@@ -613,7 +613,7 @@ CREATE TABLE `result_set_input` (
    `result_set_input_id` int(10) unsigned NOT NULL auto_increment,
    `result_set_id` int(10) unsigned NOT NULL,
    `table_id` int(10) unsigned NOT NULL,
-   `table_name` enum('experimental_chip','channel','input_set') DEFAULT NULL,
+   `table_name` enum('experimental_chip','channel','input_set', 'input_subset') DEFAULT NULL,
    PRIMARY KEY  (`result_set_input_id`, `result_set_id`),
    UNIQUE KEY `rset_table_idname_idx` (`result_set_id`, `table_id`, `table_name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -737,11 +737,12 @@ CREATE TABLE `input_subset` (
 @see input_subset
 */
 
+DROP TABLE IF EXISTS `input_set_input_subset`;
 CREATE TABLE `input_set_input_subset` (
   `input_subset_id` int(10) unsigned NOT NULL,
   `input_set_id`    int(10) unsigned NOT NULL,
   UNIQUE KEY `iset_subset_table_idx` (`input_subset_id`,`input_set_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 /**
@@ -763,7 +764,6 @@ CREATE TABLE `input_set_input_subset` (
 @column description Text description
 @column type		Array type e.g. OLIGO, PCR
 @column class		Array class e.g. AFFY_ST, ILLUMINA_INFINIUM
-
 @see    array_chip
 */
 
