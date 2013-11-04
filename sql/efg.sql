@@ -675,7 +675,6 @@ CREATE TABLE `input_set` (
    `experiment_id` int(10) unsigned default NULL,
    `feature_type_id` int(10) unsigned default NULL,
    `cell_type_id` int(10) unsigned default NULL,
-   `vendor` varchar(40) default NULL,
    `name` varchar(100) not NULL,
    `type` enum('annotated', 'result', 'segmentation', 'dna_methylation') default NULL,
    `replicate` tinyint(3) unsigned NOT NULL,
