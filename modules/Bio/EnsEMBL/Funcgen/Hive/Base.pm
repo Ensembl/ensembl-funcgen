@@ -22,7 +22,7 @@ use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( scalars_to_objects 
                                                validate_path
-                                               get_feature_file );
+                                               get_files_by_formats );
 use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref check_ref );  
 use Scalar::Util                           qw( blessed );                                            
                                                
@@ -71,6 +71,14 @@ my %param_class_info =
     analysis            => ['Analysis',          'fetch_by_logic_name'],
     experimental_group  => ['ExperimentalGroup', 'fetch_by_name'],
   );
+
+
+my %object_dataflow_methods = 
+  (
+   'Bio::EnsEMBL::Analysis' => 'logic_name', 
+  );
+
+
 
 my %valid_file_formats = 
  (
@@ -219,17 +227,23 @@ sub alignment_dir {
 
 
 sub get_study_name_from_InputSet {
-  my ($self, $iset) = @_;
-  
-   #Just strip off first two words of experiment name for now
-   #until we model study/experiment properly wrt having multiple input_sets associated
-   my $ctype      = $iset->cell_type->name;
-   my $ftype      = $iset->feature_type->name; 
-   my $study_name = $iset->get_Experiment->name;
-   $study_name =~ s/${ctype}_${ftype}_(.*)/$1/;
-   #This should still work once the experiment names have ctype and ftype removed
-    
-   return $study_name;
+  my $self = shift;
+  my $iset = shift;
+      
+  return $self->parse_study_name($iset->get_Experiment->name,
+                                 $iset->cell_type->name,
+                                 $iset->feature_type->name);
+}
+
+
+#Just strip off first two words of experiment name for now
+#until we model study/experiment properly wrt having multiple input_sets associated
+#This should still work if the experiment names have ctype and ftype removed
+
+sub parse_study_name_name{
+  my ($self, $exp, $ctype, $ftype) = @_;   
+  (my $study_name = $exp) =~ s/${ctype}_${ftype}_(.*)/$1/;
+  return $study_name;
 }
 
 
@@ -309,7 +323,7 @@ sub _set_out_db {
       
       #Reset the $db to an actual DBAdaptor (rather than a Tracking/BaseAdaptor)
       if ($self->use_tracking_db){
-        $self->param('tracking_adaptor', $db);
+        $self->set_param_method('tracking_adaptor', $db);
         $db = $db->db; 
       }
         
@@ -455,7 +469,7 @@ sub process_params {
           'Arrayref of scalars or Hashref values');  
       } 
       
-      warn "before param_class_info test with $param_name";
+      #warn "before param_class_info test with $param_name";
              
       if(exists $param_class_info{$param_name}){
         warn "yay $param_name exists in param_class_info";
@@ -614,12 +628,11 @@ sub helper {
 #pass string args, which will catch errors at compile rather than runtime
 #args are fully validated so this isn't unsafe
 
+#can't have default if required???
+#would throw in param_required if not defined 
+
 sub get_param_method {
   my ($self, $param_name, $req_or_silent, $default) = @_;
-  
-  #can't have default if required???
-  #would throw in param_required if not defined 
-   
   my $value = $self->_param_and_method($param_name, undef, $req_or_silent);
   
   if((! defined $value) && 
@@ -886,7 +899,7 @@ sub dataflow_branch_output_ids {
   my $self = $_[0];
   my $dataflow_output_ids = $self->branch_output_ids;#set by init_branch_config and will always be defined
   
-  if(keys $dataflow_output_ids){    
+  if(keys %{$dataflow_output_ids}){    
     #We need to flow the job in the order they are specified in the config
     #i.e. we can't flow the accumulator(branch 1) before we have flown the fan jobs
     #hence descending sort
@@ -966,8 +979,15 @@ sub _dataflow_params_by_list {
     my $param = $self->param_silent($param_name);
     
     if( blessed($param) ){
-      throw("Cannot dataflow $method_list_name $param_name as it is an object:\t".
-        $param);  
+      
+      if(! exists $object_dataflow_methods{ref($param)}){
+        throw("Cannot dataflow $method_list_name $param_name as it is an object without a defined dataflow method:\t".
+          $param."\nPlease add to \%object_dataflow_methods");  
+      }
+      else{
+        my $data_flow_method = $object_dataflow_methods{ref($param)};
+        $param = $param->$data_flow_method;
+      }
     }
     
     if(defined $param){
@@ -1024,7 +1044,7 @@ sub sam_ref_fai {
 sub get_alignment_file_prefix_by_InputSet{
   my ($self, $iset, $control) = @_;  
   
-  $self->db->is_stored_and_valid($iset, 'Bio::EnsEMBL::Funcgen::InputSet');
+  $self->out_db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::InputSet', $iset);
   my $path = $self->alignment_dir($iset);
   
   if($control){
@@ -1066,7 +1086,7 @@ sub get_alignment_files_by_InputSet_formats {
                   filter_from_format => $filter_format,
                   all_formats        => $all_formats};  
     
-    $path = get_alignment_file_prefix_by_InputSet($iset, $control).
+    $path = $self->get_alignment_file_prefix_by_InputSet($iset, $control).
                 '.samse'; #Currently hardcoded for bam origin!
   
     if($filter_format){
