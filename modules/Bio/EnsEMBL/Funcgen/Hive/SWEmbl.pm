@@ -51,9 +51,11 @@ sub new {
 #Can call this before new!
 #So we don't have to mess about with passing params to run and load methods
 
-sub input_formats{
-  return ['bam', 'sam', 'bed'];
-}
+#could return keys from fswitches?
+#Preference should be done by the caller, not here, so order shouldn't matter
+sub input_formats    { return ['bam', 'sam', 'bed']; }
+
+sub requires_control { return 0; }
 
 sub run {   
   my $self = $_[0];
