@@ -22,7 +22,8 @@ use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( scalars_to_objects 
                                                validate_path
-                                               get_files_by_formats );
+                                               get_files_by_formats 
+                                               path_to_namespace );
 use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref check_ref );  
 use Scalar::Util                           qw( blessed );                                            
                                                
@@ -1102,6 +1103,21 @@ sub get_alignment_files_by_InputSet_formats {
   return $align_files || throw("Failed to find $file_type (@$formats) for:\t$path");  
 }
 
+
+
+sub validate_package_from_path{
+  my $self     = shift;
+  my $pkg_path = shift;  
+  
+  eval { require $pkg_path; };
+
+  if ($@) {
+    throw( "Failed to require:\t$pkg_path" );
+  }
+  
+  #This might not always be correct if the file contains >1 package
+  return path_to_namespace($pkg_path);
+}
 
 
 
