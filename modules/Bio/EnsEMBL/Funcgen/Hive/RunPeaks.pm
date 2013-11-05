@@ -17,7 +17,6 @@ use warnings;
 use strict;
 
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( path_to_namespace );
 use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 
 
@@ -69,15 +68,7 @@ sub fetch_input {
   $self->get_output_work_dir_methods( $self->db_output_dir . '/peaks/' .
       $fset->get_InputSet->get_Experiment->name . '/' . $analysis->logic_name );
 
-  my $peak_module = $analysis->module;
-  eval { require $peak_module; };
-
-  if ($@) {
-    throw( 'Failed to require feature_set (' .
-           $fset->name . ") analysis module:\t$peak_module" );
-  }
-  
-  $peak_module = path_to_namespace($peak_module);
+  my $peak_module = $self->validate_package_from_path($analysis->module);
   my $formats = $peak_module->input_formats;
   my $filter_format = $self->param_silent('bam_filtered') ? undef : 'bam';    
   my $control_file;
