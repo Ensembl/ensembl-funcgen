@@ -3,7 +3,7 @@
 =head1 LICENSE
 
 
-  Copyright (c) 1999-2012 The European Bioinformatics Institute and
+  Copyright (c) 1999-2013 The European Bioinformatics Institute and
   Genome Research Limited.  All rights reserved.
 
   This software is distributed under a modified Apache license.
@@ -186,13 +186,14 @@ local $|=1;
 
 my ($pass,$port,$host,$user,$dbname,
 	$dnadb_pass,$dnadb_port,$dnadb_host,$dnadb_user,$dnadb_name,
-    $outdir, $write_features, $cdb,
+    $outdir, $write_features, $cdb, $tdb_host,
     $no_dump_annotated_features,$dump_regulatory_features, $include_mt,
-    $clobber, @slices, @skip_slices, $non_ref,
+    $clobber, @slices, @skip_slices,
     $focus_extend, $dump,$gene_signature, $ctype_projection, $use_tracking,
     $debug_start, $debug_end, $version, @focus_names, @attr_names, $local, $on_farm);
 
 #Defaults
+my $non_ref = 1;
 my $focus_max_length = 2000;
 #my $focus_extend = 0; #was 2000 until after 66;
 my $bsub_mem = '';
@@ -209,49 +210,50 @@ $user = $ENV{EFG_WRITE_USER};
 $dbname = $ENV{EFG_DBNAME};
 #$species = $ENV{SPECIES};
 
-GetOptions (
-            "pass|p=s"       => \$pass,
-            "port=s"         => \$port,
-            "host|h=s"       => \$host,
-            "user|u=s"       => \$user,
-            "dbname|d=s"     => \$dbname,
-			"dnadb_pass|p=s"       => \$dnadb_pass,
-            "dnadb_port=s"   => \$dnadb_port,
-            "dnadb_host|h=s" => \$dnadb_host,
-            "dnadb_user|u=s" => \$dnadb_user,
-            "dnadb_name|d=s" => \$dnadb_name,
-		       
-			"outdir|o=s"     => \$outdir,
-            #"do_intersect|i=s" => \$do_intersect,
-            "write_features|w" => \$write_features,
-            "no_dump_annotated_features"  => \$no_dump_annotated_features,
-            "dump_regulatory_features"  => \$dump_regulatory_features,
-			"rollback" => \$clobber,
-			"focus_max_length=i" => \$focus_max_length,
-            "focus_extend=i" => \$focus_extend,
-			"dump" => \$dump,
-            "gene_signature" => \$gene_signature,
-			"debug_start=i" => \$debug_start,
-            "debug_end=i" => \$debug_end, #Defaults to slice end if not set
+GetOptions 
+  (
+   "pass|p=s"       => \$pass,
+   "port=s"         => \$port,
+   "host|h=s"       => \$host,
+   "user|u=s"       => \$user,
+   "dbname|d=s"     => \$dbname,
+   "dnadb_pass|p=s"       => \$dnadb_pass,
+   "dnadb_port=s"   => \$dnadb_port,
+   "dnadb_host|h=s" => \$dnadb_host,
+   "dnadb_user|u=s" => \$dnadb_user,
+   "dnadb_name|d=s" => \$dnadb_name,
+   'tdb_host=s'      => \$tdb_host,
 
-			'cell_type_projection'=> \$ctype_projection,
-			'skip_slices=s{,}'    => \@skip_slices,
-			'slices=s{,}'         => \@slices,
-			'focus_sets=s{,}'     => \@focus_names, 
-			'attribute_sets=s{,}' => \@attr_names,
-			'use_tracking_db'     => \$use_tracking,
-			'non_ref'             => \$non_ref,
-			'include_mt'          => \$include_mt,
-			'version=s'           => \$version,
-			'local'               => \$local,
-			'bsub_mem=i'          => \$bsub_mem,
-			'_on_farm'            => \$on_farm,
-			'tee'                 => \$main::_tee,
-			'logfile=s'           => \$main::_log_file,
-			'no_log'              => \$main::_no_log,  
+   "outdir|o=s"                  => \$outdir,
+   #"do_intersect|i=s"           => \$do_intersect,
+   "write_features|w"            => \$write_features,
+   "no_dump_annotated_features"  => \$no_dump_annotated_features,
+   "dump_regulatory_features"    => \$dump_regulatory_features,
+   "rollback"                    => \$clobber,
+   "focus_max_length=i" => \$focus_max_length,
+   "focus_extend=i"     => \$focus_extend,
+   "dump"               => \$dump,
+   "gene_signature"     => \$gene_signature,
+   "debug_start=i"      => \$debug_start,
+   "debug_end=i"        => \$debug_end, #Defaults to slice end if not set
+
+   'cell_type_projection'=> \$ctype_projection,
+   'skip_slices=s{,}'    => \@skip_slices,
+   'slices=s{,}'         => \@slices,
+   'focus_sets=s{,}'     => \@focus_names, 
+   'attribute_sets=s{,}' => \@attr_names,
+   'use_tracking_db'     => \$use_tracking,
+   'include_mt'          => \$include_mt,
+   'version=s'           => \$version,
+   'local'               => \$local,
+   'bsub_mem=i'          => \$bsub_mem,
+   '_on_farm'            => \$on_farm,
+   'tee'                 => \$main::_tee,
+   'logfile=s'           => \$main::_log_file,
+   'no_log'              => \$main::_no_log,  
 	
-			'help|?'         => sub { pos2usage(-exitval => 0, -message => "Params are:\t@tmp_args"); }
-		   ) or pod2usage( -exitval => 1);
+   'help|?'         => sub { pos2usage(-exitval => 0, -message => "Params are:\t@tmp_args"); }
+  ) or pod2usage( -exitval => 1);
 
 
 my $helper = new Bio::EnsEMBL::Funcgen::Utils::Helper();
@@ -342,13 +344,13 @@ else{#Use Tracking
   #Change this to Funcgen when we implement full funcgen schema
 
   my $tdb = Bio::EnsEMBL::DBSQL::DBConnection->new
-	(
-	 -host => 'ens-genomics1',
-	 #-port => $dnadb_port,
-	 -user => 'ensro',
-	 #-pass => $dnadb_pass,
-	 -dbname => 'efg_data_tracking',
-	 #-group   => 'core',
+    (
+     -host => 'ens-genomics1',
+     #-port => $dnadb_port,
+     -user => 'ensro',
+     #-pass => $dnadb_pass,
+     -dbname => 'efg_data_tracking_70',
+     #-group   => 'core',
 	);
 
   @focus_names = get_current_regulatory_input_names($tdb, $db, 1);#Focus flag
@@ -694,7 +696,7 @@ foreach my $ctype(keys %ctype_fsets){
 
 my $analysis = Bio::EnsEMBL::Analysis->new
   (
-   -logic_name      => 'Regulatory Build',
+   -logic_name      => 'Regulatory_Build',
    -db              => 'NULL',
    -db_version      => 'NULL',
    -db_file         => 'NULL',
@@ -707,9 +709,10 @@ my $analysis = Bio::EnsEMBL::Analysis->new
    -module_version  => 'NULL',
    -parameters      => 'NULL',
    -created         => 'NULL',
-   -description     => q({'reg_feats' => 'Features from <a href="http://www.ensembl.org/info/docs/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.', 'core' => 'Sites enriched for marks of open chromatin (e.g. Dnase1) or transcription factor binding sites.  Used to define the Regulatory Feature core regions in the <a href="http://www.ensembl.org/info/docs/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.', 'other' => 'Sites enriched for histone modifications or polymerase binding.  Used to define Regulatory Feature bound regions in the <a href="http://www.ensembl.org/info/docs/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.'}),
+   -description     => q({'reg_feats' => 'Features from <a href="http://www.ensembl.org/info/docs/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.', 'core' => 'Sites enriched for marks of open chromatin (e.g. Dnase1) or transcription factor binding sites.  Used to define the Regulatory Feature core regions in the <a href="http://www.ensembl.org/info/docs/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.', 'non_core' => 'Sites enriched for histone modifications or polymerase binding.  Used to define Regulatory Feature bound regions in the <a href="http://www.ensembl.org/info/docs/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.'}),
    -display_label   => 'Regulatory Build',
    -displayable     => 1,
+   -web_data        => q({'type' => 'fg_regulatory_features', 'name' => 'Reg. Feats',  'display' =>'off', 'depth' => 10, 'default' => {'contigviewbottom' => 'normal', 'generegview' => 'normal'} }),
   );
 
 my $logic_name = $analysis->logic_name();
@@ -717,22 +720,18 @@ my $ana = $aa->fetch_by_logic_name($logic_name);
 
 if ( ! defined $ana ) {			# NEW
   $aa->store($analysis);
-    
-} elsif ( $ana->compare($analysis) ) { # EXISTS, but with different options
-
+} 
+elsif ( $ana->compare($analysis) != -1) {
   ### analysis compare
   # returns  1 if this analysis is special case of given analysis
   # returns  0 if they are equal
   # returns -1 if they are completely different
-    
-  die('Analysis with logic name \''.$logic_name.'\' already exists, but '.
-	  "has different options! Use different logic_name for you analysis '$logic_name'!");
-
-  #$self->efg_analysis->dbID($analysis->dbID);
-  #$self->efg_analysis->adaptor($self->efgdb->get_AnalysisAdaptor);
-  #$aa->update($self->efg_analysis);
- 
+  die("\n$logic_name parameter clash:\n".
+      "\tSpecified:\t\t".$analysis->parameters.
+      "\n\tPreviously stored:\t".$ana->parameters."\n\n"); 
 }
+   
+
 
 $analysis = $aa->fetch_by_logic_name($logic_name);
 
@@ -916,13 +915,11 @@ while (<$fh>) {
   #This will not run with a subslice properly
   
   
-  warn $_ if $start == 234161;
-
   if ($debug_start) {
-	next if ($start < $debug_start);
-	last if ($start > $debug_end);
+    next if ($start < $debug_start);
+    last if ($start > $debug_end);
 
-	print "\nNEW ".$attrib_fsets{$fset_id}->cell_type->name.':'.$attrib_fsets{$fset_id}->feature_type->name."\t${start}\t${end}\n";
+    print "\nNEW ".$attrib_fsets{$fset_id}->cell_type->name.':'.$attrib_fsets{$fset_id}->feature_type->name."\t${start}\t${end}\n";
 
   }
     
@@ -939,106 +936,99 @@ while (<$fh>) {
   # some stats
   $feature_count{fsets}{$fset_id}++;
   $feature_count{ctypes}{$ctype}++; #Need to report these
-	
+	my $af_hash;
 
   if (exists $focus_fsets{$fset_id}) { ### Focus feature
-	$feature_count{focus_ctypes}{$ctype}++;
+    $feature_count{focus_ctypes}{$ctype}++;
 
-	#Where is the overlap check for this?
-	#Let's convert to multi-celltype first then fix
+    #Where is the overlap check for this?
+    #Let's convert to multi-celltype first then fix
 	
-	if ($length > $focus_max_length) { # Too long, demote to attribute
-	  print "Focus feature ($af_id) longer than $focus_max_length; ",
-		"added to attribute feature list\n" if ($debug_start);
+    #Do we ever want to cache core feature via cache_feature
+    #This cache is only ever used for updating attrs for new core regions?
 
-	  #Need to build here but not modify core region?
-	  #This will become redundant if we all ways do a cell _type projection build
 
-	  &add_feature();
+    if ($length > $focus_max_length) { # Too long, demote to attribute
+      print "Focus feature ($af_id) longer than $focus_max_length; ",
+        "Treated as non_core attribute\n" if ($debug_start);
 
-	  #We are not adding this as an attribute feature
-	  #Just removing it!!
-	  
-	  
-	  $removed_ff{$fset_id}{$af_id} = 1;
-	  $removed_ff{$ctype}++;
-	  # need to check overlaps with current focus_features
-	  next;
-	}
+      #Need to consider this when creating new regfeats
+      #This may mean that two neighbouring reg feats may have a shared 
+      # overlapping core feat, which only constributes to bound and not core.
+      $af_hash = &cache_feature();
+      
+      #log removal
+      $removed_ff{$fset_id}{$af_id} = 1;
+      $removed_ff{$ctype}++;
+    }
 	
-
+    #what about TF inclusion when updating attrs
+    #these should only be included is we overlap, not if they are encompassed!
 		
-	# focus feature overlaps w/  rf core (0° of separation)
-	if (@rf && 
-		($start <= $rf[$rf_size]->{focus_end})){
+    # focus feature overlaps w/rf core (0° of separation)
+    if (@rf && 
+        ($start <= $rf[$rf_size]->{focus_end})) {
 
-	  my $update_attrs = 0;
+      
+      if ($length > $focus_max_length) { #Treat as attribute
+        &add_attribute($af_hash, $ctype);
 
-	  if (! exists ${$rf[$rf_size]{fsets}}{$ctype}){
-		$update_attrs = 1;
-	  }
+        #if ($end > $rf[$rf_size]{attribute_end}{$ctype}) {
+        #  $rf[$rf_size]{attribute_end}{$ctype} = $end ;
+        #  print "\tResetting $ctype attr end to ".$end."\n" if $debug_start;
+        #}
 
-	  &update_focus();
-	  &update_attributes() if $update_attrs;
-	} 
-	else {					# open new regulatory feature
-	  &add_focus();
-	  &update_attributes();
-	  #How is this capturing further down stream fully contained features???
-	  #Are these picked up in the %afs list?
-	}
-   	&add_feature();
+      }
+      else{
+        my $update_attrs = 0;
+        
+        if (! exists ${$rf[$rf_size]{fsets}}{$ctype}) {
+          $update_attrs = 1;
+        }
+        
+        &update_focus();
+        &update_attributes() if $update_attrs;
+      }
+    } 
+    elsif($length <= $focus_max_length){  # open new regulatory feature
+      &add_focus();
+      &update_attributes();
+      #How is this capturing further down stream fully contained features???
+      #Are these picked up in the %afs list?
+    }
+    
+    # Removed this as we don't want to consider these for inclusion
+    # as they describe
+    # 	&cache_feature();
   } 
-  else { ### Attribute feature
-	
-	#Only update if we have seen a focus feature of this ctype
-	if( @rf && 
-		((exists ${$rf[$rf_size]{fsets}}{$ctype}) || $ctype_projection)){
+  else {                      ### Attribute feature
+    $af_hash = &cache_feature();
 
-	  if ($start <= $rf[$rf_size]{focus_end}){
-		print "\tAdding overlapping $ctype feature(".$af_id.")\n" if ($debug_start);
-	  
-		# add annot. feature id to reg. feature
-		$rf[$rf_size]{annotated}{$ctype}{$af_id} = $fset_id;
-		$rf[$rf_size]{fsets}{$ctype}{$fset_id}++;
-		$seen_af{$fset_id}{$af_id} = 1;
-		
-		# update end of regulatory feature
-		#warn "$ctype $end > ".$rf[$rf_size]{attribute_end}{$ctype};
+    #Only update if we have seen a focus feature of this ctype
+    if ( @rf && 
+         ((exists ${$rf[$rf_size]{fsets}}{$ctype}) || $ctype_projection)) {
 
-		if ($end > $rf[$rf_size]{attribute_end}{$ctype}){
-		  $rf[$rf_size]{attribute_end}{$ctype} = $end ;
-		  print "\tResetting $ctype attr end to ".$end."\n" if $debug_start;
-		}
-		#else this should never happen as the dumps should be sorted by start/end?
+      if ($start <= $rf[$rf_size]{focus_end}) {
+        print "\tAdding overlapping $ctype feature(".$af_id.")\n" if ($debug_start);
+        &add_attribute($af_hash, $ctype);
+      } 
+      elsif ( ($end <= $rf[$rf_size]{attribute_end}{$ctype}) &&
+              ($start <= ($rf[$rf_size]{focus_end} + $focus_extend)) ) {	
+        
+        print "Adding fully contained $ctype feature(".$af_id.")\n" if ($debug_start);		
+        &add_attribute($af_hash, $ctype);
+      } 
+      else {
+        print "Out of range $ctype $start-$end\n" if $debug_start; #level 3?
+      }
 
-	  } 
-	  elsif( ($end <= $rf[$rf_size]{attribute_end}{$ctype}) &&
-			 ($start <= ($rf[$rf_size]{focus_end} + $focus_extend)) ){	
-		
-		#Do we not need to account for unset attr ends in here too
-		#What about completely abset attrs
-		#Need to set bound_end/start in create_regualtory_features?
-	
-		print "Adding fully contained $ctype feature(".$af_id.")\n" if ($debug_start);
-		
-		# add annot. feature id to reg. feature
-		$rf[$rf_size]{annotated}{$ctype}{$af_id} = $fset_id;
-		$rf[$rf_size]{fsets}{$ctype}{$fset_id}++;
-		$seen_af{$fset_id}{$af_id} = 1;
-	  }
-	  else{
-		print "Out of range $ctype $start-$end\n" if $debug_start; #level 3?
-	  }
-
-	  print "\t$ctype attr start/end now:\t".$rf[$rf_size]{attribute_start}{$ctype}.' - '.$rf[$rf_size]{attribute_end}{$ctype}."\n" if $debug_start;
+      print "\t$ctype attr start/end now:\t".$rf[$rf_size]{attribute_start}{$ctype}.' - '.$rf[$rf_size]{attribute_end}{$ctype}."\n" if $debug_start;
 
 	  
-	}
-
-	&add_feature();
+    }
   }
 }
+
 
 
 $helper->log_header("Skipping storage RegulatoryFeatures") if ! $write_features;
@@ -1053,14 +1043,15 @@ if ($dump_regulatory_features) {
   my $outfile  = $outdir.'/regulatory_features_'.$slice->seq_region_name.'.dat';
   my $out = open_file($outfile, ">");
     
-  foreach my $regf(@rf){
+  foreach my $regf (@rf) {
 	
-	printf $out "%d\t%s\t%d\t%d\t%d\t%d\t%s\t%s\n", 
-	  $fg_sr_id, $slice->seq_region_name, 
-		$regf->{focus_start}, $regf->{focus_end},
-		  $regf->{attribute_start}, $regf->{attribute_end}, 
-			$regf->{binstring}, join(",", sort {$a<=>$b} keys %{$regf->{annotated}});
-  };
+    printf $out "%d\t%s\t%d\t%d\t%d\t%d\t%s\t%s\n", 
+      $fg_sr_id, $slice->seq_region_name, 
+        $regf->{focus_start}, $regf->{focus_end},
+          $regf->{attribute_start}, $regf->{attribute_end}, 
+            $regf->{binstring}, join(",", sort {$a<=>$b} keys %{$regf->{annotated}});
+  }
+  ;
   
   $helper->log(sprintf "# Regulatory features written to ".$outfile);
   
@@ -1084,21 +1075,21 @@ my $total_feature_count = 0;
 
 my $die = 0;
 
-foreach my $ctype(keys %ctype_fsets){
+foreach my $ctype (keys %ctype_fsets) {
   next if $ctype eq 'MultiCell';
 
   $helper->log(sprintf "#$ctype FeatureSets %80s\t%8s\t%8s\t%8s",'Total', 'Included', 'Distinct', 'Removed');
   
 
-  foreach my $set(@{$ctype_fsets{$ctype}}){
-	my $set_feature_cnt = $feature_count{fsets}{$set->dbID} ||= 0;
-	$total_feature_count += $set_feature_cnt;
+  foreach my $set (@{$ctype_fsets{$ctype}}) {
+    my $set_feature_cnt = $feature_count{fsets}{$set->dbID} ||= 0;
+    $total_feature_count += $set_feature_cnt;
 	
-	$helper->log(sprintf "#%80s(%d)\t%8d\t%8d\t%8d\t%8d", $set->name, $set->dbID, 
-			   $set_feature_cnt, #Total
-				 $feature_count{regfeats}{$set->dbID} || 0, #Included
-				 scalar(keys %{$seen_af{$set->dbID}}) || 0, #Distinct
-				 scalar(keys %{$removed_ff{$set->dbID}}) || 0); #Removed
+    $helper->log(sprintf "#%80s(%d)\t%8d\t%8d\t%8d\t%8d", $set->name, $set->dbID, 
+                 $set_feature_cnt, #Total
+                 $feature_count{regfeats}{$set->dbID} || 0, #Included
+                 scalar(keys %{$seen_af{$set->dbID}}) || 0, #Distinct
+                 scalar(keys %{$removed_ff{$set->dbID}}) || 0); #Removed
   }
   
   my $total = $feature_count{ctypes}->{$ctype} || 0;
@@ -1108,9 +1099,9 @@ foreach my $ctype(keys %ctype_fsets){
   $helper->log("# Focus $ctype feature seen:\t$focus");
 
   if ((($total < $focus) || ($focus == 0)) &&
-	 ! $ctype_projection){
-	warn("Found inconsistenty between Total($total) and Focus($focus) $ctype features\n");
-	$die = 1;
+      ! $ctype_projection) {
+    warn("Found inconsistenty between Total($total) and Focus($focus) $ctype features\n");
+    $die = 1;
   }
 
   #This number should be the Focus - those focus which have been removed
@@ -1120,14 +1111,14 @@ foreach my $ctype(keys %ctype_fsets){
   my $p_regfs  = $feature_count{projected_regfeats}{$ctype} || 0;
   my $fp_regfs = $feature_count{failed_projected}{$ctype}   || 0; 
 
-  if($ctype_projection){
-	$helper->log("# Projected $ctype RegulatoryFeatures:\t$p_regfs");
-	$helper->log("# Failed to project $ctype RegulatoryFeatures:\t$fp_regfs");
+  if ($ctype_projection) {
+    $helper->log("# Projected $ctype RegulatoryFeatures:\t$p_regfs");
+    $helper->log("# Failed to project $ctype RegulatoryFeatures:\t$fp_regfs");
 
-	if($t_regfs != ($f_regfs + $p_regfs + $fp_regfs)){
-	  warn("WARNING:\tTotal RegFeats is not a sum of Non-project & Projected & Failed");
-	  $die = 1;
-	}
+    if ($t_regfs != ($f_regfs + $p_regfs + $fp_regfs)) {
+      warn("WARNING:\tTotal RegFeats is not a sum of Non-project & Projected & Failed");
+      $die = 1;
+    }
   }
 
 
@@ -1139,14 +1130,13 @@ foreach my $ctype(keys %ctype_fsets){
   my $max_regfs = $focus - $removed_ff{$ctype};
 
   
-  if($t_regfs > $max_regfs){
-	#Change this to log if ctype_projection?
-	warn("WARNING:\tFound more RegFeats($t_regfs) than included focus features($max_regfs) for $ctype\n");
-	$die = 1 if ! $ctype_projection;
-  }
-  elsif($t_regfs == 0){
-	warn("WARNING:\tFound no features for $ctype\n");
-	$die = 1;
+  if ($t_regfs > $max_regfs) {
+    #Change this to log if ctype_projection?
+    warn("WARNING:\tFound more RegFeats($t_regfs) than included focus features($max_regfs) for $ctype\n");
+    $die = 1 if ! $ctype_projection;
+  } elsif ($t_regfs == 0) {
+    warn("WARNING:\tFound no features for $ctype\n");
+    $die = 1;
   }
 }
 
@@ -1242,57 +1232,62 @@ sub dump_annotated_features{
 #for those cell type for which we have we have seen core evidence
 #We can do this by decoding the fset_ids
 
+
+# We can remove all this MF code if there is no within build dependacy on it
+# i.e. can be replaced with a post build patch.
+
 sub add_focus{
   print "\nNew $ctype focus:\t$start-$end\n" if ($debug_start);
 
   push @rf, {
-			 focus_start       => $start,
-			 focus_end         => $end,
-			 attribute_start   => { $ctype => $start },
-			 attribute_end     => { $ctype => $end },
-			 focus             => { 
-								   $ctype    => { $af_id => $fset_id },
-								   MultiCell => { $af_id => $fset_id },
-								  },
-			 fsets             => {
-								   MultiCell => {$fset_id => 1},
-								   $ctype    => {$fset_id => 1},
-								  },
-			 motif_feature_ids => {},
-			};
+             focus_start       => $start,
+             focus_end         => $end,
+             attribute_start   => { $ctype => $start },
+             attribute_end     => { $ctype => $end },
+             focus             => { 
+                                   $ctype    => { $af_id => $fset_id },
+                                   MultiCell => { $af_id => $fset_id },
+                                  },
+             fsets             => {
+                                   MultiCell => {$fset_id => 1},
+                                   $ctype    => {$fset_id => 1},
+                                  },
+             motif_feature_ids => {},
+            };
   
   #Do this here so we don't have to call $# multiple times.
   $rf_size +=1; 
   
 
-  if( defined $mf_ids &&
-	  ($mf_ids ne 'NULL') ){  #Cache MotifFeature ids - don't project
+  if ( defined $mf_ids &&
+       ($mf_ids ne 'NULL') ) {  #Cache MotifFeature ids - don't project
 
-	my @motif_feature_ids = split/,/, $mf_ids;
+    my @motif_feature_ids = split/,/, $mf_ids;
 	
-	$rf[$rf_size]->{motif_feature_ids}{$ctype}    ||= [];
-	$rf[$rf_size]->{motif_feature_ids}{MultiCell} ||= [];
-	#$feature_count{motif_features}{MultiCell}      += scalar(@motif_feature_ids);
-	$feature_count{motif_features}{$ctype}         += scalar(@motif_feature_ids);
+    $rf[$rf_size]->{motif_feature_ids}{$ctype}    ||= [];
+    $rf[$rf_size]->{motif_feature_ids}{MultiCell} ||= [];
+    #$feature_count{motif_features}{MultiCell}      += scalar(@motif_feature_ids);
+    $feature_count{motif_features}{$ctype}         += scalar(@motif_feature_ids);
 	
-	push @{$rf[$rf_size]->{motif_feature_ids}{$ctype}},    @motif_feature_ids;
-	push @{$rf[$rf_size]->{motif_feature_ids}{MultiCell}}, @motif_feature_ids;
+    push @{$rf[$rf_size]->{motif_feature_ids}{$ctype}},    @motif_feature_ids;
+    push @{$rf[$rf_size]->{motif_feature_ids}{MultiCell}}, @motif_feature_ids;
   }
 
 
-  if($ctype_projection){   #Set ctype projected attr start/ends
-	foreach my $ct(keys %cell_types){
-	  next if $ct eq 'MultiCell';
-	  next if $ct eq $ctype;
-	  print "Initialising $ct projection attr start/end:\t$start - $end\n" if $debug_start;
-	  $rf[$rf_size]{attribute_start}{$ct} = $start;
-	  $rf[$rf_size]{attribute_end}{$ct}   = $end;
+  if ($ctype_projection) {      #Set ctype projected attr start/ends
 
-	  #Set this to 0 such that update_focus will also update the projected regfeats
-	  $rf[$rf_size]{fsets}{$ct}{$fset_id} ||= 0;
-
-	  #How are we storing only those with attrs?
-	}
+    foreach my $ct (keys %cell_types) {
+      next if $ct eq 'MultiCell';
+      next if $ct eq $ctype;
+      print "Initialising $ct projection attr start/end:\t$start - $end\n" if $debug_start;
+      $rf[$rf_size]{attribute_start}{$ct} = $start;
+      $rf[$rf_size]{attribute_end}{$ct}   = $end;
+      
+      #Set this to 0 such that update_focus will also update the projected regfeats
+      $rf[$rf_size]{fsets}{$ct}{$fset_id} ||= 0;
+      
+      #How are we storing only those with attrs?
+    }
   }
 
   $seen_af{$fset_id}{$af_id} = 1;
@@ -1362,6 +1357,8 @@ sub update_focus{
   return;
 }
 
+
+
 sub update_attributes{
   my @cts = ($ctype);
   @cts = keys(%cell_types) if $ctype_projection;
@@ -1374,98 +1371,108 @@ sub update_attributes{
   # look upstream for all features overlapping focus feature
 
 
-  foreach my $ct(@cts){
-	next if $ct eq 'MultiCell';
-	print "\tUpdating $ct attributes\n" if ($debug_start);
-	my $updated = 0;
+  foreach my $ct (@cts) {
+    next if $ct eq 'MultiCell';
+    print "\tUpdating $ct attributes\n" if ($debug_start);
+    my $updated = 0;
 
 
-	for (my $i=0; $i<=$#{$afs{$ct}}; $i++) {
+    for (my $i=0; $i<=$#{$afs{$ct}}; $i++) {
 	  
-	  if ($afs{$ct}->[$i]{end} >= $rf[$rf_size]{focus_start}) {
-		$updated = 1;
+      if ($afs{$ct}->[$i]{end} >= $rf[$rf_size]{focus_start}) {
+        $updated = 1;
 
-		if(scalar(keys %{$rf[$rf_size]{focus}{$ctype}}) == 0){
-		  print "Updating projected feature\n" if $debug_start;
-		  exit;
-		}
+        if (scalar(keys %{$rf[$rf_size]{focus}{$ctype}}) == 0) {
+          print "Updating projected feature\n" if $debug_start;
+          exit;
+        }
 
 
-		# FIRST update attribute start of the regulatory feature...
+        # FIRST update attribute start of the regulatory feature...
 		
-		if ($afs{$ct}->[$i]{start} < $rf[$rf_size]{attribute_start}{$ct}) {
-		  #This is always the case the first feature
-		  #If there is one, it will always be upstream or start at the same location as the new focus
-		  #And we process the rest in this block so no real need for this test???
+        if ($afs{$ct}->[$i]{start} < $rf[$rf_size]{attribute_start}{$ct}) {
+          #This is always the case the first feature
+          #If there is one, it will always be upstream or start at the same location as the new focus
+          #And we process the rest in this block so no real need for this test???
 
-		  print "\tUpdating attribute start to:\t\t(".$attrib_fsets{$afs{$ct}->[$i]{fset_id}}->feature_type->name.":".$afs{$ct}->[$i]{af_id}.")\t".$afs{$ct}->[$i]{start}.' (<'.$rf[$rf_size]{attribute_start}{$ct}.")\n" if $debug_start;
+          
+          print "\tUpdating attribute start to:\t\t(".$attrib_fsets{$afs{$ct}->[$i]{fset_id}}->feature_type->name.
+            ":".$afs{$ct}->[$i]{af_id}.")\t".$afs{$ct}->[$i]{start}.' (<'.$rf[$rf_size]{attribute_start}{$ct}.")\n" if $debug_start;
 
-		  $rf[$rf_size]{attribute_start}{$ct} = $afs{$ct}->[$i]{start};
-		  $rf[$rf_size]{annotated}{$ct}{$afs{$ct}->[$i]{af_id}} = $afs{$ct}->[$i]{fset_id};
-		  $rf[$rf_size]{fsets}{$ct}{$afs{$ct}->[$i]{fset_id}}++;
-
-
-		}
+          $rf[$rf_size]{attribute_start}{$ct} = $afs{$ct}->[$i]{start};
+          $rf[$rf_size]{annotated}{$ct}{$afs{$ct}->[$i]{af_id}} = $afs{$ct}->[$i]{fset_id};
+          $rf[$rf_size]{fsets}{$ct}{$afs{$ct}->[$i]{fset_id}}++;
+        }
 		
-		# THEN remove features that are out of scope
-		splice(@{$afs{$ct}}, 0, ($i));
+        # THEN remove features that are out of scope
+        splice(@{$afs{$ct}}, 0, ($i));
 			 
-		# NOW add the remaining overlapping attribute features and set att end
-		foreach my $af(@{$afs{$ct}}) {
+        # NOW add the remaining overlapping attribute features and set att end
+        foreach my $af (@{$afs{$ct}}) {
 		  
-		  if ($af->{end} >= $start ||
-			  ( $af->{start} >= ($rf[$rf_size]{focus_start} - $focus_extend) )) {
+          if ($af->{end} >= $start ||                                               # Include all overlapping
+              (( $af->{start} >= ($rf[$rf_size]{focus_start} - $focus_extend) &&    # Include encompassed
+                 ! exists $focus_fsets{$fset_id} ))                                 # but only non_core features
+             ){
 			
-			if ($debug_start){
-			  print "\tUpdating overlapping attribute feature:\t(".
-				$attrib_fsets{$af->{fset_id}}->feature_type->name.
-				  ":".$af->{af_id}.")\t".$af->{start}.' - '.$af->{end}."\n";
-			}
-			
-			$rf[$rf_size]{annotated}{$ct}{$af->{af_id}} = $af->{fset_id};
-			$rf[$rf_size]{fsets}{$ct}{$af->{fset_id}}++;
-			
-			#Reset the attr end
-			if ($af->{end}   > $rf[$rf_size]{attribute_end}{$ct}) {
-			  print "\tUpdating attribute end to:\t\t".$af->{end}.' (> '.$af->{end}.")\n" if $debug_start;
-			  $rf[$rf_size]{attribute_end}{$ct} = $af->{end};
-			}
-			# could also test for demoted focus features here!
-			
-			$seen_af{$fset_id}{$af_id} = 1;
-		  }
-		}
-		
-		last;
-	  }
-	}
+            if ($debug_start) {
+              print "\tUpdating overlapping attribute feature:\t(".
+                $attrib_fsets{$af->{fset_id}}->feature_type->name.
+                  ":".$af->{af_id}.")\t".$af->{start}.' - '.$af->{end}."\n";
+            }
 
-	print "$ct updated coords:\t\t\t\t\t\t".$rf[$rf_size]{attribute_start}{$ct}.' - '.$rf[$rf_size]{attribute_end}{$ct}."\n" if $debug_start;
-	print "No upstream $ct features found\n" if $debug_start && (! $updated);
+            &add_attribute($af, $ct);
+          }
+        }
+		
+        last; #af for this cell type
+      }
+    }
+
+    print "$ct updated coords:\t\t\t\t\t\t".$rf[$rf_size]{attribute_start}{$ct}.' - '.$rf[$rf_size]{attribute_end}{$ct}."\n" if $debug_start;
+    print "No upstream $ct features found\n" if $debug_start && (! $updated);
   }
 
   return;
 }
 
 
-#Need add attribute method
 
-sub add_feature{
+sub add_attribute{
+  my ($af_hash, $ctype) = @_;
+  
+  $rf[$rf_size]{annotated}{$ctype}{$af_hash->{af_id}} = $af_hash->{fset_id};
+  $rf[$rf_size]{fsets}{$ctype}{$af_hash->{fset_id}}++;
+  $seen_af{$af_hash->{fset_id}}{$af_hash->{af_id}} = 1;
+  
+  #This is never called for encompassed features
+  if ( $af_hash->{end}> $rf[$rf_size]{attribute_end}{$ctype} ) {
+    $rf[$rf_size]{attribute_end}{$ctype} =  $af_hash->{end};
+    print "\tResetting $ctype attr end to ".$af_hash->{end}."\n" if $debug_start;
+  }
+  #else this should never happen as the dumps should be sorted by start/end?
+  
+  return;
+}
+
+
+sub cache_feature{
   
   print "Adding $ctype feature($af_id) to attribute feature_list\n" if $debug_start;
 
+  my $af_hash = {
+      af_id => $af_id,
+      start => $start,
+      end => $end,
+      strand => $strand,
+      score => $score,
+      fset_id => $fset_id
+	   };
 
-  push(@{$afs{$ctype}}, 
-	   {
-		af_id => $af_id,
-		start => $start,
-		end => $end,
-		strand => $strand,
-		score => $score,
-		fset_id => $fset_id
-	   });
 
-  return;
+  push @{$afs{$ctype}}, $af_hash;
+
+  return $af_hash;
 }
 
 sub build_binstring{
@@ -1519,167 +1526,164 @@ sub create_regulatory_features{
 
 
   foreach my $rf (@{$rfs}) {
-	print "\nCreating RegulatoryFeature:\t\t\t\t\t\t\t\t".$rf->{focus_start}.' - '.$rf->{focus_end}."\n" if $debug_start;
-	my $attr_cache;
+    print "\nCreating RegulatoryFeature:\t\t\t\t\t\t\t\t".$rf->{focus_start}.' - '.$rf->{focus_end}."\n" if $debug_start;
+    my $attr_cache;
 
 
-	if ($slice->start != 1 || $slice->strand != 1) {
-	  warn("**** SLICE doesn't start at position 1; resetting start of slice to 1 ****");
-	  $slice->{'start'} = 1;
-	  #This only works as we are working with seq_region_start/end values in the dumps
-	  #We should really fetch the slices with the include_duplcates flag i.e. 1 as start for PAR regions
-	}
+    if ($slice->start != 1 || $slice->strand != 1) {
+      warn("**** SLICE doesn't start at position 1; resetting start of slice to 1 ****");
+      $slice->{'start'} = 1;
+      #This only works as we are working with seq_region_start/end values in the dumps
+      #We should really fetch the slices with the include_duplcates flag i.e. 1 as start for PAR regions
+    }
 
-	my $focus_start = $rf->{focus_start};
-	my $focus_end   = $rf->{focus_end};
+    my $focus_start = $rf->{focus_start};
+    my $focus_end   = $rf->{focus_end};
 
-	#Now build each ctype RegFeat
+    #Now build each ctype RegFeat
 
-	#order cell type so we deal with MultCell first
-	#This way we can be sure to catch & cache all the tfbs
-	#for inclusion in the other cell types
-	#Remove this now we handle MFs differently.
-	#my @ctypes = grep { /[^(MultiCell)]/ } keys %{$rf->{fsets}};
-	#unshift @ctypes, 'MultiCell';										
+    #order cell type so we deal with MultCell first
+    #This way we can be sure to catch & cache all the tfbs
+    #for inclusion in the other cell types
+    #Remove this now we handle MFs differently.
+    #my @ctypes = grep { /[^(MultiCell)]/ } keys %{$rf->{fsets}};
+    #unshift @ctypes, 'MultiCell';										
 	
-	foreach my $ct (keys %{$rf->{fsets}}){#(@ctypes) {
-	  my $projected = 0;
+    foreach my $ct (keys %{$rf->{fsets}}) { #(@ctypes) {
+      my $projected = 0;
 
-	  if($debug_start){
+      if ($debug_start) {
 
-		if($ct eq 'MultiCell'){
-		  $rf->{attribute_start}{$ct} = $focus_start;
-		  $rf->{attribute_end}{$ct}   = $focus_end;
-		}
-		print "\nBuilding $ct RegFeat with attribute start/ends:\t".
-		  join(' - ', ($rf->{attribute_start}{$ct}, "\t\t", "\t\t", $rf->{attribute_end}{$ct}))."\n";
-	  }
+        if ($ct eq 'MultiCell') {
+          $rf->{attribute_start}{$ct} = $focus_start;
+          $rf->{attribute_end}{$ct}   = $focus_end;
+        }
+        print "\nBuilding $ct RegFeat with attribute start/ends:\t".
+          join(' - ', ($rf->{attribute_start}{$ct}, "\t\t", "\t\t", $rf->{attribute_end}{$ct}))."\n";
+      }
 
-	  #Only count this is it is a true regf and not a scaffold projection
-	  $feature_count{total_regfeats}{$ct}++;
+      #Only count this is it is a true regf and not a scaffold projection
+      $feature_count{total_regfeats}{$ct}++;
 	  
-	  #Recording all fset features here, no split on projected
-	  foreach my $fset_id(keys %{$rf->{fsets}{$ct}}){
-		$feature_count{regfeats}{$fset_id} += $rf->{fsets}{$ct}{$fset_id};
-	  }
+      #Recording all fset features here, no split on projected
+      foreach my $fset_id (keys %{$rf->{fsets}{$ct}}) {
+        $feature_count{regfeats}{$fset_id} += $rf->{fsets}{$ct}{$fset_id};
+      }
 
-	  #Build attr cache dependant on presence of attrs
-	  #We may not have focus data here if we are doing a ctype_projection build
-	  #attr cache is af_id fset_id pairs
+      #Build attr cache dependant on presence of attrs
+      #We may not have focus data here if we are doing a ctype_projection build
+      #attr cache is af_id fset_id pairs
 	  
 
-	  if(exists $rf->{annotated}->{$ct} && exists $rf->{focus}->{$ct}){
-		print "Found annotated and focus attrs\n" if $debug_start;
+      if (exists $rf->{annotated}->{$ct} && exists $rf->{focus}->{$ct}) {
+        print "Found annotated and focus attrs\n" if $debug_start;
 
-		$feature_count{regfeats}{$ct}++;
-		$attr_cache = {
-					   #annotated => [keys %{$rf->{focus}->{$ct}},
-					#				 keys %{$rf->{annotated}->{$ct}}],
+        $feature_count{regfeats}{$ct}++;
+        $attr_cache = {
+                       #annotated => [keys %{$rf->{focus}->{$ct}},
+                       #				 keys %{$rf->{annotated}->{$ct}}],
 
-					   annotated => {
-									 %{$rf->{focus}->{$ct}},
-									 %{$rf->{annotated}->{$ct}}
-									},
-
-
-					  };
-	  }
-	  elsif( exists $rf->{focus}->{$ct}){
-		print "Found focus attrs only\n" if $debug_start;
-		#MultiCell and focus only
-		$feature_count{regfeats}{$ct}++;
-		$attr_cache = { annotated => {%{$rf->{focus}->{$ct}}} };
-	  }
-	  elsif(exists $rf->{annotated}->{$ct}){
-		print "Found projected annotated attrs only\n" if $debug_start;
-		$projected = 1;
-		$feature_count{projected_regfeats}{$ct}++;
-		$attr_cache =  { annotated => { %{$rf->{annotated}->{$ct}}} };
-	  }
-	  else{
-		#No attrs - This is a failed projection!
-		print "Skipping Failed Projection - no attrs found\n" if $debug_start;
-		$feature_count{failed_projected}{$ct}++;
-		next; #$ct
-	  }
+                       annotated => {
+                                     %{$rf->{focus}->{$ct}},
+                                     %{$rf->{annotated}->{$ct}}
+                                    },
 
 
-	  #Add MotifFeatures as attrs
-	  #convert to hash 
-	  foreach my $mfid(@{$rf->{motif_feature_ids}{$ctype}}){
-		$attr_cache->{motif}{$mfid} = undef;
-	  }		
-	  #$attr_cache->{motif} = $rf->{motif_feature_ids}{$ctype};
+                      };
+      } elsif ( exists $rf->{focus}->{$ct}) {
+        print "Found focus attrs only\n" if $debug_start;
+        #MultiCell and focus only
+        $feature_count{regfeats}{$ct}++;
+        $attr_cache = { annotated => {%{$rf->{focus}->{$ct}}} };
+      } elsif (exists $rf->{annotated}->{$ct}) {
+        print "Found projected annotated attrs only\n" if $debug_start;
+        $projected = 1;
+        $feature_count{projected_regfeats}{$ct}++;
+        $attr_cache =  { annotated => { %{$rf->{annotated}->{$ct}}} };
+      } else {
+        #No attrs - This is a failed projection!
+        print "Skipping Failed Projection - no attrs found\n" if $debug_start;
+        $feature_count{failed_projected}{$ct}++;
+        next;                   #$ct
+      }
+
+
+      #Add MotifFeatures as attrs
+      #convert to hash 
+      foreach my $mfid (@{$rf->{motif_feature_ids}{$ctype}}) {
+        $attr_cache->{motif}{$mfid} = undef;
+      }		
+      #$attr_cache->{motif} = $rf->{motif_feature_ids}{$ctype};
 		  
-	  #We now need to clean the fset_id values from the attrs cache
-	  #map { $attr_cache->{$_} = undef } keys %$attr_cache; 
+      #We now need to clean the fset_id values from the attrs cache
+      #map { $attr_cache->{$_} = undef } keys %$attr_cache; 
 
-	  print "Creating $ct RegulatoryFeature with attribute cache:\n".Data::Dumper::Dumper($attr_cache)."\n" if $debug_start;#level 3?
+      print "Creating $ct RegulatoryFeature with attribute cache:\n".Data::Dumper::Dumper($attr_cache)."\n" if $debug_start; #level 3?
 
-	  my $reg_feat = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new
-		(
-		 -slice            => $slice,
-		 -start            => $focus_start,
-		 -end              => $focus_end,
-		 -strand           => 0,
-		 -binary_string    => &build_binstring($rf, $ct),
-		 -feature_set      => $rfsets->{$ct},
-		 -feature_type     => $rfsets->{$ct}->feature_type,
-		 -attribute_cache  => $attr_cache,
-		 -projected        => $projected,
-		);
+      my $reg_feat = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new
+        (
+         -slice            => $slice,
+         -start            => $focus_start,
+         -end              => $focus_end,
+         -strand           => 0,
+         -binary_string    => &build_binstring($rf, $ct),
+         -feature_set      => $rfsets->{$ct},
+         -feature_type     => $rfsets->{$ct}->feature_type,
+         -attribute_cache  => $attr_cache,
+         -projected        => $projected,
+        );
 	  
-	  if ($write_features) {	#Store
+      if ($write_features) {    #Store
 		  
-		($reg_feat) = @{$rfa->store($reg_feat)};
+        ($reg_feat) = @{$rfa->store($reg_feat)};
 		  
-		#Sanity check bound here to make sure we have built correctly
-		#Can only test bounds if adaptors are set
+        #Sanity check bound here to make sure we have built correctly
+        #Can only test bounds if adaptors are set
 
-		if($ct ne 'MultiCell'){#Only have bound for non-core features
+        if ($ct ne 'MultiCell') { #Only have bound for non-core features
 
-		  #Account for bounds being set by focus features from another cell type
-		  #How do we account for long 'removed' features, which are added as attrs but do not contribute to bounds/core
+          #Account for bounds being set by focus features from another cell type
+          #How do we account for long 'removed' features, which are added as attrs but do not contribute to bounds/core
 
 
-		  #This is fetching all attribute features from DB!
+          #This is fetching all attribute features from DB!
 		  
 
-		  if ((($reg_feat->bound_start != $rf->{attribute_start}->{$ct}) && ($reg_feat->bound_start != $reg_feat->start)) ||
-			  ($reg_feat->bound_end != $rf->{attribute_end}->{$ct}) && ($reg_feat->bound_end != $reg_feat->end)){
+          if ((($reg_feat->bound_start != $rf->{attribute_start}->{$ct}) && ($reg_feat->bound_start != $reg_feat->start)) ||
+              ($reg_feat->bound_end != $rf->{attribute_end}->{$ct}) && ($reg_feat->bound_end != $reg_feat->end)) {
 			
 			
-			foreach my $attr(@{$reg_feat->regulatory_attributes}){
-			  warn "$attr ".$attr->dbID."\t".$attr->start."\t".$attr->end."\n";
-			}
+            foreach my $attr (@{$reg_feat->regulatory_attributes}) {
+              warn "$attr ".$attr->dbID."\t".$attr->start."\t".$attr->end."\n";
+            }
 
 
-			warn "Have the Y PAR features been filtered?\n";
+            warn "Have the Y PAR features been filtered?\n";
 
-			die("Calculated attribute_start/end values do not match bound_start/end/focus values:\n".
-				"\t$ct bound_start ".$reg_feat->bound_start.' != seen attr '.$rf->{attribute_start}->{$ct}."\n".
-				"\t$ct bound_end   ".$reg_feat->bound_end .' != seen attr '.$rf->{attribute_end}->{$ct}."\n".
-				"\t$ct start end   ".$reg_feat->start.' - '.$reg_feat->end."\n");
+            die("Calculated attribute_start/end values do not match bound_start/end/focus values:\n".
+                "\t$ct bound_start ".$reg_feat->bound_start.' != seen attr '.$rf->{attribute_start}->{$ct}."\n".
+                "\t$ct bound_end   ".$reg_feat->bound_end .' != seen attr '.$rf->{attribute_end}->{$ct}."\n".
+                "\t$ct start end   ".$reg_feat->start.' - '.$reg_feat->end."\n");
 
 
-			#Having problems here if we are trying to project between Y PAR and X
-			#Current dest_slice mapping code simply changes the start end values assuming the slice is correct
-			#currently no test for seq_region name match
+            #Having problems here if we are trying to project between Y PAR and X
+            #Current dest_slice mapping code simply changes the start end values assuming the slice is correct
+            #currently no test for seq_region name match
 			
-			#where are current check made on dest slice?
+            #where are current check made on dest slice?
 			
-			#solution would be to extract fetch_normalised_slice_projection code to separate method
-			#then match them to dest_slice if seq_region_name doesn't match
+            #solution would be to extract fetch_normalised_slice_projection code to separate method
+            #then match them to dest_slice if seq_region_name doesn't match
 			
-			#We hadn't seen this before as the PAR region data was filtered
+            #We hadn't seen this before as the PAR region data was filtered
 
-			#Also project_to_slice doesn't handle this PAR mapping, need to add normalised slice support there?
-		  }
-		}
-	  }
+            #Also project_to_slice doesn't handle this PAR mapping, need to add normalised slice support there?
+          }
+        }
+      }
 		
-	  push @reg_feats, $reg_feat;
-	}
+      push @reg_feats, $reg_feat;
+    }
   }
 
   return \@reg_feats;
@@ -1796,15 +1800,15 @@ sub store_regbuild_meta_strings{
   my ($sql, $meta_value, $reg_string, $cmd, $msg);
   my $fset = $dset->product_FeatureSet;
 
-  if(! defined $fset ||
-	 $fset->feature_class ne 'regulatory'){
-	die('You must provide a DataSet with an associated \'regulatory\' product FeatureSet');
+  if (! defined $fset ||
+      $fset->feature_class ne 'regulatory') {
+    die('You must provide a DataSet with an associated \'regulatory\' product FeatureSet');
   }
 
   my @ssets = @{$dset->get_supporting_sets};
 
-  if(! @ssets){
-	throw('You must provide a DataSet with associated supporting sets');
+  if (! @ssets) {
+    throw('You must provide a DataSet with associated supporting sets');
   }
 
 
@@ -1816,23 +1820,23 @@ sub store_regbuild_meta_strings{
   #$reg_string = join(',', map {$_->dbID} sort {$a->name cmp $b->name} @ssets);
 
   my %reg_strings = 
-	(
-	 "regbuild.${ctype}.feature_set_ids" => join(',', map {
-	   $_->dbID} sort {$a->name cmp $b->name
-					 } @ssets),
-	 "regbuild.${ctype}.feature_type_ids" => join(',', map {
-	   $_->feature_type->dbID} sort {$a->name cmp $b->name
-								   } @ssets),
-	);
+    (
+     "regbuild.${ctype}.feature_set_ids" => join(',', map {
+       $_->dbID} sort {$a->name cmp $b->name
+                     } @ssets),
+     "regbuild.${ctype}.feature_type_ids" => join(',', map {
+       $_->feature_type->dbID} sort {$a->name cmp $b->name
+                                   } @ssets),
+    );
 
   
   my @ffset_ids;
 
-  foreach my $ffset_id(keys %focus_fsets){
+  foreach my $ffset_id (keys %focus_fsets) {
 
-	if ($focus_fsets{$ffset_id}->cell_type->name eq $dset->cell_type->name){
-	  push @ffset_ids, $ffset_id;
-	}
+    if ($focus_fsets{$ffset_id}->cell_type->name eq $dset->cell_type->name) {
+      push @ffset_ids, $ffset_id;
+    }
   }
 
   #this should be sorted to avoid string mismatches with the same contents.
@@ -1840,29 +1844,24 @@ sub store_regbuild_meta_strings{
   
 
 
-  foreach my $meta_key(keys %reg_strings){
-	($meta_value) = $ds_adaptor->db->dbc->db_handle->selectrow_array("select meta_value from meta where meta_key='${meta_key}'");
+  foreach my $meta_key (keys %reg_strings) {
+    ($meta_value) = $ds_adaptor->db->dbc->db_handle->selectrow_array("select string from regbuild_string where name='${meta_key}'");
 
-	#warn "meta value for $meta_key is $meta_value";
+    if (! defined $meta_value){
+      eval { $ds_adaptor->db->dbc->do("insert into regbuild_string (name, string) values ('${meta_key}', '$reg_strings{${meta_key}}')") };
+      die("Couldn't store $meta_key in regbuild_string table.\n$@") if $@;
+    } 
+    elsif ($meta_value ne $reg_strings{$meta_key}) {
 
-
-	if (! defined $meta_value) {
-	  $sql = "insert into meta (meta_key, meta_value) values ('${meta_key}', '$reg_strings{${meta_key}}')";
-	
-	  eval { $ds_adaptor->db->dbc->do($sql) };
-	  die("Couldn't store $meta_key in meta table.\n$@") if $@;
-	} 
-	else {
-
-	  if($meta_value ne $reg_strings{$meta_key}){
-		$msg = "$meta_key already exists and does not match\nOld\t$meta_value\nNew\t$reg_strings{${meta_key}}\nPlease archive previous RegulatoryBuild.\n";
-		die $msg if(! $overwrite);
-		warn $msg;
-	  }
-	  else{  
-		warn "Found matching $meta_key meta entry, do you need to archive a previous Regulatorybuild?\n" if ! $overwrite;
-	  }
-	}
+      if ($overwrite) {
+        warn "Overwriting old $meta_key regbuild_string entry:\t$meta_value\nwith:\t\t\t\t\t\t\t\t\t\t".$reg_strings{$meta_key}."\n";
+        eval { $ds_adaptor->db->dbc->do("update regbuild_string set string='$reg_strings{${meta_key}}' where name ='${meta_key}'") };
+        die("Couldn't store $meta_key in regbuild_string table.\n$@") if $@;
+      }
+      else{
+        die "$meta_key already exists in regbuild_string table and does not match\nOld\t$meta_value\nNew\t$reg_strings{${meta_key}}\nPlease archive previous RegulatoryBuild.\n";
+      }
+    }
   }
   
   return \%reg_strings;
