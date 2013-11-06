@@ -872,31 +872,6 @@ CREATE TABLE `probe` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
-/**
-@table  probe_design
-@desc   Stores data from array design analyses.
-@colour  #FF6666
-
-@column probe_id			Internal ID
-@column analysis_id			@link analysis table ID
-@column coord_system_id		@link coord_system table ID
-@column score				Double analysis score value
-
-@see probe
-@see analysis
-@see coord_system
-*/
-
-DROP TABLE IF EXISTS `probe_design`;
-CREATE TABLE `probe_design` (
-   `probe_id` int(10) unsigned NOT NULL,
-   `analysis_id` smallint(5) unsigned NOT NULL,
-   `score` double default NULL,
-   `coord_system_id` int(10) unsigned NOT NULL,
-    PRIMARY KEY  (`probe_id`, `analysis_id`, `coord_system_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-
 
 
 /**
@@ -1420,6 +1395,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patc
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_73_74_b.sql|input_set_subset_split');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_73_74_c.sql|result_set.replicate');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_73_74_d.sql|status_name_length');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_73_74_e.sql|drop_probe_design');
 
 
 
