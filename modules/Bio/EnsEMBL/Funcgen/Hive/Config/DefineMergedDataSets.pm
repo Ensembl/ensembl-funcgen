@@ -265,13 +265,15 @@ sub pipeline_analyses {
      -logic_name => 'DefineMergedDataSet', 
 	   -module     => 'Bio::EnsEMBL::Funcgen::Hive::DefineDataSet',
 	   -parameters => 
-	    {can_run                       => 1, 
-	     #result_set_mode              => $self->o('result_set_mode'),
-	     #result_set_only              => $self->o('result_set_only'),
-	     default_result_set_analyses  => $self->o('default_result_set_analyses') ,
-	     default_feature_set_analyses => $self->o('default_feature_set_analyses'),
-	     #result_set_analysis          => $self->o('result_set_analysis') ,
-	     #feature_set_analysis         => $self->o('feature_set_analysis'),
+	    {#Need feature here, as we DefineDataSetmay want some for result_set too?
+	     #although this is now currently impossible since we are removing InputSet
+	     #but let's keep this generic for now
+	     default_feature_set_analyses => $self->o('default_peak_analyses'),
+	     feature_set_analysis_type    => 'peak',
+	     #not $self->o('peak_analysis') as we want to batch flow this
+	     #set_type=result_set could go here, but this is entirely dependant on what
+	     #flows into DefineMergedDataSet, so leave that to IdentifyResultSets
+	     #although this will likely ahve already been created
 	     #rollback                     => $self->o('rollback'), 
 	    },
 	  #Add in default params from above!
