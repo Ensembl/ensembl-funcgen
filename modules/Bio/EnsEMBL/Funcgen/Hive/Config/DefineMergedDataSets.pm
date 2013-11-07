@@ -3,7 +3,7 @@
 
 =head1 NAME
 
-    Bio::EnsEMBL::Funcgen::Hive::Config::DefineOutputSets;
+    Bio::EnsEMBL::Funcgen::Hive::Config::DefineMergedDataSets;
 
 =head1 SYNOPSIS
 
@@ -18,7 +18,7 @@
 =cut
 
 
-package Bio::EnsEMBL::Funcgen::Hive::Config::DefineOutputSets;
+package Bio::EnsEMBL::Funcgen::Hive::Config::DefineMergedDataSets;
 
 use strict;
 use warnings;
@@ -53,7 +53,7 @@ sub default_options {
   return 
     {
      %{$self->SUPER::default_options},        
-     run_DefineMergedOutputSet => 1, 
+     run_DefineMergedDataSet => 1, 
   };
 }
 
@@ -204,7 +204,7 @@ sub pipeline_analyses {
 	 #   }],
 			 	 
 	 -flow_into => {		 
-      '2' => [ 'DefineMergedOutputSet' ],
+      '2' => [ 'DefineMergedDataSet' ],
       #Not 2->A as we don't close the funnel for this pipeline
       #'A->1' => [ ],#Nothing else waiting for this job
       #Use branch 2 here so we can flow input_ids
