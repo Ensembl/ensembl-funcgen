@@ -2,13 +2,13 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::RunnableDB::DefineOuputSet
+Bio::EnsEMBL::Funcgen::Hive::DefineDataSet
 
 =head1 DESCRIPTION
 
 =cut
 
-package Bio::EnsEMBL::Funcgen::Hive::DefineOutputSet;
+package Bio::EnsEMBL::Funcgen::Hive::DefineDataSet;
 
 use warnings;
 use strict;
@@ -32,48 +32,47 @@ use base ('Bio::EnsEMBL::Funcgen::Hive::BaseDB');
 
 #todo
 #-slice_import_status?
+#This now needs to take lists of dbIDs for InputSubsets
+#These should all share the same control
+#The InputSets will be created iteratively
+#but the data flow will be done in a batch fashion, passing on sets of InputSet IDs
+#as appropriate
+#change this analysis to DefineSets? As it deals with InputSets, FeatureSets, ResultSet and DataSets
+#or should we just create another analysis which is DefineInputSets?
+#as it is almost entirely different?
 
 
 sub fetch_input {   # fetch parameters...
   my $self = shift @_;
   $self->SUPER::fetch_input;
+  #Don't run if we are only doing ReadAnalysis
+  return if $self->param_silent('run_DefineMergedDataSet') == 0;
   
-  my ($iset)      = @{&scalars_to_objects($self->out_db, 'InputSet',
-                                                'fetch_by_dbID',
-                                                [$self->param('dbID')] ) };
-
-  if(! defined $iset){
-    throw('Cannot fetch '.$self->param('name').
-      ' ('.$self->param('dbID').') InputSet from the database');
-  } 
-
+   
+  
+  my ($iset) = @{&scalars_to_objects($self->out_db,   'InputSet',
+                                     'fetch_by_dbID', [$self->param('dbID')] ) };
   $self->param('input_set', $iset);
 
-  
   #refactor this default_analysis method in BaseDB?
   my %default_analyses;
   my @set_types = ('result_set');
   push @set_types, 'feature_set' if ! $self->get_param_method('result_set_only', 'silent');
-  
-  
+ 
   #TODO Validate default set analysis keys exist as feature_type class or name?
   #This would fail for species with low coverage i.e. some names may be absent
-  
-  
+
+
   #Can we move some of this into BaseSequenceAnalysis as it will need to be used
   #by Run_QC_and_ALigner to enable selective data flow into the relevant 
   #IdentifyInputSets analyses
   
   foreach my $set_type( @set_types ){   
-    my $set_lname = $self->param($set_type.'_analysis');
-  
+    my $set_lname = $self->param_silent($set_type.'_analysis');
     
-  
     if(! defined $set_lname){
       
-      $default_analyses{$set_type} = $self->param('default_'.$set_type.'_analyses');     
-      #catch with param_silent rahter than param_required as it is 
-      #not mandatory if set_type analysis is defined
+      $default_analyses{$set_type} = $self->param_silent('default_'.$set_type.'_analyses');     
       
       if(! defined $default_analyses{$set_type}){
         throw("Please define -${set_type}_analysis or add to default_${set_type}_analyses".
@@ -108,6 +107,7 @@ sub fetch_input {   # fetch parameters...
                                      'fetch_by_logic_name',
                                      [$set_lname])->[0]);                                              
   }
+  
 
   return;
 }
@@ -127,6 +127,10 @@ sub fetch_input {   # fetch parameters...
 
 sub run {   # Check parameters and do appropriate database/file operations... 
   my $self = shift @_;
+  #Don't run if we are only doing ReadAnalysis
+  return if $self->param_silent('run_DefineMergedDataSet') == 0;
+  #or die/throw after setting $self->input_job->transient_error( 0 );?
+  
   
   my $helper = $self->helper;  
   my $iset   = $self->param('input_set');
@@ -191,6 +195,10 @@ sub run {   # Check parameters and do appropriate database/file operations...
   #No tracking required here?
   #Todo review whether rollback handles status entries correctly
   
+  
+  
+  #TODO Need to implement branch config here!
+  
 
   #Add set_type here as result_set_only could be change between writing
   #this output_id and running a down stream analysis  
@@ -208,8 +216,10 @@ sub run {   # Check parameters and do appropriate database/file operations...
 
 sub write_output {  # Create the relevant jobs
   my $self = $_[0];
-  
-  $self->helper->debug(1, 'DefineOutputSet data flowing:', $self->param('output_id'));
+  #Don't run if we are only doing ReadAnalysis
+  return if $self->param_silent('run_DefineMergedDataSet') == 0;
+    
+  $self->helper->debug(1, 'DefineDataSet data flowing:', $self->param('output_id'));
   $self->dataflow_output_id($self->param('output_id'), 1);
   return;
 }
