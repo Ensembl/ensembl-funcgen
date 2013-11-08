@@ -79,7 +79,7 @@ my %valid_table_names =
   (
    experimental_chip => undef,
    input_set         => undef,
-   input_saubset     => undef,
+   input_subset     => undef,
    channel           => undef,
   );
 
@@ -869,6 +869,47 @@ sub compare_to {
 }
 
 
+=head2 get_Experiment
+
+  Example    : my $exp = $result_set->get_Experiment();
+  Description: Getter for the Experiment of this ResultSet.
+               Returns undef if there is more than 1 contributing Experiment
+  Returntype : Bio::EnsEMBL::Funcgen::Experiment or undef
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub get_Experiment{ 
+  my $self = shift;
+  
+  if (! exists $self->{experiment}){ #exists as undef is valid
+    my @supporting_sets = $self->get_support;
+    
+    #These are likely InputSubsets, but may still be InputSets
+    
+    my $exp;
+    
+    foreach my $set(@supporting_sets){
+    
+      if($set->can('is_control') && $set->is_control){
+        next;
+      }
+    
+      $exp ||= $set->get_Experiment;
+      
+      if($set->get_Experiment->dbID != $exp->dbID){
+        undef $exp;
+        last;        
+      }
+    }
+    
+    $self->{experiment} = $exp;
+  }
+  
+  return $self->{experiment};
+}
   
 ### DEPRECATED ###
 
