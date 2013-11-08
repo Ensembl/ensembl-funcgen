@@ -144,8 +144,8 @@ sub new {
 
 =head2 get_Experiment
 
-  Example    : my $exp = $exp_set->get_Experiment();
-  Description: Getter for the Experiment of this DataSet.
+  Example    : my $exp = $inp_set->get_Experiment();
+  Description: Getter for the Experiment of this InputSet.
   Returntype : Bio::EnsEMBL::Funcgen::Experiment
   Exceptions : None
   Caller     : General
@@ -153,7 +153,7 @@ sub new {
 
 =cut
 
-sub get_Experiment{  return $_[0]->{experiment}; }
+sub get_Experiment{  return shift->{experiment}; }
 
 
 =head2 get_InputSubsets
@@ -198,7 +198,8 @@ sub get_InputSubsets{
 =cut
 
 sub get_subset_by_name{
-  my ($self, $name) = @_;
+  my $self = shift;
+  my $name = shift;
   return (exists $self->{'subsets'}{$name}) ? $self->{'subsets'}{$name} : undef;
 }
 
@@ -215,7 +216,7 @@ sub get_subset_by_name{
 =cut
 
 sub get_subset_names{
-  my ($self) = shift;
+  my $self = shift;
   if(! exists $self->{'subsets'}){
     $self->get_InputSubsets;
   }
@@ -236,7 +237,7 @@ sub get_subset_names{
 
 =cut
 
-sub replicate {  return $_[0]->{replicate}; }
+sub replicate {  return shift->{replicate}; }
 
 
 
