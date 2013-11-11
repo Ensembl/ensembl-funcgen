@@ -224,43 +224,40 @@ sub new_fast {
 
 =cut
 
+#mapping between probename and ac_dbid is conserved through array name between hashes
+#only easily linked from arrays to probenames,as would have to do foreach on array name
+  
+#Can we change the implementation of this so we're only storing the array once, reverse
+#the cache? But we want access to the array and using an object reference as a key is ????
+#How would this impact on method functionality?
+  
+#We now handle multiple names per probe/array
+#This will not capture the relationship between
+#probe name and position on array!
+#Not a problem for affy as name is position
+#Currently not a problem for nimblegen as probes never have more than 1 name???
+  
+#This does not however accomodate multiple names on the same ArrayChip
+#and there is currently no way of validating this with the current data model
+#This is however, caught by ImportArrays
+
+
 sub add_array_chip_probename {
-    my $self = shift;
-    my ($ac_dbid, $probename, $array) = @_;
-    $self->{ 'arrays'     } ||= {};
-    $self->{ 'probenames' } ||= {};
-
-    #mass redundancy here, possibility of fetching same array over and over!!!!!!!!!!!!!!
-	#Need to implement cache in caller i.e. adaptor
-	#Made mandatory to force creation of cache
-	#we need access to adaptor before we can test is valid and stored
-	#let's no test each time for adaptor as this would slow down
-	#Just test here instead.
-
-    if(! (ref($array) && $array->isa('Bio::EnsEMBL::Funcgen::Array') && $array->dbID)){
-      #$array = $self->adaptor()->db()->get_ArrayAdaptor()->fetch_by_array_chip_dbID($ac_dbid);
-	  throw('You must pass a valid Bio::EnsEMBL::Funcgen::Array. Maybe you want to generate a cache in the caller?');
+  my $self = shift;
+  my ($ac_dbid, $probename, $array) = @_;
+  $self->{arrays}     ||= {};
+  $self->{probenames} ||= {};
+    
+  if(! (ref($array) && $array->isa('Bio::EnsEMBL::Funcgen::Array') && $array->dbID)){
+	  throw('You must pass a valid Bio::EnsEMBL::Funcgen::Array. '.
+          'Maybe you want to generate a cache in the caller?');
 	}
 
-    #mapping between probename and ac_dbid is conserved through array name between hashes
-    #only easily linked from arrays to probenames,as would have to do foreach on array name
-
-	#Can we change the implementation of this so we're only storing the array once, reverse
-	#the cache? But we want access to the array and using an object reference as a key is ????
-	#How would this impact on method functionality?
-
-	#We now handle multiple names per probe/array
-	#This will not capture the relationship between
-	#probe name and position on array!
-	#Not a problem for affy as name is position
-	#Currently not a problem for nimblegen as probes never have more than 1 name???
-
-    $self->{ 'arrays'     }->{$ac_dbid} = $array;
-
-	$self->{ 'probenames' }->{$array->name()} ||= [];
-    push @{$self->{ 'probenames' }->{$array->name()}}, $probename;
-
-    return;
+  $self->{arrays}->{$ac_dbid}           = $array;
+  $self->{probenames}->{$array->name} ||= [];
+  push @{$self->{probenames}->{$array->name}}, $probename;
+  
+  return;
 }
 
 
@@ -336,17 +333,22 @@ sub get_names_Arrays {
   Arg [1]    : Optional - list of array names, defaults to all available
   Example    : my @probenames = @{$probe->get_all_probenames()};
   Description: Retrieves all names for this probe. Only makes sense for probes
-               that are part of a probeset (i.e. Affy probes), in which case
-			   get_all_complete_names() would be more appropriate.
-  Returntype : Listref of strings
+               which share identical sequence for a given probeset and array.
+               This can either be:
+               1 A non-probeset array where probes with different names but identical 
+                 sequence have beem merged, this is only possible if the probes in question 
+                 share the same Array but are on seaprate ArrayChips.
+               2 If they are part of a probeset (i.e. Affy probes), in which case 
+                 get_all_complete_names() would be more appropriate.
+  Returntype : Arrayref of strings
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : Stable
 
 =cut
 
 sub get_all_probenames {
-    my ($self, @array_names) = @_;
+  my ($self, @array_names) = @_;
 
 	my @names;
 	@array_names = keys %{$self->{'probenames'}} if ! @array_names;
@@ -355,7 +357,7 @@ sub get_all_probenames {
 	  push @names, @{$self->{'probenames'}->{$array}};
 	}
 
-    return \@names;
+  return \@names;
 }
 
 
@@ -380,49 +382,41 @@ sub get_all_probenames {
 #Needs more work
 
 sub get_probename {
-    my ($self, $arrayname) = @_;
-
-
+  my ($self, $arrayname) = @_;
 	my $probename;
 
-    if (! $arrayname){
+  if (! $arrayname){
+    #Sanity check that there is only one non-AFFY array
+    my @ac_ids = keys %{$self->{'arrays'}};
 
-      #Sanity check that there is only one non-AFFY array
-      my @ac_ids = keys %{$self->{'arrays'}};
-
-      if((scalar @ac_ids == 1) && ($self->get_all_Arrays()->[0]->vendor() ne "AFFY")){
-		$arrayname = $self->get_all_Arrays()->[0]->name();
-      }
-      else{
-		throw('Cannot retrieve name for Probe('.$self->dbID.") without arrayname if more than 1 array chip(@ac_ids) and not NIMBELGEN(".$self->get_all_Arrays()->[0]->vendor().")\n");
-      }
+    if((scalar @ac_ids == 1) && ($self->get_all_Arrays()->[0]->vendor() ne "AFFY")){
+      $arrayname = $self->get_all_Arrays()->[0]->name();
     }
+    else{
+      throw('Cannot retrieve name for Probe('.$self->dbID.") without arrayname if more than 1 array chip(@ac_ids) and not NIMBELGEN(".$self->get_all_Arrays()->[0]->vendor().")\n");
+    }
+  }
 
-
-	#Need to check if this exists before derefing
-	#Warn here?
-	return if(! exists ${$self->{'probenames'}}{$arrayname});
-
+	return if ! exists ${$self->{'probenames'}}{$arrayname};
 
 	my @names = @{$self->{'probenames'}->{$arrayname}};
 
-
 	if(scalar(@names) > 1){
-	  my $p_info = '';
+    my $p_info = '';
 
-	  if($self->probeset){
-		$p_info = " probeset ".$self->probeset->name;
-	  }
+    if($self->probeset){
+      $p_info = " probeset ".$self->probeset->name;
+    }
 
-	  warn("Found replicate probes with different names for array ${arrayname}${p_info}.Returning comma separated string list:\t".join(',', @names)."\n");
-	  return join(',', @names);
 
+	  #warn("Found replicate probes with different names for array ${arrayname}${p_info}.Returning comma separated string list:\t".join(',', @names)."\n");
+	  return join(',', @names);	  
 	}
 	else{
 	  ($probename) = @{$self->{'probenames'}->{$arrayname}};
 	}
 
-    return $probename;
+  return $probename;
 }
 
 
@@ -613,7 +607,7 @@ sub feature_count{
 }
 
 
-
+### DEPRECATED ###
 
 ### ARRAY DESIGN SPECIFIC METHODS
 
@@ -632,6 +626,8 @@ sub feature_count{
 
 sub add_Analysis_score{
     my ($self, $anal, $score) = @_;
+    
+    throw('This functionality was removed in release 74');
 
     if(! ($anal && $anal->dbID() && $anal->isa("Bio::EnsEMBL::Analysis"))){
       throw("Must provide a valid stored Bio::EnsEMBL::Analysis");
@@ -660,6 +656,8 @@ sub add_Analysis_score{
 
 sub add_Analysis_CoordSystem_score{
     my ($self, $anal, $cs, $score) = @_;
+
+  throw('This functionality was removed in release 74'); 
 
     if(! ($anal && $anal->dbID() && $anal->isa("Bio::EnsEMBL::Analysis"))){
       throw("Must provide a valid stored Bio::EnsEMBL::Analysis");
@@ -691,6 +689,8 @@ sub add_Analysis_CoordSystem_score{
 sub get_score_by_Analysis{
   my ($self, $anal) = @_;
 
+   throw('This functionality was removed in release 74');
+
   $self->get_all_design_scores() if ! defined $self->{'analysis'};
 
   if(! ($anal && $anal->dbID() && $anal->isa("Bio::EnsEMBL::Analysis"))){
@@ -718,6 +718,7 @@ sub get_score_by_Analysis{
 sub get_score_by_Analysis_CoordSystem{
     my ($self, $anal, $cs) = @_;
 
+ throw('This functionality was removed in release 74');
     $self->get_all_design_scores() if ! defined $self->{'analysis_coord_system'};
 
     if(! ($anal && $anal->dbID() && $anal->isa("Bio::EnsEMBL::Analysis"))){
@@ -757,6 +758,8 @@ sub get_score_by_Analysis_CoordSystem{
 
 sub get_all_design_scores{
   my ($self, $no_fetch) = @_;
+
+ throw('This functionality was removed in release 74');
 
   my ($analysis_id, $cs_id, $score, @design_scores);
 
