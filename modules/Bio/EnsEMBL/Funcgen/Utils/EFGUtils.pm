@@ -619,6 +619,8 @@ sub get_files_by_formats {
 
     #Simple/quick file test first before we do any conversion nonsense
     #This also means we don't have to have any conversion config to get a file which
+    
+    #This is being undefd after we filter, so hence, might pick up a pre-exising file!
     if(! defined $filter_format){
 
        if(my $from_path = check_file($path.'.'.$format, 'gz', $params)){#we have found the required format
@@ -654,12 +656,16 @@ sub get_files_by_formats {
           (my $outpath = $path) =~ s/\.unfiltered$//o;
 
           #$format key is same as first element
-          $done_formats->{$format} = $filter_method->($path.'.'.$filter_format, {%$params,
-                                                                          out_file => $outpath.'.'.$filter_format} );
-           #so we don't try and refilter when calling convert_${from_format}_${to_format}
-          delete $params->{filter_from_format};
+
+          $done_formats->{$format} = $filter_method->($path.'.'.$filter_format, {%$params, 
+                                                                          out_file => $outpath.'.'.$filter_format} );       
+          #so we don't try and refilter when calling convert_${from_format}_${to_format}
+ 
+          #delete $params->{filter_from_format};#Is this right?
+
           undef $filter_format; #Just for safety but not strictly needed
           $path = $outpath;
+
         }
       }
     }
@@ -823,7 +829,12 @@ sub convert_sam_to_bed{
 
   (my $bed_file = $in_file) =~ s/\.sam(\.gz)*?$/.bed/;
   run_system_cmd($ENV{EFG_SRC}."/scripts/miscellaneous/sam2bed.pl -uncompressed -1_based -files $in_file");
-  generate_checksum($bed_file);
+
+  if( (exists $params->{checksum}) && $params->{checksum}){
+    write_checksum($bed_file, $params);
+  }
+  
+
   return $bed_file;
 }
 
@@ -876,6 +887,11 @@ sub write_checksum{
 
 sub generate_checksum{
   my ($file, $digest_method) = @_;
+  
+  if($file =~ /\.gz$/){
+    throw("It is unsafe to generate checksums for compressed files:\n\t$file");  
+  }
+  
   $digest_method ||= 'hexdigest';
 
   my $ctx = Digest::MD5->new;
@@ -1004,7 +1020,7 @@ sub gunzip_file {
   if( is_gzipped($filepath) ){
     system("gunzip $filepath") && throw("Failed to gunzip file:\n$filepath\n$@");
     $filepath =~ s/\.gz$//;
-    $was_gzipped = 0;
+    $was_gzipped = 1;
   }
 
   return($filepath, $was_gzipped);
@@ -1320,36 +1336,13 @@ sub parse_DB_url {
 ################################################################################
 
 #Allow no_exit as some programs(tab2mage) give successful non-zero exit codes!
+#Would be nice to catch warn output also, but system doesn not handle this well and would
+#to redirect STDERR to a file to read back in. 
 
 sub run_system_cmd{
   my ($command, $no_exit) = @_;
-
-
-  my $redirect = '';
-
-  #$self->debug(3, "system($command)");
-
-  # decide where the command line output should be redirected
-
-  #This should account for redirects
-
-  #if ($self->{_debug_level} >= 3){
-
-  #  if (defined $self->{_debug_file}){
-  #    $redirect = " >>".$self->{_debug_file}." 2>&1";
-  #  }
-  #  else{
-  #    $redirect = "";
-  #  }
-  #}
-  #else{
-    #$redirect = " > /dev/null 2>&1";
-  #}
-
-  # execute the passed system command
-  my $status = system("$command $redirect");
+  my $status = system($command);#implement $redirect
   my $exit_code = $status >> 8;
-
 
   if ($status == -1) {
     warn "Failed to execute: $!\n";
@@ -1777,6 +1770,7 @@ sub url_from_DB_params {
 #This may cause problems if the $file_path is already .gz
 
 
+
 sub check_file{
   my ($file_path, $suffix, $params) = @_;
 
@@ -1785,9 +1779,21 @@ sub check_file{
   if(-f $file_path){
     $found_path = $file_path;
   }
-  elsif(defined $suffix && (-f $file_path.'.'.$suffix) ){
-    $found_path = $file_path.'.'.$suffix;
+  elsif(defined $suffix){
+    
+    if($file_path =~ /\.${suffix}/o){
+      $file_path =~ s/\.${suffix}$//;
+      
+      if(-f $file_path){
+        $found_path = $file_path;  
+      }
+    }
+    elsif(-f $file_path.'.'.$suffix){
+      gunzip_file($file_path.'.'.$suffix);
+      $found_path = $file_path;    
+    }
   }
+    
 
   if($found_path){
     my $validate_checksum;
