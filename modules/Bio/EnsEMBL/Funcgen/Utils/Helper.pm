@@ -105,10 +105,10 @@ use vars qw(@ISA);
 #set this to debug level + 1?
 $Data::Dumper::Maxdepth = 2;
 
-my @rollback_tables = ( 'data_set',   'feature_set',
-                        'result_set', 'input_set',
-                        'experiment', 'array',
-                        'array_chip', 'experimental_chip' );
+my @rollback_tables = qw( data_set   feature_set
+                          result_set input_set
+                          experiment array
+                          array_chip experimental_chip );
 
 #List of valid rollback levels
 #To be used in conjunction with -full_delete
@@ -1170,8 +1170,9 @@ sub _validate_Set_config {
 sub define_DataSet {
   my $self = shift; 
   
-  my ($ssets, $fclass, $name, $db) = 
-    rearrange(['SUPPORTING_SETS', 'FEATURE_CLASS' ,'NAME', 'DBADAPTOR'], @_ );
+  my ($ssets, $fclass, $name, $db, $rset_mode) = 
+    rearrange(['SUPPORTING_SETS', 'FEATURE_CLASS' ,'NAME', 
+               'DBADAPTOR', 'RESULT_SET_MODE'], @_ );
   #No need to _validate_Set_config here as it will be done in the below methods
  
   
@@ -1183,10 +1184,11 @@ sub define_DataSet {
   #so we can pass it as support
   my $rset;
   
-  if($fclass eq 'annotated'){ 
+  if($fclass eq 'annotated'){
     #what about result_set_mode = none here?
-    #we may want to rollback full delete here
-    #this is a bit odd that define_ResultSet will delete if fully
+    #This is handled via define_ResultSet
+    #which will also handle a rollback/full delete
+    #this is a bit odd that define_ResultSet will delete 
     #alternate is to fetch the stored set and call _validate_rollback_Set
     #directly from here
     
