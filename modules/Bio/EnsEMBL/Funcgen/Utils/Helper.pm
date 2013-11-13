@@ -81,9 +81,9 @@ package Bio::EnsEMBL::Funcgen::Utils::Helper;
 
 use Bio::Root::Root;
 use Data::Dumper qw(Dumper);
-use Bio::EnsEMBL::Utils::Exception qw (throw stack_trace);
-use Bio::EnsEMBL::Utils::Argument qw( rearrange );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( get_date are_valid );
+use Bio::EnsEMBL::Utils::Exception         qw( throw stack_trace );
+use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( get_date assert_refs );
 use Bio::EnsEMBL::Funcgen::FeatureSet;
 use Bio::EnsEMBL::Funcgen::DataSet;
 use Bio::EnsEMBL::Funcgen::ResultSet;
@@ -1307,7 +1307,7 @@ sub rollback_FeatureSet {
         $fset->name."\nPlease omit one");  
     }
 
-    are_valid('Bio::EnsEMBL::Slice', $slices);
+    assert_refs($slices, 'Bio::EnsEMBL::Slice');
    
     $self->log( "Restricting to slices:\n\t\t" .
                 join( "\n\t\t", ( map { $_->name } @$slices ) ) );
