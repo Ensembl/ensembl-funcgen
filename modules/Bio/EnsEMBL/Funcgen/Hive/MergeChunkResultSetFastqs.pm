@@ -225,50 +225,33 @@ sub run {
      
   #Cat rep numbers so we know exactly what this is. 
   my $merged_file_prefix = $self->get_study_name_from_ResultSet($rset).
-    '_'.join('_', sort(@rep_numbers));
+    '_'.join('_', sort(@rep_numbers)).'.fastq';
+    
+  #Clean away any that match the prefix, so we don't pick them up erroneously
+  #after the split.  
+  #Is an under score the correct thing to concat the prefix with the chunk suffix?
+  run_system_cmd("rm -f ${merged_file_prefix}_*");
      
   my $cmd = 'cat '.join(' ', @fastqs).' | split -d -a 4 -l '.
     $self->fastq_chunk_size.' - '.$self->work_dir.'/'.$merged_file_prefix;
    
-   run_system_cmd($cmd);
+  run_system_cmd($cmd);
+
+  #Now I need to know exactly what files were produced to data flow to individual alignment jobs
+  $self->set_param_method('chunk_files', [@{run_backtick_cmd("ls ${merged_file_prefix}_*")}]);
 
   return;
 }
 
 
-sub write_output {  # Create the relevant job
+sub write_output {  # Create the relevant jobs
   my $self = shift @_;
 
-  
-
-  #OLD CODE#
-
-  my $set_name = $self->_set_name;
-
-  my (@align_output_ids, @merge_output_ids);
-
-  opendir(DIR,$self->_output_dir());
-  for my $split_file ( grep(/^${set_name}_\d+_\d+_\d+$/,readdir(DIR)) ){
-  my $output = eval($self->input_id);
-  $output->{input_file} = $split_file;
-  push @align_output_ids, $output;
-  }
-  closedir(DIR);
-
-  # merge data for each replicate
-
-  for my $rep (@{$self->_replicates}){
-  my $output = eval($self->input_id);
-  $output->{replicate} = $rep;
-  push @merge_output_ids, $output;
-  }
-
-
   # files to align
-  $self->dataflow_output_id(\@align_output_ids, 1);
+  $self->dataflow_output_id($self->chunk_files, 2);
 
   # merge data across replicates
-  $self->dataflow_output_id($self->input_id, 2);#input_id
+  $self->dataflow_output_id(, 3);#input_id
   return 1;
 
 }
