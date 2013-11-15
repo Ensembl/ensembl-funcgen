@@ -55,13 +55,9 @@ package Bio::EnsEMBL::Funcgen::Experiment;
 use warnings;
 use strict;
 
-use Bio::EnsEMBL::Utils::Argument qw( rearrange );
+use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
-use Bio::EnsEMBL::Funcgen::Storable;
-use vars qw(@ISA);
-
-@ISA = qw(Bio::EnsEMBL::Funcgen::Storable);
-
+use base qw( Bio::EnsEMBL::Funcgen::Storable );
 
 
 =head2 new
@@ -92,10 +88,8 @@ use vars qw(@ISA);
 
 sub new {
 	my $caller = shift;
-
-	my $class = ref($caller) || $caller;
-
-	my $self = $class->SUPER::new(@_);
+	my $class  = ref($caller) || $caller;
+	my $self   = $class->SUPER::new(@_);
 
 	my ($name, $group, $date, $p_dtype, $desc, $archive_id, $data_url, $xml_id, $xml)
 		= rearrange( ['NAME', 'EXPERIMENTAL_GROUP', 'DATE', 'PRIMARY_DESIGN_TYPE',
@@ -137,8 +131,6 @@ sub new {
 }
 
 
-### ACCESSOR METHODS ###
-
 =head2 name
 
   Example     : my $exp_name = $exp->name;
@@ -151,7 +143,7 @@ sub new {
 =cut
 
 sub name{
-  return $_[0]->{'name'};
+  return shift->{name};
 }
 
 
@@ -169,9 +161,8 @@ sub name{
 #change in webcode before deprecating
 
 sub experimental_group{
-  return $_[0]->{'group'};
+  return shift->{group};
 }
-
 
 
 =head2 get_ExperimentalGroup
@@ -185,10 +176,7 @@ sub experimental_group{
 
 =cut
 
-sub get_ExperimentalGroup{ return $_[0]->{group}; }
-
-
-
+sub get_ExperimentalGroup{ return shift->{group}; }
 
 
 =head2 date
@@ -203,7 +191,7 @@ sub get_ExperimentalGroup{ return $_[0]->{group}; }
 =cut
 
 sub date{
-  return $_[0]->{'date'};
+  return shift->{date};
 }
 
 
@@ -219,11 +207,8 @@ sub date{
 =cut
 
 sub description{
-  return $_[0]->{'description'};
+  return shift->{description};
 }
-
-
-
 
 
 =head2 primary_design_type
@@ -238,11 +223,9 @@ sub description{
 =cut
 
 sub primary_design_type{
-  return $_[0]->{'primary_design_type'};
+  return shift->{primary_design_type};
 }
 
-
-# Accessor/Setter methods
 
 =head2 mage_xml
 
@@ -257,13 +240,11 @@ sub primary_design_type{
 =cut
 
 sub mage_xml{
-  my ($self) = shift;
+  my $self          = shift;	
+  $self->{mage_xml} = shift if @_;
 
-  $self->{'mage_xml'} = shift if(@_);
-
-  #use fetch_attrs?
-  if(! exists $self->{'mage_xml'} && $self->mage_xml_id()){
-	$self->{'mage_xml'} = $self->adaptor->fetch_mage_xml_by_Experiment($self);
+  if(! exists $self->{mage_xml} && $self->mage_xml_id()){
+	$self->{mage_xml} = $self->adaptor->fetch_mage_xml_by_Experiment($self);
   }
 
   return (exists $self->{'mage_xml'}) ? $self->{'mage_xml'} : undef;
@@ -283,19 +264,38 @@ sub mage_xml{
 =cut
 
 sub mage_xml_id{
-  my $self = shift;
-
-  $self->{'mage_xml_id'} = shift if @_;
-
-  return $self->{'mage_xml_id'};
+  my $self             = shift;	
+  $self->{mage_xml_id} = shift if @_;
+  return $self->{mage_xml_id};
 }
 
 
+=head2 get_InputSubsets
 
+  Example     : my @issets = @{$exp->getInputSubsets()}
+  Description : Retrieves all InputSubsets associated with this experiment.
+  Returntype  : Arrayref of Bio::EnsEMBL::Funcgen::InputSubsets
+  Exceptions  : None
+  Caller      : General
+  Status      : At risk
 
+=cut
 
+sub get_InputSubsets{
+  my $self = shift;
+ 
+  if(! exists $self->{'input_subsets'}){
+    $self->{'input_subsets'} = {};
+  
+    foreach my $isset(@{$self->adaptor->db->get_InputSubsetAdaptor->
+                          fetch_all_by_Experiments([$self])}){
+      $self->{'input_subsets'}->{$isset->dbID} = $isset;
+    }
+  }
 
-#These convenience methods are to provide a registry for the experimental chips of the experiment
+  return [values %{$self->{'input_subsets'}}];
+}
+
 
 =head2 get_ExperimentalChips
 
@@ -309,28 +309,18 @@ sub mage_xml_id{
 =cut
 
 sub get_ExperimentalChips{
-  my ($self) = shift;
+  my $self = shift;
 
-  #should this also store echips?
-
-  #Need to retrieve all from DB if not defined, then check whether already present and add and store if not
-  #what about immediate access to dbID
-  #should we separate and have add_ExperimentalChip?
-
-
-
-  if(! exists $self->{'experimental_chips'}){
-     $self->{'experimental_chips'} = {};
-
-     #need to warn about DBAdaptor here?
-
-    foreach my $echip(@{$self->adaptor->db->get_ExperimentalChipAdaptor->fetch_all_by_experiment_dbID($self->dbID())}){
-      $self->{'experimental_chips'}->{$echip->unique_id()} = $echip;
+  if(! exists $self->{experimental_chips}){
+    $self->{experimental_chips} = {};
+  
+    foreach my $echip(@{$self->adaptor->db->get_ExperimentalChipAdaptor->
+                          fetch_all_by_experiment_dbID($self->dbID())}){
+      $self->{experimental_chips}->{$echip->unique_id()} = $echip;
     }
   }
 
-  #is this returning a list or a listref?
-  return [values %{$self->{'experimental_chips'}}];
+  return [values %{$self->{experimental_chips}}];
 }
 
 =head2 add_ExperimentalChip
@@ -345,8 +335,9 @@ sub get_ExperimentalChips{
 =cut
 
 sub add_ExperimentalChip{
-  my ($self, $echip) = @_;
-
+  my $self  = shift; 
+  my $echip = shift;
+ 
 
  throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::ExperimentalChip object")
     if(! $echip->isa("Bio::EnsEMBL::Funcgen::ExperimentalChip") || ! $echip->dbID());
@@ -376,8 +367,9 @@ sub add_ExperimentalChip{
 =cut
 
 sub get_ExperimentalChip_by_unique_id{
-  my ($self, $uid) = @_;
-
+  my $self = shift;
+  my $uid  = shift;
+  
   my ($echip);
 
   throw("Must supply a ExperimentalChip unque_id") if(! defined $uid);
@@ -414,45 +406,6 @@ sub get_ExperimentalChip_unique_ids{
 
 
 
-
-### Deprecated methods ###
-
-
-sub group{
-  my $self = shift;
-
-  deprecate("group is deprecated experimental_group instead");
-  throw("You are trying to set a experimental group name using a deprecated method") if @_;
-  return $self->experimental_group()->name;
-}
-
-
-
-sub group_id{
-	my ($self) = shift;
-
-	deprecate("Experiment->group_id is deprecated. Use exp->experimental_group->dbID instead");
-	return $self->experimental_group()->dbID;
-}
-
-
-
-sub archive_id{ #deprecated in v68
-  #would deprecate, but no easy way of doing this reliably
-  throw("Use InputSubset->archive_id");
-}
-
-
-sub data_url{ #deprecated in v68
-  #would deprecate, but no easy way of doing this reliably
-  throw("Use InputSubset->display_url");
-}
-
-
-sub source_info{ #deprecated in v68
-  #would deprecate, but no easy way of doing this reliably
-  throw("Use InputSubset->source_info");
-}
 
 =head2 reset_relational_attributes
 
@@ -493,7 +446,8 @@ sub reset_relational_attributes{
   return;
 }
 
-=head2
+
+=head2 compare_to
 
 Args[1]    : Bio::EnsEMBL::Funcgen::Storable (mandatory)
 Args[2]    : Boolean - Optional 'shallow' - no object methods compared
@@ -526,7 +480,6 @@ sub compare_to {
   return $self->SUPER::compare_to($obj, $shallow, $scl_methods,
                                   $obj_methods);
 }
-
 
 1;
 
