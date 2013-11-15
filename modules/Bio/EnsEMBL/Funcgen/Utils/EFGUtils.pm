@@ -889,7 +889,7 @@ sub generate_checksum{
   my ($file, $digest_method) = @_;
   
   if($file =~ /\.gz$/){
-    throw("It is unsafe to generate checksums for compressed files:\n\t$file");  
+    throw("It is unsafe to generate checksums for a compressed file:\n\t$file");  
   }
   
   $digest_method ||= 'hexdigest';
@@ -1327,9 +1327,9 @@ sub parse_DB_url {
 
  ReturnType  : none
 
- Example     : $Helper->debug(2,"dir=$dir file=$file");
+ Example     : run_system_cmd($my_cmd);
 
- Exceptions  : throws exception if system command returns none zero
+ Exceptions  : Throws exception if system command returns none zero and no exit boolean not set
 
 =cut
 
@@ -1341,33 +1341,74 @@ sub parse_DB_url {
 
 sub run_system_cmd{
   my ($command, $no_exit) = @_;
-  my $status = system($command);#implement $redirect
-  my $exit_code = $status >> 8;
+  my $exit_status = system($command);#don't nest below, as this may cause problems with $!
+  return _handle_exit_status($command, $exit_status, $!, $no_exit);
+}
 
-  if ($status == -1) {
-    warn "Failed to execute: $!\n";
-  }
-  elsif ($status & 127) {
-    warn sprintf("Child died with signal %d, %s coredump\nError:\t$!",($status & 127),($status & 128) ? 'with' : 'without');
-  }
-  elsif($status != 0) {
-    warn sprintf("Child exited with value %d\nError:\t$!\n", $exit_code); #get the true exit code
-  }
 
-  #We're not catching error message here?
+################################################################################
+
+=head2 run_backtick_cmd
+
+ Description : Method to control the execution of the standard `backtick` command
+               and return the results
+
+ ReturnType  : Array or Scalar as required
+
+ Example     : $Helper->debug(2,"dir=$dir file=$file");
+
+ Exceptions  : throws exception if system command returns none zero
+
+=cut
+
+################################################################################
+
+sub run_backtick_cmd{
+  my $command = shift;
+  
+  my (@results, $result);
+  
+  if(wantarray){
+    @results = `$command`;
+  }
+  else{
+    $result  = `$command`;
+  }
+  
+  _handle_exit_status($command, $?, $!); 
+  return wantarray ? @results : $result;
+}
+
+sub _handle_exit_status{
+  my ($cmd, $exit_status, $errno, $no_exit) = @_;
+  
+  my $exit_code = $exit_status >> 8; #get the true exit code
+  
+  if ($exit_status == -1) {
+    warn "Failed to execute. Error:\t$errno\n";
+  }
+  elsif ($exit_status & 127) {
+    warn sprintf("Child process died with signal %d, %s coredump\nError:\t$errno",
+                 ($exit_status & 127),
+                 ($exit_status & 128) ? 'with' : 'without');
+  }
+  elsif($exit_status != 0) {
+    warn sprintf("Child process exited with value %d\nError:\t$errno\n", $exit_code);  
+  }
 
   if ($exit_code != 0){
 
     if (! $no_exit){
-      throw("System command failed:\t$command");
+      throw("System command failed:\t$cmd");
     }
     else{
-      warn("System command returned non-zero exit code:\t$command");
+      warn("System command returned non-zero exit code:\t$cmd");
     }
   }
 
   return $exit_code;
 }
+
 
 
 =head2 scalars_to_objects
