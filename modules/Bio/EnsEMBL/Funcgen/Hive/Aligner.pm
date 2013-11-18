@@ -47,10 +47,17 @@ sub new {
     throw("Reference file does not exist or is not a file:\n\t$ref_file");  
   }
 
+  if(defined $out_dir){ 
+    if(! -d $out_dir){
+      throw("Output directory does not exist:\n\t".$out_dir);  
+    }
+    
+    $self->{out_dir}      = $out_dir;
+  }
+
   $self->{program_file} = $prog_file;
   $self->{query_file}   = $query_file;
   $self->{parameters}   = defined $prog_params  ? $prog_params : ''; #To avoid warnings
-  $self->{out_dir}      = $out_dir;
   $self->{ref_file}     = $ref_file;
   
   return $self;
