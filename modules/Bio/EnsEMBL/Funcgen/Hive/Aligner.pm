@@ -2,12 +2,12 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::Hive::PeakCaller
+Bio::EnsEMBL::Funcgen::Hive::Aligner
 
 =head1 DESCRIPTION
 
-Base class for all peak caller analyses. Provides generic constructor method, 
-along with file validation, accessor methods and a simple feature storing.
+Base class for all sequence alignement analyses. Provides generic constructor method, 
+along with file validation and some accessor methods.
 
 =cut
 
