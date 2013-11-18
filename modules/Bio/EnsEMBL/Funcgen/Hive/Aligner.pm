@@ -55,7 +55,7 @@ sub new {
     $self->{output_dir}      = $out_dir;
   }
   
-  my ($input_dir = $query_file) =~ s/.*\///go;
+  (my $input_dir = $query_file) =~ s/.*\///go;
   $self->{input_dir}      = $input_dir;
   $self->{program_file} = $prog_file;
   $self->{query_file}   = $query_file;
