@@ -16,19 +16,8 @@ package Bio::EnsEMBL::Funcgen::Hive::Aligner;
 use warnings;
 use strict;
 
-#qw the methods even if they are EXPORTED, so we know where they come from
 use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
-use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref );
-#use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( is_gzipped         gunzip_file 
-#                                               file_suffix_parse  open_file ); #convert_strand_from_bed
-
-
-#Change this to inherit from ExecutableAnalysis, for PeakCaller 
-#(and any other runnabel Analysis to use)
-
-
-
 
 sub new {
   my $class = shift;
@@ -47,7 +36,15 @@ sub new {
   }
 
   if(! -f $prog_file){
-    throw("Program file does not exist or is not a file:\n$prog_file");  
+    throw("Program file does not exist or is not a file:\n\t$prog_file");  
+  }
+
+  if(! -f $query_file){
+    throw("Query file does not exist or is not a file:\n\t$query_file");  
+  }
+
+  if(! -f $ref_file){
+    throw("Reference file does not exist or is not a file:\n\t$ref_file");  
   }
 
   $self->{prog_file}  = $prog_file;
