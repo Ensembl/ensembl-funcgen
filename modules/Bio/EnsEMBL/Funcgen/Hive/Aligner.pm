@@ -55,8 +55,9 @@ sub new {
     $self->{output_dir}      = $out_dir;
   }
   
-  (my $input_dir = $query_file) =~ s/.*\///go;
-  $self->{input_dir}      = $input_dir;
+  (my $input_dir = $query_file) =~ s/(.*\/)[^\/].*/$1/go;
+  $query_file =~ s/$input_dir//;
+  $self->{input_dir}    = $input_dir;
   $self->{program_file} = $prog_file;
   $self->{query_file}   = $query_file;
   $self->{parameters}   = defined $prog_params  ? $prog_params : ''; #To avoid warnings
