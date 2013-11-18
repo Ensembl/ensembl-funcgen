@@ -26,7 +26,7 @@ sub new {
 
   my ($prog_file, $prog_params, $query_file, $ref_file, $out_dir) =
     rearrange(['PROGRAM_FILE', 'PARAMETERS', 'QUERY_FILE', 
-               'REFERENCE_FILE', 'OUT_DIR'], @_);
+               'REFERENCE_FILE', 'OUTPUT_DIR'], @_);
       
   if(! ($prog_file && $query_file && $ref_file)){
     throw("Some mandatory parameters are not met:\n\t".
@@ -52,9 +52,11 @@ sub new {
       throw("Output directory does not exist:\n\t".$out_dir);  
     }
     
-    $self->{out_dir}      = $out_dir;
+    $self->{output_dir}      = $out_dir;
   }
-
+  
+  my ($input_dir = $query_file) =~ s/.*\///go;
+  $self->{input_dir}      = $input_dir;
   $self->{program_file} = $prog_file;
   $self->{query_file}   = $query_file;
   $self->{parameters}   = defined $prog_params  ? $prog_params : ''; #To avoid warnings
@@ -67,7 +69,9 @@ sub query_file     { return shift->{query_file};   }
 sub reference_file { return shift->{ref_file};     }
 sub program_file   { return shift->{program_file}; }
 sub parameters     { return shift->{parameters};   }
-sub out_dir        { return shift->{out_dir};      }
+sub output_dir     { return shift->{output_dir};   }
+sub input_dir      { return shift->{input_dir};    }
+
 
 #abstract class which muct be defined in the the specific aligner sub class  
 #sub run{}
