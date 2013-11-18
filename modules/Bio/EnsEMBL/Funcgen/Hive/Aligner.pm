@@ -47,6 +47,9 @@ sub new {
     throw("Reference file does not exist or is not a file:\n\t$ref_file");  
   }
 
+  (my $input_dir = $query_file) =~ s/(.*\/)[^\/].*/$1/go;
+  $query_file =~ s/$input_dir//;
+
   if(defined $out_dir){ 
     if(! -d $out_dir){
       throw("Output directory does not exist:\n\t".$out_dir);  
@@ -54,9 +57,10 @@ sub new {
     
     $self->{output_dir}      = $out_dir;
   }
+  else{
+    $self->{output_dir}      = $input_dir;
+  }
   
-  (my $input_dir = $query_file) =~ s/(.*\/)[^\/].*/$1/go;
-  $query_file =~ s/$input_dir//;
   $self->{input_dir}    = $input_dir;
   $self->{program_file} = $prog_file;
   $self->{query_file}   = $query_file;
