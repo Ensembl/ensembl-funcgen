@@ -40,9 +40,22 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(list your required methods here);
 
 package Bio::EnsEMBL::Funcgen::Utils::EFGUtils;
 
-require Exporter;
+use warnings;
+use strict;
 
-@ISA = qw(Exporter);
+use Digest::MD5;
+use Bio::EnsEMBL::Utils::Exception qw( throw      );
+use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
+use Scalar::Util                   qw( blessed    );
+use File::Path                     qw( make_path  );
+use File::Basename                 qw( dirname fileparse );
+use File::Spec;
+use Time::Local;
+use FileHandle;
+use Carp;
+
+use parent qw( Exporter );
+use vars   qw( @EXPORT_OK );
 
 @EXPORT_OK = qw(
   add_external_db
@@ -73,6 +86,7 @@ require Exporter;
   path_to_namespace
   process_bam
   process_sam_bam
+  run_backtick_cmd
   run_system_cmd
   scalars_to_objects
   set_attributes_by_my_scalar_names
@@ -86,21 +100,8 @@ require Exporter;
   write_checksum
   );
 
-#These after @ISA and @EXPORT_OK to avoid warnings
-use warnings;
-use strict;
 
-use Digest::MD5;
 
-use Bio::EnsEMBL::Utils::Exception qw( throw      );
-use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
-use Scalar::Util                   qw( blessed    );
-use File::Path                     qw( make_path  );
-use File::Basename                 qw( dirname fileparse );
-use File::Spec;
-use Time::Local;
-use FileHandle;
-use Carp;
 
 #Split out methods into FileUtils.pm?
 
