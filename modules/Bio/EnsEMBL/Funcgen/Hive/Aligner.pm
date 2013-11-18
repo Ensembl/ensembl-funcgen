@@ -47,11 +47,11 @@ sub new {
     throw("Reference file does not exist or is not a file:\n\t$ref_file");  
   }
 
-  $self->{prog_file}  = $prog_file;
-  $self->{query_file} = $query_file;
-  $self->{parameters} = defined $prog_params  ? $prog_params : ''; #To avoid warnings
-  $self->{out_dir}    = $out_dir;
-  $self->{ref_file}   = $ref_file;
+  $self->{program_file} = $prog_file;
+  $self->{query_file}   = $query_file;
+  $self->{parameters}   = defined $prog_params  ? $prog_params : ''; #To avoid warnings
+  $self->{out_dir}      = $out_dir;
+  $self->{ref_file}     = $ref_file;
   
   return $self;
 }
