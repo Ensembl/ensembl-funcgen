@@ -61,12 +61,10 @@ package Bio::EnsEMBL::Funcgen::CellType;
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::Utils::Argument qw( rearrange ) ;
+use Bio::EnsEMBL::Utils::Argument  qw( rearrange ) ;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
-use Bio::EnsEMBL::Funcgen::Storable;
 
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::Storable);
+use parent qw(Bio::EnsEMBL::Storable);
 
 my %valid_genders = (
                      male   => 1,

@@ -48,19 +48,15 @@ in the experimental_chip table.
 
 =cut
 
-use strict;
-use warnings;
-
 
 package Bio::EnsEMBL::Funcgen::ExperimentalChip;
 
-
-use Bio::EnsEMBL::Utils::Argument qw( rearrange );
+use strict;
+use warnings;
+use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
-use Bio::EnsEMBL::Funcgen::Storable;
 
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::Storable);
+use parent qw(Bio::EnsEMBL::Funcgen::Storable);
 
 
 =head2 new

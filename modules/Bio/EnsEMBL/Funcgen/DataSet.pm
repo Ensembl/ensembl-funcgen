@@ -64,12 +64,11 @@ use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate);
-use Bio::EnsEMBL::Funcgen::Storable;
 
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::Storable);
+use parent qw(Bio::EnsEMBL::Funcgen::Storable);
+
 #Should not be a Set as is sufficiently different
-#_set_Sets_anf_types also allows all Sets to be supporting
+#_set_Sets_and_types also allows all Sets to be supporting
 #but we should not add a DataSet as support
 
 =head2 new

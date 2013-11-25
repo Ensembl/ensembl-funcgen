@@ -62,20 +62,15 @@ attributes may not be altered after they are created.
 
 =cut
 
+package Bio::EnsEMBL::Funcgen::CoordSystem;
 
 use strict;
 use warnings;
 
-package Bio::EnsEMBL::Funcgen::CoordSystem;
+use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
+use Bio::EnsEMBL::Utils::Exception qw( throw );
 
-use Bio::EnsEMBL::Storable;
-
-use Bio::EnsEMBL::Utils::Argument  qw(rearrange);
-use Bio::EnsEMBL::Utils::Exception qw(throw);
-
-use vars qw(@ISA);
-
-@ISA = qw(Bio::EnsEMBL::Storable);
+use parent qw(Bio::EnsEMBL::Storable);
 
 my %warnings;
 

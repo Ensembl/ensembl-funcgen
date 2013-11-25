@@ -64,13 +64,13 @@ Bio::EnsEMBL::Funcgen::SetFeature
 =cut
 
 package Bio::EnsEMBL::Funcgen::DNAMethylationFeature;
+
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Argument qw( rearrange );
+use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 
-#use parent recommended but available from perl 5.10.1
-use base qw(Bio::EnsEMBL::Funcgen::SetFeature);
+use parent qw(Bio::EnsEMBL::Funcgen::SetFeature);
 
 
 =head2 new
