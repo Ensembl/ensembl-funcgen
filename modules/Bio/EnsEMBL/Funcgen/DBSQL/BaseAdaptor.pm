@@ -43,16 +43,17 @@ Bio::EnsEMBL::DBSQL::BaseAdaptor
 package Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
 use strict;
-
-require Exporter;
-use Class::Inspector; #For list_valid_constraints
+use warnings;
+#use Class::Inspector; #For list_valid_constraints
 use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
-use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use DBI qw(:sql_types);
+#have to re-import them, as we lose %EXPORT_TAGS in core BaseAdaptor
 
-use vars qw(@ISA @EXPORT);
-@ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor Exporter);
+use parent qw(Bio::EnsEMBL::DBSQL::BaseAdaptor Exporter);
+
+require Exporter; #Still required to use vars @EXPORT
+use vars qw( @EXPORT );
 @EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}});
 
 
@@ -107,8 +108,6 @@ sub new {
                is the 'states' constraint which uses AND logic, as this provide
                more appropriate functionality for this constraint.
 
-               NOTE: See list_valid_constraint for access to the valid
-               constraints for this adaptor
   Returntype : Scalar - Constraint SQL string
   Exceptions : Throws if params hash argument is not valid.
                Throws if specific constraint name if not valid.
@@ -148,8 +147,8 @@ sub compose_constraint_query{
         my $constrain_method = '_constrain_'.$constraint_key;
           
         if(! $self->can($constrain_method)){
-          throw($constraint_key." is not a valid constraint type. Valid constraints for ".ref($self)." are:\n\t".
-            join("\n\t", @{$self->list_valid_constraints}));
+          throw($constraint_key." is not a valid constraint type.");
+          # Valid constraints for ".ref($self)." are:\n\t".join("\n\t", @{$self->list_valid_constraints}));
         }
     
         #Only call constraint method if we have data or it is not optional
@@ -178,17 +177,17 @@ sub compose_constraint_query{
 }
 
 
-=head2 list_valid_constraints
-
-  Example    : print "Valid constraints are:\t".join("\t", @{$adaptor->list_valid_constraints});
-  Description: This method simply returns a list of valid constraint hash keys for use with
-               fetch method which support the compose_query_constraint method.
-  Returntype : Listref of scalar contraint keys
-  Exceptions : None
-  Caller     : compose_query_constraint
-  Status     : At Risk
-
-=cut
+#=head2 list_valid_constraints
+#
+#  Example    : print "Valid constraints are:\t".join("\t", @{$adaptor->list_valid_constraints});
+#  Description: This method simply returns a list of valid constraint hash keys for use with
+#               fetch method which support the compose_query_constraint method.
+#  Returntype : Listref of scalar contraint keys
+#  Exceptions : None
+#  Caller     : compose_query_constraint
+#  Status     : At Risk
+#
+#=cut
 
 #Grab all the keys from the symbol table and see if they have a coderef assigned
 #no strict 'refs';
@@ -197,13 +196,16 @@ sub compose_constraint_query{
 #This doesn't recurse down @ISA and don't seem to have a coderef associated???
 #although it is supposed to
 
-sub list_valid_constraints{
-  my $self = $_[0];
+#sub list_valid_constraints{
+#  my $self = $_[0];
 
-  #Minor helpful voodoo
-  return [ map {/_constrain_([a-zA-Z_]+$)/ ? $1 : () }
-               @{Class::Inspector->methods(ref($self), 'private')} ];
-}
+#  #Minor helpful voodoo
+#  return [ map {/_constrain_([a-zA-Z_]+$)/ ? $1 : () }
+#               @{Class::Inspector->methods(ref($self), 'private')} ];
+#}
+
+
+#Class::Inspector is no a core perl module
 
 
 =head2 _tables
