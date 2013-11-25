@@ -73,12 +73,12 @@ sub fetch_all_by_InputSet {
 }
 
 
-=head2 fetch_all_by_Experiment
+=head2 fetch_all_by_Experiments
 
-  Arg [1]    : Bio::EnsEMBL::Funcgen::Experiment
-  Example    : my @subsets = @{$iss_adaptopr->fetch_all_by_Experiment($exp_obj)};
+  Arg [1]    : Arrayref of Bio::EnsEMBL::Funcgen::Experiment objects
+  Example    : my @subsets = @{$iss_adaptopr->fetch_all_by_Experiments($exp_objs)};
   Description: Retrieves InputSubset objects from the database that belong to
-               the given Experiment
+               the given Experiments
   Returntype : Arrayref of Bio::EnsEMBL::Funcgen::InputSubset objects
   Exceptions : None
   Caller     : General
@@ -89,7 +89,7 @@ sub fetch_all_by_InputSet {
 sub fetch_all_by_Experiments {
   my ($self, $exps) = @_;
 
-  my $params = {constraints => {experiments => [$exps]}};
+  my $params = {constraints => {experiments => $exps}};
 	return $self->generic_fetch($self->compose_constraint_query($params));
 }
 
