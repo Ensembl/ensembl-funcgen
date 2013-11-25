@@ -46,13 +46,11 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor;
 
 use strict;
 use warnings;
-
 use Bio::EnsEMBL::Utils::Exception         qw( throw warning );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( mean median );
 use Bio::EnsEMBL::Funcgen::ResultSet;
-use Bio::EnsEMBL::Funcgen::ResultFeature;
-use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor; #For export
-use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor); #@ISA
+use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor; #DBI sql_types import
+
+use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor);
 
 
 =head2 fetch_all_by_feature_class
@@ -737,72 +735,8 @@ sub store_chip_channels{
 }
 
 
-
-=head2 fetch_ResultFeatures_by_Slice_ResultSet
-
-  Arg[0]     : Bio::EnsEMBL::Slice - Slice to retrieve results from
-  Arg[1]     : Bio::EnsEMBL::Funcgen::ResultSet - ResultSet to retrieve results from
-  Arg[2]     : optional string - STATUS e.g. 'DIPLAYABLE'
-  Example    : my @rfeatures = @{$rsa->fetch_ResultFeatures_by_Slice_ResultSet($slice, $rset, 'DISPLAYABLE')};
-  Description: Gets a list of lightweight ResultFeatures from the ResultSet and Slice passed.
-               Replicates are combined using a median of biological replicates based on
-               their mean techinical replicate scores
-  Returntype : List of Bio::EnsEMBL::Funcgen::ResultFeature
-  Exceptions : Warns if not experimental_chip ResultSet
-               Throws if no Slice passed
-               Warns if
-  Caller     : general
-  Status     : At risk
-
-=cut
-
-
-#Could we also have an optional net size for grouping ResultFeature into  Nbp pseudo ResultFeatures?
-
-
-#This does not account for strandedness!!
-###???
-#Is this sensible?  Do we really want the full probe object alongside the ResultFeatures?
-#strandedness?
-#what about just the probe name?
-#we could simplt add the probe_id to the ResultFeature
-#This would prevent creating probe features for all of the features which do not have results for a given resultset
-#This will mean the probe will still have to be individually created
-#But we're only creating it for those which we require
-#and we're now creating the lightweight ResultFeature instead of the ProbeFeature
-#However, if we're dealing with >1 rset in a loop
-#Then we'll be recreating the same ResultFeatures and probes for each set.
-#We're already restricting the ProbeFeatures to those within the rset
-#What we want is to get the score along side the ProbeFeature?
-#But we want the probe name!!
-#We really want something that will give Probe and ResultFeature
-#Let's set the Probe as an optional ResultFeature attribute
-
-
-sub fetch_ResultFeatures_by_Slice_ResultSet{
-  my ($self, $slice, $rset, $ec_status, $with_probe) = @_;
-
-  warn "Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor::fetch_ResultFeatures_by_Slice_ResultSet is now deprecated\n".
-	"Please use the ResultFeatureAdaptor directly";
-
-  return $self->db->get_ResultFeatureAdaptor->fetch_all_by_Slice_ResultSet($slice, $rset, $ec_status, $with_probe);
-
-}
 ### GENERIC CONSTRAIN METHODS ###
 #See Base/SetAdaptor
-
-### DEPRECATED METHODS ###
-
-
-sub fetch_all_by_name_Analysis {#Deprecated in v69
-  my ($self, $name, $anal) = @_;
-
-  deprecate('To be removed in v71. Please use fetch_all_by_name');
-
-  return $self->fetch_all_by_name($name, undef, undef, $anal);
-}
-
-
 
 
 
