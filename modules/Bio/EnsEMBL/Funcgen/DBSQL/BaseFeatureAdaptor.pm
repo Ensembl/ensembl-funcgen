@@ -40,20 +40,18 @@ to redefine some methods to use with the Funcgen DB.
 =cut
 
 package Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;
-use vars qw(@ISA @EXPORT);
+
 use strict;
-
-
+use warnings;
 use Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Utils::Cache;
-use Bio::EnsEMBL::Utils::Exception qw(warning throw deprecate stack_trace_dump);
-use Bio::EnsEMBL::Utils::Argument qw(rearrange);
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
+use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 
-#@ISA = qw(Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
-#re-ordered this as core BaseAdaptor methods were over-riding Funcgen BaseAdaptor methods
-@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor);
+use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor);
 
+use vars qw(@EXPORT); #require Exporter is done in BaseAdaptor
 @EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}});
 
 ### To do ###

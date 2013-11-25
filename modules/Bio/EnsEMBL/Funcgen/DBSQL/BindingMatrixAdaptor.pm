@@ -44,18 +44,15 @@ Bio::EnsEMBL::Funcgen::BindingMatrix
 
 =cut
 
+package Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixAdaptor;
 
 use strict;
 use warnings;
-
-package Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixAdaptor;
-
 use Bio::EnsEMBL::Utils::Exception qw( warning throw );
 use Bio::EnsEMBL::Funcgen::BindingMatrix;
-use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#sql_types barewords import
 
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
+use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 
 =head2 fetch_all_by_name

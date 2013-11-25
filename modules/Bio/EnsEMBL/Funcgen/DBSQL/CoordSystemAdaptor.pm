@@ -122,21 +122,16 @@ not have a version an empty string ('') is used instead.
 
 =cut
 
-#All these methods are actually used internally within the funcgen API
-
-
-
 package Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor;
 
+use strict;
+use warnings;
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Funcgen::CoordSystem;
 
-use strict;
-use warnings;
-use vars qw(@ISA);
+use parent qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
-@ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
 my %cs_warnings;
 
 =head2 new
