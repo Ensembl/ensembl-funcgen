@@ -53,20 +53,14 @@ provide traceability to the source experiment from a given FeatureSet.
 
 =cut
 
-use strict;
-use warnings;
-
 package Bio::EnsEMBL::Funcgen::InputSet;
 
-use Bio::EnsEMBL::Utils::Argument qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate);
-use Bio::EnsEMBL::Funcgen::DBSQL::InputSubsetAdaptor;
-use Bio::EnsEMBL::Funcgen::InputSubset;
-use Bio::EnsEMBL::Funcgen::Set;
-use Bio::EnsEMBL::Analysis;
+use strict;
+use warnings;
+use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate);
 
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::Set);
+use parent qw(Bio::EnsEMBL::Funcgen::Set);
 
 
 my %valid_types = (
