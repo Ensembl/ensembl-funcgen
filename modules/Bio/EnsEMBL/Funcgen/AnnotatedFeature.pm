@@ -61,17 +61,15 @@ Bio::EnsEMBL::Funcgen::DBSQL::AnnotatedFeatureAdaptor
 
 =cut
 
+package Bio::EnsEMBL::Funcgen::AnnotatedFeature;
+
 use strict;
 use warnings;
 
-package Bio::EnsEMBL::Funcgen::AnnotatedFeature;
-
-use Bio::EnsEMBL::Utils::Argument qw( rearrange );
+use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
-use Bio::EnsEMBL::Funcgen::SetFeature;
 
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::SetFeature);
+use parent qw(Bio::EnsEMBL::Funcgen::SetFeature);
 
 
 =head2 new

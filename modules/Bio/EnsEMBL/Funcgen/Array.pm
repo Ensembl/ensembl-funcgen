@@ -54,19 +54,15 @@ in the array table.
 =cut
 
 
+package Bio::EnsEMBL::Funcgen::Array;
+
 use strict;
 use warnings;
 
-
-package Bio::EnsEMBL::Funcgen::Array;
-
-
-use Bio::EnsEMBL::Utils::Argument qw( rearrange );
+use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
-use Bio::EnsEMBL::Funcgen::Storable;
 
-use vars qw(@ISA);# %VALID_TYPE);
-@ISA = qw(Bio::EnsEMBL::Funcgen::Storable);
+use parent qw(Bio::EnsEMBL::Funcgen::Storable);
 
 
 # Possible types for OligoArray objects
