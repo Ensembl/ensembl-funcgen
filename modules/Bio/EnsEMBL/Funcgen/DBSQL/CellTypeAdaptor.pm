@@ -40,17 +40,15 @@ Funcgen CellType objects.
 
 =cut
 
-use strict;
-use warnings;
-
 package Bio::EnsEMBL::Funcgen::DBSQL::CellTypeAdaptor;
 
+use strict;
+use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( warning throw );
 use Bio::EnsEMBL::Funcgen::CellType;
-use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#sql_types barewords import
 
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
+use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 #todo revert this to core BaseAdaptor and change _true_tables to _tables
 # as we don't use query composition or other funcgen BaseAdaptor methods?

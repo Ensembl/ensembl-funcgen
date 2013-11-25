@@ -40,17 +40,15 @@ Funcgen Channel objects.
 
 =cut
 
-use strict;
-use warnings;
-
 package Bio::EnsEMBL::Funcgen::DBSQL::ChannelAdaptor;
 
+use strict;
+use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( warning throw );
 use Bio::EnsEMBL::Funcgen::Channel;
-use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#sql_types barewords import
 
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
+use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 
 =head2 fetch_by_type_experimental_chip_id
