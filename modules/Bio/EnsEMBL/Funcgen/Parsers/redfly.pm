@@ -21,8 +21,15 @@
 package Bio::EnsEMBL::Funcgen::Parsers::redfly;
 
 use strict;
-
+use warnings;
 use File::Basename;
+use Bio::EnsEMBL::DBEntry;
+use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
+use Bio::EnsEMBL::Funcgen::ExternalFeature;
+
+use parent qw(Bio::EnsEMBL::Funcgen::Parsers::BaseExternalParser);
+
 
 # To get files for REDfly, download the following 2 GFF3 files (e.g. via wget):
 #
@@ -38,18 +45,6 @@ use File::Basename;
 #CRMs
 #2L 	REDfly	regulatory_region	2455781	2457764	.	.	.	ID="dpp_intron2"; Dbxref="Flybase:FBgn0000490", "PMID:8167377", "REDfly:247; Evidence="reporter construct (in vivo)"; Ontology_term="FBbt:00005304";
 #2L 	REDfly	regulatory_region	2445769	2446581	.	.	.	ID="dpp_dpp813"; Dbxref="Flybase:FBgn0000490", "PMID:7821226", "REDfly:246; Evidence="reporter construct (in vivo)"; Ontology_term="FBbt:00005653","FBbt:00001051";
-
-
-
-use Bio::EnsEMBL::Funcgen::Parsers::BaseExternalParser;
-use Bio::EnsEMBL::DBEntry;
-use Bio::EnsEMBL::Funcgen::ExternalFeature;
-use Bio::EnsEMBL::Utils::Exception qw( throw );
-use Bio::EnsEMBL::Utils::Argument qw( rearrange );
-
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::Parsers::BaseExternalParser);
-
 
 
 
