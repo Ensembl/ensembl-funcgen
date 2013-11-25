@@ -44,14 +44,11 @@ package Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor;
 
 use strict;
 use warnings;
-
-use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
+use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Funcgen::DataSet;
-use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#sql_types bareword import
 
-
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
+use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 =head2 fetch_by_name
 

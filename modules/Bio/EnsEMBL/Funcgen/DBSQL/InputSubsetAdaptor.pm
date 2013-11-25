@@ -22,7 +22,7 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::DBSQL::InputSubsetAdaptor - A module to
+Bio::EnsEMBL::Funcgen::DBSQL::InputSubsetAdaptor
 
 
 =head1 SYNOPSIS
@@ -40,13 +40,12 @@ package Bio::EnsEMBL::Funcgen::DBSQL::InputSubsetAdaptor;
 
 use strict;
 use warnings;
-
 use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception         qw( throw warning );
+use Bio::EnsEMBL::Utils::Exception         qw( throw );
 use Bio::EnsEMBL::Funcgen::InputSubset;
-use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor; #Performs import
-use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor);
+use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor; #DBI sql_types import
 
+use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor);
 
 
 =head2 fetch_all_by_InputSet

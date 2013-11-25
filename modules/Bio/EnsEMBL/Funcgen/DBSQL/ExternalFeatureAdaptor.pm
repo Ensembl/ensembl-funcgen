@@ -44,12 +44,12 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ExternalFeatureAdaptor;
 
 use strict;
 use warnings;
-
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::ExternalFeature;
-use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor; #for import of sql_types barewords
+use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor; #DBI sql_types import
 
 use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
+
 
 
 =head2 _true_tables

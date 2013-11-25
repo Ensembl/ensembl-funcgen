@@ -84,15 +84,13 @@ package Bio::EnsEMBL::Funcgen::DBSQL::DNAMethylationFeatureAdaptor;
 
 use strict;
 use warnings;
-
 use Bio::EnsEMBL::Funcgen::DNAMethylationFeature;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
-use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;
-#Only needs this for non-DB based methods, e.g. projection, new_fast etc.
+#use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor; 
+#Only need BaseFeatureAdaptor for non-DB based methods, e.g. projection, new_fast etc.
 use Bio::EnsEMBL::ExternalData::BigFile::BigBedAdaptor;
 
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor); #Should also inherit from Funcgen BigBedAdaptor
+use parent qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor ); #Should also inherit from Funcgen BigBedAdaptor
 
 #This 'mix-in' inheritance should be well defined, similar to a Moose 'has' (role) style relation ship.
 #It should provide a well defined interface, which does not corrupt the interface of the inheriting class

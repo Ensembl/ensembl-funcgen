@@ -40,15 +40,15 @@ Funcgen feature set.
 
 =cut
 
-use strict;
-use warnings;
-
 package Bio::EnsEMBL::Funcgen::DBSQL::FeatureSetAdaptor;
 
-use Bio::EnsEMBL::Utils::Exception qw( warning throw deprecate );
+use strict;
+use warnings;
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 use Bio::EnsEMBL::Funcgen::FeatureSet;
-use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor; #for export
-use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor);
+use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor; #DBI sql_types import
+
+use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor);
 
 
 =head2 fetch_all_by_feature_class
