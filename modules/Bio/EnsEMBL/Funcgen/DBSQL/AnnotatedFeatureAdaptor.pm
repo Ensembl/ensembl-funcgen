@@ -40,17 +40,15 @@ AnnotatedFeature objects.
 
 =cut
 
-use strict;
-use warnings;
-
 package Bio::EnsEMBL::Funcgen::DBSQL::AnnotatedFeatureAdaptor;
 
+use strict;
+use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
-use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor; #import sql_types barewords
 
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
+use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
 
 
 =head2 _true_tables
