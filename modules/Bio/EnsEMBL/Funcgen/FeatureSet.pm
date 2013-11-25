@@ -80,15 +80,14 @@ Bio::EnsEMBL::Funcgen::DataSet;
 =cut
 
 package Bio::EnsEMBL::Funcgen::FeatureSet;
-use base qw(Bio::EnsEMBL::Funcgen::Set);
-#use base rather than @ISA as we don't need to export from Set
-
-use Bio::EnsEMBL::Utils::Argument qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate);
-use Bio::EnsEMBL::Funcgen::Set;
 
 use strict;
 use warnings;
+use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
+use Bio::EnsEMBL::Utils::Exception qw( throw );
+
+use parent qw(Bio::EnsEMBL::Funcgen::Set);
+
 
 my %valid_classes = (
                      annotated    => undef,
@@ -590,24 +589,6 @@ sub reset_relational_attributes{
 }
 
 
-
-
-### DEPRECATED ###
-
-=head2 get_Experiment
-#
-#  Example    : my $exp = $FeatureSet->get_Experiment;
-#  Description: Retrieves the Experiment for this FeatureSet
-#  Returntype : Bio::EnsEMBL::Funcgen::Experiment
-#  Exceptions : None
-#  Caller     : General
-  Status     : DEPRECATED
-
-=cut
-
-sub get_Experiment{ #deprecated before v71
-  throw('FeatureSet::get_Experiment is not longer supported, please use FeatureSet::get_InputSet');
-}
 
 
 1;
