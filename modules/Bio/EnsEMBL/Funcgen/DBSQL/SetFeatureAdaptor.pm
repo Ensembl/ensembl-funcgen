@@ -51,15 +51,20 @@ package Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor;
 
 use strict;
 use warnings;
-
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
 use Bio::EnsEMBL::Funcgen::SetFeature;
-use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;#DBI sql_types import
 
-use vars qw(@ISA @EXPORT);
-@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor);
+use parent qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor );
+
+use vars qw( @EXPORT ); #require Exporter is done in BaseAdaptor
 @EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}});
+
+use parent qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor );
+
+
+
 #required for subclass adaptor store and _obj_from_sth methods
 
 =head2 fetch_all_by_FeatureType_FeatureSets

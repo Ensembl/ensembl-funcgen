@@ -55,11 +55,9 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ResultFeatureAdaptor;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
-use Bio::EnsEMBL::Funcgen::ResultSet;
+use Bio::EnsEMBL::Utils::Exception         qw( throw deprecate );
 use Bio::EnsEMBL::Funcgen::ResultFeature;
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(mean median);
-use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor; #for import of bareword SQL_TYPES
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor; #DBI sql_types import
 
 use parent qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor
 			         Bio::EnsEMBL::Funcgen::Collector::ResultFeature  );
@@ -1020,49 +1018,6 @@ sub _list_seq_region_ids{
 #Need to separate the common utility methods and have co-inheritance e.g.
 #DBFile::Adaptor    Utils::FeatureAdaptor
 #DBAdaptor::Adaptor Utils::FeatureAdaptor
-
-
-
-#Deprecated/Removed
-
-=head2 resolve_replicates_by_ResultSet
-
-  Arg[0]     : HASHREF - result_set_input_id => @scores pairs
-  #Arg[1]     : Bio::EnsEMBL::Funcgen::ResultSet - ResultSet to retrieve results from
-  Example    : my @rfeatures = @{$rsa->fetch_ResultFeatures_by_Slice_ResultSet($slice, $rset, 'DISPLAYABLE')};
-  Description: Gets a list of lightweight ResultFeatures from the ResultSet and Slice passed.
-               Replicates are combined using a median of biological replicates based on 
-               their mean techinical replicate scores
-  Returntype : List of Bio::EnsEMBL::Funcgen::ResultFeature
-  Exceptions : None
-  Caller     : general
-  Status     : deprecated
-
-=cut
-
-
-sub resolve_replicates_by_ResultSet{
-  die('ExperimentalChip/Channel based ResultFeature support was removed in version 63');
-}
-
-
-=head2 fetch_results_by_probe_id_ResultSet
-
-  Arg [1]    : int - probe dbID
-  Arg [2]    : Bio::EnsEMBL::Funcgen::ResultSet
-  Example    : my @probe_results = @{$ofa->fetch_results_by_ProbeFeature_ResultSet($pid, $result_set)};
-  Description: Gets result for a given probe in a ResultSet
-  Returntype : ARRAYREF
-  Exceptions : throws if args not valid
-  Caller     : General
-  Status     : deprecated
-
-=cut
-
-sub fetch_results_by_probe_id_ResultSet{
-  die('ExperimentalChip/Channel based ResultFeature support was removed in version 63');
-}
-
 
 
 
