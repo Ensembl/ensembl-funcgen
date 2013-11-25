@@ -35,21 +35,14 @@ my $gene = $db_adaptor->get_GeneAdaptor->fetch_by_stable_id('ENSG00000101367');
 
 package Bio::EnsEMBL::Funcgen::DBSQL::DBEntryAdaptor;
 
+use strict;
+use warnings;
 use Bio::EnsEMBL::DBSQL::DBEntryAdaptor;
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
-
 use Bio::EnsEMBL::DBEntry;
-#use Bio::EnsEMBL::IdentityXref;
-#use Bio::EnsEMBL::OntologyXref;
+use Bio::EnsEMBL::Utils::Exception qw( throw );
 
-use Bio::EnsEMBL::Utils::Exception qw(deprecate throw warning);
-
-use vars qw(@ISA @EXPORT);
-use strict;
-
-@ISA = qw( Bio::EnsEMBL::DBSQL::DBEntryAdaptor Bio::EnsEMBL::DBSQL::BaseAdaptor);
-@EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}});
-
+use parent qw( Bio::EnsEMBL::DBSQL::DBEntryAdaptor Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
 =head2 fetch_all_by_FeatureType
 
