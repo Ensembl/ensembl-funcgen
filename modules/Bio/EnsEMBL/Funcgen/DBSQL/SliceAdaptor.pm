@@ -3,6 +3,7 @@
 # Ensembl module for Bio::EnsEMBL::Funcgen::DBSQL::SliceAdaptor
 #
 #
+
 =head1 LICENSE
 
   Copyright (c) 1999-2013 The European Bioinformatics Institute and
@@ -49,14 +50,12 @@ methods to generate Slices for eFG features associated with a given gene or tran
 
 
 package Bio::EnsEMBL::Funcgen::DBSQL::SliceAdaptor;
-use vars qw(@ISA);
+
 use strict;
+use warnings;
+use Bio::EnsEMBL::Utils::Exception qw( throw );
 
-use Bio::EnsEMBL::DBSQL::SliceAdaptor;
-use Bio::EnsEMBL::Utils::Exception qw(throw deprecate warning stack_trace_dump);
-
-
-@ISA = ('Bio::EnsEMBL::DBSQL::SliceAdaptor');
+use parent qw(Bio::EnsEMBL::DBSQL::SliceAdaptor);
 
 sub new {
   my ($caller, $efgdb) = @_;

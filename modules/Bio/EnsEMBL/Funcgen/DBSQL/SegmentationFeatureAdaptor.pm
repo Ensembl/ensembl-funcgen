@@ -44,13 +44,11 @@ package Bio::EnsEMBL::Funcgen::DBSQL::SegmentationFeatureAdaptor;
 
 use strict;
 use warnings;
-
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::SegmentationFeature;
-use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor;#DBI sql_types import
 
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
+use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
 
 
 =head2 _true_tables

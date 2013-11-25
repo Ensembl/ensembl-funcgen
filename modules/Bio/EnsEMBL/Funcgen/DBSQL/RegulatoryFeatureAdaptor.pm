@@ -61,10 +61,10 @@ use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::RegulatoryFeature;
-use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor;#DBI sql_types import
 
-use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor); #@ISA
-#change to parent with perl 5.10
+use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
+
 
 my %valid_attribute_features = (
 								'Bio::EnsEMBL::Funcgen::MotifFeature' => 'motif',
