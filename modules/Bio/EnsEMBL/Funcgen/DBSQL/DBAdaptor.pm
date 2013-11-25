@@ -49,17 +49,18 @@ An adaptor to access the funcgen database and expose other available adaptors.
 package Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
 use strict;
+use warnings;
 
-use base qw(Bio::EnsEMBL::DBSQL::DBAdaptor); #@ISA
-use DBI;
-
-use Bio::EnsEMBL::Utils::Exception qw(warning throw deprecate stack_trace_dump);
+use Bio::EnsEMBL::Utils::Exception         qw( throw deprecate ) ;
+use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref );
+use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( assert_ref_do);
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBConnection;
 use Bio::EnsEMBL::Registry;
-use Bio::EnsEMBL::Utils::Argument qw(rearrange);
-use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils  qw(assert_ref_do);
+
+use DBI; #for import of sql_types barewords
+use parent qw(Bio::EnsEMBL::DBSQL::DBAdaptor);
 
 my $reg = "Bio::EnsEMBL::Registry";
 
@@ -262,21 +263,18 @@ sub new {
 
 =cut
 
-
-#This has to be in the DBAdaptor rather than Storable as we're
-#calling isa on self otherwise which we don't know whether we can
-
 sub is_stored_and_valid{
   my ($self, $class, $obj) = @_;
 
   assert_ref($obj,$class);
+
   if (! $obj->is_stored($self)) {
-    #is_stored checks adaptor params and dbID, but not whether the adaptor matches the class
     throw("$obj\t is not stored");
   }
 
   return;
 }
+
 
 =head2 are_stored_and_valid
 
@@ -295,7 +293,6 @@ sub is_stored_and_valid{
 
 sub are_stored_and_valid{
   my ($self, $class, $obj_list, $method_name) = @_;
-
   assert_ref($obj_list, 'ARRAY', 'object list');
 
   if(scalar(@$obj_list) == 0){
@@ -305,9 +302,7 @@ sub are_stored_and_valid{
   my @return_vals;
 
   foreach my $obj (@$obj_list) {
-    
-      $self->is_stored_and_valid($class, $obj);
-    
+    $self->is_stored_and_valid($class, $obj);
 
     if(! $method_name){
       assert_ref($obj, $class, 'object');
@@ -882,8 +877,8 @@ sub refresh_table {
 
 =head2 reset_table_autoinc
 
-  Arg [2]    : String - table name
-  Arg [3]    : String - Autoinc field
+  Arg [1]    : String - table name
+  Arg [2]    : String - Autoinc field
   Example    : $db->reset_table_autoinc('result_set', 'result_set_id');
   Description: Resets the autoinc field of a table to the next logical number.
                This is useful when importing and rolling back many entries.
