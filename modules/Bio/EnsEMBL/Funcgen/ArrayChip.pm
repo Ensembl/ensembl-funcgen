@@ -48,19 +48,15 @@ The data for ArrayChips is stored in the array_chip table.
 
 =cut
 
+package Bio::EnsEMBL::Funcgen::ArrayChip;
+
 use strict;
 use warnings;
 
+use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
+use Bio::EnsEMBL::Utils::Exception qw( throw );
 
-package Bio::EnsEMBL::Funcgen::ArrayChip;
-
-
-use Bio::EnsEMBL::Utils::Argument qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw warning );
-use Bio::EnsEMBL::Funcgen::Storable;
-
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::Storable);
+use parent qw(Bio::EnsEMBL::Funcgen::Storable);
 
 
 =head2 new
