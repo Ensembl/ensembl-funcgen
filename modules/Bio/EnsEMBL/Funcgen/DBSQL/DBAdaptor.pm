@@ -50,16 +50,13 @@ package Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
 use strict;
 use warnings;
-
+use DBI; #for resolving core DB
 use Bio::EnsEMBL::Utils::Exception         qw( throw deprecate ) ;
 use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref );
 use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( assert_ref_do);
-use Bio::EnsEMBL::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::DBSQL::DBConnection;
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( assert_ref_do );
 use Bio::EnsEMBL::Registry;
 
-use DBI; #for import of sql_types barewords
 use parent qw(Bio::EnsEMBL::DBSQL::DBAdaptor);
 
 my $reg = "Bio::EnsEMBL::Registry";
