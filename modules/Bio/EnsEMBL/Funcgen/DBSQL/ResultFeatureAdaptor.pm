@@ -59,12 +59,10 @@ use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 use Bio::EnsEMBL::Funcgen::ResultSet;
 use Bio::EnsEMBL::Funcgen::ResultFeature;
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(mean median);
-#Bareword SQL_TYPES not exported from BaseFeatureAdpator unless it is 'use'd first
-use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;
-use Bio::EnsEMBL::Funcgen::Collector::ResultFeature;
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor; #for import of bareword SQL_TYPES
 
-use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor
-			Bio::EnsEMBL::Funcgen::Collector::ResultFeature);
+use parent qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor
+			         Bio::EnsEMBL::Funcgen::Collector::ResultFeature  );
 
 #Private vars to used to maintain simple implementation of Collector
 #Should be set in each method to enable trimmingof  the start and end bins. 
