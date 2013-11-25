@@ -58,18 +58,15 @@ Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixAdaptor
 
 =cut
 
+package Bio::EnsEMBL::Funcgen::BindingMatrix;
 
 use strict;
 use warnings;
 
-package Bio::EnsEMBL::Funcgen::BindingMatrix;
-
-use Bio::EnsEMBL::Utils::Argument qw( rearrange ) ;
-use Bio::EnsEMBL::Utils::Exception qw( throw warning );
-use Bio::EnsEMBL::Funcgen::Storable;
-
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::Storable);
+use Bio::EnsEMBL::Utils::Argument  qw( rearrange ) ;
+use Bio::EnsEMBL::Utils::Exception qw( throw );
+  
+use parent qw(Bio::EnsEMBL::Funcgen::Storable);
 
 =head2 new
 
