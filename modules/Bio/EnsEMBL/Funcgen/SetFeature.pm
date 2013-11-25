@@ -77,15 +77,11 @@ package Bio::EnsEMBL::Funcgen::SetFeature;
 
 use strict;
 use warnings;
+use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
+use Bio::EnsEMBL::Utils::Exception qw( throw );
 
-use Bio::EnsEMBL::Feature;
-use Bio::EnsEMBL::Funcgen::Storable;
-use Bio::EnsEMBL::Utils::Argument qw(rearrange);
-use Bio::EnsEMBL::Utils::Exception qw(throw);
+use parent qw(Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable);
 
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable);
-#can't use base with dual inheritance
 
 =head2 new
 

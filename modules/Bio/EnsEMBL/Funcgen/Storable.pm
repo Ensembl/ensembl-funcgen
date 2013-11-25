@@ -47,15 +47,12 @@ package Bio::EnsEMBL::Funcgen::Storable;
 
 use strict;
 use warnings;
-
 use Bio::EnsEMBL::Registry;
-use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
-use Bio::EnsEMBL::Storable;
 
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Storable);
+use parent qw(Bio::EnsEMBL::Storable);
 
 =head2 new
 
