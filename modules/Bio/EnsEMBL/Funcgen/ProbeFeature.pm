@@ -48,19 +48,15 @@ object. The data are stored in the probe_feature table.
 
 =cut
 
-use strict;
-use warnings;
-
 package Bio::EnsEMBL::Funcgen::ProbeFeature;
 
-use Bio::EnsEMBL::Utils::Argument qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw );
-use Bio::EnsEMBL::Feature;
-use Bio::EnsEMBL::Funcgen::Storable;
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(median);
+use strict;
+use warnings;
+use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
+use Bio::EnsEMBL::Utils::Exception         qw( throw );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( median );
 
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable);
+use parent qw(Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable);
 
 
 =head2 new
