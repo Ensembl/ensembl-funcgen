@@ -50,9 +50,9 @@ package Bio::EnsEMBL::Funcgen::Parsers::Bed;
 use Bio::EnsEMBL::Funcgen::Parsers::InputSet;
 use Bio::EnsEMBL::Funcgen::FeatureSet;
 use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
-use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(open_file is_bed);
-use Bio::EnsEMBL::Utils::Argument qw( rearrange );
+use Bio::EnsEMBL::Utils::Exception         qw( throw warning deprecate );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( open_file is_bed is_gzipped);
+use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
 use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use File::Basename;
 use strict;
@@ -101,7 +101,7 @@ sub new{
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_, no_disconnect => 1);
   
-  throw("This is a skeleton class for Bio::EnsEMBL::Importer, should not be used directly") 
+  throw("This is a skeleton class for Bio::EnsEMBL::Funcgen::Importer, should not be used directly") 
 	if(! $self->isa("Bio::EnsEMBL::Funcgen::Importer"));
 
  
@@ -151,9 +151,26 @@ sub set_config{
   return;
 }
 
+#We aren't really preprocessing the file here
+#this is done in read_and_import_data
+#initialise_files?
+
+#do we even want to call this?
+#Can't we completely skip this in the caller
+#based on another flag?
+#prepare (does the sorting and pre_processing) and pre_process just does the slice
+#caching?
+#out_file will be infile if we are just pre-processing
+#if is already prepared, then we don't need to make a copy
+#Do we even need to add prepared to the file name?
+#This is filtered for the chr names
 
 
-sub pre_process_file{
+#This also set's the outputfile for use when preparing
+#simply don't write the no sort!
+
+
+sub initialise_input_file{
   my ($self, $filepath, $prepare) = @_;
 
   #Test file format
@@ -163,21 +180,26 @@ sub pre_process_file{
   #separate sort keys stop lexical sorting of start/end
   #when faced with a non numerical seq_region_name
   my $sort = ($prepare || ! $self->prepared) ? 'sort -k1,1 -k2,2n -k3,3n ' : '';
+  my $is_gzipped = &is_gzipped($filepath);
 
 
-  if($self->input_gzipped){
+  if($is_gzipped){
 	$sort .= '|' if $sort;
 	$self->input_file_operator("gzip -dc %s | $sort ");
   }
   else{
 	#This is really only required for read alignments
+	#If we dont have sort why are we even piping here? Shouldn't this just be <?
+		
 	$self->input_file_operator("$sort %s |");
   }
 
   
+
+  
   if(! defined  $self->output_file && $self->input_feature_class eq 'result'){
 	my ($name) = fileparse($filepath);
-	$name =~ s/\.gz// if $self->input_gzipped;
+	$name =~ s/\.gz// if $is_gzipped;
 
 	if($prepare){
 	  #This will be filtered for seq_region_name
@@ -261,7 +283,9 @@ sub parse_line{
   $line =~ s/\r*\n//o;#chump accounts for windows files
 
 
-  my ($chr, $start, $end, $name, $score, $strand, @other_fields) = split/\s+/o, $line;#Shoudl this not be \t?
+  my ($chr, $start, $end, $name, $score, $strand, @other_fields) = split(/\s+/o, $line);
+  
+  #Shoudl this not be \t?
   #Should we define minimum fields or microbed format with no naqme and just score?
   #my ($chr, $start, $end, $score) = split/\t/o, $line;#Mikkelson hack	
   #Validate variables types here beofre we get a nasty error from bind_param?
@@ -282,9 +306,8 @@ sub parse_line{
 	return 0;
   }
   else{
-	my $sr_name = $slice->seq_region_name;
+	my $sr_name    = $slice->seq_region_name;
 	my $slice_name = $slice->name;
-
 
 	if(! $prepare){
 
@@ -406,7 +429,6 @@ sub parse_Features_by_Slice{
   while((defined ($line = <$fh>)) && $parse){
 	#This does not catch the end of the file!
 
-
 	if($self->last_line){#Deal with previous line first
 	  $line = $self->last_line;
 	  $self->last_line('');
@@ -419,13 +441,14 @@ sub parse_Features_by_Slice{
 	$line =~ s/\r*\n//o if $line;#chump accounts for windows files
 
 	if(! $line){
-	  warn("Skipping empty line");
+	  warn("Skipping empty line, previous line is ".$self->last_line);
 	  next;
 	}
 
 	#We could use a generic method to parse here
 	#But it is small enough and simple enough to have twice
-	my ($chr, $start, $end, $name, $score, $strand, @other_fields) = split/\s+/o, $line;#Shoudl this not be \t?
+	my ($chr, $start, $end, $name, $score, $strand, @other_fields) = split/\s+/o, $line;
+	#Shoudl this not be \t?
 
 	if($slice_chr eq $chr){#Skim through the file until we find the slice
 	  $seen_chr = 1;
