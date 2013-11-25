@@ -50,16 +50,16 @@ ResultFeature collections or AnnotatedFeatures dependan ton the input feature cl
 package Bio::EnsEMBL::Funcgen::Parsers::InputSet;
 
 use strict;
+use warnings;
 use Bio::EnsEMBL::Analysis;
-use Bio::EnsEMBL::Utils::Exception         qw( throw warning deprecate );
+use Bio::EnsEMBL::Utils::Exception         qw( throw );
 use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(species_chr_num open_file is_gzipped);
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( species_chr_num open_file is_gzipped );
 use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 use Bio::EnsEMBL::Funcgen::SegmentationFeature;
 use Bio::EnsEMBL::Funcgen::FeatureType;
 
-
-use base qw(Bio::EnsEMBL::Funcgen::Parsers::BaseImporter); #@ISA change to parent with perl 5.10
+use parent qw(Bio::EnsEMBL::Funcgen::Parsers::BaseImporter);
 
 
 #todo change input_set_name to name

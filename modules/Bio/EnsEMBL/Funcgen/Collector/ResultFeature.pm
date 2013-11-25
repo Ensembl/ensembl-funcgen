@@ -1,4 +1,4 @@
-# $Id: ResultFeature.pm,v 1.13 2013-10-30 16:53:40 nj1 Exp $
+# $Id: ResultFeature.pm,v 1.14 2013-11-25 16:37:53 nj1 Exp $
 
 =head1 LICENSE
 
@@ -25,15 +25,14 @@ package Bio::EnsEMBL::Funcgen::Collector::ResultFeature;
 
 use strict;
 use warnings;
-
-use Bio::EnsEMBL::Utils::Argument  ('rearrange');
-use Bio::EnsEMBL::Utils::Exception ('throw');
+use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
+use Bio::EnsEMBL::Utils::Exception         qw( throw);
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw (open_file);
 use Bio::EnsEMBL::Funcgen::Collection::ResultFeature;
 use Bio::EnsEMBL::Funcgen::ProbeFeature; #Only used for _pre_storing slice/seq_region details
 #use POSIX;#ceil
 
-use base qw(Bio::EnsEMBL::Utils::Collector Bio::EnsEMBL::DBFile::CollectionAdaptor);#@ISA
+use parent qw(Bio::EnsEMBL::Utils::Collector Bio::EnsEMBL::DBFile::CollectionAdaptor);
 
 
 ### Global config variables

@@ -21,8 +21,15 @@
 package Bio::EnsEMBL::Funcgen::Parsers::biotiffin;
 
 use strict;
-
+use warnings;
 use File::Basename;
+use Bio::EnsEMBL::DBEntry;
+use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
+use Bio::EnsEMBL::Funcgen::ExternalFeature;
+
+use parent qw(Bio::EnsEMBL::Funcgen::Parsers::BaseExternalParser);
+
 
 # To get files for bioTIFFIN, download the following GFF file (e.g. via wget):
 #
@@ -35,14 +42,6 @@ use File::Basename;
 # 3R      MotifScanner    TIFDMEM0000001  13455911        13455921        0.0     -       0
 # 3R      MotifScanner    TIFDMEM0000001  17062830        17062840        0.0     +       0
 
-use Bio::EnsEMBL::Funcgen::Parsers::BaseExternalParser;
-use Bio::EnsEMBL::DBEntry;
-use Bio::EnsEMBL::Funcgen::ExternalFeature;
-use Bio::EnsEMBL::Utils::Exception qw( throw );
-use Bio::EnsEMBL::Utils::Argument qw( rearrange );
-
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::Parsers::BaseExternalParser);
 
 
 sub new {

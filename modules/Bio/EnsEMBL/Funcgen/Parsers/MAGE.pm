@@ -36,17 +36,16 @@ B<This program> is a base main class for all MAGE type array importers(e.g. Nimb
 
 package Bio::EnsEMBL::Funcgen::Parsers::MAGE;
 
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(get_date open_file run_system_cmd);
-use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
-use Bio::EnsEMBL::Utils::Argument qw( rearrange );
-use Bio::EnsEMBL::Funcgen::Utils::Helper;
-use Bio::MAGE::XMLUtils;
-
-
-use File::Path;
 use strict;
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::Utils::Helper);
+use warnings;
+use File::Path;
+use Bio::MAGE::XMLUtils;
+use Bio::EnsEMBL::Utils::Exception         qw( throw );
+use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( get_date open_file run_system_cmd );
+use Bio::EnsEMBL::Funcgen::Utils::Helper;
+
+use parent qw(Bio::EnsEMBL::Funcgen::Utils::Helper);
 
 
 

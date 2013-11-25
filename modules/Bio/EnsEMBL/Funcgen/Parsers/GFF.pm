@@ -44,13 +44,12 @@ parsing and importing of experimental data.
 
 package Bio::EnsEMBL::Funcgen::Parsers::GFF;
 
-use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
-use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use strict;
+use warnings;
+use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 
-
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::Parsers::ExperimentalSet);
+use parent qw(Bio::EnsEMBL::Funcgen::Parsers::InputSet);
 
 =head2 new
 

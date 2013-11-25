@@ -42,6 +42,11 @@ experimental data.
 
 package Bio::EnsEMBL::Funcgen::Parsers::Nimblegen;
 
+use strict;
+use warnings;
+use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
+use Bio::EnsEMBL::Utils::Exception         qw( throw );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( species_chr_num open_file );
 use Bio::EnsEMBL::Funcgen::Array;
 use Bio::EnsEMBL::Funcgen::ProbeSet;
 use Bio::EnsEMBL::Funcgen::Probe;
@@ -50,15 +55,8 @@ use Bio::EnsEMBL::Funcgen::FeatureType;
 use Bio::EnsEMBL::Funcgen::ExperimentalChip;
 use Bio::EnsEMBL::Funcgen::ArrayChip;
 use Bio::EnsEMBL::Funcgen::Channel;
-use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(species_chr_num open_file);
-use Bio::EnsEMBL::Utils::Argument qw( rearrange );
-use Bio::EnsEMBL::Funcgen::Parsers::MAGE;
 
-use strict;
-
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::Parsers::MAGE);
+use parent qw(Bio::EnsEMBL::Funcgen::Parsers::MAGE);
 
 =head2 new
 

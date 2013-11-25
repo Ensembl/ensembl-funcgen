@@ -47,20 +47,17 @@ parsing and importing of experimental data.
 
 package Bio::EnsEMBL::Funcgen::Parsers::Bed;
 
-use Bio::EnsEMBL::Funcgen::Parsers::InputSet;
+use strict;
+use warnings;
+use File::Basename;
+use Bio::EnsEMBL::Utils::Exception         qw( throw );
+use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( open_file is_bed is_gzipped);
 use Bio::EnsEMBL::Funcgen::FeatureSet;
 use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
-use Bio::EnsEMBL::Utils::Exception         qw( throw warning deprecate );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( open_file is_bed is_gzipped);
-use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
 use Bio::EnsEMBL::Funcgen::Utils::Helper;
-use File::Basename;
-use strict;
 
-use Data::Dumper;
-
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::Parsers::InputSet);
+use parent qw(Bio::EnsEMBL::Funcgen::Parsers::InputSet);
 
 #To do
 # Extend this so we can import features to annotated_feature

@@ -21,18 +21,15 @@
 package Bio::EnsEMBL::Funcgen::Parsers::BaseExternalParser;
 
 use strict;
-
+use warnings;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Utils::Argument qw( rearrange );
+use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Funcgen::FeatureSet;
 use Bio::EnsEMBL::Funcgen::FeatureType;
 use Bio::EnsEMBL::Analysis;
-#use Bio::EnsEMBL::Funcgen::Parsers::BaseImporter;
-#use vars qw(@ISA)
-#@ISA = ('Bio::EnsEMBL::Funcgen::Utils::Helper');
 
-use base qw(Bio::EnsEMBL::Funcgen::Parsers::BaseImporter); #@ISA change to parent with perl 5.10
+use parent qw(Bio::EnsEMBL::Funcgen::Parsers::BaseImporter);
 
 
 

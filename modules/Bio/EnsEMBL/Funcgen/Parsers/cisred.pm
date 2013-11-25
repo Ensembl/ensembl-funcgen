@@ -21,8 +21,15 @@
 package Bio::EnsEMBL::Funcgen::Parsers::cisred;
 
 use strict;
-
+use warnings;
 use File::Basename;
+use Bio::EnsEMBL::DBEntry;
+use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Funcgen::ExternalFeature;
+
+use parent qw(Bio::EnsEMBL::Funcgen::Parsers::BaseExternalParser);
+
+
 
 # To get files for CisRed data, download the following 2 files (e.g. via wget):
 #
@@ -52,17 +59,6 @@ use File::Basename;
 # 8	17	23151483	23153621	-1	ENSG00000007171
 # 14	1	166434638	166437230	-1	ENSG00000007908
 # 19	1	23602820	23605631	-1	ENSG00000007968
-
-
-use Bio::EnsEMBL::Funcgen::Parsers::BaseExternalParser;
-use Bio::EnsEMBL::DBEntry;
-use Bio::EnsEMBL::Funcgen::ExternalFeature;
-use Bio::EnsEMBL::Utils::Exception qw( throw );
-
-
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::Parsers::BaseExternalParser);
-
 
 
 
