@@ -57,17 +57,14 @@ Bio::EnsEMBL::Funcgen::DBSQL::SegmentationFeatureAdaptor
 
 =cut
 
-use strict;
-use warnings;
-
 package Bio::EnsEMBL::Funcgen::SegmentationFeature;
 
-use Bio::EnsEMBL::Utils::Argument qw( rearrange );
+use strict;
+use warnings;
+use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
-use Bio::EnsEMBL::Funcgen::SetFeature;
 
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::SetFeature);
+use parent qw(Bio::EnsEMBL::Funcgen::SetFeature);
 
 =head2 new
 

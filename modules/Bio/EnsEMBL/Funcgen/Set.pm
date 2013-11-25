@@ -61,7 +61,6 @@ use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
-use Bio::EnsEMBL::Funcgen::Storable;
 
 use parent qw(Bio::EnsEMBL::Funcgen::Storable);
 
