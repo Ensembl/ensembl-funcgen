@@ -112,39 +112,17 @@ use vars qw(@ISA);
 
 sub new{
   my ($caller) = shift;
-
-  #my $reg = "Bio::EnsEMBL::Registry";
   my $class = ref($caller) || $caller;
 
-  #$user, $host, $port, $pass, $dbname, $db, $assm_version, $reg_config, $reg_db,  $ucsc_coords, $verbose, $release, $reg_host, $reg_port, $reg_user, $reg_pass
-  #$ftype_name, $ctype_name,
-
-  my ($name, $format, $vendor, $group, $location, $contact,
-      $array_name, $array_set, $array_file, $data_dir, $result_files,
-      $exp_date, $desc, $design_type, $output_dir, $input_dir,
-      $batch_job, $farm, $prepared,
-      $norm_method, $old_dvd_format, $parser_type)
-    = rearrange(['NAME', 'FORMAT', 'VENDOR', 'GROUP', 'LOCATION', 'CONTACT',
-                 'ARRAY_NAME', 'ARRAY_SET', 'ARRAY_FILE', 'DATA_DIR', 'RESULT_FILES',
-                 'EXPERIMENT_DATE', 'DESCRIPTION',
-                 'DESIGN_TYPE', 'OUTPUT_DIR', 'INPUT_DIR', #to allow override of defaults
-                 'BATCH_JOB', 'FARM', 'PREPARED', 'NORM_METHOD',
-                 'OLD_DVD_FORMAT', 'PARSER'], @_);
-
-
-
-  #### Define parent parser class based on vendor
-  throw("Mandatory argument -vendor not defined") if ! defined $vendor;
-
-  #This will override the default Vendor Parser type
-  #Evals simply protect from messy errors if parser type not found
-  my $parser_error;
-  my $vendor_parser =  ucfirst(lc($vendor));
-
-
-  #WARNING evaling these parsers to enable pluggability hides errors in parser
-  #use a perl -MBio::EnsEMBL::Funcgen::Parsers:ParserType to debug
-  #get rid of all this case guessing and force correct parser name usage?
+  my ($format, $vendor, $group, $location, $contact,
+      $array_name, $array_set, $array_file,
+      $exp_date, $desc, $design_type, $batch_job, $farm, $prepared,
+      $norm_method, $old_dvd_format, $parser_type, $set)
+    = rearrange(['FORMAT', 'VENDOR', 'GROUP', 'LOCATION', 'CONTACT', 
+                 'ARRAY_NAME', 'ARRAY_SET', 'ARRAY_FILE', 
+                 'EXPERIMENT_DATE', 'DESCRIPTION', 'DESIGN_TYPE', 
+                 'BATCH_JOB', 'FARM', 'PREPARED', 'NORM_METHOD', 
+                 'OLD_DVD_FORMAT', 'PARSER', 'SET'], @_);
 
 
   #WARNING
@@ -158,50 +136,28 @@ sub new{
   #Then we can have Importer.pm as the base class and get rid of this.
   #as well as set_config methods?
 
-
-  eval {require "Bio/EnsEMBL/Funcgen/Parsers/${vendor_parser}.pm";};
-
-  if ($@) {
-	  #Don't warn/throw yet as we might have a standard parser format
-
-    $parser_error .= "There is no valid parser for the vendor your have specified:\t".$vendor.
-      "\nMaybe this is a typo or maybe you want to specify a default import format using the -parser option\n".$@;
-  }
-
-
-
-  if (defined $parser_type) {
-
-    #try normal case first
-    eval {require "Bio/EnsEMBL/Funcgen/Parsers/${parser_type}.pm";};
-
+  my $parser_error;
+ 
+  for my $vendor_parser( ($vendor, $parser_type) ) {
+    next if ! defined $vendor_parser;
+    $vendor_parser =  ucfirst(lc($vendor_parser));
+    
+    eval {require "Bio/EnsEMBL/Funcgen/Parsers/${vendor_parser}.pm";};
+ 
     if ($@) {
-      $parser_type = ucfirst(lc($parser_type));
-
-      #Now eval the new parser
-      eval {require "Bio/EnsEMBL/Funcgen/Parsers/${parser_type}.pm";};
-
-      if ($@) {
-
-        #Might be no default
-        my $txt = "There is no valid parser for the -parser format your have specified:\t".$parser_type."\n";
-
-        if (! $parser_error) {
-          $txt .= "Maybe this is a typo or maybe you want run with the default $vendor_parser parser\n";
-        }
-
-        throw($txt.$@);
-      }
-
-      #warn about over riding vendor parser here
-      if (! $parser_error) {
-        #Can't log this as we haven't blessed the Helper yet
-        warn("WARNING\t::\tYou are over-riding the default ".$vendor." parser with -parser ".$parser_type);
-      }
+      #Don't warn/throw yet as we might have a standard parser format
+      $parser_error .= "$@\nThere is no valid parser:\tBio/EnsEMBL/Funcgen/Parsers/${vendor_parser}.pm";
     }
-  } else {
-    throw($parser_error) if $parser_error;
-    $parser_type = $vendor_parser;
+    else{ 
+      $parser_type = $vendor_parser;
+      undef $parser_error;
+      last;
+    }
+
+  }
+  
+  if(defined $parser_error){
+    throw($parser_error."\nPlease define a valid -vendor or -parser"); 
   }
 
 
@@ -212,55 +168,63 @@ sub new{
   #### Create object from parent class
 
   my $self = $class->SUPER::new(@_);
-
+    
+ 
+  #These are all specific to certain parser or import types i.e. InputSet/ResultSet
+  #Need to move these to BaseImporter new
+  #and validate only when we try to init_  certain import
+  #or have subclasses?
+  #Importer does not fall into InputSet/ResultSet etc?
+  #WHat does it currently do?
+  #- Imports FeatureSet or ResultSets from flat files (bed etc)
+  #- Imports arrays designs and data from flat files into <-- drop this support!
+  
+  #What does it not do?
+  #- Support sam/bam
+  #- Import peaks
+  
+  #Do we want an Importer to be ultimately tied to one import, or be able to cycle through 
+  #meta data to do this importing?
+  
+  
   #### Set vars and test minimum mandatory params for any import type
+  
+  #This should be moved to BaseImporter init_ import methods
+  
+  
+  #There are issues here with moving these vars to specific init_method
+  #wrt re-using importer. Namely some vars may hang around and affect a subsquent import
+  #For now let's just add the mandatory param checks to each of the init methods
+  
+  #Also issues around having validation/checking of params separate from new?
+  #Will have to redo a lot of control flow?
+  #between new and init methods?
+  
+  
+  
+  #Generic (potentially)
+    $self->description($desc) if $desc; #experiment? or set?
+  $self->farm($farm) if $farm;
+  $self->batch_job($batch_job);
+  $self->prepared($prepared); #This is really only for pre-processing files
+  
+  #Experiment
+  $self->experiment_date($exp_date) if $exp_date;
+  $self->{'design_type'} = $design_type || 'binding_site_identification'; #remove?
 
-  $self->{'name'} = $name || throw('Mandatory param -name not met'); #This is not mandatory for array design import
-  ##  $self->{'user'} = $user || $ENV{'EFG_WRITE_USER'};
-  $self->vendor(uc($vendor));   #already tested
-  $self->{'format'} = uc($format) || 'TILED'; #remove default?
-  $self->group($group) if $group;
+  #Experimental Group stuff, need to strip this out,
+  $self->experimental_group($group) if $group;
   $self->location($location) if $location;
   $self->contact($contact) if $contact;
-  ##  $species || throw('Mandatory param -species not met');
+
+
+  #Array specific stuff
+  $self->vendor($vendor);
   $self->array_name($array_name) if $array_name;
   $self->array_set($array_set) if $array_set;
   $self->array_file($array_file) if $array_file;
-  $self->{'data_dir'} = $data_dir || $ENV{'EFG_DATA'};
-  $self->result_files($result_files)if $result_files;
-  $self->experiment_date($exp_date) if $exp_date;
-  $self->description($desc) if $desc; #experiment
-  ##  $self->feature_set_description($fset_desc) if $fset_desc;
-
-  #$assm_version || throw('Mandatory param -assembly not met');
-  #Only required if setting DB by params e.g db not passed or generated from reg
-  #i.e. most of the time
-  #Why was this made mandatory?
-  #Default to dnadb||efgdb assm from the dbname
-
-  $self->{'design_type'} = $design_type || 'binding_site_identification'; #remove default?
-  $self->{'output_dir'} = $output_dir if $output_dir; #config default override
-  $self->{'input_dir'} = $input_dir if $input_dir; #config default override
-  $self->farm($farm) if $farm;
-  $self->batch_job($batch_job);
-  $self->prepared($prepared);
-  ##  $self->{'ssh'} = $ssh || 0;
-  ##  $self->{'_dump_fasta'} = $fasta || 0;
-  #$self->{'recover'} = $recover || 0; Now in BaseImporter
-  #check for ~/.ensembl_init to mirror general EnsEMBL behaviour
-  ##  $self->{'reg_config'} = $reg_config || ((-f "$ENV{'HOME'}/.ensembl_init") ? "$ENV{'HOME'}/.ensembl_init" : undef);
+  $self->{'format'} = uc($format) || 'TILED'; #remove default?
   $self->{'old_dvd_format'} = $old_dvd_format || 0;
-  ##  $self->{'ucsc_coords'} = $ucsc_coords || 0;
-  ##  $self->{'verbose'} = $verbose || 0;
-  ##  $self->{'release'} = $release;
-
-
-
-  ##  if($reg_host && $self->{'reg_config'}){
-  ##	warn "You have specified registry parameters and a config file:\t".$self->{'reg_config'}.
-  ##	  "\nOver-riding config file with specified paramters:\t${reg_user}@${reg_host}:$reg_port";
-  ##  }
-
 
   #Will a general norm method be applicable for all imports?
   #Already casued problems with Bed imports... remove?
@@ -268,359 +232,16 @@ sub new{
   #warn "Need to fully implement norm_method is validate_mage, remove ENV NORM_METHOD?";
   $self->{'norm_method'} = $norm_method; # || $ENV{'NORM_METHOD'};
 
-  #if ($self->vendor ne 'NIMBLEGEN'){
-  #	$self->{'no_mage'} = 1;
-  #	warn "Hardcoding no_mage for non-NIMBLEGEN imports";
-  #  }
-
-
-  #  if($self->{'no_mage'} && $self->{'write_mage'}){
-  #	throw('-no_mage and -write_mage options are mutually exclusive, please select just one');
-  #  }
-
-  ##  #### Set up DBs and load and reconfig registry
-  ##
-  ##  ### Load Registry
-  ##  #Can we load the registry using the assembly version, then just redefine the efg DB?
-  ##  #We have problems here if we try and load on a dev version, where no dev DBs are available on ensembldb
-  ##  #Get the latest API version for the assembly we want to use
-  ##  #Then load the registry from that version
-  ##  #Then we can remove some of the dnadb setting code below?
-  ##  #This may cause problems with API schema mismatches
-  ##  #Can we just test whether the current default dnadb contains the assembly?
-  ##  #Problem with this is that this will not have any other data e.g. genes etc
-  ##  #which may be required for some parsers
-  ##
-  ##  #How does the registry pick up the schema version??
-  ##
-  ##  #We should really load the registry first given the dnadb assembly version
-  ##  #Then reset the eFG DB as appropriate
-  ##
-  ##
-  ##  if ($reg_host || ! defined $self->{'_reg_config'}) {
-  ##	#defaults to current ensembl DBs
-  ##	$reg_host ||= 'ensembldb.ensembl.org';
-  ##	$reg_user ||= 'anonymous';
-  ##
-  ##	#Default to the most recent port for ensdb
-  ##	if( (! $reg_port) &&
-  ##		($reg_host eq 'ensdb-archive') ){
-  ##	  $reg_port = 5304;
-  ##	}
-  ##
-  ##	#This will try and load the dev DBs if we are using v49 schema or API?
-  ##	#Need to be mindful about this when developing
-  ##	#we need to tip all this on it's head and load the reg from the dnadb version!!!!!!!
-  ##
-  ##	my $version_text= ($self->{'release'}) ? 'version '.$self->{'release'} : 'current version';
-  ##	$self->log("Loading $version_text registry from $reg_user".'@'.$reg_host);
-  ##
-  ##	#Note this defaults API version, hence running with head code
-  ##	#And not specifying a release version will find not head version
-  ##	#DBs on ensembldb, resulting in an exception from reset_DBAdaptor below
-  ##	$reg->load_registry_from_db(
-  ##								-host => $reg_host,
-  ##								-user => $reg_user,
-  ##								-port => $reg_port,
-  ##								-pass => $reg_pass,
-  ##								#-host => "ens-staging",
-  ##								#-user => 'ensro',
-  ##								-db_version => $self->{'release'},#51
-  ##								-verbose => $self->verbose,
-  ##							   );
-  ##
-  ##	throw('Not sensible to set the import DB as the default eFG DB from '.$reg_host.', please define db params') if ((! $dbname) && (! $db));
-  ##  }
-  ##  else{
-  ##	$self->log("Loading registry from:\t".$self->{'_reg_config'});
-  ##	$reg->load_all($self->{'_reg_config'}, 1);
-  ##  }
-  ##
-  ##
-  ##  #Need to test the DBs here, as we may not have loaded any!
-  ##  #get_alias wil fail otherwise?
-  ##  #This is a cyclical dependancy as we need alias to get species which we use to grab the DB
-  ##  #alias is dependant on core DB being loaded with relevant meta entries.
-  ##  #revise this when we split the Importer
-  ##
-  ##
-  ##  #Validate species
-  ##  my $alias = $reg->get_alias($species) || throw("Could not find valid species alias for $species\nYou might want to clean up:\t".$self->get_dir('output'));
-  ##  $self->species($alias);
-  ##  $self->{'param_species'} = $species;#Only used for dir generation
-  ##
-  ##
-  ##  #SET UP DBs
-  ##  if($db){
-  ##	#db will have been defined before reg loaded, so will be present in reg
-  ##
-  ##	if(! (ref($db) && $db->isa('Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor'))){
-  ##	  $self->throw('-db must be a valid Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor');
-  ##	}
-  ##  }
-  ##  else{ #define eFG DB from params or registry
-  ##
-  ##	if($reg_db){#load eFG DB from reg
-  ##
-  ##	  if($dbname){
-  ##		throw("You cannot specify DB params($dbname) and load from the registry at the same time.");
-  ##	  }
-  ##
-  ##	  $self->log('WARNING: Loading eFG DB from Registry');
-  ##	  $db = $reg->get_DBAdaptor($self->species(), 'funcgen');
-  ##	  throw("Unable to retrieve ".$self->species." funcgen DB from the registry") if ! $db;
-  ##	}
-  ##	else{#resets the eFG DB in the custom or generic registry
-  ##
-  ##	  $dbname || throw('Must provide a -dbname if not using default custom registry config');
-  ##	  #$user || throw('Must provide a -user parameter');#make this default to EFG_WRITE_USER?
-  ##	  $pass || throw('Must provide a -pass parameter');
-  ##
-  ##	  #remove this and throw?
-  ##	  if(! defined $host){
-  ##		$self->log('WARNING: Defaulting to localhost');
-  ##		$host = 'localhost';
-  ##	  }
-  ##
-  ##	  $port ||= 3306;
-  ##	  my $host_ip = '127.0.0.1';#is this valid for all localhosts?
-  ##
-  ##	  if ($self->{'ssh'}) {
-  ##		$host = `host localhost`; #mac specific? nslookup localhost wont work on server/non-PC
-  ##		#will this always be the same?
-  ##
-  ##		if (! (exists $ENV{'EFG_HOST_IP'})) {
-  ##		  warn "Environment variable EFG_HOST_IP not set for ssh mode, defaulting to $host_ip for $host";
-  ##		} else {
-  ##		  $host_ip = $ENV{'EFG_HOST_IP'};
-  ##		}
-  ##
-  ##		if ($self->host() ne 'localhost') {
-  ##		  warn "Overriding host ".$self->host()." for ssh connection via localhost($host_ip)";
-  ##		}
-  ##	  }
-  ##
-  ##
-  ##	  #data version is only used if we don't want to define the dbname
-  ##	  #This should never be guessed so don't need data_version here
-  ##	  #$dbname ||= $self->species()."_funcgen_".$self->data_version();
-  ##
-  ##
-  ##	  #Remove block below when we can
-  ##	  my $dbhost = ($self->{'ssh'}) ? $host_ip : $host;
-  ##
-  ##	  #This isn't set yet!?
-  ##	  #When we try to load, say 49, when we only have 48 on ensembldb
-  ##	  #This fails because there is not DB set for v49, as it is not on ensembl DB
-  ##	  #In this case we need to load from the previous version
-  ##	  #Trap this and suggest using the -schema_version/release option
-  ##	  #Can we autodetect this and reload the registry?
-  ##	  #We want to reload the registry anyway with the right version corresponding to the dnadb
-  ##	  #We could either test for the db in the registry or just pass the class.
-  ##
-  ##	  $db = $reg->reset_DBAdaptor($self->species(), 'funcgen', $dbname, $dbhost, $port, $self->user, $pass,
-  ##								  {
-  ##								   -dnadb_host => $reg_host,
-  ##								   -dnadb_port => $reg_port,
-  ##								   -dnadb_assembly => $assm_version,
-  ##								   -dnadb_user => $reg_user,
-  ##								   -dnadb_pass => $reg_pass,
-  ##								  });
-  ##
-  ##
-  ##	  #ConfigRegistry will try and set this
-  ##	  #This will fail if there is already one in the registry as it will try
-  ##	  #and defined a new unique species so as not to overwrite the original
-  ##	  #e.g. homo_sapiens1
-  ##
-  ##	  #This is why it was orignally written backwards as we can't easily dynamically redefine
-  ##	  #an adaptor in the registry without ConfigRegistry trying to change the name
-  ##	  #the very act of creating a new db to redefine the registry with causes ConfigRegistry
-  ##	  #to try and register it with a unique species name
-  ##
-  ##	  #Delete the old funcgen DB from the registry first
-  ##	  #$reg->remove_DBAdaptor($self->species, 'funcgen');
-  ##
-  ##	  #ConfigRegistry will automatically configure this new db
-  ##
-  ##	  #$db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-  ##	#													 -user => $user,
-  ##	#													 -host => ($self->{'ssh'}) ? $host_ip : $host,
-  ##	#													 -port => $port,
-  ##	#													 -pass => $pass,
-  ##	#													 #we need to pass dbname else we can use non-standard dbs
-  ##	#													 -dbname => $dbname,
-  ##	#													 -species => $self->species(),
-  ##	#													 -group    => 'funcgen',
-  ##	#													);
-  ##
-  ##
-  ##	  #if we get a species like homo_sapiens1 here
-  ##	  #This is because ConfigRegistry is try to make the dbname different between the
-  ##	  #one already present and the one you're trying to add
-  ##	}
-  ##  }
-  ##
-  ##
-  ##  ### VALIDATE DNADB
-  ##  #This is now done in DBAdaptor
-  ##
-  ##  #We can change this to just use the assembly version
-  ##  #we could even have the wordy assmelby version from the meta table
-  ##  #do the standard ensembl subs
-  ##  #s/[A-Za-z]//g;
-  ##  #s/\.//g;
-  ##  #And then validate?
-  ##  #Just stick to number version for now.
-  ##
-  ##
-  ##  #Now we need to set the dnadb_host params to avoid ensembldb defaults
-  ##  #This should check the registry first
-  ##  #Then load from the registry db?
-  ##  #If we have a multi host registry config file this isn't going to work!
-  ##
-  ##  #Is this required anymore as the DBAdaptor handles this?
-  ##  #Not if we pass a db with an incorrect dnadb attached.
-  ##
-  ##  #if($db->_get_schema_build($db->dnadb()) !~ /_[0-9]+_${assm_version}[a-z]*$/){
-  ###	my $warning = "WARNING: dnadb does not match assembly_version $assm_version. Using ensembldb.enembl.org to define the dnadb";
-  ###	$warning .= ' rather than the reg_config' if (defined $self->{'_reg_config'});
-  ##
-  ##	#We need to account for reg_config DBs which may have custom info in
-  ##	#So try reg_config host first, then try ensembldb with warning
-  ##	#Could have a reg_config only flag for core dbs
-  ##	#Need to implement more params in set_dnadb_by_assembly_version
-  ###	$self->log($warning);
-  ##
-  ###	$db->set_dnadb_by_assembly_version($assm_version);
-  ###  }
-  ##
-  ##
-  ##
-  ##
-  ##  #Test connections
-  ##  $self->db($db);
-  ##  $db->dbc->db_handle;
-  ##  $db->dnadb->dbc->db_handle;
-  ##  #Set re/disconnect options
-  ##
-  ##  #These really need setting dependant on the import parser
-  ##  $db->dbc->disconnect_when_inactive(1);
-  ##  $db->dnadb->dbc->disconnect_when_inactive(1);
-
-
-
-  ##  ### Check analyses/feature_type/cell_type
-  ##  if($feature_analysis){
-  ##	my $fanal = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($feature_analysis);
-  ## 	throw("The Feature Analysis $feature_analysis does not exist in the database") if(!$fanal);
-  ##	$self->feature_analysis($fanal);
-  ##
-  ##	#This currently fails before the config gets loaded!
-  ##	#Need to load config before this validation!
-  ##  }
-  ##
-  ##  if($ctype_name){
-  ##	my $ctype = $self->db->get_CellTypeAdaptor->fetch_by_name($ctype_name);
-  ## 	throw("The CellType $ctype_name does not exist in the database") if(!$ctype);
-  ##	$self->cell_type($ctype);
-  ##  }
-  ##
-  ##  if ($ftype_name) {
-  ##    my $ftype = $self->db->get_FeatureTypeAdaptor->fetch_by_name($ftype_name);
-  ##	throw("The FeatureType $ftype_name does not exist in the database") if(!$ftype);
-  ##	$self->feature_type($ftype);
-  ##  }
-
-
-  #Set config here instead?
-  #So we can check all mandatory params
-  #Set vendor specific attr dependent vars
-
-  #Generic input dir
-  $self->{'input_dir'} ||= $self->get_dir("data").'/input/'.$self->{'param_species'}.'/'.$self->vendor().'/'.$self->name();
-
-  if (! -d $self->get_dir('input')) {
-
-    if (@{$self->result_files}) {
-      #This is really InputSet specific
-      #Could go in init_experiment_import
-      $self->log("Processing files:\n\t\t".join("\n\t\t",@{$self->result_files}));
-    } else {
-      throw('input_dir is not defined or does not exist ('.$self->get_dir('input').')');
-    }
-  }
 
   #Parser specific config
-  $self->set_config();
+  $self->set_config;
 
 
   $self->debug(2, "Importer class instance created.");
-  $self->debug_hash(3, \$self);
-
+  $self->debug(3, undef, $self);
+    
   return ($self);
 }
-
-=head2 registry_host
-
-  Example    : my $reg_host = $imp->registry_host;
-  Description: Accessor for registry host attribute
-  Returntype : string e.g. ensembldb.ensembl.org
-  Exceptions : None
-  Caller     : general
-  Status     : at risk
-
-=cut
-
-sub registry_host{
-  return $_[0]->{'reg_host'};
-}
-
-=head2 registry_user
-
-  Example    : my $reg_user = $imp->registry_user;
-  Description: Accessor for registry user attribute
-  Returntype : string e.g. ensembldb.ensembl.org
-  Exceptions : None
-  Caller     : general
-  Status     : at risk
-
-=cut
-
-sub registry_user{
-  return $_[0]->{'reg_user'};
-}
-
-=head2 registry_port
-
-  Example    : my $reg_port = $imp->registry_port;
-  Description: Accessor for registry port attribute
-  Returntype : string e.g. ensembldb.ensembl.org
-  Exceptions : None
-  Caller     : general
-  Status     : at risk
-
-=cut
-
-sub registry_port{
-  return $_[0]->{'reg_port'};
-}
-
-=head2 registry_pass
-
-  Example    : my $reg_pass = $imp->registry_pass;
-  Description: Accessor for registry pass attribute
-  Returntype : string e.g. ensembldb.ensembl.org
-  Exceptions : None
-  Caller     : general
-  Status     : at risk
-
-=cut
-
-sub registry_pass{
-  return $_[0]->{'reg_pass'};
-}
-
 
 #init method kept separate from new due to differing madatory check and set up
 
@@ -639,6 +260,9 @@ sub registry_pass{
 sub init_array_import{
 
   my ($self) = shift;
+
+
+  $self->name || throw('Mandatory param -name not met'); #This is not mandatory for array design import
 
   # we need to define which paramters we'll be storing
   #use the logic names of the analyses as the field headers
@@ -670,6 +294,8 @@ sub init_array_import{
 
 sub init_experiment_import{
   my ($self) = shift;
+  
+  $self->name || throw('Mandatory param -name not met'); #This is not mandatory for array design import
 
   #Change this to take config mandatory params?
   #No specific to exp import
@@ -846,6 +472,9 @@ sub vendor{
     $self->{'vendor'} = shift;
     $self->{'vendor'} = uc($self->{'vendor'});
   }
+  elsif(! defined $self->{'vendor'}){
+   throw('Must specify a -vendor'); 
+  }
 
   return $self->{'vendor'};
 }
@@ -969,25 +598,6 @@ sub cell_type{
   return $self->{'cell_type'};
 }
 
-
-##=head2 ucsc_coords
-##
-##  Example    : $start += 1 if $self->ucsc_coords;
-##  Description: Getter for UCSC coordinate usage flag
-##  Returntype : boolean
-##  Exceptions : none
-##  Caller     : general
-##  Status     : at risk
-##
-##=cut
-##
-##sub ucsc_coords{
-##  my $self = shift;
-##  return $self->{'ucsc_coords'};
-##}
-
-
-
 =head2 array_file
 
   Example    : my $array_file = $imp->array_file();
@@ -1097,86 +707,6 @@ sub arrays{
 
 
 
-=head2 location
-
-  Example    : $imp->vendor("Hinxton");
-  Description: Getter/Setter for group location
-  Arg [1]    : optional - location
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-
-sub location{
-  my ($self) = shift;
-  $self->{'location'} = shift if(@_);
-  return $self->{'location'};
-}
-
-
-=head2 contact
-
-  Example    : my $contact = $imp->contact();
-  Description: Getter/Setter for the group contact
-  Arg [1]    : optional - contact name/email/address
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub contact{
-  my ($self) = shift;
-  $self->{'contact'} = shift if(@_);
-  return $self->{'contact'};
-}
-
-=head2 name
-
-  Example    : $imp->name('Experiment1');
-  Description: Getter/Setter for the experiment name
-  Arg [1]    : optional - experiment name
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-
-sub name{
-  my ($self) = shift;
-  $self->{'name'} = shift if(@_);
-  return $self->{'name'};
-}
-
-=head2 result_files
-
-  Example    : $imp->result_files(\@files);
-  Description: Getter/Setter for the result file paths
-  Arg [1]    : Listref of file paths
-  Returntype : Listref
-  Exceptions : none
-  Caller     : general
-  Status     : At risk
-
-=cut
-
-
-sub result_files{
-  my ($self) = shift;
-  $self->{'result_files'} = shift if(@_);
-  return $self->{'result_files'};
-}
-
-
-
-
-
 =head2 experiment_date
 
   Example    : $imp->experiment_date('2006-11-02');
@@ -1211,22 +741,23 @@ sub experiment_date{
 
 
 
-=head2 group
-
-  Example    : my $exp_group = $imp->group();
-  Description: Getter/Setter for the group name
+=head2 experimental_group
+  
+  Example    : my $exp_group = $imp->experimetnal_group();
+  Description: Getter/Setter for the ExperientalGroup name
   Arg [1]    : optional - group name
-  Returntype : string
+  Returntype : String
   Exceptions : none
   Caller     : general
   Status     : Stable
 
 =cut
 
-sub group{
-  my ($self) = shift;
-  $self->{'group'} = shift if(@_);
-  return $self->{'group'};
+sub experimental_group{
+  my ($self) = shift;	
+  $self->{'experimental_group'} = shift if(@_);
+  return $self->{'experimental_group'};
+
 }
 
 
@@ -1252,26 +783,6 @@ sub description{
   return $self->{'description'};
 }
 
-##=head2 feature_set_description
-##
-##  Example    : $imp->description("ExperimentalSet description");
-##  Description: Getter/Setter for the FeatureSet description for an
-##               InputSet import e.g. preprocessed GFF/Bed data
-##  Arg [1]    : optional - string feature set description
-##  Returntype : string
-##  Exceptions : none
-##  Caller     : general
-##  Status     : At risk
-##
-##=cut
-##
-##sub feature_set_description{
-##  my $self = shift;
-##
-##  $self->{'feature_set_description'} = shift if @_;
-##
-##  return $self->{'feature_set_description'};
-##}
 
 =head2 format
 
@@ -1318,147 +829,6 @@ sub experiment{
   return $self->{'experiment'};
 }
 
-##=head2 db
-##
-##  Example    : $imp->db($funcgen_db);
-##  Description: Getter/Setter for the db element
-##  Arg [1]    : optional - Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
-##  Returntype : Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
-##  Exceptions : throws if arg is not an DBAdaptor
-##  Caller     : general
-##  Status     : Stable
-##
-##=cut
-##
-##sub db{
-##  my $self = shift;
-##
-##  if (defined $_[0] && $_[0]->isa("Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor")) {
-##    $self->{'db'} = shift;
-##  } elsif (defined $_[0]) {
-##    throw("Need to pass a valid Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor");
-##  }
-##
-##  return $self->{'db'};
-##}
-##
-##=head2 pass
-##
-##  Example    : $imp->pass("password");
-##  Description: Getter/Setter for the db password
-##  Arg [1]    : optional - db password
-##  Returntype : string
-##  Exceptions : none
-##  Caller     : general
-##  Status     : Stable
-##
-##=cut
-##
-##
-##sub pass{
-##  my $self = shift;
-##  $self->{'pass'} = shift if(@_);
-##  return $self->{'pass'};
-##}
-##
-##=head2 pass
-##
-##  Example    : $imp->host("hoastname");
-##  Description: Getter/Setter for the db hostname
-##  Arg [1]    : optional - db hostname
-##  Returntype : string
-##  Exceptions : none
-##  Caller     : general
-##  Status     : Stable
-##
-##=cut
-##
-##sub host{
-##  my $self = shift;
-##  $self->{'host'} = shift if(@_);
-##  return $self->{'host'};
-##}
-##
-##=head2 port
-##
-##  Example    : $imp->port(3306);
-##  Description: Getter/Setter for the db port number
-##  Arg [1]    : optional - db port number
-##  Returntype : int
-##  Exceptions : none
-##  Caller     : general
-##  Status     : Stable
-##
-##=cut
-##
-##sub port{
-##  my $self = shift;
-##  $self->{'port'} = shift if(@_);
-##  return $self->{'port'};
-##}
-##
-##=head2 user
-##
-##  Example    : $imp->user("user_name");
-##  Description: Getter/Setter for the db user name
-##  Arg [1]    : optional - db user name
-##  Returntype : string
-##  Exceptions : none
-##  Caller     : general
-##  Status     : Stable
-##
-##=cut
-##
-##sub user{
-##  my $self = shift;
-##  $self->{'user'} = shift if(@_);
-##  return $self->{'user'};
-##}
-
-##=head2 dump_fasta
-##
-##  Example    : if($self->dump_fasta()){...do fasta dump...}
-##  Description: Getter/Setter for the dump_fasta flag
-##  Arg [1]    : optional - 0 or 1
-##  Returntype : boolean
-##  Exceptions : none
-##  Caller     : self
-##  Status     : Stable
-##
-##=cut
-##
-##
-##sub dump_fasta{
-##  my $self = shift;
-##  $self->{'_dump_fasta'} = shift if @_;
-##  return $self->{'_dump_fasta'};
-##}
-##
-
-
-##=head2 species
-##
-##  Example    : $imp->species("homo_sapiens");
-##  Description: Getter/Setter for species
-##  Arg [1]    : optional - species name(alias?)
-##  Returntype : string
-##  Exceptions : none ? throw if no alias found?
-##  Caller     : general
-##  Status     : Medium - may move reg alias look up to this method
-##
-##=cut
-##
-##sub species{
-##  my $self = shift;
-##
-##  #should we do reg alias look up here?
-##  #Will we ever want to redefine species?
-##  #Change to just getter?
-##
-##  $self->{'species'} = shift if(@_);
-##
-##  return $self->{'species'};
-##}
 
 =head2 get_dir
 
@@ -2704,5 +2074,33 @@ sub tidy_duplicates{
 
   return;
 }
+
+
+
+### DEPRECATED METHODS NOT IN BASEIMPORTER ###
+#   These can go as soon as we have migrated all the code
+
+sub result_files {
+  throw('result_files method is deprecated, please use input_files instead');
+}
+
+
+sub location{
+  throw('location method is deprecated, please use a predefined \'group\' instead');  
+}
+
+
+sub contact{
+  throw('contact method is deprecated, please use a predefined \'group\' instead');   
+}
+
+
+sub group{
+ my $self = shift;
+ deprecate('Please use the \'experimental_group\' method instead');
+ return $self->experimental_group(@_);
+}
+
+
 
 1;
