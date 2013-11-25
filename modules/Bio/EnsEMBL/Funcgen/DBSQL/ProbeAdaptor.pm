@@ -47,13 +47,11 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ProbeAdaptor;
 
 use strict;
 use warnings;
-
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::Probe;
-use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#Have to use here to import @EXPORT
-use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor); #@ISA
-#change to parent with perl 5.10
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#DBI sql_types import
 
+use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 =head2 fetch_by_array_probe_probeset_name
 

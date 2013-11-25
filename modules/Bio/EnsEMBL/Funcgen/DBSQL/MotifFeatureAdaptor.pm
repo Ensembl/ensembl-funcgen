@@ -47,17 +47,15 @@ Bio::EnsEMBL::Funcgen::MotifFeature
 
 =cut
 
-use strict;
-use warnings;
-
 package Bio::EnsEMBL::Funcgen::DBSQL::MotifFeatureAdaptor;
 
+use strict;
+use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::MotifFeature;
-use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;#DBI sql_types import
 
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor);
+use parent qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor );
 
 my $true_final_clause = ' ORDER by mf.seq_region_id, mf.seq_region_start, mf.seq_region_end';
 # ORDER by required by fetch_all_by_dbID_list when fetching as regulatory_attributes

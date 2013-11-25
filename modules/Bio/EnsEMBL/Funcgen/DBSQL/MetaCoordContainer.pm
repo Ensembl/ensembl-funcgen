@@ -18,16 +18,15 @@
   <helpdesk@ensembl.org>.
  
 =cut
+
  
- package Bio::EnsEMBL::Funcgen::DBSQL::MetaCoordContainer;
+package Bio::EnsEMBL::Funcgen::DBSQL::MetaCoordContainer;
 
-use vars qw(@ISA);
 use strict;
-
-use Bio::EnsEMBL::DBSQL::BaseAdaptor;
+use warnings;
 use Bio::EnsEMBL::Utils::Exception;
 
-@ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
+use parent qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
 #Can remove this whole class from the API and use the core class if we can resolve problems below
 #remove new and inherit from Bio::EnsEMBL::DBSQL::MetaCoordContainer?

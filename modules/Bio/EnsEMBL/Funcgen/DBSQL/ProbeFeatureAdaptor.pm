@@ -49,14 +49,12 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ProbeFeatureAdaptor;
 
 use strict;
 use warnings;
-
 use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 use Bio::EnsEMBL::Funcgen::ProbeFeature;
-use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;
-use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;#DBI sql_types import
+#use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor);
+use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor);
 
 
 my $true_final_clause = ' ORDER BY pf.seq_region_id, pf.seq_region_start, pf.probe_feature_id';
