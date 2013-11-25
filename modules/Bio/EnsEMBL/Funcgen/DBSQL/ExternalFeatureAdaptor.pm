@@ -40,17 +40,16 @@ ExternalFeature objects.
 
 =cut
 
+package Bio::EnsEMBL::Funcgen::DBSQL::ExternalFeatureAdaptor;
+
 use strict;
 use warnings;
 
-package Bio::EnsEMBL::Funcgen::DBSQL::ExternalFeatureAdaptor;
-
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::ExternalFeature;
-use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor; #for import of sql_types barewords
 
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
+use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
 
 
 =head2 _true_tables
@@ -68,9 +67,12 @@ use vars qw(@ISA);
 sub _true_tables {
   return ([ 'external_feature', 'ef' ],
           [ 'feature_set',      'fs' ]);
-  #feature_set this is required for fetching on analysis, external_db (cell_type or feature_type).
-  #and should be removed in favour of query composition
 }
+#feature_set is required for fetching on analysis, external_db (cell_type or feature_type).
+#and should be removed in favour of query composition
+#could put some of these type constraint methods in SetFeatureAdaptor
+#but would have to have another feature_type method in here
+#as these are in the external_feature table rather than feature_set table
 
 
 =head2 _columns
