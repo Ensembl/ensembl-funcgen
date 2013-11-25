@@ -64,12 +64,12 @@ package Bio::EnsEMBL::Funcgen::InputSubset;
 
 use strict;
 use warnings;
-
 use Bio::EnsEMBL::Utils::Argument   qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception  qw( throw deprecate );
 use Bio::EnsEMBL::Utils::Scalar     qw( assert_ref );
 
-use base qw( Bio::EnsEMBL::Funcgen::Storable );
+use parent qw( Bio::EnsEMBL::Funcgen::Storable );
+#Change to Set, once we add analysis to InputSubset(and remove InputSet)
 
 =head2 new
 

@@ -38,15 +38,16 @@ It utilises several underlying parser classes specific to array vendor or import
 
 package Bio::EnsEMBL::Funcgen::Importer;
 
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(get_date open_file run_system_cmd);
-use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
-use Bio::EnsEMBL::Utils::Argument qw( rearrange );
+use strict;
+use warnings;
+use File::Path;
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( get_date open_file run_system_cmd);
+use Bio::EnsEMBL::Utils::Exception         qw( throw deprecate );
+use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
 use Bio::EnsEMBL::Funcgen::Experiment;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
-use File::Path;
-use strict;
 use vars qw(@ISA);
 
 
