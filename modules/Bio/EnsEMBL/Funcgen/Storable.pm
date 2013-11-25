@@ -49,8 +49,9 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Registry;
-use Bio::EnsEMBL::Utils::Exception qw(throw warning);
-use Bio::EnsEMBL::Utils::Argument qw(rearrange);
+use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
+use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
 use Bio::EnsEMBL::Storable;
 
 use vars qw(@ISA);
@@ -80,15 +81,18 @@ sub new {
     throw("Adaptor muct be a valid Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor");
   }
 
-  #will these break using _new_fast
-  #THerefore ResultFeature, Probe and ProbeFeature should not be Funcgen::Storables
-
-  @{$self->{'states'}} = @$states if $states;
+  if($states){
+    assert_ref($states, 'ARRAY');
+    #Deref so we don't get unwanted update behaviour
+    @{$self->{'states'}} = @$states if $states;
+  }
+  
   $self->associated_feature_types($assoc_ftypes) if(defined $assoc_ftypes);
-
 
   return $self;
 }
+
+
 
 
 =head2 has_status
