@@ -44,6 +44,8 @@ been produced from the eFG array design software.
 
 package Bio::EnsEMBL::Funcgen::Parsers::ArrayDesign;
 
+use strict;
+use warnings;
 use Bio::EnsEMBL::Funcgen::Array;
 use Bio::EnsEMBL::Funcgen::ProbeSet;
 use Bio::EnsEMBL::Funcgen::Probe;
@@ -54,11 +56,8 @@ use Bio::EnsEMBL::Funcgen::ArrayChip;
 use Bio::EnsEMBL::Funcgen::Channel;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(species_chr_num open_file);
-use Bio::EnsEMBL::Funcgen::Utils::Helper;
-use strict;
 
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::Utils::Helper);
+use parent qw(Bio::EnsEMBL::Funcgen::Utils::Helper);
 
 
 

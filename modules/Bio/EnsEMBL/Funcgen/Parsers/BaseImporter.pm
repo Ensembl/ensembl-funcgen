@@ -37,16 +37,16 @@ Then remove Importer completely.
 package Bio::EnsEMBL::Funcgen::Parsers::BaseImporter;
 
 use strict;
-
-
-use Bio::EnsEMBL::Utils::Argument qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw );
+use warnings;
+use Bio::EnsEMBL::Registry;
+use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
+use Bio::EnsEMBL::Utils::Exception         qw( throw );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( validate_path );
 use Bio::EnsEMBL::Funcgen::FeatureSet;
 use Bio::EnsEMBL::Funcgen::FeatureType;
-use Bio::EnsEMBL::Registry;
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( validate_path );
 
-use base qw(Bio::EnsEMBL::Funcgen::Utils::Helper); #@ISA change to parent with perl 5.10
+
+use parent qw(Bio::EnsEMBL::Funcgen::Utils::Helper);
 
 
 
