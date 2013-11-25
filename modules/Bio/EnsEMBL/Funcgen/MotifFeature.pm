@@ -59,19 +59,14 @@ Bio::EnsEMBL::Funcgen::DBSQL::MotifFeatureAdaptor
 
 =cut
 
-use strict;
-use warnings;
-
 package Bio::EnsEMBL::Funcgen::MotifFeature;
 
-use Bio::EnsEMBL::Utils::Argument qw( rearrange );
+use strict;
+use warnings;
+use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
-use Bio::EnsEMBL::Feature;
-use Bio::EnsEMBL::Funcgen::Storable;
 
-
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable);
+use parent qw(Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable);
 
 
 =head2 new

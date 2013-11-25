@@ -86,12 +86,12 @@ Bio::EnsEMBL::Funcgen::SetFeature
 
 package Bio::EnsEMBL::Funcgen::RegulatoryFeature;
 
-use Bio::EnsEMBL::Utils::Argument qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw );
 use strict;
 use warnings;
+use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
+use Bio::EnsEMBL::Utils::Exception qw( throw );
 
-use base qw(Bio::EnsEMBL::Funcgen::SetFeature); #@ISA
+use parent qw(Bio::EnsEMBL::Funcgen::SetFeature);
 
 
 =head2 new

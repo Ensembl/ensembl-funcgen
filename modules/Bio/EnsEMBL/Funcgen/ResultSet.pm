@@ -58,12 +58,10 @@ package Bio::EnsEMBL::Funcgen::ResultSet;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Argument qw( rearrange );
+use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
-use Bio::EnsEMBL::Funcgen::Set;
 
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Funcgen::Set);
+use parent qw(Bio::EnsEMBL::Funcgen::Set);
 
 #Valid enum field hashes to prevent loading NULLs
 
