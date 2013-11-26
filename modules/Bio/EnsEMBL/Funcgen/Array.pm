@@ -1,18 +1,22 @@
 #
 # Ensembl module for Bio::EnsEMBL::Funcgen::Array
 #
-# You may distribute this module under the same terms as Perl itself
-
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2013 The European Bioinformatics Institute and
-  Genome Research Limited.  All rights reserved.
+Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 
-  This software is distributed under a modified Apache license.
-  For license details, please see
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-    http://www.ensembl.org/info/about/code_licence.html
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 =head1 CONTACT
 
@@ -31,15 +35,16 @@ Bio::EnsEMBL::Funcgen::Array - A module to represent a nucleotide microarray.
 
 use Bio::EnsEMBL::Funcgen::Array;
 
-my $array = Bio::EnsEMBL::Funcgen::Array->new(
-	    -NAME        => 'Array-1',
-        -FORMAT      => 'Tiled',
-        -SIZE        => '1',
-     	-VENDOR      => 'Nimblegen',
-        -DESCRIPTION => $desc,
-        -TYPE        => 'OLIGO',
-        -CLASS       => 'VENDOR_FORMAT'
-);
+my $array = Bio::EnsEMBL::Funcgen::Array->new
+ (
+	-NAME        => 'Array-1',
+  -FORMAT      => 'Tiled',
+  -SIZE        => '1',
+  -VENDOR      => 'Nimblegen',
+  -DESCRIPTION => $desc,
+  -TYPE        => 'OLIGO',
+  -CLASS       => 'VENDOR_FORMAT'
+ );
 
 my $db_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(...);
 my $array_adaptor = $db_adaptor->get_ArrayAdaptor();
@@ -58,7 +63,6 @@ package Bio::EnsEMBL::Funcgen::Array;
 
 use strict;
 use warnings;
-
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 
@@ -75,28 +79,27 @@ use parent qw(Bio::EnsEMBL::Funcgen::Storable);
 
 =head2 new
 
-  Arg [-NAME]        : string - the name of this array
-  Arg [-VENDOR]      : string - the vendor of this array (AFFY, NIMBLEGEN etc)
-  Arg [-TYPE]        : string - type of array e.g. OLIGO, PCR
-  Arg [-FORMAT]      : string - the format of this array (TILED, TARGETTED, GENE etc)
-  Arg [-DESCRIPTION] : strin - description of the array 
+  Arg [-NAME]        : String - the name of this array
+  Arg [-VENDOR]      : String - the vendor of this array (AFFY, NIMBLEGEN etc)
+  Arg [-TYPE]        : String - type of array e.g. OLIGO, PCR
+  Arg [-FORMAT]      : String - the format of this array (TILED, TARGETTED, GENE etc)
+  Arg [-DESCRIPTION] : String - description of the array 
 
-#array_chips is array of hashes or design_id and name, dbID will be populated on store, this should be a simple object!
-
-  Example    : my $array = Bio::EnsEMBL::Funcgen::Array->new(
-								  -NAME        => 'Array-1',
-								  -FORMAT      => 'Tiled',
-								  -SIZE        => '1',
-								  -VENDOR      => 'Nimblegen',
-                                  -TYPE        => 'OLIGO',
-								  -DESCRIPTION => $desc,
-                                  -CLASS       => 'VENDOR_FORMAT',#e.g. AFFY_UTR, ILLUMINA_WG
-								 );
+  Example    : my $array = Bio::EnsEMBL::Funcgen::Array->new
+                (
+								 -NAME        => 'Array-1',
+								 -FORMAT      => 'Tiled',
+								 -SIZE        => '1',
+								 -VENDOR      => 'Nimblegen',
+                 -TYPE        => 'OLIGO',
+								 -DESCRIPTION => $desc,
+                 -CLASS       => 'VENDOR_FORMAT',#e.g. AFFY_UTR, ILLUMINA_WG
+							  );
   Description: Creates a new Bio::EnsEMBL::Funcgen::Array object.
   Returntype : Bio::EnsEMBL::Funcgen::Array
-  Exceptions : None ? should throw if mandatort params not set/valid
+  Exceptions : Throws if mandatory params not set/valid
   Caller     : General
-  Status     : At risk
+  Status     : Stable
 
 =cut
 
@@ -121,10 +124,8 @@ sub new {
 
 
   throw("Must provide a vendor parameter") if ! $vendor;
-  throw("Must provide a name parameter") if ! $name;
-  #any others?
-
-  
+  throw("Must provide a name parameter")   if ! $name;
+   
   $self->name($name);
   $self->format($format)    if defined $format;
 
@@ -194,8 +195,6 @@ sub get_all_Probe_dbIDs {
   return  $self->{probe_dbids};
 }
 
-
-#Nath new get methods
 
 =head2 get_all_ProbeSets
 

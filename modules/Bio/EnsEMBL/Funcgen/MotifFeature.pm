@@ -1,7 +1,22 @@
 #
 # Ensembl module for Bio::EnsEMBL::Funcgen::MotifFeature
 #
-# You may distribute this module under the same terms as Perl itself
+
+=head1 LICENSE
+
+Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 =head1 NAME
 
@@ -12,18 +27,17 @@ on a binding matrix e.g position weight matrix
 
 use Bio::EnsEMBL::Funcgen::MotifFeature;
 
-my $feature = Bio::EnsEMBL::Funcgen::MotifFeature->new(
+my $feature = Bio::EnsEMBL::Funcgen::MotifFeature->new
+ (
 	-SLICE         => $chr_1_slice,
 	-START         => 1_000_000,
 	-END           => 1_000_024,
 	-STRAND        => -1,
-    -DISPLAY_LABEL => $text,
-    -SCORE         => $score,
-    -FEATURE_TYPE  => $ftype,
-    -INTERDB_STABLE_ID    => 1,
-); 
-
-
+  -DISPLAY_LABEL => $text,
+  -SCORE         => $score,
+  -FEATURE_TYPE  => $ftype,
+  -INTERDB_STABLE_ID    => 1,
+ );
 
 =head1 DESCRIPTION
 
@@ -37,17 +51,6 @@ of the corresponding FeatureType.
 
 Bio::EnsEMBL::Funcgen::DBSQL::MotifFeatureAdaptor
 
-
-=head1 LICENSE
-
-  Copyright (c) 1999-2009 The European Bioinformatics Institute and
-  Genome Research Limited.  All rights reserved.
-
-  This software is distributed under a modified Apache license.
-  For license details, please see
-
-    http://www.ensembl.org/info/about/code_licence.html
-
 =head1 CONTACT
 
   Please email comments or questions to the public Ensembl
@@ -55,7 +58,6 @@ Bio::EnsEMBL::Funcgen::DBSQL::MotifFeatureAdaptor
 
   Questions may also be sent to the Ensembl help desk at
   <helpdesk@ensembl.org>.
-
 
 =cut
 
