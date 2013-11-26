@@ -2,14 +2,19 @@
 
 =head1 LICENSE
 
+Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 
-  Copyright (c) 1999-2013 The European Bioinformatics Institute and
-  Genome Research Limited.  All rights reserved.
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-  This software is distributed under a modified Apache license.
-  For license details, please see
+     http://www.apache.org/licenses/LICENSE-2.0
 
-    http://www.ensembl.org/info/about/code_licence.html
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 =head1 CONTACT
 
@@ -45,20 +50,6 @@ pwm_thresh_filter.pl -i thresholds  -o filtered/
 ensembl-functgenomics/scripts/pwm_filter_mappings.pl
 ensembl-functgenomics/scripts/pwm_genome_map.pl	   
 ensembl-functgenomics/scripts/pwm_mapping_notes
-
-=head1 CVS
-
- $Log: not supported by cvs2svn $
- Revision 1.3  2011-01-10 14:25:54  nj1
- added generic #!/usr/bin/env perl
-
- Revision 1.2  2011-01-10 13:40:37  nj1
- updated boiler plate
-
- Revision 1.1  2010-11-25 15:16:38  dkeefe
- Little utility for filtering PWM mappings using the output of pwm_filter_mappings.pl
-
-
 
 =cut
 

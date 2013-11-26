@@ -1,4 +1,29 @@
-#!/usr/local/ensembl/bin/perl
+#!/usr/bin/env perl
+
+=head1 LICENSE
+
+Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
 
 =head1 DESCRIPTION
 
@@ -8,30 +33,11 @@ Currently the new may overlap the old and one another.
 
 Currently accepts only pseudo-bed type files with 1 based coords.
 
-=head1 AUTHOR(S)
-
-dkeefe@ebi.ac.uk
-
 =head1 USAGE
 
 ls -1 K562* | xargs -I {} echo make_bed_mock_set.pl~ -g~ /data/blastdb/Ensembl/funcgen/human_male_GRCh37_unmasked.id_lines~ -i '~' {} '~' '>' {} _mock | tr -d ' ' | tr '~' ' '
 
 ls -1 ES* | xargs -I {} echo make_bed_mock_set.pl~ -g~ /data/blastdb/Ensembl/funcgen/mus_musculus_male_NCBIM37_unmasked.id_lines~ -i '~' {} '~' '>' {} _mock | tr -d ' ' | tr '~' ' '
-
-
-
-
-=head1 EXAMPLES
-
-=head1 SEE ALSO
-
-
-=head1 CVS
-
- $Log: not supported by cvs2svn $
- Revision 1.1  2011-01-20 17:02:38  dkeefe
- used for determining log odds score threshold for funcgen PWM mappings
-
 
 
 =cut
