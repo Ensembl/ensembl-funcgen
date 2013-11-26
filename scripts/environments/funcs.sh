@@ -1,5 +1,20 @@
 #!/usr/local/bin/bash
 
+# Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+# 
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+# 
+#      http://www.apache.org/licenses/LICENSE-2.0
+# 
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+
 
 #echo ":::: Sourcing funcs.sh"
 export PROMPT_COMMAND='echo -ne "\033]0;${USER}@${HOSTNAME}: ${PWD}\007"'
@@ -96,64 +111,6 @@ _setOptArgArray(){
 	
 }
 
-
-
-### Trapping
-
-#Do we want to trap any other signals?
-#We probably want to capture CTRL-C (and CTRL-D?)
-#as we are exiting from scripts/cmds, but the env is then carrying on with the next step
-#Shouldn't we just Execute everything?
-
-#if [ $trap_exit -eq 1 ]
-#then
-#	trap TrapExit EXIT
-#fi
-
-#alias exit="ding_bell"
-
-#ding_bell() {
-#	echo -e "tra la la \a"
-#}
-
-################################################################################
-# Func      : _trapExt
-# Desc      : Reports exit status but calls bash before exit, so we don't exit the environment
-# Args [1]  : 
-# Return    : 
-# Exception : 
-################################################################################
-
-#_trapExit(){
-#	es=$?
-#	echo "Exiting with status:$es"
-
-	#Need to move this to funcs.sh and define exit codes and error messages
-
-	#POOP POOP! This works, and about time too.
-	#Well not quite, we aren't exiting the native shell, but we don't inherit the previosu history
-	#So not quite sure what we're doing
-
-	#This is only required if we do not initialise with a subshell and want to maintain native shell(ltcsh in our case)
-	#i.e. we don't want to exit the calling shell just because this script has exited
-	#This happens when a one time run script is shebanged without launching a subshell
-	#Or when an environment is sourced and issues consecutive EXIT signals.
-
-	#Can we call this dependant on an env var? MAINTAIN_SUBSHELL=1
-
-	#No no no, this is not working, we are still exiting the env
-	#We're just calling bash, so it looks like we're not exiting to ltcsh. GRRR!!!!
-	#This is resulting in multiple instances of bash running!
-	
-	#And still not maintain env for some exits e.g. Execute
-	#Is this because we are calling it from another script?
-	#This was working when we had it in arrays.env, but then funcs in this script couldn't rely on it and had to use exit directly.
-
-#	bash
-
-
-
-#}
 
 
 
@@ -1594,19 +1551,6 @@ padNumber()
     echo $_PAD_NUM
 }
 
-
-#Distribute()
-#{
-#   CheckBinaries scp
-   
-#   _LOCAL_DIR=$1
-#   _REMOTE_HOST=$2
-#   _REMOTE_USER=$3
-#   _REMOTE_DIR=$4
-
-#   _REMOTE_LOGIN="$_REMOTE_USER@$_REMOTE_HOST"
-#   scp -r  $_LOCAL_DIR $_REMOTE_LOGIN:$_REMOTE_DIR
-#}
 
 
 isMac(){
