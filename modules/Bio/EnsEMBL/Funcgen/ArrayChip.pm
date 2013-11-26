@@ -1,17 +1,22 @@
 #
 # Ensembl module for Bio::EnsEMBL::Funcgen::ArrayChip
 #
-# You may distribute this module under the same terms as Perl itself
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2013 The European Bioinformatics Institute and
-  Genome Research Limited.  All rights reserved.
+Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 
-  This software is distributed under a modified Apache license.
-  For license details, please see
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-    http://www.ensembl.org/info/about/code_licence.html
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 =head1 CONTACT
 
@@ -45,6 +50,10 @@ a chip/slide within an array,  of which the physical manifestation is an Experim
 An ArrayChip object represent the concept of an array chip/slide withing a given array/chipset.
 The data for ArrayChips is stored in the array_chip table.
 
+=head1 SEE ALSO
+
+Bio::EnsEMBL::Funcgen::DBSQL::ArrayChipAdaptor
+Bio::EnsEMBL::Funcgen::Array
 
 =cut
 
@@ -52,7 +61,6 @@ package Bio::EnsEMBL::Funcgen::ArrayChip;
 
 use strict;
 use warnings;
-
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 
@@ -61,32 +69,32 @@ use parent qw(Bio::EnsEMBL::Funcgen::Storable);
 
 =head2 new
 
-  Arg [-ARRAY_ID]  : int - the dbID of the parent array
+  Arg [-ARRAY_ID]  : Int - the dbID of the parent array
   Arg [-ARRAY]     : Bio::EnsEMBL::Funcgen::Array
-  Arg [-DESIGN_ID] : string - the unqiue deisng ID defined by the array vendor
-  Arg [-NAME]      : string - the name of the array chip
+  Arg [-DESIGN_ID] : String - the unqiue deisng ID defined by the array vendor
+  Arg [-NAME]      : String - the name of the array chip
 
 
-  Example    : my $array_chip = Bio::EnsEMBL::Funcgen::ArrayChip->new(
-							 -ARRAY_ID  => $array->dbID(),
-							 -NAME      => $desc,
-                                                         -DESIGN_ID => $design_id,
-							 );								       );
+  Example    : my $array_chip = Bio::EnsEMBL::Funcgen::ArrayChip->new
+                 (
+							    -ARRAY_ID  => $array->dbID(),
+							    -NAME      => $desc,
+                  -DESIGN_ID => $design_id,
+							   );	
   Description: Creates a new Bio::EnsEMBL::Funcgen::ArrayChip object.
   Returntype : Bio::EnsEMBL::Funcgen::ArrayChip
-  Exceptions : None ? should throw if mandaotry params not set
+  Exceptions : Throws if mandatory parameters are not set.
   Caller     : General
-  Status     : Medium Risk
+  Status     : Stable
 
 =cut
 
 sub new {
   my $caller = shift;
+  my $class  = ref($caller) || $caller;
+  my $self   = $class->SUPER::new(@_);
 
-  my $class = ref($caller) || $caller;
-  my $self = $class->SUPER::new(@_);
-
-  my ($array_id, $name, $design_id, $array)
+  my ($array_id, $name,  $design_id, $array)
     = rearrange( ['ARRAY_ID', 'NAME', 'DESIGN_ID', 'ARRAY'], @_ );
 
    
@@ -97,23 +105,21 @@ sub new {
 
   #Make these mutually exclusive to avoid checking
   if($array_id && $array){
-	throw('Must provide either -array or -array_id but not both');
+    throw('Must provide either -array or -array_id but not both');
   }
 
   if(defined $array){
 	
-	if(!(ref($array) && $array->isa('Bio::EnsEMBL::Funcgen::Array'))){
-	  throw('array paramter must be a valid Bio::EnsEMBL::Funcgen::Array');
-	}
+    if(!(ref($array) && $array->isa('Bio::EnsEMBL::Funcgen::Array'))){
+      throw('Array paramter must be a valid Bio::EnsEMBL::Funcgen::Array');
+    }
 	
-	$self->{'array'} = $array;
+    $self->{array} = $array;
   }
 
-
-
-  $self->array_id($array_id)  if defined $array_id;
-  $self->name($name);
-  $self->design_id($design_id);
+  $self->{array_id}  = $array_id;
+  $self->{name}      = $name;
+  $self->{design_id} = $design_id;
 
   return $self;
 }
@@ -121,57 +127,42 @@ sub new {
 
 =head2 array_id
 
-  Arg [1]    : (optional) int - the parent array dbID
   Example    : my $array_id = $array_chip->array_id();
-  Description: Getter, setter array_id attribute.
-  Returntype : int
+  Description: Getter array_id attribute.
+  Returntype : Int
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
-sub array_id {
-  my $self = shift;
-  $self->{'array_id'} = shift if @_;
-  return $self->{'array_id'};
-}
+sub array_id {  return shift->{array_id}; }
 
 =head2 name
 
-  Arg [1]    : (optional) string - the array chip name
   Example    : my $ac_name = $array_chip->name();
-  Description: Getter, setter for the name attribute
-  Returntype : string
+  Description: Getter for the name attribute
+  Returntype : String
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : Stable
 
 =cut
 
-sub name {
-  my $self = shift;
-  $self->{'name'} = shift if @_;
-  return $self->{'name'};
-}
+sub name { return shift->{name}; }
 
 =head2 design_id
 
-  Arg [1]    : (optional) string - the array_chip unique design id as deinfed by the array vendor
   Example    : my $design_id = $array_chip->design_id();
-  Description: Getter, setter for the design_id attribute
-  Returntype : string
+  Description: Getter for the design_id attribute
+  Returntype : String
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
-sub design_id {
-  my $self = shift;
-  $self->{'design_id'} = shift if @_; 
-  return $self->{'design_id'};
-}
+sub design_id {  return shift->{design_id}; }
 
 
 =head2 get_Array

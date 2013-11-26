@@ -1,17 +1,22 @@
 #
 # Ensembl module for Bio::EnsEMBL::Funcgen::AnnotatedFeature
 #
-# You may distribute this module under the same terms as Perl itself
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2013 The European Bioinformatics Institute and
-  Genome Research Limited.  All rights reserved.
+Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 
-  This software is distributed under a modified Apache license.
-  For license details, please see
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-    http://www.ensembl.org/info/about/code_licence.html
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 =head1 CONTACT
 
@@ -24,26 +29,23 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::AnnotatedFeature - A module to represent a feature mapping as 
-predicted by the eFG pipeline.
+Bio::EnsEMBL::AnnotatedFeature - A module to represent an enriched feature mapping i.e. a peak call.
 
 =head1 SYNOPSIS
 
 use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 
 my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new
-   (
-	-SLICE         => $chr_1_slice,
-	-START         => 1_000_000,
-    -SUMMIT        => 1_000_019,
-	-END           => 1_000_024,
-	-STRAND        => -1,
-    -DISPLAY_LABEL => $text,
-    -SCORE         => $score,
-    -FEATURE_SET   => $fset,
-   ); 
-
-
+  (
+	 -SLICE         => $chr_1_slice,
+	 -START         => 1_000_000,
+   -SUMMIT        => 1_000_019,
+	 -END           => 1_000_024,
+	 -STRAND        => -1,
+   -DISPLAY_LABEL => $text,
+   -SCORE         => $score,
+   -FEATURE_SET   => $fset,
+  );
 
 =head1 DESCRIPTION
 
@@ -58,6 +60,7 @@ feature where more reads align with the genome.
 =head1 SEE ALSO
 
 Bio::EnsEMBL::Funcgen::DBSQL::AnnotatedFeatureAdaptor
+Bio::EnsEMBL::Funcgen::FeatureSet
 
 =cut
 
@@ -65,26 +68,24 @@ package Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 
 use strict;
 use warnings;
-
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 
 use parent qw(Bio::EnsEMBL::Funcgen::SetFeature);
 
-
 =head2 new
 
   Arg [-SLICE]        : Bio::EnsEMBL::Slice - The slice on which this feature is.
-  Arg [-START]        : int - The start coordinate of this feature relative to the start of the slice
-		                it is sitting on. Coordinates start at 1 and are inclusive.
-  Arg [-END]          : int -The end coordinate of this feature relative to the start of the slice
-  Arg [-STRAND]       : int - The orientation of this feature. Valid values are 1, -1 and 0.
-	                    it is sitting on. Coordinates start at 1 and are inclusive.
-  Arg [-DISPLAY_LABEL]: string - Display label for this feature
-  Arg [-SUMMIT]       : optional int - seq_region peak summit position
-  Arg [-SCORE]        : optional int - Score assigned by analysis pipeline
-  Arg [-dbID]         : optional int - Internal database ID.
-  Arg [-ADAPTOR]      : optional Bio::EnsEMBL::DBSQL::BaseAdaptor - Database adaptor.
+  Arg [-START]        : Int - The start coordinate of this feature relative to the start of the slice
+                              it is sitting on. Coordinates start at 1 and are inclusive.
+  Arg [-END]          : Int -The end coordinate of this feature relative to the start of the slice
+  Arg [-STRAND]       : Int - The orientation of this feature. Valid values are 1, -1 and 0.
+	                            it is sitting on. Coordinates start at 1 and are inclusive.
+  Arg [-DISPLAY_LABEL]: String - Display label for this feature
+  Arg [-SUMMIT]       : Int (optional) - seq_region peak summit position
+  Arg [-SCORE]        : Int (optional) - Score assigned by analysis pipeline
+  Arg [-dbID]         : Int (optional) - Internal database ID.
+  Arg [-ADAPTOR]      : Bio::EnsEMBL::DBSQL::BaseAdaptor (optional) - Database adaptor.
   Example    : my $feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new
                                  (
 								  -SLICE         => $chr_1_slice,
@@ -102,43 +103,33 @@ use parent qw(Bio::EnsEMBL::Funcgen::SetFeature);
   Returntype : Bio::EnsEMBL::Funcgen::AnnotatedFeature
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : Stable
 
 =cut
 
+#Hard code strand => 0 here? And remove from input params?
+
 sub new {
   my $caller = shift;
-	
-  my $class = ref($caller) || $caller;
-  my $self = $class->SUPER::new(@_);
-  #Hard code strand => 0 here? And remove from input params?
-  my ($score, $summit) = rearrange(['SCORE', 'SUMMIT'], @_);
-    
-  #Direct assingment here removes need for set arg test in method
-
-  $self->{'score'}  = $score  if defined $score;
-  $self->{'summit'} = $summit if defined $summit;
-	
+  my $class  = ref($caller) || $caller;
+  my $self   = $class->SUPER::new(@_);
+  ($self->{score},  $self->{summit}) = rearrange(['SCORE', 'SUMMIT'], @_);	
   return $self;
 }
 
 
 =head2 score
 
-  Arg [1]    : (optional) int - score
-  Example    : my $score = $feature->score();
+  Example    : my $score = $feature->score;
   Description: Getter for the score attribute for this feature. 
-  Returntype : int
+  Returntype : String (float)
   Exceptions : None
   Caller     : General
-  Status     : Low Risk
+  Status     : Stable
 
 =cut
 
-sub score {
-    my $self = shift;
-    return $self->{'score'};
-}
+sub score {  return shift->{score}; }
 
 =head2 summit
 
@@ -152,10 +143,7 @@ sub score {
 
 =cut
 
-sub summit {
-  my $self = shift;
-  return $self->{'summit'};
-}
+sub summit {  return shift->{summit}; }
 
 
 =head2 display_label
@@ -198,13 +186,7 @@ sub display_label {
 
 =cut
 
-sub is_focus_feature{
-  my $self = shift;
-
-  #Do we need to test for FeatureSet here?
-  
-  return $self->feature_set->is_focus_set;
-}
+sub is_focus_feature{ return shift->feature_set->is_focus_set; }
 
 
 =head2 get_underlying_structure
@@ -226,15 +208,15 @@ sub get_underlying_structure{
   my $self = shift;
 
   if(! defined $self->{underlying_structure}){
-	my @loci = ($self->start);
+    my @loci = ($self->start);
 	
-	foreach my $mf(@{$self->get_associated_MotifFeatures}){
-	  push @loci, ($mf->start, $mf->end);
-	}
+    foreach my $mf(@{$self->get_associated_MotifFeatures}){
+      push @loci, ($mf->start, $mf->end);
+    }
 
-	push @loci, $self->end;
+    push @loci, $self->end;
 	
-	$self->{underlying_structure} = \@loci;
+    $self->{underlying_structure} = \@loci;
   }
 
   return $self->{underlying_structure};
@@ -253,17 +235,15 @@ sub get_underlying_structure{
 =cut
 
 sub get_associated_MotifFeatures{
-  my ($self) = @_;
+  my $self = shift;
 
-  if(! defined $self->{'assoc_motif_features'}){
-	my $mf_adaptor = $self->adaptor->db->get_MotifFeatureAdaptor;
-	
-	#These need reslicing!
-	
-	$self->{'assoc_motif_features'} = $mf_adaptor->fetch_all_by_AnnotatedFeature($self, $self->slice);
+  if(! defined $self->{assoc_motif_features}){
+    my $mf_adaptor = $self->adaptor->db->get_MotifFeatureAdaptor;
+		#These need reslicing!
+		$self->{assoc_motif_features} = $mf_adaptor->fetch_all_by_AnnotatedFeature($self, $self->slice);
   }
 
-  return $self->{'assoc_motif_features'};
+  return $self->{assoc_motif_features};
 }
 
 
