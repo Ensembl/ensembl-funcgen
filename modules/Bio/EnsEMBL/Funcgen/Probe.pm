@@ -2,16 +2,21 @@
 # Ensembl module for Bio::EnsEMBL::Funcgen::Probe
 #
 
-
 =head1 LICENSE
 
-  Copyright (c) 1999-2013 The European Bioinformatics Institute and
-  Genome Research Limited.  All rights reserved.
+Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 
-  This software is distributed under a modified Apache license.
-  For license details, please see
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-    http://www.ensembl.org/info/about/code_licence.html
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 =head1 CONTACT
 
@@ -30,15 +35,14 @@ Bio::EnsEMBL::Funcgen::Probe - A module to represent a nucleotide probe.
 
 use Bio::EnsEMBL::Funcgen::Probe;
 
-#
-
-my $probe = Bio::EnsEMBL::Funcgen::Probe->new(
-        -PROBE_SET     => $probe_set,
-	    -NAME          => 'Probe-1',
-        -ARRAY         => $array,
-        -ARRAY_CHIP_ID => $ac_dbid,
-	    -CLASS         => "EXPERIMENTAL",
-);
+my $probe = Bio::EnsEMBL::Funcgen::Probe->new
+ (
+  -PROBE_SET     => $probe_set,
+	-NAME          => 'Probe-1',
+  -ARRAY         => $array,
+  -ARRAY_CHIP_ID => $ac_dbid,
+	-CLASS         => "EXPERIMENTAL",
+ );
 
 =head1 DESCRIPTION
 
@@ -63,7 +67,7 @@ use warnings;
 use Bio::EnsEMBL::Utils::Argument qw( rearrange ) ;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 
-use parent qw(Bio::EnsEMBL::Funcgen::Storable);
+use parent qw( Bio::EnsEMBL::Funcgen::Storable );
 
 
 =head2 new

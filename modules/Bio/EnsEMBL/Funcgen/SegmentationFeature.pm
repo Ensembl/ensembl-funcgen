@@ -1,17 +1,23 @@
 #
 # Ensembl module for Bio::EnsEMBL::Funcgen::SegmentationFeature
 #
-# You may distribute this module under the same terms as Perl itself
+
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2013 The European Bioinformatics Institute and
-  Genome Research Limited.  All rights reserved.
+Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 
-  This software is distributed under a modified Apache license.
-  For license details, please see
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-    http://www.ensembl.org/info/about/code_licence.html
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 =head1 CONTACT
 
@@ -30,15 +36,15 @@ Bio::EnsEMBL::SegmentationFeature - Genomic segmentation feature
 
 use Bio::EnsEMBL::Funcgen::SegmentationFeature;
 
-my $feature = Bio::EnsEMBL::Funcgen::SegmentationFeature->new(
-	-SLICE         => $chr_1_slice,
-	-START         => 1_000_000,
-  	-END           => 1_000_024,
+my $feature = Bio::EnsEMBL::Funcgen::SegmentationFeature->new
+ (
+  -SLICE         => $chr_1_slice,
+  -START         => 1_000_000,
+  -END           => 1_000_024,
 	-STRAND        => 0,
-    -FEATURE_SET   => $fset,
-    -FEATURE_TYPE  => $ftype,
-); 
-
+  -FEATURE_SET   => $fset,
+  -FEATURE_TYPE  => $ftype,
+ );
 
 
 =head1 DESCRIPTION
@@ -64,7 +70,7 @@ use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 
-use parent qw(Bio::EnsEMBL::Funcgen::SetFeature);
+use parent qw( Bio::EnsEMBL::Funcgen::SetFeature );
 
 =head2 new
 
@@ -102,12 +108,12 @@ use parent qw(Bio::EnsEMBL::Funcgen::SetFeature);
 
 =cut
 
+#Hard code strand => 0 here? And remove from input params?
+
 sub new {
   my $caller = shift;
-	
-  my $class = ref($caller) || $caller;
-  my $self = $class->SUPER::new(@_);
-  #Hard code strand => 0 here? And remove from input params?
+	my $class  = ref($caller) || $caller;
+  my $self  = $class->SUPER::new(@_);
   my ($score, $ftype) = rearrange(['SCORE', 'FEATURE_TYPE'], @_);
 
   #test ftype as SetFeature method defaults to feature_set->feature_type

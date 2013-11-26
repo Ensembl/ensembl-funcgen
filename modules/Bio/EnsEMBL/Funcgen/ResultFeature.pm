@@ -4,13 +4,19 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2013 The European Bioinformatics Institute and
-  Genome Research Limited.  All rights reserved.
+Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 
-  This software is distributed under a modified Apache license.
-  For license details, please see
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-    http://www.ensembl.org/info/about/code_licence.html
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 =head1 CONTACT
 
@@ -75,14 +81,8 @@ use parent qw( Bio::EnsEMBL::Feature );
 =cut
 
 sub new_fast {
-  my ($class, @args)  = @_;
-  #return bless ($arrayref, $class);
-
-  #Passing arrayref here may cause problems with changing vars after obj creation
-
-  #warn "in new fast with @args";
-
-  bless \@args, $class;
+  my $class = shift;
+  bless \@_, $class;
 }
 
 
@@ -126,7 +126,7 @@ sub end {
 
 #Do we need to chacnge this to strand and have slice strand context, as with start and end
 
-sub strand {  $_[0]->[2];}
+sub strand {  shift->[2];}
 
 =head2 score
 
@@ -140,7 +140,7 @@ sub strand {  $_[0]->[2];}
 
 =cut
 
-sub score {  $_[0]->[3];}
+sub score {  shift->[3];}
 
 
 =head2 probe
@@ -157,15 +157,15 @@ sub score {  $_[0]->[3];}
 
 #probe_id is currently not available in the result_feature table, so this would be a result/probe_feature query.
 
-sub probe {  $_[0]->[4];}
+sub probe {  shift->[4];}
 
 
 #The following are only used for storage and retrieval, hence why they are not included in new_fast which is streamlined
 #for performance
 #These have no validation so all thi smust be done in the caller/storer i.e. the adaptor
 
-sub result_set_id {  $_[0]->[5];}
-sub window_size {  $_[0]->[6];}
+sub result_set_id {  shift->[5];}
+sub window_size {  shift->[6];}
 
 #May not ever need this
 #We pass the slice to store
@@ -242,7 +242,7 @@ sub move {
 
 
 sub feature_Slice {
-  my ($self) = @_;
+  my $self = shift;
 
   my $slice = $self->[7];
 
