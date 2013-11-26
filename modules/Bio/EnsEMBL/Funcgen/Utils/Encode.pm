@@ -1,15 +1,22 @@
+#
 # Ensembl module for Bio::EnsEMBL::Funcgen::Utils::Encode
 #
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2013 The European Bioinformatics Institute and
-  Genome Research Limited.  All rights reserved.
+Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 
-  This software is distributed under a modified Apache license.
-  For license details, please see
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-    http://www.ensembl.org/info/about/code_licence.html
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 =head1 CONTACT
 
@@ -35,19 +42,18 @@ with Encode regions.
 
 =cut
 
-use strict;
-use warnings;
-
 package Bio::EnsEMBL::Funcgen::Utils::Encode;
 
-require Exporter;
-use vars qw(@ISA @EXPORT_OK);
-@ISA = qw(Exporter);
-@EXPORT_OK = qw(get_encode_regions);
-
+use strict;
+use warnings;
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 use POSIX;
 use Data::Dumper;
+
+use parent qw( Exporter );
+
+use vars qw(@EXPORT_OK);
+@EXPORT_OK = qw(get_encode_regions);
 
 =head2 get_encode_regions
 
