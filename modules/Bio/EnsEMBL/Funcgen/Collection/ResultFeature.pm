@@ -4,13 +4,19 @@
 
 =head1 LICENSE
 
-  Copyright (c) 1999-2013 The European Bioinformatics Institute and
-  Genome Research Limited.  All rights reserved.
+Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 
-  This software is distributed under a modified Apache license.
-  For license details, please see
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
 
-    http://www.ensembl.org/info/about/code_licence.html
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
 
 =head1 CONTACT
 
@@ -66,12 +72,11 @@ Bio::EnsEMBL::Funcgen::Collector::ResultFeature
 #implementation.  For example a Bio::EnsEMBL::Collection::Gene would only have summary information over several genes.
 #Altho', unlikely that we'll ever collect genes.
 
+package Bio::EnsEMBL::Funcgen::Collection::ResultFeature;
+
 use strict;
 use warnings;
-
-
-package Bio::EnsEMBL::Funcgen::Collection::ResultFeature;
-use base ('Bio::EnsEMBL::Feature');#@ISA
+use parent qw( Bio::EnsEMBL::Feature );
 
 #This needs to inherit from Bio::EnsEMBL::Collection
 #Which can host some of the below methods
@@ -121,9 +126,7 @@ sub new_fast {
 
 =cut
 
-sub scores {  
-  return $_[0]->{scores};
-}
+sub scores {    return shift->{scores}; }
 
 
 
@@ -141,29 +144,22 @@ sub scores {
 
 #probe_id is currently not available in the result_feature table, so this would be a result/probe_feature query.
 
-sub probe {  
-  return $_[0]->{probe};
-}
+sub probe {    return shift->{probe}; }
 
 
-sub result_set_id {  
-  return $_[0]->{result_set_id};
-}
+sub result_set_id {    return shift->{result_set_id}; }
 
-sub window_size {  
-  return $_[0]->{window_size};
-}
-
-#could be pushed into the bigBed c code
+sub window_size {    return shift->{window_size}; }
 
 sub get_min_max_scores{
-  
-  if(! defined $_[0]->{'min_max_scores'}){
-	my @sorted_scores = sort { $a <=> $b } @{$_[0]->{'scores'}};
-	$_[0]->{'min_max_scores'} = [$sorted_scores[0], $sorted_scores[$#sorted_scores]];
+  my $self = shift;
+
+  if(! defined $self->{min_max_scores}){
+    my @sorted_scores = sort { $a <=> $b } @{$self->{scores}};
+    $self->{min_max_scores} = [$sorted_scores[0], $sorted_scores[$#sorted_scores]];
   }
 
-  return $_[0]->{'min_max_scores'};
+  return $self->{min_max_scores};
 }
 
 
