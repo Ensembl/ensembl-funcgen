@@ -62,7 +62,7 @@ use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( median );
 
-use parent qw( Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable );
+use base qw( Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable );
 
 
 =head2 new

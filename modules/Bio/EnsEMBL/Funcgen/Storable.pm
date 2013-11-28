@@ -58,7 +58,7 @@ use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
 
-use parent qw( Bio::EnsEMBL::Storable );
+use base qw( Bio::EnsEMBL::Storable );
 
 =head2 new
 

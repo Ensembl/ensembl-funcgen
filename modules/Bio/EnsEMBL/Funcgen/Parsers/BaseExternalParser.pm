@@ -35,7 +35,7 @@ use Bio::EnsEMBL::Funcgen::FeatureSet;
 use Bio::EnsEMBL::Funcgen::FeatureType;
 use Bio::EnsEMBL::Analysis;
 
-use parent qw( Bio::EnsEMBL::Funcgen::Parsers::BaseImporter );
+use base qw( Bio::EnsEMBL::Funcgen::Parsers::BaseImporter );
 
 
 

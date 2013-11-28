@@ -30,7 +30,7 @@ use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Exception;
 
-use parent qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
+use base qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
 #Can remove this whole class from the API and use the core class if we can resolve problems below
 #remove new and inherit from Bio::EnsEMBL::DBSQL::MetaCoordContainer?

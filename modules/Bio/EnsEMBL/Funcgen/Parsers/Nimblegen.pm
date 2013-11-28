@@ -62,7 +62,7 @@ use Bio::EnsEMBL::Funcgen::ExperimentalChip;
 use Bio::EnsEMBL::Funcgen::ArrayChip;
 use Bio::EnsEMBL::Funcgen::Channel;
 
-use parent qw( Bio::EnsEMBL::Funcgen::Parsers::MAGE );
+use base qw( Bio::EnsEMBL::Funcgen::Parsers::MAGE );
 
 =head2 new
 

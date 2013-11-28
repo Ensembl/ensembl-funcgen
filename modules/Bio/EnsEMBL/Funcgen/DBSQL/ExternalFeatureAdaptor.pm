@@ -54,7 +54,7 @@ use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::ExternalFeature;
 use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor; #DBI sql_types import
 
-use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
+use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
 
 
 

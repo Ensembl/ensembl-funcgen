@@ -92,7 +92,7 @@ use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 
-use parent qw(Bio::EnsEMBL::Funcgen::Set);
+use base qw(Bio::EnsEMBL::Funcgen::Set);
 
 
 my %valid_classes = (

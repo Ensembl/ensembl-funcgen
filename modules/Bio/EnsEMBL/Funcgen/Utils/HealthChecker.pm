@@ -59,7 +59,7 @@ use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Analysis;
 
-use parent qw( Bio::EnsEMBL::Funcgen::Utils::Helper );
+use base qw( Bio::EnsEMBL::Funcgen::Utils::Helper );
 
 
 #TO DO

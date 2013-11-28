@@ -33,7 +33,7 @@ use Bio::EnsEMBL::DBEntry;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Funcgen::ExternalFeature;
 
-use parent qw( Bio::EnsEMBL::Funcgen::Parsers::BaseExternalParser );
+use base qw( Bio::EnsEMBL::Funcgen::Parsers::BaseExternalParser );
 
 
 

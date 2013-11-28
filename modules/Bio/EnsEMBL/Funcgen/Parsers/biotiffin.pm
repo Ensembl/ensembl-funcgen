@@ -34,7 +34,7 @@ use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Funcgen::ExternalFeature;
 
-use parent qw( Bio::EnsEMBL::Funcgen::Parsers::BaseExternalParser );
+use base qw( Bio::EnsEMBL::Funcgen::Parsers::BaseExternalParser );
 
 
 # To get files for bioTIFFIN, download the following GFF file (e.g. via wget):
