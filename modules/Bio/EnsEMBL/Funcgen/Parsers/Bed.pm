@@ -63,7 +63,7 @@ use Bio::EnsEMBL::Funcgen::FeatureSet;
 use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 use Bio::EnsEMBL::Funcgen::Utils::Helper;
 
-use parent qw( Bio::EnsEMBL::Funcgen::Parsers::InputSet );
+use base qw( Bio::EnsEMBL::Funcgen::Parsers::InputSet );
 
 #To do
 # Extend this so we can import features to annotated_feature

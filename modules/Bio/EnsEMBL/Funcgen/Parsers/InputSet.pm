@@ -65,7 +65,7 @@ use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 use Bio::EnsEMBL::Funcgen::SegmentationFeature;
 use Bio::EnsEMBL::Funcgen::FeatureType;
 
-use parent qw( Bio::EnsEMBL::Funcgen::Parsers::BaseImporter );
+use base qw( Bio::EnsEMBL::Funcgen::Parsers::BaseImporter );
 
 
 #todo change input_set_name to name

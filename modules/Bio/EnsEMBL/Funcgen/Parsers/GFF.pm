@@ -55,7 +55,7 @@ use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 
-use parent qw( Bio::EnsEMBL::Funcgen::Parsers::InputSet );
+use base qw( Bio::EnsEMBL::Funcgen::Parsers::InputSet );
 
 =head2 new
 

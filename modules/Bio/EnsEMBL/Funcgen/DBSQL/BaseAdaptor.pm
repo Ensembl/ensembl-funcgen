@@ -57,7 +57,7 @@ use DBI qw(:sql_types);
 #have to re-import them, as we lose :sql_types $DBI::EXPORT_TAGS in core BaseAdaptor
 #we could just re-export everything
 
-use parent qw(Bio::EnsEMBL::DBSQL::BaseAdaptor Exporter);
+use base qw(Bio::EnsEMBL::DBSQL::BaseAdaptor Exporter);
 
 require Exporter; #Still required to use vars @EXPORT
 use vars qw( @EXPORT );

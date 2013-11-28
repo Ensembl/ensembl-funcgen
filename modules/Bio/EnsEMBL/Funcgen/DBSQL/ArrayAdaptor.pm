@@ -60,7 +60,7 @@ use Bio::EnsEMBL::Utils::Exception qw( warning throw );
 use Bio::EnsEMBL::Funcgen::Array;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#sql_types bareword import
 
-use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
+use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 
 =head2 fetch_by_array_chip_dbID

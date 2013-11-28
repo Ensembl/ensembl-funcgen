@@ -30,7 +30,7 @@ use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 
-use parent qw( Bio::EnsEMBL::Funcgen::Parsers::BaseExternalParser );
+use base qw( Bio::EnsEMBL::Funcgen::Parsers::BaseExternalParser );
 
 # Parse data from LBL enhancers, see http://enhancer.lbl.gov/cgi-bin/imagedb.pl?show=1;search.result=yes;form=search;search.form=no;action=search;search.sequence=1
 # e.g.

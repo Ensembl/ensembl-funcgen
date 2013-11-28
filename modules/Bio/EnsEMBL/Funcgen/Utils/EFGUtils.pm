@@ -63,7 +63,7 @@ use Time::Local;
 use FileHandle;
 use Carp;
 
-use parent qw( Exporter );
+use base qw( Exporter );
 use vars   qw( @EXPORT_OK );
 
 @EXPORT_OK = qw(

@@ -47,7 +47,7 @@ use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::DBEntry;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 
-use parent qw( Bio::EnsEMBL::DBSQL::DBEntryAdaptor Bio::EnsEMBL::DBSQL::BaseAdaptor);
+use base qw( Bio::EnsEMBL::DBSQL::DBEntryAdaptor Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
 =head2 fetch_all_by_FeatureType
 

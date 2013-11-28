@@ -56,7 +56,7 @@ use Bio::EnsEMBL::Utils::Exception qw( warning throw deprecate );
 use Bio::EnsEMBL::Funcgen::ExperimentalGroup;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#DBI sql_types import
 
-use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
+use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 
 =head2 fetch_by_name

@@ -96,7 +96,7 @@ use Bio::EnsEMBL::Utils::Exception qw( throw );
 #Only need BaseFeatureAdaptor for non-DB based methods, e.g. projection, new_fast etc.
 use Bio::EnsEMBL::ExternalData::BigFile::BigBedAdaptor;
 
-use parent qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor ); #Should also inherit from Funcgen BigBedAdaptor
+use base qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor ); #Should also inherit from Funcgen BigBedAdaptor
 
 #This 'mix-in' inheritance should be well defined, similar to a Moose 'has' (role) style relation ship.
 #It should provide a well defined interface, which does not corrupt the interface of the inheriting class

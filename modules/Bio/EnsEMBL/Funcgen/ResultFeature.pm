@@ -62,7 +62,7 @@ package Bio::EnsEMBL::Funcgen::ResultFeature;
 use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
-use parent qw( Bio::EnsEMBL::Feature );
+use base qw( Bio::EnsEMBL::Feature );
 
 ### TO BE REMOVED IN FAVOUR OF Bio::EnsEMBL::Funcgen::Collection::ResultFeature
 

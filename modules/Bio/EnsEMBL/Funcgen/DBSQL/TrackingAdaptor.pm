@@ -65,7 +65,7 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Utils::Exception         qw( throw warning );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( get_month_number );
 
-use parent qw( Bio::EnsEMBL::DBSQL::BaseAdaptor );
+use base qw( Bio::EnsEMBL::DBSQL::BaseAdaptor );
 
 #Currently don't use and Funcgen BaseAdaptor methods in here
 #and this would require _true_tables to be defined

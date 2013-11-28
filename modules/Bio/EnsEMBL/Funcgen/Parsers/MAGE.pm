@@ -51,7 +51,7 @@ use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( get_date open_file run_system_cmd );
 use Bio::EnsEMBL::Funcgen::Utils::Helper;
 
-use parent qw( Bio::EnsEMBL::Funcgen::Utils::Helper );
+use base qw( Bio::EnsEMBL::Funcgen::Utils::Helper );
 
 
 

@@ -54,7 +54,7 @@ use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Funcgen::ExperimentalChip;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#DBI sql_types import
 
-use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
+use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 
 =head2 fetch_all_by_experiment_dbID

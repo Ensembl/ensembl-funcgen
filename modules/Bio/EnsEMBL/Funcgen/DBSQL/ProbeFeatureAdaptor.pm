@@ -60,7 +60,7 @@ use Bio::EnsEMBL::Funcgen::ProbeFeature;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;#DBI sql_types import
 #use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
-use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor);
+use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor);
 
 
 my $true_final_clause = ' ORDER BY pf.seq_region_id, pf.seq_region_start, pf.probe_feature_id';

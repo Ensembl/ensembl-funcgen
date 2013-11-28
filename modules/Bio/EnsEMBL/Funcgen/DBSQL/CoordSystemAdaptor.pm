@@ -136,7 +136,7 @@ use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::Funcgen::CoordSystem;
 
-use parent qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
+use base qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
 my %cs_warnings;
 

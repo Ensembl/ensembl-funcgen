@@ -62,7 +62,7 @@ use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::MotifFeature;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;#DBI sql_types import
 
-use parent qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor );
+use base qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor );
 
 my $true_final_clause = ' ORDER by mf.seq_region_id, mf.seq_region_start, mf.seq_region_end';
 # ORDER by required by fetch_all_by_dbID_list when fetching as regulatory_attributes

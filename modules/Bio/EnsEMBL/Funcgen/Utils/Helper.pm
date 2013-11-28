@@ -96,7 +96,7 @@ use Bio::EnsEMBL::Funcgen::FeatureSet;
 use Bio::EnsEMBL::Funcgen::DataSet;
 use Bio::EnsEMBL::Funcgen::ResultSet;
 
-use parent qw( Bio::Root::Root );
+use base qw( Bio::Root::Root );
 
 #todo remove or use Bio::Root::Root properly
 #we get throw from Exception and we have re-implemented debug

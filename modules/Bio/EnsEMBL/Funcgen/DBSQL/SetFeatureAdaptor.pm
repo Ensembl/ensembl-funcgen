@@ -62,12 +62,12 @@ use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
 use Bio::EnsEMBL::Funcgen::SetFeature;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;#DBI sql_types import
 
-use parent qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor );
+use base qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor );
 
 use vars qw( @EXPORT ); #require Exporter is done in BaseAdaptor
 @EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}});
 
-use parent qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor );
+use base qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor );
 
 
 

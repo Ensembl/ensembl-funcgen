@@ -56,7 +56,7 @@ use Bio::EnsEMBL::Utils::Exception         qw( throw warning );
 use Bio::EnsEMBL::Funcgen::ResultSet;
 use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor; #DBI sql_types import
 
-use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor);
+use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor);
 
 
 =head2 fetch_all_by_feature_class

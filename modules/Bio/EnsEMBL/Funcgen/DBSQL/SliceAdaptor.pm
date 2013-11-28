@@ -59,7 +59,7 @@ use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 
-use parent qw(Bio::EnsEMBL::DBSQL::SliceAdaptor);
+use base qw(Bio::EnsEMBL::DBSQL::SliceAdaptor);
 
 sub new {
   my ($caller, $efgdb) = @_;

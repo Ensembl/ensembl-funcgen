@@ -36,7 +36,7 @@ use Bio::EnsEMBL::Funcgen::Collection::ResultFeature;
 use Bio::EnsEMBL::Funcgen::ProbeFeature; #Only used for _pre_storing slice/seq_region details
 #use POSIX;#ceil
 
-use parent qw( Bio::EnsEMBL::Utils::Collector Bio::EnsEMBL::DBFile::CollectionAdaptor );
+use base qw( Bio::EnsEMBL::Utils::Collector Bio::EnsEMBL::DBFile::CollectionAdaptor );
 
 
 ### Global config variables

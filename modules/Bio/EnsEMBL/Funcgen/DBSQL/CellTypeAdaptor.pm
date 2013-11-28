@@ -54,7 +54,7 @@ use Bio::EnsEMBL::Utils::Exception qw( warning throw );
 use Bio::EnsEMBL::Funcgen::CellType;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#sql_types barewords import
 
-use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
+use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 #todo revert this to core BaseAdaptor and change _true_tables to _tables
 # as we don't use query composition or other funcgen BaseAdaptor methods?

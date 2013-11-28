@@ -66,7 +66,7 @@ use Bio::EnsEMBL::Utils::Exception         qw( throw deprecate );
 use Bio::EnsEMBL::Funcgen::ResultFeature;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor; #DBI sql_types import
 
-use parent qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor
+use base qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor
 			         Bio::EnsEMBL::Funcgen::Collector::ResultFeature  );
 
 #Private vars to used to maintain simple implementation of Collector
