@@ -865,7 +865,7 @@ sub _fetch_other_dbIDs_by_stable_feature_set_ids{
 
 =head2 fetch_all_by_stable_ID
 
-  Arg [1]    : string - stable ID e.g. ENSR00000000001
+  Arg [1]    : string - stable ID e.g. ENSR00000000002
   Example    : my @cell_type_regfs = @{$regf_adaptor->fetch_all_by_stable_ID('ENSR00000000001');
   Description: Retrieves a list of RegulatoryFeatures with associated stable ID. One for each CellType or
                'core' RegulatoryFeature set which contains the specified stable ID.
