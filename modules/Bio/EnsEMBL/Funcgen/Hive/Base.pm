@@ -30,7 +30,11 @@ use Scalar::Util                           qw( blessed );
 
 use base ('Bio::EnsEMBL::Hive::Process');
 
-#todo what won't be using the tracking DB? i.e. Isn't everything a BaseDB?
+
+
+# TODO
+# Move a lot of this to BaseSequenceAnalysis
+# what won't be using the tracking DB? i.e. Isn't everything a BaseDB?
 #We can do peak calling and alignment outside of DB using -use_tracking_db 0
 
 #This means we need to separate the requirement for tracking DB from BaseDB as make it available
@@ -197,11 +201,13 @@ sub alignment_root_dir {
 #create no longer required in here as we normally 
 #create this using get_output_work_dir which does the validation
 
+#TODO add support for control alignment dir!
+
 sub alignment_dir {
-  my ($self, $input_set, $create) = @_;
+  my ($self, $rset, $create, $control) = @_;
    
-  if(defined $input_set){ 
-    my $exp_id = $input_set->get_Experiment->dbID;
+  if(defined $rset){ 
+    #my $exp_id = $rset->get_Experiment->dbID;
     
     #todo handle input_set analyses here
     #as the logic_name will eventually be added to the path
@@ -220,31 +226,133 @@ sub alignment_dir {
     
     $self->set_dir_param_method('alignment_dir', 
                                 [$self->alignment_root_dir, 
-                                 $self->get_study_name_from_InputSet($input_set)],
+                                 $self->get_study_name_from_Set($rset, $control)],
                                 $create);    
   }
   return $self->param('alignment_dir');
 }
 
 
-sub get_study_name_from_InputSet {
-  my $self = shift;
-  my $iset = shift;
+
+sub get_study_name_from_Set {
+  my ($self, $set, $control) = @_;
+  
+  if(! (ref($set) && 
+        ($set->isa('Bio::EnsEMBL::Funcgen::InputSubset') ||
+         $set->isa('Bio::EnsEMBL::Funcgen::ResultSet') ))){
+    throw('Must pass a valid InputSet or ResultSet');         
+  }
+  
+  my ($exp_name, $ftype);
+  my $ctype = $set->cell_type->name;
+  
+  if($control){
+    $control = _get_control_InputSubset($set);
+    
+    #This is based on the assumption that all non-ctrl subsets are associated
+    #with one ResultSet/Experiment.
+    
+    my $exp   = $control->get_Experiment;
+    $exp_name = $exp->name;
+ 
+    foreach my $isset(@{$exp->get_InputSubsets}){
       
-  return $self->parse_study_name($iset->get_Experiment->name,
-                                 $iset->cell_type->name,
-                                 $iset->feature_type->name);
+      if(! $isset->is_control){
+        $ftype = $isset->feature_type->name;  
+        last;
+      }  
+    }      
+  }
+  else{  
+    $exp_name = $set->get_Experiment->name ||
+      throw("Cannot find unique experiment name for ResultSet:\t".$set->name);
+    $ftype = $set->feature_type->name;
+  }
+  
+  (my $study_name = $exp_name) =~ s/${ctype}_${ftype}_(.*)/$1/;
+  return $study_name;
 }
 
 
-#Just strip off first two words of experiment name for now
-#until we model study/experiment properly wrt having multiple input_sets associated
-#This should still work if the experiment names have ctype and ftype removed
+#This seems odd as the naming convention is
+#$experiment->name
+#However, we need to hande controls here which will not match the experiment name
+#and experiment name is also unsafe as experiment is really a study, and 
+#need not contain the cell_type and feature_type
+#Given that we are already making many assumptions based on this we can do the same here?
+#although it would be good to have a set of methods to handle this
+#such that we don't pepper the API with assumptions i.e. if we want to change it
+#it only changes in one location.
 
-sub parse_study_name_name{
-  my ($self, $exp, $ctype, $ftype) = @_;   
-  (my $study_name = $exp) =~ s/${ctype}_${ftype}_(.*)/$1/;
-  return $study_name;
+#So we need a method which will generate the standard set prefix and the control set prefix
+#based on an existing Set, or an Experiment. 
+#Can't d this for Experiment with an additional cell_type/feature_type being passed
+#which means that the implementations would still have to change should we update the 
+#nomenclature
+
+
+#Should probably pass prefix name generation off to another method 
+#taking all the string elements. Then we would have one method which 
+#defines the nomenclature, and would not be dependant on API object
+#Would still require rejigging of implementation should the nomenclature
+#change, and API object are advantageous here for validation
+  
+
+#Don't bother validating that all the controls have matching ctypes 
+#and ftyps as this should be done during import
+#Just assume we can pick 1 which is representative
+
+
+#Will fail if we allow inter group controls?
+#No, we should never have mixed controls
+#Check this is the case on import
+    
+sub _get_control_InputSubset{
+  my $set = shift; 
+  my @is_sets;
+  
+  if( $set->isa('Bio::EnsEMBL::Funcgen::ResultSet') ){
+    @is_sets = @{$set->get_support('input_subset')};
+  
+    if(! @is_sets){
+      throw("Failed to identify control InputSubset support for ResultSet:\t".$set->name);  
+    }
+  }
+  else{
+    @is_sets = ($set);
+  }
+  
+  my @ctrls = map { $_ if $_->is_control } @is_sets;
+
+  if(! @ctrls){
+    throw('Could not identify a control InputSubset from '.ref($set).":\t".$set->name);  
+  }
+
+  return $ctrls[0];
+}
+  
+
+sub get_set_prefix_from_Set{
+  my ($self, $set, $control) = @_;
+  
+  my $study_name = $self->get_study_name_from_Set($set, $control);
+ 
+  if(! (ref($set) && 
+        ($set->isa('Bio::EnsEMBL::Funcgen::InputSubset') ||
+         $set->isa('Bio::EnsEMBL::Funcgen::ResultSet') ))){
+    throw('Must pass a valid InputSet or ResultSet');         
+  }
+  
+  my $ftype;
+  
+  if($control){
+    $ftype = _get_control_InputSubset($set)->feature_type->name;
+  }
+  else{
+     $ftype = $set->feature_type->name;
+  }
+ 
+  return $set->cell_type->name.'_'.$ftype.'_'.$study_name; 
 }
 
 
@@ -252,12 +360,16 @@ sub get_output_work_dir_methods{
   my ($self, $default_odir, $no_work_dir) = @_;
    
   my $out_dir = $self->validate_dir_param('output_dir', 1, $default_odir); 
-   
-   
   my $work_dir;    
              
-  if(! $no_work_dir){                 
+  if(! $no_work_dir){
     my $dr_dir             = $self->data_root_dir;
+    
+    if($default_odir !~ /$dr_dir/){
+      throw('Cannot set a work_dir from an output dir('.$out_dir.
+        ") which is not in the data_root_dir:\n\t$dr_dir");   
+    }    
+               
     my $wr_dir             = $self->work_root_dir;
     ($work_dir = $out_dir) =~ s/$dr_dir/$wr_dir/;
   
@@ -665,6 +777,11 @@ sub set_param_method {
 }
 
 
+#This is basically Class::Accessor but tied into the hive system
+#and validates we are not over-writing some other method
+#todo improve pacakge_method test? Should we ever need to over-write and
+#existing method?
+
 sub _param_and_method {
   my ($self, $param_name, $param_value, $req_or_silent) = @_;
   my $cref;
@@ -688,6 +805,10 @@ sub _param_and_method {
     #method in a batch job, where the global scope has persisted from
     #the first job which initialised the method
     #add debug statement here?
+    
+    #We are still injecting/over-writing the coderef here
+    #can we simply return is the package_method matches what we expect?
+    #and throw if is doesn't
     
   }
   #else it does not exist, so safe to inject
@@ -800,7 +921,7 @@ Defined by _set_out_db (if using a tracking DB or this is also a BaseDB) or vali
 
 =cut
 
-#we dei=finitely need branch_key_param|method
+#we definitely need branch_key_param|method
 #for a truly generic implementation, i.e. we want to reuse module for a different analysis
 #and need to branch based on a different method/param
 #can we validate that here?
@@ -817,18 +938,126 @@ Defined by _set_out_db (if using a tracking DB or this is also a BaseDB) or vali
 #This will prevent hardcoding of the branch_key, such that it can be redefined in the config.
 #but will also require another wrapper if we don't have an existing direct access method
 
-sub init_branch_config {
-  my ($self, $optional, $validate_bkey_method) = @_;  
-  my $branch_config = $self->get_param_method('branch_config', 'silent');
- 
-  if(! $optional){
-    assert_ref($branch_config, 'HASH', 'branch_config');  
-  }
+#sub init_branch_config {
+
+#We should probably separate out the init_branching_by_method
+
+
+
+sub init_branching_by_analysis{  
+  my $self = shift;#, $optional, $validate_bkey_method) = @_;  
+   
+  #my $branch_config = $self->get_param_method('branch_config', 'silent');
   
-  if( (defined $branch_config) &&
-      $validate_bkey_method){
+  #Not a passed param anymore, as we get it from the dataflow rules
+  my $branch_config = $self->{branch_config};
+ 
+ 
+ 
+  if(! defined $branch_config){
+    
+    my $dfr_adaptor = $self->db->get_DataflowRuleAdaptor;  
+    
+    if(! $drf_adaptor->can('fetch_all_by_analysis_id')){
+      #inject method here   
+      no strict 'refs';
+  
+      *{ref($drf_adaptor)."::fetch_all_by_analysis_id}"} = sub { 
+        my $self    = shift;
+        my $anal_id = shift;
+        throw('Must provide and analysis id argument') if ! defined $anal_id;
+        return $self->fetch_all("from_analysis_id=${anal_id}");
+      }; 
+   
+      use strict;
+    }
+    
+    if(! $drf_adaptor->can('get_dataflow_config_by_analysis_id')){
+      #inject method here using fetch_all_by_analysis_id 
+      no strict 'refs';
+  
+      *{ref($drf_adaptor)."::get_dataflow_config_by_analysis_id}"} = sub { 
+        my $self    = shift;
+        my $anal_id = shift;
+        throw('Must provide and analysis id argument') if ! defined $anal_id;
+        
+        my %df_config;
+        
+        
+        foreach my $dfr(@{$self->fetch_all_by_analysis_id($anal_id)}){
+          #$anal_id here always represents the from analysis
+          my $to_analysis = $drf->to_analysis->logic_name;
+          
+          
+          #Is it valid to wire to the same analysis using two different branches
+          #We need to catch this and throw
+          
+          if(exists $df_config{$to_analysis}){
+            throw('It appears that the pipeline configuration for '.$to_analysis.
+              " has been wired via two separate branches:\t".$dfr->branch_code.
+              ' & '.$df_config{$to_analysis}{branch}.
+              "\nDynamic branch dataflow currently only supports 1 assoicated branch");  
+          }
+          
+          $df_config{$to_analysis} ||= {branch => $drf->branch_code, funnel=>undef };
+          
+          if($dfr->funnel_dataflow_rule_id){
+            $df_config{$to_analysis}{funnel} = 
+              $self->fetch_by_dbID($drf->funnel_dataflow_rule_id)->to_analysis->logic_name;
+          }
+          
+          #This will result in redundant branche entries across the to_analysis values
+          #which is fine, we just need to handle this in the caller
+          
+          #How are we going to handle the potential of dataflowing down the same branch twice, due 
+          #to the redundancy of the branches wrt to_analyis keys
+          #this will warn, but not fail, and dataflow will not happen
+          #so is safe-ish
+          
+          #This should be skipped over somehow
+          #we could do this be caching refs to identify unique outputids
+          #although there is nothing to stop the same output id being passed in a different array/hash
+          #and hence a different ref
+          #The way the runnable would and should be naturally written will prevent this
+          #It will just be that a single analysis name will be used to flow to all?
+          #we could add support branch_job_group by taking an array of analysis names?
+          #so the args would be
+          #$self->branch_job_group([[anal1, ...], [jobid1, ...], {funnel_analysis_name=>[funnel_job1, ...]}]);
+          
+          
+          #branch_job_group will then check that all the analyses are on the same branch
+          #and that they constitute all of the analyses i.e.
+          #you don't add config without adding support and vice versa
+          #this does not prevent the dynamic branch dataflow, just what is 
+          #dataflown
+          
+          #Having the runnable directly linked to the logic names like this is 
+          #normally a bad idea, but this is the sacriface made to enable
+          #dynamic branch dataflow, and is better than having to proliferate
+          #hardcoded dataflow code
+          
+          
+          #dataflow_branched_job_groups b
+        
+        }
+        
+        return \%df_config;
+      }; 
+   
+      use strict;
+    }
+    
+    $branch_config = $dfr_adaptor->get_dataflow_config_by_analysis_id($self->analysis->dbID);
+    
+  }
+ 
+  #if(! $optional){
+  #  assert_ref($branch_config, 'HASH', 'branch_config');  
+  #}
+  
+  #if( (defined $branch_config) &&
+  if($validate_bkey_method){
     my $bkey_method = $self->get_param_method('branch_key_method', 'required');
-    #don't ever need this param again, so don't get_param_method
     
       
     #warn "branch_key_method is $bkey_method";  
@@ -840,21 +1069,221 @@ sub init_branch_config {
     }
     
     #Now reset branch_key_method method to actual branch_key_method?
-    #or just go down the old method as a variable root  
+    #or just go down the old 'method as a variable' root  
   }
   
-  $branch_config ||= {};
+  #$branch_config ||= {};
   
-  #100 is reserved branch for custom analyses
-  my %branch_data_flow_ids = ();
+  #100 is reserved branch for custom analyses?
+  #Bin this af, as we may want to use 100 for something else
+  #force config specification
+  #my %branch_data_flow_ids = ();
   #don't set 1 and 100 now so we don't have
   #keys if we really don't flow anything
-  map { $branch_data_flow_ids{$_} = [] } values %$branch_config;
+  #do we even need this now, as we have job groups
+  #map { $branch_data_flow_ids{$_} = [] } values %$branch_config;
   
-  $self->helper->debug(1, "Initialised branch_data_flow_ids:", \%branch_data_flow_ids);
+  #$self->helper->debug(1, "Initialised branch_data_flow_ids:", \%branch_data_flow_ids);
   
-  $self->set_param_method('branch_output_ids', \%branch_data_flow_ids);
+  #$self->set_param_method('branch_output_ids', \%branch_data_flow_ids);
     
+  return $self->{branch_config};
+}
+
+
+#branch key is now the analysis name, and is part of the job group
+#This does lose some of the generic nature of the branch config
+#Will this work wrt IdentifySetInputs
+#which is currently the only analysis whihc uses this?
+
+#If branch is not defined, then job group contain branch_keys as analysis names
+#If branch is defined, then job_group is simply and array of job_ids, with no branh keys
+#
+
+#$self->branch_job_group([{'Preprocess_BWA_replicate'=> [$job_id1, ...]}, {'RunIDR' => [$job_id2, ...]} ]);
+
+#This method should validate that each analysis is either of the sme branch, or is a funnel for that analysis
+#funnels have to come last? Or can we handle that?
+#Should we convert analysis names to branch numbers here?
+
+
+#Should we allow branching based on branch number only, when using branch config?
+#We shouldn't have to conditionally call the branch method
+#based on the analysis we are running, i.e. we should always dataflow
+#The wiring or lack there of, should take care of this
+
+#If we don't allow branching by number, then will we force use of analysis names
+#which may appropriate for a given analysis (and they will not be wired)
+#This will also create failures, if we are validating the analysis names
+#
+
+#We should still allow for branch_conf as this enable truly generic dataflowing
+#without hardcoded analysis names
+
+
+#Do not allow mixed branch number/analysis name job_grouping!
+#This means we should never init_config, if we just going to branch by number
+#so we should rename init_branch_config to init_branching_by_analysis!
+#
+
+
+
+#Delaying dataflow may be advantageous as it will prevent job flow until all 
+#processing is done. In the case of creating a set for futher downstream analysis,
+#the successful jobs may start flowing down stream. This then make rerunning the initial job
+#problematic, as some of the inputs will have flown and some won't. Making setting of a
+#rollback or recover mode problematic, as it will start rolling back a job which is has been successfully 
+#flown. The only option here is to then figure out which jobs succeeded in flowing, and removing them 
+#from the input, before resubmitting after correcting what caused the initial failure.
+#If we delay the dataflow, then we can simply fix the problem, and retry the original job
+#This is at the cost of delaying flow of jobs which don't have issues.
+#The later is easier here.
+
+#so we have two possible types of jobs group here
+#one where the keys are analysis names
+#and one where the keys are just branch numbers
+
+#what about branch_key method jobs?
+#the branch key method should be called in the runnable
+#to pass the branck key here
+#the init_branching_by_config method will have already set up
+#the config. Does this allow funneling?
+#Remember we aren't going to allow mixed branching
+#or should we, so long as the key is not already defined in the config?
+
+#let's deal with brancing by analysis/config first, which is effectively the same
+#apart from the branching by config will not have any funnels.
+
+#$self->branch_job_group([{'Preprocess_BWA_replicate'=> [$job_id1, ...]}, {'RunIDR' => [$job_id2, ...]} ]);
+#This is currently not supporting multiple analyses for the same branch would have to change job_group format to following:
+#$self->branch_job_group(['Branch2_analysis1', 'Branch2_analysis2'] [$branch2_job_id1, ...], {'RunIDR' => [$job_id2, ...]} ]);
+#will only ever have 1 semaphore
+#However, the reason why we are doing this dynamic braching (analysis specific resource managment) means we are very unlikely to 
+#do this rather than just configuring another branch, unless they both feed into the same semphored job!
+#no no no, this will not break the resource management as this is based on the target analysis, not the branch
+#This will be to support two differeing analyses which require the same inputs
+#we don't yet have an example of this, but it is valid
+
+
+sub _get_branch_number{
+  my $branch_codes  = shift;
+  my $branch_config = shift;  
+  my $branch;
+  assert_ref($branch_codes, 'ARRAY', 'Branch code array');
+ 
+  if(defined $branch_config){
+    
+    foreach my $bcode(@$branch_codes){
+      
+      if(! exists $branch_config->{$bcode}){
+        throw("Could not find branch config for analysis or branch key:\t".$bcode.
+          "\nDefault to a 'custom' branch here");
+        #We would need and custom_analysis_name method
+        #as we can't just use 'custom' as this may clash
+        #and we don't know the analysis name template here
+        #Could only support 1 custom analysis per runnable
+        #unless we had a get_custom_analysis_name method
+        #which would parse the unknown analysis name appropriately
+        #overkill. stop.
+      }
+      else{
+        $branch =|| $branch_config->{$bcode}{branch};
+        
+        if($branch_config->{$bcode}{branch} != $branch){
+          throw($bcode.' fan analysis/branch key has branch '.$branch_config->{$bcode}{branch}.
+            " which does not match other analysis/branch key:\t".$branch_codes[0].' '.$branch);
+        }  
+      }
+    }
+  }
+  else{#We only expect 1 branch numbers
+    
+    if(scalar(@$branch_codes) != 1){
+      throw('Only 1 branch number is permitted if no branch config has been initialised, found '.
+        scalar(@$branch_codes)); 
+    }
+    
+    if($branch_codes[0] !~ /[0-9]+/o){
+    throw("Found analysis/branch key when no branch config has been initialised:\t".$branch_code.
+      "\nPlease use a branch number or call init_branching_by_analysis or init_branching_by_config");
+    $branch = $branch_codes[0]; 
+  }
+
+  return $branch;    
+}
+
+
+
+#$self->branch_job_group([['Branch2_analysis1', 'Branch2_analysis2'] [$branch2_job_id1, ...], 'RunIDR', [$job_id2, ...]]);
+#will only ever have 1 semaphore
+
+#This currently breaks the 'custom' branch, as we are validating all
+#present in config. We could get around this, by default everything to the custom analysis
+#if it is not present
+
+sub branch_job_group{
+  my ($self, $fan_branch_codes, $fan_jobs, $funnel_branch_code, $funnel_jobs) = @_;
+  my $branch_config = $self->{branch_config};
+  my $fan_branch    = _get_branch_number($fan_branch_codes, $branch_config); 
+  #this also asserts_ref for $fan_branch_codes
+    
+  if(! (check_ref($fan_jobs, 'ARRAY') &&
+        scalar(@$fan_jobs) > 0)){
+    throw('Must have at least 1 job in the job group');        
+  }
+  
+  my $job_group = [$fan_branch, $fan_jobs]; 
+   
+  if(($funnel_branch_code && ! $funnel_jobs) ||
+     ($funnel_jobs && ! $funnel_branch_code)){
+    throw('Must have both a funnel branch code and funnel job(s) to define a funnel in a job group');    
+  }
+  elsif($funnel_branch_code){ #implicit that $funnel_jobs are also true
+    #check $funnel_branch_code is not ref?
+     
+    if(! (check_ref($funnel_jobs, 'ARRAY') &&
+          scalar(@$funnel_jobs) > 0)){
+      throw('Must have at least 1 funnel job when defining a funnel in a job group'); 
+    }
+   
+    my $funnel_branch = _get_branch_number([$funnel_branch_code], $branch_config); 
+   
+    if($branch_config){#check the funnel is valid wrt fan analyses
+      
+      #This will only work for branch config derived from the DataflowRules
+      #not defined in the config!
+      
+      throw('How are we going to differentiate here?');
+      
+      if($branch_config->{$fan_branch_codes[0]}{funnel} ne $funnel_branch_code){
+        throw($funnel_branch_code.' is not a valid funnel analysis for '.$fan_branch_codes[0].
+          'Please check you dataflow configuration');  
+      }    
+    }
+    
+    push @$job_group, ($funnel_branch, $funnel_jobs);
+  }
+  
+  $self->{job_groups} ||= [];
+  push @{$self->{job_groups}}, $job_group;
+  
+  return;
+}
+
+
+sub dataflow_job_groups{
+  my $self       = shift;
+  my $job_groups = $self->{job_groups} || []; #allow no job groups
+  
+  foreach my $job_groups(@$job_groups){
+    
+    while(@$job_group){
+      my $branch   = shift;
+      my $id_array = shift;
+      $self->dataflow_output_id($id_array, $branch);
+    }
+  } 
+
   return;
 }
 
@@ -863,6 +1292,18 @@ sub init_branch_config {
 #get updated iteratively
 #branch_key_method is validated in init_branch_config
 #but has to be called prior top branch_ouput_id
+
+
+#Haven't we given up on using a branch key method?
+#check and remove!
+#branch_key_param/method are to support
+#generic analyses which may want to branch using a different param
+#under different circumstances
+
+
+
+
+
 
 sub branch_output_id{
   my ($self, $output_id, $branch_key, $branch) = @_;
@@ -876,10 +1317,27 @@ sub branch_output_id{
     throw('No valid branch_key_method or branch argument defined');  
   }
   
-  my $branch_output_ids = $self->branch_output_ids;
-  my $branch_config     = $self->branch_config;
+  #my $branch_output_ids = $self->branch_output_ids;
+  
+  #This is now resilient to a lack of branch_key config
+  #but is this what we want?
+  #do we want to force the use of init_branch_key_config, so
+  #that we reduce the risk of missing it?
+  
+  
+  #we probably don't want the branches hardcoding in the runnable as the dataflow
+  #is really defined in the config. So let's keep the config there
+  #and change the branch numbers to branch descriptors
+  #This may seem like overkill, but it keeps analysis specific config
+  #out of the runnable, and centralises the branching logic
+  #hence reducing complexity in the Runnables themselves
+  
+   
+  
+  my $branch_output_ids = $self->get_param_method('branch_output_ids', 'silent', {});
   
   if($branch_key){
+    my $branch_config     = $self->branch_config;
     $branch = (exists $branch_config->{$branch_key}) ? 
       $branch_config->{$branch_key} : 100;
     $self->helper->debug(2, "Branch key=$branch_key");   
@@ -895,9 +1353,122 @@ sub branch_output_id{
   return;
 }
 
+### BRANCH_OTUPUT_ID/DATAFLOW_OUTPUT_ID ISSUES ###
+
+### INITIAL REQUIREMENT #######
+#
+# 1 To allow defered data flow in the write_output method such that
+#   we don't get unwanted jobs created if we specify -no_write
+#   This was to support running IdentifySetInputs such that we can see what
+#   would be kicked off without creating the jobs, in case our initial
+#   set of parameters was incorrect. Alternative here would be to run a stand alone
+#   job, but that doesn't have access to the pipeline config
+#   THIS IS ESSENTIAL!
+#   (Although we could just dataflow dependant on no_write?)
+
+### ISSUES #######
+#
+# 1 We are adding config complexity, basically reversing the dataflow spec, 
+#   omitting the semaphore details. This info is already available via the 
+#   DataflowRuleAdaptor
+#
+# 2 Due to the lack of proper semaphore handling, the current methods are unsafe.
+#   They will work fine if the config does not contain semaphores, but it currently
+#   does check or handle grouping of fan/funnel jobs
+#
+# 3 Current implementation assumes highest branch number might be a funnel and so flows 
+#   this last. This only works there is only ever 1 funnel job for the whole analysis and 
+#   that funnel job happens to be the highest branch number.
+#   This is non optimal in many way, not least because it runs counter to the idea of being able to 
+#   dynamically expand the dataflow branches (dependant on adding analysis e.g. mutliple peak caller branches)
+#   In this case, it is better to have the generic (in that they don't case which branch they are fed from,
+#   e.g. can take input from RunCCAT or RunSWEmbl) funnels jobs first. Such that you can expand
+#   the dataflow config with new peak caller branches, without the risk of having to change the branch
+#   of the funnel analyses in the config or the runnable. e.g.
+#
+#      'A->2' => [ 'RunIDR' ],   #<-- this will never change
+#      '3->A' => ['Preprocess_BWA_replicate'],
+#      '4'    => ['Preprocess_BWA_merged'],     
+#      '5'    => ['Preprocess_BWA_control'],  
+#       #we can add new aligner preprocess jobs here
+#      '6->A' => ['Preprocess_OTHERALIGNER_replicate'],
+#      '7'    => ['Preprocess_OTHERALIGNER_merged'],     
+#      '8'    => ['Preprocess_OTHERALIGNER_control'],  
+#
+# Note: it would be more safe to block these in sets of 10, such that we can increase the
+# analysis flowed to for each analysis e.g.
+#      '21->A' => ['Preprocess_BWA_replicate'],
+#      '22'    => ['Preprocess_BWA_merged'],     
+#      '23'    => ['Preprocess_BWA_control'],  
+#      '24'    => ['SomeNew_BWA_analysis_here']
+#
+# Although this is merely for human readability, only having funnels first really matters
+# in terms of maintainability. All the rest should be picked up and used correctly
+
+
+### SOLUTIONS #####
+#
+# 1 Maintain branch_config and change branch_output_id to cache_job_group.
+#   This will change from a simply hash cache to a 2d array of hashes.
+#   e.g. $self->cache_job_group([{'Preprocess_BWA_replicate'=> $job_id1}, {'RunIDR' => $job_id2} ]);
+#   The arrays are necessary to maintain the order of the dataflow for funnel jobs.
+#   cache_job_group would push this array onto an array of job_groups 
+#   Runnable will have to know which jobs need and associated funnel job.
+#   This will not catch problems where job group do not have the required funnel
+#   Nor will it catch job groups with mismatched funnel analyses
+#   How are we going to support multiple jobs? 
+#   This should look more like this:
+#   e.g. $self->branch_job_group([{'Preprocess_BWA_replicate'=> [$job_id1, ...]}, {'RunIDR' => [$job_id2, ...]} ]);
+#   what about sorting multiple imputs?
+#   That's fine just define additional analyses as above, these can be validated vs the branch config
+
+
+#
+# 2 Drop branch_config and generate this via DataflowRuleAdaptor in init_branch config.
+#   This will function as above, apart from that is iwll be posssible
+#   to validate the funnel jobs are present and correct for a given job group
+#   A cache should be built of valid funnel jobs for each branch name(fan analysis).
+#   This may break if the Dataflow API/mechanism is changed
+
+### CAVEATS #####
+#
+# 1 All this work on the assumption that each branch flow to only 1 analysis
+#   i.e. the analysis we can build from the branck key value(aligner/peak caller name).
+#   With solution 2, it is possible to check this and throw if >1 is configured or allow
+#   if a allow_multiple_branch_analyses flag is passed.
+#
+# 2 All of these solutions require standardised branch name format based on the branch key
+#
+# 3 Funnel handling will always need to be hardcoded in the runnable, as it is impossible
+#   to tell from the dataflow config should funnel after 1 branch input or all branch inputs
+#   This is handled by the job grouping.
+#
+# 4 Due to caveat 3 funnel handling will be unsafe or impossible in runnables where the branch 
+#   config and data flow can change between instances of that runnable as a different analysis
+#   e.g. IdentifySetInputs
+#   These analyses normally use a branch key method to define the branch name, and have no
+#   inherant knowledge of dataflow or sempahores. i.e. they might be able to 
+#   get the semaphore info for a given branch, but they might not know what to send down it
+#   This would also be slightly problematic in building the job groups, conditionally
+#   including the funnel job id.
+#
+# 5 This is really polluting the runnable with config info/requirements. Ideally we want them
+#   to be entirely separated. However, this is the only way of doing the dynamic branching.
+#   Hence moving this functionality as far away from the runnable as possible is preferable
+#   In Base as present, but could be moved deeper into hive code with wrappers
+
+### QUESTIONS
+#
+# 1 Where are semaphores defined in Dataflow rule? funnel_dataflow_rule_id
+# 2 How does DataflowRule handle multiple target analyses? Are these separate rules?
+# 3 Would need to inject DataflowRuleAdaptor::fetch_all_by_analysis_id
+#   as it currently assumes you pass a branch code(or reserved name  MAIN, ANYFAILURE, RUNLIMIT, MEMLIMIT)
+# 4 would also be good to inject get_analysis_dataflow_config which would return the config we require
+
+
 
 sub dataflow_branch_output_ids {
-  my $self = $_[0];
+  my $self = shift;
   my $dataflow_output_ids = $self->branch_output_ids;#set by init_branch_config and will always be defined
   
   if(keys %{$dataflow_output_ids}){    
@@ -1004,7 +1575,7 @@ sub _dataflow_params_by_list {
 
 
 
-#todo Move these to BaseSequenceAnalysis?
+#todo Move these to (and create) BaseSequenceAnalysis.pm?
 
 sub sam_ref_fai {
   my $self = $_[0]; 
@@ -1042,19 +1613,18 @@ sub sam_ref_fai {
 #control files will always be merged and so don't need the TR suffix
 #from the input set name
 
-sub get_alignment_file_prefix_by_InputSet{
-  my ($self, $iset, $control) = @_;  
+sub get_alignment_file_prefix_by_ResultSet{
+  my ($self, $rset, $control) = @_;  
   
-  $self->out_db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::InputSet', $iset);
-  my $path = $self->alignment_dir($iset);
-  
+  $self->out_db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
+  my $path = $self->alignment_dir($rset, undef, $control);
+    
   if($control){
-    $path .= '/'.$iset->cell_type->name.'_'.
-        $self->param_required('control_feature').'_'.
-        $self->get_study_name_from_InputSet($iset);
+    $path .= '/'.$self->get_set_prefix_from_Set($rset, $control).'_'.
+        $rset->analysis->logic_name;
   }
   else{
-    $path .= '/'.$iset->name; 
+    $path .= '/'.$rset->name; 
   } 
   
   return $path; 
@@ -1063,8 +1633,8 @@ sub get_alignment_file_prefix_by_InputSet{
 #This will have validated that input_set are all part of the same experiment
 #(and they have the same alignment logic_name, when this is implemented) ???
 
-sub get_alignment_files_by_InputSet_formats {
-  my ($self, $iset, $formats, $control, $all_formats, $filter_format) = @_;
+sub get_alignment_files_by_ResultSet_formats {
+  my ($self, $rset, $formats, $control, $all_formats, $filter_format) = @_;
   assert_ref($formats, 'ARRAY');  
   my $file_type = ($control) ? 'control_file' : 'alignment_file';
   my ($path, $align_files);
@@ -1075,6 +1645,13 @@ sub get_alignment_files_by_InputSet_formats {
   #usage of get_param_method here will mean we can't call this again
   #for the same file type
   #hence, this will likely fail if the worker runs more than 1 job
+  
+  
+  if(! $rset->has_status('ALIGNED')){
+    throw("Cannot get alignment files for ResultSet which does not have ALIGNED status:\t".
+      $rset->name);
+  }
+  
   
   if($self->get_param_method($file_type, 'silent')){ #Allow over-ride from config/input_id   
     #Need to test in here that it matches one of the formats
@@ -1087,7 +1664,7 @@ sub get_alignment_files_by_InputSet_formats {
                   filter_from_format => $filter_format,
                   all_formats        => $all_formats};  
     
-    $path = $self->get_alignment_file_prefix_by_InputSet($iset, $control).
+    $path = $self->get_alignment_file_prefix_by_ResultSet($rset, $control).
                 '.samse'; #Currently hardcoded for bam origin!
   
     if($filter_format){
@@ -1104,7 +1681,6 @@ sub get_alignment_files_by_InputSet_formats {
 }
 
 
-
 sub validate_package_from_path{
   my $self     = shift;
   my $pkg_path = shift;  
@@ -1117,6 +1693,23 @@ sub validate_package_from_path{
   
   #This might not always be correct if the file contains >1 package
   return path_to_namespace($pkg_path);
+}
+
+
+#config. broad_peak_feature_types is now required, even if it is just and empty array
+#as this will raise awareness that the pipeline is trying to perform some idr
+#sensitive functions
+  
+#This ! grep is fine, although it returns an empty string instead of 0
+#as oppose to 1, when nothing is returned from grep
+
+sub is_idr_feature_type{
+  my $self  = shift;
+  my $ftype = shift;
+  throw('Must pass a FeatureType name') if ! defined $ftype; 
+  
+  return $self->param_silent('no_idr') ? 0 : 
+          ! grep(/^${ftype}$/, @{$self->param_required('broad_peak_feature_types')});
 }
 
 
