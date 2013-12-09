@@ -13,8 +13,8 @@ ALTER TABLE result_set ADD UNIQUE KEY name_idx (name);
 
 ALTER TABLE result_set ADD KEY cell_type_idx (cell_type_id);
 ALTER TABLE result_set ADD KEY feature_type_idx (feature_type_id);
-
--- 
+ALTER TABLE result_set ADD KEY analysis_idx (analysis_id);
+ALTER TABLE result_set ADD KEY feature_class_idx (feature_class);
 
 
 analyze table result_set;
