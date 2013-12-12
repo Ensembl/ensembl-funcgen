@@ -968,9 +968,10 @@ sub store_associated_feature_types {
 =head2 fetch_all_by_associated_FeatureType
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureType
-  Example    : my $assoc_ftypes = $ft_adaptor->fetch_all_by_associated_SetFeature($ext_feature);
+  Example    : my $assoc_ftypes = $ft_adaptor->fetch_all_by_associated_FeatureType($ftype);
   Description: Fetches all objects which have associated FeatureType.
                Note this is not the main FeatureType for this object.
+               Likely only relevant for FeatureTypeAdaptor and ExternalFeatureAdaptor.
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::Storable objects
   Exceptions : Throws if FeatureType not valid or stored
   Caller     : General
