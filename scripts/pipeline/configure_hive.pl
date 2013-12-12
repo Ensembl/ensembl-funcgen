@@ -26,7 +26,7 @@ limitations under the License.
 
 =head1 NAME
 
-
+configure_hive.pl
 
 =head1 SYNOPSIS
 
@@ -81,29 +81,29 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils        qw( run_system_cmd
 
 #$| = 1;#for debug
 
-  my %config_info = 
-   (
-    #ConfigModule => [priority, pre-req],
-    #ConfigLabel  => [undef, (List, Of, Consituent, Configs)]
-    #Priorities should be unique and represent logical flow of pipeline!
-    #Although Peaks & Collections are effectively equal priority here
-    #they need to be different numbers due to usage as indexes below
-    #Actual priority number are arbitrary, 
-    #they just need to be in the right order
-   
-    'ReadAlignments'    => [5],
-    'IDRPeaks'          => [7],
-    'DefineOutputSets'      => [8],
-    'Peaks'                 => [9,     'DefineOutputSets'],
-    'Collections'           => [10,    'DefineOutputSets'],
-   );
-  
-  #These are separate as we sort based on priority which gives an undef warning below
-  my %config_labels = 
-   (
-    'Peaks_and_Collections' => [undef, 'Peaks', 'Collections'],
-    'UberPipe'              => [undef, 'Peaks', 'Collections', 'IDRPeaks',],
-   );
+my %config_info = 
+ (
+  #ConfigModule => [priority, pre-req],
+  #ConfigLabel  => [undef, (List, Of, Consituent, Configs)]
+  #Priorities should be unique and represent logical flow of pipeline!
+  #Although Peaks & Collections are effectively equal priority here
+  #they need to be different numbers due to usage as indexes below
+  #Actual priority number are arbitrary, 
+  #they just need to be in the right order
+ 
+  'ReadAlignment'        => [5],
+  'IDRPeaks'             => [7],
+  'DefineMergedDataSets' => [8],
+  'Peaks'                => [9,     'DefineMergedDataSets'],
+  'Collections'          => [10,    'DefineMergedDataSets'],
+ );
+
+#These are separate as we sort based on priority which gives an undef warning below
+my %config_labels = 
+ (
+  'Peaks_and_Collections' => [undef, 'Peaks', 'Collections'],
+  'UberPipe'              => [undef, 'Peaks', 'Collections', 'IDRPeaks', 'ReadAlignment'],
+ );
 
 #Todo
 #For now we are not storing the conf keys in the output DB
@@ -201,7 +201,7 @@ sub main{
     $db_script_args->{funcgen}.' '.$db_script_args->{core}.' '.$db_script_args->{pipeline};
   $pipeline_params .= " -species $species " if defined $species;  
   
-  my $pdb;  
+  my ($mc, $pdb);  
   eval { $pdb = create_DBAdaptor_from_params($pdb_params, 'core', 1); };
   
   if($@){ #Assume the DB hasn't been created yet  
@@ -214,13 +214,18 @@ sub main{
     run_system_cmd($init_cmd);  
     
     $pdb = create_DBAdaptor_from_params($pdb_params, 'core');
+    $mc  = $pdb->get_MetaContainer;
+    _register_conf_in_meta($mc, $first_conf);    
   }
+  else{
+    $mc         = $pdb->get_MetaContainer; 
+  }
+  
   
   add_hive_url_to_meta(url_from_DB_params($pdb_params), $db);
   
   
   ### PERFORM ANALYSIS_TOPUP ###
-  my $mc         = $pdb->get_MetaContainer;
   my $conf_key   = 'hive_conf';
   my @meta_confs = @{$mc->list_value_by_key($conf_key)};
   
@@ -229,24 +234,109 @@ sub main{
     if( grep(/^$conf$/, @meta_confs) ){
       warn "Skipping hive -analysis_topup.  $conf config has already been added to the DB\n";  
     }
-    else{
+    else{ #Add new config!
+      
+      #Handle potential resetting of pipeline wide 'can_run_AnalaysisLogicName' params 
+      #These should be in the meta table and should be cached if they are set to 1
+      #as there is a danger that a subsequent top up of an preceding conf may reset this to 0
+      #meaning that flow would not occur from the conf just added, which precedes
+      #a conf which has previous been initialised 
+      #Put this method in HiveUtils? (with add_hive_url_to_meta?)
+      #where else would it be used?      
+      my $meta_key        = 'can_run_%';
+      #my $meta_key_values = $mc->key_values_like_key($meta_key, 1);#like boolean
+      
+      my $sth = $mc->prepare( "SELECT meta_key, meta_value FROM meta ".
+                              "WHERE meta_key like '$meta_key'" ); #AND species_id is NULL?
+                              
+      $sth->execute;
+      my %meta_key_values;
+  
+      while ( my $arrRef = $sth->fetchrow_arrayref ) {
+        
+        warn "Got can_run_ key ".$arrRef->[0].' '.$arrRef->[1];
+        
+        if(exists $meta_key_values{$arrRef->[0]}){
+         throw('Found >1 value for meta_key '.$arrRef->[0].":\t".
+               $arrRef->[1].' & '.$meta_key_values{$arrRef->[0]}); 
+        } 
+        
+        $meta_key_values{$arrRef->[0]} = $arrRef->[1];
+      
+        #foreach my $can_run_key(keys %$meta_key_values){
+        
+        # if(scalar @{$meta_key_values->{$can_run_key}} != 1){
+        #   throw("Found >1 value for meta_key $can_run_key:\t".
+        #         join(' ',  @{$meta_key_values->{$can_run_key}})); 
+        # }  
+        
+        #if(! $meta_key_values->{$can_run_key}->[0]){
+        #  delete $meta_key_values->{$can_run_key};   
+        #}       
+        #we don't need to reset the arrayref to 1, as the presence of 
+        #the key is enough given the above test
+      }
+      
+      $sth->finish; 
+      
+      #Now do the top up
       my $topup_cmd = "perl $hive_script_dir/init_pipeline.pl Bio::EnsEMBL::Funcgen::Hive::Config::${conf} ".
         ' -analysis_topup '.$pipeline_params;  
       #warn $topup_cmd."\n";
       print "\n\nPERFORMING ANALYSIS TOPUP:\t".$conf."\n";
+      
+      #This will not catch non-fatal error output.
       run_system_cmd($topup_cmd);
       
-       #Add key via API to store with appropriate species_id
-      eval { $mc->store_key_value('hive_conf', $conf); };
+      #Reset can_run_AnalysisLogicName keys first, so we never assume that this has 
+      #been done should things fail after adding the hive_conf key
       
-      if($@){
-        throw("Failed to store hive conf meta entry:\t$conf\n$@");  
+      foreach my $can_run_key(keys %meta_key_values){
+        #Don't hard code this for 1, just in case the original value was different for some reason
+        
+        if($meta_key_values{$can_run_key}){
+          #$mc->update_key_value($can_run_key, $meta_key_values{$can_run_key});
+          my $sth = $mc->prepare( 'UPDATE meta SET meta_value = "'.$meta_key_values{$can_run_key}.
+              '" WHERE meta_key = "'.$can_run_key.'"'); #.'AND species_id IS NULL' );
+          $sth->execute;
+          $sth->finish;
+        }
+        warn "UPDATE $can_run_key!!!";  
       }
+      
+      _register_conf_in_meta($mc, $conf);    
     }
   }
 
 }# end of main
 
+
+#Add key via API to store with appropriate species_id i.e. 1
+#shouldn't this be NULL? Probably but, core API only consideres the following meta_key type
+#non-species specific: patch, schema_version, schema_type, ploidy
+#Hive obviosuly does this with direct sql.
+
+#This screws retrieval of the can_run_% meta values, as they are stored with species_id null
+#but the BaseMetaContainer the expect a species ID when using any of the normal methods
+
+#are these returned at all by the params?
+
+#Work around with be to use direct mysql and do an update on them to reset the species ID to 1?
+
+
+
+sub _register_conf_in_meta{
+  my $mc   = shift;
+  my $conf = shift;
+  
+  eval { $mc->store_key_value('hive_conf', $conf); };
+      
+  if($@){
+    throw("Failed to store hive conf meta entry:\t$conf\n$@");  
+  }
+  
+  return;  
+}
 
 sub populate_config_array{
   my ($conf_name, $confs) = @_;  
