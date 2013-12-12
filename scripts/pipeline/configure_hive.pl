@@ -301,7 +301,6 @@ sub main{
           $sth->execute;
           $sth->finish;
         }
-        warn "UPDATE $can_run_key!!!";  
       }
       
       _register_conf_in_meta($mc, $conf);    
