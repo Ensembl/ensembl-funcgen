@@ -25,25 +25,25 @@ fi
 
 
 format='GFF'
-release=72
+release=73
 
 #only required if we want to dump specific sets i.e. not the complete reg build set
-#fset_names="RegulatoryFeatures:MultiCell RegulatoryFeatures:ES RegulatoryFeatures:ESHyb RegulatoryFeatures:MEF RegulatoryFeatures:NPC RegulatoryFeatures:MEL"
+#fset_names="RegulatoryFeatures:ESHyb RegulatoryFeatures:MEF RegulatoryFeatures:MultiCell RegulatoryFeatures:MEL RegulatoryFeatures:NPC RegulatoryFeatures:ES" 
+fset_names="RegulatoryFeatures:NHEK RegulatoryFeatures:K562 RegulatoryFeatures:GM06990 RegulatoryFeatures:MultiCell RegulatoryFeatures:IMR90 RegulatoryFeatures:HSMM RegulatoryFeatures:HepG2 RegulatoryFeatures:NH-A RegulatoryFeatures:HeLa-S3 RegulatoryFeatures:CD4 RegulatoryFeatures:HUVEC RegulatoryFeatures:HMEC RegulatoryFeatures:H1ESC RegulatoryFeatures:GM12878"
+dbname="homo_sapiens_funcgen_${release}_37"
+dbhost='ens-staging1'
 
-#dbname="homo_sapiens_funcgen_${release}_37"
-#dbhost='ens-staging1'
-
-dbname="mus_musculus_funcgen_${release}_38"
-dbhost='ens-staging2'
+#dbname="mus_musculus_funcgen_${release}_38"
+#dbhost='ens-staging2'
 
 
 
 #feature_type='AnnotatedFeature'
-#feature_type='RegulatoryFeature'
-feature_type='MotifFeature'
+feature_type='RegulatoryFeature'
+#feature_type='MotifFeature'
 #feature_type='SegmentationFeature'
 
-fset_names="${feature_type}s" #Special set name to dump all Annotated/MotifFeatures in build
+#fset_names="${feature_type}s" #Special set name to dump all Annotated/MotifFeatures in build
 #Does not yet support RegulatoryFeatures as these seem to get dumped to a merged file with no cell type info
 #and merge does not handle this yet anyway
 

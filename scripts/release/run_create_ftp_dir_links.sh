@@ -20,15 +20,14 @@ shift
 
 
 
-dbname=your_binomial_speciesname_funcgen_SCHEMA_BUILD
-dbhost=your_funcgen_mysql_host
-
-#Optional
-dnadb_host=your_dnadb_mysql_host
+#dbname=homo_sapiens_funcgen_73_37
+dbname=mus_musculus_funcgen_73_38
+dbhost=ens-staging2
+dnadb_host=ens-staging2
 dnadb_user=$USER
 
-nfs_root='/nfs/root/staging/source/data/directory/species/assmebly';
-ftp_root='/ftp/mirror/root/directory'
+nfs_root='/nfs/ensnfs-dev/staging';
+ftp_root='/lustre/scratch109/ensembl/funcgen/output/ftp'
 
 if [ ! $USER ]; then
 	echo "Must provide a user argument"; exit; 
