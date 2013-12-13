@@ -206,7 +206,7 @@ sub _get_Experiment_join_clause{
   }
   else {     #We have an InputSet/InputSubset Experiment
     my $setids = join(', ', (map $_->dbID, @{$self->db->get_InputSetAdaptor->fetch_all_by_Experiment($exp)}));
-    $constraint = 'rsi.table_name="input_set" AND rsi.table_id IN ('.$setids.')';     
+    $constraint = 'rsi.table_name="input_set" AND rsi.table_id IN ('.$setids.')';
     $setids = join(', ', (map $_->dbID, @{$self->db->get_InputSubsetAdaptor->fetch_all_by_Experiments([$exp])}));
     $constraint = "(( $constraint ) OR ( rsi.table_name='input_subset' AND rsi.table_id IN (".$setids.')))';
   }
@@ -426,7 +426,7 @@ sub _objs_from_sth {
   my $a_adaptor = $self->db->get_AnalysisAdaptor();
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
   my $ct_adaptor = $self->db->get_CellTypeAdaptor();
-  $sth->bind_columns(\$dbid, \$anal_id, \$table_name, \$cc_id, \$table_id, 
+  $sth->bind_columns(\$dbid, \$anal_id, \$table_name, \$cc_id, \$table_id,
     \$name, \$ctype_id, \$ftype_id, \$feat_class, \$dbfile_dir, \$rep);
 
     #Need c/ftype cache here or rely on query cache?
@@ -557,7 +557,6 @@ sub store{
 
     $rset->dbID( $self->last_insert_id );
     $rset->adaptor($self);
-
     $self->store_states($rset);
     $self->store_chip_channels($rset);
     $self->store_dbfile_data_dir($rset) if $rset->dbfile_data_dir;
