@@ -75,6 +75,7 @@ use vars   qw( @EXPORT_OK );
   backup_file
   convert_bam_to_sam
   create_Storable_clone
+  dump_data
   file_suffix_parse
   generate_slices_from_names
   get_current_regulatory_input_names
@@ -315,6 +316,21 @@ sub create_Storable_clone {
   my $clone = bless({%{$obj}}, ref($obj));
   $clone->reset_relational_attributes($params_hash);
   return $clone;
+}
+
+sub dump_data {
+  my ($data, $indent, $terse) = @_;
+  if(defined $indent and $indent !~ /[0123]/){
+    throw("Indent must be 0,1,2,3 not $indent");
+  }
+  $indent = defined($indent) ? $indent : 2;
+  $terse = ($terse) ? $terse : undef;
+
+  my $dumper = Data::Dumper->new([$data]);
+  $dumper->Indent($indent);
+  $dumper->Terse($terse);
+  my $dump = $dumper->Dump();
+  return $dump;
 }
 
 
