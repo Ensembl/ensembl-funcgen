@@ -84,9 +84,9 @@ ensembl-analysis/modules/Bio/EnsEMBL/Analysis/Config/ProbeAlign.pm
 
 If required, edit the following environment files(see section 5):
 
-ensembl-functgenomics/scripts/efg.config
-ensembl-functgenomics/scripts/environments/pipeline.config
-ensembl-functgenomics/scripts/environments/arrays.config
+ensembl-funcgen/scripts/efg.config
+ensembl-funcgen/scripts/environments/pipeline.config
+ensembl-funcgen/scripts/environments/arrays.config
 
 If required, set up input directory structure and data (see section 6) e.g.
 
@@ -108,7 +108,7 @@ If required, run TestImportArrays and TestProbleAlign.
 Check alignment reports before running transcript annotation.
 
 >bash
->. ensembl-functgenomics/scripts/.efg
+>. ensembl-funcgen/scripts/.efg
 >. my_human_54_37p.arrays password
 >RunAlignments
 >RunTranscriptXrefs
@@ -203,7 +203,7 @@ arrays.config	 Provides deployment configuration for arrays.env
 
 You will need to create the arrays.config file e.g.
 
-efg@bc-9-1-02>cd ensembl-functgenomics/scripts/environments/
+efg@bc-9-1-02>cd ensembl-funcgen/scripts/environments/
 efg@bc-9-1-02>cp arrays.config_example arrays.config
 
 Edit this file setting data and binary paths where appropriate. All environmental variables should be 
@@ -245,7 +245,7 @@ sometimes differing even from the same vendor. Whilst the ImportArrays config(se
 someway to account for this, this only supports fasta format. To transform non-affy adfs use
 the following script:
 
-ensembl-functgenomics/scripts/array_mapping/pre_process_probe_seqs.sh
+ensembl-funcgen/scripts/array_mapping/pre_process_probe_seqs.sh
 
 ::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
@@ -255,7 +255,7 @@ ensembl-functgenomics/scripts/array_mapping/pre_process_probe_seqs.sh
 To initialise an instance of the environment a small 'instance' file is sourced. An example of this is 
 available here:
 
-ensembl-functgenomics/scripts/environments/example.arrays
+ensembl-funcgen/scripts/environments/example.arrays
 
 This contains a few variables to inform the pipeline where the output DB is.  As the eFG DBAdaptor
 auto-selects a core DB if one is not already specified, it may be necessary to define some DNADB parameters.
@@ -279,14 +279,14 @@ and passing a dnadbpass if required):
 
 >bash
 >screen -R my_instance_file_name          # Optional
->. ensembl-functgenomics/scripts/.efg     # or just efg is you have set the alias in your .bashrc
+>. ensembl-funcgen/scripts/.efg     # or just efg is you have set the alias in your .bashrc
 Setting up the Ensembl Function Genomics environment...
 Welcome to eFG!
 >. path/to/my_instance_file.arrays dbpass dnadbpass
 
 :::: Welcome to the eFG array mapping environment
 :::: Setting up the eFG pipeline environment
-:: Sourcing ARRAYS_CONFIG: /nfs/acari/nj1/src/ensembl-functgenomics/scripts/environments/arrays.config
+:: Sourcing ARRAYS_CONFIG: /nfs/acari/nj1/src/ensembl-funcgen/scripts/environments/arrays.config
 DB:               ensadmin@ens-genomics1:homo_sapiens_funcgen_54_36p:3306
 DNADB:            ensro@ens-staging:homo_sapiens_core_54_36p:3306
 PIPELINEDB:       ensadmin@ens-genomics1:arrays_pipeline_homo_sapiens_funcgen_54_36p:3306
@@ -439,9 +439,9 @@ mismatch.  These parameters can be set and changed in the instance file, dependa
 species(i.e. no utr extension for bacteria) or a given array format(which might not be recognised by probe2transcript 
 and therefore require extra configuration). To see the full range of parameters available run: 
 
-ensembl-functgenomics/scripts/array_mapping/probe2transcript.pl -help
+ensembl-funcgen/scripts/array_mapping/probe2transcript.pl -help
 or
-perldoc ensembl-functgenomics/scripts/array_mapping/probe2transcript.pl
+perldoc ensembl-funcgen/scripts/array_mapping/probe2transcript.pl
 
 This step can also be done by running the probe2transcript.pl script directly on a format by format basis.
 However, this will not perform the healthchecks and back ups which are part of the RunTranscriptXrefs function.
@@ -530,7 +530,7 @@ Here is a summary of some helpful aliases.
 
 Add this to your .bashrc for convinient initiation of base environment
 
-efg='. ~/src/ensembl-functgenomics/scripts/.efg'
+efg='. ~/src/ensembl-funcgen/scripts/.efg'
 
 After the base environment is initialised 'efg' and other aliases are defined as:
 

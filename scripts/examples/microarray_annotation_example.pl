@@ -35,7 +35,7 @@ Affy array MOE430A, on the chromosome 2:26771920:26789448
 
 =cut
 
-# Remember to add the ensembl and ensembl-functgenomics packages to your PERL5LIB
+# Remember to add the ensembl and ensembl-funcgen packages to your PERL5LIB
 
 
 use strict;

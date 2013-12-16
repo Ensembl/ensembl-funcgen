@@ -36,7 +36,7 @@ bioperl-1.2.3
 
 ensembl
 
-ensembl-functgenomics
+ensembl-funcgen
 
 ensembl-analysis
 
@@ -121,7 +121,7 @@ pipeline.config	 Provides deployment configuration for pipeline.env.
 
 You will need to create pipeline.config e.g.
 
-efg@bc-9-1-02>cd ensembl-functgenomics/scripts/environments/
+efg@bc-9-1-02>cd ensembl-funcgen/scripts/environments/
 efg@bc-9-1-02>cp pipeline.config_example pipeline.config
 
 Esit this file setting data and binary paths where appropriate. All environmental variables should be 

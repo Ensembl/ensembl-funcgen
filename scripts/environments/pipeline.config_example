@@ -25,7 +25,7 @@ export SRC=$HOME/src
 
 #These are added to path and used explicitly to get over har/lustre/work1/ensembl/nj1/array_mapping/STAPHYLOCCOCUS_AUREUdcoded #/perl lines
 #e.g. perl $ANALYSIS_SCRIPTS/
-export EFG_SCRIPTS=$SRC/ensembl-functgenomics/scripts
+export EFG_SCRIPTS=$SRC/ensembl-funcgen/scripts
 export PIPELINE_SCRIPTS=$SRC/ensembl-pipeline/scripts
 export ANALYSIS_SCRIPTS=$SRC/ensembl-analysis/scripts
 #Where are these used? In the pipeline code?

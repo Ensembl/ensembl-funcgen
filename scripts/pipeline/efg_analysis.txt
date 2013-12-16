@@ -8,7 +8,7 @@ Before you can start you need to make sure you have installed the following
 Ensembl API code:
 
 ensembl
-ensembl-functgenomics
+ensembl-funcgen
 ensembl-pipeline
 ensembl-analysis
 
@@ -49,25 +49,25 @@ http://www.ensembl.org/info/using/api/funcgen/efg_introduction.html). Some
 pipeline specific functions we will refer to later on are defined within 
 the environment file
 
-  $SRC/ensembl-functgenomics/scripts/pipeline/.efg_pipeline
+  $SRC/ensembl-funcgen/scripts/pipeline/.efg_pipeline
 
 This file contains common settings and functions utilised by the pipeline
 environment and hence does not usually need to be edited. Instead a second 
 config file is used to define project specific settings, like 
 
-  $SRC/ensembl-functgenomics/scripts/pipeline/human_50.env
+  $SRC/ensembl-funcgen/scripts/pipeline/human_50.env
 
 Such a file has to be set up and maintained according to your project (see
 comments within the example file example.env that can be used as template). To
 ease the access to the environment it is handy to set up an alias in your
 shell configuration as follows (in bash syntax):
 
-  alias eFG_human='. $SRC/ensembl-functgenomics/scripts/pipeline/human_50.env'
+  alias eFG_human='. $SRC/ensembl-funcgen/scripts/pipeline/human_50.env'
 
 A similar alias you probably have set up already for your general eFG 
 environment, i.e.
 
-  alias eFG='. $SRC/ensembl-functgenomics/scripts/.efg'
+  alias eFG='. $SRC/ensembl-funcgen/scripts/.efg'
 
 Once you have set up all the config files you first need to source the general 
 .efg file, and subsequently your project specific env file.

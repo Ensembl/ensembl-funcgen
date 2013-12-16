@@ -55,7 +55,7 @@ limitations under the License.
   --feature_analysis    The name of the Analysis used in the experiment.
   --norm|n              Normalisation method (default=vsn)
                         NOTE: FeatureType, CellType and Analysis(inc norm) entries must already 
-                              exist in the eFG DB. See ensembl-functgenomics/script/import/import_types.pl
+                              exist in the eFG DB. See ensembl-funcgen/script/import/import_types.pl
   --exp_date            The date for the experiment.
   --result_files        Space separated list of result files paths (Used in InputSet imports e.g. Bed).
   --slices              Space separated list of slice names|seq_region_names to import (only works for -input_set import)
@@ -135,10 +135,10 @@ B<This program> take several options, including an definitions file to parse and
 
 BEGIN{
 	if(! defined $ENV{'EFG_DATA'}){
-		if(-f "~/src/ensembl-functgenomics/scripts/.efg"){
-			system (". ~/src/ensembl-functgenomics/scripts/.efg");
+		if(-f "~/src/ensembl-funcgen/scripts/.efg"){
+			system (". ~/src/ensembl-funcgen/scripts/.efg");
 		}else{
-			die ("This script requires the .efg file available from ensembl-functgenomics\n".
+			die ("This script requires the .efg file available from ensembl-funcgen\n".
 				 "Please source it before running this script\n");
 		}
 	}

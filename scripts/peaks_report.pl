@@ -145,7 +145,7 @@ Base folder for output. Defaults to $WORK_DIR/output/$DB_NAME
 
 =head1 SEE ALSO
 
-ensembl-functgenomics/scripts/environments/peaks.env PeaksReport function
+ensembl-funcgen/scripts/environments/peaks.env PeaksReport function
 
 =cut
 

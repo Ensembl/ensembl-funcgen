@@ -100,7 +100,7 @@ if [[ $USER != merge ]]; then
             mkdir -m 775 -p $out_dir
         fi
 
-        job_cmd="$SRC/ensembl-functgenomics/scripts/export/dump_features.pl\
+        job_cmd="$SRC/ensembl-funcgen/scripts/export/dump_features.pl\
                   -format $format\
 	          -dbhost $dbhost\
 	          -dbname $dbname\

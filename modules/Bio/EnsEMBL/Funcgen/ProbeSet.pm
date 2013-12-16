@@ -92,10 +92,10 @@ which array it is on.
 =head1 SEE ALSO
 
   Bio::EnsEMBL::Funcgen::ProbeSetAdaptor
-  ensembl-functgenomics/scripts/examples/microarray_annotation_example.pl
+  ensembl-funcgen/scripts/examples/microarray_annotation_example.pl
 
   Or for details on how to run the array mapping pipeline see:
-  ensembl-functgenomics/docs/array_mapping.txt
+  ensembl-funcgen/docs/array_mapping.txt
 
 =cut
 

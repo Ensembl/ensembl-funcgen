@@ -99,9 +99,9 @@ different functions to wrap up sub-pipelines/scrips and make it easier to run
 them in combination
 
 If required, edit the following environment files (section 5):
-ensembl-functgenomics/scripts/efg.config
-ensembl-functgenomics/scripts/environments/pipeline.config
-ensembl-functgenomics/scripts/environments/sequencing.config
+ensembl-funcgen/scripts/efg.config
+ensembl-funcgen/scripts/environments/pipeline.config
+ensembl-funcgen/scripts/environments/sequencing.config
 
 If required, set up input directory structure and data (section 5.1) e.g.
 $DATA_HOME/fasta/${SPECIES}    
@@ -119,7 +119,7 @@ sequencing_human_64.config
 
 Initialise the environment and run the alignments and annotation (section 7):
 >bash
->. ensembl-functgenomics/scripts/.efg
+>. ensembl-funcgen/scripts/.efg
 >. sequencing_human_64.config password
 >AddAlignmentDataSets -I /folder
 >SubmitAlignments
@@ -326,7 +326,7 @@ The results should also be in ${DATA_HOME}/sam_header/${SPECIES}
 
 To initialise an instance of the environment a small instance file is sourced. 
 An example of this is available here:
-ensembl-functgenomics/scripts/environments/sequencing_example.config
+ensembl-funcgen/scripts/environments/sequencing_example.config
 
 This contains a few configuration variables. As the eFG DBAdaptor auto-selects a core DB if one is 
 not already specified, it may be necessary to define some DNADB parameters. Do this if a valid 
@@ -349,7 +349,7 @@ numerous instance in parallel.  Source an instance file by sourcing the base eFG
 and passing a dnadbpass if required):
 
 >bash
->. ensembl-functgenomics/scripts/efg.env     # or just efg if you have set the alias in your .bashrc
+>. ensembl-funcgen/scripts/efg.env     # or just efg if you have set the alias in your .bashrc
 Setting up the Ensembl Function Genomics environment...
 Welcome to eFG!
 >. path/to/sequencing_my_instance_file.config dbpass
@@ -506,7 +506,7 @@ Here is a summary of some helpful aliases.
 
 Add this to your .bashrc for convenient initiation of base environment
 
-efg='. ~/src/ensembl-functgenomics/scripts/.efg'
+efg='. ~/src/ensembl-funcgen/scripts/.efg'
 
 After the base environment is initialised 'efg' and other aliases are defined as:
 

@@ -145,7 +145,7 @@ This is generally executed by the eFG array mapping environment
 
 =head1 SEE ALSO
 
-ensembl-functgenomics/scripts/environments/arrays.env
+ensembl-funcgen/scripts/environments/arrays.env
 
 =cut
 
