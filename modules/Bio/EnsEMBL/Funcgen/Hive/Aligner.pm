@@ -24,9 +24,9 @@ sub new {
   my $self = {};
   bless $self, $class;
 
-  my ($prog_file, $prog_params, $query_file, $ref_file, $out_dir) =
+  my ($prog_file, $prog_params, $query_file, $ref_file, $out_dir, $format) =
     rearrange(['PROGRAM_FILE', 'PARAMETERS', 'QUERY_FILE', 
-               'REFERENCE_FILE', 'OUTPUT_DIR'], @_);
+               'REFERENCE_FILE', 'OUTPUT_DIR' 'OUTPUT_FORMAT'], @_);
       
   if(! ($prog_file && $query_file && $ref_file)){
     throw("Some mandatory parameters are not met:\n\t".
@@ -61,6 +61,21 @@ sub new {
     $self->{output_dir}      = $input_dir;
   }
   
+  #if($format){
+  #  
+  #  if(! grep(/^${format}$/, @{$self->valid_output_formats}) ){
+  #    throw("Output format($format) is not valid. Please specify one of:\t".
+  #      join("\t", @{$self->valid_output_formats}));  
+  #  }
+  #  
+  #  #This assumes valid_output_formats are in order of general preference
+  #  #i.e. most optimsed/performant/binary first
+  #  $self->{output_format} = $self->valid_output_formats->[0]; 
+  #  #}
+  #else{
+  #  $self->{output_format} = $self->valid_input_formats
+  #}
+  
   $self->{input_dir}    = $input_dir;
   $self->{program_file} = $prog_file;
   $self->{query_file}   = $query_file;
@@ -70,16 +85,17 @@ sub new {
   return $self;
 }
 
-sub query_file     { return shift->{query_file};   }
-sub reference_file { return shift->{ref_file};     }
-sub program_file   { return shift->{program_file}; }
-sub parameters     { return shift->{parameters};   }
-sub output_dir     { return shift->{output_dir};   }
-sub input_dir      { return shift->{input_dir};    }
+sub query_file     { return shift->{query_file};    }
+sub reference_file { return shift->{ref_file};      }
+sub program_file   { return shift->{program_file};  }
+sub parameters     { return shift->{parameters};    }
+sub output_dir     { return shift->{output_dir};    }
+sub input_dir      { return shift->{input_dir};     }
+#sub output_format  { return shift->{output_format}; }
 
-
-#abstract class which muct be defined in the the specific aligner sub class  
-#sub run{}
+#abstract methods which muct be defined in the the specific aligner sub class  
+#sub run
+#sub valid_output_formats
 
 1;
 
