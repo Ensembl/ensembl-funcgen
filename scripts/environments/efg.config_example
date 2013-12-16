@@ -7,7 +7,7 @@ export EFG_CONTACT='your@email.ac.uk'           #EDIT
 
 #Code/Data Directories
 #export SRC=$HOME/src                           #Root source code directory. EDIT This should be set in your .bashrc
-export EFG_SRC=$SRC/ensembl-functgenomics       #eFG source directory
+export EFG_SRC=$SRC/ensembl-funcgen       #eFG source directory
 export EFG_SQL=$EFG_SRC/sql                     #eFG SQL
 export EFG_DATA=$HOME/data/efg                  #Data directory. EDIT
 

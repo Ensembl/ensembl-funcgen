@@ -28,9 +28,9 @@ limitations under the License.
 
 Little utility for filtering PWM mappings using the output of pwm_filter_mappings.pl
 
-Input comprises a thresholds file as produced by ensembl-functgenomics/scripts/pwm_filter_mappings.pl and a number of original mappings files.
+Input comprises a thresholds file as produced by ensembl-funcgen/scripts/pwm_filter_mappings.pl and a number of original mappings files.
 
-It expects to find the original mappings in the current working directory in files with names like jaspar.version.mappings eg MA0012.1.mappings. Typically these will have been created by using ensembl-functgenomics/scripts/pwm_genome_map.pl followed by ensembl-functgenomics/scripts/pwm_filter_mappings.pl.
+It expects to find the original mappings in the current working directory in files with names like jaspar.version.mappings eg MA0012.1.mappings. Typically these will have been created by using ensembl-funcgen/scripts/pwm_genome_map.pl followed by ensembl-funcgen/scripts/pwm_filter_mappings.pl.
 
 Output files have names like MA0012.1.pwm_map and are written to the directory specified on the command line with -o
 
@@ -47,9 +47,9 @@ pwm_thresh_filter.pl -i thresholds  -o filtered/
 
 =head1 SEE ALSO
 
-ensembl-functgenomics/scripts/pwm_filter_mappings.pl
-ensembl-functgenomics/scripts/pwm_genome_map.pl	   
-ensembl-functgenomics/scripts/pwm_mapping_notes
+ensembl-funcgen/scripts/pwm_filter_mappings.pl
+ensembl-funcgen/scripts/pwm_genome_map.pl	   
+ensembl-funcgen/scripts/pwm_mapping_notes
 
 =cut
 

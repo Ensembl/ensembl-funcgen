@@ -117,7 +117,7 @@ Name of the tracking database (defaults to "tracking_SPECIES_NAME_funcgen_SCHEMA
 
 =head1 SEE ALSO
 
-ensembl-functgenomics/scripts/tracking/register_new_inputset.pl
+ensembl-funcgen/scripts/tracking/register_new_inputset.pl
 
 
 

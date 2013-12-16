@@ -36,7 +36,7 @@ Output is a bed style, tab separated file but with 1-based rather than 0 based c
 
 =head1 USAGE
 
-/ensembl-functgenomics/scripts/pwm_genome_map.pl -g seqs.fasta -o mappings.out 
+/ensembl-funcgen/scripts/pwm_genome_map.pl -g seqs.fasta -o mappings.out 
  JASPAR_CORE_2008/*.pfm
 
 Options 
@@ -74,9 +74,9 @@ Extra blank lines or trailing tabs in pfm files cause the error :-
 
 =head1 EXAMPLES
 
-/usr/bin/nice -n19 /nfs/users/nfs_d/dkeefe/src/head/ensembl-functgenomics/scripts/pwm_genome_map.pl  -g /data/blastdb/Ensembl/funcgen/human_male_GRCh37_unmasked.fa examples/data/matrix/JASPAR_CORE_2008/*.pfm
+/usr/bin/nice -n19 /nfs/users/nfs_d/dkeefe/src/head/ensembl-funcgen/scripts/pwm_genome_map.pl  -g /data/blastdb/Ensembl/funcgen/human_male_GRCh37_unmasked.fa examples/data/matrix/JASPAR_CORE_2008/*.pfm
 
-rm -f bsub* ; bsub -q long -o bsub_out -e bsub_err -R 'select[mem>15000] rusage[mem=15000]' -M 15000000 /nfs/users/nfs_d/dkeefe/src/head/ensembl-functgenomics/scripts/pwm_genome_map.pl -g /data/blastdb/Ensembl/funcgen/human_male_GRCh37_unmasked.fa examples/data/matrix/JASPAR_CORE_2008/*.pfm
+rm -f bsub* ; bsub -q long -o bsub_out -e bsub_err -R 'select[mem>15000] rusage[mem=15000]' -M 15000000 /nfs/users/nfs_d/dkeefe/src/head/ensembl-funcgen/scripts/pwm_genome_map.pl -g /data/blastdb/Ensembl/funcgen/human_male_GRCh37_unmasked.fa examples/data/matrix/JASPAR_CORE_2008/*.pfm
 
 pwm_genome_map.pl -g short_seqs.fa -a GRCh37 -o /lustre/scratch103/ensembl/dkeefe/jaspar_pwm_genome_map.out -t transfac examples/data/matrix/transfac32/matrix.dat 
 

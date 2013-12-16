@@ -49,10 +49,10 @@ This script generates new stable IDs for the first build of a given species.
 
 BEGIN{
 	if(! defined $ENV{'EFG_DATA'}){
-		if(-f "$ENV{'HOME'}/src/ensembl-functgenomics/scripts/.efg"){
-			system (". ~/src/ensembl-functgenomics/scripts/.efg");
+		if(-f "$ENV{'HOME'}/src/ensembl-funcgen/scripts/.efg"){
+			system (". ~/src/ensembl-funcgen/scripts/.efg");
 		}else{
-			die ("This script requires ensembl-functgenomics/scripts/.efg\n".
+			die ("This script requires ensembl-funcgen/scripts/.efg\n".
 				 "Please source it before running this script\n");
 		}
 	}

@@ -32,7 +32,7 @@ Determines the log odds score threshold for filtering PWM mappings to be incorpo
 
 see
 
-ensembl-functgenomics/scripts/pwm_mapping_notes
+ensembl-funcgen/scripts/pwm_mapping_notes
 
 grep '>'  /data/blastdb/Ensembl/funcgen/homo_sapiens_male_GRCh37_58_37c_unmasked.fasta > /data/blastdb/Ensembl/funcgen/homo_sapiens_male_GRCh37_58_37c_unmasked.id_lines
 
@@ -44,9 +44,9 @@ pwm_filter_mappings.pl -i list -e dev_homo_sapiens_funcgen_60_37e -H ens-genomic
 
 =head1 SEE ALSO
 
-ensembl-functgenomics/scripts/pwm_filter_mappings.pl
-ensembl-functgenomics/scripts/pwm_genome_map.pl
-ensembl-functgenomics/scripts/pwm_make_bed_mock_set.pl
+ensembl-funcgen/scripts/pwm_filter_mappings.pl
+ensembl-funcgen/scripts/pwm_genome_map.pl
+ensembl-funcgen/scripts/pwm_make_bed_mock_set.pl
 
 =head1 TO DO
 

@@ -126,10 +126,10 @@ B<This program> take several options, including an definitions file to parse and
 
 BEGIN{
 	if(! defined $ENV{'EFG_DATA'}){
-		if(-f "~/src/ensembl-functgenomics/scripts/.efg"){
-			system (". ~/src/ensembl-functgenomics/scripts/.efg");
+		if(-f "~/src/ensembl-funcgen/scripts/.efg"){
+			system (". ~/src/ensembl-funcgen/scripts/.efg");
 		}else{
-			die ("This script requires the .efg file available from ensembl-functgenomics\n".
+			die ("This script requires the .efg file available from ensembl-funcgen\n".
 				 "Please source it before running this script\n");
 		}
 	}
