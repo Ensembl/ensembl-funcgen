@@ -32,3 +32,4 @@ a.out
 *.o
 *.obj
 *.class
+.project
