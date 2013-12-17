@@ -52,33 +52,6 @@ ensembl-funcgen/scripts/pwm_make_bed_mock_set.pl
 
 add the functionality from pwm_filter_mappings.pl to the end of this script
 
-=head1 CVS
-
- $Log: not supported by cvs2svn $
- Revision 1.7  2013-03-11 14:33:52  nj1
- updated license
-
- Revision 1.6  2011-07-14 09:14:44  ds19
- Update
-
- Revision 1.5  2011-01-10 14:25:54  nj1
- added generic #!/usr/bin/env perl
-
- Revision 1.4  2011-01-10 13:40:37  nj1
- updated boiler plate
-
- Revision 1.3  2010-11-26 15:56:07  dkeefe
- added a single linkage clustering of the peaks step
-
- Revision 1.2  2010-11-24 10:41:13  dkeefe
- Generally tidied up, added more POD and converted hard codded
- variables to command line options.
-
- Revision 1.1  2010-11-23 14:16:43  dkeefe
- Determines the log odds score threshold for filtering PWM mappings to be incorporated into the functional genomics databases.
-
-
-
 =cut
 
 

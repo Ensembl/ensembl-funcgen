@@ -105,39 +105,6 @@ mysql -u ensro -hens-genomics2 -P3306 -BN -e"select sr.name,af.seq_region_start,
 
 mysql -u ensro -hens-genomics1 -P3306 -BN -e"select sr.name,af.seq_region_start,af.seq_region_end,af.score,ft.name,ct.name from annotated_feature af,feature_set fs,feature_type ft,seq_region sr,cell_type ct where ft.class in('Transcription Factor','Insulator') and fs.feature_type_id = ft.feature_type_id and af.feature_set_id = fs.feature_set_id and sr.seq_region_id = af.seq_region_id and sr.schema_build = '58_37k' and fs.cell_type_id = ct.cell_type_id and ft.name = 'Cmyc'" dev_mus_musculus_funcgen_59_37l
 
-
-
-
-=head1 CVS
-
- $Log: not supported by cvs2svn $
- Revision 1.8  2013-03-11 17:03:40  nj1
- updated license, and other minor tweaks/docs
-
- Revision 1.7  2011-07-14 09:15:01  ds19
- Update
-
- Revision 1.6  2011-01-10 14:25:54  nj1
- added generic #!/usr/bin/env perl
-
- Revision 1.5  2011-01-10 13:40:37  nj1
- updated boiler plate
-
- Revision 1.4  2010-09-27 15:06:20  dkeefe
- added a fastaclean step on the genomic sequences because the MOODS
- mapper handles ambiguity symbols incorrectly and generates invalid mappings.
-
- Revision 1.3  2010-06-09 13:37:18  dkeefe
- updated to use jaspar filenames with version numbers
-
- Revision 1.2  2010-05-24 13:30:54  dkeefe
- added option to use PWMs from Transfac matrix.dat file.
-
- Revision 1.1  2010-05-18 12:00:02  dkeefe
- PWM to genome mapper for routine use by Funcgen. First draft works on
- only JASPAR pfm files so far
-
-
 =head1 TO DO
 
 add perl implementation of fastaexplode
