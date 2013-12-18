@@ -100,44 +100,6 @@ The above may take a minute or so to run.
 
 =head1 SEE ALSO
 
-
-=head1 CVS
-
- $Log: not supported by cvs2svn $
- Revision 1.3  2011-01-10 14:01:05  nj1
- added generic #!/usr/bin/env perl
-
- Revision 1.2  2011-01-10 13:27:29  nj1
- updated boiler plate
-
- Revision 1.1  2010-12-08 11:43:20  dkeefe
- moved from dkeefe personal.
- used for PWM mapping and filtering
-
- Revision 1.7  2010-11-18 11:39:43  dkeefe
- altered temp filenames so it plays nicely on the farm
-
- Revision 1.6  2010-11-01 15:39:36  dkeefe
- added the option to operate on pre-sorted files using sort's merge
- facility (for speed)
-
- Revision 1.5  2010-08-17 14:12:39  dkeefe
- fixed bug with -u option
-
- Revision 1.4  2008/11/20 10:55:58  dkeefe
- more pod - a solution equivalent to the grep -v option
-
- Revision 1.3  2008/11/19 11:42:52  dkeefe
- more pod
-
- Revision 1.2  2008/11/19 10:53:01  dkeefe
- added -T and -S options to facilitate v. big sorts
- fixed bug in number of fields calculation.
-
- Revision 1.1  2008/10/08 11:01:11  dkeefe
- much faster implementation of overlaps.pl
-
-
 =cut
 
 

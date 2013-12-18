@@ -52,25 +52,6 @@ slink.pl -1 -o junk -d distrib -M4000 -m max all_dnase
 =head1 SEE ALSO
 
 
-=head1 CVS
-
- $Log: not supported by cvs2svn $
- Revision 1.3  2011-01-10 14:01:08  nj1
- added generic #!/usr/bin/env perl
-
- Revision 1.2  2011-01-10 13:27:29  nj1
- updated boiler plate
-
- Revision 1.1  2010-12-08 11:46:01  dkeefe
-  moved from dkeefe personal.
-  used for PWM mapping and filtering
-
- Revision 1.1  2009-10-14 14:19:54  dkeefe
- Takes the elements from an arbitrary number of .bed files, as specified on the command line or as a list in a file, and clusters them into larger elements which are output in three column bed format. Optionally splits long elements into shorter ones.
-
-
-
-
 =head1 TO DO
 
 

@@ -46,27 +46,6 @@ create features which lie inside introns but not in repeats
 
 =head1 SEE ALSO
 
-
-=head1 CVS
-
- $Log: not supported by cvs2svn $
- Revision 1.4  2011-01-10 14:01:14  nj1
- added generic #!/usr/bin/env perl
-
- Revision 1.3  2011-01-10 13:32:23  nj1
- updated boiler plate
-
- Revision 1.2  2010-07-15 14:29:53  dkeefe
- changed display_label to binary_string
-
- Revision 1.1  2009/06/03 09:51:57  dkeefe
- moved from parent dir.
- updated use lib path
-
- Revision 1.1  2008/04/11 09:54:54  dkeefe
- Used to create a set of randomly placed mock regulatory features which are used for chi square calculation in the regulatory feature classification script reg_feat_gen_feat_overlaps.pl
-
-
 =cut
 
 

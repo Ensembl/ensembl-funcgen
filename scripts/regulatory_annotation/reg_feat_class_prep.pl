@@ -42,28 +42,6 @@ reg_feat_class_prep.pl -e dev_mus_musculus_funcgen_59_37l -H ens-genomics1 -s mu
 
 mysql -u ensro -P3306 -hens-genomics2 -BN -e"select display_label from regulatory_feature " dk_funcgen_classify_58_ES | tr -d 0 | awk '{print length($1)}' | sort | uniq -c
 
-=head1 CVS
-
- $Log: not supported by cvs2svn $
- Revision 1.6  2011-01-10 14:01:15  nj1
- added generic #!/usr/bin/env perl
-
- Revision 1.5  2011-01-10 13:32:23  nj1
- updated boiler plate
-
- Revision 1.4  2010-09-24 09:44:26  dkeefe
- corrected sql for cell line selection properly!
-
- Revision 1.3  2010-07-09 08:52:38  dkeefe
- corrected SQL for cell line selection
-
- Revision 1.2  2010-07-01 14:54:10  dkeefe
- refined SQL for cell line selection
-
- Revision 1.1  2010-04-01 11:55:50  dkeefe
- Looks at a specified func_gen database determines which cell lines need an annotation run and prints out helpful stuff for whoever is running the classification analyses.
-
-
 =cut
 
 

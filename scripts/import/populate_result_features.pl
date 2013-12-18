@@ -39,31 +39,6 @@ Optional
 
 =head2 SYNOPSIS
 
-=head1 CVS
-
- $Log: not supported by cvs2svn $
- Revision 1.12  2012-11-27 10:58:27  nj1
- changed to support named cs level in generate_slices_from_name
-
- Revision 1.11  2011-01-10 14:01:00  nj1
- added generic #!/usr/bin/env perl
-
- Revision 1.10  2011-01-10 13:23:12  nj1
- updated boiler plate
-
- Revision 1.9  2010-07-06 09:27:10  nj1
- added jobname for farm jobs
-
- Revision 1.8  2010-06-16 08:09:10  nj1
- added output dir param to override default
-
- Revision 1.7  2010-06-15 10:33:07  nj1
- changed output dir to new dbname centric format
- update warn message re states
-
- Revision 1.6  2010-06-11 10:47:25  nj1
- Now selectively passes window_size conf to avoid resetting window_sizes to empty array
-
 
 =cut
 

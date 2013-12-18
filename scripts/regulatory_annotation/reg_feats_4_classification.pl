@@ -51,47 +51,6 @@ reg_feats_4_classification.pl -e dk_reg_feat_classify_49 -c CD4 -s mus_musculus
   tidy up
   POD
 
-=head1 CVS
-
- $Log: not supported by cvs2svn $
- Revision 1.8  2011-09-09 10:00:00  ds19
- Small change in default dump_dir
-
- Revision 1.7  2011-01-10 14:01:18  nj1
- added generic #!/usr/bin/env perl
-
- Revision 1.6  2011-01-10 13:32:23  nj1
- updated boiler plate
-
- Revision 1.5  2010-07-01 14:42:32  dkeefe
- removed the constraint that features used must have more than one attribute.
-
- Revision 1.4  2010-04-01 12:27:04  dkeefe
- added -d option to specify a scratch/dump directory
-
- Revision 1.3  2010-03-26 10:05:04  dkeefe
- added -c <cell_type> option to allow cell specific classification
-
- Revision 1.2  2009-07-30 11:36:11  dkeefe
- updates for farm2, latest mysqldump and dumping from ensdb-archive
-
- Revision 1.1  2008/08/20 07:20:13  dkeefe
- moved from parent directory
- added couple more tables
-
- Revision 1.1  2008/04/11 10:55:11  dkeefe
- Copies the reg_feature data needed for the overlap analysis into a
- specified database. Does a bit of denormalising and quite a lot of
- filtering/QC. Final product is a table in the same format as the
- genomic features called regulatory_features_filtered.
-
-
-
-
-
-
-
-
 =cut
 
 
