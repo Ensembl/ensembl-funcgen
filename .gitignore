@@ -33,3 +33,5 @@ a.out
 *.obj
 *.class
 .project
+/.settings
+/.includepath
