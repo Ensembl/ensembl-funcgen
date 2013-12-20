@@ -1,4 +1,25 @@
-=pod 
+=head1 LICENSE
+
+Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+limitations under the License.
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
 
 =head1 NAME
 
@@ -16,7 +37,7 @@ use strict;
 use Bio::EnsEMBL::Utils::Exception qw (throw);
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(scalars_to_objects);
 
-use base ('Bio::EnsEMBL::Funcgen::Hive::BaseDB');
+use parent qw(Bio::EnsEMBL::Funcgen::Hive::BaseDB);
 
 #This assumes the InputSet has been previously registered, 
 #and now we want simply to define/fetch the data set, feature and result set based on these data.
@@ -44,19 +65,13 @@ use base ('Bio::EnsEMBL::Funcgen::Hive::BaseDB');
 
 sub fetch_input {   # fetch parameters...
   my $self = shift @_;
-  $self->SUPER::fetch_input;
-  #Don't run if we are only doing ReadAnalysis
-  return if $self->param_silent('run_DefineMergedDataSet') == 0;
-  
-   
-  
-  my ($iset) = @{&scalars_to_objects($self->out_db,   'InputSet',
-                                     'fetch_by_dbID', [$self->param('dbID')] ) };
-  $self->param('input_set', $iset);
+  $self->check_analysis_can_run; #Could put this in Base::fetch_input?
+  $self->SUPER::fetch_input;  
+  my $set = $self->fetch_Set_input('ResultSet');#defines result_set method
 
-  #refactor this default_analysis method in BaseDB?
+  #refactor this default_analysis method in BaseDB? As this is reused in other runnables
   my %default_analyses;
-  my @set_types = ('result_set');
+  my @set_types = ();# ('result_set');
   push @set_types, 'feature_set' if ! $self->get_param_method('result_set_only', 'silent');
  
   #TODO Validate default set analysis keys exist as feature_type class or name?
@@ -67,8 +82,19 @@ sub fetch_input {   # fetch parameters...
   #by Run_QC_and_ALigner to enable selective data flow into the relevant 
   #IdentifyInputSets analyses
   
-  foreach my $set_type( @set_types ){   
-    my $set_lname = $self->param_silent($set_type.'_analysis');
+  #we could simplify this loop now, as we will always have the result set
+  #but don't we want to keep it generic, such that we can re-use it however we want?
+  #This is already hardocded to take a result set there is currently no other possibility
+  #apart from input_set, which will disappear
+  
+  
+  #Do we even want to define a DataSet if there is no feature_set? 
+  #durely we shoudl flow the relevant set types down each branch of the config
+  #rather than just the data set?
+  
+  foreach my $set_type( @set_types ){  
+    my $anal_type = $self->param_required($set_type.'_analysis_type'); 
+    my $set_lname = $self->param_silent($anal_type.'_analysis');
     
     if(! defined $set_lname){
       
@@ -80,15 +106,15 @@ sub fetch_input {   # fetch parameters...
       }
       
      
-      if(exists $default_analyses{$set_type}{$iset->feature_type->name}){
-        $set_lname = $default_analyses{$set_type}{$iset->feature_type->name}; 
+      if(exists $default_analyses{$set_type}{$set->feature_type->name}){
+        $set_lname = $default_analyses{$set_type}{$set->feature_type->name}; 
       }
-      elsif(exists $default_analyses{$set_type}{$iset->feature_type->class}){
-        $set_lname = $default_analyses{$set_type}{$iset->feature_type->class};
+      elsif(exists $default_analyses{$set_type}{$set->feature_type->class}){
+        $set_lname = $default_analyses{$set_type}{$set->feature_type->class};
       }
       else{
-        throw("No default $set_type analysis available for ".$iset->feature_type->name.
-          '('.$iset->feature_type->class.
+        throw("No default $set_type analysis available for ".$set->feature_type->name.
+          '('.$set->feature_type->class.
           ").\n Please add FeatureType name or class to  default_${set_type}_analyses ".
           "in default_options config or specify -${set_type}_analysis"); 
       }
@@ -96,7 +122,7 @@ sub fetch_input {   # fetch parameters...
     
     #Catch undefs in config
     if(! defined $set_lname){
-      throw("Unable to identify defined $set_type analysis in config for ".$iset->feature_type->name.
+      throw("Unable to identify defined $set_type analysis in config for ".$set->feature_type->name.
       ".\nPlease define in default_${set_type}_analyses config or specify -${set_type}_analysis");     
     }    
     #can't use process_params here as the param name does match the object name
@@ -126,14 +152,9 @@ sub fetch_input {   # fetch parameters...
 
 
 sub run {   # Check parameters and do appropriate database/file operations... 
-  my $self = shift @_;
-  #Don't run if we are only doing ReadAnalysis
-  return if $self->param_silent('run_DefineMergedDataSet') == 0;
-  #or die/throw after setting $self->input_job->transient_error( 0 );?
-  
-  
+  my $self   = shift;
   my $helper = $self->helper;  
-  my $iset   = $self->param('input_set');
+  my $rset   = $self->ResultSet;
   my $set;    
 
   #todo migrate this to the Importer as define_OutputSet
@@ -151,21 +172,21 @@ sub run {   # Check parameters and do appropriate database/file operations...
   if( $self->result_set_only ){
     throw('Pipeline does not yet support creation of a ResultSet without and associated Feature/DataSet');
      
-    $set = $helper->define_ResultSet
-      ( 
-       -NAME                 => $iset->name,#.'_'.$rset_anal->logic_name,
-       #-FEATURE_CLASS        => result | dna_methylation',
-       #currently set dynamically in define_ResultSet
-       -SUPPORTING_SETS      => [$iset],
-       -DBADAPTOR            => $self->out_db,
-       -RESULT_SET_ANALYSIS  => $self->param('result_set_analysis'),
-       -RESULT_SET_MODE      => $self->param('result_set_mode'),
-       -ROLLBACK             => $self->param('rollback'),
-       -RECOVER              => $self->param('recover'),
-       -SLICES               => $self->slices,
-       -CELL_TYPE            => $iset->cell_type,
-       -FEATURE_TYPE         => $iset->feature_type,
-     );
+    #$set = $helper->define_ResultSet
+    #  ( 
+    #   -NAME                 => $rset->name,#.'_'.$rset_anal->logic_name,
+    #   #-FEATURE_CLASS        => result | dna_methylation',
+    #   #currently set dynamically in define_ResultSet
+    #   -SUPPORTING_SETS      => [$rset],
+    #   -DBADAPTOR            => $self->out_db,
+    #   -RESULT_SET_ANALYSIS  => $self->param('result_set_analysis'),
+    #   -RESULT_SET_MODE      => $self->param('result_set_mode'),
+    #   -ROLLBACK             => $self->param('rollback'),
+    #   -RECOVER              => $self->param('recover'),
+    #   -SLICES               => $self->slices,
+    #   -CELL_TYPE            => $iset->cell_type,
+    #   -FEATURE_TYPE         => $iset->feature_type,
+    # );
         
   }
   else{
@@ -173,9 +194,9 @@ sub run {   # Check parameters and do appropriate database/file operations...
     
     $set = $helper->define_DataSet
       (
-       -NAME                 => $iset->name.'_'.$fset_anal->logic_name,
+       -NAME                 => $set->name.'_'.$fset_anal->logic_name,
        -FEATURE_CLASS        => 'annotated', #Is there overlap with rset feature_class here?
-       -SUPPORTING_SETS      => [$iset],
+       -SUPPORTING_SETS      => [$rset],
        -DBADAPTOR            => $self->out_db,
        
        -FEATURE_SET_ANALYSIS => $fset_anal,
@@ -184,8 +205,8 @@ sub run {   # Check parameters and do appropriate database/file operations...
        -ROLLBACK             => $self->param('rollback'),
        -RECOVER              => $self->param('recover'),
        -SLICES               => $self->slices,    
-       -CELL_TYPE            => $iset->cell_type,
-       -FEATURE_TYPE         => $iset->feature_type,
+       -CELL_TYPE            => $rset->cell_type,
+       -FEATURE_TYPE         => $rset->feature_type,
        #-DESCRIPTION   => ?
        #-DISPLAY_LABEL => ?
       );  
@@ -215,10 +236,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
 
 
 sub write_output {  # Create the relevant jobs
-  my $self = $_[0];
-  #Don't run if we are only doing ReadAnalysis
-  return if $self->param_silent('run_DefineMergedDataSet') == 0;
-    
+  my $self = shift;
   $self->helper->debug(1, 'DefineDataSet data flowing:', $self->param('output_id'));
   $self->dataflow_output_id($self->param('output_id'), 1);
   return;
