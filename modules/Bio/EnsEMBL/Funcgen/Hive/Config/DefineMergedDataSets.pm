@@ -1,5 +1,28 @@
 
-=pod
+=head1 LICENSE
+
+Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
 
 =head1 NAME
 
@@ -49,12 +72,10 @@ sub default_options {
   #If they are mandatory for one analysis, but optional for another
   #will have to catch that in the runnable
   
- 
   return 
-    {
-     %{$self->SUPER::default_options},        
-     run_DefineMergedDataSet => 1, 
-  };
+   {
+    %{$self->SUPER::default_options},        
+   };
 }
 
 
@@ -67,28 +88,16 @@ sub default_options {
 =cut
 
 
-#Can we move some of these to Base.pm config?
+sub pipeline_wide_parameters {
+  my $self = shift;
+               
+  return 
+   {
+    %{$self->SUPER::pipeline_wide_parameters}, 
+    can_run_DefineMergedDataSet => 1, 
+   };
+}
 
-#sub pipeline_wide_parameters {
-#  my $self = shift;
-  
-   #Deal with batch_params first as this may not have been subtituted yet
-   #and will evaluate to a string:
-   #Can't use string ("#:subst batch_params:#") as an ARRAY ref while "strict refs"
-     
-  # my $batch_params = 
-  #    [ ( ref($self->o('batch_params')) ? 
-  #        @{$self->o('batch_params')} : () ),
-  #      #These allow override of defaults  
-  #      'result_set_analysis',
-  #      'feature_set_analysis',
-  #    ];
-             
-#  return 
-#    {
-#     %{$self->SUPER::pipeline_wide_parameters}, 
-#    };
-#}
 
 
 =head2 pipeline_create_commands
@@ -191,26 +200,12 @@ sub pipeline_analyses {
 	 #this would also handle array args!
 	 
 	 
-	  	  
-	 #-input_ids => #Single input_id containing params to identify InputSets
-	 #  [{
-	 #    'cell_types'    => $self->o('cell_types'), 
-     #    'feature_types' => $self->o('feature_types'), 
-     #    'set_names'     => $self->o('input_sets'),#This is mutally exclusive to others
-     #    'set_ids'       => $self->o('input_set_ids'),
-     #    'experimental_groups' => $self->o('experimental_groups'),
-     #    'states'              => $self->o('states'),
-	 #	   #, 'result_file' => $self->o('result_file')  
-	 #   }],
-			 	 
+	
 	 -flow_into => {		 
-      '2' => [ 'DefineMergedDataSet' ],
-      #Not 2->A as we don't close the funnel for this pipeline
-      #'A->1' => [ ],#Nothing else waiting for this job
-      #Use branch 2 here so we can flow input_ids
-      #down branch 1 back bone later to a merge step
-      #although we will need to explicitly data flow
-      #Is there a post MergeCollections step?
+	    #2 is used for potential fan jobs from a single result set
+	    #3 is used as a funnel, or for jobs with no fan   
+      '3' => [ 'DefineMergedDataSet' ],
+   
       
       
       
@@ -252,51 +247,47 @@ sub pipeline_analyses {
 	  -analysis_capacity => 10,
       -rc_name => 'default',
     },
+	 
+	 
+	  #This has to mirror conf in IDRPeaks and ReadAlignments
+	  #Move this to BaseSequenceAnalysis!!!
 	  
-    {
-      #This will define a ResultSet usign the InputSet from above
-      #or if used with -analysis_topup and the Peaks.pm config
-      #will define a FeatureSet and DataSet with a ResultSet as support
-      #along with the InputSet from above 
-      
-      #How will this know to make just a ResultSet or the full DataSet?
-      
-      
-     -logic_name => 'DefineMergedDataSet', 
+	  
+	  #DefineMergedDataSet is also in BaseSequenceAnalysis 
+	  #as it is common to all pipelines as a link analysis
+	  #but has to be here also, as we can't define the -flow_into conf
+	  #from the other confs do to lack of the PreprocessAlignments analysis
+	  #All spec should match apart from -flow_into, which should be blank
+	  #in BaseSequenceAnalysis, but will be updated accordinly when using
+	  #-analysis_top_up
+	  	  
+    {-logic_name => 'DefineMergedDataSet', 
 	   -module     => 'Bio::EnsEMBL::Funcgen::Hive::DefineDataSet',
 	   -parameters => 
-	    {#Need feature here, as we DefineDataSetmay want some for result_set too?
+	    {#Need default_feature_set_analyses/feature_set_analysis_type here, 
+	     #as DefineDataSet may want some for result_set too?
 	     #although this is now currently impossible since we are removing InputSet
 	     #but let's keep this generic for now
 	     default_feature_set_analyses => $self->o('default_peak_analyses'),
 	     feature_set_analysis_type    => 'peak',
+	     check_analysis_can_run       => 1,
 	     #not $self->o('peak_analysis') as we want to batch flow this
-	     #set_type=result_set could go here, but this is entirely dependant on what
-	     #flows into DefineMergedDataSet, so leave that to IdentifyResultSets
-	     #although this will likely ahve already been created
+	 
 	     #rollback                     => $self->o('rollback'), 
 	    },
-	  #Add in default params from above!
-	  
-	  
-	  
-	  #-input_ids => [],#These will be explicitly flowed from DefineSetInputs
-	 #Would be nice to use names here instead of dbIDs, but we can't guarantee
-	 #this until the result set nameing convention is changed, and we make name a unique field
-			 	 
+	 
 	   -flow_into => 
-	     {
-		  '1' => [ 'PreprocessAlignments' ],
-		   #Not 1->A as we don't close the funnel for this part of the pipeline
-		 },
+	    {
+		   1 => [ 'PreprocessAlignments' ],
+		  },
 		 
-	   -analysis_capacity => 10,
-       -rc_name => 'default',
-	   #this really need revising as this is sorting the bed files
-	   #Need to change resource to reserve tmp space
-	   
-	   #Not having a -failed_job_tolerance here is causing the beekeeper to 
-	   #exit, especially as there is no -max_retry_count set either
+	   -analysis_capacity => 100,
+     -rc_name           => 'default',
+     -batch_size        => 10, 
+     #None of these shoudl take > 2-3 mins unless there is some rolling back to do
+     #But this will only ever be deleting annotated_feature records
+     #and maybe some states or updating sets
+     #Keep this fairly low, so we a getting the parallel compute running asap.
 	   
     },
     
@@ -325,7 +316,11 @@ sub pipeline_analyses {
 	     #i.e. each conf will add it's own formats
 	     #$self->o doesn't allow inheritance style building of arrays
 	     #let's try it with # variable # notation?     
-	     peak_branches           => $self->o('peak_branches'),
+	     #peak_branches           => $self->o('peak_branches'),
+	     
+	     
+	     #This needs to use new init_branchign_by_analysis method
+	     
 	    },
 		
 	  	

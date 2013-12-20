@@ -3,36 +3,15 @@
 
 =head1 NAME
 
-    Bio::EnsEMBL::Funcgen::HiveConfig::Alignment_conf;
+    Bio::EnsEMBL::Funcgen::Hive::Config::BaseDB;
 
 =head1 SYNOPSIS
 
-   # TODO: this could be easily merged with the Peaks pipeline...
-   # TODO: allow subfolders which will represent replicates...
-   # Allow semaphores so jobs can be run truly in parallel (see SemaStart and SemaLongMult_conf)
-
-   # Example 1: specifying only the mandatory options (initial params are taken from defaults)
-init_pipeline.pl Bio::EnsEMBL::Funcgen::HiveConfig::Alignment_conf -password <mypass>
-
-   # Example 2: specifying the mandatory options as well as setting initial params:
-init_pipeline.pl Bio::EnsEMBL::Funcgen::HiveConfig::Alignment_conf -password <mypass> -p1name p1value -p2name p2value
-
-   # Example 3: do not re-create the database, just load more tasks into an existing one:
-init_pipeline.pl Bio::EnsEMBL::Funcgen::HiveConfig::Alignment_conf -job_topup -password <mypass> -p1name p1value -p2name p2value
 
 
 =head1 DESCRIPTION
 
-    This is the Config file for the Alignment Pipeline
-
-    Please refer to Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf module to understand the interface implemented here.
-
-    The Alignment pipeline consists of several "analysis":
-        * SetupAlignmentPipeline verifies the existence of the files and creates alignment jobs ...
-        * RunAlignment makes the alignment...
-        * WrapUpAlignment merges the alignments, some QC and fills in the data tracking db
-
-    Please see the implementation details in Runnable modules themselves.
+ 
 
 =head1 CONTACT
 
@@ -46,7 +25,7 @@ package Bio::EnsEMBL::Funcgen::Hive::Config::BaseDB;
 use strict;
 use warnings;
 use Data::Dumper;
-use base ('Bio::EnsEMBL::Funcgen::Hive::Config::BaseDB');
+use parent qw(Bio::EnsEMBL::Funcgen::Hive::Config::Base);
 # All Hive databases configuration files should inherit from HiveGeneric, directly or indirectly
 
 
@@ -75,40 +54,44 @@ use base ('Bio::EnsEMBL::Funcgen::Hive::Config::BaseDB');
 #It looks like it is possible to refer to a previously defined option within the same hash
 
 sub default_options {
-  my ($self) = @_;  
+  my $self = $_[0];  
   
   return {
     %{$self->SUPER::default_options},
     
-    dnadb   => 
-     {  
-      -host   => $self->o('dnadb_host'),
-      -pass   => $self->o('dnadb_pass'),
-      -port   => $self->o('dnadb_port'),
-      -user   => $self->o('dnadb_user'),
-      -dbname => $self->o('dnadb_name'),
-     },
-        
-    efgdb  => 
-     {
-      -host   => $self->o('dbhost'),
-      -port   => $self->o('dbport'),
-      -user   => $self->o('dbuser'),
-      -pass   => $self->o('dbpass'),
-      -dbname => $self->o('dbname'),
-     },
-    
-    
-    #'registry_host'       => 'ens-livemirror',
-	#'registry_port'       => 3306,
-	#'registry_user'       => 'ensro',	
-	#'port'              => 3306,
+    #Registry params are optional
+    #It's actually a bit unsafe to use the registry in pipeline code
+    #as the DB may not have the correct species name, hence
+    #all adaptors are fetch directly from the DBAdaptor rather than using
+    #registry_host       => undef, 
+	#registry_port       => undef, 
+	#registry_user       => undef, 
+	#registry_version    => undef,
+	#registry_pass       => undef,
+	
+	#Have to access optional (undef) ENV params here
+	#These must be set in the environment
+	#Access to these from pipeline_wide_parameters is currently broken
+	#passwords via env for security
+	dnadb_pass          => $self->o('ENV', 'DNADB_PASS'),
+	pass                => $self->o('ENV', 'DB_PASS'),
+	dnadb_port          => undef,
+	
+	port                => undef,
+	
 	disconnect_when_inactive => 1, #Set on funcgen and core DBAdaptors
+	ssh                 => undef, #Connect to DBs using ssh(use in Importer)
+	
+	
+	### Optional Helper param (currently used in DefineOutputSet)
+    result_set_only    => 0, #why is this 0 rather than undef?
+    #todo remove this and use param_silent as this is really a batch_param?
+    
+ 
+    
    };
+  
 }
-
-
-__END__
 
 #Generic resource_classes are in Base
 
@@ -131,30 +114,128 @@ __END__
 
 sub pipeline_wide_parameters {
     my ($self) = @_;
+    
+    #Deal with batch_params first as this may not have been subtituted yet
+    #and will evaluate to a string:
+    #Can't use string ("#:subst batch_params:#") as an ARRAY ref while "strict refs"
+     
+   # my $batch_params = 
+   #   [ ( ref($self->o('batch_params')) ? 
+   #       @{$self->o('batch_params')} : () ),
+   #     #Generic optional params (used in Helper and elsewhere)
+    #    'rollback',
+    #    'slices',
+    #    'skip_slices',
+    #    ### More optional Helper params (currently used in DefineOutputSet)
+#    #    'result_set_only',
+#        'result_set_mode', #Can only be set to recover at present
+#        'recover',         #is this an Importer or a Helper param?
+        
+        ### Optional IdentifySetInputs parameters
+        #comma separated or defined as list ref  
+        #are these batch wide or just used for the seed job?
+        #qw( cell_types feature_types input_sets input_set_ids
+        #    experimental_groups states ),             
+        #'input_analyses'     => undef,
+        #'experiment'   => undef, 
+        #This is actually more like study, and omit for now as 
+        #input_set will handle this         
+ #     ];
                             
     return {
       %{$self->SUPER::pipeline_wide_parameters}, 
-    
-      #todo move these to default_options?
-      #and remove pipeline_wide_params
-            
+               
+       #todo make this optional to the extent we only specify a host
+       #and let the API do the rest  
       dnadb   => 
         {
-         -host   => $self->o('dnadb_host'),
-         -pass   => $self->o('dnadb_pass'),
-         -port   => $self->o('dnadb_port'),
-         -user   => $self->o('dnadb_user'),
-         -dbname => $self->o('dnadb_name'),
+         -dnadb_host   => $self->o('dnadb_host'),
+         -dnadb_pass   => $self->o('dnadb_pass'),
+         -dnadb_port   => $self->o('dnadb_port'),
+         -dnadb_user   => $self->o('dnadb_user'),
+         -dnadb_name   => $self->o('dnadb_name'),
         },
         
-      efgdb  => 
+      #todo CR rename to output DB we are no longer efg!
+      #change the cmdline prefixes to outdb_host etc, to match the config param
+      
+      #do not rename this 'db', as the param wrapper method will 
+      #clash with Process::db method  
+      
+      #These need to be made optional in Base?
+      
+      out_db  => 
         {
-         -host   => $self->o('dbhost'),
-         -port   => $self->o('dbport'),
-         -user   => $self->o('dbuser'),
-         -pass   => $self->o('dbpass'),
+         -host   => $self->o('host'),
+         -port   => $self->o('port'),
+         -user   => $self->o('user'),
+         -pass   => $self->o('pass'),
          -dbname => $self->o('dbname'),
         },
+     
+     #Can't pass optional params via the ENV as this
+     #will always barf when it is absent!
+     #Just define as undef in the env!
+     
+     
+     
+      #It's actually a bit unsafe to use the registry in pipeline code
+      #as the DB may not have the correct species name, hence
+      #all adaptors are fetch directly from the DBAdaptor rather than using
+      #the Registry.
+      #registry_host    => $self->o('registry_host'), 
+	  #registry_port    => $self->o('registry_port'), 
+	  #registry_user    => $self->o('registry_user'), 
+	  #registry_version => $self->o('registry_version'),
+	  #registry_user    => $self->o('registry_user'),
+    
+      #Currently pipeline wide, but may want to redefine for particular analyses
+      disconnect_when_inactive => $self->o('disconnect_when_inactive'),
+    
+      #Now defaults in runnable
+      #db_output_dir => $self->o('data_root_dir').'/output/'.$self->o('dbname'),
+     
+     #Optional params
+     
+     #These are not pipelinewide!!!! They only refer to s specific run!
+     #todo move these to specific analyses requiring these
+     #these should never be specified with init!
+ 
+     #todo put in other options here
+     #then validate mandatory aspects in analysis   
+        
+  
+    #Maintain this here for now in case BaseDB is used by something other than BaseSequenceAnalysis
+    #Could change this if we move the releveant code from the respective modules
+  
+     batch_param_names => 
+      [
+       #From Base.pm       
+       'no_write', #For use with runWorker.pl -no_write, so we can write some STDOUT in run
+                   #is this already available in the job, or is it just passed ot the worker?
+ #      'feature_file_format',
+   
+        #BaseDB.pm batch_params     
+        #Generic optional params (used in Helper and elsewhere)
+        'rollback',
+        'slices',
+        'skip_slices',
+        ### More optional Helper params (currently used in DefineOutputSet)
+        'result_set_only',
+        'result_set_mode', #Can only be set to recover at present
+        'recover',         #is this an Importer or a Helper param?
+        
+ #       ### Optional IdentifySetInputs parameters
+ #       #comma separated or defined as list ref  
+ #       #are these batch wide or just used for the seed job?
+ #       #qw( cell_types feature_types input_sets input_set_ids
+ #       #    experimental_groups states ),             
+ #       #'experiment'   => undef, 
+#        #'input_analyses'     => undef,
+ #       #This is actually more like study, and omit for now as 
+ #       #input_set will handle this         
+     ],
+             
     };
 }
 
