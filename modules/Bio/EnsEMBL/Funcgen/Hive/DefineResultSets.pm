@@ -1,5 +1,3 @@
-=pod 
-=pod 
 
 =head1 NAME
 
@@ -250,52 +248,52 @@ sub run {   # Check parameters and do appropriate database/file operations...
   }
   
   #Now do the actual ResultSet generation and cache the output_ids on the correct branch
-  my $batch_params = $self->batch_params;
-  my %rep_sets;#
+  my %batch_params = %{$self->batch_params};
+  my %branch_sets;
 
   foreach my $branch(keys %rsets){
   
     foreach my $rset_group($rsets{$branch}){
 
-      foreach my $rset(@rsets){
-          $rset = $helper->define_ResultSet(%{$rset});
-          
-          if($branch =~ /_merged$/){# (no control) job will only ever have 1 rset    
-            $self->branch_job_group($branch, [{%{$batch_params},
-                                               dbID       => [$rset->dbID], 
-                                               set_name   => [$rset->name],
-                                               set_type    => 'ResultSet'}]);){
-          }
-          else{
-            #populate set_names/dbIDs groups for control and replicate branches
-            $branch_sets{$branch}{$rset_group}{set_names}} ||= [];
-            $branch_sets{$branch}{$rset_group}{dbIDs}}     ||= [];
-            push @{$branch_sets{$branch}{$rset_group}{set_names}}, $rset->name;
-            push @{$branch_sets{$branch}{$rset_group}{dbIDs}},     $rset->dbID;
-    
-            if($branch =~ /_replicate$/o){
-              #Just create the individual fan output_ids
-              $branch_sets{$branch}{$rset_group}{output_ids} ||= [];
-              push @{$branch_sets{$branch}{$rset_group}{output_ids}}, {%{$batch_params},
-                                                                     dbID     => $rset->dbID,
-                                                                     set_name => $rset->name,
-                                                                     set_type => 'ResultSet'};    
-            }
+      foreach my $rset(@$rset_group){
+        $rset = $helper->define_ResultSet(%{$rset});
+        
+        if($branch =~ /_merged$/){# (no control) job will only ever have 1 rset    
+          $self->branch_job_group($branch, [{%batch_params,
+                                             dbID       => [$rset->dbID], 
+                                             set_name   => [$rset->name],
+                                             set_type    => 'ResultSet'}]);
+        }
+        else{
+          #populate set_names/dbIDs groups for control and replicate branches
+          $branch_sets{$branch}{$rset_group}{set_names} ||= [];
+          $branch_sets{$branch}{$rset_group}{dbIDs}     ||= [];
+          push @{$branch_sets{$branch}{$rset_group}{set_names}}, $rset->name;
+          push @{$branch_sets{$branch}{$rset_group}{dbIDs}},     $rset->dbID;
+  
+          if($branch =~ /_replicate$/o){
+            #Just create the individual fan output_ids
+            $branch_sets{$branch}{$rset_group}{output_ids} ||= [];
+            push @{$branch_sets{$branch}{$rset_group}{output_ids}}, {%batch_params,
+                                                                   dbID     => $rset->dbID,
+                                                                   set_name => $rset->name,
+                                                                   set_type => 'ResultSet'};    
           }
         }
       }
     }
   }
   
+  
   #Now flow job_groups of rsets to control job/replicate & IDR 
   foreach my $branch(keys %branch_sets){            
   
     if($branch =~ /_replicate$/){
       
-      foreach my $rep_set(keys %branch_sets{$branch}){ 
+      foreach my $rep_set(keys %{$branch_sets{$branch}}){ 
         #Add semaphore RunIDR job
         $self->branch_job_group($branch, $rep_set, 'RunIDR', 
-                                [{%{$batch_params},
+                                [{%batch_params,
                                  dbIDs     => $branch_sets{$branch}{$rep_set}{dbIDs},
                                  set_names => $branch_sets{$branch}{$rep_set}{set_names},
                                  set_type  => 'ResultSet'}]);
@@ -306,7 +304,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
       my ($any_group) = keys(%{$branch_sets{$branch}});
    
       $self->branch_job_group($branch, 
-                              [{%{$batch_params},
+                              [{%batch_params,
                                result_set_groups => $branch_sets{$branch},
                                set_type  => 'ResultSet',
                                dbID      => $branch_sets{$branch}{$any_group}{dbIDs}->[0],
