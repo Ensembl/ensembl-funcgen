@@ -33,8 +33,8 @@ my %fswitches =
 
 sub new {
   my $caller = shift;
-  my $class = ref($caller) || $caller;
-  my $self = $class->SUPER::new(-output_format => 'bed', @_);
+  my $class  = ref($caller) || $caller;
+  my $self   = $class->SUPER::new(-output_format => 'bed', @_);
   #specify -output_format default first, so it can be over-ridden?
   
   #bed is half_open by default
@@ -58,7 +58,7 @@ sub input_formats    { return ['bam', 'sam', 'bed']; }
 sub requires_control { return 0; }
 
 sub run {   
-  my $self = $_[0];
+  my $self = shift;
   
   my ($align_file, $suffix, $out_file, $control_file, 
     $gzip_align, $gzip_control) = @{$self->file_info};
