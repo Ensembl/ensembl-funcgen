@@ -449,7 +449,7 @@ sub create_DBAdaptor_from_params {
   my %dba_modules = (
                      funcgen => 'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor',
                      core    => 'Bio::EnsEMBL::DBSQL::DBAdaptor',
-                     #hive    => 'Bio::EnsEMBL::Hive::DBSQL::DBAdaptor',
+                     hive    => undef, #'Bio::EnsEMBL::Hive::DBSQL::DBAdaptor',
                      #This adds a unecessary requirement for ensembl-hive package
                      );
   
@@ -459,8 +459,19 @@ sub create_DBAdaptor_from_params {
   }  
   
   if(! (defined $db_type && 
-        exists $dba_modules{$ db_type}) ){
+        exists $dba_modules{$db_type}) ){
     throw("DB type argument is invalid, valid DB types are:\t".join("\t", (keys %dba_modules)) );        
+  }
+  
+  if(! defined $dba_modules{$db_type}){
+    my $dba_class = 'Bio::EnsEMBL::'.ucfirst($db_type).'::DBSQL::DBAdaptor';
+    eval "require $dba_class";
+    
+    if($@){
+      throw($@."\nFailed to require DBAdaptor class:\t$dba_class");
+    }    
+    
+    $dba_modules{$db_type} = $dba_class;
   }
   
   my $dba = $dba_modules{$db_type}->new(%$db_params);   
