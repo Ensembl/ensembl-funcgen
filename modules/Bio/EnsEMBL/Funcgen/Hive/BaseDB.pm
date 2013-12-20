@@ -155,21 +155,25 @@ sub get_Slice {
 
 #This won't be recalled nicely
 #and will be unclear in the caller whether all set methods will be injected
+#although each analysis 'should' know which methods will be available
+#due to the dataf flow input
 
 sub fetch_Set_input{
   my ($self, $return_set_type) = @_;
   
-  if(defined $return_set_type){
-  
-    if($return_set_type !~ /(result|feature|data)/o ){
-      thow("Return set type argument is not valid:\t$return_set_type\n".
-        "Must be result, feature or data"); 
-    }  
+  if(! defined $return_set_type){
+    thow("Return set type argument is not defined, must be one of:\n\t".
+      "DataSet FeatureSet ResultSet InputSet");
   }
-  else{
-    $return_set_type = ''; #To avoid warnings in test
-  }
+  elsif($return_set_type !~ /^(Result|Feature|Data)Set$/o){
+    thow("$return_set_type is not a valid return set type, must be one of:\n\t".
+        "DataSet FeatureSet ResultSet InputSet");
+  }  
+    
   
+  #why do we have a mistmach between the case of the set_type and the method name?
+  #revert to title case i.e API standard as opposed to table name
+  #as these will create methods!
   
   my $set_type       = $self->param_required('set_type');
   my $adaptor_method = 'get_'.$set_type.'Adaptor'; 
@@ -183,41 +187,46 @@ sub fetch_Set_input{
     throw("Could not fetch $set_type with dbID $dbid ($set_name)"); 
   }
   
-
+  $self->set_param_method($set_type, $set);
   
   if($set_type eq 'DataSet'){
-    $self->set_param_method('data_set', $set);
     my @rsets = @{$set->get_supporting_sets('result')};
     
     if(scalar @rsets != 1){
       
-      if($return_set_type eq 'result'){
+      if($return_set_type eq 'ResultSet'){
         throw("Expected 1 ResultSet, found:\n".$self->helper->dump(\@rsets));
       }
     }
     else{
       $self->helper->debug(2, "Setting result_set:\t".$rsets[0]->name);
-      $self->param('result_set', $rsets[0]);
+      $self->param('ResultSet', $rsets[0]);
     }
   }
   elsif($set_type eq 'ResultSet'){
-    $self->set_param_method('result_set', $set);
     my @dsets = @{$db->get_DataSetAdaptor->fetch_all_by_supporting_set($set)};
     
     if(scalar (@dsets) != 1){
       
-      if($return_set_type eq 'data'){
+      if($return_set_type eq 'DataSet'){
         throw("Failed to identify unique DataSet using ResultSet:\t".$set_name);
       } 
     }
     else{
-      $self->set_param_method('data_set', $dsets[0]);
+      $self->set_param_method('DataSet', $dsets[0]);
       $self->helper->debug(2, "Setting data_set:\t".$dsets[0]->name);     
     }
   }
-  else{
-   throw($set_type.' set_type not supported. Must be DataSet or ResultSet'); 
+  elsif($set_type eq 'InputSet'){
+    #return_set_type not valid for InputSets
+    if($return_set_type ne 'InputSet'){
+          
+    }
   }
+  else{
+   throw($set_type.' set_type not supported. Must be DataSet, ResultSet or InputSet'); 
+  }
+  
   
   
   if($self->param_silent('data_set')){
@@ -235,7 +244,11 @@ sub fetch_Set_input{
   
   }
   
-  return ($return_set_type) ? $self->param_required($return_set_type.'_set') : 1;
+  #if we don't specify return_set_type
+  #then an analysis may get an unexpected set returned if the data flow isn't correct
+  #hence needs to be mandatory
+  
+  return $self->param_required($return_set_type.'_set');
 }
 
 =over
@@ -278,15 +291,23 @@ Only if they have been specified or are required
 
 #These are always optional as they have defaults
 
-sub feature_set_analysis { return $_[0]->param_silent('feature_set_analysis'); }
+#TO DO remove these as they will be replaced with get/set_param_method in Runnables
+#where we can specify (ion context) whether they are required or not
 
-sub input_set_analysis   { return $_[0]->param_silent('input_set_analysis');   }
+#sub feature_set_analysis { return $_[0]->param_silent('feature_set_analysis'); }
 
-sub result_set_analysis  { return $_[0]->param_silent('result_set_analysis');  }
+#sub input_set_analysis   { return $_[0]->param_silent('input_set_analysis');   }
+
+#This has been superceded by more specific alignment_analysis 
+#we may have want to create different result_sets with different analyses
+#this translation between params and result_sets shoudl be done by the runnables
+#so we should really have generic set analyses here
+#TO DO, rename feature_set_analysis peak_analysis!
+#sub result_set_analysis  { return $_[0]->param_silent('result_set_analysis');  }
 
 
 #Are these mandatory if accessed?
-sub cell_type    { return $_[0]->param('cell_type');}
+sub cell_type    { return $_[0]->param_silent('cell_type');} #optional!
 
 sub feature_type { return $_[0]->param('feature_type'); }
 
