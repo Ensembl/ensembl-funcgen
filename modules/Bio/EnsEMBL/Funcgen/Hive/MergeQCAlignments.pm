@@ -46,11 +46,7 @@ use parent qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
 #todo
 # Reimplement repository support
-# Handle controls!!!!!!
 # Status handling/setting?
-
-
-
 
 
 sub fetch_input {  
@@ -59,8 +55,8 @@ sub fetch_input {
   my $rset = $self->fetch_Set_input('ResultSet');
   $self->get_param_method('output_dir', 'required');
   $self->get_param_method('bam_files',  'required');
-  $self->get_param_method('flow_mode',  'required');
   $self->get_param_method('set_prefix', 'required');#was chunk_fiule_prefix in MergeChunkResultSetFastqs
+  my $flow_mode = $self->get_param_method('flow_mode',  'required');
   #could have recreated output_dir and merged_file_name from ResultSet and run_controls
   #as we did in MergeChunkResultSetFastqs, but passed for convenience
 
@@ -140,29 +136,37 @@ sub run {
   #PhantomPeakQualityTools? Use estimate of fragment length in the peak calling?
 
   warn "Need to implement post alignment QC here. Filter out MAPQ <16. FastQC/FASTX/IDR?/PhantomPeakQualityTools frag length?";
+  #Add ResultSet status setting here!
+  #ALIGNED
+  #ALIGNMENT_QC_OKAY
 
-  my $flow_mode = $self->flow_mode;
+
+
+
+
+  my $flow_mode    = $self->flow_mode;
+  my %batch_params = %{$self->batch_params};
   
   if($flow_mode ne 'signal'){
     #Data flow to DefineDataSet.pm i.e. DefineMergedOutputSet or DefineReplicateOutputSet
     $self->branch_job_group('Define'.$flow_mode.'DataSet', 
-                            [{%{$self->batch_params},
-                             set_type    => 'ResultSet',
-                             set_name    => $self->ResultSet->name,
-                             dbID        => $self->ResultSet->dbID}]);
+                            [{%batch_params,
+                              set_type    => 'ResultSet',
+                              set_name    => $self->ResultSet->name,
+                              dbID        => $self->ResultSet->dbID}]);
   }
   else{ #Run signal fastqs
     my $rset_groups = $self->result_set_groups;
     my $align_anal  = $rset->analysis->logic_name;
     
     #This bit is very similar to some of the code in DefineResultSets
-    #jsut different enough not to be subbable tho :/
+    #jsut different enough not to be subbable tho 
 
-    foreach my $rset_group(keys %{$rset_groups}}){
+    foreach my $rset_group(keys %{$rset_groups}){
       my @fan_jobs;
         
       for my $i(0...$#{$rset_groups->{$rset_group}{dbIDs}}){
-        push @fan_jobs, {%{$self->batch_params},
+        push @fan_jobs, {%batch_params,
                          set_type    => 'ResultSet',
                          set_name    => $rset_groups->{$rset_group}{set_names}->[$i],
                          dbID        => $rset_groups->{$rset_group}{dbIDs}->[$i]};
@@ -171,14 +175,14 @@ sub run {
       my $branch = ($rset_group eq 'merged') ? 
         'Preprocess_'.$align_anal.'_merged' : 'Preprocess_'.$align_anal.'_replicate';   
       
-      my @job_group ($branch, \@fan_jobs);   
+      my @job_group = ($branch, \@fan_jobs);   
          
       if($rset_group ne 'merged'){ #Add RunIDR semaphore
         push @job_group, ('RunIDR', 
-                          [{%{$batch_params},
-                           dbIDs     => $rset_groups{$rset_group}{dbIDs},
-                           set_names => $rset_groups{$rset_group}{set_names},
-                           set_type  => 'ResultSet'}]);     
+                          [{%batch_params,
+                            dbIDs     => $rset_groups->{$rset_group}{dbIDs},
+                            set_names => $rset_groups->{$rset_group}{set_names},
+                            set_type  => 'ResultSet'}]);     
       }  
        
       $self->branch_job_group(@job_group);
