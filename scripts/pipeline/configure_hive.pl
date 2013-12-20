@@ -201,8 +201,8 @@ sub main{
     $db_script_args->{funcgen}.' '.$db_script_args->{core}.' '.$db_script_args->{pipeline};
   $pipeline_params .= " -species $species " if defined $species;  
   
-  my ($mc, $pdb);  
-  eval { $pdb = create_DBAdaptor_from_params($pdb_params, 'core', 1); };
+  my ($ntable_a, $pdb);  
+  eval { $pdb = create_DBAdaptor_from_params($pdb_params, 'hive', 1); };
   
   if($@){ #Assume the DB hasn't been created yet  
     #init the pipline with the first conf
@@ -213,12 +213,15 @@ sub main{
     print "\n\nINITIALISING DATABASE:\t".$pdb_params->{'-dbname'}."\n";
     run_system_cmd($init_cmd);  
     
-    $pdb = create_DBAdaptor_from_params($pdb_params, 'core');
-    $mc  = $pdb->get_MetaContainer;
-    _register_conf_in_meta($mc, $first_conf);    
+    $pdb      = create_DBAdaptor_from_params($pdb_params, 'hive');
+    $ntable_a = $pdb->get_NakedTableAdaptor;
+    $ntable_a->table_name('meta');
+    _register_conf_in_meta($ntable_a, $first_conf);    
   }
   else{
-    $mc         = $pdb->get_MetaContainer; 
+    #$mc         = $pdb->get_MetaContainer; 
+    $ntable_a = $pdb->get_NakedTableAdaptor;
+    $ntable_a->table_name('meta');
   }
   
   
@@ -227,7 +230,14 @@ sub main{
   
   ### PERFORM ANALYSIS_TOPUP ###
   my $conf_key   = 'hive_conf';
-  my @meta_confs = @{$mc->list_value_by_key($conf_key)};
+  
+  
+  
+  #my @meta_confs = @{$mc->list_value_by_key($conf_key)};
+  my @meta_confs = @{$ntable_a->fetch_all_by_meta_key($conf_key)};
+  
+  
+  
   
   foreach my $conf(@confs){
    
@@ -246,38 +256,49 @@ sub main{
       my $meta_key        = 'can_run_%';
       #my $meta_key_values = $mc->key_values_like_key($meta_key, 1);#like boolean
       
-      my $sth = $mc->prepare( "SELECT meta_key, meta_value FROM meta ".
-                              "WHERE meta_key like '$meta_key'" ); #AND species_id is NULL?
+      #my $sth = $mc->prepare( "SELECT meta_key, meta_value FROM meta ".
+      #                        "WHERE meta_key like '$meta_key'" ); #AND species_id is NULL?
                               
-      $sth->execute;
-      my %meta_key_values;
+      #$sth->execute;
+      #my %meta_key_values;
   
-      while ( my $arrRef = $sth->fetchrow_arrayref ) {
+      #while ( my $arrRef = $sth->fetchrow_arrayref ) {
+
+        #if(exists $meta_key_values{$arrRef->[0]}){
+        # throw('Found >1 value for meta_key '.$arrRef->[0].":\t".
+        #       $arrRef->[1].' & '.$meta_key_values{$arrRef->[0]}); 
+        #} 
         
-        warn "Got can_run_ key ".$arrRef->[0].' '.$arrRef->[1];
-        
-        if(exists $meta_key_values{$arrRef->[0]}){
-         throw('Found >1 value for meta_key '.$arrRef->[0].":\t".
-               $arrRef->[1].' & '.$meta_key_values{$arrRef->[0]}); 
-        } 
-        
-        $meta_key_values{$arrRef->[0]} = $arrRef->[1];
+        #$meta_key_values{$arrRef->[0]} = $arrRef->[1];
       
         #foreach my $can_run_key(keys %$meta_key_values){
-        
         # if(scalar @{$meta_key_values->{$can_run_key}} != 1){
         #   throw("Found >1 value for meta_key $can_run_key:\t".
         #         join(' ',  @{$meta_key_values->{$can_run_key}})); 
         # }  
-        
         #if(! $meta_key_values->{$can_run_key}->[0]){
         #  delete $meta_key_values->{$can_run_key};   
         #}       
         #we don't need to reset the arrayref to 1, as the presence of 
         #the key is enough given the above test
-      }
+      #}
       
-      $sth->finish; 
+      #$sth->finish; 
+      
+      
+      my %meta_key_values = %{$ntable_a->fetch_all_like_meta_key_HASHED_FROM_meta_key_TO_meta_value($meta_key)};
+      
+      
+      use Data::Dumper qw(Dumper);
+      warn "can_run_entries ".Dumper(\%meta_key_values)."\n";
+      
+      #now test failures
+      
+      #$ntable_a->fetch_like_meta_key_HASHED_FROM_meta_key_TO_meta_value($meta_key);
+      #$ntable_a->fetch_all_like_meta_name_and_test_HASHED_FROM_meta_name_TO_meta_value($meta_key);
+      #Both of these die nicely, but should probably throw?
+      #die('should have failed by now');
+      
       
       #Now do the top up
       my $topup_cmd = "perl $hive_script_dir/init_pipeline.pl Bio::EnsEMBL::Funcgen::Hive::Config::${conf} ".
@@ -296,14 +317,19 @@ sub main{
         
         if($meta_key_values{$can_run_key}){
           #$mc->update_key_value($can_run_key, $meta_key_values{$can_run_key});
-          my $sth = $mc->prepare( 'UPDATE meta SET meta_value = "'.$meta_key_values{$can_run_key}.
-              '" WHERE meta_key = "'.$can_run_key.'"'); #.'AND species_id IS NULL' );
-          $sth->execute;
-          $sth->finish;
+          #my $sth = $mc->prepare( 'UPDATE meta SET meta_value = "'.$meta_key_values{$can_run_key}.
+          #    '" WHERE meta_key = "'.$can_run_key.'"'); #.'AND species_id IS NULL' );
+          #$sth->execute;
+          #$sth->finish;
+          
+          #This will require primary key!
+          #How can we retrieve this using the generic autoloaded method?
+          
+          $ntable_a->update({meta_key=>$can_run_key, meta_value =>$meta_key_values{$can_run_key}}, 'meta_value' );
         }
       }
       
-      _register_conf_in_meta($mc, $conf);    
+      _register_conf_in_meta($ntable_a, $conf);    
     }
   }
 
@@ -321,17 +347,19 @@ sub main{
 #are these returned at all by the params?
 
 #Work around with be to use direct mysql and do an update on them to reset the species ID to 1?
+#Change this to use NakedTableAdaptor, as MetaContainer will disappear.
 
+#Is this going to fail as don't we need the primary key defining?
 
 
 sub _register_conf_in_meta{
-  my $mc   = shift;
-  my $conf = shift;
+  my $ntable_a   = shift;
+  my $conf       = shift;
   
-  eval { $mc->store_key_value('hive_conf', $conf); };
+  eval { $ntable_a->store({meta_key => 'hive_conf', meta_value => $conf}); };
       
   if($@){
-    throw("Failed to store hive conf meta entry:\t$conf\n$@");  
+    throw("Failed to store hive conf meta entry:\t$conf\n$@");
   }
   
   return;  
