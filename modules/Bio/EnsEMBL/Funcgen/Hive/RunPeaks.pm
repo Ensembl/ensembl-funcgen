@@ -50,29 +50,24 @@ sub fetch_input {
   my $self = shift;
   $self->SUPER::fetch_input;
 
-  my $fset     = $self->fetch_Set_input('feature');
+  my $fset     = $self->fetch_Set_input('FeatureSet');
   my $analysis = $fset->analysis;
-  my $dset     = $self->data_set; 
-  my $input_sets = $dset->get_supporting_sets('input');
+  my $rset     = $self->ResultSet; 
 
-  if ( scalar(@$input_sets) != 1 ) {
-    throw( 'Expected 1 InputSet, found ' .
-           scalar(@$input_sets) . ' for DataSet ' . $dset->name );
-  }
-
-#This is required for getting files, move this to get_alignment_file_by_InputSets?
+  #This is required for getting files, move this to get_alignment_file_by_InputSets?
   $self->set_param_method( 'cell_type', $fset->cell_type, 'required' );
 
   #do we need both experiment name and logic name in here?
+  #logic name will be in the otufile name anyway?
 
   $self->get_output_work_dir_methods( $self->db_output_dir . '/peaks/' .
-      $fset->get_InputSet->get_Experiment->name . '/' . $analysis->logic_name );
+      $rset->get_Experiment->name. '/' . $analysis->logic_name );
 
   my $peak_module = $self->validate_package_from_path($analysis->module);
   my $formats = $peak_module->input_formats;
   my $filter_format = $self->param_silent('bam_filtered') ? undef : 'bam';    
   my $control_file;
-  my $align_file = $self->get_alignment_file_by_InputSet_formats($input_sets->[0], 
+  my $align_file = $self->get_alignment_file_by_ResultSet_formats($rset, 
                                                                  $formats,
                                                                  undef,  # control flag
                                                                  undef,  # all_formats flag
@@ -81,7 +76,7 @@ sub fetch_input {
 
   if ( ! $self->get_param_method( 'skip_control', 'silent' ) ) {
     #This throws if not found
-    $control_file = $self->get_alignment_file_by_InputSet_format($input_sets->[0], 
+    $control_file = $self->get_alignment_file_by_ResultSet_format($rset, 
                                                                  $formats, 
                                                                  1,     # control flag
                                                                  undef, # all_formats flag
@@ -125,17 +120,15 @@ sub fetch_input {
 
   #validate program_file isn't already path?
 
-  my $pfile_path =
-    ( defined $self->bin_dir ) ?
-    $self->bin_dir.'/'.$analysis->program_file :
-    $analysis->program_file;
+  my $pfile_path = ( defined $self->bin_dir ) ?
+    $self->bin_dir.'/'.$analysis->program_file : $analysis->program_file;
 
   my $peak_runnable = $peak_module->new(
     -program_file      => $pfile_path,
     -parameters        => $analysis->parameters,
     -align_file        => $align_file,
     -control_file      => $control_file,
-    -out_file_prefix   => $fset->name . '.' . $analysis->logic_name,
+    -out_file_prefix   => $fset->name, # . '.' . $analysis->logic_name, #???this is already appended!
     -out_dir           => $self->output_dir,
     -convert_half_open => 1,
 
@@ -168,7 +161,7 @@ sub run {
 
 sub write_output {
   my $self = shift;
-  my $fset = $self->feature_set;
+  my $fset = $self->FeatureSet;
 
   if ( $fset->has_status('IMPORTED') ) {
     throw( "Cannot imported feature into a \'IMPORTED\' FeatureSet:\t" .
@@ -183,7 +176,7 @@ sub write_output {
 
   $fset->adaptor->set_imported_states_by_Set($fset);
 
-  my $batch_params = $self->get_batch_params;
+  #my $batch_params = $self->get_batch_params;
 
   #Log counts here?
 
