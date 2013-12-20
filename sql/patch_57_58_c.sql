@@ -1,28 +1,14 @@
--- Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
--- 
--- Licensed under the Apache License, Version 2.0 (the "License");
--- you may not use this file except in compliance with the License.
--- You may obtain a copy of the License at
--- 
---      http://www.apache.org/licenses/LICENSE-2.0
--- 
--- Unless required by applicable law or agreed to in writing, software
--- distributed under the License is distributed on an "AS IS" BASIS,
--- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
--- See the License for the specific language governing permissions and
--- limitations under the License.
-
-# patch_56_57_c.sql
+# patch_57_58_c.sql
 #
-# title: status.table_name length increase
+# title: meta.meta_value_length
 #
 # description:
-# Increase max length of status.table_name to accomodate custom data tables
+# Increase the length of the meta_value field to accomodate long reg strings
 
 
-ALTER TABLE status MODIFY `table_name` varchar(32) NOT NULL DEFAULT '';
+ALTER table meta modify `meta_value` varchar(950) NOT NULL;
 
 # patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_57_58_c.sql|s.table_name_length');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_57_58_c.sql|meta.meta_value_length');
 
 
