@@ -19,6 +19,3 @@
 #Edit this if required
 export SRC=~/src
 alias efg='bash --rcfile $SRC/ensembl-funcgen/scripts/environments/efg.env -i'
-
-
-#This is currently losing git funcs.
