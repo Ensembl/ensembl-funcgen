@@ -42,15 +42,15 @@ sub fetch_input {   # fetch parameters...
 
 
    
-  my $rset = $self->fetch_Set_input('result');
+  my $rset = $self->fetch_Set_input('ResultSet');
   $self->helper->debug(1, "CollectionWriter::fetch_input got ResultSet:\t".$rset);
   
-  my $input_sets = $rset->get_support;  
+  #my $input_sets = $rset->get_support;  
    
-  if(scalar(@$input_sets) != 1){
-    throw('Expected 1 InputSet, found '.scalar(@$input_sets).
-      ' for ResultSet '.$rset->name);   
-  }
+  #if(scalar(@$input_sets) != 1){
+  #  throw('Expected 1 InputSet, found '.scalar(@$input_sets).
+  #    ' for ResultSet '.$rset->name);   
+  #}
   
   $self->get_output_work_dir_methods($self->db_output_dir.'/result_feature/'.$rset->name, 1);#no work dir?
   #todo enable use of work dir in get_alignment_file_by_InputSet and Importer
@@ -80,11 +80,11 @@ sub fetch_input {   # fetch parameters...
   my $filter_format = $self->param_silent('bam_filtered') ? undef : 'bam';  
   
      
-  my $align_files = $self->get_alignment_files_by_InputSet_formats($input_sets->[0],
-                                                                   $self->param_required->feature_formats,
-                                                                   undef, #control flag
-                                                                   1,     #all formats
-                                                                   $self->filter_from_format); 
+  my $align_files = $self->get_alignment_files_by_ResultSet_formats($rset,
+                                                                    $self->param_required('feature_formats'),
+                                                                    undef, #control flag
+                                                                    1,     #all formats
+                                                                    $filter_format); 
   #No need to check as we have all_formats defined
   
   #what about control files here?
@@ -133,29 +133,29 @@ sub fetch_input {   # fetch parameters...
   
  
   #Finally set up the branch config
-  $self->init_branch_config(1);#allow no branch config, to support Collections config 
-   
+  $self->init_branching_by_analysis;
+      
   return;
 }
 
 
 sub run {   # Check parameters and do appropriate database/file operations... 
   my $self = shift;
-  my $Imp = $self->param('importer');
+  my $Imp  = $self->get_Importer;
     
   if(! $self->param_silent('merge')){ #Prepare or write slice col
    
-    if( ! $Imp->prepared ){
- 
-      #Preparing data...
+    if( ! $Imp->prepared ){  #Preparing data...
       $Imp->read_and_import_data('prepare');
       #Dataflow only jobs for slices that the importe has seen
-      my %seen_slices = %{$Imp->slice_cache};
+      my %seen_slices  = %{$Imp->slice_cache};
       my $batch_params = $self->batch_params;
+      my @slice_jobs = ();
 
       foreach my $slice (values %seen_slices){ 
    
-        $self->branch_output_id(
+        #$self->branch_output_id(
+        push @slice_jobs,
          {
           %{$batch_params},#-slices will be over-ridden by new_importer_params
           dbID           => $self->param('dbID'),
@@ -169,28 +169,37 @@ sub run {   # Check parameters and do appropriate database/file operations...
             -input_files    => [$Imp->output_file],
             -total_features => $Imp->counts('total_features'),
             -batch_job      => 1, 
-	        -prepared       => 1,  
+	          -prepared       => 1,  
            }
-          },
-          undef, #No branch key as we know the branch
-          2);   
+          };
+          
+         # undef, #No branch key as we know the branch
+         # 2);   
       }
+      
+      
+      #Could really do with flowing ResultSet set_type down one branch
+      #and other set types down other branch?
+      #in case we have not created a DataSet?
+  
             
       my $output_id = {%{$batch_params},#-slices will be over-ridden below
                        dbID         => $self->param('dbID'),
                        set_name     => $self->param('set_name'),#mainly for readability
                        set_type     => $self->param('set_type'),
-                       filter_from_format => undef}; #Don't want to re-filter for subsequent jobs
-              
+                       filter_from_format => undef,
+                       slices             => [keys %seen_slices]
+      }; #Don't want to re-filter for subsequent jobs
+                
+      #Deal with Collections and Mergecollection job group first
+      #It's actually not necessary to branch like this for this analysis
+      #as it is only dealing with one job group
+      #so could have simply branced the funnel jobs after
+      #but this makes it more explicit  
+      $self->branch_job_group([2], \@slice_jobs, 1, [$output_id]);
   
-      #Only flow slices to peak jobs if we have defined -slices/skip_slices         
-      if($self->slices){ 
-        $output_id->{slices} = [keys %seen_slices]; 
-      }
-  
-      #Now also flow down predefined peak_branch for given analysis logic_name
       #We have no way of knowing whether method was injected by fetch_Set_input
-      my $fset = $self->param_silent('feature_set');
+      my $fset = $self->FeatureSet;
       
       #todo
       #Do we need to be able to do this conditionally?
@@ -207,23 +216,19 @@ sub run {   # Check parameters and do appropriate database/file operations...
       #see pipeline dev notes
       
       if(defined $fset){
-        #Deref $output_id so we don't inadvertantly update it with slices below.
-        $self->branch_output_id({%$output_id}, $fset->analysis->logic_name);
+        
+        #Only flow slices to peak jobs if we have defined -slices/skip_slices   
+        if(! $self->slices){ 
+          #Deref $output_id so we don't inadvertantly update above reference.
+          $output_id = {%$output_id};
+          delete $output_id->{slices};
+        }
+    
+        #what about peaks reports?
+        #we should really flow the slices to that analysis!   
+        
+        $self->branch_job_group('run_'.$fset->analysis->logic_name, [{%$output_id}]);
       }
-      
-      #Always flow slices for Merge and PeaksReport job
-      
-      if(! exists $output_id->{slices}){
-        $output_id->{slices} = [keys %seen_slices]; 
-      }
-      
-      #This is MergeCollections specific
-      #should this be on a different branch?
-      #No done in config via analysis parameters
-      #$output_id->{merge} = 1;
-      
-      #Flows to PeaksReport and MergeCollections
-      $self->branch_output_id($output_id, undef, 1);#undef is absent branch key 
     } 
     else { #These are the fanned slice jobs  
    
@@ -236,7 +241,6 @@ sub run {   # Check parameters and do appropriate database/file operations...
     } 
   }
   else{ #Merge
-    my $rset = $self->param_required('result_set');     
     warn "HARDCODING force_overwrite for merge_and_index_slice_collections!";
     
     $Imp->feature_adaptor->merge_and_index_slice_collections($Imp->output_set, 
@@ -244,6 +248,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
                                                              $self->output_dir,
                                                              1);   
     #set appropriate states...
+    my $rset = $self->ResultSet;     
     $rset->adaptor->set_imported_states_by_Set($rset);
     
     #End of this branch & config
@@ -255,7 +260,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
 
 sub write_output { 
   my $self = shift;    
-  $self->dataflow_branch_output_ids;
+  $self->dataflow_job_groups;
   return; 
 }
 
