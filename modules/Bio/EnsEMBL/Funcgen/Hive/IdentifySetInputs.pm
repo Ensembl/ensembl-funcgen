@@ -1,4 +1,28 @@
-=pod 
+
+=head1 LICENSE
+
+Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
+
 
 =head1 NAME
 
@@ -27,10 +51,10 @@ use base ('Bio::EnsEMBL::Funcgen::Hive::BaseDB');
 
 my %set_adaptor_methods = 
 (
-  input_subset => 'get_InputSubsetAdaptor',
-  input_set    => 'get_InputSetAdaptor',
-  result_set   => 'get_ResultSetAdaptor',
-  feature_set  => 'get_FeatureSetAdaptor',
+  InputSubset => 'get_InputSubsetAdaptor',
+  InputSet    => 'get_InputSetAdaptor',
+  ResultSet   => 'get_ResultSetAdaptor',
+  FeatureSet  => 'get_FeatureSetAdaptor',
   #data_set?
 );
 
@@ -57,7 +81,9 @@ my %set_adaptor_methods =
 #  validate set type if not all SetAdaptors support this.
 #2 Could do with a way of listing embargoed, when no_write is defined
 #3 Implement is_InputSubset_downloaded in run
-#4 Genericse no_idr into something like merge_reps_only?
+#4 Genericse no_idr into something like merge_reps_only? #This is aimed at restricting to non-idr sets
+# and is not yet implemented. We really need a difference flag here. As no_idr is for turning off idr
+# not set selection and maintaining idr. Change this to run_idr as a boolean? This is still a bit ambiguous
 #5 review force/ignore_embargoed
 #6 Review throw string building once we support download
 
@@ -67,15 +93,39 @@ sub fetch_input {   # fetch parameters...
   $self->SUPER::fetch_input; 
   #$self->helper->debug(3, "IdentifySetInput params:\t", $self->input_job->{_param_hash});
     
-  #Validate set_type
-  my $set_type = $self->get_param_method('set_type', 'required'); 
-  #we coudl get this via the logic_name from $self->input_job->analysis_id;  
+  my $set_type = $self->get_param_method('set_type', 'silent'); 
+  
+  #This auto detection prevents having to do this in the SeedPipeline environment func
+  if(! defined $set_type){
+    my $lname = $self->analysis->logic_name;  
+    
+    foreach my $stype( qw( result_set input_subset ) ){
+      #no input_set support here    
+      (my $lname_type = $stype) =~ s/_//o;
+    
+      if($lname =~ /$lname_type/i){
+        
+        if($set_type){
+          throw("Cannot auto detect unique set_type from analysis logic name:\t$lname\n",  
+                'Please defined the set_type analysis_parameter or rename analysis.');
+        }
+        
+        $set_type = $stype;
+      }
+    }
+    
+    if(! defined $set_type){
+      throw("Cannot auto detect unique set_type from analysis logic name:\t$lname\n",  
+            'Please defined the set_type analysis_parameter or rename analysis.'); 
+    } 
+  }
     
   #Need to define the methods here, as we call them for all set types in run
   my $force_embargoed  = $self->get_param_method('force_embargoed',  'silent');
-  my $ignore_embargoed = $self->get_param_method('ignore_embargoed', 'silent');
-  
-  if($set_type =~ /^input_(sub)?set$/) {
+  my $ignore_embargoed = $self->get_param_method('ignore_embargoed', 'silent'); 
+  #This currently still supports input_sets
+ 
+  if($set_type =~ /^Input(Sub)?[sS]et$/) {
     $self->set_param_method('validate_InputSubset_tracking', 1); #for convenience/speed in loop below
         
     if($force_embargoed && $ignore_embargoed){
@@ -84,13 +134,23 @@ sub fetch_input {   # fetch parameters...
     }
     
     #Get feature_set analysis for control validation in run
-    $self->get_param_method('feature_set_analysis', 'silent');
+    
+  
+    #but we should also be mindful of a peak_analysis over-ride?
+    #but need to use generic params here?
+
+    #we could replace this with control_mandatory_ftypes
+    
+    #Genericise feature_set_analysis_type to feature_set_analysis
+    my $anal_type = $self->param_required('feature_set_analysis_type');     
+    $self->set_param_method('feature_set_analysis', 
+                            $self->param_silent($anal_type.'_analysis'));
     
     if(! defined $self->feature_set_analysis){
       $self->get_param_method('default_feature_set_analyses', 'silent');     
  
       if(! defined $self->default_feature_set_analyses){
-        throw("Please define -feature_set_analysis or add to default_feature_set_analyses".
+        throw("Please define -${anal_type}_analysis or add to default_feature_set_analyses".
           " in the default_options config");
       }    
     }
@@ -108,10 +168,9 @@ sub fetch_input {   # fetch parameters...
   
   
   $self->process_params([qw(set_names set_ids only_replicates allow_no_controls 
-                            identify_controls control_experiments no_idr 
-                            broad_peak_feature_types)], 1);#optional
+                            identify_controls control_experiments)], 1);#optional
               
-  if($set_type eq 'input_subset'){                      
+  if($set_type eq 'InputSubset'){                      
     if($self->identify_controls && $self->allow_no_controls){
       throw("Mutually exclusive parameters have been specified:\t".
         "identify_controls & allow_no_controls\nPlease omit one of these.");  
@@ -121,12 +180,7 @@ sub fetch_input {   # fetch parameters...
       throw("Mutually exclusive parameters have been specified:\t".
         "control_experiments & allow_no_controls\nPlease omit one of these.");  
     }
- 
-    #broad_peak_feature_types & no_idr can be undef
- 
-    if(! $self->broad_peak_feature_types){
-      $self->broad_peak_feature_types([]);#as we deref later in a grep  
-    }            
+    
                     
     #if($self->control_experiments  && $self->identify_controls){
     #  throw("Mutually exclusive parameters have been specified:\t".
@@ -157,12 +211,12 @@ sub fetch_input {   # fetch parameters...
     #Filter replicates from generic fetch_all query
     #and validate specific id/name queries return only reps
   
-    if($set_type eq 'input_set'){
+    if($set_type eq 'InputSet'){
       $only_reps = 1;    
     }
     else{
-      throw("only_replicates param is only valid for input_sets, not ${set_type}s.\n".
-        'Please omit only_replicates config or set the set_type to input_set');
+      throw("only_replicates param is only valid for InputSets, not ${set_type}s.\n".
+        'Please omit only_replicates config or set the set_type to InputSet');
     }
   }
   
@@ -206,7 +260,7 @@ sub fetch_input {   # fetch parameters...
   }
 
 
-  $self->init_branch_config(1, 1);
+  #$self->init_branch_config(1, 1);Ê#No longer needed
   #Flags are:
   #Optional branch config, as we only need this for IdentifyAlignInputsets 
   #Validate branch_key_method if we do have config
@@ -309,7 +363,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
   my $x_grp_ctrls = $self->param_silent('allow_inter_group_controls');
   my $use_exp_id;
   
-  if($set_type eq 'input_subset'){
+  if($set_type eq 'InputSubset'){
     
     if($self->control_experiments){
       my $exp_adaptor = $self->out_db->get_ExperimentAdaptor;
@@ -412,11 +466,13 @@ sub run {   # Check parameters and do appropriate database/file operations...
     my $embargoed   = 0;
     my $to_download = 0;
   
+      
+  
   
     if( $self->validate_InputSubset_tracking ){ 
       my @vsets = ($set);
      
-      if($set_type eq 'input_set'){
+      if($set_type eq 'InputSet'){
         @vsets = $set->get_InputSubsets;  
       }
      
@@ -441,7 +497,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
             }
             elsif($ignore_embargoed){
                          
-              if($set_type eq 'input_subset'){
+              if($set_type eq 'InputSubset'){
                   $embargoed = 1;
                 }
               }
@@ -464,6 +520,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
          }
          
          #Cache embargoed/to_download ctrls
+     
          
          if($set->is_control &&
           ($embargoed || $to_download)){ #Set embargoed/to_download in the ctrl cache
@@ -513,7 +570,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
      }#end of validate_InputSubset_tracking
    
       
-     if($set_type eq 'input_subset'){
+     if($set_type eq 'InputSubset'){
       
        if(! $set->is_control){    
          #We already have the ctrls in the ctrl_cache
@@ -587,6 +644,10 @@ sub run {   # Check parameters and do appropriate database/file operations...
              #But if we wanted to allow it would also need to test in DefineMergedOutputSet
              #Would also need to support rollback ResultSet to import with updated controls
              #this will result in collection being regenreated unecessarily :/
+             
+             #no_result_set is now redundant!!! As result_sets will replace input_sets
+             #no_result_set behaviour will just change such that we don't create and associate a collection
+             #and we don't set the relevant states
     
              ### GET FEATURE SET ANALYSIS ###
              my $fset_anal = $self->feature_set_analysis;
@@ -665,55 +726,80 @@ sub run {   # Check parameters and do appropriate database/file operations...
            #Cache key is essentially the set name
            #although this is more expensive to generate than a key just based on IDs
            
-           #Define subset name
-           #This will depend on ftype, broad_peak_feature_types and no_idr!
-           my $ctype     = $set->cell_type->name;
-           my $ftype     = $set->feature_type->name;
-           my $set_name = $self->parse_study_name($set->experiment->name, 
-                                                   $set->cell_type->name,
-                                                   $set->feature_type->name);       
+           #Define set name
+           
+           
+           #my $ctype    = $set->cell_type->name;
+           #my $ftype    = $set->feature_type->name;
+           #my $set_name = $self->parse_study_name($set->experiment->name, 
+           #                                        $set->cell_type->name,
+           #                                        $set->feature_type->name);       
            #This is slightly odd as we are trying to future proof against
            #the experiment names changing to more generic study names
            #We add the ctype and ftype to form the iset name so we need
            #to strip these off if they are already present
              
            #Probably need to put this in a Base method           
-           $set_name = $ctype.'_'.$ftype.'_'.$set_name;
-             
-           if((! $self->no_idr) &&
-              grep(/^${ftype}$/, @{$self->broad_peak_feature_types})){
-             $set_name .= '_TR'.$set->replicate;
-           }
-  
+           #$set_name = $ctype.'_'.$ftype.'_'.$set_name;
            
-           $output_ids{$ctrl_cache_key}->{input_subset_ids}->{$set_name} ||= {};
-  
+           #set name here will get appended with analysis logic name, but we ideally want 
+           #the TR1 to be at the end, so need to append the logic_name first
+           #we already have the alignment analysis, but this is really polluting
+           #this module
+           #we should just sub key on the rep number, and let DefineResultSets handle it.
+           
+           #This prefix should always be the standard (i.e. not the control) prefix
+           my $set_name = $self->get_set_prefix_from_Set($set);        
+           #my $rep      = $set->replicate;
+           
            if($embargoed){
              $embargoed_issets{$ctrl_cache_key}{$set_name} ||= [];
              push @{$embargoed_issets{$ctrl_cache_key}{$set_name}}, $set->dbID;
            }
            
            if($to_download){
+             #do we need to add dbids and replicate keys in here?
              $to_download_issets{$ctrl_cache_key}{$set_name} ||= [];
              push @{$to_download_issets{$ctrl_cache_key}{$set_name}}, $set->dbID;  
            }
            
+           
+           #why do we need to key on rep here?
+           #can't we just have an arrayref value here?
+           
+           $output_ids{$ctrl_cache_key}->{input_subset_ids}->{$set_name} ||= [];
            push @{$output_ids{$ctrl_cache_key}->{input_subset_ids}->{$set_name}}, $set->dbID;
          }        
        }
      }
-     else{ #Not an input_subset
-       $output_ids{$set->dbID} = {%$batch_params,
-                                  dbID     => $set->dbID, 
-                                  set_name => $set->name,
-                                  %$dataflow_params};  
-     }
- 
-    #We need to build all output_ids iteratively
-    #before we submit them after this loop
- 
+     else{ #Not an input_subset (currently just a ResultSet)
+      my $group_key = 'ungrouped';
+     
+      if($self->only_replicates){
+        #test is replicate here?
+        #probably already tested previously     
+        
+        #just parent ResultSet name (which doesn't exist yet)
+        #This is a little fragile as it depends on our nomenclature
+        #would replace this with the get set prefix
+        #then at least we are using the same code everywhere
+        #($group_key = $set->name) =~ s/_TR[0-9]+$//o;
+        
+        $group_key = $self->get_set_prefix_from_Set($set).'_'.$set->analysis->log_name;    
+        #Appened analysis name here, just in case we are running
+        #multiple analyses for the same set of data.
+      }
+     
     
-    #Need to submit them based on shared controls!
+       $output_ids{$group_key} ||= [];
+       push @{$output_ids{$group_key}}, {%$batch_params,
+                                         %$dataflow_params,
+                                         dbID     => $set->dbID, 
+                                         set_name => $set->name};
+    }
+ 
+
+    #Need to submit input_subsets them based on shared controls!
     #As we need to wait for the control jobs to download/align 
     #first before we can perform any other analyses?
     
@@ -732,14 +818,15 @@ sub run {   # Check parameters and do appropriate database/file operations...
     #Also, this would create failures of downstream analyses, when really on the 
     #control analysis has failed.
     #This is messy and also pollutes the error output, so real errors would be easily overlooked
-    
-    
   } 
     
   
   #Now iterate through output_ids doing the right thing
   
   my $warn_msg = '';
+  
+  #This needs completely changing as the keys and values have now changed!!
+  
   
  KEY: foreach my $key(keys %output_ids){
     #we need the key to access embargoes/to_download_issets cache 
@@ -751,14 +838,22 @@ sub run {   # Check parameters and do appropriate database/file operations...
     #need to be able to run this as Stand alone job, but with access
     #to config. Leo is on the case here. 
     
-    if($set_type eq 'input_subset'){
+    if($set_type eq 'InputSubset'){
       #{%$batch_params,
       # input_subset_ids     => {},  #keys are set names or 'controls'
       # %$dataflow_params}; 
  
-      my $branch = 3; 
+      my $branch = 3; #ignore or not embargoed 
       
       if(exists $oid->{input_subset_ids}->{controls}){
+        
+         #[{$cexp_isset->dbID => $cexp_isset, ...},
+         #                       $cexp_isset->feature_type->name,
+         #                       $exp_id,
+         #                       [],  #embargoed sets
+         #                       []   #to_download sets
+         #        ];  
+        
         
         if(scalar(@{$oid->{input_subset_ids}->{controls}->[3]}) > 0){ #CTRLs are embargoed!
           #build input_set specific log msg
@@ -809,11 +904,12 @@ sub run {   # Check parameters and do appropriate database/file operations...
         }
       }
         
-      #todo Test %to_download_issets and set $branch to 2 if $branch is true 
+      #todo Test %to_download_issets, and fan these to $branch to 2 if $branch is true 
       #(i.e. it's not embargoed)
       #Or do we want to download regardless of embargo status?
       #Likely yes, but leave that for now, as figuring out config
-      #and data flow for that is a bit tricky
+      #Also flow to branch 2 aswell after we have fanned
+      #Do this by building a job group and using cache_job_group
               
       if($branch){
     
@@ -832,31 +928,70 @@ sub run {   # Check parameters and do appropriate database/file operations...
         elsif(scalar(keys %{$oid->{input_subset_ids}}) > 1 ||
               ((scalar(keys %{$oid->{input_subset_ids}}) == 1) && 
                ! exists $oid->{input_subset_ids}->{controls} ) ){
-          $self->branch_output_id($oid, undef, $branch);       
+          #$self->branch_output_id($oid, undef, $branch);   
+       
+         #Tidy up control cache
+         #probably need to revise this when we add branching for download analyses
+          
+         if(exists $oid->{input_subset_ids}->{controls}){
+           $oid->{input_subset_ids}->{controls} = [keys(%{$oid->{input_subset_ids}->{controls}->[0]})];      
+         }
+         
+            
+          $self->branch_job_group($branch, [$oid]);              
         }
         else{#We have no signal subsets to flow!
           $warn_msg .= "No input_subsets to dataflow for control group:\t$key\n";
         }
       }
-      
-      #DefineInputSets now needs to support flow depedant on align status of controls
-      #and replicate factories need to check align status of individual reps before flowing
     }
     else{ #Not input_subset
-      
+     
       if($no_write){
         print STDOUT "\t".$oid->{set_name}.' ( '.$oid->{dbID}." )\n";
       }
       else{
-        $self->branch_output_id($oid, undef, 2); #This is always the DefineOutputSet job
      
-        if(defined $self->branch_config){
-          #branch_key_method will have been validated by init_branch_config   
-          #Can't do this out of the loop unless we test for config defined
-          #Is this used any more here?
-          my $branch_key_method = $self->branch_key_method;
-          $self->branch_output_id($oid, $self->$branch_key_method);  
+        #Branches now generic wrt set type   
+        #2 group of sets (optionally grouped by either controls or parent sets semaphored by 3)
+        #>3 fans of those grouped sets, which require different processing
+        #actually output id would change dependant on the set type, and the grouping strategy
+        #grouping would have to be defined by analysis parameter
+        #This will allow expansion of branches without renumbering
+        #As branch 2 is always the semaphore, we should always flow this last
+        
+        #This does however mean that for dataflow with no semaphore we will never define
+        #a funnel, and therefore only flow down branch 3 and not branch 2.
+        
+        my @job_group = (3, $oid);
+        
+        if($key ne 'ungrouped'){
+          #Now define funnel job id with all set details i.e. RunIDR
+          
+          my $funnel_oid = {%$batch_params,
+                            %$dataflow_params,
+                            dbIDs     => [], 
+                            set_names => []}; 
+                            
+          foreach my $id(@$oid){
+            push @{$funnel_oid->{dbIDs}},     $id->{dbID};
+            push @{$funnel_oid->{set_names}}, $id->{set_name};
+          }
+          
+          push @job_group, (2, [$funnel_oid]);
         }
+        
+        
+        $self->branch_job_group(@job_group);  
+        
+        #I don't think we are using this branch_config anymore??
+        #if(defined $self->branch_config){
+        #  #branch_key_method will have been validated by init_branch_config   
+        #  #Can't do this out of the loop unless we test for config defined
+        #  #Is this used any more here?
+        #  my $branch_key_method = $self->branch_key_method;
+        #  $self->branch_output_id($oid, $self->$branch_key_method);  
+        #}
       }
     }
   } #end foreach $oid
@@ -890,8 +1025,8 @@ sub _cache_controls{
       if(! exists $ctrl_cache->{$clabel}){
         #Hash required here to avoid redundant controls
         $ctrl_cache->{$clabel} = [{$cexp_isset->dbID => $cexp_isset},
-                                  $cexp_isset->feature_type->name,
-                                  $exp_id,
+                                  $cexp_isset->feature_type->name, #Used for validation
+                                  $exp_id, #Used for validation
                                   [],  #embargoed sets
                                   []   #to_download sets
                                   ];  
@@ -922,7 +1057,7 @@ sub _cache_controls{
 
 sub write_output {  # Create the relevant jobs
   my $self = shift;  
-  $self->dataflow_branch_output_ids;
+  $self->dataflow_job_groups;
   return;
 }
 
