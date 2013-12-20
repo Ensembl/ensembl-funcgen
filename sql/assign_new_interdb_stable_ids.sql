@@ -29,4 +29,18 @@ analyze table motif_feature;
 optimize table motif_feature;
 
 
+
+update external_feature set interdb_stable_id=NULL;
+set @n = 0;
+
+update external_feature mf
+  join (select external_feature_id, @n := @n + 1 new_stable_id
+          from external_feature where interdb_stable_id is NULL
+          order by external_feature_id) v
+    on mf.external_feature_id = v.external_feature_id
+  set mf.interdb_stable_id = v.new_stable_id;
+
+analyze table external_feature;
+optimize table external_feature;
+
 -- do we have an index here?
