@@ -1,4 +1,27 @@
-=pod 
+
+=head1 LICENSE
+
+Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <ensembl-dev@ebi.ac.uk>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <helpdesk@ensembl.org>.
 
 =head1 NAME
 
@@ -28,7 +51,7 @@ use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref check_ref );
 use Scalar::Util                           qw( blessed );                                            
                                                
 
-use base ('Bio::EnsEMBL::Hive::Process');
+use parent qw(Bio::EnsEMBL::Hive::Process);
 
 
 
@@ -943,26 +966,29 @@ Defined by _set_out_db (if using a tracking DB or this is also a BaseDB) or vali
 #We should probably separate out the init_branching_by_method
 
 
+#have branch_config wrapper method, which optionally takes ('analysis') or ('method', $method_name)
+#as args, this then optionally calls the relevant init method?
+#This is only useful if we want to get the config, when we are initing
+#which we never really want?
+#Too abstract, and actually obfucates initialisation
+
 
 sub init_branching_by_analysis{  
-  my $self = shift;#, $optional, $validate_bkey_method) = @_;  
+  my $self = shift;
    
-  #my $branch_config = $self->get_param_method('branch_config', 'silent');
-  
+  #my $branch_config = $self->get_param_method('branch_config', 'silent');  
   #Not a passed param anymore, as we get it from the dataflow rules
-  my $branch_config = $self->{branch_config};
  
  
- 
-  if(! defined $branch_config){
+  if(! defined $self->{branch_config}){
     
     my $dfr_adaptor = $self->db->get_DataflowRuleAdaptor;  
     
-    if(! $drf_adaptor->can('fetch_all_by_analysis_id')){
+    if(! $dfr_adaptor->can('fetch_all_by_analysis_id')){
       #inject method here   
       no strict 'refs';
   
-      *{ref($drf_adaptor)."::fetch_all_by_analysis_id}"} = sub { 
+      *{ref($dfr_adaptor)."::fetch_all_by_analysis_id}"} = sub { 
         my $self    = shift;
         my $anal_id = shift;
         throw('Must provide and analysis id argument') if ! defined $anal_id;
@@ -972,11 +998,11 @@ sub init_branching_by_analysis{
       use strict;
     }
     
-    if(! $drf_adaptor->can('get_dataflow_config_by_analysis_id')){
+    if(! $dfr_adaptor->can('get_dataflow_config_by_analysis_id')){
       #inject method here using fetch_all_by_analysis_id 
       no strict 'refs';
   
-      *{ref($drf_adaptor)."::get_dataflow_config_by_analysis_id}"} = sub { 
+      *{ref($dfr_adaptor)."::get_dataflow_config_by_analysis_id}"} = sub { 
         my $self    = shift;
         my $anal_id = shift;
         throw('Must provide and analysis id argument') if ! defined $anal_id;
@@ -986,7 +1012,7 @@ sub init_branching_by_analysis{
         
         foreach my $dfr(@{$self->fetch_all_by_analysis_id($anal_id)}){
           #$anal_id here always represents the from analysis
-          my $to_analysis = $drf->to_analysis->logic_name;
+          my $to_analysis = $dfr->to_analysis->logic_name;
           
           
           #Is it valid to wire to the same analysis using two different branches
@@ -999,11 +1025,11 @@ sub init_branching_by_analysis{
               "\nDynamic branch dataflow currently only supports 1 assoicated branch");  
           }
           
-          $df_config{$to_analysis} ||= {branch => $drf->branch_code, funnel=>undef };
+          $df_config{$to_analysis} ||= {branch => $dfr->branch_code, funnel=>undef };
           
           if($dfr->funnel_dataflow_rule_id){
             $df_config{$to_analysis}{funnel} = 
-              $self->fetch_by_dbID($drf->funnel_dataflow_rule_id)->to_analysis->logic_name;
+              $self->fetch_by_dbID($dfr->funnel_dataflow_rule_id)->to_analysis->logic_name;
           }
           
           #This will result in redundant branche entries across the to_analysis values
@@ -1047,30 +1073,25 @@ sub init_branching_by_analysis{
       use strict;
     }
     
-    $branch_config = $dfr_adaptor->get_dataflow_config_by_analysis_id($self->analysis->dbID);
+    $self->{branch_config} = $dfr_adaptor->get_dataflow_config_by_analysis_id($self->analysis->dbID);
     
   }
- 
-  #if(! $optional){
-  #  assert_ref($branch_config, 'HASH', 'branch_config');  
-  #}
-  
-  #if( (defined $branch_config) &&
-  if($validate_bkey_method){
-    my $bkey_method = $self->get_param_method('branch_key_method', 'required');
+
+  #if($validate_bkey_method){
+  #  my $bkey_method = $self->get_param_method('branch_key_method', 'required');
     
       
     #warn "branch_key_method is $bkey_method";  
       
     #This will use an existing method or create one from en exiting parameter
     
-    if(! defined $self->get_param_method($bkey_method, 'required')){
-      throw("Required branch_key_method $bkey_method is not defined defined");
-    }
+  #  if(! defined $self->get_param_method($bkey_method, 'required')){
+  #    throw("Required branch_key_method $bkey_method is not defined defined");
+  #  }
     
     #Now reset branch_key_method method to actual branch_key_method?
     #or just go down the old 'method as a variable' root  
-  }
+  #}
   
   #$branch_config ||= {};
   
@@ -1168,8 +1189,8 @@ sub init_branching_by_analysis{
 sub _get_branch_number{
   my $branch_codes  = shift;
   my $branch_config = shift;  
-  my $branch;
   assert_ref($branch_codes, 'ARRAY', 'Branch code array');
+  my $branch;
  
   if(defined $branch_config){
     
@@ -1187,11 +1208,11 @@ sub _get_branch_number{
         #overkill. stop.
       }
       else{
-        $branch =|| $branch_config->{$bcode}{branch};
+        $branch ||= $branch_config->{$bcode}{branch};
         
         if($branch_config->{$bcode}{branch} != $branch){
           throw($bcode.' fan analysis/branch key has branch '.$branch_config->{$bcode}{branch}.
-            " which does not match other analysis/branch key:\t".$branch_codes[0].' '.$branch);
+            " which does not match other analysis/branch key:\t".$branch_codes->[0].' '.$branch);
         }  
       }
     }
@@ -1203,10 +1224,12 @@ sub _get_branch_number{
         scalar(@$branch_codes)); 
     }
     
-    if($branch_codes[0] !~ /[0-9]+/o){
-    throw("Found analysis/branch key when no branch config has been initialised:\t".$branch_code.
-      "\nPlease use a branch number or call init_branching_by_analysis or init_branching_by_config");
-    $branch = $branch_codes[0]; 
+    if($branch_codes->[0] !~ /[0-9]+/o){
+      throw("Found analysis/branch key when no branch config has been initialised:\t".$branch_codes->[0].
+            "\nPlease use a branch number or call init_branching_by_analysis or init_branching_by_config");
+    }
+    
+    $branch = $branch_codes->[0]; 
   }
 
   return $branch;    
@@ -1223,7 +1246,7 @@ sub _get_branch_number{
 
 sub branch_job_group{
   my ($self, $fan_branch_codes, $fan_jobs, $funnel_branch_code, $funnel_jobs) = @_;
-  my $branch_config = $self->{branch_config};
+  my $branch_config = $self->{branch_config}; #as this may be derived from analysis or method?
   my $fan_branch    = _get_branch_number($fan_branch_codes, $branch_config); 
   #this also asserts_ref for $fan_branch_codes
     
@@ -1255,8 +1278,8 @@ sub branch_job_group{
       
       throw('How are we going to differentiate here?');
       
-      if($branch_config->{$fan_branch_codes[0]}{funnel} ne $funnel_branch_code){
-        throw($funnel_branch_code.' is not a valid funnel analysis for '.$fan_branch_codes[0].
+      if($branch_config->{$fan_branch_codes->[0]}{funnel} ne $funnel_branch_code){
+        throw($funnel_branch_code.' is not a valid funnel analysis for '.$fan_branch_codes->[0].
           'Please check you dataflow configuration');  
       }    
     }
@@ -1270,16 +1293,22 @@ sub branch_job_group{
   return;
 }
 
+#Woudl have been branched like this
+#$self->branch_job_group([['Branch2_analysis1', 'Branch2_analysis2'], [$branch2_job_id1, ...], 'RunIDR', [$job_id2, ...]]);
+#But should now look like this
+##$self->branch_job_group([2, [$branch2_job_id1, ...], 3, [$branch3_job_id2, ...]]);
 
 sub dataflow_job_groups{
   my $self       = shift;
   my $job_groups = $self->{job_groups} || []; #allow no job groups
   
-  foreach my $job_groups(@$job_groups){
-    
+  foreach my $job_group(@$job_groups){
+     
     while(@$job_group){
-      my $branch   = shift;
-      my $id_array = shift;
+      my $branch   = shift @$job_group;
+      my $id_array = shift @$job_group;
+      
+      #let dataflow_output_id do the validation
       $self->dataflow_output_id($id_array, $branch);
     }
   } 
@@ -1303,7 +1332,7 @@ sub dataflow_job_groups{
 
 
 
-
+=pod
 
 sub branch_output_id{
   my ($self, $output_id, $branch_key, $branch) = @_;
@@ -1487,6 +1516,8 @@ sub dataflow_branch_output_ids {
   return;
 }
 
+=cut 
+
 #There is effectively no difference between these apart from
 #dataflow_params are meant to be specified at different levels in the config
 #dataflow_params are to be specified in analysis parameters for flowing only 
@@ -1573,12 +1604,63 @@ sub _dataflow_params_by_list {
 
 #Could also extend the batch_param_names for the rest of this branch of the pipeline
 
+#Changed from check_link_analysis_can_run, so is now generic.
+#This would also provide a simply mechanism for stopping a pipeline at a given point
+#without borking the potential ongoing dataflow
+#This could be useful for various reasons.
+#although doing this in a batch manner may be problematic, as resetting this variable to 1
+#would require fiddling with the individual job IDs
+
+#To fail or not to fail?
+#1 Fail. Set transient_error to 0 and die with a useful error message.
+#  This will mask true failures for other reasons. But the job will still be on
+#  there for hive to pick up, once we have updated the reelvant can_run_AnalysisLogicName param
+#  and reset the job. Reset, will be to remove the transient error to 1 (and the retry count?)
+#  We will be able to manage this somewhat by having a function to discriminate between true failures
+#  and those triggered as above. This will involve checking the transient_error status and pattern matching
+#  the log message.
+#2 Succeed but do nothing. This will not hide true failures and will also reflect the true status of the
+#  job as defined by our criterion i.e. we want it to succeed in doing nothing.
+#  This however makes if very hard to identify outstanding jobs which have been halted. This means
+#  that when continued dataflow is required(after topup or whatever), then it is almost impossible
+#  to identify those job which were halted. Hence these jobs would need to be reseeded. This is non-trivial
+#  as we may not know the original seed spec, and it is likely to create duplicate job ids, which would 
+#  then do nothing if the can_run_AnalsisLogicName param is not in the job id (i.e. it is pipeline_wide).
+ 
+#param_require should/will set transient_error to 0 before dying if not specified
+#as opposed to specified as undef. Hence reducing retry churn.
+
+#Fail or no fail flag and return boolean?
+
+sub check_analysis_can_run{
+  my $self      = shift; 
+  my $check_int = $self->param_silent('check_analysis_can_run');
+  my $can_run   = 1;
+  
+  if(defined $check_int){ #Might be undef, in which case we can run
+    my $lname     = $self->analysis->logic_name;
+    my $run_param = 'can_run_'.$lname; 
+    $can_run      = $self->param_required($run_param);
+   
+
+    if(! $can_run){ #0 or specified as undef
+      $self->input_job->transient_error(0); #So we don't retry  
+      die("$lname has aborted as $run_param == 0 || undef"); 
+      #Parse this in the env
+      #Omit from GetFailedJobs 
+      #and add GetAbortedJobs?
+    }  
+  }
+    
+  return;
+}
+
 
 
 #todo Move these to (and create) BaseSequenceAnalysis.pm?
 
 sub sam_ref_fai {
-  my $self = $_[0]; 
+  my $self = shift; 
   
   if(! defined $self->param_silent('sam_ref_fai')){
     my $file_name = $self->species."_"; 
@@ -1651,8 +1733,7 @@ sub get_alignment_files_by_ResultSet_formats {
     throw("Cannot get alignment files for ResultSet which does not have ALIGNED status:\t".
       $rset->name);
   }
-  
-  
+   
   if($self->get_param_method($file_type, 'silent')){ #Allow over-ride from config/input_id   
     #Need to test in here that it matches one of the formats
     #Need to add support for converting this non-standard path to other formats
