@@ -138,7 +138,7 @@ sub fetch_input {
 sub run {
   my $self         = shift;
   my $rset         = $self->ResultSet;
-  my $rset_groups  = $self->run_controls;
+  my $run_controls = $self->run_controls;
   my $merge        = $self->merge;
   
  
@@ -294,7 +294,10 @@ sub run {
 
    foreach my $fq_file(@{$self->fastq_files}){
     
-    #Data flow to RunAligner for each of the chunks
+    #Data flow to RunAligner for each of the chunks 
+    #do we need to pass result set to aligner?
+    #Would need to pass gender, analysis logic_name 
+    
     $self->branch_job_group(2, [{set_type   => 'ResultSet',
                                  set_name   => $rset->name,
                                  dbID       => $rset->dbID,
@@ -304,8 +307,8 @@ sub run {
 
   my %signal_info;
   
-  if($self->run_controls){
-    %signal_info = (result_set_groups = > $self->result_set_groups);
+  if($run_controls){
+    %signal_info = (result_set_groups => $self->result_set_groups);
     #for flow to MergeControlAlignments_and_QC
   }
 
@@ -331,7 +334,7 @@ sub run {
 
 
 sub write_output {  # Create the relevant jobs
-  shift->dataflow_branch_jobs;
+  shift->dataflow_job_groups;
   return;
 }
 
