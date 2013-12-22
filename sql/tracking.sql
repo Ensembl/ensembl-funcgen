@@ -1,6 +1,6 @@
 
 DROP TABLE IF EXISTS `input_set_tracking`;
-CREATE TABLE `input_set_tracking` (
+/* CREATE TABLE `input_set_tracking` (
   `input_set_id` int(10) unsigned NOT NULL,
   `release_version` varchar(45),
   `is_current` int(1),
@@ -8,7 +8,7 @@ CREATE TABLE `input_set_tracking` (
   PRIMARY KEY  (`input_set_id`),
   UNIQUE KEY `name_cell_type_feature_type_idx` (`experiment_name`,`species`,`cell_type`,`feature_type`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
+*/
 
 DROP TABLE IF EXISTS `result_set_stats`;
 
@@ -29,28 +29,36 @@ CREATE TABLE `input_subset_tracking` (
   `downloaded` datetime default NULL,
   `availability_date` datetime default NULL,
   `md5sum` varchar(45) default NULL,
+  `local_url` text DEFAULT NULL,
   PRIMARY KEY  (`input_subset_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- Change this to current repository...
-INSERT INTO meta (meta_key, meta_value) VALUES ('repository','/lustre/scratch109/ensembl/funcgen/tj1/pipeline/data_home/fastq');
+-- INSERT INTO meta (meta_key, meta_value) VALUES ('fastq_repository','/Your/species/specific/fastq/dir/');
+-- INSERT INTO meta (meta_key, meta_value) VALUES ('current_coord_system','GRCh37');
 
-ALTER TABLE status_name ADD is_dev TINYINT(1) NOT NULL default 0;
+-- Change this to something more appropriate tracking_only? (is_dev is ambiguous)
+ALTER TABLE status_name ADD tracking_only TINYINT(1) NOT NULL default 0;
 
-INSERT INTO status_name (name) values ('DOWNLOADED', 0);
-INSERT INTO status_name (name) values ('IS_CURRENT', 0);
-INSERT INTO status_name (name) values ('ADD_TO_REGULATORY_BUILD', 0);
-INSERT INTO status_name (name) values ('IN_REGULATORY_BUILD', 0);
-INSERT INTO status_name (name) values ('RELEASED', 0);
-INSERT INTO status_name (name) values ('TO_BE_REVOKED', 0);
-INSERT INTO status_name (name) values ('REVOKED', 0);
-INSERT INTO status_name (name) values ('TO_BE_REBUILD', 0);
-INSERT INTO status_name (name) values ('REBUILT', 0);
-INSERT INTO status_name (name) values ('IN_RELEASE', 0);
+INSERT INTO status_name (name, tracking_only) values ('DOWNLOADED',              1);
+INSERT INTO status_name (name, tracking_only) values ('IS_CURRENT',              1);
+INSERT INTO status_name (name, tracking_only) values ('ADD_TO_REGULATORY_BUILD', 1);
+INSERT INTO status_name (name, tracking_only) values ('IN_REGULATORY_BUILD',     1);
+INSERT INTO status_name (name, tracking_only) values ('RELEASED',                1);
+INSERT INTO status_name (name, tracking_only) values ('TO_BE_REVOKED',           1);
+INSERT INTO status_name (name, tracking_only) values ('REVOKED',                 1);
+INSERT INTO status_name (name, tracking_only) values ('TO_BE_REBUILD',           1);
+INSERT INTO status_name (name, tracking_only) values ('REBUILT',                 1);
+INSERT INTO status_name (name, tracking_only) values ('IN_RELEASE',              1);
+
+-- what about status history?
+-- We need to be able to track when a set was released, and whether it was pulled and then re-release
+-- Separate table?
 
 
 ALTER TABLE `data_set_tracking`     DROP `is_current`;
-ALTER TABLE `input_set_tracking`    DROP `status`;
-ALTER TABLE `input_subset_tracking` ADD `local_url` text DEFAULT NULL;
 
-INSERT INTO meta (meta_key, meta_value) VALUES ('current_coord_system','GRCh37');
+--where has this table gone?!
+
+--ALTER TABLE `input_set_tracking`    DROP `status`;
+
