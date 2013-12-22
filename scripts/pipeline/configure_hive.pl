@@ -116,26 +116,23 @@ my %config_labels =
 sub main{
   my @tmp_args = @ARGV;
   my (@configs, $species, $data_root, $hive_script_dir, $list);               
-  
   my $db_opts  = get_DB_options_config();#This will get opts for funcgen, core and pipeline by default
   
-  GetOptions (
-              #Mandatory
-              %{$db_opts},
-              'configs=s{,}'      => \@configs,
-              'data_root=s'       => \$data_root,
-              'hive_script_dir=s' => \$hive_script_dir,
+  GetOptions 
+   (#Mandatory
+    %{$db_opts},
+    'configs=s{,}'      => \@configs,
+    'data_root=s'       => \$data_root,
+    'hive_script_dir=s' => \$hive_script_dir,
   
-              #Optional
-              #'drop' => \$drop,#implement this when we use the updated version of init_pipeline?
-              'species=s'   => \$species,
-              'list'        => \$list,
-              
-              'help'             => sub { pod2usage(-exitval => 0); }, 
-              #removed ~? frm here as we don't want to exit with 0 for ?
-              
-              'man|m'            => sub { pod2usage(-exitval => 0, -verbose => 2); },
-             ) or pod2usage(-exitval => 1, -message => "Specified parameters are:\t@tmp_args"); 
+    #Optional
+    #'drop' => \$drop,#implement this when we use the updated version of init_pipeline?
+    'species=s'   => \$species,
+    'list'        => \$list,
+    'help'             => sub { pod2usage(-exitval => 0); }, 
+    #removed ~? frm here as we don't want to exit with 0 for ?
+    'man|m'            => sub { pod2usage(-exitval => 0, -verbose => 2); },
+   ) or pod2usage(-exitval => 1, -message => "Specified parameters are:\t@tmp_args"); 
              
   #Do we want to catch the rest of ARGV here by using -- in the input and assign these to init_pipeline as extra args?
   
@@ -254,46 +251,9 @@ sub main{
       #Put this method in HiveUtils? (with add_hive_url_to_meta?)
       #where else would it be used?      
       my $meta_key        = 'can_run_%';
-      #my $meta_key_values = $mc->key_values_like_key($meta_key, 1);#like boolean
-      
-      #my $sth = $mc->prepare( "SELECT meta_key, meta_value FROM meta ".
-      #                        "WHERE meta_key like '$meta_key'" ); #AND species_id is NULL?
-                              
-      #$sth->execute;
-      #my %meta_key_values;
-  
-      #while ( my $arrRef = $sth->fetchrow_arrayref ) {
-
-        #if(exists $meta_key_values{$arrRef->[0]}){
-        # throw('Found >1 value for meta_key '.$arrRef->[0].":\t".
-        #       $arrRef->[1].' & '.$meta_key_values{$arrRef->[0]}); 
-        #} 
-        
-        #$meta_key_values{$arrRef->[0]} = $arrRef->[1];
-      
-        #foreach my $can_run_key(keys %$meta_key_values){
-        # if(scalar @{$meta_key_values->{$can_run_key}} != 1){
-        #   throw("Found >1 value for meta_key $can_run_key:\t".
-        #         join(' ',  @{$meta_key_values->{$can_run_key}})); 
-        # }  
-        #if(! $meta_key_values->{$can_run_key}->[0]){
-        #  delete $meta_key_values->{$can_run_key};   
-        #}       
-        #we don't need to reset the arrayref to 1, as the presence of 
-        #the key is enough given the above test
-      #}
-      
-      #$sth->finish; 
-      
-      
       my %meta_key_values = %{$ntable_a->fetch_all_like_meta_key_HASHED_FROM_meta_key_TO_meta_value($meta_key)};
       
-      
-      use Data::Dumper qw(Dumper);
-      warn "can_run_entries ".Dumper(\%meta_key_values)."\n";
-      
       #now test failures
-      
       #$ntable_a->fetch_like_meta_key_HASHED_FROM_meta_key_TO_meta_value($meta_key);
       #$ntable_a->fetch_all_like_meta_name_and_test_HASHED_FROM_meta_name_TO_meta_value($meta_key);
       #Both of these die nicely, but should probably throw?
@@ -315,17 +275,15 @@ sub main{
       foreach my $can_run_key(keys %meta_key_values){
         #Don't hard code this for 1, just in case the original value was different for some reason
         
-        if($meta_key_values{$can_run_key}){
-          #$mc->update_key_value($can_run_key, $meta_key_values{$can_run_key});
-          #my $sth = $mc->prepare( 'UPDATE meta SET meta_value = "'.$meta_key_values{$can_run_key}.
-          #    '" WHERE meta_key = "'.$can_run_key.'"'); #.'AND species_id IS NULL' );
-          #$sth->execute;
-          #$sth->finish;
-          
-          #This will require primary key!
-          #How can we retrieve this using the generic autoloaded method?
-          
-          $ntable_a->update({meta_key=>$can_run_key, meta_value =>$meta_key_values{$can_run_key}}, 'meta_value' );
+        if(scalar(@{$meta_key_values{$can_run_key}}) != 1){
+          throw("Found multiple entries for meta_key $can_run_key:\t".join(' ', @{$meta_key_values{$can_run_key}}));  
+        }
+        
+        my $can_run_value = $meta_key_values{$can_run_key}->[0];
+        
+        if($can_run_value){ #is defined and not 0
+          my $meta_id = $ntable_a->fetch_by_meta_key_TO_meta_id($can_run_key);            #PRIMARY KEY
+          $ntable_a->update_meta_value({meta_id=>$meta_id, meta_value =>$can_run_value}); #AUTOLOADED
         }
       }
       
