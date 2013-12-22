@@ -226,9 +226,9 @@ sub pipeline_analyses {
   
   
     {-logic_name => 'DefineResultSets', 
-     #-module     => 'Bio::EnsEMBL::Funcgen::Hive::DefineResultSets',
+     -module     => 'Bio::EnsEMBL::Funcgen::Hive::DefineResultSets',
      -meadow     => 'LOCAL',
-     -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+     #-module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
      #Inputs are either:
      #1 A set of controls and a series of InputSubset batches(replicates) which share the control
      #2 A series of unrelated InputSubset batches(replicates) which have no controls
@@ -504,7 +504,7 @@ sub pipeline_analyses {
     #which flows directly DefineReplicateOutputSet and then on to the individual Peaks jobs   
     {
      -logic_name => 'RunIDR',
-     -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',     
+     -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunIDR',     
      -batch_size => 6,
      -rc_name    => 'default', 
      -parameters => { check_analysis_can_run => 1},
