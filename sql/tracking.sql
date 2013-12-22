@@ -33,6 +33,9 @@ CREATE TABLE `input_subset_tracking` (
   PRIMARY KEY  (`input_subset_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+
+-- add notes here as we have lost this from the input_set_tracking table?
+
 -- Change this to current repository...
 -- INSERT INTO meta (meta_key, meta_value) VALUES ('fastq_repository','/Your/species/specific/fastq/dir/');
 -- INSERT INTO meta (meta_key, meta_value) VALUES ('current_coord_system','GRCh37');
@@ -56,9 +59,20 @@ INSERT INTO status_name (name, tracking_only) values ('IN_RELEASE',             
 -- Separate table?
 
 
-ALTER TABLE `data_set_tracking`     DROP `is_current`;
+--ALTER TABLE `data_set_tracking`     DROP `is_current`;
+DROP TABLE IF EXISTS `data_set_tracking`;
+CREATE TABLE `data_set_tracking` (
+  `data_set_id` int(10) unsigned NOT NULL,
+  `release_version` varchar(45) DEFAULT NULL,
+  `is_current` int(1) DEFAULT NULL,
+  PRIMARY KEY (`data_set_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1; 
 
---where has this table gone?!
+
+-- Do we really need data_set_tracking
+-- This probably more accruately feature_set_tracking
+-- although we may also want to release stand alone result_sets
+
 
 --ALTER TABLE `input_set_tracking`    DROP `status`;
 
