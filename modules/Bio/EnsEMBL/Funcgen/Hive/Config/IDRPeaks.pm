@@ -241,59 +241,6 @@ sub pipeline_analyses {
       -rc_name => 'default',
     },
 	
-	
-	
-	
-	 #Actually, we need to Preprocess the control alignments
-	 #before we call the peaks
-	 #this is to avoid having concurrent sorting/filtering of 
-	 #controls which are shared across replicates/experiments
-	 
-	 #This we need to submit to a factory which will submit batches of replicate peaks jobs
-	 #semaphoring each downstream IDR job
-	 
-	 #This will be by passed if we use analysis top up as
-	 #the alignment conf will perform this factory functionality
-	 #flowing directly from the replicate peaks jobs to DefineReplicateOutputSet
-	 #and also semaphoring the IDR job from the replicate factory which submit the replicate align jobs
-	
-	 #Can the factory perform the preprocess job too?
-	
-	  #{
-    # -logic_name => 'PreprocessControl_ReplicateFactory',#was 'SetUp',
-    # #This is basically making sure the input file is sorted wrt genomic locations
-    # #This is so we don't get parallel jobs trying to sort the control file
-    # #todo use bam_filtered to skip this sort
-    # #we need to make bam_filtered mandatory
-    # #as we can'r have parallel jobs resorting/filtering the control file
-    # #Need to implement this in all Preprocess jobs
-    # #but allow an over-ride function?
-    # #such that if we don't have a sorted file for some reason, we can still 
-    # #do the relevant preprocessing
-     
-    # -module     => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory', #Not CollectionWriter!
-   # 
-   #  
-   #  #Need to maintain this here as will not be updated by -analysis_topup
-   #  -parameters => 
-   #   {
-   #    feature_formats => ['bam'],
-   #    peak_branches   => $self->o('peak_branches'),
-   #   },
-    
-   #   -flow_into => 
-   #    {   
-   #     #This is a factory! Is this the right markup? 
-   #  #   '2->A' => ['DefineReplicateDataSet'],
-   #  #   'A->3' => ['RunIDR'], 
-   #    },
-   #  
-   #    
-   #  -analysis_capacity => 10,
-   #    -rc_name => 'normal_2GB',
-   #  #this really need revising as this is sorting the bed files
-   #  #Need to change resource to reserve tmp space
-   # },
 	  
     {
      -logic_name => 'DefineReplicateDataSet', 
@@ -338,8 +285,8 @@ sub pipeline_analyses {
   
     {
      -logic_name    => 'RunIDR',
-     -module        => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-     #-module        => 'Bio::EnsEMBL::Funcgen::Hive::RunIDR',
+     #-module        => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+     -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunIDR',
      -analysis_capacity => 100,
      -rc_name    => 'default', #~5mins + (memory?)
      -batch_size => 6,#~30mins +
