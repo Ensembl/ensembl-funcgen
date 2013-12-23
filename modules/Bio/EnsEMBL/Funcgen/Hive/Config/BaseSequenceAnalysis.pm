@@ -126,6 +126,8 @@ sub default_options {
     # },   
  
     'control_feature' => 'WCE', #was in Peaks.pm but needed for ReadAlignments 
+    
+    'idr_analysis' => '', 
    };
   
 }
@@ -165,6 +167,7 @@ sub pipeline_wide_parameters {
    {
     %{$self->SUPER::pipeline_wide_parameters}, 
     'control_feature' => $self->o('control_feature'), #from Peaks but needed for RunAlignments   
+    'idr_analysis'    => $self->o('idr_analysis'),
   
   
     #Todo feature_file_fromat, result_set_onluy/mode code should be moved to a new BaseSequenceAnalysis Runnable?
@@ -237,7 +240,8 @@ sub pipeline_wide_parameters {
        #Don't need no_idr here, as this is only used by IdentifyAlignInputSubsets
        #The rest of the IDR handling is implicit by the output and dataflow of this analysis           
         
-        'indexed_ref_fasta',            
+        'indexed_ref_fasta',   
+        'idr_analysis'         
       ],      
     };
 }
