@@ -21,6 +21,9 @@ CREATE TABLE `result_set_stats` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
+-- also add in feature_set_stats here!
+
+
 DROP TABLE IF EXISTS `input_subset_tracking`;
 
 CREATE TABLE `input_subset_tracking` (
@@ -70,8 +73,11 @@ CREATE TABLE `data_set_tracking` (
 
 
 -- Do we really need data_set_tracking
--- This probably more accruately feature_set_tracking
+-- This probably more accruately feature_set_tracking?
 -- although we may also want to release stand alone result_sets
+
+
+
 
 
 --ALTER TABLE `input_set_tracking`    DROP `status`;
