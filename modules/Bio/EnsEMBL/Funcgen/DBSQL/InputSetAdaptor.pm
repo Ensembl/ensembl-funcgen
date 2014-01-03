@@ -276,7 +276,7 @@ sub store{
           feature_type_id,
           name,
           replicate,
-          type,
+          type
           )
        VALUES (?, ?, ?, ?, ?, ?, ?)');
 
