@@ -503,9 +503,9 @@ sub pipeline_analyses {
     #This is sempahored from the ReplicateFactory
     #which flows directly DefineReplicateOutputSet and then on to the individual Peaks jobs   
     {
-     -logic_name => 'RunIDR',
-     -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunIDR',     
-     -batch_size => 6,
+     -logic_name => 'SubmitIDR',
+     -module     => 'Bio::EnsEMBL::Funcgen::Hive::SubmitIDR',     
+     -batch_size => 30,
      -rc_name    => 'default', 
      -parameters => { check_analysis_can_run => 1},
      #No flow into conf as this will be defined in the top up conf

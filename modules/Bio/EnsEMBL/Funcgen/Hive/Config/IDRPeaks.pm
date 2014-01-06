@@ -188,54 +188,15 @@ sub pipeline_analyses {
 	#DOES THIS NEED TO BE A FACTORY Or do we need to flow into a factory?
 	#We need to semaphore the IDR job based on a batch of replicates
 	
-			 	 
-	 -flow_into => 
-	  {		
-     'A->2' => ['RunIDR'], 
-	   '3->A' => ['DefineReplicateDataSet'],
-	   
-	   #'2' => ['PreprocessControl_ReplicateFactory'], 
-      #'2' => [ 'DefineReplicateOutputSet' ],
-      #Not 2->A as we don't close the funnel for this pipeline
-      #'A->1' => [ ],#Nothing else waiting for this job
-      #Use branch 2 here so we can flow input_ids
-      #down branch 1 back bone later to a merge step
-      #although we will need to explicitly data flow
-      #Is there a post MergeCollections step?
-      
-      
-      
-      #IDR/Replicate Implementation
-      #We will need additional semaphored data_flow to run_peak_replicates here
-      #to support replicate calling and IDR QC
-      #This needs to wait for all replicate sets to be peak called
-      #but ignore the rest(we don't want to wait for merged replicate peaks)
-      #there is no way of doing this without splitting the whole analysis tree from
-      #here i.e. DefineOutputSet?!!!
-      #it's clear that implementing IDR optionally along side merged peak calling 
-      #in the same pipeline is going to be tricky
-      #This would need to flow to another link analysis(if >1 is supported)
-      #Something like Run_IDR_QC
-      #That link analysis would pick up the groups of input_set_ids
-      #do the IDR across the linked FeatureSets and the submit another merged 
-      #peak job.
-      #This would mean duplicating the peak analyses as we can't loop back due to semaphore
-      #IdentifyFeatureSets(or more likely PeaksReport) would also have to be semaphored from here
-      #and receive the output of all peak jobs from both originally merged and IDR jobs?
-      #No, we can handle this with status entries
-      #Further more PreprocessALignment should not data flow to WriteCollections if it is 
-      #a replicate
-      
-      #How can we semaphore an analysis(PeaksReport) which doesn't exist in this config?
-      #would have to do this through the link analysis
-      #This would wait for everything hanging of DefineOutputSet before commencing 
-      #the link analysis, which would then run the IDR and merged peaks, before doing the final 
-      #PeaksReport
-      #This would also wait for Collections! So we would have to detach that analysis somehow
-      #or split DefineOutputSet into DefineReplicateOutputSet and DefineOutputSet
-      #VERY COMPLICATED!!!
-      
-      },
+	
+	 #This needs to change now as we will have to fan the IDR jobs.
+	 #DefineReplicateDataSet can still do the post processing tho?
+	 #No wait, this is te wrong way around
+	  -flow_into => 
+	   {		
+      'A->2' => ['SubmitIDR'],  
+	    '3->A' => ['DefineReplicateDataSet'],
+     },
 			 
 	  -analysis_capacity => 100, #although this runs on LOCAL
       -rc_name => 'default',
@@ -279,8 +240,29 @@ sub pipeline_analyses {
   
   
   
+    #SubmitIDR is a simple link job, to handle sugmitting jobs
+    #as hive will not handle multi semaphores  
   
-  
+     {
+     -logic_name    => 'SubmitIDR',
+     #-module        => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+     -module        => 'Bio::EnsEMBL::Funcgen::Hive::SubmitIDR',
+     #-meadow        => 'LOCAL',
+     -analysis_capacity => 100,#Unlikely to get anywhere near this
+     -rc_name    => 'default',
+     -batch_size => 30,#Should really take >1min to process each set of replicates
+            
+     -parameters => 
+      {
+       feature_set_analysis => $self->o('permissive_peaks'), #This will not allow batch override
+      },    
+           
+     -flow_into => 
+      {
+       '2->A' => [ 'RunIDR' ],                   # fan
+       'A->3' => [ 'PostProcessIDRReplicates' ], # funnel
+      }, 
+    },
   
   
     {
@@ -290,6 +272,45 @@ sub pipeline_analyses {
      -analysis_capacity => 100,
      -rc_name    => 'default', #~5mins + (memory?)
      -batch_size => 6,#~30mins +
+
+     #No flow into here, but this analysis should update the DB with the calculated threshold
+     #This can't be in the feature_set_stats table, due to the combinations between the reps.
+     #If we accu this, then we will lose the data!!! Preventing us from being able to simply drop one rep and
+     #rerun the post process?
+     #do we need a stand alone table for idr_thresholds, which simply has the threshold and the 2 feature_set_ids
+     #should we store anything else here? 
+     
+
+
+           
+     #-flow_into => 
+     # {
+     #  '2' => [ 'DefineMergedReplicateResultSet' ],
+     # }, 
+      
+      #Or should this do all this in the same analysis
+      #where are we going to cache the run_idr output for the
+      #final peak calling threshold? Let's keep this in a tracking DB
+      #table to prevent proliferation of analyses based on this value differing between data sets.
+      
+      #are we going to have problems having these two analyses together
+      #if we want to rerun the analysis due to the creation of the merged rset failing?
+      #would have to rerun idr too?
+      
+      #This is extremely unlikely to happen
+      #and could do some funky job_id manipulation to set skip_idr
+      
+      #No we won't be able to reuse DefineResultSets here
+           
+    },
+  
+    {
+     -logic_name    => 'PostProcessIDRReplicates',
+     #-module        => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+     -module        => 'Bio::EnsEMBL::Funcgen::Hive::PostProcessIDR',
+     -analysis_capacity => 100,
+     -rc_name    => 'default', #~5mins + (memory?)
+     -batch_size => 10,#?
      -parameters => 
       { 
        #result_set_mode              => 'none',#We never want one for an IDR DataSet
@@ -314,13 +335,10 @@ sub pipeline_analyses {
       #and could do some funky job_id manipulation to set skip_idr
       
       #No we won't be able to reuse DefineResultSets here
-      
-      
-      
-      
-      
+           
     },
-  
+ 
+ 
  
     {
      -logic_name    => 'DefineMergedReplicateResultSet',  #SWEmbl
