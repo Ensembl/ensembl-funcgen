@@ -260,7 +260,8 @@ sub pipeline_analyses {
      -flow_into => 
       {
        '2->A' => [ 'RunIDR' ],                   # fan
-       'A->3' => [ 'PostProcessIDRReplicates' ], # funnel
+       '3->A' => [ 'RunPooledPseudoRepIDR ' ], # fan
+       'A->4' => [ 'PostProcessIDRReplicates' ], # funnel
       }, 
     },
   

@@ -109,7 +109,6 @@ sub run {   # Check parameters and do appropriate database/file operations...
     push @fset_ids, $fset->dbID;
   }
 
-
   #Build 2 way rep combinations for IDR jobs
   my @idr_job_ids;
   my $last_i = $#fset_ids - 1;
@@ -123,6 +122,12 @@ sub run {   # Check parameters and do appropriate database/file operations...
                           set_type => 'FeatureSet'};
     }  
   }
+  
+  
+  
+  #Now we need to pool and produce pseudo reps? This should be done way before here?!!
+  #In between MergeControlAlignments_and_QC and Submit_IDR
+  #
   
   
   $self->branch_job_group(2, \@idr_job_ids,
