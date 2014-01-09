@@ -135,11 +135,11 @@ sub pipeline_analyses {
 
        #Not 3->A as we don't close these funnels
 	   #These branch numbers must match the corresponding default config in DefineSets
-       '3'   => [ 'run_SWEmbl_R015' ],  #Normal peaks
-       '4'   => [ 'run_ccat_histone' ], #CCAT
-       '5'   => [ 'run_SWEmbl_R0025' ], #Tight peaks 
-       '6'   => [ 'run_SWEmbl_R0005' ], #Permissive peaks 
-       '100' => [ 'run_peaks_custom' ], #defined by feature_set_analysis
+       '3'   => [ 'run_SWEmbl_R015' ],      #Normal peaks
+       '4'   => [ 'run_ccat_histone' ],     #CCAT
+       '5'   => [ 'run_SWEmbl_R0025' ],     #Tight peaks 
+       '6'   => [ 'run_SWEmbl_R0005_IDR' ], #Permissive peaks filtered by IDR max peaks value
+       '100' => [ 'run_peaks_custom' ],     #defined by feature_set_analysis
     
         
        #See notes in IdentifyInputSets config for implementation of 
@@ -233,8 +233,9 @@ sub pipeline_analyses {
 	  #Luckily this is not the case
 	  
 	  {
-     -logic_name    => 'run_SWEmbl_R0005', #SWEmbl permissive
+     -logic_name    => 'run_SWEmbl_R0005_IDR', #SWEmbl permissive IDR filtered
      -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunPeaks', 
+     -parameters    => {'filter_max_peaks' => 1},
      -hive_capacity => 10,
      -rc_name => 'long_monitored_high_mem', # Better safe than sorry... size of datasets tends to increase...
     # -flow_into => 
