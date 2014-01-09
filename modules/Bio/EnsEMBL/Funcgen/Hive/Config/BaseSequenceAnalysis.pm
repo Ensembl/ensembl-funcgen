@@ -63,7 +63,8 @@ sub default_options {
      default_peaks       => 'SWEmbl_R015', 
      default_tight_peaks => 'SWEmbl_R0025', 
      default_broad_peaks => 'ccat_histone',
-     permissive_peaks    => 'SWEmbl_R0005', 
+     permissive_peaks    => 'SWEmbl_R0005',
+     idr_peaks           => 'SWEmbl_R0005_IDR', 
      
      #default result_set_analyses
      #default_collection          => 'bwa_samse',#todo update this to reflect collection analysis
@@ -224,6 +225,8 @@ sub pipeline_wide_parameters {
         #'feature_set_analysis',
         'alignment_analysis',
         'peak_analysis',
+        #permissive_peaks? This will require RunPeaks changes? Currently harcoded in config, but probably want 
+        #to flow from IdentifyReplicateResultSets
         
         
         #Peaks.pm batch params
@@ -241,7 +244,8 @@ sub pipeline_wide_parameters {
        #The rest of the IDR handling is implicit by the output and dataflow of this analysis           
         
         'indexed_ref_fasta',   
-        'idr_analysis'         
+        'idr_analysis', #Not currently used as this is done outside of the DB
+        'max_peaks',        
       ],      
     };
 }
