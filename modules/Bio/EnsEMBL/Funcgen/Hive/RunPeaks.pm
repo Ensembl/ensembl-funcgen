@@ -17,15 +17,13 @@ use warnings;
 use strict;
 
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd );
 use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 
 
 use base ('Bio::EnsEMBL::Funcgen::Hive::BaseDB');
 
-#todo Merge in IDR QC here??? this can be done on the bed files as part of run?
-#actually replicates will need to run separately, so IDR QC will have to be
-#in a separate analysis, which means we will likely have to load the features before
-#we run IDR on the replicate bed files.
+
 
 #todo rename logic_names to be generic e.g. SWEmbl_tight
 #then we can have different parameter sets between species
@@ -46,16 +44,49 @@ use base ('Bio::EnsEMBL::Funcgen::Hive::BaseDB');
 #as it will send all output there
 #-reload
 
+
+
+#Make this optionally take a ResultSet and a peak analysis
+#to support calling without generation of Data/FeatureSet
+#if there is no feature set, we should also not load the peaks
+#if we define a max peaks value, then we rename to first output to unfiltered,
+#then add a filter step to the final expected output
+
 sub fetch_input {
   my $self = shift;
   $self->SUPER::fetch_input;
 
-  my $fset     = $self->fetch_Set_input('FeatureSet');
-  my $analysis = $fset->analysis;
-  my $rset     = $self->ResultSet; 
+  my $set_type = $self->param_required('set_type');
+  my ($fset, $rset, $analysis);
+  
+  my $max_peaks = $self->get_param_method('max_peaks', 'silent');
+  
+  if($self->param_silent('filter_max_peaks') &&
+     (! defined $max_peaks)){
+    $self->throw_no_retry('The filter_max_peaks param has been set, but no max_peaks param has been set');
+  }
+  
+
+  if($set_type eq 'ResultSet'){
+    $rset = $self->fetch_Set_input('ResultSet'); 
+    
+    #This is likely permissive peaks for pre_IDR rep 
+    my $peak_analysis = $self->param_required('peak_analysis');
+    $analysis = &scalars_to_objects($self->out_db,'Analysis',
+                                                  'fetch_by_logic_name',
+                                                  $peak_analysis)->[0];
+    if(! defined $analysis){
+      $self->throw_no_retry("Could not find peak_analysis in DB:\t".$peak_analysis);  
+    }                            
+  }
+  else{
+    $fset     = $self->fetch_Set_input('FeatureSet');
+    $analysis = $fset->analysis;
+    $rset     = $self->ResultSet; 
+  }
 
   #This is required for getting files, move this to get_alignment_file_by_InputSets?
-  $self->set_param_method( 'cell_type', $fset->cell_type, 'required' );
+  $self->set_param_method( 'cell_type', $rset->cell_type, 'required' );
 
   #do we need both experiment name and logic name in here?
   #logic name will be in the otufile name anyway?
@@ -128,7 +159,7 @@ sub fetch_input {
     -parameters        => $analysis->parameters,
     -align_file        => $align_file,
     -control_file      => $control_file,
-    -out_file_prefix   => $fset->name, # . '.' . $analysis->logic_name, #???this is already appended!
+    -out_file_prefix   => $rset->name.'.'.$analysis->logic_name,
     -out_dir           => $self->output_dir,
     -convert_half_open => 1,
 
@@ -151,9 +182,32 @@ sub fetch_input {
 sub run {
   my $self = shift;
 
+  my $out_file = $self->peak_runnable->out_file;
+
   if( ! ( $self->param_silent('reload') && 
-          -e $self->peak_runnable->out_file ) ){
+          -e  $out_file) ){
     $self->peak_runnable->run;
+  }
+
+
+  my $max_peaks = $self->max_peaks;
+
+  if($max_peaks){
+    
+    my $cmd = "mv $out_file ${out_file}.unfiltered";
+    run_system_cmd($cmd);
+    
+    $cmd = "sort -k 7nr,7nr ${out_file}.unfiltered | head -n $max_peaks | sort -k 1,2n > ".$out_file;
+    run_system_cmd($cmd);    
+    #Will failures of downstream pipes be caught?   
+
+    #Sanity check we have the file with the correct number of lines
+    $cmd = "wc -l $out_file";
+    my $filtered_peaks = run_backtick_cmd($cmd);
+      
+    if($max_peaks != $filtered_peaks){
+      throw("Expected $max_peaks in filtered bed file, but found $filtered_peaks:\n\t".$out_file);  
+    }       
   }
 
   return;
@@ -161,28 +215,35 @@ sub run {
 
 sub write_output {
   my $self = shift;
-  my $fset = $self->FeatureSet;
+  
+  my $fset;
+  
+  if($self->can('FeatureSet') &&
+     ($fset = $self->FeatureSet) ){
+    #test assignment, as we may have the FeatureSet method from a previous
+    #job in this batch     
 
-  if ( $fset->has_status('IMPORTED') ) {
-    throw( "Cannot imported feature into a \'IMPORTED\' FeatureSet:\t" .
-           $fset->name );
+    if ( $fset->has_status('IMPORTED') ) {
+      throw( "Cannot imported feature into a \'IMPORTED\' FeatureSet:\t" .
+             $fset->name );
 
-    #rollback should be outside of this module!
+     #rollback should be outside of this module!
+    }
+
+    $self->peak_runnable->store_features( $self->can('store_AnnotatedFeature'),
+                                          $fset,
+                                          $fset->adaptor->db->get_AnnotatedFeatureAdaptor );
+
+    $fset->adaptor->set_imported_states_by_Set($fset);
+
+    #my $batch_params = $self->get_batch_params;
+
+    # Log counts here?
+
+    #No data flow to PeaksQC here as this is done via semaphore from PreprocessAlignment
+
+    #todo update tracking states?
   }
-
-  $self->peak_runnable->store_features( $self->can('store_AnnotatedFeature'),
-                              $fset,
-                              $fset->adaptor->db->get_AnnotatedFeatureAdaptor );
-
-  $fset->adaptor->set_imported_states_by_Set($fset);
-
-  #my $batch_params = $self->get_batch_params;
-
-  #Log counts here?
-
-#No data flow to PeaksQC here as this is done via semaphore from PreprocessAlignment
-
-  #todo update tracking states?
 
   return;
 } ## end sub write_output
