@@ -194,8 +194,8 @@ sub pipeline_analyses {
 	 #No wait, this is te wrong way around
 	  -flow_into => 
 	   {		
-      'A->2' => ['SubmitIDR'],  
-	    '3->A' => ['DefineReplicateDataSet'],
+      'A->2' => ['PreprocessIDR'],  
+	    '3->A' => [ 'run_SWEmbl_R0005_replicate' ], #['DefineReplicateDataSet'],
      },
 			 
 	  -analysis_capacity => 100, #although this runs on LOCAL
@@ -203,28 +203,28 @@ sub pipeline_analyses {
     },
 	
 	  
-    {
-     -logic_name => 'DefineReplicateDataSet', 
-	   -module     => 'Bio::EnsEMBL::Funcgen::Hive::DefineDataSet',
-	   -parameters => 
-	    {
-	     feature_set_analysis => $self->o('permissive_peaks'), #This will not allow batch override
-	    },
+    #{
+    # -logic_name => 'DefineReplicateDataSet', 
+	  # -module     => 'Bio::EnsEMBL::Funcgen::Hive::DefineDataSet',
+	  # -parameters => 
+	  #  {
+	  #   feature_set_analysis => $self->o('permissive_peaks'), #This will not allow batch override
+	  #  },
 				 	 
-	    -flow_into => 
-       {
-        '2' => [ 'run_SWEmbl_R0005_replicate' ],
-       },
+	  #  -flow_into => 
+    #   {
+    #    '2' => [ 'run_SWEmbl_R0005_replicate' ],
+    #   },
 		 
-	   -analysis_capacity => 100,
-     -rc_name => 'default',
+	  # -analysis_capacity => 100,
+    # -rc_name => 'default',
 	   #this really need revising as this is sorting the bed files
 	   #Need to change resource to reserve tmp space
 	   
 	   #Not having a -failed_job_tolerance here is causing the beekeeper to 
 	   #exit, especially as there is no -max_retry_count set either
 	   
-    },
+    #},
     
     
     
@@ -234,6 +234,11 @@ sub pipeline_analyses {
     {
      -logic_name    => 'run_SWEmbl_R0005_replicate',  #SWEmbl permissive
      -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunPeaks',
+     -parameters => 
+      {
+       peak_analysis => $self->o('permissive_peaks'), #This will not allow batch override!
+       #Would have to flow this explicity from IdentifyReplicateResultSets and MergeReplicateAlignments_and_QC
+      },
      -analysis_capacity => 10,
      -rc_name => 'long_monitored_high_mem', # Better safe than sorry... size of datasets tends to increase...       
     },
@@ -244,9 +249,9 @@ sub pipeline_analyses {
     #as hive will not handle multi semaphores  
   
      {
-     -logic_name    => 'SubmitIDR',
+     -logic_name    => 'PreprocessIDR',
      #-module        => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-     -module        => 'Bio::EnsEMBL::Funcgen::Hive::SubmitIDR',
+     -module        => 'Bio::EnsEMBL::Funcgen::Hive::PreprocessIDR',
      #-meadow        => 'LOCAL',
      -analysis_capacity => 100,#Unlikely to get anywhere near this
      -rc_name    => 'default',
@@ -260,8 +265,8 @@ sub pipeline_analyses {
      -flow_into => 
       {
        '2->A' => [ 'RunIDR' ],                   # fan
-       '3->A' => [ 'RunPooledPseudoRepIDR ' ], # fan
-       'A->4' => [ 'PostProcessIDRReplicates' ], # funnel
+       #'3->A' => [ 'RunPooledPseudoRepIDR ' ],   # fan #This doesn't need a separate analysis
+       'A->3' => [ 'PostProcessIDRReplicates' ], # funnel
       }, 
     },
   
@@ -281,7 +286,10 @@ sub pipeline_analyses {
      #do we need a stand alone table for idr_thresholds, which simply has the threshold and the 2 feature_set_ids
      #should we store anything else here? 
      
-
+    -flow_into => 
+     {
+      2 => [ ':////accu?idr_peaks=[num_peaks]' ],
+     }
 
            
      #-flow_into => 
@@ -308,7 +316,7 @@ sub pipeline_analyses {
     {
      -logic_name    => 'PostProcessIDRReplicates',
      #-module        => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-     -module        => 'Bio::EnsEMBL::Funcgen::Hive::PostProcessIDR',
+     -module        => 'Bio::EnsEMBL::Funcgen::Hive::PostprocessIDR',
      -analysis_capacity => 100,
      -rc_name    => 'default', #~5mins + (memory?)
      -batch_size => 10,#?
