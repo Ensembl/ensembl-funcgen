@@ -1639,7 +1639,7 @@ sub check_analysis_can_run{
   
   if(defined $check_int){ #Might be undef, in which case we can run
     my $lname     = $self->analysis->logic_name;
-    my $run_param = 'can_run_'.$lname; 
+    my $run_param = 'can_'.$lname; 
     $can_run      = $self->param_required($run_param);
    
 
@@ -1821,7 +1821,61 @@ sub CvGV_name_or_bust {
 } ## end sub CvGV_name_or_bust
 
 
+
+# To be removed once this is implemented inensembl-hive
+# No obvious place for it without creating a sparse clone of Excpetions.pm
+# and getting Process.pm to import throw from there  
   
+=head2 throw_no_retry
+
+  Arg [1]    : string $msg
+  Arg [2]    : (optional) int $level
+               override the default level of exception throwing
+  Example    : use Bio::EnsEMBL::Utils::Exception qw(throw);
+               throw('We have a problem');
+  Description: Throws an exception which if not caught by an eval will
+               provide a stack trace to STDERR and die.  If the verbosity level
+               is lower than the level of the throw, then no error message is
+               displayed but the program will still die (unless the exception
+               is caught).
+  Returntype : none
+  Exceptions : thrown every time
+  Caller     : generally on error
+
+=cut
+
+sub throw {
+  my $string = shift;
+
+  # For backwards compatibility with Bio::EnsEMBL::Root::throw:  Allow
+  # to be called as an object method as well as class method.  Root
+  # function now deprecated so call will have the string instead.
+
+  $string = shift if ( ref($string) );    # Skip object if one provided.
+  $string = shift if ( $string eq "Bio::EnsEMBL::Utils::Exception" );
+
+  my $level = shift;
+  $level = $DEFAULT_EXCEPTION if ( !defined($level) );
+
+  if ( $VERBOSITY < $level ) {
+    die("\n");    # still die, but silently
+  }
+
+  my $std = stack_trace_dump(3);
+
+  my $out = sprintf(
+             "\n" .
+             "-------------------- EXCEPTION --------------------\n" .
+             "MSG: %s\n" .
+             "%s" .
+             "Date (localtime)    = %s\n" .
+             "Ensembl API version = %s\n" .
+             "---------------------------------------------------\n",
+             $string, $std, scalar( localtime() ), software_version() );
+             
+  $self->input_job->transient_error( 0 );
   
+  die($out);
+} ## end sub throw  
 
 1;
