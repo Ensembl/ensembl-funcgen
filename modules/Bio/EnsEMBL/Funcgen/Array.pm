@@ -89,7 +89,6 @@ use parent qw(Bio::EnsEMBL::Funcgen::Storable);
                 (
 								 -NAME        => 'Array-1',
 								 -FORMAT      => 'Tiled',
-								 -SIZE        => '1',
 								 -VENDOR      => 'Nimblegen',
                  -TYPE        => 'OLIGO',
 								 -DESCRIPTION => $desc,
