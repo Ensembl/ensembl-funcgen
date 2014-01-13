@@ -105,45 +105,6 @@ sub fetch_all_by_Experiments {
 #experiment is only a 2nd order index (unique)key and analysis_id is not indexe at all
 
 
-=head2 fetch_all_by_FeatureType
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureType object
-  Example    : my @sets = @{$isset_adaptor->fetch_all_by_FeatureType($ftype)};
-  Description: Retrieves InputSubset objects from the database based on FeatureType
-  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::InputSubset objects
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-sub fetch_all_by_FeatureType {
-  my ($self, $ftype) = @_;
-  my $params = {constraints => {feature_types => [$ftype]}};
-  return $self->generic_fetch($self->compose_constraint_query($params));
-}
-
-
-
-=head2 fetch_all_by_CellType
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::CellType object
-  Example    : my @sets = @{$isset_adaptor->fetch_all_by_CellType($ctype)};
-  Description: Retrieves InputSubset objects from the database based on CellType
-  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::InputSubset objects
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-sub fetch_all_by_CellType {
-  my ($self, $ctype) = @_;
-  my $params = {constraints => {cell_types => [$ctype]}};
-  return $self->generic_fetch($self->compose_constraint_query($params));
-}
-
-
 =head2 fetch_by_name
 
   Arg [1]    : String - InputSubset name
@@ -452,30 +413,6 @@ sub _constrain_archive_ids {
   #{} = not futher constraint conf
   return (' iss.archive_id IN '.join(', ', (map {uc($_)} @$archive_ids)) , {});
 }
-
-sub _constrain_cell_types {
-  my ($self, $cts) = @_;
-
-  my $constraint = $self->_table_syn.'.cell_type_id IN ('.
-        join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $cts, 'dbID')}
-        ).')';
-
-  #{} = no futher contraint config
-  return ($constraint, {});
-}
-
-
-sub _constrain_feature_types {
-  my ($self, $fts) = @_;
-
-  #Don't need to bind param this as we validate
-  my $constraint = $self->_table_syn.'.feature_type_id IN ('.
-    join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $fts, 'dbID')}).')';
-
-  #{} = no futher constraint conf
-  return ($constraint, {});
-}
-
 
 
 
