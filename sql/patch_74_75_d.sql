@@ -20,11 +20,14 @@
 */
 
 insert into result_set_input(result_set_id, table_name, table_id) select  rsi.result_set_id, 'input_subset', isiss.input_subset_id from input_set inp, input_set_input_subset isiss, result_set_input rsi where rsi.table_id=inp.input_set_id and rsi.table_name='input_set' and inp.input_set_id=isiss.input_set_id;
+
+delete from result_set_input where table_name='input_set';
+
  
 analyze table  result_set_input;
 optimize table result_set_input;
  
 # patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_74_75_d.sql|table_name_input_subset');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_74_75_d.sql|result_set_input.table_name_input_subset');
 
 
