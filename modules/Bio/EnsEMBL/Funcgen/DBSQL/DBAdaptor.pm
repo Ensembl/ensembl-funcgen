@@ -249,7 +249,8 @@ sub new {
 }
 
 
-#Move these stored method to BaseAdaptor?
+#This should be in Storable to mirror core is_stored method?
+#These do not fit in Storable, move these stored methods to BaseAdaptor?
 
 =head2 is_stored_and_valid
 
@@ -268,10 +269,10 @@ sub new {
 sub is_stored_and_valid{
   my ($self, $class, $obj) = @_;
 
-  assert_ref($obj,$class);
+  assert_ref($obj, $class);
 
   if (! $obj->is_stored($self)) {
-    throw("$obj\t is not stored");
+    throw("$obj is not stored");
   }
 
   return;
@@ -663,120 +664,6 @@ sub _set_dnadb{
   return $db;
 }
 
-
-
-
-
-#General Status methods
-#will Move to Bio::EnsEMBL::Funcgen::DBSQL::Status
-
-=head2 fetch_all_states
-
-  Arg [1]    : string - table name
-  Arg [2]    : int - table id
-  Example    : my @states = @{$db->fetch_all_states('channel', 1)};
-  Description: Retrieves all states associated with the given table record
-  Returntype : Listref
-  Exceptions : Throws if arguments not supplied
-  Caller     : general
-  Status     : At risk - Move to Status
-
-=cut
-
-sub fetch_all_states{
-	my ($self, $table, $id) = @_;
-
-
-	throw("DBAdaptor::fetch_all_states is deprecated");
-
-
-	throw("Need to specifiy a table and an id to retrieve status") if (! $table || ! $id);
-
-
-	my $sql = "SELECT state FROM status WHERE table_name=\"$table\" AND table_id=\"$id\"";
-
-	my @states = map{ $_ = "@$_"} @{$self->dbc->db_handle->selectall_arrayref($sql)};
-
-	return \@states;
-}
-
-
-=head2 fetch_status_by_name
-
-  Arg [1]    : string - table name
-  Arg [2]    : int - table id
-  Arg [3]    : string - status
-  Example    : if($db->fetch_status_by_name('channel', 1, 'IMPORTED'){ ... };
-  Description: Retrieves given state associated with the table record
-  Returntype : ARRAYREF
-  Exceptions : Throws if arguments not supplied
-  Caller     : general
-  Status     : At risk - Move to Stasus
-
-=cut
-
-
-
-sub fetch_status_by_name{
-	my ($self, $table, $id, $state) = @_;
-
-	throw("DBAdaptor::fetch_status_by_name is deprecated");
-
-	throw("Need to specify a table and an id to retrieve status") if (! $table || ! $id || ! $state);
-
-	#should we enum the state?
-
-
-	my $sql = "SELECT state FROM status WHERE table_name=\"$table\" AND table_id=\"$id\" AND state=\"$state\"";
-	return $self->dbc->db_handle->selectrow_array($sql);
-}
-
-
-=head2 set_status
-
-  Arg [1]    : string - table name
-  Arg [2]    : int - table id
-  Arg [3]    : string - status
-  Example    : $db->set_status('channel', 1, 'IMPORTED');
-  DESCRIPTION: RETRIEVES GIVEN STATE ASSOCIATED WITH THE table record
-  Returntype : ARRAYREF
-  Exceptions : Throws if arguments not supplied
-  Caller     : general
-  Status     : At risk - Move to Status
-
-=cut
-
-
-sub set_status{
-	my ($self, $table, $id, $state) = @_;
-
-	throw("DBAdaptor::set_status is deprecated");
-	throw("Need to supply a table, dbid and a valid status") if (!($table && $id && $state));
-
-	my $sql = "INSERT INTO status(table_id, table_name, state) VALUES(\"$id\", \"$table\", \"$state\")";
-	$self->dbc->do($sql);
-
-	return;
-}
-
-
-sub stable_id_prefix{
-  my $self = shift;
-
-  if (! defined $self->{'stable_id_prefix'}) {
-    ($self->{'stable_id_prefix'}) = @{$self->dnadb->get_MetaContainer->list_value_by_key
-                                        (
-                                         'species.stable_id_prefix'
-                                        )};
-
-    #Only add R if it is defined
-    $self->{'stable_id_prefix'} .= 'R' if $self->{'stable_id_prefix'};
-  }
-
-  return $self->{'stable_id_prefix'}
-}
-
-
 =head2 connect_string
 
   Example    : my $import_cmd = 'mysqlimport '.$db->connect_string()." $table_file";
@@ -913,35 +800,6 @@ sub reset_table_autoinc {
 } ## end sub reset_table_autoinc
 
 
-
-
-
-
-### DEPRECATED METHODS ###
-
-sub fetch_group_details{
-  my ($self, $gname) = @_;
-
-  deprecate("Please use ExperimentalGroupAdaptor");
-
-  throw("Need to specify a group name") if ! $gname;
-  my $sql = "SELECT * from experimental_group where name=\"$gname\"";
-  return $self->dbc->db_handle->selectrow_array($sql);
-}
-
-sub import_group{
-  my ($self, $gname, $loc, $contact) = @_;
-
-  deprecate('Please use ExperimentalGroup/Adaptor to import experimental_group info');
-  throw('import_group no longer supported');
-}
-
-sub set_dnadb_by_assembly_version{
-  my $self = shift;
-  deprecate('Please use _set_dnadb');
-  $self->{assembly_version} = shift;
-  return $self->_set_dnadb;
-}
 
 1;
 

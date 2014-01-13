@@ -1048,6 +1048,24 @@ sub build_feature_class_name{
 
 
 
+sub stable_id_prefix{
+  my $self = shift;
+
+  if (! defined $self->{'stable_id_prefix'}) {
+    ($self->{'stable_id_prefix'}) = @{$self->dnadb->get_MetaContainer->list_value_by_key
+                                        (
+                                         'species.stable_id_prefix'
+                                        )};
+
+    #Only add R if it is defined
+    $self->{'stable_id_prefix'} .= 'R' if $self->{'stable_id_prefix'};
+  }
+
+  return $self->{'stable_id_prefix'}
+}
+
+
+
 ### GENERIC CONSTRAINT METHODS ###
 #   Used by compose_constraint_query
 

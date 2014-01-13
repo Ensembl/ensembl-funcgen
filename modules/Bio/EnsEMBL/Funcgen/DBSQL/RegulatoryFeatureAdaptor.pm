@@ -348,7 +348,7 @@ sub _objs_from_sth {
      #external
     );
 
-  my $stable_id_prefix = $self->db->stable_id_prefix;
+  my $stable_id_prefix = $self->stable_id_prefix;
 
 	my (
 	    $dbID,                  $efg_seq_region_id,
