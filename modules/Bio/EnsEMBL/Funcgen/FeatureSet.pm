@@ -137,32 +137,12 @@ sub new {
   my $class  = ref($caller) || $caller;
   my $self   = $class->SUPER::new(@_);
 
-  my ($desc,
-      $dlabel,
-      $exp,
-      $exp_id,
-      $iset,
-      $iset_id,
-      ) =
-    rearrange( ['DESCRIPTION',
-                'DISPLAY_LABEL',
-                'EXPERIMENT',
-                'EXPERIMENT_ID',
-                'INPUT_SET',
-                'INPUT_SET_ID',
-               ], @_ );
+  my ($desc, $dlabel, $exp, $iset, $iset_id) = rearrange
+   ( ['DESCRIPTION', 'DISPLAY_LABEL', 'EXPERIMENT',
+      'INPUT_SET', 'INPUT_SET_ID' ], @_ );
 
-
-  if ($exp_id || $exp) {
-    throw('Passing an Experiment or an experiment_id is now deprecated,'.
-          ' please use -input_set or -input_set_id instead');
-  }
 
   #Mandatory params checks here (setting done in Set.pm)
-  if ( ! defined $self->feature_type ) {
-    throw('Must provide a FeatureType');
-  }
-
   #explicit type check here to avoid invalid types being imported as NULL
   #subsequently throwing errors on retrieval
   my $type = $self->_validate_feature_class;
