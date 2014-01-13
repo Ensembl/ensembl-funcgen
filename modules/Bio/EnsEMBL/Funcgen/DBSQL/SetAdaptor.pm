@@ -62,10 +62,9 @@ use vars qw(@EXPORT); #require Exporter done in parent
   Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureType
   Arg [2]    : String  (optional) - status e.g. 'DISPLAYABLE'
   Example    :
-  Description: Retrieves a list of features on a given slice that are created
-               by probes from the specified type of array.
-  Returntype : Listref of Bio::EnsEMBL::Set objects
-  Exceptions : Throws if no valid FeatureType type is provided
+  Description: 
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::Set objects
+  Exceptions : None
   Caller     : General
   Status     : At Risk
 
@@ -86,8 +85,8 @@ sub fetch_all_by_FeatureType {
   Arg [2]    : String  (optional) - status e.g. 'DISPLAYABLE'
   Example    :
   Description:
-  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::InputSet objects
-  Exceptions : Throws if no CellType is provided
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::Set objects
+  Exceptions : None
   Caller     : General
   Status     : At Risk
 
@@ -103,20 +102,44 @@ sub fetch_all_by_CellType {
 }
 
 
+=head2 fetch_all_by_Analysis
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Analysis
+  Example    : 
+  Description:
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::Set objects
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_Analysis {
+  my ($self, $ctype, $status) = @_;
+  my $params = {constraints => {analyses => [$ctype]}};
+  $params->{constraints}{states} = [$status] if defined $status;
+  my $results = $self->generic_fetch($self->compose_constraint_query($params));
+  $self->reset_true_tables; #As we may have added status
+  return $results;
+}
+
+
 =head2 fetch_all_by_FeatureType_Analysis
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureType
   Arg [2]    : Bio::EnsEMBL::Analysis
   Arg [3]    : (optional) Bio::EnsEMBL::Funcgen::CellType
-  Example    : my @fsets = $fs_adaptopr->fetch_all_by_FeatureType_Analysis($ftype, $anal, $ctype);
-  Description: Retrieves FeatureSet objects from the database based on FeatureType, Analysis and
+  Example    : my @sets = $set_adaptopr->fetch_all_by_FeatureType_Analysis($ftype, $anal, $ctype);
+  Description: Retrieves Set objects from the database based on FeatureType, Analysis and
                CellType if defined.
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::FeatureSet objects
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::Set objects
   Exceptions : Throws if args 1 and 2 are not valid or stored
   Caller     : General
   Status     : At Risk
 
 =cut
+
+#Historical method from the FeatureSetAdaptor
 
 sub fetch_all_by_FeatureType_Analysis {
   my ($self, $ftype, $anal, $ctype) = @_;

@@ -49,11 +49,12 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate warning );
+use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
 use Bio::EnsEMBL::Funcgen::Experiment;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#DBI sql_types bareword import
 
-use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
+use parent qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor );
 
 
 =head2 fetch_by_name
@@ -82,6 +83,45 @@ sub fetch_by_name {
     #should have unique key of group_id and experiment_name
   }
   return $result->[0];
+}
+
+
+=head2 fetch_all_by_FeatureType
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureType object
+  Example    : my @exps = @{$exp_adaptopr->fetch_all_by_FeatureType($ftype)};
+  Description: Retrieves Experiment objects from the database based on FeatureType
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::Experiment objects
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub fetch_all_by_FeatureType {
+  my ($self, $ftype) = @_;
+  my $params = {constraints => {feature_types => [$ftype]}};
+  return $self->generic_fetch($self->compose_constraint_query($params));
+}
+
+
+
+=head2 fetch_all_by_CellType
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::CellType object
+  Example    : my @exps = @{$exp_adaptopr->fetch_all_by_CellType($ctype)};
+  Description: Retrieves Experiment objects from the database based on CellType
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::Experiment objects
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub fetch_all_by_CellType {
+  my ($self, $ctype) = @_;
+  my $params = {constraints => {cell_types => [$ctype]}};
+  return $self->generic_fetch($self->compose_constraint_query($params));
 }
 
 
@@ -144,7 +184,8 @@ sub _true_tables {
 
 sub _columns {
 	return qw( e.experiment_id e.name e.experimental_group_id
-	           e.date e.primary_design_type e.description e.mage_xml_id);
+	           e.date e.primary_design_type e.description e.mage_xml_id
+	           e.feature_type_id e.cell_type_id);
 }
 
 =head2 _objs_from_sth
@@ -164,32 +205,54 @@ sub _columns {
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
 
-	my (@result, $exp_id, $name, $group_id, $p_design_type, $date, $description, $xml_id);
+	my (@result, $exp_id, $name, $group_id, $p_design_type, 
+	    $date, $description, $xml_id, $ct_id, $ft_id);
 
-	my $eg_adaptor = $self->db->get_ExperimentalGroupAdaptor();
+	my $eg_adaptor  = $self->db->get_ExperimentalGroupAdaptor;
+  my $ct_adaptor  = $self->db->get_CellTypeAdaptor;
+  my $ft_adaptor  = $self->db->get_FeatureTypeAdaptor;
 
-	$sth->bind_columns(\$exp_id, \$name, \$group_id, \$date, \$p_design_type, \$description, \$xml_id);
+	$sth->bind_columns(\$exp_id, \$name, \$group_id, \$date, \$p_design_type, 
+	                   \$description, \$xml_id, \$ft_id, \$ct_id);
 
+  my (%ftypes, %ctypes);
 
 	while ( $sth->fetch() ) {
 
 	  my $group = $eg_adaptor->fetch_by_dbID($group_id);#cache these in ExperimentalGroupAdaptor
 
-	  my $exp = Bio::EnsEMBL::Funcgen::Experiment->new
-      (
-       -DBID                => $exp_id,
-       -ADAPTOR             => $self,
-       -NAME                => $name,
-       -EXPERIMENTAL_GROUP  => $group,
-       -DATE                => $date,
-       -PRIMARY_DESIGN_TYPE => $p_design_type,
-       -DESCRIPTION         => $description,
-       -MAGE_XML_ID         => $xml_id,
-      );
+    if(! exists $ctypes{$ct_id}){
+      $ctypes{$ct_id} = $ct_adaptor->fetch_by_dbID($ct_id);
+    
+      if(! defined $ctypes{$ct_id}){
+        throw("Could not fetch linked CellType (dbID: $ct_id) for Experiment:\t$name");
+      }
+    }
+      
+    if(! exists $ftypes{$ft_id}){
+      $ftypes{$ft_id} = $ft_adaptor->fetch_by_dbID($ft_id);
+    
+      if(! defined $ftypes{$ft_id}){
+        throw("Could not fetch linked FeatureType (dbID: $ft_id) for Experiment:\t$name");
+      }
+    }
 
-	  push @result, $exp;
 
+	  push @results, Bio::EnsEMBL::Funcgen::Experiment->new
+     (
+      -DBID                => $exp_id,
+      -ADAPTOR             => $self,
+      -NAME                => $name,
+      -EXPERIMENTAL_GROUP  => $group,
+      -DATE                => $date,
+      -PRIMARY_DESIGN_TYPE => $p_design_type,
+      -DESCRIPTION         => $description,
+      -MAGE_XML_ID         => $xml_id,
+      -FEATURE_TYPE        => $ftypes{$ft_id},
+      -CELL_TYPE           => $ctypes{$ct_id},
+     );
 	}
+	
 	return \@result;
 }
 
@@ -211,53 +274,53 @@ sub _objs_from_sth {
 =cut
 
 sub store {
-    my $self = shift;
-    my @args = @_;
-
-	my ($s_exp);
+  my $self = shift;
+  my @exps = @_;
 
 	my $sth = $self->prepare('INSERT INTO experiment
-                                 (name, experimental_group_id, date, primary_design_type, description, mage_xml_id)
-                                 VALUES (?, ?, ?, ?, ?, ?)');
+                            (name, experimental_group_id, date, primary_design_type, 
+                             description, mage_xml_id, feature_type_id, cell_type_id)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
 
-    foreach my $exp (@args) {
-	  throw('Can only store Experiment objects') 	if ( ! $exp->isa('Bio::EnsEMBL::Funcgen::Experiment'));
+  foreach my $exp (@exps) {
+    assert_ref($exp, 'Bio::EnsEMBL::Funcgen::Experiment');
+  
+	  if (! $exp->is_stored($self->db)){
+      #Test object attrs are stored
+      my $exp_group = $exp->experimental_group;
+      $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ExperimentalGroup', $exp_group);
+      $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType',       $exp->feature_type);
+      $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType',          $exp->cell_type);
 
-	  if (!( $exp->dbID() && $exp->adaptor() == $self )){
-
-
-		my $exp_group = $exp->experimental_group;
-		$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ExperimentalGroup', $exp_group);
-
-
-		$s_exp = $self->fetch_by_name($exp->name());#validate on group too!
-		throw("Experiment [".$exp->name."] [".$exp->dbID." ]already exists in the database with dbID:".$s_exp->dbID().
-			  "\nTo reuse/update this Experiment you must retrieve it using the ExperimentalAdaptor".
-			  "\nMaybe you want to use the -recover option?") if $s_exp;
-
-
-		$exp = $self->update_mage_xml_by_Experiment($exp) if(defined $exp->mage_xml());
-
-		$sth->bind_param(1, $exp->name(),                     SQL_VARCHAR);
-		$sth->bind_param(2, $exp->experimental_group()->dbID, SQL_INTEGER);
-		$sth->bind_param(3, $exp->date(),                     SQL_VARCHAR);#date?
-		$sth->bind_param(4, $exp->primary_design_type(),      SQL_VARCHAR);
-		$sth->bind_param(5, $exp->description(),              SQL_VARCHAR);
-        $sth->bind_param(6, $exp->mage_xml_id(),              SQL_INTEGER);
-
-		$sth->execute();
-		$exp->dbID($self->last_insert_id);
-		$exp->adaptor($self);
-
+		  #Validate doesn't exist aleady
+		
+		  if($self->fetch_by_name($exp->name)){
+  		  throw('Experiment ['.$exp->name.'] already exists in the database.'.
+			   "\nTo reuse/update this Experiment you must retrieve it using the ExperimentAdaptor");
+		  }
+  
+  		$exp = $self->update_mage_xml_by_Experiment($exp) if(defined $exp->mage_xml());
+  
+  		$sth->bind_param(1, $exp->name,                     SQL_VARCHAR);
+  		$sth->bind_param(2, $exp->experimental_group->dbID, SQL_INTEGER);
+  		$sth->bind_param(3, $exp->date,                     SQL_VARCHAR);#date?
+  		$sth->bind_param(4, $exp->primary_design_type,      SQL_VARCHAR);
+  		$sth->bind_param(5, $exp->description,              SQL_VARCHAR);
+      $sth->bind_param(6, $exp->mage_xml_id,              SQL_INTEGER);
+      $sth->bind_param(7, $exp->feature_type->dbID,       SQL_INTEGER); 
+      $sth->bind_param(8, $exp->cell_type->dbID,          SQL_INTEGER);
+  
+  		$sth->execute();
+  		$exp->dbID($self->last_insert_id);
+  		$exp->adaptor($self);
 	  }
-	  else{
-		#assume we want to update the states
-		warn('You may want to use $exp->adaptor->store_states($exp)');
-		$self->store_states($exp);
+	  else{ #assume we want to update the states
+		  warning('If you are trying to update the states, you may want to use $exp->adaptor->store_states($exp)');
+		  $self->store_states($exp);
 	  }
 	}
 
-    return \@args;
+    return \@exps;
   }
 
 =head2 fetch_mage_xml_by_Experiment
@@ -354,12 +417,36 @@ sub update_mage_xml_by_Experiment{
 }
 
 
+## GENERIC CONSTRAIN METHODS ###
 
-### DEPRECATED METHODS ###
+#All these _constrain methods must return a valid constraint string, and a hashref of any other constraint config
 
-sub fetch_experiment_filter_counts{
-  deprecate('Please use FeatureSetAdaptor::fetch_feature_set_filter_counts')
+#Need to bind param any of these which come from URL parameters and are not tested
+
+sub _constrain_cell_types {
+  my ($self, $cts) = @_;
+
+  my $constraint = $self->_table_syn.'.cell_type_id IN ('.
+        join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $cts, 'dbID')}
+        ).')';
+
+  #{} = no futher contraint config
+  return ($constraint, {});
 }
+
+
+sub _constrain_feature_types {
+  my ($self, $fts) = @_;
+
+  #Don't need to bind param this as we validate
+  my $constraint = $self->_table_syn.'.feature_type_id IN ('.
+    join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $fts, 'dbID')}).')';
+
+  #{} = no futher constraint conf
+  return ($constraint, {});
+}
+
+
 
 
 1;

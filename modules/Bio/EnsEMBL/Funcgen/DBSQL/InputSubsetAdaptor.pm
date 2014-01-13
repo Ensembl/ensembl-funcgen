@@ -105,7 +105,43 @@ sub fetch_all_by_Experiments {
 #experiment is only a 2nd order index (unique)key and analysis_id is not indexe at all
 
 
+=head2 fetch_all_by_FeatureType
 
+  Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureType object
+  Example    : my @sets = @{$isset_adaptor->fetch_all_by_FeatureType($ftype)};
+  Description: Retrieves InputSubset objects from the database based on FeatureType
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::InputSubset objects
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub fetch_all_by_FeatureType {
+  my ($self, $ftype) = @_;
+  my $params = {constraints => {feature_types => [$ftype]}};
+  return $self->generic_fetch($self->compose_constraint_query($params));
+}
+
+
+
+=head2 fetch_all_by_CellType
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::CellType object
+  Example    : my @sets = @{$isset_adaptor->fetch_all_by_CellType($ctype)};
+  Description: Retrieves InputSubset objects from the database based on CellType
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::InputSubset objects
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub fetch_all_by_CellType {
+  my ($self, $ctype) = @_;
+  my $params = {constraints => {cell_types => [$ctype]}};
+  return $self->generic_fetch($self->compose_constraint_query($params));
+}
 
 
 =head2 fetch_by_name
@@ -258,11 +294,11 @@ sub _objs_from_sth {
       $exps{$exp_id} = $exp_adaptor->fetch_by_dbID($exp_id);
     
       if(! defined $exps{$exp_id}){
-        throw("Could not fetch linked Experiment (dbID: $ct_id) for InputSubset (dbID: $iss_id) ");
+        throw("Could not fetch linked Experiment (dbID: $exp_id) for InputSubset (dbID: $iss_id) ");
       }
     }
     
-    if(! exists $ftypes{$ct_id}){
+    if(! exists $ftypes{$ft_id}){
       $ftypes{$ft_id} = $ft_adaptor->fetch_by_dbID($ft_id);
     
       if(! defined $ftypes{$ft_id}){
@@ -341,6 +377,13 @@ sub store{
       throw( "InputSubset '" . $subset->name . "' already stored in the DB.".
             "InputSubsetAdaptor does not support updating yet.");
     }
+    
+    #Test object attrs are stored
+    $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $subset->feature_type);
+    $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType',    $subset->cell_type);
+    $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Experiment',  $subset->experiment);
+    $self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis',             $subset->analysis);
+    
 
     $sth->bind_param(1, $subset->cell_type->dbID,     SQL_INTEGER);
     $sth->bind_param(2, $subset->experiment->dbID,    SQL_INTEGER);
@@ -409,6 +452,31 @@ sub _constrain_archive_ids {
   #{} = not futher constraint conf
   return (' iss.archive_id IN '.join(', ', (map {uc($_)} @$archive_ids)) , {});
 }
+
+sub _constrain_cell_types {
+  my ($self, $cts) = @_;
+
+  my $constraint = $self->_table_syn.'.cell_type_id IN ('.
+        join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $cts, 'dbID')}
+        ).')';
+
+  #{} = no futher contraint config
+  return ($constraint, {});
+}
+
+
+sub _constrain_feature_types {
+  my ($self, $fts) = @_;
+
+  #Don't need to bind param this as we validate
+  my $constraint = $self->_table_syn.'.feature_type_id IN ('.
+    join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $fts, 'dbID')}).')';
+
+  #{} = no futher constraint conf
+  return ($constraint, {});
+}
+
+
 
 
 ###ÊDEPRECATED METHODS ###

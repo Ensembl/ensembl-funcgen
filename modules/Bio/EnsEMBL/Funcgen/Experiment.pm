@@ -64,7 +64,6 @@ use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw  );
 use parent qw( Bio::EnsEMBL::Funcgen::Storable );
 
-
 =head2 new
 
   Arg [-NAME]                : String - experiment name
@@ -96,17 +95,10 @@ sub new {
 	my $class  = ref($caller) || $caller;
 	my $self   = $class->SUPER::new(@_);
 
-	my ($name, $group, $date, $p_dtype, $desc, $archive_id, $data_url, $xml_id, $xml)
-		= rearrange( ['NAME', 'EXPERIMENTAL_GROUP', 'DATE', 'PRIMARY_DESIGN_TYPE',
-					  'DESCRIPTION','ARCHIVE_ID', 'DATA_URL', 'MAGE_XML', 'MAGE_XML_ID'], @_ );
-
-
-    #Added in v68
-    #Remove in v69
-    if($data_url || $archive_id){
-      throw('The -data_url and -archive_id parameters have been moved to the InputSubSet class');
-    }
-
+	my ($name, $group, $date, $p_dtype, 
+	    $desc, $xml, $xml_id, $ftype, $ctype) = rearrange
+	 ( ['NAME', 'EXPERIMENTAL_GROUP', 'DATE', 'PRIMARY_DESIGN_TYPE',
+      'DESCRIPTION', 'MAGE_XML', 'MAGE_XML_ID', 'FEATURE_TYPE', 'CELL_TYPE'], @_ );
 
 	#Mandatory attr checks
 
@@ -118,15 +110,23 @@ sub new {
 	  throw('You must provide a name parameter');
 	}
 
+  if(! (ref($ctype) && $ctype->isa('Bio::EnsEMBL::Funcgen::CellType')) ){
+    throw('You must provide a valid Bio::EnsEMBL::Funcgen::CellType');
+  }
+
+  if(! (ref($ftype) && $ftype->isa('Bio::EnsEMBL::Funcgen::FeatureType')) ){
+    throw('You must provide a valid Bio::EnsEMBL::Funcgen::FeatureType');
+  }
+  
 	#test date format here?
-
-
 	#Direct assignment here so we avoid setter test in methods
 	$self->{name}                = $name;
 	$self->{group}               = $group;
 	$self->{date}                = $date       if defined $date;
 	$self->{primary_design_type} = $p_dtype    if defined $p_dtype; #MGED term for primary design type
 	$self->{description}         = $desc       if defined $desc;
+	$self->{cell_type}           = $ctype;
+  $self->{feature_type}        = $ftype;
 
 	#Maintain setter funcs here as these are populated after initialisation
 	$self->mage_xml_id($xml_id) if defined $xml_id;
@@ -134,6 +134,37 @@ sub new {
 
 	return $self;
 }
+
+
+
+=head2 cell_type
+
+  Example    : my $ctype_name = $exp->cell_type->name;
+  Description: Getter for the CellType.
+  Returntype : Bio::EnsEMBL::Funcgen::CellType
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub cell_type { return shift->{cell_type}; }
+
+
+=head2 feature_type
+
+  Example    : my $ftype_name = $exp->feature_type->name;
+  Description: Getter for the FeatureType.
+  Returntype : Bio::EnsEMBL::Funcgen::FeatureType
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub feature_type { return shift->{feature_type}; }
+
+
 
 
 =head2 name
