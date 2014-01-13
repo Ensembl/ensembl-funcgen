@@ -64,7 +64,7 @@ package Bio::EnsEMBL::Funcgen::Array;
 use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 
 use parent qw(Bio::EnsEMBL::Funcgen::Storable);
 
@@ -109,8 +109,8 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
   
-  my ($name, $format, $size,  $vendor, $type, $desc, $aclass)
-    = rearrange( ['NAME', 'FORMAT', 'SIZE',  'VENDOR', 'TYPE', 'DESCRIPTION', 'CLASS'], @_ );
+  my ($name, $format, $vendor, $type, $desc, $aclass)
+    = rearrange( ['NAME', 'FORMAT', 'VENDOR', 'TYPE', 'DESCRIPTION', 'CLASS'], @_ );
   
   #mandatory params?
   #name, format, vendor
@@ -134,7 +134,6 @@ sub new {
   }
 
   $self->class(uc($aclass))     if defined $aclass;
-  $self->size($size)        if defined $size;
   $self->vendor($vendor);
   $self->description($desc) if defined $desc;
   $self->type($type)        if defined $type;
@@ -375,26 +374,6 @@ sub class {
 }
 
 
-=head2 size
-
-  Arg [1]    : (optional) int - the number of ? in the array
-  Example    : my $size = $array->size();
-  Description: Getter of size attribute for Array objects. This
-               simply counts the constituent ArrayChips
-  Returntype : int
-  Exceptions : None
-  Caller     : General
-  Status     : Medium Risk
-
-=cut
-
-sub size {
-  my $self = shift;
-
-  return scalar(keys %{$self->{'array_chips'}});
-}
-
-
 =head2 vendor
 
   Arg [1]    : (optional) string - the name of the array vendor
@@ -423,7 +402,7 @@ sub vendor {
 =head2 description
 
   Arg [1]    : (optional) string - the description of the array
-  Example    : my $size = $array->description();
+  Example    : my $desc = $array->description();
   Description: Getter, setter of description attribute for
                Array objects. 
   Returntype : string
@@ -574,6 +553,19 @@ sub add_ArrayChip{
   }
 
   return;
+}
+
+
+### DEPRECATED METHODS ###
+
+
+sub size { #deprecated 75
+  my $self = shift;
+
+  deprecate('This method was ambiguous and simply returned the number of ArrayChips. '.
+    'It will be removed in release 79');
+
+  return scalar(keys %{$self->{'array_chips'}});
 }
 
 
