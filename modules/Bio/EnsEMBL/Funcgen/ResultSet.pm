@@ -67,17 +67,9 @@ use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
-use parent qw( Bio::EnsEMBL::Funcgen::Set );
+use parent qw( Bio::EnsEMBL::Funcgen::Set Bio::EnsEMBL::Funcgen::feature_class_Set);
 
 #Valid enum field hashes to prevent loading NULLs
-
-#result_set.feature_class
-my %valid_classes =
-  (
-   result => undef,
-   dna_methylation => undef,
-  );
-
 #result_set_input.table_name
 my %valid_table_names =
   (
@@ -124,7 +116,7 @@ sub new {
 
   #explicit type check here to avoid invalid types being imported as NULL
   #and subsequently throwing errors on retrieval
-  my $type = $self->feature_class;
+  $self->_validate_feature_class(\@_);
   
   #set default type until this is moved to db_file_registry.format
   #This is not possible yet as 5mC is classed as DNA not DNA Modification!!!
@@ -132,10 +124,6 @@ sub new {
   $self->{replicate}      = $rep;
   $self->{table_ids}      = {};
 
-  if ( !( $type && exists $valid_classes{$type} ) ) {
-    throw( 'You must define a valid ResultSet type e.g. ' .
-           join( ', ', keys %valid_classes ) );
-  }
 
   #Need to maintain -table_name and _add_table_id for lazy loading ability 
   if(defined $table_name){
@@ -147,19 +135,14 @@ sub new {
    
     $self->{table_name}         = $table_name;    
   }
-  else{
-   #define table_name here based on support? 
+  #else defined based on support? 
     
-  }
-  
   #This will currently allow a ResultSet with no support/table_ids   
   if(defined $support){ 
     $self->add_support($support);     
   }
   elsif(! defined $table_name){
-    throw('You must provide either a -support or a -table_name parameter');
-    
-    
+    throw('You must provide either a -support or a -table_name parameter');    
   }
   
   #Remove this when -table_id fully deprecated
@@ -172,12 +155,16 @@ sub new {
     }
   }
   
-  
 
   $self->{result_feature_set} = (defined $rf_set) ? 1 : 0;
   $self->dbfile_data_dir($dbfile_data_dir) if defined $dbfile_data_dir;
 
   return $self;
+}
+
+
+sub _valid_feature_classes{
+  return qw( result dna_methylation );
 }
 
 
@@ -283,13 +270,13 @@ sub add_support{
   }
   elsif(! defined $tmp_table_name){
     $self->{table_name} = $table_name;  
-  }
   
-  #Validate table name
-  if(! exists $valid_table_names{$table_name}){
-    throw("The -table_name or -support objects do not refer to a valid".
-          " support table:\t$table_name\nValid table names:\t".
-          join(', ', keys %valid_table_names));
+    #Validate table name
+    if(! exists $valid_table_names{$table_name}){
+      throw("The -table_name or -support objects do not refer to a valid".
+            " support table:\t$table_name\nValid table names:\t".
+            join(', ', keys %valid_table_names));
+    }
   }
   
   #todo validate $ssets have same cell_type and feature_type

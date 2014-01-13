@@ -47,7 +47,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::InputSubsetAdaptor;
 use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception         qw( throw );
+use Bio::EnsEMBL::Utils::Exception         qw( throw deprecate );
 use Bio::EnsEMBL::Funcgen::InputSubset;
 use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor; #DBI sql_types import
 
@@ -63,9 +63,13 @@ use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor);
   Returntype : Arrayref of Bio::EnsEMBL::Funcgen::InputSubset objects
   Exceptions : None
   Caller     : General
-  Status     : Stable
+  Status     : At risk
 
 =cut
+
+
+#Was stable in 74
+#This will go away when we drop InputSets
 
 sub fetch_all_by_InputSet {
   my ($self, $iset) = @_;
@@ -98,28 +102,43 @@ sub fetch_all_by_Experiments {
 	return $self->generic_fetch($self->compose_constraint_query($params));
 }
 
+#experiment is only a 2nd order index (unique)key and analysis_id is not indexe at all
 
-=head2 fetch_by_name_and_experiment
 
-  Arg [1]    : string - InputSubset name
-  Arg [2]    : Bio::EnsEMBL::Funcgen::Experiment
-  Example    : my $iss = $iss_a->fetch_by_name_and_experiment('Iss_name', $exp);
-  Description: Retrieves a InputSubset object which matches the passed name and experiment
+
+
+
+=head2 fetch_by_name
+
+  Arg [1]    : String - InputSubset name
+  Arg [2]    : Bio::EnsEMBL::Funcgen::Experiment (optional)
+  Example    : my $iss = $iss_a->fetch_by_name('Iss_name');
+  Description: Retrieves a InputSubset object which matches the passed name 
+               and optional Experiment
   Returntype : Bio::EnsEMBL::Funcgen::InputSubset
-  Exceptions : Throws if no name defined or if more than one returned
+  Exceptions : Throws if no name or defined
+               Throws if no Experiment and cannot identify unique InputSubset
   Caller     : General
   Status     : At risk
 
 =cut
 
-sub fetch_by_name_and_experiment {
+sub fetch_by_name {
   my ($self, $name, $exp) = @_;
 
-  my $params =
-   {constraints => {experiments => [$exp],
-                    name        => $name}};
-	return $self->generic_fetch($self->compose_constraint_query($params));
+  my $params = {constraints => {name        => $name}};
+  $params->{contraints}{experiments} = [$exp] if $exp;
+  
+  my $sets = $self->generic_fetch($self->compose_constraint_query($params));
+  
+  if(scalar(@$sets) > 1){
+    throw("Could not identify a unique InputSubset with name:\t$name".
+      "\nPlease specify an Experiment argument");  
+  }
+  
+  return $sets->[0]; 
 }
+
 
 
 =head2 _columns
@@ -149,6 +168,7 @@ sub _columns {
       iss.is_control
       iss.name
       iss.replicate
+      iss.analysis_id
       );
 }
 
@@ -196,6 +216,7 @@ sub _objs_from_sth {
       $is_control,
       $name,
       $replicate,
+      $analysis_id
      );
 
 #  my $is_adaptor = $self->db->get_InputSetAdaptor;
@@ -214,41 +235,60 @@ sub _objs_from_sth {
       \$is_control,
       \$name,
       \$replicate,
+      \$analysis_id
       );
 
   my $ct_adaptor  = $self->db->get_CellTypeAdaptor;
   my $exp_adaptor = $self->db->get_ExperimentAdaptor;
   my $ft_adaptor  = $self->db->get_FeatureTypeAdaptor;
-
+  my $analysis_adaptor = $self->db->get_AnalysisAdaptor; 
+  my (%ctypes, %ftypes, %exps);  
+ 
   while($sth->fetch){
-    my $ct = $ct_adaptor->fetch_by_dbID($ct_id);
-    if(! defined $ct){
-      throw("Could not fetch linked experiment (dbID: $ct_id) for InputSubset (dbID: $iss_id) ");
+    
+    if(! exists $ctypes{$ct_id}){
+      $ctypes{$ct_id} = $ct_adaptor->fetch_by_dbID($ct_id);
+    
+      if(! defined $ctypes{$ct_id}){
+        throw("Could not fetch linked CellType (dbID: $ct_id) for InputSubset (dbID: $iss_id) ");
+      }
     }
-
-    my $exp = $exp_adaptor->fetch_by_dbID($exp_id);
-    if(! defined $exp){
-      throw("Could not fetch linked experiment (dbID: $exp_id) for InputSubset (dbID: $iss_id) ");
+    
+   if(! exists $exps{$exp_id}){
+      $exps{$exp_id} = $exp_adaptor->fetch_by_dbID($exp_id);
+    
+      if(! defined $exps{$exp_id}){
+        throw("Could not fetch linked Experiment (dbID: $ct_id) for InputSubset (dbID: $iss_id) ");
+      }
     }
-
-    my $ft = $ft_adaptor->fetch_by_dbID($ft_id);
-    if(! defined $ft){
-      throw("Could not fetch linked FeatureType (dbID: $ft_id) for InputSubset (dbID: $iss_id) ");
+    
+    if(! exists $ftypes{$ct_id}){
+      $ftypes{$ft_id} = $ft_adaptor->fetch_by_dbID($ft_id);
+    
+      if(! defined $ftypes{$ft_id}){
+        throw("Could not fetch linked FeatureType (dbID: $ft_id) for InputSubset (dbID: $iss_id) ");
+      }
     }
+    
+    #Don't cache analyses, as the adaptor does this
+    my $analysis = $analysis_adaptor->fetch_by_dbID($analysis_id) ||
+      throw("Could not fetch linked Analysis (dbID: $analysis_id) for InputSubset (dbID: $iss_id)");
 
     push @result, Bio::EnsEMBL::Funcgen::InputSubset->new (
        -dbID         => $iss_id,
-       -CELL_TYPE    => $ct,
-       -EXPERIMENT   => $exp,
-       -FEATURE_TYPE => $ft,
+       -CELL_TYPE    => $ctypes{$ct_id},
+       -EXPERIMENT   => $exps{$exp_id},
+       -FEATURE_TYPE => $ftypes{$ft_id},
        -ARCHIVE_ID   => $archive_id,
        -DISPLAY_URL  => $display_url,
        -IS_CONTROL   => $is_control,
        -NAME         => $name,
        -REPLICATE    => $replicate,
+       -ANALYSIS     => $analysis,
       );
   }
-  return(\@result);
+  
+  return \@result;
 }
 
 
@@ -284,9 +324,10 @@ sub store{
             display_url,
             is_control,
             name,
-            replicate
+            replicate,
+            analysis_id
         )
-        VALUES (?, ?, ?, ?, ?, ?, ? ,?)
+        VALUES (?, ?, ?, ?, ?, ?, ? ,?, ?)
     ");
 
 
@@ -309,6 +350,7 @@ sub store{
     $sth->bind_param(6, $subset->is_control,          SQL_INTEGER);
     $sth->bind_param(7, $subset->name,                SQL_VARCHAR);
     $sth->bind_param(8, $subset->replicate,           SQL_INTEGER);
+    $sth->bind_param(9, $subset->analysis->dbID,      SQL_INTEGER);
     $sth->execute();
 
     $subset->dbID($self->last_insert_id);
@@ -353,8 +395,7 @@ sub _constrain_input_sets {
     isiss.input_set_id  IN ('.
     join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::InputSet', $isets, 'dbID')}).')';
 
-#  return ($constraint);
-return ($constraint, $constraint_conf);
+  return ($constraint, $constraint_conf);
 }
 
 sub _constrain_archive_ids {
@@ -367,6 +408,25 @@ sub _constrain_archive_ids {
 
   #{} = not futher constraint conf
   return (' iss.archive_id IN '.join(', ', (map {uc($_)} @$archive_ids)) , {});
+}
+
+
+###ÊDEPRECATED METHODS ###
+
+#should have been fetch_by_name_and_Experiment
+#Experiment is not needed in the majority of cases
+#was also returning Arrayref
+
+sub fetch_by_name_and_experiment { #Deprecated in 75
+  my ($self, $name, $exp) = @_;
+
+  deprecate('Please use the new fetch_by_name method. This method will be removed in release 79');
+
+  return $self->fetch_by_name($name, $exp);
+  #my $params =
+  # {constraints => {experiments => [$exp],
+  #                  name        => $name}};
+  #return $self->generic_fetch($self->compose_constraint_query($params));
 }
 
 

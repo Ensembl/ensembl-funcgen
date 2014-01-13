@@ -73,8 +73,7 @@ use Bio::EnsEMBL::Utils::Argument   qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception  qw( throw deprecate );
 use Bio::EnsEMBL::Utils::Scalar     qw( assert_ref );
 
-use parent qw( Bio::EnsEMBL::Funcgen::Storable );
-#Change to Set, once we add analysis to InputSubset(and remove InputSet)
+use parent qw( Bio::EnsEMBL::Funcgen::Set );
 
 =head2 new
 
@@ -113,6 +112,7 @@ sub new {
       $is_control,
       $name,
       $rep,
+      $analysis
       )
     = rearrange([
         'CELL_TYPE',
@@ -123,12 +123,13 @@ sub new {
         'IS_CONTROL',
         'NAME',
         'REPLICATE',
+        'ANALYSIS',
         ], @_);
 
   throw('Must provide a name argument') if !defined $name;
 
-  assert_ref($exp, 'Bio::EnsEMBL::Funcgen::Experiment');
-  assert_ref($cell_type, 'Bio::EnsEMBL::Funcgen::CellType');
+  assert_ref($exp,          'Bio::EnsEMBL::Funcgen::Experiment');
+  assert_ref($cell_type,    'Bio::EnsEMBL::Funcgen::CellType');
   assert_ref($feature_type, 'Bio::EnsEMBL::Funcgen::FeatureType');
 
   $self->{cell_type}    = $cell_type;
@@ -328,7 +329,7 @@ sub compare_to {
   my ($self, $obj, $shallow, $scl_methods, $obj_methods) = @_;
 
   $scl_methods ||= [qw(name archive_id display_url replicate is_control)];
-  $obj_methods ||= [qw(cell_type experiment feature_type)];
+  $obj_methods ||= [qw(cell_type experiment feature_type analysis)];
 
   return $self->SUPER::compare_to($obj, $shallow, $scl_methods, $obj_methods);
 }

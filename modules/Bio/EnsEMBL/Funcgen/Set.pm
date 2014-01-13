@@ -73,8 +73,7 @@ use parent qw( Bio::EnsEMBL::Funcgen::Storable );
   MANDATORY ARGS:
   Arg [-NAME]          : String - name for this Set.
   Arg [-FEATURE_TYPE]  : Bio::EnsEMBL::Funcgen::FeatureType
-  Arg [-FEATURE_CLASS] : String - Class of feature e.g. result, annotated,
-                         regulatory, segmentation, external or dna_methylation.
+
   OPTIONAL ARGS:
   Arg [-CELL_TYPE]     : Bio::EnsEMBL::Funcgen::CellType
   Arg [-ANALYSIS]      : Bio::EnsEMBL::Analysis
@@ -101,19 +100,18 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($name, $anal, $ftype, $ctype, $fclass, $type)
-    = rearrange(['NAME', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE',
-                 'FEATURE_CLASS', 'TYPE'], @_);
+  my ($name, $anal, $ftype, $ctype)
+    = rearrange(['NAME', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE'], @_);
 
   #MANDATORY PARAMS
   throw('Need to specify a name')     if ! defined $name;
-  $self->{feature_class} = $fclass || $type;
-  throw('Need to specify a -feature_class') if ! defined $self->{feature_class};
-  #feature_class validation should be done in inheritor constructors
-  #against hash of valid enum field values
 
   if(! (ref($ftype) && $ftype->isa('Bio::EnsEMBL::Funcgen::FeatureType')) ){
     throw('You must provide a valid Bio::EnsEMBL::Funcgen::FeatureType');
+  }
+
+  if(! (ref($anal) && $ftype->isa('Bio::EnsEMBL::Analysis')) ){
+    throw('You must provide a valid Bio::EnsEMBL::Analysis');
   }
 
   #OPTIONAL PARAMS
@@ -126,25 +124,11 @@ sub new {
   my @namespace = split/\:\:/, ref($self);
   ($self->{_set_type} = lc($namespace[$#namespace])) =~ s/set//;
 
-  if(defined $anal){
-
-    if(ref($anal) ne 'Bio::EnsEMBL::Analysis'){
-      throw('-ANALYSIS argument must be a valid Bio::EnsEMBL::Analysis');
-    }
-
-    $self->{analysis} = $anal;
-  }
-  elsif($self->set_type ne 'input'){
-    #Currently not mandatory for input_sets
-    #Could move this to child Sets and just set analysis here
-    #As with ftype
-     throw('Must pass a valid -analysis parameter for a '.ref($self));
-  }
-
   #Direct assignment as we have already validated
   $self->{name}         = $name;
   $self->{cell_type}    = $ctype;
   $self->{feature_type} = $ftype;
+  $self->{analysis}     = $anal;
 
   return $self;
 }
@@ -161,7 +145,7 @@ sub new {
 
 =cut
 
-sub name { return $_[0]->{name}; }
+sub name { return shift->{name}; }
 
 
 =head2 cell_type
@@ -175,7 +159,7 @@ sub name { return $_[0]->{name}; }
 
 =cut
 
-sub cell_type { return $_[0]->{cell_type}; }
+sub cell_type { return shift->{cell_type}; }
 
 
 =head2 feature_type
@@ -189,49 +173,7 @@ sub cell_type { return $_[0]->{cell_type}; }
 
 =cut
 
-sub feature_type { return $_[0]->{feature_type}; }
-
-
-=head2 feature_class
-
-  Arg[0]     : String - feature class e.g. result, annotated, regulatory, external, dna_methylation or segmentation
-  Example    : my $fclass = $set->feature_class;
-  Description: Getter for the feature_type for this Set.
-  Returntype : String
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-sub feature_class { return $_[0]->{feature_class}; }
-
-
-=head2 feature_class_name
-
-  Example    : my $fclass_adaptor_method = 'get_'.$set->feature_class.'Adaptor';
-  Description: Getter for the full feature class name for this Set e.g. AnnotatedFeature, RegulatoryFeature
-  Returntype : String
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-#Test for adaptor
-#Can't set this in new as we won't pass the adaptor
-#unless creating from _obj_from_sth
-
-sub feature_class_name{
-  my $self = shift;
-
-  if(! defined $self->{feature_class_name} ){
-    $self->{feature_class_name} = $self->adaptor->build_feature_class_name($self->feature_class);
-  }
-
-  return $self->{feature_class_name};
-}
-
+sub feature_type { return shift->{feature_type}; }
 
 
 =head2 analysis
@@ -245,10 +187,7 @@ sub feature_class_name{
 
 =cut
 
-#Not currently present in input_set
-#implement in input_set instead of format
-
-sub analysis {  return $_[0]->{analysis}; }
+sub analysis {  return shift->{analysis}; }
 
 
 =head2 set_type
@@ -262,35 +201,7 @@ sub analysis {  return $_[0]->{analysis}; }
 
 =cut
 
-sub set_type { return $_[0]->{_set_type}; }
-
-
-
-
-### DEPRECATED METHODS ###
-
-
-=head2 type
-
-  Example    : my $type = $set->type;
-  Description: DEPRECATED Getter for the type for this Set.
-               e.g. annotated, external, regulatory for FeatureSets
-                    or
-                    array, sequencing for InputSets
-               Currently not applicable to DataSets or ResultSets
-  Exceptions : None
-  Returntype : string
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub type {
-  my $self = shift;
-  deprecate('Please use feature_class instead');
-  return $self->feature_class(@_);
-}
+sub set_type { return shift->{_set_type}; }
 
 
 

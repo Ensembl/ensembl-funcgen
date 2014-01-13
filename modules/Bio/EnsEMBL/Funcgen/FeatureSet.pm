@@ -92,15 +92,7 @@ use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 
-use parent qw(Bio::EnsEMBL::Funcgen::Set);
-
-
-my %valid_classes = (
-                     annotated    => undef,
-                     regulatory   => undef,
-                     external     => undef,
-                     segmentation => undef,
-                    );
+use parent qw(Bio::EnsEMBL::Funcgen::Set Bio::EnsEMBL::Funcgen::feature_class_Set);
 
 =head2 new
 
@@ -173,7 +165,7 @@ sub new {
 
   #explicit type check here to avoid invalid types being imported as NULL
   #subsequently throwing errors on retrieval
-  my $type = $self->feature_class;
+  my $type = $self->_validate_feature_class;
 
   if ( (! defined $self->cell_type) &&
        ($type ne 'external') ){
@@ -195,6 +187,10 @@ sub new {
   return $self;
 }                               ## end sub new
 
+
+sub _valid_feature_classes{
+  return qw( annotated regulatory external segmentation );
+}
 
 
 =head2 new_fast
