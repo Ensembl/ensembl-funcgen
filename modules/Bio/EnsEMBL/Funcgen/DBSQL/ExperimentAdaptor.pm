@@ -89,7 +89,7 @@ sub fetch_by_name {
 =head2 fetch_all_by_FeatureType
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureType object
-  Example    : my @exps = @{$exp_adaptopr->fetch_all_by_FeatureType($ftype)};
+  Example    : my @exps = @{$exp_adaptor->fetch_all_by_FeatureType($ftype)};
   Description: Retrieves Experiment objects from the database based on FeatureType
   Returntype : Arrayref of Bio::EnsEMBL::Funcgen::Experiment objects
   Exceptions : None
@@ -109,7 +109,7 @@ sub fetch_all_by_FeatureType {
 =head2 fetch_all_by_CellType
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::CellType object
-  Example    : my @exps = @{$exp_adaptopr->fetch_all_by_CellType($ctype)};
+  Example    : my @exps = @{$exp_adaptor->fetch_all_by_CellType($ctype)};
   Description: Retrieves Experiment objects from the database based on CellType
   Returntype : Arrayref of Bio::EnsEMBL::Funcgen::Experiment objects
   Exceptions : None
@@ -123,6 +123,29 @@ sub fetch_all_by_CellType {
   my $params = {constraints => {cell_types => [$ctype]}};
   return $self->generic_fetch($self->compose_constraint_query($params));
 }
+
+
+=head2 fetch_all_by_Analysis
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Analysis
+  Example    : my @exps = @{$exp_adaptor->fetch_all_by_Analysis($analysis)};
+  Description: Retrieves Experiment objects from the database based on an Analysis
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::Experiment objects
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_Analysis {
+  my ($self, $ctype, $status) = @_;
+  my $params = {constraints => {analyses => [$ctype]}};
+  $params->{constraints}{states} = [$status] if defined $status;
+  my $results = $self->generic_fetch($self->compose_constraint_query($params));
+  $self->reset_true_tables; #As we may have added status
+  return $results;
+}
+
 
 
 =head2 get_all_experiment_names
@@ -446,6 +469,16 @@ sub _constrain_feature_types {
   return ($constraint, {});
 }
 
+
+sub _constrain_analyses {
+  my ($self, $anals) = @_;
+
+  #Don't need to bind param this as we validate
+  my $constraint = $self->_table_syn.'.analysis_id IN ('.
+    join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Analysis', $anals, 'dbID')}).')';
+
+  return ($constraint, {});   #{} = no futher constraint conf
+}
 
 
 

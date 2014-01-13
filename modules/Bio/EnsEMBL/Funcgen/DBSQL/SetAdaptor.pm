@@ -61,8 +61,8 @@ use vars qw(@EXPORT); #require Exporter done in parent
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureType
   Arg [2]    : String  (optional) - status e.g. 'DISPLAYABLE'
-  Example    :
-  Description: 
+  Example    : my @sets = @{$set_adaptor->fetch_all_by_FeatureType($ftype)};
+  Description: Retrieves Set objects from the database based on FeatureType
   Returntype : Arrayref of Bio::EnsEMBL::Funcgen::Set objects
   Exceptions : None
   Caller     : General
@@ -83,8 +83,8 @@ sub fetch_all_by_FeatureType {
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::CellType
   Arg [2]    : String  (optional) - status e.g. 'DISPLAYABLE'
-  Example    :
-  Description:
+  Example    : my @sets = @{$set_adaptor->fetch_all_by_CellType($ctype)};
+  Description: Retrieves Set objects from the database based on CellType
   Returntype : Arrayref of Bio::EnsEMBL::Funcgen::Set objects
   Exceptions : None
   Caller     : General
@@ -105,8 +105,8 @@ sub fetch_all_by_CellType {
 =head2 fetch_all_by_Analysis
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::Analysis
-  Example    : 
-  Description:
+  Example    : my @sets = @{$set_adaptopr->fetch_all_by_Analysis($analysis)};
+  Description: Retrieves Set objects from the database based on Analysis
   Returntype : Arrayref of Bio::EnsEMBL::Funcgen::Set objects
   Exceptions : None
   Caller     : General
