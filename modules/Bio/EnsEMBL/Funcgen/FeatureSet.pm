@@ -172,11 +172,6 @@ sub new {
     throw("Only FeatureSets with type 'external' can have an undefined CellType");
   }
 
-  if ( ! ( $type && exists $valid_classes{$type} ) ) {
-    throw( 'You must define a valid FeatureSet type e.g. ' .
-           join( ', ', keys %valid_classes ) );
-  }
-
   #Direct assignment to prevent need for set arg test in method
   $self->{description}   = $desc    if defined $desc;
   $self->{display_label} = $dlabel  if defined $dlabel;
@@ -274,7 +269,7 @@ sub get_FeatureAdaptor{
 
   if (! exists $self->{'adaptor_refs'}) {
 
-    foreach my $valid_class (keys %valid_classes) {
+    foreach my $valid_class (@{$self->_valid_feature_classes}) {
       my $method = 'get_'.$self->adaptor->build_feature_class_name($valid_class).'Adaptor';
       $self->{'adaptor_refs'}{$valid_class} = $self->adaptor->db->$method;
     }
