@@ -364,16 +364,6 @@ sub fetch_all_by_associated_MotifFeature{
 #TODO GENERIC CONSTRAIN METHODS
 #1 motif_features
 
-### DEPRECATED METHODS ###
-
-#sub fetch_all_by_Slice_FeatureSet { #removed in v74
-#  my ($self, $slice, $fset) = @_;
-#  deprecate('Please use generic method SetFeatureAdaptor::fetch_all_by_Slice_FeatureSets');
-#  return $self->fetch_all_by_Slice_FeatureSets($slice, [$fset]);
-#}
-
-
-#sub fetch_all_by_Slice_Experiment # removed in v68 was never functional
 
 
 1;
