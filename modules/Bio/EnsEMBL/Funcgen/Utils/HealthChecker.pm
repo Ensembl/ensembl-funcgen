@@ -484,7 +484,7 @@ sub check_regbuild_strings{
   #my $mc = $self->db->get_MetaContainer;
   my $regf_a = $self->db->get_RegulatoryFeatureAdaptor;
   #We now want to chek all build
-  @regf_fsets = @{$fset_a->fetch_all_by_type('regulatory')};
+  @regf_fsets = @{$fset_a->fetch_all_by_feature_class('regulatory')};
 
 
   if(scalar(@regf_fsets) == 0){
