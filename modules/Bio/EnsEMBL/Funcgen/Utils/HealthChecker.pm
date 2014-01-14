@@ -753,7 +753,7 @@ sub check_stable_ids{
 
   my $fset_a = $self->db->get_FeatureSetAdaptor;
 
-  my @regf_fsets = @{$fset_a->fetch_all_by_type('regulatory')};
+  my @regf_fsets = @{$fset_a->fetch_all_by_feature_class('regulatory')};
 
   if(!@regf_fsets){
 	$self->report('WARNING: No regulatory FeatureSets found (fine if '.$self->db->species.' does not have a regulatory build)');
@@ -847,7 +847,7 @@ sub validate_DataSets{
   my %set_states;
   my $sql;
 
- RF_FSET: foreach my $rf_fset(@{$fset_a->fetch_all_by_type('regulatory')}){
+ RF_FSET: foreach my $rf_fset(@{$fset_a->fetch_all_by_feature_class('regulatory')}){
 	my $rf_fset_name = $rf_fset->name;
 
 
