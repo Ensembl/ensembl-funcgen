@@ -33,7 +33,7 @@ Bio::EnsEMBL::Funcgen::Set - A module to represent a base Set object.
 
 =head1 SYNOPSIS
 
-  use parent qw( Bio::EnsEMBL::Funcgen::Set )
+  use base qw( Bio::EnsEMBL::Funcgen::Set )
 
   sub new {
     my $caller = shift;
@@ -66,7 +66,7 @@ use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
-use parent qw( Bio::EnsEMBL::Funcgen::Storable );
+use base qw( Bio::EnsEMBL::Funcgen::Storable );
 
 =head2 new
 

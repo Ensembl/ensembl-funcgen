@@ -34,7 +34,7 @@ use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Funcgen::ExternalFeature;
 
-use parent qw( Bio::EnsEMBL::Funcgen::Parsers::BaseExternalParser );
+use base qw( Bio::EnsEMBL::Funcgen::Parsers::BaseExternalParser );
 
 
 # To get files for REDfly, download the following 2 GFF3 files (e.g. via wget):

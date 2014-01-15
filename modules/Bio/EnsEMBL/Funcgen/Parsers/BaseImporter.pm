@@ -51,7 +51,7 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( validate_path );
 use Bio::EnsEMBL::Funcgen::FeatureSet;
 use Bio::EnsEMBL::Funcgen::FeatureType;
 
-use parent qw( Bio::EnsEMBL::Funcgen::Utils::Helper );
+use base qw( Bio::EnsEMBL::Funcgen::Utils::Helper );
 
 #new
 #edb_release over-ride, to enable loading of old data.

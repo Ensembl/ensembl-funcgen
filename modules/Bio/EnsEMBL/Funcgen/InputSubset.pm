@@ -73,7 +73,7 @@ use Bio::EnsEMBL::Utils::Argument   qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception  qw( throw deprecate );
 use Bio::EnsEMBL::Utils::Scalar     qw( assert_ref );
 
-use parent qw( Bio::EnsEMBL::Funcgen::Set );
+use base qw( Bio::EnsEMBL::Funcgen::Set );
 
 =head2 new
 

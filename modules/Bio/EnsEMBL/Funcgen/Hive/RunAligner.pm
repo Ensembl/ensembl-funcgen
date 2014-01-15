@@ -39,7 +39,7 @@ package Bio::EnsEMBL::Funcgen::Hive::RunAligner;
 use warnings;
 use strict;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
-use parent qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
+use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
 #todo make this independant of ResultSet?
 

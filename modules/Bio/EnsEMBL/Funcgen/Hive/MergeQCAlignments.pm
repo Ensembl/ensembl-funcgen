@@ -40,7 +40,7 @@ use strict;
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd );
 
-use parent qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
+use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
 #TODO... use and update the tracking database dependant on no_tracking...
 

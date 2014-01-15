@@ -44,7 +44,7 @@ use strict;
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( is_gzipped run_system_cmd run_backtick_cmd );
 
-use parent qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
+use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
 #TODO... use and update the tracking database dependant on no_tracking...
 

@@ -54,7 +54,7 @@ use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
 use Bio::EnsEMBL::Funcgen::Experiment;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#DBI sql_types bareword import
 
-use parent qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor );
+use base qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor );
 
 
 =head2 fetch_by_name

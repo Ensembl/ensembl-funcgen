@@ -76,7 +76,7 @@ package Bio::EnsEMBL::Funcgen::Collection::ResultFeature;
 
 use strict;
 use warnings;
-use parent qw( Bio::EnsEMBL::Feature );
+use base qw( Bio::EnsEMBL::Feature );
 
 #This needs to inherit from Bio::EnsEMBL::Collection
 #Which can host some of the below methods

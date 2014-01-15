@@ -37,7 +37,7 @@ use strict;
 use Bio::EnsEMBL::Utils::Exception qw (throw);
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(scalars_to_objects);
 
-use parent qw(Bio::EnsEMBL::Funcgen::Hive::BaseDB);
+use base qw(Bio::EnsEMBL::Funcgen::Hive::BaseDB);
 
 #This assumes the InputSet has been previously registered, 
 #and now we want simply to define/fetch the data set, feature and result set based on these data.

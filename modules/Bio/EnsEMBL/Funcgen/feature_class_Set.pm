@@ -33,7 +33,7 @@ Bio::EnsEMBL::Funcgen::feature_class_Set - A module to add the feature_class rol
 
 =head1 SYNOPSIS
 
-  use parent qw( Bio::EnsEMBL::Funcgen::Set Bio::EnsEMBL::Funcgen::feature_class_Set )
+  use base qw( Bio::EnsEMBL::Funcgen::Set Bio::EnsEMBL::Funcgen::feature_class_Set )
 
   sub new {
     my $caller = shift;

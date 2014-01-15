@@ -50,7 +50,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw);
 use POSIX;
 use Data::Dumper;
 
-use parent qw( Exporter );
+use base qw( Exporter );
 
 use vars qw(@EXPORT_OK);
 @EXPORT_OK = qw(get_encode_regions);

@@ -69,7 +69,7 @@ use warnings;
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate);
 
-use parent qw(Bio::EnsEMBL::Funcgen::Storable);
+use base qw(Bio::EnsEMBL::Funcgen::Storable);
 
 #Should not be a Set as is sufficiently different
 #_set_Sets_and_types also allows all Sets to be supporting

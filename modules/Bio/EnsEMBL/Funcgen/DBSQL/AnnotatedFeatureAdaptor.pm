@@ -54,7 +54,7 @@ use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor; #import sql_types barewords
 
-use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
+use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
 
 
 =head2 _true_tables

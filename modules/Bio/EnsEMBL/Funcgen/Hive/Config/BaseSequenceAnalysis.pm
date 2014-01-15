@@ -5,7 +5,7 @@ package Bio::EnsEMBL::Funcgen::Hive::Config::BaseSequenceAnalysis;
 
 use strict;
 use warnings;
-use parent qw(Bio::EnsEMBL::Funcgen::Hive::Config::BaseDB);
+use base qw(Bio::EnsEMBL::Funcgen::Hive::Config::BaseDB);
 
 # All Hive databases configuration files should inherit from HiveGeneric, directly or indirectly
 

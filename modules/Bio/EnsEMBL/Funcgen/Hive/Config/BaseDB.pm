@@ -25,7 +25,7 @@ package Bio::EnsEMBL::Funcgen::Hive::Config::BaseDB;
 use strict;
 use warnings;
 use Data::Dumper;
-use parent qw(Bio::EnsEMBL::Funcgen::Hive::Config::Base);
+use base qw(Bio::EnsEMBL::Funcgen::Hive::Config::Base);
 # All Hive databases configuration files should inherit from HiveGeneric, directly or indirectly
 
 

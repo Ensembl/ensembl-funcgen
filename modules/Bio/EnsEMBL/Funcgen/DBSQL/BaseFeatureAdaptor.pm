@@ -54,7 +54,7 @@ use Bio::EnsEMBL::Utils::Cache;
 use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 
-use parent qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor);
+use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor);
 
 use vars qw(@EXPORT); #require Exporter is done in BaseAdaptor
 @EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}});

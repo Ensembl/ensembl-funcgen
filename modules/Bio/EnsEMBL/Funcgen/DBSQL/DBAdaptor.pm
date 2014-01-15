@@ -62,7 +62,7 @@ use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( assert_ref_do );
 use Bio::EnsEMBL::Registry;
 
-use parent qw(Bio::EnsEMBL::DBSQL::DBAdaptor);
+use base qw(Bio::EnsEMBL::DBSQL::DBAdaptor);
 
 my $reg = "Bio::EnsEMBL::Registry";
 

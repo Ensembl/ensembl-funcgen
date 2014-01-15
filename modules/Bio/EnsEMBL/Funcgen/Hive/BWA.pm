@@ -19,7 +19,7 @@ use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd );
 
-use parent qw( Bio::EnsEMBL::Funcgen::Hive::Aligner );#Does not import
+use base qw( Bio::EnsEMBL::Funcgen::Hive::Aligner );#Does not import
 
 
 #todo use Rob Davies hardened bwa https://github.com/daviesrob/bwa

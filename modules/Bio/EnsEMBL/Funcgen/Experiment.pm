@@ -62,7 +62,7 @@ use strict;
 
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw  );
-use parent qw( Bio::EnsEMBL::Funcgen::Storable );
+use base qw( Bio::EnsEMBL::Funcgen::Storable );
 
 =head2 new
 

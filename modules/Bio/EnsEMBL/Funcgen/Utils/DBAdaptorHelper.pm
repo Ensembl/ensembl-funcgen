@@ -54,7 +54,7 @@ use Data::Dumper                   qw( Dumper              );
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor; #This was causing cyclical requirements as it requires EFGUtils
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
-use parent qw( Exporter );
+use base qw( Exporter );
 
 use vars   qw( @EXPORT_OK );
 @EXPORT_OK = qw(               

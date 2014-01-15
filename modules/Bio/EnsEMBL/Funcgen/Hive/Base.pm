@@ -51,7 +51,7 @@ use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref check_ref );
 use Scalar::Util                           qw( blessed );                                            
                                                
 
-use parent qw(Bio::EnsEMBL::Hive::Process);
+use base qw(Bio::EnsEMBL::Hive::Process);
 
 
 

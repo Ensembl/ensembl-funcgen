@@ -51,7 +51,7 @@ use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#DBI sql_types import
-use parent qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor );
+use base qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor );
 
 use vars qw(@EXPORT); #require Exporter done in parent
 @EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}});
