@@ -33,7 +33,7 @@ update_DB_for_release.pl
 
 This script performs several updates to the eFG DBs as part of the release cycle.
 
- perl update_DB_for_release.pl <mandatory paramters> [ optional parameters ]
+ perl update_DB_for_release.pl <mandatory paramters> [ optional parameters ] 
 
 
 =head1 DESCRIPTION
@@ -56,17 +56,23 @@ See Bio::EnsEMBL::Funcgen::Utils::HealthChecker for more details.
   -host         DB host
   -user         DB user
   -pass         DB pass
-  -data_version e.g. 58_37k
+  -data_version Suffix of DB name e.g. 58_37k 
   
 
  Optional
+  -builds            Override the default assembly build to update 
   -dbname            DB name (default production name will be used if not specified)
-  -dnadb_host        DNADB host
+  -dnadb_host        Host for core DB
+  -dnadb_name        Name for core DB
+  -dnadb_user        User name for core DB
+  -dnadb_pass        Pass word for core DB
+  -dnadb_port        Port for core DB
   -skip_meta_coord   These skip methods are useful as these are likely to compete
   -skip_analyse      with running processes, but you may want to run the rest of the
   -skip_xref_cleanup update, saving these skipped methods until everything is finished.
   -check_displayable Forces log_data_sets to only use DISPLAYABLE sets
-  -methods           Over-rides defaults behaviour and only run specified methods (see above)
+  -methods           Override default method with a list of method names
+  -method_params     List of a method name and associated method parameters/arguments
   -tee               Tees output to STDOUT
   -log_file           
   -no_log            No log file, but turns on tee
@@ -94,7 +100,7 @@ use Pod::Usage;
 use Getopt::Long;
 
 my ($pass, $species, $schema_build, $skip_meta_coord, $dnadb_host, $dnadb_user, $dnadb_pass);
-my ($dnadb_port, $check_displayable);
+my ($dnadb_name, $dnadb_port, $check_displayable, @builds);
 my ($help, $man, $dbname, $skip_xref_cleanup, $skip_analyse, @methods, @method_params);
 my $user = 'ensadmin';
 my $port = 3306;
@@ -104,81 +110,73 @@ my @tmp_args = @ARGV;
 #define here to avoid warnings
 $main::_tee = 0;
 
-GetOptions( 
-		   'host|h=s'          => \$host,
-		   'port=i'            => \$port,
-		   'user|u=s'          => \$user,
-		   'pass|p=s'          => \$pass,
-		   'dbname=s'          => \$dbname,
-		   'species|d=s'       => \$species,
-		   'data_versions=s'   => \$schema_build,#mandatory as default ensembldb will not exist
-		   'dnadb_host=s'      => \$dnadb_host,
-		   'dnadb_user=s'      => \$dnadb_user,
-		   'dnadb_pass=s'      => \$dnadb_pass,
-		   'dnadb_port=s'      => \$dnadb_port,
-		   'skip_meta_coord'   => \$skip_meta_coord,
-		   'skip_analyse'      => \$skip_analyse,
-           'skip_xref_cleanup' => \$skip_xref_cleanup,
-		   'check_displayable' => \$check_displayable,
-		   'methods=s{,}'      => \@methods,
-		   'method_params=s{,}'=> \@method_params,
-		   'help|?'            => \$help,
-		   'man|m'             => \$man,
-		   'log_file=s'        => \$main::_log_file,
-		   'no_log'            => \$main::_no_log,
-		   'tee'               => \$main::_tee,
-		   #'slice=s'          => \$test_slice,
-		   #skip dumps?
-		   #force update
-		   #add opt for old, new & stable fset name
-		  ) or pod2usage(
-						 -exitval => 1,
-						 -message => "Params are:\t@tmp_args"
-						);
-
-pod2usage(0) if $help;
-pod2usage(-exitstatus => 0, -verbose => 2) if $man;
+GetOptions
+ ('host|h=s'          => \$host,
+	'port=i'            => \$port,
+	'user|u=s'          => \$user,
+  'pass|p=s'          => \$pass,
+	'dbname=s'          => \$dbname,
+	'species|d=s'       => \$species,
+	'data_version=s'    => \$schema_build,#mandatory as default ensembldb will not exist
+	'dnadb_host=s'      => \$dnadb_host,
+	'dnadb_user=s'      => \$dnadb_user,
+	'dnadb_pass=s'      => \$dnadb_pass,
+	'dnadb_port=s'      => \$dnadb_port,
+	'dnadb_name=s'      => \$dnadb_name,
+	'skip_meta_coord'   => \$skip_meta_coord,
+	'skip_analyse'      => \$skip_analyse,
+  'skip_xref_cleanup' => \$skip_xref_cleanup,
+	'check_displayable' => \$check_displayable,
+	'methods=s{,}'      => \@methods,
+	'method_params=s{,}'=> \@method_params,
+	'builds=s{,}'       => \@builds,
+	'log_file=s'        => \$main::_log_file,
+	'no_log'            => \$main::_no_log,
+	'tee'               => \$main::_tee,
+  'man'       => sub { pod2usage(-exitval => 0, -verbose => 2); },
+  'help|?'    => sub { pod2usage(-exitval => 0, -verbose => 1, -message => "Params are:\t@tmp_args"); }
+	) or pod2usage(-exitval => 1,
+                 -message => "Params are:\t@tmp_args");
 
 
-my @builds = @ARGV;
-
-$dbname = "${species}_funcgen_${schema_build}" if ! defined $dbname;
+if(! defined $dbname){
+  
+  if(! defined $schema_build){
+    die('A -dbname or a -data_version (schema_build) must be specified');
+  }
+  
+  $dbname = "${species}_funcgen_${schema_build}" 
+}
 
 if(! $main::_no_log){
   $main::_log_file ||= $ENV{'HOME'}."/logs/update_DB_for_release.$dbname.$$.log";
   print "Writing log to:\t".$main::_log_file."\n";
 }
 
-
-my $efg_db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-														  -dbname  => $dbname,
-														  -host    => $host,
-														  -port    => $port,
-														  -user    => $user,
-														  -pass    => $pass,
-														  -species => $species,
-														  -dnadb_host => $dnadb_host,
-														  -dnadb_user => $dnadb_user,
-														  -dnadb_pass => $dnadb_pass,
-														  -dnadb_port => $dnadb_port,
-														 );
+my $efg_db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
+ (-dbname  => $dbname,
+  -host    => $host,
+	-port    => $port,
+	-user    => $user,
+	-pass    => $pass,
+	-species => $species,
+	-dnadb_name => $dnadb_name,
+	-dnadb_host => $dnadb_host,
+	-dnadb_user => $dnadb_user,
+	-dnadb_pass => $dnadb_pass,
+	-dnadb_port => $dnadb_port);
 
 #Test the db connections
 $efg_db->dbc->db_handle;
 $efg_db->dnadb->dbc->db_handle;
 
-my $hchecker = Bio::EnsEMBL::Funcgen::Utils::HealthChecker->new(
-																-db                => $efg_db,
-																-builds            => \@builds,
-																-skip_meta_coord   => $skip_meta_coord,
-																-skip_analyse      => $skip_analyse,
-																-skip_xref_cleanup => $skip_xref_cleanup,
-																-check_displayable => $check_displayable,
-															   );
-
-
-
-
+my $hchecker = Bio::EnsEMBL::Funcgen::Utils::HealthChecker->new
+ (-db                => $efg_db,
+	-builds            => \@builds,
+	-skip_meta_coord   => $skip_meta_coord,
+	-skip_analyse      => $skip_analyse,
+	-skip_xref_cleanup => $skip_xref_cleanup,
+	-check_displayable => $check_displayable);
 
 
 if(@methods){
@@ -196,13 +194,13 @@ elsif(@method_params){
   ($method, @params) = @method_params;
 
   if(! $hchecker->can($method)){
-	die("You have passed an invalid method:t\$method");
+    die("You have passed an invalid method:t\$method");
   }
 
   $hchecker->$method(@params); 
 }
 else{
- $hchecker->update_db_for_release();
-
+ $hchecker->update_db_for_release;
 }
 
+1;
