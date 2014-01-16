@@ -102,7 +102,15 @@ $db_type_options{pipeline} = $db_type_options{hive};
   Arg [1]    : Arrayref - DB types to handle e.g. funcgen|db, core|dna or 
                hive|pipeline
   Example    : my $db_opts = get_DB_options_config(['funcgen', 'core']);
-               GetOptions(%$db_opts);
+               GetOptions(%$db_opts, ...);
+               
+               #OR
+               
+               my @db_opts_config = keys %{get_DB_options_config(['funcgen', 'core'])};
+               my $db_opts = {...}; #references to vars/defaults/sub handlers in here
+               GetOptions($db_opts, @db_opts_config);
+               
+               #Then get and adaptor with the options
                my $efg_db = create_Funcgen_DBAdaptor_from_options($db_opts);
   DESCRIPTION: Returns an options hash for use with GetOptions and other 'options'
                methods in this module
@@ -114,9 +122,12 @@ $db_type_options{pipeline} = $db_type_options{hive};
 
 =cut 
 
+#custom dbtypes cannot be used with process_DB_options (yet)
+#shall we have an allow custom flag?
+
 
 sub get_DB_options_config{
-  my ($db_types) = @_;  
+  my ($db_types, $allow_custom) = @_;  
   
   if(! defined $db_types){
     $db_types = ['funcgen', 'pipeline', 'core'];
@@ -132,12 +143,22 @@ sub get_DB_options_config{
   foreach my $db_type(@$db_types){
     
     if(! exists $db_type_options{$db_type}){
-      throw("$db_type is not valid. Valid DB types are:\t". 
-        join("\t", keys(%db_type_options)) ); 
+      
+      if(! $allow_custom){
+        throw("$db_type is not valid. Valid DB types are:\t". 
+          join("\t", keys(%db_type_options)) ); 
+      }
+   
+      map {my $param; $db_opts{$_} = \$param } 
+        ( map {$db_type.$_ } ('_user=s', '_pass=s', '_port=i', '_host=s', '_name=s') );  
     }
-    
-    map {my $param; $db_opts{$_} = \$param } @{$db_type_options{$db_type}};  
+    else{
+      map {my $param; $db_opts{$_} = \$param } @{$db_type_options{$db_type}};  
+    } 
   }
+  
+  
+  
   
   return \%db_opts;
 }
@@ -173,6 +194,7 @@ sub get_DB_options_config{
 
 =cut
 
+#Now supports both way of getting options hash
 #change optional to support write(pass defined) and full optional param sets?
 #validation level - optional|pass required (default no pass required)
 
@@ -195,16 +217,13 @@ sub process_DB_options {
     throw('Validation level argument is not valid, please specify \'optional\' or \'pass\'');     
   } 
   
-  
-  my %valid_option_types = (
-                            dnadb  => 1,
+  my %valid_option_types = (dnadb  => 1,
                             script => 1,
                             mysql  => {'host'   => '-h',
                                        'user'   => '-u',
                                        'pass'   => '-p',
                                        'port'   => '-P',
-                                       'dbname' => ' '}
-                           );
+                                       'dbname' => ' '});
  
   if(defined $option_type && 
      (! exists $valid_option_types{$option_type}) ){
@@ -212,8 +231,6 @@ sub process_DB_options {
       join("\t", keys %valid_option_types) ); 
   }
   
-  
-
   my (%db_params, $param, $check_param);
   
   foreach my $db_type(@$db_types){
@@ -243,17 +260,30 @@ sub process_DB_options {
     }
           
     foreach my $opt(@{$db_type_options{$db_type}}){
-      my $value = ${$db_opts->{$opt}};
-           
+      my $deref = 1;
+      my $value;
+      ($param = '-'.$opt) =~ s/\=.*//o;  
+      
+      #This conditional sub/deref is to handle the two 
+      #different types of opts hash we can take
+      #$opt entry should already 'exist' from the first 
+      #call of process_DB_options
+      if(exists $db_opts->{$opt}){
+        
+        if(defined $db_opts->{$opt}){
+          $value = ${$db_opts->{$opt}};      
+        } 
+      }
+      elsif(exists $db_opts->{$param}){
+        $value = $db_opts->{$param};
+      }
+       
+                          
       if(defined $value){
-        #will already 'exist' from the first call of process_DB_options
-        ($param = '-'.$opt) =~ s/\=.*//o;
       
         #Cache mandatory DBAdaptor params
         ($check_param = $param) =~ s/-(.*_)*//o;           #Strip off -(pdb_|dnadb_) prefixes
         $check_param = 'dbname' if $check_param eq 'name'; #handle dbname oddity  
-        
-        #warn "opt is $opt check param is $check_param";
         
         if (exists $check_params{$check_param}){
           $check_params{$check_param} = 1;  
@@ -279,7 +309,7 @@ sub process_DB_options {
        ($vlevel eq 'pass') ){
       
       if( grep(/0/, values %check_params) ){
-        throw("Could not find mandatory (user|host|dbname) $db_type DB param options:\n".
+        throw("Failed to validate $db_type DB options. Could not find mandatory (user|host|dbname) options:\n".
           Dumper($db_opts));        
       }
     }
@@ -297,21 +327,14 @@ sub process_DB_options {
   return \%db_params;
 }  
 
-#if(scalar(@$db_types) == 1){
-#  %db_params = %{$db_params{$db_types->[0]}};  
-  #This would avoid doing something like this: ${&process_DB_options($db_opts, ['pipeline'])}{pipeline};
-#}
-#Can't do this as this may give unexpected behaviour
-#e.g. passing 3 optional db_types   
-#maybe give rise to 1 or more db params hashes
-  
 
 =head2 create_Funcgen_DBAdaptor_from_options
 
   Arg [1]    : Hashref - DB options generated by passing the get_DB_options_config hash 
                to GetOptions
   Arg [2]    : String - Validation mode, 'pass' or 'optional'.
-               Omitting will validat euser, host and dbname are defined.            
+               Omitting will validate user, host and dbname are defined.
+  Arg [3]    : Boolean - DNA DB validation, conditional on the Funcgen DB.          
   Example    : my $db = create_Funcgen_DBAdaptor_from_params($db_opts);
   DESCRIPTION: Creates a Funcgen DBAdaptor given the options hash returned from GetOptions.
   Returntype : Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor 
@@ -321,12 +344,19 @@ sub process_DB_options {
 
 =cut
 
+#This currently doesn't support pass validation for dnadb
+
 sub create_Funcgen_DBAdaptor_from_options {
-  my ($db_opts, $vlevel) = @_;
-  
+  my ($db_opts, $vlevel, $validate_dnadb) = @_;
+ 
+  my $dnadb_vlevel   = 'optional'; 
   my $funcgen_params = ${&process_DB_options($db_opts, ['funcgen'], $vlevel)}{funcgen};
-  #This simply allows dnadb_params to be optional
-  my $core_params    = ${&process_DB_options($db_opts, ['core'], 'optional', 'dnadb')}{core};
+
+  if(%{$funcgen_params} && $validate_dnadb){
+    $dnadb_vlevel = undef;
+  }
+
+  my $core_params    = ${&process_DB_options($db_opts, ['core'], $dnadb_vlevel, 'dnadb')}{core};
   
   return create_DBAdaptor_from_params({%{$funcgen_params},
                                        %{$core_params}},
@@ -379,7 +409,6 @@ sub create_DBAdaptor_from_options {
 
 sub create_Funcgen_DBAdaptor_from_params {
   my ($db_params, $pass_required) = @_;
-  
   my ($dnadb, %dnadb);
   
   if(! exists $db_params->{funcgen}){
@@ -396,10 +425,6 @@ sub create_Funcgen_DBAdaptor_from_params {
     #Check whether we have complete DBADaptor param first   
     eval {$dnadb = create_DBAdaptor_from_params($db_params->{core}, 'core'); };
     my $error = $@;
-    
-    #This could fail as we have funcgen dnadb params
-    #generated by passing 'script' option type to process_DB_options
-    #or we have incomplete DBAdaptor params
         
     #These checks are not exhaustive, but should catch most behaviour
     
