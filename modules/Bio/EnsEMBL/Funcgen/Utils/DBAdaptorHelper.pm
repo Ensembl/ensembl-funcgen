@@ -500,7 +500,14 @@ sub create_DBAdaptor_from_params {
   }
   
   my $dba = $dba_modules{$db_type}->new(%$db_params);   
-  $dba->dbc->db_handle;     #Test connection 
+  
+  #Test connections  
+  $dba->dbc->db_handle;
+         
+  if($db_type eq 'funcgen'){
+    $dba->dnadb->dbc->db_handle; 
+  }
+  
   return $dba; 
 }    
   
