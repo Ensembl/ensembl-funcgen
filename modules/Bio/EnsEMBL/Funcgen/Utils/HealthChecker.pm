@@ -222,10 +222,10 @@ sub validate_new_seq_regions{
   #Get all versioned levels for all builds
   foreach my $cs(@{$dnadb_csa->fetch_all}){
 
-	if($cs->version){
-	  $versioned_levels{$cs->version} ||= [];
-	  push @{$versioned_levels{$cs->version}}, $cs->name;
-	}
+    if($cs->version){
+      $versioned_levels{$cs->version} ||= [];
+      push @{$versioned_levels{$cs->version}}, $cs->name;
+    }
   }
 
   push @{$self->{'builds'}}, $default_version if scalar(@{$self->{'builds'}}) == 0;
@@ -235,14 +235,14 @@ sub validate_new_seq_regions{
   #Grab slices for each versioned level
   foreach my $build(@{$self->{'builds'}}){
 
-	if(! exists $versioned_levels{$build}){
-	  throw("CoordSystem version $build does not exist in the dnadb ".$self->db->dnadb->dbc->dbname);
-	}
+    if(! exists $versioned_levels{$build}){
+      throw("CoordSystem version $build does not exist in the dnadb ".$self->db->dnadb->dbc->dbname);
+    }
 
-	foreach my $level(@{$versioned_levels{$build}}){
-	  $self->log("Getting slices for $level $build");
-	  push @slices, @{$slice_adaptor->fetch_all($level, $build)};
-	}
+    foreach my $level(@{$versioned_levels{$build}}){
+      $self->log("Getting slices for $level $build");
+      push @slices, @{$slice_adaptor->fetch_all($level, $build)};
+    }
   }
 
   $self->log("Importing seq_region/coord_system info for builds:\t".join(',', @{$self->{'builds'}}));
