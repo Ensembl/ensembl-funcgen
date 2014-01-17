@@ -145,7 +145,7 @@ sub new {
   #Mandatory params checks here (setting done in Set.pm)
   #explicit type check here to avoid invalid types being imported as NULL
   #subsequently throwing errors on retrieval
-  my $type = $self->_validate_feature_class;
+  my $type = $self->_validate_feature_class(\@_);
 
   if ( (! defined $self->cell_type) &&
        ($type ne 'external') ){

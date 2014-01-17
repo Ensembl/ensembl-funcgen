@@ -94,10 +94,10 @@ sub _validate_feature_class {
     throw(ucfirst($self->set_type).'Set inherits from feature_class_Set but'.
       ' does not have the mandatory _valid_feature_classes method');  
   }
-  elsif(! grep(/^${fclass}$/, @{$self->_valid_feature_classes})){
+  elsif(! grep(/^${fclass}$/, $self->_valid_feature_classes)){
     throw( "$fclass is not a valid ".ucfirst($self->set_type).
       "Set feature_class, valid feature classes are:\n\t".
-      join("\t", @{$self->_valid_feature_classes} ) );
+      join("\t", $self->_valid_feature_classes ) );
   }
   
   $self->{feature_class} = $fclass;
