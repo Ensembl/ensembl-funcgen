@@ -567,7 +567,8 @@ CREATE TABLE `feature_set` (
    `input_set_id` int(10) unsigned default NULL,
    PRIMARY KEY  (`feature_set_id`),
    KEY `feature_type_idx` (`feature_type_id`),
-   UNIQUE KEY `name_idx` (name)
+   UNIQUE KEY `name_idx` (name),
+   KEY cell_type_idx (cell_type_id)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
@@ -602,7 +603,11 @@ CREATE TABLE `result_set` (
    `feature_class` enum('result', 'dna_methylation') DEFAULT NULL,
    `replicate`       tinyint(3) unsigned NOT NULL,
    PRIMARY KEY  (`result_set_id`),
-   UNIQUE KEY `unique_idx` (`name`,`analysis_id`,`feature_type_id`,`cell_type_id`, `feature_class`)
+   UNIQUE KEY `name_idx` (`name`),
+   KEY cell_type_idx (cell_type_id),
+   KEY feature_type_idx (feature_type_id),
+   KEY analysis_idx (analysis_id),
+   KEY feature_class_idx (feature_class)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
@@ -731,9 +736,12 @@ CREATE TABLE `input_subset` (
     `display_url`     varchar(255)        DEFAULT NULL,
     `replicate`       tinyint(3) unsigned NOT NULL,
     `is_control`      tinyint(3) unsigned NOT NULL,
+    `analysis_id` smallint(5) unsigned NOT NULL,
    PRIMARY KEY  (`input_subset_id`),
    UNIQUE `name_exp_idx` (`name`, `experiment_id`),
-   KEY `archive_idx`(`archive_id`)
+   KEY `archive_idx`(`archive_id`),
+   KEY analysis_idx (analysis_id),
+   KEY experiment_idx (experiment_id)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
 
 -- cell_type_id is default NULL to support flat file imports which have not defined cell type
@@ -924,10 +932,14 @@ CREATE TABLE `experiment` (
    `primary_design_type` varchar(30) default NULL,
    `description`  varchar(255) default NULL,
    `mage_xml_id` int(10) unsigned default NULL,
+   `feature_type_id` int(10) unsigned NOT NULL,
+   `cell_type_id` int(10) unsigned DEFAULT NULL,
    PRIMARY KEY  (`experiment_id`),
    UNIQUE KEY `name_idx` (`name`),
    KEY `design_idx` (`primary_design_type`),
-   KEY `experimental_group_idx` (`experimental_group_id`)
+   KEY `experimental_group_idx` (`experimental_group_id`),
+   KEY feature_type_idx(feature_type_id),
+   KEY cell_type_idx(cell_type_id)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- Can probably remove now date (and primary_design_type?) as we don't support this level of meta data
@@ -1404,14 +1416,13 @@ CREATE TABLE `meta` (
 INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 
 -- Update and remove these for each release to avoid erroneous patching
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, "schema_version", "74");
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_73_74_a.sql|schema_version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_73_74_b.sql|input_set_subset_split');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_73_74_c.sql|result_set.replicate');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_73_74_d.sql|status_name_length');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_73_74_e.sql|drop_probe_design');
-
-
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '75');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_74_75_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_74_75_b.sql|result_set.name_unique');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_74_75_c.sql|input_subset.analysis_id_experiment_idx');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_74_75_d.sql|result_set_input.table_name_input_subset');
+-- patch_74_75_e.sql was post-poned
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_74_75_f.sql|experiment.feature_cell_type_id');
 
 
 /**

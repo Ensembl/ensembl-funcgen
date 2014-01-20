@@ -20,7 +20,7 @@
 
 UPDATE result_set rs, analysis a set rs.name=concat(rs.name, '_', a.logic_name) where rs.analysis_id=a.analysis_id;
 
-ALTER TABLE result_set DROP INDEX unique_dx;
+ALTER TABLE result_set DROP INDEX unique_idx;
 ALTER TABLE result_set ADD UNIQUE KEY name_idx (name);
 
 -- Now add back in other keys.
