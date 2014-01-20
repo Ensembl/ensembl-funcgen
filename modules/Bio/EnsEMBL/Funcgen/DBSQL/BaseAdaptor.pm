@@ -1052,7 +1052,7 @@ sub stable_id_prefix{
   my $self = shift;
 
   if (! defined $self->{'stable_id_prefix'}) {
-    ($self->{'stable_id_prefix'}) = @{$self->dnadb->get_MetaContainer->list_value_by_key
+    ($self->{'stable_id_prefix'}) = @{$self->db->dnadb->get_MetaContainer->list_value_by_key
                                         (
                                          'species.stable_id_prefix'
                                         )};
