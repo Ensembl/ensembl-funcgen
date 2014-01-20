@@ -65,6 +65,7 @@ use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
+use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
 
 use base qw( Bio::EnsEMBL::Funcgen::Storable );
 
@@ -105,19 +106,12 @@ sub new {
 
   #MANDATORY PARAMS
   throw('Need to specify a name')     if ! defined $name;
-
-  if(! (ref($ftype) && $ftype->isa('Bio::EnsEMBL::Funcgen::FeatureType')) ){
-    throw('You must provide a valid Bio::EnsEMBL::Funcgen::FeatureType');
-  }
-
-  if(! (ref($anal) && $ftype->isa('Bio::EnsEMBL::Analysis')) ){
-    throw('You must provide a valid Bio::EnsEMBL::Analysis');
-  }
+  assert_ref($ftype, 'Bio::EnsEMBL::Funcgen::FeatureType', 'Set FeatureType'); 
+  assert_ref($anal, 'Bio::EnsEMBL::Analysis', 'Set Analysis'); 
 
   #OPTIONAL PARAMS
-  if(defined $ctype &&
-     ref($ctype) ne 'Bio::EnsEMBL::Funcgen::CellType'){
-    throw('-CELL_TYPE param must be a valid Bio::EnsEMBL::Funcgen::CellType');
+  if(defined $ctype){
+    assert_ref($ctype, 'Bio::EnsEMBL::Funcgen::CellType', 'Set CellType'); 
   }
 
   #Define set_type automatically
