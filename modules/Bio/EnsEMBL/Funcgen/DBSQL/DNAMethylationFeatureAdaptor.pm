@@ -701,7 +701,12 @@ sub fetch_features {
   return \@features;
 }
 
+#Add _true_tables required by BaseAdaptor
+#This can go once the file and DB BaseAdaptors are split
 
+sub _true_tables {
+  return ([ ]);
+}
 
 
 1;
