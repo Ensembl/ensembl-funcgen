@@ -69,7 +69,7 @@ use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange ) ;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 
-use base qw(Bio::EnsEMBL::Storable);
+use parent qw(Bio::EnsEMBL::Funcgen::Storable);
 
 my %valid_genders = (
                      male   => 1,
@@ -276,5 +276,7 @@ sub compare_to {
   return $self->SUPER::compare_to($obj, $shallow, $scl_methods,
                                   $obj_methods);
 }
+
+
 1;
 
