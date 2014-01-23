@@ -43,7 +43,8 @@ use strict;
 
 use Bio::EnsEMBL::Funcgen::Parsers::vista;
 use Bio::EnsEMBL::Funcgen::Parsers::cisred;
-use Bio::EnsEMBL::Funcgen::Parsers::miranda;
+#use Bio::EnsEMBL::Funcgen::Parsers::miranda;
+use Bio::EnsEMBL::Funcgen::Parsers::Tarbase;
 use Bio::EnsEMBL::Funcgen::Parsers::redfly;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
@@ -51,13 +52,16 @@ use Pod::Usage;
 use Getopt::Long;
 
 my ($host, $user, $dnadb_host, $dnadb_user, $pass, $port, $dbname, $dnadb_name, $dnadb_port);
-my ($species, $clobber, $type, $old_assembly, $new_assembly, $archive, $dnadb_pass);
+my ($species, $clobber, $type, $old_assembly, $new_assembly, $archive, $dnadb_pass, $release);
 
 #$main Helper params
 #Set here to avoid used once error
 $main::_tee     = 0;
-$main::_log_file = undef;
+$main::_log_file   = undef;
+$main::_debug_file = undef;
+
 my @tmp_args = @ARGV;
+
 
 GetOptions
   ( 
@@ -75,11 +79,12 @@ GetOptions
    "type=s",       => \$type,
    "tee",          => \$main::_tee,
    "logfile=s"     => \$main::_log_file, 
+   "debugfile=s"   => \$main::_debug_file, 
    "archive=s",    => \$archive,
    "clobber",      => \$clobber,#This is not behaving like a boolean flag??
    "help",         => \&usage,
    "old_assembly=s", => \$old_assembly,
-   "new_assembly=s", => \$new_assembly
+   "new_assembly=s", => \$new_assembly,
   ) 
   or pod2usage( -exitval => 1,
                 -message => "Params are:\t@tmp_args"
@@ -87,7 +92,6 @@ GetOptions
 
 print "load_external_features.pl @tmp_args\n";
 my @files = @ARGV;
-
 
 #convert usage to pod2usage and move usage docs to pod at top
 
@@ -123,8 +127,7 @@ my $db_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
 #test db connections
 $db_adaptor->dbc->db_handle;
 $db_adaptor->dnadb->dbc->db_handle;
-$type = lc($type);
-
+#$type = lc($type);
 eval "require Bio::EnsEMBL::Funcgen::Parsers::$type";
 
 if($@) {
@@ -138,6 +141,8 @@ my $parser = "Bio::EnsEMBL::Funcgen::Parsers::$type"->new
    -archive       => $archive,
    -no_disconnect => 1, #Should never need to disconnect with these imports
   );
+
+
 
 $parser->parse_and_load(\@files, $old_assembly, $new_assembly);
 

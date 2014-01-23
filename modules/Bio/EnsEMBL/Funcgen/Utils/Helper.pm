@@ -1277,7 +1277,7 @@ sub rollback_FeatureSet {
   my ( $sql, $slice_name );
   my $slice_join = '';
    
-  
+  print "Full: $full_delete\n";
   if ( ! ($fset &&
          (ref($fset) eq 'Bio::EnsEMBL::Funcgen::FeatureSet') &&
           defined $fset->adaptor ) ){

@@ -47,7 +47,7 @@ use warnings;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( validate_path );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( validate_path dump_data );
 use Bio::EnsEMBL::Funcgen::FeatureSet;
 use Bio::EnsEMBL::Funcgen::FeatureType;
 
@@ -427,14 +427,16 @@ sub new{
 
 
   $self->{'data_dir'} ||= $ENV{'EFG_DATA'};
+## !!!!
+## Dirty Fix for release 75
 
-  if( (! $self->input_files($input_files)) &&
-      (! defined $self->get_dir('input') ) ){ 
-    #Set default input_dir if we have not specified files
-    #This is dependant on name which is not mandatory yet!
-    $self->{'input_dir'} = $self->get_dir("data").'/input/'.
-      $self->{'param_species'}.'/'.$self->vendor().'/'.$self->name();   
-  }
+  # if( (! $self->input_files($input_files)) &&
+  #     (! defined $self->get_dir('input') ) ){ 
+  #   #Set default input_dir if we have not specified files
+  #   #This is dependant on name which is not mandatory yet!
+  #   $self->{'input_dir'} = $self->get_dir("data").'/input/'.
+  #     $self->{'param_species'}.'/'.$self->vendor().'/'.$self->name();   
+  # }
 
   if(defined $self->get_dir('input')){
     validate_path($self->get_dir('input'), 1); #dir flag
@@ -1184,10 +1186,52 @@ sub input_files{
 
   return $self->{input_files}; 
 }
+## !!!!
+## Dirty Fix for release 75
+## !!!!!! Method copied from Importer.pm
 
+=head2 get_dir
 
+  Example    : $imp->get_dir("import");
+  Description: Retrieves full path for given directory
+  Arg [1]    : mandatory - dir name
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : at risk - move to Helper?
 
+=cut
 
+sub get_dir{
+  my ($self, $dirname) = @_;
+  return $self->get_data("${dirname}_dir");
+}
+
+=head2 vendor
+
+  Example    : $imp->vendor("NimbleGen");
+  Description: Getter/Setter for array vendor
+  Arg [1]    : optional - vendor name
+  Returntype : string
+  Exceptions : none
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub vendor{
+  my ($self) = shift;
+
+  if (@_) {
+    $self->{'vendor'} = shift;
+    $self->{'vendor'} = uc($self->{'vendor'});
+  }
+  elsif(! defined $self->{'vendor'}){
+   throw('Must specify a -vendor'); 
+  }
+
+  return $self->{'vendor'};
+}
 
 
 
