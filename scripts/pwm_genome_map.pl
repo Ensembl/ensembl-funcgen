@@ -5,8 +5,7 @@
 Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
+you may not use this file except in compliance with the License. You may obtain a copy of the License at
 
      http://www.apache.org/licenses/LICENSE-2.0
 
@@ -132,12 +131,12 @@ maybe collate output into one file per PWM
 
 
 use strict;
-#use DBI;
 use Env;
 use Getopt::Std;
 use File::Basename;
 use IO::Handle;
 use IO::File;
+use DBI qw( :sql_types );
 #use lib '/nfs/users/nfs_d/dkeefe/src/personal/ensembl-personal/dkeefe/perl/modules/';
 $ENV{PATH} .= ':/usr/local/ensembl/bin/'; #fastaclean home, probably needs moving to /software/ensembl/bin
 
@@ -185,16 +184,16 @@ my $matrix_file;
 if($pwm_type eq 'jaspar'){
 
     # we assume the matrix_list.txt file is in same dir as PWMs
-    $matrix_file = &find_matrix_txt(\@pwm_files) or die
-        "Unable to find a matrix_list.txt file for the jaspar matrices \n".
-        join("\n",@pwm_files[0..5])." etc.\n";
-    &backtick("cp $matrix_file $work_dir");
+    #$matrix_file = &find_matrix_txt(\@pwm_files) or die
+    #    "Unable to find a matrix_list.txt file for the jaspar matrices \n".
+    #    join("\n",@pwm_files[0..5])." etc.\n";
+    #&backtick("cp $matrix_file $work_dir");
 
     # we move the PWM files to the working dir and create rev-comp files
     # there too, making additions to the matrix_list in working dir as we go
     foreach my $file (@pwm_files){
         &backtick("cp $file $work_dir"); 
-	&rev_comp_matrix($file,$work_dir,$matrix_file);
+        &rev_comp_matrix($file,$work_dir);
 	my($min,$max)= &matrix_min_max($file,$work_dir);
 	print basename($file)."\t$min\t$max\n" if $verbose > 1;
 	$file_max_score{ basename($file) } = $max;
@@ -234,16 +233,41 @@ else{
 #$verbose = 2;
 my @chr_files = &explode_genome_fasta($genome_file,$work_dir.'genome',$assembly);
 
+my $jdbh;
+my $dsn = sprintf( "DBI:%s:%s:host=%s;port=%s",
+                     'mysql', 'JASPAR_v5_0', 'ens-genomics1',
+                     3306 );
+
+eval {
+  $jdbh = DBI->connect( $dsn, 'ensro', undef,
+                          { 'RaiseError' => 1 } );
+  };
+
+my $error = $@;
+
+  if ( !$jdbh || $error || !$jdbh->ping ) {
+    die( "Could not connect to database using [$dsn] as a locator:\n" . $error );
+  }
+  
+
 # now we map all the PWMs to each genomic sequence
+
+#NJ parallelise this on the farm!!!
+#This is currently running to triple the memory footprint of previous runs!
+#what is being cached in this loop, and why is there so much more of it for a modest increase 
+#in the size of Jaspar
+#%file_max_score might be the cuplrit
+#Nope this is only accessed in parse_out_2_tab, not populated
+
 foreach my $chr_file (@chr_files){
 
     my $tab=my $out=$chr_file;
     $tab =~ s/fa/tab/;
     $out =~ s/fa/out/;
     my $command = "$moods_mapper -f  $thresh $chr_file $work_dir"."*.pfm > $out";
-    #print $command."\n";
+    warn $command."\n";
     &backtick("$command");
-    &parse_out_2_tab($out,$tab,$work_dir."matrix_list.txt",\%file_max_score);
+    &parse_out_2_tab($out,$tab,$jdbh,\%file_max_score);
     #&backtick("rm -f $out");
     #&backtick("rm -f $chr_file");
 }
@@ -265,7 +289,7 @@ exit;
  
 ###################################################################
 sub matrix_min_max{
-    my($file,$work_dir,$matrix_file)=@_;
+    my($file,$work_dir)=@_;
 
     open(IN,$file) or die "failed to open $file";
 
@@ -297,7 +321,7 @@ sub matrix_min_max{
     if($rows > 4){ die "too many rows in file $file" }
     close(IN); 
 
-    my $cols = scalar(@{$mat[0]});
+    $cols = scalar(@{$mat[0]});
     # convert to probabilities and transpose to facilitate get_max_add()
     my @new_mat;
     for(my $i = 0;$i<$rows;$i++){
@@ -442,58 +466,66 @@ sub process_matrix{
 
 
 sub parse_out_2_tab{
-    my($out,$tab,$matrix_file,$max_scores_ref)=@_;
+   #my($out,$tab,$matrix_file,$max_scores_ref)=@_;
 
-    open(IN,$out) or die "couldn't open file $out ";
-    open(OUT,">$tab") or die "couldn't open file $tab ";
-
-    my $chr = basename $out;
-    $chr =~ s/\.out//;
-
-    my $strand;
-    my $id;
-    my $addn;
-    my $tf_name;
-    my $score_thresh;
-    while(my $line = <IN>){
-	chop $line;
-	if($line eq ''){
+  my($out,$tab,$dbh,$max_scores_ref)=@_;
+  
+  open(IN,$out) or die "couldn't open file $out ";
+  open(OUT,">$tab") or die "couldn't open file $tab ";
+  
+  my $chr = basename $out;
+  $chr =~ s/\.out//;
+  
+  my $strand;
+  my $id;
+  my $addn;
+  my $tf_name;
+  my $score_thresh;
+  while(my $line = <IN>){
+    chop $line;
+    if($line eq ''){
 	    next;
-	}
-        elsif($line =~ /^>/){
+    }
+    elsif($line =~ /^>/){
 	    $line =~ s/>//;
 	    $id = basename $line;
 	    $id =~ s/\.pfm//;
-
-            # get TF name from matrix_list file
-	    $tf_name = &backtick("grep '^$id	' $matrix_file |cut -f3");
-	    chop($tf_name);
+      
+      # get TF name from matrix_list file
+	    #$tf_name = &backtick("grep '^$id	' $matrix_file |cut -f3");
+	    
+	    ($tf_name) = $dbh->selectrow_array("SELECT NAME from MATRIX where BASE_ID='$id'");
+	    
+	    
+	    
+	    chop($tf_name); #wtf? taking off the version but not the dot?
 	    unless($tf_name){
-                warn "Failed to get TF name for $id from $matrix_file";
+	      warn "Failed to get TF name from the DB:\t$id\n";
+             #   warn "Failed to get TF name for $id from $matrix_file";
 	    }
-            $strand = '1';
+      $strand = '1';
 	    if($id =~ 'rc'){
-		$strand = '-1';
-		$id =~ s/rc//;
+        $strand = '-1';
+        $id =~ s/rc//;
 	    }
 	    $score_thresh = $max_scores_ref->{$id.'.pfm'} * 0.7; # 70% of max
 	    $score_thresh = 0;
 	    &commentary( $max_scores_ref->{$id.'.pfm'} ." = max score for $id $tf_name\n") if $verbose;
-
+      
 	    $line = <IN>;
 	    ($addn) = $line =~ /.*Length:([0-9]+)/;
-	}
-        else{
+    }
+    else{
 	    my($start,$score)= split("\t",$line);
 	    if($score > $score_thresh){
-	        print OUT join("\t",$chr,($start+1),($start+$addn),$tf_name,
-                                $score,$strand,$id)."\n" or 
-                                die "failed to print to $tab" ;
+        print OUT join("\t",$chr,($start+1),($start+$addn),$tf_name,
+                       $score,$strand,$id)."\n" or 
+                         die "failed to print to $tab" ;
 	    }
-	}
     }
-    close(IN);
-    close(OUT);
+  }
+  close(IN);
+  close(OUT);
 }
 
 
@@ -502,72 +534,103 @@ sub parse_out_2_tab{
 # optionally reduce chromosome name to chr_name as in ensembl databases
 # returns the list of files produced or dies
 sub explode_genome_fasta{
-    my($genome_file,$target_dir,$assembly) = @_;
-    &commentary("exploding $genome_file to $target_dir") if $verbose;
+  my($genome_file,$target_dir,$assembly) = @_;
+  &commentary("exploding $genome_file to $target_dir") if $verbose;
+  
+  if (! $genome_file){
+    die('Genome file not defined');
+  }
+  
 
-
+  warn "GENOME file is $genome_file";
+  
 	#These tests do not work!
-
-    my $res = &backtick("which fastaclean");
+  
+  my $res = &backtick("which fastaclean");
+  if($res =~ 'not found'){
+    die "Need to implement fastaclean functionality here";
+  }
+  
+  
+  $res = &backtick("which fastaexplode");
     if($res =~ 'not found'){
-	die "Need to implement fastaclean functionality here";
-    }
-
-
-    $res = &backtick("which fastaexplode");
-    if($res =~ 'not found'){
-	die "Need to implement fastaexplode functionality here";
+      die "Need to implement fastaexplode functionality here";
     }else{
-	&backtick("fastaexplode -f $genome_file -d $target_dir");
+      &backtick("fastaexplode -f $genome_file -d $target_dir");
     }
+  
+  
+  $res = &backtick("ls -1 $target_dir"."/*.fa");
+  my @lines = split("\n",$res);
+  
+  unless(@lines > 0){
+    die "ERROR: No genome files produced by splitting".$genome_file;
+  }
+  
+  # now we alter the file names if short chromosome names have been requested
+  if($assembly){
 
-
-    $res = &backtick("ls -1 $target_dir"."/*.fa");
-    my @lines = split("\n",$res);
-
-    unless(@lines > 0){
-        die "ERROR: No genome files produced by splitting".$genome_file;
-    }
-
-    # now we alter the file names if short chromosome names have been requested
-    if($assembly){
-	my @short_names;
-	foreach my $file_path (@lines){
+    my @short_names;
+    foreach my $file_path (@lines){
 	    my $name = basename $file_path;
-# sed 's/chromosome:$assembly:/chr/'|sed 's/supercontig:$assembly://' |sed 's/supercontig:://' | sed 's/:[0-9:]*//'
-
+      # sed 's/chromosome:$assembly:/chr/'|sed 's/supercontig:$assembly://' |sed 's/supercontig:://' | sed 's/:[0-9:]*//'
+      
 	    $name =~ s/chromosome:$assembly://;
 	    $name =~ s/supercontig:$assembly://;
 	    $name =~ s/supercontig:://;
 	    $name =~ s/:[0-9:]*//;
 	    my $path = dirname $file_path;
 	    my $new = $path.'/'.$name;
-	    my $command = "fastaclean -a -f $file_path > $new ; rm -f $file_path";
+
+      #This is not working as all but the Y chr are already short names
+      #temp hack to get it running
+      my $command;
+
+      if($file_path =~ /chromosome:GRCh37:Y/){
+
+      
+
+        $command = "fastaclean -a -f $file_path > $new ; rm -f $file_path";
+      }
+      else{
+        my $path = dirname $file_path;
+        my $new = $path.'/tmp';
+        $command = "fastaclean -a -f $file_path > $new ;".
+        " rm -f $file_path ;mv $new $file_path";
+      }
+
+
+        warn "executing: $command";
+
+
+
 	    &backtick($command);
 	    push @short_names, $new;
-	}
-	return @short_names;
-    }else{
-	foreach my $file_path (@lines){
-        # just do fastaclean
+    }
+    return @short_names;
+  }else{
+    foreach my $file_path (@lines){
+      # just do fastaclean
 	    my $path = dirname $file_path;
 	    my $new = $path.'/tmp';
 	    my $command = "fastaclean -a -f $file_path > $new ;".
-                      " rm -f $file_path ;mv $new $file_path";
+        " rm -f $file_path ;mv $new $file_path";
+
+      warn "executing: $command";
 	    &backtick($command);
-	}
-
     }
-
-
-    return @lines;
+    
+  }
+  
+  
+  return @lines;
 }
 
 
 
 # assumes a jaspar matrix pfm file with 4 rows A C G T
 sub rev_comp_matrix{
-    my($file,$work_dir,$matrix_file)=@_;
+    my($file,$work_dir)=@_;
 
     open(IN,$file) or die "failed to open $file";
 
@@ -615,23 +678,26 @@ sub rev_comp_matrix{
 
     close(OUT);
 
+    #NJ don't need this now, we just need to add support fo DB access where ever this is used
+    #was this ever being used again
+
     # get the relevant line from the matrix_list.txt file
     # by grepping for the id at the start of the line
     # add rc to the ID and append the line to matrix_list.txt
-    my $res = &backtick("grep '^$matrix_id.$version' $work_dir".
-                        "matrix_list.txt");
+    #my $res = &backtick("grep '^$matrix_id.$version' $work_dir".
+ #                       "matrix_list.txt");
  #   print $res;
-    chop($res);
-    my @field = split("\t",$res);
-    #$field[0] .= 'rc';
-    $field[0] = $matrix_id.'rc.'.$version;
-    $res = join("\t",@field);
-    #print $res."\n";
-    open(OUT, ">> $work_dir"."matrix_list.txt") or 
-        die "failed to open $work_dir"."matrix_list.txt for appending";
-    print OUT $res."\n" or die "failed to write to  $work_dir".
-                               "matrix_list.txt";
-    close(OUT);
+    #chop($res);
+    #my @field = split("\t",$res);
+    ##$field[0] .= 'rc';
+    #$field[0] = $matrix_id.'rc.'.$version;
+    #$res = join("\t",@field);
+    ##print $res."\n";
+    #open(OUT, ">> $work_dir"."matrix_list.txt") or 
+    #    die "failed to open $work_dir"."matrix_list.txt for appending";
+    #print OUT $res."\n" or die "failed to write to  $work_dir".
+    #                           "matrix_list.txt";
+    #close(OUT);
 
 
 }
