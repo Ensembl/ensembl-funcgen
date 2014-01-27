@@ -121,6 +121,7 @@ use Getopt::Long;
 use Pod::Usage;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( open_file );
 use Bio::EnsEMBL::Utils::Exception qw(throw warning stack_trace_dump);
 
 my ($host, $port, $user, $pass, $dbname);
@@ -161,7 +162,7 @@ pod2usage(1) if ($help);
 # Should be failing a little nicer now... 
 if(!$host || !$port || !$user || !$dbname ) {  print "Missing connection parameters for funcgen db\n"; pod2usage(0); }
 if(!$workdir || !$outputdir) {  print "Missing working folder(s)\n"; pod2usage(0); }
-if(!$species || !$assembly || !$schema) {  print "Need species and assembly information\n"; pod2usage(0); }
+if(!$species || !$assembly || !$schema) {  print "Need species, assembly and schema information\n"; pod2usage(0); }
 
 
 #Check database connections
@@ -212,25 +213,66 @@ my $fsa = $efgdba->get_FeatureSetAdaptor();
 my $bma = $efgdba->get_BindingMatrixAdaptor();
 my $dbea = $efgdba->get_DBEntryAdaptor();
 
-
-system("mkdir ${outputdir}/matrices") && die "Error creating matrices folder";
+if(! -d "${outputdir}/matrices"){
+  system("mkdir ${outputdir}/matrices") && die "Error creating matrices folder";
+}
 open(FO,">".$outputdir."/matrix_list");
 
 my @tfs;
-if(scalar(@fts)>0){
+if(scalar(@fts) > 0){
+  
   foreach my $ft (@fts){
     my $tf = $fta->fetch_by_name($ft); 
+  
     if(!$tf){
       throw "Could not find Transcription Factor $ft";
     } else {
       push(@tfs, $tf);
     } 
-  } 
-} else {
-  #If none is specified, get all...
-  warn "Using all transcription factors";
-  @tfs = @{$fta->fetch_all_by_class('Transcription Factor')};
+  }
 }
+else {
+  #If none is specified, get all...
+  #warn "Using all transcription factors";
+  @tfs = @{$fta->fetch_all_by_class('Transcription Factor')};
+  
+  #Change this to use th bm ftypes?
+  #but it appears that the matrix list uses the fset ftypes
+  
+}
+
+# Just dump out the individual pfm files here from the new merged file
+# as thats what the pipeline expects
+
+
+my $pfms_file = "${workdir}/binding_matrices/Jaspar_5.0/JASPAR_CORE/pfm/nonredundant/pfm_all.txt";
+
+my $pfms_fh = open_file($pfms_file);
+my ($line, $pfm_fh, $record, $mname);
+
+while(($line = $pfms_fh->getline) && defined $line){
+    
+  if($line =~ /^>([^ ]+)/){
+    
+    
+    if(defined $pfm_fh){
+      print $pfm_fh $record;
+      $pfm_fh->close;
+    } 
+    
+    $mname  = $1;
+    chomp $mname;
+    $pfm_fh = open_file("${outputdir}/matrices/${mname}.pfm", '>');
+    $record = '';#$line;
+  }
+  else{
+    $record .= $line;    
+  }
+}
+
+print $pfm_fh $record;
+$pfm_fh->close;
+
 
 foreach my $tf (sort { $a->name cmp $b->name} @tfs){
 
@@ -242,17 +284,33 @@ foreach my $tf (sort { $a->name cmp $b->name} @tfs){
     #if tf is NOT a complex ft, but s involved in complexes, get their matrices
     # to see if the tf is a complex, just try getting an associated gene.
     my @matrices = @{$bma->fetch_all_by_FeatureType($tf)};
-    if(scalar(@{$dbea->fetch_all_by_FeatureType($tf)})>0){
-      foreach my $atf (@{$fta->fetch_all_by_association($tf)}){
+    
+    
+    #? There may be many other DBEtries for a FeatureType
+    #Just get the associated ftypes anyway
+    
+    #In fact why are we even bothering with the TF
+    #why not just access the bms directly?
+    
+    #keep this as is for now to get it running
+   
+    
+    #if(scalar(@{$dbea->fetch_all_by_FeatureType($tf)})>0){
+      
+      
+    foreach my $atf (@{$fta->fetch_all_by_association($tf)}){
     	push @matrices, @{$bma->fetch_all_by_FeatureType($atf)};
-      }
     }
+    #}
+    
     my @names;
+    
     foreach my $matrix (@matrices){
       push @names, $matrix->name;
-      system("cp ${workdir}/binding_matrices/Jaspar/all_data/FlatFileDir/".$matrix->name.".pfm ${outputdir}/matrices") && die "could not copy matrix ".$matrix->name."";
+      #system("cp ${workdir}/binding_matrices/Jaspar_5.0/all_data/FlatFileDir/".$matrix->name.".pfm ${outputdir}/matrices") && die "could not copy matrix ".$matrix->name."";
       
     }
+    
     if(scalar(@names)>0){
       my $namestr=join(";",@names);
       print FO $tf->name."\t".$namestr."\n";
@@ -262,14 +320,21 @@ foreach my $tf (sort { $a->name cmp $b->name} @tfs){
 }
 close FO;
 
+
+#matrix_list no longer exists!!!!
+#where is this being used??!!
+
 print "processing fasta\n";
-system("cp ${workdir}/binding_matrices/Jaspar/matrix_list.txt ${outputdir}/matrices") && die "could not find fasta file";
+#system("cp ${workdir}/binding_matrices/Jaspar/matrix_list.txt ${outputdir}/matrices") && die "could not find fasta file";
 
 system("gunzip -dc ${workdir}/fasta/${species}/${species}_male_${assembly}_unmasked.fasta.gz > ${outputdir}/fasta.fas") && die "could not unzip fasta file";
 
 $assembly =~ s/_.*$//;
 print $assembly."\n";
-system("pwm_genome_map.pl -g ${outputdir}/fasta.fas -a ${assembly} -o ${outputdir}/all_mappings.tab -p 0.001 -w ${outputdir}/tmp_results/ ${outputdir}/matrices/*.pfm") && die "error running pwm_genome_map"; 
+
+my $cmd = "pwm_genome_map.pl -g ${outputdir}/fasta.fas -a ${assembly} -o ${outputdir}/all_mappings.tab -p 0.001 -w ${outputdir}/tmp_results/ ${outputdir}/matrices/*.pfm";
+print $cmd."\n";
+system($cmd) && die "error running pwm_genome_map"; 
 
 system("grep '>' ${outputdir}/fasta.fas > ${outputdir}/fasta.id_lines") && die "error processing fasta file";
 
