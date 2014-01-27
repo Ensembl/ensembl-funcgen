@@ -26,32 +26,32 @@ limitations under the License.
 
 =head1 NAME
 
- pfetch_jaspar_proteins.pl
+load_jaspar_matrices.pl
   
 =head1 SYNOPSIS
 
- pfetch_jaspar_proteins.pl [options]
+load_jaspar_matrices.pl [options]
 
 =head1 OPTIONS
 
  DB Connection:
-  --jdb_user    Jaspar DB user name
-  --jdb_host    Jaspar DB host
-  --jdb_name    Jaspar DB name (default = JASPAR_v5_0)
-  --jdb_pass    Jaspar DB password (optional)
-  --jdb_port    Jaspar DB port (optional)
-  --out_dir     Output directory (optional)
-  --user        DB user name (optional)
-  --host        DB host (optional)
-  --dbname      DB name (optional)
-  --pass        DB password (optional)
-  --port        DB port (optional)
-  --collections List of Jaspar collections to query, default is CORE and PBM
-  --pep_fasta   Location of the relevant species whole proteome fasta DB (i.e. use formatdb)
-  --pfm_file    Location of the file containing all the Position Frequency Matrices
-  --dump_jaspar_fasta Dumps fasta files for the Jaspar accessions
-  --create_edb  Create the relevant external_db records based on the dnadb
-  --skip_blast  Skips blast step if blast results file already exists (mainly for testing)
+  --jdb_user           Jaspar DB user name
+  --jdb_host           Jaspar DB host
+  --jdb_name           Jaspar DB name (default = JASPAR_v5_0). This will be used as the analysis logic_name
+  --jdb_pass           Jaspar DB password (optional)
+  --jdb_port           Jaspar DB port (optional)
+  --out_dir            Output directory (optional)
+  --user               DB user name (optional)
+  --host               DB host (optional)
+  --dbname             DB name (optional)
+  --pass               DB password (optional)
+  --port               DB port (optional)
+  --collections        List of Jaspar collections to query, default is CORE and PBM
+  --pep_fasta          Location of the relevant species whole proteome fasta DB (i.e. use formatdb)
+  --pfm_file           Location of the file containing all the Position Frequency Matrices
+  --dump_jaspar_fasta  Dumps fasta files for the Jaspar accessions
+  --create_edb         Create the relevant external_db records based on the dnadb
+  --skip_blast  	   Skips blast step if blast results file already exists (mainly for testing)
   --man
   --help
 
