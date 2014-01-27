@@ -142,11 +142,14 @@ while(my($mat,$tf)=each(%matrix_tf_pairs)){
     my $peaks_file = $tf.".real_peaks";
     open(OUT,"> $peaks_file") or die "failed to open $peaks_file";
     foreach my $aref (@$aaref){
-	if(@$aref->[1] == 0){
-	    warn "start coord = 0 \n ".join("\t",@$aref)."\nFiltered out!\n";
-	}else{
- 	    print OUT join("\t",@$aref)."\n" or die "failed to write to file";
-        }
+      
+	#if(@$aref->[1] == 0){
+	 if($aref->[1] == 0){
+	   warn "start coord = 0 \n ".join("\t",@$aref)."\nFiltered out!\n";
+   }
+   else{
+ 	   print OUT join("\t",@$aref)."\n" or die "failed to write to file";
+   }
        
     }
     close(OUT);
@@ -191,8 +194,8 @@ FIND_THRESH:
 	chop $line;
 	my @field = split("\t",$line);
 	my @mapping;
-	push @mapping,@field[0..2];
-	push @mapping,@field[7];
+	push @mapping, @field[0..2];
+	push @mapping, $field[7];
 	
 	push @mappings, \@mapping;
     }
