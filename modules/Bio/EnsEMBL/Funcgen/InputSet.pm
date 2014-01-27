@@ -66,19 +66,7 @@ use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw deprecate);
 
-use base qw(Bio::EnsEMBL::Funcgen::Set);
-
-
-my %valid_types = (
-    annotated       => undef,
-    result          => undef,
-    segmentation    => undef,
-    dna_methylation => undef,
-    );
-
-#Need the underscore to separate the words
-#for handling conversion to ucfirst feature class namespace
-
+use base qw(Bio::EnsEMBL::Funcgen::Set Bio::EnsEMBL::Funcgen::feature_class_Set);
 
 =head2 new
 
@@ -91,9 +79,9 @@ my %valid_types = (
                   -EXPERIMENT   => $exp,
                   -FEATURE_TYPE => $ftype,
                   -NAME         => 'SRR00000.fastq.gz',
+                  -FEATURE_CLASS => 'annotated',
                   -REPLICATE    => 1, # >0 for specific replicate or 0 for merged
                  );
-
 
   Description: Constructor for InputSet objects.
   Returntype : Bio::EnsEMBL::Funcgen::InputSet
@@ -108,39 +96,29 @@ my %valid_types = (
 #### Support adding passing InputSubsets and storing them in iss and isiss
 sub new {
   my $caller = shift;
-
   my $class = ref($caller) || $caller;
+  my $self  = $class->SUPER::new(@_);
+  my ($exp, $rep) = rearrange(['EXPERIMENT', 'REPLICATE'], @_);
 
-  #Add set_type here to overwrite default ref parsing in Set::set_type
-  #This need to stay like this until we patch the DB
-  my $self = $class->SUPER::new(@_);
-  my ($exp, $rep)
-    = rearrange(['EXPERIMENT', 'REPLICATE'], @_);
+  $self->_validate_feature_class(\@_);	
+  throw ('Must provide a  CellType') if ! defined $self->cell_type;
 
-  my $package_exp = 'Bio::EnsEMBL::Funcgen::Experiment';
-  if (! (ref $exp && $exp->isa($package_exp) && $exp->dbID())){
-    throw("Must specify a valid stored $package_exp. Passed: ".ref($exp));
-  }
-
-  #These are set in Set, just validate here
-  throw ('Must provide an Analysis')    if(! defined $self->analysis);
-  #throw ('Must provide a  CellType')    if(! defined $self->cell_type);
-  #Not strictly true for flat file import
-
-  my $type = $self->feature_class;
-
-  #Need to move these types to config
-
-  if(! (defined $type && exists $valid_types{$type})){
-    throw("You must define a valid InputSet feature_class($type), one of: ".join(", ", keys %valid_types));
+  if (! (ref $exp && $exp->isa('Bio::EnsEMBL::Funcgen::Experiment') && $exp->dbID())){
+    throw("Must specify a valid stored Bio::EnsEMBL::Funcgen::Experiment Passed: ".ref($exp));
   }
 
   #Set directly for speed
   $self->{replicate}  = $rep;
   $self->{experiment} = $exp;
-
   return $self;
 }
+
+
+
+sub _valid_feature_classes{
+  return qw( annotated result segmentation dna_methylation );
+}
+
 
 =head2 get_Experiment
 
