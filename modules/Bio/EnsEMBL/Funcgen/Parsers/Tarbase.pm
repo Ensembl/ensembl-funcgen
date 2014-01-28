@@ -32,7 +32,7 @@ use feature qw(say);
 use Bio::EnsEMBL::DBEntry;
 use Bio::EnsEMBL::Funcgen::FeatureType;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils  qw(dump_data add_external_db);
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils  qw(add_external_db);
 
 
 use parent qw( Bio::EnsEMBL::Funcgen::Parsers::BaseExternalParser );
@@ -48,8 +48,8 @@ sub new {
 
   #Set default feature_type and feature_set config
   $self->{static_config}{feature_types} = {(
-      'TarBase miRNA'   => {
-        -name        => 'TarBase miRNA',
+      'TarBase miRNA target'   => {
+        -name        => 'TarBase miRNA target',
         -class       => 'RNA',
         -description => 'TarBase miRNA target predictions',
         },
@@ -57,8 +57,8 @@ sub new {
 
   $self->{static_config}{analysis} = {
     TarBase =>  {
-      -logic_name    => 'TarBase miRNA',
-      -description   => 'TarBase miRNA target predictions (http://diana.imis.athena-innovation.gr/)',
+      -logic_name    => 'TarBase_v6.0',
+      -description   => '<a>TarBase</a> miRNA target predictions (http://diana.imis.athena-innovation.gr/)',
       -display_label => 'TarBase miRNA',
       -displayable   => 1,
     },
@@ -84,10 +84,10 @@ sub new {
       #This is why we have top level hash where we can define a unique compound key name
 
       feature_set   =>{
-        -feature_type      => 'TarBase miRNA', #feature_types config key name not object
+        -feature_type      => 'TarBase miRNA target', #feature_types config key name not object
         -display_label     => 'TarBase miRNA target predictions',
         -description       => 'TarBase miRNA target predictions',
-        -analysis          => 'TarBase', #analysis config key name not object
+        -analysis          => 'TarBase_v6.0', #analysis config key name not object
       },
     }
   };
@@ -99,24 +99,55 @@ sub new {
   return $self;
 }
 
-# Parse file and return hashref containing:
-#
-# - arrayref of features
-# - arrayref of factors
-
 
 sub parse_and_load{
   my ($self, $files, $old_assembly, $new_assembly) = @_;
-  #say dump_data($self); die;
 
   if (scalar(@$files) != 2) {
     throw('2 files expected, Tarbase data(1) and aliases.txt(2) from miRBase\t'.join(' ', @$files));;
   }
-  $self->log_header("Parsing miRNA names from:\t".$files->[1]);
+  
+  # Set release to the release TarBase used to map their miRNA targets 
+  my $external_db_name;
+  my $external_db_release;
+  
+  if($self->species eq 'homo_sapiens'){
+    $external_db_name    = 'homo_sapiens_core_Gene';
+    $external_db_release = '73_37'; 
+  }
+  elsif($self->species eq 'mus_musculus'){
+    $external_db_name    = 'mus_musculus_core_Gene';
+    $external_db_release = '73_38'; 
+  }
+  elsif($self->species eq 'rattus_norvegicus'){
+    $external_db_name    = 'rattus_norvegicus_core_Gene';
+    $external_db_release = '73_5'; 
+  }
+  else{
+    throw($self->species . " not implemented. Add here.")
+  }
+  $self->log_header("Using $external_db_name as external_db.name and $external_db_release as external_db.release");
+  
+  my $ex_Db = add_external_db(
+    $self->db, 
+    $external_db_name,
+    $external_db_release,
+    'EnsemblGene',
+    );
+
+  $self->log_header("Parsing miRNA names (only human, mouse and rat) from:\t".$files->[1]);  
+  # alias.txt
+  # map accession to ID 
+  # MI0000063  hsa-let-7bL;hsa-let-7b;
+  # The last ID (hsa-let-7b in this case) is always the preferred one
+  # Currently we only keep human, mouse and rat
 
   my $id_lookup = {};
   open(my $fh,'<',$files->[1]) or die "Can't access ". $files->[1];
     while(my $line = <$fh>){
+      if($line !~ /^MI\d{7}\t[a-z;0-9]*$/){
+        throw("Unexpected format of alias.txt file");
+      }
       next if($line !~ /[hsa-|mmu-|rno]/);
       chomp($line);
       my @ids = split(/\t/, $line);
@@ -128,6 +159,7 @@ sub parse_and_load{
     }
   close($fh);
 
+
   my $extfeat_a   = $self->db->get_ExternalFeatureAdaptor;
   my $dbentry_a   = $self->db->get_DBEntryAdaptor;
   my $feattype_a  = $self->db->get_FeatureTypeAdaptor;
@@ -137,10 +169,13 @@ sub parse_and_load{
   my $fset_config      = $self->{static_config}{feature_sets}{'TarBase miRNA'};
   my $fset              = $fset_config->{feature_set};
   
+  $self->rollback_FeatureSet($fset);
+  $self->log_header("Rollback old records in external_features manually");
+
+  # Logging has space for improvement
   my $log  = {};
   my $log2 = {};
 
-  $self->log_header("Parsing and loading TarBase data from:\t" . $files->[0]);
   my $species = {
     ENSG    => 'homo_sapiens',
     ENSMUSG => 'mus_musculus',
@@ -154,22 +189,14 @@ sub parse_and_load{
   # yes: MIMAT0000416|ENSG00000101158|
   # no:  MIMAT0004224|C37H5.6|Sequencing|NA|UNKNOWN|
   #next if($line !~ /\d\|ENS/);
-  my $ex_Db = add_external_db(
-    $self->db, 
-    'homo_sapiens_core_Gene',
-    '75_37',
-    'EnsemblGene',
-    );
-  
-  $self->rollback_FeatureSet($fset,undef,undef,1,1);
+  $self->log_header("Parsing and loading TarBase data from:\t" . $files->[0]);
 
-  
   open($fh,'<',$files->[0]) or die "Can't access ". $files->[0];
-  my $c = 0;
   while (my $line = <$fh>) {
-  #  last if($c == 1);
     my $species_tarbase;
-    $line =~ /^MIMAT\d{7}\|(ENSG|ENSMUSG|ENMSRNOG])/;
+    
+    $line =~ /^MIMAT\d{7}\|(ENSG|ENSMUSG|ENSRNOG])/;
+
     if($1){
       $species_tarbase = $species->{$1};
     }
@@ -299,8 +326,8 @@ sub parse_and_load{
 
       my $dbentry = Bio::EnsEMBL::DBEntry->new(
        -primary_id             => $gene->stable_id,
-       -dbname                 => 'homo_sapiens_core_Genome',
-       -release                => $self->db->_get_schema_build($self->db), 
+       -dbname                 => $external_db_name,
+       -release                => $external_db_release, 
        -display_id             => $gene->display_xref->display_id,
        -status                 => 'KNOWNXREF',
        -db_display_name        => 'EnsemblGene',
@@ -315,7 +342,7 @@ sub parse_and_load{
       $log->{stored_records}->{$mi_rna_name}++;
       $log2->{stored_records}++;
     }
-    $c++;
+    
   }
 
   close $fh;
@@ -349,8 +376,6 @@ sub parse_and_load{
   $self->log_header("Failed records: $total");
   $total = $log2->{stored_miRNA} + $log2->{stored_records};
   $self->log_header("Successfully stored: $total");
-
-
 
   #Now set states
   foreach my $status (qw(DISPLAYABLE MART_DISPLAYABLE)) {
