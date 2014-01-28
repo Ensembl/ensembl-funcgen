@@ -75,6 +75,9 @@ use vars qw( @EXPORT );
 
 =cut
 
+#This is currently adding a requirement for file based adaptor
+#to have a _true_tables method
+
 sub new {
   my ($class, @args) = @_;
   my $self = $class->SUPER::new(@args);
@@ -925,7 +928,7 @@ sub fetch_all_by_linked_transcript_Gene{
 
 =head2 store_associated_feature_types
 
-  Arg [1]     : Bio::EnsEMBL::Funcgen::Sotrable
+  Arg [1]     : Bio::EnsEMBL::Funcgen::Storable
   Example     : $ext_feat_adaptor->store_associated_feature_type($ext_feat);
   Description : Store FeatureTypes assoicated with a given Storable
   Returntype  : None
@@ -935,8 +938,15 @@ sub fetch_all_by_linked_transcript_Gene{
 
 =cut
 
+#This currently does not validation
+#of existing types
+#we may want to rollback the associated ftypes from a specific analysis
+#is rollback function safe here
+#do we want to split this into update/add and store methods?
+
+
 sub store_associated_feature_types {
-  my ($self, $storable) = @_;
+  my ($self, $storable, $rollback) = @_;
 
   #Direct access to avoid lazy loading with an unstored SetFeature
   my $assoc_ftypes = $storable->{'associated_feature_types'};
@@ -946,8 +956,15 @@ sub store_associated_feature_types {
 
   my $table_name = $storable->adaptor->_main_table->[0];
   my $dbid = $storable->dbID;
+  my $sql;
 
-  my $sql = 'INSERT into associated_feature_type(table_id, table_name, feature_type_id) values (?,?,?)';
+  if($rollback){
+    $sql = 'DELETE from associated_feature_table where '.
+      "table_name='$table_name' and table_id=$dbid";
+    $self->db->dbc->db_handle->do($sql);
+  }
+
+  $sql = 'INSERT into associated_feature_type(table_id, table_name, feature_type_id) values (?,?,?)';
 
   foreach my $ftype(@$assoc_ftypes){
 
