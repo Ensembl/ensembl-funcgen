@@ -4,7 +4,7 @@
 
 =head1 LICENSE
 
-Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [1999-2014] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -249,7 +249,7 @@ sub get_FeatureAdaptor{
 
   if (! exists $self->{'adaptor_refs'}) {
 
-    foreach my $valid_class (@{$self->_valid_feature_classes}) {
+    foreach my $valid_class ($self->_valid_feature_classes) {
       my $method = 'get_'.$self->adaptor->build_feature_class_name($valid_class).'Adaptor';
       $self->{'adaptor_refs'}{$valid_class} = $self->adaptor->db->$method;
     }
