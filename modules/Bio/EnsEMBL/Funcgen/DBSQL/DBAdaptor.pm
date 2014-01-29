@@ -254,27 +254,22 @@ sub new {
 
 =head2 is_stored_and_valid
 
-  Arg [1]    : string - class namespace
-  Arg [1]    : Bio::EnsEMBL::Funcgen::Storable e.g. ResultSet etc.
+  Arg [1]    : String - class namespace
+  Arg [2]    : Bio::EnsEMBL::Funcgen::Storable e.g. ResultSet etc.
+  Arg [3]    : String (optional) - Name of variable to use in error output (for use with assert_ref)
   Example    : $db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
   DESCRIPTION: Validates object class and stored status
-  Returntype : none
-  Exceptions : Throws if Storable is not valid or stored
-  Caller     : general - Adaptors, objects will probably be better off implementing in situ.
-               This is to avoid having to test for the adaptor for every object which could slow things down
+  Returntype : None
+  Exceptions : Throws if Storable is not stored
+  Caller     : General
   Status     : At risk
 
 =cut
 
 sub is_stored_and_valid{
-  my ($self, $class, $obj) = @_;
-
-  assert_ref($obj, $class);
-
-  if (! $obj->is_stored($self)) {
-    throw("$obj is not stored");
-  }
-
+  my ($self, $class, $obj, $name) = @_;
+  assert_ref($obj, $class, $name);
+  throw("$obj is not stored") if ! $obj->is_stored($self);
   return;
 }
 
