@@ -62,12 +62,13 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ResultFeatureAdaptor;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Exception         qw( throw deprecate );
+use Bio::EnsEMBL::Utils::Exception  qw( throw deprecate );
+use Bio::EnsEMBL::Utils::Scalar     qw( assert_ref );
 use Bio::EnsEMBL::Funcgen::ResultFeature;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor; #DBI sql_types import
 
 use base qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor
-			         Bio::EnsEMBL::Funcgen::Collector::ResultFeature  );
+			       Bio::EnsEMBL::Funcgen::Collector::ResultFeature  );
 
 #Private vars to used to maintain simple implementation of Collector
 #Should be set in each method to enable trimmingof  the start and end bins. 
@@ -406,7 +407,7 @@ sub _window_size{
   Exceptions : throws is args are not valid
                throws if supporting InputSet is not of type result (i.e. short reads import)
                throws if supporting InputSet format is not SEQUENCING (i.e. short reads import)
-               throws if ResultSet is not and input_set or experimental_chip based ResultSet (i.e. channel etc)
+               throws if ResultSet is not and input_subset or experimental_chip based ResultSet (i.e. channel etc)
   Caller     : ResultFeatureAdaptor::fetch_all_by_Slice_ResultSets
   Status     : At Risk
 
@@ -414,243 +415,227 @@ sub _window_size{
 
 sub set_collection_config_by_Slice_ResultSets{
   my ($self, $slice, $rsets, $max_bins, $window_size) = @_;
-
-  if(ref($rsets) ne 'ARRAY'){
-	throw('You must pass an ARRAYREF of Bio::EnsEMBL::ResultSet objects.');
+  assert_ref($slice, 'Bio::EnsEMBL::Slice');
+  assert_ref($rsets, 'ARRAY', 'ResultSets');
+  
+  if(scalar(@$rsets) == 0){
+	  throw('You must pass an ARRAYREF of Bio::EnsEMBL::ResultSet objects');
   }
   
-  if(! (ref($slice) && $slice->isa('Bio::EnsEMBL::Slice'))){
-	throw('You must pass a valid Bio::EnsEMBL::Slice');
-  }
-
   my ($wsize, $window_element, @rsets, %wsize_config);
   my ($collection_start, $collection_end);
 
   if($window_size && $max_bins){
-	warn "Over-riding max_bins with specific window_size, omit window_size to calculate window_size using max_bins";
+	  warn "Over-riding max_bins with specific window_size, omit window_size to calculate window_size using max_bins";
   }
 
   my ($is_rf_set);
   my $rf_source = 'file';
 
   foreach my $rset(@{$rsets}){
-	$is_rf_set      = $rset->has_status('RESULT_FEATURE_SET') || 0;
-	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
-
-	if(! ($rset->table_name eq 'input_set' || $is_rf_set)){
-	  warn("Skipping non-ResultFeature ResultSet:\t".$rset->name);
-	  next;
-	}
-
-	#Eventually will want to completely remove DB sets?
-	#Depends on how we handle 0bp window sets, BigWig?
-	#Leave 0bp sets in DB for v62 which means we need an extra status
-	#Assume all input_set rsets are file based
-
-	#NOTE:
-	#Don't need to check for packed_size and packed_template differences as they are now the
-	#same for all collections i.e. float. These would need to be separate queries otherwise.
-	#This method makes assumptions about the window_sizes array structure
-	#If this is to change more the the 0 - 30 bp change below then the config hash generation
-	#needs to be reviewed
-	
-   	if($rset->table_name eq 'experimental_chip'){ #Array Intensities i.e. single float
-	  $Bio::EnsEMBL::Utils::Collector::window_sizes->[0] = 0;#Can have natural resolution for low density array data
-	}
-	elsif($rset->table_name eq 'input_set'){
-
-	  $Bio::EnsEMBL::Utils::Collector::window_sizes->[0] = 30;
-	  
-	  #Currently only expecting int from InputSet
-	  my @isets = @{$rset->get_InputSets};
-	  my @tmp_isets = grep { !/result/ } (map { $_->feature_class } @isets );
-	  
-	  if(@tmp_isets){
-      throw("Bio::EnsEMBL::Funcgen::Collector::ResultFeature only supports result type InputSets, not @tmp_isets types");
-	  }
-		
-	  #We still have no way of encoding pack_type for result_feature InputSets
-	}
-	else{
-    throw('Bio::EnsEMBL::Funcgen::Collector:ResultFeature does not support ResultSets of type'.$rset->table_name);
-	}
-
-	
-
-	
-	### SET ResultSet CONFIG BASED ON OPTIMAL WINDOW SIZE
-	# This sets all based on $rf_source=file
-	# For wsize==0 (experimental_chip), the rf_source is fixed after this loop
-	# This is done to prevent cyclical dependancy and improve cache checking speed
- 
-	if( (defined $window_element ) &&
-		exists $wsize_config{$rf_source}{$Bio::EnsEMBL::Utils::Collector::window_sizes->[$window_element]} ){
-	  $wsize_config{$rf_source}{$Bio::EnsEMBL::Utils::Collector::window_sizes->[$window_element]}{'result_sets'}{$rset->dbID} = $rset;
-	}
-	else{ #We have not seen this wsize before
-
-
-	  #This is currently entirely based on the position of the first wsize.
-	  #We can't strictly rely that the same window_element will be optimal for each collection
-	  #However this will work if they are size ordered and only the first element changes e.g. 0 || 30
-	  #Will need to do for each set if window_sizes change
-	  
-	  if(! defined $window_element){
-			
-		my @sizes = @{$self->window_sizes};
-		#we need to remove wsize 0 if ResultSet was generated from high density seq reads
-		#0 should always be first
-
-		shift @sizes if ($sizes[0] == 0 && ($rset->table_name eq 'input_set'));
-		$max_bins ||= 700;#This is default size of display?
-        #CR Change to true drawable pixel width
-		
-		#The speed of this track is directly proportional
-		#to the display size, unlike other tracks!
-		#e.g
-		#let's say we have 300000bp
-		#700  pixels will use 450 wsize > Faster but lower resolution
-		#2000 pixels will use 150 wsize > Slower but higher resolution
-		
-		if(defined $window_size){
-		
-		  if(! grep { /^${window_size}$/ } @sizes){
-			warn "The ResultFeature window_size specifed($window_size) is not valid, the next largest will be chosen from:\t".join(', ', @sizes);
-		  }
-		  else{
-			$wsize = $window_size;
-		  }
-		}
-		else{#! defined $window_size
-		
-		  #Work out window size here based on Slice length
-		  #Select 0 wsize if slice is small enough
-		  #As loop will never pick 0
-		  #probably half 150 max length for current wsize
-		  #Will also be proportional to display size
-		  #This depends on size ordered window sizes arrays
-		  
-		  $window_size = ($slice->length)/$max_bins;
-		
-		  if($Bio::EnsEMBL::Utils::Collector::window_sizes->[0] == 0){
-			
-			my $zero_wsize_limit = ($max_bins * $sizes[1])/2;
-			
-			if($slice->length <= $zero_wsize_limit){
-			  $wsize = 0;
-			  $window_element = 0;
-			}
-		  }
-		}
+  	$is_rf_set = $rset->has_status('RESULT_FEATURE_SET') || 0;
+  	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
+    my $table_name = $rset->table_name;
+   
+  	if(! ($table_name eq 'input_subset' || $is_rf_set)){
+  	  warn("Skipping non-ResultFeature $table_name ResultSet:\t".$rset->name);
+  	  next;
+  	}
   
-		#Let's try and avoid this loop if we have already grep'd or set to 0
-		#In the browser this is only ever likely to speed up the 0 window
-		
-		if (! defined  $wsize) {
-		  #default is maximum
-		  $wsize = $sizes[-1];  #Last element
-		  
-		  #Try and find the next biggest window
-		  #As we don't want more bins than there are pixels
+  	#Eventually will want to completely remove DB sets?
+  	#Depends on how we handle 0bp window sets, BigWig?
+  	#Leave 0bp sets in DB for v62 which means we need an extra status
+  	#Assume all input_subset rsets are file based
+  
+  	#NOTE:
+  	#Don't need to check for packed_size and packed_template differences as they are now the
+  	#same for all collections i.e. float. These would need to be separate queries otherwise.
+  	#This method makes assumptions about the window_sizes array structure
+  	#If this is to change more the the 0 - 30 bp change below then the config hash generation
+  	#needs to be reviewed
+  	
+   	if($table_name eq 'experimental_chip'){ #Array Intensities i.e. single float
+  	  $Bio::EnsEMBL::Utils::Collector::window_sizes->[0] = 0;#Can have natural resolution for low density array data
+  	}
+  	elsif($table_name eq 'input_subset'){  
+  	  $Bio::EnsEMBL::Utils::Collector::window_sizes->[0] = 30;
+  	}
+  	else{
+      throw('Bio::EnsEMBL::Funcgen::Collector:ResultFeature does not support ResultSets of type'.$rset->table_name);
+  	}
 
-		  for (my $i = 0; $i <= $#sizes; $i++) {
-			#We have problems here if we want to define just one window size
-			#In the store methods, this resets the wsizes so we can only pick from those
-			#specified, hence we cannot force the use of 0
-			#@sizes needs to always be the full range of valid windows sizes
-			#Need to always add 0 and skip_zero window if 0 not defined in window_sizes?
-		  
-			if ($window_size <= $sizes[$i]) {
-			  $window_element = $i;
-			  $wsize = $sizes[$i];
-			  last;    
-			}
-		  }
-		}
-	  }
-	  else{   #ASSUME the same window_element has the optimal window_size
-		$wsize = $Bio::EnsEMBL::Utils::Collector::window_sizes->[$window_element];
-	  }
-	  
-	  
-	  
-	  #Set BLOB access & collection_start/end config
-
-	  if ( $wsize == 0) {
-		$wsize_config{$rf_source}{$wsize}{scores_field} = 'rf.scores';
-		#No need to set start end config here as these are normal features
-	  } else {
-		#We want a substring of a whole seq_region collection
-	  
-		#Correct to the nearest bin bounds	  
-		#int rounds towards 0, not always down!
-		#down if +ve or up if -ve
-		#This causes problems with setting start as we round up to zero
-		
-
-		#Sub this lot as we will use it in the Collector for building indexes?
-
-
-		my $start_bin      = $slice->start/$wsize;
-		$collection_start = int($start_bin);
-		
-		#Add 1 here so we avoid multiply by 0 below
-		if ($collection_start < $start_bin) {
-		  $collection_start +=1;	#Add 1 to the bin due to int rounding down
-		}
-		
-		$collection_start = ($collection_start * $wsize) - $wsize + 1 ; #seq_region
-		$collection_end   = int($slice->end/$wsize) * $wsize; #This will be <= $slice->end
-		
-		#Add another window if the end doesn't meet the end of the slice
-		if (($collection_end > 0) &&
-			($collection_end < $slice->end)) {
-		  $collection_end += $wsize;
-		}
-	
-		#Now correct for packed size
-		#Substring on a blob returns bytes not 2byte ascii chars!
-		#start at the first char of the first bin
-		my $sub_start = (((($collection_start - 1)/$wsize) * $self->packed_size) + 1); #add first char
-		#Default to 1 as mysql substring starts < 1 do funny things
-		$sub_start = 1 if $sub_start < 1;
-		my $sub_end   = (($collection_end/$wsize) * ($self->packed_size));
-		
-		#Set local start end config for collections
-		$wsize_config{$rf_source}{$wsize}{collection_start} = $collection_start;
-		$wsize_config{$rf_source}{$wsize}{collection_end}   = $collection_end;
-
-
-		if($rf_source eq 'file'){  #file BLOB access config
-		  $wsize_config{$rf_source}{$wsize}{'byte_offset'} = $sub_start -1;   #offset is always start - 1
-		  $wsize_config{$rf_source}{$wsize}{'byte_length'} = ($sub_end - $sub_start + 1);
-		  #warn "byte_offset = $sub_start";
-		  #warn "byte_length = ($sub_end - $sub_start + 1) => ". ($sub_end - $sub_start + 1);
-		}
-		else{ #DB BLOB access config
-		  #Finally set scores column for fetch
-		   $wsize_config{$rf_source}{$wsize}{scores_field} = "substring(rf.scores, $sub_start, ".
-			 ($sub_end - $sub_start + 1).')';
-		}
-	  }
-
-
-	  #Set the result_set and scores field config
-	  #Would also need to set pack template here if this 
-	  #were to change between collections
-	  $wsize_config{$rf_source}{$wsize}{result_sets}{$rset->dbID} = $rset;
-	}
+  	### SET ResultSet CONFIG BASED ON OPTIMAL WINDOW SIZE
+  	# This sets all based on $rf_source=file
+  	# For wsize==0 (experimental_chip), the rf_source is fixed after this loop
+  	# This is done to prevent cyclical dependancy and improve cache checking speed
+   
+  	if( (defined $window_element ) &&
+  		exists $wsize_config{$rf_source}{$Bio::EnsEMBL::Utils::Collector::window_sizes->[$window_element]} ){
+  	  $wsize_config{$rf_source}{$Bio::EnsEMBL::Utils::Collector::window_sizes->[$window_element]}{'result_sets'}{$rset->dbID} = $rset;
+  	}
+  	else{ #We have not seen this wsize before
+  
+  
+  	  #This is currently entirely based on the position of the first wsize.
+  	  #We can't strictly rely that the same window_element will be optimal for each collection
+  	  #However this will work if they are size ordered and only the first element changes e.g. 0 || 30
+  	  #Will need to do for each set if window_sizes change
+  	  
+  	  if(! defined $window_element){
+  			
+    		my @sizes = @{$self->window_sizes};
+    		#we need to remove wsize 0 if ResultSet was generated from high density seq reads
+    		#0 should always be first
+    
+    		shift @sizes if ($sizes[0] == 0 && ($rset->table_name eq 'input_subset'));
+    		$max_bins ||= 700;#This is default size of display?
+            #CR Change to true drawable pixel width
+    		
+    		#The speed of this track is directly proportional
+    		#to the display size, unlike other tracks!
+    		#e.g
+    		#let's say we have 300000bp
+    		#700  pixels will use 450 wsize > Faster but lower resolution
+    		#2000 pixels will use 150 wsize > Slower but higher resolution
+    		
+    		if(defined $window_size){
+    		
+    		  if(! grep { /^${window_size}$/ } @sizes){
+      			warn "The ResultFeature window_size specifed($window_size) is not valid, the next largest will be chosen from:\t".join(', ', @sizes);
+    		  }
+    		  else{
+      			$wsize = $window_size;
+    		  }
+    		}
+    		else{#! defined $window_size
+    		
+    		  #Work out window size here based on Slice length
+    		  #Select 0 wsize if slice is small enough
+    		  #As loop will never pick 0
+    		  #probably half 150 max length for current wsize
+    		  #Will also be proportional to display size
+    		  #This depends on size ordered window sizes arrays
+    		  
+    		  $window_size = ($slice->length)/$max_bins;
+    		
+    		  if($Bio::EnsEMBL::Utils::Collector::window_sizes->[0] == 0){
+      			my $zero_wsize_limit = ($max_bins * $sizes[1])/2;
+      			
+      			if($slice->length <= $zero_wsize_limit){
+      			  $wsize = 0;
+      			  $window_element = 0;
+      			}
+    		  }
+    		}
+      
+    		#Let's try and avoid this loop if we have already grep'd or set to 0
+    		#In the browser this is only ever likely to speed up the 0 window
+    		
+    		if (! defined  $wsize) {
+    		  #default is maximum
+    		  $wsize = $sizes[-1];  #Last element
+    		  
+    		  #Try and find the next biggest window
+    		  #As we don't want more bins than there are pixels
+    
+    		  for (my $i = 0; $i <= $#sizes; $i++) {
+      			#We have problems here if we want to define just one window size
+      			#In the store methods, this resets the wsizes so we can only pick from those
+      			#specified, hence we cannot force the use of 0
+      			#@sizes needs to always be the full range of valid windows sizes
+      			#Need to always add 0 and skip_zero window if 0 not defined in window_sizes?
+      		  
+      			if ($window_size <= $sizes[$i]) {
+      			  $window_element = $i;
+      			  $wsize = $sizes[$i];
+      			  last;    
+      			}
+    		  }
+    		}
+      }
+      else{   #ASSUME the same window_element has the optimal window_size
+    		$wsize = $Bio::EnsEMBL::Utils::Collector::window_sizes->[$window_element];
+      }
+  	  
+  	  
+  	  
+  	  #Set BLOB access & collection_start/end config
+  
+  	  if ( $wsize == 0) {
+    		$wsize_config{$rf_source}{$wsize}{scores_field} = 'rf.scores';
+    		#No need to set start end config here as these are normal features
+  	  } else {
+    		#We want a substring of a whole seq_region collection
+    	  
+    		#Correct to the nearest bin bounds	  
+    		#int rounds towards 0, not always down!
+    		#down if +ve or up if -ve
+    		#This causes problems with setting start as we round up to zero
+    		
+    
+    		#Sub this lot as we will use it in the Collector for building indexes?
+    
+    
+    		my $start_bin      = $slice->start/$wsize;
+    		$collection_start = int($start_bin);
+    		
+    		#Add 1 here so we avoid multiply by 0 below
+    		if ($collection_start < $start_bin) {
+    		  $collection_start +=1;	#Add 1 to the bin due to int rounding down
+    		}
+    		
+    		$collection_start = ($collection_start * $wsize) - $wsize + 1 ; #seq_region
+    		$collection_end   = int($slice->end/$wsize) * $wsize; #This will be <= $slice->end
+    		
+    		#Add another window if the end doesn't meet the end of the slice
+    		if (($collection_end > 0) &&
+    			($collection_end < $slice->end)) {
+    		  $collection_end += $wsize;
+    		}
+  	
+    		#Now correct for packed size
+    		#Substring on a blob returns bytes not 2byte ascii chars!
+    		#start at the first char of the first bin
+    		my $sub_start = (((($collection_start - 1)/$wsize) * $self->packed_size) + 1); #add first char
+    		#Default to 1 as mysql substring starts < 1 do funny things
+    		$sub_start = 1 if $sub_start < 1;
+    		my $sub_end   = (($collection_end/$wsize) * ($self->packed_size));
+    		
+    		#Set local start end config for collections
+    		$wsize_config{$rf_source}{$wsize}{collection_start} = $collection_start;
+    		$wsize_config{$rf_source}{$wsize}{collection_end}   = $collection_end;
+    
+    
+    		if($rf_source eq 'file'){  #file BLOB access config
+    		  $wsize_config{$rf_source}{$wsize}{'byte_offset'} = $sub_start -1;   #offset is always start - 1
+    		  $wsize_config{$rf_source}{$wsize}{'byte_length'} = ($sub_end - $sub_start + 1);
+    		  #warn "byte_offset = $sub_start";
+    		  #warn "byte_length = ($sub_end - $sub_start + 1) => ". ($sub_end - $sub_start + 1);
+    		}
+    		else{ #DB BLOB access config
+    		  #Finally set scores column for fetch
+    		   $wsize_config{$rf_source}{$wsize}{scores_field} = "substring(rf.scores, $sub_start, ".
+    			 ($sub_end - $sub_start + 1).')';
+    		}
+  	  }
+  
+  	  #Set the result_set and scores field config
+  	  #Would also need to set pack template here if this 
+  	  #were to change between collections
+  	  $wsize_config{$rf_source}{$wsize}{result_sets}{$rset->dbID} = $rset;
+  	}
+  	
   }
 
   #Fix the 0 wsize source as will be set to 'file' but should be 'db'
   
   if(exists $wsize_config{'file'}{0}){
-	$wsize_config{'db'}{0} = $wsize_config{'file'}{0};
-	delete $wsize_config{'file'}{0};
-
-	if(keys(%{$wsize_config{'file'}}) == 0){
-	  delete $wsize_config{'file'};
-	}
+  	$wsize_config{'db'}{0} = $wsize_config{'file'}{0};
+  	delete $wsize_config{'file'}{0};
+  
+  	if(keys(%{$wsize_config{'file'}}) == 0){
+  	  delete $wsize_config{'file'};
+  	}
   }
 
   $self->{'_collection_config'} = \%wsize_config;
@@ -680,7 +665,7 @@ sub set_collection_config_by_Slice_ResultSets{
 
 sub fetch_all_by_Slice_ResultSets{
   my ($self, $slice, $rsets, $max_bins, $window_size, $orig_constraint) = @_;
-  
+ 
   $orig_constraint .= (defined $orig_constraint) ? ' AND ' : '';
   #currently does not accomodate raw experimental_chip ResultSets!
   my $conf = $self->set_collection_config_by_Slice_ResultSets($slice, $rsets, $max_bins, $window_size);
@@ -688,41 +673,40 @@ sub fetch_all_by_Slice_ResultSets{
   #Loop through each wsize build constraint set private vars and query
   my (%rset_rfs, $constraint);
 
-
-  #Remove this block now we don't really support table based RFs
+  #Can remove this DB conf when we remove support for 0 wsize experimental_chip
+  #result_features
 
   my $rf_conf = $conf->{db};
   
   foreach my $wsize(keys(%{$rf_conf})){
-	$self->{'window_size'} = $wsize;
-	$_scores_field          = $rf_conf->{$wsize}->{scores_field};
-	$constraint = 'rf.result_set_id IN ('.join(', ', keys(%{$rf_conf->{$wsize}->{result_sets}})).')'.
-	  " AND rf.window_size=$wsize";
-	
-	if ($wsize != 0){
-	  $_collection_start = $rf_conf->{$wsize}->{collection_start};
-	  $_collection_end   = $rf_conf->{$wsize}->{collection_end};
-	}
-	
-	my ($rset_results) = @{$self->fetch_all_by_Slice_constraint($slice, $orig_constraint.$constraint)};
-	  	  
-	#This maybe undef if the slice is not present
-	$rset_results ||= {};
+    $self->{'window_size'} = $wsize;
+    $_scores_field          = $rf_conf->{$wsize}->{scores_field};
+    $constraint = 'rf.result_set_id IN ('.join(', ', keys(%{$rf_conf->{$wsize}->{result_sets}})).')'.
+      " AND rf.window_size=$wsize";
 
-	#Will this work for wsize split queries?
-	#We are not setting values for empty queries
-	#Which is causing errors on deref
+    if ($wsize != 0){
+      $_collection_start = $rf_conf->{$wsize}->{collection_start};
+      $_collection_end   = $rf_conf->{$wsize}->{collection_end};
+    }
 	
-	%rset_rfs = (%rset_rfs,
-				 %{$rset_results});
-
-	#Account for DB rsets which return no features
-	foreach my $rset(values %{$rf_conf->{$wsize}{result_sets}}){
-
-	  if(! exists $rset_rfs{$rset->dbID}){
-		$rset_rfs{$rset->dbID} = [];
-	  }
-	}
+    my ($rset_results) = @{$self->fetch_all_by_Slice_constraint($slice, $orig_constraint.$constraint)};
+    	  	  
+    #This maybe undef if the slice is not present
+    $rset_results ||= {};
+    
+    #Will this work for wsize split queries?
+    #We are not setting values for empty queries
+    #Which is causing errors on deref
+    	
+    %rset_rfs = (%rset_rfs, %{$rset_results});
+    
+    #Account for DB rsets which return no features
+    foreach my $rset(values %{$rf_conf->{$wsize}{result_sets}}){
+    
+      if(! exists $rset_rfs{$rset->dbID}){
+        $rset_rfs{$rset->dbID} = [];
+      }
+    }
   }
 
 
@@ -732,13 +716,13 @@ sub fetch_all_by_Slice_ResultSets{
   #Unless we have differing window_size ranges
   my $rf;
   $rf_conf = $conf->{file};
-  
+
   foreach my $wsize(keys(%{$rf_conf})){
 
-	foreach my $file_rset(values %{$rf_conf->{$wsize}{result_sets}}){
-	  $rf = $self->_fetch_from_file_by_Slice_ResultSet($slice, $file_rset, $wsize, $rf_conf);	
-	  $rset_rfs{$file_rset->dbID} = defined($rf) ? [$rf] : [];
-	}
+    foreach my $file_rset(values %{$rf_conf->{$wsize}{result_sets}}){
+      $rf = $self->_fetch_from_file_by_Slice_ResultSet($slice, $file_rset, $wsize, $rf_conf);	
+      $rset_rfs{$file_rset->dbID} = defined($rf) ? [$rf] : [];
+    }
   }
 
   return \%rset_rfs;
@@ -862,7 +846,6 @@ sub _fetch_from_file_by_Slice_ResultSet{
 
 sub fetch_all_by_Slice_ResultSet{
   my ($self, $slice, $rset, $max_bins, $window_size, $orig_constraint) = @_;
-
   #Do this first to avoid double validation of rset
   my $rf_hashref = $self->fetch_all_by_Slice_ResultSets($slice, [$rset], $max_bins, $window_size, $orig_constraint);
 
