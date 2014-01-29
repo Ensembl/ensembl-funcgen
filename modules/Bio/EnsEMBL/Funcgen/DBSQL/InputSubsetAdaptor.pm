@@ -282,6 +282,7 @@ sub _objs_from_sth {
        -NAME         => $name,
        -REPLICATE    => $replicate,
        -ANALYSIS     => $analysis,
+       -ADAPTOR      => $self,
       );
   }
   
