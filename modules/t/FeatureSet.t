@@ -3,32 +3,36 @@
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Test::More;
-use Data::Dumper qw(Dumper);
+use Data::Dumper                   qw( Dumper );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
+#use Bio::EnsEMBL::Test::MultiTestDB;
+use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
+
 
 # This test uses the following comment conventions
 # START method_name testing
 # COMPLETED method_name testing
 
-#throw('Test DB not yet implemented, you need to define a DBAdaptor and remove this throw manually');
-my $user = undef;
+throw('Test DB not yet implemented, you need to define a DBAdaptor and remove this throw manually');
+
+my $user       = undef;
+my $dnadb_user = $user;
+my $host       = undef;
+my $dbname     = undef;
+my $dnadb_host = undef;
+my $dnadb_name = undef;
 
 my $efgdba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
     -user       => $user,
-#    -pass       => ,
-    -DNADB_USER => $user,
-    #-DNADB_PORT => 3306,
-
-    -species    => 'homo_sapiens',
-    -host       => undef,
-    -dbname     => undef,
-    -DNADB_HOST => undef,
-    -DNADB_NAME => 'homo_sapiens_core_71_37',
+    -DNADB_USER => $dnadb_user,
+    #-species    => 'homo_sapiens',
+    -dbname     => $dbname,
+    -host       => $host,
+    -DNADB_HOST => $dnadb_host,
+    -DNADB_NAME => $dnadb_name,
 );
-
-
+$efgdba->dbc->db_handle;#Test DB
 
 my $rsa = $efgdba->get_adaptor("featureset");
 
