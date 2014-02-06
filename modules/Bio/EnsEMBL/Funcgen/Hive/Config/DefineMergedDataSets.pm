@@ -94,7 +94,7 @@ sub pipeline_wide_parameters {
   return 
    {
     %{$self->SUPER::pipeline_wide_parameters}, 
-    can_run_DefineMergedDataSet => 1, 
+    can_DefineMergedDataSet => 1, 
    };
 }
 
@@ -152,7 +152,7 @@ sub pipeline_analyses {
 	 -meadow_type => 'LOCAL',#should always be uppercase
 	  
 	 #general parameters to pass to all jobs, use_tracking_db?
-	 -parameters => {set_type        => 'result_set',
+	 -parameters => {set_type        => 'ResultSet',
 	                 #These are similar to batch_params but only flow
 	                 #to the next analysis
 	                 },

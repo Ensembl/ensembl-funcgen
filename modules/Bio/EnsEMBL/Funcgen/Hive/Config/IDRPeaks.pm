@@ -1,7 +1,7 @@
 
 =head1 LICENSE
 
-Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [1999-2014] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -93,8 +93,8 @@ sub pipeline_wide_parameters {
     #As there is no way of there is no way of the analysis knowing which param to use?
     #
     
-    can_run_DefineReplicateDataSet => 1, 
-    can_run_DefineMergedDataSet    => 0, 
+    can_run_SWEmbl_R0005_replicate => 1, 
+    can_DefineMergedDataSet    => 0, 
    };
 }
 
@@ -166,13 +166,15 @@ sub pipeline_analyses {
 	  -meadow_type => 'LOCAL',#should always be uppercase
 	  
 	  #general parameters to pass to all jobs, use_tracking_db?
-	  -parameters => {set_type        => 'result_set',
+	  -parameters => {set_type        => 'ResultSet',
 	                  only_replicates      => 1, 
 	                 #This might need to take a -replicate flag
 	                 #to ensure we only identify single rep InputSets
 	                 #Probably need a naming convention i.e. suffix of TR_[1-9]*
 	                 #  
 	              
+	                
+	                 
 	                
 	                 },
 	             
@@ -229,15 +231,17 @@ sub pipeline_analyses {
     
     
     
-    #Could have split this out into a mixin conf, as this is a shared analysis
-    #between Peaks and IDRPeaks
+    #Could split this out into a mixin conf (or BaseSequenceAnalysis)
+    #as this is a shared analysis between ReadAlignment and IDRPeaks
+    
+    
     {
      -logic_name    => 'run_SWEmbl_R0005_replicate',  #SWEmbl permissive
      -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunPeaks',
      -parameters => 
       {
-       peak_analysis => $self->o('permissive_peaks'), #This will not allow batch override!
-       #Would have to flow this explicity from IdentifyReplicateResultSets and MergeReplicateAlignments_and_QC
+       #peak_analysis => $self->o('permissive_peaks'), #This will not allow batch override!
+       #Now batch flown, so we need to flow this explicity as peak_analysis from IdentifyReplicateResultSets and MergeReplicateAlignments_and_QC
       },
      -analysis_capacity => 10,
      -rc_name => 'long_monitored_high_mem', # Better safe than sorry... size of datasets tends to increase...       
@@ -288,15 +292,11 @@ sub pipeline_analyses {
      
     -flow_into => 
      {
-      2 => [ ':////accu?idr_peaks=[num_peaks]' ],
+      2 => [ ':////accu?idr_peak_counts=[num_peaks]' ],
      }
 
            
-     #-flow_into => 
-     # {
-     #  '2' => [ 'DefineMergedReplicateResultSet' ],
-     # }, 
-      
+ 
       #Or should this do all this in the same analysis
       #where are we going to cache the run_idr output for the
       #final peak calling threshold? Let's keep this in a tracking DB
