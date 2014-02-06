@@ -1539,7 +1539,8 @@ sub dataflow_branch_output_ids {
 #These are only dataflowed to the next analysis
 
 sub dataflow_params {
-  my ($self, $optional) = @_; 
+  my $self         = shift;
+  my $optional     = shift;
   my $param_values = {};
   
   if(! $self->param_silent('dataflow_param_names')){
@@ -1556,8 +1557,9 @@ sub dataflow_params {
   return $param_values;
 }
 
+
 sub batch_params {
-  return $_[0]->_dataflow_params_by_list('batch_param_names');
+  return shift->_dataflow_params_by_list('batch_param_names');
 }
 
 
@@ -1658,15 +1660,26 @@ sub check_analysis_can_run{
 
 
 #todo Move these to (and create) BaseSequenceAnalysis.pm?
+#We really need to specify a force_male flag if gender is undefined
+
+#species and assembly are set in _set_outdb
 
 sub sam_ref_fai {
-  my $self = shift; 
+  my $self   = shift;
+  my $gender = shift; 
   
   if(! defined $self->param_silent('sam_ref_fai')){
-    my $file_name = $self->species."_"; 
-    $file_name  .= $self->param_required('cell_type')->gender || 'male'; #why isn't this female?
-    $file_name  .= '_'.$self->assembly.'_unmasked.fasta.fai';
+
+    if(! defined $gender){
+      $gender = $self->param_silent('gender') || $self->param_silent('default_gender');
+      
+      if(! defined $gender){
+        $self->throw_no_retry('No gender argument or param defined and no default_gender '.
+        'specific in the config');
+      }
+    }
     
+    my $file_name = $self->species.'_'.$gender.'_'.$self->assembly.'_unmasked.fasta.fai';
     my $sam_ref_fai = validate_path([$self->data_root_dir,
                                     'sam_header',
                                     $self->species,
@@ -1678,38 +1691,55 @@ sub sam_ref_fai {
   return $self->param('sam_ref_fai');
 }
 
+#merge these two subs
+
+sub sam_header{
+  my $self   = shift;
+  my $gender = shift; 
+  
+  if(! defined $self->param_silent('sam_header')){
+  
+    if(! defined $gender){
+      $gender = $self->param_silent('gender') || $self->param_silent('default_gender');
+      
+      if(! defined $gender){
+        $self->throw_no_retry('No gender argument or param defined and no default_gender '.
+        'specific in the config');
+      }
+    }
+    
+    my $sam_header = join('/', ($self->param_required('data_root_dir'),
+                                 'sam_header',
+                                 $self->species,
+                                 $self->species.'_'.$gender.'_'.$self->assembly.'_unmasked.header.sam'));
+    $self->set_param_method('sam_header', $sam_header);
+  }
+  
+  return $self->param('sam_header'); 
+}
 
 
-#Should really also pass filter_from_format
-#as we might not always want to filter
-#and we may pick up the original filter_from_format config
-#so expicilty pass it rather than messing around with redefining and dataflowing
-#This won't fix the PreprocessAlignments issue!
-#As CollectionWriter is used again.
-
-
-#alignment will use this to generate the output file
-
-#This does not account for replicates?
-#Replicate naming is handling via input set name for signal sets
-#control files will always be merged and so don't need the TR suffix
-#from the input set name
 
 sub get_alignment_file_prefix_by_ResultSet{
   my ($self, $rset, $control) = @_;  
-  
+    
   $self->out_db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
   my $path = $self->alignment_dir($rset, undef, $control);
-    
-  if($control){
-    $path .= '/'.$self->get_set_prefix_from_Set($rset, $control).'_'.
-        $rset->analysis->logic_name;
-  }
-  else{
-    $path .= '/'.$rset->name; 
-  } 
+  my @rep_numbers;
   
-  return $path; 
+  foreach my $isset(@{$rset->get_support}){
+    
+    if( ($control && $isset->is_control)  ||
+        ((! $control) && 
+         (! $isset->is_control)) ){ 
+       push @rep_numbers, $isset->replicate;
+    }
+  }
+  
+  #Uses get_set_prefix_from_Set rather than set name, as IDR rep sets
+  #will already contain the rep number, and merged sets will not  
+  return $path.'/'.$self->get_set_prefix_from_Set($rset, $control).'_'.
+    $rset->analysis->logic_name.'_'.join('_', sort(@rep_numbers)); 
 }
 
 #This will have validated that input_set are all part of the same experiment
@@ -1748,9 +1778,8 @@ sub get_alignment_files_by_ResultSet_formats {
     $path = $self->get_alignment_file_prefix_by_ResultSet($rset, $control).
                 '.samse'; #Currently hardcoded for bam origin!
   
-    if($filter_format){
-      $path .= '.unfiltered';  
-    }
+    $path .= '.unfiltered' if $filter_format;
+     
 
     $self->helper->debug(1, "Getting $file_type (filter_from_format=$filter_format):\n\t".$path);
     $align_files = get_files_by_formats($path, $formats, $params);
@@ -1822,60 +1851,27 @@ sub CvGV_name_or_bust {
 
 
 
-# To be removed once this is implemented inensembl-hive
-# No obvious place for it without creating a sparse clone of Excpetions.pm
-# and getting Process.pm to import throw from there  
+# Put this in Process.pm
   
 =head2 throw_no_retry
 
   Arg [1]    : string $msg
   Arg [2]    : (optional) int $level
                override the default level of exception throwing
-  Example    : use Bio::EnsEMBL::Utils::Exception qw(throw);
-               throw('We have a problem');
-  Description: Throws an exception which if not caught by an eval will
-               provide a stack trace to STDERR and die.  If the verbosity level
-               is lower than the level of the throw, then no error message is
-               displayed but the program will still die (unless the exception
-               is caught).
+  Example    : $self->throw_no_retry('We have a non transient error, this job will not be retried');
+  Description: Sets transient_error to 0 before throwing, such that this job will not be retried
   Returntype : none
-  Exceptions : thrown every time
-  Caller     : generally on error
+  Exceptions : throws
+  Caller     : general
 
 =cut
 
-sub throw {
-  my $string = shift;
 
-  # For backwards compatibility with Bio::EnsEMBL::Root::throw:  Allow
-  # to be called as an object method as well as class method.  Root
-  # function now deprecated so call will have the string instead.
-
-  $string = shift if ( ref($string) );    # Skip object if one provided.
-  $string = shift if ( $string eq "Bio::EnsEMBL::Utils::Exception" );
-
-  my $level = shift;
-  $level = $DEFAULT_EXCEPTION if ( !defined($level) );
-
-  if ( $VERBOSITY < $level ) {
-    die("\n");    # still die, but silently
-  }
-
-  my $std = stack_trace_dump(3);
-
-  my $out = sprintf(
-             "\n" .
-             "-------------------- EXCEPTION --------------------\n" .
-             "MSG: %s\n" .
-             "%s" .
-             "Date (localtime)    = %s\n" .
-             "Ensembl API version = %s\n" .
-             "---------------------------------------------------\n",
-             $string, $std, scalar( localtime() ), software_version() );
-             
+sub throw_no_retry {
+  my $self = shift;
   $self->input_job->transient_error( 0 );
-  
-  die($out);
-} ## end sub throw  
+  throw(@_);
+
+} ## end throw_no_retry  
 
 1;
