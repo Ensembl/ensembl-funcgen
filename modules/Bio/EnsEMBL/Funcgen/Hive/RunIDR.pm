@@ -126,7 +126,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
   #Just write to file for now until we know if/what we want in the table.
   #Do we need to be concerned if thresholds differ between combinations? 
   
-  #Warning: Parallelised appending to file!
+  #Warning: Parallelised appending to file!l
   $cmd = "echo -e \"IDR Comparison\tIDR Peaks\n$output_prefix\t$num_peaks\" >> ${out_dir}/${idr_name}-idr-stats.txt";
   run_system_cmd($cmd);
   
@@ -166,7 +166,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
 sub write_output {  # Create the relevant jobs
   my $self = shift;
   #This is accumulated into an array, which is picked up by PostprocessIDR analysis on another branch.
-  $self->dataflow_output_id( {'idr_peaks'   => $self->num_peaks}, 2);
+  $self->dataflow_output_id( {'idr_peak_counts'   => $self->num_peaks}, 2);
   return;
 }
 
