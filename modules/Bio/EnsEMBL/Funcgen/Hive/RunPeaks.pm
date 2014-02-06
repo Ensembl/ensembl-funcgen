@@ -54,6 +54,7 @@ use base ('Bio::EnsEMBL::Funcgen::Hive::BaseDB');
 
 sub fetch_input {
   my $self = shift;
+  $self->check_analysis_can_run;
   $self->SUPER::fetch_input;
 
   my $set_type = $self->param_required('set_type');
@@ -71,6 +72,16 @@ sub fetch_input {
     $rset = $self->fetch_Set_input('ResultSet'); 
     
     #This is likely permissive peaks for pre_IDR rep 
+    
+    
+    #Can we not auto detect based on run_idr and is_idr_feature_type
+    #No this is breaking the link between setting the analysis and the branching
+    #which is based on the FeatureSet logic_name
+    #This branch config is not loaded in IdentifyReplicateResultSet
+    #How are we goign to do this, such that we don't risk 
+    #passing the wrong analysis! i.e. It has to match the hive analysis name
+    #
+    
     my $peak_analysis = $self->param_required('peak_analysis');
     $analysis = &scalars_to_objects($self->out_db,'Analysis',
                                                   'fetch_by_logic_name',
@@ -102,8 +113,7 @@ sub fetch_input {
                                                                  $formats,
                                                                  undef,  # control flag
                                                                  undef,  # all_formats flag
-                                                                 $filter_format
-                                                                );
+                                                                 $filter_format);
 
   if ( ! $self->get_param_method( 'skip_control', 'silent' ) ) {
     #This throws if not found
