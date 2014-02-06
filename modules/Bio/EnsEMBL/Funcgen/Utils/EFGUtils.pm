@@ -42,9 +42,6 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(list your required methods here);
 
 =cut
 
-
-# No API/Object based methods in here
-
 ###############################################################################
 
 package Bio::EnsEMBL::Funcgen::Utils::EFGUtils;
@@ -91,6 +88,7 @@ use vars   qw( @EXPORT_OK );
   is_sam
   mean
   median
+  merge_bams
   open_file
   parse_DB_url
   path_to_namespace
@@ -1512,8 +1510,144 @@ sub scalars_to_objects{
 #This is not fatal, and not caught. Does not occur when filtering with sort
 #maybe we shoudl also be catchign $@ after samtools view -H $in_file?
 
+
+#We could use the existing Bio::SamTools package but:
+#1 This will add an extra requirement
+#2 This will need to be isolated in a hive/analysis only module
+#3 It doesn't appear to support merge operations
+#4 It wouldn't support the piping/greping we do to filter the data
+
+#support sam input here
+#also separate this into merge_sam_bam
+#and merge_sam_bam_cmd
+#then we can use this to grab the pipe command and have 1 place for the sort/merge code
+
+#move to Utils::SamUtils?
+
+
+#Can we return the number of duplicates removes?
+
+sub merge_bams{
+  my $outfile = shift;
+  my $bams    = shift;
+  my $params  = shift;  
+  
+  if(! defined $outfile){
+    throw('Output file argument is not defined');  
+  }
+  elsif($outfile !~ /\.(bam|sam)$/o){
+    throw('Output file argument must have a sam or bam file suffix');    
+  }
+  
+  my $out_flag = ($1 eq 'bam') ? 'b' : '';
+
+  #validate/convert inputs here?
+  #just assume all are bam for now
+  
+  $params ||= {};
+  assert_ref($params, 'HASH');
+  my $sort    = $params->{sort}              if exists $params->{sort};
+  my $rm_dups = $params->{remove_duplicates} if exists $params->{remove_duplicates};
+  
+  my $header_opt = '';
+  
+  if (exists $params->{sam_header}){
+    $header_opt = ' -h '.$params->{sam_header};
+  } 
+  
+  #Assume files are already sorted but support optional sort
+  
+  my $cmd;
+  
+  if(defined $sort){
+    throw('Not implemented sort yet');  
+    # my $sorted_prefix = $tmp_bam.".sorted_$$";
+    #$tmp_bam .= ($sort) ? ".sorted_$$.bam" : '.tmp.bam';
+    #$cmd .= ' | samtools view -uShb - ';  #simply convert to bam using infile header
+    #$cmd .= ($sort) ? ' | samtools sort - '.$sorted_prefix : ' > '.$tmp_bam;
+  }
+ 
+  #samtools merge [-nur1f] [-h inh.sam] [-R reg] <out.bam> <in1.bam> <in2.bam> [...]
+  #we are no longer attempting to use a header file, as this is not the same as the fasta_fai 
+  #file and bam should have integrated and matching headers at this point
+ 
+  #$cmd = "samtools merge -u ${outfile}.inc_dups ".join(' ', @$bams);
+  #run_system_cmd($cmd);
+  
+  #Does merge support - for STDOUT
+  #-u uncompressed output for pipe
+  #-f force overwrite output
+  $cmd  = 'samtools merge -u - '.join(' ', @$bams).' | '; 
+  $cmd .= 'samtools rmdup -s - - |' if $rm_dups;
+  $cmd .= "samtools view -h${out_flag} - > $outfile";
+  #does rmdup support '-' for STDIN STDOUT piping ?
+  #piping like this may cause errors downstream of the pipe not to be caught
+  #could we try doing an open on the piped cmd to try and catch a SIGPIPE?
+  run_system_cmd($cmd);
+  
+  return;
+}
+
+#Utils::SamUtils?
+
+#change this to use $params for fasta_fai?
+
+#This is header list, not in sam/bam format header
+
+sub _validate_sam_fai {
+  my $sam_bam_file = shift;
+  my $fasta_fai    = shift;
+  
+  #do not check file again here ad this is private and should have been done already
+  
+  my $fasta_fai_opt;
+
+  if (defined $fasta_fai) {
+    validate_path($fasta_fai);     $fasta_fai_opt = " -t $fasta_fai ";
+    #-t spec is now optional, as not integrating the header into each file
+    #is risky as it could get regenerated and be mismatched
+    #which may produce unpredicatable behaviour or faults if the header
+    #doesn't match the data.
+  }
+  
+  my ($fai_header, $in_file_header);
+
+  eval { $in_file_header = `samtools view -H $sam_bam_file` };
+  #$! not $@ here which will be null string
+
+  if($!){
+
+    if(! defined $fasta_fai){
+      throw("Could not find an in file header or a sam_ref_fai for:\t$sam_bam_file$!");
+    }
+  }
+  elsif(defined $fasta_fai){
+    $fai_header = `samtools view -H $fasta_fai_opt $sam_bam_file`;
+
+    if($!){
+      throw("Failed to identify view valid header from:\t$fasta_fai\n$!");
+    }
+
+    #Just make sure they are the same
+    if($fai_header ne $in_file_header){
+      warn("CHANGE THIS TO A THROW WHEN WE HAVE FINISHED DEV! Found mismatched infile and fai headers for:\n\t$sam_bam_file\n\t$fasta_fai");
+      #should this throw or just default to in file?
+      #shoudl probably give the options to reheader and sub out this whole compare_sam_header thing
+      #reheader mode, would that all old @SQ are present in new fai header?
+      #can we get the header form the fai by simply providing an empty file?
+      #cat '' | samtools view -HSt fasta.fai -
+    }
+
+    #we don't need the header file as we have the correct infile header
+    $fasta_fai_opt = '';
+  }
+  
+  return $fasta_fai_opt;
+}
+
 sub process_sam_bam {
-  my ($sam_bam_path, $params) = @_;
+  my $sam_bam_path = shift;
+  my $params       = shift;
   my $in_file;
 
   if(! ($in_file = check_file($sam_bam_path, undef, $params)) ){
@@ -1528,15 +1662,7 @@ sub process_sam_bam {
   my $fasta_fai     = $params->{ref_fai}            if exists $params->{ref_fai};
   my $out_format    = $params->{output_format}      if exists $params->{output_format};
   $out_format     ||= 'sam';
-  my $fasta_fai_opt = '';
 
-  if (defined $fasta_fai) {
-    validate_path($fasta_fai);     $fasta_fai_opt = " -t $fasta_fai ";
-    #-t spec is now optional, as not integrating the header into each file
-    #is risky as it could get regenerated and be mismatched
-    #which may produce unpredicatable behaviour or faults if the header
-    #doesn't match the data.
-  }
 
   #sam defaults
   my $in_format = 'sam';
@@ -1610,46 +1736,9 @@ sub process_sam_bam {
   #This can result in mismatched headers, as it does seem like the fai file is used rather than the in file header
   #here, at least for bams
 
-  #We need to test whether it has a header or not before we do this!
-  my ($fai_header, $in_file_header);
-
-  eval { $in_file_header =`samtools view -H $in_file` };
-
-  #$! not $@ here which will be null string
-
-  if($!){
-
-    if(! defined $fasta_fai){
-      throw("Could not find an in file header or a sam_ref_fai for:\t$in_file$!");
-    }
-  }
-  elsif(defined $fasta_fai){
-    #Now what do we do?
-    #will -H now return the faig header, or the infile header?
-    #I think the fai header (at least for bam)
-
-    $fai_header = `samtools view -H $fasta_fai_opt $in_file`;
-
-    if($!){
-      throw("Failed to identify view valid header from:\t$fasta_fai\n$!");
-    }
-
-    #Just make sure they are the same
-    if($fai_header ne $in_file_header){
-      warn("CHANGE THIS TO A THROW WHEN WE HAVE FINISHED DEV! Found mismatched infile and fai headers for:\n\t$in_file\n\t$fasta_fai");
-      #should this throw or just default to in file?
-      #shoudl probably give the options to reheader and sub out this whole compare_sam_header thing
-      #reheader mode, would that all old @SQ are present in new fai header?
-      #can we get the header form the fai by simply providing an empty file?
-      #cat '' | samtools view -HSt fasta.fai -
-
-    }
-
-    #Just undef this for simplicity
-    $fasta_fai_opt = '';
-  }
 
 
+  my $fasta_fai_opt = _validate_sam_bam_header($in_file, $fasta_fai);
   my $cmd = "samtools view -h${in_flag} $fasta_fai_opt $in_file "; # Incorporate header into file
 
   if($filter_format){
@@ -1837,8 +1926,6 @@ sub url_from_DB_params {
 
 #Very simple method to check for a file and it's compressed variants
 #This may cause problems if the $file_path is already .gz
-
-
 
 sub check_file{
   my ($file_path, $suffix, $params) = @_;
