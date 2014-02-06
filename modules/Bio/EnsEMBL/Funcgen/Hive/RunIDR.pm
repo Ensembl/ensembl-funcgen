@@ -63,7 +63,8 @@ sub fetch_input {   # fetch parameters...
 
   $self->get_param_method('idr_threshold', 'required');
   $self->get_param_method('output_prefix', 'silent');
-  $self->get_param_method('idr_name', 'silent');
+  $self->get_param_method('idr_name', 'silent', $self->output_prefix);
+  $self->param_required('idr_name');
   $self->param_required('output_dir');
   return;
 }
@@ -73,16 +74,16 @@ sub run {   # Check parameters and do appropriate database/file operations...
   my $self          = shift;
   my $files         = $self->bed_files;
   my $output_prefix = $self->output_prefix;
-  my $out_dir       = $output_dir;
+  my $out_dir       = $self->output_dir;
           
   #Check we have different files
   if($files->[0] eq $files->[1]){
-    $self->throw_no_retry("Pre-IDR ResultSets are identical, dbIDs:\t".join(' ', @$dbids));  
+    $self->throw_no_retry("Pre-IDR ResultSets are identical, dbIDs:\t".join(' ', @$files));  
   }                              
  
   #Check we have 2 reps
   if(scalar (@$files) != 2){
-    $self->throw_no_retry("RunIDR expect 2 replicate bed files:\t".join(' ', @$files)));  
+    $self->throw_no_retry("RunIDR expect 2 replicate bed files:\t".join(' ', @$files));  
   }
        
   #Check output dir exists     
@@ -94,8 +95,8 @@ sub run {   # Check parameters and do appropriate database/file operations...
   if(! defined $output_prefix){
     my @names;
     
-    foreach my $file(@files){
-      (my $name = $file) =~ s/.*\//;  
+    foreach my $file(@$files){
+      (my $name = $file) =~ s/.*\///;  
       $name =~ s/(\.np_idr)*\.bed$//;
       push @names, $name;
     }
@@ -103,13 +104,12 @@ sub run {   # Check parameters and do appropriate database/file operations...
     $output_prefix = $names[0].'_VS_'.$names[1];      
   }
 
-  $idr_name ||= $output_prefix;
-                                               
   #IDR analysis
   #TODO install idrCode in /software/ensembl/funcgen and add this an analysis?
+  my $idr_name = $self->idr_name;
   
   my $cmd = 'Rscript ~dz1/utils/idrCode/batch-consistency-analysis.r '. 
-    join(' ', @{$files})." -1 ${out_dir}/${comb_name} 0 F signal.value";  
+    join(' ', @{$files})." -1 ${out_dir}/${idr_name} 0 F signal.value";  
   #signal.value is ranking measure here i.e. SWEmbl score                                              
   run_system_cmd($cmd);      
   
@@ -164,7 +164,9 @@ sub run {   # Check parameters and do appropriate database/file operations...
 
 
 sub write_output {  # Create the relevant jobs
-  shift->dataflow_output_id( {'idr_peaks'   => $self->num_peaks}, 2);
+  my $self = shift;
+  #This is accumulated into an array, which is picked up by PostprocessIDR analysis on another branch.
+  $self->dataflow_output_id( {'idr_peaks'   => $self->num_peaks}, 2);
   return;
 }
 
