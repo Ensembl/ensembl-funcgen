@@ -26,7 +26,7 @@ sub new {
 
   my ($prog_file, $prog_params, $query_file, $ref_file, $out_dir, $format) =
     rearrange(['PROGRAM_FILE', 'PARAMETERS', 'QUERY_FILE', 
-               'REFERENCE_FILE', 'OUTPUT_DIR' 'OUTPUT_FORMAT'], @_);
+               'REFERENCE_FILE', 'OUTPUT_DIR', 'OUTPUT_FORMAT'], @_);
       
   if(! ($prog_file && $query_file && $ref_file)){
     throw("Some mandatory parameters are not met:\n\t".
