@@ -225,7 +225,9 @@ sub pipeline_wide_parameters {
         #'feature_set_analysis',
         'alignment_analysis',
         'peak_analysis',
-        #permissive_peaks? This will require RunPeaks changes? Currently harcoded in config, but probably want 
+        'permissive_peaks',
+        #? This will require RunPeaks changes? 
+        #Currently harcoded in config, but probably want 
         #to flow from IdentifyReplicateResultSets
         
         
