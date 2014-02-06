@@ -276,8 +276,8 @@ sub pipeline_wide_parameters {
     
     
     #Will need to catch as mandatory params in fetch input where required
-    species      => $self->o('species'),
-    
+    species        => $self->o('species'),
+    default_gender => 'male', #Used for defining reference files when gender is unkown
     #assembly is pipeline wide for the most part, but may want to load on two assemblies?
     #unlikely, more likely that we project from an old assembly onto a single default assembly
     
