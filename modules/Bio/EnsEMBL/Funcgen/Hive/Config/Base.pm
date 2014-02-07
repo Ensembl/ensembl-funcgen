@@ -18,7 +18,7 @@ limitations under the License.
 =head1 CONTACT
 
   Please email comments or questions to the public Ensembl
-  developers list at <ensembl-dev@ebi.ac.uk>.
+  developers list at <http://lists.ensembl.org/mailman/listinfo/dev>.
 
   Questions may also be sent to the Ensembl help desk at
   <http://www.ensembl.org/Help/Contact>.
@@ -53,7 +53,7 @@ init_pipeline.pl Bio::EnsEMBL::Funcgen::HiveConfig::Alignment_conf -job_topup -p
 
 =head1 CONTACT
 
-    Please contact ensembl-dev@ebi.ac.uk mailing list with questions/suggestions.
+    Please contact http://lists.ensembl.org/mailman/listinfo/dev mailing list with questions/suggestions.
 
 =cut
 

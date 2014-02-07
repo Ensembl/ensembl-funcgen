@@ -32,7 +32,7 @@ init_pipeline.pl Bio::EnsEMBL::Funcgen::HiveConfig::Import_conf -job_topup -pass
 
 =head1 CONTACT
 
-    Please contact ensembl-dev@ebi.ac.uk mailing list with questions/suggestions.
+    Please contact http://lists.ensembl.org/mailman/listinfo/dev mailing list with questions/suggestions.
 
 =cut
 
@@ -77,7 +77,7 @@ sub default_options {
 	  'parser'   => "Bed", #Bed
 	  'group'    => "efg",
 	  'location' => "Hinxton",
-	  'contact'  => 'ensembl-dev@ebi.ac.uk',
+	  'contact'  => 'http://lists.ensembl.org/mailman/listinfo/dev',
 
 	  'input_feature_class' => 'result',
 	  'registry_host'       => 'ens-livemirror',
