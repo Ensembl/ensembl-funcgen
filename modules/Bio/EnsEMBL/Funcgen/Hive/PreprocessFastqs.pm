@@ -272,14 +272,7 @@ sub run {
   #Pass $run_controls, as they may not be from this experiment/study, 
   #hence will need to look at the InputSubset
   my $set_prefix = $self->get_set_prefix_from_Set($rset, $run_controls);
-  
-  #Cat rep numbers so we know exactly what this is. 
-  #  '_'.join('_', sort(@rep_numbers)).'.fastq';
-  #Potential sync issues wrt rep update of ResultSet wrt old alignment file
-  #now to be handled with ResultSet ALIGNED status
-  
-      
-  #$self->set_param_method('set_prefix', $set_prefix);    
+         
 
   #For safety, clean away any that match the prefix
   #todo, check that split append an underscore
