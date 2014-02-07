@@ -67,9 +67,10 @@ sub fetch_input {   # fetch parameters...
   }
   
   my $fset_ids = $self->get_param_method('dbIDs',  'required');
-  assert_ref($rset_ids, 'ARRAY', 'FeatureSet dbIDs');
+  assert_ref($fset_ids, 'ARRAY', 'FeatureSet dbIDs');
   $self->get_param_method('permissive_peaks', 'required');
-  my $idr_peaks = $self->get_param_method('idr_peaks', 'required'); 
+  $self->get_param_method('idr_peaks',        'required');
+  my $idr_peaks = $self->get_param_method('idr_peak_counts', 'required'); 
   #This is accumulated data from the RunIDR fan jobs, submitted & semaphored from PreprocessIDR
   assert_ref($idr_peaks, 'ARRAY', 'IDR peaks');
  
@@ -84,15 +85,10 @@ sub run {   # Check parameters and do appropriate database/file operations...
                                           'fetch_by_dbID', $self->dbIDs);
   my $peak_analysis = &scalars_to_objects($self->out_db, 'Analysis',
                                           'fetch_by_logic_name',
-                                          $self->param_required('permissive_peaks'))->[0];                                                
+                                          $self->permissive_peaks)->[0];                                                
 
-  my $max_peaks = (sort {$a <=> $b} @{$self->idr_peaks})[-1];#Take the highest!
+  my $max_peaks = (sort {$a <=> $b} @{$self->idr_peak_counts})[-1];#Take the highest!
 
-  #Now build input job id for  DefineResultSet
-  #Need to dataflow max_peaks
-  #This needs to be batch flown from here
-  #so we don't have to explicitly flow it in 
-  #DefineMergedReplicateResultSet, DefineMergedDataSet and PreprocessAlignments
 
   #Where is merging going to happen?
   #We should do this in DefineResultSet
@@ -103,10 +99,59 @@ sub run {   # Check parameters and do appropriate database/file operations...
   #todo IDR based QC here! 
   
   
+  #Need to flow peak_analysis here, such that we over-ride the non-IDR defaults
+  #If we leave as is, with run_idr enable, PreprocessAlignments will
+  #use the pre-IDR analysis.
   
+  #Is there any other way to handle this?
+  #the run_idr param is now a bit ambiguous
+  #Should this be turned into a string value pre|post?
+  #Probably easier just to over-ride peak analysis defaults with peak_analysis param
+  #
+  
+  #Do the alignment merge here as we already have access to the rep ResultSets here?
+  #or do it in 
+  
+  my @controls = grep {$_->is_control} @{$rsets->[0]->get_support};
+  #my (@signals, @rep_bams);  
+  my @signals  = grep {! $_->is_control} (map {$_->get_support} @$rsets);
+  
+  #my $filter_format = $self->param_silent('bam_filtered') ? undef : 'bam'; 
+
+  my $set_prefix = $self->get_set_prefix_from_Set($rsets->[0]); 
+
+  #We can't get the alignment file from get_alignment_files_by_ResultSet_formats or 
+  #get_alignment_file_prefix_by_ResultSet as the ResultSet doesn't exist yet
+
+  #This is why we were doing the merge in DefineResultSets
+
+
+  #Let's do it there instead...GRR!
+
+  
+  #foreach my $rep_rset(@$rsets){
+  #  
+  #  push @signals, grep {! $_->is_control} @{$rep_rset->get_support};  
+  #  
+  #  #This should only return 1 bam file else throw
+  #  push @rep_bams, 
+  #    @{$self->get_alignment_files_by_ResultSet_formats($rep_rset, ['bam'],
+  #                                                      undef,  # control flag
+  #                                                      undef,  # all_formats flag
+  #                                                      $filter_format)};
+  #}
+  
+  #This is flowing to DefineMergedReplicateResultSet
   $self->branch_job_group(2, {%{$batch_params},
-                              max_peaks => $max_peaks});
-      
+                              max_peaks                  => $max_peaks, #This is batch flown
+                              peak_analysis              => $self->idr_peaks,
+                              merge_replicate_alignments => 1,
+                             
+                              input_subset_ids => 
+                               {
+                                controls     => \@controls,
+                                $set_prefix  => \@signals, }});
+                                 
   return;
 }
 
