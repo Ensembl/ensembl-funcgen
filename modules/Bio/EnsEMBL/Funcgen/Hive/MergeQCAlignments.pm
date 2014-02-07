@@ -38,7 +38,7 @@ use warnings;
 use strict;
 
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd merge_bams );
 
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
@@ -59,16 +59,8 @@ sub fetch_input {
   my $flow_mode = $self->get_param_method('flow_mode',  'required');
   #could have recreated output_dir and merged_file_name from ResultSet and run_controls
   #as we did in MergeChunkResultSetFastqs, but passed for convenience
-
-  my $species = $self->species; #set in _set_outdb
-  my $gender  = $rset->cell_type->gender || 'male';
-  
-  my $sam_header = join('/', ($self->param_required('data_root_dir'),
-                               'sam_header',
-                               $species,
-                               $species.'_'.$gender.'_'.$self->assembly.'_unmasked.header.sam'));
-  $self->set_param_method('sam_header', $sam_header);
-
+  $self->sam_header($rset->cell_type->gender);
+ 
   if($flow_mode ne 'signal'){
     $self->get_param_method('result_set_groups', 'required');
   }
@@ -99,16 +91,14 @@ sub run {
   my $rset         = $self->ResultSet;
   my $sam_header   = $self->sam_header;
   my @bam_files    = @{$self->bam_files};  
+  
   my $bam_file     = $self->output_dir.'/'.$self->set_prefix.'.unfiltered.bam';
-  my $filtered_bam = $self->output_dir.'/'.$self->set_prefix.'.bam';
-  run_system_cmd("samtools merge -f -h $sam_header $bam_file @bam_files");
-  #Maybe remove duplicates as default behavior ?.
-  #my $merge_cmd="samtools merge -h $sam_header - ${file_prefix}.[0-9]*.sorted.bam | ";
-  #$merge_cmd.=" samtools rmdup -s - ${file_prefix}.sorted.bam";
-
-
-  #keep end result as bam... it's more compact: only when passing to the peak caller we pass to sam or other format...
-  #merge_cmd.=" samtools view -h - | gzip -c > ${file_prefix}${align_type}.sam.gz"
+  #my $filtered_bam = $self->output_dir.'/'.$self->set_prefix.'.bam';
+  
+  #sam_header here is really optional if is probably present in each of the bam files
+  merge_bams($bam_file, \@bam_files, {sam_header => $self->sam_header,
+                                      remove_duplicates => 1});
+  
 
 
 #todo convert this to wite to a result_set_report table
@@ -148,19 +138,35 @@ sub run {
   my %batch_params = %{$self->batch_params};
   
   if($flow_mode ne 'signal'){
-    #Data flow to DefineDataSet.pm i.e. DefineMergedOutputSet or DefineReplicateOutputSet
-    $self->branch_job_group('Define'.$flow_mode.'DataSet', 
-                            [{%batch_params,
-                              set_type    => 'ResultSet',
-                              set_name    => $self->ResultSet->name,
-                              dbID        => $self->ResultSet->dbID}]);
+    #Data flow to DefineMergedOutputSet or run_SWEmbl_R0005_replicate
+    
+    #This is a prime example of pros/cons of using branch numbers vs analysis names
+    #Any change in the analysis name conventions in the config will break this runnable
+    #However, it does mean we can change the permissive peaks analysis
+    #and branch without having to change the runnable at all i.e. we don't need to handle 
+    #any new branches in here 
+    
+    #Can of course just piggy back an analysis on the same branch
+    #But that will duplicate the jobs between analyses on the same branch
+    
+    my %output_id = (set_type    => 'ResultSet',
+                     set_name    => $self->ResultSet->name,
+                     dbID        => $self->ResultSet->dbID);
+    my $lname     = 'DefineMergedDataSet';  
+    
+    if($flow_mode eq 'Replicate'){
+      $output_id{peak_analysis} = $self->permissive_peaks;
+      $lname                    = 'run_'.$self->permissive_peaks.'_replicate';  
+    }
+    
+    $self->branch_job_group($lname, [{%batch_params, %output_id}]);
   }
   else{ #Run signal fastqs
     my $rset_groups = $self->result_set_groups;
     my $align_anal  = $rset->analysis->logic_name;
     
     #This bit is very similar to some of the code in DefineResultSets
-    #jsut different enough not to be subbable tho 
+    #just different enough not to be subbable tho 
 
     foreach my $rset_group(keys %{$rset_groups}){
       my @fan_jobs;
