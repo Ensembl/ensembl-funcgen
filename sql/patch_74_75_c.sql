@@ -29,7 +29,15 @@ ALTER TABLE input_subset ADD KEY analysis_idx (analysis_id);
 ALTER TABLE input_subset ADD KEY experiment_idx (experiment_id);
 
 
-UPDATE input_subset iss, input_set_input_subset isiss, input_set inp set iss.analysis_id=inp.analysis_id where inp.input_set_id=isiss.input_set_id and isiss.input_subset_id=iss.input_subset_id;
+UPDATE 
+  input_subset iss, 
+  input_set_input_subset isiss, 
+  input_set inp 
+SET 
+  iss.analysis_id  = inp.analysis_id 
+WHERE 
+  inp.input_set_id      = isiss.input_set_id AND
+  isiss.input_subset_id = iss.input_subset_id;
 
 analyze table input_subset;
 optimize table input_subset;

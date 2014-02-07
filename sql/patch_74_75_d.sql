@@ -19,9 +19,30 @@
         from input_set to input_subset
 */
 
-insert into result_set_input(result_set_id, table_name, table_id) select  rsi.result_set_id, 'input_subset', isiss.input_subset_id from input_set inp, input_set_input_subset isiss, result_set_input rsi where rsi.table_id=inp.input_set_id and rsi.table_name='input_set' and inp.input_set_id=isiss.input_set_id;
+INSERT INTO 
+  result_set_input(
+    result_set_id, 
+    table_name, 
+    table_id
+  ) 
+  SELECT  
+    rsi.result_set_id, 
+    'input_subset', 
+    isiss.input_subset_id 
+  FROM 
+    input_set              inp, 
+    input_set_input_subset isiss, 
+    result_set_input       rsi 
+  WHERE 
+    rsi.table_id     = inp.input_set_id AND 
+    rsi.table_name   ='input_set'       AND 
+    inp.input_set_id = isiss.input_set_id
+    ;
 
-delete from result_set_input where table_name='input_set';
+DELETE FROM 
+  result_set_input 
+WHERE 
+  table_name='input_set';
 
  
 analyze table  result_set_input;
