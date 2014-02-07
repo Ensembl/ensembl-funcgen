@@ -75,19 +75,15 @@ use vars qw( @EXPORT );
 
 =cut
 
-sub new {
-  my ($class, @args) = @_;
-  my $self = $class->SUPER::new(@args);
-  
-  $self->reset_true_tables; #Set the _tables values
-  
-  #Set the main table attrs to avoid having to 
-  #repeatedly handle them in the contrain methods
-  my @tables = $self->_tables;
-  ($self->{_table_name}, $self->{_table_syn}) = @{$tables[0]};
-    
-  return $self;
+
+sub reset_true_tables{
+  my $self = shift;
+
+  #deref to avoid modifying TRUE_TABLES
+  @{$self->TABLES} = @{$self->TRUE_TABLES};
+  return;
 }
+
 
 
 =head2 compose_constraint_query
