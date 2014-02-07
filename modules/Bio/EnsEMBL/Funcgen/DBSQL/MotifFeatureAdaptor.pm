@@ -49,7 +49,7 @@ Bio::EnsEMBL::Funcgen::MotifFeature
   developers list at <ensembl-dev@ebi.ac.uk>.
 
   Questions may also be sent to the Ensembl help desk at
-  <helpdesk@ensembl.org>.
+  <http://www.ensembl.org/Help/Contact>.
 
 
 =cut

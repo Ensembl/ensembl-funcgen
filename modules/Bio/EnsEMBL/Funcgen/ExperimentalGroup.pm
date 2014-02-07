@@ -23,7 +23,7 @@ limitations under the License.
   Please email comments or questions to the public Ensembl  developers list at <ensembl-dev@ebi.ac.uk>.
 
   Questions may also be sent to the Ensembl help desk at
-  <helpdesk@ensembl.org>.
+  <http://www.ensembl.org/Help/Contact>.
 
 =head1 NAME
 
@@ -66,7 +66,7 @@ use base qw(Bio::EnsEMBL::Funcgen::Storable);
   Example    : my $group = Bio::EnsEMBL::Funcgen::ExperimentalGroup->new(
                                                                -name  => "EBI",
                                                                -location  => "Hinxton",
-                                                               -contact  => "dev@ensembl.org",
+                                                               -contact  => "http://lists.ensembl.org/mailman/listinfo/dev",
                                                                -url  => "http://www.ebi.ac.uk/",
                                                                -description => "European Bioinformatics Institute",
                                                                -is_project => 0,
