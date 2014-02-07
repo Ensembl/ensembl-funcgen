@@ -118,8 +118,8 @@ sub pipeline_wide_parameters {
       #This is stricly not required anymore as we use the local_url from the tracking tables
       fastq_root_dir      => $self->o('fastq_root_dir'),
       #This will should be set to one in downstream config 
-      can_run_DefineMergedDataSet    => 0,
-      can_run_DefineReplicateDataSet => 0,  
+      can_DefineMergedDataSet    => 0,
+      can_DefineReplicateDataSet => 0,  
       
       #Here as we use them in more than 1 analysis and not bothered about batch flowing/overriding
       #broad_peak_feature_types = $self>o('broad_peak_feature_types'), 
@@ -154,7 +154,7 @@ sub pipeline_analyses {
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::IdentifySetInputs',     
      -meadow_type => 'LOCAL',#should always be uppercase
      -parameters => 
-      {set_type                     => 'input_subset',
+      {set_type                     => 'InputSubset',
        feature_set_analysis_type    => 'peak',
        default_feature_set_analyses => $self->o('default_peak_analyses'),
         
@@ -167,7 +167,7 @@ sub pipeline_analyses {
        #Hence let's change InputSet analysis to the alignment
        #This is basically reciprocating the ResultSet and we should probably j
        #ust drop one of InputSubset/Set
-       dataflow_param_names => ['no_idr', 'alignment_analysis']
+       dataflow_param_names => ['no_idr'],# 'alignment_analysis'], #now batch flown
        #, 'broad_peak_feature_types'], Removed this for now as we currently don't allow over
        #of any of the defaults hashes apart from at initialisation
        #this is probably a case for using the hive batch flow
@@ -490,24 +490,43 @@ sub pipeline_analyses {
      
      #These are in IDRPeaks.pm config, 
      #This is for flowing of IDR replicate jobs  i.e. permissive SWEMBL 
-    {
-     -logic_name => 'DefineReplicateDataSet',
-     -module     => 'Bio::EnsEMBL::Funcgen::Hive::DefineDataSet',     
-     -meadow_type => 'LOCAL',#should always be uppercase
-     -batch_size => 10, 
-     -parameters => {check_analysis_can_run => 1},
-     #No flow into conf as this will be defined in the top up conf
-     },
+    #{
+    # -logic_name => 'DefineReplicateDataSet',
+    # -module     => 'Bio::EnsEMBL::Funcgen::Hive::DefineDataSet',     
+    # -meadow_type => 'LOCAL',#should always be uppercase
+    # -batch_size => 10, 
+    # -parameters => {check_analysis_can_run => 1},
+    # #No flow into conf as this will be defined in the top up conf
+    # },
      
+    
+    #Could split this out into a mixin conf (or BaseSequenceAnalysis)
+    #as this is a shared analysis between ReadAlignment and IDRPeaks
+     {
+     -logic_name    => 'run_SWEmbl_R0005_replicate',  #SWEmbl permissive
+     -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunPeaks',
+     -parameters => 
+      {
+       check_analysis_can_run => 1, 
+       peak_analysis => $self->o('permissive_peaks'), #This will not allow batch override!
+       #Would have to flow this explicity from IdentifyReplicateResultSets and MergeReplicateAlignments_and_QC
+      },
+     -analysis_capacity => 10,
+     -rc_name => 'long_monitored_high_mem', # Better safe than sorry... size of datasets tends to increase...       
+    },
+    
     
     #This is sempahored from the ReplicateFactory
     #which flows directly DefineReplicateOutputSet and then on to the individual Peaks jobs   
     {
-     -logic_name => 'SubmitIDR',
-     -module     => 'Bio::EnsEMBL::Funcgen::Hive::SubmitIDR',     
+     -logic_name => 'PreprocessIDR',
+     -module     => 'Bio::EnsEMBL::Funcgen::Hive::PreprocessIDR',     
      -batch_size => 30,
      -rc_name    => 'default', 
-     -parameters => { check_analysis_can_run => 1},
+     -parameters => 
+      {check_analysis_can_run => 1,
+       feature_set_analysis => $self->o('permissive_peaks'), #This will not allow batch override
+      },
      #No flow into conf as this will be defined in the top up conf
      
      #This ill have to pick up some accu data from Preprocess_BWA_replicate?
