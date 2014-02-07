@@ -110,11 +110,11 @@ my %config_labels =
 #but we may want to move them there, if we are to allow
 #more than one hive to run on the same DB.
 
-&main();
+&main(@ARGV);
 
 
 sub main{
-  my @tmp_args = @ARGV;
+  my @tmp_args = @_;
   my (@configs, $species, $data_root, $hive_script_dir, $list);               
   my $db_opts  = get_DB_options_config();#This will get opts for funcgen, core and pipeline by default
   
@@ -220,20 +220,14 @@ sub main{
     $ntable_a = $pdb->get_NakedTableAdaptor;
     $ntable_a->table_name('meta');
   }
-  
-  
+   
   add_hive_url_to_meta(url_from_DB_params($pdb_params), $db);
-  
   
   ### PERFORM ANALYSIS_TOPUP ###
   my $conf_key   = 'hive_conf';
   
-  
-  
   #my @meta_confs = @{$mc->list_value_by_key($conf_key)};
   my @meta_confs = @{$ntable_a->fetch_all_by_meta_key($conf_key)};
-  
-  
   
   
   foreach my $conf(@confs){
