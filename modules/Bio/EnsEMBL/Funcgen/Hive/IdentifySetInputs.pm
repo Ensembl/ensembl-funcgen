@@ -99,13 +99,13 @@ sub fetch_input {   # fetch parameters...
   if(! defined $set_type){
     my $lname = $self->analysis->logic_name;  
     
-    foreach my $stype( qw( result_set input_subset ) ){
+    foreach my $stype( qw( ResultSet InputSubset ) ){
       #no input_set support here    
-      (my $lname_type = $stype) =~ s/_//o;
+      #(my $lname_type = $stype) =~ s/_//o;
     
-      if($lname =~ /$lname_type/i){
+      if($lname =~ /$stype/){
         
-        if($set_type){
+        if($set_type){ #Throw if we match is not unique
           throw("Cannot auto detect unique set_type from analysis logic name:\t$lname\n",  
                 'Please defined the set_type analysis_parameter or rename analysis.');
         }
@@ -124,6 +124,10 @@ sub fetch_input {   # fetch parameters...
   my $force_embargoed  = $self->get_param_method('force_embargoed',  'silent');
   my $ignore_embargoed = $self->get_param_method('ignore_embargoed', 'silent'); 
   #This currently still supports input_sets
+ 
+ 
+  #set types in config are table case, where as the are some class case references in here
+  #didn't we decide on class case? Yes!
  
   if($set_type =~ /^Input(Sub)?[sS]et$/) {
     $self->set_param_method('validate_InputSubset_tracking', 1); #for convenience/speed in loop below
@@ -211,6 +215,11 @@ sub fetch_input {   # fetch parameters...
     #Filter replicates from generic fetch_all query
     #and validate specific id/name queries return only reps
   
+    #No this is wrong, this should only be for ResultSets
+    #Or can we support both for now
+    #InputSets will go away
+  
+  
     if($set_type eq 'InputSet'){
       $only_reps = 1;    
     }
@@ -219,6 +228,16 @@ sub fetch_input {   # fetch parameters...
         'Please omit only_replicates config or set the set_type to InputSet');
     }
   }
+  
+  #Revise only_replicates/handle_replicates
+  #Currently this is ambiguous
+  #why did this get renamed to handle_replicates for the run step?
+  #currently only used in IdentifyReplicateResultSets
+  #but was originally aimed at handling InputSets too, although these will now be dropped
+  #Current usage is also a proxy for flowing permissive_peaks to 
+  #run_SWEmbl_R0005_replicate
+  #Although why do we even need this, can't RunPeaks pick up run_idr and is_idr_feature_type?
+  #RunPeaks, should have to know about IDR!
   
   $self->set_param_method('handle_replicates', $only_reps);
   
@@ -288,35 +307,63 @@ sub run {   # Check parameters and do appropriate database/file operations...
   my (@failed);
   
   ### FETCH SETS ###
+ 
+ 
+  #Todo
+  #1 Changed @failed to build $throw directly with more contextual info
   
   #For set_ids and set_names, catch undef return types
-  if($self->set_ids){
+  if($self->set_ids || $self->set_names){
+    my ($ids_or_names, $method);
+    
+    if($self->set_ids){
+      $method       = 'fetch_by_dbID'; 
+      $ids_or_names = $self->set_ids; 
+    }
+    else{
+      $ids_or_names = $self->set_names; 
+      $method = 'fetch_by_name';
+    }
   
-    foreach my $id(@{$self->set_ids}){
-      my $set = $set_adaptor->fetch_by_dbID($id);
+    foreach my $var(@{$ids_or_names}){
+      my $set = $set_adaptor->$method($var);
       
-      if(! defined $set ||
-         ($handle_reps && (! $set->replicate)) ){
-        push @failed, $id;
+      if(! defined $set ){
+        push @failed, $var;
+      }
+      elsif($handle_reps){
+        
+        if($set_type eq 'ResultSet'){
+          #Validate there is just 1 supporting signal InputSubset (which is a replicate)
+          
+          #Check support type
+          #Don't bother handling input_set here as it is being dropped
+          if($set->table_name ne 'input_subset'){
+            push @failed, $var;
+            #$self->throw_no_retry('Expected input_subset support but found '.
+            #  $set->table_name." support for ResultSet:\t".$set->name);  
+          }
+          else{
+            
+            my @issets = grep { ! $_->is_control } @{$set->get_support};
+                   
+            if(scalar(@issets) != 1 ||
+               (! $issets[0]->replicate) ){
+              #Replicate paranoia here
+              #InputSubsets should be replicates
+              #but historically we have had merged InputSubsets
+              push @failed, $var;
+            }    
+          }   
+        }
+        elsif(! $set->replicate){ #Should be InputSet
+          push @failed, $var;
+        }
       }
       else{
         push @$sets, $set;
       }
     }
-  }
-  elsif($self->set_names){
-
-    foreach my $name(@{$self->set_names}){
-      my $set = $set_adaptor->fetch_by_name($name);
-        
-      if(! defined $set ||
-         ($handle_reps && (! $set->replicate)) ){
-        push @failed, $name;
-      }
-      else{
-        push @$sets, $set;
-      }
-    }    
   }
   else{ #Must be other filters  
     my $constraints = $self->constraints_hash;
@@ -330,16 +377,27 @@ sub run {   # Check parameters and do appropriate database/file operations...
     $sets = $set_adaptor->fetch_all( {constraints         => $constraints,
                                       string_param_exists => 1} ); 
     
-    #We could add a contraint for is_replicate
+    #Alternatively we could add a contraint for is_replicate
+    #not for ResultSets at present, as they do not have the replicate field
                                         
     if($handle_reps){  
       my @rep_sets;
       
       foreach my $set(@$sets){
         
-        if($set->replicate){
+        if($set_type eq 'InputSet' &&
+           $set->replicate){
           push @rep_sets, $set;  
         } 
+        elsif($set_type eq 'ResultSet' && 
+              ($set->table_name eq 'input_subset')){
+          
+          my @issets = grep { ! $_->is_control } @{$set->get_support};
+                   
+          if(scalar(@issets) == 1 && $issets[0]->replicate){
+             push @rep_sets, $set;  
+          }
+        }
       }
       
       @$sets = @rep_sets;
@@ -351,7 +409,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
     $throw = 'Failed to identify some '.$self->set_type." sets. Names or IDs don't exist";
     
     if($handle_reps){
-      $throw .= ', and/or they are merged sets and \'replicates\' were requested'; 
+      $throw .= ', and/or \'replicates\' were requested but could not find unique signal replicate'; 
     }
     $throw .= ":\n\t".join("n\t", @failed);
   } 
@@ -1000,7 +1058,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
   #about what has failed  
   
   warn $warn_msg if $warn_msg;
-  throw($throw) if $throw;  
+  $self->throw_now_retry($throw) if $throw;  
   return;
 }
 
