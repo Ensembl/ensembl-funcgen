@@ -32,7 +32,7 @@ init_pipeline.pl Bio::EnsEMBL::Funcgen::HiveConfig::*_conf -job_topup -password 
 
 =head1 CONTACT
 
-    Please contact ensembl-dev@ebi.ac.uk mailing list with questions/suggestions.
+    Please contact http://lists.ensembl.org/mailman/listinfo/dev mailing list with questions/suggestions.
 
 =cut
 
