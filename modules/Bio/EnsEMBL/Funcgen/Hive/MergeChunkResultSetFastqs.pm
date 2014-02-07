@@ -148,7 +148,7 @@ sub run {
     }
  
  
-    my @tinfo = @{$self->tracking_adaptor->fetch_InputSubset_tracking_info($iset)};
+    my @tinfo = @{$self->tracking_adaptor->fetch_InputSubset_tracking_info($isset)};
     #This is currently returning an ARRAYREF, but will change once the input_subset model
     #is corrected
     #TODO check whether input_subsets are unique and tidy as required!
@@ -190,7 +190,7 @@ sub run {
   }  
 
   
-  my @fastqs;
+  my (@fastqs, $found_path);
   
   foreach my $fastq_file(@local_urls){   
     
@@ -198,7 +198,7 @@ sub run {
     #on zipped files
     
     
-    eval { $found_path = check_file($local_url, 'gz', {checksum => 1}); };
+    eval { $found_path = check_file($fastq_file, 'gz', {checksum => 1}); };
     
     if($@){
       $throw .= "$@\n";
@@ -206,7 +206,7 @@ sub run {
     }
     elsif(! defined $found_path){
       $throw .= "Could not find InputSubset local_url path, is either not downloaded, deleted or in warehouse:\t".
-        $isset->name."\n";
+        $fastq_file."\n";
           
       #Could try warehouse here?
     }
@@ -224,7 +224,7 @@ sub run {
   
      
   #Cat rep numbers so we know exactly what this is. 
-  my $merged_file_prefix = $self->get_study_name_from_ResultSet($rset).
+  my $merged_file_prefix = $self->get_set_prefix_from_Set($rset, $run_controls).
     '_'.join('_', sort(@rep_numbers)).'.fastq';
     
   #Clean away any that match the prefix, so we don't pick them up erroneously
