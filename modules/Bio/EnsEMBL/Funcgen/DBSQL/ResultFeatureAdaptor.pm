@@ -528,6 +528,7 @@ sub set_collection_config_by_Slice_ResultSets{
     		  }
     		}
       
+      
     		#Let's try and avoid this loop if we have already grep'd or set to 0
     		#In the browser this is only ever likely to speed up the 0 window
     		
@@ -557,8 +558,7 @@ sub set_collection_config_by_Slice_ResultSets{
     		$wsize = $Bio::EnsEMBL::Utils::Collector::window_sizes->[$window_element];
       }
   	  
-  	  
-  	  
+  	 
   	  #Set BLOB access & collection_start/end config
   
   	  if ( $wsize == 0) {
@@ -720,7 +720,7 @@ sub fetch_all_by_Slice_ResultSets{
   foreach my $wsize(keys(%{$rf_conf})){
 
     foreach my $file_rset(values %{$rf_conf->{$wsize}{result_sets}}){
-      $rf = $self->_fetch_from_file_by_Slice_ResultSet($slice, $file_rset, $wsize, $rf_conf);	
+      $rf = $self->_fetch_from_file_by_Slice_ResultSet($slice, $file_rset, $wsize, $rf_conf);
       $rset_rfs{$file_rset->dbID} = defined($rf) ? [$rf] : [];
     }
   }
@@ -747,6 +747,7 @@ sub fetch_all_by_Slice_ResultSets{
 
 
 #Set/store filepath in ResultSet to avoid having to regenerate?
+#TODO change the start/end to local coords wrt query slice. How does the webcode handle this at present?
 
 sub _fetch_from_file_by_Slice_ResultSet{
   my ($self, $slice, $rset, $window_size, $conf) = @_;
@@ -776,15 +777,12 @@ sub _fetch_from_file_by_Slice_ResultSet{
   my $efg_sr_id = $self->get_seq_region_id_by_Slice($slice);
 
   if($efg_sr_id){
-	
-	my $packed_scores =  $self->read_collection_blob
-	  (
-	   $rset->get_dbfile_path_by_window_size($window_size),
-	   #Would be in analysis object for unique analysis tracks/data
-	   $efg_sr_id,
-	   $conf->{$window_size}{'byte_offset'},
-	   $conf->{$window_size}{'byte_length'},
-	  );
+    my $packed_scores =  $self->read_collection_blob
+	    ($rset->get_dbfile_path_by_window_size($window_size),
+	     #Would be in analysis object for unique analysis tracks/data
+	     $efg_sr_id,
+	     $conf->{$window_size}{'byte_offset'},
+	     $conf->{$window_size}{'byte_length'});
 
 	my ($start, $end, @scores);
 	
@@ -792,7 +790,6 @@ sub _fetch_from_file_by_Slice_ResultSet{
 	if(defined $packed_scores){
 	  ($start, $end) = ($conf->{$window_size}{collection_start}, 
 						$conf->{$window_size}{collection_end});
-	  
 	  
 	  #Need to capture unpack failure here and undef the fh?
 	  #i.e. pack/unpack repeat count overflow 
