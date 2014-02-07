@@ -71,7 +71,7 @@ sub fetch_input {   # fetch parameters...
    
   $self->set_param_method('peak_analysis', &scalars_to_objects($self->out_db, 'Analysis',
                                                                'fetch_by_logic_name',
-                                                               $self->param_required('permissive_peaks'));
+                                                               $self->param_required('permissive_peaks')));
   return;
 }
 
@@ -107,7 +107,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
   }
   elsif($peak_analysis =~ /macs/io){#future proofing as will currently never be tested
     $max_peaks = 100000;
-    warn "Reseting max filtered peaks value to 100000 for MACS analysis:\t$anal_name\n";   
+    warn "Reseting max filtered peaks value to 100000 for MACS analysis:\t$peak_analysis\n";   
   } 
       
   # Validate, count and define IDR threshold 
@@ -119,8 +119,8 @@ sub run {   # Check parameters and do appropriate database/file operations...
   #This is typically for use with peak callers that are unable to be adjusted to call large number of peaks (eg. PeakSeq or QuEST)
   #What exactly are we counting here? Total number peaks across rep, average, or the max between reps?
   #This also depends on the prevalence of the mark, it may be that a particular feature type genuinely does not have many genome wide hits
-  my (%pre_idr_beds, $bed_file, $cmd, $num_peaks, $lt_100k, $mt_100km, 
-      $log_txt, $idr_name, @rep_nums, $ctrl_ids);
+  my (%pre_idr_beds, $bed_file, $cmd, $num_peaks, $lt_100k, $mt_100k, 
+      $log_txt, @rep_nums, $ctrl_ids);
   
   foreach my $rset(@$rsets){
  
@@ -130,18 +130,24 @@ sub run {   # Check parameters and do appropriate database/file operations...
     }
     
     my $seen_rep = 0;
-    my @issets = @{$rset->get_support('input_subset')};
+    
+    if($rset->table_name ne 'input_subset'){
+      $self->throw_no_retry('Expected input_subset support but found '.
+        $rset->table_name." support for ResultSet:\t".$rset->name);  
+    }
+    
+    my @issets = @{$rset->get_support};
     my @ctrl_ids;
     
     foreach my $isset(@issets){
       
       if($isset->is_control){
-        push @ctrl_ids;        
+        push @ctrl_ids, $isset->dbID;;        
       }
       else{
         if($seen_rep){
           $self->throw_no_retry("Found more than 1 replicate (non-control) InputSet supporting an an IDR ResultSet:\n\t".
-            join("\n\t", map {$_>name} @issets)."\n");  
+            join("\n\t", map {$_->name} @issets)."\n");  
         }  
         
         push @rep_nums, $isset->replicate;
@@ -217,6 +223,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
   #maybe with a job factory? I think this is not possible without another analysis
   #but we could use a dummy? which then submit the RunIDR and semaphores the PostProcessIDR
   #Just do here for now
+  my @np_bed_files;
 
   foreach my $bed_file(keys %pre_idr_beds){
     (my $np_bed_file = $bed_file) =~ s/\.bed$/.np_idr.bed/;  
@@ -287,7 +294,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
 
   #Build 2 way rep combinations for IDR jobs
   my @idr_job_ids;
-  my $last_i = $#fset_ids - 1;
+  my $last_i = $#np_bed_files - 1;
   
   foreach my $i(0..$last_i){
     my $next_i = $i + 1;
@@ -299,7 +306,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
                           #output_prefix => $output_prefix,
                           idr_threshold => $idr_threshold,
                           idr_name      => $idr_name,
-                          bed_files     => [$np_bed_files->[i], $np_bed_files->[$j]]};
+                          bed_files     => [$np_bed_files[$i], $np_bed_files[$j]]}};
     }  
   }
   
