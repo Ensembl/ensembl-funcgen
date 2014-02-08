@@ -28,7 +28,7 @@
 -- mysqlw -pXXXXXXX -e 'CREATE DATABASE innodb_funcgen'
 -- mysqlw -pXXXXXXX innodb_funcgen < efg.sql
 -- mysqlro innodb_funcgen -N -e "show tables" | while read t; do if [[ $t != meta ]]; then echo "Altering $t to InnoDB"; mysqlw -pXXXXXXX innodb_funcgen -N -e "ALTER TABLE $t engine=InnoDB"; fi; done
-
+mysql  -h ens-genomics2 -P3306 -u ensro  innodb_funcgen -N -e "show tables" | while read t; do if [[ $t != meta ]]; then echo "Altering $t to InnoDB"; mysql  -h ens-genomics2 -P3306 -u ensadmin -pensembl  innodb_funcgen -N -e "ALTER TABLE $t engine=InnoDB"; fi; done
 -- Then, optionally disable some to remove complexity when generating ER diagrams, before running:
 -- mysqlw -pXXXXXXX innodb_funcgen < foreign_keys.sql
 
@@ -52,31 +52,31 @@ ALTER TABLE input_subset ADD FOREIGN KEY (analysis_id) REFERENCES analysis(analy
 -- input_subset
 ALTER TABLE input_subset ADD FOREIGN KEY (cell_type_id)    REFERENCES cell_type(cell_type_id);
 ALTER TABLE input_subset ADD FOREIGN KEY (experiment_id)   REFERENCES experiment(experiment_id);
-ALTER TABLE input_subset ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type(feature_id);
+ALTER TABLE input_subset ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type(feature_type_id);
 -- removed input_subset->input_set link
 
 -- Last updated for v72
-ALTER TABLE associated_xref ADD FOREIGN KEY (xref_id)             REFERENCES xref;
-ALTER TABLE associated_xref ADD FOREIGN KEY (associated_group_id) REFERENCES associated_group;
-ALTER TABLE associated_xref ADD FOREIGN KEY (object_xref_id)      REFERENCES identity_xref;
+ALTER TABLE associated_xref ADD FOREIGN KEY (xref_id)             REFERENCES xref(xref_id);
+ALTER TABLE associated_xref ADD FOREIGN KEY (associated_group_id) REFERENCES associated_group(associated_group_id);
+ALTER TABLE associated_xref ADD FOREIGN KEY (object_xref_id)      REFERENCES identity_xref(object_xref_id);
 
 -- feature_set
 ALTER TABLE feature_set ADD FOREIGN KEY (input_set_id) REFERENCES input_set(input_set_id);
 
 -- input_subset_tracking
---ALTER TABLE input_subset_tracking ADD FOREIGN KEY (input_subset_id) REFERENCES input_subset(input_subset_id);
+-- ALTER TABLE input_subset_tracking ADD FOREIGN KEY (input_subset_id) REFERENCES input_subset(input_subset_id);
 
 
 -- input_set_tracking
---ALTER TABLE input_set_tracking ADD FOREIGN KEY (input_set_id) REFERENCES input_set(input_set_id);
+-- ALTER TABLE input_set_tracking ADD FOREIGN KEY (input_set_id) REFERENCES input_set(input_set_id);
 
 
 -- result_set_tracking
---ALTER TABLE result_set_tracking ADD FOREIGN KEY (result_set_id) REFERENCES result_set(result_set_id);
+-- ALTER TABLE result_set_tracking ADD FOREIGN KEY (result_set_id) REFERENCES result_set(result_set_id);
 
 
 -- data_set_tracking
---ALTER TABLE data_set_tracking ADD FOREIGN KEY (data_set_id) REFERENCES data_set(data_set_id);
+-- ALTER TABLE data_set_tracking ADD FOREIGN KEY (data_set_id) REFERENCES data_set(data_set_id);
 
 ### eFG FKs
 
@@ -164,7 +164,7 @@ ALTER TABLE input_set ADD FOREIGN KEY (cell_type_id)    REFERENCES cell_type(cel
 
 -- input_subset
 -- removed r75
---ALTER TABLE input_subset ADD FOREIGN KEY (input_set_id) REFERENCES input_set(input_set_id);
+-- ALTER TABLE input_subset ADD FOREIGN KEY (input_set_id) REFERENCES input_set(input_set_id);
 
 
 -- array_chip
@@ -219,7 +219,7 @@ ALTER TABLE cell_type_lineage ADD FOREIGN KEY (lineage_id)    REFERENCES lineage
 
 
 
---regbuild_string
+-- regbuild_string
 -- None
 
 
