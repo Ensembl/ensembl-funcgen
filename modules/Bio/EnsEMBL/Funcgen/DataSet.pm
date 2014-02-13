@@ -66,8 +66,9 @@ package Bio::EnsEMBL::Funcgen::DataSet;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Argument qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate);
+use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
+use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
 
 use base qw(Bio::EnsEMBL::Funcgen::Storable);
 
@@ -459,68 +460,89 @@ sub reset_relational_attributes{
   return;
 }
 
+
+#Currently does not support DataSets with only mixed type support
+#i.e. not FeatureSet and CellTypes or FeatureTypes difference between
+#supporting sets
+
+
 sub _set_Sets_and_types{
   my ($self, $fset, $ssets) = @_;
 
-  if(! (defined $fset &&
-        (ref($fset) eq 'Bio::EnsEMBL::Funcgen::FeatureSet') )){
-    throw('You must provide a valid Bio::EnsEMBL::Funcgen::FeatureSet for '.
-          $self->name);
+  assert_ref($ssets, 'ARRAY', 'Supporting sets');
+  my ($ftype, $ctype, $fclass, $ftype_name, $ctype_name);
+
+  if(defined $fset){
+    assert_ref($fset, 'Bio::EnsEMBL::Funcgen::FeatureSet');
+    $ftype      = $fset->feature_type;
+    $ctype      = $fset->cell_type;
+    $fclass     = $fset->feature_class;
+    $ftype_name = $ftype->name;
+    $ctype_name = $ctype->name;
   }
-
-  #Reset dynamically defined attrs
-  $self->{feature_type} = $fset->feature_type;
-  $self->{cell_type}    = $fset->cell_type;
-
-  #Need to validate cell_type if the fset feature_class is not regulatory
-  #Need to validate feature_type if the fset feature class is not regulatory or segmentation
-  my $ftype_name = $fset->feature_type->name;
-  my $ctype_name = $fset->cell_type->name;
-  my $fclass     = $fset->feature_class;
-  $self->{'supporting_sets'} = {};
 
 
   ### Validate supporting sets
+  #Need to validate cell_type if the fset feature_class is not regulatory
+  #Need to validate feature_type if the fset feature class is not regulatory or segmentation
+  $self->{'supporting_sets'} = {};
 
-  if(! defined $ssets ||
-      (ref($ssets) ne 'ARRAY') ){
-    throw('You must pass an Arrayref of -supporting_sets');
-  }
-  else{
-    foreach my $set(@$ssets){
+  foreach my $set(@$ssets){
 
-      if(! (defined $set &&
-            ref($set) &&
-            $set->isa('Bio::EnsEMBL::Funcgen::Set') )){
-        throw('All -supporting_sets for a DataSet must be a '.
-          "Bio::EnsEMBL::Funcgen::Set\n\te.g.InputSet, ResultSet or FeatureSet '".ref($set)."'");
-      }
-
-      if($fclass ne 'regulatory'){ #Validate cell type
-
-         if($set->cell_type->name ne $ctype_name){
-           throw('Cannot add '.$set->cell_type->name.
-             " support to a $ctype_name"." $fclass DataSet");
-         }
-
-         if($fclass ne 'segmentation'){# and ne regulatory validate ftype
-         #We don't have segmentation data sets just yet
-
-           if($set->feature_type->name ne $ftype_name){
-             throw('Cannot add '.$set->feature_type->name.
-               " support to a $ftype_name"." $fclass DataSet");
-           }
-         }
-      }
-
-      $self->{'supporting_sets'}->{$set->analysis->dbID()} ||= [];
-	  push @{$self->{'supporting_sets'}->{$set->analysis->dbID()}}, $set;
+    if(! (defined $set &&
+          ref($set) &&
+          $set->isa('Bio::EnsEMBL::Funcgen::Set') )){
+      throw('All -supporting_sets for a DataSet must be a '.
+            "Bio::EnsEMBL::Funcgen::Set\n\te.g.InputSet, ResultSet or FeatureSet '".ref($set)."'");
     }
+    
+    if($fclass){
+      
+      if($fclass ne 'regulatory'){ #Validate cell type
+        
+        if($set->cell_type->name ne $ctype_name){
+          throw('Cannot add '.$set->cell_type->name.
+                " support to a $ctype_name"." $fclass DataSet");
+        }
+        
+        if($fclass ne 'segmentation'){# and ne regulatory validate ftype
+          #We don't have segmentation data sets just yet
+          
+          if($set->feature_type->name ne $ftype_name){
+            throw('Cannot add '.$set->feature_type->name.
+                  " support to a $ftype_name"." $fclass DataSet");
+          }
+        }
+      }
+    }
+    else{
+      $ftype_name ||= $set->feature_type->name;
+      $ctype_name ||= $set->cell_type->name;
+  
+      if($ftype_name ne $set->feature_type->name){
+        throw('Unable to set distinct FeatureType for a mixed support '.
+              "DataSet without a product FeatureSet:\t".$self->name);
+      }
+      
+      if($ctype_name ne $set->cell_type->name){
+        throw('Unable to set distinct CellType for a mixed support '.
+              "DataSet without a product FeatureSet:\t".$self->name);
+      }
+    }
+    
+    $self->{'supporting_sets'}->{$set->analysis->dbID()} ||= [];
+    push @{$self->{'supporting_sets'}->{$set->analysis->dbID()}}, $set;
   }
 
+  if(! defined $ftype){#and $ctype by proxy
+    $ftype = $ssets->[0]->feature_type;
+    $ctype = $ssets->[0]->cell_type;
+  }
+
+  #Reset dynamically defined attrs
+  $self->{feature_type}    = $ftype;
+  $self->{cell_type}       = $ctype;
   $self->{feature_set}     = $fset;
-  #is this safe, could conceivably push onto this arrayref
-  #after we have done this validation
   return;
 }
 
