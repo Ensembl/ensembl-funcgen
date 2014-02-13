@@ -1,4 +1,4 @@
--- Copyright [1999-2014] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+-- Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 -- 
 -- Licensed under the Apache License, Version 2.0 (the "License");
 -- you may not use this file except in compliance with the License.
@@ -73,8 +73,16 @@ ALTER TABLE input_set    DROP        format;
 ALTER TABLE input_set    DROP        vendor;
 
 
-UPDATE input_subset isset, input_set iset, input_set_input_subset link set isset.feature_type_id=iset.feature_type_id, isset.cell_type_id=iset.cell_type_id 
-  where iset.input_set_id=link.input_set_id and link.input_subset_id=isset.input_subset_id;
+UPDATE 
+  input_subset isset, 
+  input_set iset, 
+  input_set_input_subset link 
+SET 
+  isset.feature_type_id = iset.feature_type_id, 
+  isset.cell_type_id    = iset.cell_type_id 
+WHERE 
+  iset.input_set_id    = link.input_set_id     AND 
+  link.input_subset_id = isset.input_subset_id;
 
 -- ultimately input_set & input_set_input_subset will be dropped in favour of just using result_set
 -- meaning input_set.analysis_id will move to input_subset. 

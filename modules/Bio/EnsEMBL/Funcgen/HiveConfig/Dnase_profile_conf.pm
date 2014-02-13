@@ -20,7 +20,7 @@
 
 =head1 CONTACT
 
-  Please contact ehive-users@ebi.ac.uk mailing list with questions/suggestions.
+Please contact http://lists.ensembl.org/mailman/listinfo/dev mailing list with questions/suggestions.
 
 =cut
 

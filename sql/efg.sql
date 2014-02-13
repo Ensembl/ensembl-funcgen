@@ -1,11 +1,11 @@
 -- Copyright [1999-2014] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
--- 
+--
 -- Licensed under the Apache License, Version 2.0 (the "License");
 -- you may not use this file except in compliance with the License.
 -- You may obtain a copy of the License at
--- 
+--
 --      http://www.apache.org/licenses/LICENSE-2.0
--- 
+--
 -- Unless required by applicable law or agreed to in writing, software
 -- distributed under the License is distributed on an "AS IS" BASIS,
 -- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -584,6 +584,7 @@ CREATE TABLE `feature_set` (
 @column feature_type_id	 Table ID for @link feature_type
 @column cell_type_id		 Table ID for @link cell_type
 @column feature_class    Defines the class of the feature
+@column replicate       Number of the replicate. 0 represents  a pooled subset, 255 is a subset we have not processed
 
 @see result_set_input
 @see cell_type
@@ -672,17 +673,16 @@ CREATE TABLE `dbfile_registry` (
 
 @column input_set_id    Internal ID
 @column analysis_id     Table ID for @link analysis
+@column cell_type_id    Table ID for @link cell_type
 @column experiment_id   Table ID for @link experiment
 @column feature_type_id Table ID for @link feature_type
-@column cell_type_id    Table ID for @link cell_type
-@column vendor	        Name of technology vendor if appropriate
 @column name            Name of input_set
 @column type            Type of feature imported as result of analysis e.g. result, annotated
 @column replicate       Number of the replicate. 0 represents  a pooled subset, 255 is a subset we have not processed
 
 @see analysis
-@see experiment
 @see cell_type
+@see experiment
 @see feature_type
 @see result_set_input
 @see supporting_set
@@ -691,13 +691,13 @@ CREATE TABLE `dbfile_registry` (
 DROP TABLE IF EXISTS `input_set`;
 CREATE TABLE `input_set` (
    `input_set_id` int(10) unsigned NOT NULL auto_increment,
+   `analysis_id` smallint(5) unsigned NOT NULL,
+   `cell_type_id` int(10) unsigned default NULL,
    `experiment_id` int(10) unsigned default NULL,
    `feature_type_id` int(10) unsigned default NULL,
-   `cell_type_id` int(10) unsigned default NULL,
    `name` varchar(100) not NULL,
    `type` enum('annotated', 'result', 'segmentation', 'dna_methylation') default NULL,
    `replicate` tinyint(3) unsigned NOT NULL,
-   `analysis_id` smallint(5) unsigned NOT NULL,
    PRIMARY KEY  (`input_set_id`),
    UNIQUE KEY `name_idx` (`name`),
    KEY `experiment_idx` (`experiment_id`),
@@ -713,7 +713,10 @@ CREATE TABLE `input_set` (
 @colour  #66CCFF
 
 @column input_subset_id	 Internal ID
+@column analysis_id      Internal ID
+@column cell_type_id     @link cell_type table ID
 @column experiment_id	 Internal ID
+@column feature_type_id	 @link feature_type table ID
 @column name	         Name of input_subset e.g. file name
 @column archive_id	 ENA experiment identifier enabling access to specific raw data
 @column display_url      Http link to source file
@@ -727,16 +730,16 @@ CREATE TABLE `input_set` (
 
 DROP TABLE IF EXISTS `input_subset`;
 CREATE TABLE `input_subset` (
-    `input_subset_id` int(10) unsigned    NOT NULL auto_increment,
-    `cell_type_id`    int(10) unsigned default NULL,
-    `experiment_id`   int(10) unsigned    NOT NULL,
-    `feature_type_id` int(10) unsigned NOT NULL,
-    `name`            varchar(100)        NOT NULL,
-    `archive_id`      varchar(20)         DEFAULT NULL,
-    `display_url`     varchar(255)        DEFAULT NULL,
-    `replicate`       tinyint(3) unsigned NOT NULL,
-    `is_control`      tinyint(3) unsigned NOT NULL,
-    `analysis_id` smallint(5) unsigned NOT NULL,
+    `input_subset_id` int(10)     unsigned NOT NULL auto_increment,
+    `analysis_id`     smallint(5) unsigned NOT NULL,
+    `cell_type_id`    int(10)     unsigned DEFAULT NULL,
+    `experiment_id`   int(10)     unsigned NOT NULL,
+    `feature_type_id` int(10)     unsigned NOT NULL,
+    `name`            varchar(100)         NOT NULL,
+    `archive_id`      varchar(20)          DEFAULT NULL,
+    `display_url`     varchar(255)         DEFAULT NULL,
+    `replicate`       tinyint(3) unsigned  NOT NULL,
+    `is_control`      tinyint(3) unsigned  NOT NULL,
    PRIMARY KEY  (`input_subset_id`),
    UNIQUE `name_exp_idx` (`name`, `experiment_id`),
    KEY `archive_idx`(`archive_id`),
@@ -909,31 +912,33 @@ CREATE TABLE `probe` (
 @desc   Stores data high level meta data about individual experiments
 @colour  #00FF00
 
-@column experiment_id			Internal ID
-@column name			Name of experiment
-@column experimental_group_id			@link experimental_group table ID
-@column date			Date of experiment
-@column primary_design_type		e.g. binding_site_identification, preferably EFO term
-@column description			Text description
-@column	mage_xml_id			@link mage_xml table_id for array experiments
+@column experiment_id           Internal ID
+@column cell_type_id            @link cell_type table ID
+@column experimental_group_id   @link experimental_group table ID
+@column feature_type_id         @link feature_type table ID
+@column	mage_xml_id             @link mage_xml table_id for array experiments
+@column date                    Date of experiment
+@column description             Text description
+@column name                    Name of experiment
+@column primary_design_type     e.g. binding_site_identification, preferably EFO term
 
+@see cell_type
 @see experimental_group
+@see feature_type
 @see mage_xml
-@see experimental_chip
-@see input_set
 */
 
 DROP TABLE IF EXISTS `experiment`;
 CREATE TABLE `experiment` (
-   `experiment_id` int(10) unsigned NOT NULL auto_increment,
-   `name` varchar(100) default NULL,
-   `experimental_group_id` smallint(6) unsigned default NULL,
-   `date` date default '0000-00-00',
-   `primary_design_type` varchar(30) default NULL,
-   `description`  varchar(255) default NULL,
-   `mage_xml_id` int(10) unsigned default NULL,
-   `feature_type_id` int(10) unsigned NOT NULL,
-   `cell_type_id` int(10) unsigned DEFAULT NULL,
+   `experiment_id`          INT(10)     UNSIGNED  NOT NULL AUTO_INCREMENT,
+   `cell_type_id`           INT(10)     UNSIGNED  DEFAULT NULL,
+   `experimental_group_id`  SMALLINT(6) UNSIGNED  DEFAULT NULL,
+   `feature_type_id`        INT(10)     UNSIGNED  NOT NULL,
+   `mage_xml_id`            INT(10)     UNSIGNED  DEFAULT NULL,
+   `date`                   DATE                  DEFAULT '0000-00-00',
+   `description`            VARCHAR(255)          DEFAULT NULL,
+   `name`                   VARCHAR(100)          DEFAULT NULL,
+   `primary_design_type`    VARCHAR(30)           DEFAULT NULL,
    PRIMARY KEY  (`experiment_id`),
    UNIQUE KEY `name_idx` (`name`),
    KEY `design_idx` (`primary_design_type`),
@@ -1209,10 +1214,8 @@ CREATE TABLE `lineage` (
 @colour  #808000
 
 @column table_id        Table ID of associated record
-@column release         Release version
 @column status_name_id	@link status_name table ID
 @column table_name	Table name of associated record
-@column timestamp       datetime when status was added
 
 
 @see status_name
@@ -1236,7 +1239,6 @@ CREATE TABLE `status` (
 
 @column status_name_id	Internal ID
 @column name            Name of status e.g. IMPORTED, DISPLAYBLE etc.
-@column is_dev          Boolean, 1 indicates that status is also available in devDB
 
 @see status
 */

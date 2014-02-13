@@ -42,7 +42,7 @@ table if a data is present, else it will query the underlying raw data tables.
 =head1 CONTACT
 
   Please email comments or questions to the public Ensembl
-  developers list at <ensembl-dev@ebi.ac.uk>.
+  developers list at <http://lists.ensembl.org/mailman/listinfo/dev>.
 
   Questions may also be sent to the Ensembl help desk at
   <http://www.ensembl.org/Help/Contact>.

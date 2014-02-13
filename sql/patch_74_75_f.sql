@@ -18,19 +18,40 @@
 */
 
 
-ALTER table experiment ADD `feature_type_id` int(10) unsigned NOT NULL;
-ALTER table experiment ADD `cell_type_id` int(10) unsigned DEFAULT NULL;
+ALTER TABLE experiment ADD `feature_type_id` INT(10) unsigned         NOT NULL;
+ALTER TABLE experiment ADD `cell_type_id`    INT(10) unsigned DEFAULT NULL;
 
 ALTER TABLE experiment ADD KEY feature_type_idx(feature_type_id);
 ALTER TABLE experiment ADD KEY cell_type_idx(cell_type_id);
 
 -- Now update the id fields based on non-control input_subsets
 
-UPDATE experiment e, input_subset iss set e.cell_type_id=iss.cell_type_id where iss.experiment_id=e.experiment_id and iss.is_control=0;
+UPDATE 
+  experiment e, 
+  input_subset iss 
+SET 
+  e.cell_type_id=iss.cell_type_id 
+WHERE 
+  iss.experiment_id = e.experiment_id AND 
+  iss.is_control    = 0;
 
+UPDATE 
+  experiment e, 
+  input_subset iss 
+SET 
+  e.cell_type_id    = iss.cell_type_id 
+WHERE 
+  iss.experiment_id = e.experiment_id AND 
+  iss.is_control    = 0;
 
-UPDATE experiment e, input_subset iss set e.cell_type_id=iss.cell_type_id where iss.experiment_id=e.experiment_id and iss.is_control=0;
-UPDATE experiment e, input_subset iss set e.feature_type_id=iss.feature_type_id where iss.experiment_id=e.experiment_id and iss.is_control=0;
+UPDATE 
+  experiment e, 
+  input_subset iss 
+SET 
+  e.feature_type_id = iss.feature_type_id 
+WHERE 
+  iss.experiment_id = e.experiment_id AND 
+  iss.is_control    = 0;
 
 
 -- sneak in a feature_set.cell_type key
