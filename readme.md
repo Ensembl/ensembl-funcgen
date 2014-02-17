@@ -19,8 +19,10 @@ More detailed information about the Regulatory Build can be found at:
 http://www.ensembl.org/info/genome/funcgen/regulatory_build.html
 
 Please also note that we are redesigning our build process. More information about this can be found in our blog:
+
 http://www.ensembl.info/blog/2013/12/26/the-new-ensembl-regulatory-annotation/
 and
+
 http://www.ensembl.info/blog/2014/01/01/computing-ensembls-new-regulatory-annotation/
 
 ## Download
