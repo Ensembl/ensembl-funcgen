@@ -60,9 +60,9 @@ use strict;
 use warnings;
 use DateTime;
 #use POSIX                                  qw( strftime );
-use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
-#use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#DBI sql_types import
 use Bio::EnsEMBL::Utils::Exception         qw( throw warning );
+use Bio::EnsEMBL::Utils::Scalar            qw( check_ref );
+use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( get_month_number );
 
 use base qw( Bio::EnsEMBL::DBSQL::BaseAdaptor );
@@ -178,6 +178,12 @@ sub repository_path{
 
 #download_input_set_data will need revising
 
+
+#Remove InputSet support from this to simplify it
+#why are we still getting two records for a single InputSubset?
+#we are still having to contend with merged input_subsets here
+#we really need to fix this?
+
 sub fetch_InputSubset_tracking_info{
   my ($self, $set, $force_download, $date, $skip_beds) = @_;
 
@@ -186,20 +192,32 @@ sub fetch_InputSubset_tracking_info{
     throw('fetch_InputSubset_tracking_info no longer supports thte force_dowload, date or skips_beds arguments');  
   }
 
-
   my @sub_sets;
+  my $db = $self->db;
 
   if(! $set){
 	  throw('You need to pass a valid stored InputSet or InputSubset');
   }
-  elsif(ref($set) eq 'Bio::EnsEMBL::Funcgen::InputSet'){
-	  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::InputSet', $set);
-	  push @sub_sets, @{$set->get_InputSubsets};
-	
+  elsif(check_ref($set, 'Bio::EnsEMBL::Funcgen::InputSet')){
+    
+    if($set->is_stored($db)){
+  	  push @sub_sets, @{$set->get_InputSubsets};
+    }
+    else{
+      throw("InputSet is not stored in this DB:\t".$set->name);  
+    }
   }
-  elsif(ref($set) eq 'Bio::EnsEMBL::Funcgen::InputSubset'){
-	  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::InputSet', $set);
-	  push @sub_sets, $set;
+  elsif(check_ref($set, 'Bio::EnsEMBL::Funcgen::InputSubset')){
+    
+	  if($set->is_stored($db)){
+	    push @sub_sets, $set;
+    }
+    else{
+      throw("InputSubset is not stored in this DB:\t".$set->name);    
+    }
+  }
+  else{
+    throw("Set argument is not an InputSubset:\t$set");  
   }
 
 
@@ -208,7 +226,7 @@ sub fetch_InputSubset_tracking_info{
   foreach my $sset(@sub_sets){
   
     if(exists $sset->{tracking_info}){
-      push @tracking_info, $sset->{tracking_info};
+      push @tracking_info, @{$sset->{tracking_info}};
     }
     else{
       $sset->{tracking_info} = [];
@@ -224,6 +242,7 @@ sub fetch_InputSubset_tracking_info{
                WHERE iss.input_subset_id=isst.input_subset_id 
                AND iss.input_subset_id IN('.join(',', (keys %subset_cache)) .')';
 
+    #warn $sql;
 
     #if ($date ne 'IGNORE'){
 	  #  $date ||= "NOW()";
@@ -248,26 +267,28 @@ sub fetch_InputSubset_tracking_info{
     my %column;
     #pseudo array/hash? 
     $sth->bind_columns( \( @column{ @{$sth->{NAME_lc} } } ));
-  
-  
-  
+    
     while( $sth->fetch ){
       my $record = {%column}; #deref properly as %columns will be updated
-      my $dbID = $record->{input_subset_id};
       push @tracking_info, {%$record}; #Keep the dbID here
       #otherwise there will be now way to identify what the record refers to
-      delete($record->{input_subset_id}); #Don't need this
+      my $dbID = delete($record->{input_subset_id}); #Don't need this
       push @{$subset_cache{$dbID}->{tracking_info}}, $record;
     }
   }
   
-  #return $self->db->dbc->db_handle->selectall_arrayref($sql);
-  
-  
+  #Currently never using $sUbset_cache?
+
   #This is all messed up as this handles InputSet as well as InputSubsets
   #and we want to cache the result and return the records?
   #should restrict this to InputSubsets only
   #where are the callers for this?
+  
+  #warn "returning tracking info @tracking_info";
+  
+  #use Data::Dumper qw(Dumper);
+  #warn "tracking_info ".Dumper(\@tracking_info);
+  
   
   return \@tracking_info;
 }
