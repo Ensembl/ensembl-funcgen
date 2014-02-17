@@ -160,8 +160,6 @@ sub _columns {
       iss.cell_type_id
       iss.experiment_id
       iss.feature_type_id
-      iss.archive_id
-      iss.display_url
       iss.is_control
       iss.name
       iss.replicate
@@ -208,8 +206,6 @@ sub _objs_from_sth {
       $ct_id,
       $exp_id,
       $ft_id,
-      $archive_id,
-      $display_url,
       $is_control,
       $name,
       $replicate,
@@ -227,8 +223,6 @@ sub _objs_from_sth {
       \$ct_id,
       \$exp_id,
       \$ft_id,
-      \$archive_id,
-      \$display_url,
       \$is_control,
       \$name,
       \$replicate,
@@ -276,8 +270,6 @@ sub _objs_from_sth {
        -CELL_TYPE    => $ctypes{$ct_id},
        -EXPERIMENT   => $exps{$exp_id},
        -FEATURE_TYPE => $ftypes{$ft_id},
-       -ARCHIVE_ID   => $archive_id,
-       -DISPLAY_URL  => $display_url,
        -IS_CONTROL   => $is_control,
        -NAME         => $name,
        -REPLICATE    => $replicate,
@@ -318,14 +310,12 @@ sub store{
             cell_type_id,
             experiment_id,
             feature_type_id,
-            archive_id,
-            display_url,
             is_control,
             name,
             replicate,
             analysis_id
         )
-        VALUES (?, ?, ?, ?, ?, ?, ? ,?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
     ");
 
 
@@ -350,12 +340,10 @@ sub store{
     $sth->bind_param(1, $subset->cell_type->dbID,     SQL_INTEGER);
     $sth->bind_param(2, $subset->experiment->dbID,    SQL_INTEGER);
     $sth->bind_param(3, $subset->feature_type->dbID,  SQL_INTEGER);
-    $sth->bind_param(4, $subset->archive_id,          SQL_VARCHAR);
-    $sth->bind_param(5, $subset->display_url,         SQL_VARCHAR);
-    $sth->bind_param(6, $subset->is_control,          SQL_INTEGER);
-    $sth->bind_param(7, $subset->name,                SQL_VARCHAR);
-    $sth->bind_param(8, $subset->replicate,           SQL_INTEGER);
-    $sth->bind_param(9, $subset->analysis->dbID,      SQL_INTEGER);
+    $sth->bind_param(4, $subset->is_control,          SQL_INTEGER);
+    $sth->bind_param(5, $subset->name,                SQL_VARCHAR);
+    $sth->bind_param(6, $subset->replicate,           SQL_INTEGER);
+    $sth->bind_param(7, $subset->analysis->dbID,      SQL_INTEGER);
     $sth->execute();
 
     $subset->dbID($self->last_insert_id);
@@ -403,17 +391,7 @@ sub _constrain_input_sets {
   return ($constraint, $constraint_conf);
 }
 
-sub _constrain_archive_ids {
-  my ($self, $archive_ids) = @_;
 
-  if ( (ref($archive_ids) ne 'ARRAY') || scalar(@$archive_ids) == 0 ) {
-    throw('Must pass an arrayref of archive IDs');
-  }
-  my $constraint;
-
-  #{} = not futher constraint conf
-  return (' iss.archive_id IN '.join(', ', (map {uc($_)} @$archive_ids)) , {});
-}
 
 
 
@@ -435,7 +413,17 @@ sub fetch_by_name_and_experiment { #Deprecated in 75
   #return $self->generic_fetch($self->compose_constraint_query($params));
 }
 
+sub _constrain_archive_ids {
+  my ($self, $archive_ids) = @_;
 
+  if ( (ref($archive_ids) ne 'ARRAY') || scalar(@$archive_ids) == 0 ) {
+    throw('Must pass an arrayref of archive IDs');
+  }
+  my $constraint;
+
+  #{} = not futher constraint conf
+  return (' iss.archive_id IN '.join(', ', (map {uc($_)} @$archive_ids)) , {});
+}
 
 1;
 
