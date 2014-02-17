@@ -19,10 +19,7 @@ More detailed information about the Regulatory Build can be found at:
 http://www.ensembl.org/info/genome/funcgen/regulatory_build.html
 
 Please also note that we are redesigning our build process. More information about this can be found in our blog:
-
 http://www.ensembl.info/blog/2013/12/26/the-new-ensembl-regulatory-annotation/
-and
-
 http://www.ensembl.info/blog/2014/01/01/computing-ensembls-new-regulatory-annotation/
 
 ## Download
@@ -38,12 +35,15 @@ http://www.ensembl.org/info/docs/api/api_installation.html
 
 ## API tutorial
 An extensive tutorial for the Regulation API can be found at:
+
 http://www.ensembl.org/info/docs/api/funcgen/regulation_tutorial.html
 
 
 ## Contact us
 Please email comments or questions to the public Ensembl developers list at 
+
 <http://lists.ensembl.org/mailman/listinfo/dev>.
 
 Questions may also be sent to the Ensembl help desk at
+
 <http://www.ensembl.org/Help/Contact>.
