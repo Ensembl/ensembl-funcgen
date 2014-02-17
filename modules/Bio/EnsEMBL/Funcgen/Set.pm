@@ -74,10 +74,10 @@ use base qw( Bio::EnsEMBL::Funcgen::Storable );
   MANDATORY ARGS:
   Arg [-NAME]          : String - name for this Set.
   Arg [-FEATURE_TYPE]  : Bio::EnsEMBL::Funcgen::FeatureType
+  Arg [-ANALYSIS]      : Bio::EnsEMBL::Analysis
 
   OPTIONAL ARGS:
   Arg [-CELL_TYPE]     : Bio::EnsEMBL::Funcgen::CellType
-  Arg [-ANALYSIS]      : Bio::EnsEMBL::Analysis
   Arg [-DBID]          : Int
   Arg [-ADAPTOR]       : Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor e.g. Input|Result|FeatureSetAdaptor.
 
