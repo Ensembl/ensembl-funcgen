@@ -3,7 +3,7 @@ The Ensembl Funcgen API (Application Programme Interface) serves as a middle lay
 
 ## Content
 The Regulation database contains 4 different types of data:
-### 1. Regulatory Features
+#### 1. Regulatory Features
   Using our Regulatory Build, which is described here: http://www.ensembl.org/info/genome/funcgen/regulatory_build.html, we identify regions which can be involved in gene transcript regulation. The build process uses publicly available data sets based on ChIP-Seq, DNAse1-Seq and Transcription factor binding motifs.
 
 2. Seqmentation
