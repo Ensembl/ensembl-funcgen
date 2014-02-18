@@ -66,15 +66,17 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( get_month_number );
 
 use base qw( Bio::EnsEMBL::DBSQL::BaseAdaptor );
-
 #Currently don't use and Funcgen BaseAdaptor methods in here
 #and this would require _true_tables to be defined
 
 
-#Empty true tables method as required by funcgen BaseAdpator::new
-#sub _true_tables{
-#  return;  
-#}
+my %mandatory_columns = (#'input_subset_id'   => 0,
+                         'availability_date' => 1,
+                         'download_url'      => 1,
+                         'downloaded'        => 0,
+                         'local_url'         => 0,
+                         'md5sum'            => 0);
+                        
 
 =head2 new
 
@@ -184,66 +186,128 @@ sub repository_path{
 #we are still having to contend with merged input_subsets here
 #we really need to fix this?
 
+sub _columns{
+  return keys %mandatory_columns;  
+}
+
+sub _is_mandatory_column{
+  my $self = shift;
+  my $col  = shift;
+  
+  if(! defined $col){
+    throw('Must defined a columns argument');  
+  }  
+    
+  if(! exists $mandatory_columns{$col}){
+    throw($col." is not a valid column, must be one of:\t".join(' ', $self->_columns));  
+  }
+  
+  return $mandatory_columns{$col};
+}
+
+sub _is_column{
+  my $self = shift;
+  my $col  = shift;
+  
+  if(! defined $col){
+    throw('Must defined a columns argument');  
+  }  
+    
+  return exists $mandatory_columns{$col};  
+}
+
+#Change this to set the tracking info in the subsets!
+#and inject the relevant methods based on the columns
+
+sub _inject_input_subset_tracking_methods{
+  my $self = shift;
+  my $iss  = shift;
+  
+  assert_ref($iss, 'Bio::EnsEMBL::Funcgen::InputSubset');  
+  
+  #We don't need CvGV_name_or_bust here as we know 
+  #exactly what method are already present
+  my @cols = $self->_columns;
+  
+  if(! $iss->can($cols[0])){ 
+    no strict 'refs';
+  
+    for my $col(@cols){
+      *{ref($iss)."::${col}"} = 
+        sub {
+          my $self = shift;
+          my $val = undef;
+          
+          #to prevent auto vivification
+          #which may prevent fetch                   
+          if(exists $self->{tracking_info}){
+            $val = $self->{tracking_info}{$col};  
+          } 
+          return $val; 
+        };
+    }
+   
+    use strict;
+    #avoids being able to work with symbolic reference
+    #i.e. Your::Package::Name->$param_method
+    #rather than $obj->$param_method  
+  }
+  
+  return;
+}
+
+
+
+#remove InputSet support from this!
+#then we don't have to select input_subset_id
+#although this also removes the ability to query >1 record at the same time
+#this is fine for the tracking adaptor
+
 sub fetch_InputSubset_tracking_info{
   my ($self, $set, $force_download, $date, $skip_beds) = @_;
+
+  assert_ref($set, 'Bio::EnsEMBL::Funcgen::InputSubset');
 
   #can remove this when we update download_inputset_data.pl
   if($force_download || $date || $skip_beds){
     throw('fetch_InputSubset_tracking_info no longer supports thte force_dowload, date or skips_beds arguments');  
   }
 
-  my @sub_sets;
   my $db = $self->db;
 
-  if(! $set){
-	  throw('You need to pass a valid stored InputSet or InputSubset');
-  }
-  elsif(check_ref($set, 'Bio::EnsEMBL::Funcgen::InputSet')){
-    
-    if($set->is_stored($db)){
-  	  push @sub_sets, @{$set->get_InputSubsets};
-    }
-    else{
-      throw("InputSet is not stored in this DB:\t".$set->name);  
-    }
-  }
-  elsif(check_ref($set, 'Bio::EnsEMBL::Funcgen::InputSubset')){
-    
-	  if($set->is_stored($db)){
-	    push @sub_sets, $set;
-    }
-    else{
-      throw("InputSubset is not stored in this DB:\t".$set->name);    
-    }
-  }
-  else{
-    throw("Set argument is not an InputSubset:\t$set");  
-  }
+  #if(! $set){
+	#  throw('You need to pass a valid stored InputSet or InputSubset');
+  #}
+  #elsif(check_ref($set, 'Bio::EnsEMBL::Funcgen::InputSet')){
+  #  if($set->is_stored($db)){
+  #	  push @sub_sets, @{$set->get_InputSubsets};
+  #  }
+  #  else{
+  #    throw("InputSet is not stored in this DB:\t".$set->name);  
+  #  }
+  #}
+  #elsif(check_ref($set, 'Bio::EnsEMBL::Funcgen::InputSubset')){
+	#  if($set->is_stored($db)){
+	#    push @sub_sets, $set;
+  #  }
+  #  else{
+  #    throw("InputSubset is not stored in this DB:\t".$set->name);    
+  #  }
+  #}
+  #else{
+  #  throw("Set argument is not an InputSubset:\t$set");  
+  #}
 
 
-  my (%subset_cache, @tracking_info);
+  $self->_inject_input_subset_tracking_methods($set);
+  #my (%subset_cache, @tracking_info);
 
-  foreach my $sset(@sub_sets){
-  
-    if(exists $sset->{tracking_info}){
-      push @tracking_info, @{$sset->{tracking_info}};
-    }
-    else{
-      $sset->{tracking_info} = [];
-      $subset_cache{$sset->dbID} = $sset;   
-    }
-  }
-  
-  if(keys %subset_cache){
+  if(! exists $set->{tracking_info}){
 
-    my $sql = 'SELECT iss.input_subset_id, isst.replicate, isst.download_url, isst.downloaded,
-               isst.availability_date, isst.md5sum, isst.is_control, isst.not_pooled
-               FROM input_subset iss, input_subset_tracking isst
-               WHERE iss.input_subset_id=isst.input_subset_id 
-               AND iss.input_subset_id IN('.join(',', (keys %subset_cache)) .')';
+    my $sql = 'SELECT '.join(' ', ($self->_columns)).
+              ' FROM input_subset_tracking WHERE input_subset_id ='.$set->dbID;
 
     #warn $sql;
-
     #if ($date ne 'IGNORE'){
 	  #  $date ||= "NOW()";
 	  #  $sql .= " AND ( (isst.availability_date IS NULL) OR (isst.availability_date < '${date}')) ";
@@ -253,44 +317,24 @@ sub fetch_InputSubset_tracking_info{
 	  #  $sql .= ' AND isst.downloaded IS NULL';
     #}
 
-
-    #if($skip_beds){
-	  #  $sql .= ' AND iss.name not like "%.bed%"';
-    #}
-
-    #warn $sql;
-  
-    #change this to return a hash with field key names
-  
+ 
     my $sth = $self->prepare($sql);
     $sth->execute;
-    my %column;
-    #pseudo array/hash? 
-    $sth->bind_columns( \( @column{ @{$sth->{NAME_lc} } } ));
+    $set->{tracking_info} = $sth->fetchrow_hashref;
     
-    while( $sth->fetch ){
-      my $record = {%column}; #deref properly as %columns will be updated
-      push @tracking_info, {%$record}; #Keep the dbID here
-      #otherwise there will be now way to identify what the record refers to
-      my $dbID = delete($record->{input_subset_id}); #Don't need this
-      push @{$subset_cache{$dbID}->{tracking_info}}, $record;
-    }
+    #my %column;
+    #pseudo array/hash? 
+    #$sth->bind_columns( \( @column{ @{$sth->{NAME_lc} } } ));
+    #while( $sth->fetch ){
+    #  my $record = {%column}; #deref properly as %columns will be updated
+    #  push @tracking_info, {%$record}; #Keep the dbID here
+    #  #otherwise there will be now way to identify what the record refers to
+    #  my $dbID = delete($record->{input_subset_id}); #Don't need this
+    #  push @{$subset_cache{$dbID}->{tracking_info}}, $record;
+    #}
   }
   
-  #Currently never using $sUbset_cache?
-
-  #This is all messed up as this handles InputSet as well as InputSubsets
-  #and we want to cache the result and return the records?
-  #should restrict this to InputSubsets only
-  #where are the callers for this?
-  
-  #warn "returning tracking info @tracking_info";
-  
-  #use Data::Dumper qw(Dumper);
-  #warn "tracking_info ".Dumper(\@tracking_info);
-  
-  
-  return \@tracking_info;
+  return $set;
 }
 
 sub set_download_status_by_input_subset_id{
@@ -305,22 +349,11 @@ sub set_download_status_by_input_subset_id{
 
 
 
-#These will both work for InputSets too as this is supported by 
-#fetch_InputSubset_tracking_info
-
+#shouldn't this use the downloaded date?
 sub is_InputSubset_downloaded {
   my ($self, $isset) = @_;
- 
-  my $downloaded = 1;
- 
-  foreach my $tr_info(@{$self->fetch_InputSubset_tracking_info($isset)}){
-    if(! defined $tr_info->{local_url}){
-      $downloaded = 0;  
-      last;
-    }
-  }
-  
-  return $downloaded;
+  $self->fetch_InputSubset_tracking_info($isset);  
+  return (defined $isset->local_url) ? 1 : 0;
 }
 
 
@@ -366,34 +399,64 @@ sub is_InputSubset_embargoed {
     }
   }
   
-    
-  
   #InputSubsets can have more than one tracking record at the moment
   #as they are currently merged at the InputSubset level rather than the InputSet level
-  my $track_records = $self->fetch_InputSubset_tracking_info($isset);
-  
-  my @embargoed;
-  
-  #Need to change this as we don't have access to the dbID or the InputSubset name here
-  
-  foreach my $tr(@$track_records){
+  $self->fetch_InputSubset_tracking_info($isset);
  
-    #strip off time
-    (my $avail_date = $tr->{availability_date}) =~ s/ .*//o;
-    my ($year, $month, $day) = split(/-/, $avail_date);
-   
-   
-    my $isset_date = DateTime->new(day   => $day,
-                                   month => $month,
-                                   year  => $year  );
-                                  
-                                  
-    if($isset_date > $rel_date){ #Nice operator overloading!
-      push @embargoed, $isset->name;
-    }
+  #strip off time
+  (my $avail_date = $isset->availability_date) =~ s/ .*//o;
+  my ($year, $month, $day) = split(/-/, $avail_date);
+  my $isset_date = DateTime->new(day   => $day,
+                                 month => $month,
+                                 year  => $year  );
+                                                                  
+  #Nice operator overloading!
+  return ($isset_date > $rel_date) ? 1 : 0;  
+}
+
+
+sub store_input_subset_tracking_info{
+  my ($self, $iss, $info) = @_;
+  #update flag? or use separate methods for dates, urls md5s and ting?   
+  $self->is_stored_and_valid($iss, 'Bio::EnsEMBL::Funcgen::InputSubset');
+  assert_ref($info, 'HASH');
+  
+  my @cols       = ('input_subset_id');
+  my @values     = ($iss->dbID);
+  my @valid_cols = $self->_columns;
+
+  #Test for unexpect info items  
+  foreach my $col(keys %$info){
+    
+    if(! $self->_is_column){
+      throw("Found unexpected parameter in tracking info hash:\t".$col.
+        "Must be one of:\t@valid_cols");  
+    }  
   }
-   
-  return \@embargoed;  
+  
+  #Test for mandatory info items, and build cols/values
+  foreach my $col(@valid_cols){
+    
+    if($self->_is_mandatory_columns($col) &&
+       ((! exists $info->{$col}) || (! defined $info->{$col}))){
+      throw("Mandatory tracking column must be defined:\t$col");     
+    }       
+    
+    push @cols,   $col;
+    push @values, $info->{$col};
+  }
+  
+  #Use SQLHelper::execute_update here?
+  my $sql = 'INSERT into input_subset_tracking('.join(', ', @cols).
+    ') values("'.join('", "', @values).'")';
+  
+  #Although working with DBConnection here provides error handling  
+  $self->db->dbc->do($sql);  
+  
+  $self->_inject_input_subset_tracking_methods($iss);
+  $iss->{tracking_info} = $info;  
+  
+  return $iss;  
 }
 
 1;

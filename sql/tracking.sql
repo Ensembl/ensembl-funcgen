@@ -1,3 +1,25 @@
+-- Reasons for use of separate tracking/stats tables was two fold
+-- 1 For visibility (although some of this is now integrated into status)
+-- 2 As the data model was originally slightly broken, we needed
+--   a way to model many to one relationships between merged input_subsets and 
+--   individual records in input_subset_tracking
+
+-- TODO
+-- 1 Add support for tracking status history
+
+
+
+DROP TABLE IF EXISTS `experiment_tracking`;
+
+CREATE TABLE `experiment_tracking` (
+  `experiment_id` int(10) unsigned NOT NULL,
+  `notes` TEXT default NULL,
+  PRIMARY KEY  (`experiment_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+--Slight overkill for one notes field, but keep tables separate for visibility
+
+
 
 DROP TABLE IF EXISTS `input_set_tracking`;
 /* CREATE TABLE `input_set_tracking` (
@@ -28,10 +50,10 @@ DROP TABLE IF EXISTS `input_subset_tracking`;
 
 CREATE TABLE `input_subset_tracking` (
   `input_subset_id` int(10) unsigned NOT NULL,
-  `replicate` int unsigned default 1,
   `downloaded` datetime default NULL,
   `availability_date` datetime default NULL,
   `md5sum` varchar(45) default NULL,
+  `download_url` text DEFAULT NULL,
   `local_url` text DEFAULT NULL,
   PRIMARY KEY  (`input_subset_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
