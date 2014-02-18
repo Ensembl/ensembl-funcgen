@@ -103,10 +103,17 @@ sub new {
     throw('Mandatory parameter -cell_type is not defined');    
   }
 
+  if(! defined $is_control){
+    throw('Must defined an -is_control paramter'); 
+    #is_control cannot be undef, as this will resolve to false
+    #when storing
+  }
+
   $self->{experiment}   = $exp;
   $self->{is_control}   = $is_control;
   $self->{name}         = $name;
   $self->{replicate}    = $rep;
+  #replicate is fine undef as it is not a boolean field
 
   return $self;
 }
