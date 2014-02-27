@@ -61,7 +61,7 @@ use warnings;
 use DateTime;
 #use POSIX                                  qw( strftime );
 use Bio::EnsEMBL::Utils::Exception         qw( throw warning );
-use Bio::EnsEMBL::Utils::Scalar            qw( check_ref );
+use Bio::EnsEMBL::Utils::Scalar            qw( check_ref assert_ref );
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( get_month_number );
 
@@ -71,11 +71,11 @@ use base qw( Bio::EnsEMBL::DBSQL::BaseAdaptor );
 
 
 my %mandatory_columns = (#'input_subset_id'   => 0,
-                         'availability_date' => 1,
-                         'download_url'      => 1,
-                         'downloaded'        => 0,
-                         'local_url'         => 0,
-                         'md5sum'            => 0);
+                         availability_date => 1,
+                         download_url      => 1,
+                         downloaded        => 0,
+                         local_url         => 0,
+                         md5sum            => 0);
                         
 
 =head2 new
@@ -304,7 +304,7 @@ sub fetch_InputSubset_tracking_info{
 
   if(! exists $set->{tracking_info}){
 
-    my $sql = 'SELECT '.join(' ', ($self->_columns)).
+    my $sql = 'SELECT '.join(', ', ($self->_columns)).
               ' FROM input_subset_tracking WHERE input_subset_id ='.$set->dbID;
 
     #warn $sql;
@@ -321,6 +321,7 @@ sub fetch_InputSubset_tracking_info{
     my $sth = $self->prepare($sql);
     $sth->execute;
     $set->{tracking_info} = $sth->fetchrow_hashref;
+    $sth->finish;#otherwise we get disconnect warnings
     
     #my %column;
     #pseudo array/hash? 
@@ -403,9 +404,7 @@ sub is_InputSubset_embargoed {
   #as they are currently merged at the InputSubset level rather than the InputSet level
   $self->fetch_InputSubset_tracking_info($isset);
  
-  #strip off time
-  (my $avail_date = $isset->availability_date) =~ s/ .*//o;
-  my ($year, $month, $day) = split(/-/, $avail_date);
+  my ($year, $month, $day) = split(/-/, $isset->availability_date);
   my $isset_date = DateTime->new(day   => $day,
                                  month => $month,
                                  year  => $year  );
@@ -418,8 +417,9 @@ sub is_InputSubset_embargoed {
 sub store_input_subset_tracking_info{
   my ($self, $iss, $info) = @_;
   #update flag? or use separate methods for dates, urls md5s and ting?   
-  $self->is_stored_and_valid($iss, 'Bio::EnsEMBL::Funcgen::InputSubset');
-  assert_ref($info, 'HASH');
+     
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::InputSubset', $iss);
+  assert_ref($info, 'HASH', 'InputSubset tracking info HASH');
   
   my @cols       = ('input_subset_id');
   my @values     = ($iss->dbID);
@@ -428,7 +428,7 @@ sub store_input_subset_tracking_info{
   #Test for unexpect info items  
   foreach my $col(keys %$info){
     
-    if(! $self->_is_column){
+    if(! $self->_is_column($col) ){
       throw("Found unexpected parameter in tracking info hash:\t".$col.
         "Must be one of:\t@valid_cols");  
     }  
@@ -437,13 +437,15 @@ sub store_input_subset_tracking_info{
   #Test for mandatory info items, and build cols/values
   foreach my $col(@valid_cols){
     
-    if($self->_is_mandatory_columns($col) &&
+    if($self->_is_mandatory_column($col) &&
        ((! exists $info->{$col}) || (! defined $info->{$col}))){
-      throw("Mandatory tracking column must be defined:\t$col");     
+      throw("Mandatory tracking column must be defined:\t$col\nInputSubset:\t".$iss->name);     
     }       
     
-    push @cols,   $col;
-    push @values, $info->{$col};
+    if(defined $info->{$col}){
+      push @cols,   $col; 
+      push @values, $info->{$col};
+    }
   }
   
   #Use SQLHelper::execute_update here?
