@@ -94,6 +94,7 @@ my %param_class_info =
     feature_types       => ['FeatureType',       'fetch_by_name'],
     analyses            => ['Analysis',          'fetch_by_logic_name'],
     experimental_groups => ['ExperimentalGroup', 'fetch_by_name'],
+    experiments         => ['Experiment',        'fetch_by_name'],
     cell_type           => ['CellType',          'fetch_by_name'],
     feature_type        => ['FeatureType',       'fetch_by_name'],
     analysis            => ['Analysis',          'fetch_by_logic_name'],
@@ -608,7 +609,6 @@ sub process_params {
       #warn "before param_class_info test with $param_name";
              
       if(exists $param_class_info{$param_name}){
-        warn "yay $param_name exists in param_class_info";
  
         if($ref_type eq 'HASH'){#can only be hash
           throw("Need to implement $param_name fetch_all for process_params");
@@ -870,7 +870,8 @@ sub _param_and_method {
     no strict 'refs';
   
     *{ref($self)."::${param_name}"} = sub { 
-      my ($self, $param) = @_;
+      my $self  = shift;
+      my $param = shift;
     
       if(defined $param){
         $self->param($param_name, $param);
@@ -1775,9 +1776,8 @@ sub get_alignment_files_by_ResultSet_formats {
                   filter_from_format => $filter_format,
                   all_formats        => $all_formats};  
     
-    $path = $self->get_alignment_file_prefix_by_ResultSet($rset, $control).
-                '.samse'; #Currently hardcoded for bam origin!
-  
+    $path = $self->get_alignment_file_prefix_by_ResultSet($rset, $control).'.samse'; 
+    #Currently hardcoded for bam origin!
     $path .= '.unfiltered' if $filter_format;
      
 
