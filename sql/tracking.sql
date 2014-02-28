@@ -32,14 +32,13 @@ DROP TABLE IF EXISTS `input_set_tracking`;
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 */
 
-DROP TABLE IF EXISTS `result_set_stats`;
 
-CREATE TABLE `result_set_stats` (
-  `result_set_id` int(10) unsigned NOT NULL,
-  `total_reads` int unsigned NOT NULL,
-  `mapped_reads` int unsigned NOT NULL,
-  `minimum_quality_reads` int unsigned NOT NULL,
-  PRIMARY KEY  (`result_set_id`)
+DROP TABLE IF EXISTS `experiment_tracking`;
+
+CREATE TABLE `experiment_tracking` (
+  `experiment_id` int(10) unsigned NOT NULL,
+  `notes` TEXT default NULL,
+  PRIMARY KEY  (`experiment_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
@@ -50,11 +49,12 @@ DROP TABLE IF EXISTS `input_subset_tracking`;
 
 CREATE TABLE `input_subset_tracking` (
   `input_subset_id` int(10) unsigned NOT NULL,
-  `downloaded` datetime default NULL,
-  `availability_date` datetime default NULL,
-  `md5sum` varchar(45) default NULL,
+  `availability_date` date default NULL,
   `download_url` text DEFAULT NULL,
+  `downloaded` date default NULL,
+  `md5sum` varchar(45) default NULL,
   `local_url` text DEFAULT NULL,
+  `notes` TEXT default NULL,
   PRIMARY KEY  (`input_subset_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 

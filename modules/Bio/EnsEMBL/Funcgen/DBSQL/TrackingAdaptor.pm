@@ -75,7 +75,8 @@ my %mandatory_columns = (#'input_subset_id'   => 0,
                          download_url      => 1,
                          downloaded        => 0,
                          local_url         => 0,
-                         md5sum            => 0);
+                         md5sum            => 0,
+                         notes             => 0);
                         
 
 =head2 new
