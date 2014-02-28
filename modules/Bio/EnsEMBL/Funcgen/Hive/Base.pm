@@ -276,7 +276,7 @@ sub get_study_name_from_Set {
     #This is based on the assumption that all non-ctrl subsets are associated
     #with one ResultSet/Experiment.
     
-    my $exp   = $control->get_Experiment;
+    my $exp   = $control->experiment;
     $exp_name = $exp->name;
  
     foreach my $isset(@{$exp->get_InputSubsets}){
@@ -288,7 +288,7 @@ sub get_study_name_from_Set {
     }      
   }
   else{  
-    $exp_name = $set->get_Experiment->name ||
+    $exp_name = $set->experiment->name ||
       throw("Cannot find unique experiment name for ResultSet:\t".$set->name);
     $ftype = $set->feature_type->name;
   }
@@ -985,11 +985,11 @@ sub init_branching_by_analysis{
     
     my $dfr_adaptor = $self->db->get_DataflowRuleAdaptor;  
     
-    if(! $dfr_adaptor->can('fetch_all_by_analysis_id')){
-      #inject method here   
+    if(! $dfr_adaptor->can('fetch_all_by_analysis_id')){      #inject method here   
+      $self->helper->debug(1, 'Injecting '.ref($dfr_adaptor).'::fetch_all_by_analysis_id');    
       no strict 'refs';
   
-      *{ref($dfr_adaptor)."::fetch_all_by_analysis_id}"} = sub { 
+      *{ref($dfr_adaptor).'::fetch_all_by_analysis_id'} = sub { 
         my $self    = shift;
         my $anal_id = shift;
         throw('Must provide and analysis id argument') if ! defined $anal_id;
@@ -999,11 +999,12 @@ sub init_branching_by_analysis{
       use strict;
     }
     
-    if(! $dfr_adaptor->can('get_dataflow_config_by_analysis_id')){
-      #inject method here using fetch_all_by_analysis_id 
+    if(! $dfr_adaptor->can('get_dataflow_config_by_analysis_id')){  #inject method here using fetch_all_by_analysis_id 
+      $self->helper->debug(1, 'Injecting '.
+        ref($dfr_adaptor).'::get_dataflow_config_by_analysis_id');
       no strict 'refs';
-  
-      *{ref($dfr_adaptor)."::get_dataflow_config_by_analysis_id}"} = sub { 
+   
+      *{ref($dfr_adaptor).'::get_dataflow_config_by_analysis_id'} = sub { 
         my $self    = shift;
         my $anal_id = shift;
         throw('Must provide and analysis id argument') if ! defined $anal_id;
@@ -1188,6 +1189,7 @@ sub init_branching_by_analysis{
 
 
 sub _get_branch_number{
+  my $self          = shift;
   my $branch_codes  = shift;
   my $branch_config = shift;  
   assert_ref($branch_codes, 'ARRAY', 'Branch code array');
@@ -1196,6 +1198,9 @@ sub _get_branch_number{
   if(defined $branch_config){
     
     foreach my $bcode(@$branch_codes){
+      
+      $self->throw_no_retry('Branch code is undefined') if ! defined $bcode;
+      #This will allow null string and 0
       
       if(! exists $branch_config->{$bcode}){
         throw("Could not find branch config for analysis or branch key:\t".$bcode.
@@ -1248,8 +1253,11 @@ sub _get_branch_number{
 sub branch_job_group{
   my ($self, $fan_branch_codes, $fan_jobs, $funnel_branch_code, $funnel_jobs) = @_;
   my $branch_config = $self->{branch_config}; #as this may be derived from analysis or method?
-  my $fan_branch    = _get_branch_number($fan_branch_codes, $branch_config); 
+  $fan_branch_codes = [$fan_branch_codes] if ! ref($fan_branch_codes);
+  my $fan_branch    = $self->_get_branch_number($fan_branch_codes, $branch_config); 
   #this also asserts_ref for $fan_branch_codes
+    
+  $self->helper->debug(1, "Branching $fan_branch");;
     
   if(! (check_ref($fan_jobs, 'ARRAY') &&
         scalar(@$fan_jobs) > 0)){
@@ -1270,7 +1278,10 @@ sub branch_job_group{
       throw('Must have at least 1 funnel job when defining a funnel in a job group'); 
     }
    
-    my $funnel_branch = _get_branch_number([$funnel_branch_code], $branch_config); 
+    my $funnel_branch = $self->_get_branch_number([$funnel_branch_code], $branch_config); 
+   
+    $self->helper->debug(1, "Branching funnel $funnel_branch");
+   
    
     if($branch_config){#check the funnel is valid wrt fan analyses
       
