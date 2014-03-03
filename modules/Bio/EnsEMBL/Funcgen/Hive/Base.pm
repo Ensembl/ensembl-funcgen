@@ -154,7 +154,7 @@ sub fetch_input {   # nothing to fetch... just the DB parameters...
     undef, #Let's not create this until we need it
     $self->data_root_dir.'/output/'.$self->param_required('pipeline_name')
    );
-  
+ 
   #output and work dir need setting based on dbname
   if($self->get_param_method('use_tracking_db')){
     $self->_set_out_db;      
@@ -272,12 +272,22 @@ sub get_study_name_from_Set {
   
   if($control){
     $control = _get_control_InputSubset($set);
-    
+  
     #This is based on the assumption that all non-ctrl subsets are associated
     #with one ResultSet/Experiment.
     
     my $exp   = $control->experiment;
     $exp_name = $exp->name;
+ 
+    #This currently only works for Experiments
+    #which have controls mixed in
+    
+    #The pipeline does not currently expect 
+    #stand alone control experiments
+    #and will try and process these like a mixed signal/control set.
+    #This should be fine until after the alignment
+    #at which point we want to stop their processing
+    
  
     foreach my $isset(@{$exp->get_InputSubsets}){
       
@@ -285,6 +295,11 @@ sub get_study_name_from_Set {
         $ftype = $isset->feature_type->name;  
         last;
       }  
+    }
+    
+    if(! $ftype){
+     #We have a pure control experiment i.e. no signal InputSubsets
+     $ftype = $exp->feature_type->name;
     }      
   }
   else{  
@@ -346,7 +361,7 @@ sub _get_control_InputSubset{
     @is_sets = ($set);
   }
   
-  my @ctrls = map { $_ if $_->is_control } @is_sets;
+  my @ctrls = grep { $_->is_control == 1 } @is_sets;
 
   if(! @ctrls){
     throw('Could not identify a control InputSubset from '.ref($set).":\t".$set->name);  
@@ -394,7 +409,7 @@ sub get_output_work_dir_methods{
         ") which is not in the data_root_dir:\n\t$dr_dir");   
     }    
                
-    my $wr_dir             = $self->work_root_dir;
+    my $wr_dir             = $self->work_root_dir;   
     ($work_dir = $out_dir) =~ s/$dr_dir/$wr_dir/;
   
     if($work_dir eq $out_dir){
@@ -642,10 +657,12 @@ sub process_params {
 }
 
 
+#Use File::Spec for path handling
+#Would need to use this in the config too.
+
 
 sub validate_dir_param{
   my($self, $dir_name, $create, $optional_or_default) = @_;
- 
   my $req_or_silent = 'required';
   my $default;
  
@@ -656,12 +673,20 @@ sub validate_dir_param{
       $default = $optional_or_default;  
     }  
   }
- 
   
   my $path = $self->get_param_method($dir_name, $req_or_silent, $default); 
-   
-  #This will have throw if is it required and not defined or has default
- 
+  
+  #Handle redundant //'s from donfig
+  #strip the trailing / if we have one.
+  #So we can always assume this for building/substituting paths
+  
+  if($path =~ /.+\/$/o || $path =~ /\/\//o){
+    $path =~ s/\/$//o;
+    $path =~ s/\/\//\//o;
+    $self->$dir_name($path);  
+  }
+  
+  #This will have throw if is it required and not defined or has default 
   validate_path($path, $create, 1, $dir_name);
  
   #my %dirs = %{$self->process_params($dir_param_names, $optional)};
@@ -1799,6 +1824,24 @@ sub get_alignment_files_by_ResultSet_formats {
   #throw here and handle optional control file in caller. This should be done with 
   #a no_control/skip_control flag or similar  
   return $align_files || throw("Failed to find $file_type (@$formats) for:\t$path");  
+}
+
+
+#This method should detect whether we are using the default coord system
+#else append the coord_system version to the status
+#This is dependant on the current coord system
+#actually there is a danger that this could be updated, without
+#updating the states, or appneding the cs name to the set names
+#if that is what we are doing
+#we could re use the sets, but this would not be very obvious
+#and the dbfile_registry table does not support different coord systems yet
+#let's just ranme the sets for now.
+#In which case do we need this method at all?
+#as all the cs spcific states and old sets will be renamed when moving to an new assembly
+
+sub get_coord_system_status{
+  my $self   = shift;
+  my $status = shift;
 }
 
 
