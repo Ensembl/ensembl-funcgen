@@ -71,7 +71,7 @@ sub fetch_input {   # fetch parameters...
 
   #refactor this default_analysis method in BaseDB? As this is reused in other runnables
   my %default_analyses;
-  my @set_types = ();# ('result_set');
+  my @set_types = ();
   push @set_types, 'feature_set' if ! $self->get_param_method('result_set_only', 'silent');
  
   #TODO Validate default set analysis keys exist as feature_type class or name?

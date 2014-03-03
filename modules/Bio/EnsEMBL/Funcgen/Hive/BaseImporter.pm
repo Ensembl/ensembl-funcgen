@@ -2,12 +2,11 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::RunnableDB::Funcgen
+Bio::EnsEMBL::Funcgen::Hive::BaseImporter
 
 =head1 DESCRIPTION
 
-'Funcgen' is a base class for other runnables of the Funcgen Hive Pipeline
-It performs common tasks such as connecting to the EFG DB etc...
+BaseImporter is a base class to support those modules which use the Importer class
 
 =cut
 
