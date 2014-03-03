@@ -70,6 +70,7 @@ use vars   qw( @EXPORT_OK );
   assert_refs
   assert_refs_do
   backup_file
+  check_file
   convert_bam_to_sam
   create_Storable_clone
   dump_data
@@ -938,51 +939,58 @@ sub generate_checksum{
 #assume the format of the file is:
 #checksum_sig\tfilename\tdigestmethod
 
-
 sub validate_checksum{
   my ($file_path, $params) = @_;
-  my ($signature_file, $digest_method);
+  my ($signature_file, $digest_method, $md5_sig);
 
   if(defined $params){
     assert_ref($params, 'HASH');
     $signature_file = $params->{signature_file};
     $digest_method  = $params->{digest_method};
+    $md5_sig         = $params->{checksum};
+  }
+
+  if((defined $signature_file) && (defined $md5_sig)){
+    throw("Params 'signature_file' and 'checksum' are mutually exclusive, please restrict to one");
   }
 
   my $file_name = fileparse($file_path);
 
-  if(! defined $signature_file){
-    $signature_file = $file_path.'.CHECKSUM';
-  }
-
-  if(! -f $signature_file){
-    throw("Failed to find checksum file:\t$signature_file\nPlease specify one as an argument, or create default file");
-  }
-
-  my $checksum_row = `grep -E '[[:space:]]$file_name\[[:space:]]*.*\$' $signature_file` ||
-                      die("Cannot acquire $file_name checksum info from:\t$signature_file");
-  my ($md5_sig, $sig_file_name, $sig_digest_method) = split(/\s+/, $checksum_row);
-
-
-  if((! defined $sig_file_name) ||
-     ($sig_file_name ne $file_name)){
-    throw("Failed to find $file_name entry in checksum signature file:\n\t$signature_file");
-  }
-
-  #default to digest method in file
-  $digest_method     ||= $sig_digest_method;
-  #Also need to account for absent $sig_digest
-  $sig_digest_method ||= $digest_method;
-
-
-  if(defined $sig_digest_method){
-    if($digest_method ne $sig_digest_method){
-    throw("Specified digest method($digest_method) does not match method found in ".
-      "checksum signature file($sig_digest_method):\n\t$file_path\n\t$signature_file");
+  if(! defined $md5_sig){
+    
+    if(! defined $signature_file){
+      $signature_file = $file_path.'.CHECKSUM';
     }
-  }
-  else{
-    warn "Could not find digest method in checksum signature file, assuming $digest_method";
+  
+    if(! -f $signature_file){
+      throw("Failed to find checksum file:\t$signature_file\nPlease specify one as an argument, or create default file");
+    }
+  
+    my $checksum_row = `grep -E '[[:space:]]$file_name\[[:space:]]*.*\$' $signature_file` ||
+                        die("Cannot acquire $file_name checksum info from:\t$signature_file");
+    my ($sig_file_name, $sig_digest_method);
+    ($md5_sig, $sig_file_name, $sig_digest_method) = split(/\s+/, $checksum_row);
+
+    if((! defined $sig_file_name) ||
+       ($sig_file_name ne $file_name)){
+      throw("Failed to find $file_name entry in checksum signature file:\n\t$signature_file");
+    }
+  
+    #default to digest method in file
+    $digest_method     ||= $sig_digest_method;
+    #Also need to account for absent $sig_digest
+    $sig_digest_method ||= $digest_method;
+
+  
+    if(defined $sig_digest_method){
+      if($digest_method ne $sig_digest_method){
+      throw("Specified digest method($digest_method) does not match method found in ".
+        "checksum signature file($sig_digest_method):\n\t$file_path\n\t$signature_file");
+      }
+    }
+    else{
+      warn "Could not find digest method in checksum signature file, assuming $digest_method";
+    }
   }
 
   my $new_md5_sig = generate_checksum($file_path, $digest_method);
@@ -1949,7 +1957,6 @@ sub check_file{
       $found_path = $file_path;    
     }
   }
-    
 
   if($found_path){
     my $validate_checksum;
