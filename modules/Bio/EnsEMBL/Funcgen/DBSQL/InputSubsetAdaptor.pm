@@ -395,7 +395,7 @@ sub _constrain_input_sets {
 
 
 
-###ÊDEPRECATED METHODS ###
+###DEPRECATED METHODS ###
 
 #should have been fetch_by_name_and_Experiment
 #Experiment is not needed in the majority of cases

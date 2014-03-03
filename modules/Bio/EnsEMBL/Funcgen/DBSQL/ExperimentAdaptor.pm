@@ -300,10 +300,9 @@ sub store {
   my $self = shift;
   my @exps = @_;
 
-	my $sth = $self->prepare('INSERT INTO experiment
-                            (name, experimental_group_id, date, primary_design_type, 
-                             description, mage_xml_id, feature_type_id, cell_type_id
-                             arhcive_id, display_url)
+	my $sth = $self->prepare('INSERT INTO experiment(name, experimental_group_id, date, 
+	                          primary_design_type, description, mage_xml_id, feature_type_id, 
+	                          cell_type_id, archive_id, display_url)
                             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
 
   foreach my $exp (@exps) {
