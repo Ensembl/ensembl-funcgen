@@ -1849,11 +1849,9 @@ sub validate_package_from_path{
   my $self     = shift;
   my $pkg_path = shift;  
   
-  eval { require $pkg_path; };
-
-  if ($@) {
-    throw( "Failed to require:\t$pkg_path" );
-  }
+  throw('Must defined a package path to validate') if ! defined $pkg_path;
+  eval "require $pkg_path"; #$pkg_path must be interpolated as a bareword for require
+  throw( "Failed to require:\t$pkg_path\n$@" ) if  $@;
   
   #This might not always be correct if the file contains >1 package
   return path_to_namespace($pkg_path);
