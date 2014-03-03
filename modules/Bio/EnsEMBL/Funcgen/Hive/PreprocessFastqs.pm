@@ -42,8 +42,8 @@ use warnings;
 use strict;
 
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( is_gzipped run_system_cmd run_backtick_cmd );
-
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( is_gzipped run_system_cmd 
+                                               run_backtick_cmd check_file );
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
 #TODO... use and update the tracking database dependant on no_tracking...
@@ -89,13 +89,15 @@ sub fetch_input {
   my $run_controls = $self->get_param_method('result_set_groups', 'silent') ? 1 : 0;
   $self->set_param_method('run_controls', $run_controls);
   my $merge        = $self->get_param_method('merge', 'silent', $run_controls); 
+  $self->get_param_method('checksum_optional', 'silent');
   
   
   
-  if($run_controls){ #Validate we have some signal to run aswell
-    $self->get_param_method('dbIDs',     'required');
-    $self->get_param_method('set_names', 'required');  
-  }
+  #This is now implicit from presence of result_set_groups
+  #if($run_controls){ #Validate we have some signal to run aswell
+  #  $self->get_param_method('dbIDs',     'required');
+  #  $self->get_param_method('set_names', 'required');  
+  #}
     
     
     
@@ -123,16 +125,9 @@ sub fetch_input {
   
   #We need to define the work dir here for the intermediate chunk/alignments files
   #output_dir here is for alignment (no need for repository)
-  $self->get_ouput_work_dir_methods($self->alignment_dir($rset, undef, $run_controls));#default output_dir
- 
-  $self->helper->debug(1, "Work dir is:\t".$self->work_dir.
-                            "\nOutput dir is:\t".$self->output_dir);
-  
-  
-    
-  return 1;
+  $self->get_output_work_dir_methods($self->alignment_dir($rset, 1, $run_controls));#default output_dir 
+  return;
 }
-
 
 
 sub run {
@@ -140,7 +135,6 @@ sub run {
   my $rset         = $self->ResultSet;
   my $run_controls = $self->run_controls;
   my $merge        = $self->merge;
-  
  
   #Maybe we need to handle pre-aligned ResultSets here
   #check status and file
@@ -153,7 +147,7 @@ sub run {
   
   
   #This status needs to be CS specific!!
-  my $align_status = $self->get_coord_system_status('ALIGNED');#put this in BaseSequenceAnalysis
+  my $align_status = 'ALIGNED';#$self->get_coord_system_status('ALIGNED');#put this in BaseSequenceAnalysis
   
   #We have an inheritance issue here
   #BaseSequenceAnalysis isa BaseImporter?
@@ -174,90 +168,87 @@ sub run {
   
   
 
-  my (@local_urls);#, @rep_numbers);
+  my @fastqs;
   my $throw = '';
   
- ISSET: foreach my $isset(@{$rset->get_support('input_subset')}){
+  foreach my $isset(@{$rset->get_support('input_subset')}){
 
     if(($isset->is_control && ! $run_controls) ||
        ($run_controls && ! $isset->is_control)){
       next;    
     }
  
- 
-    my @tinfo = @{$self->tracking_adaptor->fetch_InputSubset_tracking_info($isset)};
-    #This is currently returning an ARRAYREF, but will change once the input_subset model
-    #is corrected
-    #TODO check whether input_subsets are unique and tidy as required!
-    
-    if(! @tinfo){
-      $throw .= "Could not find tracking info for InputSubset:\t".
+    if(! $self->tracking_adaptor->fetch_InputSubset_tracking_info($isset)){
+       $throw .= "Could not find tracking info for InputSubset:\t".
         $isset->name."\n";
       next;
     }
     
-    #todo define the align output file using the same code in get_alignment_file_by_InputSet?
-    #sub out the file name bit 
-  
-   
-      
-    foreach my $tr(@{$self->tracking_info}){
-      my $local_url = $tr->{local_url}; #Defined here until we update the schema
-      my $found_path;
-     
-      if(! defined $local_url){
-        $throw .= "Found an InputSubset without a local_url, has this been downloaded?:\t".
-          $isset->name."\n";
-        next ISSET;  
-      }
-  
-      #push @rep_numbers, $isset->replicate;
-      push @local_urls, $found_path;      
+    if(! defined $isset->local_url){
+      $throw .= "Found an InputSubset without a local_url, has this been downloaded?:\t".
+        $isset->name."\n";
+      next;  
     }
-  } 
-  
-  throw($throw) if $throw;
-  
-  
-  if((scalar(@local_urls) > 1) &&
-     ! $merge){
-    throw('ResultSet '.$rset->name.
-      " has more than one InputSubset, but merge has not been specified:\n\t".
-      join("\n\t", @local_urls));    
-  }  
 
-  
-  my (@fastqs, $found_path);
-  
-  foreach my $fastq_file(@local_urls){   
+    my $found_path;
+    my $params = {unzip => 1 };
     
-    #This should unzip the file to do the checksum, as we shouldn't have checksums
-    #on zipped files
+    if(defined $isset->md5sum || ! $self->checksum_optional ){
+      $params = {checksum => $isset->md5sum}; 
+    }
     
-    
-    eval { $found_path = check_file($fastq_file, 'gz', {checksum => 1}); };
+    #This needs to unzip them too!
+           
+    eval { $found_path = check_file($isset->local_url, 'gz', $params); };
     
     if($@){
       $throw .= "$@\n";
-      next ISSET;  
+      next;  
     }
     elsif(! defined $found_path){
       $throw .= "Could not find fastq file, is either not downloaded, has been deleted or is in warehouse:\t".
-        $fastq_file."\n";
-          
+        $isset->local_url."\n";
       #Could try warehouse here?
     }
      
+    push @fastqs, $found_path;  
+  }
  
-     
-    push @fastqs, $fastq_file;
-  }    
-     
+  throw($throw) if $throw;
+  
+  if((scalar(@fastqs) > 1) &&
+     ! $merge){
+    throw('ResultSet '.$rset->name.
+      " has more than one InputSubset, but merge has not been specified:\n\t".
+      join("\n\t", @fastqs));    
+  }  
+ 
+  #This currently fails as it tries to launch an X11 window!
  
   ### RUN FASTQC
   #18-06-10: Version 0.4 released ... Added full machine parsable output for integration into pipelines
   #use -casava option for filtering
-  run_system_cmd('fastqc -o '.$self->output_dir." @fastqs");
+  
+  warn "DEACTIVATED FASTQC FOR NOW!!!!!!!!!!!!!!!!!!!";
+  #run_system_cmd('fastqc -o '.$self->output_dir." @fastqs");
+  
+  #This is currently failing with:
+  #Exception in thread "main" java.lang.NoClassDefFoundError: org/itadaki/bzip2/BZip2InputStream
+  #      at uk.ac.babraham.FastQC.Sequence.SequenceFactory.getSequenceFile(SequenceFactory.java:83)
+  #      at uk.ac.babraham.FastQC.Analysis.OfflineRunner.processFile(OfflineRunner.java:113)
+  #      at uk.ac.babraham.FastQC.Analysis.OfflineRunner.<init>(OfflineRunner.java:84)
+  #      at uk.ac.babraham.FastQC.FastQCApplication.main(FastQCApplication.java:308)
+  #Caused by: java.lang.ClassNotFoundException: org.itadaki.bzip2.BZip2InputStream
+  #      at java.net.URLClassLoader$1.run(URLClassLoader.java:200)
+  #      at java.security.AccessController.doPrivileged(Native Method)
+  #      at java.net.URLClassLoader.findClass(URLClassLoader.java:188)
+  #      at java.lang.ClassLoader.loadClass(ClassLoader.java:307)
+  #      at sun.misc.Launcher$AppClassLoader.loadClass(Launcher.java:301)
+  #      at java.lang.ClassLoader.loadClass(ClassLoader.java:252)
+  #      at java.lang.ClassLoader.loadClassInternal(ClassLoader.java:320)
+  
+  
+  
   
   #todo parse output for failures
   #also fastscreen?
@@ -276,17 +267,19 @@ sub run {
 
   #For safety, clean away any that match the prefix
   #todo, check that split append an underscore
-  run_system_cmd("rm -f ${set_prefix}.fastq_*");#no exit?
+  run_system_cmd('rm -f '.$self->work_dir."/${set_prefix}.fastq_*");#no exit?
      
   my $cmd = 'cat '.join(' ', @fastqs).' | split -d -a 4 -l '.
     $self->fastq_chunk_size.' - '.$self->work_dir.'/'.$set_prefix.'.fastq_';
+  $self->helper->debug(1, "run_system_cmd\t$cmd"); 
   run_system_cmd($cmd);
 
-  #Now I need to know exactly what files were produced to data flow to individual alignment jobs
-  $self->set_param_method('fastq_files', [@{run_backtick_cmd("ls ${set_prefix}.fastq_*")}]);
+  #Get files to data flow to individual alignment jobs
+  my @fastqs = map { chomp($_) && $_; } run_backtick_cmd('ls '.$self->work_dir."/${set_prefix}.fastq_*");
+  $self->set_param_method('fastq_files', \@fastqs);
 
-   foreach my $fq_file(@{$self->fastq_files}){
-    
+  foreach my $fq_file(@{$self->fastq_files}){
+  
     #Data flow to RunAligner for each of the chunks 
     #do we need to pass result set to aligner?
     #Would need to pass gender, analysis logic_name 
@@ -318,6 +311,7 @@ sub run {
                              #but passed for convenience
                              output_dir => $self->output_dir,
                              set_prefix => $set_prefix,
+                             run_controls => $run_controls,
                              %signal_info}]);
 
 
