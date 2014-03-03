@@ -28,7 +28,7 @@ use base qw( Bio::EnsEMBL::Funcgen::Hive::Aligner );#Does not import
 #0.6.2_fixes        0.6.2 released version
 #0.6.2-mt           0.6.2 with multithreaded samse/sampe
 #master_fixes       The current bwa master version
-#or see if Heng has incoprorated these into the main bwa github rep?
+#or see if Heng has incorporated these into the main bwa github rep?
 
 #todo look into multi-threading to speed thing up -t #nodes
 #will this just reduce our submission rate as we will require an entire node

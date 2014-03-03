@@ -74,24 +74,16 @@ sub fetch_input {   # fetch parameters...
   #use all formats by default
   #Can we update -input_files in the Importer after we have created it?
   
-  
-  #We want to filter by default, unless bam_filtered has been specified?
-  #bam_filtered will need batchflowing from alignment pipeline
-  my $filter_format = $self->param_silent('bam_filtered') ? undef : 'bam';  
-  
-     
+   
   my $align_files = $self->get_alignment_files_by_ResultSet_formats($rset,
                                                                     $self->param_required('feature_formats'),
                                                                     undef, #control flag
-                                                                    1,     #all formats
-                                                                    $filter_format); 
-  #No need to check as we have all_formats defined
-  
-  #what about control files here?
-  
-  
-  
-  
+                                                                    1);     #all formats
+  #No need to check as we have all_formats defined? Shouldn't we just specify bed here?
+  #other formats maybe required for other downstream analyses i.e. peak calls
+  #but we don't know what formats yet
+  #todo review this
+   
   
   $self->helper->debug(1, 'CollectionWriter::fetch_input setting new_importer_params with align_files:', 
                        $align_files);
@@ -100,18 +92,17 @@ sub fetch_input {   # fetch parameters...
   
 
 
-  $self->new_Importer_params( 
     #Default params, will not over-write new_importer_param
     #which have been dataflowed
-   {
-    #-prepared            => 1, #Will be if derived from BAM in get_alignment_file_by_InputSets
+  $self->new_Importer_params( 
+   {#-prepared            => 1, #Will be if derived from BAM in get_alignment_file_by_InputSets
     #but we aren't extracting the slice names in this process yet
     -input_feature_class => 'result', #todo remove this requirement as we have output_set?
     -format              => 'SEQUENCING',#This needs changing to different types of seq
     -recover             => 1, 
     -force               => 1, #for store_window_bins_by_Slice_Parser
     -output_set          => $rset,
-    -input_files         => [$align_files->{'bed'}], #Can we set these after init?
+    -input_files         => [$align_files->{bed}], #Can we set these after init?
     -slices              => &generate_slices_from_names
                               ($self->out_db->dnadb->get_SliceAdaptor, 
                                $self->slices, 
@@ -147,7 +138,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
    
     if( ! $Imp->prepared ){  #Preparing data...
       $Imp->read_and_import_data('prepare');
-      #Dataflow only jobs for slices that the importe has seen
+      #Dataflow only jobs for slices that the import has seen
       my %seen_slices  = %{$Imp->slice_cache};
       my $batch_params = $self->batch_params;
       my @slice_jobs = ();
@@ -196,7 +187,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
       #as it is only dealing with one job group
       #so could have simply branced the funnel jobs after
       #but this makes it more explicit  
-      $self->branch_job_group([2], \@slice_jobs, 1, [$output_id]);
+      $self->branch_job_group(2, \@slice_jobs, 1, [$output_id]);
   
       #We have no way of knowing whether method was injected by fetch_Set_input
       my $fset = $self->FeatureSet;
