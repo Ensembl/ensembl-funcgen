@@ -169,7 +169,6 @@ sub fetch_Set_input{
     thow("$return_set_type is not a valid return set type, must be one of:\n\t".
         "DataSet FeatureSet ResultSet InputSet");
   }  
-    
   
   #why do we have a mistmach between the case of the set_type and the method name?
   #revert to title case i.e API standard as opposed to table name
@@ -248,7 +247,7 @@ sub fetch_Set_input{
   #then an analysis may get an unexpected set returned if the data flow isn't correct
   #hence needs to be mandatory
   
-  return $self->param_required($return_set_type.'_set');
+  return $self->param_required($return_set_type);
 }
 
 =over
@@ -318,7 +317,7 @@ sub experimental_group   { return $_[0]->param('experimental_group');           
 
 
 
-###ÊOLD METHODS
+###OLD METHODS
 
 
 
