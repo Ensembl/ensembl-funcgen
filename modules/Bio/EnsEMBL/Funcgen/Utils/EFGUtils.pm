@@ -1048,7 +1048,7 @@ sub get_month_number{
 
 
 sub gunzip_file {
-  my ($self, $filepath) = @_;
+  my $filepath = shift;
   my $was_gzipped = 0;
 
   if( is_gzipped($filepath) ){
@@ -1935,6 +1935,9 @@ sub url_from_DB_params {
 #Very simple method to check for a file and it's compressed variants
 #This may cause problems if the $file_path is already .gz
 
+#todo tidy up suffix handling, will it ever be anything other than .gz?
+
+
 sub check_file{
   my ($file_path, $suffix, $params) = @_;
 
@@ -1953,13 +1956,17 @@ sub check_file{
       }
     }
     elsif(-f $file_path.'.'.$suffix){
-      gunzip_file($file_path.'.'.$suffix);
-      $found_path = $file_path;    
+      $found_path = gunzip_file($file_path.'.'.$suffix);
     }
   }
 
   if($found_path){
     my $validate_checksum;
+
+    if($params->{gunzip} && 
+       ($found_path =~ /\.gz$/o)){          
+      $found_path = gunzip_file($found_path);  
+    }
 
     if(defined $params){
       assert_ref($params, 'HASH');
