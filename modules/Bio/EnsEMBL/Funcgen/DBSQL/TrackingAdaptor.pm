@@ -301,7 +301,7 @@ sub fetch_InputSubset_tracking_info{
 
 
   $self->_inject_input_subset_tracking_methods($set);
-  #my (%subset_cache, @tracking_info);
+  my $hashref;
 
   if(! exists $set->{tracking_info}){
 
@@ -321,7 +321,8 @@ sub fetch_InputSubset_tracking_info{
  
     my $sth = $self->prepare($sql);
     $sth->execute;
-    $set->{tracking_info} = $sth->fetchrow_hashref;
+    $hashref = $sth->fetchrow_hashref; #Will this be undef if there is no data?
+    $set->{tracking_info} = $hashref;
     $sth->finish;#otherwise we get disconnect warnings
     
     #my %column;
@@ -336,7 +337,7 @@ sub fetch_InputSubset_tracking_info{
     #}
   }
   
-  return $set;
+  return $hashref;
 }
 
 sub set_download_status_by_input_subset_id{
