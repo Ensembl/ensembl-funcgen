@@ -567,8 +567,7 @@ sub dnadb {
 
 
 sub _set_dnadb{
-  my $self = shift;
-
+  my $self       = shift;
   my $assm_ver   = $self->dnadb_assembly;
   my $dnadb_name = $self->dnadb_name;
 
@@ -587,30 +586,29 @@ sub _set_dnadb{
   my $lspecies = $reg_lspecies;
   $lspecies =~ s/[0-9]+$// if($lspecies =~ /[0-9]$/);
 
-
-  throw("Either specify a species parameter or set species.production_name in the meta table (DB: $dnadb_name) to set dnadb automatically, alternatively pass a dnadb parameter") if $lspecies eq 'default';
-
-  #Wse params first
-  #else registry params
-  #else ensembldb
-
-  my @ports = ($self->dnadb_port);
+  if( $lspecies eq 'default'){
+    throw('Either specify a species parameter or set species.production_name'.
+      " in the meta table (DB: $dnadb_name) to set dnadb automatically, alternatively pass a dnadb parameter");
+  } 
 
   #Start with lastest MySQL instances
   #We are over-riding specified port here, only for known hosts
   #we should really account for this and make it nr
-  if ($self->dnadb_host eq 'ensdb-archive') { #
+  my @ports; 
+  
+  if($self->dnadb_port){
+    @ports = ($self->dnadb_port); 
+  }
+  elsif ($self->dnadb_host eq 'ensdb-archive') { #
     @ports = (5304, 3304);
   } elsif ($self->dnadb_host eq 'ensembldb.ensembl.org') {
     @ports = (5306, 3306);
   }
 
+  my $match_name = $dnadb_name || $lspecies.'_core_%_'.$assm_ver.'%';
 
-  if (! $dnadb_name) {
-    $dnadb_name = $lspecies.'_core_%_'.$assm_ver.'%';
-  }
 
-  my $sql = 'show databases like "'.$dnadb_name.'"';
+  my $sql = 'show databases like "'.$match_name.'"';
   my ($dbh, @dbnames, $port, $host_port);
 
 
@@ -635,7 +633,10 @@ sub _set_dnadb{
     #Will always take the latest release, not the latest genebuild version
     #Which is probably what we want anyway
 
-    @dbnames = grep(/core_[0-9]/, sort @dbnames);
+    if(! $dnadb_name){
+      @dbnames = grep(/core_[0-9]/, sort @dbnames);
+    } 
+  
 
     if (scalar(@dbnames)==0) {
       warn(':: Failed to find dnadb like '.$dnadb_name.', using '
@@ -646,15 +647,13 @@ sub _set_dnadb{
     }
   }
 
-  throw("Failed to find dnadb like $dnadb_name.") if(scalar(@dbnames)==0);
-
-
+  throw("Failed to find dnadb like $match_name.") if(scalar(@dbnames)==0);
   warn ":: Auto-selecting build $assm_ver core DB as:\t".
     $self->dnadb_user.'@'.$dbnames[$#dbnames].':'.$self->dnadb_host.':'.$host_port."\n";
 
-  my $db = $reg->reset_DBAdaptor($reg_lspecies, 'core', $dbnames[$#dbnames], $self->dnadb_host, $host_port, $self->dnadb_user, $self->dnadb_pass);
-
-
+  my $db = $reg->reset_DBAdaptor($reg_lspecies, 'core', $dbnames[$#dbnames], 
+                                 $self->dnadb_host, $host_port, 
+                                 $self->dnadb_user, $self->dnadb_pass);
   $self->dnadb($db);
   return $db;
 }
