@@ -60,19 +60,13 @@ sub fetch_input {   # fetch parameters...
   #and we don't want to tie the aligner to use of a ResultSet
   #Can we make these co-optional in the constructor?
   #i.e. we can pass gender or a ResultSet?
-  
 
-
-
-  
-  
   $self->get_param_method('output_dir', 'required'); 
   #This should have been set to a 'work' dir in MergeChunkResultSetFastqs
   
   #Do we even need this? The fastq chunks will already be in a work dir?
   
-  
-  
+
   my $analysis     = $rset->analysis;
   my $align_module = $self->validate_package_from_path($analysis->module);
   my $aligner      = $analysis->program || 
@@ -91,9 +85,15 @@ sub fetch_input {   # fetch parameters...
   #  }    
   #}
 
+
+
   #validate program_file isn't a path?
   #would redefine bwa bin in the config for this analysis
   #this will change the bin_dir for everything else too, but we don't use bin_dir for anything else here 
+  
+  my $pfile = $analysis->program_file;
+  throw('Analysis '.$analysis->logic_name.' must have a program_file defined') if ! defined $pfile;
+  
   my $pfile_path = ( defined $self->bin_dir ) ? 
     $self->bin_dir.'/'.$analysis->program_file : $analysis->program_file;
 
@@ -118,9 +118,9 @@ sub fetch_input {   # fetch parameters...
   
   
     $ref_fasta = join('/', ($self->param_required('data_root_dir'),
-                               $self->program.'_indexes',
-                               $species,
-                               $species.'_'.$gender.'_'.$self->assembly.'_unmasked.fasta'));
+                            $aligner.'_indexes',
+                            $species,
+                            $species.'_'.$gender.'_'.$self->assembly.'_unmasked.fasta'));
   }
 
   my $align_runnable = $align_module->new
