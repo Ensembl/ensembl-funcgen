@@ -28,7 +28,7 @@ ALTER TABLE result_set ADD COLUMN experiment_id int(10) unsigned default NULL;
 ALTER TABLE result_set ADD KEY    experiment_idx (experiment_id);
 
 -- This update will likely be over-written by the input_subset patch script
--- to ensure faithful migration of all data from the old trackign schema
+-- to ensure faithful migration of all data from the old tracking schema
 
 UPDATE experiment e, input_subset iss, result_set_input rsi, result_set rs 
   SET e.display_url=iss.display_url, e.archive_id=iss.archive_id, rs.experiment_id=e.experiment_id
@@ -37,6 +37,13 @@ UPDATE experiment e, input_subset iss, result_set_input rsi, result_set rs
 
 analyze table result_set;
 optimize table result_set;
+
+
+ALTER TABLE input_subset DROP COLUMN archive_id;
+-- we could maintain this, but we are currently putting the SRR ids in the name field
+
+ALTER TABLE input_subset DROP COLUMN display_url;
+
   
 -- patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_75_76_b.sql|result_set/experiment.display_url/archive_id');
