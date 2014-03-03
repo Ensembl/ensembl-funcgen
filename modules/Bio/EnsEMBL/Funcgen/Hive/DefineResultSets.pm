@@ -13,6 +13,7 @@ use warnings;
 use strict;
  
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
+use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( scalars_to_objects );
 use base ('Bio::EnsEMBL::Funcgen::Hive::BaseDB');
 
@@ -143,9 +144,11 @@ sub run {   # Check parameters and do appropriate database/file operations...
   #my %rsets = (2=> [], 3=> [], 4=>[]);#Withcontrols, Merged(no controls), IDR(no controls)
   #should this be done by init_branch_config?            
  
-  my %rsets;
- 
- 
+  my (%rsets, %rep_bams);
+  #my $filter_format = $self->param_silent('bam_filtered') ? undef : 'bam'; 
+  #It is unsafe to filter from bam at this stage, so just assume this
+  #has already been done and expect the filtered file.
+       
   #setname here might not actually be set name
   #$issets is actually:
   #{input_subset_ids => {$set_name => {$replicate => [dbID1]}}
@@ -164,16 +167,23 @@ sub run {   # Check parameters and do appropriate database/file operations...
       join("\n\t", map($_->name, @$sigs)));
     }
 
-    my $ftype        = $sigs->[0]->feature_type;
-    my $is_idr_ftype = $self->is_idr_feature_type($ftype);
-    my $merge_reps   = $self->merge_replicate_alignments;
-    my $ctype        = $sigs->[0]->cell_type;
-    my @rep_sets     = ($sigs);
+    my $ftype          = $sigs->[0]->feature_type;
+    my $is_idr_ftype   = $self->is_idr_feature_type($ftype);
+    my $merge_rep_bams = $self->merge_replicate_alignments;
+    my $ctype          = $sigs->[0]->cell_type;
+    
+    #Define a single rep set with all of the InputSubsets 
+    #i.e. non-IDR merged or post-IDR merged     
+    my @rep_sets = ($sigs);
+    my $has_reps = (scalar(@$sigs) >1) ? 1 : 0;    
+    my $run_reps; 
     
     
-    if($is_idr_ftype){
+   
+   
+   if($is_idr_ftype && $has_reps){
       
-      if($merge_reps){
+      if($merge_rep_bams){
         #Merged control file should already be present
         #Merged signal file maybe present if GeneratePseudoReplicates has been run
         $branch = 'DefineMergedDataSet';
@@ -188,142 +198,104 @@ sub run {   # Check parameters and do appropriate database/file operations...
         #Sanity check here the control file is available?
         #Using the ResultSet below?
         
-        #Also do the merge handling below based on $merge_reps, and pulling back
-        #the relevant rsets to get their alignment files.
-        
-        #Actually, probably best to do the merge in PostProcesIDR
-        #as we have access to the rep ResultSets (and hence the relevant alignments files) there.
-        
-        
-      }
-      else{
-        #RunIDR semaphore handled implicitly later 
-        $branch = 'Preprocess_'.$align_lname.'_replicate';
-        @rep_sets = map {[$_]} @$sigs;
       
-        if(@$ctrls){
-          $branch = 'Preprocess_'.$align_lname.'_control';
+        $rep_bams{$parent_set_name}{rep_bams} = [];
+        #my $ctrl;
+        
+        foreach my $rep(@$sigs){
+          #Pull back the rep Rset to validate and get the alignment file for merging
+          my $rep_rset_name = $parent_set_name.'_TR'.$rep->replicate;
+          my $rset = $rset_adaptor->fetch_by_name($rep_rset_name);            
+          #Could also fetch them with $rset_a->fetch_all_by_supporting_Sets($rep).
+           
+          if(! defined $rset){
+            $self->throw_no_retry("Could not find ResultSet for post-IDR merged ResultSet:\t".
+              $rep_rset_name); 
+          }
+      
+          #todo validate controls are the same
+          #This should already have been done in PreprocessIDR
+          #but probably a good idea to do here too
+          #As we may get here by means other than PreprocessIDR?
+                    
+          push @{$rep_bams{$parent_set_name}{rep_bams}}, 
+            $self->get_alignment_file_by_ResultSet_formats($rset, ['bam']);
         }
       }
+      else{ #! $merge_rep_bams
+        $run_reps = 1;
+        #RunIDR semaphore handled implicitly later 
+        $branch = 'Preprocess_'.$align_lname.'_replicate';       
+        @rep_sets = map {[$_]} @$sigs;  #split single rep sets
+      }   
     }
-    elsif(! @$ctrls){
+    else{ #single rep ID or multi-rep non-IDR
       $branch = 'Preprocess_'.$align_lname.'_merged';
+      #This is a pre-alignemnt fastq merge done by PreprocessFatsqs
     }
     
+    #Reset branch if we have controls
+    if(@$ctrls){
+      $branch = 'Preprocess_'.$align_lname.'_control';
+    }
     
-    #So this is now creating the right sets, but how are we going to group the dbIDs/set_names
-    
-    
-    #We need to add support in here for merging previously aligned replicate bams
-    
-    
-    
-    my $filter_format = $self->param_silent('bam_filtered') ? undef : 'bam'; 
     
     foreach my $rep_set(@rep_sets){ 
-      my $rset_name = $parent_set_name.'_'.$align_anal->logic_name;
-      my %rep_bams;
-      
-      if($is_idr_ftype){
-             
-        if($merge_reps){ #Iterate over all aligned sig ResultSets
-          $rep_bams{rep_bams} = [];
-          
-          foreach my $rep(@$rep_set){
-            #Pull back the rep Rset to validate and get the alignment
-            #file for merging
-            my $rep_rset_name = $rset_name.'_TR'.$rep->replicate;
-            my $rset = $rset_adaptor->fetch_by_name($rep_rset_name);            
-            #We could alternatively fetch them like this $rset_a->fetch_all_by_supporting_Sets.
-            
-            if(! defined $rset){
-              $self->throw_no_retry("Could not find ResultSet for post-IDR merged ResultSet:\t".
-                $rep_rset_name); 
-            }
-        
-            #Validate controls are the same!
-            #This should already have been done in PreprocessIDR
-            #but probably a good idea to do here too
-            #As we may get here by means other than PreprocessIDR?
-            
-            #Need to handle filtering here
-            #at this point bam_filtered refers to the rep bams
-            #not the output bam
-            
-            #Currently hardcoded for bam
-            #although if we are merging can we/do we need to request sam?
-            #what about clean up?
-            push @{$rep_bams{rep_bams}}, 
-              $self->get_alignment_file_by_ResultSet_formats($rset, ['bam'],
-                                                             undef,  # control flag
-                                                             undef,  # all_formats flag
-                                                             $filter_format);
-            
-            
-            
-          }
-        }
-        else{ #only 1 in the $rep_set 
+      my $rset_name = $parent_set_name;#.'_'.$align_anal->logic_name;
+    
+      if($is_idr_ftype && ! exists $rep_bams{$rset_name}){
+        #only 1 in the $rep_set 
           $rset_name .= '_TR'.$rep_set->[0]->replicate;
-        }
+      }
+      #else we want the parent name
     
-    
-      #Run_BWA_and_QC_control will also need to know which way to branch
-      #and the only way of doing that at present is implicit from the set name (TRN)
-      #or of we do this above test again i.e. not_id grep broad_peak_feature_types
-      #we could flow this explicitly? (although we need Run_BWA_and_QC_control to work independantly)
-      #or just move that method to BaseSequenceAnalysis? (probably not worth it)
-      #and logic/flow control will probably be different, dependant on context
       
+      #MergeControlALignments_and_QC will also need to know which way to branch
+      #This done with combination of flow_mode via the analysis config and the presence of 
+      #result_set_groups in the input_id
       
-      #Set the ref we want to push onto here?
-      #Can't do this here as don't yet have anything to flow
-      #but we do have the keys/grouping
+      #Do not create ResultSet here as we want to validate the whole lot of 
+      #input_subsets before we create any, this will help with recovery
+      #Also can't flow here directly as the control and replicates branches
+      #need group of ResultSets    
+      #Define a cache ref to push onto
       my $cache_ref;
   
   
       #change grouping here based on $run_reps and branch?
-      #This will mean will mean we will have to break the dbIDs and set_names
-      #structure, but this is fine  
+      #This will mean we will have to break the dbIDs and set_names
+      #structure, but this is fine      
+      #???? What was this for? What does it mean?
   
-  
-      
-      #if($branch =~ /_replicate$/o){ #Group IDR sets by merged/parent set
-          
+
         
-      if($run_reps){
-        #branch can be control or replicate  
-        
-        #How can this be control? And isn't that merged?
-        
-        #This shoudl be data flown from IdentifyAlignInputSets
+      if($run_reps){  #branch can be replicate(no control) or control(with reps)  
         $rsets{$branch}->{$parent_set_name} ||= [];  
         $cache_ref                            = $rsets{$branch}->{$parent_set_name};
       }
       else{
-        #branch is only ever merged (no controls)
+        #branches can be
+        # merged (no controls)
+        # control (single rep IDR set or merged) 
+        # or DefineMergedDataSet i.e. this is the IDR analysis is DefineMergedReplicateResultSet
+        
+        #is used of merged key here correct for DefineMergedDataSet?
+        
         $rsets{$branch}{merged} ||= [];
         $cache_ref                = $rsets{$branch}{merged};
       }
       
-
-      #we don't create here as we want to validate the whole lot of input_subsets
-      #before we create any
-      #this will help with recovery
-
       push @$cache_ref,
-       {-NAME          => $rset_name,
-        #-FEATURE_CLASS        => 'result', # | dna_methylation',#This needs revising?
-        #currently set dynamically in define_ResultSet
-        -INPUT_SUBSETS => [@$rep_set, @$ctrls],
-        -DBADAPTOR     => $self->out_db,
-        -ANALYSIS      => $align_anal,
-        -ROLLBACK      => $self->param('rollback'),#?
-        -RECOVER       => $self->param('recover'), #?
-        -CELL_TYPE     => $ctype,
-        -FEATURE_TYPE  => $ftype,
-        %rep_bams
-       };
+       {-RESULT_SET_NAME     => $rset_name,
+        -SUPPORTING_SETS     => [@$rep_set, @$ctrls],
+        -DBADAPTOR           => $self->out_db,
+        -RESULT_SET_ANALYSIS => $align_anal,
+        #change these to reference a specific rollback parameter
+        #e.g. rollback_result_set?
+        -ROLLBACK            => $self->param_silent('rollback'),
+        -RECOVER             => $self->param_silent('recover'),
+        -CELL_TYPE           => $ctype,
+        -FEATURE_TYPE        => $ftype};
     }
   }
   
@@ -333,48 +305,50 @@ sub run {   # Check parameters and do appropriate database/file operations...
 
   foreach my $branch(keys %rsets){
   
-    foreach my $rset_group($rsets{$branch}){
+    foreach my $rset_group_name(keys %{$rsets{$branch}}){
+      my $rset_group = $rsets{$branch}->{$rset_group_name};
 
-      foreach my $rset(@$rset_group){
-        
-        my $rep_bams = delete($rset->{rep_bams});   
+      foreach my $rset(@$rset_group){     
         $rset = $helper->define_ResultSet(%{$rset});
         
-        if($rep_bams){
-          #Check we don't already have the file from the Generate PseudoReps step
-          #We will most likely already have filtered files by now, but we don't need to handle bam_filtered
-          #as this will be done in PreprocessAlignments   
+        if(exists $rep_bams{$rset->name}){
+          #Check we don't already have the file from the Generate PseudoReps step  
+          #Can only do merge here, as this is the point we have access to the final ResultSet
           my $merged_file = $self->get_alignment_file_prefix_by_ResultSet($rset).'.bam';
           
           if(! -f $merged_file || $self->param_silent('overwrite')){
             
-            merge_bams($merged_file, $rep_bams, 
+            merge_bams($merged_file, $rep_bams{$rset->name}{rep_bams}, 
                        {remove_duplicates => 1,
                         sam_header        => $self->sam_header($rset->cell_type->gender)});
           }
         }
         
-        if($branch =~ /_merged$/){# (no control) job will only ever have 1 rset    
+        if($branch =~ /(_merged$|^DefineMergedDataSet$)/){# (no control) job will only ever have 1 rset    
           $self->branch_job_group($branch, [{%batch_params,
                                              dbID       => [$rset->dbID], 
                                              set_name   => [$rset->name],
                                              set_type    => 'ResultSet'}]);
         }
-        else{
+        elsif($branch =~ /(_control$|_replicate$)/){
           #populate set_names/dbIDs groups for control and replicate branches
-          $branch_sets{$branch}{$rset_group}{set_names} ||= [];
-          $branch_sets{$branch}{$rset_group}{dbIDs}     ||= [];
-          push @{$branch_sets{$branch}{$rset_group}{set_names}}, $rset->name;
-          push @{$branch_sets{$branch}{$rset_group}{dbIDs}},     $rset->dbID;
-  
+          $branch_sets{$branch}{$rset_group_name}{set_names} ||= [];
+          $branch_sets{$branch}{$rset_group_name}{dbIDs}     ||= [];
+          push @{$branch_sets{$branch}{$rset_group_name}{set_names}}, $rset->name;
+          push @{$branch_sets{$branch}{$rset_group_name}{dbIDs}},     $rset->dbID;
+                    
           if($branch =~ /_replicate$/o){
             #Just create the individual fan output_ids
-            $branch_sets{$branch}{$rset_group}{output_ids} ||= [];
-            push @{$branch_sets{$branch}{$rset_group}{output_ids}}, {%batch_params,
+            $branch_sets{$branch}{$rset_group_name}{output_ids} ||= [];
+            push @{$branch_sets{$branch}{$rset_group_name}{output_ids}}, {%batch_params,
                                                                      dbID     => $rset->dbID,
                                                                      set_name => $rset->name,
                                                                      set_type => 'ResultSet'};    
           }
+        }
+        else{ #Sanity check
+          #branch is always defined within this module
+          $self->throw_no_retry("$branch is not supported by DefineResultSets");  
         }
       }
     }
@@ -384,20 +358,26 @@ sub run {   # Check parameters and do appropriate database/file operations...
   #Now flow job_groups of rsets to control job/replicate & IDR 
   foreach my $branch(keys %branch_sets){            
   
+    #what about other branches in here
+  
+  
     if($branch =~ /_replicate$/){
       
       foreach my $rep_set(keys %{$branch_sets{$branch}}){ 
         #Add semaphore RunIDR job
-        $self->branch_job_group($branch, $rep_set, 'RunIDR', 
+        $self->branch_job_group($branch, $rep_set, 'PreprocessIDR', 
                                 [{%batch_params,
                                  dbIDs     => $branch_sets{$branch}{$rep_set}{dbIDs},
                                  set_names => $branch_sets{$branch}{$rep_set}{set_names},
                                  set_type  => 'ResultSet'}]);
       }           
     }       
-    else{#($branch =~ /_control$/){    
+    elsif($branch =~ /_control$/){    
       #Pick an arbitrary set for access to the controls 
       my ($any_group) = keys(%{$branch_sets{$branch}});
+   
+      #result_set_groups here is used by MergeControlAlignments_and_QC 
+      #to flow correctly
    
       $self->branch_job_group($branch, 
                               [{%batch_params,
@@ -406,6 +386,9 @@ sub run {   # Check parameters and do appropriate database/file operations...
                                dbID      => $branch_sets{$branch}{$any_group}{dbIDs}->[0],
                                set_name  => $branch_sets{$branch}{$any_group}{set_names}->[0]}]);   
     }
+    #else{
+ #branch not supported     
+#    }
   }
   
   return;
