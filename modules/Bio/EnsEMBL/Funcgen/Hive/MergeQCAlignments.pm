@@ -53,10 +53,12 @@ sub fetch_input {
   my $self = shift;
   $self->SUPER::fetch_input();
   my $rset = $self->fetch_Set_input('ResultSet');
-  $self->get_param_method('output_dir', 'required');
-  $self->get_param_method('bam_files',  'required');
-  $self->get_param_method('set_prefix', 'required');#was chunk_fiule_prefix in MergeChunkResultSetFastqs
+  $self->get_param_method('output_dir',   'required');
+  $self->get_param_method('bam_files',    'required');
+  $self->get_param_method('run_controls', 'required');
+  $self->get_param_method('set_prefix', 'required');  #This is control specific
   my $flow_mode = $self->get_param_method('flow_mode',  'required');
+  
   #could have recreated output_dir and merged_file_name from ResultSet and run_controls
   #as we did in MergeChunkResultSetFastqs, but passed for convenience
   $self->sam_header($rset->cell_type->gender);
@@ -86,15 +88,19 @@ sub fetch_input {
 #This could also be managed with a ResultSet status. Any updates to the ResultSet
 #would require unsetting the ALIGNED status
 
+
+
 sub run {
   my $self         = shift;
   my $rset         = $self->ResultSet;
   my $sam_header   = $self->sam_header;
   my @bam_files    = @{$self->bam_files};  
-  
+ 
+ 
+  #Is this handling control file naming? 
+  #or is this already done before we get here?
   my $bam_file     = $self->output_dir.'/'.$self->set_prefix.'.unfiltered.bam';
-  #my $filtered_bam = $self->output_dir.'/'.$self->set_prefix.'.bam';
-  
+ 
   #sam_header here is really optional if is probably present in each of the bam files
   merge_bams($bam_file, \@bam_files, {sam_header => $self->sam_header,
                                       remove_duplicates => 1});
@@ -126,14 +132,14 @@ sub run {
   #PhantomPeakQualityTools? Use estimate of fragment length in the peak calling?
 
   warn "Need to implement post alignment QC here. Filter out MAPQ <16. FastQC/FASTX/IDR?/PhantomPeakQualityTools frag length?";
-  #Add ResultSet status setting here!
+  #todo Add ResultSet status setting here!
   #ALIGNED
   #ALIGNMENT_QC_OKAY
 
-
-
-
-
+  #todo filter file here to prevent competion between parallel peak
+  #calling jobs which share the same control
+  $self->get_alignment_files_by_ResultSet_format($rset, ['bam'], $self->run_controls, undef, 'bam');
+  
   my $flow_mode    = $self->flow_mode;
   my %batch_params = %{$self->batch_params};
   
@@ -154,11 +160,11 @@ sub run {
                      dbID        => $self->ResultSet->dbID);
     my $lname     = 'DefineMergedDataSet';  
     
-    if($flow_mode eq 'Replicate'){
+    if($flow_mode eq 'replicate'){
       $output_id{peak_analysis} = $self->permissive_peaks;
       $lname                    = 'run_'.$self->permissive_peaks.'_replicate';  
     }
-    
+        
     $self->branch_job_group($lname, [{%batch_params, %output_id}]);
   }
   else{ #Run signal fastqs
@@ -167,7 +173,7 @@ sub run {
     
     #This bit is very similar to some of the code in DefineResultSets
     #just different enough not to be subbable tho 
-
+    
     foreach my $rset_group(keys %{$rset_groups}){
       my @fan_jobs;
         
