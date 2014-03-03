@@ -62,7 +62,7 @@ sub default_options {
     
       #Size of each sequence chunk to be aligned (nbr of reads * 4)
       fastq_chunk_size      => 16000000, #This should run in 30min-1h
-      alignment_analysis    => 'bwa',
+      alignment_analysis    => 'bwa_samse',
       
       #Use the same set up as for the peak caller wrt conditionaly data flowing
       
@@ -120,16 +120,6 @@ sub pipeline_wide_parameters {
       #This will should be set to one in downstream config 
       can_DefineMergedDataSet    => 0,
       can_DefineReplicateDataSet => 0,  
-      
-      #Here as we use them in more than 1 analysis and not bothered about batch flowing/overriding
-      #broad_peak_feature_types = $self>o('broad_peak_feature_types'), 
-      #bring in other default config here? e.g. peak_analyses
-      #actaully most of these will need trnaslating into something specific in the
-      #analysis parameters i.e. broad_peak_feature_types will need changing to control_mandatory_feature_types
-      #for IdentifyAlignInputSubsets     
-      
-      #This is now done via the Peak runnable->requires_control
-        
     };
 }
 
@@ -256,7 +246,7 @@ sub pipeline_analyses {
       
       #For InputSubsets with no control we also need to short cut this, 
       #and flow direct to the downstream analyses of Run_BWQ_and_QC_control
-      'A->2'  => [ 'RunIDR' ],#move to 2 'A->2' but make sure I flow this last for each control group
+      'A->2'  => ['PreprocessIDR'],#move to 2 'A->2' but make sure I flow this last for each control group
       '10'    => ['Preprocess_bwa_samse_control'],
       '11'    => ['Preprocess_bwa_samse_merged'],     
       '12->A' => ['Preprocess_bwa_samse_replicate'],
@@ -402,6 +392,9 @@ sub pipeline_analyses {
     },
 
   
+    #These flow_mode params could alternatively be flowed explicitly from the 
+    #various ProcessFastqs jobs
+    #Leave it here for no
      
     {-logic_name => 'MergeControlAlignments_and_QC',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::MergeQCAlignments',
@@ -413,7 +406,8 @@ sub pipeline_analyses {
        #2 is reserved for other Define DataSet flow (single vs multiple ResultSets).
        # Although isn't really required as the branching is handled dynamically
        #but let's keep it clean here for now.
-       'A->3'  => [ 'RunIDR' ],
+       'A->3'  => [ 'PreprocessIDR' ],
+       #alignment analyses encoded in blocks of 10
        '10'    => ['Preprocess_bwa_samse_merged'],   
        '11->A' => ['Preprocess_bwa_samse_replicate'],
        },
@@ -425,7 +419,7 @@ sub pipeline_analyses {
  
     {-logic_name => 'MergeAlignments_and_QC',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::MergeQCAlignments',
-     -parameters => {flow_mode => 'Merged'},
+     -parameters => {flow_mode => 'merged'},
      -flow_into => { 2 => ['DefineMergedDataSet']},
      -batch_size => 1, #max parallelisation???
      -analysis_capacity => 200,
@@ -435,8 +429,10 @@ sub pipeline_analyses {
  
     {-logic_name => 'MergeReplicateAlignments_and_QC',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::MergeQCAlignments',
-     -parameters => {flow_mode => 'Replicate'},
-     -flow_into => {'2' => ['DefineReplicateDataSet']},
+     -parameters => {flow_mode => 'replicate'},
+     #-flow_into => {'2' => ['DefineReplicateDataSet']},
+     #peaks analyses encoded from 100
+     -flow_into => {'100' => ['run_SWEmbl_R0005_replicate']},
      -batch_size => 1, #max parallelisation???
      -analysis_capacity => 200,
      -rc_name => 'normal_high_mem',
