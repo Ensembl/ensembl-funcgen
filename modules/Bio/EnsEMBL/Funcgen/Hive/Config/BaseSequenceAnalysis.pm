@@ -128,7 +128,10 @@ sub default_options {
  
     'control_feature' => 'WCE', #was in Peaks.pm but needed for ReadAlignments 
     
-    'idr_analysis' => '', 
+    #'idr_analysis' => '', 
+    
+    'checksum_optional' => 0,
+    
    };
   
 }
@@ -167,8 +170,11 @@ sub pipeline_wide_parameters {
   return 
    {
     %{$self->SUPER::pipeline_wide_parameters}, 
-    'control_feature' => $self->o('control_feature'), #from Peaks but needed for RunAlignments   
-    'idr_analysis'    => $self->o('idr_analysis'),
+    'control_feature'          => $self->o('control_feature'), #from Peaks but needed for RunAlignments   
+    #'idr_analysis'             => $self->o('idr_analysis'),
+    'broad_peak_feature_types' => $self->o('broad_peak_feature_types'), 
+    'checksum_optional'        => $self->o('checksum_optional'),
+    #DefineResultSets currently requires this in ReadAlignments, but may be able to change that
   
   
     #Todo feature_file_fromat, result_set_onluy/mode code should be moved to a new BaseSequenceAnalysis Runnable?
@@ -236,7 +242,13 @@ sub pipeline_wide_parameters {
         
         #ReadAlignments.pm batch params
         'no_idr', #This is required
-        'bam_filtered', #Required by CollectionWriter and RunPeaks
+        #'bam_filtered', #Required by CollectionWriter and RunPeaks
+        #Now we assume/expect the filtered files
+        #this is due to potential conflicts across parallel jobs asking for the 
+        #control files to be filtered.
+        #
+        
+        
         #'alignment_analysis' #Needs to flow from IdentifyAlignInputSubsets>DefinesResultSets
         #This is just a data flow param!! But we know we always want to flow this just between
         #these two jobs, so do it explicitly    
