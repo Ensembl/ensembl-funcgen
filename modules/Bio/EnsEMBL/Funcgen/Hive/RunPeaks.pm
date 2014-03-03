@@ -107,21 +107,15 @@ sub fetch_input {
 
   my $peak_module = $self->validate_package_from_path($analysis->module);
   my $formats = $peak_module->input_formats;
-  my $filter_format = $self->param_silent('bam_filtered') ? undef : 'bam';    
+  #my $filter_format = $self->param_silent('bam_filtered') ? undef : 'bam';  
+  #It is currently unsafe to filter here (control clash), so expect filtered file
+    
   my $control_file;
-  my $align_file = $self->get_alignment_file_by_ResultSet_formats($rset, 
-                                                                 $formats,
-                                                                 undef,  # control flag
-                                                                 undef,  # all_formats flag
-                                                                 $filter_format);
+  my $align_file = $self->get_alignment_file_by_ResultSet_formats($rset, $formats);
 
   if ( ! $self->get_param_method( 'skip_control', 'silent' ) ) {
     #This throws if not found
-    $control_file = $self->get_alignment_file_by_ResultSet_format($rset, 
-                                                                 $formats, 
-                                                                 1,     # control flag
-                                                                 undef, # all_formats flag
-                                                                 $filter_format); 
+    $control_file = $self->get_alignment_file_by_ResultSet_format($rset, $formats, 1); # control flag
   }
 
   #align and control file could potentially be different formats here
