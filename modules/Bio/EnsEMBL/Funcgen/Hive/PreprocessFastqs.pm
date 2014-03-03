@@ -191,10 +191,10 @@ sub run {
     }
 
     my $found_path;
-    my $params = {unzip => 1 };
+    my $params = {gunzip => 1};
     
     if(defined $isset->md5sum || ! $self->checksum_optional ){
-      $params = {checksum => $isset->md5sum}; 
+      $params->{checksum} = $isset->md5sum; 
     }
     
     #This needs to unzip them too!
