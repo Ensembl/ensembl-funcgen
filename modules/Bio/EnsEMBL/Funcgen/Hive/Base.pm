@@ -680,14 +680,17 @@ sub validate_dir_param{
   #strip the trailing / if we have one.
   #So we can always assume this for building/substituting paths
   
-  if($path =~ /.+\/$/o || $path =~ /\/\//o){
-    $path =~ s/\/$//o;
-    $path =~ s/\/\//\//o;
-    $self->$dir_name($path);  
-  }
+  if($path){
   
-  #This will have throw if is it required and not defined or has default 
-  validate_path($path, $create, 1, $dir_name);
+    if($path =~ /.+\/$/o || $path =~ /\/\//o){
+      $path =~ s/\/$//o;
+      $path =~ s/\/\//\//o;
+      $self->$dir_name($path);  
+    }
+  
+   #This will have throw if is it required and not defined or has default 
+   validate_path($path, $create, 1, $dir_name);
+  }
  
   #my %dirs = %{$self->process_params($dir_param_names, $optional)};
   #foreach my $dir_name(keys %dirs){ 
