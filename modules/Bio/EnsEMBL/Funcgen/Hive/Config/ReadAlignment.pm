@@ -280,7 +280,7 @@ sub pipeline_analyses {
      -flow_into => 
       {
        '2->A' => ['Run_bwa_samse_control_chunk'],
-       'A->2' => ['MergeControlAlignments_and_QC'],
+       'A->3' => ['MergeControlAlignments_and_QC'],
        },
      -batch_size => 1, #max parallelisation???
      -analysis_capacity => 200,
