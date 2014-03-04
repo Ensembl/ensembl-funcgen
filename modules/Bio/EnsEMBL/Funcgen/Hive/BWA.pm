@@ -66,7 +66,13 @@ sub run {
     ($bin_dir = $bwa_bin) =~ s/(.*\/)[^\/].*/$1/go;
   }
   
-  (my $outfile_prefix = $query_file) =~ s/\.fastq$//;
+  #move this to Aligner as it is based on generic split output
+  #only if outfile_prefix is required by other aligner
+  
+  
+  (my $outfile_prefix = $query_file) =~ s/\.fastq_([0-9]+)$/.$1/;
+  
+  warn "Query file:\t$query_file\nOutfile prefix:\t$outfile_prefix";
   
   #assume samtools is in the same dir as bwa
   #no, just assume we are using the bin_dir param, else assume it is in the $PATH

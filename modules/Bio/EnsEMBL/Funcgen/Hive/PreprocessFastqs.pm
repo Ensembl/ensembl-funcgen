@@ -307,7 +307,7 @@ sub run {
   run_system_cmd($cmd);
 
   #Get files to data flow to individual alignment jobs
-  my @fastqs = map { chomp($_) && $_; } run_backtick_cmd('ls '.$self->work_dir."/${set_prefix}.fastq_*");
+  @fastqs = map { chomp($_) && $_; } run_backtick_cmd('ls '.$self->work_dir."/${set_prefix}.fastq_*");
   $self->set_param_method('fastq_files', \@fastqs);
 
   foreach my $fq_file(@{$self->fastq_files}){
@@ -340,8 +340,8 @@ sub run {
                              dbID       => $rset->dbID,
                              #bam_files should really be accu'd from the RunAligner jobs
                              #but we know what they should be here 
-                             bam_files  => [ map {$_ =~ s/fastq$/bam/o; $_} 
-                                              @{$self->fastq_files} ], 
+                             #$_ =~ s/fastq_[0-9]+/bam/o
+                             bam_files  => [ map {$_ =~ s/\.fastq_([0-9]+)$/.$1.bam/o; $_} @{$self->fastq_files} ], 
                              #we could regenerate these from result_set and run controls
                              #but passed for convenience
                              output_dir => $self->output_dir,
