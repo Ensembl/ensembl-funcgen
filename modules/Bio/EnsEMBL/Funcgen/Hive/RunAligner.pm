@@ -92,19 +92,13 @@ sub fetch_input {   # fetch parameters...
   #this will change the bin_dir for everything else too, but we don't use bin_dir for anything else here 
   
   my $pfile = $analysis->program_file;
-  throw('Analysis '.$analysis->logic_name.' must have a program_file defined') if ! defined $pfile;
-  
-  my $pfile_path = ( defined $self->bin_dir ) ? 
-    $self->bin_dir.'/'.$analysis->program_file : $analysis->program_file;
-
- 
-  my $ref_fasta;
+  throw('Analysis '.$analysis->logic_name.' must have a program_file defined') if ! defined $pfile; 
+  my $pfile_path = ( defined $self->bin_dir ) ? $self->bin_dir.'/'.$pfile : $pfile;
   
   #indexed_ref_fasta is batch flown (assuming all aligners will have indexed the ref fasta) 
   #indexes should be in the same locations, and this fasta will actually be a soft link 
   #to prevent  reundant/out of sync ref fasta files
-  
-  
+  my $ref_fasta;
    
   if(! defined $self->param_silent('indexed_ref_fasta')){ #This is batch flown
     my $gender         = $rset->cell_type->gender || 'male';
