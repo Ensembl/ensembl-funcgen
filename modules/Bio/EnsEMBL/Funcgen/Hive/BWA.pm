@@ -54,17 +54,24 @@ use base qw( Bio::EnsEMBL::Funcgen::Hive::Aligner );#Does not import
 #we always need to sort and convert to bam for merge
 
 sub run {
-  my $self = shift;
-
+  my $self        = shift;
   my $query_file  = $self->query_file;
   my $input_dir   = $self->input_dir;
   my $output_dir  = $self->output_dir;
   my $ref_file    = $self->reference_file;
   my $bwa_bin     = $self->program_file;
-  (my $bin_dir = $bwa_bin) =~ s/(.*\/)[^\/].*/$1/go;
+  my $bin_dir     = '';
+  
+  if($bwa_bin =~ /\//o){
+    ($bin_dir = $bwa_bin) =~ s/(.*\/)[^\/].*/$1/go;
+  }
+  
   (my $outfile_prefix = $query_file) =~ s/\.fastq$//;
   
   #assume samtools is in the same dir as bwa
+  #no, just assume we are using the bin_dir param, else assume it is in the $PATH
+  #so we need to pass bin_dir aswell?
+  #No we can parse from the program_file as this will already have been prefixed with the bin_dir
   
  
 
@@ -82,6 +89,7 @@ sub run {
   #Piping all these together was causing uncaught errors
 
   ### FIND SUFFIX ARRAY COORDS OF SEQS
+  #This seg faults if it is run locally as it runs out of memory
   my $bwa_cmd = "$bwa_bin aln $ref_file ${input_dir}/${query_file} > ".
     "${output_dir}/${outfile_prefix}.sai";
   run_system_cmd($bwa_cmd);
