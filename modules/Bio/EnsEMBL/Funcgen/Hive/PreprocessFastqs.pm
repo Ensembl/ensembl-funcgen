@@ -191,15 +191,40 @@ sub run {
     }
 
     my $found_path;
-    my $params = {gunzip => 1};
+    my $params = {};#{gunzip => 1};
+    #Instead of gunzipping in the warehouse, zcat is now used to 
+    #pipe directly split directly into the work area
+    #This reduces tidy up and keeps footprint low, so we don't hit
+    #out of space errors when running with a full warehouse
+    #or a nearly full scratch space
+    #This will also prevent any clashes between unzipping files in the warehouse
+    #188 secs to zcat 227MB gzipped fastq
+    #vs
+    #10 secs to gunzip (to 1.2GB) and cat
+    #This does not include rezip and tidy up time of ~90 secs 
+    #(which could arguably be defered to after the pipeline run)
+    #This is quite a large difference, but with and average of 2 or 3 reps 
+    #this will probably make this run to ~10mins, which is negligable
+    #compared to the down time from managing failed jobs due to out of space 
+    #issues.
+    
+   
     
     if(defined $isset->md5sum || ! $self->checksum_optional ){
       $params->{checksum} = $isset->md5sum; 
     }
     
     #This needs to unzip them too!
-           
-    eval { $found_path = check_file($isset->local_url, 'gz', $params); };
+    my $local_url = $isset->local_url;
+    my $suffix = 'gz' if $local_url !~ /\.gz$/o;                
+    eval { $found_path = check_file($local_url, 'gz', $params); };
+ 
+    if($found_path !~ /\.gz$/o){
+      #use is_compressed here?
+      run_system_cmd("gzip $found_path");
+      $found_path .= '.gz';  
+    }
+    
     
     if($@){
       $throw .= "$@\n";
@@ -207,7 +232,7 @@ sub run {
     }
     elsif(! defined $found_path){
       $throw .= "Could not find fastq file, is either not downloaded, has been deleted or is in warehouse:\t".
-        $isset->local_url."\n";
+        $local_url."\n";
       #Could try warehouse here?
     }
      
@@ -229,24 +254,31 @@ sub run {
   #18-06-10: Version 0.4 released ... Added full machine parsable output for integration into pipelines
   #use -casava option for filtering
   
-  warn "DEACTIVATED FASTQC FOR NOW!!!!!!!!!!!!!!!!!!!";
-  #run_system_cmd('fastqc -o '.$self->output_dir." @fastqs");
+  #We could set -t here to match the number of cpus on the node?
+  #This will need reflecting in the resource spec for this job
+  #How do we specify non-interactive mode???
+  #I think it just does this when file args are present
   
+  #Can fastqc take compressed files?
+  #Yes, but it seems to want to use Bzip to stream the data in
   #This is currently failing with:
   #Exception in thread "main" java.lang.NoClassDefFoundError: org/itadaki/bzip2/BZip2InputStream
-  #      at uk.ac.babraham.FastQC.Sequence.SequenceFactory.getSequenceFile(SequenceFactory.java:83)
-  #      at uk.ac.babraham.FastQC.Analysis.OfflineRunner.processFile(OfflineRunner.java:113)
-  #      at uk.ac.babraham.FastQC.Analysis.OfflineRunner.<init>(OfflineRunner.java:84)
-  #      at uk.ac.babraham.FastQC.FastQCApplication.main(FastQCApplication.java:308)
-  #Caused by: java.lang.ClassNotFoundException: org.itadaki.bzip2.BZip2InputStream
-  #      at java.net.URLClassLoader$1.run(URLClassLoader.java:200)
-  #      at java.security.AccessController.doPrivileged(Native Method)
-  #      at java.net.URLClassLoader.findClass(URLClassLoader.java:188)
-  #      at java.lang.ClassLoader.loadClass(ClassLoader.java:307)
-  #      at sun.misc.Launcher$AppClassLoader.loadClass(Launcher.java:301)
-  #      at java.lang.ClassLoader.loadClass(ClassLoader.java:252)
-  #      at java.lang.ClassLoader.loadClassInternal(ClassLoader.java:320)
+  #Seems like there are some odd requirements for installing fastqc 
+  #although this seems galaxy specific 
+  #http://lists.bx.psu.edu/pipermail/galaxy-dev/2011-October/007210.html
   
+  #This seems to happen even if the file is gunzipped!
+  #and when executed from /dsoftware/ensembl/funcgen  
+  #and when done in interative mode by loading the fastq through the File menu
+  
+  #This looks to be a problem with the fact that the wrapper script has been moved from the 
+  #FastQC dir to the parent bin dir. Should be able to fix this with a softlink
+  #Nope, this did not fix things!
+  
+  warn "DEACTIVATED FASTQC FOR NOW:\nfastqc -f fastq -o ".$self->output_dir." @fastqs";
+  #run_system_cmd('fastqc -o '.$self->output_dir." @fastqs");
+  
+
   
   
   
@@ -269,7 +301,7 @@ sub run {
   #todo, check that split append an underscore
   run_system_cmd('rm -f '.$self->work_dir."/${set_prefix}.fastq_*");#no exit?
      
-  my $cmd = 'cat '.join(' ', @fastqs).' | split -d -a 4 -l '.
+  my $cmd = 'zcat '.join(' ', @fastqs).' | split -d -a 4 -l '.
     $self->fastq_chunk_size.' - '.$self->work_dir.'/'.$set_prefix.'.fastq_';
   $self->helper->debug(1, "run_system_cmd\t$cmd"); 
   run_system_cmd($cmd);
@@ -299,6 +331,9 @@ sub run {
   }
 
   # Data flow to the MergeQCAlignements job 
+  
+  #This was a config problem, we had a circular semaphore using the same branch
+  
   $self->branch_job_group(3, [{%{$self->batch_params},
                              set_type   => 'ResultSet',
                              set_name   => $rset->name,
