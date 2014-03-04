@@ -18,6 +18,8 @@ use strict;
 
 use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_backtick_cmd );
+
 
 sub new {
   my $class = shift;
@@ -35,8 +37,18 @@ sub new {
                     "-REFERENCE_FILE => $ref_file")));
   }
 
+  #todo Move this analysis handling to BaseDB
+
   if(! -f $prog_file){
-    throw("Program file does not exist or is not a file:\n\t$prog_file");  
+    my $which_file = run_backtick_cmd("which $prog_file");
+    
+    if(! defined $which_file){
+      throw("Program file does not exist or is not a file:\n\t$prog_file"); 
+    }
+    else{ #redefine it to give the full path for clarity
+      $prog_file = $which_file;  
+      chomp $prog_file;
+    } 
   }
 
   if(! -f $query_file){
