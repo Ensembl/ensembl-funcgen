@@ -130,7 +130,19 @@ sub default_options {
   return {
     %{$self->SUPER::default_options},    
     #ensembl_cvs_root_dir => $ENV{'SRC'},   #Now set in env as is mandatory  requirement for loading default config 
-    bin_dir              => '/software/ensembl/funcgen',
+    
+    
+    bin_dir              => undef,#'/software/ensembl/funcgen',
+    #This is preventing things being picked up from $PATH
+    #bin_dir should really only be defined if all programs are located in the same dir
+    #or an an analysis level, to override $PATH or specify something which isn't in $PATH
+    #this should probably only be defined at the analysis level
+    #There is no way the user will know which Runnables use bin_dir
+    #Best thing to do is to probably expect this to be set in the environment
+    #and set this to undef here by default, so this can be used explicitly to 
+    #run with a custom bin_dir environment
+    
+    
     pdb_port             => undef,
     #no_write             => undef, #For use with runWorker.pl -no_write, so we can write some STDOUT in run
     
@@ -167,7 +179,7 @@ sub default_options {
 	#for each job
 	work_root_dir     => $self->o('data_root_dir').'/output/'.$self->o('pipeline_name'),
 	hive_output_dir   => $self->o('data_root_dir').'/output/'.$self->o('pipeline_name').'/hive_debug',
-    alt_data_root_dir => undef,
+  alt_data_root_dir => undef,
 
     #data_root_dir is omited, so it is made mandatory when loading the config
     #and we don't want to store a specific path in here
