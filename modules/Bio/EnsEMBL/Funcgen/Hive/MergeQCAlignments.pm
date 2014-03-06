@@ -38,7 +38,7 @@ use warnings;
 use strict;
 
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd merge_bams );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd merge_bams write_checksum );
 
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
@@ -48,6 +48,9 @@ use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 # Reimplement repository support
 # Status handling/setting?
 
+my %valid_flow_modes = (replicate => undef,
+                        merged    => undef,
+                        signal    => undef); 
 
 sub fetch_input {  
   my $self = shift;
@@ -59,24 +62,27 @@ sub fetch_input {
   $self->get_param_method('set_prefix', 'required');  #This is control specific
   my $flow_mode = $self->get_param_method('flow_mode',  'required');
   
-  #could have recreated output_dir and merged_file_name from ResultSet and run_controls
-  #as we did in MergeChunkResultSetFastqs, but passed for convenience
-  $self->sam_header($rset->cell_type->gender);
- 
-  if($flow_mode ne 'signal'){
+  if(! exists $valid_flow_modes{$flow_mode}){
+    throw("$flow_mode is now a valid flow_mode parameter, please specify one of:\t".
+      join(' ', keys %valid_flow_modes));  
+  }
+  elsif($flow_mode eq 'signal'){
     $self->get_param_method('result_set_groups', 'required');
   }
   
+  #could have recreated output_dir and merged_file_name from ResultSet and run_controls
+  #as we did in MergeChunkResultSetFastqs, but passed for convenience
+  $self->sam_header($rset->cell_type->gender);
  
   #my $repository = $self->_repository();
   #if(! -d $repository){
   #  system("mkdir -p $repository") && throw("Couldn't create directory $repository");
   #}
 
+  $self->init_branching_by_analysis;
     
   return;
 }
-
 #Is the cating of rep numbers going to cause problems?
 #The Peaks and Collections pipelines need to be able to 
 #recreate these file names.
@@ -91,60 +97,76 @@ sub fetch_input {
 
 
 sub run {
-  my $self         = shift;
-  my $rset         = $self->ResultSet;
-  my $sam_header   = $self->sam_header;
-  my @bam_files    = @{$self->bam_files};  
- 
- 
-  #Is this handling control file naming? 
-  #or is this already done before we get here?
-  my $bam_file     = $self->output_dir.'/'.$self->set_prefix.'.unfiltered.bam';
+  my $self       = shift;
+  my $rset       = $self->ResultSet;
+  my $sam_header = $self->sam_header;
+  my @bam_files  = @{$self->bam_files};  
+   
+  #We need to get get alignment file prefix here
+  my $file_prefix  = $self->get_alignment_file_prefix_by_ResultSet($rset, $self->run_controls);
+  my $bam_file     = $file_prefix.'.unfiltered.bam';
+  $self->helper->debug(1, "Merging bams to:\t".$bam_file);
  
   #sam_header here is really optional if is probably present in each of the bam files
   merge_bams($bam_file, \@bam_files, {sam_header => $self->sam_header,
                                       remove_duplicates => 1});
-  
+                                      
+  if(! $self->param_silent('no_tidy')){                                     
+    #run_system_cmd("rm -f @bam_files");
+    #rm fastq chunk here too?
+    #This is slightly odd as the bam files are defined by Preprocess, which makes an assumption
+    #on the file naming which will be created by the Aligner
+    #and now we are having to reverse that assumption to identify the fsatq files
+    #we could just pass the fastqs and make the assumption here
+    #or we could put a piece of code in BaseSequenceAnalysis to define the file format
+    #and reuse it in both.
+  }
 
 
 #todo convert this to wite to a result_set_report table
 
-  my $alignment_log = $self->output_dir.'/'.$self->set_prefix.".alignment.log";
-
-  my $cmd="echo \"Alignment QC - total reads as input: \" >> ${alignment_log}".
-    ";samtools flagstat $bam_file | head -n 1 >> ${alignment_log}".
-    ";echo \"Alignment QC - mapped reads: \" >> ${alignment_log} ".
-    ";samtools view -u -F 4 $bam_file | samtools flagstat - | head -n 1 >> ${alignment_log}".
-    "; echo \"Alignment QC - reliably aligned reads (mapping quality >= 1): \" >> ${alignment_log}".
-    ";samtools view -u -F 4 -q 1 $bam_file | samtools flagstat - | head -n 1 >> ${alignment_log}";
+  my $alignment_log = $file_prefix.".alignment.log";
+  my $cmd='echo -en "Alignment QC - total reads as input:\t\t\t\t" > '.$alignment_log.
+    ";samtools flagstat $bam_file | head -n 1 >> $alignment_log;".
+    'echo -en "Alignment QC - mapped reads:\t\t\t\t\t\t" >> '.$alignment_log.
+    ";samtools view -u -F 4 $bam_file | samtools flagstat - | head -n 1 >> $alignment_log;".
+    ' echo -en "Alignment QC - reliably aligned reads (mapping quality >= 1):\t" >> '.$alignment_log.
+    ";samtools view -u -F 4 -q 1 $bam_file | samtools flagstat - | head -n 1 >> $alignment_log";
   #Maybe do some percentages?
+  
+  $self->helper->debug(1, "Generating alignment log with:\n".$cmd);
   run_system_cmd($cmd);
   
   #my $repository = $self->_repository();
   #move("${file_prefix}.sorted.bam","${repository}/${set_name}.samse.bam");
   #my $convert_cmd =  "samtools view -h ${file_prefix}.sorted.bam | gzip -c - > ${repository}/${set_name}.samse.sam.gz";
 
-  run_system_cmd("rm -f @bam_files");
-
-
   #Filter and QC here FastQC or FASTX?
   #filter for MAPQ >= 15 here? before or after QC?
   #PhantomPeakQualityTools? Use estimate of fragment length in the peak calling?
 
-  warn "Need to implement post alignment QC here. Filter out MAPQ <16. FastQC/FASTX/IDR?/PhantomPeakQualityTools frag length?";
+  warn "Need to implement post alignment QC here. Filter out MAPQ <16. FastQC/FASTX/PhantomPeakQualityTools frag length?";
   #todo Add ResultSet status setting here!
-  #ALIGNED
   #ALIGNMENT_QC_OKAY
+
+  #Assuming all QC has passed, set status
+  $self->helper->debug(1, "Writing checksum for file:\t".$bam_file);
+  write_checksum($bam_file);
+  
+  my $aligned_status = 'ALIGNED';
+  $aligned_status .= '_CONTROL';
+  $rset->adaptor->store_status($aligned_status, $rset);
 
   #todo filter file here to prevent competion between parallel peak
   #calling jobs which share the same control
-  $self->get_alignment_files_by_ResultSet_format($rset, ['bam'], $self->run_controls, undef, 'bam');
+  #This will also check the checksum we have just generated, which is a bit redundant
+  $self->get_alignment_files_by_ResultSet_formats($rset, ['bam'], $self->run_controls, undef, 'bam');
   
   my $flow_mode    = $self->flow_mode;
   my %batch_params = %{$self->batch_params};
   
   if($flow_mode ne 'signal'){
-    #Data flow to DefineMergedOutputSet or run_SWEmbl_R0005_replicate
+    #flow_mode is merged or replicate, which flows to DefineMergedOutputSet or run_SWEmbl_R0005_replicate
     
     #This is a prime example of pros/cons of using branch numbers vs analysis names
     #Any change in the analysis name conventions in the config will break this runnable
@@ -175,10 +197,14 @@ sub run {
     #just different enough not to be subbable tho 
     
     foreach my $rset_group(keys %{$rset_groups}){
-      my @fan_jobs;
-        
+      my @rep_or_merged_jobs;    
+      #If $rset_group is set to merged in DefineResultSets (dependant on ftype and run_idr)
+      #Then the dbIDs will be different merged result sets, and we won't be specifying a funnel
+      #else $rset_group will be the parent rset name and the dbIDs will be the replicate rset
+      #and we will specify a PreprocessIDR funnel
+      
       for my $i(0...$#{$rset_groups->{$rset_group}{dbIDs}}){
-        push @fan_jobs, {%batch_params,
+        push @rep_or_merged_jobs, {%batch_params,
                          set_type    => 'ResultSet',
                          set_name    => $rset_groups->{$rset_group}{set_names}->[$i],
                          dbID        => $rset_groups->{$rset_group}{dbIDs}->[$i]};
@@ -187,10 +213,10 @@ sub run {
       my $branch = ($rset_group eq 'merged') ? 
         'Preprocess_'.$align_anal.'_merged' : 'Preprocess_'.$align_anal.'_replicate';   
       
-      my @job_group = ($branch, \@fan_jobs);   
+      my @job_group = ($branch, \@rep_or_merged_jobs);   
          
-      if($rset_group ne 'merged'){ #Add RunIDR semaphore
-        push @job_group, ('RunIDR', 
+      if($rset_group ne 'merged'){ #Add PreprocessIDR semaphore
+        push @job_group, ('PreprocessIDR', 
                           [{%batch_params,
                             dbIDs     => $rset_groups->{$rset_group}{dbIDs},
                             set_names => $rset_groups->{$rset_group}{set_names},
