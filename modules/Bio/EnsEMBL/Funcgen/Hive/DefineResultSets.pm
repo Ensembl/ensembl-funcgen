@@ -49,6 +49,59 @@ use base ('Bio::EnsEMBL::Funcgen::Hive::BaseDB');
 #now input_set_id won't be in feature set.
 #actually this is still fine for IDR sets, as these will never make it to dev.
 
+
+
+#How are we handling pre-aligned or currently aligning controls
+#we need to be able to skip the control stage and pass the correct output id directly to 
+#the signal Preprocess analyses (similar to how the no control jobs already do).
+#This should be the same output at MergeControlAlignements_and_QC
+#We should check for the relevant file first?
+#Fail here so we don't have problems rerunning the controls if we have too.
+#Maybe we can try and pull the bam out of the warehouse?
+
+#What about handling controls which are already being aligned by another batch?
+#We need to identify this, probably by a status
+#But how would we be able to handle restarting after errors?
+#If we set ALIGNING in here before we dataflow each control set?
+#This would be fine, as we only do the ALIGNING check in here
+#The risk of failing after we set that, but before we data flow is minimal
+#and the tidyup is also minimal, a simple status entry removal
+#The status would have to be on the experiment, as we don't have a ResultSet yet
+#and as we can have integrated signal/control experiments the status would have to 
+#be ALIGNING_CONTROL
+
+#The ALIGNED status should probably be assigned to the ResultSet
+#But we need a way to handle rollback here
+
+#This is the same for signal sets too!
+#But we should probably catch that later?
+#we only need to deal with the controls here as we need to flow correctly
+#for the signal sets, this will fail in DefineResultSets, unless the appropriate rollback
+#level is set
+
+#Actually, all of this should be done in define resultsets, as that where the data critical flow
+#happens. So we can then move the ALIGNING_CONTROL status to the ResultSets too!
+
+#Do we want this to fail on not? We may have some sets which can be flown successfully
+#The inputs have already been pre-grouped by IdentifyInputSubsets into control, no control merged and no control replicate
+#so failing jobs will only affect related controls jobs, or unrelated jobs (without controls).
+
+#The failure will likely be we have not set the correct recover/rollback param
+#or we have a set which is in the ALIGNING/ALIGNING_CONTROL status
+#If we have a signal set in ALIGNING status, we either have a redundant input_id
+#and we should exit, or we are retrying a non-reundant input_id which has failed
+#after the ALIGNING status has been assigned
+#This should be handled with some sort of force flag, we can either do this preferably 
+#via ReseedJob, or by by trying to create a new input id via IdentifyInputSubset
+#This is not totally safe, as there is now way of knowing which 'batch' assigned
+#the ALIGNING status, and so we don't know wether the is a parallel clashing process.
+#But this should be enough to make you stop and figure it out.
+
+#Are there easy ways to 'figure it out'?
+
+
+
+
 sub fetch_input {   # fetch parameters...
   my $self = shift;
   $self->SUPER::fetch_input;
@@ -331,9 +384,12 @@ sub run {   # Check parameters and do appropriate database/file operations...
                                              set_type    => 'ResultSet'}]);
         }
         elsif($branch =~ /(_control$|_replicate$)/){
-          #populate set_names/dbIDs groups for control and replicate branches
+          #Can we specify run_idr here in the same hash for use in MergeQCAlignments data flow
           $branch_sets{$branch}{$rset_group_name}{set_names} ||= [];
           $branch_sets{$branch}{$rset_group_name}{dbIDs}     ||= [];
+          
+          
+          
           push @{$branch_sets{$branch}{$rset_group_name}{set_names}}, $rset->name;
           push @{$branch_sets{$branch}{$rset_group_name}{dbIDs}},     $rset->dbID;
                     
