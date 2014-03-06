@@ -599,7 +599,8 @@ sub get_files_by_formats {
   #process_$format will never be called if $format file exists, hence no risk of a redundant sort
   #for safety, only set this default if filter_from_format is defined? in block below
 
-  $params->{checksum} = 1 if ! defined $params->{checksum}; #validate and check
+  #Leave this to the caller now
+  #$params->{checksum} = 1 if ! defined $params->{checksum}; #validate and check
 
   if(scalar(@$formats) == 0){
     throw('Must pass an Arrayref of file formats/suffixes in preference order e.g. [\'sam\', \'bed\']');
@@ -684,8 +685,9 @@ sub get_files_by_formats {
 
           #$format key is same as first element
 
-          $done_formats->{$format} = $filter_method->($path.'.'.$filter_format, {%$params, 
-                                                                          out_file => $outpath.'.'.$filter_format} );       
+          $done_formats->{$format} = $filter_method->($path.'.'.$filter_format, 
+                                                      {%$params, 
+                                                       out_file => $outpath.'.'.$filter_format} );       
           #so we don't try and refilter when calling convert_${from_format}_${to_format}
  
           #delete $params->{filter_from_format};#Is this right?
@@ -939,15 +941,18 @@ sub generate_checksum{
 #assume the format of the file is:
 #checksum_sig\tfilename\tdigestmethod
 
+#
+use Data::Dumper qw(Dumper);
 sub validate_checksum{
   my ($file_path, $params) = @_;
-  my ($signature_file, $digest_method, $md5_sig);
+  my ($signature_file, $digest_method, $md5_sig, $md5_optional);
 
   if(defined $params){
     assert_ref($params, 'HASH');
-    $signature_file = $params->{signature_file};
-    $digest_method  = $params->{digest_method};
-    $md5_sig         = $params->{checksum};
+    $signature_file = $params->{signature_file}    if exists $params->{signature_file};
+    $digest_method  = $params->{digest_method}     if exists $params->{digest_method};
+    $md5_sig        = $params->{checksum}          if exists $params->{checksum}; 
+    $md5_optional   = $params->{checksum_optional} if exists $params->{checksum_optional};
   }
 
   if((defined $signature_file) && (defined $md5_sig)){
@@ -958,47 +963,51 @@ sub validate_checksum{
 
   if(! defined $md5_sig){
     
-    if(! defined $signature_file){
+    if(! defined $signature_file){ 
       $signature_file = $file_path.'.CHECKSUM';
     }
+    
+    if(-f $signature_file){
+      my $checksum_row = `grep -E '[[:space:]]$file_name\[[:space:]]*.*\$' $signature_file` ||
+                          die("Cannot acquire $file_name checksum info from:\t$signature_file");
+      my ($sig_file_name, $sig_digest_method);
+      ($md5_sig, $sig_file_name, $sig_digest_method) = split(/\s+/, $checksum_row);
   
-    if(! -f $signature_file){
-      throw("Failed to find checksum file:\t$signature_file\nPlease specify one as an argument, or create default file");
-    }
-  
-    my $checksum_row = `grep -E '[[:space:]]$file_name\[[:space:]]*.*\$' $signature_file` ||
-                        die("Cannot acquire $file_name checksum info from:\t$signature_file");
-    my ($sig_file_name, $sig_digest_method);
-    ($md5_sig, $sig_file_name, $sig_digest_method) = split(/\s+/, $checksum_row);
-
-    if((! defined $sig_file_name) ||
-       ($sig_file_name ne $file_name)){
-      throw("Failed to find $file_name entry in checksum signature file:\n\t$signature_file");
-    }
-  
-    #default to digest method in file
-    $digest_method     ||= $sig_digest_method;
-    #Also need to account for absent $sig_digest
-    $sig_digest_method ||= $digest_method;
-
-  
-    if(defined $sig_digest_method){
-      if($digest_method ne $sig_digest_method){
-      throw("Specified digest method($digest_method) does not match method found in ".
-        "checksum signature file($sig_digest_method):\n\t$file_path\n\t$signature_file");
+      if((! defined $sig_file_name) ||
+         ($sig_file_name ne $file_name)){
+        throw("Failed to find $file_name entry in checksum signature file:\n\t$signature_file");
       }
-    }
-    else{
-      warn "Could not find digest method in checksum signature file, assuming $digest_method";
+    
+      #default to digest method in file
+      $digest_method     ||= $sig_digest_method;
+      #Also need to account for absent $sig_digest
+      $sig_digest_method ||= $digest_method;
+  
+    
+      if(defined $sig_digest_method){
+        if($digest_method ne $sig_digest_method){
+        throw("Specified digest method($digest_method) does not match method found in ".
+          "checksum signature file($sig_digest_method):\n\t$file_path\n\t$signature_file");
+        }
+      }
+      else{
+        warn "Could not find digest method in checksum signature file, assuming $digest_method";
+      }
     }
   }
 
-  my $new_md5_sig = generate_checksum($file_path, $digest_method);
+  if(defined $md5_sig){
+    my $new_md5_sig = generate_checksum($file_path, $digest_method);
 
-  if($md5_sig ne $new_md5_sig){
-    #This could be due to mismatched digest methods
-    throw("MD5 ($digest_method) checksum does not match signature file for:".
-      "\n\tFile:\t\t$file_path\nSignature file:\t$signature_file");
+    if($md5_sig ne $new_md5_sig){
+      #This could be due to mismatched digest methods
+      throw("MD5 ($digest_method) checksum does not match signature file for:".
+        "\n\tFile:\t\t$file_path\nSignature file:\t$signature_file");
+    }
+  }
+  elsif(! $md5_optional){
+        throw("Failed to find checksum file:\t$signature_file\n".
+          'Please specify one as an argument, create a default file or pass the checksum_optional param');
   }
 
   return $md5_sig;
@@ -1397,17 +1406,23 @@ sub run_system_cmd{
 
 ################################################################################
 
+#To have no exit here, we would have to reset $? $! and $@ as these would be lost
+#in _handle_exit_status
+
 sub run_backtick_cmd{
   my $command = shift;
   
   my (@results, $result);
   
   if(wantarray){
+    #map chomp here?
     @results = `$command`;
   }
   else{
     $result  = `$command`;
   }
+  
+
   
   _handle_exit_status($command, $?, $!); 
   return wantarray ? @results : $result;
@@ -1415,14 +1430,13 @@ sub run_backtick_cmd{
 
 sub _handle_exit_status{
   my ($cmd, $exit_status, $errno, $no_exit) = @_;
-  
   my $exit_code = $exit_status >> 8; #get the true exit code
   
   if ($exit_status == -1) {
     warn "Failed to execute. Error:\t$errno\n";
   }
   elsif ($exit_status & 127) {
-    warn sprintf("Child process died with signal %d, %s coredump\nError:\t$errno",
+    warn sprintf("Child process died with signal %d, %s coredump\nError:\t$errno\n",
                  ($exit_status & 127),
                  ($exit_status & 128) ? 'with' : 'without');
   }
@@ -1431,8 +1445,10 @@ sub _handle_exit_status{
   }
 
   if ($exit_code != 0){
-
+    
+    warn "in exit block";
     if (! $no_exit){
+      warn "why isn't this throwing";
       throw("System command failed:\t$cmd");
     }
     else{
@@ -1600,9 +1616,12 @@ sub merge_bams{
 
 #change this to use $params for fasta_fai?
 
-#This is header list, not in sam/bam format header
+#Currently infile header is optional
+#how do we validate that is valid to add the fai
+#info as the header? Won't this require a reheader
+#command to change the row values?
 
-sub _validate_sam_fai {
+sub _validate_sam_header_fai {
   my $sam_bam_file = shift;
   my $fasta_fai    = shift;
   
@@ -1618,34 +1637,51 @@ sub _validate_sam_fai {
     #doesn't match the data.
   }
   
-  my ($fai_header, $in_file_header);
 
-  eval { $in_file_header = `samtools view -H $sam_bam_file` };
+  my @infile_header = `samtools view -H $sam_bam_file"`;  
   #$! not $@ here which will be null string
 
   if($!){
-
     if(! defined $fasta_fai){
       throw("Could not find an in file header or a sam_ref_fai for:\t$sam_bam_file$!");
     }
   }
   elsif(defined $fasta_fai){
-    $fai_header = `samtools view -H $fasta_fai_opt $sam_bam_file`;
+    my @fai_header = run_backtick_cmd("samtools view -H $fasta_fai_opt $sam_bam_file");;
 
-    if($!){
-      throw("Failed to identify view valid header from:\t$fasta_fai\n$!");
+    #size difference is fin ehere, just so long as the file header
+    #is a subset of the fai header
+   
+    
+    if(! (@infile_header && @fai_header)){
+      throw("Found header with no entries:\n".
+        scalar(@fai_header)."\t$fasta_fai\n".scalar(@infile_header)."\t$sam_bam_file");    
     }
-
-    #Just make sure they are the same
-    if($fai_header ne $in_file_header){
-      warn("CHANGE THIS TO A THROW WHEN WE HAVE FINISHED DEV! Found mismatched infile and fai headers for:\n\t$sam_bam_file\n\t$fasta_fai");
-      #should this throw or just default to in file?
-      #shoudl probably give the options to reheader and sub out this whole compare_sam_header thing
-      #reheader mode, would that all old @SQ are present in new fai header?
-      #can we get the header form the fai by simply providing an empty file?
-      #cat '' | samtools view -HSt fasta.fai -
+    
+    if(scalar(@infile_header) > scalar(@fai_header)){
+      throw("Found in file header with more entries that sam fasta index:\n".
+        scalar(@fai_header)."\t$fasta_fai\n".scalar(@infile_header)."\t$sam_bam_file");    
     }
-
+   
+   
+    my ($SN, $LN, %fai_header);
+    
+    map { (undef, $SN, $LN) = split(/\s+/, $_);
+          $fai_header{$SN} = $LN;              } @fai_header;
+   
+    foreach my $line(@infile_header){
+      (undef, $SN, $LN) = split(/\s+/, $line);
+      
+      if(! exists $fai_header{$SN} ){
+        throw("$SN exist in file header but not sam fasta index\n".
+          $fasta_fai."\n".$sam_bam_file);  
+      }
+      elsif($fai_header{$SN} ne $LN){
+        throw("$SN  has mismatched LN entry between file header and sam fasta index\n".
+          $fai_header{$SN}."\t".$fasta_fai."\n$LN\t".$sam_bam_file);  
+      }
+    }
+   
     #we don't need the header file as we have the correct infile header
     $fasta_fai_opt = '';
   }
@@ -1746,7 +1782,7 @@ sub process_sam_bam {
 
 
 
-  my $fasta_fai_opt = _validate_sam_bam_header($in_file, $fasta_fai);
+  my $fasta_fai_opt = _validate_sam_header_fai($in_file, $fasta_fai);
   my $cmd = "samtools view -h${in_flag} $fasta_fai_opt $in_file "; # Incorporate header into file
 
   if($filter_format){
@@ -1970,7 +2006,7 @@ sub check_file{
 
     if(defined $params){
       assert_ref($params, 'HASH');
-      $validate_checksum = (exists $params->{checksum}) ? $params->{checksum} : undef;
+      $validate_checksum = 1 if exists $params->{checksum};
     }
 
     if($validate_checksum){
