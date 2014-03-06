@@ -137,9 +137,12 @@ sub run {
   
   #This status needs to be CS specific!!
   my $align_status = 'ALIGNED';#$self->get_coord_system_status('ALIGNED');#put this in BaseSequenceAnalysis
+  $align_status   .= '_CONTROL' if $run_controls;
   
   #We have an inheritance issue here
   #BaseSequenceAnalysis isa BaseImporter?
+  
+  warn $rset->name.' states '.join(' ', @{$rset->get_all_states});
   
   if($rset->has_status($align_status)){
     throw("Need to implement force/recover_alignment. Found $align_status ResultSet:\t".
@@ -205,6 +208,7 @@ sub run {
     #But we know these checksums are stored in the DB
         
     if(defined $isset->md5sum || ! $self->checksum_optional ){
+      warn "Specifying checksum";
       $params->{checksum} = $isset->md5sum; 
     }
     
@@ -213,13 +217,6 @@ sub run {
     my $suffix = 'gz' if $local_url !~ /\.gz$/o;                
     eval { $found_path = check_file($local_url, 'gz', $params); };
  
-    if($found_path !~ /\.gz$/o){
-      #use is_compressed here?
-      run_system_cmd("gzip $found_path");
-      $found_path .= '.gz';  
-    }
-    
-    
     if($@){
       $throw .= "$@\n";
       next;  
@@ -229,6 +226,12 @@ sub run {
         $local_url."\n";
       #Could try warehouse here?
     }
+    elsif($found_path !~ /\.gz$/o){
+      #use is_compressed here?
+      run_system_cmd("gzip $found_path");
+      $found_path .= '.gz';  
+    }
+    
      
     push @fastqs, $found_path;  
   }
