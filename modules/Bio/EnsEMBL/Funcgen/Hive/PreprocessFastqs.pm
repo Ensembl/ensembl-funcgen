@@ -83,24 +83,13 @@ sub fetch_input {
   #e.g. DefineMergedDataSet, Run_BWA_and_QC_merged, DefineReplicateDataSet or BWA_ReplicateFactory
   #or can we do this implicitly just by check if we have set_names/ids set?
   
-  
-  #my $run_controls = $self->get_param_method('run_controls', 'silent');#change this to param_silent, do we need this in run?
   #This may allow unmerged controls, if we set merge to 0 in the analysis config
   my $run_controls = $self->get_param_method('result_set_groups', 'silent') ? 1 : 0;
   $self->set_param_method('run_controls', $run_controls);
   my $merge        = $self->get_param_method('merge', 'silent', $run_controls); 
   $self->get_param_method('checksum_optional', 'silent');
   
-  
-  
-  #This is now implicit from presence of result_set_groups
-  #if($run_controls){ #Validate we have some signal to run aswell
-  #  $self->get_param_method('dbIDs',     'required');
-  #  $self->get_param_method('set_names', 'required');  
-  #}
-    
-    
-    
+     
   
   
   
@@ -208,8 +197,13 @@ sub run {
     #compared to the down time from managing failed jobs due to out of space 
     #issues.
     
-   
-    
+    #Set checksum   
+    #As we already know we don't have a checksum, simply omit it here
+    #which will mean validate_checksum will not be called
+    #Alterntive is to set an undef checksum and checksum_optinal
+    #This will cause validate_checksum to try and find a checksum from a file
+    #But we know these checksums are stored in the DB
+        
     if(defined $isset->md5sum || ! $self->checksum_optional ){
       $params->{checksum} = $isset->md5sum; 
     }
@@ -346,7 +340,7 @@ sub run {
                              #but passed for convenience
                              output_dir => $self->output_dir,
                              set_prefix => $set_prefix,
-                             run_controls => $run_controls,
+                             #run_controls => $run_controls,#now implicit from %signal_info
                              %signal_info}]);
 
 
