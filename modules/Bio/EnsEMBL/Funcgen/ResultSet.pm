@@ -331,10 +331,10 @@ sub add_support{
 #ChIP-Seq ResultFeature tracks have merged sources and only have source refs corresponding peak zmenus
 #This will also appear in the track info and config
 
-sub experimental_group{
+sub experiment{
   my $self = shift;
 
-  if(! exists $self->{experimental_group}){
+  if(! exists $self->{experimental}){
     #Not undef check as undef is a valid value
     #for mixed project ResultSets
   
@@ -342,7 +342,7 @@ sub experimental_group{
       throw('Cannot currently get ExperimentalGroup for a ResultSet with non-InputSet/InputSubset support'); 
     }
 
-    my $exp_group;
+    my $exp;
     my @sets = @{$self->get_support};
 
     if(@sets){
@@ -354,21 +354,25 @@ sub experimental_group{
           next;  
         }
         
-        $exp_group ||= $set->get_Experiment->get_ExperimentalGroup->name;  
+        $exp ||= $set->experiment;
         
-        if($exp_group ne $set->get_Experiment->get_ExperimentalGroup->name){
+        if($exp->name ne $set->experiment->name){
           #Mixed experimental_group ResultSet
-          $exp_group = undef;
+          warn('Failed to get unique Experiment for ResultSet '.$self->name."\n");
+          $exp = undef;
           last;
         }
       }
     }
 
-    $self->{experimental_group} = $exp_group;
+    $self->{experimental} = $exp;
   }
 
-  return $self->{experimental_group};
+  return $self->{experimental};
 }
+
+#add experimental_group_name wrapper to handle undef experiment?
+
 
 
 =head2 display_label
