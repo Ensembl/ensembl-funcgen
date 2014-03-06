@@ -115,7 +115,7 @@ sub has_status{
 
    throw("Must provide a status to check") if ! $status;
 
-   my @state = grep(/$status/, @{$self->get_all_states()});
+   my @state = grep(/^$status$/, @{$self->get_all_states()});
    my $boolean = scalar(@state);#will be 0 or 1 due to table contraints
 
    return $boolean;
