@@ -53,6 +53,11 @@ use Scalar::Util                           qw( blessed );
 
 use base qw(Bio::EnsEMBL::Hive::Process);
 
+my %debug_modes = (no_tidy   => 1,
+                   no_tidy_1 => 1,
+                   no_tidy_2 => 2,
+                   no_tidy_3 => 3);
+
 
 
 # TODO
@@ -125,13 +130,27 @@ my %valid_file_formats =
 sub fetch_input {   # nothing to fetch... just the DB parameters...
   my $self = $_[0];
   $self->SUPER::fetch_input;
+   
+  if(my $debug_level = $self->debug){
+    #This debug mode handling doesn't work yet, as the main hive code barfs 
+    #if the value is not a number
+    #let's get leo to look at this, as it is quite useful
   
-  $main::_debug_level = $self->debug; #Pass this onto the Helper and any other modules in the process
-
+    if($debug_level !~ /^[1-3]$/){
+      
+      if(! exists $debug_modes{$debug_level}){
+        throw("Not a valid -debug mode:\t$debug_level\nPlease specify one of:\t".
+          join(' ', keys %debug_modes));  
+      }
+      
+      (my $debug_mode = $debug_level) =~ s/_[0-3]$//o;
+      $self->param($debug_mode, $debug_modes{$debug_level});
+    }
+  
+    $main::_debug_level = $debug_level; #Pass this onto the Helper and any other modules in the process
+  } 
   #Catch and validate generic params here
   #but manage mandatory aspect in more specific runnables
-  
-
   
   #validate_dir_params uses process_params which uses get_param_and_method
   #Hence all these dir with now have a method available
@@ -154,7 +173,7 @@ sub fetch_input {   # nothing to fetch... just the DB parameters...
     undef, #Let's not create this until we need it
     $self->data_root_dir.'/output/'.$self->param_required('pipeline_name')
    );
- 
+
   #output and work dir need setting based on dbname
   if($self->get_param_method('use_tracking_db')){
     $self->_set_out_db;      
@@ -257,7 +276,15 @@ sub alignment_dir {
 }
 
 
-
+#This currently only works for Experiments
+#which have controls mixed in
+    
+#The pipeline does not currently expect 
+#stand alone control experiments
+#and will try and process these like a mixed signal/control set.
+#This should be fine until after the alignment
+#at which point we want to stop their processing
+    
 sub get_study_name_from_Set {
   my ($self, $set, $control) = @_;
   
@@ -272,22 +299,9 @@ sub get_study_name_from_Set {
   
   if($control){
     $control = _get_control_InputSubset($set);
-  
-    #This is based on the assumption that all non-ctrl subsets are associated
-    #with one ResultSet/Experiment.
-    
+    #This is based on the assumption that all non-ctrl subsets are associated with a unique Experiment.
     my $exp   = $control->experiment;
     $exp_name = $exp->name;
- 
-    #This currently only works for Experiments
-    #which have controls mixed in
-    
-    #The pipeline does not currently expect 
-    #stand alone control experiments
-    #and will try and process these like a mixed signal/control set.
-    #This should be fine until after the alignment
-    #at which point we want to stop their processing
-    
  
     foreach my $isset(@{$exp->get_InputSubsets}){
       
@@ -297,14 +311,13 @@ sub get_study_name_from_Set {
       }  
     }
     
-    if(! $ftype){
-     #We have a pure control experiment i.e. no signal InputSubsets
+    if(! $ftype){   #We have a pure control experiment i.e. no signal InputSubsets
      $ftype = $exp->feature_type->name;
     }      
   }
   else{  
     $exp_name = $set->experiment->name ||
-      throw("Cannot find unique experiment name for ResultSet:\t".$set->name);
+      throw('Cannot find unique experiment name for '.ref($set).":\t".$set->name);
     $ftype = $set->feature_type->name;
   }
   
@@ -1316,7 +1329,8 @@ sub branch_job_group{
       #This will only work for branch config derived from the DataflowRules
       #not defined in the config!
       
-      throw('How are we going to differentiate here?');
+      #throw('How are we going to differentiate here?');
+      #we don't allow init_branching_by_config any more?
       
       if($branch_config->{$fan_branch_codes->[0]}{funnel} ne $funnel_branch_code){
         throw($funnel_branch_code.' is not a valid funnel analysis for '.$fan_branch_codes->[0].
@@ -1785,6 +1799,11 @@ sub get_alignment_file_prefix_by_ResultSet{
 #This will have validated that input_set are all part of the same experiment
 #(and they have the same alignment logic_name, when this is implemented) ???
 
+#expose checksum in args or convert all to params hash
+#there are some instance when we don't need to check the checksum
+#i.e. after we have just created it? Or is that good paranoid validation?
+#checksumming does take long, so let's just take the hit and say it's belt and braces validation
+
 sub get_alignment_files_by_ResultSet_formats {
   my ($self, $rset, $formats, $control, $all_formats, $filter_format) = @_;
   assert_ref($formats, 'ARRAY');  
@@ -1798,8 +1817,10 @@ sub get_alignment_files_by_ResultSet_formats {
   #for the same file type
   #hence, this will likely fail if the worker runs more than 1 job
   
+  my $aligned_status = 'ALIGNED';
+  $aligned_status   .= '_CONTROL';
   
-  if(! $rset->has_status('ALIGNED')){
+  if(! $rset->has_status($aligned_status)){
     throw("Cannot get alignment files for ResultSet which does not have ALIGNED status:\t".
       $rset->name);
   }
@@ -1813,10 +1834,12 @@ sub get_alignment_files_by_ResultSet_formats {
   else{ # Get default file
     my $params = {ref_fai            => $self->sam_ref_fai,  #Just in case we need to convert
                   filter_from_format => $filter_format,
-                  all_formats        => $all_formats};  
+                  all_formats        => $all_formats,
+                  checksum           => undef}; #This turns on file based checksum validation
+    #We never want to set checksum_optional here, as this is really
+    #just for fastq files for which we don't have a checksum
     
-    $path = $self->get_alignment_file_prefix_by_ResultSet($rset, $control).'.samse'; 
-    #Currently hardcoded for bam origin!
+    $path = $self->get_alignment_file_prefix_by_ResultSet($rset, $control); 
     $path .= '.unfiltered' if $filter_format;
      
 
