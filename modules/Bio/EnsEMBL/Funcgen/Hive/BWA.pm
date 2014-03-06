@@ -109,8 +109,9 @@ sub run {
     " > ${output_dir}/${outfile_prefix}.samse.sam";
   run_system_cmd($bwa_cmd);
   run_system_cmd("rm -f ${output_dir}/${outfile_prefix}.sai"); #No fail flag here?
-  run_system_cmd("rm -f ${input_dir}/${query_file}"); #No fail flag here?
   
+  #Removal of fastq chunk file has been moved to MergeQCAlignment (after a successful merge)
+  #to prevent input absent files when reruning these jobs
   
   #Now we need to change this to unfiltered? But do this in the merge
   #also, need utilise EFGUtils filtering and conversion?
@@ -125,7 +126,7 @@ sub run {
   run_system_cmd("rm -f ${output_dir}/${outfile_prefix}.samse.sam");
 
   ### SORT BAM
-  $bwa_cmd = "${bin_dir}/samtools sort  ${output_dir}/${outfile_prefix}.samse.bam.unsorted ${output_dir}/${outfile_prefix}.bam";
+  $bwa_cmd = "${bin_dir}/samtools sort  ${output_dir}/${outfile_prefix}.samse.bam.unsorted ${output_dir}/${outfile_prefix}";
   run_system_cmd($bwa_cmd);
   run_system_cmd("rm -f ${output_dir}/${outfile_prefix}.samse.bam.unsorted");
   
