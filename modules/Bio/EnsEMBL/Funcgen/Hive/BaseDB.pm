@@ -317,29 +317,4 @@ sub experimental_group   { return $_[0]->param('experimental_group');           
 
 
 
-###OLD METHODS
-
-
-
-
-
-
-sub _study_name { #Currently same as set name, but could change?
-  return $_[0]->_getter_setter('study_name',$_[1]);
-}
-
-sub _set_name { #This is the default set name without any analysis suffix
-  return $_[0]->_getter_setter('set_name',$_[1]);
-}
-
-sub _file_type {
-  return $_[0]->_getter_setter('file_type',$_[1]);
-}
-
-sub _sam_header {
-  return $_[0]->_getter_setter('sam_header',$_[1]);
-}
-
-
-
 1;
