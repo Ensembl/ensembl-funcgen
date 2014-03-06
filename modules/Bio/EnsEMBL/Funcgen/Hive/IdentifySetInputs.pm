@@ -53,7 +53,7 @@ my %set_adaptor_methods =
 (
   InputSubset => 'get_InputSubsetAdaptor',
   ResultSet   => 'get_ResultSetAdaptor',
-  FeatureSet  => 'get_FeatureSetAdaptor',
+  #FeatureSet  => 'get_FeatureSetAdaptor',
   #data_set?
 );
 
@@ -94,29 +94,43 @@ my %set_adaptor_methods =
 #  Then try and identify the relevant sets, bailing if there is > 1?
 #  Let's just set the control ftypes here for now
 #  If we make the like resitrcted to the ftype field then this should work a treat
-#  Let's make this ftype_experiments and validate the format
+#  and should also pick up the control experiments too. Will this need -identify_controls 
+#  to be specified?
+#  
+#  Also, will specifying control_experiments allow association with any other experiment
+#  i.e. check whether we are still validating the control is within the project? We probably 
+#  just want to trust the -control_experiments and simply make the assocition based on cell type.
+#
+#  Actually this is going to cause trouble if we have already processed some experiments which would match 
+#  the string. The way around this is to simply add in the control_feature_types to a normal filter query
+#  
+#  This experiments_like is still valuable when we want to kick off a whole experimental sub group
 
 
-my %ctrl_ftypes   = ('Goat-IgG',   => undef, 
-                     'Rabbit-IgG', => undef,
-                     'WCE'         => undef);
+# 8 We also need a no_write mode which quickly losts all those which have not be aligned yet
+#   So this is an inverse of the ALIGNED status query. We need this for the other entry points too.
+#
+# 9 Split this out into separate subs for different sets.
+#
+# 10 Fully remove InputSet support
+
+
+
+ 
 
 
 sub fetch_input {   # fetch parameters...
   my $self = shift;
   $self->SUPER::fetch_input; 
-  #$self->helper->debug(3, "IdentifySetInput params:\t", $self->input_job->{_param_hash});
-    
-  my $set_type = $self->get_param_method('set_type', 'silent'); 
-  
+  #$self->helper->debug(3, "IdentifySetInput params:\t", $self->input_job->{_param_hash});    
+  my $set_type    = $self->get_param_method('set_type', 'silent'); 
+ 
   #This auto detection prevents having to do this in the SeedPipeline environment func
   if(! defined $set_type){
     my $lname = $self->analysis->logic_name;  
     
-    foreach my $stype( qw( ResultSet InputSubset ) ){
-      #no input_set support here    
-      #(my $lname_type = $stype) =~ s/_//o;
-    
+    foreach my $stype( keys %set_adaptor_methods ){
+  
       if($lname =~ /$stype/){
         
         if($set_type){ #Throw if we match is not unique
@@ -134,49 +148,6 @@ sub fetch_input {   # fetch parameters...
     } 
   }
     
-  #Need to define the methods here, as we call them for all set types in run
-  my $force_embargoed  = $self->get_param_method('force_embargoed',  'silent');
-  my $ignore_embargoed = $self->get_param_method('ignore_embargoed', 'silent'); 
-  #This currently still supports input_sets
- 
- 
-  #set types in config are table case, where as the are some class case references in here
-  #didn't we decide on class case? Yes!
- 
-  if($set_type =~ /^Input(Sub)?[sS]et$/) {
-    $self->set_param_method('validate_InputSubset_tracking', 1); #for convenience/speed in loop below
-        
-    if($force_embargoed && $ignore_embargoed){
-      throw('force_embargoed and ignore_embargoed are mutually exclusive parameters. '.
-        'Please omit one or both');     
-    }
-    
-    #Get feature_set analysis for control validation in run
-    
-  
-    #but we should also be mindful of a peak_analysis over-ride?
-    #but need to use generic params here?
-
-    #we could replace this with control_mandatory_ftypes
-    
-    #Genericise feature_set_analysis_type to feature_set_analysis
-    my $anal_type = $self->param_required('feature_set_analysis_type');     
-    warn "before set";
-    $self->set_param_method('feature_set_analysis', 
-                            $self->param_silent($anal_type.'_analysis'));
-                            
-    warn "FEATURE SET ANALYSIS is ".$self->feature_set_analysis;
-    #exit;
-    if(! defined $self->feature_set_analysis){
-      $self->get_param_method('default_feature_set_analyses', 'silent');     
- 
-      if(! defined $self->default_feature_set_analyses){
-        throw("Please define -${anal_type}_analysis or add to default_feature_set_analyses".
-          " in the default_options config");
-      }    
-    }
-  }
-  
   if(! exists $set_adaptor_methods{$set_type}){
     throw("The -set_type $set_type is not supported by IdentifySetInputs.\n".
           "Valid options are ".join(' ', keys(%set_adaptor_methods)) );      
@@ -186,12 +157,44 @@ sub fetch_input {   # fetch parameters...
     my $method = $set_adaptor_methods{$set_type};
     $self->set_param_method('set_adaptor', $self->out_db->$method, 'required');
   }
-  
-  
+
+  #We need these in this method
+  my $force_embargoed  = $self->get_param_method('force_embargoed',  'silent');
+  my $ignore_embargoed = $self->get_param_method('ignore_embargoed', 'silent'); 
+ 
+  #We only need these in run
   $self->process_params([qw(set_names set_ids only_replicates allow_no_controls 
-                            identify_controls control_experiments feature_type_experiments)], 1);#optional
-              
-  if($set_type eq 'InputSubset'){                      
+                            identify_controls control_experiments experiments_like control_feature_types)], 1);#optional
+               
+  if($set_type eq 'InputSubset'){     
+    
+    $self->set_param_method('validate_InputSubset_tracking', 1); #for convenience/speed in loop below
+        
+    if($force_embargoed && $ignore_embargoed){
+      throw('force_embargoed and ignore_embargoed are mutually exclusive parameters. '.
+        'Please omit one or both');     
+    }
+    
+    #Get feature_set analysis for control validation in run
+      
+    #but we should also be mindful of a peak_analysis over-ride?
+    #but need to use generic params here?
+    #we could replace this with control_mandatory_ftypes
+    
+    #Genericise feature_set_analysis_type to feature_set_analysis
+    my $anal_type = $self->param_required('feature_set_analysis_type');     
+    $self->set_param_method('feature_set_analysis', 
+                            $self->param_silent($anal_type.'_analysis'));
+                            
+    if(! defined $self->feature_set_analysis){
+      $self->get_param_method('default_feature_set_analyses', 'silent');     
+ 
+      if(! defined $self->default_feature_set_analyses){
+        throw("Please define -${anal_type}_analysis or add to default_feature_set_analyses".
+          " in the default_options config");
+      }    
+    }
+                     
     if($self->identify_controls && $self->allow_no_controls){
       throw("Mutually exclusive parameters have been specified:\t".
         "identify_controls & allow_no_controls\nPlease omit one of these.");  
@@ -202,35 +205,64 @@ sub fetch_input {   # fetch parameters...
         "control_experiments & allow_no_controls\nPlease omit one of these.");  
     }
     
+    if($self->experiments_like){
+      
+      if($self->experiments_like !~ /$[^%]_%_[^%]$/o){
+        #We could be more strict here and force the % to be in the expected ftype location
+        throw('The -experiments_like string does not have a single % mysql wildcard '.
+          "where the expected feature type should be:\n\t".$self->experiments_like);
+      }
+      
+      #do we assume identify_controls here?
+      #This was originally working by harvesting control subsets from other signal experiments
+      #This would still work the same, as the experiments_like string would pick up the controls
+      #and these will be marked as such in the DB. so we don't even need the control_feature_types
+      
+      #if identify controls is specified and the normal filters are set (i.e. not ids, names or experiments_like)
+      #then we should probably add the control_feature_types
+      
+      #The problem with identify_controls at present is that allows control association withint projects (e.g. ENCODE)
+      #and does not have sub project specificity (e.g. ENCODE_Yale).
+      
+      #Does specifying
+      
+      if(! $self->control_experiments){
+                
+      } 
+    }
+    
                     
-    #if($self->control_experiments  && $self->identify_controls){
-    #  throw("Mutually exclusive parameters have been specified:\t".
-    #    "control_experiments & identify_controls\nPlease omit one of these.");  
-    #}
-    
-    #Why has this been disabled?
-    #identify controls is actually not working properly as it allows controls across experimental sub groups
-    #which isn't correct.
-    #Basically, what we need is to support sub groups/projects properly
-    
+    if($self->control_experiments  && $self->identify_controls){
+      throw("Mutually exclusive parameters have been specified:\t".
+        "control_experiments & identify_controls\nPlease omit one of these."); 
+      #This prevents redundancy issues between the (unkown) identified and specified controls
+      #We generally know which experiments we want to run with specified controls   
+    }
     
     
     #if(! ($self->control_experiments || 
     #      $self->identify_controls ||
     #      $self->allow_no_controls) ){
-    #  throw("For set_type input_subset, one of the following must be defined:\t".
+    #  throw("For set_type InputSubset, one of the following must be defined:\t".
     #    'control_experiments identify_controls or allow_no_controls');
     #}
     #Currently this is valid as the controls are loaded as a separate experiment
     #However, this might not always be the case, so it has been disabled
+    
+    #controls *should* be identified automatically if they are pre-associated
+    
   }
   elsif($self->control_experiments || 
-        $self->identify_controls ||
-        $self->allow_no_controls){
+        $self->identify_controls   ||
+        $self->allow_no_controls   ||
+        $self->only_replicates     ||
+        $self->experiments_like){
     throw('You have specified a parameter which is not appropriate for '.$set_type.
-      "s:\n\tcontrol_experiment or identify_controls or allow_no_controls");
+      "s:\n\t-control_experiments, -identify_controls, -allow_no_controls, -only_replicates or -experiments_like");
   }  
   
+  
+  #is only_replicates 
   
   #Set an internal handle_replicates param
   #so we don't try and do this for non input_sub/sets.
@@ -245,7 +277,7 @@ sub fetch_input {   # fetch parameters...
     #InputSets will go away
   
   
-    if($set_type eq 'InputSet'){
+    if($set_type eq 'InputSubset'){
       $only_reps = 1;    
     }
     else{
@@ -283,31 +315,18 @@ sub fetch_input {   # fetch parameters...
      $self->states){ 
      #all these are OR filters except states which is an AND filter
       
-    if($self->set_names || $self->set_ids){
+    if($self->set_names || $self->set_ids || $self->experiments_like){
       throw('You have specified mutually exclusive filter params for the '.
             "IdentifySetInputs analysis\nPlease specify restrict to ".
-            '-set_name or -set_ids or a combination other filters '.
+            '-set_name, -set_ids, -experiments_like or a combination other filters '.
             '(e.g. -experimental_groups -experiments -feature_types -cell_types -analyses -states');
     }
   }
-  elsif(! ($self->set_names || $self->set_ids)){
- 
+  elsif( (grep {defined $_ } ($self->set_names, $self->set_ids, $self->experiments_like)) != 1){
     throw('You must specifiy some IdentifySetInputs filter params either '.
-          '-input_sets or -set_ids or a combination of '.
+          '-set_names, -set_ids, -experiments_like or a combination of '.
           '-feature_types -cell_types -experiments -experimental_groups -states -analyses');
   }
-  elsif($self->set_names && $self->set_ids){
-    throw('You have specified mutually exclusive filter params for the '.
-            "IdentifySetInputs analysis\nPlease specify restrict to ".
-            'set_names or -set_ids or a combination other filters '.
-            '(e.g. -experimental_groups -experiments -feature_types -cell_types -analyses -states');  
-  }
-
-
-  #$self->init_branch_config(1, 1);#No longer needed
-  #Flags are:
-  #Optional branch config, as we only need this for IdentifyAlignInputsets 
-  #Validate branch_key_method if we do have config
 
   return;
 }
@@ -340,9 +359,15 @@ sub run {   # Check parameters and do appropriate database/file operations...
   #1 Changed @failed to build $throw directly with more contextual info
   
   #For set_ids and set_names, catch undef return types
-  if($self->set_ids || $self->set_names){
+  if($self->set_ids || $self->set_names || $self->experiment_like){
     my ($ids_or_names, $method);
-    
+     
+    if($self->experiments_like){#This can only be an InputSubset analysis
+      my $sql = 'SELECT input_subset_id from input_subset iss, experiment e where e.name like "'.
+        $self->experiments_like.'" and e.experiment_id=iss.experiment_id';
+      $self->set_ids($set_adaptor->dbc->db_handle->selectcol_arrayref($sql));    
+    }
+      
     if($self->set_ids){
       $method       = 'fetch_by_dbID'; 
       $ids_or_names = $self->set_ids; 
@@ -351,7 +376,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
       $ids_or_names = $self->set_names; 
       $method = 'fetch_by_name';
     }
-  
+    
     foreach my $var(@{$ids_or_names}){
       my $set = $set_adaptor->$method($var);
       
@@ -360,17 +385,17 @@ sub run {   # Check parameters and do appropriate database/file operations...
       }
       elsif($handle_reps){
         
+        #We are only using handle_replicates for IdentifyReplicateResultSets
+        #so this is probably still valid, but we should probably just ignore the failed?
+        #We should probably also validate set_type in fetch_input and resitrct to ResultSet
+        
+                
         if($set_type eq 'ResultSet'){
           #Validate there is just 1 supporting signal InputSubset (which is a replicate)
           
           #Check support type
           #Don't bother handling input_set here as it is being dropped
-          if($set->table_name ne 'input_subset'){
-            push @failed, $var;
-            #$self->throw_no_retry('Expected input_subset support but found '.
-            #  $set->table_name." support for ResultSet:\t".$set->name);  
-          }
-          else{
+          if($set->table_name eq 'input_subset'){
             
             my @issets = grep { ! $_->is_control } @{$set->get_support};
                    
@@ -382,14 +407,21 @@ sub run {   # Check parameters and do appropriate database/file operations...
               push @failed, $var;
             }    
           }   
+          else{
+            push @failed, $var;
+            #$self->throw_no_retry('Expected input_subset support but found '.
+            #  $set->table_name." support for ResultSet:\t".$set->name);  
+          }
         }
-        elsif(! $set->replicate){ #Should be InputSet
+        elsif(! $set->replicate){ #Should be InputSubset
+          #and this is now redundant as all InputSubsets will have a replicate?
           push @failed, $var;
         }
       }
       else{
         push @$sets, $set;
       }
+      
     }
   }
   else{ #Must be other filters  
