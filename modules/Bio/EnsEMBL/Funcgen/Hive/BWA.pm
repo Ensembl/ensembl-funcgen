@@ -121,7 +121,8 @@ sub run {
   #-S input is sam, with header (else -t is required)
   #-u output is uncompressed bam, prefered for piping to other samtools cmds, although this has been shown to
   #be fragile, hence we have split the cmds up here
-  $bwa_cmd = "${bin_dir}/samtools view -uS ${output_dir}/${outfile_prefix}.samse.sam > ${output_dir}/${outfile_prefix}.samse.bam.unsorted"; 
+  #-h include header in output
+  $bwa_cmd = "${bin_dir}/samtools view -uhS ${output_dir}/${outfile_prefix}.samse.sam > ${output_dir}/${outfile_prefix}.samse.bam.unsorted"; 
   run_system_cmd($bwa_cmd);
   run_system_cmd("rm -f ${output_dir}/${outfile_prefix}.samse.sam");
 
