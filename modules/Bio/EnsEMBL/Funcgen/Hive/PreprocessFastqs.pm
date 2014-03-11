@@ -134,32 +134,28 @@ sub run {
   #hence we can't re-use an old alignment file
   #this should be handled when creating/rolling back the ResultSet
   
-  
   #This status needs to be CS specific!!
-  my $align_status = 'ALIGNED';#$self->get_coord_system_status('ALIGNED');#put this in BaseSequenceAnalysis
-  $align_status   .= '_CONTROL' if $run_controls;
+  #Actually, this should only be allowed if we are recovering
+  #force should have rolled back the ResultSet ALIGNED status
+  #although ideally this should be handled in the previous analysis
+  #and flowed directly to DefineReplicate/MergedDataSet
+  #Hence we should never reuse the merged fastq?
+  #if we are recovering, we want the bam file (given the reps are the same)
+  #if we are forcing or rolling back, then we should probably redo everything
   
-  #We have an inheritance issue here
-  #BaseSequenceAnalysis isa BaseImporter?
-  
-  warn $rset->name.' states '.join(' ', @{$rset->get_all_states});
-  
-  if($rset->has_status($align_status)){
-    throw("Need to implement force/recover_alignment. Found $align_status ResultSet:\t".
-      $rset->name."\n");
-     
-    #Actually, this should only be allowed if we are recovering
-    #force should have rolled back the ResultSet ALIGNED status
-    #although ideally this should be handled in the previous analysis
-    #and flowed directly to DefineReplicate/MergedDataSet
-    #Hence we should never reuse the merged fastq?
-    #if we are recovering, we want the bam file (given the reps are the same)
-    #if we are forcing or rolling back, then we should probably redo everything
+  if($self->run_controls){
+    my $exp = $self->get_control_InputSubset($rset);
+    
+    if($exp->has_status('ALIGNED_CONTROL')){
+      throw("Need to implement force/recover_control_alignment. Found ALIGNED_CONTROL ResultSet:\t".
+      $rset->name."(Control Experiment = ".$exp->name.")\n");
+    }
+  }
+  elsif($rset->has_status('ALIGNED')){
+    throw("Need to implement force/recover_alignment. Found ALIGNED ResultSet:\t".
+    $rset->name."\n");
   }
   
-  
-  
-
   my @fastqs;
   my $throw = '';
   
@@ -208,7 +204,6 @@ sub run {
     #But we know these checksums are stored in the DB
         
     if(defined $isset->md5sum || ! $self->checksum_optional ){
-      warn "Specifying checksum";
       $params->{checksum} = $isset->md5sum; 
     }
     
@@ -296,12 +291,13 @@ sub run {
 
   #For safety, clean away any that match the prefix
   #todo, check that split append an underscore
-  run_system_cmd('rm -f '.$self->work_dir."/${set_prefix}.fastq_*");#no exit?
+  
+  run_system_cmd('rm -f '.$self->work_dir."/${set_prefix}.fastq_*", 1);
+  #no exit flag, in case rm fails due to no old files
      
   my $cmd = 'zcat '.join(' ', @fastqs).' | split -d -a 4 -l '.
     $self->fastq_chunk_size.' - '.$self->work_dir.'/'.$set_prefix.'.fastq_';
-  $self->helper->debug(1, "run_system_cmd\t$cmd"); 
-  run_system_cmd($cmd);
+  $self->run_system_cmd_no_retry($cmd);
 
   #Get files to data flow to individual alignment jobs
   @fastqs = map { chomp($_) && $_; } run_backtick_cmd('ls '.$self->work_dir."/${set_prefix}.fastq_*");
@@ -343,7 +339,7 @@ sub run {
                              #but passed for convenience
                              output_dir => $self->output_dir,
                              set_prefix => $set_prefix,
-                             #run_controls => $run_controls,#now implicit from %signal_info
+                             #run_controls => $run_controls,
                              %signal_info}]);
 
 
