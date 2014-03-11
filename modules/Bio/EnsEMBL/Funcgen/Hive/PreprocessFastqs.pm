@@ -295,13 +295,57 @@ sub run {
   run_system_cmd('rm -f '.$self->work_dir."/${set_prefix}.fastq_*", 1);
   #no exit flag, in case rm fails due to no old files
      
-  my $cmd = 'zcat '.join(' ', @fastqs).' | split -d -a 4 -l '.
+  my @du = run_backtick_cmd("du -ck @fastqs");   
+  (my $pre_du = $du[-1]) =~ s/[\s]+total//;   
+     
+  my $cmd = 'zcat '.join(' ', @fastqs).' | split --verbose -d -a 4 -l '.
     $self->fastq_chunk_size.' - '.$self->work_dir.'/'.$set_prefix.'.fastq_';
-  $self->run_system_cmd_no_retry($cmd);
-
+  #It seems like we were getting some incomplete split giving just 1 0000 file!
+  #We need a way to validate the expected output size
+  #some intermediate files also seem to be missing, so we have 0000 and 0002 but not 0001
+  #Sort and check highest value
+  #$self->run_system_cmd_no_retry($cmd);
+  my @split_stdout = run_backtick_cmd($cmd);
+  (my $final_file = $split_stdout[-1]) =~ s/creating file \`(.*)\'/$1/;
+  
+  if(! defined $final_file){
+    $self->throw_no_retry('Failed to parse (s/.*\`([0-9]+)\\\'/$1/) final file '.
+      ' from last split output line: '.$split_stdout[-1]);  
+  }
+  
   #Get files to data flow to individual alignment jobs
-  @fastqs = map { chomp($_) && $_; } run_backtick_cmd('ls '.$self->work_dir."/${set_prefix}.fastq_*");
-  $self->set_param_method('fastq_files', \@fastqs);
+  my @new_fastqs = run_backtick_cmd('ls '.$self->work_dir."/${set_prefix}.fastq_*");
+  @new_fastqs    = sort {$a cmp $b} @new_fastqs;
+  
+  #Now do some sanity checking to make sure we have all the files
+  
+  if($new_fastqs[-1] ne $final_file){
+    $self->throw_no_retry("split output specified last chunk file was numbered \'$final_file\',".
+      " but found:\n".$new_fastqs[-1]);  
+  }
+  else{
+    $final_file =~ s/.*_([0-9]+)$/$1/;
+    $final_file  =~ s/^[0]+//;
+    
+    if($final_file != $#new_fastqs){
+      $self->throw_no_retry('split output specified '.($final_file+1).
+        ' file(s) were created but only found '.scalar(@new_fastqs).":\n".join("\n", @new_fastqs));  
+    }  
+  }
+  
+  #and the unzipped files are at least as big as the input gzipped files
+  @du = run_backtick_cmd("du -ck @new_fastqs");   
+  (my $post_du = $du[-1]) =~ s/[\s]+total//; 
+  
+  $self->helper->debug(1, 'Merged and split '.scalar(@fastqs).' (total '.$pre_du.'k) input fastq files into '.
+    scalar(@new_fastqs).' tmp fastq files (total'.$post_du.')');
+  
+  if($post_du < $pre_du){
+    $self->throw_no_retry("Input fastq files totaled ${pre_du}k, but output chunks totaled only ${post_du}k");  
+  }
+  
+  
+  $self->set_param_method('fastq_files', \@new_fastqs);
 
   foreach my $fq_file(@{$self->fastq_files}){
   
