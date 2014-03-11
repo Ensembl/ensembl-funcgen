@@ -198,17 +198,17 @@ sub main{
     $db_script_args->{funcgen}.' '.$db_script_args->{core}.' '.$db_script_args->{pipeline};
   $pipeline_params .= " -species $species " if defined $species;  
   
-  my ($ntable_a, $pdb);  
+  my ($cmd, $ntable_a, $pdb);  
   eval { $pdb = create_DBAdaptor_from_params($pdb_params, 'hive', 1); };
   
   if($@){ #Assume the DB hasn't been created yet  
     #init the pipline with the first conf
     my $first_conf = shift @confs;
-    my $init_cmd   = "perl $hive_script_dir/init_pipeline.pl ".
+    $cmd = "perl $hive_script_dir/init_pipeline.pl ".
       "Bio::EnsEMBL::Funcgen::Hive::Config::${first_conf} $pipeline_params";
     
     print "\n\nINITIALISING DATABASE:\t".$pdb_params->{'-dbname'}."\n";
-    run_system_cmd($init_cmd);  
+    run_system_cmd($cmd);  
     
     $pdb      = create_DBAdaptor_from_params($pdb_params, 'hive');
     $ntable_a = $pdb->get_NakedTableAdaptor;
@@ -238,12 +238,12 @@ sub main{
     else{ #Add new config!
       
       #Handle potential resetting of pipeline wide 'can_run_AnalaysisLogicName' params 
-      #These should be in the meta table and should be cached if they are set to 1
-      #as there is a danger that a subsequent top up of an preceding conf may reset this to 0
-      #meaning that flow would not occur from the conf just added, which precedes
-      #a conf which has previous been initialised 
-      #Put this method in HiveUtils? (with add_hive_url_to_meta?)
-      #where else would it be used?      
+      #These should be in the meta table and should be cached if they are 'true' 
+      #as there is a danger that a subsequent top up of an upsteam conf may reset this to 0
+      #This would result dataflow not occuring from the conf just added through the link 
+      #analysis to the next conf(which has be added previously)
+      #Put this method in HiveUtils? (with add_hive_url_to_meta?) where else would it be used?
+                 
       my $meta_key        = 'can_run_%';
       my %meta_key_values = %{$ntable_a->fetch_all_like_meta_key_HASHED_FROM_meta_key_TO_meta_value($meta_key)};
       
@@ -252,16 +252,14 @@ sub main{
       #$ntable_a->fetch_all_like_meta_name_and_test_HASHED_FROM_meta_name_TO_meta_value($meta_key);
       #Both of these die nicely, but should probably throw?
       #die('should have failed by now');
-      
-      
+            
       #Now do the top up
-      my $topup_cmd = "perl $hive_script_dir/init_pipeline.pl Bio::EnsEMBL::Funcgen::Hive::Config::${conf} ".
+      $cmd = "perl $hive_script_dir/init_pipeline.pl Bio::EnsEMBL::Funcgen::Hive::Config::${conf} ".
         ' -analysis_topup '.$pipeline_params;  
-      #warn $topup_cmd."\n";
       print "\n\nPERFORMING ANALYSIS TOPUP:\t".$conf."\n";
       
       #This will not catch non-fatal error output.
-      run_system_cmd($topup_cmd);
+      run_system_cmd($cmd);
       
       #Reset can_run_AnalysisLogicName keys first, so we never assume that this has 
       #been done should things fail after adding the hive_conf key
@@ -278,6 +276,16 @@ sub main{
         if($can_run_value){ #is defined and not 0
           my $meta_id = $ntable_a->fetch_by_meta_key_TO_meta_id($can_run_key);            #PRIMARY KEY
           $ntable_a->update_meta_value({meta_id=>$meta_id, meta_value =>$can_run_value}); #AUTOLOADED
+          
+          #Now reset the analysis if the value matches this config
+          #i.e. we have just topped up with a downstream config, and want to reset and link
+          #analyses which may have run.
+          
+          if($can_run_value eq $conf){
+            $cmd = "perl $hive_script_dir/beekeeper.pl --reset_all_for_analysis $can_run_value";
+            print "\nRESETTING LINK ANALYSIS JOBS FOR:\t$can_run_key\n";
+            run_system_cmd($cmd);
+          }
         }
       }
       
