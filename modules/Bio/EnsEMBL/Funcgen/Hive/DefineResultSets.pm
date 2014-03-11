@@ -99,7 +99,8 @@ use base ('Bio::EnsEMBL::Funcgen::Hive::BaseDB');
 
 #Are there easy ways to 'figure it out'?
 
-
+#we already have the correct wiring to do this as it matches
+#the non-control flow, but we will be passing different data.
 
 
 sub fetch_input {   # fetch parameters...
@@ -177,6 +178,8 @@ sub run {   # Check parameters and do appropriate database/file operations...
                                                        [$align_lname])->[0];
   
   #We don't use fetch_Set_input here as we are dealing with many InputSubsets
+ 
+  my $control_branch = '';
   
   if(@{$self->controls}){
     $ctrls = &scalars_to_objects($self->out_db, 'InputSubset',
@@ -186,21 +189,65 @@ sub run {   # Check parameters and do appropriate database/file operations...
       throw("Found unexpected non-control InputSubsets specified as controls\n\t".
         join("\n\t", map($_->name, @$ctrls)));
     }
+    
+    $control_branch = 'Preprocess_'.$align_lname.'_control';
+    
+    
+    #Test control Experiment is ALIGNED_CONTROL
+    #if it has already been aligned then only submit then 
+    #undef the $control_branch and things should just flow directly
+    #onto the correct analyses
+    
+    #How are we going to handle rollback of the control alignments?
+    #This would require a rollback of all dependant data!
+    
+    
+    
+    #if it is ALIGNING_CONTROL
+    #Then we need to exit here
+    #it would be nice to set a retry perioud for this
+    #We need to output some query to enable easy polling of the 
+    #DB to allow identification of when the 
+    
+    
+    #We need to validate they are all from the same experiment, 
+    #although this os done in IdentifySetInputs?
+    
+    my (%exps, $exp);
+    
+    foreach my $ctrl(@$ctrls){
+      $exp = $ctrl->experiment;
+      $exps{$exp->name} = $exp;
+    }
+    
+    if( scalar(keys(%exps)) != 1 ){
+      throw("Failed to identify a unique control Experiment:\n".
+        join(' ', keys(%exps)));  
+    }
+    
+    if ($exp->has_status('ALIGNED_CONTROL')){
+        $control_branch = '' 
+    }
+    else{
+      #Put these two call righ tnext to each other to minimize 
+      #chance of race condition with a parallel job.
+      
+      if($exp->has_status('ALIGNING_CONTROL')){
+        $self->input_job->transient_error(0); #So we don't retry  
+        #Would be nice to set a retry delay of 60 mins
+        throw($exp->name.' is in the ALIGNING_CONTROL state, another job may already be aligning these controls'.
+          "\nPlease wait until ".$exp->name.' has the ALIGNED_CONTROL status before resubmitting this job');
+      }
+      
+      $exp->adaptor->store_status('ALIGNING_CONTROL', $exp);  
+    }  
   }
                                              
-  #Now we need to know whether to create a merged InputSet or a Replicate InputSet?
-  #The set_names will already be set, but we actually need to set a rep value in the ResultSet
-  #Just parse from the set_name, or set explicitly in the hash
   
   #validate all input_subsets before we start creating anything, such that rerunning the job will be clean
   
-  #my %rsets = (2=> [], 3=> [], 4=>[]);#Withcontrols, Merged(no controls), IDR(no controls)
-  #should this be done by init_branch_config?            
  
   my (%rsets, %rep_bams);
-  #my $filter_format = $self->param_silent('bam_filtered') ? undef : 'bam'; 
-  #It is unsafe to filter from bam at this stage, so just assume this
-  #has already been done and expect the filtered file.
        
   #setname here might not actually be set name
   #$issets is actually:
@@ -212,6 +259,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
    
   foreach my $set_name(keys %$issets){
     my $parent_set_name = $set_name.'_'.$align_anal->logic_name;
+    
     my $sigs = &scalars_to_objects($self->out_db, 'InputSubset',
                                                   'fetch_by_dbID',
                                                   $issets->{$set_name});
@@ -288,9 +336,11 @@ sub run {   # Check parameters and do appropriate database/file operations...
     }
     
     #Reset branch if we have controls
-    if(@$ctrls){
-      $branch = 'Preprocess_'.$align_lname.'_control';
-    }
+    #if(@$ctrls){
+    #  $branch = 'Preprocess_'.$align_lname.'_control';
+    #}
+    
+    $branch = $control_branch if $control_branch;
     
     
     foreach my $rep_set(@rep_sets){ 
@@ -356,6 +406,12 @@ sub run {   # Check parameters and do appropriate database/file operations...
   my %batch_params = %{$self->batch_params};
   my %branch_sets;
 
+  #We need to test for CONTROL_ALIGNED here
+  #but this is currently only set on the ResultSets
+  #and these maybe entirely new result sets
+  #so this has to be set on the experiment too!
+  #we can test that above and set the branch accordingly
+
   foreach my $branch(keys %rsets){
   
     foreach my $rset_group_name(keys %{$rsets{$branch}}){
@@ -384,7 +440,6 @@ sub run {   # Check parameters and do appropriate database/file operations...
                                              set_type    => 'ResultSet'}]);
         }
         elsif($branch =~ /(_control$|_replicate$)/){
-          #Can we specify run_idr here in the same hash for use in MergeQCAlignments data flow
           $branch_sets{$branch}{$rset_group_name}{set_names} ||= [];
           $branch_sets{$branch}{$rset_group_name}{dbIDs}     ||= [];
           
@@ -397,9 +452,9 @@ sub run {   # Check parameters and do appropriate database/file operations...
             #Just create the individual fan output_ids
             $branch_sets{$branch}{$rset_group_name}{output_ids} ||= [];
             push @{$branch_sets{$branch}{$rset_group_name}{output_ids}}, {%batch_params,
-                                                                     dbID     => $rset->dbID,
-                                                                     set_name => $rset->name,
-                                                                     set_type => 'ResultSet'};    
+                                                                          dbID     => $rset->dbID,
+                                                                          set_name => $rset->name,
+                                                                          set_type => 'ResultSet'};    
           }
         }
         else{ #Sanity check
