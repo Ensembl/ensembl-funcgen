@@ -46,6 +46,7 @@ use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
 sub fetch_input {   # fetch parameters...
   my $self = shift;
+  $self->check_analysis_can_run;
   $self->SUPER::fetch_input();
   my $rset       = $self->fetch_Set_input('ResultSet');
   my $fastq_file = $self->get_param_method('fastq_file', 'required');
@@ -117,6 +118,9 @@ sub fetch_input {   # fetch parameters...
                             $species.'_'.$gender.'_'.$self->assembly.'_unmasked.fasta'));
   }
 
+
+  
+
   my $align_runnable = $align_module->new
    (
     -program_file      => $pfile_path,
@@ -134,7 +138,15 @@ sub fetch_input {   # fetch parameters...
 
 
 sub run {
-  shift->aligner->run;
+  my $self = shift;
+  
+  eval { $self->aligner->run };
+  my $err = $@ 
+   
+  if($err){
+    $self->throw_no_retry('Failed to call run on '.ref($self->aligner).":\n$err"); 
+  }
+  
   return;
 }
 
