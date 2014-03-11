@@ -28,7 +28,7 @@ Bio::EnsEMBL::Hive::Funcgen::MergeQCAlignments
 
 =head1 DESCRIPTION
 
-
+Merges bam alignments from split (replicate or merged) fastq files.
 
 =cut
 
@@ -42,11 +42,13 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd merge_bams write_c
 
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
-#TODO... use and update the tracking database dependant on no_tracking...
-
-#todo
-# Reimplement repository support
-# Status handling/setting?
+#TODO
+#1 Reimplement repository support
+#2 QC Status handling/setting?
+#3 Use and update the tracking database dependant on no_tracking
+#4 Drop signal flow_mode in favour of using result_set_groups as a proxy. 
+#  It is kinda nice to have this flow_mode vs result_set_group validation though.
+ 
 
 my %valid_flow_modes = (replicate => undef,
                         merged    => undef,
@@ -56,11 +58,12 @@ sub fetch_input {
   my $self = shift;
   $self->SUPER::fetch_input();
   my $rset = $self->fetch_Set_input('ResultSet');
-  $self->get_param_method('output_dir',   'required');
-  $self->get_param_method('bam_files',    'required');
-  $self->get_param_method('run_controls', 'required');
+  $self->get_param_method('output_dir', 'required');
+  $self->get_param_method('bam_files',  'required');
   $self->get_param_method('set_prefix', 'required');  #This is control specific
   my $flow_mode = $self->get_param_method('flow_mode',  'required');
+  $self->set_param_method('run_controls', 0); 
+  
   
   if(! exists $valid_flow_modes{$flow_mode}){
     throw("$flow_mode is now a valid flow_mode parameter, please specify one of:\t".
@@ -68,6 +71,13 @@ sub fetch_input {
   }
   elsif($flow_mode eq 'signal'){
     $self->get_param_method('result_set_groups', 'required');
+    $self->run_controls(1); 
+  }
+  elsif($self->get_param_method('result_set_groups', 'silent')){
+    throw("The $flow_mode flow mode is not valid for use with result_set_groups"); 
+  }
+  elsif($flow_mode eq 'replicate'){
+    $self->get_param_method('permissive_peaks', 'required');
   }
   
   #could have recreated output_dir and merged_file_name from ResultSet and run_controls
@@ -80,20 +90,8 @@ sub fetch_input {
   #}
 
   $self->init_branching_by_analysis;
-    
   return;
 }
-#Is the cating of rep numbers going to cause problems?
-#The Peaks and Collections pipelines need to be able to 
-#recreate these file names.
-#in fact we need to share the same code used by get_alignment_file_by_ResultSet_formats
-#which does not use the rep numbers
-#This may be risky
-#In the event of a disconnect between update of an ResultSet with new reps
-#and running the peaks/collections on a pre-exitingalignment file(without new rep)
-#This could also be managed with a ResultSet status. Any updates to the ResultSet
-#would require unsetting the ALIGNED status
-
 
 
 sub run {
@@ -107,24 +105,16 @@ sub run {
   my $bam_file     = $file_prefix.'.unfiltered.bam';
   $self->helper->debug(1, "Merging bams to:\t".$bam_file);
  
-  #sam_header here is really optional if is probably present in each of the bam files
+  #sam_header here is really optional if is probably present in each of the bam files but maybe incomplete 
   merge_bams($bam_file, \@bam_files, {sam_header => $self->sam_header,
                                       remove_duplicates => 1});
-                                      
+   
   if(! $self->param_silent('no_tidy')){                                     
-    #run_system_cmd("rm -f @bam_files");
-    #rm fastq chunk here too?
-    #This is slightly odd as the bam files are defined by Preprocess, which makes an assumption
-    #on the file naming which will be created by the Aligner
-    #and now we are having to reverse that assumption to identify the fsatq files
-    #we could just pass the fastqs and make the assumption here
-    #or we could put a piece of code in BaseSequenceAnalysis to define the file format
-    #and reuse it in both.
+    run_system_cmd("rm -f @bam_files");
   }
 
 
-#todo convert this to wite to a result_set_report table
-
+  #todo convert this to wite to a result_set_report table
   my $alignment_log = $file_prefix.".alignment.log";
   my $cmd='echo -en "Alignment QC - total reads as input:\t\t\t\t" > '.$alignment_log.
     ";samtools flagstat $bam_file | head -n 1 >> $alignment_log;".
@@ -133,7 +123,6 @@ sub run {
     ' echo -en "Alignment QC - reliably aligned reads (mapping quality >= 1):\t" >> '.$alignment_log.
     ";samtools view -u -F 4 -q 1 $bam_file | samtools flagstat - | head -n 1 >> $alignment_log";
   #Maybe do some percentages?
-  
   $self->helper->debug(1, "Generating alignment log with:\n".$cmd);
   run_system_cmd($cmd);
   
@@ -153,15 +142,24 @@ sub run {
   $self->helper->debug(1, "Writing checksum for file:\t".$bam_file);
   write_checksum($bam_file);
   
-  my $aligned_status = 'ALIGNED';
-  $aligned_status .= '_CONTROL';
-  $rset->adaptor->store_status($aligned_status, $rset);
+  if($self->run_controls){
+    my $exp = $self->get_control_InputSubset($rset);
+    $exp->adaptor->store_status('ALIGNED_CONTROL', $exp);
+  }
+  else{
+    $rset->adaptor->store_status('ALIGNED', $rset);
+  }
+
+
+  #This needs to set ALIGNED_CONTROL for all of the resultset in the result_set group
+  #not just the single arbitrary one we are dealing with here
+  #or just move the ALIGNED_CONTROL status to Experiment?
+
 
   #todo filter file here to prevent competion between parallel peak
   #calling jobs which share the same control
   #This will also check the checksum we have just generated, which is a bit redundant
   $self->get_alignment_files_by_ResultSet_formats($rset, ['bam'], $self->run_controls, undef, 'bam');
-  
   my $flow_mode    = $self->flow_mode;
   my %batch_params = %{$self->batch_params};
   
