@@ -110,9 +110,6 @@ sub run {
   run_system_cmd($bwa_cmd);
   run_system_cmd("rm -f ${output_dir}/${outfile_prefix}.sai"); #No fail flag here?
   
-  #Removal of fastq chunk file has been moved to MergeQCAlignment (after a successful merge)
-  #to prevent input absent files when reruning these jobs
-  
   #Now we need to change this to unfiltered? But do this in the merge
   #also, need utilise EFGUtils filtering and conversion?
   #filtering should be done here, such that we don't get parellel processes trying to do this for controls
@@ -138,6 +135,10 @@ sub run {
   #although we are doing this here, as it is a pre-req for the merge step
   #just drop samse from file name for now, as we only do single end reads at present
   
+  #Remove input last just in case we fail and need the input to rerun
+  #Otherwise we would have to reset all jobs in this fan and redo the split
+  run_system_cmd("rm -f ${input_dir}/${query_file}"); #No fail flag here?
+
   return;
 }
 
