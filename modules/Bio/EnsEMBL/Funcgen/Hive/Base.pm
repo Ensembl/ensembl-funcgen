@@ -46,7 +46,8 @@ use Bio::EnsEMBL::Utils::Exception         qw( throw );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( scalars_to_objects 
                                                validate_path
                                                get_files_by_formats 
-                                               path_to_namespace );
+                                               path_to_namespace 
+                                               run_system_cmd );
 use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref check_ref );  
 use Scalar::Util                           qw( blessed );                                            
                                                
@@ -94,32 +95,23 @@ $main::_no_log      = 1;
 #Used in set_param_arrays for scalars_to_objects
 #Could our this to make it dynamically mutable, i.e. redefine it from a sub class
 my %param_class_info = 
-  (
-    cell_types          => ['CellType',          'fetch_by_name'],
-    feature_types       => ['FeatureType',       'fetch_by_name'],
-    analyses            => ['Analysis',          'fetch_by_logic_name'],
-    experimental_groups => ['ExperimentalGroup', 'fetch_by_name'],
-    experiments         => ['Experiment',        'fetch_by_name'],
-    cell_type           => ['CellType',          'fetch_by_name'],
-    feature_type        => ['FeatureType',       'fetch_by_name'],
-    analysis            => ['Analysis',          'fetch_by_logic_name'],
-    experimental_group  => ['ExperimentalGroup', 'fetch_by_name'],
-  );
+ (cell_types          => ['CellType',          'fetch_by_name'],
+  feature_types       => ['FeatureType',       'fetch_by_name'],
+  analyses            => ['Analysis',          'fetch_by_logic_name'],
+  experimental_groups => ['ExperimentalGroup', 'fetch_by_name'],
+  experiments         => ['Experiment',        'fetch_by_name'],
+  cell_type           => ['CellType',          'fetch_by_name'],
+  feature_type        => ['FeatureType',       'fetch_by_name'],
+  analysis            => ['Analysis',          'fetch_by_logic_name'],
+  experimental_group  => ['ExperimentalGroup', 'fetch_by_name']       );
 
 
-my %object_dataflow_methods = 
-  (
-   'Bio::EnsEMBL::Analysis' => 'logic_name', 
-  );
-
-
+my %object_dataflow_methods = ('Bio::EnsEMBL::Analysis' => 'logic_name');
 
 my %valid_file_formats = 
- (
-  bed  => 'Bed',
+ (bed  => 'Bed',
   sam  => 'SAM',
-  bam  => 'BAM',
- );
+  bam  => 'BAM' );
 
 #Advantage of having separate fetch_input, run and write methods is to allow
 #calling of super methods at appropriate point.
@@ -298,7 +290,7 @@ sub get_study_name_from_Set {
   my $ctype = $set->cell_type->name;
   
   if($control){
-    $control = _get_control_InputSubset($set);
+    $control = $self->get_control_InputSubset($set);
     #This is based on the assumption that all non-ctrl subsets are associated with a unique Experiment.
     my $exp   = $control->experiment;
     $exp_name = $exp->name;
@@ -321,7 +313,12 @@ sub get_study_name_from_Set {
     $ftype = $set->feature_type->name;
   }
   
-  (my $study_name = $exp_name) =~ s/${ctype}_${ftype}_(.*)/$1/;
+  (my $study_name = $exp_name) =~ s/${ctype}_${ftype}_(.*)/$1/i;
+  
+  if($study_name eq $exp_name){
+    throw("Failed to create study name for Experiment $exp_name with cell type $ctype and feature type $ftype");  
+  }
+  
   return $study_name;
 }
 
@@ -359,8 +356,9 @@ sub get_study_name_from_Set {
 #No, we should never have mixed controls
 #Check this is the case on import
     
-sub _get_control_InputSubset{
-  my $set = shift; 
+sub get_control_InputSubset{
+  my $self = shift;
+  my $set  = shift; 
   my @is_sets;
   
   if( $set->isa('Bio::EnsEMBL::Funcgen::ResultSet') ){
@@ -398,7 +396,7 @@ sub get_set_prefix_from_Set{
   my $ftype;
   
   if($control){
-    $ftype = _get_control_InputSubset($set)->feature_type->name;
+    $ftype = $self->get_control_InputSubset($set)->feature_type->name;
   }
   else{
      $ftype = $set->feature_type->name;
@@ -811,7 +809,7 @@ sub helper {
 sub get_param_method {
   my ($self, $param_name, $req_or_silent, $default) = @_;
   my $value = $self->_param_and_method($param_name, undef, $req_or_silent);
-  
+    
   if((! defined $value) && 
      defined $default ){
     #warn "There is not $param_name defined in the config. Defaulting to:\t$default";   
@@ -1689,22 +1687,29 @@ sub _dataflow_params_by_list {
 #Fail or no fail flag and return boolean?
 
 sub check_analysis_can_run{
-  my $self      = shift; 
-  my $check_int = $self->param_silent('check_analysis_can_run');
-  my $can_run   = 1;
+  my $self    = shift; 
+  my $check   = $self->param_silent('check_analysis_can_run');
+  my $can_run = 1;
   
-  if(defined $check_int){ #Might be undef, in which case we can run
+  if((defined $check) && $check){
+    #Might be undef, in which case we can run
+    #Not false i.e. not 0 but can be a string
     my $lname     = $self->analysis->logic_name;
     my $run_param = 'can_'.$lname; 
     $can_run      = $self->param_required($run_param);
    
-
     if(! $can_run){ #0 or specified as undef
-      $self->input_job->transient_error(0); #So we don't retry  
+    
+      #Set this as a success, as the beekeeper will bail
+      #if we start seeing persistant failures
+      #These jobs, will be reset by configure_hive.pl
+      #when topping up with the relevant conf
+    
+      $self->input_job->incomplete( 0 );
+      #so we don't retry and the job is not marked as Failed
+      
+      #$self->input_job->transient_error(0); #So we don't retry  
       die("$lname has aborted as $run_param == 0 || undef"); 
-      #Parse this in the env
-      #Omit from GetFailedJobs 
-      #and add GetAbortedJobs?
     }  
   }
     
@@ -1818,13 +1823,21 @@ sub get_alignment_files_by_ResultSet_formats {
   #hence, this will likely fail if the worker runs more than 1 job
   
   my $aligned_status = 'ALIGNED';
-  $aligned_status   .= '_CONTROL';
+  $aligned_status   .= '_CONTROL' if $control;
   
-  if(! $rset->has_status($aligned_status)){
-    throw("Cannot get alignment files for ResultSet which does not have ALIGNED status:\t".
+  if($control){
+    my $exp = $self->get_control_InputSubset($rset);
+    
+    if(! $exp->has_status('ALIGNED_CONTROL')){
+      throw('Cannot get control alignment files for a ResultSet('.$rset->name.
+        ') whose Experiment('.$exp->name.') does not have the ALIGNED_CONTROL status');
+    }   
+  }
+  elsif(! $rset->has_status('ALIGNED')){
+    throw("Cannot get alignment files for ResultSet which does not have $aligned_status status:\t".
       $rset->name);
   }
-   
+  
   if($self->get_param_method($file_type, 'silent')){ #Allow over-ride from config/input_id   
     #Need to test in here that it matches one of the formats
     #Need to add support for converting this non-standard path to other formats
@@ -1902,6 +1915,22 @@ sub is_idr_feature_type{
 
 
 
+sub run_system_cmd_no_retry{
+  my $self = shift; 
+  my $cmd  = shift;
+  
+   $self->helper->debug(1, "run_system_cmd_no_retry\t$cmd"); 
+  
+  if(run_system_cmd($cmd, 1) != 0){
+    $self->throw_no_retry("Failed to run_system_cmd:\t$cmd");  
+  }  
+  
+  return;
+}
+  
+
+
+
 #Move this to EFGUtils
 
 =head2 C<CvGV_name_or_bust> I<coderef>
@@ -1926,7 +1955,6 @@ sub CvGV_name_or_bust {
     my $gv = Devel::Peek::CvGV($in) or return;
     *$gv{PACKAGE} . '::' . *$gv{NAME};
 } ## end sub CvGV_name_or_bust
-
 
 
 # Put this in Process.pm
