@@ -59,7 +59,17 @@ sub fetch_input {
   $self->SUPER::fetch_input();
   my $rset = $self->fetch_Set_input('ResultSet');
   $self->get_param_method('output_dir', 'required');
-  $self->get_param_method('bam_files',  'required');
+  $self->get_param_method('bam_files',  'silent');
+  $self->get_param_method('fastq_files',  'silent');
+  
+  
+  if((! $self->bam_files ) && $self->fastq_files){
+    $self->bam_files([ map {$_ =~ s/\.fastq_([0-9]+)$/.$1.bam/o; $_} @{$self->fastq_files} ]);
+  }
+  elsif(! $self->bam_files){
+    $self->throw_no_retry('No bam_files or fastq_files have been defined');    
+  }
+  
   $self->get_param_method('set_prefix', 'required');  #This is control specific
   my $flow_mode = $self->get_param_method('flow_mode',  'required');
   $self->set_param_method('run_controls', 0); 
@@ -98,6 +108,17 @@ sub run {
   my $self       = shift;
   my $rset       = $self->ResultSet;
   my $sam_header = $self->sam_header;
+  
+  
+  
+  #Clean up fastqs first, as they are no longer needed
+  if($self->fastq_files){
+    #Run with no exit flag so we don't fail on retry
+    run_system_cmd('rm -f '.join(' ', @{$self->fastq_files}), 1);
+  }
+  
+  
+  
   my @bam_files  = @{$self->bam_files};  
    
   #We need to get get alignment file prefix here
@@ -109,9 +130,17 @@ sub run {
   merge_bams($bam_file, \@bam_files, {sam_header => $self->sam_header,
                                       remove_duplicates => 1});
    
-  if(! $self->param_silent('no_tidy')){                                     
-    run_system_cmd("rm -f @bam_files");
-  }
+  #if(! $self->param_silent('no_tidy')){                                     
+  #  #run_system_cmd("rm -f @bam_files");
+  #  #No if this fails after here, we have lost the bams
+  #  #do bam tidy up in the next analysis
+  #  #we need a tidy_files param, which will just deleting the inputs from the 
+  #  #previous job
+  #  #This should be used in funnel jobs, to tidy up the tmp files from each fan job
+  #  
+  #}
+
+  
 
 
   #todo convert this to wite to a result_set_report table
@@ -175,7 +204,8 @@ sub run {
     #Can of course just piggy back an analysis on the same branch
     #But that will duplicate the jobs between analyses on the same branch
     
-    my %output_id = (set_type    => 'ResultSet',
+    my %output_id = (garbage     => \@bam_files,
+                     set_type    => 'ResultSet',
                      set_name    => $self->ResultSet->name,
                      dbID        => $self->ResultSet->dbID);
     my $lname     = 'DefineMergedDataSet';  
@@ -203,9 +233,10 @@ sub run {
       
       for my $i(0...$#{$rset_groups->{$rset_group}{dbIDs}}){
         push @rep_or_merged_jobs, {%batch_params,
-                         set_type    => 'ResultSet',
-                         set_name    => $rset_groups->{$rset_group}{set_names}->[$i],
-                         dbID        => $rset_groups->{$rset_group}{dbIDs}->[$i]};
+                                   garbage     => \@bam_files, 
+                                   set_type    => 'ResultSet',
+                                   set_name    => $rset_groups->{$rset_group}{set_names}->[$i],
+                                   dbID        => $rset_groups->{$rset_group}{dbIDs}->[$i]};
       }
          
       my $branch = ($rset_group eq 'merged') ? 
