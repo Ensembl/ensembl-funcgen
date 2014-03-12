@@ -190,7 +190,13 @@ sub run {
 
   if( ! ( $self->param_silent('reload') && 
           -e  $out_file) ){
-    $self->peak_runnable->run;
+
+    eval { $self->peak_runnable->run };
+    my $err = $@; 
+   
+    if($err){
+      $self->throw_no_retry('Failed to call run on '.ref($self->peak_runnable).":\n$err"); 
+    }
   }
 
 
