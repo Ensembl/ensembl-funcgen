@@ -327,6 +327,8 @@ sub run {
     $final_file =~ s/.*_([0-9]+)$/$1/;
     $final_file  =~ s/^[0]+//;
     
+    $self->debug(1, "Matching final_file index $final_file vs new_fastq max index ".$#new_fastqs);
+    
     if($final_file != $#new_fastqs){
       $self->throw_no_retry('split output specified '.($final_file+1).
         ' file(s) were created but only found '.scalar(@new_fastqs).":\n".join("\n", @new_fastqs));  
@@ -371,19 +373,22 @@ sub run {
   
   #This was a config problem, we had a circular semaphore using the same branch
   
+  #There is some redundancy between bam_file and garbage here
+  #we could let the Merge job do the bam_file name generation replacement
+  #
+  
   $self->branch_job_group(3, [{%{$self->batch_params},
                              set_type   => 'ResultSet',
                              set_name   => $rset->name,
                              dbID       => $rset->dbID,
                              #bam_files should really be accu'd from the RunAligner jobs
                              #but we know what they should be here 
-                             #$_ =~ s/fastq_[0-9]+/bam/o
-                             bam_files  => [ map {$_ =~ s/\.fastq_([0-9]+)$/.$1.bam/o; $_} @{$self->fastq_files} ], 
+                             #bam_files  => [ map {$_ =~ s/\.fastq_([0-9]+)$/.$1.bam/o; $_} @{$self->fastq_files} ],
+                             fastq_files => $self->fastq_files,
                              #we could regenerate these from result_set and run controls
                              #but passed for convenience
                              output_dir => $self->output_dir,
                              set_prefix => $set_prefix,
-                             #run_controls => $run_controls,
                              %signal_info}]);
 
 
