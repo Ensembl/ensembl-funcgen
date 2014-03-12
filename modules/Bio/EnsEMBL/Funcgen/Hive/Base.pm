@@ -171,8 +171,33 @@ sub fetch_input {   # nothing to fetch... just the DB parameters...
     $self->_set_out_db;      
   }
 
+  #Sneakily tidy up any tmp files defined by the previous job
+  #This is normally a funnel job, and the tmp files
+  #were generated in the job which created the fan/semphore. 
+  #The tmp files will have been used in the fan jobs . 
+  #It is unsafe to delete them in the fan jobs in case they 
+  #die (RUN_LIMIT) before the job is marked as DONE
+  #We only ever want to get this param (not_set), as would always pass this explicitly in the 
+  #relevant output_id and not generically to all branches via dataflow_params or batch_params
+  my $garbage = $self->param_silent('garbage');
+
+  if(defined $garbage){
+    #allow scalars and arrayref
+    
+    if(ref($garbage)){
+      assert_ref($garbage, 'ARRAY', 'garbage files');
+      $garbage = join(' ', @$garbage);  
+    }
+    
+    #run with no exit flag so we don't fail on retry
+    run_system_cmd("rm -f $garbage", 1);
+  }
+
   return;
 }
+
+
+
 
 
 
