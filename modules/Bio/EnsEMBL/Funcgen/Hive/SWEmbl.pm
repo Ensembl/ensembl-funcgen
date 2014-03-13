@@ -20,6 +20,7 @@ use strict;
 #qw the methods even if they are EXPORTED, so we know where they come from
 use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd );
 use base qw( Bio::EnsEMBL::Funcgen::Hive::PeakCaller );#Does not import
 
 my %fswitches = 
@@ -34,14 +35,9 @@ my %fswitches =
 sub new {
   my $caller = shift;
   my $class  = ref($caller) || $caller;
-  my $self   = $class->SUPER::new(-output_format => 'bed', @_);
   #specify -output_format default first, so it can be over-ridden?
+  my $self   = $class->SUPER::new(-output_format => 'bed', -is_half_open => 1, @_);
   
-  #bed is half_open by default
-  if(! defined $self->is_half_open){
-    $self->{is_half_open} = 1;
-  }
- 
   return;
 }
 
@@ -59,25 +55,20 @@ sub requires_control { return 0; }
 
 sub run {   
   my $self = shift;
-  
   my ($align_file, $suffix, $out_file, $control_file, 
     $gzip_align, $gzip_control) = @{$self->file_info};
-
     
   my $format_switch = $fswitches{lc($suffix)};#auto-vivifies
   throw("$suffix is not recognised as a valid SWEmbl input format") if(! $format_switch);
         
-  my $command = $self->program_file." $format_switch -z -i ".
+  my $cmd = $self->program_file." $format_switch -z -i ".
     $self->align_file.' '. $self->parameters.' -o '.$out_file;
+  $cmd .= " -r ".$self->control_file if $self->control_file;
   
-  if($self->control_file){  
-    $command .= " -r ".$self->control_file; 
-  }
-  
-  #warn "Running analysis:\t$command";
-  if(system($command)) { throw("FAILED to run $command"); }
+  warn "Running:\t$cmd\n" if $self->debug;
+  run_system_cmd($cmd);
      
-  return 1;
+  return;
 }
 
 
