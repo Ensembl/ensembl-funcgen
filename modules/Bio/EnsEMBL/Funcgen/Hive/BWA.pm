@@ -71,20 +71,24 @@ sub run {
   
   
   (my $outfile_prefix = $query_file) =~ s/\.fastq_([0-9]+)$/.$1/;
+  warn "Query file:\t$query_file\nOutfile prefix:\t$outfile_prefix\n" if $self->debug;
   
-  warn "Query file:\t$query_file\nOutfile prefix:\t$outfile_prefix";
+  my $sai_file      = "${output_dir}/${outfile_prefix}.sai";
+  my $samse_file    = "${output_dir}/${outfile_prefix}.samse.sam";
+  my $unsorted_file = "${output_dir}/${outfile_prefix}.samse.bam.unsorted";
+  my $bam_file      = "${output_dir}/${outfile_prefix}.bam";
+  my @tmp_files = ($sai_file, $samse_file, $unsorted_file);
+  
+  my $rm_cmd = 'rm -f '.join(' ', @tmp_files);
+  warn "Removing pre-existing intermediates:\n$rm_cmd $bam_file\n" if $self->debug;
+  run_system_cmd($rm_cmd.' '.$bam_file, 1);#no exit flag in case they aren't there
   
   #assume samtools is in the same dir as bwa
   #no, just assume we are using the bin_dir param, else assume it is in the $PATH
   #so we need to pass bin_dir aswell?
   #No we can parse from the program_file as this will already have been prefixed with the bin_dir
   
- 
 
-  #TODO Pass the location of the binary to be sure we'll be running the right version?
-#  my $bwa_cmd = "$bwa_bin aln $bwa_index $input_file";
-  #Allow this to work with paired reads?? Maybe not for the moment...
-  #in that case pass bwa algorithm as parameter...
   #If using -q make sure we've got the correct Sanger quality scores...
 #  $bwa_cmd .= " | $bwa_bin samse $bwa_index - $input_file";
 #  $bwa_cmd .= " | samtools view -uS - ";
@@ -96,37 +100,43 @@ sub run {
 
   ### FIND SUFFIX ARRAY COORDS OF SEQS
   #This seg faults if it is run locally as it runs out of memory
-  my $bwa_cmd = "$bwa_bin aln $ref_file ${input_dir}/${query_file} > ".
-    "${output_dir}/${outfile_prefix}.sai";
-  run_system_cmd($bwa_cmd);
+  my $cmd = "$bwa_bin aln $ref_file ${input_dir}/${query_file} > $sai_file";
+  warn "Running:\n$cmd\n" if $self->debug;  
+  run_system_cmd($cmd);
   
 
-  ### GENERATE SINGLE END READ ALIGNMETNS
+  ### GENERATE SINGLE END READ ALIGNMENTS
   #todo add -P option here to load index into memory which should speed execution
   #but will require ~5GB of memory
   #THIS ONLY WORKS FOR SAMPE?
-  $bwa_cmd = "$bwa_bin samse $ref_file ${output_dir}/${outfile_prefix}.sai ${input_dir}/${query_file}".
-    " > ${output_dir}/${outfile_prefix}.samse.sam";
-  run_system_cmd($bwa_cmd);
-  run_system_cmd("rm -f ${output_dir}/${outfile_prefix}.sai"); #No fail flag here?
+  $cmd = "$bwa_bin samse $ref_file $sai_file ${input_dir}/${query_file} > $samse_file";
+  warn "Running:\n$cmd\n" if $self->debug;  
+  run_system_cmd($cmd);
   
-  #Now we need to change this to unfiltered? But do this in the merge
-  #also, need utilise EFGUtils filtering and conversion?
-  #filtering should be done here, such that we don't get parellel processes trying to do this for controls
   
   ### CONVERT TO BAM
   #-S input is sam, with header (else -t is required)
   #-u output is uncompressed bam, prefered for piping to other samtools cmds, although this has been shown to
   #be fragile, hence we have split the cmds up here
   #-h include header in output
-  $bwa_cmd = "${bin_dir}/samtools view -uhS ${output_dir}/${outfile_prefix}.samse.sam > ${output_dir}/${outfile_prefix}.samse.bam.unsorted"; 
-  run_system_cmd($bwa_cmd);
-  run_system_cmd("rm -f ${output_dir}/${outfile_prefix}.samse.sam");
-
+  $cmd = "${bin_dir}/samtools view -uhS $samse_file > $unsorted_file"; 
+  warn "Running:\n$cmd\n" if $self->debug;
+  run_system_cmd($cmd);
+  
   ### SORT BAM
-  $bwa_cmd = "${bin_dir}/samtools sort  ${output_dir}/${outfile_prefix}.samse.bam.unsorted ${output_dir}/${outfile_prefix}";
-  run_system_cmd($bwa_cmd);
-  run_system_cmd("rm -f ${output_dir}/${outfile_prefix}.samse.bam.unsorted");
+  #Do this in parallel here in prep for chunk merge and sort in funnel job
+  #This can give the following error output without returning an exit code?!
+  #[bwa_aln_core] 4000000 sequences have been processed.
+  #[samopen] SAM header is present: 194 sequences.
+  #[bam_header_read] EOF marker is absent. The input is probably truncated.
+  #[bam_sort_core] merging from 2 files...
+  #This is actually a known bug and can be ignored
+  #https://github.com/samtools/samtools/issues/18
+  
+  $cmd = "${bin_dir}/samtools sort $unsorted_file ${output_dir}/${outfile_prefix}";
+  warn "Running:\n$cmd\n" if $self->debug;
+  run_system_cmd($cmd);
+
   
   #how are we going to handle samse here?
   #is this generic to all read aligners? nomenclature certainly isn't
@@ -135,10 +145,9 @@ sub run {
   #although we are doing this here, as it is a pre-req for the merge step
   #just drop samse from file name for now, as we only do single end reads at present
   
-  #Remove input last just in case we fail and need the input to rerun
-  #Otherwise we would have to reset all jobs in this fan and redo the split
-  run_system_cmd("rm -f ${input_dir}/${query_file}"); #No fail flag here?
-
+  #To allow rerunning on failure, leave removing inputs to the funnel job
+  warn "Removing:\n$rm_cmd\n" if $self->debug;
+  run_system_cmd($rm_cmd);
   return;
 }
 
