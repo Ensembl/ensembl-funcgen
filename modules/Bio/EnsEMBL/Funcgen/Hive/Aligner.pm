@@ -26,9 +26,9 @@ sub new {
   my $self = {};
   bless $self, $class;
 
-  my ($prog_file, $prog_params, $query_file, $ref_file, $out_dir, $format) =
+  my ($prog_file, $prog_params, $query_file, $ref_file, $out_dir, $format, $debug) =
     rearrange(['PROGRAM_FILE', 'PARAMETERS', 'QUERY_FILE', 
-               'REFERENCE_FILE', 'OUTPUT_DIR', 'OUTPUT_FORMAT'], @_);
+               'REFERENCE_FILE', 'OUTPUT_DIR', 'OUTPUT_FORMAT', 'DEBUG'], @_);
       
   if(! ($prog_file && $query_file && $ref_file)){
     throw("Some mandatory parameters are not met:\n\t".
@@ -93,6 +93,7 @@ sub new {
   $self->{query_file}   = $query_file;
   $self->{parameters}   = defined $prog_params  ? $prog_params : ''; #To avoid warnings
   $self->{ref_file}     = $ref_file;
+  $self->{debug}        = $debug;
   
   return $self;
 }
@@ -103,6 +104,7 @@ sub program_file   { return shift->{program_file};  }
 sub parameters     { return shift->{parameters};    }
 sub output_dir     { return shift->{output_dir};    }
 sub input_dir      { return shift->{input_dir};     }
+sub debug          { return shift->{debug};         }
 #sub output_format  { return shift->{output_format}; }
 
 #abstract methods which muct be defined in the the specific aligner sub class  
