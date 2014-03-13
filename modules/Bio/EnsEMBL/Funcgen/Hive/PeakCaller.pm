@@ -24,7 +24,8 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( is_gzipped         gunzip_file
                                                file_suffix_parse  open_file ); #convert_strand_from_bed
 
 
-#Move this to utils
+my %half_open_formats = (bed => 1);
+
 
 sub new {
   my $class = shift;
@@ -33,10 +34,10 @@ sub new {
 
   my ($prog_file, $prog_params, $align_file, $control_file, 
     $out_dir, $out_file_prefix, $reload, $rerun, $no_load, 
-    $is_half_open, $convert_half_open, $output_format) =
+    $is_half_open, $convert_half_open, $output_format, $debug) =
     rearrange(['PROGRAM_FILE', 'PARAMETERS', 'ALIGN_FILE', 'CONTROL_FILE',
       'OUT_DIR', 'OUT_FILE_PREFIX', 'RELOAD', 'RERUN', 'NO_LOAD', 
-      'IS_HALF_OPEN', 'CONVERT_HALF_OPEN', 'OUTPUT_FORMAT'], @_);
+      'IS_HALF_OPEN', 'CONVERT_HALF_OPEN', 'OUTPUT_FORMAT', 'DEBUG'], @_);
       
  
   #may want to have an empty string for the params
@@ -54,13 +55,15 @@ sub new {
     throw("Program file does not exist or is not a file:\n$prog_file");  
   }
 
-
   if(! defined $control_file){
     warn "Running $prog_file without and control file\n"; #omit this warn? 
   }
  
-
-  #pass helper here for debug/log?
+  
+  if((! defined $is_half_open) && 
+    exists $half_open_formats{$output_format}){
+    $is_half_open = $half_open_formats{$output_format};   
+  }
   
   
   $self->{control_file}      = $control_file; 
@@ -72,6 +75,7 @@ sub new {
   $self->{output_format}     = $output_format;
   $self->{is_half_open}      = $is_half_open;
   $self->{convert_half_open} = $convert_half_open;
+  $self->{debug}             = $debug;
   
   #Init files here, so the output file is still available even if we don't run
   #i.e. for reloading
@@ -126,19 +130,20 @@ sub init_files {
   return $self->{file_info};
 }
 
-sub file_info         { return $_[0]->{file_info};         }
-sub control_file      { return $_[0]->{control_file};      }
-sub align_file        { return $_[0]->{align_file};        }
-sub program_file      { return $_[0]->{program_file};      }
-sub parameters        { return $_[0]->{parameters};        }
-sub out_dir           { return $_[0]->{out_dir};           }
-sub out_file_prefix   { return $_[0]->{out_file_prefix};   }
-sub output_format     { return $_[0]->{output_format};     }
-sub out_file          { return $_[0]->{out_file};          }
-sub out_file_handle   { return $_[0]->{out_file_handle};   }
-sub out_file_header   { return $_[0]->{out_file_header};   } 
-sub is_half_open      { return $_[0]->{is_half_open};      }
-sub convert_half_open { return $_[0]->{convert_half_open}; }   
+sub file_info         { return shift->{file_info};         }
+sub control_file      { return shift->{control_file};      }
+sub align_file        { return shift->{align_file};        }
+sub program_file      { return shift->{program_file};      }
+sub parameters        { return shift->{parameters};        }
+sub out_dir           { return shift->{out_dir};           }
+sub out_file_prefix   { return shift->{out_file_prefix};   }
+sub output_format     { return shift->{output_format};     }
+sub out_file          { return shift->{out_file};          }
+sub out_file_handle   { return shift->{out_file_handle};   }
+sub out_file_header   { return shift->{out_file_header};   } 
+sub is_half_open      { return shift->{is_half_open};      }
+sub convert_half_open { return shift->{convert_half_open}; }   
+sub debug             { return shift->{debug};             }   
 
   
 #File parsing and DB loading may be polluting this PeakCaller code
