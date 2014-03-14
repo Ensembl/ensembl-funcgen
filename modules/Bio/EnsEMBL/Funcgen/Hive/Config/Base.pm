@@ -205,6 +205,11 @@ sub default_options {
     #How is password not throwing and error as we don't have ENSADMIN_PSW set in the env?
 
     verbose => undef,
+    #no_tidy => undef, #todo implement no_tidy
+    #Set this to stop the pipeline removing intermediates
+    #which maybe required for rerunning certain jobs
+    #leaving this unset greatly reduces the running footprint of the pipeline
+    #This is useful for debugging
    };
 }
 
@@ -219,44 +224,22 @@ sub default_options {
 sub resource_classes {
   my ($self) = @_;
   return 
-    {
-      
-      #todo add in lsf group spec here to top LSF warning output
-      #todo pass DB_HOST_LSFNAME as param
-      
-     #Use this section when running on Sanger Farm2
-  #   default                 => { 'LSF' => '' },    
-  #   urgent                  => { 'LSF' => '-q yesterday' },
-  #   normal_monitored        => { 'LSF' => " -R\"select[$ENV{DB_HOST_LSFNAME}<1000] ".
-  #                                          "rusage[$ENV{DB_HOST_LSFNAME}=10:duration=10:decay=1]\"" },
-  #   normal_high_mem         => { 'LSF' => ' -M5000000 -R"select[mem>5000] rusage[mem=5000]"' },
-  #   long_monitored          => { 'LSF' => "-q long -R\"select[$ENV{DB_HOST_LSFNAME}<1000] ".
-  #                                          "rusage[$ENV{DB_HOST_LSFNAME}=10:duration=10:decay=1]\"" },
-  #   long_high_mem           => { 'LSF' => '-q long -M4000000 -R"select[mem>4000] rusage[mem=4000]"' },
-  #   long_monitored_high_mem => { 'LSF' => "-q long -M4000000 -R\"select[$ENV{DB_HOST_LSFNAME}<1000 && mem>4000]".
-  #                                              " rusage[$ENV{DB_HOST_LSFNAME}=10:duration=10:decay=1,mem=4000]\"" },
-
-  
-     #Use this section when running on Sanger Farm3
+    {#todo add in lsf group spec here to top LSF warning output
+     #todo pass DB_HOST_LSFNAME as param
+     
      default                 => { 'LSF' => '' },    
      urgent                  => { 'LSF' => '-q yesterday' },
      normal_2GB              => { 'LSF' => ' -M2000 -R"select[mem>2000] rusage[mem=2000]"' },
      normal_monitored        => { 'LSF' => " -R\"select[$ENV{DB_HOST_LSFNAME}<1000] ".
                                             "rusage[$ENV{DB_HOST_LSFNAME}=10:duration=10:decay=1]\"" },
      normal_high_mem         => { 'LSF' => ' -M5000 -R"select[mem>5000] rusage[mem=5000]"' },
+     normal_high_mem_2cpu    => { 'LSF' => ' -n2 -M5000 -R"select[mem>5000] rusage[mem=5000] span[hosts=1]"' },
+     normal_10gb             => { 'LSF' => ' -M10000 -R"select[mem>10000] rusage[mem=10000]"' },
      long_monitored          => { 'LSF' => "-q long -R\"select[$ENV{DB_HOST_LSFNAME}<1000] ".
                                             "rusage[$ENV{DB_HOST_LSFNAME}=10:duration=10:decay=1]\"" },
      long_high_mem           => { 'LSF' => '-q long -M4000 -R"select[mem>4000] rusage[mem=4000]"' },
      long_monitored_high_mem => { 'LSF' => "-q long -M4000 -R\"select[$ENV{DB_HOST_LSFNAME}<1000 && mem>4000]".
                                                 " rusage[$ENV{DB_HOST_LSFNAME}=10:duration=10:decay=1,mem=4000]\"" },
-
-    
-
-
-     #Use this section when running on EBI cluster???
-     #    0 => { -desc => 'default',          'LSF' => '' },
-     #    1 => { -desc => 'long_high_mem',      'LSF' => '-M5000 -R"select[mem>5000] rusage[mem=5000]"' },
-     #    2 => { -desc => 'normal_high_memory',    'LSF' => '-M5000 -R"select[mem>5000] rusage[mem=5000]"' },
     };
 }
 
@@ -285,6 +268,7 @@ sub pipeline_wide_parameters {
   return {
     %{$self->SUPER::pipeline_wide_parameters},  # inheriting pipeline_name(not any more)
     pipeline_name => $self->o('pipeline_name'),
+    
     
     
     #Will need to catch as mandatory params in fetch input where required
@@ -350,7 +334,17 @@ sub pipeline_wide_parameters {
                                  #is this already available in the job, or is it just passed ot the worker?
                     ],
     
-      
+    #This should really only ever be defined
+    #when running in debug mode, but here for clarity.
+    #This will not be passed as a param, so would either need to reseed the job
+    #or pass no_tidy as the debug level
+    #we could translate that to a real debug level via a hash in Base
+    #not_tidy, no_tidy_2, no_tidy_3
+    #This would work really nicely, but the hive code currently barfs as it expects a number
+    #Will have to reseed job instead!
+    #Currently only implemented in:
+    #MergeQCAlignements - to maintain fastq and bam chunk files
+    #no_tidy => $self->o('no_tidy'),  
   };
 }
 
