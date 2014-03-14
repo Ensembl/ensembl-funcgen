@@ -1748,9 +1748,13 @@ sub check_analysis_can_run{
 
 #species and assembly are set in _set_outdb
 
+#These a gender specific rather than just using the male superset(inc Y) as there
+#can be other gender specific (X or Y) unassembled top level seqs (contigs, scaffolds etc)
+
+
 sub sam_ref_fai {
-  my $self   = shift;
-  my $gender = shift; 
+  my $self        = shift;
+  my $gender      = shift; 
   
   if(! defined $self->param_silent('sam_ref_fai')){
 
@@ -1765,21 +1769,20 @@ sub sam_ref_fai {
     
     my $file_name = $self->species.'_'.$gender.'_'.$self->assembly.'_unmasked.fasta.fai';
     my $sam_ref_fai = validate_path([$self->data_root_dir,
-                                    'sam_header',
+                                     'sam_header',
                                     $self->species,
                                     $file_name]);
-     
     $self->param('sam_ref_fai', $sam_ref_fai);
   }
   
   return $self->param('sam_ref_fai');
 }
 
-#merge these two subs
+#merge these two methods?
 
 sub sam_header{
-  my $self   = shift;
-  my $gender = shift; 
+  my $self        = shift;
+  my $gender      = shift; 
   
   if(! defined $self->param_silent('sam_header')){
   
@@ -1791,11 +1794,11 @@ sub sam_header{
         'specific in the config');
       }
     }
-    
-    my $sam_header = join('/', ($self->param_required('data_root_dir'),
-                                 'sam_header',
-                                 $self->species,
-                                 $self->species.'_'.$gender.'_'.$self->assembly.'_unmasked.header.sam'));
+    my $file_name = $self->species.'_'.$gender.'_'.$self->assembly.'_unmasked.header.sam';
+    my $sam_header = validate_path([$self->data_root_dir,
+                                    'sam_header',
+                                    $self->species,
+                                    $file_name]);
     $self->set_param_method('sam_header', $sam_header);
   }
   
