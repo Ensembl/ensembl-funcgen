@@ -94,7 +94,8 @@ sub pipeline_wide_parameters {
   return 
    {
     %{$self->SUPER::pipeline_wide_parameters}, 
-    can_DefineMergedDataSet => 1, 
+    can_DefineMergedDataSet => 'DefineMergedDataSets',
+    #Set to the config name so the configure_pipeline script knows to reset these jobs  
    };
 }
 
@@ -146,26 +147,11 @@ sub pipeline_analyses {
   my $self = shift;
 
   return [
-    {
-     -logic_name => 'IdentifyMergedResultSets',
-	 -module     => 'Bio::EnsEMBL::Funcgen::Hive::IdentifySetInputs',	  
-	 -meadow_type => 'LOCAL',#should always be uppercase
-	  
-	 #general parameters to pass to all jobs, use_tracking_db?
-	 -parameters => {set_type        => 'ResultSet',
-	                 #These are similar to batch_params but only flow
-	                 #to the next analysis
-	                 },
-	                 #dataflow_param_names => ['recover']}, 
-	                 #this is redundant as it is a batch_param_name!
-
-	  	  
-	  	  
-  	  #Do we need to change the param names here?
-  	  #When we merge confs, this will mean that
-  	  #subsequent IdentifySetInputs job will get all the params
-  	  #from the original init?
-  	  #are the input_ids ignored when we merge? omitted
+   {
+    -logic_name => 'IdentifyMergedResultSets',
+	  -module     => 'Bio::EnsEMBL::Funcgen::Hive::IdentifySetInputs',	  
+	  -meadow_type => 'LOCAL',#should always be uppercase
+	  -parameters => {set_type        => 'ResultSet'},
 	  	  
   	 #These are always created, even if we have used analysis_top_up
   	 #hence at the start of the next conf, we will get input_ids which are data flown
@@ -238,11 +224,11 @@ sub pipeline_analyses {
       #This would also wait for Collections! So we would have to detach that analysis somehow
       #or split DefineOutputSet into DefineReplicateOutputSet and DefineOutputSet
       #VERY COMPLICATED!!!
-      
+     #We don't care about these failing, as we expect them too
       },
 	
 	   
-	
+       -failed_job_tolerance => 100, 
 			 
 	  -analysis_capacity => 10,
       -rc_name => 'default',
