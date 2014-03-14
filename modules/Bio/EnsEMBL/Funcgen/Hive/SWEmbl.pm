@@ -38,7 +38,7 @@ sub new {
   #specify -output_format default first, so it can be over-ridden?
   my $self   = $class->SUPER::new(-output_format => 'bed', -is_half_open => 1, @_);
   
-  return;
+  return $self;
 }
 
 #todo SWEmbl handles gzipped file, so just use is_gzipped and pass -z
