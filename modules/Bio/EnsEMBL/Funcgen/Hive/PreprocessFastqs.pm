@@ -144,7 +144,7 @@ sub run {
   #if we are forcing or rolling back, then we should probably redo everything
   
   if($run_controls){
-    my $exp = $self->get_control_InputSubset($rset);
+    my $exp = $self->get_control_InputSubset($rset)->experiment;
     
     if($exp->has_status('ALIGNED_CONTROL')){
       throw("Need to implement force/recover_control_alignment. Found ALIGNED_CONTROL ResultSet:\t".
@@ -319,6 +319,7 @@ sub run {
   #some intermediate files also seem to be missing, so we have 0000 and 0002 but not 0001
   #Sort and check highest value
   #$self->run_system_cmd_no_retry($cmd);
+  $self->helper->debug(1, "Running chunk command:\n$cmd");
   my @split_stdout = run_backtick_cmd($cmd);
   (my $final_file = $split_stdout[-1]) =~ s/creating file \`(.*)\'/$1/;
   
