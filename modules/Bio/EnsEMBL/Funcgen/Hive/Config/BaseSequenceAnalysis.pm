@@ -9,7 +9,6 @@ use base qw(Bio::EnsEMBL::Funcgen::Hive::Config::BaseDB);
 
 # All Hive databases configuration files should inherit from HiveGeneric, directly or indirectly
 
-
 =head2 default_options
 
     Description : Implements default_options() interface method of 
@@ -126,7 +125,11 @@ sub default_options {
     #  '5mC'                  => $self->o('default_5mC'),
     # },   
  
-    'control_feature' => 'WCE', #was in Peaks.pm but needed for ReadAlignments 
+    'control_feature_types' => ['Goat-IgG', 'Rabbit-IgG', 'WCE'], 
+                     #was in Peaks.pm but needed for ReadAlignments 
+    #Only needed for IdentifyInputSubsets, which does the control association
+    #Move this to ReadAlignments as we don't need it for Peaks at all?
+    
     
     #'idr_analysis' => '', 
     
@@ -170,9 +173,11 @@ sub pipeline_wide_parameters {
   return 
    {
     %{$self->SUPER::pipeline_wide_parameters}, 
-    'control_feature'          => $self->o('control_feature'), #from Peaks but needed for RunAlignments   
-    #'idr_analysis'             => $self->o('idr_analysis'),
+    'control_feature_types'    => $self->o('control_feature_types'),    
+    #'idr_analysis'            => $self->o('idr_analysis'),
     'broad_peak_feature_types' => $self->o('broad_peak_feature_types'), 
+    
+    
     'checksum_optional'        => $self->o('checksum_optional'),
     #DefineResultSets currently requires this in ReadAlignments, but may be able to change that
   
@@ -259,7 +264,8 @@ sub pipeline_wide_parameters {
         
         'indexed_ref_fasta',   
         'idr_analysis', #Not currently used as this is done outside of the DB
-        'max_peaks',        
+        'max_peaks',
+        'checksum_optional'        
       ],      
     };
 }
