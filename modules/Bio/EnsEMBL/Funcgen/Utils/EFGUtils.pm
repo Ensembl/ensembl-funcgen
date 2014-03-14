@@ -1855,7 +1855,7 @@ sub process_sam_bam {
   #UNCOMMENT
   #warn "COMMENTED OUT _validate_sam_header_fai";
   #We need an allow no header option
-  my $fasta_fai_opt = validate_sam_header_fai($in_file, $fasta_fai);
+  my $fasta_fai_opt = validate_sam_header($in_file, $fasta_fai);
   #my $fasta_fai_opt ='';
 
   my $cmd = "samtools view -h${in_flag} $fasta_fai_opt $in_file "; # Incorporate header into file
