@@ -143,7 +143,7 @@ sub run {
   #if we are recovering, we want the bam file (given the reps are the same)
   #if we are forcing or rolling back, then we should probably redo everything
   
-  if($self->run_controls){
+  if($run_controls){
     my $exp = $self->get_control_InputSubset($rset);
     
     if($exp->has_status('ALIGNED_CONTROL')){
@@ -158,8 +158,23 @@ sub run {
   
   my @fastqs;
   my $throw = '';
+  my $set_rep_suffix = '';
+  my @issets = @{$rset->get_support('input_subset')};
   
-  foreach my $isset(@{$rset->get_support('input_subset')}){
+  if((! $run_controls) && (! $merge) &&
+    ($self->is_idr_feature_type($rset->feature_type))){
+  
+    if(scalar(@issets) != 1){
+      $self->throw_no_retry('Expected 1 InputSubset(replicate) for IDR ResultSet '.
+        $rset->name.' but found '.scalar(@issets).' Specify merge, or restrict to 1 InputSubset');  
+    }
+    
+    $set_rep_suffix = '_TR'.$issets[0]->replicate;
+      
+  }
+  
+  
+  foreach my $isset(@issets){
 
     if(($isset->is_control && ! $run_controls) ||
        ($run_controls && ! $isset->is_control)){
@@ -286,8 +301,7 @@ sub run {
   
   #Pass $run_controls, as they may not be from this experiment/study, 
   #hence will need to look at the InputSubset
-  my $set_prefix = $self->get_set_prefix_from_Set($rset, $run_controls);
-         
+  my $set_prefix = $self->get_set_prefix_from_Set($rset, $run_controls).$set_rep_suffix;        
 
   #For safety, clean away any that match the prefix
   #todo, check that split append an underscore
