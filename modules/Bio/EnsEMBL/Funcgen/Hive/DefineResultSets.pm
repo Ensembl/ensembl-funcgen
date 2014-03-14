@@ -229,7 +229,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
         $control_branch = '' 
     }
     else{
-      #Put these two call righ tnext to each other to minimize 
+      #Put these two call right next to each other to minimize 
       #chance of race condition with a parallel job.
       
       if($exp->has_status('ALIGNING_CONTROL')){
@@ -239,7 +239,10 @@ sub run {   # Check parameters and do appropriate database/file operations...
           "\nPlease wait until ".$exp->name.' has the ALIGNED_CONTROL status before resubmitting this job');
       }
       
-      $exp->adaptor->store_status('ALIGNING_CONTROL', $exp);  
+      $exp->adaptor->store_status('ALIGNING_CONTROL', $exp); 
+      
+      #todo check success of this in case another job has pipped us
+       
     }  
   }
                                              
