@@ -35,13 +35,26 @@ use base qw( Bio::EnsEMBL::Funcgen::Hive::Aligner );#Does not import
 #to be free before we get a slot
 #maybe try -t 2?
 
-#sub new {
-#  my $caller = shift;
-#  my $class = ref($caller) || $caller;
-#  my $self = $class->SUPER::new(@_);  
-#  return;
-#}
+sub new {
+  my $caller      = shift;
+  my $class       = ref($caller) || $caller;
+  my $self        = $class->SUPER::new(@_);
+  my ($fasta_fai) = rearrange(['SAM_REF_FAI'], @_);
+  
+  if(! defined $fasta_fai) {
+    throw('BWA requires a -sam_ref_fai file to add a header to the output');   
+  }
+  elsif(! -f $fasta_fai){
+    throw("-sam_ref_fai parameter does not exist or is not a file:\n".$fasta_fai);
+  }
+  
+  $self->{sam_ref_fai} = $fasta_fai; 
+  
+  warn "Created ".$self if $self->debug;
+  return $self;
+}
 
+sub sam_ref_fai { return shift->{sam_ref_fai}; }
 
 
 #todo handle bwa dir ans samtools dir better
@@ -60,6 +73,7 @@ sub run {
   my $output_dir  = $self->output_dir;
   my $ref_file    = $self->reference_file;
   my $bwa_bin     = $self->program_file;
+  my $fasta_fai   = $self->sam_ref_fai;
   my $bin_dir     = '';
   
   if($bwa_bin =~ /\//o){
@@ -119,7 +133,11 @@ sub run {
   #-u output is uncompressed bam, prefered for piping to other samtools cmds, although this has been shown to
   #be fragile, hence we have split the cmds up here
   #-h include header in output
-  $cmd = "${bin_dir}/samtools view -uhS $samse_file > $unsorted_file"; 
+  
+  #This won't have a header output, as bwa samse doesn't output one!!!!!
+  #so we need to add the fai file
+  
+  $cmd = "${bin_dir}/samtools view -t $fasta_fai -uhS $samse_file > $unsorted_file"; 
   warn "Running:\n$cmd\n" if $self->debug;
   run_system_cmd($cmd);
   
