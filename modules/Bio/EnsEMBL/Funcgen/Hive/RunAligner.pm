@@ -39,10 +39,23 @@ package Bio::EnsEMBL::Funcgen::Hive::RunAligner;
 use warnings;
 use strict;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
-#todo make this independant of ResultSet?
+  #We need a list of Aligner specific param requirements which are not specified
+  #in $analysis->parameters
+  #bwa_index_root, gender, assembly fasta_fai
+  #How are we going to genericise these?
+  #We can't specify ResultSet->cell_type->gender
+  #and we don't want to tie the aligner to use of a ResultSet
+  #Can we make these co-optional in the constructor?
+  #i.e. we can pass gender 
 
+#Some of these are depeandant on the gender being used
+#so we need a method to generate the relevant 
+  
+#TODO Can we make this independant of ResultSet
+#by passing all params it needs.  
 
 sub fetch_input {   # fetch parameters...
   my $self = shift;
@@ -51,22 +64,9 @@ sub fetch_input {   # fetch parameters...
   my $rset       = $self->fetch_Set_input('ResultSet');
   my $fastq_file = $self->get_param_method('fastq_file', 'required');
 
-
-
-  #We need a list of Aligner specific param requirements which are not specified
-  #in $analysis->parameters
-  #bwa_index_root, gender, assembly
-  #How are we going to genericise these?
-  #We can't specify ResultSet->cell_type->gender
-  #and we don't want to tie the aligner to use of a ResultSet
-  #Can we make these co-optional in the constructor?
-  #i.e. we can pass gender or a ResultSet?
-
-  $self->get_param_method('output_dir', 'required'); 
-  #This should have been set to a 'work' dir in MergeChunkResultSetFastqs
-  
-  #Do we even need this? The fastq chunks will already be in a work dir?
-  
+  #$self->get_param_method('output_dir', 'required'); 
+  #This should have been set to a 'work' dir in PreprocessFastqs 
+  #Do we even need this? The fastq chunks will already be in a work dir?  
 
   my $analysis     = $rset->analysis;
   my $align_module = $self->validate_package_from_path($analysis->module);
@@ -74,43 +74,22 @@ sub fetch_input {   # fetch parameters...
     throw('Aligner analysis cannot have an undef program attribute:'.$analysis->logic_name);
   $self->set_param_method('aligner', $aligner); 
 
-  
-  #my %aligner_reqs;  
-  #foreach my $req(@{$align_module->required_parameters}){
-   
-  #  if(! $self->can($req)){
-  #    throw("Could not call method for $aligner aligner creation:\t".$req);
-  #  }
-  #  else{
-  #    $aligner_reqs{"-${req}"} = $self->$req;
-  #  }    
-  #}
-
-
-
   #validate program_file isn't a path?
   #would redefine bwa bin in the config for this analysis
   #this will change the bin_dir for everything else too, but we don't use bin_dir for anything else here 
-  
   my $pfile = $analysis->program_file;
   throw('Analysis '.$analysis->logic_name.' must have a program_file defined') if ! defined $pfile; 
   my $pfile_path = ( defined $self->bin_dir ) ? $self->bin_dir.'/'.$pfile : $pfile;
-  
-  #indexed_ref_fasta is batch flown (assuming all aligners will have indexed the ref fasta) 
-  #indexes should be in the same locations, and this fasta will actually be a soft link 
-  #to prevent  reundant/out of sync ref fasta files
   my $ref_fasta;
    
   if(! defined $self->param_silent('indexed_ref_fasta')){ #This is batch flown
     my $gender         = $rset->cell_type->gender || 'male';
     my $species        = $self->species; 
   
-    #TODO: Maybe check if the index file is really there? Eventually the bwa output will tell you though
-  
+    #TODO: Check if the index file is really there? Eventually the bwa output will tell you though
     #index file suffix may change between aligners
     #best to pass just the target file, index root dir, species, gender
     #and let the Aligner construct the appropriate index file
-  
   
     $ref_fasta = join('/', ($self->param_required('data_root_dir'),
                             $aligner.'_indexes',
@@ -118,21 +97,43 @@ sub fetch_input {   # fetch parameters...
                             $species.'_'.$gender.'_'.$self->assembly.'_unmasked.fasta'));
   }
 
+  my $aligner_methods = $self->get_param_method('aligner_param_methods', 'silent');
+  my %aparams;
 
+  if($aligner_methods){
+    assert_ref($aligner_methods, 'ARRAY', 'aligner_param_methods');
+    
+    foreach my $method(@$aligner_methods){
+      
+      if(! $self->can($method)){
+        #This must be a param we haven't seen yet 
+        $aparams{'-'.$method} = $self->param_required($method);  
+      }
+      else{
+        #We have a method which may build this param dynamically
+        $aparams{'-'.$method} = $self->$method;   
+      }  
+
+      $self->helper->debug(1, "Setting $method aligner parameter:\t".$aparams{'-'.$method});
+    }
+  }
   
-
+  
+  $self->helper->debug(1, "Creating aligner:\t".$align_module); 
+  
   my $align_runnable = $align_module->new
-   (
-    -program_file      => $pfile_path,
-    -parameters        => $analysis->parameters,
+   (-program_file      => $pfile_path,
+    -parameters        => $analysis->parameters, 
     -query_file        => $fastq_file,
     -reference_file    => $ref_fasta,
+    -debug             => $self->debug,
+    %aparams                                    );
+    
     #-output_dir        =>   
-   # %aligner_reqs
-   );
    
+   
+  $self->helper->debug(1, "Setting aligner:\t".$align_runnable); 
   $self->set_param_method('aligner', $align_runnable); 
-  
   return;
 }
 
@@ -141,18 +142,18 @@ sub run {
   my $self = shift;
   
   eval { $self->aligner->run };
-  my $err = $@ 
-   
+  my $err = $@; 
+  
   if($err){
     $self->throw_no_retry('Failed to call run on '.ref($self->aligner).":\n$err"); 
   }
   
+  $self->debug(1, "Finished running ".ref($self->aligner));
   return;
 }
 
 
 sub write_output {  # Nothing to write
-  #my $self = shift;
   return;
 }
 
