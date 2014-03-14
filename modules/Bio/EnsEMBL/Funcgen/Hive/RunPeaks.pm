@@ -168,8 +168,9 @@ sub fetch_input {
     -convert_half_open => 1,
 
     #todo change this to separate flags, reload will take priority over retry?
-    -is_half_open => $self->param_silent('is_half_open') ||
-      0,    #default to closed coords
+    -is_half_open => $self->param_silent('is_half_open') || 0,    #default to closed coords
+    -debug             => $self->debug,
+  
   );
 
   #How are we going to support filtered and unfiltered feature/data_set here?
