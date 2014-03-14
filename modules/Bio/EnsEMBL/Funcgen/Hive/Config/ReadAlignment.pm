@@ -63,6 +63,7 @@ sub default_options {
       #Size of each sequence chunk to be aligned (nbr of reads * 4)
       fastq_chunk_size      => 16000000, #This should run in 30min-1h
       alignment_analysis    => 'bwa_samse',
+      bwa_samse_param_methods     => ['sam_ref_fai'],
       
       #Use the same set up as for the peak caller wrt conditionaly data flowing
       
@@ -112,14 +113,16 @@ sub pipeline_wide_parameters {
       #get new versions of bwa in /software/ensembl/bin/bwa? Hardened bwa?
      
       #Size of each sequence chunk to be aligned (nbr of reads * 4)
-      fastq_chunk_size    => $self->o('fastq_chunk_size'),   #Change to batch specific
-      alignment_analysis  => $self->o('alignment_analysis'), #Nope we may want this to be batch specific!
+      fastq_chunk_size      => $self->o('fastq_chunk_size'),   #Change to batch specific
+      alignment_analysis    => $self->o('alignment_analysis'), #Nope we may want this to be batch specific!
+      aligner_param_methods => $self->o('alignment_analysis').'_param_methods',
       
       #This is stricly not required anymore as we use the local_url from the tracking tables
       fastq_root_dir      => $self->o('fastq_root_dir'),
       #This will should be set to one in downstream config 
-      can_DefineMergedDataSet    => 0,
-      can_DefineReplicateDataSet => 0,  
+      can_PreprocessIDR              => 0,
+      can_run_SWEmbl_R0005_replicate => 0,  
+      can_DefineMergedDataSet       => 0,
     };
 }
 
@@ -173,6 +176,8 @@ sub pipeline_analyses {
       },
      -analysis_capacity => 1, #For safety, and can only run 1 LOCAL?
      -rc_name => 'default',   #NA as LOCAL?
+     -failed_job_tolerance => 100, 
+     #We don't care about these failing, as we expect them too
     },
   
   
@@ -222,11 +227,7 @@ sub pipeline_analyses {
      #Inputs are either:
      #1 A set of controls and a series of InputSubset batches(replicates) which share the control
      #2 A series of unrelated InputSubset batches(replicates) which have no controls
-    -parameters => 
-     {dataflow_param_names => ['no_idr'],#this is now batch flowed as we need it in DefineMergedOutputSet????
-      #branch_config        => $self->o('alignment_branches'), 
-      #branch_key_param     => 'alignment_analysis', #This is not a generic analysis, so we don't need this
-     },
+    -parameters => {dataflow_param_names => ['no_idr']},#this is now batch flowed as we need it in DefineMergedOutputSet????
     -flow_into => 
      {#Needs to know about -no_idr and default_broad_peak_feature_types so it can flow correctly
       #To get broad_peak feature types to run IDR you would have to unset broad_peak_feature_types
@@ -273,10 +274,14 @@ sub pipeline_analyses {
      -rc_name           => 'default', #NA as LOCAL?
     },
   
-   
+    ### PREPROCESS ANALYSES ###
+    #Currently averaging ~22mins
+    #But this depends entirely on the number and size of the reps in the control
+    
     {-logic_name => 'Preprocess_bwa_samse_control',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::PreprocessFastqs',
-     #-parameters => {run_controls => 1}, #This is now implicit with the flow of signal result_set_groups
+     #-parameters => {run_controls => 1}, #This is now implicit with the flow of signal 'result_set_groups'
+     #rename this to control_set_groups or something more obvious?
      -flow_into => 
       {
        '2->A' => ['Run_bwa_samse_control_chunk'],
@@ -284,46 +289,10 @@ sub pipeline_analyses {
        },
      -batch_size => 1, #max parallelisation???
      -analysis_capacity => 200,
-     -rc_name => 'normal_high_mem',
-    }, 
+     -rc_name => 'normal_high_mem'}, 
  
  
-    {-logic_name => 'Run_bwa_samse_control_chunk',
-     -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunAligner',
-     -batch_size => 1, #max parallelisation???
-     -analysis_capacity => 200,
-     -rc_name => 'normal_high_mem',
-    }, 
- 
- 
-    #We could have had just 1 merge analysis
-    #but this would have meant selective data flow
-    #for each instance. This is more flexible, and requires less hardcording
-    #we still need branch config here to handle the aligners dynamically
-    #we will never use the control branch(2) in AlignmentQC, so we re-use this
-    #for DataSet params dataflow
-    #This also prevents the issue of assinging an arbitrary much higher branch number 
-    #to avoid clashes with any new aligner config which might be added 
-    #to alignment_branches
- 
-   #If there is no branch_config, then we jsut default to 
-     #flow the DataSet params
-     #else we will flow the Preprocess and ReplicateFactory aligner jobs dynamically
-     #using the alignment_branches config
-     #This approach is implicit and may get broken if alignment_branches
-     #ever get batch flowed or movbed to pipeline_wide?
-     #hence it would be safer to set a flow mode
-     #
-         #How do we fail QC without failing the job?
-     #Need to update a QC report table   
-     
-                
-     
-
- 
- 
-    {
-     -logic_name => 'Preprocess_bwa_samse_merged',
+     {-logic_name => 'Preprocess_bwa_samse_merged',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::PreprocessFastqs',
      -parameters => {merge => 1},
      -flow_into => 
@@ -331,74 +300,86 @@ sub pipeline_analyses {
        '2->A' => ['Run_bwa_samse_merged_chunk'], 
        'A->3' => [ 'MergeAlignments_and_QC' ], #This is in Peaks.pm conf   
        },
-
      -batch_size => 1, #max parallelisation???
      -analysis_capacity => 200,
-     -rc_name => 'normal_high_mem',
-    },
-     
-    {
-     -logic_name => 'Run_bwa_samse_merged_chunk',
-     -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunAligner',
-     -batch_size => 1, #max parallelisation???
-     -analysis_capacity => 200,
-     -rc_name => 'normal_high_mem',
-    },
-
-
- 
-
-    {
-     -logic_name => 'Preprocess_bwa_samse_replicate',
+     -rc_name => 'normal_high_mem'},
+   
+    
+     {-logic_name => 'Preprocess_bwa_samse_replicate',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::PreprocessFastqs',
      #-parameters => { },
-   
      -flow_into => 
       {
        '2->A' => ['Run_bwa_samse_replicate_chunk'], 
        'A->3' => [ 'MergeReplicateAlignments_and_QC' ],
        },
-
      -batch_size => 1, #max parallelisation???
      -analysis_capacity => 200,
-     -rc_name => 'normal_high_mem',
-    },
+     -rc_name => 'normal_high_mem'},
   
+    
+    ### RUN BWA ANALYSES ###
+    #These are currently averaging ~35mins, so can probably up to batch_size 2 to reduce submission time?
+    #Although this will just throttle this step to 70mins, regardless of load
+    #if we maintain it at 1, then all the analysis capacity will be used
+    #meaning batching will effectively be done by the workers, which will probably take little time
+    #to be submitted, but we suffer from this anyway.
 
-
-    {
-     -logic_name => 'Run_bwa_samse_replicate_chunk',
+    {-logic_name => 'Run_bwa_samse_control_chunk',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunAligner',
-     # These jobs can be run in parallell... don't put too many since it may generate many jobs...jobs
+     -batch_size => 1, #max parallelisation???
+     -analysis_capacity => 1000,
+     -rc_name => 'normal_10gb'}, 
+    
+    {-logic_name => 'Run_bwa_samse_merged_chunk',
+     -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunAligner',
+     -batch_size => 1, #max parallelisation???
+     -analysis_capacity => 1000,
+     -rc_name => 'normal_10gb'},
+
+    {-logic_name => 'Run_bwa_samse_replicate_chunk',
+     -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunAligner',
+     # These jobs can be run in parallell... don't put too many since it may generate many jobs...jobs!
      #-limit => 1,#what is this?
      -batch_size => 1, #max parallelisation? Although probably want to up this so we don't hit pending time
-     -analysis_capacity => 200,
-     -rc_name => 'normal_high_mem',
-     
-       -flow_into => {
-       #Flow this directly into IdentifyInputSets
-       #or can we flow into DefineOutputsets and skip IdentifyInputSets?
-       
-       #Do we need wrap up alignment?
-
-      #  '2' => [ 'DefineReplicateDataSet' ],
-       
-     
-        #This will be conditional on -no_idr and presence of 
-        #feature type name/class in permissive_feature_set_analyses
-        
-       },
-     
-    },
-
+     -analysis_capacity => 1000,
+     -rc_name => 'normal_10gb'},
+ 
   
-    #These flow_mode params could alternatively be flowed explicitly from the 
-    #various ProcessFastqs jobs
-    #Leave it here for no
+    ### MERGE ANALYSES ###
+    #These all use 2cpus as there use a double piped samtools command
+    #which runs 3 samtools processes. 2cpus was the suggestion of ISG based on
+    #the output of their monitoring programs
+    #It may be safer and quicker to schedule if these we broken down into individual
+    #processes. But this would increase footprint and require tidy up.
+     
+    #flow_mode could alternatively be flowed from the ProcessFastqs jobs
+    #Leave it here for now
+    
+    #We could have had just 1 merge analysis but this would have meant selective data flow
+    #for each instance. This is more flexible, and requires less hardcording.
+    #We still need branch config here to handle the aligners dynamically
+    #We will never use the control branch(2) in AlignmentQC, 
+    #This is reserved for DefineDataSet params dataflow
+    #This also prevents the issue of assinging an arbitrary much higher branch number 
+    #to avoid clashes with any new aligner branches which might be added
+ 
+    #If there is no branch_config, then we just default to flow the DataSet params
+    #else we will flow the Preprocess and ReplicateFactory aligner jobs dynamically
+    #using the alignment_branches config
+    #This approach is implicit and may get broken if alignment_branches     #ever get batch flowed or movbed to pipeline_wide?
+     #hence it would be safer to set a flow mod
+     #
+         #How do we fail QC without failing the job?
+     #Need to update a QC report table   
+     
+               
      
     {-logic_name => 'MergeControlAlignments_and_QC',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::MergeQCAlignments',
      -parameters => {flow_mode => 'signal'},
+     #actually, this can be inferred from the presence of result_set_groups
+     #which is only set in PreprocessFastqs if run_controls is set
      
      #Flow to the signal alignment analyses (as we have now done the control pre-requisite).                  
      -flow_into => 
@@ -411,9 +392,9 @@ sub pipeline_analyses {
        '10'    => ['Preprocess_bwa_samse_merged'],   
        '11->A' => ['Preprocess_bwa_samse_replicate'],
        },
-     -batch_size => 1, #max parallelisation???
+     -batch_size => 1, #max parallelisation
      -analysis_capacity => 200,
-     -rc_name => 'normal_high_mem',
+     -rc_name => 'normal_high_mem_2cpu',
     }, 
 
  
@@ -421,21 +402,24 @@ sub pipeline_analyses {
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::MergeQCAlignments',
      -parameters => {flow_mode => 'merged'},
      -flow_into => { 2 => ['DefineMergedDataSet']},
-     -batch_size => 1, #max parallelisation???
+     -batch_size => 1, #max parallelisation
      -analysis_capacity => 200,
-     -rc_name => 'normal_high_mem',
+     -rc_name => 'normal_high_mem_2cpu',
     }, 
  
  
     {-logic_name => 'MergeReplicateAlignments_and_QC',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::MergeQCAlignments',
-     -parameters => {flow_mode => 'replicate'},
-     #-flow_into => {'2' => ['DefineReplicateDataSet']},
+     -parameters => 
+      {flow_mode => 'replicate', 
+       permissive_peaks         => $self->o('permissive_peaks')},
+       #make permissive_peaks pipeline wide and remove from here?
+       
      #peaks analyses encoded from 100
      -flow_into => {'100' => ['run_SWEmbl_R0005_replicate']},
-     -batch_size => 1, #max parallelisation???
+     -batch_size => 1, #max parallelisation
      -analysis_capacity => 200,
-     -rc_name => 'normal_high_mem',
+     -rc_name => 'normal_high_mem_2cpu',
      
      #This will definitely have to write some accu data
      #such that Run_IDR can pick up on any QC failures
@@ -447,12 +431,12 @@ sub pipeline_analyses {
 
  
      
-     #WARNING!
-     #How do we protect again the same set details being flowed through both configs?
-     #This may fail due to the presence of a duplicate input_id when flowing to the Merged analysis
-     #but not before we might attempt a rollback (if rollback/recover is set)?
-     #This may end up rolling back a set which is actively being processed via the other branch of the pipeline
-     #Leave this for now due to safety concerns?
+   #WARNING!
+   #How do we protect again the same set details being flowed through both configs?
+   #This may fail due to the presence of a duplicate input_id when flowing to the Merged analysis
+   #but not before we might attempt a rollback (if rollback/recover is set)?
+   #This may end up rolling back a set which is actively being processed via the other branch of the pipeline
+   #Leave this for now due to safety concerns?
 
 
     ### LINK ANALYSES TO DOWNSTREAM CONFIGS
@@ -487,7 +471,7 @@ sub pipeline_analyses {
      #These are in IDRPeaks.pm config, 
      #This is for flowing of IDR replicate jobs  i.e. permissive SWEMBL 
     #{
-    # -logic_name => 'DefineReplicateDataSet',
+    # -logic_name => 'DefineMergedDataSet',
     # -module     => 'Bio::EnsEMBL::Funcgen::Hive::DefineDataSet',     
     # -meadow_type => 'LOCAL',#should always be uppercase
     # -batch_size => 10, 
@@ -502,13 +486,14 @@ sub pipeline_analyses {
      -logic_name    => 'run_SWEmbl_R0005_replicate',  #SWEmbl permissive
      -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunPeaks',
      -parameters => 
-      {
-       check_analysis_can_run => 1, 
+      {check_analysis_can_run => 1, 
        peak_analysis => $self->o('permissive_peaks'), #This will not allow batch override!
        #Would have to flow this explicity from IdentifyReplicateResultSets and MergeReplicateAlignments_and_QC
       },
      -analysis_capacity => 10,
      -rc_name => 'long_monitored_high_mem', # Better safe than sorry... size of datasets tends to increase...       
+     #This is to stop the beekeeper exiting when all these jobs fail
+     #would it be better to have them succeed, as we will be resetting them anyway?  
     },
     
     
