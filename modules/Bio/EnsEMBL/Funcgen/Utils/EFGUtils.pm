@@ -917,9 +917,9 @@ sub write_checksum{
 sub generate_checksum{
   my ($file, $digest_method) = @_;
   
-  if($file =~ /\.gz$/){
-    throw("It is unsafe to generate checksums for a compressed file:\n\t$file");  
-  }
+  #if($file =~ /\.gz$/){
+    #warn("It is unsafe to generate checksums for a compressed file:\n\t$file");  
+  #}
   
   $digest_method ||= 'hexdigest';
 
@@ -941,8 +941,6 @@ sub generate_checksum{
 #assume the format of the file is:
 #checksum_sig\tfilename\tdigestmethod
 
-#
-use Data::Dumper qw(Dumper);
 sub validate_checksum{
   my ($file_path, $params) = @_;
   my ($signature_file, $digest_method, $md5_sig, $md5_optional);
@@ -1382,6 +1380,15 @@ sub parse_DB_url {
 #Would be nice to catch warn output also, but system doesn not handle this well and would
 #to redirect STDERR to a file to read back in. 
 
+
+#These are currently not capturing STDERR and so this is not reported in the
+#throw. It is necessary to inspect the STDERR file to see these, which is a slight
+#problem with the hive which will only list the API throw string, not the actual
+#external error
+
+#Need to use IPC::Open3
+#http://learn.perl.org/faq/perlfaq8.html#How-can-I-capture-STDERR-from-an-external-command-
+
 sub run_system_cmd{
   my ($command, $no_exit) = @_;
   my $exit_status = system($command);#don't nest below, as this may cause problems with $!
@@ -1416,7 +1423,7 @@ sub run_backtick_cmd{
   
   if(wantarray){
     #map chomp here?
-    @results = `$command`;
+    @results = map {chomp $_; $_} `$command`;
   }
   else{
     $result  = `$command`;
@@ -1446,9 +1453,7 @@ sub _handle_exit_status{
 
   if ($exit_code != 0){
     
-    warn "in exit block";
     if (! $no_exit){
-      warn "why isn't this throwing";
       throw("System command failed:\t$cmd");
     }
     else{
@@ -1551,38 +1556,77 @@ sub scalars_to_objects{
 
 #Can we return the number of duplicates removes?
 
+#header should already be included in bams, but 
+#we do want functionality to include it here
+#todo currently does nothing and header shoudl be specified as fai file!
+#shoudl validate this if they are both present
+#so we need an infile optional flag in _validate_sam_header_index_fai
+
+#when do we ever use sam_header and no fai?
+
+#We currently never use sam_header as the is the only things it is passed to and this
+#doesn't ever use it
+
+#This is for use with merge, and overwrites header which would otherwise
+#just be copied from the first bam file!
+#This maybe a subset of the complete header, dependant on the output of bwa 
+#for that chunk. Does it omit header lines for which is has no alignments?
+
+#how do we create sam header from fai?
+#samtools faidx ref.fa; samtools view -ht ref.fa.fai myfile.sam
+#But this requires a sam file, and will this output the full header?
+
+#Do we really need the sam header here, can't we just validate
+#each bam header is a subset of the fai, then integrate the full header via view?
+
+
 sub merge_bams{
-  my $outfile = shift;
-  my $bams    = shift;
-  my $params  = shift;  
+  my $outfile    = shift;
+  my $sam_header = shift;
+  my $bams       = shift;
+  my $params     = shift;  
+  
+  assert_ref($bams, 'ARRAY', 'bam files');
+  my $out_flag = '';
   
   if(! defined $outfile){
     throw('Output file argument is not defined');  
   }
   elsif($outfile !~ /\.(bam|sam)$/o){
+    $out_flag = 'b' if $1 eq 'bam';
     throw('Output file argument must have a sam or bam file suffix');    
   }
   
-  my $out_flag = ($1 eq 'bam') ? 'b' : '';
-
+  
+  
+  
+  #For safety we need to validate all the bam headers are the same?
+  #or at least no LN clashed for the same SN?
+  #Must all be subsets of sam_header if specified, and reheader output with
+  #sam_header if defined
+  #else, with the merge of all the input headers?
+  #This later option would permit merges of redunant headers if the SN values
+  #are not identical for the same sequence
+  #force sam header for safety?
+  #For now, let just make sure they are identical
+  #if (! defined $sam_header){
+  #  throw('Must pass a sam_header argument');
+  #}
+  #sam_header check will be done in validate_sam_header with cross validate boolean
+  map { validate_sam_header($_, $sam_header, 1);} @$bams;
+  
   #validate/convert inputs here?
-  #just assume all are bam for now
-  
-  $params ||= {};
+  #just assume all aren bam for now
+
+  my $merge_opt = ' -h '.$sam_header;  
+  $params     ||= {};
   assert_ref($params, 'HASH');
-  my $sort    = $params->{sort}              if exists $params->{sort};
-  my $rm_dups = $params->{remove_duplicates} if exists $params->{remove_duplicates};
-  
-  my $header_opt = '';
-  
-  if (exists $params->{sam_header}){
-    $header_opt = ' -h '.$params->{sam_header};
-  } 
-  
-  #Assume files are already sorted but support optional sort
-  
+  my $debug     = $params->{debug}             if exists $params->{debug};
+  my $sort      = $params->{sort}              if exists $params->{sort};
+  my $rm_dups   = $params->{remove_duplicates} if exists $params->{remove_duplicates};
   my $cmd;
   
+  #Assume files are already sorted but support optional sort
   if(defined $sort){
     throw('Not implemented sort yet');  
     # my $sorted_prefix = $tmp_bam.".sorted_$$";
@@ -1601,12 +1645,15 @@ sub merge_bams{
   #Does merge support - for STDOUT
   #-u uncompressed output for pipe
   #-f force overwrite output
+  #-h is include header in output, seems to be in sam format i.e. not binary if output is bam??
   $cmd  = 'samtools merge -u - '.join(' ', @$bams).' | '; 
-  $cmd .= 'samtools rmdup -s - - |' if $rm_dups;
+  $cmd .= 'samtools rmdup -s - - | ' if $rm_dups;
   $cmd .= "samtools view -h${out_flag} - > $outfile";
   #does rmdup support '-' for STDIN STDOUT piping ?
   #piping like this may cause errors downstream of the pipe not to be caught
   #could we try doing an open on the piped cmd to try and catch a SIGPIPE?
+  
+  warn "Merging with:\n$cmd\n" if $debug;
   run_system_cmd($cmd);
   
   return;
@@ -1614,79 +1661,104 @@ sub merge_bams{
 
 #Utils::SamUtils?
 
-#change this to use $params for fasta_fai?
+#There are three use cases here:
+#1 Cross validation
+#2 Returning header opt in case of no samfile header
+#3 Ensuring sam has header if ref header not specified
 
-#Currently infile header is optional
-#how do we validate that is valid to add the fai
-#info as the header? Won't this require a reheader
-#command to change the row values?
+#The last two will happen by default, with 1 happening if both are present
+#or the corss validate boolean is passed
 
-sub _validate_sam_header_fai {
-  my $sam_bam_file = shift;
-  my $fasta_fai    = shift;
+#arguably the cross validate boolean could be dropped in favour of testing
+#in the calling context, but convenient here
+
+sub validate_sam_header {
+  my $sam_bam_file     = shift;
+  my $header_or_fai    = shift;
+  my $xvalidate        = shift;
+  my $is_fai           = 1 if $header_or_fai =~ /\.fai$/o;
   
-  #do not check file again here ad this is private and should have been done already
-  
-  my $fasta_fai_opt;
-
-  if (defined $fasta_fai) {
-    validate_path($fasta_fai);     $fasta_fai_opt = " -t $fasta_fai ";
-    #-t spec is now optional, as not integrating the header into each file
-    #is risky as it could get regenerated and be mismatched
-    #which may produce unpredicatable behaviour or faults if the header
-    #doesn't match the data.
+  if(! defined $sam_bam_file){
+    throw("Mandatory argument not specified:\t sam/bam file"); 
   }
+  elsif($xvalidate && ! $header_or_fai){
+     throw('The cross validation boolean has been passed, but no header/fai argument has been passed');
+  }  
   
-
-  my @infile_header = `samtools view -H $sam_bam_file"`;  
-  #$! not $@ here which will be null string
-
+  validate_path($sam_bam_file);
+  #samtools view -t
+  #samtools merge -h 
+  my $header_opt    = ($is_fai) ? ' -t '.$header_or_fai : ' -h '.$header_or_fai;
+  my @infile_header = run_backtick_cmd("samtools view -H $sam_bam_file");  
+ 
   if($!){
-    if(! defined $fasta_fai){
-      throw("Could not find an in file header or a sam_ref_fai for:\t$sam_bam_file$!");
+    #$! not $@ here which will be null string
+    if(! defined $header_or_fai){
+      throw('Could not find an in file header or a reference file header for:'.
+        "\n$sam_bam_file\n$header_or_fai\n$!");
+    }
+    elsif($xvalidate){
+      throw('Cross validate boolean has been passed but failed to fetch a header from the reference file:'.
+        "\n\t$header_or_fai");    
     }
   }
-  elsif(defined $fasta_fai){
-    my @fai_header = run_backtick_cmd("samtools view -H $fasta_fai_opt $sam_bam_file");;
-
-    #size difference is fin ehere, just so long as the file header
-    #is a subset of the fai header
-   
+  elsif($xvalidate && ! @infile_header){
+    throw('Cross validate boolean has been passed but bam/sam file has no header entries:'.
+      "\n\t$sam_bam_file");  
+  }
+  elsif($header_or_fai){
+    validate_path($header_or_fai); 
+    my @ref_header;
     
-    if(! (@infile_header && @fai_header)){
-      throw("Found header with no entries:\n".
-        scalar(@fai_header)."\t$fasta_fai\n".scalar(@infile_header)."\t$sam_bam_file");    
+    if($is_fai){
+      @ref_header = run_backtick_cmd("samtools view -H $header_opt $sam_bam_file");;
+    }
+    else{
+      @ref_header = run_backtick_cmd("cat $header_or_fai"); 
     }
     
-    if(scalar(@infile_header) > scalar(@fai_header)){
-      throw("Found in file header with more entries that sam fasta index:\n".
-        scalar(@fai_header)."\t$fasta_fai\n".scalar(@infile_header)."\t$sam_bam_file");    
+    
+    if(! @ref_header){
+       throw("Reference file has no header entries:\n\t$header_or_fai");
+    }
+    
+    if(scalar(@infile_header) > scalar(@ref_header)){
+      throw("Found in file header with more entries that the reference header:\n".
+        scalar(@ref_header)."\t$header_or_fai\n".scalar(@infile_header)."\t$sam_bam_file");    
     }
    
-   
-    my ($SN, $LN, %fai_header);
+    #size difference is fine here, just so long as the file header
+    #is a subset of the ref header
+    my ($SN, $LN, %ref_header);
+    my $hdr_cnt = 0;
     
     map { (undef, $SN, $LN) = split(/\s+/, $_);
-          $fai_header{$SN} = $LN;              } @fai_header;
+          $ref_header{$SN} = $LN;              } @ref_header;
+   
    
     foreach my $line(@infile_header){
       (undef, $SN, $LN) = split(/\s+/, $line);
+      $hdr_cnt++;
       
-      if(! exists $fai_header{$SN} ){
-        throw("$SN exist in file header but not sam fasta index\n".
-          $fasta_fai."\n".$sam_bam_file);  
+      if(! exists $ref_header{$SN} ){
+        throw("$SN exist in file header but not sam header/fai\n".
+          $header_or_fai."\n".$sam_bam_file);  
       }
-      elsif($fai_header{$SN} ne $LN){
+      elsif($ref_header{$SN} ne $LN){
         throw("$SN  has mismatched LN entry between file header and sam fasta index\n".
-          $fai_header{$SN}."\t".$fasta_fai."\n$LN\t".$sam_bam_file);  
+          $ref_header{$SN}."\t".$header_or_fai."\n$LN\t".$sam_bam_file);  
       }
     }
    
-    #we don't need the header file as we have the correct infile header
-    $fasta_fai_opt = '';
+    #we don't need the header file as the headers completely match
+    #This may result in a feamle header bing replaced with a male header
+    #due to it containing the extra @SQ SN:Y line
+    #actaully there can be some gender specific top level unassembled contigs too! 
+    #Meaning any non-gender specific header will need to be a merge, not just the male header 
+    $header_opt = '' if $hdr_cnt == scalar(@ref_header);
   }
   
-  return $fasta_fai_opt;
+  return $header_opt;
 }
 
 sub process_sam_bam {
@@ -1780,9 +1852,12 @@ sub process_sam_bam {
   #This can result in mismatched headers, as it does seem like the fai file is used rather than the in file header
   #here, at least for bams
 
+  #UNCOMMENT
+  #warn "COMMENTED OUT _validate_sam_header_fai";
+  #We need an allow no header option
+  my $fasta_fai_opt = validate_sam_header_fai($in_file, $fasta_fai);
+  #my $fasta_fai_opt ='';
 
-
-  my $fasta_fai_opt = _validate_sam_header_fai($in_file, $fasta_fai);
   my $cmd = "samtools view -h${in_flag} $fasta_fai_opt $in_file "; # Incorporate header into file
 
   if($filter_format){
