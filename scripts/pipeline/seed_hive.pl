@@ -85,10 +85,7 @@ use Pod::Usage;
 use Bio::EnsEMBL::Hive::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd run_backtick_cmd );
 
-
 my @valid_lnames = qw(IdentifyAlignInputSubsets IdentifyReplicateResultSets IdentifyMergedResultSets);
-
-#$| = 1;#for debug
 
 &main(@ARGV);
 
@@ -122,9 +119,9 @@ sub main{
   if(! ((defined $lname) && (defined $hive_url) && 
         (defined $hive_script_dir) && (defined $input_id)) ){
     pod2usage(-exitval => 1, 
-              -message => "Mandatory parameters not met:\n\t-logic_name\t".($lname || ''). 
-                            "\n\t-input_id\t".($input_id || ''). 
-                            "\n\t-url\t".($hive_url || ''). 
+              -message => "Mandatory parameters not met:\n\t-logic_name\t\t".($lname || ''). 
+                            "\n\t-input_id\t\t".($input_id || ''). 
+                            "\n\t-url\t\t\t".($hive_url || ''). 
                             "\n\t-hive_script_dir\t".($hive_script_dir|| '')."\n");      
   }
   
@@ -136,36 +133,42 @@ sub main{
   if($no_write){
     $input_id =~ s/[,]*}$/,no_write=>1}/;
   }
-
-  #is this STDERR and will run_backtick_cmd catch this?
-  my $job_info = run_backtick_cmd("perl $hive_script_dir/seed_pipeline.pl -url $hive_url ".
-                                    "-logic_name $lname -input_id $input_id 2>&1");
-                                    
-                                    
-  warn "exit status is $?\njob_info is $job_info";
-                                    
-  #Will this return an ecit code if it already exists?
-  #we need a no_exit mode
-  #hence we need to propogate $? and $!?     
+   
+   
+  ### SEED THE PIPELINE ### 
+  my $cmd = "perl $hive_script_dir/seed_pipeline.pl -url $hive_url ".
+              "-logic_name $lname -input_id '$input_id' 2>&1";
+  #We don't get an exit status here if the job_id already exists even though it is not seeded. 
+  #Catch STDERR here has the transformed input_id is printed to STDERR
+              
+  #warn "Running $cmd";
+  my $job_info = run_backtick_cmd($cmd);
+  my $exit_status = $?;                                   
+  #warn "exit status is $?\njob_info is $job_info";
   
+  
+  ### GET THE JOB ID ###                                    
   my $job_id;
   my $id_stored = 0;
   
   if( $job_info =~ /Could not create job/){
     #This will have been reformated as it appears in the DB
     (my $stored_input_id= $job_info) =~ s/Could not create job '//;
-    $stored_input_id =~ s/ '\(it may have.*//;
+    $stored_input_id =~ s/' \(it may have.*//;
+    chomp($stored_input_id);
     
     #Now try and fetch job_id from the job or analysis_data table;  
     my $hive_db = Bio::EnsEMBL::Hive::DBSQL::DBAdaptor->new(-url => $hive_url);
     
     my $sql_helper = $hive_db->dbc->sql_helper;
-    my $sql = "select job_id from job where input_id='$input_id'";
+    my $sql = "select job_id from job where input_id='$stored_input_id'";
+    #warn "SQL $sql";
     $job_id = $sql_helper->execute_single_result($sql, undef, undef, undef, 1);#no throw flag
     
     if(! defined $job_id){
       $sql = 'select job_id from job j, analysis_data ad where ad.data='.
-        ".'$input_id' and j.input_id =concat('_extended_data_id ', ad.analysis_data_id)"; 
+        "'$stored_input_id' and j.input_id =concat('_extended_data_id ', ad.analysis_data_id)"; 
+      #warn "SQL $sql";  
       $job_id = $sql_helper->execute_single_result($sql, undef, undef, undef, 1);#no throw flag
     }
     
@@ -175,15 +178,25 @@ sub main{
     
     $id_stored = 1;    
   }
+  elsif($exit_status){
+    die("Failed to execute:\n$cmd\n$job_info");
+  }
   else{
     ($job_id = $job_info) =~ s/Job ([0-9]+) \[.*/$1/;
+    
+    if($job_id !~ /^[0-9]+$/){
+      my $err = "Seeded job, but failed to parse job id from script output:\n$job_info";
+      $err .= "\nSkipping -no_write run for $lname" if $no_write;
+      die($err);
+    }      
   }
   
-  if( ! defined $job_id){
-    die ("Failed to seed $lname job\t$input_id");
-  }
-  elsif( $no_write ){
-    run_system_cmd("perl $hive_script_dir/runWorker.pl -url $hive_url -no_write -job_id $job_id -force");
+  ### RUN IdentifySetInputs -no_write 
+  
+  if( $no_write ){
+    $cmd = "perl $hive_script_dir/runWorker.pl -url $hive_url -no_write -job_id $job_id -force 1";
+    #warn "Running $cmd";
+    run_system_cmd($cmd);
   }
   else{
     #would be nice to get some output here, by actually running IdetifyInputSubsets
@@ -193,8 +206,9 @@ sub main{
     }
     else{
       print "Job ($job_id) successfully seeded:\n$input_id\n";  
+    }
   }
-
+  
   return;
 }# end of main
 
