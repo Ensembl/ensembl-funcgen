@@ -1415,9 +1415,12 @@ sub run_system_cmd{
 
 #To have no exit here, we would have to reset $? $! and $@ as these would be lost
 #in _handle_exit_status
+#Hence would not be able to tell whether the returned vlue was an error 
+#or the expected data
 
 sub run_backtick_cmd{
   my $command = shift;
+  my $no_exit = shift;
   
   my (@results, $result);
   
@@ -1429,36 +1432,34 @@ sub run_backtick_cmd{
     $result  = `$command`;
   }
   
-
-  
-  _handle_exit_status($command, $?, $!); 
+  my $exit_status = $?;
+  _handle_exit_status($command, $exit_status, $!, $no_exit); 
+  $? = $exit_status if $no_exit;
+   
   return wantarray ? @results : $result;
 }
 
 sub _handle_exit_status{
-  my ($cmd, $exit_status, $errno, $no_exit) = @_;
+  my ($cmd, $exit_status, $err, $no_exit) = @_;
   my $exit_code = $exit_status >> 8; #get the true exit code
   
   if ($exit_status == -1) {
-    warn "Failed to execute. Error:\t$errno\n";
+    warn "Failed to execute. Error:\t$err\n";
   }
   elsif ($exit_status & 127) {
-    warn sprintf("Child process died with signal %d, %s coredump\nError:\t$errno\n",
+    warn sprintf("Child process died with signal %d, %s coredump\nError:\t$err\n",
                  ($exit_status & 127),
                  ($exit_status & 128) ? 'with' : 'without');
   }
   elsif($exit_status != 0) {
-    warn sprintf("Child process exited with value %d\nError:\t$errno\n", $exit_code);  
-  }
-
-  if ($exit_code != 0){
+    my $msg = sprintf("Child process exited with value %d\nError:\t$err\n", $exit_code);
     
-    if (! $no_exit){
-      throw("System command failed:\t$cmd");
-    }
-    else{
-      warn("System command returned non-zero exit code:\t$cmd");
-    }
+      if (! $no_exit){
+        throw sprintf("Child process exited with value %d\nError:\t$err\n", $exit_code);
+      }   
+      else{
+        warn sprintf("Child process exited with value %d\nError:\t$err\n", $exit_code);  
+      }
   }
 
   return $exit_code;
@@ -1579,12 +1580,15 @@ sub scalars_to_objects{
 #Do we really need the sam header here, can't we just validate
 #each bam header is a subset of the fai, then integrate the full header via view?
 
+#update to take a sam fai or header file
+#the header integration removes the need for the final view step
+#if ther headers aren't identical
 
 sub merge_bams{
-  my $outfile    = shift;
-  my $sam_header = shift;
-  my $bams       = shift;
-  my $params     = shift;  
+  my $outfile     = shift;
+  my $sam_ref_fai = shift;
+  my $bams        = shift;
+  my $params      = shift || {};  
   
   assert_ref($bams, 'ARRAY', 'bam files');
   my $out_flag = '';
@@ -1596,9 +1600,11 @@ sub merge_bams{
     $out_flag = 'b' if $1 eq 'bam';
     throw('Output file argument must have a sam or bam file suffix');    
   }
-  
-  
-  
+
+  assert_ref($params, 'HASH');
+  my $debug     = $params->{debug}             if exists $params->{debug};
+  my $sort      = $params->{sort}              if exists $params->{sort};
+  my $rm_dups   = $params->{remove_duplicates} if exists $params->{remove_duplicates};
   
   #For safety we need to validate all the bam headers are the same?
   #or at least no LN clashed for the same SN?
@@ -1613,20 +1619,20 @@ sub merge_bams{
   #  throw('Must pass a sam_header argument');
   #}
   #sam_header check will be done in validate_sam_header with cross validate boolean
-  map { validate_sam_header($_, $sam_header, 1);} @$bams;
+  my $view_header_opt;
+  map { my $tmp_opt = validate_sam_header($_, $sam_ref_fai, 1, $params);
+        $view_header_opt = $tmp_opt if $tmp_opt;               } @$bams;
   
   #validate/convert inputs here?
   #just assume all aren bam for now
 
-  my $merge_opt = ' -h '.$sam_header;  
-  $params     ||= {};
-  assert_ref($params, 'HASH');
-  my $debug     = $params->{debug}             if exists $params->{debug};
-  my $sort      = $params->{sort}              if exists $params->{sort};
-  my $rm_dups   = $params->{remove_duplicates} if exists $params->{remove_duplicates};
+
   my $cmd;
   
   #Assume files are already sorted but support optional sort
+  #it would be nice if samtools updated the sort flag in the header?
+  #maybe we can do this?
+  
   if(defined $sort){
     throw('Not implemented sort yet');  
     # my $sorted_prefix = $tmp_bam.".sorted_$$";
@@ -1635,27 +1641,85 @@ sub merge_bams{
     #$cmd .= ($sort) ? ' | samtools sort - '.$sorted_prefix : ' > '.$tmp_bam;
   }
  
-  #samtools merge [-nur1f] [-h inh.sam] [-R reg] <out.bam> <in1.bam> <in2.bam> [...]
-  #we are no longer attempting to use a header file, as this is not the same as the fasta_fai 
-  #file and bam should have integrated and matching headers at this point
- 
-  #$cmd = "samtools merge -u ${outfile}.inc_dups ".join(' ', @$bams);
-  #run_system_cmd($cmd);
+
   
-  #Does merge support - for STDOUT
-  #-u uncompressed output for pipe
+  #-u uncompressed BAM output for pipe (header remains in sam format)
   #-f force overwrite output
   #-h is include header in output, seems to be in sam format i.e. not binary if output is bam??
-  $cmd  = 'samtools merge -u - '.join(' ', @$bams).' | '; 
-  $cmd .= 'samtools rmdup -s - - | ' if $rm_dups;
-  $cmd .= "samtools view -h${out_flag} - > $outfile";
-  #does rmdup support '-' for STDIN STDOUT piping ?
-  #piping like this may cause errors downstream of the pipe not to be caught
+  # - To specify seding output to STDOUTT for
+  
+
+  
+  #rmdup samtools rmdup [-sS] <input.srt.bam> <out.bam>
+  #docs look like it only takes sorted bam? 
+  #but there is no specific mention of this?
+  #I don't think so, this is probably just the optimal way of doing this
+  #but we never assume the file is sorted? or do we?
+  #look how this is handled in get_alignment_files_by_ResultSet  
+  
+  if($rm_dups || $view_header_opt){
+    #merge keeps the header in sam format (maybe this is a product of -u)?
+    $cmd  = 'samtools merge -u - '.join(' ', @$bams).' | '; 
+   
+    if( $rm_dups ){
+       #rmdup converts the header into binary format
+       $cmd .= 'samtools rmdup -s - ';
+       
+       if( $view_header_opt ){
+         $cmd .=  '- | '
+       }
+       else{
+         $cmd .= $outfile;  
+       }
+    }
+    
+    if($view_header_opt){
+      #We only need to do this if the validate_sam_header
+      #method identifed some of the bams without the relevant header
+      
+      $cmd .= "samtools view -t $sam_ref_fai -h${out_flag} - > $outfile";
+      #This is current failing on the first line of the fai file with?
+      #[sam_header_read2] 194 sequences loaded.
+      #[sam_read1] reference 'LN:133797422' is recognized as '*'.
+      #Parse error at line 1: invalid CIGAR character
+      # Aborted
+      
+           
+      #$? is set to 134 when this happens!
+      #Why is this working in BWA?
+      #Maybe it's not?
+      
+      #Oddly enough this doesn't abort when running within this analysis
+      #but does on the cmdline, when runnign the commands separately
+      #even after exit handling fix
+      
+      #scripts does give this output tho, which is totally different:
+      #sh: line 1:  1707 Done                    samtools merge -u - /lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/alignments/homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW.0000.bam /lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/alignments/homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW.0001.bam /lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/alignments/homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW.0002.bam /lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/alignments/homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW.0003.bam /lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/alignments/homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW.0004.bam
+      #1708                       | samtools rmdup -s - -
+      #1709 Aborted                 | samtools view -t /lustre/scratch109/ensembl/funcgen/sam_header/homo_sapiens/homo_sapiens_male_GRCh38_unmasked.fasta.fai -h - > /lustre/scratch109/ensembl/funcgen/alignments/homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW_bwa_samse_1.unfiltered.bam
+      
+      #Irt just seems to hang for a long time and then carry on with the script
+      #as though nothign had happened
+      #cmdline returns 134 in $?
+      
+      #This appears to have been caused by using the wrong fai file
+      #it was using the male file by default (as it has the super set of seqs)
+      #So it seems that mismatched in file headers vs fai headers causes this error
+      #No! But getting the headers to match, did mean the merge avoids the problematic
+      #samtools view -ht command
+    }
+  }
+  else{  
+    $cmd  = "samtools merge $outfile ".join(' ', @$bams); 
+  }
+ 
+  
+  #piping like this may cause errors downstream of the pipe to be missed
   #could we try doing an open on the piped cmd to try and catch a SIGPIPE?
   
   warn "Merging with:\n$cmd\n" if $debug;
   run_system_cmd($cmd);
-  
+  warn "Finished merge" if $debug;
   return;
 }
 
@@ -1676,7 +1740,10 @@ sub validate_sam_header {
   my $sam_bam_file     = shift;
   my $header_or_fai    = shift;
   my $xvalidate        = shift;
+  my $params           = shift || {};
+  assert_ref($params, 'HASH');
   my $is_fai           = 1 if $header_or_fai =~ /\.fai$/o;
+  my $debug            = $params->{debug} if exists $params->{debug};
   
   if(! defined $sam_bam_file){
     throw("Mandatory argument not specified:\t sam/bam file"); 
@@ -1755,6 +1822,8 @@ sub validate_sam_header {
     #due to it containing the extra @SQ SN:Y line
     #actaully there can be some gender specific top level unassembled contigs too! 
     #Meaning any non-gender specific header will need to be a merge, not just the male header 
+    warn scalar(@ref_header)." lines in reference header:\t$header_or_fai\n".
+      $hdr_cnt." lines in file header:\t$sam_bam_file" if $debug;
     $header_opt = '' if $hdr_cnt == scalar(@ref_header);
   }
   
