@@ -430,9 +430,10 @@ sub run {   # Check parameters and do appropriate database/file operations...
           
           if(! -f $merged_file || $self->param_silent('overwrite')){
             
-            merge_bams($merged_file, $rep_bams{$rset->name}{rep_bams}, 
-                       {remove_duplicates => 1,
-                        sam_header        => $self->sam_header($rset->cell_type->gender)});
+            merge_bams($merged_file, 
+                       $rep_bams{$rset->name}{rep_bams},
+                       $self->sam_ref_fai($rset->cell_type->gender)
+                       {remove_duplicates => 1});
           }
         }
         
@@ -445,9 +446,6 @@ sub run {   # Check parameters and do appropriate database/file operations...
         elsif($branch =~ /(_control$|_replicate$)/){
           $branch_sets{$branch}{$rset_group_name}{set_names} ||= [];
           $branch_sets{$branch}{$rset_group_name}{dbIDs}     ||= [];
-          
-          
-          
           push @{$branch_sets{$branch}{$rset_group_name}{set_names}}, $rset->name;
           push @{$branch_sets{$branch}{$rset_group_name}{dbIDs}},     $rset->dbID;
                     
