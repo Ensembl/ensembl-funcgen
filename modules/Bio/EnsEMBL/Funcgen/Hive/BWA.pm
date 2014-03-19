@@ -88,7 +88,7 @@ sub run {
   warn "Query file:\t$query_file\nOutfile prefix:\t$outfile_prefix\n" if $self->debug;
   
   my $sai_file      = "${output_dir}/${outfile_prefix}.sai";
-  my $samse_file    = "${output_dir}/${outfile_prefix}.samse.sam";
+  my $samse_file    = "${output_dir}/${outfile_prefix}.samse.bam";#sam";
   my $unsorted_file = "${output_dir}/${outfile_prefix}.samse.bam.unsorted";
   my $bam_file      = "${output_dir}/${outfile_prefix}.bam";
   my @tmp_files = ($sai_file, $samse_file, $unsorted_file);
@@ -137,7 +137,12 @@ sub run {
   #This won't have a header output, as bwa samse doesn't output one!!!!!
   #so we need to add the fai file
   
-  $cmd = "${bin_dir}/samtools view -t $fasta_fai -uhS $samse_file > $unsorted_file"; 
+  #we were using sam output here for collections
+  #but we are deleting this at the moment anyway, 
+  #so change to bam output and drop -S
+  #also dropped -u as we are not piping here
+  
+  $cmd = "${bin_dir}/samtools view -t $fasta_fai -bh $samse_file > $unsorted_file"; 
   warn "Running:\n$cmd\n" if $self->debug;
   run_system_cmd($cmd);
   
@@ -154,7 +159,17 @@ sub run {
   $cmd = "${bin_dir}/samtools sort $unsorted_file ${output_dir}/${outfile_prefix}";
   warn "Running:\n$cmd\n" if $self->debug;
   run_system_cmd($cmd);
+  
+  #This can die with the following output, but we don't exit!
+  #[bam_header_read] invalid BAM binary header (this is not a BAM file).
+  #[bam_sort_core] truncated file. Continue anyway.
+  #Child process died with signal 11, without coredump
+  #Error:
+  
 
+  
+  #todo update sort flag in header, samtools should really do this
+  #@HD     SO:coordinate
   
   #how are we going to handle samse here?
   #is this generic to all read aligners? nomenclature certainly isn't
