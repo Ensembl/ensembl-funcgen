@@ -78,6 +78,12 @@ INSERT INTO status_name (name, tracking_only) values ('REVOKED',                
 INSERT INTO status_name (name, tracking_only) values ('TO_BE_REBUILD',           1);
 INSERT INTO status_name (name, tracking_only) values ('REBUILT',                 1);
 INSERT INTO status_name (name, tracking_only) values ('IN_RELEASE',              1);
+INSERT INTO status_name (name, tracking_only) values ('ALIGNING_CONTROL',        1);
+INSERT INTO status_name (name, tracking_only) values ('ALIGNED',                 1);
+
+-- Are these last two ALIGN* states really tracking_only?
+
+
 
 -- what about status history?
 -- We need to be able to track when a set was released, and whether it was pulled and then re-release
