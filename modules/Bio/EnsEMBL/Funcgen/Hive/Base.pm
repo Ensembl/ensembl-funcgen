@@ -1780,6 +1780,12 @@ sub sam_ref_fai {
 
 #merge these two methods?
 
+#We don't actuall need this any more
+#This was only used in conjuction with samtools merge to include the header in the output
+#But this output sam format for the header and bam for the rest of the file
+#essentailly creating a corrupt file. 
+#So we now use the fai file with samtools view instead
+
 sub sam_header{
   my $self        = shift;
   my $gender      = shift; 
@@ -1876,7 +1882,7 @@ sub get_alignment_files_by_ResultSet_formats {
     my $params = {ref_fai            => $self->sam_ref_fai,  #Just in case we need to convert
                   filter_from_format => $filter_format,
                   all_formats        => $all_formats,
-                  checksum           => undef}; #This turns on file based checksum validation
+                  checksum           => 1}; #This turns on file based checksum generation/validation
     #We never want to set checksum_optional here, as this is really
     #just for fastq files for which we don't have a checksum
     
@@ -1892,6 +1898,72 @@ sub get_alignment_files_by_ResultSet_formats {
   #a no_control/skip_control flag or similar  
   return $align_files || throw("Failed to find $file_type (@$formats) for:\t$path");  
 }
+
+
+sub archive_root{
+  return shift->param_silent('archive_root');  
+}
+
+
+
+#return boolean, to enable handling in caller.
+#we could have a force_archiving mode
+#but if if someone can remember to set force_archive, 
+#they can remember to set archive_root
+#if archive_root is set but the archive fails, then we die
+
+#if an analysis needs mandatory archiving due to the potential size 
+#of the output, then the return value can let the caller know whether 
+#to throw or not
+#The right param to have he is allow_no_archiving
+#This will enable these analyses to run without an archive
+
+
+#Move this to EFGUtils and wrap it up here
+#Then we can re use it in the environment
+
+
+#validate archive_root is not the same as data_root_dir in new?
+
+sub archive_file{
+  my $self      = shift;
+  my $file      = shift;
+  my $mandatory = shift;
+  
+  if(my $archive_root = $self->archive_root){
+    
+    my $data_root =$self->data_root_dir;
+    
+    if($file !~ /^$data_root/o){
+      $self->throw_no_retry('The file path to archive must be a full length path rooted in the data root directory:'.
+        "\nFile path:\t$file\nData root:\t$data_root\n");  
+    }
+        
+    (my $archive_file = $file) =~ s/$data_root/$archive_root/;
+    
+    #sanity check these are not the same
+    
+    if($archive_file == $file){
+      $self->throw_no_retry("Source and archive filepath are the same:\n$file");  
+    }
+    
+    #Now we need to create the target directory if it doesn't exist
+    (my $target_root = $archive_file) =~ s/(.*\/)[^\/]+$/$1/;
+    
+    if(! -d $target_root){
+      #Maybe this is an intermitent error?
+      $self->run_system_cmd_no_retry("mkdir -p $target_root");      
+    } 
+        
+    $self->run_system_cmd_no_retry("mv $file $archive_file");    
+  }
+  elsif($mandatory && ! $self->param_silent('allow_no_archiving')){
+    $self->throw_no_retry('The mandatory flag has been set but not archive_root is defined');  
+  }
+  
+  return;
+}
+
 
 
 #This method should detect whether we are using the default coord system
