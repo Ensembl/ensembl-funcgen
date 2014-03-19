@@ -118,6 +118,9 @@ sub fetch_input {
   return;
 }
 
+#TODO 
+# 1 Extra ulatr-paranoid sanity check to test the last line of the input and the output
+#   to make sure it isn't truncated
 
 sub run {
   my $self         = shift;
@@ -164,12 +167,15 @@ sub run {
   if((! $run_controls) && (! $merge) &&
     ($self->is_idr_feature_type($rset->feature_type))){
   
-    if(scalar(@issets) != 1){
+    my @signal_issets = grep { ! $_->is_control } @issets;
+  
+    if(scalar(@signal_issets) != 1){
       $self->throw_no_retry('Expected 1 InputSubset(replicate) for IDR ResultSet '.
-        $rset->name.' but found '.scalar(@issets).' Specify merge, or restrict to 1 InputSubset');  
+        $rset->name.' but found '.scalar(@signal_issets).' Specify merge, or restrict to 1 InputSubset');  
     }
     
-    $set_rep_suffix = '_TR'.$issets[0]->replicate;
+    #We are not filtering for controls here!!
+    $set_rep_suffix = '_TR'.$signal_issets[0]->replicate;
       
   }
   
@@ -285,10 +291,7 @@ sub run {
   warn "DEACTIVATED FASTQC FOR NOW:\nfastqc -f fastq -o ".$self->output_dir." @fastqs";
   #run_system_cmd('fastqc -o '.$self->output_dir." @fastqs");
   
-
-  
-  
-  
+ 
   #todo parse output for failures
   #also fastscreen?
 
@@ -296,16 +299,14 @@ sub run {
   
   #What about adaptor trimming? and quality score trimming?
   #FASTX? quality_trimmer, clipper (do we have access to the primers?) and trimmer?
-  #Should also probably do some post alignment comparison of GC content
+ 
   
-  
-  #Pass $run_controls, as they may not be from this experiment/study, 
-  #hence will need to look at the InputSubset
-  my $set_prefix = $self->get_set_prefix_from_Set($rset, $run_controls).$set_rep_suffix;        
+
+  my $set_prefix = $self->get_set_prefix_from_Set($rset, $run_controls).
+    '_'.$rset->analysis->logic_name.$set_rep_suffix;    
+        
 
   #For safety, clean away any that match the prefix
-  #todo, check that split append an underscore
-  
   run_system_cmd('rm -f '.$self->work_dir."/${set_prefix}.fastq_*", 1);
   #no exit flag, in case rm fails due to no old files
      
@@ -314,11 +315,6 @@ sub run {
      
   my $cmd = 'zcat '.join(' ', @fastqs).' | split --verbose -d -a 4 -l '.
     $self->fastq_chunk_size.' - '.$self->work_dir.'/'.$set_prefix.'.fastq_';
-  #It seems like we were getting some incomplete split giving just 1 0000 file!
-  #We need a way to validate the expected output size
-  #some intermediate files also seem to be missing, so we have 0000 and 0002 but not 0001
-  #Sort and check highest value
-  #$self->run_system_cmd_no_retry($cmd);
   $self->helper->debug(1, "Running chunk command:\n$cmd");
   my @split_stdout = run_backtick_cmd($cmd);
   (my $final_file = $split_stdout[-1]) =~ s/creating file \`(.*)\'/$1/;
@@ -333,7 +329,6 @@ sub run {
   @new_fastqs    = sort {$a cmp $b} @new_fastqs;
   
   #Now do some sanity checking to make sure we have all the files
-  
   if($new_fastqs[-1] ne $final_file){
     $self->throw_no_retry("split output specified last chunk file was numbered \'$final_file\',".
       " but found:\n".$new_fastqs[-1]);  
@@ -396,18 +391,10 @@ sub run {
                              set_type   => 'ResultSet',
                              set_name   => $rset->name,
                              dbID       => $rset->dbID,
-                             #bam_files should really be accu'd from the RunAligner jobs
-                             #but we know what they should be here 
-                             #bam_files  => [ map {$_ =~ s/\.fastq_([0-9]+)$/.$1.bam/o; $_} @{$self->fastq_files} ],
                              fastq_files => $self->fastq_files,
-                             #we could regenerate these from result_set and run controls
-                             #but passed for convenience
                              output_dir => $self->output_dir,
                              set_prefix => $set_prefix,
                              %signal_info}]);
-
-
-
   return;
 }
 
