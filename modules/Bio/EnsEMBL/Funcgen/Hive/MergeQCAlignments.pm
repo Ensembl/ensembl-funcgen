@@ -58,6 +58,9 @@ sub fetch_input {
   my $self = shift;
   $self->SUPER::fetch_input();
   my $rset = $self->fetch_Set_input('ResultSet');
+  $self->param_required('archive_root');#Do this here to fail early
+  #make this optional, as not everybody will want
+  
   $self->get_param_method('output_dir', 'required');
   $self->get_param_method('bam_files',  'silent');
   $self->get_param_method('fastq_files',  'silent');
@@ -129,22 +132,22 @@ sub run {
    
   #We need to get get alignment file prefix here
   my $file_prefix  = $self->get_alignment_file_prefix_by_ResultSet($rset, $self->run_controls);
-  my $bam_file     = $file_prefix.'.unfiltered.bam';
-  $self->helper->debug(1, "Merging bams to:\t".$bam_file);
+  my $unfiltered_bam     = $file_prefix.'.unfiltered.bam';
+  $self->helper->debug(1, "Merging bams to:\t".$unfiltered_bam);
  
   #sam_header here is really optional if is probably present in each of the bam files but maybe incomplete 
-  merge_bams($bam_file, $self->sam_header, \@bam_files, 
+  merge_bams($unfiltered_bam, $self->sam_ref_fai($rset->cell_type->gender), \@bam_files, 
              {remove_duplicates => 1,
               debug             => $self->debug});
    
   #todo convert this to wite to a result_set_report table
   my $alignment_log = $file_prefix.".alignment.log";
   $cmd ='echo -en "Alignment QC - total reads as input:\t\t\t\t" > '.$alignment_log.
-    ";samtools flagstat $bam_file | head -n 1 >> $alignment_log;".
+    ";samtools flagstat $unfiltered_bam | head -n 1 >> $alignment_log;".
     'echo -en "Alignment QC - mapped reads:\t\t\t\t\t\t" >> '.$alignment_log.
-    ";samtools view -u -F 4 $bam_file | samtools flagstat - | head -n 1 >> $alignment_log;".
+    ";samtools view -u -F 4 $unfiltered_bam | samtools flagstat - | head -n 1 >> $alignment_log;".
     ' echo -en "Alignment QC - reliably aligned reads (mapping quality >= 1):\t" >> '.$alignment_log.
-    ";samtools view -u -F 4 -q 1 $bam_file | samtools flagstat - | head -n 1 >> $alignment_log";
+    ";samtools view -u -F 4 -q 1 $unfiltered_bam | samtools flagstat - | head -n 1 >> $alignment_log";
   #Maybe do some percentages?
   $self->helper->debug(1, "Generating alignment log with:\n".$cmd);
   run_system_cmd($cmd);
@@ -162,8 +165,8 @@ sub run {
   #ALIGNMENT_QC_OKAY
 
   #Assuming all QC has passed, set status
-  $self->helper->debug(1, "Writing checksum for file:\t".$bam_file);
-  write_checksum($bam_file);
+  $self->helper->debug(1, "Writing checksum for file:\t".$unfiltered_bam);
+  write_checksum($unfiltered_bam);
   
   if($self->run_controls){
     my $exp = $self->get_control_InputSubset($rset);
@@ -183,6 +186,8 @@ sub run {
   #calling jobs which share the same control
   #This will also check the checksum we have just generated, which is a bit redundant
   $self->get_alignment_files_by_ResultSet_formats($rset, ['bam'], $self->run_controls, undef, 'bam');
+  $self->archive_file($unfiltered_bam, 1);#mandatory flag
+  
   my $flow_mode    = $self->flow_mode;
   my %batch_params = %{$self->batch_params};
   
