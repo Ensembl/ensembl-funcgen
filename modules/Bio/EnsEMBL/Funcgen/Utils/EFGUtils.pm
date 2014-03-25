@@ -106,6 +106,7 @@ use vars   qw( @EXPORT_OK );
   url_from_DB_params
   validate_checksum
   validate_path
+  validate_sam_header
   write_checksum
   );
 
@@ -869,30 +870,38 @@ sub convert_sam_to_bed{
 
 
 sub write_checksum{
-  my ($file_path, $params) = @_;
-  my ($signature_file, $digest_method);
+  my $file_path = shift;
+  my $params    = shift || {};
 
-  if(defined $params){
-    assert_ref($params, 'HASH');
-    $signature_file = $params->{signature_file};
-    $digest_method  = $params->{digest_method};
-  }
+  assert_ref($params, 'HASH');
+  my $signature_file = $params->{signature_file} if exists $params->{signature_file};
+  my $digest_method  = $params->{digest_method}  if exists $params->{digest_method};
+  my $debug          = (exists $params->{debug}) ? $params->{debug} : 0;
 
   $digest_method ||= 'hexdigest';
-  my $md5_sig  = generate_checksum($file_path, $digest_method);
+  my $md5_sig   = generate_checksum($file_path, $digest_method);
+  
+  
   my $file_name = fileparse($file_path);
 
   if(! defined $signature_file){
     $signature_file = $file_path.'.CHECKSUM';
   }
+  
+  warn "Writing checksum:\t$md5_sig\t$signature_file\n" if $debug;
 
   my $checksum_row = $md5_sig."\t".$file_name."\t".$digest_method;
 
   #Update or create entry in signature_file
+
   my $sigfile_row;
   if(-f $signature_file){
-    $sigfile_row = `grep '$file_name' $signature_file` ||
-                    die("Failed to grep checksum signature file:\t$signature_file");
+    $sigfile_row = run_backtick_cmd("grep '$file_name' $signature_file", 1);#no exit flag
+    
+    if($?){
+      warn("$sigfile_row\nFailed to grep old checksum from existing signature file:\t$signature_file");
+      $sigfile_row = '';
+    }
   }
 
   if($sigfile_row){ #Update entry
@@ -942,17 +951,16 @@ sub generate_checksum{
 #checksum_sig\tfilename\tdigestmethod
 
 sub validate_checksum{
-  my ($file_path, $params) = @_;
-  my ($signature_file, $digest_method, $md5_sig, $md5_optional);
+  my $file_path = shift;
+  my $params    = shift || {};
 
-  if(defined $params){
-    assert_ref($params, 'HASH');
-    $signature_file = $params->{signature_file}    if exists $params->{signature_file};
-    $digest_method  = $params->{digest_method}     if exists $params->{digest_method};
-    $md5_sig        = $params->{checksum}          if exists $params->{checksum}; 
-    $md5_optional   = $params->{checksum_optional} if exists $params->{checksum_optional};
-  }
-
+  assert_ref($params, 'HASH');
+  my $signature_file = $params->{signature_file}    if exists $params->{signature_file};
+  my $digest_method  = $params->{digest_method}     if exists $params->{digest_method};
+  my $md5_sig        = $params->{checksum}          if exists $params->{checksum}; 
+  my $md5_optional   = $params->{checksum_optional} if exists $params->{checksum_optional};
+  my $debug          = (exists $params->{debug}) ? $params->{debug} : 0;
+  
   if((defined $signature_file) && (defined $md5_sig)){
     throw("Params 'signature_file' and 'checksum' are mutually exclusive, please restrict to one");
   }
@@ -966,8 +974,10 @@ sub validate_checksum{
     }
     
     if(-f $signature_file){
-      my $checksum_row = `grep -E '[[:space:]]$file_name\[[:space:]]*.*\$' $signature_file` ||
-                          die("Cannot acquire $file_name checksum info from:\t$signature_file");
+      my $cmd = "grep -E '[[:space:]]+$file_name\[[:space:]]*.*\$' $signature_file";
+      warn "Checksum file grep:\t$cmd" if $debug;
+      my $checksum_row = run_backtick_cmd($cmd);
+      warn "Checksum file row:\t$checksum_row" if $debug;
       my ($sig_file_name, $sig_digest_method);
       ($md5_sig, $sig_file_name, $sig_digest_method) = split(/\s+/, $checksum_row);
   
@@ -996,11 +1006,14 @@ sub validate_checksum{
 
   if(defined $md5_sig){
     my $new_md5_sig = generate_checksum($file_path, $digest_method);
-
+    
     if($md5_sig ne $new_md5_sig){
-      #This could be due to mismatched digest methods
-      throw("MD5 ($digest_method) checksum does not match signature file for:".
-        "\n\tFile:\t\t$file_path\nSignature file:\t$signature_file");
+      #This could be due to mismatched digest methods?
+      my $msg = 'MD5 checksums do not match:'.
+        "\n\tExpected\t$md5_sig\n\tFound\t\t$new_md5_sig".
+        "\n\tFile:\t\t$file_path";
+      $msg .= "\n\tSignature file:\t$signature_file" if $signature_file;
+      throw($msg);
     }
   }
   elsif(! $md5_optional){
@@ -1421,7 +1434,7 @@ sub run_system_cmd{
 sub run_backtick_cmd{
   my $command = shift;
   my $no_exit = shift;
-  
+    
   my (@results, $result);
   
   if(wantarray){
@@ -1441,10 +1454,18 @@ sub run_backtick_cmd{
 
 sub _handle_exit_status{
   my ($cmd, $exit_status, $err, $no_exit) = @_;
-  my $exit_code = $exit_status >> 8; #get the true exit code
+  
+  my $exit_code;
+  
+  if ($cmd =~ /\|/){
+    warn "Failed piped commands may not be caught:\n$cmd\n";    
+  }
+
+  $exit_code = $exit_status >> 8; #get the true exit code
+  
   
   if ($exit_status == -1) {
-    warn "Failed to execute. Error:\t$err\n";
+    warn "Failed to execute:\t$cmd\nError:\t$err\n";
   }
   elsif ($exit_status & 127) {
     warn sprintf("Child process died with signal %d, %s coredump\nError:\t$err\n",
@@ -1452,13 +1473,13 @@ sub _handle_exit_status{
                  ($exit_status & 128) ? 'with' : 'without');
   }
   elsif($exit_status != 0) {
-    my $msg = sprintf("Child process exited with value %d\nError:\t$err\n", $exit_code);
+    my $msg = sprintf("Child process exited with value %d:\t $cmd\nError:\t$err\n", $exit_code);
     
       if (! $no_exit){
-        throw sprintf("Child process exited with value %d\nError:\t$err\n", $exit_code);
+        throw($msg);
       }   
       else{
-        warn sprintf("Child process exited with value %d\nError:\t$err\n", $exit_code);  
+        warn $msg;  
       }
   }
 
@@ -1602,9 +1623,10 @@ sub merge_bams{
   }
 
   assert_ref($params, 'HASH');
-  my $debug     = $params->{debug}             if exists $params->{debug};
-  my $sort      = $params->{sort}              if exists $params->{sort};
-  my $rm_dups   = $params->{remove_duplicates} if exists $params->{remove_duplicates};
+  my $debug     = $params->{debug}    if exists $params->{debug};
+  #my $sort      = $params->{sort}    if exists $params->{sort};
+  my $rm_dups   = $params->{rmdups}   if exists $params->{rmdups};
+  my $checksum  = $params->{write_checksum} if exists $params->{write_checksum};
   
   #For safety we need to validate all the bam headers are the same?
   #or at least no LN clashed for the same SN?
@@ -1633,13 +1655,13 @@ sub merge_bams{
   #it would be nice if samtools updated the sort flag in the header?
   #maybe we can do this?
   
-  if(defined $sort){
-    throw('Not implemented sort yet');  
+  #if(defined $sort){
+  #  throw('Not implemented sort yet');  
     # my $sorted_prefix = $tmp_bam.".sorted_$$";
     #$tmp_bam .= ($sort) ? ".sorted_$$.bam" : '.tmp.bam';
     #$cmd .= ' | samtools view -uShb - ';  #simply convert to bam using infile header
     #$cmd .= ($sort) ? ' | samtools sort - '.$sorted_prefix : ' > '.$tmp_bam;
-  }
+  #}
  
 
   
@@ -1677,6 +1699,8 @@ sub merge_bams{
       #We only need to do this if the validate_sam_header
       #method identifed some of the bams without the relevant header
       
+      warn "Currently integrating fai header via samtools view, but it is more efficient to integrate is with sam format header in merge";
+      
       $cmd .= "samtools view -t $sam_ref_fai -h${out_flag} - > $outfile";
       #This is current failing on the first line of the fai file with?
       #[sam_header_read2] 194 sequences loaded.
@@ -1707,6 +1731,9 @@ sub merge_bams{
       #So it seems that mismatched in file headers vs fai headers causes this error
       #No! But getting the headers to match, did mean the merge avoids the problematic
       #samtools view -ht command
+      
+      #This is because only the first process exit status is captured by perl
+      
     }
   }
   else{  
@@ -1720,6 +1747,11 @@ sub merge_bams{
   warn "Merging with:\n$cmd\n" if $debug;
   run_system_cmd($cmd);
   warn "Finished merge" if $debug;
+  
+  if($checksum){
+    write_checksum($outfile, $params);  
+  }
+    
   return;
 }
 
@@ -1743,7 +1775,7 @@ sub validate_sam_header {
   my $params           = shift || {};
   assert_ref($params, 'HASH');
   my $is_fai           = 1 if $header_or_fai =~ /\.fai$/o;
-  my $debug            = $params->{debug} if exists $params->{debug};
+  my $debug            = (exists $params->{debug}) ? $params->{debug} : 0;
   
   if(! defined $sam_bam_file){
     throw("Mandatory argument not specified:\t sam/bam file"); 
@@ -1823,41 +1855,47 @@ sub validate_sam_header {
     #actaully there can be some gender specific top level unassembled contigs too! 
     #Meaning any non-gender specific header will need to be a merge, not just the male header 
     warn scalar(@ref_header)." lines in reference header:\t$header_or_fai\n".
-      $hdr_cnt." lines in file header:\t$sam_bam_file" if $debug;
+      $hdr_cnt." lines in file header:\t$sam_bam_file\n" if $debug >= 2;
     $header_opt = '' if $hdr_cnt == scalar(@ref_header);
   }
   
   return $header_opt;
 }
 
+
+#todo
+#1 We need to catch if consequence of opts is to actually do nothing
+#2 Make rmdups optional as this will have already been done in the merge_bams
+
+
 sub process_sam_bam {
   my $sam_bam_path = shift;
-  my $params       = shift;
+  my $params       = shift || {};
   my $in_file;
 
   if(! ($in_file = check_file($sam_bam_path, undef, $params)) ){
     throw("Cannot find file:\n\t$sam_bam_path");
   }
-
-  $params ||= {};
+  
+  #Could just take a local copy of the hash to avoid doing this and use
+  #the hash directly
   assert_ref($params, 'HASH');
-  my $out_file      = $params->{out_file}           if exists $params->{out_file};
-  my $sort          = $params->{sort}               if exists $params->{sort};
+  my $out_file      = $params->{out_file}      if exists $params->{out_file};
+  my $sort          = $params->{sort}          if exists $params->{sort};
+  my $skip_rmdups   = $params->{skip_rmdups}   if exists $params->{skip_rmdups};
+  my $checksum      = $params->{checksum}      if exists $params->{checksum};
+  my $fasta_fai     = $params->{ref_fai}       if exists $params->{ref_fai};
+  my $out_format    = $params->{output_format} if exists $params->{output_format};
+  my $debug         = $params->{debug}         if exists $params->{debug};  
   my $filter_format = $params->{filter_from_format} if exists $params->{filter_from_format};
-  my $fasta_fai     = $params->{ref_fai}            if exists $params->{ref_fai};
-  my $out_format    = $params->{output_format}      if exists $params->{output_format};
-  $out_format     ||= 'sam';
-
+  my $force         = $params->{force_process_sam_bam} if exists $params->{force_process_sam_bam}; 
 
   #sam defaults
+  $out_format     ||= 'sam';
   my $in_format = 'sam';
-  my $out_flag   = '';
   my $in_flag   = 'S';
 
-  if($out_format eq 'bam'){
-    $out_flag = 'b';
-  }
-  elsif($out_format ne 'sam'){
+  if($out_format !~ /^(bam|sam)$/){
     throw("$out_format is not a valid samtools output format");
   }
 
@@ -1921,63 +1959,172 @@ sub process_sam_bam {
   #This can result in mismatched headers, as it does seem like the fai file is used rather than the in file header
   #here, at least for bams
 
-  #UNCOMMENT
-  #warn "COMMENTED OUT _validate_sam_header_fai";
-  #We need an allow no header option
-  my $fasta_fai_opt = validate_sam_header($in_file, $fasta_fai);
-  #my $fasta_fai_opt ='';
 
-  my $cmd = "samtools view -h${in_flag} $fasta_fai_opt $in_file "; # Incorporate header into file
-
-  if($filter_format){
-    $cmd .= "-F 4 | ". #-F Skip alignments with bit set in flag (4 = unaligned)
-    " grep -vE '^[^[:space:]]+[[:blank:]][^[:space:]]+[[:blank:]][^[:space:]]+\:[^[:space:]]+\:MT\:' ". #Filter MTs
-    " | grep -v '^MT' | grep -v '^chrM' ";                                                              #Filter more MTs
-  }
-
-  #-u uncompressed bam (as we are piping)
-  #-S SAM input
-  #-t  header file (could omit this if it is integrated into the sam/bam?)
-  #- (dash) here is placeholder for STDIN (as samtools doesn't fully support piping).
-  #This is interpreted by bash but probably better to specify /dev/stdin?
-  #for clarity and as some programs can treat is as STDOUT or anything else?
-  #-b output is bam
+  #Define and clean intermediate sorted files first
   (my $tmp_bam = $in_file) =~ s/\.$in_format//;
-  my $sorted_prefix = $tmp_bam.".sorted_$$";
-  $tmp_bam .= ($sort) ? ".sorted_$$.bam" : '.tmp.bam';
-
-  #-m 2000000 (don't use 2G here,a s G is just ignored and 2k is used, resulting in millions of tmp files)
-  #do we need an -m spec here for speed? Probably better to throttle this so jobs are predictable on the farm
-  #We could also test the sorted flag before doing this?
-  #But samtools sort does not set it (not in the spec)!
-  #samtools view -H unsort.bam
-  #@HD    VN:1.0    SO:unsorted
-  #samtools view -H sort.bam
-  #@HD    VN:1.0    SO:coordinate
-  #We could add it here, but VN is mandatory and we don't know the version of the sam format being used?
-  #bwa doesn't seem to output the HD field, not do the docs suggest which spec is used for a given version
-  #mailed Heng Lee regarding this
-  $cmd .= ' | samtools view -uShb - ';  #simply convert to bam using infile header
-  $cmd .= ($sort) ? ' | samtools sort - '.$sorted_prefix : ' > '.$tmp_bam;
-  #warn $cmd;
-  run_system_cmd($cmd);
-
-  #Add a remove duplicates step
-  #-s single end reads or samse (default is paired, sampe)
-  #Do this after alignment as we expect multiple reads if they map across several loci
-  #but not necessarily at exactly the same loci which indicates PCR bias
-  if($filter_format){
-    $cmd = "samtools rmdup -s $tmp_bam - | ".
-      "samtools view -h${out_flag} - > $out_file";
-  }else{
-    $cmd = "samtools view -h${out_flag} $tmp_bam > $out_file";
+  my $sorted_prefix = $tmp_bam.".sorted";
+  $tmp_bam .= ($sort) ? ".sorted.bam" : '.tmp.bam';  
+  my $cmd = "rm -f $tmp_bam*";
+  warn $cmd."\n" if $debug;
+  run_system_cmd($cmd, 1); #no exit flag
+  $cmd = '';
+  
+  #Check header and define include option
+  my $fasta_fai_opt = validate_sam_header($in_file, $fasta_fai, undef $params);
+  
+  
+  #Validate that we actually want to do something here
+  #filter, sort, format conversion or header include?
+  #othwerwise this is a simple mv operation
+  my $reheader = 0;
+  
+  if((! ($filter_format || $sort)) &&
+     ($out_format eq $in_format) ){
+    #This could possibly be a reheader operation or simply a move
+    
+    if(! $fasta_fai_opt){
+      
+      if(! $force){
+      #arguably we should just do this but it is likely the options are wrong
+      #could provide a flag over-ride for this?
+      throw('The options provided do not require any processing of the input file:'.
+        "\n\t$in_file\nOther than copying to the output file destination:\n\t".
+        $out_file."\nPlease check/revise your options or specify the force_process_sam_bam parameter");
+      }
+      else{
+        $cmd = "mv $in_file $out_file";  
+      }
+    }
+    else{ #We simply want to reheader
+      #in and out format are the same, so can just test in format
+    
+      if($in_format eq 'sam'){
+        $cmd = "samtools view -h${in_flag} $fasta_fai_opt $in_file ";   
+      }
+      else{ #must be bam
+        throw('bam reheader is not yet supported as requires a sam format header file');
+        #actually fai format is not yet being validated, so this will fail if we pass a sam header
+        #as the $fasta_fai_opt will be -h (for merge) if it is in sam format
+        #$cmd = 'samtools reheader $sam_fai_or_header $in_file && mv $in_file $out_file';
+      }
+    }
   }
-
-  #warn $cmd;
-  run_system_cmd($cmd);
-  run_system_cmd("rm -f $tmp_bam");
-
-  if( (exists $params->{checksum}) && $params->{checksum}){
+  
+  
+  if(! $cmd){ #We want to do some filtering/sorting
+  
+    my $filter_opt = '-F 4' if $filter_format;
+    $cmd = "samtools view -hub${in_flag} $filter_opt $fasta_fai_opt $in_file "; # -h include header
+    #if we are not filtering and the headers match then we don even need this step!
+    #We shoudl probably omit the MT filtering completely as these will be handled in the blacklist?
+    #we haven't omitted other repeats yet, so this would be consistent
+  
+    #todo tidy up filter_format vs filter_mt modes
+    #drop MT filtering from here!
+  
+    #if($filter_format){
+      #$cmd .= "-F 4 | ". #-F Skip alignments with bit set in flag (4 = unaligned)
+      #  " grep -vE '^[^[:blank:]]+[[:blank:]][^[:blank:]]+[[:blank:]]+(MT|chrM)' "; #Filter MTs or any reference seq with an MT prefix
+      #Could add blank after MT, just in case there are valid unassembed seq names with MT prefixes
+      #Fairly safe to assume that all things beginning with chrM are MT or unassembled MT
+    #}
+  
+    #-u uncompressed bam (as we are piping)
+    #-S SAM input
+    #-t  header file (could omit this if it is integrated into the sam/bam?)
+    #- (dash) here is placeholder for STDIN (as samtools doesn't fully support piping).
+    #This is interpreted by bash but probably better to specify /dev/stdin?
+    #for clarity and as some programs can treat is as STDOUT or anything else?
+    #-b output is bam
+    #-m 2000000 (don't use 2G here,a s G is just ignored and 2k is used, resulting in millions of tmp files)
+    #do we need an -m spec here for speed? Probably better to throttle this so jobs are predictable on the farm
+    #We could also test the sorted flag before doing this?
+    #But samtools sort does not set it (not in the spec)!
+    #samtools view -H unsort.bam
+    #@HD    VN:1.0    SO:unsorted
+    #samtools view -H sort.bam
+    #@HD    VN:1.0    SO:coordinate
+    #We could add it here, but VN is mandatory and we don't know the version of the sam format being used?
+    #bwa doesn't seem to output the HD field, not do the docs suggest which spec is used for a given version
+    #mailed Heng Lee regarding this
+    #$cmd .= ' | samtools view -uShb - ';  #simply convert to bam using infile header
+    $cmd .= ($sort) ? ' | samtools sort - '.$sorted_prefix : ' > '.$tmp_bam;
+    warn $cmd."\n" if $debug;
+    run_system_cmd($cmd);
+    
+    
+    #This is now giving 
+    #[sam_header_read2] 194 sequences loaded.
+    #[sam_read1] reference 'LN:133797422' is recognized as '*'.
+    #Parse error at line 1: invalid CIGAR character
+    #[samopen] SAM header is present: 194 sequences.
+    #[sam_read1] reference 'SN:KI270740.1    LN:37240
+  
+  
+    #' is recognized as '*'.
+    #[main_samview] truncated file.
+    
+    #But this is not caught as an error!!!
+    #as the exit status is only caught for the last command
+    #let's write a run_piped_system_cmd which checks bash $PIPESTATUS array
+    #which contains all exit states for all commands in last pipe command
+    
+    #why is the fasta_fai_opt being defined at all?
+    #surely the headers are the same?
+    #Is this error because there are headers in both files
+    
+  
+    #Add a remove duplicates step
+    #-s single end reads or samse (default is paired, sampe)
+    #Do this after alignment as we expect multiple reads if they map across several loci
+    #but not necessarily at exactly the same loci which indicates PCR bias
+    
+    my $rm_cmd = "rm -f $tmp_bam";
+    
+    if($filter_format){
+      
+      if(! $skip_rmdups){      
+        $cmd = "samtools rmdup -s $tmp_bam ";
+      }
+      
+      if($out_format eq 'sam'){
+        
+        if($skip_rmdups){       
+          $cmd = "samtools view -h $tmp_bam > $out_file"; 
+        }
+        else{
+          $cmd .= "- | samtools view -h - > $out_file";
+        }
+           
+      }
+      elsif($skip_rmdups){
+        $cmd = "mv $tmp_bam $out_file";   
+        $rm_cmd = ''
+      }
+      else{
+        $cmd .= $out_file;  
+      }
+    }
+    elsif($out_format eq 'bam'){
+      #We know we have bam by now as we have done some sorting
+      $cmd = "mv $tmp_bam $out_file";
+      $rm_cmd = '';
+    }
+    else{ #We need to convert to sam     
+      $cmd = "samtools view -h $tmp_bam > $out_file";
+    }
+    
+    warn $cmd."\n" if $debug;
+    run_system_cmd($cmd);  
+    $cmd = $rm_cmd;
+  }
+  
+  if($cmd){
+    warn $cmd."\n" if $debug;
+    run_system_cmd($cmd);
+  }
+  
+  if($checksum){
     write_checksum($out_file, $params);
   }
 
@@ -2118,6 +2265,9 @@ sub url_from_DB_params {
 #todo tidy up suffix handling, will it ever be anything other than .gz?
 
 
+# To run on checksum validation simply define the checksum param
+#to the expected checksum or undef if we want to read from a sig file
+
 sub check_file{
   my ($file_path, $suffix, $params) = @_;
 
@@ -2160,6 +2310,7 @@ sub check_file{
 
   return $found_path;
 }
+
 
 sub validate_path{
   my ($path, $create, $is_dir, $alt_root) = @_;
@@ -2248,8 +2399,6 @@ sub validate_path{
 
   return $path;
 }
-
-#Funcgen added methods
 
 
 
