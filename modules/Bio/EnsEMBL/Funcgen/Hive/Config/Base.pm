@@ -210,6 +210,12 @@ sub default_options {
     #which maybe required for rerunning certain jobs
     #leaving this unset greatly reduces the running footprint of the pipeline
     #This is useful for debugging
+    
+    archive_root     => undef,
+    allow_no_archive => 0,
+    #Set this to 1 to allow analyses to skip
+    #archiving if archive_root is not specified
+    
    };
 }
 
@@ -292,7 +298,13 @@ sub pipeline_wide_parameters {
     #No default for data dir, as we don't want to check in internal paths
     data_root_dir     => $self->o('data_root_dir'), #'/lustre/scratch109/ensembl/funcgen',
     work_root_dir     => $self->o('work_root_dir'), #'/lustre/scratch109/ensembl/funcgen',
-    alt_data_root_dir => $self->o('alt_data_root_dir'),    
+    alt_data_root_dir => $self->o('alt_data_root_dir'), 
+    
+    
+    archive_root     => $self->o('archive_root'),
+    allow_no_archive => $self->o('allow_no_archive'),
+    
+       
     bin_dir           => $self->o('bin_dir'),
   
     #root_output_dir => $self->o('root_output_dir'),
