@@ -56,6 +56,10 @@ my %valid_flow_modes = (replicate => undef,
 
 sub fetch_input {  
   my $self = shift;
+  
+  #Set some module defaults
+  $self->param('disconnect_if_idle', 1);
+  
   $self->SUPER::fetch_input();
   my $rset = $self->fetch_Set_input('ResultSet');
   $self->param_required('archive_root');#Do this here to fail early
@@ -122,7 +126,7 @@ sub run {
   if($self->fastq_files){
     #Run with no exit flag so we don't fail on retry
     $cmd = 'rm -f '.join(' ', @{$self->fastq_files});
-    $self->helper->debug(1, "Removing fastq chunks:\n$cmd");
+    $self->helper->debug(3, "Removing fastq chunks:\n$cmd");
     run_system_cmd($cmd, 1);
   }
   
@@ -137,8 +141,9 @@ sub run {
  
   #sam_header here is really optional if is probably present in each of the bam files but maybe incomplete 
   merge_bams($unfiltered_bam, $self->sam_ref_fai($rset->cell_type->gender), \@bam_files, 
-             {remove_duplicates => 1,
-              debug             => $self->debug});
+             {rmdups         => 1,
+              write_checksum => 1, #turns on checksum writing
+              debug          => $self->debug});
    
   #todo convert this to wite to a result_set_report table
   my $alignment_log = $file_prefix.".alignment.log";
@@ -151,11 +156,7 @@ sub run {
   #Maybe do some percentages?
   $self->helper->debug(1, "Generating alignment log with:\n".$cmd);
   run_system_cmd($cmd);
-  
-  #my $repository = $self->_repository();
-  #move("${file_prefix}.sorted.bam","${repository}/${set_name}.samse.bam");
-  #my $convert_cmd =  "samtools view -h ${file_prefix}.sorted.bam | gzip -c - > ${repository}/${set_name}.samse.sam.gz";
-
+ 
   #Filter and QC here FastQC or FASTX?
   #filter for MAPQ >= 15 here? before or after QC?
   #PhantomPeakQualityTools? Use estimate of fragment length in the peak calling?
@@ -163,17 +164,19 @@ sub run {
   warn "Need to implement post alignment QC here. Filter out MAPQ <16. FastQC/FASTX/PhantomPeakQualityTools frag length?";
   #todo Add ResultSet status setting here!
   #ALIGNMENT_QC_OKAY
-
   #Assuming all QC has passed, set status
-  $self->helper->debug(1, "Writing checksum for file:\t".$unfiltered_bam);
-  write_checksum($unfiltered_bam);
   
   if($self->run_controls){
-    my $exp = $self->get_control_InputSubset($rset);
+    my $exp = $self->get_control_InputSubset($rset)->experiment;
     $exp->adaptor->store_status('ALIGNED_CONTROL', $exp);
   }
   else{
     $rset->adaptor->store_status('ALIGNED', $rset);
+    
+    #Set IMPORTED too as this is the generic status used in the rollback methods
+    #IMPORTED suggests data has actually been loaded into the DB, where as ALIGNED
+    #refers to alignments generate outside of the DB.
+    $rset->adaptor->store_status('IMPORTED', $rset);
   }
 
 
