@@ -66,6 +66,9 @@ use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
 sub fetch_input {  
   my $self = shift;
+  #Set some module defaults
+  $self->param('disconnect_if_idle', 1);
+  
   $self->SUPER::fetch_input();
   my $rset = $self->fetch_Set_input('ResultSet');
 
@@ -165,7 +168,7 @@ sub run {
   my @issets = @{$rset->get_support('input_subset')};
   
   if((! $run_controls) && (! $merge) &&
-    ($self->is_idr_feature_type($rset->feature_type))){
+    ($self->is_idr_FeatureType($rset->feature_type))){
   
     my @signal_issets = grep { ! $_->is_control } @issets;
   

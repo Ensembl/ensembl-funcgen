@@ -36,8 +36,10 @@ $main::_no_log = 1;
 
 sub fetch_input {   # fetch parameters...
   my $self = shift;
-  $self->SUPER::fetch_input;  
-  
+  #Set some module defaults
+  $self->param('disconnect_if_idle', 1);
+
+  $self->SUPER::fetch_input;    
   $self->helper->debug(1, "CollectionWriter::fetch_input after SUPER::fetch_input");
 
 
