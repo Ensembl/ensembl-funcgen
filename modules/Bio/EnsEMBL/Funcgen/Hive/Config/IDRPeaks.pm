@@ -93,8 +93,10 @@ sub pipeline_wide_parameters {
     #As there is no way of there is no way of the analysis knowing which param to use?
     #
     
-    can_run_SWEmbl_R0005_replicate => 1, 
-    can_DefineMergedDataSet    => 0, 
+    can_run_SWEmbl_R0005_replicate => 'IDRPeaks',
+    can_PreprocessIDR              => 'IDRPeaks',
+    #Set to the config name so the configure_pipeline script knows to reset these jobs 
+    can_DefineMergedDataSet        => 0, 
    };
 }
 
@@ -170,12 +172,7 @@ sub pipeline_analyses {
 	                  only_replicates      => 1, 
 	                 #This might need to take a -replicate flag
 	                 #to ensure we only identify single rep InputSets
-	                 #Probably need a naming convention i.e. suffix of TR_[1-9]*
-	                 #  
-	              
-	                
-	                 
-	                
+	                 #Probably need a naming convention i.e. suffix of TR_[1-9]*	                
 	                 },
 	             
       #This will fan into the rep peak jobs
@@ -194,14 +191,16 @@ sub pipeline_analyses {
 	 #This needs to change now as we will have to fan the IDR jobs.
 	 #DefineReplicateDataSet can still do the post processing tho?
 	 #No wait, this is te wrong way around
-	  -flow_into => 
-	   {		
-      'A->2' => ['PreprocessIDR'],  
-	    '3->A' => [ 'run_SWEmbl_R0005_replicate' ], #['DefineReplicateDataSet'],
-     },
+	   -flow_into => 
+	    {		
+       'A->2' => ['PreprocessIDR'],  
+	     '3->A' => [ 'run_SWEmbl_R0005_replicate' ], #['DefineReplicateDataSet'],
+      },
 			 
-	  -analysis_capacity => 100, #although this runs on LOCAL
-      -rc_name => 'default',
+	   -analysis_capacity => 100, #although this runs on LOCAL
+     -rc_name => 'default',
+     -failed_job_tolerance => 100, 
+     #We don't care about these failing, as we expect them too
     },
 	
 	  
@@ -261,10 +260,8 @@ sub pipeline_analyses {
      -rc_name    => 'default',
      -batch_size => 30,#Should really take >1min to process each set of replicates
             
-     -parameters => 
-      {
-       feature_set_analysis => $self->o('permissive_peaks'), #This will not allow batch override
-      },    
+     -parameters => { feature_set_analysis => $self->o('permissive_peaks') },
+      #This will not allow batch override
            
      -flow_into => 
       {
