@@ -827,10 +827,13 @@ sub define_ResultSet {
     rearrange( ['RESULT_SET_NAME','RESULT_SET_ANALYSIS', 
                 'RESULT_SET_MODE', 'SUPPORTING_SETS'], @_ );
 
+
+
   throw("Mandatory parameter note defined:\t-RESULT_SET_NAME") if ! defined $name;
   assert_ref($sets, 'ARRAY'); 
   throw('Must pass at least one supporting set') if scalar(@$sets) == 0;
 
+  $self->debug(1, "Defining ResultSet $name");
    
   foreach my $set(@$sets){
     assert_ref($set, 'Bio::EnsEMBL::Funcgen::InputSubset', 'InputSubset support');
@@ -999,7 +1002,7 @@ sub _validate_rollback_Set {
     #this would only be unsafe if we ever want to treat sets differently wrt recovery
     #that will never happen  
         
-      
+
     if( (($rollback_level >= $rollback_modes{$set_type}) ||
          (! $stored_set->has_status('IMPORTED')        ) ||
          $recover                                       ) 
