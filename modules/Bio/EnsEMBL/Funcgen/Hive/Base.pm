@@ -521,9 +521,9 @@ sub _set_out_db {
       $db->dnadb->dbc->db_handle;
   	
       #To avoid farm issues...
-      if($self->param('disconnect_when_inactive')){
-        $db->dbc->disconnect_when_inactive(1);
-        $db->dnadb->dbc->disconnect_when_inactive(1);
+      if($self->param_silent('disconnect_if_idle')){
+        $db->dbc->disconnect_if_idle(1);
+        $db->dnadb->dbc->disconnect_if_idle(1);
       }
       
           
@@ -1321,11 +1321,11 @@ sub branch_job_group{
   my $fan_branch    = $self->_get_branch_number($fan_branch_codes, $branch_config); 
   #this also asserts_ref for $fan_branch_codes
     
-  $self->helper->debug(1, "Branching $fan_branch");;
+  $self->helper->debug(1, "Branching $fan_branch(".join(' ', @$fan_branch_codes).')');
     
   if(! (check_ref($fan_jobs, 'ARRAY') &&
         scalar(@$fan_jobs) > 0)){
-    throw('Must have at least 1 job in the job group');        
+    throw("Must have at least 1 job in the job group for fan/branch $fan_branch");        
   }
   
   my $job_group = [$fan_branch, $fan_jobs]; 
@@ -1860,7 +1860,7 @@ sub get_alignment_files_by_ResultSet_formats {
   $aligned_status   .= '_CONTROL' if $control;
   
   if($control){
-    my $exp = $self->get_control_InputSubset($rset);
+    my $exp = $self->get_control_InputSubset($rset)->experiment;
     
     if(! $exp->has_status('ALIGNED_CONTROL')){
       throw('Cannot get control alignment files for a ResultSet('.$rset->name.
@@ -1879,17 +1879,24 @@ sub get_alignment_files_by_ResultSet_formats {
     #$align_files = { => validate_path($self->param($file_type)) };
   }
   else{ # Get default file
-    my $params = {ref_fai            => $self->sam_ref_fai,  #Just in case we need to convert
-                  filter_from_format => $filter_format,
-                  all_formats        => $all_formats,
-                  checksum           => 1}; #This turns on file based checksum generation/validation
-    #We never want to set checksum_optional here, as this is really
-    #just for fastq files for which we don't have a checksum
-    
     $path = $self->get_alignment_file_prefix_by_ResultSet($rset, $control); 
     $path .= '.unfiltered' if $filter_format;
+    my $params = {debug              => $self->debug,
+                  ref_fai            => $self->sam_ref_fai($rset->cell_type->gender),  #Just in case we need to convert
+                  filter_from_format => $filter_format,
+                  skip_rmdups        => 1, #This will have been done in merge_bams
+                  all_formats        => $all_formats,
+                  checksum           => undef,  #This turns on file based checksum generation/validation
+                  };
+    #We never want to set checksum_optional here, as this is really
+    #just for fastq files for which we don't have a checksum
+    #This is currently bein interpreted at the actual check sum
+    #as is passed directly through to the provess method in EFGUtils
+    #and check_file
+    #This currently only call validate_checksum if checksum is defined
+    #but we also want this to support getting the checksum
+    #no, 
      
-
     $self->helper->debug(1, "Getting $file_type (filter_from_format=$filter_format):\n\t".$path);
     $align_files = get_files_by_formats($path, $formats, $params);
   }  
@@ -1943,7 +1950,7 @@ sub archive_file{
     
     #sanity check these are not the same
     
-    if($archive_file == $file){
+    if($archive_file eq $file){
       $self->throw_no_retry("Source and archive filepath are the same:\n$file");  
     }
     
@@ -2004,10 +2011,11 @@ sub validate_package_from_path{
 #This ! grep is fine, although it returns an empty string instead of 0
 #as oppose to 1, when nothing is returned from grep
 
-sub is_idr_feature_type{
+sub is_idr_FeatureType{
   my $self  = shift;
   my $ftype = shift;
-  throw('Must pass a FeatureType name') if ! defined $ftype; 
+  assert_ref($ftype, 'Bio::EnsEMBL::Funcgen::FeatureType');
+  $ftype = $ftype->name;
   
   return $self->param_silent('no_idr') ? 0 : 
           ! grep(/^${ftype}$/, @{$self->param_required('broad_peak_feature_types')});
