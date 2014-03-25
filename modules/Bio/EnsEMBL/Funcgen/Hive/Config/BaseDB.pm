@@ -79,7 +79,8 @@ sub default_options {
 	
 	port                => undef,
 	
-	disconnect_when_inactive => 1, #Set on funcgen and core DBAdaptors
+	#Best to do this on a per analysis basis
+	#disconnect_when_idle => undef, #Set on funcgen and core DBAdaptors
 	ssh                 => undef, #Connect to DBs using ssh(use in Importer)
 	
 	
@@ -188,9 +189,7 @@ sub pipeline_wide_parameters {
 	  #registry_user    => $self->o('registry_user'), 
 	  #registry_version => $self->o('registry_version'),
 	  #registry_user    => $self->o('registry_user'),
-    
-      #Currently pipeline wide, but may want to redefine for particular analyses
-      disconnect_when_inactive => $self->o('disconnect_when_inactive'),
+
     
       #Now defaults in runnable
       #db_output_dir => $self->o('data_root_dir').'/output/'.$self->o('dbname'),
