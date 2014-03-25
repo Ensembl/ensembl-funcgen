@@ -213,11 +213,10 @@ sub run {   # Check parameters and do appropriate database/file operations...
     #We need to validate they are all from the same experiment, 
     #although this os done in IdentifySetInputs?
     
-    my (%exps, $exp);
+    my %exps;
     
     foreach my $ctrl(@$ctrls){
-      $exp = $ctrl->experiment;
-      $exps{$exp->name} = $exp;
+      $exps{$ctrl->experiment->name} = $ctrl->experiment;
     }
     
     if( scalar(keys(%exps)) != 1 ){
@@ -225,7 +224,11 @@ sub run {   # Check parameters and do appropriate database/file operations...
         join(' ', keys(%exps)));  
     }
     
+    my ($exp) = values(%exps);#We only have one
+    
     if ($exp->has_status('ALIGNED_CONTROL')){
+        $self->helper->debug(1, 'Skipping control processing as '.$exp->name.
+          ' Experiment has ALIGNED_CONTROL status');
         $control_branch = '' 
     }
     else{
@@ -272,7 +275,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
     }
 
     my $ftype          = $sigs->[0]->feature_type;
-    my $is_idr_ftype   = $self->is_idr_feature_type($ftype);
+    my $is_idr_ftype   = $self->is_idr_FeatureType($ftype);
     my $merge_rep_bams = $self->merge_replicate_alignments;
     my $ctype          = $sigs->[0]->cell_type;
     
@@ -282,10 +285,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
     my $has_reps = (scalar(@$sigs) >1) ? 1 : 0;    
     my $run_reps; 
     
-    
-   
-   
-   if($is_idr_ftype && $has_reps){
+    if($is_idr_ftype && $has_reps){
       
       if($merge_rep_bams){
         #Merged control file should already be present
@@ -338,18 +338,13 @@ sub run {   # Check parameters and do appropriate database/file operations...
       #This is a pre-alignemnt fastq merge done by PreprocessFatsqs
     }
     
-    #Reset branch if we have controls
-    #if(@$ctrls){
-    #  $branch = 'Preprocess_'.$align_lname.'_control';
-    #}
-    
+    #Reset if we have controls    
     $branch = $control_branch if $control_branch;
-    
     
     foreach my $rep_set(@rep_sets){ 
       my $rset_name = $parent_set_name;#.'_'.$align_anal->logic_name;
     
-      if($is_idr_ftype && ! exists $rep_bams{$rset_name}){
+      if($is_idr_ftype && $has_reps){
         #only 1 in the $rep_set 
           $rset_name .= '_TR'.$rep_set->[0]->replicate;
       }
@@ -427,12 +422,17 @@ sub run {   # Check parameters and do appropriate database/file operations...
           #Check we don't already have the file from the Generate PseudoReps step  
           #Can only do merge here, as this is the point we have access to the final ResultSet
           my $merged_file = $self->get_alignment_file_prefix_by_ResultSet($rset).'.bam';
+      
+          #This also needs to use the get_alignment_files_by_ResultSet method!
+          
+      
           
           if(! -f $merged_file || $self->param_silent('overwrite')){
             
+            throw("Need to implement archive support here!");
             merge_bams($merged_file, 
                        $rep_bams{$rset->name}{rep_bams},
-                       $self->sam_ref_fai($rset->cell_type->gender)
+                       $self->sam_ref_fai($rset->cell_type->gender),
                        {remove_duplicates => 1});
           }
         }
@@ -444,6 +444,9 @@ sub run {   # Check parameters and do appropriate database/file operations...
                                              set_type    => 'ResultSet'}]);
         }
         elsif($branch =~ /(_control$|_replicate$)/){
+          
+          $self->helper->debug(1, "Cacheing $branch branch jobs for ".$rset->name);
+          
           $branch_sets{$branch}{$rset_group_name}{set_names} ||= [];
           $branch_sets{$branch}{$rset_group_name}{dbIDs}     ||= [];
           push @{$branch_sets{$branch}{$rset_group_name}{set_names}}, $rset->name;
@@ -469,15 +472,14 @@ sub run {   # Check parameters and do appropriate database/file operations...
   
   #Now flow job_groups of rsets to control job/replicate & IDR 
   foreach my $branch(keys %branch_sets){            
-  
+    $self->helper->debug(1, "Processing cached branch $branch");
     #what about other branches in here
-  
   
     if($branch =~ /_replicate$/){
       
       foreach my $rep_set(keys %{$branch_sets{$branch}}){ 
         #Add semaphore RunIDR job
-        $self->branch_job_group($branch, $rep_set, 'PreprocessIDR', 
+        $self->branch_job_group($branch, $branch_sets{$branch}{$rep_set}{output_ids}, 'PreprocessIDR', 
                                 [{%batch_params,
                                  dbIDs     => $branch_sets{$branch}{$rep_set}{dbIDs},
                                  set_names => $branch_sets{$branch}{$rep_set}{set_names},
@@ -488,9 +490,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
       #Pick an arbitrary set for access to the controls 
       my ($any_group) = keys(%{$branch_sets{$branch}});
    
-      #result_set_groups here is used by MergeControlAlignments_and_QC 
-      #to flow correctly
-   
+      #result_set_groups here is used by MergeControlAlignments_and_QC to flow correctly
       $self->branch_job_group($branch, 
                               [{%batch_params,
                                result_set_groups => $branch_sets{$branch},
