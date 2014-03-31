@@ -439,8 +439,8 @@ sub run {   # Check parameters and do appropriate database/file operations...
         
         if($branch =~ /(_merged$|^DefineMergedDataSet$)/){# (no control) job will only ever have 1 rset    
           $self->branch_job_group($branch, [{%batch_params,
-                                             dbID       => [$rset->dbID], 
-                                             set_name   => [$rset->name],
+                                             dbID       => $rset->dbID, 
+                                             set_name   => $rset->name,
                                              set_type    => 'ResultSet'}]);
         }
         elsif($branch =~ /(_control$|_replicate$)/){
