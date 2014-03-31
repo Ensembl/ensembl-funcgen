@@ -189,7 +189,8 @@ sub run {
   #calling jobs which share the same control
   #This will also check the checksum we have just generated, which is a bit redundant
   $self->get_alignment_files_by_ResultSet_formats($rset, ['bam'], $self->run_controls, undef, 'bam');
-  $self->archive_file($unfiltered_bam, 1);#mandatory flag
+  $self->archive_file($unfiltered_bam, 1);#mandatory flagn
+  $self->archive_file($unfiltered_bam.'.CHECKSUM', 1);
   
   my $flow_mode    = $self->flow_mode;
   my %batch_params = %{$self->batch_params};
