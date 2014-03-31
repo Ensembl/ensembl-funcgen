@@ -52,6 +52,7 @@ use strict;
 use Digest::MD5;
 use Bio::EnsEMBL::Utils::Exception qw( throw      );
 use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
+use Data::Dumper                   qw( Dumper );
 use Scalar::Util                   qw( blessed    );
 use File::Path                     qw( make_path  );
 use File::Basename                 qw( dirname fileparse );
@@ -61,7 +62,7 @@ use FileHandle;
 use Carp;
 
 use base qw( Exporter );
-use vars   qw( @EXPORT_OK );
+use vars qw( @EXPORT_OK );
 
 @EXPORT_OK = qw(
   add_external_db
@@ -135,28 +136,27 @@ sub add_external_db{
     $efg_db->dbc->do('insert into external_db (db_name, db_release, status, dbprimary_acc_linkable, priority, db_display_name, type) '.
       "values('$db_name', '$db_release', 'KNOWNXREF', '1', '5', '$db_display_name', 'MISC')");
   }
+  
+  return;
 }
 
 
 #Move to PipelineUtils?
 
 sub add_hive_url_to_meta {
-  my ($url, $db) = @_;
-
-  #VALIDATE ARGS
+  my $url = shift;
+  my $db  = shift;
   parse_DB_url($url);
   assert_ref($db, 'Bio::EnsEMBL::DBSQL::DBAdaptor', 'db');#restrict this to Funcgen?
 
   my $mc         = $db->get_MetaContainer;
   my $meta_key = 'hive_url';
-
   my $meta_value = $mc->single_value_by_key($meta_key);
 
   if( ! defined $meta_value){ #Store the new meta entry
     #Add key via API to store with appropriate species_id
-    eval { $mc->store_key_value($meta_key, $url); };
 
-    if($@){
+    if(! eval { $mc->store_key_value($meta_key, $url); 1}){
       throw("Failed to store hive url meta entry:\t$meta_key\t$url\n$@");
     }
   }
@@ -195,10 +195,8 @@ sub add_hive_url_to_meta {
 
 sub assert_ref_do {
   my ($ref, $expected, $method, $attribute_name) = @_;
-
   #Can't do this as we expect a method return value
   #return 1 unless $ASSERTIONS;
-  my $value;
 
   $attribute_name ||= '-Unknown-';
   throw('No method given') if ! defined $method;
@@ -279,11 +277,11 @@ sub backup_file{
 
   if (-f $file_path) {
     #$self->log("Backing up:\t$file_path");
-    system ("mv ${file_path} ${file_path}.".`date '+%T'`) == 0 || return 0;
+    my $date = run_backtick_cmd('date \'+%T\'');
+    system ("mv ${file_path} ${file_path}.${date}") == 0 || return 0;
   }
 
   return 1;
-
 }
 
 
@@ -321,25 +319,28 @@ sub create_Storable_clone {
 }
 
 sub dump_data {
-  my ($data, $indent, $terse) = @_;
-  if(defined $indent and $indent !~ /[0123]/){
+  my $data   = shift;
+  my $indent = shift;
+  my $terse  = shift;
+  
+  if((defined $indent) and $indent !~ /[0-3]/o){
     throw("Indent must be 0,1,2,3 not $indent");
   }
-  $indent = defined($indent) ? $indent : 2;
-  $terse = ($terse) ? $terse : undef;
+  
+  $indent = 2 if ! defined $indent;
 
   my $dumper = Data::Dumper->new([$data]);
   $dumper->Indent($indent);
   $dumper->Terse($terse);
-  my $dump = $dumper->Dump();
-  return $dump;
+  
+  return $dumper->Dump;
 }
 
 
 #Do this as File::Basename doesn't quite get there.
 
 sub file_suffix_parse{
-  my $filepath = $_[0];
+  my $filepath = shift;
 
   my $file_name                  = fileparse($filepath);
   (my $file_prefix = $file_name) =~ s/\.[a-zA-Z0-9]$//;
@@ -353,7 +354,13 @@ sub file_suffix_parse{
 #slice ref args can be array ref (inc empty) or undef
 
 sub generate_slices_from_names{
-  my ($slice_adaptor, $slice_names, $skip_slices, $level, $non_ref, $inc_dups, $assembly) = @_;
+  my $slice_adaptor = shift;
+  my $slice_names   = shift;
+  my $skip_slices   = shift;
+  my $level         = shift;
+  my $non_ref       = shift;
+  my $inc_dups      = shift;
+  my $assembly      = shift;
   my (@slices, $slice, $sr_name, $have_slice_names, $have_skip_slices);
 
   #Test if $assembly is old?
@@ -382,23 +389,20 @@ sub generate_slices_from_names{
 
     foreach my $name(@$slice_names){
       $slice = $slice_adaptor->fetch_by_region(undef, $name, undef, undef, undef, $assembly);
-
-      #WHy is this failing for hap regions?
+      #Why is this failing for hap regions?
 
       if(! $slice){
 
-        #Need to eval this as it will break with incorrect formating
-
-        eval { $slice = $slice_adaptor->fetch_by_name($name) };
-
-        if(! $slice){
+        if(! (eval { $slice = $slice_adaptor->fetch_by_name($name); 1 } &&
+              defined $slice) ){
+          #Need to eval this as it will break with incorrect formating
           throw("Could not fetch slice by region or name:\t".$name);
         }
       }
 
       $sr_name = $slice->seq_region_name;
 
-      next if(grep/^${sr_name}$/, @$skip_slices);
+      next if(grep { /^${sr_name}$/ } @$skip_slices);
       push @slices, $slice;
     }
   }
@@ -418,9 +422,9 @@ sub generate_slices_from_names{
 
     if($have_skip_slices){
 
-      foreach $slice(@tmp_slices){
+      foreach my $slice(@tmp_slices){
         $sr_name = $slice->seq_region_name;
-        push @slices, $slice if ! grep/^${sr_name}$/, @$skip_slices;
+        push @slices, $slice if ! grep { /^${sr_name}$/ } @$skip_slices;
       }
     }
     else{
@@ -543,7 +547,7 @@ sub get_date{
 }
 
 
-
+#todo refactor get_files_by_formats complexity & nesting issues
 #This handles g/unzipping and conversion from bam > sam > bed
 #This also assumes that we only ever want to convert in this direction
 #i.e. assumes bam /sam will always exist if we have bed.
@@ -628,11 +632,10 @@ sub get_files_by_formats {
   my $filter_format         = $params->{filter_from_format};
   my $all_formats           = $params->{all_formats};
   my $done_formats          = {};
-  my ($files, @feature_files);
 
   #Add filter format if it is not in $formats
   if($filter_format &&
-     (! grep(/^$filter_format$/, @$formats) ) ){
+     (!  grep { /^$filter_format$/ } @$formats )){
     unshift @$formats, $filter_format;
     $clean_filtered_format = 1;
   }
@@ -642,7 +645,7 @@ sub get_files_by_formats {
     my $can_filter = 0;
 
     #Do this before simple file test as it is quicker
-    if(grep(/^${format}$/, (keys %$done_formats))){ #We have already created this format
+    if(grep { /^${format}$/ } keys %$done_formats){ #We have already created this format
       next;
     }
 
@@ -721,7 +724,7 @@ sub get_files_by_formats {
           #Test for file here if we are not filtering! Else we will always go through
           #other formats and potentially redo conversion if we have tidied intermediate files
           if( (! defined $filter_format) &&
-              (! grep (/^${from_format}$/, keys(%$done_formats)) ) ){
+              (! grep { /^${from_format}$/ } keys %$done_formats )){
             my $from_path = $path.".${from_format}";
 
             if($from_path = check_file($from_path, 'gz', $params)){#we have found the required format
@@ -732,7 +735,7 @@ sub get_files_by_formats {
 
 
           #find the first one which has been done, or if none, assume the first is present
-          if( (grep (/^${from_format}$/, keys(%$done_formats)) ) ||
+          if( (grep { /^${from_format}$/ } keys %$done_formats)  ||
               $i == 0){
             #then convert that to the next, and so on.
             for(my $x = $i; $x < $#{$conversion_paths{$format}}; $x++){
@@ -783,7 +786,7 @@ sub get_files_by_formats {
   foreach my $format(keys %$done_formats){
     #doesn't matter about $all_formats here
 
-    if(! grep(/^${format}$/, @$formats)){
+    if(! grep { /^${format}$/ } @$formats){
       delete $done_formats->{$format};
     }
   }
@@ -872,23 +875,22 @@ sub convert_sam_to_bed{
 sub write_checksum{
   my $file_path = shift;
   my $params    = shift || {};
-
   assert_ref($params, 'HASH');
-  my $signature_file = $params->{signature_file} if exists $params->{signature_file};
-  my $digest_method  = $params->{digest_method}  if exists $params->{digest_method};
-  my $debug          = (exists $params->{debug}) ? $params->{debug} : 0;
+  
+  my $signature_file = (exists $params->{signature_file}) ? $params->{signature_file} : undef;
+  my $digest_method  = (exists $params->{digest_method})  ? $params->{digest_method}  : undef;
+  my $debug          = (exists $params->{debug})          ? $params->{debug}          : 0;
 
   $digest_method ||= 'hexdigest';
   my $md5_sig   = generate_checksum($file_path, $digest_method);
-  
-  
   my $file_name = fileparse($file_path);
 
   if(! defined $signature_file){
     $signature_file = $file_path.'.CHECKSUM';
+    warn "Defining default signature file as $signature_file\n";
   }
   
-  warn "Writing checksum:\t$md5_sig\t$signature_file\n" if $debug;
+  warn "Writing checksum:\t$md5_sig\t$file_name\nTo signature file:\t$signature_file\n" if $debug;
 
   my $checksum_row = $md5_sig."\t".$file_name."\t".$digest_method;
 
@@ -896,6 +898,8 @@ sub write_checksum{
 
   my $sigfile_row;
   if(-f $signature_file){
+    warn "Signature file is $signature_file\n" if $debug;
+    
     $sigfile_row = run_backtick_cmd("grep '$file_name' $signature_file", 1);#no exit flag
     
     if($?){
@@ -924,8 +928,8 @@ sub write_checksum{
 
 
 sub generate_checksum{
-  my ($file, $digest_method) = @_;
-  
+  my $file          = shift;
+  my $digest_method = shift;
   #if($file =~ /\.gz$/){
     #warn("It is unsafe to generate checksums for a compressed file:\n\t$file");  
   #}
@@ -939,10 +943,12 @@ sub generate_checksum{
      'please choose a valid digest method or omit for default hexdigest method');
   }
 
-  open(FILE, $file) or throw("Cannot open file for md5 digest:\t$file");
-  $ctx->addfile(*FILE);
+  #Don't use bareword (FILE) for descriptor as is stored in symbol table for this package
+  #meaning potential interference if FILE is used elsewhere. (PBP 203)
+  open(my $CHK_FILE, '>', $file) or throw("Cannot open file for md5 digest:\t$file");
+  $ctx->addfile($CHK_FILE);
   my $md5_sig = $ctx->$digest_method;
-  close(FILE);
+  close($CHK_FILE);
 
   return $md5_sig;
 }
@@ -955,11 +961,11 @@ sub validate_checksum{
   my $params    = shift || {};
 
   assert_ref($params, 'HASH');
-  my $signature_file = $params->{signature_file}    if exists $params->{signature_file};
-  my $digest_method  = $params->{digest_method}     if exists $params->{digest_method};
-  my $md5_sig        = $params->{checksum}          if exists $params->{checksum}; 
-  my $md5_optional   = $params->{checksum_optional} if exists $params->{checksum_optional};
-  my $debug          = (exists $params->{debug}) ? $params->{debug} : 0;
+  my $signature_file = (exists $params->{signature_file})    ? $params->{signature_file}    : undef;
+  my $digest_method  = (exists $params->{digest_method})     ? $params->{digest_method}     : undef;
+  my $md5_sig        = (exists $params->{checksum})          ? $params->{checksum}          : undef; 
+  my $md5_optional   = (exists $params->{checksum_optional}) ? $params->{checksum_optional} : undef;
+  my $debug          = (exists $params->{debug})             ? $params->{debug}             : 0;
   
   if((defined $signature_file) && (defined $md5_sig)){
     throw("Params 'signature_file' and 'checksum' are mutually exclusive, please restrict to one");
@@ -1081,29 +1087,27 @@ sub gunzip_file {
 }
 
 
+#TODO Change this to use named pipes for the zcat so pipe exit can be caught properly
+#do this in open file, by passing an array of open modes
+
 sub is_bed {
   my $file = shift;
-
-  #Use open_file here!
+  my ($BED_FILE, @line);
 
   if(&is_gzipped($file, 1)){
-
-    open(FILE, "zcat $file 2>&1 |") or throw("Can't open file via zcat:\t$file");
+    open($BED_FILE, "zcat $file 2>&1 |") or throw("Can't open file via zcat:\t$file");
   }
   else{
-    open(FILE, $file) or throw("Can't open file:\t$file");
+    open($BED_FILE, '<', $file) or throw("Can't open file:\t$file");
   }
 
-  my @line;
-  #$verbose =1;
-
-
-  while (<FILE>) {
+  while (<$BED_FILE>) {
     chomp;
     @line = split("\t", $_);
     last;
   }
-  close FILE;
+  
+  close($BED_FILE);
 
   if (scalar @line < 6) {
     #warn "Infile '$file' does not have 6 or more columns. We expect bed format:\t".
@@ -1132,7 +1136,7 @@ sub is_bed {
 #would be nive to have a no thro mode, which would return the original value
 
 sub convert_strand_from_bed {
-  my $strand = $_[0];
+  my $strand = shift;
 
   if(! defined $strand){
    throw('Strand argument is not defined');
@@ -1152,10 +1156,10 @@ sub is_gzipped {
 
   throw ("File does not exist:\t$file") if ! -e $file;
 
-  open(FILE, "file -L $file |")
+  open(my $GZ_FILE, "file -L $file |")
     or throw("Can't execute command 'file' on '$file'");
-  my $file_info = <FILE>;
-  close FILE;
+  my $file_info = <$GZ_FILE>;
+  close($GZ_FILE);
 
   my $gzip = 0;
 
@@ -1193,41 +1197,28 @@ sub is_sam{
 
 sub mean{
   my $scores = shift;
-
   my $total = 0;
-
-  map $total+= $_, @$scores;
-  my $mean = $total/(scalar(@$scores));
-
-  return $mean;
-
+  map { $total+= $_ } @$scores;
+  return $total / scalar(@$scores);
 }
 
 
-#Sort should always be done in the caller if required
+#todo, add no sort flag, and sort by default?
+#will need to deref to avoidaffecting the the array in the caller
 
 sub median{
-  my ($scores, $sort) = shift;
-
-  return undef if (! @$scores);
-
+  my $scores = shift;
+  return if ! @$scores;
 
   my ($median);
   my $count = scalar(@$scores);
   my $index = $count-1;
-  #need to deal with lines with no results!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  #need to deal with undefs
   #deal with one score fastest
   return  $scores->[0] if ($count == 1);
 
-
-  if($sort){
-    #This is going to sort the reference here, so will affect
-    #The array in the caller
-    #We need to deref to avoid this
-  }
-
   #taken from Statistics::Descriptive
-  #remeber we're dealing with size starting with 1 but indices starting at 0
+  #remember we're dealing with size starting with 1 but indices starting at 0
 
   if ($count % 2) { #odd number of scores
     $median = $scores->[($index+1)/2];
@@ -1235,7 +1226,6 @@ sub median{
   else { #even, get mean of flanks
     $median = ($scores->[($index)/2] + $scores->[($index/2)+1] ) / 2;
   }
-
 
   return $median;
 }
@@ -1262,7 +1252,7 @@ sub median{
 =cut
 
 sub path_to_namespace {
-  my $path = $_[0];
+  my $path = shift;;
 
   if(! defined $path){
    throw('No path argument defined');
@@ -1273,6 +1263,9 @@ sub path_to_namespace {
   return $path;
 }
 
+
+#todo test file exists and is readable/writable first to avoid zombie?
+#todo Use IPC::Open3 for piping? Take list of operators (and list of files e.g. in/out)
 
 sub open_file{
   my ($file, $operator, $file_permissions) = @_;
@@ -1294,23 +1287,15 @@ sub open_file{
 
 
   if(! -d $dir){
-    eval { make_path($dir, $mkpath_opts) };
 
-    if($@){
+    if(! eval { make_path($dir, $mkpath_opts); 1 }){
       throw("Failed to make_path:\t$dir\n$@");
     }
   }
 
-  #my $fh;
-
-  #Test exists and is readable/writable first to avoid zombie?
-
-  my $fh = new FileHandle "$operator";
-  #warn "operator is $operator";
-
-  #open(my $fh, $operator) or die("Failed to open:\t$operator");
 
 
+  my $fh = FileHandle->new($operator);
 
   #This does not catch errors when piping then redirecting
   #as the progam will have opened sucessfully
@@ -1342,7 +1327,7 @@ sub open_file{
 
     #eval will treat octal number and string as true octal number
     #else will pass non-octal string/number which we can't catch
-    chmod(eval($file_permissions), $file);
+    chmod(eval{$file_permissions}, $file);
   }
 
   return $fh;
@@ -1351,7 +1336,7 @@ sub open_file{
 
 
 sub parse_DB_url {
-  my $url = $_[0];
+  my $url = shift;
 
   my ($dbtype, $user, $pass, $host, $dbname, $port);
 
@@ -1426,10 +1411,11 @@ sub run_system_cmd{
 
 ################################################################################
 
-#To have no exit here, we would have to reset $? $! and $@ as these would be lost
-#in _handle_exit_status
-#Hence would not be able to tell whether the returned vlue was an error 
-#or the expected data
+
+#todo Use IPC::Open3 instead of backtick here
+#Although we are handling exit codes, this will allow us
+#to capture STDOUT and STDERR sepatately
+#http://search.cpan.org/dist/Perl-Critic/lib/Perl/Critic/Policy/InputOutput/ProhibitBacktickOperators.pm
 
 sub run_backtick_cmd{
   my $command = shift;
@@ -1438,16 +1424,22 @@ sub run_backtick_cmd{
   my (@results, $result);
   
   if(wantarray){
-    #map chomp here?
-    @results = map {chomp $_; $_} `$command`;
+    #perlcritic(3) suggests this 3 statement map should be subbed out
+    #@results = map {my $line = $_; chomp $line; $line} `$command`;
+    #This is substantially faster
+    @results = `$command`;
+    chomp(@results);  
   }
   else{
     $result  = `$command`;
+    chomp($result);
   }
   
   my $exit_status = $?;
   _handle_exit_status($command, $exit_status, $!, $no_exit); 
   $? = $exit_status if $no_exit;
+  #Non-local 'Magic' $? assignment is a perlcritic severity 4 warning. 
+  #But we actually want this 'global' behaviour 
    
   return wantarray ? @results : $result;
 }
@@ -1473,7 +1465,7 @@ sub _handle_exit_status{
                  ($exit_status & 128) ? 'with' : 'without');
   }
   elsif($exit_status != 0) {
-    my $msg = sprintf("Child process exited with value %d:\t $cmd\nError:\t$err\n", $exit_code);
+    my $msg = sprintf("Child process exited with value %d:\t$cmd\nError:\t$err\n", $exit_code);
     
       if (! $no_exit){
         throw($msg);
@@ -1610,23 +1602,29 @@ sub merge_bams{
   my $sam_ref_fai = shift;
   my $bams        = shift;
   my $params      = shift || {};  
-  
   assert_ref($bams, 'ARRAY', 'bam files');
+  
+  if(! scalar(@$bams)){
+    throw('Must provide an arrayref of bam files to merge');  
+  }
+  
   my $out_flag = '';
   
   if(! defined $outfile){
     throw('Output file argument is not defined');  
   }
-  elsif($outfile !~ /\.(bam|sam)$/o){
+  elsif($outfile !~ /\.(?:bam|sam)$/xo){
+    #?: does not assign to $1
     $out_flag = 'b' if $1 eq 'bam';
     throw('Output file argument must have a sam or bam file suffix');    
   }
 
   assert_ref($params, 'HASH');
-  my $debug     = $params->{debug}    if exists $params->{debug};
-  #my $sort      = $params->{sort}    if exists $params->{sort};
-  my $rm_dups   = $params->{rmdups}   if exists $params->{rmdups};
-  my $checksum  = $params->{write_checksum} if exists $params->{write_checksum};
+  my $debug     = (exists $params->{debug})          ? $params->{debug}          : 0;
+  my $rm_dups   = (exists $params->{rmdups})         ? $params->{rmdups}         : undef;
+  my $checksum  = (exists $params->{write_checksum}) ? $params->{write_checksum} : undef;
+  warn "merge_bam_params are:\n".Dumper($params)."\n" if $debug;
+  
   
   #For safety we need to validate all the bam headers are the same?
   #or at least no LN clashed for the same SN?
@@ -1642,14 +1640,15 @@ sub merge_bams{
   #}
   #sam_header check will be done in validate_sam_header with cross validate boolean
   my $view_header_opt;
-  map { my $tmp_opt = validate_sam_header($_, $sam_ref_fai, 1, $params);
-        $view_header_opt = $tmp_opt if $tmp_opt;               } @$bams;
+  
+  for(@$bams){ 
+    my $tmp_opt = validate_sam_header($_, $sam_ref_fai, 1, $params);
+    $view_header_opt = $tmp_opt if $tmp_opt;               
+  }
   
   #validate/convert inputs here?
   #just assume all aren bam for now
-
-
-  my $cmd;
+  my $cmd = '';
   
   #Assume files are already sorted but support optional sort
   #it would be nice if samtools updated the sort flag in the header?
@@ -1679,16 +1678,35 @@ sub merge_bams{
   #but we never assume the file is sorted? or do we?
   #look how this is handled in get_alignment_files_by_ResultSet  
   
+  my $skip_merge = 0;
+  
+  if(scalar(@$bams) == 1){
+    #samtools merge cannot handle a single input!
+    #Instead it throws a seemingly completely unrelated error message:
+    #Note: Samtools' merge does not reconstruct the @RG dictionary in the header. Users
+    #  must provide the correct header with -h, or uses Picard which properly maintains
+    #  the header dictionary in merging.
+           
+    #Rather than having the caller have to handle this, let's just do the expected thing here
+    #and warn.
+    $skip_merge = 1;
+    warn 'Only 1 bam file has been specified, merge will be skipped, '.
+      "otherwise file will be processed accordingly\n";
+  }
+  
+  
+  
   if($rm_dups || $view_header_opt){
     #merge keeps the header in sam format (maybe this is a product of -u)?
-    $cmd  = 'samtools merge -u - '.join(' ', @$bams).' | '; 
+    $cmd = 'samtools merge -u - '.join(' ', @$bams).' | ' if ! $skip_merge; 
    
     if( $rm_dups ){
        #rmdup converts the header into binary format
-       $cmd .= 'samtools rmdup -s - ';
+       $cmd .= 'samtools rmdup -s ';
+       $cmd .= $skip_merge ? $bams->[0].' ' : ' - ';
        
        if( $view_header_opt ){
-         $cmd .=  '- | '
+         $cmd .=  ' - | '
        }
        else{
          $cmd .= $outfile;  
@@ -1736,8 +1754,11 @@ sub merge_bams{
       
     }
   }
-  else{  
-    $cmd  = "samtools merge $outfile ".join(' ', @$bams); 
+  elsif(! $skip_merge){  
+    $cmd = "samtools merge $outfile ".join(' ', @$bams); 
+  }
+  else{ #skip merge
+    $cmd = 'cp '.$bams->[0].' '.$outfile;
   }
  
   
@@ -1746,7 +1767,7 @@ sub merge_bams{
   
   warn "Merging with:\n$cmd\n" if $debug;
   run_system_cmd($cmd);
-  warn "Finished merge" if $debug;
+  warn "Finished merge to $outfile" if $debug;
   
   if($checksum){
     write_checksum($outfile, $params);  
@@ -1774,8 +1795,8 @@ sub validate_sam_header {
   my $xvalidate        = shift;
   my $params           = shift || {};
   assert_ref($params, 'HASH');
-  my $is_fai           = 1 if $header_or_fai =~ /\.fai$/o;
-  my $debug            = (exists $params->{debug}) ? $params->{debug} : 0;
+  my $is_fai           = ($header_or_fai =~ /\.fai$/o) ?                1 : 0;
+  my $debug            = (exists $params->{debug})     ? $params->{debug} : 0;
   
   if(! defined $sam_bam_file){
     throw("Mandatory argument not specified:\t sam/bam file"); 
@@ -1831,8 +1852,10 @@ sub validate_sam_header {
     my ($SN, $LN, %ref_header);
     my $hdr_cnt = 0;
     
-    map { (undef, $SN, $LN) = split(/\s+/, $_);
-          $ref_header{$SN} = $LN;              } @ref_header;
+    for(@ref_header){
+      (undef, $SN, $LN) = split(/\s+/, $_);
+      $ref_header{$SN} = $LN; 
+    }
    
    
     foreach my $line(@infile_header){
@@ -1880,22 +1903,22 @@ sub process_sam_bam {
   #Could just take a local copy of the hash to avoid doing this and use
   #the hash directly
   assert_ref($params, 'HASH');
-  my $out_file      = $params->{out_file}      if exists $params->{out_file};
-  my $sort          = $params->{sort}          if exists $params->{sort};
-  my $skip_rmdups   = $params->{skip_rmdups}   if exists $params->{skip_rmdups};
-  my $checksum      = $params->{checksum}      if exists $params->{checksum};
-  my $fasta_fai     = $params->{ref_fai}       if exists $params->{ref_fai};
-  my $out_format    = $params->{output_format} if exists $params->{output_format};
-  my $debug         = $params->{debug}         if exists $params->{debug};  
-  my $filter_format = $params->{filter_from_format} if exists $params->{filter_from_format};
-  my $force         = $params->{force_process_sam_bam} if exists $params->{force_process_sam_bam}; 
+  my $out_file      = (exists $params->{out_file})              ? $params->{out_file}              : undef;
+  my $sort          = (exists $params->{sort})                  ? $params->{sort}                  : undef;
+  my $skip_rmdups   = (exists $params->{skip_rmdups})           ? $params->{skip_rmdups}           : undef;
+  my $checksum      = (exists $params->{checksum})              ? $params->{checksum}              : undef;
+  my $fasta_fai     = (exists $params->{ref_fai})               ? $params->{ref_fai}               : undef;
+  my $out_format    = (exists $params->{output_format})         ? $params->{output_format}         : undef;
+  my $debug         = (exists $params->{debug})                 ? $params->{debug}                 : 0;  
+  my $filter_format = (exists $params->{filter_from_format})    ? $params->{filter_from_format}    : undef;
+  my $force         = (exists $params->{force_process_sam_bam}) ? $params->{force_process_sam_bam} : undef; 
 
   #sam defaults
   $out_format     ||= 'sam';
   my $in_format = 'sam';
   my $in_flag   = 'S';
 
-  if($out_format !~ /^(bam|sam)$/){
+  if($out_format !~ /^(?:bam|sam)$/){
     throw("$out_format is not a valid samtools output format");
   }
 
@@ -1903,7 +1926,7 @@ sub process_sam_bam {
     $in_format = 'bam';
     $in_flag   = '';
   }
-  elsif($in_file !~ /\.sam(\.gz)*?$/o){ # sam (maybe gzipped)
+  elsif($in_file !~ /\.sam(?:\.gz)*?$/o){ # sam (maybe gzipped)
     throw("Unrecognised sam/bam file:\t".$in_file);
   }
 
@@ -1916,7 +1939,7 @@ sub process_sam_bam {
 
 
   if(! $out_file){
-    ($out_file = $in_file) =~ s/\.${in_format}(.gz)*?$/.${out_format}/;
+    ($out_file = $in_file) =~ s/\.${in_format}(?:.gz)*?$/.${out_format}/;
 
     if(defined $filter_format){
       $out_file =~ s/\.unfiltered//o;  #This needs doing only if is not defined
@@ -2012,8 +2035,7 @@ sub process_sam_bam {
   
   
   if(! $cmd){ #We want to do some filtering/sorting
-  
-    my $filter_opt = '-F 4' if $filter_format;
+    my $filter_opt = ($filter_format) ? '-F 4' : '';
     $cmd = "samtools view -hub${in_flag} $filter_opt $fasta_fai_opt $in_file "; # -h include header
     #if we are not filtering and the headers match then we don even need this step!
     #We shoudl probably omit the MT filtering completely as these will be handled in the blacklist?
@@ -2214,8 +2236,8 @@ sub strip_param_args{
 
 	  ($param_name = $args->[$i]) =~ s/^[-]+//;
 
-	  if(grep/^${param_name}$/, @strip_params){
-		$seen_opt = 1;
+	  if( grep { /^${param_name}$/ } @strip_params){
+		  $seen_opt = 1;
 	  }
 	}
 
@@ -2232,11 +2254,10 @@ sub strip_param_args{
 
 sub strip_param_flags{
   my ($args, @strip_params) = @_;
-
-  my @args = @$args;
+  my @args;
 
   foreach my $flag(@strip_params){
-	@args = grep(!/[-]+${flag}$/, @args);
+	  push @args, grep { !/[-]+${flag}$/ } @$args;
   }
 
   return \@args;
@@ -2244,7 +2265,7 @@ sub strip_param_flags{
 
 
 sub url_from_DB_params {
-  my $db_params = $_[0];
+  my $db_params = shift;
 
   my $host   = (exists $db_params->{'-host'})   ? $db_params->{'-host'} :
     throw('Missing mandatory -host paramter in DB parameters hash');
@@ -2387,9 +2408,7 @@ sub validate_path{
   elsif($is_dir && $create){
       #print STDOUT "Creating${label}:\n\t$path\n";
 
-    eval { make_path($path) };
-
-    if($@){
+    if(! eval { make_path($path); 1 }){
       throw("Unable to create:\n\t$path\n$@");
     }
   }
@@ -2399,7 +2418,6 @@ sub validate_path{
 
   return $path;
 }
-
 
 
 1;
