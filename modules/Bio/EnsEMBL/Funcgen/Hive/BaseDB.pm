@@ -180,6 +180,9 @@ sub fetch_Set_input{
   my $db             = $self->param_required('out_db');
   my $set_name       = $self->param_required('set_name');
   #can't $db->can($adaptor_method) as this doesn't work with autoload
+  
+  
+  $self->helper->debug(1, "Fetching $set_name $set_type with dbID $dbid");
   my $set            = $db->$adaptor_method->fetch_by_dbID($dbid);
   
   if(! defined $set){
