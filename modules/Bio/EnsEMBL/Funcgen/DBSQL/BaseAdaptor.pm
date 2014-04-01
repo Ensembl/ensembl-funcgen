@@ -547,11 +547,11 @@ sub store_status{
       throw("$state is not a valid status_name for $obj:\t".$obj->dbID);
     }
 
-	$sql = "INSERT into status(table_id, table_name, status_name_id) VALUES('".$obj->dbID()."', '$table', '$status_id')";
-	$self->db->dbc->do($sql);
+	 $sql = "INSERT into status(table_id, table_name, status_name_id) VALUES('".$obj->dbID()."', '$table', '$status_id')";
+	 $self->db->dbc->do($sql);
 
-	#Setting it in the obj if it is not already present.
-	$obj->add_status($state) if(! $obj->has_status($state, $obj));
+	 #Setting it in the obj if it is not already present.
+	 $obj->add_status($state) if ! $obj->has_status($state, $obj);
   }
 
   return;
@@ -912,16 +912,12 @@ sub fetch_all_by_linked_Transcript{
 
 
 sub fetch_all_by_linked_transcript_Gene{
-   my ( $self, $gene ) = @_;
-
-   if(! $gene ||
-	  ! (ref($gene) && $gene->isa('Bio::EnsEMBL::Gene') && $gene->dbID)){
-	 throw('You must provide a valid stored Bio::EnsEMBL:Gene object');
-   }
-   #No need to quote param here as this is a known int from the DB.
-   my $tx_sids = $gene->adaptor->db->dbc->db_handle->selectcol_arrayref('select tsid.stable_id from transcript_stable_id tsid, transcript t where t.gene_id='.$gene->dbID.' and t.transcript_id=tsid.transcript_id');
-
-   return $self->fetch_all_by_external_names($tx_sids, $self->db->species.'_core_Transcript');
+  my $self = shift;
+  my $gene = shift;
+  assert_ref($gene, 'Bio::EnsEMBL::Gene'); 
+  #No need to pass params here as we known the gene ID is an int from the db 
+  my $tx_sids = $gene->adaptor->db->dbc->sql_helper->execute_simple('select t.stable_id from transcript t where t.gene_id='.$gene->dbID);
+  return $self->fetch_all_by_external_names($tx_sids, $self->db->species.'_core_Transcript');
 }
 
 
