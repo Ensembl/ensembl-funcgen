@@ -49,11 +49,8 @@ use Data::Dumper;
 ####################################
 
 my $registry = "Bio::EnsEMBL::Registry";
-$registry->load_registry_from_db(
-								 -host => 'ens-staging2',#'ensembldb.ensembl.org',
-								 -user => 'ensro',#'anonymous',
-#								 -db_version => 56,
-				 );
+$registry->load_registry_from_db(-host => 'ensembldb.ensembl.org',
+								                 -user => 'anonymous');
 
 #print "Using api: ",$registry->software_version,"\n";
 
@@ -65,36 +62,34 @@ my $tx_adaptor    = $registry->get_adaptor("mus musculus","core","Transcript");
 my $gene_adaptor  = $registry->get_adaptor("mus musculus","core","Gene");
 
 #####################################################
-# Get the slice from chr 20, start 400000, end 500000
-# Get the oligo array object for MOE430A
+# Get the slice for gene Cntnap1 with 100000bp flanks
+# Get the MOE430A array
 #####################################################
 
-my $slice = $slice_adaptor->fetch_by_region('chromosome','2',26771920, 26789448);
+my ($gene)  = @{$gene_adaptor->fetch_all_by_external_name('Cntnap1')};
+my $slice = $gene->feature_Slice->expand(10000, 10000);
 my $array = $aa->fetch_by_name_vendor('MOE430A', 'AFFY');
 
-
-#########################################
-# Get mapped probes for that slice
-#########################################
+############################################
+# Get mapped probes for that slice and array
+############################################
 
 my $oligo_features = $pfa->fetch_all_by_Slice_Array($slice,$array);
-print "\nProbeFeatures for Array ".$array->name." on slice ".$slice->name."\n\n";
+print "\n".scalar(@$oligo_features)." ProbeFeatures for Array ".$array->name." on slice ".$slice->name."\n\n";
 
 foreach my $pf(@$oligo_features){
-    my $probeset   = $pf->probeset->name;
-    my $probename  = $pf->probe->get_probename($array->name);
+  my $probeset   = $pf->probeset->name;
+  my $probename  = $pf->probe->get_probename($array->name);
 	my $slice_name = $pf->feature_Slice->name;
 	#extended cigar_string as defined by SAMTools group
-    print "\tProbe $probeset $probename is aligned on $slice_name with cigar string ".$pf->cigar_string."\n";
-  }
-
+  print "\tProbe $probeset $probename is aligned on $slice_name with cigar string ".$pf->cigar_string."\n";
+}
 
 ############################################
-# Get all ProbeFeatures annotated on the probesets annotated to Exons
+# Get all ProbeFeatures annotated on the probesets annotated to Transcripts
 # Note: ProbeFeature level DBEntries are used to build Probe/ProbeSet
 # level transcript annotatations.
-my $chro2 = $slice_adaptor->fetch_by_region('chromosome','2');
-print "\nProbeFeatures xref'd to Transcripts on slice ".$chro2->name."\n";
+print "\nProbeFeatures xref'd to Transcripts on slice ".$slice->name."\n";
 my @genes = @{ $slice->get_all_Genes() };
 
 foreach my $gene  (@genes) {
@@ -162,6 +157,23 @@ foreach my $probeset (@probesets){
   print "\t".$probeset->name." on arrays ".$arrays_string." with Probe hits $dbe_info\n";
   
 }
+
+#############################################################
+# Get all probesets annotated to transcripts for a given gene
+#############################################################
+
+print "\nAll probesets associated with transcript of Cntnap1:\n";
+
+
+foreach my $pset(@{$pba->fetch_all_by_linked_transcript_Gene($gene)}){
+	print $pset->name."\n";
+	
+	#Use the loop above to get all of the xref info for each probeset, 
+	#which may include mappings to other genes/transcript
+}
+
+
+
 
 ############################################
 # Probeset centric access
