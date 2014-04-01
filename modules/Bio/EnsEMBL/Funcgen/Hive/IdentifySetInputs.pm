@@ -50,53 +50,39 @@ use base ('Bio::EnsEMBL::Funcgen::Hive::BaseDB');
 
 
 my %set_adaptor_methods = 
-(
+ (
   InputSubset => 'get_InputSubsetAdaptor',
   ResultSet   => 'get_ResultSetAdaptor',
-  #FeatureSet  => 'get_FeatureSetAdaptor',
-  #data_set?
-);
+ );
 
-
-#Accessors to catch compile time errors and avoid uncaught typos
-
-#These are now all injected by set_param_method below
-#sub sets {                return $_[0]->param('sets');                }
-#sub set_type {            return $_[0]->param_required('set_type');   }
-#sub set_adaptor {         return $_[0]->param('set_adaptor');         }
-#sub constraints_hash {    return $_[0]->param('constraints_hash');    }
-
-#These are now injected by get_param_method via process_params below
-#sub feature_types {       return $_[0]->param('feature_types');       }
-#sub cell_types {          return $_[0]->param('cell_types');          }
-#sub experimental_groups { return $_[0]->param('experimental_groups'); }
-#sub analyses {            return $_[0]->param('analyses');            }
-#sub set_ids {             return $_[0]->param('set_ids');             }
-#sub set_names {           return $_[0]->param('set_names');           }
-#sub states {              return $_[0]->param('states');              } 
 
 #TODO 
-#1 Check we have experiment/experimetal_group support for the composable queries
+
+#1 DONE Check we have experiment/experimetal_group support for the composable queries
 #  validate set type if not all SetAdaptors support this.
+
 #2 Could do with a way of listing embargoed, when no_write is defined
-#3 Implement is_InputSubset_downloaded in run
+
+#3 DONE Implement is_InputSubset_downloaded in run
+
 #4 Genericse no_idr into something like merge_reps_only? #This is aimed at restricting to non-idr sets
 # and is not yet implemented. We really need a difference flag here. As no_idr is for turning off idr
 # not set selection and maintaining idr. Change this to run_idr as a boolean? This is still a bit ambiguous
-#5 review force/ignore_embargoed
+
+#5 Review force/ignore_embargoed/ not downloaded. Should we skip these by default? Or have separate skip options?
+#  Skip non-downloaded by default unless -download is specified (it might be okay to down load a few files on the farm
+#  but bulk download should be done on the head node, apparently systems prefer this
+#  non cpu optimised overloading of a head node rather than tying up a farm node)
+#  Then we are still left with the force/ignore_embargoed options.
+
 #6 Review throw string building once we support download
+
 #7 Revise control handling. This needs to be restricted to experimental sub groups
 #  i.e. ENCODE_Yale not ENCODE
-#  This is currently not supported by the DB
-#  But we could optionally add support for a like query for the experiments
-#  e.g. experiments_like => 'K562_%_ENCODE_Yale', control_experiments => 'K562_WCE_ENCODE_Yale'
-#  Can we harvest control ftypes automatically from the feature_type table
-#  Then try and identify the relevant sets, bailing if there is > 1?
-#  Let's just set the control ftypes here for now
-#  If we make the like resitrcted to the ftype field then this should work a treat
-#  and should also pick up the control experiments too. Will this need -identify_controls 
-#  to be specified?
-#  
+#  DONE experiments_like => 'K562_%_ENCODE_Yale', control_experiments => 'K562_WCE_ENCODE_Yale'
+#  This will also identify control sets.
+
+#  Drop allow_inter_group controls in favour of -control_experiments?
 #  Also, will specifying control_experiments allow association with any other experiment
 #  i.e. check whether we are still validating the control is within the project? We probably 
 #  just want to trust the -control_experiments and simply make the assocition based on cell type.
@@ -104,25 +90,38 @@ my %set_adaptor_methods =
 #  Actually this is going to cause trouble if we have already processed some experiments which would match 
 #  the string. The way around this is to simply add in the control_feature_types to a normal filter query
 #  
-#  This experiments_like is still valuable when we want to kick off a whole experimental sub group
 
-
-# 8 We also need a no_write mode which quickly losts all those which have not be aligned yet
+# 8 We also need a no_write mode which quickly lists all those which have not be aligned yet
 #   So this is an inverse of the ALIGNED status query. We need this for the other entry points too.
+#   How will this protect against set which have already been seeded?
+#   Do we need a SEEDED status? Would this be on the Experiment or InputSubset level?
+#   This is only relevant to a particular instance of the hive. So this is not really safe.
+#   We need a way to just skip over/stop flow of ResultSets which arleady exist
+#   This is going to be tricky as this could be seen as a failure too
+#   Maybe configure_hive and DropPipeline could check/delete these states?
+#   So we really need a two prong approach here. 
+#   1 Throw if the ResultSet exists and is aligned. (this is currently done in DefineResultSets)
+#   2 Check if the Experiment has been seeded already? This does not apply to control experiments
+#     Race condition between redundant controls is already being handled by ALIGNING_CONTROL in DefineResultSets
+#   This is really tying the IdentifyInputSubset analysis to DefineResultSets, but it is much more logical
+#   to do the checks here, rather than having to manage a failing DefinedResultSets job and reeseding
+#   We need an ignore aligned mode. This will be mutually exclusive with the rollback result_set mode 
 #
 # 9 Split this out into separate subs for different sets.
 #
 # 10 Fully remove InputSet support
 
+# 11 DONE Tidy up only_replicates/handle_replicates 
 
 
- 
-
+my @iset_only_params = qw( allow_no_controls control_feature_types skip_absent
+                           force_embargoed  ignore_embargoed  identify_controls  control_experiments );
+                          
+my @rset_only_params = qw( only_replicates );
 
 sub fetch_input {   # fetch parameters...
   my $self = shift;
   $self->SUPER::fetch_input; 
-  #$self->helper->debug(3, "IdentifySetInput params:\t", $self->input_job->{_param_hash});    
   my $set_type    = $self->get_param_method('set_type', 'silent'); 
  
   #This auto detection prevents having to do this in the SeedPipeline environment func
@@ -146,7 +145,12 @@ sub fetch_input {   # fetch parameters...
       throw("Cannot auto detect unique set_type from analysis logic name:\t$lname\n",  
             'Please defined the set_type analysis_parameter or rename analysis.'); 
     } 
+    
+    $self->set_type($set_type);
   }
+  
+  
+  ### Get the set type adaptor
     
   if(! exists $set_adaptor_methods{$set_type}){
     throw("The -set_type $set_type is not supported by IdentifySetInputs.\n".
@@ -158,34 +162,67 @@ sub fetch_input {   # fetch parameters...
     $self->set_param_method('set_adaptor', $self->out_db->$method, 'required');
   }
 
-  #We need these in this method
-  my $force_embargoed  = $self->get_param_method('force_embargoed',  'silent');
-  my $ignore_embargoed = $self->get_param_method('ignore_embargoed', 'silent'); 
- 
-  #We only need these in run
-  $self->process_params([qw(set_names set_ids only_replicates allow_no_controls 
-                            identify_controls control_experiments experiments_like control_feature_types)], 1);#optional
-               
-  if($set_type eq 'InputSubset'){     
-    
-    $self->set_param_method('validate_InputSubset_tracking', 1); #for convenience/speed in loop below
-        
-    if($force_embargoed && $ignore_embargoed){
-      throw('force_embargoed and ignore_embargoed are mutually exclusive parameters. '.
-        'Please omit one or both');     
-    }
-    
-    #Get feature_set analysis for control validation in run
+  ### Get/set generic optional param methods
+  #todo, split this into ref types, so we can validate
+  #i.e. scalar|arrayref|hashref vars
+  $self->process_params([qw(set_names set_ids experiments)], 1);#1 is optional flag
+  $self->set_param_method('constraints_hash',
+                          $self->process_params([qw(feature_types cell_types states
+                                                    analyses experimental_groups)],
+                                                1, 1));  #optional/as array flags
+  #all these are OR filters except states which is an AND filter
+                      
+
+  ### Catch mutally exclusive params  
+  if(keys %{$self->constraints_hash}){ 
       
-    #but we should also be mindful of a peak_analysis over-ride?
-    #but need to use generic params here?
-    #we could replace this with control_mandatory_ftypes
+    if($self->set_names || $self->set_ids || $self->experiments){
+      throw('You have specified mutually exclusive filter params for the '.
+            "IdentifySetInputs analysis\nPlease specify restrict to ".
+            'set_names, set_ids, experiments_like or a combination other filters '.
+            '(e.g. experimental_groups experiments feature_types cell_types analyses states');
+    }
+  }
+  elsif( (grep {defined $_ } ($self->set_names, $self->set_ids, $self->experiments)) != 1){      
+    throw('You must specify some IdentifySetInputs filter params either '.
+          'set_names, set_ids, experiments_like or a combination of '.
+          'feature_types cell_types experiments experimental_groups states analyses');
+  }
+
+  #Fetch set type specific inputs
+  my $set_input_method = '_fetch_'.$set_type.'_input';
+  $self->$set_input_method;
+
+  return;
+}
+
+
+sub _fetch_InputSubset_input{
+  my $self = shift;    
+  $self->_validate_param_specifity(\@rset_only_params);     
+  $self->process_params(\@iset_only_params, 1);#1 is optional flag 
+  $self->set_param_method('validate_InputSubset_tracking', 1); #for convenience/speed in loop below
+        
+  if($self->force_embargoed && $self->ignore_embargoed){
+    throw('force_embargoed and ignore_embargoed are mutually exclusive parameters. '.
+     'Please omit one or both');     
+  }
     
-    #Genericise feature_set_analysis_type to feature_set_analysis
-    my $anal_type = $self->param_required('feature_set_analysis_type');     
-    $self->set_param_method('feature_set_analysis', 
-                            $self->param_silent($anal_type.'_analysis'));
-                            
+  #Get feature_set analysis for control validation in run
+    
+  #but we should also be mindful of a peak_analysis over-ride?
+  #but need to use generic params here?
+  #we could replace this with control_mandatory_ftypes
+  
+  #Genericise feature_set_analysis_type to feature_set_analysis
+  my $anal_type = $self->param_required('feature_set_analysis_type');     
+  $self->set_param_method('feature_set_analysis', 
+                          $self->param_silent($anal_type.'_analysis'));
+
+  #This give the following warning
+  #ParamWarning: value for param('feature_set_analysis') is used before having been initialized!
+  #should we change set/get_param_method to use param_silent by default?
+                               
     if(! defined $self->feature_set_analysis){
       $self->get_param_method('default_feature_set_analyses', 'silent');     
  
@@ -205,13 +242,15 @@ sub fetch_input {   # fetch parameters...
         "control_experiments & allow_no_controls\nPlease omit one of these.");  
     }
     
-    if($self->experiments_like){
+    if($self->experiments){
+#      warn "experiments is ".$self->experiments;
+      #assert_ref
       
-      if($self->experiments_like !~ /$[^%]_%_[^%]$/o){
-        #We could be more strict here and force the % to be in the expected ftype location
-        throw('The -experiments_like string does not have a single % mysql wildcard '.
-          "where the expected feature type should be:\n\t".$self->experiments_like);
-      }
+      #if($self->experiments !~ /^[^%]+_%_[^%]+$/o){
+      #  #We could be more strict here and force the % to be in the expected ftype location
+      #  throw('The -experiments_like string does not have a single % mysql wildcard '.
+      #    "where the expected feature type should be:\n\t".$self->experiments_like);
+      #}
       
       #do we assume identify_controls here?
       #This was originally working by harvesting control subsets from other signal experiments
@@ -251,84 +290,63 @@ sub fetch_input {   # fetch parameters...
     
     #controls *should* be identified automatically if they are pre-associated
     
+
+    
+  return;
+}
+
+
+sub _validate_param_specifity{
+  my $self           = shift;
+  my $invalid_params = shift;  
+  my $err_txt        = '';
+  
+  foreach my $param_name(@$invalid_params){
+    if(my $param = $self->param_silent($param_name)){
+      $err_txt .= "\t-".$param_name." => '".$param."'\n";
+    }
   }
-  elsif($self->control_experiments || 
-        $self->identify_controls   ||
-        $self->allow_no_controls   ||
-        $self->only_replicates     ||
-        $self->experiments_like){
-    throw('You have specified a parameter which is not appropriate for '.$set_type.
-      "s:\n\t-control_experiments, -identify_controls, -allow_no_controls, -only_replicates or -experiments_like");
+  
+  if($err_txt){    
+    throw('You have specified a parameter which is not appropriate for '.$self->set_type."s:\n$err_txt");
   }  
   
-  
-  #is only_replicates 
-  
-  #Set an internal handle_replicates param
-  #so we don't try and do this for non input_sub/sets.
-  my $only_reps = 0;
-  
-  if($self->only_replicates){
-    #Filter replicates from generic fetch_all query
-    #and validate specific id/name queries return only reps
-  
-    #No this is wrong, this should only be for ResultSets
-    #Or can we support both for now
-    #InputSets will go away
-  
-  
-    if($set_type eq 'InputSubset'){
-      $only_reps = 1;    
-    }
-    else{
-      throw("only_replicates param is only valid for InputSets, not ${set_type}s.\n".
-        'Please omit only_replicates config or set the set_type to InputSet');
-    }
-  }
-  
-  #Revise only_replicates/handle_replicates
-  #Currently this is ambiguous
-  #why did this get renamed to handle_replicates for the run step?
-  #currently only used in IdentifyReplicateResultSets
-  #but was originally aimed at handling InputSets too, although these will now be dropped
-  #Current usage is also a proxy for flowing permissive_peaks to 
-  #run_SWEmbl_R0005_replicate
-  #Although why do we even need this, can't RunPeaks pick up run_idr and is_idr_feature_type?
-  #RunPeaks, should have to know about IDR!
-  
-  $self->set_param_method('handle_replicates', $only_reps);
-  
-  #Parse comma separated lists of filters into arrayrefs of string or objects
-  $self->set_param_method('constraints_hash',
-                          $self->process_params([qw(feature_types cell_types states
-                                                    analyses experiments experimental_groups)],
-                                                1, 1)  #optional/as array flags
-                          );      
-
-  #Catch mutally exclusive filter params  
-  
-  if($self->feature_types ||
-     $self->cell_types ||
-     $self->experiments ||
-     $self->experimental_groups ||
-     $self->analyses ||
-     $self->states){ 
-     #all these are OR filters except states which is an AND filter
-      
-    if($self->set_names || $self->set_ids || $self->experiments_like){
-      throw('You have specified mutually exclusive filter params for the '.
-            "IdentifySetInputs analysis\nPlease specify restrict to ".
-            '-set_name, -set_ids, -experiments_like or a combination other filters '.
-            '(e.g. -experimental_groups -experiments -feature_types -cell_types -analyses -states');
-    }
-  }
-  elsif( (grep {defined $_ } ($self->set_names, $self->set_ids, $self->experiments_like)) != 1){
-    throw('You must specifiy some IdentifySetInputs filter params either '.
-          '-set_names, -set_ids, -experiments_like or a combination of '.
-          '-feature_types -cell_types -experiments -experimental_groups -states -analyses');
-  }
-
   return;
+}
+
+
+sub _fetch_ResultSet_input{
+  my $self           = shift;
+  $self->_validate_param_specifity(\@iset_only_params);       
+  $self->process_params(\@rset_only_params, 1);#1 is optional flag
+  return;
+}
+
+#We are only using only_replicates for IdentifyReplicateResultSets
+ 
+#Validate there is just 1 supporting signal InputSubset
+#and the replicate number matches the TR suffix
+#Healthy replicate paranoia here
+#All InputSubsets should be replicates
+#but historically we have had merged InputSubsets
+    
+
+sub _is_replicate_ResultSet{
+  my $self = shift;
+  my $rset = shift; 
+  my $rep_set;
+  
+  if($rset->table_name eq 'input_subset'){
+    my @issets = grep { ! $_->is_control } @{$rset->get_support};
+    my $rep    = $issets[0]->replicate;
+           
+    if((scalar(@issets) == 1) && $rep && 
+       ($rset->name =~ /_TR${rep}$/)){
+      $rep_set = $rset;
+    }
+  }
+  
+  return $rep_set;
 }
 
 
@@ -344,9 +362,9 @@ sub run {   # Check parameters and do appropriate database/file operations...
   #(for those that support/require batch params)
   my $dataflow_params = $self->dataflow_params(1);#optional flag
   my $batch_params    = $self->batch_params; 
-  my $handle_reps     = $self->handle_replicates;
-  my $set_adaptor     = $self->set_adaptor;
   my $set_type        = $self->set_type;
+  my $only_reps       = ($set_type eq 'ResultSet') ? $self->only_replicates : 0;
+  my $set_adaptor     = $self->set_adaptor;
   my $no_write        = $self->param_silent('no_write'); 
   my $sets  = [];
   my $throw = '';
@@ -359,15 +377,9 @@ sub run {   # Check parameters and do appropriate database/file operations...
   #1 Changed @failed to build $throw directly with more contextual info
   
   #For set_ids and set_names, catch undef return types
-  if($self->set_ids || $self->set_names || $self->experiment_like){
+  if($self->set_ids || $self->set_names){
     my ($ids_or_names, $method);
-     
-    if($self->experiments_like){#This can only be an InputSubset analysis
-      my $sql = 'SELECT input_subset_id from input_subset iss, experiment e where e.name like "'.
-        $self->experiments_like.'" and e.experiment_id=iss.experiment_id';
-      $self->set_ids($set_adaptor->dbc->db_handle->selectcol_arrayref($sql));    
-    }
-      
+  
     if($self->set_ids){
       $method       = 'fetch_by_dbID'; 
       $ids_or_names = $self->set_ids; 
@@ -383,49 +395,55 @@ sub run {   # Check parameters and do appropriate database/file operations...
       if(! defined $set ){
         push @failed, $var;
       }
-      elsif($handle_reps){
+      elsif($only_reps){#is ResultSet
         
-        #We are only using handle_replicates for IdentifyReplicateResultSets
-        #so this is probably still valid, but we should probably just ignore the failed?
-        #We should probably also validate set_type in fetch_input and resitrct to ResultSet
-        
-                
-        if($set_type eq 'ResultSet'){
-          #Validate there is just 1 supporting signal InputSubset (which is a replicate)
-          
-          #Check support type
-          #Don't bother handling input_set here as it is being dropped
-          if($set->table_name eq 'input_subset'){
-            
-            my @issets = grep { ! $_->is_control } @{$set->get_support};
-                   
-            if(scalar(@issets) != 1 ||
-               (! $issets[0]->replicate) ){
-              #Replicate paranoia here
-              #InputSubsets should be replicates
-              #but historically we have had merged InputSubsets
-              push @failed, $var;
-            }    
-          }   
-          else{
-            push @failed, $var;
-            #$self->throw_no_retry('Expected input_subset support but found '.
-            #  $set->table_name." support for ResultSet:\t".$set->name);  
-          }
+        if(! $self->_is_replicate_ResultSet($set)){
+          push @failed, $var;    
         }
-        elsif(! $set->replicate){ #Should be InputSubset
-          #and this is now redundant as all InputSubsets will have a replicate?
-          push @failed, $var;
-        }
+      }
+      elsif(($set_type eq 'InputSubet') && ! $set->replicate){
+        #and this is now redundant as all InputSubsets will have a replicate?
+        push @failed, $var;
       }
       else{
         push @$sets, $set;
       }
-      
     }
   }
-  else{ #Must be other filters  
+  else{#Must have constraints or experiments
     my $constraints = $self->constraints_hash;
+  
+    if($self->experiments){  #Preprocess experiment wildcards
+      my @exp_names;
+      my @exp_wildcards;
+      
+      for(@{$self->experiments}){
+        
+        if($_ =~ /%/){
+          push @exp_wildcards, $_;
+        }
+        else{
+          push @exp_names, $_;  
+        }
+      }
+      
+      my $sql_helper = $set_adaptor->dbc->sql_helper;
+      
+      foreach my $wc(@exp_wildcards){
+        my $sql = 'SELECT name from experiment name like "'.$wc.'"';
+        my @wc_names = @{$sql_helper->execute_simple($sql)};
+        
+        if(! @wc_names){
+          push @failed, $wc;  
+        }
+        else{
+          push @exp_names, @wc_names;  
+        }
+      }
+      
+      $constraints->{experiments} = \@exp_names;
+    }
+      
      
     #Need to account for analysis or format
     #i.e. we don't want to queue up the Segmentation input_sets
@@ -439,26 +457,17 @@ sub run {   # Check parameters and do appropriate database/file operations...
     #Alternatively we could add a contraint for is_replicate
     #not for ResultSets at present, as they do not have the replicate field
                                         
-    if($handle_reps){  
+    if($only_reps){  
+      
       my @rep_sets;
       
       foreach my $set(@$sets){
-        
-        if($set_type eq 'InputSet' &&
-           $set->replicate){
-          push @rep_sets, $set;  
-        } 
-        elsif($set_type eq 'ResultSet' && 
-              ($set->table_name eq 'input_subset')){
-          
-          my @issets = grep { ! $_->is_control } @{$set->get_support};
-                   
-          if(scalar(@issets) == 1 && $issets[0]->replicate){
-             push @rep_sets, $set;  
-          }
+        if(my $rep_set = $self->_is_replicate_ResultSet($set)){
+          push @rep_sets, $rep_set;  
         }
       }
       
+      #Redefine only_replicate sets
       @$sets = @rep_sets;
     }
   }
@@ -467,7 +476,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
   if(@failed){
     $throw = 'Failed to identify some '.$self->set_type." sets. Names or IDs don't exist";
     
-    if($handle_reps){
+    if($only_reps){
       $throw .= ', and/or \'replicates\' were requested but could not find unique signal replicate'; 
     }
     $throw .= ":\n\t".join("n\t", @failed);
@@ -580,115 +589,117 @@ sub run {   # Check parameters and do appropriate database/file operations...
   my $force_embargoed  = $self->force_embargoed;
   my $ignore_embargoed = $self->ignore_embargoed;
   
+  #Iterate through the sets 
   
  SET: foreach my $set( @$sets ){
+    $self->helper->debug(1, 'Processing '.ref($set)." set:\t".$set->name);
     my $embargoed   = 0;
     my $to_download = 0;
   
-      
-    #warn "Processing set:\t".$set->name;
-  
-    if( $self->validate_InputSubset_tracking ){ 
-      my @vsets = ($set);
-     
-      if($set_type eq 'InputSet'){
-        @vsets = $set->get_InputSubsets;  
-      }
-     
-      foreach my $vset(@vsets){
-       
-        if(! exists $seen_issets{$vset->dbID}){
-          $seen_issets{$vset->dbID} = undef;
-  
-          if( $tracking_adaptor->is_InputSubset_embargoed($set, $rel_month)){ 
-   
-            if(! ($force_embargoed || $ignore_embargoed)){
-              my $rd_txt = '';
-     
-              if($no_rel_date){
-                $rd_txt = "\nOr maybe you want to specify a release_month when seeding this analysis?"; 
-              }
-     
-              $throw .= "\nFound InputSubset which is not out of embargo:\n\t".$set->name.
-               "\nYou can over-ride this by specifying force_embargo or ignore_embargo.".
-               $rd_txt;
-            }
-            elsif($ignore_embargoed){
-                         
-              if($set_type eq 'InputSubset'){
-                  $embargoed = 1;
-                }
-              }
-              else{#input_set
-                next SET;
-              }
-            }
-          }
-      
-          if(! $tracking_adaptor->is_InputSubset_downloaded($set)){
-            $to_download = 1;
-            $throw .= "\nInputSet has InputSubsets which are not downloaded:\n\t".$set->name."\n"; 
-            #'Please run download_input_set_data or specify allow_downloads
-            #todo throw for now until we have written an analysis module
-            #build the download output_id or mark it for batch flow to the download analysis
-            #we shouldn't dataflow to DefineInputSet directly if we
-            #are missing some fastqs!
-            #Needs some more work, as if a control is missing, then we will need to batch up all the 
-            #dependant InputSubset groups        
-         }
-         
-         #Cache embargoed/to_download ctrls
-     
-         
-         if($set->is_control &&
-          ($embargoed || $to_download)){ #Set embargoed/to_download in the ctrl cache
-           #Recreate the cache key logic here
-           my $clabel   = $set->cell_type->name;
+    #Should need this anymore as we shouldn't get a reundant dbID in the query
+    if(exists $seen_issets{$set->dbID}){
+      warn "Seen redundant InputSubset dbID:\t".
+        $set->dbID."\t".$set->name.'('.$set->experiment->name.")\tvs\t".
+        $set->dbID."\t".$set->name.'('.$seen_issets{$set->dbID}.")\n"; 
+      next;
+    }
     
-           if(! $x_group_ctrls){
-             $clabel .= '_'.$set->get_Experiment->experimental_group_id;# <- probably doesn't exist (write wrapper and method!)
+    $seen_issets{$set->dbID} = $set->experiment->name;
+      
+    if($set_type eq 'InputSubset'){
+
+      if( $tracking_adaptor->is_InputSubset_embargoed($set, $rel_month)){ 
+ 
+        if(! ($force_embargoed || $ignore_embargoed)){
+          my $rd_txt = '';
+   
+          if($no_rel_date){
+            $rd_txt = "\nOr maybe you want to specify a release_month when seeding this analysis?"; 
+          }
+   
+          $throw .= "\nFound InputSubset which is not out of embargo:\n\t".$set->name.
+           "\nYou can over-ride this by specifying force_embargo or ignore_embargo.".$rd_txt;
+        }
+        elsif($ignore_embargoed){
+                       
+          if($set_type eq 'InputSubset'){
+              $embargoed = 1;
+          }
+        }
+        else{#input_set
+          next SET;
+        }
+      }
+      
+  
+      if(! $tracking_adaptor->is_InputSubset_downloaded($set)){
+        $to_download = 1;
+        $throw .= "\nFound InputSubsets which are not downloaded:\n\t".$set->name."\n".
+          'Please specify -skip_absent, -download or if a bulk download is required, '.
+          'run DOWNLOAD_SCRIPT separately?' if ! $self->skip_absent;               
+      }
+       
+      #Cache embargoed/to_download ctrls
+     
+      #Is this too complicated?
+      #The aim here is to allow submission of sets between groups
+      #some of which have controls in the same group, and some which need to use control
+      #from another group
+      
+      #The issue here is that we may identify > 1 control
+      #and we want to take the one from the matching exp group first
+      
+      #We should probably just drop x_group_controls completely
+      #and let control_experiments over-ride that?  
+      #Or only use x_group_controls here should not take
+      
+     
+       
+      if($set->is_control && 
+        ($embargoed || $to_download)){ #Set embargoed/to_download in the ctrl cache
+        #Recreate the cache key logic here
+        my $clabel = $set->cell_type->name;
+  
+         if(! $x_group_ctrls){
+           $clabel .= '_'.$set->experiment->experimental_group->dbID;
+         }
+      
+         #double exists so we don't auto vivify 
+         if(exists $ctrl_cache{$clabel} &&
+            exists $ctrl_cache{$clabel}->{input_subsets}->{$set->dbID}){
+            
+           if($embargoed){
+             $ctrl_cache{$clabel}->{embargoed} ||= [];
+             push @{$ctrl_cache{$clabel}->{embargoed}}, $set->dbID;
            }
-        
+            
+           if($to_download){
+             $ctrl_cache{$clabel}->{to_download} ||= [];
+             push @{$ctrl_cache{$clabel}->{to_download}}, $set->dbID;
+           }
+         }
+            
+                
+         if($use_exp_id){
+           $clabel = $set->cell_type->name.'_'.$set->experiment_id;
+         
            if(exists $ctrl_cache{$clabel} &&
               exists $ctrl_cache{$clabel}->{input_subsets}->{$set->dbID}){
               #double exists so we don't auto vivify 
-              
-              if($embargoed){
-                $ctrl_cache{$clabel}->{embargoed} ||= [];
-                push @{$ctrl_cache{$clabel}->{embargoed}}, $set->dbID;
-              }
-              
-              if($to_download){
-                $ctrl_cache{$clabel}->{to_download} ||= [];
-                push @{$ctrl_cache{$clabel}->{to_download}}, $set->dbID;
-              }
-           }
             
-                
-           if($use_exp_id){
-             $clabel   = $set->cell_type->name.'_'.$set->experiment_id;
-           
-             if(exists $ctrl_cache{$clabel} &&
-                exists $ctrl_cache{$clabel}->{input_subsets}->{$set->dbID}){
-                #double exists so we don't auto vivify 
-              
-               if($embargoed){
-                 $ctrl_cache{$clabel}->{embargoed} ||= [];
-                 push @{$ctrl_cache{$clabel}->{embargoed}}, $set->dbID;
-               }
-              
-               if($to_download){
-                 $ctrl_cache{$clabel}->{to_download} ||= [];
-                 push @{$ctrl_cache{$clabel}->{to_download}}, $set->dbID;
-               }
+             if($embargoed){
+               $ctrl_cache{$clabel}->{embargoed} ||= [];
+               push @{$ctrl_cache{$clabel}->{embargoed}}, $set->dbID;
+             }
+            
+             if($to_download){
+               $ctrl_cache{$clabel}->{to_download} ||= [];
+               push @{$ctrl_cache{$clabel}->{to_download}}, $set->dbID;
              }
            }
          }
        }
-     }#end of validate_InputSubset_tracking
-   
       
-     if($set_type eq 'InputSubset'){
       
        if(! $set->is_control){    
          #We already have the ctrls in the ctrl_cache
@@ -877,6 +888,9 @@ sub run {   # Check parameters and do appropriate database/file operations...
            my $set_name = $self->get_set_prefix_from_Set($set);        
            #my $rep      = $set->replicate;
            
+           
+           #We need to flatten these hashes so we can access them on a per set basis
+           
            if($embargoed){
              $embargoed_issets{$ctrl_cache_key}{$set_name} ||= [];
              push @{$embargoed_issets{$ctrl_cache_key}{$set_name}}, $set->dbID;
@@ -897,30 +911,8 @@ sub run {   # Check parameters and do appropriate database/file operations...
          }        
        }
      }
-     else{ #Not an input_subset (currently just a ResultSet)
-      my $group_key = 'ungrouped';
-     
-      if($self->only_replicates){
-        #test is replicate here?
-        #probably already tested previously     
-        
-        #just parent ResultSet name (which doesn't exist yet)
-        #This is a little fragile as it depends on our nomenclature
-        #would replace this with the get set prefix
-        #then at least we are using the same code everywhere
-        #($group_key = $set->name) =~ s/_TR[0-9]+$//o;
-        
-        $group_key = $self->get_set_prefix_from_Set($set).'_'.$set->analysis->log_name;    
-        #Appened analysis name here, just in case we are running
-        #multiple analyses for the same set of data.
-      }
-     
-    
-       $output_ids{$group_key} ||= [];
-       push @{$output_ids{$group_key}}, {%$batch_params,
-                                         %$dataflow_params,
-                                         dbID     => $set->dbID, 
-                                         set_name => $set->name};
+     else{ #Not an InputSubset (currently just a ResultSet)
+      $self->_cache_ResultSet_output_id($set, \%output_ids, $batch_params, $dataflow_params);
     }
  
 
@@ -928,8 +920,6 @@ sub run {   # Check parameters and do appropriate database/file operations...
     #As we need to wait for the control jobs to download/align 
     #first before we can perform any other analyses?
     
-
-    #Is this true?
     #This is only true if the control has not already been aligned!
     #as we need to semaphore downstream analysis based on success of control alignment
     #this does not however stop us from doing the signal alignments
@@ -1071,7 +1061,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
         }
       }
     }
-    else{ #Not input_subset
+    else{ #ResultSet
      
       if($no_write){
         print STDOUT "\t".$oid->{set_name}.' ( '.$oid->{dbID}." )\n";
@@ -1109,15 +1099,6 @@ sub run {   # Check parameters and do appropriate database/file operations...
         
         
         $self->branch_job_group(@job_group);  
-        
-        #I don't think we are using this branch_config anymore??
-        #if(defined $self->branch_config){
-        #  #branch_key_method will have been validated by init_branch_config   
-        #  #Can't do this out of the loop unless we test for config defined
-        #  #Is this used any more here?
-        #  my $branch_key_method = $self->branch_key_method;
-        #  $self->branch_output_id($oid, $self->$branch_key_method);  
-        #}
       }
     }
   } #end foreach $oid
@@ -1127,6 +1108,35 @@ sub run {   # Check parameters and do appropriate database/file operations...
   
   warn $warn_msg if $warn_msg;
   $self->throw_no_retry($throw) if $throw;  
+  return;
+}
+
+
+
+sub _cache_ResultSet_output_id{
+  my ($self, $rset, $oids, $batch_params, $dataflow_params) = @_; 
+  my $group_key = 'ungrouped';
+   
+  if($self->only_replicates){
+    #test is replicate here?
+    #probably already tested previously     
+    
+    #just parent ResultSet name (which doesn't exist yet)
+    #This is a little fragile as it depends on our nomenclature
+    #would replace this with the get set prefix
+    #then at least we are using the same code everywhere
+    #($group_key = $set->name) =~ s/_TR[0-9]+$//o;
+    
+    $group_key = $self->get_set_prefix_from_Set($rset).'_'.$rset->analysis->log_name;    
+    #Appened analysis name here, just in case we are running
+    #multiple analyses for the same set of data.
+  }
+   
+  $oids->{$group_key} ||= [];
+  push @{$oids->{$group_key}}, {%$batch_params,
+                                %$dataflow_params,
+                                dbID     => $rset->dbID, 
+                                set_name => $rset->name}; 
   return;
 }
 
