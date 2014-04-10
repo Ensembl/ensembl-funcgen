@@ -80,8 +80,7 @@ use Pod::Usage;
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd );
 Getopt::Long::Configure("pass_through"); #Allows unknown options to pass on to @ARGV
 
-&run_aligner();
-#run_aligner rather than main for clarity when required into a module
+&run_aligner(); #not main, for clarity when required into a module
 
 sub run_aligner{
   #Assigning to @ARGV allows this script to be required and run from a module 
@@ -96,18 +95,17 @@ sub run_aligner{
     'help'             => sub { pod2usage(-exitval => 0); }, 
     'man|m'            => sub { pod2usage(-exitval => 0, -verbose => 2); },
    );
-
+  # or pod2usage(-exitval => 1, -message => "Specified parameters are:\t@tmp_args"); 
+  #can't do this as we expect the unexpected! <Cue silouette of crazy naked dancing lady> <- 10 points for that reference
   my @aligner_params = @ARGV;
-
-#can't do this as we expect the unexpected! <Cue silouette of crazy naked dancing lady> <- 10 points for that reference
-# or pod2usage(-exitval => 1, -message => "Specified parameters are:\t@tmp_args"); 
              
   if(! defined $aln_pkg){
     pod2usage(-exitval => 1, -message => '-aligner parameter must be defined');
   }
   
   if($aln_pkg !~ /::/){
-    warn "Full $aln_pkg namespace was not specified, defaulting to:\tBio::EnsEMBL::Funcgen::Hive::$aln_pkg\n";
+    warn "Full $aln_pkg namespace was not specified, defaulting to:\t".
+      "Bio::EnsEMBL::Funcgen::Hive::$aln_pkg\n";
     $aln_pkg = "Bio::EnsEMBL::Funcgen::Hive::$aln_pkg";
   }
   
