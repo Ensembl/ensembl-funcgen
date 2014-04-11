@@ -38,7 +38,8 @@ use warnings;
 use strict;
 
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd merge_bams write_checksum );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd write_checksum );
+use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools;# merge_bams 
 
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
@@ -141,15 +142,14 @@ sub run {
  
   #sam_header here is really optional if is probably present in each of the bam files but maybe incomplete 
   merge_bams($unfiltered_bam, $self->sam_ref_fai($rset->cell_type->gender), \@bam_files, 
-             {rmdups         => 1,
-              write_checksum => 1, #turns on checksum writing
+             {write_checksum => 1, #turns on checksum writing
               debug          => $self->debug});
    
   #todo convert this to wite to a result_set_report table
   my $alignment_log = $file_prefix.".alignment.log";
   $cmd ='echo -en "Alignment QC - total reads as input:\t\t\t\t" > '.$alignment_log.
     ";samtools flagstat $unfiltered_bam | head -n 1 >> $alignment_log;".
-    'echo -en "Alignment QC - mapped reads:\t\t\t\t\t\t" >> '.$alignment_log.
+    'echo -en "Alignment QC - mapped reads:r\t\t\t\t\t" >> '.$alignment_log.
     ";samtools view -u -F 4 $unfiltered_bam | samtools flagstat - | head -n 1 >> $alignment_log;".
     ' echo -en "Alignment QC - reliably aligned reads (mapping quality >= 1):\t" >> '.$alignment_log.
     ";samtools view -u -F 4 -q 1 $unfiltered_bam | samtools flagstat - | head -n 1 >> $alignment_log";
