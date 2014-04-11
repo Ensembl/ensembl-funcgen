@@ -45,9 +45,10 @@ use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( scalars_to_objects 
                                                validate_path
-                                               get_files_by_formats 
                                                path_to_namespace 
-                                               run_system_cmd );
+                                               run_system_cmd
+                                               dump_data );
+use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools qw( get_files_by_formats );
 use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref check_ref );  
 use Scalar::Util                           qw( blessed );                                            
                                                
@@ -94,6 +95,7 @@ $main::_no_log      = 1;
 
 #Used in set_param_arrays for scalars_to_objects
 #Could our this to make it dynamically mutable, i.e. redefine it from a sub class
+#Need this here rather than EFGUtils so we can test
 my %param_class_info = 
  (cell_types          => ['CellType',          'fetch_by_name'],
   feature_types       => ['FeatureType',       'fetch_by_name'],
@@ -609,6 +611,9 @@ sub param_silent {
 #todo add skip fetch and alt class arrays ref args?
 
 
+#todo remove as_array as we now specify the input_ids directly
+#rather than passing individual param options
+
 sub process_params {
   my ($self, $param_names, $optional, $as_array) = @_;
   
@@ -641,7 +646,6 @@ sub process_params {
     #defined here will not catch empty hashes
     #arrays are not permitted here
     
-    
     if(defined $param_val){
       my $ref_type = ref($param_val);
       my $values = $param_val;
@@ -669,7 +673,7 @@ sub process_params {
                                        $values);
         }
         
-        $self->helper->debug(1, "$param_name is now ", $values);
+        $self->helper->debug(2, "$param_name is now ", $values);
       }
       
       
@@ -688,6 +692,10 @@ sub process_params {
       #Do we want to set this in all_params?
     }
   }
+  
+  
+  $self->helper->debug(1, 'Processed param names('.join(' ', @$param_names).
+    ") are:\t".dump_data(\%all_params));
   
   return \%all_params; 
 }

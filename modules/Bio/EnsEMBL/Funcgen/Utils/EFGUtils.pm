@@ -76,6 +76,7 @@ use vars qw( @EXPORT_OK );
   create_Storable_clone
   dump_data
   file_suffix_parse
+  generate_checksum
   generate_slices_from_names
   get_current_regulatory_input_names
   get_date
@@ -331,7 +332,7 @@ sub dump_data {
 
   my $dumper = Data::Dumper->new([$data]);
   $dumper->Indent($indent);
-  $dumper->Terse($terse);
+  $dumper->Terse($terse) if $terse;
   
   return $dumper->Dump;
 }
@@ -546,6 +547,9 @@ sub get_date{
 	return $time;
 }
 
+=pod
+
+## NOW ALL IN SeqTools!
 
 #todo refactor get_files_by_formats complexity & nesting issues
 #This handles g/unzipping and conversion from bam > sam > bed
@@ -871,6 +875,7 @@ sub convert_sam_to_bed{
   return $bed_file;
 }
 
+=cut
 
 sub write_checksum{
   my $file_path = shift;
@@ -945,8 +950,9 @@ sub generate_checksum{
 
   #Don't use bareword (FILE) for descriptor as is stored in symbol table for this package
   #meaning potential interference if FILE is used elsewhere. (PBP 203)
-  open(my $CHK_FILE, '>', $file) or throw("Cannot open file for md5 digest:\t$file");
-  $ctx->addfile($CHK_FILE);
+  open(my $CHK_FILE, '<', $file) or throw("Cannot open file for md5 digest:\t$file\n$!");
+  binmode $CHK_FILE;
+  $ctx->addfile($CHK_FILE);#eval this?
   my $md5_sig = $ctx->$digest_method;
   close($CHK_FILE);
 
@@ -1597,6 +1603,8 @@ sub scalars_to_objects{
 #the header integration removes the need for the final view step
 #if ther headers aren't identical
 
+### NOW IN SeqTools!
+
 sub merge_bams{
   my $outfile     = shift;
   my $sam_ref_fai = shift;
@@ -1621,7 +1629,7 @@ sub merge_bams{
 
   assert_ref($params, 'HASH');
   my $debug     = (exists $params->{debug})          ? $params->{debug}          : 0;
-  my $rm_dups   = (exists $params->{rmdups})         ? $params->{rmdups}         : undef;
+  my $no_rmdups = (exists $params->{no_rmdups})      ? $params->{no_rmdups}      : undef;
   my $checksum  = (exists $params->{write_checksum}) ? $params->{write_checksum} : undef;
   warn "merge_bam_params are:\n".Dumper($params)."\n" if $debug;
   
@@ -1696,11 +1704,11 @@ sub merge_bams{
   
   
   
-  if($rm_dups || $view_header_opt){
+  if((! $no_rmdups) || $view_header_opt){
     #merge keeps the header in sam format (maybe this is a product of -u)?
     $cmd = 'samtools merge -u - '.join(' ', @$bams).' | ' if ! $skip_merge; 
    
-    if( $rm_dups ){
+    if( ! $no_rmdups ){
        #rmdup converts the header into binary format
        $cmd .= 'samtools rmdup -s ';
        $cmd .= $skip_merge ? $bams->[0].' ' : ' - ';
@@ -1776,7 +1784,7 @@ sub merge_bams{
   return;
 }
 
-#Utils::SamUtils?
+#NOW IN SeqTools!
 
 #There are three use cases here:
 #1 Cross validation
@@ -1788,6 +1796,7 @@ sub merge_bams{
 
 #arguably the cross validate boolean could be dropped in favour of testing
 #in the calling context, but convenient here
+=pod
 
 sub validate_sam_header {
   my $sam_bam_file     = shift;
@@ -1886,6 +1895,9 @@ sub validate_sam_header {
 }
 
 
+
+
+### NOW IN SeqTools!
 #todo
 #1 We need to catch if consequence of opts is to actually do nothing
 #2 Make rmdups optional as this will have already been done in the merge_bams
@@ -2153,6 +2165,7 @@ sub process_sam_bam {
   return $out_file;
 }
 
+=cut
 
 sub species_chr_num{
     my ($species, $val) = @_;
