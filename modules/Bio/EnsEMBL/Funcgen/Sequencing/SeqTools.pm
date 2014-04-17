@@ -18,16 +18,26 @@ use strict;
 use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref );
 use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( dump_data
+                                               run_system_cmd
                                                run_backtick_cmd 
                                                write_checksum 
                                                validate_path
-                                               check_file );
+                                               check_file );                                              
+use Bio::EnsEMBL::Funcgen::Sequencing::SeqQC; #run_QC
 
 use base qw( Exporter );
 use vars qw( @EXPORT );
 
-@EXPORT = qw( run_aligner );
+@EXPORT = qw( 
+  convert_bam_to_sam
+  convert_sam_to_bed
+  get_files_by_formats
+  merge_bams
+  process_bam
+  run_aligner
+  split_fastqs
+  validate_sam_header );
 
 #This is designed to act as an object and as a standard package
 #run_align_tools will call constructor which will validate that a run mode has been passed
@@ -48,24 +58,16 @@ use vars qw( @EXPORT );
 #merge only rmdups
 
 
-#sub new {
-#  my $class = shift;
-#  my $self = {};
-#  bless $self, $class;
-
-#  my ($prog_file, $prog_params, $query_file, $target_file, $out_dir, $format, $debug) =
-#    rearrange(['PROGRAM_FILE', 'PARAMETERS', 'QUERY_FILE', 
-#               'TARGET_FILE', 'OUTPUT_DIR', 'OUTPUT_FORMAT', 'DEBUG'], @_);
-      
-
-#  return $self;
-#}
 
 #add debug and helper to all these methods
 
 
+#to do, allow qc methods to be used in here too, to restrict what is run
+#from the default qc_type?
+#No, just make people run these separately?
+
 sub run_aligner{ 
-  my ($aln_pkg, $aln_params) = rearrange( [qw(aligner aligner_params) ], @_);
+  my ($aln_pkg, $aln_params, $skip_qc) = rearrange( [qw(aligner aligner_params skip_qc) ], @_);
   assert_ref($aln_params, 'ARRAY', 'Aligner params');
   
   throw('-aligner parameter has not been specifed')  if ! defined $aln_pkg;
@@ -96,25 +98,238 @@ sub run_aligner{
   #    join(' ', @$aln_params));
   #}
 
-  #This should return the output file
-  return $aligner->run;
+
+  #Implement QC in here, wht are we going to return here?
+  #return ($aligner->run, $qc_results);
+  #This may cause problems if the caller does this
+  #if($run_aligner($aln_pkg, $aln_params, 1)){ ... }
+  #This test will return false, as this will test the last value in the array
+  #in this context
+  #if we return @results, where the null value is omited
+  #then all is good.
+  
+  
+  #Need to eval this, so we don't call QC on undef file if it has failed?
+  #No failure should have died by now
+  my @results = ($aligner->run); #This should return the output file
+  
+  if( ! $skip_qc){
+        
+  }
+
+  
+  return @results;
 }
 
 
+
+#mv md5 checking in here too? as that is integrated into check_file
+#Just force use of gz files here to simplify zcat and md5 checking?
+# add qc thresholds?
 
 sub split_fastqs{
-  my ($files, $aln_params, $chunk_size) = 
-    rearrange( [qw(files merge chunk_size) ], @_);  
+  my ($files, $out_prefix, $out_dir, $work_dir, 
+      $check_sums, $merge, $chunk_size, $skip_qc, $debug) = rearrange( 
+      [qw( files out_prefix out_dir work_dir 
+       merge chunk_size skip_qc debug) ], @_);  
+ 
+  assert_ref($files, 'ARRAY', '-files');
+  if(! (@$files && 
+        (grep {!/fastq.gz$/} @$files) )){
+    throw('-files must be an array ref of gzipped fastq files');  
+  }
+    
+  throw('-out_prefix is not defined') if ! defined $out_prefix;
+  
+  if(! -d $out_dir){
+    throw("-out_dir $out_dir is not a valid output directory");        
+  } 
+
+  if(! defined $work_dir){
+    $work_dir = $out_dir;
+  }
+  elsif(! -d $work_dir){
+    throw("-work_dir $work_dir is not a valid work directory");   
+  }
+ 
+  if($check_sums){
+    assert_ref($check_sums, 'ARRAY', '-check_sums');    
+    
+    if(scalar(@$check_sums) != scalar(@$files)){
+      throw(scalar(@$files).' -files have been specific but only '.scalar(@$check_sums).
+        " -check_sums have been specified\nTo ensure input validation these must ".
+        "match, even if undef checksums have to be specified");  
+    }
+  }
+ 
+ 
+  my (@fastqs, %params, $throw);
+  
+  foreach my $i(0..$#{$files}){
+    my $found_path;
+    %params = ( debug => $debug, checksum => $check_sums->[$i]);
+    
+    #Hmm, no undef checksum here means try and find one in a file
+    
+    #Look for gz files too, 
+    #we can't do a md5 check if we don't match the url exactly
+    eval { $found_path = check_file($files->[$i], 'gz', \%params); };
+ 
+    if($@){
+      $throw .= "$@\n";
+      next;  
+    }
+    elsif(! defined $found_path){
+      $throw .= "Could not find fastq file, is either not downloaded, has been deleted or is in warehouse:\t".
+        $files->[$i]."\n";
+      #Could try warehouse here?
+    }
+    elsif($found_path !~ /\.gz$/o){
+      #use is_compressed here?
+      #This will also modify the original file! And potentially invalidate any checksumming
+      throw("Found unzipped path, aborting as gzipping will invalidate any further md5 checking:\t$found_path");
+      run_system_cmd("gzip $found_path");
+      $found_path .= '.gz';  
+    }
+     
+    push @fastqs, $found_path;   
+  }
+  
+  throw($throw) if $throw;
+  
+  my (@results, @qc_results);
   
   
+  
+  #if qc fails here, we still split?
+  #we need a way to signify QC failure easily without 
+  #having to test hash keys?
+  #This could be an array of booleans?
+  #so we would return \@new_fastqs, \@pass_fail_booleans, \@qc_hashes 
+  
+ #FastQC in here 
+ 
+ 
+  #This currently fails as it tries to launch an X11 window!
+ 
+  ### RUN FASTQC
+  #18-06-10: Version 0.4 released ... Added full machine parsable output for integration into pipelines
+  #use -casava option for filtering
+  
+  #We could set -t here to match the number of cpus on the node?
+  #This will need reflecting in the resource spec for this job
+  #How do we specify non-interactive mode???
+  #I think it just does this when file args are present
+  
+  #Can fastqc take compressed files?
+  #Yes, but it seems to want to use Bzip to stream the data in
+  #This is currently failing with:
+  #Exception in thread "main" java.lang.NoClassDefFoundError: org/itadaki/bzip2/BZip2InputStream
+  #Seems like there are some odd requirements for installing fastqc 
+  #although this seems galaxy specific 
+  #http://lists.bx.psu.edu/pipermail/galaxy-dev/2011-October/007210.html
+  
+  #This seems to happen even if the file is gunzipped!
+  #and when executed from /dsoftware/ensembl/funcgen  
+  #and when done in interative mode by loading the fastq through the File menu
+  
+  #This looks to be a problem with the fact that the wrapper script has been moved from the 
+  #FastQC dir to the parent bin dir. Should be able to fix this with a softlink
+  #Nope, this did not fix things!
+  
+  warn "DEACTIVATED FASTQC FOR NOW:\nfastqc -f fastq -o ".$out_dir." @fastqs";
+  #run_system_cmd('fastqc -o '.$self->output_dir." @fastqs");
+  
+ 
+  #todo parse output for failures
+  #also fastscreen?
+
+  warn("Need to add parsing of fastqc report here to catch module failures");
+  
+  #What about adaptor trimming? and quality score trimming?
+  #FASTX? quality_trimmer, clipper (do we have access to the primers?) and trimmer?
+   
+    
+
+  #For safety, clean away any that match the prefix
+  run_system_cmd('rm -f '.$work_dir."/${out_prefix}.fastq_*", 1);
+  #no exit flag, in case rm fails due to no old files
+     
+  my @du = run_backtick_cmd("du -ck @fastqs");   
+  (my $pre_du = $du[-1]) =~ s/[\s]+total//;   
+     
+  my $cmd = 'zcat '.join(' ', @fastqs).' | split --verbose -d -a 4 -l '.
+    $chunk_size.' - '.$work_dir.'/'.$out_prefix.'.fastq_';
+  #$self->helper->debug(1, "Running chunk command:\n$cmd");
+  warn "Running chunk command:\n$cmd\n" if $debug;
+  
+  my @split_stdout = run_backtick_cmd($cmd);
+  (my $final_file = $split_stdout[-1]) =~ s/creating file \`(.*)\'/$1/;
+  
+  if(! defined $final_file){
+    throw('Failed to parse (s/.*\`([0-9]+)\\\'/$1/) final file '.
+      ' from last split output line: '.$split_stdout[-1]);  
+  }
+  
+  #Get files to data flow to individual alignment jobs
+  my @new_fastqs = run_backtick_cmd('ls '.$work_dir."/${out_prefix}.fastq_*");
+  @new_fastqs    = sort {$a cmp $b} @new_fastqs;
+  
+  #Now do some sanity checking to make sure we have all the files
+  if($new_fastqs[-1] ne $final_file){
+    throw("split output specified last chunk file was numbered \'$final_file\',".
+      " but found:\n".$new_fastqs[-1]);  
+  }
+  else{
+    $final_file =~ s/.*_([0-9]+)$/$1/;
+    $final_file  =~ s/^[0]+//;
+    
+    #$self->debug(1, "Matching final_file index $final_file vs new_fastq max index ".$#new_fastqs);
+    warn "Matching final_file index $final_file vs new_fastq max index ".$#new_fastqs."\n" if $debug;
+    
+    
+    if($final_file != $#new_fastqs){
+      throw('split output specified '.($final_file+1).
+        ' file(s) were created but only found '.scalar(@new_fastqs).":\n".join("\n", @new_fastqs));  
+    }  
+  }
+  
+  #and the unzipped files are at least as big as the input gzipped files
+  @du = run_backtick_cmd("du -ck @new_fastqs");   
+  (my $post_du = $du[-1]) =~ s/[\s]+total//; 
+  
+  #$self->helper->debug(1, 'Merged and split '.scalar(@fastqs).' (total '.$pre_du.'k) input fastq files into '.
+  #  scalar(@new_fastqs).' tmp fastq files (total'.$post_du.')');
+  warn 'Merged and split '.scalar(@fastqs).' (total '.$pre_du.'k) input fastq files into '.
+    scalar(@new_fastqs).' tmp fastq files (total'.$post_du.")\n" if $debug;
+  
+  if($post_du < $pre_du){
+    throw("Input fastq files totaled ${pre_du}k, but output chunks totaled only ${post_du}k");  
+  }
+  
+  return \@results;#\@new_fastqs, \%qc_results;
 }
 
 
 
 
 
+#Move rmdups to process?
+#Then unfiltered file, will be truly unfiltered.
+#This will just increase our footprint on warehouse
+#Keeping the unfiltered bam is not really necessary, we really only want the unfitlered QC report, 
+#so we now how many didn't map, and how many duplicates there were. to give us an idea of the quality 
+#of the fastq.
+#So change this to skip the rmdups, then perform the pre-filter qc
+#i.e. the alignement report, flagstat etc
+#Then immediately process_bam, to sort and filter out dups and unmapped
+#and call this unique_mappings
 
+#so we are effectively moving all filter processing to process_sam_bam
 
+#This is slightly inefficient,if we don't care about the intermediate unfiltered data
+
+#Integrate slign report in here?
 
 sub merge_bams{
   my $outfile     = shift;
@@ -142,7 +357,7 @@ sub merge_bams{
   my $debug     = (exists $params->{debug})          ? $params->{debug}          : 0;
   my $no_rmdups = (exists $params->{no_rmdups})      ? $params->{no_rmdups}      : undef;
   my $checksum  = (exists $params->{write_checksum}) ? $params->{write_checksum} : undef;
-  warn "merge_bam_params are:\n".Dumper($params)."\n" if $debug;
+  warn "merge_bam_params are:\n".dump_data($params)."\n" if $debug;
   
   
   #For safety we need to validate all the bam headers are the same?
@@ -696,12 +911,13 @@ sub get_files_by_formats {
         }
         elsif((scalar(@{$conversion_paths{$format}}) == 1 ) ||
               (! $clean_filtered_format)){
-          my $filter_method = 'process_'.$filter_format;
+          my $filter_method_name = 'process_'.$filter_format;
+          my $filter_method;
           $can_filter = 1;
 
           #Sanity check we can call this
-          if(! ($filter_method = Bio::EnsEMBL::Funcgen::Utils::EFGUtils->can($filter_method))){
-            throw("Cannot call $filter_method for path:\n\t$path\n".
+          if(! ($filter_method = Bio::EnsEMBL::Funcgen::Sequencing::SeqTools->can($filter_method_name))){
+            throw("Cannot call $filter_method_name for path:\n\t$path\n".
               'Please add method or correct conversion path config hash');
           }
 
