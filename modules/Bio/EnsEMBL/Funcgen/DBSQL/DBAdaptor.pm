@@ -56,7 +56,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use strict;
 use warnings;
 use DBI; #for resolving core DB
-use Bio::EnsEMBL::Utils::Exception         qw( throw deprecate ) ;
+use Bio::EnsEMBL::Utils::Exception         qw( throw deprecate warning) ;
 use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref );
 use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( assert_ref_do );
@@ -422,11 +422,14 @@ sub _get_schema_build{
   throw("Need to define a DBAdaptor to retrieve the schema_build from") if (! $db);
 
   my $schema_build;
-
-  if ( $db->dbc->dbname =~ /.*_([0-9]+_[0-9]+[a-z]*)$/) {
+  my $name = $db->dbc->dbname; 
+  if ( $name =~ /.*_([0-9]+_[0-9]+[a-z]*)$/) {
     #if( $db->dbc->dbname =~ /.*([0-9]+_[0-9]+[a-z]*)$/){
     #warn "HARDCODED DEBUGGING FOR ANOMALOUS CORE DNADB INSERT";
     $schema_build = $1;
+  }
+  else {
+    warning ("Wrong format: '$name' Release & Assembly expected at the end of dbname, e.g.: *_core_75_37")
   }
 
   return $schema_build;
