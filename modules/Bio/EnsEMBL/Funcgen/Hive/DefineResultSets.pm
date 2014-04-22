@@ -181,7 +181,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
  
   my $control_branch = '';
   
-  if(@{$self->controls}){
+  if($self->controls){
     $ctrls = &scalars_to_objects($self->out_db, 'InputSubset',
                                                 'fetch_by_dbID',
                                                 $self->controls);
