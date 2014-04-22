@@ -38,7 +38,7 @@ use warnings;
 use strict;
 
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd write_checksum );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd );
 use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools;# merge_bams 
 
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
@@ -147,9 +147,9 @@ sub run {
    
   #todo convert this to wite to a result_set_report table
   my $alignment_log = $file_prefix.".alignment.log";
-  $cmd ='echo -en "Alignment QC - total reads as input:\t\t\t\t" > '.$alignment_log.
-    ";samtools flagstat $unfiltered_bam | head -n 1 >> $alignment_log;".
-    'echo -en "Alignment QC - mapped reads:r\t\t\t\t\t" >> '.$alignment_log.
+  $cmd ='echo -en "Alignment QC - samtools flagstat output:\n" > '.$alignment_log.
+    ";samtools flagstat $unfiltered_bam >> $alignment_log;".
+    'echo -en "Alignment QC - mapped reads:\t\t\t\t\t" >> '.$alignment_log.
     ";samtools view -u -F 4 $unfiltered_bam | samtools flagstat - | head -n 1 >> $alignment_log;".
     ' echo -en "Alignment QC - reliably aligned reads (mapping quality >= 1):\t" >> '.$alignment_log.
     ";samtools view -u -F 4 -q 1 $unfiltered_bam | samtools flagstat - | head -n 1 >> $alignment_log";
@@ -169,6 +169,7 @@ sub run {
   if($self->run_controls){
     my $exp = $self->get_control_InputSubset($rset)->experiment;
     $exp->adaptor->store_status('ALIGNED_CONTROL', $exp);
+    $exp->adaptor->revoke_status('ALIGNING_CONTROL', $exp);
   }
   else{
     $rset->adaptor->store_status('ALIGNED', $rset);
@@ -188,7 +189,17 @@ sub run {
   #todo filter file here to prevent competion between parallel peak
   #calling jobs which share the same control
   #This will also check the checksum we have just generated, which is a bit redundant
-  $self->get_alignment_files_by_ResultSet_formats($rset, ['bam'], $self->run_controls, undef, 'bam');
+  $self->get_alignment_files_by_ResultSet_formats($rset, ['bam'], 
+                                                  $self->run_controls, 
+                                                  undef, 
+                                                  'bam');
+                                                  
+  #This is really only unmapped and duplicate reads (as we have dropped MT filtering)
+  #i.,e. unique_mapping
+  #so we can drop archiving of this for now, so long as we maintain the 
+  #alignement log for the unfiltered file
+  #We would have to re-instate an unfiltered file if we ever introduce
+  #more filtering filtering                                                
   $self->archive_file($unfiltered_bam, 1);#mandatory flagn
   $self->archive_file($unfiltered_bam.'.CHECKSUM', 1);
   
