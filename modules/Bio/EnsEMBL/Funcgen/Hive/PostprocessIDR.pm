@@ -39,7 +39,7 @@ use strict;
  
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( scalars_to_objects );
-use base ('Bio::EnsEMBL::Funcgen::Hive::BaseDB');
+use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
 #TODO 
 # 1 ADD IDR based QC
