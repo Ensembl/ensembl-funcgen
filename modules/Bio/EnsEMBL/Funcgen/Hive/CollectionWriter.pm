@@ -14,8 +14,8 @@ use base ('Bio::EnsEMBL::Funcgen::Hive::BaseImporter');
 
 use warnings;
 use strict;
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( generate_slices_from_names
-                                               get_feature_file ); 
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( generate_slices_from_names );
+                                        
                                                #strip_param_args strip_param_flags run_system_cmd);
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 
