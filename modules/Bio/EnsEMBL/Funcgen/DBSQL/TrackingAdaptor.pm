@@ -217,8 +217,16 @@ sub _is_column{
   return exists $mandatory_columns{$col};  
 }
 
-#Change this to set the tracking info in the subsets!
-#and inject the relevant methods based on the columns
+#Genericise this
+#optionally add in class specific subs like is_embargoed and set_dowload_status?
+#As these methods are not simple getter/setters it maybe cleaner not to inject them
+#But this leaves some methods available via the object, and some by the adaptor only :/
+#This is a case to have separate class specific _inject methods, which call the generic
+#_inject methods(for the getter/setters), then inject the additionally inject the
+#class specific ones
+#One downside to this is error handling, where line numbers will reference anonymous subroutines
+#and not the true line number in this module. This is likely fine for the getter/setters, but might
+#be problemtic with more complicated methods.
 
 sub _inject_input_subset_tracking_methods{
   my $self = shift;
@@ -226,8 +234,8 @@ sub _inject_input_subset_tracking_methods{
   
   assert_ref($iss, 'Bio::EnsEMBL::Funcgen::InputSubset');  
   
-  #We don't need CvGV_name_or_bust here as we know 
-  #exactly what method are already present
+  #We don't need to test for existing methods in the namespace here(CvGV_name_or_bust)
+  #as we know exactly what methods are already present
   my @cols = $self->_columns;
   
   if(! $iss->can($cols[0])){ 
@@ -259,10 +267,7 @@ sub _inject_input_subset_tracking_methods{
 
 
 
-#remove InputSet support from this!
-#then we don't have to select input_subset_id
-#although this also removes the ability to query >1 record at the same time
-#this is fine for the tracking adaptor
+#genericise this to fetch_tracking_info
 
 sub fetch_InputSubset_tracking_info{
   my ($self, $set, $force_download, $date, $skip_beds) = @_;
@@ -340,6 +345,9 @@ sub fetch_InputSubset_tracking_info{
   return $hashref;
 }
 
+
+#
+
 sub set_download_status_by_input_subset_id{
   my ($self, $iss_id, $to_null) = @_;
   
@@ -357,14 +365,16 @@ sub set_download_status_by_input_subset_id{
 #and then using direct methods?
 #can we also add is_embargoed to the injected methods dependant on the presence of an embargo field?
 
-sub is_InputSubset_downloaded {
-  my ($self, $isset) = @_;
-  $self->fetch_InputSubset_tracking_info($isset);  
-  return (defined $isset->download_date) ? 1 : 0;
-}
+#sub is_InputSubset_downloaded {
+#  my ($self, $isset) = @_;
+#  $self->fetch_InputSubset_tracking_info($isset);  
+#  return (defined $isset->download_date) ? 1 : 0;
+#}
 
 
 #Careful this is american format for some reason!!!
+
+#Can we inject a version this for input_subsets?
 
 sub is_InputSubset_embargoed {
   my ($self, $isset, $yyyy_mm_dd) = @_;
@@ -430,6 +440,10 @@ sub is_InputSubset_embargoed {
   return ($isset_date > $rel_date) ? 1 : 0;  
 }
 
+
+#Genericise this to store_tracking_info
+#This will require some additions nesting of %mandatory_columns
+#based on a table name key
 
 sub store_input_subset_tracking_info{
   my ($self, $iss, $info) = @_;
