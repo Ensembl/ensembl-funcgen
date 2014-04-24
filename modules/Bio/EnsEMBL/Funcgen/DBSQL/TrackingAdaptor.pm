@@ -73,7 +73,7 @@ use base qw( Bio::EnsEMBL::DBSQL::BaseAdaptor );
 my %mandatory_columns = (#'input_subset_id'   => 0,
                          availability_date => 1,
                          download_url      => 1,
-                         downloaded        => 0,
+                         download_date     => 0,
                          local_url         => 0,
                          md5sum            => 0,
                          notes             => 0);
@@ -352,11 +352,15 @@ sub set_download_status_by_input_subset_id{
 
 
 
-#shouldn't this use the downloaded date?
+
+#can probably remove this, in favour of calling fetch_input_subset_tracking_info
+#and then using direct methods?
+#can we also add is_embargoed to the injected methods dependant on the presence of an embargo field?
+
 sub is_InputSubset_downloaded {
   my ($self, $isset) = @_;
   $self->fetch_InputSubset_tracking_info($isset);  
-  return (defined $isset->local_url) ? 1 : 0;
+  return (defined $isset->download_date) ? 1 : 0;
 }
 
 
