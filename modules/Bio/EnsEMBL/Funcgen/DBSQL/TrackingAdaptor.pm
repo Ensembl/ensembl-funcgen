@@ -344,7 +344,7 @@ sub set_download_status_by_input_subset_id{
   my ($self, $iss_id, $to_null) = @_;
   
   my $date = ($to_null) ? 'NULL' : 'NOW()';
-  my $sql = "UPDATE input_subset_tracking SET downloaded=${date} WHERE input_subset_id=${iss_id};";
+  my $sql = "UPDATE input_subset_tracking SET download_date=${date} WHERE input_subset_id=${iss_id};";
   $self->db->dbc->do($sql);
 
   return;
