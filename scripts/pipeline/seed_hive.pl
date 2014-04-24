@@ -42,22 +42,26 @@ seed_hive.pl
     -input_id         <String>      Input id for the given logic name. This is a hash containing Set 
                                     filter key value pairs and other options i.e.
                                     '{#define lists as comma separated string
-                                      feature_types       => \"ftype_name1,ftype_name2\",   
+                                      feature_types       => "ftype_name1,ftype_name2",   
                                       #or as listref           
-                                      cell_types          => [\"celltype_name1\", \"celltype_name2\"], 
-                                      experimental_groups => \"egroup_1\",
-                                      analyses            => [\"set_analysis_1\", \"set_analysis_2\"],
+                                      cell_types          => ["celltype_name1", "celltype_name2"], 
+                                      experimental_groups => "egroup_1",
+                                      analyses            => ["set_analysis_1", "set_analysis_2"],
                                       #Review these states, uses OR logic here as opposed to AND for above
-                                      states              => [\"RERUN\", \"TO_RUN\"],            
+                                      states              => ["RERUN", "TO_RUN"],            
 
                                       #Or direct specificy sets names or dbIDs directly (cannot use comma separated string) e.g.
-                                      set_names\"           => [\"set_name_1\", \"set_name_2\"],
+                                      set_names           => ["set_name_1", "set_name_2"],
                                       #OR
                                       set_ids             => [1,2],
+                                      #OR 
+                                      experiments         => ["CTYPE_FTYPE_EXPGROUP(_ARCHIVEID)", "CTYPE_%_EXPGROUP(_ARCHIVEID)"],
 
                                       #OPTIONAL DATAFLOW PARAMS TO THE NEXT LOGICAL ANALYSIS 
                                       #e.g. DefineOutputSet
                                       dataflow_params     => {recover=>1} }'
+    WARNING: ONLY USE QUOTING STYLE AS ABOVE                                    
+    WARNING: If calling from a bash script then omit all spaces to avoid word splitting                                  
     -url              <String>      Hive DB URL i.e. mysql://DB_USER:DB_PASS@DB_HOST:DB_PORT/DB_NAME
                                     (Normally defined by environment)
     -hive_script_dir  <String>      Hive scripts directory (Normally defined by environment)
@@ -65,6 +69,7 @@ seed_hive.pl
   Optional:
     -no_write         Seeds pipeline and runs Identify analysis in -no_write mode to
                       list Sets which would be identified by given input_id
+    -debug    [1-3]   Sets the debug output level for -no_write mode
     -help             Prints a helpful message
     -man              Prints the man page
 
@@ -87,7 +92,7 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd run_backtick_cmd )
 
 my @valid_lnames = qw(IdentifyAlignInputSubsets IdentifyReplicateResultSets IdentifyMergedResultSets);
 
-&main(@ARGV);
+&main();
 
 #todo
 #1 Allow to run with no arguments, which will identify the seedable analyses???
@@ -95,8 +100,9 @@ my @valid_lnames = qw(IdentifyAlignInputSubsets IdentifyReplicateResultSets Iden
 #  in the pod
 
 sub main{
-  my @tmp_args = @_;
+  my @tmp_args = @ARGV;
   my ($hive_url, $hive_script_dir, $lname, $no_write, $input_id);               
+  my $debug = '';
   
   GetOptions 
    (#Mandatory
@@ -107,6 +113,7 @@ sub main{
   
     #Optional
     'no_write'         => \$no_write,
+    'debug=i'          => \$debug,
     'help'             => sub { pod2usage(-exitval => 0); }, 
     #removed ~? frm here as we don't want to exit with 0 for ?
     'man|m'            => sub { pod2usage(-exitval => 0, -verbose => 2); },
@@ -130,21 +137,29 @@ sub main{
               -message => $lname.' is not a valid logic_name');
   }
   
+  
+  
   if($no_write){
     $input_id =~ s/[,]*}$/,no_write=>1}/;
   }
    
+  $debug = '-debug '.$debug if $debug; 
+   
+  warn "input_id is $input_id" if $debug; 
    
   ### SEED THE PIPELINE ### 
+  
+  #Need to preprocess $input_id to escape single quotes
+  
   my $cmd = "perl $hive_script_dir/seed_pipeline.pl -url $hive_url ".
               "-logic_name $lname -input_id '$input_id' 2>&1";
   #We don't get an exit status here if the job_id already exists even though it is not seeded. 
   #Catch STDERR here has the transformed input_id is printed to STDERR
               
-  #warn "Running $cmd";
+  warn "Running $cmd" if $debug;
   my $job_info = run_backtick_cmd($cmd);
   my $exit_status = $?;                                   
-  #warn "exit status is $?\njob_info is $job_info";
+  warn "exit status is $?\njob_info is $job_info\n" if $debug;
   
   
   ### GET THE JOB ID ###                                    
@@ -153,27 +168,30 @@ sub main{
   
   if( $job_info =~ /Could not create job/){
     #This will have been reformated as it appears in the DB
-    (my $stored_input_id= $job_info) =~ s/Could not create job '//;
-    $stored_input_id =~ s/' \(it may have.*//;
-    chomp($stored_input_id);
+    (my $stored_input_id = $job_info) =~ s/Could not create job '//;
+    $stored_input_id =~ s/' \(it may have.*(?:\n.*)*$//;
+    #optional multi line subsitution as it may have been suffixed with another 
+    #input_id = line with an added length value;
+#    chomp($stored_input_id);
     
+ 
     #Now try and fetch job_id from the job or analysis_data table;  
     my $hive_db = Bio::EnsEMBL::Hive::DBSQL::DBAdaptor->new(-url => $hive_url);
     
     my $sql_helper = $hive_db->dbc->sql_helper;
     my $sql = "select job_id from job where input_id='$stored_input_id'";
-    #warn "SQL $sql";
+    #warn "\n\nSQL $sql";
     $job_id = $sql_helper->execute_single_result($sql, undef, undef, undef, 1);#no throw flag
     
     if(! defined $job_id){
       $sql = 'select job_id from job j, analysis_data ad where ad.data='.
         "'$stored_input_id' and j.input_id =concat('_extended_data_id ', ad.analysis_data_id)"; 
-      #warn "SQL $sql";  
+      #warn "\n\nSQL $sql";  
       $job_id = $sql_helper->execute_single_result($sql, undef, undef, undef, 1);#no throw flag
     }
     
     if(! defined $job_id){
-      die("Failed to identify existing job_id for input_id:\n$input_id");  
+      die("Failed to identify existing job_id for input_id:\n$input_id\nUsing SQL:\t$sql");  
     } 
     
     $id_stored = 1;    
@@ -182,7 +200,8 @@ sub main{
     die("Failed to execute:\n$cmd\n$job_info");
   }
   else{
-    ($job_id = $job_info) =~ s/Job ([0-9]+) \[.*/$1/;
+    #Handles multi-line output
+    ($job_id = $job_info) =~ s/(?:.*\n)*.*Job ([0-9]+) \[ .*/$1/;
     
     if($job_id !~ /^[0-9]+$/){
       my $err = "Seeded job, but failed to parse job id from script output:\n$job_info";
@@ -194,7 +213,7 @@ sub main{
   ### RUN IdentifySetInputs -no_write 
   
   if( $no_write ){
-    $cmd = "perl $hive_script_dir/runWorker.pl -url $hive_url -no_write -job_id $job_id -force 1";
+    $cmd = "perl $hive_script_dir/runWorker.pl -url $hive_url -no_write -job_id $job_id -force 1 $debug";
     #warn "Running $cmd";
     run_system_cmd($cmd);
   }
