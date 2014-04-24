@@ -406,7 +406,18 @@ sub is_InputSubset_embargoed {
   #as they are currently merged at the InputSubset level rather than the InputSet level
   $self->fetch_InputSubset_tracking_info($isset);
  
-  my ($year, $month, $day) = split(/-/, $isset->availability_date);
+  #This was causing issues as DateTime cannot take the default null date of 0000-00-00
+  my $avail_date = $isset->availability_date;
+    
+  if($avail_date eq '0000-00-00'){
+    warn "Found $avail_date availability date for InputSubset:\t".$isset->name.
+      "\nDefaulting to 0001-01-01\n";
+    $avail_date = '0001-01-01';
+  }
+ 
+  my ($year, $month, $day) = split(/-/, $avail_date);
+  
+  
   my $isset_date = DateTime->new(day   => $day,
                                  month => $month,
                                  year  => $year  );
