@@ -191,26 +191,50 @@ END
 DELIMITER ;
 
 
--- Both these needs to be views
-
--- SET CT_IDS=_GetRegBuildCellTypeIDs();
--- SET FT_IDS=_GetSegBuildFeatureTypeIDs();
 
 -- we need a procedure to re-create this if the CT/FT_IDS ever change
 -- or can we use functions in view to make them dynamic?
 
-/* This is dependant on the set naming convention
- * and can probably be done better by joining through the 
- * result_set_input table
+-- update these to show the relevant controls in a 3rd column?
+-- would be nice to get 'with rollup' in here, but that needs a group by.
+
+
+
+/* Show just the data required for the segmentation data
+ * Use this to kick off prioritised jobs based on a group_concat query:
+ *  select group_concat('"', experiment, '"') from seg_exp_view 
+ *  where experiment like "CTYPE_%_EXP_GROUP_" and result_set is NULL;
+ * Or use this wildcard string directly in SeedPipeline. This may identify
+ * additional non-segmentation experiments, so it's a good idea to check
+ * the reg_exp_view, and use the group_concat approach if there are 
+ * already some processed experiments. 
  */
 
 DELIMITER //
 CREATE OR REPLACE VIEW seg_exp_view AS
-  SELECT e.name as experiment, rs.name as result_set FROM experiment e LEFT JOIN result_set rs on rs.name like concat(e.name, '%') 
+  SELECT e.experiment_id, e.name as experiment, ft.class, rs.name as result_set, et.notes 
+    FROM feature_type ft, experiment e LEFT JOIN result_set rs on rs.name like concat(e.name, '%') 
+    LEFT JOIN experiment_tracking et on e.experiment_id=et.experiment_id
     WHERE FIND_IN_SET(e.cell_type_id, GetRegBuildCellTypeIDs()) 
-    AND FIND_IN_SET(e.feature_type_id, GetSegBuildFeatureTypeIDs());
+    AND FIND_IN_SET(e.feature_type_id, GetSegBuildFeatureTypeIDs()) 
+    AND e.feature_type_id=ft.feature_type_id ORDER by e.name;
 //
 DELIMITER ;
+
+/* Shows all the data viable for the regulatory build i.e. also including the 
+ * histones and TFs not reuired for the segmentation
+ */
+
+DELIMITER //
+CREATE OR REPLACE VIEW reg_exp_view AS
+  SELECT e.experiment_id, e.name as experiment, ft.class, rs.name as result_set, et.notes 
+  FROM feature_type ft, experiment e LEFT JOIN result_set rs on rs.name like concat(e.name, '%') 
+    LEFT JOIN experiment_tracking et on e.experiment_id=et.experiment_id
+    WHERE FIND_IN_SET(e.cell_type_id, GetRegBuildCellTypeIDs()) 
+    AND e.feature_type_id=ft.feature_type_id ORDER by e.name;
+//
+DELIMITER ;
+
 
 
 DELIMITER //
@@ -222,5 +246,13 @@ CREATE OR REPLACE VIEW exp_subset_view AS
 //
 DELIMITER ;
 
-
+DELIMITER //
+CREATE OR REPLACE VIEW exp_status_view AS
+  SELECT e.name as experiment, sn.name
+    FROM experiment e 
+    LEFT JOIN status s on s.table_id=e.experiment_id 
+    LEFT JOIN status_name sn using(status_name_id)
+    WHERE s.table_name='experiment' ORDER BY e.name;
+//
+DELIMITER ;
 
