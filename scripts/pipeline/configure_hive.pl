@@ -30,17 +30,21 @@ configure_hive.pl
 
 =head1 SYNOPSIS
 
-  configure_hive.pl -host <string> -user <String> -pass <String> -dbname <String> -data_root <String> \
-    -hive_script_dir <String> -configs <String> ... \
-    [-port <Int> -dnadb_host <String> -dnadb_user <String> -dnadb_pass <String> -dnadb_name <String> \
-     -dnadb_port <Int> -list -help -man]
+  configure_hive.pl [-configs <String> ...] \          #Normally all that is required when running within pipeline environent
+    [-host <string> -user <String> -pass <String> -dbname <String> \
+     -data_root <String> -hive_script_dir <String> ] \ #Mandatory params specified by pipeline enviornment
+    [-port <Int> -dnadb_host <String> -dnadb_user <String> -dnadb_pass <String> 
+     -dnadb_name <String> -dnadb_port <Int> ] \        #Optional params specified by the pipeline environment
+    [ -list -help -man ] \                             # Truly optional params
 
 =head1 PARAMETERS
 
   Mandatory:
+    -configs          <String> ...  Config module names e.g. Peaks (use -list for full lst)
+
+  Madatory if not run within pipeline environment:
     -data_root        <String>      Root data directory
     -hive_script_dir  <String>      Hive scripts directory
-    -configs          <String> ...  Config module names e.g. Peaks (use -list for full lst)
     -host             <String>      Funcgen DB host
     -user             <String>      Funcgen DB user
     -pass             <String>      Funcgen DB pass
@@ -110,15 +114,16 @@ my %config_labels =
 #but we may want to move them there, if we are to allow
 #more than one hive to run on the same DB.
 
-&main(@ARGV);
+&main();
 
 
 sub main{
-  my @tmp_args = @_;
-  my (@configs, $species, $data_root, $hive_script_dir, $list);               
+  my @tmp_args = @ARGV;
+  my (@configs, $species, $data_root, $hive_script_dir, $list);   
+  my ($archive_root, $allow_no_arch);            
   my $db_opts  = get_DB_options_config();#This will get opts for funcgen, core and pipeline by default
   
-  GetOptions 
+  GetOptions
    (#Mandatory
     %{$db_opts},
     'configs=s{,}'      => \@configs,
@@ -126,6 +131,8 @@ sub main{
     'hive_script_dir=s' => \$hive_script_dir,
   
     #Optional
+    'archive_root=s'    => \$archive_root,
+    'allow_no_archive'  => \$allow_no_arch,
     #'drop' => \$drop,#implement this when we use the updated version of init_pipeline?
     'species=s'   => \$species,
     'list'        => \$list,
@@ -154,10 +161,31 @@ sub main{
   
   if(! defined $hive_script_dir){
     throw('-hive_script_dir is a mandatory parameter');  
-  }      
-  elsif(! -d $hive_script_dir){
+  }elsif(! -d $hive_script_dir){
     throw("-hive_script_dir is not a valid directory:\t${hive_script_dir}");
   }
+  
+  #Do some sensible pre-init dir checking, 
+  #Thiss would be caught by the pipeline, but we don't want to 
+  #have to tidy up if these are wrong
+  
+  if(! defined $data_root){
+    throw('-data_root is a mandatory parameter');  
+  }elsif(! -d $data_root){
+    throw("-data_root is not a valid directory:\t${data_root}");
+  }
+  
+  my $arch_params = '';
+  
+  if(defined $archive_root){
+    
+    if(! -d $archive_root){
+      throw("-archive_root is not a valid directory:\t${archive_root}");  
+    }
+    $arch_params .= " -archive_root $archive_root ";  
+  }
+  
+  $arch_params .= ' -allow_no_archive 1 ' if defined $allow_no_arch;
   
   if(! @configs){
     pod2usage(-exitval => 1, 
@@ -166,7 +194,6 @@ sub main{
   }
   
   ### HANDLE DB PARAMS ###
-  
   my $db_script_args = process_DB_options($db_opts, ['funcgen', 'core', 'pipeline'], undef, 'script');
   my $pdb_params     = ${&process_DB_options($db_opts, ['pipeline'])}{pipeline};
   my $db             = create_Funcgen_DBAdaptor_from_options($db_opts, 'pass');
@@ -194,7 +221,7 @@ sub main{
   
   
   ### INITIALISE/CREATE PIPELINE DB ###
-  my $pipeline_params = "-data_root_dir $data_root -pipeline_name ".$pdb_params->{'-dbname'}.' '.
+  my $pipeline_params = "$arch_params -data_root_dir $data_root -pipeline_name ".$pdb_params->{'-dbname'}.' '.
     $db_script_args->{funcgen}.' '.$db_script_args->{core}.' '.$db_script_args->{pipeline};
   $pipeline_params .= " -species $species " if defined $species;  
   
@@ -221,7 +248,8 @@ sub main{
     $ntable_a->table_name('meta');
   }
    
-  add_hive_url_to_meta(url_from_DB_params($pdb_params), $db);
+  my $hive_url = url_from_DB_params($pdb_params); 
+  add_hive_url_to_meta($hive_url, $db);
   
   ### PERFORM ANALYSIS_TOPUP ###
   my $conf_key   = 'hive_conf';
@@ -244,7 +272,7 @@ sub main{
       #analysis to the next conf(which has be added previously)
       #Put this method in HiveUtils? (with add_hive_url_to_meta?) where else would it be used?
                  
-      my $meta_key        = 'can_run_%';
+      my $meta_key        = 'can_%';
       my %meta_key_values = %{$ntable_a->fetch_all_like_meta_key_HASHED_FROM_meta_key_TO_meta_value($meta_key)};
       
       #now test failures
@@ -265,26 +293,28 @@ sub main{
       #been done should things fail after adding the hive_conf key
       
       foreach my $can_run_key(keys %meta_key_values){
-        #Don't hard code this for 1, just in case the original value was different for some reason
-        
+      
         if(scalar(@{$meta_key_values{$can_run_key}}) != 1){
           throw("Found multiple entries for meta_key $can_run_key:\t".join(' ', @{$meta_key_values{$can_run_key}}));  
         }
-        
         my $can_run_value = $meta_key_values{$can_run_key}->[0];
         
         if($can_run_value){ #is defined and not 0
           my $meta_id = $ntable_a->fetch_by_meta_key_TO_meta_id($can_run_key);            #PRIMARY KEY
           $ntable_a->update_meta_value({meta_id=>$meta_id, meta_value =>$can_run_value}); #AUTOLOADED
-          
+       
           #Now reset the analysis if the value matches this config
           #i.e. we have just topped up with a downstream config, and want to reset and link
           #analyses which may have run.
+          #$can_run_key will be double quoted as it is loaded from the config
           
-          if($can_run_value eq $conf){
-            $cmd = "perl $hive_script_dir/beekeeper.pl --reset_all_for_analysis $can_run_value";
-            print "\nRESETTING LINK ANALYSIS JOBS FOR:\t$can_run_key\n";
+          (my $can_run_analysis = $can_run_key) =~ s/^can_//o;
+             
+          if($can_run_value eq "\"$conf\""){
+            $cmd = "perl $hive_script_dir/beekeeper.pl -url $hive_url --reset_all_jobs_for_analysis $can_run_analysis";
+            print "\nRESETTING LINK ANALYSIS JOBS FOR:\t$can_run_analysis\n";
             run_system_cmd($cmd);
+            print "\nRESET LINK ANALYSIS JOBS FOR:\t$can_run_analysis\n";
           }
         }
       }
