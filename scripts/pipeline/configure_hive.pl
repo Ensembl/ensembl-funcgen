@@ -80,9 +80,9 @@ use Bio::EnsEMBL::Funcgen::Utils::DBAdaptorHelper qw( process_DB_options
                                                       create_Funcgen_DBAdaptor_from_options
                                                       create_DBAdaptor_from_params );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils        qw( run_system_cmd
-                                                      url_from_DB_params
-                                                      add_hive_url_to_meta );
-
+                                                      url_from_DB_params 
+                                                      add_DB_url_to_meta );
+use Bio::EnsEMBL::Funcgen::Hive::Utils            qw( inject_DataflowRuleAdaptor_methods );
 #$| = 1;#for debug
 
 my %config_info = 
@@ -249,21 +249,22 @@ sub main{
   }
    
   my $hive_url = url_from_DB_params($pdb_params); 
-  add_hive_url_to_meta($hive_url, $db);
+  add_DB_url_to_meta('hive', $hive_url, $db);
   
   ### PERFORM ANALYSIS_TOPUP ###
   my $conf_key   = 'hive_conf';
   
   #my @meta_confs = @{$mc->list_value_by_key($conf_key)};
   my @meta_confs = @{$ntable_a->fetch_all_by_meta_key($conf_key)};
-  
+  my $dfr_adaptor = $pdb->get_DataflowRuleAdaptor;
+  inject_DataflowRuleAdaptor_methods($dfr_adaptor); #Injects get_semaphoring_analysis_ids
   
   foreach my $conf(@confs){
    
-    if( grep(/^$conf$/, @meta_confs) ){
-      warn "Skipping hive -analysis_topup.  $conf config has already been added to the DB\n";  
-    }
-    else{ #Add new config!
+    #if( grep(/^$conf$/, @meta_confs) ){
+    #  warn "Skipping hive -analysis_topup.  $conf config has already been added to the DB\n";  
+    #}
+    #else{ #Add new config!
       
       #Handle potential resetting of pipeline wide 'can_run_AnalaysisLogicName' params 
       #These should be in the meta table and should be cached if they are 'true' 
@@ -292,7 +293,38 @@ sub main{
       #Reset can_run_AnalysisLogicName keys first, so we never assume that this has 
       #been done should things fail after adding the hive_conf key
       
+      #We need to do these in order, with semaphored analyses reset last
+      #As all link analyses are marked as DONE, when resetting a funnel job
+      #before it's DONE fan jobs the beekeeper will look at the fan jobs 
+      #and as they are all done will mark the funnel as READY insterad of SEMAPHORED
+      #Even a 2nd attempt at resetting the funnel jobs will not work in this case
+      #As they are seen as READY and effectively already reset :(
+      #we may also need to run beekeeper -balance_semphores 
+      #but this should be used with caution as it can go wrong.
+      
+      #Can we get the semaphore info from the DataFlowRuleAdaptor?
+      
+      
+      #We need to pre-process these to order them such that the funnel jobs are reset last
+      #We will need to bring back all the DataflowRules for this
+      #as the funnel_dataflow_rule_id will likely be in a non-link analysis
+      #let's do a direct SQL approach for this, rather than getting all the analyses
+      my @can_run_keys;
+      
+      
       foreach my $can_run_key(keys %meta_key_values){
+        (my $lname = $can_run_key) =~ s/^can_//o; 
+        
+        if($dfr_adaptor->get_semaphoring_analysis_ids_by_logic_name($lname)){
+          push @can_run_keys, $can_run_key;   
+        }
+        else{
+          unshift @can_run_keys, $can_run_key;  
+        }   
+      }
+      
+      
+      foreach my $can_run_key(@can_run_keys){
       
         if(scalar(@{$meta_key_values{$can_run_key}}) != 1){
           throw("Found multiple entries for meta_key $can_run_key:\t".join(' ', @{$meta_key_values{$can_run_key}}));  
@@ -319,8 +351,8 @@ sub main{
         }
       }
       
-      _register_conf_in_meta($ntable_a, $conf);    
-    }
+    #  _register_conf_in_meta($ntable_a, $conf);    
+    #}
   }
 
 }# end of main

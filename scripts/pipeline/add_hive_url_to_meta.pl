@@ -65,8 +65,7 @@ use strict;
 use warnings;
 use Getopt::Long;
 use Pod::Usage;
-use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils        qw( add_hive_url_to_meta  );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils        qw( add_DB_url_to_meta  );
 use Bio::EnsEMBL::Funcgen::Utils::DBAdaptorHelper qw( get_DB_options_config 
                                                       create_DBAdaptor_from_options );
 
@@ -77,27 +76,16 @@ my @tmp_args = @ARGV;
 
 GetOptions (
             %$db_opts,
-            #'species=s'  => \$species,
             'url=s'      => \$url,
-            #'pipeline=s' => \$pname,
-      
             'help'             => sub { pod2usage(-exitval => 0); }, #do we need verbose here?
             #removed ~? frm here as we don't want to exit with 0 for ?
-            
             'man|m'            => sub { pod2usage(-exitval => 0, -verbose => 2); },
            ) or pod2usage(-exitval => 1, -message => "Specified parameters are:\t@tmp_args"); 
            
-### check options ###
-#if( ! (defined $url &&
-#       defined $pname) ){
-#  pod2usage(-exitval => 1, 
-#            -message => "You must specify all mandatory parameters\nSpecified parameters are:\t@tmp_args"
-#            );        
-# }
-
+#Drop this script in favour of a 1 liner in the env?
 
 #We just want to create a core DBAdaptor here so we avoid defaulting to ensembldb for the dnadb
 #and we don't want to force specification of the dnadb params
-add_hive_url_to_meta($url, create_DBAdaptor_from_options($db_opts, 'funcgen', 'pass'));
+add_DB_url_to_meta($url, create_DBAdaptor_from_options($db_opts, 'funcgen', 'pass'));
 
 1;
