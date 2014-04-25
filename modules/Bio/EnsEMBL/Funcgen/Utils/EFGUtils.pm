@@ -65,14 +65,13 @@ use base qw( Exporter );
 use vars qw( @EXPORT_OK );
 
 @EXPORT_OK = qw(
+  add_DB_url_to_meta
   add_external_db
-  add_hive_url_to_meta
   assert_ref_do
   assert_refs
   assert_refs_do
   backup_file
   check_file
-  convert_bam_to_sam
   create_Storable_clone
   dump_data
   file_suffix_parse
@@ -80,23 +79,17 @@ use vars qw( @EXPORT_OK );
   generate_slices_from_names
   get_current_regulatory_input_names
   get_date
-  get_files_by_formats
   get_file_format
   get_month_number
-  get_my_scalar_name
-  get_feature_file
   gunzip_file
   is_bed
   is_gzipped
   is_sam
   mean
   median
-  merge_bams
   open_file
   parse_DB_url
   path_to_namespace
-  process_bam
-  process_sam_bam
   run_backtick_cmd
   run_system_cmd
   scalars_to_objects
@@ -140,37 +133,6 @@ sub add_external_db{
   
   return;
 }
-
-
-#Move to PipelineUtils?
-
-sub add_hive_url_to_meta {
-  my $url = shift;
-  my $db  = shift;
-  parse_DB_url($url);
-  assert_ref($db, 'Bio::EnsEMBL::DBSQL::DBAdaptor', 'db');#restrict this to Funcgen?
-
-  my $mc         = $db->get_MetaContainer;
-  my $meta_key = 'hive_url';
-  my $meta_value = $mc->single_value_by_key($meta_key);
-
-  if( ! defined $meta_value){ #Store the new meta entry
-    #Add key via API to store with appropriate species_id
-
-    if(! eval { $mc->store_key_value($meta_key, $url); 1}){
-      throw("Failed to store hive url meta entry:\t$meta_key\t$url\n$@");
-    }
-  }
-  elsif($meta_value ne $url){
-    throw("Could not set hive_url meta entry:\t".$url."\nAs ".$db->dbc->dbname.
-      " is currently locked to a different hive DB:\t$meta_value\n".
-      'Please use that hive DB or drop that pipeline, or remove the meta entry');
-  }
-  #else meta values match and all is good.
-
-  return;
-}
-
 
 
 =head2 assert_ref_do
@@ -547,335 +509,7 @@ sub get_date{
 	return $time;
 }
 
-=pod
 
-## NOW ALL IN SeqTools!
-
-#todo refactor get_files_by_formats complexity & nesting issues
-#This handles g/unzipping and conversion from bam > sam > bed
-#This also assumes that we only ever want to convert in this direction
-#i.e. assumes bam /sam will always exist if we have bed.
-
-#sam params contains:
-#ref_fai         => file_path
-#filter_from_bam => 1
-#could also support:
-#include_MT   => 1,
-#include_dups => 1,
-#ignore header mismatch? (could do thi swith levels, which ignore supersets in fai?
-
-#Currently hardoded for samse files name for sam and bed
-#todo _validate_sam_params
-
-
-#$formats should be in preference order? Although this doesn't break things, it will just return a non-optimal file format
-
-#Slightly horrible method to manage acquisition and conversion of files between
-#supported formats (not necessarily feature formats)
-#all_formats is necessary such that we don't redundant process files which are on the same conversion path when we have filter_format set
-
-
-#There is a possibility that the formats provided might not have the same root, and so
-#filter_from_format may be invlaid for one
-#In this case two method calls might be require, hence we don't want to throw here if we can't find a file
-
-  #This seems over-engineered! But we definitely need the ability to request two formats at the same time
-  #to prevent parallel requests for the same file
-
-  #Filtering will normally be done outside of this method, by the alignment pipeline
-  #however, we must support it here incase we need to refilter, or we get alignment files
-  #supplied outside of the pipeline
-
-
-#what about if we only have the unfiltered file
-#but we ask for filtered
-#should we automatically filter?
-#should we move handling 'unfiltered' to here from get_alignment_files_by_InputSet_formats?
-#Is this too pipeline specific?
-#what if some files don't use the 'unfiltered' convention?
-#then we may get warnings or failures if the in_file and the out_file match
-#would need to expose out_path as a parameter
-#which would then need to be used as the in path for all subsequent conversion
-#No this wouldn't work as it would change the in file to contain unfiltered
-#which might not be the case.
-
-sub get_files_by_formats {
-  my ($path, $formats, $params) = @_;
-  assert_ref($formats, 'ARRAY');
-  $params ||= {};
-  assert_ref($params, 'HASH');
-  $params->{sort}     = 1 if ! defined $params->{sort};     #Always sort if we call process_$format
-  #process_$format will never be called if $format file exists, hence no risk of a redundant sort
-  #for safety, only set this default if filter_from_format is defined? in block below
-
-  #Leave this to the caller now
-  #$params->{checksum} = 1 if ! defined $params->{checksum}; #validate and check
-
-  if(scalar(@$formats) == 0){
-    throw('Must pass an Arrayref of file formats/suffixes in preference order e.g. [\'sam\', \'bed\']');
-  }
-
-  my %conversion_paths = ( bam => ['bam'],
-                           sam => ['bam', 'sam'],
-                           bed => ['bam', 'sam', 'bed'],
-                           #we always need the target format as the last element
-                           #such that we can validate the filter_format e.g. for bam
-                           #if the path array only has one element, it must match the key
-                           #and this constitues calling filter_bam
-                           #or if filter_format not set, just grabbing the bam file
-
-                           #This approach prevents being able to | bam sort/filters through
-                           #to other cmds, so may be slower if we don't need to keep intermediate files?
-
-                           #Could also have non-bam rooted paths in here
-                           #and maybe multiple path with different roots?
-                         );
-
-  my $can_convert           = 0;
-  my $clean_filtered_format = 0;
-  my $filter_format         = $params->{filter_from_format};
-  my $all_formats           = $params->{all_formats};
-  my $done_formats          = {};
-
-  #Add filter format if it is not in $formats
-  if($filter_format &&
-     (!  grep { /^$filter_format$/ } @$formats )){
-    unshift @$formats, $filter_format;
-    $clean_filtered_format = 1;
-  }
-
-  #Attempt to get the first or all formats
-  foreach my $format(@$formats){
-    my $can_filter = 0;
-
-    #Do this before simple file test as it is quicker
-    if(grep { /^${format}$/ } keys %$done_formats){ #We have already created this format
-      next;
-    }
-
-    #Simple/quick file test first before we do any conversion nonsense
-    #This also means we don't have to have any conversion config to get a file which
-    
-    #This is being undefd after we filter, so hence, might pick up a pre-exising file!
-    if(! defined $filter_format){
-
-       if(my $from_path = check_file($path.'.'.$format, 'gz', $params)){#we have found the required format
-          $done_formats->{$format} = $from_path;
-          next;
-       }
-    }
-
-
-    ### Validate we can convert ###
-    if(exists $conversion_paths{$format}){
-      $can_convert = 1;
-
-      if(defined $filter_format){
-
-        if( ($conversion_paths{$format}->[0] ne $filter_format) &&
-            ($all_formats) ){
-          throw("Cannot filter $format from $filter_format for path:\n\t$path");
-        }
-        elsif((scalar(@{$conversion_paths{$format}}) == 1 ) ||
-              (! $clean_filtered_format)){
-          my $filter_method = 'process_'.$filter_format;
-          $can_filter = 1;
-
-          #Sanity check we can call this
-          if(! ($filter_method = Bio::EnsEMBL::Funcgen::Utils::EFGUtils->can($filter_method))){
-            throw("Cannot call $filter_method for path:\n\t$path\n".
-              'Please add method or correct conversion path config hash');
-          }
-
-          #Set outfile here so we don't have to handle unfiltered in process_sam_bam
-          #don't add it to $params as this will affected all convert methods
-          (my $outpath = $path) =~ s/\.unfiltered$//o;
-
-          #$format key is same as first element
-
-          $done_formats->{$format} = $filter_method->($path.'.'.$filter_format, 
-                                                      {%$params, 
-                                                       out_file => $outpath.'.'.$filter_format} );       
-          #so we don't try and refilter when calling convert_${from_format}_${to_format}
- 
-          #delete $params->{filter_from_format};#Is this right?
-
-          undef $filter_format; #Just for safety but not strictly needed
-          $path = $outpath;
-
-        }
-      }
-    }
-    elsif($all_formats){
-      throw("No conversion path defined for $format. Cannot acquire $format file for path:\n\t$path\n".
-        'Please select a supported file format or add config and conversion support methods for $format');
-    }
-
-    ### Attempt conversion ###
-    if($can_convert){
-      #This now assumes that if $filter_format is set
-      #convert_${filter_format}_${to_format} provides filter functionality
-
-      if(scalar(@{$conversion_paths{$format}}) != 1){      #already handled process_${format} above
-        #Go through the conversion path backwards
-        #Start at last but one as we have already checked the last above i.e. the target format
-        #or start at 0 if we have $filter_format defined
-        my $start_i = (defined $filter_format) ? 0 : ($#{$conversion_paths{$format}} -1);
-
-        for(my $i = $start_i; $i>=0; $i--){
-          my $from_format = $conversion_paths{$format}->[$i];
-
-          #Test for file here if we are not filtering! Else we will always go through
-          #other formats and potentially redo conversion if we have tidied intermediate files
-          if( (! defined $filter_format) &&
-              (! grep { /^${from_format}$/ } keys %$done_formats )){
-            my $from_path = $path.".${from_format}";
-
-            if($from_path = check_file($from_path, 'gz', $params)){#we have found the required format
-              $done_formats->{$from_format} = $from_path;
-              #next; #next $x/$to_format as we don't want to force conversion
-            }
-          }
-
-
-          #find the first one which has been done, or if none, assume the first is present
-          if( (grep { /^${from_format}$/ } keys %$done_formats)  ||
-              $i == 0){
-            #then convert that to the next, and so on.
-            for(my $x = $i; $x < $#{$conversion_paths{$format}}; $x++){
-              my $to_format   = $conversion_paths{$format}->[$x+1];
-              $from_format    = $conversion_paths{$format}->[$x];
-              my $conv_method = 'convert_'.$from_format.'_to_'.$to_format;
-
-              #Sanity check we can call this
-              if(! ($conv_method = Bio::EnsEMBL::Funcgen::Utils::EFGUtils->can($conv_method))){
-                throw("Cannot call $conv_method for path:\n\t$path\n".
-                  'Please add method or correct conversion path config hash');
-              }
-
-
-              $done_formats->{$to_format} = $conv_method->($path.'.'.$from_format, $params);
-
-              #Remove '.unfitlered' from path for subsequent conversion
-              if(($i==0) &&
-                defined $filter_format){
-                $path =~ s/\.unfiltered$//o;
-              }
-            }
-
-            last; #We have finished with this $conversion_path{format}
-          }
-        }
-
-
-        if($clean_filtered_format && ($format eq $filter_format)){
-          #filter_format is not our target format, so we need to keep going
-          next; #$format
-        }
-        elsif(! $all_formats){  #else we have found the most preferable, yay!
-          last;  #$format
-        }
-      }
-    }
-  } #end foreach my $format
-
-
-  #Now clean $done_formats
-
-  if($clean_filtered_format){
-   #actually delete filtered file here?
-    delete $done_formats->{$filter_format};
-  }
-
-  foreach my $format(keys %$done_formats){
-    #doesn't matter about $all_formats here
-
-    if(! grep { /^${format}$/ } @$formats){
-      delete $done_formats->{$format};
-    }
-  }
-
-  #test we have somethign to return!?
-  #if( scalar(keys %$done_formats) == 0 ){
-  #  throw('Failed to find any '.join(', ', @$formats)." files for path:\n\t$path");
-  #}
-  #don't do this as we may want to test for a filtered file, before attempting a filter
-  #from a different path
-  #This is caught in get_alignment_files_by_InputSet_formats
-
-  return $done_formats;
-}
-
-
-
-#Is validate_checksum going to have problems as files are gunzipped
-#Should validate checksum also handle .gz files i.e. check for entry without .gz, gunzip and validate?
-#Maybe all checksums should be done on gunzipped files
-
-
-#DAMMIT! Part of the filtering is currently done in SAM!!!!
-#Need to fix this so we can drop sam file completely.
-
-#There is a danger that a filter_format maybe specified but a pre_process_method
-#never get called. This will have to be handled in the first convert_method in the path
-#but we could put a method check in place?
-
-
-#All pre_process_$format methods need to handle filter_from_format
-#and should faciliatate filter and sort functions
-#Can we merge this with process_sam_bam?
-#and maintain this as a simple wrapper process_bam, which somply sets output format
-#then we can also have process_sam as another wrapper method
-#This would mean moving $params support to sort_and_filter_sam(process_bam)
-#and also filter_from_format support and generate_checksum
-
-#No this will make unflitered naming mandatory for process_sam!
-
-#Calling pre_process assumes we want to at least convert, filter or just sort
-#Otherwise we can simply just use the file
-#Need to support sort flag. We might not want to sort if we already have a sorted bam
-#Always sort when filtering?
-#
-
-sub process_bam{
-  my ($bam_file, $params) = @_;
-  $params ||= {};
-  assert_ref($params, 'HASH');
-  return process_sam_bam($bam_file, {%$params, output_format => 'bam'});
-}
-
-sub convert_bam_to_sam{
-  my ($bam_file, $params) = @_;
-  $params ||= {};
-  assert_ref($params, 'HASH');
-  return process_sam_bam($bam_file, {%$params, output_format => 'sam'});
-}
-
-#sub process_sam would need to check_file with gz suffix!
-
-
-#Need to implement optional sort_and_filter_sam here?
-
-sub convert_sam_to_bed{
-  my ($sam_file, $params) = @_;
-  my $in_file;
-
-  if(! ($in_file = check_file($sam_file, 'gz', $params)) ){
-    throw("Cannot find file:\n\t$sam_file(.gz)");
-  }
-
-  (my $bed_file = $in_file) =~ s/\.sam(\.gz)*?$/.bed/;
-  run_system_cmd($ENV{EFG_SRC}."/scripts/miscellaneous/sam2bed.pl -uncompressed -1_based -files $in_file");
-
-  if( (exists $params->{checksum}) && $params->{checksum}){
-    write_checksum($bed_file, $params);
-  }
-  
-
-  return $bed_file;
-}
-
-=cut
 
 sub write_checksum{
   my $file_path = shift;
@@ -986,7 +620,8 @@ sub validate_checksum{
     }
     
     if(-f $signature_file){
-      my $cmd = "grep -E '[[:space:]]+$file_name\[[:space:]]*.*\$' $signature_file";
+      my $qtd_file_name = quotemeta($file_name);
+      my $cmd = "grep -E '[[:space:]]+$qtd_file_name\[[:space:]]*.*\$' $signature_file";
       warn "Checksum file grep:\t$cmd" if $debug;
       my $checksum_row = run_backtick_cmd($cmd);
       warn "Checksum file row:\t$checksum_row" if $debug;
@@ -1546,243 +1181,6 @@ sub scalars_to_objects{
 }
 
 
-#todo
-# 1 add support for filter config i.e. which seq_regions to filter in/out
-# 2 Sorted but unfiltered and unconverted files may cause name clash here
-#   Handle this in caller outside of EFGUtils, by setting out_file appropriately
-# 3 add a DESTROY method to remove any tmp sorted files which may persist after an
-#   ungraceful exit. These can be added to a global $main::files_to_delete array
-#   which should then also be undef'd in DESTROY so they don't persisnt to another instance
-
-#This warning occurs when only filtering bam to bam:
-#[bam_header_read] EOF marker is absent. The input is probably truncated.
-#This is not fatal, and not caught. Does not occur when filtering with sort
-#maybe we shoudl also be catchign $@ after samtools view -H $in_file?
-
-
-#We could use the existing Bio::SamTools package but:
-#1 This will add an extra requirement
-#2 This will need to be isolated in a hive/analysis only module
-#3 It doesn't appear to support merge operations
-#4 It wouldn't support the piping/greping we do to filter the data
-
-#support sam input here
-#also separate this into merge_sam_bam
-#and merge_sam_bam_cmd
-#then we can use this to grab the pipe command and have 1 place for the sort/merge code
-
-#move to Utils::SamUtils?
-
-
-#Can we return the number of duplicates removes?
-
-#header should already be included in bams, but 
-#we do want functionality to include it here
-#todo currently does nothing and header shoudl be specified as fai file!
-#shoudl validate this if they are both present
-#so we need an infile optional flag in _validate_sam_header_index_fai
-
-#when do we ever use sam_header and no fai?
-
-#We currently never use sam_header as the is the only things it is passed to and this
-#doesn't ever use it
-
-#This is for use with merge, and overwrites header which would otherwise
-#just be copied from the first bam file!
-#This maybe a subset of the complete header, dependant on the output of bwa 
-#for that chunk. Does it omit header lines for which is has no alignments?
-
-#how do we create sam header from fai?
-#samtools faidx ref.fa; samtools view -ht ref.fa.fai myfile.sam
-#But this requires a sam file, and will this output the full header?
-
-#Do we really need the sam header here, can't we just validate
-#each bam header is a subset of the fai, then integrate the full header via view?
-
-#update to take a sam fai or header file
-#the header integration removes the need for the final view step
-#if ther headers aren't identical
-
-### NOW IN SeqTools!
-
-sub merge_bams{
-  my $outfile     = shift;
-  my $sam_ref_fai = shift;
-  my $bams        = shift;
-  my $params      = shift || {};  
-  assert_ref($bams, 'ARRAY', 'bam files');
-  
-  if(! scalar(@$bams)){
-    throw('Must provide an arrayref of bam files to merge');  
-  }
-  
-  my $out_flag = '';
-  
-  if(! defined $outfile){
-    throw('Output file argument is not defined');  
-  }
-  elsif($outfile !~ /\.(?:bam|sam)$/xo){
-    #?: does not assign to $1
-    $out_flag = 'b' if $1 eq 'bam';
-    throw('Output file argument must have a sam or bam file suffix');    
-  }
-
-  assert_ref($params, 'HASH');
-  my $debug     = (exists $params->{debug})          ? $params->{debug}          : 0;
-  my $no_rmdups = (exists $params->{no_rmdups})      ? $params->{no_rmdups}      : undef;
-  my $checksum  = (exists $params->{write_checksum}) ? $params->{write_checksum} : undef;
-  warn "merge_bam_params are:\n".Dumper($params)."\n" if $debug;
-  
-  
-  #For safety we need to validate all the bam headers are the same?
-  #or at least no LN clashed for the same SN?
-  #Must all be subsets of sam_header if specified, and reheader output with
-  #sam_header if defined
-  #else, with the merge of all the input headers?
-  #This later option would permit merges of redunant headers if the SN values
-  #are not identical for the same sequence
-  #force sam header for safety?
-  #For now, let just make sure they are identical
-  #if (! defined $sam_header){
-  #  throw('Must pass a sam_header argument');
-  #}
-  #sam_header check will be done in validate_sam_header with cross validate boolean
-  my $view_header_opt;
-  
-  for(@$bams){ 
-    my $tmp_opt = validate_sam_header($_, $sam_ref_fai, 1, $params);
-    $view_header_opt = $tmp_opt if $tmp_opt;               
-  }
-  
-  #validate/convert inputs here?
-  #just assume all aren bam for now
-  my $cmd = '';
-  
-  #Assume files are already sorted but support optional sort
-  #it would be nice if samtools updated the sort flag in the header?
-  #maybe we can do this?
-  
-  #if(defined $sort){
-  #  throw('Not implemented sort yet');  
-    # my $sorted_prefix = $tmp_bam.".sorted_$$";
-    #$tmp_bam .= ($sort) ? ".sorted_$$.bam" : '.tmp.bam';
-    #$cmd .= ' | samtools view -uShb - ';  #simply convert to bam using infile header
-    #$cmd .= ($sort) ? ' | samtools sort - '.$sorted_prefix : ' > '.$tmp_bam;
-  #}
- 
-
-  
-  #-u uncompressed BAM output for pipe (header remains in sam format)
-  #-f force overwrite output
-  #-h is include header in output, seems to be in sam format i.e. not binary if output is bam??
-  # - To specify seding output to STDOUTT for
-  
-
-  
-  #rmdup samtools rmdup [-sS] <input.srt.bam> <out.bam>
-  #docs look like it only takes sorted bam? 
-  #but there is no specific mention of this?
-  #I don't think so, this is probably just the optimal way of doing this
-  #but we never assume the file is sorted? or do we?
-  #look how this is handled in get_alignment_files_by_ResultSet  
-  
-  my $skip_merge = 0;
-  
-  if(scalar(@$bams) == 1){
-    #samtools merge cannot handle a single input!
-    #Instead it throws a seemingly completely unrelated error message:
-    #Note: Samtools' merge does not reconstruct the @RG dictionary in the header. Users
-    #  must provide the correct header with -h, or uses Picard which properly maintains
-    #  the header dictionary in merging.
-           
-    #Rather than having the caller have to handle this, let's just do the expected thing here
-    #and warn.
-    $skip_merge = 1;
-    warn 'Only 1 bam file has been specified, merge will be skipped, '.
-      "otherwise file will be processed accordingly\n";
-  }
-  
-  
-  
-  if((! $no_rmdups) || $view_header_opt){
-    #merge keeps the header in sam format (maybe this is a product of -u)?
-    $cmd = 'samtools merge -u - '.join(' ', @$bams).' | ' if ! $skip_merge; 
-   
-    if( ! $no_rmdups ){
-       #rmdup converts the header into binary format
-       $cmd .= 'samtools rmdup -s ';
-       $cmd .= $skip_merge ? $bams->[0].' ' : ' - ';
-       
-       if( $view_header_opt ){
-         $cmd .=  ' - | '
-       }
-       else{
-         $cmd .= $outfile;  
-       }
-    }
-    
-    if($view_header_opt){
-      #We only need to do this if the validate_sam_header
-      #method identifed some of the bams without the relevant header
-      
-      warn "Currently integrating fai header via samtools view, but it is more efficient to integrate is with sam format header in merge";
-      
-      $cmd .= "samtools view -t $sam_ref_fai -h${out_flag} - > $outfile";
-      #This is current failing on the first line of the fai file with?
-      #[sam_header_read2] 194 sequences loaded.
-      #[sam_read1] reference 'LN:133797422' is recognized as '*'.
-      #Parse error at line 1: invalid CIGAR character
-      # Aborted
-      
-           
-      #$? is set to 134 when this happens!
-      #Why is this working in BWA?
-      #Maybe it's not?
-      
-      #Oddly enough this doesn't abort when running within this analysis
-      #but does on the cmdline, when runnign the commands separately
-      #even after exit handling fix
-      
-      #scripts does give this output tho, which is totally different:
-      #sh: line 1:  1707 Done                    samtools merge -u - /lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/alignments/homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW.0000.bam /lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/alignments/homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW.0001.bam /lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/alignments/homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW.0002.bam /lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/alignments/homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW.0003.bam /lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/alignments/homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW.0004.bam
-      #1708                       | samtools rmdup -s - -
-      #1709 Aborted                 | samtools view -t /lustre/scratch109/ensembl/funcgen/sam_header/homo_sapiens/homo_sapiens_male_GRCh38_unmasked.fasta.fai -h - > /lustre/scratch109/ensembl/funcgen/alignments/homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW_bwa_samse_1.unfiltered.bam
-      
-      #Irt just seems to hang for a long time and then carry on with the script
-      #as though nothign had happened
-      #cmdline returns 134 in $?
-      
-      #This appears to have been caused by using the wrong fai file
-      #it was using the male file by default (as it has the super set of seqs)
-      #So it seems that mismatched in file headers vs fai headers causes this error
-      #No! But getting the headers to match, did mean the merge avoids the problematic
-      #samtools view -ht command
-      
-      #This is because only the first process exit status is captured by perl
-      
-    }
-  }
-  elsif(! $skip_merge){  
-    $cmd = "samtools merge $outfile ".join(' ', @$bams); 
-  }
-  else{ #skip merge
-    $cmd = 'cp '.$bams->[0].' '.$outfile;
-  }
- 
-  
-  #piping like this may cause errors downstream of the pipe to be missed
-  #could we try doing an open on the piped cmd to try and catch a SIGPIPE?
-  
-  warn "Merging with:\n$cmd\n" if $debug;
-  run_system_cmd($cmd);
-  warn "Finished merge to $outfile" if $debug;
-  
-  if($checksum){
-    write_checksum($outfile, $params);  
-  }
-    
-  return;
-}
 
 #NOW IN SeqTools!
 
@@ -2275,6 +1673,40 @@ sub strip_param_flags{
 
   return \@args;
 }
+
+
+sub add_DB_url_to_meta {
+  my $url_type = shift;
+  my $url      = shift;
+  my $db       = shift;
+  
+  if(! defined $url_type){
+    throw('Must provide URL_TYPE, URL and DBAdaptor arguments');
+  }
+  parse_DB_url($url);
+  assert_ref($db, 'Bio::EnsEMBL::DBSQL::DBAdaptor', 'db');#restrict this to Funcgen?
+
+  my $mc         = $db->get_MetaContainer;
+  my $meta_key = $url_type.'_url';
+  my $meta_value = $mc->single_value_by_key($meta_key);
+
+  if( ! defined $meta_value){ #Store the new meta entry
+    #Add key via API to store with appropriate species_id
+
+    if(! eval { $mc->store_key_value($meta_key, $url); 1}){
+      throw("Failed to store hive url meta entry:\t$meta_key\t$url\n$@");
+    }
+  }
+  elsif($meta_value ne $url){
+    throw("Could not set $meta_key meta entry:\t".$url."\nAs ".$db->dbc->dbname.
+      " is currently locked to a different hive DB:\t$meta_value\n".
+      'Please use that hive DB or drop that pipeline, or remove the meta entry');
+  }
+  #else meta values match and all is good.
+
+  return;
+}
+
 
 
 sub url_from_DB_params {
