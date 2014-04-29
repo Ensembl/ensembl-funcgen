@@ -42,6 +42,21 @@ CREATE TABLE `experiment_tracking` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
+DROP TABLE IF EXISTS `result_set_tracking`;
+
+CREATE TABLE `result_set_tracking` (
+  `result_set_id`        int(10) unsigned NOT NULL,
+  `idr_max_peaks`        mediumint(8) unsigned default NULL,
+  `idr_peak_analysis_id` smallint(5) unsigned default NULL,
+  PRIMARY KEY  (`result_set_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+-- idr stuff in here until we sort the IDRPeaks > DefineOutputSets config linking
+-- Also add some summary alignment stats and QC
+-- Also separate QC table with full txt file import (for now) and add methods to parse as required
+-- this will be cs specific, so probably better to have result/feature_set specific qc tables
+
+
 -- also add in feature_set_stats here!
 
 
