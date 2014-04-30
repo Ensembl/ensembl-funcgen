@@ -21,7 +21,8 @@ use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
 use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( is_gzipped         gunzip_file 
-                                               file_suffix_parse  open_file ); #convert_strand_from_bed
+                                               file_suffix_parse  open_file
+                                               run_backtick_cmd ); #convert_strand_from_bed
 
 
 my %half_open_formats = (bed => 1);
@@ -52,7 +53,19 @@ sub new {
   }
 
   if(! -f $prog_file){
-    throw("Program file does not exist or is not a file:\n$prog_file");  
+    my $which_file = run_backtick_cmd("which $prog_file");
+    
+    if(! defined $which_file){
+      throw("Program file does not exist or is not a file:\n\t$prog_file"); 
+    }
+    else{ #redefine it to give the full path for clarity
+      $prog_file = $which_file;  
+      chomp $prog_file;
+    } 
+  }
+
+  if(! defined $align_file){
+    throw('-ALIGN_FILE is a mandatory parameter');  
   }
 
   if(! defined $control_file){
@@ -67,7 +80,7 @@ sub new {
   
   
   $self->{control_file}      = $control_file; 
-  $self->{prog_file}         = $prog_file;
+  $self->{program_file}      = $prog_file;
   $self->{align_file}        = $align_file;
   $self->{parameters}        = defined $prog_params  ? $prog_params : ''; #To avoid warnings
   $self->{out_dir}           = $out_dir;
@@ -87,7 +100,7 @@ sub new {
   #change get_alignment_file method to take a list of formats in preference order?
   #This will allow the caller to pick the prefered format, but not fail if it is not available
   
-  $self->get_file_info;
+  $self->init_files;
    
   return $self;
 }
@@ -108,15 +121,14 @@ sub init_files {
   if(! defined $self->{file_info}){
   
     my ($align_file, $gzip_align) = gunzip_file($self->align_file);
-    my $gzip_control = 0;
-    my $control_file = $self->control_file;
+    my ($file_prefix, $suffix)    = file_suffix_parse($align_file);   
+    my $gzip_control              = 0;
+    my $control_file              = $self->control_file;
   
     if($control_file){
       ($control_file, $gzip_control) = gunzip_file($self->align_file);
     }
   
-    my ($file_prefix, $suffix) = file_suffix_parse($align_file);   
-   
     if(! defined $self->out_file_prefix){
       $self->{out_file_prefix} = $file_prefix;  
     }
