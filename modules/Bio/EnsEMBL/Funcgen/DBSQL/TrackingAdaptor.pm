@@ -508,7 +508,7 @@ sub get_valid_stored_table_name{
 
 sub get_table_name_from_class{
   my $class = shift || throw('Must provide a class argument');
-  return join('_', split_camel_case($class));
+  return join('_', split_CamelCase($class));
 }
 
 
