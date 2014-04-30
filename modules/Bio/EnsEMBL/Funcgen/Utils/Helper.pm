@@ -113,10 +113,13 @@ my @rollback_tables = qw( data_set   feature_set
                           experiment array
                           array_chip experimental_chip );
 
-#List of valid rollback levels
+#List of valid rollback levels, which are set in _velidate_Set_config
+#based on set type string
 #To be used in conjunction with -full_delete
 #values here used in > ops below, to implement
 #hierarchical rollback
+
+
 
 my %rollback_modes = 
   (
