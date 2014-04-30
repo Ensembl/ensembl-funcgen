@@ -23,7 +23,6 @@ limitations under the License.
   Questions may also be sent to the Ensembl help desk at
   <http://www.ensembl.org/Help/Contact>.
 
-
 =head1 NAME
 
 Bio::EnsEMBL::Funcgen::Hive::IdentifySetInputs;
@@ -40,9 +39,9 @@ package Bio::EnsEMBL::Funcgen::Hive::IdentifySetInputs;
 use warnings;
 use strict;
 
-use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Exception         qw( throw );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( scalars_to_objects );
-use base ('Bio::EnsEMBL::Funcgen::Hive::BaseDB');
+use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
 
 
@@ -91,7 +90,9 @@ my %set_adaptor_methods =
 #  the string. The way around this is to simply add in the control_feature_types to a normal filter query
 #  
 
-# 8 We also need a no_write mode which quickly lists all those which have not be aligned yet
+# 8 DESPERATELY NEED THIS!! 
+## select e.name from experiment e left join result_set rs on rs.name like concat(e.name, '%') where e.name like "HepG2%" and rs.name is NULL;
+#We also need a no_write mode which quickly lists all those which have not be aligned yet
 #   So this is an inverse of the ALIGNED status query. We need this for the other entry points too.
 #   How will this protect against set which have already been seeded?
 #   Do we need a SEEDED status? Would this be on the Experiment or InputSubset level?
@@ -165,7 +166,10 @@ sub fetch_input {   # fetch parameters...
   ### Get/set generic optional param methods
   #todo, split this into ref types, so we can validate
   #i.e. scalar|arrayref|hashref vars
-  $self->process_params([qw(set_names set_ids experiments)], 1);#1 is optional flag
+  $self->process_params([qw(set_names set_ids)], 1);#1 is optional flag
+  $self->get_param_method('experiments', 'silent');
+  #can't process_params for experiments as it would actually fetch the Experiments
+  #and fail with a widlcard
   $self->set_param_method('constraints_hash',
                           $self->process_params([qw(feature_types cell_types states
                                                     analyses experimental_groups)],
@@ -197,11 +201,16 @@ sub fetch_input {   # fetch parameters...
 }
 
 
+#todo Shoudl identify_controls be on by default?
+
 sub _fetch_InputSubset_input{
   my $self = shift;    
   $self->_validate_param_specifity(\@rset_only_params);     
   $self->process_params(\@iset_only_params, 1);#1 is optional flag 
-  $self->set_param_method('validate_InputSubset_tracking', 1); #for convenience/speed in loop below
+  
+  #Do we even need this now, tracking DB is mandatory
+  #and ignore/force_embargoed handle other use cases
+  #$self->set_param_method('validate_InputSubset_tracking', 1); #for convenience/speed in loop below
         
   if($self->force_embargoed && $self->ignore_embargoed){
     throw('force_embargoed and ignore_embargoed are mutually exclusive parameters. '.
@@ -430,7 +439,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
       my $sql_helper = $set_adaptor->dbc->sql_helper;
       
       foreach my $wc(@exp_wildcards){
-        my $sql = 'SELECT name from experiment name like "'.$wc.'"';
+        my $sql = 'SELECT name from experiment where name like "'.$wc.'"';
         my @wc_names = @{$sql_helper->execute_simple($sql)};
         
         if(! @wc_names){
@@ -441,7 +450,10 @@ sub run {   # Check parameters and do appropriate database/file operations...
         }
       }
       
-      $constraints->{experiments} = \@exp_names;
+      $constraints->{experiments} =  scalars_to_objects($self->out_db, 
+                                                        'Experiment',
+                                                        'fetch_by_name',
+                                                        \@exp_names);
     }
       
      
@@ -506,13 +518,13 @@ sub run {   # Check parameters and do appropriate database/file operations...
       foreach my $var(@{$self->control_experiments}){
         $exp = $exp_adaptor->$exp_method($var);
         
-        warn "Cacheing control experiment:\t".$exp->name;
-        
         if(! defined $exp){
           push @failed, $var;
           next; #$var
         }
+
         #This should really be Study! Not experimental group. So is not 100% safe
+        warn "Cacheing control experiment:\t".$exp->name;
         $exp_group = $exp->get_ExperimentalGroup->name;
         
         $self->_cache_controls(
@@ -567,11 +579,10 @@ sub run {   # Check parameters and do appropriate database/file operations...
 
   
   ### SET UP VALIDATION VARS ###
-  my ($no_rel_date, $rel_date, $force, $ignore, $rel_month, $tracking_adaptor);
-
-  if( $self->validate_InputSubset_tracking ) { #we know this is an input_set
-    $tracking_adaptor = $self->tracking_adaptor;
+  my ($no_rel_date, $rel_date, $force, $ignore, $rel_month);
+  my $tracking_adaptor = $self->tracking_adaptor;
   
+  if( $self->set_type eq 'InputSubset' ) { 
     $rel_month   = $self->get_param_method('release_month',    'silent');
     $no_rel_date = (defined $rel_month) ? 0 : 1;
     #currently in american format, hence we have a release month for safety
@@ -590,9 +601,9 @@ sub run {   # Check parameters and do appropriate database/file operations...
   my $ignore_embargoed = $self->ignore_embargoed;
   
   #Iterate through the sets 
-  
  SET: foreach my $set( @$sets ){
     $self->helper->debug(1, 'Processing '.ref($set)." set:\t".$set->name);
+    
     my $embargoed   = 0;
     my $to_download = 0;
   
@@ -607,6 +618,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
     $seen_issets{$set->dbID} = $set->experiment->name;
       
     if($set_type eq 'InputSubset'){
+      $tracking_adaptor->fetch_tracking_info; #Injects basic tracking info accessors
 
       if( $tracking_adaptor->is_InputSubset_embargoed($set, $rel_month)){ 
  
@@ -632,11 +644,18 @@ sub run {   # Check parameters and do appropriate database/file operations...
       }
       
   
-      if(! $tracking_adaptor->is_InputSubset_downloaded($set)){
+      if(! defined $set->download_date){
         $to_download = 1;
-        $throw .= "\nFound InputSubsets which are not downloaded:\n\t".$set->name."\n".
+        $throw .= "\nFound InputSubsets which are not downloaded:\n\t".$set->name.'('.$set->experiment->name.")\n".
           'Please specify -skip_absent, -download or if a bulk download is required, '.
           'run DOWNLOAD_SCRIPT separately?' if ! $self->skip_absent;               
+      }
+      elsif(! -e $set->local_url){
+        $to_download = 1;
+        $throw .= "\nFound InputSubsets which were downloaded on ".$set->downlaod_date." but are not present:\n\t".
+          $set->name.'('.$set->experiment->name.")\t".$set->local_url."\n".
+          'Please specify -skip_absent, -download or if a bulk download is required, '.
+          'run DOWNLOAD_SCRIPT separately?' if ! $self->skip_absent;       
       }
        
       #Cache embargoed/to_download ctrls
@@ -681,7 +700,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
             
                 
          if($use_exp_id){
-           $clabel = $set->cell_type->name.'_'.$set->experiment_id;
+           $clabel = $set->cell_type->name.'_'.$set->experiment->dbID;
          
            if(exists $ctrl_cache{$clabel} &&
               exists $ctrl_cache{$clabel}->{input_subsets}->{$set->dbID}){
@@ -712,21 +731,24 @@ sub run {   # Check parameters and do appropriate database/file operations...
          my $clabel   = $set->cell_type->name;
       
          if(! $x_group_ctrls){
-           $clabel .= '_'.$set->experiment->experimental_group->dbID;
+           $clabel .= '_expgrp_'.$set->experiment->experimental_group->dbID;
          }
         
+         $self->helper->debug(3, 'Attempting to identify control for '.$set->name.' using control key '.$clabel);
          my $non_exp_ctrl = $ctrl_cache{$clabel} if exists $ctrl_cache{$clabel};
          my $exp_ctrl;
         
          if($use_exp_id){
-           $clabel   = $set->cell_type->name.'_'.$set->experiment->dbID;
+           $clabel   = $set->cell_type->name.'_exp_'.$set->experiment->dbID;
+           $self->helper->debug(3, 'Attempting to identify control for '.$set->name.' using control key '.$clabel);
            $exp_ctrl = $ctrl_cache{$clabel} if exists $ctrl_cache{$clabel};
          }
         
                 
          if( (! ($non_exp_ctrl || $exp_ctrl)) &&
             ! $allow_no_ctrls){
-           $throw .= "Could not find a control for InputSubset:\n\t".$set->name."\n";     
+           $throw .= "Could not find a control for InputSubset:\n\t".$set->name.'('.
+            $set->experiment->name.")\n";     
          }
          elsif($non_exp_ctrl && $exp_ctrl){
            #Make sure these are the same!
@@ -803,9 +825,11 @@ sub run {   # Check parameters and do appropriate database/file operations...
               
              ### TEST WHETHER IT NEEDS CONTROLS ###          
              if(! exists $control_reqd{$fset_anal}){
-               eval { $fset_anal = &scalars_to_objects($self->out_db,
-                                                       'Analysis', 
-                                                       'fetch_by_logic_name',                                                        [$fset_anal])->[0]; };
+               eval { $fset_anal = scalars_to_objects($self->out_db, 
+                                                      'Analysis', 
+                                                      'fetch_by_logic_name', 
+                                                      [$fset_anal])->[0]; };
+         
                if( ! $fset_anal){
                  $throw .= 'Could not get analysis for '.$set->name."\n$@\n";  
                  next SET;
@@ -975,11 +999,11 @@ sub run {   # Check parameters and do appropriate database/file operations...
           #appending to appropriate throw/warn string and setting branch
           my $ctrls = delete $oid->{input_subset_ids}->{controls};
           my $msg   = "\nFound embargoed control subsets ($key):\t".
-                        join(', ', @{$ctrls->{embargoed}})."\nRelated InputSets:\n\t".
+                        join(', ', @{$ctrls->{embargoed}})."\nRelated InputSubsets:\n\t".
                         join("\n\t", keys %{$oid->{input_subset_ids}})."\n";
           
           if($ignore_embargoed){
-            $warn_msg .= "Skipping dataflow for the following InputSets.\n$msg";   
+            $warn_msg .= "Skipping dataflow for the following InputSubets.\n$msg";   
             $branch = 0;            
             next KEY; #Not interested in InputSet specific embargoes
           }
@@ -1170,10 +1194,10 @@ sub _cache_controls{
       my $exp_id = $cexp_isset->experiment->dbID;
     
       if($use_exp_id){
-        $clabel .= '_'.$exp_id;
+        $clabel .= '_exp_'.$exp_id;
       }
       elsif(! $x_grp_ctrls){
-        $clabel .= '_'.$cexp_isset->experiment->experimental_group->dbID;
+        $clabel .= '_expgrp_'.$cexp_isset->experiment->experimental_group->dbID;
       }
     
       if(! exists $ctrl_cache->{$clabel}){
@@ -1222,20 +1246,5 @@ sub write_output {  # Create the relevant jobs
 }
 
 
-#Could move this to the TrackingAdaptor
-#if the TrackingAdaptor also updated it's cache after download
-#is not implemented above
-
-sub is_InputSet_downloaded {
-  my $self = shift;
-  my $iset = shift;
-  
-  if($iset){
-    #This method handles/validates InputSets too
-    $self->{input_set_downloaded} = $self->tracking_adaptor->is_InputSubset_downloaded($iset); 
-  }   
-  
-  return $self->{input_set_downloaded};
-}
 
 1;
