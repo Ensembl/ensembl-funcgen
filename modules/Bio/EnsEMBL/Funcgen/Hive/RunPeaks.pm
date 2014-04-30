@@ -17,11 +17,11 @@ use warnings;
 use strict;
 
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd 
+                                               scalars_to_objects );
 use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 
-
-use base ('Bio::EnsEMBL::Funcgen::Hive::BaseDB');
+use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
 
 
@@ -63,6 +63,12 @@ sub fetch_input {
   my $set_type = $self->param_required('set_type');
   my ($fset, $rset, $analysis);
   
+  
+  #Why do we need both of these? Surely max_peaks implies filter!
+  #These also needs grabbing from result_set_tracking in IdentifySetInputs
+  #and dataflowing
+  
+  
   my $max_peaks = $self->get_param_method('max_peaks', 'silent');
   
   if($self->param_silent('filter_max_peaks') &&
@@ -86,9 +92,9 @@ sub fetch_input {
     #
     
     my $peak_analysis = $self->param_required('peak_analysis');
-    $analysis = &scalars_to_objects($self->out_db,'Analysis',
+    $analysis = scalars_to_objects($self->out_db, 'Analysis',
                                                   'fetch_by_logic_name',
-                                                  $peak_analysis)->[0];
+                                                  [$peak_analysis])->[0];
     if(! defined $analysis){
       $self->throw_no_retry("Could not find peak_analysis in DB:\t".$peak_analysis);  
     }                            
@@ -111,14 +117,33 @@ sub fetch_input {
   my $peak_module = $self->validate_package_from_path($analysis->module);
   my $formats = $peak_module->input_formats;
   #my $filter_format = $self->param_silent('bam_filtered') ? undef : 'bam';  
-  #It is currently unsafe to filter here (control clash), so expect filtered file
-    
-  my $control_file;
-  my $align_file = $self->get_alignment_file_by_ResultSet_formats($rset, $formats);
+  #It is currently unsafe to filter here (control clash), so expect filtered file  
+  
+  #The problem here is that we are returning a hash of files keys on the format
+  #This conversion may cause clashes for fan job which share the same controls
+  #(e.g. peak calling jobs if they require formats other than bam)
+  #Collections jobs will be pre-processed/converted individually before submitting
+  #the slice job.
+  #So here we really only need the first available format
+   
+  #Restrict to bam for now
+  
+  if($formats->[0] ne 'bam'){
+    throw("It is currently unsafe to use any non-bam format at this point.\n".
+      "This is due to the possibility of filtering/format conversion clashes between parallel\n".
+      "jobs which share the same control files. Please implement PreprocessAlignments to\n".
+      "group jobs by controls and set/handle FILTERING_CONTROL status");  
+  }
+  
+  $formats = ['bam'];
+  my $align_file = $self->get_alignment_files_by_ResultSet_formats($rset, $formats)->{bam};
+  my $control_file;  
 
   if ( ! $self->get_param_method( 'skip_control', 'silent' ) ) {
     #This throws if not found
-    $control_file = $self->get_alignment_file_by_ResultSet_format($rset, $formats, 1); # control flag
+    $control_file = $self->get_alignment_files_by_ResultSet_formats($rset, 
+                                                                        $formats, 
+                                                                        1)->{bam}; # control flag
   }
 
   #align and control file could potentially be different formats here
@@ -194,15 +219,12 @@ sub run {
 
   if( ! ( $self->param_silent('reload') && 
           -e  $out_file) ){
-
-    eval { $self->peak_runnable->run };
-    my $err = $@; 
-   
-    if($err){
+       
+    if(! eval { $self->peak_runnable->run; 1 }){
+      my $err = $@; 
       $self->throw_no_retry('Failed to call run on '.ref($self->peak_runnable).":\n$err"); 
     }
   }
-
 
   my $max_peaks = $self->max_peaks;
 
