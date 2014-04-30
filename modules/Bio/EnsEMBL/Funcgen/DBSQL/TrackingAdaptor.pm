@@ -202,6 +202,18 @@ sub _columns{
   return keys %{$tracking_columns{$table_name}};  
 }
 
+sub _mandatory_columns{
+  my $self       = shift;
+  #unlikely table_name will be 0
+  my $table_name = shift || throw('Must defined a table_name argument');
+   
+  if(! defined $table_name){
+    throw('Must defined a table_name argument');  
+  }  
+  
+  #force list context so we don't just get the number of matches
+  return (grep { $tracking_columns{$_} } keys %tracking_columns);
+}
 
 sub _is_mandatory_column{
   my $self       = shift;
@@ -318,7 +330,16 @@ sub fetch_tracking_info{
 
 #TO DO
 #This should also set the local_url?
-#Or should we drop this in favour of a generic store/update method? 
+#The is a question of validation of the tracking info before storing
+#in this case, if we have set the download date, then we should also set the local_url
+#is this a case to have a validate_input_subset_tracking_info method?
+#This is currently of very limited utility, and can probably be handled in the caller (for now)
+#Remove this in favour of store_tracking_info($storable, {allow_update =>1}) ?
+#Although the is extra logic here: to_null and potential local_url check?
+
+#This could be a wrapper to store_tracking_info. But we would need to get the stored data first
+#and selectively overwrite just the date (and local_url) and set purge, to ensure that the NULL date
+#is updated
 
 sub set_download_status_by_input_subset_id{
   my ($self, $iss_id, $to_null) = @_;
@@ -331,19 +352,8 @@ sub set_download_status_by_input_subset_id{
 }
 
 
-#can probably remove this, in favour of calling fetch_input_subset_tracking_info
-#and then using direct methods?
-#can we also add is_embargoed to the injected methods dependant on the presence of an embargo field?
-
-#sub is_InputSubset_downloaded {
-#  my ($self, $isset) = @_;
-#  $self->fetch_InputSubset_tracking_info($isset);  
-#  return (defined $isset->download_date) ? 1 : 0;
-#}
-
 
 #Careful this is american format for some reason!!!
-
 #Can we inject a version this for input_subsets?
 
 sub is_InputSubset_embargoed {
@@ -412,35 +422,58 @@ sub is_InputSubset_embargoed {
 
 
 
-#todo handle update safely
-#INSERT IGNORE based on update flag or always INSERT_IGNORE?
-#Will we always know to update?
-#Maybe not, but we should know when not to update?
-#Will it always be safe to update? There may be old info lurking in the table
-#could have an overwrite function which will set the NULLs?
-#tricky as this may bork good data.
-#Probably need to pull back existing data?
-#test return of INSERT IGNORE, if 0E0, then we know it has failed and should do an update
-#certainly shouldn't update by default, as this will always silently overwrite existing data
-#so we probably need allow_update which will update only those tracking attributes which
-#have data, and a purge/overwrite flag, which will also update the NULL attributes to NULL
-#have these as flags or params will be safer in case of a flag ordering issue
+#Subroutine "store_tracking_info" with high complexity score (28) Consider refactoring.  (Severity: 3)
 
 sub store_tracking_info{
-  my $self     = shift;
-  my $storable = shift;
-  my $info     = shift;
-  my $params   = shift;
-  #update flag? or use separate methods for dates, urls md5s and ting?   
+  my $self         = shift;
+  my $storable     = shift;
+  my $params       = shift || {};
+  my $table_name   = $self->get_valid_stored_table_name($storable);   
+  my $allow_update = (exists $params->{allow_update}) ? $params->{allow_update} : 0;
+  my $purge        = (exists $params->{purge})        ? $params->{purge}        : 0;
+  my $info         = (exists $params->{info})         ? $params->{info}         : undef;
   
-  my $table_name = $self->get_valid_stored_table_name($storable);   
+  if(! defined $info){
+    if(! exists $storable->{tracking_info}){
+      throw('Found no tracking info to store. Please set info using tracking methods '.
+      'if they are available, else pass the info hash parameters, but not both'); 
+    }
+    
+    $info = $storable->{tracking_info};
+  }
+  elsif(exists $storable->{tracking_info}){
+    #Does this risk unecessary failure if the tracking info 
+    #has has been autovivified for some reason with null values?
+    #This should never happen. 
+    throw('An info hash parameter has been passed for a '.$table_name.
+      " Storable which already has a tracking_info hash set\n".
+      'Please use the existing tracking methods if available else pass the info hash parameter, but not both');
+  }
+  
   assert_ref($info, 'HASH', 'Tracking info HASH');
   
-  my @cols       = ($table_name.'_id');
-  my @values     = ($storable->dbID);
+  #Grab the existing data to ensure we return/set the complete set of tracking 
+  #info after an update
+  my $stored_info = $self->get_tracking_info($storable);
+  
+  #Compare hashes to avoid unecessary INSERT which may 
+  #fail if we have not specified allow update
+  my $info_is_identical = 1;
+  
+  foreach my $key(%$stored_info){ #This will have all the column keys
+  
+    if( ( (defined $stored_info->{$key}) && 
+           ((! exists $info->{$key}) || ($stored_info->{$key} ne $info->{$key})) ) ||
+        ( (! defined $stored_info->{$key}) && 
+           (exists $info->{$key}) && (defined $info->{$key})) ){  
+      #This last test does not handle empty strings
+      $info_is_identical = 0;;
+    }
+  }
+  
+  #Test for unexpect info items  
   my @valid_cols = $self->_columns($table_name);
 
-  #Test for unexpect info items  
   foreach my $col(keys %$info){
     
     if(! $self->_is_column($table_name, $col) ){
@@ -450,35 +483,84 @@ sub store_tracking_info{
     }  
   }
   
+  return if $info_is_identical;
+  
   #Test for mandatory info items, and build cols/values
+  my @cols       = ($table_name.'_id');
+  my @values     = ($storable->dbID);
+  
   foreach my $col(@valid_cols){
+    
+    
+    #Need to handle update here. There is no way of knowing whether the record has
+    #already been stored, so we just skip this test if $allow_update is set
+    #and let the eval handle the failure
     
     if($self->_is_mandatory_column($table_name, $col) &&
        ((! exists $info->{$col}) || (! defined $info->{$col}))){
       throw("Mandatory tracking column must be defined:\t$col\n$table_name:\t".$storable->name);     
     }       
     
-    if(defined $info->{$col}){
+    #This only updates those attributes which are set unless purge is set. 
+    #In which case undef attribs will be autovivified as undef(or NULL/default in the DB)
+    
+    #Hmm, this will not update current update NULLs!
+    #e.g. when we want to reset a download_date to NULL
+    #This makes the line between overwrite and update a bit murky
+    #If we allow NULLs to be specified then we risk overwriting the data
+    #especially if the tracking hash has been autovivified
+    #This is only done after a fetch, so the data always matches the DB
+    #The only risk is that someone may use the _columns method
+    #to generate the info hash and leave some keys undef, which maybe defined in the DB
+    #Even grabbing the store_info in set_download_status_by_input_subset_id
+    #wont protect again this? What if we fetch the stored_info first
+    #create the full valid hash, then specify purge in set_download_status_by_input_subset_id    
+    
+    #Never update NULLs here unless $purge is set!
+    
+    if(defined $info->{$col} || $purge){
       push @cols,   $col; 
       push @values, $info->{$col};
     }
   }
-  
-  #Use SQLHelper::execute_update here?
-  
-
-  
-  my $sql = "INSERT into ${table_name}_tracking(".join(', ', @cols).
+    
+  my $sql = "INSERT IGNORE into ${table_name}_tracking(".join(', ', @cols).
     ') values("'.join('", "', @values).'")';
   
-  #Although working with DBConnection here provides error handling  
-  $self->db->dbc->do($sql);  
+  if($allow_update){
+    $sql .= 'ON DUPLICATE KEY UPDATE '.join(', ', (map {"$_=values($_)"} @cols));  
+  }
   
-  #make this generic and pass table_name?
+  #Use SQLHelper::execute_update here?
+  #Although working with DBConnection here provides error handling  
+  my $row_cnt;
+  my $db = $self->db;
+  
+  if(! eval { $row_cnt = $db->dbc->do($sql); 1 }){
+    my $update_warn = '';
+    
+    if($allow_update){
+      $update_warn = 'This maybe because allow_update is specified for an absent row '.
+        "and the mandatory columns have not been specified:\n\t".
+        join(' ', $self->_mandatory_columns)."\n";
+    }
+     
+    throw("Failed to insert using sql:\t$sql\n${update_warn}$@");
+  }
+  
+  #This shoudl always be greater than 1
+  #$row_cnt = 0 if $row_cnt eq '0E0';
+
+  #Overwrite set info KV pairs in stored_info
+  #so we're sure have the complete set of tracking data
+  #if allow_update was used with incomplete data.
  
+  foreach my $key(keys %$info){
+    $stored_info->{$key} = $info->{$key};  
+  }
+  
   $self->_inject_tracking_methods($storable);
-  #could pass $table_name here too, but let the method validate
-  $storable->{tracking_info} = $info;  
+  $storable->{tracking_info} = $stored_info;  
   
   return $storable;  
 }
