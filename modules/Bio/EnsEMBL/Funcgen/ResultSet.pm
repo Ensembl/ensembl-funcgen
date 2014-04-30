@@ -878,10 +878,8 @@ sub get_Experiment{
   my $self = shift;
   
   if (! exists $self->{experiment}){ #exists as undef is valid
-    my @supporting_sets = $self->get_support;
-    
     #These are likely InputSubsets, but may still be InputSets
-    
+    my @supporting_sets = @{$self->get_support};
     my $exp;
     
     foreach my $set(@supporting_sets){
@@ -890,9 +888,9 @@ sub get_Experiment{
         next;
       }
     
-      $exp ||= $set->get_Experiment;
+      $exp ||= $set->experiment;
       
-      if($set->get_Experiment->dbID != $exp->dbID){
+      if($set->experiment->dbID != $exp->dbID){
         undef $exp;
         last;        
       }
