@@ -449,10 +449,7 @@ sub _test_funcgen_table{
   #Does this test for ad
 
   my @tables = $obj->adaptor->_tables;
-
   my ($table) = @{$tables[0]};
-  #InputSubSet fix, as doesn't have own adaptor
-  $table = 'input_subset' if $obj->isa('Bio::EnsEMBL::Funcgen::InputSubset');
 
   return $table || $self->throw("Cannot identify table name from $obj adaptor");
 }
