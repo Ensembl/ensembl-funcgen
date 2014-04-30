@@ -63,20 +63,23 @@ use DateTime;
 use Bio::EnsEMBL::Utils::Exception         qw( throw warning );
 use Bio::EnsEMBL::Utils::Scalar            qw( check_ref assert_ref );
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( get_month_number );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( get_month_number split_CamelCase);
 
 use base qw( Bio::EnsEMBL::DBSQL::BaseAdaptor );
 #Currently don't use and Funcgen BaseAdaptor methods in here
 #and this would require _true_tables to be defined
 
-
-my %mandatory_columns = (#'input_subset_id'   => 0,
-                         availability_date => 1,
-                         download_url      => 1,
-                         download_date     => 0,
-                         local_url         => 0,
-                         md5sum            => 0,
-                         notes             => 0);
+#values are mandatory booleans
+my %tracking_columns = 
+ (input_subset => {availability_date => 1,
+                   download_url      => 1,
+                   download_date     => 0,
+                   local_url         => 0,
+                   md5sum            => 0,
+                   notes             => 0},
+  result_set   => {idr_max_peaks        => 0,
+                   idr_peak_analysis_id => 0},
+ );
                         
 
 =head2 new
@@ -188,36 +191,42 @@ sub repository_path{
 #we really need to fix this?
 
 sub _columns{
-  return keys %mandatory_columns;  
+  my $self       = shift;
+  #unlikely table_name will be 0
+  my $table_name = shift || throw('Must defined a table_name argument');
+   
+  if(! defined $table_name){
+    throw('Must defined a table_name argument');  
+  }  
+  
+  return keys %{$tracking_columns{$table_name}};  
 }
+
 
 sub _is_mandatory_column{
-  my $self = shift;
-  my $col  = shift;
-  
-  if(! defined $col){
-    throw('Must defined a columns argument');  
-  }  
+  my $self       = shift;
+  #unlikely table_name or col will be 0
+  my $table_name = shift || throw('Must defined a table_name argument');
+  my $col        = shift || throw('Must defined a columns argument');
     
-  if(! exists $mandatory_columns{$col}){
-    throw($col." is not a valid column, must be one of:\t".join(' ', $self->_columns));  
+  if(! exists $tracking_columns{$table_name}{$col}){
+    throw($col." is not a valid column, must be one of:\t".join(' ', $self->_columns($table_name)));  
   }
   
-  return $mandatory_columns{$col};
+  return $tracking_columns{$table_name}{$col};
 }
+
 
 sub _is_column{
-  my $self = shift;
-  my $col  = shift;
-  
-  if(! defined $col){
-    throw('Must defined a columns argument');  
-  }  
+  my $self       = shift;
+  #unlikely table_name or col will be 0
+  my $table_name = shift || throw('Must defined a table_name argument');
+  my $col        = shift || throw('Must defined a columns argument');
     
-  return exists $mandatory_columns{$col};  
+  return exists $tracking_columns{$table_name}{$col};  
 }
 
-#Genericise this
+
 #optionally add in class specific subs like is_embargoed and set_dowload_status?
 #As these methods are not simple getter/setters it maybe cleaner not to inject them
 #But this leaves some methods available via the object, and some by the adaptor only :/
@@ -228,24 +237,24 @@ sub _is_column{
 #and not the true line number in this module. This is likely fine for the getter/setters, but might
 #be problemtic with more complicated methods.
 
-sub _inject_input_subset_tracking_methods{
-  my $self = shift;
-  my $iss  = shift;
-  
-  assert_ref($iss, 'Bio::EnsEMBL::Funcgen::InputSubset');  
-  
+sub _inject_tracking_methods{
+  my $self       = shift;
+  my $storable   = shift || throw('Must pass a Storable argument');
+  my $table_name = $self->get_valid_stored_table_name($storable);   
+    
   #We don't need to test for existing methods in the namespace here(CvGV_name_or_bust)
   #as we know exactly what methods are already present
-  my @cols = $self->_columns;
+  my @cols = $self->_columns($table_name);
   
-  if(! $iss->can($cols[0])){ 
+  if(! $storable->can($cols[0])){ 
+    my $ref = ref($storable);
     no strict 'refs';
   
     for my $col(@cols){
-      *{ref($iss)."::${col}"} = 
+      *{$ref."::${col}"} = 
         sub {
           my $self = shift;
-          my $val = undef;
+          my $val  = undef;
           
           #to prevent auto vivification
           #which may prevent fetch                   
@@ -266,68 +275,29 @@ sub _inject_input_subset_tracking_methods{
 }
 
 
+#Todo 
+#Handle clashes between existing tracking_info attribute and fetched data
 
-#genericise this to fetch_tracking_info
+sub fetch_tracking_info{
+  my $self       = shift;
+  my $storable   = shift || throw('Must pass a Storable argument');
+  my $table_name = $self->get_valid_stored_table_name($storable);   
+  my $db         = $self->db;
 
-sub fetch_InputSubset_tracking_info{
-  my ($self, $set, $force_download, $date, $skip_beds) = @_;
-
-  assert_ref($set, 'Bio::EnsEMBL::Funcgen::InputSubset');
-
-  #can remove this when we update download_inputset_data.pl
-  if($force_download || $date || $skip_beds){
-    throw('fetch_InputSubset_tracking_info no longer supports thte force_dowload, date or skips_beds arguments');  
-  }
-
-  my $db = $self->db;
-
-  #if(! $set){
-	#  throw('You need to pass a valid stored InputSet or InputSubset');
-  #}
-  #elsif(check_ref($set, 'Bio::EnsEMBL::Funcgen::InputSet')){
-  #  if($set->is_stored($db)){
-  #	  push @sub_sets, @{$set->get_InputSubsets};
-  #  }
-  #  else{
-  #    throw("InputSet is not stored in this DB:\t".$set->name);  
-  #  }
-  #}
-  #elsif(check_ref($set, 'Bio::EnsEMBL::Funcgen::InputSubset')){
-	#  if($set->is_stored($db)){
-	#    push @sub_sets, $set;
-  #  }
-  #  else{
-  #    throw("InputSubset is not stored in this DB:\t".$set->name);    
-  #  }
-  #}
-  #else{
-  #  throw("Set argument is not an InputSubset:\t$set");  
-  #}
-
-
-  $self->_inject_input_subset_tracking_methods($set);
+  $self->_inject_tracking_methods($storable);
   my $hashref;
 
-  if(! exists $set->{tracking_info}){
+  if(exists $storable->{tracking_info}){
+    throw("$table_name Storable(".$storable->dbID.
+      ") already has tracking_info attribute. Please store/update before fetching\n");  
+  }else{
 
-    my $sql = 'SELECT '.join(', ', ($self->_columns)).
-              ' FROM input_subset_tracking WHERE input_subset_id ='.$set->dbID;
-
-    #warn $sql;
-    #if ($date ne 'IGNORE'){
-	  #  $date ||= "NOW()";
-	  #  $sql .= " AND ( (isst.availability_date IS NULL) OR (isst.availability_date < '${date}')) ";
-    #}
-
-    #if(! $force_download){
-	  #  $sql .= ' AND isst.downloaded IS NULL';
-    #}
-
- 
+    my $sql = 'SELECT '.join(', ', ($self->_columns($table_name))).
+              " FROM ${table_name}_tracking WHERE ${table_name}_id =".$storable->dbID;
     my $sth = $self->prepare($sql);
     $sth->execute;
     $hashref = $sth->fetchrow_hashref; #Will this be undef if there is no data?
-    $set->{tracking_info} = $hashref;
+    $storable->{tracking_info} = $hashref;
     $sth->finish;#otherwise we get disconnect warnings
     
     #my %column;
@@ -346,7 +316,9 @@ sub fetch_InputSubset_tracking_info{
 }
 
 
-#
+#TO DO
+#This should also set the local_url?
+#Or should we drop this in favour of a generic store/update method? 
 
 sub set_download_status_by_input_subset_id{
   my ($self, $iss_id, $to_null) = @_;
@@ -357,8 +329,6 @@ sub set_download_status_by_input_subset_id{
 
   return;
 }
-
-
 
 
 #can probably remove this, in favour of calling fetch_input_subset_tracking_info
@@ -441,25 +411,40 @@ sub is_InputSubset_embargoed {
 }
 
 
-#Genericise this to store_tracking_info
-#This will require some additions nesting of %mandatory_columns
-#based on a table name key
 
-sub store_input_subset_tracking_info{
-  my ($self, $iss, $info) = @_;
+#todo handle update safely
+#INSERT IGNORE based on update flag or always INSERT_IGNORE?
+#Will we always know to update?
+#Maybe not, but we should know when not to update?
+#Will it always be safe to update? There may be old info lurking in the table
+#could have an overwrite function which will set the NULLs?
+#tricky as this may bork good data.
+#Probably need to pull back existing data?
+#test return of INSERT IGNORE, if 0E0, then we know it has failed and should do an update
+#certainly shouldn't update by default, as this will always silently overwrite existing data
+#so we probably need allow_update which will update only those tracking attributes which
+#have data, and a purge/overwrite flag, which will also update the NULL attributes to NULL
+#have these as flags or params will be safer in case of a flag ordering issue
+
+sub store_tracking_info{
+  my $self     = shift;
+  my $storable = shift;
+  my $info     = shift;
+  my $params   = shift;
   #update flag? or use separate methods for dates, urls md5s and ting?   
-     
-  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::InputSubset', $iss);
-  assert_ref($info, 'HASH', 'InputSubset tracking info HASH');
   
-  my @cols       = ('input_subset_id');
-  my @values     = ($iss->dbID);
-  my @valid_cols = $self->_columns;
+  my $table_name = $self->get_valid_stored_table_name($storable);   
+  assert_ref($info, 'HASH', 'Tracking info HASH');
+  
+  my @cols       = ($table_name.'_id');
+  my @values     = ($storable->dbID);
+  my @valid_cols = $self->_columns($table_name);
 
   #Test for unexpect info items  
   foreach my $col(keys %$info){
     
-    if(! $self->_is_column($col) ){
+    if(! $self->_is_column($table_name, $col) ){
+      #Could also grep this from @valid_cols?
       throw("Found unexpected parameter in tracking info hash:\t".$col.
         "Must be one of:\t@valid_cols");  
     }  
@@ -468,9 +453,9 @@ sub store_input_subset_tracking_info{
   #Test for mandatory info items, and build cols/values
   foreach my $col(@valid_cols){
     
-    if($self->_is_mandatory_column($col) &&
+    if($self->_is_mandatory_column($table_name, $col) &&
        ((! exists $info->{$col}) || (! defined $info->{$col}))){
-      throw("Mandatory tracking column must be defined:\t$col\nInputSubset:\t".$iss->name);     
+      throw("Mandatory tracking column must be defined:\t$col\n$table_name:\t".$storable->name);     
     }       
     
     if(defined $info->{$col}){
@@ -480,16 +465,52 @@ sub store_input_subset_tracking_info{
   }
   
   #Use SQLHelper::execute_update here?
-  my $sql = 'INSERT into input_subset_tracking('.join(', ', @cols).
+  
+
+  
+  my $sql = "INSERT into ${table_name}_tracking(".join(', ', @cols).
     ') values("'.join('", "', @values).'")';
   
   #Although working with DBConnection here provides error handling  
   $self->db->dbc->do($sql);  
   
-  $self->_inject_input_subset_tracking_methods($iss);
-  $iss->{tracking_info} = $info;  
+  #make this generic and pass table_name?
+ 
+  $self->_inject_tracking_methods($storable);
+  #could pass $table_name here too, but let the method validate
+  $storable->{tracking_info} = $info;  
   
-  return $iss;  
+  return $storable;  
 }
+
+
+sub get_valid_stored_table_name{
+  my $self     = shift;
+  my $storable = shift || throw('Must pass a Storable object argument');
+    
+  (my $class = ref($storable)) =~ s/.*:://;
+  my $table_name = get_table_name_from_class($class);
+  
+  if(! exists $tracking_columns{$table_name}){
+    throw("$class table_name ($table_name) does not correspond to a valid tracking class:\n\t".
+      join("\n\t", keys %tracking_columns));  
+  }
+  
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::'.$class, $storable);
+  
+  return $table_name;  
+}
+
+
+#Move this to DBAdaptor?
+#Not BaseAdaptor as this is not a BaseAdaptor (is multi table adaptor)
+#but probably shouldn't be DBAdaptor either?
+
+sub get_table_name_from_class{
+  my $class = shift || throw('Must provide a class argument');
+  return join('_', split_camel_case($class));
+}
+
+
 
 1;
