@@ -162,12 +162,12 @@ sub split_fastqs{
     }
   }
  
- 
+  $chunk_size ||= 16000000;#Optimised for ~ 30 mins bwa alignment bjob
   my (@fastqs, %params, $throw);
   
   foreach my $i(0..$#{$files}){
     my $found_path;
-    %params = ( debug => $debug, checksum => $check_sums->[$i]);
+    %params = ( debug => $debug, checksum => $check_sums->[$i] );
     
     #Hmm, no undef checksum here means try and find one in a file
     
@@ -313,8 +313,64 @@ sub split_fastqs{
 
 
 
+#todo
+# 1 add support for filter config i.e. which seq_regions to filter in/out
+# 2 Sorted but unfiltered and unconverted files may cause name clash here
+#   Handle this in caller outside of EFGUtils, by setting out_file appropriately
+# 3 add a DESTROY method to remove any tmp sorted files which may persist after an
+#   ungraceful exit. These can be added to a global $main::files_to_delete array
+#   which should then also be undef'd in DESTROY so they don't persisnt to another instance
 
-#Move rmdups to process?
+#This warning occurs when only filtering bam to bam:
+#[bam_header_read] EOF marker is absent. The input is probably truncated.
+#This is not fatal, and not caught. Does not occur when filtering with sort
+#maybe we shoudl also be catchign $@ after samtools view -H $in_file?
+
+
+#We could use the existing Bio::SamTools package but:
+#1 This will add an extra requirement
+#2 This will need to be isolated in a hive/analysis only module
+#3 It doesn't appear to support merge operations
+#4 It wouldn't support the piping/greping we do to filter the data
+
+#support sam input here
+#also separate this into merge_sam_bam
+#and merge_sam_bam_cmd
+#then we can use this to grab the pipe command and have 1 place for the sort/merge code
+
+#move to Utils::SamUtils?
+
+
+#Can we return the number of duplicates removes?
+
+#header should already be included in bams, but 
+#we do want functionality to include it here
+#todo currently does nothing and header shoudl be specified as fai file!
+#shoudl validate this if they are both present
+#so we need an infile optional flag in _validate_sam_header_index_fai
+
+#when do we ever use sam_header and no fai?
+
+#We currently never use sam_header as the is the only things it is passed to and this
+#doesn't ever use it
+
+#This is for use with merge, and overwrites header which would otherwise
+#just be copied from the first bam file!
+#This maybe a subset of the complete header, dependant on the output of bwa 
+#for that chunk. Does it omit header lines for which is has no alignments?
+
+#how do we create sam header from fai?
+#samtools faidx ref.fa; samtools view -ht ref.fa.fai myfile.sam
+#But this requires a sam file, and will this output the full header?
+
+#Do we really need the sam header here, can't we just validate
+#each bam header is a subset of the fai, then integrate the full header via view?
+
+#update to take a sam fai or header file
+#the header integration removes the need for the final view step
+#if ther headers aren't identical
+
+#Move rmdups to process_sam_bam?
 #Then unfiltered file, will be truly unfiltered.
 #This will just increase our footprint on warehouse
 #Keeping the unfiltered bam is not really necessary, we really only want the unfitlered QC report, 
@@ -514,13 +570,36 @@ sub merge_bams{
 
 #todo
 #1 We need to catch if consequence of opts is to actually do nothing
-#2 Make rmdups optional as this will have already been done in the merge_bams
+#2 Make rmdups optional as this will have already been done in the merge_bams?
+#  No we should always rmdups here, in case we want to keep the truly unfiltered file?
+#3 Implement multi-mapping filter
+  #ENCODE removed multimapping reads, probably by filtering based on presence of XA tag
+  #-n is not defined. This seems only to apply to paired reads?
+  #It's unclear exactly what bwa does here.
+  #Repetitive hits will be chosen randoml(y, and XA will be written for alternate mappings)
+  #This means some duplicate reads will likely be slipping through if
+  #they map to multiple locations
+#  To filter (given bwa samse -n wasn't used)
+#  -F 100 will remove non-primary mappings
+#  -v XA will remove remaining primary mappings will alternative mapping present in the 
+#  XA field.  samtools view -F 100 -h in.bam | grep -v XA 
+#This only works for single end reads, and would potentially leave dangling reads if
+#the other half of a pair did not have an XA tag. So you would have to grep out the QNAME (query/pair name)
+#and re-filter on that.
+#--> Implement and are_paired flag
 
+
+#checksum in params here acts to check and write checksums
+#checksum => undef tries to find a checksum file
+#checksum => MD%STRING checks using string
 
 sub process_sam_bam {
   my $sam_bam_path = shift;
   my $params       = shift || {};
   my $in_file;
+
+  #undef checksum here mean try and find one to validate
+  #but then we don't write one
 
   if(! ($in_file = check_file($sam_bam_path, undef, $params)) ){
     throw("Cannot find file:\n\t$sam_bam_path");
@@ -532,7 +611,8 @@ sub process_sam_bam {
   my $out_file      = (exists $params->{out_file})              ? $params->{out_file}              : undef;
   my $sort          = (exists $params->{sort})                  ? $params->{sort}                  : undef;
   my $skip_rmdups   = (exists $params->{skip_rmdups})           ? $params->{skip_rmdups}           : undef;
-  my $checksum      = (exists $params->{checksum})              ? $params->{checksum}              : undef;
+  #Turn on checksum writing
+  my $checksum      = (exists $params->{checksum})              ? 1                                : undef;
   my $fasta_fai     = (exists $params->{ref_fai})               ? $params->{ref_fai}               : undef;
   my $out_format    = (exists $params->{output_format})         ? $params->{output_format}         : undef;
   my $debug         = (exists $params->{debug})                 ? $params->{debug}                 : 0;  
@@ -833,9 +913,10 @@ sub process_sam_bam {
 #so we could move this back to EFGUtils
 
 sub get_files_by_formats {
-  my ($path, $formats, $params) = @_;
+  my $path    = shift;
+  my $formats = shift;
+  my $params  = shift || {};
   assert_ref($formats, 'ARRAY');
-  $params ||= {};
   assert_ref($params, 'HASH');
   $params->{sort}     = 1 if ! defined $params->{sort};     #Always sort if we call process_$format
   #process_$format will never be called if $format file exists, hence no risk of a redundant sort
@@ -982,7 +1063,7 @@ sub get_files_by_formats {
               my $conv_method = 'convert_'.$from_format.'_to_'.$to_format;
 
               #Sanity check we can call this
-              if(! ($conv_method = Bio::EnsEMBL::Funcgen::Utils::EFGUtils->can($conv_method))){
+              if(! ($conv_method = Bio::EnsEMBL::Funcgen::Sequencing::SeqTools->can($conv_method))){
                 throw("Cannot call $conv_method for path:\n\t$path\n".
                   'Please add method or correct conversion path config hash');
               }
@@ -1099,7 +1180,7 @@ sub convert_sam_to_bed{
   }
 
   (my $bed_file = $in_file) =~ s/\.sam(\.gz)*?$/.bed/;
-  run_system_cmd($ENV{EFG_SRC}."/scripts/miscellaneous/sam2bed.pl -uncompressed -1_based -files $in_file");
+  run_system_cmd($ENV{EFG_SRC}."/scripts/miscellaneous/sam2bed.pl -1_based -files $in_file");
 
   if( (exists $params->{checksum}) && $params->{checksum}){
     write_checksum($bed_file, $params);
