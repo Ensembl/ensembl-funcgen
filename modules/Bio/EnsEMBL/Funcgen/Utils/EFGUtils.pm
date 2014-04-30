@@ -96,6 +96,7 @@ use vars qw( @EXPORT_OK );
   set_attributes_by_my_scalar_names
   species_chr_num
   species_name
+  split_CamelCase
   strip_param_args
   strip_param_flags
   url_from_DB_params
@@ -306,7 +307,7 @@ sub file_suffix_parse{
   my $filepath = shift;
 
   my $file_name                  = fileparse($filepath);
-  (my $file_prefix = $file_name) =~ s/\.[a-zA-Z0-9]$//;
+  (my $file_prefix = $file_name) =~ s/\.[a-zA-Z0-9]+$//;
   (my $suffix      = $file_name) =~ s/$file_prefix\.//;
 
   return ($file_prefix, $suffix);
@@ -618,7 +619,13 @@ sub validate_checksum{
     if(! defined $signature_file){ 
       $signature_file = $file_path.'.CHECKSUM';
     }
-    
+   
+   
+    if(! -f $signature_file){
+      warn "!!!!! REMOVE THIS !!!!\nTEMPORARILY CREATING missing MD5 file:\t$signature_file";
+      write_checksum($file_path);         
+    }
+      
     if(-f $signature_file){
       my $qtd_file_name = quotemeta($file_name);
       my $cmd = "grep -E '[[:space:]]+$qtd_file_name\[[:space:]]*.*\$' $signature_file";
@@ -664,7 +671,7 @@ sub validate_checksum{
     }
   }
   elsif(! $md5_optional){
-        throw("Failed to find checksum file:\t$signature_file\n".
+    throw("Failed to find checksum file:\t$signature_file\n".
           'Please specify one as an argument, create a default file or pass the checksum_optional param');
   }
 
@@ -718,9 +725,11 @@ sub gunzip_file {
   my $filepath = shift;
   my $was_gzipped = 0;
 
+  
+
   if( is_gzipped($filepath) ){
-    system("gunzip $filepath") && throw("Failed to gunzip file:\n$filepath\n$@");
-    $filepath =~ s/\.gz$//;
+    run_system_cmd("gunzip $filepath");
+    $filepath =~ s/\.(?:t){0,1}gz$//;
     $was_gzipped = 1;
   }
 
@@ -792,8 +801,16 @@ sub convert_strand_from_bed {
 }
 
 
+#This can return true for some file formats which use gzip intenrally
+#but are not valid gzip files e.g. bam
+#Hence we now test for known gzip suffixes
+#Probably need an override flag here
+#changed return type to file suffix, for file name subbing
+
 sub is_gzipped {
-  my ($file, $fail_if_compressed) = @_;
+  my $file               = shift; 
+  my $fail_if_compressed = shift;
+  my $gzip               = 0;
 
   throw ("File does not exist:\t$file") if ! -e $file;
 
@@ -802,15 +819,17 @@ sub is_gzipped {
   my $file_info = <$GZ_FILE>;
   close($GZ_FILE);
 
-  my $gzip = 0;
 
-  if($file_info =~ /compressed data/){
+  if($file =~ /\.(?:t){0,1}gz$/){
 
-    if($file_info =~ /gzip/){
-      $gzip = 1;
-    }
-    else{
-      throw("File is compressed but not with gzip, please unzip or gzip:\t$file_info");
+    if($file_info =~ /compressed data/){
+
+      if($file_info =~ /gzip/){
+        $gzip = 1;
+      }
+      else{
+        throw("File is compressed but not with gzip, please unzip or gzip:\t$file_info");
+      }
     }
   }
 
@@ -1088,7 +1107,7 @@ sub run_backtick_cmd{
 sub _handle_exit_status{
   my ($cmd, $exit_status, $err, $no_exit) = @_;
   
-  my $exit_code;
+  my ($exit_code, $err_string);
   
   if ($cmd =~ /\|/){
     warn "Failed piped commands may not be caught:\n$cmd\n";    
@@ -1096,26 +1115,27 @@ sub _handle_exit_status{
 
   $exit_code = $exit_status >> 8; #get the true exit code
   
-  
   if ($exit_status == -1) {
-    warn "Failed to execute:\t$cmd\nError:\t$err\n";
+    $err_string = "Failed to execute:\t$cmd\nError:\t$err\n";
   }
   elsif ($exit_status & 127) {
-    warn sprintf("Child process died with signal %d, %s coredump\nError:\t$err\n",
-                 ($exit_status & 127),
-                 ($exit_status & 128) ? 'with' : 'without');
+    $err_string = sprintf("Child process died with signal %d, %s coredump\nError:\t$err\n",
+                    ($exit_status & 127),
+                    ($exit_status & 128) ? 'with' : 'without');
   }
   elsif($exit_status != 0) {
-    my $msg = sprintf("Child process exited with value %d:\t$cmd\nError:\t$err\n", $exit_code);
-    
-      if (! $no_exit){
-        throw($msg);
-      }   
-      else{
-        warn $msg;  
-      }
+    $err_string = sprintf("Child process exited with value %d:\t$cmd\nError:\t$err\n", $exit_code);
   }
-
+  
+  if(defined $err_string){
+    if(! $no_exit){
+      throw($err_string);
+    }   
+    else{
+      warn $err_string;  
+    }
+  }
+  
   return $exit_code;
 }
 
@@ -1126,7 +1146,8 @@ sub _handle_exit_status{
   Arg [1]    : Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
   Arg [2]    : String - class name of object to retrieve
   Arg [3]    : String - method name to use
-  Arg [4]    : Arrayref - Scalar arguments to use iteratively with the fetch method
+  Arg [4]    : Arrayref - Scalar arguments to use iteratively with the fetch method.
+               A single scalar can also be passed in a scalar context.
   Example    : my @cell_types = @{scalars_to_object($db, 'CellType',
                                                     'fetch_by_name',
                                                     [ qw ( GM06990 HUVEC H1ESC ) ])};
@@ -1149,6 +1170,12 @@ sub _handle_exit_status{
 sub scalars_to_objects{
   my ($db, $class_name, $fetch_method, $scalars) = @_;
   assert_ref($db, 'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor', 'db');
+
+  #Be kind and handle single scalars in scalar context
+  if(defined $scalars && 
+     (! ref($scalars)) ){
+    $scalars = [$scalars];     
+  }
 
   if(! ((defined $scalars && (ref($scalars) eq 'ARRAY')) &&
          defined $class_name &&
@@ -1623,6 +1650,14 @@ sub species_name{
   return $species_names{uc($species)};
 }
 
+#returns array
+
+sub split_CamelCase{
+  my $string = shift || die('Must provide a CamelCase string to split');
+  #I'd like to thank google and salva  
+  #This will simply drop any non-letter characters
+  return $string =~ /[A-Z](?:[A-Z]+|[a-z]*)(?=$|[A-Z])/g;
+}
 
 
 #These subs are useful for implementing
