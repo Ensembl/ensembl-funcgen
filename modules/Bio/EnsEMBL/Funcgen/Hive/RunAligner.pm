@@ -53,10 +53,11 @@ use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
 #Some of these are depeandant on the gender being used
 #so we need a method to generate the relevant 
-  
-#TODO Can we make this independant of ResultSet
-#by passing all params it needs.  
 
+
+#NOTE: There is a run_aligner.pl script which will do much the same as this module
+#      without the dependancy on having access to a DB or and Analysis object
+  
 sub fetch_input {   # fetch parameters...
   my $self = shift;
   #Set some module defaults
@@ -65,6 +66,7 @@ sub fetch_input {   # fetch parameters...
   
   $self->SUPER::fetch_input();
   my $rset       = $self->fetch_Set_input('ResultSet');
+  #$self->set_param_method('query_file', $self->param_required('fastq_file'));
   my $fastq_file = $self->get_param_method('fastq_file', 'required');
 
   #$self->get_param_method('output_dir', 'required'); 
@@ -72,20 +74,25 @@ sub fetch_input {   # fetch parameters...
   #Do we even need this? The fastq chunks will already be in a work dir?  
 
   my $analysis     = $rset->analysis;
-  my $align_module = $self->validate_package_from_path($analysis->module);
+  #program is no passed to Aligner so validate here
   my $aligner      = $analysis->program || 
     throw('Aligner analysis cannot have an undef program attribute:'.$analysis->logic_name);
-  $self->set_param_method('aligner', $aligner); 
+  #$self->set_param_method('analysis_parameters', $analysis->parameters);
+  my $align_module = $self->validate_package_from_path($analysis->module); 
+  #$self->set_param_method('align_module', 
+  #                        $self->validate_package_from_path($analysis->module));
 
   #validate program_file isn't a path?
   #would redefine bwa bin in the config for this analysis
-  #this will change the bin_dir for everything else too, but we don't use bin_dir for anything else here 
+  #this will change the bin_dir for everything else too, but we don't use bin_dir for anything else here  
   my $pfile = $analysis->program_file;
   throw('Analysis '.$analysis->logic_name.' must have a program_file defined') if ! defined $pfile; 
   my $pfile_path = ( defined $self->bin_dir ) ? $self->bin_dir.'/'.$pfile : $pfile;
-  my $ref_fasta;
+  #$self->set_param_method('program_file', $pfile_path)
+  
+  my $ref_fasta = $self->param_silent('indexed_ref_fasta');#This is batch flown
    
-  if(! defined $self->param_silent('indexed_ref_fasta')){ #This is batch flown
+  if(! defined $ref_fasta){ 
     my $gender         = $rset->cell_type->gender || 'male';
     my $species        = $self->species; 
   
@@ -99,6 +106,8 @@ sub fetch_input {   # fetch parameters...
                             $species,
                             $species.'_'.$gender.'_'.$self->assembly.'_unmasked.fasta'));
   }
+  
+  #$self->set_param_method('target_file', $ref_fasta);
 
   my $aligner_methods = $self->get_param_method('aligner_param_methods', 'silent');
   my %aparams;
@@ -119,22 +128,26 @@ sub fetch_input {   # fetch parameters...
 
       $self->helper->debug(1, "Setting $method aligner parameter:\t".$aparams{'-'.$method});
     }
+    
+    #$self->set_param_method('aligner_params', $aparams);
   }
   
   
   $self->helper->debug(1, "Creating aligner:\t".$align_module); 
+ 
+  #TODO Change this to use a run script, which can then be used outside of the pipeline
+  #This is fine so long as we are not passing any objects
+  #This is fine, so long as we are capturing errors properly and 
+  #passing them back up the stack for reporting
   
   my $align_runnable = $align_module->new
    (-program_file      => $pfile_path,
     -parameters        => $analysis->parameters, 
     -query_file        => $fastq_file,
-    -reference_file    => $ref_fasta,
+    -target_file       => $ref_fasta,
     -debug             => $self->debug,
     %aparams                                    );
     
-    #-output_dir        =>   
-   
-   
   $self->helper->debug(1, "Setting aligner:\t".$align_runnable); 
   $self->set_param_method('aligner', $align_runnable); 
   return;
@@ -143,12 +156,10 @@ sub fetch_input {   # fetch parameters...
 
 sub run {
   my $self = shift;
-  
-  eval { $self->aligner->run };
-  my $err = $@; 
-  
-  if($err){
-    $self->throw_no_retry('Failed to call run on '.ref($self->aligner).":\n$err"); 
+    
+  if(! eval { $self->aligner->run; 1; }){
+    my $err = $@;
+    $self->throw_no_retry('Failed to call run on '.ref($self->aligner)."\n$err"); 
   }
   
   $self->debug(1, "Finished running ".ref($self->aligner));
