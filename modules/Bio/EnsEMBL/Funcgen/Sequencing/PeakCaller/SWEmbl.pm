@@ -55,17 +55,31 @@ sub requires_control { return 0; }
 
 sub run {   
   my $self = shift;
-  my ($align_file, $suffix, $out_file, $control_file, 
-    $gzip_align, $gzip_control) = @{$self->file_info};
+  my ($align_file, $out_file, $suffix, $control_file, 
+    $gzipped_align, $gzipped_control) = @{$self->file_info};
     
   my $format_switch = $fswitches{lc($suffix)};#auto-vivifies
   throw("$suffix is not recognised as a valid SWEmbl input format") if(! $format_switch);
         
-  my $cmd = $self->program_file." $format_switch -z -i ".
+        
+  #Set -z 
+  my $compressed = $gzipped_align ? ' -z ' : '';
+        
+  if($control_file &&
+     ($gzipped_control != $gzipped_align)){
+    throw("-i(input_file) and -r(eference/input file cannot have mixed compression states:\n\t".
+      $align_file."\n\t".$control_file);  
+  }
+        
+        
+  my $cmd = $self->program_file." $format_switch -i $compressed ".
     $self->align_file.' '. $self->parameters.' -o '.$out_file;
   $cmd .= " -r ".$self->control_file if $self->control_file;
   
   warn "Running:\t$cmd\n" if $self->debug;
+  
+  
+  #This did no cause failure when failed
   run_system_cmd($cmd);
      
   return;
