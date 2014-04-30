@@ -454,7 +454,7 @@ sub store_tracking_info{
   
   #Grab the existing data to ensure we return/set the complete set of tracking 
   #info after an update
-  my $stored_info = $self->get_tracking_info($storable);
+  my $stored_info = $self->fetch_tracking_info($storable);
   
   #Compare hashes to avoid unecessary INSERT which may 
   #fail if we have not specified allow update
@@ -590,7 +590,7 @@ sub get_valid_stored_table_name{
 
 sub get_table_name_from_class{
   my $class = shift || throw('Must provide a class argument');
-  return join('_', split_CamelCase($class));
+  return lc(join('_', split_CamelCase($class)));
 }
 
 
