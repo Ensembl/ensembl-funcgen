@@ -44,6 +44,7 @@ use strict;
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( is_gzipped run_system_cmd 
                                                run_backtick_cmd check_file );
+#use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools qw( split_fastqs );
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
 #TODO... use and update the tracking database dependant on no_tracking...
@@ -182,7 +183,6 @@ sub run {
       
   }
   
-  
   foreach my $isset(@issets){
 
     if(($isset->is_control && ! $run_controls) ||
@@ -190,7 +190,7 @@ sub run {
       next;    
     }
  
-    if(! $self->tracking_adaptor->fetch_InputSubset_tracking_info($isset)){
+    if(! $self->tracking_adaptor->fetch_tracking_info($isset)){
        $throw .= "Could not find tracking info for InputSubset:\t".
         $isset->name."\n";
       next;
@@ -203,7 +203,7 @@ sub run {
     }
 
     my $found_path;
-    my $params = {};#{gunzip => 1};
+    my $params = {};#{gunzip => 1}; #NEVER DEFINE gunzip here!
     #Instead of gunzipping in the warehouse, zcat is now used to 
     #pipe directly split directly into the work area
     #This reduces tidy up and keeps footprint low, so we don't hit
@@ -231,9 +231,12 @@ sub run {
       $params->{checksum} = $isset->md5sum; 
     }
     
-    #This needs to unzip them too!
     my $local_url = $isset->local_url;
-    my $suffix = 'gz' if $local_url !~ /\.gz$/o;                
+    #Look for gz files too. These would normally already be gzipped
+    #if downloaded from a repository
+    #But they may have been gzipped after processing if produced locally
+    #add .tgz support here?
+    #we can't do a md5 check if we don't match the url exactly
     eval { $found_path = check_file($local_url, 'gz', $params); };
  
     if($@){
@@ -245,10 +248,12 @@ sub run {
         $local_url."\n";
       #Could try warehouse here?
     }
-    elsif($found_path !~ /\.gz$/o){
+    elsif($found_path !~ /\.(?:t){0,1}gz$/o){
       #use is_compressed here?
-      run_system_cmd("gzip $found_path");
-      $found_path .= '.gz';  
+      #This will also modify the original file! And potentially invalidate any checksumming
+      $self->throw_no_retry("Found unzipped path, aborting as gzipping will invalidate any further md5 checking:\t$found_path");
+      #run_system_cmd("gzip $found_path");
+      #$found_path .= '.gz';  
     }
     
      
@@ -263,6 +268,14 @@ sub run {
       " has more than one InputSubset, but merge has not been specified:\n\t".
       join("\n\t", @fastqs));    
   }  
+ 
+  my $set_prefix = $self->get_set_prefix_from_Set($rset, $run_controls).
+    '_'.$rset->analysis->logic_name.$set_rep_suffix; 
+ 
+  #Will need to eval this so we can throw_no_retry 
+  #split_fastqs(\@fastqs, $set_prefix, )
+ 
+ 
  
   #This currently fails as it tries to launch an X11 window!
  
@@ -305,8 +318,7 @@ sub run {
  
   
 
-  my $set_prefix = $self->get_set_prefix_from_Set($rset, $run_controls).
-    '_'.$rset->analysis->logic_name.$set_rep_suffix;    
+     
         
 
   #For safety, clean away any that match the prefix
