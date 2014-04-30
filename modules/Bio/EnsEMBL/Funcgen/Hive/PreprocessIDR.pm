@@ -55,8 +55,11 @@ use warnings;
 use strict;
  
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( scalars_to_objects run_backtick_cmd run_system_cmd );
-use base ('Bio::EnsEMBL::Funcgen::Hive::BaseDB');
+use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( scalars_to_objects 
+                                               run_backtick_cmd 
+                                               run_system_cmd );
+use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
 sub fetch_input {   # fetch parameters...
   my $self = shift;
@@ -69,10 +72,12 @@ sub fetch_input {   # fetch parameters...
   
   my $rset_ids = $self->get_param_method('dbIDs',  'required');
   assert_ref($rset_ids, 'ARRAY', 'ResultSet dbIDs');
+  
+  warn "permissive peaks is ".$self->param_required('permissive_peaks');
    
   $self->set_param_method('peak_analysis', &scalars_to_objects($self->out_db, 'Analysis',
                                                                'fetch_by_logic_name',
-                                                               $self->param_required('permissive_peaks')));
+                                                               $self->param_required('permissive_peaks'))->[0]);
   return;
 }
 
@@ -92,7 +97,8 @@ sub run {   # Check parameters and do appropriate database/file operations...
   my $batch_params  = $self->batch_params;
   my $exp_name      = $rsets->[0]->get_Experiment->name;
   #This is also done in RunPeaks, so we really need a single method to do this?
-  $self->get_output_work_dir_methods( $self->db_output_dir.'/peaks/'.$exp_name.'/'.$peak_analysis);
+  my $lname         =  $peak_analysis->logic_name;
+  $self->get_output_work_dir_methods($self->db_output_dir.'/peaks/'.$exp_name.'/'.$lname);
   my $out_dir = $self->output_dir;
  
   # Do this here so we don't have clashes between RunIDR jobs 
@@ -100,15 +106,17 @@ sub run {   # Check parameters and do appropriate database/file operations...
   # Validate analysis
   my $max_peaks     = 300000;
   
-  if($peak_analysis !~ /swembl/io){
+  
+  
+  if($lname !~ /swembl/io){
     #$self->input_job->transient_error( 0 );
-    $self->throw_no_retry('Pre-IDR peak filtering and reformating is currently only been optimised by the SWEmbl analysis');
+    $self->throw_no_retry('Pre-IDR peak filtering and reformating is currently only optimised for the SWEmbl analysis');
     #This maybe fine, but not for MACS2, see IDR docs here 
     #https://sites.google.com/site/anshulkundaje/projects/idr#TOC-CALL-PEAKS-ON-INDIVIDUAL-REPLICATES
   }
-  elsif($peak_analysis =~ /macs/io){#future proofing as will currently never be tested
+  elsif($lname =~ /macs/io){#future proofing as will currently never be tested
     $max_peaks = 100000;
-    warn "Reseting max filtered peaks value to 100000 for MACS analysis:\t$peak_analysis\n";   
+    warn "Reseting max filtered peaks value to 100000 for MACS analysis:\t$lname\n";   
   } 
       
   # Validate, count and define IDR threshold 
@@ -174,14 +182,23 @@ sub run {   # Check parameters and do appropriate database/file operations...
     #based on the out_dir, outfile_prefix and the output_format
     #We should probably pass this whole path, such that we can centralise how the path is generated?
     #If we let the default PeakCaller formats be used, we can't know what the suffix will be at this point
-    $bed_file = $out_dir.'/'.$rset->name.'.bed';
+    
+    
+    #Need to put this in BaseSequencing somewhere?
+    #There is currently an issues with set nameing, as this will integrate the alignment analysis
+    #too. Although this maybe desirable to avoid clashes between features sets with different alignments
+    #The API does not handle this yet.
+    
+    
+    
+    $bed_file = $out_dir.'/'.$rset->name.'.'.$lname.'.bed';
     
     if(! -f $bed_file){  
       $self->throw_no_retry("Could not find pre-IDR bed file:\t$bed_file\n".
         'Need to dump bed from DB directly to required format!');
     }
     
-    $cmd                     = "wc -l $bed_file";
+    $cmd                     = "wc -l $bed_file | awk '{print \$1}'";
     $num_peaks               = run_backtick_cmd($cmd) - 14;
     $pre_idr_beds{$bed_file} = $num_peaks;
    
@@ -215,7 +232,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
   #TODO We need some mechanism to restart this job, to force the threshold, or by dropping 1/some of the replicates. 
   
   my $idr_threshold = ($num_peaks < 100000) ? 0.05 : 0.01;
-  my $idr_name      = $exp_name.'_'.$peak_analysis.'_'.join('_', sort @rep_nums);
+  my $idr_name      = $exp_name.'_'.$lname.'_'.join('_', sort @rep_nums);
   $cmd = "echo -e \"Pre-IDR File\tNum Peaks\n$log_txt\nIDR Threshold = $idr_threshold\" > ${out_dir}/${idr_name}-idr_stats.txt";
   run_system_cmd($cmd);
  
@@ -265,13 +282,26 @@ sub run {   # Check parameters and do appropriate database/file operations...
     #Now we are stripping out the header and setting signal.value to score 
     #before sorting on score and filtering based on $max_peaks  
     #and resorting based on position  
-    $cmd = 'awk \'BEGIN {OFS="\t"} if($1 !~ /^#/) {print $1,$2,$3,".",$7,".",$7,-1,-1,int($9-$1)}\' '.
+    $cmd = 'awk \'BEGIN {OFS="\t"} { if($1 !~ /^#/) {print $1,$2,$3,".",$7,".",$7,-1,-1,int($9-$1)} }\' '.
       "$bed_file | sort -k 7nr,7nr | head -n $max_peaks | sort -k 1,2n > ".$np_bed_file;
     run_system_cmd($cmd);    
-    #Will failures of downstream pipes be caught?   
+       
+    #This is currently giving: 
+    #sort: write failed: standard output: Broken pipe
+    #sort: write error
+    #This is likely due to SIG_PIPE not being handled correctly within perl(as it is in the shell)
+    #If this is not handled correctly then processes on either side of the can try to read or write 
+    #to a dead pipe, causing the error. In this case, most likely th efirst sort reading from the 
+    #awk pipe
+  
+    #Need to use perl pipe here? This seems only to be simple IO pipes within perl
+    #
+    #Put this in EFGUtils?
+  
+     
 
     #Sanity check we have the file with the correct number of lines
-    $cmd = "wc -l $np_bed_file";
+    $cmd = "wc -l $np_bed_file | awk '{print \$1}'";
     my $filtered_peaks = run_backtick_cmd($cmd);
       
     if($max_peaks != $filtered_peaks){
@@ -287,9 +317,9 @@ sub run {   # Check parameters and do appropriate database/file operations...
   }
 
 
-  my $idr_analysis = &scalars_to_objects($self->out_db, 'Analysis',
-                                                        'fetch_by_logic_name',
-                                                        [$self->idr_analysis])->[0]; 
+  #my $idr_analysis = &scalars_to_objects($self->out_db, 'Analysis',
+  #                                                      'fetch_by_logic_name',
+  #                                                      [$self->idr_analysis])->[0]; 
 
 
 
@@ -302,12 +332,14 @@ sub run {   # Check parameters and do appropriate database/file operations...
   
     foreach my $j($next_i..$#np_bed_files){
       
-      push @idr_job_ids, {{%{$batch_params},
+      push @idr_job_ids, {%$batch_params,
                           output_dir    => $out_dir,
-                          #output_prefix => $output_prefix,
                           idr_threshold => $idr_threshold,
-                          idr_name      => $idr_name,
-                          bed_files     => [$np_bed_files[$i], $np_bed_files[$j]]}};
+                          #Ideally we want something like
+                          #rset_name_TR1_vs_TR2
+                          #output_prefix =>
+                          accu_idx      => $i,
+                          bed_files     => [$np_bed_files[$i], $np_bed_files[$j]]};
     }  
   }
   
@@ -317,11 +349,12 @@ sub run {   # Check parameters and do appropriate database/file operations...
   #In between MergeControlAlignments_and_QC and Submit_IDR
   #
   
-  
+
+  #
   $self->branch_job_group(2, \@idr_job_ids,
-                          3, {%{$batch_params},
+                          3, [{%$batch_params,
                               dbIDs    => $self->dbIDs,
-                              set_type => 'ResultSet'});
+                              set_type => 'ResultSet'}]);
       
   return;
 }
