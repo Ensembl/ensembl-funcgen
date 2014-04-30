@@ -35,10 +35,13 @@ package Bio::EnsEMBL::Funcgen::Hive::RunIDR;
 
 use warnings;
 use strict;
- 
+
+use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref ); 
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( scalars_to_objects run_system_cmd );
-use base ('Bio::EnsEMBL::Funcgen::Hive::BaseDB');
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( scalars_to_objects 
+                                               run_system_cmd 
+                                               run_backtick_cmd );
+use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
 ### CURRENT ISSUES 
 #
@@ -62,10 +65,19 @@ sub fetch_input {   # fetch parameters...
   
 
   $self->get_param_method('idr_threshold', 'required');
+  
+  #One of these is required, why do we have 2?
+  #It's easier to generate this in the caller
+  #Or do we just use the names to generate the output prefix?
+  #and drop idr_name completely?
+  #How do we get what matches between two string, then do a vs on the rest?
+  
   $self->get_param_method('output_prefix', 'silent');
-  $self->get_param_method('idr_name', 'silent', $self->output_prefix);
-  $self->param_required('idr_name');
-  $self->param_required('output_dir');
+  #$self->get_param_method('idr_name', 'silent', $self->output_prefix);
+  $self->param_required('accu_idx');
+  
+  
+  $self->get_output_work_dir_methods;
   return;
 }
 
@@ -97,24 +109,26 @@ sub run {   # Check parameters and do appropriate database/file operations...
     
     foreach my $file(@$files){
       (my $name = $file) =~ s/.*\///;  
-      $name =~ s/(\.np_idr)*\.bed$//;
+      $name =~ s/(?:\.np_idr)\.bed$//;
       push @names, $name;
     }
     
-    $output_prefix = $names[0].'_VS_'.$names[1];      
+    if(! defined $output_prefix){
+      $output_prefix = $names[0].'_VS_'.$names[1];
+    }      
   }
 
   #IDR analysis
   #TODO install idrCode in /software/ensembl/funcgen and add this an analysis?
-  my $idr_name = $self->idr_name;
+  #my $idr_name = $self->idr_name;
   
   my $cmd = 'Rscript ~dz1/utils/idrCode/batch-consistency-analysis.r '. 
-    join(' ', @{$files})." -1 ${out_dir}/${idr_name} 0 F signal.value";  
+    join(' ', @{$files})." -1 ${out_dir}/${output_prefix} 0 F signal.value";  
   #signal.value is ranking measure here i.e. SWEmbl score                                              
   run_system_cmd($cmd);      
   
   #Do this here rather than in post_process so we parallelise the awk.
-  $cmd = "awk '$11 <= ".$self->idr_threshold." {print $0}' ${out_dir}/${output_prefix}-overlapped-peaks.txt | wc -l";
+  $cmd = "awk '\$11 <= ".$self->idr_threshold." {print \$0}' ${out_dir}/${output_prefix}-overlapped-peaks.txt | wc -l";
   my $num_peaks = run_backtick_cmd($cmd);
 
   #Now, do we write this as an accu entry in the hive DB, or do we want it 
@@ -126,8 +140,10 @@ sub run {   # Check parameters and do appropriate database/file operations...
   #Just write to file for now until we know if/what we want in the table.
   #Do we need to be concerned if thresholds differ between combinations? 
   
-  #Warning: Parallelised appending to file!l
-  $cmd = "echo -e \"IDR Comparison\tIDR Peaks\n$output_prefix\t$num_peaks\" >> ${out_dir}/${idr_name}-idr-stats.txt";
+  #Warning: Parallelised appending to file!
+  #This will also cause duplicate lines if the RunIDR jobs are rerun
+  #PreprocessIDR should probably clean this file away too
+  $cmd = "echo -e \"IDR Comparison\tIDR Peaks\n$output_prefix\t$num_peaks\" >> ${out_dir}/${output_prefix}-idr-stats.txt";
   run_system_cmd($cmd);
   
   $self->set_param_method('num_peaks', $num_peaks);
@@ -154,10 +170,17 @@ sub run {   # Check parameters and do appropriate database/file operations...
   #echo Final run with new -R param set to $new_cutoff
   #SWEMBL -F -V -i $merged_bam -f 150 -R $new_cutoff -o $output -r $control 
    
-  #        $self->branch_job_group($branch, [{%{$batch_params},
-  #                                           dbID       => [$rset->dbID], 
-  #                                           set_name   => [$rset->name],
-  #                                           set_type    => 'ResultSet'}]);){
+
+
+  #TO DO Capture IDR QC output and threshold
+  #accu num_peaks depedant on pass/fail
+  #WHere are the QC metrics????
+  #em.sav and iri.sav are both internally gzip compressed but have no .(t)gz suffix
+  #Its unclear what exactly can read these formats as zless does not
+  
+
+    
+    
   return;
 }
 
@@ -165,7 +188,8 @@ sub run {   # Check parameters and do appropriate database/file operations...
 
 sub write_output {  # Create the relevant jobs
   my $self = shift;
-  #This is accumulated into an array, which is picked up by PostprocessIDR analysis on another branch.
+  #This is insert into an accu array based on the value of accu_idx
+  #This is picked up by PostprocessIDR analysis on another branch.
   $self->dataflow_output_id( {'idr_peak_counts'   => $self->num_peaks}, 2);
   return;
 }
