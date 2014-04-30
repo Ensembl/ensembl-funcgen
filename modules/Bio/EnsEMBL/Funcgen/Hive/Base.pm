@@ -443,7 +443,7 @@ sub get_output_work_dir_methods{
   if(! $no_work_dir){
     my $dr_dir             = $self->data_root_dir;
     
-    if($default_odir !~ /$dr_dir/){
+    if($out_dir !~ /$dr_dir/){
       throw('Cannot set a work_dir from an output dir('.$out_dir.
         ") which is not in the data_root_dir:\n\t$dr_dir");   
     }    
@@ -1238,7 +1238,8 @@ sub branch_job_group{
   my $fan_branch    = $self->_get_branch_number($fan_branch_codes, $branch_config); 
   #this also asserts_ref for $fan_branch_codes
     
-  $self->helper->debug(1, "Branching $fan_branch(".join(' ', @$fan_branch_codes).')');
+  $self->helper->debug(1, "Branching ".scalar(@$fan_jobs).
+    " to branch(es) $fan_branch(codes=".join(' ', @$fan_branch_codes).')');
     
   if(! (check_ref($fan_jobs, 'ARRAY') &&
         scalar(@$fan_jobs) > 0)){
@@ -1261,7 +1262,8 @@ sub branch_job_group{
    
     my $funnel_branch = $self->_get_branch_number([$funnel_branch_code], $branch_config); 
    
-    $self->helper->debug(1, "Branching funnel $funnel_branch");
+    $self->helper->debug(1, 'Branching funnel '.scalar(@$funnel_jobs).
+      " to branch $funnel_branch(code=$funnel_branch_code)");
    
    
     if($branch_config){#check the funnel is valid wrt fan analyses
@@ -1803,7 +1805,8 @@ sub get_alignment_files_by_ResultSet_formats {
                   filter_from_format => $filter_format,
                   skip_rmdups        => 1, #This will have been done in merge_bams
                   all_formats        => $all_formats,
-                  checksum           => undef,  #This turns on file based checksum generation/validation
+                  checksum           => undef,  
+                  #This turns on file based checksum generation/validation?
                   };
     #We never want to set checksum_optional here, as this is really
     #just for fastq files for which we don't have a checksum
