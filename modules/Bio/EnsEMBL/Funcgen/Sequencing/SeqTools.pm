@@ -23,7 +23,9 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( dump_data
                                                run_backtick_cmd 
                                                write_checksum 
                                                validate_path
-                                               check_file );                                              
+                                               check_file
+                                               validate_package_path 
+                                               which_path );                                              
 use Bio::EnsEMBL::Funcgen::Sequencing::SeqQC; #run_QC
 
 use base qw( Exporter );
@@ -34,8 +36,11 @@ use vars qw( @EXPORT );
   convert_sam_to_bed
   get_files_by_formats
   merge_bams
+  post_process_IDR
+  pre_process_IDR
   process_bam
   run_aligner
+  run_IDR
   split_fastqs
   validate_sam_header );
 
@@ -66,8 +71,13 @@ use vars qw( @EXPORT );
 #from the default qc_type?
 #No, just make people run these separately?
 
+
+#TODO
+# 1 Change all paramter handling to use rearrange only? i.e. no unamed args! 
+
 sub run_aligner{ 
-  my ($aln_pkg, $aln_params, $skip_qc) = rearrange( [qw(aligner aligner_params skip_qc) ], @_);
+  my ($aln_pkg, $aln_params, $skip_qc, $debug) = 
+    rearrange( [qw(aligner aligner_params skip_qc debug) ], @_);
   assert_ref($aln_params, 'ARRAY', 'Aligner params');
   
   throw('-aligner parameter has not been specifed')  if ! defined $aln_pkg;
@@ -84,11 +94,7 @@ sub run_aligner{
   }
   
   #Quote so eval treats $aln_pkg as BAREWORD and converts :: to /
-  if( ! eval "{require $aln_pkg; 1}"){
-    die("Failed to require $aln_pkg\n$@");
-  }
-
- 
+  validate_package_path($aln_pkg);
   my $aligner = $aln_pkg->new(@$aln_params);
 
   #Don't really need this, although might be nice to show the args passed in the 
@@ -173,10 +179,8 @@ sub split_fastqs{
     
     #Look for gz files too, 
     #we can't do a md5 check if we don't match the url exactly
-    eval { $found_path = check_file($files->[$i], 'gz', \%params); };
- 
-    if($@){
-      $throw .= "$@\n";
+    if(! eval { $found_path = check_file($files->[$i], 'gz', \%params); 1}){
+      $throw .= "Failed to check_file:\t".$files->[$i]."\n$@";
       next;  
     }
     elsif(! defined $found_path){
@@ -1153,15 +1157,15 @@ sub get_files_by_formats {
 #
 
 sub process_bam{
-  my ($bam_file, $params) = @_;
-  $params ||= {};
+  my $bam_file = shift;
+  my $params   = shift || {};
   assert_ref($params, 'HASH');
   return process_sam_bam($bam_file, {%$params, output_format => 'bam'});
 }
 
 sub convert_bam_to_sam{
-  my ($bam_file, $params) = @_;
-  $params ||= {};
+  my $bam_file = shift;
+  my $params   = shift || {};
   assert_ref($params, 'HASH');
   return process_sam_bam($bam_file, {%$params, output_format => 'sam'});
 }
@@ -1172,7 +1176,8 @@ sub convert_bam_to_sam{
 #Need to implement optional sort_and_filter_sam here?
 
 sub convert_sam_to_bed{
-  my ($sam_file, $params) = @_;
+  my $sam_file = shift;
+  my $params   = shift || {};
   my $in_file;
 
   if(! ($in_file = check_file($sam_file, 'gz', $params)) ){
@@ -1186,7 +1191,6 @@ sub convert_sam_to_bed{
     write_checksum($bed_file, $params);
   }
   
-
   return $bed_file;
 }
 
@@ -1205,7 +1209,7 @@ sub convert_sam_to_bed{
 
 
 sub validate_sam_header {
-  my $sam_bam_file     = shift;
+  my $sam_bam_file     = shift or throw("Mandatory argument not specified:\t sam/bam file");
   my $header_or_fai    = shift;
   my $xvalidate        = shift;
   my $params           = shift || {};
@@ -1213,10 +1217,7 @@ sub validate_sam_header {
   my $is_fai           = ($header_or_fai =~ /\.fai$/o) ?                1 : 0;
   my $debug            = (exists $params->{debug})     ? $params->{debug} : 0;
   
-  if(! defined $sam_bam_file){
-    throw("Mandatory argument not specified:\t sam/bam file"); 
-  }
-  elsif($xvalidate && ! $header_or_fai){
+  if($xvalidate && ! $header_or_fai){
      throw('The cross validation boolean has been passed, but no header/fai argument has been passed');
   }  
   
@@ -1299,6 +1300,313 @@ sub validate_sam_header {
   
   return $header_opt;
 }
+
+
+ # Validate, count and define IDR threshold 
+  #If you started with ~150 to 300K relaxed pre-IDR peaks for large genomes (human/mouse), 
+  #then threshold of 0.01 or 0.02 generally works well. 
+  #If you started with < 100K pre-IDR peaks for large genomes (human/mouse), 
+  #then threshold of 0.05 is more appropriate. 
+  #This is because the IDR sees a smaller noise component and the IDR scores get weaker. 
+  #This is typically for use with peak callers that are unable to be adjusted to call large number of peaks (eg. PeakSeq or QuEST)
+  #What exactly are we counting here? Total number peaks across rep, average, or the max between reps?
+  #This also depends on the prevalence of the mark, it may be that a particular feature type genuinely does not have many genome wide hits
+ 
+  #idr_threshold is being skewed by the rep with the least peaks
+  #meaning more peaks will be identified from each replicate comparison
+  #This will however, still be low if we have had to truncate in line with
+  #the rep with the lowest number of pre-IDR peaks
+  
+sub pre_process_IDR{
+  my $out_dir      = shift or throw('Must provide and out_dir argument');
+  my $pre_idr_beds = shift;
+  my $batch_name   = shift or throw('Must provide a batch_name argument');
+  my $max_peaks    = shift or throw('Must provide a max_peaks argument'); 
+  throw("out_dir does not exist:\t$out_dir") if ! -d $out_dir;
+  assert_ref($pre_idr_beds, 'ARRAY');
+
+  if(scalar(@$pre_idr_beds) < 2){
+    throw('Cannot run IDR with less than 2 replicates:\n\t'.$pre_idr_beds->[0]);  
+  }
+    
+  my ($mt_100k, $lt_100k, $log_txt);
+  
+  foreach my $bed_file(@$pre_idr_beds){
+    
+    if(! -f $bed_file){  
+      throw("Could not find pre-IDR bed file:\t$bed_file\n".
+        'Need to dump bed from DB directly to required format!');
+    }
+  
+    #Ignore comments and header    
+    my $cmd       = "grep -vE '(#|(^Region[[:space:]]+Start))' $bed_file | wc -l | awk '{print \$1}'";
+    my $num_peaks = run_backtick_cmd($cmd);
+     
+    if($num_peaks > 100000){
+      $mt_100k = 1;
+      
+      if($num_peaks < 150000){
+        warn 'Pre-IDR peaks counts fall in threshold grey zone(100k-150k), defaulting to 0.01'.
+          " but maybe consider 0.02 for:\n\t$bed_file\n";  
+      }  
+    }
+    else{
+      $lt_100k = 1;
+    }
+
+    if($num_peaks < $max_peaks){
+      #We take the lowest number of peaks, as we need comparable numbers of peaks
+      #across all inputs
+      $max_peaks = $num_peaks;  
+    }
+    
+    $log_txt .= $bed_file."\t".$num_peaks."\n";
+  } 
+     
+  #Note this does not yet support MACS yet, should prbably just ignore it as we filter to 100000
+  my $idr_threshold = ($max_peaks < 100000) ? 0.05 : 0.01;
+  
+  if($lt_100k && $mt_100k){
+    #$self->throw_no_retry("Identified different optimal thresholds due to pre-IDR peak counts spanning the 100k limit:\n".
+    #  $log_txt);
+    warn 'Identified different optimal thresholds due to pre-IDR peak counts spanning the 100k limit:'.
+      "\n$log_txt\nDefaulting to lower threshold:\t$idr_threshold\n";    
+  }
+  
+  #TODO We need some mechanism to restart this job, to force the threshold, or by dropping 1/some of the replicates. 
+  
+  my $cmd = "echo -e \"Pre-IDR File\tNum Peaks\n$log_txt\nIDR Threshold = $idr_threshold\"".
+    "> ${out_dir}/${batch_name}-idr-stats.txt";
+  run_system_cmd($cmd);
+  
+  
+  
+  #TODO parallelise the filtering and reformating to speed things up, so let's semphaore than to a simple CMD job.
+  #can we even do this as we already have a semaphore on the RunIDR and
+  #maybe with a job factory? I think this is not possible without another analysis
+  #but we could use a dummy? which then submit the RunIDR and semaphores the PostProcessIDR
+  #Just do here for now
+  my @np_bed_files;
+
+  #This does not needs to be a hash!
+  #we never use $num_peaks values
+
+
+  #foreach my $bed_file(keys %pre_idr_beds){
+  foreach my $i(0..$#{$pre_idr_beds}){
+    my $bed_file     = $pre_idr_beds->[$i];
+    (my $np_bed_file = $bed_file) =~ s/\.bed$/.np_idr.bed/;  
+    #Never re-use np_idr output file in case it is truncated due to job failure/exit.
+    #or in fact due to self consistency IDR
+    #Is there a danger of an np_idr file usage clash?
+    
+    #SWEmbl output header::
+    #Input  GSE30558_GSM758361_PrEC.sorted.bam
+    #Reference      GSE30558_GSM758360_LNCaP.sorted.bam
+    #Sequence length        0
+    #Fragment length        0
+    #Background     0.000000
+    #Position Background    0.036383
+    #Long Background        0.181917
+    #Threshold      5.000000
+    #Minimum count above bg 15
+    #Penalty increase       70
+    #Quality cutoff 0.000000
+    #Result cutoff  0.000000
+    #Penalty factor 0.552834
+      
+    #and fields:
+    #Region        - Part of the genome build e.g. chromosome
+    #Start pos.    - Base in region where peak starts
+    #End pos.      - Base in region where peak ends
+    #Count         - Number of reads in experimental sample in peak
+    #Length        - Length of peak (distance between start and end pos.)
+    #Unique pos.   - Number of unique bases within peak at which reads begin
+    #Score         - The SWEMBL score, which is basically the count of filtered thresholded reads in the peak, minus the penalties (gap distances and reference sample reads).
+    #Ref. count    - Number of reads in reference sample in peak
+    #Max. Coverage - Depth of reads at summit
+    #Summit        - Median position of highest read coverage
+    
+    #signalValue field was being set to (Count - Ref. Count)/min
+    #Min is not really required here for ranking and simply add the header requirement
+    #would be better to simply omit and skip the commented header if present?  
+    #my $cmd = 'awk \'BEGIN {OFS="\t"} NR == 9 {min=$5} NR > 14 {print $1,$2,$3,".",$7,".",($4-$8)/min,-1,-1,int($9-$1)}\' '.
+      
+    #Now we are stripping out the header and setting signal.value to score 
+    #before sorting on score and filtering based on $max_peaks  
+    #and resorting based on position  
+    $cmd = 'awk \'BEGIN {OFS="\t"} { if($0 !~ /^(#|(Region[[:space:]]+Start))/) {print $1,$2,$3,".",$7,".",$7,-1,-1,int($9-$1)} }\' '.
+      "$bed_file | sort -k 7nr,7nr | head -n $max_peaks | sort -k 1,2n > ".$np_bed_file;
+    run_system_cmd($cmd);    
+       
+    #This is currently giving: 
+    #sort: write failed: standard output: Broken pipe
+    #sort: write error
+    #This is likely due to SIG_PIPE not being handled correctly within perl(as it is in the shell)
+    #If this is not handled correctly then processes on either side of the can try to read or write 
+    #to a dead pipe, causing the error. In this case, most likely th efirst sort reading from the 
+    #awk pipe
+  
+    #Need to use perl pipe here? This seems only to be simple IO pipes within perl
+  
+    #Sanity check we have the file with the correct number of lines
+    $cmd = "wc -l $np_bed_file | awk '{print \$1}'";
+    my $filtered_peaks = run_backtick_cmd($cmd);
+      
+    if($max_peaks != $filtered_peaks){
+      throw("Expected $max_peaks in filtered pre-IDR bed file, but found $filtered_peaks:\n\t".$np_bed_file);  
+    }   
+    
+    #TODO check the feature_set_stat or statuses
+    #such that we know the peak calling jobs has finished and passed QC!    
+    #Do this for each before we submit IDR jobs, as we may have to drop some reps
+    push @np_bed_files, $np_bed_file;
+  }  
+ 
+  return (\@np_bed_files, $idr_threshold);
+}
+
+
+
+sub run_IDR{
+  my ($out_dir, $output_prefix, $threshold, $bed_files, $batch_name, $bam_files) = 
+    rearrange([ qw(out_dir output_prefix threshold bed_files batch_name bam_files) ], @_); 
+  #add max_npairs, this may have to be a denominator of scalar(@$idr_comparison_files)?
+  defined $out_dir       or throw('Must provide an out_dir argument');
+  defined $output_prefix or throw('Must provide an output_prefix argument');
+  defined $threshold     or throw('Must provide an IDR threshold to count peaks');
+  assert_ref($bed_files, 'ARRAY', 'bed_files');
+  defined $batch_name    or throw('Must provide a batch name to log counts to idr-stats file');
+  assert_ref($bam_files, 'ARRAY', 'bam_files') if defined $bam_files;
+  
+  #use a default for this? Currently defined in Preprocess_IDR
+ 
+  #Check we have different files
+  #This is not sensible as we will need to run self consistency IDR?
+  
+  if($bed_files->[0] eq $bed_files->[1]){
+    throw("Pre-IDR ResultSets are identical, dbIDs:\t".join(' ', @$bed_files));  
+  }                              
+ 
+  #Check we have 2 reps
+  if(scalar (@$bed_files) != 2){
+    throw("run_IDR expect 2 replicate bed files:\t".join(' ', @$bed_files));  
+  }
+       
+  #Check output dir exists     
+  if(! -d $out_dir){
+    throw("Output directory does not exist:\t$out_dir");  
+  }
+
+  #IDR analysis
+  #TODO install idrCode in /software/ensembl/funcgen and add this an analysis?
+  #my $idr_name = $self->idr_name;
+  my $script_path = which_path('batch-consistency-analysis.r');
+  my $cmd = "Rscript $script_path ".join(' ', @{$bed_files}).
+    " -1 ${out_dir}/${output_prefix} 0 F signal.value";  
+  #signal.value is ranking measure here i.e. SWEmbl score                                              
+  run_system_cmd($cmd);      
+  
+  #Do this here rather than in post_process so we parallelise the awk.
+  $cmd = "awk '\$11 <= ".$threshold.
+    " {print \$0}' ${out_dir}/${output_prefix}-overlapped-peaks.txt | wc -l";
+  my $num_peaks = run_backtick_cmd($cmd);
+
+  #Now, do we write this as an accu entry in the hive DB, or do we want it 
+  #in the tracking DB?
+  #Probably the later, such that we can drop/add reps to an IDR set after we have dropped the hive DB.
+  #There is currently no logic place to put this in the tracking DB!
+  #We would have to add a result_set_idr_stats table to handle the multiplicity
+  #This is probably a good place to store the other IDR stats too?
+  #Just write to file for now until we know if/what we want in the table.
+  #Do we need to be concerned if thresholds differ between combinations? 
+  
+  my $unaltered_num_peaks = $num_peaks;
+  
+  #Temporary solution to handle differeing pre-IDR peak counts, which cross threshold boundaries
+  #Do we have access to the ResultSet here? No!
+  
+  if($bam_files){
+    my @align_counts;
+    
+    #- the number of peaks is strongly correlated (from the couple of examples we looked at) 
+    # to the number of reads.
+    #- the IDR gives an estimate on the number of realistic peaks at the intersection of two files.
+    #- obviously this intersection is limited by the smaller file
+
+    #We have two files, one with N reads and the other with n < N reads. 
+    #From their intersection we call p peaks that look good. However, if n were greater, 
+    #p would also be greater. So how big should n be? At first blush, n should be each to the mean (N+n)/2.
+    #p*((N+n)/2)/n
+     
+    foreach my $bam(@$bam_files){
+      #Unfiltered counts are already available in the flagstat output
+      #in the alignment report
+      
+      #We always want to counts of the input(filtered) bam file
+      #so let's recount here for safety, even though we aren't filtering at present
+      my $cmd = "samtools view $bam | wc -l";
+      push @align_counts, run_backtick_cmd($cmd);
+    }
+   
+    my ($smalln, $bigN) = sort { $a <=> $b } @align_counts;
+    $num_peaks *= ( ($bigN + $smalln) / 2 ) / $smalln;
+  }
+  
+  
+  #Warning: Parallelised appending to file!
+  #This will also cause duplicate lines if the RunIDR jobs are rerun
+  $cmd = "echo -e \"IDR Comparison\tIDR Peaks\n$output_prefix\t$num_peaks($unaltered_num_peaks)\"".
+    " >> ${out_dir}/${batch_name}-idr-stats.txt";
+  run_system_cmd($cmd);
+  
+  return $num_peaks;
+}
+
+#TODO
+# 1 Add more IDR based QC here
+
+sub post_process_IDR{
+  my $out_dir       = shift or throw('Must provide an out_dir argument');
+  my $output_prefix = shift or throw('Must provide an output_prefix argument');
+  my $idr_peaks     = shift;
+  my $params        = shift || {};
+  assert_ref($idr_peaks, 'ARRAY', 'idr_peaks');
+  
+  #add max_npairs, this may have to be a denominator of scalar(@$idr_comparison_files)?
+  my ($idr_files, $npairs, $debug) = 
+    rearrange([ qw(idr_files npairs debug) ], %$params);
+  
+  my $max_peaks = int((sort {$a <=> $b} @{$idr_peaks})[-1]);#Take the highest!
+  
+  my $cmd = "echo -e \"IDR Max Peaks = $max_peaks\" >> ${out_dir}/${output_prefix}-idr-stats.txt";
+  run_system_cmd($cmd);
+  
+  if($output_prefix && $idr_files){
+    assert_ref($idr_files, 'ARRAY');#or just handle scalar arg here?
+    $npairs ||= 1;
+    
+    if($npairs > scalar(@$idr_files)){
+      throw("batch-consistency-plot.r will not handle npairs($npairs)".
+        ' greater than the number of idr files specified('.scalar(@$idr_files).')');  
+    }   
+    
+    my $script_path = which_path('batch-consistency-plot.r');
+    $cmd = "Rscript $script_path 1 $out_dir/$output_prefix ".join(' ', map { $out_dir.'/'.$_ } @{$idr_files});
+    run_system_cmd($cmd);
+    
+    warn "IDR plots are available here:\n\t$out_dir/${output_prefix}-plot.ps\n" if $debug;  
+  }
+  elsif($output_prefix || $idr_files){
+    throw('To run batch-consistency-plot.r both the output_prefix and idr_files parameters must be set');  
+  }
+  
+  warn "Final IDR Max peaks threshold:\t$max_peaks\n".
+    "For more details, see ${out_dir}/${output_prefix}-idr-stats.txt\n" if $debug;
+
+  return $max_peaks;
+}
+
 
 1;
 
