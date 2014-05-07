@@ -18,7 +18,8 @@ use strict;
 
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd 
-                                               scalars_to_objects );
+                                               scalars_to_objects
+                                               validate_package_path );
 use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
@@ -112,9 +113,9 @@ sub fetch_input {
   #logic name will be in the otufile name anyway?
 
   $self->get_output_work_dir_methods( $self->db_output_dir . '/peaks/' .
-      $rset->get_Experiment->name. '/' . $analysis->logic_name );
+      $rset->experiment->name. '/' . $analysis->logic_name );
 
-  my $peak_module = $self->validate_package_from_path($analysis->module);
+  my $peak_module = validate_package_path($analysis->module);
   my $formats = $peak_module->input_formats;
   #my $filter_format = $self->param_silent('bam_filtered') ? undef : 'bam';  
   #It is currently unsafe to filter here (control clash), so expect filtered file  
@@ -139,11 +140,11 @@ sub fetch_input {
   my $align_file = $self->get_alignment_files_by_ResultSet_formats($rset, $formats)->{bam};
   my $control_file;  
 
-  if ( ! $self->get_param_method( 'skip_control', 'silent' ) ) {
+  if ( grep {$_->is_control} @{$rset->get_support} ) {
     #This throws if not found
     $control_file = $self->get_alignment_files_by_ResultSet_formats($rset, 
-                                                                        $formats, 
-                                                                        1)->{bam}; # control flag
+                                                                    $formats, 
+                                                                    1)->{bam}; # control flag
   }
 
   #align and control file could potentially be different formats here
