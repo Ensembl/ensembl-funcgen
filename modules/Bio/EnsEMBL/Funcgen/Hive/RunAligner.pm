@@ -38,8 +38,9 @@ package Bio::EnsEMBL::Funcgen::Hive::RunAligner;
 
 use warnings;
 use strict;
-use Bio::EnsEMBL::Utils::Exception qw( throw );
-use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
+use Bio::EnsEMBL::Utils::Exception         qw( throw );
+use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( validate_package_path );
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
   #We need a list of Aligner specific param requirements which are not specified
@@ -78,7 +79,7 @@ sub fetch_input {   # fetch parameters...
   my $aligner      = $analysis->program || 
     throw('Aligner analysis cannot have an undef program attribute:'.$analysis->logic_name);
   #$self->set_param_method('analysis_parameters', $analysis->parameters);
-  my $align_module = $self->validate_package_from_path($analysis->module); 
+  my $align_module = validate_package_path($analysis->module); 
   #$self->set_param_method('align_module', 
   #                        $self->validate_package_from_path($analysis->module));
 
