@@ -43,11 +43,13 @@ use Devel::Peek;
 
 use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( scalars_to_objects 
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( get_alignment_file_prefix_by_ResultSet
+                                               get_study_name_from_Set
+                                               scalars_to_objects 
                                                validate_path
-                                               path_to_namespace 
                                                run_system_cmd
                                                dump_data );
+use Bio::EnsEMBL::Funcgen::Hive::Utils     qw( inject_DataflowRuleAdaptor_methods );
 use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools qw( get_files_by_formats );
 use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref check_ref );  
 use Scalar::Util                           qw( blessed );                                            
@@ -223,8 +225,8 @@ sub validate_non_DB_inputs{
 #Getter methods to catch potential typos at compile time rather than runtime or not at all!
 #Use param directly as the previous set method was not catching undef (as param only warns with undef)
 
-
-sub cell_type { return $_->param_required('cell_type'); }
+#remove this?
+#sub cell_type { return $_->param_required('cell_type'); }
 
 
 #add other generic params here
@@ -288,67 +290,12 @@ sub alignment_dir {
     
     $self->set_dir_param_method('alignment_dir', 
                                 [$self->alignment_root_dir, 
-                                 $self->get_study_name_from_Set($rset, $control)],
+                                 get_study_name_from_Set($rset, $control)],
                                 $create);    
   }
   return $self->param('alignment_dir');
 }
 
-
-#This currently only works for Experiments
-#which have controls mixed in
-    
-#The pipeline does not currently expect 
-#stand alone control experiments
-#and will try and process these like a mixed signal/control set.
-#This should be fine until after the alignment
-#at which point we want to stop their processing
-    
-sub get_study_name_from_Set {
-  my ($self, $set, $control) = @_;
-  
-  if(! (ref($set) && 
-        ($set->isa('Bio::EnsEMBL::Funcgen::InputSubset') ||
-         $set->isa('Bio::EnsEMBL::Funcgen::ResultSet') ))){
-    throw('Must pass a valid InputSet or ResultSet');         
-  }
-  
-  my ($exp_name, $ftype);
-  my $ctype = $set->cell_type->name;
-  
-  if($control){
-    $control = $self->get_control_InputSubset($set);
-    #This is based on the assumption that all non-ctrl subsets are associated with a unique Experiment.
-    my $exp   = $control->experiment;
-    $exp_name = $exp->name;
- 
-    foreach my $isset(@{$exp->get_InputSubsets}){
-      
-      if(! $isset->is_control){
-        $ftype = $isset->feature_type->name;  
-        last;
-      }  
-    }
-    
-    if(! $ftype){   #We have a pure control experiment i.e. no signal InputSubsets
-     $ftype = $exp->feature_type->name;
-    }      
-  }
-  else{  
-    $exp_name = $set->experiment->name ||
-      throw('Cannot find unique experiment name for '.ref($set).":\t".$set->name);
-    $ftype = $set->feature_type->name;
-  }
-  
-  #\Q..\E escape mata characters in string variables 
-  (my $study_name = $exp_name) =~ s/\Q${ctype}_${ftype}\E_(.*)/$1/i;
-  
-  if($study_name eq $exp_name){
-    throw("Failed to create study name for Experiment $exp_name with cell type $ctype and feature type $ftype");  
-  }
-  
-  return $study_name;
-}
 
 
 #This seems odd as the naming convention is
@@ -384,55 +331,6 @@ sub get_study_name_from_Set {
 #No, we should never have mixed controls
 #Check this is the case on import
     
-sub get_control_InputSubset{
-  my $self = shift;
-  my $set  = shift; 
-  my @is_sets;
-  
-  if( $set->isa('Bio::EnsEMBL::Funcgen::ResultSet') ){
-    @is_sets = @{$set->get_support('input_subset')};
-  
-    if(! @is_sets){
-      throw("Failed to identify control InputSubset support for ResultSet:\t".$set->name);  
-    }
-  }
-  else{
-    @is_sets = ($set);
-  }
-  
-  my @ctrls = grep { $_->is_control == 1 } @is_sets;
-
-  if(! @ctrls){
-    throw('Could not identify a control InputSubset from '.ref($set).":\t".$set->name);  
-  }
-
-  return $ctrls[0];
-}
-  
-
-sub get_set_prefix_from_Set{
-  my ($self, $set, $control) = @_;
-  
-  my $study_name = $self->get_study_name_from_Set($set, $control);
- 
-  if(! (ref($set) && 
-        ($set->isa('Bio::EnsEMBL::Funcgen::InputSubset') ||
-         $set->isa('Bio::EnsEMBL::Funcgen::ResultSet') ))){
-    throw('Must pass a valid InputSet or ResultSet');         
-  }
-  
-  my $ftype;
-  
-  if($control){
-    $ftype = $self->get_control_InputSubset($set)->feature_type->name;
-  }
-  else{
-     $ftype = $set->feature_type->name;
-  }
- 
-  return $set->cell_type->name.'_'.$ftype.'_'.$study_name; 
-}
-
 
 sub get_output_work_dir_methods{
   my ($self, $default_odir, $no_work_dir) = @_;
@@ -459,9 +357,9 @@ sub get_output_work_dir_methods{
     
     $self->validate_dir_param('work_dir', 1, $work_dir);
   }
-  
-  $self->helper->debug(1, "output_dir $out_dir\nwork_dir $work_dir\ndefault $default_odir");
 
+  $default_odir ||='';#to avoid undef warning in debug
+  $self->helper->debug(1, "output_dir $out_dir\nwork_dir $work_dir\ndefault $default_odir");
   return ($out_dir, $work_dir);
 }
 
@@ -1731,29 +1629,6 @@ sub sam_header{
 }
 
 
-
-sub get_alignment_file_prefix_by_ResultSet{
-  my ($self, $rset, $control) = @_;  
-    
-  $self->out_db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
-  my $path = $self->alignment_dir($rset, undef, $control);
-  my @rep_numbers;
-  
-  foreach my $isset(@{$rset->get_support}){
-    
-    if( ($control && $isset->is_control)  ||
-        ((! $control) && 
-         (! $isset->is_control)) ){ 
-       push @rep_numbers, $isset->replicate;
-    }
-  }
-  
-  #Uses get_set_prefix_from_Set rather than set name, as IDR rep sets
-  #will already contain the rep number, and merged sets will not  
-  return $path.'/'.$self->get_set_prefix_from_Set($rset, $control).'_'.
-    $rset->analysis->logic_name.'_'.join('_', sort(@rep_numbers)); 
-}
-
 #This will have validated that input_set are all part of the same experiment
 #(and they have the same alignment logic_name, when this is implemented) ???
 
@@ -1779,7 +1654,7 @@ sub get_alignment_files_by_ResultSet_formats {
   $aligned_status   .= '_CONTROL' if $control;
   
   if($control){
-    my $exp = $self->get_control_InputSubset($rset)->experiment;
+    my $exp = $rset->experiment(1);#control flag
     
     if(! $exp->has_status('ALIGNED_CONTROL')){
       throw('Cannot get control alignment files for a ResultSet('.$rset->name.
@@ -1798,7 +1673,9 @@ sub get_alignment_files_by_ResultSet_formats {
     #$align_files = { => validate_path($self->param($file_type)) };
   }
   else{ # Get default file
-    $path = $self->get_alignment_file_prefix_by_ResultSet($rset, $control); 
+    my $align_dir = $self->alignment_dir($rset, undef, $control);
+  
+    $path = get_alignment_file_prefix_by_ResultSet($rset, $align_dir, $control); 
     $path .= '.unfiltered' if $filter_format;
     my $params = {debug              => $self->debug,
                   ref_fai            => $self->sam_ref_fai($rset->cell_type->gender),  #Just in case we need to convert
@@ -1823,7 +1700,7 @@ sub get_alignment_files_by_ResultSet_formats {
  
   #throw here and handle optional control file in caller. This should be done with 
   #a no_control/skip_control flag or similar  
-  return $align_files || throw("Failed to find $file_type (@$formats) for:\t$path");  
+    return $align_files || throw("Failed to find $file_type (@$formats) for:\t$path");  
 }
 
 
@@ -1911,17 +1788,7 @@ sub get_coord_system_status{
 }
 
 
-sub validate_package_from_path{
-  my $self     = shift;
-  my $pkg_path = shift;  
-  
-  throw('Must defined a package path to validate') if ! defined $pkg_path;
-  eval "require $pkg_path"; #$pkg_path must be interpolated as a bareword for require
-  throw( "Failed to require:\t$pkg_path\n$@" ) if  $@;
-  
-  #This might not always be correct if the file contains >1 package
-  return path_to_namespace($pkg_path);
-}
+
 
 
 #config. broad_peak_feature_types is now required, even if it is just and empty array
