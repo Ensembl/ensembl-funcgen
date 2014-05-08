@@ -58,6 +58,8 @@ package Bio::EnsEMBL::Funcgen::DBSQL::TrackingAdaptor;
 
 use strict;
 use warnings;
+use feature qw(say);
+
 use DateTime;
 #use POSIX                                  qw( strftime );
 use Bio::EnsEMBL::Utils::Exception         qw( throw warning );
@@ -433,6 +435,7 @@ sub store_tracking_info{
   my $purge        = (exists $params->{purge})        ? $params->{purge}        : 0;
   my $info         = (exists $params->{info})         ? $params->{info}         : undef;
   
+
   if(! defined $info){
     if(! exists $storable->{tracking_info}){
       throw('Found no tracking info to store. Please set info using tracking methods '.
@@ -457,20 +460,21 @@ sub store_tracking_info{
   my $stored_info = $self->fetch_tracking_info($storable);
   
   #Compare hashes to avoid unecessary INSERT which may 
-  #fail if we have not specified allow update
-  my $info_is_identical = 1;
-  
-  foreach my $key(%$stored_info){ #This will have all the column keys
-  
-    if( ( (defined $stored_info->{$key}) && 
-           ((! exists $info->{$key}) || ($stored_info->{$key} ne $info->{$key})) ) ||
-        ( (! defined $stored_info->{$key}) && 
-           (exists $info->{$key}) && (defined $info->{$key})) ){  
-      #This last test does not handle empty strings
-      $info_is_identical = 0;;
+  #fail if we have not specified allow_update
+  my $info_is_identical = 0;
+
+  if(keys $stored_info){
+     $info_is_identical = 1; 
+    foreach my $key(keys %$stored_info){ #This will have all the column keys
+      if( ( (defined $stored_info->{$key}) && 
+             ((! exists $info->{$key}) || ($stored_info->{$key} ne $info->{$key})) ) ||
+          ( (! defined $stored_info->{$key}) && 
+             (exists $info->{$key}) && (defined $info->{$key})) ){  
+        #This last test does not handle empty strings
+        $info_is_identical = 0;;
+      }
     }
   }
-  
   #Test for unexpect info items  
   my @valid_cols = $self->_columns($table_name);
 
@@ -482,15 +486,13 @@ sub store_tracking_info{
         "Must be one of:\t@valid_cols");  
     }  
   }
-  
-  return if $info_is_identical;
-  
+  return if $info_is_identical ;
+
   #Test for mandatory info items, and build cols/values
   my @cols       = ($table_name.'_id');
   my @values     = ($storable->dbID);
   
   foreach my $col(@valid_cols){
-    
     
     #Need to handle update here. There is no way of knowing whether the record has
     #already been stored, so we just skip this test if $allow_update is set
@@ -523,7 +525,7 @@ sub store_tracking_info{
       push @values, $info->{$col};
     }
   }
-    
+  
   my $sql = "INSERT IGNORE into ${table_name}_tracking(".join(', ', @cols).
     ') values("'.join('", "', @values).'")';
   
@@ -535,7 +537,6 @@ sub store_tracking_info{
   #Although working with DBConnection here provides error handling  
   my $row_cnt;
   my $db = $self->db;
-  
   if(! eval { $row_cnt = $db->dbc->do($sql); 1 }){
     my $update_warn = '';
     
