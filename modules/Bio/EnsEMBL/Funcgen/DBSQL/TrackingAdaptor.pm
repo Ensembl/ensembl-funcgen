@@ -463,7 +463,7 @@ sub store_tracking_info{
   #fail if we have not specified allow_update
   my $info_is_identical = 0;
 
-  if(keys $stored_info){
+  if(keys %$stored_info){
      $info_is_identical = 1; 
     foreach my $key(keys %$stored_info){ #This will have all the column keys
       if( ( (defined $stored_info->{$key}) && 
