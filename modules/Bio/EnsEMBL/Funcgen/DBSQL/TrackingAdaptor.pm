@@ -274,7 +274,12 @@ sub _inject_tracking_methods{
           #which may prevent fetch                   
           if(exists $self->{tracking_info}){
             $val = $self->{tracking_info}{$col};  
-          } 
+          }
+          else{
+            $self->throw("Cannot get $col attribute as tracking_info has not be set yet.".
+            ' You need to call $tdb->fetch_tracking_info($storable) first.');  
+          }
+           
           return $val; 
         };
     }
@@ -304,6 +309,8 @@ sub fetch_tracking_info{
   if(exists $storable->{tracking_info}){
     throw("$table_name Storable(".$storable->dbID.
       ") already has tracking_info attribute. Please store/update before fetching\n");  
+      
+      #This may over-write existing data
   }else{
 
     my $sql = 'SELECT '.join(', ', ($self->_columns($table_name))).
@@ -400,11 +407,19 @@ sub is_InputSubset_embargoed {
   
   #InputSubsets can have more than one tracking record at the moment
   #as they are currently merged at the InputSubset level rather than the InputSet level
-  $self->fetch_InputSubset_tracking_info($isset);
+  #What will happen here is we have other unstored tracking info
+  #It will still barf.
+  #we need to fix fetch_tracking_info to handle this, similar to how store does
+  #fetching without method ssets means we should preferentially take the new data
+  #what about NULLs? Should warn too
+  #If the methods are available, it means we have already fetched
+  #only if they are not available and tracking_info hash is present is it an issue
+  #This should suffice for now
+  $self->fetch_tracking_info($isset) if ! $isset->can('availability_date');
  
   #This was causing issues as DateTime cannot take the default null date of 0000-00-00
   my $avail_date = $isset->availability_date;
-    
+ 
   if($avail_date eq '0000-00-00'){
     warn "Found $avail_date availability date for InputSubset:\t".$isset->name.
       "\nDefaulting to 0001-01-01\n";
@@ -412,14 +427,10 @@ sub is_InputSubset_embargoed {
   }
  
   my ($year, $month, $day) = split(/-/, $avail_date);
-  
-  
-  my $isset_date = DateTime->new(day   => $day,
-                                 month => $month,
-                                 year  => $year  );
-                                                                  
-  #Nice operator overloading!
-  return ($isset_date > $rel_date) ? 1 : 0;  
+  my $isset_date           = DateTime->new(day   => $day,
+                                           month => $month,
+                                           year  => $year  );                                                                
+  return ($isset_date > $rel_date) ? 1 : 0; #Nice operator overloading!  
 }
 
 
