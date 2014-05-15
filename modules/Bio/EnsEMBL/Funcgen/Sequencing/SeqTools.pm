@@ -14,6 +14,16 @@ package Bio::EnsEMBL::Funcgen::Sequencing::SeqTools;
 use warnings;
 use strict;
 
+use Net::FTP;
+use feature qw(say);
+use DBI     qw(:sql_types);
+
+use Bio::EnsEMBL::Funcgen::DBSQL::TrackingAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Funcgen::InputSubset;
+use Bio::EnsEMBL::Funcgen::Experiment;
+use Bio::EnsEMBL::Utils::SqlHelper;
+
 #use File::Basename                        qw( fileparse );
 use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref );
 use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
@@ -23,7 +33,11 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( dump_data
                                                run_backtick_cmd 
                                                write_checksum 
                                                validate_path
-                                               check_file );                                              
+                                               check_file );  
+
+
+
+
 use Bio::EnsEMBL::Funcgen::Sequencing::SeqQC; #run_QC
 
 use base qw( Exporter );
@@ -32,12 +46,17 @@ use vars qw( @EXPORT );
 @EXPORT = qw( 
   convert_bam_to_sam
   convert_sam_to_bed
+  create_and_populate_files_txt
+  download_all_files_txt
   get_files_by_formats
+  load_experiments_into_tracking_db
   merge_bams
+  modify_files_txt_for_regulation
   process_bam
   run_aligner
   split_fastqs
-  validate_sam_header );
+  validate_sam_header 
+  );
 
 #This is designed to act as an object and as a standard package
 #run_align_tools will call constructor which will validate that a run mode has been passed
@@ -134,6 +153,7 @@ sub split_fastqs{
        merge chunk_size skip_qc debug) ], @_);  
  
   assert_ref($files, 'ARRAY', '-files');
+
   if(! (@$files && 
         (grep {!/fastq.gz$/} @$files) )){
     throw('-files must be an array ref of gzipped fastq files');  
@@ -1262,8 +1282,8 @@ sub validate_sam_header {
         scalar(@ref_header)."\t$header_or_fai\n".scalar(@infile_header)."\t$sam_bam_file");    
     }
    
-    #size difference is fine here, just so long as the file header
-    #is a subset of the ref header
+    # size difference is fine here, just so long as the file header
+    # is a subset of the ref header
     my ($SN, $LN, %ref_header);
     my $hdr_cnt = 0;
     
@@ -1271,7 +1291,6 @@ sub validate_sam_header {
       (undef, $SN, $LN) = split(/\s+/, $_);
       $ref_header{$SN} = $LN; 
     }
-   
    
     foreach my $line(@infile_header){
       (undef, $SN, $LN) = split(/\s+/, $line);
@@ -1287,11 +1306,11 @@ sub validate_sam_header {
       }
     }
    
-    #we don't need the header file as the headers completely match
-    #This may result in a feamle header bing replaced with a male header
-    #due to it containing the extra @SQ SN:Y line
-    #actaully there can be some gender specific top level unassembled contigs too! 
-    #Meaning any non-gender specific header will need to be a merge, not just the male header 
+    # we don't need the header file as the headers completely match
+    # This may result in a feamle header bing replaced with a male header
+    # due to it containing the extra @SQ SN:Y line
+    # actaully there can be some gender specific top level unassembled contigs too! 
+    # Meaning any non-gender specific header will need to be a merge, not just the male header 
     warn scalar(@ref_header)." lines in reference header:\t$header_or_fai\n".
       $hdr_cnt." lines in file header:\t$sam_bam_file\n" if $debug >= 2;
     $header_opt = '' if $hdr_cnt == scalar(@ref_header);
@@ -1299,6 +1318,602 @@ sub validate_sam_header {
   
   return $header_opt;
 }
+
+# Iterates through all files.txt found in the typical goldenPath 
+# directory structure
+# !!! Only stores fastq !!!
+
+sub create_and_populate_files_txt {
+  my ($cfg, $helper) = @_;
+
+  # reduced to classes (potentially) present in $table
+  my $class = "'Histone','RNA','Polymerase','Transcription Factor','Open Chromatin'";
+  my $table = $cfg->{tables}->{registration};
+
+  my $table_id = $table.'_id';
+
+  my $sql_table = "
+          CREATE TABLE `$table` (
+            `$table_id`         INT(10) unsigned      NOT NULL  auto_increment,
+            `name`              VARCHAR(100)          NOT NULL,
+            `alternate_name`    VARCHAR(100)          DEFAULT NULL,
+            `antibody`          VARCHAR(64)           DEFAULT NULL,
+            `assembly`          enum('hg18', 'hg19')  NOT NULL,
+            `cell`              VARCHAR(64)           NOT NULL,
+            `compression`       VARCHAR(10)           DEFAULT NULL,
+            `control`           VARCHAR(64)           DEFAULT NULL,
+            `controlId`         VARCHAR(64)           DEFAULT NULL,
+            `dataType`          VARCHAR(50)           DEFAULT NULL,
+            `dateUnrestricted`  DATE                  DEFAULT NULL,
+            `filename`          VARCHAR(100)          NOT NULL,
+            `lab`               VARCHAR(100)          NOT NULL,
+            `md5sum`            CHAR(32)              DEFAULT NULL,
+            `objStatus`         VARCHAR(255)          DEFAULT NULL,
+            `path`              VARCHAR(255)          DEFAULT NULL,
+            `replicate`         INTEGER(2)            DEFAULT NULL,
+            `setType`           VARCHAR(25)           DEFAULT NULL,
+            `size`              VARCHAR(5)            DEFAULT NULL,
+            `treatment`         VARCHAR(50)           DEFAULT NULL,
+            `type`              VARCHAR(20)           NOT     NULL,
+            `cell_type`         VARCHAR(120)          DEFAULT NULL,
+            `class`             ENUM($class)          DEFAULT NULL,
+            `ens_lab`           VARCHAR(100)          NOT NULL,
+            `feature_type`      VARCHAR(40)           DEFAULT NULL,
+            `logic_name`        VARCHAR(100)          DEFAULT NULL,
+
+            PRIMARY KEY  (`$table_id`),
+            UNIQUE name_assembly_idx (`name`, `assembly`)
+            ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
+  ";
+  # DBI->trace(2);
+
+  $helper->execute_update(-SQL => "DROP TABLE IF EXISTS `$table`");
+  $helper->execute_update(-SQL => $sql_table);
+
+
+  #Make table name variable, use $cfg
+
+  my $sql_select_by_md5sum = "
+    SELECT 
+      name 
+    FROM
+      $table
+    WHERE
+      md5sum = ?
+  ";
+
+  my $sql_insert_table = "
+  INSERT INTO 
+    $table (
+      name,
+      alternate_name,
+      antibody,
+      assembly,
+      cell,
+      compression,
+      control,
+      controlId,
+      dataType,
+      dateUnrestricted,
+      filename,
+      lab,
+      md5sum,
+      objStatus,
+      path,
+      replicate,
+      setType,
+      size,
+      treatment,
+      type,
+      cell_type,
+      ens_lab,
+      feature_type
+    )
+  VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?);
+  ";
+  my @assemblies = qw(hg18 hg19);
+  for my $assembly(@assemblies) {
+    
+    my $base_dir = File::Spec->catdir('goldenPath', $assembly, 'encodeDCC');
+    my $dir_dcc  = File::Spec->catdir($cfg->{directories}->{files_txt}, $base_dir);
+
+    opendir (my $labs, $dir_dcc ) or die "Error  opening dir $dir_dcc";
+    while( my $lab = readdir($labs)){
+      next if($lab !~ /^wgEncode/);
+    
+      my $path_table = File::Spec->catfile($dir_dcc, $lab, 'files.txt');
+      if(-f $path_table){
+        # !!! only fastq coming back !!!!
+        my $files_txt = _read_files_txt($path_table);
+        foreach my $name (sort keys %{$files_txt}){
+          my $record = $files_txt->{$name};
+
+          my $path = File::Spec->catfile($base_dir,$lab);
+          
+          my $md5sum = $record->{md5sum};
+          my $alt_name = undef;
+
+          if(defined $md5sum){
+              # DBI->trace(2);
+              $alt_name = 
+              $helper->execute_single_result(
+                -SQL      => $sql_select_by_md5sum, 
+                -PARAMS   => [$md5sum], 
+                -NO_ERROR => 1
+                );
+            }
+          # use the same values as ENCODE. Ensembl specific changes are applied later  
+          my $cell_type     = $record->{cell};
+          my $feature_type  = $record->{antibody};
+          my $ens_lab       = $record->{lab};
+            # say dump_data($$table->{$name},1,1);
+            # say $cell_type,
+            # say $feature_type;
+            # say $ens_lab;
+
+            
+
+            $helper->execute_update(
+              -SQL    => $sql_insert_table, 
+              -PARAMS => [
+              [$name,                       SQL_VARCHAR],
+              [$alt_name,                   SQL_VARCHAR],
+              [$record->{antibody},         SQL_VARCHAR],
+              [$assembly,                   SQL_VARCHAR],
+              [$record->{cell},             SQL_VARCHAR],
+              [$record->{compression},      SQL_VARCHAR],
+              [$record->{control},          SQL_VARCHAR],
+              [$record->{controlId},        SQL_VARCHAR],
+              [$record->{dataType},         SQL_VARCHAR],
+              [$record->{dateUnrestricted}, SQL_VARCHAR],
+              [$record->{filename},         SQL_VARCHAR],
+              [$record->{lab},              SQL_VARCHAR],
+              [$record->{md5sum},           SQL_VARCHAR],
+              [$record->{objStatus},        SQL_VARCHAR],
+              [$path,                       SQL_VARCHAR],
+              [$record->{replicate},        SQL_VARCHAR],
+              [$record->{setType},          SQL_VARCHAR],
+              [$record->{size},             SQL_VARCHAR],
+              [$record->{treatment},        SQL_VARCHAR],
+              [$record->{type},             SQL_VARCHAR],
+              [$cell_type,                  SQL_VARCHAR],
+              [$ens_lab,                    SQL_VARCHAR],
+              [$feature_type,               SQL_VARCHAR],
+              ]);
+  # die;
+        }
+      }
+      else{
+        say "$path_table not available";
+      }
+    }
+    closedir($labs);
+  }
+}
+
+
+=head2 modify_files_txt_for_regulation
+
+  Arg 1  : HASH - Configuration
+  Arg 2  : Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
+  Returntype  : None
+  Exceptions  : Throws if non-optional arguments are missing
+  Description : Downloads all files.txt and md5sum.txt from standard ENCODE directory structure.
+
+=cut
+  
+sub modify_files_txt_for_regulation {
+  my ($cfg, $helper) = @_;
+  
+  warn "\n\n++++++ These modifications should be regularly reviewed. Especially assigning class HISTONE ++++++\n";
+  my $table = $cfg->{tables}->{registration};
+
+  
+  if($table ne 'files_txt'){
+   warn "These modifications are specific to ENCODE $table";
+  }
+  
+  say "\n\n+++++++++++++++++++ Modifications to $table: FeatureType +++++++++++++++++++\n";
+
+  # Antibodies "CTCF_(SC-15914)" and "CTCF_(SC-5916)" to FeatureType "CTCF"
+  # no discinct as we execute_into_hash
+  # Be careful, this will also do wrong shortenings like ZNF-MIZD-CP1_(ab65767) to ZNF-MIZD-CP1
+  # These are addressed individually later
+  my $sql_select_antibody = "
+    SELECT
+      antibody,
+      1
+    FROM
+      $table
+    WHERE
+      antibody LIKE '%_(%)'
+  ";
+
+  my $tmp = $helper->execute_into_hash(-SQL => $sql_select_antibody);
+  
+  my $ab_to_ft = {};
+  foreach my $antibody (sort keys %{$tmp}){
+    # CTCF_(SC-15914) or  Pol2(phosphoS2)
+    $antibody =~ /^(.*?)_?\(/;
+    $ab_to_ft->{$antibody} = $1;
+  }
+
+  my $sql_update_feature_type = "
+    UPDATE
+      $table
+    SET
+      feature_type = ?
+    WHERE
+      antibody = ?
+  ";
+
+  foreach my $antibody (sort keys %{$ab_to_ft}){
+    my $feature_type = $ab_to_ft->{$antibody};
+    say "UPDATE $table SET feature_type = $feature_type\tWHERE antibody = $antibody";
+    $helper->execute_update(
+      -SQL    =>  $sql_update_feature_type,
+      -PARAMS => [$feature_type, $antibody],
+      );
+  }
+
+  say "\n\n+++++++++++++++++++ Modifications to $table: Miscellaneous +++++++++++++++++++\n";
+
+  my @sqls;
+
+  # replicate
+  push(@sqls, "UPDATE $table SET replicate = 1 WHERE replicate IS NULL");
+
+  # treatment
+  push(@sqls, "UPDATE $table SET treatment = 'None' WHERE treatment IS NULL");
+
+  # setType
+  push(@sqls, "UPDATE files_txt SET setType = 'input' WHERE feature_type = 'Input'   AND setType = 'exp'");
+  push(@sqls, "UPDATE files_txt SET setType = 'input' WHERE antibody     = 'Control' AND setType = 'exp'");
+
+  # antibody
+  push(@sqls, "UPDATE $table SET antibody = 'DNase' WHERE name LIKE '%dnase%'");
+
+  # cell_type
+  push(@sqls, "UPDATE $table SET cell_type = 'Monocytes-CD14+' WHERE cell = 'Monocytes-CD14+_RO01746'");
+  push(@sqls, "UPDATE $table SET cell_type = 'DND-41'          WHERE cell = 'Dnd41'");
+  push(@sqls, "UPDATE $table SET cell_type = 'H1ESC'           WHERE cell = 'H1-hESC'");
+
+  #ens_lab
+  push(@sqls, "UPDATE $table SET ens_lab = 'UTA' WHERE lab = 'UT-A'");
+
+  #feature_type
+  push(@sqls, "UPDATE $table SET feature_type = 'H2AF'  WHERE antibody = 'H2A.Z'");
+  push(@sqls, "UPDATE $table SET feature_type = 'DNase1' WHERE antibody = 'DNase'");
+  push(@sqls, "UPDATE $table SET feature_type = 'CTCF'   WHERE antibody like 'CTCF_%'");
+  push(@sqls, "UPDATE $table SET feature_type = 'PolII'  WHERE antibody like 'Pol2%'");
+  push(@sqls, "UPDATE $table SET feature_type = 'PolIII' WHERE antibody like 'Pol3%'");
+
+  # http://www.ensembl.org/Homo_sapiens/Gene/Summary?db=core;g=ENSG00000087510; 
+  push(@sqls, "UPDATE $table SET feature_type = 'TFAP2C' WHERE feature_type = 'AP-2gamma' ");
+  # http://moma.ki.au.dk/genome-mirror/cgi-bin/hgEncodeVocab?ra=encode%2Fcv.ra&target=%22CHD4_Mi2%22
+  push(@sqls, "UPDATE $table SET feature_type = 'CHD4'   WHERE antibody = 'CHD4_Mi2' ");
+  # http://www.factorbook.org/mediawiki/index.php/ERalpha_a
+  push(@sqls, "UPDATE $table SET feature_type = 'ESR1'   WHERE antibody = 'ERalpha_a' ");
+  push(@sqls, "UPDATE $table SET feature_type = 'EGR1'   WHERE antibody = 'Egr-1' ");
+  push(@sqls, "UPDATE $table SET feature_type = 'GATA2'  WHERE antibody = 'GATA-2' ");
+  # http://epigenome.cbrc.jp/cgi-bin/hgEncodeVocab?ra=encode%2Fcv.ra&target=%22HA-E2F1%22
+  push(@sqls, "UPDATE $table SET feature_type = 'E2F1'   WHERE antibody = 'HA-E2F1' ");
+  # http://moma.ki.au.dk/genome-mirror/cgi-bin/hgEncodeVocab?ra=encode%2Fcv.ra&target=%22NCoR%22
+  push(@sqls, "UPDATE $table SET feature_type = 'NCOR1'  WHERE antibody = 'NCoR' ");
+  # http://www.noncode.org/cgi-bin/hgEncodeVocab?ra=encode%2Fcv.ra&target=%22p300%22
+  push(@sqls, "UPDATE $table SET feature_type = 'EP300'  WHERE antibody = 'P300_KAT3B' ");
+  push(@sqls, "UPDATE $table SET feature_type = 'PAX5'   WHERE antibody like 'PAX5-%' ");
+  push(@sqls, "UPDATE $table SET feature_type = 'SIN3A'  WHERE antibody = 'Sin3Ak-20' ");
+  # http://epigenome.cbrc.jp/cgi-bin/hgEncodeVocab?ra=encode%2Fcv.ra&target=%22TCF7L2%22
+  push(@sqls, "UPDATE $table SET feature_type = 'TCF7L2' WHERE antibody = 'TCF7L2_C9B9_(2565)' ");
+  push(@sqls, "UPDATE $table SET feature_type = 'USF1'   WHERE antibody = 'USF-1' ");
+  # http://www.noncode.org/cgi-bin/hgEncodeVocab?ra=encode%2Fcv.ra&target=%22ZNF-MIZD-CP1_(ab65767)%22
+  push(@sqls, "UPDATE $table SET feature_type = 'ZMIZ1'  WHERE antibody = 'ZNF-MIZD-CP1_(ab65767)' ");
+
+  # See also: http://genome.ucsc.edu/cgi-bin/hgEncodeVocab?ra=encode/cv.ra&type=control
+  push(@sqls, "UPDATE $table SET feature_type = 'WCE'    WHERE setType = 'Input'");
+
+  # logic_name
+  push(@sqls, "UPDATE $table SET logic_name = 'ChIP-Seq'  WHERE dataType = 'ChipSeq'");
+  push(@sqls, "UPDATE $table SET logic_name = 'DNase-Seq' WHERE dataType = 'DnaseSeq'");
+  push(@sqls, "UPDATE $table SET logic_name = 'FAIRE'     WHERE dataType = 'FaireSeq'");
+
+  # class
+  # This is true for the ENCODE 2011 data freeze
+  push(@sqls, "UPDATE $table SET class = 'Histone'                WHERE dataType = 'ChipSeq' AND feature_type LIKE 'H%K%'");
+  push(@sqls, "UPDATE $table SET class = 'Polymerase'             WHERE dataType = 'ChipSeq' AND feature_type IN ('PolII', 'PolIII')  ");
+  push(@sqls, "UPDATE $table SET class = 'Open Chromatin'         WHERE dataType = 'DnaseSeq'");
+  push(@sqls, "UPDATE $table SET class = 'Transcription Factor'   WHERE dataType = 'ChipSeq' AND feature_type != 'WCE' AND class is NULL");
+  push(@sqls, "UPDATE $table SET class = 'Transcription Factor'   WHERE antibody = 'H2A.Z'");
+
+
+  for my $sql(@sqls){
+    say $sql;
+    $helper->execute_update(-SQL => $sql);
+  }
+}
+ 
+=head2 load_experiments
+
+  Arg 1  : HASH - Configuration
+  Arg 2  : Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
+  Arg 3  : HASH - Constraints
+  Arg 4  : [Optional] ARRAY of Bio::EnsEMBL::Funcgen::Experiment
+  Arg 5  : [Optional] ARRAY of Bio::EnsEMBL::Funcgen::CellType
+  Arg 6  : [Optional] ARRAY of Bio::EnsEMBL::Funcgen::FeatureType
+  
+  Returntype  : None
+  Exceptions  : Throws if non-optional arguments are missing
+  Description : Downloads all files.txt and md5sum.txt from standard ENCODE directory structure.
+
+=cut
+
+
+sub load_experiments_into_tracking_db {
+  my ($cfg, $db, $constraints, $exp_data, $cell_type_data, $feature_type_data) = @_;
+
+  assert_ref($cfg, 'HASH');
+  assert_ref($db, 'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor');
+  assert_ref($constraints, 'HASH');
+
+  my $helper  = Bio::EnsEMBL::Utils::SqlHelper->new( -DB_CONNECTION => $db->dbc );
+  
+  my $exp_a = $db->get_ExperimentAdaptor;
+  my $eg_a  = $db->get_ExperimentalGroupAdaptor;
+
+  my $ct_a = $db->get_CellTypeAdaptor;
+  my $ft_a = $db->get_FeatureTypeAdaptor;
+
+  my $anal_adaptor = $db->get_AnalysisAdaptor;
+  my $iss_a = $db->get_InputSubsetAdaptor;
+
+  my $tr_a  = Bio::EnsEMBL::Funcgen::DBSQL::TrackingAdaptor->new(
+        -user       => $db->dbc->user,
+        -pass       => $db->dbc->pass,
+        -host       => $db->dbc->host,
+        -port       => $db->dbc->port,
+        -dbname     => $db->dbc->dbname,
+        -dnadb_name => $db->dnadb_name,
+  );
+
+
+  my $sql = "
+    SELECT
+      cell_type,
+      dateUnrestricted,
+      ens_lab,
+      feature_type,
+      filename,
+      logic_name,
+      md5sum,
+      name,
+      objStatus,
+      path,
+      replicate
+    FROM
+      files_txt
+  ";
+  # Adding constraints
+  if(defined $constraints){
+    $sql .= 'WHERE ';
+
+   for my $cst(@$constraints){
+     my $table = shift @$cst;
+     my $values = join(', ', map { qq/"$_"/ } @$cst);
+     $sql .= "$table IN ($values)";
+     $sql .= " AND\n " if($cst != $constraints->[-1]);
+   }  
+  }
+  # say $sql;
+  # DBI->trace(2);
+  my $files = $helper->execute(
+    -SQL      => $sql,
+    -CALLBACK => sub {
+      my @row = @{shift @_};
+      return {
+        cell_type         => $row[0],
+        dateUnrestricted  => $row[1],
+        ens_lab           => $row[2],
+        feature_type      => $row[3],
+        filename          => $row[4],
+        logic_name        => $row[5],
+        md5sum            => $row[6],
+        name              => $row[7],
+        objStatus         => $row[8],
+        path              => $row[9],
+        replicate         => $row[10],
+      }
+    } 
+  );
+      # say dump_data($files,1,1);
+  # die;
+  foreach my $file (@$files){
+    my $ft_name  = $file->{feature_type};
+    my $ct_name  = $file->{cell_type};
+    
+
+    # type determines the style of the experiment name
+    my $type = $cfg->{general}->{type};
+    
+    my $exp_name;
+    if($type eq 'ENCODE'){
+      $exp_name = $ct_name .'_' . $ft_name . '_' . $type . '_' . $file->{ens_lab};
+    }
+    else{
+      throw "'$type' not implemted."; 
+    }
+
+    # CellType
+    my $ct  = $ct_a ->fetch_by_name($ct_name);
+    if(!$ct){
+      $ct =_store_cell_feature_type ($db, $helper, 'CellType', $ct_name, $cell_type_data);
+    }
+
+    # FeatureType
+    my $ft  = $ft_a ->fetch_by_name($ft_name); 
+    if(!$ft){
+      $ft = _store_cell_feature_type ($db, $helper, 'FeatureType', $ft_name, $feature_type_data);
+    }
+
+    # Implement store method
+    my $anal = $anal_adaptor->fetch_by_logic_name($file->{logic_name});
+    if(not $anal){
+      warn "Analysis $file->{logic_name} not in DB. Skipping...";
+      next;
+    };
+
+    # Risky me thinks
+    my $control = 0; 
+    $control = 1 if($ft_name eq "WCE"); 
+
+
+    my $exp = $exp_a->fetch_by_name($exp_name);
+    my $iss = $iss_a->fetch_by_name($file->{name}, $exp);
+
+    # Check if InputSubset is already linked to a different Experiment
+    if(!$exp and $iss){
+      if($exp_name ne $iss->experiment->name){
+        throw($iss->name . ' is linked to ' . $iss->experiment->name . ' not ' . $exp_name );
+      }
+    }
+
+    if(! $exp){
+      my $eg = $eg_a->fetch_by_name($exp_data->{experimental_group});
+     
+      my $exp_new = Bio::EnsEMBL::Funcgen::Experiment->new
+                       (
+                        -cell_type           => $ct,
+                        -experimental_group  => $eg,
+                        -feature_type        => $ft,
+                        -date                => DateTime::Format::MySQL->format_datetime(DateTime->now),
+                        -description         => $exp_data->{description},
+                        -name                => $exp_name,
+                       );
+       ($exp) = @{$exp_a->store($exp_new)};
+       say "Added Experiment " . $exp->name . ' [dbID: ' . $exp->dbID .']';
+    }
+
+    if(!$iss){
+      my $iss_new = Bio::EnsEMBL::Funcgen::InputSubset->new
+                     (
+                      -cell_type     => $ct,
+                      -experiment    => $exp,
+                      -feature_type  => $ft,
+                      -analysis      => $anal,
+                      -is_control    => $control,
+                      -name          => $file->{name},
+                      -replicate     => $file->{replicate},
+                     );
+      ($iss) = @{$iss_a->store($iss_new)};
+      say "Added InputSubset " . $iss->name . ' [dbID: ' .$iss->dbID .']';
+
+      my $web_url = File::Spec->catfile($cfg->{urls}->{base}, $file->{path}, $file->{filename});
+      # catfile replaces // with /
+      $web_url =~ s!:/!://!;
+      
+      if($file->{objStatus}){
+        if($file->{objStatus} !~ /^[revoked|replaced]/){
+          throw('Status: '. $file->{objStatus}. ' not implemted');
+        }
+      }
+
+      my $tr_info->{info} = {
+        availability_date => 1,
+        download_url      => $web_url,
+        download_date     => undef,
+        local_url         => undef,
+        md5sum            => $file->{md5sum},
+        notes             => $file->{objStatus},
+      };
+      my $out = $tr_a->store_tracking_info($iss, $tr_info);
+      say "Added TrackingInfo for " . $iss->name . ' [dbID: ' .$iss->dbID .']';
+
+    }
+  }
+}
+
+
+
+=head2 _download_all_files_txt
+
+  Argument 1  : HASH - configuration
+  Returntype  : None 
+  Exceptions  : Missing config, inaccessible remote server or local directories
+  Description : Downloads all files.txt and md5sum.txt from standard ENCODE directory structure.
+
+=cut
+
+sub download_all_files_txt {
+  my ($cfg) = @_;
+
+  my $server = $cfg->{urls}->{base};
+  my $base_data_dir = $cfg->{directories}->{data};
+
+
+  my $ftp;
+  $ftp = Net::FTP->new($server, Debug => 0) or throw "Cannot connect to $server: $@";
+  $ftp->login("anonymous",'-anonymous@')    or throw "Cannot login ", $ftp->message;
+  
+  my @assemblies = qw(hg18 hg19);
+  for my $assembly(@assemblies){
+    my $dir_dcc = File::Spec->catdir('/', 'goldenPath', $assembly, 'encodeDCC');
+    $ftp->cwd($dir_dcc) or throw "Cannot cd to $dir_dcc ", $ftp->message;
+    my $labs = $ftp->ls;
+    for my $lab(@$labs){
+      next if($lab !~ /^wgEncode/);
+      my $dir_lab = File::Spec->catdir($dir_dcc, $lab);
+      $ftp->cwd($dir_lab) or throw "Cannot cd to $dir_lab", $ftp->message;
+      my $local_dir = File::Spec->catdir($base_data_dir, $dir_lab);
+      make_path($local_dir);
+      
+      my $local_files_txt  = File::Spec->catfile($local_dir, 'files.txt');
+      $ftp->get('files.txt', $local_files_txt) 
+      or warn "No files.txt in $dir_lab\tFTP message:", $ftp->message;
+      $local_files_txt =~ s/files\.txt/md5sum.txt/;
+      $ftp->get('md5sum.txt', $local_files_txt) 
+      or warn "No md5sum.txt in $dir_lab\tFTP message:", $ftp->message;
+    }
+  }
+}
+
+=head2 _store_cell_feature_type
+
+  Argument 1  : Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
+  Argument 2  : Bio::EnsEMBL::Utils::SqlHelper
+  Argument 3  : String - CellType or FeatureType
+  Argument 4  : String - Name used as key in $data HASH
+  Argument 5  : HASHREF - containing Cell or FeatureType objects
+  Returntype  : Bio::EnsEMBL::Funcgen::CellType or Bio::EnsEMBL::Funcgen::FeatureType
+  Exceptions  : Missing arguments
+  Description : PRIVATE - stores Cell or FeatureType
+
+=cut
+
+sub _store_cell_feature_type {
+  my ($db, $helper, $type, $name, $data) = @_;
+
+  assert_ref($db,     'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor');
+  assert_ref($helper, 'Bio::EnsEMBL::Utils::SqlHelper');
+
+  if($type !~ /[CellType|FeatureType]/){
+    throw("$type must be CellType or FeatureType");
+  }
+  if(! $data->{$name}){
+    throw("$type $name not defined in $type data.");
+  }
+  if(! defined $data){
+    throw("$type $name is not in db and $type data not defined.");
+  }
+
+  my $adaptor;
+  $adaptor = $db->get_CellTypeAdaptor    if ($type eq 'CellType');
+  $adaptor = $db->get_FeatureTypeAdaptor if ($type eq 'FeatureType');
+  my ($object) = @{$adaptor->store($data->{$name})};
+  say "Added $type $name";
+  return $object;
+}
+
+
 
 1;
 
