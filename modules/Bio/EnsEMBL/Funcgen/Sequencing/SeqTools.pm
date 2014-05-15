@@ -49,9 +49,9 @@ use vars qw( @EXPORT );
   get_files_by_formats
   load_experiments_into_tracking_db
   merge_bams
+  modify_files_txt_for_regulation
   post_process_IDR
   pre_process_IDR
-  modify_files_txt_for_regulation
   process_bam
   run_aligner
   run_IDR
