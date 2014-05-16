@@ -2064,13 +2064,13 @@ sub load_experiments_into_tracking_db {
     # CellType
     my $ct  = $ct_a ->fetch_by_name($ct_name);
     if(!$ct){
-      $ct =_store_cell_feature_type ($db, $helper, 'CellType', $ct_name, $cell_type_data);
+      $ct =_store_cell_feature_type ($db, $ct_name, $cell_type_data);
     }
 
     # FeatureType
     my $ft  = $ft_a ->fetch_by_name($ft_name);
     if(!$ft){
-      $ft = _store_cell_feature_type ($db, $helper, 'FeatureType', $ft_name, $feature_type_data);
+      $ft = _store_cell_feature_type ($db, $ft_name, $feature_type_data);
     }
 
     # Implement store method
@@ -2197,10 +2197,8 @@ sub download_all_files_txt {
 =head2 _store_cell_feature_type
 
   Argument 1  : Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
-  Argument 2  : Bio::EnsEMBL::Utils::SqlHelper
-  Argument 3  : String - CellType or FeatureType
-  Argument 4  : String - Name used as key in $data HASH
-  Argument 5  : HASHREF - containing Cell or FeatureType objects
+  Argument 2  : String - Name used as key in $data HASH
+  Argument 3  : HASHREF - containing Cell or FeatureType objects
   Returntype  : Bio::EnsEMBL::Funcgen::CellType or Bio::EnsEMBL::Funcgen::FeatureType
   Exceptions  : Missing arguments
   Description : PRIVATE - stores Cell or FeatureType
@@ -2208,26 +2206,20 @@ sub download_all_files_txt {
 =cut
 
 sub _store_cell_feature_type {
-  my ($db, $helper, $type, $name, $data) = @_;
-
-  assert_ref($db,     'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor');
-  assert_ref($helper, 'Bio::EnsEMBL::Utils::SqlHelper');
-
-  if($type !~ /[CellType|FeatureType]/){
-    throw("$type must be CellType or FeatureType");
-  }
-  if(! $data->{$name}){
-    throw("$type $name not defined in $type data.");
-  }
-  if(! defined $data){
-    throw("$type $name is not in db and $type data not defined.");
+  my ($db, $name, $data) = @_;
+  assert_ref($db,   'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor');
+  assert_ref($data, 'HASH', 'Cell/FeatureType cache');
+  
+  if(! ((exists $data->{$name} && defined $data->{$name})) ){
+    throw("$name not defined in data.");
   }
 
-  my $adaptor;
-  $adaptor = $db->get_CellTypeAdaptor    if ($type eq 'CellType');
-  $adaptor = $db->get_FeatureTypeAdaptor if ($type eq 'FeatureType');
-  my ($object) = @{$adaptor->store($data->{$name})};
-  say "Added $type $name";
+  my $object  = $data->{$name};
+  my $adaptor =  (check_ref($object, 'Bio::EsnEMBL::Funcgen::CellType')) ? 
+    $db->get_CellTypeAdaptor : $db->get_FeatureTypeAdaptor;
+ 
+  ($object) = @{$adaptor->store($data->{$name})};
+  say 'Added '.ref($object).":\t$name";
   return $object;
 }
 
