@@ -90,9 +90,9 @@ use vars qw( @EXPORT );
 #TODO
 # 1 Change all paramter handling to use rearrange only? i.e. no unamed args!
 
-sub run_aligner{
-  my ($aln_pkg, $aln_params, $skip_qc, $debug) =
-    rearrange( [qw(aligner aligner_params skip_qc debug) ], @_);
+sub run_aligner{ 
+  my ($aln_pkg, $aln_params, $skip_qc, $batch_job, $debug) = 
+    rearrange( [qw(aligner aligner_params skip_qc batch_job debug) ], @_);
   assert_ref($aln_params, 'ARRAY', 'Aligner params');
 
   throw('-aligner parameter has not been specifed')  if ! defined $aln_pkg;
@@ -110,6 +110,7 @@ sub run_aligner{
 
   #Quote so eval treats $aln_pkg as BAREWORD and converts :: to /
   validate_package_path($aln_pkg);
+  
   my $aligner = $aln_pkg->new(@$aln_params);
 
   #Don't really need this, although might be nice to show the args passed in the
@@ -138,15 +139,20 @@ sub run_aligner{
 
   }
 
-
-  return @results;
+  
+  return \@results;
 }
 
 
-
+#todo implement this in PreprocessFastqs
 #mv md5 checking in here too? as that is integrated into check_file
 #Just force use of gz files here to simplify zcat and md5 checking?
 # add qc thresholds?
+
+#is split splitting across fastq records?
+#lines do no appear to be wrapped with \n?
+#Or is this becuase all multi line records are 4 lines, so we just specify
+#a multiple of 4!
 
 sub split_fastqs{
   my ($files, $out_prefix, $out_dir, $work_dir,
@@ -185,6 +191,11 @@ sub split_fastqs{
   }
 
   $chunk_size ||= 16000000;#Optimised for ~ 30 mins bwa alignment bjob
+  
+  if($chunk_size % 4){
+    throw("Chunk size($chunk_size) is not a multiple of 4. This is required to ensure safe splitting of 4 line fastq records.");  
+  }
+  
   my (@fastqs, %params, $throw);
 
   foreach my $i(0..$#{$files}){
@@ -204,12 +215,12 @@ sub split_fastqs{
         $files->[$i]."\n";
       #Could try warehouse here?
     }
-    elsif($found_path !~ /\.gz$/o){
+    elsif($found_path !~ /\.(?:t){0,1}gz$/o){
       #use is_compressed here?
-      #This will also modify the original file! And potentially invalidate any checksumming
-      throw("Found unzipped path, aborting as gzipping will invalidate any further md5 checking:\t$found_path");
-      run_system_cmd("gzip $found_path");
-      $found_path .= '.gz';
+      #This will also modify the original file!
+      throw("Found unzipped path, aborting as gzipping may invalidate any further md5 checking:\t$found_path");
+      #run_system_cmd("gzip $found_path");
+      #$found_path .= '.gz';  
     }
 
     push @fastqs, $found_path;
@@ -326,8 +337,8 @@ sub split_fastqs{
   if($post_du < $pre_du){
     throw("Input fastq files totaled ${pre_du}k, but output chunks totaled only ${post_du}k");
   }
-
-  return \@results;#\@new_fastqs, \%qc_results;
+  
+  return (\@new_fastqs);#, \%qc_results;
 }
 
 
@@ -1309,7 +1320,7 @@ sub validate_sam_header {
     # actaully there can be some gender specific top level unassembled contigs too!
     # Meaning any non-gender specific header will need to be a merge, not just the male header
     warn scalar(@ref_header)." lines in reference header:\t$header_or_fai\n".
-      $hdr_cnt." lines in file header:\t$sam_bam_file\n" if $debug >= 2;
+      $hdr_cnt." lines in file header:\t$sam_bam_file\n" if $debug && ($debug >= 2);
     $header_opt = '' if $hdr_cnt == scalar(@ref_header);
   }
 
@@ -1340,7 +1351,7 @@ sub pre_process_IDR{
   assert_ref($pre_idr_beds, 'ARRAY');
 
   if(scalar(@$pre_idr_beds) < 2){
-    throw('Cannot run IDR with less than 2 replicates:\n\t'.$pre_idr_beds->[0]);
+    throw("Cannot run IDR with less than 2 replicates:\n\t".$pre_idr_beds->[0]);  
   }
 
   my ($mt_100k, $lt_100k, $log_txt);
@@ -1378,13 +1389,16 @@ sub pre_process_IDR{
   }
 
   #Note this does not yet support MACS yet, should prbably just ignore it as we filter to 100000
-  my $idr_threshold = ($max_peaks < 100000) ? 0.05 : 0.01;
-
+  my $idr_threshold   = ($max_peaks < 100000) ? 0.05 : 0.01;
+  #Could alternatively pass all thresholds back to the caller
+  my $x_thresh_adjust = 0;
+  
   if($lt_100k && $mt_100k){
     #$self->throw_no_retry("Identified different optimal thresholds due to pre-IDR peak counts spanning the 100k limit:\n".
     #  $log_txt);
     warn 'Identified different optimal thresholds due to pre-IDR peak counts spanning the 100k limit:'.
-      "\n$log_txt\nDefaulting to lower threshold:\t$idr_threshold\n";
+      "\n$log_txt\nDefaulting to lower threshold:\t$idr_threshold\n";  
+    $x_thresh_adjust = 1;    
   }
 
   #TODO We need some mechanism to restart this job, to force the threshold, or by dropping 1/some of the replicates.
@@ -1475,9 +1489,9 @@ sub pre_process_IDR{
     #such that we know the peak calling jobs has finished and passed QC!
     #Do this for each before we submit IDR jobs, as we may have to drop some reps
     push @np_bed_files, $np_bed_file;
-  }
-
-  return (\@np_bed_files, $idr_threshold);
+  }  
+ 
+  return (\@np_bed_files, $idr_threshold, $x_thresh_adjust);
 }
 
 
@@ -1499,9 +1513,9 @@ sub run_IDR{
   #This is not sensible as we will need to run self consistency IDR?
 
   if($bed_files->[0] eq $bed_files->[1]){
-    throw("Pre-IDR ResultSets are identical, dbIDs:\t".join(' ', @$bed_files));
-  }
-
+    throw("Pre-IDR peak files are identical:\t".join(' ', @$bed_files));  
+  }                              
+ 
   #Check we have 2 reps
   if(scalar (@$bed_files) != 2){
     throw("run_IDR expect 2 replicate bed files:\t".join(' ', @$bed_files));
@@ -1579,6 +1593,8 @@ sub run_IDR{
 
 #TODO
 # 1 Add more IDR based QC here
+# 2 Rscript will currently submit and interactive job to farm if launched on a head node
+#   else will run locally if already on a farm node
 
 sub post_process_IDR{
   my $out_dir       = shift or throw('Must provide an out_dir argument');
