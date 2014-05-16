@@ -49,6 +49,7 @@ package Bio::EnsEMBL::Funcgen::Utils::EFGUtils;
 use warnings;
 use strict;
 
+use File::Find; 
 use Digest::MD5;
 use Bio::EnsEMBL::Utils::Exception qw( throw      );
 use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
@@ -77,6 +78,9 @@ use vars qw( @EXPORT_OK );
   file_suffix_parse
   generate_checksum
   generate_slices_from_names
+  get_alignment_file_prefix_by_ResultSet
+  get_set_prefix_from_Set
+  get_study_name_from_Set
   get_current_regulatory_input_names
   get_date
   get_file_format
@@ -101,10 +105,12 @@ use vars qw( @EXPORT_OK );
   strip_param_flags
   url_from_DB_params
   validate_checksum
+  validate_package_path
   validate_path
   validate_sam_header
+  which_path
   write_checksum
-  );
+ );
 
 
 
@@ -305,12 +311,7 @@ sub dump_data {
 
 sub file_suffix_parse{
   my $filepath = shift;
-
-  my $file_name                  = fileparse($filepath);
-  (my $file_prefix = $file_name) =~ s/\.[a-zA-Z0-9]+$//;
-  (my $suffix      = $file_name) =~ s/$file_prefix\.//;
-
-  return ($file_prefix, $suffix);
+  return (fileparse($filepath) =~ /(.*)\.([^\.]+)$/);
 }
 
 
@@ -520,10 +521,9 @@ sub write_checksum{
   my $signature_file = (exists $params->{signature_file}) ? $params->{signature_file} : undef;
   my $digest_method  = (exists $params->{digest_method})  ? $params->{digest_method}  : undef;
   my $debug          = (exists $params->{debug})          ? $params->{debug}          : 0;
-
-  $digest_method ||= 'hexdigest';
-  my $md5_sig   = generate_checksum($file_path, $digest_method);
-  my $file_name = fileparse($file_path);
+  $digest_method   ||= 'hexdigest';
+  my $md5_sig        = generate_checksum($file_path, $digest_method);
+  my $file_name      = fileparse($file_path);
 
   if(! defined $signature_file){
     $signature_file = $file_path.'.CHECKSUM';
@@ -531,12 +531,11 @@ sub write_checksum{
   }
   
   warn "Writing checksum:\t$md5_sig\t$file_name\nTo signature file:\t$signature_file\n" if $debug;
-
   my $checksum_row = $md5_sig."\t".$file_name."\t".$digest_method;
 
   #Update or create entry in signature_file
-
   my $sigfile_row;
+  
   if(-f $signature_file){
     warn "Signature file is $signature_file\n" if $debug;
     
@@ -700,7 +699,6 @@ sub get_file_format{
 }
 
 
-
 sub get_month_number{
   my($mon) = @_;
   my %month_nos =(
@@ -724,8 +722,7 @@ sub get_month_number{
 sub gunzip_file {
   my $filepath = shift;
   my $was_gzipped = 0;
-
-  
+ 
 
   if( is_gzipped($filepath) ){
     run_system_cmd("gunzip $filepath");
@@ -891,7 +888,7 @@ sub median{
 }
 
 
-=head2 path_to_namspace
+=head2 path_to_namespace
 
   Arg [1]    : String - Module path
   Example    : my $path = '/my/module.pm';
@@ -912,10 +909,10 @@ sub median{
 =cut
 
 sub path_to_namespace {
-  my $path = shift;;
+  my $path = shift;
 
   if(! defined $path){
-   throw('No path argument defined');
+    throw('No path argument defined');
   }
 
   $path =~ s/[\/]+/::/g;
@@ -925,7 +922,7 @@ sub path_to_namespace {
 
 
 #todo test file exists and is readable/writable first to avoid zombie?
-#todo Use IPC::Open3 for piping? Take list of operators (and list of files e.g. in/out)
+#todo Use IPC::Open open2/3 for piping? Take list of operators (and list of files e.g. in/out)
 
 sub open_file{
   my ($file, $operator, $file_permissions) = @_;
@@ -1207,390 +1204,6 @@ sub scalars_to_objects{
   return \@objs;
 }
 
-
-
-#NOW IN SeqTools!
-
-#There are three use cases here:
-#1 Cross validation
-#2 Returning header opt in case of no samfile header
-#3 Ensuring sam has header if ref header not specified
-
-#The last two will happen by default, with 1 happening if both are present
-#or the corss validate boolean is passed
-
-#arguably the cross validate boolean could be dropped in favour of testing
-#in the calling context, but convenient here
-=pod
-
-sub validate_sam_header {
-  my $sam_bam_file     = shift;
-  my $header_or_fai    = shift;
-  my $xvalidate        = shift;
-  my $params           = shift || {};
-  assert_ref($params, 'HASH');
-  my $is_fai           = ($header_or_fai =~ /\.fai$/o) ?                1 : 0;
-  my $debug            = (exists $params->{debug})     ? $params->{debug} : 0;
-  
-  if(! defined $sam_bam_file){
-    throw("Mandatory argument not specified:\t sam/bam file"); 
-  }
-  elsif($xvalidate && ! $header_or_fai){
-     throw('The cross validation boolean has been passed, but no header/fai argument has been passed');
-  }  
-  
-  validate_path($sam_bam_file);
-  #samtools view -t
-  #samtools merge -h 
-  my $header_opt    = ($is_fai) ? ' -t '.$header_or_fai : ' -h '.$header_or_fai;
-  my @infile_header = run_backtick_cmd("samtools view -H $sam_bam_file");  
- 
-  if($!){
-    #$! not $@ here which will be null string
-    if(! defined $header_or_fai){
-      throw('Could not find an in file header or a reference file header for:'.
-        "\n$sam_bam_file\n$header_or_fai\n$!");
-    }
-    elsif($xvalidate){
-      throw('Cross validate boolean has been passed but failed to fetch a header from the reference file:'.
-        "\n\t$header_or_fai");    
-    }
-  }
-  elsif($xvalidate && ! @infile_header){
-    throw('Cross validate boolean has been passed but bam/sam file has no header entries:'.
-      "\n\t$sam_bam_file");  
-  }
-  elsif($header_or_fai){
-    validate_path($header_or_fai); 
-    my @ref_header;
-    
-    if($is_fai){
-      @ref_header = run_backtick_cmd("samtools view -H $header_opt $sam_bam_file");;
-    }
-    else{
-      @ref_header = run_backtick_cmd("cat $header_or_fai"); 
-    }
-    
-    
-    if(! @ref_header){
-       throw("Reference file has no header entries:\n\t$header_or_fai");
-    }
-    
-    if(scalar(@infile_header) > scalar(@ref_header)){
-      throw("Found in file header with more entries that the reference header:\n".
-        scalar(@ref_header)."\t$header_or_fai\n".scalar(@infile_header)."\t$sam_bam_file");    
-    }
-   
-    #size difference is fine here, just so long as the file header
-    #is a subset of the ref header
-    my ($SN, $LN, %ref_header);
-    my $hdr_cnt = 0;
-    
-    for(@ref_header){
-      (undef, $SN, $LN) = split(/\s+/, $_);
-      $ref_header{$SN} = $LN; 
-    }
-   
-   
-    foreach my $line(@infile_header){
-      (undef, $SN, $LN) = split(/\s+/, $line);
-      $hdr_cnt++;
-      
-      if(! exists $ref_header{$SN} ){
-        throw("$SN exist in file header but not sam header/fai\n".
-          $header_or_fai."\n".$sam_bam_file);  
-      }
-      elsif($ref_header{$SN} ne $LN){
-        throw("$SN  has mismatched LN entry between file header and sam fasta index\n".
-          $ref_header{$SN}."\t".$header_or_fai."\n$LN\t".$sam_bam_file);  
-      }
-    }
-   
-    #we don't need the header file as the headers completely match
-    #This may result in a feamle header bing replaced with a male header
-    #due to it containing the extra @SQ SN:Y line
-    #actaully there can be some gender specific top level unassembled contigs too! 
-    #Meaning any non-gender specific header will need to be a merge, not just the male header 
-    warn scalar(@ref_header)." lines in reference header:\t$header_or_fai\n".
-      $hdr_cnt." lines in file header:\t$sam_bam_file\n" if $debug >= 2;
-    $header_opt = '' if $hdr_cnt == scalar(@ref_header);
-  }
-  
-  return $header_opt;
-}
-
-
-
-
-### NOW IN SeqTools!
-#todo
-#1 We need to catch if consequence of opts is to actually do nothing
-#2 Make rmdups optional as this will have already been done in the merge_bams
-
-
-sub process_sam_bam {
-  my $sam_bam_path = shift;
-  my $params       = shift || {};
-  my $in_file;
-
-  if(! ($in_file = check_file($sam_bam_path, undef, $params)) ){
-    throw("Cannot find file:\n\t$sam_bam_path");
-  }
-  
-  #Could just take a local copy of the hash to avoid doing this and use
-  #the hash directly
-  assert_ref($params, 'HASH');
-  my $out_file      = (exists $params->{out_file})              ? $params->{out_file}              : undef;
-  my $sort          = (exists $params->{sort})                  ? $params->{sort}                  : undef;
-  my $skip_rmdups   = (exists $params->{skip_rmdups})           ? $params->{skip_rmdups}           : undef;
-  my $checksum      = (exists $params->{checksum})              ? $params->{checksum}              : undef;
-  my $fasta_fai     = (exists $params->{ref_fai})               ? $params->{ref_fai}               : undef;
-  my $out_format    = (exists $params->{output_format})         ? $params->{output_format}         : undef;
-  my $debug         = (exists $params->{debug})                 ? $params->{debug}                 : 0;  
-  my $filter_format = (exists $params->{filter_from_format})    ? $params->{filter_from_format}    : undef;
-  my $force         = (exists $params->{force_process_sam_bam}) ? $params->{force_process_sam_bam} : undef; 
-
-  #sam defaults
-  $out_format     ||= 'sam';
-  my $in_format = 'sam';
-  my $in_flag   = 'S';
-
-  if($out_format !~ /^(?:bam|sam)$/){
-    throw("$out_format is not a valid samtools output format");
-  }
-
-  if($in_file =~ /\.bam$/o){     # bam (not gzipped!)
-    $in_format = 'bam';
-    $in_flag   = '';
-  }
-  elsif($in_file !~ /\.sam(?:\.gz)*?$/o){ # sam (maybe gzipped)
-    throw("Unrecognised sam/bam file:\t".$in_file);
-  }
-
-  #This is odd, we really only need a flag here
-  #but we already have the filter_from_format in the params
-  if(defined $filter_format &&
-     ($filter_format ne $in_format) ){
-    throw("Input filter_from_format($filter_format) does not match input file:\n\t$in_file");
-  }
-
-
-  if(! $out_file){
-    ($out_file = $in_file) =~ s/\.${in_format}(?:.gz)*?$/.${out_format}/;
-
-    if(defined $filter_format){
-      $out_file =~ s/\.unfiltered//o;  #This needs doing only if is not defined
-    }
-  }
-
-  #Sanity checks
-  (my $unzipped_source = $in_file) =~ s/\.gz$//o;
-  (my $unzipped_target = $out_file)     =~ s/\.gz$//o;
-
-  if($unzipped_source eq $unzipped_target){
-    #This won't catch .gz difference
-    #so we may have an filtered file which matches the in file except for .gz in the infile
-    throw("Input and output (unzipped) files are not allowed to match:\n\t$in_file");
-  }
-
-  if($filter_format){
-
-    if($in_file !~ /unfiltered/o){
-      warn("Filter flag is set but input file name does not contain 'unfiltered':\n\t$in_file");
-    }
-
-    if($out_file =~ /unfiltered/o){
-      throw("Filter flag is set but output files contains 'unfiltered':\n\t$in_file");
-    }
-  }
-  elsif(! $sort &&
-        ($in_format eq $out_format) ){
-    throw("Parameters would result in no change for:\n\t$in_file");
-  }
-
-
-  #Could do all of this with samtools view?
-  #Will fail if header is absent and $fasta_fai not specified
-  #$fasta_fai is ignored if infile header present
-  #Doing it like this would integrate the fai into the output file, which is probably what we want?
-  #This would also catch the absent header in the first command rather than further down the pipe
-  #chain which will not becaught gracefully
-
-  #This can result in mismatched headers, as it does seem like the fai file is used rather than the in file header
-  #here, at least for bams
-
-
-  #Define and clean intermediate sorted files first
-  (my $tmp_bam = $in_file) =~ s/\.$in_format//;
-  my $sorted_prefix = $tmp_bam.".sorted";
-  $tmp_bam .= ($sort) ? ".sorted.bam" : '.tmp.bam';  
-  my $cmd = "rm -f $tmp_bam*";
-  warn $cmd."\n" if $debug;
-  run_system_cmd($cmd, 1); #no exit flag
-  $cmd = '';
-  
-  #Check header and define include option
-  my $fasta_fai_opt = validate_sam_header($in_file, $fasta_fai, undef $params);
-  
-  
-  #Validate that we actually want to do something here
-  #filter, sort, format conversion or header include?
-  #othwerwise this is a simple mv operation
-  my $reheader = 0;
-  
-  if((! ($filter_format || $sort)) &&
-     ($out_format eq $in_format) ){
-    #This could possibly be a reheader operation or simply a move
-    
-    if(! $fasta_fai_opt){
-      
-      if(! $force){
-      #arguably we should just do this but it is likely the options are wrong
-      #could provide a flag over-ride for this?
-      throw('The options provided do not require any processing of the input file:'.
-        "\n\t$in_file\nOther than copying to the output file destination:\n\t".
-        $out_file."\nPlease check/revise your options or specify the force_process_sam_bam parameter");
-      }
-      else{
-        $cmd = "mv $in_file $out_file";  
-      }
-    }
-    else{ #We simply want to reheader
-      #in and out format are the same, so can just test in format
-    
-      if($in_format eq 'sam'){
-        $cmd = "samtools view -h${in_flag} $fasta_fai_opt $in_file ";   
-      }
-      else{ #must be bam
-        throw('bam reheader is not yet supported as requires a sam format header file');
-        #actually fai format is not yet being validated, so this will fail if we pass a sam header
-        #as the $fasta_fai_opt will be -h (for merge) if it is in sam format
-        #$cmd = 'samtools reheader $sam_fai_or_header $in_file && mv $in_file $out_file';
-      }
-    }
-  }
-  
-  
-  if(! $cmd){ #We want to do some filtering/sorting
-    my $filter_opt = ($filter_format) ? '-F 4' : '';
-    $cmd = "samtools view -hub${in_flag} $filter_opt $fasta_fai_opt $in_file "; # -h include header
-    #if we are not filtering and the headers match then we don even need this step!
-    #We shoudl probably omit the MT filtering completely as these will be handled in the blacklist?
-    #we haven't omitted other repeats yet, so this would be consistent
-  
-    #todo tidy up filter_format vs filter_mt modes
-    #drop MT filtering from here!
-  
-    #if($filter_format){
-      #$cmd .= "-F 4 | ". #-F Skip alignments with bit set in flag (4 = unaligned)
-      #  " grep -vE '^[^[:blank:]]+[[:blank:]][^[:blank:]]+[[:blank:]]+(MT|chrM)' "; #Filter MTs or any reference seq with an MT prefix
-      #Could add blank after MT, just in case there are valid unassembed seq names with MT prefixes
-      #Fairly safe to assume that all things beginning with chrM are MT or unassembled MT
-    #}
-  
-    #-u uncompressed bam (as we are piping)
-    #-S SAM input
-    #-t  header file (could omit this if it is integrated into the sam/bam?)
-    #- (dash) here is placeholder for STDIN (as samtools doesn't fully support piping).
-    #This is interpreted by bash but probably better to specify /dev/stdin?
-    #for clarity and as some programs can treat is as STDOUT or anything else?
-    #-b output is bam
-    #-m 2000000 (don't use 2G here,a s G is just ignored and 2k is used, resulting in millions of tmp files)
-    #do we need an -m spec here for speed? Probably better to throttle this so jobs are predictable on the farm
-    #We could also test the sorted flag before doing this?
-    #But samtools sort does not set it (not in the spec)!
-    #samtools view -H unsort.bam
-    #@HD    VN:1.0    SO:unsorted
-    #samtools view -H sort.bam
-    #@HD    VN:1.0    SO:coordinate
-    #We could add it here, but VN is mandatory and we don't know the version of the sam format being used?
-    #bwa doesn't seem to output the HD field, not do the docs suggest which spec is used for a given version
-    #mailed Heng Lee regarding this
-    #$cmd .= ' | samtools view -uShb - ';  #simply convert to bam using infile header
-    $cmd .= ($sort) ? ' | samtools sort - '.$sorted_prefix : ' > '.$tmp_bam;
-    warn $cmd."\n" if $debug;
-    run_system_cmd($cmd);
-    
-    
-    #This is now giving 
-    #[sam_header_read2] 194 sequences loaded.
-    #[sam_read1] reference 'LN:133797422' is recognized as '*'.
-    #Parse error at line 1: invalid CIGAR character
-    #[samopen] SAM header is present: 194 sequences.
-    #[sam_read1] reference 'SN:KI270740.1    LN:37240
-  
-  
-    #' is recognized as '*'.
-    #[main_samview] truncated file.
-    
-    #But this is not caught as an error!!!
-    #as the exit status is only caught for the last command
-    #let's write a run_piped_system_cmd which checks bash $PIPESTATUS array
-    #which contains all exit states for all commands in last pipe command
-    
-    #why is the fasta_fai_opt being defined at all?
-    #surely the headers are the same?
-    #Is this error because there are headers in both files
-    
-  
-    #Add a remove duplicates step
-    #-s single end reads or samse (default is paired, sampe)
-    #Do this after alignment as we expect multiple reads if they map across several loci
-    #but not necessarily at exactly the same loci which indicates PCR bias
-    
-    my $rm_cmd = "rm -f $tmp_bam";
-    
-    if($filter_format){
-      
-      if(! $skip_rmdups){      
-        $cmd = "samtools rmdup -s $tmp_bam ";
-      }
-      
-      if($out_format eq 'sam'){
-        
-        if($skip_rmdups){       
-          $cmd = "samtools view -h $tmp_bam > $out_file"; 
-        }
-        else{
-          $cmd .= "- | samtools view -h - > $out_file";
-        }
-           
-      }
-      elsif($skip_rmdups){
-        $cmd = "mv $tmp_bam $out_file";   
-        $rm_cmd = ''
-      }
-      else{
-        $cmd .= $out_file;  
-      }
-    }
-    elsif($out_format eq 'bam'){
-      #We know we have bam by now as we have done some sorting
-      $cmd = "mv $tmp_bam $out_file";
-      $rm_cmd = '';
-    }
-    else{ #We need to convert to sam     
-      $cmd = "samtools view -h $tmp_bam > $out_file";
-    }
-    
-    warn $cmd."\n" if $debug;
-    run_system_cmd($cmd);  
-    $cmd = $rm_cmd;
-  }
-  
-  if($cmd){
-    warn $cmd."\n" if $debug;
-    run_system_cmd($cmd);
-  }
-  
-  if($checksum){
-    write_checksum($out_file, $params);
-  }
-
-  return $out_file;
-}
-
-=cut
 
 sub species_chr_num{
     my ($species, $val) = @_;
@@ -1896,6 +1509,176 @@ sub validate_path{
     throw("Could not find:\n\t$path");
   }
 
+  return $path;
+}
+
+
+
+# Move some of these to SetUtils?
+
+
+
+#Is this really needed, could this not just be replaced with
+#my @controls = grep { $_->is_control == 1 } @{$set->get_support};
+#and test in caller, which is probably better?
+
+#This also assumes InputSubset input if not ResultSet?!
+#This arbitrarily returns the first, no all
+
+
+#If this is just used for getting the control feature type, then we can probably to that all at once?
+#and make this private?
+
+#control experiment is now being handles by ResultSet itself
+#should probably move feature_type method to ResultSet too
+
+sub _get_a_control_InputSubset{
+  my $set  = shift; 
+  my @is_sets;
+  
+  if( $set->isa('Bio::EnsEMBL::Funcgen::ResultSet') ){
+    #Enforce input_subset table_name here
+    
+    @is_sets = @{$set->get_support};
+  
+    if(! @is_sets){
+      throw("Failed to identify control InputSubset support for ResultSet:\t".$set->name);  
+    }
+  }
+  else{
+    @is_sets = ($set);
+  }
+  
+  my @ctrls = grep { $_->is_control == 1 } @is_sets;
+
+  if(! @ctrls){
+    throw('Could not identify a control InputSubset from '.ref($set).":\t".$set->name);  
+  }
+
+  return $ctrls[0];
+}
+  
+#This may cause uncaught exception if there are no controls and 
+#the caller does not test the return  
+#Assumes is ResultSet with table_name input_subset
+sub _get_control_InputSubsets{
+  my $set = shift;
+  return [ grep { $_->is_control == 1 } @{$set->get_support} ];  
+}
+
+
+#Should this conditionally append the analysis?
+#This is only useful if your want to omit the _TRN 
+#suffix.
+
+
+sub get_set_prefix_from_Set{
+  my $set        = shift;
+  my $control    = shift; 
+  my $study_name = get_study_name_from_Set($set, $control);
+ 
+  if(! (ref($set) && 
+        ($set->isa('Bio::EnsEMBL::Funcgen::InputSubset') ||
+         $set->isa('Bio::EnsEMBL::Funcgen::ResultSet') ))){
+    throw('Must pass a valid InputSet or ResultSet');         
+  }
+  
+  my $ftype;
+  
+  if($control){
+    $ftype = _get_a_control_InputSubset($set)->feature_type->name;
+  }
+  else{
+     $ftype = $set->feature_type->name;
+  }
+ 
+  return $set->cell_type->name.'_'.$ftype.'_'.$study_name; 
+}
+
+#This currently only works for Experiments
+#which have controls mixed in
+    
+#The pipeline does not currently expect 
+#stand alone control experiments
+#and will try and process these like a mixed signal/control set.
+#This should be fine until after the alignment
+#at which point we want to stop their processing
+    
+sub get_study_name_from_Set {
+  my $set     = shift;
+  my $control = shift;
+  
+  if(! (ref($set) && 
+        ($set->isa('Bio::EnsEMBL::Funcgen::InputSubset') ||
+         $set->isa('Bio::EnsEMBL::Funcgen::ResultSet') ))){
+    throw('Must pass a valid InputSet or ResultSet');         
+  }
+  
+  my ($exp_name, $ftype);
+  my $ctype = $set->cell_type->name;
+  
+  if($control){
+    $control = _get_a_control_InputSubset($set);
+    #This is based on the assumption that all non-ctrl subsets are associated with a unique Experiment.
+    my $exp   = $control->experiment;
+    $exp_name = $exp->name;
+ 
+    foreach my $isset(@{$exp->get_InputSubsets}){
+      
+      if(! $isset->is_control){
+        $ftype = $isset->feature_type->name;  
+        last;
+      }  
+    }
+    
+    if(! $ftype){   #We have a pure control experiment i.e. no signal InputSubsets
+     $ftype = $exp->feature_type->name;
+    }      
+  }
+  else{  
+    $exp_name = $set->experiment->name ||
+      throw('Cannot find unique experiment name for '.ref($set).":\t".$set->name);
+    $ftype = $set->feature_type->name;
+  }
+  
+  #\Q..\E escape mata characters in string variables 
+  (my $study_name = $exp_name) =~ s/\Q${ctype}_${ftype}\E_(.*)/$1/i;
+  
+  if($study_name eq $exp_name){
+    throw("Failed to create study name for Experiment $exp_name with cell type $ctype and feature type $ftype");  
+  }
+  
+  return $study_name;
+}
+
+#This will also take a namespace
+
+sub validate_package_path{
+  my $pkg_path = shift ||  throw('Must defined a package path to validate');  
+ 
+  #Quote so eval treats $aln_pkg as BAREWORD and converts :: to /
+  if(! eval "{require $pkg_path; 1}" ){ 
+    throw( "Failed to require:\t$pkg_path\n$@" );
+  }
+  
+  #This might not always be correct if the file contains >1 package
+  return path_to_namespace($pkg_path);
+}
+
+#This is to get around the problem that some scripts are not available in the top level of the $PATH dirs
+#and creating a toplevel link is not appropriate as we need there full path.
+#move this to EFGUtils?
+sub which_path{
+  my $filename  = shift;
+  my @env_paths = split(/:/, $ENV{PATH});
+  my $path;
+   
+  find(sub{ if ($_ eq $filename){$path=$File::Find::name; return; }}, @env_paths);
+  
+  if(! defined $path){
+    throw("Unable to find file in \$PATH:\t$filename\n\$PATH contains:\t".join("\t", @env_paths));
+  }
+  
   return $path;
 }
 
