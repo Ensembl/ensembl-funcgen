@@ -79,12 +79,8 @@ sub fetch_input {   # fetch parameters...
   $self->get_output_work_dir_methods;
 
   #temp solution to adjust maxpeaks for poor reps
-  if(my $bams = $self->param_silent('bam_files')){
-    assert_ref($bams, 'ARRAY');
-    $self->set_param_method('bam_files', $bams);  
-  }
-
-
+  $self->get_param_method('bam_files', 'silent');  
+  assert_ref($self->bam_files, 'ARRAY', 'bam_files') if $self->bam_files;
   return;
 }
 
@@ -93,12 +89,17 @@ sub run {   # Check parameters and do appropriate database/file operations...
   my $self          = shift;
   
   #eval this and throw no retry
-  my $num_peaks = run_IDR(-out_dir       => $self->output_dir, 
-                              -output_prefix => $self->output_prefix, 
-                              -threshold     => $self->idr_threshold, 
-                              -bed_files     => $self->bed_files,
-                              -batch_name    => $self->batch_name, 
-                              -bam_files     => $self->bam_files);
+  my $num_peaks;
+  
+  if(! eval { $num_peaks = run_IDR(-out_dir       => $self->output_dir, 
+                                   -output_prefix => $self->output_prefix, 
+                                   -threshold     => $self->idr_threshold, 
+                                   -bed_files     => $self->bed_files,
+                                   -batch_name    => $self->batch_name, 
+                                   -bam_files     => $self->bam_files); 1 }){
+    $self->throw_no_retry("Failed to run_IDR ".$self->output_prefix."\n$@");                                   
+  }
+  
   $self->set_param_method('num_peaks', $num_peaks);
   
   #This probably needs writing to the accu table too! 
