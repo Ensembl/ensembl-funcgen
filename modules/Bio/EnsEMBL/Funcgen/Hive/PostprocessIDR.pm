@@ -37,8 +37,12 @@ package Bio::EnsEMBL::Funcgen::Hive::PostprocessIDR;
 use warnings;
 use strict;
  
-use Bio::EnsEMBL::Utils::Exception         qw( throw );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( scalars_to_objects );
+use Bio::EnsEMBL::Utils::Scalar                 qw( assert_ref );
+use Bio::EnsEMBL::Utils::Exception              qw( throw );
+use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools qw( post_process_IDR );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils      qw( scalars_to_objects
+                                                    get_set_prefix_from_Set
+                                                    run_system_cmd );
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
 #TODO 
@@ -60,98 +64,82 @@ sub fetch_input {   # fetch parameters...
   #How are we going to differentiate pseudo reps?
   #SubmitIDR will know about these,as they will be passed explicitly from GeneratePseudoReplicates
   #as file names (not sets!?).
-  
+  $self->get_output_work_dir_methods;
   
   if($self->param_required('set_type') ne 'ResultSet'){
     throw("Param set_type should be 'ResultSet', not:\t".$self->param('set_type'));  
   }
   
-  my $fset_ids = $self->get_param_method('dbIDs',  'required');
-  assert_ref($fset_ids, 'ARRAY', 'FeatureSet dbIDs');
+  my $rset_ids = $self->get_param_method('dbIDs',  'required');
+  assert_ref($rset_ids, 'ARRAY', 'ResultSet dbIDs');
   $self->get_param_method('permissive_peaks', 'required');
-  $self->get_param_method('idr_peaks',        'required');
-  my $idr_peaks = $self->get_param_method('idr_peak_counts', 'required'); 
+  $self->get_param_method('idr_peak_counts',  'required');
+  $self->get_param_method('output_prefixes',  'required');
+  $self->get_param_method('batch_name',       'required');
+  assert_ref($self->output_prefixes, 'ARRAY', 'output_prefixes');
+  
   #This is accumulated data from the RunIDR fan jobs, submitted & semaphored from PreprocessIDR
+  my $idr_peaks = $self->get_param_method('idr_peak_counts', 'required');   
   assert_ref($idr_peaks, 'ARRAY', 'IDR peaks');
  
   return;
 }
 
 
+
+#To do
+#1 Move most of this to SeqTools
+#2 Add an IDR peak analysis, and record the max_peaks in the feature_set description? or tracking?
+
 sub run {   # Check parameters and do appropriate database/file operations... 
-  my $self  = shift;  
-  my $batch_params  = $self->batch_params;
-  my $rsets         = &scalars_to_objects($self->out_db,  'ResultSet',
-                                          'fetch_by_dbID', $self->dbIDs);
-  my $peak_analysis = &scalars_to_objects($self->out_db, 'Analysis',
-                                          'fetch_by_logic_name',
-                                          $self->permissive_peaks)->[0];                                                
-
-  my $max_peaks = (sort {$a <=> $b} @{$self->idr_peak_counts})[-1];#Take the highest!
-
-
-  #Where is merging going to happen?
-  #We should do this in DefineResultSet
+  my $self         = shift;  
+  my $out_dir      = $self->output_dir;
+  my $batch_params = $self->batch_params;
+  my $batch_name   = $self->batch_name;
+  my $rsets        = &scalars_to_objects($self->out_db,  'ResultSet',
+                                         'fetch_by_dbID', $self->dbIDs);
+                                          
+  #Need to flow peak_analysis here, such that we over-ride the no IDR mode defaults
+  #Otherwise DefineMergedDataSet will use the pre-IDR analysis.????
+  #Is this correct? No, we always want to run permissive, so this entirely depends on no_idr
+  my $max_peaks;
+  
+  if(! eval { $max_peaks = post_process_IDR($out_dir, $batch_name, $self->idr_peak_counts,
+                                   {'-idr_files'     => $self->output_prefixes,
+                                    '-debug'         => $self->debug}); 1 }){
+    $self->throw_no_retry("Failed to post_process_IDR $batch_name\n$@");                                    
+  }
+  
   #Pooled file should already exist from Pseudo-rep creation
   #but handle absence, just incase we want to run without this step
-
-  
-  #todo IDR based QC here! 
-  
-  
-  #Need to flow peak_analysis here, such that we over-ride the non-IDR defaults
-  #If we leave as is, with run_idr enable, PreprocessAlignments will
-  #use the pre-IDR analysis.
-  
-  #Is there any other way to handle this?
-  #the run_idr param is now a bit ambiguous
-  #Should this be turned into a string value pre|post?
-  #Probably easier just to over-ride peak analysis defaults with peak_analysis param
-  #
+ 
   
   #Do the alignment merge here as we already have access to the rep ResultSets here?
   #or do it in 
+  #controls should be same across all fsets
+  my @controls   = grep {$_->is_control}   @{$rsets->[0]->get_support};
+  my @signals    = grep {! $_->is_control} (map {@{$_->get_support}} @$rsets);  
+  my $set_prefix = get_set_prefix_from_Set($rsets->[0]); 
+  my %controls   = ();
   
-  my @controls = grep {$_->is_control} @{$rsets->[0]->get_support};
-  #my (@signals, @rep_bams);  
-  my @signals  = grep {! $_->is_control} (map {$_->get_support} @$rsets);
-  
-  #my $filter_format = $self->param_silent('bam_filtered') ? undef : 'bam'; 
-
-  my $set_prefix = $self->get_set_prefix_from_Set($rsets->[0]); 
-
-  #We can't get the alignment file from get_alignment_files_by_ResultSet_formats or 
-  #get_alignment_file_prefix_by_ResultSet as the ResultSet doesn't exist yet
-
-  #This is why we were doing the merge in DefineResultSets
-
-
-  #Let's do it there instead...GRR!
-
-  
-  #foreach my $rep_rset(@$rsets){
-  #  
-  #  push @signals, grep {! $_->is_control} @{$rep_rset->get_support};  
-  #  
-  #  #This should only return 1 bam file else throw
-  #  push @rep_bams, 
-  #    @{$self->get_alignment_files_by_ResultSet_formats($rep_rset, ['bam'],
-  #                                                      undef,  # control flag
-  #                                                      undef,  # all_formats flag
-  #                                                      $filter_format)};
-  #}
+  if(@controls){
+    #Only flow controls if they are defined
+    #mainly for tidyness, but just incase downstream analysis
+    #doesn't handle emtpy controls
+    $controls{controls} =  [ map {$_->dbID } @controls];  
+  }
   
   #This is flowing to DefineMergedReplicateResultSet
-  $self->branch_job_group(2, {%{$batch_params},
+  $self->branch_job_group(2, [{%{$batch_params},
                               max_peaks                  => $max_peaks, #This is batch flown
-                              peak_analysis              => $self->idr_peaks,
-                              merge_replicate_alignments => 1,
+                              #peak_analysis              => $peak_analysis->logic_name,
+                              merge_idr_replicates       => 1,
+                              alignment_analysis         => $rsets->[0]->analysis->logic_name,
                              
                               input_subset_ids => 
                                {
-                                controls     => \@controls,
-                                $set_prefix  => \@signals, }});
-                                 
+                                %controls,
+                                $set_prefix  => [ map {$_->dbID } @signals], }}]);
   return;
 }
 
