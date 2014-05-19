@@ -28,9 +28,10 @@ sub new {
   my $self = {};
   bless $self, $class;
 
-  my ($prog_file, $prog_params, $query_file, $target_file, $out_dir, $format, $debug) =
-    rearrange(['PROGRAM_FILE', 'PARAMETERS', 'QUERY_FILE', 
-               'TARGET_FILE', 'OUTPUT_DIR', 'OUTPUT_FORMAT', 'DEBUG'], @_);
+  my ($prog_file, $prog_params, $query_file, $target_file, 
+      $out_dir, $format, $batch_job, $debug) =
+    rearrange(['PROGRAM_FILE', 'PARAMETERS', 'QUERY_FILE', 'TARGET_FILE', 
+               'OUTPUT_DIR', 'OUTPUT_FORMAT', 'BATCH_JOB', 'DEBUG'], @_);
       
   if(! ($prog_file && $query_file && $target_file)){
     throw("Some mandatory parameters are not met:\n\t".
@@ -54,12 +55,25 @@ sub new {
   }
 
 
+  if($batch_job){
+  
+    if(! defined $ENV{LSB_JOBINDEX}){
+      throw('Batch job mode is specified, '.
+        'but this job does not have an LSB_JOBINDEX environment variable available');  
+    }  
+   
+    #Now alter query file wrt LSB_INDEX
+    #This is based on the default split chunk suffix length of 4
+    #unlikely we will get > 9999 chunks 
+    $query_file .= '_'.sprintf("%04d" ,($ENV{LSB_JOBINDEX} - 1));
+  }
+    
   #It looks like links are no longer files in perl 5.14?
-
   if(! -f $query_file){    
     my $linked_file = readlink $query_file;
         
     if($linked_file ne $query_file){
+      
       if(! -f $linked_file){
         throw("Query file link target is not a file:\n".
           "\tQuery file\t$query_file\n".
