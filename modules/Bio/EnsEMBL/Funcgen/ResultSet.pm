@@ -313,66 +313,6 @@ sub add_support{
 }
 
 
-=head2 experimental_group
-
-  Example    : my $rset_exp_group = $rset->experimental_group;
-  Description: Convenience method to get the unique experimental group name
-               for this ResutlSet. Only works for ResultSets supported by InputSets.
-  Returntype : String or undef (if no unique name found).
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-#Need a better way for handling source refs/track info for tracks which can share the same analysis
-#Is this the analysis description right place to be putting source refs?
-#Yes if we are only ever going to have one source/signal track
-#ChIP-Seq ResultFeature tracks have merged sources and only have source refs corresponding peak zmenus
-#This will also appear in the track info and config
-
-sub experiment{
-  my $self = shift;
-
-  if(! exists $self->{experimental}){
-    #Not undef check as undef is a valid value
-    #for mixed project ResultSets
-  
-    if($self->table_name !~ /^input_(sub)?set$/o){
-      throw('Cannot currently get ExperimentalGroup for a ResultSet with non-InputSet/InputSubset support'); 
-    }
-
-    my $exp;
-    my @sets = @{$self->get_support};
-
-    if(@sets){
-   
-      foreach my $set(@sets){
-
-        if($set->can('is_control') && $set->is_control){
-          #ignore controls as they can come from other groups
-          next;  
-        }
-        
-        $exp ||= $set->experiment;
-        
-        if($exp->name ne $set->experiment->name){
-          #Mixed experimental_group ResultSet
-          warn('Failed to get unique Experiment for ResultSet '.$self->name."\n");
-          $exp = undef;
-          last;
-        }
-      }
-    }
-
-    $self->{experimental} = $exp;
-  }
-
-  return $self->{experimental};
-}
-
-#add experimental_group_name wrapper to handle undef experiment?
-
 
 
 =head2 display_label
@@ -624,7 +564,7 @@ sub get_result_set_input_id{
 =cut
 
 sub get_support {
-  my $self = $_[0];
+  my $self = shift;
   
   if(! defined $self->{support}){
     my $adaptor_method = 'get_'.
@@ -862,44 +802,63 @@ sub compare_to {
 }
 
 
-=head2 get_Experiment
+=head2 experiment
 
-  Example    : my $exp = $result_set->get_Experiment();
+  Arg[1]     : Boolean - Control flag, get's control experiment instead of signal experiment
+  Example    : my $exp = $result_set->experiment;
   Description: Getter for the Experiment of this ResultSet.
                Returns undef if there is more than 1 contributing Experiment
   Returntype : Bio::EnsEMBL::Funcgen::Experiment or undef
-  Exceptions : None
+  Exceptions : Warns if cannot identify unique Experiment
   Caller     : General
   Status     : At Risk
 
 =cut
 
-sub get_Experiment{ 
-  my $self = shift;
-  
-  if (! exists $self->{experiment}){ #exists as undef is valid
-    #These are likely InputSubsets, but may still be InputSets
-    my @supporting_sets = @{$self->get_support};
+#Could denormalise and add experiment_id and control_experiment_id fields  
+#to the result_set table.
+#We should ever have >1 experiment/result_set so this should be fine
+
+#change this to experiment (maintain get_Experiments as a deprecated wrapper, 
+#to standardise Set interface between InputSubset and ResultSet
+
+sub experiment{ 
+  my $self    = shift;
+  my $control = shift;
+  my $attr_name = 'experiment';
+  $attr_name    = 'control_'.$attr_name if $control; 
+ 
+  if (! exists $self->{$attr_name}){ #exists as undef is valid
+    #These are likely InputSubsets, but could be others e.g. InputSets, ExperimentalChips etc
+    my @support = @{$self->get_support};
     my $exp;
     
-    foreach my $set(@supporting_sets){
+    foreach my $support(@support){
     
-      if($set->can('is_control') && $set->is_control){
-        next;
+      if($support->can('is_control')){
+        
+        if(($support->is_control && ! $control) ||
+           ($control && ! $support->is_control)){
+          next;
+        }
+      }
+      elsif($control){
+        throw("Cannot get control Experiment for ResultSet with support type:\t".ref($support));  
       }
     
-      $exp ||= $set->experiment;
+      $exp ||= $support->experiment;
       
-      if($set->experiment->dbID != $exp->dbID){
+      if($support->experiment->dbID != $exp->dbID){
         undef $exp;
+        warn('Failed to get unique Experiment for ResultSet '.$self->name."\n");
         last;        
       }
     }
     
-    $self->{experiment} = $exp;
+    $self->{$attr_name} = $exp;
   }
   
-  return $self->{experiment};
+  return $self->{$attr_name};
 }
   
 ### DEPRECATED ###
@@ -914,5 +873,13 @@ sub add_table_id { #DEPRECATED IN v72
    deprecate('The add_table_id method is now deprecated, please use the -support param in new');
    return $_[0]->_add_table_id($_[1]);
 }
+
+
+#an attempt to try and standardise the Set interface/role
+sub get_Experiment{ #DEPRECATED in v76
+  deprecate('The get_Experiment method is now deprecated, please use the experiment method instead');
+  return shift->experiment;
+}
+
 
 1;
