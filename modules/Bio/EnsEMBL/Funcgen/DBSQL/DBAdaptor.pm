@@ -698,25 +698,23 @@ sub connect_string{
 
 #table is not really mandatory, and this can delete from multiple tables at a time
 
+#TODO return $row_cnt?
+#Use SQLHelper?
 
 sub rollback_table {
   my ( $self, $sql, $table, $id_field, $no_clean_up, $force_clean_up ) = @_;
+  my $row_cnt;
 
   if(! ($sql && $table)){
    throw('Must provide at least the SQL and table name arguments');
   }
 
-  my $row_cnt;
-
   #warn $sql;
-  eval { $row_cnt = $self->dbc->do($sql) };
-
-  if ($@) {
+  if(! eval { $row_cnt = $self->dbc->do($sql); 1 }){
     throw("Failed to rollback table $table using sql:\t$sql\n$@");
   }
 
   $row_cnt = 0 if $row_cnt eq '0E0';
-
   #$self->log("Deleted $row_cnt $table records");
 
   if ( $force_clean_up || ( $row_cnt && !$no_clean_up ) ) {
