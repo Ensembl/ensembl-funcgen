@@ -35,7 +35,8 @@ use warnings;
 use strict;
  
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( scalars_to_objects );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( scalars_to_objects 
+                                               get_set_prefix_from_Set );
 
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
@@ -191,10 +192,12 @@ sub run {   # Check parameters and do appropriate database/file operations...
   }
   else{
     my $fset_anal = $self->param('feature_set_analysis');
+    my $set_prefix = get_set_prefix_from_Set($rset);
+    
     
     $set = $helper->define_DataSet
       (
-       -NAME                 => $set->name.'_'.$fset_anal->logic_name,
+       -NAME                 => $set_prefix.'_'.$fset_anal->logic_name,
        -FEATURE_CLASS        => 'annotated', #Is there overlap with rset feature_class here?
        -SUPPORTING_SETS      => [$rset],
        -DBADAPTOR            => $self->out_db,
