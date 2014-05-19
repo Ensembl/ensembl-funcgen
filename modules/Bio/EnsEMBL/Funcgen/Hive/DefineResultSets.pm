@@ -12,10 +12,11 @@ package Bio::EnsEMBL::Funcgen::Hive::DefineResultSets;
 use warnings;
 use strict;
  
-use Bio::EnsEMBL::Utils::Exception         qw( throw );
-use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( scalars_to_objects );
-use base ('Bio::EnsEMBL::Funcgen::Hive::BaseDB');
+use Bio::EnsEMBL::Utils::Exception              qw( throw );
+use Bio::EnsEMBL::Utils::Scalar                 qw( assert_ref );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils      qw( scalars_to_objects );
+use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools qw( merge_bams );
+use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
 #Change this to DefineResultSets and drop InputSet!
 #This will mean input_set.analysis moves to input_subset.
@@ -122,8 +123,24 @@ sub fetch_input {   # fetch parameters...
   #alignment_analysis is dataflowed explicitly from IdentifyAlignInputSubsets
   #to allow batch over-ride of the default/pipeline_wide value.
   #Could have put this in batch params, but it is only needed here
+  
                     
-  $self->get_param_method('merge_replicate_alignments', 'silent');
+  my $merge = $self->get_param_method('merge_idr_replicates', 'silent');
+
+  if($merge){
+    
+    if( scalar(keys %$isset_ids) != 1 ){
+      $self->throw_no_retry('Cannot currently specify > 1 input_subsets_ids group in merge_idr_replicate');
+    }
+    
+    $self->get_param_method('max_peaks', 'required'); #dataflowed from PostprocessIDR
+    my $ppeak_lname = $self->param_required('permissive_peaks'); #batch flown
+    $self->set_param_method('idr_peak_analysis_id',
+                            scalars_to_objects($self->out_db,
+                                               'Analysis', 
+                                               'fetch_by_logic_name',
+                                               $ppeak_lname)->[0]->dbID);
+  }
 
   #probably need to batch flow just -no_idr
   #as that will also be required in DefineMergedOutputSet? why?
@@ -131,6 +148,8 @@ sub fetch_input {   # fetch parameters...
 
   return;
 }
+
+#Move these to EFGUtils?
 
 sub _are_controls{
   my $ctrls        = shift; 
@@ -147,6 +166,7 @@ sub _are_controls{
   return $all_controls;
 }
 
+
 sub _are_signals{
   my $sigs     = shift; 
   my $all_sigs = 1;
@@ -161,6 +181,7 @@ sub _are_signals{
   
   return $all_sigs;
 } 
+
 
 sub run {   # Check parameters and do appropriate database/file operations... 
   my $self         = shift;
@@ -180,11 +201,14 @@ sub run {   # Check parameters and do appropriate database/file operations...
   #We don't use fetch_Set_input here as we are dealing with many InputSubsets
  
   my $control_branch = '';
+  my $controls = $self->controls;
   
-  if($self->controls){
+  if($controls && 
+     assert_ref($controls, 'ARRAY', 'controls') &&
+     @$controls){
     $ctrls = &scalars_to_objects($self->out_db, 'InputSubset',
                                                 'fetch_by_dbID',
-                                                $self->controls);
+                                                $controls);
     if(! &_are_controls($ctrls)){
       throw("Found unexpected non-control InputSubsets specified as controls\n\t".
         join("\n\t", map($_->name, @$ctrls)));
@@ -220,7 +244,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
     }
     
     if( scalar(keys(%exps)) != 1 ){
-      throw("Failed to identify a unique control Experiment:\n".
+      throw("Failed to identify a unique control Experiment for :\n".
         join(' ', keys(%exps)));  
     }
     
@@ -262,6 +286,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
   
   
   #why did we need these rep keys?
+  my $merge_idr_reps = $self->merge_idr_replicates;
    
   foreach my $set_name(keys %$issets){
     my $parent_set_name = $set_name.'_'.$align_anal->logic_name;
@@ -276,7 +301,6 @@ sub run {   # Check parameters and do appropriate database/file operations...
 
     my $ftype          = $sigs->[0]->feature_type;
     my $is_idr_ftype   = $self->is_idr_FeatureType($ftype);
-    my $merge_rep_bams = $self->merge_replicate_alignments;
     my $ctype          = $sigs->[0]->cell_type;
     
     #Define a single rep set with all of the InputSubsets 
@@ -287,7 +311,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
     
     if($is_idr_ftype && $has_reps){
       
-      if($merge_rep_bams){
+      if($merge_idr_reps){
         #Merged control file should already be present
         #Merged signal file maybe present if GeneratePseudoReplicates has been run
         $branch = 'DefineMergedDataSet';
@@ -323,10 +347,10 @@ sub run {   # Check parameters and do appropriate database/file operations...
           #As we may get here by means other than PreprocessIDR?
                     
           push @{$rep_bams{$parent_set_name}{rep_bams}}, 
-            $self->get_alignment_file_by_ResultSet_formats($rset, ['bam']);
+            $self->get_alignment_files_by_ResultSet_formats($rset, ['bam'])->{bam};
         }
       }
-      else{ #! $merge_rep_bams
+      else{ #! $merge_idr_reps
         $run_reps = 1;
         #RunIDR semaphore handled implicitly later 
         $branch = 'Preprocess_'.$align_lname.'_replicate';       
@@ -344,9 +368,9 @@ sub run {   # Check parameters and do appropriate database/file operations...
     foreach my $rep_set(@rep_sets){ 
       my $rset_name = $parent_set_name;#.'_'.$align_anal->logic_name;
     
-      if($is_idr_ftype && $has_reps){
-        #only 1 in the $rep_set 
-          $rset_name .= '_TR'.$rep_set->[0]->replicate;
+      if($is_idr_ftype && $has_reps && ! $merge_idr_reps){
+        #there will be only 1 in the $rep_set 
+        $rset_name .= '_TR'.$rep_set->[0]->replicate;
       }
       #else we want the parent name
     
@@ -395,6 +419,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
         #e.g. rollback_result_set?
         -ROLLBACK            => $self->param_silent('rollback'),
         -RECOVER             => $self->param_silent('recover'),
+        -FULL_DELETE         => $self->param_silent('full_delete'),
         -CELL_TYPE           => $ctype,
         -FEATURE_TYPE        => $ftype};
     }
@@ -403,6 +428,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
   #Now do the actual ResultSet generation and cache the output_ids on the correct branch
   my %batch_params = %{$self->batch_params};
   my %branch_sets;
+  my $tracking_adaptor = $self->tracking_adaptor;
 
   #We need to test for CONTROL_ALIGNED here
   #but this is currently only set on the ResultSets
@@ -418,22 +444,66 @@ sub run {   # Check parameters and do appropriate database/file operations...
       foreach my $rset(@$rset_group){     
         $rset = $helper->define_ResultSet(%{$rset});
         
-        if(exists $rep_bams{$rset->name}){
+        #How is this not failing? This is likely because there are not dependancies and 
+        #everythign matches, but it should match as we should have both reps in here
+        
+        my %archive_files;
+      
+        if($merge_idr_reps){
+          #Store the tracking info first!
+          #This is to ensure persistance of max_peaks and permissive_peaks analysis
+          #between instances of the pipeline configs.
+          #what is allow_update?
+          #This is to allow update of tracking info, if we have rerun
+          
+          $tracking_adaptor->store_tracking_info(
+            $rset, 
+            {allow_update => 1,
+             info         => {idr_max_peaks        => $self->max_peaks,
+                              idr_peak_analysis_id => $self->idr_peak_analysis_id,
+             }         
+            });
+          
+                
+          #if(!exists $rep_bams{$rset->name}){#throw?}
           #Check we don't already have the file from the Generate PseudoReps step  
           #Can only do merge here, as this is the point we have access to the final ResultSet
-          my $merged_file = $self->get_alignment_file_prefix_by_ResultSet($rset).'.bam';
+          my $merged_file = $self->get_alignment_path_prefix_by_ResultSet($rset).'.bam'; 
       
           #This also needs to use the get_alignment_files_by_ResultSet method!
           
-      
+          #why would we ever want to use existing merged file here?
+          #This is if Pseudo rep IDR has already created the file
+          #Let's simply remove this test, and expect the file 
+          #once the pseudo rep code is implemented
+          
           
           if(! -f $merged_file || $self->param_silent('overwrite')){
             
-            throw("Need to implement archive support here!");
+            #throw("Need to implement archive support here!");
+            #basically we need to archive the rep bams, but probably not until
+            #this analysis has finished successfully
+            #so let's pass this on, similar to garbage
+            
+            #In future we will treat align all replicates separately,
+            #and never archive merged files
+            
+            
+            $archive_files{to_archive} = $rep_bams{$rset->name}{rep_bams}; 
+            
+            #Temporary hack to handle a gender update from undef to female for NHDF-AD
+            #sam_ref_fai is already set by get_alignment_files_by_ResultSet_format
+            my $gender = ($rset->cell_type->name eq 'NHDF-AD') ? 'male' :
+              $rset->cell_type->gender;
+              
+            warn "REMOVE: gender hacked for NHDF-AD";
+            
             merge_bams($merged_file, 
+                       $self->sam_ref_fai($gender),
                        $rep_bams{$rset->name}{rep_bams},
-                       $self->sam_ref_fai($rset->cell_type->gender),
-                       {remove_duplicates => 1});
+                       {no_rmdups => 1,
+                        debug     => $self->debug
+                       });
           }
         }
         
@@ -441,7 +511,8 @@ sub run {   # Check parameters and do appropriate database/file operations...
           $self->branch_job_group($branch, [{%batch_params,
                                              dbID       => $rset->dbID, 
                                              set_name   => $rset->name,
-                                             set_type    => 'ResultSet'}]);
+                                             set_type    => 'ResultSet',
+                                             %archive_files}]);
         }
         elsif($branch =~ /(_control$|_replicate$)/){
           
