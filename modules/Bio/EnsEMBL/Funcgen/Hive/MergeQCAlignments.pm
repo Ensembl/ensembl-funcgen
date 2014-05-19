@@ -49,7 +49,7 @@ use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 #3 Use and update the tracking database dependant on no_tracking
 #4 Drop signal flow_mode in favour of using result_set_groups as a proxy. 
 #  It is kinda nice to have this flow_mode vs result_set_group validation though.
- 
+#5 Make archive optional, i.e. remove mandatory flag? 
 
 my %valid_flow_modes = (replicate => undef,
                         merged    => undef,
@@ -57,7 +57,6 @@ my %valid_flow_modes = (replicate => undef,
 
 sub fetch_input {  
   my $self = shift;
-  
   #Set some module defaults
   $self->param('disconnect_if_idle', 1);
   
@@ -122,8 +121,7 @@ sub run {
   my $sam_header = $self->sam_header;
   my $cmd;
   
-  
-  #Clean up fastqs first, as they are no longer needed
+  ### CLEAN FASTQS ###
   if($self->fastq_files){
     #Run with no exit flag so we don't fail on retry
     $cmd = 'rm -f '.join(' ', @{$self->fastq_files});
@@ -131,20 +129,17 @@ sub run {
     run_system_cmd($cmd, 1);
   }
   
-  
-  
-  my @bam_files  = @{$self->bam_files};  
-   
-  #We need to get get alignment file prefix here
-  my $file_prefix  = $self->get_alignment_file_prefix_by_ResultSet($rset, $self->run_controls);
+  ### MERGE BAMS ###
+  my $file_prefix  = $self->get_alignment_path_prefix_by_ResultSet($rset, $self->run_controls); 
   my $unfiltered_bam     = $file_prefix.'.unfiltered.bam';
-  $self->helper->debug(1, "Merging bams to:\t".$unfiltered_bam);
- 
+  $self->helper->debug(1, "Merging bams to:\t".$unfiltered_bam); 
   #sam_header here is really optional if is probably present in each of the bam files but maybe incomplete 
+  my @bam_files  = @{$self->bam_files};  
   merge_bams($unfiltered_bam, $self->sam_ref_fai($rset->cell_type->gender), \@bam_files, 
              {write_checksum => 1, #turns on checksum writing
               debug          => $self->debug});
-   
+  
+  ### ALIGNMENT REPORT ### 
   #todo convert this to wite to a result_set_report table
   my $alignment_log = $file_prefix.".alignment.log";
   $cmd ='echo -en "Alignment QC - samtools flagstat output:\n" > '.$alignment_log.
@@ -167,7 +162,7 @@ sub run {
   #Assuming all QC has passed, set status
   
   if($self->run_controls){
-    my $exp = $self->get_control_InputSubset($rset)->experiment;
+    my $exp = $rset->experiment(1);#control flag
     $exp->adaptor->store_status('ALIGNED_CONTROL', $exp);
     $exp->adaptor->revoke_status('ALIGNING_CONTROL', $exp);
   }
@@ -200,11 +195,10 @@ sub run {
   #alignement log for the unfiltered file
   #We would have to re-instate an unfiltered file if we ever introduce
   #more filtering filtering                                                
-  $self->archive_file($unfiltered_bam, 1);#mandatory flagn
-  $self->archive_file($unfiltered_bam.'.CHECKSUM', 1);
+  $self->archive_files([$unfiltered_bam, $unfiltered_bam.'.CHECKSUM'] 1);#mandatory flagn
   
-  my $flow_mode    = $self->flow_mode;
   my %batch_params = %{$self->batch_params};
+  my $flow_mode    = $self->flow_mode;
   
   if($flow_mode ne 'signal'){
     #flow_mode is merged or replicate, which flows to DefineMergedOutputSet or run_SWEmbl_R0005_replicate
