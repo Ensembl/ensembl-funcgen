@@ -57,6 +57,7 @@ configure_hive.pl
     -dnadb_pass       <String>      Core DB pass
     -dnadb_name       <String>      Core DB name
     -dnadb_port       <Int>         Core DB port
+    -force            Forces analysis top up, even if config already exists in DB
     -list             Print a list of the supported config module names
     -help             Prints a helpful message
     -man              Prints the man page
@@ -83,7 +84,10 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils        qw( run_system_cmd
                                                       url_from_DB_params 
                                                       add_DB_url_to_meta );
 use Bio::EnsEMBL::Funcgen::Hive::Utils            qw( inject_DataflowRuleAdaptor_methods );
-#$| = 1;#for debug
+
+#TODO
+# 1 Genericise pipeline param passing. Current allow_no_arch and archive_root are hardcoded.
+
 
 my %config_info = 
  (
@@ -120,7 +124,7 @@ my %config_labels =
 sub main{
   my @tmp_args = @ARGV;
   my (@configs, $species, $data_root, $hive_script_dir, $list);   
-  my ($archive_root, $allow_no_arch);            
+  my ($archive_root, $allow_no_arch, $force);            
   my $db_opts  = get_DB_options_config();#This will get opts for funcgen, core and pipeline by default
   
   GetOptions
@@ -150,7 +154,7 @@ sub main{
   #add some sprintf lpad action in here
   push @valid_confs, map("$_ (= ".join(' ', @{$config_labels{$_}}[1..$#{$config_labels{$_}}]).')', 
                          keys %config_labels);
-  %config_info = (%config_info, %config_labels); #Add labels after sort
+  %config_info = (%config_info, %config_labels);
   
   if($list){
     print "Valid config modules/labels are:\n\t".join("\n\t", @valid_confs)."\n";
@@ -254,17 +258,17 @@ sub main{
   ### PERFORM ANALYSIS_TOPUP ###
   my $conf_key   = 'hive_conf';
   
-  #my @meta_confs = @{$mc->list_value_by_key($conf_key)};
+  #my @meta_confs = @{$mc->list_value_by_key($conf_key)};#old method used this
   my @meta_confs = @{$ntable_a->fetch_all_by_meta_key($conf_key)};
   my $dfr_adaptor = $pdb->get_DataflowRuleAdaptor;
   inject_DataflowRuleAdaptor_methods($dfr_adaptor); #Injects get_semaphoring_analysis_ids
   
   foreach my $conf(@confs){
    
-    #if( grep(/^$conf$/, @meta_confs) ){
-    #  warn "Skipping hive -analysis_topup.  $conf config has already been added to the DB\n";  
-    #}
-    #else{ #Add new config!
+    if( grep(/^$conf$/, @meta_confs) ){
+      warn "Skipping hive -analysis_topup.  $conf config has already been added to the DB\n";  
+    }
+    else{ #Add new config!
       
       #Handle potential resetting of pipeline wide 'can_run_AnalaysisLogicName' params 
       #These should be in the meta table and should be cached if they are 'true' 
@@ -309,11 +313,18 @@ sub main{
       #We will need to bring back all the DataflowRules for this
       #as the funnel_dataflow_rule_id will likely be in a non-link analysis
       #let's do a direct SQL approach for this, rather than getting all the analyses
+      
+      #will -reset_all_bobs_for_analysis even reset to SEMAPHORED?
+      #We could do this manually will an update and then -balance_semaphores
+      
+      
       my @can_run_keys;
       
       
       foreach my $can_run_key(keys %meta_key_values){
         (my $lname = $can_run_key) =~ s/^can_//o; 
+        
+        warn "push/unshift $lname, $can_run_key";
         
         if($dfr_adaptor->get_semaphoring_analysis_ids_by_logic_name($lname)){
           push @can_run_keys, $can_run_key;   
@@ -325,34 +336,52 @@ sub main{
       
       
       foreach my $can_run_key(@can_run_keys){
+        
       
         if(scalar(@{$meta_key_values{$can_run_key}}) != 1){
+          #this should not be possible as we are fetching a hash
           throw("Found multiple entries for meta_key $can_run_key:\t".join(' ', @{$meta_key_values{$can_run_key}}));  
         }
-        my $can_run_value = $meta_key_values{$can_run_key}->[0];
         
-        if($can_run_value){ #is defined and not 0
+        #This is getting the old value! Not the new one!
+        my $old_value = $meta_key_values{$can_run_key}->[0];
+        my $new_value = $ntable_a->fetch_by_meta_key_TO_meta_value($can_run_key); 
+        #warn "testing $can_run_key with values(new/old):\t".$new_value.' / '.$old_value;
+        
+        if($old_value){ #is defined and not 0
+        
+          if(! $new_value){
+            throw("Failed to process link analyses for $conf. $can_run_key meta_value has been reset from 1 to $new_value");  
+          }
+        }
+        elsif($new_value){ #&& ! $old_value
+       
           my $meta_id = $ntable_a->fetch_by_meta_key_TO_meta_id($can_run_key);            #PRIMARY KEY
-          $ntable_a->update_meta_value({meta_id=>$meta_id, meta_value =>$can_run_value}); #AUTOLOADED
+          #$ntable_a->update_meta_value({meta_id=>$meta_id, meta_value =>$can_run_value}); #AUTOLOADED
        
           #Now reset the analysis if the value matches this config
           #i.e. we have just topped up with a downstream config, and want to reset and link
           #analyses which may have run.
           #$can_run_key will be double quoted as it is loaded from the config
           
+          #Currently this will reset all DONE jobs. #This means that if we have 2 configs
+          #which specify they're namsespace as the value, then truly DONE jobs will be reset
+          #why was this change from 1 to config name?
+          #The change from 0 to 1 enough here
+          #Probably need to change this back?
           (my $can_run_analysis = $can_run_key) =~ s/^can_//o;
-             
-          if($can_run_value eq "\"$conf\""){
+          
+          #if($can_run_value eq "\"$conf\""){
             $cmd = "perl $hive_script_dir/beekeeper.pl -url $hive_url --reset_all_jobs_for_analysis $can_run_analysis";
             print "\nRESETTING LINK ANALYSIS JOBS FOR:\t$can_run_analysis\n";
             run_system_cmd($cmd);
             print "\nRESET LINK ANALYSIS JOBS FOR:\t$can_run_analysis\n";
-          }
+          #}
         }
       }
       
-    #  _register_conf_in_meta($ntable_a, $conf);    
-    #}
+      _register_conf_in_meta($ntable_a, $conf);    
+    }
   }
 
 }# end of main
