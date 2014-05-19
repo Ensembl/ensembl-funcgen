@@ -56,7 +56,7 @@ use warnings;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
-use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
+use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref check_ref );
 
 use base qw( Bio::EnsEMBL::Storable );
 
@@ -162,7 +162,8 @@ sub get_all_states{
   if(! defined $self->{states}){
 
     if(! $self->adaptor){
-      throw('Cannot get_all_states for a Storable without an associated adaptor');
+      #throw('Cannot get_all_states for a Storable without an associated adaptor');
+      $self->{states} = []; #Need to set this for compare_to
     }
     else{ #Populate cache
 
@@ -633,6 +634,11 @@ sub compare_storable_methods {
       next;
     }
     #else we have same number of storables
+    
+    #Need to account for a single undef value, here?
+    
+    
+    
 
     for my $i (0..$#{$these_objs}){
       #We can't alter $method key here for test discrimination
@@ -686,14 +692,9 @@ sub _compare_method_return_types{
 
   my ($diff, $multi, @these_values, @other_values);
 
-  if($storable){
-    @these_values = $self->$method;
-    @other_values = $obj->$method;
-  }
-  else{
-    @these_values = $self->$method || ('NULL');
-    @other_values = $obj->$method  || ('NULL');
-  }
+  #|| () avoids handing a array of a single undef value
+  @these_values = $self->$method || ();
+  @other_values = $obj->$method  || ();
 
   #Handle return types
   if( (scalar(@these_values) == 1) &&
@@ -710,7 +711,7 @@ sub _compare_method_return_types{
       }
     }
   }
-
+  
   #Compare sizes and sort
   if(scalar(@these_values) != scalar(@other_values) ) {
     $diff = "Return size mismatch:\t".
