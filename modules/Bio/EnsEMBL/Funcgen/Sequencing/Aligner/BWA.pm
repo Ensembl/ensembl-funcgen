@@ -22,6 +22,11 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd );
 use base qw( Bio::EnsEMBL::Funcgen::Sequencing::Aligner);#Does not import
 
 
+# NOTE:
+# If bwa is seg faulting with little to no useful output, it is probably running
+# out of memory. Try upping the bsub -R/M spec
+
+
 #todo use Rob Davies hardened bwa https://github.com/daviesrob/bwa
 #The following branches are available:
 #0.5.10-mt_fixes    0.5.10 with multithreaded samse/sampe
@@ -34,6 +39,10 @@ use base qw( Bio::EnsEMBL::Funcgen::Sequencing::Aligner);#Does not import
 #will this just reduce our submission rate as we will require an entire node
 #to be free before we get a slot
 #maybe try -t 2?
+#What is more efficient here, multiple cpu jobs or more single cpu jobs?
+#In terms of optimsed run time, curretnly 1cpu/chunk takes ~ 30mins
+#Using >1cpu would likely mean upping the chunk size, or running > 1 in a batch series
+
 
 sub new {
   my $caller      = shift;
@@ -105,7 +114,7 @@ sub run {
   warn "Query file:\t$query_file\nOutfile prefix:\t$outfile_prefix\n" if $self->debug;
   
   my $sai_file      = "${output_dir}/${outfile_prefix}.sai";
-  my $samse_file    = "${output_dir}/${outfile_prefix}.samse.bam";#sam";
+  my $samse_file    = "${output_dir}/${outfile_prefix}.samse.sam";
   my $unsorted_file = "${output_dir}/${outfile_prefix}.samse.bam.unsorted";
   my $bam_file      = "${output_dir}/${outfile_prefix}.bam";
   my @tmp_files = ($sai_file, $samse_file, $unsorted_file);
@@ -140,6 +149,7 @@ sub run {
   #todo add -P option here to load index into memory which should speed execution
   #but will require ~5GB of memory
   #THIS ONLY WORKS FOR SAMPE?
+    
   $cmd = "$bwa_bin samse $ref_file $sai_file ${input_dir}/${query_file} > $samse_file";
   warn "Running:\n$cmd\n" if $self->debug;  
   run_system_cmd($cmd);
@@ -201,7 +211,7 @@ sub run {
   
   #return Name of output file. Will need to process output format params
   #if we implement this
-  return "${output_dir}/${outfile_prefix}.bam";
+  return $bam_file;
 }
 
 
