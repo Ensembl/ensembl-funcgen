@@ -43,8 +43,8 @@ use Devel::Peek;
 
 use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( get_alignment_file_prefix_by_ResultSet
-                                               get_study_name_from_Set
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( get_study_name_from_Set
+                                               get_set_prefix_from_Set
                                                scalars_to_objects 
                                                validate_path
                                                run_system_cmd
@@ -196,7 +196,10 @@ sub fetch_input {   # nothing to fetch... just the DB parameters...
     #run with no exit flag so we don't fail on retry
     run_system_cmd("rm -f $garbage", 1);
   }
-
+  
+  my $to_archive = $self->param_silent('to_archive');
+  $self->archive_files($to_archive) if defined $to_archive;
+    
   return;
 }
 
@@ -293,6 +296,7 @@ sub alignment_dir {
                                  get_study_name_from_Set($rset, $control)],
                                 $create);    
   }
+  
   return $self->param('alignment_dir');
 }
 
@@ -1189,7 +1193,7 @@ sub branch_job_group{
 
 #Woudl have been branched like this
 #$self->branch_job_group([['Branch2_analysis1', 'Branch2_analysis2'], [$branch2_job_id1, ...], 'RunIDR', [$job_id2, ...]]);
-#But should now look like this
+#But should look like this
 ##$self->branch_job_group([2, [$branch2_job_id1, ...], 3, [$branch3_job_id2, ...]]);
 
 sub dataflow_job_groups{
@@ -1197,13 +1201,72 @@ sub dataflow_job_groups{
   my $job_groups = $self->{job_groups} || []; #allow no job groups
   
   foreach my $job_group(@$job_groups){
+    #we can detect funnel jobs here!
+    #Is it possibl to have more than one semaphore from a fan?
+    #when will the fan be flown, on the first funnel flow? 
+     
      
     while(@$job_group){
       my $branch   = shift @$job_group;
       my $id_array = shift @$job_group;
       
       #let dataflow_output_id do the validation
-      $self->dataflow_output_id($id_array, $branch);
+      
+      #This will fail silently if the input_id already exists
+      #There is no way to know which of the jobs have failed to flow
+      #and it only returns this internal DB ids of the successful jobs
+    
+      #why are we only getting 1 job in the group here?
+      #is this how preprocess flows them?
+    
+      #warn "Dataflowing ".scalar(@$id_array)." on branch $branch";
+    
+    
+      $self->dataflow_output_id($id_array, $branch);  
+      
+      #my $num_jobs = scalar(@$id_array);
+    
+      #If these are fan jobs, these will not be dataflowed until 
+      #the funnel jobs is flowed!!! So this will not work here
+    
+      #my @job_dbids      = @{$self->dataflow_output_id($id_array, $branch)};
+      #my $total_jobs     = scalar(@$id_array);
+      #my $failed_to_flow = $total_jobs - scalar(@job_dbids);
+      
+      
+      #This will not stop the flowed jobs from commencing, but will mark this jobs as failed so we have a good
+      #point of reference for clean up.
+      
+      #We need to be able to capture the failing jobs, grab there ids and delete them
+    
+      #all we would need is the destringified input_id and the analysis_id to identify
+      #the problematic job
+      #This is available in dataflow_output_id
+      #Then we could handle the delete here
+      #or it could be integrated into the AnalysisJobAdaptor and called from dataflow_output_id
+      #given some delete on conflict flag
+      #The alternate is to use INSERT REPLACE
+      #but this leaves downstream jobs in place, until they themselves are REPLACED
+      #Delete would be cleaner
+    
+      #There is no easy way  to do this from here
+    
+    
+    
+    
+      #if($failed_to_flow){
+      #  my $flown_jobs = '';
+
+      #  if(@job_dbids){
+      #    $flown_jobs = "\nSome jobs were successfully flown but may need deleting:".
+      #      "\n@job_dbids";
+      #  }
+
+      #  #This is currently dieing before it get's a chance to flow the rest
+      #  $self->throw_no_retry("Failed to dataflow $failed_to_flow/$total_jobs job IDs as ".
+      #  "they already exist in the DB${flown_jobs}");  
+      #}
+      
     }
   } 
 
@@ -1637,6 +1700,31 @@ sub sam_header{
 #i.e. after we have just created it? Or is that good paranoid validation?
 #checksumming does take long, so let's just take the hit and say it's belt and braces validation
 
+
+sub get_alignment_path_prefix_by_ResultSet{
+  my $self    = shift;
+  my $rset    = shift;
+  my $control = shift;;  
+  assert_ref($rset, 'Bio::EnsEMBL::Funcgen::ResultSet');
+  my @rep_numbers;
+  
+  foreach my $isset(@{$rset->get_support}){
+    
+    if( ($control && $isset->is_control)  ||
+        ((! $control) && 
+         (! $isset->is_control)) ){ 
+       push @rep_numbers, $isset->replicate;
+    }
+  }
+  
+  #Uses get_set_prefix_from_Set rather than set name, as IDR rep sets
+  #will already contain the rep number, and merged sets will not  
+  return $self->alignment_dir($rset, undef, $control).'/'.
+    get_set_prefix_from_Set($rset, $control).'_'.
+    $rset->analysis->logic_name.'_'.join('_', sort(@rep_numbers)); 
+}
+
+
 sub get_alignment_files_by_ResultSet_formats {
   my ($self, $rset, $formats, $control, $all_formats, $filter_format) = @_;
   assert_ref($formats, 'ARRAY');  
@@ -1656,6 +1744,11 @@ sub get_alignment_files_by_ResultSet_formats {
   if($control){
     my $exp = $rset->experiment(1);#control flag
     
+    #This should never happen
+    if(! defined $exp){
+      $self->throw_no_retry('Could not get a control experiment for ResultSet '.$rset->name);
+    } 
+    
     if(! $exp->has_status('ALIGNED_CONTROL')){
       throw('Cannot get control alignment files for a ResultSet('.$rset->name.
         ') whose Experiment('.$exp->name.') does not have the ALIGNED_CONTROL status');
@@ -1673,12 +1766,16 @@ sub get_alignment_files_by_ResultSet_formats {
     #$align_files = { => validate_path($self->param($file_type)) };
   }
   else{ # Get default file
-    my $align_dir = $self->alignment_dir($rset, undef, $control);
-  
-    $path = get_alignment_file_prefix_by_ResultSet($rset, $align_dir, $control); 
+    $path = $self->get_alignment_path_prefix_by_ResultSet($rset, $control); 
     $path .= '.unfiltered' if $filter_format;
+    
+    #Temporary hack to handle a gender update from undef to female for NHDF-AD    
+    my $gender = ($rset->cell_type->name eq 'NHDF-AD') ? 'male' :
+              $rset->cell_type->gender;
+    warn "REMOVE: gender hacked for NHDF-AD";         
+    
     my $params = {debug              => $self->debug,
-                  ref_fai            => $self->sam_ref_fai($rset->cell_type->gender),  #Just in case we need to convert
+                  ref_fai            => $self->sam_ref_fai($gender),  #Just in case we need to convert
                   filter_from_format => $filter_format,
                   skip_rmdups        => 1, #This will have been done in merge_bams
                   all_formats        => $all_formats,
@@ -1729,37 +1826,54 @@ sub archive_root{
 
 #validate archive_root is not the same as data_root_dir in new?
 
-sub archive_file{
-  my $self      = shift;
-  my $file      = shift;
-  my $mandatory = shift;
+
+sub archive_files{
+  my $self       = shift;
+  my $files      = shift;
+  my $mandatory  = shift;
+  
+  if(ref($files)){
+    assert_ref($files, 'ARRAY', 'archive files');  
+  }
+  else{
+    $files = [$files];  
+  }
   
   if(my $archive_root = $self->archive_root){
     
-    my $data_root =$self->data_root_dir;
+    my $data_root = $self->data_root_dir;
+
+    foreach my $file(@$files){
     
-    if($file !~ /^$data_root/o){
-      $self->throw_no_retry('The file path to archive must be a full length path rooted in the data root directory:'.
-        "\nFile path:\t$file\nData root:\t$data_root\n");  
-    }
+      if($file !~ /^$data_root/o){
+        $self->throw_no_retry('The file path to archive must be a full length path rooted in the data root directory:'.
+          "\nFile path:\t$file\nData root:\t$data_root\n");  
+      }
         
-    (my $archive_file = $file) =~ s/$data_root/$archive_root/;
+      (my $archive_file = $file) =~ s/$data_root/$archive_root/;
     
-    #sanity check these are not the same
+      #sanity check these are not the same 
+      if($archive_file eq $file){
+        $self->throw_no_retry("Source and archive filepath are the same:\n$file");  
+      }
     
-    if($archive_file eq $file){
-      $self->throw_no_retry("Source and archive filepath are the same:\n$file");  
-    }
+      #Now we need to create the target directory if it doesn't exist
+      (my $target_root = $archive_file) =~ s/(.*\/)[^\/]+$/$1/;
+      
+      if((! -f $file) && (-f $archive_file)){
+        #File appears to have already been archived. This is probably a rerunning job
+        return;
+      }
+      
     
-    #Now we need to create the target directory if it doesn't exist
-    (my $target_root = $archive_file) =~ s/(.*\/)[^\/]+$/$1/;
-    
-    if(! -d $target_root){
-      #Maybe this is an intermitent error?
-      $self->run_system_cmd_no_retry("mkdir -p $target_root");      
-    } 
+      if(! -d $target_root){
+        #Maybe this is an intermitent error?
+        $self->run_system_cmd_no_retry("mkdir -p $target_root");      
+      } 
+      
         
-    $self->run_system_cmd_no_retry("mv $file $archive_file");    
+      $self->run_system_cmd_no_retry("mv $file $archive_file");    
+    }
   }
   elsif($mandatory && ! $self->param_silent('allow_no_archiving')){
     $self->throw_no_retry('The mandatory flag has been set but not archive_root is defined');  
