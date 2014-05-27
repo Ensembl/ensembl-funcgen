@@ -40,12 +40,10 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( scalars_to_objects
 
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
-#This assumes the InputSet has been previously registered, 
-#and now we want simply to define/fetch the data set, feature and result set based on these data.
+#This assumes the ResultSet has been previously registered,
 
 #params
-#name
-#result_set_only
+#set_type, name, dbID
 #These allow over-ride of defaults
 #feature_set_analysis
 #result_set_analysis
@@ -62,179 +60,139 @@ use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 #change this analysis to DefineSets? As it deals with InputSets, FeatureSets, ResultSet and DataSets
 #or should we just create another analysis which is DefineInputSets?
 #as it is almost entirely different?
+#refactor this default_analysis code in BaseDB? As this is reused in other runnables
 
 
 sub fetch_input {   # fetch parameters...
   my $self = shift @_;
-  $self->check_analysis_can_run; #Could put this in Base::fetch_input?
+  $self->check_analysis_can_run; 
   $self->SUPER::fetch_input;  
   my $set = $self->fetch_Set_input('ResultSet');#defines result_set method
-
-  #refactor this default_analysis method in BaseDB? As this is reused in other runnables
   my %default_analyses;
-  my @set_types = ();
-  push @set_types, 'feature_set' if ! $self->get_param_method('result_set_only', 'silent');
- 
-  #TODO Validate default set analysis keys exist as feature_type class or name?
-  #This would fail for species with low coverage i.e. some names may be absent
 
 
   #Can we move some of this into BaseSequenceAnalysis as it will need to be used
   #by Run_QC_and_ALigner to enable selective data flow into the relevant 
   #IdentifyInputSets analyses
   
-  #we could simplify this loop now, as we will always have the result set
-  #but don't we want to keep it generic, such that we can re-use it however we want?
-  #This is already hardocded to take a result set there is currently no other possibility
-  #apart from input_set, which will disappear
+  my $anal_type = $self->param_required('feature_set_analysis_type'); 
+  my $set_lname = $self->get_param_method($anal_type.'_analysis', 'silent');
   
   
-  #Do we even want to define a DataSet if there is no feature_set? 
-  #durely we shoudl flow the relevant set types down each branch of the config
-  #rather than just the data set?
-  
-  foreach my $set_type( @set_types ){  
-    my $anal_type = $self->param_required($set_type.'_analysis_type'); 
-    my $set_lname = $self->param_silent($anal_type.'_analysis');
+  ### Set post IDR FeatureSet analysis 
+  if($self->is_idr_ResultSet($set)){
+    #This is highly dependant on the fact we never make a DataSet for the IDR replicate peaks (only a ResultSet)
+    #If this ever changes we could use a 'merged' param here or the analysis_name (DefineMergtedDataSet) as a proxy
     
-    if(! defined $set_lname){
-      
-      $default_analyses{$set_type} = $self->param_silent('default_'.$set_type.'_analyses');     
-      
-      if(! defined $default_analyses{$set_type}){
-        throw("Please define -${set_type}_analysis or add to default_${set_type}_analyses".
-          " in the default_options config");
-      }
-      
-     
-      if(exists $default_analyses{$set_type}{$set->feature_type->name}){
-        $set_lname = $default_analyses{$set_type}{$set->feature_type->name}; 
-      }
-      elsif(exists $default_analyses{$set_type}{$set->feature_type->class}){
-        $set_lname = $default_analyses{$set_type}{$set->feature_type->class};
-      }
-      else{
-        throw("No default $set_type analysis available for ".$set->feature_type->name.
-          '('.$set->feature_type->class.
-          ").\n Please add FeatureType name or class to  default_${set_type}_analyses ".
-          "in default_options config or specify -${set_type}_analysis"); 
-      }
-    }                                  
+    #We may not have had peak_analysis batch flown if we are starting from IdentifyMergedResultSets
+    #although if defined it should match permissive_peaks here
+    #This would highlights a potential conflict between no_idr and peak_analysis
+    #Should peak_analysis turn on no_idr?
+    #peak_analysis, is generally for non-idr data sets
+    #and permissive_peaks overrides this
+    #IDR mode currently only supports SWEMBL, so redefining permissive_peaks
+    #will fail in some unkown way at present?       
+    $set_lname = $self->get_param_method('permissive_peaks', 'required').'_IDR';  
     
-    #Catch undefs in config
-    if(! defined $set_lname){
-      throw("Unable to identify defined $set_type analysis in config for ".$set->feature_type->name.
-      ".\nPlease define in default_${set_type}_analyses config or specify -${set_type}_analysis");     
-    }    
-    #can't use process_params here as the param name does match the object name
-    #We could over-ride this with a second arrayref of class names                                      
-    $self->param($set_type.'_analysis', 
-                 &scalars_to_objects($self->out_db,
-                                     'Analysis', 
-                                     'fetch_by_logic_name',
-                                     [$set_lname])->[0]);                                              
+          #Reset peak_analysis here for clarity as this is batch flown
+    #although we woudl still use the above to create the feature_set
+    $self->peak_analysis($set_lname);
+    
+    #This module has been written so that it is agnostic towards to the type of feature_set
+    #it is creating, so putting permissive_peaks in here spoils that at present   
+    #i.e. we pass the default_peak_analyses as the default_feature_set_analyses
   }
+    
+    
+  if(! defined $set_lname){
+    
+    $default_analyses{feature_set} = $self->param_silent('default_feature_set_analyses');     
+    
+    if(! defined $default_analyses{feature_set}){
+      throw("Please define -feature_set_analysis or add to default_feature_set_analyses".
+        " in the analysis config");
+    }
+    
+ 
+    if(exists $default_analyses{feature_set}{$set->feature_type->name}){
+      $set_lname = $default_analyses{feature_set}{$set->feature_type->name}; 
+    }
+    elsif(exists $default_analyses{feature_set}{$set->feature_type->class}){
+      $set_lname = $default_analyses{feature_set}{$set->feature_type->class};
+    }
+    else{
+      throw("No default feature_set analysis available for ".$set->feature_type->name.
+        '('.$set->feature_type->class.
+        ").\n Please add FeatureType name or class to  default_feature_set_analyses ".
+        "in analysis config or specify -feature_set_analysis"); 
+    }
+  }                                  
+    
+  #Catch undefs in config
+  if(! defined $set_lname){
+    throw('Unable to identify defined feature_set analysis in config for '.$set->feature_type->name.
+    ".\nPlease define in -default_feature_set_analyses config or specify -feature_set_analysis");     
+  }    
+  #can't use process_params here as the param name does match the object name
+  #We could over-ride this with a second arrayref of class names     
   
-
+  warn "defining analysis as $set_lname";
+                                   
+  $self->param('feature_set_analysis', 
+               &scalars_to_objects($self->out_db,
+                                   'Analysis', 
+                                   'fetch_by_logic_name',
+                                   [$set_lname])->[0]);                                              
   return;
 }
 
 
-#TODO handle ResultSet only run
-#This would take a flag and create the ResultSet in isolation
-#would need to validate not FeatureSet stuff was set
-#this might clash with some defaults if we had mixed set types in the pipeline
-#i.e. some with and some without datasets
-#feature_set_analysis is always created dynamically anyway, so this would be dependant on
-#-result_set_only 
-
-
-#TODO Add support for feature_set_only! IDR sets!
-
-
+#TODO
+#1 Migrate this to the Importer as define_OutputSetthere is some overlap 
+#  there of param validation between BaseImporter and hive 
+#2 Review whether rollback handles status entries correctly
+#3 Review whether we need to store some tracking info here
+#4 If the dataflow ever changes from this, we will need to use branching_by_analysis
+  
 sub run {   # Check parameters and do appropriate database/file operations... 
   my $self   = shift;
   my $helper = $self->helper;  
   my $rset   = $self->ResultSet;
+  my $fset_anal = $self->param('feature_set_analysis');
+  my $set_prefix = get_set_prefix_from_Set($rset);
   my $set;    
-
-  #todo migrate this to the Importer as define_OutputSet
-  #there is some overlap here of param validation between BaseImporter and hive
-  
-      
+    
   #Never set -FULL_DELETE here!
   #It is unwise to do this in a pipeline and should be handled
   #on a case by case basis using a separate rollback script    
-  
   #Should also never really specify recover here either?
-  #This bascailly ignores the fact that a ResultSet may be lin ked to other DataSets
+  #This bascailly ignores the fact that a ResultSet may be linked to other DataSets
   
-  
-  if( $self->result_set_only ){
-    throw('Pipeline does not yet support creation of a ResultSet without and associated Feature/DataSet');
-     
-    #$set = $helper->define_ResultSet
-    #  ( 
-    #   -NAME                 => $rset->name,#.'_'.$rset_anal->logic_name,
-    #   #-FEATURE_CLASS        => result | dna_methylation',
-    #   #currently set dynamically in define_ResultSet
-    #   -SUPPORTING_SETS      => [$rset],
-    #   -DBADAPTOR            => $self->out_db,
-    #   -RESULT_SET_ANALYSIS  => $self->param('result_set_analysis'),
-    #   -RESULT_SET_MODE      => $self->param('result_set_mode'),
-    #   -ROLLBACK             => $self->param('rollback'),
-    #   -RECOVER              => $self->param('recover'),
-    #   -SLICES               => $self->slices,
-    #   -CELL_TYPE            => $iset->cell_type,
-    #   -FEATURE_TYPE         => $iset->feature_type,
-    # );
-        
-  }
-  else{
-    my $fset_anal = $self->param('feature_set_analysis');
-    my $set_prefix = get_set_prefix_from_Set($rset);
-    
-    
-    $set = $helper->define_DataSet
-      (
-       -NAME                 => $set_prefix.'_'.$fset_anal->logic_name,
-       -FEATURE_CLASS        => 'annotated', #Is there overlap with rset feature_class here?
-       -SUPPORTING_SETS      => [$rset],
-       -DBADAPTOR            => $self->out_db,
-       
-       -FEATURE_SET_ANALYSIS => $fset_anal,
-       -RESULT_SET_ANALYSIS  => $self->param('result_set_analysis'),
-       -RESULT_SET_MODE      => $self->param('result_set_mode'),
-       -ROLLBACK             => $self->param('rollback'),
-       -RECOVER              => $self->param('recover'),
-       -SLICES               => $self->slices,    
-       -CELL_TYPE            => $rset->cell_type,
-       -FEATURE_TYPE         => $rset->feature_type,
-       #-DESCRIPTION   => ?
-       #-DISPLAY_LABEL => ?
-      );  
-  }
+  $set = $helper->define_DataSet
+   (
+    -NAME                 => $set_prefix.'_'.$fset_anal->logic_name,
+    -FEATURE_CLASS        => 'annotated', #Is there overlap with rset feature_class here?
+    -SUPPORTING_SETS      => [$rset],
+    -DBADAPTOR            => $self->out_db,
+    -FEATURE_SET_ANALYSIS => $fset_anal,
+    -RESULT_SET_ANALYSIS  => $self->param('result_set_analysis'),
+    -RESULT_SET_MODE      => $self->param('result_set_mode'),
+    -ROLLBACK             => $self->param('rollback'),
+    -RECOVER              => $self->param('recover'),
+    -SLICES               => $self->slices,    
+    -CELL_TYPE            => $rset->cell_type,
+    -FEATURE_TYPE         => $rset->feature_type,
+    #-DESCRIPTION   => ?
+    #-DISPLAY_LABEL => ?
+  );  
 
 
-  #No tracking required here?
-  #Todo review whether rollback handles status entries correctly
-  
-  
-  
-  #TODO Need to implement branch config here!
-  
-
-  #Add set_type here as result_set_only could be change between writing
-  #this output_id and running a down stream analysis  
   $self->param('output_id', 
                {%{$self->batch_params},
                 dbID       => $set->dbID, 
                 set_name   => $set->name,
-                set_type   => ($self->result_set_only ? 
-                               'ResultSet' : 'DataSet')}
-              );
-  
-  return 1;
+                set_type   => 'DataSet'  });
+  return ;
 }
 
 
