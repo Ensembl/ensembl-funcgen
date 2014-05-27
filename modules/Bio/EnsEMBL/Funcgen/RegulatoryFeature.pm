@@ -194,7 +194,7 @@ sub display_label {
 
 =cut
 
-sub display_id {  return $_[0]->{stable_id}; }
+sub display_id {  return shift->{stable_id}; }
 
 
 =head2 binary_string
@@ -209,7 +209,7 @@ sub display_id {  return $_[0]->{stable_id}; }
 
 =cut
 
-sub binary_string{ return $_[0]->{binary_string}; }
+sub binary_string{ return shift->{binary_string}; }
 
 
 =head2 stable_id
@@ -420,14 +420,6 @@ sub _sort_attributes{
 
 sub attribute_cache{
   my ($self, $attr_hash) = @_;
-
-#  if(! defined $attr_hash){
-#	$self->regulatory_attributes; #Fetch the attrs?
-#
-#
-#	#Do we need to do this now we have separated the caches?
-#
-#  }
 
   if(defined $attr_hash){
 
@@ -788,7 +780,32 @@ sub get_other_RegulatoryFeatures{
 }
 
 
+=head2 summary_as_hash
+
+  Example       : $regf_summary = $regf->summary_as_hash;
+  Description   : Retrieves a textual summary of this RegulatoryFeature.
+  Returns       : Hashref of descriptive strings
+  Status        : Intended for internal use (REST)
+
+=cut
+
+sub summary_as_hash {
+  my $self = shift;
+  #For speed, grab feature_set first rather than using wrappers 
+  my $fset = $self->feature_set;
+
+  return
+    {ID                      => $self->stable_id,
+     regulatory_feature_type => $fset->feature_type->name,
+     cell_type               => $fset->cell_type->name,
+     bound_start             => $self->bound_seq_region_start,
+     start                   => $self->seq_region_start,
+     end                     => $self->seq_region_end,
+     bound_end               => $self->bound_seq_region_end,
+     strand                  => $self->strand,
+     seq_region_name         => $self->seq_region_name};
+}
 
 1;
 
-__END__
+
