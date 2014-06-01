@@ -71,7 +71,7 @@ use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
 =cut
 
 sub _true_tables {
-  return ([ 'mrna_feature', 'mrnaf' ],
+  return ([ 'mirna_feature', 'mirnaf' ],
           [ 'feature_set',  'fs' ]);
 }
 #feature_set is required for fetching on analysis, external_db (cell_type or feature_type).
@@ -96,17 +96,17 @@ sub _true_tables {
 
 sub _columns {
   return qw(
-			mrnaf.mrna_feature_id   
-      mrnaf.seq_region_id
-			mrnaf.seq_region_start      
-      mrnaf.seq_region_end
-			mrnaf.seq_region_strand     
-      mrnaf.display_label
-			mrnaf.feature_type_id
-      mrnaf.feature_set_id
-			mrnaf.interdb_stable_id
-      mrnaf.accession
-      mrnaf.evidence
+			mirnaf.mirna_feature_id   
+      mirnaf.seq_region_id
+			mirnaf.seq_region_start      
+      mirnaf.seq_region_end
+			mirnaf.seq_region_strand     
+      mirnaf.display_label
+			mirnaf.feature_type_id
+      mirnaf.feature_set_id
+			mirnaf.interdb_stable_id
+      mirnaf.accession
+      mirnaf.evidence
 	   );
 }
 
