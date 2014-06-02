@@ -384,4 +384,18 @@ sub fetch_by_interdb_stable_id {
   return $self->generic_fetch('ef.interdb_stable_id=?')->[0];
 }
 
+sub fetch_all_by_accessions{
+  my ($self, $accessions) = @_;
+  my $params = {constraints => {accession=>$accessions}};
+  return $self->generic_fetch($self->compose_constraint_query($params));
+
+}
+
+sub _constrain_accession {
+  my ($self, $accessions) = @_; 
+  my $constraint = 'mirnaf.accession IN(' . join (', ', map { qq!"$_"! } @$accessions).')';
+  return $constraint;
+
+}
+
 1;
