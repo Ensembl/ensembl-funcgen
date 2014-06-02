@@ -312,7 +312,7 @@ sub are_stored_and_valid{
 
   return \@return_vals;
 
-  
+
 }
 
 
@@ -378,6 +378,7 @@ sub get_available_adaptors{
                'FGCoordSystem'          => 'Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor',
                'InputSet'               => 'Bio::EnsEMBL::Funcgen::DBSQL::InputSetAdaptor',
                'InputSubset'            => 'Bio::EnsEMBL::Funcgen::DBSQL::InputSubsetAdaptor',
+               'MirnaFeature'           => 'Bio::EnsEMBL::Funcgen::DBSQL::MirnaFeatureAdaptor',
                'MetaCoordContainer'     => 'Bio::EnsEMBL::Funcgen::DBSQL::MetaCoordContainer',
                'MotifFeature'           => 'Bio::EnsEMBL::Funcgen::DBSQL::MotifFeatureAdaptor',
                'Probe'                  => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeAdaptor',
@@ -422,7 +423,7 @@ sub _get_schema_build{
   throw("Need to define a DBAdaptor to retrieve the schema_build from") if (! $db);
 
   my $schema_build;
-  my $name = $db->dbc->dbname; 
+  my $name = $db->dbc->dbname;
   if ( $name =~ /.*_([0-9]+_[0-9]+[a-z]*)$/) {
     #if( $db->dbc->dbname =~ /.*([0-9]+_[0-9]+[a-z]*)$/){
     #warn "HARDCODED DEBUGGING FOR ANOMALOUS CORE DNADB INSERT";
@@ -592,15 +593,15 @@ sub _set_dnadb{
   if( $lspecies eq 'default'){
     throw('Either specify a species parameter or set species.production_name'.
       " in the meta table (DB: $dnadb_name) to set dnadb automatically, alternatively pass a dnadb parameter");
-  } 
+  }
 
   #Start with lastest MySQL instances
   #We are over-riding specified port here, only for known hosts
   #we should really account for this and make it nr
-  my @ports; 
-  
+  my @ports;
+
   if($self->dnadb_port){
-    @ports = ($self->dnadb_port); 
+    @ports = ($self->dnadb_port);
   }
   elsif ($self->dnadb_host eq 'ensdb-archive') { #
     @ports = (5304, 3304);
@@ -638,8 +639,8 @@ sub _set_dnadb{
 
     if(! $dnadb_name){
       @dbnames = grep(/core_[0-9]/, sort @dbnames);
-    } 
-  
+    }
+
 
     if (scalar(@dbnames)==0) {
       warn(':: Failed to find dnadb like '.$dnadb_name.', using '
@@ -654,8 +655,8 @@ sub _set_dnadb{
   warn ":: Auto-selecting build $assm_ver core DB as:\t".
     $self->dnadb_user.'@'.$dbnames[$#dbnames].':'.$self->dnadb_host.':'.$host_port."\n";
 
-  my $db = $reg->reset_DBAdaptor($reg_lspecies, 'core', $dbnames[$#dbnames], 
-                                 $self->dnadb_host, $host_port, 
+  my $db = $reg->reset_DBAdaptor($reg_lspecies, 'core', $dbnames[$#dbnames],
+                                 $self->dnadb_host, $host_port,
                                  $self->dnadb_user, $self->dnadb_pass);
   $self->dnadb($db);
   return $db;
