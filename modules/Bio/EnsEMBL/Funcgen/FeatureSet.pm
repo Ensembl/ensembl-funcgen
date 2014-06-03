@@ -102,7 +102,7 @@ use base qw(Bio::EnsEMBL::Funcgen::Set Bio::EnsEMBL::Funcgen::feature_class_Set)
                -NAME          => String - name for this Set.
                -FEATURE_TYPE  => Bio::EnsEMBL::Funcgen::FeatureType
                -FEATURE_CLASS => String - Class of feature e.g. result, annotated,
-                                 regulatory, segmentation, external or dna_methylation.
+                                 regulatory, segmentation, external, mirna, or dna_methylation.
              OPTIONAL:
                -INPUT_SET     => Bio::EnsEMBL::Funcgen::InputSet
                -DESCRIPTION   => String
@@ -147,9 +147,10 @@ sub new {
   #subsequently throwing errors on retrieval
   my $type = $self->_validate_feature_class(\@_);
 
-  if ( (! defined $self->cell_type) &&
-       ($type ne 'external') ){
-    throw("Only FeatureSets with type 'external' can have an undefined CellType");
+  if(! defined $self->cell_type){
+    if( ($type ne 'external') and ($type ne 'mirna') ){
+      throw("Only FeatureSets with type 'external' can have an undefined CellType");
+    }
   }
 
   #Direct assignment to prevent need for set arg test in method
@@ -164,7 +165,7 @@ sub new {
 
 
 sub _valid_feature_classes{
-  return qw( annotated regulatory external segmentation );
+  return qw( annotated regulatory external segmentation mirna);
 }
 
 

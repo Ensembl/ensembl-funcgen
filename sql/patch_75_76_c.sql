@@ -14,10 +14,12 @@
 
 
 /**
-@header patch_75_76_b.sql - result_set/experiment.display_url/archive_id
-@desc   Move input_subset display_url and archive_id to the experiment table, and
-        add an experiment_id field to result_set. Drop redundant input_subset fields.
+@header patch_75_76_c.sql - cell_type.display_label
+@desc Increase size of display_label
+
 */
 
 -- accomodate longer names like Monocytes-CD14-RO01746
-alter table cell_type modify display_label varchar(30);
+ALTER TABLE cell_type MODIFY display_label VARCHAR(30);
+
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_75_76_c.sql|cell_type.display_label);

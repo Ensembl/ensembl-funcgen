@@ -59,7 +59,7 @@ use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor);
 
 =head2 fetch_all_by_feature_class
 
-  Arg [1]    : String - feature class i.e. 'annotated', 'regulatory', 'segmentation' or 'external'
+  Arg [1]    : String - feature class i.e. 'annotated', 'regulatory', 'segmentation', 'mirna' or 'external'
   Arg [2]    : String (optional) - status e.g. 'DISPLAYABLE'
   Arg [2]    : Bio::EnsEMBL::Funcgen::CellType (optional) or a HASH parameters
                containing contraint config e.g.
