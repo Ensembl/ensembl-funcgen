@@ -81,38 +81,51 @@ sub fetch_input {
 }
 
 
-#This is starting to overlap with the Importer a little
+#This is starting to overlap with the BaseImporter/Importer a little
 #but new style Peak import is not supported by Importer just yet.
 
 #todo expose generate_slices_from_names args
+# change this to sub to use cache_slices, slices, slice_cache 
+# there is some support for this in the BaseImporter,
+# So we should probably move this code somewhere useable by all
+
+#Fix this here for now, then move everything to the Helper, so we can access it
+#here and from the Base/Importers
+
+#get_Slice does not handle seem to filter skip_slices/slices either
 
 sub slice_objects {
-  my ($self, $slice_objects) = @_;
+  my $self          = shift;
+  my $slice_objects = shift;
   
   if($slice_objects){
     assert_refs($slice_objects, 'Bio::EnsEMBL::Slice', 'slice_objects');   
   }
-  elsif(! defined $self->param_silent('slice_objects') ){
+  elsif(! defined $self->param_silent('slice_cache') ){
     $slice_objects = generate_slices_from_names
                       ($self->out_db->dnadb->get_SliceAdaptor, 
                        $self->slices, $self->skip_slices, 'toplevel', 
                        0, 0, $self->assembly); 
     #0, 0 are non_ref and inc_dups flags
+    
+    #Check we have some here
   }
    
   if($slice_objects){
     
-    if($self->param_silent('slice_objects')){
+    if($self->param_silent('slice_cache')){
       warn "Over-writing existing slice_objects";
-      $self->param_silent('slice_objects', {});  
+      $self->param_silent('slice_cache', {});  
     }
     
     my %slices;
+    
     map {$slices{$_->seq_region_name} = $_} @$slice_objects;
-    $self->param('slice_objects', \%slices); 
+
+    $self->param('slice_cache', \%slices); 
   } 
    
-  return [ values %{$self->param('slice_objects')} ]; 
+  return [ values %{$self->param('slice_cache')} ]; 
 }
 
 
@@ -128,20 +141,25 @@ sub get_Slice {
   #In case UCSC input is used... carefull names may not match with ensembl db!
   $seq_region =~ s/^chr//i;   #case insensitive     
 
-
-  my $slice_objects = $self->slice_objects;
-
-
   #We have seen a slice, but have not restricted slices so this
   #must be a slice we can't handle
   my $slice = undef;
   
-  if( (! exists $slice_objects->{$seq_region}) &&
+  $self->slice_objects if ! defined $self->param_silent('slice_cache');
+  my $slice_cache = $self->param_required('slice_cache');
+  
+  if( (! exists $slice_cache->{$seq_region}) &&
       (! ($self->slices || $self->skip_slices) ) ){
-    throw("Unable to get Slice for:\t".$seq_region);      
+    
+        
+    #we're not actually testing slices and skip slices here
+    #These shoudl ideally be cached, so we can access them quickly
+    #or just ignore them?    
+        
+    throw("Unable to get Slice for:\tx".$seq_region.'x');      
   }
   else{
-    $slice =  $self->slice_objects->{$seq_region}; 
+    $slice =  $slice_cache->{$seq_region}; 
   }
      
   return $slice;
@@ -188,6 +206,9 @@ sub fetch_Set_input{
   if(! defined $set){
     throw("Could not fetch $set_type with dbID $dbid ($set_name)"); 
   }
+  elsif($set->name ne $set_name){
+    throw("Fetch $set_type with dbID $dbid, expected $set_name but got ".$set->name);  
+  }
   
   $self->set_param_method($set_type, $set);
   
@@ -202,7 +223,7 @@ sub fetch_Set_input{
     }
     else{
       $self->helper->debug(2, "Setting result_set:\t".$rsets[0]->name);
-      $self->param('ResultSet', $rsets[0]);
+      $self->set_param_method('ResultSet', $rsets[0]);
     }
   }
   elsif($set_type eq 'ResultSet'){
@@ -216,13 +237,7 @@ sub fetch_Set_input{
     }
     else{
       $self->set_param_method('DataSet', $dsets[0]);
-      $self->helper->debug(2, "Setting data_set:\t".$dsets[0]->name);     
-    }
-  }
-  elsif($set_type eq 'InputSet'){
-    #return_set_type not valid for InputSets
-    if($return_set_type ne 'InputSet'){
-          
+      $self->helper->debug(2, "Setting data_set:\t".$dsets[0]->name);  
     }
   }
   else{
@@ -231,19 +246,18 @@ sub fetch_Set_input{
   
   
   
-  if($self->param_silent('data_set')){
-     my $fset = $self->data_set->product_FeatureSet;
+  if($self->param_silent('DataSet')){
+     my $fset = $self->DataSet->product_FeatureSet;
      
      if($fset){
-        $self->set_param_method('feature_set', $fset); 
+        $self->set_param_method('FeatureSet', $fset); 
         $self->helper->debug(2, "Setting feature_set:\t".$fset->name);        
      }
   }
   
-  if( ($return_set_type eq 'feature') &&
-      (! $self->param_silent('feature_set')) ){
+  if( ($return_set_type eq 'FeatureSet') &&
+      (! $self->param_silent('FeatureSet')) ){
     throw("Failed to fetch a FeatureSet using $set_type:\t".$set_name);
-  
   }
   
   #if we don't specify return_set_type
