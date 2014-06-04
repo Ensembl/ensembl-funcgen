@@ -134,10 +134,18 @@ sub run {
   my $unfiltered_bam     = $file_prefix.'.unfiltered.bam';
   $self->helper->debug(1, "Merging bams to:\t".$unfiltered_bam); 
   #sam_header here is really optional if is probably present in each of the bam files but maybe incomplete 
-  my @bam_files  = @{$self->bam_files};  
-  merge_bams($unfiltered_bam, $self->sam_ref_fai($rset->cell_type->gender), \@bam_files, 
-             {write_checksum => 1, #turns on checksum writing
-              debug          => $self->debug});
+  my @bam_files  = @{$self->bam_files}; 
+  
+  #Temporary hack to handle a gender update from undef to female for NHDF-AD
+  #sam_ref_fai is already set by get_alignment_files_by_ResultSet_format
+  my $gender = ($rset->cell_type->name eq 'NHDF-AD') ? 'male' :
+                $rset->cell_type->gender;
+  warn "REMOVE: gender hacked for NHDF-AD";
+     
+  merge_bams($unfiltered_bam, 
+             $self->sam_ref_fai($gender), 
+             \@bam_files, 
+             {debug          => $self->debug});
   
   ### ALIGNMENT REPORT ### 
   #todo convert this to wite to a result_set_report table
@@ -164,7 +172,7 @@ sub run {
   if($self->run_controls){
     my $exp = $rset->experiment(1);#control flag
     $exp->adaptor->store_status('ALIGNED_CONTROL', $exp);
-    $exp->adaptor->revoke_status('ALIGNING_CONTROL', $exp);
+    $exp->adaptor->revoke_status('ALIGNING_CONTROL', $exp, 1);#validate status flag
   }
   else{
     $rset->adaptor->store_status('ALIGNED', $rset);
@@ -195,7 +203,7 @@ sub run {
   #alignement log for the unfiltered file
   #We would have to re-instate an unfiltered file if we ever introduce
   #more filtering filtering                                                
-  $self->archive_files([$unfiltered_bam, $unfiltered_bam.'.CHECKSUM'] 1);#mandatory flagn
+  $self->archive_files([$unfiltered_bam, $unfiltered_bam.'.CHECKSUM'], 1);#mandatory flag
   
   my %batch_params = %{$self->batch_params};
   my $flow_mode    = $self->flow_mode;
