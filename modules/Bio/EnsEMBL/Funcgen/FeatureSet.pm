@@ -148,7 +148,7 @@ sub new {
   my $type = $self->_validate_feature_class(\@_);
 
   if(! defined $self->cell_type){
-    if( ($type ne 'external') and ($type ne 'mirna') ){
+    if( ($type ne 'external') and ($type ne 'mirna_target') ){
       throw("Only FeatureSets with type 'external' can have an undefined CellType");
     }
   }
@@ -165,7 +165,7 @@ sub new {
 
 
 sub _valid_feature_classes{
-  return qw( annotated regulatory external segmentation mirna);
+  return qw( annotated regulatory external segmentation mirna_target);
 }
 
 
