@@ -54,11 +54,11 @@ package Bio::EnsEMBL::Funcgen::Hive::PreprocessIDR;
 use warnings;
 use strict;
  
-use Bio::EnsEMBL::Utils::Exception         qw( throw );
-use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( scalars_to_objects 
-                                               run_backtick_cmd 
-                                               run_system_cmd );
+use Bio::EnsEMBL::Utils::Exception              qw( throw );
+use Bio::EnsEMBL::Utils::Scalar                 qw( assert_ref );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils      qw( scalars_to_objects );
+use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools qw( pre_process_IDR );                                          
+                                               
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
 sub fetch_input {   # fetch parameters...
@@ -73,11 +73,26 @@ sub fetch_input {   # fetch parameters...
   my $rset_ids = $self->get_param_method('dbIDs',  'required');
   assert_ref($rset_ids, 'ARRAY', 'ResultSet dbIDs');
   
-  warn "permissive peaks is ".$self->param_required('permissive_peaks');
+  
+  #warn "pre fudge ids are ".join(' ', @$rset_ids);
+  
+  $rset_ids = [keys %{{ map { $_ => 1 } @$rset_ids }}];
    
-  $self->set_param_method('peak_analysis', &scalars_to_objects($self->out_db, 'Analysis',
-                                                               'fetch_by_logic_name',
-                                                               $self->param_required('permissive_peaks'))->[0]);
+  #warn "post fudge ids are ".join(' ', @$rset_ids);
+  
+  #Temporary bug fix
+  #This accounts for duplicate result_set_ids which 
+  #which are generated in DefineResultSet, due to redundant 
+  #replicate numbers
+  #We need to delete all downstream jobs for the affected PreprocessIDR jobs
+  #also need to put a sanity check in DefineResultSets, or Identify, which
+  #catches any redundant signal rep numbers!
+  $self->dbIDs($rset_ids);
+   
+  $self->set_param_method('peak_analysis', 
+                          &scalars_to_objects($self->out_db, 'Analysis',
+                                              'fetch_by_logic_name',
+                                              $self->param_required('permissive_peaks'))->[0]);
   return;
 }
 
@@ -87,27 +102,16 @@ sub run {   # Check parameters and do appropriate database/file operations...
   my $rsets = &scalars_to_objects($self->out_db, 'ResultSet',
                                                  'fetch_by_dbID',
                                                  $self->dbIDs);
-                                                 
-  if(scalar(@$rsets) <2){
-    throw("Cannot run IDR with less than 2 replicate ResultSets:\t".
-      join("\t", (map {$_->name} @$rsets)));  
-  }                                               
-  
   my $peak_analysis = $self->peak_analysis;                                                 
   my $batch_params  = $self->batch_params;
-  my $exp_name      = $rsets->[0]->get_Experiment->name;
+  my $exp_name      = $rsets->[0]->experiment->name;
   #This is also done in RunPeaks, so we really need a single method to do this?
   my $lname         =  $peak_analysis->logic_name;
   $self->get_output_work_dir_methods($self->db_output_dir.'/peaks/'.$exp_name.'/'.$lname);
   my $out_dir = $self->output_dir;
- 
-  # Do this here so we don't have clashes between RunIDR jobs 
-
-  # Validate analysis
   my $max_peaks     = 300000;
-  
-  
-  
+ 
+  # Validate analysis  
   if($lname !~ /swembl/io){
     #$self->input_job->transient_error( 0 );
     $self->throw_no_retry('Pre-IDR peak filtering and reformating is currently only optimised for the SWEmbl analysis');
@@ -119,21 +123,14 @@ sub run {   # Check parameters and do appropriate database/file operations...
     warn "Reseting max filtered peaks value to 100000 for MACS analysis:\t$lname\n";   
   } 
       
-  # Validate, count and define IDR threshold 
-  #If you started with ~150 to 300K relaxed pre-IDR peaks for large genomes (human/mouse), 
-  #then threshold of 0.01 or 0.02 generally works well. 
-  #If you started with < 100K pre-IDR peaks for large genomes (human/mouse), 
-  #then threshold of 0.05 is more appropriate. 
-  #This is because the IDR sees a smaller noise component and the IDR scores get weaker. 
-  #This is typically for use with peak callers that are unable to be adjusted to call large number of peaks (eg. PeakSeq or QuEST)
-  #What exactly are we counting here? Total number peaks across rep, average, or the max between reps?
-  #This also depends on the prevalence of the mark, it may be that a particular feature type genuinely does not have many genome wide hits
-  my (%pre_idr_beds, $bed_file, $cmd, $num_peaks, $lt_100k, $mt_100k, 
-      $log_txt, @rep_nums, $ctrl_ids);
+      
+  my (@pre_idr_beds, @rep_nums, $ctrl_ids, @bams);
+  
+  #sub _pre_process_IDR_ResultSets?
   
   foreach my $rset(@$rsets){
  
-    if($exp_name ne $rset->get_Experiment->name){
+    if($exp_name ne $rset->experiment->name){
       $self->throw_no_retry("IDR Replicate ResultSets are not from the same experiment:\t".
         $rsets->[0]->name.' '.$rset->name);  
     }
@@ -175,186 +172,86 @@ sub run {   # Check parameters and do appropriate database/file operations...
         join("\t", (map {$_->name} @$rsets)));  
     }
     
-    
     #todo validate ResultSet analysis here too?
-      
     #bed file is currently defined by PeakCaller::init_files
     #based on the out_dir, outfile_prefix and the output_format
     #We should probably pass this whole path, such that we can centralise how the path is generated?
     #If we let the default PeakCaller formats be used, we can't know what the suffix will be at this point
     
-    
-    #Need to put this in BaseSequencing somewhere?
     #There is currently an issues with set nameing, as this will integrate the alignment analysis
     #too. Although this maybe desirable to avoid clashes between features sets with different alignments
     #The API does not handle this yet.
     
-    
-    
-    $bed_file = $out_dir.'/'.$rset->name.'.'.$lname.'.bed';
-    
-    if(! -f $bed_file){  
-      $self->throw_no_retry("Could not find pre-IDR bed file:\t$bed_file\n".
-        'Need to dump bed from DB directly to required format!');
-    }
-    
-    $cmd                     = "wc -l $bed_file | awk '{print \$1}'";
-    $num_peaks               = run_backtick_cmd($cmd) - 14;
-    $pre_idr_beds{$bed_file} = $num_peaks;
-   
-    if($num_peaks > 100000){
-      $mt_100k = 1;
-      
-      if($num_peaks < 150000){
-        warn 'Pre-IDR peaks counts fall in threshold grey zone(100k-150k), defaulting to 0.01'.
-          " but maybe consider 0.02 for:\n\t$bed_file\n";  
-      }  
-    }
-    else{
-      $lt_100k = 1;
-    }
-
-    if($num_peaks < $max_peaks){
-      $max_peaks = $num_peaks;  
-    }
-    
-    $log_txt .= $bed_file."\t".$num_peaks."\n";
-  }
-    
-  
-  #Note this does not yet support MACS yet, should prbably just ignore it as we filter to 100000
-  
-  if($lt_100k && $mt_100k){
-    $self->throw_no_retry("Identified different optimal thresholds due to pre-IDR peak counts spanning the 100k limit:\n".
-      $log_txt);    
+    push @pre_idr_beds, $out_dir.'/'.$rset->name.'.'.$lname.'.bed';
+    #do read counts in RunIDR to parallelise
+    push @bams,         $self->get_alignment_files_by_ResultSet_formats($rset, ['bam'])->{bam};
   }
   
-  #TODO We need some mechanism to restart this job, to force the threshold, or by dropping 1/some of the replicates. 
   
-  my $idr_threshold = ($num_peaks < 100000) ? 0.05 : 0.01;
-  my $idr_name      = $exp_name.'_'.$lname.'_'.join('_', sort @rep_nums);
-  $cmd = "echo -e \"Pre-IDR File\tNum Peaks\n$log_txt\nIDR Threshold = $idr_threshold\" > ${out_dir}/${idr_name}-idr_stats.txt";
-  run_system_cmd($cmd);
- 
-  #TODO parallelise the filtering and reformating to speed things up, so let's semphaore than to a simple CMD job.
-  #can we even do this as we already have a semaphore on the RunIDR and
-  #maybe with a job factory? I think this is not possible without another analysis
-  #but we could use a dummy? which then submit the RunIDR and semaphores the PostProcessIDR
-  #Just do here for now
-  my @np_bed_files;
-
-  foreach my $bed_file(keys %pre_idr_beds){
-    (my $np_bed_file = $bed_file) =~ s/\.bed$/.np_idr.bed/;  
-    #Never re-use np_idr output file in case it is truncated due to job failure/exit.
-    
-    #SWEmbl output header::
-    #Input  GSE30558_GSM758361_PrEC.sorted.bam
-    #Reference      GSE30558_GSM758360_LNCaP.sorted.bam
-    #Sequence length        0
-    #Fragment length        0
-    #Background     0.000000
-    #Position Background    0.036383
-    #Long Background        0.181917
-    #Threshold      5.000000
-    #Minimum count above bg 15
-    #Penalty increase       70
-    #Quality cutoff 0.000000
-    #Result cutoff  0.000000
-    #Penalty factor 0.552834
-      
-    #and fields:
-    #Region        - Part of the genome build e.g. chromosome
-    #Start pos.    - Base in region where peak starts
-    #End pos.      - Base in region where peak ends
-    #Count         - Number of reads in experimental sample in peak
-    #Length        - Length of peak (distance between start and end pos.)
-    #Unique pos.   - Number of unique bases within peak at which reads begin
-    #Score         - The SWEMBL score, which is basically the count of filtered thresholded reads in the peak, minus the penalties (gap distances and reference sample reads).
-    #Ref. count    - Number of reads in reference sample in peak
-    #Max. Coverage - Depth of reads at summit
-    #Summit        - Median position of highest read coverage
-    
-    #signalValue field was being set to (Count - Ref. Count)/min
-    #Min is not really required here for ranking and simply add the header requirement
-    #would be better to simply omit and skip the commented header if present?  
-    #my $cmd = 'awk \'BEGIN {OFS="\t"} NR == 9 {min=$5} NR > 14 {print $1,$2,$3,".",$7,".",($4-$8)/min,-1,-1,int($9-$1)}\' '.
-      
-    #Now we are stripping out the header and setting signal.value to score 
-    #before sorting on score and filtering based on $max_peaks  
-    #and resorting based on position  
-    $cmd = 'awk \'BEGIN {OFS="\t"} { if($1 !~ /^#/) {print $1,$2,$3,".",$7,".",$7,-1,-1,int($9-$1)} }\' '.
-      "$bed_file | sort -k 7nr,7nr | head -n $max_peaks | sort -k 1,2n > ".$np_bed_file;
-    run_system_cmd($cmd);    
-       
-    #This is currently giving: 
-    #sort: write failed: standard output: Broken pipe
-    #sort: write error
-    #This is likely due to SIG_PIPE not being handled correctly within perl(as it is in the shell)
-    #If this is not handled correctly then processes on either side of the can try to read or write 
-    #to a dead pipe, causing the error. In this case, most likely th efirst sort reading from the 
-    #awk pipe
+  #Put batch_name code in BaseSequencing or Base? 
+  my $batch_name                 = $exp_name.'_'.$lname.'_'.join('_', sort @rep_nums);
+  my ($np_bed_files, $threshold, $x_thresh_adjust);
   
-    #Need to use perl pipe here? This seems only to be simple IO pipes within perl
-    #
-    #Put this in EFGUtils?
+  if(! eval { ($np_bed_files, $threshold, $x_thresh_adjust) = 
+                pre_process_IDR($out_dir, \@pre_idr_beds, $batch_name, $max_peaks); 1}){
+    $self->throw_no_retry("Failed to pre_process_IDR $batch_name\n$@");                
+  } 
   
-     
-
-    #Sanity check we have the file with the correct number of lines
-    $cmd = "wc -l $np_bed_file | awk '{print \$1}'";
-    my $filtered_peaks = run_backtick_cmd($cmd);
-      
-    if($max_peaks != $filtered_peaks){
-      throw("Expected $max_peaks in filtered pre-IDR bed file, but found $filtered_peaks:\n\t".$np_bed_file);  
-    }   
- 
-    
-    
-    #TODO check the feature_set_stat or statuses
-    #such that we know the peak calling jobs has finished and passed QC!    
-    #Do this for each before we submit IDR jobs, as we may have to drop some reps
-    push @np_bed_files, $np_bed_file;
-  }
-
-
-  #my $idr_analysis = &scalars_to_objects($self->out_db, 'Analysis',
-  #                                                      'fetch_by_logic_name',
-  #                                                      [$self->idr_analysis])->[0]; 
-
-
+  # end _pre_process_IDR_ResultSets
 
   #Build 2 way rep combinations for IDR jobs
   my @idr_job_ids;
-  my $last_i = $#np_bed_files - 1;
+  my @out_prefixes;
+  my $last_i = $#{$np_bed_files} - 1;
   
   foreach my $i(0..$last_i){
     my $next_i = $i + 1;
   
-    foreach my $j($next_i..$#np_bed_files){
+    #2 ways jobs 
+    foreach my $j($next_i..$#{$np_bed_files}){
+      my @names;
+    
+      foreach my $file($np_bed_files->[$i], $np_bed_files->[$j]){
+        (my $name = $file) =~ s/.*\///;  
+        $name =~ s/(?:\.np_idr)\.bed$//;
+        push @names, $name;
+      }
       
-      push @idr_job_ids, {%$batch_params,
+      my $output_prefix = $names[0].'_VS_'.$names[1];
+      push @out_prefixes, $output_prefix;
+      
+      my $job = {%$batch_params,
                           output_dir    => $out_dir,
-                          idr_threshold => $idr_threshold,
-                          #Ideally we want something like
-                          #rset_name_TR1_vs_TR2
-                          #output_prefix =>
+                          idr_threshold => $threshold,
                           accu_idx      => $i,
-                          bed_files     => [$np_bed_files[$i], $np_bed_files[$j]]};
+                          output_prefix => $output_prefix,
+                          batch_name    => $batch_name,
+                          bed_files     => [$np_bed_files->[$i], $np_bed_files->[$j]]};
+      
+      if($x_thresh_adjust){
+        $job->{bam_files} = [$bams[$i], $bams[$j]];  
+      }
+                                
+      push @idr_job_ids, $job;
+      #push @idr_job_ids, {%$batch_params,
+      #                    output_dir    => $out_dir,
+      #                    idr_threshold => $threshold,
+      #                    accu_idx      => $i,
+      #                    output_prefix => $output_prefix,
+      #                    batch_name    => $batch_name,
+      #                    bed_files     => [$np_bed_files->[$i], $np_bed_files->[$j]]};
     }  
   }
   
-  
-  
   #Now we need to pool and produce pseudo reps? This should be done way before here?!!
   #In between MergeControlAlignments_and_QC and Submit_IDR
-  #
-  
-
-  #
   $self->branch_job_group(2, \@idr_job_ids,
                           3, [{%$batch_params,
-                              dbIDs    => $self->dbIDs,
-                              set_type => 'ResultSet'}]);
+                              output_dir      => $out_dir,
+                              batch_name    => $batch_name,
+                              output_prefixes => \@out_prefixes,
+                              dbIDs           => $self->dbIDs,
+                              set_type        => 'ResultSet'}]);
       
   return;
 }
