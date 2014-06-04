@@ -1,5 +1,5 @@
 #
-# Ensembl module for Bio::EnsEMBL::Funcgen::MirnaFeature
+# Ensembl module for Bio::EnsEMBL::Funcgen::MirnaTargetFeature
 #
 
 =head1 LICENSE
@@ -29,14 +29,14 @@ limitations under the License.
 
 =head1 NAME
 
-Bio::EnsEMBL::MirnaFeature - A module to represent an externally curated feature 
+Bio::EnsEMBL::MirnaTargetFeature - A module to represent an externally curated feature
 mapping from an external_db.
 
 =head1 SYNOPSIS
 
-use Bio::EnsEMBL::Funcgen::MirnaFeature;
+use Bio::EnsEMBL::Funcgen::MirnaTargetFeature;
 
-my $feature = Bio::EnsEMBL::Funcgen::MirnaFeature->new(
+my $feature = Bio::EnsEMBL::Funcgen::MirnaTargetFeature->new(
 	-SLICE         => $chr_1_slice,
 	-START         => 1_000_000,
 	-END           => 1_000_024,
@@ -50,12 +50,12 @@ my $feature = Bio::EnsEMBL::Funcgen::MirnaFeature->new(
 
 =head1 DESCRIPTION
 
-An MirnaFeature object represents the genomic placement of an externally curated
+An MirnaTargetFeature object represents the genomic placement of an externally curated
 feature from and DB external to Ensembl.
 
 =cut
 
-package Bio::EnsEMBL::Funcgen::MirnaFeature;
+package Bio::EnsEMBL::Funcgen::MirnaTargetFeature;
 
 use strict;
 use warnings;
@@ -67,10 +67,9 @@ use base qw(Bio::EnsEMBL::Funcgen::SetFeature);
 
 =head2 new
 
- 
   Arg [-FEATURE_SET]  : Bio::EnsEMBL::Funcgen::FeatureSet
   Arg [-FEATURE_TYPE] : Bio::EnsEMBL::Funcgen::FeatureType
-  Arg [-ANALYSIS]     : Bio::EnsEMBL::Analysis 
+  Arg [-ANALYSIS]     : Bio::EnsEMBL::Analysis
   Arg [-SLICE]        : Bio::EnsEMBL::Slice - The slice on which this feature is.
   Arg [-START]        : int - The start coordinate of this feature relative to the start of the slice
 		                it is sitting on. Coordinates start at 1 and are inclusive.
@@ -80,7 +79,7 @@ use base qw(Bio::EnsEMBL::Funcgen::SetFeature);
   Arg [-STRAND]       : int - The orientation of this feature. Valid values are 1, -1 and 0.
   Arg [-dbID]         : (optional) int - Internal database ID.
   Arg [-ADAPTOR]      : (optional) Bio::EnsEMBL::DBSQL::BaseAdaptor - Database adaptor.
-  Example             : my $feature = Bio::EnsEMBL::Funcgen::MirnaFeature->new(
+  Example             : my $feature = Bio::EnsEMBL::Funcgen::MirnaTargetFeature->new(
                             -SLICE         => $chr_1_slice,
                             -START         => 1_000_000,
                             -END           => 1_000_024,
@@ -92,23 +91,33 @@ use base qw(Bio::EnsEMBL::Funcgen::SetFeature);
                                                );
 
 
-  Description: Constructor for MirnaFeature objects.
-  Returntype : Bio::EnsEMBL::Funcgen::MirnaFeature
+  Description: Constructor for MirnaTargetFeature objects.
+  Returntype : Bio::EnsEMBL::Funcgen::MirnaTargetFeature
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
 sub new {
   my $caller = shift;
-	
+
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
+  my ($accession, $evidence, $interdb_stable_id, $method ) = 
+    rearrange (['ACCESSION', 'EVIDENCE', 'INTERDB_STABLE_ID', 'METHOD'], @_);
+
+  if(! defined $accession){
+    throw("Mandatory parameter -accession not defined");
+  }
+  $self->{accession} = $accession;
+  $self->{evidence}  = $evidence;
+  $self->{method}    = $method;
+
   #Remove this method if we interdb_stable_id to SetFeature
-  ($self->{'interdb_stable_id'}) = rearrange(['INTERDB_STABLE_ID'], @_);
- 		
+  $self->{'interdb_stable_id'} = $interdb_stable_id;
+
   return $self;
 }
 
@@ -142,22 +151,22 @@ sub interdb_stable_id {
 
 sub display_label {
   my $self = shift;
-	    
+
   if(! $self->{'display_label'}  && $self->adaptor){
-	
+
 	$self->{'display_label'}  = $self->feature_set->feature_type->name().' - ';
 	$self->{'display_label'} .= $self->cell_type->name() if $self->cell_type();
 	$self->{'display_label'} .= $self->feature_type->name() if(defined $self->{'feature_type'});
   }
-	
+
   return $self->{'display_label'};
 }
 
 =head2 accession
 
   Arg [1]    : (optional) int - stable_id e.g 1
-  Example    : my $acc = $mirna_feature->accession();
-  Description: Getter for the accession attribute for this MirnaFeature.
+  Example    : my $acc = $mirna_target_feature->accession();
+  Description: Getter for the accession attribute for this MirnaTargetFeature.
   Returntype : string
   Exceptions : None
   Caller     : General
@@ -172,8 +181,8 @@ sub accession {
 =head2 evidence
 
   Arg [1]    : (optional) int - stable_id e.g 1
-  Example    : my $acc = $mirna_feature->evidence();
-  Description: Getter for the evidence attribute for this MirnaFeature.
+  Example    : my $acc = $mirna_target_feature->evidence();
+  Description: Getter for the evidence attribute for this MirnaTargetFeature.
   Returntype : string
   Exceptions : None
   Caller     : General
@@ -183,6 +192,22 @@ sub accession {
 
 sub evidence {
   return $_[0]->{'evidence'};
+}
+
+=head2 method
+
+  Arg [1]    : (optional) int - stable_id e.g 1
+  Example    : my $acc = $mirna_target_feature->method();
+  Description: Getter for the method attribute for this MirnaTargetFeature.
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub method {
+  return $_[0]->{'method'};
 }
 
 1;

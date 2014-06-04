@@ -32,7 +32,7 @@ use feature qw(say);
 use Bio::EnsEMBL::DBEntry;
 use Bio::EnsEMBL::Funcgen::FeatureType;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils  qw(add_external_db);
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils  qw(add_external_db dump_data);
 
 
 use parent qw( Bio::EnsEMBL::Funcgen::Parsers::BaseExternalParser );
@@ -88,6 +88,7 @@ sub new {
         -display_label     => 'TarBase miRNA target predictions',
         -description       => 'TarBase miRNA target predictions',
         -analysis          => 'TarBase_v6.0', #analysis config key name not object
+        -feature_class     => 'mirna'
       },
     }
   };
@@ -106,38 +107,38 @@ sub parse_and_load{
   if (scalar(@$files) != 2) {
     throw('2 files expected, Tarbase data(1) and aliases.txt(2) from miRBase\t'.join(' ', @$files));;
   }
-  
-  # Set release to the release TarBase used to map their miRNA targets 
+
+  # Set release to the release TarBase used to map their miRNA targets
   my $external_db_name;
   my $external_db_release;
-  
+
   if($self->species eq 'homo_sapiens'){
     $external_db_name    = 'homo_sapiens_core_Gene';
-    $external_db_release = '73_37'; 
+    $external_db_release = '73_37';
   }
   elsif($self->species eq 'mus_musculus'){
     $external_db_name    = 'mus_musculus_core_Gene';
-    $external_db_release = '73_38'; 
+    $external_db_release = '73_38';
   }
   elsif($self->species eq 'rattus_norvegicus'){
     $external_db_name    = 'rattus_norvegicus_core_Gene';
-    $external_db_release = '73_5'; 
+    $external_db_release = '73_5';
   }
   else{
     throw($self->species . " not implemented. Add here.")
   }
   $self->log_header("Using $external_db_name as external_db.name and $external_db_release as external_db.release");
-  
+
   my $ex_Db = add_external_db(
-    $self->db, 
+    $self->db,
     $external_db_name,
     $external_db_release,
     'EnsemblGene',
     );
 
-  $self->log_header("Parsing miRNA names (only human, mouse and rat) from:\t".$files->[1]);  
+  $self->log_header("Parsing miRNA names (only human, mouse and rat) from:\t".$files->[1]);
   # alias.txt
-  # map accession to ID 
+  # map accession to ID
   # MI0000063  hsa-let-7bL;hsa-let-7b;
   # The last ID (hsa-let-7b in this case) is always the preferred one
   # Currently we only keep human, mouse and rat
@@ -145,8 +146,9 @@ sub parse_and_load{
   my $id_lookup = {};
   open(my $fh,'<',$files->[1]) or die "Can't access ". $files->[1];
     while(my $line = <$fh>){
-      if($line !~ /^MI\d{7}\t[a-z;0-9]*$/){
-        throw("Unexpected format of alias.txt file");
+      chomp($line);
+      if($line !~ /^MI|MIMAT\d{7}\t[a-z;0-9\.\-A-Z]*$/){
+        throw("Unexpected format [$line] in alias.txt file [$files->[1]]");
       }
       next if($line !~ /[hsa-|mmu-|rno]/);
       chomp($line);
@@ -155,22 +157,22 @@ sub parse_and_load{
       if(defined $id_lookup->{$ids[0]}){
         throw("Duplicate record $ids[0] in file " . $files->[1]);
       }
+      # last name is always the one should be used
       $id_lookup->{$ids[0]} = $mi_rna_names[-1];
     }
   close($fh);
 
-
-  my $extfeat_a   = $self->db->get_ExternalFeatureAdaptor;
+  my $mirnafeat_a = $self->db->get_MirnaTargetFeatureAdaptor;
   my $dbentry_a   = $self->db->get_DBEntryAdaptor;
   my $feattype_a  = $self->db->get_FeatureTypeAdaptor;
   my $gene_a      = $self->db->dnadb->get_GeneAdaptor;
   my $slice_a     = $self->db->dnadb->get_SliceAdaptor;
-  
+
   my $fset_config      = $self->{static_config}{feature_sets}{'TarBase miRNA'};
   my $fset              = $fset_config->{feature_set};
-  
+
   $self->rollback_FeatureSet($fset);
-  $self->log_header("Rollback old records in external_features manually");
+  $self->log_header("Rollback old records in mirna_target_features manually");
 
   # Logging has space for improvement
   my $log  = {};
@@ -194,7 +196,7 @@ sub parse_and_load{
   open($fh,'<',$files->[0]) or die "Can't access ". $files->[0];
   while (my $line = <$fh>) {
     my $species_tarbase;
-    
+
     $line =~ /^MIMAT\d{7}\|(ENSG|ENSMUSG|ENSRNOG])/;
 
     if($1){
@@ -207,7 +209,7 @@ sub parse_and_load{
       next;
     }
     throw $line if (!$species_tarbase );
-    
+
     if($self->{species} ne $species_tarbase){
       $log->{different_species}->{$species_tarbase}++;
       $log2->{different_species}++;
@@ -224,7 +226,7 @@ sub parse_and_load{
     # 3: Computational
     # 4: 57569740_57569768
     # 5: http://diana.imis.athena-innovation.gr/DianaTools/index.php?r=tarbase/index&mirnas=MIMAT0000416&genes=ENSG00000101158
-    
+
     my @fields = split(/\|/,$line);
     my $mi_rna_id = $fields[0];
     my $ensg      = $fields[1];
@@ -289,7 +291,7 @@ sub parse_and_load{
           next;
         }
         push @coords, {start => $1, stop => $2};
-      }   
+      }
       elsif($coord =~ /^(\d+);(\d+)_(\d+);(\d+)$/){
         if( $1 > $3 or $2 > $4){
           $log->{reverse_coordinates}->{"$mi_rna_name\t$ensg\t$location"}++;
@@ -298,36 +300,39 @@ sub parse_and_load{
         }
         push @coords, {start => $1, stop => $3};
         push @coords, {start => $2, stop => $4};
-      }    
+      }
       else{
         $log->{location_format}->{$location}++;
         $log2->{location_format}++;
         next;
-      }   
+      }
     }
     $log->{stored_miRNA}->{$mi_rna_name}++;
     $log2->{stored_miRNA}++;
 
-   
+
     for my $sites(@coords) {
       # my $transcript_mi_rna_seq = $transcript->seq->subseq($mi_rna_start, $mi_rna_end);
       #  my @genomic_coords        = $transcript->cdna2genomic($mi_rna_start, $mi_rna_end);
-     
-      my $feature = Bio::EnsEMBL::Funcgen::ExternalFeature->new (
-       -start         => $sites->{start}, 
-       -end           => $sites->{stop},  
-       -strand        => $gene->strand,
+
+      my $feature = Bio::EnsEMBL::Funcgen::MirnaTargetFeature->new (
        -feature_type  => $feature_type,
-       -slice         => $gene->slice,
-       -display_label => $mi_rna_name, 
        -feature_set   => $fset,
+       -accession     => $mi_rna_id,
+       -display_label => $mi_rna_name,
+       -evidence      => $evidence,
+       -method        => $method,
+       -slice         => $gene->slice,
+       -start         => $sites->{start},
+       -end           => $sites->{stop},
+       -strand        => $gene->strand,
        );
-       $extfeat_a->store($feature);
+        $mirnafeat_a->store($feature);
 
       my $dbentry = Bio::EnsEMBL::DBEntry->new(
        -primary_id             => $gene->stable_id,
        -dbname                 => $external_db_name,
-       -release                => $external_db_release, 
+       -release                => $external_db_release,
        -display_id             => $gene->display_xref->display_id,
        -status                 => 'KNOWNXREF',
        -db_display_name        => 'EnsemblGene',
@@ -342,13 +347,13 @@ sub parse_and_load{
       $log->{stored_records}->{$mi_rna_name}++;
       $log2->{stored_records}++;
     }
-    
+
   }
 
   close $fh;
   my $errors = $self->{_default_log_dir} . "/tarbase_import.$$.log";
     open($fh,'>',$errors) or die "Can not access '$errors'\n$!";
-    
+
       foreach my $message (sort keys %{$log}){
         next if($message =~ /stored_records|stored_miRNA/);
         say $fh '::::::  '.$message . "\t[". $log2->{$message} .']'.'  ::::::';
@@ -360,7 +365,7 @@ sub parse_and_load{
 
   my $total = 0;
 
-  $self->log_header("Parsing stats - Unsuccessful");  
+  $self->log_header("Parsing stats - Unsuccessful");
 
   foreach my $key (sort keys %{$log2}){
     next if($key =~ /stored_records|stored_miRNA/);
@@ -369,8 +374,8 @@ sub parse_and_load{
   }
 
   $self->log_header("Parsing statistics - Successful");
-  $self->log("miRNAs stored: " . $log2->{stored_miRNA});  
-  $self->log("Interactions stored: " . $log2->{stored_records});  
+  $self->log("miRNAs stored: " . $log2->{stored_miRNA});
+  $self->log("Interactions stored: " . $log2->{stored_records});
 
 
   $self->log_header("Failed records: $total");

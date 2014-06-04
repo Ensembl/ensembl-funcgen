@@ -56,7 +56,7 @@ sub new {
   #archive?
   #type? is this even used?
 
-  
+
   #throw('You must define a type of external_feature to import') if(! defined $type);
 
   if (! ($db && ref($db) &&
@@ -78,7 +78,7 @@ sub new {
 
   throw('-import_sets not fully implemented yet') if defined $import_fsets;
   $self->{'import_sets'} = (defined $import_fsets) ? @{$import_fsets} : undef;
-  
+
   $self->log("Parsing and loading $type ExternalFeatures");
 
   return $self;
@@ -128,10 +128,10 @@ sub set_feature_sets{
 
   my $fset_adaptor = $self->db->get_FeatureSetAdaptor;
   my $analysis_adaptor = $self->db->get_AnalysisAdaptor;
-  
+
   foreach my $fset_name(@{$self->import_sets}){
 
-	$self->log("Defining FeatureSet:\t$fset_name");  
+	$self->log("Defining FeatureSet:\t$fset_name");
 	my $fset = $fset_adaptor->fetch_by_name($fset_name);
 
 	#we don't need data sets for external_feature sets!
@@ -167,25 +167,26 @@ sub set_feature_sets{
 
 
 	if(! defined $fset){
-	  my ($name, $analysis, $ftype, $display_label, $desc);	  
+	  my ($name, $analysis, $ftype, $display_label, $desc);
 	  my $fset_analysis_key = (exists ${$fset_config}{-analysis})      ? '-analysis'      : '-ANALYSIS';
 	  my $fset_name_key     = (exists ${$fset_config}{-name})          ? '-name'          : '-NAME';
 	  my $fset_ftype_key    = (exists ${$fset_config}{-feature_type})  ? '-feature_type'  : '-FEATURE_TYPE';
 	  my $fset_dlabel_key   = (exists ${$fset_config}{-display_label}) ? '-display_label' : '-DISPLAY_LABEL';
 	  my $fset_desc_key     = (exists ${$fset_config}{-description})   ? '-description'   : '-DESCRIPTION';
+	  my $fset_fclass_key   = (exists ${$fset_config}{-feature_class}) ? '-feature_class' : 'external';
 	  my $display_name      = (exists ${$fset_config}{$fset_dlabel_key}) ? $fset_config->{$fset_dlabel_key} : $fset_name;
 	  #fset config name be different from key name
 	  my $fs_name           = (exists ${$fset_config}{$fset_name_key}) ? $fset_config->{$fset_name_key} : $fset_name;
 	  #warn if they are different?
-	  
-	  
+
+
 	  #Can't just deref config hash here as we need to deref the nested feature_type and analysis attrs
-	  
+
 	  $fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
-													 -name         => $fs_name,
-													 -feature_class=> 'external',
-													 -analysis     => ${$fset_config->{$fset_analysis_key}},
-													 -feature_type => ${$fset_config->{$fset_ftype_key}},
+													 -name          => $fs_name,
+													 -feature_class => $fset_fclass_key,
+													 -analysis      => ${$fset_config->{$fset_analysis_key}},
+													 -feature_type  => ${$fset_config->{$fset_ftype_key}},
 													 -display_label => $display_name,
 													 -description   => $fset_config->{$fset_desc_key}
 													);
@@ -246,7 +247,7 @@ sub set_feature_sets{
 #	if(! defined $ftype){
 #	  $self->log("FeatureType '".$ftype_config->{'name'}."' for external feature_set ".$self->{'type'}." not present");
 #	  $self->log("Storing using type hash definitions");
-#	
+#
 #	  $ftype = Bio::EnsEMBL::Funcgen::FeatureType->new(
 #													   -name => $ftype_config->{'name'},
 #													   -class => $ftype_config->{'class'},

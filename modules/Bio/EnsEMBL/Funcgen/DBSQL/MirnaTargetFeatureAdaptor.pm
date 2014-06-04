@@ -1,5 +1,5 @@
 #
-# Ensembl module for Bio::EnsEMBL::DBSQL::Funcgen::MirnaFeatureAdaptor
+# Ensembl module for Bio::EnsEMBL::DBSQL::Funcgen::MirnaTargetFeatureAdaptor
 #
 
 =head1 LICENSE
@@ -29,8 +29,8 @@ limitations under the License.
 
 =head1 NAME
 
-Bio::EnsEMBL::DBSQL::Funcgen::MirnaFeatureAdaptor - A database adaptor for fetching and
-storing MirnaFeature objects.
+Bio::EnsEMBL::DBSQL::Funcgen::MirnaTargetFeatureAdaptor - A database adaptor for fetching and
+storing MirnaTargetFeature objects.
 
 =head1 SYNOPSIS
 
@@ -41,17 +41,17 @@ my $features = $afa->fetch_all_by_Slice($slice);
 
 =head1 DESCRIPTION
 
-The MirnaFeatureAdaptor is a database adaptor for storing and retrieving
-MirnaFeature objects.
+The MirnaTargetFeatureAdaptor is a database adaptor for storing and retrieving
+MirnaTargetFeature objects.
 
 =cut
 
-package Bio::EnsEMBL::Funcgen::DBSQL::MirnaFeatureAdaptor;
+package Bio::EnsEMBL::Funcgen::DBSQL::MirnaTargetFeatureAdaptor;
 
 use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
-use Bio::EnsEMBL::Funcgen::MirnaFeature;
+use Bio::EnsEMBL::Funcgen::MirnaTargetFeature;
 use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor; #DBI sql_types import
 
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
@@ -71,7 +71,7 @@ use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
 =cut
 
 sub _true_tables {
-  return ([ 'mirna_feature', 'mirnaf' ],
+  return ([ 'mirna_target_feature', 'mitaf' ],
           [ 'feature_set',  'fs' ]);
 }
 #feature_set is required for fetching on analysis, external_db (cell_type or feature_type).
@@ -96,17 +96,18 @@ sub _true_tables {
 
 sub _columns {
   return qw(
-			mirnaf.mirna_feature_id   
-      mirnaf.seq_region_id
-			mirnaf.seq_region_start      
-      mirnaf.seq_region_end
-			mirnaf.seq_region_strand     
-      mirnaf.display_label
-			mirnaf.feature_type_id
-      mirnaf.feature_set_id
-			mirnaf.interdb_stable_id
-      mirnaf.accession
-      mirnaf.evidence
+			mitaf.mirna_target_feature_id
+      mitaf.seq_region_id
+			mitaf.seq_region_start
+      mitaf.seq_region_end
+			mitaf.seq_region_strand
+      mitaf.display_label
+			mitaf.feature_type_id
+      mitaf.feature_set_id
+			mitaf.interdb_stable_id
+      mitaf.accession
+      mitaf.evidence
+      mitaf.method
 	   );
 }
 
@@ -116,9 +117,9 @@ sub _columns {
   Arg [1]    : DBI statement handle object
   Example    : None
   Description: PROTECTED implementation of superclass abstract method.
-               Creates MirnaFeature objects from an executed DBI statement
+               Creates MirnaTargetFeature objects from an executed DBI statement
 			   handle.
-  Returntype : Listref of Bio::EnsEMBL::MirnaFeature objects
+  Returntype : Listref of Bio::EnsEMBL::MirnaTargetFeature objects
   Exceptions : None
   Caller     : Internal
   Status     : At Risk
@@ -129,7 +130,7 @@ sub _objs_from_sth {
 	my ($self, $sth, $mapper, $dest_slice) = @_;
 
 	# For EFG this has to use a dest_slice from core/dnaDB whether specified or not.
-	# So if it not defined then we need to generate one derived from the species_name and 
+	# So if it not defined then we need to generate one derived from the species_name and
   # schema_build of the feature we're retrieving.
 
 
@@ -140,31 +141,33 @@ sub _objs_from_sth {
 	my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
 	my $ftype_adaptor = $self->db->get_FeatureTypeAdaptor();
 	my (
-	    $external_feature_id,  
+	    $external_feature_id,
       $efg_seq_region_id,
-	    $seq_region_start,      
+	    $seq_region_start,
       $seq_region_end,
-	    $seq_region_strand,     
+	    $seq_region_strand,
       $fset_id,
-		  $display_label,         
+		  $display_label,
       $ftype_id,
 		  $interdb_stable_id,
       $accession,
       $evidence,
+      $method,
 	   );
 
 	$sth->bind_columns(
-					   \$external_feature_id,   
+					   \$external_feature_id,
              \$efg_seq_region_id,
-					   \$seq_region_start,      
+					   \$seq_region_start,
              \$seq_region_end,
-					   \$seq_region_strand,     
+					   \$seq_region_strand,
              \$display_label,
-					   \$ftype_id,              
+					   \$ftype_id,
              \$fset_id,
 					   \$interdb_stable_id,
              \$accession,
              \$evidence,
+             \$method,
 					  );
 
 
@@ -268,7 +271,7 @@ sub _objs_from_sth {
 	      $slice = $dest_slice;
 	    }
 
-	  push @features, Bio::EnsEMBL::Funcgen::MirnaFeature->new_fast
+	  push @features, Bio::EnsEMBL::Funcgen::MirnaTargetFeature->new_fast
 		({
 		  'start'               => $seq_region_start,
 		  'end'                 => $seq_region_end,
@@ -283,6 +286,7 @@ sub _objs_from_sth {
 		  'interdb_stable_id'   => $interdb_stable_id,
       'accession'           => $accession,
       'evidence'            => $evidence,
+      'method'              => $method,
 		 });
 	  }
 
@@ -291,13 +295,13 @@ sub _objs_from_sth {
 
 =head2 store
 
-  Args       : List of Bio::EnsEMBL::Funcgen::MirnaFeature objects
+  Args       : List of Bio::EnsEMBL::Funcgen::MirnaTargetFeature objects
   Example    : $ofa->store(@features);
-  Description: Stores given MirnaFeature objects in the database. Should only
+  Description: Stores given MirnaTargetFeature objects in the database. Should only
                be called once per feature because no checks are made for
 			   duplicates. Sets dbID and adaptor on the objects that it stores.
   Returntype : Arrayref of stored ExternalFeatures
-  Exceptions : Throws if a list of MirnaFeature objects is not provided or if
+  Exceptions : Throws if a list of MirnaTargetFeature objects is not provided or if
                the Analysis, CellType and FeatureType objects are not attached or stored
   Caller     : General
   Status     : At Risk
@@ -308,34 +312,35 @@ sub store{
 	my ($self, @mrna_fs) = @_;
 
 	if (scalar(@mrna_fs) == 0) {
-		throw('Must call store with a list of MirnaFeature objects');
+		throw('Must call store with a list of MirnaTargetFeature objects');
 	}
 
 	my $sth = $self->prepare("
-		INSERT INTO mirna_feature (
+		INSERT INTO mirna_target_feature (
 			seq_region_id,
       seq_region_start,
 			seq_region_end,
       seq_region_strand,
-      display_label,   
+      display_label,
       feature_type_id,
       feature_set_id,
       accession,
-      evidence
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      evidence,
+      method
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	");
 
 	my $db = $self->db();
 
   FEATURE: foreach my $mrna_f (@mrna_fs) {
 
-	  if(! (ref($mrna_f) && $mrna_f->isa('Bio::EnsEMBL::Funcgen::MirnaFeature') )) {
-  		throw('Feature must be an MirnaFeature object');
+	  if(! (ref($mrna_f) && $mrna_f->isa('Bio::EnsEMBL::Funcgen::MirnaTargetFeature') )) {
+  		throw('Feature must be an MirnaTargetFeature object');
 	  }
 
 	  if ( $mrna_f->is_stored($db) ) {
   		#does not accomodate adding Feature to >1 feature_set
-  		warning('MirnaFeature [' . $mrna_f->dbID() . '] is already stored in the database');
+  		warning('MirnaTargetFeature [' . $mrna_f->dbID() . '] is already stored in the database');
   		next FEATURE;
 	  }
 
@@ -344,15 +349,16 @@ sub store{
 	  my $seq_region_id;
 	  ($mrna_f, $seq_region_id) = $self->_pre_store($mrna_f);
 
-	  $sth->bind_param(1, $seq_region_id,                 SQL_INTEGER);
-	  $sth->bind_param(2, $mrna_f->start,                 SQL_INTEGER);
-	  $sth->bind_param(3, $mrna_f->end,                   SQL_INTEGER);
-	  $sth->bind_param(4, $mrna_f->strand,                SQL_TINYINT);
-	  $sth->bind_param(5, $mrna_f->display_label,         SQL_VARCHAR);
-	  $sth->bind_param(6, $mrna_f->feature_type->dbID,    SQL_INTEGER);
-	  $sth->bind_param(7, $mrna_f->feature_set->dbID,     SQL_INTEGER);
-    $sth->bind_param(8, $mrna_f->accession,             SQL_VARCHAR);
-    $sth->bind_param(9, $mrna_f->evidence,              SQL_VARCHAR);
+	  $sth->bind_param(1,  $seq_region_id,                 SQL_INTEGER);
+	  $sth->bind_param(2,  $mrna_f->start,                 SQL_INTEGER);
+	  $sth->bind_param(3,  $mrna_f->end,                   SQL_INTEGER);
+	  $sth->bind_param(4,  $mrna_f->strand,                SQL_TINYINT);
+	  $sth->bind_param(5,  $mrna_f->display_label,         SQL_VARCHAR);
+	  $sth->bind_param(6,  $mrna_f->feature_type->dbID,    SQL_INTEGER);
+	  $sth->bind_param(7,  $mrna_f->feature_set->dbID,     SQL_INTEGER);
+    $sth->bind_param(8,  $mrna_f->accession,             SQL_VARCHAR);
+    $sth->bind_param(9,  $mrna_f->evidence,              SQL_VARCHAR);
+    $sth->bind_param(10, $mrna_f->method,                SQL_VARCHAR);
 
 	  $sth->execute();
 	  $mrna_f->dbID( $self->last_insert_id );
@@ -365,11 +371,11 @@ sub store{
 
 =head2 fetch_by_interdb_stable_id
 
-  Arg [1]    : Integer $stable_id - The 'interdb stable id' of the MirnaFeature to retrieve
+  Arg [1]    : Integer $stable_id - The 'interdb stable id' of the MirnaTargetFeature to retrieve
   Example    : my $rf = $rf_adaptor->fetch_by_interdb_stable_id(1);
-  Description: Retrieves a MirnaFeature via its interdb_stable id. This is really an internal
+  Description: Retrieves a MirnaTargetFeature via its interdb_stable id. This is really an internal
                method to facilitate inter DB linking.
-  Returntype : Bio::EnsEMBL::Funcgen::MirnaFeature
+  Returntype : Bio::EnsEMBL::Funcgen::MirnaTargetFeature
   Exceptions : none
   Caller     : general
   Status     : Stable
@@ -392,8 +398,8 @@ sub fetch_all_by_accessions{
 }
 
 sub _constrain_accession {
-  my ($self, $accessions) = @_; 
-  my $constraint = 'mirnaf.accession IN(' . join (', ', map { qq!"$_"! } @$accessions).')';
+  my ($self, $accessions) = @_;
+  my $constraint = 'mitaf.accession IN(' . join (', ', map { qq!"$_"! } @$accessions).')';
   return $constraint;
 
 }

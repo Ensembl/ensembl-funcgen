@@ -378,7 +378,7 @@ sub get_available_adaptors{
                'FGCoordSystem'          => 'Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor',
                'InputSet'               => 'Bio::EnsEMBL::Funcgen::DBSQL::InputSetAdaptor',
                'InputSubset'            => 'Bio::EnsEMBL::Funcgen::DBSQL::InputSubsetAdaptor',
-               'MirnaFeature'           => 'Bio::EnsEMBL::Funcgen::DBSQL::MirnaFeatureAdaptor',
+               'MirnaTargetFeature'     => 'Bio::EnsEMBL::Funcgen::DBSQL::MirnaTargetFeatureAdaptor',
                'MetaCoordContainer'     => 'Bio::EnsEMBL::Funcgen::DBSQL::MetaCoordContainer',
                'MotifFeature'           => 'Bio::EnsEMBL::Funcgen::DBSQL::MotifFeatureAdaptor',
                'Probe'                  => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeAdaptor',

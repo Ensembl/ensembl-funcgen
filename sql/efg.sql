@@ -225,11 +225,11 @@ CREATE TABLE `motif_feature` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
-@table  mirna_feature
+@table  mirna_target_feature
 @desc   The table contains imports from externally curated resources e.g. cisRED, miRanda, VISTA, redFLY etc.
 @colour  #FFCC66
 
-@column mirna_feature_id    Internal ID
+@column mirna_target_feature_id    Internal ID
 @column seq_region_id       @link seq_region table ID
 @column seq_region_start    Start position of this feature
 @column seq_region_end      End position of this feature
@@ -247,9 +247,9 @@ CREATE TABLE `motif_feature` (
 */
 
 
-DROP TABLE IF EXISTS `mirna_feature`;
-CREATE TABLE `mirna_feature` (
-  `mirna_feature_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+DROP TABLE IF EXISTS `mirna_target_feature`;
+CREATE TABLE `mirna_target_feature` (
+  `mirna_target_feature_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `seq_region_id` int(10) unsigned NOT NULL,
   `seq_region_start` int(10) unsigned NOT NULL,
   `seq_region_end` int(10) unsigned NOT NULL,
@@ -260,12 +260,13 @@ CREATE TABLE `mirna_feature` (
   `interdb_stable_id` int(10) unsigned DEFAULT NULL,
   `accession` varchar(60) DEFAULT NULL,
   `evidence` varchar(60) DEFAULT NULL,
-  PRIMARY KEY (`mirna_feature_id`),
+  `method` varchar(60) DEFAULT NULL,
+  PRIMARY KEY (`mirna_target_feature_id`),
   UNIQUE KEY `interdb_stable_id_idx` (`interdb_stable_id`),
   KEY `feature_type_idx` (`feature_type_id`),
   KEY `feature_set_idx` (`feature_set_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`)
-) ENGINE=MyISAM AUTO_INCREMENT=14 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 
