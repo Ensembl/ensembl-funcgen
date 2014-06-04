@@ -27,6 +27,26 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( is_gzipped         gunzip_file
 
 my %half_open_formats = (bed => 1);
 
+#To be over-ridden in the sub class with hardcoded values
+sub out_file_types{ return shift->{out_file_types}; }
+sub input_formats{  return shift->{input_formats};  }
+#sub requires_control {  }
+#Currently only used in the caller to identify which files need generating
+#Omitted here for safety, due to boolean return type
+
+
+# Currently the only sane place to check whether a FeatureSet has been IMPORTED
+# or needs rolling back is in the caller.
+# Can't put it in init/parse file, as these are not DB specific
+# Cannot put it in store_AnnotatedFeature as this is too late to
+# catch before running the peak caller, and is also called iteratively
+# Currently we are not rolling back before importing!
+# Hence we are getting failures if we try and rerun a job
+# rollback is gurrently only done during set definition
+# we should do it in RunPeaks!
+
+#output format should really only be used to define cmdline switches for
+#output file if they exist
 
 sub new {
   my $class = shift;
@@ -34,22 +54,21 @@ sub new {
   bless $self, $class;
 
   my ($prog_file, $prog_params, $align_file, $control_file, 
-    $out_dir, $out_file_prefix, $reload, $rerun, $no_load, 
+    $out_dir, $out_file_prefix, $reload, $rerun, $no_load,
     $is_half_open, $convert_half_open, $output_format, $debug) =
     rearrange(['PROGRAM_FILE', 'PARAMETERS', 'ALIGN_FILE', 'CONTROL_FILE',
-      'OUT_DIR', 'OUT_FILE_PREFIX', 'RELOAD', 'RERUN', 'NO_LOAD', 
+      'OUT_DIR', 'OUT_FILE_PREFIX', 'RELOAD', 'RERUN', 'NO_LOAD',
       'IS_HALF_OPEN', 'CONVERT_HALF_OPEN', 'OUTPUT_FORMAT', 'DEBUG'], @_);
       
- 
-  #may want to have an empty string for the params
- 
-  if(! ($prog_file && (defined $prog_params) && $align_file &&
-        $out_dir && $output_format)){
+  if(! ($prog_file && (defined $prog_params) && 
+        $align_file && $out_dir)){
     #this will give an undef warning
-    throw("Some mandatory parameters are not met:\n\t".
-      "-PROGRAM_FILE => $prog_file, -ALIGN_FILE => $align_file, ".
-      "-PARAMETERS => $prog_params, -OUT_DIR => $out_dir, ".
-      "-OUTPUT_FORMAT => $output_format");
+    throw("Some of the folllowing mandatory parameters are not met:\n\t".
+      "-PROGRAM_FILE, -ALIGN_FILE, -PARAMETERS or -OUT_DIR\n@_");
+  }
+
+  if(! -d $out_dir){
+    throw("-out_dir does not exist:\t".$out_dir);  
   }
 
   if(! -f $prog_file){
@@ -72,12 +91,22 @@ sub new {
     warn "Running $prog_file without and control file\n"; #omit this warn? 
   }
  
-  
   if((! defined $is_half_open) && 
     exists $half_open_formats{$output_format}){
     $is_half_open = $half_open_formats{$output_format};   
   }
   
+  #Set default out_file_type here
+  if(! defined $self->out_file_types){
+    $self->{out_file_types} = [$output_format];
+    #Don't test $output_format, as it is only strictly required
+    #if we specify an output prefix and the subclass
+    #requires the format to build the output file path
+    #or we have not specified an outfile path  
+  }
+  
+
+  #we aslo want to enable output_file spec, if this is even valid for the particular caller
   
   $self->{control_file}      = $control_file; 
   $self->{program_file}      = $prog_file;
@@ -90,9 +119,7 @@ sub new {
   $self->{convert_half_open} = $convert_half_open;
   $self->{debug}             = $debug;
   
-  #Init files here, so the output file is still available even if we don't run
-  #i.e. for reloading
-  
+
   
   #This is an issue as this forces the requirement of the feature files here
   #before we can ask this moduel what format it wants
@@ -101,7 +128,6 @@ sub new {
   #This will allow the caller to pick the prefered format, but not fail if it is not available
   
   $self->init_files;
-   
   return $self;
 }
 
@@ -115,6 +141,14 @@ sub new {
 #do we still want a reload mode, where we don't care about the input
 #files, so long as we have a valid out_file_prefix
 
+#We never really want to unzip! As this may spoil checksums!!
+
+#Some programs require an output file param others
+# an output prefix, and some have > 1 output 
+#Issue here is post-processing the files, we need to know which formats we want
+#and hence which methods to call
+    
+
 sub init_files {
   my ($self, $unzip) = @_;
   
@@ -126,19 +160,18 @@ sub init_files {
     my $control_file              = $self->control_file;
   
     if($control_file){
-      ($control_file, $gzip_control) = gunzip_file($self->align_file);
+      ($control_file, $gzip_control) = gunzip_file($control_file);
     }
   
     if(! defined $self->out_file_prefix){
       $self->{out_file_prefix} = $file_prefix;  
     }
     
-    $self->{out_file} = $self->out_dir.'/'.$self->out_file_prefix.'.'.$self->output_format;
-  
-    $self->{file_info} = [$align_file, $self->{out_file}, $suffix,
+    $self->{out_file_prefix}  = $self->out_dir.'/'.$self->out_file_prefix;#.'.'.$self->output_format;
+    $self->{file_info} = [$align_file, $self->{out_file_prefix}, $suffix,
                           $control_file, $gzip_align, $gzip_control];
   }
-    
+
   return $self->{file_info};
 }
 
@@ -150,57 +183,79 @@ sub parameters        { return shift->{parameters};        }
 sub out_dir           { return shift->{out_dir};           }
 sub out_file_prefix   { return shift->{out_file_prefix};   }
 sub output_format     { return shift->{output_format};     }
-sub out_file          { return shift->{out_file};          }
 sub out_file_handle   { return shift->{out_file_handle};   }
 sub out_file_header   { return shift->{out_file_header};   } 
 sub is_half_open      { return shift->{is_half_open};      }
 sub convert_half_open { return shift->{convert_half_open}; }   
-sub debug             { return shift->{debug};             }   
+sub debug             { return shift->{debug};             }
+
+#This attribute should be defined directly in the subclass constructor  
+#or the method should be redefined in subclass to take file_type arg if required. 
+#This is requiref for reload mode. (i.e. without calling run)
+sub out_file          { return shift->{out_file};          }
 
   
 #File parsing and DB loading may be polluting this PeakCaller code
 #but is not mandatory functionality, so we will allow this as is quite useful
-#This is completely agnostic toward the type of code ref p
- 
-sub process_features {
-  my ($self, $process_cref, @process_cref_args) = @_;  
-  
-  assert_ref($process_cref, 'CODE', 'Process feature method');
-  
-  #parse/init methods can either be implemented directly in subclass as parse_feature
-  #without setting output_format, or by setting output_format and relying on generic 
-  #output format methods defined in this class, or by re-implementing the later in a subclass 
-  my $init_method = 'init_output_file';
-  my $parse_method = 'parse_feature';
+#as it can enable DB load functionality outside of the pipeline
+#This is completely agnostic toward the type of code ref
+#so it could be a DB store function or something completely different!
+#Move some of this to SeqTools?
+#Then use SeqTools directly in RunPeaks instead.
 
-  if(defined $self->output_format){
-    $parse_method = 'parse_'.$self->output_format.'_feature';
-    $init_method  = 'init_'.$self->output_format.'_feature';
-  } 
+
+sub process_features {
+  my $self  = shift;
+  my $params = shift;
+  assert_ref($params, 'HASH', 'Params');
+  my ($file_type, $process_cref, $process_args) = 
+    rearrange([qw( file_type processor_ref processor_args )], %$params);
+  
+  if(! defined $file_type){
+    #If there is only one, assume we want that, else die
+    if(scalar @{$self->out_file_types} == 1){
+      $file_type = $self->out_file_types->[0];
+    }
+    else{
+      throw('Unable to identify a file type to process. PeakCaller does not '.
+        'have a unique out file type, please specify a -file_type in the '.
+        'process_features parameter hash');  
+    }
+  }
+  
+  assert_ref($process_args, 'ARRAY', 'Process feature method arguments');
+  assert_ref($process_cref, 'CODE',  'Process feature method');
+  my $parse_method = 'parse_'.$file_type.'_record';
+  my $init_method  = 'init_'.$file_type.'_file';
   
   if(! $self->can($parse_method)){
     throw(ref($self)."::${parse_method} is not a valid method.".
-    ' This class is missing a method or does not have a valid output format');      
+    ' This class is missing a method or does not have a supported output format');      
   }
    
   if(! $self->can($init_method)){
     throw(ref($self)."::${init_method} is not a valid method.".
-    ' This class is missing a method or does not have a valid output format');      
+    ' This class is missing a method or does not have a supported output format');      
   }
   
+  
+  $self->helper->debug(1, "Processing file:\t".$self->out_file($file_type));
   $self->$init_method;
-  my $feature_hash;
- 
-  while( ($feature_hash = $self->parse_feature) &&
+  my ($feature_hash, $feature_cnt, $retval, @retvals);
+  
+  while( ($feature_hash = $self->$parse_method) &&
          defined $feature_hash ){          
-    $process_cref->(@process_cref_args, $feature_hash);       
+    $retval = $process_cref->(@$process_args, $feature_hash);     
+    push @retvals, $retval if defined $retval;
+    $feature_cnt++;  
   }   
+   
+  return ($feature_cnt, \@retvals);
 }  
 
 
-
 sub init_bed_file {
-  my $self = $_[0];
+  my $self = shift;
     
   $self->{out_file_handle} = open_file($self->out_file);
   #This will validate exists
@@ -212,9 +267,7 @@ sub init_bed_file {
   while(($line = $self->out_file_handle->getline) &&
          defined $line){
     
-    #Should we handle # and Region here too?
-    
-    if($line =~ /^browser/){
+       if($line =~ /^(browser)/){
       $prevpos = $self->out_file_handle->getpos;
     }
     elsif($line =~ /^track/){
@@ -226,45 +279,57 @@ sub init_bed_file {
     }
   }
   
-  $self->out_file_handle->setpos($prevpos);
-  
+  $self->out_file_handle->setpos($prevpos); 
   return $self->out_file_handle;
 }
 
+#can probably put this in another parser module
+#maybe IO will provide this?
 
-sub parse_bed_feature {
-  my $self = $_[0];
-  my $line;
+#Would be nice to define a spec for what we want returning
+#rather than the standard field names, i.e. what this translates to
+#in our constructor of choice. Simplest way would be to pass a list of 
+#of key values in the field order, to override the default ones
+#This will not handle overloading fields, maybe this is something autosql can handle?
+
+
+sub parse_bed_record {
+  my $self = shift;
+  my ($line, $fhash);
   
-  eval { $line = $self->out_file_handle->getline; };
-  
-  if($@){
+  if(! eval { $line = $self->out_file_handle->getline; 1}){
     throw("Failed to getline from out_file_handle, maybe you need to init_bed_file first.\n$@");
   }
-  
+ 
   if(defined $line){
-    my ($seqid, $start, $end, undef, undef, undef, $score, undef, undef, $summit) = split(/\s+/, $line);
-       
-    #$strand = convert_strand_from_bed($strand);
-    $summit = int($summit + 0.5);#Rounds to nearest integer as int rounds down     
-
+    my ($seqid, $start, $end, $name, $score, $strand) = split(/\s+/, $line);
+    $strand = convert_strand_from_bed($strand);
+    
+    #Need to handle seq_id conversion if the bed is UCSC format
+     
     if($self->is_half_open && $self->convert_half_open){
       $start += 1;
     }
-    
+      
     #Handle half_open here, but slice in Caller which knows about the DB
-
-    $line = 
-      {-start      => $start,
-       -end        => $end,
-       -score      => $score,
-       -summit     => $summit,
-       -seq_region => $seqid   
-      };
+    $fhash = 
+     {-start      => $start,
+      -end        => $end,
+      -name       => $name,
+      -strand     => $strand,
+      -score      => $score,
+      -seq_region => $seqid   };
   }
 
-  return $line;
+  return $fhash;
 }
+
+#This should really go in SeqTools::_init/run_peak_caller
+#which would then call other PeakCaller methods
+#but there are currently too many interdepencies in RunPeaks::fetch_input
+#
+
+
 
 
 1;
