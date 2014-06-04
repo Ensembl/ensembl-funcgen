@@ -342,7 +342,7 @@ sub parse_and_load{
        -linkage_annotation     => 'TarBase Micro RNA target',
        -analysis               => $fset->analysis,
       );
-     $dbentry_a->store($dbentry, $feature->dbID, 'ExternalFeature');#
+     $dbentry_a->store($dbentry, $feature->dbID, 'MirnaTargetFeature');#
 
       $log->{stored_records}->{$mi_rna_name}++;
       $log2->{stored_records}++;
