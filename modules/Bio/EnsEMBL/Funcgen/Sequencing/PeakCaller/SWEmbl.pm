@@ -132,6 +132,8 @@ sub filter_max_peaks{
 #TODO revise how we create and handle filehandles
 # sub out get_txt_filehandle, set as attr, or exclusively pass between methods?
 # out_file_handle is currently generic and does not support multiple file_types
+# Also change all this to generic parse_header/record method, and pass an optional file types
+# 
 
 sub parse_txt_header{
   my $self   = shift;
