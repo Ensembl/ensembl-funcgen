@@ -58,7 +58,10 @@ use warnings;
 use File::Basename;
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
 use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( open_file is_bed is_gzipped);
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( convert_strand
+                                               open_file 
+                                               is_bed 
+                                               is_gzipped);
 use Bio::EnsEMBL::Funcgen::FeatureSet;
 use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 use Bio::EnsEMBL::Funcgen::Utils::Helper;
@@ -206,6 +209,7 @@ sub initialise_input_file{
 
 	if($prepare){
 	  #This will be filtered for seq_region_name
+	  
 	  $self->output_file($self->get_dir('output')."/prepared.${name}.gz");
 	}
 	else{
@@ -284,8 +288,6 @@ sub parse_line{
   #	#sanity check here
   return 0 if($line =~ /track name=/o);
   $line =~ s/\r*\n//o;#chump accounts for windows files
-
-
   my ($chr, $start, $end, $name, $score, $strand, @other_fields) = split(/\s+/o, $line);
   
   #Shoudl this not be \t?
@@ -314,7 +316,7 @@ sub parse_line{
 
 	if(! $prepare){
 
-	  $strand = $self->set_strand($strand);
+	  $strand = convert_strand($strand);
 	  $start += 1 if $self->ucsc_coords;
 	  
 	  # Set name dependantly on input class
@@ -375,6 +377,9 @@ sub parse_line{
 #Should really move this to InputSet parser
 #Altho this would require an extra method call per line to parse the record
 
+#Need to cache slice and count feature, otherwise we get scary found ont data warnings
+#should really use parse line instead of dealing with separately
+
 sub parse_Features_by_Slice{
   my ($self, $slice) = @_;
 
@@ -385,6 +390,9 @@ sub parse_Features_by_Slice{
   }
 
   my $slice_chr = $slice->seq_region_name;
+
+  warn "Parsing features for slice:\t".$slice->name;
+
 
   #This method assumes that method calls will walk through a seq_region
   #using adjacent slices
@@ -402,22 +410,24 @@ sub parse_Features_by_Slice{
   
   if(! ($slice_start == ($last_slice_end + 1) &&
 		($slice->seq_region_name eq $last_slice_name))){
-	#Need to reopen the file as we are doing a second pass over the same data
-	#This is not guaranteed to work for re-reading sets of slices
-	#This would also not be caught by this test
-
-	#To be safe we need to reset the file handle from the caller context
-
-	throw("Bed parser does not yet support parsing features from successive non-adjacent Slices\n".
-		  "Last slice end - Next slice start:\t$last_slice_name:${last_slice_end} - ".
-		  $slice->seq_region_name.':'.$slice_start);
+    #Need to reopen the file as we are doing a second pass over the same data
+    #This is not guaranteed to work for re-reading sets of slices
+    #This would also not be caught by this test
+    
+    #To be safe we need to reset the file handle from the caller context
+    throw("Bed parser does not yet support parsing features from successive non-adjacent Slices\n".
+      "Last slice end - Next slice start:\t$last_slice_name:${last_slice_end} - ".
+      $slice->seq_region_name.':'.$slice_start);
   }
 	
   
   #Deal with 5' overhang first
   foreach my $feature(@{$self->overhang_features}){	
-	$feature = $feature->transfer($slice);
-	push @features, $feature if $feature;#This should always be true
+    $feature = $feature->transfer($slice);
+    
+    if($feature){ #This should always be true
+      push @features, $feature; 
+    }
   }
 
   $self->{'overhang_features'} = []; #reset overhang features
@@ -430,15 +440,15 @@ sub parse_Features_by_Slice{
   #This currently parses the rest of the file once we have seen the data we want
 
   while((defined ($line = <$fh>)) && $parse){
-	#This does not catch the end of the file!
+  #This does not catch the end of the file!
 
-	if($self->last_line){#Deal with previous line first
-	  $line = $self->last_line;
-	  $self->last_line('');
-	}
-	else{
-	  $line = <$fh>;
-	}
+    if($self->last_line){#Deal with previous line first
+      $line = $self->last_line;
+      $self->last_line('');
+    }
+    else{
+      $line = <$fh>;
+    }
 
 	#Still need to chump here in case no other fields
 	$line =~ s/\r*\n//o if $line;#chump accounts for windows files
@@ -450,10 +460,14 @@ sub parse_Features_by_Slice{
 
 	#We could use a generic method to parse here
 	#But it is small enough and simple enough to have twice
-	my ($chr, $start, $end, $name, $score, $strand, @other_fields) = split/\s+/o, $line;
-	#Shoudl this not be \t?
+	my ($chr, $start, $end, $name, $score, $strand, @other_fields) = split(/\s+/o, $line);
 
 	if($slice_chr eq $chr){#Skim through the file until we find the slice
+	
+	  #Count and cache so the output doesn't report no features
+	  $self->count('features');
+	  $self->cache_slice($slice->seq_region_name);
+	  
 	  $seen_chr = 1;
 	  if($end >= $slice_start){
 

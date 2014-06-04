@@ -22,8 +22,9 @@ use Bio::EnsEMBL::Utils::Exception         qw( throw );
 use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( is_gzipped         gunzip_file 
                                                file_suffix_parse  open_file
-                                               run_backtick_cmd ); #convert_strand_from_bed
-
+                                               convert_strand
+                                               run_backtick_cmd );
+                                               
 my %half_open_formats = (bed => 1);
 
 #To be over-ridden in the sub class with hardcoded values
@@ -289,7 +290,7 @@ sub parse_bed_record {
  
   if(defined $line){
     my ($seqid, $start, $end, $name, $score, $strand) = split(/\s+/, $line);
-    $strand = convert_strand_from_bed($strand);
+    $strand = convert_strand($strand);
     
     #Need to handle seq_id conversion if the bed is UCSC format
      
