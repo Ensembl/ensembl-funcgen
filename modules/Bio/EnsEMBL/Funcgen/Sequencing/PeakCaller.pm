@@ -24,7 +24,6 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( is_gzipped         gunzip_file
                                                file_suffix_parse  open_file
                                                run_backtick_cmd ); #convert_strand_from_bed
 
-
 my %half_open_formats = (bed => 1);
 
 #To be over-ridden in the sub class with hardcoded values
@@ -33,17 +32,6 @@ sub input_formats{  return shift->{input_formats};  }
 #sub requires_control {  }
 #Currently only used in the caller to identify which files need generating
 #Omitted here for safety, due to boolean return type
-
-
-# Currently the only sane place to check whether a FeatureSet has been IMPORTED
-# or needs rolling back is in the caller.
-# Can't put it in init/parse file, as these are not DB specific
-# Cannot put it in store_AnnotatedFeature as this is too late to
-# catch before running the peak caller, and is also called iteratively
-# Currently we are not rolling back before importing!
-# Hence we are getting failures if we try and rerun a job
-# rollback is gurrently only done during set definition
-# we should do it in RunPeaks!
 
 #output format should really only be used to define cmdline switches for
 #output file if they exist
@@ -104,10 +92,7 @@ sub new {
     #requires the format to build the output file path
     #or we have not specified an outfile path  
   }
-  
 
-  #we aslo want to enable output_file spec, if this is even valid for the particular caller
-  
   $self->{control_file}      = $control_file; 
   $self->{program_file}      = $prog_file;
   $self->{align_file}        = $align_file;
@@ -118,14 +103,6 @@ sub new {
   $self->{is_half_open}      = $is_half_open;
   $self->{convert_half_open} = $convert_half_open;
   $self->{debug}             = $debug;
-  
-
-  
-  #This is an issue as this forces the requirement of the feature files here
-  #before we can ask this moduel what format it wants
-  
-  #change get_alignment_file method to take a list of formats in preference order?
-  #This will allow the caller to pick the prefered format, but not fail if it is not available
   
   $self->init_files;
   return $self;
@@ -204,6 +181,17 @@ sub out_file          { return shift->{out_file};          }
 #Then use SeqTools directly in RunPeaks instead.
 
 
+#todo
+#Change all init/parse/out_file_handle methods to be generic and take 
+#an optional file_type argument?
+#This would mean the arg would be superfluous for those PeakCallers
+#which don't use it. None of these methods take any args other than fle_type at present
+#So this is not currently an issue
+#These generic methods would then despatch to the correct method?
+#How much of this can be moved in here, vs PeakCaller specific functionality
+#i.e. file_type to suffix conversion
+#Leave thsi for now
+
 sub process_features {
   my $self  = shift;
   my $params = shift;
@@ -239,7 +227,7 @@ sub process_features {
   }
   
   
-  $self->helper->debug(1, "Processing file:\t".$self->out_file($file_type));
+  warn "Processing file:\t".$self->out_file($file_type) if $self->debug;
   $self->$init_method;
   my ($feature_hash, $feature_cnt, $retval, @retvals);
   
@@ -253,6 +241,7 @@ sub process_features {
   return ($feature_cnt, \@retvals);
 }  
 
+#For common formats there is a potential to wrap IO parsers
 
 sub init_bed_file {
   my $self = shift;
@@ -283,15 +272,12 @@ sub init_bed_file {
   return $self->out_file_handle;
 }
 
-#can probably put this in another parser module
-#maybe IO will provide this?
 
 #Would be nice to define a spec for what we want returning
 #rather than the standard field names, i.e. what this translates to
 #in our constructor of choice. Simplest way would be to pass a list of 
 #of key values in the field order, to override the default ones
 #This will not handle overloading fields, maybe this is something autosql can handle?
-
 
 sub parse_bed_record {
   my $self = shift;
@@ -323,14 +309,6 @@ sub parse_bed_record {
 
   return $fhash;
 }
-
-#This should really go in SeqTools::_init/run_peak_caller
-#which would then call other PeakCaller methods
-#but there are currently too many interdepencies in RunPeaks::fetch_input
-#
-
-
-
 
 1;
 
