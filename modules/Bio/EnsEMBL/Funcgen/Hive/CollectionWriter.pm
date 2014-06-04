@@ -31,8 +31,10 @@ $main::_no_log = 1;
 #output_dir  This is a generic over ride for the default output dir
 
 #todo
-#default set up is that alignment will have already done the filter from bam
-#hence we woudl need to set the filter_from_format param if we ever want to change this
+#1 default set up is that alignment will have already done the filter from bam
+#  hence we woudl need to set the filter_from_format param if we ever want to change this
+#2 Move a lot of the fetch_input_code to run
+
 
 sub fetch_input {   # fetch parameters...
   my $self = shift;
@@ -40,19 +42,16 @@ sub fetch_input {   # fetch parameters...
   $self->param('disconnect_if_idle', 1);
 
   $self->SUPER::fetch_input;    
-  $self->helper->debug(1, "CollectionWriter::fetch_input after SUPER::fetch_input");
-
-
-   
+  $self->helper->debug(1, "CollectionWriter::fetch_input after SUPER::fetch_input");  
   my $rset = $self->fetch_Set_input('ResultSet');
   $self->helper->debug(1, "CollectionWriter::fetch_input got ResultSet:\t".$rset);
   
-  #my $input_sets = $rset->get_support;  
-   
-  #if(scalar(@$input_sets) != 1){
-  #  throw('Expected 1 InputSet, found '.scalar(@$input_sets).
-  #    ' for ResultSet '.$rset->name);   
-  #}
+ 
+  $self->init_branching_by_analysis;  #Set up the branch config
+  my $ftype_name = $rset->feature_type->name;
+ 
+
+  
   
   $self->get_output_work_dir_methods($self->db_output_dir.'/result_feature/'.$rset->name, 1);#no work dir?
   #todo enable use of work dir in get_alignment_file_by_InputSet and Importer
@@ -76,16 +75,80 @@ sub fetch_input {   # fetch parameters...
   #use all formats by default
   #Can we update -input_files in the Importer after we have created it?
   
+  
+  #Hack to add in states that were missed in DefineResultSets
+  $rset->adaptor->store_status('ALIGNED', $rset);
+  
+  if($self->FeatureSet->analysis->program eq 'CCAT'){
+    #throw('Need to implement control preprocessing for CCAT');  
+    
+    my $exp = $rset->experiment(1);#ctrl flag
+    #But only in PreprocessAlignments no in WriteCollections 
+    
+    if(! $exp->has_status('CONTROL_CONVERTED_TO_BED')){
+      #Make this status specific for now, just in case
+    
+      if($exp->has_status('CONVERTING_CONTROL_TO_BED')){
+         $self->input_job->transient_error(0); #So we don't retry  
+          #Would be nice to set a retry delay of 60 mins
+          throw($exp->name.' is in the CONVERTING_CONTROL_TO_BED state, another job may already be converting these controls'.
+            "\nPlease wait until ".$exp->name.' has the CONTROL_CONVERTED_TO_BED status before resubmitting this job');
+      }
+      else{
+        #Potential race condition here will fail on store
+        $exp->adaptor->store_status('CONVERTING_CONTROL_TO_BED', $exp); 
+       
+        $self->get_alignment_files_by_ResultSet_formats($rset,
+                                                        ['bed'],
+                                                        1); #control flag
+      
+        #todo check success of this in case another job has pipped us
+        $exp->adaptor->store_status('CONTROL_CONVERTED_TO_BED',   $exp); 
+        $exp->adaptor->revoke_status('CONVERTING_CONTROL_TO_BED', $exp, 1);#Validate status flag
+      }   
+    }
+  }
+  
+  
+  #This currently keeps the sam files! Which is caning the lfs quota                                                                    
+  warn "Hardcoded PreprocessAlignments to get bed only, as sam intermediate was eating quota";
    
-  my $align_files = $self->get_alignment_files_by_ResultSet_formats($rset,
-                                                                    $self->param_required('feature_formats'),
-                                                                    undef, #control flag
-                                                                    1);     #all formats
+  my $align_files = $self->get_alignment_files_by_ResultSet_formats($rset, ['bed']);
+                                                                #    $self->param_required('feature_formats'),
+                                                                #    undef, #control flag
+                                                                #    1);     #all formats
+                                                                    
+                                                                    
+                                                                    
+                                                                    
+
+                                                                    
   #No need to check as we have all_formats defined? Shouldn't we just specify bed here?
   #other formats maybe required for other downstream analyses i.e. peak calls
   #but we don't know what formats yet
+  #We have to do the conversion here, so we don't get parallel Collection slice jobs trying to do the conversion
   #todo review this
    
+  #Now we need to convert the control file for CCAT
+  #This is harcoded and needs revising, can't guarantee this will be grouped by control
+  #at this point, so will have to employ status checking to avoid clashes
+  #This analysis really needs to know the formats required for downstream analyses
+  #These are available via the config, but not the PeakCaller modules themselves
+  #So we will have to hardcode this in the config 
+  
+  #We can't test the filepaths, as 
+  #1 We don't know wether they are finished
+  #2 The code to build the file path is nested in get_alignment_files_by_ResultSet_formats 
+  #  and get_files_by_formats. Probably need a no_convert mode, which just returns what's there
+  #  already
+  
+  #This has to be on the experiment
+  #Let's just do it for all rather than just non-IDR ftypes??
+  
+  
+ 
+  
+  
   
   $self->helper->debug(1, 'CollectionWriter::fetch_input setting new_importer_params with align_files:', 
                        $align_files);
@@ -103,6 +166,7 @@ sub fetch_input {   # fetch parameters...
     -format              => 'SEQUENCING',#This needs changing to different types of seq
     -recover             => 1, 
     -force               => 1, #for store_window_bins_by_Slice_Parser
+    -parser              => 'Bed',
     -output_set          => $rset,
     -input_files         => [$align_files->{bed}], #Can we set these after init?
     -slices              => &generate_slices_from_names
@@ -124,10 +188,6 @@ sub fetch_input {   # fetch parameters...
     $self->param_required('slices');     
   }
   
- 
-  #Finally set up the branch config
-  $self->init_branching_by_analysis;
-      
   return;
 }
 
@@ -142,10 +202,18 @@ sub run {   # Check parameters and do appropriate database/file operations...
       $Imp->read_and_import_data('prepare');
       #Dataflow only jobs for slices that the import has seen
       my %seen_slices  = %{$Imp->slice_cache};
+      
+      if(! %seen_slices){
+        $self->throw_no_retry("Found no data after prepare step for:\n\t".
+          join("\n\t", @{$Imp->input_files}));  
+      }
+      
       my $batch_params = $self->batch_params;
       my @slice_jobs = ();
 
       foreach my $slice (values %seen_slices){ 
+        
+   
    
         #$self->branch_output_id(
         push @slice_jobs,
@@ -192,7 +260,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
       $self->branch_job_group(2, \@slice_jobs, 1, [$output_id]);
   
       #We have no way of knowing whether method was injected by fetch_Set_input
-      my $fset = $self->FeatureSet;
+      my $fset = $self->FeatureSet;#from fetch_Set_input
       
       #todo
       #Do we need to be able to do this conditionally?
