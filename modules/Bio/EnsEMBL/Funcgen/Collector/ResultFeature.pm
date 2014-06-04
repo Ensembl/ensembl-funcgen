@@ -264,7 +264,7 @@ sub get_Features_by_Slice{
 	$features = $self->result_set->get_ResultFeatures_by_Slice($slice, undef, undef, undef, 0);
   }
   elsif($source_set_type eq 'input'){
-	$features = $self->parser->parse_Features_by_Slice($slice);
+    $features = $self->parser->parse_Features_by_Slice($slice);
 
 	#This method assumes a sorted file handle
 	#Can we set markers for disk seeking on a sorted handle?
@@ -616,51 +616,46 @@ sub get_total_packed_size{
 
 sub set_collection_defs_by_ResultSet{
   my ($self, $rset) = @_;
-   
   $self->result_set($rset);
-
   warn "set_collection_defs_by_ResultSet ".join(', ', @{$Bio::EnsEMBL::Utils::Collector::window_sizes});
 
   if(defined $rset){
-	#This is most likely already done in the caller
-	#$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
+    #This is most likely already done in the caller
+    #$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
 	
-	if($rset->table_name eq 'experimental_chip'){ #Array Intensities i.e. single float
-	  #perl only offers native endian order for floats (http://www.perlmonks.org/?node_id=629530)
-	  #$Bio::EnsEMBL::Utils::Collector::packed_size       = 4;#per score
-	  #$Bio::EnsEMBL::Utils::Collector::pack_template     = 'f';#per score
-	  #Use defaults for these now
-
-	  $Bio::EnsEMBL::Utils::Collector::bin_method        = 'max_magnitude';#only used by collector
-	  $Bio::EnsEMBL::Utils::Collector::window_sizes->[0] = 0;#Can have natural resolution for low density array data
-	}
-	elsif($rset->table_name eq 'input_set'){
-	  #Need to reset this as we may be doing serial queries.
-	  $Bio::EnsEMBL::Utils::Collector::window_sizes->[0] = 30;
-
-	  #Currently only expecting int from InputSet
-	  my @isets = @{$rset->get_support};
-	  my @tmp_isets = grep(!/result/, (map $_->feature_class, @isets));
-	  
-	  if(@tmp_isets){
-		throw("Bio::EnsEMBL::Funcgen::Collector::ResultFeature only supports result type InputSets, not @tmp_isets types");
-	  }
-
-	  #We still have no way of encoding pack_type for result_feature InputSets
-	}
-	else{
-	  throw('Bio::EnsEMBL::Funcgen::Collector:ResultFeature does not support ResultSets of type'.$rset->table_name);
-	}
+    if($rset->table_name eq 'experimental_chip'){ #Array Intensities i.e. single float
+  	  #perl only offers native endian order for floats (http://www.perlmonks.org/?node_id=629530)
+  	  #$Bio::EnsEMBL::Utils::Collector::packed_size       = 4;#per score
+  	  #$Bio::EnsEMBL::Utils::Collector::pack_template     = 'f';#per score
+  	  #Use defaults for these now
+  
+      $Bio::EnsEMBL::Utils::Collector::bin_method        = 'max_magnitude';#only used by collector
+      $Bio::EnsEMBL::Utils::Collector::window_sizes->[0] = 0;#Can have natural resolution for low density array data
+    }
+    elsif($rset->table_name eq 'input_subset'){
+  	  #Need to reset this as we may be doing serial queries.
+      $Bio::EnsEMBL::Utils::Collector::window_sizes->[0] = 30;
+  
+  	  #Currently only expecting int from InputSet
+  	  #my @isets = @{$rset->get_support};
+  	  #my @tmp_isets = grep(!/result/, (map $_->feature_class, @isets));
+  	  
+  	  #if(@tmp_isets){
+  		#throw("Bio::EnsEMBL::Funcgen::Collector::ResultFeature only supports result type InputSets, not @tmp_isets types");
+  	  #}
+  
+  	  #We still have no way of encoding pack_type for result_feature InputSets
+  	}
+    else{
+      throw('Bio::EnsEMBL::Funcgen::Collector:ResultFeature does not support ResultSets of type '.
+        $rset->table_name);
+    }
   }
 
-  
   #Do we need to validate the smallest non-0 window size
   #against the max pack size?
   #This should be done in the Collector
-
-   warn "set_collection_defs_by_ResultSet ".join(', ', @{$Bio::EnsEMBL::Utils::Collector::window_sizes});
-
-
+  warn "set_collection_defs_by_ResultSet ".join(', ', @{$Bio::EnsEMBL::Utils::Collector::window_sizes});
   return;
 }
 
