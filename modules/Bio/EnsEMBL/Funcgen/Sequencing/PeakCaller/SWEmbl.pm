@@ -122,10 +122,7 @@ sub filter_max_peaks{
   warn $cmd if $self->debug;
   run_system_cmd($cmd);
       
-  #$cmd = "rm -f $out_file.header $out_file.filtered";
-  #warn $cmd if $self->debug;
-  #unlink($out_file.header, $out_file.filtered); 
-   
+  unlink("${out_file}.header", "${out_file}.filtered");    
   return;     
 }
 
