@@ -419,36 +419,28 @@ sub _final_clause {
 =cut
 
 sub _objs_from_sth {
-  my ($self, $sth) = @_;
+  my $self = shift;
+  my $sth  = shift;
   my (@rsets, $last_id, $rset, $dbid, $anal_id, $anal, $ftype, $ctype, $table_id);
   my ($sql, $table_name, $cc_id, $ftype_id, $ctype_id, $rf_set, $dbfile_dir);
   my ($name, $rep, $feat_class);
-  my $a_adaptor = $self->db->get_AnalysisAdaptor();
-  my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
-  my $ct_adaptor = $self->db->get_CellTypeAdaptor();
+  my $a_adaptor  = $self->db->get_AnalysisAdaptor;
+  my $ft_adaptor = $self->db->get_FeatureTypeAdaptor;
+  my $ct_adaptor = $self->db->get_CellTypeAdaptor;
   $sth->bind_columns(\$dbid, \$anal_id, \$table_name, \$cc_id, \$table_id,
-    \$name, \$ctype_id, \$ftype_id, \$feat_class, \$dbfile_dir, \$rep);
+                     \$name, \$ctype_id, \$ftype_id, \$feat_class, \$dbfile_dir, \$rep);
 
-    #Need c/ftype cache here or rely on query cache?
+  while ( $sth->fetch ) {
 
-  while ( $sth->fetch() ) {
-
-    if(! $rset || ($rset->dbID() != $dbid)){
-
+    if( (! defined $rset) || ($rset->dbID != $dbid) ){
       push @rsets, $rset if $rset;
-
       $anal  = (defined $anal_id)  ? $a_adaptor->fetch_by_dbID($anal_id)   : undef;
       $ftype = (defined $ftype_id) ? $ft_adaptor->fetch_by_dbID($ftype_id) : undef;
       $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
-
-
-      if(defined $dbfile_dir){
-        $dbfile_dir = $self->build_dbfile_path($dbfile_dir);
-      }
+      $dbfile_dir = $self->build_dbfile_path($dbfile_dir) if defined $dbfile_dir;
 
       $rset = Bio::EnsEMBL::Funcgen::ResultSet->new
-        (
-         -DBID            => $dbid,
+        (-DBID            => $dbid,
          -NAME            => $name,
          -ANALYSIS        => $anal,
          -TABLE_NAME      => $table_name,
@@ -457,24 +449,13 @@ sub _objs_from_sth {
          -FEATURE_CLASS   => $feat_class,
          -ADAPTOR         => $self,
          -DBFILE_DATA_DIR => $dbfile_dir,
-         -REPLICATE       => $rep,
-        );
-    }
-
-
-    if(defined $rset->feature_type()){
-      throw("ResultSet does not accomodate multiple FeatureTypes") if ($ftype_id != $rset->feature_type->dbID());
-    }
-
-    if(defined $rset->cell_type()){
-      throw("ResultSet does not accomodate multiple CellTypes") if ($ctype_id != $rset->cell_type->dbID());
+         -REPLICATE       => $rep,        );
     }
 
     $rset->_add_table_id($table_id, $cc_id);
   }
 
   push @rsets, $rset if $rset;
-
   return \@rsets;
 }
 
@@ -482,11 +463,9 @@ sub _objs_from_sth {
 #needs to move to a dbfile specific module
 
 sub build_dbfile_path{
-  my ($self, $subpath) = @_;
-
-  my $full_path = $self->dbfile_data_root.'/'.$subpath;
-  $full_path =~ s:/+:/:g;
-
+  my $self    = shift;
+  my $subpath = shift;
+  (my $full_path = $self->dbfile_data_root.'/'.$subpath) =~ s:/+:/:g;
   return $full_path;
 }
 
@@ -553,7 +532,10 @@ sub store{
     $sth->bind_param(3, $ct_id,                  SQL_INTEGER);
     $sth->bind_param(4, $ft_id,                  SQL_INTEGER);
     $sth->bind_param(5, $rset->feature_class,    SQL_VARCHAR);
-    $sth->execute;
+    
+    if(! eval {$sth->execute; 1}){
+      throw("Failed to store $rset ".$rset->name."\n$@");  
+    }
 
     $rset->dbID( $self->last_insert_id );
     $rset->adaptor($self);
@@ -613,19 +595,20 @@ sub dbfile_data_root{
   Description: Updater/Setter for the root dbfile data directory for this ResultSet
   Returntype : None
   Exceptions : Throws if ResultSet is not stored and valid
-               Throws if dbfile_dat_dir not defined
+               Throws if dbfile_data_dir not defined
+               Throws if unable to store dbfile_data_dir
   Caller     : Bio::EnsEMBL::Funcgen::Collector::ResultFeature
   Status     : at risk
 
 =cut
 
-#This is actually not always a dir
+#This is not always a dir, but can be a prefix or a template
 #leave for now until we use core API for this
 
 
 sub store_dbfile_data_dir{
-  my ($self, $rset) = @_;
-
+  my $self = shift;
+  my $rset = shift;
 
   if ( ! $rset->is_stored($self->db()) ) {
     throw('ResultSet must be stored in the database before storing chip_channel entries');
@@ -634,37 +617,64 @@ sub store_dbfile_data_dir{
   my $data_dir = $rset->dbfile_data_dir;
 
   if(! $data_dir){
-	throw('You need to pass a dbfile_data_dir argument to update the ResultSet');
+    throw('You need to pass a dbfile_data_dir argument to update the ResultSet');
   }
 
   #Check we have a record
-  my $sql = 'SELECT path from dbfile_registry where table_name="result_set" and table_id=?';
-  my $sth = $self->prepare($sql);
-  $sth->bind_param(1, $data_dir, SQL_VARCHAR);
-  $sth->execute;
-
-  my ($db_dir) = $sth->fetch();
+  my $rset_id = $rset->dbID;
+  my $db_dir  = $self->_fetch_dbfile_data_dir($rset_id);
 
   if($db_dir &&
 	 ($db_dir ne $data_dir)){#UPDATE
-	$sql = 'UPDATE dbfile_registry set path=? where table_name="result_set" and table_id=?';
-	$sth = $self->prepare($sql);
-	$sth->bind_param(1, $data_dir,   SQL_VARCHAR);
-	$sth->bind_param(2, $rset->dbID, SQL_INTEGER);
-	$sth->execute;
+    my $sql = 'UPDATE dbfile_registry set path=? where table_name="result_set" and table_id=?';
+    my $sth = $self->prepare($sql);
+    $sth->bind_param(1, $data_dir, SQL_VARCHAR);
+    $sth->bind_param(2, $rset_id,  SQL_INTEGER);
+    
+    if(! eval {$sth->execute; 1}){
+      throw('Failed to update dbfile_data_dir for '.$rset->name."\n$@");  
+    }
   }
   elsif(! $db_dir){#STORE
-	$sql = 'INSERT INTO  dbfile_registry(table_id, table_name, path) values(?, "result_set", ?)';
-	$sth = $self->prepare($sql);
-	$sth->bind_param(1, $rset->dbID, SQL_INTEGER);
-	$sth->bind_param(2, $data_dir,   SQL_VARCHAR);
-
-	$sth->execute;
+    my $sql = 'INSERT INTO dbfile_registry(table_id, table_name, path) values(?, "result_set", ?)';
+    my $sth = $self->prepare($sql);
+    $sth->bind_param(1, $rset_id,  SQL_INTEGER);
+    $sth->bind_param(2, $data_dir, SQL_VARCHAR);
+    
+    if(! eval {$sth->execute; 1}){
+      my $err = $@;
+      #This could be a race condition if we have parallel writes going on
+      #Attempt to validate stored value is same, else fail
+      
+      $db_dir = $self->_fetch_dbfile_data_dir($rset_id);
+      
+      if(defined $db_dir){
+      
+        if($db_dir ne $data_dir){
+          throw('Failed to store dbfile_data_dir table '.$rset->name.
+            "\n'Racing' process stored a differing value:\n\t$data_dir\n\tvs\n\t$db_dir\n$err");
+        }#else this was a race condition
+      }
+      else{
+        throw('Failed to store dbfile_data_dir for '.$rset->name."\n$err"); 
+      }
+    }
   }
 
   return;
 }
 
+#This is only used for validation in store_dbfile_data_dir
+
+sub _fetch_dbfile_data_dir{
+  my $self    = shift;
+  my $rset_id = shift;
+  my $sql  = 'SELECT path from dbfile_registry where table_name="result_set" and table_id=?';
+  my $sth  = $self->prepare($sql);
+  $sth->bind_param(1, $rset_id, SQL_INTEGER);
+  $sth->execute;
+  return $sth->fetch(); #return array containing path field
+}
 
 =head2 store_chip_channels
 
