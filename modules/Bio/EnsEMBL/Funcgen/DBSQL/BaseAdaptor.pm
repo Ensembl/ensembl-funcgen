@@ -322,7 +322,8 @@ sub _table_name {
 =cut
 
 sub store_states{
-  my ($self, $storable) = @_;
+  my $self     = shift;
+  my $storable = shift;
   assert_ref($storable, 'Bio::EnsEMBL::Funcgen::Storable');
 
   foreach my $state(@{$storable->get_all_states()}){
@@ -532,10 +533,10 @@ sub has_stored_status{
 =cut
 
 sub store_status{
-  my ($self, $state, $obj) = @_;
-
-  my $sql;
-  my $table = $self->_test_funcgen_table($obj);
+  my $self   = shift;
+  my $state  = shift;
+  my $obj    = shift;
+  my $table  = $self->_test_funcgen_table($obj);
 
   if(! $self->has_stored_status($state, $obj)){
     my $status_id = $self->_get_status_name_id($state);
@@ -544,73 +545,80 @@ sub store_status{
       throw("$state is not a valid status_name for $obj:\t".$obj->dbID);
     }
 
-	 $sql = "INSERT into status(table_id, table_name, status_name_id) VALUES('".$obj->dbID()."', '$table', '$status_id')";
-	 $self->db->dbc->do($sql);
-
-	 #Setting it in the obj if it is not already present.
-	 $obj->add_status($state) if ! $obj->has_status($state, $obj);
+	  my $sql = "INSERT into status(table_id, table_name, status_name_id) VALUES('".
+	   $obj->dbID()."', '$table', '$status_id')";
+	  
+	  if(! eval { $self->db->dbc->do($sql); 1}){ 
+	   throw("Failed to store apparently unstored $state status for $obj (dbID=".
+	     $obj->dbID."\nPotential race condition with parallel process\n$@");
+	  }
+	  
+	  #Setting it in the obj if it is not already present.
+	  $obj->add_status($state) if ! $obj->has_status($state, $obj);
   }
-
+  
   return;
 }
 
 
 =head2 revoke_status
 
-  Arg [1]    : string - status name e.g. 'IMPORTED'
+  Arg [1]    : String - status name e.g. 'IMPORTED'
   Arg [2]    : Bio::EnsEMBL::Funcgen::Storable
+  Arg [3]    : Boolean - Validate status name flag. Will throw if not valid.
   Example    : $rset_adaptor->revoke_status('DAS DISPLAYABLE', $result_set);
   Description: Revokes the given state of Storable in status table.
-  Returntype : None
+  Returntype : Boolean - Success or Failure
   Exceptions : Warns if storable does not have state
-               Throws is status name is not valid
-               Throws if not state passed
+               Throws is status name is not defined
+               Throws if status record delete fails
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
 sub revoke_status{
-  my ($self, $state, $storable) = @_;
-
-  throw('Must provide a status name') if(! defined $state);
-  my $table_name = $self->_test_funcgen_table($storable);
-  my $status_id = $self->_get_status_name_id($state);
+  my $self            = shift;
+  my $state           = shift or throw('Must provide a status name');
+  my $storable        = shift;
+  my $validate_status = shift;
+  my $table_name      = $self->_test_funcgen_table($storable);
+  my $status_id       = $self->_get_status_name_id($state, $validate_status);
+  my $revoked         = 0;
 
   if ($status_id){
 
-    #hardcode for InputSubset
-    $table_name = 'input_subset' if $storable->isa('Bio::Ensembl::Funcgen:InputSubset');
-
-
     if(! $self->has_stored_status($state, $storable)){
-  	warn $storable.' '.$storable->dbID()." does not have status $state to revoke\n";
-  	return;
+  	  warn $storable.' '.$storable->dbID()." does not have status $state to revoke\n";
     }
-
-    #do sanity checks on table to ensure that IMPORTED does not get revoke before data deleted?
-    #how would we test this easily?
-
-    my $sql = "delete from status where table_name='${table_name}'".
-  	 " and status_name_id=${status_id} and table_id=".$storable->dbID();
-
-    $self->db->dbc->db_handle->do($sql);
-
-    #now splice from status array;
-    #splice in loop should work as we will only see 1
-    #Just hash this?
-
-    for my $i(0..$#{$storable->{'states'}}){
-
-  	  if($storable->{'states'}->[0] eq $state){
-  	    splice @{$storable->{'states'}}, $i, 1;
-  	    last;
-  	  }
+    else{
+      #do sanity checks on table to ensure that IMPORTED does not get revoke before data deleted?
+      #how would we test this easily?
+      my $sql = "delete from status where table_name='${table_name}'".
+    	 " and status_name_id=${status_id} and table_id=".$storable->dbID();
+      if(! eval { $self->db->dbc->do($sql); 1}){ 
+        throw("Failed to delete $state status from DB for $storable (dbID=".
+          $storable->dbID.")\n$@");
+      }
+      
+      my @tmp_states;
+  
+      for my $stored_state(@{$storable->{states}}){
+    
+    	  if($stored_state ne $state){
+      	  push @tmp_states, $stored_state;
+      	}
+      }
+      
+      $storable->{states} = \@tmp_states;
+      $revoked = 1;
     }
   }
-  #throw here?
+  #else{ Don't throw as the state of the object is as expected, but
+  #this may be a mis-spelled status, and the real status may persist
+  #So handle in the caller
 
-  return;
+  return $revoked;
 }
 
 
@@ -627,17 +635,21 @@ sub revoke_status{
 =cut
 
 sub revoke_states{
-  my ($self, $storable) = @_;
+  my $self     = shift;
+  my $storable = shift;
 
   my $table_name = $self->_test_funcgen_table($storable);
   #add support for InputSubset which doesn't currently have an adaptor
-  $table_name = 'input_subset' if $storable->isa('Bio::Ensembl::Funcgen::InputSubset');
   my $sql = "delete from status where table_name='${table_name}'".
-	" and table_id=".$storable->dbID();
+    " and table_id=".$storable->dbID();
 
   #Do delete and clear stored states
-  $self->db->dbc->db_handle->do($sql);
-  undef $storable->{'states'};
+  if(! eval {$self->db->dbc->do($sql); 1}){
+    throw('Failed to revoke states('.join(' ', @{$storable->get_all_states}).
+      ") for $storable (dbID=".$storable->dbID."\n$@");  
+  }
+  
+  undef $storable->{states};
   return $storable;
 }
 
@@ -688,6 +700,7 @@ sub set_imported_states_by_Set{
   #Woould need to do this if ever we loaded on a non-default cs version
 
   $set->adaptor->store_status("IMPORTED_${cs_version}", $set);
+  $set->adaptor->store_status("IMPORTED", $set);
 }
 
 
