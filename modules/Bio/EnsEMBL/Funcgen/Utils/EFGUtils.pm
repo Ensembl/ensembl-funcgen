@@ -74,6 +74,7 @@ use vars qw( @EXPORT_OK );
   backup_file
   check_file
   create_Storable_clone
+  convert_strand
   dump_data
   file_suffix_parse
   generate_checksum
@@ -118,9 +119,12 @@ use vars qw( @EXPORT_OK );
 #Split out methods into FileUtils.pm?
 
 
-my %bed_strands = ('+' =>  1,
-                   '-' => -1,
-                   '.' =>  0);
+my %strand_syns = ('+'  =>  1,
+                   '-'  => -1,
+                   '.'  =>  0,
+                   '1'  => 1,
+                   '0'  => 0,
+                   '-1' => '-1');
 
 
 
@@ -512,7 +516,6 @@ sub get_date{
 }
 
 
-
 sub write_checksum{
   my $file_path = shift;
   my $params    = shift || {};
@@ -539,7 +542,8 @@ sub write_checksum{
   if(-f $signature_file){
     warn "Signature file is $signature_file\n" if $debug;
     
-    $sigfile_row = run_backtick_cmd("grep '$file_name' $signature_file", 1);#no exit flag
+    $sigfile_row = run_backtick_cmd("grep '$file_name' $signature_file", 1);
+    #no exit flag as grep will return 1 if no results are returned
     
     if($?){
       warn("$sigfile_row\nFailed to grep old checksum from existing signature file:\t$signature_file");
@@ -599,7 +603,6 @@ sub generate_checksum{
 sub validate_checksum{
   my $file_path = shift;
   my $params    = shift || {};
-
   assert_ref($params, 'HASH');
   my $signature_file = (exists $params->{signature_file})    ? $params->{signature_file}    : undef;
   my $digest_method  = (exists $params->{digest_method})     ? $params->{digest_method}     : undef;
@@ -619,8 +622,8 @@ sub validate_checksum{
       $signature_file = $file_path.'.CHECKSUM';
     }
    
-   
-    if(! -f $signature_file){
+    if((! -f $signature_file) && 
+       ($signature_file =~ /\.bam.CHECKSUM/o)){
       warn "!!!!! REMOVE THIS !!!!\nTEMPORARILY CREATING missing MD5 file:\t$signature_file";
       write_checksum($file_path);         
     }
@@ -628,15 +631,16 @@ sub validate_checksum{
     if(-f $signature_file){
       my $qtd_file_name = quotemeta($file_name);
       my $cmd = "grep -E '[[:space:]]+$qtd_file_name\[[:space:]]*.*\$' $signature_file";
-      warn "Checksum file grep:\t$cmd" if $debug;
+      #warn "Checksum file grep:\t$cmd" if $debug;
       my $checksum_row = run_backtick_cmd($cmd);
-      warn "Checksum file row:\t$checksum_row" if $debug;
+      #warn "Checksum file row:\t$checksum_row" if $debug;
       my ($sig_file_name, $sig_digest_method);
       ($md5_sig, $sig_file_name, $sig_digest_method) = split(/\s+/, $checksum_row);
   
       if((! defined $sig_file_name) ||
          ($sig_file_name ne $file_name)){
-        throw("Failed to find $file_name entry in checksum signature file:\n\t$signature_file");
+        throw("Failed to find $file_name entry in checksum signature file:".
+          "\n\t$signature_file\nUsing:\t$cmd");
       }
     
       #default to digest method in file
@@ -782,19 +786,19 @@ sub is_bed {
 #Have individual format methods, as this is likely to hit performance
 #would be nive to have a no thro mode, which would return the original value
 
-sub convert_strand_from_bed {
+sub convert_strand {
   my $strand = shift;
 
   if(! defined $strand){
    throw('Strand argument is not defined');
   }
 
-  if(! exists $bed_strands{$strand}){
-    throw('Strand argument is not a valid bed strand, should be one of: '.
-      join(' ', keys %bed_strands));
+  if(! exists $strand_syns{$strand}){
+    throw('Strand argument is not a supported strand synonym, should be one of: '.
+      join(' ', keys %strand_syns));
   }
 
-  return $bed_strands{$strand};
+  return $strand_syns{$strand};
 }
 
 
@@ -1044,10 +1048,15 @@ sub parse_DB_url {
 #Need to use IPC::Open3
 #http://learn.perl.org/faq/perlfaq8.html#How-can-I-capture-STDERR-from-an-external-command-
 
+#Should reset $? here too? In case we want to handle that in the caller
+#Although this is returned after bit shifting
+
 sub run_system_cmd{
   my ($command, $no_exit) = @_;
-  my $exit_status = system($command);#don't nest below, as this may cause problems with $!
-  return _handle_exit_status($command, $exit_status, $!, $no_exit);
+  #$exit_status is same as $? i.e. $CHILD_ERROR
+  #my $exit_status = system($command);#don't nest below, as this may cause problems with $!
+  system($command);
+  return _handle_exit_status($command, $?, $!, $no_exit);
 }
 
 
@@ -1074,10 +1083,12 @@ sub run_system_cmd{
 #to capture STDOUT and STDERR sepatately
 #http://search.cpan.org/dist/Perl-Critic/lib/Perl/Critic/Policy/InputOutput/ProhibitBacktickOperators.pm
 
+#remove $@ from here, this is only for perl evals?
+#remove $! from here as this is only set by system or library calls?
+
 sub run_backtick_cmd{
   my $command = shift;
   my $no_exit = shift;
-    
   my (@results, $result);
   
   if(wantarray){
@@ -1085,25 +1096,31 @@ sub run_backtick_cmd{
     #@results = map {my $line = $_; chomp $line; $line} `$command`;
     #This is substantially faster
     @results = `$command`;
-    chomp(@results);  
   }
   else{
-    $result  = `$command`;
-    chomp($result);
+    $result  = `$command`;  
   }
   
-  my $exit_status = $?;
+  my $exit_status = $?; #$CHILD_ERROR
+  #my $errno       = $!; 
   _handle_exit_status($command, $exit_status, $!, $no_exit); 
   $? = $exit_status if $no_exit;
   #Non-local 'Magic' $? assignment is a perlcritic severity 4 warning. 
   #But we actually want this 'global' behaviour 
    
-  return wantarray ? @results : $result;
+  if(wantarray){
+    chomp(@results); 
+    return @results ; 
+  }
+  else{
+    chomp($result);
+    return $result;
+  }
 }
 
+
 sub _handle_exit_status{
-  my ($cmd, $exit_status, $err, $no_exit) = @_;
-  
+  my ($cmd, $exit_status, $errno, $no_exit) = @_;
   my ($exit_code, $err_string);
   
   if ($cmd =~ /\|/){
@@ -1113,15 +1130,15 @@ sub _handle_exit_status{
   $exit_code = $exit_status >> 8; #get the true exit code
   
   if ($exit_status == -1) {
-    $err_string = "Failed to execute:\t$cmd\nError:\t$err\n";
+    $err_string = "Failed to execute:\t$cmd\nError:\t$errno\n";
   }
   elsif ($exit_status & 127) {
-    $err_string = sprintf("Child process died with signal %d, %s coredump\nError:\t$err\n",
+    $err_string = sprintf("Child process died with signal %d, %s coredump\nError:\t$errno\n",
                     ($exit_status & 127),
                     ($exit_status & 128) ? 'with' : 'without');
   }
   elsif($exit_status != 0) {
-    $err_string = sprintf("Child process exited with value %d:\t$cmd\nError:\t$err\n", $exit_code);
+    $err_string = sprintf("Child process exited with value %d:\t$cmd\nError:\t$errno\n", $exit_code);
   }
   
   if(defined $err_string){
@@ -1135,7 +1152,6 @@ sub _handle_exit_status{
   
   return $exit_code;
 }
-
 
 
 =head2 scalars_to_objects
@@ -1383,8 +1399,9 @@ sub url_from_DB_params {
 #to the expected checksum or undef if we want to read from a sig file
 
 sub check_file{
-  my ($file_path, $suffix, $params) = @_;
-
+  my $file_path = shift;
+  my $suffix    = shift;
+  my $params    = shift;
   my $found_path;
 
   if(-f $file_path){
@@ -1392,7 +1409,8 @@ sub check_file{
   }
   elsif(defined $suffix){
     
-    if($file_path =~ /\.${suffix}/o){
+    if($file_path =~ /\.${suffix}/o){ #check without first
+      #Just incase it was already in the $file_path
       $file_path =~ s/\.${suffix}$//;
       
       if(-f $file_path){
@@ -1400,12 +1418,11 @@ sub check_file{
       }
     }
     elsif(-f $file_path.'.'.$suffix){
-      $found_path = gunzip_file($file_path.'.'.$suffix);
+      $found_path =  $file_path.'.'.$suffix
     }
   }
 
   if($found_path){
-    my $validate_checksum;
 
     if($params->{gunzip} && 
        ($found_path =~ /\.gz$/o)){          
@@ -1414,11 +1431,10 @@ sub check_file{
 
     if(defined $params){
       assert_ref($params, 'HASH');
-      $validate_checksum = 1 if exists $params->{checksum};
-    }
-
-    if($validate_checksum){
-      validate_checksum($found_path, $params);
+      
+      if(exists $params->{checksum}){
+        validate_checksum($found_path, $params);  
+      }
     }
   }
 
