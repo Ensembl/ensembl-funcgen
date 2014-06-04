@@ -1,4 +1,3 @@
-
 =head1 LICENSE
 
 Copyright [1999-2014] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
@@ -190,11 +189,15 @@ sub fetch_input {   # nothing to fetch... just the DB parameters...
     
     if(ref($garbage)){
       assert_ref($garbage, 'ARRAY', 'garbage files');
+      unlink(@$garbage);
       $garbage = join(' ', @$garbage);  
+    }
+    else{
+      unlink($garbage);  
     }
     
     #run with no exit flag so we don't fail on retry
-    run_system_cmd("rm -f $garbage", 1);
+    #run_system_cmd("rm -f $garbage", 1);
   }
   
   my $to_archive = $self->param_silent('to_archive');
@@ -337,13 +340,14 @@ sub alignment_dir {
     
 
 sub get_output_work_dir_methods{
-  my ($self, $default_odir, $no_work_dir) = @_;
-   
-  my $out_dir = $self->validate_dir_param('output_dir', 1, $default_odir); 
+  my $self         = shift;
+  my $default_odir = shift;
+  my $no_work_dir  = shift;
+  my $out_dir      = $self->validate_dir_param('output_dir', 1, $default_odir); 
   my $work_dir;    
              
   if(! $no_work_dir){
-    my $dr_dir             = $self->data_root_dir;
+    my $dr_dir = $self->data_root_dir;
     
     if($out_dir !~ /$dr_dir/){
       throw('Cannot set a work_dir from an output dir('.$out_dir.
@@ -363,7 +367,7 @@ sub get_output_work_dir_methods{
   }
 
   $default_odir ||='';#to avoid undef warning in debug
-  $self->helper->debug(1, "output_dir $out_dir\nwork_dir $work_dir\ndefault $default_odir");
+  $self->helper->debug(1, "output_dir $out_dir\n\twork_dir $work_dir\n\tdefault output_dir$default_odir");
   return ($out_dir, $work_dir);
 }
 
@@ -411,8 +415,9 @@ sub _set_out_db {
         'Bio::EnsEMBL::Funcgen::DBSQL::TrackingAdaptor' :
         'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor';
        
-      eval{	$db = $adaptor_class->new(%{ $db }, %{ $dnadb_params }) };	  
-      if($@) { throw "Error creating the Funcgen DBAdaptor and/or dna DBAdaptor $@";  }  
+      if(! eval{	$db = $adaptor_class->new(%{ $db }, %{ $dnadb_params }); 1 }){	  
+        throw("Error creating the Funcgen DBAdaptor and/or dna DBAdaptor\n$@");  
+      }  
       
       #Reset the $db to an actual DBAdaptor (rather than a Tracking/BaseAdaptor)
       if ($self->use_tracking_db){
@@ -960,6 +965,37 @@ sub init_branching_by_analysis{
     my $dfr_adaptor = $self->db->get_DataflowRuleAdaptor;  
     inject_DataflowRuleAdaptor_methods($dfr_adaptor);   
     $self->{branch_config} = $dfr_adaptor->get_dataflow_config_by_analysis_id($self->analysis->dbID);
+
+   
+    
+    #Now we need to generate new entries so that we can still branch by branch number
+    #otherwise _get_branch_number will fail
+    
+    #There is a very small possibilty that an logic name may clash with a branch number
+    #So let's catch that here
+    
+    my %bn_config;
+    my $branch_config = $self->{branch_config};
+    
+    foreach my $config(values(%$branch_config)){
+      my $branch = $config->{branch};
+      my $funnel = $config->{funnel};
+      
+      
+      if(exists $branch_config->{$branch}){
+        throw('Cannot init_branching_by_analysis as logic_name'.
+          " clashes with branch number:\t".$branch);  
+      }
+      
+      #No need to validate funnel. This is implicit from the config
+      #as semaphores are keyed on the branch
+      
+      $bn_config{$branch} = $config;
+    }
+    
+    $self->{branch_config} = {%$branch_config, %bn_config}; 
+    $self->helper->debug(1, "Branch config is:\n", $self->{branch_config});
+    
   }
 
   #if($validate_bkey_method){
@@ -1087,7 +1123,7 @@ sub _get_branch_number{
       
       if(! exists $branch_config->{$bcode}){
         throw("Could not find branch config for analysis or branch key:\t".$bcode.
-          "\nDefault to a 'custom' branch here");
+          "\n");
         #We would need and custom_analysis_name method
         #as we can't just use 'custom' as this may clash
         #and we don't know the analysis name template here
@@ -1095,6 +1131,10 @@ sub _get_branch_number{
         #unless we had a get_custom_analysis_name method
         #which would parse the unknown analysis name appropriately
         #overkill. stop.
+        
+        #This maybe a branch number instead of a analysis name
+        
+        
       }
       else{
         $branch ||= $branch_config->{$bcode}{branch};
@@ -1106,7 +1146,7 @@ sub _get_branch_number{
       }
     }
   }
-  else{#We only expect 1 branch numbers
+  else{#We only expect 1 branch number
     
     if(scalar(@$branch_codes) != 1){
       throw('Only 1 branch number is permitted if no branch config has been initialised, found '.
@@ -1163,23 +1203,19 @@ sub branch_job_group{
     }
    
     my $funnel_branch = $self->_get_branch_number([$funnel_branch_code], $branch_config); 
-   
     $self->helper->debug(1, 'Branching funnel '.scalar(@$funnel_jobs).
       " to branch $funnel_branch(code=$funnel_branch_code)");
    
    
     if($branch_config){#check the funnel is valid wrt fan analyses
+      #Funnel branch code, may also just be a branch number and not a logic name
+      #So we have to use the funnel_branch and fan branch rather than codes
+      my $funnel_name = $branch_config->{$fan_branch}{funnel};
       
-      #This will only work for branch config derived from the DataflowRules
-      #not defined in the config!
-      
-      #throw('How are we going to differentiate here?');
-      #we don't allow init_branching_by_config any more?
-      
-      if($branch_config->{$fan_branch_codes->[0]}{funnel} ne $funnel_branch_code){
-        throw($funnel_branch_code.' is not a valid funnel analysis for '.$fan_branch_codes->[0].
-          'Please check you dataflow configuration');  
-      }    
+      if($branch_config->{$funnel_name}{branch} ne $funnel_branch){
+        throw("$funnel_branch_code is not a valid funnel analysis for fan branches:\t".
+          join(', ', @$fan_branch_codes)."\nPlease check you dataflow configuration");  
+      }   
     }
     
     push @$job_group, ($funnel_branch, $funnel_jobs);
@@ -1190,6 +1226,22 @@ sub branch_job_group{
   
   return;
 }
+
+
+
+
+
+=head2 dataflow_job_groups
+
+  Arg [1]    : Arrayref - Optional job groups
+  Example    : 
+  Description: 
+  Returntype : 
+  Exceptions : 
+  Caller     : General
+  Status     : At risk
+
+=cut
 
 #Woudl have been branched like this
 #$self->branch_job_group([['Branch2_analysis1', 'Branch2_analysis2'], [$branch2_job_id1, ...], 'RunIDR', [$job_id2, ...]]);
@@ -1700,12 +1752,37 @@ sub sam_header{
 #i.e. after we have just created it? Or is that good paranoid validation?
 #checksumming does take long, so let's just take the hit and say it's belt and braces validation
 
+#Validation is in here
+#as this enables passing validated path prefixes directly to get_files_by_format
+#in non-Hive code
 
 sub get_alignment_path_prefix_by_ResultSet{
-  my $self    = shift;
-  my $rset    = shift;
-  my $control = shift;;  
+  my ($self, $rset, $control, $validate_aligned) = @_;
   assert_ref($rset, 'Bio::EnsEMBL::Funcgen::ResultSet');
+  
+  if($validate_aligned){
+    my $aligned_status = 'ALIGNED';
+    $aligned_status   .= '_CONTROL' if $control;
+  
+    if($control){
+      my $exp = $rset->experiment(1);#control flag
+     
+      ##This should never happen
+      #if(! defined $exp){
+      #  $self->throw_no_retry('Could not get a control experiment for ResultSet '.$rset->name);
+      #} 
+    
+      if(! $exp->has_status('ALIGNED_CONTROL')){
+        throw('Cannot get control alignment files for a ResultSet('.$rset->name.
+          ') whose Experiment('.$exp->name.') does not have the ALIGNED_CONTROL status');
+      }   
+    }
+    elsif(! $rset->has_status('ALIGNED')){
+      throw("Cannot get alignment files for ResultSet which does not have $aligned_status status:\t".
+        $rset->name);
+    }
+  }
+  
   my @rep_numbers;
   
   foreach my $isset(@{$rset->get_support}){
@@ -1725,6 +1802,14 @@ sub get_alignment_path_prefix_by_ResultSet{
 }
 
 
+#Split this, so we can return the path prefixes
+#Then write a wrapper to re-implement this functionality
+#path_prefixes will be useful in RunPeaks to pass to SeqTools::_init_run_peak_caller
+
+#We already have this above! But it doesn't have the control status checking
+#Just move that code into the above method and pass a validate aligned arg?
+
+
 sub get_alignment_files_by_ResultSet_formats {
   my ($self, $rset, $formats, $control, $all_formats, $filter_format) = @_;
   assert_ref($formats, 'ARRAY');  
@@ -1738,26 +1823,6 @@ sub get_alignment_files_by_ResultSet_formats {
   #for the same file type
   #hence, this will likely fail if the worker runs more than 1 job
   
-  my $aligned_status = 'ALIGNED';
-  $aligned_status   .= '_CONTROL' if $control;
-  
-  if($control){
-    my $exp = $rset->experiment(1);#control flag
-    
-    #This should never happen
-    if(! defined $exp){
-      $self->throw_no_retry('Could not get a control experiment for ResultSet '.$rset->name);
-    } 
-    
-    if(! $exp->has_status('ALIGNED_CONTROL')){
-      throw('Cannot get control alignment files for a ResultSet('.$rset->name.
-        ') whose Experiment('.$exp->name.') does not have the ALIGNED_CONTROL status');
-    }   
-  }
-  elsif(! $rset->has_status('ALIGNED')){
-    throw("Cannot get alignment files for ResultSet which does not have $aligned_status status:\t".
-      $rset->name);
-  }
   
   if($self->get_param_method($file_type, 'silent')){ #Allow over-ride from config/input_id   
     #Need to test in here that it matches one of the formats
@@ -1766,7 +1831,7 @@ sub get_alignment_files_by_ResultSet_formats {
     #$align_files = { => validate_path($self->param($file_type)) };
   }
   else{ # Get default file
-    $path = $self->get_alignment_path_prefix_by_ResultSet($rset, $control); 
+    $path = $self->get_alignment_path_prefix_by_ResultSet($rset, $control, 1);#1 is validate aligned flag 
     $path .= '.unfiltered' if $filter_format;
     
     #Temporary hack to handle a gender update from undef to female for NHDF-AD    
@@ -1780,7 +1845,7 @@ sub get_alignment_files_by_ResultSet_formats {
                   skip_rmdups        => 1, #This will have been done in merge_bams
                   all_formats        => $all_formats,
                   checksum           => undef,  
-                  #This turns on file based checksum generation/validation?
+                  #Specifying undef here turns on file based checksum generation/validation
                   };
     #We never want to set checksum_optional here, as this is really
     #just for fastq files for which we don't have a checksum
@@ -1791,7 +1856,9 @@ sub get_alignment_files_by_ResultSet_formats {
     #but we also want this to support getting the checksum
     #no, 
      
-    $self->helper->debug(1, "Getting $file_type (filter_from_format=$filter_format):\n\t".$path);
+    $filter_format ||= '';#to avoid undef in debug 
+    $self->helper->debug(1, "Getting $file_type (formats: ".join(', ',@$formats).
+      " filter_from_format: $filter_format):\n\t".$path);
     $align_files = get_files_by_formats($path, $formats, $params);
   }  
  
@@ -1896,10 +1963,10 @@ sub archive_files{
 #In which case do we need this method at all?
 #as all the cs spcific states and old sets will be renamed when moving to an new assembly
 
-sub get_coord_system_status{
-  my $self   = shift;
-  my $status = shift;
-}
+#sub get_coord_system_status{
+#  my $self   = shift;
+#  my $status = shift;
+#}
 
 
 
@@ -1921,6 +1988,22 @@ sub is_idr_FeatureType{
   return $self->param_silent('no_idr') ? 0 : 
           ! grep(/^${ftype}$/, @{$self->param_required('broad_peak_feature_types')});
 }
+
+sub is_idr_ResultSet{
+  my $self = shift,
+  my $rset = shift;
+  assert_ref($rset, 'Bio::EnsEMBL::Funcgen::ResultSet');
+  my $is_idr_rset = 0;  
+  my @sig_reps    = grep { ! $_->is_control } @{$rset->get_support}; 
+    
+  if($self->is_idr_FeatureType($rset->feature_type) &&
+     (scalar(@sig_reps) > 1) ){
+    $is_idr_rset = 1;     
+  }
+
+  return $is_idr_rset;  
+}
+
 
 
 
