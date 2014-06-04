@@ -140,7 +140,7 @@ sub new {
 
   if( ( ref($set) ne 'Bio::EnsEMBL::Funcgen::FeatureSet') &&
 	  ( ref($set) ne 'Bio::EnsEMBL::Funcgen::ResultSet') ){
-    throw("Must pass valid Bio::EnsEMBL::Funcgen::FeatureSet or ResultSet object");
+    throw("Must pass valid Bio::EnsEMBL::Funcgen::FeatureSet or ResultSet object\n@_");
   }
 
   #Grab FeatureSet first so we can pass analysis to base Feature class
@@ -151,7 +151,7 @@ sub new {
   if($ftype){
 	
     if (ref($ftype) ne 'Bio::EnsEMBL::Funcgen::FeatureType') {
-      throw('feature_type param must be a valid Bio::EnsEMBL::Funcgen::FeatureType');
+      throw("feature_type param must be a valid Bio::EnsEMBL::Funcgen::FeatureType\n@_");
     }
   
     $self->{feature_type} = $ftype;
