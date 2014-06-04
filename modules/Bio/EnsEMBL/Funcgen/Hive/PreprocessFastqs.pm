@@ -42,7 +42,8 @@ use warnings;
 use strict;
 
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( is_gzipped run_system_cmd 
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( is_gzipped run_system_cmd
+                                               get_set_prefix_from_Set
                                                run_backtick_cmd check_file );
 #use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools qw( split_fastqs );
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
@@ -151,7 +152,7 @@ sub run {
   #if we are forcing or rolling back, then we should probably redo everything
   
   if($run_controls){
-    my $exp = $self->get_control_InputSubset($rset)->experiment;
+    my $exp = $rset->experiment(1);#control flag
     
     if($exp->has_status('ALIGNED_CONTROL')){
       throw("Need to implement force/recover_control_alignment. Found ALIGNED_CONTROL ResultSet:\t".
@@ -166,7 +167,7 @@ sub run {
   my @fastqs;
   my $throw = '';
   my $set_rep_suffix = '';
-  my @issets = @{$rset->get_support('input_subset')};
+  my @issets = @{$rset->get_support};
   
   if((! $run_controls) && (! $merge) &&
     ($self->is_idr_FeatureType($rset->feature_type))){
@@ -269,7 +270,7 @@ sub run {
       join("\n\t", @fastqs));    
   }  
  
-  my $set_prefix = $self->get_set_prefix_from_Set($rset, $run_controls).
+  my $set_prefix = get_set_prefix_from_Set($rset, $run_controls).
     '_'.$rset->analysis->logic_name.$set_rep_suffix; 
  
   #Will need to eval this so we can throw_no_retry 
@@ -373,14 +374,16 @@ sub run {
   
   
   $self->set_param_method('fastq_files', \@new_fastqs);
-
+  my %batch_params = %{$self->batch_params};
+ 
   foreach my $fq_file(@{$self->fastq_files}){
   
     #Data flow to RunAligner for each of the chunks 
     #do we need to pass result set to aligner?
     #Would need to pass gender, analysis logic_name 
     
-    $self->branch_job_group(2, [{set_type   => 'ResultSet',
+    $self->branch_job_group(2, [{%batch_params,
+                                 set_type   => 'ResultSet',
                                  set_name   => $rset->name,
                                  dbID       => $rset->dbID,
                                  output_dir => $self->work_dir, #we could regenerate this from result_set and run controls
@@ -402,7 +405,7 @@ sub run {
   #we could let the Merge job do the bam_file name generation replacement
   #
   
-  $self->branch_job_group(3, [{%{$self->batch_params},
+  $self->branch_job_group(3, [{%batch_params,
                              set_type   => 'ResultSet',
                              set_name   => $rset->name,
                              dbID       => $rset->dbID,
