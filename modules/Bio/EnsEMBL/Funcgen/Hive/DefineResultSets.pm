@@ -256,8 +256,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
         $control_branch = '' 
     }
     else{
-      #Put these two call right next to each other to minimize 
-      #chance of race condition with a parallel job.
+      #Potential race condition here will fail on store
       
       if($exp->has_status('ALIGNING_CONTROL')){
         $self->input_job->transient_error(0); #So we don't retry  
@@ -498,16 +497,30 @@ sub run {   # Check parameters and do appropriate database/file operations...
               
             warn "REMOVE: gender hacked for NHDF-AD";
             
+            
+            
             merge_bams($merged_file, 
                        $self->sam_ref_fai($gender),
                        $rep_bams{$rset->name}{rep_bams},
-                       {no_rmdups => 1,
-                        debug     => $self->debug
+                       {no_rmdups      => 1,
+                        debug          => $self->debug,
                        });
+                       
+            $rset->adaptor->store_status('ALIGNED', $rset);
+            #IMPORTED not set here, as this is used to signify whether
+            #a collection file has been written.
           }
+          
+          #Can't set IDR peak_analysis here, as we may lose this
+          #between pipelines i.e. when using IdentifyMergedResultSets after
+          #blowing away an old pipeline
+          
         }
         
-        if($branch =~ /(_merged$|^DefineMergedDataSet$)/){# (no control) job will only ever have 1 rset    
+        if($branch =~ /(_merged$|^DefineMergedDataSet$)/){# (no control) job will only ever have 1 rset
+        
+          #
+            
           $self->branch_job_group($branch, [{%batch_params,
                                              dbID       => $rset->dbID, 
                                              set_name   => $rset->name,
