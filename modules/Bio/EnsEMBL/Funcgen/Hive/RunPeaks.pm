@@ -16,10 +16,11 @@ package Bio::EnsEMBL::Funcgen::Hive::RunPeaks;
 use warnings;
 use strict;
 
-use Bio::EnsEMBL::Utils::Exception         qw( throw );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd 
-                                               scalars_to_objects
-                                               validate_package_path );
+use Bio::EnsEMBL::Utils::Exception              qw( throw );
+use Bio::EnsEMBL::Utils::Scalar                 qw( assert_ref );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils      qw( scalars_to_objects );
+use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools qw( _init_peak_caller 
+                                                    _run_peak_caller );                                               
 use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
@@ -29,10 +30,9 @@ use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 #todo rename logic_names to be generic e.g. SWEmbl_tight
 #then we can have different parameter sets between species
 
-#todo Delegate to the peak analysis runnable, such that it is entirely independant of the hive
-#this will require a standard interface
-#and moving a lot of the fetch_input stuff in here
-#rename this RunPeaks
+#todo Move more to PeakCaller so it is available from SeqTools
+#Or move directly to SeqTools? Max peaks filtering. write_output and store_AnnotatedFeature?
+#
 
 #input_dir and work_dir can be separate
 #such that we can't point to remote fastqs
@@ -55,20 +55,25 @@ use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
 sub fetch_input {
   my $self = shift;
-  #Set some module defaults
+  #Do some thing before we SUPER::fetch_input
   $self->param('disconnect_if_idle', 1);
   $self->check_analysis_can_run;
-  
   $self->SUPER::fetch_input;
 
-  my $set_type = $self->param_required('set_type');
-  my ($fset, $rset, $analysis);
+  my $set_type = $self->param_required('set_type');  
+  my $pftypes  = $self->get_param_method('process_file_types', 'silent', [undef]);
+  assert_ref($pftypes, 'ARRAY', 'process_file_types');
   
+  if(scalar(@$pftypes) != 1){
+    #Single undef value, to enable single iteration of loops
+    #below where we want default value of $peak_caller->out_file($file_type);
+    #See write_output for limitations of current support
+    $self->throw_no_retry("RunPeaks currently only supports a single process_file_type:\n\t".
+      'process_file_type => ["'.join('", "', @$pftypes).'"]');  
+  }
   
-  #Why do we need both of these? Surely max_peaks implies filter!
-  #These also needs grabbing from result_set_tracking in IdentifySetInputs
-  #and dataflowing
-  
+  #filter_max_peaks ensures validation of max_peaks variables for known IDR analyses
+  #max_peaks also needs grabbing from result_set_tracking and dataflow from IdentifySetInputs
   
   my $max_peaks = $self->get_param_method('max_peaks', 'silent');
   
@@ -77,6 +82,7 @@ sub fetch_input {
     $self->throw_no_retry('The filter_max_peaks param has been set, but no max_peaks param has been set');
   }
   
+  my ($fset, $rset, $analysis);
 
   if($set_type eq 'ResultSet'){
     $rset = $self->fetch_Set_input('ResultSet'); 
@@ -100,14 +106,11 @@ sub fetch_input {
       $self->throw_no_retry("Could not find peak_analysis in DB:\t".$peak_analysis);  
     }                            
   }
-  else{
+  else{ 
     $fset     = $self->fetch_Set_input('FeatureSet');
     $analysis = $fset->analysis;
     $rset     = $self->ResultSet; 
   }
-
-  #This is required for getting files, move this to get_alignment_file_by_InputSets?
-  $self->set_param_method( 'cell_type', $rset->cell_type, 'required' );
 
   #do we need both experiment name and logic name in here?
   #logic name will be in the otufile name anyway?
@@ -115,144 +118,90 @@ sub fetch_input {
   $self->get_output_work_dir_methods( $self->db_output_dir . '/peaks/' .
       $rset->experiment->name. '/' . $analysis->logic_name );
 
-  my $peak_module = validate_package_path($analysis->module);
-  my $formats = $peak_module->input_formats;
-  #my $filter_format = $self->param_silent('bam_filtered') ? undef : 'bam';  
-  #It is currently unsafe to filter here (control clash), so expect filtered file  
-  
-  #The problem here is that we are returning a hash of files keys on the format
-  #This conversion may cause clashes for fan job which share the same controls
-  #(e.g. peak calling jobs if they require formats other than bam)
-  #Collections jobs will be pre-processed/converted individually before submitting
-  #the slice job.
-  #So here we really only need the first available format
-   
-  #Restrict to bam for now
-  
-  if($formats->[0] ne 'bam'){
-    throw("It is currently unsafe to use any non-bam format at this point.\n".
-      "This is due to the possibility of filtering/format conversion clashes between parallel\n".
-      "jobs which share the same control files. Please implement PreprocessAlignments to\n".
-      "group jobs by controls and set/handle FILTERING_CONTROL status");  
-  }
-  
-  $formats = ['bam'];
-  my $align_file = $self->get_alignment_files_by_ResultSet_formats($rset, $formats)->{bam};
-  my $control_file;  
+  my $align_prefix   = $self->get_alignment_path_prefix_by_ResultSet($rset, undef, 1);#validate aligned flag 
+  my $control_prefix = $self->get_alignment_path_prefix_by_ResultSet($rset, 1, 1);#and control flag 
+  my $gender = ($rset->cell_type->name eq 'NHDF-AD') ? 'male' :
+                $rset->cell_type->gender;
+  warn "REMOVE: gender hacked for NHDF-AD";  
+  my $sam_ref_fai = $self->sam_ref_fai($gender);  #Just in case we need to convert
 
-  if ( grep {$_->is_control} @{$rset->get_support} ) {
-    #This throws if not found
-    $control_file = $self->get_alignment_files_by_ResultSet_formats($rset, 
-                                                                    $formats, 
-                                                                    1)->{bam}; # control flag
-  }
-
-  #align and control file could potentially be different formats here
-  #shall we let the peak caller handle that or test here?
-
-
-  #work dir is now based on the peaks and we get the input alignment file
-  #above, so we don't need this dir
-
-#my $work_dir = $self->workdir.'/'.join('/', ($self->workdir,
-#                                             'alignments',
-#                                             $self->species,
-#                                             $self->assembly)
-#                                             $experiment_name);
-#workdir is currently not used!!!!
-#This should be used for the samtools sort/merge stuff
-#so needs defining in BaseDB?
-#or just Base.pm
-#Should we mirror all the subdirs from the workdir root?
-#Then we can set workdir dynamically by just subing the output_dir with the work_dir
-
-  #output_dir method should also set work_dir
-  #input_dir should nevr be written to, unless it is also the output_dir
-
-  #my $input_dir = $self->param_silent('input_dir') || $work_dir;
-  #$self->set_dir_param_method('input_dir', $input_dir);
-
-  #todo create SWEmbl runnable which does not inherit from hive
-  #pass through self for access to debug/log etc?
-
-#We must flow separately for each analysis! from the CollctionWriter preprocess job
-
-  #This is hardcoding for packages in Bio::EnsEMBL::Funcgen::Hive
-  #use full package name in analysis!
-
- 
-
-  #validate program_file isn't already path?
-
+  #These maybe things like extra input/reference files
+  #where we don't want to store the filepath in the DB.
+  my $sensitive_caller_params = $self->param_silent($analysis->program.'_parameters') || {};
   my $pfile_path = ( defined $self->bin_dir ) ?
     $self->bin_dir.'/'.$analysis->program_file : $analysis->program_file;
 
-  my $peak_runnable = $peak_module->new(
-    -program_file      => $pfile_path,
-    -parameters        => $analysis->parameters,
-    -align_file        => $align_file,
-    -control_file      => $control_file,
-    -out_file_prefix   => $rset->name.'.'.$analysis->logic_name,
-    -out_dir           => $self->output_dir,
-    -convert_half_open => 1,
-
-    #todo change this to separate flags, reload will take priority over retry?
-    -is_half_open => $self->param_silent('is_half_open') || 0,    #default to closed coords
+  my $peak_runnable = _init_peak_caller
+   (-analysis => $analysis,
+    -align_prefix => $align_prefix,
+    -control_prefix => $control_prefix,
+    -sam_ref_fai => $sam_ref_fai,
     -debug             => $self->debug,
-  
-  );
-
-  #How are we going to support filtered and unfiltered feature/data_set here?
-  #should we keep the peak and the alignment in the same DBagnostic
-  #directory?
-  #No we should at least have then in analysis_logic_name subdirs
-  #and these are DB specific.
-
+    -peak_module_params =>
+     {%$sensitive_caller_params,
+      -program_file      => $pfile_path,
+      -out_file_prefix   => $rset->name.'.'.$analysis->logic_name,
+      -out_dir           => $self->output_dir,
+      -convert_half_open => 1,
+      -is_half_open      => $self->param_silent('is_half_open') || 0},    #default to closed coords
+   );
+   
   $self->set_param_method( 'peak_runnable', $peak_runnable );
 
-  return 1;
+  return;
 } ## end sub fetch_input
 
+
+
+#out_file may need a file_type spec here
+#There is only partial support here for multiple output
+#process_file_types array is specified in the analysis config
+#all would be post processed uniformly, although this is only specified 
+#for CCAT at present which has no $max_peaks specified
+#write_output also lacks the ability to specify the extra FeatureSets required
+#for the outher output files. Hence we only expect 1 process_file_type there
+
+#mv max peak filtering to write_output?
+#This seems more appropriate now, given that we need to do file/header manipulation
+#for filtering. And sort if format specific
+#Do we want to be able filter in run, without 'writing' output
+
 sub run {
-  my $self = shift;
+  my $self      = shift;
+  my $max_peaks = $self->max_peaks;
+   
+  if( ! $self->param_silent('reload')){
+    my $pcaller = $self->peak_runnable;
 
-  my $out_file = $self->peak_runnable->out_file;
-
-  if( ! ( $self->param_silent('reload') && 
-          -e  $out_file) ){
-       
-    if(! eval { $self->peak_runnable->run; 1 }){
-      my $err = $@; 
-      $self->throw_no_retry('Failed to call run on '.ref($self->peak_runnable).":\n$err"); 
+    if(! eval { _run_peak_caller(-peak_caller => $pcaller, 
+                                 -max_peaks   => $self->max_peaks, 
+                                 -file_types  => $self->process_file_types,
+                                 -debug       => $self->debug); 1 }){
+      $self->throw_no_retry('Failed to call run on '.ref($pcaller)."\n$@");                                
     }
   }
-
-  my $max_peaks = $self->max_peaks;
-
-  if($max_peaks){
-    
-    my $cmd = "mv $out_file ${out_file}.unfiltered";
-    run_system_cmd($cmd);
-    
-    $cmd = "sort -k 7nr,7nr ${out_file}.unfiltered | head -n $max_peaks | sort -k 1,2n > ".$out_file;
-    run_system_cmd($cmd);    
-    #Will failures of downstream pipes be caught?   
-
-    #Sanity check we have the file with the correct number of lines
-    $cmd = "wc -l $out_file";
-    my $filtered_peaks = run_backtick_cmd($cmd);
-      
-    if($max_peaks != $filtered_peaks){
-      throw("Expected $max_peaks in filtered bed file, but found $filtered_peaks:\n\t".$out_file);  
-    }       
-  }
-
+  
   return;
 }
 
+
+#TODO
+# 1 Log counts here, in tracking DB
+# 2 Dataflow to PeaksQC from here of PreprocessAlignments
+# 3 Add in optional QC and PeaksReport
+# 4 Handle >1 output files/formats e.g. CCAT significant.region significant.peak
+#  This is already handle in run, but there is no way to handle/specify the params
+#  for the process method i.e. extra feature sets?
+
+
+# Move the bulk of this to SeqTools?
+# This would require a pre-registered FeatureSets
+# unless we import some of the define_sets code in there
+# Will SeqTools ever be able to do an Feature/ResultSet import based on command line params?
+# Is this overkill?
+
 sub write_output {
   my $self = shift;
-  
   my $fset;
   
   if($self->can('FeatureSet') &&
@@ -263,110 +212,83 @@ sub write_output {
     if ( $fset->has_status('IMPORTED') ) {
       throw( "Cannot imported feature into a \'IMPORTED\' FeatureSet:\t" .
              $fset->name );
-
-     #rollback should be outside of this module!
     }
+    else{ #Rollback
+      #Just in case we have some duplicate records from a previously failed job
+      $self->helper->rollback_FeatureSet($fset);
+    }
+    
+    my $af_adaptor = $fset->adaptor->db->get_AnnotatedFeatureAdaptor;    
+    my $params     = 
+     {-file_type      => $self->process_file_types->[0],
+      -processor_ref  => $self->can('store_AnnotatedFeature'),
+      -processor_args => [$self,#Need to pass self as this calls a code ref
+                          $fset,
+                          $af_adaptor]};  
 
-    $self->peak_runnable->store_features( $self->can('store_AnnotatedFeature'),
-                                          $fset,
-                                          $fset->adaptor->db->get_AnnotatedFeatureAdaptor );
-
+    #Need list context otherwise would get last value of list returned
+    #i.e. $retvals, which we don't need here
+    my ($feature_cnt) = $self->peak_runnable->process_features($params);
+    
+    #As CCAT is very oddly calling duplicate regions we need to skip over these in 
+    #store_AnnotatedFeature
+    #Hence we need to validate the feature_cnt returned matches a the DB count 
+    #else throw here, rather than in store_AnnotatedFeature
+    #so we can finish the load.
+    #Luckily there is now flow from the CCAT analysis, so we can review these and accept them
+    #throw before or after imported states?
+                        
+    $self->helper->debug(1, "Processed $feature_cnt features for ".$fset->name.'('.$fset->dbID.')');
+    my $stored_features = $af_adaptor->generic_count('af.feature_set_id='.$fset->dbID);
+    
+    #Arguably this should be after the follwing test
     $fset->adaptor->set_imported_states_by_Set($fset);
+    
+    if($feature_cnt != $stored_features){
+      #coudl change to a normal throw if we move above the satus setting
+      $self->throw_no_retry('Processed feature count does not match stored '.
+        "feature count:\t$feature_cnt vs $stored_features");
+    }  
+      
+    #This is currently only setting IMPORTED_GRCh38, not IMPORTED too
 
-    #my $batch_params = $self->get_batch_params;
-
-    # Log counts here?
-
-    #No data flow to PeaksQC here as this is done via semaphore from PreprocessAlignment
-
-    #todo update tracking states?
+    # Log counts here in tracking?
+    #No data flow to PeaksQC here as this is done via semaphore from PreprocessAlignment?
+  }
+  else{
+    warn "Failed load features as no FeatureSet is defined";
+    #This is for the IDR replicate data, can we omit this error if we know that  
   }
 
   return;
 } ## end sub write_output
 
+#Should we attempt to skip features which overhang end of slices?
+#This may be a 'feature' of the peak caller?
 
 sub store_AnnotatedFeature {
   my ( $self, $fset, $af_adaptor, $fhash ) = @_;
+  my $err;  
 
   if ( my $slice = $self->get_Slice( $fhash->{-seq_region} ) ) {
     delete ${$fhash}{-seq_region};
-
-    eval {
-      $af_adaptor->store( Bio::EnsEMBL::Funcgen::AnnotatedFeature->new(
-                                 %$fhash, -slice => $slice -feature_set => $fset
-                          ) );
-    };
-
-    if ($@) {
-      throw( 'Could not create and store ' .
-             $fset->name . " AnnotatedFeature with attributes:\n\t" .
-             join( "\n\t", ( map { "$_ => " . $fhash->{$_} } keys %$fhash ) ) );
+    
+    if(! eval {$af_adaptor->store( Bio::EnsEMBL::Funcgen::AnnotatedFeature->new
+                                    (%$fhash, -slice => $slice, -feature_set => $fset)); 1}){
+      $err = 'Could not create and store ' .
+        $fset->name . " AnnotatedFeature with attributes:\n\t" .
+        join( "\n\t", ( map { "$_ => " . $fhash->{$_} } keys %$fhash ) ).
+        "\n\t-slice => $slice\n\t-feature_set => $fset\n$@";
     }
   }
+  else{
+    $err = "Failed to get slice ".$fhash->{-seq_region};
+  }
 
-  # else this can only happen with -slices/skip_slices
-
-  return;
+  warn $err if $err;
+  return $err;
 }
 
 1;
 
-# Private function only to be called by subclasses of this class
-# gets the number of reads in a sam or bed file
-#sub _get_number_of_reads {
-#   my ($self, $file, $file_type) = (shift, shift, shift);
-#   if(($file_type ne "bed") && ($file_type ne "sam")){ throw "Only bed and sam file types supported"; }
-#   my $nbr_reads = 0;
-#   #If needed, add an option to check if is zipped or not...
-#   my $open_cmd = "gzip -dc $file |";
-#   open(FILE,$open_cmd);
-#   while(<FILE>){
-#     if($file_type eq "sam"){
-#       next if /^\@SQ/;
-#     }else {
-#       next if /track name=/o;
-#     }
-#     $nbr_reads++;
-#   }
-#   close FILE;
-#   return $nbr_reads;
-#}
-
-# Private function only to be called by subclasses of this class
-# gets the number of reads in a sam or bed file
-#sub _get_slices {
-#  #NOT DONE!!
-#   my ($self, $file, $file_type) = (shift, shift, shift);
-#   if(($file_type ne "bed") && ($file_type ne "sam")){ throw "Only bed and sam file types supported"; }
-#   my $nbr_reads = 0;
-#   #If needed, add an option to check if is zipped or not...
-#   my $open_cmd = "gzip -dc $file |";
-#   open(FILE,$open_cmd);
-#   while(<FILE>){
-#     if($file_type eq "sam"){
-#       next if /^@SQ/;
-#     }else {
-#       next if /track name=/o;
-#     }
-#     $nbr_reads++;
-#   }
-#   close FILE;
-#   return $nbr_reads;
-#}
-
-=item input_dir 
-
-=item skip_control
-
-=item align_file
-
-=item control_file
-
-#is now injected as 'align_file'
-#sub _input_file {
-#  return $_[0]->_getter_setter('input_file',$_[1]);
-#}
-
-=cut
 
