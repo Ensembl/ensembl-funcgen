@@ -75,6 +75,16 @@ sub sam_ref_fai { return shift->{sam_ref_fai}; }
 #although output format is sam
 #we always need to sort and convert to bam for merge
 
+#Todo
+#1 Move sort functionality to SeqTools? Careful not to have reciprocal use statements
+# as SeqTools will use this will running an aligner
+# Hence we may need to move the sort call back to RunAligner
+# Also add @HD SO tag! Or does a more recent version
+#of samtools do this? Check manifest for releases past 0.1.18, sourceforge only list 0.1.19
+#which seems to be the one with the BGZD bug re-introduced
+#Have the project hosting moved elsewhere?
+#gut hub lists a release candidate for 0.2.0, but this is not likely
+
 sub run {
   my $self        = shift;
   my $query_file  = $self->query_file;
