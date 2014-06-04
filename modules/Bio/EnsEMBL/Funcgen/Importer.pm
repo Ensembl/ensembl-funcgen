@@ -143,16 +143,18 @@ sub new{
   #as well as set_config methods?
 
   my $parser_error;
+  
+  if(! ($vendor || $parser_type)){
+    throw('Must define a -vendor or a -parser parameter');  
+  }
  
   for my $vendor_parser( ($vendor, $parser_type) ) {
     next if ! defined $vendor_parser;
     $vendor_parser =  ucfirst(lc($vendor_parser));
-    
-    eval {require "Bio/EnsEMBL/Funcgen/Parsers/${vendor_parser}.pm";};
- 
-    if ($@) {
+  
+    if ( ! eval {require "Bio/EnsEMBL/Funcgen/Parsers/${vendor_parser}.pm"; 1}) {
       #Don't warn/throw yet as we might have a standard parser format
-      $parser_error .= "$@\nThere is no valid parser:\tBio/EnsEMBL/Funcgen/Parsers/${vendor_parser}.pm";
+      $parser_error .= "There is no valid parser:\tBio/EnsEMBL/Funcgen/Parsers/${vendor_parser}.pm\n$@";
     }
     else{ 
       $parser_type = $vendor_parser;
@@ -172,7 +174,6 @@ sub new{
   #change this to be called explicitly from the load script?
 
   #### Create object from parent class
-
   my $self = $class->SUPER::new(@_);
     
  
@@ -1113,8 +1114,7 @@ sub cache_slice{
 
 sub slice_cache{
   my $self = shift;
-
-  return $self->{'slice_cache'};
+  return $self->{'slice_cache'} || {};
 }
 
 
