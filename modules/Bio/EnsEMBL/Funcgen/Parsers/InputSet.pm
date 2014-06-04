@@ -60,6 +60,7 @@ use warnings;
 use Bio::EnsEMBL::Analysis;
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
 use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
+use Bio::EnsEMBL::Utils::Scalar            qw( check_ref assert_ref );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( species_chr_num open_file is_gzipped );
 use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 use Bio::EnsEMBL::Funcgen::SegmentationFeature;
@@ -353,30 +354,63 @@ sub define_sets{
 #Need to use new methods which handle rollback
 
 #todo remove InputSubset generation from here
-#as this should be done by register_experiment
+#as this should be done by register_experiment?
+#What about data types which do not have support, such as external feature sets?
+#Or segmantations?
+
+
+#
 
 sub validate_files{
   my ($self, $prepare, $eset, $output_set) = @_;
 
-  #Get files from input directory
-  if (! $self->input_files) {
-    #todo genericise this input directory? i.e. set a defined dir, and do not concat name here
-    
-    #todo should change this to use get_feature_file
-    #i.e. the same code which is being used in the pipeline
-    
-    my $list = "ls ".$self->get_dir('input').'/'.$self->name().'*.';
-    my @rfiles = `$list`;
-    $self->input_files(\@rfiles);
+  if(! (check_ref($eset, 'Bio::EnsEMBL::Funcgen::ResultSet') &&
+        ($eset->table_name eq 'input_subset'))){
+    throw('validate_files currently only supports processing ResultSets with InputSubset support');        
   }
 
- 
+  #This has now been changed to remove support for InputSet
+  #and currently expects all InputSubsets to be registered before hand
+  #If we are to genericse this into a generic Set importer
+  #then we will need to maintain registration functionality in here
+
+
+  #This no longer works, as the old code had merged InputSubset and now input_subsets 
+  #represent disitnct replcicates
+  
+  #We simply want to change how this works to use the single input_file
+  #provided.
+  #We were previously setting IMPORTED on subsets, 
+  #but now this must be done on ResultSets instead?
+  #The match between the ResultSet name and the file name is slightly different
+  #This check was to ensure cross valdiation between the file and the input_subset
+  #filepath generation code is only available in the Hive at present?
+    
+  
+  #And we will need to remove IMPORTED status setting for rsets ealier in the pipeline
+  #What implications will this have?
+  #The states are getting a bit messy here
+  #as we can have a ResultSet which is LOADED, associated with a DataSet,
+  #but itself not IMPORTED. This is what recovery mode is for.
+  
+  #Is there a danger of deleting a ResultSet which does not have the IMPORTED state
+  #therefore invalidating the DataSet?
+  #There is logic in place to prevent this
+  
+  #Let just simplify this massively for now to get things running
+  #We just need to identify new data and rollback if we have the relevant rollback flags set
+
+  
+  #Assume we have got the right file wrt to the ResultSet
+  #and we don't need to use the modified filename as a key any more, just use the full path?
+
+
   
   #Here were are tracking the import of individual files by adding them as InputSubSets
   #Recovery would never know what to delete
   #So would need to delete all, Hence no point in setting status?
   #We do not rollback IMPORTED data here.  This is done via separate scripts
-  #To reduce the rick of accidentally deleting/overwriting data by leaving a stry -rollback
+  #To reduce the rick of accidentally deleting/overwriting data by leaving a stray -rollback
   #flag in the run script
 
   ### VALIDATE FILES ###
@@ -389,6 +423,101 @@ sub validate_files{
     throw('Validate files does not yet support multiple Slice rollback');
   }
   
+ 
+  #NEW CODE STARTS
+  assert_ref($self->input_files, 'ARRAY', 'input_files');
+  
+  if(scalar(@{$self->input_files}) != 1) {
+    throw("Did not find 1 input_file:\n\t".join("\n\t", @{$self->input_files}));    
+  }
+  
+  my $filepath = $self->input_files->[0];
+  (my $filename = $filepath) =~ s/.*\///;#Just used for logging now
+  #$filename =~ s/(prepared\.){0,1}(.*)(?:\..*$)/$1$2/;
+  
+   
+  $self->log('Validating '.$self->vendor." file:\t$filename");
+  throw("Cannot find ".$self->vendor." file:\t$filepath") if(! -e $filepath); 
+ 
+ 
+  my $rollback;
+ 
+  #This is decoupling the STATUS from the filename(was input_subset)
+  #So this is a bit risky, if we ever want to use a different file, as it may be recognised
+  #as already IMPORTED, or rollback other data
+  #We need to update the status here to be more specific
+  #COLLECTION_IMPORTED?
+  #When do we set IMPORTED for ResultSet
+  #Is this even useful now
+  #It was a simple status to signify whether an import of a ResultSet was complete
+  #and in case of reload, either rollback incomplete imports or not
+ 
+ 
+  if(! $eset->has_status('IMPORTED')){
+    $self->log("Found existing ResultSet without IMPORTED status:\t$filename");
+    $rollback = 1;
+  }
+  elsif($self->rollback){
+    $self->log("Rolling back IMPORTED ResultSet:\t$filename");
+    $rollback  = 1;
+  }
+  else{ #IMPORTED
+     $new_data{$filepath} = 0;
+     $self->log("Found previously IMPORTED ResultSet:\t$filename");
+  }
+ 
+  #Is recovery even valid here any more?
+ 
+ 
+  if ($rollback &&         #recoverable sets i.e. exists but not IMPORTED
+      ( (! $self->recovery) && (! $self->rollback) ) ) {
+    throw("Found ResultSet without IMPORTED status:\n\t".$eset->name."\n".
+          "You must specify -recover or -rollback to perform a full rollback");
+  }
+  
+  
+  
+  if($rollback){
+    $new_data{$filepath} = 1;
+   
+    if (! $prepare) {
+      #Don't rollback when in prepare mode as it will also be done
+      #redundantly in parallel slice jobs
+      #and to ensure that data is definitely rolled back before import
+      $self->log("Rolling back ResultSet:\t\t\t\t".$eset->name);
+    
+      if ($self->input_feature_class eq 'result' ||
+          $self->input_feature_class eq 'dna_methylation') {
+        $self->rollback_ResultSet($eset, $self->slices->[0], $self->recovery);
+        #Do not rollback_InputSet here as we may have parallel Slice based imports running
+      }
+    }
+  }
+
+  return \%new_data;
+ 
+ 
+ 
+  #OLD CODE STARTS
+ 
+ 
+ 
+ 
+ 
+  #Get files from input directory
+  if (! $self->input_files) {
+    #todo genericise this input directory? i.e. set a defined dir, and do not concat name here
+    
+    #todo should change this to use get_feature_file
+    #i.e. the same code which is being used in the pipeline
+    
+    my $list = "ls ".$self->get_dir('input').'/'.$self->name().'*.';
+    my @rfiles = run_backtick_cmd($list);
+    $self->input_files(\@rfiles);
+  }
+ 
+ 
+ 
  
   
   #IMPORTED status here may prevent
@@ -406,25 +535,48 @@ sub validate_files{
   #set the max seen replicate value
   my $replicate = 0;
 
-  foreach my $iss( @{$eset->get_InputSubsets} ){
+  my (%support);  
+
+  #foreach my $iss( @{$eset->get_InputSubsets} ){
+  foreach my $iss( @{$eset->get_support} ){ 
     
-    if($iss->replicate >  $replicate){
-      $replicate = $iss->replicate;
+    
+    if(! $iss->is_control){
+      $support{$iss->name} = $iss;  
+    
+      if($iss->replicate >  $replicate){
+        $replicate = $iss->replicate;
+      }
     }
   }
+
+ 
+  
+  
 
 
   foreach my $filepath ( @{$self->input_files} ) {
     my ($filename, $sub_set);
     chomp $filepath;
    	($filename = $filepath) =~ s/.*\///;
+   	$filename =~ s/(prepared\.){0,1}(.*)(?:\..*$)/$1$2/; 
+   	#Strip of any suffixes! Does this match the exact input_subset name processing?
+   	
     $file_paths{$filename} = $filepath;			 
     $filename =~ s/^prepared\.// if $self->prepared; #reset filename to that originally used to create the Inputsubsets
 
     $self->log('Validating '.$self->vendor." file:\t$filename");
-    throw("Cannot find ".$self->vendor." file:\t$filepath") if(! -e $filepath); #Can deal with links
+    throw("Cannot find ".$self->vendor." file:\t$filepath") if(! -e $filepath); 
+    #Can deal with links
 		
-    if ( $sub_set = $eset->get_subset_by_name($filename) ) {
+	
+		
+		
+    #if ( $sub_set = $eset->get_subset_by_name($filename) ) {
+    if(exists $support{$filename}){
+      $sub_set = $support{$filename};
+      
+      
       #IMPORTED status here is just for the file
       #Any changes to analysis or coord_system should result in different InputSubset(file)
       #Will only ever be imported into one Feature|ResultSet
@@ -441,6 +593,9 @@ sub validate_files{
         push @rollback_sets, $sub_set;
       }
     } else {
+      
+      throw('This needs updated to support the new InputSubset data model, or removing in favour of register_experiment.pl');
+      
       $replicate ++;
 
       $self->log("Found new InputSubset:\t${filename}");
@@ -634,7 +789,7 @@ sub read_and_import_data{
   if($preprocess && 
      (! $self->prepared) &&
      (! $self->can('initialise_input_file')) ){
-	throw('preprocess mode is not currently available in '.ref($self));
+    throw('preprocess mode is not currently available in '.ref($self));
   }
   
  
@@ -643,7 +798,7 @@ sub read_and_import_data{
 	# ($self->batch_job || $self->prepared)){
 	#prepare should be called once by the runner, not in each batch_job
 	#don't prepare if already prepared
-	throw('You cannot run read_and_import_data in preprocess mode with a -batch_job');
+    throw('You cannot run read_and_import_data in preprocess mode with a -batch_job');
   }
   
   
@@ -655,17 +810,19 @@ sub read_and_import_data{
   #todo integrate all this into define_sets?
   
   if(! defined $output_set){
+    throw('Cannot currently handle undef output set, needs updating to remove InputSet');
     (undef, $output_set, $eset) = $self->define_sets();
   }
   elsif($output_set->isa('Bio::EnsEMBL::Funcgen::ResultSet')){
-     $eset = $output_set->get_support->[0];
+     #$eset = $output_set->get_support->[0];
      $self->result_set($output_set); #required for ResultFeature Collector and Bed Parser
   }
   elsif($output_set->isa('Bio::EnsEMBL::Funcgen::FeatureSet')){
+    throw('Need to update FeatureSet mode to use ResultSets instead of InputSets');
     $eset = $output_set->get_DataSet->get_supporting_sets->[0];
   }
   else{
-   throw("Unsupported output set class specified:\t".$output_set); 
+    throw("Unsupported output set class specified:\t".$output_set); 
   }
   
   #We also need to account for bsub'd slice based import
@@ -676,255 +833,238 @@ sub read_and_import_data{
   
   #validate_files required that the data_set is defined
   
-  my $new_data = $self->validate_files($preprocess, $eset, $output_set);
+  #my $new_data = $self->validate_files($preprocess, $eset, $output_set);
+  my $new_data = $self->validate_files($preprocess, $self->result_set, $output_set);
   my $seen_new_data = 0;
  
   
   ### READ AND IMPORT FILES ###
   foreach my $filepath(@{$self->input_files()}) {
-	chomp $filepath;
-	
-	($filename = $filepath) =~ s/.*\///;
-	$self->input_file($filepath); #This is only used by Collector::ResultFeature::reinitialise_input method
-	
-	if($new_data->{$filepath} ){	#This will currently autovivify!
-	  $seen_new_data = 1;
-	  
-	  #can't this be moved to intialise_input_file?
-	  #$self->{'input_gzipped'} = &is_gzipped($filepath);
-	  
-  
-	  #we still need to initialise_input even if we are not preprocessing
-	  #as we need to se tthe gzip pipe
-	  
-	  #if( (! $self->prepared) && 
-	  #    ($self->can('initialise_input_file')) ){
-	  if( $self->can('initialise_input_file') ){
-        $filepath = $self->initialise_input_file($filepath, $preprocess);
+    chomp $filepath;
+    #($filename = $filepath) =~ s/.*\///;
+    $filename = $filepath;
+
+    if($new_data->{$filepath} ){	#autovivify is okay here
+      $seen_new_data = 1;
+      $self->input_file($filepath); #Only used by Collector::ResultFeature::reinitialise_input
+    
+      if( $self->can('initialise_input_file') ){ #Set input_file_operator and output_file
+        $filepath = $self->initialise_input_file($filepath, $preprocess);  
       }
 	  
-	  $self->log_header(ucfirst($action).' '.$self->vendor." file:\t".$filepath);
+	    $self->log_header(ucfirst($action).' '.$self->vendor);
+	    $self->log("Input file:\t".$filepath);
+      $self->log("Output file:\t".$self->output_file) if $self->output_file;
+	        
+  
+  	  #We need to be able to optional open pipe to gzip | sort here
+      #i.e. define open command
+      $fh = open_file($filepath, $self->input_file_operator);
 
-	  #We need to be able to optional open pipe to gzip | sort here
-	  #i.e. define open command
-	  $fh = open_file($filepath, $self->input_file_operator);
-
-	  #This my become way too large for some reads files
-	  #Currently no problems
-	  #This is not working as we are sorting the file!
-	  #$self->parse_header($fh) if $self->can('parse_header');
+      #This my become way too large for some reads files
+      #Currently no problems
+      #This is not working as we are sorting the file!
+      #$self->parse_header($fh) if $self->can('parse_header');
 	  
-	  #For result features some times we want to run 
-	  #locally and just sort without dumping
-	  #i.e if we are not a batch job
-	  #as there is no need to dump if it is a single process
+      #For result features some times we want to run 
+      #locally and just sort without dumping
+      #i.e if we are not a batch job
+      #as there is no need to dump if it is a single process
 	  
     
-	  if( (($self->input_feature_class eq 'result') ||
-	       ($self->input_feature_class eq 'dna_methylation' )) && 
+      if( (($self->input_feature_class eq 'result') ||
+           ($self->input_feature_class eq 'dna_methylation' )) && 
          ! $preprocess){
       
-      #Use the ResultFeature Collector here
-      #Omiting the 0 wsize
-      #How are we going to omit 0 wsize when doing the fetch?
-      #simply check table name in ResultSet?
-      
-      #Should we do this for multiple chrs?
-      #or fail here
-      # we need to pass self
-      #for access to get_Features_by_Slice
-		#which should be in the specific parser e.g Bed
-      
-		#Will this not clash with standard ResultFeature::get_ResultFeatures_by_Slice?
-		#Could really do with separating the pure file parsers from the importer code, so these can be reused
-		#by other code. Then simply use Bed import parser for specific import functions and as wrapper to 
-		#Bed file parser
-		#So should really have
-		#Parsers::File::Bed
-		#and
-		#Parsers::Import::Bed
-		#This can probably wait until we update BioPerl and just grab the Bed parser from there?
+        #Use the ResultFeature Collector here
+        #Omiting the 0 wsize
+        #How are we going to omit 0 wsize when doing the fetch?
+        #simply check table name in ResultSet?
+        
+        #Should we do this for multiple chrs?
+        #or fail here
+        # we need to pass self
+        #for access to get_Features_by_Slice
+        #which should be in the specific parser e.g Bed
+    
+    		#Will this not clash with standard ResultFeature::get_ResultFeatures_by_Slice?
+    		#Could really do with separating the pure file parsers from the importer code, so these can be reused
+    		#by other code. Then simply use Bed import parser for specific import functions and as wrapper to 
+    		#Bed file parser
+    		#So should really have
+    		#Parsers::File::Bed
+    		#and
+    		#Parsers::Import::Bed
+    		#This can probably wait until we update BioPerl and just grab the Bed parser from there?
+    
+        my $slices = $self->slices;
+    
+    		#Should this be caught in new?
+        if(! @$slices){
+          throw("You must define a slice to generate ResultFeature Collections from InputSet:\t".$eset->name);
+        }
+    		
+    
+        if(scalar(@$slices) > 1){
+      	  throw("InputSet parser does not yet support multi-Slice import for ResultFeature collections\n"
+      			."Please submit these to the farm as single slice jobs");
+      	}
 
-		my $slices = $self->slices;
-
-		#Should this be caught in new?
-		if(! @$slices){
-		  throw("You must define a slice to generate ResultFeature Collections from InputSet:\t".$eset->name);
-		}
-		
-
-		if(scalar(@$slices) > 1){
-		  throw("InputSet parser does not yet support multi-Slice import for ResultFeature collections\n"
-				."Please submit these to the farm as single slice jobs");
-		}
-
-		#restrict to just 1 slice as we don't yet support disk seeking
-		#if the slices are not in the same order as they appear in the file
-		#also we want to parallelise this
-		
-		#Set as attr for parse_Features_by_Slice in format sepcific Parsers
+        #restrict to just 1 slice as we don't yet support disk seeking
+        #if the slices are not in the same order as they appear in the file
+        #also we want to parallelise this
+        
+        #Set as attr for parse_Features_by_Slice in format sepcific Parsers
 
 	
-		$self->file_handle(open_file($filepath, $self->input_file_operator));
-		
-		
-		foreach my $slice(@$slices){
-		  $self->feature_adaptor->store_window_bins_by_Slice_Parser($slice, $self, 
-																	(
-																	 #Force needs reimplementing here?
-																	 -force            => $self->{force},
-																	 -dbfile_data_root => $self->{dbfile_data_root},
-																	));
-		}  
-
-		warn "Need to update InputSubset status to IMPORTED after all slices have been loaded";
-		#Do we even need to set RESULT_FEATURE_SET for input_set ResultFeatures?
-
-		
-
-		warn "Closing $filename\nDisregard the following 'Broken pipe' warning";
-
-		#Closing the read end of a pipe before the process writing to it at the other end 
-		#is done writing results in the writer receiving a SIGPIPE. If the other end can't 
-		#handle that, be sure to read all the data before closing the pipe.
-		#This suggests the gzip pipe has not finished reading, but it *should* be at the end of the file?
-		#$SIG{PIPE} = 'IGNORE'; #Catch with subref and warn instead?
-		#Or maybe an eval will catch the STDERR better?
-		#sub catch_SIGPIPE{
-		#  my $sig = shift @_;
-		#  print " Caught SIGPIPE: $sig $1 \n";
-		#  return;
-		#  
-		#}
-		#$SIG{PIPE} = \&catch_SIGPIPE;
-		#my $retval =  eval { no warnings 'all'; $fh->close };
-		#if($@){
-		#  warn "after eval with error $@\nretval is $retval";
-		#}
-		#Neither of these catch gzip: stdout: Broken pipe
-		
-		#IO::UnCompress::Gunzip?
-
-
-		eval { close($fh); };
-		 
-		if($@){
-		  die("Found errors when closing file\n$@");
-		}		  
-	  }
-	  else{
-		  
-	  
-		#Revoke FeatureSet IMPORTED state here incase we fail halfway through
-		#This will have already been rolled back, 
-		#todo remove this when we update the define sets method
-		#as stats should have been removed already?
-		if ($output_set->has_status('IMPORTED') && (! $preprocess)) {
-          $output_set->adaptor->revoke_status('IMPORTED', $output_set)
-		}
-		
-		#What about IMPORTED_"CSVERSION"
-		#This may leave us with an incomplete import which still has
-		#an IMPORTED_CSVERSION state
-		#We need to depend on IMPORTED for completeness of set
-		#DAS currently only uses IMPORTED_CSVERSION
-		#This is okayish but we also need to write HCs for any sets 
-		#which do not have IMPORTED state!
-		my ($line, @outlines, $out_fh);
-
-		if($preprocess && ! $self->prepared){  
-		  #Assume we want gzipped output
-		  #filename is actually based on input, so may not have gz in file name
-		  $out_fh = open_file($self->output_file, "| gzip -c > %s");
-		}
-		
-
-		while(defined ($line=<$fh>)){
-		  #Generic line processing
-		  #Move these to parse_line?
-		  $line =~ s/\r*\n//o;
-		  next if $line =~ /^\#/;	
-		  next if $line =~ /^$/;
-		  
-		  if($self->parse_line($line, $preprocess)){
-		    #This counts all lines as oppose to cache_slice count, which only caches
-		    #data lines where a slice can be cached
-			$self->count('total parsed lines');
-
-			#Cache or print to sorted file
-			if($preprocess && 
-			   (! $self->prepared) ){
-
-			  if(scalar(@outlines) >1000){
-				print $out_fh join("\n", @outlines)."\n";
-				@outlines = ();
-			  }
-			  else{
-				push @outlines, $line;
-			  }
-			}
-		  }
-		}
-	 
-		eval { close($fh); };
-		
-		 
-	    if($@){
-          die("Found errors when closing file\n$@");
-		}
-		  
-
-		#Print last of sorted file
-		if($preprocess && 
-		   (! $self->prepared) ){
-		  print $out_fh join("\n", @outlines)."\n";
-		  eval { close($out_fh) ;};
-		  
-		  if($@){
-		    die("Found errors when closing file\n$@");
-		  }
-		  
-		  @outlines = ();
-		}
-
-		if(! $preprocess){
-		  #reset filename to that originally used to create the Inputsubsets
-		  #some files may not have this prefix
-		  $filename =~ s/^prepared\.// if $self->prepared;
-
-		  my $sub_set = $eset->get_subset_by_name($filename);
-		  $sub_set->adaptor->store_status('IMPORTED', $sub_set) if ! $self->batch_job;
-		}
-	  }
-
-
-    #Could really do with warning if seen slices don't match
-    #specified slices
-            
-      foreach my $slice(@{$self->slices}) {
+        $self->file_handle(open_file($filepath, $self->input_file_operator));
         
-        if(exists $self->{'slice_cache'}->{$slice->seq_region_name}){
-          #should overlook Y for female cell types here?
+        
+        
+        foreach my $slice(@$slices){
+          $self->feature_adaptor->store_window_bins_by_Slice_Parser($slice, $self, 
+        															(
+        															 #Force needs reimplementing here?
+        															 -force            => $self->{force},
+        															 -dbfile_data_root => $self->{dbfile_data_root},
+        															));
+        }  
+
+        warn "Need to update InputSubset status to IMPORTED after all slices have been loaded";
+        #Do we even need to set RESULT_FEATURE_SET for input_set ResultFeatures?
+        warn "Closing $filename\nDisregard the following 'Broken pipe' warning";
+
+        #Closing the read end of a pipe before the process writing to it at the other end 
+        #is done writing results in the writer receiving a SIGPIPE. If the other end can't 
+        #handle that, be sure to read all the data before closing the pipe.
+        #This suggests the gzip pipe has not finished reading, but it *should* be at the end of the file?
+        #$SIG{PIPE} = 'IGNORE'; #Catch with subref and warn instead?
+        #Or maybe an eval will catch the STDERR better?
+        #sub catch_SIGPIPE{
+        #  my $sig = shift @_;
+        #  print " Caught SIGPIPE: $sig $1 \n";
+        #  return;
+        #  
+        #}
+        #$SIG{PIPE} = \&catch_SIGPIPE;
+        #my $retval =  eval { no warnings 'all'; $fh->close };
+        #if($@){
+        #  warn "after eval with error $@\nretval is $retval";
+        #}
+        #Neither of these catch gzip: stdout: Broken pipe
+        
+        #IO::UnCompress::Gunzip?
+
+        if(! eval { close($fh); 1;}){
+          throw("Found errors when closing file\n$@");
+        }
+      }
+      else{
+	  
+        #Revoke FeatureSet IMPORTED state here incase we fail halfway through
+        #This will have already been rolled back, 
+        #todo remove this when we update the define sets method
+        #as stats should have been removed already?
+        if ($output_set->has_status('IMPORTED') && (! $preprocess)) {
+              $output_set->adaptor->revoke_status('IMPORTED', $output_set)
+        }
+        #What about IMPORTED_"CSVERSION"
+        #This may leave us with an incomplete import which still has
+        #an IMPORTED_CSVERSION state
+        #We need to depend on IMPORTED for completeness of set
+        #DAS currently only uses IMPORTED_CSVERSION
+        #This is okayish but we also need to write HCs for any sets 
+        #which do not have IMPORTED state!
+        my ($line, @outlines, $out_fh);
+
+        if($preprocess && ! $self->prepared){  
+          #Assume we want gzipped output
+          #filename is actually based on input, so may not have gz in file name
+          $out_fh = open_file($self->output_file, "| gzip -c > %s");
+        }
+
+   	    while(defined ($line=<$fh>)){
+          #Generic line processing
+          #Move these to parse_line?
+          $line =~ s/\r*\n//o;
+          next if $line =~ /^\#/;	
+          next if $line =~ /^$/;
+          
+          if($self->parse_line($line, $preprocess)){
+            #This counts all lines as oppose to cache_slice count, which only caches
+            #data lines where a slice can be cached
+            $self->count('total parsed lines');
+
+            #Cache or print to sorted file
+            if($preprocess && ! $self->prepared ){
+
+              if(scalar(@outlines) >1000){
+                print $out_fh join("\n", @outlines)."\n";
+                @outlines = ();
+              }
+              else{
+                push @outlines, $line;
+              }
+            }
+          }
+        }
+	 
+        if(! eval { close($fh); 1;}){
+          throw("Found errors when closing file\n$@");
+        }
+		  
+
+        #Print last of sorted file
+        if($preprocess && ! $self->prepared){
+          print $out_fh join("\n", @outlines)."\n";
+  
+          if(! eval { close($out_fh); 1;}){
+            throw("Found errors when closing file\n$@");
+          }
+        
+          @outlines = ();
+        }
+
+        if(! $preprocess){
+          #reset filename to that originally used to create the Inputsubsets
+          #some files may not have this prefix
+          $filename =~ s/^prepared\.// if $self->prepared;
+          my $sub_set = $eset->get_subset_by_name($filename);
+          $sub_set->adaptor->store_status('IMPORTED', $sub_set) if ! $self->batch_job;
+        }
+      }
+
+
+      #Could really do with warning if seen slices don't match
+      #specified slices
+
+      foreach my $slice(@{$self->slices}) {
+
+        if(! exists $self->{'slice_cache'}->{$slice->seq_region_name}){
+          #should handle Y for female cell types here?
           warn "Found no data for specified slice:\t".$slice->seq_region_name."\n";  
         }
       }
 
-	  
-	  if($preprocess){
-		$self->log("Finished preparing import from:\t$filepath");
-	  }
-	  else{
-		#Need to tweak this for slice based import
-		$self->log('Finished importing '.$self->counts('features').' '.
-				   $output_set->name." features from:\t$filepath");
-		
-	  }
+      if($preprocess){
+        $self->log("Finished preparing import:\t".$self->output_file);
+      }
+      else{
+        #Need to tweak this for slice based import
+        $self->log('Finished importing '.$self->counts('features').' '.
+        $output_set->name." features from:\t$filepath");
+      }
 	
-	  foreach my $key (keys %{$self->counts}){
-		$self->log("Count $key:\t".$self->counts($key));
-	  }	  
-	}
+      foreach my $key (keys %{$self->counts}){
+        $self->log('Count '.sprintf("%-25s", "$key:").$self->counts($key));
+      }	  
+    }
   }
+
+  
+
+
+
 
   #Here we should set IMPORTED on the FeatureSet
   #We could also log the first dbID of each feature in a subset to facilitate subset rollback
@@ -939,9 +1079,12 @@ sub read_and_import_data{
   #Also currently happens with ResultFeatures loaded by slice jobs, as this may already be set by a parallel job
 
   if(! $preprocess){
-	$output_set->adaptor->set_imported_states_by_Set($output_set) if $seen_new_data && ! $self->batch_job;
-	$self->log("No new data, skipping result parse") if ! grep /^1$/o, values %{$new_data};
-	$self->log("Finished parsing and importing results");
+    $output_set->adaptor->set_imported_states_by_Set($output_set) if $seen_new_data && ! $self->batch_job;
+    #When does this actually set imported states?
+    #In a post processing job, but it looks like thi swill stil try and store the collections?
+   
+    $self->log("No new data, skipping result parse") if ! grep /^1$/o, values %{$new_data};
+    $self->log("Finished parsing and importing results"); 
   }
     
   return;
@@ -1013,35 +1156,6 @@ sub load_feature_and_xrefs{
   return $feature;
 }
 
-#This should really be handled in Bio::EnsEMBL::Feature?
-#Move to Helper?
-
-sub set_strand{
-  my ($self, $strand) = @_;
-
-  my $ens_strand = 0;
-
-  my %strand_vals = (
-					 '1'  => 1,
-					 '0'  => 0,
-					 '-1' => -1,
-					 '+'  => 1,
-					 '-'  => -1,
-					 '.'  => 0,
-					);
-
-  if($strand){
-	
-	if(exists $strand_vals{$strand}){
-	  $ens_strand = $strand_vals{$strand};
-	}
-	else{
-	  throw("Could not identify strand value for $strand");
-	}
-  }
-
-  return $ens_strand;
-}
 
 sub total_features{
   my ($self, $total) = @_;
