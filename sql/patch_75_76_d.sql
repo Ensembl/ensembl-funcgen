@@ -19,7 +19,7 @@
 
 */
 
-ALTER TABLE feature_set MODIFY type enum('annotated','regulatory','external','segmentation', 'mirna') DEFAULT NULL;
+ALTER TABLE feature_set MODIFY type enum('annotated','regulatory','external','segmentation', 'mirna_target') DEFAULT NULL;
 ALTER TABLE object_xref MODIFY ensembl_object_type enum('AnnotatedFeature','Experiment','ExternalFeature','FeatureType','MirnaTargetFeature','Probe','ProbeFeature','ProbeSet','RegulatoryFeature') NOT NULL;
 
 
