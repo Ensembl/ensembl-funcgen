@@ -427,16 +427,15 @@ sub new{
 
 
   $self->{'data_dir'} ||= $ENV{'EFG_DATA'};
-## !!!!
-## Dirty Fix for release 75
 
-  # if( (! $self->input_files($input_files)) &&
-  #     (! defined $self->get_dir('input') ) ){ 
-  #   #Set default input_dir if we have not specified files
-  #   #This is dependant on name which is not mandatory yet!
-  #   $self->{'input_dir'} = $self->get_dir("data").'/input/'.
-  #     $self->{'param_species'}.'/'.$self->vendor().'/'.$self->name();   
-  # }
+
+  if( (! $self->input_files($input_files)) &&
+       (! defined $self->get_dir('input') ) ){ 
+    #Set default input_dir if we have not specified files
+     #This is dependant on name which is not mandatory yet!
+      $self->{'input_dir'} = $self->get_dir("data").'/input/'.
+      $self->{'param_species'}.'/'.$self->vendor().'/'.$self->name();   
+  }
 
   if(defined $self->get_dir('input')){
     validate_path($self->get_dir('input'), 1); #dir flag
@@ -910,17 +909,18 @@ sub slices{
 
 
 sub count{
-  my ($self, $count_type) = @_;
+  my $self       = shift;
+  my $count_type = shift;;
 
   $self->{'_counts'}{$count_type} ||=0;
   $self->{'_counts'}{$count_type}++;
-  return;
+  return $self->{'_counts'}{$count_type};
 }
 
 
-sub rollback{ return $_[0]->{rollback}; }
+sub rollback{ return shift->{rollback}; }
 
-sub recovery{ return $_[0]->{recover}; }
+sub recovery{ return shift->{recover}; }
 
 
 =head2 db
@@ -934,7 +934,7 @@ sub recovery{ return $_[0]->{recover}; }
 
 =cut
 
-sub db{ return $_[0]->{db}; }
+sub db{ return shift->{db}; }
 
 
 =head2 species
@@ -948,7 +948,7 @@ sub db{ return $_[0]->{db}; }
 
 =cut
 
-sub species{ return $_[0]->{species}; }
+sub species{ return shift->{species}; }
 
 
 =head2 ucsc_coords
@@ -962,7 +962,7 @@ sub species{ return $_[0]->{species}; }
 
 =cut
 
-sub ucsc_coords{ return $_[0]->{ucsc_coords}; }
+sub ucsc_coords{ return shift->{ucsc_coords}; }
 
 
 =head2 dump_fasta
@@ -976,9 +976,9 @@ sub ucsc_coords{ return $_[0]->{ucsc_coords}; }
 
 =cut
 
-sub dump_fasta{ return $_[0]->{_dump_fasta}; }
+sub dump_fasta{ return shift->{_dump_fasta}; }
 
-sub slice_adaptor{ return $_[0]->{slice_adaptor}; }
+sub slice_adaptor{ return shift->{slice_adaptor}; }
 
 
 =head2 name
@@ -992,8 +992,7 @@ sub slice_adaptor{ return $_[0]->{slice_adaptor}; }
 
 =cut
 
-sub name{ return $_[0]->{name}; }
-
+sub name{ return shift->{name}; }
 
 
 =head2 feature_set_description
@@ -1007,9 +1006,7 @@ sub name{ return $_[0]->{name}; }
 
 =cut
 
-sub feature_set_description{ return $_[0]->{feature_set_desc}; }
-
-
+sub feature_set_description{ return shift->{feature_set_desc}; }
 
 
 =head2 project_feature
@@ -1030,11 +1027,10 @@ sub feature_set_description{ return $_[0]->{feature_set_desc}; }
 # --------------------------------------------------------------------------------
 # Project a feature from one slice to another
 sub project_feature {
-  my ($self, $feat, $new_assembly) = @_;
-
-  # project feature to new assembly
-  my $feat_slice = $feat->feature_Slice;
-
+  my $self         = shift;
+  my $feat         = shift;
+  my $new_assembly = shift;
+  my $feat_slice   = $feat->feature_Slice;  # project feature to new assembly
 
   if (! $feat_slice) {
     throw('Cannot get Feature Slice for '.$feat->start.':'.$feat->end.':'.$feat->strand.' on seq_region '.$feat->slice->name);
