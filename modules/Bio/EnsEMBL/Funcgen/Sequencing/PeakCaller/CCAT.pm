@@ -34,8 +34,8 @@ use base qw( Bio::EnsEMBL::Funcgen::Sequencing::PeakCaller );#Does not import
 sub input_formats    { return ['bed']; }
 sub requires_control { return 1; }
 sub out_file_types   { return [qw( significant_region 
-                                  significant_peak 
-                                  top100000_peak )];}
+                                   significant_peak 
+                                   top100000_peak )];}
  #We can't pass through peak caller specific params, this is done via the 
   #analysis->parameters but we don't want to store internal path in the DB
   #we need to pass this from the config?
@@ -72,13 +72,13 @@ sub out_file{
   my $file_type = shift;
   
   if((! defined $file_type) ||
-     (! grep {/^{$file_type}$/} @{$self->out_file_types})){
-    throw("Must provide a valid file type arguments to build the out_file:\n\t".
+     (! grep {/^${file_type}$/} @{$self->out_file_types})){
+    throw("Must provide a valid file type argument($file_type) to build the out_file:\n\t".
       join(' ', @{$self->out_file_types}));
   }
   
   $file_type =~ s/_/./;
-  return $self->out_prefix.'/.'.$file_type;          
+  return $self->out_file_prefix.'.'.$file_type;          
 }
 
 
@@ -178,7 +178,7 @@ sub parse_significant_region_record {
     #my ($seqid, $summit, $start, $end, $signal_reads, 
     #    $ctrl_reads, $fold, $fdr) = split("\t", $line);
     my ($seqid, $summit, $start, $end, undef, 
-        undef, $fold, $fdr) = split("\t", $line);
+        undef, $fold_change, $fdr) = split("\t", $line);
         
     return if $fdr > $self->fdr_threshold;
 
@@ -186,7 +186,7 @@ sub parse_significant_region_record {
      {-start      => $start,
       -end        => $end,
       -strand     => 0,
-      -score      => $fold,
+      -score      => $fold_change,
       -summit     => $summit,
       -seq_region => $seqid   };
   }
