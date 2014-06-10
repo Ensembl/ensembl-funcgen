@@ -22,4 +22,4 @@
 -- accomodate longer names like Monocytes-CD14-RO01746
 ALTER TABLE cell_type MODIFY display_label VARCHAR(30);
 
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_75_76_c.sql|cell_type.display_label);
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_75_76_c.sql|cell_type.display_label');
