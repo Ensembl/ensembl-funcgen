@@ -558,9 +558,18 @@ sub merge_bams{
       #even after exit handling fix
 
       #scripts does give this output tho, which is totally different:
-      #sh: line 1:  1707 Done                    samtools merge -u - /lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/alignments/homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW.0000.bam /lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/alignments/homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW.0001.bam /lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/alignments/homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW.0002.bam /lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/alignments/homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW.0003.bam /lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/alignments/homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW.0004.bam
+      #sh: line 1:  1707 Done                    
+      #samtools merge -u - /lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/alignments/homo_sapiens/GRCh38
+      #/ENCODE_UW/NHEK_WCE_ENCODE_UW.0000.bam /lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/alignments/
+      #homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW.0001.bam 
+      #
+      #/lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/alignments/homo_sapiens/GRCh38/ENCODE_UW/
+      #NHEK_WCE_ENCODE_UW.0002.bam /lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/alignments/
+      #homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW.0003.bam /lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/
+      #alignments/homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW.0004.bam
       #1708                       | samtools rmdup -s - -
-      #1709 Aborted                 | samtools view -t /lustre/scratch109/ensembl/funcgen/sam_header/homo_sapiens/homo_sapiens_male_GRCh38_unmasked.fasta.fai -h - > /lustre/scratch109/ensembl/funcgen/alignments/homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW_bwa_samse_1.unfiltered.bam
+      #1709 Aborted                 | samtools view -t /lustre/scratch109/ensembl/funcgen/sam_header/homo_sapiens/homo_sapiens_male_GRCh38_unmasked.fasta.fai -h - > 
+      # /lustre/scratch109/ensembl/funcgen/alignments/homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW_bwa_samse_1.unfiltered.bam
 
       #Irt just seems to hang for a long time and then carry on with the script
       #as though nothign had happened
@@ -1942,17 +1951,20 @@ sub create_and_populate_files_txt {
     opendir (my $labs, $dir_dcc ) or die "Error  opening dir $dir_dcc";
     while( my $lab = readdir($labs)){
       next if($lab !~ /^wgEncode/);
-
+      # DELETE next unless($lab eq 'wgEncodeOpenChromChip');
       my $path_table = File::Spec->catfile($dir_dcc, $lab, 'files.txt');
       if(-f $path_table){
         # !!! only fastq coming back !!!!
         my $files_txt = _read_files_txt($path_table);
+        # DELETE   say dump_data($files_txt->{wgEncodeOpenChromChipHelas3CtcfRawDataRep2},1,1);
+       
         foreach my $name (sort keys %{$files_txt}){
           my $record = $files_txt->{$name};
-
+          # DELETE next unless ($name eq 'wgEncodeOpenChromChipHelas3CtcfRawDataRep2');
           my $path = File::Spec->catfile($base_dir,$lab);
-
+          # DELETE   say 'Record: '. dump_data($record,1,1);
           my $md5sum = $record->{md5sum};
+         # DELETE  say 'Intial value: '.$record->{md5sum};
           my $alt_name = undef;
 
           if(defined $md5sum){
@@ -1964,6 +1976,8 @@ sub create_and_populate_files_txt {
                 -NO_ERROR => 1
                 );
             }
+         # DELETE  say 'After lookup: '.$record->{md5sum};
+
           # use the same values as ENCODE. Ensembl specific changes are applied later
           my $cell_type     = $record->{cell};
           my $feature_type  = $record->{antibody};
@@ -2011,6 +2025,86 @@ sub create_and_populate_files_txt {
     }
     closedir($labs);
   }
+}
+
+=head2 _read_files_txt
+ 
+  Argument 1  : 
+  Returntype  : 
+  Exceptions  : 
+  Description : Reads $table and returns a HASHREF with filename, fieldname and values, e.g.:
+                $h->{wgEncodeHaibTfbsHepg2P300V0416101RawDataRep2}->{md5sum} = e4d9de1900e5cd950196d4d46f321816
+                Not every files.txt in hg18 has a md5sum field, the data was provided in a
+                In some cases files.txt in hg18 don't have md5sum field. In those cases the values is taken from 
+                the md5sum.txt file.
+
+=cut
+
+sub _read_files_txt {
+  my ($file) = @_;
+say "FILE: $file";
+  my $md5sum_file = $file;
+     $md5sum_file =~ s/files\.txt/md5sum\.txt/;
+
+  my $md5sums = _read_md5sum_txt($md5sum_file);
+
+  my $all_records = {};
+  open(my $fh,'<',$file) or die "Can not open/access '$file'\n$!";
+  # line: wgEncodeSydhTfbsA549Bhlhe40IggrabAlnRep1.fastq.gz  project=wgEncode; grant=Snyder; lab=Stanford; (...)
+  while(my $line = <$fh>){
+    chomp($line);
+
+    # wgEncodeHudsonalphaChipSeqA549ControlPcr2xDex100nmAlnRep1.fastq.gz
+    # wgEncodeHudsonalphaChipSeqA549ControlPcr2xDex100nmAlnRep1.bam
+    
+    # $1: wgEncodeBroadChipSeqAlignmentsRep1Gm12878ControlV2.tagAlign.gz 
+    # $2: wgEncodeBroadChipSeqAlignmentsRep1Gm12878ControlV2 
+    # $3: tagAlign 
+    # $4: gz
+
+    $line =~ /^((\S+?)\.(\w+)\.?(\w+))?\s+/;
+    # only keeping fastq's
+    throw($line) if(!$3);
+    next unless($3 eq 'fastq');
+    my $filename = $1;
+    # name is unique in input_subset
+    my $name     = $2;
+    #$all_records->{$name}->{format} = $2;
+    $all_records->{$name}->{filename}    = $1;
+    $all_records->{$name}->{compression} = $3;
+
+    # Cut filename from line
+    $line =~ s/^\S+?\s+//o;
+    
+    my @fields = split(/;/,$line);
+    for my $field (@fields){
+      $field =~ s/^\s//;
+      $field =~ s/\s$//;
+      my @values = split(/=/, $field);
+      # be suspicious!
+      if(exists $all_records->{$name}->{$values[0]}){
+        throw "$name $values[0] duplicate";
+      }
+      $all_records->{$name}->{$values[0]} = $values[1];
+    }
+    # DELETE say "Before if: ". dump_data($all_records->{$name},1,1) if($name eq 'wgEncodeOpenChromChipHelas3CtcfRawDataRep2');
+
+    if(! exists $all_records->{$name}->{md5sum}){
+        
+      # DELETE  say "Before if2: ";say dump_data($all_records->{$name},1,1);
+      if(!exists $md5sums->{$name}){
+        warn "no md5sum for $name";
+      }
+      else{
+        $all_records->{$name}->{md5sum} = $md5sums->{$name};
+      }
+      # DELETE  say "After if2: ";say dump_data($all_records->{$name},1,1);
+
+      
+    }
+  }
+  close($fh);
+  return $all_records;
 }
 
 
@@ -2427,6 +2521,39 @@ sub _store_cell_feature_type {
   return $object;
 }
 
+=head2 _read_md5sum_txt
+
+  Argument 1  : 
+  Returntype  : 
+  Exceptions  : Unknown format
+  Description : Only for FASTQ! Reads md5sum file, which is needed as some hg18 labs did not include
+                it in files.txt 
+
+=cut
+
+sub _read_md5sum_txt {
+  my ($file) = @_;
+  return undef if(!-e $file);
+  my $hash;
+  open(my $fh,'<',$file) or die "Can not open/access '$file'\n$!";
+    while(my $line  = <$fh>){
+      next unless($line =~ /fastq\.gz/);
+      $line =~
+      chomp($line);
+      my @line = split(/\s+/,$line);
+      if($line[0] =~ /^(wgEncode\w+?)\./){
+        $hash->{$1} = $line[1];
+      } 
+      elsif($line[1] =~ /^(wgEncode\w+?)\./){
+        $hash->{$1} = $line[0];
+      } 
+      else{
+        throw("What the fuck now? $line");
+      }
+    }
+  close($fh);
+  return $hash;
+}
 
 
 1;
