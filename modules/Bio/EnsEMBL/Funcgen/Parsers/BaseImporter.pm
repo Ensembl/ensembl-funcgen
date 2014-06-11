@@ -1211,9 +1211,15 @@ sub get_dir{
   Returntype : string
   Exceptions : none
   Caller     : general
-  Status     : Stable
+  Status     : at risk
 
 =cut
+
+#Move to vendor specific importer super class
+#BaseImporter need not know anything about vendors
+#Currently being called redundantly for external feature imports
+#from contructor to set default input dir. External feature imports normally
+#specify the inputs are cmdline args(not params)
 
 sub vendor{
   my ($self) = shift;
@@ -1222,14 +1228,9 @@ sub vendor{
     $self->{'vendor'} = shift;
     $self->{'vendor'} = uc($self->{'vendor'});
   }
-  elsif(! defined $self->{'vendor'}){
-   throw('Must specify a -vendor'); 
-  }
 
   return $self->{'vendor'};
 }
-
-
 
 
 1;
