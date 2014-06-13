@@ -429,13 +429,13 @@ sub new{
   $self->{'data_dir'} ||= $ENV{'EFG_DATA'};
 
 
-  if( (! $self->input_files($input_files)) &&
-       (! defined $self->get_dir('input') ) ){ 
-    #Set default input_dir if we have not specified files
-     #This is dependant on name which is not mandatory yet!
-      $self->{'input_dir'} = $self->get_dir("data").'/input/'.
-      $self->{'param_species'}.'/'.$self->vendor().'/'.$self->name();   
-  }
+  #if( (! $self->input_files($input_files)) &&
+  #     (! defined $self->get_dir('input') ) ){ 
+  #  #Set default input_dir if we have not specified files
+  #   #This is dependant on name which is not mandatory yet!
+  #    $self->{'input_dir'} = $self->get_dir("data").'/input/'.
+  #    $self->{'param_species'}.'/'.$self->vendor().'/'.$self->name();   
+  #}
 
   if(defined $self->get_dir('input')){
     validate_path($self->get_dir('input'), 1); #dir flag
@@ -1201,35 +1201,6 @@ sub input_files{
 sub get_dir{
   my ($self, $dirname) = @_;
   return $self->get_data("${dirname}_dir");
-}
-
-=head2 vendor
-
-  Example    : $imp->vendor("NimbleGen");
-  Description: Getter/Setter for array vendor
-  Arg [1]    : optional - vendor name
-  Returntype : string
-  Exceptions : none
-  Caller     : general
-  Status     : at risk
-
-=cut
-
-#Move to vendor specific importer super class
-#BaseImporter need not know anything about vendors
-#Currently being called redundantly for external feature imports
-#from contructor to set default input dir. External feature imports normally
-#specify the inputs are cmdline args(not params)
-
-sub vendor{
-  my ($self) = shift;
-
-  if (@_) {
-    $self->{'vendor'} = shift;
-    $self->{'vendor'} = uc($self->{'vendor'});
-  }
-
-  return $self->{'vendor'};
 }
 
 

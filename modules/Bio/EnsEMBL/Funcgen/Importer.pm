@@ -209,6 +209,22 @@ sub new{
   
   
   
+
+  if( (! $self->input_files($input_files)) &&
+       (! defined $self->get_dir('input') ) ){ 
+    #Set default input_dir if we have not specified files
+     #This is dependant on name which is not mandatory yet!
+      $self->{'input_dir'} = $self->get_dir("data").'/input/'.
+      $self->{'param_species'}.'/'.$self->vendor().'/'.$self->name();   
+  }
+
+  if(defined $self->get_dir('input')){
+    validate_path($self->get_dir('input'), 1); #dir flag
+  }
+    
+
+
+  
   #Generic (potentially)
     $self->description($desc) if $desc; #experiment? or set?
   $self->farm($farm) if $farm;
@@ -244,11 +260,16 @@ sub new{
   $self->set_config;
 
 
+
+
   $self->debug(2, "Importer class instance created.");
   $self->debug(3, undef, $self);
     
   return ($self);
 }
+
+
+
 
 #init method kept separate from new due to differing madatory check and set up
 
@@ -282,6 +303,9 @@ sub init_array_import{
   #or eFG format.
 
   $self->create_output_dirs('caches', 'fastas');
+
+  
+
 
 
 }
