@@ -40,13 +40,8 @@ limitations under the License.
 #can we use linkage annotation in object_xref?
 
 use strict;
+use warnings;
 
-use Bio::EnsEMBL::Funcgen::Parsers::vista;
-use Bio::EnsEMBL::Funcgen::Parsers::cisred;
-#use Bio::EnsEMBL::Funcgen::Parsers::miranda;
-use Bio::EnsEMBL::Funcgen::Parsers::Tarbase;
-use Bio::EnsEMBL::Funcgen::Parsers::Fantom;
-use Bio::EnsEMBL::Funcgen::Parsers::redfly;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Pod::Usage;
@@ -99,12 +94,6 @@ my @files = @ARGV;
 usage() if (!$host || !$user || !$dbname || !$type);
 
 
-
-#only do this if cdbname is specified
-#But we need to allow for other options for port/user/pass too
-
-
-
 my $db_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
   (
    -host   => $host,
@@ -114,9 +103,6 @@ my $db_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
    -species => $species,
    -group  => 'funcgen',
    -dbname => $dbname,
-   #-dnadb  => $cdb,
-   #pass other dnadb params here(not name)m to auto aqcuire
-
    -dnadb_host => $dnadb_host || 'ens-livemirror',
    -dnadb_port => $dnadb_port || '3306',
    -dnadb_user => $dnadb_user || 'ensro',
@@ -128,11 +114,11 @@ my $db_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
 #test db connections
 $db_adaptor->dbc->db_handle;
 $db_adaptor->dnadb->dbc->db_handle;
-#$type = lc($type);
-eval "require Bio::EnsEMBL::Funcgen::Parsers::$type";
 
-if($@) {
-  die("Did not find a parser module: Bio::EnsEMBL::Funcgen::Parsers::$type");
+#Have to quote the entire block when evaling require
+
+if(! eval "{require Bio::EnsEMBL::Funcgen::Parsers::$type; 1}"){
+  die("Did not find a parser module: Bio::EnsEMBL::Funcgen::Parsers::$type\n$@");
 }
 
 my $parser = "Bio::EnsEMBL::Funcgen::Parsers::$type"->new
