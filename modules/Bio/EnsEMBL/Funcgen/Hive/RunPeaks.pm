@@ -120,10 +120,7 @@ sub fetch_input {
 
   my $align_prefix   = $self->get_alignment_path_prefix_by_ResultSet($rset, undef, 1);#validate aligned flag 
   my $control_prefix = $self->get_alignment_path_prefix_by_ResultSet($rset, 1, 1);#and control flag 
-  my $gender = ($rset->cell_type->name eq 'NHDF-AD') ? 'male' :
-                $rset->cell_type->gender;
-  warn "REMOVE: gender hacked for NHDF-AD";  
-  my $sam_ref_fai = $self->sam_ref_fai($gender);  #Just in case we need to convert
+  my $sam_ref_fai = $self->sam_ref_fai($rset->cell_type->gender);  #Just in case we need to convert
 
   #These maybe things like extra input/reference files
   #where we don't want to store the filepath in the DB.
@@ -203,6 +200,11 @@ sub run {
 sub write_output {
   my $self = shift;
   my $fset;
+  
+  #Move this test to fetch_input based on -no_write status?
+  #Is -no_write available to the Process? I htink not, as we have had to specify it in the input_id
+  #for IdentifySetInputs
+  
   
   if($self->can('FeatureSet') &&
      ($fset = $self->FeatureSet) ){
