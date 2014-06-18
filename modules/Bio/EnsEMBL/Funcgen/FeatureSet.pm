@@ -150,7 +150,7 @@ sub new {
 
   if(! defined $self->cell_type){
     if( ($type eq 'annotated') ||  ($type eq 'regulatory') ||  ($type eq 'segmentation')){
-      throw("FeatureSets with type '$type' require a defined CellType");
+      throw("FeatureSets with feature_class '$type' require a defined CellType");
     }
   }
 
