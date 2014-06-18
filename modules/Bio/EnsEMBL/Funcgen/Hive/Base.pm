@@ -1759,26 +1759,19 @@ sub sam_header{
 sub get_alignment_path_prefix_by_ResultSet{
   my ($self, $rset, $control, $validate_aligned) = @_;
   assert_ref($rset, 'Bio::EnsEMBL::Funcgen::ResultSet');
+  my $ctrl_exp = ($control) ? $rset->experiment(1) : undef;
+  return if $control && ! $ctrl_exp;
   
   if($validate_aligned){
-    my $aligned_status = 'ALIGNED';
-    $aligned_status   .= '_CONTROL' if $control;
   
     if($control){
-      my $exp = $rset->experiment(1);#control flag
-     
-      ##This should never happen
-      #if(! defined $exp){
-      #  $self->throw_no_retry('Could not get a control experiment for ResultSet '.$rset->name);
-      #} 
-    
-      if(! $exp->has_status('ALIGNED_CONTROL')){
+      if($ctrl_exp && (! $ctrl_exp->has_status('ALIGNED_CONTROL'))){
         throw('Cannot get control alignment files for a ResultSet('.$rset->name.
-          ') whose Experiment('.$exp->name.') does not have the ALIGNED_CONTROL status');
-      }   
+          ') whose Experiment('.$ctrl_exp->name.') does not have the ALIGNED_CONTROL status');
+      }
     }
     elsif(! $rset->has_status('ALIGNED')){
-      throw("Cannot get alignment files for ResultSet which does not have $aligned_status status:\t".
+      throw("Cannot get alignment files for ResultSet which does not have ALIGNED status:\t".
         $rset->name);
     }
   }
@@ -1834,13 +1827,8 @@ sub get_alignment_files_by_ResultSet_formats {
     $path = $self->get_alignment_path_prefix_by_ResultSet($rset, $control, 1);#1 is validate aligned flag 
     $path .= '.unfiltered' if $filter_format;
     
-    #Temporary hack to handle a gender update from undef to female for NHDF-AD    
-    my $gender = ($rset->cell_type->name eq 'NHDF-AD') ? 'male' :
-              $rset->cell_type->gender;
-    warn "REMOVE: gender hacked for NHDF-AD";         
-    
     my $params = {debug              => $self->debug,
-                  ref_fai            => $self->sam_ref_fai($gender),  #Just in case we need to convert
+                  ref_fai            => $self->sam_ref_fai($rset->cell_type->gender),  #Just in case we need to convert
                   filter_from_format => $filter_format,
                   skip_rmdups        => 1, #This will have been done in merge_bams
                   all_formats        => $all_formats,
