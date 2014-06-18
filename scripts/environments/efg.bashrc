@@ -19,3 +19,6 @@
 #Edit this if required
 export SRC=~/src
 alias efg='bash --rcfile $SRC/ensembl-funcgen/scripts/environments/efg.env -i'
+
+#For xterm title (works in screen too)
+PROMPT_COMMAND='echo -ne "\033]0;${PWD}\007"'
