@@ -312,8 +312,10 @@ sub _table_name {
 =head2 store_states
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::Storable
+  Arg [2]    : Arrayref (optional) - States to store
   Example    : $rset_adaptor->store_states($result_set);
-  Description: Stores states of Storable in status table.
+  Description: Stores states in status table. By default will store state
+               attributes, but will also store optioanlly specified states
   Returntype : None
   Exceptions : Throws if Storable is not stored
   Caller     : General
@@ -324,9 +326,11 @@ sub _table_name {
 sub store_states{
   my $self     = shift;
   my $storable = shift;
+  my $states   = shift || [];
   assert_ref($storable, 'Bio::EnsEMBL::Funcgen::Storable');
+  assert_ref($states, 'ARRAY', 'optional states');
 
-  foreach my $state(@{$storable->get_all_states()}){
+  foreach my $state((@{$storable->get_all_states()}, @$states)){
     
     if (! $self->has_stored_status($state, $storable)){
       $self->store_status($state, $storable) 
@@ -577,6 +581,8 @@ sub store_status{
 
 =cut
 
+#Where is the return value use(d|ful)
+
 sub revoke_status{
   my $self            = shift;
   my $state           = shift or throw('Must provide a status name');
@@ -625,8 +631,10 @@ sub revoke_status{
 =head2 revoke_states
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::Storable
+  Arg [2]    : Arrayref (optional) - States to revoke
+  Arg [3]    : Boolean (optional) - Validate status exists
   Example    : $rset_adaptor->revoke_status($result_set);
-  Description: Deletes all status records associated with the passed Storable.
+  Description: Deletes all or specified status records from the Storable.
   Returntype : Bio::EnsEMBL::Funcgen::Storable
   Exceptions : None
   Caller     : General + Helper rollback methods
@@ -637,19 +645,30 @@ sub revoke_status{
 sub revoke_states{
   my $self     = shift;
   my $storable = shift;
+  my $states   = shift || [];
+  my $validate = shift;
+  assert_ref($states, 'ARRAY', 'optional states');
 
-  my $table_name = $self->_test_funcgen_table($storable);
-  #add support for InputSubset which doesn't currently have an adaptor
-  my $sql = "delete from status where table_name='${table_name}'".
-    " and table_id=".$storable->dbID();
-
-  #Do delete and clear stored states
-  if(! eval {$self->db->dbc->do($sql); 1}){
-    throw('Failed to revoke states('.join(' ', @{$storable->get_all_states}).
+  if(! @$states){
+    my $table_name = $self->_test_funcgen_table($storable);
+    undef $storable->{states};
+    my $sql = "delete from status where table_name='${table_name}'".
+      " and table_id=".$storable->dbID();
+   
+    if(! eval {$self->db->dbc->do($sql); 1}){
+     throw('Failed to revoke states('.join(' ', @{$storable->get_all_states}).
       ") for $storable (dbID=".$storable->dbID."\n$@");  
+    }
+  }
+  else{
+    
+    foreach my $state(@$states){
+     $self->revoke_status($state, $storable, $validate);
+     #Cannot return revoked boolean here. Bu this only return false if
+     #it didn't already have the status
+    }
   }
   
-  undef $storable->{states};
   return $storable;
 }
 
@@ -666,41 +685,43 @@ sub revoke_states{
 
 =cut
 
+#Move a wrapper to Storable, which handles the obj attributes
+#which then call this method to remove the status entries?
+
 #This needs to be used by RunnableDBs too!
 #All state stuff is handled by BaseAdaptor?
 #Can we put this in the SetAdaptor?
 
+#CoordSystem specific status may go, if we are removing multi CoordSys support
+
 sub set_imported_states_by_Set{
-  my ($self, $set) = @_;
-
+  my $self = shift;
+  my $set  = shift;
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Set', $set);
-  #This should really be restricted to FeatureSet and ResultSet
+  return $self->store_states($set, $self->_imported_states);
+}
 
-  #Store default states for FeatureSets
-  #DAS_DISPLAYABLE IMPORTED_'CSVERSION'
-  #These need to insert ignore as may already be present?
-  #Insert ignore may not catch an invalid status
-  #So add states and store states as this checks
-  $set->adaptor->store_status('DAS_DISPLAYABLE', $set);
+sub revoke_imported_states_by_Set{
+  my $self = shift;
+  my $set  = shift;
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Set', $set);
+  return $self->revoke_states($set, $self->_imported_states);
+}
 
 
-  #To get assembly version here we need to
-  # 1 get the current default chromosome version
-  # or/and
-  # 2 Use the assembly param to guess it from the coord_sys table
-  # #This may pose problems for DB names which use numbers in their genebuild version
-  # Would need to set this as a flag and/or specify the genebuild version too
-  # Currently dnadb is set to last dnadb with 'assembly' as default version
-  # We should match as test, just to make sure
 
+
+sub _imported_states{
+  my $self = shift;
   #Get default chromosome version for this dnadb
-  my $cs_version = $self->db->dnadb->get_CoordSystemAdaptor->fetch_by_name('chromosome')->version;
-
-  #Sanity check that it matches the assembly param?
-  #Woould need to do this if ever we loaded on a non-default cs version
-
-  $set->adaptor->store_status("IMPORTED_${cs_version}", $set);
-  $set->adaptor->store_status("IMPORTED", $set);
+  
+  if(! defined $self->{imported_states}){
+    $self->{imported_states} = ['IMPORTED', 
+                                 'IMPORTED_'.
+                                  $self->db->dnadb->get_CoordSystemAdaptor->fetch_by_name('chromosome')->version];
+  }
+  
+  return $self->{imported_states}; 
 }
 
 
