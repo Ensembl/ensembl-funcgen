@@ -48,6 +48,7 @@ impossible from the previous analyses.
 # 4 Pick up peak QC failures from status table(no FeatureSet)? Or accu?
 #   Or tracking table? Accu is probably enough here
 #   But we do need to track the QC for individual reps, so we can mark them as dodgy   
+# 5 Currently hardcoded for SWEmbl output with txt file suffix.
 
 package Bio::EnsEMBL::Funcgen::Hive::PreprocessIDR;
 
@@ -124,7 +125,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
   } 
       
       
-  my (@pre_idr_beds, @rep_nums, $ctrl_ids, @bams);
+  my (@pre_idr_files, @rep_nums, $ctrl_ids, @bams);
   
   #sub _pre_process_IDR_ResultSets?
   
@@ -182,7 +183,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
     #too. Although this maybe desirable to avoid clashes between features sets with different alignments
     #The API does not handle this yet.
     
-    push @pre_idr_beds, $out_dir.'/'.$rset->name.'.'.$lname.'.bed';
+    push @pre_idr_files, $out_dir.'/'.$rset->name.'.'.$lname.'.txt';
     #do read counts in RunIDR to parallelise
     push @bams,         $self->get_alignment_files_by_ResultSet_formats($rset, ['bam'])->{bam};
   }
@@ -190,10 +191,10 @@ sub run {   # Check parameters and do appropriate database/file operations...
   
   #Put batch_name code in BaseSequencing or Base? 
   my $batch_name                 = $exp_name.'_'.$lname.'_'.join('_', sort @rep_nums);
-  my ($np_bed_files, $threshold, $x_thresh_adjust);
+  my ($np_files, $threshold, $x_thresh_adjust);
   
-  if(! eval { ($np_bed_files, $threshold, $x_thresh_adjust) = 
-                pre_process_IDR($out_dir, \@pre_idr_beds, $batch_name, $max_peaks); 1}){
+  if(! eval { ($np_files, $threshold, $x_thresh_adjust) = 
+                pre_process_IDR($out_dir, \@pre_idr_files, $batch_name, $max_peaks); 1}){
     $self->throw_no_retry("Failed to pre_process_IDR $batch_name\n$@");                
   } 
   
@@ -202,18 +203,18 @@ sub run {   # Check parameters and do appropriate database/file operations...
   #Build 2 way rep combinations for IDR jobs
   my @idr_job_ids;
   my @out_prefixes;
-  my $last_i = $#{$np_bed_files} - 1;
+  my $last_i = $#{$np_files} - 1;
   
   foreach my $i(0..$last_i){
     my $next_i = $i + 1;
   
     #2 ways jobs 
-    foreach my $j($next_i..$#{$np_bed_files}){
+    foreach my $j($next_i..$#{$np_files}){
       my @names;
     
-      foreach my $file($np_bed_files->[$i], $np_bed_files->[$j]){
+      foreach my $file($np_files->[$i], $np_files->[$j]){
         (my $name = $file) =~ s/.*\///;  
-        $name =~ s/(?:\.np_idr)\.bed$//;
+        $name =~ s/(?:\.np_idr)\.txt$//;
         push @names, $name;
       }
       
@@ -226,7 +227,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
                           accu_idx      => $i,
                           output_prefix => $output_prefix,
                           batch_name    => $batch_name,
-                          bed_files     => [$np_bed_files->[$i], $np_bed_files->[$j]]};
+                          bed_files     => [$np_files->[$i], $np_files->[$j]]};
       
       if($x_thresh_adjust){
         $job->{bam_files} = [$bams[$i], $bams[$j]];  
