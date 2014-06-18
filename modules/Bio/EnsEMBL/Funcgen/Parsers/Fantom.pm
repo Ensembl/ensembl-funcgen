@@ -195,7 +195,7 @@ sub _assign_strand {
   return $strand;
 }
 
-sub parse_and_load{
+sub parse_and_load {
   my ($self, $files, $new_assembly) = @_;
 
 
@@ -227,18 +227,17 @@ sub parse_and_load{
   
   
 
-
-  for my $file (@$files){
-  $self->log_header("Parsing and loading FANTOM data from:\t$file");
+  my $log = {};
 
   my $fset_config   = $self->{static_config}{feature_sets}{'FANTOM'};
   my $fset          = $fset_config->{feature_set};
   
-  $self->rollback_FeatureSet($fset);
+  # $self->rollback_FeatureSet($fset);
   $self->log_header("Rollback old records in external_features manually");
-
-
-  my $flag_track_line = 0;
+  
+  for my $file (@$files){
+    $self->log_header("Parsing and loading FANTOM data from:\t$file");
+    my $flag_track_line = 0;
     open(my $fh,'<',$file) or throw "Can't access $file";
       my $ft_name;
       my $type; 
@@ -300,12 +299,7 @@ sub parse_and_load{
       }
 
 
-      my $slice = $slice_a->fetch_by_region(
-        'chromosome',
-        $data->{chr},
-        $data->{start},
-        $data->{end},
-        );
+      my $slice = $slice_a->fetch_by_region('chromosome', $data->{chr},);
       
       my $feature_type = $feattype_a->fetch_by_name($ft_name);
 
@@ -332,8 +326,19 @@ sub parse_and_load{
        );
 
       $feature = $self->project_feature($feature, $new_assembly);
+      if($feature){
+        $feature->{display_label} = 
+          $feature->slice->seq_region_name . ':'.
+          $feature->start . '-' .
+          $feature->end;
 
-       $extfeat_a->store($feature);
+       ($feature) = @{$extfeat_a->store($feature)};
+       foreach my $status (qw(DISPLAYABLE MART_DISPLAYABLE)) {
+        $fset->adaptor->store_status($status, $fset);
+       }
+
+
+      }
 
       # my $dbentry = Bio::EnsEMBL::DBEntry->new(
       #  -primary_id             => $gene->stable_id,
@@ -351,16 +356,10 @@ sub parse_and_load{
       # );
      # $dbentry_a->store($dbentry, $feature->dbID, 'ExternalFeature');#
      #Now set states
-     foreach my $status (qw(DISPLAYABLE MART_DISPLAYABLE)) {
-      $fset->adaptor->store_status($status, $fset);
-     }
-      
-      
     }
     close $fh;
   }
- 
-  return;
+  say dump_data($log,1,1);    
 
 }
 
