@@ -102,6 +102,7 @@ use warnings;
 use Getopt::Long;
 use Pod::Usage;
 use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools;# qw( run_aligner );
+use Bio::EnsEMBL::Funcgen::Sequencing::SeqQC; #in case we just want to run QC
 
 Getopt::Long::Configure("pass_through"); #Allows unknown options to pass on to @ARGV
 
@@ -121,12 +122,10 @@ Getopt::Long::Configure("pass_through"); #Allows unknown options to pass on to @
 
 #my $real_path = __FILE__;
 
-unless(caller){
-  #This avoids executing run_aligner when including as a libaray via require or do
-  #for general usage or when unit testing
-  #Although this is now slightly redundant now we have moved things to AlignTools
-  main();  
-}
+main() unless(caller);
+#This avoids executing run_aligner when including as a libaray via require or do
+#for general usage or when unit testing
+#Although this is now slightly redundant now we have moved things to AlignTools
 
 
 #process_sam_bam filters unmapped, sorts and rmdups
@@ -137,8 +136,8 @@ unless(caller){
 
 
 sub main{
-  my ($aligner, $split, $merge, $outfile, $run_qc, $no_rmdups);
-  my ($sam_ref_fai, @files, $debug_level, $write_chk);
+  my ($aligner, $split, $merge, $outfile, $skip_qc, $no_rmdups, $qc_type, $out_dir, $batch_job,
+      $sam_ref_fai, @files, $debug_level, $write_chk, $out_prefix, @qc_methods);
 
   GetOptions 
    (#Run modes
@@ -150,24 +149,36 @@ sub main{
     #'peak_caller=s'
     
     
+    'out_dir=s' => \$out_dir,
+
     #Split/Merge params
-    'files=s{,}' => \@files,
+    'files=s{,}'   => \@files,
+    'out_prefix=s' => \$out_prefix, 
     
     #Merge params
-    'outfile=s'      => \$outfile,
-    'sam_ref_fai=s'  => \$sam_ref_fai, #also required for BWA aligner
-    'write_checksum' => \$write_chk,
-    'no_rmdups'      => \$no_rmdups,
+    'outfile=s'       => \$outfile,
+    'sam_ref_fai=s'   => \$sam_ref_fai, #also required for BWA aligner
+    'write_checksum'  => \$write_chk,
+    'no_rmdups'       => \$no_rmdups,
+    'qc_methods=s{,}' => \@qc_methods,
+    'qc_type=s'       => \$qc_type,
+    
+    #these should return a hash ref of qc method keys
+    #and qc results values
+    #These will be used to push into the tracking DB
+    #just store the pass/fail state and point to the output file for now?
+    
+    
      
     #Optional
-    'run_qc'    => \$run_qc,
+    'skip_inline_qc' => \$skip_qc,
     'debug=i'   => \$debug_level,
     'help'      => sub { pod2usage(-exitval => 0); }, 
     'man|m'     => sub { pod2usage(-exitval => 0, -verbose => 2); },
    );
   # or pod2usage(-exitval => 1, -message => "Specified parameters are:\t@tmp_args"); 
   #can't do this as we expect the unexpected! <Cue silouette of crazy naked dancing lady> <- 10 points for that reference
-  my @aligner_params = @ARGV;
+  my @extra_params = @ARGV;
   
   #Passing ARGV like this will not handle flag, as they will have no value
   #so all unsupported flags must have boolean values
@@ -178,11 +189,15 @@ sub main{
   #and handled in AlignTools i.e. if they contain spaces, then they will be split where appropriate
  
  
-  if(! ($aligner || $merge || $split)){
+  if(! ($aligner || $merge || $split || $qc_type || @qc_methods )){
     pod2usage(-exitval => 1, 
               -message => "Run mode has not been specified.\n".
-                "Please specify -aligner, -split or -merge individually or -split and -merge together");  
+                "Please specify one of:\t".join(' ', (qw(-aligner -split -merge -qc_type -qc_methods))).
+                "\nOr -split and -merge together");  
   }
+  
+  
+  #Need to handle multiple modes here
   
   if($aligner &&
      ($merge && $split)){
@@ -195,6 +210,9 @@ sub main{
   #Here we have a problem, that some of these method may take hashrefs of params
   #(or other objects) which cannot be passed on the command line
   #hence will need to add option support for those params
+ 
+  #Change these to named subs or despatch table?
+ 
   
   if($aligner){
     #we may have clash between -files and -query_file
@@ -205,14 +223,51 @@ sub main{
                   "Please specify -query_file");
     }
     
+    #sam_ref_fai is BWA specific here
+    #need to make this generic somehow
+
+   warn "aligner params are @extra_params";
+
+
     run_aligner(-aligner        => $aligner, 
-                -run_qc         => $run_qc,
-                
-                -aligner_params => [@aligner_params,
+                -skip_qc         => $skip_qc,
+                -aligner_params => [@extra_params,
                                     -sam_ref_fai, $sam_ref_fai]);
   }
   elsif($split){
-    split_fastqs(-files => \@files, -merge => $merge);   
+    my ($fastq_chunks, $qc_results) = 
+      split_fastqs(-files      => \@files, 
+                   -out_prefix => $out_prefix,
+                   -out_dir    => $out_dir,
+                   -merge      => $merge, 
+                   -skip_qc    => $skip_qc);
+                   
+                   
+    #Do something for QC here?
+                 
+    #output cmdline for run_aligner and merge
+    #enable batch job run?
+    #This would be unsafe to automatically use LSB_INDEX to generate suffix, as this
+    #may be part of a batch, unless done explcitly with a -batch_job flag in this script
+    #which then would change the query file accordingly
+    #This would be tricky, as we don't capture -query_file in here
+    #Just pass -batch_job to run_aligner
+    
+    my $batch_size = scalar(@$fastq_chunks);
+    (my $prefix    = $fastq_chunks->[0]) =~ s/_[0-9]{4}$//;
+    (my $job_name  = $prefix)            =~ s/.*\///;
+    
+    print "To run aligner jobs use the following cmdline:\n\t".
+      "bsub -o ${job_name}_alignments.\%J.\%I.out -e ${job_name}_alignments.\%J.\%I.err -J ${job_name}_alignments[1-$batch_size] -q normal -R ".
+      '$EFG_SRC/scripts/sequencing/run_seq_tools.pl -aligner BWA -program_file bwa -batch_job 1 -sam_ref_fai $SAM_REF_FAI -target_file $TARGET_FILE '.
+      " -query_file $prefix\n";
+     
+    #-w is lsf job dependancy on align batch
+    #need to change the file to bam files
+        
+    print "To run post alignment merge job, use the following cmdline:\n\t".
+      "bsub -w \"'done(${job_name}_alignments)'\" \$EFG_SRC/scripts/sequencing/run_seq_tools.pl -merge -sam_ref_fai \$SAM_REF_FAI ".
+      "-outfile ${out_prefix}.bam -files ".join(' ', @$fastq_chunks);   
   }
   else{#must be $merge
     #
