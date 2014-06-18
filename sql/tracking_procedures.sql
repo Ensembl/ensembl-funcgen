@@ -101,7 +101,7 @@ DROP table if exists progress_summary;
   ) ENGINE=MyISAM;
 
 CREATE OR REPLACE VIEW progress_view AS
-   SELECT ct.name as CellType, ft.name as FeatureType, ps.experiments, ps.imported_feature_sets, ps.aligned_result_sets, ps.imported_result_sets
+   SELECT ct.name as CellType, ft.name as FeatureType, ps.experiments, (ps.experiments - ps.imported_result_sets) as unprocessed_experiments, ps.imported_feature_sets, ps.aligned_result_sets, ps.imported_result_sets
    FROM feature_type ft 
    JOIN progress_summary ps USING(feature_type_id)
    JOIN cell_type ct    using (cell_type_id);
@@ -197,8 +197,10 @@ DELIMITER ;
 
 -- update these to show the relevant controls in a 3rd column?
 -- would be nice to get 'with rollup' in here, but that needs a group by.
+-- can we add that artificially?
+-- This does not work select * from progress_view group by CellType, FeatureType with rollup;
 
-
+-- we really need a view which shows whether subsets are downloaded or not
 
 /* Show just the data required for the segmentation data
  * Use this to kick off prioritised jobs based on a group_concat query:
@@ -208,6 +210,14 @@ DELIMITER ;
  * additional non-segmentation experiments, so it's a good idea to check
  * the reg_exp_view, and use the group_concat approach if there are 
  * already some processed experiments. 
+ */
+
+
+/* Append suggested control sets based on a self join using the experimental_group, cell_type and WCE feature type
+ * This needs to be subgroup!
+ * This will work once we have patched the experimental_group table
+ * To represent subgroups as groups, but we should preferentially use the project 
+ * which will need changing from a boolean to a varchar 
  */
 
 DELIMITER //
@@ -222,12 +232,24 @@ CREATE OR REPLACE VIEW seg_exp_view AS
 DELIMITER ;
 
 /* Shows all the data viable for the regulatory build i.e. also including the 
- * histones and TFs not reuired for the segmentation
+ * histones and TFs not required for the segmentation
  */
 
 DELIMITER //
 CREATE OR REPLACE VIEW reg_exp_view AS
-  SELECT e.experiment_id, e.name as experiment, ft.class, rs.name as result_set, et.notes 
+  SELECT e.experiment_id, e.name as experiment, ft.class, rs.name as result_set, et.notes, group_concat(e1.name) as controls
+  FROM feature_type ft, experiment e LEFT JOIN result_set rs on rs.name like concat(e.name, '%') 
+    LEFT JOIN experiment_tracking et on e.experiment_id=et.experiment_id
+    LEFT JOIN experiment e1 on (e.experimental_group_id=e1.experimental_group_id
+      AND e.cell_type_id=e1.cell_type_id and e1.name like "%\_WCE\_%")
+    WHERE FIND_IN_SET(e.cell_type_id, GetRegBuildCellTypeIDs()) 
+    AND e.feature_type_id=ft.feature_type_id GROUP by e.experiment_id, rs.name ORDER by e.name;
+//
+DELIMITER ;
+
+DELIMITER //
+CREATE OR REPLACE VIEW reg_exp_view AS
+  SELECT e.experiment_id, e.name as experiment, ft.class, rs.name as result_set, et.notes
   FROM feature_type ft, experiment e LEFT JOIN result_set rs on rs.name like concat(e.name, '%') 
     LEFT JOIN experiment_tracking et on e.experiment_id=et.experiment_id
     WHERE FIND_IN_SET(e.cell_type_id, GetRegBuildCellTypeIDs()) 
@@ -239,12 +261,46 @@ DELIMITER ;
 
 DELIMITER //
 CREATE OR REPLACE VIEW exp_subset_view AS
-  SELECT e.name as experiment, iss.*, isst.availability_date, isst.download_url, isst.md5sum, isst.local_url, isst.notes 
+  SELECT e.name as experiment, iss.input_subset_id, iss.name, iss.replicate, iss.is_control, isst.availability_date, isst.md5sum, group_concat(sn.name) as states, isst.notes, isst.download_url, isst.local_url  
     FROM experiment e 
     LEFT JOIN input_subset iss using(experiment_id) 
-    LEFT JOIN input_subset_tracking isst using(input_subset_id);
+    LEFT JOIN input_subset_tracking isst using(input_subset_id)
+    LEFT JOIN status s on iss.input_subset_id=s.table_id
+    LEFT JOIN status_name sn on s.status_name_id=sn.status_name_id
+    WHERE s.table_name='input_subset'
+    GROUP BY iss.input_subset_id;
 //
 DELIMITER ;
+
+
+DELIMITER //
+CREATE OR REPLACE VIEW result_subset_view AS
+  SELECT rs.result_set_id, rs.name AS result_set, iss.input_subset_id, iss.name AS input_subset, 
+         iss.replicate, iss.is_control
+  FROM   result_set rs 
+  JOIN   result_set_input rsi ON rs.result_set_id = rsi.result_set_id
+  JOIN   input_subset iss     ON iss.input_subset_id = rsi.table_id
+  WHERE  rsi.table_name = 'input_subset';
+//
+DELIMITER ;
+
+DELIMITER //
+CREATE OR REPLACE VIEW result_replicate_subset_view AS
+  SELECT rs.result_set_id, rs.name as result_set, iss.name as input_subset, iss.replicate, 
+          iss.is_control, concat(replace(rs.name, 'TR', ''), '.bam') as align_file     
+  FROM result_set rs      
+  JOIN result_set_input rsi USING(result_set_id)      
+  JOIN input_subset iss on iss.input_subset_id = rsi.table_id       
+  WHERE rsi.table_name='input_subset' and rs.name rlike ".*_TR[0-9]+$";
+//
+DELIMITER ;
+
+/* we don't really need result_merged_subset_view as the mapping between bams and input fastqs is 
+ * only really needed for the segmentation i.e. individual replicates bams
+ * this would involved a replcace(group_concat(replicate), ',', '_') and an order on the 
+ * replicate aswell as the necessary group keys. Would also need to group concat the input_subset names
+ * so not ideal. 
+ */
 
 DELIMITER //
 CREATE OR REPLACE VIEW exp_status_view AS
