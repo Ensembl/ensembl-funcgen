@@ -318,6 +318,8 @@ my $update_fail_cnt = 0;
 sub main{
   my @tmp_args = @ARGV;
 
+  die('Currently un safe, as storing string ref to HASH(...). Needs testing');
+
   my (@job_ids, $url, $hive_script_dir, $logic_name, $ignore_downstream, 
       $delete_downstream, $ignore_retries, $inc_ready, $inc_done);
   my $downstream_mode = '';
@@ -470,9 +472,14 @@ sub reseed_and_reset_job {
   
   my $input_id = $job->input_id || {}; 
   #input_id is normally a string here
+  
+  warn "Stored input_id is $input_id";
   $input_id    = destringify($input_id) if ! ref($input_id);  
   $job->input_id({ %{$input_id}, 
                    %{destringify( $append_string )} } );
+ 
+  warn "new input_id is ".$job->input_id;
+  
  
   # DO THE UPDATE 
   if(! $job_a->update($job)){
