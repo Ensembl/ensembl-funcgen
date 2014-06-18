@@ -149,7 +149,7 @@ sub new {
   my $type = $self->_validate_feature_class(\@_);
 
   if(! defined $self->cell_type){
-    if( ($type eq 'annotated') ||  ($type ne 'regulatory') ||  ($type ne 'segmentation')){
+    if( ($type eq 'annotated') ||  ($type eq 'regulatory') ||  ($type eq 'segmentation')){
       throw("FeatureSets with type '$type' require a defined CellType");
     }
   }
