@@ -1555,7 +1555,10 @@ sub rollback_ResultSet {
     }
   }
 
-  $db->get_ResultSetAdaptor->revoke_states($rset);  
+
+  #This currently also revokes pre-imported states
+  #i.e. ALIGNED/ING
+  $db->get_ResultSetAdaptor->revoke_imported_states_by_Set($rset);  
   
   
   if($rset->table_name ne 'input_subset'){
@@ -1581,6 +1584,8 @@ sub rollback_ResultSet {
       $self->debug(2, "rollback_ResultSet - deleting supporting_set entries:\n\t$sql");
       $db->rollback_table($sql, 'supporting_set' ); 
     } 
+  
+    $db->get_ResultSetAdaptor->revoke_states($rset);
   
     $sql = 'DELETE rs, rsi from result_set rs, result_set_input rsi WHERE '.
       'rsi.result_set_id=rs.result_set_id AND rs.result_set_id='.$rset->dbID;
