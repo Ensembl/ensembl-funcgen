@@ -226,7 +226,7 @@ sub new{
 
   
   #Generic (potentially)
-    $self->description($desc) if $desc; #experiment? or set?
+  $self->description($desc) if $desc; #experiment? or set?
   $self->farm($farm) if $farm;
   $self->batch_job($batch_job);
   $self->prepared($prepared); #This is really only for pre-processing files
@@ -242,7 +242,7 @@ sub new{
 
 
   #Array specific stuff
-  $self->vendor($vendor);
+  $self->vendor($vendor || $parser_type);
   $self->array_name($array_name) if $array_name;
   $self->array_set($array_set) if $array_set;
   $self->array_file($array_file) if $array_file;
@@ -497,17 +497,17 @@ sub create_output_dirs{
 =cut
 
 sub vendor{
-  my ($self) = shift;
+  my $self   = shift;
+  my $vendor = shift;
 
-  if (@_) {
-    $self->{'vendor'} = shift;
-    $self->{'vendor'} = uc($self->{'vendor'});
+  if(defined $vendor) {
+    $self->{vendor} = uc($vendor);
   }
-  elsif(! defined $self->{'vendor'}){
+  elsif(! defined $self->{vendor}){
    throw('Must specify a -vendor'); 
   }
 
-  return $self->{'vendor'};
+  return $self->{vendor};
 }
 
 
@@ -1094,6 +1094,7 @@ sub cache_slice{
   $region_name = "MT" if $region_name eq "M";
 
   if (! exists ${$self->{'seen_slice_cache'}}{$region_name}) {
+    $self->debug(1, 'Cacheing slice: '.$region_name); 
     my $slice = $self->slice_adaptor->fetch_by_region($cs_name, $region_name);
 
     #Set seen cache so we don't try this again
@@ -1113,6 +1114,7 @@ sub cache_slice{
     $self->{'slice_cache'}->{$region_name} = $slice;
   }
 
+  
   if ($total_count && exists ${$self->{'seen_slice_cache'}}{$region_name}) {
     #This is an InputSet specific method
     $self->count('total_features') if $self->can('count');
