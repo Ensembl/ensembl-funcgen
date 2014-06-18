@@ -21,7 +21,5 @@
 
 ALTER TABLE feature_set MODIFY type enum('annotated','regulatory','external','segmentation', 'mirna_target') DEFAULT NULL;
 ALTER TABLE object_xref MODIFY ensembl_object_type enum('AnnotatedFeature','Experiment','ExternalFeature','FeatureType','MirnaTargetFeature','Probe','ProbeFeature','ProbeSet','RegulatoryFeature') NOT NULL;
-UPDATE analysis_description SET web_data = replace(web_data, 'regulatory_regions', 'mirna_targets') WHERE analysis_id = (SELECT analysis_id FROM analysis WHERE logic_name = 'TarBase_v6.0');
 
-
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_75_76_d.sql|feature_set.type mirna; object_xref.ensembl_object_type add MirnaTargetFeature; analysis_description change regulatory_regions to mirna_targets');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_75_76_d.sql|feature_set.type mirna; object_xref.ensembl_object_type add MirnaTargetFeature');
