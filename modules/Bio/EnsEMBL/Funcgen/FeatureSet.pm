@@ -89,6 +89,7 @@ package Bio::EnsEMBL::Funcgen::FeatureSet;
 
 use strict;
 use warnings;
+use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref check_ref );
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 
@@ -104,7 +105,8 @@ use base qw(Bio::EnsEMBL::Funcgen::Set Bio::EnsEMBL::Funcgen::feature_class_Set)
                -FEATURE_CLASS => String - Class of feature e.g. result, annotated,
                                  regulatory, segmentation, external, mirna, or dna_methylation.
              OPTIONAL:
-               -INPUT_SET     => Bio::EnsEMBL::Funcgen::InputSet
+               -EXPERIMENT    => Bio::EnsEMBL::Funcgen::Experiment
+               -EXPERIMENT_ID => Int
                -DESCRIPTION   => String
                -DISPLAY_NAME  => String
                -CELL_TYPE     => Bio::EnsEMBL::Funcgen::CellType
@@ -122,7 +124,7 @@ use base qw(Bio::EnsEMBL::Funcgen::Set Bio::EnsEMBL::Funcgen::feature_class_Set)
                   -feature_class => 'annotated',
                   -description   => 'HeLa-S3 H3K4me3 SWEmbl peaks replicate 1',
                   -display_label => 'HeLa-S3 H3K4me3',
-                  -input_set     => $iset,
+                  -experiment    => $exp,
 			           );
   Description: Constructor for FeatureSet objects.
   Returntype : Bio::EnsEMBL::Funcgen::FeatureSet
@@ -137,9 +139,8 @@ sub new {
   my $class  = ref($caller) || $caller;
   my $self   = $class->SUPER::new(@_);
 
-  my ($desc, $dlabel, $exp, $iset, $iset_id) = rearrange
-   ( ['DESCRIPTION', 'DISPLAY_LABEL', 'EXPERIMENT',
-      'INPUT_SET', 'INPUT_SET_ID' ], @_ );
+  my ($desc, $dlabel, $iset, $iset_id) = rearrange
+   ( ['DESCRIPTION', 'DISPLAY_LABEL', 'INPUT_SET', 'INPUT_SET_ID'], @_ );
 
 
   #Mandatory params checks here (setting done in Set.pm)
@@ -148,17 +149,20 @@ sub new {
   my $type = $self->_validate_feature_class(\@_);
 
   if(! defined $self->cell_type){
-    if( ($type ne 'external') and ($type ne 'mirna_target') ){
-      throw("Only FeatureSets with type 'external' can have an undefined CellType");
+    if( ($type eq 'annotated') ||  ($type ne 'regulatory') ||  ($type ne 'segmentation')){
+      throw("FeatureSets with type '$type' require a defined CellType");
     }
   }
 
   #Direct assignment to prevent need for set arg test in method
   $self->{description}   = $desc    if defined $desc;
   $self->{display_label} = $dlabel  if defined $dlabel;
-  $self->{input_set_id}  = $iset_id if defined $iset_id;
-  $self->{input_set}     = $iset    if defined $iset;
-  #let the store/compare_to do is_stored_and_valid on InputSet?
+ 
+
+  if(defined $iset || defined $iset_id){
+    throw('FeatureSet not longer takes and InputSet or it\'s dbID in the constructor'.
+          ', please upass an Experiment/dbID instead');
+  }
 
   return $self;
 }                               ## end sub new
@@ -381,83 +385,6 @@ sub is_attribute_set{
 }
 
 
-=head2 get_InputSet
-
-  Example    : my $input_set = $FeatureSet->get_InputSet;
-  Description: Retrieves the InputSet for this FeatureSet
-  Returntype : Bio::EnsEMBL::Funcgen::InputSet
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub get_InputSet{
-  my $self = shift;
-
-  if ( (! defined $self->{input_set}) &&
-       (defined $self->{input_set_id}) ) {
-    $self->{input_set} = $self->adaptor->db->get_InputSetAdaptor->fetch_by_dbID($self->{input_set_id});
-  }
-
-  return $self->{input_set};
-}
-
-
-
-=head2 source_label
-
-  Example    : my $source_label = $fset->source_label;
-  Description: Retrieves the source label this FeatureSet, used in zmenus
-  Returntype : Arrayref of Strings
-  Exceptions : None
-  Caller     : Webcode zmenus
-  Status     : At Risk - remove, to be done by webcode? or move to InputSet and wrap from here
-
-=cut
-
-#These are used to link through to the experiment view based on feature_set name
-#select input_set_id, count(distinct archive_id) as cnt , group_concat(archive_id) from input_subset where archive_id is not NULL group by input_set_id having cnt >1;
-
-sub source_label{
-  my $self = shift;
-
-  if (! defined $self->{source_label}) {
-    my $input_set = $self->get_InputSet;
-
-    if ($input_set) {
-      my (@source_labels, %source_labels);
-
-      foreach my $isset (@{$input_set->get_InputSubsets}) {
-
-        if (defined $isset->archive_id) {
-          #Hash usage to account for duplicates from
-          #non-unique input_subsets (bed/sam issue)
-          $source_labels{$isset->archive_id} = undef;
-        }
-        #Archive IDs e.g. SRX identifiers or undef.
-      }
-
-      @source_labels = keys %source_labels;
-
-      #Append project name
-      my $exp_group = $input_set->get_Experiment->experimental_group;
-
-      if ($exp_group &&
-          $exp_group->is_project) {
-        push @source_labels, $exp_group->name;
-      }
-
-      $self->{source_label} = join(q{ }, # Single space
-                                   @source_labels);
-
-    }
-  }
-
-  return $self->{source_label};
-}
-
-
 =head2 compare_to
 
   Args[1]    : Bio::EnsEMBL::Funcgen::Storable (mandatory)
@@ -467,7 +394,7 @@ sub source_label{
                Defaults to: name description display_label feature_class get_all_states
   Args[4]    : Arrayref - Optional list of FeatureSet method names each
                returning a Storable or an Array or Arrayref of Storables.
-               Defaults to: feature_type cell_type analysis get_InputSet
+               Defaults to: feature_type cell_type analysis get_Experiment
   Example    : my %shallow_diffs = %{$rset->compare_to($other_rset, 1)};
   Description: Compare this FeatureSet to another based on the defined scalar
                and storable methods.
@@ -486,7 +413,7 @@ sub compare_to {
   my ($self, $obj, $shallow, $scl_methods, $obj_methods) = @_;
 
   $scl_methods ||= [qw(name description display_label feature_class get_all_states)];
-  $obj_methods ||= [qw(feature_type cell_type analysis get_InputSet)];
+  $obj_methods ||= [qw(feature_type cell_type analysis experiment)];
 
   return $self->SUPER::compare_to($obj, $shallow, $scl_methods,
                                   $obj_methods);
@@ -503,7 +430,7 @@ sub compare_to {
 
            Optional if not presently defined:
             -cell_type    => Bio::EnsEMBL::Funcgen::CellType,
-            -input_set    => Bio::EnsEMBL::Funcgen::InputSet,
+            -experiment   => Bio::EnsEMBL::Funcgen::Experiment,
 
   Description: Resets all the relational attributes of a given FeatureSet.
                Useful when creating a cloned object for migration beween DBs
@@ -516,39 +443,30 @@ sub compare_to {
 
 sub reset_relational_attributes{
   my ($self, $params_hash, $no_db_reset) = @_;
-  my ($analysis, $feature_type, $cell_type, $iset) =
-      rearrange(['ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'INPUT_SET'],
+  my ($analysis, $feature_type, $cell_type, $exp) =
+      rearrange(['ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'EXPERIMENT'],
       %$params_hash);
 
-  if(! (defined $analysis &&
-        ref($analysis) eq 'Bio::EnsEMBL::Analysis') ){
-    throw('You must pass a valid Bio::EnsEMBL::Analysis');
-  }
+  assert_ref($analysis, 'Bio::EnsEMBL::Analysis');
+  assert_ref($feature_type, 'Bio::EnsEMBL::Funcgen::FeatureType');
 
-  if(! (defined $feature_type &&
-        ref($feature_type) eq 'Bio::EnsEMBL::Funcgen::FeatureType') ){
-    throw('You must pass a valid Bio::EnsEMBL::Funcgen::FeatureType');
+  if( $self->cell_type && 
+      ! check_ref($cell_type, 'Bio::EnsEMBL::Funcgen::CellType') ){
+    throw("You must pass a valid Bio::EnsEMBL::Funcgen::CellType\n".
+          "Passed:\t".ref($cell_type));
   }
-
-  if( ($self->cell_type) && !
-        (defined $cell_type &&
-        (ref($cell_type) eq 'Bio::EnsEMBL::Funcgen::CellType')) ){
-    throw('You must pass a valid Bio::EnsEMBL::Funcgen::CellType');
+  
+  if( $self->experiment &&
+      ! check_ref($exp, 'Bio::EnsEMBL::Funcgen::Experiment') ){
+    throw("You must pass a valid Bio::EnsEMBL::Funcgen::Experiment\n".
+          "Passed:\t".ref($exp));
   }
-
-
-  if( defined $self->get_InputSet) {
-    if( not (
-      defined $iset && (ref $iset  eq 'Bio::EnsEMBL::Funcgen::InputSet')) ){
-      throw('You must pass a valid Bio::EnsEMBL::Funcgen::InputSet'.
-        'Passed: "' . ref($iset) . '"');
-    }
-  }
-  if(defined $iset){
-    #This will allow addition of an input_set
+  
+  if(defined $exp){
+    #This will allow addition of an experiment
     #when it was not prevously defined
-    $self->{input_set_id} = $iset->dbID;
-    $self->{input_set}    = $iset;
+    $self->{experiment_id} = $exp->dbID;
+    $self->{experiment}    = $exp;
   }
 
   $self->{cell_type}    = $cell_type;

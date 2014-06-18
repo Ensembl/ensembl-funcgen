@@ -205,7 +205,7 @@ sub _columns {
 			   fs.analysis_id fs.cell_type_id
 			   fs.name fs.type
 			   fs.description fs.display_label
-			   fs.input_set_id);
+			   fs.experiment_id);
 }
 
 
@@ -229,7 +229,7 @@ sub _objs_from_sth {
 	my ($self, $sth) = @_;
 
 	my (@fsets, $fset, $analysis, %analysis_hash, $feature_type, $cell_type, $name, $type, $display_label, $desc);
-	my ($feature_set_id, $ftype_id, $analysis_id, $ctype_id, $input_set_id, %ftype_hash, %ctype_hash);
+	my ($feature_set_id, $ftype_id, $analysis_id, $ctype_id, $exp_id, %ftype_hash, %ctype_hash);
 
 	my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
 	my $anal_adaptor = $self->db->get_AnalysisAdaptor();
@@ -237,10 +237,9 @@ sub _objs_from_sth {
 	$ctype_hash{'NULL'} = undef;
 
 	$sth->bind_columns(\$feature_set_id, \$ftype_id, \$analysis_id, \$ctype_id,
-                       \$name, \$type, \$desc, \$display_label, \$input_set_id);
+                       \$name, \$type, \$desc, \$display_label, \$exp_id);
 
 	while ( $sth->fetch()) {
-
 		$ctype_id ||= 'NULL';
 
 		# Get the analysis object
@@ -264,7 +263,7 @@ sub _objs_from_sth {
 		   -feature_class => $type,
 		   -display_label => $display_label,
 		   -description   => $desc,
-		   -input_set_id  => $input_set_id,
+		   -experiment_id => $exp_id,
 		  );
 
 		push @fsets, $fset;
@@ -301,7 +300,7 @@ sub store {
 	my $sth = $self->prepare
 	  (
 	   "INSERT INTO feature_set
-        (feature_type_id, analysis_id, cell_type_id, name, type, description, display_label, input_set_id)
+        (feature_type_id, analysis_id, cell_type_id, name, type, description, display_label, experiment_id)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
 	  );
 
@@ -328,23 +327,23 @@ sub store {
 			$ctype_id = $ctype->dbID;
 		  }
 
-		  my $input_set_id;
-		  my $input_set =  $fset->get_InputSet;
+		  my $exp_id;
+		  my $exp = $fset->experiment;
 
-		  if($input_set){
-			$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::InputSet', $input_set);
-			$input_set_id = $input_set->dbID;
+		  if($exp){
+        $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Experiment', $exp);
+        $exp_id = $exp->dbID;
 		  }
 
 
-		  $sth->bind_param(1, $fset->feature_type->dbID,     SQL_INTEGER);
-		  $sth->bind_param(2, $fset->analysis->dbID,         SQL_INTEGER);
-		  $sth->bind_param(3, $ctype_id,                     SQL_INTEGER);
-		  $sth->bind_param(4, $fset->name,                   SQL_VARCHAR);
-		  $sth->bind_param(5, $fset->feature_class,          SQL_VARCHAR);
-		  $sth->bind_param(6, $fset->description,            SQL_VARCHAR);
-		  $sth->bind_param(7, $fset->display_label,          SQL_VARCHAR);
-		  $sth->bind_param(8, $input_set_id,                 SQL_INTEGER);
+		  $sth->bind_param(1, $fset->feature_type->dbID, SQL_INTEGER);
+		  $sth->bind_param(2, $fset->analysis->dbID,     SQL_INTEGER);
+		  $sth->bind_param(3, $ctype_id,                 SQL_INTEGER);
+		  $sth->bind_param(4, $fset->name,               SQL_VARCHAR);
+		  $sth->bind_param(5, $fset->feature_class,      SQL_VARCHAR);
+		  $sth->bind_param(6, $fset->description,        SQL_VARCHAR);
+		  $sth->bind_param(7, $fset->display_label,      SQL_VARCHAR);
+		  $sth->bind_param(8, $exp_id,                   SQL_INTEGER);
 
 		  $sth->execute();
 		  $fset->dbID($self->last_insert_id);
@@ -447,8 +446,8 @@ sub fetch_feature_set_filter_counts{
 
    my $sql = 'SELECT count(*), eg.name, eg.description, eg.is_project, ft.class, ct.name, ct.description '.
     'FROM experimental_group eg, experiment e, feature_set fs, feature_type ft, cell_type ct, '.
-      'status s, status_name sn, input_set inp '.
-        'WHERE fs.input_set_id=inp.input_set_id and inp.experiment_id=e.experiment_id '.
+      'status s, status_name sn '.
+        'WHERE fs.experiment_id=e.experiment_id '.
           'AND e.experimental_group_id=eg.experimental_group_id '.
           'AND fs.feature_type_id=ft.feature_type_id AND fs.cell_type_id=ct.cell_type_id '.
             'AND fs.feature_set_id=s.table_id AND fs.type="annotated" AND s.table_name="feature_set" '.
@@ -553,7 +552,7 @@ sub _constrain_experimental_groups{
   my ($self, $egs, $projects_only) = @_;
 
   #enable query extension
-  my $constraint_conf = {tables => [['input_set', 'inp'], ['experiment', 'e']]};
+  my $constraint_conf = {tables => [['experiment', 'e']]};
 
 
   if ( (ref($egs) ne 'ARRAY') ||
@@ -573,7 +572,7 @@ sub _constrain_experimental_groups{
   }
 
   #Don't need to bind param this as we validate above
-  my $constraint = ' fs.input_set_id=inp.input_set_id and inp.experiment_id=e.experiment_id AND '.
+  my $constraint = ' fs.experiment_id=e.experiment_id AND '.
     'e.experimental_group_id IN ('.join(', ', @eg_ids).')';
 
   return ($constraint, $constraint_conf);

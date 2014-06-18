@@ -92,15 +92,18 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($exp, $is_control, $name, $rep) = rearrange
-   (['EXPERIMENT', 'IS_CONTROL', 'NAME', 'REPLICATE'], @_);
+  my ($is_control, $name, $rep) = rearrange
+   (['IS_CONTROL', 'NAME', 'REPLICATE'], @_);
 
   #FeatureType and Analysis validated in Set
-  #Cell type validated in Set if defined  
-  assert_ref($exp, 'Bio::EnsEMBL::Funcgen::Experiment');
-
+  #CellType and Experiment validated in Set if defined  
+ 
   if(! defined $self->cell_type){
-    throw('Mandatory parameter -cell_type is not defined');    
+    throw('Mandatory parameter -cell_type is not defined');
+  }
+
+  if(! defined $self->experiemnt){
+    throw('Mandatory parameter -experiment is not defined');
   }
 
   if(! defined $is_control){
@@ -109,7 +112,7 @@ sub new {
     #when storing
   }
 
-  $self->{experiment}   = $exp;
+
   $self->{is_control}   = $is_control;
   $self->{name}         = $name;
   $self->{replicate}    = $rep;
@@ -117,20 +120,6 @@ sub new {
 
   return $self;
 }
-
-
-=head2 experiment
-
-  Example    : my $experiment = $iss->experiment;
-  Description: Getter for the experiment attribute of this InputSubset.
-  Returntype : Bio::EnsEMBL::Funcgen::InputSubset
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-sub experiment { return shift->{experiment}; }
 
 
 =head2 replicate
@@ -193,8 +182,9 @@ sub reset_relational_attributes{
   
   $self->{cell_type}     = $cell_type;
   $self->{experiment}    = $experiment;
+  $self->{experiment_id} = $experiment->dbID;
   $self->{feature_type}  = $feature_type;
-  $self->{analysis}  = $analysis;
+  $self->{analysis}      = $analysis;
 
   # Undef dbID and adaptor by default
   if(! $no_db_reset){

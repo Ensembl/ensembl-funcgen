@@ -52,7 +52,7 @@ use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw deprecate warning );
 use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
 use Bio::EnsEMBL::Funcgen::Experiment;
-use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#DBI sql_types bareword import
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;# For DBI :sql_types import;
 
 use base qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor );
 
@@ -73,7 +73,7 @@ sub fetch_by_name {
   my $self = shift;
   my $name = shift;
 
-  throw("Need to specify and experiment name argument") if (! defined $name);
+  throw("Need to specify and experiment name argument") if  ! defined $name;
 
   $self->bind_param_generic_fetch($name, SQL_VARCHAR);
   my $result = $self->generic_fetch("e.name = ?");
@@ -82,6 +82,7 @@ sub fetch_by_name {
     throw("Experiment $name is not unique in the database, but only one result has been returned");
     #should have unique key of group_id and experiment_name
   }
+
   return $result->[0];
 }
 
@@ -99,7 +100,8 @@ sub fetch_by_name {
 =cut
 
 sub fetch_all_by_FeatureType {
-  my ($self, $ftype) = @_;
+  my $self   = shift;
+  my $ftype  = shift;
   my $params = {constraints => {feature_types => [$ftype]}};
   return $self->generic_fetch($self->compose_constraint_query($params));
 }
@@ -119,7 +121,8 @@ sub fetch_all_by_FeatureType {
 =cut
 
 sub fetch_all_by_CellType {
-  my ($self, $ctype) = @_;
+  my $self   = shift;
+  my $ctype  = shift;
   my $params = {constraints => {cell_types => [$ctype]}};
   return $self->generic_fetch($self->compose_constraint_query($params));
 }
@@ -161,9 +164,9 @@ sub fetch_all_by_Analysis {
 =cut
 
 sub get_all_experiment_names{
-  my ($self, $displayable) = @_;
-
-  my $sql = 'SELECT e.name FROM experiment e';
+  my $self        = shift;
+  my $displayable = shift;
+  my $sql         = 'SELECT e.name FROM experiment e';
 
   if($displayable){
     $sql .= ', status s, status_name sn WHERE e.experiment_id = s.table_id AND '.
@@ -278,7 +281,7 @@ sub _objs_from_sth {
      );
 	}
 	
-	return \@result;
+  return \@result;
 }
 
 
@@ -346,7 +349,54 @@ sub store {
 	}
 
     return \@exps;
+}
+
+
+
+=head2 fetch_source_label_by_experiment_id
+
+  Args       : Int - experiment_id
+  Example    : my $source_label = $fset->source_label;
+  Description: Retrieves the source label this FeatureSet, used in zmenus
+  Returntype : String - Space separated if more than 1 label.
+  Exceptions : 
+  Caller     : FeatureSet/ResultSet::source_label, ultimately the webcode
+  Status     : at risk
+
+=cut
+
+#This shortcuts having to create the Experiment object
+#which probably saves 3 trips to the DB and some redundant processing
+
+sub fetch_source_label_by_experiment_id{
+  my $self   = shift;
+  my $exp_id = shift or throw('Must provide an experiment_id argument');
+
+  my $sql = 'SELECT e.archive_id, e.display_url, eg.name, eg.is_project from experiment e '.
+    'LEFT JOIN experimental_group eg using(experimental_group_id) where e.experiment_id=?';
+
+  my $sth = $self->prepare($sql);
+  $sth->bind_param(1, $exp_id, SQL_INTEGER);
+ 
+  if(! eval{ $sth->execute; 1}){
+    throw("Failed to fetch_source_label_by_experiment_id, SQL:\n$sql\n$@");
   }
+  
+  my ($archive_id, $url, $eg_name, $is_project) = $sth->fetchrow_array;
+  $sth->finish;
+
+  # Handle multiple SRX IDs, just in case the submitters
+  # archive the reps as separate experiments :(
+  my @source_labels;
+  @source_labels = split/,/, $archive_id if defined $archive_id;
+  push @source_labels, $eg_name if $is_project;  #Append project name
+  
+  return join(q{ }, # Single space
+              @source_labels);
+}
+
+
+
 
 =head2 fetch_mage_xml_by_Experiment
 

@@ -40,8 +40,8 @@ my $result_set = Bio::EnsEMBL::Funcgen::ResultSet->new
   (
    -dbid        => $dbid,
    -analysis    => $analysis,
-   -table_name  => 'input_set',
-   -table_id    => $input_set_id,
+   -table_name  => 'input_subset',
+   -table_id    => $input_subset_id,
    -feature_class => 'dna_methylation',
   );
 
@@ -64,6 +64,7 @@ package Bio::EnsEMBL::Funcgen::ResultSet;
 
 use strict;
 use warnings;
+use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref check_ref );
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
@@ -74,7 +75,6 @@ use base qw( Bio::EnsEMBL::Funcgen::Set Bio::EnsEMBL::Funcgen::feature_class_Set
 my %valid_table_names =
   (
    experimental_chip => undef,
-   input_set         => undef,
    input_subset     => undef,
    channel           => undef,
   );
@@ -187,9 +187,8 @@ sub _valid_feature_classes{
 
 sub reset_relational_attributes{
   my ($self, $params_hash, $no_db_reset) = @_;
-  my ($support, $analysis, $feature_type, $cell_type) =
-    rearrange(['SUPPORT', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE'], 
-    %$params_hash);
+  my ($support, $analysis, $feature_type, $cell_type, $exp) =
+    rearrange(['SUPPORT', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'EXPERIMENT'], %$params_hash);
   
   #flush table ID cache and add support
   $self->{table_ids} = undef;  
@@ -198,22 +197,24 @@ sub reset_relational_attributes{
   
   #is_stored (in corresponding db) checks will be done in store method
  
-  if(! (defined $analysis &&
-        ref($analysis) eq 'Bio::EnsEMBL::Analysis') ){
-    throw('You must pass a valid Bio::EnsEMBL::Analysis');
+  assert_ref($analysis,     'Bio::EnsEMBL::Analysis');
+  assert_ref($feature_type, 'Bio::EnsEMBL::Funcgen::FeatureType');
+  assert_ref($cell_type,    'Bio::EnsEMBL::Funcgen::CellType');
+ 
+  if( $self->experiment &&
+      ! check_ref($exp, 'Bio::EnsEMBL::Funcgen::Experiment') ){
+    throw("You must pass a valid Bio::EnsEMBL::Funcgen::Experiment\n".
+          "Passed:\t".ref($exp));
   }
   
-  if(! (defined $feature_type &&
-        ref($feature_type) eq 'Bio::EnsEMBL::Funcgen::FeatureType') ){
-    throw('You must pass a valid Bio::EnsEMBL::Funcgen::FeatureType');
+  if(defined $exp){
+    #This will allow addition of an experiment
+    #when it was not prevously defined
+    $self->{experiment_id} = $exp->dbID;
+    $self->{experiment}    = $exp;
   }
-  
-  
-  if(! (defined $cell_type &&
-        ref($cell_type) eq 'Bio::EnsEMBL::Funcgen::CellType') ){
-    throw('You must pass a valid Bio::EnsEMBL::Funcgen::CellType');
-  }
-  
+
+
   $self->{cell_type}    = $cell_type;
   $self->{feature_type} = $feature_type;
   $self->{analysis}     = $analysis;
@@ -430,7 +431,7 @@ sub result_feature_set{ return $_[0]->{result_feature_set}; }
 
 =head2 table_name
 
-  Example    : if($result_set->table_name eq 'input_set'){
+  Example    : if($result_set->table_name eq 'input_subset'){
                  #Do something here
                }
   Description: Getter for the table_name of a ResultSet.
@@ -536,7 +537,7 @@ sub contains{
 
 =head2 get_result_set_input_id
 
-  Arg [1]    : int - dbID (experimental_chip, channel or input_set)
+  Arg [1]    : int - dbID (experimental_chip, channel or input_subset)
   Example    : $result_set->get_result_set_input_id($ec_id);
   Description: Retrieves a result_set_input_id from the cache given a dbID
   Returntype : int
@@ -815,12 +816,10 @@ sub compare_to {
 
 =cut
 
-#Could denormalise and add experiment_id and control_experiment_id fields  
-#to the result_set table.
-#We should ever have >1 experiment/result_set so this should be fine
+#experiment_id is not mandatory, so we can still get this from the support
+#probably best to make it mandatory in the near future, although this won't support control
+#use it if it is there, else use rsi's
 
-#change this to experiment (maintain get_Experiments as a deprecated wrapper, 
-#to standardise Set interface between InputSubset and ResultSet
 
 sub experiment{ 
   my $self    = shift;
@@ -829,31 +828,38 @@ sub experiment{
   $attr_name    = 'control_'.$attr_name if $control; 
  
   if (! exists $self->{$attr_name}){ #exists as undef is valid
-    #These are likely InputSubsets, but could be others e.g. InputSets, ExperimentalChips etc
-    my @support = @{$self->get_support};
-    my $exp;
-    
-    foreach my $support(@support){
-    
-      if($support->can('is_control')){
+
+    if((! $control) &&
+       $self->experiment_id){
+      $exp = $self->adaptor->db->get_ExperimentAdaptor->fetch_by_dbID($self->experiment_id);
+    }
+    else{
+      #These are likely InputSubsets, but could be others e.g. InputSets, ExperimentalChips etc
+      my @support = @{$self->get_support};
+      my $exp;
+      
+      foreach my $support(@support){
         
-        if(($support->is_control && ! $control) ||
-           ($control && ! $support->is_control)){
-          next;
+        if($support->can('is_control')){
+          
+          if(($support->is_control && ! $control) ||
+             ($control && ! $support->is_control)){
+            next;
+          }
+        }
+        elsif($control){
+          throw("Cannot get control Experiment for ResultSet with support type:\t".ref($support));  
+        }
+        
+        $exp ||= $support->experiment;
+        
+        if($support->experiment->dbID != $exp->dbID){
+          undef $exp;
+          warn('Failed to get unique Experiment for ResultSet '.$self->name."\n");
+          last;        
         }
       }
-      elsif($control){
-        throw("Cannot get control Experiment for ResultSet with support type:\t".ref($support));  
-      }
-    
-      $exp ||= $support->experiment;
-      
-      if($support->experiment->dbID != $exp->dbID){
-        undef $exp;
-        warn('Failed to get unique Experiment for ResultSet '.$self->name."\n");
-        last;        
-      }
-    }
+    }   
     
     $self->{$attr_name} = $exp;
   }
