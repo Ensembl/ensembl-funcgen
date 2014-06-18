@@ -232,14 +232,11 @@ sub run {
       #Then the dbIDs will be different merged result sets, and we won't be specifying a funnel
       #else $rset_group will be the parent rset name and the dbIDs will be the replicate rset
       #and we will specify a PreprocessIDR funnel
-      
-      
-      warn "Garbage collection disabled";
-      
+           
       for my $i(0...$#{$rset_groups->{$rset_group}{dbIDs}}){
         push @rep_or_merged_jobs, 
           {%batch_params,
-           #garbage     => \@bam_files, 
+           garbage     => \@bam_files, 
            #Passing rep bam here prevent us from redoing the peak calling
            #Disable? Or wait till we restructure and only ever keep the rep bams
            set_type    => 'ResultSet',
