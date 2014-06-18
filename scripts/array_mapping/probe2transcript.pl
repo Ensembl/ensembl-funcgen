@@ -612,14 +612,10 @@ $probe_db->dbc->db_handle;
 #print $probe_db->species."\n";
 #Registry was doing the species increment trick.
 
-
-warn "OMITTED Setting disconnect_when_inactive to true";
-#$probe_db->dbc->disconnect_when_inactive(1);
-#$transcript_db->dbc->disconnect_when_inactive(1);
-#$xref_db->dbc->disconnect_when_inactive(1);
-#This is turned off after we have done the processing.
-#This was done as we were getting connection timeout which weren't
-#caught by DBI
+#Allow automatic reconnection
+$probe_db->dbc->disconnect_if_idle(1);
+$transcript_db->dbc->disconnect_if_idle(1);
+$xref_db->dbc->disconnect_if_idle(1);
 
 #Grab species ID for healtcheck delete and check
 my $species_id = 1;
@@ -1508,9 +1504,6 @@ my %um_cnts = { Total => 0 };
 # now loop over all the mappings and add xrefs for those that have a suitable number of matches
 #values can be a simple count or an array of annotations depending on probeset_arrays
 my $link_txt = '';
-
-warn "Setting disconnect_when_inactive to false for xref DB";
-$xref_db->dbc->disconnect_when_inactive(0);
 
 
 foreach my $key (keys %transcript_feature_info) {
