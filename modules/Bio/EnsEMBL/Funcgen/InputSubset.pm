@@ -102,7 +102,7 @@ sub new {
     throw('Mandatory parameter -cell_type is not defined');
   }
 
-  if(! defined $self->experiemnt){
+  if(! defined $self->experiment){
     throw('Mandatory parameter -experiment is not defined');
   }
 
