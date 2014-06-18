@@ -281,7 +281,8 @@ sub _columns {
 			rf.bound_end_length      rf.display_label
 			rf.feature_type_id       rf.feature_set_id
 			rf.stable_id             rf.binary_string
-			rf.projected             ra.attribute_feature_id
+			rf.projected             rf.has_evidence
+			rf.cell_type_count       ra.attribute_feature_id
 			ra.attribute_feature_table
 	   );
 }
@@ -358,7 +359,8 @@ sub _objs_from_sth {
       $ftype_id,              $fset_id,
       $stable_id,             $attr_id,
       $attr_type,             $bin_string,
-      $projected
+      $projected,             $has_evidence,
+      $cell_type_count
      );
 
 	$sth->bind_columns
@@ -369,7 +371,8 @@ sub _objs_from_sth {
      \$bound_end_length,  \$display_label,
      \$ftype_id,          \$fset_id,
      \$stable_id,         \$bin_string,
-     \$projected,         \$attr_id,
+     \$projected,         \$has_evidence,
+     \$cell_type_count,   \$attr_id,
      \$attr_type
     );
 
@@ -583,6 +586,8 @@ sub _objs_from_sth {
           'set'            => $fset_hash{$fset_id},
           'feature_type'   => $ftype_hash{$ftype_id},
           'stable_id'      => $sid,
+          'has_evidence'   => $has_evidence,
+          'cell_type_count'=> $cell_type_count,
          });
 
 	  }
