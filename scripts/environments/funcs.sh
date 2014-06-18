@@ -61,14 +61,17 @@ export GROUP_DATA_DIR=$(readlink -e $HOME/scratch_prd)
 
 
 _setOptArgArray(){
+    local array_var=
+    local args=
+    local nextarg=
+   	local OptArgArray=
 
 	#Set var in sub
 	#Subshelling would cause problems with setting OPTIND 
 	array_var=$1
 	shift
-	  #Should this be $@ to avoid spliting 'words with' with spaces?
+	#Should this be $@ to avoid spliting 'words with' with spaces?
 	args=($*)   
-	OptArgArray=
 	nextarg=0
 
 
@@ -84,54 +87,26 @@ _setOptArgArray(){
 	i=$(($OPTIND - 2))
 
 	while [[ $nextarg = 0 ]]; do
-	
-		#echo "i is $i"
-
+	  #echo "i is $i"
 		#echo "arg is ${args[$i]}"
-
-		
-		if [[ "${args[$i]}" = -* ]] || [[ -z "${args[$i]}" ]]; then
+		#if [[ ("${args[$i]}" = -*) || (-z "${args[$i]}") ]]; then	
+		if [[ ( ${args[$i]} = -* ) || ( ! ${args[$i]} ) ]]; then
 			nextarg=1
 			OPTIND=$(($i + 1))
 			#echo "next arg is at $OPTIND"
 				#do we need to set this to -1?
 		else
 			#echo "using arg ${args[$i]}"
-			OptArgArray="$OptArgArray ${args[$i]}"
-			
+			OptArgArray="$OptArgArray ${args[$i]}"		
 		fi
 		
-
 		i=$(($i + 1))
-
 	done
 
-
-	eval "$array_var=($OptArgArray)"
-	
+	eval "$array_var=($OptArgArray)"	
 }
 
 
-
-
-################################################################################
-# Func      : CheckUser()
-# Desc      : checks the a user user name against the current user
-# Args [1]  : user name
-# Return    : none 
-# Exception : exits if user names dont match 
-################################################################################
-
-Checkuser()
-{
-    current_user=$(whoami)
-
-    if [ $1 != $current_user ]
-    then
-        echo "error : script must be run by '$1' not '$current_user'"
-		exit 205
-    fi
-}
 
 ################################################################################
 # Func      : jobWait()
@@ -143,37 +118,35 @@ Checkuser()
 # Exception : Exits if JobID not defined
 ################################################################################
 
-jobWait()
-{
-	job_id=$1
+jobWait(){
+  local job_id=
+  local secs=
+  local complete=
+  local exited=
+  local status=
+
+  job_id=$1
 	secs=$2
 	secs=${secs:=300}
-	
-	
 	CheckVariables job_id
 
 	complete=
 	exited=
 
 	#Test for valid job first?
-	
-	echo -n "Sleep interval is $secs secs"
+	echo -n "Checking for job every $secs secs"
 
-
-	while [ ! $complete ]; do
-
+	while [[ ! $complete ]]; do
 		job_info=($(bjobs $job_id))
 		status=${job_info[10]}
 		#We probably need to catch lsf daemon not responding here
 		#as well as bjobs failure
 
-		if [[ $status = 'EXIT' ]]; then
-			
+		if [[ $status = 'EXIT' ]]; then		
 			#Get exit code
 			complete=$(bjobs -l $job_id | grep 'Exited with exit code')
 			complete=$(echo $complete | sed 's/.*code //')
 			complete=$(echo $complete | sed 's/\. The CPU.*//')
-
 			
 		elif [[ $status = 'DONE' ]]; then
 			complete=0
@@ -184,14 +157,16 @@ jobWait()
 	done
 
 	echo -e "Finished waiting for job:\t$job_id"
-
 	return $complete
-
 }
 
 
 
 checkJob(){
+  local job_name=
+  local exit=
+	JOB_ID=
+
 	job_name=$1
 	exit=$2
 
@@ -200,7 +175,6 @@ checkJob(){
 
 	echo -e "Checking for job:\t$job_name"
 
-	JOB_ID=
 	
 	if [[ "$QUEUE_MANAGER" = 'LSF' ]]; then
 
@@ -308,6 +282,49 @@ submitJob(){
 
 
 
+
+################################################################################
+# Func      : CheckGlobalVariables()
+# Desc      : Checks that all passed environment variable names have defined values
+# Args [n]  : List of variable names to check 
+# Returns   : True is all are defined
+#             False if string evaluated variable is of length zero
+################################################################################
+
+#This is really low utility now, apart from in the _InitEnv
+#functions, and also in functions which require optional global vars
+
+CheckGlobalVariables(){
+  local line=
+
+  if [[ ! $* ]]; then
+		echo 'Must pass variable name(s) to check'
+		return 1
+	fi
+
+  local var=
+
+  for var in $*; do
+      val=$(eval "echo \$$var")
+      
+      if [[ -z $val ]];  then 
+          line="$line \$$var"
+      fi
+  done
+  
+  if [[ ! -z $line ]];  then
+      echo "Environment variable(s) :$line are not set"
+      return 1
+  fi
+
+}
+
+
+
+
+
+
+
 ################################################################################
 # Func      : CheckVariables()
 # Desc      : check that all passed environment variables have been assigned 
@@ -317,8 +334,10 @@ submitJob(){
 # Exception : Exits if string evaluated variable is of length zero
 ################################################################################
 
-CheckVariables()
-{
+
+# REMOVE THIS IN FAVOUR OF CheckGlobalVariables
+
+CheckVariables(){
 	line=
 
 	if [ ! "$*" ]; then
@@ -357,7 +376,7 @@ CheckVariablesOrUsage(){
 
 	#Could CheckVariabl
 
-	tmp=$(CheckVariables $variable_names)
+	tmp=$(CheckGlobalVariables $variable_names)
 
 	if [ $? != 0 ]; then
 		echo -e "$tmp\n$usage"
@@ -371,9 +390,9 @@ ValidateVariableOrUsage(){
 	usage=$1
 	shift
 
-	CheckVariables usage
+	CheckGlobalVariables usage
 
-	tmp=$(ValidateVariable $*)
+	tmp=$(ValidateGlobalVariable $*)
 
 	if [ $? != 0 ]; then
 		echo "$tmp"
@@ -384,7 +403,7 @@ ValidateVariableOrUsage(){
 
 
 ################################################################################
-# Func      : ValidateVariable()
+# Func      : ValidateGlobalVariable()
 # Desc      : Check that the passed variable is contained in pass valid variable
 #             array
 # Arg [1]   : Variable to validate 
@@ -393,13 +412,13 @@ ValidateVariableOrUsage(){
 # Exception : Exits if variable is not present in valid variable list
 ################################################################################
 
-#Can specific no_exit here
+#Can specify no_exit here
 #But probably better just to subshell, then we catch all the errors echoed
 
 # eg. error=$(ValidateVariablesOrUsage "$usage" type valid_types)
 # Then deal with error in context
 
-ValidateVariable(){
+ValidateGlobalVariable(){
 	var_name=$1
 	valid_vars_name=$2
 	no_exit=$3
@@ -447,8 +466,7 @@ ValidateVariable(){
 # Exception : none
 ################################################################################
 
-CheckBinaries()
-{
+CheckBinaries(){
     for var in $*
     do
         which $var | grep ^no > /dev/null
@@ -475,8 +493,7 @@ CheckBinaries()
 # Exception : exists if not a directory
 ################################################################################
 
-CheckDirs()
-{
+CheckDirs(){
 
 	for dir_name in $*
     do
@@ -498,8 +515,7 @@ CheckDirs()
 # Exception : exits if 'mkdir' fails 
 ################################################################################
 
-MakeDirs()
-{
+MakeDirs(){
      for dir_name in $*
      do
          if [ ! -d $dir_name ]
@@ -556,8 +572,7 @@ BackUpFile(){
 
 
 
-ArchiveData()
-{
+ArchiveData(){
 	OPTIND=1
 
 	compress=
@@ -700,7 +715,7 @@ ArchiveData()
 	#even if -r isn't specified
 #}
 
-#Enables fast removal of files by moving to .del filder in root of current path
+#Enables fast removal of files by moving to .del folder in root of current path
 #Post-pones actual rm to cron job, based on files last mod'd more than N days
 
 #Was failing to compile as del was already aliased
@@ -1145,11 +1160,8 @@ DistributeData(){
 # Exception : exits if 'cd' fails 
 ################################################################################
 
-ChangeDir()
-{
-
+ChangeDir(){
 	Execute cd $1
-
 }
 
 ################################################################################
@@ -1161,8 +1173,7 @@ ChangeDir()
 # Exception : exits if 'cd' fails or MakeDir fails
 ################################################################################
 
-ChangeMakeDir()
-{
+ChangeMakeDir(){
     MakeDirs $1
 	ChangeDir $1
 }
@@ -1177,8 +1188,7 @@ ChangeMakeDir()
 # Exception : exists if not a file 
 ################################################################################
 
-CheckFile()
-{
+CheckFile(){
     if [ ! -f $1 ]
     then
         echo "error : file $1 does not exist"
@@ -1220,8 +1230,7 @@ $usage_string"
 # Exception : exits if command fails
 ################################################################################
 
-Execute()
-{
+Execute(){
 	#No point in using this unless you want to exit
 	#Just test $? otherwise
 
@@ -1260,8 +1269,7 @@ Execute()
 # Exception : exits if MoveFile fails 
 ################################################################################
 
-SedFile()
-{
+SedFile(){
     _SED_CMD=$1
     _FILE=$2
 
@@ -1285,8 +1293,7 @@ SedFile()
 # Exception : none 
 ################################################################################
 
-GetDir()
-{
+GetDir(){
     echo ${1%/*}
 }
 
@@ -1298,8 +1305,7 @@ GetDir()
 # Exception : none 
 ################################################################################
 
-GetFilename()
-{ 
+GetFilename(){ 
     echo ${1##*/}
 }
 
@@ -1333,23 +1339,27 @@ SetFileSize(){
 #REPLY=$(AskQuestion "Would you like to use the following $seq_type file? [y|n] $file")
 
 
-AskQuestion()
-{
-   _QUESTION=$1
+AskQuestion(){
+    local question=
+    local answer_regex=
+    question=$1
+    answer_regex=$2
+      
+    if [[ $answer_regex ]]; then
+      question+=" $answer_regex";
+      local first_try=
+      echo -en "$question?" 
+      read REPLY
+    
+      while [[ ! $REPLY =~ ^${answer_regex}$  ]]; do
+          echo -e "$REPLY is not a recognized answer, please restrict to the following:  $answer_regex"
+          read REPLY
+      done
 
-
-   #-e works on mac altho not documented in echo man
-
-    echo -en "$_QUESTION?  " 
-    read REPLY
-
-
-	#Value of return always have to be an int
-	#Hence we can't return $REPLY
-
-	#We should return 1 or undef to signify if response is valid given list of possible answers
-
-	#return $REPLY
+    else
+        echo -en "$question?" 
+        read REPLY
+    fi
 }
 
 
@@ -1377,7 +1387,6 @@ ContinueOverride(){
     else
 		echo "Auto Continue"
     fi
-
 }
 
 
@@ -1391,8 +1400,7 @@ ContinueOverride(){
 # Exception : exits if not a compressed file and prints error msg
 ################################################################################
 
-CheckCompressedFile()
-{
+CheckCompressedFile(){
     _FILE=$1
 
     if [ $(isCompressedFile $_FILE) -eq $_FALSE ] 
@@ -1410,8 +1418,7 @@ CheckCompressedFile()
 # Exception : none
 ################################################################################
 
-isCompressedFile()
-{
+isCompressedFile(){
     _FILE2=$1
 
     file $_FILE2 | grep "compressed data" > /dev/null
@@ -1432,8 +1439,7 @@ isCompressedFile()
 # Exception : none
 ################################################################################
 
-getDay()
-{
+getDay(){
     echo $(date '+%d') 
 }
 
@@ -1445,8 +1451,7 @@ getDay()
 # Exception : none
 ################################################################################
 
-getMonth()
-{
+getMonth(){
     echo $(date '+%m') 
 }
 
@@ -1458,8 +1463,7 @@ getMonth()
 # Exception : none
 ################################################################################
 
-getPreviousMonth()
-{
+getPreviousMonth(){
     if [ $(getMonth) -eq "01" ]
     then
         _PREV_MNTH=12
@@ -1478,8 +1482,7 @@ getPreviousMonth()
 # Exception : none
 ################################################################################
 
-getDaysInMonth()
-{
+getDaysInMonth(){
     _MNTH=$1
     _YEAR=$2
     
@@ -1495,8 +1498,7 @@ getDaysInMonth()
 # Exception : none
 ################################################################################
 
-getYear()
-{
+getYear(){
     echo $(date '+%Y')
 }
 
@@ -1508,8 +1510,7 @@ getYear()
 # Exception : none
 ################################################################################
 
-getPreviousYear()
-{
+getPreviousYear(){
     echo $(expr $(getYear) - 1) 
 }
 
@@ -1524,8 +1525,7 @@ getPreviousYear()
 # Exception : none
 ################################################################################
 
-getPreviousRelativeYear()
-{
+getPreviousRelativeYear(){
     if [ $(getPreviousMonth) -eq "12" ]
     then
         _PREV_YEAR=$(getPreviousYear)
@@ -1543,8 +1543,7 @@ getPreviousRelativeYear()
 # Exception : none
 ################################################################################
 
-padNumber()
-{
+padNumber(){
     _NUM=$1
 
     _PAD_NUM=$(echo $_NUM | awk '{printf("%02d",$1)}')
@@ -1560,3 +1559,45 @@ isMac(){
 	fi
 }
 
+
+PrintColour(){
+	#Declare vars local first!
+  local colour=
+  local string=
+  local usage=
+  local nocolour=
+
+
+  nocolour="\e[0m"
+	usage="PrintColour\n
+  Description:\tPrints text in colours\n
+  Usage:\t\tPrintColour -c(olour) red|green|blue -s(tring) 'YOUR STRING TO PRINT']"
+
+	OPTIND=1
+	while getopts ":hc:s:" opt; do
+		case $opt in 
+			h  ) echo -e "$usage"; return 0;;
+      c  ) colour=$OPTARG ;;
+      s  ) string=$OPTARG ;;
+      \? ) echo -e "$usage"; return 1;;
+    esac 
+  done
+
+  [[ ! $string ]] && ( echo -e "Mandatory param -s(tring) not set\n$usage" && return 1)
+  local colour_code=
+
+
+  if [[ "$colour" = red ]];then
+      colour_code="\e[0;31m"
+  elif [[ "$colour" = blue ]];then
+      colour_code="\e[0;34m"
+  elif [[ "$colour" != green ]]; then
+      colour_code="\e[0;32m"
+  else
+      echo -e "PrintColour: The colour $colour is not supported"
+      return 1
+  fi
+
+  printf "$colour_code%s $nocolour\n" "$string"
+
+}
