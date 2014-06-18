@@ -67,6 +67,9 @@ sub run {
       $align_file."\n\t".$control_file);  
   }
  
+  #Sometimes SWEmbl fails to open output file if it exists already
+  unlink($self->out_file);
+ 
   my $cmd = $self->program_file." $format_switch -i $compressed ".
     $self->align_file.' '. $self->parameters.' -o '.$self->out_file;
   $cmd .= " -r ".$self->control_file if $self->control_file;
