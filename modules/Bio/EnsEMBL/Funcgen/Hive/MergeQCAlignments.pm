@@ -134,16 +134,10 @@ sub run {
   my $unfiltered_bam     = $file_prefix.'.unfiltered.bam';
   $self->helper->debug(1, "Merging bams to:\t".$unfiltered_bam); 
   #sam_header here is really optional if is probably present in each of the bam files but maybe incomplete 
-  my @bam_files  = @{$self->bam_files}; 
-  
-  #Temporary hack to handle a gender update from undef to female for NHDF-AD
-  #sam_ref_fai is already set by get_alignment_files_by_ResultSet_format
-  my $gender = ($rset->cell_type->name eq 'NHDF-AD') ? 'male' :
-                $rset->cell_type->gender;
-  warn "REMOVE: gender hacked for NHDF-AD";
+  my @bam_files  = @{$self->bam_files};
      
   merge_bams($unfiltered_bam, 
-             $self->sam_ref_fai($gender), 
+             $self->sam_ref_fai($rset->cell_type->gender), 
              \@bam_files, 
              {debug          => $self->debug});
   
@@ -176,26 +170,18 @@ sub run {
   }
   else{
     $rset->adaptor->store_status('ALIGNED', $rset);
-    
-    #Set IMPORTED too as this is the generic status used in the rollback methods
-    #IMPORTED suggests data has actually been loaded into the DB, where as ALIGNED
-    #refers to alignments generate outside of the DB.
-    $rset->adaptor->store_status('IMPORTED', $rset);
+    #Do not set IMPORTED here, as this signifies that the collections
+    #have already been written(i.e what would have been importing data into the DB
+    #before we moved it out to flat files)
   }
 
-
-  #This needs to set ALIGNED_CONTROL for all of the resultset in the result_set group
-  #not just the single arbitrary one we are dealing with here
-  #or just move the ALIGNED_CONTROL status to Experiment?
-
-
-  #todo filter file here to prevent competion between parallel peak
+  #filter file here to prevent race condition between parallel peak
   #calling jobs which share the same control
   #This will also check the checksum we have just generated, which is a bit redundant
   $self->get_alignment_files_by_ResultSet_formats($rset, ['bam'], 
                                                   $self->run_controls, 
                                                   undef, 
-                                                  'bam');
+                                                  'bam');#Filter from format
                                                   
   #This is really only unmapped and duplicate reads (as we have dropped MT filtering)
   #i.,e. unique_mapping
@@ -247,12 +233,18 @@ sub run {
       #else $rset_group will be the parent rset name and the dbIDs will be the replicate rset
       #and we will specify a PreprocessIDR funnel
       
+      
+      warn "Garbage collection disabled";
+      
       for my $i(0...$#{$rset_groups->{$rset_group}{dbIDs}}){
-        push @rep_or_merged_jobs, {%batch_params,
-                                   garbage     => \@bam_files, 
-                                   set_type    => 'ResultSet',
-                                   set_name    => $rset_groups->{$rset_group}{set_names}->[$i],
-                                   dbID        => $rset_groups->{$rset_group}{dbIDs}->[$i]};
+        push @rep_or_merged_jobs, 
+          {%batch_params,
+           #garbage     => \@bam_files, 
+           #Passing rep bam here prevent us from redoing the peak calling
+           #Disable? Or wait till we restructure and only ever keep the rep bams
+           set_type    => 'ResultSet',
+           set_name    => $rset_groups->{$rset_group}{set_names}->[$i],
+           dbID        => $rset_groups->{$rset_group}{dbIDs}->[$i]};
       }
          
       my $branch = ($rset_group eq 'merged') ? 
