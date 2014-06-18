@@ -519,7 +519,7 @@ sub merge_bams{
 
 
   if((! $no_rmdups) || $view_header_opt){
-    #merge keeps the header in sam format (maybe this is a product of -u)?
+    #-u uncompressed output for pipeing to rmdups or view
     $cmd = 'samtools merge -u - '.join(' ', @$bams).' | ' if ! $skip_merge;
 
     if( ! $no_rmdups ){
@@ -825,6 +825,10 @@ sub process_sam_bam {
     #$cmd .= ' | samtools view -uShb - ';  #simply convert to bam using infile header
     $cmd .= ($sort) ? ' | samtools sort - '.$sorted_prefix : ' > '.$tmp_bam;
     warn $cmd."\n" if $debug;
+    
+    #This is doing a redundant view step if we are not sorting or filtering and the input is already bam and has the correct header
+    
+    
     run_system_cmd($cmd);
 
 
@@ -1434,22 +1438,14 @@ sub _init_peak_caller{
  
     $formats = [$format];
   
-   
-    #Temporary hack to handle a gender update from undef to female for NHDF-AD    
-    #my $gender = ($rset->cell_type->name eq 'NHDF-AD') ? 'male' :
-    #          $rset->cell_type->gender;
-    #warn "REMOVE: gender hacked for NHDF-AD";  
-    #move this to caller   
-    
     #May need to specify checksum param separately
-        
-    
+  
     my $get_files_params = {debug              => $debug,
-                  ref_fai            => $sam_ref_fai,  #Just in case we need to convert
-                  skip_rmdups        => 1, #This will have been done in merge_bams
-                  checksum           => undef,  
-                  #Specifying undef here turns on file based checksum generation/validation
-                  };
+                            ref_fai            => $sam_ref_fai,  #Just in case we need to convert
+                            skip_rmdups        => 1, #This will have been done in merge_bams
+                            checksum           => undef,  
+                            #Specifying undef here turns on file based checksum generation/validation
+                           };
     
   
     my $align_file = get_files_by_formats($align_prefix, 
@@ -1636,7 +1632,7 @@ sub pre_process_IDR{
   #foreach my $bed_file(keys %pre_idr_beds){
   foreach my $i(0..$#{$pre_idr_beds}){
     my $bed_file     = $pre_idr_beds->[$i];
-    (my $np_bed_file = $bed_file) =~ s/\.bed$/.np_idr.bed/;
+    (my $np_bed_file = $bed_file) =~ s/\.txt$/.np_idr.txt/;
     #Never re-use np_idr output file in case it is truncated due to job failure/exit.
     #or in fact due to self consistency IDR
     #Is there a danger of an np_idr file usage clash?
