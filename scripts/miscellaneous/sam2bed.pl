@@ -91,7 +91,8 @@ GetOptions
   (
    'on_farm'    => \$on_farm,
    'files=s{,}' => \@files,
-   '1_based'    => \$one_based,         
+   '1_based'    => \$one_based,    
+   #no_gzip?     
    'man'        => sub { pod2usage(-exitval => 0, -verbose => 2); },
    'help'       => sub { pod2usage(-exitval => 0, -verbose => 1, -message => "Params are:\t@tmp_args"); }
   ) or pod2usage( -exitval => 1,
@@ -132,18 +133,18 @@ foreach my $file(@files){
   }
 
 
-  $gz = (&is_gzipped($file)) ? '.gz' : '';
-  $file_operator = ($gz) ? "gzip -dc %s |" : '';
-  
-  my $infile = open_file($file, $file_operator);
-  my $outfile = $file;
-  my $regex = ($gz) ? '\.sam\.gz' : '\.sam$';
-  $outfile =~ s/${regex}/\.bed/;
-  $outfile .= '.gz';
-  $outfile = open_file($outfile, '| gzip -c > %s');
+  $gz            = is_gzipped($file) ? '.gz' : '';
+  $file_operator = $gz ? "gzip -dc %s |" : ''; 
+  my $infile     = open_file($file, $file_operator);
+
+  my $outfile    = $file;
+  $outfile       =~ s/\.sam(?:\.gz){0,1}$/\.bed/;
+  $file_operator = $gz ? '| gzip -c > %s' : '>';
+  $outfile      .= '.gz' if $gz;
+  $outfile       = open_file($outfile, $file_operator);#'| gzip -c > %s');
 
   print "Converting file to bed format:\t$file\n";
-  my ($strand, @cache, $name, $flag, $slice_name, $pos, $mapq);
+  my ($strand, @cache, $name, $flag, $pos, $mapq);
   my ($read, $start, $seq_region_name);
    
 
@@ -152,13 +153,16 @@ foreach my $file(@files){
     chomp;
 
     #(Query,flag,ref,pos,mapq,cigar,mrnm,mpos,isize,seq,quak,opt)
-    ($name, $flag, $slice_name, $pos, $mapq, undef, undef, undef, undef, $read) = split("\t");
+    ($name, $flag, $seq_region_name, $pos, $mapq, undef, undef, undef, undef, $read) = split("\t");
     next if $flag & 4; #Unmapped read.
 	
     #Query strand is in the 5th(index == 4) bit...  assuming the reference strand never changes
     #i.e. 2*4 = 16 bitwise 16 & 16 == 16 else 0
     $strand = ($flag & 16) ? '-' : '+';
-    (undef, undef , $seq_region_name) = split(':', $slice_name);
+    
+    if($seq_region_name =~ /:/){
+      (undef, undef , $seq_region_name) = split(':', $seq_region_name);
+    }
 	
     #Can we put something better than 100 in score position?
     #Do we really want the names in the bed file?
