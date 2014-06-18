@@ -86,6 +86,6 @@ GetOptions (
 
 #We just want to create a core DBAdaptor here so we avoid defaulting to ensembldb for the dnadb
 #and we don't want to force specification of the dnadb params
-add_DB_url_to_meta($url, create_DBAdaptor_from_options($db_opts, 'funcgen', 'pass'));
+add_DB_url_to_meta('hive', $url, create_DBAdaptor_from_options($db_opts, 'funcgen', 'pass'));
 
 1;
