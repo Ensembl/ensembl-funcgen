@@ -184,6 +184,9 @@ sub main{
     $job_id = $sql_helper->execute_single_result($sql, undef, undef, undef, 1);#no throw flag
     
     if(! defined $job_id){
+      #todo, this need to join to the analysis table also!
+      
+      
       $sql = 'select job_id from job j, analysis_data ad where ad.data='.
         "'$stored_input_id' and j.input_id =concat('_extended_data_id ', ad.analysis_data_id)"; 
       #warn "\n\nSQL $sql";  
