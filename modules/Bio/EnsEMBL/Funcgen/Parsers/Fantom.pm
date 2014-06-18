@@ -179,6 +179,7 @@ my $dispatch = {
 sub _assign_strand {
   my ($symbol) = @_;
   my $strand;
+
   if($symbol eq '.'){
     $strand = 0;
   }
@@ -195,7 +196,7 @@ sub _assign_strand {
 }
 
 sub parse_and_load{
-  my ($self, $files) = @_;
+  my ($self, $files, $new_assembly) = @_;
 
 
   if(scalar @$files < 1){
@@ -305,9 +306,7 @@ sub parse_and_load{
         $data->{start},
         $data->{end},
         );
-  say dump_data($data,1,1);
-  say 'Start: ' . $data->{start};        
-  say 'End: ' . $data->{end};        
+      
       my $feature_type = $feattype_a->fetch_by_name($ft_name);
 
       if(!$feature_type){
@@ -331,6 +330,9 @@ sub parse_and_load{
        -display_label => $data->{name}, 
        -feature_set   => $fset,
        );
+
+      $feature = $self->project_feature($feature, $new_assembly);
+
        $extfeat_a->store($feature);
 
       # my $dbentry = Bio::EnsEMBL::DBEntry->new(
