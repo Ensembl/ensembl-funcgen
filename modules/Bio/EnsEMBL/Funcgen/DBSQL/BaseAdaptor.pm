@@ -916,11 +916,12 @@ sub fetch_all_by_external_names{
 =cut
 
 sub fetch_all_by_linked_Transcript{
-  my ($self, $tx) = @_;
+  my $self = shift;
+  my $tx   = shift;
+  assert_ref($tx, 'Bio::EnsEMBL::Transcript');
 
-  if(! $tx ||
-	 ! (ref($tx) && $tx->isa('Bio::EnsEMBL::Transcript') && $tx->dbID)){
-	throw('You must provide a valid stored Bio::EnsEMBL:Transcript object');
+  if(! $tx->dbID ){
+	   throw('You must provide a stored Bio::EnsEMBL:Transcript object');
   }
 
   return $self->fetch_all_by_external_name($tx->stable_id, $self->db->species.'_core_Transcript')
@@ -941,12 +942,16 @@ sub fetch_all_by_linked_Transcript{
 
 =cut
 
-
 sub fetch_all_by_linked_transcript_Gene{
   my $self = shift;
   my $gene = shift;
   assert_ref($gene, 'Bio::EnsEMBL::Gene'); 
-  #No need to pass params here as we known the gene ID is an int from the db 
+ 
+  if(! $gene->dbID ){
+     throw('You must provide a stored Bio::EnsEMBL::Gene object');
+  }
+  
+  #No need to pass params here as we know the gene ID is an int from the db 
   my $tx_sids = $gene->adaptor->db->dbc->sql_helper->execute_simple('select t.stable_id from transcript t where t.gene_id='.$gene->dbID);
   return $self->fetch_all_by_external_names($tx_sids, $self->db->species.'_core_Transcript');
 }
