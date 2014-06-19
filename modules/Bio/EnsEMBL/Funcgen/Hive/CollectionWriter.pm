@@ -212,10 +212,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
       my @slice_jobs = ();
 
       foreach my $slice (values %seen_slices){ 
-        
-   
-   
-        #$self->branch_output_id(
+
         push @slice_jobs,
          {
           %{$batch_params},#-slices will be over-ridden by new_importer_params
@@ -232,24 +229,17 @@ sub run {   # Check parameters and do appropriate database/file operations...
             -batch_job      => 1, 
 	          -prepared       => 1,  
            }
-          };
-          
-         # undef, #No branch key as we know the branch
-         # 2);   
+         };
       }
       
-      
-      #Could really do with flowing ResultSet set_type down one branch
-      #and other set types down other branch?
-      #in case we have not created a DataSet?
-  
-            
+                  
       my $output_id = {%{$batch_params},#-slices will be over-ridden below
                        dbID         => $self->param('dbID'),
                        set_name     => $self->param('set_name'),#mainly for readability
                        set_type     => $self->param('set_type'),
                        filter_from_format => undef,
                        slices             => [keys %seen_slices]
+                       
       }; #Don't want to re-filter for subsequent jobs
                 
       #Deal with Collections and Mergecollection job group first
@@ -257,7 +247,12 @@ sub run {   # Check parameters and do appropriate database/file operations...
       #as it is only dealing with one job group
       #so could have simply branced the funnel jobs after
       #but this makes it more explicit  
-      $self->branch_job_group(2, \@slice_jobs, 1, [$output_id]);
+      
+      #This merge job delete the input for the peak job, this could conceivable do this
+      #before it get a chance to run. V unlikly tho, du eto runtime.
+      #We really need to ad ad a final semaphored job, to do the clean up
+      
+      $self->branch_job_group(2, \@slice_jobs, 1, [{%$output_id, garbage => [$Imp->output_file]}]);
   
       #We have no way of knowing whether method was injected by fetch_Set_input
       my $fset = $self->FeatureSet;#from fetch_Set_input
@@ -310,8 +305,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
                                                              1);   
     #set appropriate states...
     my $rset = $self->ResultSet;     
-    $rset->adaptor->set_imported_states_by_Set($rset);
-    
+    $rset->adaptor->set_imported_states_by_Set($rset);  
     #End of this branch & config
   }
 
