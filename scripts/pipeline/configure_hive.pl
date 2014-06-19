@@ -259,7 +259,7 @@ sub main{
   my $conf_key   = 'hive_conf';
   
   #my @meta_confs = @{$mc->list_value_by_key($conf_key)};#old method used this
-  my @meta_confs = @{$ntable_a->fetch_all_by_meta_key($conf_key)};
+  my @meta_confs = map {$_->{meta_value}} @{$ntable_a->fetch_all_by_meta_key($conf_key)};
   my $dfr_adaptor = $pdb->get_DataflowRuleAdaptor;
   inject_DataflowRuleAdaptor_methods($dfr_adaptor); #Injects get_semaphoring_analysis_ids
   
@@ -351,7 +351,7 @@ sub main{
         if($old_value){ #is defined and not 0
         
           if(! $new_value){
-            throw("Failed to process link analyses for $conf. $can_run_key meta_value has been reset from 1 to $new_value");  
+            die("Failed to process link analyses for $conf. $can_run_key meta_value has been reset from 1 to $new_value");  
           }
         }
         elsif($new_value){ #&& ! $old_value
