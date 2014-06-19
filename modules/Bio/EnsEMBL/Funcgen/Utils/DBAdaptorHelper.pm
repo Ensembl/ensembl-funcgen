@@ -258,12 +258,13 @@ sub process_DB_options {
     if (defined $vlevel && ($vlevel eq 'pass')){                    
       $check_params{pass} = 0;   
     }
+      
+    my $dbtype_prefix = '';  
           
     foreach my $opt(@{$db_type_options{$db_type}}){
       my $deref = 1;
       my $value;
       ($param = '-'.$opt) =~ s/\=.*//o;  
-      
       #This conditional sub/deref is to handle the two 
       #different types of opts hash we can take
       #$opt entry should already 'exist' from the first 
@@ -280,10 +281,12 @@ sub process_DB_options {
        
                           
       if(defined $value){
-      
-        #Cache mandatory DBAdaptor params
-        ($check_param = $param) =~ s/-(.*_)*//o;           #Strip off -(pdb_|dnadb_) prefixes
-        $check_param = 'dbname' if $check_param eq 'name'; #handle dbname oddity  
+        $param =~ /-(.*_)?(.*)/o;
+        $check_param   = $2;
+        $dbtype_prefix = $1 || ''; 
+        
+        #($check_param = $param) =~ s/-(.*_)*//o;           #Strip off -(pdb_|dnadb_) prefixes
+        $check_param = 'dbname' if $check_param eq 'name'; #handle dnadb_name oddity  
         
         if (exists $check_params{$check_param}){
           $check_params{$check_param} = 1;  
@@ -307,10 +310,12 @@ sub process_DB_options {
     # CHECK PARAMS       
     if((! defined $vlevel) ||
        ($vlevel eq 'pass') ){
-      
-      if( grep(/0/, values %check_params) ){
-        throw("Failed to validate $db_type DB options. Could not find mandatory (user|host|dbname) options:\n".
-          Dumper($db_opts));        
+        
+      if(grep(/0/, values %check_params) ){
+        #This lists -dnadb_name option as -dnadb_dbname
+        throw("Failed to validate $db_type DB options. Could not find mandatory (".
+          join(' ', (map {"-${dbtype_prefix}".$_ } keys %check_params)).
+          ") options:\n".Dumper($db_opts));        
       }
     }
     
