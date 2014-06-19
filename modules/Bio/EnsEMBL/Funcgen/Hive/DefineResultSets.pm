@@ -479,28 +479,15 @@ sub run {   # Check parameters and do appropriate database/file operations...
           
           if(! -f $merged_file || $self->param_silent('overwrite')){
             
-            #throw("Need to implement archive support here!");
-            #basically we need to archive the rep bams, but probably not until
-            #this analysis has finished successfully
-            #so let's pass this on, similar to garbage
-            
             #In future we will treat align all replicates separately,
             #and never archive merged files
             
             
             $archive_files{to_archive} = $rep_bams{$rset->name}{rep_bams}; 
-            
-            #Temporary hack to handle a gender update from undef to female for NHDF-AD
-            #sam_ref_fai is already set by get_alignment_files_by_ResultSet_format
-            my $gender = ($rset->cell_type->name eq 'NHDF-AD') ? 'male' :
-              $rset->cell_type->gender;
-              
-            warn "REMOVE: gender hacked for NHDF-AD";
-            
-            
+     
             
             merge_bams($merged_file, 
-                       $self->sam_ref_fai($gender),
+                       $self->sam_ref_fai($rset->cell_type->gender),
                        $rep_bams{$rset->name}{rep_bams},
                        {no_rmdups      => 1,
                         debug          => $self->debug,
@@ -514,13 +501,9 @@ sub run {   # Check parameters and do appropriate database/file operations...
           #Can't set IDR peak_analysis here, as we may lose this
           #between pipelines i.e. when using IdentifyMergedResultSets after
           #blowing away an old pipeline
-          
         }
         
         if($branch =~ /(_merged$|^DefineMergedDataSet$)/){# (no control) job will only ever have 1 rset
-        
-          #
-            
           $self->branch_job_group($branch, [{%batch_params,
                                              dbID       => $rset->dbID, 
                                              set_name   => $rset->name,
