@@ -166,18 +166,18 @@ my $assembly;
 my %opt;
 
 if(! @ARGV){
-  &help_text;
+  help_text();
 }
 
 print "$0 @ARGV\n";
-&Getopt::Std::getopts('a:s:t:g:h:v:o:i:p:w:', \%opt) || die ;
+Getopt::Std::getopts('a:s:t:g:h:v:o:i:p:w:', \%opt) || die ;
 
 
 # get configuration from environment variables
 #&config; # this may fail but config can be on command line
 
 
-&process_arguments;
+process_arguments();
 my @pwm_files = @ARGV;
 
 run_system_cmd("rm -rf $work_dir", 1); #No exit flag
@@ -204,7 +204,7 @@ if($pwm_type eq 'jaspar'){
     foreach my $file (@pwm_files){
         run_system_cmd("cp $file $work_dir"); 
         rev_comp_matrix($file,$work_dir);
-	my($min,$max)= &matrix_min_max($file,$work_dir);
+	my($min,$max)= matrix_min_max($file,$work_dir);
 	print basename($file)."\t$min\t$max\n" if $verbose > 1;
 	$file_max_score{ basename($file) } = $max;
     }
@@ -220,11 +220,11 @@ elsif($pwm_type eq 'transfac'){
              join("\n",@ARGV)."\n";
     }
 
-    my @pwm_files = &parse_matrixdat_2_pfm($ARGV[0],$work_dir);
+    my @pwm_files = parse_matrixdat_2_pfm($ARGV[0],$work_dir);
 
     foreach my $file (@pwm_files){
 	rev_comp_matrix($file,$work_dir);
-	my($min,$max)= &matrix_min_max($file,$work_dir);
+	my($min,$max)= matrix_min_max($file,$work_dir);
 	print basename($file)."\t$min\t$max\n";
 	$file_max_score{ basename($file) } = $max;
     }
@@ -279,7 +279,7 @@ foreach my $chr_file (@chr_files){
       my $command = "$moods_mapper -f  $thresh $chr_file $work_dir"."*.pfm > $out";
       warn $command."\n";
       run_system_cmd("$command");
-      &parse_out_2_tab($out,$tab,$jdbh,\%file_max_score);
+      parse_out_2_tab($out,$tab,$jdbh,\%file_max_score);
       unlink($out); #Fail here, otherwise we will double the footprint?
     }
 
@@ -351,7 +351,7 @@ sub matrix_min_max{
     print $file."\n".$matrix_id."\n";
     unless($matrix_id){die "problem parsing matrix name $file"}
 
-    my($min_pos,@sums) = &get_max_add(@new_mat);
+    my($min_pos,@sums) = get_max_add(@new_mat);
     return($min_pos,$sums[0]);
 
 }
@@ -379,8 +379,8 @@ sub get_max_add{
 	#$min_sum += &log2( $list[3]/0.25 );
 
 	$maxes[$i] = ((($list[0])+0.002)/1.008)/0.25;
-	$maxes[$i] = &log2($maxes[$i]);
-	$min_sum += &log2( ((($list[3])+0.002)/1.008)/0.25 );
+	$maxes[$i] = log2($maxes[$i]);
+	$min_sum  += log2( ((($list[3])+0.002)/1.008)/0.25 );
 
     }
  
@@ -427,7 +427,7 @@ sub parse_matrixdat_2_pfm{
 	if($line =~ /^AC/){($ac) = $line =~ /AC  (M[0-9]+)/; }
         if($line =~ /^NA/){($name) = $line =~ /NA  (.+)/; }
 	if($line =~ /^P0/){
-	my $pfm = &process_matrix($ifh,$ofh,$ac,$name,$work_dir);
+	my $pfm = process_matrix($ifh,$ofh,$ac,$name,$work_dir);
 	push @files, $pfm;
 	}
 
@@ -524,7 +524,7 @@ sub parse_out_2_tab{
 	    }
 	    $score_thresh = $max_scores_ref->{$id.'.pfm'} * 0.7; # 70% of max
 	    $score_thresh = 0;
-	    &commentary( $max_scores_ref->{$id.'.pfm'} ." = max score for $id $tf_name\n") if $verbose;
+	    commentary( $max_scores_ref->{$id.'.pfm'} ." = max score for $id $tf_name\n") if $verbose;
       
 	    $line = <IN>;
 	    ($addn) = $line =~ /.*Length:([0-9]+)/;
@@ -559,7 +559,7 @@ sub parse_out_2_tab{
 # returns the list of files produced or dies
 sub explode_genome_fasta{
   my($genome_file,$target_dir,$assembly) = @_;
-  &commentary("exploding $genome_file to $target_dir") if $verbose;
+  commentary("exploding $genome_file to $target_dir") if $verbose;
   
   if (! $genome_file){
     die('Genome file not defined');
@@ -568,21 +568,21 @@ sub explode_genome_fasta{
 
 	#These tests do not work!
   
-  my $res = &backtick("which fastaclean");
-  if($res =~ 'not found'){
-    die "Need to implement fastaclean functionality here";
-  }
+  #Why both testing at all, running them with test
+  
+  #run_system_cmd("which fastaclean");
+
   
   
-  $res = &backtick("which fastaexplode");
-    if($res =~ 'not found'){
-      die "Need to implement fastaexplode functionality here";
-    }else{
-      &backtick("fastaexplode -f $genome_file -d $target_dir");
-    }
+  #$res = &backtick("which fastaexplode");
+  #  if($res =~ 'not found'){
+   #   die "Need to implement fastaexplode functionality here";
+  #  }else{
+   run_system_cmd("fastaexplode -f $genome_file -d $target_dir");
+   # }
   
   
-  $res = &backtick("ls -1 $target_dir"."/*.fa");
+  my $res = run_backtick_cmd("ls -1 $target_dir"."/*.fa");
   my @lines = split("\n",$res);
   
   unless(@lines > 0){
@@ -626,7 +626,7 @@ sub explode_genome_fasta{
 
 
 
-	    &backtick($command);
+	    run_system_cmd($command);
 	    push @short_names, $new;
     }
     return @short_names;
@@ -639,7 +639,7 @@ sub explode_genome_fasta{
         " rm -f $file_path ;mv $new $file_path";
 
       warn "executing: $command";
-	    &backtick($command);
+	    run_system_cmd($command);
     }
     
   }
@@ -708,7 +708,7 @@ sub err{
 
 sub process_arguments{
     if ( exists $opt{'h'} ){ 
-        &help_text;
+        help_text();
     }
 
     if (exists $opt{w}){
@@ -739,7 +739,7 @@ sub process_arguments{
     if (exists $opt{o}){
         $outfile = $opt{o};
     }else{
-	   &help_text("Please give a name for the output file");
+	   help_text("Please give a name for the output file");
     }
 
 
