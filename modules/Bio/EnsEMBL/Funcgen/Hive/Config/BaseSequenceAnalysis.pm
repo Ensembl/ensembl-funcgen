@@ -42,17 +42,7 @@ sub default_options {
      #or will this not be updated?
      
      
-     #Used when dataflowing from PreprocessAlignments through to the Peaks config
-     #peak_branches => 
-     # {
-     #  #2 is slice jobs! 
-     #  SWEmbl_R015   => 3, 
-     #  ccat_histone  => 4,                      
-     #  SWEmbl_R0025  => 5,
-       #100 is 'custom' rename this to generic?
-     #  SWEmbl_R0005 => 6, #permissive
-     #},
-         
+    
      #These allow batch wide override of defaults
      #result_set_analysis  => undef,
      #feature_set_analysis => undef,
@@ -79,7 +69,7 @@ sub default_options {
     #if running ReadAlignments in isolation
     
     broad_peak_feature_types => ['H3K36me3', 'H3K27me3'],
-    #Slight redundancy here wrt default_feature_set_analyses
+    #Slight redundancy here wrt default_peak_analyses
     #Can we switch this around, so they are all defined like this?
     #e.g. default_peak_feature_types = ['Histone', 'Transcription Factor'],
     #This would be slightly more cumbersone wrt access
@@ -90,7 +80,8 @@ sub default_options {
      {
       #These $self->o methods interpolate above spec 
       Histone             => $self->o('default_peaks'),
-      'Transcript Factor' => $self->o('default_peaks'), 
+      'Transcription Factor' => $self->o('default_peaks'), 
+      'Polymerase'        => $self->o('default_peaks'), 
       DNase1              => $self->o('default_tight_peaks'),
       H3K36me3            => $self->o('default_broad_peaks'), 
       H3K27me3            => $self->o('default_broad_peaks'),
@@ -99,49 +90,17 @@ sub default_options {
       #('#expr(map{ $_ => #default_broad_peaks# } @{#broad_peak_feature_types#})expr#'),
      }, 
    
-    
-    #permissive_feature_set_analyses =>
-    #{
-    #  Histone             => $self->o('default_permissive_peaks'),
-    #  'Transcript Factor' => $self->o('default_permissive_peaks'), 
-    #  DNase1              => $self->o('default_permissive_peaks'),
-    #  #H3K36me3            => $self->o('default_permissive_broad_peaks'), 
-    #  #H3K27me3            => $self->o('default_permissive_broad_peaks'), 
-    #  #This will not work as wil default to Histone if it can't find the 
-    #  #more specific ftype name
-    #    
-    #},
- 
- 
-    #These need changing to alignment analyses!
-    #or just removing as we have a default_alignment_analysis
-    #should we change this to a generic result_set_analysis?
- 
-    #default_result_set_analyses => 
-    # {
-    #  'Transcription Factor' => $self->o('default_collection'),
-    #  'Open Chromatin'       => $self->o('default_collection'),
-    #  Histone                => $self->o('default_collection'),
-    #  '5mC'                  => $self->o('default_5mC'),
-    # },   
  
     'control_feature_types' => ['Goat-IgG', 'Rabbit-IgG', 'WCE'], 
                      #was in Peaks.pm but needed for ReadAlignments 
     #Only needed for IdentifyInputSubsets, which does the control association
     #Move this to ReadAlignments as we don't need it for Peaks at all?
     
-    
-    #'idr_analysis' => '', 
-    
-    'checksum_optional' => 0,
-    
+  
+    'checksum_optional' => 0,   
    };
   
 }
-
-#Generic resource_classes are in Base
-
-
 
 =head2 pipeline_wide_parameters
 
@@ -209,12 +168,14 @@ sub pipeline_wide_parameters {
         #BaseDB.pm batch_params     
         #Generic optional params (used in Helper and elsewhere)
         'rollback',
+        'full_delete',
         'slices',
         'skip_slices',
         ### More optional Helper params (currently used in DefineOutputSet)
         'result_set_only',
         'result_set_mode', #Can only be set to recover at present
         'recover',         #is this an Importer or a Helper param?
+        
         
         ### Optional IdentifySetInputs parameters
         #comma separated or defined as list ref  
@@ -233,7 +194,6 @@ sub pipeline_wide_parameters {
         #This is translated by the runnable itself, or in the case of a generic runnable
         #with have from some analysis level config
         
-        #'feature_set_analysis',
         'alignment_analysis',
         'peak_analysis',
         'permissive_peaks',

@@ -394,7 +394,7 @@ sub pipeline_analyses {
        },
      -batch_size => 1, #max parallelisation
      -analysis_capacity => 200,
-     -rc_name => 'normal_high_mem_2cpu',
+     -rc_name => 'normal_5GB_2cpu_monitored',
     }, 
 
  
@@ -404,7 +404,7 @@ sub pipeline_analyses {
      -flow_into => { 2 => ['DefineMergedDataSet']},
      -batch_size => 1, #max parallelisation
      -analysis_capacity => 200,
-     -rc_name => 'normal_high_mem_2cpu',
+     -rc_name => 'normal_5GB_2cpu_monitored',
     }, 
  
  
@@ -419,7 +419,7 @@ sub pipeline_analyses {
      -flow_into => {'100' => ['run_SWEmbl_R0005_replicate']},
      -batch_size => 1, #max parallelisation
      -analysis_capacity => 200,
-     -rc_name => 'normal_high_mem_2cpu',
+     -rc_name => 'normal_5GB_2cpu_monitored',
      
      #This will definitely have to write some accu data
      #such that Run_IDR can pick up on any QC failures

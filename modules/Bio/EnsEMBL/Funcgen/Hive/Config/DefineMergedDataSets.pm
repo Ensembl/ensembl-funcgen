@@ -94,8 +94,15 @@ sub pipeline_wide_parameters {
   return 
    {
     %{$self->SUPER::pipeline_wide_parameters}, 
-    can_DefineMergedDataSet => 'DefineMergedDataSets',
-    #Set to the config name so the configure_pipeline script knows to reset these jobs  
+    can_DefineMergedDataSet => 1,#'DefineMergedDataSets',
+    #Set to the config name so the configure_pipeline script knows to reset these jobs 
+    
+    #These are not strictly needed for DefineMergedDataSets
+    #As this is always used in conjunction with Peaks and/or Collections
+    #But need these here as we are now using MutliConfigLinker 
+    #which requires these params
+    #can_Link_to_Peaks       => 0,
+    #can_Link_to_Collections => 0,
    };
 }
 
@@ -277,6 +284,26 @@ sub pipeline_analyses {
 	   
     },
     
+   
+   
+   
+   
+   
+   
+   
+    #Can't have this as this link analysis as the flow_into config is only updated
+    #if it doesn't exists
+    #Therefore we are just getting the flow_into spec from the first config we top up with
+    #We need a ConfigLinker
+    #This will simply act to separate the flow_into config, and simply pass on the data flow
+    #For this purpose, it will not need any 'can_run' functionality
+    #Although we will probably want to to add this in case we want to add collections 
+    #in after we have run peaks
+    #Currently there is no easy way to do this. Would have to blow the pipeline away and
+    #init with just the config you didn't run and reseed.
+    #The only reason why we need ConfigLinker, is because we are linking to multiple downstream configs
+    #So this needs to be MultiConfigLinker!
+   
     
     #This needs changing to take a result_set_id and not create the sets
     #shall we merge this into the next step
@@ -308,19 +335,22 @@ sub pipeline_analyses {
 	     #This needs to use new init_branchign_by_analysis method
 	     
 	    },
-		
+	    
+	    #-flow_into => 
+	    # {'2' => [ 'Link_to_Peaks' ],
+		  #  '3' => [ 'Link_to_Collections' ],
+	    # },
 	  	
 		
 	   #No -flow_into defined as this will be handled by -analysis_topup
 	   # See Peaks and Collections conf.			 	 
 			 
-	   -analysis_capacity => 10,
-       -rc_name => 'normal_2GB',
+	   -analysis_capacity => 100,
+     -rc_name => 'normal_high_mem_2cpu',
 	   #this really need revising as this is sorting the bed files
 	   #Need to change resource to reserve tmp space
 	  },
-    
-	 
+   
   ];
 }
 
@@ -328,3 +358,58 @@ sub pipeline_analyses {
 
 
 1;
+
+
+__END__
+
+
+=pod    
+
+    #The input id needs to be job_groups
+    #Then the MultiConfigLink can simply branch_job_groups
+    #according to config
+    #This means that PreprocessAlignments will have
+    #to flow job_groups which match config in MultiConfigLink config
+    #so there is an interdependancy here
+    #There is no way around this, MultiConfigLink always need to config 
+    #that the previous analysis would have if it wasn't linked
+    #This is the nature of the MultiConfigLinker
+    #This is odd, as not only is the PreprocessAlignments 
+    #data_flow spec in a seprate downstream config but it is also 
+    #in a completely separate MultiConfigLink analysis
+    
+        
+    {
+     -logic_name => 'Link_to_Peaks',
+     -meadow     => 'LOCAL',
+     -module     => 'Bio::EnsEMBL::Funcgen::Hive::MultiConfigLinker',
+     
+     #Need to maintain this here as will not be updated by -analysis_topup
+     #-parameters => 
+     # {
+     # },
+     #No -flow_into defined as this will be handled by -analysis_topup
+     # See Peaks  conf.         
+       
+     -analysis_capacity => 100,
+     -rc_name => 'default',
+    },
+    
+    
+     {
+     -logic_name => 'Link_to_Collections',
+     -meadow     => 'LOCAL',
+     -module     => 'Bio::EnsEMBL::Funcgen::Hive::MultiConfigLinker',
+     
+     #Need to maintain this here as will not be updated by -analysis_topup
+     #-parameters => 
+     # {
+     # },
+     #No -flow_into defined as this will be handled by -analysis_topup
+     # See Collections conf.         
+       
+     -analysis_capacity => 100,
+     -rc_name => 'default',
+    },
+    
+=cut

@@ -124,6 +124,10 @@ use base qw(Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf);
 # at least do the required thing dependant on the order in which the configs
 # are topped up.
 
+
+#To do
+# 1 Move species & assembly to BaseDB?
+
 sub default_options {
   my $self = $_[0];  
   
@@ -228,18 +232,31 @@ sub default_options {
 
 
 sub resource_classes {
-  my ($self) = @_;
+  my $self = shift;
   return 
     {#todo add in lsf group spec here to top LSF warning output
      #todo pass DB_HOST_LSFNAME as param
      
      default                 => { 'LSF' => '' },    
-     urgent                  => { 'LSF' => '-q yesterday' },
+     #urgent                  => { 'LSF' => '-q yesterday' },
+     #Should never use this in the pipleine, best to bswitch after submission if required
      normal_2GB              => { 'LSF' => ' -M2000 -R"select[mem>2000] rusage[mem=2000]"' },
      normal_monitored        => { 'LSF' => " -R\"select[$ENV{DB_HOST_LSFNAME}<1000] ".
                                             "rusage[$ENV{DB_HOST_LSFNAME}=10:duration=10:decay=1]\"" },
      normal_high_mem         => { 'LSF' => ' -M5000 -R"select[mem>5000] rusage[mem=5000]"' },
      normal_high_mem_2cpu    => { 'LSF' => ' -n2 -M5000 -R"select[mem>5000] rusage[mem=5000] span[hosts=1]"' },
+     normal_monitored_2GB    => {'LSF' => " -M2000 -R\"select[$ENV{DB_HOST_LSFNAME}<1000 && mem>2000]".
+                                                " rusage[$ENV{DB_HOST_LSFNAME}=10:duration=10:decay=1,mem=2000]\"" },
+     normal_monitored_4GB    => {'LSF' => " -M4000 -R\"select[$ENV{DB_HOST_LSFNAME}<1000 && mem>4000]".
+                                            " rusage[$ENV{DB_HOST_LSFNAME}=10:duration=10:decay=1,mem=4000]\"" },  
+     normal_monitored_8GB    => {'LSF' => " -M8000 -R\"select[$ENV{DB_HOST_LSFNAME}<1000 && mem>8000]".
+                                            " rusage[$ENV{DB_HOST_LSFNAME}=10:duration=10:decay=1,mem=8000]\"" },   
+     normal_monitored_2GB    => {'LSF' => " -M16000 -R\"select[$ENV{DB_HOST_LSFNAME}<1000 && mem>16000]".
+                                            " rusage[$ENV{DB_HOST_LSFNAME}=10:duration=10:decay=1,mem=16000]\"" },    
+     normal_10gb_monitored    => {'LSF' => " -M10000 -R\"select[$ENV{DB_HOST_LSFNAME}<1000 && mem>10000]".
+                                            " rusage[$ENV{DB_HOST_LSFNAME}=10:duration=10:decay=1,mem=10000]\"" },                                                                         
+     normal_5GB_2cpu_monitored => {'LSF' => " -n2 -M5000 -R\"select[$ENV{DB_HOST_LSFNAME}<1000 && mem>5000]".
+                                                " rusage[$ENV{DB_HOST_LSFNAME}=10:duration=10:decay=1,mem=5000] span[hosts=1]\"" },
      normal_10gb             => { 'LSF' => ' -M10000 -R"select[mem>10000] rusage[mem=10000]"' },
      long_monitored          => { 'LSF' => "-q long -R\"select[$ENV{DB_HOST_LSFNAME}<1000] ".
                                             "rusage[$ENV{DB_HOST_LSFNAME}=10:duration=10:decay=1]\"" },
@@ -381,6 +398,12 @@ sub pipeline_wide_parameters {
 #CR consider adding hive tables to output DB, therefore associating pipeline data with output data
 #Need to consider overwriting/cleaning existing hive tables
 #This will remove the possibility of having two hives run on the same DB. Is this a good thing?
+
+## WARNING!!
+## Currently init_pipeline.pl doesn't run this method when a pipeline is created with the -analysis_topup option
+# configure_hive.pl handles this
+
+
 
 1;
 
