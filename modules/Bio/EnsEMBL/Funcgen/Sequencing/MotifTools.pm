@@ -53,15 +53,15 @@ sub rev_comp_matrix{
   my $file    = shift;
   my $out_dir = shift; 
 
-  my ($in_file, $out_file, @mat, $cols, $line, $rc_file, $suffix);
+  my (@mat, $cols, $line, $rc_file, $suffix);
    
   #Assume whatever suffix is correct
-  if($in_file =~ /\.([a-zA-Z]+)$/){
+  if($file =~ /\.([a-zA-Z]+)$/){
     $suffix = $1;
-    ($rc_file = $in_file) =~ s/${suffix}$/rc.${suffix}/;       
+    ($rc_file = $file) =~ s/${suffix}$/rc.${suffix}/;       
   }
   else{
-    throw("Could not identify matrix file suffix:\t$in_file");      
+    throw("Could not identify matrix file suffix:\t$file");      
   }
   
   if(defined $out_dir){
@@ -88,7 +88,7 @@ sub rev_comp_matrix{
               2 => 1,
               3 => 0);
   my $rows = 0;
-  open_file($in_file, '<', $file);
+  my $in_file = open_file($file, '<');
 
   #If we pass an invalid file, this will parse the whoel thing before dying
   #Probably better than slowing down the whole run by inloop or preloop validation
@@ -111,11 +111,11 @@ sub rev_comp_matrix{
   }
   
   close($in_file);  
-  throw("Found too many rows in matrix file:\t$file") if $rows > 3;
+  throw("Found incorrect number of rows($rows) in matrix file:\t$file") if $rows != 4;
  
-  open_file($out_file,'>', $rc_file);
+  my $out_file = open_file($rc_file, '>');
 
-  foreach my $idx(@$rows){
+  foreach my $idx(0..3){
     print $out_file join(" ",@{$mat[$idx]})."\n";
   }
 
