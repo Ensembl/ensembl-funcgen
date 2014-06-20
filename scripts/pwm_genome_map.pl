@@ -122,6 +122,9 @@ maybe collate output into one file per PWM
 # 4 DONE fastaclean path? Now append path belowb
 # 5 Fix backtick which tests do not work
 # 6 remove config sub
+# 7 Reduce memory footprint! Currently using > 30GB with Jaspar 5
+# 8 Parallelise & make recoverable
+# 9 Restrict to motifs we are interested
 
 #Requirements
 #Do this in a pre-exec before we process anything?
@@ -137,17 +140,21 @@ use File::Basename;
 use IO::Handle;
 use IO::File;
 use DBI qw( :sql_types );
+
+use Bio::EnsEMBL::Funcgen::Sequencing::MotifTools qw( rev_comp_matrix );
+use BioEnsEMBL::Funcgen::Utils::EFGUtils qw( run_backtick_cmd run_system_cmd );
+
+
+
 #use lib '/nfs/users/nfs_d/dkeefe/src/personal/ensembl-personal/dkeefe/perl/modules/';
 $ENV{PATH} .= ':/usr/local/ensembl/bin/'; #fastaclean home, probably needs moving to /software/ensembl/bin
 
-my($user, $password, $driver, $host, $port);
+my($user, $password, $driver, $host, $port, $work_dir);
 my $outfile='';
 my $infile='';
 my $sp;
 my $verbose = 0;
 my $pwm_type = 'jaspar';
-my $work_dir = "/lustre/scratch103/ensembl/dkeefe/pwm_genome_map_$$/";
-#my $work_dir = "/lustre/scratch101/ensembl/ds19/tmp/";
 
 my $genome_file;
 #Changed DS
@@ -173,16 +180,19 @@ print "$0 @ARGV\n";
 &process_arguments;
 my @pwm_files = @ARGV;
 
-`rm -rf $work_dir`;
-#$verbose = 2;
-&backtick("mkdir -p $work_dir"."/genome");
+run_system_cmd("rm -rf $work_dir", 1); #No exit flag
+
+#Isn't this removing the
+
+run_system_cmd("mkdir -p ${work_dir}/genome");
 
 
 # irrespective of pwm_type we need to create the rev-comp matrices and put all the matrices in a working directory - along with a composite matrix_list.txt file
 my %file_max_score;
-my $matrix_file;
+#my $matrix_file;
 if($pwm_type eq 'jaspar'){
 
+    #No longer needed as we get the TF name from the DB
     # we assume the matrix_list.txt file is in same dir as PWMs
     #$matrix_file = &find_matrix_txt(\@pwm_files) or die
     #    "Unable to find a matrix_list.txt file for the jaspar matrices \n".
@@ -193,7 +203,7 @@ if($pwm_type eq 'jaspar'){
     # there too, making additions to the matrix_list in working dir as we go
     foreach my $file (@pwm_files){
         &backtick("cp $file $work_dir"); 
-        &rev_comp_matrix($file,$work_dir);
+        rev_comp_matrix($file,$work_dir);
 	my($min,$max)= &matrix_min_max($file,$work_dir);
 	print basename($file)."\t$min\t$max\n" if $verbose > 1;
 	$file_max_score{ basename($file) } = $max;
@@ -213,7 +223,7 @@ elsif($pwm_type eq 'transfac'){
     my @pwm_files = &parse_matrixdat_2_pfm($ARGV[0],$work_dir);
 
     foreach my $file (@pwm_files){
-	&rev_comp_matrix($file,$work_dir);
+	rev_comp_matrix($file,$work_dir);
 	my($min,$max)= &matrix_min_max($file,$work_dir);
 	print basename($file)."\t$min\t$max\n";
 	$file_max_score{ basename($file) } = $max;
@@ -264,11 +274,14 @@ foreach my $chr_file (@chr_files){
     my $tab=my $out=$chr_file;
     $tab =~ s/fa/tab/;
     $out =~ s/fa/out/;
-    my $command = "$moods_mapper -f  $thresh $chr_file $work_dir"."*.pfm > $out";
-    warn $command."\n";
-    &backtick("$command");
-    &parse_out_2_tab($out,$tab,$jdbh,\%file_max_score);
-    #&backtick("rm -f $out");
+    
+    if(! -e $tab){    
+      my $command = "$moods_mapper -f  $thresh $chr_file $work_dir"."*.pfm > $out";
+      warn $command."\n";
+      &backtick("$command");
+      &parse_out_2_tab($out,$tab,$jdbh,\%file_max_score);
+      &backtick("rm -f $out");
+    }
     #&backtick("rm -f $chr_file");
 }
 
@@ -542,8 +555,6 @@ sub explode_genome_fasta{
   }
   
 
-  warn "GENOME file is $genome_file";
-  
 	#These tests do not work!
   
   my $res = &backtick("which fastaclean");
@@ -627,83 +638,6 @@ sub explode_genome_fasta{
 }
 
 
-
-# assumes a jaspar matrix pfm file with 4 rows A C G T
-sub rev_comp_matrix{
-    my($file,$work_dir)=@_;
-
-    open(IN,$file) or die "failed to open $file";
-
-    my %swap =( 0 => 3,
-                1 => 2,
-                2 => 1,
-                3 => 0
-	       );
-
-    my @mat;
-    my $rows = 0;
-    my $cols;
-    while(my $line = <IN>){
-	chop $line;
-	unless($line =~ /[0-9]/){next}
-        $line =~ s/^\s+(.*)/$1/; # remove leading whitespace
-        $line =~ s/[\[\]]//g; #remove brackets if any
-	my @field = split(/\s+/,$line); # split on white space
-	#print join("\t",@field)."\n";
-	#print join("~",@field)."\n";
-	my @rev= reverse(@field);
-	$mat[$swap{$rows}] = \@rev;
-	#print join("\t",reverse(@field))."\n";
-        $rows++;
-
-    }
-    if($rows > 4){ die "too many rows in file $file" }
-    close(IN); 
-
-    # jaspar IDs can be MA for core, CN for CNE, PB, PH and PF for PHYLOFACTS
-    # our own PWM IDs are FG
-    #my($matrix_id) = $file =~ /.*([MPCF][AFNG][0-9]+).pfm/;
-    my($matrix_id,$version) = $file =~ /.*([MPCF][AFNGBHL][0-9]+).([0-9]*).pfm/;
-    print $file."\n".$matrix_id." $version\n";
-    unless($matrix_id){die "problem parsing matrix name $file"}
- 
-
-    my $rc_file = $work_dir.$matrix_id.'rc.'.$version.'.pfm';
-    print $rc_file."\n";
-    open(OUT,"> $rc_file") or die "failed to open file $rc_file";
-
-    for(my $i=0;$i<$rows;$i++){
-        print OUT join(" ",@{$mat[$i]})."\n";
-    }
-
-    close(OUT);
-
-    #NJ don't need this now, we just need to add support fo DB access where ever this is used
-    #was this ever being used again
-
-    # get the relevant line from the matrix_list.txt file
-    # by grepping for the id at the start of the line
-    # add rc to the ID and append the line to matrix_list.txt
-    #my $res = &backtick("grep '^$matrix_id.$version' $work_dir".
- #                       "matrix_list.txt");
- #   print $res;
-    #chop($res);
-    #my @field = split("\t",$res);
-    ##$field[0] .= 'rc';
-    #$field[0] = $matrix_id.'rc.'.$version;
-    #$res = join("\t",@field);
-    ##print $res."\n";
-    #open(OUT, ">> $work_dir"."matrix_list.txt") or 
-    #    die "failed to open $work_dir"."matrix_list.txt for appending";
-    #print OUT $res."\n" or die "failed to write to  $work_dir".
-    #                           "matrix_list.txt";
-    #close(OUT);
-
-
-}
-
-
-
 # There should be a matrix_list.txt file in the same directory as the pfm files
 sub find_matrix_txt{
     my($pwm_files_aref) = @_;
@@ -752,6 +686,9 @@ sub backtick{
 
 # when using backticks to exec scripts the caller captures STDOUT
 # its best therefore to have error on STDOUT and commentary on STDERR
+
+#Er no, just capture true error output via $!
+
 sub commentary{
     print STDERR "$_[0]";
 }
@@ -787,7 +724,10 @@ sub process_arguments{
 
 
     if (exists $opt{w}){
-        $work_dir = $opt{w}; 
+        $work_dir = $opt{w}.'/tmp_results/'; 
+    }
+    else{
+      die("Must provide mandatory workdir";  
     }
 
     if (exists $opt{p}){
@@ -811,7 +751,7 @@ sub process_arguments{
     if (exists $opt{o}){
         $outfile = $opt{o};
     }else{
-	&help_text("Please give a name for the output file");
+	   &help_text("Please give a name for the output file");
     }
 
 
