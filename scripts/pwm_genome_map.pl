@@ -142,7 +142,7 @@ use IO::File;
 use DBI qw( :sql_types );
 
 use Bio::EnsEMBL::Funcgen::Sequencing::MotifTools qw( rev_comp_matrix );
-use BioEnsEMBL::Funcgen::Utils::EFGUtils qw( run_backtick_cmd run_system_cmd );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_backtick_cmd run_system_cmd );
 
 
 
@@ -202,7 +202,7 @@ if($pwm_type eq 'jaspar'){
     # we move the PWM files to the working dir and create rev-comp files
     # there too, making additions to the matrix_list in working dir as we go
     foreach my $file (@pwm_files){
-        &backtick("cp $file $work_dir"); 
+        run_system_cmd("cp $file $work_dir"); 
         rev_comp_matrix($file,$work_dir);
 	my($min,$max)= &matrix_min_max($file,$work_dir);
 	print basename($file)."\t$min\t$max\n" if $verbose > 1;
@@ -241,7 +241,7 @@ else{
 # also if the sequences contain characters other than [acgtnACGTN] they need
 # to be converted to N otherwise find_pssm_dna outputs the wrong coords.
 #$verbose = 2;
-my @chr_files = &explode_genome_fasta($genome_file,$work_dir.'genome',$assembly);
+my @chr_files = explode_genome_fasta($genome_file,$work_dir.'genome',$assembly);
 
 my $jdbh;
 my $dsn = sprintf( "DBI:%s:%s:host=%s;port=%s",
@@ -270,32 +270,33 @@ my $error = $@;
 #Nope this is only accessed in parse_out_2_tab, not populated
 
 foreach my $chr_file (@chr_files){
-
-    my $tab=my $out=$chr_file;
-    $tab =~ s/fa/tab/;
-    $out =~ s/fa/out/;
+    my $tab = my $out = $chr_file;
+    #this assumes suffix is always fa
+    $tab =~ s/fa$/tab/;
+    $out =~ s/fa$/out/;
     
     if(! -e $tab){    
       my $command = "$moods_mapper -f  $thresh $chr_file $work_dir"."*.pfm > $out";
       warn $command."\n";
-      &backtick("$command");
+      run_system_cmd("$command");
       &parse_out_2_tab($out,$tab,$jdbh,\%file_max_score);
-      &backtick("rm -f $out");
+      unlink($out); #Fail here, otherwise we will double the footprint?
     }
-    #&backtick("rm -f $chr_file");
+
+    unlink($chr_file); #We always run fastaexplode, so may aswell
 }
 
 
 # collate individual .tab files into the specified output file
 my $command = "cat $work_dir/genome/*.tab > $outfile ";
-&backtick($command);
+run_system_cmd($command);
 
 # count how many mappings we got for each matrix
 #$command = "cut -f4 $outfile | sort| uniq -c > $work_dir"."pwm_mapping_counts_".$pwm_type;
 #&backtick($command);
 
 # tidy up
-`rm -rf $work_dir`;
+run_system_cmd("rm -rf $work_dir");
 exit;
 
 
@@ -542,6 +543,16 @@ sub parse_out_2_tab{
 }
 
 
+
+
+#Move this to EFGUtils?
+#Can't put it in SeqTools as this would create a cyclical dependancy if we ever put
+#a wrapper method to MotifTools in there,
+#we likely want to use it in other modules
+#maybe FastaTools? with some dump index fasta methods?
+#Maybe SeqTools is the right place, and we call that from here instead of within MotifTools?
+#This would prevent having a full wrapper in MotifTools
+
 # get the individual sequences from the genome file and put them in files
 # which have the fasta id as their name and an extension of .fa
 # optionally reduce chromosome name to chr_name as in ensembl databases
@@ -664,25 +675,6 @@ sub find_matrix_txt{
 }
 
 
-# makes shell execute command and checks for errors
-# returns the output of the command unprocessed
-sub backtick{
-    my $command = shift;
-
-    warn "executing $command \n" if ($verbose ==2);
-
-    my $res = `$command`;
-    if($?){
-        warn "failed to execute $command\n";
-        warn "output:\t$res\n";
-	die "exit code $?";
-    }
-
-    return $res;
-}
-
-
-
 
 # when using backticks to exec scripts the caller captures STDOUT
 # its best therefore to have error on STDOUT and commentary on STDERR
@@ -715,19 +707,15 @@ sub err{
 
 
 sub process_arguments{
-
     if ( exists $opt{'h'} ){ 
         &help_text;
     }
-
-
-
 
     if (exists $opt{w}){
         $work_dir = $opt{w}.'/tmp_results/'; 
     }
     else{
-      die("Must provide mandatory workdir";  
+      die("Must provide mandatory workdir");  
     }
 
     if (exists $opt{p}){
