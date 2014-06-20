@@ -35,29 +35,41 @@ load_jaspar_matrices.pl [options]
 =head1 OPTIONS
 
  DB Connection:
-  --jdb_user           Jaspar DB user name
+  --user               DB user name 
+  --host               DB host 
+  --dbname             DB name 
+  --pass               DB password 
+  --port               DB port (optional)  --jdb_user           Jaspar DB user name
+  --dnadb_user         Core DB user
+  --dnadb_host         Core DB host
+  --dnadb_name         Core DB name
+  --dnadb_pass         Core DB password (optional)
+  --dnadb_port         Core DB port (optional)
+  --jdb_user           Jaspar DB user
   --jdb_host           Jaspar DB host
   --jdb_name           Jaspar DB name (default = JASPAR_v5_0). This will be used as the analysis logic_name
   --jdb_pass           Jaspar DB password (optional)
   --jdb_port           Jaspar DB port (optional)
+  
+ Inputs/Outputs: 
   --out_dir            Output directory (optional)
-  --user               DB user name (optional)
-  --host               DB host (optional)
-  --dbname             DB name (optional)
-  --pass               DB password (optional)
-  --port               DB port (optional)
-  --collections        List of Jaspar collections to query, default is CORE and PBM
   --pep_fasta          Location of the relevant species whole proteome fasta DB (i.e. use formatdb)
   --pfm_file           Location of the file containing all the Position Frequency Matrices
+ 
+ Other:
+  --collections        List of Jaspar collections to query, default is CORE and PBM
   --dump_jaspar_fasta  Dumps fasta files for the Jaspar accessions
-  --create_edb         Create the relevant external_db records based on the dnadb
-  --skip_blast  	   Skips blast step if blast results file already exists (mainly for testing)
+  --skip_blast  	     Skips blast step if blast results file already exists (mainly for testing)
   --man
   --help
 
 =head1 DESCRIPTION
 
 B<This program>
+
+
+For a Jaspar analysis which has been previosuly imported, binding matrix entries and associated xrefs are 
+deleted before being re-imported.
 
 =cut
 
@@ -111,6 +123,17 @@ B<This program>
 # 12 Consider ftype_to_pfm name only matches if we can't even get a blast result. This may be because 
 #    the feature type name is not present as a gene external name 
 
+# 13 Does this handle rollback of previously loaded xrefs/associations? Yes it does.
+
+# 14 This script is dependant on core xrefs being in place. As this is the first
+#    step in the motif pipeline, it effectively holds up the alignments.
+#    Supporting a post-import tidyup, is probably more trouble than it's worth.
+#    It is probably only needed with a new assembly, or a significantly revised genebuild
+#    A validate mode maybe useful, which would do the associations, and check whether they
+#    match what is in the DB already. So decoupling the association from the DB import would be nice
+
+
+
 use warnings;
 use strict;
 
@@ -118,6 +141,8 @@ use strict;
 #use Bio::DB::SwissProt; #This uses dbfetch not uniprot rest service (which is always up)
 
 #my $sp = new Bio::DB::SwissProt;
+
+use Data::Dumper qw( Dumper );
 
 use Getopt::Long;
 use Pod::Usage;
@@ -140,11 +165,6 @@ my @tmp_args = @ARGV;
 
 ### Some adventures in GetOptions processing ###
 
-#my ($pass, $user, $host, @cols);
-#my $dbname  = 'JASPAR_v5_0';
-#my $driver  = 'mysql';
-#my $port    = 3306;
-#my $out_dir = '.';
 
 #As we never use this vars now, do we even need to declare vars which dont have defaults?
 #can we not simply specify an empty ref? [] {} or \undef
@@ -199,13 +219,12 @@ my %opts = (
                -verbose => 1,
                -message => "Params are:\t@tmp_args" );
   } );
-my @db_opts = keys %{ get_DB_options_config( [ 'funcgen', 'dna', 'jdb' ], 1 ) }
-  ;    #allow custom flag
+my @db_opts = keys %{ get_DB_options_config( [ 'funcgen', 'dna', 'jdb' ], 1 ) };    #allow custom flag
 my @opts_config = (
   @db_opts, qw( out_dir=s  collection=s@ dump_jaspar_fasta
-    pfm_file=s pep_fasta=s   create_edb  skip_blast        help ) );
+    pfm_file=s pep_fasta=s   skip_blast        help ) );
 
-GetOptions( \%opts, @opts_config ) or    #Catch unkown options
+GetOptions( \%opts, @opts_config ) or    #Catch unknown options
   pod2usage( -exitval => 1, -message => "Params are:\t@tmp_args" );
 
 #Delete the help and man subs as we don't want to pass those around
@@ -245,9 +264,9 @@ print "load_jaspar_matrices.pl @tmp_args\n";
 
 sub main {
   my $opts = shift;
-  my ($out_dir, $colls, $pfm_file, $create_edb, $jdb_version, 
+  my ($out_dir, $colls, $pfm_file, $jdb_version, 
       $pep_fasta, $dump_pfm_fasta, $skip_blast) = rearrange
-      (['OUT_DIR', 'COLLECTIONS', 'PFM_FILE', 'CREATE_EDB', 'JDB_VERSION',
+      (['OUT_DIR', 'COLLECTIONS', 'PFM_FILE', 'JDB_VERSION',
         'PEP_FASTA', 'DUMP_JASPAR_FASTA', 'SKIP_BLAST'], %$opts );
 
   #assert_ref($colls, 'ARRAY');
@@ -307,8 +326,8 @@ sub main {
 #CORE isn't strictly a 'collection', although it is stored as such in the Jaspar DB
   }
 
-  my $efg_db = create_Funcgen_DBAdaptor_from_options( $opts, 'optional', 1 )
-    ;              #Conditional validate dnadb flag
+  my $efg_db = create_Funcgen_DBAdaptor_from_options( $opts, 'pass', 1 ); 
+  #Require as password here, but write user may not require one? 
 
   my $helper     = Bio::EnsEMBL::Funcgen::Utils::Helper->new( no_log => 1 );
   my $db_species = $efg_db->species;
@@ -325,7 +344,7 @@ sub main {
     $efg_db->get_AnalysisAdaptor->fetch_by_logic_name( $opts->{'-jdb_name'} );
   my $db_version = $efg_db->_get_schema_build( $efg_db->dnadb );
 
-  if ( !defined $analysis ) {
+  if ( ! defined $analysis ) {
 
 #Using Jaspar as the logic name here will prevent being able to load two versions along
 #side each other which could complicate things
@@ -359,12 +378,11 @@ sub main {
 #add this rollback function to the Helper based on the analysis.
   }
 
-  if ($create_edb) {
-    add_external_db( $efg_db, $db_species . '_core_Gene',
-                     $db_version, 'EnsemblGene' );
 
-    #todo add translation here too?
-  }
+  #Just do this anyway. It will warn if it already exists
+
+  add_external_db( $efg_db, $db_species . '_core_Gene',
+                     $db_version, 'EnsemblGene' );
 
   if ($dump_pfm_fasta) {
     &dump_jaspar_fasta( $jdbh, $out_dir, $colls );
@@ -451,11 +469,8 @@ sub main {
   my $ftype_to_pfm            = 0;
   my $multi_pep_dump          = 0;
 
-#my $ftype_pep_fasta         = $out_dir.'/'.$db_species.'_TranscriptionFactor_FeatureTypes.pep.fasta';
-#my $fasta_fh                = open_file($ftype_pep_fasta, '>');
 
   #warn "Hardcoding 10 ftypes for testing!";
-
   #@ftypes = @ftypes[0..9];
 
   #could probably change this to use keys
@@ -739,10 +754,10 @@ sub main {
    (my $blast_results = $pep_fasta) =~ s/.*\///g;
    $blast_results =~ s/\.fa(asta)//;
    #this subing does not work, fasta remains in string 
-   $blast_results = $out_dir.'/'."Jaspar_vs_${blast_results}.blastp.txt";
+   $blast_results = $out_dir."/Jaspar_vs_${blast_results}.blastp.txt";
    
-   warn "HARDCODING PEP FAST TO tmp/Jaspar_vs_homo_sapiens_core_75_37.pep.blastp.txt";
-   $blast_results = './tmp/Jaspar_vs_homo_sapiens_core_75_37.pep.blastp.txt'; 
+   warn "HARDCODING PEP FAST TO $out_dir/Jaspar_vs_homo_sapiens_core_76_38.pep.blastp.txt";
+   $blast_results = $out_dir.'/Jaspar_vs_homo_sapiens_core_76_38.pep.blastp.txt'; 
 
    if($skip_blast){
       
@@ -756,6 +771,7 @@ sub main {
      warn "TODO need to log blast output";
      &blast_jaspar_matrices( $pep_fasta, $out_dir, $blast_results );
    }
+
 
 
    my $blast_fh = open_file($blast_results);
@@ -1386,36 +1402,52 @@ sub dump_jaspar_fasta{
   my $skipped = 0;
   my $wrote   = 0;
   
-
   foreach my $row(@$rows){  
     #pfetch may return a header with a .1 suffix, and maybe others
     #> pfetch Q6LBK7
     #>Q6LBK7.1 Q6LBK7_HUMAN C-myc protein (Fragment)
     #QIPELENNEKAPKVVILKKATAYILSVQAEEQKLISEEDLLRKRREQLKHKLEQLRNSCA
-  
+    
     foreach my $j_acc(@{$row->{accs}}){
       #Assuming that these are all uniprot accessions 
       #pfetch will bring anything back from UniProtKB (inc current data) and EMBL
-      my $pf_fasta = run_backtick_cmd('pfetch '.$j_acc);
-      chomp($pf_fasta);
+      
+      #actually pfetch will alternately return a translation or a cdna seq (or no match)
+      #as it alternates between DBs if there are entries in both.
+      #and it's hard to tell which will be returned first so have to try twice
+      #Could use magical undocumented -d pep argument 
+      #-d pep is not uniprot?
+      #So some translations must be in EMBL, and -d pep does not bring these back
+      #This also requires a version number to be specified, which we do not have.
+         
+      #Need to use Uniprot webservice here!
     
+      my ($pf_fasta, @seq);
+      
+      for(0..1){
+        $pf_fasta = run_backtick_cmd('pfetch '.$j_acc);
+        (undef, @seq) = split("\n", $pf_fasta);   
+       
+        if((! defined $seq[0]) ||
+           ($seq[0] =~ /^[agct]+$/i)){
+          @seq = ();
+        } 
+        else{
+          last;  
+        }
+      }
+         
       #Should  probably merge fastas from complexes into the same fasta
       #and remove acc from file name.
     
-      if(! defined $pf_fasta){
+      if(! @seq){
         push @fails, $row->{id};
       }
       else{
-        #print 'Writing fasta for '.$row->{id}.' '$j_acc."\n";
-        my (undef, @seq) = split("\n", $pf_fasta);      
-        #(my $pf_acc = $pf_header) =~ s/>([^ ])+ /$1/;
-        #Keep pf accession for provenance
-        
-        #$pf_fasta = '>'.join("\t", ($hashref->{id}, $j_acc, $pf_acc, $hashref->{name}, 
-        #                            $hashref->{collection}, $hashref->{lspecies}))."\n".join("\n", @seq);
-       
+        #print 'Writing fasta for '.$row->{id}.' '.$j_acc."\n";
+     
         #We really only need the id and the accession in the header
-        $pf_fasta = '>'.$row->{id}.'.'.$row->{version}.'__'.$j_acc.'__'.$row->{name}."\n".join("\n", @seq)."\n";
+        $pf_fasta = '>'.$row->{id}.'.'.$row->{version}.'__'.$j_acc.'__'.$row->{name}."\n".join("\n", @seq);
        
         #can we do this from one query file, instead of many?
         #currently this is overwriting fasta for matrices which have > 1 acc (complexes?)
