@@ -93,8 +93,8 @@ sub pipeline_wide_parameters {
     #As there is no way of there is no way of the analysis knowing which param to use?
     #
     
-    can_run_SWEmbl_R0005_replicate => 'IDRPeaks',
-    can_PreprocessIDR              => 'IDRPeaks',
+    can_run_SWEmbl_R0005_replicate => 1,#'IDRPeaks',
+    can_PreprocessIDR              => 1,#'IDRPeaks',
     #Set to the config name so the configure_pipeline script knows to reset these jobs 
     can_DefineMergedDataSet        => 0, 
    };
@@ -193,6 +193,7 @@ sub pipeline_analyses {
 	 #No wait, this is te wrong way around
 	   -flow_into => 
 	    {		
+	     # 'A->2' => ['PreprocessSelfIDR'],
        'A->2' => ['PreprocessIDR'],  
 	     '3->A' => [ 'run_SWEmbl_R0005_replicate' ], #['DefineReplicateDataSet'],
       },
@@ -203,37 +204,7 @@ sub pipeline_analyses {
      #We don't care about these failing, as we expect them too
     },
 	
-	  
-    #{
-    # -logic_name => 'DefineReplicateDataSet', 
-	  # -module     => 'Bio::EnsEMBL::Funcgen::Hive::DefineDataSet',
-	  # -parameters => 
-	  #  {
-	  #   feature_set_analysis => $self->o('permissive_peaks'), #This will not allow batch override
-	  #  },
-				 	 
-	  #  -flow_into => 
-    #   {
-    #    '2' => [ 'run_SWEmbl_R0005_replicate' ],
-    #   },
-		 
-	  # -analysis_capacity => 100,
-    # -rc_name => 'default',
-	   #this really need revising as this is sorting the bed files
-	   #Need to change resource to reserve tmp space
-	   
-	   #Not having a -failed_job_tolerance here is causing the beekeeper to 
-	   #exit, especially as there is no -max_retry_count set either
-	   
-    #},
-    
-    
-    
-    
-    #Could split this out into a mixin conf (or BaseSequenceAnalysis)
-    #as this is a shared analysis between ReadAlignment and IDRPeaks
-    
-    
+      
     {
      -logic_name    => 'run_SWEmbl_R0005_replicate',  #SWEmbl permissive
      -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunPeaks',
@@ -242,23 +213,117 @@ sub pipeline_analyses {
        #peak_analysis => $self->o('permissive_peaks'), #This will not allow batch override!
        #Now batch flown, so we need to flow this explicity as peak_analysis from IdentifyReplicateResultSets and MergeReplicateAlignments_and_QC
       },
-     -analysis_capacity => 10,
-     -rc_name => 'long_monitored_high_mem', # Better safe than sorry... size of datasets tends to increase...       
+     -analysis_capacity => 300,
+     -rc_name => 'normal_5GB_2cpu_monitored', # Better safe than sorry... size of datasets tends to increase...       
     },
   
+    {
+     -logic_name    => 'PreprocessSelfIDR',
+     -module        => 'Bio::EnsEMBL::Funcgen::Hive::PreprocessIDR',
+     #-meadow        => 'LOCAL', #Could potentially do this locally due to low load/runtime?
+     #although it is potentially a >1 cpu job due to triple pipe command
+     -analysis_capacity => 100,#Unlikely to get anywhere near this
+     -rc_name    => 'default',
+     -batch_size => 30, #Should really take ~1min to process each set of replicates
+            
+     -parameters => { feature_set_analysis => $self->o('permissive_peaks') },
+      #This will not allow batch override
+           
+     -flow_into => 
+      {
+       '2->A' => [ 'RunSelfIDR' ],                   # fan
+       #'3->A' => [ 'RunPooledPseudoRepIDR ' ],   # fan #This doesn't need a separate analysis
+       'A->3' => [ 'PostProcessSelfIDRReplicates' ], # funnel
+      }, 
+    },
+    
+    
+       {
+     -logic_name    => 'RunSelfIDR',
+     -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunIDR',
+     -analysis_capacity => 100,
+     -rc_name    => 'normal_2GB', #~10mins + (memory?)
+     -batch_size => 6,#~30mins +
+
+     #No flow into here, but this analysis should update the DB with the calculated threshold
+     #This can't be in the feature_set_stats table, due to the combinations between the reps.
+     #If we accu this, then we will lose the data!!! Preventing us from being able to simply drop one rep and
+     #rerun the post process?
+     #do we need a stand alone table for idr_thresholds, which simply has the threshold and the 2 feature_set_ids
+     #should we store anything else here? 
+     
+    -flow_into => 
+     {
+      2 => [ ':////accu?self_idr_peak_counts=[accu_idx]' ],
+     }
+
+           
+ 
+      #Or should this do all this in the same analysis
+      #where are we going to cache the run_idr output for the
+      #final peak calling threshold? Let's keep this in a tracking DB
+      #table to prevent proliferation of analyses based on this value differing between data sets.
+      
+      #are we going to have problems having these two analyses together
+      #if we want to rerun the analysis due to the creation of the merged rset failing?
+      #would have to rerun idr too?
+      
+      #This is extremely unlikely to happen
+      #and could do some funky job_id manipulation to set skip_idr
+      
+      #No we won't be able to reuse DefineResultSets here
+           
+    },
   
+    {
+     -logic_name    => 'PostProcessSelfIDRReplicates',
+     -module        => 'Bio::EnsEMBL::Funcgen::Hive::PostprocessIDR',
+      #-meadow        => 'LOCAL', #Could potentially do this locally due to low load/runtime?
+     #although it is potentially a >1 cpu job due to triple pipe command
+     -analysis_capacity => 100,
+     -rc_name    => 'default', #<1mins
+     -batch_size => 10,#?
+     -parameters => 
+      { 
+       #result_set_mode              => 'none',#We never want one for an IDR DataSet
+       #default_feature_set_analyses => $self->o('permissive_feature_set_analyses'), 
+      },
+           
+     -flow_into => 
+      {
+       '2' => [ 'PreprocessIDR' ],
+      }, 
+      
+      #Or should this do all this in the same analysis
+      #where are we going to cache the run_idr output for the
+      #final peak calling threshold? Let's keep this in a tracking DB
+      #table to prevent proliferation of analyses based on this value differing between data sets.
+      
+      #are we going to have problems having these two analyses together
+      #if we want to rerun the analysis due to the creation of the merged rset failing?
+      #would have to rerun idr too?
+      
+      #This is extremely unlikely to happen
+      #and could do some funky job_id manipulation to set skip_idr
+      
+      #No we won't be able to reuse DefineResultSets here
+           
+    },
+    
+    
+    
   
     #SubmitIDR is a simple link job, to handle sugmitting jobs
     #as hive will not handle multi semaphores  
   
      {
      -logic_name    => 'PreprocessIDR',
-     #-module        => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
      -module        => 'Bio::EnsEMBL::Funcgen::Hive::PreprocessIDR',
-     #-meadow        => 'LOCAL',
+     #-meadow        => 'LOCAL', #Could potentially do this locally due to low load/runtime?
+     #although it is potentially a >1 cpu job due to triple pipe command
      -analysis_capacity => 100,#Unlikely to get anywhere near this
      -rc_name    => 'default',
-     -batch_size => 30,#Should really take >1min to process each set of replicates
+     -batch_size => 30, #Should really take ~1min to process each set of replicates
             
      -parameters => { feature_set_analysis => $self->o('permissive_peaks') },
       #This will not allow batch override
@@ -274,10 +339,9 @@ sub pipeline_analyses {
   
     {
      -logic_name    => 'RunIDR',
-     #-module        => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
      -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunIDR',
      -analysis_capacity => 100,
-     -rc_name    => 'default', #~5mins + (memory?)
+     -rc_name    => 'normal_2GB', #~10mins + (memory?)
      -batch_size => 6,#~30mins +
 
      #No flow into here, but this analysis should update the DB with the calculated threshold
@@ -289,7 +353,7 @@ sub pipeline_analyses {
      
     -flow_into => 
      {
-      2 => [ ':////accu?idr_peak_counts=[num_peaks]' ],
+      2 => [ ':////accu?idr_peak_counts=[accu_idx]' ],
      }
 
            
@@ -312,10 +376,11 @@ sub pipeline_analyses {
   
     {
      -logic_name    => 'PostProcessIDRReplicates',
-     #-module        => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
      -module        => 'Bio::EnsEMBL::Funcgen::Hive::PostprocessIDR',
+      #-meadow        => 'LOCAL', #Could potentially do this locally due to low load/runtime?
+     #although it is potentially a >1 cpu job due to triple pipe command
      -analysis_capacity => 100,
-     -rc_name    => 'default', #~5mins + (memory?)
+     -rc_name    => 'default', #<1mins
      -batch_size => 10,#?
      -parameters => 
       { 
@@ -346,39 +411,17 @@ sub pipeline_analyses {
  
  
  
-    {
-     -logic_name    => 'DefineMergedReplicateResultSet',  #SWEmbl
+    {-logic_name    => 'DefineMergedReplicateResultSet',
      -module        => 'Bio::EnsEMBL::Funcgen::Hive::DefineResultSets',
      -analysis_capacity => 100,
-     -rc_name => 'default', 
-     
-     -parameters => 
-     { 
-     },
-           
-     -flow_into => 
-      {
-       '2' => [ 'DefineMergedDataSet' ],
-      }, 
-      
-      #Or should this do all this in the same analysis
-      #where are we going to cache the run_idr output for the
-      #final peak calling threshold? Let's keep this in a tracking DB
-      #table to prevent proliferation of analyses based on this value differing between data sets.
-      
-      #are we going to have problems having these two analyses together
-      #if we want to rerun the analysis due to the creation of the merged rset failing?
-      #would have to rerun idr too?
-      
-      #This is extremely unlikely to happen
-      #and could do some funky job_id manipulation to set skip_idr
-      
-      #No we won't be able to reuse DefineResultSets here
-      
-      
-      
-      
-      
+     -rc_name => 'default', #< 1 min probably need > 200MB for samtools merge!
+     #Might this have been the source of the merged truncated file errors?
+     #but hive should have caught this if it was exceeding the MEMLIMIT
+     #how many cpu's are we using for merge?
+     #This all depends on output format and whether rmdups is set
+     #currently we do not rmdups and maintain bam format, so no piped commands
+  
+     -flow_into => { '2' => [ 'DefineMergedDataSet' ] }, 
     },
   
  

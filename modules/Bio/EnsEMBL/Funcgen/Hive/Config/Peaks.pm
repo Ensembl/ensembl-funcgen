@@ -68,16 +68,15 @@ use base ('Bio::EnsEMBL::Funcgen::Hive::Config::BaseDB');
 
 =cut
 
-#sub pipeline_wide_parameters {
-#    my $self = shift;
-#    
-#     
-#    return 
-#     {
-#      %{$self->SUPER::pipeline_wide_parameters},  # inheriting database and hive tables creation
-#
-#     };
-#}
+sub pipeline_wide_parameters {
+  my $self = shift;
+     
+  return 
+   {
+    %{$self->SUPER::pipeline_wide_parameters},  # inheriting database and hive tables creation
+      #can_Link_to_Peaks       => 1,
+   };
+}
 
 
 
@@ -158,12 +157,8 @@ sub pipeline_analyses {
      -rc_name => 'default',
      #todo revise this to reserve tmp space as this is sorting the bed files
     },
-  
-  
-      
-   
-  
     
+ 
   
   
     #we have an issue here as the fan changes from a slice fan, to an analysis fan
@@ -194,35 +189,33 @@ sub pipeline_analyses {
 	  {
 	   -logic_name    => 'run_SWEmbl_R015',  #SWEmbl normal (histones/Dnase?)
 	   -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunPeaks',
-	   -analysis_capacity => 10,
-	   -rc_name => 'long_monitored_high_mem', # Better safe than sorry... size of datasets tends to increase...	   
+	   -analysis_capacity => 100,
+	   -rc_name => 'normal_5GB_2cpu_monitored', # Better safe than sorry... size of datasets tends to increase...	   
 	   
 	  },
 
 	  {
 	   -logic_name    => 'run_ccat_histone', #CCAT
 	   -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunPeaks', 
-	   -analysis_capacity => 10,
-	   -rc_name => 'normal_monitored', # CCAT does not need much
+	   -parameters    =>
+	    {process_file_types => ['significant_region'],
+	     CCAT_parameters => {-chr_file => $self->o('data_root_dir').
+	                           '/reference_files/CCAT/homo_sapiens_GRCh38_unmasked.CCAT_chr_lengths.txt'}},
+	   -analysis_capacity => 100,
+	   -rc_name => 'normal_monitored_2GB', # CCAT does not need much?
+	   #we were getting MEMLIMIT failures with default 200mb
+	  
 	  },
 
-#fragmentSize   200
-#slidingWinSize  150
-#movingStep  20
-#isStrandSensitiveMode   0
-#minCount  10
-#outputNum   100000
-#randomSeed  123456
-#minScore  4.0 
-#bootstrapPass   50
+#fragmentSize 200 slidingWinSize 150 movingStep 20 isStrandSensitiveMode 0 minCount 10 outputNum 100000 randomSeed 123456 minScore 4.0 bootstrapPass 50
 
 
 
       {
 	   -logic_name    => 'run_SWEmbl_R0025', #SWEmbl TF
 	   -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunPeaks', 
-	   -hive_capacity => 10,
-	   -rc_name => 'long_monitored_high_mem', # Better safe than sorry... size of datasets tends to increase...
+	   -hive_capacity => 100,
+	   -rc_name => 'normal_5GB_2cpu_monitored', # Better safe than sorry... size of datasets tends to increase...
 	  # -flow_into => 
 	  },
 	  
@@ -236,8 +229,8 @@ sub pipeline_analyses {
      -logic_name    => 'run_SWEmbl_R0005_IDR', #SWEmbl permissive IDR filtered
      -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunPeaks', 
      -parameters    => {'filter_max_peaks' => 1},
-     -hive_capacity => 10,
-     -rc_name => 'long_monitored_high_mem', # Better safe than sorry... size of datasets tends to increase...
+     -hive_capacity => 100,
+     -rc_name => 'normal_5GB_2cpu_monitored', # Better safe than sorry... size of datasets tends to increase...
     # -flow_into => 
     },
     
@@ -248,8 +241,8 @@ sub pipeline_analyses {
       { 
        -logic_name    => 'run_peaks_custom', #Peaks caller not supported by config 
        -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunPeaks', # Peak caller defined by feature_set_analysis
-       -hive_capacity => 10,
-       -rc_name => 'long_monitored_high_mem', # Better safe than sorry... size of datasets tends to increase...
+       -hive_capacity => 100,
+       -rc_name => 'normal_5GB_2cpu_monitored', # Better safe than sorry... size of datasets tends to increase...
        #-flow_into => 
       },
 	  
@@ -323,3 +316,35 @@ sub pipeline_analyses {
 
 1;
 
+__END__
+
+
+   
+=pod
+   
+    {
+     -logic_name => 'Link_to_Peaks',
+     -meadow     => 'LOCAL',
+     -module     => 'Bio::EnsEMBL::Funcgen::Hive::MultiConfigLinker',
+     
+     #Need to added in previous config as will not be updated by -analysis_topup
+     #-parameters => 
+     # {
+     # },
+     
+     -flow_into =>
+      { #Maintained original branches here, but could revise these
+       '3'   => [ 'run_SWEmbl_R015' ],      #Normal peaks
+       '4'   => [ 'run_ccat_histone' ],     #CCAT
+       '5'   => [ 'run_SWEmbl_R0025' ],     #Tight peaks 
+       '6'   => [ 'run_SWEmbl_R0005_IDR' ], #Permissive peaks filtered by IDR max peaks value
+       '100' => [ 'run_peaks_custom' ],     #defined by feature_set_analysis
+      }, 
+       
+     -analysis_capacity => 100,
+     -rc_name => 'default',
+    }, 
+    
+=cut   
+  
+    

@@ -103,33 +103,8 @@ use base ('Bio::EnsEMBL::Funcgen::Hive::Config::BaseSequenceAnalysis');
 
 =head2 resource_classes
 
-    Description : Implements resource_classes() interface method of
-      Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf that lists the LSF resource classes available
-
-=cut
-
-=pod All these generic resources are now defined in Base.pm
-
-#todo define fine tuned analysis specific resource_classes
-
-sub resource_classes {
-    my ($self) = @_;
-    return {
-        'default'                    => { 'LSF' => '' },
-        'urgent'                     => { 'LSF' => '-q yesterday' },
-        'normal_monitored'           => { 'LSF' => "        -R\"select[$ENV{LSF_RESOURCE_HOST}<1000] rusage[$ENV{LSF_RESOURCE_HOST}=10:duration=10:decay=1]\"" },
-        'long_monitored'             => { 'LSF' => "-q long -R\"select[$ENV{LSF_RESOURCE_HOST}<1000] rusage[$ENV{LSF_RESOURCE_HOST}=10:duration=10:decay=1]\"" },
-        'long_high_memory'           => { 'LSF' => '-q long -M4000000 -R"select[mem>4000] rusage[mem=4000]"' },
-        'long_monitored_high_memory' => { 'LSF' => "-q long -M4000000 -R\"select[$ENV{LSF_RESOURCE_HOST}<1000 && mem>4000] rusage[$ENV{LSF_RESOURCE_HOST}=10:duration=10:decay=1,mem=4000]\"" },
-
-#	    0 => { -desc => 'default',                         'LSF' => '' },
-#	    1 => { -desc => 'urgent',                          'LSF' => '-q yesterday' },
-#	    2 => { -desc => 'normal ens-genomics1',            'LSF' => '-R"select[myens_genomics1<1000] rusage[myens_genomics1=10:duration=10:decay=1]"' },
-#	    3 => { -desc => 'long ens-genomics1',              'LSF' => '-q long -R"select[myens_genomics1<1000] rusage[myens_genomics1=10:duration=10:decay=1]"' },
-#	    4 => { -desc => 'long high memory',                'LSF' => '-q long -M4000000 -R"select[mem>4000] rusage[mem=4000]"' },
-#	    5 => { -desc => 'long ens-genomics1 high memory',  'LSF' => '-q long -M6000000 -R"select[myens_genomics1<600 && mem>6000] rusage[myens_genomics1=12:duration=5:decay=1,mem=6000]"' },
-	   };
-}
+    All generic resources are defined in Base.pm
+  
 =cut
 
 
@@ -141,30 +116,14 @@ sub resource_classes {
 
 =cut
 
-
-#Can we move some of these to Base.pm config?
-
-#sub pipeline_wide_parameters {
-#  my ($self) = @_;
-#  return 
-#    {
-#     %{$self->SUPER::pipeline_wide_parameters}, 
-#     
-#	 };
-#}
-
-
-=head2 pipeline_create_commands
-
-    Description : Implements pipeline_create_commands() interface method of
-      Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf that lists the commands
-      that will create and set up the Hive database.
-
-=cut
-
-## WARNING!!
-## Currently init_pipeline.pl doesn't run this method when a pipeline is created with the -analysis_topup option
-
+sub pipeline_wide_parameters {
+  my ($self) = @_;
+  return 
+   {
+    %{$self->SUPER::pipeline_wide_parameters}, 
+    #can_Link_to_Collections       => 1,     
+	 };
+}
 
 
 =head2 pipeline_analyses
@@ -174,8 +133,6 @@ sub resource_classes {
 
 
 =cut
-
-
 
 #(2) The hive_capacity worker limiting mechanism that was in place for years is going to change slightly.
 #The old meanings of the values were:
@@ -194,13 +151,10 @@ sub resource_classes {
 #If you know/find out that your pipeline *RELIES* on this functionality, please explicitly set -hive_capacity => 1 in the corresponding analyses.
 #This will make your pipeline compatible with future releases of the Hive system.
 
-
-
 sub pipeline_analyses {
   my $self = shift;
 
   return [
- 
      {
 	   -logic_name => 'PreprocessAlignments',#was 'SetUp',
 	   #This is basically making sure the input file is sorted wrt genomic locations
@@ -213,21 +167,16 @@ sub pipeline_analyses {
          '2->A' => [ 'WriteSignalCollection' ],
          'A->1' => [ 'MergeCollections' ],
         }, 
-        
-         
-       
-       
+
 	   -analysis_capacity => 50,
 	   #Change this to hive_capacity as it may be competing with parallel peak jobs
-       -rc_name => 'normal_2GB',
-       #can we key this into another param for the memusage which will also be pickup by get_feature
-       #file and set the same mem spec in the samtools cmd?
-	    #todo revise this to reserve tmp space as this is sorting the bed files
+     -rc_name => 'normal_2GB',
+     #can we key this into another param for the memusage which will also be pickup by get_feature
+     #file and set the same mem spec in the samtools cmd?
+     #todo revise this to reserve tmp space as this is sorting the bed files
     },
     
-    
-    
-    
+
     
       #Currently this step itself kicks off jobs?
       #Need to hive the individual jobs!
@@ -251,15 +200,18 @@ sub pipeline_analyses {
 
 	  
 	   #-input_ids     => [ dataflowed from PrepareInputAlignment via branch 1 ]
-	   -analysis_capacity => 200,
+	   -analysis_capacity => 1000,
 	   #Change this to hive_capacity as it may be competing with parallel peak jobs
-       -rc_name => 'long_monitored_high_mem',
+     -rc_name => 'normal_10gb_monitored',
        
        #Needed to force 1 job per worker, unless we have fixed the window_sizes bug?
        #i.e. needs to make package vars attrs instead
        #such that they don't persist across instances of the object
        #-batch_size => 1,
        #This is now fixed
+       
+     #Have seen apparently transient filesystem acces errors cause failure here
+     #unable to open output files  
 	  },
 	
 	
@@ -268,10 +220,38 @@ sub pipeline_analyses {
 	   -module     => 'Bio::EnsEMBL::Funcgen::Hive::CollectionWriter',
 	   -parameters => { merge => 1 }, #Move this to data flow? as this is not config
 	   #rather a constant for this analysis
-  	   -analysis_capacity => 10,
-       -rc_name => 'default',
+  	 -analysis_capacity => 200,
+     -rc_name => 'default',
 	  },
   ];
 }
 
 1;
+
+
+__END__
+
+
+=pod    
+    {
+     -logic_name => 'Link_to_Collectionss',
+     -meadow     => 'LOCAL',
+     -module     => 'Bio::EnsEMBL::Funcgen::Hive::MultiConfigLinker',
+     
+     #Need to added in previous config as will not be updated by -analysis_topup
+     #-parameters => 
+     # {
+     # },
+     
+     -flow_into =>
+      { #Maintained original branches here, but could revise these
+       '2->A' => [ 'WriteSignalCollection' ],
+       'A->1' => [ 'MergeCollections' ],
+      }, 
+       
+     -analysis_capacity => 100,
+     -rc_name => 'default',
+    },     
+
+=cut
+
