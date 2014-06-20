@@ -65,7 +65,7 @@ use IO::File;
 use constant  NO_ROWS => '0E0';
 
 
-my($user, $password, $driver, $host, $port);
+my($user, $password, $driver, $host, $port, $mapping_tabfile);
 my $outfile='';
 my $infile='';
 my $verbose = 2;
@@ -77,7 +77,7 @@ my %opt;
 $| = 1; #no output buffer
 
 if ($ARGV[0]){
-&Getopt::Std::getopts('u:p:e:H:h:o:i:P:g:s:', \%opt) || &help_text("Invalid Argument") ;
+&Getopt::Std::getopts('t:u:p:e:H:h:o:i:P:g:s:', \%opt) || &help_text("Invalid Argument") ;
 }else{
 &help_text; 
 }
@@ -121,7 +121,7 @@ while(my($mat,$tf)=each(%matrix_tf_pairs)){
     # get just the mappings for this matrix from the all_mappings file
     my $mappings_file = $mat.".mappings";
     unless( -e $mappings_file ){
-	my $command = "grep $mat all_mappings.tab > $mappings_file";
+	my $command = "grep $mat $mapping_tabfile > $mappings_file";
 	&backtick($command);
 
 	#Hack to deal with a special case that messes things up!
@@ -134,7 +134,12 @@ while(my($mat,$tf)=each(%matrix_tf_pairs)){
     #my ($schema_build) = $enc_db =~ /.*funcgen_(.*)/;
     if(!defined($schema_build)){ die "Need a schema build!"; }
     #schema build better passed as input as db may not hve been "transformed"
-    my $q = "select sr.name,af.seq_region_start,af.seq_region_end,af.score,ft.name,ct.name from annotated_feature af,feature_set fs,feature_type ft,seq_region sr,cell_type ct where ft.class in('Transcription Factor','Insulator') and fs.feature_type_id = ft.feature_type_id and af.feature_set_id = fs.feature_set_id and sr.seq_region_id = af.seq_region_id and sr.schema_build = '$schema_build' and fs.cell_type_id = ct.cell_type_id and ft.name = '$tf'";
+    
+    #This should use the API!
+    #restriction to schema build is killing this query as the DB was copied before the update script was run
+    #API would automatically select the current coord_system
+    
+    my $q = "select sr.name,af.seq_region_start,af.seq_region_end,af.score,ft.name,ct.name from annotated_feature af,feature_set fs,feature_type ft,seq_region sr,cell_type ct where ft.class in('Transcription Factor','Insulator', 'Transcription Factor Complex') and fs.feature_type_id = ft.feature_type_id and af.feature_set_id = fs.feature_set_id and sr.seq_region_id = af.seq_region_id and sr.schema_build = '$schem_build' and fs.cell_type_id = ct.cell_type_id and ft.name = '$tf'";
     &commentary( "executing :-\n$q\n");
     my $aaref = $dbh->selectall_arrayref($q);
     unless(defined $aaref && @$aaref > 0){die "no data returned by query :\n$q"}
@@ -415,7 +420,10 @@ sub process_arguments{
         &help_text;
     }
 
-
+    if (exists $opt{t}){
+        $mapping_tabfile = $opt{t}; 
+    }
+  
 
     if (exists $opt{H}){
         $host = $opt{H}; 
