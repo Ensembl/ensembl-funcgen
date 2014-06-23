@@ -52,7 +52,7 @@ sub new {
       'FANTOM'   => {
         -name         => 'FANTOM',
         -class        => 'DNA',
-        -description  => 'FANTOM enhancers and promoters',
+        -description  => 'FANTOM enhancers and TSS',
         -so_accession => 'SO:0000110',
         -so_name      => 'sequence_feature',
         },
@@ -71,16 +71,16 @@ sub new {
         -so_name      => 'enhancer',
         },
       'FANTOM_tss_strict'   => {
-        -name         => 'FANTOM promoter strict',
+        -name         => 'FANTOM TSS strict',
         -class        => 'Transcription Start Site',
-        -description  => 'FANTOM promoter, strict',
+        -description  => 'FANTOM TSS, strict',
         -so_accession => 'SO:0000315',
         -so_name      => 'transcription_start_site',
         },
       'FANTOM_tss_relaxed'   => {
-        -name         => 'FANTOM promoter relaxed',
+        -name         => 'FANTOM TSS relaxed',
         -class        => 'Transcription Start Site',
-        -description  => 'FANTOM promoter, relaxed',
+        -description  => 'FANTOM TSS, relaxed',
         -so_accession => 'SO:0000315',
         -so_name      => 'transcription_start_site',
         },
@@ -305,16 +305,8 @@ sub parse_and_load {
 
       if(!$feature_type){
         throw "No FeatureType for $ft_name";
-        # my $ft = Bio::EnsEMBL::Funcgen::FeatureType->new(
-        # -name         => $ft_name,
-        # -class        => $class,
-        # -description  => $ft_desc,
-        # -so_accession => $so_acc,
-        # -so_name      => $so_name,
-        # );
-        #   say dump_data($ft,1,1);
-        # $feattype_a->store($ft);
       }
+      
       my $feature = Bio::EnsEMBL::Funcgen::ExternalFeature->new (
        -start         => $data->{start}, 
        -end           => $data->{end},  
@@ -327,17 +319,16 @@ sub parse_and_load {
 
       $feature = $self->project_feature($feature, $new_assembly);
       if($feature){
-        $feature->{display_label} = 
+        if($type eq 'enhancers'){
+          $feature->{display_label}  = 
           $feature->slice->seq_region_name . ':'.
           $feature->start . '-' .
           $feature->end;
-
-       ($feature) = @{$extfeat_a->store($feature)};
-       foreach my $status (qw(DISPLAYABLE MART_DISPLAYABLE)) {
-        $fset->adaptor->store_status($status, $fset);
-       }
-
-
+        }
+        ($feature) = @{$extfeat_a->store($feature)};
+        foreach my $status (qw(DISPLAYABLE MART_DISPLAYABLE)) {
+          $fset->adaptor->store_status($status, $fset);
+        }
       }
 
       # my $dbentry = Bio::EnsEMBL::DBEntry->new(

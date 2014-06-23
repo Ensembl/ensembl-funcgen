@@ -24,7 +24,7 @@ limitations under the License.
 
 =cut
 
-package Bio::EnsEMBL::Funcgen::Parsers::vista;
+package Bio::EnsEMBL::Funcgen::Parsers::Vista;
 
 use strict;
 use warnings;
@@ -50,26 +50,26 @@ sub new {
   #Set default feature_type and feature_set config
   $self->{static_config}{feature_types} = {(
                                             'VISTA Target'   => {
-                                                                 -name        => 'VISTA Target', 
+                                                                 -name        => 'VISTA Target',
                                                                  -class       => 'Search Region',
                                                                  -description => 'VISTA target region',
                                                                 },
                                             'VISTA Enhancer' => {
-                                                                 -name         => 'VISTA Enhancer', 
+                                                                 -name         => 'VISTA Enhancer',
                                                                  -class        => 'Enhancer',
                                                                  -description  => 'Enhancer identified by positive VISTA assay',
                                                                  -so_name      => 'enhancer',
                                                                  -so_accession => 'SO:0000165',
                                                                 },
                                             'VISTA Target - Negative' => {
-                                                                          -name        => 'VISTA Target - Negative', 
+                                                                          -name        => 'VISTA Target - Negative',
                                                                           -class => 'Search Region',
                                                                           -description => 'Enhancer negative region identified by VISTA assay',
                                                                          },
                                            )};
-  
+
   $self->{static_config}{analyses} = {
-                                      VISTA =>  { 
+                                      VISTA =>  {
                                                  -logic_name => 'VISTA',
                                                  -description   => 'VISTA Enhancer Assay (http://enhancer.lbl.gov/)',
                                                  -display_label => 'VISTA',
@@ -80,16 +80,16 @@ sub new {
   #This is used as the entry point to store/validate
   #So all of the above needs to be referenced in here
   $self->{static_config}{feature_sets} = {
-                                          'VISTA enhancer set' => 
+                                          'VISTA enhancer set' =>
                                           {
-                                           #Stored in this order 
+                                           #Stored in this order
 
                                            #Entries here are flexible
                                            #Can be omited if defined in feature_set
                                            #top level analyses/feature_types definition required if no DB defaults available
                                            #These can be a ref to the whole or subset of the top level analyses/feature_types hash
                                            #A key with an empty hash or undef(with or without a matching key in the top level analyses/feature_types hash
-										   
+
                                            #analyses      => $self->{static_config}{analyses},
                                            feature_types => $self->{static_config}{feature_types},
 
@@ -97,7 +97,7 @@ sub new {
                                            #This wont work for feature_types as they are not unique by name!!!!!!
                                            #This is why we have top level hash where we can define a unique compound key name
 
-                                           feature_set   => 
+                                           feature_set   =>
                                            {
                                             -feature_type      => 'VISTA Target', #feature_types config key name not object
                                             -display_label     => 'VISTA Enhancers',
@@ -106,7 +106,7 @@ sub new {
                                            },
                                           }
                                          };
-  
+
   #$self->validate_and_store_feature_types;
   $self->validate_and_store_config([keys %{$self->{static_config}{feature_sets}}]);
   $self->set_feature_sets;
@@ -125,11 +125,11 @@ sub new {
 
 sub parse_and_load{
   my ($self, $files, $old_assembly, $new_assembly) = @_;
-  
+
   if (scalar(@$files) != 1) {
     throw('You must provide a unique file path to load VISTA features from:\t'.join(' ', @$files));;
   }
-  
+
   my $file = $files->[0];
   $self->log_header("Parsing and loading LBNL VISTA enhancer data from:\t$file");
 
@@ -144,7 +144,7 @@ sub parse_and_load{
                      homo_sapiens => 'hs',
                      mus_musculus => 'mm',
                     );
-  
+
   my $species = Bio::EnsEMBL::Registry->get_alias($self->db->species);
 
   if ( (! defined $species) ||
@@ -212,7 +212,7 @@ sub parse_and_load{
        -display_label => $species.$element_number, #"LBNL-$element_number",
        -feature_set   => $set,
       );
-	
+
 
     # project if necessary
     if ($new_assembly) {
@@ -239,7 +239,7 @@ sub parse_and_load{
   foreach my $status (qw(DISPLAYABLE MART_DISPLAYABLE)) {
     $set->adaptor->store_status($status, $set);
   }
-  
+
 
   return;
 

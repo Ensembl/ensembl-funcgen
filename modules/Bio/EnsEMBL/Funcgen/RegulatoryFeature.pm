@@ -328,6 +328,42 @@ sub has_attribute{
   return exists ${$self->attribute_cache}{$fclass}{$dbID};
 }
 
+=head2 has_evidence
+
+  Arg [1]     : None
+  Returntype  : Boolean 
+  Exceptions  : None
+  Description : Returns 1 if has_evidence = 1, nothing otherwise
+
+=cut
+
+sub has_evidence {
+  my ($self) = @_;  
+
+  if(defined $self->{has_evidence} && $self->{has_evidence} == 1){
+    return 1;
+  }
+  else {
+    return;
+  }
+}
+
+=head2 cell_type_count
+
+  Arg [1]     : None 
+  Returntype  : SCALAR 
+  Exceptions  : None
+  Description : Returns the amount of cells where this RegFeat is active
+
+=cut
+
+sub cell_type_count {
+  my ($self) = @_;
+
+  return($self->{cell_type_count});
+}
+
+
 =head2 get_focus_attributes
 
   Arg [1]    : None

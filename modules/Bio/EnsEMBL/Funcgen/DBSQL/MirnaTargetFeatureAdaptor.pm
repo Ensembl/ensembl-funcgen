@@ -108,6 +108,7 @@ sub _columns {
       mitaf.accession
       mitaf.evidence
       mitaf.method
+      mitaf.supporting_information
 	   );
 }
 
@@ -153,6 +154,7 @@ sub _objs_from_sth {
       $accession,
       $evidence,
       $method,
+      $supporting_information,
 	   );
 
 	$sth->bind_columns(
@@ -168,6 +170,7 @@ sub _objs_from_sth {
              \$accession,
              \$evidence,
              \$method,
+             \$supporting_information,
 					  );
 
 
@@ -211,7 +214,7 @@ sub _objs_from_sth {
 
 
 	  #Get the FeatureSet/Type objects
-	  $fset_hash{$fset_id} = $fset_adaptor->fetch_by_dbID($fset_id) if(! exists $fset_hash{$fset_id});
+	  $fset_hash{$fset_id}   = $fset_adaptor->fetch_by_dbID($fset_id) if(! exists $fset_hash{$fset_id});
 	  $ftype_hash{$ftype_id} = $ftype_adaptor->fetch_by_dbID($ftype_id) if(! exists $ftype_hash{$ftype_id});
 
 	  # Get the slice object
@@ -326,8 +329,9 @@ sub store{
       feature_set_id,
       accession,
       evidence,
-      method
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      method,
+      supporting_information
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	");
 
 	my $db = $self->db();
@@ -349,16 +353,17 @@ sub store{
 	  my $seq_region_id;
 	  ($mrna_f, $seq_region_id) = $self->_pre_store($mrna_f);
 
-	  $sth->bind_param(1,  $seq_region_id,                 SQL_INTEGER);
-	  $sth->bind_param(2,  $mrna_f->start,                 SQL_INTEGER);
-	  $sth->bind_param(3,  $mrna_f->end,                   SQL_INTEGER);
-	  $sth->bind_param(4,  $mrna_f->strand,                SQL_TINYINT);
-	  $sth->bind_param(5,  $mrna_f->display_label,         SQL_VARCHAR);
-	  $sth->bind_param(6,  $mrna_f->feature_type->dbID,    SQL_INTEGER);
-	  $sth->bind_param(7,  $mrna_f->feature_set->dbID,     SQL_INTEGER);
-    $sth->bind_param(8,  $mrna_f->accession,             SQL_VARCHAR);
-    $sth->bind_param(9,  $mrna_f->evidence,              SQL_VARCHAR);
-    $sth->bind_param(10, $mrna_f->method,                SQL_VARCHAR);
+	  $sth->bind_param(1,  $seq_region_id,                  SQL_INTEGER);
+	  $sth->bind_param(2,  $mrna_f->start,                  SQL_INTEGER);
+	  $sth->bind_param(3,  $mrna_f->end,                    SQL_INTEGER);
+	  $sth->bind_param(4,  $mrna_f->strand,                 SQL_TINYINT);
+	  $sth->bind_param(5,  $mrna_f->display_label,          SQL_VARCHAR);
+	  $sth->bind_param(6,  $mrna_f->feature_type->dbID,     SQL_INTEGER);
+	  $sth->bind_param(7,  $mrna_f->feature_set->dbID,      SQL_INTEGER);
+    $sth->bind_param(8,  $mrna_f->accession,              SQL_VARCHAR);
+    $sth->bind_param(9,  $mrna_f->evidence,               SQL_VARCHAR);
+    $sth->bind_param(10, $mrna_f->method,                 SQL_VARCHAR);
+    $sth->bind_param(11, $mrna_f->supporting_information, SQL_VARCHAR);
 
 	  $sth->execute();
 	  $mrna_f->dbID( $self->last_insert_id );

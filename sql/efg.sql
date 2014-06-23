@@ -63,18 +63,20 @@
 DROP TABLE IF EXISTS `regulatory_feature`;
 CREATE TABLE `regulatory_feature` (
   `regulatory_feature_id` int(10) unsigned NOT NULL auto_increment,
+  `feature_set_id`	int(10) unsigned default NULL,
+  `feature_type_id`	int(10) unsigned default NULL,
+  `binary_string` varchar(500) default NULL,
+  `display_label` varchar(80) default NULL,
+  `stable_id` mediumint(8) unsigned default NULL,
   `seq_region_id` int(10) unsigned NOT NULL,
+  `seq_region_strand` tinyint(1) NOT NULL,
   `seq_region_start` int(10) unsigned NOT NULL,
   `seq_region_end` int(10) unsigned NOT NULL,
-  `seq_region_strand` tinyint(1) NOT NULL,
-  `display_label` varchar(80) default NULL,
-  `feature_type_id`	int(10) unsigned default NULL,
-  `feature_set_id`	int(10) unsigned default NULL,
-  `stable_id` mediumint(8) unsigned default NULL,
-  `binary_string` varchar(500) default NULL,
-  `projected` boolean default FALSE,
   `bound_start_length` mediumint(3) unsigned NOT NULL,
   `bound_end_length` mediumint(3) unsigned NOT NULL,
+  `projected` boolean default FALSE,
+  `cell_type_count` smallint(6) DEFAULT 0,
+  `has_evidence` tinyint(1)  DEFAULT NULL,
   PRIMARY KEY  (`regulatory_feature_id`),
   UNIQUE KEY `fset_seq_region_idx` (`feature_set_id`, `seq_region_id`,`seq_region_start`),
   KEY `feature_type_idx` (`feature_type_id`),
@@ -230,44 +232,45 @@ CREATE TABLE `motif_feature` (
 @colour  #FFCC66
 
 @column mirna_target_feature_id    Internal ID
+@column accession           Accession number given by data source
+@column display_label       Text display label
+@column evidence            Evidence level provided by data source
+@column interdb_stable_id   Unique key, provides linkability between DBs
+@column method              Method used to identify miRNA target
 @column seq_region_id       @link seq_region table ID
 @column seq_region_start    Start position of this feature
 @column seq_region_end      End position of this feature
 @column seq_region_strand   Strand orientation of this feature
-@column display_label       Text display label
 @column feature_type_id     @link feature_type table ID
 @column feature_set_id      @link feature_set table ID
-@column interdb_stable_id   Unique key, provides linkability between DBs
-@column accession           Accession number given by data source
-@column evidence            Evidence level provided by data source
 
-@see seq_region
 @see feature_set
 @see feature_type
+@see seq_region
 */
 
 
 DROP TABLE IF EXISTS `mirna_target_feature`;
 CREATE TABLE `mirna_target_feature` (
   `mirna_target_feature_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `feature_set_id` int(10) unsigned NOT NULL,
+  `feature_type_id` int(10) unsigned DEFAULT NULL,
+  `accession` varchar(60) DEFAULT NULL,
+  `display_label` varchar(60) DEFAULT NULL,
+  `evidence` varchar(60) DEFAULT NULL,
+  `interdb_stable_id` int(10) unsigned DEFAULT NULL,
+  `method` varchar(60) DEFAULT NULL,
   `seq_region_id` int(10) unsigned NOT NULL,
   `seq_region_start` int(10) unsigned NOT NULL,
   `seq_region_end` int(10) unsigned NOT NULL,
   `seq_region_strand` tinyint(1) NOT NULL,
-  `display_label` varchar(60) DEFAULT NULL,
-  `feature_type_id` int(10) unsigned DEFAULT NULL,
-  `feature_set_id` int(10) unsigned NOT NULL,
-  `interdb_stable_id` int(10) unsigned DEFAULT NULL,
-  `accession` varchar(60) DEFAULT NULL,
-  `evidence` varchar(60) DEFAULT NULL,
-  `method` varchar(60) DEFAULT NULL,
+  `supporting_information` varchar(100) DEFAULT NULL,
   PRIMARY KEY (`mirna_target_feature_id`),
   UNIQUE KEY `interdb_stable_id_idx` (`interdb_stable_id`),
   KEY `feature_type_idx` (`feature_type_id`),
   KEY `feature_set_idx` (`feature_set_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
 
 
 /**

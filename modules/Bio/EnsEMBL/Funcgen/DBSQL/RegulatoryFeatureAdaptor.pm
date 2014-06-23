@@ -647,8 +647,9 @@ sub store{
 			bound_end_length,      seq_region_strand,
       display_label,         feature_type_id,
       feature_set_id,        stable_id,
-      binary_string,         projected
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+      binary_string,         projected,
+      has_evidence,          cell_type_count
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
  #bound_seq_region_start,	bound_seq_region_end
 
@@ -696,7 +697,9 @@ sub store{
 	$sth->bind_param(9,  $rf->feature_set->dbID,   SQL_INTEGER);
 	$sth->bind_param(10, $sid,                     SQL_INTEGER);
 	$sth->bind_param(11, $rf->binary_string,       SQL_VARCHAR);
-	$sth->bind_param(12, $rf->is_projected,        SQL_BOOLEAN);
+  $sth->bind_param(12, $rf->is_projected,        SQL_BOOLEAN);
+  $sth->bind_param(13, $rf->has_evidence,        SQL_BOOLEAN);
+	$sth->bind_param(13, $rf->cell_type_count,     SQL_INTEGER);
 
 	#Store and set dbID
 	$sth->execute;
