@@ -1187,13 +1187,10 @@ sub define_DataSet {
     
     if(defined $ssets){
       
-      if((scalar(@$ssets) == 1) &&
-          check_ref($ssets->[0], 'Bio::EnsEMBL::Funcgen::ResultSet')){
-        $rset = $ssets->[0];
-      }
-      else{ #We likely have InputSubsets
-        $rset = $self->define_ResultSet(@_);
-      }
+      if(! ((scalar(@$ssets) == 1) &&
+            check_ref($ssets->[0], 'Bio::EnsEMBL::Funcgen::ResultSet'))){ #We likely have InputSubsets
+        $ssets = [$self->define_ResultSet(@_)];
+      }#else we have a single ResultSet
     }
     else{
       throw("Mandatory parameter not defined:\t-SUPPORTING_SETS"); 
@@ -1205,11 +1202,9 @@ sub define_DataSet {
 
   #Generate new DataSet first to validate the parameters
   my $new_dset = Bio::EnsEMBL::Funcgen::DataSet->new
-    (
-     -name            => $name,
+    (-name            => $name,
      -feature_set     => $fset,
-     -supporting_sets => [$rset],
-    );
+     -supporting_sets => $ssets);
   my $stored_dset = $dset_adaptor->fetch_by_name($name);
  
   #Could we actually cascade a compare_to from DataSet to feature_set and result_set?
