@@ -14,13 +14,11 @@
 
 
 /**
-@header patch_75_76_e.sql - reg build adjustment
-@desc add has_evidence, cell_type_count to regulatory_feature, change UNIQUE
+@header patch_75_76_g.sql - FANTOM adjustment
+@desc add feature_type.class Transcription Start Site
 
 */
-ALTER TABLE regulatory_feature ADD has_evidence TINYINT(1);
-ALTER TABLE regulatory_feature ADD cell_type_count smallint(6);
-ALTER TABLE regulatory_feature DROP DROP INDEX fset_seq_region_idx;
-ALTER TABLE regulatory_feature ADD UNIQUE fset_seq_region_idx (`feature_set_id`, `seq_region_id`, `seq_region_start`, `feature_type_id`);
 
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_75_76_e.sql|add has_evidence, cell_type_count to regulatory_feature, adjust UNIQUE constraint');
+ALTER TABLE feature_type CHANGE class class enum('Insulator','DNA','Regulatory Feature','Histone','RNA','Polymerase','Transcription Factor','Transcription Factor Complex','Regulatory Motif','Enhancer','Expression','Pseudo','Open Chromatin','Search Region','Association Locus','Segmentation State','DNA Modification', 'Transcription Start Site') DEFAULT NULL;
+
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_75_76_g.sql|add feature_type.class Transcription Start Site');
