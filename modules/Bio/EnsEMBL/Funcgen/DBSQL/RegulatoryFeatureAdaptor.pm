@@ -352,28 +352,44 @@ sub _objs_from_sth {
   my $stable_id_prefix = $self->stable_id_prefix;
 
 	my (
-	    $dbID,                  $efg_seq_region_id,
-	    $seq_region_start,      $seq_region_end,
-	    $seq_region_strand,     $bound_start_length,
-      $bound_end_length,  $display_label,
-      $ftype_id,              $fset_id,
-      $stable_id,             $attr_id,
-      $attr_type,             $bin_string,
-      $projected,             $has_evidence,
-      $cell_type_count
+	    $dbID,                  
+      $efg_seq_region_id,
+	    $seq_region_start,      
+      $seq_region_end,
+	    $seq_region_strand,     
+      $bound_start_length,
+      $bound_end_length,  
+      $display_label,
+      $ftype_id,              
+      $fset_id,
+      $stable_id,             
+      $attr_id,
+      $attr_type,             
+      $bin_string,
+      $projected,             
+      $has_evidence,
+      $cell_type_count,
      );
 
 	$sth->bind_columns
     (
-     \$dbID,              \$efg_seq_region_id,
-     \$seq_region_start,  \$seq_region_end,
-     \$seq_region_strand, \$bound_start_length,
-     \$bound_end_length,  \$display_label,
-     \$ftype_id,          \$fset_id,
-     \$stable_id,         \$bin_string,
-     \$projected,         \$has_evidence,
-     \$cell_type_count,   \$attr_id,
-     \$attr_type
+     \$dbID,              
+     \$efg_seq_region_id,
+     \$seq_region_start,  
+     \$seq_region_end,
+     \$seq_region_strand, 
+     \$bound_start_length,
+     \$bound_end_length,  
+     \$display_label,
+     \$ftype_id,          
+     \$fset_id,
+     \$stable_id,         
+     \$bin_string,
+     \$projected,         
+     \$attr_id,
+     \$attr_type,
+     \$has_evidence,
+     \$cell_type_count,
     );
 
 	my ($asm_cs, $cmp_cs, $asm_cs_name);
@@ -602,7 +618,6 @@ sub _objs_from_sth {
 
   #handle last record
   if ($reg_feat) {
-
     $reg_feat->attribute_cache(\%reg_attrs);
     push @features, $reg_feat;
   }
