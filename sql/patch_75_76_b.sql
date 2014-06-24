@@ -27,6 +27,30 @@ ALTER TABLE experiment ADD COLUMN display_url varchar(255) DEFAULT NULL;
 ALTER TABLE result_set ADD COLUMN experiment_id int(10) unsigned default NULL;
 ALTER TABLE result_set ADD KEY    experiment_idx (experiment_id);
 
+
+
+/* Data patch for CRCh37 75 data. In 76 this data was all re-imported from scratch.
+ * Do all the ADD actions from the rest of the patch first.
+ * Then do these updates (do not do any of the other updates, as they rely on freshly imported data):
+ * UPDATE feature_set fs, input_set inp set fs.experiment_id=inp.experiment_id where fs.input_set_id=inp.input_set_id;
+ * Query OK, 529 rows affected (0.02 sec)
+ * UPDATE result_set rs, supporting_set ss, data_set ds, feature_set fs set rs.experiment_id=fs.experiment_id 
+ *  WHERE fs.experiment_id is not NULL and fs.feature_set_id=ds.feature_set_id and ds.data_set_id=ss.data_set_id 
+ *  AND   ss.supporting_set_id=rs.result_set_id and ss.type='result';
+ * Query OK, 481 rows affected (0.05 sec)
+ * Mismatch is due to some result_sets being assocaited with >1 feature_set
+ * 
+ * UPDATE experiment e, input_set inp, input_set_input_subset isiss, input_subset iss set e.archive_id=iss.archive_id, e.display_url=iss.display_url
+ *  WHERE e.experiment_id=inp.experiment_id and inp.input_set_id=isiss.input_set_id and isiss.input_subset_id=iss.input_subset_id 
+ *  AND iss.name not like "%WCE%" and iss.is_control=0;
+ * Query OK, 530 rows affected (0.03 sec)
+ * 
+ * Then do all the DROP actions from the rest of the patch.
+ * 
+ */
+
+
+
 ALTER TABLE feature_set DROP COLUMN input_set_id;
 ALTER TABLE feature_set ADD COLUMN experiment_id int(10) unsigned default NULL;
 ALTER TABLE feature_set ADD KEY    experiment_idx (experiment_id);
