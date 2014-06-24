@@ -141,15 +141,17 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($stable_id, $attr_cache, $bin_string, $projected)
-    = rearrange(['STABLE_ID', 'ATTRIBUTE_CACHE', 'BINARY_STRING', 'PROJECTED'], @_);
+  my ($stable_id, $attr_cache, $bin_string, $projected, $has_evidence, $cell_type_count)
+    = rearrange(['STABLE_ID', 'ATTRIBUTE_CACHE', 'BINARY_STRING', 'PROJECTED', 'HAS_EVIDENCE', 'CELL_TYPE_COUNT'], @_);
 
   #None of these are mandatory at creation
   #under different use cases
-  $self->{binary_string} = $bin_string if defined $bin_string;
-  $self->{stable_id}     = $stable_id  if defined $stable_id;
-  $self->{projected}     = $projected  if defined $projected;
-  $self->attribute_cache($attr_cache)  if $attr_cache;
+  $self->{binary_string} = $bin_string    if defined $bin_string;
+  $self->{stable_id}     = $stable_id     if defined $stable_id;
+  $self->{projected}     = $projected     if defined $projected;
+  $self->{has_evidence}  = $has_evidence  if defined $has_evidence;
+  $self->{cell_type_count}  = $cell_type_count  if defined $cell_type_count;
+  $self->attribute_cache($attr_cache)     if $attr_cache;
 
   return $self;
 }
