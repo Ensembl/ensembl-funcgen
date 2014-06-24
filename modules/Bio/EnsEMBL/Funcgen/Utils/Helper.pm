@@ -1384,8 +1384,8 @@ sub rollback_FeatureSet {
   
     #Delete regbuild strings first
     if ( $fset->feature_class eq 'regulatory' ) {  
-      $sql = "DELETE from regbuild_string where feature_set_id=" . $fset->dbID;
-      $db->rollback_table( $sql, 'regbuild_string', 'feature_set_id' );
+      $sql = "DELETE from regbuild_string where name like 'regbuild." . $fset->cell_type->name.".%'";
+      $db->rollback_table( $sql, 'regbuild_string', 'regbuild_string_id' );
       $self->log( "Deleted regbuild_string entries for:\t" . $fset->name );
     }  
   
