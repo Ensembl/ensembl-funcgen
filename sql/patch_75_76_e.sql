@@ -15,10 +15,12 @@
 
 /**
 @header patch_75_76_e.sql - reg build adjustment
-@desc add has_evidence, cell_type_count to regulatory_feature
+@desc add has_evidence, cell_type_count to regulatory_feature, change UNIQUE
 
 */
 ALTER TABLE regulatory_feature ADD has_evidence TINYINT(1);
 ALTER TABLE regulatory_feature ADD cell_type_count smallint(6);
+ALTER TABLE regulatory_feature DROP DROP INDEX fset_seq_region_idx;
+ALTER TABLE regulatory_feature ADD UNIQUE fset_seq_region_idx (`feature_set_id`, `seq_region_id`, `seq_region_start`, `feature_type_id`);
 
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_75_76_e.sql|add has_evidence, cell_type_count to regulatory_feature');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_75_76_e.sql|add has_evidence, cell_type_count to regulatory_feature, adjust unique');

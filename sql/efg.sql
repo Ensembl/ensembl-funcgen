@@ -76,9 +76,9 @@ CREATE TABLE `regulatory_feature` (
   `bound_end_length` mediumint(3) unsigned NOT NULL,
   `projected` boolean default FALSE,
   `cell_type_count` smallint(6) DEFAULT 0,
-  `has_evidence` tinyint(1)  DEFAULT NULL,
+  `has_evidence` tinyint(1)  DEFAULT 0,
   PRIMARY KEY  (`regulatory_feature_id`),
-  UNIQUE KEY `fset_seq_region_idx` (`feature_set_id`, `seq_region_id`,`seq_region_start`),
+  UNIQUE KEY `fset_seq_region_idx` (`feature_set_id`, `feature_type_id`, `seq_region_id`,`seq_region_start`),
   KEY `feature_type_idx` (`feature_type_id`),
   KEY `stable_id_idx` (`stable_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
