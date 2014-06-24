@@ -470,6 +470,12 @@ sub _set_Sets_and_types{
   my ($self, $fset, $ssets) = @_;
 
   assert_ref($ssets, 'ARRAY', 'Supporting sets');
+  
+  if(scalar(@$ssets) < 1){
+    throw('Must pass an arrayref of supporting Sets e.g. InputSubsets, ResultSets or FeatureSets');  
+  }
+  
+  
   my ($ftype, $ctype, $fclass, $ftype_name, $ctype_name);
 
   if(defined $fset){
