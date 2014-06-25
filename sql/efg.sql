@@ -1466,13 +1466,14 @@ CREATE TABLE `meta` (
 INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 
 -- Update and remove these for each release to avoid erroneous patching
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '75');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_74_75_a.sql|schema_version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_74_75_b.sql|result_set.name_unique');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_74_75_c.sql|input_subset.analysis_id_experiment_idx');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_74_75_d.sql|result_set_input.table_name_input_subset');
--- patch_74_75_e.sql was post-poned
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_74_75_f.sql|experiment.feature_cell_type_id');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '76');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch_75_76_a.sql|schema_version')
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch_75_76_b.sql|result/feature_set.experiment_id & experiment/input_subset.display_url/archive_id')
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch_75_76_c.sql|cell_type.display_label')
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch_75_76_d.sql|feature_set.type mirna; object_xref.ensembl_object_type add MirnaTargetFeature')
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch_75_76_e.sql|add has_evidence, cell_type_count to regulatory_feature, adjust UNIQUE constraint')
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch_75_76_f.sql|add feature_type.class Transcription Start Site')
+
 
 
 /**
