@@ -88,13 +88,14 @@ sub new {
         -display_label     => 'TarBase miRNA target predictions',
         -description       => 'TarBase miRNA target predictions',
         -analysis          => 'TarBase_v6.0', #analysis config key name not object
-        -feature_class     => 'mirna'
+        -feature_class     => 'mirna_target'
       },
     }
   };
 
   #$self->validate_and_store_feature_types;
   $self->validate_and_store_config([keys %{$self->{static_config}{feature_sets}}]);
+
   $self->set_feature_sets;
 
   return $self;
@@ -114,15 +115,15 @@ sub parse_and_load{
 
   if($self->species eq 'homo_sapiens'){
     $external_db_name    = 'homo_sapiens_core_Gene';
-    $external_db_release = '73_37';
+    $external_db_release = '76_38';
   }
   elsif($self->species eq 'mus_musculus'){
     $external_db_name    = 'mus_musculus_core_Gene';
-    $external_db_release = '73_38';
+    $external_db_release = '76_38';
   }
   elsif($self->species eq 'rattus_norvegicus'){
     $external_db_name    = 'rattus_norvegicus_core_Gene';
-    $external_db_release = '73_5';
+    $external_db_release = '76_5';
   }
   else{
     throw($self->species . " not implemented. Add here.")
@@ -144,7 +145,7 @@ sub parse_and_load{
   # Currently we only keep human, mouse and rat
 
   my $id_lookup = {};
-  open(my $fh,'<',$files->[1]) or die "Can't access ". $files->[1];
+  open(my $fh,'<',$files->[1]) or throw "Can't access ". $files->[1];
     while(my $line = <$fh>){
       chomp($line);
       if($line !~ /^MI|MIMAT\d{7}\t[a-z;0-9\.\-A-Z]*$/){
@@ -162,6 +163,8 @@ sub parse_and_load{
     }
   close($fh);
 
+  $self->log_header('Parsed aliases');
+
   my $mirnafeat_a = $self->db->get_MirnaTargetFeatureAdaptor;
   my $dbentry_a   = $self->db->get_DBEntryAdaptor;
   my $feattype_a  = $self->db->get_FeatureTypeAdaptor;
@@ -169,7 +172,7 @@ sub parse_and_load{
   my $slice_a     = $self->db->dnadb->get_SliceAdaptor;
 
   my $fset_config      = $self->{static_config}{feature_sets}{'TarBase miRNA'};
-  my $fset              = $fset_config->{feature_set};
+  my $fset             = $fset_config->{feature_set};
 
   $self->rollback_FeatureSet($fset);
   $self->log_header("Rollback old records in mirna_target_features manually");
@@ -215,17 +218,28 @@ sub parse_and_load{
       $log2->{different_species}++;
       next;
     }
+    # MIMAT0000416|ENSG00000137801|Proteomics|Computational|39581895_39581923|MRE1|spliced_no|
+    # http://diana.imis.athena-innovation.gr/DianaTools/index.php?r=tarbase/index&mirnas=MIMAT0000416&genes=ENSG00000137801
+    
+    # MIMAT0000416|ENSG00000137801|Proteomics|Computational|39590612_39590623|MRE2|spliced_yes|
+    # http://diana.imis.athena-innovation.gr/DianaTools/index.php?r=tarbase/index&mirnas=MIMAT0000416&genes=ENSG00000137801
+    
+    # MIMAT0000416|ENSG00000137801|Proteomics|Computational|39591191_39591207|MRE2|spliced_yes|
+    # http://diana.imis.athena-innovation.gr/DianaTools/index.php?r=tarbase/index&mirnas=MIMAT0000416&genes=ENSG00000137801
+    
     # MIMAT0000416|ENSG00000101158|Proteomics|Computational|57569740_57569768|
     # http://diana.imis.athena-innovation.gr/DianaTools/index.php?r=tarbase/index&mirnas=MIMAT0000416&genes=ENSG00000101158
 
     chomp($line);
 
     # 0: MIMAT0000416
-    # 1: ENSG00000101158
+    # 1: ENSG00000137801
     # 2: Proteomics
     # 3: Computational
-    # 4: 57569740_57569768
-    # 5: http://diana.imis.athena-innovation.gr/DianaTools/index.php?r=tarbase/index&mirnas=MIMAT0000416&genes=ENSG00000101158
+    # 4: 39581895_39581923
+    # 5: MRE1
+    # 6: spliced_no
+    # 7: http://diana.imis.athena-innovation.gr/DianaTools/index.php?r=tarbase/index&mirnas=MIMAT0000416&genes=ENSG00000137801
 
     my @fields = split(/\|/,$line);
     my $mi_rna_id = $fields[0];
@@ -233,7 +247,9 @@ sub parse_and_load{
     my $method    = $fields[2];
     my $evidence  = $fields[3];
     my $location  = $fields[4];
-    my $link      = $fields[5];
+    my $mre       = $fields[5];
+    my $spliced   = $fields[6];
+    my $link      = $fields[7];
 
     # MI0000060 -> cel-miR-87-3p
     my $mi_rna_name = $id_lookup->{$mi_rna_id};
@@ -352,7 +368,7 @@ sub parse_and_load{
 
   close $fh;
   my $errors = $self->{_default_log_dir} . "/tarbase_import.$$.log";
-    open($fh,'>',$errors) or die "Can not access '$errors'\n$!";
+    open($fh,'>',$errors) or throw "Can not access '$errors'\n$!";
 
       foreach my $message (sort keys %{$log}){
         next if($message =~ /stored_records|stored_miRNA/);

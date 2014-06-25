@@ -165,15 +165,16 @@ sub set_feature_sets{
 	#simply as analyses, feature_sets and feature_types?
 	my $fset_config = 	$self->{static_config}{feature_sets}{$fset_name}{feature_set};
 
-
 	if(! defined $fset){
 	  my ($name, $analysis, $ftype, $display_label, $desc);
+
 	  my $fset_analysis_key = (exists ${$fset_config}{-analysis})      ? '-analysis'      : '-ANALYSIS';
 	  my $fset_name_key     = (exists ${$fset_config}{-name})          ? '-name'          : '-NAME';
 	  my $fset_ftype_key    = (exists ${$fset_config}{-feature_type})  ? '-feature_type'  : '-FEATURE_TYPE';
 	  my $fset_dlabel_key   = (exists ${$fset_config}{-display_label}) ? '-display_label' : '-DISPLAY_LABEL';
 	  my $fset_desc_key     = (exists ${$fset_config}{-description})   ? '-description'   : '-DESCRIPTION';
-	  my $fset_fclass_key   = (exists ${$fset_config}{-feature_class}) ? '-feature_class' : 'external';
+
+	  my $fset_fclass_key   = (exists ${$fset_config}{-feature_class}) ? $fset_config->{-feature_class} : 'external';
 	  my $display_name      = (exists ${$fset_config}{$fset_dlabel_key}) ? $fset_config->{$fset_dlabel_key} : $fset_name;
 	  #fset config name be different from key name
 	  my $fs_name           = (exists ${$fset_config}{$fset_name_key}) ? $fset_config->{$fset_name_key} : $fset_name;
@@ -183,15 +184,15 @@ sub set_feature_sets{
 	  #Can't just deref config hash here as we need to deref the nested feature_type and analysis attrs
 
 	  $fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
-													 -name          => $fs_name,
-													 -feature_class => $fset_fclass_key,
-													 -analysis      => ${$fset_config->{$fset_analysis_key}},
-													 -feature_type  => ${$fset_config->{$fset_ftype_key}},
-													 -display_label => $display_name,
-													 -description   => $fset_config->{$fset_desc_key}
-													);
+							 -name          => $fs_name,
+							 -feature_class => $fset_fclass_key,
+							 -analysis      => ${$fset_config->{$fset_analysis_key}},
+							 -feature_type  => ${$fset_config->{$fset_ftype_key}},
+							 -display_label => $display_name,
+							 -description   => $fset_config->{$fset_desc_key}
+								);
 
-	  ($fset) = @{$self->db->get_FeatureSetAdaptor->store($fset)};
+	  ($fset) = @{$self->db->get_FeatureSetAdaptor->store($fset)}; 
 	}
 
 	#Now replace config hash with object

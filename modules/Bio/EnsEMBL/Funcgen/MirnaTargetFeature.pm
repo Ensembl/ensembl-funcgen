@@ -210,5 +210,22 @@ sub method {
   return $_[0]->{'method'};
 }
 
+=head2 supporting_information
+
+  Arg [1]    : (optional) int - stable_id e.g 1
+  Example    : my $acc = $mirna_target_feature->supporting_information();
+  Description: Getter for the supporting_information attribute for this MirnaTargetFeature.
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub supporting_information {
+  return $_[0]->{'supporting_information'};
+}
+
+
 1;
 
