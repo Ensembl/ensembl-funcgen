@@ -105,15 +105,16 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($accession, $evidence, $interdb_stable_id, $method ) = 
-    rearrange (['ACCESSION', 'EVIDENCE', 'INTERDB_STABLE_ID', 'METHOD'], @_);
+  my ($accession, $evidence, $interdb_stable_id, $method, $supporting_information ) = 
+    rearrange (['ACCESSION', 'EVIDENCE', 'INTERDB_STABLE_ID', 'METHOD', 'SUPPORTING_INFORMATION'], @_);
 
   if(! defined $accession){
     throw("Mandatory parameter -accession not defined");
   }
-  $self->{accession} = $accession;
-  $self->{evidence}  = $evidence;
-  $self->{method}    = $method;
+  $self->{accession}              = $accession;
+  $self->{evidence}               = $evidence;
+  $self->{method}                 = $method;
+  $self->{supporting_information} = $supporting_information;
 
   #Remove this method if we interdb_stable_id to SetFeature
   $self->{'interdb_stable_id'} = $interdb_stable_id;
@@ -223,7 +224,13 @@ sub method {
 =cut
 
 sub supporting_information {
-  return $_[0]->{'supporting_information'};
+  my ($self, $info) = @_;
+
+  if(defined $info){
+    $self->{supporting_information} = $info;
+  
+  }
+  return $self->{'supporting_information'};
 }
 
 

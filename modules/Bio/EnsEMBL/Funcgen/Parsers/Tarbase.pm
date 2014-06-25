@@ -251,6 +251,7 @@ sub parse_and_load{
     my $spliced   = $fields[6];
     my $link      = $fields[7];
 
+
     # MI0000060 -> cel-miR-87-3p
     my $mi_rna_name = $id_lookup->{$mi_rna_id};
     if(!$mi_rna_name){
@@ -342,6 +343,7 @@ sub parse_and_load{
        -start         => $sites->{start},
        -end           => $sites->{stop},
        -strand        => $gene->strand,
+       -supporting_information =>"$mre; $spliced",
        );
         $mirnafeat_a->store($feature);
 
