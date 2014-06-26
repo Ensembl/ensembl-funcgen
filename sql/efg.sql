@@ -12,21 +12,21 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-#
-# Ensembl funcgen table definitions
-#
-
-
-# Conventions:
-#  - use lower case and underscores
-#  - internal IDs are integers named tablename_id
-#  - same name is given in foreign key relations
-
-# DO NOT use '---' as a comment, this breaks in macosx mysql?!
-# This also generally applies to all  --[^ ] !?
-
-# Table documentation uses format parsed and defined here
-
+/**
+* Ensembl funcgen table definitions
+*
+*
+*
+* Conventions:
+*  - use lower case and underscores
+*  - internal IDs are integers named tablename_id
+*  - same name is given in foreign key relations
+*
+* DO NOT use '---' as a comment, this breaks in macosx mysql?!
+* This also generally applies to all  --[^ ] !?
+*
+* Table documentation uses format parsed and defined here
+**/
 
 /**
 @header  Main feature tables
@@ -49,15 +49,19 @@
 @column display_label       	Text display label
 @column feature_type_id     	@link feature_type table ID
 @column feature_set_id      	@link feature_set table ID
-@column stable_id	      	Integer stable ID without ENSR prefix
-@column bound_start_length      Distance between start of the feature and start of the bound region
-@column bound_end_length        Distance between end of the bound region and end of this feature
-@column binary_string		Binary representation for the underlying feature sets/types
-@column projected		Boolean, defines whether reg feat structure has been projected to this cell type
+@column stable_id	      	    Integer stable ID without ENSR prefix
+@column bound_start_length    Distance between start of the feature and start of the bound region
+@column bound_end_length      Distance between end of the bound region and end of this feature
+@column binary_string		      Binary representation for the underlying feature sets/types
+@column projected		          Boolean, defines whether reg feat structure has been projected to this cell type
+@column cell_type_count       Integer, precomupted number of cell type specific features with evidence
+@column has_evidence          Boolean, indicates that this feature has evidence on this cell type
 
 @see seq_region
 @see feature_set
 @see feature_type
+
+
 */
 
 DROP TABLE IF EXISTS `regulatory_feature`;
@@ -270,7 +274,7 @@ CREATE TABLE `mirna_target_feature` (
   KEY `feature_type_idx` (`feature_type_id`),
   KEY `feature_set_idx` (`feature_set_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 /**
@@ -476,11 +480,11 @@ DROP TABLE IF EXISTS `feature_type`;
 CREATE TABLE `feature_type` (
 	`feature_type_id` int(10) unsigned NOT NULL auto_increment,
 	`name` varchar(40) NOT NULL,
-	`class` enum('Insulator', 'DNA', 'Regulatory Feature', 'Histone', 'RNA',
-				'Polymerase', 'Transcription Factor', 'Transcription Factor Complex',
-				'Regulatory Motif',  'Enhancer', 'Expression', 'Pseudo',
-				'Open Chromatin', 'Search Region', 'Association Locus', 'Segmentation State',
-				'DNA Modification') default NULL,
+	`class` enum('Insulator','DNA','Regulatory Feature','Histone',
+	             'RNA','Polymerase','Transcription Factor','Transcription Factor Complex',
+	             'Regulatory Motif','Enhancer','Expression','Pseudo','Open Chromatin',
+	             'Search Region','Association Locus','Segmentation State',
+	             'DNA Modification', 'Transcription Start Site') default NULL,
   `analysis_id` smallint(5) unsigned default NULL,
 	`description`  varchar(255) default NULL,
 	`so_accession` varchar(64) DEFAULT NULL,
@@ -588,7 +592,7 @@ CREATE TABLE `supporting_set` (
 @column type		Type of features contained e.g. annotated, external or regualtory
 @column description	Text description
 @column display_label	Shorter more readable version of name
-@column input_set_id    Table ID for @link input_set
+@column experiment_id    Table ID for @link experiment
 
 @see data_set
 @see cell_type
@@ -612,11 +616,12 @@ CREATE TABLE `feature_set` (
    `type` enum('annotated', 'regulatory', 'external', 'segmentation') default NULL,
    `description` varchar(80) default NULL,
    `display_label` varchar(80) default NULL,
-   `input_set_id` int(10) unsigned default NULL,
+   `experiment_id` int(10) unsigned default NULL,
    PRIMARY KEY  (`feature_set_id`),
    KEY `feature_type_idx` (`feature_type_id`),
    UNIQUE KEY `name_idx` (name),
-   KEY cell_type_idx (cell_type_id)
+   KEY cell_type_idx (cell_type_id),
+   KEY experiment_idx (experiment_id)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
@@ -644,19 +649,21 @@ CREATE TABLE `feature_set` (
 
 DROP TABLE IF EXISTS `result_set`;
 CREATE TABLE `result_set` (
-   `result_set_id` int(10) unsigned NOT NULL auto_increment,
-   `analysis_id` smallint(5) unsigned NOT NULL,
-   `name` varchar(100) default NULL,
-   `cell_type_id` int(10) unsigned default NULL,
-   `feature_type_id` int(10) unsigned default NULL,
-   `feature_class` enum('result', 'dna_methylation') DEFAULT NULL,
-   `replicate`       tinyint(3) unsigned NOT NULL,
+   `result_set_id`    int(10) unsigned NOT NULL auto_increment,
+   `analysis_id`      smallint(5) unsigned NOT NULL,
+   `name`             varchar(100) default NULL,
+   `cell_type_id`     int(10) unsigned default NULL,
+   `feature_type_id`  int(10) unsigned default NULL,
+   `feature_class`    enum('result', 'dna_methylation') DEFAULT NULL,
+   `replicate`        tinyint(3) unsigned NOT NULL,
+   `experiment_id`    int(10) unsigned default NULL,
    PRIMARY KEY  (`result_set_id`),
    UNIQUE KEY `name_idx` (`name`),
    KEY cell_type_idx (cell_type_id),
    KEY feature_type_idx (feature_type_id),
    KEY analysis_idx (analysis_id),
-   KEY feature_class_idx (feature_class)
+   KEY feature_class_idx (feature_class),
+   KEY experiment_idx (experiment_id)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
@@ -766,8 +773,6 @@ CREATE TABLE `input_set` (
 @column experiment_id	 Internal ID
 @column feature_type_id	 @link feature_type table ID
 @column name	         Name of input_subset e.g. file name
-@column archive_id	 ENA experiment identifier enabling access to specific raw data
-@column display_url      Http link to source file
 @column replicate        Number of the replicate. 0 represents  a pooled subset, 255 is a subset we have not processed
 @column is_control       Subset is a control
 
@@ -784,13 +789,10 @@ CREATE TABLE `input_subset` (
     `experiment_id`   int(10)     unsigned NOT NULL,
     `feature_type_id` int(10)     unsigned NOT NULL,
     `name`            varchar(100)         NOT NULL,
-    `archive_id`      varchar(20)          DEFAULT NULL,
-    `display_url`     varchar(255)         DEFAULT NULL,
     `replicate`       tinyint(3) unsigned  NOT NULL,
     `is_control`      tinyint(3) unsigned  NOT NULL,
    PRIMARY KEY  (`input_subset_id`),
    UNIQUE `name_exp_idx` (`name`, `experiment_id`),
-   KEY `archive_idx`(`archive_id`),
    KEY analysis_idx (analysis_id),
    KEY experiment_idx (experiment_id)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
@@ -969,6 +971,8 @@ CREATE TABLE `probe` (
 @column description             Text description
 @column name                    Name of experiment
 @column primary_design_type     e.g. binding_site_identification, preferably EFO term
+@column archive_id              ENA experiment identifier enabling access to specific raw data
+@column display_url             Http link to source file
 
 @see cell_type
 @see experimental_group
@@ -987,6 +991,8 @@ CREATE TABLE `experiment` (
    `description`            VARCHAR(255)          DEFAULT NULL,
    `name`                   VARCHAR(100)          DEFAULT NULL,
    `primary_design_type`    VARCHAR(30)           DEFAULT NULL,
+   `archive_id`             varchar(60)           DEFAULT NULL,
+   `display_url`            varchar(255)          DEFAULT NULL,
    PRIMARY KEY  (`experiment_id`),
    UNIQUE KEY `name_idx` (`name`),
    KEY `design_idx` (`primary_design_type`),
@@ -1185,7 +1191,7 @@ DROP TABLE IF EXISTS `cell_type`;
 CREATE TABLE `cell_type` (
    `cell_type_id` int(10) unsigned NOT NULL auto_increment,
    `name`  varchar(120) not NULL,
-   `display_label` varchar(20) default NULL,
+   `display_label` varchar(30) default NULL,
    `description` varchar(80) default NULL,
    `gender` enum('male', 'female', 'hermaphrodite') default NULL,
    `efo_id` varchar(20) DEFAULT NULL,
@@ -1467,13 +1473,13 @@ INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 
 -- Update and remove these for each release to avoid erroneous patching
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '76');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch_75_76_a.sql|schema_version')
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch_75_76_b.sql|result/feature_set.experiment_id & experiment/input_subset.display_url/archive_id')
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch_75_76_c.sql|cell_type.display_label')
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch_75_76_d.sql|feature_set.type mirna; object_xref.ensembl_object_type add MirnaTargetFeature')
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch_75_76_e.sql|add has_evidence, cell_type_count to regulatory_feature, adjust UNIQUE constraint')
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch_75_76_f.sql|add feature_type.class Transcription Start Site')
 
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_75_76_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_75_76_b.sql|result/feature_set.experiment_id & experiment/input_subset.display_url/archive_id');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_75_76_c.sql|cell_type.display_label');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_75_76_d.sql|feature_set.type mirna; object_xref.ensembl_object_type add MirnaTargetFeature');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_75_76_e.sql|add has_evidence, cell_type_count to regulatory_feature');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_75_76_f.sql|add feature_type.class Transcription Start Site');
 
 
 /**
@@ -1515,7 +1521,7 @@ CREATE TABLE `meta_coord` (
 @see associcated_group
 @see xref
 */
-
+DROP TABLE IF EXISTS `associated_xref`;
 CREATE TABLE `associated_xref` (
   `associated_xref_id`  int(10)       unsigned NOT NULL AUTO_INCREMENT,
   `object_xref_id`      int(10)       unsigned NOT NULL DEFAULT '0',
@@ -1540,7 +1546,7 @@ CREATE TABLE `associated_xref` (
 @column associated_group_id Associated group id. Primary key, internal identifier
 @column description Optional description for this group
 */
-
+DROP TABLE IF EXISTS `associated_group`;
 CREATE TABLE `associated_group` (
   `associated_group_id` int(10)      unsigned NOT NULL AUTO_INCREMENT,
   `description`         varchar(128)          DEFAULT NULL,
