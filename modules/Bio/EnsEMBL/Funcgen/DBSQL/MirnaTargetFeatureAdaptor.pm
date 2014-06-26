@@ -290,6 +290,7 @@ sub _objs_from_sth {
       'accession'           => $accession,
       'evidence'            => $evidence,
       'method'              => $method,
+      'supporting_information' => $supporting_information,
 		 });
 	  }
 
@@ -347,7 +348,7 @@ sub store{
   		warning('MirnaTargetFeature [' . $mrna_f->dbID() . '] is already stored in the database');
   		next FEATURE;
 	  }
-    
+
 	  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $mrna_f->feature_set);
 
 	  my $seq_region_id;
