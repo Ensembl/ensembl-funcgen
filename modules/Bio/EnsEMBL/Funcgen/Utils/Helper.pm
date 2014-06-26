@@ -1002,7 +1002,7 @@ sub _validate_rollback_Set {
     #this would only be unsafe if we ever want to treat sets differently wrt recovery
     #that will never happen  
      
-     
+    $recover ||=0; #to avoid undef in debug  
     $self->debug(1, "rollback: if ((\$rollback_level($rollback_level) >= \$rollback_modes{$set_type}(".$rollback_modes{$set_type}.")) ||\n".
       "(! \$stored_set->has_status('IMPORTED')(".$stored_set->has_status('IMPORTED').")) ||\n".
       " \$recover($recover))\n". 
