@@ -63,6 +63,14 @@ segmentation	$name	$type	$location
 
 =cut
 
+# TODO Careful that segmentation cell type names are not clean
+# TODO Generate Exons file
+# TODO Generate TSS file
+# TODO Generate chromosome lengths from database
+# TODO Allow 2 TFS to create feature in the absence of DNase
+# TODO Allow overlaps with flanking regions
+# TODO Filter out blacklisted regions
+
 use strict;
 use warnings;
 use File::Path qw(mkpath);
