@@ -57,7 +57,7 @@ limitations under the License.
                         NOTE: FeatureType, CellType and Analysis(inc norm) entries must already 
                               exist in the eFG DB. See ensembl-funcgen/script/import/import_types.pl
   --exp_date            The date for the experiment.
-  --result_files        Space separated list of result files paths (Used in InputSet imports e.g. Bed).
+  --input_files         Space separated list of result files paths (Used in InputSet imports e.g. Bed).
   --slices              Space separated list of slice names|seq_region_names to import (only works for -input_set import)
   --skip_slices         Space separated list of seq_region names to skip (only works for -input_set import)
   --config_file         User defned config file (see import_config.pm.example)
@@ -159,7 +159,7 @@ my ($input_name, $input_dir, $name, $rset_name, $output_dir, $loc, $contact, $gr
 my ($assm_ver, $help, $man, $species, $nmethod, $dnadb, $array_set, $array_name, $vendor, $exp_date, $ucsc);
 my ($ctype, $ftype, $recover, $mage_tab, $update_xml, $write_mage, $no_mage, $farm, $exp_set, $old_dvd_format);
 my ($reg_host, $reg_user, $reg_port, $reg_pass, $input_feature_class, $lsf_host, $batch_job, $prepared);
-my ($total_features, $parser, $fanal, $release, $format, $on_farm, @result_files, @slices, @skip_slices);
+my ($total_features, $parser, $fanal, $release, $format, $on_farm, @input_files, @slices, @skip_slices);
 my ($merged_replicates, $config_file);
 
 my $data_dir = $ENV{'EFG_DATA'};
@@ -195,7 +195,7 @@ GetOptions
    "cell_type=s"           => \$ctype,
    "norm_method=s"         => \$nmethod,
    "exp_date=s"            => \$exp_date,
-   'result_files=s{,}'     => \@result_files,
+   'input_files=s{,}'     => \@input_files,
    'merged_replicates'     => \$merged_replicates,
    'slices=s{,}'           => \@slices,
    'skip_slices=s{,}'      => \@skip_slices,
@@ -279,7 +279,7 @@ if (@ARGV){
 			 -message => "You have specified unknown options/args:\t@ARGV");
 }
 
-die("Nimblegen import does not support cmdline defined result files") if (@result_files && uc($vendor) eq "NIMBELGEN");
+die("Nimblegen import does not support cmdline defined result files") if (@input_files && uc($vendor) eq "NIMBELGEN");
 
 #Need to add (primary) design_type and description, or add to defs file?
 
@@ -416,7 +416,7 @@ my $Imp = Bio::EnsEMBL::Funcgen::Importer->new
    -verbose     => $verbose,
    -input_dir   => $input_dir,
    -exp_date     => $exp_date,
-   -result_files    => \@result_files, #change to -input_subset_files?
+   -input_files    => \@input_files, #change to -input_subset_files?
    -merged_replicates => $merged_replicates,
    -total_features => $total_features,
    -old_dvd_format => $old_dvd_format,
@@ -509,7 +509,7 @@ if((defined $input_feature_class) &&
 	#Is this to do with?
 	#gzip: stdout: Disk quota exceeded
 
-	die("Could not get prepared file for:\t".$result_files[0]);
+	die("Could not get prepared file for:\t".$input_files[0]);
 
 	#$input_file = $result_files[0];
 	#$prepared = '';
@@ -525,13 +525,13 @@ if((defined $input_feature_class) &&
   #Re/set attrs/params appropriately for local/farm job
   if($farm){
 	$total_feats = "-_total_features $total_feats";
-	$input_file = "-result_files $input_file";
+	$input_file = "-input_files $input_file";
   }
   else{
 	#re/set Imp attrs if we are running locally
 	$Imp->total_features($total_feats);
 	$Imp->prepared(1);
-	$Imp->result_files([$input_file]);
+	$Imp->input_files([$input_file]);
   }
 }
 else{
@@ -540,7 +540,7 @@ else{
   #Logically these may never be needed in the farm submission
   #but define in case we change the logic
   $total_feats = "-_total_features $total_features" if $total_features;
-  $input_file  = "-result_files @result_files" if @result_files;
+  $input_file  = "-input_files @input_files" if @input_files;
   
 }
 
@@ -573,7 +573,7 @@ if($farm &&           ###BSUB JOBS
   #set new slices as those which have been seen in the input
   #so we don't have to run jobs for all toplevel seq_regions
   my @args = @{&strip_param_args(\@tmp_args, ('log_file', 'debug_file', 
-											  'result_files', 'slices', 
+											  'input_files', 'slices', 
 											  'skip_slices'))};
   #no log to avoid overwriting log file
   #output in lsf files
@@ -654,9 +654,80 @@ else{ ### DO THE IMPORT
     #This should all move to a wrapper method in the InputSet parser
     #based on a file registration style import
 
-    $Imp->init_experiment_import;
-    my ($dset, $rset, $inp_set) = $Imp->define_sets;
-    $Imp->validate_files; #Add InputSubsets
+    my $exp = $Imp->init_experiment_import;
+    
+    #This now needs to register the input_subsets and call define_ResultSet
+    #we should really compare all $exp input_subsets versus input_files
+    #but for now let's just assume the input_file we have is correct
+    
+    #This should really be merged into InputSet::validate_files
+    #do here for now, as the collection pipeline is currently running and also uses that code.
+    
+    if(scalar(@input_files) != 1){
+      die("parse_and_import.pl currently expects exactly 1 input_file for a dna_methylation import:\n\t".
+        join("\n\t", @input_files));  
+    }
+    
+    my $input_file = $input_files[0];
+    (my $iss_name = $input_file) =~ s/.*\///;
+    
+
+    my $analysis = $Imp->db->get_AnalysisAdaptor->fetch_by_logic_name($fanal);
+    
+    use Bio::EnsEMBL::Funcgen::InputSubset;
+    
+    my $iss = Bio::EnsEMBL::Funcgen::InputSubset->new
+    (-name         => $iss_name,
+     -replicate    => 0,
+     -experiment   => $exp,
+     -is_control   => 0,
+     -cell_type    => $exp->cell_type,
+     -feature_type => $exp->feature_type,
+     -analysis     => $analysis,
+    );
+    
+    my $iss_adaptor = $Imp->db->get_InputSubsetAdaptor;
+    my @stored_subsets = @{$iss_adaptor->fetch_all_by_Experiments([$exp])};
+    
+    if(@stored_subsets){
+      
+      if(scalar(@stored_subsets) >1){
+        die("Found > 1 stored input_subsets:\n\t".
+          join("\n\t", (map {$_->name} @stored_subsets)));  
+      }
+    
+      warn "Need to check diffs here for InputSubset";
+    
+      #check diffs here
+      
+      $iss = $stored_subsets[0];
+    }
+    else{
+      $iss = $iss_adaptor->store($iss)->[0];  
+    }
+    
+
+    
+    #now defined_ResultSet
+    my $rset = $Imp->define_ResultSet
+     (-RESULT_SET_NAME     => $exp_set.'_'.$analysis->logic_name,
+      -SUPPORTING_SETS     => [$iss],
+      -DBADAPTOR           => $Imp->db,
+      -RESULT_SET_ANALYSIS => $analysis,
+      #change these to reference a specific rollback parameter
+      #e.g. rollback_result_set?
+      #-ROLLBACK           => $rollback,
+      #-FEATURE_CLASS       => 'dna_methylation',
+      #This is currently handled automatically by testing the feature type is 5mC
+      -RECOVER             => $recover,
+      #-FULL_DELETE        => $self->param_silent('full_delete'),
+      -CELL_TYPE           => $exp->cell_type,
+      -FEATURE_TYPE        => $exp->feature_type,
+      -EXPERIMENT          => $exp);
+    
+    
+    #my ($dset, $rset, $inp_set) = $Imp->define_sets;
+    #$Imp->validate_files; #Add InputSubsets
  
     #Update ResultSet dbfile_data_dir
 
@@ -667,11 +738,11 @@ else{ ### DO THE IMPORT
     #rather than the current full local path
     #MD5s?
 
-    my $iss = $inp_set->get_InputSubsets->[0];
+    #my $iss = $inp_set->get_InputSubsets->[0];
 
-    if(!defined $iss){
-      throw('It appears that InputSubset '.$inp_set->name.' has not had any InputSubsets imported.');
-    }
+    #if(!defined $iss){
+    #  throw('It appears that InputSubset '.$inp_set->name.' has not had any InputSubsets imported.');
+    #}
 
     my $dbfile_subdir = '/dna_methylation_feature/'.$rset->name.
       '/'.$iss->name;
@@ -697,12 +768,13 @@ else{ ### DO THE IMPORT
     #so it doesn't actually match the -output_dir specified on the cmdline
     #also currently contains the 'default' norm and raw data dirs
     #to be fixed when as we overhaul the Importer
-    my $output_path = $Imp->get_dir('output').'/'.$inp_set->get_InputSubsets->[0]->name;
+    #my $output_path = $Imp->get_dir('output').'/'.$inp_set->get_InputSubsets->[0]->name;
+    my $output_path = $Imp->get_dir('output').'/'.$iss->name;
 
     
     #assume we only have 1 result file with full path 
     #need to integrate this into a validate_files method or wrapper
-    my $input_file = $Imp->result_files->[0];
+    #my $input_file = $Imp->input_files->[0];
 
     if(! -e $output_path){
       my $cmd = "ln -s $input_file $output_path";
