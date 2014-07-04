@@ -837,9 +837,8 @@ sub define_ResultSet {
   throw("Mandatory parameter note defined:\t-RESULT_SET_NAME") if ! defined $name;
   assert_ref($sets, 'ARRAY'); 
   throw('Must pass at least one supporting set') if scalar(@$sets) == 0;
-
   $self->debug(1, "Defining ResultSet $name");
-   
+  
   foreach my $set(@$sets){
     assert_ref($set, 'Bio::EnsEMBL::Funcgen::InputSubset', 'InputSubset support');
         
@@ -859,12 +858,15 @@ sub define_ResultSet {
     }             
   }
 
+  
    
   #slight hack until we sort out 5mC class and db_file_registry.format
   #also overlaps with FeatureSet -feature_class
   #Move this to ResultSet new?
-  my $fclass = ($sets->[0]->feature_type eq '5mC') ? 
+  my $fclass = ($sets->[0]->feature_type->name eq '5mC') ? 
     'dna_methylation' : 'result';
+  
+ 
   
   #This is now mandatory to avoid erroneous naming when omitted
   #my $name ||= $sets->[0]->experiment->name.' '.$anal->logic_name;
