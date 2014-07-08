@@ -394,10 +394,10 @@ sub _objs_from_sth {
      \$stable_id,         
      \$bin_string,
      \$projected,         
-     \$attr_id,
-     \$attr_type,
      \$has_evidence,
      \$cell_type_count,
+     \$attr_id,
+     \$attr_type,
     );
 
 	my ($asm_cs, $cmp_cs, $asm_cs_name);
