@@ -366,10 +366,15 @@ sub update_meta_coord{
 	#would need to select distinct coord_system_id for table first
 	#This may well slow down quite a bit doing it this way
 
-	$sql = "select distinct s.coord_system_id from coord_system cs, seq_region s, $table_name t WHERE t.seq_region_id = s.seq_region_id and s.coord_system_id = cs.coord_system_id and cs.species_id = $species_id";
+	$sql = "select distinct s.coord_system_id from coord_system cs, seq_region s, $table_name t ".
+    "WHERE t.seq_region_id = s.seq_region_id and s.coord_system_id = cs.coord_system_id and cs.species_id = $species_id";
 	my @cs_ids = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
 	#Convert single element arrayrefs to scalars
 	map $_ = ${$_}[0], @cs_ids;
+
+
+  #This should probably fail if features are present but don't match any seq_region_ids in the seq_region_table
+  #i.e. they have been incorrectly imported directly into mysql
 
 	$self->log("New max_lengths for $table_name are:");
 
