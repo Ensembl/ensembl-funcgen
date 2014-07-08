@@ -184,20 +184,23 @@ sub fetch_input {   # nothing to fetch... just the DB parameters...
   #relevant output_id and not generically to all branches via dataflow_params or batch_params
   my $garbage = $self->param_silent('garbage');
 
+
+  #Should garbage collection and archiving be disabled if -no_write is set?
+
   if(defined $garbage){
     #allow scalars and arrayref
     
     if(ref($garbage)){
       assert_ref($garbage, 'ARRAY', 'garbage files');
       unlink(@$garbage);
-      $garbage = join(' ', @$garbage);  
     }
     else{
+      warn "Skipping garbage collection for debugging:\t$garbage";
       unlink($garbage);  
     }
     
-    #run with no exit flag so we don't fail on retry
-    #run_system_cmd("rm -f $garbage", 1);
+    #run with no exit flag so it doesn't fail on retry
+    run_system_cmd("rm -f $garbage", 1);
   }
   
   my $to_archive = $self->param_silent('to_archive');
