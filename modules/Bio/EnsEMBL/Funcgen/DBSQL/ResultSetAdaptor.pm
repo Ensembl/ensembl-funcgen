@@ -672,8 +672,19 @@ sub _fetch_dbfile_data_dir{
   my $sql  = 'SELECT path from dbfile_registry where table_name="result_set" and table_id=?';
   my $sth  = $self->prepare($sql);
   $sth->bind_param(1, $rset_id, SQL_INTEGER);
-  $sth->execute;
-  return $sth->fetch(); #return array containing path field
+  
+  
+  if(! eval {$sth->execute; 1} ){
+    throw("Failed to fetch dbfile_registry using:\n$sql (dbID=$rset_id)\n$@");
+  }
+  
+  my $dir;
+  
+  if(my $row_ref = $sth->fetch){
+    $dir = $sth->fetch->[0];
+  }
+  
+  return $dir;
 }
 
 =head2 store_chip_channels
