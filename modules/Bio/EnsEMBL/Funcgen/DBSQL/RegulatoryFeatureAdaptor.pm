@@ -376,7 +376,7 @@ sub _objs_from_sth {
       $bin_string,
       $projected,             
       $has_evidence,
-      $cell_type_count,
+      $cell_type_count
      );
 
 	$sth->bind_columns

@@ -195,12 +195,8 @@ sub fetch_input {   # nothing to fetch... just the DB parameters...
       unlink(@$garbage);
     }
     else{
-      warn "Skipping garbage collection for debugging:\t$garbage";
       unlink($garbage);  
-    }
-    
-    #run with no exit flag so it doesn't fail on retry
-    run_system_cmd("rm -f $garbage", 1);
+    }    
   }
   
   my $to_archive = $self->param_silent('to_archive');

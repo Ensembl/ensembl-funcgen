@@ -73,7 +73,7 @@ sub default_options {
      },
 
      #Need to change this to use $ENV{OUT_ROOT} so we can switch scratch usage easily
-     'output_dir' => '/lustre/scratch103/ensembl/funcgen/data_home/output/'.$self->o('dbname'),
+     'output_dir' => undef,
      'slices'     => '',
 
 	 };
@@ -92,10 +92,10 @@ sub resource_classes {
     {
      'default'                    => { 'LSF' => '' },
      'urgent'                     => { 'LSF' => '-q yesterday' },
-     'normal_monitored'           => { 'LSF' => "-M1000000 -R\"select[$ENV{LSF_RESOURCE_HOST}<1000 && mem>1000] rusage[$ENV{LSF_RESOURCE_HOST}=10:duration=10:decay=1,mem=1000]\"" },
+     'normal_monitored'           => { 'LSF' => "-M1000 -R\"select[$ENV{LSF_RESOURCE_HOST}<1000 && mem>1000] rusage[$ENV{LSF_RESOURCE_HOST}=10:duration=10:decay=1,mem=1000]\"" },
      'long_monitored'             => { 'LSF' => "-q long -R\"select[$ENV{LSF_RESOURCE_HOST}<1000] rusage[$ENV{LSF_RESOURCE_HOST}=10:duration=10:decay=1]\"" },
-     'long_high_memory'           => { 'LSF' => '-q long -M4000000 -R"select[mem>4000] rusage[mem=4000]"' },
-     'long_monitored_high_memory' => { 'LSF' => "-q long -M4000000 -R\"select[$ENV{LSF_RESOURCE_HOST}<600 && mem>4000] rusage[$ENV{LSF_RESOURCE_HOST}=12:duration=5:decay=1,mem=4000]\"" },
+     'long_high_memory'           => { 'LSF' => '-q long -M4000 -R"select[mem>4000] rusage[mem=4000]"' },
+     'long_monitored_high_memory' => { 'LSF' => "-q long -M4000 -R\"select[$ENV{LSF_RESOURCE_HOST}<600 && mem>4000] rusage[$ENV{LSF_RESOURCE_HOST}=12:duration=5:decay=1,mem=4000]\"" },
 
 #     0 => { -desc => 'default',          'LSF' => '' },
 #     1 => { -desc => 'urgent',           'LSF' => '-q yesterday' },

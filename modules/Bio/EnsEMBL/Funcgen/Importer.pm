@@ -394,8 +394,7 @@ sub init_experiment_import{
       -PRIMARY_DESIGN_TYPE => $self->design_type,
       -DESCRIPTION         => $self->description,
       -CELL_TYPE           => $self->cell_type,
-      -FEATURE_TYPE        => $self->feature_type,
-      -ADAPTOR             => $self->db->get_ExperimentAdaptor);
+      -FEATURE_TYPE        => $self->feature_type);
 
     ($exp) =  @{$exp_adaptor->store($exp)};
   }

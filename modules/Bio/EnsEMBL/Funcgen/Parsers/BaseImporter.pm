@@ -234,7 +234,7 @@ sub new{
   
       if (! $num_dbs) {
         #only throw if we don't have any other db params passed?
-        thow("Failed to load any DBs from $reg_user".'@'.$reg_host." for release $version.\n".
+        throw("Failed to load any DBs from $reg_user".'@'.$reg_host." for release $version.\n".
              "This will result in a failure to validate the species.\n".
              "Please define a valid -release for the registry and/or registry params/config\n".
              "Or select a -registry_host which matches the API version:\t".$reg->software_version);

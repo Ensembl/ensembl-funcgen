@@ -287,10 +287,10 @@ sub _objs_from_sth {
 		  'set'                 => $fset_hash{$fset_id},
 		  'feature_type'        => $ftype_hash{$ftype_id},
 		  'interdb_stable_id'   => $interdb_stable_id,
-      'accession'           => $accession,
-      'evidence'            => $evidence,
-      'method'              => $method,
-      'supporting_information' => $supporting_information,
+          'accession'           => $accession,
+          'evidence'            => $evidence,
+          'method'              => $method,
+          'supporting_information' => $supporting_information,
 		 });
 	  }
 
