@@ -57,10 +57,12 @@ add the functionality from pwm_filter_mappings.pl to the end of this script
 
 use strict;
 use DBI;
-use Env;
 use Getopt::Std;
 use IO::Handle;
 use IO::File;
+
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd
+                                               run_backtick_cmd );
 
 use constant  NO_ROWS => '0E0';
 
@@ -69,7 +71,7 @@ my($user, $password, $driver, $host, $port, $mapping_tabfile);
 my $outfile='';
 my $infile='';
 my $verbose = 2;
-my $perc_thresh = 5; # FDR
+my $perc_thresh = 5; # 5% background
 my $genome_descriptor_file;# = "/data/blastdb/Ensembl/funcgen/homo_sapiens_male_GRCh37_58_37c_unmasked.id_lines";
 my $schema_build;
 my %opt;
@@ -83,15 +85,16 @@ if ($ARGV[0]){
 }
 
 
-# get configuration from environment variables
-&config; # this may fail but config can be on command line
 
-my $enc_db = 'dev_homo_sapiens_funcgen_60_37e';# default, can be overridden by args
+my $enc_db;
 &process_arguments;
 
 my $ofh;
 if($outfile){
-     open($ofh,">$outfile") or die "couldn't open file $outfile\n";
+     #open($ofh,">$outfile") or die "couldn't open file $outfile\n";
+     
+     open($ofh,">>$outfile") or die "couldn't open file $outfile\n";
+     
 }else{
         #or write to STDOUT
      $ofh = new IO::File;
@@ -107,189 +110,347 @@ my $dbh = &make_contact($enc_db);
 
 my %matrix_tf_pairs= &get_list_from_file($infile);
 
-#%matrix_tf_pairs=(
-# 'MA0139.1' => 'CTCF',
-# 'MA0099.2' => 'Cjun',
-# 'MA0099.2' => 'Cfos'
+#This currently write and read mappings files from cwd, so has to be run from the dir!!??
 
-	#	   );
 
-while(my($mat,$tf)=each(%matrix_tf_pairs)){
+#We could make this recoverable by skipping if we already have the threshold available in the file
 
-    &commentary( "$mat\t$tf\n");
 
-    # get just the mappings for this matrix from the all_mappings file
-    my $mappings_file = $mat.".mappings";
-    unless( -e $mappings_file ){
-	my $command = "grep $mat $mapping_tabfile > $mappings_file";
-	&backtick($command);
+#Need to tidy up peak files!!
+#do we even need to sort here? Output from Moods should already be sorted.
+#although we need the peaks and the MF sorted in the same order.
+#How is the sort handling primes?
+#mappings file do not appear to have +ve stranf then -ve strand mapping
+#cooccur handles the sorting
 
-	#Hack to deal with a special case that messes things up!
-	if($mat eq ' PB0182.1'){
-	  &backtick("awk '\$5 > 9' < PB0182.1.mappings > PB0182.1.mappings.filtered"); 
-	  &backtick("mv PB0182.1.mappings.filtered PB0182.1.mappings");
-	}
+MATRIX: while(my($mat,$tf)=each(%matrix_tf_pairs)){
+
+  &commentary("$mat\t$tf\n");
+  
+  
+  if(-e $outfile){
+    my $grep_cmd    = "grep -E '^$mat\[\[:space:\]\]' $outfile";
+    my $thresh_line = run_backtick_cmd($grep_cmd, 1);#grep returns exit code 1 if not present
+  
+    if($thresh_line){
+      warn "Skipping $mat as is already present in output:\n$thresh_line";
+      next MATRIX;  
     }
+  }
 
-    #my ($schema_build) = $enc_db =~ /.*funcgen_(.*)/;
-    if(!defined($schema_build)){ die "Need a schema build!"; }
-    #schema build better passed as input as db may not hve been "transformed"
+  # get just the mappings for this matrix from the all_mappings file
+  my $mappings_file = $mat.".mappings";
     
-    #This should use the API!
-    #restriction to schema build is killing this query as the DB was copied before the update script was run
-    #API would automatically select the current coord_system
+  #This grep is VERY SLOOOOOOOOOOWWWWWWWW
+  #the pwm_genome_map.pl script could probably write to separate files
+  #by bsubbing individual pwm alignment jobs
+  #Where are these removed? Are we duplicating footprint again?
+  #This wrote an empty file for the first matrix. likely issues with runtime?
+  
+  if($mat eq 'MA0065.1'){
+    warn "Skipping MA0065.1 for now as is rerunning grep";
+    next MATRIX;
+  }
+  elsif(! -e $mappings_file ){
     
-    my $q = "select sr.name,af.seq_region_start,af.seq_region_end,af.score,ft.name,ct.name from annotated_feature af,feature_set fs,feature_type ft,seq_region sr,cell_type ct where ft.class in('Transcription Factor','Insulator', 'Transcription Factor Complex') and fs.feature_type_id = ft.feature_type_id and af.feature_set_id = fs.feature_set_id and sr.seq_region_id = af.seq_region_id and sr.schema_build = '$schem_build' and fs.cell_type_id = ct.cell_type_id and ft.name = '$tf'";
-    &commentary( "executing :-\n$q\n");
-    my $aaref = $dbh->selectall_arrayref($q);
-    unless(defined $aaref && @$aaref > 0){die "no data returned by query :\n$q"}
+    warn "Skipping $mat $tf due to absent mappings file:\$mappings_file";
+    next MATRIX;
+    
+    
+    # -F = fixed string
+    #LC_ALL changes locale to C, which forces ASCII character set (128 characters) rather than UTF-8's > 110,000 
+    my $command = "LC_ALL=C grep -F $mat $mapping_tabfile > $mappings_file";
+    run_system_cmd($command);
 
-    my $peaks_file = $tf.".real_peaks";
-    open(OUT,"> $peaks_file") or die "failed to open $peaks_file";
-    foreach my $aref (@$aaref){
+    #Hack to deal with a special case that messes things up!
+    if($mat eq ' PB0182.1'){
+      run_system_cmd("awk '\$5 > 9' < PB0182.1.mappings > PB0182.1.mappings.filtered"); #Prime less than 9? wtf, was this supposed to filter score?
+      run_system_cmd("mv PB0182.1.mappings.filtered PB0182.1.mappings");
+    }
+  }
+ 
+  #elsif($mat eq 'MA0341.1'){
+  #   warn "Skipping MA0341.1 as does not meet threshold";
+  #  next MATRIX;
+  #  
+
+  #my ($schema_build) = $enc_db =~ /.*funcgen_(.*)/;
+  if(!defined($schema_build)){ die "Need a schema build!"; }
+  #schema build better passed as input as db may not hve been "transformed"
+    
+  #This should use the API!
+  #restriction to schema build is killing this query as the DB was copied before the update script was run
+  #API would automatically select the current coord_system
+  
+  #New query
+  my $q = 'select sr.name, af.seq_region_start, af.seq_region_end, fs.name, af.score, af.seq_region_strand '.
+    'from annotated_feature af, feature_set fs, seq_region sr, feature_type ft '.
+    'where ft.class in(\'Transcription Factor\', \'Insulator\', \'Transcription Factor Complex\') '.
+    'and fs.feature_type_id = ft.feature_type_id and af.feature_set_id = fs.feature_set_id '.
+    'and sr.seq_region_id = af.seq_region_id and sr.schema_build = '.
+    "'$schema_build' and ft.name = '$tf' and af.seq_region_start>0";
+  #Add sort in here, but needs to be matched to unix sort of MF mappings
+  
+#select sr.name, af.seq_region_start, af.seq_region_end, fs.name, af.score, af.strand from annotated_feature af, feature_set fs, seq_region sr, feature_type ft where ft.class in("Transcription Factor", "Insulator", "Transcription Factor Complex") and fs.feature_type_id = ft.feature_type_id and af.feature_set_id = fs.feature_set_id and sr.seq_region_id = af.seq_region_id and sr.schema_build ='76_38' and ft.name = 'Egr1'
+  
+  my $peaks_file = $tf.".real_peaks";
+  #temp hack to get this thing shifting
+  my $cmd = "mysql --skip-column-names -hens-genomics2 -uensro -e\"$q\" nj1_tracking_homo_sapiens_funcgen_76_38 | sort -k1,1 -k2,2g -k3,3g > $peaks_file";
+
+  #old query  
+  #Half of this is being ignored at present as peaks file only has sr, start and end?
+  #unecessary joing to celltype?
+  #$q = 'select sr.name,af.seq_region_start,af.seq_region_end,af.score,ft.name,ct.name '.
+  #  'from annotated_feature af,feature_set fs,feature_type ft,seq_region sr,cell_type ct'.
+  #  'where ft.class in("Transcription Factor", "Insulator", "Transcription Factor Complex") '.
+  #  'and fs.feature_type_id = ft.feature_type_id and af.feature_set_id = fs.feature_set_id '.
+  #  'and sr.seq_region_id = af.seq_region_id and sr.schema_build = '.
+  #  "'$schema_build' and fs.cell_type_id = ct.cell_type_id and ft.name = '$tf'";
+    
+  #Change this to bed format so we can use bedtools!
+  #Also need to change mappings file to bed format, in parse_out_to_tab/bed  
+    
+  #&commentary( "executing :-\n$q\n");
+  #warn $cmd;
+  run_system_cmd($cmd);
+
+  
+=pod
+
+  my $aaref = $dbh->selectall_arrayref($q);
+  unless(defined $aaref && @$aaref > 0){die "no data returned by query :\n$q"}
+
+
+  open(OUT,"> $peaks_file") or die "failed to open $peaks_file";
+  
+  #put this filter in the query!!! so we can dump straight to a sorted file
+  #instead of bloating the memory and iterating
+  
+  foreach my $aref (@$aaref){
       
-	#if(@$aref->[1] == 0){
-	 if($aref->[1] == 0){
-	   warn "start coord = 0 \n ".join("\t",@$aref)."\nFiltered out!\n";
-   }
-   else{
- 	   print OUT join("\t",@$aref)."\n" or die "failed to write to file";
-   }
-       
+	  if($aref->[1] == 0){
+	    warn "start coord = 0 \n ".join("\t",@$aref)."\nFiltered out!\n";
     }
-    close(OUT);
-    # We single linkage cluster the real peaks
-    # before we create the mock peaks    
-    &backtick("slink.pl -o temp_$$ -U $peaks_file ");
-    &backtick("rm -f $peaks_file ");
-    &backtick("mv temp_$$ $peaks_file ");
+    else{
+ 	    print OUT join("\t",@$aref)."\n" or die "failed to write to file";
+    }
+  }
 
-    my $mock_file = $tf.".mock_peaks";
-    my $command = "pwm_make_bed_mock_set.pl -g $genome_descriptor_file  -i $peaks_file > $mock_file";
-    &backtick($command);
+  close(OUT);
+  
+=cut
+  
+  # We single linkage cluster the real peaks
+  # before we create the mock peaks    
+  #&backtick("slink.pl -o temp_$$ -U $peaks_file ");
+  run_system_cmd("~dz1/.local/bin/bedtools merge -i $peaks_file > temp_$$");
+ # &backtick("rm -f $peaks_file ");
+  run_system_cmd("mv temp_$$ $peaks_file");
+  
+  my $mock_file = $tf.".mock_peaks";
+  my $command = "pwm_make_bed_mock_set.pl -g $genome_descriptor_file  -i $peaks_file | sort  -k1,1 -k2,2g -k3,3g > $mock_file";
+  warn $command;
+  run_system_cmd($command);
 
-   
-    my $real_olaps_file = $tf."_real_peaks_$mat".".olaps";
-    $command = "cooccur.pl -o ".$real_olaps_file." $peaks_file $mappings_file " ;
+  #todo pre-sort mappings files, so we can specifiy -sorted in bedtools commands
+  
 
-    &backtick($command);
+  #These are dying due to using 37GB! due to unsorted input?
 
-    my $mock_olaps_file = $tf."_mock_peaks_$mat".".olaps";
-    $command = "cooccur.pl -o ".$mock_olaps_file."  $mock_file $mappings_file ";
-    &backtick($command);
+  my $real_olaps_file = $tf."_real_peaks_$mat".".olaps";
+  #$command = $ENV{SRC}."/ensembl-funcgen/scripts/miscellaneous/cooccur.pl -o ".$real_olaps_file." $peaks_file $mappings_file " ;
+  $command = "~dz1/.local/bin/bedtools intersect -sorted -wa -wb -a $peaks_file -b $mappings_file > $real_olaps_file";
+  warn $command;
+  run_system_cmd($command);
 
-    my $max = &backtick("cut -f 8 $real_olaps_file | sort -g -u | tail -1");
-    chop $max;
-    my $n_peaks =  &backtick("cat $peaks_file |wc -l");
-    chop $n_peaks;
+  my $mock_olaps_file = $tf."_mock_peaks_$mat".".olaps";
+  #$command = $ENV{SRC}."/ensembl-funcgen/scripts/miscellaneous/cooccur.pl -o ".$mock_olaps_file."  $mock_file $mappings_file ";
+  $command = "~dz1/.local/bin/bedtools intersect -sorted -wa -wb -a $mock_file -b $mappings_file > $mock_olaps_file";
+  warn $command;
+  run_system_cmd($command);
 
 
-FIND_THRESH:
+  #Here, need to handle format difference
+  #Cut the score, this appear to be cutting the strand, but there was an empty field
+  #-u was is redundant here?
+  my $max = run_backtick_cmd("cut -f 8 $real_olaps_file | sort -g | tail -1");
+  
+  #New format
+  #my $max = run_backtick_cmd("cut -f 11 $real_olaps_file | sort -g -u | tail -1");
+  chop $max;
+  my $n_peaks = run_backtick_cmd("wc -l $peaks_file");
+  chop $n_peaks;
 
-    my $ifh;
-    open($ifh,$mock_olaps_file) or die "failed to open $mock_olaps_file";
 
-    $verbose = 3;	    
-       
-    my %peaks;
+  #FIND_THRESH:
+
+  my $ifh;
+  open($ifh, $mock_olaps_file) or die "failed to open $mock_olaps_file";
+  $verbose = 3;	    
+  my @mappings; # array of arrays of chr,start,end,log odds score
+
+  while(my $line = <$ifh>){
+    chop $line;
+    my @field = split("\t",$line);
+    push @mappings, [@field[0..2], $field[7]];
     
-    my @mappings; # array of arrays of chr,start,end,log odds score
+    #new format
+    #push @mappings, [@field[0..2], $field[10]];
+  }
 
-    while(my $line = <$ifh>){
-	chop $line;
-	my @field = split("\t",$line);
-	my @mapping;
-	push @mapping, @field[0..2];
-	push @mapping, $field[7];
-	
-	push @mappings, \@mapping;
-    }
-    close($ifh);
+  close($ifh);
 
-    &commentary( "$tf\t"); 
-    my ($perc_of_max_thresh, $score_thresh) =
-               &mock_perc_score_thresh(\@mappings,$n_peaks,$perc_thresh,$max);
+  &commentary( "$tf\t"); 
+  my ($perc_of_max_thresh, $score_thresh) =
+   identify_background_threshold(\@mappings,$n_peaks,$perc_thresh,$max);
 
-    print $ofh "$mat\t$tf\t$perc_of_max_thresh\t $score_thresh\n";
-
+  print $ofh "$mat\t$tf\t$perc_of_max_thresh\t$score_thresh\n";
 }
 
 
-
-
-
 $dbh->disconnect;
+
+
 exit;
 
 
  
 ###################################################################
 # $max is the max log odds score for the factor's PWM
-# $perc_thresh is the maximum percentage of mock peaks we want to contain a peak# $npeaks is the total number of peaks for the factor
-# $aaref contains the mappings to the mock peaks as an array of arrays of
-# chr,start,end,log_odds_score
+# $perc_thresh is the maximum percentage of mock peaks we want to contain a peak
+# $npeaks is the total number of peaks for the factor
+# $aaref contains the mappings to the mock peaks as an array of arrays of chr,start,end,log_odds_score
 sub mock_perc_score_thresh{
-    my($aaref,$n_peaks,$perc_thresh,$max)=@_;
+  my ($aaref, $n_peaks, $perc_thresh, $max) = @_;
+  my $max_allowed = $n_peaks * $perc_thresh /100;
+  my $decr        = 0.1;
+  
+  
+  
+  #Holy chao! This is a 1000 iterations!
+  #let's be a bit more clever about this, and either do it binary chop style
+  #or at least do initial larger decrements?
+  #current percentages are showing anywhere between 33 and 100%
+  #are the 100% pfms really meeting the 5% background?
+  
+  for(my $perc=100;$perc>0;$perc -= $decr){
+    my $thresh = $max * $perc/100;
+    my %peaks;
 
-    my $max_allowed = $n_peaks * $perc_thresh /100;
-    my $decr = 0.1;
-    for(my $perc=100;$perc>0;$perc -= $decr){
-        my $thresh = $max * $perc/100;
-	my %peaks;
-	foreach my $aref (@$aaref){
+    foreach my $aref (@$aaref){
 
-            if($aref->[3] >= $thresh){
-	        my $peak = join('~',$aref->[0],$aref->[1],$aref->[2]);
-	#	    print $peak." ".$aref->[3]." $thresh\n";
-	  	$peaks{$peak}++;
-
-	    }
-	}
-
-        my $peak_count = scalar(keys(%peaks));
-	print STDERR "$perc $max_allowed $peak_count ".$peak_count *100/$n_peaks." $thresh\n" if $verbose >2;
-        if($peak_count >= $max_allowed){
-	    print STDERR "$perc $max_allowed $peak_count ".$peak_count *100/$n_peaks." $thresh\n" if $verbose >1 ;
-	    if($peak_count *100/$n_peaks > $perc_thresh+1){
-		$perc += $decr;
-		$perc = ($perc > 100)? 100:$perc;
-		$thresh = $max * $perc/100;
-	    }
-
-	    print STDERR "$perc $max_allowed $peak_count ".$peak_count *100/$n_peaks." $thresh\n" if $verbose > 1;
-
-
-	    return($perc,$thresh);
-
-
-	}
+      if($aref->[3] >= $thresh){
+        my $peak = join('~',$aref->[0],$aref->[1],$aref->[2]);
+	      #	    print $peak." ".$aref->[3]." $thresh\n";
+        $peaks{$peak}++;
+      }
     }
 
-if($verbose == 99){ 
+    my $peak_count = scalar(keys(%peaks));
+    print STDERR "$perc $max_allowed $peak_count ".$peak_count *100/$n_peaks." $thresh\n" if $verbose >2;
+    
+    
+    warn "$peak_count >= $max_allowed";
+    
+    if($peak_count >= $max_allowed){
+      print STDERR "CALCULATING FINAL TRESH $perc $max_allowed $peak_count ".$peak_count *100/$n_peaks." $thresh\n" if $verbose >1 ;
+	    
+      if($peak_count *100/$n_peaks > $perc_thresh+1){
+        $perc  += $decr;
+        $perc   = ($perc > 100)? 100:$perc;
+        $thresh = $max * $perc/100;
+	    }
+
+      print STDERR "FINAL $perc $max_allowed $peak_count ".$peak_count *100/$n_peaks." $thresh\n" if $verbose > 1;
+      return ($perc,$thresh);
+    }
+  }
+
+  if($verbose == 99){ 
     die "Either generate more mappings for this factor or remove it from this run";
+  }
+  
+  print "PROBLEM: This factor does not reach threshold \n\n";
+  $verbose = 99; 
+  # run the procedure with high verbose level to generate diagnostic output
+  &mock_perc_score_thresh($aaref,$n_peaks,$perc_thresh,$max)
 }
-print "PROBLEM: This factor does not reach threshold \n\n";
-$verbose = 99; 
-# run the procedure with high verbose level to generate diagnostic output
-&mock_perc_score_thresh($aaref,$n_peaks,$perc_thresh,$max)
-
-}
 
 
+sub identify_background_threshold{
+  my ($aaref, $n_peaks, $perc_thresh, $max) = @_;
+  my $max_allowed = $n_peaks * $perc_thresh /100;
+  #my $decr        = 0.1;
+  my $decr = 5;
+ 
+  #Holy chao! This was a 1000 iterations!
+  #let's be a bit more clever about this, and either do it binary chop style
+  #or at least do initial larger decrements?
+  #current percentages are showing anywhere between 33 and 100%
+  #are the 100% pfms really meeting the 5% background?
 
-sub backtick{
-    my $command = shift;
+  THRESH: for(my $perc=100; $perc>0; $perc -= $decr){
+    warn "prec is now $perc";
+    my $thresh = $max * $perc/100;
+    #my %peaks;
+    my $prev_peak = '';
+    my $peak_count = 0;
 
-    warn "executing $command \n" if ($verbose ==2);
+    foreach my $aref (@$aaref){
 
-    my $res = `$command`;
-    if($?){
-        warn "failed to execute $command \n";
-        warn "output :-\n $res \n";
-	die "exit code $?";
+      if($aref->[3] >= $thresh){
+        my $peak = join('~', ($aref->[0],$aref->[1],$aref->[2]) );
+        #     print $peak." ".$aref->[3]." $thresh\n";
+        #$peaks{$peak}++;
+        #These are not NR peaks, as we get get a peak union
+        #for each MF overlap
+        #we could easily change this to a count by comparing to the previous key
+        
+        
+        if($peak ne $prev_peak){
+          $peak_count++;
+          $prev_peak = $peak;  
+        }
+      }
     }
 
-    return $res;
+    #my $peak_count = scalar(keys(%peaks));
+    #print STDERR "$perc $max_allowed $peak_count ".$peak_count *100/$n_peaks." $thresh\n" if $verbose >2;
+    
+    
+    #warn "$peak_count >= $max_allowed";
+    
+    if($peak_count >= $max_allowed){
+      
+      if(($decr != 0.1) && $perc != 100){
+        #reset loop from previous iteration with finer grain decrements  
+        $perc += $decr;
+        $decr = 0.1;
+        warn "Resetting: \$perc to $perc and \$decr to $decr"; 
+        next THRESH;
+      }
+         
+      print STDERR "CALCULATING FINAL TRESH $perc $max_allowed $peak_count ".$peak_count *100/$n_peaks." $thresh\n" if $verbose >1 ;
+
+      if($peak_count *100/$n_peaks > $perc_thresh+1){
+        $perc  += $decr;
+        $perc   = ($perc > 100) ? 100 : $perc;
+        $thresh = $max * $perc/100;
+      }
+
+      print STDERR "FINAL $perc $max_allowed $peak_count ".$peak_count *100/$n_peaks." $thresh\n" if $verbose > 1;
+      return ($perc,$thresh);
+    }
+  }
+
+  if($verbose == 99){ 
+    die "Either generate more mappings for this factor or remove it from this run";
+  }
+  
+  print "PROBLEM: This factor does not reach threshold \n\n";
+  $verbose = 99; 
+  # run the procedure with high verbose level to generate diagnostic output
+  identify_background_threshold($aaref,$n_peaks,$perc_thresh,$max)
 }
 
 
@@ -372,16 +533,6 @@ sub get_list_from_file{
 }
 
 
-sub config{
- 
-($user =     $ENV{'ENSMARTUSER'}) or return(0); 
-($host   =   $ENV{'ENSMARTHOST'}) or return(0); 
-($port =     $ENV{'ENSMARTPORT'}) or return(0); #usually 3360
-($driver  =  $ENV{'ENSMARTDRIVER'}) or return(0); # mysql
-($password = $ENV{'ENSMARTPWD'}) or return(0); #
- 
-}
-   
 sub err{
     print STDERR "$_[0]\n";
 }

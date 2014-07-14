@@ -53,6 +53,8 @@ ensembl-funcgen/scripts/pwm_mapping_notes
 
 =cut
 
+#TODO This is much quicker in awk! Currently done in parallelised in a bash script
+
 
 use strict;
 use DBI;
@@ -95,32 +97,38 @@ close(IN);
 
 foreach my $mat (keys %facs){
 
-    my $source_file = $mat.".mappings";
-    &commentary("filtering $source_file\n");
+  my $source_file = $mat.".mappings";
+  &commentary("filtering $source_file\n");
 
-    my $write_file = $out_dir.$mat.".pwm_map";
+  my $write_file = $out_dir.$mat.".pwm_map";
 #    $verbose = 2;
-    my $max = &backtick("cut -f 5 $source_file | sort -g -u | tail -1");
-    chop $max;
-    my $thresh = $facs{$mat}->{'thresh'} * $max/100;
-    print "$mat $max $thresh\n" if $verbose;
 
-    my $ifh;
-    open($ifh,$source_file) or die "failed to open $source_file";
-    my $ofh;
-    open($ofh,"> $write_file") or die "failed to open $write_file";
-    while(my $line = <$ifh>){
-	        
-	my @field = split("\t",$line);
-	#print $field[4]."\n";
-	if($field[4] >= $thresh){
-	    print $ofh $line or die "failed to print to $write_file";
-	}
+    #TODO This is already calculated in pwm_filter_map.pl
+    #This should be written to file/tracking/hive, so it doesn't have to be recalculated
+    #This should go in a binding_matrix_analysis table
+    #which will contain the max score, and the perc threshold used, and maybe some other stats?
+    #in fact we already have the score_thresh, why is this being recalculated?
+    
+  my $max = &backtick("cut -f 5 $source_file | sort -g -u | tail -1");
+  chop $max;
+  my $thresh = $facs{$mat}->{'thresh'} * $max/100;
+  print "$mat $max $thresh\n" if $verbose;
+
+  my $ifh;
+  open($ifh,$source_file) or die "failed to open $source_file";
+  my $ofh;
+  open($ofh,"> $write_file") or die "failed to open $write_file";
+  
+  while(my $line = <$ifh>){
+    my @field = split("\t",$line);
+    
+    if($field[4] >= $thresh){
+      print $ofh $line or die "failed to print to $write_file";
     }
+  }
 	    
-    close($ifh);
-    close($ofh);
-
+  close($ifh);
+  close($ofh);
 }
 
 exit;

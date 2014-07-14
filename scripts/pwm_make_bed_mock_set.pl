@@ -91,13 +91,22 @@ if($outfile){
 open(IN,$genome_file) or die "failed to open $genome_file";
 my %chrom;
 while(my $line = <IN>){
-    chop $line;
-    my @field = split(':',$line);
-    $chrom{$field[2]}->{max} = $field[4];
-    $chrom{$field[2]}->{min} = $field[3];
-    if($field[3] != 1){
-        die "chromosome $field[2] has high start - script needs updating to deal with this ";
-    }
+
+  #warn $line;
+  chomp $line;
+  
+  #This is new fasta header format as of release 76
+  #This needs moving to SeqTools or similar, so we always use the same code for fasta header handling!
+  
+  my($sr_name, undef, $slice_name) = split(/\s+/, $line);
+  $sr_name =~ s/^>//;
+  my(undef, undef, undef, $min, $max) = split(/:/,$slice_name);
+  $chrom{$sr_name}->{max} = $max;
+  $chrom{$sr_name}->{min} = $min;
+
+  if($min != 1){
+    die "$sr_name has high start in genome file:\t$genome_file\nScript needs updating to deal with this ";
+  }
 }
 close(IN);
 
@@ -108,48 +117,57 @@ my @orig;
 open(IN,$infile) or die "failed to open $infile";
 while(my $line = <IN>){
     chop $line;
-    my @field = split("\t",$line);
-    my @feat = @field[0..2];
-    push @orig, \@feat;
-
+    #my @field = split("\t",$line);
+   # my @feat = @field[0..2];
+   # push @orig, \@feat;
+  push @orig, [split("\t",$line)];
 }
 close(IN);
 
+my $wrote = 0;
+
 foreach my $aref (@orig){
-    #print join("\t",@$aref)."\n";
-    my $len = $aref->[2] - $aref->[1] +1;
+  #print join("\t",@$aref)."\n";
+  my $len = $aref->[2] - $aref->[1] +1;
 
-    ##### HACK HACK DS Test
-    #If the length of feature is greater than genome region where it is we can ignore this one... ?
-    # This region is most likely atrefactual and should be eliminated...
-    if($len >= $chrom{$aref->[0]}->{max}){
-      print STDERR "Length of feature greater than lenght of genome region!\n";
-      next;
-    }
-    ### END OF HACK
+  ##### HACK HACK DS Test
+  #If the length of feature is greater than genome region where it is we can ignore this one... ?
+  # This region is most likely atrefactual and should be eliminated...
+  if($len >= $chrom{$aref->[0]}->{max}){
+    print STDERR "Length of feature greater than lenght of genome region!\n";
+    next;
+  }
+  ### END OF HACK
 
-    my $new_end = 0;
-    my $tries = 0;
-    while($new_end < $len){ # should also consider chrom start coord here
-        $new_end = int(rand($chrom{$aref->[0]}->{max}));
-	$tries ++;
-	if($tries > 1000){
-            die "Data problem :\n".
-                "max for ".$aref->[0]." = ".$chrom{$aref->[0]}->{max}."\n".
-                join("\t",@$aref)." len = $len\n";
-	}
-    }
+  my $new_end = 0;
+  my $tries = 0;
 
-    my $new_start = $new_end - $len +1;
-    #my $new_len =  $new_end -  $new_start +1;
-
-    print $ofh $aref->[0]."\t$new_start\t$new_end\n";
-
+  while($new_end < $len){ # should also consider chrom start coord here
+    $new_end = int(rand($chrom{$aref->[0]}->{max}));
+    $tries ++;
     
+    if($tries > 1000){
+      die "Data problem :\n".
+        "max for ".$aref->[0]." = ".$chrom{$aref->[0]}->{max}."\n".
+        join("\t",@$aref)." len = $len\n";
+    }
+  }
 
+  my $new_start = $new_end - $len +1;
+  #my $new_len =  $new_end -  $new_start +1;
+
+  $wrote++;
+  print $ofh $aref->[0]."\t$new_start\t$new_end\n";#.join("\t", $aref->[3..$#{$aref}])."\n";
 }
 
 close($ofh);
+
+if(! $wrote){
+  die("Failed to write any mock peaks to:\t$outfile");
+}
+else{
+  warn "Wrote $wrote mock peaks to:\t$outfile\n";  
+}
 
 exit;
 
