@@ -38,6 +38,6 @@ CREATE TABLE `mirna_target_feature` (
     KEY `feature_type_idx` (`feature_type_id`),
     KEY `feature_set_idx` (`feature_set_id`),
     KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`)
-) ENGINE=MyISAM
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
 
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_75_76_g.sql|mirna_target_feature');
