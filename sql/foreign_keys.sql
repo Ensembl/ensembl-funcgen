@@ -1,26 +1,26 @@
 -- Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
--- 
+--
 -- Licensed under the Apache License, Version 2.0 (the "License");
 -- you may not use this file except in compliance with the License.
 -- You may obtain a copy of the License at
--- 
+--
 --      http://www.apache.org/licenses/LICENSE-2.0
--- 
+--
 -- Unless required by applicable law or agreed to in writing, software
 -- distributed under the License is distributed on an "AS IS" BASIS,
 -- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-# Foreign key relationships in the Ensembl schema (see efg.sql)
-#
-# This file is intended as a reference since some of the relationships
-# are not obvious.
-#
-# Note that these constraints are not actually used by Ensembl for
-# performance reasons, and referential integrity is enforced at the
-# application level. Also MySQL currently does not support foreign
-# key constraints on MyISAM tables.
+--  Foreign key relationships in the Ensembl schema (see efg.sql)
+--
+--  This file is intended as a reference since some of the relationships
+--  are not obvious.
+--
+--  Note that these constraints are not actually used by Ensembl for
+--  performance reasons, and referential integrity is enforced at the
+--  application level. Also MySQL currently does not support foreign
+--  key constraints on MyISAM tables.
 
 
 -- To run this script you must first create an empty DB and update all tables to InnoDB
@@ -28,7 +28,6 @@
 -- mysqlw -pXXXXXXX -e 'CREATE DATABASE innodb_funcgen'
 -- mysqlw -pXXXXXXX innodb_funcgen < efg.sql
 -- mysqlro innodb_funcgen -N -e "show tables" | while read t; do if [[ $t != meta ]]; then echo "Altering $t to InnoDB"; mysqlw -pXXXXXXX innodb_funcgen -N -e "ALTER TABLE $t engine=InnoDB"; fi; done
-mysql  -h ens-genomics2 -P3306 -u ensro  innodb_funcgen -N -e "show tables" | while read t; do if [[ $t != meta ]]; then echo "Altering $t to InnoDB"; mysql  -h ens-genomics2 -P3306 -u ensadmin -pensembl  innodb_funcgen -N -e "ALTER TABLE $t engine=InnoDB"; fi; done
 -- Then, optionally disable some to remove complexity when generating ER diagrams, before running:
 -- mysqlw -pXXXXXXX innodb_funcgen < foreign_keys.sql
 
@@ -37,6 +36,11 @@ mysql  -h ens-genomics2 -P3306 -u ensro  innodb_funcgen -N -e "show tables" | wh
 -- This is caused by meta TABLE, which has no foreign keys anyway, so skip this.
 
 -- Last updated for v75 (included 73,74)
+
+
+ALTER TABLE result_set  ADD FOREIGN KEY (experiment_id) REFERENCES experiment (experiment_id);
+ALTER TABLE feature_set ADD FOREIGN KEY (experiment_id) REFERENCES experiment (experiment_id);
+
 
 -- 74_75f
 ALTER TABLE experiment ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type(feature_type_id);
@@ -60,8 +64,9 @@ ALTER TABLE associated_xref ADD FOREIGN KEY (xref_id)             REFERENCES xre
 ALTER TABLE associated_xref ADD FOREIGN KEY (associated_group_id) REFERENCES associated_group(associated_group_id);
 ALTER TABLE associated_xref ADD FOREIGN KEY (object_xref_id)      REFERENCES identity_xref(object_xref_id);
 
+-- Removed 75_76_b
 -- feature_set
-ALTER TABLE feature_set ADD FOREIGN KEY (input_set_id) REFERENCES input_set(input_set_id);
+-- ALTER TABLE feature_set ADD FOREIGN KEY (input_set_id) REFERENCES input_set(input_set_id);
 
 -- input_subset_tracking
 -- ALTER TABLE input_subset_tracking ADD FOREIGN KEY (input_subset_id) REFERENCES input_subset(input_subset_id);

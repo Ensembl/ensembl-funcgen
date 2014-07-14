@@ -236,17 +236,18 @@ CREATE TABLE `motif_feature` (
 @colour  #FFCC66
 
 @column mirna_target_feature_id    Internal ID
-@column accession           Accession number given by data source
-@column display_label       Text display label
-@column evidence            Evidence level provided by data source
-@column interdb_stable_id   Unique key, provides linkability between DBs
-@column method              Method used to identify miRNA target
-@column seq_region_id       @link seq_region table ID
-@column seq_region_start    Start position of this feature
-@column seq_region_end      End position of this feature
-@column seq_region_strand   Strand orientation of this feature
-@column feature_type_id     @link feature_type table ID
-@column feature_set_id      @link feature_set table ID
+@column accession               Accession number given by data source
+@column display_label           Text display label
+@column evidence                Evidence level provided by data source
+@column interdb_stable_id       Unique key, provides linkability between DBs
+@column method                  Method used to identify miRNA target
+@column seq_region_id           @link seq_region table ID
+@column seq_region_start        Start position of this feature
+@column seq_region_end          End position of this feature
+@column seq_region_strand       Strand orientation of this feature
+@column feature_type_id         @link feature_type table ID
+@column feature_set_id          @link feature_set table ID
+@column supporting_information  Additional information which does not fit another category
 
 @see feature_set
 @see feature_type
@@ -631,16 +632,18 @@ CREATE TABLE `feature_set` (
 @desc   Container for raw/signal data, used as input to an analysis or for visualisation of the raw signal i.e. a wiggle track.
 @colour  #66CCFF
 
-@column result_set_id		 Internal ID
-@column analysis_id			 Table ID for @link analysis
-@column name				     Name for this feature set
-@column feature_type_id	 Table ID for @link feature_type
-@column cell_type_id		 Table ID for @link cell_type
-@column feature_class    Defines the class of the feature
-@column replicate       Number of the replicate. 0 represents  a pooled subset, 255 is a subset we have not processed
+@column result_set_id     Internal ID
+@column analysis_id       Table ID for @link analysis
+@column experiment_id	  @link experiment table ID
+@column name	          Name for this feature set
+@column feature_type_id	  Table ID for @link feature_type
+@column cell_type_id	  Table ID for @link cell_type
+@column feature_class     Defines the class of the feature
+@column replicate         Number of the replicate. 0 represents  a pooled subset, 255 is a subset we have not processed
 
 @see result_set_input
 @see cell_type
+@see experiment
 @see feature_type
 @see analysis
 @see supporting_set
