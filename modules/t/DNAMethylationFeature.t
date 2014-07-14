@@ -10,10 +10,9 @@ my $multi  = Bio::EnsEMBL::Test::MultiTestDB->new();
 my $efgdba = $multi->get_DBAdaptor("funcgen");
 
 #define data root
-my $data_root =
+my $data_root = '';#NEEDS DEFINING
 
-   "/lustre/scratch109/ensembl/funcgen/output/dev_homo_sapiens_funcgen_69_37/";
-  #"/nfs/ensnfs-dev/staging/homo_sapiens/GRCh37/";
+throw('$data_root needs defining');
 
 #obtain Adaptors
 my $rsa           = $efgdba->get_adaptor("resultset");

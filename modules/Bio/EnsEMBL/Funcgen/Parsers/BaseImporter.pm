@@ -1151,7 +1151,7 @@ sub check_base_mandatory_params {
 
 =cut
 
-sub input_files{ 
+sub input_files{
   my ($self, $input_files) = @_;
   #coudl also be really kind and handle being passed an Array rather than an Arrayref
   

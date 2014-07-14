@@ -22,12 +22,17 @@ shift
 
 #dbname=homo_sapiens_funcgen_73_37
 dbname=mus_musculus_funcgen_73_38
-dbhost=ens-staging2
-dnadb_host=ens-staging2
+dbhost=
+dnadb_host=
 dnadb_user=$USER
 
-nfs_root='/nfs/ensnfs-dev/staging';
-ftp_root='/lustre/scratch109/ensembl/funcgen/output/ftp'
+nfs_root=
+ftp_root=
+
+echo "Need to manually edit dnadb params and set nfs_root and ftp_root"
+exit 1;
+
+
 
 if [ ! $USER ]; then
 	echo "Must provide a user argument"; exit; 

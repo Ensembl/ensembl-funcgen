@@ -60,16 +60,18 @@ sub default_options {
   my ($self) = @_;
   return
     {
-     'ensembl_cvs_root_dir' => $ENV{'SRC'},
+     %{$self->SUPER::default_options},    
+    'hive_root_dir' => $ENV{'SRC'}.'/ensembl-hive',
      # some Compara developers might prefer $ENV{'HOME'}.'/ensembl_main'
+    'pipeline_name' => $ENV{'PDB_NAME'},
 
-     'pipeline_db' =>
+    'pipeline_db' =>
      {
       -host   => $self->o('host'),
       -port   => $self->o('port'),
       -user   => $self->o('user'),
       -pass   => $self->o('pass'),
-      -dbname => $ENV{'USER'}.'_motif_import_'.$self->o('dbname'),
+      -dbname => $ENV{'PDB_NAME'},
      },
 
      #Need to change this to use $ENV{OUT_ROOT} so we can switch scratch usage easily
@@ -120,7 +122,7 @@ sub pipeline_wide_parameters {
   my ($self) = @_;
   return {
 
-	  'pipeline_name'   => $self->o('pipeline_db', '-dbname'),  # name used by the beekeeper to prefix job names on the farm
+	  'pipeline_name'   => $self->o('pipeline_name'),  # name used by the beekeeper to prefix job names on the farm
 	  'hive_output_dir' => $self->o('output_dir')."/motif_features/hive_output",
 	  'output_dir' => $self->o('output_dir')."/motif_features/results",
 
@@ -190,7 +192,7 @@ sub pipeline_analyses {
       -logic_name    => 'run_import',
       -module        => 'Bio::EnsEMBL::Funcgen::RunnableDB::ImportMotifFeatures',
       -parameters    => { },
-      -hive_capacity => 1,   # allow several workers to perform identical tasks in parallel
+      -analysis_capacity => 50,   # allow several workers to perform identical tasks in parallel
       -batch_size    => 1,
       -input_ids     => [
                          #For the moment it only receives the matrix, and deduces feature_type(s) from there...

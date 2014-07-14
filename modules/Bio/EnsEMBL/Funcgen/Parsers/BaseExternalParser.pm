@@ -183,15 +183,12 @@ sub set_feature_sets{
 
 	  #Can't just deref config hash here as we need to deref the nested feature_type and analysis attrs
 
-	  $fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(
-							 -name          => $fs_name,
-							 -feature_class => $fset_fclass_key,
-							 -analysis      => ${$fset_config->{$fset_analysis_key}},
-							 -feature_type  => ${$fset_config->{$fset_ftype_key}},
-							 -display_label => $display_name,
-							 -description   => $fset_config->{$fset_desc_key}
-								);
-
+	  $fset = Bio::EnsEMBL::Funcgen::FeatureSet->new(-name          => $fs_name,
+													 -feature_class => $fset_fclass_key,
+													 -analysis      => ${$fset_config->{$fset_analysis_key}},
+													 -feature_type  => ${$fset_config->{$fset_ftype_key}},
+													 -display_label => $display_name,
+													 -description   => $fset_config->{$fset_desc_key}		 );
 	  ($fset) = @{$self->db->get_FeatureSetAdaptor->store($fset)}; 
 	}
 

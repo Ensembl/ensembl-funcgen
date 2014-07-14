@@ -403,7 +403,7 @@ sub init_experiment_import{
   #remove and add specific report, this is catchig some Root stuff
   #$self->log("Initiated efg import with following parameters:\n".Data::Dumper::Dumper(\$self));
 
-  return $self->experiment($exp);;
+  return $self->experiment($exp);
 }
 
 

@@ -60,7 +60,7 @@ use File::Basename                 qw( dirname fileparse );
 use File::Spec;
 use Time::Local;
 use FileHandle;
-use Carp;
+use Carp qw( confess );
 
 use base qw( Exporter );
 use vars qw( @EXPORT_OK );
@@ -929,23 +929,21 @@ sub path_to_namespace {
 #todo Use IPC::Open open2/3 for piping? Take list of operators (and list of files e.g. in/out)
 
 sub open_file{
-  my ($file, $operator, $file_permissions) = @_;
+  my $file             = shift || throw('Must provide a file argument');
+  my $operator         = shift || '<';
+  my $file_permissions = shift;
 
-  $operator ||= '<';
 
   if ($operator !~ /%/) {
     $operator = "$operator $file";
-  } else {
-    #We have some piping to do
+  } else { #We have some piping to do
     $operator = sprintf($operator, $file);
   }
 
   #Get dir here and create if not exists
-  my $dir = dirname($file);
-
-  my $mkpath_opts = {verbose => 1};
+  my $dir              = dirname($file);
+  my $mkpath_opts      = {verbose => 1};
   $mkpath_opts->{mode} = $file_permissions if defined $file_permissions;
-
 
   if(! -d $dir){
 
@@ -965,19 +963,15 @@ sub open_file{
   #won't be caught until we close the file descriptor
   #Which is a little late, and we don't catch error codes on close yet
 
-  if (! defined $fh) {
-    croak("Failed to open $operator");
-  }
-
   #it maybe better to use PerlIO libs here e.g. PerlIO::gzip
-
+  confess("Failed to open $operator") if ! defined $fh;
 
   #Have to chmod here as umask will over-ride permissions passed to FileHandle
   if (defined $file_permissions) {
 
     #Catch non-numeric here as chmod still returns true
     if ($file_permissions =~ /[^0-9]/) {
-      croak("Failed to change $file permissions using:\t$file_permissions");
+      confess("Failed to change $file permissions using:\t$file_permissions");
     }
 
     #chmod requires a literal octal number e.g. 0775 not '0775'
@@ -1133,7 +1127,7 @@ sub _handle_exit_status{
     $err_string = "Failed to execute:\t$cmd\nError:\t$errno\n";
   }
   elsif ($exit_status & 127) {
-    $err_string = sprintf("Child process died with signal %d, %s coredump\nError:\t$errno\n",
+    $err_string = sprintf("Child process died with signal %d, %s coredump\n$cmd\nError:\t$errno\n",
                     ($exit_status & 127),
                     ($exit_status & 128) ? 'with' : 'without');
   }

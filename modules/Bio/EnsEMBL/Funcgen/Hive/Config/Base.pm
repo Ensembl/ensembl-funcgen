@@ -251,7 +251,7 @@ sub resource_classes {
                                             " rusage[$ENV{DB_HOST_LSFNAME}=10:duration=10:decay=1,mem=4000]\"" },  
      normal_monitored_8GB    => {'LSF' => " -M8000 -R\"select[$ENV{DB_HOST_LSFNAME}<1000 && mem>8000]".
                                             " rusage[$ENV{DB_HOST_LSFNAME}=10:duration=10:decay=1,mem=8000]\"" },   
-     normal_monitored_2GB    => {'LSF' => " -M16000 -R\"select[$ENV{DB_HOST_LSFNAME}<1000 && mem>16000]".
+     normal_monitored_16GB    => {'LSF' => " -M16000 -R\"select[$ENV{DB_HOST_LSFNAME}<1000 && mem>16000]".
                                             " rusage[$ENV{DB_HOST_LSFNAME}=10:duration=10:decay=1,mem=16000]\"" },    
      normal_10gb_monitored    => {'LSF' => " -M10000 -R\"select[$ENV{DB_HOST_LSFNAME}<1000 && mem>10000]".
                                             " rusage[$ENV{DB_HOST_LSFNAME}=10:duration=10:decay=1,mem=10000]\"" },                                                                         
