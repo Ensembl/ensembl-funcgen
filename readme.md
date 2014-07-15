@@ -14,7 +14,7 @@ Ensembl also provides the complementary genome segmentation analyses which are u
 Microarray probe mappings for several species, for example Affymetrix, Codelink, Agilent, Illumina and Phalanx.
 
 #### 4. External Regulatory Data
-The Funcgen database also contains data loaded from external sources such as: Tarbase (human, mouse); human enhancers from the VISTA Browser; human RRBS and WGBS assays and the Fanton 5 human regulatory element predictions.
+The Funcgen database also contains data loaded from external sources such as: Tarbase (human, mouse); human enhancers from the VISTA Browser; human RRBS and WGBS assays and the Fantom 5 human regulatory element predictions.
 
 
 More information can be found on our blog, including details of the recent regulatory build redesign process:
