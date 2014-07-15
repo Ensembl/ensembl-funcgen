@@ -143,10 +143,10 @@ GetOptions (
 	    'dnadb_port=i'        => \$dnadb_port,
 	    'dnadb_pass=s'        => \$dnadb_pass,
 	    'dnadb_name=s'        => \$dnadb_name,
-	    'dbhost=s'           => \$host,
-	    'dbuser=s'           => \$user,
-	    'dbport=i'           => \$port,
-	    'dbpass=s'           => \$pass,
+	    'host=s'           => \$host,
+	    'user=s'           => \$user,
+	    'port=i'           => \$port,
+	    'pass=s'           => \$pass,
 	    'dbname=s'           => \$dbname,
 	    'workdir=s'          => \$workdir,
 	    'outputdir=s'        => \$outputdir,
@@ -160,9 +160,9 @@ GetOptions (
 pod2usage(1) if ($help);
 
 # Should be failing a little nicer now... 
-if(!$host || !$port || !$user || !$dbname ) {  print "Missing connection parameters for funcgen db\n"; pod2usage(0); }
+if(!$host || !$port || !$user || !$dbname ) {  print "Missing connection parameters for funcgen db\n"; pod2usage(1); }
 if(!$workdir || !$outputdir) {  print "Missing working folder(s)\n"; pod2usage(0); }
-if(!$species || !$assembly || !$schema) {  print "Need species, assembly and schema information\n"; pod2usage(0); }
+if(!$species || !$assembly || !$schema) {  print "Need species, assembly and schema information\n"; pod2usage(1); }
 
 
 #Check database connections
@@ -184,11 +184,12 @@ if($dnadb_name){
 }
 
 my ($efgdba, $apass);
+
 if($dbname){
 
   if ($pass){
-	$apass = {-pass => $pass};
-	$pass = "-p $pass";
+    $apass = {-pass => $pass};
+    $pass = "-p $pass";
   }
 
 
@@ -212,6 +213,11 @@ my $fta = $efgdba->get_FeatureTypeAdaptor();
 my $fsa = $efgdba->get_FeatureSetAdaptor();
 my $bma = $efgdba->get_BindingMatrixAdaptor();
 my $dbea = $efgdba->get_DBEntryAdaptor();
+
+
+#Separate this into a separate step/script
+
+=pod
 
 if(! -d "${outputdir}/matrices"){
   system("mkdir ${outputdir}/matrices") && die "Error creating matrices folder";
@@ -320,25 +326,56 @@ foreach my $tf (sort { $a->name cmp $b->name} @tfs){
 }
 close FO;
 
+=cut
 
-#matrix_list no longer exists!!!!
+#matrix_list no longer exists as we use the DB
 #where is this being used??!!
-
-print "processing fasta\n";
 #system("cp ${workdir}/binding_matrices/Jaspar/matrix_list.txt ${outputdir}/matrices") && die "could not find fasta file";
 
-system("gunzip -dc ${workdir}/fasta/${species}/${species}_male_${assembly}_unmasked.fasta.gz > ${outputdir}/fasta.fas") && die "could not unzip fasta file";
+#print "processing fasta\n";
+#WHAT? Why are we gunzipping and copying here, why is this not used in situ?
+#system("gunzip -dc ${workdir}/fasta/${species}/${species}_male_${assembly}_unmasked.fasta.gz > ${outputdir}/fasta.fas") && die "could not unzip fasta file";
 
+my $fasta_file = "${workdir}/fasta/${species}/${species}_male_${assembly}_unmasked.fasta";
 $assembly =~ s/_.*$//;
 print $assembly."\n";
 
-my $cmd = "pwm_genome_map.pl -g ${outputdir}/fasta.fas -a ${assembly} -o ${outputdir}/all_mappings.tab -p 0.001 -w ${outputdir}/tmp_results/ ${outputdir}/matrices/*.pfm";
-print $cmd."\n";
-system($cmd) && die "error running pwm_genome_map"; 
+my $map_file = "${outputdir}/all_mappings.tab";
+#This is currently hardcoded in pwm_filter_map!?
 
-system("grep '>' ${outputdir}/fasta.fas > ${outputdir}/fasta.id_lines") && die "error processing fasta file";
+#Could do with a recover or force mode here
 
-system("pwm_filter_mappings.pl -i ${outputdir}/matrix_list -e ".$dbname." -H ".$host." -u ".$user." -P ".$port." -o ${outputdir}/thresholds -g ${outputdir}/fasta.id_lines -s ${schema}") && die "could not run pwm_filter_mappings";
+if(! -f $map_file){
+
+
+  my $cmd = "pwm_genome_map.pl -g ${outputdir}/fasta.fas -a ${assembly} -o $map_file ".
+    "-p 0.001 -w ${outputdir}/tmp_results/ ${outputdir}/matrices/*.pfm";
+  print $cmd."\n";
+  system($cmd) && die "error running pwm_genome_map"; 
+}
+
+#stashed
+#  #There is a danger that the workdir will be removed by this script
+#  #so append tmp_results in the script not here, and make mandatory
+#
+#  my $cmd = "pwm_genome_map.pl -g $fasta_file -a ${assembly} -o $map_file ".
+#    "-p 0.001 -w $outputdir ${outputdir}/matrices/*.pfm";
+#  print $cmd."\n";
+#  #warn "skipping pwm_genome_map\n";
+#  system($cmd) && die "error running pwm_genome_map"; 
+#}
+
+#print "Creating fasta header file...\n";
+#system("grep '>' $fasta_file > ${outputdir}/fasta.id_lines") && die "error processing fasta file";
+
+
+
+
+#The output thresholds need to be stored in the DB for future reference, and used as a factor in defining the permissive threshold above
+system("pwm_filter_mappings.pl -t $map_file -i ${outputdir}/matrix_list -e ".$dbname." -H ".$host." -u ".$user." -P ".$port." -o ${outputdir}/thresholds -g ${outputdir}/fasta.id_lines -s ${schema}") && die "could not run pwm_filter_mappings";
+#stashed
+#system("pwm_filter_mappings.pl -t $map_file -i ${outputdir}/matrix_list -e ".$dbname." -H ".$host." -u ".$user." -P ".$port." $pass -o ${outputdir}/thresholds -g ${outputdir}/fasta.id_lines -s ${schema}") && die "could not run pwm_filter_mappings";
+
 
 system("mkdir -p ${outputdir}/filtered") && die "could not create filtered folder";
 
