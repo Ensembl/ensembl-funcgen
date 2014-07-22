@@ -15,6 +15,10 @@
 # limitations under the License.
 
 
+# MySQL query to get the correct $fset_names:
+# select replace(group_concat(name), ",", " ") from feature_set where type = 'regulatory' ;
+
+
 USER=$1
 shift
 
@@ -25,42 +29,35 @@ fi
 
 
 format='GFF'
-release=73
-
-#only required if we want to dump specific sets i.e. not the complete reg build set
-#fset_names="RegulatoryFeatures:ESHyb RegulatoryFeatures:MEF RegulatoryFeatures:MultiCell RegulatoryFeatures:MEL RegulatoryFeatures:NPC RegulatoryFeatures:ES" 
-fset_names="RegulatoryFeatures:NHEK RegulatoryFeatures:K562 RegulatoryFeatures:GM06990 RegulatoryFeatures:MultiCell RegulatoryFeatures:IMR90 RegulatoryFeatures:HSMM RegulatoryFeatures:HepG2 RegulatoryFeatures:NH-A RegulatoryFeatures:HeLa-S3 RegulatoryFeatures:CD4 RegulatoryFeatures:HUVEC RegulatoryFeatures:HMEC RegulatoryFeatures:H1ESC RegulatoryFeatures:GM12878"
-dbname="homo_sapiens_funcgen_${release}_37"
-dbhost='ens-staging1'
-
-#dbname="mus_musculus_funcgen_${release}_38"
-#dbhost='ens-staging2'
-
-
+release=76
 
 #feature_type='AnnotatedFeature'
-feature_type='RegulatoryFeature'
 #feature_type='MotifFeature'
-#feature_type='SegmentationFeature'
-
 #fset_names="${feature_type}s" #Special set name to dump all Annotated/MotifFeatures in build
+
+
+feature_type='RegulatoryFeature'
+#feature_type='SegmentationFeature'
+#dbname="homo_sapiens_funcgen_${release}_38"
+#dbhost='ens-staging1'
+
+#fset_names="RegulatoryFeatures:A549 RegulatoryFeatures:DND-41 RegulatoryFeatures:GM12878 RegulatoryFeatures:H1ESC RegulatoryFeatures:HeLa-S3 RegulatoryFeatures:HepG2 RegulatoryFeatures:HMEC RegulatoryFeatures:HSMM RegulatoryFeatures:HSMMtube RegulatoryFeatures:HUVEC RegulatoryFeatures:IMR90 RegulatoryFeatures:K562 RegulatoryFeatures:Monocytes-CD14+ RegulatoryFeatures:NH-A RegulatoryFeatures:NHDF-AD RegulatoryFeatures:NHEK RegulatoryFeatures:NHLF RegulatoryFeatures:Osteobl RegulatoryFeatures:MultiCell"
+
+dbname="mus_musculus_funcgen_${release}_38"
+dbhost='ens-staging2'
+
+fset_names="RegulatoryFeatures:ESHyb RegulatoryFeatures:MEF RegulatoryFeatures:MultiCell RegulatoryFeatures:MEL RegulatoryFeatures:NPC RegulatoryFeatures:ES"
+
+#feature_type='RegulatoryFeature'
+feature_type='SegmentationFeature'
+
+
 #Does not yet support RegulatoryFeatures as these seem to get dumped to a merged file with no cell type info
 #and merge does not handle this yet anyway
 
 
 
-# MySQL query to get the correct $fset_names:
-# select replace(group_concat(name), ",", " ") from feature_set where type = 'regulatory' ;
 
-# Mouse:
-#fset_names="RegulatoryFeatures:ESHyb RegulatoryFeatures:ES RegulatoryFeatures:NPC RegulatoryFeatures:MultiCell RegulatoryFeatures:MEF RegulatoryFeatures:MEL"
-
-# Human:
-# Regulatory
-#fset_names="RegulatoryFeatures:NHEK RegulatoryFeatures:K562 RegulatoryFeatures:GM06990 RegulatoryFeatures:MultiCell RegulatoryFeatures:IMR90 RegulatoryFeatures:HSMM RegulatoryFeatures:HepG2 RegulatoryFeatures:NH-A RegulatoryFeatures:HeLa-S3 RegulatoryFeatures:CD4 RegulatoryFeatures:HUVEC RegulatoryFeatures:HMEC RegulatoryFeatures:H1ESC RegulatoryFeatures:GM12878";
-# Segmentation
-#fset_names="Segmentation:HUVEC Segmentation:K562 Segmentation:GM12878 Segmentation:H1ESC Segmentation:HeLa-S3 Segmentation:HepG2";
-#Should do this for all, so we don't have to specify -feature_sets
 
 dnadbhost=$dbhost
 dnadbuser=$USER
