@@ -20,10 +20,11 @@ shift
 
 
 
-#dbname=homo_sapiens_funcgen_73_37
-dbname=mus_musculus_funcgen_73_38
-dbhost=
-dnadb_host=
+dbname=homo_sapiens_funcgen_76_38
+#dbname=mus_musculus_funcgen_76_38
+dbhost=ens-staging1
+dnadb_host=ens-staging1
+
 dnadb_user=$USER
 
 nfs_root=
