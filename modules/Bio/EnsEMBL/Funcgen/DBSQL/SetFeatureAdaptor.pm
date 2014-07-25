@@ -309,7 +309,7 @@ sub _generate_feature_set_id_clause{
 	}
 
 	if($fset->feature_class ne $fclass){
-	  throw('FeatureSet feature_class \''.$fclass.'\' does not match adaptor feature_class \''.$fset->feature_class.'\'');
+	  throw('FeatureSet feature_class \''.$fset->feature_class.'\' does not match adaptor feature_class \''.$fclass.'\'');
 	}
 
 	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
@@ -497,7 +497,7 @@ sub fetch_all_by_logic_name {
 =cut
 
 sub _feature_class{
-  (my $fclass = $_[0]->_main_table->[0]) =~ s/_.*//; #use the first word of the table name as the class
+  (my $fclass = $_[0]->_main_table->[0]) =~ s/_feature$//; #use the first word of the table name as the class
   return $fclass;
 }
 
