@@ -52,36 +52,36 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(dump_data);
 # Then get the slice/array adaptors
 ####################################
 
-# my $registry = "Bio::EnsEMBL::Registry";
-# $registry->load_registry_from_db(-host => 'ensembldb.ensembl.org',
+my $registry = "Bio::EnsEMBL::Registry";
+$registry->load_registry_from_db(-host => 'ensembldb.ensembl.org',
 
-# my $slice_adaptor = $registry->get_adaptor("mus musculus","core","Slice");
-# my $pfa           = $registry->get_adaptor("mus musculus","funcgen","ProbeFeature");
-# my $aa            = $registry->get_adaptor("mus musculus","funcgen","Array");
-# my $pba           = $registry->get_adaptor("mus musculus","funcgen","ProbeSet");
-# my $tx_adaptor    = $registry->get_adaptor("mus musculus","core","Transcript");
-# my $gene_adaptor  = $registry->get_adaptor("mus musculus","core","Gene");
+my $slice_adaptor = $registry->get_adaptor("mus musculus","core","Slice");
+my $pfa           = $registry->get_adaptor("mus musculus","funcgen","ProbeFeature");
+my $aa            = $registry->get_adaptor("mus musculus","funcgen","Array");
+my $pba           = $registry->get_adaptor("mus musculus","funcgen","ProbeSet");
+my $tx_adaptor    = $registry->get_adaptor("mus musculus","core","Transcript");
+my $gene_adaptor  = $registry->get_adaptor("mus musculus","core","Gene");
 
-my $cfg = Config::Tiny->new;
-   $cfg = Config::Tiny->read('../test_db.ini');
-
-my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new (
-  -user       => $cfg->{staging}->{user},
-  # -pass       => $cfg->{staging}->{pass},
-  -host       => $cfg->{staging}->{host},
-  -port       => $cfg->{staging}->{port},
-  -dbname     => $cfg->{staging}->{dbname},
-  -dnadb_host => $cfg->{staging}->{host},
-  -dnadb_user => $cfg->{staging}->{user},
-  );
-
-my $dna_db = Bio::EnsEMBL::DBSQL::DBAdaptor->new (
-  -user       => $cfg->{dna_db}->{user},
-  # -pass       => $cfg->{staging}->{pass},
-  -host       => $cfg->{dna_db}->{host},
-  -port       => $cfg->{dna_db}->{port},
-  -dbname     => $cfg->{dna_db}->{dbname},
-  );
+#my $cfg = Config::Tiny->new;
+#   $cfg = Config::Tiny->read('../test_db.ini');
+#
+#my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new (
+#  -user       => $cfg->{staging}->{user},
+#  # -pass       => $cfg->{staging}->{pass},
+#  -host       => $cfg->{staging}->{host},
+#  -port       => $cfg->{staging}->{port},
+#  -dbname     => $cfg->{staging}->{dbname},
+#  -dnadb_host => $cfg->{staging}->{host},
+#  -dnadb_user => $cfg->{staging}->{user},
+#  );
+#
+#my $dna_db = Bio::EnsEMBL::DBSQL::DBAdaptor->new (
+#  -user       => $cfg->{dna_db}->{user},
+#  # -pass       => $cfg->{staging}->{pass},
+#  -host       => $cfg->{dna_db}->{host},
+#  -port       => $cfg->{dna_db}->{port},
+#  -dbname     => $cfg->{dna_db}->{dbname},
+#  );
 
 
 #print "Using api: ",$registry->software_version,"\n";
