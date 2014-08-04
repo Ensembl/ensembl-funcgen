@@ -166,7 +166,7 @@ my @feature_classes = ('result_feature', 'dna_methylation_feature');
 
 print "create_ftp_dir_links.pl @tmp_args\n";
 
-GetOptions 
+GetOptions
   (
    'dnadb_host=s'       => \$dnadbhost,
    'dnadb_user=s'       => \$dnadbuser,
@@ -186,7 +186,7 @@ GetOptions
    #'force'              => \$force,
    "help|?"             => sub { pod2usage(-exitval => 0, -verbose => 1); },
    "man|m"              => sub { pod2usage(-exitval => 0, -verbose => 3); },
-   
+
   )  or pod2usage( -exitval => 1 ); #Catch unknown opts, culprit will be printed by GetOptions
 
 
@@ -221,7 +221,7 @@ if(!$host || !$user || !$dbname )  {  die("Missing connection parameters (use -h
 #Create database connections
 
 
- 
+
 my $efgdb = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
   (
    -host    => $host,
@@ -230,7 +230,7 @@ my $efgdb = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
    -dbname  => $dbname,
 #   -species => $species, #Not strictly necessary
    -pass    => $pass,
-   
+
    -dnadb_host   => $dnadbhost,
    -dnadb_port   => $dnadbport,
    -dnadb_user   => $dnadbuser,
@@ -276,30 +276,30 @@ my $dbfile_data_root = $nfs_root.'/'.$species.'/'.$assm;
 #To enable copying of links around, we use source paths relative to the target directory (rather than full paths)
 
 $link_config{nfs} =
-  { 
+  {
    root     => $nfs_root,
    release_target_path  => $nfs_root."/release_${schema_version}/${species}/${assm}",
-   
+
    #assuming we have cd'd into a subdir of the release_target_path
    #e.g. $nfs_root."/release-${schema_version}/${species}/${assm}/feature_class
    relative_source_path => "../../../../${species}/${assm}",
-   
+
   };
 
-   
+
 $link_config{ftp} =
   {
    root     => $ftp_root,#do we even need this?
    release_target_path  => $ftp_root."/release-${schema_version}/data_files/${species}/${assm}",
-   
+
    #assuming we have cd'd into a subdir of the release_target_path
    #e.g. $ftp_root."/release-${schema_version}/data_files/${species}/${assm}/feature_class
-   relative_source_path => "../../../../../data_files/${species}/${assm}",
+   relative_source_path => "../../../../data_files/${species}/${assm}",
   };
-                                      
 
 
-#Looping is a bit higgeldy-piggeldy here as we want to dealing with all links for a 
+
+#Looping is a bit higgeldy-piggeldy here as we want to dealing with all links for a
 #given data set at the same time
 #hence we have to interate over @link_types a few times.
 
@@ -322,12 +322,12 @@ foreach my $link_type(@link_types){
 
       my $fclass_dir_link = $ftp_root."/data_files/${species}/${assm}/${fclass}";
       my $fclass_nfs_dir  = $dbfile_data_root."/${fclass}";
-      
+
       if(! -l $fclass_dir_link){ #Let's create it
         print "Top level data_files dir link does not exist:\t$fclass_dir_link\n";
-      
+
         #We build dbfile_data_root above, as it has been removed from meta
-        
+
         if(! -d $dbfile_data_root){
           die("dbfile.data_root is not a valid directory:\t$dbfile_data_root");
         }
@@ -339,7 +339,7 @@ foreach my $link_type(@link_types){
       }
     }
   }
-  
+
   my $rel_dir = $link_config{$link_type}->{release_target_path};
 
   if(! -d $rel_dir){
@@ -354,28 +354,28 @@ foreach my $link_type(@link_types){
 #Loop through set types and create links
 #my $dir = getcwd;
 my ($feature_class, $ftp_source_dir, $source_dir, $target_dir, @true_paths);
-  
+
 foreach my $set_type (@set_types) {
-    
+
   #warn "getting $set_type setadaptor";
-  #my $set_adaptor = $reg->get_adaptor($species, 'funcgen', $set_type.'setadaptor');    
+  #my $set_adaptor = $reg->get_adaptor($species, 'funcgen', $set_type.'setadaptor');
   my $method      = 'get_'.ucfirst($set_type).'SetAdaptor';
   my $set_adaptor = $efgdb->$method;
-    
+
   foreach my $set (@{$set_adaptor->fetch_all}) {
-      
+
     #Check if is DISPLAYABLE and have data files
-      
+
     #This is ResultSet specific after here
     ($source_dir = $set->dbfile_data_dir) =~ s'/+'/'g;
     #Let's tidy up the source dir as we have numerous multiple slashes ///
-	
+
     if ( ! ($set->is_displayable &&
             $source_dir)) {
       next;
     }
-	 
- 
+
+
     #get true source here to list
     #will always be on nfs
 
@@ -389,7 +389,7 @@ foreach my $set_type (@set_types) {
     ($target_dir = $source_dir) =~ s'^/'';
     $target_dir = (split '/', $target_dir)[1];
     #It should always be the 2nd element, even if we have a full file path
-    #if this ever does not match the source dir name, 
+    #if this ever does not match the source dir name,
     #then we need add the $target_dir back into the ln cmd and
     #implement an overwrite mode which removes the existing link
 
@@ -401,51 +401,51 @@ foreach my $set_type (@set_types) {
       foreach my $link_type (@link_types) {
         my $rel_dir = $link_config{$link_type}->{release_target_path};
         my $fclass_dir = $rel_dir."/${feature_class}";
-        
+
         if (! -d $fclass_dir) {
           system("mkdir -p $fclass_dir") == 0 or die("Failed to create $link_type release dir:\t${fclass_dir}");
         }
-	
+
         chdir($fclass_dir) || die("Failed to move to $link_type release dir:\t${fclass_dir}");;
 
-	
+
         #Now we need to redefine source_dir as link to data_files relative to target dir
         $source_dir =  $link_config{$link_type}->{relative_source_path}."/${feature_class}/${target_dir}";
-      
-   
+
+
         #SANITY CHECKING
-      
+
         #This is now dependant on link_type?
-        #should do this once really 
-     
+        #should do this once really
+
 
         if (! -d $source_dir) { #Is is a directory?
           #This will be a directory as the link is at the data_file level
           die("Source dbfile_data_dir does not exist for ".$set->name."\t".$source_dir."\nFrom $fclass_dir");
         } else {                #Does is contain any data?
           opendir(DirHandle, $source_dir) || die("Failed to open source dir:\t$source_dir");
-        
+
           #Need to catch error here
-        
+
           my $num_files = 0;
-        
+
           while (readdir(DirHandle)) {
             $num_files++;
             #Could check for expected suffixes or non-empty files
             #check for name match
             #But we are verging on a HC here.
           }
-        
+
           closedir(DirHandle);
-        
+
           if (! $num_files) {
             die("Found 0 files in source directory:\t${source_dir}");
           }
-        }	
-      
-      
+        }
+
+
         if (-e $target_dir){
-          
+
           if(! -l $target_dir){
             #this is not quite true as we are not testing the path
             die("$target_dir already exists but is not a link to $source_dir");
@@ -466,7 +466,7 @@ foreach my $set_type (@set_types) {
           #rather than before in the config
           $source_dir = $ftp_mnt.$source_dir;
         }
-     
+
         my $cmd = "ln -sf $source_dir "; #$target_dir";
         system("$cmd") == 0 or die("Failed to create link using:\t${cmd}\nFrom $fclass_dir");
 
@@ -481,12 +481,12 @@ foreach my $set_type (@set_types) {
   }
 
 }
-	
+
 
 
 print "Source file paths:\n\t".join("\n\t", @true_paths)."\n";
 
-	
+
 #chdir($dir);
 
 
