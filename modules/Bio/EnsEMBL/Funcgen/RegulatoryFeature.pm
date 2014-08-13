@@ -834,7 +834,7 @@ sub summary_as_hash {
 
   return
     {ID                      => $self->stable_id,
-     regulatory_feature_type => $fset->feature_type->name,
+     regulatory_feature_type => $self->feature_type->name,
      cell_type               => $fset->cell_type->name,
      bound_start             => $self->bound_seq_region_start,
      start                   => $self->seq_region_start,
