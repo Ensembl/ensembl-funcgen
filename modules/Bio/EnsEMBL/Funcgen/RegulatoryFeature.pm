@@ -831,17 +831,24 @@ sub summary_as_hash {
   my $self = shift;
   #For speed, grab feature_set first rather than using wrappers 
   my $fset = $self->feature_set;
+  my %flanks = ();
+  my $ftype = $self->feature_type->name;
+
+  if(($ftype eq 'Promoter') ||
+     ($self->adaptor->db->species ne 'homo_sapiens')){
+    $flanks{bound_start} = $self->bound_seq_region_start;
+    $flanks{bound_end}   = $self->bound_seq_region_end;
+  }
 
   return
     {ID                      => $self->stable_id,
-     regulatory_feature_type => $self->feature_type->name,
+     regulatory_feature_type => $ftype,
      cell_type               => $fset->cell_type->name,
-     bound_start             => $self->bound_seq_region_start,
      start                   => $self->seq_region_start,
      end                     => $self->seq_region_end,
-     bound_end               => $self->bound_seq_region_end,
      strand                  => $self->strand,
      seq_region_name         => $self->seq_region_name};
+     %flanks,
 }
 
 1;
