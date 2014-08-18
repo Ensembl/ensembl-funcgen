@@ -112,15 +112,15 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
   my $bmatrix;
-  ($self->{'score'}, $bmatrix,   $self->{'display_label'}, $self->{'interdb_stable_id'}) 
-	= rearrange(['SCORE', 'BINDING_MATRIX', 'DISPLAY_LABEL', 'INTERDB_STABLE_ID'], @_);
+  ($self->{score}, $bmatrix,   $self->{display_label}, $self->{interdb_stable_id}) 
+   = rearrange(['SCORE', 'BINDING_MATRIX', 'DISPLAY_LABEL', 'INTERDB_STABLE_ID'], @_);
     
 
   if(! (ref($bmatrix) && $bmatrix->isa('Bio::EnsEMBL::Funcgen::BindingMatrix'))){
 	throw('You must pass be a valid Bio::EnsEMBL::Funcgen::BindingMatrix');
   }
 
-  $self->{'binding_matrix'} = $bmatrix;
+  $self->{binding_matrix} = $bmatrix;
 
   return $self;
 }
@@ -143,7 +143,6 @@ sub new_fast {
 }
 
 
-
 =head2 binding_matrix
 
   Example    : my $bmatrix_name = $mfeat->binding_matrix->name;
@@ -156,7 +155,7 @@ sub new_fast {
 =cut
 
 sub binding_matrix{
-  return $_[0]->{binding_matrix};
+  return shift->{binding_matrix};
 }
 
 =head2 feature_type
@@ -172,7 +171,7 @@ sub binding_matrix{
 
 
 sub feature_type{
-  return $_[0]->{binding_matrix}->feature_type;
+  return shift->{binding_matrix}->feature_type;
 }
 
 
@@ -188,7 +187,7 @@ sub feature_type{
 =cut
 
 sub score {
-  return $_[0]->{'score'};
+  return shift->{score};
 }
 
 
@@ -206,8 +205,7 @@ sub score {
 sub display_label {
   #If not set in new before store, a default is stored as:
   #$mf->binding_matrix->feature_type->name.':'.$mf->binding_matrix->name();
-
-  return $_[0]->{'display_label'};
+  return shift->{display_label};
 }
 
 
@@ -224,10 +222,9 @@ sub display_label {
 =cut
 
 sub associated_annotated_features{
-  my ($self, $afs) = @_;
-  
+  my $self = shift;
+  my $afs  = shift;
   #Lazy load as we don't want to have to do a join on all features when most will not have any
-
  
   if (defined $afs) {
 
@@ -280,9 +277,8 @@ sub associated_annotated_features{
 =cut
 
 sub is_position_informative {
-  my ($self, $position) = @_;
-
-  throw "Need a position" if ! defined $position;
+  my $self     = shift;
+  my $position = shift || throw 'Need a position argument';
 
   if( ($position < 1) || 
       ($position > $self->binding_matrix->length) ){
@@ -374,9 +370,42 @@ sub infer_variation_consequence{
 =cut
 
 sub interdb_stable_id {
-  return $_[0]->{'interdb_stable_id'};
+  return shift->{interdb_stable_id};
 }
 
+
+=head2 summary_as_hash
+
+  Example       : $motif_feature_summary = $motif_feature->summary_as_hash;
+  Description   : Retrieves a textual summary of this MotifFeature.
+  Returns       : Hashref of descriptive strings
+  Status        : Intended for internal use (REST)
+
+=cut
+
+sub summary_as_hash {
+  my $self = shift;
+  my ($acc, $ftype);
+  #split display_label as binding matrix may be lazy loaded and slow things down
+  
+  if ($self->display_label =~ /(.*[^:])(:)(.*)/o){ 
+    $ftype = $1;
+    $acc = $3;
+  }
+  else{
+    warn "Failed to parse feature type and binding matric from display_id:\t".$self->display_id;
+  }
+
+  #Add bm.threshold in here?
+  return
+   {binding_matrix          => $acc,
+    motif_feature_type      => $ftype,
+    start                   => $self->seq_region_start,
+    end                     => $self->seq_region_end,
+    strand                  => $self->strand,
+    seq_region_name         => $self->seq_region_name,
+    score                   => $self->score            };
+}
 
 
 1;
