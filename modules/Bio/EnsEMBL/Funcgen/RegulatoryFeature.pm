@@ -828,11 +828,9 @@ sub get_other_RegulatoryFeatures{
 =cut
 
 sub summary_as_hash {
-  my $self = shift;
-  #For speed, grab feature_set first rather than using wrappers 
-  my $fset = $self->feature_set;
+  my $self   = shift;
   my %flanks = ();
-  my $ftype = $self->feature_type->name;
+  my $ftype  = $self->feature_type->name;
 
   if(($ftype eq 'Promoter') ||
      ($self->adaptor->db->species ne 'homo_sapiens')){
@@ -843,12 +841,13 @@ sub summary_as_hash {
   return
     {ID                      => $self->stable_id,
      regulatory_feature_type => $ftype,
-     cell_type               => $fset->cell_type->name,
+     cell_type               => $self->feature_set->cell_type->name,
      start                   => $self->seq_region_start,
      end                     => $self->seq_region_end,
      strand                  => $self->strand,
-     seq_region_name         => $self->seq_region_name};
-     %flanks,
+     seq_region_name         => $self->seq_region_name,
+     %flanks                                            };
+   
 }
 
 1;
