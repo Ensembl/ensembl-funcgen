@@ -55,7 +55,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate);
 use Bio::EnsEMBL::Funcgen::FeatureType;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#DBI sql_types import
 
@@ -96,16 +96,15 @@ foreach my $evidence_type(keys %regulatory_evidence_info){
   }
 }
 
-=head2 fetch_by_name
+=head2 fetch_all_by_name
 
   Arg [1]    : string - name of FeatureType
   Arg [2]    : optional string - class of FeatureType
   Arg [3]    : optional Bio::EnsEMBL::Analysis - Analysis used to generate FeatureType
   Example    : my $ft = $ft_adaptor->fetch_by_name('H3K4me2');
   Description: Does what it says on the tin
-  Returntype : Bio::EnsEMBL::Funcgen::FeatureType object (or ARRAY if called in ARRAY context)
-  Exceptions : Throws if more than one FeatureType for a given name found.
-               Throws if Analysis is defined but not valid.
+  Returntype : Arrayref Bio::EnsEMBL::Funcgen::FeatureType object 
+  Exceptions : Throws if Analysis is defined but not valid.
   Caller     : General
   Status     : At risk
 
@@ -115,7 +114,7 @@ foreach my $evidence_type(keys %regulatory_evidence_info){
 #incorporating that functionality here will conditioanlly change the return type!!
 
 
-sub fetch_by_name{
+sub fetch_all_by_name{
   my ($self, $name, $class, $analysis) = @_;
 
   throw("Must specify a FeatureType name") if(! $name);
@@ -131,17 +130,10 @@ sub fetch_by_name{
   $self->bind_param_generic_fetch($name,           SQL_VARCHAR);
   $self->bind_param_generic_fetch($class,          SQL_VARCHAR) if $class;
   $self->bind_param_generic_fetch($analysis->dbID, SQL_INTEGER) if $analysis;
-  my @fts = @{$self->generic_fetch($constraint)};
+  
+  return $self->generic_fetch($constraint);
 
 
-  #This can happen if using a redundant name between classes and/or analyses
-
-  if( wantarray && (scalar @fts >1) ){
-    throw("Found more than one FeatureType:$name\n".
-          "Please specify a class and/or analysis argument to disambiguate");
-  }
-
-  return (wantarray) ? @fts : $fts[0];
 }
 
 
@@ -570,6 +562,57 @@ sub fetch_all_by_evidence_type{
 sub fetch_all_by_associated_SetFeature{
   throw('Please use the more generic fetch_all_by_association method');
 }
+
+=head2 --- DEPRECATED e77 --- fetch_by_name
+
+  Arg [1]    : string - name of FeatureType
+  Arg [2]    : optional string - class of FeatureType
+  Arg [3]    : optional Bio::EnsEMBL::Analysis - Analysis used to generate FeatureType
+  Example    : my $ft = $ft_adaptor->fetch_by_name('H3K4me2');
+  Description: Does what it says on the tin
+  Returntype : Bio::EnsEMBL::Funcgen::FeatureType object (or ARRAY if called in ARRAY context)
+  Exceptions : Throws if more than one FeatureType for a given name found.
+               Throws if Analysis is defined but not valid.
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+#Should really change this to fetch_all_by_name
+#incorporating that functionality here will conditioanlly change the return type!!
+
+
+sub fetch_by_name{
+  my ($self, $name, $class, $analysis) = @_;
+  deprecate('Please use fetch_all_by_name');
+
+  throw("Must specify a FeatureType name") if(! $name);
+
+  my $constraint = ' name = ? ';
+  $constraint   .= ' AND class = ? ' if $class;
+
+  if($analysis){
+    $self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis', $analysis);
+    $constraint .= ' AND analysis_id = ? ';
+  }
+
+  $self->bind_param_generic_fetch($name,           SQL_VARCHAR);
+  $self->bind_param_generic_fetch($class,          SQL_VARCHAR) if $class;
+  $self->bind_param_generic_fetch($analysis->dbID, SQL_INTEGER) if $analysis;
+  my @fts = @{$self->generic_fetch($constraint)};
+
+
+  #This can happen if using a redundant name between classes and/or analyses
+
+  if( wantarray && (scalar @fts >1) ){
+    throw("Found more than one FeatureType:$name\n".
+          "Please specify a class and/or analysis argument to disambiguate");
+  }
+
+  return (wantarray) ? @fts : $fts[0];
+}
+
+
 
 1;
 
