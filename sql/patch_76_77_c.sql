@@ -20,7 +20,7 @@
 UPDATE feature_type SET so_accession = 'SO:0000934'        WHERE so_accession = 'miRNA_target_site';
 UPDATE feature_type SET so_name      = 'miRNA_target_site' WHERE so_name      = 'SO:0000934';
 
-# patch identifier
+-- patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_76_77_c.sql|Correct mirna so_name and accession in feature_type');
 
 

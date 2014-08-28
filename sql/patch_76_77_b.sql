@@ -19,6 +19,6 @@
 
 UPDATE feature_type SET name = 'CTCF Binding Site' WHERE name = 'CTCF' AND class = 'Regulatory Feature' AND so_accession = 'SO:0001974' AND description = 'CTCF binding site';
 
-# patch identifier
+-- patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_76_77_b.sql|CTCF feature_type update');
 

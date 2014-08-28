@@ -13,12 +13,15 @@
 -- limitations under the License.
 
 /**
-@header patch_76_77_a.sql - schema version
-@desc   Update schema_version in meta table to 76
+@header patch_76_77_d.sql - Fix errornous feature_type_id in mirna_target_feature
+@desc   85 records have an incorrect feature_type_id assinged
 */
 
-UPDATE meta SET meta_value='77' WHERE meta_key='schema_version';
+
+UPDATE mirna_target_feature mtf JOIN feature_type ft ON mtf.display_label = ft.name SET mtf.feature_type_id = ft.feature_type_id;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_76_77_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_76_77_d.sql|Fix errornous feature_type_id in mirna_target_feature');
+
+
 
