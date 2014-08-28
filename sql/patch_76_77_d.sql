@@ -14,7 +14,7 @@
 
 /**
 @header patch_76_77_d.sql - Fix errornous feature_type_id in mirna_target_feature
-@desc   85 records have an incorrect feature_type_id assinged
+@desc   A few records have an incorrect feature_type_id assinged
 */
 
 
