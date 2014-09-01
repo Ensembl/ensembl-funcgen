@@ -131,7 +131,7 @@ sub _get_current_FeatureSet{
 	$self->{'multicell_set'} = $self->db->get_FeatureSetAdaptor->fetch_by_name('RegulatoryFeatures:MultiCell');
 
 	if(! $self->{'multicell_set'}){
-	  warn('Could not retrieve current default RegulatoryFeatures:MuiltiCell FeatureSet');
+	  warn('Could not retrieve current default RegulatoryFeatures:MultiCell FeatureSet');
 	}
   }
 

@@ -643,7 +643,7 @@ sub _set_dnadb{
 
 
     if (scalar(@dbnames)==0) {
-      warn(':: Failed to find dnadb like '.$dnadb_name.', using '
+      warn(':: Failed to find dnadb like '.$match_name.', using '
            .$self->dnadb_user.'@'.$self->dnadb_host.':'.$port);
     } else {
       $host_port = $port;
