@@ -373,6 +373,30 @@ sub interdb_stable_id {
   return shift->{interdb_stable_id};
 }
 
+=head2 summary_as_hash
+
+  Example       : $motf_summary = $motf->summary_as_hash;
+  Description   : Retrieves a textual summary of this MotifFeature.
+  Returns       : Hashref of descriptive strings
+  Status        : Intended for internal use (REST)
+
+=cut
+
+sub summary_as_hash {
+  my $self = shift;
+  #For speed, grab feature_set first rather than using wrappers 
+  my $bmat = $self->binding_matrix;
+
+  return
+    {start                   => $self->seq_region_start,
+     end                     => $self->seq_region_end,
+     strand                  => $self->strand,
+     seq_region_name         => $self->seq_region_name,
+     feature_type            => $self->feature_type,
+     score                   => $self->score,
+     binding_matrix          => $bmat->name};
+}
+
 
 =head2 summary_as_hash
 

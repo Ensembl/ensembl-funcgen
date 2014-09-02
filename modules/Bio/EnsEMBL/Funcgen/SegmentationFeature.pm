@@ -166,7 +166,6 @@ sub display_label {
   return $self->{'display_label'};
 }
 
-
 =head2 summary_as_hash
 
   Example       : $segf_summary = $segf->summary_as_hash;
@@ -180,12 +179,11 @@ sub summary_as_hash {
   my $self = shift;
 
   return
-    {ID                        => $self->stable_id,
+    {
      segmentation_feature_type => $self->feature_type->name,
      cell_type                 => $self->feature_set->cell_type->name,
      start                     => $self->seq_region_start,
      end                       => $self->seq_region_end,
-     strand                    => $self->strand,
      seq_region_name           => $self->seq_region_name              };
 }
 

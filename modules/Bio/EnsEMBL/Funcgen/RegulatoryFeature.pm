@@ -840,14 +840,17 @@ sub summary_as_hash {
 
   return
     {ID                      => $self->stable_id,
-     regulatory_feature_type => $ftype,
-     cell_type               => $self->feature_set->cell_type->name,
+     cell_type               => $self->cell_type->name,
+     bound_start             => $self->bound_seq_region_start,
+     bound_end               => $self->bound_seq_region_end,
      start                   => $self->seq_region_start,
      end                     => $self->seq_region_end,
      strand                  => $self->strand,
      seq_region_name         => $self->seq_region_name,
-     %flanks                                            };
-   
+     activity_evidence       => $self->has_evidence,
+     description             => $self->feature_type->description,
+     feature_type            => "regulatory"
+    };
 }
 
 1;
