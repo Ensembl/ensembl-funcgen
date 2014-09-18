@@ -282,7 +282,7 @@ $link_config{nfs} =
 
    #assuming we have cd'd into a subdir of the release_target_path
    #e.g. $nfs_root."/release-${schema_version}/${species}/${assm}/feature_class
-   relative_source_path => "../../../../${species}/${assm}",
+   relative_source_path => "../../../../../${species}/${assm}",
 
   };
 
@@ -294,7 +294,7 @@ $link_config{ftp} =
 
    #assuming we have cd'd into a subdir of the release_target_path
    #e.g. $ftp_root."/release-${schema_version}/data_files/${species}/${assm}/feature_class
-   relative_source_path => "../../../../data_files/${species}/${assm}",
+   relative_source_path => "../../../../../data_files/${species}/${assm}",
   };
 
 
@@ -460,12 +460,13 @@ foreach my $set_type (@set_types) {
           }
         }
 
-        if($link_type eq 'ftp'){
+        #Diasabled this as ftp mount point no longer requires links to be one directory out
+        #if($link_type eq 'ftp'){
           #alter source dir here for old ftp mnt
           #after we have tested the source files
           #rather than before in the config
-          $source_dir = $ftp_mnt.$source_dir;
-        }
+        #  $source_dir = $ftp_mnt.$source_dir;
+        #}
 
         my $cmd = "ln -sf $source_dir "; #$target_dir";
         system("$cmd") == 0 or die("Failed to create link using:\t${cmd}\nFrom $fclass_dir");
