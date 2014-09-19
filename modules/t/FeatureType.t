@@ -27,10 +27,10 @@ ok(1, 'Startup test');#?
 
 my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
   (
-   -user    => 'ensro',
-   -host    => 'ens-staging1',
+   -user    => 'XXX',
+   -host    => 'XXX',
    -species => 'homo_sapiens', #Does this prevent alias loading?
-   -dbname  => 'homo_sapiens_funcgen_77_38'
+   -dbname  => 'homo_sapiens_funcgen_XXX'
   );
 
 
