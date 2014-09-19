@@ -7,7 +7,9 @@ use Test::More qw(no_plan); #no_plan required for skip usage
 
 use Bio::EnsEMBL::Test::MultiTestDB;
 use Bio::EnsEMBL::Test::TestUtils;
+use Bio::EnsEMBL::Utils::Scalar qw( check_ref );  
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
+
 
 # switch on the debug prints
 our $verbose = 0;
@@ -23,13 +25,13 @@ ok(1, 'Startup test');#?
 #my $db    = $multi->get_DBAdaptor( 'funcgen' );
 
 
-#my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
-#  (
-#   -user    => 'XXX',
-#   -host    => 'XXX',
-#   -species => 'homo_sapiens', #Does this prevent alias loading?
-#   -dbname  => 'XXX'
-#  );
+my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
+  (
+   -user    => 'ensro',
+   -host    => 'ens-staging1',
+   -species => 'homo_sapiens', #Does this prevent alias loading?
+   -dbname  => 'homo_sapiens_funcgen_77_38'
+  );
 
 
 #debug( 'Test database instantiated' ); #Less verbose, but only get test names in line and in debug mode
@@ -240,10 +242,42 @@ foreach my $ftype(@ftypes){
 ok($okay, 'fetch_all_by_evidence_type("non_core") only returns non_core FeatureTypes');
 
 
+#Test redundant name fetching. 
+my $ftype;
+
+eval{ $ftype = $ftype_a->fetch_by_name('Predicted Transcribed Region') };
+ok($@, 'fetch_by_name caught multiple FeatureTypes returned to a scalar context');
+
+eval{ @ftypes = $ftype_a->fetch_by_name('Predicted Transcribed Region') };
+my $error = $@;
+
+SKIP: {
+      #This should only skip if the evidence_type is not defined?
+
+      if(scalar(@ftypes) < 2){
+        skip 'Cannot test fetch_by_name returns array as there are <1 Predicted Transcribed Region feature types stored', 1;
+      }
+
+      ok((! $error) && check_ref($ftypes[0], 'Bio::EnsEMBL::Funcgen::FeatureType'), 'fetch_by_name returns multiple FeatureTypes in a scalar context');
+}
+
+my $ftypes;
+eval{ $ftypes = $ftype_a->fetch_all_by_name('Predicted Transcribed Region') };
+my $error = $@;
+
+#We should load these here, instead of depending 
+#on pre-stored Predicted Transcribed Region entries.
+ok((! $@) && 
+   check_ref($ftypes, 'ARRAY') &&
+   scalar(@$ftypes) == 24      &&
+   check_ref($ftypes->[0], 'Bio::EnsEMBL::Funcgen::FeatureType'), 'fetch_all_by_name returns expected number(expected 24, got '.scalar(@$ftypes).') of FeatureTypes');
 
 
 
 
 
 
-#done_testing();#was double printing, obviously called in Test::More DESTROY or something?
+
+
+
+
