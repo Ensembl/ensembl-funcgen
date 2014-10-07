@@ -93,8 +93,8 @@ use vars qw( @EXPORT );
 #TODO
 # 1 Change all paramter handling to use rearrange only? i.e. no unamed args!
 
-sub run_aligner{ 
-  my ($aln_pkg, $aln_params, $skip_qc, $batch_job, $debug) = 
+sub run_aligner{
+  my ($aln_pkg, $aln_params, $skip_qc, $batch_job, $debug) =
     rearrange( [qw(aligner aligner_params skip_qc batch_job debug) ], @_);
   assert_ref($aln_params, 'ARRAY', 'Aligner params');
 
@@ -111,7 +111,7 @@ sub run_aligner{
     $aln_pkg = "Bio::EnsEMBL::Funcgen::Sequencing::Aligner::$aln_pkg";
   }
 
-  validate_package_path($aln_pkg); 
+  validate_package_path($aln_pkg);
   my $aligner = $aln_pkg->new(@$aln_params);
 
   #Don't really need this, although might be nice to show the args passed in the
@@ -140,7 +140,7 @@ sub run_aligner{
 
   }
 
-  
+
   return \@results;
 }
 
@@ -192,11 +192,11 @@ sub split_fastqs{
   }
 
   $chunk_size ||= 16000000;#Optimised for ~ 30 mins bwa alignment bjob
-  
+
   if($chunk_size % 4){
-    throw("Chunk size($chunk_size) is not a multiple of 4. This is required to ensure safe splitting of 4 line fastq records.");  
+    throw("Chunk size($chunk_size) is not a multiple of 4. This is required to ensure safe splitting of 4 line fastq records.");
   }
-  
+
   my (@fastqs, %params, $throw);
 
   foreach my $i(0..$#{$files}){
@@ -221,7 +221,7 @@ sub split_fastqs{
       #This will also modify the original file!
       throw("Found unzipped path, aborting as gzipping may invalidate any further md5 checking:\t$found_path");
       #run_system_cmd("gzip $found_path");
-      #$found_path .= '.gz';  
+      #$found_path .= '.gz';
     }
 
     push @fastqs, $found_path;
@@ -338,7 +338,7 @@ sub split_fastqs{
   if($post_du < $pre_du){
     throw("Input fastq files totaled ${pre_du}k, but output chunks totaled only ${post_du}k");
   }
-  
+
   return (\@new_fastqs);#, \%qc_results;
 }
 
@@ -557,17 +557,17 @@ sub merge_bams{
       #even after exit handling fix
 
       #scripts does give this output tho, which is totally different:
-      #sh: line 1:  1707 Done                    
+      #sh: line 1:  1707 Done
       #samtools merge -u - /lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/alignments/homo_sapiens/GRCh38
       #/ENCODE_UW/NHEK_WCE_ENCODE_UW.0000.bam /lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/alignments/
-      #homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW.0001.bam 
+      #homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW.0001.bam
       #
       #/lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/alignments/homo_sapiens/GRCh38/ENCODE_UW/
       #NHEK_WCE_ENCODE_UW.0002.bam /lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/alignments/
       #homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW.0003.bam /lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/
       #alignments/homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW.0004.bam
       #1708                       | samtools rmdup -s - -
-      #1709 Aborted                 | samtools view -t /lustre/scratch109/ensembl/funcgen/sam_header/homo_sapiens/homo_sapiens_male_GRCh38_unmasked.fasta.fai -h - > 
+      #1709 Aborted                 | samtools view -t /lustre/scratch109/ensembl/funcgen/sam_header/homo_sapiens/homo_sapiens_male_GRCh38_unmasked.fasta.fai -h - >
       # /lustre/scratch109/ensembl/funcgen/alignments/homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW_bwa_samse_1.unfiltered.bam
 
       #Irt just seems to hang for a long time and then carry on with the script
@@ -783,10 +783,10 @@ sub process_sam_bam {
 
 
   if(! $cmd){ #We want to do some filtering/sorting
-  
+
     #No this may just be format conversion!
     #So we need to extract that part into another block
-  
+
     my $filter_opt = ($filter_format) ? '-F 4' : '';
     $cmd = "samtools view -hub${in_flag} $filter_opt $fasta_fai_opt $in_file "; # -h include header
     #if we are not filtering and the headers match then we don even need this step!
@@ -824,10 +824,10 @@ sub process_sam_bam {
     #$cmd .= ' | samtools view -uShb - ';  #simply convert to bam using infile header
     $cmd .= ($sort) ? ' | samtools sort - '.$sorted_prefix : ' > '.$tmp_bam;
     warn $cmd."\n" if $debug;
-    
+
     #This is doing a redundant view step if we are not sorting or filtering and the input is already bam and has the correct header
-    
-    
+
+
     run_system_cmd($cmd);
 
 
@@ -893,7 +893,7 @@ sub process_sam_bam {
     }
 
     warn $cmd."\n" if $debug;
-    
+
     run_system_cmd($cmd);
     $cmd = $rm_cmd;
   }
@@ -969,7 +969,7 @@ sub get_files_by_formats {
   my $params  = shift || {};
   assert_ref($formats, 'ARRAY');
   assert_ref($params, 'HASH');
-  
+
   if(scalar(@$formats) == 0){
     throw('Must pass an Arrayref of file formats/suffixes in preference order e.g. [\'sam\', \'bed\']');
   }
@@ -1002,13 +1002,13 @@ sub get_files_by_formats {
     #sort should always be done when doign initial file sorting/merging
     #so if standard or unfiltered bam is present, then we don't need to sort
     $params->{sort}     = 1 if ! defined $params->{sort};    #for safety
-        
+
     if(!  grep { /^$filter_format$/ } @$formats){
       unshift @$formats, $filter_format;
       $clean_filtered_format = 1;
     }
   }
-  
+
   #Attempt to get the first or all formats
   foreach my $format(@$formats){
     #warn "Getting $format";
@@ -1081,7 +1081,7 @@ sub get_files_by_formats {
         'Please select a supported file format or add config and conversion support methods for $format');
     }
     else{
-      warn "No conversion path found for $format\n";  
+      warn "No conversion path found for $format\n";
     }
 
     ### Attempt conversion ###
@@ -1116,11 +1116,11 @@ sub get_files_by_formats {
           if( (grep { /^${from_format}$/ } keys %$done_formats)  ||
               $i == 0){
             #then convert that to the next, and so on.
-            
+
             #Sub this out to process_format_conversion_path
-            
+
             for(my $x = $i; $x < $#{$conversion_paths{$format}}; $x++){
-              
+
               my $to_format   = $conversion_paths{$format}->[$x+1];
               $from_format    = $conversion_paths{$format}->[$x];
               my $conv_method = 'convert_'.$from_format.'_to_'.$to_format;
@@ -1354,7 +1354,7 @@ sub validate_sam_header {
 }
 
 
-#Can't do this easily, as we don't know exactly what we want to pass through to the 
+#Can't do this easily, as we don't know exactly what we want to pass through to the
 #PeakCaller. Isn't this already done with run_aligner?
 #Actually, we have acces to get_files_by_format here
 #so we could optionally defined the signal and control files here given the right input
@@ -1363,102 +1363,102 @@ sub validate_sam_header {
 #processing here from RunPeaks::fetch_input
 
 sub _init_peak_caller{
-  my($peak_pkg, $params, $analysis, $align_prefix, $control_prefix, 
+  my($peak_pkg, $params, $analysis, $align_prefix, $control_prefix,
     $sam_ref_fai,$debug) = rearrange(
-     [qw(peak_module peak_module_params analysis align_prefix control_prefix 
-     sam_ref_fai debug)], @_);    
-  
-  my (@params_array, $peak_module); 
-  
+     [qw(peak_module peak_module_params analysis align_prefix control_prefix
+     sam_ref_fai debug)], @_);
+
+  my (@params_array, $peak_module);
+
   if(defined $analysis){ #API mode
-    
+
     if($peak_pkg){
       throw("Mututally exclusive paramters detected:\n\t-peak_module => $peak_pkg".
-        "\n\t-analysis => $analysis(".$analysis->logic_name.')');  
-    } 
-    
+        "\n\t-analysis => $analysis(".$analysis->logic_name.')');
+    }
+
     assert_ref($params, 'HASH', 'PeakCaller parameters');
     assert_ref($analysis, 'Bio::EnsEMBL::Analysis');
-    
+
     #Identify potentially clashing params which woudl be derived from analysis
     #or FeatureSet
     #-program_file
     #-parameters
     #-align_file
     #-control_file
-    
+
     #TODO identify conflict and throw
     #foreach my $conflict()
-    
+
     #Let's just overwrite the params with the Analysis derived stuff for now?
-    
+
     #Things we require in params but can be left to PeakCaller to validate?
     #-out_file_prefix
-    
+
     #we don't expect any peak_module or analysis params!?
-    
+
     #but we do require an signal prefix
-    
+
     #get align file and control file
-    
+
     if(! defined $align_prefix){
-      throw('Must pass an -align_prefix in -analysis mode');  
+      throw('Must pass an -align_prefix in -analysis mode');
     }
-    
+
     $peak_module = validate_package_path($analysis->module);
     my $formats = $peak_module->input_formats;
-    #my $filter_format = $self->param_silent('bam_filtered') ? undef : 'bam';  
-    #It is currently unsafe to filter here (control clash), so expect filtered file  
-  
+    #my $filter_format = $self->param_silent('bam_filtered') ? undef : 'bam';
+    #It is currently unsafe to filter here (control clash), so expect filtered file
+
     #The problem here is that we are returning a hash of files keys on the format
     #This conversion may cause clashes for fan job which share the same controls
     #(e.g. peak calling jobs if they require formats other than bam)
     #Collections jobs will be pre-processed/converted individually before submitting
     #the slice job.
     #So here we really only need the first available format
-   
+
     #Restrict to bam (and bed explicitly for CCAT) for now
     my $format = 'bam';
-  
+
     if($formats->[0] ne 'bam'){
-    
+
       if($analysis->program eq 'CCAT'){
 
-        warn 'Hardcoding CCAT format to bed until CollectionWriter can be made PeakCaller aware wrt to formats';      
+        warn 'Hardcoding CCAT format to bed until CollectionWriter can be made PeakCaller aware wrt to formats';
         $format = 'bed';
       }
       else{
         throw("It is currently unsafe to use any non-bam format at this point.\n".
           "This is due to the possibility of filtering/format conversion clashes between parallel\n".
           "jobs which share the same control files. Please implement PreprocessAlignments to\n".
-          "group jobs by controls and set/handle FILTERING_CONTROL status");  
+          "group jobs by controls and set/handle FILTERING_CONTROL status");
       }
     }
- 
+
     $formats = [$format];
-  
+
     #May need to specify checksum param separately
-  
+
     my $get_files_params = {debug              => $debug,
                             ref_fai            => $sam_ref_fai,  #Just in case we need to convert
                             skip_rmdups        => 1, #This will have been done in merge_bams
-                            checksum           => undef,  
+                            checksum           => undef,
                             #Specifying undef here turns on file based checksum generation/validation
                            };
-    
-  
-    my $align_file = get_files_by_formats($align_prefix, 
+
+
+    my $align_file = get_files_by_formats($align_prefix,
                                          $formats,
                                          $get_files_params)->{$format};
-    
+
     my $ctrl_file;
-    
+
     if($control_prefix){
-      $ctrl_file = get_files_by_formats($control_prefix, 
+      $ctrl_file = get_files_by_formats($control_prefix,
                                        $formats,
                                        $get_files_params)->{$format};
     }
-    
+
     $params->{-debug}          = $debug;
     $params->{-align_file}     = $align_file;
     $params->{-control_file}   = $ctrl_file;
@@ -1470,13 +1470,13 @@ sub _init_peak_caller{
     #-out_dir
     #-convert_half_open
     #-is_half_open
-    
-    
+
+
     @params_array = %$params; #flatten hash
   }
-  else{ #Script mode   
+  else{ #Script mode
     if(! defined $peak_pkg){
-      throw('Must provide a -peak_module or -analysis parameter');  
+      throw('Must provide a -peak_module or -analysis parameter');
     }
     elsif($peak_pkg !~ /::/){
       #Might this be a path?
@@ -1484,51 +1484,51 @@ sub _init_peak_caller{
         "Bio::EnsEMBL::Funcgen::Sequencing::PeakCaller::$peak_pkg\n";
       $peak_pkg = "Bio::EnsEMBL::Funcgen::Sequencing::PeakCaller::$peak_pkg";
     }
-    
+
     assert_ref($params, 'ARRAY', 'PeakCaller params');
     @params_array = @$params;
     $peak_module = validate_package_path($peak_pkg);
   }
-  
+
 
   return $peak_module->new(@params_array);
 }
 
 sub _run_peak_caller{
-  my($pcaller, $max_peaks, $file_types)  = rearrange([qw(peak_caller max_peaks file_types)], @_); 
+  my($pcaller, $max_peaks, $file_types)  = rearrange([qw(peak_caller max_peaks file_types)], @_);
   assert_ref($pcaller, 'Bio::EnsEMBL::Funcgen::Sequencing::PeakCaller');
- 
+
   #Do this first, so we fail early
   if( (defined $max_peaks) && (! $pcaller->can('filter_max_peaks')) ){
-    throw(ref($pcaller).' cannot filter_max_peaks');        
+    throw(ref($pcaller).' cannot filter_max_peaks');
   }
-  
+
   $pcaller->run; #eval in caller if required
-  
+
   if(defined $max_peaks){
 
     foreach my $file_type(@$file_types){
       $pcaller->filter_max_peaks($max_peaks, $file_type)
     }
   }
-  
-  return;    
+
+  return;
 }
 
 sub run_peak_caller{
-   my ($max_peaks, $file_types, $debug, $skip_qc) = rearrange([qw(max_peaks file_types debug skip_qc)], @_);  
-   my $peak_caller           = _init_peak_caller(@_);  
-   
+   my ($max_peaks, $file_types, $debug, $skip_qc) = rearrange([qw(max_peaks file_types debug skip_qc)], @_);
+   my $peak_caller           = _init_peak_caller(@_);
+
    #Pass these explicitly, so we don't pass all the _init_peak_caller params too
    _run_peak_caller(-peak_caller => $peak_caller,
                     -max_peaks   => $max_peaks,
                     -file_types  => $file_types,
                     -skip_qc     => $skip_qc,
-                    -debug       => $debug); 
-       
-       
-       
-   #Now write/process/load as required  
+                    -debug       => $debug);
+
+
+
+   #Now write/process/load as required
 }
 
 #Move peak caller post processing stuff in here too?
@@ -1559,7 +1559,7 @@ sub pre_process_IDR{
   assert_ref($pre_idr_beds, 'ARRAY');
 
   if(scalar(@$pre_idr_beds) < 2){
-    throw("Cannot run IDR with less than 2 replicates:\n\t".$pre_idr_beds->[0]);  
+    throw("Cannot run IDR with less than 2 replicates:\n\t".$pre_idr_beds->[0]);
   }
 
   my ($mt_100k, $lt_100k, $log_txt);
@@ -1600,13 +1600,13 @@ sub pre_process_IDR{
   my $idr_threshold   = ($max_peaks < 100000) ? 0.05 : 0.01;
   #Could alternatively pass all thresholds back to the caller
   my $x_thresh_adjust = 0;
-  
+
   if($lt_100k && $mt_100k){
     #$self->throw_no_retry("Identified different optimal thresholds due to pre-IDR peak counts spanning the 100k limit:\n".
     #  $log_txt);
     warn 'Identified different optimal thresholds due to pre-IDR peak counts spanning the 100k limit:'.
-      "\n$log_txt\nDefaulting to lower threshold:\t$idr_threshold\n";  
-    $x_thresh_adjust = 1;    
+      "\n$log_txt\nDefaulting to lower threshold:\t$idr_threshold\n";
+    $x_thresh_adjust = 1;
   }
 
   #TODO We need some mechanism to restart this job, to force the threshold, or by dropping 1/some of the replicates.
@@ -1697,8 +1697,8 @@ sub pre_process_IDR{
     #such that we know the peak calling jobs has finished and passed QC!
     #Do this for each before we submit IDR jobs, as we may have to drop some reps
     push @np_bed_files, $np_bed_file;
-  }  
- 
+  }
+
   return (\@np_bed_files, $idr_threshold, $x_thresh_adjust);
 }
 
@@ -1721,9 +1721,9 @@ sub run_IDR{
   #This is not sensible as we will need to run self consistency IDR?
 
   if($bed_files->[0] eq $bed_files->[1]){
-    throw("Pre-IDR peak files are identical:\t".join(' ', @$bed_files));  
-  }                              
- 
+    throw("Pre-IDR peak files are identical:\t".join(' ', @$bed_files));
+  }
+
   #Check we have 2 reps
   if(scalar (@$bed_files) != 2){
     throw("run_IDR expect 2 replicate bed files:\t".join(' ', @$bed_files));
@@ -1952,7 +1952,7 @@ sub create_and_populate_files_txt {
         # !!! only fastq coming back !!!!
         my $files_txt = _read_files_txt($path_table);
         # DELETE   say dump_data($files_txt->{wgEncodeOpenChromChipHelas3CtcfRawDataRep2},1,1);
-       
+
         foreach my $name (sort keys %{$files_txt}){
           my $record = $files_txt->{$name};
           # DELETE next unless ($name eq 'wgEncodeOpenChromChipHelas3CtcfRawDataRep2');
@@ -2023,14 +2023,14 @@ sub create_and_populate_files_txt {
 }
 
 =head2 _read_files_txt
- 
-  Argument 1  : 
-  Returntype  : 
-  Exceptions  : 
+
+  Argument 1  :
+  Returntype  :
+  Exceptions  :
   Description : Reads $table and returns a HASHREF with filename, fieldname and values, e.g.:
                 $h->{wgEncodeHaibTfbsHepg2P300V0416101RawDataRep2}->{md5sum} = e4d9de1900e5cd950196d4d46f321816
                 Not every files.txt in hg18 has a md5sum field, the data was provided in a
-                In some cases files.txt in hg18 don't have md5sum field. In those cases the values is taken from 
+                In some cases files.txt in hg18 don't have md5sum field. In those cases the values is taken from
                 the md5sum.txt file.
 
 =cut
@@ -2051,10 +2051,10 @@ say "FILE: $file";
 
     # wgEncodeHudsonalphaChipSeqA549ControlPcr2xDex100nmAlnRep1.fastq.gz
     # wgEncodeHudsonalphaChipSeqA549ControlPcr2xDex100nmAlnRep1.bam
-    
-    # $1: wgEncodeBroadChipSeqAlignmentsRep1Gm12878ControlV2.tagAlign.gz 
-    # $2: wgEncodeBroadChipSeqAlignmentsRep1Gm12878ControlV2 
-    # $3: tagAlign 
+
+    # $1: wgEncodeBroadChipSeqAlignmentsRep1Gm12878ControlV2.tagAlign.gz
+    # $2: wgEncodeBroadChipSeqAlignmentsRep1Gm12878ControlV2
+    # $3: tagAlign
     # $4: gz
 
     $line =~ /^((\S+?)\.(\w+)\.?(\w+))?\s+/;
@@ -2070,7 +2070,7 @@ say "FILE: $file";
 
     # Cut filename from line
     $line =~ s/^\S+?\s+//o;
-    
+
     my @fields = split(/;/,$line);
     for my $field (@fields){
       $field =~ s/^\s//;
@@ -2085,7 +2085,7 @@ say "FILE: $file";
     # DELETE say "Before if: ". dump_data($all_records->{$name},1,1) if($name eq 'wgEncodeOpenChromChipHelas3CtcfRawDataRep2');
 
     if(! exists $all_records->{$name}->{md5sum}){
-        
+
       # DELETE  say "Before if2: ";say dump_data($all_records->{$name},1,1);
       if(!exists $md5sums->{$name}){
         warn "no md5sum for $name";
@@ -2095,7 +2095,7 @@ say "FILE: $file";
       }
       # DELETE  say "After if2: ";say dump_data($all_records->{$name},1,1);
 
-      
+
     }
   }
   close($fh);
@@ -2502,15 +2502,15 @@ sub _store_cell_feature_type {
   my ($db, $name, $data) = @_;
   assert_ref($db,   'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor');
   assert_ref($data, 'HASH', 'Cell/FeatureType cache');
-  
+
   if(! ((exists $data->{$name} && defined $data->{$name})) ){
     throw("$name not defined in data.");
   }
 
   my $object  = $data->{$name};
-  my $adaptor =  (check_ref($object, 'Bio::EsnEMBL::Funcgen::CellType')) ? 
+  my $adaptor =  (check_ref($object, 'Bio::EsnEMBL::Funcgen::CellType')) ?
     $db->get_CellTypeAdaptor : $db->get_FeatureTypeAdaptor;
- 
+
   ($object) = @{$adaptor->store($data->{$name})};
   say 'Added '.ref($object).":\t$name";
   return $object;
@@ -2518,11 +2518,11 @@ sub _store_cell_feature_type {
 
 =head2 _read_md5sum_txt
 
-  Argument 1  : 
-  Returntype  : 
+  Argument 1  :
+  Returntype  :
   Exceptions  : Unknown format
   Description : Only for FASTQ! Reads md5sum file, which is needed as some hg18 labs did not include
-                it in files.txt 
+                it in files.txt
 
 =cut
 
@@ -2538,12 +2538,12 @@ sub _read_md5sum_txt {
       my @line = split(/\s+/,$line);
       if($line[0] =~ /^(wgEncode\w+?)\./){
         $hash->{$1} = $line[1];
-      } 
+      }
       elsif($line[1] =~ /^(wgEncode\w+?)\./){
         $hash->{$1} = $line[0];
-      } 
+      }
       else{
-        throw("What the fuck now? $line");
+        throw("Unrecognised format: $line");
       }
     }
   close($fh);
