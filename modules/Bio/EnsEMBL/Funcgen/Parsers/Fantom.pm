@@ -196,7 +196,7 @@ sub _assign_strand {
 }
 
 sub parse_and_load {
-  my ($self, $files, $new_assembly) = @_;
+  my ($self, $files, $old_assembly, $new_assembly) = @_;
 
 
   if(scalar @$files < 1){
@@ -232,9 +232,8 @@ sub parse_and_load {
   my $fset_config   = $self->{static_config}{feature_sets}{'FANTOM'};
   my $fset          = $fset_config->{feature_set};
   
-  # $self->rollback_FeatureSet($fset);
-  $self->log_header("Rollback old records in external_features manually");
-  
+  $self->rollback_FeatureSet($fset);
+
   for my $file (@$files){
     $self->log_header("Parsing and loading FANTOM data from:\t$file");
     my $flag_track_line = 0;
@@ -298,12 +297,11 @@ sub parse_and_load {
         throw("Unkown type: $type");
       }
 
-
       my $slice = $slice_a->fetch_by_region('chromosome', $data->{chr},);
       
-      my $feature_type = $feattype_a->fetch_by_name($ft_name);
+      my $feature_type = shift @{$feattype_a->fetch_all_by_name($ft_name)};
 
-      if(!$feature_type){
+      if(! defined($feature_type)){
         throw "No FeatureType for $ft_name";
       }
       
@@ -316,8 +314,15 @@ sub parse_and_load {
        -display_label => $data->{name}, 
        -feature_set   => $fset,
        );
-
+      # say $line;
+      # say $feature->slice->name;
+      # say $feature->start;
+      # say $feature->end;
       $feature = $self->project_feature($feature, $new_assembly);
+      # say $feature->slice->name."\n";
+      # say $feature->start;
+      # say $feature->end;
+
       if($feature){
         if($type eq 'enhancers'){
           $feature->{display_label}  = 
@@ -329,6 +334,9 @@ sub parse_and_load {
         foreach my $status (qw(DISPLAYABLE MART_DISPLAYABLE)) {
           $fset->adaptor->store_status($status, $fset);
         }
+        # say "Stored: " .$feature->dbID;
+ # die;
+
       }
 
       # my $dbentry = Bio::EnsEMBL::DBEntry->new(
