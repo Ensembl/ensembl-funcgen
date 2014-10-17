@@ -1440,6 +1440,7 @@ INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '78');
 
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_77_78_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_77_78_b.sql|Change unmapped_reason_id from smallint to int');
 
 /**
 @table meta_coord
