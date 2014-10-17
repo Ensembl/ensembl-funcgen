@@ -13,12 +13,12 @@
 -- limitations under the License.
 
 /**
-@header patch_77_78_a.sql - schema version
-@desc   Update schema_version in meta table to 78
+@header patch_77_78_b.sql - schema version
+@desc   Change unmapped_reason_id from smallint to int
 */
 
-UPDATE meta SET meta_value='78' WHERE meta_key='schema_version';
+ALTER TABLE unmapped_reason MODIFY COLUMN unmapped_reason_id int(10) unsigned NOT NULL AUTO_INCREMENT;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_77_78_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_77_78_b.sql|Change unmapped_reason_id from smallint to int');
 
