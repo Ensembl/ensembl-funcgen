@@ -64,6 +64,9 @@ segmentation	$name	$type	$location
 =cut
 
 # TODO Careful that segmentation cell type names are not clean
+# TODO Weight different states in mix
+# TODO Create poised label (intersection of repression and TFBS)
+# TODO Create 4-state activity indicator: active, poised, repressed, inactive
 # TODO Generate Exons file
 # TODO Generate TSS file
 # TODO Generate chromosome lengths from database
