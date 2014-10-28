@@ -428,9 +428,12 @@ sub _get_schema_build{
     #if( $db->dbc->dbname =~ /.*([0-9]+_[0-9]+[a-z]*)$/){
     #warn "HARDCODED DEBUGGING FOR ANOMALOUS CORE DNADB INSERT";
     $schema_build = $1;
+    if (length($schema_build) > 10) {
+       $schema_build = substr($schema_build, -10);
+    }
   }
   else {
-    warning ("Wrong format: '$name' Release & Assembly expected at the end of dbname, e.g.: *_core_75_37")
+    warning ("Wrong format: '$name' Release & Assembly expected at the end of dbname, e.g.: *_core_75_37");
   }
 
   return $schema_build;
