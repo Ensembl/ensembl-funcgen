@@ -829,14 +829,6 @@ sub get_other_RegulatoryFeatures{
 
 sub summary_as_hash {
   my $self   = shift;
-  my %flanks = ();
-  my $ftype  = $self->feature_type->name;
-
-  if(($ftype eq 'Promoter') || #New promoter with flanks
-    ($ftype eq 'Unclassified') || ($ftype =~ /Associated$/)){ #Old build type
-    $flanks{bound_start} = $self->bound_seq_region_start;
-    $flanks{bound_end}   = $self->bound_seq_region_end;
-  }
 
   return
     {ID                      => $self->stable_id,

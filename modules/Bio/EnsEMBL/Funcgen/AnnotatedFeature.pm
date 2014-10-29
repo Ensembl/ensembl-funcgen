@@ -249,8 +249,8 @@ sub get_associated_MotifFeatures{
 
 =head2 summary_as_hash
 
-  Example       : $segf_summary = $segf->summary_as_hash;
-  Description   : Retrieves a textual summary of this SegmentationFeature.
+  Example       : $segf_summary = $annotf->summary_as_hash;
+  Description   : Retrieves a textual summary of this AnnotatedFeature.
   Returns       : Hashref of descriptive strings
   Status        : Intended for internal use (REST)
 
@@ -261,12 +261,13 @@ sub summary_as_hash {
   my $fset = $self->feature_set;
 
   return
-    {annotated_feature_type => $fset->feature_type->name,
-     cell_type              => $fset->feature_set->cell_type->name,
+    {chipseq_feature_type => $self->feature_type->name,
+     cell_type              => $self->cell_type->name,
      start                  => $self->seq_region_start,
      end                    => $self->seq_region_end,
      strand                 => $self->strand,
-     seq_region_name        => $self->seq_region_name              };
+     seq_region_name        => $self->seq_region_name              
+    };
 }
 1;
 

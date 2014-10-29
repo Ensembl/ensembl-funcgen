@@ -504,9 +504,38 @@ sub get_result_by_ResultSet{
     return median($results);
 }
 
+=head2 summary_as_hash
 
+  Example       : $array_feature_summary = $array_feature->summary_as_hash;
+  Description   : Retrieves a textual summary of this ArrayFeature.
+  Returns       : Hashref of descriptive strings
+  Status        : Intended for internal use (REST)
 
+=cut
 
+sub summary_as_hash {
+  my $self = shift;
+  my $probe = $self->probe;
+ 
+  my %arrays = ();
+  my $names_Arrays = $probe->get_names_Arrays; 
+  foreach my $name (keys %$names_Arrays) {
+    if (defined $names_Arrays->{$name}) {
+      $arrays{$names_Arrays->{$name}->name} = $probe->get_probename($names_Arrays->{$name}->name);
+    }
+  }
+
+  return
+   {
+    start                   => $self->seq_region_start,
+    end                     => $self->seq_region_end,
+    strand                  => $self->strand,
+    seq_region_name         => $self->seq_region_name,
+    feature_type            => 'array_probe',
+
+    probe_length            => $probe->length,
+    array_probe_names       => \%arrays
+   };
+}
 
 1;
-
