@@ -830,6 +830,12 @@ sub get_other_RegulatoryFeatures{
 sub summary_as_hash {
   my $self   = shift;
 
+  # The reason we define $has_evidence outside of the hash constructor is
+  # that for some weird Perl reason if $has_evidence is undef, then perl decides 
+  # that it does not exist, and creates a hash with an odd number of elements,
+  # instead of a null value. Grrrr....
+  my $has_evidence = $self->has_evidence;
+
   return
     {ID                      => $self->stable_id,
      cell_type               => $self->cell_type->name,
@@ -839,7 +845,7 @@ sub summary_as_hash {
      end                     => $self->seq_region_end,
      strand                  => $self->strand,
      seq_region_name         => $self->seq_region_name,
-     activity_evidence       => $self->has_evidence,
+     activity_evidence       => $has_evidence,
      description             => $self->feature_type->description,
      feature_type            => "regulatory"
     };
