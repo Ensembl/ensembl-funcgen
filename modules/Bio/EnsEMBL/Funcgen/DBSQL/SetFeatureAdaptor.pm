@@ -513,7 +513,8 @@ sub _feature_class{
 # and need separating from the BaseAdaptor
 
 sub _constrain_cell_types {
-  my ($self, $cts) = @_;
+  my $self = shift;
+  my $cts  = shift;
 
   #Don't need to bind param this as we validate
   my $constraint = " fs.cell_type_id IN (".
@@ -532,7 +533,8 @@ sub _constrain_cell_types {
 #or grep columns for table_syn.feature_type_id here?
 
 sub _constrain_feature_types {
-  my ($self, $fts) = @_;
+  my $self = shift;
+  my $fts  = shift;
  
   #Don't need to bind param this as we validate
   my $constraint = " fs.feature_type_id IN (".
@@ -551,8 +553,17 @@ sub _constrain_feature_types {
 #This basically catches unsafe specification of arrays with undef values
 #as these will cause errors or no results
 
+
+#This should use analysis_adpator cache and return undef?
+#Genericise this in BaseFeatureAdaptor by adding a call
+#to _meta_info_table which would return relevant set table for SetFeatures
+#else just the feature table?
+#Isn't this already wrong for ResultFeature? Or is that not a SetFeature?
+
+
 sub _constrain_logic_names {
-  my ($self, $logic_names) = @_;
+  my $self        = shift;
+  my $logic_names = shift;
   assert_ref($logic_names, 'ARRAY');
   
   if(! @$logic_names){
@@ -575,7 +586,8 @@ sub _constrain_logic_names {
 }
 
 sub _constrain_feature_sets {
-  my ($self, $fsets) = @_;
+  my $self  = shift;
+  my $fsets = shift;
  
   #Don't need to bind param this as we validate
   #match on fs.feature_set_id rather than feature_table feature_set_id
