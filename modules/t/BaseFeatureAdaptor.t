@@ -33,14 +33,6 @@ ok(1, 'Startup test');#?
 #  );
 
 
-my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
-  (
-   -user    => 'ensro',
-   -host    => 'ens-staging1',
-   -species => 'homo_sapiens', #Does this prevent alias loading?
-   -dbname  => 'homo_sapiens_funcgen_78_38'
-  );
-
 
 #debug( 'Test database instantiated' ); #Less verbose, but only get test names in line and in debug mode
 ok( $db, 'DBAdaptor creation');# More verbose, but we get failed test name summary at end
