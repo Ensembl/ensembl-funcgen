@@ -265,6 +265,8 @@ sub fetch_all_by_Slice_constraint {
     $cache->{$key} = \@result;
   }
 
+  $self->reset_true_tables; #for compose_constraint support
+
   return \@result;
 }
 
