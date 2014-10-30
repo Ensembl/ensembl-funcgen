@@ -103,7 +103,9 @@ sub new {
                   {
                    names    => [ 'name1', 'name2' ],
                    analyses => [ $analysis_obj1, $analysis_obj2 ],
-                  }
+                  },
+                 optional_contraints =>
+                  {an_optional_contraint => undef} 
                 }
                This method will iterate through the cosntraints keys calling
                _constrain_${constraints_key} e.g. _constrain_analyses.
@@ -142,16 +144,25 @@ sub compose_constraint_query{
   my ($self, $params) = @_;
 
   if($params &&
-	 (ref($params) ne 'HASH') ){
-	throw('You must pass a valid params HASHREF to compose_constraint_query');
+	   (ref($params) ne 'HASH') ){
+    throw('You must pass a valid params HASHREF to compose_constraint_query');
   }
 
+  #Get main table syn here and pass, to reduce redundancy in _constrain methods
+
   my @constraints;
+ 
+  #Currently no redundancy checking between constraints and optional_constraints
+  #Redundant constraints may result in an SQL error if any tables are added
+  #otherwise will either return as normal if the constraint values are the same
+  #else will return nothing due to the mutually exclusive constraint
 
   for my $con_type (qw(constraints optional_constraints)){ 
-
+    
     if( exists ${$params}{$con_type} ){
-  
+      #Handle/delete logic_names here and return undef if not valid
+      #such that we can return early from caller (as fetch_all_by_Slice_constraint does).
+      
       foreach my $constraint_key(keys (%{$params->{$con_type}})){
         #warn "$con_type $constraint_key = ".$params->{$con_type}{$constraint_key};
         my $constrain_method = '_constrain_'.$constraint_key;

@@ -53,6 +53,7 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::Utils::Cache;
 use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
+use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
 
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor);
 
@@ -112,10 +113,11 @@ sub generic_fetch {
 
   Arg [1]    : Bio::EnsEMBL::Slice $slice
                the slice from which to obtain features
-  Arg [2]    : (optional) string $constraint
-               An SQL query constraint (i.e. part of the WHERE clause)
-  Arg [3]    : (optional) string $logic_name
-               the logic name of the type of features to obtain
+  Arg [2]    : String (optional) - An SQL query constraint (i.e. part of the WHERE clause)
+               OR
+               Hashref - Params hashref containing constraints and/or optional contraints
+               See BaseAdaptor::compose_constraint for more information.
+  Arg [3]    : String (optional) - The logic name of the type of features to obtain
   Example    : $fs = $a->fetch_all_by_Slice_constraint($slc, 'perc_ident > 5');
   Description: Returns a listref of features created from the database which
                are on the Slice defined by $slice and fulfill the SQL
@@ -130,7 +132,7 @@ sub generic_fetch {
 =cut
 
 sub fetch_all_by_Slice_constraint {
-  my($self, $slice, $constraint, $logic_name) = @_;
+  my($self, $slice, $params, $logic_name) = @_;
 
   my @result;
 
@@ -138,40 +140,44 @@ sub fetch_all_by_Slice_constraint {
     throw('Bio::EnsEMBL::Slice argument expected.');
   }
 
-  $constraint ||= '';
+  #Maintain $params, as this may contain more than the constraint config
+  my $constraint = '';
+
+  if((defined $params) &&
+     (ref($params) eq 'HASH')){ #This is a scalar status arg
+    #overwriting logic_names here
+
+    if(defined $logic_name){
+      $params->{constraints}{logic_names} = [$logic_name];
+    }
+
+    $constraint = $self->compose_constraint_query($params);
+
+    #This does not yet return undef for unknown logic_names
+    #So the query will still be performed
+  }
+  else{#still supporting passing a constraint string 
+    $constraint = $self->_logic_name_to_constraint($params, $logic_name);
+    #if the logic name was invalid, undef was returned
+    return [] if ! defined $constraint; 
+  }
 
   my $fg_cs = $self->db->get_FGCoordSystemAdaptor->fetch_by_name
-    (
-     $slice->coord_system->name(),
-     $slice->coord_system->version()
-    );
-
-
+   ($slice->coord_system->name,
+    $slice->coord_system->version);
 
   if (! defined $fg_cs) {
     warn "No CoordSystem present for ".$slice->coord_system->name().":".$slice->coord_system->version();
     return \@result;
   }
 
-
   #build seq_region cache here once for entire query
   $self->build_seq_region_cache($slice);
   my $syn = $self->_main_table->[1];
 
-  $constraint = $self->_logic_name_to_constraint($constraint, $logic_name);
-
-
-
-
-  #if the logic name was invalid, undef was returned
-  return [] if(!defined($constraint));
-
-
 
   #check the cache and return if we have already done this query
-
   #Added schema_build to feature cache for EFG
-
   my $key;
   my $cache;
   if ( !$self->db->no_cache() ) {
@@ -1316,19 +1322,60 @@ sub count_features_by_field_id{
 
 =cut
 
+sub force_reslice{
+  my $self  = shift;
+  my $force = shift;
 
-  sub force_reslice{
-    my ($self, $force) = @_;
-
-
-    if (defined $force) {
-      $self->{force_reslice} = $force;
-    }
-
-    return $self->{force_reslice};
+  if (defined $force) {
+    $self->{force_reslice} = $force;
   }
 
+  return $self->{force_reslice};
+}
 
+
+# Currently over-riding this method in SetFeatureAdaptor
+# But might be nice to remove that and genericise this by getting 
+# the analysis_id table via a method which can be over-ridden e.g. 
+# SetFeatureAdaptor::_analysis_id_table_syn which would return the relevant set table name and syn
+# BaseFeatureAdaptor::_analysis_id_table_syn would simply return the _main_table syn
+# 
+
+#Should this use the cache via AnalysisAdpator::fetch_by_logic_name?
+#As _logic_name_to_constriant does?
+#_logic_name_to_constraint returns undef if logic_name is not known
+# allowing caller to return [] early.
+# How would this work in compose_constraint?
+# simply delete this first if exists
+# How does this work wrt redundancy between constraints and optional_constraints
+
+# For generic methods, there is a slight redundancy in calling
+# the _main_table method
+# Can we call this in compose_constraint and pass to contrain method
+
+sub _constrain_logic_names {
+  my $self        = shift;
+  my $logic_names = shift;
+  assert_ref($logic_names, 'ARRAY');
+  
+  if(! @$logic_names){
+    throw('Must pass an Arrayref of logic_name strings to contrain by');  
+  }
+
+  for my $lname(@$logic_names){
+    if(! defined $lname){
+      throw('Found undefined logic_name value');  
+    }  
+  }
+
+  my $syn = $self->_main_table->[1];
+  $self->_tables([['analysis', 'a']]);
+
+  my $constraint = $syn.'.analysis_id = a.analysis_id and a.logic_name in ("'.
+    join('", "', @$logic_names).'")';
+    
+  return ($constraint, {});   #{} = not further constraint conf
+}
 
 1;
 
