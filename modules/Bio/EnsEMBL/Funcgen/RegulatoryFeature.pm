@@ -339,16 +339,8 @@ sub has_attribute{
 
 =cut
 
-sub has_evidence {
-  my ($self) = @_;  
+sub has_evidence { return shift->{has_evidence}; }
 
-  if(defined $self->{has_evidence} && $self->{has_evidence} == 1){
-    return 1;
-  }
-  else {
-    return;
-  }
-}
 
 =head2 cell_type_count
 
@@ -359,11 +351,7 @@ sub has_evidence {
 
 =cut
 
-sub cell_type_count {
-  my ($self) = @_;
-
-  return($self->{cell_type_count});
-}
+sub cell_type_count { shift->{cell_type_count}; }
 
 
 =head2 get_focus_attributes
@@ -827,14 +815,23 @@ sub get_other_RegulatoryFeatures{
 
 =cut
 
+#why has has_evidence been transposed to activity_evidence?
+
 sub summary_as_hash {
   my $self   = shift;
 
-  # The reason we define $has_evidence outside of the hash constructor is
-  # that for some weird Perl reason if $has_evidence is undef, then perl decides 
-  # that it does not exist, and creates a hash with an odd number of elements,
-  # instead of a null value. Grrrr....
-  my $has_evidence = $self->has_evidence;
+  #Use cell_type count here to detect new build
+  #but this is set to 0 for cell type specific features
+  #my %build_specific_params;
+  #my $ctype_cnt = $self->cell_type_count;
+
+  #if($ctype_cnt){
+  #  $build_specific_params{cell_type_count}    = $ctype_cnt;
+  #  $build_specific_params{activity_envidence} = $self->has_evidence;
+  #}
+  #else{
+  #  $build_specific_params{projected} = $self->projected;
+  #}
 
   return
     {ID                      => $self->stable_id,
@@ -845,9 +842,10 @@ sub summary_as_hash {
      end                     => $self->seq_region_end,
      strand                  => $self->strand,
      seq_region_name         => $self->seq_region_name,
-     activity_evidence       => $has_evidence,
+     activity_evidence       => $self->has_evidence,
      description             => $self->feature_type->description,
-     feature_type            => "regulatory"
+     feature_type            => "regulatory",
+     #%build_specific_params,
     };
 }
 

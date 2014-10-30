@@ -19,13 +19,13 @@ ok(1, 'Startup test');#?
 #my $db    = $multi->get_DBAdaptor( 'funcgen' );
 
 
-#my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
-#  (
-#   -user    => 'XXX',
-#   -host    => 'XXX',
-#   -species => 'homo_sapiens', #Does this prevent alias loading?
-#   -dbname  => 'XXX'
-#  );
+my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
+  (
+   -user    => 'XXX',
+   -host    => 'XXX',
+   -species => 'homo_sapiens', #Does this prevent alias loading?
+   -dbname  => 'homo_sapiens_funcgen_78_38'
+  );
 
 
 #debug( 'Test database instantiated' ); #Less verbose, but only get test names in line and in debug mode
@@ -80,7 +80,9 @@ TODO: {
 # now create/fetch a new RegulatoryFeature on X PAR
 my $slice_a = $dnadb->get_SliceAdaptor;
 #my $x_slice = $slice_a->fetch_by_region('chromosome', 'X', 68800, 72000, -1);
-my $x_slice = $slice_a->fetch_by_region('chromosome', 'X', 332794, 337089);
+my $x_start = 332794;
+my $x_end   = 380000;
+my $x_slice = $slice_a->fetch_by_region('chromosome', 'X', $x_start, $x_end);
 
 
 #Use H1ESC as this seems to have the most bounds in this region
@@ -113,7 +115,7 @@ SKIP: {
     #$rf->bound_seq_region_start.' - '. $rf->seq_region_start.' -- '.
     #    $rf->seq_region_end.' - '. $rf->bound_seq_region_end;
 
-    skip 'Could not identify RegulatoryFeature with start and end bound';
+    skip('Could not identify RegulatoryFeature with start and end bound', 13);
   }
 
    
@@ -156,7 +158,7 @@ SKIP: {
  
   
 
-  my $y_slice = $slice_a->fetch_by_region('chromosome', 'Y', (332794 - 50000), (337089-30000) );
+  my $y_slice = $slice_a->fetch_by_region('chromosome', 'Y', ($x_start - 50000), ($x_end - 30000) );
   #use x seq_region_end as this is always ~40kb > Y seq_region_end
   my $y_rf;
 
@@ -174,14 +176,21 @@ SKIP: {
 
   ok($y_rf, 'Corresponding Y PAR RegulatoryFeature fetched');
 
-  ok( ($rf->seq_region_start != $y_rf->seq_region_start) &&
-      ($rf->seq_region_end != $y_rf->seq_region_end),
-      'Y RegulatoryFeature projection seq_region loci do not match X'
-    );
+
+  SKIP: {
+
+    if(! defined $y_rf){
+      skip('Skipping Y par tests as failed to fetch corresponding Y PAR feature', 3);
+    }
+
+    ok(($rf->seq_region_start != $y_rf->seq_region_start) &&
+       ($rf->seq_region_end != $y_rf->seq_region_end),
+       'Y RegulatoryFeature projection seq_region loci do not match X');
   
-  #These are proxy tests until we know the exact data/values
-  ok($y_rf->bound_start != $rf->bound_start, 'projected bound_start changed');
-  ok($y_rf->bound_end   != $rf->bound_end, 'projected bound_start changed');
+    #These are proxy tests until we know the exact data/values
+    ok($y_rf->bound_start != $rf->bound_start, 'projected bound_start changed');
+    ok($y_rf->bound_end   != $rf->bound_end, 'projected bound_start changed');
+  }
 }
 
 $skip = 0; 
@@ -217,5 +226,89 @@ sub test_bound_length_start_end{
 }
 
 
+# Old vs New Build tests
+# These are for methods which return different data
+# from different build versions e.g. 
+# summary_as_hash, has_evidence, cell_type_count & is_projected
+# So these need to be done with two builds
+# Here we will use 2 dbs for convinience
+# but this needs changing to use different feature sets
+# once we start using the test DB.
+
+
+#Assuming that the last $rf we saw was from a new build version
+
+
+test_summary_as_hash($rf, 'New');
+
+my $mdb = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
+  (-user    => 'XXX',
+   -host    => 'XXX',
+   -species => 'mus_musculus', #Does this prevent alias loading?
+   -dbname  => 'mus_musculus_funcgen_78_38'
+  );
+
+my $sid = 'ENSMUSR00000233228';
+my $mrf = $mdb->get_RegulatoryFeatureAdaptor->fetch_by_stable_id($sid);
+
+SKIP: {
+
+  if(! defined $mrf){
+    skip("Skipping Old build tests as failed to retrieve $sid", 1);
+  }
+
+  test_summary_as_hash($mrf, 'Old');
+}
+
+
+sub test_summary_as_hash{
+  my $rf         = shift;
+  my $build_type = shift;
+
+  my $hash_summary = $rf->summary_as_hash;
+
+  #my @hash_array = %$hash_summary;
+  #Checking for any undefs translated to missing elements
+  #ok(! (scalar(@hash_array) % 2), 'summary_as_hash returns even sized list');
+  #This will always return an even sized list as perl will have simply shifted things
+  #up into the apparent void and appended and undef
+
+
+  #Now let's check the ones we know about and for any unknown ones?
+  #although it may be better to omit undef kv pairs
+  #in terms of REST performance, we want to reduce the amount of data return
+  #and let the calling API/code handle/translate the ommissions as undefs.
+
+  my %summary_keys = 
+   (ID                => undef,
+    cell_type         => undef,
+    bound_start       => undef, 
+    bound_end         => undef, 
+    start             => undef, 
+    end               => undef, 
+    strand            => undef, 
+    seq_region_name   => undef, 
+    activity_evidence => undef, 
+    description       => undef, 
+    feature_type      => undef,
+    projected         => undef,
+    cell_type_count   => undef);
+
+  my $hash_valid = 1; 
+
+  foreach my $key(keys %$hash_summary){
+
+    if( ! exists $summary_keys{$key}){
+      $hash_valid = 0;
+      last;
+    }
+  }
+
+  my $invalid_keys = ($hash_valid) ? '' : 
+   join(' ', keys %$hash_summary);
+
+  ok($hash_valid, "Summary hash invalid keys:\t$invalid_keys");
+
+}
 
 #done_testing();#was double printing, obviously called in Test::More DESTROY or something?
