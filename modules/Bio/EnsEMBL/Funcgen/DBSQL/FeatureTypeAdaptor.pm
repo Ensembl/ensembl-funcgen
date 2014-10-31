@@ -142,7 +142,7 @@ sub fetch_by_name{
           "Please specify a class and/or analysis argument to disambiguate");
   }
 
-  return @fts;
+  return wantarray ? @fts : $fts[0];
 }
 
 

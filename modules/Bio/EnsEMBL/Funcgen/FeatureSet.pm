@@ -394,7 +394,7 @@ sub is_attribute_set{
                Defaults to: name description display_label feature_class get_all_states
   Args[4]    : Arrayref - Optional list of FeatureSet method names each
                returning a Storable or an Array or Arrayref of Storables.
-               Defaults to: feature_type cell_type analysis get_Experiment
+               Defaults to: feature_type cell_type analysis experiment
   Example    : my %shallow_diffs = %{$rset->compare_to($other_rset, 1)};
   Description: Compare this FeatureSet to another based on the defined scalar
                and storable methods.
@@ -447,8 +447,8 @@ sub reset_relational_attributes{
       rearrange(['ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'EXPERIMENT'],
       %$params_hash);
 
-  assert_ref($analysis, 'Bio::EnsEMBL::Analysis');
-  assert_ref($feature_type, 'Bio::EnsEMBL::Funcgen::FeatureType');
+  assert_ref($analysis,     'Bio::EnsEMBL::Analysis',             'Analysis');
+  assert_ref($feature_type, 'Bio::EnsEMBL::Funcgen::FeatureType', 'FeatureType');
 
   if( $self->cell_type && 
       ! check_ref($cell_type, 'Bio::EnsEMBL::Funcgen::CellType') ){
