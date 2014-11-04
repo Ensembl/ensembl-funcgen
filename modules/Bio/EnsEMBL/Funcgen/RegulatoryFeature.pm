@@ -834,19 +834,19 @@ sub summary_as_hash {
   #}
 
   return
-    {ID                      => $self->stable_id,
-     cell_type               => $self->cell_type->name,
-     bound_start             => $self->bound_seq_region_start,
-     bound_end               => $self->bound_seq_region_end,
-     start                   => $self->seq_region_start,
-     end                     => $self->seq_region_end,
-     strand                  => $self->strand,
-     seq_region_name         => $self->seq_region_name,
-     activity_evidence       => $self->has_evidence,
-     description             => $self->feature_type->description,
-     feature_type            => "regulatory",
-     #%build_specific_params,
-    };
+   {ID                      => $self->stable_id,
+    cell_type               => $self->cell_type->name,
+    bound_start             => $self->bound_seq_region_start,
+    bound_end               => $self->bound_seq_region_end,
+    start                   => $self->seq_region_start,
+    end                     => $self->seq_region_end,
+    strand                  => $self->strand,
+    seq_region_name         => $self->seq_region_name,
+    activity_evidence       => $self->has_evidence,
+    description             => $self->feature_type->description,
+    feature_type            => "regulatory",
+    #%build_specific_params, 
+   };
 }
 
 1;

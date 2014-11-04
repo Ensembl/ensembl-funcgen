@@ -201,7 +201,7 @@ sub new_fast { return bless ($_[1], $_[0]); }
 
 =cut
 
-sub description { return $_[0]->{description}; }
+sub description { return shift->{description}; }
 
 
 
@@ -217,7 +217,7 @@ sub description { return $_[0]->{description}; }
 =cut
 
 sub display_label {
-  my ($self) = @_;
+  my $self = shift;
 
   if ( ! defined $self->{display_label} ) {
 
@@ -277,7 +277,8 @@ sub get_FeatureAdaptor{
 =cut
 
 sub get_Features_by_Slice{
-  my ($self, $slice) = @_;
+  my $self  = shift;
+  my $slice = shift;
 
   return $self->get_FeatureAdaptor->fetch_all_by_Slice_FeatureSets($slice, [$self]);
 }
@@ -299,7 +300,8 @@ sub get_Features_by_Slice{
 
 
 sub get_Features_by_FeatureType{
-  my ($self, $type) = @_;
+  my $self = shift;
+  my $type = shift;
 
   return $self->get_FeatureAdaptor->fetch_all_by_FeatureType_FeatureSets($type, [$self]);
 }
