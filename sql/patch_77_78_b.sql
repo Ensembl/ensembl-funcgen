@@ -18,6 +18,8 @@
 */
 
 ALTER TABLE unmapped_reason MODIFY COLUMN unmapped_reason_id int(10) unsigned NOT NULL AUTO_INCREMENT;
+ALTER TABLE unmapped_object MODIFY COLUMN unmapped_reason_id int(10) unsigned NOT NULL;
+
 
 -- patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_77_78_b.sql|Change unmapped_reason_id from smallint to int');

@@ -1658,7 +1658,7 @@ CREATE TABLE ontology_xref (
 
 DROP TABLE if EXISTS unmapped_reason;
 CREATE TABLE `unmapped_reason` (
-  `unmapped_reason_id` smallint(5) unsigned NOT NULL auto_increment,
+  `unmapped_reason_id` int(10) unsigned NOT NULL auto_increment,
   `summary_description` varchar(255) default NULL,
   `full_description` varchar(255) default NULL,
   PRIMARY KEY  (`unmapped_reason_id`)
