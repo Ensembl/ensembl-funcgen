@@ -73,6 +73,7 @@ segmentation	$name	$type	$location
 # TODO Allow 2 TFS to create feature in the absence of DNase
 # TODO Allow overlaps with flanking regions
 # TODO Filter out blacklisted regions
+# TODO Extend Regulatory_features to the extent of overlapping TFBS 
 
 use strict;
 use warnings;
