@@ -64,7 +64,6 @@ segmentation	$name	$type	$location
 =cut
 
 # TODO Weight different states in mix
-# TODO Create 4-state activity indicator: active, poised, repressed, inactive
 # TODO Generate Exons file
 # TODO Generate TSS file
 # TODO Generate chromosome lengths from database
@@ -113,6 +112,14 @@ our %COLORS = (
   gene => "0,176,80",
   poised => "192,0,190"
   repressed => "127,127,127"
+);
+
+# These states describe the features at the cell-type level
+our %states = (
+  active => 0,
+  poised => 1,
+  repressed => 2,
+  inactive => 3
 );
 
 ########################################################
@@ -1473,11 +1480,8 @@ sub compute_ChromHMM_celltype_state {
 
 sub compute_ChromHMM_annotation_state {
   my ($options, $segmentation, $celltype, $annotation) = @_;
-  my $dead_color = $COLORS{dead};
   my $temp;
   my $process=1;
-
-  my $reference = "$options->{working_dir}/build/$annotation.bed";
 
   if ($annotation eq 'tfbs') {
     $temp = "$options->{working_dir}/celltype_tf/$celltype.bed";
@@ -1499,14 +1503,37 @@ sub compute_ChromHMM_annotation_state {
     }
   }
 
-  my $temp2 = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$annotation.positive.bed";
-  my $temp3 = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$annotation.negative.bed";
-
   if ($process && -e $temp) {
-    run("bedtools intersect -wa -u -a $reference -b $temp > $temp2");
-    run("bedtools intersect -wa -v -a $reference -b $temp | awk \'{\$9=\"$dead_color\"; print}\' > $temp3");
+    my $reference = "$options->{working_dir}/build/$annotation.bed";
+    my $repressed = "$options->{working_dir}/segmentation_summaries/$segmentation->{name}/$celltype/repressed.bed";
+    my $poised = "$options->{working_dir}/segmentation_summaries/$segmentation->{name}/$celltype/poised.bed";
+
+    # POISED => POISED
+    my $temp2 = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$annotation.poised.bed";
+    my $poised_color = $COLORS{poised};
+    run("bedtools intersect -wa -u -a $reference -b $poised | awk \'{\$9=\"$poised_color\"; print}\' > $temp2");
+
+    # !POISED && ACTIVE && REPRESSED => POISED
+    my $temp3 = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$annotation.active_repressed.bed";
+    run("bedtools intersect -wa -v -a $reference -b $poised | bedtools intersect -wa -u -a stdin -b $temp | bedtools intersect -wa -u -a stdin -b $repressed | awk \'{\$9=\"$poised_color\"; print}\' > $temp3");
+
+    # !POISED && !ACTIVE && REPRESSED => REPRESSED
+    my $temp4 = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$annotation.repressed.bed";
+    my $repressed_color = $COLORS{repressed};
+    run("bedtools intersect -wa -v -a $reference -b $poised | bedtools intersect -wa -v -a stdin -b $temp | bedtools intersect -wa -u -a stdin -b $repressed | awk \'{\$9=\"$repressed_color\"; print}\' > $temp4");
+
+    # !POISED && ACTIVE && !REPRESSED => ACTIVE
+    my $temp5 = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$annotation.active.bed";
+    run("bedtools intersect -wa -v -a $reference -b $poised | bedtools intersect -wa -u -a stdin -b $temp | bedtools intersect -wa -v -a stdin -b $repressed > $temp5");
+
+    # !POISED && !ACTIVE && !REPRESSED => DEAD
+    my $temp6 = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$annotation.inactive.bed";
+    my $dead_color = $COLORS{dead};
+    run("bedtools intersect -wa -v -a $reference -b $poised | bedtools intersect -wa -v -a stdin -b $temp | bedtools intersect -wa -v -a stdin -b $repressed | awk \'{\$9=\"$dead_color\"; print}\' > $temp4");
+
+    # Merge all this into one bed file
     my $output = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$annotation.final.bed";
-    run("sort -m $temp2 $temp3 -k1,1 -k2,2n > $output");
+    run("sort -m $temp2 $temp3 $temp4 $temp5 $temp6 -k1,1 -k2,2n > $output");
     return $output;
   } else {
     # Could not find evidence for or against, do not report any regions
