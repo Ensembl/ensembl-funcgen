@@ -64,7 +64,6 @@ segmentation	$name	$type	$location
 =cut
 
 # TODO Weight different states in mix
-# TODO Create poised label (intersection of repression and TFBS)
 # TODO Create 4-state activity indicator: active, poised, repressed, inactive
 # TODO Generate Exons file
 # TODO Generate TSS file
@@ -96,13 +95,12 @@ our @functions = ('tss', 'proximal', 'distal', 'ctcf');
 # The annotations are the labels used in the build. TFBS and DNAse are special in that they is not 
 # built from segmentation data, rather from Chip-Seq peaks
 our @annotations = (@functions, 'tfbs', 'dnase');
-# These labels are used in annotating and coloring the initial segmentations, some are not 
-# present in the build.
-our @labels = (@annotations, 'weak', 'dead', 'repressed');
 # Typical histone marks used to detect repression. Note that the strings are normalised 
 # via the clean_name function below
 our @repressed_marks = ('H3K27ME3');
 our @open_chromatin_assays = ('DNASE', 'DNASE1');
+# These labels are used in annotating and coloring both the build and the segmentations, some are not 
+# present in both, only in one.
 our %COLORS = (
   tss => "255,0,0",
   tfbs => "209,157,0",
@@ -111,8 +109,9 @@ our %COLORS = (
   distal => "250,202,0",
   ctcf => "10,190,254",
   dead => "225,225,225",
-  weak => "225,225,225",
+  weak => "141,255,68",
   gene => "0,176,80",
+  poised => "192,0,190"
   repressed => "127,127,127"
 );
 
@@ -133,7 +132,7 @@ sub main {
   # Compute summaries of segmentations
   extract_segmentation_state_summaries($options);
   # Select the segmentation states that best match a label
-  select_segmentation_states($options);
+  label_segmentation_states($options);
   # Color the input segmentations based on the label assigments above
   make_segmentation_bedfiles($options);
   # Set cutoffs to optimise the quality of the build (using TF binding as an indicator_
@@ -680,7 +679,7 @@ sub extract_ChromHMM_state_summary {
 ## * $options->{working_dir}/assignments.txt (Tab delimited file)
 ########################################################
 
-sub select_segmentation_states {
+sub label_segmentation_states {
   my $options = shift;
   my ($segmentation, $state);
   
@@ -743,11 +742,11 @@ sub select_segmentation_states_2 {
   compute_overlaps($options, $segmentation);
 
   foreach $state (@{$segmentation->{states}}) {
-    select_segmentation_state($options, $segmentation, $state);
+    label_segmentation_state($options, $segmentation, $state);
   }
 }
 
-sub select_segmentation_state {
+sub label_segmentation_state {
   my ($options, $segmentation, $state) = @_;
   my $overlaps = $segmentation->{overlaps};
   my $assignments = $options->{assignments}->{$segmentation->{name}};
@@ -755,7 +754,11 @@ sub select_segmentation_state {
   if ($overlaps->{ctcf}->{$state} > .25) {
     $assignments->{$state} = 'ctcf';
   } elsif ($overlaps->{repressed}->{$state} > $segmentation->{repressed_cutoff}) {
-    $assignments->{$state} = 'repressed';
+    if ($overlaps->{tfbs}->{$state} < 1) {
+      $assignments->{$state} = 'repressed';
+    } else {
+      $assignments->{$state} = 'poised';
+    }
   } elsif ($overlaps->{tfbs}->{$state} < 1 && $overlaps->{gene}->{$state} < 1) {
     $assignments->{$state} = 'dead';
   } elsif ($overlaps->{tfbs}->{$state} < $weak_cutoff && $overlaps->{gene}->{$state} < $weak_cutoff) {
