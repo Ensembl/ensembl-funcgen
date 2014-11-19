@@ -901,7 +901,7 @@ sub compute_ChromHMM_repressed_scores {
   }
   close $fh;
 
-  $segmentation->{repressed_cutoff} = $max / 2;
+  $segmentation->{repressed_cutoff} = $max / 4;
 }
 
 sub compute_GMTK_repressed_scores {
@@ -938,7 +938,7 @@ sub compute_GMTK_repressed_scores {
   foreach my $state (@{$segmentation->{states}}) {
     print "Emission\t$segmentation->{name}\trepressed\t$state\t$segmentation->{overlaps}->{repressed}->{$state}\n";
   }
-  $segmentation->{repressed_cutoff} = $max / 2;
+  $segmentation->{repressed_cutoff} = $max / 4;
 }
 
 sub compute_Segway_repressed_scores {
@@ -975,7 +975,7 @@ sub compute_Segway_repressed_scores {
     print "Emission\t$segmentation->{name}\trepressed\t$state\t$segmentation->{overlaps}->{repressed}->{$state}\n";
   }
 
-  $segmentation->{repressed_cutoff} = $max / 2;
+  $segmentation->{repressed_cutoff} = $max / 4;
 }
 
 ########################################################
