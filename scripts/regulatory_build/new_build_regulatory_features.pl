@@ -63,7 +63,6 @@ segmentation	$name	$type	$location
 
 =cut
 
-# TODO Careful that segmentation cell type names are not clean
 # TODO Weight different states in mix
 # TODO Create poised label (intersection of repression and TFBS)
 # TODO Create 4-state activity indicator: active, poised, repressed, inactive
@@ -616,6 +615,7 @@ sub extract_ChromHMM_cells {
     foreach my $file (@$files) {
       my $cell = basename $file;
       $cell =~ s/.bed$//;
+      $cell = clean_name($cell);
       print $fh "$cell\n";
     }
     close $fh;
