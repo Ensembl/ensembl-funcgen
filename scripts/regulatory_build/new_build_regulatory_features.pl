@@ -68,7 +68,6 @@ segmentation	$name	$type	$location
 # TODO Generate TSS file
 # TODO Generate chromosome lengths from database
 # TODO Allow 2 TFS to create feature in the absence of DNase
-# TODO Allow overlaps with flanking regions
 # TODO Filter out blacklisted regions
 # TODO Extend Regulatory_features to the extent of overlapping TFBS 
 
