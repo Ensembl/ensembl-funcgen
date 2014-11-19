@@ -63,7 +63,6 @@ segmentation	$name	$type	$location
 
 =cut
 
-# TODO Weight different states in mix
 # TODO Generate Exons file
 # TODO Generate TSS file
 # TODO Generate chromosome lengths from database
@@ -1142,26 +1141,28 @@ sub select_segmentation_cutoffs {
   $options->{cutoffs}->{$segmentation->{name}} = {};
 
   foreach my $function (@functions) {
-    my $states = select_relevant_states($options, $segmentation, $function);
-    select_segmentation_cutoff($options, $segmentation, $function, $states);
+    $options->{selected_states}->{$segmentation->{name}}->{$function} = select_relevant_states($options, $segmentation, $function);
+    $options->{cutoffs}->{$segmentation->{name}}->{$function} = select_segmentation_cutoff($options, $segmentation, $function);
   }
 }
 
 sub select_relevant_states {
   my ($options, $segmentation, $function) = @_;
-  my @states = ();
+  my %states = ();
   my $assignments = $options->{assignments}->{$segmentation->{name}};
   foreach my $state (@{$segmentation->{states}}) {
     if ($assignments->{$state} eq $function) {
       print "Selecting $state $function\n";
     }
-    if ($assignments->{$state} eq $function 
-        && test_relevance($options, $segmentation, $function, $state)) {
-      push @states, $state;
+    if ($assignments->{$state} eq $function) {
+      my $weight = test_relevance($options, $segmentation, $function, $state));
+      if ($weight > 0) {
+        $states{$state} = $weight;
+      }
     }
   }
-  $options->{selected_states}->{$segmentation->{name}}->{$function} = \@states;
-  print "Selected\t$segmentation->{name}\t$function\t". join(" ", @{$options->{selected_states}->{$segmentation->{name}}->{$function}})."\n";
+  print "Selected\t$segmentation->{name}\t$function\t". join(" ", keys @states)."\n";
+  return \%states;
 }
 
 sub test_relevance {
@@ -1175,7 +1176,7 @@ sub test_relevance {
     if ($enrichment == 0) {
       return 0;
     } elsif (compute_enrichment_between_files($reference, "gt $i $file") > $weak_cutoff) {
-      return 1;
+      return $i;
     }
   }
 
@@ -1184,27 +1185,35 @@ sub test_relevance {
 
 sub select_segmentation_cutoff {
   my ($options, $segmentation, $function) = @_;
-  my $last_fscore = 0;
-
   print "Setting cutoff for $function...\n";
 
   my $tfbs = "$options->{trackhub_dir}/overview/all_tfbs.bw";
   my $tfbs_auc = `wiggletools AUC - $tfbs`;
 
   my $celltype_count = scalar(@{$segmentation->{celltypes}});
+  my $max_weight = undef;
+  my $min_step = 1;
   my @files = ();
-  foreach my $state (@{$options->{selected_states}->{$segmentation->{name}}->{$function}}) {
-    push @files, "$options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw";
+  my @weights = ();
+  my %hash = %{$options->{selected_states}->{$segmentation->{name}}->{$function}};
+  foreach my $state (keys %hash) {
+    my $cutoff = $hash{$state};
+    push @files, "scale ".(1/$cutoff)." $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw";
+    $min_step /= $cutoff;
+    if ((! defined $max_weight) || $max_weight < 1 / $cutoff) {
+      $max_weight = 1 / $cutoff;
+    }
   }
 
   if (scalar @files == 0) {
-    $options->{cutoffs}->{$segmentation->{name}}->{$function} = 0;
-    return;
+    return 0;
   }
 
   my $files_string = join(" ", @files);
 
-  foreach my $i (0..$celltype_count) {
+  my $last_fscore = 0;
+  my $last_cutoff = 0;
+  for (my $i = 0; $i < $celltype_count * $max_weight; $i += $min_step) {
     my $auc = `wiggletools AUC - mult $tfbs gt $i sum $files_string`;
     my $sens = $auc / $tfbs_auc; 
 
@@ -1226,16 +1235,15 @@ sub select_segmentation_cutoff {
 
     print "CutoffTest\t$function\t.\t$fscore\n";
     if ($fscore < $last_fscore) {
-      $options->{cutoffs}->{$segmentation->{name}}->{$function} = $i - 1;
-      my $cutoff = $i-1;
-      print "cutoff set at $cutoff\n";
-      return 
+      print "cutoff set at $last_cutoff\n";
+      return $last_cutoff;
     }
     $last_fscore = $fscore;
+    $last_cutoff = $i;
   }
 
-  $options->{cutoffs}->{$segmentation->{name}}->{$function} = $celltype_count - 1;
   print "cutoff set at MAX\n";
+  return $celltype_count * $max_weight - $min_step;
 }
 
 ########################################################
@@ -1393,11 +1401,11 @@ sub compute_regulatory_features_for_function {
 
 sub function_definition {
   my ($options, $function, $segmentation) = @_;
-  my $states = $options->{selected_states}->{$segmentation->{name}}->{$function};
+  my $hash = $options->{selected_states}->{$segmentation->{name}}->{$function};
   my $cutoff = $options->{cutoffs}->{$segmentation->{name}}->{$function};
   my @summaries = ();
-  foreach my $state (@$states) {
-    push @summaries, "$options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw";
+  foreach my $state (keys %$hash) {
+    push @summaries, "scale ".(1/$hash->{$state})." options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw";
   }
   if (scalar @summaries > 0) {
     return " gt $cutoff sum " . join(" ", @summaries);
