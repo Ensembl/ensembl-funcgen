@@ -406,16 +406,20 @@ sub get_metadata {
 
   if (defined $options->{dump}) {
     read_dump($options);
-  } else {
+  }
+
+  if (defined $options->{db_adaptor}) {
     fetch_metadata($options);
   }
 
   if (!defined $options->{chrom_lengths}) {
     create_chrom_lengths($options);
   }
+
   if (!defined $options->{tss}) {
     create_tss($options);
   }
+
   if (!defined $options->{exons}) {
     create_exons($options);
   }
