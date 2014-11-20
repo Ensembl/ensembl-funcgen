@@ -31,7 +31,7 @@ new_build_regulatory_features.pl
 =head1 SYNOPSIS
 
 Automatic run:
-new_build_regulatory_features.pl -o ./ -d dump.txt -a hg38 -l chrom_sizes.txt -t tss.bed -g exons.bed -u http://ngs.sanger.ac.uk/production/ensembl/regulation/GRCh38
+new_build_regulatory_features.pl -o ./ -a hg38 -u http://ngs.sanger.ac.uk/production/ensembl/regulation/GRCh38 -h $HOST -P $PORT -u $USER -p $PASS
 
 Where:
 	* -o: directory for output
@@ -78,7 +78,6 @@ segmentation	$name	$type	$location
 =cut
 
 # TODO Allow 2 TFS to create feature in the absence of DNase
-# TODO Filter out blacklisted regions
 # TODO Extend Regulatory_features to the extent of overlapping TFBS 
 
 use strict;
