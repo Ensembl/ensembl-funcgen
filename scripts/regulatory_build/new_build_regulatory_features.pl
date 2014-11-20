@@ -84,6 +84,7 @@ use strict;
 use warnings;
 use File::Path qw(mkpath);
 use File::Basename;
+use File::Temp;
 use Storable;
 use Data::Dumper;
 
@@ -439,29 +440,7 @@ sub read_dump {
     my @elems = split /\t/, $line;
 
     if ($elems[0] eq 'peaks') {
-      my $tf = clean_name($elems[1]);
-      my $cell = clean_name($elems[2]);
-
-      if (grep($_ eq clean_name($tf), @open_chromatin_assays)) {
-	if (!defined $options->{cell_type_open}->{$cell}) {
-	  $options->{cell_type_open}->{$cell} = [];
-	}
-	push @{$options->{cell_type_open}->{$cell}}, $elems[3];
-      } else {
-	if (!defined $options->{cell_type_tfs}->{$cell}) {
-	  $options->{cell_type_tfs}->{$cell} = [];
-	}
-	push @{$options->{cell_type_tfs}->{$cell}}, $elems[3];
-
-	if (!defined $options->{peak_calls}->{$tf}) {
-	  $options->{peak_calls}->{$tf} = {};
-	}
-	if (!defined $options->{peak_calls}->{$tf}->{$cell}) {
-	  $options->{peak_calls}->{$tf}->{$cell} = [];
-	}
-	push @{$options->{peak_calls}->{$tf}->{$cell}}, $elems[3];
-      }
-
+      record_peak_file($options, $elems[1], $elems[2], $elems[3]);
     } elsif ($elems[0] eq 'segmentation') {
       my $segmentation = {};
       $segmentation->{name} = $elems[1];
@@ -474,7 +453,49 @@ sub read_dump {
 }
 
 sub fetch_metadata {
-  # TODO
+  my ($options) = @_;
+  my @slices = sort {$a->name cmp $b->name} @{$options->{dnadb_adaptor}->get_SliceAdaptor->fetch_all('toplevel', undef, undef, False)};
+  foreach my $featureSet (@{$options->{db_adaptor}->get_adaptor("FeatureSet")->fetch_all_by_feature_class("annotated")}) {
+    my $tf = $featureSet->feature_type->name;
+    my $cell = $featureSet->cell->name;
+    my $dir = "$options->{working_dir}/peaks/$tf/$cell/";
+    mkpath $dir;
+
+    my $fh = File::Temp->new(DIR => $dir, SUFFIX => '.bed');
+    foreach my $slice (@slices) {
+      foreach my $feature (sort {$a->start <=> $b->start} @{$featureSet->get_Features_by_Slice($slice)});
+	print $fh join("\t", ($slice->name, $feature->start - 1, $feature->end));
+      }
+    }
+    record_peak_dir($options, $tf, $cell, $fh->filename);
+    close $fh
+  }
+}
+
+sub record_peak_file {
+  my ($options, $tf, $cell, $file) = @_;
+  my $ctf = clean_name($tf);
+  my $ccell = clean_name($cell);
+
+  if (grep($_ eq $ctf, @open_chromatin_assays)) {
+    if (!defined $options->{cell_type_open}->{$ccell}) {
+      $options->{cell_type_open}->{$ccell} = [];
+    }
+    push @{$options->{cell_type_open}->{$ccell}}, $file;
+  } else {
+    if (!defined $options->{cell_type_tfs}->{$ccell}) {
+      $options->{cell_type_tfs}->{$ccell} = [];
+    }
+    push @{$options->{cell_type_tfs}->{$ccell}}, $file;
+
+    if (!defined $options->{peak_calls}->{$ctf}) {
+      $options->{peak_calls}->{$ctf} = {};
+    }
+    if (!defined $options->{peak_calls}->{$ctf}->{$ccell}) {
+      $options->{peak_calls}->{$ctf}->{$ccell} = [];
+    }
+    push @{$options->{peak_calls}->{$ctf}->{$ccell}}, $file;
+  }
 }
 
 sub create_chrom_lengths {
@@ -491,7 +512,7 @@ sub fetch_chrom_lengths {
   my @slices = @{ $slice_adaptor->fetch_all('toplevel', undef, undef, False) };
 
   foreach my $slice (@slices) {
-    print $fh join("\t", ($slice->seq_region_name(), 1 + $slice->end() - $slice->start())) . "\n";
+    print $fh join("\t", ($slice->seq_region_name() - 1, $slice->end() - $slice->start())) . "\n";
   }
 }
 
@@ -512,9 +533,9 @@ sub fetch_tss {
     foreach my $gene (@{$slice->get_all_Genes()}) {
       foreach my $transcript (@{$gene->get_all_Transcripts()}) {
 	if ($transcript->strand() > 0) {
-	  push @tss_coords, [$slice->seq_regions_name(), $transcript->start(), $transcript->start() + 1];
+	  push @tss_coords, [$slice->seq_regions_name(), $transcript->start() - 1, $transcript->start()];
         } else {
-	  push @tss_coords, [$slice->seq_regions_name(), $transcript->end(), $transcript->end() + 1];
+	  push @tss_coords, [$slice->seq_regions_name(), $transcript->end() - 1, $transcript->end()];
 	}
       }
     }
@@ -543,7 +564,7 @@ sub fetch_exons {
     foreach my $gene (@{$slice->get_all_Genes()}) {
       foreach my $transcript (@{$gene->get_all_Transcripts()}) {
         foreach my $exon (@{$transcript->get_all_Exons()}) {
-	  push @exon_coords, [$slice->seq_regions_name(), $exon$exon->start(), $exon->end() + 1];
+	  push @exon_coords, [$slice->seq_regions_name(), $exon$exon->start() - 1, $exon->end()];
 	}
       }
     }
@@ -570,7 +591,7 @@ sub fetch_mask {
   my $slice_adaptor = $options->{dnadb_adaptor}->get_SliceAdaptor();
   foreach my $slice (@{$slice_adaptor->fetch_all('toplevel', undef, undef, False) }) {
     foreach my $mask (@{$slice->get_all_MiscFeatures('encode_excluded')}) {
-      push @mask_coords, [$slice->seq_regions_name(), $mask$mask->start(), $mask->end() + 1];
+      push @mask_coords, [$slice->seq_regions_name(), $mask$mask->start(), $mask->end() - 1];
     }
   }
 
