@@ -78,7 +78,6 @@ segmentation	$name	$type	$location
 =cut
 
 # TODO Allow 2 TFS to create feature in the absence of DNase
-# TODO Extend Regulatory_features to the extent of overlapping TFBS 
 
 use strict;
 use warnings;
@@ -1501,106 +1500,121 @@ sub compute_regulatory_features {
     print "Computing Regulatory Build...\n";
   }
 
-  my $preBuild = compute_prebuild($options);
-  my $tfbs = compute_unannotated_tfbs($options, $preBuild);
-  my $dnase = compute_unannotated_dnase($options, $preBuild, $tfbs);
+  #############################################
+  ## Precompute everything independently
+  #############################################
 
+  my $tss_tmp = compute_initial_regions($options, "tss");
+  my $proximal_tmp = compute_initial_regions($options, "proximal");
+  my $distal_tmp = compute_initial_regions($options, "distal");
+  my $ctcf_tmp = compute_initial_regions($options, "ctcf");
+
+  # Compute TF binding
+  my $tfbs_signal = "$options->{trackhub_dir}/overview/all_tfbs.bw"; 
+  my $tfbs_tmp = "$options->{working_dir}/build/tfbs.tmp.bed";
+  my $awk_dnase = make_awk_command("tfbs");
+  run("wiggletools write_bg - unit $tfbs_signal | $awk_tfbs > $tfbs_tmp");
+
+  #Compute open dnase
+  my $dnase_tmp = "$options->{working_dir}/build/dnase.tmp.bed";
+  my @files = glob "$options->{working_dir}/celltype_dnase/*.bed";
+  my $awk_dnase = make_awk_command("dnase");
+  run("wiggletools write_bg - unit sum ".join(" ", @files)." | $awk_dnase > $dnase_tmp");
+
+  #############################################
+  ## Percolate overlapping features up each level 
+  #############################################
+
+  # DNAse sites are merged to overlapping TFBS sites
+  my $tfbs_tmp2 = "$options->{working_dir}/build/tfbs.tmp2.bed";
+  expand_boundaries([$dnase_tmp], $tfbs_tmp, $tfbs_tmp2);
+
+  # DNAse and TFBS sites are merged to overlapping distal sites
+  my $distal_tmp2 = "$options->{working_dir}/build/distal.tmp2.bed";
+  expand_boundaries([$dnase_tmp, $tfbs_tmp], $distal_tmp, $distal_tmp2);
+
+  # DNAse, TFBS and distal sites are merged to overlapping proximal sites
+  my $proximal_tmp2 = "$options->{working_dir}/build/proximal.tmp2.bed";
+  expand_boundaries([$dnase_tmp, $tfbs_tmp, $distal_tmp], $proximal_tmp, $proximal_tmp2);
+
+  # DNAse, TFBS, distal and proximal sites are merged to overlapping TSS sites
+  my $tss_tmp2 = "$options->{working_dir}/build/tss.tmp2.bed";
+  expand_boundaries([$dnase_tmp, $tfbs_tmp, $distal_tmp, $proximal_tmp], $tss_tmp, $tss_tmp2);
+
+  #############################################
+  ## Find non overlapping features for each level 
+  #############################################
+
+  # Convenience short hand
+  my $awk_id = "awk '{\$4 = \$4\"_\"NR'; print;}";
+
+  # All features that overlap known TSS are retained
+  my $tss = "$output->{working_dir}/build/tss.bed";
+  run("bedtools intersect -u -wa -a $tss_tmp2 -b $options->{tss} | $awk_id > $tss");
+
+  # All features that do not go into a demoted file
+  my $demoted = "$options->{working_dir}/build/demoted_tss.bed";
+  run("bedtools intersect -v -wa -a $tss_tmp2 -b $options->{tss} > $demoted");
+
+  # Unaligned proximal sites are retained
+  my $proximal = "$options->{working_dir}/build/proximal.bed";
+  run("bedtools unionbedg $proximal_tmp2 $demoted | bedtools intersect -wa -v -a stdin -b $tss_tmp2 | $awk_contract | $awk_id > $proximal");
+
+  # Unaligned distal sites are retained
+  my $distal = "$options->{working_dir}/build/distal.bed";
+  run("bedtools intersect -wa -v -a $distal_tmp2 -b $tss_tmp2 | bedtools intersect -wa -v -a stdin -b $proximal_tmp2 | $awk_contract | $awk_id > $distal");
+
+  # Unaligned TFBS sites are retained
+  my $tfbs = "$options->{working_dir}/build/tfbs.bed";
+  run("bedtools intersect -wa -v -a $tfbs_tmp2 -b $tss_tmp2 | bedtools intersect -wa -v -a stdin -b $proximal_tmp2 | bedtools intersect -wa -v -a stdin -b $distal_tmp2 | $awk_contract | $awk_id > $tfbs");
+
+  # Unaligned DNAse sites are retained
+  my $dnase = "$options->{working_dir}/build/dnase.bed";
+  run("bedtools intersect -wa -v -a $dnase_tmp -b $tss_tmp2 | bedtools intersect -wa -v -a stdin -b $proximal_tmp2 | bedtools intersect -wa -v -a stdin -b $distal_tmp2 | bedtools intersect -wa -v -a stdin -b $tfbs | $awk_contract | $awk_id > $dnase");
+
+  #############################################
+  ## CTCF computed independently 
+  #############################################
+
+  my $awk_ctcf = make_awk_command("ctcf");
+  my $ctcf = "$output->{working_dir}/build/ctcf.bed";
+  run("$awk_ctcf $ctcf_tmp > $ctcf");
+
+  #############################################
+  ## Apply mask
+  #############################################
+
+  my $awk_mask = "";
   if (defined $options->{mask}) {
-    run("sort -m $dnase $tfbs $preBuild -k1,1 -k2,2n | bedtools intersect -wa -v -a stdin -b $options->{mask} | $bed_output");
-  } else {
-    run("sort -m $dnase $tfbs $preBuild -k1,1 -k2,2n > $bed_output");
+    $awk_mask = "| bedtools intersect -wa -v -a stdin -b $options->{mask}");
   }
+
+  #############################################
+  ## Merge
+  #############################################
+  run("sort -m $tss $proximal $distal $ctcf $dnase $tfbs -k1,1 -k2,2n $awk_mask > $bed_output");
   convert_to_bigBed($options, $bed_output);
 }
 
-sub compute_unannotated_dnase {
-  my ($options, $preBuild, $tfbs) = @_;
+sub expand_boundaries {
+  my ($source_files, $target_file, $output);
+  # Convenience short hand
+  my $awk_expand = "awk 'BEGIN {OFS=\"\\t\"} {if (\$2 > 0) \$2 -= 1; \$3 += 1; print \$1,\$2,\$3,\$4;}'";
+  my $awk_move_boundaries = "awk 'BEGIN {OFS=\"\\t\"} \$4 != name {if (name) {print chr, start, end, name, 1000, \".\", thickStart, thickEnd, rgb; } chr=\$1; start=\$2; end=\$3; name=\$4; thickStart=\$7; thickEnd=\$8; rgb=\$9} \$10 == chr && \$11+1 < start {start=\$11+1} \$10 == chr && \$12-1 > end {end=\$12-1} END {print chr, start, end, name, 1000, \".\", thickStart, thickEnd, rgb}'";
 
-  my $dnase = "$options->{working_dir}/build/dnase.tmp.bed";
-  my @files = glob "$options->{working_dir}/celltype_dnase/*.bed";
-  my $awk_cmd = "awk \'BEGIN {OFS=\"\\t\"} {\$5=1000; \$6=\".\"; \$7=\$2; \$8=\$3; \$9=\"$COLORS{dnase}\"; print }\'";
-  run("wiggletools write_bg - unit sum ".join(" ", @files)." | $awk_cmd > $dnase");
-
-  my $u_dnase = "$options->{working_dir}/build/dnase.tmp2.bed";
-  run("bedtools intersect -wa -v -a $dnase -b $preBuild | awk 'BEGIN {OFS=\"\\t\"} {\$4=\"open_\"NR; print}' > $u_dnase");
-  my $u_dnase2 = "$options->{working_dir}/build/dnase.bed";
-  run("bedtools intersect -wa -v -a $u_dnase -b $tfbs > $u_dnase2");
-  return $u_dnase2;
-}
-
-sub compute_unannotated_tfbs {
-  my ($options, $preBuild) = @_;
-  my $tfbs_signal = "$options->{trackhub_dir}/overview/all_tfbs.bw"; 
-  my $tfbs = "$options->{working_dir}/build/tfbs.tmp.bed";
-  my $awk_cmd = "awk \'BEGIN {OFS=\"\\t\"} {\$5=1000; \$6=\".\"; \$7=\$2; \$8=\$3; \$9=\"$COLORS{tfbs}\"; print }\'";
-  run("wiggletools write_bg - unit $tfbs_signal | $awk_cmd > $tfbs");
-
-  my $u_tfbs = "$options->{working_dir}/build/tfbs.bed";
-  run("bedtools intersect -wa -v -a $tfbs -b $preBuild | awk 'BEGIN {OFS=\"\\t\"} {\$4=\"tfbs_\"NR; print}' > $u_tfbs");
-  return $u_tfbs;
-}
-
-sub compute_prebuild {
-  my ($options) = @_;
-
-  # All features that overlap known TSS are retained
-  my $tss_tmp = compute_initial_regions($options, "tss");
-  my $tss = "$output->{working_dir}/build/$tss.bed";
-  run("bedtools intersect -u -wa -a $tss_tmp -b $options->{tss} > $output.tmp2.bed");
-  run("cat $output.tmp2.bed | $awk_cmd > $output");
-  # All features that do not go into a demoted file
-  run("bedtools intersect -v -wa -a $tss_tmp -b $options->{tss} > $options->{working_dir}/build/demoted_tss.bed");
-
-  # Precompute proximals
-  my $proximal_tmp = compute_initial_regions($options, "tss");
-
-  # All features that do not overlap known proximals or TSS are retained
-  run("bedtools closest -d -a $output.tmp.bed -b $tss.tmp.bed | awk '\$9 > 1' | cut -f1-4 | uniq > $output.tmp2.bed");
-  run("bedtools closest -d -a $output.tmp2.bed -b $proximal.tmp.bed | awk '\$9 > 1' | cut -f1-4 | uniq | $awk_cmd > $output");
-  # All features that overlap a proximal OR a TSS are collected:
-  run("bedtools closest -d -a $output.tmp.bed -b $tss.tmp.bed | awk '\$9 <= 1' | cut -f1-4 | uniq > $output.tmp3.bed");
-  run("bedtools closest -d -a $output.tmp.bed -b $proximal.tmp.bed | awk '\$9 <= 1' | cut -f1-4 | uniq >> $output.tmp3.bed");
-  run("sort -k1,1 -k2,2n $output.tmp3.bed > $output.tmp4.bed");
-  # We merge those into proximals:
-  run("wiggletools write_bg $proximal.tmp2.bed unit sum $output.tmp4.bed $options->{working_dir}/build/demoted_tss.bed $proximal.tmp.bed");
-  # This awk one-liner takes in a BedGraph and converts into a Bed9
-  my $color = $COLORS{proximal};
-  my $awk_cmd2 = "awk \'BEGIN {OFS=\"\\t\"} {\$4=\"proximal_\"NR; \$5=1000; \$6=\".\"; \$7=\$2; \$8=\$3; \$9=\"$color\"; print }\'";
-  # We extend the proximals to help detection of overlaps:
-  run("awk 'BEGIN {OFS=\"\\t\"} {if (\$2 > 0) \$2 -= 1; \$3 += 1; print;}' $proximal.tmp2.bed > $proximal.tmp3.bed");
-  # All proximals that do not overlap the pre-annotated TSS are called proximal (contract elements after the fact)
-  run("bedtools intersect -v -wa -a $proximal.tmp3.bed -b $tss | awk '{\$2+=1; \$3-=1; print;}' | $awk_cmd2 > $proximal");
-  # We print out for each TSS all the overlapping features
-  run("bedtools intersect -loj -wa -wb -a $tss -b $proximal.tmp3.bed > $options->{working_dir}/build/tss.proximal.overlaps.txt");
-  # We process this list so that each TSS is assigned the min start and the max end of all overlapping features
-  run("awk 'BEGIN {OFS=\"\\t\"} \$4 != name {if (name) {print chr, start, end, name, 1000, \".\", thickStart, thickEnd, rgb; } chr=\$1; start=\$2; end=\$3; name=\$4; thickStart=\$7; thickEnd=\$8; rgb=\$9} \$10 == chr && \$11+1 < start {start=\$11+1} \$10 == chr && \$12-1 > end {end=\$12-1} END {print chr, start, end, name, 1000, \".\", thickStart, thickEnd, rgb}' $options->{working_dir}/build/tss.proximal.overlaps.txt > $tss");
-
-  # And finally compute CTCF
-  my $ctcf_tmp = compute_initial_regions($options, "ctcf");
-  my $ctcf = "$output->{working_dir}/build/$ctcf.bed";
-  run("cat $ctcf_tmp | $awk_cmd > $ctcf");
-
-  # Merge
-  my $preBuild = "$options->{working_dir}/build/preRegBuild.bed";
-  run("sort -m $tss $proximal $distal $ctcf -k1,1 -k2,2n > $preBuild");
-  return $preBuild;
+  run("cat ".join(" ", @{$source_files}). " | $awk_expand | bedtools intersect -loj -wa -wb -a $target_file -b stdin | $awk_move_boundaries > $output");
 }
 
 sub compute_initial_regions {
   my ($options, $function) = @_;
   my $output = "$output->{working_dir}/build/$function.tmp.bed";
-  my $wiggletools_cmd = "wiggletools write_bg $output unit sum ";
+  my $wiggletools_cmd = "wiggletools write_bg - unit sum ";
   foreach my $segmentation (@{$options->{segmentations}}) {
     $wiggletools_cmd .= function_definition($options, $function, $segmentation); 
   }
-  run("$wiggletools_cmd") ;
+  my $awk_cmd = make_awk_command($function);
+  run("$wiggletools_cmd | $awk_cmd > $output") ;
   return $output;
-}
-
-sub make_awk_command {
-  my ($function) = @_;
-  # This awk one-liner takes in a BedGraph and converts into a Bed9
-  return "awk \'BEGIN {OFS=\"\\t\"} {\$4=\"${function}_\"NR; \$5=1000; \$6=\".\"; \$7=\$2; \$8=\$3; \$9=\"$COLORS{$function}\"; print }\'";
 }
 
 sub function_definition {
@@ -1616,6 +1630,12 @@ sub function_definition {
   } else {
     return "";
   }
+}
+
+sub make_awk_command {
+  my ($function) = @_;
+  # This awk one-liner takes in a BedGraph and converts into a Bed9
+  return "awk \'BEGIN {OFS=\"\\t\"} {\$4=\"${function}_\"NR; \$5=1000; \$6=\".\"; \$7=\$2; \$8=\$3; \$9=\"$COLORS{$function}\"; print }\'";
 }
 
 ########################################################
