@@ -93,7 +93,7 @@ use Data::Dumper;
 ########################################################
 
 # A bunch of arbitrary cutoffs
-# All of these cutoff are applied to enrichment ratios
+# All of these cutoff are applied to enrichment ratios (i.e. 1 == neutral)
 our $weak_cutoff = 2;
 our $strong_cutoff = 5;
 our $very_strong_cutoff = 10;
@@ -178,7 +178,7 @@ use Getopt::Long;
 sub read_command_line {
   my %options = ();
 
-  GetOptions(\%options, "help|h=s", "tmp|T=s", "out|o=s", "dump|d=s", "assembly|a=s", "chrom_lengths|l=s", "tss|t=s", "exons|g=s", "url|u=s", "host|h=s", "port|P=s", "db|D=s", "user|u=s", "pass|p=s");
+  GetOptions(\%options, "help|h=s", "tmp|T=s", "out|o=s", "dump|d=s", "assembly|a=s", "chrom_lengths|l=s", "tss|t=s", "exons|g=s", "url|u=s", "host|h=s", "port|P=s", "db|D=s", "user|u=s", "pass|p=s", "mask|m=s");
 
   $options{output_dir} = $options{out};
   $options{working_dir} = $options{tmp};
@@ -1459,7 +1459,11 @@ sub compute_regulatory_features {
   my $tfbs = compute_unannotated_tfbs($options, $preBuild);
   my $dnase = compute_unannotated_dnase($options, $preBuild, $tfbs);
 
-  run("sort -m $dnase $tfbs $preBuild -k1,1 -k2,2n > $bed_output");
+  if (defined $options->{mask}) {
+    run("sort -m $dnase $tfbs $preBuild -k1,1 -k2,2n | bedtools intersect -wa -v -a stdin -b $options->{mask} | $bed_output");
+  } else {
+    run("sort -m $dnase $tfbs $preBuild -k1,1 -k2,2n > $bed_output");
+  }
   convert_to_bigBed($options, $bed_output);
 }
 
