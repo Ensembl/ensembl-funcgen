@@ -51,10 +51,10 @@ Where:
 	* -a: UCSC assembly name (for trackHub)
 	* -u: Base url for trackHub location.
 	* -l: tab delimited file, each line contains a chromosome name followed
-		by its length.
-	* -t: Bed file with TSS. Can be Ensembl transcript TSS, CAGE tags...
-	* -g: Bed file with Exons. A BioMart dump would work. 
-	* -d: dump file (described below)
+		by its length.  [Overrides database info]
+	* -t: Bed file with TSS. Can be Ensembl transcript TSS, CAGE tags... [Overrides database info]
+	* -g: Bed file with Exons. A BioMart dump would work. [Overrides database info]
+	* -d: dump file (described below) [Added to database datasets]
 
 =head1 DESCRIPTION
 
