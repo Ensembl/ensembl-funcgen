@@ -423,6 +423,10 @@ sub get_metadata {
   if (!defined $options->{exons}) {
     create_exons($options);
   }
+
+  if (!defined $options->{mask}) {
+    create_mask($options);
+  }
 }
 
 sub read_dump {
@@ -551,6 +555,32 @@ sub fetch_exons {
     print $fh, join("\t", @{$exon_coord})."\n";
   }
 }
+
+sub create_mask {
+  my ($options) = @_;
+  $options->{mask} = "$options->{working_dir}/mask.txt";
+  open my $fh, ">", $options->{mask};
+  fetch_mask($options, $fh);
+  close $fh
+}
+
+sub fetch_mask {
+  my ($options, $fh) = @_;
+  my @mask_coords = ();
+  my $slice_adaptor = $options->{dnadb_adaptor}->get_SliceAdaptor();
+  foreach my $slice (@{$slice_adaptor->fetch_all('toplevel', undef, undef, False) }) {
+    foreach my $mask (@{$slice->get_all_MiscFeatures('encode_excluded')}) {
+      push @mask_coords, [$slice->seq_regions_name(), $mask$mask->start(), $mask->end() + 1];
+    }
+  }
+
+  my @sorted_mask_coords = sort {comp_coords($a, $b)} @mask_coords;
+
+  foreach my $mask_coords (@sorted_mask_coords) {
+    print $fh, join("\t", @{$mask_coord})."\n";
+  }
+}
+
 
 sub comp_coords {
   my ($a, $b) = @_;
@@ -1450,15 +1480,7 @@ sub compute_regulatory_features {
     print "Computing Regulatory Build...\n";
   }
 
-  my @files = ();
-  foreach my $function (@functions) {
-    push @files, compute_regulatory_features_for_function($options, $function);
-  }
-
-  my $file_list = join(" ", @files);
-  my $preBuild = "$options->{working_dir}/build/preRegBuild.bed";
-  run("sort -m $file_list -k1,1 -k2,2n > $preBuild");
-
+  my $preBuild = compute_prebuild($options);
   my $tfbs = compute_unannotated_tfbs($options, $preBuild);
   my $dnase = compute_unannotated_dnase($options, $preBuild, $tfbs);
 
@@ -1497,64 +1519,67 @@ sub compute_unannotated_tfbs {
   return $u_tfbs;
 }
 
-sub compute_regulatory_features_for_function {
+sub compute_prebuild {
+  my ($options) = @_;
+
+  # All features that overlap known TSS are retained
+  my $tss_tmp = compute_initial_regions($options, "tss");
+  my $tss = "$output->{working_dir}/build/$tss.bed";
+  run("bedtools intersect -u -wa -a $tss_tmp -b $options->{tss} > $output.tmp2.bed");
+  run("cat $output.tmp2.bed | $awk_cmd > $output");
+  # All features that do not go into a demoted file
+  run("bedtools intersect -v -wa -a $tss_tmp -b $options->{tss} > $options->{working_dir}/build/demoted_tss.bed");
+
+  # Precompute proximals
+  my $proximal_tmp = compute_initial_regions($options, "tss");
+
+  # All features that do not overlap known proximals or TSS are retained
+  run("bedtools closest -d -a $output.tmp.bed -b $tss.tmp.bed | awk '\$9 > 1' | cut -f1-4 | uniq > $output.tmp2.bed");
+  run("bedtools closest -d -a $output.tmp2.bed -b $proximal.tmp.bed | awk '\$9 > 1' | cut -f1-4 | uniq | $awk_cmd > $output");
+  # All features that overlap a proximal OR a TSS are collected:
+  run("bedtools closest -d -a $output.tmp.bed -b $tss.tmp.bed | awk '\$9 <= 1' | cut -f1-4 | uniq > $output.tmp3.bed");
+  run("bedtools closest -d -a $output.tmp.bed -b $proximal.tmp.bed | awk '\$9 <= 1' | cut -f1-4 | uniq >> $output.tmp3.bed");
+  run("sort -k1,1 -k2,2n $output.tmp3.bed > $output.tmp4.bed");
+  # We merge those into proximals:
+  run("wiggletools write_bg $proximal.tmp2.bed unit sum $output.tmp4.bed $options->{working_dir}/build/demoted_tss.bed $proximal.tmp.bed");
+  # This awk one-liner takes in a BedGraph and converts into a Bed9
+  my $color = $COLORS{proximal};
+  my $awk_cmd2 = "awk \'BEGIN {OFS=\"\\t\"} {\$4=\"proximal_\"NR; \$5=1000; \$6=\".\"; \$7=\$2; \$8=\$3; \$9=\"$color\"; print }\'";
+  # We extend the proximals to help detection of overlaps:
+  run("awk 'BEGIN {OFS=\"\\t\"} {if (\$2 > 0) \$2 -= 1; \$3 += 1; print;}' $proximal.tmp2.bed > $proximal.tmp3.bed");
+  # All proximals that do not overlap the pre-annotated TSS are called proximal (contract elements after the fact)
+  run("bedtools intersect -v -wa -a $proximal.tmp3.bed -b $tss | awk '{\$2+=1; \$3-=1; print;}' | $awk_cmd2 > $proximal");
+  # We print out for each TSS all the overlapping features
+  run("bedtools intersect -loj -wa -wb -a $tss -b $proximal.tmp3.bed > $options->{working_dir}/build/tss.proximal.overlaps.txt");
+  # We process this list so that each TSS is assigned the min start and the max end of all overlapping features
+  run("awk 'BEGIN {OFS=\"\\t\"} \$4 != name {if (name) {print chr, start, end, name, 1000, \".\", thickStart, thickEnd, rgb; } chr=\$1; start=\$2; end=\$3; name=\$4; thickStart=\$7; thickEnd=\$8; rgb=\$9} \$10 == chr && \$11+1 < start {start=\$11+1} \$10 == chr && \$12-1 > end {end=\$12-1} END {print chr, start, end, name, 1000, \".\", thickStart, thickEnd, rgb}' $options->{working_dir}/build/tss.proximal.overlaps.txt > $tss");
+
+  # And finally compute CTCF
+  my $ctcf_tmp = compute_initial_regions($options, "ctcf");
+  my $ctcf = "$output->{working_dir}/build/$ctcf.bed";
+  run("cat $ctcf_tmp | $awk_cmd > $ctcf");
+
+  # Merge
+  my $preBuild = "$options->{working_dir}/build/preRegBuild.bed";
+  run("sort -m $tss $proximal $distal $ctcf -k1,1 -k2,2n > $preBuild");
+  return $preBuild;
+}
+
+sub compute_initial_regions {
   my ($options, $function) = @_;
-  my $segmentation;
-
-  my $output = "$options->{working_dir}/build/$function.bed";
-
-  my $wiggletools_cmd = "wiggletools write_bg $output.tmp.bed unit sum ";
-  foreach $segmentation (@{$options->{segmentations}}) {
+  my $output = "$output->{working_dir}/build/$function.tmp.bed";
+  my $wiggletools_cmd = "wiggletools write_bg $output unit sum ";
+  foreach my $segmentation (@{$options->{segmentations}}) {
     $wiggletools_cmd .= function_definition($options, $function, $segmentation); 
   }
   run("$wiggletools_cmd") ;
-
-  my $color = $COLORS{$function};
-  # This awk one-liner takes in a BedGraph and converts into a Bed9
-  my $awk_cmd = "awk \'BEGIN {OFS=\"\\t\"} {\$4=\"${function}_\"NR; \$5=1000; \$6=\".\"; \$7=\$2; \$8=\$3; \$9=\"$color\"; print }\'";
-
-  if ($function eq 'tss') {
-    # All features that overlap known TSS are retained
-    run("bedtools intersect -u -wa -a $output.tmp.bed -b $options->{tss} > $output.tmp2.bed");
-    run("cat $output.tmp2.bed | $awk_cmd > $output");
-    # All features that do not go into a demoted file
-    run("bedtools intersect -v -wa -a $output.tmp.bed -b $options->{tss} > $options->{working_dir}/build/demoted_tss.bed");
-  } elsif ($function eq 'proximal') {
-    # Do nothing, wait for distals
-    ;
-  } elsif ($function eq 'distal') {
-    my $tss = "$options->{working_dir}/build/tss.bed";
-    my $proximal = "$options->{working_dir}/build/proximal.bed";
-    # All features that do not overlap known proximals or TSS are retained
-    run("bedtools closest -d -a $output.tmp.bed -b $tss.tmp.bed | awk '\$9 > 1' | cut -f1-4 | uniq > $output.tmp2.bed");
-    run("bedtools closest -d -a $output.tmp2.bed -b $proximal.tmp.bed | awk '\$9 > 1' | cut -f1-4 | uniq | $awk_cmd > $output");
-    # All features that overlap a proximal OR a TSS are collected:
-    run("bedtools closest -d -a $output.tmp.bed -b $tss.tmp.bed | awk '\$9 <= 1' | cut -f1-4 | uniq > $output.tmp3.bed");
-    run("bedtools closest -d -a $output.tmp.bed -b $proximal.tmp.bed | awk '\$9 <= 1' | cut -f1-4 | uniq >> $output.tmp3.bed");
-    run("sort -k1,1 -k2,2n $output.tmp3.bed > $output.tmp4.bed");
-    # We merge those into proximals:
-    run("wiggletools write_bg $proximal.tmp2.bed unit sum $output.tmp4.bed $options->{working_dir}/build/demoted_tss.bed $proximal.tmp.bed");
-    # This awk one-liner takes in a BedGraph and converts into a Bed9
-    my $color = $COLORS{proximal};
-    my $awk_cmd2 = "awk \'BEGIN {OFS=\"\\t\"} {\$4=\"proximal_\"NR; \$5=1000; \$6=\".\"; \$7=\$2; \$8=\$3; \$9=\"$color\"; print }\'";
-    # We extend the proximals to help detection of overlaps:
-    run("awk 'BEGIN {OFS=\"\\t\"} {if (\$2 > 0) \$2 -= 1; \$3 += 1; print;}' $proximal.tmp2.bed > $proximal.tmp3.bed");
-    # All proximals that do not overlap the pre-annotated TSS are called proximal (contract elements after the fact)
-    run("bedtools intersect -v -wa -a $proximal.tmp3.bed -b $tss | awk '{\$2+=1; \$3-=1; print;}' | $awk_cmd2 > $proximal");
-    # We print out for each TSS all the overlapping features
-    run("bedtools intersect -loj -wa -wb -a $tss -b $proximal.tmp3.bed > $options->{working_dir}/build/tss.proximal.overlaps.txt");
-    # We process this list so that each TSS is assigned the min start and the max end of all overlapping features
-    run("awk 'BEGIN {OFS=\"\\t\"} \$4 != name {if (name) {print chr, start, end, name, 1000, \".\", thickStart, thickEnd, rgb; } chr=\$1; start=\$2; end=\$3; name=\$4; thickStart=\$7; thickEnd=\$8; rgb=\$9} \$10 == chr && \$11+1 < start {start=\$11+1} \$10 == chr && \$12-1 > end {end=\$12-1} END {print chr, start, end, name, 1000, \".\", thickStart, thickEnd, rgb}' $options->{working_dir}/build/tss.proximal.overlaps.txt > $tss");
-
-  } elsif ($function eq 'ctcf') {
-    # Just run the formatting script
-    run("cat $output.tmp.bed | $awk_cmd > $output");
-  } else {
-    print STDERR "Unknown function $function\n";
-    exit 1;
-  }
-
   return $output;
+}
+
+sub make_awk_command {
+  my ($function) = @_;
+  # This awk one-liner takes in a BedGraph and converts into a Bed9
+  return "awk \'BEGIN {OFS=\"\\t\"} {\$4=\"${function}_\"NR; \$5=1000; \$6=\".\"; \$7=\$2; \$8=\$3; \$9=\"$COLORS{$function}\"; print }\'";
 }
 
 sub function_definition {
