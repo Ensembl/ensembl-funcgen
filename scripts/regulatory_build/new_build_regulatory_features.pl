@@ -30,16 +30,30 @@ new_build_regulatory_features.pl
 
 =head1 SYNOPSIS
 
+Automatic run:
 new_build_regulatory_features.pl -o ./ -d dump.txt -a hg38 -l chrom_sizes.txt -t tss.bed -g exons.bed -u http://ngs.sanger.ac.uk/production/ensembl/regulation/GRCh38
 
 Where:
 	* -o: directory for output
 	* -a: UCSC assembly name (for trackHub)
+	* -u: Base url for trackHub location.
+	* -h: host server
+	* -D: host database
+	* -P: host port
+	* -u: host login 
+	* -p: host password 
+
+Manual run:
+new_build_regulatory_features.pl -o ./ -d dump.txt -a hg38 -l chrom_sizes.txt -t tss.bed -g exons.bed -u http://ngs.sanger.ac.uk/production/ensembl/regulation/GRCh38
+
+Where:
+	* -o: directory for output
+	* -a: UCSC assembly name (for trackHub)
+	* -u: Base url for trackHub location.
 	* -l: tab delimited file, each line contains a chromosome name followed
 		by its length.
 	* -t: Bed file with TSS. Can be Ensembl transcript TSS, CAGE tags...
 	* -g: Bed file with Exons. A BioMart dump would work. 
-	* -u: Base url for trackHub location.
 	* -d: dump file (described below)
 
 =head1 DESCRIPTION
@@ -63,9 +77,6 @@ segmentation	$name	$type	$location
 
 =cut
 
-# TODO Generate Exons file
-# TODO Generate TSS file
-# TODO Generate chromosome lengths from database
 # TODO Allow 2 TFS to create feature in the absence of DNase
 # TODO Filter out blacklisted regions
 # TODO Extend Regulatory_features to the extent of overlapping TFBS 
@@ -167,20 +178,48 @@ use Getopt::Long;
 sub read_command_line {
   my %options = ();
 
-  GetOptions(\%options, "help|h=s", "pwd|p=s", "out|o=s", "dump|d=s", "assembly|a=s", "chrom_lengths|l=s", "tss|t=s", "genes|g=s", "url|u=s");
+  GetOptions(\%options, "help|h=s", "tmp|T=s", "out|o=s", "dump|d=s", "assembly|a=s", "chrom_lengths|l=s", "tss|t=s", "exons|g=s", "url|u=s", "host|h=s", "port|P=s", "db|D=s", "user|u=s", "pass|p=s");
 
   $options{output_dir} = $options{out};
-  $options{working_dir} = $options{pwd};
+  $options{working_dir} = $options{tmp};
 
   return \%options;
 }
 
 sub check_options {
   my $options = shift;
+
   die('Output directory not defined') unless defined $options->{out};
-  die('Ensembl dumps not described') unless defined $options->{dump};
   die('Assembly name not defined') unless defined $options->{assembly};
-  die('Chromosome lengths not provided') unless defined $options->{chrom_lengths};
+  die('Base url not defined') unless defined $options->{url};
+
+  if (! defined $options->{host}) {
+    die('Ensembl dumps not described') unless defined $options->{dump};
+    die('Chromosome lengths not provided') unless defined $options->{chrom_lengths};
+    die('TSS file not provided') unless defined $options->{tss};
+    die('Exon file not provided') unless defined $options->{exons};
+    die('Chromosome length file not provided') unless defined $options->{exons};
+  } else {
+    die('Database not defined') unless defined $options->{db};
+    die('User account not defined') unless defined $options->{user};
+    $options->{db_adaptor} = Bio::EnsEMBL::DBSQL::DBAdaptor->new
+    (
+	-user   => $options->{user},
+	-dbname => $options->{db},
+	-host   => $options->{host},
+	-pass   => $options->{pass},
+	-port   => $options->{port}
+    );
+    $options->{dnadb_adaptor} = Bio::EnsEMBL::DBSQL::DBAdaptor->new
+    (
+	-user   => $options->{db_adaptor}->dnadb_user(),
+	-dbname => $options->{db_adaptor}->dnadb_name(),
+	-host   => $options->{db_adaptor}->dnadb_host(),
+	-pass   => $options->{db_adaptor}->dnadb_pass(),
+	-port   => $options->{db_adaptor}->dnadb_port()
+    );
+  }
+
   if (!defined $options->{working_dir}) {
     $options->{working_dir} = "$options->{output_dir}/tmp/";
   }
@@ -359,7 +398,6 @@ sub read_chrom_lengths {
 ########################################################
 
 sub get_metadata {
-  # TODO get from tracking db
   my $options = shift;
 
   $options->{cell_type_tfs} = {};
@@ -367,6 +405,25 @@ sub get_metadata {
   $options->{peak_calls} = {};
   $options->{segmentations} = [];
 
+  if (defined $options->{dump}) {
+    read_dump($options);
+  } else {
+    fetch_metadata($options);
+  }
+
+  if (!defined $options->{chrom_lengths}) {
+    create_chrom_lengths($options);
+  }
+  if (!defined $options->{tss}) {
+    create_tss($options);
+  }
+  if (!defined $options->{exons}) {
+    create_exons($options);
+  }
+}
+
+sub read_dump {
+  my ($options) = @_;
   print "Reading $options->{dump}\n";
 
   open my $fh, "<", $options->{dump};
@@ -379,23 +436,23 @@ sub get_metadata {
       my $cell = clean_name($elems[2]);
 
       if (grep($_ eq clean_name($tf), @open_chromatin_assays)) {
-        if (!defined $options->{cell_type_open}->{$cell}) {
-          $options->{cell_type_open}->{$cell} = [];
-        }
-        push @{$options->{cell_type_open}->{$cell}}, $elems[3];
+	if (!defined $options->{cell_type_open}->{$cell}) {
+	  $options->{cell_type_open}->{$cell} = [];
+	}
+	push @{$options->{cell_type_open}->{$cell}}, $elems[3];
       } else {
-        if (!defined $options->{cell_type_tfs}->{$cell}) {
-          $options->{cell_type_tfs}->{$cell} = [];
-        }
-        push @{$options->{cell_type_tfs}->{$cell}}, $elems[3];
+	if (!defined $options->{cell_type_tfs}->{$cell}) {
+	  $options->{cell_type_tfs}->{$cell} = [];
+	}
+	push @{$options->{cell_type_tfs}->{$cell}}, $elems[3];
 
-        if (!defined $options->{peak_calls}->{$tf}) {
-          $options->{peak_calls}->{$tf} = {};
-        }
-        if (!defined $options->{peak_calls}->{$tf}->{$cell}) {
-          $options->{peak_calls}->{$tf}->{$cell} = [];
-        }
-        push @{$options->{peak_calls}->{$tf}->{$cell}}, $elems[3];
+	if (!defined $options->{peak_calls}->{$tf}) {
+	  $options->{peak_calls}->{$tf} = {};
+	}
+	if (!defined $options->{peak_calls}->{$tf}->{$cell}) {
+	  $options->{peak_calls}->{$tf}->{$cell} = [];
+	}
+	push @{$options->{peak_calls}->{$tf}->{$cell}}, $elems[3];
       }
 
     } elsif ($elems[0] eq 'segmentation') {
@@ -406,6 +463,100 @@ sub get_metadata {
 
       push @{$options->{segmentations}}, $segmentation;
     }
+  }
+}
+
+sub fetch_metadata {
+  # TODO
+}
+
+sub create_chrom_lengths {
+  my ($options) = @_;
+  $options->{chrom_lengths} = "$options->{working_dir}/chrom_lengths.txt";
+  open my $fh, ">", $options->{chrom_lengths};
+  fetch_chrom_lengths($options, $fh);
+  close $fh
+}
+
+sub fetch_chrom_lengths {
+  my ($options, $fh) = @_;
+  my $slice_adaptor = $options->{dnadb_adaptor}->get_SliceAdaptor();
+  my @slices = @{ $slice_adaptor->fetch_all('toplevel', undef, undef, False) };
+
+  foreach my $slice (@slices) {
+    print $fh join("\t", ($slice->seq_region_name(), 1 + $slice->end() - $slice->start())) . "\n";
+  }
+}
+
+sub create_tss {
+  my ($options) = @_;
+  $options->{tss} = "$options->{working_dir}/tss.txt";
+  open my $fh, ">", $options->{tss};
+  fetch_tss($options, $fh);
+  close $fh
+}
+
+sub fetch_tss {
+  my ($options, $fh) = @_;
+  my $slice_adaptor = $options->{dnadb_adaptor}->get_SliceAdaptor();
+  my @tss_coords = ();
+  my $slice_adaptor = $options->{dnadb_adaptor}->get_SliceAdaptor();
+  foreach my $slice (@{$slice_adaptor->fetch_all('toplevel', undef, undef, False) }) {
+    foreach my $gene (@{$slice->get_all_Genes()}) {
+      foreach my $transcript (@{$gene->get_all_Transcripts()}) {
+	if ($transcript->strand() > 0) {
+	  push @tss_coords, [$slice->seq_regions_name(), $transcript->start(), $transcript->start() + 1];
+        } else {
+	  push @tss_coords, [$slice->seq_regions_name(), $transcript->end(), $transcript->end() + 1];
+	}
+      }
+    }
+  }
+
+  my @sorted_tss_coords = sort {comp_coords($a, $b)} @tss_coords;
+
+  foreach my $exons_coord (@sorted_tss_coords) {
+    print $fh, join("\t", @{$tss_coord})."\n";
+  }
+}
+
+sub create_exons {
+  my ($options) = @_;
+  $options->{exons} = "$options->{working_dir}/exons.txt";
+  open my $fh, ">", $options->{exons};
+  fetch_exons($options, $fh);
+  close $fh
+}
+
+sub fetch_exons {
+  my ($options, $fh) = @_;
+  my @exon_coords = ();
+  my $slice_adaptor = $options->{dnadb_adaptor}->get_SliceAdaptor();
+  foreach my $slice (@{$slice_adaptor->fetch_all('toplevel', undef, undef, False) }) {
+    foreach my $gene (@{$slice->get_all_Genes()}) {
+      foreach my $transcript (@{$gene->get_all_Transcripts()}) {
+        foreach my $exon (@{$transcript->get_all_Exons()}) {
+	  push @exon_coords, [$slice->seq_regions_name(), $exon$exon->start(), $exon->end() + 1];
+	}
+      }
+    }
+  }
+
+  my @sorted_exon_coords = sort {comp_coords($a, $b)} @exon_coords;
+
+  foreach my $exons_coord (@sorted_exon_coords) {
+    print $fh, join("\t", @{$exon_coord})."\n";
+  }
+}
+
+sub comp_coords {
+  my ($a, $b) = @_;
+  if ($a->[0] ne $b->[0]) {
+    return $a->[0] cmp $b->[0];
+  } elsif ($a->[1] != $b->[1]) {
+    return $a->[1] <=> $b->[1];
+  } else {
+    return $a->[2] <=> $b->[2];
   }
 }
 
@@ -665,7 +816,7 @@ sub extract_ChromHMM_state_summary {
 ## * A $options hash which contains:
 ##   - $options->{working_dir}
 ##   - $options->{trackhub_dir}
-##   - $options->{genes} Path to bed file with exonic regions
+##   - $options->{exons} Path to bed file with exonic regions
 ##   - $options->{tss} Path to bed file with known TSSs
 ##   - $options->{peak_calls}->{CTCF}->{$cell} A list of filepaths to CTCF peak calls of celltype $cell
 ##   - $options->{segmentations} where each value is a hash containing:
@@ -836,7 +987,7 @@ sub compute_overlap_score {
   if ($test eq 'ctcf') {
     $reference = "$options->{trackhub_dir}/tfbs/CTCF.bw";
   } elsif ($test eq 'gene') {
-    $reference = $options->{genes};
+    $reference = $options->{exons};
   } elsif ($test eq 'tfbs') {
     $reference = "$options->{trackhub_dir}/overview/all_tfbs.bw";
   } elsif ($test eq 'tss') {
