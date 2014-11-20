@@ -137,29 +137,46 @@ sub load_segmentation_features_from_file {
   my $slice = undef;
   run("bigBedToBed $file $tmp");
   my @features = ();
+  my $previous_label = undef;
+  my $previous_seg_feat = undef;
   while (my $line = <$fh>) {
     chomp $line;
     my ($chr, $start, $end, $name, $score, $strand, $thickStart, $thickEnd, $rgb) = split /\t/, $line;
-    my ($state, $annotation, $number) = split /_/, $name;
+    my ($state, $label, $number) = split /_/, $name;
     if ($chr ne $prev_chrom) {
-	$slice = $sa->fetch_by_region('toplevel', $chr);
-	$prev_chrom = $chr;
+      $slice = $sa->fetch_by_region('toplevel', $chr);
+      $prev_chrom = $chr;
+      push @features, $previous_seg_feat;
+      $previous_label = undef;
+      $previous_seg_feat = undef;
     }
-    my $sf = Bio::EnsEMBL::Funcgen::SegmentationFeature->new
-     (
-      -SLICE         => $slice,
-      -START         => $start + 1,
-      -END           => $end,
-      -STRAND        => 0,
-      -FEATURE_SET   => $feature_set,
-      -FEATURE_TYPE  => $feature_type->{$annotation},
-    );
-    push @features, $sf;
+
+    if ($label eq $previous_label) {
+      $previous_seq_feat->end($end);
+    } else {
+      if (defined $previous_seg_feat) {
+	push @features, $previous_seg_feat;
+      }
+      $previous_seg_feat = Bio::EnsEMBL::Funcgen::SegmentationFeature->new
+       (
+	-SLICE         => $slice,
+	-START         => $start + 1,
+	-END           => $end,
+	-STRAND        => 0,
+	-FEATURE_SET   => $feature_set,
+	-FEATURE_TYPE  => $feature_type->{$label},
+      );
+      $previous_label = $label;
+    }
 
     if (scalar(@features) == 10000) {
       $sfa->store(@features);
       @features = ();
     }
+  }
+
+  if (defined $previous_seg_feat) {
+    push @features, $previous_seg_feat;
   }
 
   if (scalar(@features) > 0) {
