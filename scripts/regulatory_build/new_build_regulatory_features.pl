@@ -77,8 +77,6 @@ segmentation	$name	$type	$location
 
 =cut
 
-# TODO Allow 2 TFS to create feature in the absence of DNase
-
 use strict;
 use warnings;
 use File::Path qw(mkpath);
@@ -620,8 +618,8 @@ sub comp_coords {
 ## * options hash with values:
 ##   - $options->{trackhub_dir} (path to trackhub dir)
 ##   - $options->{working_dir} (path to working tmp dir)
-##   - $options->{celltype_open} (hash which assigns a list of peak calls to each cell type)
-##   - $options->{celltype_tfs} (hash which assigns a list of peak calls to each cell type)
+##   - $options->{cell_type_open} (hash which assigns a list of peak calls to each cell type)
+##   - $options->{cell_type_tfs} (hash which assigns a list of peak calls to each cell type)
 ##   - $options->{peak_calls} (hash which assigns a list of peak calls to each )
 ## 
 ## Writes into:
@@ -672,7 +670,7 @@ sub compute_celltype_tf_sites_2 {
     run("wiggletools write_bg $output1 unit sum " . join(" ", @{$open_exps}));
     $options->{celltype_dnase}->{$celltype} = $output1;
     trim_bed_to_chrom_lengths($options, $output1);
-    run("wiggletools write_bg $output2 unit mult sum ".join(" ", @{$tf_exps}). " : $output1 ");
+    run("wiggletools write_bg $output2 gt 1 sum ".join(" ", @{$tf_exps}). " $output1 ");
   } else {
     run("wiggletools write_bg $output2 unit sum ".join(" ", @{$tf_exps}));
   }
@@ -708,7 +706,7 @@ sub compute_antibody_specific_prob {
      if (defined $options->{cell_type_open}->{$cell}) {
   my $tf_peaks = $options->{peak_calls}->{$tf}->{$cell};
   my $open_peaks = $options->{cell_type_open}->{$cell};
-        push @exps, "unit mult sum " . join(" ", @$tf_peaks) . " : sum " . join(" ", @$open_peaks) . " : :";
+        push @exps, "gt 1 sum " . join(" ", @$tf_peaks) . " unit sum " . join(" ", @$open_peaks) . " : :";
      }
   }
 
@@ -1510,16 +1508,16 @@ sub compute_regulatory_features {
   my $ctcf_tmp = compute_initial_regions($options, "ctcf");
 
   # Compute TF binding
-  my $tfbs_signal = "$options->{trackhub_dir}/overview/all_tfbs.bw"; 
+  my $tfbs_signal = "$options->{trackhub_dir}/overview/all_tfbs.bw";
   my $tfbs_tmp = "$options->{working_dir}/build/tfbs.tmp.bed";
   my $awk_dnase = make_awk_command("tfbs");
   run("wiggletools write_bg - unit $tfbs_signal | $awk_tfbs > $tfbs_tmp");
 
   #Compute open dnase
   my $dnase_tmp = "$options->{working_dir}/build/dnase.tmp.bed";
-  my @files = glob "$options->{working_dir}/celltype_dnase/*.bed";
+  my @dnase_files = glob "$options->{working_dir}/celltype_tf/*.bed";
   my $awk_dnase = make_awk_command("dnase");
-  run("wiggletools write_bg - unit sum ".join(" ", @files)." | $awk_dnase > $dnase_tmp");
+  run("wiggletools write_bg - unit sum ".join(" ", @dnase_files)." | $awk_dnase > $dnase_tmp");
 
   #############################################
   ## Percolate overlapping features up each level 
