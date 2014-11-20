@@ -30,7 +30,7 @@ load_build.pl
 
 =head1 SYNOPSIS
 
-perl load_new_assembly.pl --host $host --user $user --pass $pass --dbname homo_sapiens_funcgen_76_38 --dnadb_name homo_sapiens_core_76_38 --dnadb_user $user2 --dnadb_host $host2 --base_dir hg38/ --stable stable_ids.txt
+perl load_new_assembly.pl --host $host --user $user --pass $pass --dbname homo_sapiens_funcgen_76_38 --dnadb_name homo_sapiens_core_76_38 --dnadb_user $user2 --dnadb_host $host2 --base_dir hg38/
 
 =head1 DESCRIPTION
 
@@ -49,7 +49,6 @@ when running in parallel. In the good times, each job takes ~1h to run.
 
 =cut
 
-
 use strict;
 use Getopt::Long;
 use File::Basename;
@@ -59,87 +58,92 @@ use Bio::EnsEMBL::Analysis;
 use File::Temp qw/ tempfile tempdir /;
 
 my $dead_rgb = '225,225,225';
+my $poised = "192,0,190";
+my $repressed = "127,127,127";
 
 main();
 
+####################################################
+## Overview
+####################################################
 sub main {
-  my ($base_dir, $stable_id_filename, $pass,$port,$host,$user,$dbname,
-	  $dnadb_pass,$dnadb_port,$dnadb_host,$dnadb_user,$dnadb_name,
-      $assembly_schema);
+  print "Getting options\n";
+  my $options = get_options();
+  print "Connecting to database\n";
+  my $db = connect_db($options);
+  print "Getting analysis\n";
+  my $analysis = get_analysis($db);
+  print "Getting cell types\n";
+  my $ctypes = get_cell_type_names($options->{base_dir});
+  print "Getting stable ids\n";
+  my $stable_id = get_stable_id($options, $db);
+  print "Getting slices\n";
+  my $slice = get_slices($db);
+  print "Getting feature sets\n";
+  my $feature_set = get_regulatory_FeatureSets($analysis, $ctypes, $db);
+  print "Getting feature types\n";
+  my $feature_type = get_feature_types($db);
+  print "Counting active features\n";
+  my $count_hash = compute_counts($base_dir);
+  print "Creating regulatory_feature table\n";
+  compute_regulatory_features($options, $feature_set, $feature_type, $stable_id, $count_hash, $seq_region_id);
+  print "Creating regulatory_annotation table\n";
+  compute_regulatory_annotations($options);
+}
 
-  GetOptions 
-    (
-     "base_dir|b=s"       => \$base_dir,
-     "stable|s=s"       => \$stable_id_filename,
-     "assembly_schema|a=s"       => \$assembly_schema,
-     "pass|p=s"       => \$pass,
-     "port=s"         => \$port,
-     "host|h=s"       => \$host,
-     "user|u=s"       => \$user,
-     "dbname|d=s"     => \$dbname,
-     "dnadb_pass|p=s"       => \$dnadb_pass,
-     "dnadb_port=s"   => \$dnadb_port,
-     "dnadb_host|h=s" => \$dnadb_host,
-     "dnadb_user|u=s" => \$dnadb_user,
-     "dnadb_name|d=s" => \$dnadb_name,
-     'help|?'         => sub { pos2usage(-exitval => 0, ); }
-    ) or pod2usage( -exitval => 1);
+####################################################
+## Command line options
+####################################################
+sub get_options {
+  my %options = ();
+  GetOptions (
+    \%options,
+    "base_dir|b=s",
+    "pass|p=s",
+    "port=s",
+    "host|h=s",
+    "user|u=s",
+    "dbname|d=s",
+    "dnadb_pass|p=s",
+    "dnadb_port=s",
+    "dnadb_host|H=s",
+    "dnadb_user|U=s",
+    "dnadb_name|D=s",
+  ) or pod2usage( -exitval => 1);
+  defined $base_dir || die ("You must define the base directory!\t--base_dir XXXX\n");
+  defined $stable_id_filename || die ("You must define the stable ID mapping file\t--stable XXX\n");
+  return \%options;
+}
 
+####################################################
+## Connecting to the DB
+####################################################
+sub connect_db {
+  my ($options) = @_;
   my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
     (
-     -host   => $host,
-     -user   => $user,
-     -dbname => $dbname,
-     -pass   => $pass,
-     -port   => $port,
-     #-dnadb  => $cdb,
+     -host   => $options->{host},
+     -user   => $options->{user},
+     -dbname => $options->{dbname},
+     -pass   => $options->{pass},
+     -port   => $options->{port},
+     #-dnadb  => $options->{cdb},
      -group  => 'funcgen',#Should be set as default in adaptor new method
-     -dnadb_host => $dnadb_host,
-     -dnadb_port => $dnadb_port,
-     -dnadb_user => $dnadb_user,
-     -dnadb_pass => $dnadb_pass,
-     -dnadb_name => $dnadb_name,
+     -dnadb_host => $options->{dnadb_host},
+     -dnadb_port => $options->{dnadb_port},
+     -dnadb_user => $options->{dnadb_user},
+     -dnadb_pass => $options->{dnadb_pass},
+     -dnadb_name => $options->{dnadb_name},
     );
 
-
-#Test connections
+  #Test connections
   $db->dbc->db_handle;
   $db->dnadb->dbc->db_handle;
   if(! defined $db->species){
     die("Could not get a valid species from $dbname, please check the meta species.production_name");
   }
 
-  defined $base_dir || die ("You must define the base directory!\t--base_dir XXXX\n");
-  defined $stable_id_filename || die ("You must define the stable ID mapping file\t--stable XXX\n");
-
-  print "Getting analysis\n";
-  my $analysis = get_analysis($db);
-  print "Getting cell types\n";
-  my $ctypes = get_cell_type_names($base_dir);
-  print "Getting stable ids\n";
-  my $stable_id = get_stable_id($stable_id_filename);
-  print "Getting seq region ids\n";
-  my $seq_region_id = get_seq_region_ids($db, $assembly_schema);
-  print "Getting feature set ids\n";
-  my $feature_set = get_regulatory_FeatureSets($analysis, $ctypes, $db);
-  print "Counting active features\n";
-  my $count_hash = compute_counts($base_dir);
-  print "Creating regulatory_feature table\n";
-  compute_regulatory_features($base_dir, $feature_set, $stable_id, $count_hash, $seq_region_id, $host, $user, $pass, $dbname);
-  print "Creating regulatory_annotation table\n";
-  compute_regulatory_annotations($host, $user, $pass, $dbname);
-}
-
-#####################################################
-# Convenience wrapper to run the commandline safely 
-#####################################################
-# Params: command line command
-#####################################################
-
-sub run {
-  my ($cmd) = @_;
-  print cmd;
-  system($cmd) && die("Failed when running command:\n$cmd\n");
+  return $db;
 }
 
 #####################################################
@@ -157,33 +161,30 @@ sub get_analysis {
   my $aa  = $db->get_AnalysisAdaptor();
   my $ana = $aa->fetch_by_logic_name('Regulatory_Build');
 
-  if ( defined $ana ) {
-    print "\tPrexisting\n";
-    return $ana;
+  if ( not defined $ana ) {
+    my $analysis = Bio::EnsEMBL::Analysis->new
+      (
+       -logic_name      => 'Regulatory_Build',
+       -db              => 'NULL',
+       -db_version      => 'NULL',
+       -db_file         => 'NULL',
+       -program         => 'NULL',
+       -program_version => 'NULL',
+       -program_file    => 'NULL', #Could use $program_name here, but this is only part of the build
+       -gff_source      => 'NULL',
+       -gff_feature     => 'NULL',
+       -module          => 'NULL',
+       -module_version  => 'NULL',
+       -parameters      => 'NULL',
+       -created         => 'NULL',
+       -description     => q({'reg_feats' => 'Features from <a href="http://www.ensembl.org/info/docs/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.', 'core' => 'Sites enriched for marks of open chromatin (e.g. Dnase1) or transcription factor binding sites.  Used to define the Regulatory Feature core regions in the <a href="http://www.ensembl.org/info/docs/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.', 'non_core' => 'Sites enriched for histone modifications or polymerase binding.  Used to define Regulatory Feature bound regions in the <a href="http://www.ensembl.org/info/docs/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.'}),
+       -display_label   => 'Regulatory Build',
+       -displayable     => 1,
+       -web_data        => q({'type' => 'fg_regulatory_features', 'name' => 'Reg. Feats',  'display' =>'off', 'depth' => 10, 'default' => {'contigviewbottom' => 'normal', 'generegview' => 'normal'} }),
+      );
+
+    $aa->store($analysis);
   }
-
-  my $analysis = Bio::EnsEMBL::Analysis->new
-    (
-     -logic_name      => 'Regulatory_Build',
-     -db              => 'NULL',
-     -db_version      => 'NULL',
-     -db_file         => 'NULL',
-     -program         => 'NULL',
-     -program_version => 'NULL',
-     -program_file    => 'NULL', #Could use $program_name here, but this is only part of the build
-     -gff_source      => 'NULL',
-     -gff_feature     => 'NULL',
-     -module          => 'NULL',
-     -module_version  => 'NULL',
-     -parameters      => 'NULL',
-     -created         => 'NULL',
-     -description     => q({'reg_feats' => 'Features from <a href="http://www.ensembl.org/info/docs/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.', 'core' => 'Sites enriched for marks of open chromatin (e.g. Dnase1) or transcription factor binding sites.  Used to define the Regulatory Feature core regions in the <a href="http://www.ensembl.org/info/docs/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.', 'non_core' => 'Sites enriched for histone modifications or polymerase binding.  Used to define Regulatory Feature bound regions in the <a href="http://www.ensembl.org/info/docs/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.'}),
-     -display_label   => 'Regulatory Build',
-     -displayable     => 1,
-     -web_data        => q({'type' => 'fg_regulatory_features', 'name' => 'Reg. Feats',  'display' =>'off', 'depth' => 10, 'default' => {'contigviewbottom' => 'normal', 'generegview' => 'normal'} }),
-    );
-
-  $aa->store($analysis);
   return $aa;
 }
 
@@ -206,23 +207,17 @@ sub get_cell_type_names{
 }
 
 #####################################################
-# Assign stable ids to features
+# Convenience wrapper to run the commandline safely 
 #####################################################
-# Params: PreProcessed file
+# Params: command line command
 #####################################################
 
-sub get_stable_id {
-  my ($filename) = @_;
-  my %stable_id = ();
-  open my $fh, "<", $filename;
-  while (my $line = <$fh>) {
-    chomp $line;
-    my @items = split /\t/, $line;
-    $stable_id{$items[0]} = $items[1];
-  }
-  close $fh;
-  return \%stable_id;
+sub run {
+  my ($cmd) = @_;
+  print cmd;
+  system($cmd) && die("Failed when running command:\n$cmd\n");
 }
+
 
 #####################################################
 # Alternate assign stable ids to features
@@ -230,8 +225,8 @@ sub get_stable_id {
 # Params: Bed file with previous Build
 #####################################################
 
-sub get_stable_id_2 {
-  my ($old, $base_dir) = @_;
+sub get_stable_id {
+  my ($options, $db) = @_;
   my ($fh, $new) = tempfile();
   close $fh;
 
@@ -312,21 +307,17 @@ sub get_overlaps_between_files {
 }
 
 #####################################################
-# Get seq_region_ids for each chromosome
+# Get slice for each chromosome
 #####################################################
 # Params: - DBAdaptor
-#         - Assembly schema string
 #####################################################
 
-sub get_seq_region_ids {
-  my ($db, $schema) = @_;
+sub get_slices {
+  my ($db) = @_;
+  my $slices = $db->get_adaptor("Slice")->fetch_all();
   my %hash = ();
-  my $sql = "SELECT name, seq_region_id FROM seq_region WHERE schema_build='$schema'";
-  my $rows = $db->dbc->db_handle->selectall_hashref($sql, 'name');
-
-  foreach my $name (keys %{$rows}) {
-    print "\tCHROM\t$name\t$rows->{$name}->{seq_region_id}\n";
-    $hash{$name} = $rows->{$name}->{seq_region_id};
+  foreach my $slice (@{$slices}) {
+    $hash{$slice->name} = $slice;
   }
   return \%hash;
 }
@@ -562,12 +553,75 @@ sub count_active {
     if (!defined $count_hash->{$name}) {
       $count_hash->{$name} = 0;
     }
-    if ($rgb ne $dead_rgb) {
+    if ($rgb ne $dead_rgb && $rgb ne $poised && $rgb ne $repressed) {
       $count_hash->{$name} += 1;
     }
   }
   close $fh;
   unlink $tmp_name;
+}
+
+#####################################################
+# Get a hashref from feature type name to FeatureType 
+# object
+#####################################################
+# Params: - DBAdaptor object
+#####################################################
+ 
+sub get_feature_types {
+  my ($db) = @_;
+  my $fta = $db->get_adaptor("FeatureType");
+  my %long_name= (
+    'ctcf'=>'CTCF Binding Site',
+    'distal'=>'Enhancer',
+    'proximal'=>'Promoter Flanking Region',
+    'tss'=>'Promoter',
+    'tfbs'=>'TF binding site',
+    'open'=>'Open chromatin'
+  );
+  my %description= (
+    'ctcf'=>'CTCF Binding Site',
+    'distal'=>'Predicted enhancer',
+    'proximal'=>'Predicted promoter flanking region',
+    'tss'=>'Predicted promoter',
+    'tfbs'=>'Transcription factor binding site',
+    'open'=>'Open chromatin region'
+  );
+  my %so_accession = (
+    'ctcf'=>'SO:0001974',
+    'distal'=>'SO:0000165',
+    'proximal'=>'SO:0001952',
+    'tss'=>'SO:0000167',
+    'tfbs'=>'SO:0000235',
+    'open'=>'SO:0001747'
+  );
+  my %so_name = (
+    'ctcf'=>'CTCF_binding_site',
+    'distal'=>'enhancer',
+    'proximal'=>'promoter_flanking_region',
+    'tss'=>'promoter',
+    'tfbs'=>'TF_binding_site',
+    'open'=>'open_chromatin_region'
+  );
+
+  my $feature_type = {};
+  for my $label (('ctcf','distal','proximal','tss','tfbs','open')) {
+    $feature_type->{$label} = $fta->fetch_by_name($long_name{$label});
+
+    if (! defined $feature_type{$label}) {
+      my $ft = Bio::EnsEMBL::Funcgen::FeatureType->new(
+	-name => $long_name{$label},
+	-class => 'Regulatory Feature',
+	-description => $description{$label},
+	-analysis => undef,
+	-so_name => $so_name{$label},
+	-so_accession => $so_accession{$label}
+      );
+      $fta->store($ft);
+      $feature_type->{$label} = $ft;
+    }
+  }
+  return $feature_type;
 }
 
 #####################################################
@@ -585,34 +639,15 @@ sub count_active {
 #####################################################
 
 sub compute_regulatory_features {
-  my ($base_dir, $feature_set, $stable_id, $count_hash, $seq_region_ids, $host, $user, $pass, $dbname) = @_;
-  my ($outfile, $out_filename) = tempfile();
-  my $feature_type_id = get_feature_type_ids();
+  my ($options, $feature_set, $feature_type, $stable_id, $count_hash, $seq_region_ids) = @_;
   foreach my $cell_type (keys %{$feature_set}) {
-    load_celltype_build($base_dir, $feature_set->{$cell_type}->dbID, $stable_id, $count_hash, $seq_region_ids, $outfile, $cell_type, $feature_type_id);
+    load_celltype_build($options->{base_dir}, $feature_set->{$cell_type}, $stable_id, $count_hash, $slice, $cell_type, $feature_type);
   }
-  close $outfile;
   # TODO Remove previous???
-  # TODO Load with API
-  run("mysql -h $host -u $user -p$pass -D $dbname -e 'LOAD DATA LOCAL INFILE \"$outfile\" INTO TABLE regulatory_feature;'");
-  unlink $out_filename;
-}
-
-sub get_feature_type_ids {
-  # TODO get IDs from DB
-  my %feature_type_id = (
-    'ctcf'=>'179034',
-    'distal'=>'179037',
-    'proximal'=>'179038',
-    'tss'=>'179040',
-    'tfbs'=>'179194',
-    'open'=>'179195',
-  );
-  return \%feature_type_id;
 }
 
 sub load_celltype_build {
-  my ($base_dir, $feature_set_id, $stable_id, $count_hash, $seq_region_ids, $outfile, $cell_type, $feature_type_id) = @_;
+  my ($base_dir, $feature_set, $stable_id, $count_hash, $slice, $cell_type, $feature_type) = @_;
   my ($tmp, $tmp_name) = tempfile();
   print "\tProcessing data from cell type $cell_type\n";
   my $bigbed;
@@ -622,35 +657,54 @@ sub load_celltype_build {
     $bigbed = "$base_dir/projected_segmentations/$cell_type.bb";
   }
   run("bigBedToBed $bigbed $tmp_name");
-  process_file($tmp_name, $feature_set_id, $stable_id, $count_hash, $outfile, $seq_region_ids, $feature_type_id);
+  process_file($tmp, $feature_set, $stable_id, $count_hash, $slice, $feature_type);
   close $tmp;
   unlink $tmp_name;
 }
 
 sub process_file {
-  my ($filename, $feature_set_id, $stable_id, $count_hash, $outfile, $seq_region_ids, $feature_type_id) = @_;
-  open my $fh, "<", $filename;
+  my ($fh, $feature_set, $stable_id, $count_hash, $slice, $feature_type, $rfa) = @_;
+  my @features = ();
+
   while (my $line = <$fh>) {
     chomp $line;
     my ($chrom, $start, $end, $name, $score, $strand, $thickStart, $thickEnd, $rgb) = split /\t/, $line;;
-    # TODO Smarter filter for valid chromosomes
-    if ($chrom eq "MT") {
-      next;
-    }
-    my ($feature_type, $number) = split /_/, $name;
-    my $uniqueID = $stable_id->{$name};
-    my $bounded_start_length = $thickStart - $start;;
-    my $bounded_end_length = $end - $thickEnd;
+    my ($feature_type_str, $number) = split /_/, $name;
     my $has_evidence = 0;
-    if ($rgb ne $dead_rgb) {    
-      $has_evidence = 1;
+    if ($rgb ne $dead_rgb && $rgb ne $poised && $rgb ne $repressed) {
+      $has_evidence = 1; # TODO 4 way
     }
-    my $count = $count_hash->{$name};
-    exists $feature_type_id->{$feature_type} || die("Could not find feature type for $feature_type\n".join("\t", keys %{$feature_type_id})."\n");
-    print $outfile join("\t", (0, $seq_region_ids->{$chrom}, $thickStart+1, $thickEnd, 0, '\\N', $feature_type_id->{$feature_type}, $feature_set_id, $uniqueID, '\\N', 0, $bounded_start_length, $bounded_end_length, $has_evidence, $count));
-    print $outfile "\n";
+
+    exists $feature_type->{$feature_type_str} || die("Could not find feature type for $feature_type\n".join("\t", keys %{$feature_type})."\n");
+    exists $slice->{$chrom} || die("Could not find slice type for $chrom\n".join("\t", keys %{$slice})."\n");
+    exists $stable_id->{$number} || die("Could not find stable ID for feature # $number\n");
+    exists $count->{$number} || die("Could not find count for feature # $number\n");
+
+    push @features, Bio::EnsEMBL::Funcgen::RegulatoryFeature->new(
+      -SLICE => $slice->{$chrom};
+      -START         => $thickStart + 1,
+      -END           => $thickEnd,
+      -STRAND        => 0,
+      -DISPLAY_LABEL => '\\N',
+      -FEATURE_SET   => $feature_set,
+      -FEATURE_TYPE  => $feature_type->{$feature_type_str},
+      -ATTRIBUTE_CACHE => \%attr_cache, # TODO 
+                     => $thickStart - $start, # TODO
+                     => $end - $thickEnd, # TODO
+                     => $has_evidence, # TODO
+                     => $count->{$number}, # TODO
+                     => $stable_id->{$number} # TODO
+    );
+
+    if (scalar @features > 10000) {
+      $rfa->store(@features);
+      @features = ();
+    }
   }
-  close $fh;
+
+  if (scalar @features > 0) {
+    $rfa->store();
+  }
 }
 
 #####################################################
@@ -663,7 +717,7 @@ sub process_file {
 #####################################################
 
 sub compute_regulatory_annotations {
-  my ($host, $user, $pass, $dbname) = @_;
+  my ($options) = @_;
 
   my ($tmp_fh, $regulatory_features) = tempfile();
   my ($tmp_fh2, $annotations) = tempfile();
@@ -677,16 +731,16 @@ sub compute_regulatory_annotations {
   # Extract regulatory, annotated, and motif features into flat tab-delimited files.
   # The common format of these files is:
   # chrom	start	end	ID
-  run("mysql -NB -h $host -u $user -p$pass -D $dbname -e 'select rf.seq_region_id, rf.seq_region_start - rf.bound_start_length, rf.seq_region_end + rf.bound_end_length, rf.regulatory_feature_id, fs.cell_type_id FROM regulatory_feature rf LEFT JOIN feature_set fs ON rf.feature_set_id=fs.feature_set_id ORDER by rf.seq_region_id, rf.seq_region_starti - rf.bound_start_length' > $regulatory_features");
-  run("mysql -NB -h $host -u $user -p$pass -D $dbname -e 'select af.seq_region_id, af.seq_region_start, af.seq_region_end, af.annotated_feature_id, fs.cell_type_id FROM annotated_feature af LEFT JOIN feature_set fs ON af.feature_set_id=fs.feature_set_id ORDER BY af.seq_region_id, af.seq_region_start;' > $annotations");
-  run("mysql -NB -h $host -u $user -p$pass -D $dbname -e 'select mf.seq_region_id, mf.seq_region_start, mf.seq_region_end, mf.motif_feature_id FROM motif_feature mf ORDER BY mf.seq_region_id, mf.seq_region_start;' > $motifs");
+  run("mysql -NB -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -e 'select rf.seq_region_id, rf.seq_region_start - rf.bound_start_length, rf.seq_region_end + rf.bound_end_length, rf.regulatory_feature_id, fs.cell_type_id FROM regulatory_feature rf LEFT JOIN feature_set fs ON rf.feature_set_id=fs.feature_set_id ORDER by rf.seq_region_id, rf.seq_region_starti - rf.bound_start_length' > $regulatory_features");
+  run("mysql -NB -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -e 'select af.seq_region_id, af.seq_region_start, af.seq_region_end, af.annotated_feature_id, fs.cell_type_id FROM annotated_feature af LEFT JOIN feature_set fs ON af.feature_set_id=fs.feature_set_id ORDER BY af.seq_region_id, af.seq_region_start;' > $annotations");
+  run("mysql -NB -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -e 'select mf.seq_region_id, mf.seq_region_start, mf.seq_region_end, mf.motif_feature_id FROM motif_feature mf ORDER BY mf.seq_region_id, mf.seq_region_start;' > $motifs");
 
   # Overlap regulatory features with (annotated|motif) features. Store ID pairs into one flat file
   run("bedtools intersect -sorted -wa -wb -a $regulatory_features -b $annotations | awk '\$5==\$10 {print \$4\"\t\"\$9\"\tannotated\"} ' > $out");
   run("bedtools intersect -sorted -wa -wb -a $regulatory_features -b $motifs | awk ' {print \$4\"\t\"\$9\"\tmotif\"} ' >> $out");
 
   # Load into database
-  run("mysql -h $host -u $user -p$pass -D $dbname -e 'LOAD DATA LOCAL INFILE \"$out\" INTO TABLE regulatory_attribute;'");
+  run("mysql -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -e 'LOAD DATA LOCAL INFILE \"$out\"} INTO TABLE regulatory_attribute;'");
 
   unlink $regulatory_features;
   unlink $annotations;

@@ -112,7 +112,7 @@ sub main {
   defined $segmentation || die ("You must define the segmentation name!\t--segmentation XXXX\n");
   defined $cell_type || die ("You must define the cell type name!\t--cell_type XXXX\n");
 
-  load_segmentation_features_from_file($db, $segmentation, "$base_dir/segmentations/$segmentation/$cell_type.bb");
+  load_segmentation_features_from_file($db, $segmentation, $cell_type, "$base_dir/segmentations/$segmentation/$cell_type.bb");
 }
 
 sub run {
@@ -122,11 +122,8 @@ sub run {
 }
 
 sub load_segmentation_features_from_file {
-  my ($db, $segmentation, $file) = @_;
+  my ($db, $segmentation, $cell_type, $file) = @_;
   print "Processing file $file\n";
-  my @items = split /\./, basename $file;
-  pop @items;
-  my $cell_type = join ('.', @items);
   my $analysis = create_analysis($db, $segmentation, $cell_type);
   my $feature_set = create_feature_set($db, $segmentation, $cell_type, $analysis);
   my $feature_type = create_feature_type($db, $analysis);
@@ -189,11 +186,9 @@ sub load_segmentation_features_from_file {
 
 sub create_analysis {
 ### Check whether analysis is already stored
-#TO DO Update the description text here? Use flat file import?
-#my $program_name = ($0 =~ s'.*/''g);
   my ($db, $segmentation, $cell_type) = @_;
 
-  my $logic_name = "chromhmm.segway.$cell_type.$segmentation";
+  my $logic_name = "Segmentation.$cell_type.$segmentation";
   my $aa  = $db->get_AnalysisAdaptor();
   my $ana = $aa->fetch_by_logic_name($logic_name);
 
