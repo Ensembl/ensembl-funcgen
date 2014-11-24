@@ -266,6 +266,9 @@ $dbh->disconnect;
 filter_pwm_mappings($perc_of_max_thresh, $mapping_file, $outdir.'/'.$mat.".filtered.bed");
 
 
+run_system_cmd("rm -f $peaks_file $mock_file $mock_olaps_file $real_olaps_file");
+
+
 exit;
 
 
