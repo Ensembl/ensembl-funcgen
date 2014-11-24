@@ -47,8 +47,6 @@ sub fetch_input {
   my $self = $_[0];
   $self->SUPER::fetch_input;
 
-
-  
   #Set the DB if we haven't already in Base (for tracking)
   #This also sets species and assembly methods
   $self->_set_out_db if ! $self->use_tracking_db;
@@ -84,7 +82,10 @@ sub fetch_input {
 #This is starting to overlap with the BaseImporter/Importer a little
 #but new style Peak import is not supported by Importer just yet.
 
-#todo expose generate_slices_from_names args
+#Move this (and similar methods) to a mix-in? so we can reuse this between objects (like a role)
+#
+
+#todo expose generate_slices_from_names args i.e. inc_dups!
 # change this to sub to use cache_slices, slices, slice_cache 
 # there is some support for this in the BaseImporter,
 # So we should probably move this code somewhere useable by all
@@ -93,6 +94,9 @@ sub fetch_input {
 #here and from the Base/Importers
 
 #get_Slice does not handle seem to filter skip_slices/slices either
+
+#Slightly odd handling of non_PARs in here. But it the only way to safely
+#do it.
 
 sub slice_objects {
   my $self          = shift;
@@ -115,51 +119,96 @@ sub slice_objects {
     
     if($self->param_silent('slice_cache')){
       warn "Over-writing existing slice_objects";
-      $self->param_silent('slice_cache', {});  
+      $self->param_silent('slice_cache',    []); 
+      $self->param_silent('slice_registry', {});  
     }
     
-    my %slices;
-    
-    map {$slices{$_->seq_region_name} = $_} @$slice_objects;
+    #Deref for safety, so we don't get any odd updating of this cache
+    #via the passed arrayref.
+    my $slices = [@$slice_objects];
+    $self->param('slice_cache', $slices);
+    #Point the registry at the cache to reduce footprint 
+    my %slice_registry;
+  
+    foreach my $i (0..$#{$slices}){
+      $slice_registry{$slices->[$i]->name} = $slices->[$i];
 
-    $self->param('slice_cache', \%slices); 
+      my $sr_name = $slices->[$i]->seq_region_name;
+
+      if(! exists $slice_registry{$sr_name}){
+        $slice_registry{$sr_name} = $slices->[$i];
+      }
+      else{ #Create and array to handle PARs
+
+        if(ref($slice_registry{$sr_name}) ne 'ARRAY'){
+           $slice_registry{$sr_name} = [$slices->[$i]];
+        }
+
+        push @{$slice_registry{$sr_name}}, $slices->[$i];
+      }
+    }
+
+    $self->param('slice_registry', \%slice_registry);
   } 
    
-  return [ values %{$self->param('slice_cache')} ]; 
+  return $self->param('slice_cache'); 
 }
 
 
-#to do validate assembly, and that start = 1 if we get a slice name?
+
 
 sub get_Slice {
-  my ($self, $seq_region) = @_;
+  my ($self, $name, $lstart, $lend) = @_;
 
-  #in case we have passed a slice name
-  if($seq_region =~ /^\S*:\S*:(\S+):\S+:\S+:\S/) { $seq_region = $1; }
-  #should we validate assembly here?
-  
+  $self->slice_objects if ! defined $self->param_silent('slice_registry');
+  my $slice_cache = $self->param_required('slice_registry');
+
   #In case UCSC input is used... carefull names may not match with ensembl db!
-  $seq_region =~ s/^chr//i;   #case insensitive     
+  #This should not alter slice names
+  $name =~ s/^chr([^o])/$1/i;   
 
-  #We have seen a slice, but have not restricted slices so this
-  #must be a slice we can't handle
-  my $slice = undef;
-  
-  $self->slice_objects if ! defined $self->param_silent('slice_cache');
-  my $slice_cache = $self->param_required('slice_cache');
-  
-  if( (! exists $slice_cache->{$seq_region}) &&
-      (! ($self->slices || $self->skip_slices) ) ){
-    
-        
-    #we're not actually testing slices and skip slices here
-    #These shoudl ideally be cached, so we can access them quickly
-    #or just ignore them?    
-        
-    throw("Unable to get Slice for:\tx".$seq_region.'x');      
+  if( (! exists $slice_cache->{$name}) &&
+      (! ($self->slices || $self->skip_slices) ) ){    
+    #We have seen a slice, but have not restricted slices so this
+    #must be a slice we can't handle     
+    throw("Unable to get Slice for:\tx".$name.'x');      
   }
-  else{
-    $slice =  $slice_cache->{$seq_region}; 
+
+  my $slice = (exists $slice_cache->{$name}) ? 
+   $slice_cache->{$name} : undef;
+
+  if($slice && 
+     (ref($slice) eq 'ARRAY')){
+    #We have non-PAR regions cached as the slice cache was likely generated
+    #without no_dups set.
+
+    if(! ($lstart && $lend)){
+      throw('The slice cache has been generated without duplications i.e. '.
+        'it contains multiple Y non-PAR slices. This requires specifying a '.
+        'loci start and end value to resolve the slice required.'.
+        "\nAlternatively, generate the slice cache with the inc_dups argument set\n".
+        "Note: Setting inc_dups will result in duplicate features fetched across the X-Y PAR regions.");
+    }
+
+    #Identify the appropriate non-PAR slice
+    my $tmp_slice;
+
+    foreach my $non_par(@{$slice}){
+
+      if(( ($lstart >= $non_par->start) && ($lstart <= $non_par->end)) ||
+         ( ($lend   >= $non_par->start) && ($lend   <= $non_par->end)) ){
+        $tmp_slice = $non_par;
+        last;
+      }
+    } 
+
+    if(! defined $tmp_slice){
+      throw("Failed to find a non-PAR slice for:\t$name $lstart - $lend\n".
+        'This location must lie on a PAR region or outside the sequence');
+      #Print non_PARs here?
+    }
+
+    $slice = $tmp_slice;
   }
      
   return $slice;
