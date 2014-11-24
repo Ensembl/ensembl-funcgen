@@ -56,14 +56,13 @@ package Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use strict;
 use warnings;
 use DBI; #for resolving core DB
-use Bio::EnsEMBL::Utils::Exception         qw( throw deprecate warning) ;
+use Bio::EnsEMBL::Utils::Exception         qw( throw deprecate warning );
 use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref );
 use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( assert_ref_do );
 use Bio::EnsEMBL::Registry;
 
 use base qw(Bio::EnsEMBL::DBSQL::DBAdaptor);
-
 my $reg = "Bio::EnsEMBL::Registry";
 
 
@@ -402,38 +401,43 @@ sub get_available_adaptors{
   return (\%pairs);
 }
 
+
 =head2 _get_schema_build
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor or Bio::EnsEMBL::DBSQL::DBAdaptor
-  Example    : my $shema_build = $db->_get_schema_build($slice->adaptor->db());
-  DESCRIPTION:
-  Returntype : string
-  Exceptions : Throws if argument not supplied
-  Caller     : general
+  Example    : my $schema_build = $db->_get_schema_build($slice->adaptor->db());
+  DESCRIPTION: Given a DBAdaptor, parses the the 'SCHEMA_BUILD' string from the DB name.
+  Returntype : String or undef - 'SCHEMA_BUILD' as per the standard DB naming.
+  Exceptions : Throws if DBAdaptor not passed 
+               Warns if unable to match expected schema_build string format from the DB name
+               and returns undef.
+  Caller     : General
   Status     : At risk - replace with MetaContainer method
 
 =cut
 
-
-#Slightly hacky convenience method to get the data/schema.version/build from a feature slice
+# This is actually more accurately the DB suffix, as 
+# 1 The build is now just normally the assembly number (with some exceptions in EG)
+# 2 It may not be the current default schema_build used in the API if the coord_system.is_current flag
+#   has been moved to a different schema_build i.e. after the update_DB_for_release.pl script has been run
 
 sub _get_schema_build{
-  my ($self, $db) = @_;
-  #Have to explicitly pass self->db to this method if required, this highlights which db is being tested
-  throw("Need to define a DBAdaptor to retrieve the schema_build from") if (! $db);
+  my $self = shift;
+  my $db   = shift;
 
+  assert_ref($db, 'Bio::EnsEMBL::DBSQL::DBAdaptor');
   my $schema_build;
   my $name = $db->dbc->dbname;
-  if ( $name =~ /.*_([0-9]+_[0-9]+[a-z]*)$/) {
-    #if( $db->dbc->dbname =~ /.*([0-9]+_[0-9]+[a-z]*)$/){
-    #warn "HARDCODED DEBUGGING FOR ANOMALOUS CORE DNADB INSERT";
+
+  if ($name =~ /.*_([0-9]+_[0-9]+[a-z]*)$/o) {
     $schema_build = $1;
+  
     if (length($schema_build) > 10) {
-       $schema_build = substr($schema_build, -10);
+      $schema_build = substr($schema_build, -10);
     }
   }
   else {
-    warning ("Wrong format: '$name' Release & Assembly expected at the end of dbname, e.g.: *_core_75_37");
+    warning("Wrong format: '$name' Release & Assembly expected at the end of dbname, e.g.: *_core_75_37");
   }
 
   return $schema_build;
