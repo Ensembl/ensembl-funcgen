@@ -65,14 +65,30 @@ sub default_options {
      # some Compara developers might prefer $ENV{'HOME'}.'/ensembl_main'
     'pipeline_name' => $ENV{'PDB_NAME'},
 
-    'pipeline_db' =>
-     {
-      -host   => $self->o('host'),
-      -port   => $self->o('port'),
-      -user   => $self->o('user'),
-      -pass   => $self->o('pass'),
-      -dbname => $ENV{'PDB_NAME'},
-     },
+    #'pipeline_db' =>
+    # {
+    #  -host   => $self->o('host'),
+    #  -port   => $self->o('port'),
+    #  -user   => $self->o('user'),
+    #  -pass   => $self->o('pass'),
+    #  -driver => 'mysql',
+    #  -dbname => $ENV{'PDB_NAME'},
+    # },
+
+#Will need to define this below if we want access to it as a param
+    pipeline_db => 
+    {
+     #  test => $self->o('GRR'),
+      #CR enable different db params from output db
+     -host   => $self->o('host'),
+     -port   => $self->o('port'),
+     -user   => $self->o('user'),
+     -pass   => $self->o('pass'),
+     -dbname => $self->o('ENV', 'PDB_NAME'),
+     -driver => 'mysql',
+     #todo deal with this in the env and don't corrupt pipeline_name add $ENV{USER}?
+    },
+
 
      #Need to change this to use $ENV{OUT_ROOT} so we can switch scratch usage easily
      'output_dir' => undef,
