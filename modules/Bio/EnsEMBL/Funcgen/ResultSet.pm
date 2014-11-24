@@ -652,22 +652,13 @@ sub get_replicate_set_by_result_set_input_id{
 
   if( ! defined $self->{'_replicate_cache'}){
 
-	warn "Generating replicate cache!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!";
-
-
-	foreach my $ec (@{$self->get_ExperimentalChips()}){
-
-	  $self->{'_replicate_cache'}{$self->get_result_set_input_id($ec->dbID())} = $ec->replicate();
-
-
-	}
+    foreach my $ec (@{$self->get_ExperimentalChips()}){
+      $self->{'_replicate_cache'}{$self->get_result_set_input_id($ec->dbID())} = $ec->replicate();
+    }
   }
 
-
   #warn here of absent replicate info?
-
   return (exists $self->{'_replicate_cache'}{$cc_id}) ?  $self->{'_replicate_cache'}{$cc_id} : undef;
-
 }
 
 sub get_replicate_set_by_chip_channel_id{
