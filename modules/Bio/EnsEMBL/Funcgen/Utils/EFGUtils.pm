@@ -49,7 +49,7 @@ package Bio::EnsEMBL::Funcgen::Utils::EFGUtils;
 use warnings;
 use strict;
 
-use File::Find; 
+use File::Find; #qw( find )
 use Digest::MD5;
 use Bio::EnsEMBL::Utils::Exception qw( throw      );
 use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
@@ -929,15 +929,12 @@ sub path_to_namespace {
 #todo Use IPC::Open open2/3 for piping? Take list of operators (and list of files e.g. in/out)
 
 sub open_file{
-  my $file             = shift || throw('Must provide a file argument');
+  my $file             = shift;
   my $operator         = shift || '<';
   my $file_permissions = shift;
 
-
-  if ($operator !~ /%/) {
-    $operator = "$operator $file";
-  } else { #We have some piping to do
-    $operator = sprintf($operator, $file);
+  if(! defined $file){
+    throw('Must provide a file argument');
   }
 
   #Get dir here and create if not exists
@@ -945,14 +942,19 @@ sub open_file{
   my $mkpath_opts      = {verbose => 1};
   $mkpath_opts->{mode} = $file_permissions if defined $file_permissions;
 
-  if(! -d $dir){
+  if((! -d $dir) && 
+     ($operator eq '>')){
 
     if(! eval { make_path($dir, $mkpath_opts); 1 }){
       throw("Failed to make_path:\t$dir\n$@");
     }
   }
 
-
+  if ($operator !~ /%/) {
+    $operator = "$operator $file";
+  } else { #We have some piping to do
+    $operator = sprintf($operator, $file);
+  }
 
   my $fh = FileHandle->new($operator);
 
@@ -1113,6 +1115,13 @@ sub run_backtick_cmd{
 }
 
 
+#This is currently not capturing error output very well.
+#If we are running a script, the error message from the script 
+#(and whatever binary it is running) is not captured
+#Meaning Running scripts from script can mean errors go missing.
+#use IPC::Run instead of system? But this is not a core module!
+#IPC::Cmd is available in 5.12 but not 5.10 Grr!
+
 sub _handle_exit_status{
   my ($cmd, $exit_status, $errno, $no_exit) = @_;
   my ($exit_code, $err_string);
@@ -1132,7 +1141,8 @@ sub _handle_exit_status{
                     ($exit_status & 128) ? 'with' : 'without');
   }
   elsif($exit_status != 0) {
-    $err_string = sprintf("Child process exited with value %d:\t$cmd\nError:\t$errno\n", $exit_code);
+    #$cmd may contain sprintf symbols here we need to escape
+    $err_string = sprintf("Child process exited with value %d:", $exit_code)."\t$cmd\nError:\t$errno\n";
   }
   
   if(defined $err_string){
@@ -1677,7 +1687,10 @@ sub validate_package_path{
 
 #This is to get around the problem that some scripts are not available in the top level of the $PATH dirs
 #and creating a toplevel link is not appropriate as we need there full path.
-#move this to EFGUtils?
+
+#Shouldn't call this on a full path as will fail and take a long time about it
+#Also,  we already know the location!
+
 sub which_path{
   my $filename  = shift;
   my @env_paths = split(/:/, $ENV{PATH});
