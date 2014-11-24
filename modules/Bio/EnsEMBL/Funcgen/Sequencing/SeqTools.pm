@@ -23,7 +23,7 @@ use Bio::EnsEMBL::Funcgen::InputSubset;
 use Bio::EnsEMBL::Funcgen::Experiment;
 use Bio::EnsEMBL::Utils::SqlHelper;
 
-#use File::Basename                        qw( fileparse );
+use File::Basename                         qw( dirname basename );
 use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref );
 use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
@@ -33,8 +33,8 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( dump_data
                                                write_checksum
                                                validate_path
                                                check_file
-                                               validate_package_path
                                                open_file
+                                               validate_package_path
                                                which_path );
 use Bio::EnsEMBL::Funcgen::Sequencing::SeqQC; #run_QC
 
@@ -48,6 +48,7 @@ use vars qw( @EXPORT );
   convert_sam_to_bed
   create_and_populate_files_txt
   download_all_files_txt
+  explode_fasta_file
   get_files_by_formats
   load_experiments_into_tracking_db
   merge_bams
@@ -55,6 +56,7 @@ use vars qw( @EXPORT );
   post_process_IDR
   pre_process_IDR
   process_bam
+  randomise_bed_file
   run_aligner
   run_IDR
   run_peak_caller
@@ -1354,6 +1356,11 @@ sub validate_sam_header {
 }
 
 
+
+
+#These are split into _init and _run methods to allow initialisation before running the 
+#peak caller proper. This fits well with the fetch_input/run jobs procedure of the hive.
+
 #Can't do this easily, as we don't know exactly what we want to pass through to the
 #PeakCaller. Isn't this already done with run_aligner?
 #Actually, we have acces to get_files_by_format here
@@ -2550,6 +2557,192 @@ sub _read_md5sum_txt {
   return $hash;
 }
 
+#Add no overlap mode?
+
+#This is dependant on the following fasta header format:  >seq_region_name NA slice_name
+#e.g. >18 dna:chromosome chromosome:GRCh37:18:1:78077248:1 chromosome 18
+
+sub randomise_bed_file{
+  my ($input_bed, $output_bed, $fasta_header_file, $sort_options) = 
+   rearrange([qw(INPUT_BED OUTPUT_BED FASTA_HEADER_FILE SORT_OPTIONS)], @_);
+
+  $sort_options ||= '-k1,1 -k2,2n -k3,3n';
+  my $ifh     = open_file($input_bed);
+  my $ofh     = open_file($output_bed.'.tmp', "| sort $sort_options > \%s");
+  #This sort is not working!! But the print is?
+
+  my $headers = open_file($fasta_header_file);
+  my ($line, %chrom, @orig);
+
+  while(($line = $headers->getline) && defined $line){
+    chomp $line;
+    #This is new fasta header format as of release 76
+    #This needs moving to SeqTools or similar, so we always use the same code for fasta header handling!
+  
+    my($sr_name, undef, $slice_name) = split(/\s+/, $line);
+    $sr_name =~ s/^>//;
+    (undef, undef, undef, $chrom{$sr_name}->{min}, $chrom{$sr_name}->{max}) = split(/:/, $slice_name);
+
+    if(! $chrom{$sr_name}->{min}){
+      throw("no min found for $line");
+    }
+
+    if($chrom{$sr_name}->{min} != 1){
+      throw("$sr_name has high start in genome file:\t$$fasta_header_file\n".
+        "Script needs updating to deal with this");
+    }
+  }
+  $headers->close;
+
+  my $wrote   = 0;
+  my $skipped = 0;
+
+  while(($line = $ifh->getline) && defined $line){
+    chomp $line;
+    #push @orig, [split("\t", $line)];
+    my ($sr_name, $start, $end, $id, undef, $strand) = split("\t", $line);
+
+    #Now assumes bed standard 0 based coords
+    my $len = $end - $start; ##  +1;
+
+    if($len >= $chrom{$sr_name}->{max}){
+      warn "Length of feature($len) greater than length of genome region(".
+        $chrom{$sr_name}->{max}.
+        ")\nSkipping likely artefactual region:\t$sr_name\t$start\t$end\n";
+      $skipped++;
+      next;
+    }
+    
+    my $new_end = 0;
+    my $tries   = 0;
+
+    while($new_end < $len){ # should also consider chrom start coord here
+      $new_end = int(rand($chrom{$sr_name}->{max}));
+      $tries ++;
+    
+      if($tries > 1000){
+        throw("Data problem :\n".
+          "max for ".$sr_name." = ".$chrom{$sr_name}->{max}."\n".
+          join("\t", ($sr_name, $start, $end, $id, '.', $strand))." len = $len");
+      }
+    }
+
+    my $new_start = $new_end - $len;
+    $strand = '.' if ! defined $strand; #Avoid undef warnings 
+    # +1; #Now assumes bed standard 0 based coords
+    #Buffer here!
+    $wrote++;
+    print $ofh join("\t", ($sr_name, $new_start, $new_end, '.', '.', $strand))."\n";
+  }
+  $ifh->close;
+  $ofh->close;
+  run_system_cmd("mv ${output_bed}.tmp $output_bed");
+
+  if(! $wrote){
+    throw("Failed to write any mock peaks to:\t$output_bed");
+  }
+  else{
+    warn "Wrote ${wrote}/".($wrote + $skipped)." mock peaks to:\t$output_bed\n";  
+  }
+
+  return;
+}
+
+
+
+# get the individual sequences from the genome file and put them in files
+# which have the fasta id as their name and an extension of .fa
+# optionally reduce chromosome name to chr_name as in ensembl databases
+# returns the list of files produced or dies
+
+#TODO This should just delete and over-write unless recover is specified
+
+sub explode_fasta_file{
+  my $input_fasta = shift;  
+  my $target_dir  = shift;
+  my $assembly    = shift;
+  my $vlevel      = shift || 0;
+
+
+  if (! (defined $input_fasta && -f $input_fasta)){
+    throw("Input fasta file is not defined or does not exist:\t$input_fasta");
+  }
+
+  my @lines;
+
+  if(! -d $target_dir){
+    print "Exploding fasta file:\t$input_fasta\nTo:\t\t\t$target_dir\n" if $vlevel;
+    my $tmp_dir = "${target_dir}_tmp";
+    #Don't make this a tmp subdir or $target_dir, as this will obviously
+    #make the $target_dir exist, leading to errors on retry
+    #if this falls over
+  
+    run_system_cmd("rm -f $tmp_dir") if -d $tmp_dir;
+    run_system_cmd("mkdir -p $tmp_dir");
+    run_system_cmd("fastaexplode -f $input_fasta -d $tmp_dir");
+    @lines = run_backtick_cmd("ls -1 ${tmp_dir}/*.fa");
+    #file name expression results in paths being returned instead of basenames
+  
+    print 'Cleaning '.scalar(@lines)." exploded fasta files\n" if $vlevel;
+    # now we alter the file names if short chromosome names have been requested
+    if($assembly){
+
+      foreach my $file_path (@lines){
+        my $name = basename $file_path;# ls -1 always gives basename!
+        # sed 's/chromosome:$assembly:/chr/'|sed 's/supercontig:$assembly://' |sed 's/supercontig:://' | sed 's/:[0-9:]*//'
+
+        #This should all be in the first block below?
+        #And make it generic to rename all slice named files to seq_region named files?
+        #This is really only important if we have mismatched header formats which may result in
+        #mismatched file name formats
+        $name =~ s/chromosome:$assembly://o;
+        $name =~ s/supercontig:$assembly://o;
+        $name =~ s/supercontig:://o;
+        $name =~ s/:[0-9:]*//;
+        my $path = dirname $file_path;
+        my $new = $path.'/'.$name;
+        #This is not working as all but the Y chr are already short names
+        #temp hack to get it running. This 
+
+        my $command;
+
+        if($file_path =~ /chromosome:GRCh37:Y/){
+          $command = "fastaclean -a -f $file_path > $new ; rm -f $file_path";
+        }
+        else{
+          my $path = dirname $file_path;
+          my $new = $path.'/tmp';
+          $command = "fastaclean -a -f $file_path > $new ;".
+          " rm -f $file_path ;mv $new $file_path";
+        }
+
+        print "Executing: $command\n" if $vlevel > 1;
+        run_system_cmd($command);
+      }
+    }
+    else{  # just do fastaclean
+
+      foreach my $file_path (@lines){   
+        my $new = dirname($file_path).'/tmp';
+        run_system_cmd("fastaclean -a -f $file_path > $new");
+        run_system_cmd("mv $new $file_path");
+      }
+    }
+
+    run_system_cmd("mkdir -p $target_dir");
+    run_system_cmd("mv $tmp_dir/* $target_dir/");
+    run_system_cmd("rm -rf $tmp_dir");   
+  }
+  #else Assume this is correct if we have some files
+
+  @lines = run_backtick_cmd("ls -1 ${target_dir}/*.fa", 1);
+  
+  if(! scalar(@lines)){
+    throw("ERROR: No fasta files produced by splitting:\t".$input_fasta);
+  }
+
+  return \@lines;
+}
 
 1;
 
