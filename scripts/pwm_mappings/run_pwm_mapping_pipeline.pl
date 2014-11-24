@@ -102,10 +102,6 @@ Species e.g. mus_musculus
 
 Assembly e.g. GRCh37_58_37c
 
-=item B<-schema>
-
-Schema Build e.g. 61_37n
-
 =item B<-feature_type_list>
 
 Space separated list of feature types e.g. Max cMyb .
@@ -115,54 +111,59 @@ If not specified all FeatureTypes with class 'Transcription Factor' will be used
 
 =cut
 
+
+
+#TODO 
+# 1 Pull this apart and put it into hive, some of the following may disappear when  this is done
+# 2 Allow skip matrix extract in place of a matrix dir.
+# 3 Make assembly optional, default to dnadb default
+
+
 use strict;
 use warnings;
 use Getopt::Long;
 use Pod::Usage;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( open_file );
-use Bio::EnsEMBL::Utils::Exception qw(throw warning stack_trace_dump);
+use Bio::EnsEMBL::Funcgen::Sequencing::MotifTools qw( read_matrix_file
+                                                      reverse_complement_matrix 
+                                                      write_matrix_file
+                                                      get_revcomp_file_path          );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils        qw( open_file run_system_cmd run_backtick_cmd );
+use Bio::EnsEMBL::Utils::Exception                qw( throw warning stack_trace_dump );
 
 my ($host, $port, $user, $pass, $dbname);
 my ($dnadb_host, $dnadb_port, $dnadb_user, $dnadb_pass, $dnadb_name);
-my ($help, $workdir, $outputdir, $species, $assembly, $schema);
-
-
-#get command line options
-
+my ($help, $workdir, $outputdir, $species, $assembly);
 my (@fts, @fset_names);
 
 print "run_pwm_mapping_pipeline.pl @ARGV\n";
 
-#Maybe pass these to our bin folder?
-# /usr/local/ensembl/bin/fastaexplode & fastaclean
 GetOptions (
-	    'dnadb_host=s'        => \$dnadb_host,
-	    'dnadb_user=s'        => \$dnadb_user,
-	    'dnadb_port=i'        => \$dnadb_port,
-	    'dnadb_pass=s'        => \$dnadb_pass,
-	    'dnadb_name=s'        => \$dnadb_name,
-	    'host=s'           => \$host,
-	    'user=s'           => \$user,
-	    'port=i'           => \$port,
-	    'pass=s'           => \$pass,
-	    'dbname=s'           => \$dbname,
-	    'workdir=s'          => \$workdir,
-	    'outputdir=s'        => \$outputdir,
-	    'species=s'          => \$species,
-	    'assembly=s'         => \$assembly,
-	    'schema=s'           => \$schema,
-	    "feature_type_list=s{,}"  => \@fts,
-	    "help|h"             => \$help,
-	   )  or pod2usage( -exitval => 1 ); #Catch unknown opts
-
+ 'dnadb_host=s' => \$dnadb_host,
+ 'dnadb_user=s' => \$dnadb_user,
+ 'dnadb_port=i' => \$dnadb_port,
+ 'dnadb_pass=s' => \$dnadb_pass,
+ 'dnadb_name=s' => \$dnadb_name,
+ 'dbhost=s'     => \$host,
+ 'dbuser=s'     => \$user,
+ 'dbport=i'     => \$port,
+ 'dbpass=s'     => \$pass,
+ 'dbname=s'     => \$dbname,
+ 'workdir=s'    => \$workdir,
+ 'outputdir=s'  => \$outputdir,
+ 'species=s'    => \$species,
+ 'assembly=s'   => \$assembly,
+ "feature_type_list=s{,}"  => \@fts,
+ "help|h"             => \$help,
+) or pod2usage( -exitval => 1 ); #Catch unknown opts
+  
 pod2usage(1) if ($help);
 
 # Should be failing a little nicer now... 
 if(!$host || !$port || !$user || !$dbname ) {  print "Missing connection parameters for funcgen db\n"; pod2usage(1); }
 if(!$workdir || !$outputdir) {  print "Missing working folder(s)\n"; pod2usage(0); }
-if(!$species || !$assembly || !$schema) {  print "Need species, assembly and schema information\n"; pod2usage(1); }
+if(!$species || !$assembly ) {  print "Need species and assembly information\n"; pod2usage(1); }
 
 
 #Check database connections
@@ -209,175 +210,268 @@ if($dbname){
 $efgdba->dbc->db_handle;
 $efgdba->dnadb->dbc->db_handle;
 
-my $fta = $efgdba->get_FeatureTypeAdaptor();
-my $fsa = $efgdba->get_FeatureSetAdaptor();
-my $bma = $efgdba->get_BindingMatrixAdaptor();
-my $dbea = $efgdba->get_DBEntryAdaptor();
 
-
+### Identify FeatureSets with associated BindingMatrices ###
 #Separate this into a separate step/script
-
-=pod
-
-if(! -d "${outputdir}/matrices"){
-  system("mkdir ${outputdir}/matrices") && die "Error creating matrices folder";
-}
-open(FO,">".$outputdir."/matrix_list");
-
+my $fta  = $efgdba->get_FeatureTypeAdaptor();
+my $fsa  = $efgdba->get_FeatureSetAdaptor();
+my $bma  = $efgdba->get_BindingMatrixAdaptor();
+#my $dbea = $efgdba->get_DBEntryAdaptor();
 my @tfs;
+
+#Could remove this bit is we implement FeatureSetAdaptor::_contrain_featyre_type_class
+#Although this woudl not allow validation os specified FeatureTypes
+
 if(scalar(@fts) > 0){
   
   foreach my $ft (@fts){
     my $tf = $fta->fetch_by_name($ft); 
   
-    if(!$tf){
+    if(! $tf){
       throw "Could not find Transcription Factor $ft";
-    } else {
-      push(@tfs, $tf);
+    } 
+    else {
+      push @tfs, $tf;
     } 
   }
 }
-else {
-  #If none is specified, get all...
-  #warn "Using all transcription factors";
+else {  #If none is specified, get all...
   @tfs = @{$fta->fetch_all_by_class('Transcription Factor')};
-  
   #Change this to use th bm ftypes?
   #but it appears that the matrix list uses the fset ftypes
-  
 }
 
-# Just dump out the individual pfm files here from the new merged file
-# as thats what the pipeline expects
 
-
-my $pfms_file = "${workdir}/binding_matrices/Jaspar_5.0/JASPAR_CORE/pfm/nonredundant/pfm_all.txt";
-
-my $pfms_fh = open_file($pfms_file);
-my ($line, $pfm_fh, $record, $mname);
-
-while(($line = $pfms_fh->getline) && defined $line){
-    
-  if($line =~ /^>([^ ]+)/){
-    
-    
-    if(defined $pfm_fh){
-      print $pfm_fh $record;
-      $pfm_fh->close;
-    } 
-    
-    $mname  = $1;
-    chomp $mname;
-    $pfm_fh = open_file("${outputdir}/matrices/${mname}.pfm", '>');
-    $record = '';#$line;
-  }
-  else{
-    $record .= $line;    
-  }
-}
-
-print $pfm_fh $record;
-$pfm_fh->close;
-
+my %matrix_tf;
+#If we ever support more than one source (i.e. something other than Jaspar)
+#Then we need to restrict this list based on the source DB
 
 foreach my $tf (sort { $a->name cmp $b->name} @tfs){
-
-  # if there is displayable data for it, get its matrix(ces) and print them.
+  # if there is displayable data for it, get matrices and cache print them.
   #my @fs = @{$fsa->fetch_all_by_FeatureType($tf,'displayable')};
-  my @fs = @{$fsa->fetch_all_by_FeatureType($tf)};
 
-  if(scalar(@fs)>0){
-    #if tf is NOT a complex ft, but s involved in complexes, get their matrices
-    # to see if the tf is a complex, just try getting an associated gene.
-    my @matrices = @{$bma->fetch_all_by_FeatureType($tf)};
-    
-    
-    #? There may be many other DBEtries for a FeatureType
-    #Just get the associated ftypes anyway
-    
-    #In fact why are we even bothering with the TF
-    #why not just access the bms directly?
-    
-    #keep this as is for now to get it running
-   
-    
-    #if(scalar(@{$dbea->fetch_all_by_FeatureType($tf)})>0){
-      
-      
+  #Skip MA0491.1 as we know this currently causes failures
+  #with find_pssm_dna:
+  #terminate called after throwing an instance of 'std::bad_alloc'
+  #what():  std::bad_alloc
+  #Probably due to very large frequencies in matrx:
+  #>more ../../matrices/*MA0491.1*
+  #::::::::::::::
+  #../../matrices/MA0491.1.pfm
+  #::::::::::::::
+  #1238915163 0 0 38710 0 0 1547 38710 0 5786
+  #7594824 0 0 0 22857 0 37163 0 5136 14956
+  #1364018723 0 38710 0 14078 0 0 0 2301 12429
+  #119220 38710 0 0 1775 38710 0 0 31273 5539
+
+
+  if(@{$fsa->fetch_all_by_FeatureType($tf)}){
+    #Get direct TF binding_matrix associations     
+    map { $matrix_tf{$_->name} = $tf->name if $_->name ne 'MA0491.1' } @{$bma->fetch_all_by_FeatureType($tf)};
+
+    #And indirect associations through TF complexes
     foreach my $atf (@{$fta->fetch_all_by_association($tf)}){
-    	push @matrices, @{$bma->fetch_all_by_FeatureType($atf)};
-    }
-    #}
-    
-    my @names;
-    
-    foreach my $matrix (@matrices){
-      push @names, $matrix->name;
-      #system("cp ${workdir}/binding_matrices/Jaspar_5.0/all_data/FlatFileDir/".$matrix->name.".pfm ${outputdir}/matrices") && die "could not copy matrix ".$matrix->name."";
-      
-    }
-    
-    if(scalar(@names)>0){
-      my $namestr=join(";",@names);
-      print FO $tf->name."\t".$namestr."\n";
-    
+      map { $matrix_tf{$_->name} = $tf->name if $_->name ne 'MA0491.1'} @{$bma->fetch_all_by_FeatureType($atf)};
     }
   }
 }
-close FO;
 
-=cut
+if(! -d "${outputdir}/matrices"){
+  system("mkdir ${outputdir}/matrices") && die "Error creating matrices folder";
+}
 
-#matrix_list no longer exists as we use the DB
-#where is this being used??!!
-#system("cp ${workdir}/binding_matrices/Jaspar/matrix_list.txt ${outputdir}/matrices") && die "could not find fasta file";
 
-#print "processing fasta\n";
-#WHAT? Why are we gunzipping and copying here, why is this not used in situ?
-#system("gunzip -dc ${workdir}/fasta/${species}/${species}_male_${assembly}_unmasked.fasta.gz > ${outputdir}/fasta.fas") && die "could not unzip fasta file";
+
+### Create Individual pfm files ###
+
+# Moods expects individual pfm files, but the new Jaspar release only 
+# has a single mutli-record file.
+
+# Currently also need collections which have ID prefix PB (PBM) PL (PBM_LHL) and PH (PBM_HOMEO)
+# These matrices need to be grabbed form the previous release (JASPAR2010),a nd some even from the
+# release before that!!
+# They are not present in the current release as they have not been updated in Jaspar 5(???), even though 
+# they are they are present in DB, the ARCHIVE sql directories and on the website(????!)
+# This needs to be done manually before running this script
+# TODO Also need to update the association script to use these collections.
+
+# Have to use all these files, as there are omissions from each, even though they are in the 
+# current live web site.
+# These are in order of preference
+
+my @source_pfm_files = (
+  "${workdir}/binding_matrices/Jaspar_5.0/JASPAR_CORE/pfm/nonredundant/pfm_all.txt",
+  "${workdir}/binding_matrices/Jaspar_5.0/JASPAR_CORE/pfm/redundant/pfm_all.txt",
+  "${workdir}/binding_matrices/JASPAR2010/all_data/matrix_only/matrix.txt",
+  "${workdir}/binding_matrices/Jaspar_pre_2010/all_data/matrix_only/matrix_only.txt",
+  );
+
+#Why are we now not getting these?
+#PL0007.1(Max) is associated to a FeatureSet but is not present in the source pfm file
+#PH0144.1(POU2F2) is associated to a FeatureSet but is not present in the source pfm file
+
+#PH0144.1 is in 2010 and pre 2010, why are we not parsing it?
+
+
+#Could even fork prior to the matrix file read, and submit batch jobs
+# based on the matrix/tf name pair. This would however mean multiple parallel reads
+# from the same matrix file.
+# Also need to consider the ability to run a pfm without the dependancy on a Feature set.
+# Basically we need to keep the Featture set identification, the pwm mapping and the theshold 
+#generation/filtering steps separate.
+
+my ($pfm_file, %pfm_files);
+my @matrix_ids    = keys(%matrix_tf);
+my $num_matrices = scalar(@matrix_ids);
+#We could check for the pfm and recvomp pfm file in the loop above, to prevent
+#reading and recreateing the pfm files everytime.
+
+print "Extracting matrix files...\n";
+
+PFM_FILE: foreach my $pfms_file(@source_pfm_files){
+  print "Reading matrices from:\t$pfms_file\n";
+  #restrict read matrices here, not below
+  my $matrix_info = read_matrix_file($pfms_file, \@matrix_ids);
+
+  foreach my $matrix_id(keys %$matrix_info){
+    #Ensure we haven't see this matrix previously i.e. in the newer file
+
+    #if(! exists $matrix_tf{$matrix_id}){
+    #  die("$matrix_id is not in original filter list");
+    #}
+
+    if(! exists $pfm_files{$matrix_id}){
+      #Original matrix
+      #warn "Processing $matrix_id";
+      $pfm_file = "${outputdir}/matrices/${matrix_id}.pfm";
+      write_matrix_file([$matrix_info->{$matrix_id}], 
+                        $pfm_file);
+      $pfm_files{$matrix_id} = $pfm_file;
+
+      #Revcomp matrix!
+      $matrix_info->{$matrix_id}{matrix} = 
+       reverse_complement_matrix($matrix_info->{$matrix_id}{matrix});
+      write_matrix_file([$matrix_info->{$matrix_id}], 
+                        get_revcomp_file_path($pfm_file));
+
+
+      $num_matrices--;
+      last PFM_FILE if ! $num_matrices;   
+    }
+  }
+}
+
+
+#This needs to be passed as an arg!
+#Keep all the input file path architecture in the caller
 
 my $fasta_file = "${workdir}/fasta/${species}/${species}_male_${assembly}_unmasked.fasta";
-$assembly =~ s/_.*$//;
-print $assembly."\n";
 
-my $map_file = "${outputdir}/all_mappings.tab";
-#This is currently hardcoded in pwm_filter_map!?
+
+$assembly =~ s/_.*$//;
+print "Using assembly:\t$assembly\n";
+
 
 #Could do with a recover or force mode here
 
-if(! -f $map_file){
+
+#TO DO
+# Move all the functionality from these scripts to MotifTools
+# So we never have to system call a separate script as this
+# loses error output (at least without IPC::Cmd/Run which isn't in 5.10)
 
 
-  my $cmd = "pwm_genome_map.pl -g ${outputdir}/fasta.fas -a ${assembly} -o $map_file ".
-    "-p 0.001 -w ${outputdir}/tmp_results/ ${outputdir}/matrices/*.pfm";
-  print $cmd."\n";
-  system($cmd) && die "error running pwm_genome_map"; 
+### Validate we have found all matrices registered in the DB
+my $absent = 0;
+
+foreach my $mname(keys(%matrix_tf)){
+
+  if(! exists $pfm_files{$mname}){
+    warn $mname.'('.$matrix_tf{$mname}.") is associated to a FeatureSet but is not present in the source pfm file\n";
+    $absent = 1;
+  }
 }
 
-#stashed
-#  #There is a danger that the workdir will be removed by this script
-#  #so append tmp_results in the script not here, and make mandatory
-#
-#  my $cmd = "pwm_genome_map.pl -g $fasta_file -a ${assembly} -o $map_file ".
-#    "-p 0.001 -w $outputdir ${outputdir}/matrices/*.pfm";
-#  print $cmd."\n";
-#  #warn "skipping pwm_genome_map\n";
-#  system($cmd) && die "error running pwm_genome_map"; 
-#}
+if($absent){
+  die("Identified some absent matrices in the input pfm files:\n\t".
+    join("\n\t", @source_pfm_files));
+}
 
-#print "Creating fasta header file...\n";
-#system("grep '>' $fasta_file > ${outputdir}/fasta.id_lines") && die "error processing fasta file";
+my $cmd = "pwm_genome_map.pl -g $fasta_file -a ${assembly} ".
+ "-p 0.001 -o ${outputdir} ".join(' ', values(%pfm_files));
+#This bsubs a job array of run_moods.pl jobs for each matrix (inc rev comp) vs chr fasta files
+#Then waits for them to finish before merging
+run_system_cmd($cmd); 
+
+my $fasta_headers_file = "${outputdir}/fasta.headers.txt";
+
+#This is currently broken as the Y chr header was wrong
+
+if(! -f $fasta_headers_file){
+  print "Creating fasta header file...\n";
+  run_system_cmd("grep '>' $fasta_file > ${fasta_headers_file}.tmp");
+  run_system_cmd("mv ${fasta_headers_file}.tmp ${fasta_headers_file}");
+}
+
+run_system_cmd("mkdir -p ${outputdir}/filtered");
 
 
-
+#Let's just pass one map file and the TF from the matrix_list
+#Map tab files are generated
+#Or just add everything to pwm_genome_map?
+#By moving code to MotifTools?
 
 #The output thresholds need to be stored in the DB for future reference, and used as a factor in defining the permissive threshold above
-system("pwm_filter_mappings.pl -t $map_file -i ${outputdir}/matrix_list -e ".$dbname." -H ".$host." -u ".$user." -P ".$port." -o ${outputdir}/thresholds -g ${outputdir}/fasta.id_lines -s ${schema}") && die "could not run pwm_filter_mappings";
-#stashed
-#system("pwm_filter_mappings.pl -t $map_file -i ${outputdir}/matrix_list -e ".$dbname." -H ".$host." -u ".$user." -P ".$port." $pass -o ${outputdir}/thresholds -g ${outputdir}/fasta.id_lines -s ${schema}") && die "could not run pwm_filter_mappings";
+
+my $thresholds_file = "${outputdir}/thresholds.txt";
+my $lsf_out_dir     = "${outputdir}/filtered/lsf_out/";
+mkdir($lsf_out_dir); #This likely already exists from pwm_genome_map.pl Actually, this may be removed if all is successful.
 
 
-system("mkdir -p ${outputdir}/filtered") && die "could not create filtered folder";
+#Touch filter file here, so we don't get and failure when the pwm_file_mappings.pl script tries to append
+system("touch $thresholds_file");
 
-system("pwm_thresh_filter.pl -i ${outputdir}/thresholds -o ${outputdir}/filtered") && die "could not run pwm_thresh_filter";
+MATRIX: foreach my $matrix (keys %matrix_tf){
+  #Defined/written in pwm_genome_map.pl process_and_align_matrix
+  my $map_file        = "${outputdir}/${matrix}.unfiltered.bed";
+  print "Preparing to post-process:\t$map_file\n";
+  
+  #if(-e $thresholds_file){
+    my $grep_cmd    = "grep -E '^$matrix\[\[:space:\]\]' $thresholds_file";
+    my $thresh_line = run_backtick_cmd($grep_cmd, 1);#grep returns exit code 1 if not present
+  
+    if($thresh_line){
+      warn "Skipping $matrix as is already present in output:\n$thresh_line";
+      next MATRIX;  
+    }
+  #}
 
+  my $job_cmd = "pwm_filter_mappings.pl -m $matrix -t $map_file -T ".$matrix_tf{$matrix}." -e ".$dbname.
+   " -H ".$host." -u ".$user." -P ".$port.
+   " -o ${outputdir} -g $fasta_headers_file -a $assembly";
+
+  my $bjob_name = "FILTER_${matrix}";
+  my $bsub_params = '-M 2000 -R"select[mem>2000] rusage[mem=2000]" '.
+   "-o $lsf_out_dir/$bjob_name.\%J.out -e $lsf_out_dir/$bjob_name.\%J.err";
+  my $cmd         = "bsub -J $bjob_name $bsub_params '$job_cmd'";
+  print "$cmd\n";
+  my $bsub_output = run_backtick_cmd($cmd);
+
+  #print $bsub_output."\n";
+
+  if($bsub_output =~ /Job \<([0-9]+)\> is submitted to /){
+    $bsub_output = $1;
+  }
+  else{  
+    #This is slightly brittle, we could do some retry here?
+    throw("Failed to submit job:\n$cmd\n$bsub_output");
+  }
+
+
+#run_system_cmd("pwm_filter_mappings.pl -t $map_file -i ${outputdir}/matrix_list -e ".$dbname.
+#  " -H ".$host." -u ".$user." -P ".$port.
+#  " -o ${outputdir}/thresholds -g ${outputdir}/fasta.id_lines -s ${schema}");
+
+#run_system_cmd("pwm_thresh_filter.pl -i ${outputdir}/thresholds -o ${outputdir}/filtered");
+  
+}

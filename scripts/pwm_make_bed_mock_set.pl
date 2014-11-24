@@ -43,6 +43,10 @@ ls -1 ES* | xargs -I {} echo make_bed_mock_set.pl~ -g~ /data/blastdb/Ensembl/fun
 =cut
 
 
+
+#TO DO
+# 1 Strip all of this out and use SeqUtils::randomise_bed_file
+
 use strict;
 use DBI;
 use Env;
@@ -50,10 +54,6 @@ use Env;
 use Getopt::Std;
 use IO::Handle;
 use IO::File;
-use lib '/nfs/users/nfs_d/dkeefe/src/personal/ensembl-personal/dkeefe/perl/modules/';
-
-
-use constant  NO_ROWS => '0E0';
 
 $| = 1; #no output buffer
 
@@ -68,13 +68,10 @@ my $genome_file;
 
 my %opt;
 
-
-
-
 if ($ARGV[0]){
-&Getopt::Std::getopts('g:h:o:i:n', \%opt) || die ;
+  &Getopt::Std::getopts('g:h:o:i:n', \%opt) || die ;
 }else{
-&help_text; 
+  &help_text; 
 }
 
 &process_arguments;
