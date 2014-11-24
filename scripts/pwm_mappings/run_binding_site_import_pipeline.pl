@@ -110,7 +110,7 @@ my ($dnadb_host, $dnadb_port, $dnadb_user, $dnadb_name);
 my ($help, $workdir, $output_dir, @slices);
 
 #get command line options
-print "run_binding_site_import.pl @ARGV\n";
+print "$0 @ARGV\n";
 
 GetOptions (
 	    'dnadb_host=s'       => \$dnadb_host,
@@ -160,13 +160,14 @@ opendir(DIR,$workdir);
 my @files = readdir(DIR);
 closedir DIR;
 
-my $first = 1;
+my $first = 1; #For omitting -job_topup
 
 my $bma = $efgdb->get_BindingMatrixAdaptor();
 
-foreach my $file (@files){
-  
-  next if(!( $file =~ /^(.*).pwm_map$/));
+
+foreach my $file (@files){  
+
+  next if $file !~ /^(.*)\.filtered\.bed$/;
   my $matrix = $1;
   print "Matrix: ".$matrix."\n";
 
@@ -186,12 +187,12 @@ foreach my $file (@files){
   $efgdb->dbc->do("delete from associated_motif_feature where motif_feature_id in (select motif_feature_id from ".$mf_sql." )");
   $efgdb->dbc->do("delete from ".$mf_sql);
 
-  my $cmd="init_pipeline.pl Bio::EnsEMBL::Funcgen::HiveConfig::ImportMotifFeatures_conf -dnadb_host $dnadb_host -dnadb_port $dnadb_port -dnadb_user $dnadb_user -dnadb_name $dnadb_name -host $host -port $port -user $user -pass $pass -dbname $dbname -output_dir $output_dir -efg_src $ENV{SRC}/ensembl-funcgen/ -file ${workdir}/${file} -matrix $matrix ".(scalar(@slices)>0 ? " -slices ".join(",",@slices) : "")." ".($first ? '' : " -job_topup");
+  my $cmd="init_pipeline.pl Bio::EnsEMBL::Funcgen::HiveConfig::ImportMotifFeatures_conf -dnadb_host $dnadb_host -dnadb_port $dnadb_port -dnadb_user $dnadb_user -dnadb_name $dnadb_name -host $host -port $port -user $user -pass $pass -dbname $dbname -output_dir $output_dir -efg_src $ENV{SRC}/ensembl-funcgen/ -file ${workdir}/${file} -matrix $matrix ".
+   (scalar(@slices)>0 ? " -slices ".join(",",@slices) : "")." ".($first ? '' : " -job_topup");
   print $cmd."\n";
   system($cmd);
 
   $first = 0;
-
 }
 
 
