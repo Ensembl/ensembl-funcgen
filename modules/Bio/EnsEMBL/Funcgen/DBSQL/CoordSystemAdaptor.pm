@@ -371,7 +371,7 @@ sub fetch_by_name{
   #	throw('To access toplevel or seqlevel you must provide a the third schema_build argument');
   # }
 
-  warn "Using dnadb(${sbuild}) to acquire $name" if($name =~ /level/);
+  warn "Using dnadb(${sbuild}) to acquire $name" if $name =~ /level/;
 
   if($name eq 'seqlevel') {
     return $self->fetch_sequence_level_by_schema_build($sbuild);
@@ -551,9 +551,6 @@ sub fetch_all_by_name {
 }
 
 
-
-
-
 =head2 fetch_by_dbID
 
   Arg [1]    : int dbID
@@ -563,7 +560,7 @@ sub fetch_all_by_name {
                id exists.
   Returntype : Bio::EnsEMBL::Funcgen::CoordSystem or undef
   Exceptions : thrown if no coord_system exists for specified dbID
-  Caller     : general
+  Caller     : General
   Status     : Stable
 
 =cut
@@ -571,14 +568,8 @@ sub fetch_all_by_name {
 sub fetch_by_dbID {
   my $self = shift;
   my $dbID = shift;
-
-  throw('dbID argument is required') if(!$dbID);
-
-  my $cs = $self->{'_dbID_cache'}->{$dbID};
-
-  return undef if(!$cs);
-
-  return $cs;
+  throw('dbID argument is required') if defined $dbID;
+  return $self->{'_dbID_cache'}->{$dbID};
 }
 
 
@@ -794,6 +785,7 @@ sub get_mapping_path {
 
   return $path || [];
 }
+
 
 =head2 _fetch_by_attribute
 
