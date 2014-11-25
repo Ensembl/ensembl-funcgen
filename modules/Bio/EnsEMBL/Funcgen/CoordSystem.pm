@@ -433,14 +433,15 @@ sub equals {
 	#we need to make sure these are default CS, otherwise we can get into trouble with
 	#re-used or mismatched seq_region_ids between DB wih different default assemblies
 
-	if (! $self->contains_schema_build($self->adaptor->db->_get_schema_build($cs->adaptor()))) {
+	if (! $self->contains_schema_build($self->adaptor->db->_get_schema_build($cs->adaptor->db))) {
 
 	  #Only warn first time this is seen
-	  my $warning_key = $self->adaptor->db->_get_schema_build($cs->adaptor()).':'.$self->name().':'.$self->version;
+	  my $warning_key = $self->adaptor->db->_get_schema_build($cs->adaptor->db).':'.$self->name().':'.$self->version;
 
 	  if(! exists $warnings{$warning_key}){
-		warn 'You are using a schema_build('.$self->adaptor->db->_get_schema_build($cs->adaptor()).') which has no CoordSystem stored for '.$cs->version.". Defaulting to closest name version match.\n";
-		$warnings{$warning_key} = 1;
+      warn 'You are using a schema_build('.$self->adaptor->db->_get_schema_build($cs->adaptor->db).
+        ') which has no CoordSystem stored for '.$cs->version.". Defaulting to closest name version match.\n";
+      $warnings{$warning_key} = 1;
 	  }
 	}
     return 1;
