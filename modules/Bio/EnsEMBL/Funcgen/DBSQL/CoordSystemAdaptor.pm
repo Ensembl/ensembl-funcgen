@@ -568,7 +568,7 @@ sub fetch_all_by_name {
 sub fetch_by_dbID {
   my $self = shift;
   my $dbID = shift;
-  throw('dbID argument is required') if defined $dbID;
+  throw('dbID argument is required') if ! defined $dbID;
   return $self->{'_dbID_cache'}->{$dbID};
 }
 
