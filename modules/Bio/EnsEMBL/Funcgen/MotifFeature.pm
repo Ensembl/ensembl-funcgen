@@ -76,7 +76,7 @@ use base qw(Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable);
 =head2 new
 
  
-  Arg [-SCORE]          : (optional) int - Score assigned by analysis pipeline
+  Arg [-SCORE]          : (optional) int - Score given by the motif mapper.
   Arg [-SLICE]          : Bio::EnsEMBL::Slice - The slice on which this feature is.
   Arg [-BINDING_MATRIX] : Bio::EnsEMBL::Funcgen::BindingMatrix - Binding Matrix associated to this feature.
   Arg [-START]          : int - The start coordinate of this feature relative to the start of the slice
@@ -167,8 +167,9 @@ sub feature_type{ return shift->{binding_matrix}->feature_type; }
 =head2 score
 
   Example    : my $score = $feature->score();
-  Description: Getter for the score attribute for this feature. 
-  Returntype : double
+  Description: Getter for the score attribute for this feature. This is the
+               score given by the motif mapping software.
+  Returntype : Scalar (double)
   Exceptions : None
   Caller     : General
   Status     : Low Risk
@@ -265,7 +266,7 @@ sub associated_annotated_features{
 
 sub is_position_informative {
   my $self     = shift;
-  my $position = shift || throw 'Need a position argument';
+  my $position = shift || throw('Need tp specify a valid position argument');
 
   if( ($position < 1) || 
       ($position > $self->binding_matrix->length) ){
@@ -305,10 +306,8 @@ sub is_position_informative {
 
 sub infer_variation_consequence{
   my ($self, $vf, $linear) = @_;
+  assert_ref($vf, 'Bio::EnsEMBL::Variation::VariationFeature');
 
-  if(! $vf->isa('Bio::EnsEMBL::Variation::VariationFeature')){
-    throw "We expect a Bio::EnsEMBL::Variation::VariationFeature object, not a ".$vf->class;
-  }
 
   #See if these checks are required or if there are more efficient ways to do the checks...
   #if(($self->slice->seq_region_name ne $vf->slice->seq_region_name) ||
@@ -343,6 +342,7 @@ sub infer_variation_consequence{
   
 }
 
+
 =head2 interdb_stable_id
 
   Arg [1]    : (optional) int - stable_id e.g 1
@@ -356,9 +356,7 @@ sub infer_variation_consequence{
 
 =cut
 
-sub interdb_stable_id {
-  return shift->{interdb_stable_id};
-}
+sub interdb_stable_id { return shift->{interdb_stable_id}; }
 
 
 =head2 summary_as_hash
