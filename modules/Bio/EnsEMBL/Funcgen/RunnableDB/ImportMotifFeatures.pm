@@ -61,21 +61,22 @@ sub fetch_input {   # fetch parameters...
   
   
   my $fta = $db->get_FeatureTypeAdaptor;
-  my @bms = @{$db->get_BindingMatrixAdaptor->fetch_all_by_name($matrix));
+  my @bms = @{$db->get_BindingMatrixAdaptor->fetch_all_by_name($matrix)};
 
   #Get by name...
-  if(scalar(@bms) != 0){
+  if(scalar(@bms) != 1){
     throw("Failed to find unique BindingMatrix with name:\t".$matrix);
   }
 
-  my $matrix = $bms[0];
+  $matrix = $bms[0];
   $self->param('matrix', $matrix);
 
   #check if there is already data for this matrix stored... if there is, throw an error...  
   #TODO test specifically for data in slices...
   my $count = $db->dbc->db_handle->selectrow_array("select count(*) from motif_feature where binding_matrix_id=".$matrix->dbID);
   
-  if(($count>0) && !($self->param('slices'))){ 
+  if( ($count>0) && 
+      ! $self->param('slices')){ 
     throw "Data for ".$matrix->name." already exists! Remove it first"; 
   }
 
@@ -102,7 +103,7 @@ sub fetch_input {   # fetch parameters...
     " annotated_feature af, seq_region sr where af.seq_region_id=sr.seq_region_id and ".
       " feature_set_id in (".join(",",@fsets).")";
   my $cmd = "mysql --skip-column-names -e \"".$query."\" -quick -h".$self->param('host')." -P".$self->param('port').
-    " -u".$self->param('user')." -p".$self->param('pass').' '.$self->param('dbname')." >".$peaks_bed;
+    " -u".$self->param('user')." -p".$self->param('pass').' '.$self->param('dbname')." | sort -k1,1 -k2,2n -k3,3n >".$peaks_bed;
 
   print $cmd."\n";
 
@@ -118,81 +119,78 @@ sub run {   # Check parameters and do appropriate database/file operations...
   my $bm      = $self->param('matrix');
   my $results = $self->param('output_dir')."/overlaps_".$bm->name.".tab";
  
-  #To ensure full overlap we need to use -f 100 and put the annotaed features as the second file
-  my $cmd = 'bedtools intersect -sorted -f 100 -wa -wb -a '.
+  #To ensure full overlap we need to use -f 1 and put the annotaed features as the second file
+  my $cmd = 'bedtools intersect -sorted -f 1 -wa -wb -a '.
    $self->param('file').' -b '.$self->param('peaks_bed')." > $results";
   run_system_cmd($cmd);
 
-  my @slices;
+  my %slice_cache;
 
   if($self->param('slices')){
-    @slices = split(/,/,$self->param('slices'));
+    map {$slice_cache{$_} = $sa->fetch_by_region('toplevel', $_)} 
+     @{$self->param('slices')};
+  }
+  else{
+    #Here we allow all non-ref slices
+    #Assuming features are on genomic coords (i.e. inc dups for Y)
+    map {$slice_cache{$_->seq_region_name} = $_} 
+     @{$sa->fetch_all('toplevel', undef, 1, 1)} ;
   }
 
-  my ($line, $slice, $rel_aff, %slice_cache);
+  my ($line, $slice, $rel_aff, %skipped_slices);
   #Set these here first, so they are automatically updated below.
   my $motif_features = {};
   my $af_ids         = {};
   $self->param('motif_features', $motif_features);
   $self->param('annotated_feature_ids', $af_ids);  
   my $rfile = open_file($results);
+  my ($mf_sr, $mf_start, $mf_end, $score, $mf_strand, $af_id, $cache_key);
 
-  RECORD: while(($line = $rfile->getline) && deined $line){
+  RECORD: while(($line = $rfile->getline) && defined $line){
     chomp;
-    my ($mf_sr, $mf_start, $mf_end, undef, $score, $mf_strand, undef, undef, undef, $af_id) = split("\t");
-    my $cache_key = join(':'. ($mf_sr, $mf_start, $mf_end, $score));
-
-    
-    #TODO Change this to use the SliceHelper slice_cache and get_Slice methods (currently n BaseDB)
-    #Quick hack to only import specific slices...
-    my $filter = 0;
+    ($mf_sr, $mf_start, $mf_end, undef, $score, $mf_strand, undef, undef, undef, $af_id) = split("\t", $line);
+    $cache_key = join(':'. ($mf_sr, $mf_start, $mf_end, $score));
    
-    if(scalar(@slices)>0){
-      
-      foreach my $slice (@slices){ 
-        if($slice eq $sr){ 
-          next RECORD; 
-        }
-      }
-    }
+    #TODO Change this to use the SliceHelper slice_cache and get_Slice methods (currently n BaseDB)
+    #Quick hack to only import specific slices... 
 
-    if(! exists $slice_cache{$sr}){
+    if(! exists $slice_cache{$mf_sr}){
 
-      my $slice = $sa->fetch_by_region('toplevel', $mv_sr);
-    
-      if($slice) { 
-        $slice_cache{$mf_sr} = $slice;
-      } else { 
-        warn "Slice $sr not found: silently ignoring entry"; 
-        next RECORD;
+      if(! exists $skipped_slices{$mf_sr}){
+        warn "Slice not specified or found, skipping seq region:\t$mf_sr\n";
+        $skipped_slices{$mf_sr} = undef;
       }
-    }
-    elsif(! defined $slice_cache{$sr}){
-      warn "Slice $sr not found: silently ignoring entry"; 
+        
       next RECORD;
-
     }
 
-    if(! exists $motif_features{$cache_key}){
-      $slice   = $sa->fetch_by_region('toplevel',$mf_sr, $mf_start, $mf_end, $mf_strand);
+    if(! exists $motif_features->{$cache_key}){
+      #This was using the API relative afifinity method to set the threshold score
+      #but this is not the same score as used by Moods which was used to filter.
+      #threshold does not appear to be used by API anywhere else  so have now omitted this
+      #$motif_slice   = $sa->fetch_by_region('toplevel',$mf_sr, $mf_start, $mf_end, $mf_strand);
       #$rel_aff = $bm->relative_affinity($motif_slice->seq);
       #$min_rel_aff = $rel_aff if $rel_aff < $min_rel_aff;
 
-      $motif_features{$cache_key} = Bio::EnsEMBL::Funcgen::MotifFeature->new
-       (-slice          => $slice,
+      $motif_features->{$cache_key} = Bio::EnsEMBL::Funcgen::MotifFeature->new
+       (-slice          => $slice_cache{$mf_sr},
         -start          => $mf_start,
         -end            => $mf_end,
         -strand         => $mf_strand,
         -binding_matrix => $bm,
-        -score          => sprintf("%.3f", $relative_affinity));
+        -score          => sprintf("%.3f", $score));#$relative_affinity));
 
-      $af_ids{$cache_key} = [];
+      $af_ids->{$cache_key} = [];
      }
 
-    push $af_ids{$cache_key}, $af_id;     
+    push @{$af_ids->$cache_key}, $af_id;     
   }
 
   $rfile->close;
+
+
+  #throw_no_retry here is non are loaded?
+  #assuming it's problem with the intersect
 
   #This is not the threshold calculated by the pipeline but
   #the feature with the lowest threshold above that!
@@ -204,7 +202,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
 sub write_output {  
   my $self   = shift;
   my $mfs    = $self->param('motif_features');
-  my $af_ids = $self->param{'annotated_feature_ids'};
+  my $af_ids = $self->param('annotated_feature_ids');
   my $dbc    = $self->param('dba')->dbc;
   my $mfa    = $self->param('dba')->get_MotifFeatureAdaptor;
   my ($mf, $sql);
@@ -212,7 +210,7 @@ sub write_output {
   foreach my $key(keys %$mfs){
     $mf = $mfa->store($mfs->{$key})->[0];
 
-    foreach my $af_id (@{$af_ids->{$cache_key}}){
+    foreach my $af_id (@{$af_ids->{$key}}){
       $sql = "INSERT INTO associated_motif_feature (annotated_feature_id, motif_feature_id) VALUES ($af_id, ".$mf->dbID.")";
       $dbc->do($sql);
     }
