@@ -127,7 +127,7 @@ sub read_matrix_file{
   while( ($line = $in_file->getline) && 
          defined $line){
     chomp $line;
-        
+
     if($line =~ /^>/){ #e.g. >MA0012.1 br_Z3 
 
       if(@matrix_tmp && ! $header){ #Process and cache the matrix
@@ -165,7 +165,7 @@ sub read_matrix_file{
     }
     else{
       # remove leading whitespace or A|C|G|T [ ] wrapping
-      $line =~ s/^[ACGT\s\[]*([0-9 ]+)\s*\]*/$1/o; 
+      $line =~ s/^[ACGT\s\[]*([0-9 ]+)\s*\]*/$1 /o; 
       push @matrix_tmp, [ split(/\s+/, $line) ];
     }
   }
