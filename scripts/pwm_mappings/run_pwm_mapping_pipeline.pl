@@ -100,7 +100,7 @@ Species e.g. mus_musculus
 
 =item B<-assembly>
 
-Assembly e.g. GRCh37_58_37c
+Assembly e.g. GRCh38
 
 =item B<-feature_type_list>
 
@@ -447,7 +447,7 @@ MATRIX: foreach my $matrix (keys %matrix_tf){
   #}
 
   my $job_cmd = "pwm_filter_mappings.pl -m $matrix -t $map_file -T ".$matrix_tf{$matrix}." -e ".$dbname.
-   " -H ".$host." -u ".$user." -P ".$port.
+   " -H ".$host." -u ".$user." -P ".$port.' '.$pass.
    " -o ${outputdir} -g $fasta_headers_file -a $assembly";
 
   my $bjob_name = "FILTER_${matrix}";

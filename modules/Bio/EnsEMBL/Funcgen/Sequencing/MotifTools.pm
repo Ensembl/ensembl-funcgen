@@ -486,14 +486,22 @@ sub parse_find_pssm_dna_to_bed{
 }
 
 
+#The reason we were using $perc_of_max here is because 
+#the background rate is also a percentage?
+#But this may not scale if we simply re-run this filtering on some 
+#new mappings with higher scores. 
+
+#todo this could be done quicker in awk?
+
 sub filter_pwm_mappings{
-  my $perc_of_max  = shift;
+  #my $perc_of_max  = shift;
+  my $threshold    = shift;
   my $in_file      = shift;
   my $out_file     = shift;
   
-  my $max = run_backtick_cmd("cut -f 5 $in_file | sort -g -u | tail -1");
-  chop $max;
-  my $threshold = $max * $perc_of_max/100;
+  #my $max = run_backtick_cmd("cut -f 5 $in_file | sort -g -u | tail -1");
+  #chop $max;
+  #my $threshold = $max * $perc_of_max/100;
   #print "$mat $max $thresh\n" if $verbose;
   my $ifh = open_file($in_file);
   my $ofh = open_file($out_file, '>');

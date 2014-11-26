@@ -102,6 +102,9 @@ use strict;
 use warnings;
 use Getopt::Long;
 use Pod::Usage;
+
+
+use Bio::EnsEMBL::Utils::Exception qw(throw);
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
@@ -157,7 +160,7 @@ my $efgdb = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
 $efgdb->dbc->db_handle;
 
 opendir(DIR,$workdir);
-my @files = readdir(DIR);
+my @files = readdir(DIR) || throw("Could not readdir:\t$workdir");
 closedir DIR;
 
 my $first = 1; #For omitting -job_topup

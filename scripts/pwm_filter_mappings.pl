@@ -244,26 +244,30 @@ close($ifh);
 my ($perc_of_max_thresh, $score_thresh) =
  identify_background_threshold(\@mappings,$n_peaks,$perc_thresh,$max);
 
-#print $ofh "$mat\t$tf\t$perc_of_max_thresh\t$score_thresh\n";
-#This file is no longer used as we simply thresh filter in line below
+#This is used to in the caller to identify whether to submit the job
+#We don't actually use the score thresh at all, as we recalculate it
+#from the max of the actual motif mapping scores.
+#We really only need one of these?
+
+#This file is no longer used as we simply thresh filter in line below?
 #This is also slightly unsafe as we have parallel processes cating to same file
+#Can we write direct to binding_matrix.threshold?
+
+
+$sql = 'UPDATE binding_matrix set threshold='.$score_thresh.' where name="'.$mat.'"';
+$dbh->do($sql);
+
 my $thresh_string = "$mat\t$tf\t$perc_of_max_thresh\t$score_thresh";
 $cmd = "echo '$thresh_string' >> $outfile";
 run_system_cmd($cmd);
 
 $dbh->disconnect;
 
-
-
-#Stuff from pwm_filter_thresh.pl
-
-#Move this to MotifTools.pm
-
-
 &commentary("filtering $mapping_file\n");
 
 
-filter_pwm_mappings($perc_of_max_thresh, $mapping_file, $outdir.'/'.$mat.".filtered.bed");
+#filter_pwm_mappings($perc_of_max_thresh, $mapping_file, $outdir.'/'.$mat.".filtered.bed");
+filter_pwm_mappings($score_thresh, $mapping_file, $outdir.'/'.$mat.".filtered.bed");
 
 
 run_system_cmd("rm -f $peaks_file $mock_file $mock_olaps_file $real_olaps_file");
@@ -311,7 +315,7 @@ sub mock_perc_score_thresh{
     print "$peak_count >= $max_allowed\n";
     
     if($peak_count >= $max_allowed){
-      print "CALCULATING FINAL TRESH $perc $max_allowed $peak_count ".$peak_count *100/$n_peaks." $thresh\n" if $verbose >1 ;
+      print "CALCULATING FINAL THRESH $perc $max_allowed $peak_count ".$peak_count *100/$n_peaks." $thresh\n" if $verbose >1 ;
 	    
       if($peak_count *100/$n_peaks > $perc_thresh+1){
         $perc  += $decr;
