@@ -32,6 +32,10 @@ a.out
 *.o
 *.obj
 *.class
+MultiTestDB.conf
+*.frozen.conf
+bioperl*.zip
+/modules/t/CLEAN.t
 .project
 /.settings
 /.includepath
