@@ -53,11 +53,13 @@ package Bio::EnsEMBL::Funcgen::Utils::HealthChecker;
 
 use strict;
 use Data::Dumper;
+
+use Bio::EnsEMBL::Utils::Exception         qw( throw );
+use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd );
 use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use Bio::EnsEMBL::Funcgen::ProbeFeature;
-use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw );
-use Bio::EnsEMBL::Analysis;
+
 
 use base qw( Bio::EnsEMBL::Funcgen::Utils::Helper );
 
@@ -137,7 +139,7 @@ sub update_db_for_release{
 
   #do seq_region_update to validate dnadb first
   #hence avoiding redoing longer methods
-  $self->validate_new_seq_regions;#($force_srs);
+  $self->validate_new_seq_regions;
   $self->check_regbuild_strings;
   $self->check_meta_species_version;
   $self->set_current_coord_system;
@@ -155,8 +157,7 @@ sub update_db_for_release{
 }
 
 sub validate_new_seq_regions{
-  my ($self, $force) = @_;
-
+  my $self = shift;
 
   #We need to add some functionality to handle non-standard schema_build progression here
   #This should be used before any data is loaded
@@ -174,21 +175,6 @@ sub validate_new_seq_regions{
   # we also need to get all the toplevel seq_regions and store them in the seq_region table
   #use BaseFeatureAdaptor::_pre_store with and array of pseudo feature on each top level slice
 
-  #Validate the efgdb and dnadb schema version are the same first
-  #This is because we expect the schem_build to be the same for a release
-  #However, this will autoset the dnadb if no defined, so will always match!
-
-  if(! $force){
-	my $efgdb_sm = join('_', @{$self->get_schema_and_build($self->{'dbname'})});
-	my $dnadb_sm = join('_', @{$self->get_schema_and_build($self->db->dnadb->dbc->dbname)});
-
-	if($efgdb_sm ne $dnadb_sm){
-	  $self->report("WARNING:\tSkipped validate_new_seq_regions as schema_versions are mismatched:\t".
-				 "efgdb $efgdb_sm\tdnadb $dnadb_sm");
-	  return 0;
-	}
-  }
-
   my $pf_adaptor    = $self->db->get_ProbeFeatureAdaptor();
   my $slice_adaptor = $self->db->dnadb->get_SliceAdaptor();
   my $dnadb_csa     = $self->db->dnadb->get_CoordSystemAdaptor;
@@ -203,21 +189,19 @@ sub validate_new_seq_regions{
   #May miss some old versioned level if the new assembly no longer has them
   foreach my $slice(@{$slice_adaptor->fetch_all('toplevel', undef, 1)}){
 
-	if (! $slice->coord_system->version){
-	  push @slices, $slice;
-	}
-	else{
-
-	  if($default_version &&
-		  ($default_version ne $slice->coord_system->version)){
-		throw("Found more than one default CoordSystem version:\t${default_version}\t".$slice->coord_system->version);
-	  }
-	  else{
-		$default_version = $slice->coord_system->version;
-	  }
-	}
+    if (! $slice->coord_system->version){
+      push @slices, $slice;
+    }
+    else{
+      if($default_version &&
+        ($default_version ne $slice->coord_system->version)){
+        throw("Found more than one default CoordSystem version:\t${default_version}\t".$slice->coord_system->version);
+      }
+      else{
+        $default_version = $slice->coord_system->version;
+      }
+    }
   }
-
 
   #Get all versioned levels for all builds
   foreach my $cs(@{$dnadb_csa->fetch_all}){
@@ -229,8 +213,6 @@ sub validate_new_seq_regions{
   }
 
   push @{$self->{'builds'}}, $default_version if scalar(@{$self->{'builds'}}) == 0;
-
-
 
   #Grab slices for each versioned level
   foreach my $build(@{$self->{'builds'}}){
@@ -249,193 +231,157 @@ sub validate_new_seq_regions{
 
   foreach my $slice(@slices){
 
-	if($slice->start() != 1){
-	  $self->log("Reslicing slice:\t".$slice->name());
-	  #we must have some sort of PAR linked region i.e. Y
-	  $slice = $slice_adaptor->fetch_by_region($slice->coord_system_name(), $slice->seq_region_name());
-	}
+    if($slice->start != 1){
+      $self->log("Reslicing slice:\t".$slice->name);
+	    #we must have some sort of PAR linked region i.e. Y
+      $slice = $slice_adaptor->fetch_by_region($slice->coord_system_name(), $slice->seq_region_name());
+    }
 
 
-	#we need test if it needs doing first?
-	#we would need to test for the coord_systems outside of this loop
-	#and then for each seq_region inside the loop if the coord_system is present
+	  #we need test if it needs doing first?
+	  #we would need to test for the coord_systems outside of this loop
+	  #and then for each seq_region inside the loop if the coord_system is present
 
-	$self->log("_pre_storing seq_region info for slice:\t".$slice->name());
+    $self->log("_pre_storing seq_region info for slice:\t".$slice->name());
 
-	my $pseudo_feature = Bio::EnsEMBL::Funcgen::ProbeFeature->new
-	  (
-	   -slice => $slice,
-	   -start => 0,
-	   -end   => 0,
-	   -strand => 0,
-		);
-
-	$pf_adaptor->_pre_store($pseudo_feature);
-	#This will create a meta_coord entry of max_length 1 for features which have an absent meta_coord entry
-
+    $pf_adaptor->_pre_store(
+      Bio::EnsEMBL::Funcgen::ProbeFeature->new(-slice => $slice,
+                                               -start => 0,
+                                               -end   => 0,
+                                               -strand => 0     ) );
+	  #This will create a meta_coord entry of max_length 1 for features which have an absent meta_coord entry
   }
 
-
   $self->log("Finished validating seq_regions\n");
-
   return;
 }
-
-
 
 
 sub update_meta_coord{
   my ($self, @table_names) = @_;
 
-  my $species_id = $self->db->species_id;
-
   if($self->{'skip_meta_coord'}){
-	$self->log("Skipping meta_coord update\n");
-	return;
+    $self->log("Skipping meta_coord update\n");
+    return;
   }
-
 
   $self->log_header('Updating meta_coord table');
 
+  my $species_id           = $self->db->species_id;
 
   #set default table_name
   if(! @table_names || scalar(@table_names) == 0){
+	  #Can we do this via DBAdaptor and get all available adaptors 
+    #which are BaseFeatureAdaptors then grab the first table name
 
-	#Can we do this via DBAdaptor and get all available adaptors which are BaseFeatureAdaptors then grab the first table name
-
-	if(defined $self->{'meta_coord_tables'}){
-	  @table_names = @{$self->{'meta_coord_tables'}};
-	}
-	else{#default
-
-	  @table_names = qw(
-						regulatory_feature
-						probe_feature
-						external_feature
-						annotated_feature
-						result_feature
-						segmentation_feature
-					 );
-	}
+    if(defined $self->{'meta_coord_tables'}){
+      @table_names = @{$self->{'meta_coord_tables'}};
+    }
+    else{#default
+      @table_names = qw(
+			 regulatory_feature
+       probe_feature
+       external_feature
+       annotated_feature
+       mirna_target_feature
+       segmentation_feature
+      );
+    }
   }
 
   #backup meta coord
-  if(system($self->{'mysql_connect_string'}." -e 'SELECT * FROM meta_coord'"
-			. '> '.$self->{'dbname'}.'meta_coord.backup'
-		   ) != 0 ){
-
-	throw("Can't dump the original meta_coord for back up");#will this get copied to log?
-  }
-  else {
+  my $cmd = $self->{'mysql_connect_string'}.' -e "SELECT * FROM meta_coord" > '.$self->{'dbname'}.'meta_coord.backup';
+  run_system_cmd($cmd);
 	$self->log('Original meta_coord table backed up in '. $self->{'dbname'}.'.meta_coord.backup');
-  }
-
 
   #Update each max_length for table_name and coord_system
-
   my $sql;
 
   foreach my $table_name(@table_names){
+    $sql = 'select distinct(cs.name), mc.coord_system_id, cs.version, mc.max_length from '.
+    "coord_system cs, meta_coord mc where mc.table_name='$table_name' and ".
+    "mc.coord_system_id=cs.coord_system_id and cs.species_id = $species_id";
 
-	$sql = "select distinct(cs.name), mc.coord_system_id, cs.version, mc.max_length from coord_system cs, meta_coord mc where mc.table_name='$table_name' and mc.coord_system_id=cs.coord_system_id and cs.species_id = $species_id";
+    $self->log('');
+    $self->log("Updating meta_coord max_length for $table_name:");
+    $self->log("name\tcoord_system_id\tversion\tmax_length");
 
-	$self->log('');
-	$self->log("Updating meta_coord max_length for $table_name:");
-	$self->log("name\tcoord_system_id\tversion\tmax_length");
+  	#can we test for emtpy array here? Then skip delete.
+    my @info = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
+    map {$self->log(join("\t", @{$_}))} @info;
 
-	#can we test for emtpy array here? Then skip delete.
+  	# Clean old entries
+    $self->log("Deleting old meta_coord entries");
+    $sql = "DELETE mc FROM meta_coord mc, coord_system cs WHERE mc.table_name ='$table_name' and mc.coord_system_id = cs.coord_system_id and cs.species_id = $species_id";
+    $self->db->dbc->db_handle->do($sql);
 
-	my @info = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
+    # Generate new max_lengths
+    $self->log("Generating new max_lengths");
 
-	#log this
-	map {$self->log(join("\t", @{$_}))} @info;
+    #Is this query running for each redundant cs_id?
+    #would it be more efficient to retrieve the NR cs_ids first and loop the query for each cs_id?
+    #Can we get the dbID of the largest feature for ease of checking?
+    #This won't work as we're grouping by coord_system
+    #would need to select distinct coord_system_id for table first
+    #This may well slow down quite a bit doing it this way
 
-	# Clean old entries
-	$self->log("Deleting old meta_coord entries");
-	$sql = "DELETE mc FROM meta_coord mc, coord_system cs WHERE mc.table_name ='$table_name' and mc.coord_system_id = cs.coord_system_id and cs.species_id = $species_id";
-	$self->db->dbc->db_handle->do($sql);
+    $sql = 'select distinct s.coord_system_id from coord_system cs, seq_region s, '.
+     "$table_name t WHERE t.seq_region_id = s.seq_region_id and s.coord_system_id = ".
+     "cs.coord_system_id and cs.species_id = $species_id";
 
-	# Generate new max_lengths
-	$self->log("Generating new max_lengths");
+    my @cs_ids = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
+	  #Convert single element arrayrefs to scalars
+    map $_ = ${$_}[0], @cs_ids;
 
-	#Is this query running for each redundant cs_id?
-	#would it be more efficient to retrieve the NR cs_ids first and loop the query for each cs_id?
+    #This should probably fail if features are present but don't match any seq_region_ids in the seq_region_table
+    #i.e. they have been incorrectly imported directly into mysql
+    $self->log("New max_lengths for $table_name are:");
+    $self->log(join("\t", ('coord_system_id', 'max_length', 'longest record dbID')));
 
-	#Can we get the dbID of the largest feature for ease of checking?
-	#This won't work as we're grouping by coord_system
-	#would need to select distinct coord_system_id for table first
-	#This may well slow down quite a bit doing it this way
+    foreach my $cs_id(@cs_ids){
+      #This will always give a length of 1 even if there are no features present
+      my @cs_lengths;
 
-	$sql = "select distinct s.coord_system_id from coord_system cs, seq_region s, $table_name t ".
-    "WHERE t.seq_region_id = s.seq_region_id and s.coord_system_id = cs.coord_system_id and cs.species_id = $species_id";
-	my @cs_ids = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
-	#Convert single element arrayrefs to scalars
-	map $_ = ${$_}[0], @cs_ids;
+      #The probe_feature table is now too big to do this in one go
+      #We need to break this down into sr_ids
+      $sql = "SELECT distinct t.seq_region_id from $table_name t, seq_region sr ".
+       "where t.seq_region_id=sr.seq_region_id and sr.coord_system_id=$cs_id";
+      my @sr_ids = @{$self->db->dbc->db_handle->selectcol_arrayref($sql)};
 
+      #Get longest feature for all seq_regions
+      foreach my $sr_id(@sr_ids){
+        $sql = "SELECT (t.seq_region_end - t.seq_region_start + 1 ) as max, t.${table_name}_id ".
+         "FROM $table_name t WHERE t.seq_region_id = $sr_id ";
+        $sql .= ' and t.window_size=0' if $table_name eq 'result_feature';
+        $sql .= ' order by max desc limit 1';
 
-  #This should probably fail if features are present but don't match any seq_region_ids in the seq_region_table
-  #i.e. they have been incorrectly imported directly into mysql
+        #Problem here is that DBs without 0 wsize result_feture entries will not get a meta_coord entry
+        #We need to implement this in the _pre_store method too?
+        my ($cs_length, $table_id);
+        ($cs_length, $table_id) = $self->db->dbc->db_handle->selectrow_array($sql);
+        push @cs_lengths, [$cs_length, $table_id] if $cs_length;
+      }
 
-	$self->log("New max_lengths for $table_name are:");
-
-	$self->log(join("\t", ('coord_system_id', 'max_length', 'longest record dbID')));
-
-	foreach my $cs_id(@cs_ids){
-	  #This will always give a length of 1 even if there are no features present
-
-	  my @cs_lengths;
-
-	  #The probe_feature table is now too big to do this in one go
-	  #We need to break this down into sr_ids
-
-	  $sql = "SELECT distinct t.seq_region_id from $table_name t, seq_region sr where t.seq_region_id=sr.seq_region_id and sr.coord_system_id=$cs_id";
-
-	  my @sr_ids = @{$self->db->dbc->db_handle->selectcol_arrayref($sql)};
-
-
-	  #Get longest feature for all seq_regions
-	  foreach my $sr_id(@sr_ids){
-		$sql = "SELECT (t.seq_region_end - t.seq_region_start + 1 ) as max, t.${table_name}_id "
-		  . "FROM $table_name t "
-			. "WHERE t.seq_region_id = $sr_id ";
-		$sql .= ' and t.window_size=0' if $table_name eq 'result_feature';
-		$sql .= " order by max desc limit 1";
-
-
-		#Problem here is that DBs without 0 wsize result_feture entries will not get a meta_coord entry
-		#We need to implement this in the _pre_store method too?
-
-
-		my ($cs_length, $table_id);
-		($cs_length, $table_id) = $self->db->dbc->db_handle->selectrow_array($sql);
-		push @cs_lengths, [$cs_length, $table_id] if $cs_length;
-	  }
-
-
-	  if(@cs_lengths){
-		#This will now contain a list of arrays refs contain the max length and feature id for
-		#each seq_region in this coord_system
-		#Now sort to get the longest
-		#Can't sort on 2 day array in the normal way
-		#One list list lists, the comparatee is no longer a list but a reference
-		@cs_lengths = sort { $b->[0] <=> $a->[0] } @cs_lengths;
-		$self->log(join("\t\t", ($cs_id, @{$cs_lengths[0]})));
-		$sql = "INSERT INTO meta_coord values('${table_name}', $cs_id, ".$cs_lengths[0][0].')';
-		$self->db->dbc->db_handle->do($sql);
-	  }
-	}
+      if(@cs_lengths){
+        #This will now contain a list of arrays refs contain the max length and feature id for
+		    #each seq_region in this coord_system. Now sort to get the longest
+		    #Can't sort on 2 day array in the normal way
+		    #One list list lists, the comparatee is no longer a list but a reference
+        @cs_lengths = sort { $b->[0] <=> $a->[0] } @cs_lengths;
+        $self->log(join("\t\t", ($cs_id, @{$cs_lengths[0]})));
+        $sql = "INSERT INTO meta_coord values('${table_name}', $cs_id, ".$cs_lengths[0][0].')';
+        $self->db->dbc->db_handle->do($sql);
+      }
+    }
   }
 
   $self->log("Finished updating meta_coord max_lengths\n");
-
   return;
 }
 
 
-#change this to check_meta_species_version
-
 sub check_meta_species_version{
-  my ($self) = @_;
+  my $self = shift;
 
   $self->log_header('Checking meta species.production_name and schema_version against dbname');
 
@@ -445,24 +391,23 @@ sub check_meta_species_version{
   my $schema_version = $mc->list_value_by_key('schema_version')->[0];
 
   if(! defined $schema_version){
-	$self->report_fail("No meta schema_version defined");
+    $self->report_fail("No meta schema_version defined");
   }
   elsif($dbname !~ /funcgen_${schema_version}_/){
-	$self->report_fail("Meta schema_version ($schema_version) does not match the dbname ($dbname).");
+    $self->report_fail("Meta schema_version ($schema_version) does not match the dbname ($dbname).");
   }
-
 
   my @latin_names = @{$mc->list_value_by_key('species.production_name')};
 
   if(scalar(@latin_names) > 1){
-	$self->report_fail("Found more than one species.production_name in meta:\t".join(", ", @latin_names));
+    $self->report_fail("Found more than one species.production_name in meta:\t".join(", ", @latin_names));
   }
   elsif(scalar(@latin_names) == 1 && ($latin_names[0] ne $dbname_species)){
-	$self->report_fail("Found mismatch between meta species.production_name and dbname:\t".$latin_names[0]." vs $dbname_species");
+    $self->report_fail("Found mismatch between meta species.production_name and dbname:\t".$latin_names[0]." vs $dbname_species");
   }
   elsif(scalar(@latin_names) == 0){
-	$self->report("WARNING:\tFound no meta species.production_name setting as:\t$dbname_species");
-	$self->db->dbc->db_handle->do("INSERT into meta(species_id, meta_key, meta_value) values(1, 'species.production_name', '$dbname_species')");
+    $self->report("WARNING:\tFound no meta species.production_name setting as:\t$dbname_species");
+    $self->db->dbc->db_handle->do("INSERT into meta(species_id, meta_key, meta_value) values(1, 'species.production_name', '$dbname_species')");
   }
   #else is okay
 
@@ -475,13 +420,9 @@ sub check_meta_species_version{
 #Using same code used by build_reg_feats!
 
 sub check_regbuild_strings{
-  my ($self) = @_;
-
-  #Removed $update arg as we would always want to do this manually
-
+  my $self = shift;
   $self->log_header('Checking regbuild strings');
   my $species_id = $self->db->species_id;
-
 
   my @regf_fsets;
   my $passed = 1;
@@ -496,185 +437,153 @@ sub check_regbuild_strings{
     $self->report('WARNING:check_regbuild_strings found no regulatory FeatureSets (fine if '.$self->db->species.' your species does not have a regulatory build');
   }
   else{
-
     warn "Need to check/update regbuild.version and regbuild.initial_release_date regbuild.last_annotation_update";
+    #How do we validate this?
+    #Check all feature_sets exist
+    #Pull back some features from a test slice and check the number of bits match.
+    #Check the feature_type string exists and matches else create.
 
 
-	#How do we validate this?
-	#Check all feature_sets exist
-	#Pull back some features from a test slice and check the number of bits match.
-	#Check the feature_type string exists and matches else create.
+    foreach my $fset(@regf_fsets){
+      $self->log_header("Validating regbuild_string entries for FeatureSets:\t".$fset->name);
+  	  #Fail for old versions as we want to remove these
 
-
-	foreach my $fset(@regf_fsets){
-	  $self->log_header("Validating regbuild_string entries for FeatureSets:\t".$fset->name);
-
-	  #Fail for old versions as we want to remove these
-	  if( $fset->name =~ /_v[0-9]+$/){
-		$self->report_fail("".$fset->name." is an old RegulatoryFeature set, please remove!");
-		next;
-	  }
-
-	  my $cell_type = (defined $fset->cell_type) ? $fset->cell_type->name : 'core';
-
-	  #This has been lifted from build_regulatory_features.pl store_regbuild_strings
-	  #Need to move this to a RegulatoryBuilder module
-	  my $dset = $self->db->get_DataSetAdaptor->fetch_by_product_FeatureSet($fset);
-
-    if(! defined $dset){
-      throw("Could not find DataSet associated with FeatureSet:\t".$fset->name);
-    }
-
-	  my @ssets = @{$dset->get_supporting_sets};
-
-	  if(! @ssets){
-      throw('You must provide a DataSet with associated supporting sets');
-	  }
-
-
-
-	  my %reg_strings =
-		(
-		 "regbuild.${cell_type}.feature_set_ids" => join(',', map {
-		   $_->dbID} sort {$a->name cmp $b->name
-						 } @ssets),
-
-		 "regbuild.${cell_type}.feature_type_ids" => join(',', map {
-		   $_->feature_type->dbID} sort {$a->name cmp $b->name
-									   } @ssets),
-		);
-
-	  my @ffset_ids;
-
-	  #Skip this now as we use the ftype classes for defining the focus sets
-	  #foreach my $fset(@ssets){
-
-
-	#	#This might fail if soem TFs haven't been included as focus i.e. are part of PolII/III
-	#	#e.g. TFIIIC-110
-##
-#		if( ($fset->feature_type->class eq 'Transcription Factor') ||
-#			($fset->feature_type->class eq 'Open Chromatin') ){
-#		  push @ffset_ids, $fset->dbID;
-#		}
-#	  }
-
-
-	  my ($sql, %db_reg_string);
-
-	  foreach my $string_key(keys %reg_strings){
-      my ($string)= $self->db->dbc->db_handle->selectrow_array("select string from regbuild_string where name='${string_key}' and species_id=$species_id");
-
-      if (! defined $string) {
-        $sql = "insert into regbuild_string (species_id, name, string) values ($species_id, '${string_key}', '$reg_strings{${string_key}}');";
-
-        $self->report("WARNING:\tInserting absent $string_key into regbuild_string table");
-        eval { $self->db->dbc->do($sql) };
-        die("Couldn't store $string_key in regbuild_string table\n$sql\n$@") if $@;
+      if( $fset->name =~ /_v[0-9]+$/){
+        $self->report_fail("".$fset->name." is an old RegulatoryFeature set, please remove!");
+        next;
       }
-      elsif ($string ne $reg_strings{$string_key}){
-        $sql = "update regbuild_string set string='".$reg_strings{$string_key}."' where name='${string_key}';";
 
-        if($self->fix){
-          $self->report("WARNING:\tUpdating mismatched $string_key found in regbuild_string table:\t${string}");#\tUpdate using:\t$sql");
+      my $cell_type = (defined $fset->cell_type) ? $fset->cell_type->name : 'core';
+
+      #This has been lifted from build_regulatory_features.pl store_regbuild_strings
+      #Need to move this to a RegulatoryBuilder module
+      my $dset = $self->db->get_DataSetAdaptor->fetch_by_product_FeatureSet($fset);
+
+      if(! defined $dset){
+        throw("Could not find DataSet associated with FeatureSet:\t".$fset->name);
+      }
+
+      my @ssets = @{$dset->get_supporting_sets};
+
+      if(! @ssets){
+        throw('You must provide a DataSet with associated supporting sets');
+      }
+
+
+      my %reg_strings =
+       ("regbuild.${cell_type}.feature_set_ids" => 
+         join(',', map { $_->dbID} sort {$a->name cmp $b->name} @ssets),
+
+        "regbuild.${cell_type}.feature_type_ids" => 
+         join(',', map { $_->feature_type->dbID} sort {$a->name cmp $b->name} @ssets),
+       );
+
+
+      my ($sql, %db_reg_string);
+
+      foreach my $string_key(keys %reg_strings){
+        my ($string)= $self->db->dbc->db_handle->selectrow_array("select string from regbuild_string where name='${string_key}' and species_id=$species_id");
+
+        if (! defined $string) {
+          $sql = "insert into regbuild_string (species_id, name, string) values ($species_id, '${string_key}', '$reg_strings{${string_key}}');";
+
+          $self->report("WARNING:\tInserting absent $string_key into regbuild_string table");
           eval { $self->db->dbc->do($sql) };
-          die("Couldn't update $string_key in regbuild_string table\n$sql\n$@") if $@;
+          die("Couldn't store $string_key in regbuild_string table\n$sql\n$@") if $@;
+        }
+        elsif ($string ne $reg_strings{$string_key}){
+          $sql = "update regbuild_string set string='".$reg_strings{$string_key}."' where name='${string_key}';";
 
+          if($self->fix){
+            $self->report("WARNING:\tUpdating mismatched $string_key found in regbuild_string table:\t${string}");#\tUpdate using:\t$sql");
+            eval { $self->db->dbc->do($sql) };
+            die("Couldn't update $string_key in regbuild_string table\n$sql\n$@") if $@;
+          }
+          else{
+            $self->report_fail("Mismatched $string_key found in regbuild_string table:\t${string}\n\tUpdate using:\t$sql");
+          }
+        }
+
+        $db_reg_string{$string_key} = $string;
+      }
+
+
+      #Now need to tidy this block wrt new code added above
+      my $fset_string_key  = "regbuild.${cell_type}.feature_set_ids";
+      my $ftype_string_key = "regbuild.${cell_type}.feature_type_ids";
+      my $fset_string  = $db_reg_string{$fset_string_key};
+      my $ftype_string = $db_reg_string{$ftype_string_key};
+
+      if(! ($fset_string && $ftype_string)){
+        $self->report_fail("Skipping fset vs ftype string test for $cell_type")
+      }
+      else{		#This is now effectively handled by the loop above
+        $self->log("Validating :\t$fset_string_key vs $ftype_string_key");
+        my @fset_ids  = split/,/, $fset_string;
+        my @ftype_ids = split/,/, $ftype_string;
+        my @new_ftype_ids;
+        my $ftype_fail = 0;
+
+        #Now need to work backwards through ftypes to remove pseudo ftypes before validating
+        #New string should be A,A,A;S,S,S,S,S,S;P,P,P
+        #Where A is and Anchor/Seed set
+        #S is a supporting set
+        #P is a pseudo feature type e.g. TSS proximal
+
+        if(scalar(@fset_ids) != scalar(@ftype_ids)){
+          $self->report_fail("Length mismatch between:\n\t$fset_string_key(".scalar(@fset_ids).")\t$fset_string\n\tAND\n\t$ftype_string_key(".scalar(@ftype_ids).")\t$ftype_string");
+        }
+
+        foreach my $i(0..$#fset_ids){
+          my $supporting_set_id = $fset_ids[$i];
+          my $sset = $fset_a->fetch_by_dbID($supporting_set_id);
+
+          if(! defined $sset){
+            $self->report_fail("$fset_string_key $supporting_set_id does not exist in the DB");
+          }
+          else{ #test/build ftype string
+
+            if(defined $ftype_string){
+
+              if($sset->feature_type->dbID != $ftype_ids[$i]){
+                $ftype_fail = 1;
+                $self->report_fail("$fset_string_key $supporting_set_id(".$sset->name.") FeatureType(".$sset->feature_type->name.") does not match $ftype_string_key $ftype_ids[$i]");
+              }
+            }
+
+            push @new_ftype_ids, $sset->feature_type->dbID;
+          }
+        }
+
+        #Set ftype_string
+        #This will not account for pseudo ftypes?  Remove!!!?
+        my $new_ftype_string = join(',', @new_ftype_ids);
+
+        if(! defined $ftype_string){
+          $self->log("Updating $ftype_string_key to:\t$new_ftype_string");
+          $self->db->dbc->db_handle->do("INSERT into regbuild_string(species_id, name, string) values($species_id, '$ftype_string_key', '$new_ftype_string')");
+        }
+        elsif($ftype_fail){
+          $self->report_fail("$ftype_string_key($ftype_string) does not match $fset_string_key types($new_ftype_string)");
+        }
+
+        #Finally validate versus a reg feat
+        #Need to change this to ftype string rather than fset string?
+        my $id_row_ref = $self->db->dbc->db_handle->selectrow_arrayref('select regulatory_feature_id from regulatory_feature where feature_set_id='.$fset->dbID.' limit 1');
+        
+        if(! defined $id_row_ref){
+          $self->report_fail("No RegulatoryFeatures found for FeatureSet ".$fset->name);
         }
         else{
-          $self->report_fail("Mismatched $string_key found in regbuild_string table:\t${string}\n\tUpdate using:\t$sql");
+          my ($regf_dbID) = @$id_row_ref;
+          my $rf_string = $regf_a->fetch_by_dbID($regf_dbID)->binary_string;
+          
+          if(length($rf_string) != scalar(@fset_ids)){
+            $self->report_fail("Regulatory string length mismatch between RegulatoryFeature($regf_dbID) and $fset_string_key:\n$rf_string(".length($rf_string).")\n$fset_string(".scalar(@fset_ids).")");
+          }
         }
       }
-
-      $db_reg_string{$string_key} = $string;
-	  }
-
-
-	  #Now need to tidy this block wrt new code added above
-	  my $fset_string_key  = "regbuild.${cell_type}.feature_set_ids";
-	  my $ftype_string_key = "regbuild.${cell_type}.feature_type_ids";
-	  my $fset_string  = $db_reg_string{$fset_string_key};
-	  my $ftype_string = $db_reg_string{$ftype_string_key};
-
-	  if(! ($fset_string && $ftype_string)){
-      $self->report_fail("Skipping fset vs ftype string test for $cell_type")
-	  }
-	  else{
-
-		#This is now effectively handled by the loop above
-
-		$self->log("Validating :\t$fset_string_key vs $ftype_string_key");
-
-		my @fset_ids  = split/,/, $fset_string;
-		my @ftype_ids = split/,/, $ftype_string;
-		my @new_ftype_ids;
-		my $ftype_fail = 0;
-
-		#Now need to work backwards through ftypes to remove pseudo ftypes before validating
-		#New string should be A,A,A;S,S,S,S,S,S;P,P,P
-		#Where A is and Anchor/Seed set
-		#S is a supporting set
-		#P is a pseudo feature type e.g. TSS proximal
-
-
-		if(scalar(@fset_ids) != scalar(@ftype_ids)){
-		  $self->report_fail("Length mismatch between:\n\t$fset_string_key(".scalar(@fset_ids).")\t$fset_string\n\tAND\n\t$ftype_string_key(".scalar(@ftype_ids).")\t$ftype_string");
-		}
-
-		foreach my $i(0..$#fset_ids){
-		  my $supporting_set_id = $fset_ids[$i];
-		  my $sset = $fset_a->fetch_by_dbID($supporting_set_id);
-
-		  if(! defined $sset){
-        $self->report_fail("$fset_string_key $supporting_set_id does not exist in the DB");
-		  }
-		  else{
-			#test/build ftype string
-
-			if(defined $ftype_string){
-
-			  if($sset->feature_type->dbID != $ftype_ids[$i]){
-				$ftype_fail = 1;
-				$self->report_fail("$fset_string_key $supporting_set_id(".$sset->name.") FeatureType(".$sset->feature_type->name.") does not match $ftype_string_key $ftype_ids[$i]");
-			  }
-			}
-
-			push @new_ftype_ids, $sset->feature_type->dbID;
-
-		  }
-		}
-
-
-		#Set ftype_string
-		#This will not account for pseudo ftypes?  Remove!!!?
-		my $new_ftype_string = join(',', @new_ftype_ids);
-
-		if(! defined $ftype_string){
-		  $self->log("Updating $ftype_string_key to:\t$new_ftype_string");
-		  $self->db->dbc->db_handle->do("INSERT into regbuild_string(species_id, name, string) values($species_id, '$ftype_string_key', '$new_ftype_string')");
     }
-		elsif($ftype_fail){
-		  $self->report_fail("$ftype_string_key($ftype_string) does not match $fset_string_key types($new_ftype_string)");
-		}
-
-
-		#Finally validate versus a reg feat
-		#Need to change this to ftype string rather than fset string?
-		my $id_row_ref = $self->db->dbc->db_handle->selectrow_arrayref('select regulatory_feature_id from regulatory_feature where feature_set_id='.$fset->dbID.' limit 1');
-
-		if(! defined $id_row_ref){
-		  $self->report_fail("No RegulatoryFeatures found for FeatureSet ".$fset->name);
-		}
-		else{
-		  my ($regf_dbID) = @$id_row_ref;
-		  my $rf_string = $regf_a->fetch_by_dbID($regf_dbID)->binary_string;
-
-		  if(length($rf_string) != scalar(@fset_ids)){
-			$self->report_fail("Regulatory string length mismatch between RegulatoryFeature($regf_dbID) and $fset_string_key:\n$rf_string(".length($rf_string).")\n$fset_string(".scalar(@fset_ids).")");
-		  }
-		}
-	  }
-	}
   }
 
   return;
