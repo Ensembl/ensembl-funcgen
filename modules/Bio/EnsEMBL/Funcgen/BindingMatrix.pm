@@ -278,19 +278,21 @@ sub frequencies_revcomp {
   Arg [2]    : (optional) boolean - 1 if results are to be in linear scale (default is log scale)
   Example    : $matrix->relative_affinity($sequence);
   Description: Calculates the binding affinity of a given sequence
-	relative to the optimal site for the matrix
-	The site is taken as if it were in the proper orientation
-        Considers a purely random background p(A)=p(C)=p(G)=p(T)
+	             relative to the optimal site for the matrix
+	             The site is taken as if it were in the proper orientation
+               Considers a purely random background p(A)=p(C)=p(G)=p(T)
   Returntype : double
   Exceptions : Throws if the sequence length does not have the matrix length
-  or if the sequence has unclear bases (N is not accepted)
+               or if the sequence has unclear bases (N is not accepted)
   Caller     : General
   Status     : At Risk
 
 =cut
 
 sub relative_affinity {
-  my ($self, $sequence, $linear) = (shift, shift, shift);
+  my $self     = shift;
+  my $sequence = shift;
+  my $linear   = shift;
   $sequence =~ s/^\s+//;
   $sequence =~ s/\s+$//;
   
@@ -308,6 +310,7 @@ sub relative_affinity {
   
   my $log_odds = 0;
   my @bases = split(//,$sequence);
+
   for(my $i=0;$i<$matrix_length;$i++){
     $log_odds += $weight_matrix->{$bases[$i]}->[$i];	
   }
