@@ -65,6 +65,8 @@ package Bio::EnsEMBL::Funcgen::MotifFeature;
 
 use strict;
 use warnings;
+
+use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 
@@ -108,22 +110,16 @@ use base qw(Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable);
 
 sub new {
   my $caller = shift;
-	
-  my $class = ref($caller) || $caller;
-  my $self = $class->SUPER::new(@_);
-  my $bmatrix;
-  ($self->{score}, $bmatrix,   $self->{display_label}, $self->{interdb_stable_id}) 
+  my $class  = ref($caller) || $caller;
+  my $self   = $class->SUPER::new(@_);
+  
+  ($self->{score}, $self->{binding_matrix}, $self->{display_label}, $self->{interdb_stable_id}) 
    = rearrange(['SCORE', 'BINDING_MATRIX', 'DISPLAY_LABEL', 'INTERDB_STABLE_ID'], @_);
     
-
-  if(! (ref($bmatrix) && $bmatrix->isa('Bio::EnsEMBL::Funcgen::BindingMatrix'))){
-	throw('You must pass be a valid Bio::EnsEMBL::Funcgen::BindingMatrix');
-  }
-
-  $self->{binding_matrix} = $bmatrix;
-
+  assert_ref($self->binding_matrix, 'Bio::EnsEMBL::Funcgen::BindingMatrix');
   return $self;
 }
+
 
 =head2 new_fast
 
@@ -138,9 +134,7 @@ sub new {
 
 =cut
 
-sub new_fast {
-  return bless ($_[1], $_[0]);
-}
+sub new_fast { return bless ($_[1], $_[0]); }
 
 
 =head2 binding_matrix
@@ -154,9 +148,7 @@ sub new_fast {
 
 =cut
 
-sub binding_matrix{
-  return shift->{binding_matrix};
-}
+sub binding_matrix{ return shift->{binding_matrix}; }
 
 =head2 feature_type
 
@@ -169,10 +161,7 @@ sub binding_matrix{
 
 =cut
 
-
-sub feature_type{
-  return shift->{binding_matrix}->feature_type;
-}
+sub feature_type{ return shift->{binding_matrix}->feature_type; }
 
 
 =head2 score
@@ -186,9 +175,7 @@ sub feature_type{
 
 =cut
 
-sub score {
-  return shift->{score};
-}
+sub score { return shift->{score}; }
 
 
 =head2 display_label
