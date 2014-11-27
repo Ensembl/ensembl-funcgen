@@ -159,9 +159,6 @@ $sbuild = pop @$sbuild;
 #Does bed tools make any special accomodation of the half-open
 #format. So Ensembl coords may show as non overlapping if they overlap by just 1?
 
-#Test this!
-
-#New query
 $sql = 'select sr.name, (af.seq_region_start - 1), af.seq_region_end, fs.name, af.score, af.seq_region_strand '.
   'from annotated_feature af, feature_set fs, seq_region sr, feature_type ft '.
   'where ft.class in(\'Transcription Factor\', \'Insulator\', \'Transcription Factor Complex\') '.
@@ -205,26 +202,34 @@ randomise_bed_file(-input_bed         => $peaks_file,
                    -fasta_header_file => $genome_descriptor_file,
                    -output_bed        => $mock_file              );
 
+#Do we need -f 1 here?
+#Can we be less stringent when defining the threshold, but still use
+#-f 1 when importing?
+
 #Real peaks are pre-sorted
 my $real_olaps_file = $tf."_real_peaks_$mat".".olaps.bed";
-$cmd = "bedtools intersect -sorted -wa -wb -a $peaks_file -b $mapping_file > $real_olaps_file";
+$cmd = "bedtools intersect -sorted -f 1 -wa -wb -a $mapping_file -b $peaks_file> $real_olaps_file";
 run_system_cmd($cmd);
 
 my $mock_olaps_file = $tf."_mock_peaks_$mat".".olaps.bed";
-$cmd = "bedtools intersect -sorted -wa -wb -a $mock_file -b $mapping_file > $mock_olaps_file";
+$cmd = "bedtools intersect -sorted -f 1 -wa -wb -a $mapping_file -b $mock_file > $mock_olaps_file";
 run_system_cmd($cmd);
 
 #Here, need to handle format difference
 #Cut the score, this appear to be cutting the strand, but there was an empty field
 #-u was is redundant here?
-my $max = run_backtick_cmd("cut -f 8 $real_olaps_file | sort -g | tail -1");
+my $max = run_backtick_cmd("cut -f 5 $real_olaps_file | sort -g | tail -1");
+
+
+warn "max is $max";
 
 #New format
 #my $max = run_backtick_cmd("cut -f 11 $real_olaps_file | sort -g -u | tail -1");
-chop $max;
-my $n_peaks = run_backtick_cmd("wc -l $peaks_file");
-chop $n_peaks;
+#chop $max;
+my $n_peaks = run_backtick_cmd("wc -l $peaks_file | awk '{print \$1}'");
+#chop $n_peaks;
 
+#warn "Num peaks is $n_peaks";
 
 #FIND_THRESH:
 
@@ -234,9 +239,11 @@ $verbose = 3;
 my @mappings; # array of arrays of chr,start,end,log odds score
 
 while(my $line = <$ifh>){
-  chop $line;
+  chomp $line;
   my @field = split("\t",$line);
-  push @mappings, [@field[0..2], $field[7]];
+  #mock_sr, mock_start, mock_end, mf_start? No, this should be score?
+  #push @mappings, [@field[0..2], $field[7]];
+  push @mappings, [@field[6..8], $field[4]];
 }
 
 close($ifh);
@@ -254,7 +261,7 @@ my ($perc_of_max_thresh, $score_thresh) =
 #Can we write direct to binding_matrix.threshold?
 
 
-$sql = 'UPDATE binding_matrix set threshold='.$score_thresh.' where name="'.$mat.'"';
+$sql = "UPDATE binding_matrix set threshold=${score_thresh} where name='${mat}'";
 $dbh->do($sql);
 
 my $thresh_string = "$mat\t$tf\t$perc_of_max_thresh\t$score_thresh";
@@ -275,7 +282,7 @@ run_system_cmd("rm -f $peaks_file $mock_file $mock_olaps_file $real_olaps_file")
 
 exit;
 
-
+#This is no longer used?
  
 ###################################################################
 # $max is the max log odds score for the factor's PWM
@@ -315,7 +322,7 @@ sub mock_perc_score_thresh{
     print "$peak_count >= $max_allowed\n";
     
     if($peak_count >= $max_allowed){
-      print "CALCULATING FINAL THRESH $perc $max_allowed $peak_count ".$peak_count *100/$n_peaks." $thresh\n" if $verbose >1 ;
+      print "CALCULATING FINAL TRESH $perc $max_allowed $peak_count ".$peak_count *100/$n_peaks." $thresh\n" if $verbose >1 ;
 	    
       if($peak_count *100/$n_peaks > $perc_thresh+1){
         $perc  += $decr;
@@ -342,33 +349,22 @@ sub mock_perc_score_thresh{
 sub identify_background_threshold{
   my ($aaref, $n_peaks, $perc_thresh, $max) = @_;
   my $max_allowed = $n_peaks * $perc_thresh /100;
-  #my $decr        = 0.1;
   my $decr = 5;
  
-  #Holy chao! This was a 1000 iterations!
-  #let's be a bit more clever about this, and either do it binary chop style
-  #or at least do initial larger decrements?
-  #current percentages are showing anywhere between 33 and 100%
-  #are the 100% pfms really meeting the 5% background?
-
   THRESH: for(my $perc=100; $perc>0; $perc -= $decr){
-    print "Filtering at percentage:\t$perc\n" if $verbose >2;
-    my $thresh = $max * $perc/100;
-    #my %peaks;
-    my $prev_peak = '';
+    my $thresh     = $max * $perc/100;
+    print "Filtering at percentage:\t$thresh(${perc}% of max score $max)\n" if $verbose >2;
+    my $prev_peak  = '';
     my $peak_count = 0;
 
     foreach my $aref (@$aaref){
 
       if($aref->[3] >= $thresh){
         my $peak = join('~', ($aref->[0],$aref->[1],$aref->[2]) );
-        #     print $peak." ".$aref->[3]." $thresh\n";
-        #$peaks{$peak}++;
         #These are not NR peaks, as we get get a peak union
         #for each MF overlap
         #we could easily change this to a count by comparing to the previous key
-        
-        
+           
         if($peak ne $prev_peak){
           $peak_count++;
           $prev_peak = $peak;  
@@ -376,12 +372,8 @@ sub identify_background_threshold{
       }
     }
 
-    #my $peak_count = scalar(keys(%peaks));
     #print STDERR "$perc $max_allowed $peak_count ".$peak_count *100/$n_peaks." $thresh\n" if $verbose >2;
-    
-    
-    #warn "$peak_count >= $max_allowed";
-    
+
     if($peak_count >= $max_allowed){
       
       if(($decr != 0.1) && $perc != 100){
@@ -394,7 +386,7 @@ sub identify_background_threshold{
          
       print "CALCULATING FINAL TRESH $perc $max_allowed $peak_count ".$peak_count *100/$n_peaks." $thresh\n" if $verbose >1 ;
 
-      if($peak_count *100/$n_peaks > $perc_thresh+1){
+      if((($peak_count * 100) / $n_peaks) > ($perc_thresh + 1)){
         $perc  += $decr;
         $perc   = ($perc > 100) ? 100 : $perc;
         $thresh = $max * $perc/100;
