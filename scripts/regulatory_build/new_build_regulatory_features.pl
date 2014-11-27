@@ -1642,7 +1642,7 @@ sub function_definition {
   my $cutoff = $options->{cutoffs}->{$segmentation->{name}}->{$function};
   my @summaries = ();
   foreach my $state (keys %$hash) {
-    push @summaries, "scale ".(1/$hash->{$state})." options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw";
+    push @summaries, "scale ".(1/$hash->{$state})." $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw";
   }
   if (scalar @summaries > 0) {
     return " gt $cutoff sum " . join(" ", @summaries);
