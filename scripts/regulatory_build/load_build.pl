@@ -84,9 +84,9 @@ sub main {
   print "Getting feature types\n";
   my $feature_type = get_feature_types($db);
   print "Counting active features\n";
-  my $count_hash = compute_counts($base_dir);
+  my $count_hash = compute_counts($options->{base_dir});
   print "Creating regulatory_feature table\n";
-  compute_regulatory_features($options, $feature_set, $feature_type, $stable_id, $count_hash, $seq_region_id);
+  compute_regulatory_features($options, $feature_set, $feature_type, $stable_id, $count_hash, $slice);
   print "Creating regulatory_annotation table\n";
   compute_regulatory_annotations($options);
 }
@@ -104,14 +104,11 @@ sub get_options {
     "host|h=s",
     "user|u=s",
     "dbname|d=s",
-    "dnadb_pass|p=s",
-    "dnadb_port=s",
-    "dnadb_host|H=s",
-    "dnadb_user|U=s",
-    "dnadb_name|D=s",
   ) or pod2usage( -exitval => 1);
-  defined $base_dir || die ("You must define the base directory!\t--base_dir XXXX\n");
-  defined $stable_id_filename || die ("You must define the stable ID mapping file\t--stable XXX\n");
+  defined $options{base_dir} || die ("You must define the base directory!\t--base_dir XXXX\n");
+  defined $options{host} || die ("You must define the destination host!\t--base_dir XXXX\n");
+  defined $options{user} || die ("You must define the user login!\t--base_dir XXXX\n");
+  defined $options{dbname} || die ("You must define the database name!\t--base_dir XXXX\n");
   return \%options;
 }
 
@@ -140,7 +137,7 @@ sub connect_db {
   $db->dbc->db_handle;
   $db->dnadb->dbc->db_handle;
   if(! defined $db->species){
-    die("Could not get a valid species from $dbname, please check the meta species.production_name");
+    die("Could not get a valid species from $options->{dbname}, please check the meta species.production_name");
   }
 
   return $db;
@@ -230,7 +227,7 @@ sub get_stable_id {
   my ($fh, $new) = tempfile();
   close $fh;
 
-  run("bigBedToBed $base_dir/overview/RegBuild.bb $new");
+  run("bigBedToBed $options->{base_dir}/overview/RegBuild.bb $new");
   my ($overlaps, $max_id) = get_overlaps_between_files($old, $new);
 
 # Go through overlaos in order of increasing overlap length. This means that you should always 
@@ -608,7 +605,7 @@ sub get_feature_types {
   for my $label (('ctcf','distal','proximal','tss','tfbs','open')) {
     $feature_type->{$label} = $fta->fetch_by_name($long_name{$label});
 
-    if (! defined $feature_type{$label}) {
+    if (! defined $feature_type->{$label}) {
       my $ft = Bio::EnsEMBL::Funcgen::FeatureType->new(
 	-name => $long_name{$label},
 	-class => 'Regulatory Feature',
@@ -639,7 +636,7 @@ sub get_feature_types {
 #####################################################
 
 sub compute_regulatory_features {
-  my ($options, $feature_set, $feature_type, $stable_id, $count_hash, $seq_region_ids) = @_;
+  my ($options, $feature_set, $feature_type, $stable_id, $count_hash, $slice) = @_;
   foreach my $cell_type (keys %{$feature_set}) {
     load_celltype_build($options->{base_dir}, $feature_set->{$cell_type}, $stable_id, $count_hash, $slice, $cell_type, $feature_type);
   }
@@ -678,7 +675,7 @@ sub process_file {
     exists $feature_type->{$feature_type_str} || die("Could not find feature type for $feature_type\n".join("\t", keys %{$feature_type})."\n");
     exists $slice->{$chrom} || die("Could not find slice type for $chrom\n".join("\t", keys %{$slice})."\n");
     exists $stable_id->{$number} || die("Could not find stable ID for feature # $number\n");
-    exists $count->{$number} || die("Could not find count for feature # $number\n");
+    exists $count_hash->{$number} || die("Could not find count for feature # $number\n");
 
     push @features, Bio::EnsEMBL::Funcgen::RegulatoryFeature->new(
       -SLICE => $slice->{$chrom};
