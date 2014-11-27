@@ -2613,23 +2613,13 @@ sub randomise_bed_file{
       next;
     }
     
-    my $new_end = 0;
-    my $tries   = 0;
-
-    while($new_end < $len){ # should also consider chrom start coord here
-      $new_end = int(rand($chrom{$sr_name}->{max}));
-      $tries ++;
-    
-      if($tries > 1000){
-        throw("Data problem :\n".
-          "max for ".$sr_name." = ".$chrom{$sr_name}->{max}."\n".
-          join("\t", ($sr_name, $start, $end, $id, '.', $strand))." len = $len");
-      }
-    }
-
-    my $new_start = $new_end - $len;
+    my $new_start = int(rand($chrom{$sr_name}->{max} - $len +1));
+    # +1 as we want to use 0 to iradicate the int rounding bias towards 0
+    # if we get 0, then we set it to the under-represented max
+    $new_start  ||= $chrom{$sr_name}->{max} - $len + 1;
+    $new_start--; #Make 1/2 open
+    my $new_end   = $new_start + $len;
     $strand = '.' if ! defined $strand; #Avoid undef warnings 
-    # +1; #Now assumes bed standard 0 based coords
     #Buffer here!
     $wrote++;
     print $ofh join("\t", ($sr_name, $new_start, $new_end, '.', '.', $strand))."\n";
