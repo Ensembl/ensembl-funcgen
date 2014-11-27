@@ -159,40 +159,46 @@ my $efgdb = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
 # Test connection
 $efgdb->dbc->db_handle;
 
-opendir(DIR,$workdir);
-my @files = readdir(DIR) || throw("Could not readdir:\t$workdir");
+opendir(DIR,$workdir) || throw("Could not opendir:\t$workdir");
+my @files = readdir(DIR); 
 closedir DIR;
 
 my $first = 1; #For omitting -job_topup
-
-my $bma = $efgdb->get_BindingMatrixAdaptor();
-
+my $bma   = $efgdb->get_BindingMatrixAdaptor;
 
 foreach my $file (@files){  
 
   next if $file !~ /^(.*)\.filtered\.bed$/;
   my $matrix = $1;
   print "Matrix: ".$matrix."\n";
-
   my @bms = @{ $bma->fetch_all_by_name($matrix) };
-  if(scalar(@bms)==0) { warn $matrix." does not exist - ignoring"; next; }
-  if(scalar(@bms)>1) { warn "More than onw matrix with name ".$matrix." - ignoring"; next; }
 
-  my $bm = $bms[0];
+  if(scalar(@bms) != 1){ 
+    die("Failed to find unique matrix with name $matrix.".
+      "(Probably because it is present in two sources/analyses)") 
+  }
 
+  my $bm     = $bms[0];
   my $mf_sql =  "motif_feature where binding_matrix_id=".$bm->dbID;
+
   if(scalar(@slices)>0){
     warn "Restricting to requested ".scalar(@slices)." slices";
     $mf_sql = $mf_sql." and seq_region_id in (select seq_region_id from seq_region where name in ('".join("','",@slices)."'))";
   }
 
-  warn "Deleting previous data for $matrix with matrix id ".$bm->dbID." - this will likely imply that a new regulatory build is needed";
-  $efgdb->dbc->do("delete from associated_motif_feature where motif_feature_id in (select motif_feature_id from ".$mf_sql." )");
-  $efgdb->dbc->do("delete from ".$mf_sql);
+
+  my $sql = "delete from associated_motif_feature where motif_feature_id in (select motif_feature_id from $mf_sql )";
+  warn "Deleting $matrix data(".$bm->dbID.") - regulatory_attribute/associated_motif_feature records will need regenerating\n";
+  #warn $sql;
+  $efgdb->dbc->do($sql);
+  
+  $sql = "delete from $mf_sql";
+  #warn $sql;
+  $efgdb->dbc->do($sql);
 
   my $cmd="init_pipeline.pl Bio::EnsEMBL::Funcgen::HiveConfig::ImportMotifFeatures_conf -dnadb_host $dnadb_host -dnadb_port $dnadb_port -dnadb_user $dnadb_user -dnadb_name $dnadb_name -host $host -port $port -user $user -pass $pass -dbname $dbname -output_dir $output_dir -efg_src $ENV{SRC}/ensembl-funcgen/ -file ${workdir}/${file} -matrix $matrix ".
    (scalar(@slices)>0 ? " -slices ".join(",",@slices) : "")." ".($first ? '' : " -job_topup");
-  print $cmd."\n";
+  #print $cmd."\n";
   system($cmd);
 
   $first = 0;
