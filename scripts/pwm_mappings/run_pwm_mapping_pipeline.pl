@@ -267,11 +267,13 @@ foreach my $tf (sort { $a->name cmp $b->name} @tfs){
 
   if(@{$fsa->fetch_all_by_FeatureType($tf)}){
     #Get direct TF binding_matrix associations     
-    map { $matrix_tf{$_->name} = $tf->name if $_->name ne 'MA0491.1' } @{$bma->fetch_all_by_FeatureType($tf)};
+
+#    if $_->name ne 'MA0491.1' } 
+    map { $matrix_tf{$_->name} = $tf->name } @{$bma->fetch_all_by_FeatureType($tf)};
 
     #And indirect associations through TF complexes
     foreach my $atf (@{$fta->fetch_all_by_association($tf)}){
-      map { $matrix_tf{$_->name} = $tf->name if $_->name ne 'MA0491.1'} @{$bma->fetch_all_by_FeatureType($atf)};
+      map { $matrix_tf{$_->name} = $tf->name } @{$bma->fetch_all_by_FeatureType($atf)};
     }
   }
 }
