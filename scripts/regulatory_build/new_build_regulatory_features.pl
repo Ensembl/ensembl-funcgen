@@ -116,7 +116,7 @@ our %COLORS = (
   dead => "225,225,225",
   weak => "141,255,68",
   gene => "0,176,80",
-  poised => "192,0,190"
+  poised => "192,0,190",
   repressed => "127,127,127"
 );
 
@@ -175,7 +175,7 @@ use Getopt::Long;
 sub read_command_line {
   my %options = ();
 
-  GetOptions(\%options, "help|h=s", "tmp|T=s", "out|o=s", "dump|d=s", "assembly|a=s", "chrom_lengths|l=s", "tss|t=s", "exons|g=s", "url|u=s", "host|h=s", "port|P=s", "db|D=s", "user|u=s", "pass|p=s", "mask|m=s");
+  GetOptions(\%options, "help|h=s", "tmp|T=s", "out|o=s", "dump|d=s", "assembly|a=s", "chrom_lengths|l=s", "tss|t=s", "exons|g=s", "url=s", "host|h=s", "port|P=s", "db|D=s", "user|u=s", "pass|p=s", "mask|m=s");
 
   $options{output_dir} = $options{out};
   $options{working_dir} = $options{tmp};
@@ -284,7 +284,10 @@ sub convert_to_bigWig {
 sub run {
   my ($cmd) = @_;
   print "Running $cmd\n";
-  system($cmd) && die("Failure when running command\n$cmd\n");
+  my $exit_code = system($cmd);
+  if ($exit_code != 0) {
+    die("Failure when running command\n$cmd\n")
+  }
 }
 
 ########################################################
@@ -316,6 +319,20 @@ sub deserialise {
     push @data, $line;
   }
   return \@data;
+}
+
+sub deserialise_hash {
+  my ($filename) = shift;
+  my %data = ();
+  my $fh;
+  open $fh, "<", $filename;
+  my $line;
+  while ($line = <$fh>) {
+    chomp $line;
+    my @items = split("\t", $line);
+    $data{$items[0]} = $items[1];
+  }
+  return \%data;
 }
 
 ########################################################
@@ -422,7 +439,7 @@ sub get_metadata {
     create_exons($options);
   }
 
-  if (!defined $options->{mask}) {
+  if (!defined $options->{mask} && defined $options->{host}) {
     create_mask($options);
   }
 }
@@ -451,7 +468,7 @@ sub read_dump {
 
 sub fetch_metadata {
   my ($options) = @_;
-  my @slices = sort {$a->name cmp $b->name} @{$options->{dnadb_adaptor}->get_SliceAdaptor->fetch_all('toplevel', undef, undef, False)};
+  my @slices = sort {$a->name cmp $b->name} @{$options->{dnadb_adaptor}->get_SliceAdaptor->fetch_all('toplevel', undef, undef, 0)};
   foreach my $featureSet (@{$options->{db_adaptor}->get_adaptor("FeatureSet")->fetch_all_by_feature_class("annotated")}) {
     my $tf = $featureSet->feature_type->name;
     my $cell = $featureSet->cell->name;
@@ -460,7 +477,7 @@ sub fetch_metadata {
 
     my $fh = File::Temp->new(DIR => $dir, SUFFIX => '.bed');
     foreach my $slice (@slices) {
-      foreach my $feature (sort {$a->start <=> $b->start} @{$featureSet->get_Features_by_Slice($slice)});
+      foreach my $feature (sort {$a->start <=> $b->start} @{$featureSet->get_Features_by_Slice($slice)}) {
 	print $fh join("\t", ($slice->name, $feature->start - 1, $feature->end));
       }
     }
@@ -506,7 +523,7 @@ sub create_chrom_lengths {
 sub fetch_chrom_lengths {
   my ($options, $fh) = @_;
   my $slice_adaptor = $options->{dnadb_adaptor}->get_SliceAdaptor();
-  my @slices = @{ $slice_adaptor->fetch_all('toplevel', undef, undef, False) };
+  my @slices = @{ $slice_adaptor->fetch_all('toplevel', undef, undef, 0) };
 
   foreach my $slice (@slices) {
     print $fh join("\t", ($slice->seq_region_name() - 1, $slice->end() - $slice->start())) . "\n";
@@ -525,8 +542,7 @@ sub fetch_tss {
   my ($options, $fh) = @_;
   my $slice_adaptor = $options->{dnadb_adaptor}->get_SliceAdaptor();
   my @tss_coords = ();
-  my $slice_adaptor = $options->{dnadb_adaptor}->get_SliceAdaptor();
-  foreach my $slice (@{$slice_adaptor->fetch_all('toplevel', undef, undef, False) }) {
+  foreach my $slice (@{$slice_adaptor->fetch_all('toplevel', undef, undef, 0) }) {
     foreach my $gene (@{$slice->get_all_Genes()}) {
       foreach my $transcript (@{$gene->get_all_Transcripts()}) {
 	if ($transcript->strand() > 0) {
@@ -540,7 +556,7 @@ sub fetch_tss {
 
   my @sorted_tss_coords = sort {comp_coords($a, $b)} @tss_coords;
 
-  foreach my $exons_coord (@sorted_tss_coords) {
+  foreach my $tss_coord (@sorted_tss_coords) {
     print $fh, join("\t", @{$tss_coord})."\n";
   }
 }
@@ -557,11 +573,11 @@ sub fetch_exons {
   my ($options, $fh) = @_;
   my @exon_coords = ();
   my $slice_adaptor = $options->{dnadb_adaptor}->get_SliceAdaptor();
-  foreach my $slice (@{$slice_adaptor->fetch_all('toplevel', undef, undef, False) }) {
+  foreach my $slice (@{$slice_adaptor->fetch_all('toplevel', undef, undef, 0) }) {
     foreach my $gene (@{$slice->get_all_Genes()}) {
       foreach my $transcript (@{$gene->get_all_Transcripts()}) {
         foreach my $exon (@{$transcript->get_all_Exons()}) {
-	  push @exon_coords, [$slice->seq_regions_name(), $exon$exon->start() - 1, $exon->end()];
+	  push @exon_coords, [$slice->seq_regions_name(), $exon->start() - 1, $exon->end()];
 	}
       }
     }
@@ -569,7 +585,7 @@ sub fetch_exons {
 
   my @sorted_exon_coords = sort {comp_coords($a, $b)} @exon_coords;
 
-  foreach my $exons_coord (@sorted_exon_coords) {
+  foreach my $exon_coord (@sorted_exon_coords) {
     print $fh, join("\t", @{$exon_coord})."\n";
   }
 }
@@ -586,15 +602,15 @@ sub fetch_mask {
   my ($options, $fh) = @_;
   my @mask_coords = ();
   my $slice_adaptor = $options->{dnadb_adaptor}->get_SliceAdaptor();
-  foreach my $slice (@{$slice_adaptor->fetch_all('toplevel', undef, undef, False) }) {
+  foreach my $slice (@{$slice_adaptor->fetch_all('toplevel', undef, undef, 0) }) {
     foreach my $mask (@{$slice->get_all_MiscFeatures('encode_excluded')}) {
-      push @mask_coords, [$slice->seq_regions_name(), $mask$mask->start(), $mask->end() - 1];
+      push @mask_coords, [$slice->seq_regions_name(), $mask->start(), $mask->end() - 1];
     }
   }
 
   my @sorted_mask_coords = sort {comp_coords($a, $b)} @mask_coords;
 
-  foreach my $mask_coords (@sorted_mask_coords) {
+  foreach my $mask_coord (@sorted_mask_coords) {
     print $fh, join("\t", @{$mask_coord})."\n";
   }
 }
@@ -790,10 +806,10 @@ sub extract_ChromHMM_state_summaries {
   $segmentation->{states} = extract_ChromHMM_states($options, $segmentation, \@bedfiles);
   $segmentation->{celltypes} = extract_ChromHMM_cells($options, $segmentation, \@bedfiles);
 
-  foreach my $cell (@{$segmentation->{celltypes}}) {
+  foreach my $cell (keys %{$segmentation->{celltypes}}) {
     my $summary = "$options->{working_dir}/segmentation_summaries/$segmentation->{name}/$cell.bed";
     if (must_compute($options,$summary)) {
-      run("sort -k1,1 -k2,2n $segmentation->{location}/$cell.bed > $summary") ;
+      run("sort -k1,1 -k2,2n $segmentation->{celltypes}->{$cell} > $summary") ;
     }
   }
 
@@ -822,16 +838,16 @@ sub extract_ChromHMM_cells {
       my $cell = basename $file;
       $cell =~ s/.bed$//;
       $cell = clean_name($cell);
-      print $fh "$cell\n";
+      print $fh "$cell\t$file\n";
     }
     close $fh;
   }
-  return deserialise($output);
+  return deserialise_hash($output);
 }
 
 sub extract_ChromHMM_state_summary {
   my ($options, $segmentation, $state) = @_;
-  my $celltypes = $segmentation->{celltypes};
+  my @celltypes = keys %{$segmentation->{celltypes}};
   my $cell;
 
   my @summaries = ();
@@ -845,7 +861,7 @@ sub extract_ChromHMM_state_summary {
 
   mkdir "$options->{working_dir}/segmentation_summaries/$segmentation->{name}/$state/";
 
-  foreach $cell (@{$segmentation->{celltypes}}) {
+  foreach $cell (@celltypes) {
     my $source = "$options->{working_dir}/segmentation_summaries/$segmentation->{name}/$cell.bed";
     my $summary = "$options->{working_dir}/segmentation_summaries/$segmentation->{name}/$state/$cell.bed";
     run("awk \'\$4 == \"$state\" \' $source > $summary") ;
@@ -1049,7 +1065,7 @@ sub compute_overlap_score {
 
   if ($test eq 'ctcf') {
     print "Running wiggletools pearson - $reference $file\n";
-    $segmentation->{overlaps}->{$test}->{$state} = `wiggletools pearson - $reference $file`;
+    $segmentation->{overlaps}->{$test}->{$state} = `wiggletools pearson $reference $file`;
   } else {
     $segmentation->{overlaps}->{$test}->{$state} = compute_enrichment_between_files($reference, $file);
   }
@@ -1060,9 +1076,9 @@ sub compute_overlap_score {
 sub compute_enrichment_between_files {
   my ($reference, $file) = @_;
 
-  my $auc = `wiggletools AUC - mult $reference unit $file`;
-  my $breadth = `wiggletools AUC - unit $file`;
-  my $ref_auc = `wiggletools AUC - $reference`;
+  my $auc = `wiggletools AUC mult $reference unit $file`;
+  my $breadth = `wiggletools AUC unit $file`;
+  my $ref_auc = `wiggletools AUC $reference`;
 
   if ($breadth == 0) {
     return 0;
@@ -1224,7 +1240,7 @@ sub make_segmentation_bedfiles_2 {
     mkdir "$options->{trackhub_dir}/segmentations/$segmentation->{name}";
   }
 
-  foreach $celltype (@{$segmentation->{celltypes}}) {
+  foreach $celltype (keys %{$segmentation->{celltypes}}) {
     make_segmentation_bedfile($options, $segmentation, $celltype);
   }
 }
@@ -1326,7 +1342,7 @@ sub set_cutoffs {
 
   foreach my $segmentation (@{$options->{segmentations}}) {
     foreach my $function (keys %{$options->{selected_states}->{$segmentation->{name}}}) {
-      print "Selected\t$segmentation->{name}\t$function\t". join(" ", @{$options->{selected_states}->{$segmentation->{name}}->{$function}})."\n";
+      print "Selected\t$segmentation->{name}\t$function\t". join(" ", keys %{$options->{selected_states}->{$segmentation->{name}}->{$function}})."\n";
     }
   }
 
@@ -1357,13 +1373,13 @@ sub select_relevant_states {
       print "Selecting $state $function\n";
     }
     if ($assignments->{$state} eq $function) {
-      my $weight = test_relevance($options, $segmentation, $function, $state));
+      my $weight = test_relevance($options, $segmentation, $function, $state);
       if ($weight > 0) {
         $states{$state} = $weight;
       }
     }
   }
-  print "Selected\t$segmentation->{name}\t$function\t". join(" ", keys @states)."\n";
+  print "Selected\t$segmentation->{name}\t$function\t". join(" ", keys %states)."\n";
   return \%states;
 }
 
@@ -1372,7 +1388,7 @@ sub test_relevance {
   my $reference = "$options->{trackhub_dir}/overview/all_tfbs.bw"; 
   my $file = "$options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw";
 
-  for (my $i = 1; $i < scalar(@{$segmentation->{celltypes}}); $i++) {
+  for (my $i = 1; $i < scalar(keys %{$segmentation->{celltypes}}); $i++) {
     my $enrichment = compute_enrichment_between_files($reference, "gt $i $file");
     print "Enrichment\t$state\t$i:\t$enrichment\n";
     if ($enrichment == 0) {
@@ -1390,9 +1406,9 @@ sub select_segmentation_cutoff {
   print "Setting cutoff for $function...\n";
 
   my $tfbs = "$options->{trackhub_dir}/overview/all_tfbs.bw";
-  my $tfbs_auc = `wiggletools AUC - $tfbs`;
+  my $tfbs_auc = `wiggletools AUC $tfbs`;
 
-  my $celltype_count = scalar(@{$segmentation->{celltypes}});
+  my $celltype_count = scalar(keys %{$segmentation->{celltypes}});
   my $max_weight = undef;
   my $min_step = 1;
   my @files = ();
@@ -1416,11 +1432,11 @@ sub select_segmentation_cutoff {
   my $last_fscore = 0;
   my $last_cutoff = 0;
   for (my $i = 0; $i < $celltype_count * $max_weight; $i += $min_step) {
-    my $auc = `wiggletools AUC - mult $tfbs gt $i sum $files_string`;
+    my $auc = `wiggletools AUC mult $tfbs gt $i sum $files_string`;
     my $sens = $auc / $tfbs_auc; 
 
-    my $overlap = `wiggletools AUC - gt 0 mult $tfbs gt $i sum $files_string`; 
-    my $breadth = `wiggletools AUC - gt $i sum $files_string`;
+    my $overlap = `wiggletools AUC gt 0 mult $tfbs gt $i sum $files_string`; 
+    my $breadth = `wiggletools AUC gt $i sum $files_string`;
     my $spec;
     if ($breadth == 0) {
       $spec = 0;
@@ -1510,7 +1526,7 @@ sub compute_regulatory_features {
   # Compute TF binding
   my $tfbs_signal = "$options->{trackhub_dir}/overview/all_tfbs.bw";
   my $tfbs_tmp = "$options->{working_dir}/build/tfbs.tmp.bed";
-  my $awk_dnase = make_awk_command("tfbs");
+  my $awk_tfbs = make_awk_command("tfbs");
   run("wiggletools write_bg - unit $tfbs_signal | $awk_tfbs > $tfbs_tmp");
 
   #Compute open dnase
@@ -1525,18 +1541,22 @@ sub compute_regulatory_features {
 
   # DNAse sites are merged to overlapping TFBS sites
   my $tfbs_tmp2 = "$options->{working_dir}/build/tfbs.tmp2.bed";
+  print "AAA";
   expand_boundaries([$dnase_tmp], $tfbs_tmp, $tfbs_tmp2);
 
   # DNAse and TFBS sites are merged to overlapping distal sites
   my $distal_tmp2 = "$options->{working_dir}/build/distal.tmp2.bed";
+  print "AAA";
   expand_boundaries([$dnase_tmp, $tfbs_tmp], $distal_tmp, $distal_tmp2);
 
   # DNAse, TFBS and distal sites are merged to overlapping proximal sites
   my $proximal_tmp2 = "$options->{working_dir}/build/proximal.tmp2.bed";
+  print "AAA";
   expand_boundaries([$dnase_tmp, $tfbs_tmp, $distal_tmp], $proximal_tmp, $proximal_tmp2);
 
   # DNAse, TFBS, distal and proximal sites are merged to overlapping TSS sites
   my $tss_tmp2 = "$options->{working_dir}/build/tss.tmp2.bed";
+  print "AAA";
   expand_boundaries([$dnase_tmp, $tfbs_tmp, $distal_tmp, $proximal_tmp], $tss_tmp, $tss_tmp2);
 
   #############################################
@@ -1547,7 +1567,7 @@ sub compute_regulatory_features {
   my $awk_id = "awk '{\$4 = \$4\"_\"NR'; print;}";
 
   # All features that overlap known TSS are retained
-  my $tss = "$output->{working_dir}/build/tss.bed";
+  my $tss = "$options->{working_dir}/build/tss.bed";
   run("bedtools intersect -u -wa -a $tss_tmp2 -b $options->{tss} | $awk_id > $tss");
 
   # All features that do not go into a demoted file
@@ -1556,6 +1576,7 @@ sub compute_regulatory_features {
 
   # Unaligned proximal sites are retained
   my $proximal = "$options->{working_dir}/build/proximal.bed";
+  my $awk_contract = "awk 'BEGIN {OFS='\t'} {\$2 += 1; \$3 -= 1; print}'";
   run("bedtools unionbedg $proximal_tmp2 $demoted | bedtools intersect -wa -v -a stdin -b $tss_tmp2 | $awk_contract | $awk_id > $proximal");
 
   # Unaligned distal sites are retained
@@ -1575,7 +1596,7 @@ sub compute_regulatory_features {
   #############################################
 
   my $awk_ctcf = make_awk_command("ctcf");
-  my $ctcf = "$output->{working_dir}/build/ctcf.bed";
+  my $ctcf = "$options->{working_dir}/build/ctcf.bed";
   run("$awk_ctcf $ctcf_tmp > $ctcf");
 
   #############################################
@@ -1584,7 +1605,7 @@ sub compute_regulatory_features {
 
   my $awk_mask = "";
   if (defined $options->{mask}) {
-    $awk_mask = "| bedtools intersect -wa -v -a stdin -b $options->{mask}");
+    $awk_mask = "| bedtools intersect -wa -v -a stdin -b $options->{mask}";
   }
 
   #############################################
@@ -1605,7 +1626,7 @@ sub expand_boundaries {
 
 sub compute_initial_regions {
   my ($options, $function) = @_;
-  my $output = "$output->{working_dir}/build/$function.tmp.bed";
+  my $output = "$options->{working_dir}/build/$function.tmp.bed";
   my $wiggletools_cmd = "wiggletools write_bg - unit sum ";
   foreach my $segmentation (@{$options->{segmentations}}) {
     $wiggletools_cmd .= function_definition($options, $function, $segmentation); 
@@ -1671,7 +1692,7 @@ sub compute_segmentation_states {
 
   mkdir "$options->{working_dir}/projected_segmentations/$segmentation->{name}/";
 
-  foreach $celltype (@{$segmentation->{celltypes}}) {
+  foreach $celltype (keys %{$segmentation->{celltypes}}) {
     if (must_compute($options,"$options->{trackhub_dir}/projected_segmentations/$celltype.bb")) {
       compute_celltype_state($options, $segmentation, $celltype);
     } else {
@@ -1892,13 +1913,13 @@ sub make_track_hub_segmentations_2 {
   my $name = $segmentation->{name};
   my @states = $segmentation->{states};
   my $state_count = scalar(@states);
-  my $celltypes = $segmentation->{celltypes};
-  my $celltype_count = scalar(@$celltypes);
+  my @celltypes = keys %{$segmentation->{celltypes}};
+  my $celltype_count = scalar(@celltypes);
   my $state_string = "";
 
   my $celltype_list = "";
   my $celltype;
-  foreach $celltype (@{$segmentation->{celltypes}}) {
+  foreach $celltype (@celltypes) {
     my $short = $celltype;
     $short =~ s/[_-]//g;
     $celltype_list .= " $short=$celltype";
@@ -1920,7 +1941,7 @@ sub make_track_hub_segmentations_2 {
   print $file "type bigBed 9\n";
   print $file "noInherit on\n";
 
-  foreach $celltype (@{$segmentation->{celltypes}}) {
+  foreach $celltype (@celltypes) {
     my $short = $celltype;
     $short =~ s/[_-]//g;
 
@@ -1952,8 +1973,8 @@ sub make_track_hub_segmentation_summaries_2 {
   my $name = ${segmentation}->{name};
   my $states = $segmentation->{states};
   my $state_count = scalar(@$states);
-  my $celltypes = $segmentation->{celltypes};
-  my $celltype_count = scalar(@$celltypes);
+  my @celltypes = keys %{$segmentation->{celltypes}};
+  my $celltype_count = scalar(@celltypes);
   my $state_string = "";
   my $state;
 
@@ -2002,7 +2023,7 @@ sub make_track_hub_projected_segmentations {
 
   my $celltype_list = "";
   foreach my $segmentation (@{$options->{segmentations}}) {
-    foreach $celltype (@{$segmentation->{celltypes}}) {
+    foreach $celltype (keys %{$segmentation->{celltypes}}) {
       my $short = $celltype;
       $short =~ s/[_-]//g;
       $celltype_list .= " $short=$celltype";
@@ -2027,7 +2048,7 @@ sub make_track_hub_projected_segmentations {
 
   foreach my $segmentation (@{$options->{segmentations}}) {
     my $name = $segmentation->{name};
-    foreach $celltype (@{$segmentation->{celltypes}}) {
+    foreach $celltype (keys %{$segmentation->{celltypes}}) {
       my $short = $celltype;
       $short =~ s/[_-]//g;
       $celltype_list .= " $short=$celltype";
