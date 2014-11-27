@@ -12,17 +12,16 @@ Bio::EnsEMBL::Hive::RunnableDB::Funcgen::ImportMotifFeatures
 
 package Bio::EnsEMBL::Funcgen::RunnableDB::ImportMotifFeatures;
 
-use base ('Bio::EnsEMBL::Hive::Process');
-
-
 use warnings;
 use strict;
+
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor; 
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( open_file run_system_cmd );
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
-use Bio::EnsEMBL::Funcgen::Importer;
-#use Data::Dumper;
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( open_file run_system_cmd );
+use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor; 
+use Bio::EnsEMBL::Funcgen::MotifFeature;
+
+use base ('Bio::EnsEMBL::Hive::Process');
 
 #global values for the Helper... maybe pass as parameters...
 $main::_debug_level = 0;
@@ -73,11 +72,11 @@ sub fetch_input {   # fetch parameters...
 
   #check if there is already data for this matrix stored... if there is, throw an error...  
   #TODO test specifically for data in slices...
-  my $count = $db->dbc->db_handle->selectrow_array("select count(*) from motif_feature where binding_matrix_id=".$matrix->dbID);
+  my ($count) = $db->dbc->db_handle->selectrow_array("select count(*) from motif_feature where binding_matrix_id=".$matrix->dbID);
   
-  if( ($count>0) && 
+  if( ($count > 0) && 
       ! $self->param('slices')){ 
-    throw "Data for ".$matrix->name." already exists! Remove it first"; 
+    throw("Data for ".$matrix->name." already exists! Remove it first"); 
   }
 
   my $ft  = $matrix->feature_type;
@@ -102,8 +101,9 @@ sub fetch_input {   # fetch parameters...
   my $query = "select distinct sr.name, (af.seq_region_start -1), af.seq_region_end, af.annotated_feature_id from ".
     " annotated_feature af, seq_region sr where af.seq_region_id=sr.seq_region_id and ".
       " feature_set_id in (".join(",",@fsets).")";
-  my $cmd = "mysql --skip-column-names -e \"".$query."\" -quick -h".$self->param('host')." -P".$self->param('port').
-    " -u".$self->param('user')." -p".$self->param('pass').' '.$self->param('dbname')." | sort -k1,1 -k2,2n -k3,3n >".$peaks_bed;
+  my $cmd = 'mysql --skip-column-names -e "'.$query.'" -quick -h'.$self->param('host').
+   ' -P'.$self->param('port').' -u'.$self->param('user').' -p'.$self->param('pass').' '.
+   $self->param('dbname').' | sort -k1,1 -k2,2n -k3,3n > '.$peaks_bed;
 
   print $cmd."\n";
 
@@ -147,13 +147,12 @@ sub run {   # Check parameters and do appropriate database/file operations...
   my ($mf_sr, $mf_start, $mf_end, $score, $mf_strand, $af_id, $cache_key);
 
   RECORD: while(($line = $rfile->getline) && defined $line){
-    chomp;
+    chomp $line;
     ($mf_sr, $mf_start, $mf_end, undef, $score, $mf_strand, undef, undef, undef, $af_id) = split("\t", $line);
-    $cache_key = join(':'. ($mf_sr, $mf_start, $mf_end, $score));
-   
+    $cache_key = join(':', ($mf_sr, $mf_start, $mf_end, $mf_strand));
     #TODO Change this to use the SliceHelper slice_cache and get_Slice methods (currently n BaseDB)
     #Quick hack to only import specific slices... 
-
+  
     if(! exists $slice_cache{$mf_sr}){
 
       if(! exists $skipped_slices{$mf_sr}){
@@ -181,9 +180,9 @@ sub run {   # Check parameters and do appropriate database/file operations...
         -score          => sprintf("%.3f", $score));#$relative_affinity));
 
       $af_ids->{$cache_key} = [];
-     }
+    }
 
-    push @{$af_ids->$cache_key}, $af_id;     
+    push @{$af_ids->{$cache_key}}, $af_id;     
   }
 
   $rfile->close;
