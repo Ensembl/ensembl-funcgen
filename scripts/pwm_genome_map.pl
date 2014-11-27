@@ -280,16 +280,7 @@ my $seen_failures = 0;
 #This will loop indefinitely if we encounter a non-trnasient job state which is
 #not DONE or EXIT e.g. UNKWN
 
-#
-#These may have already have finished in a previous run
-#Also processed is being set in run_pwm_alignments if all
-#batch output is present, but here this is used as a flag for merged
-#which they may not have been
-
-#Also bjobs_poll seems not to work properly yet
-
-#This while needs changing, as we may have non_still running, but some to merge
-# move sleep
+#TODO parallelise these merges by fanning these jobs in the hive
 
 while($num_still_running){
 
