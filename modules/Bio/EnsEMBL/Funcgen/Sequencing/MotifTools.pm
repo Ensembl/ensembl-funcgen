@@ -69,6 +69,7 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd
   reverse_complement_matrix
   revcomp_matrix_file
   run_moods
+  sprint_matrix
   write_matrix_file
 );
 
@@ -211,27 +212,41 @@ sub reverse_complement_matrix{
 }
 
 
+#This does not handle revcomp
+#although we just pass that as the 'matrix'
+#would likely have to alter header too.
+
 sub write_matrix_file{
   my $matrix_hashes = shift;
   my $out_path      = shift;
   my $write_header  = shift;
   assert_ref($matrix_hashes, 'ARRAY', '$matrix_hashes');
-  $write_header     = 1 if scalar(keys @$matrix_hashes) > 1;
-
-  my $out_file = open_file($out_path, '>');
+  $write_header     = 1 if scalar(keys %$matrix_hashes) > 1;
+  my $out_file      = open_file($out_path, '>');
 
   foreach my $mhash(@$matrix_hashes){
     print $out_file $mhash->{header}."\n" if $write_header;
-
-    for my $row(@{$mhash->{matrix}}){
-      print $out_file join(" ", @{$row})."\n";
-    }
+    print $out_file sprint_matrix($mhash->{matrix});
   }
 
   close($out_file);
 }
 
-#This still doesn't return any of the read or revcompd data.
+
+sub sprint_matrix{
+  my $matrix = shift;
+  assert_ref($matrix, 'ARRAY', 'Matrix array');
+  my $mstring;
+
+  for my $row(@$matrix){
+    assert_ref($row, 'ARRAY', 'Matrix row array');
+    $mstring .= join(" ", @{$row})."\n";
+  }
+
+  return $mstring;
+}
+
+
 
 sub get_revcomp_file_path{
   my $pfm_file_path = shift;
