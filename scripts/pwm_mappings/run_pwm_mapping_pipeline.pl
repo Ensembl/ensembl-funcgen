@@ -219,8 +219,11 @@ my $bma  = $efgdba->get_BindingMatrixAdaptor();
 #my $dbea = $efgdba->get_DBEntryAdaptor();
 my @tfs;
 
-#Could remove this bit is we implement FeatureSetAdaptor::_contrain_featyre_type_class
+#Could remove this bit is we implement FeatureSetAdaptor::_constrain_feature_type_class
 #Although this woudl not allow validation os specified FeatureTypes
+
+#@fts = ('RXRA');
+
 
 if(scalar(@fts) > 0){
   
@@ -246,29 +249,15 @@ my %matrix_tf;
 #If we ever support more than one source (i.e. something other than Jaspar)
 #Then we need to restrict this list based on the source DB
 
+
 foreach my $tf (sort { $a->name cmp $b->name} @tfs){
   # if there is displayable data for it, get matrices and cache print them.
   #my @fs = @{$fsa->fetch_all_by_FeatureType($tf,'displayable')};
-
-  #Skip MA0491.1 as we know this currently causes failures
-  #with find_pssm_dna:
-  #terminate called after throwing an instance of 'std::bad_alloc'
-  #what():  std::bad_alloc
-  #Probably due to very large frequencies in matrx:
-  #>more ../../matrices/*MA0491.1*
-  #::::::::::::::
-  #../../matrices/MA0491.1.pfm
-  #::::::::::::::
-  #1238915163 0 0 38710 0 0 1547 38710 0 5786
-  #7594824 0 0 0 22857 0 37163 0 5136 14956
-  #1364018723 0 38710 0 14078 0 0 0 2301 12429
-  #119220 38710 0 0 1775 38710 0 0 31273 5539
 
 
   if(@{$fsa->fetch_all_by_FeatureType($tf)}){
     #Get direct TF binding_matrix associations     
 
-#    if $_->name ne 'MA0491.1' } 
     map { $matrix_tf{$_->name} = $tf->name } @{$bma->fetch_all_by_FeatureType($tf)};
 
     #And indirect associations through TF complexes
@@ -398,6 +387,7 @@ if($absent){
   die("Identified some absent matrices in the input pfm files:\n\t".
     join("\n\t", @source_pfm_files));
 }
+
 
 my $cmd = "pwm_genome_map.pl -g $fasta_file -a ${assembly} ".
  "-p 0.001 -o ${outputdir} ".join(' ', values(%pfm_files));
