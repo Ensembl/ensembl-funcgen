@@ -39,7 +39,7 @@ load_jaspar_matrices.pl [options]
   --host               DB host 
   --dbname             DB name 
   --pass               DB password 
-  --port               DB port (optional)  --jdb_user           Jaspar DB user name
+  --port               DB port (optional)  
   --dnadb_user         Core DB user
   --dnadb_host         Core DB host
   --dnadb_name         Core DB name
@@ -54,10 +54,11 @@ load_jaspar_matrices.pl [options]
  Inputs/Outputs: 
   --out_dir            Output directory (optional)
   --pep_fasta          Location of the relevant species whole proteome fasta DB (i.e. use formatdb)
-  --pfm_file           Location of the file containing all the Position Frequency Matrices
- 
+  --pfm_files          List of file paths containing all the Position Frequency Matrices. 
+                       Sometimes this is necessary as Jaspar may not include all the current matrices 
+                       (available via the web site) in the data release.
  Other:
-  --collections        List of Jaspar collections to query, default is CORE and PBM
+  --collections        List of Jaspar collection to query. Default are: CORE PBM
   --dump_jaspar_fasta  Dumps fasta files for the Jaspar accessions
   --skip_blast  	     Skips blast step if blast results file already exists (mainly for testing)
   --man
@@ -155,77 +156,46 @@ use Bio::EnsEMBL::DBEntry;
 
 use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use Bio::EnsEMBL::Funcgen::Utils::DBAdaptorHelper qw( get_DB_options_config
-                                                      create_Funcgen_DBAdaptor_from_options );
+                                                      create_Funcgen_DBAdaptor_from_options
+                                                      create_DBConnection_from_options );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils        qw( run_backtick_cmd
                                                       run_system_cmd
                                                       open_file
                                                       add_external_db );
+use Bio::EnsEMBL::Funcgen::Sequencing::MotifTools qw( read_matrix_file sprint_matrix );
 
-my @tmp_args = @ARGV;
+print "$0 @ARGV\n";
 
-### Some adventures in GetOptions processing ###
-
-
-#As we never use this vars now, do we even need to declare vars which dont have defaults?
-#can we not simply specify an empty ref? [] {} or \undef
-
-#Can we also add a preceding - to the options config such that we can use these will rearrange?
-#or will this handle striping the absent -?
-
-#my ($odir, @cols);
-
-#Don't really need to keep these separate, but don eas an example
-#my $db_opts    = get_DB_options_config(['funcgen', 'dna', 'jdb'], 1);
-#my $other_opts = {'-out_dir=s' => \$odir,
-#                  '-collections=s{,}'  => \@cols};#\[]};
-
-#Dang this cause read only modification error!!!!
-#We will never used these vars!
-
-#GetOptions
-# (%{$db_opts},
-#  %{$other_opts},
-#  man  => sub { pod2usage(-exitval => 0, -verbose => 2); },
-#  help => sub { pod2usage(-exitval => 0,
-#                          -verbose => 1,
-#                          -message => "Params are:\t@tmp_args"); }
-# ) or #Catch unkown options
-# pod2usage( -exitval => 1,
-#             -message => "Params are:\t@tmp_args");
-
-#Don't do this for $db_opts as process_DB_options does this
-#We need to nest these options, such that we can pass the original options spec
-#i.e. main rearrange doesn't have to handle them
-#in fact it wouldn't anyway, it would just ignore them
-#do we even need to keep these separate
-#The only advantage is so we don't have to hadnle the individual vars in rearrange
-#and we don't have to pass @_ to the create_Funcgen_DBAdaptor method
-
-#foreach my $key(keys %$other_opts){
-#  (my $new_key = $key) =~ s/\=.*$//o;
-#  $other_opts->{$new_key}      = delete $other_opts->{$key};
-#}
-
-#$other_opts->{'-db_options'} = $db_opts;
-
-#${,} does not work and s@ only pushes multiple -option specs onto same array
-#Multiple names should only be specified in the @opts_config not the %opts
+# Define options has and defaults
+#s@ spec requires multiple -option specs to push onto 'option' array
+#${,} on it's own simply redefines a sclar value with the last topion seen
+#Have to pre-define the $opts{option} => [] to get it to push
+#But will simple add to any pre-defined array, will not over-write defaults
+#These also have to be specifid in @opts_config to be able to over-ride them with options
 my %opts = (
-  'jdb_name'    => 'JASPAR_v5_0',
+  'jdb_name'    => 'JASPAR_v5_0', #opt config provided by get_DB_options_from_config
   'jdb_version' => '5.0',
+  'collections' => [],#No defaults in here! s{,} spec will push rather than over-write
+  'pfm_files'   => [],#No defaults in here! s{,} spec will push rather than over-write
   'man'         => sub { pod2usage( -exitval => 0, -verbose => 2 ); },
   'help'        => sub {
     pod2usage( -exitval => 0,
-               -verbose => 1,
-               -message => "Params are:\t@tmp_args" );
+               -verbose => 1,);
+              # -message => "Params are:\t@ARGV" );
   } );
-my @db_opts = keys %{ get_DB_options_config( [ 'funcgen', 'dna', 'jdb' ], 1 ) };    #allow custom flag
-my @opts_config = (
-  @db_opts, qw( out_dir=s  collection=s@ dump_jaspar_fasta
-    pfm_file=s pep_fasta=s   skip_blast        help ) );
 
-GetOptions( \%opts, @opts_config ) or    #Catch unknown options
-  pod2usage( -exitval => 1, -message => "Params are:\t@tmp_args" );
+GetOptions( 
+ \%opts, 
+ #Opts config
+ ((keys %{ get_DB_options_config( [ 'funcgen', 'dna', 'jdb' ], 1 ) }),  #allow custom flag
+   qw( out_dir=s      collections=s{,} dump_jaspar_fasta jdb_version=s
+       pfm_files=s{,} pep_fasta=s      skip_blast        help       man ))) or   
+  pod2usage( -exitval => 1 );  #Catch unknown options
+
+if (@ARGV) {    #Catch trailing args
+  pod2usage( -exitval => 1,
+             -message => "You have specified unknown args:\t@ARGV" );
+}
 
 #Delete the help and man subs as we don't want to pass those around
 #Getopt::Long qw(:config auto_help) would do this for us but the help
@@ -235,41 +205,24 @@ GetOptions( \%opts, @opts_config ) or    #Catch unknown options
 delete $opts{help};
 delete $opts{man};
 
-#Rename collections array, so it makes sense if we ever require in this code
-$opts{collections} = delete $opts{collection};
-
+#Prefix - for rearrange()
 foreach my $key ( keys %opts ) {
   $opts{"-${key}"} = delete $opts{$key};
 }
 
-#Gash! Neither way works the we need here so either I stripe the =.* spec off the keys
-#or I have to add the - prefix GRRR!
-
-#Probably better the other way, as it will be less fiddling and will allow us
-#to update specific opts hashes to localize groups of options in predefined hashes
-#Also wont have to delete the man and help entries, and we will be able to use =s{,}
-#No no no, we still have to deref the opts values!
-#Better this way
-
-if (@ARGV) {    #Catch trailing args
-  pod2usage( -exitval => 1,
-             -message => "You have specified unknown options/args:\t@ARGV" );
-}
-
-print "load_jaspar_matrices.pl @tmp_args\n";
-
-#Sub everythign so we can re-use it in other scripts/modules if required
-
+#Sub main so we can re-use/test it in other scripts/modules if required
 &main( \%opts );
+
+#Passing ref here, as we need access to $opts in main, to pass it onto
+#the various DBAdatproHelper::create_DB* methods
+#This prevents the need to handle all the DB options in this script
 
 sub main {
   my $opts = shift;
-  my ($out_dir, $colls, $pfm_file, $jdb_version, 
-      $pep_fasta, $dump_pfm_fasta, $skip_blast) = rearrange
-      (['OUT_DIR', 'COLLECTIONS', 'PFM_FILE', 'JDB_VERSION',
-        'PEP_FASTA', 'DUMP_JASPAR_FASTA', 'SKIP_BLAST'], %$opts );
-
-  #assert_ref($colls, 'ARRAY');
+  my ($out_dir, $colls, $pfm_files, $jdb_name, $jdb_version, 
+      $pep_fasta, $dump_pfm_fasta, $skip_blast) = 
+   rearrange([qw( OUT_DIR COLLECTIONS PFM_FILES JDB_NAME JDB_VERSION
+                  PEP_FASTA DUMP_JASPAR_FASTA SKIP_BLAST )], %$opts );
 
   if ( !$out_dir ) {
     $out_dir = '.';
@@ -278,54 +231,25 @@ sub main {
     die("-out_dir does not exist:\t$out_dir");
   }
 
-  if ( !( $pfm_file && -f $pfm_file ) ) {
-    die( '-pfm_file needs to be a valid position frequency matrix file,' .
-         " containing all the required PFMs:\t$pfm_file" );
+  if(@$pfm_files){
+
+    for my $pfm_file(@$pfm_files){
+      die("Path specified by -pfm_files does not exist or is not a file:\t:.$pfm_file") if ! -f $pfm_file;
+    }
+  }
+  else{
+    die('Must specify at least one path with -pfm_files');
   }
 
-  die('Mandatory --jdb_user param not specified')
-    if !defined $opts->{'-jdb_user'};
-  die('Mandatory --jdb_host param not specified')
-    if !defined $opts->{'-jdb_host'};
-  die('Mandatory --jdb_name param not specified')
-    if !defined $opts->{'-jdb_name'};
-    
+  $colls = [qw( CORE PBM )] if ! @$colls;#    #Validate vs DB?
+  #CORE isn't strictly a 'collection', although it is stored as such in the Jaspar DB
+  
   if((! defined $pep_fasta) ||
       ! -f $pep_fasta){
     die("-pep_fasta is not defined or does not exists:\t$pep_fasta");      
   }  
 
-  #Currently get undefs here
-  #add support in process_DB_options?
-
-  my $jdbh;
-  my $dsn = sprintf( "DBI:%s:%s:host=%s;port=%s",
-                     'mysql', $opts->{'-jdb_name'}, $opts->{'-jdb_host'},
-                     $opts->{-jdb_port} || 3306 );
-
-  eval {
-    $jdbh = DBI->connect( $dsn, $opts->{'-jdb_user'}, $opts->{'-jdb_pass'},
-                          { 'RaiseError' => 1 } );
-  };
-
-  my $error = $@;
-
-  if ( !$jdbh || $error || !$jdbh->ping ) {
-    die( 'Could not connect to database ' . $opts->{'-jdb_name'} . ' as user ' .
-         $opts->{'-jdb_user'} . " using [$dsn] as a locator:\n" . $error );
-  }
-
-  if ($colls) {    #Validate vs DB
-    assert_ref( $colls, 'ARRAY', 'Collections' );
-
-    die('collection validation not yet implemented');
-  }
-  else {
-    $colls = [qw( CORE PBM )];
-
-#CORE isn't strictly a 'collection', although it is stored as such in the Jaspar DB
-  }
-
+  my $jdbh   = create_DBConnection_from_options($opts, 'jdb', );
   my $efg_db = create_Funcgen_DBAdaptor_from_options( $opts, 'pass', 1 ); 
   #Require as password here, but write user may not require one? 
 
@@ -340,28 +264,23 @@ sub main {
     ( $species = ucfirst( lc($species) ) ) =~ s/_/ /;
   }
 
-  my $analysis =
-    $efg_db->get_AnalysisAdaptor->fetch_by_logic_name( $opts->{'-jdb_name'} );
+  my $analysis   = $efg_db->get_AnalysisAdaptor->fetch_by_logic_name($jdb_name);
   my $db_version = $efg_db->_get_schema_build( $efg_db->dnadb );
 
   if ( ! defined $analysis ) {
-
-#Using Jaspar as the logic name here will prevent being able to load two versions along
-#side each other which could complicate things
-
-    $analysis =
-      Bio::EnsEMBL::Analysis->new(
-      -logic_name  => $opts->{'-jdb_name'},
-      -db_version  => $jdb_version,
-      -description => 'Position Frequency Matrices from the ' .
-"<a href='http://jaspar.genereg.net/'>Jaspar Database</a> ($jdb_version)",
-      -display_label => 'Jaspar' );
+    #Using Jaspar as the logic name here will prevent being able to load two versions along
+    #side each other which could complicate things
+    $analysis = Bio::EnsEMBL::Analysis->new(
+     -logic_name  => $jdb_name,
+     -db_version  => $jdb_version,
+     -description => 'Position Frequency Matrices from the ' .
+      "<a href='http://jaspar.genereg.net/'>Jaspar Database</a> ($jdb_version)",
+     -display_label => 'Jaspar' );
+    
     $efg_db->get_AnalysisAdaptor->store($analysis);
   }
   else {    #rollback!
-    my $delete_sql =
-      'DELETE from object_xref where analysis_id=' . $analysis->dbID;
-
+    my $delete_sql = 'DELETE from object_xref where analysis_id='.$analysis->dbID;
     #warn "Rolling back with:\t$delete_sql";
     $efg_db->dbc->db_handle->do($delete_sql);
 
@@ -369,18 +288,15 @@ sub main {
     #We might just want to rerun the blast step or this step?
     #is blast step dependant on the output of this step
     #is yes then we need to do everythign at the same time
-
-    $delete_sql =
-      'DELETE from binding_matrix where analysis_id=' . $analysis->dbID;
+    $delete_sql = 'DELETE from binding_matrix where analysis_id='.$analysis->dbID;
     $efg_db->dbc->db_handle->do($delete_sql);
 
-#todo rollback motif_features and associated_motif_feature and regulatory_attribute ?
-#add this rollback function to the Helper based on the analysis.
+    #todo rollback motif_features and associated_motif_feature and regulatory_attribute ?
+    #add this rollback function to the Helper based on the analysis.
   }
 
 
-  #Just do this anyway. It will warn if it already exists
-
+  #Just do this anyway. It will just warn if it already exists
   add_external_db( $efg_db, $db_species . '_core_Gene',
                      $db_version, 'EnsemblGene' );
 
@@ -893,20 +809,37 @@ sub main {
 
   
   ### CACHE PFMS ###
-  my $fh = open_file($pfm_file);
-  my (%pfms, $id);
+  my %pfms;
   
-  while(($line = $fh->getline) && defined $line){
-    
-    if($line =~ /^>([^ ]+) /){
-      $id = $1;
-     # warn "caching pfm freqs for $id";
-      $pfms{$id} = ''; 
+  foreach my $pfm_file(@$pfm_files){ 
+  
+    my $tmp_pfms = read_matrix_file($pfm_file);
+
+    if(! %pfms){
+      %pfms = %$tmp_pfms;
     }
     else{
-      $pfms{$id} .= $line;    
+      foreach my $id(keys %$tmp_pfms){
+        $pfms{$id} = $tmp_pfms->{$id} if ! exists $pfms{$id};
+      }
     }
   }
+
+  #Change this to use MotifTools::read_matrix_file
+  #But this will lose the protein accession, no?
+
+  #my $fh = open_file($pfm_file);
+  #while(($line = $fh->getline) && defined $line){
+  #  
+  #  if($line =~ /^>([^ ]+) /){
+  #    $id = $1;
+  #   # warn "caching pfm freqs for $id";
+  #    $pfms{$id} = ''; 
+  #  }
+  #  else{
+  #    $pfms{$id} .= $line;    
+  #  }
+  #}
   
   #warn "cached ".scalar(keys %pfms)." pfms";
   #if(! exists $pfms{'MA0492.1'}){
@@ -1049,16 +982,16 @@ sub main {
          
          
           if($ht eq 'pwm_gene_name'){
-            $linkage_txt = 'FeatureType($name) > PFM($acc) > Gene($name) : $pfm_key';   
+            $linkage_txt = "FeatureType($name) > PFM($acc) > Gene($name) : $pfm_key";   
           }
           elsif($ht eq 'pwm_gene_accession'){
-            $linkage_txt = 'FeatureType($name) > PFM($acc) > Gene : $pfm_key';   
+            $linkage_txt = "FeatureType($name) > PFM($acc) > Gene : $pfm_key";   
           }
           elsif($ht eq 'gene_pwm_accession'){
-            $linkage_txt = 'FeatureType($name) > Gene($acc) > PFM : $pfm_key';   
+            $linkage_txt = "FeatureType($name) > Gene($acc) > PFM : $pfm_key";   
           }
           elsif($ht eq 'blast'){
-            $linkage_txt = 'External name association to support $pfm_key $acc $name PFM blast'; 
+            $linkage_txt = "External name association to support $pfm_key $acc $name PFM blast"; 
           }
           else{
             die("$ht hit type is currently not supported");  
@@ -1139,9 +1072,9 @@ sub main {
       #this qualitative info should probably be loaded as another xref?
       #although this may be useful in the interface as a confidence level?
       #we should have an explicit version
-      -frequencies  => $pfms{$pfm_id_version});
+      #-frequencies  => $pfms{$pfm_id_version});
+     -frequencies  => sprint_matrix($pfms{$pfm_id_version}->matrix));
    $bm_adaptor->store($bm);
-   
    
    $bms_loaded++; 
 
@@ -1376,7 +1309,7 @@ sub dump_jaspar_fasta{
   my $colls   = shift;
   #my $pfms   = shift;
  
-  assert_ref($jdbh, 'DBI::db', 'Jaspar DB Handle');
+  assert_ref($jdbh, 'Bio::EnsEMBL::DBSQL::DBConnection', 'Jaspar DB Handle');
  
  #todo remove any pre-existing jaspar files?
  #these will be picked up by the blast step
