@@ -1779,7 +1779,7 @@ CREATE TABLE `unmapped_object` (
   `analysis_id` smallint(5) unsigned NOT NULL,
   `external_db_id` smallint(5) unsigned default NULL,
   `identifier` varchar(255) NOT NULL,
-  `unmapped_reason_id` smallint(5) unsigned NOT NULL,
+  `unmapped_reason_id` INT(10) unsigned NOT NULL,
   `query_score` double default NULL,
   `target_score` double default NULL,
   `ensembl_id` int(10) unsigned default '0',
