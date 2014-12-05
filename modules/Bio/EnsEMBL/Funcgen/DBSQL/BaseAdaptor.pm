@@ -846,20 +846,18 @@ sub _get_status_name_id{
 sub fetch_all_by_external_name {
   my ( $self, $external_name, $external_db_name ) = @_;
 
-  my $entryAdaptor = $self->db->get_DBEntryAdaptor();
+  my $entryAdaptor = $self->db->get_DBEntryAdaptor;
   my (@ids, $type, $type_name);
-  ($type = ref($self)) =~ s/.*:://;
-  $type =~ s/Adaptor$//;
-  ($type_name = $type) =~ s/Feature$/_feature/;
-  my $xref_method = 'list_'.lc($type_name).'_ids_by_extid';
-
-  if(! $entryAdaptor->can($xref_method)){
-	warn "Does not yet accomodate $type external names";
-	return [];
+  
+  if(ref($self) =~ /.+::(.+)Adaptor$/o){
+    $type = $1;
+  }
+  else{
+    throw("Failed to identify data class name from adaptor namespace:\t".ref($self));
   }
 
-  #Would be better if _list_ method returned and arrayref
-  return $self->fetch_all_by_dbID_list([$entryAdaptor->$xref_method($external_name, $external_db_name)]);
+  return $self->fetch_all_by_dbID_list(
+    [ $entryAdaptor->_type_by_external_id( $external_name, $type, undef, $external_db_name) ]);
 }
 
 
@@ -1002,7 +1000,7 @@ sub store_associated_feature_types {
   my $sql;
 
   if($rollback){
-    $sql = 'DELETE from associated_feature_table where '.
+    $sql = 'DELETE from associated_feature_type where '.
       "table_name='$table_name' and table_id=$dbid";
     $self->db->dbc->db_handle->do($sql);
   }
