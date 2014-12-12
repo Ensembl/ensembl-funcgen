@@ -284,7 +284,20 @@ Eg. for human, we need to first dump the male genomic sequence and then generate
 stripping the male genomic sequence of the male-specific genomic regions. 
 
 E.g. getting the sequence using ensembl-analysis scripts: takes a bit so better run on a dedicated node
->bsub -J get_seq_${SPECIES} -e get_seq_${SPECIES}.err -o get_seq_${SPECIES}.out -R"select[mem>3500] rusage[mem=3500]" -M3500000 "perl $SRC/ensembl-analysis/scripts/sequence_dump.pl -dbhost ${DNADB_HOST} -dbuser ${DNADB_USER} -dbport ${DNADB_PORT} -dbname ${DNADB_NAME} -species ${SPECIES} -coord_system_name toplevel -filename ${DATA_HOME}/fasta/${SPECIES}/${SPECIES}_male_${ASSEMBLY}_${SCHEMA_BUILD}_unmasked.fasta"
+>bsub \
+-J get_seq_${SPECIES} \
+-e get_seq_${SPECIES}.err \
+-o get_seq_${SPECIES}.out \
+-R"select[mem>3500] rusage[mem=3500]" \
+-M3500000 \
+"perl $SRC/ensembl-analysis/scripts/sequence_dump.pl \
+-dbhost ${DNADB_HOST} \
+-dbuser ${DNADB_USER} \
+-dbport ${DNADB_PORT} \
+-dbname ${DNADB_NAME} \
+-species ${SPECIES} \
+-coord_system_name toplevel \
+-filename ${DATA_HOME}/fasta/${SPECIES}/${SPECIES}_male_${ASSEMBLY}_${SCHEMA_BUILD}_unmasked.fasta"
 
 This will not output alternative haplotyes. For human, this will only output non PAR-regions
 of the Y chromosome, split in distinct sequences. As these will cause problems with coordinates 
@@ -319,7 +332,8 @@ Transfer the resulting fai file to ${DATA_HOME}/sam_header/${SPECIES}
 
 Finally, you'll also need a sam header file necessary to merge temporary alignments.
 You can just run e.g.:
-cat homo_sapiens_*_unmasked.fasta.fai | cut -f 1,2 | sed 's/\t/\tLN\:/' | sed 's/^/@SQ\tSN\:/' > homo_sapiens_*_unmasked.header.sam 
+cat homo_sapiens_*_unmasked.fasta.fai | cut -f 1,2 | sed 's/\t/\tLN\:/' | sed 's/^/@SQ\tSN\:/' \
+> homo_sapiens_*_unmasked.header.sam 
 The results should also be in ${DATA_HOME}/sam_header/${SPECIES}
 
 5.2 Initiating An Instance 
@@ -525,7 +539,14 @@ mysqlreadspipe	- Connects to the Read Counts pipeline DB
 :: Adding new Feature Type, Cell Type or Analysis
 Use the script ${EFG_SRC}/scripts/import/import_type.pl
 E.g.:
-perl $EFG_SRC/scripts/import/import_type.pl -type FeatureType -s mus_musculus -dbname $DB_NAME -pass $DB_PASS -name Rbbp5 -class 'Transcription Factor' -description 'Rbbp5 Transcription Factor Binding'
+perl $EFG_SRC/scripts/import/import_type.pl \
+-type FeatureType \
+-s mus_musculus \
+-dbname $DB_NAME \
+-pass $DB_PASS \
+-name Rbbp5 \
+-class 'Transcription Factor' \
+-description 'Rbbp5 Transcription Factor Binding'
 
 New entries should be added to the files:
 ${EFG_SRC}/scripts/import/types/${SPECIES}.CellTypes.txt
