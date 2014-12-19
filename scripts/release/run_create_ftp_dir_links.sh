@@ -20,19 +20,15 @@ shift
 
 
 
-dbname=homo_sapiens_funcgen_76_38
+dbname=homo_sapiens_funcgen_77_38
 #dbname=mus_musculus_funcgen_76_38
 dbhost=ens-staging1
 dnadb_host=ens-staging1
 
 dnadb_user=$USER
 
-nfs_root=
-ftp_root=
-
-echo "Need to manually edit dnadb params and set nfs_root and ftp_root"
-exit 1;
-
+nfs_root='/nfs/ensnfs-dev/staging';
+ftp_root='/lustre/scratch109/ensembl/funcgen/output/ftp'
 
 
 if [ ! $USER ]; then

@@ -29,7 +29,7 @@ fi
 
 
 format='GFF'
-release=76
+release=77
 
 #feature_type='AnnotatedFeature'
 #feature_type='MotifFeature'
@@ -38,25 +38,22 @@ release=76
 
 feature_type='RegulatoryFeature'
 #feature_type='SegmentationFeature'
-#dbname="homo_sapiens_funcgen_${release}_38"
-#dbhost='ens-staging1'
+dbname="homo_sapiens_funcgen_${release}_38"
+dbhost='ens-staging1'
 
-#fset_names="RegulatoryFeatures:A549 RegulatoryFeatures:DND-41 RegulatoryFeatures:GM12878 RegulatoryFeatures:H1ESC RegulatoryFeatures:HeLa-S3 RegulatoryFeatures:HepG2 RegulatoryFeatures:HMEC RegulatoryFeatures:HSMM RegulatoryFeatures:HSMMtube RegulatoryFeatures:HUVEC RegulatoryFeatures:IMR90 RegulatoryFeatures:K562 RegulatoryFeatures:Monocytes-CD14+ RegulatoryFeatures:NH-A RegulatoryFeatures:NHDF-AD RegulatoryFeatures:NHEK RegulatoryFeatures:NHLF RegulatoryFeatures:Osteobl RegulatoryFeatures:MultiCell"
+fset_names="RegulatoryFeatures:A549 RegulatoryFeatures:DND-41 RegulatoryFeatures:GM12878 RegulatoryFeatures:H1ESC RegulatoryFeatures:HeLa-S3 RegulatoryFeatures:HepG2 RegulatoryFeatures:HMEC RegulatoryFeatures:HSMM RegulatoryFeatures:HSMMtube RegulatoryFeatures:HUVEC RegulatoryFeatures:IMR90 RegulatoryFeatures:K562 RegulatoryFeatures:Monocytes-CD14+ RegulatoryFeatures:NH-A RegulatoryFeatures:NHDF-AD RegulatoryFeatures:NHEK RegulatoryFeatures:NHLF RegulatoryFeatures:Osteobl RegulatoryFeatures:MultiCell"
 
-dbname="mus_musculus_funcgen_${release}_38"
-dbhost='ens-staging2'
+#dbname="mus_musculus_funcgen_${release}_38"
+#dbhost='ens-staging2'
 
-fset_names="RegulatoryFeatures:ESHyb RegulatoryFeatures:MEF RegulatoryFeatures:MultiCell RegulatoryFeatures:MEL RegulatoryFeatures:NPC RegulatoryFeatures:ES"
+#fset_names="RegulatoryFeatures:ESHyb RegulatoryFeatures:MEF RegulatoryFeatures:MultiCell RegulatoryFeatures:MEL RegulatoryFeatures:NPC RegulatoryFeatures:ES"
 
 #feature_type='RegulatoryFeature'
-feature_type='SegmentationFeature'
+#feature_type='SegmentationFeature'
 
 
 #Does not yet support RegulatoryFeatures as these seem to get dumped to a merged file with no cell type info
 #and merge does not handle this yet anyway
-
-
-
 
 
 dnadbhost=$dbhost
