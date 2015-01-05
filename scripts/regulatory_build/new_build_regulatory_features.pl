@@ -129,6 +129,8 @@ our %states = (
   inactive => 3
 );
 
+our $start_time = time;
+
 ########################################################
 ## Toplevel pipeline 
 ########################################################
@@ -136,7 +138,7 @@ our %states = (
 main();
 
 sub main {
-  print "Entering New Regulatory Build pipeline\n";
+  print_log("Entering New Regulatory Build pipeline\n");
   # Read command line
   my $options = get_options();
   # Read dump file with file locations and metadata
@@ -157,7 +159,7 @@ sub main {
   compute_states($options);
   # Prepare trackhub header files
   make_track_hub($options);
-  print "Exiting New Regulatory Build pipeline\n";
+  print_log("Exiting New Regulatory Build pipeline\n");
 }
 
 ########################################################
@@ -300,11 +302,25 @@ sub convert_to_bigWig {
 
 sub run {
   my ($cmd) = @_;
-  print "Running $cmd\n";
+  print_log("Running $cmd\n");
   my $exit_code = system($cmd);
   if ($exit_code != 0) {
     die("Failure when running command\n$cmd\n")
   }
+}
+
+########################################################
+## Print conveninence
+## Params:
+## - String
+## Actions:
+## - Prints string, with time stamp in front
+########################################################
+
+sub print_log {
+  my ($str) = @_;
+  my $runtime = time - $start_time;
+  print "[$runtime] $str";
 }
 
 ########################################################
@@ -463,7 +479,7 @@ sub get_metadata {
 
 sub read_dump {
   my ($options) = @_;
-  print "Reading $options->{dump}\n";
+  print_log("Reading $options->{dump}\n");
 
   open my $fh, "<", $options->{dump};
   while (my $line = <$fh>) {
@@ -544,6 +560,7 @@ sub create_chrom_lengths {
 
 sub fetch_chrom_lengths {
   my ($options, $fh) = @_;
+  print_log("Fetching chromosome lengths from core DB\n");
   my $slice_adaptor = $options->{dnadb_adaptor}->get_SliceAdaptor();
   my @slices = @{ $slice_adaptor->fetch_all('toplevel', undef, undef, 0) };
 
@@ -562,6 +579,7 @@ sub create_tss {
 
 sub fetch_tss {
   my ($options, $fh) = @_;
+  print_log("Fetching TSSs from core DB\n");
   my $slice_adaptor = $options->{dnadb_adaptor}->get_SliceAdaptor();
   my @tss_coords = ();
   foreach my $slice (@{$slice_adaptor->fetch_all('toplevel', undef, undef, 0) }) {
@@ -594,6 +612,7 @@ sub create_exons {
 sub fetch_exons {
   my ($options, $fh) = @_;
   my @exon_coords = ();
+  print_log("Fetching exons from core DB\n");
   my $slice_adaptor = $options->{dnadb_adaptor}->get_SliceAdaptor();
   foreach my $slice (@{$slice_adaptor->fetch_all('toplevel', undef, undef, 0) }) {
     foreach my $gene (@{$slice->get_all_Genes()}) {
@@ -623,6 +642,7 @@ sub create_mask {
 sub fetch_mask {
   my ($options, $fh) = @_;
   my @mask_coords = ();
+  print_log("Fetching ENCODE excluded regions from core DB\n");
   my $slice_adaptor = $options->{dnadb_adaptor}->get_SliceAdaptor();
   foreach my $slice (@{$slice_adaptor->fetch_all('toplevel', undef, undef, 0) }) {
     foreach my $mask (@{$slice->get_all_MiscFeatures('encode_excluded')}) {
@@ -674,11 +694,11 @@ sub compute_tf_probs {
   my $options = shift;
 
   if (!must_compute($options,"$options->{trackhub_dir}/overview/all_tfbs.bw")) {
-    print "TF binding probs already there, skipping calculations...\n";
+    print_log("TF binding probs already there, skipping calculations...\n");
     return;
   }
 
-  print "Computing TF binding tracks\n";
+  print_log("Computing TF binding tracks\n");
   compute_celltype_tf_sites($options);
   my $tf_probs = compute_antibody_specific_probs($options);
   compute_global_tf_prob($options, $tf_probs);
@@ -823,7 +843,7 @@ sub extract_segmentation_state_summaries_2 {
 
 sub extract_ChromHMM_state_summaries {
   my ($options, $segmentation) = @_;
-  print "Going through output of segmentation $segmentation->{name}\n";
+  print_log("Going through output of segmentation $segmentation->{name}\n");
   my @bedfiles = glob "$segmentation->{location}/*.bed";
   $segmentation->{states} = extract_ChromHMM_states($options, $segmentation, \@bedfiles);
   $segmentation->{celltypes} = extract_ChromHMM_cells($options, $segmentation, \@bedfiles);
@@ -842,7 +862,7 @@ sub extract_ChromHMM_state_summaries {
 
 sub extract_ChromHMM_states {
   my ($options, $segmentation, $files) = @_;
-  print "Extracting state names\n";
+  print_log("Extracting state names\n");
   my $output = "$options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/states.txt";
   if (must_compute($options,$output)) {
     run("cat " . join(" ", @$files) . " | grep -v '^track\>' | cut -f4 | uniq | sort | uniq > $output");
@@ -852,7 +872,7 @@ sub extract_ChromHMM_states {
 
 sub extract_ChromHMM_cells {
   my ($options, $segmentation, $files) = @_;
-  print "Extracting cell names\n";
+  print_log("Extracting cell names\n");
   my $output = "$options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/cells.txt";
   if (must_compute($options,$output)) {
     open my $fh, ">", $output;
@@ -875,10 +895,10 @@ sub extract_ChromHMM_state_summary {
   my @summaries = ();
 
   if (!must_compute($options,"$options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw")) {
-    print "Summary of state $state in segmentation $segmentation->{name} already computed, skipping...\n";
+    print_log("Summary of state $state in segmentation $segmentation->{name} already computed, skipping...\n");
     return;
   } else {
-    print "Computing summary of state $state in segmentation $segmentation->{name}.\n";
+    print_log("Computing summary of state $state in segmentation $segmentation->{name}.\n");
   }
 
   mkdir "$options->{working_dir}/segmentation_summaries/$segmentation->{name}/$state/";
@@ -929,10 +949,10 @@ sub label_segmentation_states {
   my ($segmentation, $state);
   
   if (!must_compute($options,"$options->{working_dir}/assignments.txt")) {
-    print "Loading pre-existing assignments $options->{working_dir}/assignments.txt\n";
+    print_log("Loading pre-existing assignments $options->{working_dir}/assignments.txt\n");
     $options->{assignments} = load_assignments( "$options->{working_dir}/assignments.txt");
   } else {
-    print "Assigning states to function\n";
+    print_log("Assigning states to functional labels\n");
     $options->{assignments} = {};
     foreach $segmentation (@{$options->{segmentations}}) {
       select_segmentation_states_2($options, $segmentation);
@@ -943,7 +963,7 @@ sub label_segmentation_states {
   foreach $segmentation (@{$options->{segmentations}}) {
     my $assignments = $options->{assignments}->{$segmentation->{name}};
     foreach $state (keys %{$assignments}) {
-      print "Assignment\t$segmentation->{name}\t$state\t$assignments->{$state}\n";
+      print_log("Assignment\t$segmentation->{name}\t$state\t$assignments->{$state}\n");
     }
   }
 }
@@ -982,7 +1002,7 @@ sub select_segmentation_states_2 {
 
   $options->{assignments}->{$segmentation->{name}} = {};
 
-  print "Entering segmentation $segmentation->{name}\n";
+  print_log("Entering segmentation $segmentation->{name}\n");
 
   compute_overlaps($options, $segmentation);
 
@@ -1054,10 +1074,10 @@ sub compute_overlap_scores {
   my $state;
   my $output = "$options->{working_dir}/overlaps/$segmentation->{name}/$test.txt";
   if (!must_compute($options,$output)) {
-    print "Retrieving pre-computed overlaps for test $test\n";
+    print_log("Retrieving pre-computed overlaps for test $test\n");
     $segmentation->{overlaps}->{$test} = retrieve($output);
   } else {
-    print "Computing overlaps for test $test\n";
+    print_log("Computing overlaps for test $test\n");
 
     $segmentation->{overlaps}->{$test} = {};
     foreach $state (@{$segmentation->{states}}) {
@@ -1086,7 +1106,7 @@ sub compute_overlap_score {
   }
 
   if ($test eq 'ctcf') {
-    print "Running wiggletools pearson - $reference $file\n";
+    print_log("Running wiggletools pearson $reference $file\n");
     $segmentation->{overlaps}->{$test}->{$state} = `wiggletools pearson $reference $file`;
   } else {
     $segmentation->{overlaps}->{$test}->{$state} = compute_enrichment_between_files($reference, $file);
@@ -1139,7 +1159,7 @@ sub compute_ChromHMM_repressed_scores {
        $sum += $items[$column];
     }
     $segmentation->{overlaps}->{repressed}->{"E$items[0]"} = $sum;
-    print "Emission\t$segmentation->{name}\trepressed\t$items[0]\t$sum\n";
+    print_log("Emission\t$segmentation->{name}\trepressed\t$items[0]\t$sum\n");
     if ($sum > $max) {
       $max = $sum;
     }
@@ -1181,7 +1201,7 @@ sub compute_GMTK_repressed_scores {
   close $fh;
 
   foreach my $state (@{$segmentation->{states}}) {
-    print "Emission\t$segmentation->{name}\trepressed\t$state\t$segmentation->{overlaps}->{repressed}->{$state}\n";
+    print_log("Emission\t$segmentation->{name}\trepressed\t$state\t$segmentation->{overlaps}->{repressed}->{$state}\n");
   }
   $segmentation->{repressed_cutoff} = $max / 4;
 }
@@ -1217,7 +1237,7 @@ sub compute_Segway_repressed_scores {
   close $fh;
 
   foreach my $state (@{$segmentation->{states}}) {
-    print "Emission\t$segmentation->{name}\trepressed\t$state\t$segmentation->{overlaps}->{repressed}->{$state}\n";
+    print_log("Emission\t$segmentation->{name}\trepressed\t$state\t$segmentation->{overlaps}->{repressed}->{$state}\n");
   }
 
   $segmentation->{repressed_cutoff} = $max / 4;
@@ -1282,7 +1302,7 @@ sub make_ChromHMM_bedfile {
   my $output = "$options->{trackhub_dir}/segmentations/$segmentation->{name}/$celltype.bed";
 
   if (!must_compute($options,"$options->{trackhub_dir}/segmentations/$segmentation->{name}/$celltype.bb")) {
-    print "Colorised segmentation $output already exists, skipping...\n";
+    print_log("Colorised segmentation $output already exists, skipping...\n");
     return;
   }
 
@@ -1363,14 +1383,14 @@ sub set_cutoffs {
   }
 
   foreach my $segmentation (@{$options->{segmentations}}) {
-    foreach my $function (keys %{$options->{selected_states}->{$segmentation->{name}}}) {
-      print "Selected\t$segmentation->{name}\t$function\t". join(" ", keys %{$options->{selected_states}->{$segmentation->{name}}->{$function}})."\n";
+    foreach my $label (keys %{$options->{selected_states}->{$segmentation->{name}}}) {
+      print_log("Selected\t$segmentation->{name}\t$label\t". join(" ", keys %{$options->{selected_states}->{$segmentation->{name}}->{$label}})."\n");
     }
   }
 
   foreach my $segmentation (@{$options->{segmentations}}) {
-    foreach my $function (keys %{$options->{cutoffs}->{$segmentation->{name}}}) {
-      print "Cutoff\t$segmentation->{name}\t$function\t$options->{cutoffs}->{$segmentation->{name}}->{$function}\n";
+    foreach my $label (keys %{$options->{cutoffs}->{$segmentation->{name}}}) {
+      print_log("Cutoff\t$segmentation->{name}\t$label\t$options->{cutoffs}->{$segmentation->{name}}->{$label}\n");
     }
   }
 }
@@ -1424,8 +1444,8 @@ sub test_relevance {
 }
 
 sub select_segmentation_cutoff {
-  my ($options, $segmentation, $function) = @_;
-  print "Setting cutoff for $function...\n";
+  my ($options, $segmentation, $label) = @_;
+  print_log("Setting cutoff for $label...\n");
 
   my $tfbs = "$options->{trackhub_dir}/overview/all_tfbs.bw";
   my $tfbs_auc = `wiggletools AUC $tfbs`;
@@ -1473,16 +1493,16 @@ sub select_segmentation_cutoff {
       $fscore = 2 * ($spec * $sens) / ($spec + $sens);
     }
 
-    print "CutoffTest\t$function\t.\t$fscore\n";
+    print_log("CutoffTest\t$label\t.\t$fscore\n");
     if ($fscore < $last_fscore) {
-      print "cutoff set at $last_cutoff\n";
+      print_log("cutoff set at $last_cutoff\n");
       return $last_cutoff;
     }
     $last_fscore = $fscore;
     $last_cutoff = $i;
   }
 
-  print "cutoff set at MAX\n";
+  print_log("cutoff set at MAX\n");
   return $celltype_count * $max_weight - $min_step;
 }
 
@@ -1530,10 +1550,10 @@ sub compute_regulatory_features {
   mkdir "$options->{working_dir}/build/";
 
   if (!must_compute($options,$bb_output)) {
-    print "$bb_output already exists, skipping...\n";
+    print_log("$bb_output already exists, skipping...\n");
     return;
   } else {
-    print "Computing Regulatory Build...\n";
+    print_log("Computing Regulatory Build...\n");
   }
 
   #############################################
@@ -1718,7 +1738,7 @@ sub compute_segmentation_states {
     if (must_compute($options,"$options->{trackhub_dir}/projected_segmentations/$celltype.bb")) {
       compute_celltype_state($options, $segmentation, $celltype);
     } else {
-      print "Projected segmentation of $celltype already computed, skipping...\n";
+      print_log("Projected segmentation of $celltype already computed, skipping...\n");
     }
   }
 }
@@ -1836,7 +1856,7 @@ sub compute_ChromHMM_annotation_state {
 
 sub make_track_hub {
   my $options = shift;
-  print "Making track hub header files\n";
+  print_log("Making track hub header files\n");
   make_track_hub_headers($options);
   make_track_hub_assembly($options);
 }
