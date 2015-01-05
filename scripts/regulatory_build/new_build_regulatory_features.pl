@@ -1019,7 +1019,7 @@ sub label_segmentation_state {
   if ($overlaps->{ctcf}->{$state} > .25) {
     $assignments->{$state} = 'ctcf';
   } elsif ($overlaps->{repressed}->{$state} > $segmentation->{repressed_cutoff}) {
-    if ($overlaps->{tfbs}->{$state} < 1) {
+    if ($overlaps->{tfbs}->{$state} < $weak_cutoff) {
       $assignments->{$state} = 'repressed';
     } else {
       $assignments->{$state} = 'poised';
@@ -1166,7 +1166,7 @@ sub compute_ChromHMM_repressed_scores {
   }
   close $fh;
 
-  $segmentation->{repressed_cutoff} = $max / 4;
+  $segmentation->{repressed_cutoff} = $max / 3;
 }
 
 sub compute_GMTK_repressed_scores {
@@ -1203,7 +1203,7 @@ sub compute_GMTK_repressed_scores {
   foreach my $state (@{$segmentation->{states}}) {
     print_log("Emission\t$segmentation->{name}\trepressed\t$state\t$segmentation->{overlaps}->{repressed}->{$state}\n");
   }
-  $segmentation->{repressed_cutoff} = $max / 4;
+  $segmentation->{repressed_cutoff} = $max / 3;
 }
 
 sub compute_Segway_repressed_scores {
@@ -1240,7 +1240,7 @@ sub compute_Segway_repressed_scores {
     print_log("Emission\t$segmentation->{name}\trepressed\t$state\t$segmentation->{overlaps}->{repressed}->{$state}\n");
   }
 
-  $segmentation->{repressed_cutoff} = $max / 4;
+  $segmentation->{repressed_cutoff} = $max / 3;
 }
 
 ########################################################
