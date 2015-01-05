@@ -36,7 +36,6 @@ new_build_regulatory_features.pl -o ./ -a hg38 -u http://ngs.sanger.ac.uk/produc
 Where:
 	* -o: directory for output
 	* -a: UCSC assembly name (for trackHub)
-	* -u: Base url for trackHub location.
 	* -h: host server
 	* -D: host database
 	* -P: host port
@@ -49,7 +48,6 @@ new_build_regulatory_features.pl -o ./ -d dump.txt -a hg38 -l chrom_sizes.txt -t
 Where:
 	* -o: directory for output
 	* -a: UCSC assembly name (for trackHub)
-	* -u: Base url for trackHub location.
 	* -l: tab delimited file, each line contains a chromosome name followed
 		by its length.  [Overrides database info]
 	* -t: Bed file with TSS. Can be Ensembl transcript TSS, CAGE tags... [Overrides database info]
@@ -188,7 +186,6 @@ sub check_options {
 
   die('Output directory not defined') unless defined $options->{out};
   die('Assembly name not defined') unless defined $options->{assembly};
-  die('Base url not defined') unless defined $options->{url};
 
   if (! defined $options->{host}) {
     die('Ensembl dumps not described') unless defined $options->{dump};
@@ -1796,7 +1793,6 @@ sub compute_ChromHMM_annotation_state {
 ##
 ## Params:
 ## * $options: hash containing:
-##   - $options->{url} Base URL of track hub
 ##   - $options->{assembly} UCSC name of the assembly
 ##   - $options->{trackhub_dir}
 ##   - $options->{segmentations} List of hashes containing:
@@ -1826,7 +1822,7 @@ sub make_track_hub_headers {
 
   open($fh, ">", "$options->{output_dir}/genomes.txt");
   print $fh "genome $options->{assembly}\n";
-  print $fh "trackDb $options->{assembly}/trackDb.txt\n";
+  print $fh "trackDb trackDb_$options->{assembly}.txt\n";
   close($fh);
 
   open($fh, ">", "$options->{output_dir}/hub.txt");
@@ -1841,7 +1837,7 @@ sub make_track_hub_headers {
 sub make_track_hub_assembly {
   my $options = shift;
 
-  my $output = "$options->{trackhub_dir}/trackDb.txt";
+  my $output = "trackDb_$options->{assembly}.txt";
   open(my $file, ">", $output) || die("Could not open $output\n");
 
   make_track_hub_overview($options, $file);
@@ -1873,9 +1869,9 @@ sub make_track_hub_overview {
 
   print $file "\ttrack RegBuildOverview\n";
   print $file "\tparent BuildOverview on\n";
-  print $file "\tbigDataUrl $options->{url}/$options->{assembly}/overview/RegBuild.bb\n";
+  print $file "\tbigDataUrl $options->{assembly}/overview/RegBuild.bb\n";
   print $file "\tshortLabel Regulatory Build\n";
-  print $file "\tlongLabel Ensembl Regulatory annotation of regional function\n";
+  print $file "\tlongLabel Ensembl Regulatory label of regional function\n";
   print $file "\ttype bigBed 9\n";
   print $file "\titemRgb on\n";
   print $file "\tsubGroups source=EnsRegBuild\n";
@@ -1886,7 +1882,7 @@ sub make_track_hub_overview {
 
   print $file "\ttrack TFBSSummary\n";
   print $file "\tparent BuildOverview on\n";
-  print $file "\tbigDataUrl $options->{url}/$options->{assembly}/overview/all_tfbs.bw\n";
+  print $file "\tbigDataUrl $options->{assembly}/overview/all_tfbs.bw\n";
   print $file "\tshortLabel TFBS Summary\n";
   print $file "\tlongLabel Summary of Transcription Factor Binding Site peaks from all cell types\n";
   print $file "\ttype bigWig\n";
@@ -1948,7 +1944,7 @@ sub make_track_hub_segmentations_2 {
     print $file "\n";
 
     print $file "\ttrack ${name}_${celltype}_segments\n";
-    print $file "\tbigDataUrl $options->{url}/$options->{assembly}/segmentations/$segmentation->{name}/$celltype.bb\n";
+    print $file "\tbigDataUrl $options->{assembly}/segmentations/$segmentation->{name}/$celltype.bb\n";
     print $file "\tparent ${name}CellSegments off\n";
     print $file "\tshortLabel Seg. ${celltype}\n";
     print $file "\tlongLabel $segmentation->{type} segmentation of the $celltype genome after training on $celltype_count cell types\n";
@@ -2004,7 +2000,7 @@ sub make_track_hub_segmentation_summaries_2 {
     print $file "\n";
 
     print $file "\ttrack ${name}_$state\n";
-    print $file "\tbigDataUrl $options->{url}/$options->{assembly}/segmentation_summaries/$segmentation->{name}/$state.bw\n";
+    print $file "\tbigDataUrl $options->{assembly}/segmentation_summaries/$segmentation->{name}/$state.bw\n";
     print $file "\tparent ${name}SegmentationSummaries off\n";
     print $file "\tshortLabel $state summary\n";
     print $file "\tlongLabel Overlap summary of $state state across $celltype_count segmentations\n";
@@ -2056,7 +2052,7 @@ sub make_track_hub_projected_segmentations {
       print $file "\n";
 
       print $file "\ttrack ${name}_${celltype}_projected\n";
-      print $file "\tbigDataUrl $options->{url}/$options->{assembly}/projected_segmentations/$celltype.bb\n";
+      print $file "\tbigDataUrl $options->{assembly}/projected_segmentations/$celltype.bb\n";
       print $file "\tparent ProjectedSegments off\n";
       print $file "\tshortLabel $celltype\n";
       print $file "\tlongLabel Projection of the Ensembl Regulatory build onto $celltype\n";
@@ -2108,7 +2104,7 @@ sub make_track_hub_tfbs {
     print $file "\n";
 
     print $file "\ttrack $tf\n";
-    print $file "\tbigDataUrl $options->{url}/$options->{assembly}/tfbs/$tf.bw\n";
+    print $file "\tbigDataUrl $options->{assembly}/tfbs/$tf.bw\n";
     print $file "\tparent TfbsPeaks off\n";
     print $file "\tshortLabel $tf \n";
     print $file "\tlongLabel Overlap summary of $tf ChipSeq binding peaks across available datasets\n";
