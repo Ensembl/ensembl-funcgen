@@ -95,12 +95,12 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 our $weak_cutoff = 2;
 our $strong_cutoff = 5;
 our $very_strong_cutoff = 10;
-# The functions are the annotation labels of the build built from segmentation data
-# Note that the order determines the order of the build. They must be in that order
-our @functions = ('tss', 'proximal', 'distal', 'ctcf');
-# The annotations are the labels used in the build. TFBS and DNAse are special in that they is not 
-# built from segmentation data, rather from Chip-Seq peaks
-our @annotations = (@functions, 'tfbs', 'dnase');
+# The functional labels are the labels of the build built from segmentation data
+our @functional_labels = ('tss', 'proximal', 'distal', 'ctcf');
+# The empirical labels are the labels of the build built from ChIP-seq peaks
+our @empirical_labels = ('tfbs', 'dnase');
+# The labels used in the build:
+our @labels = (@functional_labels, @empirical_labels);
 # Typical histone marks used to detect repression. Note that the strings are normalised 
 # via the clean_name function below
 our @repressed_marks = ('H3K27ME3');
@@ -118,15 +118,17 @@ our %COLORS = (
   weak => "141,255,68",
   gene => "0,176,80",
   poised => "192,0,190",
-  repressed => "127,127,127"
+  repressed => "127,127,127",
+  na => "255,255,255"
 );
 
 # These states describe the features at the cell-type level
-our %states = (
+our %feature_states = (
   active => 0,
   poised => 1,
   repressed => 2,
-  inactive => 3
+  inactive => 3,
+  na => 4
 );
 
 our $start_time = time;
@@ -178,7 +180,7 @@ use Getopt::Long;
 sub read_command_line {
   my %options = ();
 
-  GetOptions(\%options, "help|h=s", "tmp|T=s", "out|o=s", "dump|d=s", "assembly|a=s", "chrom_lengths|l=s", "tss|t=s", "exons|g=s", "url=s", "host|h=s", "port|P=s", "db|D=s", "user|u=s", "pass|p=s", "mask|m=s");
+  GetOptions(\%options, "help=s", "tmp|t=s", "out|o=s", "dump=s", "assembly|a=s", "chrom_lengths|l=s", "tss|t=s", "exons|g=s", "host|h=s", "port|P=s", "db|D=s", "user|u=s", "pass|p=s",  "dnadb_host=s", "dnadb_port=s", "dnadb_name=s", "dnadb_user=s", "dnadb_pass=s", "mask=s");
 
   $options{output_dir} = $options{out};
   $options{working_dir} = $options{tmp};
@@ -917,7 +919,7 @@ sub extract_ChromHMM_state_summary {
 
 ########################################################
 ## Characterising segmentation states 
-## This first annotation assigns a label to each state of 
+## This first label assigns a label to each state of 
 ## each segmentation, partly to color the segmentations 
 ## partly to inform the next step.
 ##
@@ -1324,9 +1326,9 @@ sub make_ChromHMM_state_bedfile {
   my $output = "$options->{working_dir}/segmentations/$segmentation->{name}/$state/$celltype.bed";
 
   mkpath "$options->{working_dir}/segmentations/$segmentation->{name}/$state/";
-  my $assigned_annotation = $options->{assignments}->{$segmentation->{name}}->{$state};
-  my $color = $COLORS{$assigned_annotation};
-  my $awk_string = "BEGIN {OFS=\"\\t\"} {\$4 = \"${state}_${assigned_annotation}_\"NR; \$5=1000; \$6=\".\"; \$7=\$2; \$8=\$3; \$9=\"$color\"; print}";
+  my $assigned_label = $options->{assignments}->{$segmentation->{name}}->{$state};
+  my $color = $COLORS{$assigned_label};
+  my $awk_string = "BEGIN {OFS=\"\\t\"} {\$4 = \"${state}_${assigned_label}_\"NR; \$5=1000; \$6=\".\"; \$7=\$2; \$8=\$3; \$9=\"$color\"; print}";
   run("awk \'$awk_string\' $input > $output") ;
 
   return $output;
@@ -1354,10 +1356,10 @@ sub make_ChromHMM_state_bedfile {
 ## * $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw
 ##
 ## It computes:
-## * $options->{selected_states}->{$segmentation->{name}}->{$function} 
+## * $options->{selected_states}->{$segmentation->{name}}->{$label} 
 ##   List of state names that given an appropriate cutoff can have a 5x enrichment 
 ##   in the reference marker
-## * $options->{cutoffs}->{$segmentation->{name}}->{$function} Integer
+## * $options->{cutoffs}->{$segmentation->{name}}->{$label} Integer
 ##   Cutoff on the sum of values of selected states that maximises 
 ##   the F-score of detection of TF binding 
 ##
@@ -1402,39 +1404,39 @@ sub select_segmentation_cutoffs {
   $options->{selected_states}->{$segmentation->{name}} = {};
   $options->{cutoffs}->{$segmentation->{name}} = {};
 
-  foreach my $function (@functions) {
-    $options->{selected_states}->{$segmentation->{name}}->{$function} = select_relevant_states($options, $segmentation, $function);
-    $options->{cutoffs}->{$segmentation->{name}}->{$function} = select_segmentation_cutoff($options, $segmentation, $function);
+  foreach my $label (@functional_labels) {
+    $options->{selected_states}->{$segmentation->{name}}->{$label} = select_relevant_states($options, $segmentation, $label);
+    $options->{cutoffs}->{$segmentation->{name}}->{$label} = select_segmentation_cutoff($options, $segmentation, $label);
   }
 }
 
 sub select_relevant_states {
-  my ($options, $segmentation, $function) = @_;
+  my ($options, $segmentation, $label) = @_;
   my %states = ();
   my $assignments = $options->{assignments}->{$segmentation->{name}};
   foreach my $state (@{$segmentation->{states}}) {
-    if ($assignments->{$state} eq $function) {
-      print "Selecting $state $function\n";
+    if ($assignments->{$state} eq $label) {
+      print_log("Selecting $state $label\n");
     }
-    if ($assignments->{$state} eq $function) {
-      my $weight = test_relevance($options, $segmentation, $function, $state);
+    if ($assignments->{$state} eq $label) {
+      my $weight = test_relevance($options, $segmentation, $label, $state);
       if ($weight > 0) {
         $states{$state} = $weight;
       }
     }
   }
-  print "Selected\t$segmentation->{name}\t$function\t". join(" ", keys %states)."\n";
+  print_log("Selected\t$segmentation->{name}\t$label\t". join(" ", keys %states)."\n");
   return \%states;
 }
 
 sub test_relevance {
-  my ($options, $segmentation, $function, $state) = @_;
+  my ($options, $segmentation, $label, $state) = @_;
   my $reference = "$options->{trackhub_dir}/overview/all_tfbs.bw"; 
   my $file = "$options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw";
 
   for (my $i = 1; $i < scalar(keys %{$segmentation->{celltypes}}); $i++) {
     my $enrichment = compute_enrichment_between_files($reference, "gt $i $file");
-    print "Enrichment\t$state\t$i:\t$enrichment\n";
+    print_log("Enrichment\t$state\t$i:\t$enrichment\n");
     if ($enrichment == 0) {
       return 0;
     } elsif (compute_enrichment_between_files($reference, "gt $i $file") > $weak_cutoff) {
@@ -1457,7 +1459,7 @@ sub select_segmentation_cutoff {
   my $min_step = 1;
   my @files = ();
   my @weights = ();
-  my %hash = %{$options->{selected_states}->{$segmentation->{name}}->{$function}};
+  my %hash = %{$options->{selected_states}->{$segmentation->{name}}->{$label}};
   foreach my $state (keys %hash) {
     my $cutoff = $hash{$state};
     push @files, "scale ".(1/$cutoff)." $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw";
@@ -1535,8 +1537,8 @@ sub select_segmentation_cutoff {
 ##   - $options->{working_dir}
 ##   - $options->{segmentations}: List of hashes with:
 ##     . $segmentation->{name}
-##   - $options->{selected_states}->{$segmentation->{name}}->{$function}: List of strings
-##   - $options->{cutoffs}->{$segmentation->{name}}->{$function}: Scalar
+##   - $options->{selected_states}->{$segmentation->{name}}->{$label}: List of strings
+##   - $options->{cutoffs}->{$segmentation->{name}}->{$label}: Scalar
 ##   - $options->{tss} Path to BEd file with experimentally validated TSS
 ## Expected files:
 ## * $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw 
@@ -1585,34 +1587,27 @@ sub compute_regulatory_features {
 
   # DNAse sites are merged to overlapping TFBS sites
   my $tfbs_tmp2 = "$options->{working_dir}/build/tfbs.tmp2.bed";
-  print "AAA";
   expand_boundaries([$dnase_tmp], $tfbs_tmp, $tfbs_tmp2);
 
   # DNAse and TFBS sites are merged to overlapping distal sites
   my $distal_tmp2 = "$options->{working_dir}/build/distal.tmp2.bed";
-  print "AAA";
   expand_boundaries([$dnase_tmp, $tfbs_tmp], $distal_tmp, $distal_tmp2);
 
   # DNAse, TFBS and distal sites are merged to overlapping proximal sites
   my $proximal_tmp2 = "$options->{working_dir}/build/proximal.tmp2.bed";
-  print "AAA";
   expand_boundaries([$dnase_tmp, $tfbs_tmp, $distal_tmp], $proximal_tmp, $proximal_tmp2);
 
   # DNAse, TFBS, distal and proximal sites are merged to overlapping TSS sites
   my $tss_tmp2 = "$options->{working_dir}/build/tss.tmp2.bed";
-  print "AAA";
   expand_boundaries([$dnase_tmp, $tfbs_tmp, $distal_tmp, $proximal_tmp], $tss_tmp, $tss_tmp2);
 
   #############################################
   ## Find non overlapping features for each level 
   #############################################
 
-  # Convenience short hand
-  my $awk_id = "awk '{\$4 = \$4\"_\"NR'; print;}";
-
   # All features that overlap known TSS are retained
   my $tss = "$options->{working_dir}/build/tss.bed";
-  run("bedtools intersect -u -wa -a $tss_tmp2 -b $options->{tss} | $awk_id > $tss");
+  run("bedtools intersect -u -wa -a $tss_tmp2 -b $options->{tss} > $tss");
 
   # All features that do not go into a demoted file
   my $demoted = "$options->{working_dir}/build/demoted_tss.bed";
@@ -1620,28 +1615,27 @@ sub compute_regulatory_features {
 
   # Unaligned proximal sites are retained
   my $proximal = "$options->{working_dir}/build/proximal.bed";
-  my $awk_contract = "awk 'BEGIN {OFS='\t'} {\$2 += 1; \$3 -= 1; print}'";
-  run("bedtools unionbedg $proximal_tmp2 $demoted | bedtools intersect -wa -v -a stdin -b $tss_tmp2 | $awk_contract | $awk_id > $proximal");
+  my $awk_proximal = make_awk_command("proximal", 0);
+  run("wiggletools write_bg - unit sum $proximal_tmp2 $demoted | $awk_proximal | bedtools intersect -wa -v -a stdin -b $tss_tmp2 > $proximal");
 
   # Unaligned distal sites are retained
   my $distal = "$options->{working_dir}/build/distal.bed";
-  run("bedtools intersect -wa -v -a $distal_tmp2 -b $tss_tmp2 | bedtools intersect -wa -v -a stdin -b $proximal_tmp2 | $awk_contract | $awk_id > $distal");
+  run("bedtools intersect -wa -v -a $distal_tmp2 -b $tss_tmp2 | bedtools intersect -wa -v -a stdin -b $proximal_tmp2 > $distal");
 
   # Unaligned TFBS sites are retained
   my $tfbs = "$options->{working_dir}/build/tfbs.bed";
-  run("bedtools intersect -wa -v -a $tfbs_tmp2 -b $tss_tmp2 | bedtools intersect -wa -v -a stdin -b $proximal_tmp2 | bedtools intersect -wa -v -a stdin -b $distal_tmp2 | $awk_contract | $awk_id > $tfbs");
+  run("bedtools intersect -wa -v -a $tfbs_tmp2 -b $tss_tmp2 | bedtools intersect -wa -v -a stdin -b $proximal_tmp2 | bedtools intersect -wa -v -a stdin -b $distal_tmp2 > $tfbs");
 
   # Unaligned DNAse sites are retained
   my $dnase = "$options->{working_dir}/build/dnase.bed";
-  run("bedtools intersect -wa -v -a $dnase_tmp -b $tss_tmp2 | bedtools intersect -wa -v -a stdin -b $proximal_tmp2 | bedtools intersect -wa -v -a stdin -b $distal_tmp2 | bedtools intersect -wa -v -a stdin -b $tfbs | $awk_contract | $awk_id > $dnase");
+  run("bedtools intersect -wa -v -a $dnase_tmp -b $tss_tmp2 | bedtools intersect -wa -v -a stdin -b $proximal_tmp2 | bedtools intersect -wa -v -a stdin -b $distal_tmp2 | bedtools intersect -wa -v -a stdin -b $tfbs_tmp2 > $dnase");
 
   #############################################
   ## CTCF computed independently 
   #############################################
 
-  my $awk_ctcf = make_awk_command("ctcf");
   my $ctcf = "$options->{working_dir}/build/ctcf.bed";
-  run("$awk_ctcf $ctcf_tmp > $ctcf");
+  run("mv $ctcf_tmp $ctcf");
 
   #############################################
   ## Apply mask
@@ -1655,35 +1649,34 @@ sub compute_regulatory_features {
   #############################################
   ## Merge
   #############################################
-  run("sort -m $tss $proximal $distal $ctcf $dnase $tfbs -k1,1 -k2,2n $awk_mask > $bed_output");
+  my $awk_contract = "awk '\$3 > \$2 + 1 {\$2 += 1; \$3 -= 1;} \$7 < \$2 {\$7 = \$2} \$8 > \$3 {\$8 = \$3} {print}'";
+  run("sort -m $tss $proximal $distal $ctcf $dnase $tfbs -k1,1 -k2,2n $awk_mask | $awk_contract > $bed_output");
   convert_to_bigBed($options, $bed_output);
 }
 
 sub expand_boundaries {
-  my ($source_files, $target_file, $output);
-  # Convenience short hand
-  my $awk_expand = "awk 'BEGIN {OFS=\"\\t\"} {if (\$2 > 0) \$2 -= 1; \$3 += 1; print \$1,\$2,\$3,\$4;}'";
+  my ($source_files, $target_file, $output) = @_;
   my $awk_move_boundaries = "awk 'BEGIN {OFS=\"\\t\"} \$4 != name {if (name) {print chr, start, end, name, 1000, \".\", thickStart, thickEnd, rgb; } chr=\$1; start=\$2; end=\$3; name=\$4; thickStart=\$7; thickEnd=\$8; rgb=\$9} \$10 == chr && \$11+1 < start {start=\$11+1} \$10 == chr && \$12-1 > end {end=\$12-1} END {print chr, start, end, name, 1000, \".\", thickStart, thickEnd, rgb}'";
 
-  run("cat ".join(" ", @{$source_files}). " | $awk_expand | bedtools intersect -loj -wa -wb -a $target_file -b stdin | $awk_move_boundaries > $output");
+  run("cat ".join(" ", @{$source_files}). " | bedtools intersect -loj -wa -wb -a $target_file -b stdin | $awk_move_boundaries > $output");
 }
 
 sub compute_initial_regions {
-  my ($options, $function) = @_;
-  my $output = "$options->{working_dir}/build/$function.tmp.bed";
+  my ($options, $label) = @_;
+  my $output = "$options->{working_dir}/build/$label.tmp.bed";
   my $wiggletools_cmd = "wiggletools write_bg - unit sum ";
   foreach my $segmentation (@{$options->{segmentations}}) {
-    $wiggletools_cmd .= function_definition($options, $function, $segmentation); 
+    $wiggletools_cmd .= weighted_summary_definition($options, $label, $segmentation); 
   }
-  my $awk_cmd = make_awk_command($function);
+  my $awk_cmd = make_awk_command($label);
   run("$wiggletools_cmd | $awk_cmd > $output") ;
   return $output;
 }
 
-sub function_definition {
-  my ($options, $function, $segmentation) = @_;
-  my $hash = $options->{selected_states}->{$segmentation->{name}}->{$function};
-  my $cutoff = $options->{cutoffs}->{$segmentation->{name}}->{$function};
+sub weighted_summary_definition {
+  my ($options, $label, $segmentation) = @_;
+  my $hash = $options->{selected_states}->{$segmentation->{name}}->{$label};
+  my $cutoff = $options->{cutoffs}->{$segmentation->{name}}->{$label};
   my @summaries = ();
   foreach my $state (keys %$hash) {
     push @summaries, "scale ".(1/$hash->{$state})." $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw";
@@ -1696,9 +1689,15 @@ sub function_definition {
 }
 
 sub make_awk_command {
-  my ($function) = @_;
+  my ($label, $expand) = @_;
   # This awk one-liner takes in a BedGraph and converts into a Bed9
-  return "awk \'BEGIN {OFS=\"\\t\"} {\$4=\"${function}_\"NR; \$5=1000; \$6=\".\"; \$7=\$2; \$8=\$3; \$9=\"$COLORS{$function}\"; print }\'";
+  # Note that it IDs the lines with the line number
+  # It also optionally expands the coordinates by 1 to garantee overlaps of contiguous regions
+  my $expansion = "if (\$2 > 0) \$2 -= 1; \$3 += 1;";
+  if (defined $expand && $expand == 0) {
+    $expansion = "";
+  }
+  return "awk \'BEGIN {OFS=\"\\t\"} {$expansion \$4=\"${label}_\"NR; \$5=1000; \$6=\".\"; \$7=\$2; \$8=\$3; \$9=\"$COLORS{$label}\"; print }\'";
 }
 
 ########################################################
@@ -1711,7 +1710,7 @@ sub make_awk_command {
 ##   - $options->{working_dir}
 ##   - $options->{segmentation}
 ## Expected files:
-## * $options->{working_dir}/build/$annotation.bed
+## * $options->{working_dir}/build/$label.bed
 ## * $options->{working_dir}/celltype_tf/$celltype.bed
 ## * $options->{working_dir}/celltype_dnase/$celltype.bed
 ## Created files:
@@ -1759,79 +1758,88 @@ sub compute_celltype_state {
 
 sub compute_ChromHMM_celltype_state {
   my ($options, $segmentation, $celltype) = @_;
-  my $annotation;
+  my $output = "$options->{trackhub_dir}/projected_segmentations/$celltype.bed";
 
-  my @bedfiles = ();
-  
-  foreach $annotation (@annotations) {
-    push @bedfiles, compute_ChromHMM_annotation_state($options, $segmentation, $celltype, $annotation);
+  foreach my $prelabel ((@functional_labels, 'repressed', 'poised')) {
+    precompute_ChromHMM_label_state($options, $segmentation, $celltype, $prelabel);
   }
 
-  my $output = "$options->{trackhub_dir}/projected_segmentations/$celltype.bed";
+  my @bedfiles = ();
+  foreach my $label (@labels) {
+    push @bedfiles, compute_ChromHMM_label_state($options, $segmentation, $celltype, $label);
+  }
+
   run("sort -m " . join(" ", @bedfiles) . " -k1,1 -k2,2n > $output") ;
   convert_to_bigBed($options, $output);
 }
 
-sub compute_ChromHMM_annotation_state {
-  my ($options, $segmentation, $celltype, $annotation) = @_;
-  my $temp;
-  my $process=1;
-
-  if ($annotation eq 'tfbs') {
-    $temp = "$options->{working_dir}/celltype_tf/$celltype.bed";
-  } elsif ($annotation eq 'dnase') {
-    $temp = "$options->{working_dir}/celltype_dnase/$celltype.bed";
-  } else {
-    my @files = ();
-    foreach my $state (@{$segmentation->{states}}) {
-      if ($options->{assignments}->{$segmentation->{name}}->{$state} eq $annotation) {
-        push @files, "$options->{working_dir}/segmentation_summaries/$segmentation->{name}/$state/$celltype.bed";
-      }
-    }
-
-    if (scalar @files == 0) {
-      $process=0;
-    } else {
-      $temp = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$annotation.bed";
-      run("sort -m " . join(" ", @files). " -k1,1 -k2,2n > $temp");
+sub precompute_ChromHMM_label_state {
+  my ($options, $segmentation, $celltype, $label) = @_;
+  my $output = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$label.bed";
+  my @files = ();
+  foreach my $state (@{$segmentation->{states}}) {
+    if ($options->{assignments}->{$segmentation->{name}}->{$state} eq $label) {
+      push @files, "$options->{working_dir}/segmentation_summaries/$segmentation->{name}/$state/$celltype.bed";
     }
   }
 
-  if ($process && -e $temp) {
-    my $reference = "$options->{working_dir}/build/$annotation.bed";
-    my $repressed = "$options->{working_dir}/segmentation_summaries/$segmentation->{name}/$celltype/repressed.bed";
-    my $poised = "$options->{working_dir}/segmentation_summaries/$segmentation->{name}/$celltype/poised.bed";
+  if (scalar @files > 0) {
+    run("sort -m " . join(" ", @files). " -k1,1 -k2,2n > $output");
+  } elsif ($label eq "repressed" || $label eq "poised") {
+    run("echo > $output");
+  }
+}
+
+sub compute_ChromHMM_label_state {
+  my ($options, $segmentation, $celltype, $label) = @_;
+  my $awk_contract = "awk '\$3 > \$2 + 1 {\$2 += 1; \$3 -= 1;} \$7 < \$2 {\$7 = \$2} \$8 > \$3 {\$8 = \$3} {print}'";
+  my $output = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$label.final.bed";
+  my $reference = "$options->{working_dir}/build/$label.bed";
+
+  my $temp;
+  if ($label eq 'tfbs') {
+    $temp = "$options->{working_dir}/celltype_tf/$celltype.bed";
+  } elsif ($label eq 'dnase') {
+    $temp = "$options->{working_dir}/celltype_dnase/$celltype.bed";
+  } else {
+    $temp = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$label.bed";
+  }
+
+  if (defined $temp && -e $temp) {
+    my $repressed = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/repressed.bed";
+    my $poised = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/poised.bed";
 
     # POISED => POISED
-    my $temp2 = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$annotation.poised.bed";
+    my $temp2 = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$label.poised.bed";
     my $poised_color = $COLORS{poised};
     run("bedtools intersect -wa -u -a $reference -b $poised | awk \'{\$9=\"$poised_color\"; print}\' > $temp2");
 
     # !POISED && ACTIVE && REPRESSED => POISED
-    my $temp3 = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$annotation.active_repressed.bed";
+    my $temp3 = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$label.active_repressed.bed";
     run("bedtools intersect -wa -v -a $reference -b $poised | bedtools intersect -wa -u -a stdin -b $temp | bedtools intersect -wa -u -a stdin -b $repressed | awk \'{\$9=\"$poised_color\"; print}\' > $temp3");
 
     # !POISED && !ACTIVE && REPRESSED => REPRESSED
-    my $temp4 = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$annotation.repressed.bed";
+    my $temp4 = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$label.repressed.bed";
     my $repressed_color = $COLORS{repressed};
     run("bedtools intersect -wa -v -a $reference -b $poised | bedtools intersect -wa -v -a stdin -b $temp | bedtools intersect -wa -u -a stdin -b $repressed | awk \'{\$9=\"$repressed_color\"; print}\' > $temp4");
 
     # !POISED && ACTIVE && !REPRESSED => ACTIVE
-    my $temp5 = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$annotation.active.bed";
+    my $temp5 = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$label.active.bed";
     run("bedtools intersect -wa -v -a $reference -b $poised | bedtools intersect -wa -u -a stdin -b $temp | bedtools intersect -wa -v -a stdin -b $repressed > $temp5");
 
     # !POISED && !ACTIVE && !REPRESSED => DEAD
-    my $temp6 = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$annotation.inactive.bed";
+    my $temp6 = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$label.inactive.bed";
     my $dead_color = $COLORS{dead};
-    run("bedtools intersect -wa -v -a $reference -b $poised | bedtools intersect -wa -v -a stdin -b $temp | bedtools intersect -wa -v -a stdin -b $repressed | awk \'{\$9=\"$dead_color\"; print}\' > $temp4");
+    run("bedtools intersect -wa -v -a $reference -b $poised | bedtools intersect -wa -v -a stdin -b $temp | bedtools intersect -wa -v -a stdin -b $repressed | awk \'{\$9=\"$dead_color\"; print}\' > $temp6");
 
     # Merge all this into one bed file
-    my $output = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$annotation.final.bed";
-    run("sort -m $temp2 $temp3 $temp4 $temp5 $temp6 -k1,1 -k2,2n > $output");
+    run("sort -m $temp2 $temp3 $temp4 $temp5 $temp6 -k1,1 -k2,2n | $awk_contract > $output");
     return $output;
   } else {
     # Could not find evidence for or against, do not report any regions
-    return "";
+    my $na_color = $COLORS{na};
+    run("cat $reference | awk \'{\$9=\"$na_color\"; print}\' | $awk_contract > $output");
+    return $output;
   }
 }
 
