@@ -834,7 +834,7 @@ sub extract_segmentation_state_summaries_2 {
   mkdir "$options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/";
   mkdir "$options->{working_dir}/segmentation_summaries/$segmentation->{name}/";
 
-  if ($segmentation->{type} eq 'ChromHMM' || $segmentation->{type} eq 'Segway') {
+  if ($segmentation->{type} eq 'ChromHMM' || $segmentation->{type} eq 'Segway' || $segmentation->{type} eq 'GMTK') {
     extract_ChromHMM_state_summaries($options, $segmentation);
   } else {
     die("Unknown segmentation format $segmentation->{type}\n");
@@ -1050,6 +1050,8 @@ sub compute_overlaps {
   if ($segmentation->{type} eq 'ChromHMM') {
     compute_ChromHMM_repressed_scores($options, $segmentation);
   } elsif ($segmentation->{type} eq 'Segway') {
+    compute_Segway_repressed_scores($options, $segmentation);
+  } elsif ($segmentation->{type} eq 'GMTK') {
     compute_GMTK_repressed_scores($options, $segmentation);
   } else {
     print STDERR "Could not recognize segmentation type $segmentation->{type}\n";
