@@ -80,8 +80,11 @@ use warnings;
 use File::Path qw(mkpath);
 use File::Basename;
 use File::Temp;
+${File::Temp::KEEP_ALL} = 1;
 use Storable;
 use Data::Dumper;
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
 ########################################################
 ## Global constants 
@@ -196,21 +199,38 @@ sub check_options {
   } else {
     die('Database not defined') unless defined $options->{db};
     die('User account not defined') unless defined $options->{user};
-    $options->{db_adaptor} = Bio::EnsEMBL::DBSQL::DBAdaptor->new
+    if (!defined $options->{dnadb_user}) {
+      $options->{dnadb_user} = $options->{user};
+    }
+    if (!defined $options->{dnadb_host}) {
+      $options->{dnadb_host} = $options->{host};
+    }
+    if (!defined $options->{dnadb_pass}) {
+      $options->{dnadb_pass} = $options->{pass};
+    }
+    if (!defined $options->{dnadb_port}) {
+      $options->{dnadb_port} = $options->{port};
+    }
+    $options->{db_adaptor} = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
     (
 	-user   => $options->{user},
 	-dbname => $options->{db},
 	-host   => $options->{host},
 	-pass   => $options->{pass},
-	-port   => $options->{port}
+	-port   => $options->{port},
+	-dnadb_user   => $options->{dnadb_user},
+	-dnadb_dbname => $options->{dnadb_db},
+	-dnadb_host   => $options->{dnadb_host},
+	-dnadb_pass   => $options->{dnadb_pass},
+	-dnadb_port   => $options->{dnadb_port}
     );
     $options->{dnadb_adaptor} = Bio::EnsEMBL::DBSQL::DBAdaptor->new
     (
-	-user   => $options->{db_adaptor}->dnadb_user(),
-	-dbname => $options->{db_adaptor}->dnadb_name(),
-	-host   => $options->{db_adaptor}->dnadb_host(),
-	-pass   => $options->{db_adaptor}->dnadb_pass(),
-	-port   => $options->{db_adaptor}->dnadb_port()
+	-user   => $options->{dnadb_user},
+	-dbname => $options->{dnadb_name},
+	-host   => $options->{dnadb_host},
+	-pass   => $options->{dnadb_pass},
+	-port   => $options->{dnadb_port}
     );
   }
 
@@ -465,21 +485,26 @@ sub read_dump {
 
 sub fetch_metadata {
   my ($options) = @_;
-  my @slices = sort {$a->name cmp $b->name} @{$options->{dnadb_adaptor}->get_SliceAdaptor->fetch_all('toplevel', undef, undef, 0)};
+  print_log("Fetching metadata from funcgen DB\n");
+  my @slices = sort {$a->seq_region_name cmp $b->seq_region_name} @{$options->{dnadb_adaptor}->get_SliceAdaptor->fetch_all('toplevel', undef, undef, 0)};
   foreach my $featureSet (@{$options->{db_adaptor}->get_adaptor("FeatureSet")->fetch_all_by_feature_class("annotated")}) {
     my $tf = $featureSet->feature_type->name;
-    my $cell = $featureSet->cell->name;
+    if ($tf =~ /^H[2-4][ABKZ]/) {
+      next;
+    }
+    my $cell = $featureSet->cell_type->name;
     my $dir = "$options->{working_dir}/peaks/$tf/$cell/";
     mkpath $dir;
 
     my $fh = File::Temp->new(DIR => $dir, SUFFIX => '.bed');
+    my $filename = $fh->filename;
     foreach my $slice (@slices) {
       foreach my $feature (sort {$a->start <=> $b->start} @{$featureSet->get_Features_by_Slice($slice)}) {
-	print $fh join("\t", ($slice->name, $feature->start - 1, $feature->end));
+	print $fh join("\t", ($slice->seq_region_name, $feature->start - 1, $feature->end))."\n";
       }
     }
-    record_peak_dir($options, $tf, $cell, $fh->filename);
-    close $fh
+    record_peak_file($options, $tf, $cell, $fh->filename);
+    close $fh;
   }
 }
 
@@ -523,13 +548,13 @@ sub fetch_chrom_lengths {
   my @slices = @{ $slice_adaptor->fetch_all('toplevel', undef, undef, 0) };
 
   foreach my $slice (@slices) {
-    print $fh join("\t", ($slice->seq_region_name() - 1, $slice->end() - $slice->start())) . "\n";
+    print $fh join("\t", ($slice->seq_region_name(), $slice->end() - $slice->start())) . "\n";
   }
 }
 
 sub create_tss {
   my ($options) = @_;
-  $options->{tss} = "$options->{working_dir}/tss.txt";
+  $options->{tss} = "$options->{working_dir}/tss.bed";
   open my $fh, ">", $options->{tss};
   fetch_tss($options, $fh);
   close $fh
@@ -543,9 +568,9 @@ sub fetch_tss {
     foreach my $gene (@{$slice->get_all_Genes()}) {
       foreach my $transcript (@{$gene->get_all_Transcripts()}) {
 	if ($transcript->strand() > 0) {
-	  push @tss_coords, [$slice->seq_regions_name(), $transcript->start() - 1, $transcript->start()];
+	  push @tss_coords, [$slice->seq_region_name(), $transcript->start() - 1, $transcript->start()];
         } else {
-	  push @tss_coords, [$slice->seq_regions_name(), $transcript->end() - 1, $transcript->end()];
+	  push @tss_coords, [$slice->seq_region_name(), $transcript->end() - 1, $transcript->end()];
 	}
       }
     }
@@ -554,13 +579,13 @@ sub fetch_tss {
   my @sorted_tss_coords = sort {comp_coords($a, $b)} @tss_coords;
 
   foreach my $tss_coord (@sorted_tss_coords) {
-    print $fh, join("\t", @{$tss_coord})."\n";
+    print $fh join("\t", @{$tss_coord})."\n";
   }
 }
 
 sub create_exons {
   my ($options) = @_;
-  $options->{exons} = "$options->{working_dir}/exons.txt";
+  $options->{exons} = "$options->{working_dir}/exons.bed";
   open my $fh, ">", $options->{exons};
   fetch_exons($options, $fh);
   close $fh
@@ -574,7 +599,7 @@ sub fetch_exons {
     foreach my $gene (@{$slice->get_all_Genes()}) {
       foreach my $transcript (@{$gene->get_all_Transcripts()}) {
         foreach my $exon (@{$transcript->get_all_Exons()}) {
-	  push @exon_coords, [$slice->seq_regions_name(), $exon->start() - 1, $exon->end()];
+	  push @exon_coords, [$slice->seq_region_name(), $exon->start() - 1, $exon->end()];
 	}
       }
     }
@@ -583,13 +608,13 @@ sub fetch_exons {
   my @sorted_exon_coords = sort {comp_coords($a, $b)} @exon_coords;
 
   foreach my $exon_coord (@sorted_exon_coords) {
-    print $fh, join("\t", @{$exon_coord})."\n";
+    print $fh join("\t", @{$exon_coord})."\n";
   }
 }
 
 sub create_mask {
   my ($options) = @_;
-  $options->{mask} = "$options->{working_dir}/mask.txt";
+  $options->{mask} = "$options->{working_dir}/mask.bed";
   open my $fh, ">", $options->{mask};
   fetch_mask($options, $fh);
   close $fh
@@ -601,14 +626,14 @@ sub fetch_mask {
   my $slice_adaptor = $options->{dnadb_adaptor}->get_SliceAdaptor();
   foreach my $slice (@{$slice_adaptor->fetch_all('toplevel', undef, undef, 0) }) {
     foreach my $mask (@{$slice->get_all_MiscFeatures('encode_excluded')}) {
-      push @mask_coords, [$slice->seq_regions_name(), $mask->start(), $mask->end() - 1];
+      push @mask_coords, [$slice->seq_region_name(), $mask->start(), $mask->end() - 1];
     }
   }
 
   my @sorted_mask_coords = sort {comp_coords($a, $b)} @mask_coords;
 
   foreach my $mask_coord (@sorted_mask_coords) {
-    print $fh, join("\t", @{$mask_coord})."\n";
+    print $fh join("\t", @{$mask_coord})."\n";
   }
 }
 
