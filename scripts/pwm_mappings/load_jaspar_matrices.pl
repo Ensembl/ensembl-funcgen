@@ -2,7 +2,7 @@
 
 =head1 LICENSE
 
-Copyright [1999-2014] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -61,6 +61,7 @@ load_jaspar_matrices.pl [options]
   --collections        List of Jaspar collection to query. Default are: CORE PBM
   --dump_jaspar_fasta  Dumps fasta files for the Jaspar accessions
   --skip_blast  	     Skips blast step if blast results file already exists (mainly for testing)
+  --feature_type       <String> Feature type name to test. For testing only as will rollback all other data
   --man
   --help
 
@@ -68,9 +69,8 @@ load_jaspar_matrices.pl [options]
 
 B<This program>
 
-
-For a Jaspar analysis which has been previosuly imported, binding matrix entries and associated xrefs are 
-deleted before being re-imported.
+Finds associations between Jaspar matrices (pfms) and Ensembl Genes via name or accessions matches and best in genome blast hits.
+Binding matrices with associations are loaded into the DB (old xrefs and complex feature type associations are deleted).
 
 =cut
 
@@ -89,51 +89,7 @@ deleted before being re-imported.
 #   This may mean we may match a gene which does not have the feature type name as
 #   an eternal name. Need to monitor how many this affects
 
-#TODO
-
-# 1 Review counts
-
-# 2 Make sure we update binding_matrix, as it may have change between Jaspar releases
-#   do we store this version info anywhere?  Will actual matrix have changed if we enounter
-#   different versions. Probably!
-
-# 3 Attempt blast match for ftypes which have no species specific pfms
-#   But have a ftype matched pfm on a different species.
-#   This will require these we can identify a unique protein based on the ftype name
-
-# 4 Add mode which will allow associations between fuzzy match pairs
-
-# 5 Load new analysis based on jdb name. Load binding matrices. Leave old ones, and remove them afterwards based on the analysis_id.
-#   Add version to description. Currently just set to 'Jaspar Matrix', which is redundant as this described by the analysis
-
-# 6 DONE add support for Jaspar DB version? Add to analysis description (is already in analysis logic name).
-
-# 7 Add support for restricting to a single FeatureType or PFM
-
-# 8 Consider Ftype gene xrefs which are pre-existing. These used to be located in a flat file.
-#   Actually, there are associations which can be made using Jsapar wich can't be done directly via the gene
-#   Should we sub out the Gene assoication bit, so this can be reused?
-
-# 9 Handle non species hits? Or just add species to the where clause and let the blast step handle that
-
-# 10 Use helper to log/debug, and add helper options
-
-# 11 Update to use Uniprot rest web service rather than flaky (and proprietary) pfetch
-#    dbfetch service which has some latency, so probably better to update to use that directly using LWP
-
-# 12 Consider ftype_to_pfm name only matches if we can't even get a blast result. This may be because 
-#    the feature type name is not present as a gene external name 
-
-# 13 Does this handle rollback of previously loaded xrefs/associations? Yes it does.
-
-# 14 This script is dependant on core xrefs being in place. As this is the first
-#    step in the motif pipeline, it effectively holds up the alignments.
-#    Supporting a post-import tidyup, is probably more trouble than it's worth.
-#    It is probably only needed with a new assembly, or a significantly revised genebuild
-#    A validate mode maybe useful, which would do the associations, and check whether they
-#    match what is in the DB already. So decoupling the association from the DB import would be nice
-
-
+# TODO See ENSREGULATION-132
 
 use warnings;
 use strict;
@@ -188,7 +144,7 @@ GetOptions(
  \%opts, 
  #Opts config
  ((keys %{ get_DB_options_config( [ 'funcgen', 'dna', 'jdb' ], 1 ) }),  #allow custom flag
-   qw( out_dir=s      collections=s{,} dump_jaspar_fasta jdb_version=s
+   qw( out_dir=s      collections=s{,} dump_jaspar_fasta jdb_version=s feature_type=s
        pfm_files=s{,} pep_fasta=s      skip_blast        help       man ))) or   
   pod2usage( -exitval => 1 );  #Catch unknown options
 
@@ -220,9 +176,9 @@ foreach my $key ( keys %opts ) {
 sub main {
   my $opts = shift;
   my ($out_dir, $colls, $pfm_files, $jdb_name, $jdb_version, 
-      $pep_fasta, $dump_pfm_fasta, $skip_blast) = 
+      $pep_fasta, $dump_pfm_fasta, $skip_blast, $ftype_name) = 
    rearrange([qw( OUT_DIR COLLECTIONS PFM_FILES JDB_NAME JDB_VERSION
-                  PEP_FASTA DUMP_JASPAR_FASTA SKIP_BLAST )], %$opts );
+                  PEP_FASTA DUMP_JASPAR_FASTA SKIP_BLAST FEATURE_TYPE )], %$opts );
 
   if ( !$out_dir ) {
     $out_dir = '.';
@@ -326,11 +282,6 @@ sub main {
 
   #Make ftypes non-redundant
   my %ftypes;
-
-  #my @ftypes = grep { ! $seen{$_->name}++ } (map { $_->feature_type } @fsets);
-  
-  #warn "hardcoding for just 10 ftypes";
-  
   map { $ftypes{ $_->feature_type->name } = $_->feature_type } @fsets; #[0-9];
 
   my $dnadb      = $efg_db->dnadb;
@@ -339,14 +290,19 @@ sub main {
   my $dbentry_a  = $efg_db->get_DBEntryAdaptor;
   my $bm_adaptor = $efg_db->get_BindingMatrixAdaptor;
 
+
+  if ($ftype_name){
+    warn "WARNING:\tTesting with $ftype_name. All other data will be removed";
+    %ftypes = ($ftype_name => $ftype_a->fetch_by_name($ftype_name));
+  }
 #These are the minimum fields(and aliases) required to support preprocess_jaspar_rows
 #So could add more, but can't remove any
 #todo change this to use COLLATE for lc match
-  my $sql =
-'SELECT m.BASE_ID as id, m.VERSION as version, t.SPECIES as species, mp.ACC as accs, m.NAME as name '
-    . 'FROM MATRIX m, MATRIX_PROTEIN mp, MATRIX_SPECIES ms, TAX t '
-    . 'WHERE m.ID=mp.ID and m.ID=ms.ID and ms.TAX_ID = t.TAX_ID and LOWER(m.NAME) like ?';
-  my $sth = $jdbh->prepare($sql);
+#  my $sql =
+#'SELECT m.BASE_ID as id, m.VERSION as version, t.SPECIES as species, mp.ACC as accs, m.NAME as name '
+#    . 'FROM MATRIX m, MATRIX_PROTEIN mp, MATRIX_SPECIES ms, TAX t '
+#    . 'WHERE m.ID=mp.ID and m.ID=ms.ID and ms.TAX_ID = t.TAX_ID and LOWER(m.NAME) like ?';
+#  my $sth = $jdbh->prepare($sql);
 
   #Can't do an IN statement as the accs are cat'd within the field!!!
   my $sql2 =
@@ -375,7 +331,7 @@ sub main {
 
   my ( %ftype_matches, %no_matches, %peps_to_gene_ftype_names, %counts, %pfm_hits);
 
-#todo put these counters in the hash? or remove hash in favour of individual counts
+  #todo put these counters in the hash? or remove hash in favour of individual counts
   my $ftype_to_pfm_complex    = 0;
   my $gene_to_pfm_complex     = 0;
   my $ftype_to_gene_only_full = 0;
@@ -386,17 +342,63 @@ sub main {
   my $multi_pep_dump          = 0;
 
 
-  #warn "Hardcoding 10 ftypes for testing!";
-  #@ftypes = @ftypes[0..9];
+  #FeatureType.name synonyms (primarily Gene external_names, not complex names)
+  #So essentially a subset of the old manually annotated homo_sapiens.FeatureType_Genes.txt and
+  #FeatureType_associations.txt
+  #This should omit subunit to complex matches, as this is not really what we want to do here
+  #The complex sub-unit relationship should be handled either by the pfm name or the core 
+  #external_names, and should be identified by sub-unit synonyms matching via the name match 
+  #or blast validation
 
+  my %ftype_syns = 
+   (Cmyc => [qw(c-Myc MYC)],
+    Cfos => [qw(c-Fos FOS])],
+    Cjun => [qw(c-Jun JUN)],
+    AP1  => [qw(AP-1)], #Add subunits in here?
+    Gabp => [qw(GABPA)],
+    PU1  => [qw(PU.1)],
+    NFKB => [qw(NFKB1)],
+   );
+
+  my %syn_to_ftype;
+
+  foreach my $ftype(keys %ftype_syns){
+    map {$syn_to_ftype{$_} = $ftype} @{$ftype_syns{$ftype}};
+  }
+
+  my ($sth, $sql);
   #could probably change this to use keys
   #and then only access the %ftype hash when absolutely necessary
 
   foreach my $ftype ( values %ftypes ) {
     my $ftype_name = $ftype->name;
+    my @fsyns      = ($ftype_name, 
+      (exists $ftype_syns{$ftype_name} ? @{$ftype_syns{$ftype_name}} : ()));
     print "Finding associations for:\t$ftype_name\n";
     ####  FeatureType name > PFM name > Gene accession/external_name ###
-    $sth->bind_param( 1, '%' . lc($ftype_name) . '%', SQL_VARCHAR );
+
+    #$sql = 'SELECT m.BASE_ID as id, m.VERSION as version, t.SPECIES as species,'.
+    # 'mp.ACC as accs, m.NAME as name '.
+    # 'FROM MATRIX m, MATRIX_PROTEIN mp, MATRIX_SPECIES ms, TAX t '.
+    # 'WHERE m.ID=mp.ID and m.ID=ms.ID and ms.TAX_ID = t.TAX_ID and ';#LOWER(m.NAME) like  ?';
+    #$sql .= join(' OR ', (map { ' LOWER(m.NAME) like "%'.lc($_).'%"' } 
+    #    ($ftype_name, (exists $ftype_syns{$ftype_name} ? @{$ftype_syns{$ftype_name}}: ()))));
+    #This was causing a client out of memory errors for queries with > 1 synonym. 
+    #This was because no indexes were being used for the OR query on MATRIX.NAME
+    #MySQL for some reason, then refuses to use any other indexes resulting in 
+    #putting a cartesian product of all the tables in a join buffer?!
+    #Optimising did nothing (which would normally work for dodgy index selection)
+    #MATRIX_PROTEIN and MATRIX_SPECIES turn out to be InnoDB.
+
+    #Sub-select fixed forced this to use the relevant keys where possible
+    #Still doesn't 
+    $sql = 'SELECT d.BASE_ID as id, d.VERSION as version, t.SPECIES as species, mp.ACC as accs, '.
+     'd.NAME as name from MATRIX_PROTEIN mp, MATRIX_SPECIES ms, TAX t, '.
+     '(SELECT ID, BASE_ID, VERSION, NAME FROM MATRIX WHERE '; 
+    $sql .= join(' OR ', (map { ' LOWER(NAME) like "%'.lc($_).'%"' }  @fsyns));
+    $sql .= ')as d where d.ID=mp.ID and d.ID=ms.ID and ms.TAX_ID = t.TAX_ID';
+    #warn "\n\nsql is $sql";
+    $sth = $jdbh->prepare($sql);
     $sth->execute;
 
     #Filters out older versions and non species specific rows
@@ -408,8 +410,6 @@ sub main {
       $no_matches{$ftype_name}{ftype_to_pfm} = $ftype;
     }
     else {
-      #We never actually use this
-      #$ftype_matches{$ftype_name}{feature_type} = $ftype;
 
       foreach my $row_ref (@$pfm_matches) {
         my $found_gene = 0;
@@ -417,6 +417,9 @@ sub main {
           ($row_ref->{id},   $row_ref->{species}, $row_ref->{accs},
            $row_ref->{name}, $row_ref->{version} );
 
+        #name here will be jaspar name, so potentially a synonym!
+        #need to convert this back to offical funcgen ftype name?
+        #The name is used later on to fethc the ftype!!
         my $pfm_key = $id . '.' . $version . ' ' . $name;
 
         if ( $name =~ /::/ ) {
@@ -428,6 +431,7 @@ sub main {
           my $seen_multi;
           my @genes = @{ $gene_a->fetch_all_by_external_name( $accs->[$i] ) };
 
+          
           if ( scalar(@genes) > 1 ) {
             $counts{multi_acc_to_gene_hits}++;
           }
@@ -438,44 +442,124 @@ sub main {
              #This is very unlikely, as we are filtering out the non-species specific stuff
           }
 
+
+          my $sub_unit_name;
+          my @syn_info = (\@fsyns);
+
           if ( $name =~ /::/ ) {
             print "Found ".scalar(@genes)." genes for TF complex hit $name with acc ".
               $accs->[$i]."\n";
+
+            #This only supports dimers at present!
+            #todo add > dimer test
+
+            foreach my $syn(@fsyns){
+              if($name =~ /(^|::)${ftype_name}(::|$)/i){
+                my $match = $1.$ftype_name.$2; 
+
+                (my $sub_unit_syn = $name) =~ s/$match//;
+
+
+                #Need to match syn to funcgen ftype first.
+                if(exists $syn_to_ftype{$sub_unit_syn}){
+                  $sub_unit_name = $syn_to_ftype{$sub_unit_syn};
+                   
+                  if(exists $ftype_syns{$sub_unit_name}){
+                    #deref to avoid any odd ref updating with unshift below
+                    $syn_info[1] = [@{$ftype_syns{$sub_unit_name}}];
+                  }
+                }
+                else{
+                  $sub_unit_name = $sub_unit_syn
+                }
+
+                unshift @{$syn_info[1]}, $sub_unit_name; 
+                last; #$syn
+              }
+            }    
           }
+
 
           foreach my $gene (@genes) {
             $found_gene = 1;
-            my @xrefs = grep { lc( $_->display_id ) eq lc($ftype_name) }
-              @{ $gene->get_all_DBLinks };
-
             #Match the ftype name to the gene external names
-            if (@xrefs) {
-              $counts{ftype_pwm_gene_and_name}++;    #This is a redundant count
-              print "PFM (name) FeatureType: $ftype_name > PFM $id $name > " .
-                $gene->display_id . ' ' . $accs->[$i] . "\n";
-
-              if ($matched_display_label) {
-
-                if ( !$seen_multi ) {
-                  $counts{multi_gene_to_display_label_hits}++;
-
-                  #This is likely due to paralogs/gene families
-                  $seen_multi = 1;
-                }
+            my %xrefs;
+            #Need to iterate of sub here for this
+            #DBLinks - name/syn match for the ftype, then the non-ftype sub-unit
+            
+            for my $i(0..$#syn_info){
+            
+              foreach my $fsyn(@{$syn_info[$i]}){
+                map {$xrefs{$_->dbID} = $_} 
+                 (grep { lc( $_->display_id ) eq lc($fsyn) } @{ $gene->get_all_DBLinks });
+                #Adding syn support did not actually increase the number of full acc to name matches
               }
 
-              $matched_display_label = 1;
-              $pfm_hits{$pfm_key}{ $accs->[$i] }{$ftype_name}{pwm_gene_name} ||= [];
-              push @{ $pfm_hits{$pfm_key}{ $accs->[$i] }{$ftype_name}{pwm_gene_name} }, $gene;
+              if (%xrefs) {
+                $counts{ftype_pwm_gene_and_name}++;    #This is a redundant count
+                print "PFM (name) FeatureType: $ftype_name > PFM $id $name > " .
+                $gene->display_id . ' ' . $accs->[$i] . "\n";
 
-            } ## end if (@xrefs)
-            else {
+                #Todo his bit does not handle complexes yet
+                #We need to account for $matched_display_label and $seen_multi
+                #for each sub-unit
+                #make them hashes based on $fsyn
+
+
+                if ($matched_display_label) {
+
+                  if ( ! $seen_multi ) {
+                    $counts{multi_gene_to_display_label_hits}++;
+                    #This is likely due to paralogs/gene families or TF complex
+                    $seen_multi = 1;
+                  }
+                }
+
+                $matched_display_label = 1;
+
+                #How are we going to store the separate matches where?
+                #Do we need an extra key under the hit type
+                #This will normally just be the ftype
+                #but it could be the ftype syn or a sub-unit syn
+                #would have to do this for all hit types?
+                #we may have different syns matching from ftype to pfm name
+                #and from pfm name/ftype to gene external name
+                #we really only need to store the syn for the last match to gene external name?
+
+                #actually the extra key need to be the true ftype name to enable us to store
+                #the correct associated_feature_type
+                #We don't know what this might be for the sub-unit
+                #so we need to process the %ftype_syns into %syn_to_ftype
+                #can $ftype_name be a syn here? No.
+
+                my $dlabel_match = $ftype_name;
+
+                if($i > 0){ #Find the funcgen ftype name for the 
+                  $dlabel_match = $sub_unit_name;
+                }
+
+                #Wait, do we need to nest here?
+                #We are already keying on $pfm_key
+                #so can we not simply use the existing ftype key?
+
+                #$pfm_hits{$pfm_key}{ $accs->[$i] }{$ftype_name}{pwm_gene_name}{$dlabel_match} ||= [];
+                #push @{ $pfm_hits{$pfm_key}{ $accs->[$i] }{$ftype_name}{pwm_gene_name}{$dlabel_match}}, $gene;
+                $pfm_hits{$pfm_key}{ $accs->[$i] }{$dlabel_match}{pwm_gene_name} ||= [];
+                push @{ $pfm_hits{$pfm_key}{ $accs->[$i] }{$dlabel_match}{pwm_gene_name}}, $gene;
+            
+                #Doing this messes up futher fype centric processing below
+              } 
+            } 
+
+                     
+            if (! %xrefs) {
               print "PFM (acc): FeatureType $ftype_name > PFM $id $name > " .
                 $gene->display_id . ' ' . $accs->[$i] . "\n";
 
               $pfm_hits{$pfm_key}{ $accs->[$i] }{$ftype_name}{pwm_gene_accession} ||= [];
               push @{ $pfm_hits{$pfm_key}{ $accs->[$i] }{$ftype_name}{pwm_gene_accession} }, $gene;
             }
+
           } ## end foreach my $gene (@genes)
         } ## end foreach my $i ( 0 .. $#{$accs...})
 
@@ -486,40 +570,25 @@ sub main {
       } ## end foreach my $row_ref (@$pfm_matches)
     } ## end else [ if ( !scalar(@$pfm_matches...))]
 
-    ### DO SOME COUNTS 
-    
-    if ( $ftype_matches{$ftype_name} ) { #Avoids auto-vivification of hash value
-
-      if ( exists $ftype_matches{$ftype_name}{pwm_gene_name} ) {
-
-        if ( !exists $ftype_matches{$ftype_name}{pwm_gene_accesssion} ) {
-          $ftype_to_gene_only_full++;
-        }
-
-        $ftype_to_gene_full++;
-      }
-
-      if ( exists $ftype_matches{$ftype_name}{pwm_gene_accesssion} ) {
-
-        if ( !exists $ftype_matches{$ftype_name}{pwm_gene_name} ) {
-          $ftype_to_gene_no_full++;
-        }
-
-        $ftype_to_gene++;
-
-      } ## end if ( exists $ftype_matches...)
-    } ## end if ( $ftype_matches{$ftype_name...})
-
 
     ####  FeatureType name > Gene external_name > PFM accession/name ###
-    my @genes = @{ $gene_a->fetch_all_by_external_name($ftype_name) };
+    my %genes = map { $_->dbID => $_ } @{$gene_a->fetch_all_by_external_name($ftype_name)};
 
-    if ( scalar( @genes > 1 ) ) {
+    #Need to hash this
+
+    if(exists $ftype_syns{$ftype_name}){
+
+      foreach my $syn(@{$ftype_syns{$ftype_name}}){
+        map { $genes{$_->dbID} = $_ } @{$gene_a->fetch_all_by_external_name($syn)};
+      }
+    }
+
+    if ( scalar(keys %genes) > 1 ){
       $counts{'multi_ftype_to_gene_hits'}++;
     }
-    elsif ( scalar(@genes) ) {
+    elsif ( scalar(keys %genes) ) {# Must be just one
 
-      foreach my $gene (@genes) {
+      foreach my $gene (values %genes) {
 
         foreach my $pep ( map { $_->translation } @{ $gene->get_all_Transcripts } ){
 
@@ -535,7 +604,7 @@ sub main {
 
     my @validated_genes = ();
 
-    foreach my $gene (@genes) {
+    foreach my $gene (values %genes) {
       my $seen_pwm       = 0;
       my %seen           = ();
       my @dbprimary_accs = map { $_->primary_id }
@@ -558,13 +627,10 @@ sub main {
           my $pfm_key = $id.'.'.$version.' '.$name;  
           $seen_pwm = 1;
 
-          if ( $name =~ /(^|::)${ftype_name}(::|$)/i )
-          {    #Ignore previously seen fully validated
-            $counts{ftype_gene_pwm_and_name}++;    #Count for sanity check
+          if ( $name =~ /(^|::)${ftype_name}(::|$)/i ){ #Ignore previously seen fully validated
+            $counts{ftype_gene_pwm_and_name}++;         #Count for sanity check
 
-            #These are being pushed for each acc
-            #not for each ftype
-            #
+            #These are being pushed for each acc not for each ftype
             print "Gene (name) FeatureType: $ftype_name > Gene $xref_acc " .
               $gene->display_id . " > PFM $id $name\n";
             push @validated_genes, $gene;
@@ -578,43 +644,32 @@ sub main {
               $gene_to_pfm_complex++;
             }
 
-#Need to handle versions here
-#We don't yet know how many this is affecting
-#$ftype_matches{$ftype_name}{gene_pwm_accession} ||= [];
-#push @{$ftype_matches{$ftype_name}{gene_pwm_accession}}, [$gene, $id, $name, $version, $xref_acc];
-#Need to remove these from the no match cache? Or handle this later
-
+            #Need to remove these from the no match cache? Or handle this later
             $pfm_hits{$pfm_key}{$xref_acc}{$ftype_name}{gene_pwm_accession} ||=[];
             push @{$pfm_hits{$pfm_key}{$xref_acc}{$ftype_name}{gene_pwm_accession}}, $gene;#do we even need the name here?
-              
-              print "GENE (acc): FeatureType $ftype_name > ".$gene->display_id." ($xref_acc) > PFM $id ${name}\n";
-            }
-          }
-                 
-          #Now dump the pep fasta for the transcript which matches the ftype name
-          my @xrefs = grep {lc($_->display_id) eq lc($ftype_name)} @{$gene->get_all_DBLinks};
-          my %seen_xrefs;
-          
-     
-            #Now cache those with no acc/name hits
-          if ( !$seen_pwm ) {
-            #or just count here?
-            $no_matches{$ftype_name}{gene_to_pfm} = $ftype;
+            print "GENE (acc): FeatureType $ftype_name > ".$gene->display_id." ($xref_acc) > PFM $id ${name}\n";
           }
         }
-      }
+      }      
 
-      #Validate we get full validation in both directions
+      #Now cache those with no acc/name hits
+      if ( ! $seen_pwm ) {
+        #or just count here?
+        $no_matches{$ftype_name}{gene_to_pfm} = $ftype;
+      }  
+    }
 
-      #This appears to be a failure to take the highest version
-      #This is because for the Gene first we are preprocessing rows on separate
-      #accs, so it never sees the the other version
-      #where as for the PWM first approach we are preprocessing the rows based
-      #on the name, which bring back both rows.
+    #Validate we get full validation in both directions
 
-     #We need to handle version in the main cache for the Gene first approach
-     #but for acc only matches
-      warn "TODO !!! Can we convert match validation to use pfm_matches or use booleans !!!";
+    #This appears to be a failure to take the highest version
+    #This is because for the Gene first we are preprocessing rows on separate
+    #accs, so it never sees the the other version
+    #where as for the PWM first approach we are preprocessing the rows based
+    #on the name, which bring back both rows.
+
+   #We need to handle version in the main cache for the Gene first approach
+   #but for acc only matches
+    warn "TODO !!! Can we convert match validation to use pfm_matches or use booleans !!!";
 
     #if(exists $ftype_matches{$ftype_name}){
     #  if(@validated_genes &&
@@ -635,37 +690,37 @@ sub main {
     #  }
     #}
    }
-      
+     
+
+  ### DO SOME COUNTS 
+  # Now done after above loop, to account
+  #for non-ftype_name sub-unit matches in pwm_gene_name matches
+
+   for my $ftype_name(keys %ftypes){ 
+    if ( $ftype_matches{$ftype_name} ) { #Avoids auto-vivification of hash value
+
+      if ( exists $ftype_matches{$ftype_name}{pwm_gene_name} ) {
+
+        if ( ! exists $ftype_matches{$ftype_name}{pwm_gene_accesssion} ) {
+          $ftype_to_gene_only_full++;
+        }
+
+        $ftype_to_gene_full++;
+      }
+
+      if ( exists $ftype_matches{$ftype_name}{pwm_gene_accesssion} ) {
+
+        if ( ! exists $ftype_matches{$ftype_name}{pwm_gene_name} ) {
+          $ftype_to_gene_no_full++;
+        }
+
+        $ftype_to_gene++;
+
+      } ## end if ( exists $ftype_matches...)
+    } ## end if ( $ftype_matches{$ftype_name...})   
           #Not getting the converage of the previous approach...yet!
+  } 
 
-          #Before reverse search, multi acc and TF complex support
-
-#Found FeatureType - Gene matches (inc non-display_id):  29
-#Found no FeatureType - PFM matches:     61
-#Found only Feature - PFM matches (i.e. no PFM-Gene acc match):  1
-#Both of the following counts ere probably the result of different genes giving rise to the same protein product through identical splicing:
-#Multiple Gene hits for a single acc:    1
-#Including a matching display label:     1
-
-          #Now with gene first search? and fuzzy matching and catd acc handling
-          # but no complex::processing
-
-#FeatureType > PFM > Gene matches:
-#Found FeatureType - Gene matches (inc non-display_id):  36
-#Found no FeatureType - PFM matches:     54
-#Found only Feature - PFM matches (i.e. no PFM-Gene acc match):  1
-#Both of the following counts ere probably the result of different genes giving rise to the same protein product through identical splicing:
-#Multiple Gene hits for a single acc:    5
-#Including a matching display label:     5
-
-          #FeatureType > Gene > PFM matches:
-          #Full (should already have these in the above numbers):  85
-          #All PFM matches (not distinct wrt ftype or gene):       23
-
-          #Now after fuzzy name match bug fix
-
-          #should probably do this before the loop
-          #so we can do the blast in line
 
    (my $blast_results = $pep_fasta) =~ s/.*\///g;
    $blast_results =~ s/\.fa(asta)//;
@@ -693,7 +748,7 @@ sub main {
    my $blast_fh = open_file($blast_results);
    my ( $pfm_id, $line, $ens_sid, $pfm_acc, $ftype, %blast_hits, $name );
 
-   warn "ARE WE handling versions here?";
+
 
    #This is currently returning many many PFM hits for each gene
    #many of varying quality
@@ -706,48 +761,71 @@ sub main {
 
   #Do some no_match preprocessing before we consider the blast hits
   foreach my $ftype(keys %no_matches){
-    
+    #This is fragile, as it may not work correctly if the number of association methods is 
+    #changed above. Change this such that the no_matches entry is deleted as soon as we find a match.
+
     if(scalar keys(%{$no_matches{$ftype}}) != 2){# we have at least 1 match
       delete $no_matches{$ftype};
     }  
   }
-  
 
-   my $used_blast_hits = 0;
+  my $used_blast_hits = 0;
 
-   
+  while( ( $line = $blast_fh->getline ) && defined $line ) {
+         ( $pfm_id, $ens_sid ) = split( /\t/, $line );
+         ( $pfm_id, $pfm_acc, $name ) = split(/__/, $pfm_id );
+    my $pfm_key = $pfm_id.' '.$name;
+     
+    my ($gene, $ftype);
 
+    if(! exists $peps_to_gene_ftype_names{$ens_sid} ){
+      #Change here to use any ftype if we want to load all associations
+      #Currently %ftypes restrict to those used in FeatureSets
 
-   while ( ( $line = $blast_fh->getline ) && defined $line ) {
-     ( $pfm_id, $ens_sid ) = split( /\t/, $line );
-     ( $pfm_id, $pfm_acc, $name ) = split(/__/, $pfm_id );
-     my $pfm_key = $pfm_id.' '.$name;
-          
-     if ( exists $peps_to_gene_ftype_names{$ens_sid} ) {
-       my ( $gene, $ftype ) = @{ $peps_to_gene_ftype_names{$ens_sid} };
-       #Only set this if we don't already have a good xref match
-       #already contains version from dumps 
+      $gene  = $gene_a->fetch_by_translation_stable_id($ens_sid);
 
-       if(! exists $pfm_hits{$pfm_key}{$pfm_acc}){
-         #This will autovivify the $pfm_id key, bu thtat fine as we are setting it in here anyway
-         print "Found no xref matches for PFM $pfm_key($pfm_acc), defaulting to best blast hit:\t $ens_sid(".$gene->stable_id.") $ftype\n"; 
-         $pfm_hits{$pfm_key}{$pfm_acc}{$ftype}{blast} = [$gene];
-         $used_blast_hits++;
-    
-         if(exists $no_matches{$ftype}){
-           delete $no_matches{$ftype};
-         }
-         
-       }
-       else{
-         warn "TODO: Log if we have a blast hit which differs or matches the existing hit(s)";
-       }
-     }
-     else{
-       print "Best PFM $pfm_key($pfm_acc) blast hit $ens_sid is not a recognisable TranscriptionFactor FeatureType\n";
-     }     
+      if(! exists $ftypes{$name}){
+        print "Best PFM $pfm_key($pfm_acc) blast hit $ens_sid does not have a recognisable FeatureSet\n";
+        next;
+        #We could still have a name mismatch between the FeatureSet ftype and the protein name
+        #This maybe resolved manually?
+
+        #We are still missing a ton of these e.g. Cfos Cjun Cmyc etc
+        #These are missed because they should be hyphenated and we don't have ftype synonyms yet
+        #because of name mismatches between the ftype and the gene or matrix
+        #How was this over-come originally?
+
+        #Likely manual curation!
+        #This scripts only loads matrices based on automated associations
+        #so we're going to have to curate some synonyms in here!
+      }
+      else{
+        $ftype = $ftypes{$name};
+      }
+
+      $peps_to_gene_ftype_names{$ens_sid} = [$gene, $ftype];
+    }
+    else{
+      ($gene, $ftype) = @{ $peps_to_gene_ftype_names{$ens_sid} };
+    }
+     
+    #Only set this if we don't already have a good xref match
+    #already contains version from dumps 
+
+    if(! exists $pfm_hits{$pfm_key}{$pfm_acc}){
+      #This will autovivify the $pfm_id key, bu thtat fine as we are setting it in here anyway
+      print "Found no xref matches for PFM $pfm_key($pfm_acc), defaulting to best blast hit:\t $ens_sid(".$gene->stable_id.") $ftype\n"; 
+      $pfm_hits{$pfm_key}{$pfm_acc}{$ftype}{blast} = [$gene];
+      $used_blast_hits++;
+      delete $no_matches{$ftype} if exists $no_matches{$ftype};
+    }
+    else{
+      warn "TODO: Log if we have a blast hit which differs or matches the existing hit(s)";
+    }    
   }
   
+
+
   #break this down into full and non-display_id matches
   print "FeatureType > PFM > Gene matches:\n";
   print "Total redundant fully validated matches, FeatureType > PFM > Gene name:\t".$counts{ftype_pwm_gene_and_name}."\n"; 
@@ -755,10 +833,13 @@ sub main {
     $ftype_to_gene_full.'/'.$ftype_to_gene_only_full.'/'.$ftype_to_gene_no_full."\n";
   #.scalar(keys %{$counts{any_matches}})."\n";
   
-  
-  print "Found no FeatureType - PFM matches:\t\t\t\t".scalar(keys %{$no_matches{ftype_to_pfm}})."\n";
-  print "Found only Feature - PFM matches (i.e. no PFM-Gene acc match):\t".scalar(keys %{$no_matches{pfm_to_gene}})."\n";
-  
+  print "Found no FeatureType - PFM matches:\t\t\t\t".
+   scalar(map { exists $no_matches{$_}{ftype_to_pfm} } keys %no_matches)."\n";
+  #print "Found no FeatureType - PFM matches:\t\t\t\t".scalar(keys %{$no_matches{ftype_to_pfm}})."\n";
+  #print "Found only Feature - PFM matches (i.e. no PFM-Gene acc match):\t".scalar(keys %{$no_matches{pfm_to_gene}})."\n";
+  print "Found only Feature - PFM matches (i.e. no PFM-Gene acc match):\t".
+   scalar(map { exists $no_matches{$_}{pfm_to_gene} } keys %no_matches)."\n";
+
   print 'Both of the following counts ere probably the result of different genes giving'.
     " rise to the same protein product through identical splicing:\n"; 
   print "Multiple Gene hits for a single acc:\t\t\t\t".$counts{multi_acc_to_gene_hits}."\n";
@@ -809,10 +890,12 @@ sub main {
 
   
   ### CACHE PFMS ###
+  # This assumes the most recent/preferable file is first
+  # and preferentially takes that entry, only adding absent entries 
+  # from the subsequent files
   my %pfms;
   
   foreach my $pfm_file(@$pfm_files){ 
-  
     my $tmp_pfms = read_matrix_file($pfm_file);
 
     if(! %pfms){
@@ -825,30 +908,7 @@ sub main {
     }
   }
 
-  #Change this to use MotifTools::read_matrix_file
-  #But this will lose the protein accession, no?
-
-  #my $fh = open_file($pfm_file);
-  #while(($line = $fh->getline) && defined $line){
-  #  
-  #  if($line =~ /^>([^ ]+) /){
-  #    $id = $1;
-  #   # warn "caching pfm freqs for $id";
-  #    $pfms{$id} = ''; 
-  #  }
-  #  else{
-  #    $pfms{$id} .= $line;    
-  #  }
-  #}
-  
-  #warn "cached ".scalar(keys %pfms)." pfms";
-  #if(! exists $pfms{'MA0492.1'}){
-  #  die('BLARRT');  
-  #}
-  
-  
  
-  #my ($version, $acc);
   #The multi acc entries all appear to be TF complexes
   #So long as there aren't >1 ftype hit per acc do we care?
   #Different accs may have the same ftype hit
@@ -859,6 +919,7 @@ sub main {
   #In the cse of >1 ftype hit/acc, then take the one with the best hit?
   #or throw?
 
+  #This is in order of preference, do not change!
   my @hit_types = qw(pwm_gene_name pwm_gene_accession gene_pwm_accession blast);
   my %bm_descs =
    (pwm_gene_name      => 'Name/Accession association',
@@ -871,63 +932,52 @@ sub main {
 
   foreach my $pfm_key(keys %pfm_hits){
     #This is now a lot more simple as we have already keyed on accession!
-    
     my ($pfm_id_version, $name) = split(/ /, $pfm_key);
     my ($pfm_id, $version)      = split(/\./, $pfm_id_version);
     my $acc_hits                = $pfm_hits{$pfm_key};
-    my (%seen_ftypes, $bm_ftype, %validation_types, $store_assoc_ftypes, @assoc_ftypes);
+    my (%seen_ftypes, $bm_ftype, $store_assoc_ftypes, %assoc_ftypes);
     my @accs = keys %{$acc_hits};
-    
+
     if(! scalar(@accs)){
       die("Found pfm_hit entry for $pfm_key with no acc hits");  
     }
-    elsif(scalar(@accs) > 1){
-      
-      #Deal with TF complexes here!
-      #i.e. we need to store an ftype based on the name
-      #associate that with the binding_matrix
-      #then store associated ftypes to the bm based on what we find below.
-      
-      #These can then be used to pull back the relevant bms when doing the mapping for a given feature set 
-      
-      
-      if($name !~ /::/){
-        die("Multiple accession are not yet supported for PFM which are not Transcription Factor Complexes:\t$name");  
-      }
-   
+
+    if($name =~ /::/){
       $store_assoc_ftypes = 1;
-      $bm_ftype           = $ftype_a->fetch_by_name($name);   
+      $bm_ftype           = $ftype_a->fetch_by_name($name);   #Shouldn't already exist?
       
-        
-      if(! defined $bm_ftype){
-        #define and store here
-       
+      if(! defined $bm_ftype){  #define and store here  
         print "Storing new Transcription Factor Complex FeatureType:\t$name\n";
-        
         $bm_ftype = Bio::EnsEMBL::Funcgen::FeatureType->new
-                     (-name         => $name,
-                      -class        => 'Transcription Factor Complex',
-                      -description  => '$name binding',
-                      -so_accession => 'SO:0000235',
-                      -so_name      => 'TF_binding_site');
-        $ftype_a->store($bm_ftype);
-        
+         (-name         => $name,
+          -class        => 'Transcription Factor Complex',
+          -description  => "$name binding",
+          -so_accession => 'SO:0000235',
+          -so_name      => 'TF_binding_site');
+        $ftype_a->store($bm_ftype);        
       }  
-      #validate it doesn't already exist?
-      
+ 
       $ftypes{$bm_ftype->name} = $bm_ftype;
-      $bm_ftype = $bm_ftype->name;
+      $bm_ftype = $bm_ftype->name;   
+    }
+    elsif(scalar(@accs) > 1){
+      die('Multiple accession are not yet supported for PFM which are not '.
+       "Transcription Factor Complexes:\t$name");  
     }
     
-
     
     foreach my $acc(@accs){
       my @ftypes = keys %{$acc_hits->{$acc}};
-      #We need to restrict this to 1 so we can assoicate the bm with just 1 ftype        
+      #We can get 2 hits here, if the > 1 gene is brought back by the given acc
+      #These are likely to have come from Genes which have the TF complex acc
+      #as an external name
       
       if(scalar(@ftypes) > 1){
-        die("Found pfm_hit acc hit for $pfm_key $acc with more than 1 FeatureType:\t @ftypes");
-        #If this happens we could arbitrarily take the best match type  
+  
+        if(! $store_assoc_ftypes){ #We don't have a complex
+          #If this happens we could arbitrarily take the best match type
+          die("Found pfm_hit acc hit for $pfm_key $acc with more than 1 FeatureType:\t @ftypes");
+        }
       }
       elsif(! @ftypes){
         die("Found empty acc hit for $pfm_key $acc");
@@ -935,95 +985,137 @@ sub main {
 
       my $ftype = $ftypes[0];
       $bm_ftype ||= $ftype;
+    
+      my ($gene, %seen_genes, $ftype_obj);
+             
+   
+      #No we can can pwm_gene_name|pwm_gene_accession and gene_pwm_accession together
+      #for each accession. And each accession may bring back > 1 pwm_gene_name hit        
 
-      if(exists $seen_ftypes{$ftype}){
-        die( "Already seen match for FeatureType $ftype:\t$pfm_key $acc"); 
-        #CHANGE THIS TO A WARN AND STORE DUPLICATES IF IT IS A PROBLEM
-        #as it maybe possible that we map to the same ftype via different genes/accs
-        #if we are dealing with a gene family/paralog
-        #we may also see an ftype mapping to > 1 gene for 1 acc 
-        #for the same reason
-         
-      }
+      foreach my $hit_ftype(@ftypes){  
+        #This is fine, we expect > 1 pfm/ftype
+        #if(exists $seen_ftypes{$ftype}){
+        #  warn( "Already seen match for FeatureType $ftype:\t$pfm_key $acc");   
+        #}
       
-      if($store_assoc_ftypes){
-        push @assoc_ftypes, $ftypes{$ftype};        
-      }
-      
-      my ($gene, %seen_genes, $last_ht);
-      
-          
-      for my $ht(@hit_types){
-        
-        if(exists $acc_hits->{$acc}->{$ftype}->{$ht}){
-          my @genes = @{$acc_hits->{$acc}->{$ftype}->{$ht}}; 
-         
-          if(! @genes){
-            die("Failed to find any gene hits for feature_type hit for $pfm_key $acc $ftype hit_type $ht");
+
+        #Get the ftype object first
+        if(! exists $ftypes{$hit_ftype}){
+          $ftype_obj = $ftype_a->fetch_by_name($hit_ftype);
+          #This may fail if there is >1 with the same name across classes
+
+          if(! defined $ftype_obj){
+            die("Identified TF sub-unit $hit_ftype gene xref, but failed to store as $hit_ftype is not loaded as a FeatureType");
           }
-         
-          foreach my $gene(@genes){
-         
-          if(! defined $gene){
-            die("Feature type gene hit for $pfm_key $acc $ftype hit_type $ht is not defined");
-          }
-          elsif(exists $seen_genes{$gene->stable_id}){
-            warn "Skipping $ht hit for $pfm_key $acc $ftype as we have already seen a better hit";
-            next; #$ht 
-          }  
-          
-          ### STORE THE XREF! ###
-          #This is quicker than using the API
-          #especially if we see it more than once
-          #Could just use display_xref here instead
-          my $display_name = $helper->get_core_display_name_by_stable_id($efg_db->dnadb, $gene->stable_id, 'gene');
-          $last_ht         = $ht;
-          my $linkage_txt;
-         
-         
-          if($ht eq 'pwm_gene_name'){
-            $linkage_txt = "FeatureType($name) > PFM($acc) > Gene($name) : $pfm_key";   
-          }
-          elsif($ht eq 'pwm_gene_accession'){
-            $linkage_txt = "FeatureType($name) > PFM($acc) > Gene : $pfm_key";   
-          }
-          elsif($ht eq 'gene_pwm_accession'){
-            $linkage_txt = "FeatureType($name) > Gene($acc) > PFM : $pfm_key";   
-          }
-          elsif($ht eq 'blast'){
-            $linkage_txt = "External name association to support $pfm_key $acc $name PFM blast"; 
-          }
-          else{
-            die("$ht hit type is currently not supported");  
-          }
-     
-          my $dbentry = Bio::EnsEMBL::DBEntry->new
-           (-dbname                 => $db_species.'_core_Gene',
-            -release                => $db_version,
-            -status                 => 'KNOWNXREF',
-            -display_label_linkable => 1,
-            -db_display_name        => $efg_db->dnadb->dbc->dbname,
-            -db_display_name        => 'EnsemblGene',
-            -type                   => 'MISC',
-            -primary_id             => $gene->stable_id,
-            -display_id             => $display_name,
-            -info_type              => 'MISC',
-            -info_text              => 'GENE',
-            -linkage_annotation     => $linkage_txt,
-            -analysis               => $analysis);
-    
-          #DBI->trace(2);
-          $dbentry_a->store($dbentry, $ftypes{$ftype}->dbID, 'FeatureType');#1 is ignore release flag 
+
+          $ftypes{$hit_ftype} = $ftype_obj;
         }
+        else{
+          $ftype_obj = $ftypes{$hit_ftype}
         }
-      }      
+
+        if($store_assoc_ftypes){
+          print "Cacheing associated feature type for $name:\t$acc $hit_ftype\n";
+          $assoc_ftypes{$hit_ftype} = $ftype_obj; 
+        }
+
+        for my $ht(@hit_types){ #in order of preference?
+
+          if(exists $acc_hits->{$acc}->{$hit_ftype}->{$ht}){
+
+            my @genes = @{$acc_hits->{$acc}->{$hit_ftype}->{$ht}}; 
+            
+            if(! @genes){
+              die("Failed to find any gene hits for feature_type hit for $pfm_key $acc $ftype hit_type $ht");
+            }
+           
+            #$hit_frtpe will be official funngen ftype name
+            #The $name here is the pf name which may be a syn of the
+            #funcgen ftype
+            #The $hit_ftype is not necessarily the gene external name used
+            #as we may have converted from a syn to the official fype name
+            #For pwm_gene_name the hit_ftype may not match the source ftype
+
+            foreach my $gene(@genes){       
+             
+              if(! defined $gene){
+                die("Feature type gene hit for $pfm_key $acc $ftype hit_type $ht is not defined");
+              }
+              elsif(exists $seen_genes{$gene->stable_id}){
+                warn "Skipping $ht hit for $pfm_key $acc $ftype as we have already seen a better hit";
+                #Could cross validate here we are not getting a different $hit_ftype for this gene
+                next; #$gene 
+              }  
+          
+              $seen_genes{$gene->stable_id} = $hit_ftype;
+
+              ### STORE THE XREF! ###
+              #This is quicker than using the API
+              #especially if we see it more than once
+              #Could just use display_xref here instead
+              my $display_name = $helper->get_core_display_name_by_stable_id($efg_db->dnadb, $gene->stable_id, 'gene');
+              #$last_ht         = $ht;
+              my $linkage_txt;
+            
+              if($ht eq 'pwm_gene_name'){
+                #The FeatureType here may actually be a sub-unit of the source ftype
+                #The $hit_ftype may have been converted from a external_name synonym
+                #The FeatureType will either be the $hit_ftype if it is not a complex
+                #or the official funcgen version of part of the $name if it is a complex
+
+                #This is not 100% accurate as we have now way of knowing what the source ftype
+                #is at this point
+
+                #But we not xreffing the source ftype for complexes
+                #so this is fine
+
+
+                $linkage_txt = ($name =~ /::/) ? "FeatureType($name) " :
+                  "FeatureType($hit_ftype) " ;
+
+                $linkage_txt .= " > PFM($name/$acc) > Gene($hit_ftype) : $pfm_key"; 
+              }
+              elsif($ht eq 'pwm_gene_accession'){
+                $linkage_txt = "FeatureType($hit_ftype) > PFM($name/$acc) > Gene : $pfm_key";   
+              }
+              elsif($ht eq 'gene_pwm_accession'){
+                #The $hit_type here may have been converted to a synnym to retrieve the gene
+                #via external name
+                $linkage_txt = "FeatureType($hit_ftype) > Gene($acc) > PFM : $pfm_key";   
+              }
+              elsif($ht eq 'blast'){
+                $linkage_txt = "External name association to support $pfm_key $acc $name PFM blast"; 
+              }
+              else{ die("$ht hit type is currently not supported"); } #should never happen
     
-      if(! $last_ht){# keys(%seen_genes)){
-        die("Failed to find expected hit_type for feature_type hit for $pfm_key $acc $ftype:\t".
-          join(keys(%{$acc_hits->{$acc}->{$ftype}})));
-      }
-      
-      $validation_types{$last_ht} = 1;
+              my $dbentry = Bio::EnsEMBL::DBEntry->new
+               (-dbname                 => $db_species.'_core_Gene',
+                -release                => $db_version,
+                -status                 => 'KNOWNXREF',
+                -display_label_linkable => 1,
+                -db_display_name        => $efg_db->dnadb->dbc->dbname,
+                -db_display_name        => 'EnsemblGene',
+                -type                   => 'MISC',
+                -primary_id             => $gene->stable_id,
+                -display_id             => $display_name,
+                -info_type              => 'MISC',
+                -info_text              => 'GENE',
+                -linkage_annotation     => $linkage_txt,
+                -analysis               => $analysis);
+    
+              $dbentry_a->store($dbentry, $ftype_obj->dbID, 'FeatureType');#1 is ignore release flag 
+            }
+          }   
+        }
+
+        #Don't really need this?
+        #if(! $last_ht){# keys(%seen_genes)){
+        #  die("Failed to find an expected hit_type for feature_type hit for $pfm_key $acc $ftype:\t".
+        #   join(keys(%{$acc_hits->{$acc}->{$ftype}})));
+        #}
+
+        #$validation_types{$last_ht} = 1;
+      }         
     }
 
     #We may have hit types from multiple gene hits on one ftype 
@@ -1037,23 +1129,31 @@ sub main {
 
     ### STORE THE BINDING_MATRIX ###
     #validate we have a bm_ftype?
-    my $vtype;
-    
+    #my $vtype;
     #Get best validation method 
-    
-    foreach my $ht(@hit_types){
-    
-      if(exists $validation_types{$ht}){
-        $vtype = $bm_descs{$ht};
-        last;  
-      }
-    }    
+    #This needs multi acc/ftype support!?
+    #We may have more than one validation type for a complex
+    #Do we even need this annotation?
+    #The linkage annotation should suffice.
+    #foreach my $ht(@hit_types){
+    #  if(exists $validation_types{$ht}){
+    #    $vtype = $bm_descs{$ht};
+    #    last;  
+    #  }
+    #}    
       
     $bm_ftype = $ftypes{$bm_ftype}; 
        
-    if(@assoc_ftypes){
-      
-      $bm_ftype->adaptor->store_associated_feature_types($bm_ftype, \@assoc_ftypes, 1);#rollback flag  
+    if(%assoc_ftypes){
+      print "Storing associated feature types for:\t".$bm_ftype->name."\n";
+      $bm_ftype->associated_feature_types([values %assoc_ftypes]);
+      $bm_ftype->adaptor->store_associated_feature_types($bm_ftype, 1);#rollback flag  
+      #This rollback will remove any associations stored by other scripts
+      #Better to insert ignore rather than rollback?
+
+      #TODO Don't we also need to store the reverse relationship?
+      #Or should the adaptor do this?
+
     }   
        
     if(! exists $pfms{$pfm_id_version}){
@@ -1067,13 +1167,13 @@ sub main {
      (-name         => $pfm_id.'.'.$version,
       -analysis     => $analysis,
       -feature_type => $bm_ftype,
-      -description  => $vtype,
+      #-description  => $vtype,
       #description is not currently used in the web interface
       #this qualitative info should probably be loaded as another xref?
       #although this may be useful in the interface as a confidence level?
       #we should have an explicit version
       #-frequencies  => $pfms{$pfm_id_version});
-     -frequencies  => sprint_matrix($pfms{$pfm_id_version}->matrix));
+     -frequencies  => sprint_matrix($pfms{$pfm_id_version}->{matrix}));
    $bm_adaptor->store($bm);
    
    $bms_loaded++; 
@@ -1100,7 +1200,11 @@ sub main {
   #it's unlikely that these won't have blast hits
   #but we may be able to see some obvious matches which aren't handled by this pipeline
   
-  print "Failed to identify any matches for FeatureTypes:\n\t".join("\n\t", keys %no_matches)."\n";
+  print 'Failed to identify any matches for '.scalar(keys %no_matches)." FeatureTypes:\n\t".join("\n\t", keys %no_matches)."\n";
+
+  #Really need to know whether these had partial hits, i.e. matched a gene, but not a pfm as this may indicate a missing synonym.
+
+
   print "Skipped ".scalar(@colls_skipped)." non CORE PFMs:\n@colls_skipped\n"; 
   print "Loaded $bms_loaded Binding Matrices\n";
   return;
@@ -1204,6 +1308,12 @@ sub blast_jaspar_matrices{
 
 
 #todo count/warn skipped versions
+
+#Returns Array containing an arrayref of species specific Hashes containing the query fields
+# and a 2nd arrayref of non-species Hashes
+
+# This does not help the sub-unit issue as there is no mapping between
+# the protein accessions and the sub-unit name
  
 sub preprocess_jaspar_rows {
   my ($executed_sth, $species, $name, $acc) = @_;
@@ -1258,13 +1368,15 @@ sub preprocess_jaspar_rows {
       
       if($name){ #Validate the query name 
  
-        if ($href->{name} !~ /(^|::)${name}(::|$)/i){  #Allow TF complex matches
+        if ($href->{name} !~ /(^|::)${name}(::|$)/i){ 
           warn "Skipping fuzzy name match:\t\t$name (Ensembl) vs ".$href->{name}." (Jaspar)\n";
           next;
         }
-        elsif($href->{name} =~ /::/){
+        elsif($href->{name} =~ /::/){  #Allow TF complex matches
+
           print "Matched TF complex:\t$name (Ensembl) vs ".$href->{name}." (Jaspar)\n";
         }
+        #else{} $href->{name} eq $name 
       }
        
       
