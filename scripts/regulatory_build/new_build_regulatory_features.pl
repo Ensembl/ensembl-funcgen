@@ -203,6 +203,10 @@ sub check_options {
   } else {
     die('Database not defined') unless defined $options->{db};
     die('User account not defined') unless defined $options->{user};
+    if (!defined $options->{dnadb_db}) {
+      $options->{dnadb_db} = $options->{db};
+      $options->{dnadb_db} =~ s/funcgen/core/;
+    }
     if (!defined $options->{dnadb_user}) {
       $options->{dnadb_user} = $options->{user};
     }
