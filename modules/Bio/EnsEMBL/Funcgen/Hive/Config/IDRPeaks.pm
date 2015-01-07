@@ -226,7 +226,7 @@ sub pipeline_analyses {
      -rc_name    => 'default',
      -batch_size => 30, #Should really take ~1min to process each set of replicates
             
-     -parameters => { feature_set_analysis => $self->o('permissive_peaks') },
+     -parameters => { permissive_peaks => $self->o('permissive_peaks') },
       #This will not allow batch override
            
      -flow_into => 
@@ -325,7 +325,7 @@ sub pipeline_analyses {
      -rc_name    => 'default',
      -batch_size => 30, #Should really take ~1min to process each set of replicates
             
-     -parameters => { feature_set_analysis => $self->o('permissive_peaks') },
+     -parameters => { permissive_peaks => $self->o('permissive_peaks') },
       #This will not allow batch override
            
      -flow_into => 
