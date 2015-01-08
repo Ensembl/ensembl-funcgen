@@ -171,7 +171,7 @@ sub get_Slice {
       (! ($self->slices || $self->skip_slices) ) ){    
     #We have seen a slice, but have not restricted slices so this
     #must be a slice we can't handle     
-    throw("Unable to get Slice for:\tx".$name.'x');      
+    throw("Unable to get Slice for:\t$name");      
   }
 
   my $slice = (exists $slice_cache->{$name}) ? 
