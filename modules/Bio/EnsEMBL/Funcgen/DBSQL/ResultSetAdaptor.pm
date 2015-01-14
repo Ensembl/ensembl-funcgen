@@ -532,9 +532,9 @@ sub store{
     $sth->bind_param(3, $ct_id,                  SQL_INTEGER);
     $sth->bind_param(4, $ft_id,                  SQL_INTEGER);
     $sth->bind_param(5, $rset->feature_class,    SQL_VARCHAR);
-    
+
     if(! eval {$sth->execute; 1}){
-      throw("Failed to store $rset ".$rset->name."\n$@");  
+      throw("Failed to store $rset ".$rset->name."\n$@");
     }
 
     $rset->dbID( $self->last_insert_id );
@@ -630,9 +630,9 @@ sub store_dbfile_data_dir{
     my $sth = $self->prepare($sql);
     $sth->bind_param(1, $data_dir, SQL_VARCHAR);
     $sth->bind_param(2, $rset_id,  SQL_INTEGER);
-    
+
     if(! eval {$sth->execute; 1}){
-      throw('Failed to update dbfile_data_dir for '.$rset->name."\n$@");  
+      throw('Failed to update dbfile_data_dir for '.$rset->name."\n$@");
     }
   }
   elsif(! $db_dir){#STORE
@@ -640,23 +640,23 @@ sub store_dbfile_data_dir{
     my $sth = $self->prepare($sql);
     $sth->bind_param(1, $rset_id,  SQL_INTEGER);
     $sth->bind_param(2, $data_dir, SQL_VARCHAR);
-    
+
     if(! eval {$sth->execute; 1}){
       my $err = $@;
       #This could be a race condition if we have parallel writes going on
       #Attempt to validate stored value is same, else fail
-      
+
       $db_dir = $self->_fetch_dbfile_data_dir($rset_id);
-      
+
       if(defined $db_dir){
-      
+
         if($db_dir ne $data_dir){
           throw('Failed to store dbfile_data_dir table '.$rset->name.
             "\n'Racing' process stored a differing value:\n\t$data_dir\n\tvs\n\t$db_dir\n$err");
         }#else this was a race condition
       }
       else{
-        throw('Failed to store dbfile_data_dir for '.$rset->name."\n$err"); 
+        throw('Failed to store dbfile_data_dir for '.$rset->name."\n$err");
       }
     }
   }
@@ -672,18 +672,18 @@ sub _fetch_dbfile_data_dir{
   my $sql  = 'SELECT path from dbfile_registry where table_name="result_set" and table_id=?';
   my $sth  = $self->prepare($sql);
   $sth->bind_param(1, $rset_id, SQL_INTEGER);
-  
-  
+
+
   if(! eval {$sth->execute; 1} ){
     throw("Failed to fetch dbfile_registry using:\n$sql (dbID=$rset_id)\n$@");
   }
-  
+
   my $dir;
-  
+
   if(my $row_ref = $sth->fetch){
-    $dir = $sth->fetch->[0];
+    $dir = $row_ref->[0];
   }
-  
+
   return $dir;
 }
 
