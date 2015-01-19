@@ -57,6 +57,7 @@ sub fetch_input {
   my $self = shift;
   #Do some thing before we SUPER::fetch_input
   $self->param('disconnect_if_idle', 1);
+  $self->param('include_slice_duplicates',1);
   $self->check_analysis_can_run;
   $self->SUPER::fetch_input;
 

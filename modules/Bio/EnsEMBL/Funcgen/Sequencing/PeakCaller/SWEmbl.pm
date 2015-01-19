@@ -183,9 +183,13 @@ sub parse_txt_record {
   if(defined $line){
     #my ($seqid, $start, $end, $cnt, $length, $uniq_pos, $score, $ref_cnt, $max_cvg, $summit) = split(/\s+/, $line);
     chomp $line;
+
     my ($seqid, $start, $end, undef, undef, undef, 
         $score, undef, undef, $summit) = split(/\s+/, $line);
-       
+    if( (!defined $seqid) || ($seqid eq '') ){
+      throw("FILE: " . $self->out_file . "\nLINE:\n$line");
+    }
+
     if($summit){
       $summit = int($summit + 0.5);#Rounds to nearest integer as int rounds down     
     }
