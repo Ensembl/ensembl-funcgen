@@ -1662,18 +1662,29 @@ sub expand_boundaries {
   my ($source_files, $target_file, $output) = @_;
   my $awk_move_boundaries = "awk 'BEGIN {OFS=\"\\t\"} \$4 != name {if (name) {print chr, start, end, name, 1000, \".\", thickStart, thickEnd, rgb; } chr=\$1; start=\$2; end=\$3; name=\$4; thickStart=\$7; thickEnd=\$8; rgb=\$9} \$10 == chr && \$11+1 < start {start=\$11+1} \$10 == chr && \$12-1 > end {end=\$12-1} END {print chr, start, end, name, 1000, \".\", thickStart, thickEnd, rgb}'";
 
-  run("cat ".join(" ", @{$source_files}). " | bedtools intersect -loj -wa -wb -a $target_file -b stdin | $awk_move_boundaries > $output");
+  my @defined_source_files = grep defined,  @{$source_files};
+  if (scalar @defined_source_files) {
+    run("cat ".join(" ", @{$source_files}). " | bedtools intersect -loj -wa -wb -a $target_file -b stdin | $awk_move_boundaries > $output");
+  } else {
+    run("cp $target_file $output");
+  }
 }
 
 sub compute_initial_regions {
   my ($options, $label) = @_;
   my $output = "$options->{working_dir}/build/$label.tmp.bed";
   my $wiggletools_cmd = "wiggletools write_bg - unit sum ";
+  my $empty_list = 1;
   foreach my $segmentation (@{$options->{segmentations}}) {
     $wiggletools_cmd .= weighted_summary_definition($options, $label, $segmentation); 
+    $empty_list = 0;
   }
-  my $awk_cmd = make_awk_command($label);
-  run("$wiggletools_cmd | $awk_cmd > $output") ;
+  if ($empty_list) {
+    run("touch $output");
+  } else {
+    my $awk_cmd = make_awk_command($label);
+    run("$wiggletools_cmd | $awk_cmd > $output");
+  }
   return $output;
 }
 
