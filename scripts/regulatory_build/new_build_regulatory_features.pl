@@ -31,7 +31,7 @@ new_build_regulatory_features.pl
 =head1 SYNOPSIS
 
 Automatic run:
-new_build_regulatory_features.pl -o ./ -a hg38 -u http://ngs.sanger.ac.uk/production/ensembl/regulation/GRCh38 -h $HOST -P $PORT -u $USER -p $PASS
+new_build_regulatory_features.pl -o ./ -a hg38 -D $FUNCGEN_DB -h $HOST -P $PORT -u $USER -p $PASS
 
 Where:
 	* -o: directory for output
@@ -43,7 +43,7 @@ Where:
 	* -p: host password 
 
 Manual run:
-new_build_regulatory_features.pl -o ./ -d dump.txt -a hg38 -l chrom_sizes.txt -t tss.bed -g exons.bed -u http://ngs.sanger.ac.uk/production/ensembl/regulation/GRCh38
+new_build_regulatory_features.pl -o ./ -d dump.txt -a hg38 -l chrom_sizes.txt -t tss.bed -g exons.bed
 
 Where:
 	* -o: directory for output
@@ -103,7 +103,7 @@ our @empirical_labels = ('tfbs', 'dnase');
 our @labels = (@functional_labels, @empirical_labels);
 # Typical histone marks used to detect repression. Note that the strings are normalised 
 # via the clean_name function below
-our @repressed_marks = ('H3K27ME3');
+our @repressed_marks = ('H3K27ME3','H3K9ME3');
 our @open_chromatin_assays = ('DNASE', 'DNASE1');
 # These labels are used in annotating and coloring both the build and the segmentations, some are not 
 # present in both, only in one.
@@ -399,7 +399,7 @@ sub trim_bed_to_chrom_lengths {
   while ($line = <$fh>) {
     chomp $line;
     my @items = split /\t/, $line;
-    if ($items[1] < $lengths->{$items[0]} && $items[2] > 0) {
+    if (defined $lengths->{$items[0]} && $items[1] < $lengths->{$items[0]} && $items[2] > 0) {
       if ($items[2] >= $lengths->{$items[0]}) {
         $items[2] = $lengths->{$items[0]};
       }
