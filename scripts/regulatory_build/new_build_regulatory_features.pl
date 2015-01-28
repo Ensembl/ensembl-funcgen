@@ -1581,7 +1581,7 @@ sub compute_regulatory_features {
 
   #Compute open dnase
   my $dnase_tmp = "$options->{working_dir}/build/dnase.tmp.bed";
-  my @dnase_files = glob "$options->{working_dir}/celltype_tf/*.bed";
+  my @dnase_files = glob "$options->{working_dir}/celltype_dnase/*.bed";
   my $awk_dnase = make_awk_command("dnase");
   run("wiggletools write_bg - unit sum ".join(" ", @dnase_files)." | $awk_dnase > $dnase_tmp");
 
@@ -1590,56 +1590,90 @@ sub compute_regulatory_features {
   #############################################
 
   # DNAse sites are merged to overlapping TFBS sites
-  my $tfbs_tmp2 = "$options->{working_dir}/build/tfbs.tmp2.bed";
-  expand_boundaries([$dnase_tmp], $tfbs_tmp, $tfbs_tmp2);
+  my $tfbs_tmp2 = undef; 
+  my $remove_tfbs = ""; 
+  if (defined $tfbs_tmp) {
+    $tfbs_tmp2 = "$options->{working_dir}/build/tfbs.tmp2.bed";
+    expand_boundaries([$dnase_tmp], $tfbs_tmp, $tfbs_tmp2);
+    $remove_tfbs = " | bedtools intersect -wa -v -a stdin -b $tfbs_tmp2";
+  }
 
   # DNAse and TFBS sites are merged to overlapping distal sites
-  my $distal_tmp2 = "$options->{working_dir}/build/distal.tmp2.bed";
-  expand_boundaries([$dnase_tmp, $tfbs_tmp], $distal_tmp, $distal_tmp2);
+  my $distal_tmp2 = undef; 
+  my $remove_distal = ""; 
+  if (defined $distal_tmp) {
+    $distal_tmp2 = "$options->{working_dir}/build/distal.tmp2.bed";
+    expand_boundaries([$dnase_tmp, $tfbs_tmp], $distal_tmp, $distal_tmp2);
+    $remove_distal = " | bedtools intersect -wa -v -a stdin -b $distal_tmp2";
+  }
 
   # DNAse, TFBS and distal sites are merged to overlapping proximal sites
-  my $proximal_tmp2 = "$options->{working_dir}/build/proximal.tmp2.bed";
-  expand_boundaries([$dnase_tmp, $tfbs_tmp, $distal_tmp], $proximal_tmp, $proximal_tmp2);
+  my $proximal_tmp2 = undef; 
+  my $remove_proximal = ""; 
+  if (defined $proximal_tmp2) {
+    $proximal_tmp2 = "$options->{working_dir}/build/proximal.tmp2.bed";
+    expand_boundaries([$dnase_tmp, $tfbs_tmp, $distal_tmp], $proximal_tmp, $proximal_tmp2);
+    $remove_proximal = " | bedtools intersect -wa -v -a stdin -b $proximal_tmp2";
+  }
 
   # DNAse, TFBS, distal and proximal sites are merged to overlapping TSS sites
-  my $tss_tmp2 = "$options->{working_dir}/build/tss.tmp2.bed";
-  expand_boundaries([$dnase_tmp, $tfbs_tmp, $distal_tmp, $proximal_tmp], $tss_tmp, $tss_tmp2);
+  my $tss_tmp2 = undef; 
+  my $remove_tss = ""; 
+  if (defined $tss_tmp2) {
+    $tss_tmp2 = "$options->{working_dir}/build/tss.tmp2.bed";
+    expand_boundaries([$dnase_tmp, $tfbs_tmp, $distal_tmp, $proximal_tmp], $tss_tmp, $tss_tmp2);
+    $remove_tss = " | bedtools intersect -wa -v -a stdin -b $tss_tmp2";
+  }
 
   #############################################
   ## Find non overlapping features for each level 
   #############################################
 
   # All features that overlap known TSS are retained
-  my $tss = "$options->{working_dir}/build/tss.bed";
-  run("bedtools intersect -u -wa -a $tss_tmp2 -b $options->{tss} > $tss");
+  my $tss = undef; 
+  my $demoted = undef; 
+  if (defined $tss_tmp2) {
+    $tss = "$options->{working_dir}/build/tss.bed";
+    run("bedtools intersect -u -wa -a $tss_tmp2 -b $options->{tss} > $tss");
 
-  # All features that do not go into a demoted file
-  my $demoted = "$options->{working_dir}/build/demoted_tss.bed";
-  run("bedtools intersect -v -wa -a $tss_tmp2 -b $options->{tss} > $demoted");
+    # All features that do not go into a demoted file
+    $demoted = "$options->{working_dir}/build/demoted_tss.bed";
+    run("bedtools intersect -v -wa -a $tss_tmp2 -b $options->{tss} > $demoted");
+  }
 
   # Unaligned proximal sites are retained
-  my $proximal = "$options->{working_dir}/build/proximal.bed";
-  my $awk_proximal = make_awk_command("proximal", 0);
-  run("wiggletools write_bg - unit sum $proximal_tmp2 $demoted | $awk_proximal | bedtools intersect -wa -v -a stdin -b $tss_tmp2 > $proximal");
+  my $proximal = undef;
+  if (defined $proximal_tmp2 or defined $demoted) {
+    $proximal = "$options->{working_dir}/build/proximal.bed";
+    my $awk_proximal = make_awk_command("proximal", 0);
+    my $files = join(" ", grep defined, ($proximal_tmp2, $demoted));
+    run("wiggletools write_bg - unit sum $files | $awk_proximal $remove_tss > $proximal");
+  }
 
   # Unaligned distal sites are retained
-  my $distal = "$options->{working_dir}/build/distal.bed";
-  run("bedtools intersect -wa -v -a $distal_tmp2 -b $tss_tmp2 | bedtools intersect -wa -v -a stdin -b $proximal_tmp2 > $distal");
+  my $distal = undef; 
+  if (defined $distal_tmp2) {
+    $distal = "$options->{working_dir}/build/distal.bed";
+    run("cat $distal_tmp2 $remove_tss $remove_proximal > $distal");
+  }
 
   # Unaligned TFBS sites are retained
   my $tfbs = "$options->{working_dir}/build/tfbs.bed";
-  run("bedtools intersect -wa -v -a $tfbs_tmp2 -b $tss_tmp2 | bedtools intersect -wa -v -a stdin -b $proximal_tmp2 | bedtools intersect -wa -v -a stdin -b $distal_tmp2 > $tfbs");
+  run("cat $tfbs_tmp2 $remove_tss $remove_proximal $remove_distal > $tfbs");
 
   # Unaligned DNAse sites are retained
   my $dnase = "$options->{working_dir}/build/dnase.bed";
-  run("bedtools intersect -wa -v -a $dnase_tmp -b $tss_tmp2 | bedtools intersect -wa -v -a stdin -b $proximal_tmp2 | bedtools intersect -wa -v -a stdin -b $distal_tmp2 | bedtools intersect -wa -v -a stdin -b $tfbs_tmp2 > $dnase");
+  run("bedtools intersect -wa -v -a $dnase_tmp -b $tfbs_tmp2 $remove_tss $remove_proximal $remove_distal > $dnase");
 
   #############################################
   ## CTCF computed independently 
   #############################################
 
-  my $ctcf = "$options->{working_dir}/build/ctcf.bed";
-  run("mv $ctcf_tmp $ctcf");
+  my $ctcf = undef;
+  if (defined $ctcf_tmp) {
+    my $ctcf = "$options->{working_dir}/build/ctcf.bed";
+    run("mv $ctcf_tmp $ctcf");
+  }
 
   #############################################
   ## Apply mask
@@ -1654,13 +1688,14 @@ sub compute_regulatory_features {
   ## Merge
   #############################################
   my $awk_contract = "awk '\$3 > \$2 + 1 {\$2 += 1; \$3 -= 1;} \$7 < \$2 {\$7 = \$2} \$8 > \$3 {\$8 = \$3} {print}'";
-  run("sort -m $tss $proximal $distal $ctcf $dnase $tfbs -k1,1 -k2,2n $awk_mask | $awk_contract > $bed_output");
+  my $files = join(" ", grep defined, ($tss, $proximal, $distal, $ctcf, $dnase, $tfbs));
+  run("sort -m $files -k1,1 -k2,2n $awk_mask | $awk_contract > $bed_output");
   convert_to_bigBed($options, $bed_output);
 }
 
 sub expand_boundaries {
   my ($source_files, $target_file, $output) = @_;
-  my $awk_move_boundaries = "awk 'BEGIN {OFS=\"\\t\"} \$4 != name {if (name) {print chr, start, end, name, 1000, \".\", thickStart, thickEnd, rgb; } chr=\$1; start=\$2; end=\$3; name=\$4; thickStart=\$7; thickEnd=\$8; rgb=\$9} \$10 == chr && \$11+1 < start {start=\$11+1} \$10 == chr && \$12-1 > end {end=\$12-1} END {print chr, start, end, name, 1000, \".\", thickStart, thickEnd, rgb}'";
+  my $awk_move_boundaries = "awk 'BEGIN {OFS=\"\\t\"} \$4 != name {if (name) {print chr, start, end, name, 1000, \".\", thickStart, thickEnd, rgb; } chr=\$1; start=\$2; end=\$3; name=\$4; thickStart=\$7; thickEnd=\$8; rgb=\$9} \$10 == chr && \$11+1 < start {start=\$11+1} \$10 == chr && \$12-1 > end {end=\$12-1} END {if (chr) {print chr, start, end, name, 1000, \".\", thickStart, thickEnd, rgb}}'";
 
   my @defined_source_files = grep defined,  @{$source_files};
   if (scalar @defined_source_files) {
@@ -1674,18 +1709,17 @@ sub compute_initial_regions {
   my ($options, $label) = @_;
   my $output = "$options->{working_dir}/build/$label.tmp.bed";
   my $wiggletools_cmd = "wiggletools write_bg - unit sum ";
-  my $empty_list = 1;
+  my $wiggletools_params = "";
   foreach my $segmentation (@{$options->{segmentations}}) {
-    $wiggletools_cmd .= weighted_summary_definition($options, $label, $segmentation); 
-    $empty_list = 0;
+    $wiggletools_params .= weighted_summary_definition($options, $label, $segmentation); 
   }
-  if ($empty_list) {
-    run("touch $output");
+  if (length $wiggletools_params == 0) {
+    return undef;
   } else {
     my $awk_cmd = make_awk_command($label);
-    run("$wiggletools_cmd | $awk_cmd > $output");
+    run("$wiggletools_cmd $wiggletools_params | $awk_cmd > $output");
+    return $output;
   }
-  return $output;
 }
 
 sub weighted_summary_definition {
