@@ -414,6 +414,10 @@ sub trim_bed_to_chrom_lengths {
 
   unlink $file;
   rename "$file.tmp", $file;
+
+  if (-z $file) {
+    print_log("WARNING: Filtered $file is now empty... is this normal?");
+  }
 }
 
 sub read_chrom_lengths {
