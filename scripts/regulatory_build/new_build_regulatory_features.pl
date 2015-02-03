@@ -1639,7 +1639,7 @@ sub compute_regulatory_features {
   # DNAse, TFBS and distal sites are merged to overlapping proximal sites
   my $proximal_tmp2 = undef; 
   my $remove_proximal = ""; 
-  if (defined $proximal_tmp2) {
+  if (defined $proximal_tmp) {
     $proximal_tmp2 = "$options->{working_dir}/build/proximal.tmp2.bed";
     expand_boundaries([$dnase_tmp, $tfbs_tmp, $distal_tmp], $proximal_tmp, $proximal_tmp2);
     $remove_proximal = " | bedtools intersect -wa -v -a stdin -b $proximal_tmp2";
@@ -1648,7 +1648,7 @@ sub compute_regulatory_features {
   # DNAse, TFBS, distal and proximal sites are merged to overlapping TSS sites
   my $tss_tmp2 = undef; 
   my $remove_tss = ""; 
-  if (defined $tss_tmp2) {
+  if (defined $tss_tmp) {
     $tss_tmp2 = "$options->{working_dir}/build/tss.tmp2.bed";
     expand_boundaries([$dnase_tmp, $tfbs_tmp, $distal_tmp, $proximal_tmp], $tss_tmp, $tss_tmp2);
     $remove_tss = " | bedtools intersect -wa -v -a stdin -b $tss_tmp2";
