@@ -885,7 +885,8 @@ sub extract_ChromHMM_state_summaries {
   foreach my $cell (keys %{$segmentation->{celltypes}}) {
     my $summary = "$options->{working_dir}/segmentation_summaries/$segmentation->{name}/$cell.bed";
     if (must_compute($options,$summary)) {
-      run("sort -k1,1 -k2,2n $segmentation->{celltypes}->{$cell} > $summary") ;
+      run("sort -k1,1 -k2,2n $segmentation->{celltypes}->{$cell} > $summary");
+      trim_bed_to_chrom_lengths($options, $summary);
     }
   }
 
