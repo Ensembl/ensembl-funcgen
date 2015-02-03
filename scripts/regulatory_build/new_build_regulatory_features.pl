@@ -1883,7 +1883,7 @@ sub compute_ChromHMM_label_state {
     $temp = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$label.bed";
   }
 
-  if (defined $temp && -e $temp) {
+  if (-e $reference && -s $reference && defined $temp && -e $temp && -s $temp) {
     my $repressed = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/repressed.bed";
     my $poised = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/poised.bed";
 
