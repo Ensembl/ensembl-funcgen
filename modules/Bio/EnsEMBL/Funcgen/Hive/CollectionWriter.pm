@@ -75,10 +75,6 @@ sub fetch_input {   # fetch parameters...
   #use all formats by default
   #Can we update -input_files in the Importer after we have created it?
   
-  
-  #Hack to add in states that were missed in DefineResultSets
-  $rset->adaptor->store_status('ALIGNED', $rset);
-  
   if($self->FeatureSet->analysis->program eq 'CCAT'){
     #throw('Need to implement control preprocessing for CCAT');  
     
