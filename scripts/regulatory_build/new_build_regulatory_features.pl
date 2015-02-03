@@ -1327,7 +1327,7 @@ sub make_segmentation_bedfiles_2 {
 sub make_segmentation_bedfile {
   my ($options, $segmentation, $celltype) = @_;
 
-  if ($segmentation->{type} eq 'ChromHMM' || $segmentation->{type} eq 'Segway') {
+  if ($segmentation->{type} eq 'ChromHMM' || $segmentation->{type} eq 'Segway' || $segmentation->{type} eq 'GMTK') {
     make_ChromHMM_bedfile($options, $segmentation, $celltype);
   } else {
     die("Unknown segmentation type $segmentation->{type}\n");
@@ -1827,7 +1827,7 @@ sub compute_celltype_state {
 
   mkdir "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype";
 
-  if ($segmentation->{type} eq 'ChromHMM' || $segmentation->{type} eq 'Segway') {
+  if ($segmentation->{type} eq 'ChromHMM' || $segmentation->{type} eq 'Segway' || $segmentation->{type} eq 'GMTK') {
     compute_ChromHMM_celltype_state($options, $segmentation, $celltype);
   } else {
     die ("Unknown segmentation type $segmentation->{type}");
