@@ -457,33 +457,57 @@ sub read_chrom_lengths {
 sub get_metadata {
   my $options = shift;
 
-  $options->{cell_type_tfs} = {};
-  $options->{cell_type_open} = {};
-  $options->{peak_calls} = {};
-  $options->{segmentations} = [];
+  my $location = "$options->{working_dir}/metadata";
 
-  if (defined $options->{dump}) {
-    read_dump($options);
-  }
+  if (must_compute($options, $location)) {
+    $options->{cell_type_tfs} = {};
+    $options->{cell_type_open} = {};
+    $options->{peak_calls} = {};
+    $options->{segmentations} = [];
 
-  if (defined $options->{db_adaptor}) {
-    fetch_metadata($options);
-  }
+    if (defined $options->{dump}) {
+      read_dump($options);
+    }
 
-  if (!defined $options->{chrom_lengths}) {
-    create_chrom_lengths($options);
-  }
+    if (defined $options->{db_adaptor}) {
+      fetch_metadata($options);
+    }
 
-  if (!defined $options->{tss}) {
-    create_tss($options);
-  }
+    if (!defined $options->{chrom_lengths}) {
+      create_chrom_lengths($options);
+    }
 
-  if (!defined $options->{exons}) {
-    create_exons($options);
-  }
+    if (!defined $options->{tss}) {
+      create_tss($options);
+    }
 
-  if (!defined $options->{mask} && defined $options->{host}) {
-    create_mask($options);
+    if (!defined $options->{exons}) {
+      create_exons($options);
+    }
+
+    if (!defined $options->{mask} && defined $options->{host}) {
+      create_mask($options);
+    }
+    my %hash = ();
+    $hash{cell_type_tfs} = $options->{cell_type_tfs};
+    $hash{cell_type_open} = $options->{cell_type_open};
+    $hash{peak_calls} = $options->{peak_calls};
+    $hash{segmentations} = $options->{segmentations};
+    $hash{chrom_lengths} = $options->{chrom_lengths};
+    $hash{tss} = $options->{tss};
+    $hash{exons} = $options->{exons};
+    $hash{mask} = $options->{mask};
+    store \%hash, $location;
+  } else {
+    my $prev_options = retrieve($location); 
+    $options->{cell_type_tfs} = $prev_options->{cell_type_tfs};
+    $options->{cell_type_open} = $prev_options->{cell_type_open};
+    $options->{peak_calls} = $prev_options->{peak_calls};
+    $options->{segmentations} = $prev_options->{segmentations};
+    $options->{chrom_lengths} = $prev_options->{chrom_lengths};
+    $options->{tss} = $prev_options->{tss};
+    $options->{exons} = $prev_options->{exons};
+    $options->{mask} = $prev_options->{mask};
   }
 }
 
