@@ -135,9 +135,9 @@ sub get_options {
     "small_update=s",
   ) or pod2usage( -exitval => 1);
   defined $options{base_dir} || die ("You must define the base directory!\t--base_dir XXXX\n");
-  defined $options{host} || die ("You must define the destination host!\t--base_dir XXXX\n");
-  defined $options{user} || die ("You must define the user login!\t--base_dir XXXX\n");
-  defined $options{dbname} || die ("You must define the database name!\t--base_dir XXXX\n");
+  defined $options{host} || die ("You must define the destination host!\t--host XXXX\n");
+  defined $options{user} || die ("You must define the user login!\t--user XXXX\n");
+  defined $options{dbname} || die ("You must define the database name!\t--dbname XXXX\n");
   return \%options;
 }
 
