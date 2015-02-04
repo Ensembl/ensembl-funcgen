@@ -60,6 +60,7 @@ use File::Temp qw/ tempfile tempdir /;
 my $dead_rgb = '225,225,225';
 my $poised = "192,0,190";
 my $repressed = "127,127,127";
+our $start_time = time;
 
 main();
 
@@ -67,28 +68,42 @@ main();
 ## Overview
 ####################################################
 sub main {
-  print "Getting options\n";
+  print_log("Getting options\n");
   my $options = get_options();
-  print "Connecting to database\n";
+  print_log("Connecting to database\n");
   my $db = connect_db($options);
-  print "Getting analysis\n";
+  print_log("Getting analysis\n");
   my $analysis = get_analysis($db);
-  print "Getting cell types\n";
+  print_log("Getting cell types\n");
   my $ctypes = get_cell_type_names($options->{base_dir});
-  print "Getting stable ids\n";
+  print_log("Getting stable ids\n");
   my $stable_id = get_stable_id($options, $db);
-  print "Getting slices\n";
+  print_log("Getting slices\n");
   my $slice = get_slices($db);
-  print "Getting feature sets\n";
+  print_log("Getting feature sets\n");
   my $feature_set = get_regulatory_FeatureSets($analysis, $ctypes, $db);
-  print "Getting feature types\n";
+  print_log("Getting feature types\n");
   my $feature_type = get_feature_types($db);
-  print "Counting active features\n";
+  print_log("Counting active features\n");
   my $count_hash = compute_counts($options->{base_dir});
-  print "Creating regulatory_feature table\n";
+  print_log("Creating regulatory_feature table\n");
   compute_regulatory_features($options, $feature_set, $feature_type, $stable_id, $count_hash, $slice);
-  print "Creating regulatory_annotation table\n";
+  print_log("Creating regulatory_annotation table\n");
   compute_regulatory_annotations($options);
+}
+
+########################################################
+## Print conveninence
+## Params:
+## - String
+## Actions:
+## - Prints string, with time stamp in front
+########################################################
+
+sub print_log {
+  my ($str) = @_;
+  my $runtime = time - $start_time;
+  print "[$runtime] $str";
 }
 
 ####################################################
@@ -211,7 +226,7 @@ sub get_cell_type_names{
 
 sub run {
   my ($cmd) = @_;
-  print cmd;
+  print_log($cmd . "\n");
   system($cmd) && die("Failed when running command:\n$cmd\n");
 }
 
@@ -355,7 +370,7 @@ sub get_regulatory_FeatureSets{
 # and ctype_fsets contain core fsets
 
   foreach my $ctype (@{$ctypes},('MultiCell')) {  
-    print "\tCreating feature set for cell type $ctype\n";
+    print_log("\tCreating feature set for cell type $ctype\n");
     my ($desc, $dlabel, $fset_name);
     
     $fset_name = "RegulatoryFeatures:$ctype";
@@ -507,11 +522,9 @@ sub get_cell_type_supporting_sets {
   my %ctype_ssets;
   $ctype_ssets{MultiCell} = [];
   foreach my $ctype (@{$ctypes}) {  
-    print "\tSearching for supporting sets on cell type $ctype\n";
+    print_log("\tSearching for supporting sets on cell type $ctype\n");
     my $CellType = $cta->fetch_by_name($ctype);
     my @ssets = ();
-    print $ctype."\n";
-    print $CellType."\n";
     foreach my $fs (@{$fsa->fetch_all_by_CellType($CellType)}) {
       if ($fs->feature_class eq 'annotated') {
         push @ssets, $fs;
@@ -541,7 +554,7 @@ sub compute_counts {
 
 sub count_active {
   my ($filename, $count_hash) = @_;
-  print "\tCounting in file $filename\n";
+  print_log("\tCounting in file $filename\n");
   my ($fh, $tmp_name) = tempfile();
   run("bigBedToBed $filename $tmp_name");
   while (my $line  = <$fh>) {
@@ -646,7 +659,7 @@ sub compute_regulatory_features {
 sub load_celltype_build {
   my ($base_dir, $feature_set, $stable_id, $count_hash, $slice, $cell_type, $feature_type) = @_;
   my ($tmp, $tmp_name) = tempfile();
-  print "\tProcessing data from cell type $cell_type\n";
+  print_log("\tProcessing data from cell type $cell_type\n");
   my $bigbed;
   if ($cell_type eq 'MultiCell') {
     $bigbed = "$base_dir/overview/RegBuild.bb";
