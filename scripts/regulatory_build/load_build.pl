@@ -101,6 +101,8 @@ sub main {
   compute_regulatory_features($options, $feature_set, $feature_type, $stable_id, $count_hash, $slice);
   print_log("Creating regulatory_annotation table\n");
   compute_regulatory_annotations($options);
+  print_log("Updating meta table\n");
+  update_meta_table($options, $db);
 }
 
 ########################################################
@@ -130,6 +132,7 @@ sub get_options {
     "host|h=s",
     "user|u=s",
     "dbname|d=s",
+    "small_update=s",
   ) or pod2usage( -exitval => 1);
   defined $options{base_dir} || die ("You must define the base directory!\t--base_dir XXXX\n");
   defined $options{host} || die ("You must define the destination host!\t--base_dir XXXX\n");
@@ -806,6 +809,27 @@ sub compute_regulatory_annotations {
   unlink $annotations;
   unlink $motifs;
   unlink $out;
+}
+
+#####################################################
+# Updates data in metatable 
+#####################################################
+# Params: - Bio::EnsEMBL::Funcgen::DBAdaptor
+#####################################################
+
+sub update_meta_table {
+  my ($options, $db) = @_;
+  my $mc = $db->get_db_adaptor('MetaContainer');
+  my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
+  my @version = split(".", $mc->single_value_by_key('regbuild.version'));
+  if (defined $options->{small_update}) {
+    $version[1] += 1;
+  } else {
+    $version[0] += 1;
+  }
+  $mc->update_key_value('regbuild.version', join(".", @version));
+  $mc->update_key_value('regbuild.initial_release_date', "$year-$mon");
+  $mc->update_key_value('regbuild.last_annotation_update', "$year-$mon");
 }
 
 1;
