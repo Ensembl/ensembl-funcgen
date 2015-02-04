@@ -1655,6 +1655,17 @@ sub compute_regulatory_features {
   }
 
   #############################################
+  ## Apply mask
+  #############################################
+
+  my $awk_mask = "";
+  if (defined $options->{mask}) {
+    $awk_mask = "| bedtools intersect -wa -v -a stdin -b $options->{mask}";
+  }
+  my $awk_contract = "awk 'BEGIN {OFS=\"\t\"} \$3 > \$2 + 1 {\$2 += 1; \$3 -= 1;} \$7 < \$2 {\$7 = \$2} \$8 > \$3 {\$8 = \$3} {print}'";
+  my $final_filter = "$awk_mask | $awk_contract";
+
+  #############################################
   ## Find non overlapping features for each level 
   #############################################
 
@@ -1663,11 +1674,11 @@ sub compute_regulatory_features {
   my $demoted = undef; 
   if (defined $tss_tmp2) {
     $tss = "$options->{working_dir}/build/tss.bed";
-    run("bedtools intersect -u -wa -a $tss_tmp2 -b $options->{tss} > $tss");
+    run("bedtools intersect -u -wa -a $tss_tmp2 -b $options->{tss} $final_filter > $tss");
 
     # All features that do not go into a demoted file
     $demoted = "$options->{working_dir}/build/demoted_tss.bed";
-    run("bedtools intersect -v -wa -a $tss_tmp2 -b $options->{tss} > $demoted");
+    run("bedtools intersect -v -wa -a $tss_tmp2 -b $options->{tss} $final_filter > $demoted");
   }
 
   # Unaligned proximal sites are retained
@@ -1676,23 +1687,23 @@ sub compute_regulatory_features {
     $proximal = "$options->{working_dir}/build/proximal.bed";
     my $awk_proximal = make_awk_command("proximal", 0);
     my $files = join(" ", grep defined, ($proximal_tmp2, $demoted));
-    run("wiggletools write_bg - unit sum $files | $awk_proximal $remove_tss > $proximal");
+    run("wiggletools write_bg - unit sum $files | $awk_proximal $remove_tss $final_filter > $proximal");
   }
 
   # Unaligned distal sites are retained
   my $distal = undef; 
   if (defined $distal_tmp2) {
     $distal = "$options->{working_dir}/build/distal.bed";
-    run("cat $distal_tmp2 $remove_tss $remove_proximal > $distal");
+    run("cat $distal_tmp2 $remove_tss $remove_proximal $final_filter > $distal");
   }
 
   # Unaligned TFBS sites are retained
   my $tfbs = "$options->{working_dir}/build/tfbs.bed";
-  run("cat $tfbs_tmp2 $remove_tss $remove_proximal $remove_distal > $tfbs");
+  run("cat $tfbs_tmp2 $remove_tss $remove_proximal $remove_distal $final_filter > $tfbs");
 
   # Unaligned DNAse sites are retained
   my $dnase = "$options->{working_dir}/build/dnase.bed";
-  run("bedtools intersect -wa -v -a $dnase_tmp -b $tfbs_tmp2 $remove_tss $remove_proximal $remove_distal > $dnase");
+  run("bedtools intersect -wa -v -a $dnase_tmp -b $tfbs_tmp2 $remove_tss $remove_proximal $remove_distal $final_filter > $dnase");
 
   #############################################
   ## CTCF computed independently 
@@ -1700,25 +1711,15 @@ sub compute_regulatory_features {
 
   my $ctcf = undef;
   if (defined $ctcf_tmp) {
-    my $ctcf = "$options->{working_dir}/build/ctcf.bed";
-    run("mv $ctcf_tmp $ctcf");
-  }
-
-  #############################################
-  ## Apply mask
-  #############################################
-
-  my $awk_mask = "";
-  if (defined $options->{mask}) {
-    $awk_mask = "| bedtools intersect -wa -v -a stdin -b $options->{mask}";
+    $ctcf = "$options->{working_dir}/build/ctcf.bed";
+    run("cat $ctcf_tmp $final_filter > $ctcf");
   }
 
   #############################################
   ## Merge
   #############################################
-  my $awk_contract = "awk '\$3 > \$2 + 1 {\$2 += 1; \$3 -= 1;} \$7 < \$2 {\$7 = \$2} \$8 > \$3 {\$8 = \$3} {print}'";
   my $files = join(" ", grep defined, ($tss, $proximal, $distal, $ctcf, $dnase, $tfbs));
-  run("sort -m $files -k1,1 -k2,2n $awk_mask | $awk_contract > $bed_output");
+  run("sort -m $files -k1,1 -k2,2n > $bed_output");
   convert_to_bigBed($options, $bed_output);
 }
 
@@ -1870,7 +1871,6 @@ sub precompute_ChromHMM_label_state {
 
 sub compute_ChromHMM_label_state {
   my ($options, $segmentation, $celltype, $label) = @_;
-  my $awk_contract = "awk '\$3 > \$2 + 1 {\$2 += 1; \$3 -= 1;} \$7 < \$2 {\$7 = \$2} \$8 > \$3 {\$8 = \$3} {print}'";
   my $output = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$label.final.bed";
   my $reference = "$options->{working_dir}/build/$label.bed";
 
@@ -1911,12 +1911,12 @@ sub compute_ChromHMM_label_state {
     run("bedtools intersect -wa -v -a $reference -b $poised | bedtools intersect -wa -v -a stdin -b $temp | bedtools intersect -wa -v -a stdin -b $repressed | awk \'{\$9=\"$dead_color\"; print}\' > $temp6");
 
     # Merge all this into one bed file
-    run("sort -m $temp2 $temp3 $temp4 $temp5 $temp6 -k1,1 -k2,2n | $awk_contract > $output");
+    run("sort -m $temp2 $temp3 $temp4 $temp5 $temp6 -k1,1 -k2,2n > $output");
     return $output;
   } else {
     # Could not find evidence for or against, do not report any regions
     my $na_color = $COLORS{na};
-    run("cat $reference | awk \'{\$9=\"$na_color\"; print}\' | $awk_contract > $output");
+    run("cat $reference | awk \'{\$9=\"$na_color\"; print}\' > $output");
     return $output;
   }
 }
