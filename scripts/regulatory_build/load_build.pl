@@ -58,8 +58,9 @@ use Bio::EnsEMBL::Analysis;
 use File::Temp qw/ tempfile tempdir /;
 
 my $dead_rgb = '225,225,225';
-my $poised = "192,0,190";
-my $repressed = "127,127,127";
+my $poised_rgb = "192,0,190";
+my $repressed_rgb = "127,127,127";
+my $na_rgb = "255,255,255";
 our $start_time = time;
 
 main();
@@ -563,7 +564,7 @@ sub count_active {
     if (!defined $count_hash->{$name}) {
       $count_hash->{$name} = 0;
     }
-    if ($rgb ne $dead_rgb && $rgb ne $poised && $rgb ne $repressed) {
+    if ($rgb ne $dead_rgb && $rgb ne $poised_rgb && $rgb ne $repressed_rgb && $rgb ne $na_rgb) {
       $count_hash->{$name} += 1;
     }
   }
@@ -681,7 +682,7 @@ sub process_file {
     my ($chrom, $start, $end, $name, $score, $strand, $thickStart, $thickEnd, $rgb) = split /\t/, $line;;
     my ($feature_type_str, $number) = split /_/, $name;
     my $has_evidence = 0;
-    if ($rgb ne $dead_rgb && $rgb ne $poised && $rgb ne $repressed) {
+    if ($rgb ne $dead_rgb && $rgb ne $poised_rgb && $rgb ne $repressed_rgb && $rgb ne $na_rgb) {
       $has_evidence = 1; # TODO 4 way
     }
 
