@@ -37,8 +37,7 @@ perl load_new_assembly.pl --host $host --user $user --pass $pass --dbname homo_s
 Loads a segmentation BigBed file annotated by the new regulatory build into the database.
 Params:
 	* base_dir: directory with assembly name (e.g. ./hg38) create by build
-	* segmentation_name: name of segmentation as named in build
-	* cell_type_name: name of cell type as named in build.
+	* your usual Ensembl Funcgen MySQL params: host, dnadb_host, usr, dnadb_user, etc...
 
 In short, the file $base_dir/segmentations/$segmentation/$cell_type_name.bb must exist
 
@@ -171,7 +170,7 @@ sub connect_db {
 #####################################################
 # Create/Get analysis for Build
 #####################################################
-# Params: A DBAdaptor
+# Params: Bio::EnsEMBL::Funcgen::DBAdaptor
 #####################################################
 
 sub get_analysis {
@@ -254,7 +253,7 @@ sub get_cell_type_names {
 #####################################################
 # Convenience wrapper to run the commandline safely 
 #####################################################
-# Params: command line command
+# Params: command line command string
 #####################################################
 
 sub run {
@@ -267,7 +266,7 @@ sub run {
 #####################################################
 # Alternate assign stable ids to features
 #####################################################
-# Params: Bed file with previous Build
+# Params: Bio::EnsEMBL::Funcgen::DBAdaptor
 #####################################################
 
 sub get_stable_id {
@@ -278,7 +277,7 @@ sub get_stable_id {
   run("bigBedToBed $options->{base_dir}/overview/RegBuild.bb $new");
   my ($overlaps, $max_id) = get_overlaps_between_files($old, $new);
 
-# Go through overlaos in order of increasing overlap length. This means that you should always 
+# Go through overlaps in order of increasing overlap length. This means that you should always 
 # overwrite an overlap with a later one. 
   sub cmp_overlaps {
     return $a->[14] <=> $b->[14];
@@ -374,7 +373,7 @@ sub get_slices {
 #         - DBAdaptor
 #####################################################
 
-sub get_regulatory_FeatureSets{
+sub get_regulatory_FeatureSets {
   my ($analysis, $ctypes, $db) = @_;
   my %rf_sets;
   my $fta = $db->get_FeatureTypeAdaptor();
