@@ -79,6 +79,8 @@ main();
 sub main {
   print_log("Getting options\n");
   my $options = get_options();
+  print_log("Ensuring previous build is archived\n");
+  archive_previous_build($options);
   print_log("Connecting to database\n");
   my $db = connect_db($options);
   print_log("Getting analysis\n");
@@ -134,6 +136,23 @@ sub get_options {
   defined $options{user} || die ("You must define the user login!\t--base_dir XXXX\n");
   defined $options{dbname} || die ("You must define the database name!\t--base_dir XXXX\n");
   return \%options;
+}
+
+####################################################
+## Archiving old build
+####################################################
+sub archive_previous_build {
+  my ($options) = @_;
+  my $connection = "mysql -u $options->{user} -h $options->{host} -D $options->{dbname}";
+  if (defined $options->{port}) {
+    $connection .= " -P $options->{port}";
+  }
+  if (defined $options->{pass}) {
+    $connection .= " -p$options->{pass}";
+  }
+  run("$connection -e 'UPDATE data_set SET name = CONCAT(name, \".ARCHIVED\") WHERE name LIKE \"RegulatoryFeatures:%\" AND name NOT LIKE \"%.ARCHIVED\"'");
+  run("$connection -e 'UPDATE feature_set SET name = CONCAT(name, \".ARCHIVED\") WHERE name LIKE \"RegulatoryFeatures:%\" AND name NOT LIKE \"%.ARCHIVED\"'");
+  run("$connection -e 'UPDATE meta SET meta_key = CONCAT(meta_key, \".ARCHIVED\") WHERE meta_key LIKE \"regbuild.%\" AND meta_key NOT LIKE \"%.ARCHIVED\"'");
 }
 
 ####################################################
