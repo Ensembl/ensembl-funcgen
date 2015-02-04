@@ -61,6 +61,15 @@ my $dead_rgb = '225,225,225';
 my $poised_rgb = "192,0,190";
 my $repressed_rgb = "127,127,127";
 my $na_rgb = "255,255,255";
+
+our %label_description= (
+  'ctcf'=>'CTCF Binding Site',
+  'distal'=>'Predicted enhancer',
+  'proximal'=>'Predicted promoter flanking region',
+  'tss'=>'Predicted promoter',
+  'tfbs'=>'Transcription factor binding site',
+  'dnase'=>'Open chromatin region'
+);
 our $start_time = time;
 
 main();
@@ -197,24 +206,47 @@ sub get_analysis {
       );
 
     $aa->store($analysis);
+    return $analysis;
+  } else {
+    return $ana;
   }
-  return $aa;
+}
+
+########################################################
+## Removing unwanted characters 
+## Quick string normalisation function tor remove weird 
+## characters froms file names and remove variants
+########################################################
+
+sub clean_name {
+  my $string = shift;
+  $string =~ s/[\-\(\)]//g;
+  $string =~ s/_.*//g;
+  return uc($string);
 }
 
 #####################################################
 # Get list of cell types
 #####################################################
-# Params: The base_directory
+# Params: The base_directory name
 #####################################################
 
-sub get_cell_type_names{
-  my ($base_dir) = @_;
+sub get_cell_type_names {
+  my ($base_dir, $db) = @_;
+  my $cta = $db->get_CellTypeAdaptor();  
+  my %cell_type_from_clean = ();
+  for my $cell_type (@{$cta->fetch_all()}) {
+    $cell_type_from_clean{clean_name($cell_type->name)} = $cell_type;
+  }
+
   my @cell_types = ();
   foreach my $file (glob "$base_dir/projected_segmentations/*.bb") {
-    my $cell_type = basename $file;
-    $cell_type =~ s/\.bb//;
-    print "\tCELL TYPE $cell_type\n";
-    push @cell_types, $cell_type;
+    my $cell_type_name = basename $file;
+    $cell_type_name =~ s/\.bb//;
+    if (!exists $cell_type_from_clean{$cell_type_name}) {
+      die("Celltype $cell_type_name unknown!");
+    }
+    push @cell_types, $cell_type_from_clean{$cell_type_name}->name;
   }
   return \@cell_types;
 }
@@ -299,12 +331,11 @@ sub get_overlaps_between_files {
   while (my $line = <$fh>) {
     chomp $line;
     my @items = split /\t/, $line;
-    # Check no feature type incompatibility
-    if ($items[4] ne 'NONE') {
-      # TODO map strings to feature type
-      if (0) {
-        next;  
-      }
+    # Check for feature type incompatibility
+    my @comps = split("_", $items[8]);
+    my $label = $comps[0];
+    if ($items[3] ne $label_description{$label}) {
+      next;
     }
     push @overlaps, \@items;
 
