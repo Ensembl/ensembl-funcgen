@@ -30,7 +30,7 @@ load_segmentation.pl
 
 =head1 SYNOPSIS
 
-load_segmentations.pl --host $host --user $user --pass $pass --base_dir hg38 --dbname homo_sapiens_funcgen_76_38 --dnadb_name homo_sapiens_core_76_38 --dnadb_host $host2 --dnadb_user $user2 --segmentation $segmentation_name --cell_type $cell_type_name
+load_segmentations.pl --host $host --user $user --pass $pass --base_dir hg38 --dbname homo_sapiens_funcgen_76_38 --segmentation $segmentation_name --cell_type $cell_type_name
 
 =head1 DESCRIPTION
 
@@ -61,8 +61,7 @@ use Bio::EnsEMBL::Utils::Exception         qw( throw stack_trace );
 main();
 
 sub main {
-  my ($base_dir, $segmentation, $cell_type, $pass,$port,$host,$user,$dbname,
-	  $dnadb_pass,$dnadb_port,$dnadb_host,$dnadb_user,$dnadb_name);
+  my ($base_dir, $segmentation, $cell_type, $pass,$port,$host,$user,$dbname);
 
   GetOptions 
     (
@@ -74,11 +73,6 @@ sub main {
      "host|h=s"       => \$host,
      "user|u=s"       => \$user,
      "dbname|d=s"     => \$dbname,
-     "dnadb_pass|p=s"       => \$dnadb_pass,
-     "dnadb_port=s"   => \$dnadb_port,
-     "dnadb_host|h=s" => \$dnadb_host,
-     "dnadb_user|u=s" => \$dnadb_user,
-     "dnadb_name|d=s" => \$dnadb_name,
      'help|?'         => sub { pos2usage(-exitval => 0, ); }
     ) or pod2usage( -exitval => 1);
 
@@ -90,16 +84,10 @@ sub main {
      -pass   => $pass,
      -port   => $port,
      -group  => 'funcgen',#Should be set as default in adaptor new method
-     -dnadb_host => $dnadb_host,
-     -dnadb_port => $dnadb_port,
-     -dnadb_user => $dnadb_user,
-     -dnadb_pass => $dnadb_pass,
-     -dnadb_name => $dnadb_name,
     );
 
 #Test connections
   $db->dbc->db_handle;
-  $db->dnadb->dbc->db_handle;
 
 #Test species
   my $species = $db->species;
