@@ -293,6 +293,20 @@ sub run {
 
 sub get_stable_id {
   my ($options, $db) = @_;
+
+  my ($ofh, $old) = tempfile();
+  sub cmp_features {
+    if ($a->seq_region_name ne $b->seq_region_name) {
+      return $a->seq_region_name cmp $b->seq_region_name;
+    } else {
+      return $a->seq_region_start <=> $b->seq_region_start;
+    }
+  }
+  foreach my $feature (sort cmp_features @{$db->get_adaptor('FeatureSet')->fetch_by_name('RegulatoryFeatures:MultiCell.ARCHIVED')->get_all_Features()}) {
+    print $ofh join("\t", ($feature->seq_region_name, $feature->bound_start, $feature->bound_end, $feature->feature_type->name, substr($feature->stable_id, 4))) . "\n";
+  }
+  close $ofh;
+
   my ($fh, $new) = tempfile();
   close $fh;
 
@@ -307,8 +321,8 @@ sub get_stable_id {
   my %old_pref = ();
   my %new_pref = ();
   foreach my $entry (sort cmp_overlaps @{$overlaps}) {
-    $old_pref{$entry->[3]} = $entry->[8];
-    $new_pref{$entry->[8]} = $entry->[3];
+    $old_pref{$entry->[4]} = $entry->[8];
+    $new_pref{$entry->[8]} = $entry->[4];
   }
 
 # Output new_id/old_id pairs if mutual best hits, else create new ids starting from 
@@ -343,8 +357,7 @@ sub get_overlaps_between_files {
   
 # Compute overlaps between regions defined in both file
   my ($fh, $filename) = tempfile();
-  my $cmd = "bedtools intersect -a $old -b $new -wo > $filename";
-  system($cmd) && die("Failed bedtools command\n");
+  run("bedtools intersect -a $old -b $new -wo > $filename");
 
 # Parse output
   my @overlaps = ();
@@ -361,7 +374,7 @@ sub get_overlaps_between_files {
     push @overlaps, \@items;
 
     # Look for maximum ID number among the old features
-    my $id = substr($items[3], 4);
+    my $id = $items[4];
     if (!defined $max_id || $max_id < $id) {
       $max_id = $id;
     }
@@ -379,10 +392,10 @@ sub get_overlaps_between_files {
 
 sub get_slices {
   my ($db) = @_;
-  my $slices = $db->get_adaptor("Slice")->fetch_all();
+  my $slices = $db->get_adaptor("Slice")->fetch_all('toplevel',undef,0,1);
   my %hash = ();
   foreach my $slice (@{$slices}) {
-    $hash{$slice->name} = $slice;
+    $hash{$slice->seq_region_name} = $slice;
   }
   return \%hash;
 }
