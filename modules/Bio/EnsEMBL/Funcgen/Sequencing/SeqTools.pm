@@ -599,6 +599,8 @@ sub merge_bams{
 
   warn "Merging with:\n$cmd\n" if $debug;
   run_system_cmd($cmd);
+  # Should catch incomplete bam file
+  run_system_cmd("samtools view -h $outfile");
   warn "Finished merge to $outfile" if $debug;
 
   if(! $no_checksum){
@@ -1358,7 +1360,7 @@ sub validate_sam_header {
 
 
 
-#These are split into _init and _run methods to allow initialisation before running the 
+#These are split into _init and _run methods to allow initialisation before running the
 #peak caller proper. This fits well with the fetch_input/run jobs procedure of the hive.
 
 #Can't do this easily, as we don't know exactly what we want to pass through to the
@@ -2563,7 +2565,7 @@ sub _read_md5sum_txt {
 #e.g. >18 dna:chromosome chromosome:GRCh37:18:1:78077248:1 chromosome 18
 
 sub randomise_bed_file{
-  my ($input_bed, $output_bed, $fasta_header_file, $sort_options) = 
+  my ($input_bed, $output_bed, $fasta_header_file, $sort_options) =
    rearrange([qw(INPUT_BED OUTPUT_BED FASTA_HEADER_FILE SORT_OPTIONS)], @_);
 
   $sort_options ||= '-k1,1 -k2,2n -k3,3n';
@@ -2578,7 +2580,7 @@ sub randomise_bed_file{
     chomp $line;
     #This is new fasta header format as of release 76
     #This needs moving to SeqTools or similar, so we always use the same code for fasta header handling!
-  
+
     my($sr_name, undef, $slice_name) = split(/\s+/, $line);
     $sr_name =~ s/^>//;
     (undef, undef, undef, $chrom{$sr_name}->{min}, $chrom{$sr_name}->{max}) = split(/:/, $slice_name);
@@ -2612,14 +2614,14 @@ sub randomise_bed_file{
       $skipped++;
       next;
     }
-    
+
     my $new_start = int(rand($chrom{$sr_name}->{max} - $len +1));
     # +1 as we want to use 0 to iradicate the int rounding bias towards 0
     # if we get 0, then we set it to the under-represented max
     $new_start  ||= $chrom{$sr_name}->{max} - $len + 1;
     $new_start--; #Make 1/2 open
     my $new_end   = $new_start + $len;
-    $strand = '.' if ! defined $strand; #Avoid undef warnings 
+    $strand = '.' if ! defined $strand; #Avoid undef warnings
     #Buffer here!
     $wrote++;
     print $ofh join("\t", ($sr_name, $new_start, $new_end, '.', '.', $strand))."\n";
@@ -2632,7 +2634,7 @@ sub randomise_bed_file{
     throw("Failed to write any mock peaks to:\t$output_bed");
   }
   else{
-    warn "Wrote ${wrote}/".($wrote + $skipped)." mock peaks to:\t$output_bed\n";  
+    warn "Wrote ${wrote}/".($wrote + $skipped)." mock peaks to:\t$output_bed\n";
   }
 
   return;
@@ -2648,7 +2650,7 @@ sub randomise_bed_file{
 #TODO This should just delete and over-write unless recover is specified
 
 sub explode_fasta_file{
-  my $input_fasta = shift;  
+  my $input_fasta = shift;
   my $target_dir  = shift;
   my $assembly    = shift;
   my $vlevel      = shift || 0;
@@ -2666,13 +2668,13 @@ sub explode_fasta_file{
     #Don't make this a tmp subdir or $target_dir, as this will obviously
     #make the $target_dir exist, leading to errors on retry
     #if this falls over
-  
+
     run_system_cmd("rm -f $tmp_dir") if -d $tmp_dir;
     run_system_cmd("mkdir -p $tmp_dir");
     run_system_cmd("fastaexplode -f $input_fasta -d $tmp_dir");
     @lines = run_backtick_cmd("ls -1 ${tmp_dir}/*.fa");
     #file name expression results in paths being returned instead of basenames
-  
+
     print 'Cleaning '.scalar(@lines)." exploded fasta files\n" if $vlevel;
     # now we alter the file names if short chromosome names have been requested
     if($assembly){
@@ -2692,7 +2694,7 @@ sub explode_fasta_file{
         my $path = dirname $file_path;
         my $new = $path.'/'.$name;
         #This is not working as all but the Y chr are already short names
-        #temp hack to get it running. This 
+        #temp hack to get it running. This
 
         my $command;
 
@@ -2712,7 +2714,7 @@ sub explode_fasta_file{
     }
     else{  # just do fastaclean
 
-      foreach my $file_path (@lines){   
+      foreach my $file_path (@lines){
         my $new = dirname($file_path).'/tmp';
         run_system_cmd("fastaclean -a -f $file_path > $new");
         run_system_cmd("mv $new $file_path");
@@ -2721,12 +2723,12 @@ sub explode_fasta_file{
 
     run_system_cmd("mkdir -p $target_dir");
     run_system_cmd("mv $tmp_dir/* $target_dir/");
-    run_system_cmd("rm -rf $tmp_dir");   
+    run_system_cmd("rm -rf $tmp_dir");
   }
   #else Assume this is correct if we have some files
 
   @lines = run_backtick_cmd("ls -1 ${target_dir}/*.fa", 1);
-  
+
   if(! scalar(@lines)){
     throw("ERROR: No fasta files produced by splitting:\t".$input_fasta);
   }
