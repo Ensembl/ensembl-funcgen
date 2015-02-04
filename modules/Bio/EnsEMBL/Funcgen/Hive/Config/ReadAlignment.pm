@@ -115,8 +115,7 @@ sub pipeline_wide_parameters {
       #Size of each sequence chunk to be aligned (nbr of reads * 4)
       fastq_chunk_size      => $self->o('fastq_chunk_size'),   #Change to batch specific
       alignment_analysis    => $self->o('alignment_analysis'), #Nope we may want this to be batch specific!
-      aligner_param_methods => $self->o('bwa_samse_param_methods'),
-
+      aligner_param_methods => $self->o($self->o('alignment_analysis').'_param_methods'),
       #This is stricly not required anymore as we use the local_url from the tracking tables
       fastq_root_dir      => $self->o('fastq_root_dir'),
       #This will should be set to one in downstream config
