@@ -1,9 +1,24 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::Hive::DefineInputSets
+Bio::EnsEMBL::Funcgen::Hive::DefineResultSets
 
 =head1 DESCRIPTION
+
+The modules creates and stores ResultSet objects given a list of input_subset_ids. Dynamic data flow is performed 
+via the 'branching_by_analysis' mechanism which allows branch names to be used to data flow. This allows dataflow 
+to be defined by the inputs of an analysis wrt the pre-defined analysis config.
+
+It functions in two modes:
+
+  1 DefineResultSets analysis
+  This runs prior to any alignment analyses. For experiments which are destined for IDR analysis, 
+  it creates individual replicate ResultSets, else it creates a merged replicate ResultSet. Branching by
+  analysis data flows to:
+    Preprocess_${alignment_analysis}_(control|merged|replicate) & PreprocessIDR (dependant on 'replciate')
+    
+  2 DefineMergedReplicateResultSet analysis
+  This runs post IDR analysis and also merges the replicate alignments. This always dataflows to DefineMergedDataSet
 
 =cut
 
@@ -14,94 +29,9 @@ use strict;
  
 use Bio::EnsEMBL::Utils::Exception              qw( throw );
 use Bio::EnsEMBL::Utils::Scalar                 qw( assert_ref );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils      qw( scalars_to_objects );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils      qw( scalars_to_objects validate_checksum);
 use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools qw( merge_bams );
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
-
-#Change this to DefineResultSets and drop InputSet!
-#This will mean input_set.analysis moves to input_subset.
-#input_set.replicate will move to result_set
-
-#feature_set.input_set_id can be replaced with result_set_id
-#this is only required for speed of experiment view and Source label zmenu rendering
-
-#what are the implications for non seqencing input_sets?
-#i.e. other flat file imports? e.g. segmentation
-#This is non-critical and should really not be in the input_set/subset
-#tables. Was just added there as this was a existing mechanism of import.
-
-#should we rename input_subset as input_set
-
-#what are the implications for tracking?
-
-#what are the implications for exiting pipeline modules?
-# IdentifySetInputs will have to change support for input_sets to result_sets
-
-#Impact on existing import code. This is all based around input_set tracking.
-#So this will need to be change to result_set. This needs to be overhauled for collections
-#anyway, as this would currently store the bed file as an input_subset
-
-#ResultSetAdaptor support
-
-#How can we do this will minimal impact on web and release 74?
-
-
-#Can't have no result_set mode now as this will break the link to the input_subset
-#now input_set_id won't be in feature set.
-#actually this is still fine for IDR sets, as these will never make it to dev.
-
-
-
-#How are we handling pre-aligned or currently aligning controls
-#we need to be able to skip the control stage and pass the correct output id directly to 
-#the signal Preprocess analyses (similar to how the no control jobs already do).
-#This should be the same output at MergeControlAlignements_and_QC
-#We should check for the relevant file first?
-#Fail here so we don't have problems rerunning the controls if we have too.
-#Maybe we can try and pull the bam out of the warehouse?
-
-#What about handling controls which are already being aligned by another batch?
-#We need to identify this, probably by a status
-#But how would we be able to handle restarting after errors?
-#If we set ALIGNING in here before we dataflow each control set?
-#This would be fine, as we only do the ALIGNING check in here
-#The risk of failing after we set that, but before we data flow is minimal
-#and the tidyup is also minimal, a simple status entry removal
-#The status would have to be on the experiment, as we don't have a ResultSet yet
-#and as we can have integrated signal/control experiments the status would have to 
-#be ALIGNING_CONTROL
-
-#The ALIGNED status should probably be assigned to the ResultSet
-#But we need a way to handle rollback here
-
-#This is the same for signal sets too!
-#But we should probably catch that later?
-#we only need to deal with the controls here as we need to flow correctly
-#for the signal sets, this will fail in DefineResultSets, unless the appropriate rollback
-#level is set
-
-#Actually, all of this should be done in define resultsets, as that where the data critical flow
-#happens. So we can then move the ALIGNING_CONTROL status to the ResultSets too!
-
-#Do we want this to fail on not? We may have some sets which can be flown successfully
-#The inputs have already been pre-grouped by IdentifyInputSubsets into control, no control merged and no control replicate
-#so failing jobs will only affect related controls jobs, or unrelated jobs (without controls).
-
-#The failure will likely be we have not set the correct recover/rollback param
-#or we have a set which is in the ALIGNING/ALIGNING_CONTROL status
-#If we have a signal set in ALIGNING status, we either have a redundant input_id
-#and we should exit, or we are retrying a non-reundant input_id which has failed
-#after the ALIGNING status has been assigned
-#This should be handled with some sort of force flag, we can either do this preferably 
-#via ReseedJob, or by by trying to create a new input id via IdentifyInputSubset
-#This is not totally safe, as there is now way of knowing which 'batch' assigned
-#the ALIGNING status, and so we don't know wether the is a parallel clashing process.
-#But this should be enough to make you stop and figure it out.
-
-#Are there easy ways to 'figure it out'?
-
-#we already have the correct wiring to do this as it matches
-#the non-control flow, but we will be passing different data.
 
 
 sub fetch_input {   # fetch parameters...
@@ -123,8 +53,7 @@ sub fetch_input {   # fetch parameters...
   #alignment_analysis is dataflowed explicitly from IdentifyAlignInputSubsets
   #to allow batch over-ride of the default/pipeline_wide value.
   #Could have put this in batch params, but it is only needed here
-  
-                    
+                  
   my $merge = $self->get_param_method('merge_idr_replicates', 'silent');
 
   if($merge){
@@ -149,7 +78,7 @@ sub fetch_input {   # fetch parameters...
   return;
 }
 
-#Move these to EFGUtils?
+#Move these to Pipeline/EFGUtils?
 
 sub _are_controls{
   my $ctrls        = shift; 
@@ -471,10 +400,13 @@ sub run {   # Check parameters and do appropriate database/file operations...
       
           #This also needs to use the get_alignment_files_by_ResultSet method!
           
-          #why would we ever want to use existing merged file here?
-          #This is if Pseudo rep IDR has already created the file
+          #This would use and existing merged file here if Pseudo rep IDR has already created the file
           #Let's simply remove this test, and expect the file 
           #once the pseudo rep code is implemented
+
+          # This is causing old buggy files to be used at present
+
+          # Let's add a checsum test if it already exists
           
           
           if(! -f $merged_file || $self->param_silent('overwrite')){
@@ -496,6 +428,9 @@ sub run {   # Check parameters and do appropriate database/file operations...
             $rset->adaptor->store_status('ALIGNED', $rset);
             #IMPORTED not set here, as this is used to signify whether
             #a collection file has been written.
+          }
+          else{
+            validate_checksum($merged_file);
           }
           
           #Can't set IDR peak_analysis here, as we may lose this
