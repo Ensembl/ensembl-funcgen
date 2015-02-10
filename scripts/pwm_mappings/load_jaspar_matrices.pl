@@ -775,7 +775,6 @@ sub main {
          ( $pfm_id, $ens_sid ) = split( /\t/, $line );
          ( $pfm_id, $pfm_acc, $name ) = split(/__/, $pfm_id );
     my $pfm_key = $pfm_id.' '.$name;
-     
     my ($gene, $ftype);
 
     if(! exists $peps_to_gene_ftype_names{$ens_sid} ){
@@ -799,11 +798,10 @@ sub main {
         #This scripts only loads matrices based on automated associations
         #so we're going to have to curate some synonyms in here!
       }
-      else{
-        $ftype = $ftypes{$name};
-      }
-
-      $peps_to_gene_ftype_names{$ens_sid} = [$gene, $ftype];
+     
+      $ftype = $name;
+      warn "Setting $name ftype to $ftype for $ens_sid";
+      $peps_to_gene_ftype_names{$ens_sid} = [$gene, $name];
     }
     else{
       ($gene, $ftype) = @{ $peps_to_gene_ftype_names{$ens_sid} };
@@ -814,7 +812,8 @@ sub main {
 
     if(! exists $pfm_hits{$pfm_key}{$pfm_acc}){
       #This will autovivify the $pfm_id key, bu thtat fine as we are setting it in here anyway
-      print "Found no xref matches for PFM $pfm_key($pfm_acc), defaulting to best blast hit:\t $ens_sid(".$gene->stable_id.") $ftype\n"; 
+      print "Found no xref matches for PFM $pfm_key($pfm_acc), defaulting to best blast hit:\t $ens_sid(".
+        $gene->stable_id.") $ftype\n"; 
       $pfm_hits{$pfm_key}{$pfm_acc}{$ftype}{blast} = [$gene];
       $used_blast_hits++;
       delete $no_matches{$ftype} if exists $no_matches{$ftype};
@@ -967,7 +966,9 @@ sub main {
     
     
     foreach my $acc(@accs){
+
       my @ftypes = keys %{$acc_hits->{$acc}};
+      warn "$acc @ftypes";
       #We can get 2 hits here, if the > 1 gene is brought back by the given acc
       #These are likely to have come from Genes which have the TF complex acc
       #as an external name
@@ -1005,7 +1006,7 @@ sub main {
           #This may fail if there is >1 with the same name across classes
 
           if(! defined $ftype_obj){
-            die("Identified TF sub-unit $hit_ftype gene xref, but failed to store as $hit_ftype is not loaded as a FeatureType");
+            die("Identified TF sub-unit $hit_ftype gene xref, but failed to store it is not loaded as a FeatureType");
           }
 
           $ftypes{$hit_ftype} = $ftype_obj;
