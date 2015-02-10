@@ -596,11 +596,25 @@ sub merge_bams{
 
   #piping like this may cause errors downstream of the pipe to be missed
   #could we try doing an open on the piped cmd to try and catch a SIGPIPE?
-
   warn "Merging with:\n$cmd\n" if $debug;
   run_system_cmd($cmd);
-  # Should catch incomplete bam file
-  run_system_cmd("samtools view -h $outfile");
+  
+  # samtools merge can create a truncated file which lacks an EOF marker
+  # unfortunately this does not raise an error and so will not be caught above
+  # samtools view -h will return $? == 2 here
+  # however, this is non-optimal as it slows down this step for the 99% of files which merge correctly
+  # samtools -H does not raise an error or a warning, 
+  # samtools -H(b|u) does not raise and but does output a warning:
+  # [bam_header_read] EOF marker is absent. The input is probably truncated.
+  # So let's capture output here via backticks..eugh.
+  # Backticks normally only capture STDOUT. So redirect STDERR to STDOUT before we discard STDOUT
+  $cmd = "samtools view -Hb $outfile 2>&1 > /dev/null";
+  my $uncaught_merge_error = run_backtick_cmd($cmd);
+
+  if($uncaught_merge_error){
+    throw("samtools merge appeared to create a truncated file:\n\t$uncaught_merge_error");
+  }
+
   warn "Finished merge to $outfile" if $debug;
 
   if(! $no_checksum){
@@ -638,7 +652,7 @@ sub merge_bams{
 #checksum => MD%STRING checks using string
 #Probably need a new param here
 
-#This is triggering an unnecessary sort when convertin bam to sam
+# ENSREGULATION-142 This is triggering an unnecessary sort when converting bam to sam
 
 sub process_sam_bam {
   my $sam_bam_path = shift;
@@ -829,7 +843,8 @@ sub process_sam_bam {
     $cmd .= ($sort) ? ' | samtools sort - '.$sorted_prefix : ' > '.$tmp_bam;
     warn $cmd."\n" if $debug;
 
-    #This is doing a redundant view step if we are not sorting or filtering and the input is already bam and has the correct header
+    # 
+    # This is doing a redundant view step if we are not sorting or filtering and the input is already bam and has the correct header
 
 
     run_system_cmd($cmd);
