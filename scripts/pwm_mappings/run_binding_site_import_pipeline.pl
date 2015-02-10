@@ -139,36 +139,31 @@ if(!$workdir) {  print "Missing working folder(s)\n"; pod2usage(0); }
 if(!$output_dir) {  print "Missing output folder(s)\n"; pod2usage(0); }
 
 my $coredb = Bio::EnsEMBL::DBSQL::DBAdaptor->new
-  (
-   '-host'        => $dnadb_host,
+  ('-host'        => $dnadb_host,
    '-user'        => $dnadb_user,
    '-port'        => $dnadb_port,
-   '-dbname'      => $dnadb_name,
-  );
+   '-dbname'      => $dnadb_name );
 
 my $efgdb = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
-  (
-   -host    => $host,
+  (-host    => $host,
    -port    => $port,
    -user    => $user,
    -dbname  => $dbname,
    -pass    => $pass,
-   -dnadb  => $coredb,
-  );
+   -dnadb  => $coredb  );
 
 # Test connection
 $efgdb->dbc->db_handle;
-
-opendir(DIR,$workdir) || throw("Could not opendir:\t$workdir");
-my @files = readdir(DIR); 
-closedir DIR;
-
 my $first = 1; #For omitting -job_topup
 my $bma   = $efgdb->get_BindingMatrixAdaptor;
 
-foreach my $file (@files){  
+opendir(DIR, $workdir) || throw("Could not opendir:\t$workdir");
+my @files = readdir(DIR); 
+closedir DIR;
 
+foreach my $file (@files){  
   next if $file !~ /^(.*)\.filtered\.bed$/;
+  
   my $matrix = $1;
   print "Matrix: ".$matrix."\n";
   my @bms = @{ $bma->fetch_all_by_name($matrix) };
@@ -179,13 +174,12 @@ foreach my $file (@files){
   }
 
   my $bm     = $bms[0];
-  my $mf_sql =  "motif_feature where binding_matrix_id=".$bm->dbID;
+  my $mf_sql = 'motif_feature where binding_matrix_id='.$bm->dbID;
 
   if(scalar(@slices)>0){
     warn "Restricting to requested ".scalar(@slices)." slices";
     $mf_sql = $mf_sql." and seq_region_id in (select seq_region_id from seq_region where name in ('".join("','",@slices)."'))";
   }
-
 
   my $sql = "delete from associated_motif_feature where motif_feature_id in (select motif_feature_id from $mf_sql )";
   warn "Deleting $matrix data(".$bm->dbID.") - regulatory_attribute/associated_motif_feature records will need regenerating\n";
