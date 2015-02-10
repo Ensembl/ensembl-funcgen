@@ -173,7 +173,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
 
       $motif_features->{$cache_key} = Bio::EnsEMBL::Funcgen::MotifFeature->new
        (-slice          => $slice_cache{$mf_sr},
-        -start          => $mf_start,
+        -start          => ($mf_start + 1),
         -end            => $mf_end,
         -strand         => $mf_strand,
         -binding_matrix => $bm,
