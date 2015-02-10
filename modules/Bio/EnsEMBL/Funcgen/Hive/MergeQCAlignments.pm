@@ -170,9 +170,8 @@ sub run {
   }
   else{
     $rset->adaptor->store_status('ALIGNED', $rset);
-    #Do not set IMPORTED here, as this signifies that the collections
-    #have already been written(i.e what would have been importing data into the DB
-    #before we moved it out to flat files)
+    # Do not set IMPORTED here, as this signifies that the collections have already been written
+    # i.e what would have been importing data into the DB before we moved it out to flat files
   }
 
   #filter file here to prevent race condition between parallel peak
@@ -194,9 +193,7 @@ sub run {
   my %batch_params = %{$self->batch_params};
   my $flow_mode    = $self->flow_mode;
   
-  if($flow_mode ne 'signal'){
-    #flow_mode is merged or replicate, which flows to DefineMergedOutputSet or run_SWEmbl_R0005_replicate
-    
+  if($flow_mode ne 'signal'){   #flow_mode is merged or replicate
     #This is a prime example of pros/cons of using branch numbers vs analysis names
     #Any change in the analysis name conventions in the config will break this runnable
     #However, it does mean we can change the permissive peaks analysis
@@ -206,12 +203,19 @@ sub run {
     #Can of course just piggy back an analysis on the same branch
     #But that will duplicate the jobs between analyses on the same branch
     
-    my %output_id = (garbage     => \@bam_files,
-                     set_type    => 'ResultSet',
+    my %output_id = (set_type    => 'ResultSet',
                      set_name    => $self->ResultSet->name,
                      dbID        => $self->ResultSet->dbID);
-    my $lname     = 'DefineMergedDataSet';  
-    
+
+    if(! $self->debug){
+      $output_id{garbage} = \@bam_files;   
+    }
+    else{  #Do not garbage collect in debug mode. In case we need to rerun.
+      warn "Skipping garbage collection for:\n".join("\n\t", @bam_files);
+    }
+  
+    my $lname     = 'DefineMergedDataSet';  #flow mode eq merged
+
     if($flow_mode eq 'replicate'){
       $output_id{peak_analysis} = $self->permissive_peaks;
       $lname                    = 'run_'.$self->permissive_peaks.'_replicate';  
