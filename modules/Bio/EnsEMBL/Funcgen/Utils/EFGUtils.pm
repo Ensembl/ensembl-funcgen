@@ -622,11 +622,11 @@ sub validate_checksum{
       $signature_file = $file_path.'.CHECKSUM';
     }
    
-    if((! -f $signature_file) && 
-       ($signature_file =~ /\.bam.CHECKSUM/o)){
-      warn "!!!!! REMOVE THIS !!!!\nTEMPORARILY CREATING missing MD5 file:\t$signature_file";
-      write_checksum($file_path);         
-    }
+    #if((! -f $signature_file) && 
+    #   ($signature_file =~ /\.bam.CHECKSUM/o)){
+    #  warn "!!!!! REMOVE THIS !!!!\nTEMPORARILY CREATING missing MD5 file:\t$signature_file";
+    #  write_checksum($file_path);         
+    #}
       
     if(-f $signature_file){
       my $qtd_file_name = quotemeta($file_name);
