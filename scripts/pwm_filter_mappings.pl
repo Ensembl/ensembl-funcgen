@@ -159,6 +159,9 @@ $sbuild = pop @$sbuild;
 #Does bed tools make any special accomodation of the half-open
 #format. So Ensembl coords may show as non overlapping if they overlap by just 1?
 
+# This will currently fail unless the update script has been run, as the seq_region records may not be present?
+
+
 $sql = 'select sr.name, (af.seq_region_start - 1), af.seq_region_end, fs.name, af.score, af.seq_region_strand '.
   'from annotated_feature af, feature_set fs, seq_region sr, feature_type ft '.
   'where ft.class in(\'Transcription Factor\', \'Insulator\', \'Transcription Factor Complex\') '.
