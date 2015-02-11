@@ -327,7 +327,7 @@ CREATE  TABLE `binding_matrix` (
  `threshold` double default NULL,
  PRIMARY KEY (`binding_matrix_id`) ,
  KEY `feature_type_idx` (`feature_type_id`),
- KEY `name_analysis_idx` (`name`, `analysis_id`)
+ UNIQUE KEY `name_analysis_idx` (`name`, `analysis_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
@@ -1437,10 +1437,10 @@ CREATE TABLE `meta` (
 INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 
 -- Update and remove these for each release to avoid erroneous patching
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '78');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '79');
 
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_77_78_a.sql|schema_version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_77_78_b.sql|Change unmapped_reason_id from smallint to int');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_78_79_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_78_79_b.sql|Add a unique key to the binding_matrix table');
 
 /**
 @table meta_coord
