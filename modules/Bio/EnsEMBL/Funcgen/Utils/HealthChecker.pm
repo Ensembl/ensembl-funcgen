@@ -271,7 +271,7 @@ sub update_meta_coord{
 
   #set default table_name
   if(! @table_names || scalar(@table_names) == 0){
-	  #Can we do this via DBAdaptor and get all available adaptors 
+	  #Can we do this via DBAdaptor and get all available adaptors
     #which are BaseFeatureAdaptors then grab the first table name
 
     if(defined $self->{'meta_coord_tables'}){
@@ -471,10 +471,10 @@ sub check_regbuild_strings{
 
 
       my %reg_strings =
-       ("regbuild.${cell_type}.feature_set_ids" => 
+       ("regbuild.${cell_type}.feature_set_ids" =>
          join(',', map { $_->dbID} sort {$a->name cmp $b->name} @ssets),
 
-        "regbuild.${cell_type}.feature_type_ids" => 
+        "regbuild.${cell_type}.feature_type_ids" =>
          join(',', map { $_->feature_type->dbID} sort {$a->name cmp $b->name} @ssets),
        );
 
@@ -570,14 +570,14 @@ sub check_regbuild_strings{
         #Finally validate versus a reg feat
         #Need to change this to ftype string rather than fset string?
         my $id_row_ref = $self->db->dbc->db_handle->selectrow_arrayref('select regulatory_feature_id from regulatory_feature where feature_set_id='.$fset->dbID.' limit 1');
-        
+
         if(! defined $id_row_ref){
           $self->report_fail("No RegulatoryFeatures found for FeatureSet ".$fset->name);
         }
         else{
           my ($regf_dbID) = @$id_row_ref;
           my $rf_string = $regf_a->fetch_by_dbID($regf_dbID)->binary_string;
-          
+
           if(length($rf_string) != scalar(@fset_ids)){
             $self->report_fail("Regulatory string length mismatch between RegulatoryFeature($regf_dbID) and $fset_string_key:\n$rf_string(".length($rf_string).")\n$fset_string(".scalar(@fset_ids).")");
           }
@@ -606,11 +606,9 @@ sub log_data_sets{
   $self->log_header($txt);
 
   #Check for status first to avoid warning from BaseAdaptor.
-  eval { $dset_adaptor->_get_status_name_id($status) };
-
-  if($@){
-	$self->report_fail("FAIL: You have specified check_displayable, but the DISPLAYABLE status_name is not present in the DB");
-	return;
+  if (! eval { $dset_adaptor->_get_status_name_id($status); 1 }){
+	  $self->report_fail("FAIL: You have specified check_displayable, but the DISPLAYABLE status_name is not present in the DB\n$@");
+	  return;
   }
 
 
