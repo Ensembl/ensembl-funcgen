@@ -292,34 +292,32 @@ sub fetch_all_by_FeatureSets {
 
 sub _generate_feature_set_id_clause{
   my ($self, $fsets) = @_;
-
   my @fs_ids;
 
-  if(! ( (ref($fsets) eq 'ARRAY') &&
-         scalar(@{$fsets}) > 0) ){
+  if(! ( (ref($fsets) eq 'ARRAY') && scalar(@{$fsets}) > 0) ){
     throw('Must provide a list of Bio::EnsEMBL::Funcgen::FeatureSet objects');
   }
 
   my $fclass = $self->_feature_class;
   
   foreach my $fset (@{$fsets}) {
-	
-	if (! (ref($fset) && $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet"))){
-	  throw('Not a FeatureSet object');
-	}
 
-	if($fset->feature_class ne $fclass){
-	  throw('FeatureSet feature_class \''.$fset->feature_class.'\' does not match adaptor feature_class \''.$fclass.'\'');
-	}
+    if (! (ref($fset) && $fset->isa("Bio::EnsEMBL::Funcgen::FeatureSet"))){
+      throw('Not a FeatureSet object');
+    }
 
-	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
+    if($fset->feature_class ne $fclass){
+      throw('FeatureSet feature_class \''.$fset->feature_class.
+        '\' does not match adaptor feature_class \''.$fclass.'\'');
+    }
 
-	push (@fs_ids, $fset->dbID());
+    $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset, 'FeatureSet');
+
+    push (@fs_ids, $fset->dbID());
   }
 
   return scalar(@fs_ids >1) ? 'IN ('.join(',', @fs_ids).')' : '= '.$fs_ids[0];
 }
-
 
 
 =head2 fetch_all_by_Slice_FeatureSets
