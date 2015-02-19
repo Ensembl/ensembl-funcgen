@@ -746,6 +746,7 @@ sub get_schema_and_build {
   return [ $dbname[ ( $#dbname - 1 ) ], $dbname[ ($#dbname) ] ];
 }
 
+
 =head2 get_regbuild_set_states
 
   Arg [1]    : Bio::EnsEMBL::DBAdaptor
@@ -782,7 +783,7 @@ sub get_regbuild_set_states {
     #What about non-chromosome assemblies?
     #top level will not return version...why not?
     @dset_states = ('DISPLAYABLE');
-    @rset_states = ( @dset_states, 'DAS_DISPLAYABLE', $imp_cs_status );
+    @rset_states = ( @dset_states, $imp_cs_status );
     @fset_states = ( @rset_states, 'MART_DISPLAYABLE' );
   }
 
