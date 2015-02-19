@@ -1559,20 +1559,20 @@ sub run_peak_caller{
 #This maybe overkill as it would require Set handling/defnition code
 
 
- # Validate, count and define IDR threshold
-  #If you started with ~150 to 300K relaxed pre-IDR peaks for large genomes (human/mouse),
-  #then threshold of 0.01 or 0.02 generally works well.
-  #If you started with < 100K pre-IDR peaks for large genomes (human/mouse),
-  #then threshold of 0.05 is more appropriate.
-  #This is because the IDR sees a smaller noise component and the IDR scores get weaker.
-  #This is typically for use with peak callers that are unable to be adjusted to call large number of peaks (eg. PeakSeq or QuEST)
-  #What exactly are we counting here? Total number peaks across rep, average, or the max between reps?
-  #This also depends on the prevalence of the mark, it may be that a particular feature type genuinely does not have many genome wide hits
+# Validate, count and define IDR threshold
+#If you started with ~150 to 300K relaxed pre-IDR peaks for large genomes (human/mouse),
+#then threshold of 0.01 or 0.02 generally works well.
+#If you started with < 100K pre-IDR peaks for large genomes (human/mouse),
+#then threshold of 0.05 is more appropriate.
+#This is because the IDR sees a smaller noise component and the IDR scores get weaker.
+#This is typically for use with peak callers that are unable to be adjusted to call large number of peaks (eg. PeakSeq or QuEST)
+#What exactly are we counting here? Total number peaks across rep, average, or the max between reps?
+#This also depends on the prevalence of the mark, it may be that a particular feature type genuinely does not have many genome wide hits
 
-  #idr_threshold is being skewed by the rep with the least peaks
-  #meaning more peaks will be identified from each replicate comparison
-  #This will however, still be low if we have had to truncate in line with
-  #the rep with the lowest number of pre-IDR peaks
+#idr_threshold is being skewed by the rep with the least peaks
+#meaning more peaks will be identified from each replicate comparison
+#This will however, still be low if we have had to truncate in line with
+#the rep with the lowest number of pre-IDR peaks
 
 sub pre_process_IDR{
   my $out_dir      = shift or throw('Must provide and out_dir argument');
@@ -1595,7 +1595,7 @@ sub pre_process_IDR{
         'Need to dump bed from DB directly to required format!');
     }
 
-    #Ignore comments and header
+    # Ignore comments and header
     my $cmd       = "grep -vE '(#|(^Region[[:space:]]+Start))' $bed_file | wc -l | awk '{print \$1}'";
     my $num_peaks = run_backtick_cmd($cmd);
 
@@ -1612,17 +1612,16 @@ sub pre_process_IDR{
     }
 
     if($num_peaks < $max_peaks){
-      #We take the lowest number of peaks, as we need comparable numbers of peaks
-      #across all inputs
+      # We take the lowest number of peaks, as we need comparable numbers of peaks across all inputs
       $max_peaks = $num_peaks;
     }
 
     $log_txt .= $bed_file."\t".$num_peaks."\n";
   }
 
-  #Note this does not yet support MACS yet, should prbably just ignore it as we filter to 100000
+  # Note this does not yet support MACS yet, should prbably just ignore it as we filter to 100000
   my $idr_threshold   = ($max_peaks < 100000) ? 0.05 : 0.01;
-  #Could alternatively pass all thresholds back to the caller
+  # Could alternatively pass all thresholds back to the caller
   my $x_thresh_adjust = 0;
 
   if($lt_100k && $mt_100k){
@@ -1633,83 +1632,64 @@ sub pre_process_IDR{
     $x_thresh_adjust = 1;
   }
 
-  #TODO We need some mechanism to restart this job, to force the threshold, or by dropping 1/some of the replicates.
+  # TODO We need some mechanism to restart this job, to force the threshold, or by dropping 1/some of the replicates.
 
   my $cmd = "echo -e \"Pre-IDR File\tNum Peaks\n$log_txt\nIDR Threshold = $idr_threshold\"".
     "> ${out_dir}/${batch_name}-idr-stats.txt";
   run_system_cmd($cmd);
 
-
-
-  #TODO parallelise the filtering and reformating to speed things up, so let's semphaore than to a simple CMD job.
-  #can we even do this as we already have a semaphore on the RunIDR and
-  #maybe with a job factory? I think this is not possible without another analysis
-  #but we could use a dummy? which then submit the RunIDR and semaphores the PostProcessIDR
-  #Just do here for now
+  # TODO parallelise the filtering and reformating to speed things up, so let's semphaore than to a simple CMD job.
+  # can we even do this as we already have a semaphore on the RunIDR and
+  # maybe with a job factory? I think this is not possible without another analysis
+  # but we could use a dummy? which then submit the RunIDR and semaphores the PostProcessIDR
+  # Just do here for now
   my @np_bed_files;
 
-  #This does not needs to be a hash!
-  #we never use $num_peaks values
-
-
-  #foreach my $bed_file(keys %pre_idr_beds){
   foreach my $i(0..$#{$pre_idr_beds}){
     my $bed_file     = $pre_idr_beds->[$i];
     (my $np_bed_file = $bed_file) =~ s/\.txt$/.np_idr.txt/;
-    #Never re-use np_idr output file in case it is truncated due to job failure/exit.
-    #or in fact due to self consistency IDR
-    #Is there a danger of an np_idr file usage clash?
+    # Never re-use np_idr output file in case it is truncated due to job failure/exit. 
+    # Is there a danger of an np_idr file usage clash (pseudo/self consistency IDR?
 
-    #SWEmbl output header::
-    #Input  GSE30558_GSM758361_PrEC.sorted.bam
-    #Reference      GSE30558_GSM758360_LNCaP.sorted.bam
-    #Sequence length        0
-    #Fragment length        0
-    #Background     0.000000
-    #Position Background    0.036383
-    #Long Background        0.181917
-    #Threshold      5.000000
-    #Minimum count above bg 15
-    #Penalty increase       70
-    #Quality cutoff 0.000000
-    #Result cutoff  0.000000
-    #Penalty factor 0.552834
+    # SWEmbl output header::
+    # Input  GSE30558_GSM758361_PrEC.sorted.bam
+    # Reference      GSE30558_GSM758360_LNCaP.sorted.bam
+    # Sequence length        0
+    # Fragment length        0
+    # Background     0.000000
+    # Position Background    0.036383
+    # Long Background        0.181917
+    # Threshold      5.000000
+    # Minimum count above bg 15
+    # Penalty increase       70
+    # Quality cutoff 0.000000
+    # Result cutoff  0.000000
+    # Penalty factor 0.552834
 
-    #and fields:
-    #Region        - Part of the genome build e.g. chromosome
-    #Start pos.    - Base in region where peak starts
-    #End pos.      - Base in region where peak ends
-    #Count         - Number of reads in experimental sample in peak
-    #Length        - Length of peak (distance between start and end pos.)
-    #Unique pos.   - Number of unique bases within peak at which reads begin
-    #Score         - The SWEMBL score, which is basically the count of filtered thresholded reads in the peak, minus the penalties (gap distances and reference sample reads).
-    #Ref. count    - Number of reads in reference sample in peak
-    #Max. Coverage - Depth of reads at summit
-    #Summit        - Median position of highest read coverage
+    # and fields:
+    # Region        - Part of the genome build e.g. chromosome
+    # Start pos.    - Base in region where peak starts
+    # End pos.      - Base in region where peak ends
+    # Count         - Number of reads in experimental sample in peak
+    # Length        - Length of peak (distance between start and end pos.)
+    # Unique pos.   - Number of unique bases within peak at which reads begin
+    # Score         - The SWEMBL score, which is basically the count of filtered thresholded reads in the peak, minus the penalties (gap distances and reference sample reads).
+    # Ref. count    - Number of reads in reference sample in peak
+    # Max. Coverage - Depth of reads at summit
+    # Summit        - Median position of highest read coverage
 
-    #signalValue field was being set to (Count - Ref. Count)/min
-    #Min is not really required here for ranking and simply add the header requirement
-    #would be better to simply omit and skip the commented header if present?
-    #my $cmd = 'awk \'BEGIN {OFS="\t"} NR == 9 {min=$5} NR > 14 {print $1,$2,$3,".",$7,".",($4-$8)/min,-1,-1,int($9-$1)}\' '.
+    # signalValue field was being set to (Count - Ref. Count)/min
+    # Min is not really required here for ranking and simply add the header requirement
+  
+    # TODO Get header skipping regex from PeakCaller. Currently hardcoded for SWEmbl
+    # TODO Handle pipes with perl pipe or IPC::open/run
 
-    #Now we are stripping out the header and setting signal.value to score
-    #before sorting on score and filtering based on $max_peaks
-    #and resorting based on position
+    # Strip out the header and set signal.value to score, sort on score, filter based on $max_peaks, resort based on position
     $cmd = 'awk \'BEGIN {OFS="\t"} { if($0 !~ /^(#|(Region[[:space:]]+Start))/) {print $1,$2,$3,".",$7,".",$7,-1,-1,int($9-$1)} }\' '.
       "$bed_file | sort -k 7nr,7nr | head -n $max_peaks | sort -k 1,2n > ".$np_bed_file;
     run_system_cmd($cmd);
 
-    #This is currently giving:
-    #sort: write failed: standard output: Broken pipe
-    #sort: write error
-    #This is likely due to SIG_PIPE not being handled correctly within perl(as it is in the shell)
-    #If this is not handled correctly then processes on either side of the can try to read or write
-    #to a dead pipe, causing the error. In this case, most likely th efirst sort reading from the
-    #awk pipe
-
-    #Need to use perl pipe here? This seems only to be simple IO pipes within perl
-
-    #Sanity check we have the file with the correct number of lines
+    # Sanity check we have the file with the correct number of lines
     $cmd = "wc -l $np_bed_file | awk '{print \$1}'";
     my $filtered_peaks = run_backtick_cmd($cmd);
 
@@ -1717,9 +1697,12 @@ sub pre_process_IDR{
       throw("Expected $max_peaks in filtered pre-IDR bed file, but found $filtered_peaks:\n\t".$np_bed_file);
     }
 
-    #TODO check the feature_set_stat or statuses
-    #such that we know the peak calling jobs has finished and passed QC!
-    #Do this for each before we submit IDR jobs, as we may have to drop some reps
+    # Need to check this is != 0?
+
+
+    # TODO check the feature_set_stat or states
+    # such that we know the peak calling jobs has finished and passed QC!
+    # Do this for each before we submit IDR jobs, as we may have to drop some reps
     push @np_bed_files, $np_bed_file;
   }
 
@@ -1814,8 +1797,8 @@ sub run_IDR{
   }
 
 
-  #Warning: Parallelised appending to file!
-  #This will also cause duplicate lines if the RunIDR jobs are rerun
+  # Warning: Parallelised appending to file!
+  # This will also cause duplicate lines if the RunIDR jobs are rerun!
   $cmd = "echo -e \"IDR Comparison\tIDR Peaks\n$output_prefix\t$num_peaks($unaltered_num_peaks)\"".
     " >> ${out_dir}/${batch_name}-idr-stats.txt";
   run_system_cmd($cmd);
@@ -1823,7 +1806,7 @@ sub run_IDR{
   return $num_peaks;
 }
 
-#TODO
+# TODO
 # 1 Add more IDR based QC here
 # 2 Rscript will currently submit and interactive job to farm if launched on a head node
 #   else will run locally if already on a farm node
