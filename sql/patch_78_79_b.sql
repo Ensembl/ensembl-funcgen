@@ -17,10 +17,10 @@
 @desc   Add a unique key to the binding_matrix table
 */
 
-ALTER TABLE binding_matrix DROP KEY `name_analysis_idx`; 
+ALTER TABLE binding_matrix DROP KEY `name_analysis_idx`;
 ALTER TABLE binding_matrix ADD UNIQUE KEY `name_analysis_idx` (`name`,`analysis_id`);
 optimize table binding_matrix;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_78_79_b.sqlbinding_matrix unique key');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_78_79_b.sql|binding_matrix unique key');
 

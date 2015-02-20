@@ -1440,7 +1440,7 @@ INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '79');
 
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_78_79_a.sql|schema_version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_78_79_b.sql|Add a unique key to the binding_matrix table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_78_79_b.sql|binding_matrix unique key');
 
 /**
 @table meta_coord
