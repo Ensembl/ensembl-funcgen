@@ -226,7 +226,7 @@ sub compose_constraint_query{
 #}
 
 
-#Class::Inspector is no a core perl module
+#Class::Inspector is not a core perl module
 
 
 =head2 _tables
