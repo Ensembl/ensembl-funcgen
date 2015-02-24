@@ -181,23 +181,18 @@ my $hchecker = Bio::EnsEMBL::Funcgen::Utils::HealthChecker->new
 
 if(@methods){
   foreach my $method(@methods){
-
-	if(! $hchecker->can($method)){
-	  die("You have passed an invalid method:t\$method");
-	}
-
-	$hchecker->$method;  
+    if(! eval {$hchecker->$method; 1;}){
+      die("Failed to run HealthChecker::$method\n$@");
+    }
   }
 }
 elsif(@method_params){
   my ($method, @params);
   ($method, @params) = @method_params;
 
-  if(! $hchecker->can($method)){
-    die("You have passed an invalid method:t\$method");
+  if(! eval {$hchecker->$method(@params); 1;}){
+    die("Failed to run HealthChecker::$method(",join(',', @params).")\n$@");
   }
-
-  $hchecker->$method(@params); 
 }
 else{
  $hchecker->update_db_for_release;

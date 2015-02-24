@@ -803,6 +803,51 @@ sub reset_table_autoinc {
 } ## end sub reset_table_autoinc
 
 
+=head2 feature_tables
+
+  Example    : my @ftable_name = $db->feature_tables;
+  Description: Returns a list of the main tables for all adaptors which are
+               Bio::EnsEMBL::DBSQL::BaseFeatureAdaptors.
+  Returntype : Arrayref
+  Exceptions : None
+  Caller     : HealthChecker::update_meta_coord
+  Status     : At risk
+
+=cut
+
+sub feature_tables{
+  my $self = shift;
+ 
+  if(! exists $self->{feature_tables}){
+    $self->{feature_tables} = [];
+    my $adaptor_hash = $self->get_all_db_adaptors;
+
+    foreach my $aname(keys %{$self->get_available_adaptors}){
+      # Could match $aname =~ /Feature/ here, but this would potnetially be unsafe
+      # Hence this is costly as it generates all adaptors and associated caches
+      my $get_method = 'get_'.$aname.'Adaptor';
+
+      # eval this as the DNAMethylationFeatureAdaptor is dependant on 
+      # Bio/EnsEMBL/ExternalData/BigFile/BigBedAdaptor.pm which is currently in ensembl-webcode
+      my $adaptor;
+
+      if(eval {$adaptor = $self->$get_method; 1;}){
+
+        if($adaptor->isa('Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor')){
+
+          if($adaptor->can('_main_table')){  # Skip core (non-FeatureAdaptor) classes
+            push @{$self->{feature_tables}}, $adaptor->_main_table->[0];
+          }
+        }
+      }
+      else{
+        warn "$@";
+      }
+    }
+  }
+
+  return $self->{feature_tables};
+}
 
 1;
 
