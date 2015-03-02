@@ -35,7 +35,7 @@ limitations under the License.
 #This may also double flow control loop unless we could stream or iterate this info?
 #This would mean caching all the var in the method as attrs
 
-#How an we over-ride calling _obj_from_sth? Basically we want all the underlying code, but the final method call to change 
+#How an we over-ride calling _obj_from_sth? Basically we want all the underlying code, but the final method call to change
 #dependant on the output required. Could set a global var and use _obj_from_sth as wrapper. This would me one extra test per record?
 #Or can we used a method var i.e. $self->$method_name where method_name can be _new_fast or dump_bed/gff or collect_feature
 
@@ -54,7 +54,7 @@ limitations under the License.
 
 #Would have to wrap new_fast which would mean an extra method call for the core functionality :/
 #Unless we put all the dump method in the Feature class and always use Bio::EnsEMBL::Funcgen::ProbeFeature->$data_method?
-#other data methods would have to be subs 
+#other data methods would have to be subs
 
 # Do we need to support seq_region and local coords?
 
@@ -68,7 +68,7 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw (open_file strip_param_args strip_param_flags generate_slices_from_names);
 use Cwd;
- 
+
 #To do
 # 1 Integrate into Exporter module
 # 2 Genericise this to dump_features, use various format parsers for output
@@ -79,7 +79,7 @@ use Cwd;
 # Use logger?
 
 # Bloat the feature class vs separate Exporter?
-# which knows how to translate various features to each format. But is this necessary if we want to 
+# which knows how to translate various features to each format. But is this necessary if we want to
 # avoid the extra iteration etc...
 
 #For now have all subs here, in a way that can easily be moved to the relevant adaptors.
@@ -111,7 +111,7 @@ my $write_sr_header = 1;
 
 
 
-GetOptions 
+GetOptions
   (
    'feature_sets=s{,}' => \@fset_names,
    'result_sets=s{,}'  => \@rset_names,
@@ -129,22 +129,22 @@ GetOptions
    'species=s'        => \$species,
    "dbname=s"         => \$dbname,
    "dbhost=s"         => \$dbhost,
-   
+
    "dnadb_pass=s"     => \$dnadb_pass,
    'dnadb_user=s'     => \$dnadb_user,
    "dnadb_port=s"     => \$dnadb_port,
    "dnadb_name=s"     => \$dnadb_name,
    "dnadb_host=s"     => \$dnadb_host,
-   
+
    "out_root=s"       => \$out_root,
    'dump_name=s'      => \$dump_name, #default to feature_set or array name, mandatory for multi set dump
    'slices=s{,}'      => \@slices,
    'skip_slices=s{,}' => \@skip_slices,
- 
+
    'bin_dir=s'        => \$bin_dir,
    'no_dups'          => \$no_dups, #only works when -slices omitted
    'force_local'      => \$force_local,
-   'farm'             => \$farm,  
+   'farm'             => \$farm,
    '_on_farm'         => \$on_farm,
    #'with_headers=i'   => \$with_headers, #This writes the file header when on farm?
    #default is to write on sr headers for slice farm jobs
@@ -159,11 +159,11 @@ GetOptions
    'zip|z'            => \$zip,
    #'no_cat_un'        => \$no_cat_un,
    'keep_colons'      => \$keep_colons,
-   
+
 
    "help|?"           => \$help,
    "man|m"            => \$man,
-  ) 
+  )
   or pod2usage( -exitval => 1,
 				-message => "Params are:\t@tmp_args"
 			  );
@@ -231,11 +231,11 @@ my $dump_mfs;
 
 
 sub get_regulatory_FeatureSets{
-  
+
   my @rf_fsets;
 
   foreach my $rf_fset (@{$fset_a->fetch_all_by_feature_class('regulatory')}) {
-	  
+
     if ($rf_fset->name =~ /v[0-9]+$/) {
       warn "Skipping archived set:\t".$rf_fset->name.
         "\nThis should be removed before release\n";
@@ -244,7 +244,7 @@ sub get_regulatory_FeatureSets{
 
     push @rf_fsets, $rf_fset;
   }
-	
+
   return @rf_fsets;
 }
 
@@ -256,30 +256,30 @@ if (@fset_names) {
   if( ($fset_names[0] eq 'AnnotatedFeatures') ||
       ($fset_names[0] eq 'MotifFeatures') ){
     #||
-    #  ($fset_names[0] eq 'RegulatoryFeatures') ){ #This is currently broken 
+    #  ($fset_names[0] eq 'RegulatoryFeatures') ){ #This is currently broken
     #as it does not dump separate fset files.
 
     if(scalar(@fset_names) >1){
       die("Can only define one set name when defining a group of -sets:\t@fset_names");
     }
-    
+
     if ($fset_names[0] eq 'AnnotatedFeatures') {
 
       #Could do this via meta strings?
       my %fset_names;
       my $dset_a = $db->get_DataSetAdaptor;
-      
+
       my @reg_fsets = &get_regulatory_FeatureSets;
-      
+
       foreach my $reg_fset(@reg_fsets){
-        map {$fset_names{$_->name} = undef} 
+        map {$fset_names{$_->name} = undef}
           @{$dset_a->fetch_by_product_FeatureSet($reg_fset)->get_supporting_sets};
       }
-      
-      
+
+
       @fset_names = keys %fset_names;
-      
-    } 
+
+    }
     elsif($fset_names[0] eq 'RegulatoryFeatures'){
       my @reg_fsets = &get_regulatory_FeatureSets;
       @fset_names = ();
@@ -290,10 +290,10 @@ if (@fset_names) {
 
       $source_name = $reg_fsets[0]->analysis->logic_name.'_v'.
         (${$meta_container->list_value_by_key('regbuild.version')}[0]);
-      
+
       $merged_dump = 0; #Force dumping in separate files
 
-    } 
+    }
     elsif ($fset_names[0] eq 'MotifFeatures') {
       $dump_mfs = 1;
       @fset_names = ();
@@ -327,7 +327,7 @@ if($format eq 'BIGWIG'){
 
 my %format_config = (
 					 #Is no_dups format specific too?
-					 
+
 
 					 BED => {
 							 has_header    => 1,
@@ -346,7 +346,7 @@ my %format_config = (
 							 #allow_merged_dump => 0,
 							 compression_script => 'wigToBigWig',
 
-							 #add variable conf in ftype config							 
+							 #add variable conf in ftype config
 							},
 
 
@@ -374,7 +374,7 @@ if($array){
   }
   @output_names = ($array);
   my $array = $array_a->fetch_by_name_vendor($array, $vendor);
-  
+
   if(! $array){
     die("Could not fetch array:\t$vendor\t$array\n");
   }
@@ -387,25 +387,25 @@ if($array){
   $feature_adaptor = $db->get_ProbeFeatureAdaptor;
 }
 elsif(@fset_names){
- 
+
   #default is merged dump here
 
 
   foreach my $fset_name(@fset_names){
-    
+
     my $fset = $fset_a->fetch_by_name($fset_name);
-    
+
     $feature_class ||= $fset->feature_class;
-    
+
     if($feature_class ne $fset->feature_class){
       die("Cannot dump mixed FeatureSet classes:\t".$feature_class."\t".$fset->feature_class);
     }
-    
+
     push @fsets, $fset;
   }
-  
+
   if(! $dump_name){
-    
+
     if(scalar(@fsets) == 1){
       $dump_name = $fset_names[0];
     }
@@ -422,11 +422,11 @@ elsif(@fset_names){
   $feature_adaptor	= $fsets[0]->get_FeatureAdaptor;
 }
 elsif(@rset_names){
-  #can't do merged dump 
+  #can't do merged dump
   #do this must farm by slice and result set!
-  
+
   foreach my $rset_name(@rset_names){
-	
+
 	my @fetched_rsets = @{$rset_a->fetch_all_by_name($rset_name)};
 	my $num_rsets = scalar(@fetched_rsets);
 
@@ -436,7 +436,7 @@ elsif(@rset_names){
 	elsif(! $num_rsets){
 	  die("Failed to fetch ResultSet:\t$rset_name\n");
 	}
-	
+
 	push @rsets, $fetched_rsets[0];
   }
 
@@ -444,14 +444,14 @@ elsif(@rset_names){
 
   if( ((! $farm) || $on_farm) &&
 	  scalar(@rsets) != 1){
-	
+
 	#force local here?
 	#This would require a fetch param loop in dump code below.
 	die("Cannot run multiple ResultSet dumps in one dump on the farm. Please specify -farm\n");
   }
 
 
-  $dump_name     ||= $rsets[0]->name;  
+  $dump_name     ||= $rsets[0]->name;
   $file_name       = $dump_name;
   $file_name      .= '.'.$window_size;# if ! $on_farm;
 
@@ -460,10 +460,10 @@ elsif(@rset_names){
   @header_params   = ($rsets[0], $window_size);#?
   @output_names    = @rset_names;
   $feature_adaptor = $db->get_ResultFeatureAdaptor;   #Move get_FeatureAdaptor to Set.pm?
- 
+
   #Validate window_size
   $feature_adaptor->set_collection_defs_by_ResultSet($rsets[0]);
-  
+
   if(! (defined $window_size  &&
 		$feature_adaptor->has_window_size($window_size) )){
 	die("You must suppliy a valid -window_size from:\t".join(" ", @{$feature_adaptor->window_sizes}));
@@ -473,7 +473,7 @@ elsif(@rset_names){
   #This is an intersect between format and feature config
    #need to handle vars too:  -clip $wig_file $chrom_file $bw_file";
   #This is going to be set name and wsize specific
-  
+
   #Assuming bigwig here
   #This also assumes we chdir so paths are local
   $compression_args = " -clip ${file_name}.wig ${file_name}.chrom.sizes ${file_name}.bigwig";
@@ -539,9 +539,9 @@ if(@skip_slices){
 
 
 if(! $farm){
-  
+
   if(scalar(@slices) !=1){
-	  
+
 	if(! ($force_local || $post_process)){
 	  die("You are running with multiple Slices, maybe you want to specify -farm or -force_local\n");
 	}
@@ -557,7 +557,7 @@ if(! $farm){
   }
 }
 else{ #Submit to farm
- 
+
   if($post_process){
     die("-post_process should not be run in -farm mode. Please correct you parameters");
   }
@@ -575,8 +575,8 @@ else{ #Submit to farm
   my @args = @{&strip_param_args(\@tmp_args, ('slices', 'skip_slices', 'dump_name', 'out_dir'))};
   @args = @{&strip_param_flags(\@tmp_args, ('farm'))};
   my $cmd = " ${script_dir}/${script_name} @args -out_root $out_dir -_on_farm";
- 
-  
+
+
 
 
   foreach my $slice(@slices){
@@ -585,18 +585,18 @@ else{ #Submit to farm
     #This would also allow range queries to be catered for slice rather than whole genome
     #Also change this to job array?
     #would need to do this prior to this block so we have the correct slices for post porcessing
-    
-    my $job_name = $file_name.'.'.$slice->seq_region_name;	
+
+    my $job_name = $file_name.'.'.$slice->seq_region_name;
     #my $bsub_cmd="bsub -q $queue -J \"${job_name}[1-${num_jobs}]\" -o ${output_dir}/${job_name}.".'%J.%I'.".out -e ${output_dir}/${job_name}.".'%J.%I'.".err";
-    
+
     #$lsf_host does not support ensdb-archive
-    
+
     my $bsub_cmd="bsub -q $queue -J \"${job_name}\" -o ${lsf_dir}/${job_name}.".'%J'.".out -e ${lsf_dir}/${job_name}.".'%J'.".err ".
-      "-R 'select[mem>1000]' -R 'rusage[mem=1000]' -M 1000000";
-    
+      "-R 'select[mem>1000]' -R 'rusage[mem=1000]' -M 1000";
+
     #"-R 'select[(${lsf_host}<=800)&&(mem>400)]' -R 'rusage[${lsf_host}=12:duration=10,mem=400]' -M 400000";
     #Need to threshold against DB load here
-    
+
     #dump name can't be job name here
     my $cmd_args = " -dump_name $dump_name -slices ".$slice->name;
     print $bsub_cmd.$cmd.$cmd_args."\n";
@@ -616,7 +616,7 @@ else{ #Submit to farm
 #So the format methods can go in the objs not the adaptors
 #Move these up to the config block and set all as generic ftype_conf
 
-my %format_subs = 
+my %format_subs =
   (
    'get_ProbeFeature_BED'         => \&get_ProbeFeature_BED,
    'get_RegulatoryFeature_GFF'    => \&get_RegulatoryFeature_GFF,
@@ -634,15 +634,15 @@ my %format_subs =
    #'get_AnnotatedFeature_GFF_header'  => \&get_AnnotatedFeature_GFF_header,
    'get_AnnotatedFeature_BED_header'  => \&get_AnnotatedFeature_BED_header,
    'get_RegulatoryFeature_BED_header'  => \&get_RegulatoryFeature_BED_header,
-   
+
    #'get_SegmentationFeature_BED_header'  => \&get_SegmentationFeature_BED_header,
-   #'get_ExternalFeature_GFF_header'   => \&get_ExternalFeature_GFF_header,		   
+   #'get_ExternalFeature_GFF_header'   => \&get_ExternalFeature_GFF_header,
   );
 
 #Change all of these to Slice Iterators to avoid high mem usage
 #and allow parallel dumps
 
-my %fetch_methods = 
+my %fetch_methods =
   (
    'ProbeFeature'        => 'fetch_Iterator_by_Slice_Arrays',
    'ResultFeature'       => 'fetch_Iterator_by_Slice_ResultSet',
@@ -657,7 +657,7 @@ my %fetch_methods =
 #Would be nice to pre-validate all 'Regulatory Feature' class feature types have an entry in here
 
 
-my %regf_ftype_rgb = 
+my %regf_ftype_rgb =
   (
    'Unclassified'                    => '192,192,192', #'grey', actually silver?  #C0C0C0
    'Promoter Associated'             => '0,100,0', #'darkgreen',  #006400
@@ -668,7 +668,7 @@ my %regf_ftype_rgb =
 #These are all ucfirsted only in the web interface. And PolIII drops 'Transcription' Change?
 
 #Remove these once they are in the DB
-my %seg_so_terms = 
+my %seg_so_terms =
   (
    'CTCF enriched'                           => { name =>'TF_binding_site', acc => 'SO:0000235'},
    #CTCF_binding_site submitted to SO
@@ -721,7 +721,7 @@ foreach my $slice (@slices) {
 
   my $ofile_path = $out_dir.$ofile_name;
   my $ofile;
-  
+
   #Cat files
   if ($post_process) {
     push @dump_files, $ofile_name;
@@ -733,7 +733,7 @@ foreach my $slice (@slices) {
   my $cnt = 0;
 
 
-  
+
 
   #Use Iterator method here to avoid chunking
   #warn "Fetching ".ref($adaptors{$feature_class})."->$fetch_method($slice, @fetch_params)\n";
@@ -746,33 +746,33 @@ foreach my $slice (@slices) {
   #if(! $feature->can($format_method)){
   #die ref($feature)." does not support the $format_method method\n";
   #}
-  
+
   #sub these out to avoid repeating header method calls
   my $seen_feats = 0;
-  
+
   if (ref($feats) eq 'Bio::EnsEMBL::Utils::Iterator') {
-	
+
     #Do this after feature fetch to avoid creating empty file
     if ($feats->has_next) {
       $seen_feats = 1;
       $ofile = open_file($ofile_path, '>');
-  
+
       if ($conf_ref->{has_header}) {
         print $ofile $format_subs{$format_method.'_header'}->(@header_params, $slice);
       }
     }
-	
+
     while ( ($feature = $feats->next) &&
             defined $feature) {
       &print_line;
     }
   } else {                      # Normal ARRAYREF of features
-	
+
     #Do this after feature fetch to avoid creating empty file
     if (scalar(@$feats)) {
       $seen_feats = 1;
       $ofile = open_file($ofile_path, '>');
-	  
+
       if ($conf_ref->{has_header}) {
         print $ofile $format_subs{$format_method.'_header'}->(@header_params, $slice);
       }
@@ -782,19 +782,19 @@ foreach my $slice (@slices) {
       }
     }
   }
-	
+
   sub print_line{
-    $cnt++;	
+    $cnt++;
     #Move all this to the relevant Feature class method get_FORMAT
     #Utilise base Feature methods for common attrs i.e. $self->SUPER->get_FORMAT
 
     #warn $format_method;
-    
+
     #Feature class needs pre-defining for sets where this is redundant
     #wait until we migrate to new IO code to do this
 
     push @output, &{$format_subs{$format_method}}($feature, $seq_name, $source_name); #, $feature_class);
-    
+
     if (scalar(@output) == 1000) { #1000
       print $ofile join('', @output);
       @output = ();
@@ -806,10 +806,10 @@ foreach my $slice (@slices) {
     print $ofile join('', @output);
     @output = ();
     close($ofile);
-    
+
     print "Features dumped:\t\t\t$cnt\nOutput can be found here:\t\t$ofile_name\n";
-    
-    
+
+
     if ($zip) {
       system("gzip -f $ofile_name") == 0 or die("Could not gzip file:\t$ofile_path");
     }
@@ -827,7 +827,7 @@ if($post_process){
   my $ofile_path =  $out_dir.$file_name.'.'.lc($format);
   my $cwd =  Cwd::cwd();
   chdir($out_dir);
-  
+
   if(-e $ofile_path){
 	die("Found existing output file, please remove to -post_process:\n\trm -f $ofile_path\n");
   }
@@ -847,20 +847,20 @@ if($post_process){
   my @cat_files;
 
   for my $i(0..$#dump_files){
-	  
+
 	if(-e $dump_files[$i] &&
 	   ! -z $dump_files[$i]){  #exists and is not empty
-	  
+
 	  if ($format eq 'WIG'){
 		my $seq_name = $slices[$i]->seq_region_name;
-		
+
 		if($slices[$i]->coord_system->name eq 'chromosome'){
 		  $seq_name = 'chr'.$seq_name;
 		}
-	
 
-		
-	
+
+
+
 		print $chrom_fh $seq_name."\t".$slices[$i]->length."\n" if $format eq 'WIG';
 
 		#The onverhanging bins exceed the seq length which results in:
@@ -890,13 +890,13 @@ if($post_process){
   #validate cat with du?
 
   #compress and zip should be mutually exclusive?
-  
+
   if($compress){
     $cmd = $bin_dir.$conf_ref->{compression_script}.' '.$compression_args;
     print "\n".$cmd."\n";
     system($cmd) == 0 or die("Failed to compress compress output:\n$cmd\n$!");
     push @cat_files, $ofile_path;
-	
+
   }
 
 
@@ -904,7 +904,7 @@ if($post_process){
     system("gzip -f $ofile_path") == 0 or die("Could not gzip file:\t$ofile_path");
     #gzip removes source file so no need to add to @dump_files
   }
-  
+
   if(! $no_clean){
     $cmd = "rm -f @cat_files";
     #print $cmd."\n";
@@ -928,9 +928,9 @@ sub get_RegulatoryFeature_GFF{
   #Including MotifFeatures?
   #Do we want this?
   my @attrs;
-		
+
   foreach my $reg_attr(@{$feature->regulatory_attributes()}){
-		
+
 	if($reg_attr->isa('Bio::EnsEMBL::Funcgen::AnnotatedFeature')){
 
 	  #Only need cell type here for MultiCell
@@ -947,13 +947,13 @@ sub get_RegulatoryFeature_GFF{
 	  warn "Found unsupported RegulatoryFeature attribute Feature type:\t".ref($reg_attr);
 	}
   }
-  
 
-  return join("\t", 
-              (@{$gff}, 
-               join(';', ('Name='.$feature->feature_type->name, 'ID='.$feature->stable_id, 
-                           'bound_start='.$feature->bound_seq_region_start, 
-                           'bound_end='.$feature->bound_seq_region_end, 
+
+  return join("\t",
+              (@{$gff},
+               join(';', ('Name='.$feature->feature_type->name, 'ID='.$feature->stable_id,
+                           'bound_start='.$feature->bound_seq_region_start,
+                           'bound_end='.$feature->bound_seq_region_end,
                            'Note=Consists of following features: '.join(',', @attrs)))))
     ."\n";
 
@@ -971,7 +971,7 @@ sub get_SegmentationFeature_GFF{
   #we don't yet have so names for segfeats in the database
   #patch in a hash look up until next release
 
-  
+
   my $gff = &get_GFF(@_, $seg_so_terms{$feature->feature_type->name}->{name});
 
 
@@ -991,13 +991,13 @@ sub get_AnnotatedFeature_GFF{
     ";Alias=".$feature->feature_set->name.
       ";Class=".$feature->feature_type->class.
         ";Cell_type=". $feature->cell_type->name;
-  
+
   my $summit    = $feature->summit;
   $attr_string .= ";Summit=$summit" if $summit;
-  
+
   my $pwm_names = &get_associated_BindingMatrix_names($feature);
   $attr_string .= ';Note=Contains the following PWMs: '.join(',', @$pwm_names) if @$pwm_names;
-  
+
   return join("\t", (@$gff, $attr_string))."\n";
 }
 
@@ -1007,7 +1007,7 @@ sub get_associated_BindingMatrix_names{
 
   my $pwm_names;
   my (@pwm_names);
-  
+
 
   foreach my $assoc_mf(@{$mf_assocd_feature->get_associated_MotifFeatures()}){
     #mf display_label or binding_matrix id/name here?
@@ -1043,7 +1043,7 @@ sub get_AnnotatedFeature_BED{
 
   #chrom, chromStart, chromEnd, name, score, strand, thickStart, thickEnd, itemRgb, blockCount, blockSizes, blockStarts
   $bed->[3] = $feature->feature_type->name;
-  
+
   return join("\t", @$bed)."\n";
 }
 
@@ -1060,7 +1060,7 @@ sub get_RegulatoryFeature_BED{
   #Do we want to wedge cell type in here too?
   #chrom, boundStart, boundEnd, stable_id:FeatureType, score, strand, coreStart, coreEnd, itemRgb, motifFeatureCount, motifFeatureSizes, motifFeatureStarts, motifFeatureInfo (pwm_name:pwm_accession:score, ...)
 
-  #motifFeatureInfo does not deconvolute transcription factor complex pwm names as in zmenus 
+  #motifFeatureInfo does not deconvolute transcription factor complex pwm names as in zmenus
   #i.e. doesn't add associated experiment ftype in parenthesis e.g. mxl-1::mdl-1 (Max)
 
   #Re-assign core the think loci first
@@ -1080,10 +1080,10 @@ sub get_RegulatoryFeature_BED{
   $bed->[4] = 0;                            #score
   $bed->[5] = '.';                          #strand
   $bed->[8] = $regf_ftype_rgb{$ftype_name}; #itemRGB
-  
+
   # Define MotifFeature info as blocks
   #Need to sub this out, for use with get_AnnotatatedFeature_Bed
-   
+
   #assumes mfs return in order (which they should?, this needs testing!)
   #If not, this could be slowing down display due to excessive index and disk seeking?
 
@@ -1094,10 +1094,10 @@ sub get_RegulatoryFeature_BED{
 
   foreach my $assoc_mf(@{$feature->regulatory_attributes('motif')}){
     $bed->[9] ++;
-    
+
     push @{$bed->[10]}, $assoc_mf->length;
     push @{$bed->[11]}, $assoc_mf->seq_region_start;
-    
+
     #pwm_name:pwm_accession:score
 
     #pwm_name:pwm_accession = mf.display label?
@@ -1111,12 +1111,12 @@ sub get_RegulatoryFeature_BED{
     #push @{$bed->[12]}, $assoc_mf->display_label.':'.$assoc_mf->score;
     #
 
-    
+
     my $binding_matrix =  $assoc_mf->binding_matrix;
     push @{$bed->[12]}, $binding_matrix->feature_type->name.'/'.$binding_matrix->name.'/'.$assoc_mf->score;
 
   }
-  
+
 
   $bed->[10] = (@{$bed->[10]}) ? join(',', @{$bed->[10]}) : '';
   $bed->[11] = (@{$bed->[11]}) ? join(',', @{$bed->[11]}) : '';
@@ -1127,7 +1127,7 @@ sub get_RegulatoryFeature_BED{
   #1 Delimiter on motifFeatureInfo triplet clashes with transcription factor complex pwm names
   #2 Need to update RGBs from string to actual values
   #3 Are spaces allowed in name field? ENSR00000528857:Promoter Associated
-    
+
   return join("\t", @$bed)."\n";
 }
 
@@ -1139,10 +1139,10 @@ sub get_RegulatoryFeature_BED{
 sub get_ProbeFeature_BED_header{
   my ($vendor, $array) = @_;
   #   track name=pairedReads description="Clone Paired Reads" useScore=1
- 
+
   #use dump name instead of vendor array here?
   #this may have been polluted with seq_region_name
- 
+
   return "track name=$dump_name description=\"Ensembl ".$array->vendor.':'.$array->name." mappings\" useScore=0\n";
 }
 
@@ -1150,7 +1150,7 @@ sub get_ProbeFeature_BED_header{
 sub get_RegulatoryFeature_BED_header{
 
   #   track name=pairedReads description="Clone Paired Reads" useScore=1
- 
+
   #return "track name=$dump_name description=\"Ensembl ".$fset->name." mappings\" useScore=0\n";
 }
 
@@ -1160,11 +1160,11 @@ sub get_ProbeFeature_BED{
    #Could do with enabling custom name score methods here
 
    #chrom, chromStart, chromEnd, name, score, strand, thickStart, thickEnd, itemRgb, blockCount, blockSizes, blockStarts
-   
+
    #Alter get_complete_probename to drop array
    #use complete name if we have merged arrays dumps in same file
    my $probeset = $feature->probeset->name;
-   $probeset = defined($probeset) ? $probeset.':' : '';   
+   $probeset = defined($probeset) ? $probeset.':' : '';
    $bed->[3] = $probeset.$feature->probe->get_probename($array);
 
    #$bed->[4] = we don't store the similarity score
@@ -1178,16 +1178,16 @@ sub get_ProbeFeature_BED{
 
 
 #Following should be moved to BaseFeature(Adaptor?)
-#Shouldn't need to create the object for this info? 
+#Shouldn't need to create the object for this info?
 #But may be redundant calcs if we need to for the more specific feature data anyway.
 
 
 sub get_GFF{
   my ($feature, $seq_name, $source_name, $feature_class) = @_;
-  
+
   #http://www.sequenceontology.org/gff3.shtml
   #seq_id, source, type, start, end, score, strand, phase, attributes
-  
+
   ##gff-version 3
   #ctg123  .  exon  1300  1500  .  +  .  ID=exon00001
 
@@ -1198,13 +1198,13 @@ sub get_GFF{
   if(! defined $source_name){
     $source_name = $feature->analysis->logic_name;
   }
-  
+
   if (! defined $feature_class){
     $feature_class = $feature->feature_type->so_name;
     #This is failing for MotifFeatures as they don't currently have a feature type method
   }
 
-  my @gff = ($seq_name, $source_name, $feature_class, $feature->seq_region_start, $feature->seq_region_end, 
+  my @gff = ($seq_name, $source_name, $feature_class, $feature->seq_region_start, $feature->seq_region_end,
 			 '.', $conf_ref->{strand}->{$feature->seq_region_strand}, '.');
 
   return \@gff;
@@ -1216,7 +1216,7 @@ sub get_GFF{
 sub get_BED{
   #my ($feature, $seq_name, $dbname, $feature_class) = @_;
   my ($feature, $seq_name) = @_;
-  
+
 
   #chrom, chromStart, chromEnd, name, score, strand, thickStart, thickEnd, itemRgb, blockCount, blockSizes, blockStarts
   #track name=pairedReads description="Clone Paired Reads" useScore=1
@@ -1224,11 +1224,11 @@ sub get_BED{
 
   #Ensembl is 1 based, but BED is 0 based i.e.half open.
   #already prefixing with chr by default
-  
+
 
   #Define known attrs and mandatory fields
   my @bed = ($seq_name, undef, $feature->seq_region_end, undef, $conf_ref->{strand}->{$feature->seq_region_strand});
-  
+
   #Set size to mandatory fields
   # $#bed = 5;
 
@@ -1238,7 +1238,7 @@ sub get_BED{
   else{
 	$bed[1] = ($feature->seq_region_start -1);
   }
-  
+
 
   return \@bed;
 }
@@ -1281,7 +1281,7 @@ sub get_ResultFeature_WIG_header{
 #  yLineOnOff        on|off               # default is off
 #  windowingFunction maximum|mean|minimum # default is maximum
 #  smoothingWindow   off|[2-16]           # default is off
-  
+
 
 
 
@@ -1299,14 +1299,14 @@ sub get_ResultFeature_WIG_header{
 
 
   if($write_file_header){
-	$header = 'track type=wiggle_0 name="'.$rset->name.'" description="'.$rset->display_label."\"\n"; 
+	$header = 'track type=wiggle_0 name="'.$rset->name.'" description="'.$rset->display_label."\"\n";
 	#Is windowing function max magnitude or just max? 'windowingFunction=maximum'
 	$write_file_header = 0;
   }
 
 
   #ResultSet could do with a display name/label, but this is on the FeatureSet
-  
+
   if($write_sr_header){
 	$header .= "fixedStep chrom=".$seq_name." start=".$slice->start.
 	  ' step='.$window_size.' span='.$window_size."\n";
