@@ -34,10 +34,16 @@
 -- Some potential errors
 -- ERROR 1071 (42000) at line 1: Specified key was too long; max key length is 767 bytes
 -- This is caused by meta TABLE, which has no foreign keys anyway, so skip this.
+-- ALTER TABLE   ADD FOREIGN KEY () REFERENCES  ();
+
+
+
+-- Last updated for e78_79
+ALTER TABLE mirna_target_feature  ADD FOREIGN KEY (feature_set_id) REFERENCES feature_set (feature_set_id);
+ALTER TABLE mirna_target_feature  ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type (feature_type_id);
+
 
 -- Last updated for v75 (included 73,74)
-
-
 ALTER TABLE result_set  ADD FOREIGN KEY (experiment_id) REFERENCES experiment (experiment_id);
 ALTER TABLE feature_set ADD FOREIGN KEY (experiment_id) REFERENCES experiment (experiment_id);
 
