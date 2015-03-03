@@ -1229,8 +1229,8 @@ CREATE TABLE `lineage` (
 DROP TABLE IF EXISTS `status`;
 CREATE TABLE `status` (
    `table_id`       int(10) unsigned  DEFAULT NULL,
-   `status_name_id` int(10) unsigned  NOT NULL,
    `table_name`     varchar(32)       DEFAULT NULL,
+   `status_name_id` int(10) unsigned  NOT NULL,
    PRIMARY KEY  (`table_id`, `table_name`, `status_name_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
