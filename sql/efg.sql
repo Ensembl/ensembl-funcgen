@@ -1258,34 +1258,22 @@ CREATE TABLE `status_name` (
 
 
 -- Remove these to separate file and handle with import_type.pl?
-INSERT INTO status_name(name) VALUES ('ADD_TO_REGULATORY_BUILD');
 INSERT INTO status_name(name) VALUES ('ALIGNED');
 INSERT INTO status_name(name) VALUES ('ALIGNED_CONTROL');
-INSERT INTO status_name(name) VALUES ('ALIGNING_CONTROL');
-INSERT INTO status_name(name) VALUES ('CONTROL_CONVERTED_TO_BED');
-INSERT INTO status_name(name) VALUES ('CONVERTING_CONTROL_TO_BED');
 INSERT INTO status_name(name) VALUES ('DAS_DISPLAYABLE');
-INSERT INTO status_name(name) VALUES ('DISABLED');
 INSERT INTO status_name(name) VALUES ('DISPLAYABLE');
 INSERT INTO status_name(name) VALUES ('DOWNLOADED');
 INSERT INTO status_name(name) VALUES ('IMPORTED');
 INSERT INTO status_name(name) VALUES ('IMPORTED_NCBI36');
 INSERT INTO status_name(name) VALUES ('IMPORTED_GRCh37');
 INSERT INTO status_name(name) VALUES ('IMPORTED_GRCh38');
-INSERT INTO status_name(name) VALUES ('IN_REGULATORY_BUILD');
-INSERT INTO status_name(name) VALUES ('IN_RELEASE');
 INSERT INTO status_name(name) VALUES ('IS_CONTROL');
 INSERT INTO status_name(name) VALUES ('IS_CURRENT');
 INSERT INTO status_name(name) VALUES ('LOESS');
 INSERT INTO status_name(name) VALUES ('MART_DISPLAYABLE');
 INSERT INTO status_name(name) VALUES ('Parzen');
-INSERT INTO status_name(name) VALUES ('REBUILT');
-INSERT INTO status_name(name) VALUES ('RELEASED');
 INSERT INTO status_name(name) VALUES ('RESOLVED');
 INSERT INTO status_name(name) VALUES ('RESULT_FEATURE_SET');
-INSERT INTO status_name(name) VALUES ('REVOKED');
-INSERT INTO status_name(name) VALUES ('TO_BE_REBUILD');
-INSERT INTO status_name(name) VALUES ('TO_BE_REVOKED');
 INSERT INTO status_name(name) VALUES ('VSN_GLOG');
 -- need to add more states, probably need to validate/insert required states in Importer
 -- would need to get CoordSys objects and set IMPORTED_CS_"cs_id" for relevant data_version
