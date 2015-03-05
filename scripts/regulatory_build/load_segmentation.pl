@@ -118,6 +118,12 @@ sub clean_name {
   return uc($string);
 }
 
+#####################################################
+# Convenience wrapper to run the commandline safely 
+#####################################################
+# Params: command line command string
+#####################################################
+
 sub run {
   my ($cmd) = @_;
   print cmd;
@@ -291,7 +297,8 @@ sub create_feature_type {
     dead => "Predicted heterochomatin",
     weak => "Predicted low activity",
     gene => "Predicted Transcribed Region",
-    repressed => "Predicted Repressed"
+    repressed => "Predicted Repressed",
+    poised => "Predicted Poised"
   );
 
   my %description = (
@@ -302,7 +309,8 @@ sub create_feature_type {
     dead => "Predicted heterochromatin",
     weak => "Predicted low activity proximal to active states",
     gene => "Predicted transcribed region",
-    repressed => "Predicted repressed region"
+    repressed => "Predicted repressed region",
+    poised => "Predicted poised region"
   );
 
   my %feature_type = ();
