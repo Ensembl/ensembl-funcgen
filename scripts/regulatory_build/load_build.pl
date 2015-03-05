@@ -86,7 +86,7 @@ sub main {
   print_log("Getting analysis\n");
   my $analysis = get_analysis($db);
   print_log("Getting cell types\n");
-  my $ctypes = get_cell_type_names($options->{base_dir});
+  my $ctypes = get_cell_type_names($options->{base_dir}, $db);
   print_log("Getting stable ids\n");
   my $stable_id = get_stable_id($options, $db);
   print_log("Getting slices\n");
@@ -98,7 +98,7 @@ sub main {
   print_log("Counting active features\n");
   my $count_hash = compute_counts($options->{base_dir});
   print_log("Creating regulatory_feature table\n");
-  compute_regulatory_features($options, $feature_set, $feature_type, $stable_id, $count_hash, $slice);
+  compute_regulatory_features($options, $feature_set, $feature_type, $stable_id, $count_hash, $slice, $db);
   print_log("Creating regulatory_annotation table\n");
   compute_regulatory_annotations($options);
   print_log("Updating meta table\n");
@@ -715,15 +715,15 @@ sub get_feature_types {
 #####################################################
 
 sub compute_regulatory_features {
-  my ($options, $feature_set, $feature_type, $stable_id, $count_hash, $slice) = @_;
+  my ($options, $feature_set, $feature_type, $stable_id, $count_hash, $slice, $db) = @_;
+  my $rfa = $db->get_adaptor("RegulatoryFeature");
   foreach my $cell_type (keys %{$feature_set}) {
-    load_celltype_build($options->{base_dir}, $feature_set->{$cell_type}, $stable_id, $count_hash, $slice, $cell_type, $feature_type);
+    load_celltype_build($options->{base_dir}, $feature_set->{$cell_type}, $stable_id, $count_hash, $slice, $cell_type, $feature_type, $rfa);
   }
-  # TODO Remove previous???
 }
 
 sub load_celltype_build {
-  my ($base_dir, $feature_set, $stable_id, $count_hash, $slice, $cell_type, $feature_type) = @_;
+  my ($base_dir, $feature_set, $stable_id, $count_hash, $slice, $cell_type, $feature_type, $rfa) = @_;
   my ($tmp, $tmp_name) = tempfile();
   print_log("\tProcessing data from cell type $cell_type\n");
   my $bigbed;
@@ -733,7 +733,7 @@ sub load_celltype_build {
     $bigbed = "$base_dir/projected_segmentations/$cell_type.bb";
   }
   run("bigBedToBed $bigbed $tmp_name");
-  process_file($tmp, $feature_set, $stable_id, $count_hash, $slice, $feature_type);
+  process_file($tmp, $feature_set, $stable_id, $count_hash, $slice, $feature_type, $rfa);
   close $tmp;
   unlink $tmp_name;
 }
@@ -751,26 +751,27 @@ sub process_file {
       $has_evidence = 1; # TODO 4 way
     }
 
-    exists $feature_type->{$feature_type_str} || die("Could not find feature type for $feature_type\n".join("\t", keys %{$feature_type})."\n");
+    exists $feature_type->{$feature_type_str} || die("Could not find feature type for $feature_type_str\n".join("\t", keys %{$feature_type})."\n");
     exists $slice->{$chrom} || die("Could not find slice type for $chrom\n".join("\t", keys %{$slice})."\n");
-    exists $stable_id->{$number} || die("Could not find stable ID for feature # $number\n");
-    exists $count_hash->{$number} || die("Could not find count for feature # $number\n");
+    exists $stable_id->{$name} || die("Could not find stable ID for feature # $name\n");
+    exists $count_hash->{$name} || die("Could not find count for feature # $name\n");
 
-    push @features, Bio::EnsEMBL::Funcgen::RegulatoryFeature->new(
-      -SLICE => $slice->{$chrom};
-      -START         => $thickStart + 1,
-      -END           => $thickEnd,
-      -STRAND        => 0,
-      -DISPLAY_LABEL => '\\N',
-      -FEATURE_SET   => $feature_set,
-      -FEATURE_TYPE  => $feature_type->{$feature_type_str},
-      -ATTRIBUTE_CACHE => \%attr_cache, # TODO 
-                     => $thickStart - $start, # TODO
-                     => $end - $thickEnd, # TODO
-                     => $has_evidence, # TODO
-                     => $count->{$number}, # TODO
-                     => $stable_id->{$number} # TODO
-    );
+    push @features, Bio::EnsEMBL::Funcgen::RegulatoryFeature->new_fast({
+      slice         => $slice->{$chrom},
+      start         => $thickStart + 1,
+      end           => $thickEnd,
+      strand        => 0,
+      display_label => '\\N',
+      set           => $feature_set,
+      feature_type  => $feature_type->{$feature_type_str},
+      _bound_lengths => [$thickStart - $start, $end - $thickEnd],
+      has_evidence  => $has_evidence,
+      cell_type_count => $count_hash->{$name},
+      stable_id     => $stable_id->{$name},
+      analysis      => $feature_set->analysis,
+      #     adaptor       => $rfa,
+      projected     => ($feature_set->cell_type ne 'MultiCell'),
+    });
 
     if (scalar @features > 10000) {
       $rfa->store(@features);
@@ -779,7 +780,7 @@ sub process_file {
   }
 
   if (scalar @features > 0) {
-    $rfa->store();
+    $rfa->store(@features);
   }
 }
 
