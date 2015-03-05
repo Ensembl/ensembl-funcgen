@@ -55,6 +55,7 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use Bio::EnsEMBL::Analysis;
 use File::Temp qw/ tempfile tempdir /;
+${File::Temp::KEEP_ALL} = 1;
 
 my $dead_rgb = '225,225,225';
 my $poised_rgb = "192,0,190";
@@ -170,8 +171,6 @@ sub connect_db {
      -dbname => $options->{dbname},
      -pass   => $options->{pass},
      -port   => $options->{port},
-     #-dnadb  => $options->{cdb},
-     -group  => 'funcgen',#Should be set as default in adaptor new method
      -dnadb_host => $options->{dnadb_host},
      -dnadb_port => $options->{dnadb_port},
      -dnadb_user => $options->{dnadb_user},
@@ -258,6 +257,7 @@ sub get_cell_type_names {
   my %cell_type_from_clean = ();
   for my $cell_type (@{$cta->fetch_all()}) {
     $cell_type_from_clean{clean_name($cell_type->name)} = $cell_type;
+    defined $cell_type || die("Unrecognized cell type name $cell_type\n");
   }
 
   my @cell_types = ();
@@ -348,6 +348,7 @@ sub get_stable_id {
   }
   close $in;
   unlink $new;
+  unlink $old;
 
   return \%stable_id_hash;
 }
@@ -443,13 +444,13 @@ sub get_regulatory_FeatureSets {
     $dlabel    = "Reg.Feats $ctype";
 
     if($ctype eq 'MultiCell') {
-      $desc = 'Generic RegulatoryFeature focus regions';
+      $desc = 'Consensus RegulatoryFeature regions';
     }
     else {
       $desc = "$ctype specific RegulatoryFeatures";
     }
 
-    $helper->log("Defining FeatureSet:\t$fset_name");
+    print_log("Defining FeatureSet:\t$fset_name");
 
     my $description;
     if ($ctype eq 'MultiCell') {
@@ -496,20 +497,16 @@ sub get_regulatory_FeatureSets {
 
   #Set states
   foreach my $dset(@dsets){
-    # TODO Remove hardcoded values?
-    foreach my $ds_state(('DISPLAYABLE')){
-      $dsa->store_status($ds_state, $dset);
-    }
+    $dsa->store_status('DISPLAYABLE', $dset);
   }
     
   foreach my $fset(@fsets){
-    # TODO Remove hardcoded values?
     foreach my $fs_state(('DISPLAYABLE','IMPORTED','IMPORTED_GRCh38','MART_DISPLAYABLE')) {
       $fsa->store_status($fs_state, $fset);
     }
   }
 
-  $helper->log("Got RegulatoryFeature sets for CellTypes:\t".join(', ', keys %rf_sets));
+  print_log("Got RegulatoryFeature sets for CellTypes:\t".join(', ', keys %rf_sets));
   return \%rf_sets;
 }
 
