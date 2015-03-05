@@ -827,17 +827,20 @@ sub compute_regulatory_annotations {
 
 sub update_meta_table {
   my ($options, $db) = @_;
-  my $mc = $db->get_db_adaptor('MetaContainer');
+  my $mc = $db->get_MetaContainer();
   my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
-  my @version = split(".", $mc->single_value_by_key('regbuild.version'));
+  $year += 1900;
+  $mon += 1;
+  my @version = split(".", $mc->single_value_by_key('regbuild.version.ARCHIVED'));
   if (defined $options->{small_update}) {
     $version[1] += 1;
   } else {
     $version[0] += 1;
+    $version[0] += 0;
+    $mc->store_key_value('regbuild.initial_release_date', "$year-$mon");
   }
-  $mc->update_key_value('regbuild.version', join(".", @version));
-  $mc->update_key_value('regbuild.initial_release_date', "$year-$mon");
-  $mc->update_key_value('regbuild.last_annotation_update', "$year-$mon");
+  $mc->store_key_value('regbuild.version', join(".", @version));
+  $mc->store_key_value('regbuild.last_annotation_update', "$year-$mon");
 }
 
 1;
