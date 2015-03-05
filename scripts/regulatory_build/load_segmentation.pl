@@ -100,7 +100,22 @@ sub main {
   defined $segmentation || die ("You must define the segmentation name!\t--segmentation XXXX\n");
   defined $cell_type || die ("You must define the cell type name!\t--cell_type XXXX\n");
 
-  load_segmentation_features_from_file($db, $segmentation, $cell_type, "$base_dir/segmentations/$segmentation/$cell_type.bb");
+  my $clean_cell_type = clean_name($cell_type);
+
+  load_segmentation_features_from_file($db, $segmentation, $cell_type, "$base_dir/segmentations/$segmentation/$clean_cell_type.bb");
+}
+
+########################################################
+## Removing unwanted characters 
+## Quick string normalisation function tor remove weird 
+## characters froms file names and remove variants
+########################################################
+
+sub clean_name {
+  my $string = shift;
+  $string =~ s/[\-\(\)]//g;
+  $string =~ s/_.*//g;
+  return uc($string);
 }
 
 sub run {
