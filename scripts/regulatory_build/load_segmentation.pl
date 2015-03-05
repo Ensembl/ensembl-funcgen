@@ -322,11 +322,9 @@ sub create_feature_type {
       -class => "Segmentation State",
       -description => $description{$key},
       -analysis => $analysis,
-      -so_name  => "NULL",
-      -so_accession => "NULL" 
     );
-    $feature_type{$key} = $fta->store($ft)->[0];
-    defined $feature_type{$key}->dbID || die;
+    $fta->store($ft);
+    $feature_type{$key} = $ft;
   }
   return \%feature_type;
 }
