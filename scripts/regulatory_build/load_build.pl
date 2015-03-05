@@ -722,7 +722,8 @@ sub load_celltype_build {
   if ($cell_type eq 'MultiCell') {
     $bigbed = "$base_dir/overview/RegBuild.bb";
   } else {
-    $bigbed = "$base_dir/projected_segmentations/$cell_type.bb";
+    my $cell_type_name = clean_name($cell_type);
+    $bigbed = "$base_dir/projected_segmentations/$cell_type_name.bb";
   }
   run("bigBedToBed $bigbed $tmp_name");
   process_file($tmp, $feature_set, $stable_id, $count_hash, $slice, $feature_type, $rfa);
