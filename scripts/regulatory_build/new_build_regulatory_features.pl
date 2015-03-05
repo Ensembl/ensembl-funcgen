@@ -661,7 +661,9 @@ sub fetch_exons {
   my @sorted_exon_coords = sort {comp_coords($a, $b)} @exon_coords;
 
   foreach my $exon_coord (@sorted_exon_coords) {
-    print $fh join("\t", @{$exon_coord})."\n";
+    if ($exon_coord->[1] < $exon_coord->[2]) {
+      print $fh join("\t", @{$exon_coord})."\n";
+    }
   }
 }
 
@@ -680,14 +682,16 @@ sub fetch_mask {
   my $slice_adaptor = $options->{dnadb_adaptor}->get_SliceAdaptor();
   foreach my $slice (@{$slice_adaptor->fetch_all('toplevel', undef, undef, 0) }) {
     foreach my $mask (@{$slice->get_all_MiscFeatures('encode_excluded')}) {
-      push @mask_coords, [$slice->seq_region_name(), $mask->start(), $mask->end() - 1];
+      push @mask_coords, [$slice->seq_region_name(), $mask->start() - 1, $mask->end()];
     }
   }
 
   my @sorted_mask_coords = sort {comp_coords($a, $b)} @mask_coords;
 
   foreach my $mask_coord (@sorted_mask_coords) {
-    print $fh join("\t", @{$mask_coord})."\n";
+    if ($mask_coord->[1] < $mask_coord->[2]) {
+      print $fh join("\t", @{$mask_coord})."\n";
+    }
   }
 }
 
