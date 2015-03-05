@@ -143,20 +143,22 @@ sub load_segmentation_features_from_file {
     chomp $line;
     my ($chr, $start, $end, $name, $score, $strand, $thickStart, $thickEnd, $rgb) = split /\t/, $line;
     my ($state, $label, $number) = split /_/, $name;
-    if ($chr ne $prev_chrom) {
-      $slice = $sa->fetch_by_region('toplevel', $chr);
-      $prev_chrom = $chr;
-      push @features, $previous_seg_feat;
-      $previous_label = undef;
-      $previous_seg_feat = undef;
-    }
+    defined $feature_type->{$label} || die("$label has no associated feature type!");
 
-    if ($label eq $previous_label) {
-      $previous_seq_feat->end($end);
+    if ($label eq $previous_label && $chr eq $prev_chrom) {
+      $previous_seg_feat->end($end);
     } else {
-      if (defined $previous_seg_feat) {
-	push @features, $previous_seg_feat;
+      if ($chr ne $prev_chrom) {
+        $slice = $sa->fetch_by_region('toplevel', $chr);
+        $prev_chrom = $chr;
       }
+
+      if (scalar(@features) == 10000) {
+	print "FLUSH\n";
+        $sfa->store(@features);
+        @features = ();
+      }
+
       $previous_seg_feat = Bio::EnsEMBL::Funcgen::SegmentationFeature->new
        (
 	-SLICE         => $slice,
@@ -167,16 +169,8 @@ sub load_segmentation_features_from_file {
 	-FEATURE_TYPE  => $feature_type->{$label},
       );
       $previous_label = $label;
+      push @features, $previous_seg_feat;
     }
-
-    if (scalar(@features) == 10000) {
-      $sfa->store(@features);
-      @features = ();
-    }
-  }
-
-  if (defined $previous_seg_feat) {
-    push @features, $previous_seg_feat;
   }
 
   if (scalar(@features) > 0) {
