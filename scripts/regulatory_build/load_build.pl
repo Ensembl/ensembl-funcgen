@@ -653,15 +653,7 @@ sub get_feature_types {
     'proximal'=>'Promoter Flanking Region',
     'tss'=>'Promoter',
     'tfbs'=>'TF binding site',
-    'open'=>'Open chromatin'
-  );
-  my %description= (
-    'ctcf'=>'CTCF Binding Site',
-    'distal'=>'Predicted enhancer',
-    'proximal'=>'Predicted promoter flanking region',
-    'tss'=>'Predicted promoter',
-    'tfbs'=>'Transcription factor binding site',
-    'open'=>'Open chromatin region'
+    'dnase'=>'Open chromatin'
   );
   my %so_accession = (
     'ctcf'=>'SO:0001974',
@@ -669,7 +661,7 @@ sub get_feature_types {
     'proximal'=>'SO:0001952',
     'tss'=>'SO:0000167',
     'tfbs'=>'SO:0000235',
-    'open'=>'SO:0001747'
+    'dnase'=>'SO:0001747'
   );
   my %so_name = (
     'ctcf'=>'CTCF_binding_site',
@@ -677,18 +669,18 @@ sub get_feature_types {
     'proximal'=>'promoter_flanking_region',
     'tss'=>'promoter',
     'tfbs'=>'TF_binding_site',
-    'open'=>'open_chromatin_region'
+    'dnase'=>'open_chromatin_region'
   );
 
   my $feature_type = {};
-  for my $label (('ctcf','distal','proximal','tss','tfbs','open')) {
+  for my $label (('ctcf','distal','proximal','tss','tfbs','dnase')) {
     $feature_type->{$label} = $fta->fetch_by_name($long_name{$label});
 
     if (! defined $feature_type->{$label}) {
       my $ft = Bio::EnsEMBL::Funcgen::FeatureType->new(
 	-name => $long_name{$label},
 	-class => 'Regulatory Feature',
-	-description => $description{$label},
+	-description => $label_description{$label},
 	-analysis => undef,
 	-so_name => $so_name{$label},
 	-so_accession => $so_accession{$label}
