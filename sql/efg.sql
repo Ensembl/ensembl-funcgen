@@ -690,7 +690,8 @@ CREATE TABLE `dbfile_registry` (
    `table_id` int(10) unsigned NOT NULL,
    `table_name` varchar(32)NOT NULL,
    `path` varchar(255) NOT NULL,
-   PRIMARY KEY  (`table_id`, `table_name`)
+   PRIMARY KEY  (`table_id`, `table_name`),
+   UNIQUE KEY `table_id_name_path_idx` (`table_id`,`table_name`, `path`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
@@ -1437,10 +1438,10 @@ CREATE TABLE `meta` (
 INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 
 -- Update and remove these for each release to avoid erroneous patching
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '79');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '80');
 
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_78_79_a.sql|schema_version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_78_79_b.sql|binding_matrix unique key');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_79_80_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_79_80_b.sql|dbfile_registry_unique_key');
 
 /**
 @table meta_coord
