@@ -760,7 +760,7 @@ sub process_file {
       stable_id     => $stable_id->{$name},
       analysis      => $feature_set->analysis,
       #     adaptor       => $rfa,
-      projected     => ($feature_set->cell_type ne 'MultiCell'),
+      projected     => 0,
     });
 
     if (scalar @features > 10000) {
