@@ -281,6 +281,7 @@ sub create_feature_set {
     -name          => $name,
     -description   => "$cell_type $segmentation segmentation",
     -display_label => "$cell_type segmentation",
+    -states        => ['DISPLAYABLE','IMPORTED','IMPORTED_GRCh38','MART_DISPLAYABLE']
   );
   $fsa->store($feature_set);
   return $feature_set;
