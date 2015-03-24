@@ -1183,7 +1183,8 @@ sub dump_probe_features {
     $cmd .= " -p$options->{xref_pass}";
   }
 
-  run("$cmd > $filename2");
+  ## Quick filter for trailing semi-colons in database names
+  run("$cmd | sed -e 's/;\$//' > $filename2");
 }
 
 # ----------------------------------------------------------------------
