@@ -948,10 +948,17 @@ sub get_RegulatoryFeature_GFF{
 	}
   }
 
+  my $activity;
+  if ($feature->has_evidence() == 1) {
+    $activity = 'active';
+  } else {
+    $activity = 'inactive';
+  }
 
   return join("\t",
               (@{$gff},
                join(';', ('Name='.$feature->feature_type->name, 'ID='.$feature->stable_id,
+                           'activity='.$activity,
                            'bound_start='.$feature->bound_seq_region_start,
                            'bound_end='.$feature->bound_seq_region_end,
                            'Note=Consists of following features: '.join(',', @attrs)))))
