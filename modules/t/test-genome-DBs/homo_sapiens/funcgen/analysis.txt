@@ -1,0 +1,40 @@
+16	0000-00-00 00:00:00	Regulatory_Build	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+67	2014-01-27 15:58:33	TarBase_v6.0	\N	6.0	\N	\N	\N	\N	\N	\N	\N	\N	\N
+19	0000-00-00 00:00:00	VISTA	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+25	2009-01-26 22:30:27	ILLUMINA_WG_ProbeAlign	\N	\N	\N	exonerate	2.2.0	/lustre/work1/ensembl/gs2/local/x86_64/bin/exonerate	\N	ProbeAlign	\N	\N	\N
+27	2009-01-27 16:48:46	probe2transcript	\N	\N	\N	probe2transcript.pl	\N	\N	\N	\N	\N	\N	\N
+30	2009-02-26 10:24:56	AFFY_ST_ProbeAlign	\N	\N	\N	exonerate	2.2.0	/lustre/work1/ensembl/gs2/local/x86_64/bin/exonerate	\N	ProbeAlign	\N	\N	\N
+31	2009-02-26 10:24:56	AFFY_UTR_ProbeAlign	\N	\N	\N	exonerate	2.2.0	/lustre/work1/ensembl/gs2/local/x86_64/bin/exonerate	\N	ProbeAlign	\N	\N	\N
+32	2009-05-11 14:43:34	AGILENT_ProbeAlign	\N	\N	\N	exonerate	2.2.0	/lustre/work1/ensembl/gs2/local/x86_64/bin/exonerate	\N	ProbeAlign	\N	\N	\N
+33	2009-05-11 14:43:34	PHALANX_ProbeAlign	\N	\N	\N	exonerate	2.2.0	/lustre/work1/ensembl/gs2/local/x86_64/bin/exonerate	\N	ProbeAlign	\N	\N	\N
+43	0000-00-00 00:00:00	bwa_samse	\N	\N	\N	bwa	\N	bwa	\N	Bio::EnsEMBL::Funcgen::Sequencing::Aligner::BWA	\N	\N	\N
+46	2010-08-13 00:00:00	SWEmbl_R0025	\N	\N	3.3	SWEmbl	2008-08-03	SWEmbl	-f 150 -R 0.0025	Bio::EnsEMBL::Funcgen::Sequencing::PeakCaller::SWEmbl	\N	\N	\N
+47	2010-08-13 00:00:00	SWEmbl_R015	\N	\N	3.3	SWEmbl	2008-08-03	SWEmbl	-f 150 -R 0.015	Bio::EnsEMBL::Funcgen::Sequencing::PeakCaller::SWEmbl	\N	\N	\N
+50	2011-03-04 10:01:37	illumina_infinium_probealign	\N	\N	\N	exonerate	2.2.0	/software/ensembl/compara/exonerate/exonerate	\N	ProbeAlign	\N	\N	\N
+51	2011-04-07 00:00:00	ccat_histone	\N	\N	\N	CCAT	3.0	CCAT	fragmentSize 200 slidingWinSize 150 movingStep 20 isStrandSensitiveMode 0 minCount 10 outputNum 100000 randomSeed 123456 minScore 4.0 bootstrapPass 50	Bio::EnsEMBL::Funcgen::Sequencing::PeakCaller::CCAT	\N	\N	\N
+59	2012-08-16 12:52:42	RRBS_merged_filtered_10	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+60	2012-08-16 12:52:52	WGBS_merged	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+61	2013-10-30 13:21:36	ChIP-Seq	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+62	2013-10-30 13:21:36	DNase-Seq	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+65	2013-10-30 13:21:36	RRBS	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+66	2013-10-30 13:21:36	WGBS	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N	\N
+69	2014-05-27 11:10:56	SWEmbl_R0005_IDR	\N	\N	\N	SWEmbl	3.5	SWEmbl	-f 150 -R 0.0005 -d 150	Bio::EnsEMBL::Funcgen::Sequencing::PeakCaller::SWEmbl	\N	\N	\N
+70	2014-06-18 13:45:40	JASPAR_v5_0	\N	5.0	\N	\N	\N	\N	\N	\N	\N	\N	\N
+71	2014-06-23 13:38:06	FANTOM_v5	\N	5	\N	\N	\N	\N	\N	\N	\N	\N	\N
+72	0000-00-00 00:00:00	segmentation.a549.segway_17	\N	\N	\N	chromHMM/Segway	\N	\N	\N	\N	\N	\N	\N
+73	0000-00-00 00:00:00	segmentation.dnd-41.segway_17	\N	\N	\N	chromHMM/Segway	\N	\N	\N	\N	\N	\N	\N
+74	0000-00-00 00:00:00	segmentation.nhlf.segway_17	\N	\N	\N	chromHMM/Segway	\N	\N	\N	\N	\N	\N	\N
+75	0000-00-00 00:00:00	segmentation.huvec.segway_17	\N	\N	\N	chromHMM/Segway	\N	\N	\N	\N	\N	\N	\N
+76	0000-00-00 00:00:00	segmentation.hsmm.segway_17	\N	\N	\N	chromHMM/Segway	\N	\N	\N	\N	\N	\N	\N
+77	0000-00-00 00:00:00	segmentation.gm12878.segway_17	\N	\N	\N	chromHMM/Segway	\N	\N	\N	\N	\N	\N	\N
+78	0000-00-00 00:00:00	segmentation.hela-s3.segway_17	\N	\N	\N	chromHMM/Segway	\N	\N	\N	\N	\N	\N	\N
+79	0000-00-00 00:00:00	segmentation.h1esc.segway_17	\N	\N	\N	chromHMM/Segway	\N	\N	\N	\N	\N	\N	\N
+80	0000-00-00 00:00:00	segmentation.hepg2.segway_17	\N	\N	\N	chromHMM/Segway	\N	\N	\N	\N	\N	\N	\N
+81	0000-00-00 00:00:00	segmentation.nhek.segway_17	\N	\N	\N	chromHMM/Segway	\N	\N	\N	\N	\N	\N	\N
+82	0000-00-00 00:00:00	segmentation.osteobl.segway_17	\N	\N	\N	chromHMM/Segway	\N	\N	\N	\N	\N	\N	\N
+83	0000-00-00 00:00:00	segmentation.nh-a.segway_17	\N	\N	\N	chromHMM/Segway	\N	\N	\N	\N	\N	\N	\N
+84	0000-00-00 00:00:00	segmentation.k562.segway_17	\N	\N	\N	chromHMM/Segway	\N	\N	\N	\N	\N	\N	\N
+85	0000-00-00 00:00:00	segmentation.hsmmtube.segway_17	\N	\N	\N	chromHMM/Segway	\N	\N	\N	\N	\N	\N	\N
+86	0000-00-00 00:00:00	segmentation.hmec.segway_17	\N	\N	\N	chromHMM/Segway	\N	\N	\N	\N	\N	\N	\N
+87	0000-00-00 00:00:00	segmentation.monocytes-cd14+.segway_17	\N	\N	\N	chromHMM/Segway	\N	\N	\N	\N	\N	\N	\N
+88	0000-00-00 00:00:00	segmentation.nhdf-ad.segway_17	\N	\N	\N	chromHMM/Segway	\N	\N	\N	\N	\N	\N	\N

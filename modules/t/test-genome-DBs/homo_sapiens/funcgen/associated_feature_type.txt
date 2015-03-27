@@ -1,0 +1,17 @@
+178990	feature_type	178962
+178990	feature_type	178988
+178991	feature_type	178962
+178991	feature_type	178989
+178996	feature_type	178896
+178996	feature_type	178996
+178998	feature_type	178962
+179279	feature_type	178895
+179279	feature_type	179279
+179280	feature_type	178962
+179280	feature_type	178993
+179281	feature_type	178892
+179281	feature_type	178911
+179368	feature_type	178894
+179368	feature_type	178898
+179369	feature_type	178891
+179369	feature_type	178892

@@ -1,0 +1,4 @@
+67	homo_sapiens_core_Gene	79_37	KNOWNXREF	1	5	EnsemblGene	MISC	\N	\N	\N
+68	homo_sapiens_core_Transcript	79_37	KNOWNXREF	1	5	EnsemblTranscript	MISC	\N	\N	\N
+69	homo_sapiens_core_Genome	79_37	KNOWNXREF	1	5	EnsemblGenome	MISC	\N	\N	\N
+70	homo_sapiens_core_Gene	79_38	KNOWNXREF	1	5	EnsemblGene	MISC	\N	\N	\N

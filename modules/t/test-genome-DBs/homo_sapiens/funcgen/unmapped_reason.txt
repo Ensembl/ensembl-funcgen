@@ -1,0 +1,3 @@
+3180	Unmapped intronic	Probe mapped to intronic region of transcript
+3181	Unmapped exon boundary	Probe mapped to exon boundary of transcript
+3183	No transcript mappings	Probe did not map to any transcripts
