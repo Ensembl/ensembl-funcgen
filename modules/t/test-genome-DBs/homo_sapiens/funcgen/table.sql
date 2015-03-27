@@ -493,15 +493,8 @@ CREATE TABLE `probe_feature` (
   KEY `probe_idx` (`probe_id`),
   KEY `seq_region_probe_probe_feature_idx` (`seq_region_id`,`seq_region_start`,`seq_region_end`,`probe_id`,`probe_feature_id`)
 ) ENGINE=MyISAM AUTO_INCREMENT=36502097 DEFAULT CHARSET=latin1;
-/*!40101 SET character_set_client = @saved_cs_client */;
 
---
--- Table structure for table `probe_set`
---
 
-DROP TABLE IF EXISTS `probe_set`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `probe_set` (
   `probe_set_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(100) NOT NULL,
@@ -624,15 +617,8 @@ CREATE TABLE `segmentation_feature` (
   KEY `feature_type_idx` (`feature_type_id`),
   KEY `test` (`seq_region_id`)
 ) ENGINE=MyISAM AUTO_INCREMENT=35538900 DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
-/*!40101 SET character_set_client = @saved_cs_client */;
 
---
--- Table structure for table `seq_region`
---
 
-DROP TABLE IF EXISTS `seq_region`;
-/*!40101 SET @saved_cs_client     = @@character_set_client */;
-/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `seq_region` (
   `seq_region_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(40) NOT NULL,
