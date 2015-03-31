@@ -462,7 +462,7 @@ sub get_unknown_transcript_list {
 # Load unknown transcripts into the xref table
 sub load_new_transcript_xrefs {
 	my ($new_transcripts, $xref_db, $transc_edb_id) = @_;
-	my ($fh, $filename) = tempfile(DIR=>'/nfs/users/nfs_d/dz1/lustre2/');
+	my ($fh, $filename) = tempfile();
 	foreach my $transcript (@$new_transcripts) {
 		print $fh join("\t", ('/N', $transc_edb_id, $transcript->stable_id, $transcript->display_id, $transcript->version, '\N', 'MISC','TRANSCRIPT'))."\n";
 	}
