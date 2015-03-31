@@ -1,0 +1,36 @@
+16	{'reg_feats' => 'Features from <a href="/info/genome/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.', 'core' => 'Sites enriched for marks of open chromatin (e.g. DNase1) or transcription factor binding sites.', 'non_core' =>  'Sites enriched for histone modifications or polymerase binding.'} 	Regulatory Build	1	{'type' => 'fg_regulatory_features', 'name' => 'Reg. Feats',  'display' =>'off', 'depth' => 10, 'default' => {'contigviewbottom' => 'normal', 'generegview' => 'normal'} }
+71	<a href=+http://fantom.gsc.riken.jp/5/+>Fantom 5</a> TSS/Enhancer Predictions	Fantom 5	1	{'type' => 'regulatory_regions', 'colourset' => 'fantom', 'display' =>'off', 'priority' => ['FANTOM robust enhancer'] }
+67	<a href="http://diana.imis.athena-innovation.gr/DianaTools/index.php?r=tarbase/index">Tarbase</a> miRNA target predictions	TarBase	1	{'type' => 'mirna_targets', 'colourset' => 'synteny', 'display' =>'off'}
+19	VISTA Enhancer Assay (http://enhancer.lbl.gov/)	VISTA	1	{'type' => 'regulatory_regions', 'colourset' => 'synteny', 'display' =>'off'}
+25	Genomic alignments for ILLUMINA_WG arrays	ILLUMINA_WG_ProbeAlign	1	{'type' => '_oligo', 'key' => 'array_chip', 'colourset' => 'feature', 'display' =>'off' }
+27	Microarray probes from manufacturers are aligned to the genome by Ensembl, if the probe sequences are provided. The mapping is a two-step procedure outlined <a href="http://www.ensembl.org/info/docs/microarray_probe_set_mapping.html">here</a>.	Probe2Transcript Annotation	0	undef
+31	Genomic alignments for AFFY_UTR arrays	AFFY_UTR_ProbeAlign	1	{'type' => '_oligo', 'key' => 'array_chip', 'colourset' => 'feature', 'display' =>'off' }
+30	Genomic alignments for AFFY_ST arrays	AFFY_ST_ProbeAlign	1	{'type' => '_oligo', 'key' => 'array_chip', 'colourset' => 'feature', 'display' =>'off' }
+32	Genomic alignments for AGILENT arrays	AGILENT_ProbeAlign	1	{'type' => '_oligo', 'key' => 'array_chip', 'colourset' => 'feature', 'display' =>'off' }
+33	Genomic alignments for PHALANX arrays	PHALANX_ProbeAlign	1	{'type' => '_oligo', 'key' => 'array_chip', 'colourset' => 'feature', 'display' =>'off' }
+43	BWA single read alignment	BWA	1	\N
+46	SWEMBL Peak Caller	SWEmbl	1	\N
+47	SWEMBL Peak Caller	SWEmbl	1	\N
+50	Transcript alignments for ILLUMINA_INFINIUM arrays	ILLUMINA_INFINIUM_ProbeAlign	1	{'type' => '_oligo', 'key' => 'array_chip', 'colourset' => 'feature', 'display'  =>'off' }
+51	CCAT Peak Caller	CCAT	1	\N
+60	Whole Genome Bisulphite Sequencing: 5 Methyl Cytosine (and 5hmC). Merged replicates.	WGBS	1	{}
+59	Reduced Representation Bisulphite Sequencing: 5 Methyl Cytosine (and 5hmC). Merged replicates, filtered for a minimum of 10 reads	RRBS	1	{}
+69	SWEmbl Peak Caller with IDR peak filtering	SWEMBL IDR	1	\N
+70	Position Frequency Matrices from the <a href='http://jaspar.genereg.net/'>Jaspar Database</a> (5.0)	Jaspar	0	\N
+72	A549 <a href="/info/genome/funcgen/regulatory_segmentation.html">Segway</a> segmentation state analysis	A549 Regulatory Segmentation	1	{'type' =>'fg_segmentation_features', 'colourset' => 'fg_segmentation_features','display'  =>'off', key=>'seg_A549' }
+73	DND-41 <a href="/info/genome/funcgen/regulatory_segmentation.html">Segway</a> segmentation state analysis	DND-41 Regulatory Segmentation	1	{'type' =>'fg_segmentation_features', 'colourset' => 'fg_segmentation_features','display'  =>'off', key=>'seg_DND-41' }
+75	HUVEC <a href="/info/genome/funcgen/regulatory_segmentation.html">Segway</a> segmentation state analysis	HUVEC Regulatory Segmentation	1	{'type' =>'fg_segmentation_features', 'colourset' => 'fg_segmentation_features','display'  =>'off', key=>'seg_HUVEC' }
+74	Nhlf <a href="/info/genome/funcgen/regulatory_segmentation.html">Segway</a> segmentation state analysis	Nhlf Regulatory Segmentation	1	{'type' =>'fg_segmentation_features', 'colourset' => 'fg_segmentation_features','display'  =>'off', key=>'seg_Nhlf' }
+76	HSMM <a href="/info/genome/funcgen/regulatory_segmentation.html">Segway</a> segmentation state analysis	HSMM Regulatory Segmentation	1	{'type' =>'fg_segmentation_features', 'colourset' => 'fg_segmentation_features','display'  =>'off', key=>'seg_HSMM' }
+77	GM12878 <a href="/info/genome/funcgen/regulatory_segmentation.html">Segway</a> segmentation state analysis	GM12878 Regulatory Segmentation	1	{'type' =>'fg_segmentation_features', 'colourset' => 'fg_segmentation_features','display'  =>'off', key=>'seg_GM12878' }
+78	HeLa-S3 <a href="/info/genome/funcgen/regulatory_segmentation.html">Segway</a> segmentation state analysis	HeLa-S3 Regulatory Segmentation	1	{'type' =>'fg_segmentation_features', 'colourset' => 'fg_segmentation_features','display'  =>'off', key=>'seg_HeLa-S3' }
+79	H1ESC <a href="/info/genome/funcgen/regulatory_segmentation.html">Segway</a> segmentation state analysis	H1ESC Regulatory Segmentation	1	{'type' =>'fg_segmentation_features', 'colourset' => 'fg_segmentation_features','display'  =>'off', key=>'seg_H1ESC' }
+80	HepG2 <a href="/info/genome/funcgen/regulatory_segmentation.html">Segway</a> segmentation state analysis	HepG2 Regulatory Segmentation	1	{'type' =>'fg_segmentation_features', 'colourset' => 'fg_segmentation_features','display'  =>'off', key=>'seg_HepG2' }
+81	NHEK <a href="/info/genome/funcgen/regulatory_segmentation.html">Segway</a> segmentation state analysis	NHEK Regulatory Segmentation	1	{'type' =>'fg_segmentation_features', 'colourset' => 'fg_segmentation_features','display'  =>'off', key=>'seg_NHEK' }
+82	Osteobl <a href="/info/genome/funcgen/regulatory_segmentation.html">Segway</a> segmentation state analysis	Osteobl Regulatory Segmentation	1	{'type' =>'fg_segmentation_features', 'colourset' => 'fg_segmentation_features','display'  =>'off', key=>'seg_Osteobl' }
+83	NH-A <a href="/info/genome/funcgen/regulatory_segmentation.html">Segway</a> segmentation state analysis	NH-A Regulatory Segmentation	1	{'type' =>'fg_segmentation_features', 'colourset' => 'fg_segmentation_features','display'  =>'off', key=>'seg_NH-A' }
+84	K562 <a href="/info/genome/funcgen/regulatory_segmentation.html">Segway</a> segmentation state analysis	K562 Regulatory Segmentation	1	{'type' =>'fg_segmentation_features', 'colourset' => 'fg_segmentation_features','display'  =>'off', key=>'seg_K562' }
+85	HSMMtube <a href="/info/genome/funcgen/regulatory_segmentation.html">Segway</a> segmentation state analysis	HSMMtube Regulatory Segmentation	1	{'type' =>'fg_segmentation_features', 'colourset' => 'fg_segmentation_features','display'  =>'off', key=>'seg_HSMMtube' }
+86	HMEC <a href="/info/genome/funcgen/regulatory_segmentation.html">Segway</a> segmentation state analysis	HMEC Regulatory Segmentation	1	{'type' =>'fg_segmentation_features', 'colourset' => 'fg_segmentation_features','display'  =>'off', key=>'seg_HMEC' }
+87	Monocytes-CD14+ <a href="/info/genome/funcgen/regulatory_segmentation.html">Segway</a> segmentation state analysis	Monocytes-CD14+ Regulatory Segmentation	1	{'type' =>'fg_segmentation_features', 'colourset' => 'fg_segmentation_features','display'  =>'off', key=>'seg_Monocytes-CD14+' }
+88	NHDF-AD <a href="/info/genome/funcgen/regulatory_segmentation.html">Segway</a> segmentation state analysis	NHDF-AD Regulatory Segmentation	1	{'type' =>'fg_segmentation_features', 'colourset' => 'fg_segmentation_features','display'  =>'off', key=>'seg_NHDF-AD' }

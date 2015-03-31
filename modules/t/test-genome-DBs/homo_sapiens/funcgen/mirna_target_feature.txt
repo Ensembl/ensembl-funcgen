@@ -1,0 +1,5 @@
+27911	571	179134	MIMAT0000222	hsa-miR-192-5p	Computational	\N	Microarray	585	32911390	32911398	1	MRE1; spliced_no
+27912	571	179177	MIMAT0000424	hsa-miR-128-3p	Computational	\N	Microarray	585	32914823	32914844	1	MRE1; spliced_no
+27913	571	179112	MIMAT0000421	hsa-miR-122-5p	Computational	\N	Microarray	585	32918767	32918786	1	MRE1; spliced_no
+27914	571	179139	MIMAT0000449	hsa-miR-146a-5p	Computational	\N	Other Technique	585	32930713	32930739	1	MRE1; spliced_no
+27915	571	179112	MIMAT0000421	hsa-miR-122-5p	Computational	\N	Microarray	585	32936660	32936678	1	MRE2; spliced_yes

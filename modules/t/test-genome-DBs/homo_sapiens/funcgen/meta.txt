@@ -1,0 +1,8 @@
+534	\N	schema_version	79
+156	1	species.production_name	homo_sapiens
+223	\N	schema_type	funcgen
+595	1	regbuild.last_annotation_update	2015-3
+589	\N	patch	patch_78_79_a.sql|schema_version
+592	\N	patch	patch_78_79_b.sql|binding_matrix unique key
+594	1	regbuild.initial_release_date	2015-3
+593	1	regbuild.version	13

@@ -1,0 +1,99 @@
+164	179015	FeatureType	3805400	External name association to support MA0098.2 Ets1 P27577 Ets1 PFM blast	70
+165	178892	FeatureType	3805401	FeatureType(Cjun) > Gene(P05412) > PFM : MA0489.1 JUN (var.2)	70
+161	178896	FeatureType	3805397	FeatureType(Gata1) > PFM(TAL1::GATA1/P17542) > Gene : MA0140.2 TAL1::GATA1	70
+162	178948	FeatureType	3805398	FeatureType(NFKB) > Gene(P19838) > PFM : MA0105.3 NFKB1	70
+163	178944	FeatureType	3805399	External name association to support PB0034.1 Irf4_1 Q64287 Irf4_1 PFM blast	70
+160	178896	FeatureType	3805396	FeatureType(TAL1::GATA1)  > PFM(TAL1::GATA1/P17542) > Gene(Gata1) : MA0140.2 TAL1::GATA1	70
+159	178996	FeatureType	3805365	FeatureType(TAL1::GATA1)  > PFM(TAL1::GATA1/P15976) > Gene(TAL1::GATA1) : MA0140.2 TAL1::GATA1	70
+158	178996	FeatureType	3805396	FeatureType(TAL1::GATA1)  > PFM(TAL1::GATA1/P15976) > Gene(TAL1::GATA1) : MA0140.2 TAL1::GATA1	70
+157	178993	FeatureType	3805395	FeatureType(NR1H2::RXRA)  > PFM(NR1H2::RXRA/P55055) > Gene(NR1H2) : MA0115.1 NR1H2::RXRA	70
+155	178993	FeatureType	3805385	FeatureType(NR1H2::RXRA)  > PFM(NR1H2::RXRA/P55055) > Gene(NR1H2) : MA0115.1 NR1H2::RXRA	70
+156	178993	FeatureType	3805386	FeatureType(NR1H2::RXRA)  > PFM(NR1H2::RXRA/P55055) > Gene(NR1H2) : MA0115.1 NR1H2::RXRA	70
+153	178984	FeatureType	3805393	FeatureType(ZBTB33)  > PFM(ZBTB33/Q86T24) > Gene(ZBTB33) : MA0527.1 ZBTB33	70
+154	179016	FeatureType	3805394	External name association to support MA0383.1 SMP1 YBR182C SMP1 PFM blast	70
+152	178984	FeatureType	3805392	FeatureType(ZBTB33)  > PFM(ZBTB33/Q86T24) > Gene(ZBTB33) : MA0527.1 ZBTB33	70
+151	178959	FeatureType	3805391	FeatureType(PU1) > Gene(P17947) > PFM : MA0080.2 SPI1	70
+150	178894	FeatureType	3805382	FeatureType(Max) > PFM(MYC::MAX/Q6LBK7) > Gene : MA0059.1 MYC::MAX	70
+149	179026	FeatureType	3805390	FeatureType(SP2)  > PFM(SP2/Q02086) > Gene(SP2) : MA0516.1 SP2	70
+148	178976	FeatureType	3805389	External name association to support MA0521.1 Tcf12 Q61286 Tcf12 PFM blast	70
+147	178979	FeatureType	3805388	FeatureType(Tr4) > Gene(P49116) > PFM : MA0504.1 NR2C2	70
+146	178962	FeatureType	3805386	FeatureType(PPARG::RXRA)  > PFM(PPARG::RXRA/P19793) > Gene(RXRA) : MA0065.1 PPARG::RXRA	70
+145	178962	FeatureType	3805385	FeatureType(PPARG::RXRA)  > PFM(PPARG::RXRA/P19793) > Gene(RXRA) : MA0065.1 PPARG::RXRA	70
+144	178988	FeatureType	3805387	FeatureType(PPARG::RXRA)  > PFM(PPARG::RXRA/P37231) > Gene(PPARG) : MA0065.1 PPARG::RXRA	70
+143	178988	FeatureType	3805386	FeatureType(PPARG::RXRA)  > PFM(PPARG::RXRA/P37231) > Gene(PPARG) : MA0065.1 PPARG::RXRA	70
+142	178988	FeatureType	3805385	FeatureType(PPARG::RXRA)  > PFM(PPARG::RXRA/P37231) > Gene(PPARG) : MA0065.1 PPARG::RXRA	70
+141	178941	FeatureType	3805384	FeatureType(HNF4A)  > PFM(HNF4A/P41235) > Gene(HNF4A) : MA0114.2 HNF4A	70
+140	178956	FeatureType	3805383	External name association to support MA0318.1 HMRA2 YCR096C HMRA2 PFM blast	70
+139	178898	FeatureType	3805382	External name association to support MA0147.2 Myc P01108 Myc PFM blast	70
+138	178895	FeatureType	3805380	FeatureType(NFE2::MAF)  > PFM(NFE2::MAF/Q16621) > Gene(Nfe2) : MA0501.1 NFE2::MAF	70
+137	178895	FeatureType	3805381	FeatureType(Nfe2) > PFM(NFE2::MAF/O75444) > Gene : MA0501.1 NFE2::MAF	70
+136	179279	FeatureType	3805380	FeatureType(NFE2::MAF)  > PFM(NFE2::MAF/O75444) > Gene(NFE2::MAF) : MA0501.1 NFE2::MAF	70
+134	178958	FeatureType	3805378	FeatureType(POU2F2)  > PFM(POU2F2/P09086) > Gene(POU2F2) : MA0507.1 POU2F2	70
+135	178955	FeatureType	3805379	External name association to support MA0239.1 prd P23758 prd PFM blast	70
+133	178980	FeatureType	3805377	FeatureType(USF1)  > PFM(USF1/P22415) > Gene(USF1) : MA0093.2 USF1	70
+132	178952	FeatureType	3805376	FeatureType(Nrf1)  > PFM(NRF1/Q16656) > Gene(Nrf1) : MA0506.1 NRF1	70
+131	178924	FeatureType	3805375	FeatureType(E2F6)  > PFM(E2F6/O75461) > Gene(E2F6) : MA0471.1 E2F6	70
+130	179022	FeatureType	3805374	FeatureType(FOXA1)  > PFM(FOXA1/P55317) > Gene(FOXA1) : MA0148.3 FOXA1	70
+129	179017	FeatureType	3805373	FeatureType(MEF2C)  > PFM(MEF2C/Q06413) > Gene(MEF2C) : MA0497.1 MEF2C	70
+128	178904	FeatureType	3805372	FeatureType(SRebp2) > Gene(Q12772) > PFM : MA0596.1 SREBF2	70
+127	178899	FeatureType	3805371	External name association to support MA0062.2 GABPA Q91YY8 GABPA PFM blast	70
+126	178915	FeatureType	3805370	External name association to support PB0111.1 Bhlhb2_2 O35185 Bhlhb2_2 PFM blast	70
+124	178923	FeatureType	3805368	External name association to support MA0541.1 EFL-1 G5EF11 EFL-1 PFM blast	70
+125	178969	FeatureType	3805369	FeatureType(SP1)  > PFM(SP1/P08047) > Gene(SP1) : MA0079.3 SP1	70
+123	178903	FeatureType	3805367	FeatureType(SRebp1) > Gene(P36956) > PFM : MA0595.1 SREBF1	70
+122	178894	FeatureType	3805366	External name association to support PB0147.1 Max_2 P28574 Max_2 PFM blast	70
+121	178896	FeatureType	3805365	External name association to support MA0035.3 Gata1 P17679 Gata1 PFM blast	70
+120	178900	FeatureType	3805364	FeatureType(Nrsf) > Gene(NP_005603) > PFM : MA0138.2 REST	70
+119	179023	FeatureType	3805363	External name association to support MA0446.1 fkh P14734 fkh PFM blast	70
+118	178926	FeatureType	3805362	External name association to support MA0341.1 MSN2 YMR037C MSN2 PFM blast	70
+117	179024	FeatureType	3805361	FeatureType(HNF4G)  > PFM(HNF4G/Q14541) > Gene(HNF4G) : MA0484.1 HNF4G	70
+116	178901	FeatureType	3805360	External name association to support MA0331.1 MCM1 YMR043W MCM1 PFM blast	70
+166	179192	FeatureType	3805402	FeatureType(EBF1)  > PFM(EBF1/Q9UH73) > Gene(EBF1) : MA0154.2 EBF1	70
+167	178893	FeatureType	3805403	FeatureType(Jund) > Gene(P17535) > PFM : MA0492.1 JUND (var.2)	70
+168	178989	FeatureType	3805404	FeatureType(RXRA::VDR)  > PFM(RXRA::VDR/P19793) > Gene(VDR) : MA0074.1 RXRA::VDR	70
+169	178989	FeatureType	3805385	FeatureType(RXRA::VDR)  > PFM(RXRA::VDR/P19793) > Gene(VDR) : MA0074.1 RXRA::VDR	70
+170	178989	FeatureType	3805386	FeatureType(RXRA::VDR)  > PFM(RXRA::VDR/P19793) > Gene(VDR) : MA0074.1 RXRA::VDR	70
+171	179027	FeatureType	3805405	FeatureType(THAP1)  > PFM(THAP1/Q9NVV9) > Gene(THAP1) : MA0597.1 THAP1	70
+172	178932	FeatureType	3805406	FeatureType(Gata2)  > PFM(GATA2/P23769) > Gene(Gata2) : MA0036.2 GATA2	70
+173	178921	FeatureType	3805407	FeatureType(E2F1)  > PFM(E2F1/Q01094) > Gene(E2F1) : MA0024.2 E2F1	70
+174	9	FeatureType	3805408	FeatureType(CTCF)  > PFM(CTCF/P49711) > Gene(CTCF) : MA0139.1 CTCF	70
+175	179019	FeatureType	3805409	FeatureType(FOSL1)  > PFM(FOSL1/P15407) > Gene(FOSL1) : MA0477.1 FOSL1	70
+176	179030	FeatureType	3805410	FeatureType(Junb)  > PFM(JUNB/P17275) > Gene(Junb) : MA0490.1 JUNB	70
+177	179018	FeatureType	3805411	FeatureType(ZEB1)  > PFM(ZEB1/P37275) > Gene(ZEB1) : MA0103.2 ZEB1	70
+178	178983	FeatureType	3805412	FeatureType(Yy1)  > PFM(YY1/P25490) > Gene(Yy1) : MA0095.2 YY1	70
+179	179025	FeatureType	3805413	External name association to support MA0531.1 CTCF Q9VS55 CTCF PFM blast	70
+180	178930	FeatureType	3805414	FeatureType(FOSL2)  > PFM(FOSL2/P15408) > Gene(FOSL2) : MA0478.1 FOSL2	70
+181	178897	FeatureType	3805415	FeatureType(Znf263)  > PFM(ZNF263/O14978) > Gene(Znf263) : MA0528.1 ZNF263	70
+182	178891	FeatureType	3805416	External name association to support MA0099.2 JUN::FOS P01100 JUN::FOS PFM blast	70
+183	178911	FeatureType	3805417	FeatureType(BATF::JUN)  > PFM(BATF::JUN/Q16520) > Gene(BATF) : MA0462.1 BATF::JUN	70
+184	178892	FeatureType	3805417	FeatureType(BATF::JUN)  > PFM(BATF::JUN/AAA59197) > Gene(Cjun) : MA0462.1 BATF::JUN	70
+185	179014	FeatureType	3805418	FeatureType(ELF1)  > PFM(ELF1/P32519) > Gene(ELF1) : MA0473.1 ELF1	70
+13287	33463384	ProbeFeature	3811740	exon/3' flank boundary	27
+3908252	35868047	ProbeFeature	3852126	exon/3' flank boundary	27
+3917498	35868047	ProbeFeature	3852206	3' flank	27
+3920244	35868047	ProbeFeature	3852218	exon	27
+4244007	35490812	ProbeFeature	3852126	exon/3' flank boundary	27
+4254131	35490812	ProbeFeature	3852206	3' flank	27
+4255514	35490812	ProbeFeature	3852218	exon	27
+4368453	33898832	ProbeFeature	3852126	exon	27
+4368454	33113359	ProbeFeature	3852126	exon/3' flank boundary	27
+4377353	33113359	ProbeFeature	3852206	3' flank	27
+4378757	33898832	ProbeFeature	3852218	exon	27
+4378758	33113359	ProbeFeature	3852218	exon	27
+17253319	130791	Probe	3852206	Matches 3' flank. Matches 2 other transcripts	27
+17291029	130791	Probe	3852126	Matches exon/3' flank boundary. Matches 2 other transcripts	27
+17330534	130791	Probe	3852218	Matches exon. Matches 2 other transcripts	27
+18033906	55599	Probe	3852206	Matches 3' flank. Matches 2 other transcripts	27
+18097884	138152	Probe	3852126	Matches exon/3' flank boundary. Matches 2 other transcripts	27
+18102294	88332	Probe	3852126	Matches exon. Matches 1 other transcript	27
+18123332	55599	Probe	3852126	Matches exon/3' flank boundary. Matches 2 other transcripts	27
+18231093	210756	Probe	3811740	Matches exon/3' flank boundary. Maps uniquely to this transcript	27
+18289369	138152	Probe	3852218	Matches exon. Matches 2 other transcripts	27
+18303451	55599	Probe	3852218	Matches exon. Matches 2 other transcripts	27
+18332294	88332	Probe	3852218	Matches exon. Matches 1 other transcript	27
+18503650	138152	Probe	3852206	Matches 3' flank. Matches 2 other transcripts	27
+18552145	27911	MirnaTargetFeature	3981067	TarBase Micro RNA target	67
+18552146	27912	MirnaTargetFeature	3981067	TarBase Micro RNA target	67
+18552147	27913	MirnaTargetFeature	3981067	TarBase Micro RNA target	67
+18552148	27914	MirnaTargetFeature	3981067	TarBase Micro RNA target	67
+18552149	27915	MirnaTargetFeature	3981067	TarBase Micro RNA target	67
