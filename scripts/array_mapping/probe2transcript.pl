@@ -362,7 +362,7 @@ sub main {
   create_final_xrefs($object_transcript_hits, $xrefs, $xref_db, $options, $OUT);
   $Helper->log("Loading xrefs info DB", 0 , 'append_date');
   if (scalar @$xrefs) {
-    store_xrefs($xrefs, $xref_db, $options->{transc_edb_id}, $options->{analysis}, $options->{transcript_xref_id});
+    store_xrefs($xrefs, $xref_db, $options->{transc_edb_id}, $options->{analysis}, $options->{transcript_xref_id}, $options);
   }
   close ($OUT);
 
@@ -1930,7 +1930,7 @@ sub add_xref {
 
   push @$xrefs, [$transcript_id, $linkage_annotation, $object_id, $object_type];
   if (scalar @$xrefs > 10000) {
-    store_xrefs($xrefs, $xref_db, $options->{transc_edb_id}, $options->{analysis}, $options->{transcript_xref_id});
+    store_xrefs($xrefs, $xref_db, $options->{transc_edb_id}, $options->{analysis}, $options->{transcript_xref_id}, $options);
     @$xrefs = ();
   }
 }
@@ -1952,7 +1952,7 @@ sub add_xref {
 # - transcript_sref_id: hash ref linking Bio::EnsEMBL::Transcript objects to xref_id numbers
 
 sub store_xrefs {
-  my ($xrefs, $xref_db, $transc_edb_id, $analysis, $transcript_xref_id) = @_;
+  my ($xrefs, $xref_db, $transc_edb_id, $analysis, $transcript_xref_id, $options) = @_;
   my ($fh, $filename) = tempfile();
   for my $xref (@$xrefs) {
     my ($transcript_id, $linkage_annotation, $object_id, $object_type) = @$xref;
