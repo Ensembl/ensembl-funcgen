@@ -1804,9 +1804,7 @@ sub cache_and_load_unmapped_objects {
     $unmapped_counts->{Total}++;
     push @{$unmapped_objects}, $um_obj;
     if(scalar(@{$unmapped_objects}) > 10000) {
-      $Helper->log("Loading ".scalar(@{$unmapped_objects})." unmapped objects", 0, 1);
       store_unmapped_objects($unmapped_objects, $options);
-      $Helper->log("Done loading", 0, 1);
       @{$unmapped_objects} = ();
     }
   }
@@ -1903,8 +1901,15 @@ sub store_unmapped_objects {
   }
   chmod 0644, $filename;
   $fh->autoflush;
-  my $sql = "LOAD DATA LOCAL INFILE \"$filename\" INTO TABLE unmapped_object";
-  $db->dbc->db_handle->do($sql);
+  my $cmd = "mysql -u $options->{xref_user} -h $options->{xref_host} -D $options->{xref_dbname} -e 'LOAD DATA LOCAL INFILE \"$filename\" INTO TABLE unmapped_object'";
+  if (defined $options->{xref_port}) {
+    $cmd .= " -P $options->{xref_port}";
+  }
+  if (defined $options->{xref_pass}) {
+    $cmd .= " -p$options->{xref_pass}";
+  }
+  run($cmd);
+
   close $fh;
 }
 
@@ -1958,8 +1963,14 @@ sub store_xrefs {
   }
   chmod 0644, $filename;
   $fh->autoflush;
-  my $sql = "LOAD DATA LOCAL INFILE \"$filename\" INTO TABLE object_xref";
-  $xref_db->dbc->db_handle->do($sql);
+  my $cmd = "mysql -u $options->{xref_user} -h $options->{xref_host} -D $options->{xref_dbname} -e 'LOAD DATA LOCAL INFILE \"$filename\" INTO TABLE object_xref'";
+  if (defined $options->{xref_port}) {
+    $cmd .= " -P $options->{xref_port}";
+  }
+  if (defined $options->{xref_pass}) {
+    $cmd .= " -p$options->{xref_pass}";
+  }
+  run($cmd);
   close $fh;
 }
 
