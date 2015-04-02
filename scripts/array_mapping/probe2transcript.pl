@@ -1804,9 +1804,7 @@ sub cache_and_load_unmapped_objects {
     $unmapped_counts->{Total}++;
     push @{$unmapped_objects}, $um_obj;
     if(scalar(@{$unmapped_objects}) > 10000) {
-      $Helper->log("Loading ".scalar(@{$unmapped_objects})." unmapped objects", 0, 1);
       store_unmapped_objects($unmapped_objects, $options);
-      $Helper->log("Done loading", 0, 1);
       @{$unmapped_objects} = ();
     }
   }
