@@ -95,10 +95,8 @@ use base qw(Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable);
 								                                	  -STRAND         => -1,
                                 									  -BINDING_MATRIX => $bm,
 								                                	  -DISPLAY_LABEL  => $text,
-                                  									  -SCORE          => $score,
-                                                                      -INTERDB_STABLE_ID     => 1,
-                                                                     );
-
+                                  									-SCORE          => $score,
+                                                    -INTERDB_STABLE_ID     => 1 );
 
   Description: Constructor for MotifFeature objects.
   Returntype : Bio::EnsEMBL::Funcgen::MotifFeature
@@ -114,9 +112,9 @@ sub new {
   my $self   = $class->SUPER::new(@_);
   
   ($self->{score}, $self->{binding_matrix}, $self->{display_label}, $self->{interdb_stable_id}) 
-   = rearrange(['SCORE', 'BINDING_MATRIX', 'DISPLAY_LABEL', 'INTERDB_STABLE_ID'], @_);
-    
+    = rearrange(['SCORE', 'BINDING_MATRIX', 'DISPLAY_LABEL', 'INTERDB_STABLE_ID'], @_);
   assert_ref($self->binding_matrix, 'Bio::EnsEMBL::Funcgen::BindingMatrix');
+
   return $self;
 }
 
@@ -254,11 +252,11 @@ sub associated_annotated_features{
 
 =head2 is_position_informative
 
-  Arg [1]    : int - 1-based position within the Motif
+  Arg [1]    : Scalar - 1-based integer position within the motif wrt +ve seq_region_strand.
   Example    : $mf->is_position_informative($pos);
   Description: Indicates if a given position within the motif is highly informative
-  Returntype : boolean
-  Exceptions : throws if position out of bounds ( < 1 or > length of motif)
+  Returntype : Boolean
+  Exceptions : None
   Caller     : General
   Status     : At High risk
 
@@ -266,26 +264,18 @@ sub associated_annotated_features{
 
 sub is_position_informative {
   my $self     = shift;
-  my $position = shift || throw('Need tp specify a valid position argument');
+  my $position = shift;
 
-  if( ($position < 1) || 
-      ($position > $self->binding_matrix->length) ){
-    throw "Position outside of MotifFeature loci";
-  }
-
-  #if on the opposite strand, then need to reverse complement the position
-  if($self->strand < 0){ 
-    $position = $self->binding_matrix->length - $position + 1; 
-  }
-
-  return $self->binding_matrix->is_position_informative($position);
+  # Not just $self->strand here as that is always wrt feature slice strand
+  my $revcomp = ($self->seq_region_strand == -1) ? 1 : 0;
+  return $self->binding_matrix->is_position_informative($position, $revcomp);
 }
 
 
 =head2 infer_variation_consequence
 
   Arg [1]    : Bio::EnsEMBL::Variation::VariationFeature
-  Arg [2]    : boolean - 1 if results in linear scale (default is log scale)
+  Arg [2]    : Boolean - returns result in linear scale (default is log scale)
   Example    : my $vfs = $vf_adaptor->fetch_all_by_Slice($slice_adaptor->fetch_by_region('toplevel',$mf->seq_region_name,$mf->start,$mf->end,$mf->strand));
                foreach my $vf (@{$vfs}){
                    print $mf->infer_variation_consequence($vf)."\n";
@@ -295,51 +285,58 @@ sub is_position_informative {
                Returns a value between -100% (lost) and +100% (gain) indicating the difference 
                in strength between the motif in the reference and after the variation.
 
-               The variation feature slice needs to be the motif feature, including the strand
-  Returntype : float
-  Exceptions : throws if argument is not a  Bio::EnsEMBL::Variation::VariationFeature
-               throws if the variation feature is not contained in the motif feature
+  Returntype : Scalar (numeric)
+  Exceptions : Throws if argument is not a Bio::EnsEMBL::Variation::VariationFeature
+               Warns if the VariationFeature is not contained within the MotifFeature
   Caller     : General
   Status     : At High risk
 
 =cut
 
 sub infer_variation_consequence{
-  my ($self, $vf, $linear) = @_;
+  my $self   = shift;
+  my $vf     = shift;
+  my $linear = shift;
   assert_ref($vf, 'Bio::EnsEMBL::Variation::VariationFeature');
+  my $vf_sr_start = $vf->seq_region_start;
+  my $sr_start    = $self->seq_region_start;
+  my $allele      = $vf->allele_string(undef, $self->seq_region_strand);
 
-
-  #See if these checks are required or if there are more efficient ways to do the checks...
-  #if(($self->slice->seq_region_name ne $vf->slice->seq_region_name) ||
-  #   ($self->slice->start != $vf->slice->start) || 
-  #   ($self->slice->end != $vf->slice->end) ){
-  #  throw "Variation and Motif are on distinct slices";
-  #}
-  #if(!(($vf->start >= $self->start) && ($vf->end <= $self->end ))){
-  #  throw "Variation should be entirely contained in the Motif";
-  #}
-
-  if( ($vf->start < 1) || ($vf->end > $self->binding_matrix->length)){ throw "Variation not entirely contained in the motif feature"; }
-
-  if(!($vf->allele_string =~ /^[ACTG]\/[ACTG]$/)){ throw "Currently only SNPs are supported"; }
-
-  my $ref_seq = $self->seq;
-
-  my $variant = $vf->allele_string;
-  $variant =~ s/^.*\///;
-  $variant =~ s/\s*$//;
-
-  my ($vf_start,$vf_end) = ($vf->start, $vf->end);
-  if($vf->strand == -1){
-    #Needed for insertions
-    $variant = reverse($variant);
-    $variant =~ tr/ACGT/TGCA/;
+  if($allele !~ /^[ACTG]\/[ACTG]$/){ 
+    throw("Unsupported variation allele:\t".$allele."\nCurrently only SNPs supported"); 
   }
-  my $var_seq = substr($ref_seq,0, $vf_start - 1).$variant.substr($ref_seq, $vf_start+length($variant)-1);
 
-  my $bm = $self->{'binding_matrix'};
-  return 100 * ($bm->relative_affinity($var_seq,$linear) - $bm->relative_affinity($ref_seq,$linear));
-  
+  # From now on, assumes variation is a SNP
+  if( ! (($self->seq_region_name eq $vf->seq_region_name) &&
+         ($sr_start <= $vf_sr_start) &&
+         ($self->seq_region_end >= $vf_sr_start))){
+
+    warn('VariationFeature('.$vf->variation_name.
+      ") is not contained within MotifFeature:\t".$self->slice->name."\n");
+    return 0; # 0 as we need a consequence delta
+  }
+
+  my $ref_seq = $self->seq; # Get the stranded seq
+  $allele =~ s/^.*\/\s*//;  # Get the strand specific non-ref allele
+
+  my $vf_idx = $vf_sr_start - $sr_start; # 0 based to avoid unecessary -1 in substr
+
+  my $var_seq = substr($ref_seq, 0, $vf_idx).$allele.
+    substr($ref_seq, $vf_idx + 1);  # + length($variant));
+
+  # relative affinity only works with strand matched seq 
+  # in 5'->3' orientation. We already have the strand seq 
+  # so just need to reverse if -1
+
+  if($self->seq_region_strand == -1){
+    $var_seq = reverse($var_seq);#tr/ACGT/TGCA/;
+    $ref_seq = reverse($ref_seq);
+  }  
+
+  my $bm = $self->binding_matrix;
+
+  return 100 * ($bm->relative_affinity($var_seq, $linear) - 
+                $bm->relative_affinity($ref_seq, $linear)); 
 }
 
 

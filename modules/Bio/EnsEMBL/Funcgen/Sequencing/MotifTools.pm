@@ -65,6 +65,7 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd
   filter_pwm_mappings
   get_revcomp_file_path
   matrix_min_max
+  parse_matrix_line
   read_matrix_file
   reverse_complement_matrix
   revcomp_matrix_file
@@ -89,14 +90,13 @@ my %method_refs = ('parse_find_pssm_dna_to_bed' => \&parse_find_pssm_dna_to_bed)
 =head2 read_matrix_file
 
   Arg [1]     : String - The input file path i.e. a Japar pmf file.
-  Arg [2]     : Boolean (optional) - When set also generates the reverse 
-                complement matrix.
+  Arg [2]     : Arrayref (optional) - A list of matrix IDs to read from file
   Description : Reads a matrix file and return each frequency or weight as 
                 an element of an array. Can process multiple matrices within 
                 a headered file, or single matrix from a header less file.
                 In the case of a headerless file, the file name is used to 
                 generate the hash key.
-  Returntype  : Hasref - ID line/File prefix hash keys. Values are 3d array. 
+  Returntype  : Hashref - ID line/File prefix hash keys. Values are 3d array. 
                 The first element being an arrayref of a 2d array representing
                 the matrix. If the boolean argument is passed, the second 
                 element will represent the reverse complement  
@@ -165,9 +165,9 @@ sub read_matrix_file{
       $header = $line;
     }
     else{
-      # remove leading whitespace or A|C|G|T [ ] wrapping
-      $line =~ s/^[ACGT\s\[]*([0-9 ]+)\s*\]*/$1 /o; 
-      push @matrix_tmp, [ split(/\s+/, $line) ];
+      #eval thsi and write $id, to avoid having to pass $id, as parse_matrix_line
+      #is used in web code
+      push @matrix_tmp, [parse_matrix_line($line)]; #, $matrix_id);
     }
   }
 
@@ -195,6 +195,23 @@ sub read_matrix_file{
   }
 
   return \%matrix_cache;
+}
+
+# Also used in BindingMatrix
+
+sub parse_matrix_line{
+  my $line = shift;
+  #my $id   = shift;
+  # remove leading whitespace or A|C|G|T [ ] wrapping
+  (my $clean_line = $line) =~ s/^\s*[ACGTacgt]?\s*\[?\s*([0-9 ]+[0-9])/$1/o;
+  $clean_line =~ s/\s*\]?\s*$//o;
+  #(my $clean_line = $line) =~ s/^\s*[ACGTacgt]?\s*\[?\s*([0-9 ]+)\s*\]?\s*$/$1/o;
+
+  if($clean_line =~ /[^\s0-9]/){
+    throw("Found invalid characters in matrix line:\n$line");
+  }
+
+  return split(/\s+/, $clean_line);
 }
 
 

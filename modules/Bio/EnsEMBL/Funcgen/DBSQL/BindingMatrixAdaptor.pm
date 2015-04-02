@@ -54,6 +54,9 @@ package Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixAdaptor;
 use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( warning throw );
+use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
+
+
 use Bio::EnsEMBL::Funcgen::BindingMatrix;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#sql_types barewords import
 
@@ -76,15 +79,17 @@ use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 sub fetch_all_by_name{
   my ($self, $name, $analysis) = @_;
+  throw('Must specify a BindingMatrix name') if ! defined $name;
 
-  throw("Must specify a BindingMatrix name") if(! $name);
-
-  my $constraint = " bm.name = ? ";
-  $constraint .= " AND bm.analysis_id = ?" if $analysis;
-
+  my $constraint = ' bm.name = ? ';
   $self->bind_param_generic_fetch($name,           SQL_VARCHAR);
-  $self->bind_param_generic_fetch($analysis->dbID, SQL_INTEGER) if $analysis;
 
+  if($analysis){
+    assert_ref($analysis, 'Bio::EnsEMBL::Analysis');
+    $constraint .= ' AND bm.analysis_id = ?' if $analysis;
+    $self->bind_param_generic_fetch($analysis->dbID, SQL_INTEGER);
+  }
+  
   return $self->generic_fetch($constraint);
 }
 
@@ -263,14 +268,8 @@ sub store {
   my $s_matrix;
 
   foreach my $matrix (@args) {
-
-    if ( ! $matrix->isa('Bio::EnsEMBL::Funcgen::BindingMatrix') ) {
-      throw('Can only store BindingMatrix objects, skipping $matrix');
-    }
-
-	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $matrix->feature_type);
-
-
+    assert_ref($matrix, 'Bio::EnsEMBL::Funcgen::BindingMatrix', 'BindingMatrix');
+    $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $matrix->feature_type);
 
     if (!( $matrix->dbID() && $matrix->adaptor() == $self )){
 
