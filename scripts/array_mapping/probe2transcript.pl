@@ -964,7 +964,7 @@ sub check_probe_analysis_join {
 
 sub get_transcripts_per_probefeature {
   my ($xref_db, $options) = @_;
-  my $sql = 'SELECT ensembl_id, dbprimary_acc from object_xref JOIN probe_feature ON probe_feature_id = ensembl_id JOIN probe USING(probe_id) JOIN probe_set USING(probe_set_id) JOIN array_chip USING(array_chip_id) JOIN array USING(array_id) JOIN xref USING(xref_id) WHERE ensembl_object_type = "ProbeFeature" AND array.name in ("'.join('", "', @{$options->{array_names}}).'") AND external_db_id = '. $options->{transc_edb_id};
+  my $sql = 'SELECT ensembl_id, dbprimary_acc from object_xref JOIN probe_feature ON probe_feature_id = ensembl_id JOIN probe USING(probe_id) JOIN array_chip USING(array_chip_id) JOIN array USING(array_id) JOIN xref USING(xref_id) WHERE ensembl_object_type = "ProbeFeature" AND array.name in ("'.join('", "', @{$options->{array_names}}).'") AND external_db_id = '. $options->{transc_edb_id};
   my $sth = $xref_db->dbc()->prepare($sql);
   $sth->execute();
 
@@ -1178,7 +1178,7 @@ sub write_extended_transcript {
 
 sub dump_probe_features {
   my ($filename2, $options) = @_;
-  my $sql = 'SELECT seq_region.name, seq_region_start, seq_region_end, seq_region_strand, cigar_line, mismatches, probe_feature_id, probe_id, probe.name, probe_set_id, probe_set.name  FROM probe_feature JOIN probe USING(probe_id) JOIN probe_set USING(probe_set_id) JOIN array_chip USING(array_chip_id) JOIN array USING(array_id) JOIN seq_region USING(seq_region_id) WHERE array.name IN ("'.join('", "', @{$options->{array_names}})."\") and array.vendor=\"$options->{vendor}\" ORDER BY seq_region.name, seq_region_start";
+  my $sql = 'SELECT seq_region.name, seq_region_start, seq_region_end, seq_region_strand, cigar_line, mismatches, probe_feature_id, probe_id, probe.name, probe_set_id, probe_set.name  FROM probe_feature JOIN probe USING(probe_id) LEFT JOIN probe_set USING(probe_set_id) JOIN array_chip USING(array_chip_id) JOIN array USING(array_id) JOIN seq_region USING(seq_region_id) WHERE array.name IN ("'.join('", "', @{$options->{array_names}})."\") and array.vendor=\"$options->{vendor}\" ORDER BY seq_region.name, seq_region_start";
 
   my $cmd = "mysql --quick -NB -u $options->{xref_user} -h $options->{xref_host} -D $options->{xref_dbname} -e '$sql'";
   if (defined $options->{xref_port}) {
