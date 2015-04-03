@@ -1120,7 +1120,7 @@ sub write_extended_transcripts_into_file {
   }
 
   run("sort -k1,1 -k2,2n $filename0 > $filename");
-  close $fh;
+  close $fh0;
   unlink $filename0;
 }
 
