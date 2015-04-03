@@ -1178,7 +1178,7 @@ sub write_extended_transcript {
 
 sub dump_probe_features {
   my ($filename2, $options) = @_;
-  my $sql = 'SELECT seq_region.name, seq_region_start, seq_region_end, seq_region_strand, cigar_line, mismatches, probe_feature_id, probe_id, probe.name, probe_set_id, probe_set.name  FROM probe_feature JOIN probe USING(probe_id) LEFT JOIN probe_set USING(probe_set_id) JOIN array_chip USING(array_chip_id) JOIN array USING(array_id) JOIN seq_region USING(seq_region_id) WHERE array.name IN ("'.join('", "', @{$options->{array_names}})."\") and array.vendor=\"$options->{vendor}\" ORDER BY seq_region.name, seq_region_start";
+  my $sql = 'SELECT seq_region.name, seq_region_start, seq_region_end, seq_region_strand, cigar_line, mismatches, probe_feature_id, probe_id, probe.name, probe_set_id, probe_set.name  FROM probe_feature JOIN probe USING(probe_id) LEFT JOIN probe_set USING(probe_set_id) JOIN array_chip USING(array_chip_id) JOIN array USING(array_id) JOIN seq_region USING(seq_region_id) WHERE array.name IN ("'.join('", "', @{$options->{array_names}})."\") and array.vendor=\"$options->{vendor}\" GROUP BY probe_feature_id, probe_id, probe_set_id ORDER BY seq_region.name, seq_region_start";
 
   my $cmd = "mysql --quick -NB -u $options->{xref_user} -h $options->{xref_host} -D $options->{xref_dbname} -e '$sql'";
   if (defined $options->{xref_port}) {
