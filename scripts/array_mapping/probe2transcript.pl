@@ -327,18 +327,20 @@ sub main {
   }
 
   $Helper->log("Writing extended transcript slices into Bed file", 0, 'append_date');
-  my ($fh, $filename) = tempfile();
+  my ($fh, $filename) = tempfile(DIR => './');
   write_extended_transcripts_into_file($transcripts, $filename, $options);
 
   $Helper->log("Dumping probes into Bed file", 0, 'append_date');
-  my ($fh2, $filename2) = tempfile();
+  my ($fh2, $filename2) = tempfile(DIR => './');
   dump_probe_features($filename2, $options);
 
   $Helper->log("Overlapping probe features and transcripts", 0, 'append_date');
-  my ($fh3, $filename3) = tempfile();
+  my ($fh3, $filename3) = tempfile(DIR => './');
   run("bedtools intersect -sorted -wa -wb -a $filename -b $filename2 | sort -k4,4 > $filename3");
   close $fh;
+  unlink $filename;
   close $fh2;
+  unlink $filename2;
 
 # Pesky global variables
   my $xrefs = [];
@@ -348,6 +350,7 @@ sub main {
   open (my $OUT, ">", "$options->{filename}.out");
   $Helper->log("Performing overlap analysis.", 0, 'append_date');
   my $object_transcript_hits = associate_probes_to_transcripts($transcripts, $fh3, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $OUT);
+  unlink $filename3;
 
   $Helper->log("Logging probesets that don't map to any transcripts", 0, 'append_date');
   log_unmapped_objects($object_transcript_hits, $unmapped_counts, $unmapped_objects, $options, $OUT);
@@ -961,7 +964,7 @@ sub check_probe_analysis_join {
 
 sub get_transcripts_per_probefeature {
   my ($xref_db, $options) = @_;
-  my $sql = 'SELECT ensembl_id, dbprimary_acc from object_xref JOIN probe_feature ON probe_feature_id = ensembl_id JOIN probe USING(probe_id) JOIN probe_set USING(probe_set_id) JOIN array_chip USING(array_chip_id) JOIN array USING(array_id) JOIN xref USING(xref_id) WHERE ensembl_object_type = "ProbeFeature" AND array.name in ("'.join('", "', @{$options->{array_names}}).'") AND external_db_id = '. $options->{transc_edb_id};
+  my $sql = 'SELECT ensembl_id, dbprimary_acc from object_xref JOIN probe_feature ON probe_feature_id = ensembl_id JOIN probe USING(probe_id) JOIN array_chip USING(array_chip_id) JOIN array USING(array_id) JOIN xref USING(xref_id) WHERE ensembl_object_type = "ProbeFeature" AND array.name in ("'.join('", "', @{$options->{array_names}}).'") AND external_db_id = '. $options->{transc_edb_id};
   my $sth = $xref_db->dbc()->prepare($sql);
   $sth->execute();
 
@@ -1117,6 +1120,8 @@ sub write_extended_transcripts_into_file {
   }
 
   run("sort -k1,1 -k2,2n $filename0 > $filename");
+  close $fh0;
+  unlink $filename0;
 }
 
 sub write_extended_transcript { 
@@ -1173,7 +1178,7 @@ sub write_extended_transcript {
 
 sub dump_probe_features {
   my ($filename2, $options) = @_;
-  my $sql = 'SELECT seq_region.name, seq_region_start, seq_region_end, seq_region_strand, cigar_line, mismatches, probe_feature_id, probe_id, probe.name, probe_set_id, probe_set.name  FROM probe_feature JOIN probe USING(probe_id) JOIN probe_set USING(probe_set_id) JOIN array_chip USING(array_chip_id) JOIN array USING(array_id) JOIN seq_region USING(seq_region_id) WHERE array.name IN ("'.join('", "', @{$options->{array_names}})."\") and array.vendor=\"$options->{vendor}\" ORDER BY seq_region.name, seq_region_start";
+  my $sql = 'SELECT seq_region.name, seq_region_start, seq_region_end, seq_region_strand, cigar_line, mismatches, probe_feature_id, probe_id, probe.name, probe_set_id, probe_set.name  FROM probe_feature JOIN probe USING(probe_id) LEFT JOIN probe_set USING(probe_set_id) JOIN array_chip USING(array_chip_id) JOIN array USING(array_id) JOIN seq_region USING(seq_region_id) WHERE array.name IN ("'.join('", "', @{$options->{array_names}})."\") and array.vendor=\"$options->{vendor}\" GROUP BY probe_feature_id, probe_id, probe_set_id ORDER BY seq_region.name, seq_region_start";
 
   my $cmd = "mysql --quick -NB -u $options->{xref_user} -h $options->{xref_host} -D $options->{xref_dbname} -e '$sql'";
   if (defined $options->{xref_port}) {
@@ -1185,13 +1190,6 @@ sub dump_probe_features {
 
   ## Quick filter for trailing semi-colons in database names
   run("$cmd | sed -e 's/;\$//' > $filename2");
-}
-
-# ----------------------------------------------------------------------
-
-sub overlap_probe_features_and_transcripts {
-  my ($filename, $filename2, $filename3) = @_;
-  run("bedtools overlap -wab -a $filename -b $filename2 > $filename3");
 }
 
 # ----------------------------------------------------------------------
@@ -1909,8 +1907,8 @@ sub store_unmapped_objects {
     $cmd .= " -p$options->{xref_pass}";
   }
   run($cmd);
-
   close $fh;
+  unlink $filename;
 }
 
 # ----------------------------------------------------------------------
@@ -1972,6 +1970,7 @@ sub store_xrefs {
   }
   run($cmd);
   close $fh;
+  unlink $filename;
 }
 
 ########################################################
