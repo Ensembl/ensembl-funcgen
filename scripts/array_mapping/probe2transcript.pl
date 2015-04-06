@@ -1312,7 +1312,7 @@ sub examine_probefeature {
   if($options->{array_config}{probeset_arrays}) {
     $log_name       = $transcript_sid."\t(${probeset_name})\t${probe_id}";
   } else{
-    $log_name       = $transcript_sid."\t(".join(',', @{$options->{object}->{$probe_id}}).")\t${probe_id}";
+    $log_name       = $transcript_sid."\t(".join(',', @{$options->{object_names}->{$probe_id}}).")\t${probe_id}";
   }
 
   if($options->{array_config}{sense_interrogation}) {
