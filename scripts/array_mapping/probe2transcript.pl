@@ -1577,7 +1577,7 @@ sub remove_promiscuous_objects {
       foreach my $transcript_id (keys %{$object_transcript_hits->{$object_id}}) {
         my $id_names = $object_id.'('.join(',', @{$options->{object_names}{$object_id}}).')';
         my $probeset_size = $options->{probeset_sizes}->{$object_id};
-        my $hits = $object_transcript_hits->{$object_id}{$transcript_id}{0};
+        my $hits = $object_transcript_hits->{$object_id}{$transcript_id}[0];
         print $OUT "$id_names\t$transcript_id\tpromiscuous\t$hits/$probeset_size\tCurrentTranscripts".$object_transcript_count."\n";
         cache_and_load_unmapped_objects(
           $options, 
