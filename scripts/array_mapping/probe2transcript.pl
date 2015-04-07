@@ -327,15 +327,15 @@ sub main {
   }
 
   $Helper->log("Writing extended transcript slices into Bed file", 0, 'append_date');
-  my ($fh, $filename) = tempfile(DIR => './');
+  my ($fh, $filename) = tempfile(DIR => $options->{temp_dir});
   write_extended_transcripts_into_file($transcripts, $filename, $options);
 
   $Helper->log("Dumping probes into Bed file", 0, 'append_date');
-  my ($fh2, $filename2) = tempfile(DIR => './');
+  my ($fh2, $filename2) = tempfile(DIR => $options->{temp_dir});
   dump_probe_features($filename2, $options);
 
   $Helper->log("Overlapping probe features and transcripts", 0, 'append_date');
-  my ($fh3, $filename3) = tempfile(DIR => './');
+  my ($fh3, $filename3) = tempfile(DIR => $options->{temp_dir});
   run("bedtools intersect -sorted -wa -wb -a $filename -b $filename2 | sort -k4,4 > $filename3");
   close $fh;
   unlink $filename;
@@ -440,6 +440,7 @@ No deletion is done by default.
 [--max_transcripts] Only use this many transcripts. Useful for debugging.
 [--no_triage]       Don't write to the unmapped_object/unmapped_reason tables.
 [--health_check]    Only do sanity checks, then stop. Useful for capthing errors before nohuping the process proper.
+[--temp_dir]        Directory to store large temporary files
 [--help]            This text.
 EOF
 
@@ -530,6 +531,7 @@ sub get_options {
   'no_triage'              => \$options->{no_triage},
   'parallelise'            => \$options->{parallelise},
   'clean_up'               => \$options->{clean_up},
+  'temp_dir'               => \$options->{temp_dir},
   'linked_arrays=i'          => \$options->{array_config}->{linked_arrays},
   'probeset_arrays=i'        => \$options->{array_config}->{probeset_arrays},
   'sense_interrogation=i'    => \$options->{array_config}->{sense_interrogation},
