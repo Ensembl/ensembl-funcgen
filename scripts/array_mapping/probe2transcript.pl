@@ -1483,7 +1483,7 @@ sub compute_hits {
 
     my $probeset_size = $options->{probeset_sizes}{$object_id};
 
-    if ((($hits / $probeset_size) >= $options->{mapping_threshold}) 
+    if (($options->{xref_object} eq 'ProbeSet' && ($hits / $probeset_size) >= $options->{mapping_threshold}) 
           || ($hits && ($options->{xref_object} eq 'Probe'))) {
       my $num_mismatch_hits = 0;
       if($options->{array_config}{probeset_arrays}) {
