@@ -29,27 +29,28 @@ fi
 
 
 format='GFF'
-release=77
+release=79
 
-#feature_type='AnnotatedFeature'
+feature_type='AnnotatedFeature'
 #feature_type='MotifFeature'
-#fset_names="${feature_type}s" #Special set name to dump all Annotated/MotifFeatures in build
+fset_names="${feature_type}s" #Special set name to dump all Annotated/MotifFeatures in build
 
 
-feature_type='RegulatoryFeature'
+#feature_type='RegulatoryFeature'
 #feature_type='SegmentationFeature'
-dbname="homo_sapiens_funcgen_${release}_38"
-dbhost='ens-staging1'
+#dbname="homo_sapiens_funcgen_${release}_38"
+#dbhost='ens-staging1'
+dbname="homo_sapiens_funcgen_79_37"
+dbhost='genebuild10'
 
-fset_names="RegulatoryFeatures:A549 RegulatoryFeatures:DND-41 RegulatoryFeatures:GM12878 RegulatoryFeatures:H1ESC RegulatoryFeatures:HeLa-S3 RegulatoryFeatures:HepG2 RegulatoryFeatures:HMEC RegulatoryFeatures:HSMM RegulatoryFeatures:HSMMtube RegulatoryFeatures:HUVEC RegulatoryFeatures:IMR90 RegulatoryFeatures:K562 RegulatoryFeatures:Monocytes-CD14+ RegulatoryFeatures:NH-A RegulatoryFeatures:NHDF-AD RegulatoryFeatures:NHEK RegulatoryFeatures:NHLF RegulatoryFeatures:Osteobl RegulatoryFeatures:MultiCell"
+#fset_names="RegulatoryFeatures:A549 RegulatoryFeatures:DND-41 RegulatoryFeatures:GM12878 RegulatoryFeatures:H1ESC RegulatoryFeatures:HeLa-S3 RegulatoryFeatures:HepG2 RegulatoryFeatures:HMEC RegulatoryFeatures:HSMM RegulatoryFeatures:HSMMtube RegulatoryFeatures:HUVEC RegulatoryFeatures:IMR90 RegulatoryFeatures:K562 RegulatoryFeatures:Monocytes-CD14+ RegulatoryFeatures:NH-A RegulatoryFeatures:NHDF-AD RegulatoryFeatures:NHEK RegulatoryFeatures:NHLF RegulatoryFeatures:Osteobl RegulatoryFeatures:MultiCell"
+#fset_names="RegulatoryFeatures:NHEK"
 
 #dbname="mus_musculus_funcgen_${release}_38"
 #dbhost='ens-staging2'
 
 #fset_names="RegulatoryFeatures:ESHyb RegulatoryFeatures:MEF RegulatoryFeatures:MultiCell RegulatoryFeatures:MEL RegulatoryFeatures:NPC RegulatoryFeatures:ES"
 
-#feature_type='RegulatoryFeature'
-#feature_type='SegmentationFeature'
 
 
 #Does not yet support RegulatoryFeatures as these seem to get dumped to a merged file with no cell type info
@@ -94,17 +95,17 @@ if [[ $USER != merge ]]; then
             mkdir -m 775 -p $out_dir
         fi
 
-        job_cmd="$SRC/ensembl-funcgen/scripts/export/dump_features.pl\
-                  -format $format\
-	          -dbhost $dbhost\
-	          -dbname $dbname\
-                  -dnadb_host $dnadbhost\
-                  -dnadb_user $dnadbuser\
-	                      $dump_params\
-	          -out_root $out_dir \
-                  -bin_dir $bin_dir\
-	          -user $USER\
-	                $@	"
+          job_cmd="$SRC/ensembl-funcgen/scripts/export/dump_features.pl\
+          -format $format\
+          -dbhost $dbhost\
+          -dbname $dbname\
+          -dnadb_host $dnadbhost\
+          -dnadb_user $dnadbuser\
+          $dump_params\
+          -out_root $out_dir \
+          -bin_dir $bin_dir\
+          -user $USER\
+          $@	"
 
 
     #Add these on cmd line to avoid including them by mistake
