@@ -139,8 +139,8 @@ sub new {
   my $class  = ref($caller) || $caller;
   my $self   = $class->SUPER::new(@_);
 
-  my ($desc, $dlabel, $iset, $iset_id) = rearrange
-   ( ['DESCRIPTION', 'DISPLAY_LABEL', 'INPUT_SET', 'INPUT_SET_ID'], @_ );
+  my ($desc, $dlabel, $exp) = rearrange
+   ( ['DESCRIPTION', 'DISPLAY_LABEL', 'EXPERIMENT'], @_ );
 
 
   #Mandatory params checks here (setting done in Set.pm)
@@ -155,14 +155,10 @@ sub new {
   }
 
   #Direct assignment to prevent need for set arg test in method
+  $self->{experiment}    = $exp     if defined $exp;
   $self->{description}   = $desc    if defined $desc;
   $self->{display_label} = $dlabel  if defined $dlabel;
  
-
-  if(defined $iset || defined $iset_id){
-    throw('FeatureSet not longer takes and InputSet or it\'s dbID in the constructor'.
-          ', please upass an Experiment/dbID instead');
-  }
 
   return $self;
 }                               ## end sub new
