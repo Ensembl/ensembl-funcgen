@@ -33,13 +33,13 @@ use Bio::EnsEMBL::Funcgen::Experiment;
 
 my $exp = Bio::EnsEMBL::Funcgen::Experiment->new
                (
-				-ADAPTOR             => $self,
-				-NAME                => $name,
-				-EXPERIMENTAL_GROUP  => $experimental_group,
-				-DATE                => $date,
-				-PRIMARY_DESIGN_TYPE => 'binding_site_indentification',
-				-DESCRIPTION         => $description,
-				-ARCHIVE_ID          => $archive_id,
+        -ADAPTOR             => $self,
+        -NAME                => $name,
+        -EXPERIMENTAL_GROUP  => $experimental_group,
+        -DATE                => $date,
+        -PRIMARY_DESIGN_TYPE => 'binding_site_indentification',
+        -DESCRIPTION         => $description,
+        -ARCHIVE_ID          => $archive_id,
                );
 
 my $db_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(...);
@@ -62,6 +62,8 @@ use strict;
 
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw  );
+use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref check_ref );
+
 use base qw( Bio::EnsEMBL::Funcgen::Storable );
 
 =head2 new
@@ -74,12 +76,12 @@ use base qw( Bio::EnsEMBL::Funcgen::Storable );
 
   Example    : my $array = Bio::EnsEMBL::Funcgen::Experiment->new
                 (-NAME                => $name,
-							   -EXPERIMENTAL_GROUP  => $group,
-							   -DATE                => $date,
-							   -PRIMARY_DESIGN_TYPE => $p_design_type,
-							   -DESCRIPTION         => $description,
-					       -ARCHIVE_ID          => 'SRX000000',
-					       -DISPLAY_URL         => $non_archive_url);
+                 -EXPERIMENTAL_GROUP  => $group,
+                 -DATE                => $date,
+                 -PRIMARY_DESIGN_TYPE => $p_design_type,
+                 -DESCRIPTION         => $description,
+                 -ARCHIVE_ID          => 'SRX000000',
+                 -DISPLAY_URL         => $non_archive_url);
 
   Description: Creates a new Bio::EnsEMBL::Funcgen::Experiment object.
   Returntype : Bio::EnsEMBL::Funcgen::Experiment
@@ -91,25 +93,25 @@ use base qw( Bio::EnsEMBL::Funcgen::Storable );
 =cut
 
 sub new {
-	my $caller = shift;
-	my $class  = ref($caller) || $caller;
-	my $self   = $class->SUPER::new(@_);
+    my $caller = shift;
+    my $class  = ref($caller) || $caller;
+    my $self   = $class->SUPER::new(@_);
 
-	my ($name, $group, $date, $p_dtype, 
-	    $desc, $xml, $xml_id, $ftype, $ctype, $archive_id, $url) = rearrange
-	 ( ['NAME', 'EXPERIMENTAL_GROUP', 'DATE', 'PRIMARY_DESIGN_TYPE',
+    my ($name, $group, $date, $p_dtype, 
+        $desc, $xml, $xml_id, $ftype, $ctype, $archive_id, $url) = rearrange
+     ( ['NAME', 'EXPERIMENTAL_GROUP', 'DATE', 'PRIMARY_DESIGN_TYPE',
       'DESCRIPTION', 'MAGE_XML', 'MAGE_XML_ID', 'FEATURE_TYPE', 'CELL_TYPE',
       'ARCHIVE_ID', 'DISPLAY_URL'], @_ );
 
-	#Mandatory attr checks
+    #Mandatory attr checks
 
-	if(ref($group) ne 'Bio::EnsEMBL::Funcgen::ExperimentalGroup'){
-	  throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::ExperimentalGroup object");
-	}
+    if(ref($group) ne 'Bio::EnsEMBL::Funcgen::ExperimentalGroup'){
+      throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::ExperimentalGroup object");
+    }
 
-	if(! defined $name){
-	  throw('You must provide a name parameter');
-	}
+    if(! defined $name){
+      throw('You must provide a name parameter');
+    }
 
   if(! (ref($ctype) && $ctype->isa('Bio::EnsEMBL::Funcgen::CellType')) ){
     throw('You must provide a valid Bio::EnsEMBL::Funcgen::CellType');
@@ -119,23 +121,23 @@ sub new {
     throw('You must provide a valid Bio::EnsEMBL::Funcgen::FeatureType');
   }
   
-	#test date format here?
-	#Direct assignment here so we avoid setter test in methods
-	$self->{name}                = $name;
-	$self->{group}               = $group;
-	$self->{date}                = $date       if defined $date;
-	$self->{primary_design_type} = $p_dtype    if defined $p_dtype; #MGED term for primary design type
-	$self->{description}         = $desc       if defined $desc;
-	$self->{cell_type}           = $ctype;
+    #test date format here?
+    #Direct assignment here so we avoid setter test in methods
+    $self->{name}                = $name;
+    $self->{group}               = $group;
+    $self->{date}                = $date       if defined $date;
+    $self->{primary_design_type} = $p_dtype    if defined $p_dtype; #MGED term for primary design type
+    $self->{description}         = $desc       if defined $desc;
+    $self->{cell_type}           = $ctype;
   $self->{feature_type}        = $ftype;
   $self->{archive_id}          = $archive_id;
   $self->{display_url}         = $url;
 
-	#Maintain setter funcs here as these are populated after initialisation
-	$self->mage_xml_id($xml_id) if defined $xml_id;
-	$self->mage_xml($xml)       if defined $xml;
+    #Maintain setter funcs here as these are populated after initialisation
+    $self->mage_xml_id($xml_id) if defined $xml_id;
+    $self->mage_xml($xml)       if defined $xml;
 
-	return $self;
+    return $self;
 }
 
 
@@ -279,11 +281,11 @@ sub primary_design_type{
 =cut
 
 sub mage_xml{
-  my $self          = shift;	
+  my $self          = shift;    
   $self->{mage_xml} = shift if @_;
 
   if(! exists $self->{mage_xml} && $self->mage_xml_id()){
-	$self->{mage_xml} = $self->adaptor->fetch_mage_xml_by_Experiment($self);
+    $self->{mage_xml} = $self->adaptor->fetch_mage_xml_by_Experiment($self);
   }
 
   return (exists $self->{'mage_xml'}) ? $self->{'mage_xml'} : undef;
@@ -303,7 +305,7 @@ sub mage_xml{
 =cut
 
 sub mage_xml_id{
-  my $self             = shift;	
+  my $self             = shift; 
   $self->{mage_xml_id} = shift if @_;
   return $self->{mage_xml_id};
 }
@@ -463,9 +465,20 @@ sub get_ExperimentalChip_unique_ids{
 sub reset_relational_attributes{
   my ($self, $params_hash, $no_db_reset) = @_;
 
-  my ($experimental_group) = rearrange(['EXPERIMENTAL_GROUP'], %$params_hash);
+  my (
+    $cell_type,
+    $experimental_group,
+    $feature_type,
+    ) = rearrange([
+    'CELL_TYPE',
+    'EXPERIMENTAL_GROUP',
+    'FEATURE_TYPE'
+    ], %$params_hash);
 
   #is_stored (in corresponding db) checks will be done in store method
+  
+  assert_ref($feature_type, 'Bio::EnsEMBL::Funcgen::FeatureType');
+  assert_ref($cell_type,    'Bio::EnsEMBL::Funcgen::CellType');
 
   if(! (defined $experimental_group &&
         ref($experimental_group) eq 'Bio::EnsEMBL::Funcgen::ExperimentalGroup') ){
@@ -474,7 +487,9 @@ sub reset_relational_attributes{
     throw($msg);
   }
 
-  $self->{group}    = $experimental_group;
+  $self->{cell_type}    = $cell_type;
+  $self->{group}        = $experimental_group;
+  $self->{feature_type} = $feature_type;
 
   #Undef the dbID and adaptor by default
   if(! $no_db_reset){
