@@ -20,10 +20,10 @@ shift
 
 
 
-dbname=homo_sapiens_funcgen_77_38
+dbname=homo_sapiens_funcgen_79_37
 #dbname=mus_musculus_funcgen_76_38
-dbhost=ens-staging1
-dnadb_host=ens-staging1
+dbhost=genebuild10
+dnadb_host=genebuild10
 
 dnadb_user=$USER
 
