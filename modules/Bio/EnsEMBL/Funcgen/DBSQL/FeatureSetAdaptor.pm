@@ -318,7 +318,7 @@ sub store {
 		  $self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis', $fset->analysis);
 
 
-		  # Check optional InputSet and CellType
+		  # Check optional CellType and Experiment
 		  my $ctype_id;
 		  my $ctype = $fset->cell_type;
 
