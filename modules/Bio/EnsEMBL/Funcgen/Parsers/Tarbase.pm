@@ -29,6 +29,7 @@ package Bio::EnsEMBL::Funcgen::Parsers::Tarbase;
 use strict;
 use warnings;
 use feature qw(say);
+
 use Bio::EnsEMBL::DBEntry;
 use Bio::EnsEMBL::Funcgen::FeatureType;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
@@ -110,20 +111,21 @@ sub parse_and_load{
   }
 
   # Set release to the release TarBase used to map their miRNA targets
+  # Change load_external_features to also pass release version
   my $external_db_name;
   my $external_db_release;
 
   if($self->species eq 'homo_sapiens'){
     $external_db_name    = 'homo_sapiens_core_Gene';
-    $external_db_release = '76_38';
+    $external_db_release = '79_38';
   }
   elsif($self->species eq 'mus_musculus'){
     $external_db_name    = 'mus_musculus_core_Gene';
-    $external_db_release = '76_38';
+    $external_db_release = '79_37';
   }
   elsif($self->species eq 'rattus_norvegicus'){
     $external_db_name    = 'rattus_norvegicus_core_Gene';
-    $external_db_release = '76_5';
+    $external_db_release = '79_5';
   }
   else{
     throw($self->species . " not implemented. Add here.")
@@ -220,13 +222,13 @@ sub parse_and_load{
     }
     # MIMAT0000416|ENSG00000137801|Proteomics|Computational|39581895_39581923|MRE1|spliced_no|
     # http://diana.imis.athena-innovation.gr/DianaTools/index.php?r=tarbase/index&mirnas=MIMAT0000416&genes=ENSG00000137801
-    
+
     # MIMAT0000416|ENSG00000137801|Proteomics|Computational|39590612_39590623|MRE2|spliced_yes|
     # http://diana.imis.athena-innovation.gr/DianaTools/index.php?r=tarbase/index&mirnas=MIMAT0000416&genes=ENSG00000137801
-    
+
     # MIMAT0000416|ENSG00000137801|Proteomics|Computational|39591191_39591207|MRE2|spliced_yes|
     # http://diana.imis.athena-innovation.gr/DianaTools/index.php?r=tarbase/index&mirnas=MIMAT0000416&genes=ENSG00000137801
-    
+
     # MIMAT0000416|ENSG00000101158|Proteomics|Computational|57569740_57569768|
     # http://diana.imis.athena-innovation.gr/DianaTools/index.php?r=tarbase/index&mirnas=MIMAT0000416&genes=ENSG00000101158
 
@@ -261,9 +263,15 @@ sub parse_and_load{
     }
 
     my $gene = $gene_a->fetch_by_stable_id($ensg);
+
     if(!$gene){
       $log->{outdated_stableID}->{$ensg}++;
       $log2->{outdated_stableID}++;
+      next;
+    }
+    if(!defined $gene->display_xref){
+      $log->{display_id_missing}->{$ensg}++;
+      $log2->{display_id_missing}++;
       next;
     }
     # Might be possible to BLAT 3UTR, but testing a few examples did not result in usable result
@@ -345,7 +353,18 @@ sub parse_and_load{
        -strand        => $gene->strand,
        -supporting_information =>"$mre; $spliced",
        );
-        $mirnafeat_a->store($feature);
+
+      # project if necessary
+      if ($new_assembly) {
+       $feature = $self->project_feature($feature, $new_assembly);
+
+        if (! defined $feature) {
+          $log->{projecting}->{$mi_rna_name}++;
+          $log2->{projecting}++;
+          next;
+        }
+      }
+      $mirnafeat_a->store($feature);
 
       my $dbentry = Bio::EnsEMBL::DBEntry->new(
        -primary_id             => $gene->stable_id,
