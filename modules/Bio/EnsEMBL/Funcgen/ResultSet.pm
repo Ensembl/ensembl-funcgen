@@ -75,7 +75,7 @@ use base qw( Bio::EnsEMBL::Funcgen::Set Bio::EnsEMBL::Funcgen::feature_class_Set
 my %valid_table_names =
   (
    experimental_chip => undef,
-   input_subset     => undef,
+   input_subset      => undef,
    channel           => undef,
   );
 
