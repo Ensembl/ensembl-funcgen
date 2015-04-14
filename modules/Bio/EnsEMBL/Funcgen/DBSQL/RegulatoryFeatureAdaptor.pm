@@ -82,11 +82,9 @@ my %valid_attribute_features = (
 sub fetch_MultiCell_by_stable_ID_Slice {
   my ($self, $stable_id, $slice) = @_;
   my  $fset = $self->_get_current_FeatureSet;
-
-  throw('You must provide a stable_id argument') if ! $stable_id;
-  $stable_id =~ s/[A-Z0]+//;
-
-  $self->bind_param_generic_fetch($stable_id,  SQL_INTEGER);
+  throw('You must provide a stable_id argument') if ! defined $stable_id;
+ 
+  $self->bind_param_generic_fetch($stable_id,  SQL_VARCHAR);
   $self->bind_param_generic_fetch($fset->dbID, SQL_INTEGER);
   return $self->fetch_all_by_Slice_constraint($slice, 'rf.stable_id=? and rf.feature_set_id=?')->[0];
 }
@@ -177,62 +175,50 @@ sub fetch_by_stable_id {
 
 =cut
 
-
 #change this to fetch_all_by_stable_id and remove method of same name below or vice versa?
 #check usage of this method first
 
 
 sub fetch_all_by_stable_id_FeatureSets {
-  my ($self, $stable_id, @fsets) = @_;
+  my $self      = shift;
+  my $stable_id = shift;
+  my @fsets     = @_;  # Change this to arrayref of fsets
 
-  #Change this to arrayref of fsets
-
-  #Standard implementation exposes logic name as a parameter
-  #But it will always be RegulatoryFeature/Build
 
   throw('Must provide a stable ID') if ! defined $stable_id;
-
-  $stable_id =~ s/ENS[A-Z]*R0*//;
-
-
-  #Need to test stable_id here as there is a chance that this argument has been omitted and we are dealing with
-  #a feature set object
-  $self->bind_param_generic_fetch($stable_id, SQL_INTEGER);
+  $self->bind_param_generic_fetch($stable_id, SQL_VARCHAR);
   my $constraint = 'rf.stable_id=?';
-
 
   #Change this to use _generate_feature_set_id_clause
 
   if(@fsets){
 
-	#need to catch empty array and invalid FeatureSets
-	if(scalar(@fsets == 0)){
-	  warning("You have not specified any FeatureSets to fetch the RegulatoryFeature from, defaulting to all");
-	}
-	else{
+	  #need to catch empty array and invalid FeatureSets
+    if(scalar(@fsets == 0)){
+      warning("You have not specified any FeatureSets to fetch the RegulatoryFeature from, defaulting to all");
+    }
+    else{
 
-	  #validate FeatureSets
-	  #Need to check $fset->feature_class eq 'regulatory' too?
-	  map { $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $_)} @fsets;
+	    #validate FeatureSets
+	    #Need to check $fset->feature_class eq 'regulatory' too?
+      map { $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $_)} @fsets;
 
-	  if(scalar(@fsets) == 1){
-      $constraint .= ' and rf.feature_set_id=?';
-      $self->bind_param_generic_fetch($fsets[0]->dbID, SQL_INTEGER);
-	  }else{
-      #How can we bind param this?
-
-      my @bind_slots;
-
-      foreach my $dbid(map $_->dbID, @fsets){
-        push @bind_slots, '?';
-        $self->bind_param_generic_fetch($dbid, SQL_INTEGER);
+      if(scalar(@fsets) == 1){
+        $constraint .= ' and rf.feature_set_id=?';
+        $self->bind_param_generic_fetch($fsets[0]->dbID, SQL_INTEGER);
       }
+      else{
+        my @bind_slots;
 
-      $constraint .= ' AND rf.feature_set_id IN ('.join(', ', @bind_slots).')';
-	  }
-	}
-}
+        foreach my $dbid(map $_->dbID, @fsets){
+          push @bind_slots, '?';
+          $self->bind_param_generic_fetch($dbid, SQL_INTEGER);
+        }
 
+        $constraint .= ' AND rf.feature_set_id IN ('.join(', ', @bind_slots).')';
+      }
+    }
+  }
   return $self->generic_fetch($constraint);
 }
 
@@ -357,8 +343,6 @@ sub _objs_from_sth {
      #external
     );
 
-  my $stable_id_prefix = $self->stable_id_prefix;
-
 	my (
 	    $dbID,                  
       $efg_seq_region_id,
@@ -448,7 +432,7 @@ sub _objs_from_sth {
 	  #Handle non-unique skipping first
 
     if ( $stable_id &&
-         ($skip_stable_id == $stable_id) ) {
+         ($skip_stable_id eq $stable_id) ) {
       #Faster for queries which need to skip if we have this first
       next;
 	  } elsif (@fset_ids) {
@@ -456,7 +440,7 @@ sub _objs_from_sth {
       #so we don't keep doing _fetch_other_feature_set_ids_by_stable_feature_set_ids
       #for ID s we have already checked
 
-      if ($no_skip_stable_id != $stable_id) {
+      if ($no_skip_stable_id ne $stable_id) {
         @other_rf_ids = @{$self->_fetch_other_dbIDs_by_stable_feature_set_ids
                             ($stable_id,
                              \@fset_ids,
@@ -590,10 +574,6 @@ sub _objs_from_sth {
 	      $slice = $dest_slice;
 	    }
 
-
-      #This stops an init warning when sid is absent for sid mapping
-      my $sid = (defined $stable_id) ? sprintf($stable_id_prefix."%011d", $stable_id) : undef;
-
       $reg_feat = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new_fast
         ({
           'start'          => $seq_region_start,
@@ -609,7 +589,7 @@ sub _objs_from_sth {
           'projected'      => $projected,
           'set'            => $fset_hash{$fset_id},
           'feature_type'   => $ftype_hash{$ftype_id},
-          'stable_id'      => $sid,
+          'stable_id'      => $stable_id),
           'has_evidence'   => $has_evidence,
           'cell_type_count'=> $cell_type_count,
          });
@@ -703,18 +683,12 @@ sub store{
 	  next;
 	}
 
-
 	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $rf->feature_set);
-
-
-	my ($sid, $seq_region_id);
+	my ($seq_region_id);
 	($rf, $seq_region_id) = $self->_pre_store($rf);
 	$rf->adaptor($self);#Set adaptor first to allow attr feature retreival for bounds
 	#This is only required when storing
 
-
-	#Actually never happens, as we always assign stable_ids after storing
-	($sid = $rf->stable_id) =~ s/ENS[A-Z]*R0*// if defined $rf->stable_id;
 
 	$sth->bind_param(1,  $seq_region_id,           SQL_INTEGER);
 	$sth->bind_param(2,  $rf->start,               SQL_INTEGER);
@@ -725,7 +699,7 @@ sub store{
 	$sth->bind_param(7,  $rf->{display_label},     SQL_VARCHAR);#Deref so we don't store API default value
 	$sth->bind_param(8,  $rf->feature_type->dbID,  SQL_INTEGER);
 	$sth->bind_param(9,  $rf->feature_set->dbID,   SQL_INTEGER);
-	$sth->bind_param(10, $sid,                     SQL_INTEGER);
+	$sth->bind_param(10, $rf->stable_id,           SQL_VARCHAR);
 	$sth->bind_param(11, $rf->binary_string,       SQL_VARCHAR);
   $sth->bind_param(12, $rf->is_projected,        SQL_BOOLEAN);
   $sth->bind_param(13, $rf->has_evidence,        SQL_BOOLEAN);
@@ -775,11 +749,11 @@ sub store{
 =cut
 
 sub fetch_all_by_Slice {
-  my ($self, $slice, $fset) = @_;
-
+  my $self  = shift;
+  my $slice = shift;
+  my $fset  = shift;;
   $fset ||= $self->_get_current_FeatureSet; #This get the MultiCell sets
 
-  #Ternary operator essential here, as we don't want to die if there is no data!
   return (defined $fset) ? $self->fetch_all_by_Slice_FeatureSets($slice, [$fset]) : undef;
 }
 
@@ -914,17 +888,16 @@ sub _fetch_other_dbIDs_by_stable_feature_set_ids{
 
 =cut
 
+# Add fsets arg here?
+
 sub fetch_all_by_stable_ID {
-  my ($self, $stable_id) = @_;
-
-  #Add fsets here?
-
-  throw('You must provide a stable_id argument') if ! $stable_id;
-  $stable_id =~ s/[A-Z0]+//;
-
-  $self->bind_param_generic_fetch($stable_id, SQL_INTEGER);
+  my $self      = shift;
+  my $stable_id = shift;
+  throw('You must provide a stable_id argument') if ! defined $stable_id;
+  $self->bind_param_generic_fetch($stable_id, SQL_VARCHAR);
   return $self->generic_fetch('rf.stable_id=?');
 }
+
 
 =head2 fetch_all_by_attribute_feature
 

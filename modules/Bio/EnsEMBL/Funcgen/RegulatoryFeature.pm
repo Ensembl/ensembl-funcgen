@@ -321,7 +321,6 @@ sub regulatory_attributes{
 
 =cut
 
-
 sub has_attribute{
   my ($self, $dbID, $fclass) = @_;
 
@@ -329,6 +328,7 @@ sub has_attribute{
 
   return exists ${$self->attribute_cache}{$fclass}{$dbID};
 }
+
 
 =head2 has_evidence
 
@@ -371,9 +371,8 @@ sub get_focus_attributes{
 
   if(! exists $self->{'focus_attributes'} ||
 	 ! @{$self->{'focus_attributes'}}){
-	$self->_sort_attributes;
+   $self->_sort_attributes;
   }
-
 
   return $self->{'focus_attributes'};
 }
@@ -415,13 +414,13 @@ sub _sort_attributes{
 
   foreach my $attrf(@{$self->regulatory_attributes}){
 
-	if($attrf->isa('Bio::EnsEMBL::Funcgen::MotifFeature') ||
-	   $attrf->feature_set->is_focus_set){
-	  push @{$self->{'focus_attributes'}}, $attrf;
-	}
-	else{
-	  push @{$self->{'nonfocus_attributes'}}, $attrf;
-	}
+    if($attrf->isa('Bio::EnsEMBL::Funcgen::MotifFeature') ||
+       $attrf->feature_set->is_focus_set){
+      push @{$self->{'focus_attributes'}}, $attrf;
+    }
+    else{
+      push @{$self->{'nonfocus_attributes'}}, $attrf;
+    }
   }
 
   return;
