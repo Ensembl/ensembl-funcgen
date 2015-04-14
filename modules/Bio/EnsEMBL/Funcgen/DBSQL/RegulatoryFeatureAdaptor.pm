@@ -589,7 +589,7 @@ sub _objs_from_sth {
           'projected'      => $projected,
           'set'            => $fset_hash{$fset_id},
           'feature_type'   => $ftype_hash{$ftype_id},
-          'stable_id'      => $stable_id),
+          'stable_id'      => $stable_id,
           'has_evidence'   => $has_evidence,
           'cell_type_count'=> $cell_type_count,
          });
