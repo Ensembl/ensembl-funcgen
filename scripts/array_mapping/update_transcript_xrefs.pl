@@ -1,5 +1,4 @@
-#
-#/usr/bin/env perl
+#!/usr/bin/env perl
 
 =head1 LICENSE
 
@@ -17,6 +16,7 @@ WITH$OUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
+
 =head1 CONTACT
 
 Please email comments or questions to the public Ensembl
@@ -25,18 +25,15 @@ developers list at <http://lists.ensembl.org/mailman/listinfo/dev>.
 Questions may also be sent to the Ensembl help desk at
 <http://www.ensembl.org/Help/Contact>.
 
+
 =head1 NAME
 
 update_transcript_xrefs.pl
 
+
 =head1 SYNOPSIS
 
-This script performs probe(set) to transcript mapping based on a few simple parameters. Overlap analysis 
-of ProbeFeatures is performed and annotations are stored as xrefs for individual ProbeFeatures, Probes or 
-ProbeSets as a whole. Any probe(set)s which fail the mapping procedure are by default stored in the 
-UnmappedObject tables and a logfile is also written.
-
-e.g. perl update_xref_transcripts.pl --species $SPECIES --transcript_dbname $DNADB_NAME --transcript_host $DNADB_HOST --transcript_port $DNADB_PORT --transcript_user $DNADB_USER --xref_host $DB_HOST --xref_dbname $DB_NAME --xref_user $DB_USER --xref_pass $DB_PASS 
+e.g. perl update_xref_transcripts.pl --out_dir $WORK_DIR --species $SPECIES --transcript_dbname $DNADB_NAME --transcript_host $DNADB_HOST --transcript_port $DNADB_PORT --transcript_user $DNADB_USER --xref_host $DB_HOST --xref_dbname $DB_NAME --xref_user $DB_USER --xref_pass $DB_PASS 
 
 
 =head1 DESCRIPTION
@@ -44,43 +41,46 @@ e.g. perl update_xref_transcripts.pl --species $SPECIES --transcript_dbname $DNA
 
 =head1 OPTIONS
 
-Mandatory
--species    Latin name as used in DB name or meta table e.g. homo_sapiens
+Note: [--parameter] Denotes optional parameter.
 
--reg_verbose    Turns on verbose output when loading the registry
+[--out_dir]  Default is current working directory.
+--species    Latin name as used in DB name or meta table e.g. homo_sapiens
 
--reg_host
--reg_port
--reg_user
--reg_pass
+READING TRANSCRIPTS:
+--transcript_host            The database server to read transcripts from.
+[--transcript_port]          The port to use for reading transcripts. Defaults to 3306.
+--transcript_user            Database username for reading transcripts.
+--transcript_pass            Password for transcript_user, if required.
+--transcript_dbname          Database name to read transcripts from.
+[--transcript_multi_species] Indicates that the transcript database is multi-species
+[--transcript_species_id]    Species ID to use top access multi-species data
 
+
+WRITING XREFS:
+--xref_host            The database server to write xrefs to.
+[--xref_port]          The port to use for writing xrefs.. Defaults to 3306.
+--xref_user            Database username for xrefs. Must allow writing.
+--xref_pass            Password for xref_user, if required.
+--xref_dbname          Database name to write xrefs to.
+[--xref_multi_species] Indicates that the transcript database is multi-species
+[--xref_species_id]    Species ID to use top access multi-species data
+
+OR USING A REGISTRY:
+[--reg_verbose]    Turns on verbose output when loading the registry
+
+--reg_host
+--reg_port
+--reg_user
+[--reg_pass]
 or
+[--reg_file]
 
--reg_file
-
-or
-
--transcript_host          Mandatory
--transcript_user          Mandatory
--transcript_port    
--transcript_pass          Mandatory
--transcript_dbname        Mandatory
--transcript_multi_species
--transcript_species_id
-
--xref_host          Mandatory
--xref_user          Mandatory
--xref_port
--xref_pass          Mandatory
--xref_dbname        Mandatory
--xref_multi_species
--xref_species_id
 
 Other options:
--import_edb         Automatically imports the external_db record if not present
--tee                Tees output to STD$OUT
--filename           Sets name to be used in output and logfile, default is xref_dbname_probe2transcript.log|out
--help               Prints this POD documentation and exits
+--tee                Tees output to STDOUT
+--log_file           Default is $out_dir/xref_dbname_update_transcript_xrefs.log. Or if --out_dir is
+                     not specified, the default Helper log directory.
+--help               Prints this POD documentation and exits
 
 
 =head1 EXAMPLE
@@ -89,62 +89,18 @@ Other options:
 =head1 SEE ALSO
 
 ensembl-funcgen/scripts/environments/arrays.env
+ensembl-funcgen/scripts/probe2transcript.pl
 
 =cut
 
 #To do
 
-# 1. Reimpliment validate arrays, see old script?
-# 2. Add unannotated UTR clipping dependant on nearest neighbour
-# 3. Extend UTRs to default length is they are less than defaults, so long as they don't overlap neighbour, 
-#    then use annotated if present or clip to neighbour start/end if not, also accounting for default UTRs 
-#    in the neighbour.
-# 4. Separate UTR multipliers for 3' and 5'?
-# 5. Implement incremental update from list of stable IDs. Consider unmapped probe changes etc. 
-# 6. Parallelise by probeset chunks, can't do this by chromosome slices as we need to know genomewide 
-#    counts for a given probeset. Calc UTRs then submit chunks jobs to farm
-#    Chunk by retrieving all probesets and sorting an array of probeset names, then splice the array 
-#    according to the number of chunks. We're still going to have retrieve all the transcripts and retrieve 
-#    all probes for each, so we are really not gaining anything!! The only gain we can make is by chunking 
-#    by slice, but then we need to know how many times something has mapped. Can we do some clean up afterwards? 
-#    Let's add a clean up mode which simply deletes all probe sets which map too many times. We would need to 
-#    ignore this threshold as we were mapping!!! So we don't delete and then mess up the counts for post run 
-#    clean up.
-# 7. There is no reason to have separate probe and xref DBs???
-# 8. Validate array format against arrays specified? May want to just use an array format as a template???
-# 9. Add mismatch filter for ProbeTranscriptAlign xrefs as match rules can differ between alignment and 
-#    annotation
-# 10.Handle ProbeAlign mismatch vs overlap mis match. Currently the overlap calculation is naive to the 
-#    presence of alignment mis-matches.  Which means there is a possiblity of including probes with a total 
-#    sequence mismatch of (align mismatch + overlap mismatch). This has always been the case.
-# 11.Move ProbeAlign unmapped object storage to write_output, then this will not get written in test mode and 
-#    we won't get duplication should the job fail halfway through. This is because hceck existing only check oxs, not uos.
-# 12.Enable probesets to have different sizes on different arrays, see notes in cache_arrays_per_object
-# 13.Collect warning into summary repoprt to list at very end.
-# 14 Reduce max_transcripts as this is never being hit due to alignment threshold
-# 15 Why can't we omit -arrays if we have -format?
-# 16 Add UTR only overlap  in range registry.
-# 17 Check for ProbeFeature xrefs and UOs in check_existing_and_exit?
-# 18 PostAlign/PreXref processing
-#    Remove duplicated ProbeFeatures(from ProbeTranscriptAlign) and redirect Xrefs
-#    Being careful to make sure cigarlines are valid for both.
-#    Remove ProbeTranscriptAlign ProbeFeaturess which have been called promiscuous 
-#    by ProbeAlign, and update to promiscuous if sum of ProbeAlign and 
-#    ProbeTranscriptAlign features render a Probe promiscuous
+# 1. Make this do the UTR calculations once, so it's not done redundantly in probe2transcript.
+#    Move this code to a separate module, so we can keep functionatlity in both scripts.
+#    Will need to bsub this, and write/flow output somewhere.
 
-#Ensembl Genomes stuff
-# TEST Registry usage required as species will come from same DB
-# In which case we need to take a species param for each of the transcript, array and xref DBs
-# Or can we force delete to be species specific? We would need to do this anyway to support updating of species asynchronously
-# We probably need to think about this for the 1st stage too, 
-# but will be easy as we just need to dump the correct top level sequence
-# Validate species against registry alias and use this to generate species_core_Gene DB rather than ensembl_core_Gene
-# patch other efg DBs and alter External parsers accordingly.
-# Can't rely on Registry as species aliases may not be present or loaded
-
-# Issues
-# Cannot account for running non-linked arrays which may use the same probe/set name.  This may cause failure if the probeset sizes are different. Xrefs and counts should be unaffected as we base these on the probe_set_ids not the names. This is not really an issue as unlinked arrays should not be run together
-# Cannot currently handle probesets with different sizes between arrays, defaults to lowest probeset size to be permissive. See todo 12.
+# 2. Remove Helper and print to std filename directly. Currently log_file is never used as Helper
+#    is initialised too early. Hence some output going may go to STDOUT and some to the default log dir
 
 use strict;
 
@@ -153,22 +109,23 @@ use Getopt::Long;
 use File::Temp qw/tempfile/;
 use IO::Handle;
 
-use Bio::EnsEMBL::DBEntry;
-use Bio::EnsEMBL::UnmappedObject;
+use Bio::EnsEMBL::DBSQL::Driver; # For over-riding connect_params method
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Mapper::RangeRegistry;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::Utils::Helper;
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw (median mean get_date);
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_backtick_cmd );
 
 $| = 1; # auto flush stdout
 
-#Helper params
+# Helper params
+my $Helper = new Bio::EnsEMBL::Funcgen::Utils::Helper;  
+# This needs initisalising later, see To do 2 above
 $main::_log_file = undef;
 $main::_tee      = 0;    
-our $Helper = new Bio::EnsEMBL::Funcgen::Utils::Helper;
 my $debug = 0;
+
+# print "$0 @ARGV\n"; 
 
 main();
 
@@ -192,44 +149,9 @@ sub main {
 
 # ----------------------------------------------------------------------
 
-sub usage {
-
-	print << "EOF";
-Updates transcript xref ids.
-
-perl $0 {options}
-
-Options ([..] indicates optional):
-
-READING TRANSCRIPTS:
---transcript_host            The database server to read transcripts from.
-[--transcript_port]          The port to use for reading transcripts. Defaults to 3306.
---transcript_user            Database username for reading transcripts.
---transcript_pass            Password for transcript_user, if required.
---transcript_dbname          Database name to read transcripts from.
-[--transcript_multi_species] Indicates that the transcript database is multi-species
-[--transcript_species_id]    Species ID to use top access multi-species data
-
-WRITING XREFS:
---xref_host            The database server to write xrefs to.
-[--xref_port]          The port to use for writing xrefs.. Defaults to 3306.
---xref_user            Database username for xrefs. Must allow writing.
---xref_pass            Password for xref_user, if required.
---xref_dbname          Database name to write xrefs to.
-[--xref_multi_species] Indicates that the transcript database is multi-species
-[--xref_species_id]    Species ID to use top access multi-species data
-EOF
-
-	exit(0);
-
-}
-
-# ----------------------------------------------------------------------
-
 sub get_options {
 	my $options = {};
-
-# Default options
+  # Default options
 	$options->{reg_verbose} = 0;
 	$options->{transcript_port} = 3306; 
 	$options->{xref_port} = 3306;
@@ -237,49 +159,68 @@ sub get_options {
 	my @tmp_args = @ARGV;
 
 	GetOptions(
-		'transcript_host=s'      => \$options->{transcript_host},
-	'transcript_user=s'      => \$options->{transcript_user},
-	'transcript_port=i'      => \$options->{transcript_port},
-	'transcript_pass=s'      => \$options->{transcript_pass},
-	'transcript_dbname=s'    => \$options->{transcript_dbname},
-	'transcript_species_id=i' => \$options->{transcript_species_id},
-	'transcript_multi_species' => \$options->{transcript_multi_species},
-	'xref_host=s'            => \$options->{xref_host},
-	'xref_user=s'            => \$options->{xref_user},
-	'xref_port=i'            => \$options->{xref_port},
-	'xref_pass=s'            => \$options->{xref_pass},
-	'xref_dbname=s'          => \$options->{xref_dbname},
-	'xref_species_id=i' => \$options->{xref_species_id},
-	'xref_multi_species' => \$options->{xref_multi_species},
-	'reg_file=s'             => \$options->{reg_file},
-	'reg_host=s'             => \$options->{reg_host},
-	'reg_user=s'             => \$options->{reg_user},
-	'reg_pass=s'             => \$options->{reg_pass},
-	'reg_port=i'             => \$options->{reg_port},
-	'reg_verbose'            => \$options->{reg_verbose},
-	'species=s'              => \$options->{species},
-#Helper params
-	'tee'                    => \$main::_tee,
-	'filename'               => \$main::_log_file,
-#add a reduced log to minimize memory usage?
-	'help'                   => sub { pos2usage(-exitval => 0, -message => "Params are:\t@tmp_args"); }
+    'transcript_host=s'        => \$options->{transcript_host},
+    'transcript_user=s'        => \$options->{transcript_user},
+    'transcript_port=i'        => \$options->{transcript_port},
+    'transcript_pass=s'        => \$options->{transcript_pass},
+    'transcript_dbname=s'      => \$options->{transcript_dbname},
+    'transcript_species_id=i'  => \$options->{transcript_species_id},
+    'transcript_multi_species' => \$options->{transcript_multi_species},
+    'xref_host=s'              => \$options->{xref_host},
+    'xref_user=s'              => \$options->{xref_user},
+    'xref_port=i'              => \$options->{xref_port},
+    'xref_pass=s'              => \$options->{xref_pass},
+    'xref_dbname=s'            => \$options->{xref_dbname},
+    'xref_species_id=i'        => \$options->{xref_species_id},
+    'xref_multi_species'       => \$options->{xref_multi_species},
+    'reg_file=s'               => \$options->{reg_file},
+    'reg_host=s'               => \$options->{reg_host},
+    'reg_user=s'               => \$options->{reg_user},
+    'reg_pass=s'               => \$options->{reg_pass},
+    'reg_port=i'               => \$options->{reg_port},
+    'reg_verbose'              => \$options->{reg_verbose},
+    'species=s'                => \$options->{species},
+    'out_dir=s'                => \$options->{out_dir},
+    # Helper params
+    'tee'                    => \$main::_tee,
+    'log_file'               => \$main::_log_file,
+    'help'                   => sub { pos2usage(-exitval => 0, -message => "Params are:\t@tmp_args"); }
 	) or pod2usage(
 		-exitval => 1,
 		-message => "Params are:\t@tmp_args"
 	);
 
-#Set log type so we are no over writing to the same files for different 
-#format, or custom formats
-	$options->{log_type} = $options->{format} || $$;
-	$options->{filename} ||= "$options->{xref_dbname}_$options->{log_type}_probe2transcript";
-	$main::_log_file ||=  "./$options->{filename}.log";
-	$options->{hostname} = `hostname`;
-	chomp($options->{hostname});
-	$Helper->log_header('Running on probe2transcript.pl on: '.$options->{hostname}, 0, 'append_date');
+
+  # This is not working correctly, and is currently writing log file to default log dir, not workdir
+  # no_log should be set in caller
+
+	#$options->{filename} ||= "$options->{xref_dbname}_$options->{log_type}_probe2transcript";
+
+
+  if(defined $options->{out_dir}){
+
+    if(! -d $options->{out_dir}){
+      die("Parameter --out_dir is not a valid directory:\t".$options->{out_dir});
+    }
+
+    #append a slash is not already present
+    if($options->{out_dir} !~ /\/$/o){
+      $options->{out_dir} .= '/';
+    }
+  }
+  else{ $options->{out_dir} = ''; }  # Avoid under concat warning
+
+  # This is currently useless, see To do 2 above
+  if(! defined $main::_log_file){
+    $main::_log_file = $options->{out_dir}.$options->{xref_dbname}.'_update_transcript_xrefs.log';
+  }
+
+	$options->{hostname} = run_backtick_cmd('hostname');
+	$Helper->log_header("Running on $0 on: ".$options->{hostname}, 0, 'append_date');
 	$Helper->log("Params are:\t@tmp_args");
 
 	if(! $options->{species}) {
-		die("Must provide a -species");
+		die('Must provide a -species');
 	}
 
 	if($options->{reg_host} && ! ($options->{reg_user} && $options->{reg_pass})) {
@@ -333,7 +274,7 @@ sub get_databases {
 		);
 
 		$xref_db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-			-host => $options->{xref_host},
+			-host   => $options->{xref_host},
 			-port   => $options->{xref_port},
 			-user   => $options->{xref_user},
 			-pass   => $options->{xref_pass},
@@ -344,11 +285,56 @@ sub get_databases {
 		);
 	}
 
-#Test the DBs here before starting
+  # Test the DBs here before starting
+ 
 	$transcript_db->dbc->db_handle;
+
+  # Inject/over-write Driver::connect_params method to handle mysql_local_infile config
+  # This has the advantage of maintaining the use of the Ensembl DBAdaptors, so we don't
+  # have to write any more exception handling or other wrappers
+  # The cost here is the risk of this (very stable method) getting out of sync
+  no strict 'refs';
+  
+  *{'Bio::EnsEMBL::DBSQL::Driver::connect_params'} = sub { 
+    my $self = shift;
+    my $conn = shift;
+
+    my $dbname = $conn->dbname();
+    my $dbparam = ($dbname) ? "database=${dbname};" : q{};
+
+    my $dsn = sprintf( "DBI:%s:%shost=%s;port=%s",
+     $conn->driver(), $dbparam,
+     $conn->host(),   $conn->port() );
+
+    my $attrs = { 'RaiseError' => 1 };
+
+    if ((exists $conn->{local_infile}) && $conn->{local_infile}){
+      #$dsn .= ';mysql_local_infile=1';
+      $attrs->{mysql_local_infile} = 1;
+    }
+
+    if ( $conn->{'disconnect_when_inactive'} ) {
+      $conn->{'count'}++;
+      if ( $conn->{'count'} > 1000 ) {
+        sleep 1;
+        $conn->{'count'} = 0;
+      }
+    }
+
+    return {
+      dsn        => $dsn,
+      username   => $conn->username(),
+      password   => $conn->password(),
+      attributes => $attrs,
+    };
+  };
+     
+  use strict;
+
+  $xref_db->{local_infile} = 1;
 	$xref_db->dbc->db_handle;
 
-#Allow automatic reconnection
+  # Allow automatic reconnection
 	$transcript_db->dbc->disconnect_if_idle(1);
 	$xref_db->dbc->disconnect_if_idle(1);
 
@@ -393,7 +379,7 @@ sub get_external_db_id {
 	} 
 
 	$Helper->log("Importing external_db using: $sql");
-	$xref_db->dbc->db_handle->do($sql);
+	$xref_db->dbc->do($sql);
 	return $xref_db->last_insert_id();
 }
 
@@ -464,12 +450,15 @@ sub load_new_transcript_xrefs {
 	my ($new_transcripts, $xref_db, $transc_edb_id) = @_;
 	my ($fh, $filename) = tempfile();
 	foreach my $transcript (@$new_transcripts) {
-		print $fh join("\t", ('/N', $transc_edb_id, $transcript->stable_id, $transcript->display_id, $transcript->version, '\N', 'MISC','TRANSCRIPT'))."\n";
+		print $fh join("\t", ('\N', $transc_edb_id, $transcript->stable_id, $transcript->display_id, $transcript->version, '\N', 'MISC','TRANSCRIPT'))."\n";
 	}
-	chmod 0644, $filename;
+
+	chmod 0644, $filename; # Just in case default means mysql can't read it
 	$fh->autoflush;
 	my $sql = "LOAD DATA LOCAL INFILE \"$filename\" INTO TABLE xref";
-	$xref_db->dbc->db_handle->do($sql);
+	$xref_db->dbc->do($sql);
+
 	close $fh;
+  return;
 }
 
