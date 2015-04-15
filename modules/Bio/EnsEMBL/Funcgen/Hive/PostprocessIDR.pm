@@ -59,7 +59,6 @@ sub fetch_input {   # fetch parameters...
   #                            set_type => 'ResultSet'}
 
   #Can either get the accu idr peaks or read from file
-  #based on the 
     
   #How are we going to differentiate pseudo reps?
   #SubmitIDR will know about these,as they will be passed explicitly from GeneratePseudoReplicates
@@ -70,17 +69,12 @@ sub fetch_input {   # fetch parameters...
     throw("Param set_type should be 'ResultSet', not:\t".$self->param('set_type'));  
   }
   
-  my $rset_ids = $self->get_param_method('dbIDs',  'required');
-  assert_ref($rset_ids, 'ARRAY', 'ResultSet dbIDs');
-  $self->get_param_method('permissive_peaks', 'required');
-  $self->get_param_method('idr_peak_counts',  'required');
-  $self->get_param_method('output_prefixes',  'required');
+  assert_ref($self->get_param_method('dbIDs',  'required'), 'ARRAY', 'ResultSet dbIDs');
+  #$self->get_param_method('permissive_peaks', 'required');
   $self->get_param_method('batch_name',       'required');
-  assert_ref($self->output_prefixes, 'ARRAY', 'output_prefixes');
-  
+  assert_ref($self->get_param_method('output_prefixes',  'required'), 'ARRAY', 'output_prefixes');
   #This is accumulated data from the RunIDR fan jobs, submitted & semaphored from PreprocessIDR
-  my $idr_peaks = $self->get_param_method('idr_peak_counts', 'required');   
-  assert_ref($idr_peaks, 'ARRAY', 'IDR peaks');
+  assert_ref($self->get_param_method('idr_peak_counts', 'required'), 'ARRAY', 'IDR peaks');
  
   return;
 }
