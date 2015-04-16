@@ -143,7 +143,7 @@ sub main {
 		$Helper->log("No transcripts need adding\n", 0, 1);
 	} else {
 		$Helper->log("Found ".scalar @$new_transcripts ." transcripts to add\n", 0, 1);
-		load_new_transcript_xrefs ($new_transcripts, $xref_db, $transc_edb_id);
+		load_new_transcript_xrefs ($new_transcripts, $xref_db, $transc_edb_id, $options);
 	}
 }
 
@@ -447,7 +447,7 @@ sub get_unknown_transcript_list {
 
 # Load unknown transcripts into the xref table
 sub load_new_transcript_xrefs {
-	my ($new_transcripts, $xref_db, $transc_edb_id) = @_;
+	my ($new_transcripts, $xref_db, $transc_edb_id, $options) = @_;
 	my ($fh, $filename) = tempfile();
 	foreach my $transcript (@$new_transcripts) {
 		print $fh join("\t", ('\N', $transc_edb_id, $transcript->stable_id, $transcript->display_id, $transcript->version, '\N', 'MISC','TRANSCRIPT'))."\n";
@@ -455,10 +455,33 @@ sub load_new_transcript_xrefs {
 
 	chmod 0644, $filename; # Just in case default means mysql can't read it
 	$fh->autoflush;
-	my $sql = "LOAD DATA LOCAL INFILE \"$filename\" INTO TABLE xref";
-	$xref_db->dbc->do($sql);
-
+	my $cmd = "mysql -u $options->{xref_user} -h $options->{xref_host} -D $options->{xref_dbname} -e 'LOAD DATA LOCAL INFILE \"$filename\" INTO TABLE xref'";
+	if (defined $options->{xref_port}) {
+	$cmd .= " -P $options->{xref_port}";
+	}
+	if (defined $options->{xref_pass}) {
+	$cmd .= " -p$options->{xref_pass}";
+	}
+	run($cmd);
 	close $fh;
-  return;
+	unlink $filename;
+}
+
+########################################################
+## System calls 
+## Wrapper function for system calls
+## Params:
+## - Command line
+## Actions:
+## - Runs command, prints out error in case of failure
+########################################################
+
+sub run {
+  my ($cmd) = @_;
+  $Helper->log("Running $cmd\n", 0, 'append_date');
+  my $exit_code = system($cmd);
+  if ($exit_code != 0) {
+    die("Failure when running command\n$cmd\n")
+  }
 }
 
