@@ -336,7 +336,7 @@ sub main {
 
   $Helper->log("Overlapping probe features and transcripts", 0, 'append_date');
   my ($fh3, $filename3) = tempfile(DIR => $options->{temp_dir});
-  run("bedtools intersect -sorted -wa -wb -a $filename -b $filename2 | sort -k4,4 > $filename3");
+  run("bedtools intersect -wa -wb -a $filename -b $filename2 | sort -k4,4 > $filename3");
   close $fh;
   unlink $filename;
   close $fh2;
