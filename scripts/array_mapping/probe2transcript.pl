@@ -1170,10 +1170,10 @@ sub write_extended_transcript {
   my $new_end;
   if ($transcript->strand() >= 0) {
     $new_start = $transcript->seq_region_start - $options->{$transcript_sid}{flanks}{5}; 
-    $new_end = $transcript->seq_region_end + $options->{flanks}{3};
+    $new_end = $transcript->seq_region_end + $options->{$transcript_sid}{flanks}{3};
   } else {
     $new_start = $transcript->seq_region_start - $options->{$transcript_sid}{flanks}{3}; 
-    $new_end = $transcript->seq_region_end + $options->{flanks}{5};
+    $new_end = $transcript->seq_region_end + $options->{$transcript_sid}{flanks}{5};
   }
 
   if ($new_start < 0 ) {
@@ -1397,11 +1397,11 @@ sub examine_probefeature {
   if($options->{array_config}{sense_interrogation}) {
     if($transcript->seq_region_strand == $strand) {
       print $OUT "Unmapped sense ".$log_name."\n";
-      next;
+      return;
     }
   } elsif ($transcript->seq_region_strand != $strand) {
     print $OUT "Unmapped anti-sense ".$log_name."\n";
-    next;
+    return;
   }
 
   my $mm_link_txt = '';
@@ -1507,12 +1507,12 @@ sub record_aligned_probefeature {
   my $flank_end     = 0;
   my $flank_overlap = 0;
 
-  foreach my $end ('3', '5') {
-    if ($options->{$transcript->stable_id}{flanks}{$end}) {
-      $flank_overlap = $options->{rr}->overlap_size("${end}_exonutr", $start, $end);
+  foreach my $side ('3', '5') {
+    if ($options->{$transcript->stable_id}{flanks}{$side}) {
+      $flank_overlap = $options->{rr}->overlap_size("${side}_exonutr", $start, $end);
     }
     if ($flank_overlap) {
-      $flank_end = $end;
+      $flank_end = $side;
       last;
     }
   }
@@ -2009,7 +2009,7 @@ sub store_unmapped_objects {
 
   my ($fh, $filename) = tempfile();
   foreach my $unmapped_object ( @$unmapped_objects ) {
-    print $fh join("\t", ['\N', $unmapped_object->{'type'}, $unmapped_object->analysis->dbID, $unmapped_object->{'external_db_id'}, $unmapped_object->{'identifier'}, $unmapped_object->{'unmapped_reason_id'}, $unmapped_object->{'query_score'}, $unmapped_object->{'target_score'}, $unmapped_object->{'ensembl_id'}, $unmapped_object->{'ensembl_object_type'}, '\N'])."\n";
+    print $fh join("\t", ('\N', $unmapped_object->{'type'}, $unmapped_object->analysis->dbID, $unmapped_object->{'external_db_id'}, $unmapped_object->{'identifier'}, $unmapped_object->{'unmapped_reason_id'}, '\N', '\N', $unmapped_object->{'ensembl_id'}, $unmapped_object->{'ensembl_object_type'}, '\N'))."\n";
   }
   chmod 0644, $filename;
   $fh->autoflush;
