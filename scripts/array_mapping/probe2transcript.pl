@@ -1607,6 +1607,9 @@ sub compute_hits {
       }
 
       $object_transcript_hits->{$object_id}{$transcript->stable_id} = [$hits, $num_mismatch_hits];
+      if ($options->{xref_object} eq 'Probe' && $hits == 1) {
+        push @{$object_transcript_hits->{$object_id}{$transcript->stable_id}}, $transcript_feature_info->{$object_id}[0][0];
+      }
     } else {
       my $id_names = $object_id.'('.join(',', @{$options->{object_names}{$object_id}}).')';
       print $OUT "$id_names\t".$transcript->stable_id."\tinsufficient\t$hits/$probeset_size in ProbeSet\n";
@@ -1726,8 +1729,8 @@ sub create_final_xrefs {
 
   foreach my $object_id (keys %$object_transcript_hits) {
     foreach my $transcript_id (keys %{$object_transcript_hits->{$object_id}}) {
-      my ($hits, $num_mismatch_hits) = @{$object_transcript_hits->{$object_id}{$transcript_id}};
       my $id_names = $object_id.'('.join(',', @{$options->{object_names}{$object_id}}).')';
+      my ($hits, $num_mismatch_hits, $desc) = @{$object_transcript_hits->{$object_id}{$transcript_id}};
 
       my $linkage_annotation;
       if($options->{xref_object} eq 'ProbeSet') {
@@ -1740,13 +1743,15 @@ sub create_final_xrefs {
             $linkage_annotation .= "(with $num_mismatch_hits mismatched probes)";
           }
         }
-      } elsif($hits > 1) {
-        $linkage_annotation = "Matches $hits times";
-        if ($num_mismatch_hits) {
-          $linkage_annotation .= " ($num_mismatch_hits times with mismatches)";
+      } else {
+	if($hits > 1) {
+          $linkage_annotation = "Matches $hits times";
+          if ($num_mismatch_hits) {
+            $linkage_annotation .= " ($num_mismatch_hits times with mismatches)";
+          }
+        } else{
+          $linkage_annotation = 'Matches '. $desc;
         }
-      } else{
-        $linkage_annotation = 'Matches '.$hits - $num_mismatch_hits;
       }
 
       my $other_hits = (scalar keys %{$object_transcript_hits->{$object_id}}) - 1;
