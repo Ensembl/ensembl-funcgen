@@ -832,23 +832,25 @@ sub update_meta_table {
   my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
   $year += 1900;
   $mon += 1;
+  my ($main, $update);
   my $version = $mc->single_value_by_key('regbuild.version.ARCHIVED');
   if (defined $version) {
-    my ($main, $update) = split(".", $version);
+    ($main, $update) = split(/\./, $version);
     if (defined $options->{small_update}) {
+      $mc->store_key_value('regbuild.initial_release_date', $mc->single_value_by_key('regbuild.initial_release_date.ARCHIVED'));
       $update += 1;
     } else {
+      $mc->store_key_value('regbuild.initial_release_date', "$year-$mon");
       $main += 1;
       $update = 0;
-      $mc->update_key_value('regbuild.initial_release_date', "$year-$mon");
     }
-    $mc->update_key_value('regbuild.version', join(".", ($main, $update)));
-    $mc->update_key_value('regbuild.last_annotation_update', "$year-$mon");
   } else {
-    $mc->set_key_value('regbuild.initial_release_date', "$year-$mon");
-    $mc->set_key_value('regbuild.version', "1.0");
-    $mc->set_key_value('regbuild.last_annotation_update', "$year-$mon");
+    $mc->store_key_value('regbuild.initial_release_date', "$year-$mon");
+    $main = 1;
+    $update = 0;
   }
+  $mc->store_key_value('regbuild.version', join(".", ($main, $update)));
+  $mc->store_key_value('regbuild.last_annotation_update', "$year-$mon");
 }
 
 1;
