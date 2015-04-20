@@ -30,14 +30,14 @@ load_build.pl
 
 =head1 SYNOPSIS
 
-perl load_new_assembly.pl --host $host --user $user --pass $pass --dbname homo_sapiens_funcgen_76_38 --dnadb_name homo_sapiens_core_76_38 --dnadb_user $user2 --dnadb_host $host2 --base_dir hg38/
+perl load_new_assembly.pl --host $host --user $user --pass $pass --dbname homo_sapiens_funcgen_76_38 --base_dir hg38/
 
 =head1 DESCRIPTION
 
 Loads a segmentation BigBed file annotated by the new regulatory build into the database.
 Params:
 	* base_dir: directory with assembly name (e.g. ./hg38) create by build
-	* your usual Ensembl Funcgen MySQL params: host, dnadb_host, usr, dnadb_user, etc...
+	* your usual Ensembl Funcgen MySQL params: host, user etc...
 
 In short, the file $base_dir/segmentations/$segmentation/$cell_type_name.bb must exist
 
