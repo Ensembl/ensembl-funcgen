@@ -1801,7 +1801,6 @@ sub print_unmapped_counts {
 # object_id x Bio::EnsEMBL::Transcript object => array ref
 sub print_xrefs_per_array {
   my ($xref_object, $arrays_per_object, $object_transcript_hits) = @_;
-  my $count = 0;
 
   $Helper->log("Counting xrefs");
 
@@ -1810,17 +1809,21 @@ sub print_xrefs_per_array {
   my %covered_objects = ();
   foreach my $object_id (keys %$object_transcript_hits) {
     foreach my $array (@{$arrays_per_object->{$object_id}}) {
-      $count++;
-      $objects_per_array{$array} ||= 0;
-      $objects_per_array{$array}++;
-      $total{$array}++;
+      $total{$array} ||= 0;
+      $total{$array} += scalar keys %{$object_transcript_hits->{$object_id}};
       $covered_objects{$array} ||= {};
       $covered_objects{$array}{$object_id} = undef;
     }
   }
 
+  foreach my $object_id (keys %$arrays_per_object) {
+    foreach my $array (@{$arrays_per_object->{$object_id}}) {
+      $objects_per_array{$array} ||= 0;
+      $objects_per_array{$array}++;
+    }
+  }
+
   $Helper->log("Found ".scalar(keys(%$object_transcript_hits))." hits");
-  $Helper->log("Total updates: $count");
 
   foreach my $aname(keys %total) {
     $Helper->log("$aname distinct $xref_object xrefs mapped(total xrefs):\t". 
