@@ -133,7 +133,7 @@ sub get_options {
     "host|h=s",
     "user|u=s",
     "dbname|d=s",
-    "small_update=s",
+    "small_update",
   ) or pod2usage( -exitval => 1);
   defined $options{base_dir} || die ("You must define the base directory!\t--base_dir XXXX\n");
   defined $options{host} || die ("You must define the destination host!\t--host XXXX\n");
