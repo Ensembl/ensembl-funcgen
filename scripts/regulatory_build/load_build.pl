@@ -786,7 +786,8 @@ sub process_file {
 sub compute_regulatory_annotations {
   my ($options) = @_;
 
-  my ($tmp_fh, $regulatory_features) = tempfile();
+  my ($tmp_fh, $cell_type_regulatory_features) = tempfile();
+  my ($tmp_fh, $multicell_regulatory_features) = tempfile();
   my ($tmp_fh2, $annotations) = tempfile();
   my ($tmp_fh3, $motifs) = tempfile();
   my ($tmp_fh4, $out) = tempfile();
@@ -812,7 +813,8 @@ sub compute_regulatory_annotations {
   run("mysql -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -e 'TRUNCATE TABLE regulatory_attribute;'");
   run("mysql -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -e 'LOAD DATA LOCAL INFILE \"$out\" INTO TABLE regulatory_attribute;'");
 
-  unlink $regulatory_features;
+  unlink $cell_type_regulatory_features;
+  unlink $multicell_regulatory_features;
   unlink $annotations;
   unlink $motifs;
   unlink $out;
