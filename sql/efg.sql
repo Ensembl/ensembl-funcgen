@@ -74,7 +74,7 @@ CREATE TABLE `regulatory_feature` (
   `seq_region_start` int(10) unsigned NOT NULL,
   `seq_region_end` int(10) unsigned NOT NULL,
   `display_label` varchar(80) default NULL,
-  `stable_id` `stable_id` varchar(128) DEFAULT NULL,
+  `stable_id`  varchar(128) DEFAULT NULL,
   `binary_string` varchar(500) default NULL,
   `projected` boolean default FALSE,
   `bound_start_length` mediumint(3) unsigned NOT NULL,
