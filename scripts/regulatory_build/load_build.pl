@@ -154,9 +154,11 @@ sub archive_previous_build {
   if (defined $options->{pass}) {
     $connection .= " -p$options->{pass}";
   }
-  run("$connection -e 'UPDATE data_set SET name = CONCAT(name, \".ARCHIVED\") WHERE name LIKE \"RegulatoryFeatures:%\" AND name NOT LIKE \"%.ARCHIVED\"'");
-  run("$connection -e 'UPDATE feature_set SET name = CONCAT(name, \".ARCHIVED\") WHERE name LIKE \"RegulatoryFeatures:%\" AND name NOT LIKE \"%.ARCHIVED\"'");
-  run("$connection -e 'UPDATE meta SET meta_key = CONCAT(meta_key, \".ARCHIVED\") WHERE meta_key LIKE \"regbuild.%\" AND meta_key NOT LIKE \"%.ARCHIVED\"'");
+  my $version = $mc->single_value_by_key('regbuild.version');
+  run("$connection -e 'UPDATE data_set SET name = CONCAT(name, \"_v$version\") WHERE name LIKE \"RegulatoryFeatures:%\" AND name NOT LIKE \"%_v$version\"'");
+  run("$connection -e 'UPDATE feature_set SET name = CONCAT(name, \"_v$version\") WHERE name LIKE \"RegulatoryFeatures:%\" AND name NOT LIKE \"%_v$version\"'");
+  run("$connection -e 'UPDATE meta SET meta_key = CONCAT(meta_key, \"_v$version\") WHERE meta_key LIKE \"regbuild.%\" AND meta_key NOT LIKE \"%_v$version\"'");
+  $options->{old_version} = $version;
 }
 
 ####################################################
@@ -302,7 +304,7 @@ sub get_stable_id {
       return $a->seq_region_start <=> $b->seq_region_start;
     }
   }
-  foreach my $feature (sort cmp_features @{$db->get_adaptor('FeatureSet')->fetch_by_name('RegulatoryFeatures:MultiCell.ARCHIVED')->get_all_Features()}) {
+  foreach my $feature (sort cmp_features @{$db->get_adaptor('FeatureSet')->fetch_by_name('RegulatoryFeatures:MultiCell_v'.$options->{old_version})->get_all_Features()}) {
     print $ofh join("\t", ($feature->seq_region_name, $feature->bound_start, $feature->bound_end, $feature->feature_type->name, substr($feature->stable_id, 4))) . "\n";
   }
   close $ofh;
@@ -833,11 +835,11 @@ sub update_meta_table {
   $year += 1900;
   $mon += 1;
   my ($main, $update);
-  my $version = $mc->single_value_by_key('regbuild.version.ARCHIVED');
+  my $version = $options->{old_version};
   if (defined $version) {
     ($main, $update) = split(/\./, $version);
     if (defined $options->{small_update}) {
-      $mc->store_key_value('regbuild.initial_release_date', $mc->single_value_by_key('regbuild.initial_release_date.ARCHIVED'));
+      $mc->store_key_value('regbuild.initial_release_date', $mc->single_value_by_key('regbuild.initial_release_date_v'.$options->{old_version}));
       $update += 1;
     } else {
       $mc->store_key_value('regbuild.initial_release_date', "$year-$mon");
