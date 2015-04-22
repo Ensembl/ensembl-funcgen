@@ -304,16 +304,22 @@ sub get_stable_id {
       return $a->seq_region_start <=> $b->seq_region_start;
     }
   }
-  foreach my $feature (sort cmp_features @{$db->get_adaptor('FeatureSet')->fetch_by_name('RegulatoryFeatures:MultiCell_v'.$options->{old_version})->get_all_Features()}) {
-    print $ofh join("\t", ($feature->seq_region_name, $feature->bound_start, $feature->bound_end, $feature->feature_type->name, substr($feature->stable_id, 4))) . "\n";
-  }
-  close $ofh;
-
+  my $feature_set = $db->get_adaptor('FeatureSet')->fetch_by_name('RegulatoryFeatures:MultiCell_v'.$options->{old_version});
+  my ($overlaps, $max_id);
   my ($fh, $new) = tempfile();
   close $fh;
-
   run("bigBedToBed $options->{base_dir}/overview/RegBuild.bb $new");
-  my ($overlaps, $max_id) = get_overlaps_between_files($old, $new);
+
+  if (defined $feature_set) {
+    foreach my $feature (sort cmp_features @{$feature_set->get_all_Features()}) {
+      print $ofh join("\t", ($feature->seq_region_name, $feature->bound_start, $feature->bound_end, $feature->feature_type->name, substr($feature->stable_id, 4))) . "\n";
+    }
+    close $ofh;
+
+    ($overlaps, $max_id) = get_overlaps_between_files($old, $new);
+  } else {
+    ($overlaps, $max_id) = ([], 0);
+  }
 
 # Go through overlaps in order of increasing overlap length. This means that you should always 
 # overwrite an overlap with a later one. 
