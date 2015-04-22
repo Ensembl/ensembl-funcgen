@@ -80,10 +80,10 @@ main();
 sub main {
   print_log("Getting options\n");
   my $options = get_options();
-  print_log("Ensuring previous build is archived\n");
-  archive_previous_build($options);
   print_log("Connecting to database\n");
   my $db = connect_db($options);
+  print_log("Ensuring previous build is archived\n");
+  archive_previous_build($options, $db);
   print_log("Getting analysis\n");
   my $analysis = get_analysis($db);
   print_log("Getting cell types\n");
@@ -146,7 +146,7 @@ sub get_options {
 ## Archiving old build
 ####################################################
 sub archive_previous_build {
-  my ($options) = @_;
+  my ($options, $db) = @_;
   my $connection = "mysql -u $options->{user} -h $options->{host} -D $options->{dbname}";
   if (defined $options->{port}) {
     $connection .= " -P $options->{port}";
@@ -154,7 +154,7 @@ sub archive_previous_build {
   if (defined $options->{pass}) {
     $connection .= " -p$options->{pass}";
   }
-  my $version = $mc->single_value_by_key('regbuild.version');
+  my $version = $db->get_MetaContainer->single_value_by_key('regbuild.version');
   run("$connection -e 'UPDATE data_set SET name = CONCAT(name, \"_v$version\") WHERE name LIKE \"RegulatoryFeatures:%\" AND name NOT LIKE \"%_v$version\"'");
   run("$connection -e 'UPDATE feature_set SET name = CONCAT(name, \"_v$version\") WHERE name LIKE \"RegulatoryFeatures:%\" AND name NOT LIKE \"%_v$version\"'");
   run("$connection -e 'UPDATE meta SET meta_key = CONCAT(meta_key, \"_v$version\") WHERE meta_key LIKE \"regbuild.%\" AND meta_key NOT LIKE \"%_v$version\"'");
@@ -476,7 +476,7 @@ sub get_regulatory_FeatureSets {
       ); 
 
     #Always overwrite in case we have redefined the sets
-    &store_regbuild_meta_strings($dset, 1);
+    define_regbuild_meta_strings($db, $dset);
     $rf_sets{$ctype} = $dset->product_FeatureSet;
 
     #Set states
@@ -512,75 +512,14 @@ sub get_regulatory_FeatureSets {
   return \%rf_sets;
 }
 
-#This could move to DataSetAdaptor and be called from define_and_validate_sets
-#If focus set info was stored in data set
-
-#Thsi needs to be made available to the Helper for HC/Updating
-#in case of archive failure
-
-sub store_regbuild_meta_strings{
-  my ($dset, $overwrite) = @_;
-
-  my $ds_adaptor = $dset->adaptor;
-  $ds_adaptor->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::DataSet', $dset);
-  my ($sql, $meta_value, $reg_string, $cmd, $msg);
-  my $fset = $dset->product_FeatureSet;
-
-  if (! defined $fset ||
-      $fset->feature_class ne 'regulatory') {
-    die('You must provide a DataSet with an associated \'regulatory\' product FeatureSet');
-  }
-
-  my @ssets = @{$dset->get_supporting_sets};
-
-  if (! @ssets) {
-    ('You must provide a DataSet with associated supporting sets');
-  }
-
-  my $ctype = (defined $fset->cell_type) ?  $fset->cell_type->name : 'core';
-
-  ### build and import regbuild strings by feature_set_id and feature_type_id
-
-  #($meta_value) = $ds_adaptor->db->dbc->db_handle->selectrow_array("select meta_value from meta where meta_key='regbuild.${ctype}.feature_set_ids'");
-  #$reg_string = join(',', map {$_->dbID} sort {$a->name cmp $b->name} @ssets);
-
-  my %reg_strings = 
-    (
-     "regbuild.${ctype}.feature_set_ids" => join(',', map {
-       $_->dbID} sort {$a->name cmp $b->name
-                     } @ssets),
-     "regbuild.${ctype}.feature_type_ids" => join(',', map {
-       $_->feature_type->dbID} sort {$a->name cmp $b->name
-                                   } @ssets),
-    );
-  
-  my @ffset_ids;
-
-  #this should be sorted to avoid string mismatches with the same contents.
-  $reg_strings{"regbuild.${ctype}.focus_feature_set_ids"} = join(', ', @ffset_ids);
-
-  foreach my $meta_key (keys %reg_strings) {
-    ($meta_value) = $ds_adaptor->db->dbc->db_handle->selectrow_array("select string from regbuild_string where name='${meta_key}'");
-
-    if (! defined $meta_value){
-      eval { $ds_adaptor->db->dbc->do("insert into regbuild_string (name, string) values ('${meta_key}', '$reg_strings{${meta_key}}')") };
-      die("Couldn't store $meta_key in regbuild_string table.\n$@") if $@;
-    } 
-    elsif ($meta_value ne $reg_strings{$meta_key}) {
-
-      if ($overwrite) {
-        warn "Overwriting old $meta_key regbuild_string entry:\t$meta_value\nwith:\t\t\t\t\t\t\t\t\t\t".$reg_strings{$meta_key}."\n";
-        eval { $ds_adaptor->db->dbc->do("update regbuild_string set string='$reg_strings{${meta_key}}' where name ='${meta_key}'") };
-        die("Couldn't store $meta_key in regbuild_string table.\n$@") if $@;
-      }
-      else{
-        die "$meta_key already exists in regbuild_string table and does not match\nOld\t$meta_value\nNew\t$reg_strings{${meta_key}}\nPlease archive previous RegulatoryBuild.\n";
-      }
-    }
-  }
-  
-  return \%reg_strings;
-}
+#####################################################
+# Gets supporting feature sets for cell type
+#####################################################
+# Params: 
+# * ctypes: arrayref of cell type names
+# * cta: Bio::EnsEMBL::Funcgen::DBSQL::CellTypeAdaptor object
+# * fsa: Bio::EnsEMBL::Funcgen::DBSQL::FeatureSetAdaptor object
+#####################################################
 
 sub get_cell_type_supporting_sets {
   my ($ctypes, $cta, $fsa) = @_;
@@ -599,6 +538,82 @@ sub get_cell_type_supporting_sets {
     push @{$ctype_ssets{MultiCell}}, @ssets;
   }
   return \%ctype_ssets;
+}
+
+#####################################################
+# Store meta strings in regbuild_string table
+#####################################################
+# Params: 
+# * Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
+# * Bio::EnsEMBL::Funcgen::Dataset object
+#####################################################
+
+sub define_regbuild_meta_strings{
+  my ($db, $dset) = @_;
+
+  my $ds_adaptor = $dset->adaptor;
+  $ds_adaptor->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::DataSet', $dset);
+
+  ## Extract supporting sets, sorted by name
+  my @ssets = sort {$a->name cmp $b->name} @{$dset->get_supporting_sets};
+  if (! @ssets) {
+    die('You must provide a DataSet with associated supporting sets');
+  }
+  
+  ## Extract core supporting sets
+  my @ffset_ids = ();
+  foreach my $class ("Transcription Factor", "Transcription Factor Complex", "Open Chromatin") {
+    foreach my $ft (@{$db->get_adaptor('FeatureType')->fetch_all_by_class($class)}) {
+      foreach my $fset (@{$db->get_adaptor('FeatureSet')->fetch_all_by_FeatureType($ft)}) {
+	if ($fset->cell_type->name eq $dset->cell_type->name) {
+          push @ffset_ids, $fset;
+        }
+      }
+    }
+  }
+  @ffset_ids = sort {$a->name cmp $b->name} @ffset_ids;
+
+  my $fset = $dset->product_FeatureSet;
+  if (! defined $fset ||
+      $fset->feature_class ne 'regulatory') {
+    die('You must provide a DataSet with an associated \'regulatory\' product FeatureSet');
+  }
+  my $ctype = (defined $fset->cell_type) ?  $fset->cell_type->name : 'core';
+
+  my %reg_strings = 
+    (
+     "regbuild.${ctype}.feature_set_ids" => join(',', map {$_->dbID} @ssets),
+     "regbuild.${ctype}.feature_type_ids" => join(',', map {$_->feature_type->dbID} @ssets),
+     "regbuild.${ctype}.focus_feature_set_ids" => join(', ', map{$_->dbID} @ffset_ids)
+    );
+
+  store_regbuild_meta_strings($ds_adaptor, \%reg_strings);
+}
+
+#####################################################
+# Store meta strings in regbuild_string table
+#####################################################
+# Params: 
+# * Bio::EnsEMBL::Funcgen::DBSQL::DatasetAdaptor object
+# * Hashref containing scalar => scalar
+#####################################################
+
+sub store_regbuild_meta_strings{
+  my ($ds_adaptor, $reg_strings) = @_;
+
+  foreach my $meta_key (keys %$reg_strings) {
+    my ($meta_value) = $ds_adaptor->db->dbc->db_handle->selectrow_array("select string from regbuild_string where name='${meta_key}'");
+
+    if (! defined $meta_value){
+      eval { $ds_adaptor->db->dbc->do("insert into regbuild_string (name, string) values ('${meta_key}', '$reg_strings->{${meta_key}}')") };
+      die("Couldn't store $meta_key in regbuild_string table.\n$@") if $@;
+    } 
+    elsif ($meta_value ne $reg_strings->{$meta_key}) {
+      warn "Overwriting old $meta_key regbuild_string entry:\t$meta_value\nwith:\t\t\t\t\t\t\t\t\t\t".$reg_strings->{$meta_key}."\n";
+      eval { $ds_adaptor->db->dbc->do("update regbuild_string set string='$reg_strings->{${meta_key}}' where name ='${meta_key}'") };
+      die("Couldn't store $meta_key in regbuild_string table.\n$@") if $@;
+    }
+  }
 }
 
 #####################################################
