@@ -1121,8 +1121,26 @@ sub _get_branch_number{
       #This will allow null string and 0
       
       if(! exists $branch_config->{$bcode}){
-        throw("Could not find branch config for analysis or branch key:\t".$bcode.
-          "\n");
+        # Is this true for PreprocessAlignments
+        # i.e. a link analysis which forks to two downstream configs
+        # either branch keys or branch numbers may not be configured
+        # Currently this is true, but only becuase the CollectionWriter is written
+        # to detect if the feature set is defined 
+        # i.e. if we need to flow to the peak calling analyses
+        # probably just need to change this to a warn, and drop the br()anch validation
+
+        if($bcode =~ /^[0-9]+$/){
+          # Just warn, as this is a generic numbered branch which may not be wired
+          warn "Could not find branch config for branch:\t".
+            $bcode."\n";
+
+        }
+        else{
+          # Always throw as string banch key are data config/driven
+          # So there must be a config error
+          throw("Could not find branch config for analysis:\t".
+            $bcode."\n");
+        }
         #We would need and custom_analysis_name method
         #as we can't just use 'custom' as this may clash
         #and we don't know the analysis name template here
@@ -1175,6 +1193,7 @@ sub _get_branch_number{
 sub branch_job_group{
   my ($self, $fan_branch_codes, $fan_jobs, $funnel_branch_code, $funnel_jobs) = @_;
   my $branch_config = $self->{branch_config}; #as this may be derived from analysis or method?
+ 
   $fan_branch_codes = [$fan_branch_codes] if ! ref($fan_branch_codes);
   my $fan_branch    = $self->_get_branch_number($fan_branch_codes, $branch_config); 
   #this also asserts_ref for $fan_branch_codes
