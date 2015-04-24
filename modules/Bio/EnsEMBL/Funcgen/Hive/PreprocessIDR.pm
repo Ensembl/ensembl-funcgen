@@ -208,7 +208,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
   foreach my $i(0..$last_i){
     my $next_i = $i + 1;
   
-    #2 ways jobs 
+    #2 way jobs 
     foreach my $j($next_i..$#{$np_files}){
       my @names;
     
@@ -222,25 +222,18 @@ sub run {   # Check parameters and do appropriate database/file operations...
       push @out_prefixes, $output_prefix;
       
       my $job = {%$batch_params,
-                          output_dir    => $out_dir,
-                          idr_threshold => $threshold,
-                          accu_idx      => $i,
-                          output_prefix => $output_prefix,
-                          batch_name    => $batch_name,
-                          bed_files     => [$np_files->[$i], $np_files->[$j]]};
+                 output_dir    => $out_dir,
+                 idr_threshold => $threshold,
+                 accu_idx      => $i,
+                 output_prefix => $output_prefix,
+                 batch_name    => $batch_name,
+                 bed_files     => [$np_files->[$i], $np_files->[$j]]};
       
       if($x_thresh_adjust){
         $job->{bam_files} = [$bams[$i], $bams[$j]];  
       }
                                 
       push @idr_job_ids, $job;
-      #push @idr_job_ids, {%$batch_params,
-      #                    output_dir    => $out_dir,
-      #                    idr_threshold => $threshold,
-      #                    accu_idx      => $i,
-      #                    output_prefix => $output_prefix,
-      #                    batch_name    => $batch_name,
-      #                    bed_files     => [$np_bed_files->[$i], $np_bed_files->[$j]]};
     }  
   }
   
@@ -248,11 +241,11 @@ sub run {   # Check parameters and do appropriate database/file operations...
   #In between MergeControlAlignments_and_QC and Submit_IDR
   $self->branch_job_group(2, \@idr_job_ids,
                           3, [{%$batch_params,
-                              output_dir      => $out_dir,
-                              batch_name    => $batch_name,
-                              output_prefixes => \@out_prefixes,
-                              dbIDs           => $self->dbIDs,
-                              set_type        => 'ResultSet'}]);
+                               output_dir      => $out_dir,
+                               batch_name    => $batch_name,
+                               output_prefixes => \@out_prefixes,
+                               dbIDs           => $self->dbIDs,
+                               set_type        => 'ResultSet'}]);
       
   return;
 }

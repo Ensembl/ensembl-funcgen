@@ -94,7 +94,7 @@ sub fetch_input {   # fetch parameters...
     #will fail in some unkown way at present?       
     $set_lname = $self->get_param_method('permissive_peaks', 'required').'_IDR';  
     
-          #Reset peak_analysis here for clarity as this is batch flown
+    #Reset peak_analysis here for clarity as this is batch flown
     #although we woudl still use the above to create the feature_set
     $self->peak_analysis($set_lname);
     
