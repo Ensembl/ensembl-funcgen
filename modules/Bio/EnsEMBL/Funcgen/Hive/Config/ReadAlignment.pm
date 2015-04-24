@@ -115,7 +115,11 @@ sub pipeline_wide_parameters {
       #Size of each sequence chunk to be aligned (nbr of reads * 4)
       fastq_chunk_size      => $self->o('fastq_chunk_size'),   #Change to batch specific
       alignment_analysis    => $self->o('alignment_analysis'), #Nope we may want this to be batch specific!
-      aligner_param_methods => $self->o($self->o('alignment_analysis').'_param_methods'),
+      #aligner_param_methods => $self->o($self->o('alignment_analysis').'_param_methods'),
+
+      # this is currently preaking the option processing
+      aligner_param_methods => $self->o('bwa_samse_param_methods'),
+
       #This is stricly not required anymore as we use the local_url from the tracking tables
       fastq_root_dir      => $self->o('fastq_root_dir'),
       #This will should be set to one in downstream config
@@ -159,7 +163,8 @@ sub pipeline_analyses {
        #Hence let's change InputSet analysis to the alignment
        #This is basically reciprocating the ResultSet and we should probably j
        #ust drop one of InputSubset/Set
-       dataflow_param_names => ['no_idr'],# 'alignment_analysis'], #now batch flown
+       dataflow_param_names => ['no_idr'], 
+       # 'alignment_analysis'], #now batch flown
        #, 'broad_peak_feature_types'], Removed this for now as we currently don't allow over
        #of any of the defaults hashes apart from at initialisation
        #this is probably a case for using the hive batch flow
