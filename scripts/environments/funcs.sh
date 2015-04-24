@@ -1230,21 +1230,22 @@ $usage_string"
 # Exception : exits if command fails
 ################################################################################
 
-Execute(){
-	#No point in using this unless you want to exit
-	#Just test $? otherwise
+# Can we trap errors here somehow, using signal handling?
 
-	#echo "Executing $*"
-	#We're having problems with perl -e, mysql -e and mysql < file!
-	#Also haveing probles with cmd="echo 'sql statement' | mysql"
-	#Execute $cmd
-	#This just echos the whole of cmd and doesn't pipe!
-	#This works if we don't use $cmd and Execute directly. 
+# We're having problems with perl -e, mysql -e and mysql < file!
+# Also haveing probles with cmd="echo 'sql statement' | mysql"
+# Execute $cmd
+# This just echos the whole of cmd and doesn't pipe!
+# This works if we don't use $cmd and Execute directly. 
+# Use $@ instead?
 
+# No point in using this unless you want to exit
+# Just test $? otherwise
 
-    $*
+Execute(){	
+	#echo "Executing $*"	
+  $*
 	rtn=$? 
-
 
 	if [ $rtn != 0 ]
 	then 
@@ -1253,8 +1254,7 @@ Execute(){
 		#This will exit the shell if we are running on cmdline
 	fi
 
-	#Can we trap errors here somehow?
-
+  return $rtn
 }
 
 
