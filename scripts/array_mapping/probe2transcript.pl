@@ -1,5 +1,4 @@
-#
-#/usr/bin/env perl
+#!/usr/bin/env perl
 
 =head1 LICENSE
 
@@ -336,7 +335,7 @@ sub main {
 
   $Helper->log("Overlapping probe features and transcripts", 0, 'append_date');
   my ($fh3, $filename3) = tempfile(DIR => $options->{temp_dir});
-  run("bedtools intersect -wa -wb -a $filename -b $filename2 | sort -k4,4 > $filename3");
+  run("bedtools intersect -sorted -wa -wb -a $filename -b $filename2 | sort -k4,4 > $filename3");
   close $fh;
   unlink $filename;
   close $fh2;
@@ -531,7 +530,7 @@ sub get_options {
   'no_triage'              => \$options->{no_triage},
   'parallelise'            => \$options->{parallelise},
   'clean_up'               => \$options->{clean_up},
-  'temp_dir'               => \$options->{temp_dir},
+  'temp_dir=s'               => \$options->{temp_dir},
   'linked_arrays=i'          => \$options->{array_config}->{linked_arrays},
   'probeset_arrays=i'        => \$options->{array_config}->{probeset_arrays},
   'sense_interrogation=i'    => \$options->{array_config}->{sense_interrogation},
@@ -551,6 +550,12 @@ sub get_options {
 
 #Set log type so we are no over writing to the same files for different 
 #format, or custom formats
+
+  # This is not working correctly, as is currently writing to default central log dir, not workdir
+  # if this file is not defined, default to STDOUT, so is captured by lsf .out file
+  # 
+
+
   $options->{log_type} = $options->{format} || $$;
   $options->{filename} ||= "$options->{xref_dbname}_$options->{log_type}_probe2transcript";
   $main::_log_file ||=  "./$options->{filename}.log";
@@ -895,11 +900,17 @@ sub get_transcript_xref_ids {
   return $hash;
 }
 
+
+# This die is not propogating the exit status to LSF, which sees it as a success?
+
 sub check_xrefs {
   my ($xref_db, $transc_edb_id, $transcripts, $transcript_xref_id) = @_;
+  
   for my $transcript (@$transcripts) {
+
     if (! defined $transcript_xref_id->{$transcript->stable_id()}) {
-      die("Transcript absent from xref table: ".$transcript->stable_id().", from external db: $transc_edb_id\n");
+      die("Transcript absent from xref table: ".$transcript->stable_id().
+        ", from external db: $transc_edb_id\n");
     }
   }
 }
