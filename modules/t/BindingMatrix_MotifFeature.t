@@ -318,6 +318,35 @@ is(scalar(@mfs), $ctype_count, 'MotifFeatureAdaptor::fetch_all_by_Slice_CellType
 #Restore table
 $multi->restore;
 
+# N base test
+
+TODO:{
+  local $TODO = 'N bases not supported yet';
+
+  # Kinda hard to do this as the test DB currently does not have any Ns!
+  # mysql> select seq_region_id, length(sequence) l from dna where sequence like "%N%" order by l asc limit 10;
+# +---------------+------+
+# | seq_region_id | l    |
+# +---------------+------+
+# |    2006139307 |  100 |
+# |        115151 |  358 |
+# |    2006139387 |  395 |
+# |    2006139385 |  792 |
+# |    2006139318 |  940 |
+# |    2006139379 | 1095 |
+# |    2006139386 | 1140 |
+# |         35438 | 1194 |
+# |         35456 | 1408 |
+# |         35454 | 1703 |
+# +---------------+------+
+# Need to insert one of these into the test DB, then create a MotifFeature over a region with an N
+# Then do a relative_affinity call where the base change is on a normal base (should use neutral weight)
+# Then do a relative_affinity where the base changed is the N base (should return undef)
+# Does the VEP (MotifFeatureVariationAllele::motif_score_delta) even use infer_variation_consequence? No reference in
+# ensembl-variation. So need to check code between motif_score_delta and infer_variation_consequence.
+
+}
+
 done_testing();
 
 1;
