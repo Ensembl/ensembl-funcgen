@@ -285,7 +285,7 @@ sub is_position_informative {
                Returns a value between -100% (lost) and +100% (gain) indicating the difference 
                in strength between the motif in the reference and after the variation.
 
-  Returntype : Scalar (numeric)
+  Returntype : Scalar (numeric) or undef
   Exceptions : Throws if argument is not a Bio::EnsEMBL::Variation::VariationFeature
                Warns if the VariationFeature is not contained within the MotifFeature
   Caller     : General
@@ -333,10 +333,11 @@ sub infer_variation_consequence{
     $ref_seq = reverse($ref_seq);
   }  
 
-  my $bm = $self->binding_matrix;
+  my $bm     = $self->binding_matrix;
+  my $var_ra = $bm->relative_affinity($var_seq, $linear);
+  my $ref_ra = $bm->relative_affinity($ref_seq, $linear);
 
-  return 100 * ($bm->relative_affinity($var_seq, $linear) - 
-                $bm->relative_affinity($ref_seq, $linear)); 
+  return (defined $var_ra && defined $ref_ra ) ? (100 * ($var_ra - $ref_ra)) : undef; 
 }
 
 

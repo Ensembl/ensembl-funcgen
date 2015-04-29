@@ -69,7 +69,7 @@ package Bio::EnsEMBL::Funcgen::BindingMatrix;
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref check_ref);
+use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref check_ref );
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Funcgen::Sequencing::MotifTools qw( parse_matrix_line 
@@ -349,7 +349,7 @@ sub matrix{
                in the proper orientation. Considers a purely random background e.g.
                    p(A)=p(C)=p(G)=p(T)
                Returns value between 0 and 1    
-  Returntype : Scalar - numeric
+  Returntype : Scalar - numeric or undef
   Exceptions : Throws if the sequence length does not have the matrix length
                or if the sequence has unclear bases (N is not accepted)
   Caller     : General
@@ -365,7 +365,8 @@ sub relative_affinity {
   ($seq = uc($seq)) =~ s/\s+//g; #be forgiving of case and spaces
   
   if($seq =~ /[^ACGT]/){
-    throw("Sequence argument contains in-valid [^acgtACGT] characters:\t$seq");	
+    warn($self->name." sequence contains in-valid [^acgtACGT] characters:\t$seq");	
+    return undef;
   }
   
   if(length($seq) != $self->length){
