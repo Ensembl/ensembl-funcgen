@@ -165,6 +165,10 @@ sub load_segmentation_features_from_file {
         @features = ();
       }
 
+      if (!defined $feature_type->{$label}) {
+        die("Unknown label $label\n");
+      }
+
       $previous_seg_feat = Bio::EnsEMBL::Funcgen::SegmentationFeature->new
        (
 	-SLICE         => $slice,
@@ -268,20 +272,38 @@ sub create_feature_set {
   my $cta = $db->get_CellTypeAdaptor();
   my $name = "$cell_type $segmentation segmentation";
   my $previous = $fsa->fetch_by_name($name);
+  my $ft = $fta->fetch_by_name('SegmentationState');
   if (defined $previous) {
     rollback_segmentation_FeatureSet($db, $previous);
     warn "Done rolling back";
     return $previous;
   }
+  if (!defined $cell_type) {
+    die "Undefined cell_type";
+  }
+  if (!defined $name) {
+    die "Undefined name";
+  }
+  if (!defined $ft) {
+    $ft = Bio::EnsEMBL::Funcgen::FeatureType->new(
+      -name  => 'SegmentationState',
+      -class => "Segmentation State",
+      -description => 'Regulatory genome segment'
+    );
+    $fta->store($ft);
+  }
+  if (!defined $ft) {
+    die "Undefined feature type with name 'SegmentationState'";
+  }
   my $feature_set = Bio::EnsEMBL::Funcgen::FeatureSet->new(
+    -name          => $name,
     -analysis      => $analysis,
-    -feature_type  => $fta->fetch_by_name('SegmentationState'),
+    -feature_type  => $ft,
     -feature_class => 'segmentation',
     -cell_type     => $cta->fetch_by_name($cell_type),
-    -name          => $name,
     -description   => "$cell_type $segmentation segmentation",
     -display_label => "$cell_type segmentation",
-    -states        => ['DISPLAYABLE','IMPORTED','IMPORTED_GRCh38','MART_DISPLAYABLE']
+    -states        => ['DISPLAYABLE','IMPORTED','IMPORTED_GRCh38','MART_DISPLAYABLE'],
   );
   $fsa->store($feature_set);
   return $feature_set;
@@ -326,6 +348,10 @@ sub create_feature_type {
     );
     $fta->store($ft);
     $feature_type{$key} = $ft;
+
+    if (!defined $ft || !defined $ft->dbID) {
+      die("Failed to create feature type for label $key\n");
+    }
   }
   return \%feature_type;
 }
