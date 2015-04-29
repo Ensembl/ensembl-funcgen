@@ -315,16 +315,14 @@ sub store{
 		throw('Must call store with a list of SegmentationFeature objects');
 	}
 
-	my $sth = $self->prepare("
+	my $sth = $self->prepare('
 		INSERT INTO segmentation_feature (
 			seq_region_id,   seq_region_start,
 			seq_region_end,  seq_region_strand,
-            feature_type_id, feature_set_id,   score, display_label
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-	");
-
-
-	my $db = $self->db();
+      feature_type_id, feature_set_id,   
+      score,           display_label
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+	my $db = $self->db;
 
 
   FEATURE: foreach my $seg (@segs) {
@@ -339,21 +337,20 @@ sub store{
 			next FEATURE;
 		}
 
-		$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $seg->feature_set);
-
+		$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet',  $seg->feature_set);
+		$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $seg->feature_type);
 
 		my $seq_region_id;
 		($seg, $seq_region_id) = $self->_pre_store($seg);
 
-		$sth->bind_param(1, $seq_region_id,             SQL_INTEGER);
-		$sth->bind_param(2, $seg->start(),              SQL_INTEGER);
-		$sth->bind_param(3, $seg->end(),                SQL_INTEGER);
-		$sth->bind_param(4, $seg->strand(),             SQL_TINYINT);
-		$sth->bind_param(5, $seg->feature_type->dbID(), SQL_INTEGER);
-		$sth->bind_param(6, $seg->feature_set->dbID(),  SQL_INTEGER);
-		$sth->bind_param(7, $seg->score(),               SQL_DOUBLE);
-		$sth->bind_param(8, $seg->display_label(),      SQL_VARCHAR);
-
+		$sth->bind_param(1, $seq_region_id,           SQL_INTEGER);
+		$sth->bind_param(2, $seg->start,              SQL_INTEGER);
+		$sth->bind_param(3, $seg->end,                SQL_INTEGER);
+		$sth->bind_param(4, $seg->strand,             SQL_TINYINT);
+		$sth->bind_param(5, $seg->feature_type->dbID, SQL_INTEGER);
+		$sth->bind_param(6, $seg->feature_set->dbID,  SQL_INTEGER);
+		$sth->bind_param(7, $seg->score,               SQL_DOUBLE);
+		$sth->bind_param(8, $seg->display_label,      SQL_VARCHAR);
 
 		$sth->execute();
 		$seg->dbID( $self->last_insert_id );
