@@ -1,15 +1,8 @@
-{
-  'port'   => $PORT,
-  'driver' => 'mysql',
-  'user'   => $USER,
-  'pass'   => $PASS,
-  'host'   => $HOST,
-  
-  # add a line with the dbname and module
+{ # add a line with the dbname and module
   'databases' => {
     'homo_sapiens' => { 
       'core' => 'Bio::EnsEMBL::DBSQL::DBAdaptor',
-      'funcgen'    => 'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor' 
+      'funcgen' => 'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor' 
     },
   },
 
