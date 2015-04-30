@@ -119,49 +119,31 @@ sub _columns {
 
 sub _objs_from_sth {
 	my ($self, $sth, $mapper, $dest_slice) = @_;
-
-
 	#For EFG this has to use a dest_slice from core/dnaDB whether specified or not.
 	#So if it not defined then we need to generate one derived from the species_name and schema_build of the feature we're retrieving.
-
-
-	my ($sa, $seq_region_id);
-	#don't really need this if we're using DNADBSliceAdaptor?
-	$sa = $dest_slice->adaptor->db->get_SliceAdaptor() if($dest_slice);
-	$sa ||= $self->db->dnadb->get_SliceAdaptor();
-
+	my $sa = $dest_slice ? $dest_slice->adaptor->db->get_SliceAdaptor : 
+                         $self->db->dnadb->get_SliceAdaptor;
 
 	#Some of this in now probably overkill as we'll always be using the DNADB as the slice DB
 	#Hence it should always be on the same coord system
 	my $fset_adaptor  = $self->db->get_FeatureSetAdaptor;
 	my $ftype_adaptor = $self->db->get_FeatureTypeAdaptor;
-	my @features;
-	my (%fset_hash, %slice_hash, %sr_name_hash, %sr_cs_hash, %ftype_hash);
+	my (@features, %fset_hash, %slice_hash, %sr_name_hash, %sr_cs_hash, %ftype_hash);
 
-	my (
-	    $segmentation_feature_id, $efg_seq_region_id,
-	    $seq_region_start,        $seq_region_end,
-	    $seq_region_strand,       $ftype_id,
-		$fset_id,                 $score,
-		$display_label
-
-	);
+	my ($seq_region_id,  $segmentation_feature_id, $efg_seq_region_id, $seq_region_start,
+      $seq_region_end, $seq_region_strand,       $ftype_id,
+      $fset_id,        $score,                   $display_label	);
 
 	$sth->bind_columns(
-					   \$segmentation_feature_id, \$efg_seq_region_id,
-					   \$seq_region_start,        \$seq_region_end,
-					   \$seq_region_strand,       \$ftype_id,
-					   \$fset_id,        	   	  \$score,
-					   \$display_label,
-					  );
+    \$segmentation_feature_id, \$efg_seq_region_id,
+    \$seq_region_start,        \$seq_region_end,
+    \$seq_region_strand,       \$ftype_id,
+    \$fset_id,        	   	  \$score,
+    \$display_label
+  );
 
+	my ($asm_cs, $cmp_cs, $asm_cs_name, $asm_cs_vers, $cmp_cs_name, $cmp_cs_vers);
 
-	my $asm_cs;
-	my $cmp_cs;
-	my $asm_cs_name;
-	my $asm_cs_vers;
-	my $cmp_cs_name;
-	my $cmp_cs_vers;
 	if ($mapper) {
 		$asm_cs      = $mapper->assembled_CoordSystem();
 		$cmp_cs      = $mapper->component_CoordSystem();
@@ -171,11 +153,9 @@ sub _objs_from_sth {
 		$cmp_cs_vers = $cmp_cs->version();
 	}
 
-	my $dest_slice_start;
-	my $dest_slice_end;
-	my $dest_slice_strand;
-	my $dest_slice_length;
-	my $dest_slice_sr_name;
+	my ($dest_slice_start,  $dest_slice_end, $dest_slice_strand, 
+      $dest_slice_length, $dest_slice_sr_name);
+
 	if ($dest_slice) {
 		$dest_slice_start   = $dest_slice->start();
 		$dest_slice_end     = $dest_slice->end();
@@ -184,8 +164,7 @@ sub _objs_from_sth {
 		$dest_slice_sr_name = $dest_slice->seq_region_name();
 	}
 
-
-  FEATURE: while ( $sth->fetch() ) {
+  FEATURE: while ( $sth->fetch ) {
 	  #Need to build a slice adaptor cache here?
 	  #Would only ever want to do this if we enable mapping between assemblies??
 	  #Or if we supported the mapping between cs systems for a given schema_build, which would have to be handled by the core api
@@ -196,83 +175,76 @@ sub _objs_from_sth {
 	  $seq_region_id = $self->get_core_seq_region_id($efg_seq_region_id);
 
 	  if(! $seq_region_id){
-		warn "Cannot get slice for eFG seq_region_id $efg_seq_region_id\n".
-		  "The region you are using is not present in the current seq_region_cache.\n".
-			"Maybe you need to redefine the dnadb or update_DB_for_release?";
-		next;
+      warn "Cannot get slice for eFG seq_region_id $efg_seq_region_id\n".
+       "The region you are using is not present in the current seq_region_cache.\n".
+			 "Maybe you need to redefine the dnadb or update_DB_for_release?";
+      next;
 	  }
 
-	  #Get the FeatureSet object
+	  #Get the FeatureSet FeatureType & Slice objects
 	  $fset_hash{$fset_id} = $fset_adaptor->fetch_by_dbID($fset_id) if ! exists $fset_hash{$fset_id};
 	  $ftype_hash{$ftype_id} = $ftype_adaptor->fetch_by_dbID($ftype_id) if ! exists $fset_hash{$ftype_id};
-
-
-	  # Get the slice object
 	  my $slice = $slice_hash{'ID:'.$seq_region_id};
 
 	  if (! $slice) {
-		$slice                            = $sa->fetch_by_seq_region_id($seq_region_id);
-		$slice_hash{'ID:'.$seq_region_id} = $slice;
-		$sr_name_hash{$seq_region_id}     = $slice->seq_region_name();
-		$sr_cs_hash{$seq_region_id}       = $slice->coord_system();
+      $slice                            = $sa->fetch_by_seq_region_id($seq_region_id);
+      $slice_hash{'ID:'.$seq_region_id} = $slice;
+      $sr_name_hash{$seq_region_id}     = $slice->seq_region_name;
+      $sr_cs_hash{$seq_region_id}       = $slice->coord_system;
 	  }
 
 	  my $sr_name = $sr_name_hash{$seq_region_id};
-	    my $sr_cs   = $sr_cs_hash{$seq_region_id};
+    my $sr_cs   = $sr_cs_hash{$seq_region_id};
 
 	  # Remap the feature coordinates to another coord system if a mapper was provided
 	  if ($mapper) {
+      throw("Not yet implmented mapper, check equals are Funcgen calls too!");
 
-		throw("Not yet implmented mapper, check equals are Funcgen calls too!");
-
-	      ($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand)
-			= $mapper->fastmap($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand, $sr_cs);
+      ($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand)
+			 = $mapper->fastmap($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand, $sr_cs);
 
 	      # Skip features that map to gaps or coord system boundaries
-	      next FEATURE if !defined $sr_name;
+      next FEATURE if !defined $sr_name;
 
-	      # Get a slice in the coord system we just mapped to
-	      if ( $asm_cs == $sr_cs || ( $cmp_cs != $sr_cs && $asm_cs->equals($sr_cs) ) ) {
-		$slice = $slice_hash{"NAME:$sr_name:$cmp_cs_name:$cmp_cs_vers"}
-		  ||= $sa->fetch_by_region($cmp_cs_name, $sr_name, undef, undef, undef, $cmp_cs_vers);
-	      } else {
-		$slice = $slice_hash{"NAME:$sr_name:$asm_cs_name:$asm_cs_vers"}
-		  ||= $sa->fetch_by_region($asm_cs_name, $sr_name, undef, undef, undef, $asm_cs_vers);
-	      }
-	    }
+      # Get a slice in the coord system we just mapped to
+      if ( $asm_cs == $sr_cs || ( $cmp_cs != $sr_cs && $asm_cs->equals($sr_cs) ) ) {
+        $slice = $slice_hash{"NAME:$sr_name:$cmp_cs_name:$cmp_cs_vers"}
+         ||= $sa->fetch_by_region($cmp_cs_name, $sr_name, undef, undef, undef, $cmp_cs_vers);
+      } else {
+        $slice = $slice_hash{"NAME:$sr_name:$asm_cs_name:$asm_cs_vers"}
+         ||= $sa->fetch_by_region($asm_cs_name, $sr_name, undef, undef, undef, $asm_cs_vers);
+      }
+    }
 
-	    # If a destination slice was provided convert the coords
-	    # If the destination slice starts at 1 and is forward strand, nothing needs doing
-	    if ($dest_slice) {
-	      unless ($dest_slice_start == 1 && $dest_slice_strand == 1) {
-		if ($dest_slice_strand == 1) {
-		  $seq_region_start = $seq_region_start - $dest_slice_start + 1;
-		  $seq_region_end   = $seq_region_end   - $dest_slice_start + 1;
-		} else {
-		  my $tmp_seq_region_start = $seq_region_start;
-		  $seq_region_start        = $dest_slice_end - $seq_region_end       + 1;
-		  $seq_region_end          = $dest_slice_end - $tmp_seq_region_start + 1;
-		  $seq_region_strand      *= -1;
-		}
-	      }
+    # If a destination slice was provided convert the coords
+    # If the destination slice starts at 1 and is forward strand, nothing needs doing
+    if ($dest_slice) {
+      unless ($dest_slice_start == 1 && $dest_slice_strand == 1) {
+        if ($dest_slice_strand == 1) {
+          $seq_region_start = $seq_region_start - $dest_slice_start + 1;
+          $seq_region_end   = $seq_region_end   - $dest_slice_start + 1;
+        } else {
+          my $tmp_seq_region_start = $seq_region_start;
+          $seq_region_start        = $dest_slice_end - $seq_region_end       + 1;
+          $seq_region_end          = $dest_slice_end - $tmp_seq_region_start + 1;
+          $seq_region_strand      *= -1;
+        }
+      }
 
-	      # Throw away features off the end of the requested slice
+      # Throw away features off the end of the requested slice
 		  if(! $self->force_reslice){
-			#force_reslice set by RegulatoryFeature::regulatory_attributes
-			#so we don't lose attrs which are not on the dest_slice
+  			#force_reslice set by RegulatoryFeature::regulatory_attributes
+	  		#so we don't lose attrs which are not on the dest_slice
 
-			next FEATURE if $seq_region_end < 1 || $seq_region_start > $dest_slice_length
-			  || ( $dest_slice_sr_name ne $sr_name );
+        next FEATURE if $seq_region_end < 1 || $seq_region_start > $dest_slice_length
+         || ( $dest_slice_sr_name ne $sr_name );
 
-			$slice = $dest_slice;
+        $slice = $dest_slice;
 		  }
 		}
 
-
-
 	  push @features, Bio::EnsEMBL::Funcgen::SegmentationFeature->new_fast
-		( {
-		   start          => $seq_region_start,
+     ({start          => $seq_region_start,
 		   end            => $seq_region_end,
 		   strand         => $seq_region_strand,
 		   slice          => $slice,
@@ -283,10 +255,10 @@ sub _objs_from_sth {
 		   adaptor        => $self,
 		   dbID           => $segmentation_feature_id,
 		   display_label  => $display_label,
-		   set    => $fset_hash{$fset_id},
+		   set            => $fset_hash{$fset_id},
 		   feature_type   =>  $ftype_hash{$ftype_id},
-		  } );
-	}
+		  });
+    }
 
 	return \@features;
 }
