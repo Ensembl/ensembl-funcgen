@@ -337,7 +337,7 @@ sub infer_variation_consequence{
   my $var_ra = $bm->relative_affinity($var_seq, $linear);
   my $ref_ra = $bm->relative_affinity($ref_seq, $linear);
 
-  return (defined $var_ra && defined $ref_ra ) ? (100 * ($var_ra - $ref_ra) : undef; 
+  return (defined $var_ra && defined $ref_ra ) ? (100 * ($var_ra - $ref_ra)) : undef; 
 }
 
 

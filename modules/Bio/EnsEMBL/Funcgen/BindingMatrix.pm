@@ -365,7 +365,7 @@ sub relative_affinity {
   ($seq = uc($seq)) =~ s/\s+//g; #be forgiving of case and spaces
   
   if($seq =~ /[^ACGT]/){
-    warn($self->name." sequence argument contains in-valid [^acgtACGT] characters:\t$seq");	
+    warn($self->name." sequence contains in-valid [^acgtACGT] characters:\t$seq");	
     return undef;
   }
   
