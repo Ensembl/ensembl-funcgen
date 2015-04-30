@@ -336,21 +336,33 @@ sub create_feature_type {
     poised => "Predicted poised region"
   );
 
-  my %feature_type = ();
   my $fta = $db->get_FeatureTypeAdaptor();
-  foreach my $key (keys %name) {
-    my $ft = Bio::EnsEMBL::Funcgen::FeatureType->new
-    (
-      -name  => $name{$key},
-      -class => "Segmentation State",
-      -description => $description{$key},
-      -analysis => $analysis,
-    );
-    $fta->store($ft);
-    $feature_type{$key} = $ft;
+  my %existing_feature_type = ();
+  foreach my $ft (@{$fta->fetch_all_by_Analysis($analysis)}) {
+    $existing_feature_type{$ft->name} = $ft;
+  }
 
-    if (!defined $ft || !defined $ft->dbID) {
+  my %feature_type = ();
+  foreach my $key (keys %name) {
+    if (defined $existing_feature_type{$name{$key}}) {
+      $feature_type{$key} = $existing_feature_type{$name{$key}};
+    } else {
+      my $ft = Bio::EnsEMBL::Funcgen::FeatureType->new
+      (
+        -name  => $name{$key},
+        -class => "Segmentation State",
+        -description => $description{$key},
+        -analysis => $analysis,
+      );
+      $fta->store($ft);
+      $feature_type{$key} = $ft;
+    }
+
+    if (!defined $feature_type{$key}) {
       die("Failed to create feature type for label $key\n");
+    }
+    if (!defined $feature_type{$key}->dbID) {
+      die("Failed to store feature type for label $key\n");
     }
   }
   return \%feature_type;
