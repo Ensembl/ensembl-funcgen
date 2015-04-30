@@ -13,33 +13,25 @@ use Test::More;
 use Test::Exception;  # throws_ok
 #use Test::Output;     # stderr_is
 
-
 # Test DB slice is 13:32888400-32974305
-
-
 # switch on the debug prints
 our $verbose = 0;
 
 # TODO
 # Add can_ok tests for all methods?
 
-
 my $skip = 0;
-
 ok(1, 'Start up');
 
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
+my $db    = $multi->get_DBAdaptor( "funcgen" );
+ok( $db, 'Test database instantiated');
 
-my $db   = $multi->get_DBAdaptor( "funcgen" );
 my $bma  = $db->get_BindingMatrixAdaptor;
 my $mf_a = $db->get_MotifFeatureAdaptor;
 
-ok( $db, 'Test database instantiated');
 
-
-#
 # Create BindingMatrix
-#
 
 my $freqs = ">CTCF_Test  
 A [ 87	167	281	56	8	744	40	107	851	5	333	54	12	56	104	372	82	117	402  ]
@@ -137,7 +129,7 @@ $matrix->threshold(0.81);
 
 is($matrix->relative_affinity("TGGCCACCA"), '0.209170634168983', 'Relative affinity test (log)');
 is($matrix->relative_affinity("CTCAGTGGA", 1), '0.0655146380336576', 'Relative affinity test (linear)');
-
+is($matrix->relative_affinity("NTCAGTGGA", 1), undef, 'Relative affinity test seq contains N');
 #Now store second BindingMatrix
 $bma->store($matrix);
 
@@ -321,9 +313,10 @@ $multi->restore;
 # N base test
 
 TODO:{
-  local $TODO = 'N bases not supported yet';
+  local $TODO = 'Seq contains N for MotifFeature::infer_variation_consequence tests';
 
-  # Kinda hard to do this as the test DB currently does not have any Ns!
+
+  # Kinda hard to do this on MotifFeature as the test DB currently does not have any Ns!
   # mysql> select seq_region_id, length(sequence) l from dna where sequence like "%N%" order by l asc limit 10;
 # +---------------+------+
 # | seq_region_id | l    |
