@@ -556,8 +556,6 @@ sub _constrain_feature_types {
 #Genericise this in BaseFeatureAdaptor by adding a call
 #to _meta_info_table which would return relevant set table for SetFeatures
 #else just the feature table?
-#Isn't this already wrong for ResultFeature? Or is that not a SetFeature?
-
 
 sub _constrain_logic_names {
   my $self        = shift;

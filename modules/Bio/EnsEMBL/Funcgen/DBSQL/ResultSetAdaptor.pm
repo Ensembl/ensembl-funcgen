@@ -36,15 +36,15 @@ storing ResultSet objects.
 
 my $rset_adaptor = $db->get_ResultSetAdaptor();
 
-my @rsets = @{$rset_adaptor->fetch_all_by_Experiment()};
+my @rsets = @{$rset_adaptor->fetch_all_by_Experiment};
 
 =head1 DESCRIPTION
 
 The ResultSetAdaptor is a database adaptor for storing and retrieving
-ResultSet objects which encapsulate ResultFeatures defining individual points of
-experimental 'signal' data. This can be raw signal(Channel) or
-normalised(ExperimentalChip) data from an Array Experiment. A ResultSet can also
-encapsulate processed signal/read data(InputSet) from a sequencing Experiment e.g RPKM.
+ResultSet objects. A ResultSet represents low level analysis of a discrete set 
+of data i.e. alignments of a particular technical replicate or a merged set of
+replicates. The underlying data are stored in flat files  which can be accessed 
+via the relevant library or command line tool. 
 
 =cut
 
@@ -52,7 +52,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Exception         qw( throw warning );
+use Bio::EnsEMBL::Utils::Exception         qw( throw warning deprecate );
 use Bio::EnsEMBL::Funcgen::ResultSet;
 use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor; #DBI sql_types import
 
@@ -118,30 +118,18 @@ sub fetch_all_by_feature_class {
 
 sub fetch_all_linked_by_ResultSet{
   my ($self, $rset) = @_;
-
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
 
-
-  my $constraint = '
-    rsi.result_set_id IN (
-      SELECT DISTINCT(
-          result_set_id)
-      FROM
-        result_set_input
-      WHERE
-        result_set_input_id
-      IN(
-        '.join(', ', @{$rset->result_set_input_ids}).')) ';
-
+  my $constraint = 'rsi.result_set_id IN ( '.
+    'SELECT DISTINCT(result_set_id) FROM result_set_input '.
+    'WHERE result_set_input_id IN('.join(', ', @{$rset->result_set_input_ids}).')) ';
   my @tmp = @{$self->generic_fetch($constraint)};
 
-  #Now remove query set
+  # Now remove query set
   my @linked_sets;
-
   map {push @linked_sets, $_ if $_->dbID != $rset->dbID} @tmp;
 
   return \@linked_sets;
-
 }
 
 
@@ -182,11 +170,11 @@ sub _get_Experiment_join_clause{
 
   if (@ecs) { # We have an Array based experiment
 
-    my $ec_ids = join(', ', (map $_->dbID, @ecs)); #get ' separated list of ecids
+    my $ec_ids = join(', ', map {$_->dbID} @ecs); #get ' separated list of ecids
 
 
-    my @chans = map @$_, (map $_->get_Channels(), @ecs);
-    my $chan_ids = join(', ', (map $_->dbID(), @chans)); #get ' separated list of chanids
+    my @chans = map { @$_ } (map {$_->get_Channels} @ecs);
+    my $chan_ids = join(', ', map {$_->dbID} @chans); #get ' separated list of chanids
     #These give empty strings which are defined
     #This will not work for single IDs of 0, but this will never happen.
 
@@ -205,10 +193,9 @@ sub _get_Experiment_join_clause{
 
   }
   else {     #We have an InputSet/InputSubset Experiment
-    my $setids = join(', ', (map $_->dbID, @{$self->db->get_InputSetAdaptor->fetch_all_by_Experiment($exp)}));
-    $constraint = 'rsi.table_name="input_set" AND rsi.table_id IN ('.$setids.')';
-    $setids = join(', ', (map $_->dbID, @{$self->db->get_InputSubsetAdaptor->fetch_all_by_Experiments([$exp])}));
-    $constraint = "(( $constraint ) OR ( rsi.table_name='input_subset' AND rsi.table_id IN (".$setids.')))';
+    my $setids = join(', ', map {$_->dbID} 
+      @{$self->db->get_InputSubsetAdaptor->fetch_all_by_Experiments([$exp])});
+    $constraint = "rsi.table_name='input_subset' AND rsi.table_id IN (${setids})";
   }
 
   return $constraint;
@@ -230,13 +217,7 @@ sub _get_Experiment_join_clause{
 
 sub fetch_all_by_Experiment{
   my ($self, $exp, $analysis) = @_;
-
-  #my $constraint = "ec.experiment_id=".$exp->dbID();
-  #This was much easier with the more complicated default where join
-  #should we reinstate and just have a duplication of cell/feature_types?
-
   my $join = $self->_get_Experiment_join_clause($exp);
-
   return ($join) ? $self->generic_fetch($join) : [];
 }
 
@@ -380,6 +361,7 @@ sub _default_where_clause {
 }
 
 
+
 =head2 _final_clause
 
   Args       : None
@@ -421,14 +403,14 @@ sub _final_clause {
 sub _objs_from_sth {
   my $self = shift;
   my $sth  = shift;
-  my (@rsets, $last_id, $rset, $dbid, $anal_id, $anal, $ftype, $ctype, $table_id);
-  my ($sql, $table_name, $cc_id, $ftype_id, $ctype_id, $rf_set, $dbfile_dir);
+  my (@rsets, $rset, $dbid, $anal_id, $anal, $ftype, $ctype, $table_id);
+  my ($sql, $table_name, $cc_id, $ftype_id, $ctype_id, $dbfile_path);
   my ($name, $rep, $feat_class);
   my $a_adaptor  = $self->db->get_AnalysisAdaptor;
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor;
   my $ct_adaptor = $self->db->get_CellTypeAdaptor;
   $sth->bind_columns(\$dbid, \$anal_id, \$table_name, \$cc_id, \$table_id,
-                     \$name, \$ctype_id, \$ftype_id, \$feat_class, \$dbfile_dir, \$rep);
+                     \$name, \$ctype_id, \$ftype_id, \$feat_class, \$dbfile_path, \$rep);
 
   while ( $sth->fetch ) {
 
@@ -437,7 +419,10 @@ sub _objs_from_sth {
       $anal  = (defined $anal_id)  ? $a_adaptor->fetch_by_dbID($anal_id)   : undef;
       $ftype = (defined $ftype_id) ? $ft_adaptor->fetch_by_dbID($ftype_id) : undef;
       $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
-      $dbfile_dir = $self->build_dbfile_path($dbfile_dir) if defined $dbfile_dir;
+    
+      if(defined $dbfile_path){
+        ($dbfile_path = $self->dbfile_data_root.'/'.$dbfile_path) =~ s:/+:/:g;
+      }
 
       $rset = Bio::EnsEMBL::Funcgen::ResultSet->new
         (-DBID            => $dbid,
@@ -448,7 +433,7 @@ sub _objs_from_sth {
          -CELL_TYPE       => $ctype,
          -FEATURE_CLASS   => $feat_class,
          -ADAPTOR         => $self,
-         -DBFILE_DATA_DIR => $dbfile_dir,
+         -DBFILE_PATH     => $dbfile_path,
          -REPLICATE       => $rep,        );
     }
 
@@ -459,15 +444,6 @@ sub _objs_from_sth {
   return \@rsets;
 }
 
-
-#needs to move to a dbfile specific module
-
-sub build_dbfile_path{
-  my $self    = shift;
-  my $subpath = shift;
-  (my $full_path = $self->dbfile_data_root.'/'.$subpath) =~ s:/+:/:g;
-  return $full_path;
-}
 
 =head2 store
 
@@ -484,17 +460,12 @@ sub build_dbfile_path{
 
 sub store{
   my ($self, @rsets) = @_;
-
-  throw("Must provide a list of ResultSet objects") if(scalar(@rsets == 0));
-
-  my (%analysis_hash);
+  scalar(@rsets) || throw("Must provide a list of ResultSet objects");
 
   my $sth = $self->prepare('INSERT INTO result_set '.
                            '(analysis_id, name, cell_type_id, feature_type_id, feature_class) '.
                            'VALUES (?, ?, ?, ?, ?)');
-
-  my $db = $self->db();
-  my $analysis_adaptor = $db->get_AnalysisAdaptor();
+  my $db = $self->db;
 
  FEATURE: foreach my $rset (@rsets) {
 
@@ -502,27 +473,12 @@ sub store{
       throw('Must be an ResultSet object to store. Passed: ' . ref($rset) );
     }
 
-
     if ( $rset->is_stored($db) ) {
-      throw('ResultSet [' . $rset->dbID() . '] is already stored in the database\nResultSetAdaptor does not yet accomodate updating ResultSets');
-      #would need to retrive stored result set and update table_ids
+      throw('ResultSet [' . $rset->dbID . '] is already stored in the database'.
+        "\nResultSetAdaptor does not yet accomodate updating ResultSets");
     }
 
-    #above does not check if it has been generated from scratch but is identical i.e. recovery.
-    #Need to check table_id and analysis and that it has the correct status
-
-
-
-    if ( ! defined $rset->analysis() ) {
-      throw('An analysis must be attached to the ResultSet objects to be stored.');
-    }
-
-    # Store the analysis if it has not been stored yet
-    if ( ! $rset->analysis->is_stored($db) ) {
-      warn("Will this not keep storing the same analysis if we keep passing the same unstored analysis?");
-      $analysis_adaptor->store( $rset->analysis() );
-    }
-
+    $self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis', $rset->analysis);
 
     my $ct_id = (defined $rset->cell_type)    ? $rset->cell_type->dbID    : undef;
     my $ft_id = (defined $rset->feature_type) ? $rset->feature_type->dbID : undef;
@@ -541,7 +497,7 @@ sub store{
     $rset->adaptor($self);
     $self->store_states($rset);
     $self->store_chip_channels($rset);
-    $self->store_dbfile_data_dir($rset) if $rset->dbfile_data_dir;
+    $self->store_dbfile_path($rset) if $rset->dbfile_path;
   }
 
   return \@rsets;
@@ -554,11 +510,10 @@ sub store{
 =head2 dbfile_data_root
 
   Arg[1]     : Optional String: Root path of dbfile data directory
-  Example    : $rset_adaptor->dbfile_data_dir('/over-ride/path);
-  Description: This allows the root path to be over-ridden. The default path
-               is stored in the meta table as 'dbfile.data_root'. This can be
-               over-ridden by the webcode by setting REGULATION_FILE_PATH in
-               DEFAULTS.ini
+  Example    : $rset_adaptor->dbfile_data_root('/data/root/dir/);
+  Description: This allows the root path to be defined.,as this will change
+               between installations. This can be over-ridden by the webcode 
+               by setting REGULATION_FILE_PATH in DEFAULTS.ini
   Returntype : String
   Exceptions : None
   Caller     : Bio::EnsEMBL::Funcgen::DBAdaptor::ResultSet
@@ -570,25 +525,15 @@ sub dbfile_data_root{
   my ($self, $root) = @_;
 
   if($root){
+    $root =~ s/\/$//o;  # strip off trailing /, as this is present in dbfile_registry.path
     $self->{dbfile_data_root} = $root;
   }
-  elsif(! defined $self->{dbfile_data_root}){
-
-    #Grab it from the meta table
-    $self->{dbfile_data_root} = $self->db->get_MetaContainer->single_value_by_key('dbfile.data_root');
-
-    #set to empty string if undef, so we don't keep querying the meta table
-    $self->{dbfile_data_root} ||= '';
-  }
-
-  return $self->{dbfile_data_root};
+ 
+  return $self->{dbfile_data_root} || '';  # Avoids concat warning
 }
 
 
-
-
-
-=head2 store_dbfile_data_dir
+=head2 store_dbfile_path
 
   Arg[1]     : Bio::EnsEMBL::Funcgen::ResultSet
   Example    : $rset_adaptor->store_dbfile_data_dir;
@@ -597,66 +542,65 @@ sub dbfile_data_root{
   Exceptions : Throws if ResultSet is not stored and valid
                Throws if dbfile_data_dir not defined
                Throws if unable to store dbfile_data_dir
-  Caller     : Bio::EnsEMBL::Funcgen::Collector::ResultFeature
+  Caller     : Bio::EnsEMBL::Funcgen::Hive::BigWigWriter
   Status     : at risk
 
 =cut
 
-#This is not always a dir, but can be a prefix or a template
-#leave for now until we use core API for this
-
-
-sub store_dbfile_data_dir{
+sub store_dbfile_path{
   my $self = shift;
   my $rset = shift;
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
 
-  if ( ! $rset->is_stored($self->db()) ) {
-    throw('ResultSet must be stored in the database before storing chip_channel entries');
+  my $path = $rset->dbfile_path;
+  if(! defined $path){ throw('ResultSet::dbfile_path attribute is not set') }
+
+  # Strip off dbfile_data_root and throw if now set.
+  my $root = $self->dbfile_data_root;
+
+  if(! $root){  # not ! defined, as we default to the null string
+    throw('It is unsafe to store_dbfile_path without setting the dbfile_data_root first');
   }
 
-  my $data_dir = $rset->dbfile_data_dir;
-
-  if(! $data_dir){
-    throw('You need to pass a dbfile_data_dir argument to update the ResultSet');
-  }
+  $path =~ s/$root//;
 
   #Check we have a record
-  my $rset_id = $rset->dbID;
-  my $db_dir  = $self->_fetch_dbfile_data_dir($rset_id);
+  my $rset_id  = $rset->dbID;
+  my $db_path  = $self->_fetch_dbfile_path($rset_id);
 
-  if($db_dir &&
-	 ($db_dir ne $data_dir)){#UPDATE
+  if($db_path &&
+	 ($db_path ne $path)){  # UPDATE
+    # Really should have rolled this back prior to this point
     my $sql = 'UPDATE dbfile_registry set path=? where table_name="result_set" and table_id=?';
     my $sth = $self->prepare($sql);
-    $sth->bind_param(1, $data_dir, SQL_VARCHAR);
-    $sth->bind_param(2, $rset_id,  SQL_INTEGER);
+    $sth->bind_param(1, $path,    SQL_VARCHAR);
+    $sth->bind_param(2, $rset_id, SQL_INTEGER);
 
     if(! eval {$sth->execute; 1}){
       throw('Failed to update dbfile_data_dir for '.$rset->name."\n$@");
     }
   }
-  elsif(! $db_dir){#STORE
+  elsif(! defined $db_path){  # STORE
     my $sql = 'INSERT INTO dbfile_registry(table_id, table_name, path) values(?, "result_set", ?)';
     my $sth = $self->prepare($sql);
-    $sth->bind_param(1, $rset_id,  SQL_INTEGER);
-    $sth->bind_param(2, $data_dir, SQL_VARCHAR);
+    $sth->bind_param(1, $rset_id, SQL_INTEGER);
+    $sth->bind_param(2, $path,    SQL_VARCHAR);
 
     if(! eval {$sth->execute; 1}){
       my $err = $@;
       #This could be a race condition if we have parallel writes going on
       #Attempt to validate stored value is same, else fail
+      $db_path = $self->_fetch_dbfile_path($rset_id);
 
-      $db_dir = $self->_fetch_dbfile_data_dir($rset_id);
+      if(defined $db_path){
 
-      if(defined $db_dir){
-
-        if($db_dir ne $data_dir){
+        if($db_path ne $path){
           throw('Failed to store dbfile_data_dir table '.$rset->name.
-            "\n'Racing' process stored a differing value:\n\t$data_dir\n\tvs\n\t$db_dir\n$err");
-        }#else this was a race condition
+            "\n'Racing' process stored a differing value:\n\t$path\n\tvs\n\t$db_path\n$err");
+        }  # else this was a race condition
       }
       else{
-        throw('Failed to store dbfile_data_dir for '.$rset->name."\n$err");
+        throw('Failed to store dbfile_path for '.$rset->name."\n$err");
       }
     }
   }
@@ -664,27 +608,27 @@ sub store_dbfile_data_dir{
   return;
 }
 
-#This is only used for validation in store_dbfile_data_dir
 
-sub _fetch_dbfile_data_dir{
+#This is only used for validation in store_dbfile_path
+
+sub _fetch_dbfile_path{
   my $self    = shift;
   my $rset_id = shift;
   my $sql  = 'SELECT path from dbfile_registry where table_name="result_set" and table_id=?';
   my $sth  = $self->prepare($sql);
   $sth->bind_param(1, $rset_id, SQL_INTEGER);
 
-
   if(! eval {$sth->execute; 1} ){
     throw("Failed to fetch dbfile_registry using:\n$sql (dbID=$rset_id)\n$@");
   }
 
-  my $dir;
+  my $path;
 
   if(my $row_ref = $sth->fetch){
-    $dir = $row_ref->[0];
+    $path = $row_ref->[0];
   }
 
-  return $dir;
+  return $path;
 }
 
 =head2 store_chip_channels
@@ -714,57 +658,59 @@ sub store_chip_channels{
     throw('ResultSet must be stored in the database before storing chip_channel entries');
   }
 
-  my $sth = $self->prepare("
-		INSERT INTO result_set_input (
-			result_set_id, table_id, table_name
-		) VALUES (?, ?, ?)
-	");
+  my $sth = $self->prepare('INSERT INTO result_set_input (result_set_id, table_id, table_name)'.
+    ' VALUES (?, ?, ?)');
 
-  my $sth1 = $self->prepare("
-		INSERT INTO result_set_input (
-			result_set_input_id, result_set_id, table_id, table_name
-		) VALUES (?, ?, ?, ?)
-	");
-
+  my $sth1 = $self->prepare('INSERT INTO result_set_input '.
+    '(result_set_input_id, result_set_id, table_id, table_name) VALUES (?, ?, ?, ?)');
 
   #Store and set all previously unstored table_ids
   foreach my $table_id(@{$rset->table_ids()}){
     my $cc_id = $rset->get_result_set_input_id($table_id);
 
     if(! defined $cc_id){
-      $sth->bind_param(1, $rset->dbID(),       SQL_INTEGER);
-      $sth->bind_param(2, $table_id,           SQL_INTEGER);
-      $sth->bind_param(3, $rset->table_name(), SQL_VARCHAR);
+      $sth->bind_param(1, $rset->dbID,       SQL_INTEGER);
+      $sth->bind_param(2, $table_id,         SQL_INTEGER);
+      $sth->bind_param(3, $rset->table_name, SQL_VARCHAR);
+      $sth->execute;
+      $rset->_add_table_id($table_id, $self->last_insert_id);
+    }
+    else{
+      #this should only store if not already stored for this rset
+      #this is because we may want to add chip_channels to a previously stored rset
+      my $sql = 'SELECT result_set_input_id from result_set_input where result_set_id='.$rset->dbID.
+       " AND result_set_input_id=${cc_id}";
+      my $loaded = $self->db->dbc->db_handle->selectcol_arrayref($sql);
 
-      $sth->execute();
-
-	  $cc_id = $self->last_insert_id;
-      $rset->_add_table_id($table_id,  $self->last_insert_id);
-    }else{
-
-	  #this should only store if not already stored for this rset
-	  #this is because we may want to add chip_channels to a previously stored rset
-	  my $sql = 'SELECT result_set_input_id from result_set_input where result_set_id='.$rset->dbID().
-		" AND result_set_input_id=${cc_id}";
-	  my ($loaded) = map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
-
-	  if(! $loaded){
-		$sth1->bind_param(1, $cc_id,       SQL_INTEGER);
-		$sth1->bind_param(2, $rset->dbID(),       SQL_INTEGER);
-		$sth1->bind_param(3, $table_id,           SQL_INTEGER);
-		$sth1->bind_param(4, $rset->table_name(), SQL_VARCHAR);
-		$sth1->execute();#this could still fail is some one duplicates a result_set_id, table_id, table_name entry
-	  }
-	}
+      if(scalar @$loaded){
+        $sth1->bind_param(1, $cc_id,            SQL_INTEGER);
+        $sth1->bind_param(2, $rset->dbID,       SQL_INTEGER);
+        $sth1->bind_param(3, $table_id,         SQL_INTEGER);
+        $sth1->bind_param(4, $rset->table_name, SQL_VARCHAR);
+        $sth1->execute();#this could still fail is some one duplicates a result_set_id, table_id, table_name entry
+      }
+    }
   }
   return $rset;
 }
 
 
 ### GENERIC CONSTRAIN METHODS ###
-#See Base/SetAdaptor
+# See Base/SetAdaptor
 
 
+
+### DEPRECATED METHODS ###
+
+sub store_dbfile_data_dir{  # DEPRECATED IN v80
+  deprecate('Please use store_dbfile_path');
+  return store_dbfile_path(@_);
+}
+
+sub _fetch_dbfile_data_dir{
+  deprecate('Please use _fetch_dbfile_path');
+  return _fetch_dbfile_path(@_);
+}
 
 
 

@@ -637,8 +637,6 @@ sub compare_storable_methods {
     
     #Need to account for a single undef value, here?
     
-    
-    
 
     for my $i (0..$#{$these_objs}){
       #We can't alter $method key here for test discrimination
@@ -717,25 +715,24 @@ sub _compare_method_return_types{
     $diff = "Return size mismatch:\t".
               scalar(@these_values).', '.scalar(@other_values);
   }
-  elsif(scalar(@these_values) > 1){
+  elsif(scalar(@these_values)){
     $multi = 1;
 
     if($storable){
+        # Do storable check here as this is required for dbID sort. adds iteration
+        # Move to compare_storable_methods?
 
-        #Do storable check here as this is required for dbID sort
-        #adds iteration
-        eval { map $_->isa('Bio::EnsEMBL::Storable'),
-                (@these_values, @other_values)};
-
-        if($@){
-          throw($method.' does not return Storable(s)');
+        if(! eval { map { die() if ! $_->isa('Bio::EnsEMBL::Storable') } 
+                     (@these_values, @other_values); 
+                    1;}){
+          throw($method.' method does not return Storable(s)');
         }
 
         @these_values = sort {$a->dbID <=> $b->dbID} @these_values;
         @other_values = sort {$a->dbID <=> $b->dbID} @other_values;
     }
     else{
-      #scalar check done in comapre_scalar_methods (for speed)
+      #scalar check done in compare_scalar_methods (for speed)
       @these_values = sort @these_values;
       @other_values = sort @other_values;
     }

@@ -738,9 +738,9 @@ sub _imported_states{
 
 =head2 status_filter
 
-  Arg [1]    : string - status e.g. IMPORTED, DISPLAYABLE
-  Arg [2]    : string - table name e.g. experimental_chip
-  Arg [3]    : list   - table dbIDs
+  Arg [1]    : String - status e.g. IMPORTED, DISPLAYABLE
+  Arg [2]    : String - table name e.g. experimental_chip
+  Arg [3]    : List   - table dbIDs
   Exmaple    : my @displayable_ec_ids = @{$ec_adaptor->status_filter('DISPLAYABLE',
                                                                      'experimental_chip',
                                                                      (map $_->dbID, @echips))};
@@ -748,7 +748,7 @@ sub _imported_states{
   Returntype : ARRAYREF
   Exceptions : Warns if state already set
                Throws is status name is not already stored.
-  Caller     : general - ResultSetAdaptor->fetch_Resultfeatures_by_Slice
+  Caller     : general
   Status     : At risk - Move to Status?
 
 =cut
@@ -761,8 +761,9 @@ sub status_filter{
 
   if($status_id){
 
-    throw("Must provide a table_name and table_ids to filter non-displayable ids")
-      if(! ($table_name && @table_ids));
+    if(! ($table_name && @table_ids)){
+      throw("Must provide a table_name and table_ids to filter non-displayable ids");
+    }      
 
     my $sql = "SELECT table_id from status where table_name='$table_name' and ".
                "table_id in (".join(", ", @table_ids).") and status.status_name_id".

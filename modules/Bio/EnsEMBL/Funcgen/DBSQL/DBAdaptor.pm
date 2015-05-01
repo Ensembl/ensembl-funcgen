@@ -384,7 +384,6 @@ sub get_available_adaptors{
                'ProbeFeature'           => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeFeatureAdaptor',
                'ProbeSet'               => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeSetAdaptor',
                'RegulatoryFeature'      => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor',
-               'ResultFeature'          => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultFeatureAdaptor',
                'ResultSet'              => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor',
                'SegmentationFeature'    => 'Bio::EnsEMBL::Funcgen::DBSQL::SegmentationFeatureAdaptor',
                'Slice'                  => 'Bio::EnsEMBL::Funcgen::DBSQL::SliceAdaptor',

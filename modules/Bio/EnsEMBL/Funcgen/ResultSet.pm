@@ -91,7 +91,6 @@ my %valid_table_names =
                   -dbid               => $dbid,
                   -analysis           => $analysis,
                   -support            => \@support_objects,
-                  -result_feature_set => 1,
                   -feature_class      => 'result',
                   -feature_type       => $ftype,
 	             );
@@ -109,18 +108,15 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($table_name, $table_id, $rf_set, $dbfile_data_dir, $support, $rep)
-    = rearrange(['TABLE_NAME', 'TABLE_ID', 'RESULT_FEATURE_SET',
-                 'DBFILE_DATA_DIR', 'SUPPORT', 'REPLICATE'], @_);
+  my ($table_name, $table_id, $dbfile_path, $support, $rep)
+    = rearrange(['TABLE_NAME', 'TABLE_ID', 'DBFILE_PATH', 'SUPPORT', 'REPLICATE'], @_);
   # TEST MANDATORY PARAMS
-
-  #explicit type check here to avoid invalid types being imported as NULL
-  #and subsequently throwing errors on retrieval
+  # explicit type check here to avoid invalid types being imported as NULL
+  # and subsequently throwing errors on retrieval
   $self->_validate_feature_class(\@_);
 
-  #set default type until this is moved to db_file_registry.format
-  #This is not possible yet as 5mC is classed as DNA not DNA Modification!!!
-
+  # set default type until this is moved to db_file_registry.format
+  # This is not possible yet as 5mC is classed as DNA not DNA Modification!!!
   $self->{replicate}      = $rep;
   $self->{table_ids}      = {};
 
@@ -155,9 +151,9 @@ sub new {
     }
   }
 
-
-  $self->{result_feature_set} = (defined $rf_set) ? 1 : 0;
-  $self->dbfile_data_dir($dbfile_data_dir) if defined $dbfile_data_dir;
+  # Don't use setter here as this will call $self->adaptor->dbfile_data_root
+  # which may not have been set yet.
+  $self->{dbfile_path} = $dbfile_path if defined $dbfile_path;
 
   return $self;
 }
@@ -314,8 +310,6 @@ sub add_support{
 }
 
 
-
-
 =head2 display_label
 
   Example    : print $set->display_label;
@@ -361,72 +355,24 @@ sub display_label {
 }
 
 
-#These are CollectionContainer? methods
-#For a core track the would probably be in the Analysis
-#All other collection methods are in ResultFeatureAdaptor(and parents)
+=head2 dbfile_path
 
-=head2 get_dbfile_path_by_window_size
-
-  Arg[1]     : int - window size
-  Arg[2]     : OPTIONAL Bio::EnsEMBL::Slice Used when generating individual seq_region Collections
-  Example    : my $filepath = $self->get_dbfile_path_by_ResultSet_window_size($rset, $wsize);
-  Description: Generates the default dbfile path for a given ResultSet and window_size
-  Returntype : string
-  Exceptions : Throws if Slice is not valid
-  Caller     : general
-  Status     : At risk
-
-=cut
-
-sub get_dbfile_path_by_window_size{
-  my ($self, $window_size, $slice) = @_;
-
-  if($slice){
-
-    if(! (ref($slice) && $slice->isa("Bio::EnsEMBL::Slice"))){
-      throw('You must provide a valid Bio::EnsEMBL::Slice');
-    }
-
-    $window_size .= '.'.$slice->seq_region_name;
-  }
-
-  return $self->dbfile_data_dir.'/result_features.'.$self->name.'.'.$window_size.'.col';
-}
-
-
-=head2 dbfile_data_dir
-
-  Arg[1]     : String (optional) - data directory for this ResultSet
-  Example    : my $dbfile_data_dir = $self->dbfile_data_dir;
-  Description: Getter/Setter for the root dbfile data directory for this ResultSet
+  Arg[1]     : String (optional) - File path for flat 'DB' file for this ResultSet
+                e.g. a BigWig/Bed file
+  Example    : my $dbfile_path = $self->dbfile_path;
+  Description: Getter/Setter for the dbfile path attribute
   Returntype : String
   Exceptions : None
-  Caller     : Bio::EnsEMBL::Funcgen::Importer and new
+  Caller     : General
   Status     : at risk
 
 =cut
 
-# currently using setter functionality in importer
-
-sub dbfile_data_dir{
-  my ($self, $data_dir) = @_;
-  $self->{dbfile_data_dir} = $data_dir if defined $data_dir;
-  return $self->{dbfile_data_dir};
+sub dbfile_path{
+  my $self             = shift;
+  $self->{dbfile_path} = shift if @_;
+  return $self->{dbfile_path};
 }
-
-
-=head2 result_feature_set
-
-  Example    : if($rset->result_feature_set){ ...use result_feature table ...};
-  Description: Getter for the result_feature_set attribute.
-  Returntype : Boolean
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub result_feature_set{ return $_[0]->{result_feature_set}; }
 
 
 =head2 table_name
@@ -442,7 +388,7 @@ sub result_feature_set{ return $_[0]->{result_feature_set}; }
 
 =cut
 
-sub table_name{ return $_[0]->{table_name}; }
+sub table_name{ return shift->{table_name}; }
 
 
 =head2 _add_table_id
@@ -469,12 +415,12 @@ sub _add_table_id {
   }else{
 
     #This allows setting of the cc_id on store
-    if((exists $self->{'table_ids'}->{$table_id}) &&
-       (defined $self->{'table_ids'}->{$table_id})){
+    if((exists $self->{table_ids}->{$table_id}) &&
+       (defined $self->{table_ids}->{$table_id})){
       throw("You are attempting to redefine a result_set_input_id which is already defined");
     }
 
-    $self->{'table_ids'}->{$table_id} = $cc_id;
+    $self->{table_ids}->{$table_id} = $cc_id;
   }
 
   return;
@@ -492,7 +438,7 @@ sub _add_table_id {
 
 =cut
 
-sub table_ids { return [ keys %{$_[0]->{'table_ids'}} ]; }
+sub table_ids { return [ keys %{shift->{table_ids}} ]; }
 
 
 =head2 result_set_input_ids
@@ -506,7 +452,7 @@ sub table_ids { return [ keys %{$_[0]->{'table_ids'}} ]; }
 
 =cut
 
-sub result_set_input_ids { return [ values %{$_[0]->{'table_ids'}} ]; }
+sub result_set_input_ids { return [ values %{shift->{table_ids}} ]; }
 
 
 =head2 contains
@@ -528,7 +474,7 @@ sub contains{
   if($table_name ne $self->table_name){
     warn("ResultSet(".$self->table_name().") cannot contain ${table_name}s");
   }else{
-    $contains = 1 if (exists $self->{'table_ids'}->{$chip_channel->dbID()});
+    $contains = 1 if exists $self->{table_ids}->{$chip_channel->dbID()};
   }
 
   return $contains;
@@ -549,7 +495,7 @@ sub contains{
 
 sub get_result_set_input_id{
   my ($self, $table_id) = @_;
-  return (exists $self->{'table_ids'}->{$table_id}) ?  $self->{'table_ids'}->{$table_id} : undef;
+  return (exists $self->{table_ids}->{$table_id}) ?  $self->{table_ids}->{$table_id} : undef;
 }
 
 
@@ -600,12 +546,11 @@ sub get_support {
 
 sub get_ExperimentalChips{
   my $self = shift;
-
   my $echips;
 
   if( $self->table_name ne 'experimental_chip' ||
       $self->table_name ne 'channel' ){
-	warn 'Cannot get_ExperimentalChips for an ResultSet with table_name '.$self->table_name;
+    warn 'Cannot get_ExperimentalChips for an ResultSet with table_name '.$self->table_name;
   }
   elsif($self->table_name eq 'experimental_chip'){
     $echips = $self->get_support;
@@ -622,10 +567,10 @@ sub get_ExperimentalChips{
         $echips{$chan->experimental_chip_id} ||= $ec_adaptor->fetch_by_dbID($chan->experimental_chip_id);
       }
 
-      @{$self->{'experimental_chips'}} = values %echips;
+      @{$self->{experimental_chips}} = values %echips;
     }
 
-    $echips = $self->{'experimental_chips'};
+    $echips = $self->{experimental_chips};
   }
 
   return $echips;
@@ -650,15 +595,15 @@ sub get_ExperimentalChips{
 sub get_replicate_set_by_result_set_input_id{
   my ($self, $cc_id) = @_;
 
-  if( ! defined $self->{'_replicate_cache'}){
+  if( ! defined $self->{_replicate_cache}){
 
     foreach my $ec (@{$self->get_ExperimentalChips()}){
-      $self->{'_replicate_cache'}{$self->get_result_set_input_id($ec->dbID())} = $ec->replicate();
+      $self->{_replicate_cache}{$self->get_result_set_input_id($ec->dbID())} = $ec->replicate();
     }
   }
 
   #warn here of absent replicate info?
-  return (exists $self->{'_replicate_cache'}{$cc_id}) ?  $self->{'_replicate_cache'}{$cc_id} : undef;
+  return (exists $self->{_replicate_cache}{$cc_id}) ?  $self->{_replicate_cache}{$cc_id} : undef;
 }
 
 sub get_replicate_set_by_chip_channel_id{
@@ -669,62 +614,6 @@ sub get_replicate_set_by_chip_channel_id{
 }
 
 
-=head2 get_displayable_ResultFeatures_by_Slice
-
-  Arg[1]     : Bio::EnsEMBL::Slice
-  Arg[2]     : Boolean - with probe flag, will nest Probe object in ResultFeature
-  Example    : my @results = @{$ResultSet->get_all_displayable_ResultFeatures_by_Slice($slice)};
-  Description: Simple wrapper method for ResultFeatureAdaptor::fetch_all_by_Slice_ResultSet
-  Returntype : Arrayref of ResultFeatures
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-
-sub get_displayable_ResultFeatures_by_Slice{
-  my ($self, $slice, $with_probe, $max_bins, $window_size, $constraint) = @_;
-  return $self->adaptor->fetch_ResultFeatures_by_Slice_ResultSet($slice, $self, 'DISPLAYABLE', $with_probe, $max_bins, $window_size, $constraint);
-}
-
-
-
-
-=head2 get_ResultFeatures_by_Slice
-
-  Arg[1]     : Bio::EnsEMBL::Slice
-  Arg[2]     : Integer - Max bins i.e. pixel width of display
-  Arg[3]     : Integer - window_size
-  Arg[4]     : String - constraint
-  Example    : my @rfs_with_rpobe = @{$ResultSet->get_all_ResultFeatures_by_Slice($slice, undef, 1)};
-  Description: Simple wrapper method for ResultFeatureAdaptor::fetch_all_by_Slice_ResultSet
-  Returntype : Arrayref of ResultFeatures
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub get_ResultFeatures_by_Slice{
-  my ($self, $slice, $max_bins, $window_size, $constraint) = @_;
-  return $self->adaptor->db->get_ResultFeatureAdaptor->fetch_all_by_Slice_ResultSet($slice, $self, $max_bins, $window_size, $constraint);
-}
-
-
-
-#Floats unpack inaccurately so need 3 sigfiging
-#This should match the format in which they are originally stored
-#This is dependant on ResultSet type i.e. reads or intensity?
-#No format for reads!
-#Should this be set in the ResultSet instead?
-#It may be more efficient for the caller to test for format first rather than blindly printf'ing
-#even if there is no format?
-#This needs setting in new, so we don't have to eval for every score.
-
-sub score_format{
-  return '%.3f';
-}
 
 
 =head2 log_label
@@ -785,12 +674,10 @@ sub log_label {
 
 sub compare_to {
   my ($self, $obj, $shallow, $scl_methods, $obj_methods) = @_;
-
   $obj_methods ||= [qw(feature_type cell_type analysis get_support)];
   $scl_methods ||= [qw(name table_name feature_class get_all_states)];
 
-  return $self->SUPER::compare_to($obj, $shallow, $scl_methods,
-                                  $obj_methods);
+  return $self->SUPER::compare_to($obj, $shallow, $scl_methods, $obj_methods);
 }
 
 
@@ -858,24 +745,27 @@ sub experiment{
   return $self->{$attr_name};
 }
 
+
 ### DEPRECATED ###
 
-sub get_InputSets{ #DEPRECATED IN v72
-  deprecate('get_InputSets is now deprecated, please use get_support.');
-  return $_[0]->get_support;
+sub result_feature_set{  # DEPRECATED in v81
+  deprecate('ResultSet not longer supports ResultFeature retrieval. Access the underlying flat file by using dbfile_path and the appropriate library e.g. Bio::DB::BigFile');
+  return;
 }
 
-
-sub add_table_id { #DEPRECATED IN v72
-   deprecate('The add_table_id method is now deprecated, please use the -support param in new');
-   return $_[0]->_add_table_id($_[1]);
+sub get_ResultFeatures_by_Slice{  # DEPRECATED in v81
+  deprecate('ResultSet not longer supports ResultFeature retrieval. Access the underlying flat file by using dbfile_path and the appropriate library e.g. Bio::DB::BigFile');
+  return;
 }
 
+sub get_displayable_ResultFeatures_by_Slice{  # DEPRECATED in v81
+  deprecate('ResultSet not longer supports ResultFeature retrieval. Access the underlying flat file by using dbfile_path and the appropriate library e.g. Bio::DB::BigFile');
+  return;
+}
 
-#an attempt to try and standardise the Set interface/role
-sub get_Experiment{ #DEPRECATED in v76
-  deprecate('The get_Experiment method is now deprecated, please use the experiment method instead');
-  return shift->experiment;
+sub get_dbfile_path_by_window_size{  # DEPRECATED IN v81
+  deprecate('Please use dbfile_path directly to get full file path');
+  return;
 }
 
 
