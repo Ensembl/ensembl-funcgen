@@ -1661,7 +1661,7 @@ sub get_study_name_from_Set {
     $ftype = $set->feature_type->name;
   }
   
-  #\Q..\E escape mata characters in string variables 
+  #\Q..\E escape meta-characters in string variables 
   (my $study_name = $exp_name) =~ s/\Q${ctype}_${ftype}\E_(.*)/$1/i;
   
   if($study_name eq $exp_name){

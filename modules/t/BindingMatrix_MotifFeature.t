@@ -24,7 +24,7 @@ my $skip = 0;
 ok(1, 'Start up');
 
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
-my $db    = $multi->get_DBAdaptor( "funcgen" );
+my $db    = $multi->get_DBAdaptor( 'funcgen' );
 ok( $db, 'Test database instantiated');
 
 my $bma  = $db->get_BindingMatrixAdaptor;
@@ -49,8 +49,7 @@ my $bm_desc  = 'Jaspar Matrix';
 my $analysis_a = $db->get_AnalysisAdaptor;
 my $analysis   = $analysis_a->fetch_by_logic_name($lname);
 
-#3
-ok ($ftype);
+
 
 my $matrix = Bio::EnsEMBL::Funcgen::BindingMatrix->new(
 													   -name         => $bm_name,
@@ -72,7 +71,7 @@ ok(test_getter_setter($matrix, "threshold", 0.9),       'Set/get threshold attri
 ok($matrix->is_position_informative(5),                 'Position 5 is informative');
 ok(! $matrix->is_position_informative(19),              'Position 9 is not informative');
 
-throws_ok(sub{$matrix->is_position_informative(100)}, 
+throws_ok(sub{ $matrix->is_position_informative(100) }, 
           qr/.*Position\([0-9]+\) is out of bounds.*/s, 
           'BindingMatrix is_position_informative out of bounds');
 

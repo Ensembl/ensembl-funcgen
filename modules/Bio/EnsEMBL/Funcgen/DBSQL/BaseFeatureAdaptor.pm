@@ -492,6 +492,7 @@ sub get_seq_region_id_by_Slice{
   return $fg_sr_id;
 }
 
+
 sub get_core_seq_region_id{
   my ($self, $fg_sr_id) = @_;
 
@@ -541,25 +542,9 @@ sub get_core_seq_region_id{
   return $core_sr_id;
 }
 
-=head2 _pre_store
 
-  Arg [1]    : Bio::EnsEMBL::Feature
-  Example    : $fs = $a->fetch_all_by_Slice_constraint($slc, 'perc_ident > 5');
-  Description: Helper function containing some common feature storing functionality
-               Given a Feature this will return a copy (or the same feature if no changes
-	           to the feature are needed) of the feature which is relative to the start
-               of the seq_region it is on. The seq_region_id of the seq_region it is on
-               is also returned.  This method will also ensure that the database knows which coordinate
-               systems that this feature is stored in.  This supercedes the core method, to trust the
-               slice the feature has been generated on i.e. from the dnadb.  Also handles multi-coordsys
-               aspect, generating new coord_system_ids as appropriate and assembly projection.
-  Returntype : Bio::EnsEMBL::Feature and the seq_region_id it is mapped to
-  Exceptions : thrown if $slice is not defined
-  Caller     : Bio::EnsEMBL::"Type"FeatureAdaptors
-  Status     : At risk
-
-=cut
-
+# TODO compare this to core methods and remove new_assembly support?
+# 
 
 sub _pre_store {
   my ($self, $feature, $new_assembly) = @_;
@@ -582,10 +567,6 @@ sub _pre_store {
 
   # make sure feature coords are relative to start of entire seq_region
   if ($slice->start != 1 || $slice->strand != 1) {
-
-    #throw("You must generate your feature on a slice starting at 1 with strand 1");
-    #We did remove this transfer it uses direct hash access which
-    #did not work with old array based ResultFeatures
 
     #move feature onto a slice of the entire seq_region
     $slice = $slice->adaptor->fetch_by_region($slice->coord_system->name(),
@@ -646,6 +627,8 @@ sub _pre_store {
 
     #These are just callers for ResultFeature!
     #For speed.
+
+    # TODO revert this back to has based implementation?
 
     $feature->start($proj_slice->start);
     $feature->end($proj_slice->end);

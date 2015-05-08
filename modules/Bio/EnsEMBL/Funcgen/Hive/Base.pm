@@ -342,7 +342,7 @@ sub get_output_work_dir_methods{
   my $self         = shift;
   my $default_odir = shift;
   my $no_work_dir  = shift;
-  my $out_dir      = $self->validate_dir_param('output_dir', 1, $default_odir); 
+  my $out_dir      = $self->validate_dir_param('output_dir', 1, $default_odir);  # Create flag
   my $work_dir;    
              
   if(! $no_work_dir){
@@ -771,11 +771,12 @@ sub set_param_method {
       throw("$req is not a valid method type for set_param_and method, can only be 'required'");  
     }
     elsif(! defined $param_value){
+      # why not leave this to _param_and_method?
       throw($param_name.' value is required but not defined');  
     }
   }
   
-  return $_[0]->_param_and_method($param_name, $param_value, $req);    
+  return $self->_param_and_method($param_name, $param_value, $req);    
 }
 
 

@@ -45,7 +45,10 @@ use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 #as it will send all output there
 #-reload
 
-
+# todo
+# Should really generalise this and remove mandatory set dependancies
+# Allow passing the files required from the upstream analysis
+# And make the set operations optional
 
 #Make this optionally take a ResultSet and a peak analysis
 #to support calling without generation of Data/FeatureSet
@@ -130,11 +133,11 @@ sub fetch_input {
     $self->bin_dir.'/'.$analysis->program_file : $analysis->program_file;
 
   my $peak_runnable = _init_peak_caller
-   (-analysis => $analysis,
-    -align_prefix => $align_prefix,
+   (-analysis       => $analysis,
+    -align_prefix   => $align_prefix,
     -control_prefix => $control_prefix,
-    -sam_ref_fai => $sam_ref_fai,
-    -debug             => $self->debug,
+    -sam_ref_fai    => $sam_ref_fai,
+    -debug          => $self->debug,
     -peak_module_params =>
      {%$sensitive_caller_params,
       -program_file      => $pfile_path,
@@ -147,7 +150,7 @@ sub fetch_input {
   $self->set_param_method( 'peak_runnable', $peak_runnable );
 
   return;
-} ## end sub fetch_input
+}  # end sub fetch_input
 
 
 

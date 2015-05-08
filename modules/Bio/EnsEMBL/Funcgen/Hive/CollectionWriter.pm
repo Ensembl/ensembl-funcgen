@@ -14,7 +14,8 @@ use base ('Bio::EnsEMBL::Funcgen::Hive::BaseImporter');
 
 use warnings;
 use strict;
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( generate_slices_from_names );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( generate_slices_from_names 
+                                               run_system_cmd );
                                         
                                                #strip_param_args strip_param_flags run_system_cmd);
 use Bio::EnsEMBL::Utils::Exception qw(throw);
@@ -43,43 +44,45 @@ sub fetch_input {   # fetch parameters...
 
   $self->SUPER::fetch_input;    
   $self->helper->debug(1, "CollectionWriter::fetch_input after SUPER::fetch_input");  
-  my $rset = $self->fetch_Set_input('ResultSet');
+  my $rset = $self->fetch_Set_input('ResultSet');  # Injects ResultSet, FeatureSet & DataSet methods
   $self->helper->debug(1, "CollectionWriter::fetch_input got ResultSet:\t".$rset);
   
- 
   $self->init_branching_by_analysis;  #Set up the branch config
   my $ftype_name = $rset->feature_type->name;
  
-
+  $self->get_output_work_dir_methods($self->db_output_dir.'/result_feature/'.$rset->name, 1);#no work dir flag
+  #todo enable use of work dir in get_alignment_file_by_ResultSet_formats 
+  # and Importer for bed file generation
   
-  
-  $self->get_output_work_dir_methods($self->db_output_dir.'/result_feature/'.$rset->name, 1);#no work dir?
-  #todo enable use of work dir in get_alignment_file_by_InputSet and Importer
-  
-  #This is required by sam_ref_fai which is called by get_alignment_file_by_InputSet
-  #Move this to get_alignment_file_by_InputSet?
+  # This is required by sam_ref_fai which is called by get_alignment_file_by_ResultSet_formats
+  # Move this to get_alignment_file_by_ResultSet_formats?
   $self->set_param_method('cell_type', $rset->cell_type, 'required'); 
   
   
-  #TODO: need to dataflow 'prepared' status of bam file from alignment pipeline
-  #can't data flow, but can set this in the alignment pipeline_wide params
-  #then use this to perform the filtering in the first place
+  # TODO: need to dataflow 'bam_filtered' from alignment pipeline
+  # Curretnly this is setin the alignment pipeline_wide params
+  # then use this to perform the filtering in the first place
+  # Of course we can data flow this, set it as a batch_param and flow it from the
+  # branching analysis i.e. DefineResultSets or MergeControlAlignments_and_QC 
+  # (and manually from IdentifyReplicateResultSets?)
+
+  
+  # This should be in run as it can do some conversion?
+  # also need to pass formats array through 
+  # dependant on which analysis we are running bam and bed for Preprocess and just bed for WriteCollections
+  # Currently no way to do this dynamically as we don't know what the analysis is (?)
+  # so we have to ad as analysis_params
+  # and there is no way of detecting what formats down stream analyses need
+  # so again, they have to be hardcoded in analysis params
+  # use all formats by default
+  # Can we update -input_files in the Importer after we have created it?
   
   
-  #This should be in run as it can do some conversion!, also need to pass formats array through 
-  #dependant on which analysis we are running bam and bed for Preprocess and just bed for WriteCollections
-  #Currently no way to do this dynamically as we don't know what the analysis is (?)
-  #so we have to ad as analysis_params
-  #and there is no way of detecting what formats down stream analyses need
-  #so again, they have to be hardcoded in analysis params
-  #use all formats by default
-  #Can we update -input_files in the Importer after we have created it?
-  
+
   if($self->FeatureSet->analysis->program eq 'CCAT'){
-    #throw('Need to implement control preprocessing for CCAT');  
     
-    my $exp = $rset->experiment(1);#ctrl flag
-    #But only in PreprocessAlignments no in WriteCollections 
+    my $exp = $rset->experiment(1);  # ctrl flag
+    # But only in PreprocessAlignments no in WriteCollections 
     
     if(! $exp->has_status('CONTROL_CONVERTED_TO_BED')){
       #Make this status specific for now, just in case
@@ -104,20 +107,18 @@ sub fetch_input {   # fetch parameters...
       }   
     }
   }
+
   
   
   #This currently keeps the sam files! Which is caning the lfs quota                                                                    
   warn "Hardcoded PreprocessAlignments to get bed only, as sam intermediate was eating quota";
    
-  my $align_files = $self->get_alignment_files_by_ResultSet_formats($rset, ['bed']);
+  my $align_files = $self->get_alignment_files_by_ResultSet_formats($rset, ['bam', 'bed']);
                                                                 #    $self->param_required('feature_formats'),
                                                                 #    undef, #control flag
                                                                 #    1);     #all formats
-                                                                    
-                                                                    
-                                                                    
-                                                                    
-
+                                                                                                                                                                            
+  $self->set_param_method('bam_file', $align_files->{bam}, 'required');  # For bai test/creation 
                                                                     
   #No need to check as we have all_formats defined? Shouldn't we just specify bed here?
   #other formats maybe required for other downstream analyses i.e. peak calls
@@ -165,12 +166,11 @@ sub fetch_input {   # fetch parameters...
     -parser              => 'Bed',
     -output_set          => $rset,
     -input_files         => [$align_files->{bed}], #Can we set these after init?
-    -slices              => &generate_slices_from_names
-                              ($self->out_db->dnadb->get_SliceAdaptor, 
-                               $self->slices, 
-                               $self->skip_slices, 
-                               'toplevel', 
-                               0, 1),#nonref, incdups
+    -slices              => generate_slices_from_names
+                             ($self->out_db->dnadb->get_SliceAdaptor, 
+                              $self->slices, 
+                              $self->skip_slices, 
+                              'toplevel', 0, 1),#nonref, incdups
    });
   
   #todo why do we have to set EFG_DATA?
@@ -195,63 +195,84 @@ sub run {   # Check parameters and do appropriate database/file operations...
   if(! $self->param_silent('merge')){ #Prepare or write slice col
    
     if( ! $Imp->prepared ){  #Preparing data...
+
+      # Test/create bai index file
+      if(! -e $self->bam_file.'.bai'){
+        my $cmd = 'samtools index '.$self->bam_file;  # -b option not require for this version
+        run_system_cmd($cmd);
+      } 
+
+
       $Imp->read_and_import_data('prepare');
       #Dataflow only jobs for slices that the import has seen
-      my %seen_slices  = %{$Imp->slice_cache};
+
+      # what does this actually do?
+      # do we even need to do this now as we don't need the slices
+      # is anything else stored?
+      # IMPORTED is revoked is it is already set, so we will need to manage that
+      # We're not actually storing anything yet, so that can be done in
+      # the PeakCaller/BigWigWriter?
+
       
-      if(! %seen_slices){
-        $self->throw_no_retry("Found no data after prepare step for:\n\t".
-          join("\n\t", @{$Imp->input_files}));  
-      }
+      #my %seen_slices  = %{$Imp->slice_cache};
+      
+      #if(! %seen_slices){
+      #  $self->throw_no_retry("Found no data after prepare step for:\n\t".
+      #    join("\n\t", @{$Imp->input_files}));  
+      #}
       
       my $batch_params = $self->batch_params;
-      my @slice_jobs = ();
+#      my @slice_jobs = ();
 
-      foreach my $slice (values %seen_slices){ 
-
-        push @slice_jobs,
-         {
-          %{$batch_params},#-slices will be over-ridden by new_importer_params
-          dbID           => $self->param('dbID'),
-          set_name       => $self->param('set_name'),#mainly for readability
-          set_type       => $self->param('set_type'),
-          slices         => [$slice->seq_region_name],
-          filter_from_format => undef, #Don't want to re-filter for subsequent jobs
-          feature_formats    => ['bed'], #also don't need bam for Collection job
-          new_importer_params => 
-           {
-            -input_files    => [$Imp->output_file],
-            -total_features => $Imp->counts('total_features'),
-            -batch_job      => 1, 
-	          -prepared       => 1,  
-           }
-         };
-      }
+      #foreach my $slice (values %seen_slices){ 
+#
+#        push @slice_jobs,
+#         {
+#          %{$batch_params},#-slices will be over-ridden by new_importer_params
+#          dbID           => $self->param('dbID'),
+#          set_name       => $self->param('set_name'),#mainly for readability
+#          set_type       => $self->param('set_type'),
+#          slices         => [$slice->seq_region_name],
+#          filter_from_format => undef, #Don't want to re-filter for subsequent jobs
+#          feature_formats    => ['bed'], #also don't need bam for Collection job
+#          new_importer_params => 
+#           {
+#            -input_files    => [$Imp->output_file],
+#            -total_features => $Imp->counts('total_features'),
+#            -batch_job      => 1,
+#	          -prepared       => 1,  
+#           }
+#         };
+#      }
       
-                  
-      my $output_id = {%{$batch_params},#-slices will be over-ridden below
+      # This now only flows to BigWigWriter
+      # Need to pass the set info anyway as the states will need updating
+      # Is there any danger of the BigWigWriter attempting to resort the file,
+      # which maybe being used by the another analysis?
+
+      my $output_id = {%{$batch_params},  # -slices will be over-ridden below
+                       # These are already param_required by fetch_Set_input
                        dbID         => $self->param('dbID'),
-                       set_name     => $self->param('set_name'),#mainly for readability
+                       set_name     => $self->param('set_name'),  # mainly for readability
                        set_type     => $self->param('set_type'),
                        filter_from_format => undef,
-                       slices             => [keys %seen_slices]
-                       
-      }; #Don't want to re-filter for subsequent jobs
+                       #slices             => [keys %seen_slices]                   
+                     }; 
+      #Don't want to re-filter for subsequent jobs
                 
       #Deal with Collections and Mergecollection job group first
       #It's actually not necessary to branch like this for this analysis
       #as it is only dealing with one job group
       #so could have simply branced the funnel jobs after
-      #but this makes it more explicit  
-      
-      #This merge job delete the input for the peak job, this could conceivable do this
-      #before it get a chance to run. V unlikly tho, du eto runtime.
+      #but this makes it more explicit   
+      #$self->branch_job_group(2, \@slice_jobs, 1, [{%$output_id, garbage => [$Imp->output_file]}]);
+
+
       #We really need to ad ad a final semaphored job, to do the clean up
-      
-      $self->branch_job_group(2, \@slice_jobs, 1, [{%$output_id, garbage => [$Imp->output_file]}]);
-  
-      #We have no way of knowing whether method was injected by fetch_Set_input
-      my $fset = $self->FeatureSet;#from fetch_Set_input
+      #bed files only, as we keep the bams
+      $self->branch_job_group(2, [$output_id]);
+
+      my $fset = $self->FeatureSet;
       
       #todo
       #Do we need to be able to do this conditionally?

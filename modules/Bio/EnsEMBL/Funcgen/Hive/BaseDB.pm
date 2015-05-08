@@ -242,18 +242,14 @@ sub fetch_Set_input{
         "DataSet FeatureSet ResultSet InputSet");
   }  
   
-  #why do we have a mistmach between the case of the set_type and the method name?
-  #revert to title case i.e API standard as opposed to table name
-  #as these will create methods!
-  
-  my $set_type       = $self->param_required('set_type');
-  my $adaptor_method = 'get_'.$set_type.'Adaptor'; 
+  # inject these also with set_param_method?  
+  my $set_type       = $self->param_required('set_type'); 
   my $dbid           = $self->param_required('dbID');
   my $db             = $self->param_required('out_db');
   my $set_name       = $self->param_required('set_name');
   #can't $db->can($adaptor_method) as this doesn't work with autoload
   
-  
+  my $adaptor_method = 'get_'.$set_type.'Adaptor'; 
   $self->helper->debug(1, "Fetching $set_name $set_type with dbID $dbid");
   my $set            = $db->$adaptor_method->fetch_by_dbID($dbid);
   

@@ -30,8 +30,7 @@ use base qw( Bio::EnsEMBL::Funcgen::Sequencing::PeakCaller );#Does not import
 #This has been fixed to actually use the number of entries in the file to set the 
 #array size. The fixed version is available in the funcgen software area. 
 
-#Old Runnable actually suggests it can also run with bam and sam??
-sub input_formats    { return ['bed']; }
+sub input_formats    { return ['bed']; }  # readmet.txt suggests bed format only, sigh.
 sub requires_control { return 1; }
 sub out_file_types   { return [qw( significant_region 
                                    significant_peak 

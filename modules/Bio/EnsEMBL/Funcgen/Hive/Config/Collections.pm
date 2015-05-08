@@ -156,17 +156,13 @@ sub pipeline_analyses {
 
   return [
      {
-	   -logic_name => 'PreprocessAlignments',#was 'SetUp',
-	   #This is basically making sure the input file is sorted wrt genomic locations
+	   -logic_name => 'PreprocessAlignments',
+	   # This is basically making sure the input file is sorted wrt genomic locations
+
 	   -module     => 'Bio::EnsEMBL::Funcgen::Hive::CollectionWriter',
 	   #-parameters => {},
-
 				 	 
-	   -flow_into => 
-        {
-         '2->A' => [ 'WriteSignalCollection' ],
-         'A->1' => [ 'MergeCollections' ],
-        }, 
+	   -flow_into => { 2 => ['WriteBigWig'] }, 
 
 	   -analysis_capacity => 50,
 	   #Change this to hive_capacity as it may be competing with parallel peak jobs
@@ -176,53 +172,16 @@ sub pipeline_analyses {
      #todo revise this to reserve tmp space as this is sorting the bed files
     },
     
-
-    
-      #Currently this step itself kicks off jobs?
-      #Need to hive the individual jobs!
-      
-      #This also now no longer needs to bother with creating the sets,
-      #It should pick up a set from the input id(result_set_id)
-      #check it is in the correct state for the params set
-      #i.e. not IMPORTED if we don't have rollback, else bail out with a warning
-      #and no dependant sets at all
-      #We need to separate this logic from define_Sets
-      #i.e. w eneed to be able to run this logic with and existing set
-      #This is what _validate_rollback_Set does, but this expects an unstored set too
-      #Won't all of this have been done in DefineSets?
-      #Change this to PrepareSets? As this should also handle storage and rollback
-      #Or simply StoreRollbackSets?
-      
-	  {
-	   -logic_name    => 'WriteSignalCollection',
-	   -module        => 'Bio::EnsEMBL::Funcgen::Hive::CollectionWriter',
-	   #-parameters    => {}.
-
-	  
-	   #-input_ids     => [ dataflowed from PrepareInputAlignment via branch 1 ]
-	   -analysis_capacity => 1000,
-	   #Change this to hive_capacity as it may be competing with parallel peak jobs
+    {
+     -logic_name    => 'WriteBigWig',
+     -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunWiggleTools',
+     # -parameters    => {operator => 'write'},  # now default
+     #-input_ids     => [ dataflowed from PreprocessAlignments via branch 2 ]
+     -analysis_capacity => 1000,
+     #Change this to hive_capacity as it may be competing with parallel peak jobs
      -rc_name => 'normal_10gb_monitored',
-       
-       #Needed to force 1 job per worker, unless we have fixed the window_sizes bug?
-       #i.e. needs to make package vars attrs instead
-       #such that they don't persist across instances of the object
-       #-batch_size => 1,
-       #This is now fixed
-       
-     #Have seen apparently transient filesystem acces errors cause failure here
-     #unable to open output files  
-	  },
-	
-	
-	  {
-	   -logic_name => 'MergeCollections',
-	   -module     => 'Bio::EnsEMBL::Funcgen::Hive::CollectionWriter',
-	   -parameters => { merge => 1 }, #Move this to data flow? as this is not config
-	   #rather a constant for this analysis
-  	 -analysis_capacity => 200,
-     -rc_name => 'default',
-	  },
+    },  
+
   ];
 }
 

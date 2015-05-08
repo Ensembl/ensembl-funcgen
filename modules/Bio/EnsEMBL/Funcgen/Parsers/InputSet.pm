@@ -205,11 +205,10 @@ sub set_config{
   my $adaptor_method         = 'get_'.$fclass_name.'Adaptor';
 
   #cannot validate here using 'can' as it doesn't appear to work for autoloaded methods :(
-  eval { $self->{feature_adaptor} =  $self->db->$adaptor_method; };
-
-  if($@){
-    throw("$@\nFailed to $adaptor_method, ".$self->input_feature_class.
-      ' is not a valid feature class');
+ 
+  if(! eval { $self->{feature_adaptor} =  $self->db->$adaptor_method; 1;}){
+    throw("Failed to $adaptor_method, ".$self->input_feature_class.
+      " is not a valid feature class\n$@");
   }
 
 
@@ -966,7 +965,7 @@ sub read_and_import_data{
         #todo remove this when we update the define sets method
         #as stats should have been removed already?
         if ($output_set->has_status('IMPORTED') && (! $preprocess)) {
-              $output_set->adaptor->revoke_status('IMPORTED', $output_set)
+          $output_set->adaptor->revoke_status('IMPORTED', $output_set);
         }
         #What about IMPORTED_"CSVERSION"
         #This may leave us with an incomplete import which still has
