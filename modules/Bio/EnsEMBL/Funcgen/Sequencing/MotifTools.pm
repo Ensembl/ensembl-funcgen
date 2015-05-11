@@ -238,7 +238,7 @@ sub write_matrix_file{
   my $out_path      = shift;
   my $write_header  = shift;
   assert_ref($matrix_hashes, 'ARRAY', '$matrix_hashes');
-  $write_header     = 1 if scalar(keys @$matrix_hashes) > 1;
+  $write_header     = 1 if scalar(@$matrix_hashes) > 1;
   my $out_file      = open_file($out_path, '>');
 
   foreach my $mhash(@$matrix_hashes){
