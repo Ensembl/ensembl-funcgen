@@ -18,7 +18,9 @@ use strict;
 use File::Temp                             qw( tempfile );
 use Fatal                                  qw( close );
 use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( generate_slices_from_names run_system_cmd );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( generate_slices_from_names 
+                                               run_system_cmd
+                                               run_backtick_cmd );
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
 
 use base ('Bio::EnsEMBL::Funcgen::Hive::BaseDB');
@@ -26,7 +28,16 @@ use base ('Bio::EnsEMBL::Funcgen::Hive::BaseDB');
 # Todo
 # 1 Move this to SeqTools so it can be re-used in other contexts?
 #   Limited utility as it is already a very thin wrapper.
-# 2 Add file version support? 
+#   But convert_bam_to_bigwig would site well with other SeqTools
+#   convert methods
+#   That would spoil the generic functionality of RunWiggleTools
+#   Other option would be to create a WiggleTools.pm wrapper
+#   And have SeqTools::convert_bam_to_bigwig point to that?
+# 2 Add file version support? Or handle this separately?
+# 3 Change directory naming? There is not need for result_feature reference now?
+#   Remember we can't change the structure on nfs live easily!
+#   Is there any chance that get_alignment_files_by_ResultSet_formats
+
 
 ####################################################
 ## Preparations
@@ -37,7 +48,28 @@ sub fetch_input {
   my $self = shift;
   $self->param('disconnect_if_idle', 1);  # Set before DB connection via SUPER::fetch_input
   $self->SUPER::fetch_input;
-  $self->get_param_method('operator', 'silent', 'write');
+  $self->get_param_method('reduce_operator', 'silent', '');
+  $self->get_param_method('map_operator', 'silent', '');
+  $self->get_param_method('map_args', 'silent', '');
+  my $mode = $self->get_param_method('mode', 'silent');
+
+  # We could (cross-)validate the operators/mode here
+  # but let's just let wiggletools fail for now.
+  if($mode){
+    my $mode_method = '_build_'.lc($mode).'_cmd';
+
+    if(! $self->can($mode_method)){
+      $self->throw_no_retry("Unsupported mode:\t".$mode);
+    }
+    
+    $self->set_param_method('mode_method', $mode_method);
+  }
+
+
+  # Need an RPKM mode which does all the right things
+  # samtools idxstats file.bam to get num reads
+
+
 
   if($self->get_param_method('set_type', 'silent')){  # Set input params
     my $rset = $self->fetch_Set_input('ResultSet');
@@ -59,12 +91,16 @@ sub fetch_input {
         $rset->adaptor->revoke_status('IMPORTED', $rset);
       }
       else{
-        $self->throw_no_retry("Cannot write bigWig as result set is already marked as IMPORTED\n".
-          'To over-ride, run reseed_jobs.pl -append \'{force>1}\'');
+        $self->throw_no_retry("Cannot write bigWig as result set is already marked as IMPORTED:\t".
+          $rset->name.'('.$rset->dbID.")\nTo over-ride, run reseed_jobs.pl -append '{force>1}'");
         # DebugJob -f will not do this, as this is a beekeeper option
       }
     }
 
+    # This could potentially trigger a filter/sort step to produce the 
+    # filtered bam. This would be unsafe if parallel jobs are using the same file
+    # This normally is done directly after merge, so should be safe, unless the sorted/filtered
+    # bam has been deleted by mistake
     $self->input_files([$self->get_alignment_files_by_ResultSet_formats($rset, ['bam'])->{bam}]);
     $self->set_param_method('output_format', 'BigWig');
     $self->get_param_method('output_prefix',
@@ -90,11 +126,7 @@ sub fetch_input {
 
 
   # TODO
-  # Change this directory naming? There is not need for result_feature reference now?
-  # Remember we can't change the structure on nfs live easily!
-  # Is there any chance that get_alignment_files_by_ResultSet_formats
-  # could trigger a filter/sort?
-  # This file may already be in use by another analysis i.e. the peak caller
+  # 
 
   # This may not actually be used if output_file is specified
   $self->get_output_work_dir_methods($self->db_output_dir.'/result_feature/');
@@ -108,13 +140,11 @@ sub fetch_input {
 
 sub run {
   my $self        = shift;
-  my @tmpfiles;
-  my $chrlen_file = $self->write_chrlen_file;
-
+  
   # DEFINE THE OUTPUT
-  my $write_out = '-';
+  my $write_out    = '-';
   my $reformat_cmd = '';
-  my $output;
+  my ($output, $cmd, @tmpfiles);
 
   if(lc($self->output_format) eq 'wig'){
     $write_out = $self->output_prefix.'.wig';
@@ -130,15 +160,24 @@ sub run {
     # Should really be done in fetch_input, but easier here.
   }
 
-  my $operator = ($self->operator eq 'write') ? '' : $self->operator;
+  # Build map command
+  my $mode_method = $self->mode_method;
 
-  # BUILD/RUN THE COMMAND
+  if($mode_method){
+    $cmd = $self->$mode_method();
+  }
+  else{
+    $cmd = $self->reduce_operator.' '.$self->map_operator.' '.$self->map_args.' '.
+     join(' ', @{$self->input_files});
+  }
+
+  # RUN THE COMMAND
   # Presence of index files is input format specific, so not explicitly tested/generated here
   # Always use write to avoid redirects
-  my $cmd = "wiggletools write $write_out $operator ".
-   join(' ',@{$self->input_files}).$reformat_cmd;
+  $cmd = "wiggletools write $write_out ".$cmd.$reformat_cmd;
+  $self->helper->debug(1, "Running:\n\t".$cmd);
   run_system_cmd($cmd);
-  # Took about 20 mins with ~ 8GB mem for single bam
+  # Simple 'bam to wig' took about 20 mins with ~ 8GB mem for single bam
 
   # PUT OUT THE TRASH
   if(@tmpfiles){
@@ -160,6 +199,31 @@ sub run {
 
 
 sub write_output {  return; }  # Nothing to do/flow here?
+# Will still autoflow if wired on branch 1.
+
+
+sub _build_rpkm_cmd{
+  my $self = shift;
+  my $cmd  = 'mean ';
+  my ($total_mapped, $count_cmd);
+
+  # This assumes bam input with index
+  foreach my $file(@{$self->input_files}){
+    
+    $count_cmd = 'samtools idxstats '.$file.' | awk \'{total = total + $2} END{print total}\'';
+    $self->helper->debug(2, "Running:\n\t".$count_cmd);
+    $total_mapped = run_backtick_cmd($count_cmd);
+    # pipe causes uncaught failures on absence of bai file, so test here?
+
+    if(! $total_mapped){
+      $self->throw_no_retry('Failed to get number of mapped reads from index. Does it exist?');
+    }
+
+    $cmd .= ' scale '.(10**9 / $total_mapped).' '.$file;
+  }
+
+  return $cmd;
+}
 
 
 sub write_chrlen_file {
@@ -170,7 +234,7 @@ sub write_chrlen_file {
                                           $self->slices,
                                           $self->skip_slices,
                                           'toplevel', 0, 1);  # nonref, incdups
-  $self->debug(2, 'Writing lengths for '.scalar(@{$slices}).' toplevel (inc_dups) slices');
+  $self->helper->debug(1, 'Writing lengths for '.scalar(@{$slices}).' toplevel (inc_dups) slices');
 
   foreach my $slice (@{$slices}) {
     print $fh join("\t", ($slice->seq_region_name, $slice->end - $slice->start + 1)) . "\n";

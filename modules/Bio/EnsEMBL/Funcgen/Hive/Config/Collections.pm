@@ -175,7 +175,7 @@ sub pipeline_analyses {
     {
      -logic_name    => 'WriteBigWig',
      -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunWiggleTools',
-     # -parameters    => {operator => 'write'},  # now default
+     -parameters    => {mode => 'RPKM'},
      #-input_ids     => [ dataflowed from PreprocessAlignments via branch 2 ]
      -analysis_capacity => 1000,
      #Change this to hive_capacity as it may be competing with parallel peak jobs
