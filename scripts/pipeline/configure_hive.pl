@@ -88,7 +88,7 @@ use Bio::EnsEMBL::Funcgen::Hive::Utils            qw( inject_DataflowRuleAdaptor
 
 # TODO
 # 1 Genericise pipeline param passing. Current allow_no_arch and archive_root are hardcoded.
-# 2  -force            Forces analysis top up, even if config already exists in DB?
+# 2  -force            Force analysis top up, even if config already exists in DB?
 # 3 For now we are not storing the conf keys in the output DB but we may want
 #   to move them there, if we are to allow more than one hive to run on the 
 #   same DB.
@@ -114,12 +114,14 @@ my %config_labels =
   'UberPipe'              => [undef, 'Peaks', 'Collections', 'IDRPeaks', 'ReadAlignment'] );
 
 
+# Some global variable to avoid excessive arg passing
+my ($ntable_a, $dfr_adaptor, $hive_script_dir, $hive_url);
+
 main();
 
 sub main{
   my @tmp_args = @ARGV;
-  my (@configs, $species, $data_root, $hive_script_dir, $list);
-  my ($archive_root, $allow_no_arch);
+  my (@configs, $species, $data_root, $list, $archive_root, $allow_no_arch);
   my $db_opts  = get_DB_options_config();  #Get opts for funcgen, core and pipeline
 
   GetOptions
@@ -195,31 +197,19 @@ sub main{
 
   ### PRE-PROCESS CONFIGS ###
   my @confs;
-
-  foreach my $conf(@configs){
-    # Could remove this in favour of the throw in populate_config_array
-    if(! exists $config_info{$conf}){
-      pod2usage(-exitval => 1,
-                -message => "'$conf' is not a supported config module/label. Valid names are:\n\t".
-                             join("\n\t", @valid_confs));
-    }
-
-    _populate_config_array($conf, \@confs);
-  }
-
-  # Strip out any undef elements
-  my @tmp_confs;
-  map { defined $_ && push @tmp_confs, $_ } @confs;
-  @confs = @tmp_confs;
+  map { _populate_config_array($_, \@confs) } @configs;
+  # Need to remove undef elements as @confs is populated using priority as index
+  # e.g. Consider updating with Peaks (with priority 9)
+  @confs = grep { defined $_ } @confs;
 
   ### INITIALISE/CREATE PIPELINE DB ###
-  my ($cmd, $ntable_a, $pdb);
+  my ($cmd, $pdb);
   my $pipeline_params = "$arch_params -data_root_dir $data_root -pipeline_name ".$pdb_params->{'-dbname'}.' '.
     $db_script_args->{funcgen}.' '.$db_script_args->{core}.' '.$db_script_args->{pipeline};
   if(defined $species){ $pipeline_params .= " -species $species " }
 
   if(! eval { $pdb = create_DBAdaptor_from_params($pdb_params, 'hive', 1); 1;}){
-  # if($@){ #Assume the DB hasn't been created yet  
+    #Assume the DB hasn't been created yet  
     #init the pipline with the first conf
     my $first_conf = shift @confs;
     $cmd = "perl $hive_script_dir/init_pipeline.pl ".
@@ -238,13 +228,13 @@ sub main{
     $ntable_a->table_name('meta');
   }
 
-  my $hive_url = url_from_DB_params($pdb_params);
+  $hive_url = url_from_DB_params($pdb_params);
   add_DB_url_to_meta('hive', $hive_url, $db);
 
   ### PERFORM ANALYSIS_TOPUP ###
   my $conf_key    = 'hive_conf';
   my @meta_confs  = map {$_->{meta_value}} @{$ntable_a->fetch_all_by_meta_key($conf_key)};
-  my $dfr_adaptor = $pdb->get_DataflowRuleAdaptor;
+  $dfr_adaptor    = $pdb->get_DataflowRuleAdaptor;
   inject_DataflowRuleAdaptor_methods($dfr_adaptor);  # Injects get_semaphoring_analysis_ids
 
   foreach my $conf(@confs){
@@ -259,15 +249,13 @@ sub main{
       # as there is a danger that a subsequent top up of an upsteam conf may reset this to 0
       # This would result dataflow not occuring from the conf just added through the link
       # analysis to the next conf(which has be added previously)
-      # Put this method in HiveUtils? (with add_hive_url_to_meta?) where else would it be used?
-      my $meta_key        = 'can_%';
-      my %meta_key_values = %{$ntable_a->fetch_all_like_meta_key_HASHED_FROM_meta_key_TO_meta_value($meta_key)};
-
-      #now test failures
-      # $ntable_a->fetch_like_meta_key_HASHED_FROM_meta_key_TO_meta_value($meta_key);
-      # $ntable_a->fetch_all_like_meta_name_and_test_HASHED_FROM_meta_name_TO_meta_value($meta_key);
-      # Both of these die nicely, but should probably throw?
-      # die('should have failed by now');
+      my $sth = $ntable_a->dbc->prepare('SELECT meta_key, meta_value from meta where meta_value like "can_%"');
+      $sth->execute;
+      my $meta_key_values = $sth->fetchall_hashref('meta_key');
+      
+      foreach my $mkey(keys %{$meta_key_values}){  # Make value just meta_key string
+        $meta_key_values->{$mkey} = $meta_key_values->{$mkey}{'meta_value'}; 
+      }
 
       # Now do the top up
       $cmd = "perl $hive_script_dir/init_pipeline.pl Bio::EnsEMBL::Funcgen::Hive::Config::${conf} ".
@@ -277,26 +265,27 @@ sub main{
 
       # Remove some of these static args in place of our $main::vars?
       # or change to hash of named args
-      _updated_link_analyses($ntable_a, $dfr_adaptor, $conf, $hive_script_dir, $hive_url, \%meta_key_values);
-      _register_conf_in_meta($ntable_a, $conf);
+      _updated_link_analyses($conf, $meta_key_values);
+      _register_conf_in_meta($conf);
     }
   }
 
   return;
-}  # end of main
+}  # end of main ### TA DAA! ###
+
 
 sub _updated_link_analyses{
-  my ($ntable_a, $dfr_adaptor, $conf, $hive_script_dir, $hive_url, $meta_key_values) = @_;
+  my ($conf, $meta_key_values) = @_;
   # Reset can_run_AnalysisLogicName keys first, so we never assume that this has 
   # been done should things fail after adding the hive_conf key
 
-  # We need to do these in order, with semaphored analyses reset last
+  # We need to do these in order, with semaphored analyses reset last.
   # As all link analyses are marked as DONE, when resetting a funnel job
-  # before it's DONE fan jobs the beekeeper will look at the fan jobs 
-  # and as they are all done will mark the funnel as READY insterad of SEMAPHORED
-  # Even a 2nd attempt at resetting the funnel jobs will not work in this case
+  # before it's DONE fan jobs, the beekeeper will look at the fan jobs 
+  # and as they are all DONE, will mark the funnel as READY instead of SEMAPHORED.
+  # Even a 2nd attempt at resetting the funnel jobs will not work in this case.
   # As they are seen as READY and effectively already reset :(
-  # we may also need to run beekeeper -balance_semphores
+  # We may also need to run beekeeper -balance_semphores
   # but this should be used with caution as it can go wrong.
 
   # We need to pre-process these to order them such that the funnel jobs are reset last
@@ -304,13 +293,13 @@ sub _updated_link_analyses{
   # as the funnel_dataflow_rule_id will likely be in a non-link analysis
   # let's do a direct SQL approach for this, rather than getting all the analyses
 
-  # will -reset_all_jobs_for_analysis even reset to SEMAPHORED?
-  # We could do this manually will an update and then -balance_semaphores
+  # Will -reset_all_jobs_for_analysis reset to SEMAPHORED?
+  # We could do this manually with an update and then -balance_semaphores
+  # TODO Check this and refine these comments
   my @can_run_keys;
 
   foreach my $can_run_key(keys %{$meta_key_values}){
     (my $lname = $can_run_key) =~ s/^can_//o;
-    # warn "push/unshift $lname, $can_run_key";
 
     if($dfr_adaptor->get_semaphoring_analysis_ids_by_logic_name($lname)){
       push @can_run_keys, $can_run_key;
@@ -320,74 +309,55 @@ sub _updated_link_analyses{
     }
   }
 
-
   foreach my $can_run_key(@can_run_keys){
-
-    if(scalar(@{$meta_key_values->{$can_run_key}}) != 1){
-      # this should not be possible as we are fetching a hash
-      throw("Found multiple entries for meta_key $can_run_key:\t".
-       join(' ', @{$meta_key_values->{$can_run_key}}));
-    }
-
-    # This is getting the old value! Not the new one!
-    my $old_value = $meta_key_values->{$can_run_key}->[0];
-    my $new_value = $ntable_a->fetch_by_meta_key_TO_meta_value($can_run_key);
-    # warn "testing $can_run_key with values(new/old):\t".$new_value.' / '.$old_value;
-
-    if($old_value){  # is defined and not 0
-
-      if(! $new_value){
-        croak("Failed to process link analyses for $conf. $can_run_key meta_value has been reset from 1 to $new_value");
-      }
-    }
-    elsif($new_value){ #&& ! $old_value
-
-      my $meta_id = $ntable_a->fetch_by_meta_key_TO_meta_id($can_run_key);            #PRIMARY KEY
-      # $ntable_a->update_meta_value({meta_id=>$meta_id, meta_value =>$can_run_value}); #AUTOLOADED
-
-      # Now reset the analysis if the value matches this config
-      # i.e. we have just topped up with a downstream config, and want to reset and link
-      # analyses which may have run.
-      # $can_run_key will be double quoted as it is loaded from the config
-
-      # Currently this will reset all DONE jobs. #This means that if we have 2 configs
-      # which specify they're namsespace as the value, then truly DONE jobs will be reset
-      # why was this change from 1 to config name?
-      # The change from 0 to 1 enough here
-      # Probably need to change this back?
-      (my $can_run_analysis = $can_run_key) =~ s/^can_//o;
-
-      # if($can_run_value eq "\"$conf\""){
-      my $cmd = "perl $hive_script_dir/beekeeper.pl -url $hive_url --reset_all_jobs_for_analysis $can_run_analysis";
-      print "\nRESETTING LINK ANALYSIS JOBS FOR:\t$can_run_analysis\n";
-      run_system_cmd($cmd);
-      print "\nRESET LINK ANALYSIS JOBS FOR:\t$can_run_analysis\n";
-      # }
-    }
+    _update_link_analysis($conf, $can_run_key, $meta_key_values);
   }
+
   return;
 }
 
 
+sub _update_link_analysis{
+  my ($conf, $can_run_key, $meta_key_values) = @_;
 
-# Add key via API to store with appropriate species_id i.e. 1
-# shouldn't this be NULL? Probably but, core API only consideres the following meta_key type
-# non-species specific: patch, schema_version, schema_type, ploidy
-# Hive obviosuly does this with direct sql.
+  my $old_value = $meta_key_values->{$can_run_key};
+  my $new_value = $ntable_a->fetch_by_meta_key_TO_meta_value($can_run_key);
 
-# This screws retrieval of the can_run_% meta values, as they are stored with species_id null
-# but the BaseMetaContainer the expect a species ID when using any of the normal methods
-# are these returned at all by the params?
+  if($old_value){  # is defined and not 0
 
-# Work around with be to use direct mysql and do an update on them to reset the species ID to 1?
-# Change this to use NakedTableAdaptor, as MetaContainer will disappear.
+    if(! $new_value){
+      croak("Failed to process link analyses for $conf. $can_run_key meta_value has been reset from 1 to $new_value");
+      # my $meta_id = $ntable_a->fetch_by_meta_key_TO_meta_id($can_run_key);            #PRIMARY KEY
+      # $ntable_a->update_meta_value({meta_id=>$meta_id, meta_value =>$can_run_value}); #AUTOLOADED 
+    }
+  }
+  elsif($new_value){  # && ! $old_value
+    # Now reset the analysis if the value matches this config
+    # i.e. we have just topped up with a downstream config, and want to reset and link
+    # analyses which may have run.
+    # $can_run_key will be double quoted as it is loaded from the config
 
-# Is this going to fail as don't we need the primary key defining?
+    # Currently this will reset all DONE jobs. 
+    # This means that if we have 2 configs which specify they're namsespace as the value, then truly DONE jobs will be reset
+    # why was this change from 1 to config name?
+    # The change from 0 to 1 enough here
+    # Probably need to change this back?
+    (my $can_run_analysis = $can_run_key) =~ s/^can_//o;
+
+    # if($can_run_value eq "\"$conf\""){
+    my $cmd = "perl $hive_script_dir/beekeeper.pl -url $hive_url --reset_all_jobs_for_analysis $can_run_analysis";
+    print "\nRESETTING LINK ANALYSIS JOBS FOR:\t$can_run_analysis\n";
+    run_system_cmd($cmd);
+    print "\nRESET LINK ANALYSIS JOBS FOR:\t$can_run_analysis\n";
+    # }
+  }
+
+  return;
+}
 
 
 sub _register_conf_in_meta{
-  my $ntable_a   = shift;
-  my $conf       = shift;
+  my $conf = shift;
 
   if(! eval { $ntable_a->store({meta_key => 'hive_conf', meta_value => $conf}); 1}){
     throw("Failed to store hive conf meta entry:\t$conf\n$@");
@@ -396,6 +366,7 @@ sub _register_conf_in_meta{
   return;
 }
 
+
 sub _populate_config_array{
   my ($conf_name, $confs) = @_;
 
@@ -403,7 +374,7 @@ sub _populate_config_array{
   if(! exists $config_info{$conf_name}){
     # Handle this in caller as this will also know the parent conf
     # No, need to handle here as this will recurse
-    croak("'$conf_name' is defined a pre-requisite, but is not defined in the config\nPlease amend config!");
+    croak("'$conf_name' is not defined in the config\nPlease amend config!");
   }
 
   # Must have at least a priority(can be undef) and a conf name
@@ -430,8 +401,5 @@ sub _populate_config_array{
 
   return $confs;
 }  # end of populate_config_array
-
-
-### TA DAA! ###
 
 1;
