@@ -270,7 +270,7 @@ sub create_feature_set {
   my $fsa = $db->get_FeatureSetAdaptor();
   my $fta = $db->get_FeatureTypeAdaptor();
   my $cta = $db->get_CellTypeAdaptor();
-  my $name = "$cell_type $segmentation segmentation";
+  my $name = "Segmentation:$cell_type";
   my $previous = $fsa->fetch_by_name($name);
   my $ft = $fta->fetch_by_name('SegmentationState');
   if (defined $previous) {
