@@ -93,51 +93,38 @@ use base qw( Bio::EnsEMBL::Funcgen::Storable );
 =cut
 
 sub new {
-    my $caller = shift;
-    my $class  = ref($caller) || $caller;
-    my $self   = $class->SUPER::new(@_);
+  my $caller = shift;
+  my $class  = ref($caller) || $caller;
+  my $self   = $class->SUPER::new(@_);
 
-    my ($name, $group, $date, $p_dtype, 
-        $desc, $xml, $xml_id, $ftype, $ctype, $archive_id, $url) = rearrange
-     ( ['NAME', 'EXPERIMENTAL_GROUP', 'DATE', 'PRIMARY_DESIGN_TYPE',
+  my ($name, $group, $date, $p_dtype, 
+      $desc, $xml, $xml_id, $ftype, $ctype, $archive_id, $url) = rearrange
+   ( ['NAME', 'EXPERIMENTAL_GROUP', 'DATE', 'PRIMARY_DESIGN_TYPE',
       'DESCRIPTION', 'MAGE_XML', 'MAGE_XML_ID', 'FEATURE_TYPE', 'CELL_TYPE',
       'ARCHIVE_ID', 'DISPLAY_URL'], @_ );
 
-    #Mandatory attr checks
-
-    if(ref($group) ne 'Bio::EnsEMBL::Funcgen::ExperimentalGroup'){
-      throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::ExperimentalGroup object");
-    }
-
-    if(! defined $name){
-      throw('You must provide a name parameter');
-    }
-
-  if(! (ref($ctype) && $ctype->isa('Bio::EnsEMBL::Funcgen::CellType')) ){
-    throw('You must provide a valid Bio::EnsEMBL::Funcgen::CellType');
-  }
-
-  if(! (ref($ftype) && $ftype->isa('Bio::EnsEMBL::Funcgen::FeatureType')) ){
-    throw('You must provide a valid Bio::EnsEMBL::Funcgen::FeatureType');
-  }
+  # Mandatory attr checks
+  throw('You must provide a name parameter') if ! defined $name;
+  assert_ref($group, 'Bio::EnsEMBL::Funcgen::ExperimentalGroup');
+  assert_ref($ctype, 'Bio::EnsEMBL::Funcgen::CellType');
+  assert_ref($ftype, 'Bio::EnsEMBL::Funcgen::FeatureType');
   
-    #test date format here?
-    #Direct assignment here so we avoid setter test in methods
-    $self->{name}                = $name;
-    $self->{group}               = $group;
-    $self->{date}                = $date       if defined $date;
-    $self->{primary_design_type} = $p_dtype    if defined $p_dtype; #MGED term for primary design type
-    $self->{description}         = $desc       if defined $desc;
-    $self->{cell_type}           = $ctype;
+  #Direct assignment here so we avoid setter test in methods
+  $self->{name}                = $name;
+  $self->{group}               = $group;
+  $self->{date}                = $date       if defined $date;
+  $self->{primary_design_type} = $p_dtype    if defined $p_dtype; #MGED term for primary design type
+  $self->{description}         = $desc       if defined $desc;
+  $self->{cell_type}           = $ctype;
   $self->{feature_type}        = $ftype;
   $self->{archive_id}          = $archive_id;
   $self->{display_url}         = $url;
 
-    #Maintain setter funcs here as these are populated after initialisation
-    $self->mage_xml_id($xml_id) if defined $xml_id;
-    $self->mage_xml($xml)       if defined $xml;
+  #Maintain setter funcs here as these are populated after initialisation
+  $self->mage_xml_id($xml_id) if defined $xml_id;
+  $self->mage_xml($xml)       if defined $xml;
 
-    return $self;
+  return $self;
 }
 
 

@@ -80,28 +80,15 @@ use base qw(Bio::EnsEMBL::Funcgen::Storable);
 =cut
 
 sub new {
-  my $caller = shift;
-
+  my $caller    = shift;
   my $obj_class = ref($caller) || $caller;
-  my $self = $obj_class->SUPER::new(@_);
+  my $self      = $obj_class->SUPER::new(@_);
 
-  my (
-      $name,
-      $location,
-      $contact,
-      $url,
-      $desc,
-      $is_project
-     ) = rearrange([
-       'NAME', 'LOCATION', 'CONTACT', 'URL', 'DESCRIPTION', 'IS_PROJECT'
-          ], @_);
+  my ($name, $location, $contact, $url, $desc, $is_project) = rearrange(
+    ['NAME', 'LOCATION', 'CONTACT', 'URL', 'DESCRIPTION', 'IS_PROJECT'], @_);
 
-
-  if($name){
-    $self->name($name);
-  }else{
-    throw("Must supply a Group name\n");
-  }
+  throw('Must supply a name parameter') if ! defined $name;
+  $self->name($name);
   $self->location($location) if $location;
   $self->contact($contact) if $contact;
   $self->url($url) if $url;
