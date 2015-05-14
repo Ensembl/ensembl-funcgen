@@ -15,23 +15,10 @@ our $verbose = 0;
 my $skip = 0;
 my $okay = 0;
 
-warn "BaseFeatureAdaptor.t tests are incomplete and needs updating to use MultiTestDB\n";
+ok(1, 'Startup test');
 
-
-ok(1, 'Startup test');#?
-
-#my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
-#my $db    = $multi->get_DBAdaptor( 'funcgen' );
-
-
-#my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
-#  (
-#   -user    => 'XXX',
-#   -host    => 'XXX',
-#   -species => 'homo_sapiens', #Does this prevent alias loading?
-#   -dbname  => 'homo_sapiens_funcgen_73_37'
-#  );
-
+my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
+my $db    = $multi->get_DBAdaptor( 'funcgen' );
 
 
 #debug( 'Test database instantiated' ); #Less verbose, but only get test names in line and in debug mode
