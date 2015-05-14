@@ -210,7 +210,7 @@ sub _true_tables {
 
 sub _columns {
 	return qw( e.experiment_id e.name e.experimental_group_id
-	           e.date e.primary_design_type e.description e.mage_xml_id
+	           e.primary_design_type e.description e.mage_xml_id
 	           e.feature_type_id e.cell_type_id e.archive_id e.display_url);
 }
 
@@ -219,8 +219,7 @@ sub _columns {
   Arg [1]    : DBI statement handle object
   Example    : None
   Description: PROTECTED implementation of superclass abstract method.
-               Creates Array objects from an executed DBI statement
-			   handle.
+               Creates Array objects from an executed DBI statement handle.
   Returntype : Listref of Bio::EnsEMBL::Funcgen::Experiment objects
   Exceptions : None
   Caller     : Internal
@@ -232,13 +231,13 @@ sub _objs_from_sth {
 	my ($self, $sth) = @_;
 
 	my (@result, $exp_id, $name, $group_id, $p_design_type, 
-	    $date, $description, $xml_id, $ct_id, $ft_id, $archive_id, $url);
+	    $description, $xml_id, $ct_id, $ft_id, $archive_id, $url);
 
 	my $eg_adaptor  = $self->db->get_ExperimentalGroupAdaptor;
   my $ct_adaptor  = $self->db->get_CellTypeAdaptor;
   my $ft_adaptor  = $self->db->get_FeatureTypeAdaptor;
 
-	$sth->bind_columns(\$exp_id, \$name, \$group_id, \$date, \$p_design_type, 
+	$sth->bind_columns(\$exp_id, \$name, \$group_id, \$p_design_type, 
 	                   \$description, \$xml_id, \$ft_id, \$ct_id, \$archive_id, \$url);
 
   my (%ftypes, %ctypes);
@@ -269,8 +268,6 @@ sub _objs_from_sth {
       -DBID                => $exp_id,
       -ADAPTOR             => $self,
       -NAME                => $name,
-      -EXPERIMENTAL_GROUP  => $group,
-      -DATE                => $date,
       -PRIMARY_DESIGN_TYPE => $p_design_type,
       -DESCRIPTION         => $description,
       -MAGE_XML_ID         => $xml_id,
@@ -278,6 +275,7 @@ sub _objs_from_sth {
       -CELL_TYPE           => $ctypes{$ct_id},
       -ARCHIVE_ID          => $archive_id,
       -DISPLAY_URL         => $url,
+      -EXPERIMENTAL_GROUP  => $group,
      );
 	}
 	
@@ -303,10 +301,10 @@ sub store {
   my $self = shift;
   my @exps = @_;
 
-	my $sth = $self->prepare('INSERT INTO experiment(name, experimental_group_id, date, 
+	my $sth = $self->prepare('INSERT INTO experiment(name, experimental_group_id,
 	                          primary_design_type, description, mage_xml_id, feature_type_id, 
 	                          cell_type_id, archive_id, display_url)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
 
   foreach my $exp (@exps) {
     assert_ref($exp, 'Bio::EnsEMBL::Funcgen::Experiment');
@@ -326,18 +324,16 @@ sub store {
 		  }
   
   		$exp = $self->update_mage_xml_by_Experiment($exp) if(defined $exp->mage_xml());
-  
+
   		$sth->bind_param(1,  $exp->name,                     SQL_VARCHAR);
-  		$sth->bind_param(2,  $exp->experimental_group->dbID, SQL_INTEGER);
-  		$sth->bind_param(3,  $exp->date,                     SQL_VARCHAR);#date?
-  		$sth->bind_param(4,  $exp->primary_design_type,      SQL_VARCHAR);
-  		$sth->bind_param(5,  $exp->description,              SQL_VARCHAR);
-      $sth->bind_param(6,  $exp->mage_xml_id,              SQL_INTEGER);
-      $sth->bind_param(7,  $exp->feature_type->dbID,       SQL_INTEGER); 
-      $sth->bind_param(8,  $exp->cell_type->dbID,          SQL_INTEGER);
-      $sth->bind_param(9,  $exp->archive_id,               SQL_VARCHAR); 
-      $sth->bind_param(10, $exp->display_url,              SQL_VARCHAR);
-  
+  		$sth->bind_param(2,  $exp_group->dbID,               SQL_INTEGER);
+  		$sth->bind_param(3,  $exp->primary_design_type,      SQL_VARCHAR);
+  		$sth->bind_param(4,  $exp->description,              SQL_VARCHAR);
+      $sth->bind_param(5,  $exp->mage_xml_id,              SQL_INTEGER);
+      $sth->bind_param(6,  $exp->feature_type->dbID,       SQL_INTEGER); 
+      $sth->bind_param(7,  $exp->cell_type->dbID,          SQL_INTEGER);
+      $sth->bind_param(8,  $exp->archive_id,               SQL_VARCHAR); 
+      $sth->bind_param(9, $exp->display_url,               SQL_VARCHAR);
   		$sth->execute();
   		$exp->dbID($self->last_insert_id);
   		$exp->adaptor($self);

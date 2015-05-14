@@ -933,7 +933,6 @@ CREATE TABLE `probe` (
 @column experimental_group_id   @link experimental_group ID
 @column feature_type_id         @link feature_type table ID
 @column mage_xml_id             @link mage_xml ID
-@column date                    Date of experiment
 @column description             Text description
 @column name                    Name of experiment
 @column primary_design_type     e.g. binding_site_identification, preferably EFO term
@@ -953,7 +952,6 @@ CREATE TABLE `experiment` (
    `experimental_group_id`  SMALLINT(6) UNSIGNED  DEFAULT NULL,
    `feature_type_id`        INT(10)     UNSIGNED  NOT NULL,
    `mage_xml_id`            INT(10)     UNSIGNED  DEFAULT NULL,
-   `date`                   DATE                  DEFAULT '0000-00-00',
    `description`            VARCHAR(255)          DEFAULT NULL,
    `name`                   VARCHAR(100)          DEFAULT NULL,
    `primary_design_type`    VARCHAR(30)           DEFAULT NULL,
@@ -1426,11 +1424,10 @@ CREATE TABLE `meta` (
 INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 
 -- Update and remove these for each release to avoid erroneous patching
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '80');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '81');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_80_81_a.sql|schema_version');
 
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_79_80_a.sql|schema_version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_79_80_b.sql|dbfile_registry_unique_key');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_79_80_c.sql|stable_id_changed_to_varchar');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_80_81_c.sql|drop experiment.date');
 
 
 /**

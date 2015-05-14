@@ -32,15 +32,13 @@ Bio::EnsEMBL::Funcgen::Experiment
 use Bio::EnsEMBL::Funcgen::Experiment;
 
 my $exp = Bio::EnsEMBL::Funcgen::Experiment->new
-               (
-        -ADAPTOR             => $self,
-        -NAME                => $name,
-        -EXPERIMENTAL_GROUP  => $experimental_group,
-        -DATE                => $date,
-        -PRIMARY_DESIGN_TYPE => 'binding_site_indentification',
-        -DESCRIPTION         => $description,
-        -ARCHIVE_ID          => $archive_id,
-               );
+ (-ADAPTOR             => $self,
+  -NAME                => $name,
+  -EXPERIMENTAL_GROUP  => $experimental_group,
+  -PRIMARY_DESIGN_TYPE => 'binding_site_indentification',
+  -DESCRIPTION         => $description,
+  -ARCHIVE_ID          => $archive_id,
+ );
 
 my $db_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(...);
 my $exp_adaptor = $db_adaptor->get_ExperimentAdaptor();
@@ -61,7 +59,7 @@ use warnings;
 use strict;
 
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw  );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref check_ref );
 
 use base qw( Bio::EnsEMBL::Funcgen::Storable );
@@ -77,7 +75,6 @@ use base qw( Bio::EnsEMBL::Funcgen::Storable );
   Example    : my $array = Bio::EnsEMBL::Funcgen::Experiment->new
                 (-NAME                => $name,
                  -EXPERIMENTAL_GROUP  => $group,
-                 -DATE                => $date,
                  -PRIMARY_DESIGN_TYPE => $p_design_type,
                  -DESCRIPTION         => $description,
                  -ARCHIVE_ID          => 'SRX000000',
@@ -97,9 +94,9 @@ sub new {
   my $class  = ref($caller) || $caller;
   my $self   = $class->SUPER::new(@_);
 
-  my ($name, $group, $date, $p_dtype, 
+  my ($name, $group, $p_dtype, 
       $desc, $xml, $xml_id, $ftype, $ctype, $archive_id, $url) = rearrange
-   ( ['NAME', 'EXPERIMENTAL_GROUP', 'DATE', 'PRIMARY_DESIGN_TYPE',
+   ( ['NAME', 'EXPERIMENTAL_GROUP', 'PRIMARY_DESIGN_TYPE',
       'DESCRIPTION', 'MAGE_XML', 'MAGE_XML_ID', 'FEATURE_TYPE', 'CELL_TYPE',
       'ARCHIVE_ID', 'DISPLAY_URL'], @_ );
 
@@ -112,7 +109,6 @@ sub new {
   #Direct assignment here so we avoid setter test in methods
   $self->{name}                = $name;
   $self->{group}               = $group;
-  $self->{date}                = $date       if defined $date;
   $self->{primary_design_type} = $p_dtype    if defined $p_dtype; #MGED term for primary design type
   $self->{description}         = $desc       if defined $desc;
   $self->{cell_type}           = $ctype;
@@ -205,22 +201,6 @@ sub experimental_group{
 =cut
 
 sub get_ExperimentalGroup{ return shift->{group}; }
-
-
-=head2 date
-
-  Example     : my $exp_date = $exp->date;
-  Description : Getter for the date
-  Returntype  : String
-  Exceptions  : None
-  Caller      : General
-  Status      : Stable
-
-=cut
-
-sub date{
-  return shift->{date};
-}
 
 
 =head2 description
@@ -515,7 +495,7 @@ Status     : At Risk
 sub compare_to {
   my ($self, $obj, $shallow, $scl_methods, $obj_methods) = @_;
 
-  $scl_methods ||= [qw(name date primary_design_type description mage_xml_id)];
+  $scl_methods ||= [qw(name primary_design_type description mage_xml_id)];
   $obj_methods ||= [qw(experimental_group)];
 
   return $self->SUPER::compare_to($obj, $shallow, $scl_methods,
@@ -603,7 +583,10 @@ sub source_info{
 }
 
 
-
+### DEPRECATED METHODS ###
+sub date{  # deprecated in v81
+  deprecate('Experiment::date is no longer support');
+}
 
 
 
