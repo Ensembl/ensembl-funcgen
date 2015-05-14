@@ -5,28 +5,23 @@ use warnings;
 
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Test::More;
-use Data::Dumper qw(Dumper);
+use Test::Exception;               # throws_ok
+use Bio::EnsEMBL::Test::TestUtils  qw( test_getter_setter debug );
+use Data::Dumper                   qw( Dumper );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Test::MultiTestDB;
+
+ok(1, 'Start up');
+
+# switch on the debug prints
+our $verbose = 0;
+
+my $multi  = Bio::EnsEMBL::Test::MultiTestDB->new();
+my $efgdba = $multi->get_DBAdaptor("funcgen");
 
 # This test uses the following comment conventions
 # START method_name testing
 # COMPLETED method_name testing
-
-throw('Test DB not yet implemented, you need to define a DBAdaptor and remove this throw manually');
-my $user = undef;
-
-my $efgdba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-    -user       => $user,
-#    -pass       => ,
-    -DNADB_USER => $user,
-    #-DNADB_PORT => 3306,
-
-    -species    => 'homo_sapiens',
-    -host       => undef,
-    -dbname     => undef,
-    -DNADB_HOST => undef,
-    -DNADB_NAME => 'homo_sapiens_core_71_37',
-);
 
 
 
@@ -136,4 +131,6 @@ ok($@, 'DataSet::reset_relational_attributes no -supporting_sets error');
 
 done_testing();
 
+
+1;
 
