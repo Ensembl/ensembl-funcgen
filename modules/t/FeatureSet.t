@@ -4,10 +4,12 @@ use strict;
 use warnings;
 
 use Test::More;
+use Test::Exception;               # throws_ok
 use Data::Dumper                   qw( Dumper );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
-use Bio::EnsEMBL::Utils::Scalar    qw (check_ref );
-#use Bio::EnsEMBL::Test::MultiTestDB;
+use Bio::EnsEMBL::Utils::Scalar    qw( check_ref );
+use Bio::EnsEMBL::Test::MultiTestDB;
+use Bio::EnsEMBL::Test::TestUtils  qw( test_getter_setter debug );
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
 
@@ -15,20 +17,14 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 # START method_name testing
 # COMPLETED method_name testing
 
-throw('Test DB not yet implemented, you need to define a DBAdaptor and remove this throw manually');
+ok(1, 'Start up');
 
-my $efgdba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-    -user       => 'XXX',
-    #-DNADB_USER => $dnadb_user,
-    -species    => 'homo_sapiens',
-    -dbname     => 'homo_sapiens_funcgen_78_38',
-    -host       => 'XXX',
-    #-DNADB_HOST => $dnadb_host,
-    #-DNADB_NAME => $dnadb_name,
-);
-$efgdba->dbc->db_handle;#Test DB
+# switch on the debug prints
+our $verbose = 0;
 
-my $fsa = $efgdba->get_adaptor("featureset");
+my $multi  = Bio::EnsEMBL::Test::MultiTestDB->new();
+my $efgdba = $multi->get_DBAdaptor("funcgen");
+my $fsa    = $efgdba->get_adaptor("featureset");
 
 #Just grab a few result sets to work with
 #DISPLAYABLE ensure we should have an input_set defined
@@ -202,20 +198,10 @@ ok(! $@, 'FeatureSet::reset_relational_attributes optional -cell_type');
 # COMPLETED testing reset_relational_attributes  
 
 
-
-#Mouse specific test 
-
-my $mdb = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-           -user       => 'XXX',
-           -species    => 'mus_musculus',
-           -dbname     => 'mus_musculus_funcgen_78_38',
-           -host       => 'XXX',
-);
-
-my $mirna = 'mmu-miR-16-5p';#MIMAT0000527
-my $ftype = $mdb->get_FeatureTypeAdaptor->fetch_by_name($mirna);
+my $mirna     = 'hsa-miR-122-5p';#mmu-miR-16-5p';#MIMAT0000527
+my $ftype     = $efgdba->get_FeatureTypeAdaptor->fetch_by_name($mirna);
 my $fset_name = 'TarBase miRNA';
-$fset  = $mdb->get_FeatureSetAdaptor->fetch_by_name($fset_name);
+$fset         = $fsa->fetch_by_name($fset_name);
 
 SKIP: {
   if(! ($ftype && $fset)){
@@ -224,7 +210,6 @@ SKIP: {
   }
 
   my $mirna_feats = $fset->get_Features_by_FeatureType($ftype);
-
   my $is_aref = check_ref($mirna_feats, 'ARRAY');
 
   ok($is_aref, 'get_Features_by_FeatureType returns Arrayref');
@@ -235,19 +220,14 @@ SKIP: {
       skip('Skipping get_Features_by_FeatureType count test. Failed to return Arrayref', 2);
     }
 
-
-    #should be 1019 in mus_musculus_funcgen_78_38
-    my $true_ft_cnt = 1019;
     my $feat_cnt = scalar(@$mirna_feats);
-    ok($feat_cnt == $true_ft_cnt, "Got $true_ft_cnt miRNATargetFeatures via get_Features_by_FeatureType:\t$feat_cnt");
+    is($feat_cnt,  2, "FeatureSet::get_Features_by_FeatureType expected $mirna feature count");
 
     #Test all have correct FeatureType.
 
-    my @mismatches = grep {! /$mirna/ } (map {$_->feature_type->name} @$mirna_feats);
+    my @mismatches = grep {! /^${mirna}$/ } (map {$_->feature_type->name} @$mirna_feats);
     ok(! @mismatches, "Found no mismatches FeatureTypes from get_Features_by_FeatureType:\t".scalar(@mismatches));  
   }
-
-
 }
 
 
