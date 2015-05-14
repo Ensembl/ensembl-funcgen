@@ -6,26 +6,23 @@ use Bio::EnsEMBL::Slice;
 use Bio::EnsEMBL::Funcgen::ArrayChip;
 use Bio::EnsEMBL::Funcgen::Array;
 
+use Test::More;
+use Test::Exception;  # throws_ok
 use Bio::EnsEMBL::Test::TestUtils qw( test_getter_setter debug );
 use Bio::EnsEMBL::Test::MultiTestDB;
 
-BEGIN { $| = 1;
-	use Test;
-	plan tests => 23;
-}
+local $| = 1;
 
 # switch on the debug prints
 our $verbose = 0;
 
-debug( "Startup test" );
-ok(1);
+ok(1, 'Start up test');
 
 my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
 
 my $db = $multi->get_DBAdaptor( "funcgen" );
 
-debug( "Test database instatiated" );
-ok( $db );
+isa_ok($db, 'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor', 'Test database instatiated');
 
 
 #
@@ -43,59 +40,56 @@ my $array = Bio::EnsEMBL::Funcgen::Array->new
    -CLASS       => 'VENDOR_FORMAT',#e.g. AFFY_UTR, ILLUMINA_WG
   );
 
-ok( ref( $array ) && $array->isa( "Bio::EnsEMBL::Funcgen::Array" ));
+isa_ok($array, 'Bio::EnsEMBL::Funcgen::Array', 'Array constructor return type');
 
 #
 # What arrays should be able to do
 # Temporarily set some new attributes
 
-ok( test_getter_setter( $array, "dbID", 2 ));
-ok( test_getter_setter( $array, "adaptor", undef ));
-ok( test_getter_setter( $array, "name", "Test2" ));
-ok( test_getter_setter( $array, "format", 'TILED2' ));
-ok( test_getter_setter( $array, "vendor", 'ILLUMINA2' ));
-ok( test_getter_setter( $array, "class", 'ILLUMINA_WG2' ));
-ok( test_getter_setter( $array, "description", 'TESTING2'));
-#10 tests
+# These are really storable tests
+#ok( test_getter_setter( $array, "dbID", 2 ), 'test_getter_setter dbID');
+#ok( test_getter_setter( $array, "adaptor", undef ), 'test_getter_setter adaptor');
+
+ok( test_getter_setter( $array, 'name', 'Test2' ), 'test_getter_setter Array::name');
+ok( test_getter_setter( $array, 'format', 'TILED2' ), 'test_getter_setter Array::format');
+ok( test_getter_setter( $array, 'vendor', 'ILLUMINA2' ), 'test_getter_setter Array::vendor');
+ok( test_getter_setter( $array, 'class', 'ILLUMINA_WG2' ), 'test_getter_setter Array::classs');
+ok( test_getter_setter( $array, 'description', 'TESTING2'), 'test_getter_setter Array::description');
+
 
 
 #
 #Create an ArrayChip
 #
 
-#What about testing for failures?
-#eval and test $@?
-
 my $array_chip = Bio::EnsEMBL::Funcgen::ArrayChip->new 
-  (
-   -design_id   => 'Test',
-   -array_id    => 1,
+  (-design_id   => 'Test',
+   -array_id    => 34,  # HG-U133A
    -name        => 'Test',
+   -adaptor     => $db->get_ArrayChipAdaptor); # Required for get_Array with -array_id
 
-  );
+isa_ok($array_chip, 'Bio::EnsEMBL::Funcgen::ArrayChip', 'ArrayChip constructor return type (-array_id)');
+# This currently throws as now adaptor has been set yet. This is only ever used in the ArrayChipAdaptor::_objs_from_sth for lazy loading
 
-ok( ref( $array_chip ) && $array_chip->isa( "Bio::EnsEMBL::Funcgen::ArrayChip" ));
+isa_ok($array_chip->get_Array, 'Bio::EnsEMBL::Funcgen::Array', 'ArrayChip::get_Array return type (-array_id)');
 
 #Now use different params
 $array_chip = Bio::EnsEMBL::Funcgen::ArrayChip->new 
-  (
-   -design_id   => 'Test',
+  (-design_id   => 'Test_design_id',
    -array       => $array,
-   -name        => 'Test',
-  );
+   -name        => 'Test_name');
 
-ok( ref( $array_chip ) && $array_chip->isa( "Bio::EnsEMBL::Funcgen::ArrayChip" ));
 
 #
 # What array_chips should be able to do
 #
 
-ok( test_getter_setter( $array_chip, "dbID", 2 ));
-ok( test_getter_setter( $array_chip, "adaptor", undef ));
-ok( test_getter_setter( $array_chip, "name", "Test2" ));
-ok( test_getter_setter( $array_chip, "design_id", "Test2" ));
-ok( ref($array_chip->get_Array) eq 'Bio::EnsEMBL::Funcgen::Array');
-#17 tests
+#ok( test_getter_setter( $array_chip, "dbID", 2 ));
+#ok( test_getter_setter( $array_chip, "adaptor", undef ));
+isa_ok($array_chip, 'Bio::EnsEMBL::Funcgen::ArrayChip', 'ArrayChip constructor return type (-array)');
+isa_ok( $array_chip->get_Array, 'Bio::EnsEMBL::Funcgen::Array', 'ArrayChip::get_Array return type (-array)');
+is($array_chip->name, 'Test_name', 'ArrayChip::name');
+is($array_chip->design_id, 'Test_design_id', 'ArrayChip::design_id');
 
 
 #Now test some of the Array methods which require an ArrayChip
@@ -106,23 +100,20 @@ ok( ref($array_chip->get_Array) eq 'Bio::EnsEMBL::Funcgen::Array');
 $array = $db->get_ArrayAdaptor->fetch_by_name_vendor('HG-U133A','AFFY');
 #Only have 1 ArrayChip for this array
 ($array_chip) = @{$array->get_ArrayChips};
-ok( ref($array_chip) eq 'Bio::EnsEMBL::Funcgen::ArrayChip');
-ok( scalar(@{$array->get_array_chip_ids}) == 1);
+isa_ok($array_chip, 'Bio::EnsEMBL::Funcgen::ArrayChip', 'Array::get_ArrayChips return type');
+is( scalar(@{$array->get_array_chip_ids}), 1, 'Array::get_array_chip_ids expected number');
 my ($design_id) =  @{$array->get_design_ids};
-ok($design_id eq 'HG-U133A');
+is($design_id, 'HG-U133A', 'Array::get_design_ids expected ID');
 
 $array_chip = $array->get_ArrayChip_by_design_id($design_id);
-ok( ref( $array_chip ) && $array_chip->isa( "Bio::EnsEMBL::Funcgen::ArrayChip" ));
+isa_ok($array_chip, 'Bio::EnsEMBL::Funcgen::ArrayChip', 'Array::get_ArrayChip_by_design_id return type');
 
-#
-$array_chip->design_id('TEST');
+
+$array_chip->{design_id} = 'TEST';  # design_id is only a getter
 $array->add_ArrayChip($array_chip);
 $array_chip = $array->get_ArrayChip_by_design_id('TEST');
-ok( ref( $array_chip ) && $array_chip->isa( "Bio::EnsEMBL::Funcgen::ArrayChip" ));
-ok( scalar(@{$array->get_array_chip_ids}) == 2);
-
-
-#Num test 23
+isa_ok($array_chip, 'Bio::EnsEMBL::Funcgen::ArrayChip', 'Array::add_ArrayChip & get_ArrayChip_by_design_id');
+is(scalar(@{$array->get_array_chip_ids}), 2, 'Array::add_ArrayChip & get_array_chip_ids returns expect amount');
 
 
 

@@ -515,6 +515,7 @@ sub get_ArrayChip_by_design_id{
   return $achip;
 }
 
+
 =head2 add_ArrayChip
 
   Arg [1]    : mandatory - Bio::EnsEMBL::Funcgen::ArrayChip
@@ -527,28 +528,19 @@ sub get_ArrayChip_by_design_id{
 
 =cut
 
-#This uses previosuly stored array_chips withotu warning
-#Need to implement fetch_store method?
-
 sub add_ArrayChip{
   my ($self, $array_chip) = @_;
 
-  throw("You must supply a stored Bio::EnsEMBL::Funcgen::ArrayChip") if(! ($array_chip && 
-									   $array_chip->isa("Bio::EnsEMBL::Funcgen::ArrayChip") && 
-									   $array_chip->dbID()));
-  
-  if ($self->dbID() && $self->adaptor()){
-    $self->get_ArrayChips() if (! $self->{'array_chips'});
+  if ($self->adaptor){
+    $self->adaptor->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ArrayChip', $array_chip, 'array_chip');
+    $self->get_ArrayChips if ! $self->{array_chips};
 
-    if(exists $self->{'array_chips'}{$array_chip->design_id}){
-      $array_chip = $self->{'array_chips'}{$array_chip->design_id};
-      #warn("Array chip for ".$array_chip->design_id()." already exists, using previous stored array chip\n");
-    }else{
+    if(! exists $self->{array_chips}{$array_chip->design_id}){
       $self->{'array_chips'}{$array_chip->design_id} = $array_chip;
     }
-
-  }else{
-    throw("Array must be stored before adding an array_chip");
+  }
+  else{
+    throw('Array needs an adaptor before adding an array_chip');
   }
 
   return;
@@ -557,15 +549,6 @@ sub add_ArrayChip{
 
 ### DEPRECATED METHODS ###
 
-
-sub size { #deprecated 75
-  my $self = shift;
-
-  deprecate('This method was ambiguous and simply returned the number of ArrayChips. '.
-    'It will be removed in release 79');
-
-  return scalar(keys %{$self->{'array_chips'}});
-}
 
 
 1;
