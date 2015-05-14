@@ -487,25 +487,25 @@ sub get_current_regulatory_input_names{
 
 sub get_date{
 	my ($format, $file) = @_;
-
 	my ($time, $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst);
 
-
-	throw("File does not exist or is not a regular file:\t$file") if $file && ! -f $file;
-
+  if ($file && ! -e $file){
+    throw("File does not exist:\t$file") 
+  }
 
 	($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = (defined $file) ?
 	  localtime((stat($file))[9]) : localtime();
 
 	#print "	($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst)\n";
 
-	if((! defined $format && ! defined $file) || $format eq "date"){
-		$time = ($year+1900)."-".$mday."-".($mon+1);
+	if((! defined $format && ! defined $file) || 
+     $format eq 'date'){
+		$time = sprintf("%d-%02d-%02d", ($year+1900), $mday, ($mon+1));
 	}
-	elsif($format eq "time"){#not working!
+	elsif($format eq 'time'){ 
 		$time = "${hour}:${min}:${sec}";
 	}
-	elsif($format eq "timedate"){#
+	elsif($format eq 'timedate'){
 	  $time = localtime();
 	}
 	else{#add mysql formats here, datetime etc...
