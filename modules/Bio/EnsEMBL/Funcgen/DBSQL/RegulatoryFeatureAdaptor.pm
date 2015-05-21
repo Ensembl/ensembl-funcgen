@@ -408,20 +408,15 @@ sub _objs_from_sth {
 	}
 
   my $slice;
-  my %reg_attrs = (
-				   annotated => {},
-				   motif     => {},
-				   #external
-				  );
+  my %reg_attrs = (annotated => {}, motif => {}); # segmentation?
 
   #Set 'unique' set of feature_set_ids
   my @fset_ids;
 
-   if($self->{params_hash}{unique}){
-	#FeatureSet have been pre-validated in the fetch method
-	@fset_ids = map $_->dbID, @{$self->{params_hash}{feature_sets}};
+  if($self->{params_hash}{unique}){
+    # FeatureSet have been pre-validated in the fetch method
+    @fset_ids = map {$_->dbID} @{$self->{params_hash}{feature_sets}};
   }
-
 
   my $skip_stable_id    = 0;#stable IDs are never 0
   my $no_skip_stable_id = 0;
@@ -429,10 +424,8 @@ sub _objs_from_sth {
 
  FEATURE: while ( $sth->fetch() ) {
 
-	  #Handle non-unique skipping first
-
-    if ( $stable_id &&
-         ($skip_stable_id eq $stable_id) ) {
+  if ( $stable_id &&      # Handle non-unique skipping first
+       ($skip_stable_id eq $stable_id) ) {
       #Faster for queries which need to skip if we have this first
       next;
 	  } elsif (@fset_ids) {
@@ -444,8 +437,7 @@ sub _objs_from_sth {
         @other_rf_ids = @{$self->_fetch_other_dbIDs_by_stable_feature_set_ids
                             ($stable_id,
                              \@fset_ids,
-                             {
-                              include_projected => $self->{params_hash}{include_projected}})};
+                             {include_projected => $self->{params_hash}{include_projected}})};
 
         if (@other_rf_ids) {
           $skip_stable_id = $stable_id;
@@ -458,8 +450,6 @@ sub _objs_from_sth {
       #else don't skip this stable ID
 	  }
 
-
-
 	  if (! $reg_feat || ($reg_feat->dbID != $dbID)) {
 
       if ($skip_feature) {
@@ -470,13 +460,7 @@ sub _objs_from_sth {
       if ($reg_feat) {          #Set the previous attr cache and reset
         $reg_feat->attribute_cache(\%reg_attrs);
         push @features, $reg_feat;
-
-
-        %reg_attrs = (
-                      annotated => {},
-                      motif     => {},
-                      #external
-                     );
+        %reg_attrs = (annotated => {}, motif => {});
       }
 
 	    #Would need to build a slice adaptor cache here to enable mapping between assemblies
@@ -498,11 +482,9 @@ sub _objs_from_sth {
 	    #$old_cs_id = $cs_id;
 	    #Need to make sure we are restricting calls to Experiment and channel(i.e. the same coord_system_id)
 
-      #Get the FeatureSet object
-      $fset_hash{$fset_id} = $fset_adaptor->fetch_by_dbID($fset_id) if(! exists $fset_hash{$fset_id});
-
-      #Get the FeatureType object
-      $ftype_hash{$ftype_id} = $ft_adaptor->fetch_by_dbID($ftype_id) if(! exists $ftype_hash{$ftype_id});
+      #Get the FeatureSet/Types objects
+      $fset_hash{$fset_id} = $fset_adaptor->fetch_by_dbID($fset_id) if ! exists $fset_hash{$fset_id};
+      $ftype_hash{$ftype_id} = $ft_adaptor->fetch_by_dbID($ftype_id) if ! exists $ftype_hash{$ftype_id};
 
 	    # Get the slice object
 	    $slice = $slice_hash{'ID:'.$seq_region_id};
@@ -596,7 +578,6 @@ sub _objs_from_sth {
 
 	  }
 
-
 	  #populate attributes cache
 	  if (defined $attr_id  && ! $skip_feature) {
 
@@ -609,7 +590,6 @@ sub _objs_from_sth {
     $reg_feat->attribute_cache(\%reg_attrs);
     push @features, $reg_feat;
   }
-
 
   #reset params hash
   $self->{params_hash} = undef;
