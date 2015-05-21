@@ -255,12 +255,9 @@ sub stable_id {
 
 sub regulatory_attributes{
   my ($self, $feature_class) = @_;
-
   my @fclasses;
-  my %adaptors = (
-                  'annotated' => $self->adaptor->db->get_AnnotatedFeatureAdaptor,
-                  'motif'     => $self->adaptor->db->get_MotifFeatureAdaptor,
-                 );
+  my %adaptors = ('annotated' => $self->adaptor->db->get_AnnotatedFeatureAdaptor,
+                  'motif'     => $self->adaptor->db->get_MotifFeatureAdaptor     );
 
   if (defined $feature_class) {
 
@@ -277,35 +274,31 @@ sub regulatory_attributes{
   }
 
   foreach my $fclass (@fclasses) {
-    #Now structured as hash to facilitate faster has_attribute method
-    #Very little difference to array based cache
-    my @attr_dbIDs = keys %{$self->{'attribute_cache'}{$fclass}};
-
+    # Now structured as hash to facilitate faster has_attribute method
+    # Very little difference to array based cache
+    my @attr_dbIDs = keys %{$self->{attribute_cache}{$fclass}};
 	
     if (scalar(@attr_dbIDs) > 0) {
 	  
-      if ( ! ( ref($self->{'regulatory_attributes'}{$fclass}->[0])  &&
-               ref($self->{'regulatory_attributes'}{$fclass}->[0])->isa('Bio::EnsEMBL::Feature') )) {
+      if ( ! ( ref($self->{regulatory_attributes}{$fclass}->[0])  &&
+               ref($self->{regulatory_attributes}{$fclass}->[0])->isa('Bio::EnsEMBL::Feature') )) {
       
         $adaptors{$fclass}->force_reslice(1); #So we don't lose attrs which aren't on the slice
-
-        #fetch_all_by_Slice_constraint does relevant normalised Slice projection i.e. PAR mappingg
+        # fetch_all_by_Slice_constraint does relevant normalised Slice projection i.e. PAR mappingg
         $self->{'regulatory_attributes'}{$fclass} = 
           $adaptors{$fclass}->fetch_all_by_Slice_constraint
-            (
-             $self->slice,
-             lc($fclass).'_feature_id in('.join(',', @attr_dbIDs).')'
-            );
+            ($self->slice,
+             lc($fclass).'_feature_id in('.join(',', @attr_dbIDs).')' );
 
-        #Forces reslice and inclusion for attributes not contained within slice 
+        # Forces reslice and inclusion for attributes not contained within slice 
         $adaptors{$fclass}->force_reslice(0);
       }
     } else {
-      $self->{'regulatory_attributes'}{$fclass} = [];
+      $self->{regulatory_attributes}{$fclass} = [];
     }
   }
 
-  return [ map { @{$self->{'regulatory_attributes'}{$_}} } @fclasses ];
+  return [ map { @{$self->{regulatory_attributes}{$_}} } @fclasses ];
 }
 
 =head2 has_attribute

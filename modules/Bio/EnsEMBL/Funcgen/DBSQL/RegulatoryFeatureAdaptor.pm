@@ -653,57 +653,54 @@ sub store{
 
   foreach my $rf (@rfs) {
 
-	if( ! ref $rf || ! $rf->isa('Bio::EnsEMBL::Funcgen::RegulatoryFeature') ) {
-	  throw('Feature must be an RegulatoryFeature object');
-	}
+    if( ! ref $rf || ! $rf->isa('Bio::EnsEMBL::Funcgen::RegulatoryFeature') ) {
+      throw('Feature must be an RegulatoryFeature object');
+    }
 
-	if ( $rf->is_stored($db) ) {
-	  #does not accomodate adding Feature to >1 feature_set
-	  warning('Skipping RegulatoryFeature [' . $rf->dbID() . '] as it is already stored in the database');
-	  next;
-	}
+    if ( $rf->is_stored($db) ) {
+      # does not accomodate adding Feature to >1 feature_set
+      warning('Skipping RegulatoryFeature [' . $rf->dbID() . '] as it is already stored in the database');
+      next;
+    }
 
-	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $rf->feature_set);
-	my ($seq_region_id);
-	($rf, $seq_region_id) = $self->_pre_store($rf);
-	$rf->adaptor($self);#Set adaptor first to allow attr feature retreival for bounds
-	#This is only required when storing
-
-
-	$sth->bind_param(1,  $seq_region_id,           SQL_INTEGER);
-	$sth->bind_param(2,  $rf->start,               SQL_INTEGER);
-	$sth->bind_param(3,  $rf->end,                 SQL_INTEGER);
-	$sth->bind_param(4,  $rf->bound_start_length,  SQL_INTEGER);
-	$sth->bind_param(5,  $rf->bound_end_length,    SQL_INTEGER);
-	$sth->bind_param(6,  $rf->strand,              SQL_TINYINT);
-	$sth->bind_param(7,  $rf->{display_label},     SQL_VARCHAR);#Deref so we don't store API default value
-	$sth->bind_param(8,  $rf->feature_type->dbID,  SQL_INTEGER);
-	$sth->bind_param(9,  $rf->feature_set->dbID,   SQL_INTEGER);
-	$sth->bind_param(10, $rf->stable_id,           SQL_VARCHAR);
-	$sth->bind_param(11, $rf->binary_string,       SQL_VARCHAR);
-  $sth->bind_param(12, $rf->is_projected,        SQL_BOOLEAN);
-  $sth->bind_param(13, $rf->has_evidence,        SQL_BOOLEAN);
-	$sth->bind_param(14, $rf->cell_type_count,     SQL_INTEGER);
-
-	#Store and set dbID
-	$sth->execute;
-	$rf->dbID( $self->last_insert_id );
+    $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $rf->feature_set);
+    my ($seq_region_id);
+    ($rf, $seq_region_id) = $self->_pre_store($rf);
+    $rf->adaptor($self);  # Set adaptor first to allow attr feature retreival for bounds
+    # This is only required when storing
 
 
-	#Store regulatory_attributes
-	#Attr cache now only holds dbids not objs
+    $sth->bind_param(1,  $seq_region_id,           SQL_INTEGER);
+    $sth->bind_param(2,  $rf->start,               SQL_INTEGER);
+    $sth->bind_param(3,  $rf->end,                 SQL_INTEGER);
+    $sth->bind_param(4,  $rf->bound_start_length,  SQL_INTEGER);
+    $sth->bind_param(5,  $rf->bound_end_length,    SQL_INTEGER);
+    $sth->bind_param(6,  $rf->strand,              SQL_TINYINT);
+    $sth->bind_param(7,  $rf->{display_label},     SQL_VARCHAR);  # Deref so we don't store API default value
+    $sth->bind_param(8,  $rf->feature_type->dbID,  SQL_INTEGER);
+    $sth->bind_param(9,  $rf->feature_set->dbID,   SQL_INTEGER);
+    $sth->bind_param(10, $rf->stable_id,           SQL_VARCHAR);
+    $sth->bind_param(11, $rf->binary_string,       SQL_VARCHAR);
+    $sth->bind_param(12, $rf->is_projected,        SQL_BOOLEAN);
+    $sth->bind_param(13, $rf->has_evidence,        SQL_BOOLEAN);
+    $sth->bind_param(14, $rf->cell_type_count,     SQL_INTEGER);
+    # Store and set dbID
+    $sth->execute;
+    $rf->dbID( $self->last_insert_id );
 
-	my %attrs = %{$rf->attribute_cache};
+    # Store regulatory_attributes
+    # Attr cache now only holds dbids not objs
+    my %attrs = %{$rf->attribute_cache};
 
-	foreach my $fclass(keys %attrs){
+    foreach my $fclass(keys %attrs){
 
-	  foreach my $attr_id(keys %{$attrs{$fclass}}){
-		$sth2->bind_param(1, $rf->dbID, SQL_INTEGER);
-		$sth2->bind_param(2, $attr_id,  SQL_INTEGER);
-		$sth2->bind_param(3, $fclass,   SQL_VARCHAR);
-		$sth2->execute();
-	  }
-	}
+      foreach my $attr_id(keys %{$attrs{$fclass}}){
+        $sth2->bind_param(1, $rf->dbID, SQL_INTEGER);
+        $sth2->bind_param(2, $attr_id,  SQL_INTEGER);
+        $sth2->bind_param(3, $fclass,   SQL_VARCHAR);
+        $sth2->execute();
+      }
+    }
   }
 
   return \@rfs;

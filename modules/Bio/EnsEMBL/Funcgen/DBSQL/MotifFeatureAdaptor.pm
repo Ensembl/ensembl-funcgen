@@ -301,21 +301,17 @@ sub _objs_from_sth {
 	my ($seq_region_id, @features, %bm_hash,
       %slice_hash, %sr_name_hash, %sr_cs_hash);
 
-	my (
-	    $motif_feature_id,  $efg_seq_region_id,
+	my ($motif_feature_id,  $efg_seq_region_id,
 	    $seq_region_start,  $seq_region_end,
 	    $seq_region_strand, $bm_id,
       $display_label,     $score,
-      $stable_id
-     );
+      $stable_id);
 
-	$sth->bind_columns(
-                     \$motif_feature_id,  \$efg_seq_region_id,
+	$sth->bind_columns(\$motif_feature_id,  \$efg_seq_region_id,
                      \$seq_region_start,  \$seq_region_end,
                      \$seq_region_strand, \$bm_id,
                      \$display_label,     \$score,
-                     \$stable_id
-                    );
+                     \$stable_id);
 
 	my ($asm_cs, $cmp_cs, $asm_cs_name, $asm_cs_vers, $cmp_cs_name, $cmp_cs_vers);
 
@@ -339,9 +335,7 @@ sub _objs_from_sth {
 		$dest_slice_sr_name = $dest_slice->seq_region_name();
 	}
 
-
  FEATURE: while ( $sth->fetch() ) {
-
 	  #Build a slice adaptor cache here if we want to enable mapping between assemblies??
 	  #Or if we supported the mapping between cs systems for a given schema_build, which would have to be handled by the core api
 
@@ -421,8 +415,6 @@ sub _objs_from_sth {
 
       $slice = $dest_slice;
 	  }
-
-
 
     push @features, Bio::EnsEMBL::Funcgen::MotifFeature->new_fast
 		  ({
