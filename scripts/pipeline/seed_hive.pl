@@ -157,8 +157,9 @@ sub main{
   #Catch STDERR here has the transformed input_id is printed to STDERR
               
   warn "Running $cmd" if $debug;
-  my $job_info = run_backtick_cmd($cmd);
-  my $exit_status = $?;                                   
+  my $job_info = run_backtick_cmd($cmd);  # This get's polluted with STDERR sometimes
+  # TODO Use IPC run to get just STDOUT.
+  my $exit_status = $?;    
   warn "exit status is $?\njob_info is $job_info\n" if $debug;
   
   
@@ -167,13 +168,11 @@ sub main{
   my $id_stored = 0;
   
   if( $job_info =~ /Could not create job/){
-    #This will have been reformated as it appears in the DB
-    (my $stored_input_id = $job_info) =~ s/Could not create job '//;
+    # This will have been reformated as it appears in the DB
+    # Can we replace the code which actually reformat the input_id?
+    (my $stored_input_id = $job_info) =~ s/^.*Could not create job '//s;
     $stored_input_id =~ s/' \(it may have.*(?:\n.*)*$//;
     #optional multi line subsitution as it may have been suffixed with another 
-    #input_id = line with an added length value;
-#    chomp($stored_input_id);
-    
  
     #Now try and fetch job_id from the job or analysis_data table;  
     my $hive_db = Bio::EnsEMBL::Hive::DBSQL::DBAdaptor->new(-url => $hive_url);
