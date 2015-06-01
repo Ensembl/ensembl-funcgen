@@ -91,7 +91,7 @@ sub default_options {
      }, 
    
  
-    'control_feature_types' => ['Goat-IgG', 'Rabbit-IgG', 'WCE'], 
+    'control_feature_types' => ['Goat-IgG', 'Rabbit-IgG', 'WCE', 'rat-IgG-control', 'rabbit-IgG-control', 'mouse-IgG-control'], 
                      #was in Peaks.pm but needed for ReadAlignments 
     #Only needed for IdentifyInputSubsets, which does the control association
     #Move this to ReadAlignments as we don't need it for Peaks at all?
