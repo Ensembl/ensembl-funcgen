@@ -35,10 +35,6 @@ DELIMITER //
 CREATE PROCEDURE SummariseSegBuild()
 SummariseSegBuild: BEGIN
   DECLARE FT_IDS, CT_IDS VARCHAR(1000) DEFAULT NULL;
-  -- SELECT string INTO CT_IDS FROM regbuild_string WHERE name='regbuild.cell_type_ids';
-  
-  -- SELECT string INTO FT_IDS FROM regbuild_string WHERE name='segmentation.feature_type_ids';		
-  
   SET CT_IDS=GetRegBuildCellTypeIDs();
   SET FT_IDS=GetSegBuildFeatureTypeIDs();
   
