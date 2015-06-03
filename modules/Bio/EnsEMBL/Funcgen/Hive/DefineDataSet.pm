@@ -89,15 +89,29 @@ sub fetch_input {   # fetch parameters...
     #This would highlights a potential conflict between no_idr and peak_analysis
     #Should peak_analysis turn on no_idr?
     #peak_analysis, is generally for non-idr data sets
-    #and permissive_peaks overrides this
+    #and permissive_peaks overridesthis
     #IDR mode currently only supports SWEMBL, so redefining permissive_peaks
     #will fail in some unkown way at present?       
-    $set_lname = $self->get_param_method('permissive_peaks', 'required').'_IDR';  
     
-    #Reset peak_analysis here for clarity as this is batch flown
-    #although we woudl still use the above to create the feature_set
-    $self->peak_analysis($set_lname);
-    
+    # This is currently causing failures with only Collection config loaded
+    # and will still cause failure even if we don't set peak analysis?
+    # How do we re-use an existing data set?
+    # The pipeline actually needs restructuring
+    # as there is no need for a dataset if we are just generating bigwigs(result_set)
+
+    # flow to unwired analysis is okay, so let's just code around this for now.
+
+    # $set_lname = $self->get_param_method('permissive_peaks', 'required').'_IDR';  
+    # $self->peak_analysis($set_lname);
+    # $set_lname = $self->get_param_method('permissive_peaks', 'required').'_IDR';  
+
+    if(my $ppeak_anal = $self->get_param_method('permissive_peaks') ){ 
+      #Reset peak_analysis here for clarity as this is batch flown
+      #although we woudl still use the above to create the feature_set
+      #$self->peak_analysis($ppeak_anal.'_IDR');
+      $set_lname = $ppeak_anal.'_IDR';
+    }
+
     #This module has been written so that it is agnostic towards to the type of feature_set
     #it is creating, so putting permissive_peaks in here spoils that at present   
     #i.e. we pass the default_peak_analyses as the default_feature_set_analyses
@@ -113,7 +127,6 @@ sub fetch_input {   # fetch parameters...
         " in the analysis config");
     }
     
- 
     if(exists $default_analyses{feature_set}{$set->feature_type->name}){
       $set_lname = $default_analyses{feature_set}{$set->feature_type->name}; 
     }
@@ -135,8 +148,6 @@ sub fetch_input {   # fetch parameters...
   }    
   #can't use process_params here as the param name does match the object name
   #We could over-ride this with a second arrayref of class names     
-  
-  warn "defining analysis as $set_lname";
                                    
   $self->param('feature_set_analysis', 
                &scalars_to_objects($self->out_db,
@@ -162,15 +173,13 @@ sub run {   # Check parameters and do appropriate database/file operations...
   my $set_prefix = get_set_prefix_from_Set($rset);
   my $set;    
     
-  #Never set -FULL_DELETE here!
-  #It is unwise to do this in a pipeline and should be handled
-  #on a case by case basis using a separate rollback script    
-  #Should also never really specify recover here either?
-  #This bascailly ignores the fact that a ResultSet may be linked to other DataSets
-  
+  # Never set -FULL_DELETE here!
+  # It is unwise to do this in a pipeline and should be handled
+  # on a case by case basis using a separate rollback script    
+  # Should also never really specify recover here either?
+  # This bascailly ignores the fact that a ResultSet may be linked to other DataSets
   $set = $helper->define_DataSet
-   (
-    -NAME                 => $set_prefix.'_'.$fset_anal->logic_name,
+   (-NAME                 => $set_prefix.'_'.$fset_anal->logic_name,
     -FEATURE_CLASS        => 'annotated', #Is there overlap with rset feature_class here?
     -SUPPORTING_SETS      => [$rset],
     -DBADAPTOR            => $self->out_db,
@@ -181,11 +190,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
     -RECOVER              => $self->param('recover'),
     -SLICES               => $self->slices,    
     -CELL_TYPE            => $rset->cell_type,
-    -FEATURE_TYPE         => $rset->feature_type,
-    #-DESCRIPTION   => ?
-    #-DISPLAY_LABEL => ?
-  );  
-
+    -FEATURE_TYPE         => $rset->feature_type                    );  
 
   $self->param('output_id', 
                {%{$self->batch_params},
