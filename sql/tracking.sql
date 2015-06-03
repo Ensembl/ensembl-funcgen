@@ -95,7 +95,7 @@ INSERT INTO status_name (name, tracking_only) values ('REBUILT',                
 INSERT INTO status_name (name, tracking_only) values ('IN_RELEASE',              1);
 INSERT INTO status_name (name, tracking_only) values ('ALIGNING_CONTROL',        1);
 INSERT INTO status_name (name, tracking_only) values ('ALIGNED',                 1);
-
+INSERT INTO status_name (name, tracking_only) values ('ALIGNED_CONTROL',                 1);
 -- Are these last two ALIGN* states really tracking_only?
 
 
