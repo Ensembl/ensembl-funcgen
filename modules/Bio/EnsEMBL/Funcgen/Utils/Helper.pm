@@ -11,7 +11,7 @@ You may obtain a copy of the License at
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
 WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-See the License for the specific language governing permissions and
+See the License for the specific language governin.g permissions and
 limitations under the License.
 
 =head1 CONTACT
@@ -97,6 +97,8 @@ use Bio::EnsEMBL::Funcgen::FeatureSet;
 use Bio::EnsEMBL::Funcgen::DataSet;
 use Bio::EnsEMBL::Funcgen::ResultSet;
 
+use feature qw(say);
+
 use base qw( Bio::Root::Root );
 
 #todo remove or use Bio::Root::Root properly
@@ -119,7 +121,7 @@ my @rollback_tables = qw( data_set   feature_set
 #values here used in > ops below, to implement
 #hierarchical rollback
 
-
+ 
 
 my %rollback_modes = 
   (
@@ -1350,29 +1352,60 @@ sub rollback_FeatureSet {
     $fset->adaptor->revoke_states($fset);
         
     if ( $fset->feature_class eq 'regulatory' ) {   #Rollback reg attributes
-      $sql = "DELETE ra from regulatory_attribute ra, $table f where ".
-        "f.${table}_id=ra.${table}_id and f.feature_set_id=".$fset->dbID.$slice_join;
-          
-      $db->rollback_table( $sql, 'regulatory_attribute');
+      $sql = "
+        DELETE 
+          ra 
+        FROM 
+          regulatory_attribute ra, 
+          $table f 
+        WHERE
+          f.${table}_id    = ra.${table}_id AND 
+          f.feature_set_id = ".$fset->dbID.$slice_join;
+      say $sql;    
+      # $db->rollback_table( $sql, 'regulatory_attribute');
     }
     elsif($fset->feature_class eq 'annotated'){   #Handle amfs
-      $sql = 'DELETE amf from annotated_feature af, associated_motif_feature amf where '.
-        'af.feature_set_id='.$fset->dbID.
+      $sql = '
+        DELETE 
+          amf 
+        FROM 
+          annotated_feature af, 
+          associated_motif_feature amf 
+        WHERE 
+          af.feature_set_id = '.$fset->dbID.
         ' AND af.annotated_feature_id = amf.annotated_feature_id'.$slice_join;
-      $db->rollback_table( $sql, 'associated_motif_feature' );
+      say $sql;
+      # $db->rollback_table( $sql, 'associated_motif_feature' );
     } ## end if ( $fset->feature_class...)
       
     #Remove object_xref records (but not xref which may be used by soemthing else)
-    $sql = "DELETE ox from object_xref ox, $table f where ox.ensembl_object_type='"
-      .ucfirst( $fset->feature_class )."Feature' and ox.ensembl_id=f.${table}_id and ".
-      "f.feature_set_id=". $fset->dbID . $slice_join;
-    $db->rollback_table( $sql, 'object_xref', 'object_xref_id' );
+    $sql = "
+      DELETE 
+        ox 
+      FROM 
+        object_xref ox, 
+        $table f 
+      WHERE 
+        ox.ensembl_object_type='"
+       .ucfirst( $fset->feature_class )."Feature' and 
+       ox.ensembl_id=f.${table}_id and ".
+      "f.feature_set_id =". $fset->dbID . $slice_join;
+    say $sql;
+    # $db->rollback_table( $sql, 'object_xref', 'object_xref_id' );
       
     #Remove associated_feature_type records
-    $sql = "DELETE aft from associated_feature_type aft, $table f where ".
-      "f.feature_set_id=".$fset->dbID." and f.${table}_id=aft.table_id and ".
-      "aft.table_name='".$fset->feature_class . "_feature'" . $slice_join;
-    $db->rollback_table( $sql, 'associated_feature_type' );
+    $sql = "
+      DELETE 
+        aft 
+      FROM 
+        associated_feature_type aft, 
+        $table f 
+      WHERE ".
+        "f.feature_set_id = ".$fset->dbID." and 
+         f.${table}_id    = aft.table_id    and ".
+        "aft.table_name   = '".$fset->feature_class . "_feature'" . $slice_join;
+    say $sql;
+    # $db->rollback_table( $sql, 'associated_feature_type' );
       
     #Remove features
     $sql = "DELETE f from $table f where f.feature_set_id=" .
@@ -1422,63 +1455,64 @@ sub rollback_FeatureSet {
 
 =cut
 
-#Need to change slice to slices ref here
-#Need to add full rollback, which will specify to remove all sets
-#as well as results and
-#These params need clarifying as their nature changes between input_set and array rsets
-#Don't we always want to rollback_results?
-#force should only really be used to rollback InputSet ResultFeature sets
-#i.e. Read collections which are not used as direct input for the linked product FeatureSet
-#This should fail with array data associated with a product feature set
+# Need to change slice to slices ref here
+# Need to add full rollback, which will specify to remove all sets
+# as well as results and
+# These params need clarifying as their nature changes between input_set and array rsets
+# Don't we always want to rollback_results?
+# force should only really be used to rollback InputSet ResultFeature sets
+# i.e. Read collections which are not used as direct input for the linked product FeatureSet
+# This should fail with array data associated with a product feature set
 
 
-#todo update callers to add full_delete, recovery and force flags as appropriate
-#force should really only be used via the script i.e. we don't really want to use force
-#in the automated pipeline, as this will probably lead to errors
+# todo update callers to add full_delete, recovery and force flags as appropriate
+# force should really only be used via the script i.e. we don't really want to use force
+# in the automated pipeline, as this will probably lead to errors
 
 
-#todo add slices support here
+# todo add slices support here
 
-#It would be better to take the known dataset here rather than 'recovery'
+# It would be better to take the known dataset here rather than 'recovery'
 
-#There is a case here, for just being able to redefine the result_set_input entries
-#This can be identified from _compare_set_for_rollback
-#Can recover handle this, 
-#maybe full_delete and force_delete should just be full_delete 1|2
-#and recover/update should be recover 1|2
-#force delete is never passed from _validate_rollback_Set at present
+# There is a case here, for just being able to redefine the result_set_input entries
+# This can be identified from _compare_set_for_rollback
+# Can recover handle this, 
+# maybe full_delete and force_delete should just be full_delete 1|2
+# and recover/update should be recover 1|2
+# force delete is never passed from _validate_rollback_Set at present
 
 sub rollback_ResultSet {
   my ( $self, $rset, $slices, $recover, $full_delete, $force_delete ) = @_;
-
-  $self->debug(1, "rollback_ResultSet:\t ResultSet = ".$rset->name.
-    "\trecover = $recover\tfull_delete = $full_delete\tforce_delete = $force_delete");
-
-  if($slices){
-    warn "Slice rollback not currently supported, performing full rollback for ResultSet:\t".
-      $rset->name; 
-  }
-
-
-  if($full_delete){
-    
-    if($recover){
-      throw('The \'full delete\' and \'recover\' argument are mutually exclusive'.
-        ', please omit one or both');   
-    }
-    
-    if ($slices) {
-      throw("Cannot do a \'full delete\' on a sub set of \'slices\' for ResultSet:\t".
-        $rset->name."\nPlease omit one");  
-    }          
-  }
 
   if ( ! ($rset &&
          (ref($rset) eq 'Bio::EnsEMBL::Funcgen::ResultSet') &&
           defined $rset->adaptor ) ){
     throw('Must provide a valid stored Bio::EnsEMBL::Funcgen::ResultSet');
   }
-  
+
+  my $rs_name = $rset->name;
+
+  $self->debug(1, "rollback_ResultSet:\t
+    ResultSet     = $rs_name\t
+    recover       = $recover\t
+    full_delete   = $full_delete\t
+    force_delete  = $force_delete");
+
+  if($slices){
+    warn "Slice rollback not supported, performing full rollback for ResultSet:\t$rs_name"; 
+  }
+
+
+  if($full_delete){
+    
+    if($recover){
+      throw("The 'full delete' and 'recover' argument are mutually exclusive, please omit one or both");   
+    }
+    
+    if ($slices) {
+      throw("Cannot do a 'full delete' on a sub set of 'slices' for ResultSet:\t$rs_name\nPlease omit one");  
+    }          
+  }
   
   my $db = $rset->adaptor->db; #Assumes db is accessible  
   $db->is_stored_and_valid( 'Bio::EnsEMBL::Funcgen::ResultSet', $rset );
@@ -1511,11 +1545,11 @@ sub rollback_ResultSet {
     if( ! ($recover || $full_delete)){
       
       if(scalar (@dsets) > 1){
-        throw('ResultSet '.$rset->name." has associated DataSets, please specify".
-          " -recover or use rollback script with -force_delete:\n\t".join(',', (map $_->name, @dsets)));
+        throw("ResultSet $rs_name has associated DataSets, please specify -recover or use ".
+          "rollback script with -force_delete:\n\t".join(',', (map $_->name, @dsets)));
       }
       else{
-        throw('ResultSet '.$rset->name." has an associated DataSet, please specify".
+        throw("ResultSet $rs_name has an associated DataSet, please specify".
           " 'recover', 'full_delete' or use rollback script:\n\t".
           join(',', (map $_->name, @dsets)));
       }
@@ -1533,6 +1567,11 @@ sub rollback_ResultSet {
       }
       #else assume we know about this DataSet?     
     }
+    elsif($full_delete) {
+      say "Removing DataSets using rollback_FeatureSet";
+      
+
+    }
     elsif(! $force_delete){ # && full delete
       #full_delete may invalidate states for dependant Data/FeatureSets
       #this may cause problems in a pipeline, unless the dependant Data/FeatureSets
@@ -1546,9 +1585,8 @@ sub rollback_ResultSet {
       #an absent supporting result_set, which will break the DataSet
       #but the rollback, may mean that this result_set_id get's re-used
       #by a completely different ResultSet!
-    
-      throw("Cannot 'full delete' ResultSet which has dependant DataSet(s):\t".
-          $rset->name."\n:DataSets:\n\t".join("\n\t", (map { $_->name } @dsets))."\n".
+      throw("Cannot 'full delete' ResultSet [$rs_name] which has dependant DataSet(s):\n\t".
+          join("\n\t", (map { $_->name } @dsets))."\n".
           "Please use rollback script with -force_delete instead");
     }
   }
@@ -1566,30 +1604,57 @@ sub rollback_ResultSet {
   my $sql;
   
   if($rset->dbfile_data_dir){ #delete the dbfile_registry entry 
-    $sql = 'DELETE from dbfile_registry where table_name="result_set" and table_id='.$rset->dbID;
-     $self->debug(2, "rollback_ResultSet - deleting dbfile_registry enrty:\n\t$sql");
-    $db->rollback_table($sql, 'dbfile_registry');
+    $sql = '
+      DELETE FROM 
+        dbfile_registry 
+      WHERE 
+        table_name = "result_set" AND 
+        table_id   = '.$rset->dbID
+        ;
+    $self->debug(2, "rollback_ResultSet - deleting dbfile_registry enrty:\n\t$sql");
+    # $db->rollback_table($sql, 'dbfile_registry');
   }
 
   #We may want to just change the result_set_inputs, without changing the result_set record?
   #is this sane? as it may involve leaving an orphaned result_set
 
   if($full_delete){ #delete the result_set and result_set_input entries
-  
+
     if(@dsets){
-      $sql = 'DELETE ss from result_set rs, supporting_set ss WHERE '.
-        'rs.result_set_id=ss.supporting_set_id AND ss.type="result"';
+
+      if(scalar(@dsets) > 1) {
+        throw("More than one DataSet linked to ResultSet '$rs_name'");
+      }
+
+      $sql = "
+      DELETE 
+        ss 
+      FROM 
+        result_set     rs, 
+        supporting_set ss 
+      WHERE 
+         rs.result_set_id = ss.supporting_set_id AND 
+         ss.type          = 'result'
+         ";
       $self->debug(2, "rollback_ResultSet - deleting supporting_set entries:\n\t$sql");
-      $db->rollback_table($sql, 'supporting_set' ); 
+      # $db->rollback_table($sql, 'supporting_set' ); 
     } 
   
     $db->get_ResultSetAdaptor->revoke_states($rset);
   
-    $sql = 'DELETE rs, rsi from result_set rs, result_set_input rsi WHERE '.
-      'rsi.result_set_id=rs.result_set_id AND rs.result_set_id='.$rset->dbID;
+    $sql = '
+      DELETE 
+        rs, 
+        rsi 
+      FROM 
+        result_set        rs, 
+        result_set_input rsi 
+      WHERE 
+       rsi.result_set_id=rs.result_set_id AND 
+      rs.result_set_id='.$rset->dbID;
       
     $self->debug(2, "rollback_ResultSet - deleting ResultSet:\n\t$sql" );
-    $db->rollback_table($sql, 'result_set', 'result_set_id');   
+    # $db->rollback_table($sql, 'result_set', 'result_set_id');   
   }
   
  $self->debug(1, "rollback_Result - finished rolling back:\t" . $rset->name ); 
