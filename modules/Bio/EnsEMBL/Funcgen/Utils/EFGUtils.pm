@@ -60,7 +60,7 @@ use File::Basename                 qw( dirname fileparse );
 use File::Spec;
 use Time::Local;
 use FileHandle;
-use Carp qw( confess );
+use Carp qw( confess croak );
 
 use base qw( Exporter );
 use vars qw( @EXPORT_OK );
@@ -133,7 +133,7 @@ sub add_external_db{
   my ($efg_db, $db_name, $db_release, $db_display_name) = @_;
   my $sql = "select external_db_id from external_db where db_name='$db_name' and db_release='$db_release'";
   my ($db_id) =  $efg_db->dbc->db_handle->selectrow_array($sql);
-  
+
   if($db_id){
     warn "External DB $db_name $db_release already exists in db with db_id $db_id\n";
   } else {
@@ -141,7 +141,7 @@ sub add_external_db{
     $efg_db->dbc->do('insert into external_db (db_name, db_release, status, dbprimary_acc_linkable, priority, db_display_name, type) '.
       "values('$db_name', '$db_release', 'KNOWNXREF', '1', '5', '$db_display_name', 'MISC')");
   }
-  
+
   return;
 }
 
@@ -296,17 +296,17 @@ sub dump_data {
   my $data   = shift;
   my $indent = shift;
   my $terse  = shift;
-  
+
   if((defined $indent) and $indent !~ /[0-3]/o){
     throw("Indent must be 0,1,2,3 not $indent");
   }
-  
+
   $indent = 2 if ! defined $indent;
 
   my $dumper = Data::Dumper->new([$data]);
   $dumper->Indent($indent);
   $dumper->Terse($terse) if $terse;
-  
+
   return $dumper->Dump;
 }
 
@@ -490,7 +490,7 @@ sub get_date{
 	my ($time, $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst);
 
   if ($file && ! -e $file){
-    throw("File does not exist:\t$file") 
+    throw("File does not exist:\t$file")
   }
 
 	($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst) = (defined $file) ?
@@ -498,16 +498,19 @@ sub get_date{
 
 	#print "	($sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst)\n";
 
-	if((! defined $format && ! defined $file) || 
+	if((! defined $format && ! defined $file) ||
      $format eq 'date'){
 		$time = sprintf("%d-%02d-%02d", ($year+1900), $mday, ($mon+1));
 	}
-	elsif($format eq 'time'){ 
+	elsif($format eq 'time'){
 		$time = "${hour}:${min}:${sec}";
 	}
 	elsif($format eq 'timedate'){
 	  $time = localtime();
 	}
+  elsif($format eq 'mysql_curdate'){
+    $time = sprintf("%d-%02d-%02d", ($year+1900), ($mon+1), $mday,);
+  }
 	else{#add mysql formats here, datetime etc...
 		croak("get_date does not handle format:\t$format");
 	}
@@ -520,7 +523,7 @@ sub write_checksum{
   my $file_path = shift;
   my $params    = shift || {};
   assert_ref($params, 'HASH');
-  
+
   my $signature_file = (exists $params->{signature_file}) ? $params->{signature_file} : undef;
   my $digest_method  = (exists $params->{digest_method})  ? $params->{digest_method}  : undef;
   my $debug          = (exists $params->{debug})          ? $params->{debug}          : 0;
@@ -532,19 +535,19 @@ sub write_checksum{
     $signature_file = $file_path.'.CHECKSUM';
     warn "Defining default signature file as $signature_file\n";
   }
-  
+
   warn "Writing checksum:\t$md5_sig\t$file_name\nTo signature file:\t$signature_file\n" if $debug;
   my $checksum_row = $md5_sig."\t".$file_name."\t".$digest_method;
 
   #Update or create entry in signature_file
   my $sigfile_row;
-  
+
   if(-f $signature_file){
     warn "Signature file is $signature_file\n" if $debug;
-    
+
     $sigfile_row = run_backtick_cmd("grep '$file_name' $signature_file", 1);
     #no exit flag as grep will return 1 if no results are returned
-    
+
     if($?){
       warn("$sigfile_row\nFailed to grep old checksum from existing signature file:\t$signature_file");
       $sigfile_row = '';
@@ -574,9 +577,9 @@ sub generate_checksum{
   my $file          = shift;
   my $digest_method = shift;
   #if($file =~ /\.gz$/){
-    #warn("It is unsafe to generate checksums for a compressed file:\n\t$file");  
+    #warn("It is unsafe to generate checksums for a compressed file:\n\t$file");
   #}
-  
+
   $digest_method ||= 'hexdigest';
 
   my $ctx = Digest::MD5->new;
@@ -606,10 +609,10 @@ sub validate_checksum{
   assert_ref($params, 'HASH');
   my $signature_file = (exists $params->{signature_file})    ? $params->{signature_file}    : undef;
   my $digest_method  = (exists $params->{digest_method})     ? $params->{digest_method}     : undef;
-  my $md5_sig        = (exists $params->{checksum})          ? $params->{checksum}          : undef; 
+  my $md5_sig        = (exists $params->{checksum})          ? $params->{checksum}          : undef;
   my $md5_optional   = (exists $params->{checksum_optional}) ? $params->{checksum_optional} : undef;
   my $debug          = (exists $params->{debug})             ? $params->{debug}             : 0;
-  
+
   if((defined $signature_file) && (defined $md5_sig)){
     throw("Params 'signature_file' and 'checksum' are mutually exclusive, please restrict to one");
   }
@@ -617,17 +620,17 @@ sub validate_checksum{
   my $file_name = fileparse($file_path);
 
   if(! defined $md5_sig){
-    
-    if(! defined $signature_file){ 
+
+    if(! defined $signature_file){
       $signature_file = $file_path.'.CHECKSUM';
     }
-   
-    #if((! -f $signature_file) && 
+
+    #if((! -f $signature_file) &&
     #   ($signature_file =~ /\.bam.CHECKSUM/o)){
     #  warn "!!!!! REMOVE THIS !!!!\nTEMPORARILY CREATING missing MD5 file:\t$signature_file";
-    #  write_checksum($file_path);         
+    #  write_checksum($file_path);
     #}
-      
+
     if(-f $signature_file){
       my $qtd_file_name = quotemeta($file_name);
       my $cmd = "grep -E '[[:space:]]+$qtd_file_name\[[:space:]]*.*\$' $signature_file";
@@ -636,19 +639,19 @@ sub validate_checksum{
       #warn "Checksum file row:\t$checksum_row" if $debug;
       my ($sig_file_name, $sig_digest_method);
       ($md5_sig, $sig_file_name, $sig_digest_method) = split(/\s+/, $checksum_row);
-  
+
       if((! defined $sig_file_name) ||
          ($sig_file_name ne $file_name)){
         throw("Failed to find $file_name entry in checksum signature file:".
           "\n\t$signature_file\nUsing:\t$cmd");
       }
-    
+
       #default to digest method in file
       $digest_method     ||= $sig_digest_method;
       #Also need to account for absent $sig_digest
       $sig_digest_method ||= $digest_method;
-  
-    
+
+
       if(defined $sig_digest_method){
         if($digest_method ne $sig_digest_method){
         throw("Specified digest method($digest_method) does not match method found in ".
@@ -663,7 +666,7 @@ sub validate_checksum{
 
   if(defined $md5_sig){
     my $new_md5_sig = generate_checksum($file_path, $digest_method);
-    
+
     if($md5_sig ne $new_md5_sig){
       #This could be due to mismatched digest methods?
       my $msg = 'MD5 checksums do not match:'.
@@ -726,7 +729,7 @@ sub get_month_number{
 sub gunzip_file {
   my $filepath = shift;
   my $was_gzipped = 0;
- 
+
 
   if( is_gzipped($filepath) ){
     run_system_cmd("gunzip $filepath");
@@ -757,7 +760,7 @@ sub is_bed {
     @line = split("\t", $_);
     last;
   }
-  
+
   close($BED_FILE);
 
   if (scalar @line < 6) {
@@ -809,7 +812,7 @@ sub convert_strand {
 #changed return type to file suffix, for file name subbing
 
 sub is_gzipped {
-  my $file               = shift; 
+  my $file               = shift;
   my $fail_if_compressed = shift;
   my $gzip               = 0;
 
@@ -942,7 +945,7 @@ sub open_file{
   my $mkpath_opts      = {verbose => 1};
   $mkpath_opts->{mode} = $file_permissions if defined $file_permissions;
 
-  if((! -d $dir) && 
+  if((! -d $dir) &&
      ($operator eq '>')){
 
     if(! eval { make_path($dir, $mkpath_opts); 1 }){
@@ -1033,7 +1036,7 @@ sub parse_DB_url {
 
 #Allow no_exit as some programs(tab2mage) give successful non-zero exit codes!
 #Would be nice to catch warn output also, but system doesn not handle this well and would
-#to redirect STDERR to a file to read back in. 
+#to redirect STDERR to a file to read back in.
 
 
 #These are currently not capturing STDERR and so this is not reported in the
@@ -1086,7 +1089,7 @@ sub run_backtick_cmd{
   my $command = shift;
   my $no_exit = shift;
   my (@results, $result);
-  
+
   if(wantarray){
     #perlcritic(3) suggests this 3 statement map should be subbed out
     #@results = map {my $line = $_; chomp $line; $line} `$command`;
@@ -1094,19 +1097,19 @@ sub run_backtick_cmd{
     @results = `$command`;
   }
   else{
-    $result  = `$command`;  
+    $result  = `$command`;
   }
-  
+
   my $exit_status = $?; #$CHILD_ERROR
-  #my $errno       = $!; 
-  _handle_exit_status($command, $exit_status, $!, $no_exit); 
+  #my $errno       = $!;
+  _handle_exit_status($command, $exit_status, $!, $no_exit);
   $? = $exit_status if $no_exit;
-  #Non-local 'Magic' $? assignment is a perlcritic severity 4 warning. 
-  #But we actually want this 'global' behaviour 
-   
+  #Non-local 'Magic' $? assignment is a perlcritic severity 4 warning.
+  #But we actually want this 'global' behaviour
+
   if(wantarray){
-    chomp(@results); 
-    return @results ; 
+    chomp(@results);
+    return @results ;
   }
   else{
     chomp($result);
@@ -1116,7 +1119,7 @@ sub run_backtick_cmd{
 
 
 #This is currently not capturing error output very well.
-#If we are running a script, the error message from the script 
+#If we are running a script, the error message from the script
 #(and whatever binary it is running) is not captured
 #Meaning Running scripts from script can mean errors go missing.
 #use IPC::Run instead of system? But this is not a core module!
@@ -1125,13 +1128,13 @@ sub run_backtick_cmd{
 sub _handle_exit_status{
   my ($cmd, $exit_status, $errno, $no_exit) = @_;
   my ($exit_code, $err_string);
-  
+
   if ($cmd =~ /\|/){
-    warn "Failed piped commands may not be caught:\n$cmd\n";    
+    warn "Failed piped commands may not be caught:\n$cmd\n";
   }
 
   $exit_code = $exit_status >> 8; #get the true exit code
-  
+
   if ($exit_status == -1) {
     $err_string = "Failed to execute:\t$cmd\nError:\t$errno\n";
   }
@@ -1144,16 +1147,16 @@ sub _handle_exit_status{
     #$cmd may contain sprintf symbols here we need to escape
     $err_string = sprintf("Child process exited with value %d:", $exit_code)."\t$cmd\nError:\t$errno\n";
   }
-  
+
   if(defined $err_string){
     if(! $no_exit){
       throw($err_string);
-    }   
+    }
     else{
-      warn $err_string;  
+      warn $err_string;
     }
   }
-  
+
   return $exit_code;
 }
 
@@ -1189,9 +1192,9 @@ sub scalars_to_objects{
   assert_ref($db, 'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor', 'db');
 
   #Be kind and handle single scalars in scalar context
-  if(defined $scalars && 
+  if(defined $scalars &&
      (! ref($scalars)) ){
-    $scalars = [$scalars];     
+    $scalars = [$scalars];
   }
 
   if(! ((defined $scalars && (ref($scalars) eq 'ARRAY')) &&
@@ -1287,7 +1290,7 @@ sub species_name{
 
 sub split_CamelCase{
   my $string = shift || die('Must provide a CamelCase string to split');
-  #I'd like to thank google and salva  
+  #I'd like to thank google and salva
   #This will simply drop any non-letter characters
   return $string =~ /[A-Z](?:[A-Z]+|[a-z]*)(?=$|[A-Z])/g;
 }
@@ -1347,7 +1350,7 @@ sub add_DB_url_to_meta {
   my $url_type = shift;
   my $url      = shift;
   my $db       = shift;
-  
+
   if(! defined $url_type){
     throw('Must provide URL_TYPE, URL and DBAdaptor arguments');
   }
@@ -1412,13 +1415,13 @@ sub check_file{
     $found_path = $file_path;
   }
   elsif(defined $suffix){
-    
+
     if($file_path =~ /\.${suffix}/o){ #check without first
       #Just incase it was already in the $file_path
       $file_path =~ s/\.${suffix}$//;
-      
+
       if(-f $file_path){
-        $found_path = $file_path;  
+        $found_path = $file_path;
       }
     }
     elsif(-f $file_path.'.'.$suffix){
@@ -1428,16 +1431,16 @@ sub check_file{
 
   if($found_path){
 
-    if($params->{gunzip} && 
-       ($found_path =~ /\.gz$/o)){          
-      $found_path = gunzip_file($found_path);  
+    if($params->{gunzip} &&
+       ($found_path =~ /\.gz$/o)){
+      $found_path = gunzip_file($found_path);
     }
 
     if(defined $params){
       assert_ref($params, 'HASH');
-      
+
       if(exists $params->{checksum}){
-        validate_checksum($found_path, $params);  
+        validate_checksum($found_path, $params);
       }
     }
   }
@@ -1553,134 +1556,134 @@ sub validate_path{
 #should probably move feature_type method to ResultSet too
 
 sub _get_a_control_InputSubset{
-  my $set  = shift; 
+  my $set  = shift;
   my @is_sets;
-  
+
   if( $set->isa('Bio::EnsEMBL::Funcgen::ResultSet') ){
     #Enforce input_subset table_name here
-    
+
     @is_sets = @{$set->get_support};
-  
+
     if(! @is_sets){
-      throw("Failed to identify control InputSubset support for ResultSet:\t".$set->name);  
+      throw("Failed to identify control InputSubset support for ResultSet:\t".$set->name);
     }
   }
   else{
     @is_sets = ($set);
   }
-  
+
   my @ctrls = grep { $_->is_control == 1 } @is_sets;
 
   if(! @ctrls){
-    throw('Could not identify a control InputSubset from '.ref($set).":\t".$set->name);  
+    throw('Could not identify a control InputSubset from '.ref($set).":\t".$set->name);
   }
 
   return $ctrls[0];
 }
-  
-#This may cause uncaught exception if there are no controls and 
-#the caller does not test the return  
+
+#This may cause uncaught exception if there are no controls and
+#the caller does not test the return
 #Assumes is ResultSet with table_name input_subset
 sub _get_control_InputSubsets{
   my $set = shift;
-  return [ grep { $_->is_control == 1 } @{$set->get_support} ];  
+  return [ grep { $_->is_control == 1 } @{$set->get_support} ];
 }
 
 
 #Should this conditionally append the analysis?
-#This is only useful if your want to omit the _TRN 
+#This is only useful if your want to omit the _TRN
 #suffix.
 
 
 sub get_set_prefix_from_Set{
   my $set        = shift;
-  my $control    = shift; 
+  my $control    = shift;
   my $study_name = get_study_name_from_Set($set, $control);
- 
-  if(! (ref($set) && 
+
+  if(! (ref($set) &&
         ($set->isa('Bio::EnsEMBL::Funcgen::InputSubset') ||
          $set->isa('Bio::EnsEMBL::Funcgen::ResultSet') ))){
-    throw('Must pass a valid InputSet or ResultSet');         
+    throw('Must pass a valid InputSet or ResultSet');
   }
-  
+
   my $ftype;
-  
+
   if($control){
     $ftype = _get_a_control_InputSubset($set)->feature_type->name;
   }
   else{
      $ftype = $set->feature_type->name;
   }
- 
-  return $set->cell_type->name.'_'.$ftype.'_'.$study_name; 
+
+  return $set->cell_type->name.'_'.$ftype.'_'.$study_name;
 }
 
 #This currently only works for Experiments
 #which have controls mixed in
-    
-#The pipeline does not currently expect 
+
+#The pipeline does not currently expect
 #stand alone control experiments
 #and will try and process these like a mixed signal/control set.
 #This should be fine until after the alignment
 #at which point we want to stop their processing
-    
+
 sub get_study_name_from_Set {
   my $set     = shift;
   my $control = shift;
-  
-  if(! (ref($set) && 
+
+  if(! (ref($set) &&
         ($set->isa('Bio::EnsEMBL::Funcgen::InputSubset') ||
          $set->isa('Bio::EnsEMBL::Funcgen::ResultSet') ))){
-    throw('Must pass a valid InputSet or ResultSet');         
+    throw('Must pass a valid InputSet or ResultSet');
   }
-  
+
   my ($exp_name, $ftype);
   my $ctype = $set->cell_type->name;
-  
+
   if($control){
     $control = _get_a_control_InputSubset($set);
     #This is based on the assumption that all non-ctrl subsets are associated with a unique Experiment.
     my $exp   = $control->experiment;
     $exp_name = $exp->name;
- 
+
     foreach my $isset(@{$exp->get_InputSubsets}){
-      
+
       if(! $isset->is_control){
-        $ftype = $isset->feature_type->name;  
+        $ftype = $isset->feature_type->name;
         last;
-      }  
+      }
     }
-    
+
     if(! $ftype){   #We have a pure control experiment i.e. no signal InputSubsets
      $ftype = $exp->feature_type->name;
-    }      
+    }
   }
-  else{  
+  else{
     $exp_name = $set->experiment->name ||
       throw('Cannot find unique experiment name for '.ref($set).":\t".$set->name);
     $ftype = $set->feature_type->name;
   }
-  
-  #\Q..\E escape meta-characters in string variables 
+
+  #\Q..\E escape meta-characters in string variables
   (my $study_name = $exp_name) =~ s/\Q${ctype}_${ftype}\E_(.*)/$1/i;
-  
+
   if($study_name eq $exp_name){
-    throw("Failed to create study name for Experiment $exp_name with cell type $ctype and feature type $ftype");  
+    throw("Failed to create study name for Experiment $exp_name with cell type $ctype and feature type $ftype");
   }
-  
+
   return $study_name;
 }
 
 #This will also take a namespace
 
 sub validate_package_path{
-  my $pkg_path = shift ||  throw('Must defined a package path to validate');  
- 
+  my $pkg_path = shift ||  throw('Must defined a package path to validate');
+
   #Quote so eval treats $aln_pkg as BAREWORD and converts :: to /
-  if(! eval "{require $pkg_path; 1}" ){ 
+  if(! eval "{require $pkg_path; 1}" ){
     throw( "Failed to require:\t$pkg_path\n$@" );
   }
-  
+
   #This might not always be correct if the file contains >1 package
   return path_to_namespace($pkg_path);
 }
@@ -1695,13 +1698,13 @@ sub which_path{
   my $filename  = shift;
   my @env_paths = split(/:/, $ENV{PATH});
   my $path;
-   
+
   find(sub{ if ($_ eq $filename){$path=$File::Find::name; return; }}, @env_paths);
-  
+
   if(! defined $path){
     throw("Unable to find file in \$PATH:\t$filename\n\$PATH contains:\t".join("\t", @env_paths));
   }
-  
+
   return $path;
 }
 
