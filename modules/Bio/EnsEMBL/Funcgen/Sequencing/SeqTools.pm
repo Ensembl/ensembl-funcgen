@@ -1297,7 +1297,8 @@ sub validate_sam_header {
   #samtools view -t
   #samtools merge -h
   my $header_opt    = ($is_fai) ? ' -t '.$header_or_fai : ' -h '.$header_or_fai;
-  my @infile_header = run_backtick_cmd("samtools view -H $sam_bam_file");
+  # Filter out non-@SQ lines
+  my @infile_header = run_backtick_cmd("samtools view -H $sam_bam_file | grep '\@SQ'");
 
   if($!){
     #$! not $@ here which will be null string

@@ -200,7 +200,7 @@ sub pipeline_analyses {
 	   -parameters    =>
 	    {process_file_types => ['significant_region'],
 	     CCAT_parameters => {-chr_file => $self->o('data_root_dir').
-	                           '/reference_files/CCAT/homo_sapiens_GRCh38_unmasked.CCAT_chr_lengths.txt'}},
+	                           '/reference_files/CCAT/'.$self->o('species').'_'.$self->o('assembly').'_unmasked.CCAT_chr_lengths.txt'}},
 	   -analysis_capacity => 100,
 	   -rc_name => 'normal_monitored_2GB', # CCAT does not need much?
 	   #we were getting MEMLIMIT failures with default 200mb
