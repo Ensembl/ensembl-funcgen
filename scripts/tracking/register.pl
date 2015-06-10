@@ -46,7 +46,17 @@ sub main {
 
   my $headers = {};
   my $ids = [];
-     $ids = ['ENCSR000CEH', 'ENCSR000CDB','ENCSR000CBK'];
+     $ids = [
+     'ENCSR000CNJ', 
+     'ENCSR000CNK',
+     # 'ENCSR000CNL',
+     # 'ENCSR000CNI',
+     'ENCSR000COG',
+     'ENCSR000COF',
+     'ENCSR000COE',
+     # 'ENCSR000CMO',
+     'ENCSR000CNE',
+     ];
      # $ids = parse_flatfile($cfg->{file}->{input});
   say "Found " .scalar(@{$ids}) . ' Experiments to register';
 
@@ -88,7 +98,7 @@ sub main {
 
     # $data contains data parsed from JSON or data derived from JSON
     my $data = {};
-    $data->{experiment_id} = $id;
+    $data->{experiment_id}  = $id;
     $data->{experiment_url} = $url;
     parse_ENCODE_json($cfg, $json, $data);
 
@@ -230,7 +240,7 @@ sub fetch_input_subset {
          download_date     => undef,
          local_url         => undef,
          md5sum            => $file->{md5sum},
-         notes             => 'Experiment:'.$data->{experiment_id},
+         notes             => $data->{experiment_name},
        };
       $cfg->{tr_a}->{tr}->store_tracking_info($iss, $tr_info);
 
@@ -257,8 +267,8 @@ sub fetch_experiment {
           -NAME                => $data->{experiment_name},
           -CELL_TYPE           => $objects->{cell_type},
           -FEATURE_TYPE        => $objects->{feature_type},
+          -ARCHIVE_ID          => $data->{experiment_id},
           -EXPERIMENTAL_GROUP  => $objects->{exp_group},
-          # -DATE                => get_date('mysql'),
           -DESCRIPTION         => $data->{description},
        );
 
@@ -266,7 +276,7 @@ sub fetch_experiment {
 
     my $tr_info->{info} = {
      # experiment_id     => $experiment->dbID,
-     notes             => 'Experiment:'.$data->{experiment_id},
+     notes             => 'Experiment:'.$data->{experiment_name},
     };
    $cfg->{tr_a}->{tr}->store_tracking_info($experiment, $tr_info);
 
