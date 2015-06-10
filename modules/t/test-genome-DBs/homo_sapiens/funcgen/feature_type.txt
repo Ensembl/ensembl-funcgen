@@ -144,16 +144,16 @@
 179384	Predicted Promoter Flank	Segmentation State	75	Predicted promoter flanking region	\N	\N
 179385	Predicted Promoter Flank	Segmentation State	74	Predicted promoter flanking region	\N	\N
 179387	CTCF enriched	Segmentation State	73	CTCF enriched element	\N	\N
-179391	Predicted heterochomatin	Segmentation State	73	Predicted heterochromatin	\N	\N
+179391	Predicted heterochromatin	Segmentation State	73	Predicted heterochromatin	\N	\N
 179393	CTCF enriched	Segmentation State	76	CTCF enriched element	\N	\N
 179394	CTCF enriched	Segmentation State	74	CTCF enriched element	\N	\N
-179395	Predicted heterochomatin	Segmentation State	76	Predicted heterochromatin	\N	\N
-179396	Predicted heterochomatin	Segmentation State	72	Predicted heterochromatin	\N	\N
+179395	Predicted heterochromatin	Segmentation State	76	Predicted heterochromatin	\N	\N
+179396	Predicted heterochromatin	Segmentation State	72	Predicted heterochromatin	\N	\N
 179397	CTCF enriched	Segmentation State	75	CTCF enriched element	\N	\N
 179398	Predicted Enhancer	Segmentation State	73	Predicted enhancer	\N	\N
-179399	Predicted heterochomatin	Segmentation State	74	Predicted heterochromatin	\N	\N
+179399	Predicted heterochromatin	Segmentation State	74	Predicted heterochromatin	\N	\N
 179400	Predicted Enhancer	Segmentation State	76	Predicted enhancer	\N	\N
-179401	Predicted heterochomatin	Segmentation State	75	Predicted heterochromatin	\N	\N
+179401	Predicted heterochromatin	Segmentation State	75	Predicted heterochromatin	\N	\N
 179403	Predicted Enhancer	Segmentation State	74	Predicted enhancer	\N	\N
 179404	Predicted Enhancer	Segmentation State	72	Predicted enhancer	\N	\N
 179405	Predicted Enhancer	Segmentation State	75	Predicted enhancer	\N	\N
@@ -166,25 +166,25 @@
 179416	Predicted Transcribed Region	Segmentation State	77	Predicted transcribed region	\N	\N
 179417	Predicted Promoter Flank	Segmentation State	77	Predicted promoter flanking region	\N	\N
 179419	CTCF enriched	Segmentation State	77	CTCF enriched element	\N	\N
-179420	Predicted heterochomatin	Segmentation State	77	Predicted heterochromatin	\N	\N
+179420	Predicted heterochromatin	Segmentation State	77	Predicted heterochromatin	\N	\N
 179421	Predicted Enhancer	Segmentation State	77	Predicted enhancer	\N	\N
 179423	Predicted Promoter with TSS	Segmentation State	77	Predicted promoter region including transcription start site	\N	\N
 179424	Predicted low activity	Segmentation State	78	Predicted low activity proximal to active states	\N	\N
 179425	Predicted Transcribed Region	Segmentation State	78	Predicted transcribed region	\N	\N
-179429	Predicted heterochomatin	Segmentation State	78	Predicted heterochromatin	\N	\N
+179429	Predicted heterochromatin	Segmentation State	78	Predicted heterochromatin	\N	\N
 179430	Predicted Enhancer	Segmentation State	78	Predicted enhancer	\N	\N
 179432	Predicted Promoter with TSS	Segmentation State	78	Predicted promoter region including transcription start site	\N	\N
 179433	Predicted low activity	Segmentation State	79	Predicted low activity proximal to active states	\N	\N
 179434	Predicted Transcribed Region	Segmentation State	79	Predicted transcribed region	\N	\N
 179435	Predicted Promoter Flank	Segmentation State	79	Predicted promoter flanking region	\N	\N
 179437	CTCF enriched	Segmentation State	79	CTCF enriched element	\N	\N
-179438	Predicted heterochomatin	Segmentation State	79	Predicted heterochromatin	\N	\N
+179438	Predicted heterochromatin	Segmentation State	79	Predicted heterochromatin	\N	\N
 179439	Predicted Enhancer	Segmentation State	79	Predicted enhancer	\N	\N
 179441	Predicted Promoter with TSS	Segmentation State	79	Predicted promoter region including transcription start site	\N	\N
 179442	Predicted low activity	Segmentation State	80	Predicted low activity proximal to active states	\N	\N
 179443	Predicted Transcribed Region	Segmentation State	80	Predicted transcribed region	\N	\N
 179446	CTCF enriched	Segmentation State	80	CTCF enriched element	\N	\N
-179447	Predicted heterochomatin	Segmentation State	80	Predicted heterochromatin	\N	\N
+179447	Predicted heterochromatin	Segmentation State	80	Predicted heterochromatin	\N	\N
 179448	Predicted Enhancer	Segmentation State	80	Predicted enhancer	\N	\N
 179450	Predicted Promoter with TSS	Segmentation State	80	Predicted promoter region including transcription start site	\N	\N
 179451	Predicted low activity	Segmentation State	82	Predicted low activity proximal to active states	\N	\N
@@ -195,8 +195,8 @@
 179456	Predicted Promoter Flank	Segmentation State	81	Predicted promoter flanking region	\N	\N
 179459	CTCF enriched	Segmentation State	82	CTCF enriched element	\N	\N
 179460	CTCF enriched	Segmentation State	81	CTCF enriched element	\N	\N
-179461	Predicted heterochomatin	Segmentation State	82	Predicted heterochromatin	\N	\N
-179462	Predicted heterochomatin	Segmentation State	81	Predicted heterochromatin	\N	\N
+179461	Predicted heterochromatin	Segmentation State	82	Predicted heterochromatin	\N	\N
+179462	Predicted heterochromatin	Segmentation State	81	Predicted heterochromatin	\N	\N
 179463	Predicted Enhancer	Segmentation State	82	Predicted enhancer	\N	\N
 179464	Predicted Enhancer	Segmentation State	81	Predicted enhancer	\N	\N
 179467	Predicted Promoter with TSS	Segmentation State	82	Predicted promoter region including transcription start site	\N	\N
@@ -207,8 +207,8 @@
 179472	Predicted Transcribed Region	Segmentation State	83	Predicted transcribed region	\N	\N
 179474	Predicted Promoter Flank	Segmentation State	83	Predicted promoter flanking region	\N	\N
 179477	CTCF enriched	Segmentation State	84	CTCF enriched element	\N	\N
-179479	Predicted heterochomatin	Segmentation State	84	Predicted heterochromatin	\N	\N
-179480	Predicted heterochomatin	Segmentation State	83	Predicted heterochromatin	\N	\N
+179479	Predicted heterochromatin	Segmentation State	84	Predicted heterochromatin	\N	\N
+179480	Predicted heterochromatin	Segmentation State	83	Predicted heterochromatin	\N	\N
 179481	Predicted Enhancer	Segmentation State	84	Predicted enhancer	\N	\N
 179482	Predicted Enhancer	Segmentation State	83	Predicted enhancer	\N	\N
 179485	Predicted Promoter with TSS	Segmentation State	84	Predicted promoter region including transcription start site	\N	\N
@@ -217,13 +217,13 @@
 179488	Predicted Transcribed Region	Segmentation State	85	Predicted transcribed region	\N	\N
 179489	Predicted Promoter Flank	Segmentation State	85	Predicted promoter flanking region	\N	\N
 179491	CTCF enriched	Segmentation State	85	CTCF enriched element	\N	\N
-179492	Predicted heterochomatin	Segmentation State	85	Predicted heterochromatin	\N	\N
+179492	Predicted heterochromatin	Segmentation State	85	Predicted heterochromatin	\N	\N
 179493	Predicted Enhancer	Segmentation State	85	Predicted enhancer	\N	\N
 179495	Predicted Promoter with TSS	Segmentation State	85	Predicted promoter region including transcription start site	\N	\N
 179496	Predicted low activity	Segmentation State	86	Predicted low activity proximal to active states	\N	\N
 179497	Predicted Transcribed Region	Segmentation State	86	Predicted transcribed region	\N	\N
 179498	Predicted Promoter Flank	Segmentation State	86	Predicted promoter flanking region	\N	\N
-179501	Predicted heterochomatin	Segmentation State	86	Predicted heterochromatin	\N	\N
+179501	Predicted heterochromatin	Segmentation State	86	Predicted heterochromatin	\N	\N
 179502	Predicted Enhancer	Segmentation State	86	Predicted enhancer	\N	\N
 179504	Predicted Promoter with TSS	Segmentation State	86	Predicted promoter region including transcription start site	\N	\N
 179505	Predicted low activity	Segmentation State	87	Predicted low activity proximal to active states	\N	\N
@@ -232,11 +232,11 @@
 179509	Predicted low activity	Segmentation State	88	Predicted low activity proximal to active states	\N	\N
 179510	CTCF enriched	Segmentation State	87	CTCF enriched element	\N	\N
 179511	Predicted Transcribed Region	Segmentation State	88	Predicted transcribed region	\N	\N
-179512	Predicted heterochomatin	Segmentation State	87	Predicted heterochromatin	\N	\N
+179512	Predicted heterochromatin	Segmentation State	87	Predicted heterochromatin	\N	\N
 179513	Predicted Promoter Flank	Segmentation State	88	Predicted promoter flanking region	\N	\N
 179514	Predicted Enhancer	Segmentation State	87	Predicted enhancer	\N	\N
 179517	CTCF enriched	Segmentation State	88	CTCF enriched element	\N	\N
 179518	Predicted Promoter with TSS	Segmentation State	87	Predicted promoter region including transcription start site	\N	\N
-179519	Predicted heterochomatin	Segmentation State	88	Predicted heterochromatin	\N	\N
+179519	Predicted heterochromatin	Segmentation State	88	Predicted heterochromatin	\N	\N
 179520	Predicted Enhancer	Segmentation State	88	Predicted enhancer	\N	\N
 179522	Predicted Promoter with TSS	Segmentation State	88	Predicted promoter region including transcription start site	\N	\N
