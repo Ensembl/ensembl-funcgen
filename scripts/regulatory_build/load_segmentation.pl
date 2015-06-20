@@ -220,8 +220,10 @@ sub create_analysis {
      -module_version  => 'NULL',
      -parameters      => 'NULL',
      -created         => 'NULL',
-     -display_label   => "$segmentation Segmentation for cell type $cell_type",
      -displayable     => 1,
+     -display_label   => "$segmentation Regulatory Segmentation",
+     -description     => "$cell_type <a href=\"/info/genome/funcgen/regulatory_segmentation.html\">Segway</a> segmentation state analysis",
+     -web_data        => "{'type' =>'fg_segmentation_features', 'colourset' => 'fg_segmentation_features','display' =>'off', key=>'seg_$cell_type' }",
     );
 
   $aa->store($ana);
