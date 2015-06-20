@@ -244,7 +244,9 @@ sub clean_name {
   my $string = shift;
   $string =~ s/[\-\(\)]//g;
   $string =~ s/_.*//g;
-  return uc($string);
+  $string = uc($string);
+  $string =~ s/:/x/g;
+  return $string;
 }
 
 #####################################################
