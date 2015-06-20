@@ -30,9 +30,9 @@ probe2transcript.pl
 
 =head1 SYNOPSIS
 
-This script performs probe(set) to transcript mapping based on a few simple parameters. Overlap analysis 
-of ProbeFeatures is performed and annotations are stored as xrefs for individual ProbeFeatures, Probes or 
-ProbeSets as a whole. Any probe(set)s which fail the mapping procedure are by default stored in the 
+This script performs probe(set) to transcript mapping based on a few simple parameters. Overlap analysis
+of ProbeFeatures is performed and annotations are stored as xrefs for individual ProbeFeatures, Probes or
+ProbeSets as a whole. Any probe(set)s which fail the mapping procedure are by default stored in the
 UnmappedObject tables and a logfile is also written.
 
 e.g. perl probe2transcript.pl --species $SPECIES --transcript_dbname $DNADB_NAME --transcript_host $DNADB_HOST --transcript_port $DNADB_PORT --transcript_user $DNADB_USER --xref_host $DB_HOST --xref_dbname $DB_NAME --xref_user $DB_USER --xref_pass $DB_PASS --calculate_utrs --utr_multiplier 1 --arrays HT_MG-430A  -vendor AFFY -format AFFY_UTR
@@ -71,11 +71,11 @@ This is overridden by the following extend options
 -unannotated_3_utr           Default extension for transcripts with unannotated 3' UTRs
 -annotated_5_prime_extend    Default bp extension for all transcripts with annotated 5' UTRs
 -annotated_3_prime_extend    Default bp extension for all transcripts with annotated 3' UTRs
--utr_multiplier              Defines UTR extension as multiple of annotated UTR. This is overridden 
+-utr_multiplier              Defines UTR extension as multiple of annotated UTR. This is overridden
 if the above options are set.
--max_transcripts             Maximum number of transcripts probe(set) can map to before we call it 
+-max_transcripts             Maximum number of transcripts probe(set) can map to before we call it
 promiscuous, default is 100.
--threshold                   This is the fraction(0-1) of probes within a probeset required to call it 
+-threshold                   This is the fraction(0-1) of probes within a probeset required to call it
 mapped, default is 0.5
 
 
@@ -103,7 +103,7 @@ or
 
 -transcript_host          Mandatory
 -transcript_user          Mandatory
--transcript_port    
+-transcript_port
 -transcript_pass          Mandatory
 -transcript_dbname        Mandatory
 -transcript_multi_species
@@ -128,9 +128,9 @@ or
 Testing:
 
 -test_transcripts   Number of transcripts to perform a test run on.
--slice              Name of test slice to perform a test run on 
+-slice              Name of test slice to perform a test run on
 -transcript         Test transcript stable ID
--no_store           Not yet implemented        
+-no_store           Not yet implemented
 
 Other options:
 -import_edb         Automatically imports the external_db record if not present
@@ -152,28 +152,28 @@ ensembl-funcgen/scripts/environments/arrays.env
 
 # 1. Reimpliment validate arrays, see old script?
 # 2. Add unannotated UTR clipping dependant on nearest neighbour
-# 3. Extend UTRs to default length is they are less than defaults, so long as they don't overlap neighbour, 
-#    then use annotated if present or clip to neighbour start/end if not, also accounting for default UTRs 
+# 3. Extend UTRs to default length is they are less than defaults, so long as they don't overlap neighbour,
+#    then use annotated if present or clip to neighbour start/end if not, also accounting for default UTRs
 #    in the neighbour.
 # 4. Separate UTR multipliers for 3' and 5'?
-# 5. Implement incremental update from list of stable IDs. Consider unmapped probe changes etc. 
-# 6. Parallelise by probeset chunks, can't do this by chromosome slices as we need to know genomewide 
+# 5. Implement incremental update from list of stable IDs. Consider unmapped probe changes etc.
+# 6. Parallelise by probeset chunks, can't do this by chromosome slices as we need to know genomewide
 #    counts for a given probeset. Calc UTRs then submit chunks jobs to farm
-#    Chunk by retrieving all probesets and sorting an array of probeset names, then splice the array 
-#    according to the number of chunks. We're still going to have retrieve all the transcripts and retrieve 
-#    all probes for each, so we are really not gaining anything!! The only gain we can make is by chunking 
-#    by slice, but then we need to know how many times something has mapped. Can we do some clean up afterwards? 
-#    Let's add a clean up mode which simply deletes all probe sets which map too many times. We would need to 
-#    ignore this threshold as we were mapping!!! So we don't delete and then mess up the counts for post run 
+#    Chunk by retrieving all probesets and sorting an array of probeset names, then splice the array
+#    according to the number of chunks. We're still going to have retrieve all the transcripts and retrieve
+#    all probes for each, so we are really not gaining anything!! The only gain we can make is by chunking
+#    by slice, but then we need to know how many times something has mapped. Can we do some clean up afterwards?
+#    Let's add a clean up mode which simply deletes all probe sets which map too many times. We would need to
+#    ignore this threshold as we were mapping!!! So we don't delete and then mess up the counts for post run
 #    clean up.
 # 7. There is no reason to have separate probe and xref DBs???
 # 8. Validate array format against arrays specified? May want to just use an array format as a template???
-# 9. Add mismatch filter for ProbeTranscriptAlign xrefs as match rules can differ between alignment and 
+# 9. Add mismatch filter for ProbeTranscriptAlign xrefs as match rules can differ between alignment and
 #    annotation
-# 10.Handle ProbeAlign mismatch vs overlap mis match. Currently the overlap calculation is naive to the 
-#    presence of alignment mis-matches.  Which means there is a possiblity of including probes with a total 
+# 10.Handle ProbeAlign mismatch vs overlap mis match. Currently the overlap calculation is naive to the
+#    presence of alignment mis-matches.  Which means there is a possiblity of including probes with a total
 #    sequence mismatch of (align mismatch + overlap mismatch). This has always been the case.
-# 11.Move ProbeAlign unmapped object storage to write_output, then this will not get written in test mode and 
+# 11.Move ProbeAlign unmapped object storage to write_output, then this will not get written in test mode and
 #    we won't get duplication should the job fail halfway through. This is because hceck existing only check oxs, not uos.
 # 12.Enable probesets to have different sizes on different arrays, see notes in cache_arrays_per_object
 # 13.Collect warning into summary repoprt to list at very end.
@@ -184,15 +184,15 @@ ensembl-funcgen/scripts/environments/arrays.env
 # 18 PostAlign/PreXref processing
 #    Remove duplicated ProbeFeatures(from ProbeTranscriptAlign) and redirect Xrefs
 #    Being careful to make sure cigarlines are valid for both.
-#    Remove ProbeTranscriptAlign ProbeFeaturess which have been called promiscuous 
-#    by ProbeAlign, and update to promiscuous if sum of ProbeAlign and 
+#    Remove ProbeTranscriptAlign ProbeFeaturess which have been called promiscuous
+#    by ProbeAlign, and update to promiscuous if sum of ProbeAlign and
 #    ProbeTranscriptAlign features render a Probe promiscuous
 
 #Ensembl Genomes stuff
 # TEST Registry usage required as species will come from same DB
 # In which case we need to take a species param for each of the transcript, array and xref DBs
 # Or can we force delete to be species specific? We would need to do this anyway to support updating of species asynchronously
-# We probably need to think about this for the 1st stage too, 
+# We probably need to think about this for the 1st stage too,
 # but will be easy as we just need to dump the correct top level sequence
 # Validate species against registry alias and use this to generate species_core_Gene DB rather than ensembl_core_Gene
 # patch other efg DBs and alter External parsers accordingly.
@@ -203,6 +203,7 @@ ensembl-funcgen/scripts/environments/arrays.env
 # Cannot currently handle probesets with different sizes between arrays, defaults to lowest probeset size to be permissive. See todo 12.
 
 use strict;
+use warnings;
 
 use Pod::Usage;
 use Getopt::Long;
@@ -218,17 +219,15 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw (median mean get_date);
 
-$| = 1; # auto flush stdout
-
 #Helper params
 $main::_log_file = undef;
 $main::_tee      = 0;
-our $Helper;
+local $| = 1; # auto flush stdout
+our $Helper = Bio::EnsEMBL::Funcgen::Utils::Helper->new();
 my $debug = 0;
 
-#ARRAY FORMAT CONFIG
-
-my %array_format_config = 
+#Array format config for current vendors
+my %array_format_config =
 (
   AFFY_UTR => {
     probeset_arrays         => 1,
@@ -252,8 +251,8 @@ my %array_format_config =
   AGILENT => {
     probeset_arrays        => 0,
     linked_arrays     => 1,
-    sense_interrogation => 0,                           
-  },                                        
+    sense_interrogation => 0,
+  },
 
 
   PHALANX => {
@@ -283,9 +282,15 @@ my %array_format_config =
   WUSTL =>  {
     probeset_arrays        => 0,
     linked_arrays     => 1,
-    sense_interrogation => 0,                           
-  },                        
+    sense_interrogation => 0,
+  },
 );
+
+=head2 main
+
+  Description: Where everything is
+
+=cut 
 
 main();
 
@@ -330,7 +335,7 @@ sub rollback_arrays {
 sub main {
   my $options = get_options();
 
-  $Helper->log("Setting global constant variables", 0, 'append_date');
+  $Helper->log('Setting global constant variables', 0, 'append_date');
   my ($probe_db, $transcript_db, $xref_db) = @{get_databases($options)};
 
   $Helper->log("Rolling back results from previous runs of this type", 0, 'append_date');
@@ -350,17 +355,21 @@ sub main {
   $options->{desc_to_id} = {};
 
   check_xrefs($xref_db, $options->{transc_edb_id}, $transcripts, $options->{transcript_xref_id});
-  $Helper->log("Cleaning xrefs to avoid duplicate entries", 0, 'append_date');
+  $Helper->log('Cleaning xrefs to avoid duplicate entries', 0, 'append_date');
   if($options->{delete}) {
-    delete_existing_xrefs($options);
+    my $array_names = '"'.join('", "', @{$options->{array_names}}).'"';
+    my $text = "Deleting $options->{species}" . ($array_names) ? "($array_names)" : 'ALL';
+    $Helper->log("$text unmapped records and xrefs for probe2transcript...this may take a while");
+    delete_existing_xrefs($options->{array_names});
   } else{
+    $Helper->log_header('Checking existing Xrefs');
     check_existing_and_exit($xref_db, $options);
   }
-  $Helper->log("Checking that all probes link to analyses", 0, 'append_date');
+  $Helper->log('Checking that all probes link to analyses', 0, 'append_date');
   check_probe_analysis_join($probe_db);
   $Helper->log("Caching arrays per $options->{xref_object}", 0, 'append_date');
   ($options->{arrays_per_object}, $options->{probeset_sizes}, $options->{object_names}) = @{cache_arrays_per_object($probe_db, $options)};
-  $Helper->log("Caching transcript / probe feature xrefs", 0, 'append_date');
+  $Helper->log('Caching transcript / probe feature xrefs', 0, 'append_date');
   $options->{transcripts_per_probefeature} = get_transcripts_per_probefeature($xref_db, $options);
   if($options->{calc_utrs}) {
     $Helper->log('Calculating default UTR lengths from greatest of max median|mean', 0, 'append_date');
@@ -368,15 +377,15 @@ sub main {
     $Helper->log('Finished calculating unannotated UTR lengths', 0, 'append_date');
   }
 
-  $Helper->log("Writing extended transcript slices into Bed file", 0, 'append_date');
+  $Helper->log('Writing extended transcript slices into Bed file', 0, 'append_date');
   my ($fh, $filename) = tempfile(DIR => $options->{temp_dir});
   write_extended_transcripts_into_file($transcripts, $filename, $options);
 
-  $Helper->log("Dumping probes into Bed file", 0, 'append_date');
+  $Helper->log('Dumping probes into Bed file', 0, 'append_date');
   my ($fh2, $filename2) = tempfile(DIR => $options->{temp_dir});
   dump_probe_features($filename2, $options);
 
-  $Helper->log("Overlapping probe features and transcripts", 0, 'append_date');
+  $Helper->log('Overlapping probe features and transcripts', 0, 'append_date');
   my ($fh3, $filename3) = tempfile(DIR => $options->{temp_dir});
   run("bedtools intersect -sorted -wa -wb -a $filename -b $filename2 | sort -k4,4 > $filename3");
   close $fh;
@@ -390,26 +399,26 @@ sub main {
   my $unmapped_counts = {};
 
   open (my $OUT, ">", "$options->{filename}.out");
-  $Helper->log("Performing overlap analysis.", 0, 'append_date');
+  $Helper->log('Performing overlap analysis.', 0, 'append_date');
   my $object_transcript_hits = associate_probes_to_transcripts($transcripts, $fh3, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $OUT);
   unlink $filename3;
 
-  $Helper->log("Logging probesets that don't map to any transcripts", 0, 'append_date');
+  $Helper->log('Logging probesets that don\'t map to any transcripts', 0, 'append_date');
   log_unmapped_objects($object_transcript_hits, $unmapped_counts, $unmapped_objects, $options, $OUT);
-  $Helper->log("Filtering out promiscuous objects", 0 , 'append_date');
+  $Helper->log('Filtering out promiscuous objects', 0 , 'append_date');
   remove_promiscuous_objects($object_transcript_hits, $unmapped_counts, $unmapped_objects, $options, $OUT);
-  $Helper->log("Flushing last unmapped probesets", 0 , 'append_date');
+  $Helper->log('Flushing last unmapped probesets', 0 , 'append_date');
   if(scalar @$unmapped_objects) {
     $options->{unmapped_object_adaptor}->store(@$unmapped_objects);
   }
 
-  $Helper->log("Creating final xrefs", 0, 'append_date');
+  $Helper->log('Creating final xrefs', 0, 'append_date');
   create_final_xrefs($object_transcript_hits, $xrefs, $xref_db, $options, $OUT);
-  $Helper->log("Loading xrefs info DB", 0 , 'append_date');
+  close ($OUT);
+  $Helper->log('Loading xrefs info DB', 0 , 'append_date');
   if (scalar @$xrefs) {
     store_xrefs($xrefs, $xref_db, $options->{transc_edb_id}, $options->{analysis}, $options->{transcript_xref_id}, $options);
   }
-  close ($OUT);
 
   print_unmapped_counts($unmapped_counts);
   print_xrefs_per_array($options->{xref_object}, $options->{arrays_per_object}, $object_transcript_hits);
@@ -418,14 +427,18 @@ sub main {
 
   add_mart_displayable_status($options->{array_names}, $options->{vendor}, $xref_db);
   $Helper->log_header("Completed Transcript $options->{xref_object} annotation for @{$options->{array_names}}", 0, 'append_date');
+  return;
 }
 
-# ----------------------------------------------------------------------
-# Online help message
+=head2 
+
+  Description: Online help message
+
+=cut
 
 sub usage {
 
-  print << "EOF";
+  print << 'EOF';
 Maps probe probes to transcripts.
 
 perl $0 {options}
@@ -474,7 +487,7 @@ coding region as well. Defaults to 2000. Specify 'annotated' to use annotated le
 [--max_probesets]   Don't store mappings to any 'promiscuous' probesets that map
 to more than this number of transcripts. Defaults to 100.
 [--arrays]          Mandatory. Space separated list of arrays of same format e.g. AFFY or AFFY_ST etc.
-[--threshold]       Fraction of probes per probeset that have to map. Default 0.5 
+[--threshold]       Fraction of probes per probeset that have to map. Default 0.5
 MISCELLANEOUS:
 [--delete]          Delete existing xrefs and object_xrefs, and entries in unmapped_object.
 No deletion is done by default.
@@ -487,11 +500,14 @@ No deletion is done by default.
 EOF
 
   exit(0);
-
 }
 
-# ----------------------------------------------------------------------
-# Reads command line options
+=head2 get_options
+
+  Decription: parses the command line, checks for sanity
+  ReturnType: Hash ref
+
+=cut
 
 sub get_options {
   my $options = {};
@@ -500,8 +516,8 @@ sub get_options {
   $options->{reg_verbose} = 0;
   ($options->{transcript_multi_species}, $options->{xref_multi_species}, $options->{probe_multi_species}) = (0,0,0);
   ($options->{transcript_species_id}, $options->{xref_species_id}, $options->{probe_species_id}) = (1,1,1);
-  $options->{transcript_port} = 3306; 
-  $options->{probe_port} = 3306; 
+  $options->{transcript_port} = 3306;
+  $options->{probe_port} = 3306;
   $options->{xref_port} = 3306;
   $options->{max_mismatches} = 1;
   $options->{max_transcripts} = 100;
@@ -591,12 +607,12 @@ sub get_options {
     -message => "Params are:\t@tmp_args"
   );
 
-#Set log type so we are no over writing to the same files for different 
+#Set log type so we are no over writing to the same files for different
 #format, or custom formats
 
   # This is not working correctly, as is currently writing to default central log dir, not workdir
   # if this file is not defined, default to STDOUT, so is captured by lsf .out file
-  # 
+  #
 
 
   $options->{log_type} = $options->{format} || $$;
@@ -611,23 +627,23 @@ sub get_options {
   $Helper->log("Params are:\t@tmp_args");
 
   if (! @{$options->{array_names}}) {
-    die("It is not wise to run all available arrays at the same time\nYou must supply a list of array names using -arrays, i.e. for all or a subset of a given array format(e.g. AFFY_UTR, AFFY_ST, ILLUMINA_WG)");
+    croak("It is not wise to run all available arrays at the same time\nYou must supply a list of array names using -arrays, i.e. for all or a subset of a given array format(e.g. AFFY_UTR, AFFY_ST, ILLUMINA_WG)");
   }
 
   if (! $options->{vendor}) {
-    die ('Must supply a -vendor parameter e.g. AFFY');
+    croak ('Must supply a -vendor parameter e.g. AFFY');
   }
 
   if(defined $options->{format} && ! exists $array_format_config{$options->{format}}) {
-    die("-format is not valid:\t$options->{format}\nMust specify valid format e.g. ".join(', ', keys(%array_format_config)).
+    croak("-format is not valid:\t$options->{format}\nMust specify valid format e.g. ".join(', ', keys(%array_format_config)).
       "\nOr maybe you want to use -probeset_arrays, -linked_arrays and -sense_interrogation to define the format parameters?\n");
   }
 
-  if(! ($options->{array_config}->{probeset_arrays} && 
-        $options->{array_config}->{linked_arrays} && 
+  if(! ($options->{array_config}->{probeset_arrays} &&
+        $options->{array_config}->{linked_arrays} &&
         $options->{array_config}->{sense_interrogation})
      && ! $options->{format}) {
-    die('You must specify a valid format parameter if you are not using -probeset_arrays, -linked_arrays and -sense_interrogation\n');
+    croak('You must specify a valid format parameter if you are not using -probeset_arrays, -linked_arrays and -sense_interrogation\n');
   }
 
   foreach my $key (keys %{$options->{array_config}}) {
@@ -635,7 +651,7 @@ sub get_options {
       if(exists $array_format_config{$options->{format}}) {
         $options->{array_config}->{$key} = $array_format_config{$options->{format}}{$key};
       } else{
-        die("Cannot find default $options->{key} config for $options->{format} format");
+        croak("Cannot find default $options->{key} config for $options->{format} format");
       }
     }
   }
@@ -643,67 +659,67 @@ sub get_options {
   $options->{xref_object} = ($options->{array_config}{probeset_arrays}) ? 'ProbeSet' : 'Probe';
 
   if($options->{reg_host} && $options->{reg_file}) {
-    die('You have specified confliciting parameters -reg_file -reg_host');
+    croak('You have specified confliciting parameters -reg_file -reg_host');
   }
 
   if(($options->{reg_host} || $options->{reg_file}) && ($options->{probe_dbname} || $options->{xref_dbname} || $options->{transcript_dbname})) {
-    die('You have specified conflicting paramters -reg_dbname and -probe_dbname or -transcript_dbname or -xref_dbname');
+    croak('You have specified conflicting paramters -reg_dbname and -probe_dbname or -transcript_dbname or -xref_dbname');
   }
 
   if($options->{reg_host} && ! ($options->{reg_user} && $options->{reg_pass})) {
-    die('Must provide at least a -reg_user -reg_pass (optional -reg_port -reg_verbose) if loading from db');
+    croak('Must provide at least a -reg_user -reg_pass (optional -reg_port -reg_verbose) if loading from db');
   }
 
   if(! $options->{species}) {
-    die("Must provide a -species");
+    croak('Must provide a -species');
   }
 
   if(!$options->{reg_file} && !$options->{reg_host}) {
     if (!$options->{transcript_user} || !$options->{transcript_dbname} || !$options->{transcript_host}) {
-      die("You must specify a -transcript_user -transcript_dbname -transcript_host\n");
-    } 
+      croak("You must specify a -transcript_user -transcript_dbname -transcript_host\n");
+    }
     if(!$options->{xref_user} || !$options->{xref_dbname} || !$options->{xref_host}) {
-      die("You must specify a -xref_user -xref_dbname and -xref_host\n");
+      croak("You must specify a -xref_user -xref_dbname and -xref_host\n");
     }
   }
 
   if($options->{test_slice} && $options->{test_transcript_sid}) {
-    die('Can only run in one test mode, please specify -slice or -transcript');
+    croak('Can only run in one test mode, please specify -slice or -transcript');
   }
 
   if(defined $options->{utr_extends}->{3} && defined $options->{utr_extends}{5} && $options->{utr_multiplier}) {#Can't have all
-    die('You cannot set both -3/5_prime_extend values and a -utr_multiplier');
+    croak('You cannot set both -3/5_prime_extend values and a -utr_multiplier');
   }
   elsif(!(defined  $options->{utr_extends}->{3} || defined $options->{utr_extends}{5} || defined $options->{utr_multiplier})) {#Can't have none
-    die("You must set some extension rules using  -3/5_prime_extend values and/or -utr_multiplier\n".
+    croak("You must set some extension rules using  -3/5_prime_extend values and/or -utr_multiplier\n".
       "Set -utr_multiplier to 0 and omit -3/5_prime_extend to run against UTR only\n");
   }
   else{
-    $Helper->log("You have specified -utr_multiplier and a -3|5_prime_extend, -3|5_prime_extend will override where appropriate");
+    $Helper->log('You have specified -utr_multiplier and a -3|5_prime_extend, -3|5_prime_extend will override where appropriate');
   }
 
 #Multiplier needs to be a pisitive real number
   if(defined $options->{utr_multiplier} && $options->{utr_multiplier} !~ /-*[0-9]+[\.0-9]*/) {
-    die("-utr_multiplier must be a positive real number:\t$options->{utr_multiplier}");
+    croak("-utr_multiplier must be a positive real number:\t$options->{utr_multiplier}");
   }
 
 #Validate extend params
-  for my $end ('3', '5') {
+  for my $end (3, 5) {
     if(defined $options->{utr_extends}->{$end} && $options->{utr_extends}{$end} =~ /\D+/) {
-      die("Invalid -${end}_prime_extend parameter(".$options->{utr_extends}{$end}.").  Must be a number(bp)");
+      croak("Invalid -${end}_prime_extend parameter(".$options->{utr_extends}{$end}.").  Must be a number(bp)");
     }
   }
 
 #Can't use both default unannotated UTRs and calculate
   if($options->{unannotated_utrs}->{5} && $options->{unannotated_utrs}{3} && $options->{calc_utrs}) {
-    die('You cannot set both -unannotated_5/3utr values and -calculate_utrs');
+    croak('You cannot set both -unannotated_5/3utr values and -calculate_utrs');
   }
 
 #Validate unannotated defaults
-  for my $end ('3', '5') {
+  for my $end (3, 5) {
     if(defined $options->{unannotated_utrs}->{$end}) {
       if($options->{unannotated_utrs}->{$end} =~ /^\D+$/) {
-        die("Invalid -unannotated_${end}_utr parameter(".$options->{unannotated_utrs}{$end}.").  Must be a number(bp)");
+        croak("Invalid -unannotated_${end}_utr parameter(".$options->{unannotated_utrs}{$end}.").  Must be a number(bp)");
       }
       else{
         $Helper->log("Setting ${end} unannotated UTR length to ".$options->{unannotated_utrs}{$end});
@@ -720,13 +736,18 @@ sub get_options {
   return $options;
 }
 
-# ----------------------------------------------------------------------
-# Connects to databases
-# Returns an array ref containing 3 Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor objects
+=head2 get_databases
+
+  Description: Connects to databases
+  Returntype: An array ref containing 3 Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor objects
+
+=cut
 
 sub get_databases {
   my ($options) = @_;
   my ($probe_db, $transcript_db, $xref_db);
+
+  # Check for a registry
   if($options->{reg_file} || $options->{reg_host}) {
     my $reg = 'Bio::EnsEMBL::Registry';
     if($options->{reg_file}) {
@@ -740,7 +761,7 @@ sub get_databases {
         -pass    => $options->{reg_pass},
         -verbose => $options->{reg_verbose},
       );
-    }        
+    }
 
     $transcript_db = $reg->get_DBAdaptor($options->{species}, 'Core');
     $xref_db       = $reg->get_DBAdaptor($options->{species}, 'Funcgen');
@@ -780,17 +801,17 @@ sub get_databases {
         -species_id => $options->{probe_species_id}
       );
     } else{
-      $Helper->log("No probe DB params specified, defaulting to xref params");
+      $Helper->log('No probe DB params specified, defaulting to xref params');
       $probe_db = $xref_db;
     }
   }
 
-#Test the DBs here before starting
+  #Test the DBs here before starting
   $transcript_db->dbc->db_handle;
   $xref_db->dbc->db_handle;
   $probe_db->dbc->db_handle;
 
-#Allow automatic reconnection
+  #Allow automatic reconnection
   $probe_db->dbc->disconnect_if_idle(1);
   $transcript_db->dbc->disconnect_if_idle(1);
   $xref_db->dbc->disconnect_if_idle(1);
@@ -798,13 +819,15 @@ sub get_databases {
   return [$probe_db, $transcript_db, $xref_db];
 }
 
-# ----------------------------------------------------------------------
-# Params:
-# - $xref_db: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
-# - $vendor: string
-# - $array_names: array ref of strings
-#
-# Returns: hash ref mapping string names to Bio::EnsEMBL::Funcgen::Array objects
+=head2 get_arrays
+
+  Arg 1: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
+  Arg 2: string with vendor's name
+  Arg 3: array ref of strings with microarray names 
+  Returntype: hash ref mapping string names to Bio::EnsEMBL::Funcgen::Array objects
+
+=cut 
+
 sub get_arrays {
   my ($xref_db, $vendor, $array_names) = @_;
   my $array_format;
@@ -815,13 +838,13 @@ sub get_arrays {
     my $array = $aa->fetch_by_name_vendor($name, $vendor);
 
     if(! $array) {
-      die("Could not find $vendor $name array in DB");
+      croak("Could not find $vendor $name array in DB");
     }
 
     $array_format ||= $array->format();
 
-    if($array_format ne $array_format) {
-      die('You must not map arrays of different formats in the same process');
+    if($array->format ne $array_format) {
+      croak('You must not map arrays of different formats in the same process');
     }
 
     $arrays{$name} = $array;
@@ -829,91 +852,101 @@ sub get_arrays {
   return \%arrays;
 }
 
-# ----------------------------------------------------------------------
-# Params:
-# - xref_db: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
-# - species: string name
-# - edb_name: MySQL database name 
-# - schema build: string
-# - import_edb: boolean
-#
-# Returns: ID number of external id in external_db table (xref system)
+=head2 get_external_db_id
+
+  Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
+  Arg2: species string name
+  Arg3: MySQL database name
+  Arg4: schema build string
+  Arg5: import_edb: boolean determines whether to create new entry in xref system if none found
+  Returntype: ID number of external id in external_db table (xref system)
+
+=cut
 
 sub get_external_db_id {
   my($xref_db, $species, $edb_name, $schema_build, $import_edb) = @_;
-#Check for external_db records for species DBs
-  my ($transc_edb_display_name, $edb_display);
-  $transc_edb_display_name = "EnsemblTranscript";
-  $edb_display             = $transc_edb_display_name;
+  my $transc_edb_display_name = 'EnsemblTranscript';
+  my $edb_display             = $transc_edb_display_name;
 
-  my $sql = "SELECT external_db_id, db_release from external_db where db_name='$edb_name'";
-  my @versions = @{$xref_db->dbc->db_handle->selectall_arrayref($sql)};
-  my @tmp;
-
-  foreach my $row(@versions) {
-    my ($edb_id, $version) = @$row;
-    push @tmp, $version;
-
-    if($schema_build eq $version) { 
-      return $edb_id;
-    }
+  #Check for external_db records for species DBs
+  my $sql = "
+  SELECT 
+    external_db_id
+  FROM 
+    external_db
+  WHERE
+    db_name='$edb_name' 
+    AND db_release='$version'
+  ";
+  my @ids = @{$xref_db->dbc->db_handle->selectall_arrayref($sql)};
+  if (scalar @ids > 0) {
+    return $ids[0][0];
   }
 
-  $sql = 'INSERT into external_db(db_name, db_release, status, dbprimary_acc_linkable, priority, db_display_name, type) values('.
-  "'${edb_name}', '${schema_build}', 'KNOWNXREF', 1, 5, '$edb_display', 'MISC')";
-
   if(! $import_edb) {
-    die("Could not find current external_db $edb_name $schema_build from available versions:\t @tmp\nMaybe you have mis-spelt the -trans-species or you may need to manually add the external_db to the table and master file:\n\n$sql\n\n");
-  } 
-
-  $Helper->log("Importing external_db using: $sql");
-  $xref_db->dbc->db_handle->do($sql);
-  return $xref_db->last_insert_id();
+    croak("Could not find current external_db $edb_name $schema_build from available versions:\t @tmp\nMaybe you have mis-spelt the -trans-species or you may need to manually add the external_db to the table and master file:\n\n$sql\n\n");
+  } else {
+    # Insert database details into xref system
+    $sql = "
+    INSERT 
+      INTO external_db
+        (db_name, db_release, status, dbprimary_acc_linkable, priority, db_display_name, type) 
+      VALUES
+        ('$edb_name', '$schema_build', 'KNOWNXREF', 1, 5, '$edb_display', 'MISC')
+    ";
+    $Helper->log("Importing external_db using: $sql");
+    $xref_db->dbc->db_handle->do($sql);
+    return $xref_db->last_insert_id();
+  }
 }
 
-# ----------------------------------------------------------------------
-# Params:
-# - xref_db: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
-#
-# Returns: Bio::EnsEMBL::Analysis object 
+=head2 get_or_create_analysis
+
+  Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
+  Returntype: Bio::EnsEMBL::Analysis object
+
+=cut 
 
 sub get_or_create_analysis {
   my ($xref_db) = @_;
   my $analysis_adaptor = $xref_db->get_AnalysisAdaptor();
-  my $analysis = $analysis_adaptor->fetch_by_logic_name("probe2transcript");
+  my $analysis = $analysis_adaptor->fetch_by_logic_name('probe2transcript');
 
   if (!$analysis) {
-    my $id = $analysis_adaptor->store(new Bio::EnsEMBL::Analysis(
+    my $id = $analysis_adaptor->store(Bio::EnsEMBL::Analysis->new(
         -logic_name    => 'probe2transcript',
         -program       => 'probe2transcript.pl',
         -description   => 'Microarray probes from manufacturers are aligned to the genome by Ensembl, if the probe sequences are provided. The mapping is a two-step procedure outlined <a href="/info/docs/microarray_probe_set_mapping.html">here</a>.',
         -displayable   => '0')
     );
-    $analysis = $analysis_adaptor->fetch_by_logic_name("probe2transcript");
+    $analysis = $analysis_adaptor->fetch_by_logic_name('probe2transcript');
   }
   return $analysis;
 }
 
-# ----------------------------------------------------------------------
-# Params:
-# - transcript_db: Bio::EnsEMBL::DBSQL::DBAdaptor object
-# - test_slice: string describing a slice (see Bio::EnsEMBL::DBSQL::SliceAdaptor::fetch_by_name)
-# - test_transcript_sid: Ensembl transcript stable identifier
-#
-# Returns: Array ref of Bio::EnsEMBL::Transcript objects 
+=head2 get_transcripts
+
+  Arg1: Bio::EnsEMBL::DBSQL::DBAdaptor object
+  Arg2: string describing a slice (see Bio::EnsEMBL::DBSQL::SliceAdaptor::fetch_by_name)
+  Arg3: Ensembl transcript stable identifier
+  Returntype: Array ref of Bio::EnsEMBL::Transcript objects
+
+=cut
 
 sub get_transcripts {
   my ($transcript_db, $test_slice, $test_transcript_sid) = @_;
   my $transcript_adaptor = $transcript_db->get_TranscriptAdaptor();
   my $slice_adaptor = $transcript_db->get_SliceAdaptor();
   my $transcripts;
+
+  # If running in testing mode only select a subset of existing transcripts
   if($test_slice) {
     $Helper->log("Running in test mode with slice:\t$test_slice\n".
       "WARNING:\tPromiscuous probesets will not be caught! Calculated UTRs will be wrong!");
-#Need to add better text here when we have implemented parallel runs
+    #Need to add better text here when we have implemented parallel runs
     my $slice = $slice_adaptor->fetch_by_name($test_slice);
     if (! defined $slice) {
-      die("Could not get slice from the DB:\t$slice");
+      croak("Could not get slice from the DB:\t$slice");
     }
     $transcripts = $transcript_adaptor->fetch_all_by_Slice($slice);
   } elsif($test_transcript_sid) {
@@ -926,78 +959,125 @@ sub get_transcripts {
     $transcripts = $transcript_adaptor->fetch_all();
   }
 
+  # Count transcripts
   if (scalar @$transcripts == 0) {
-    die('Could not find any transcripts');
+    croak('Could not find any transcripts');
   }
-  $Helper->log("Identified ".scalar(@$transcripts)." transcripts for probe mapping");
+  $Helper->log('Identified '.scalar(@$transcripts).' transcripts for probe mapping');
 
+  # Sort by stable id
   my @final = sort {$a->stable_id cmp $b->stable_id} @$transcripts;
   return \@final;
 }
 
-# Get internal xref_id for the transcripts in the xref table
+=head2 get_transcript_xreF_ids
+
+  Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
+  Arg2: Xref external DB id
+  Returntype: Hashref of transcript stable ID => Funcgen xref_id for all transcripts 
+  in the xref table
+
+=cut
+
 sub get_transcript_xref_ids {
   my ($xref_db, $transc_edb_id) = @_;
   my $hash = {};
-  my $sql = "SELECT dbprimary_acc, xref_id FROM xref WHERE external_db_id = $transc_edb_id;";
+  my $sql = "
+  SELECT 
+    dbprimary_acc, xref_id 
+  FROM 
+    xref 
+  WHERE 
+    external_db_id = $transc_edb_id;
+  ";
   foreach my $row (@{$xref_db->dbc->db_handle->selectall_arrayref($sql)}) {
     $hash->{$row->[0]} = $row->[1];
   }
   return $hash;
 }
 
+=head2 check_xrefs
+  
+  Description: Checks whether all known transcripts are stored in the Xref table
+  Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
+  Arg2: Xref external DB ID
+  Arg3: Array ref of Bio::EnsEMBL::Transcript objects
+  Arg4: Hash ref of stable id => Funcgen xref_id
 
-# This die is not propogating the exit status to LSF, which sees it as a success?
+=cut 
 
 sub check_xrefs {
   my ($xref_db, $transc_edb_id, $transcripts, $transcript_xref_id) = @_;
-  
+
   for my $transcript (@$transcripts) {
 
     if (! defined $transcript_xref_id->{$transcript->stable_id()}) {
-      die("Transcript absent from xref table: ".$transcript->stable_id().
+      croak('Transcript absent from xref table: '.$transcript->stable_id().
         ", from external db: $transc_edb_id\n");
-    }
-  }
-}
-
-
-# ----------------------------------------------------------------------
-# Delete existing xrefs & object xrefs & unmapped objects. Use user-specified arrays if
-# defined, otherwise all arrays.
-# Don't restrict to db_version as this would result in DBEntries/UnmappedObjects for old
-# releases persisting.
-
-sub delete_existing_xrefs {
-  my ($options) = @_;
-
-  my $array_names = '"'.join('", "', @{$options->{array_names}}).'"';
-  my $text = "Deleting $options->{species}" . ($array_names) ? "($array_names)" : 'ALL';
-  $Helper->log("$text unmapped records and xrefs for probe2transcript...this may take a while");
-
-  my @arrays = values{$options->{array_names}};
-
-  while (my $array = pop @arrays) {
-    if (scalar @arrays) {
-      $Helper->rollback_ArrayChips($array->get_ArrayChips, 'probe2transcript', undef, undef, 1, 0);
-    } else {
-      $Helper->rollback_ArrayChips($array->get_ArrayChips, 'probe2transcript', undef, undef, 0, 1);
     }
   }
   return;
 }
 
+=head2 delete_existing_xrefs
 
-# ----------------------------------------------------------------------
-# Check if there are already xrefs defined, and exit if there are.
-# Use user-specified arrays if defined, otherwise all arrays.
-# Assumes external_db.dbname == probe_array.name
+  Description: Delete existing xrefs & object xrefs & unmapped objects. Use user-specified arrays if
+  defined, otherwise all arrays.
+  Arg: Array ref of microarray names:
+
+=cut
+
+sub delete_existing_xrefs {
+  my ($arrays) = @_;
+
+# Don't restrict to db_version as this would result in DBEntries/UnmappedObjects for old
+# releases persisting.
+  if (scalar @arrays) {
+    while (my $array = pop @$arrays) {
+      $Helper->rollback_ArrayChips($array->get_ArrayChips, 'probe2transcript', undef, undef, 1, 0);
+    }
+  } else {
+    $Helper->rollback_ArrayChips($array->get_ArrayChips, 'probe2transcript', undef, undef, 0, 1);
+  }
+  return;
+}
+
+=head2 check_existing_and_exit
+
+  Description: Check if there are already xrefs defined, and exit if there are.
+  Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
+  Arg2: Name of core database
+  Arg3: Hash ref containing:
+   - array_names: array ref
+   - array_config: hash ref with vendor array configs
+   - xref_object: "probe" or "probe_set"
+
+=cut
 
 sub check_existing_and_exit {
   my ($xref_db, $transc_edb_name, $options) = @_;
-  $Helper->log_header('Checking existing Xrefs');
+# Use user-specified arrays if defined, otherwise all arrays.
+# Assumes external_db.dbname == probe_array.name
   my $probe_join = ($options->{array_config}{probeset_arrays}) ? 'p.probe_set_id' : 'p.probe_id';
-  my $xref_sth = $xref_db->dbc()->prepare("SELECT COUNT(*) FROM xref x, object_xref ox, external_db e, probe p, array_chip ac, array a WHERE x.xref_id=ox.xref_id AND e.external_db_id=x.external_db_id AND e.db_name ='$transc_edb_name' and ox.ensembl_object_type='$options->{xref_object}' and ox.ensembl_id=${probe_join} and ox.linkage_annotation!='ProbeTranscriptAlign' and p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id and a.name=?");
+
+  my $sql = "
+  SELECT 
+    COUNT(*) 
+  FROM 
+     xref x, object_xref ox, external_db e, probe p, array_chip ac, array a 
+  WHERE 
+     x.xref_id=ox.xref_id 
+     AND e.external_db_id=x.external_db_id 
+     AND e.db_name ='$transc_edb_name' 
+     AND ox.ensembl_object_type='$options->{xref_object}' 
+     AND ox.ensembl_id=${probe_join} 
+     AND ox.linkage_annotation!='ProbeTranscriptAlign'
+     AND p.array_chip_id=ac.array_chip_id
+     AND ac.array_id=a.array_id
+     AND a.name=?
+  ";
+
+  my $xref_sth = $xref_db->dbc()->prepare($sql);
 
   foreach my $array (@{$options->{array_names}}) {
     $xref_sth->execute($array);
@@ -1008,25 +1088,69 @@ sub check_existing_and_exit {
     }
   }
   $xref_sth->finish();
+  return;
 }
 
-# ----------------------------------------------------------------------
-# Checks that all probe_feature rows have a corresponding analysis entry
+=head2 check_probe_analysis_join
+
+  Description: Checks that all probe_feature rows have a corresponding analysis entry
+  Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
+
+=cut
 
 sub check_probe_analysis_join {
   my ($probe_db) = @_;
-  my $sql = 'SELECT distinct pf.analysis_id, a.logic_name from probe_feature pf left join analysis a on pf.analysis_id=a.analysis_id';
-  foreach my $record (@{$probe_db->dbc->db_handle->selectall_arrayref($sql)}) {
-    my ($anal_id, $lname) = @$record;
+
+  my $sql = '
+  SELECT 
+    DISTINCT analysis_id, logic_name 
+  FROM 
+    probe_feature pf 
+    LEFT JOIN analysis a 
+      USING(analysis_id)
+  ';
+
+  foreach my $row (@{$probe_db->dbc->db_handle->selectall_arrayref($sql)}) {
+    my ($anal_id, $lname) = @$row;
     if(! $lname) {
-      die("Found probe_feature analysis without a corresponding analysis entry:\t$anal_id");
+      croak("Found probe_feature analysis without a corresponding analysis entry:\t$anal_id");
     }
   }
+  return;
 }
+
+
+=head2 get_transcripts_per_probefeature
+
+  Description: counts how many transcripts overlap a probe feature from the xref table 
+  Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
+  Arg2: Hash ref containing:
+  - array_names: array ref
+  - transc_edb_id: id of the core database in the external_db table of the xref system
+
+=cut
 
 sub get_transcripts_per_probefeature {
   my ($xref_db, $options) = @_;
-  my $sql = 'SELECT ensembl_id, dbprimary_acc from object_xref JOIN probe_feature ON probe_feature_id = ensembl_id JOIN probe USING(probe_id) JOIN array_chip USING(array_chip_id) JOIN array USING(array_id) JOIN xref USING(xref_id) WHERE ensembl_object_type = "ProbeFeature" AND array.name in ("'.join('", "', @{$options->{array_names}}).'") AND external_db_id = '. $options->{transc_edb_id};
+  my $sql = '
+  SELECT 
+    ensembl_id, dbprimary_acc 
+  FROM object_xref 
+    JOIN probe_feature
+      ON probe_feature_id = ensembl_id 
+    JOIN probe 
+      USING(probe_id) 
+    JOIN array_chip 
+      USING(array_chip_id) 
+    JOIN array 
+      USING(array_id) 
+    JOIN xref 
+      USING(xref_id) 
+  WHERE 
+    ensembl_object_type = "ProbeFeature" 
+    AND array.name in ("'.join('", "', @{$options->{array_names}}).'") 
+    AND external_db_id = '. $options->{transc_edb_id};
+
   my $sth = $xref_db->dbc()->prepare($sql);
   $sth->execute();
 
@@ -1035,28 +1159,67 @@ sub get_transcripts_per_probefeature {
   $sth->bind_columns(\$probeset_id, \$transcript_sid);
   while($sth->fetch()) {
     $transcripts_per_probefeature{$probeset_id} ||= {};
-    $transcripts_per_probefeature{$probeset_id}{$transcript_sid} = 1;
+    $transcripts_per_probefeature{$probeset_id}{$transcript_sid}++;
+    # TODO Check for duplicates, i.e. check number == 1
   }
 
   return \%transcripts_per_probefeature;
 }
 
-# ----------------------------------------------------------------------
-# Stores the list of objects in each array
-# Returns: arrayref with three hashrefs:
-# * arrays_per_object: List of array names for each object_id
-# * probeset_sizes: Integer for each object_id
-# * object_names: String name for each object_id
+=head2 cache_arrays_per_object
+
+ Description: Stores the list of objects in each array
+ Arg1: Bio::EnsEMBL::DBSQL::DBAdaptor object
+ Arg2: Hash ref containing
+ - array_names: array ref
+ - array_config: hash ref with vendor configs
+ Returntype: arrayref with three hashrefs:
+ - List of array names for each object_id
+ - Integer for each object_id
+ - String name for each object_id
+
+=cut 
 
 sub cache_arrays_per_object {
   my ($probe_db, $options) = @_;
 
   my $sql;
   if($options->{array_config}{probeset_arrays}) {
-    $sql = 'SELECT ps.probe_set_id, ps.name, a.name, count(p.probe_id) FROM probe p, probe_set ps, array a, array_chip ac WHERE a.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id and p.probe_set_id=ps.probe_set_id and a.name in ("'.join('", "', @{$options->{array_names}}).'") GROUP BY p.probe_set_id, a.name';
+    # Find all probesets belonging to the chosen microarrays
+    $sql = '
+    SELECT 
+      probe_set_id, ps.name, a.name, count(p.probe_id) 
+    FROM 
+      probe p
+      JOIN probe_set ps
+       USING(probe_set_id)
+      JOIN array_chip ac 
+        USING(array_chip_id)
+      JON array a
+        USING(array_id)
+    WHERE 
+      a.name in ("'.join('", "', @{$options->{array_names}}).'") 
+    GROUP BY 
+      p.probe_set_id, a.name
+    ';
   }
   else{
-    $sql = 'SELECT p.probe_id, GROUP_CONCAT(p.name SEPARATOR "#"), a.name, count(p.probe_id) FROM probe p, array a, array_chip ac WHERE a.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id and a.name in ("'.join('", "', @{$options->{array_names}}).'") GROUP BY p.probe_id, a.name';
+    # Find all probes belonging to the chosen microarrays
+    # Sometimes the same probe has different names across arrays, hence we concatenate those
+    $sql = '
+    SELECT 
+      p.probe_id, GROUP_CONCAT(p.name SEPARATOR "#"), a.name, count(p.probe_id) 
+    FROM 
+      probe p 
+      JOIN array_chip ac 
+        USING(array_chip_id)
+      JOIN array a
+        USING(array_id)
+    WHERE 
+      a.name in ("'.join('", "', @{$options->{array_names}}).'") 
+    GROUP BY 
+      p.probe_id, a.name
+    ';
   }
 
   my $sth = $probe_db->dbc()->prepare($sql);
@@ -1088,175 +1251,219 @@ sub cache_arrays_per_object {
   return [\%arrays_per_object, \%probeset_sizes, \%object_names];
 }
 
+=head2 calculate_utrs
 
-# ----------------------------------------------------------------------
-# Computes the extension required on each gene
-# Params:
-# * unannotated_utrs: hashref, possibly with integer values associated to 5 and 3 constants.
-# * transcripts: list of Bio::EnsEMBL::Transcript objects
-#
-# Fills in unannotated_utrs hashref
+  Description: Computes the extension required on each gene. Fills in unannotated_utrs hashref
+  Arg1: hashref, possibly with integer values associated to "5" and "3" constants.
+  Arg2: Array ref of Bio::EnsEMBL::Transcript objects
+
+  TODO Possibly pull this out into a separate function in the pipeline. 
+=cut
 
 sub calculate_utrs {
   my ($unannotated_utrs, $transcripts) = @_;
-  my (@five_lengths, @three_lengths);
-  my $five_cnt  = 0;
-  my $three_cnt = 0;
-  my $five_zero_cnt = 0;
-  my $three_zero_cnt = 0;
+  my %lengths = (
+    5 => [],
+    3 => [] 
+  );
 
+  # Get a list of all utr lengths from all transcripts, where defined
   foreach my $transcript(@$transcripts) {
-    if(! defined $unannotated_utrs->{3}) {
-      my $three_utr = $transcript->three_prime_utr;
+    if(! defined $unannotated_utrs->{3} && $transcript->three_prime_utr) {
+      push @{$lengths{3}}, $transcript->three_prime_utr->length;
+    }
+    if(! defined $unannotated_utrs->{5} && $transcript->five_prime_utr) {
+      push @{$lengths{5}}, $transcript->five_prime_utr->length;
+    }
+  }
 
-      if (defined $three_utr) {
-        $three_cnt++;
-        push @three_lengths, $three_utr->length;
+  # Compute a typical utr length from the measured values
+  foreach my $side (5,3) {
+    if(! defined $unannotated_utrs->{$side}) {
+      my $count = scalar @{$lengths{side}};
+      my $zero_count = (scalar @$transcripts) - $count;
+      $Helper->log("Seen $count ${side}' UTRs, $zero_count have length 0");
+
+      if($count) {
+	my ($mean, $remainder) = split/\./, mean($lengths{side});
+	if ($remainder =~ /^[5-9]/) {
+	  $mean++;
+	}
+	@lengths = sort {$a <=> $b} @lengths;
+	my $median = median($lengths{side});
+	$unannotated_utrs->{$side}  = ($mean > $median)  ? $mean : $median;
+	$Helper->log("Calculated default unannotated ${side}' UTR length:\t$unannotated_utrs->{$side}");
       } else{
-        $three_zero_cnt++;
-      }
-    }
-    if(! defined $unannotated_utrs->{5}) {
-      my $five_utr  = $transcript->five_prime_utr;
-
-      if (defined $five_utr) {
-        $five_cnt++;
-        push @five_lengths, $five_utr->length;
-      } else{
-        $five_zero_cnt++;        
+	croak('Found no 5\' UTRs, you must specify a -unannotated_5_utr');
       }
     }
   }
 
-  if(! defined $unannotated_utrs->{5}) {
-    $Helper->log("Seen $five_cnt 5' UTRs, $five_zero_cnt have length 0");
-
-    if($five_cnt) {
-      my ($five_mean, $remainder) = split/\./, mean(\@five_lengths);
-      if ($remainder =~ /^[5-9]/) {
-        $five_mean++;
-      }
-      @five_lengths = sort {$a <=> $b} @five_lengths;
-      my $five_median = median(\@five_lengths);
-      $unannotated_utrs->{5}  = ($five_mean  > $five_median)  ? $five_mean  : $five_median;
-      $Helper->log("Calculated default unannotated 5' UTR length:\t".$unannotated_utrs->{5});
-    } else{
-      die("Found no 5' UTRs, you must specify a -unannotated_5_utr");
-    }
-  }
-
-  if(! defined $unannotated_utrs->{3}) {
-    $Helper->log("Seen $three_cnt 3' UTRs, $three_zero_cnt have length 0");
-
-    if($three_cnt) {
-      my ($three_mean, $remainder) = split/\./, mean(\@three_lengths);;
-      if ($remainder =~ /^[5-9]/) {
-        $three_mean++;
-      }
-      @three_lengths = sort {$a <=> $b} @three_lengths;
-      my $three_median = median(\@three_lengths);
-      $unannotated_utrs->{3} = ($three_mean > $three_median) ? $three_mean : $three_median;
-      $Helper->log("Calculated default unannotated 3' UTR length:\t".$unannotated_utrs->{3});
-    } else{
-      die("Found no 3' UTRs, you must specify a -unannotated_3_utr");
-    }
-  }
+  return;
 }
 
-# ----------------------------------------------------------------------
+=head2 write_extended_transcripts_into_file
 
-sub write_extended_transcripts_into_file { 
+  Description: Dumps transcript regions into sorted BED file
+  Stores a hash ref into the options hash ref
+  Arg1: Array ref of Bio::EnsEMBL::Transcript objects
+  Arg2: Filename to be written into
+  Arg3: Hash ref to collect stats
+
+=cut
+
+sub write_extended_transcripts_into_file {
   my ($transcripts, $filename, $options) = @_;
 
-  my ($fh0, $filename0) = tempfile();
   $options->{flanks} = {};
-  $options->{utr_counts} = {};
-  $options->{utr_counts}{3} = [];
-  $options->{utr_counts}{5} = [];
+  my $utr_counts = {};
+  $utr_counts{3} = [];
+  $utr_counts{5} = [];
+
+  # Write each transcript into file
+  my ($fh0, $filename0) = tempfile();
   foreach my $transcript (@$transcripts) {
-    print $fh0 write_extended_transcript($transcript, $options)."\n";
+    print $fh0 write_extended_transcript($transcript, $utr_counts, $options)."\n";
   }
 
+  # Sort by chromosome name then start coordinate
+  run("sort -k1,1 -k2,2n $filename0 > $filename");
+  close $fh0;
+  unlink $filename0;
+
+  # Prints out some random stats
   foreach my $end(5, 3) {
     my $total_length = 0;
-    map $total_length += $_, @{$options->{utr_counts}->{$end}};
-    my $num_utrs = scalar(@{$options->{utr_counts}->{$end}});
+    foreach my $utr_count (@{$utr_counts->{$end}}) {
+      $total_length += $_;
+    } 
+    my $num_utrs = scalar(@{$utr_counts->{$end}});
     my $average = ($num_utrs) ? ($total_length/$num_utrs) : 0;
     $Helper->log("Seen $num_utrs $end prime UTRs with and average length of $average");
   }
 
-  run("sort -k1,1 -k2,2n $filename0 > $filename");
-  close $fh0;
-  unlink $filename0;
+  return;
 }
 
-sub write_extended_transcript { 
-  my ($transcript, $options) = @_;
+=head2 write_extended_transcript
+
+  Arg1: Bio::EnsEMBL::Transcript object
+  Arg2: Hash ref for UTR stats collection
+  Arg3: Hash ref to collect stats
+  Returntype: line for BED file
+
+=cut
+
+sub write_extended_transcript {
+  my ($transcript, $utr_counts, $options) = @_;
   my $transcript_sid = $transcript->stable_id;
 
   if ($debug) {
     $Helper->log("\nDEBUG:\tTranscript ".$transcript_sid);
   }
 
-  $options->{flanks}{$transcript_sid} = {
-    5 => 0,
-    3 => 0,
-  };
-
-  foreach my $end('5', '3') {        
-    if($options->{utr_extends}{$end} || $options->{utr_multiplier} || $options->{unannotated_utrs}{$end}) {
-      my $method = ($end == 5) ? 'five' : 'three';
-      $method .= '_prime_utr';
-      my $utr = $transcript->$method;
-
-      if(defined $utr) {
-        push @{$options->{utr_counts}->{$end}}, $utr->length;
-        if(defined $options->{utr_extends}{$end}) {
-          $options->{$transcript_sid}{flanks}{$end} = $options->{utr_extends}{$end};
-        }
-        else{
-          $options->{$transcript_sid}{flanks}{$end} = $utr->length * $options->{utr_multiplier};
-        }
-      } elsif (defined  $options->{unannotated_utrs}{$end}) {
-        $options->{$transcript_sid}{flanks}{$end} = $options->{unannotated_utrs}{$end};
-      }
-    }
+  # Computing UTR extension length
+  $options->{flanks}{$transcript_sid} = {};
+  foreach my $end(5, 3) {
+    $options->{flanks}{$transcript_sid}{$end} = extend_transcript($end, $transcript, $options);
   }
 
   my $new_start;
   my $new_end;
+  # Check whether the transcript is on the postive/undefined or negative strand
   if ($transcript->strand() >= 0) {
-    $new_start = $transcript->seq_region_start - $options->{$transcript_sid}{flanks}{5}; 
-    $new_end = $transcript->seq_region_end + $options->{$transcript_sid}{flanks}{3};
+    $new_start = $transcript->seq_region_start - $options->{$transcript_sid}{flanks}{5};
+    $new_end   = $transcript->seq_region_end + $options->{$transcript_sid}{flanks}{3};
   } else {
-    $new_start = $transcript->seq_region_start - $options->{$transcript_sid}{flanks}{3}; 
+    $new_start = $transcript->seq_region_start - $options->{$transcript_sid}{flanks}{3};
     $new_end = $transcript->seq_region_end + $options->{$transcript_sid}{flanks}{5};
   }
 
-  if ($new_start < 0 ) {
+  if ($new_start < 0) {
     $new_start = 0;
   }
 
   return join("\t", ($transcript->seq_region_name, $new_start, $new_end, $transcript->stable_id));
 }
 
-# ----------------------------------------------------------------------
-# Prints out bed file with probe feature data
-# Params:
-# * filename: filename for destination file
-# * options: hashref with constants, in particular:
-#   - xref_user
-#   - xref_host
-#   - xref_dbname
-#   - xref_port
-#   - xref_pass
-#
-# Creates file with the given filename
+
+=head2 extend_transcript
+
+  Arg1: "5" or "3"
+  Arg2: Bio::EnsEMBL::Transcript object
+  Arg3: Hash ref for UTR stats collection
+  Arg4: Hash ref to collect stats
+  Returntype: Length of extension in basepairs 
+
+=cut
+
+sub extend_transcript {
+  my ($end, $transcript, $utrs, $options) = @_;
+  if($options->{utr_extends}{$end} || $options->{utr_multiplier} || $options->{unannotated_utrs}{$end}) {
+    my $method = ($end == 5) ? 'five' : 'three';
+    $method .= '_prime_utr';
+    my $utr = $transcript->$method;
+
+    if(defined $utr) {
+      push @{$utr_counts->{$end}}, $utr->length;
+      if(defined $options->{utr_extends}{$end}) {
+	return $options->{utr_extends}{$end};
+      }
+      else{
+	return $utr->length * $options->{utr_multiplier};
+      }
+    } elsif (defined  $options->{unannotated_utrs}{$end}) {
+      return $options->{unannotated_utrs}{$end};
+    }
+  } else {
+    return 0;
+  }
+}
+
+=head2 dump_probe_features
+
+  Description: Prints out bed file with probe feature data
+  Arg1: filename for destination file
+  Arg2: hashref with constants, in particular:
+  - xref_user
+  - xref_host
+  - xref_dbname
+  - xref_port
+  - xref_pass
+
+=cut 
 
 sub dump_probe_features {
   my ($filename2, $options) = @_;
-  my $sql = 'SELECT seq_region.name, seq_region_start, seq_region_end, seq_region_strand, cigar_line, mismatches, probe_feature_id, probe_id, probe.name, probe_set_id, probe_set.name  FROM probe_feature JOIN probe USING(probe_id) LEFT JOIN probe_set USING(probe_set_id) JOIN array_chip USING(array_chip_id) JOIN array USING(array_id) JOIN seq_region USING(seq_region_id) WHERE array.name IN ("'.join('", "', @{$options->{array_names}})."\") and array.vendor=\"$options->{vendor}\" GROUP BY probe_feature_id, probe_id, probe_set_id ORDER BY seq_region.name, seq_region_start";
+  my $names = join('", "', @{$options->{array_names}});
+  # Selecting all probe features for selected arrays in sorted BED format with useful metadata on the same line
+  my $sql = "
+  SELECT 
+    seq_region.name, seq_region_start, seq_region_end, seq_region_strand, cigar_line, mismatches, probe_feature_id, probe_id, probe.name, probe_set_id, probe_set.name  
+  FROM 
+    probe_feature 
+    JOIN probe 
+      USING(probe_id) 
+    LEFT JOIN probe_set 
+      USING(probe_set_id) 
+    JOIN array_chip 
+      USING(array_chip_id) 
+    JOIN array 
+      USING(array_id) 
+    JOIN seq_region 
+      USING(seq_region_id) 
+  WHERE 
+    array.name IN \"$names\" 
+    AND array.vendor=\"$options->{vendor}\" 
+  GROUP BY 
+    probe_feature_id, probe_id, probe_set_id 
+  ORDER BY 
+    seq_region.name, seq_region_start
+  ";
 
+  # Dump straight into file, without perl getting in the way
+  # Note the use of --quick which prevent the MySQL client from squirreling all the data in memory,
+  # instead this forces it to stream the data stright into the file
   my $cmd = "mysql --quick -NB -u $options->{xref_user} -h $options->{xref_host} -D $options->{xref_dbname} -e '$sql'";
   if (defined $options->{xref_port}) {
     $cmd .= " -P $options->{xref_port}";
@@ -1267,51 +1474,60 @@ sub dump_probe_features {
 
   ## Quick filter for trailing semi-colons in database names
   run("$cmd | sed -e 's/;\$//' > $filename2");
+  return;
 }
 
-# ----------------------------------------------------------------------
-# OK this is where the action happens mostly. Goes through each overlap 
-# between transcript and probe feature, and collects data.
-#
-# Params:
-# * transcripts: list of Bio::EnsEMBL::Transcript objects 
-# * pf_transc_overlap_fh: filehandle to the dump file created by bedtools
-# * unmapped_counts: hashref
-# * unmapped_objects: arrayref
-# * xrefs: arrayref
-# * xref_db:  Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
-# * options: hashref with constant parameters
-# * OUT: filehandle to log file
-#
-# Returns: composite hashref: object_id -> transcript stable id -> arrayref -> 2 integers
+=head2 
+
+  Description: OK this is where the action happens mostly. Goes through each overlap
+  between transcript and probe feature, and collects data.
+  Arg1: Array ref of Bio::EnsEMBL::Transcript objects
+  Arg2: filehandle to the dump file created by bedtools
+  Arg3: unmapped_counts: hashref
+  Arg4: unmapped_objects: arrayref
+  Arg5: xrefs: arrayref
+  Arg6: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
+  Arg7: hashref with constant parameters
+  Arg8: filehandle to log file
+  Returntype: composite hashref: object_id -> transcript stable id -> arrayref -> 2 integers
+
+=cut
 
 sub associate_probes_to_transcripts {
   my ($transcripts, $pf_transc_overlap_fh, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $OUT) = @_;
+  # Number of processed transcripts
   my $index = 0;
+  # Last percentage point to be processed for progress display
   my $last_pc = -1;
+  # Last line to be read from the overlap file
   my $last_line = undef;
+  # Hash ref with resuting overlaps
   my $object_transcript_hits = {};
 
-  $Helper->log("% Complete:", 0, 'append_date');
+  $Helper->log('% Complete:', 0, 'append_date');
   foreach my $transcript (@$transcripts) {
-    my $transcript_feature_info = {};
     if (defined $options->{test_transcripts} && $options->{test_transcripts}-- <= 0) {
       last;
     }
     $last_pc = print_progress($index++, scalar @{$transcripts}, $last_pc);
-    $last_line = examine_transcript($transcript, $transcript_feature_info, $pf_transc_overlap_fh, $last_line, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $OUT); 
+    # Stores overlaps temporarily 
+    my $transcript_feature_info = {};
+    $last_line = examine_transcript($transcript, $transcript_feature_info, $pf_transc_overlap_fh, $last_line, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $OUT);
     compute_hits($transcript, $transcript_feature_info, $object_transcript_hits, $unmapped_objects, $unmapped_counts, $options, $OUT);
   }
 
   return $object_transcript_hits;
 }
 
-# ------------------------------------------------------
-# Prints a little blurb on stdout each % of the way through
-# Params:
-# * index: integer
-# * total: total number of transcripts
-# * last_pc: last percentage threshold to be passed
+=head2 print_progress
+
+  Description: Prints a little blurb on stdout each % of the way through
+  Arg1: Number of transcripts processd 
+  Arg2: Total number of transcripts
+  Arg3: last percentage threshold to be printed out
+
+=cut 
+
 sub print_progress {
   my ($index, $total, $last_pc) = @_;
   my $pc = int ((100 * $index) / $total);
@@ -1323,7 +1539,7 @@ sub print_progress {
 }
 
 # ----------------------------------------------------------------------
-# For one trasncript, goes through each overlap 
+# For one trasncript, goes through each overlap
 # between that transcript and probe feature, and collects data.
 #
 # Params:
@@ -1343,24 +1559,20 @@ sub print_progress {
 sub examine_transcript {
   my ($transcript, $transcript_feature_info, $pf_transc_overlap_fh, $last_line, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $OUT) = @_;
 
-  $options->{rr}->flush();
+  my $range_registry = $options->{rr};
+  $range_registry->flush();
   my @exons     = @{$transcript->get_all_Exons};
-  my $num_exons = $#exons;
-  my ($first_exon, $last_exon);
-  foreach my $e (0..$#exons) {
-    $options->{rr}->check_and_register('exonic', $exons[$e]->seq_region_start, $exons[$e]->seq_region_end);
-    if ($e == 0) {
-      $first_exon = $exons[$e];
-    }
-    if ($e == $num_exons) {
-      $last_exon  = $exons[$e];
-    }
+  foreach my $exon (@exons) {
+    $range_registry->check_and_register('exonic', $exon->seq_region_start, $exon->seq_region_end);
   }
+  my $first_exon = $exons[0];
+  my $last_exon  = $exons[$#exons];
 
   my %exonutrs;
   my $transcript_sid = $transcript->stable_id;
   my $transcript_slice = $transcript->feature_Slice();
   my $slice            = $transcript_slice->expand($options->{$transcript_sid}{flanks}{5}, $options->{$transcript_sid}{flanks}{3});
+  # Find flanking regions
   if ($transcript->strand == 1) {
     if ($options->{$transcript_sid}{flanks}{3}) {
       $exonutrs{3} = [$last_exon->seq_region_start, $slice->end];
@@ -1377,41 +1589,46 @@ sub examine_transcript {
     }
   }
 
-  foreach my $end('3', '5') {
+  # Mark flanking regions
+  foreach my $end(3, 5) {
     if ($options->{$transcript_sid}{flanks}{$end}) {
-      $options->{rr}->check_and_register("${end}_exonutr", @{$exonutrs{$end}});
+      $range_registry->check_and_register("${end}_exonutr", @{$exonutrs{$end}});
     }
   }
 
+  # Process last line read if defined
+  # Note that in previous iteration of this function the reader found a line with a different 
+  # transcript stable ID, it passes this line over to future iterations.
   my $line = $last_line;
   my $overran = 0;
   my $count = 0;
   if (defined $line) {
     chomp $line;
-    my ($tx_chr, $tx_start, $tx_end, $transcript_sid, $chr, $start, $end, $strand, $cigar, $mismatches, $feature_id, $probe_id, $probe_name, $probeset_id, $probeset_name) = split "\t", $line;
-    if ($transcript_sid gt $transcript->stable_id()) {
+    my ($tx_chr, $tx_start, $tx_end, $transcript_sid_2, $chr, $start, $end, $strand, $cigar, $mismatches, $feature_id, $probe_id, $probe_name, $probeset_id, $probeset_name) = split "\t", $line;
+    if ($transcript_sid_2 gt $transcript_sid) {
       $overran = 1;
     }
-    if ($transcript_sid eq $transcript->stable_id()) {
+    if ($transcript_sid_2 eq $transcript_sid) {
       examine_probefeature($transcript, $feature_id, $probe_id, $probe_name, $probeset_id, $probeset_name, $start, $end, $strand, $cigar, $mismatches, $transcript_feature_info, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $OUT);
       $count++;
     }
   }
 
+  # Process all following lines until you hit another transcript stable id
   while (!$overran && defined ($line = <$pf_transc_overlap_fh>)) {
     chomp $line;
-    my ($tx_chr, $tx_start, $tx_end, $transcript_sid, $chr, $start, $end, $strand, $cigar, $mismatches, $feature_id, $probe_id, $probe_name, $probeset_id, $probeset_name) = split "\t", $line;
-    if ($transcript_sid gt $transcript->stable_id()) {
+    my ($tx_chr, $tx_start, $tx_end, $transcript_sid_2, $chr, $start, $end, $strand, $cigar, $mismatches, $feature_id, $probe_id, $probe_name, $probeset_id, $probeset_name) = split "\t", $line;
+    if ($transcript_sid_2 gt $transcript_sid) {
       last;
     }
-    if ($transcript_sid eq $transcript->stable_id()) {
+    if ($transcript_sid_2 eq $transcript_sid) {
       examine_probefeature($transcript, $feature_id, $probe_id, $probe_name, $probeset_id, $probeset_name, $start, $end, $strand, $cigar, $mismatches, $transcript_feature_info, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $OUT);
       $count++;
     }
   }
 
   if ($debug) {
-    $Helper->log("DEBUG:\tProbeFeatures $count for ".join("\t", (map $_->name, values(%{$options->{arrays}}))));
+    $Helper->log("DEBUG:\tProbeFeatures $count for ".join("\t", (map {$_->name} values(%{$options->{arrays}}))));
   }
 
   print $OUT "\n";
@@ -1453,11 +1670,11 @@ sub examine_probefeature {
 
   if($options->{array_config}{sense_interrogation}) {
     if($transcript->seq_region_strand == $strand) {
-      print $OUT "Unmapped sense ".$log_name."\n";
+      print $OUT 'Unmapped sense '.$log_name."\n";
       return;
     }
   } elsif ($transcript->seq_region_strand != $strand) {
-    print $OUT "Unmapped anti-sense ".$log_name."\n";
+    print $OUT 'Unmapped anti-sense '.$log_name."\n";
     return;
   }
 
@@ -1473,6 +1690,7 @@ sub examine_probefeature {
   } else {
     record_aligned_probefeature($feature_id, $probe_id, $probeset_id, $start, $end, $cigar_line, $mismatch_count, $transcript_feature_info, $transcript, $mm_link_txt, $mismatches, $log_name, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $OUT);
   }
+  return;
 }
 
 # ----------------------------------------------------------------------
@@ -1505,18 +1723,19 @@ sub record_gapped_probefeature {
       push @{$transcript_feature_info->{$probe_id}}, ["exon-exon match${mm_link_txt}", $mismatches];
     }
   } else {
-    print $OUT "Unmapped Gapped ProbeFeature ".$log_name."\n";
+    print $OUT 'Unmapped Gapped ProbeFeature '.$log_name."\n";
     cache_and_load_unmapped_objects(
-      $options, 
-      $unmapped_counts, 
-      $unmapped_objects, 
-      $transcript_sid, 
-      'ProbeFeature', 
-      $feature_id,  
-      "Unmapped Gapped ProbeFeature", 
-      "Gapped ProbeFeature did not match transcript structure"
+      $options,
+      $unmapped_counts,
+      $unmapped_objects,
+      $transcript_sid,
+      'ProbeFeature',
+      $feature_id,
+      'Unmapped Gapped ProbeFeature',
+      'Gapped ProbeFeature did not match transcript structure'
     );
   }
+  return;
 }
 
 # ----------------------------------------------------------------------
@@ -1564,7 +1783,7 @@ sub record_aligned_probefeature {
   my $flank_end     = 0;
   my $flank_overlap = 0;
 
-  foreach my $side ('3', '5') {
+  foreach my $side (3, 5) {
     if ($options->{$transcript->stable_id}{flanks}{$side}) {
       $flank_overlap = $options->{rr}->overlap_size("${side}_exonutr", $start, $end);
     }
@@ -1595,7 +1814,7 @@ sub record_aligned_probefeature {
       push @{$transcript_feature_info->{$probe_id}}, [$linkage_annotation, $mismatches];
     }
     add_xref($transcript->stable_id, $feature_id, 'ProbeFeature', $linkage_annotation, $xrefs, $xref_db, $options);
-  } else { 
+  } else {
     my ($summary, $region);
 
     if (!( $exon_overlap || $flank_overlap)) {
@@ -1609,138 +1828,243 @@ sub record_aligned_probefeature {
         $summary = "${flank_end}' flank boundary";
         $region  = $summary;
       }
-    } else {        
+    } else {
       $summary = "${flank_end}' flank boundary";
       $region  = $summary;
     }
     print $OUT "Unmapped $summary ".$log_name."\n";
     cache_and_load_unmapped_objects(
-      $options, 
-      $unmapped_counts, 
-      $unmapped_objects, 
-      $transcript->stable_id, 
-      'ProbeFeature',  
-      $feature_id, 
-      "Unmapped $summary", 
+      $options,
+      $unmapped_counts,
+      $unmapped_objects,
+      $transcript->stable_id,
+      'ProbeFeature',
+      $feature_id,
+      "Unmapped $summary",
       "Probe mapped to $region of transcript"
     );
   }
+  return;
 }
 
-# ----------------------------------------------------------------------
-# Converts hash ref linking objects to hits into a more conveninent 
-# hash ref object -> transcript -> array ref -> 2 integers
-#
-# Params:
-# - transcript: Bio::EnsEMBL::Transcript object
-# - transcript_feature_info: hash ref linking objects to hits
-# - object_transcript_hits: hash ref to be filled
-# - unmapped_objects: array ref with list of unmapped objects
-# - unmapped_counts: hash ref with stats on unmapped objects
-#  made up of probesets
-# - options: hash ref of global constants
-# - OUT: File handle for detailed output
+=head2
+
+  Description: Converts hash ref linking objects to hits into a more conveninent
+  hash ref object -> transcript -> array ref -> 2 integers
+  Arg1: Bio::EnsEMBL::Transcript object
+  Arg2: hash ref linking objects to hits
+  Arg3: hash ref to be filled
+  Arg4: array ref with list of unmapped objects
+  Arg5: hash ref with stats on unmapped objects
+   made up of probesets
+  Arg6: hash ref of global constants
+  Arg7: File handle for detailed output
+
+=cut
 
 sub compute_hits {
   my ($transcript, $transcript_feature_info, $object_transcript_hits, $unmapped_objects, $unmapped_counts, $options, $OUT) = @_;
 
   foreach my $object_id (keys %$transcript_feature_info) {
-    my $hits;
-    if($options->{array_config}{probeset_arrays}) {
-      $hits = scalar(keys %{$transcript_feature_info->{$object_id}});
-    } else{
-      $hits = scalar(@{$transcript_feature_info->{$object_id}});
-    }
+    compute_hits($object_id, $transcript, $transcript_feature_info, $object_transcript_hits, $unmapped_objects, $unmapped_counts, $options, $OUT);
+  }
 
-    my $probeset_size = $options->{probeset_sizes}{$object_id};
+  return;
+}
 
-    if (($options->{xref_object} eq 'ProbeSet' && ($hits / $probeset_size) >= $options->{mapping_threshold}) 
-          || ($hits && ($options->{xref_object} eq 'Probe'))) {
-      my $num_mismatch_hits = 0;
-      if($options->{array_config}{probeset_arrays}) {
-        map {$num_mismatch_hits += 1 if $_->[1] == $_->[0]}  values %{$transcript_feature_info->{$object_id}};
-      } else{
-        map {$num_mismatch_hits += 1 if $_->[1] } @{$transcript_feature_info->{$object_id}};
+=head2 compute_hits_2
+
+  Description: Converts hash ref linking an object to hits into a more conveninent
+  hash ref object -> transcript -> array ref -> 2 integers
+  Arg1: Ensembl DB ID 
+  Arg2: Bio::EnsEMBL::Transcript object
+  Arg3: hash ref linking objects to hits
+  Arg4: hash ref to be filled
+  Arg5: array ref with list of unmapped objects
+  Arg6: hash ref with stats on unmapped objects
+   made up of probesets
+  Arg7: hash ref of global constants
+  Arg8: File handle for detailed output
+
+=cut
+
+sub compute_hits_2 {
+  my ($object_id, $transcript, $transcript_feature_info, $object_transcript_hits, $unmapped_objects, $unmapped_counts, $options, $OUT) = @_;
+
+  # Count hits between object and transcript
+  my $hits;
+  if($options->{array_config}{probeset_arrays}) {
+    $hits = scalar(keys %{$transcript_feature_info->{$object_id}});
+  } else{
+    $hits = scalar(@{$transcript_feature_info->{$object_id}});
+  }
+
+  my $probeset_size = $options->{probeset_sizes}{$object_id};
+
+  # Verifiy whether the number of hits is above threshold
+  if (($options->{xref_object} eq 'ProbeSet' && ($hits / $probeset_size) >= $options->{mapping_threshold})
+	|| ($hits && ($options->{xref_object} eq 'Probe'))) {
+    # Success: store the hit information
+    store_sufficient_hit($object_id, $transcript, $transcript_feature_info, $object_transcript_hits, $options, $OUT);
+  } else {
+    # Failure, store unmapped object information
+    store_insufficient_hit($object_id, $trancript, $hits, $probeset_size, $unmapped_objects, $unmapped_object_counts, $options, $OUT);
+  }
+
+  return;
+}
+
+=head2 store_sufficeient_hit
+
+  Description: Converts hash ref linking an object to a transcript into a more conveninent
+  hash ref object -> transcript -> array ref -> 2 integers
+  Arg1: Ensembl DB ID 
+  Arg2: Bio::EnsEMBL::Transcript object
+  Arg3: Number of hits 
+  Arg4: hash ref linking objects to hits
+  Arg5: hash ref to be filled
+   made up of probesets
+  Arg6: hash ref of global constants
+  Arg7: File handle for detailed output
+
+=cut
+
+sub store_sufficient_hit {
+  my ($object_id, $transcript, $hits, $transcript_feature_info, $object_transcript_hits, $options, $OUT) = @_;
+  # Count mismatches
+  my $num_mismatch_hits = 0;
+  if($options->{array_config}{probeset_arrays}) {
+    foreach my $value (values %{$transcript_feature_info->{$object_id}}) {
+      if ($_->[1] == $_->[0]) {
+	$num_mismatch_hits += 1;
       }
-
-      $object_transcript_hits->{$object_id}{$transcript->stable_id} = [$hits, $num_mismatch_hits];
-      if ($options->{xref_object} eq 'Probe' && $hits == 1) {
-        push @{$object_transcript_hits->{$object_id}{$transcript->stable_id}}, $transcript_feature_info->{$object_id}[0][0];
+    } 
+  } else{
+    foreach my $value (@{$transcript_feature_info->{$object_id}}) {
+      if ($_->[1]) {
+	$num_mismatch_hits += 1;
       }
-    } else {
-      my $id_names = $object_id.'('.join(',', @{$options->{object_names}{$object_id}}).')';
-      print $OUT "$id_names\t".$transcript->stable_id."\tinsufficient\t$hits/$probeset_size in ProbeSet\n";
-      cache_and_load_unmapped_objects(
-        $options, 
-        $unmapped_counts, 
-        $unmapped_objects, 
-        $transcript->stable_id, 
-        'ProbeSet',  
-        $object_id,  
-        "Insufficient hits", 
-        "Insufficient number of hits $hits/$probeset_size in ProbeSet"
-      );
     }
+  }
+
+  $object_transcript_hits->{$object_id}{$transcript->stable_id} = [$hits, $num_mismatch_hits];
+  if ($options->{xref_object} eq 'Probe' && $hits == 1) {
+    push @{$object_transcript_hits->{$object_id}{$transcript->stable_id}}, $transcript_feature_info->{$object_id}[0][0];
   }
 }
 
-# ----------------------------------------------------------------------
-# Stores all objects with no assocation to a transcript into the unmapped
-# table
-#
-# Params:
-# - object_transcript_hits: hash ref of hash refs linking 
-# object_id x Bio::EnsEMBL::Transcript object => array ref
-# - unmapped_counts: hash ref with stats on unmapped objects
-# - unmapped_objects: array ref with list of unmapped objects
-# - options: hash ref of global constants
-# - OUT: File handle for detailed output
+=head2 store_insufficient_hit 
+
+  Description: Records a missed connection between object and transcript 
+  Arg1: Ensembl DB ID 
+  Arg2: Bio::EnsEMBL::Transcript object
+  Arg3: Number of hits 
+  Arg4: Size of probeset
+  Arg5: array ref with list of unmapped objects
+  Arg6: hash ref with stats on unmapped objects
+   made up of probesets
+  Arg7: hash ref of global constants
+  Arg8: File handle for detailed output
+
+=cut
+
+sub store_insufficient_hit {
+  my ($object_id, $trancript, $hits, $probeset_size, $unmapped_objects, $unmapped_object_counts, $options, $OUT) = @_;
+
+  my $id_names = $object_id.'('.join(',', @{$options->{object_names}{$object_id}}).')';
+
+  print $OUT "$id_names\t".$transcript->stable_id."\tinsufficient\t$hits/$probeset_size in ProbeSet\n";
+
+  cache_and_load_unmapped_objects(
+    $options,
+    $unmapped_counts,
+    $unmapped_objects,
+    $transcript->stable_id,
+    'ProbeSet',
+    $object_id,
+    'Insufficient hits',
+    "Insufficient number of hits $hits/$probeset_size in ProbeSet"
+  );
+
+}
+
+=head2
+
+  Description: Stores all objects with no assocation to a transcript into the unmapped
+  table
+  Arg1: hash ref of hash refs linking object_id x Bio::EnsEMBL::Transcript object => array ref
+  Arg2: hash ref with stats on unmapped objects
+  Arg3: array ref with list of unmapped objects
+  Arg4: hash ref of global constants
+  Arg5: File handle for detailed output
+
+=cut
 
 sub log_unmapped_objects {
   my ($object_transcript_hits, $unmapped_counts, $unmapped_objects, $options, $OUT) = @_;
 
+  # Skip if running in test mode
   if($options->{test_slice} || $options->{test_transcript_sid}) {
     my $tmp = $options->{test_slice} || $options->{test_transcript_sid};
     $Helper->log("Skipping log_unmapped_objects as we are running on a test on:\t${tmp}");
     return;
   }
 
-  my ($object_id, $object_name);
-
   foreach my $object_id (keys %{$options->{arrays_per_object}}) {
     if (!exists $object_transcript_hits->{$object_id}) {
-      my $names = join(',', @{$options->{object_names}{$object_id}});
-      print $OUT "$options->{xref_object} $object_id($names)\tNo transcript mappings\n";
-      cache_and_load_unmapped_objects(
-        $options, 
-        $unmapped_counts, 
-        $unmapped_objects, 
-        'NO_TRANSCRIPT_MAPPINGS', 
-        $options->{xref_object}, 
-        $object_id, 
-        'No transcript mappings', 
-        $options->{xref_object}.' did not map to any transcripts'
-      ); 
+      log_unmapped_object($object_id, $unmapped_counts, $unmapped_objects, $options, $OUT);
     }
+  }
+
+  return;
+}
+
+=head2
+
+  Description: Stores an object with no assocation to a transcript into the unmapped
+  table
+  Arg1: Ensembl ID of the object
+  Arg2: hash ref with stats on unmapped objects
+  Arg3: array ref with list of unmapped objects
+  Arg4: hash ref of global constants
+  Arg5: File handle for detailed output
+
+=cut
+
+sub log_unmapped_object {
+  my ($object_id, $unmapped_counts, $unmapped_objects, $options, $OUT) = @_;
+
+    my $names = join(',', @{$options->{object_names}{$object_id}});
+    print $OUT "$options->{xref_object} $object_id($names)\tNo transcript mappings\n";
+    cache_and_load_unmapped_objects(
+      $options,
+      $unmapped_counts,
+      $unmapped_objects,
+      'NO_TRANSCRIPT_MAPPINGS',
+      $options->{xref_object},
+      $object_id,
+      'No transcript mappings',
+      $options->{xref_object}.' did not map to any transcripts'
+    );
   }
 }
 
-# ----------------------------------------------------------------------
-# Removes objects with too many hits from the list of candidate object+transcript hits 
-#
-# Params:
-# - transcripts_per_object: hash ref linking objects to a count
-# - object_transcript_hits: list of candidate xref hits
-# - unmapped_counts: hash ref with stats on unmapped objects
-# - unmapped_objects: array ref with list of unmapped objects
-# - options: hash ref with constant variables, in particular:
-#   * max_transcripts: integer cutoff
-#   * object_names: hash ref linking object_id => object name
-#   * probeset_sizes: hash ref linking object_id => integer size
-#   * xref_object: "Probe" or "ProbeSet"
-# - OUT: File handle for detailed output
-#
-# Returns: array ref of filtered hits
+=head2 remove_promiscuous_objects
+
+  Description: Removes objects with too many hits from the list of candidate object+transcript hits
+  Arg1: hash ref linking objects to a count
+  Arg2: list of candidate xref hits
+  Arg3: hash ref with stats on unmapped objects
+  Arg4: array ref with list of unmapped objects
+  Arg5: hash ref with constant variables, in particular:
+    * max_transcripts: integer cutoff
+    * object_names: hash ref linking object_id => object name
+    * probeset_sizes: hash ref linking object_id => integer size
+    * xref_object: "Probe" or "ProbeSet"
+  Arg6: File handle for detailed output
+  Returntype: array ref of filtered hits
+
+=cut
 
 sub remove_promiscuous_objects {
   my ($object_transcript_hits, $unmapped_counts, $unmapped_objects, $options, $OUT) = @_;
@@ -1749,38 +2073,68 @@ sub remove_promiscuous_objects {
     my $object_transcript_count = scalar keys %{$object_transcript_hits->{$object_id}};
     if ($object_transcript_count > $options->{max_transcripts}) {
       foreach my $transcript_id (keys %{$object_transcript_hits->{$object_id}}) {
-        my $id_names = $object_id.'('.join(',', @{$options->{object_names}{$object_id}}).')';
-        my $probeset_size = $options->{probeset_sizes}->{$object_id};
-        my $hits = $object_transcript_hits->{$object_id}{$transcript_id}[0];
-        print $OUT "$id_names\t$transcript_id\tpromiscuous\t$hits/$probeset_size\tCurrentTranscripts".$object_transcript_count."\n";
-        cache_and_load_unmapped_objects(
-          $options, 
-          $unmapped_counts, 
-          $unmapped_objects, 
-          $transcript_id, 
-          'ProbeSet',  
-          $object_id,  
-          "Promiscuous $options->{xref_object}", 
-          "$options->{xref_object} maps to $object_transcript_count transcripts (max 100)."
-        );
-        delete $object_transcript_hits->{$object_id};
+        remove_promiscuous_object($object_id, $transcript_id, $object_transcript_count, $unmapped_counts, $unmapped_objects, $options, $OUT);
       }
-    } 
+      # Cleaning up unecessary hash ref, opening its contents to garbage collection
+      delete $object_transcript_hits->{$object_id};
+    }
   }
+  return;
 }
 
-# ----------------------------------------------------------------------
-# Transforms the filtered list of object+transcript hits into xrefs and
-# loads those
-#
-# Params:
-# - object_transcript_hits: hash ref of hash refs linking 
-# object_id x Bio::EnsEMBL::Transcript object => array ref
-# - xrefs: temporary array storage for xref objects about to be loaded
-# - options: hash ref with constant variables, in particular:
-#   * object_names: hash ref linking object_id => object name
-#   * probeset_sizes: hash ref linking object_id => integer size
-#   * xref_object: "Probe" or "ProbeSet"
+=head2 remove_promiscuous_object
+
+  Description: Removes an object/transcript hit from the list of candidates because the 
+    object has too many other hits
+  Arg1: EnsemblID 
+  Arg2: object_transcript_hits: list of candidate xref hits
+  Arg3: unmapped_counts: hash ref with stats on unmapped objects
+  Arg4: unmapped_objects: array ref with list of unmapped objects
+  Arg5: hash ref with constant variables, in particular:
+    - max_transcripts: integer cutoff
+    - object_names: hash ref linking object_id => object name
+    - probeset_sizes: hash ref linking object_id => integer size
+    - xref_object: "Probe" or "ProbeSet"
+  Arg6: File handle for detailed output
+  Returntype: array ref of filtered hits
+
+=cut
+
+sub remove_promiscuous_object {
+  my ($object_id, $transcript_id, $object_transcript_count, $unmapped_counts, $unmapped_objects, $options, $OUT) = @_;
+
+  my $id_names = $object_id.'('.join(',', @{$options->{object_names}{$object_id}}).')';
+  my $probeset_size = $options->{probeset_sizes}->{$object_id};
+  my $hits = $object_transcript_hits->{$object_id}{$transcript_id}[0];
+  print $OUT "$id_names\t$transcript_id\tpromiscuous\t$hits/$probeset_size\tCurrentTranscripts".$object_transcript_count."\n";
+  cache_and_load_unmapped_objects(
+    $options,
+    $unmapped_counts,
+    $unmapped_objects,
+    $transcript_id,
+    'ProbeSet',
+    $object_id,
+    "Promiscuous $options->{xref_object}",
+    "$options->{xref_object} maps to $object_transcript_count transcripts (max 100)."
+  );
+
+  return;
+}
+
+=head2 
+
+  Description: Transforms the filtered list of object+transcript hits into xrefs and
+    loads those
+  Arg1: hash ref of hash refs linking
+    object_id x Bio::EnsEMBL::Transcript object => array ref
+  Arg2: temporary array storage for xref objects about to be loaded
+  Arg3: hash ref with constant variables, in particular:
+    - object_names: hash ref linking object_id => object name
+    - probeset_sizes: hash ref linking object_id => integer size
+    - xref_object: "Probe" or "ProbeSet"
+
+=cut 
+
 sub create_final_xrefs {
   my ($object_transcript_hits, $xrefs, $xref_db, $options, $OUT) = @_;
 
@@ -1795,7 +2149,7 @@ sub create_final_xrefs {
         $linkage_annotation = "${hits}/${probeset_size} in probeset";
         if ($num_mismatch_hits) {
           if ($num_mismatch_hits == 1) {
-            $linkage_annotation .= "(with 1 mismatched probe)";
+            $linkage_annotation .= '(with 1 mismatched probe)';
           } else{
             $linkage_annotation .= "(with $num_mismatch_hits mismatched probes)";
           }
@@ -1817,22 +2171,23 @@ sub create_final_xrefs {
         $linkage_annotation .= ". Matches $other_hits other transcript${plural}";
       }
       else{
-        $linkage_annotation .= ". Maps uniquely to this transcript";
+        $linkage_annotation .= '. Maps uniquely to this transcript';
       }
 
       add_xref($transcript_id, $object_id, $options->{xref_object}, $linkage_annotation, $xrefs, $xref_db, $options);
       print $OUT "$id_names\t$transcript_id\tmapped\t$hits/$options->{probeset_size}{$object_id}\n";
     }
   }
+  return;
 }
 
-# ----------------------------------------------------------------------
-# All the following functions display various stats on the whole process
+=head2 print_unmapped_counts
 
-# ----------------------------------------------------------------------
-# Params:
-# - unmapped_counts: hash ref of hash refs linking:
-# object_type x object name => integer count
+  Arg1: hash ref of hash refs linking:
+    object_type x object name => integer count
+
+=cut 
+
 sub print_unmapped_counts {
   my ($unmapped_counts) = @_;
   my $uo_string;
@@ -1848,18 +2203,22 @@ sub print_unmapped_counts {
   }
   $uo_string .= "\t\t\t\tTotal\t".$unmapped_counts->{Total}."\n";
   $Helper->log("UnmappedObjects loaded:\n$uo_string");
+  return;
 }
 
-# ----------------------------------------------------------------------
-# Params:
-# - xref_object: "Probe" or "ProbeSet"
-# - arrays_per_object: hash ref linking object_id => array name
-# - object_transcript_hits: hash ref of hash refs linking 
-# object_id x Bio::EnsEMBL::Transcript object => array ref
+=head2 print_xrefs_per_array
+
+  Arg1: "Probe" or "ProbeSet"
+  Arg2: hash ref linking object_id => array name
+  Arg3: hash ref of hash refs linking
+    object_id x Bio::EnsEMBL::Transcript object => array ref
+
+=cut 
+
 sub print_xrefs_per_array {
   my ($xref_object, $arrays_per_object, $object_transcript_hits) = @_;
 
-  $Helper->log("Counting xrefs");
+  $Helper->log('Counting xrefs');
 
   my %objects_per_array = ();
   my %total = ();
@@ -1880,20 +2239,24 @@ sub print_xrefs_per_array {
     }
   }
 
-  $Helper->log("Found ".scalar(keys(%$object_transcript_hits))." hits");
+  $Helper->log('Found '.scalar(keys(%$object_transcript_hits)).' hits');
 
   foreach my $aname(keys %total) {
-    $Helper->log("$aname distinct $xref_object xrefs mapped(total xrefs):\t". 
+    $Helper->log("$aname distinct $xref_object xrefs mapped(total xrefs):\t".
       scalar(keys(%{$covered_objects{$aname}}))."/$objects_per_array{$aname}($total{$aname})");
   }
+  return;
 }
 
-# ----------------------------------------------------------------------
-# Params:
-# - Total: number of transcripts 
-# - object_transcript_hits: hash ref of hash refs linking 
-# object_id x Bio::EnsEMBL::Transcript object => array ref
-# - xref_object: "Probe" or "ProbeSet"
+=head2 print_most_mapped_transcripts
+
+  Arg1: number of transcripts
+  Arg2: hash ref of hash refs linking
+    object_id x Bio::EnsEMBL::Transcript object => array ref
+  Arg3: "Probe" or "ProbeSet"
+
+=cut
+
 sub print_most_mapped_transcripts {
   my ($total, $object_transcript_hits, $xref_object) = @_;
   my %transcript_xref_counts = ();
@@ -1907,19 +2270,22 @@ sub print_most_mapped_transcripts {
   $Helper->log('Mapped '. scalar(keys(%transcript_xref_counts))."/$total transcripts ", 0, 'append_date');
 
 #sort keys with respect to values.
-  $Helper->log_header("Top 5 most mapped transcripts:");
+  $Helper->log_header('Top 5 most mapped transcripts:');
   my @tids = sort { $transcript_xref_counts{$b} <=>  $transcript_xref_counts{$a} } keys %transcript_xref_counts;
 
   for my $i(0..4) {
     $Helper->log("$tids[$i] mapped $transcript_xref_counts{$tids[$i]} times");
   }
+  return;
 }
 
-# ----------------------------------------------------------------------
-# Params:
-# - object_transcript_hits: hash ref of hash refs linking 
-# object_id x Bio::EnsEMBL::Transcript object => array ref
-# - xref_object: "Probe" or "ProbeSet"
+=head2 print_most_mapped_probes
+
+  Arg1: hash ref of hash refs linking
+        object_id x Bio::EnsEMBL::Transcript object => array ref
+  Arg2:: "Probe" or "ProbeSet"
+
+=cut 
 sub print_most_mapped_probes {
   my ($object_transcript_hits, $xref_object) = @_;
   my %transcripts_per_object = ();
@@ -1936,37 +2302,56 @@ sub print_most_mapped_probes {
   for my $i(0..4) {
     $Helper->log("dbid $xo_ids[$i] mapped $xo_counts[$i] times");
   }
+  return;
 }
 
-# ----------------------------------------------------------------------
-# BioMart voodoo, don't ask me what this means
+=head2
+  
+  Description: BioMart voodoo, don't ask me what this means
+  Arg1: array ref of microarray names
+  Arg2: vendor name
+  Arg3: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
+
+=cut
 
 sub add_mart_displayable_status {
   my ($array_names, $vendor, $xref_db) = @_;
-  my $sql='INSERT IGNORE into status select a.array_id, "array", sn.status_name_id from array a, status_name sn where a.name in ("'.
-  join('", "', @$array_names)."\") and a.vendor='$vendor' and sn.name in ('MART_DISPLAYABLE')";
+  my $names_string = join('", "', @$array_names);
+  my $sql="
+  INSERT IGNORE 
+    INTO status 
+    SELECT 
+      a.array_id, 'array', sn.status_name_id 
+      FROM 
+        array a, status_name sn 
+      WHERE 
+        a.name in ($names_string)
+        AND a.vendor='$vendor'
+	AND sn.name in ('MART_DISPLAYABLE')
+  ";
   $Helper->log_header('Adding MART_DISPLAYABLE status entries');
   $xref_db->dbc->do($sql);
+  return;
 }
 
-# ----------------------------------------------------------------------
-# Stores an objects into the unmapped_object table, with some caching
-#
-# Params:
-# - options: hash ref of global constants
-# - unmapped_counts: hash ref with stats on unmapped objects
-# - unmapped_objects: array ref with list of unmapped objects
-# - identifier: stable id to potential hit
-# - object_type: Probe, ProbeSet or ProbeFeature
-# - object_id: Ensembl ID of the object
-# - summary: short string
-# - description: longer string
+=head2 cache_and_load_unmapped_objects
+
+  Description: Stores an objects into the unmapped_object table, with some caching
+  Arg1: hash ref of global constants
+  Arg2: hash ref with stats on unmapped objects
+  Arg3: array ref with list of unmapped objects
+  Arg4: stable id to potential hit
+  Arg5: "Probe", "ProbeSet" or "ProbeFeature"
+  Arg6: Ensembl ID of the object
+  Arg7: short string description
+  Arg8: longer string description
+
+=cut
 
 sub cache_and_load_unmapped_objects {
   my ($options, $unmapped_counts, $unmapped_objects, $identifier, $object_type, $object_id, $summary, $description) = @_;
   if (! $options->{no_triage}) {
-    my $um_obj = new Bio::EnsEMBL::UnmappedObject
-    (
+    my $um_obj = Bio::EnsEMBL::UnmappedObject->new(
       -type       => 'probe2transcript',
       -analysis   => $options->{analysis},
       -identifier => $identifier,
@@ -1976,7 +2361,7 @@ sub cache_and_load_unmapped_objects {
       -ensembl_id => $object_id,
       -external_db_id => $options->{transc_edb_id},
     );
-    $unmapped_counts->{$um_obj->ensembl_object_type}{$um_obj->summary} ||= 0;  
+    $unmapped_counts->{$um_obj->ensembl_object_type}{$um_obj->summary} ||= 0;
     $unmapped_counts->{$um_obj->ensembl_object_type}{$um_obj->summary}++;
     $unmapped_counts->{Total}++;
     push @{$unmapped_objects}, $um_obj;
@@ -1985,99 +2370,39 @@ sub cache_and_load_unmapped_objects {
       @{$unmapped_objects} = ();
     }
   }
+  return;
 }
+
+=head2 store_unmapped_objects
+  
+  Description: Stores unmapped object information into database
+  Arg1: array ref of unmapped Ensembl objects
+  Arg2: hash ref containing:
+  - unmapped_object_adaptor: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
+  - desc_to_id: hash ref associating an unmapped_reason description to its db id
+
+=cut
 
 sub store_unmapped_objects {
   my ($unmapped_objects, $options) = @_;
 
   if( scalar(@$unmapped_objects) == 0 ) {
-    throw("Must call store with list of UnmappedObjects");
+    throw('Must call store with list of UnmappedObjects');
   }
-
-  my $db = $options->{unmapped_object_adaptor}->db();
-  my $analysis_adaptor = $db->get_AnalysisAdaptor();
-
-  my $sth_reason = $options->{unmapped_object_adaptor}->prepare
-    ("INSERT INTO unmapped_reason (summary_description, full_description)".
-    " VALUES (?,?)");
-
-  my $sth_fetch_reason =
-  $options->{unmapped_object_adaptor}->prepare(
-    "SELECT 
-    unmapped_reason_id
-    FROM 
-    unmapped_reason
-    WHERE
-    full_description = ? 
-    " );
 
   foreach my $unmapped_object ( @$unmapped_objects ) {
-    if( !ref $unmapped_object || !$unmapped_object->isa("Bio::EnsEMBL::UnmappedObject") ) {
-      throw("UnmappedObject must be an Ensembl UnmappedObject, " .
-      "not a [".ref($unmapped_object)."]");
-    }
-      if($unmapped_object->is_stored($db)){
-      next;
-    } 
-
-    my $analysis = $unmapped_object->analysis();
-    throw("UnmappedObject must have an analysis object.".$unmapped_object->analysis."\n") if(!defined($analysis));
-
-    my $analysis_id;
-    if($analysis->is_stored($db)) {
-      $analysis_id = $analysis->dbID();
-    } else {
-      $analysis_id = $db->get_AnalysisAdaptor->store($analysis);
-    }
-
-# Check if unmapped reason is cached
-# Check if it has been added since the cache was created
-# Try to store it
-
-    if(!defined($options->{desc_to_id}{$unmapped_object->{'description'}})){
-      $sth_reason->bind_param(1,$unmapped_object->{'summary'},SQL_VARCHAR);
-      $sth_reason->bind_param(2,$unmapped_object->{'description'},SQL_VARCHAR);
-
-      if(! eval{ $sth_reason->execute(); 1 }){    
-# DBI Trace possible here?
-        warning($@); #
-        my $msg;
-        $msg .= "INSERT INTO unmapped_reason (summary_description, full_description) VALUES (";
-        $msg .=  $unmapped_object->{'summary'} .','. $unmapped_object->{'description'}. ')';
-# Temporary fix for naughty cross-dependency regulation code.
-        use Data::Dumper;
-        warning("Query: \n$msg");
-        print STDERR "UnmappedObject: \n";
-        print STDERR Dumper $unmapped_object;
-
-        $sth_fetch_reason->execute($unmapped_object->{'description'});
-
-        my $unmapped_reasons = $sth_fetch_reason->fetchrow_arrayref();
-        if(! defined($unmapped_reasons)){
-          my $msg = $unmapped_object->{'description'}. " unable to store. Check MySQL schema, maybe PK not big enough?";
-          throw($msg);
-        }
-        if(scalar @$unmapped_reasons != 1){
-          throw("Multiple results for this description");
-        }
-        $unmapped_object->{'unmapped_reason_id'} = $unmapped_reasons->[0];
-
-      } else{
-        $unmapped_object->{'unmapped_reason_id'} = $options->{unmapped_object_adaptor}->last_insert_id;
-      }
-      $options->{desc_to_id}{$unmapped_object->{'description'}} = $unmapped_object->{'unmapped_reason_id'};
-    } else{
-      $unmapped_object->{'unmapped_reason_id'} = $options->{desc_to_id}{$unmapped_object->{'description'}};
-    }
+    set_unmapped_reason_id($unmapped_object, $options);
   }
-  $sth_reason->finish();      
 
+  # Dump data into flat file
   my ($fh, $filename) = tempfile();
   foreach my $unmapped_object ( @$unmapped_objects ) {
     print $fh join("\t", ('\N', $unmapped_object->{'type'}, $unmapped_object->analysis->dbID, $unmapped_object->{'external_db_id'}, $unmapped_object->{'identifier'}, $unmapped_object->{'unmapped_reason_id'}, '\N', '\N', $unmapped_object->{'ensembl_id'}, $unmapped_object->{'ensembl_object_type'}, '\N'))."\n";
   }
   chmod 0644, $filename;
   $fh->autoflush;
+
+  # Load file into DB
   my $cmd = "mysql -u $options->{xref_user} -h $options->{xref_host} -D $options->{xref_dbname} -e 'LOAD DATA LOCAL INFILE \"$filename\" INTO TABLE unmapped_object'";
   if (defined $options->{xref_port}) {
     $cmd .= " -P $options->{xref_port}";
@@ -2088,19 +2413,127 @@ sub store_unmapped_objects {
   run($cmd);
   close $fh;
   unlink $filename;
+
+  return;
 }
 
-# ----------------------------------------------------------------------
-# Creates a hash ref describing an xref and appends it to the array ref
-#
-# Parameters:
-# - transcript stable id, 
-# - object_id of the Probe/ProbeSet/ProbeFeature
-# - object_type ("Probe", "ProbeFeature" or "ProbeSet")
-# - linkage_annotation string,
-# - transcript version,
-# - xrefs list of already created xrefs
-# - options: collection of global constants
+=head2 set_unmapped_reason_id
+
+  Description: Sets unmapped object reason id 
+  Arg1: Bio::EnsEMBL::Funcgen::UnmappedObject object 
+  Arg2: hash ref containing:
+  - unmapped_object_adaptor: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
+  - desc_to_id: hash ref associating an unmapped_reason description to its db id
+
+=cut
+
+sub set_unmapped_reason_id {
+  my ($unmapped_object, $options) = @_;
+  if ( !ref $unmapped_object || !$unmapped_object->isa('Bio::EnsEMBL::UnmappedObject') ) {
+    throw('UnmappedObject must be an Ensembl UnmappedObject, not a ['.ref($unmapped_object).']');
+  }
+
+  my $db = $options->{unmapped_object_adaptor}->db();
+
+  if ($unmapped_object->is_stored($db)){
+    next;
+  }
+
+  my $analysis = $unmapped_object->analysis();
+  throw('UnmappedObject must have an analysis object.'.$unmapped_object->analysis."\n") if(!defined($analysis));
+
+  my $analysis_id;
+  if($analysis->is_stored($db)) {
+    $analysis_id = $analysis->dbID();
+  } else {
+    $analysis_id = $db->get_AnalysisAdaptor->store($analysis);
+  }
+
+  # Check if unmapped reason is cached
+  if(!defined($options->{desc_to_id}{$unmapped_object->{'description'}})){
+    # Try to store it
+    $unmapped_object->{'unmapped_reason_id'} = create_unmapped_reason($db, $unmapped_object);
+    $options->{desc_to_id}{$unmapped_object->{'description'}} = $unmapped_object->{'unmapped_reason_id'};
+  } else{
+    $unmapped_object->{'unmapped_reason_id'} = $options->{desc_to_id}{$unmapped_object->{'description'}};
+  }
+}
+
+=head2 create_unmapped_reason
+
+  Description: Creates new record in unmapped_reason table
+  Arg1: Bio::EnsEMBL::Funcgen::UnmappedObject object
+  Arg2: Bio::EnsEMBL::Funcgen::DBSQL::UnmappedObjectAdaptor object
+  Returntype: DB ID
+
+=cut
+
+sub create_unmapped_reason {
+  my ($unmapped_object, $unmapped_object_adaptor) = @_;
+  # Insert new reason into unmapped reason table
+  my $sql_reason = '
+  INSERT INTO 
+    unmapped_reason 
+    (summary_description, full_description) 
+    VALUES 
+    (?,?)
+  ';
+  my $sth_reason = $unmapped_object_adaptor->prepare($sql_reason);
+
+  $sth_reason->bind_param(1,$unmapped_object->{'summary'},SQL_VARCHAR);
+  $sth_reason->bind_param(2,$unmapped_object->{'description'},SQL_VARCHAR);
+  my $id; 
+
+  if(! eval{ $sth_reason->execute(); 1 }){
+# DBI Trace possible here?
+    warning($@); #
+    my $msg;
+    $msg .= 'INSERT INTO unmapped_reason (summary_description, full_description) VALUES (';
+    $msg .=  $unmapped_object->{'summary'} .','. $unmapped_object->{'description'}. ')';
+# Temporary fix for naughty cross-dependency regulation code.
+    require Data::Dumper;
+    warning("Query: \n$msg");
+    print STDERR "UnmappedObject: \n";
+    print STDERR Dumper $unmapped_object;
+
+    # Search for reason into unmapped_reason table
+    my $sql_fetch_reason = '
+    SELECT 
+      unmapped_reason_id 
+    FROM unmapped_reason 
+      WHERE full_description = ?
+    ';
+    my $sth_fetch_reason = $options->{unmapped_object_adaptor}->prepare($sql);
+    $sth_fetch_reason->execute($unmapped_object->{'description'});
+
+    my $unmapped_reasons = $sth_fetch_reason->fetchrow_arrayref();
+    if(! defined($unmapped_reasons)){
+      throw($unmapped_object->{'description'}. ' unable to store. Check MySQL schema, maybe PK not big enough?');
+    }
+    if(scalar @$unmapped_reasons != 1){
+      throw('Multiple results for this description');
+    }
+    $id = $unmapped_reasons->[0];
+    $sth_fetch_reason->finish();
+  } else{
+    $id = $unmapped_object_adaptor->last_insert_id;
+  }
+  $sth_reason->finish();
+  return $id;
+}
+
+=head2 add_xref
+
+  Description: Creates a hash ref describing an xref and appends it to the array ref (arg6)
+  Arg1: transcript stable id,
+  Arg2: object_id of the Probe/ProbeSet/ProbeFeature
+  Arg3: object_type ("Probe", "ProbeFeature" or "ProbeSet")
+  Arg4: linkage_annotation string,
+  Arg5: transcript version,
+  Arg6: xrefs list of already created xrefs
+  Arg7: collection of global constants
+
+=cut
 
 sub add_xref {
   my ($transcript_id, $object_id, $object_type, $linkage_annotation, $xrefs, $xref_db, $options) = @_;
@@ -2110,36 +2543,43 @@ sub add_xref {
     store_xrefs($xrefs, $xref_db, $options->{transc_edb_id}, $options->{analysis}, $options->{transcript_xref_id}, $options);
     @$xrefs = ();
   }
+  return;
 }
 
-# ----------------------------------------------------------------------
-# Loads a bunch of xrefs in a single MySQL commands
-# rather than one-by-one.
-#
-# Parameters:
-#  - xrefs: hash ref (table) of hash refs (rows), populated by add_xref.
-#  Each row contains:
-#    * transcript ref 
-#    * linkage_annotation, 
-#    * object_id, 
-#    * object_type ("Probe", "ProbeFeature" or "ProbeSet")
-# - xref_db: Bio::EnsEMBL::DBSQL::DBAdaptor object for the external transcript db
-# - transc_edb_id: id of the external transcript db in the xref system
-# - analysis: Bio::EnsEMBL::Analysis object
-# - transcript_sref_id: hash ref linking Bio::EnsEMBL::Transcript objects to xref_id numbers
+=head2 store_xrefs
+
+  Description: Loads a bunch of xrefs in a single MySQL command
+  rather than one-by-one.
+  Arg1: hash ref (table) of hash refs (rows), populated by add_xref.
+  Each row contains:
+    * transcript ref
+    * linkage_annotation,
+    * object_id,
+    * object_type ("Probe", "ProbeFeature" or "ProbeSet")
+  Arg2: Bio::EnsEMBL::DBSQL::DBAdaptor object for the external transcript db
+  Arg3: id of the external transcript db in the xref system
+  Arg4: Bio::EnsEMBL::Analysis object
+  Arg5: hash ref linking Bio::EnsEMBL::Transcript objects to xref_id numbers
+
+=cut
 
 sub store_xrefs {
   my ($xrefs, $xref_db, $transc_edb_id, $analysis, $transcript_xref_id, $options) = @_;
+
+  # Dump table into flat file
   my ($fh, $filename) = tempfile();
   for my $xref (@$xrefs) {
     my ($transcript_id, $linkage_annotation, $object_id, $object_type) = @$xref;
     if (! defined $transcript_xref_id->{$transcript_id}) {
-      die("Transcript $transcript_id absent from xref table!\n");
+      croak("Transcript $transcript_id absent from xref table!\n");
     }
     print $fh join("\t", ('\N', $object_id, $object_type, $transcript_xref_id->{$transcript_id}, $linkage_annotation, $analysis->dbID))."\n";
   }
   chmod 0644, $filename;
+  # Remember to flush after you're done
   $fh->autoflush;
+
+  # Load into database
   my $cmd = "mysql -u $options->{xref_user} -h $options->{xref_host} -D $options->{xref_dbname} -e 'LOAD DATA LOCAL INFILE \"$filename\" INTO TABLE object_xref'";
   if (defined $options->{xref_port}) {
     $cmd .= " -P $options->{xref_port}";
@@ -2150,23 +2590,23 @@ sub store_xrefs {
   run($cmd);
   close $fh;
   unlink $filename;
+  return;
 }
 
-########################################################
-## System calls 
-## Wrapper function for system calls
-## Params:
-## - Command line
-## Actions:
-## - Runs command, prints out error in case of failure
-########################################################
+=head2 run
+
+  Description: Wrapper function for system calls
+  Runs command, prints out error in case of failure
+  Arg: Command line
+
+=cut
 
 sub run {
   my ($cmd) = @_;
   $Helper->log("Running $cmd\n", 0, 'append_date');
   my $exit_code = system($cmd);
   if ($exit_code != 0) {
-    die("Failure when running command\n$cmd\n")
+    croak("Failure when running command\n$cmd\n")
   }
+  return;
 }
-
