@@ -354,7 +354,8 @@ sub get_stable_id {
       $next_free_id += 1;
     }
 
-    $stable_id_hash{$new_id} = $stable_id;
+    # Creating stable id string, composed of prefix + 11 digit integer, front padded with 0s
+    $stable_id_hash{$new_id} = "ENSMUSR" . sprintf("%011d", $stable_id);
   }
   close $in;
   unlink $new;
@@ -538,7 +539,7 @@ sub get_cell_type_supporting_sets {
     my $CellType = $cta->fetch_by_name($ctype);
     my @ssets = ();
     foreach my $fs (@{$fsa->fetch_all_by_CellType($CellType)}) {
-      if ($fs->feature_class eq 'annotated') {
+      if ($fs->feature_class eq 'annotated' && $fs->has_status('IMPORTED')) {
         push @ssets, $fs;
       }
     }
@@ -776,7 +777,6 @@ sub process_file {
       start         => $thickStart + 1,
       end           => $thickEnd,
       strand        => 0,
-      display_label => '\\N',
       set           => $feature_set,
       feature_type  => $feature_type->{$feature_type_str},
       _bound_lengths => [$thickStart - $start, $end - $thickEnd],
