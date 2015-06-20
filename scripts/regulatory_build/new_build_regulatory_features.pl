@@ -884,7 +884,7 @@ sub extract_segmentation_state_summaries_2 {
 sub extract_ChromHMM_state_summaries {
   my ($options, $segmentation) = @_;
   print_log("Going through output of segmentation $segmentation->{name}\n");
-  my @bedfiles = glob "$segmentation->{location}/*.bed";
+  my @bedfiles = glob "$segmentation->{location}/*_segments.bed";
   $segmentation->{states} = extract_ChromHMM_states($options, $segmentation, \@bedfiles);
   $segmentation->{celltypes} = extract_ChromHMM_cells($options, $segmentation, \@bedfiles);
 
@@ -1665,7 +1665,7 @@ sub compute_regulatory_features {
   #############################################
 
   my $awk_mask = "";
-  if (defined $options->{mask}) {
+  if (defined $options->{mask} && -s $options->{mask} > 0) {
     $awk_mask = "| bedtools intersect -wa -v -a stdin -b $options->{mask}";
   }
   my $awk_contract = "awk 'BEGIN {OFS=\"\t\"} \$3 > \$2 + 1 {\$2 += 1; \$3 -= 1;} \$7 < \$2 {\$7 = \$2} \$8 > \$3 {\$8 = \$3} {print}'";
