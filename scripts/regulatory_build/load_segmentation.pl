@@ -317,7 +317,7 @@ sub create_feature_type {
     proximal => "Predicted Promoter Flank",
     distal => "Predicted Enhancer",
     ctcf => "CTCF enriched",
-    dead => "Predicted heterochomatin",
+    dead => "Predicted heterochromatin",
     weak => "Predicted low activity",
     gene => "Predicted Transcribed Region",
     repressed => "Predicted Repressed",
