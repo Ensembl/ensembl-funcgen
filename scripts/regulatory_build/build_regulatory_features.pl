@@ -714,7 +714,7 @@ my $analysis = Bio::EnsEMBL::Analysis->new
    -module_version  => 'NULL',
    -parameters      => 'NULL',
    -created         => 'NULL',
-   -description     => q({'reg_feats' => 'Features from <a href="/info/genome/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.', 'core' => 'Sites enriched for marks of open chromatin (e.g. Dnase1) or transcription factor binding sites.  Used to define the Regulatory Feature core regions in the <a href="http://www.ensembl.org/info/docs/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.', 'non_core' => 'Sites enriched for histone modifications or polymerase binding.  Used to define Regulatory Feature bound regions in the <a href="http://www.ensembl.org/info/docs/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.'}),
+   -description     => q({'reg_feats' => 'Features from <a href="/info/genome/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.', 'core' => 'Sites enriched for marks of open chromatin (e.g. Dnase1) or transcription factor binding sites.  Used to define the Regulatory Feature core regions in the <a href="/info/genome/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.', 'non_core' => 'Sites enriched for histone modifications or polymerase binding.  Used to define Regulatory Feature bound regions in the <a href="/info/genome/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.'}),
    -display_label   => 'Regulatory Build',
    -displayable     => 1,
    -web_data        => q({'type' => 'fg_regulatory_features', 'name' => 'Reg. Feats',  'display' =>'off', 'depth' => 10, 'default' => {'contigviewbottom' => 'normal', 'generegview' => 'normal'} }),
