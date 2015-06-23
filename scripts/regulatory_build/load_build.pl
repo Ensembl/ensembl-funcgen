@@ -36,8 +36,8 @@ perl load_new_assembly.pl --host $host --user $user --pass $pass --dbname homo_s
 
 Loads a segmentation BigBed file annotated by the new regulatory build into the database.
 Params:
-	* base_dir: directory with assembly name (e.g. ./hg38) create by build
-	* your usual Ensembl Funcgen MySQL params: host, user etc...
+  * base_dir: directory with assembly name (e.g. ./hg38) create by build
+  * your usual Ensembl Funcgen MySQL params: host, user etc...
 
 In short, the file $base_dir/segmentations/$segmentation/$cell_type_name.bb must exist
 
@@ -51,6 +51,7 @@ when running in parallel. In the good times, each job takes ~1h to run.
 use strict;
 use Getopt::Long;
 use File::Basename;
+use Data::Dumper qw (Dumper);
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use Bio::EnsEMBL::Analysis;
@@ -197,16 +198,13 @@ sub connect_db {
 #####################################################
 
 sub get_analysis {
-### Check whether analysis is already stored
-#TO DO Update the description text here? Use flat file import?
-#my $program_name = ($0 =~ s'.*/''g);
+  ### Check whether analysis is already stored
+  #TO DO Update the description text here? Use flat file import?
+  #my $program_name = ($0 =~ s'.*/''g);
   my ($db) = @_;
+  my $aa   = $db->get_AnalysisAdaptor();
 
-  my $aa  = $db->get_AnalysisAdaptor();
-  my $ana = $aa->fetch_by_logic_name('Regulatory_Build');
-
-  if ( not defined $ana ) {
-    my $analysis = Bio::EnsEMBL::Analysis->new
+  my $analysis = Bio::EnsEMBL::Analysis->new
       (
        -logic_name      => 'Regulatory_Build',
        -db              => undef,
@@ -221,15 +219,28 @@ sub get_analysis {
        -module_version  => undef,
        -parameters      => undef,
        -created         => undef,
-       -description     => q({'reg_feats' => 'Features from <a href="/info/genome/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.', 'core' => 'Sites enriched for marks of open chromatin (e.g. DNase1) or transcription factor binding sites.', 'non_core' =>  'Sites enriched for histone modifications or polymerase binding.'}),
+       -description     => q({'reg_feats' => 'Features from <a href="/info/genome/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.',).
+        q('core' => 'Sites enriched for marks of open chromatin (e.g. DNase1) or transcription factor binding sites.', ).
+        q('non_core' =>  'Sites enriched for histone modifications or polymerase binding.'}),
        -display_label   => 'Regulatory Build',
        -displayable     => 1,
-       -web_data        => q({'type' => 'fg_regulatory_features', 'name' => 'Reg. Feats',  'display' =>'off', 'depth' => 10, 'default' => {'contigviewbottom' => 'normal', 'generegview' => 'normal'} }),
+       -web_data        => q({'type' => 'fg_regulatory_features', 'name' => 'Reg. Feats',  'display' =>'off', 'depth' => 10, ).
+        q('default' => {'contigviewbottom' => 'normal', 'generegview' => 'normal'} }),
       );
 
+  my $ana = $aa->fetch_by_logic_name('Regulatory_Build');
+
+  if ( not defined $ana ) {
     $aa->store($analysis);
     return $analysis;
   } else {
+
+    if(! (($ana->compare($analysis) == 1) &&
+          ($ana->description eq $analysis->description) &&
+          ($ana->web_data    eq $analysis->web_data))){
+      die("Found stored Regulatory_Build analysis with unexepcted attributes. Please patch the database to match:\n".Dumper($analysis));
+    }
+
     return $ana;
   }
 }
@@ -343,7 +354,7 @@ sub get_stable_id {
   while (my $line = <$in>) {
     chomp $line;
     my @items = split /\t/, $line;
-    my $new_id = @items[3];
+    my $new_id = $items[3];
 
     my $stable_id = undef;
 
@@ -809,14 +820,15 @@ sub process_file {
 #####################################################
 
 sub compute_regulatory_annotations {
-  my ($options) = @_;
+  my $options = shift;
 
   my ($tmp_fh, $cell_type_regulatory_features) = tempfile();
-  my ($tmp_fh, $multicell_regulatory_features) = tempfile();
+  my ($tmp_fh1, $multicell_regulatory_features) = tempfile();
   my ($tmp_fh2, $annotations) = tempfile();
   my ($tmp_fh3, $motifs) = tempfile();
   my ($tmp_fh4, $out) = tempfile();
   close $tmp_fh;
+  close $tmp_fh1;
   close $tmp_fh2;
   close $tmp_fh3;
   close $tmp_fh4;

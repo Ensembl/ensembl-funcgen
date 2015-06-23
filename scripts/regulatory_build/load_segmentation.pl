@@ -128,7 +128,7 @@ sub clean_name {
 
 sub run {
   my ($cmd) = @_;
-  print cmd;
+  print $cmd;
   system($cmd) && die("Failed when running command:\n$cmd\n");
 }
 
@@ -201,17 +201,13 @@ sub create_analysis {
   my $aa  = $db->get_AnalysisAdaptor();
   my $ana = $aa->fetch_by_logic_name($logic_name);
 
-  if ( defined $ana ) {
-    return $ana;
-  }
-
-  $ana = Bio::EnsEMBL::Analysis->new
+  my $analysis = Bio::EnsEMBL::Analysis->new
     (
      -logic_name      => $logic_name,
      -db              => 'NULL',
      -db_version      => 'NULL',
      -db_file         => 'NULL',
-     -program         => "chromHMM/Segway",
+     -program         => $segmentation,
      -program_version => 'NULL',
      -program_file    => 'NULL', #Could use $program_name here, but this is only part of the build
      -gff_source      => 'NULL',
@@ -222,12 +218,23 @@ sub create_analysis {
      -created         => 'NULL',
      -displayable     => 1,
      -display_label   => "$segmentation Regulatory Segmentation",
-     -description     => "$cell_type <a href=\"/info/genome/funcgen/regulatory_segmentation.html\">Segway</a> segmentation state analysis",
-     -web_data        => "{'type' =>'fg_segmentation_features', 'colourset' => 'fg_segmentation_features','display' =>'off', key=>'seg_$cell_type' }",
+     -description     => qq($cell_type <a href="/info/genome/funcgen/regulatory_segmentation.html">$segmentation</a> segmentation state analysis"),
+     -web_data        => qq({'type' =>'fg_segmentation_features', 'colourset' => 'fg_segmentation_features','display' =>'off', key=>'seg_$cell_type' }),
     );
 
-  $aa->store($ana);
-  return $ana;
+   if ( not defined $ana ) {
+    $aa->store($analysis);
+    return $analysis;
+  } else {
+
+    if(! (($ana->compare($analysis) == 1) &&
+          ($ana->description eq $analysis->description) &&
+          ($ana->web_data    eq $analysis->web_data))){
+      die("Found stored $logic_name analysis with unexepcted attributes. Please patch the database to match:\n".Dumper($analysis));
+    }
+
+    return $ana;
+  }  
 }
 
 sub rollback_segmentation_FeatureSet {
