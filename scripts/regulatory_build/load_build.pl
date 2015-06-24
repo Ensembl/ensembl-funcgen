@@ -367,7 +367,18 @@ sub get_stable_id {
     }
 
     # Creating stable id string, composed of prefix + 11 digit integer, front padded with 0s
-    $stable_id_hash{$new_id} = "ENSMUSR" . sprintf("%011d", $stable_id);
+    my $species = $db->get_MetaContainer->get_production_name;
+    if ($species eq 'homo_sapiens') {
+      $stable_id_hash{$new_id} = "ENSR" . sprintf("%011d", $stable_id);
+    } elsif ($species eq 'mus_musculus') {
+      $stable_id_hash{$new_id} = "ENSMUSR" . sprintf("%011d", $stable_id);
+    } else {
+      # The general strategy (excluding human and mouse) is first letter of genus followed 
+      # by first two letters of species
+      my @components = split('_', $species);
+      my $triletter_code = substr($components[0], 0, 1) . substr($components[1], 0, 2);
+      $stable_id_hash{$new_id} = "ENS" . uc($triletter_code) . 'R' . sprintf("%011d", $stable_id);
+    } 
   }
   close $in;
   unlink $new;
