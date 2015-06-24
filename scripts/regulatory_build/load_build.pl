@@ -159,6 +159,7 @@ sub archive_previous_build {
   run("$connection -e 'UPDATE data_set SET name = CONCAT(name, \"_v$version\") WHERE name LIKE \"RegulatoryFeatures:%\" AND name NOT LIKE \"%_v$version\"'");
   run("$connection -e 'UPDATE feature_set SET name = CONCAT(name, \"_v$version\") WHERE name LIKE \"RegulatoryFeatures:%\" AND name NOT LIKE \"%_v$version\"'");
   run("$connection -e 'UPDATE meta SET meta_key = CONCAT(meta_key, \"_v$version\") WHERE meta_key LIKE \"regbuild.%\" AND meta_key NOT LIKE \"%_v$version\"'");
+  run("$connection -e 'UPDATE regbuild_string SET name = CONCAT(name, \"_v$version\") WHERE name NOT LIKE \"%_v$version\"'");
   $options->{old_version} = $version;
 }
 
