@@ -75,9 +75,13 @@ our $start_time = time;
 
 main();
 
-####################################################
-## Overview
-####################################################
+=header2 main
+
+  Description: Overall process
+  Returntype: undef
+
+=cut
+
 sub main {
   print_log("Getting options\n");
   my $options = get_options();
@@ -107,13 +111,14 @@ sub main {
   update_meta_table($options, $db);
 }
 
-########################################################
-## Print conveninence
-## Params:
-## - String
-## Actions:
-## - Prints string, with time stamp in front
-########################################################
+=header2 print_log
+
+  Description: Print conveninence
+  Arg1: String
+  Returntype: undef
+  Side effects: Prints string, with time stamp in front
+
+=cut
 
 sub print_log {
   my ($str) = @_;
@@ -121,9 +126,13 @@ sub print_log {
   print "[$runtime] $str";
 }
 
-####################################################
-## Command line options
-####################################################
+=header2 get_options
+
+  Description: Command line options
+  Returntype: hashreof
+
+=cut
+
 sub get_options {
   my %options = ();
   GetOptions (
@@ -143,9 +152,15 @@ sub get_options {
   return \%options;
 }
 
-####################################################
-## Archiving old build
-####################################################
+=header2
+
+  Description: Archiving old build
+  Arg1: options hash ref
+  Arg2: Bio::EnsEMBL::Funcgen::DBAdaptor object
+  Side effect: write into database
+  
+=cut
+
 sub archive_previous_build {
   my ($options, $db) = @_;
   my $connection = "mysql -u $options->{user} -h $options->{host} -D $options->{dbname}";
@@ -163,9 +178,14 @@ sub archive_previous_build {
   $options->{old_version} = $version;
 }
 
-####################################################
-## Connecting to the DB
-####################################################
+=header2 connect_db
+
+  Description: Connecting to the DB
+  Arg1: options hash ref
+  Returntype: Bio::EnsEMBL::Funcgen::DBAdaptor object
+
+=cut 
+
 sub connect_db {
   my ($options) = @_;
   my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
@@ -192,11 +212,13 @@ sub connect_db {
   return $db;
 }
 
-#####################################################
-# Create/Get analysis for Build
-#####################################################
-# Params: Bio::EnsEMBL::Funcgen::DBAdaptor
-#####################################################
+=header2 get_analysis
+
+  Description: Create/Get analysis for Build
+  Arg1: Bio::EnsEMBL::Funcgen::DBAdaptor
+  Returntype: Bio::EnsEMBL::Funcgen::Analysis object
+
+=cut
 
 sub get_analysis {
   ### Check whether analysis is already stored
@@ -246,11 +268,15 @@ sub get_analysis {
   }
 }
 
-########################################################
-## Removing unwanted characters 
-## Quick string normalisation function tor remove weird 
-## characters froms file names and remove variants
-########################################################
+=header2 clean_name
+
+  Description: Removing unwanted characters 
+    Quick string normalisation function tor remove weird 
+    characters froms file names and remove variants
+  Arg1: String
+  Returntype: String
+
+=cut
 
 sub clean_name {
   my $string = shift;
@@ -261,11 +287,14 @@ sub clean_name {
   return $string;
 }
 
-#####################################################
-# Get list of cell types
-#####################################################
-# Params: The base_directory name
-#####################################################
+=header2 get_cell_type_names
+
+  Description: Get list of cell types
+  Arg1: The base_directory name
+  Arg2: Bio::EnsEMBL::Funcgen::DBAdaptor object
+  Returntype: array ref
+
+=cut
 
 sub get_cell_type_names {
   my ($base_dir, $db) = @_;
@@ -288,11 +317,14 @@ sub get_cell_type_names {
   return \@cell_types;
 }
 
-#####################################################
-# Convenience wrapper to run the commandline safely 
-#####################################################
-# Params: command line command string
-#####################################################
+=header2 run
+
+  Description: Convenience wrapper to run the commandline safely 
+  Arg1: command line command string
+  Returntype: undef
+  Side effects: runs command
+
+=cut
 
 sub run {
   my ($cmd) = @_;
@@ -300,12 +332,14 @@ sub run {
   system($cmd) && die("Failed when running command:\n$cmd\n");
 }
 
+=header2
 
-#####################################################
-# Alternate assign stable ids to features
-#####################################################
-# Params: Bio::EnsEMBL::Funcgen::DBAdaptor
-#####################################################
+  Description: Assign stable ids to features
+  Arg1: options hash ref
+  Arg2: Bio::EnsEMBL::Funcgen::DBAdaptor
+  Returntype: hashref 
+
+=cut
 
 sub get_stable_id {
   my ($options, $db) = @_;
@@ -387,6 +421,15 @@ sub get_stable_id {
   return \%stable_id_hash;
 }
 
+=header2 get_overlaps_between_files
+
+  Description: Computes overlaps between two builds contained in bed files
+  Arg1: old build file location 
+  Arg2: new build file location
+  Returntype: list ref containing: array ref of overlaps, maximum of the old build's stable ids
+
+=cut 
+
 sub get_overlaps_between_files {
   my ($old, $new) = @_;
   
@@ -419,11 +462,14 @@ sub get_overlaps_between_files {
   return (\@overlaps, $max_id);
 }
 
-#####################################################
-# Get slice for each chromosome
-#####################################################
-# Params: - DBAdaptor
-#####################################################
+=header2 get_slices
+
+  Description: Get slice for each chromosome
+  Arg1: Bio::EnsEMBL::Funcgen::DBAdaptor object
+  Returntype: hashref:
+    - seq_region_name => Bio::EnsEMBL::Slice object
+
+=cut
 
 sub get_slices {
   my ($db) = @_;
@@ -435,13 +481,15 @@ sub get_slices {
   return \%hash;
 }
 
-#####################################################
-# Create/Get FeatureSet for each cell type
-#####################################################
-# Params: - Analysis object
-#         - Array ref of cell types
-#         - DBAdaptor
-#####################################################
+=header2 get_regulatory_FeatureSets
+
+  Description: Create/Get FeatureSet for each cell type
+  Arg1: Analysis object
+  Arg2: Array ref of cell types
+  Arg2: Bio::EnsEMBL::Funcgen::DBAdaptor object
+  Returntype: hashref: cell type name => Bio::EnsEMBL::Funcgen::FeatureSet
+
+=cut
 
 sub get_regulatory_FeatureSets {
   my ($analysis, $ctypes, $db) = @_;
@@ -545,14 +593,15 @@ sub get_regulatory_FeatureSets {
   return \%rf_sets;
 }
 
-#####################################################
-# Gets supporting feature sets for cell type
-#####################################################
-# Params: 
-# * ctypes: arrayref of cell type names
-# * cta: Bio::EnsEMBL::Funcgen::DBSQL::CellTypeAdaptor object
-# * fsa: Bio::EnsEMBL::Funcgen::DBSQL::FeatureSetAdaptor object
-#####################################################
+=header2 get_cell_type_supporting_set
+
+  Description: Gets supporting feature sets for cell type
+  Arg1: arrayref of cell type names
+  Arg2: Bio::EnsEMBL::Funcgen::DBSQL::CellTypeAdaptor object
+  Arg3: Bio::EnsEMBL::Funcgen::DBSQL::FeatureSetAdaptor object
+  Returntype: hash ref: celltype name => array ref of Bio::EnsEMBL::Funcgen::FeatureSet objects
+
+=cut
 
 sub get_cell_type_supporting_sets {
   my ($ctypes, $cta, $fsa) = @_;
@@ -573,13 +622,15 @@ sub get_cell_type_supporting_sets {
   return \%ctype_ssets;
 }
 
-#####################################################
-# Store meta strings in regbuild_string table
-#####################################################
-# Params: 
-# * Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
-# * Bio::EnsEMBL::Funcgen::Dataset object
-#####################################################
+=header2 define_regbuild_meta_strings
+
+  Description: Store meta strings in regbuild_string table
+  Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
+  Arg2: Bio::EnsEMBL::Funcgen::Dataset object
+  Returntype: undef
+  Side effects: enters rows into regbuild_string table 
+
+=cut
 
 sub define_regbuild_meta_strings{
   my ($db, $dset) = @_;
@@ -626,13 +677,15 @@ sub define_regbuild_meta_strings{
   store_regbuild_meta_strings($ds_adaptor, \%reg_strings);
 }
 
-#####################################################
-# Store meta strings in regbuild_string table
-#####################################################
-# Params: 
-# * Bio::EnsEMBL::Funcgen::DBSQL::DatasetAdaptor object
-# * Hashref containing scalar => scalar
-#####################################################
+=header2 store_regbuild_meta_strings
+
+  Description: Store meta strings in regbuild_string table
+  Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DatasetAdaptor object
+  Arg2: Hashref containing celltype name => regbuild string
+  Returntype: undef
+  Side effects: adds rows to regbuild_string table
+
+=cut
 
 sub store_regbuild_meta_strings{
   my ($ds_adaptor, $reg_strings) = @_;
@@ -652,12 +705,14 @@ sub store_regbuild_meta_strings{
   }
 }
 
-#####################################################
-# Count the number of active features for each temporary
-# ID across all cell types
-#####################################################
-# Params: - Base directory
-#####################################################
+=header2 compute_counts
+
+  Description: Count the number of active features for each temporary
+  ID across all cell types
+  Arg1: Base directory
+  Returntype: temp id => scalar
+
+=cut
 
 sub compute_counts {
   my ($base_dir) = @_;
@@ -667,6 +722,17 @@ sub compute_counts {
   }
   return $count_hash;
 }
+
+=header2 count_active
+
+  Description: Count the number of active features for each temporary
+  ID across one cell types
+  Arg1: BigBed file location
+  Arg2: Hashref
+  Returntype: undef
+  Side effects: updates hash ref
+
+=cut
 
 sub count_active {
   my ($filename, $count_hash) = @_;
@@ -687,12 +753,14 @@ sub count_active {
   unlink $tmp_name;
 }
 
-#####################################################
-# Get a hashref from feature type name to FeatureType 
-# object
-#####################################################
-# Params: - DBAdaptor object
-#####################################################
+=header2 get_feature_types
+
+  Description: Get a hashref from feature type name to FeatureType 
+   object
+  Arg1: Bio::EnsEMBL::Funcgen::DBAdaptor object
+  Returntype: Bio::EnsEMBL::Funcgen::FeatureType object
+
+=cut
  
 sub get_feature_types {
   my ($db) = @_;
@@ -742,19 +810,20 @@ sub get_feature_types {
   return $feature_type;
 }
 
-#####################################################
-# Creates the actual RegulatoryFeature objects
-#####################################################
-# Params: - Base directory
-#         - feature_set: Hash ref: cell type name -> FeatureSet
-#         - stable_id: Hash ref: temporary id -> new id
-#         - count_hash: Hash ref: temporary id -> count
-#         - seq_region_ids: Hash ref: chromosome name -> seq_region_id
-#         - host
-#         - user
-#         - pass
-#         - dbname
-#####################################################
+=header2 compute_regulatory_features
+
+  Description: Creates the actual RegulatoryFeature objects
+  Arg1: Options hashref
+  Arg2: Hash ref: cell type name -> FeatureSet
+  Arg3: Hash ref: label -> FeatureType
+  Arg3: Hash ref: temporary id -> stable id
+  Arg4: Hash ref: temporary id -> count
+  Arg5: hash ref: chromosome name -> seq_region_id
+  Arg6: Bio::EnsEMBL::Funcgen::DBAdaptor object
+  Returntype: undef
+  Side effects: writes into regulatory_feature table
+
+=cut
 
 sub compute_regulatory_features {
   my ($options, $feature_set, $feature_type, $stable_id, $count_hash, $slice, $db) = @_;
@@ -763,6 +832,21 @@ sub compute_regulatory_features {
     load_celltype_build($options->{base_dir}, $feature_set->{$cell_type}, $stable_id, $count_hash, $slice, $cell_type, $feature_type, $rfa);
   }
 }
+
+=header2 load_celltype_build
+
+  Description: loads the data from the build's BigBed files into the database
+  Arg1: filehandle into input file
+  Arg2: Bio::EnsEMBL::Funcgen::FeatureSet
+  Arg3: hashref: bedfile id => stable id
+  Arg4: hashref: bedfile id => integer 
+  Arg5: hashref: slice name => Bio::EnsEMBL::Slice
+  Arg6: hashref: label => Bio::EnsEMBL::Funcgen::FeatureType
+  Arg7: Bio::EnsEMBL::Funcgen::RegulatoryFeatureAdaptor
+  Returntype: undef
+  Side effects: writes into regulatory_feature table
+
+=cut
 
 sub load_celltype_build {
   my ($base_dir, $feature_set, $stable_id, $count_hash, $slice, $cell_type, $feature_type, $rfa) = @_;
@@ -780,6 +864,21 @@ sub load_celltype_build {
   close $tmp;
   unlink $tmp_name;
 }
+
+=header2 process_file
+
+  Description: loads the data from a Bed file into the database
+  Arg1: filehandle into input file
+  Arg2: Bio::EnsEMBL::Funcgen::FeatureSet
+  Arg3: hashref: bedfile id => stable id
+  Arg4: hashref: bedfile id => integer 
+  Arg5: hashref: slice name => Bio::EnsEMBL::Slice
+  Arg6: hashref: label => Bio::EnsEMBL::Funcgen::FeatureType
+  Arg7: Bio::EnsEMBL::Funcgen::RegulatoryFeatureAdaptor
+  Returntype: undef
+  Side effects: writes into regulatory_feature table
+
+=cut
 
 sub process_file {
   my ($fh, $feature_set, $stable_id, $count_hash, $slice, $feature_type, $rfa) = @_;
@@ -826,14 +925,14 @@ sub process_file {
   }
 }
 
-#####################################################
-# Assign motifs and annotations to regulatory features
-#####################################################
-# Params: - host
-#         - user
-#         - pass
-#         - dbname
-#####################################################
+=header2 compute_regulatory_annotations
+
+  Description: Assign motifs and annotations to regulatory features
+  Arg1: options hash ref
+  Returntype: undef
+  Side effects: writes into regulatory_attributes table
+
+=cut
 
 sub compute_regulatory_annotations {
   my $options = shift;
@@ -873,16 +972,21 @@ sub compute_regulatory_annotations {
   unlink $out;
 }
 
-#####################################################
-# Updates data in metatable 
-#####################################################
-# Params: - Bio::EnsEMBL::Funcgen::DBAdaptor
-#####################################################
+=header2 update_meta_table
+
+  Description: Updates data in metatable 
+  Arg1: options hash ref
+  Arg2: Bio::EnsEMBL::Funcgen::DBAdaptor
+  Returntype: undef
+  Side effects: enters new values in meta table
+
+=cut 
 
 sub update_meta_table {
   my ($options, $db) = @_;
   my $mc = $db->get_MetaContainer();
   my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
+  # Seriously localtime, you're useless
   $year += 1900;
   $mon += 1;
   my ($main, $update);
