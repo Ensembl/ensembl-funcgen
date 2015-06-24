@@ -534,8 +534,9 @@ sub get_regulatory_FeatureSets {
     $dsa->store_status('DISPLAYABLE', $dset);
   }
     
+  my $assembly = $db->dnadb->get_MetaContainer->single_value_by_key('assembly.default');
   foreach my $fset(@fsets){
-    foreach my $fs_state(('DISPLAYABLE','IMPORTED','IMPORTED_GRCh38','MART_DISPLAYABLE')) {
+    foreach my $fs_state(('DISPLAYABLE','IMPORTED','IMPORTED_' . $assembly, 'MART_DISPLAYABLE')) {
       $fsa->store_status($fs_state, $fset);
     }
   }
@@ -562,7 +563,7 @@ sub get_cell_type_supporting_sets {
     my $CellType = $cta->fetch_by_name($ctype);
     my @ssets = ();
     foreach my $fs (@{$fsa->fetch_all_by_CellType($CellType)}) {
-      if ($fs->feature_class eq 'annotated' && $fs->has_status('IMPORTED')) {
+      if ($fs->feature_type eq 'annotated' && $fs->has_status('IMPORTED')) {
         push @ssets, $fs;
       }
     }
