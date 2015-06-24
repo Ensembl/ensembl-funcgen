@@ -592,13 +592,16 @@ sub define_regbuild_meta_strings{
   if (! @ssets) {
     die('You must provide a DataSet with associated supporting sets');
   }
+  if ($dset->cell_type->name eq 'MultiCell') {
+    @ssets = grep {$_->feature_class != 'Polymerase' && $_->feature_class != 'Histone'}, @ssets;
+  }
   
   ## Extract core supporting sets
   my @ffset_ids = ();
   foreach my $class ("Transcription Factor", "Transcription Factor Complex", "Open Chromatin") {
     foreach my $ft (@{$db->get_adaptor('FeatureType')->fetch_all_by_class($class)}) {
       foreach my $fset (@{$db->get_adaptor('FeatureSet')->fetch_all_by_FeatureType($ft)}) {
-	if ($fset->cell_type->name eq $dset->cell_type->name) {
+	if ($dset->cell_type->name eq 'MultiCell' || $fset->cell_type->name eq $dset->cell_type->name) {
           push @ffset_ids, $fset;
         }
       }
