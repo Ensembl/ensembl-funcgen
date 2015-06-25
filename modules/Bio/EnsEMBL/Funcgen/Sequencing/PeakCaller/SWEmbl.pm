@@ -42,7 +42,7 @@ sub out_file_types   { return ['txt'];               }
 sub new {
   my $caller          = shift;
   my $class           = ref($caller) || $caller;
-  my $self            = $class->SUPER::new(-is_half_open => 1, @_);
+  my $self            = $class->SUPER::new(@_);  # @_ will over-ride -is_half_open
   #This needs setting here, ss we may need it for reload (i.e. without calling run)      
   $self->{out_file} ||= $self->out_file_prefix.'.'.$self->out_file_types->[0];
   return $self;
@@ -55,9 +55,13 @@ sub run {
   my ($align_file, $out_file_prefix, $suffix, $control_file, 
     $gzipped_align, $gzipped_control) = @{$self->file_info};
     
-  my $format_switch = $fswitches{lc($suffix)};#auto-vivifies
+  my $format_switch = $fswitches{lc($suffix)}; # auto-vivifies
   throw("$suffix is not recognised as a valid SWEmbl input format") if(! $format_switch);
         
+  # Slight work around here as is_half_open for SWEmbl is defined by input, not output format
+  # This is normally set in PeakCaller::init_files via new.
+  $self->{is_half_open} = 1 if lc($suffix) eq 'bed';
+
   #Set -z 
   my $compressed = $gzipped_align ? ' -z ' : '';
         
