@@ -115,6 +115,7 @@ $array_chip = $array->get_ArrayChip_by_design_id('TEST');
 isa_ok($array_chip, 'Bio::EnsEMBL::Funcgen::ArrayChip', 'Array::add_ArrayChip & get_ArrayChip_by_design_id');
 is(scalar(@{$array->get_array_chip_ids}), 2, 'Array::add_ArrayChip & get_array_chip_ids returns expect amount');
 
+done_testing();
 
 
 
