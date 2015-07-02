@@ -351,8 +351,9 @@ sub run {
   }
   else{
     $final_file =~ s/.*_([0-9]+)$/$1/;
-    $final_file  =~ s/^[0]+//;
-    
+    $final_file =~ s/^[0]+//;
+    $final_file ||= 0;  #Handle the 0000 case
+  
     $self->debug(1, "Matching final_file index $final_file vs new_fastq max index ".$#new_fastqs);
     
     if($final_file != $#new_fastqs){
@@ -361,10 +362,19 @@ sub run {
     }  
   }
   
+  # This fails sometimes as the system takes a little while to update the info 
+  # available to du. Is stat or ls more reliable here.
+  # Just sleep for now.
+
+  sleep(60);  # Allow du info to be updated.
+
   #and the unzipped files are at least as big as the input gzipped files
-  @du = run_backtick_cmd("du -ck @new_fastqs");   
+  @du = run_backtick_cmd("du -ck @new_fastqs");  
+   warn "du -ck @new_fastqs\n@du"; 
   (my $post_du = $du[-1]) =~ s/[\s]+total//; 
   
+ 
+
   $self->helper->debug(1, 'Merged and split '.scalar(@fastqs).' (total '.$pre_du.'k) input fastq files into '.
     scalar(@new_fastqs).' tmp fastq files (total'.$post_du.')');
   
@@ -383,11 +393,14 @@ sub run {
     #Would need to pass gender, analysis logic_name 
     
     $self->branch_job_group(2, [{%batch_params,
-                                 set_type   => 'ResultSet',
-                                 set_name   => $rset->name,
-                                 dbID       => $rset->dbID,
+                                 #set_type   => 'ResultSet',
+                                 #set_name   => $rset->name,
+                                 #dbID       => $rset->dbID,
                                  output_dir => $self->work_dir, #we could regenerate this from result_set and run controls
-                                 fastq_file => $fq_file}]);
+                                 # Add 
+                                 gender     => $rset->cell_type->gender,
+                                 analysis   => $rset->analysis->logic_name,   
+                                 query_file => $fq_file}]);
   }
 
   my %signal_info;

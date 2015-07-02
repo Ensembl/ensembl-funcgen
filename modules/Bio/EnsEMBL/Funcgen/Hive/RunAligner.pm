@@ -66,22 +66,19 @@ sub fetch_input {   # fetch parameters...
   $self->check_analysis_can_run;
   
   $self->SUPER::fetch_input();
-  my $rset       = $self->fetch_Set_input('ResultSet');
-  #$self->set_param_method('query_file', $self->param_required('fastq_file'));
-  my $fastq_file = $self->get_param_method('fastq_file', 'required');
+
+  my $query_file = $self->param_required('query_file'); #fasta or fastq
 
   #$self->get_param_method('output_dir', 'required'); 
   #This should have been set to a 'work' dir in PreprocessFastqs 
   #Do we even need this? The fastq chunks will already be in a work dir?  
 
-  my $analysis     = $rset->analysis;
+  my $logic_name = $self->param_required('analysis');
+  my $analysis   = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($logic_name);
   #program is no passed to Aligner so validate here
   my $aligner      = $analysis->program || 
     throw('Aligner analysis cannot have an undef program attribute:'.$analysis->logic_name);
-  #$self->set_param_method('analysis_parameters', $analysis->parameters);
   my $align_module = validate_package_path($analysis->module); 
-  #$self->set_param_method('align_module', 
-  #                        $self->validate_package_from_path($analysis->module));
 
   #validate program_file isn't a path?
   #would redefine bwa bin in the config for this analysis
@@ -91,10 +88,10 @@ sub fetch_input {   # fetch parameters...
   my $pfile_path = ( defined $self->bin_dir ) ? $self->bin_dir.'/'.$pfile : $pfile;
   #$self->set_param_method('program_file', $pfile_path)
   
-  my $ref_fasta = $self->param_silent('indexed_ref_fasta');#This is batch flown
+  my $ref_fasta = $self->param_silent('indexed_ref_fasta');  # This is batch flown
    
   if(! defined $ref_fasta){ 
-    my $gender         = $rset->cell_type->gender || 'male';
+    my $gender         = $self->param_silent('gender') || 'male';
     my $species        = $self->species; 
   
     #TODO: Check if the index file is really there? Eventually the bwa output will tell you though
@@ -144,7 +141,7 @@ sub fetch_input {   # fetch parameters...
   my $align_runnable = $align_module->new
    (-program_file      => $pfile_path,
     -parameters        => $analysis->parameters, 
-    -query_file        => $fastq_file,
+    -query_file        => $query_file,
     -target_file       => $ref_fasta,
     -debug             => $self->debug,
     %aparams                                    );
