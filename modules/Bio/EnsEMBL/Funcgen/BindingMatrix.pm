@@ -109,7 +109,7 @@ sub new {
   my $self      = $obj_class->SUPER::new(@_);
   
   my ( $name, $analysis, $freqs, $desc, $ftype, $thresh ) = rearrange
-	 (['NAME', 'ANALYSIS', 'FREQUENCIES', 'DESCRIPTION', 'FEATURE_TYPE', 'THRESHOLD'], @_);
+   (['NAME', 'ANALYSIS', 'FREQUENCIES', 'DESCRIPTION', 'FEATURE_TYPE', 'THRESHOLD'], @_);
   
   throw('Must supply a -name parameter')        if ! defined $name;
   throw('Must supply a -frequencies parameter') if ! defined $freqs;
@@ -365,8 +365,8 @@ sub relative_affinity {
   ($seq = uc($seq)) =~ s/\s+//g; #be forgiving of case and spaces
   
   if($seq =~ /[^ACGT]/){
-    warn($self->name." sequence contains in-valid [^acgtACGT] characters:\t$seq");	
-    return undef;
+    warn($self->name." sequence contains in-valid [^acgtACGT] characters:\t$seq");
+    return; # Not undef which can be true in list context
   }
   
   if(length($seq) != $self->length){
@@ -380,7 +380,7 @@ sub relative_affinity {
   my $weight_matrix = $self->weights;
 
   for my $i(0..$#bases){
-    $log_odds += $weight_matrix->{$bases[$i]}->[$i];	
+    $log_odds += $weight_matrix->{$bases[$i]}->[$i];  
   }
   
   #This log scale may be quite unrealistic, but useful just for comparison.
@@ -464,9 +464,9 @@ sub length {
 =cut
 
 sub weights {
-	my $self    = shift;
+  my $self    = shift;
   $self->_process_frequency_matrix if ! defined $self->{weights};
-	return $self->{weights};	
+  return $self->{weights};  
 }
 
 
