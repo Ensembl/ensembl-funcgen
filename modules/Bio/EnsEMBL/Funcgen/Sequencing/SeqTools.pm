@@ -23,6 +23,7 @@ use Bio::EnsEMBL::Funcgen::InputSubset;
 use Bio::EnsEMBL::Funcgen::Experiment;
 use Bio::EnsEMBL::Utils::SqlHelper;
 
+use File::Temp                             qw( tempfile );
 use File::Basename                         qw( dirname basename );
 use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref );
 use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
@@ -62,6 +63,7 @@ use vars qw( @EXPORT );
   run_peak_caller
   split_fastqs
   validate_sam_header
+  write_chr_length_file
   );
 
 #This is designed to act as an object and as a standard package
@@ -2734,6 +2736,33 @@ sub explode_fasta_file{
 
   return \@lines;
 }
+
+# Environment should call ascript to write this and set path in env for pipeline config
+# else will be called in tmp file mode for each analysis
+
+
+sub write_chr_length_file{
+  my ($slices, $out_file) = @_;
+  my $fh;
+
+  if(! defined $out_file){ 
+    ($fh, $out_file) = tempfile(); 
+    #DIR => '/tmp/'); #, UNLINK => 0); # Do not delete on exit? 
+  }
+  else{
+    # Use flock here for safety?
+    # over-write by default?
+    $fh = open_file($out_file, '>');
+  }
+
+  foreach my $slice (@{$slices}) {
+    print $fh join("\t", ($slice->seq_region_name, $slice->end - $slice->start + 1)) . "\n";
+  }
+
+  close $fh;
+  return $out_file;
+}  
+
 
 1;
 
