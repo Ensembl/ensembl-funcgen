@@ -121,8 +121,10 @@ my %set_adaptor_methods =
 
 
 
-my @iset_only_params = qw( allow_no_controls control_feature_types skip_absent
+my @iset_only_params = qw( allow_no_controls skip_absent
                            force_embargoed  ignore_embargoed  identify_controls  control_experiments );
+# No longer iset_only as defaults are present in BaseSequenceAnalysis config
+#control_feature_types 
                           
 my @rset_only_params = qw( only_replicates );
 
@@ -370,7 +372,7 @@ sub _is_replicate_ResultSet{
 }
 
 
-#todo This needs splitting out into separate sub for each set type
+#todo This needs splitting out into separate sub for each set type (and then some)
 
 
 sub run {   # Check parameters and do appropriate database/file operations... 
@@ -604,8 +606,6 @@ sub run {   # Check parameters and do appropriate database/file operations...
   ### BUILD THE OUTPUT ID FOR EACH SET ###
   my (%output_ids, %rep_cache, %embargoed_issets, %to_download_issets, %control_reqd);
   my $tracking_adaptor = $self->tracking_adaptor;
-  my $force_embargoed  = $self->force_embargoed;
-  my $ignore_embargoed = $self->ignore_embargoed;
   
   #TODO add more STDOUT if in -no_write mode
   
@@ -629,7 +629,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
       $throw .= 
         $self->_cache_InputSubset_output_id($set, $tracking_adaptor, \%output_ids, \%ctrl_cache, 
                                             \%rep_cache, \%to_download_issets, \%embargoed_issets, 
-                                            $force_embargoed, $ignore_embargoed, $x_grp_ctrls, 
+                                            $self->force_embargoed, $self->ignore_embargoed, $x_grp_ctrls, 
                                             $use_exp_id, $self->allow_no_controls, $rel_month, 
                                             $no_rel_date, $batch_params, $dataflow_params, 
                                             \%control_reqd);
@@ -669,7 +669,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
  KEY: foreach my $key(keys %output_ids){
     #we need the key to access embargoes/to_download_issets cache 
     my $oid = $output_ids{$key};  
-    
+ 
     #Also need to check the embargoed status, and skip InputSubsets which are dependant on 
     #an embargoed subset
     #no write to support listing sets before actually seeding them
@@ -698,12 +698,12 @@ sub run {   # Check parameters and do appropriate database/file operations...
                         join(', ', @{$ctrls->{embargoed}})."\nRelated InputSubsets:\n\t".
                         join("\n\t", keys %{$oid->{input_subset_ids}})."\n";
           
-          if($ignore_embargoed){
+          if($self->ignore_embargoed){
             $warn_msg .= "Skipping dataflow for the following InputSubets.\n$msg";   
             $branch = 0;            
             next KEY;
           }
-          elsif($force_embargoed){
+          elsif($self->force_embargoed){
             $warn_msg .= "Forcing dataflow for embargoed controls ($key):\t".
                           join(', ', @{$ctrls->{embargoed}})."\n";
             $oid->{input_subset_ids}->{controls} = $ctrls;   #add ctrls back in!
@@ -723,12 +723,12 @@ sub run {   # Check parameters and do appropriate database/file operations...
         
         foreach my $iset_name(values %{$embargoed_issets{$key}}){
         
-          if($ignore_embargoed){
+          if($self->ignore_embargoed){
             $warn_msg .= "\nSkipping dataflow for InputSubset with embargoed signal subsets:\t$iset_name\n";   
             delete $oid->{input_subset_ids}->{$iset_name};
           
           }
-          elsif($force_embargoed){
+          elsif($self->force_embargoed){
             $warn_msg .= "Forcing dataflow for InputSubset with embargoed signal subsets:\t$iset_name\n";
           }
           else{
@@ -785,7 +785,8 @@ sub run {   # Check parameters and do appropriate database/file operations...
     else{ #ResultSet
      
       if($no_write){
-        print STDOUT "\t".$oid->{set_name}.' ( '.$oid->{dbID}." )\n";
+        print STDOUT "ResultSets Identified\t".$key.":\n\t".
+          join(', ', map {$_->{set_name}.'('.$_->{dbID}.')'} @$oid)."\n";
       }
       else{
      
@@ -808,7 +809,8 @@ sub run {   # Check parameters and do appropriate database/file operations...
           my $funnel_oid = {%$batch_params,
                             %$dataflow_params,
                             dbIDs     => [], 
-                            set_names => []}; 
+                            set_names => [],
+                            set_type  => 'ResultSet'}; 
                             
           foreach my $id(@$oid){
             push @{$funnel_oid->{dbIDs}},     $id->{dbID};
@@ -853,12 +855,26 @@ sub _cache_ResultSet_output_id{
     #Appened analysis name here, just in case we are running
     #multiple analyses for the same set of data.
   }
-   
+  
+
+  #if( ! exists $oids->{$group_key}){
+  #  $oids->{$group_key} = {%$batch_params,
+  #                         %$dataflow_params,
+  #                         dbIDs => [], 
+  #                         set_names => []};
+  #} 
+
+  # Is this right? We defo need some grouping here
+  # For control conversion?
+  # No, we always have a single id for for each job
+  # So what is the group key for here?
+
   $oids->{$group_key} ||= [];
   push @{$oids->{$group_key}}, {%$batch_params,
                                 %$dataflow_params,
                                 dbID     => $rset->dbID, 
-                                set_name => $rset->name}; 
+                                set_name => $rset->name,
+                                set_type => 'ResultSet'}; 
   return;
 }
 
