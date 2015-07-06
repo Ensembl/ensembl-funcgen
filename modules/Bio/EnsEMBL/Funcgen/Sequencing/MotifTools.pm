@@ -203,11 +203,11 @@ sub parse_matrix_line{
   my $line = shift;
   #my $id   = shift;
   # remove leading whitespace or A|C|G|T [ ] wrapping
-  (my $clean_line = $line) =~ s/^\s*[ACGTacgt]?\s*\[?\s*([0-9 ]+[0-9])/$1/o;
+  (my $clean_line = $line) =~ s/^\s*[ACGTacgt]?\s*\[?\s*([\.0-9 ]+[\.0-9])/$1/o;
   $clean_line =~ s/\s*\]?\s*$//o;
   #(my $clean_line = $line) =~ s/^\s*[ACGTacgt]?\s*\[?\s*([0-9 ]+)\s*\]?\s*$/$1/o;
 
-  if($clean_line =~ /[^\s0-9]/){
+  if($clean_line =~ /[^\s0-9\.]/){
     throw("Found invalid characters in matrix line:\n$line");
   }
 
