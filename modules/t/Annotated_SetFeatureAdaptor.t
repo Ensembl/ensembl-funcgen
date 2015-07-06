@@ -20,17 +20,9 @@ warn "Annotated_SetFeatureAdaptor.t tests are incomplete and needs updating to u
 
 ok(1, 'Startup test');#?
 
-#my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
-#my $db    = $multi->get_DBAdaptor( 'funcgen' );
+my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
+my $db    = $multi->get_DBAdaptor( 'funcgen' );
 
-
-#my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
-#  (
-#   -user    => 'XXX',
-#   -host    => 'XXX',
-#   -species => 'homo_sapiens', #Does this prevent alias loading?
-#   -dbname  => 'homo_sapiens_funcgen_73_37'
-#  );
 
 
 #debug( 'Test database instantiated' ); #Less verbose, but only get test names in line and in debug mode
