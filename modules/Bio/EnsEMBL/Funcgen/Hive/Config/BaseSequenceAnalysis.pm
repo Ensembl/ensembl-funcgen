@@ -91,10 +91,11 @@ sub default_options {
      }, 
    
  
-    'control_feature_types' => ['Goat-IgG', 'Rabbit-IgG', 'WCE', 'rat-IgG-control', 'rabbit-IgG-control', 'mouse-IgG-control'], 
-                     #was in Peaks.pm but needed for ReadAlignments 
-    #Only needed for IdentifyInputSubsets, which does the control association
-    #Move this to ReadAlignments as we don't need it for Peaks at all?
+    'control_feature_types' => ['Goat-IgG', 'Rabbit-IgG', 'WCE', 'rat-IgG-control', 'rabbit-IgG-control', 'mouse-IgG-control', 'GFP'], 
+    # Possible add 'negative' to this?
+    # was in Peaks.pm but needed for ReadAlignments 
+    # Only needed for IdentifyInputSubsets, which does the control association
+    # Move this to ReadAlignments as we don't need it for Peaks at all?
     
   
     'checksum_optional' => 0,   
@@ -132,6 +133,8 @@ sub pipeline_wide_parameters {
   return 
    {
     %{$self->SUPER::pipeline_wide_parameters}, 
+    # 'alignment_root_dir' => undef, # defaults to what is set in  Base::alignment_root_dir 
+
     'control_feature_types'    => $self->o('control_feature_types'),    
     #'idr_analysis'            => $self->o('idr_analysis'),
     'broad_peak_feature_types' => $self->o('broad_peak_feature_types'), 
@@ -148,7 +151,7 @@ sub pipeline_wide_parameters {
     #not have these as batch params
     #
   
-           ### THIS NEEDS REWORKING FOR IDRPEAKS ###
+     ### THIS NEEDS REWORKING FOR IDRPEAKS ###
            
            
     #Any of these which have defaults, also need to be specified as pipeline_wide_parameters
