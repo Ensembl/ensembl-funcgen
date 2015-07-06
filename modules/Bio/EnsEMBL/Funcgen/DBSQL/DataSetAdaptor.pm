@@ -171,6 +171,10 @@ sub fetch_all_by_supporting_set {
   #self join here to make sure we get all linked result_sets
   my $sql = ' ds.data_set_id IN (SELECT data_set_id from supporting_set where type="'.$set->set_type.'" and supporting_set_id='.$set->dbID().')';
 
+  warn "SQL $sql";
+
+
+
   return $self->generic_fetch($sql);
 }
 
@@ -312,10 +316,10 @@ sub _objs_from_sth {
   my ($fset_id, $fset, $set, $name, $ss_type, $ss_id, %params);
 
   my %set_adaptors = (
-	  feature      => $self->db->get_FeatureSetAdaptor(),
-	  result       => $self->db->get_ResultSetAdaptor(),
-    input        => $self->db->get_InputSetAdaptor(),
-					 );
+	  feature      => $self->db->get_FeatureSetAdaptor,
+	  result       => $self->db->get_ResultSetAdaptor,
+    input        => $self->db->get_InputSetAdaptor,
+	 );
   $sth->bind_columns(\$dbID, \$fset_id, \$name, \$ss_type, \$ss_id);
 
   while ( $sth->fetch() ) {
@@ -323,26 +327,25 @@ sub _objs_from_sth {
     if ((! %params) || ($params{-DBID} != $dbID)) {
 
 	  if (%params) {
-		push @data_sets, Bio::EnsEMBL::Funcgen::DataSet->new
-		                   (%params, '-SUPPORTING_SETS', \@supporting_sets);
-		#do not set to empty array as this will cause failure of check in DataSet->new
-		undef @supporting_sets;
+	   	push @data_sets, Bio::EnsEMBL::Funcgen::DataSet->new
+		                    (%params, '-SUPPORTING_SETS', \@supporting_sets);
+		  #do not set to empty array as this will cause failure of check in DataSet->new
+		  undef @supporting_sets;
 	  }
 
-	  %params =
-	   (
+	  %params =(
 	    -DBID                => $dbID,
 	    -NAME                => $name,
 	    -FEATURE_SET         => $set_adaptors{'feature'}->fetch_by_dbID($fset_id),
 	    -ADAPTOR             => $self
-       );
+     );
 	}
 
 	if ($ss_id) {
 	  my $sset = $set_adaptors{$ss_type}->fetch_by_dbID($ss_id);
 
 	  if (! $sset) {
-		throw("Could not find supporting $ss_type set with dbID $ss_id");
+		  throw('Could not find '.$name." supporting $ss_type set with dbID $ss_id");
 	  }
 
 	  push @supporting_sets, $sset;
