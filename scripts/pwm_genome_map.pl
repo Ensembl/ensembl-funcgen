@@ -467,6 +467,9 @@ sub run_matrix_alignments{
   #To force a re-run requires deleting the output
   my $seen = 0;
 
+  # TODO Remove job array submission for slices
+  # Biggest job only seems to take ~90secs?
+
   if(! -e $all_mappings_file){
     my @target_files;
     (my $out_prefix = $work_dir.'/'.$pfm_file_name) =~ s/\.pfm$/.unfiltered/o;
