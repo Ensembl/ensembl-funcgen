@@ -179,9 +179,23 @@ sub pipeline_analyses {
      #-input_ids     => [ dataflowed from PreprocessAlignments via branch 2 ]
      -analysis_capacity => 1000,
      #Change this to hive_capacity as it may be competing with parallel peak jobs
-     -rc_name => 'normal_10gb_monitored',
-    },  
+     -rc_name => 'normal_16GB_2cpu',
+     # This resource usage is a product of the read depth, so it could be detected in
+     # PreprocessAlignments and flowed selectively to WriteBigWig_10gb WriteBigWig_16gb
+     # This would be beneficial if throughput is hampered by spec required for biggest jobs
+     # ~ 2/3rds run with 10GB or less
+     # ~ 1/4 run with 16GB
+     # The small remainder require ~25GB
+     # One clocked in over 31.1GB!
+     # Actually max already reported as ~24GB (via lsf_report.pl)
+     # Best current approach is to run with 16GB by default
+     # Then switch the resource_class_id to the 30GB resource for the failed jobs.
+     # TODO
+     # Analyse the usage here wrt file size and implement the dynamic data flow as per above.
+     # Likely need 2/3 cpu also due to pipe
+     # Doesn't need to be monitored, as there is little to now DB work here
 
+    },  
   ];
 }
 
