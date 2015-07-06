@@ -421,7 +421,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
             merge_bams($merged_file, 
                        $self->sam_ref_fai($rset->cell_type->gender),
                        $rep_bams{$rset->name}{rep_bams},
-                       {no_rmdups      => 1,
+                       {no_rmdups      => 1,        # Only necessary within a replicate
                         debug          => $self->debug,
                        });
                        
