@@ -52,7 +52,7 @@ sub new {
   if(! ($prog_file && (defined $prog_params) &&
         $align_file && $out_dir)){
     #this will give an undef warning
-    throw("Some of the folllowing mandatory parameters are not met:\n\t".
+    throw("Some of the following mandatory parameters are not met:\n\t".
       "-PROGRAM_FILE, -ALIGN_FILE, -PARAMETERS or -OUT_DIR\n@_");
   }
 
