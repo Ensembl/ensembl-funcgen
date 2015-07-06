@@ -249,6 +249,8 @@ sub main{
       # as there is a danger that a subsequent top up of an upsteam conf may reset this to 0
       # This would result dataflow not occuring from the conf just added through the link
       # analysis to the next conf(which has be added previously)
+
+      # Put this in SQL/DBAdaptorHelper as a fetchall_hashref wrapper?
       my $sth = $ntable_a->dbc->prepare('SELECT meta_key, meta_value from meta where meta_value like "can_%"');
       $sth->execute;
       my $meta_key_values = $sth->fetchall_hashref('meta_key');
