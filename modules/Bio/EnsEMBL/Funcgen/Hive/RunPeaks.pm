@@ -145,7 +145,7 @@ sub fetch_input {
       -out_dir           => $self->output_dir,
       -convert_half_open => 1, # Before loading into DB
       #-is_half_open      => $self->param_silent('is_half_open') || 0}, # Now defined by PeakCaller or subclass defined on out/input formats   
-   );
+    });
    
   $self->set_param_method( 'peak_runnable', $peak_runnable );
 
