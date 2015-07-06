@@ -31,10 +31,10 @@ $main::_no_log = 1;
 #params
 #output_dir  This is a generic over ride for the default output dir
 
-#todo
+# TODO
 #1 default set up is that alignment will have already done the filter from bam
 #  hence we woudl need to set the filter_from_format param if we ever want to change this
-#2 Move a lot of the fetch_input_code to run
+#2 Move a lot of the fetch_input_code to run, as it is actually converting bam to bed
 
 
 sub fetch_input {   # fetch parameters...
@@ -100,6 +100,8 @@ sub fetch_input {   # fetch parameters...
         $self->get_alignment_files_by_ResultSet_formats($rset,
                                                         ['bed'],
                                                         1); #control flag
+
+        # This is creating the prepared bed file in a subdir
       
         #todo check success of this in case another job has pipped us
         $exp->adaptor->store_status('CONTROL_CONVERTED_TO_BED',   $exp); 
@@ -142,11 +144,6 @@ sub fetch_input {   # fetch parameters...
   #This has to be on the experiment
   #Let's just do it for all rather than just non-IDR ftypes??
   
-  
- 
-  
-  
-  
   $self->helper->debug(1, 'CollectionWriter::fetch_input setting new_importer_params with align_files:', 
                        $align_files);
   #Arguably, some of the should be set in default_importer_params
@@ -154,8 +151,8 @@ sub fetch_input {   # fetch parameters...
   
 
 
-    #Default params, will not over-write new_importer_param
-    #which have been dataflowed
+  #Default params, will not over-write new_importer_param
+  #which have been dataflowed
   $self->new_Importer_params( 
    {#-prepared            => 1, #Will be if derived from BAM in get_alignment_file_by_InputSets
     #but we aren't extracting the slice names in this process yet
@@ -202,128 +199,57 @@ sub run {   # Check parameters and do appropriate database/file operations...
         run_system_cmd($cmd);
       } 
 
-
       $Imp->read_and_import_data('prepare');
-      #Dataflow only jobs for slices that the import has seen
+   
 
-      # what does this actually do?
-      # do we even need to do this now as we don't need the slices
-      # is anything else stored?
-      # IMPORTED is revoked is it is already set, so we will need to manage that
+      # This now only rebokes the IMPORTED status
+      # so we will need to manage that before we can remove the Importer usage
       # We're not actually storing anything yet, so that can be done in
       # the PeakCaller/BigWigWriter?
+      # This was also creating the prepared bed for collection generation
+      # Looks like this wasn't being used for CCAT peak calling
+      # There small potential that an unsorted bed file could be used for CCAT
+      # Although this is always generated from the sorted bam at present,
+      # as opposed to a pre-computed unverified/sorted bed file.
 
-      
-      #my %seen_slices  = %{$Imp->slice_cache};
-      
-      #if(! %seen_slices){
-      #  $self->throw_no_retry("Found no data after prepare step for:\n\t".
-      #    join("\n\t", @{$Imp->input_files}));  
-      #}
-      
-      my $batch_params = $self->batch_params;
-#      my @slice_jobs = ();
-
-      #foreach my $slice (values %seen_slices){ 
-#
-#        push @slice_jobs,
-#         {
-#          %{$batch_params},#-slices will be over-ridden by new_importer_params
-#          dbID           => $self->param('dbID'),
-#          set_name       => $self->param('set_name'),#mainly for readability
-#          set_type       => $self->param('set_type'),
-#          slices         => [$slice->seq_region_name],
-#          filter_from_format => undef, #Don't want to re-filter for subsequent jobs
-#          feature_formats    => ['bed'], #also don't need bam for Collection job
-#          new_importer_params => 
-#           {
-#            -input_files    => [$Imp->output_file],
-#            -total_features => $Imp->counts('total_features'),
-#            -batch_job      => 1,
-#	          -prepared       => 1,  
-#           }
-#         };
-#      }
-      
-      # This now only flows to BigWigWriter
-      # Need to pass the set info anyway as the states will need updating
-      # Is there any danger of the BigWigWriter attempting to resort the file,
-      # which maybe being used by the another analysis?
-
-      my $output_id = {%{$batch_params},  # -slices will be over-ridden below
+    
+      my $output_id = {%{$self->batch_params}, 
                        # These are already param_required by fetch_Set_input
                        dbID         => $self->param('dbID'),
                        set_name     => $self->param('set_name'),  # mainly for readability
                        set_type     => $self->param('set_type'),
-                       filter_from_format => undef,
-                       #slices             => [keys %seen_slices]                   
+                       filter_from_format => undef,                 
                      }; 
-      #Don't want to re-filter for subsequent jobs
-                
-      #Deal with Collections and Mergecollection job group first
-      #It's actually not necessary to branch like this for this analysis
-      #as it is only dealing with one job group
-      #so could have simply branced the funnel jobs after
-      #but this makes it more explicit   
-      #$self->branch_job_group(2, \@slice_jobs, 1, [{%$output_id, garbage => [$Imp->output_file]}]);
 
-
-      #We really need to ad ad a final semaphored job, to do the clean up
+      #Need to add a final semaphored job, to do the clean up
       #bed files only, as we keep the bams
-      $self->branch_job_group(2, [$output_id]);
+      $self->branch_job_group(2, [$output_id]); #BigWigWriter data flow
 
       my $fset = $self->FeatureSet;
       
-      #todo
-      #Do we need to be able to do this conditionally?
-      #If we are re-running then data flowing here will create duplicate jobs
-      #on any branch which has run successfully before
-      #this is fine if the input_id is the same and we are using the same hive
-      #as it will not create the job
-      #But if we have reseeded with slightly different batch_params
-      #or we are using a new hive, then this will try to rerun
-      #the next analyses
+      # TODO
+      # Do we need to be able to do this conditionally?
+      # If we are re-running then data flowing here will create duplicate jobs
+      # on any branch which has run successfully before
+      # this is fine if the input_id is the same and we are using the same hive
+      # as it will not create the job
+      # But if we have reseeded with slightly different batch_params
+      # or we are using a new hive, then this will try to rerun
+      # the next analyses
       
-      #Maybe we don't even won't to run the peaks, even though we have a feature set?
-      #
-      #see pipeline dev notes
+      # Maybe we don't even won't to run the peaks, even though we have a feature set?
+      # see pipeline dev notes
       
       if(defined $fset){
-        
-        #Only flow slices to peak jobs if we have defined -slices/skip_slices   
-        if(! $self->slices){ 
-          #Deref $output_id so we don't inadvertantly update above reference.
-          $output_id = {%$output_id};
-          delete $output_id->{slices};
-        }
-    
-        #what about peaks reports?
-        #we should really flow the slices to that analysis!   
-        
         $self->branch_job_group('run_'.$fset->analysis->logic_name, [{%$output_id}]);
       }
     } 
     else { #These are the fanned slice jobs  
-   
-      #This generates a slice .col file
-      $Imp->read_and_import_data;
-
-      #This is currently skipping tons of empty lines?!!!      
-      
-      #End of this branch, merge job is waiting for these
+      $self->throw_no_retry('CollectionWriter no longer supports collection generation');
     } 
   }
-  else{ #Merge
-    warn "HARDCODING force_overwrite for merge_and_index_slice_collections!";
-    
-    $Imp->feature_adaptor->merge_and_index_slice_collections($Imp->output_set, 
-                                                             $Imp->slices, 
-                                                             $self->output_dir,
-                                                             1);   
-    #set appropriate states...
-    my $rset = $self->ResultSet;     
-    $rset->adaptor->set_imported_states_by_Set($rset);  
-    #End of this branch & config
+  else{
+    $self->throw_no_retry('CollectionWriter no longer supports collection merge mode');
   }
 
   return;
