@@ -43,7 +43,6 @@ my $tdb = Bio::EnsEMBL::DBSQL::Funcgen::DBSQL::TrackingAdaptor->new
   );
 
 
-
 =head1 DESCRIPTION
 
 Handles interaction with the funcgen tracking DB is used to store meta data and tracking information
@@ -159,8 +158,8 @@ sub repository_path{
   my $sql;
 
   if(! defined $self->{repository_path}){
-	$sql = "SELECT meta_value from meta where meta_key='repository';";
-	($self->{repository_path}) = @{$self->db->dbc->db_handle->selectrow_arrayref($sql)};
+    $sql = "SELECT meta_value from meta where meta_key='repository';";
+    ($self->{repository_path}) = $self->db->dbc->db_handle->selectrow_array($sql);
   }
 
   if(defined $rpath){
@@ -353,10 +352,14 @@ sub fetch_tracking_info{
 #is updated
 
 sub set_download_status_by_input_subset_id{
-  my ($self, $iss_id, $to_null) = @_;
+  my ($self, $iss_id, $to_null, $lurl) = @_;
+
+
 
   my $date = ($to_null) ? 'NULL' : 'NOW()';
-  my $sql = "UPDATE input_subset_tracking SET download_date=${date} WHERE input_subset_id=${iss_id};";
+  my $sql = "UPDATE input_subset_tracking SET download_date=${date}";
+  $sql .= ", local_url='${lurl}'" if $lurl;
+  $sql .= " WHERE input_subset_id=${iss_id};";
   $self->db->dbc->do($sql);
 
   return;
