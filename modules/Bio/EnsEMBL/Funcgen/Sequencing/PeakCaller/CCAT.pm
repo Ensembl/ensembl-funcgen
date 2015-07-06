@@ -52,10 +52,11 @@ sub new {
   my $caller = shift;
   my $class  = ref($caller) || $caller;
   my $self   = $class->SUPER::new(@_);
-  
+
   #Passed as $sensitive_caller_params from RunPeaks (CCAT_parameters in analysis config)
   my ($chr_file, $fdr_thresh) = rearrange([qw(CHR_FILE FDR_THRESHOLD)], @_);
-  throw('Must provide a -chr_file parameter') if ! -e $chr_file;
+
+  throw("Must provide a valid existing -chr_file parameter:\n\t$chr_file") if ! -e $chr_file;
   $self->{chr_file} = $chr_file;      
   $self->{fdr_threshold} = (defined $fdr_thresh) ? $fdr_thresh : 0.05;
   return $self;
