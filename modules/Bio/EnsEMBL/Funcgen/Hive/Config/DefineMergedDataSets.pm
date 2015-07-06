@@ -56,14 +56,12 @@ use base ('Bio::EnsEMBL::Funcgen::Hive::Config::BaseSequenceAnalysis');
 #any given Runnable/DB. Move all specific options to parameters sections
 #specific for that analysis
 
-
 =head2 default_options
 
     Description : Implements default_options() interface method of
     Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf that is used to initialize default options.
 
 =cut
-
 
 sub default_options {
   my ($self) = @_;
