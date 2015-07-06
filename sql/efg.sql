@@ -1145,7 +1145,7 @@ CREATE TABLE `cell_type` (
    `name`  varchar(120) not NULL,
    `display_label` varchar(30) default NULL,
    `description` varchar(80) default NULL,
-   `gender` enum('male', 'female', 'hermaphrodite') default NULL,
+   `gender` enum('male', 'female', 'hermaphrodite', 'mixed') default NULL,
    `efo_id` varchar(20) DEFAULT NULL,
    `tissue` varchar(50) default NULL,
    PRIMARY KEY  (`cell_type_id`),
@@ -1426,7 +1426,7 @@ INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 -- Update and remove these for each release to avoid erroneous patching
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '81');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_80_81_a.sql|schema_version');
-
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_80_81_b.sql|add gender: mixed to table cell_type ');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_80_81_c.sql|drop experiment.date');
 
 
