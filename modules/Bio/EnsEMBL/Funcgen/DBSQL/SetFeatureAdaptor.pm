@@ -417,7 +417,7 @@ sub _logic_name_to_constraint {
   Example    : None
   Description: PROTECTED implementation of superclass abstract method.
                Returns an additional table joining constraint to use for
-			   queries.
+               queries.
   Returntype : List of strings
   Exceptions : None
   Caller     : Internal
@@ -447,8 +447,9 @@ sub _default_where_clause {
 
 =cut
 
-#This is required as tables constain mutliple data sets loaded at different times
-#hence we may not get the expected or of features returned
+# This is required as tables contain mutliple data sets loaded at different times
+# hence we may not get the expected order of features returned
+# i.e. if we query over >1 data set
 
 sub _final_clause {
   my $self = shift;
@@ -473,12 +474,7 @@ sub _final_clause {
 
 sub fetch_all_by_logic_name { 
   my ($self, $lname) = @_; 
-  #my $logic_name = shift || throw( "Need a logic_name" ); 
-  #$constraint = ' '.$self->_main_table->[1].'.feature_set_id=fs.feature_set_id and fs.analysis_id = '.$an->dbID() if($an);
-  #my $an = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($logic_name); 
-  #return (defined $constraint) ? $self->generic_fetch($constraint) : undef;
   my $constraint = $self->compose_constraint_query({constraints => {logic_names => [$lname]}});
-  
   return $self->generic_fetch($constraint) || undef;
 } 
 
@@ -538,18 +534,8 @@ sub _constrain_feature_types {
   my $constraint = " fs.feature_type_id IN (".
         join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $fts, 'dbID')}).')';  
   
-  return ($constraint, {});   #{} = not futher constraint conf
+  return ($constraint, {});   #{} = not further constraint conf
 }
-
-
-#This currently doesn't catch array with undef value(s)
-#Passing an undef $logic_name to the method would not normally result in a throw
-#unless it is a mandatory method
-#so we need to catch this before here really
-#and make this validate as though it is mandatory
-
-#This basically catches unsafe specification of arrays with undef values
-#as these will cause errors or no results
 
 
 #This should use analysis_adpator cache and return undef?
@@ -572,13 +558,12 @@ sub _constrain_logic_names {
     }  
   }
 
-
   $self->_tables([['analysis', 'a']]);
 
   my $constraint = ' fs.analysis_id = a.analysis_id and a.logic_name in ("'.
     join('", "', @$logic_names).'")';
     
-  return ($constraint, {});   #{} = not futher constraint conf
+  return ($constraint, {});   #{} = not further constraint conf
 }
 
 sub _constrain_feature_sets {
