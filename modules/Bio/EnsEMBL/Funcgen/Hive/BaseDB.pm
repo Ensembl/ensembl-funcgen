@@ -101,10 +101,8 @@ sub fetch_input {
 sub slice_objects {
   my $self          = shift;
   my $slice_objects = shift;
-  if(!defined $self->param_silent('include_slice_duplicates')){
-    $self->param('include_slice_duplicates',0);
-  }
-  my $param_dups = $self->param('include_slice_duplicates');
+  my $param_dups    = $self->param_silent('include_slice_duplicates');
+
   if($slice_objects){
     assert_refs($slice_objects, 'Bio::EnsEMBL::Slice', 'slice_objects');   
   }
@@ -114,8 +112,6 @@ sub slice_objects {
                        $self->slices, $self->skip_slices, 'toplevel', 
                        0, $param_dups, $self->assembly); 
     #0, 0 are non_ref and inc_dups flags
-    
-    #Check we have some here
   }
    
   if($slice_objects){
@@ -186,7 +182,7 @@ sub get_Slice {
     #without no_dups set.
 
     if(! ($lstart && $lend) && 
-       ! ($self->parm('include_slice_duplicates') )
+       ! ($self->param('include_slice_duplicates') )
       ){
       throw('The slice cache has been generated without duplications i.e. '.
         'it contains multiple Y non-PAR slices. This requires specifying a '.
