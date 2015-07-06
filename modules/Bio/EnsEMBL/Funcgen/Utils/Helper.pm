@@ -1295,6 +1295,8 @@ sub rollback_FeatureSet {
   #Check whether this is a supporting set for another data_set
   my @dsets =  @{ $db->get_DataSetAdaptor->fetch_all_by_supporting_set($fset) };
 
+
+
   if (@dsets) {
     my $txt = $fset->name." is a supporting set of the following DataSets:\t" .
               join( ', ', ( map { $_->name } @dsets ) );
@@ -1603,7 +1605,7 @@ sub rollback_ResultSet {
   
   my $sql;
   
-  if($rset->dbfile_data_dir){ #delete the dbfile_registry entry 
+  if($rset->dbfile_path){ #delete the dbfile_registry entry 
     $sql = '
       DELETE FROM 
         dbfile_registry 
@@ -1611,7 +1613,7 @@ sub rollback_ResultSet {
         table_name = "result_set" AND 
         table_id   = '.$rset->dbID
         ;
-    $self->debug(2, "rollback_ResultSet - deleting dbfile_registry enrty:\n\t$sql");
+    $self->debug(2, "rollback_ResultSet - deleting dbfile_registry entry:\n\t$sql");
     # $db->rollback_table($sql, 'dbfile_registry');
   }
 
