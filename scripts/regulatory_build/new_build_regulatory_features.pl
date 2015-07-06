@@ -34,25 +34,25 @@ Automatic run:
 new_build_regulatory_features.pl -o ./ -a hg38 -D $FUNCGEN_DB -h $HOST -P $PORT -u $USER -p $PASS
 
 Where:
-	* -o: directory for output
-	* -a: UCSC assembly name (for trackHub)
-	* -h: host server
-	* -D: host database
-	* -P: host port
-	* -u: host login 
-	* -p: host password 
+  * -o: directory for output
+  * -a: UCSC assembly name (for trackHub)
+  * -h: host server
+  * -D: host database
+  * -P: host port
+  * -u: host login 
+  * -p: host password 
 
 Manual run:
 new_build_regulatory_features.pl -o ./ -d dump.txt -a hg38 -l chrom_sizes.txt -t tss.bed -g exons.bed
 
 Where:
-	* -o: directory for output
-	* -a: UCSC assembly name (for trackHub)
-	* -l: tab delimited file, each line contains a chromosome name followed
-		by its length.  [Overrides database info]
-	* -t: Bed file with TSS. Can be Ensembl transcript TSS, CAGE tags... [Overrides database info]
-	* -g: Bed file with Exons. A BioMart dump would work. [Overrides database info]
-	* -d: dump file (described below) [Added to database datasets]
+  * -o: directory for output
+  * -a: UCSC assembly name (for trackHub)
+  * -l: tab delimited file, each line contains a chromosome name followed
+    by its length.  [Overrides database info]
+  * -t: Bed file with TSS. Can be Ensembl transcript TSS, CAGE tags... [Overrides database info]
+  * -g: Bed file with Exons. A BioMart dump would work. [Overrides database info]
+  * -d: dump file (described below) [Added to database datasets]
 
 =head1 DESCRIPTION
 
@@ -63,15 +63,15 @@ In particular you will need a dump file which describes all the available
 experimental data. The dump file is tab delimited, it contains two types of
 entries:
 * ChIPseq peaks
-peak	$assay	$cell	$location_bed_or_bigBed
+peak  $assay  $cell $location_bed_or_bigBed
 The assay type is generally a TF antibody name or DNAse
 
 * Segmentations
-segmentation	$name	$type	$location
-	- name: is just a free string, which will be used a directory name (avoid special characters and spaces).
-	- type: is ChromHMM or Segway
-	- location: directory which contains a bunch of bed files, each bedfile named $celltype.bed. In addition 
-	the directory must contain an emissions file (emissions*.txt for ChromHMM, *.tab for Segway).
+segmentation  $name $type $location
+  - name: is just a free string, which will be used a directory name (avoid special characters and spaces).
+  - type: is ChromHMM or Segway
+  - location: directory which contains a bunch of bed files, each bedfile named $celltype.bed. In addition 
+  the directory must contain an emissions file (emissions*.txt for ChromHMM, *.tab for Segway).
 
 =cut
 
