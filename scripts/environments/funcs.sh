@@ -45,20 +45,6 @@ _TRUE=1;
 _FALSE=!$_
 
 
-#could set BACKUP_DIR here too?
-#Note: Using sym links for these DIR vars means the patch in the functions should also be symlinks!
-export ARCHIVE_DIR=$HOME/warehouse
-export GROUP_ARCHIVE_DIR=$HOME/warehouse_prd
-
-
-#Problems with which dir to use as EFG_DATA contains efg, so we can't sub that off the path
-#This require DATA_DIR (similar to SRC?)
-#Can now keep this outside of efg.env/config
-#Keep config in here for now, or move to .bashrc or funcs.config?
-#readlink here to make ArchiveData path matching easier
-export DATA_DIR=$(readlink -e $HOME/scratch)
-export GROUP_DATA_DIR=$(readlink -e $HOME/scratch_prd)  
-
 
 _setOptArgArray(){
     local array_var=
@@ -305,16 +291,16 @@ CheckGlobalVariables(){
   local var=
 
   for var in $*; do
-      val=$(eval "echo \$$var")
-      
-      if [[ -z $val ]];  then 
-          line="$line \$$var"
-      fi
+    val=$(eval "echo \$$var")
+    
+    if [[ -z $val ]];  then 
+      line="$line \$$var"
+    fi
   done
   
   if [[ ! -z $line ]];  then
-      echo "Environment variable(s) :$line are not set"
-      return 1
+    echo "Environment variable(s) :$line are not set"
+    return 1
   fi
 
 }
