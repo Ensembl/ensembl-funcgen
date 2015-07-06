@@ -239,6 +239,7 @@ sub validate_non_DB_inputs{
 
 
 #This does allow config over-ride but would need adding to the pipeline_wide_params
+# Move to BaseSequencing.pm?
 
 sub alignment_root_dir {
  my $self = $_[0];
@@ -256,6 +257,8 @@ sub alignment_root_dir {
  return $self->param('alignment_root_dir'); 
 }
 
+
+# Move to BaseSequencing/pm
 #todo support >1 root_output dir?
 #might want to spread data across two scratch areas?
 #move alignments to output dir?
@@ -1122,37 +1125,10 @@ sub _get_branch_number{
       #This will allow null string and 0
       
       if(! exists $branch_config->{$bcode}){
-        # Is this true for PreprocessAlignments
-        # i.e. a link analysis which forks to two downstream configs
-        # either branch keys or branch numbers may not be configured
-        # Currently this is true, but only becuase the CollectionWriter is written
-        # to detect if the feature set is defined 
-        # i.e. if we need to flow to the peak calling analyses
-        # probably just need to change this to a warn, and drop the br()anch validation
-
-        if($bcode =~ /^[0-9]+$/){
-          # Just warn, as this is a generic numbered branch which may not be wired
-          warn "Could not find branch config for branch:\t".
-            $bcode."\n";
-
-        }
-        else{
-          # Always throw as string banch key are data config/driven
-          # So there must be a config error
-          throw("Could not find branch config for analysis:\t".
-            $bcode."\n");
-        }
-        #We would need and custom_analysis_name method
-        #as we can't just use 'custom' as this may clash
-        #and we don't know the analysis name template here
-        #Could only support 1 custom analysis per runnable
-        #unless we had a get_custom_analysis_name method
-        #which would parse the unknown analysis name appropriately
-        #overkill. stop.
-        
-        #This maybe a branch number instead of a analysis name
-        
-        
+        # numbered or named branches might not actually be wired
+        # dependant on loaded config
+        warn "Could not find branch config for branch:\t".
+            $bcode."\n";        
       }
       else{
         $branch ||= $branch_config->{$bcode}{branch};
