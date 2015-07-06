@@ -2,7 +2,7 @@
 
 use strict;
 use warnings;
-use Data::Dumper;
+#use Data::Dumper qw( Dumper );
 use Carp;
 
 use JSON qw(decode_json);
@@ -25,15 +25,14 @@ use Bio::EnsEMBL::Funcgen::InputSubset;
 
 use Bio::EnsEMBL::Utils::SqlHelper;
 
-
 use constant CONFIG  => 'register.config.ini';
 select((select(STDOUT), $|=1)[0]);
 
-my $http = HTTP::Tiny->new();
-my $server = 'https://www.encodeproject.org';
-my $global_headers = { 'Content-Type' => 'application/json' };
+my $server            = 'https://www.encodeproject.org';
+my $global_headers    = { 'Content-Type' => 'application/json' };
 my $last_request_time = Time::HiRes::time();
-my $request_count = 0;
+my $request_count     = 0;
+my $debug             = 1;
 
 main();
 
@@ -47,15 +46,15 @@ sub main {
   my $headers = {};
   my $ids = [];
      $ids = [
-     'ENCSR000CNJ', 
-     'ENCSR000CNK',
-     # 'ENCSR000CNL',
-     # 'ENCSR000CNI',
-     'ENCSR000COG',
-     'ENCSR000COF',
-     'ENCSR000COE',
-     # 'ENCSR000CMO',
-     'ENCSR000CNE',
+     'ENCSR000CNG',
+     #'ENCSR000CNK',
+     ## 'ENCSR000CNL',
+     #'ENCSR000CNI',
+     #'ENCSR000COG',
+     #'ENCSR000COF',
+     #'ENCSR000COE',
+     ## 'ENCSR000CMO',
+     #'ENCSR000CNE',
      ];
      # $ids = parse_flatfile($cfg->{file}->{input});
   say "Found " .scalar(@{$ids}) . ' Experiments to register';
@@ -106,7 +105,7 @@ sub main {
     compare_biosample_set_in_root($data);
 
     for my $file (@{$data->{files} }){
-      fetch_analyis($cfg, $data, $objects);
+      fetch_analysis($cfg, $data, $objects);
 
       create_cell_type_name($cfg, $data, $file);
       create_experiment_name($data, $file);
@@ -136,9 +135,9 @@ sub print_objects {
 }
 
 ###############################################################################
-#                              fetch_analyis
+#                              fetch_analysis
 ###############################################################################
-sub fetch_analyis {
+sub fetch_analysis {
   my ($cfg, $data, $objects) = @_;
 
   my $anal = $cfg->{tr_a}->{an}->fetch_by_logic_name($data->{analysis});
@@ -348,8 +347,23 @@ sub compare_biosample_set_in_root {
           croak "Missing '$f'. $acc: Files: $uuid_1 $uuid_2";
         }
         if($file_1->{$f} ne $file_2->{$f}){
-          croak "Difference '$f'. $acc: Files: $uuid_1 $uuid_2";
-        }
+
+        #  if($f eq 'description'){
+        #    # This can differ is some of the samples are on an individual or pooled
+        #    # This is *okay* if the gender of the cell type is male
+        #    # But likely not so if female, as the pooled sample is likely
+        #    # mixed gender?
+
+        #    warn "Biosample set difference found for $acc:\n".
+        #     "File:\t$uuid_1\t$f:\t".$file_1->{$f}."\n".
+        #     "File:\t$uuid_2\t$f:\t".$file_2->{$f}."\n";
+        #  }
+        #  else{
+            croak "Biosample set difference found for $acc:\n".
+             "File:\t$uuid_1\t$f:\t".$file_1->{$f}."\n".
+             "File:\t$uuid_2\t$f:\t".$file_2->{$f}."\n";
+        #   }
+         }
       }
     }
   }
@@ -428,15 +442,49 @@ sub assign_feature_type {
 sub fetch_and_decode_json {
   my ($url, $headers) = @_;
 
-  if(!exists $headers->{'Content-Type'} ){
+  if(! exists $headers->{'Content-Type'} ){
    $headers->{'Content-Type'} = 'application/json';
   }
-  my $response = $http->get($url, {headers => $headers});
 
-  _test_json_response($response);
-  $response = JSON::XS::decode_json ($response->{content});
+  warn "URL:\t$url" if $debug;
+  my ($success, $response);
+  my $timeout     = 0; # Default in HTTP::Tiny;
+  my $max_retries = 3;
 
-  return $response;
+  while(! $success && $max_retries){
+    # This needs a longer timeout
+    $timeout += 60;  # Just incase fail was a timeout 
+    my $http  = HTTP::Tiny->new(timeout => $timeout);
+    $response = $http->get($url, {headers => $headers});
+    $success  = _test_json_response($response);  # This will sleep on retry-after
+
+    # It appears this timeout is being ignored or is not applicable to this error
+    # IO::Socket::INET: connect: Connection timed out
+    # The timeout code is disabled in our local install as per:
+    # http://stackoverflow.com/questions/3570440/perl-how-to-get-iosocketinet-timeout-after-x-seconds
+    # This seems to be hardcoded to ~15 seconds
+    # Is this a red herring? Maybe it's a proxy issue?
+    # But I have http_proxy set, which is what HTTP::Tiny uses
+
+    warn "timeout $timeout\nsuccess $success\ncontent ".$response->{content} if $debug;
+    $max_retries --;
+  }
+  
+  if(! $success){
+
+    #if($url =~ /ENCSR000CNG/){
+    #  $response->{content} = `cat ./ENCSR000CNG.json`;
+    #}
+    #elsif($url =~ /ENCSR000CNI/){
+    #  $response->{content} = `cat ./ENCSR000CNI.json`;
+    #}
+    #else{
+      die("Failed for endpoint:\t$url\nHTTP::Tiny status code:\t".$response->{status}."\n".
+        $response->{reason}.":\t".$response->{content}."\n");
+    #}
+  }
+
+  return JSON::XS::decode_json($response->{content});
 }
 
 ###############################################################################
@@ -610,25 +658,31 @@ sub parse_flatfile {
 #                            _test_json_response
 ###############################################################################
 sub _test_json_response {
-  my ($response) = @_;
+  my $response = shift;
+  my $status   = $response->{status};
+  my $success  = $response->{success};
 
-  my $status = $response->{status};
+  if(! $success) {
+    # The codes are from HTTP::Tiny.
 
-  if(!$response->{success}) {
-    # Quickly check for rate limit exceeded & Retry-After (
-    #  lowercase due to our client)
+    # Quickly check for rate limit exceeded & Retry-After 
+    # lowercase due to our client
     if($status == 429 && exists $response->{headers}->{'retry-after'}) {
       my $retry = $response->{headers}->{'retry-after'};
       Time::HiRes::sleep($retry);
       # After sleeping see that we re-request
-      # return perform_rest_action($endpoint, $parameters, $headers);
+      # return perform_rest_action($endpoint, $parameters, $headers)
     }
-    else {
-      my ($status, $reason) = ($response->{status}, $response->{reason});
-      die "Failed for endpoint! Status code: ${status}. Reason: ${reason}\n";
+    elsif($status != 599 && 
+      $response->{content} !~ /Connection timed out/){
+      # Only if it was not a time out do we die here
+      # Could do with URL here  
+      die("Failed for endpoint! HTTP::Tiny status code:\t${status}\n".
+        $response->{reason}.":\t".$response->{content}."\n");
     }
   }
 
+  return $success;
 }
 
 
