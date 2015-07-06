@@ -16,28 +16,10 @@ our $verbose = 0;
 my $skip = 0;
 my $okay = 0;
 
-warn "FeatureType.t tests are incomplete and needs updating to use MultiTestDB\n";
-
-
 ok(1, 'Startup test');#?
 
-#my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
-#my $db    = $multi->get_DBAdaptor( 'funcgen' );
-
-
-my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
-  (
-   -user    => 'XXX',
-   -host    => 'XXX',
-   -species => 'homo_sapiens', #Does this prevent alias loading?
-   -dbname  => 'homo_sapiens_funcgen_XXX'
-  );
-
-
-#debug( 'Test database instantiated' ); #Less verbose, but only get test names in line and in debug mode
-ok( $db, 'DBAdaptor creation');# More verbose, but we get failed test name summary at end
-
-
+my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
+my $db    = $multi->get_DBAdaptor( 'funcgen' );
 my $dnadb = $db->dnadb;
 
 
@@ -51,7 +33,7 @@ my $dnadb = $db->dnadb;
 
 my $ftype_a = $db->get_FeatureTypeAdaptor;
 
-ok($ftype_a, 'Got FeatureTypeAdaptor');
+isa_ok($ftype_a, 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor', 'Got FeatureTypeAdaptor');
 
 #TODO: {
 
