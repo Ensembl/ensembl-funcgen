@@ -1051,9 +1051,10 @@ sub parse_DB_url {
 #Although this is returned after bit shifting
 
 sub run_system_cmd{
-  my ($command, $no_exit) = @_;
+  my ($command, $no_exit, $verbose) = @_;
   #$exit_status is same as $? i.e. $CHILD_ERROR
   #my $exit_status = system($command);#don't nest below, as this may cause problems with $!
+  print "$command\n" if $verbose;
   system($command);
   return _handle_exit_status($command, $?, $!, $no_exit);
 }
@@ -1125,12 +1126,15 @@ sub run_backtick_cmd{
 #use IPC::Run instead of system? But this is not a core module!
 #IPC::Cmd is available in 5.12 but not 5.10 Grr!
 
+# $! is only set if a call to the OS fails, and may contain unexpected values
+# So only use $! if $? is set.
+
 sub _handle_exit_status{
   my ($cmd, $exit_status, $errno, $no_exit) = @_;
   my ($exit_code, $err_string);
 
   if ($cmd =~ /\|/){
-    warn "Failed piped commands may not be caught:\n$cmd\n";
+    warn "# Failed piped commands may not be caught:\n$cmd\n";
   }
 
   $exit_code = $exit_status >> 8; #get the true exit code
@@ -1371,7 +1375,7 @@ sub add_DB_url_to_meta {
   elsif($meta_value ne $url){
     throw("Could not set $meta_key meta entry:\t".$url."\nAs ".$db->dbc->dbname.
       " is currently locked to a different hive DB:\t$meta_value\n".
-      'Please use that hive DB or drop that pipeline, or remove the meta entry');
+      'Please use that hive DB or drop that pipeline and remove the meta entry');
   }
   #else meta values match and all is good.
 
