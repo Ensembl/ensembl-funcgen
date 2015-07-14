@@ -2,7 +2,6 @@ language: "perl"
 
 perl:
   - "5.14"
-  - "5.12"
   - "5.10"
 
 env:
@@ -22,6 +21,7 @@ install:
     - cpanm -v --installdeps --with-recommends --notest --cpanfile ensembl/cpanfile .
     - cpanm -n Devel::Cover::Report::Coveralls
     - cpanm -n DBD::SQLite
+    - cpanm -n Data::Dumper
     - cp travisci/MultiTestDB.conf modules/t/MultiTestDB.conf
 
 script: "./travisci/harness.sh"
@@ -31,16 +31,10 @@ matrix:
   exclude:
     - perl: "5.10"
       env: COVERALLS=false DB=mysql
-    - perl: "5.12"
-      env: COVERALLS=false DB=sqlite
-    - perl: "5.12"
-      env: COVERALLS=true  DB=mysql
-    - perl: "5.14"
-      env: COVERALLS=false DB=sqlite
     - perl: "5.14"
       env: COVERALLS=true  DB=mysql
 
 notifications:
   email:
-    on_success: always
+    # on_success: always
     on_failure: always
