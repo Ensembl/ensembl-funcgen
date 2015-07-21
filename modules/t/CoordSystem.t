@@ -52,6 +52,89 @@ throws_ok { $cosys->is_top_level() }
 qr/Not yet implmented, need to test against the core cache using dnadb\/schema_build/,
     'Check is_top_level throws exception';
 
+throws_ok {
+    $cosys->add_core_coord_system_info(
+        -core_coord_system_id => 2,
+        -rank                 => 1,
+    );
+}
+qr/Must provide a schema_build/, 'Test schema_build exception';
+
+throws_ok {
+    $cosys->add_core_coord_system_info(
+        -schema_build => '53_34u',
+        -rank         => 1,
+    );
+}
+qr/Must provide a core_coord_system_id/,
+    'Test core_coord_system_id exception';
+
+throws_ok {
+    $cosys->add_core_coord_system_info(
+        -schema_build         => '53_34u',
+        -core_coord_system_id => 2,
+        -rank                 => 1,
+        -top_level            => 1,
+    );
+}
+qr/RANK argument must be 0 if TOP_LEVEL is 1/,
+    'Test rank - top_level exception';
+
+throws_ok {
+    $cosys->add_core_coord_system_info(
+        -schema_build         => '53_34u',
+        -core_coord_system_id => 2,
+        -rank                 => -1,
+    );
+}
+qr/The RANK argument must be a positive integer/,
+    'Test rank is positive integer exception';
+
+throws_ok {
+    $cosys->add_core_coord_system_info(
+        -schema_build         => '53_34u',
+        -core_coord_system_id => 2,
+        -top_level            => 1,
+    );
+}
+qr/The NAME argument must be "toplevel" if TOP_LEVEL is 1/,
+    'Test name - top_level exception';
+
+$cosys = Bio::EnsEMBL::Funcgen::CoordSystem->new(
+    -name    => 'toplevel',
+    -version => 'NCBI33'
+);
+
+throws_ok {
+    $cosys->add_core_coord_system_info(
+        -schema_build         => '53_34u',
+        -core_coord_system_id => 2,
+        -top_level            => 1,
+        -sequence_level       => 2,
+    );
+}
+qr/SEQUENCE_LEVEL argument must be 0 if TOP_LEVEL is 1/,
+    'Test sequence_level - top_level exception';
+
+throws_ok {
+    $cosys->add_core_coord_system_info(
+        -schema_build         => '53_34u',
+        -core_coord_system_id => 2,
+    );
+}
+qr/RANK argument must be non-zero if not toplevel CoordSystem/,
+    'Test rank - top_level exception';
+
+throws_ok {
+    $cosys->add_core_coord_system_info(
+        -schema_build         => '53_34u',
+        -core_coord_system_id => 2,
+        -rank                 => 2,
+    );
+}
+qr/Cannot name coord system 'toplevel' unless TOP_LEVEL is 1/,
+    'Test name - top_level exception';
+
 # my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
 # my $db   = $multi->get_DBAdaptor( "funcgen" );
 
