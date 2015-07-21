@@ -52,10 +52,10 @@ throws_ok { $cosys->is_top_level() }
 qr/Not yet implmented, need to test against the core cache using dnadb\/schema_build/,
     'Check is_top_level throws exception';
 
-my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
-my $db   = $multi->get_DBAdaptor( "core" );
+# my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
+# my $db   = $multi->get_DBAdaptor( "funcgen" );
 
-print $cosys->($db);
+# print $cosys->($db);
 
 # 'SCHEMA_BUILD','TOP_LEVEL', 'SEQUENCE_LEVEL', 'DEFAULT', 'RANK', 'IS_STORED', 'CORE_COORD_SYSTEM_ID'
 
