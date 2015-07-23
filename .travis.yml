@@ -8,9 +8,14 @@ env:
   - COVERALLS=true  DB=mysql
   - COVERALLS=false DB=mysql
 
+sudo: false
+
+addons:
+  apt:
+    packages:
+    - unzip
+
 before_install:
-    - sudo apt-get -y update
-    - sudo apt-get -y install unzip
     - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-test.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl.git
     - wget https://github.com/bioperl/bioperl-live/archive/bioperl-release-1-2-3.zip
