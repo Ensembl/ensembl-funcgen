@@ -23,8 +23,32 @@
 #  Questions may also be sent to the Ensembl help desk at
 #  <http://www.ensembl.org/Help/Contact>.
 
-echo ":::: Setting up the hive environment ::::" 
+ERSA_USAGE='>. ersa_env.sh /path/to/instance/config.sh [dbpass] [dnadb_pass]'
 
+base_name=$(basename -- "$0")
+
+if [[ "$base_name" != "bash" ]]; then
+  echo -e "$base_name must be sourced not executed e.g.\n\t$ERSA_USAGE"
+  exit
+fi
+
+export EFG_SRC=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd | sed 's#/scripts/environments##')
+export SRC=$(echo $EFG_SRC | sed 's#/ensembl-funcgen##')
+
+#if [[ ! $EFG_SRC ]]; then
+#  echo -e "\$EFG_SRC is not defined. You need to setup and initialise the base efg environment first (efg.env/config)."
+#  return 1
+#fi
+
+INSTANCE_CONFIG=$1
+shift
+
+if [[ ! $INSTANCE_CONFIG ]]; then
+  echo -e "You must pass at least an instance config file path argument:\n\t$ERSA_USAGE"
+  return 1
+fi
+
+echo ":::: Setting up the hive environment ::::" 
 
 
 #Source in some handy functions
@@ -33,16 +57,27 @@ echo ":::: Setting up the hive environment ::::"
 #Also change so we don't need absolute path as we can source from the same directory
 . $EFG_SRC/scripts/environments/funcs.sh
 
-PIPELINE_CONFIG=${PIPLINE_CONFIG:=$EFG_SRC/scripts/environments/hive.config}
-echo ":: Sourcing environment config: $PIPELINE_CONFIG"
+PIPELINE_CONFIG=${PIPLINE_CONFIG:=$EFG_SRC/scripts/environments/ersa_site_config.sh}
+echo -e ":: Sourcing site config:\t$PIPELINE_CONFIG"
 . $PIPELINE_CONFIG
+
+
+echo "DATA_HOME is $DATA_HOME"
+
+echo -e ":: Sourcing instance config:\t$INSTANCE_CONFIG"
+. $INSTANCE_CONFIG
+export DB_PASS=$1
+export DNADB_PASS=$2
+shift
+shift
+# Just in case we want to pass any other arguments, but this is already getting close to needing GetOpts
 
 
 
 
 # TODO 
 
-# 2 _InitEnv CheckVariables  SEQ_ARCHIVE_DIR and others
+# 2 _InitEnv CheckVariables  ARCHIVE_DIR and others
 #
 # 3 Merge ListJobs and GetFailedJobs
 #
@@ -75,7 +110,7 @@ export PIPELINE_PACKAGE=ensembl-hive
 
 # Move these to seq.env
 #env colour is red
-export ENV_NAME='hive'
+export ENV_NAME='ersa'
 export PS1_COLOUR=31
 #This should take a different colour for every env?
 #blue is base efg
@@ -146,7 +181,7 @@ alias mysqlhive='mysql $PDB_MYSQL_ARGS'
 
 
 #TODO
-#1 CheckVariables $SEQ_ARCHIVE_DIR? This is actually optional, 
+#1 CheckVariables $ARCHIVE_DIR? This is actually optional, 
 #but would need to  conditionally pass it in ConfigurePipeline
 #2 CheckVariables DNADB_SCRIPT_ARGS (or make it optional in ConfigurePipeline)
 
@@ -300,9 +335,7 @@ PIPELINEDB:       ${PDB_USER}@${PDB_HOST}:${PDB_NAME}:${PDB_PORT}"
 	export BACKUP_DIR=${WORK_DIR}/backup
 	export PIPELINE_OUT=${WORK_DIR}/hive_debug
 
-	#Create db output dir if not present
-  # TODO remove this? Perl scripts should probably do this.
-	#MakeDirs $WORK_DIR
+	MakeDirs $WORK_DIR
 
   #This is required as the config uses this to identify default config locations
   export ENSEMBL_CVS_ROOT_DIR=$SRC
@@ -463,16 +496,16 @@ GenerateIndexes(){
 # WE need to add similar functions to ConfigureMotifPipeline
 # ConfigureArrayPipeline
 
-ConfigureSeqPipeline(){
+ConfigurePipeline(){
   perl $EFG_SCRIPTS/pipeline/configure_hive.pl -pdb_user $PDB_USER -pdb_pass $PDB_PASS -PDB_NAME $PDB_NAME \
     -pdb_host $PDB_HOST -pdb_port $PDB_PORT -user $DB_USER -pass $DB_PASS -host $DB_HOST -port $DB_PORT -dbname $DB_NAME \
     $DNADB_SCRIPT_ARGS -hive_script_dir $PIPELINE_SCRIPTS -species $LC_SPECIES -data_root $DATA_HOME \
-    -archive_root $SEQ_ARCHIVE_DIR $@
+    -archive_root $ARCHIVE_DIR $@
   PrintColour -c blue -s "Type 'Help' for a list of aliases and commands"
 }
 
 
-SeedSeqPipeline(){
+SeedPipeline(){
   perl $EFG_SCRIPTS/pipeline/seed_hive.pl -url $HIVE_URL -hive_script_dir $PIPELINE_SCRIPTS $@
   PrintColour -c blue -s "Type 'Help' for a list of aliases and commands"
 }
@@ -910,22 +943,24 @@ Help(){
 
 Useful aliases:
 
-  mysqlpipe - Access to the hive DB
-  mysqlefg  - Access to the output funcgen DB
+  mysqlpipe - Access the hive DB via mysql client
+  mysqlefg  - Access the output funcgen DB via mysql client
+  mysqlcore - Access the core DB via mysql client
+  datahome  - cd to \$DATA_HOME i.e. $DATA_HOME
   workdir   - cd to the working directory i.e. $WORK_DIR
+  aligndir  - cd to the alignments directory for this species i.e. $DATA_HOME/alignments/$SPECIES
 
 Useful functions (use -h for help where specified):
 
-  ConfigureSeqPipeline [optional init_pipeline.pl args] 
-    - Initialises and adds 'Configs' to the hive pipeline DB
-  GenerateGraph     [-h] - Generates the pipeline graph
-  GenerateLSFReport [-h] - Generates lsf report
-  SeedSeqPipeline      [-h] - Seeds the pipeline with jobs or see what would be seeded
-  ReseedPipeline    [optional reseed_pipeline.pl args]
+  ConfigurePipeline    [optional init_pipeline.pl args] - Initialises and adds 'Configs' to the hive pipeline DB
+  GenerateGraph        [-h] - Generates the pipeline graph
+  GenerateLSFReport    [-h] - Generates lsf report
+  SeedPipeline         [-h] - Seeds the pipeline with jobs or see what would be seeded
+  ReseedPipeline       [optional reseed_pipeline.pl args]
 
-  Beekeeper     [optional beekeeper.pl args] 
-    - Simply calls beekeeper.pl -url \$HIVE_URL -hive_log_dir \$WORK_DIR/debug
-  DebugJob      [-h]
+  Beekeeper            [optional beekeeper.pl args] - Simply calls beekeeper.pl -url \$HIVE_URL 
+  Beekeeper_with_logs  [optional beekeeper.pl args] - As above but with:\t-hive_log_dir \$WORK_DIR/debug
+  DebugJob             [-h]
   DeleteDownstreamJobs [-h]
 
   AnalysisProgress             - Selects * from progress table
@@ -934,9 +969,6 @@ Useful functions (use -h for help where specified):
   GetFailedJobs     [ -h ] - Lists failing jobs
    
   Help          [-l(ong)]  - Prints this message, the -l(ong) option includes full list of aliases and functions
-
-#Add stuff in here about GUI
-#Add shortcuts to config dir
 "
 
 }
@@ -1067,121 +1099,6 @@ ImportMotifMatch(){
   beekeeper.pl -url mysql://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${USER}_motif_import_${DB_NAME} -loop
 
   echo "Now check results in $WORK_DIR/motif_features/results"
-
-}
-
-# DumpSeq
-# Lifted straight from arrays.env
-
-# TODO Update to work here
-# TODO Add pep dump support
-# TODO split out into DumpGenome DumpProteins DumpGenes
-#      DumpProteins maybe able to be integrated into motif pipeline
-
-# It's not entirely safe to put this in the sequencing pipeline.
-# If there are parallel pipelines, this may result in duplicated dumps or usage of incomplete dumps
-# Same issues as GenerateIndexes
-
-DumpSeq(){
-  local seq_type
-  seq_type=$1
-  #should take output_file var here?
-
-  CheckGlobalVariables seq_type
-
-  #Validate
-  ValidateGlobalVariable seq_type VALID_ALIGN_TYPES
-
-  #seqs_var="${seq_type}SEQS"
-    dir="${ARRAYS_HOME}/${seq_type}SEQS"
-    
-  #Create SEQS dir with large stripe size
-
-  if [ ! -d $dir ]
-  then
-    MakeDirs $dir
-    lfs setstripe $dir 0 -1 -1
-  fi
-  
-  dump_dnadb_param=
-
-  if [ $DNADB_PASS ]; then
-    dnadb_pass_param="--dbpass $DNADB_PASS"
-  fi
-
-  jid=
-
-
-  #These all need to chage to schema build due to 
-  #lack of genebuild version and additional patches on the same assembly
-
-
-  if [ $seq_type = "GENOMIC" ]; then
-    #We don't yet support non-ref seqs here MHC haps etc.
-    #Would need to revert to schema_buld as dbname soes not encode patches
-    job_name=${SPECIES}_toplevel_${SCHEMA_BUILD}.fasta
-    export GENOMICSEQS=${dir}/${job_name}
-    echo ":: Dumping softmasked genomic sequence: $GENOMICSEQS"
-
-    #This sometimes runs out of memory on head nodes??
-    #Always after chr 6 and before chr 4 for human
-    #Even tho mem usage has remained ~ 20%???
-
-    #Do this as it may not be executable after checkout
-    chmod +x $ANALYSIS_SCRIPTS/sequence_dump.pl
-    BackUpFile $GENOMICSEQS
-  
-  
-    #This only took 122MB for GRCh38, let's ask for 400mb to be sure
-
-    bsub_cmd="-e ${dir}/genomic_seq.%J.err -o ${dir}/genomic_seq.%J.out -R\"select[mem>400] rusage[mem=400]\" -M400 "
-    cmd="$EFG_PERL $ANALYSIS_SCRIPTS/sequence_dump.pl \
-                 -dbhost $DNADB_HOST \
-                 -dbuser $DNADB_USER \
-                 -dbname $DNADB_NAME \
-                 -species $SPECIES \
-                 -coord_system_name toplevel \
-                 -mask_repeat Dust  \
-                 -mask_repeat RepeatMask  \
-                 -softmask $MULTI_SPECIES \
-                 -filename $GENOMICSEQS $dnadb_pass_param"
-
-  elif  [ $seq_type = "TRANSCRIPT" ]; then
-    #CheckVariables now done in _InitEnv
-
-
-
-    job_name=${SPECIES}_transcripts.${SCHEMA_BUILD}.fasta
-    export TRANSCRIPTSEQS=${dir}/${job_name}
-    echo ":: Dumping transcript sequence: $TRANSCRIPTSEQS"
-
-    BackUpFile $TRANSCRIPTSEQS
-
-    #This took ~4GB for human 75 transcripts
-    bsub_cmd="-e ${dir}/transcript_seq.%J.err -o ${dir}/transcript_seq.%J.out -R\"select[mem>6000] rusage[mem=6000]\" -M6000 "
-
-    cmd="$EFG_PERL $EFG_SCRIPTS/export/dump_genes.pl \
-        -dbport  $DNADB_PORT \
-        -dbuser  $DNADB_USER \
-        -dbhost  $DNADB_HOST \
-        -dbname  $DNADB_NAME \
-        -species $SPECIES \
-        $MULTI_SPECIES  \
-        -cdna  \
-        -stable_id \
-        -file $TRANSCRIPTSEQS $dnadb_pass_param"
-      
-  else
-    echo "The seq_type $seq_type is not recognized"
-    exit 1;
-  fi
-
-
-  bsubJob $job_name "$bsub_cmd" "$cmd"
-  
-  if [[ "$QUEUE_MANAGER" != Local ]]; then
-    echo "Now need to wait or $seq_type dump to finish: jobWait $JOB_ID"
-  fi
 
 }
 
@@ -1362,3 +1279,5 @@ bsubJob(){
 	fi
 }
 
+
+_InitHiveEnv
