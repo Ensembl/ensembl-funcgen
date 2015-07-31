@@ -111,7 +111,7 @@ my %config_info =
 # These are separate as we sort based on priority which gives an undef warning below
 my %config_labels =
  ('Peaks_and_Collections' => [undef, 'Peaks', 'Collections'],
-  'UberPipe'              => [undef, 'Peaks', 'Collections', 'IDRPeaks', 'ReadAlignment'] );
+  'ErsaPipe'              => [undef, 'Peaks', 'Collections', 'IDRPeaks', 'ReadAlignment'] );
 
 
 # Some global variable to avoid excessive arg passing
