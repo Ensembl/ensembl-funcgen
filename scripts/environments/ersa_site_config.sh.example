@@ -6,16 +6,16 @@
 # To make instance specific changes you can override these defaults 
 # by setting them in your instance.env file
 
-
-
-export VALID_QUEUE_MANAGERS="LSF Local"
-
 # Now defined dynamically in ersa_env.sh
 #export SRC=$HOME/src
-
 export ARCHIVE_DIR=/parh/to/your/warehouse/root/directory/
 export DATA_HOME=/path/to/your/working/root/directory/
 
+export VALID_QUEUE_MANAGERS="LSF Local"
+export PIPELINE_PACKAGE=ensembl-hive
+export ENV_NAME='ersa'
+export PS1_COLOUR=31
+#env colour is red
 
 
 ### Initialise/Reset Variables ###
