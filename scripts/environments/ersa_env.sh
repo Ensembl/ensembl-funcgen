@@ -13,9 +13,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
-
-#CONTACT
+#
+# CONTACT
 #
 #  Please email comments or questions to the public Ensembl
 #  developers list at <http://lists.ensembl.org/mailman/listinfo/dev>.
@@ -23,8 +22,66 @@
 #  Questions may also be sent to the Ensembl help desk at
 #  <http://www.ensembl.org/Help/Contact>.
 
-ERSA_USAGE='>. ersa_env.sh /path/to/instance/config.sh [dbpass] [dnadb_pass]'
+### GENERAL NOTES ###
+# 1 Never exit! 
+#   Execute has been changed to return the exit code rather than exiting.
+#   Always catch and return 1, so we don't don't the use out of the subshell
+#   Some of the older funcs from funcs.sh still exit, so these need updating to return or subshelling to avoid exit
+#   As such you really don't want lot's of nested Execute via dependant functions calls
+#   To avoid having to handle this, the depth of the function call stack should never exceed 2
+#   i.e. Don't call other functions unless it is a very simple utility function, which you know does
+#   does not call other functions. Should probably rename all these utility functions as internal prefixed with _
+#   This would also facilate automatic listing of the env functions by ignore functions prefixed with _
 
+# 2 Can it be moved to a perl script or the hive?
+#   Always consider whether something is better written in perl with a simple wrapper here if required
+#   Or even better, put it in the pipeline!
+
+
+### TODOs ###
+# 
+# There are likely more specific TODOs inline. Search for TODO.
+#
+# 1 If we want the basic non-ERSA specific funcs & aliases available for other pipelines
+#   We will have tosplit this back into hive_env.sh and ersa_env.sh
+#   This is not-stricly necessary as non-ersa pipelines are unlikely to require the interactive
+#   review and seeding process. i.e. they probably have a single seed point which can be initiated
+#   without the need for the configure & seed functions. Not using the env means you won't get 
+#   aliases, GetFailedJobs, ListJobs, DebugJobs etc.
+
+# 2 _InitEnv CheckVariables  ARCHIVE_DIR and others
+#
+# 3 Merge ListJobs and GetFailedJobs
+#
+# 4 Review funcs.sh Re/Move all unused func elsewhere or delete
+#
+# 5 Add reseed support to DebugJob, such that we can add things like recover/rollback to a debug job. 
+
+# 6 pass DB passwords via environment for security, currently done on cmdline
+
+# 7 Add the config summary to Help -l
+
+# 8 Change functions to return 0 for the Check/Validate style methods
+#   Then we can handle returning from here, instead of exit the shell
+#   This may break the array mapping env. In the interim, add the funcs here
+#   until we have time to update/retro fit them into the array mapping env
+#   We can get around this by subshelling the call e.g. if [ ! $(ValidateVariablesOrUsage) ]; then return; fi
+#   This won't work as the value tested here is the string output, not the exit code 
+#   which needs to be test with $?
+#   And actually supresses the text output, hence we won't see usage output
+#   CheckDirs currently exits the subshell horribly as will others.
+#   But this is no longer subshelled as the subshell was the old pre-req of having the efg.env 
+#   initialsed, so exits the terminal!!
+#   The old exit version of the funcs are still used in arrays.env
+#   Simpy Create new ones with _!
+
+# 9 Either source efg.env (tidy up first) or move efg.env aliases/funcs to separate file, such that we can source them
+#   Typing efg in ersa curretnly sources the efg env (as the alias hasn't been redefined by efg.env)
+#   rather than simply cd'ing to the repo.
+#   This is required to bring the git env config in! i.e. git prompt stuff.
+
+
+ERSA_USAGE='>. ersa_env.sh /path/to/instance/config.sh [dbpass] [dnadb_pass]'
 base_name=$(basename -- "$0")
 
 if [[ "$base_name" != "bash" ]]; then
@@ -32,97 +89,53 @@ if [[ "$base_name" != "bash" ]]; then
   exit
 fi
 
-export EFG_SRC=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd | sed 's#/scripts/environments##')
+# Take existing $EFG_SRC or default to relative location of this file
+export EFG_SRC=${EFG_SRC:=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd | sed 's#/scripts/environments##')}
 export SRC=$(echo $EFG_SRC | sed 's#/ensembl-funcgen##')
 
-#if [[ ! $EFG_SRC ]]; then
-#  echo -e "\$EFG_SRC is not defined. You need to setup and initialise the base efg environment first (efg.env/config)."
-#  return 1
-#fi
+
+### Validate config files exist
 
 INSTANCE_CONFIG=$1
-shift
-
 if [[ ! $INSTANCE_CONFIG ]]; then
-  echo -e "You must pass at least an instance config file path argument:\n\t$ERSA_USAGE"
+  echo -e "You must pass at least an instance config file path argument:\n\t$ERSA_USAGE\nSee:\t$EFG_SRC/scripts/environments/ersa_instance_config.sh.example"
+  return 1
+elif [[ ! -f $INSTANCE_CONFIG ]]; then
+  echo -e "The instance config file does not exist:\n\t$INSTANCE_CONFIG\nSee:\t$EFG_SRC/scripts/environments/ersa_instance_config.sh.example"
   return 1
 fi
 
-echo ":::: Setting up the hive environment ::::" 
-
-
-#Source in some handy functions
-#This will be changed so this sources .efg or rename efg.env
-#And efg.env sources funcs.sh
-#Also change so we don't need absolute path as we can source from the same directory
-. $EFG_SRC/scripts/environments/funcs.sh
-
 PIPELINE_CONFIG=${PIPLINE_CONFIG:=$EFG_SRC/scripts/environments/ersa_site_config.sh}
+if [[ ! -f $PIPELINE_CONFIG ]]; then
+  echo -e "You must create a 'site' config file:\n\t$PIPELINE_CONFIG\nSee:\t$EFG_SRC/scripts/environments/ersa_site_config.sh.example"
+  return 1
+fi
+
+
+
+echo ":::: Setting up the ERSA hive environment ::::" 
+. $EFG_SRC/scripts/environments/funcs.sh
 echo -e ":: Sourcing site config:\t$PIPELINE_CONFIG"
 . $PIPELINE_CONFIG
-
-
-echo "DATA_HOME is $DATA_HOME"
-
 echo -e ":: Sourcing instance config:\t$INSTANCE_CONFIG"
 . $INSTANCE_CONFIG
-export DB_PASS=$1
-export DNADB_PASS=$2
+
+# Have to do this after the sourcing the $PIPELINE_CONFIG
+# As this resets all the config vars
+export DB_PASS=$2
+export DNADB_PASS=$3
+echo $DB_PASS $DNADB_PASS
+shift
 shift
 shift
 # Just in case we want to pass any other arguments, but this is already getting close to needing GetOpts
-
-
-
-
-# TODO 
-
-# 2 _InitEnv CheckVariables  ARCHIVE_DIR and others
-#
-# 3 Merge ListJobs and GetFailedJobs
-#
-# 9 Review funcs.sh Move all unused func to my personal funcs_and_aliases file
-#   Change such that the return or exit dependant on whether they are in an interactive shell or not
-#
-# 10 Add reseed support to DebugJob, such that we can add things like recover/rollback to a debug job. 
-#
-# 12 Add DumpSeq function. Lift this from array mapping env and put it in the pipeline.env, with
-#    extended functionality for peptide dumps? It's not entirely safe to put this in the pipeline.
-#    If there are parallel pipelines, this may result in duplicated dumps or usage of incomplete dumps
-#
-# 14 DONE Investigate removing all _QueryVal SetMYSQL_ARGS functionality in place of Hive::Utils
-#    Some of this is really more suited for the TrackingAdaptor. Can we create a generic lightweight script
-#    For the tracking adaptor that will simply create it, then call a method with some params
-#    and return the results. Or can all _QueryVal calls be replaced with direct mysqlpipe/efg --no-column-names
-#    queries? Then we could also dump SetMYSQL_ARGS
-#
-# 15 Remove dependancy on efg.env, just expect $SRC, and use $EFG_SRC if defined or default EFG_SRC 
-#    to $SRC/ensembl-functgenomics
-
-# If the efg.env functions are apparently not available, this has been run rather than sourced.
-# which is still odd, as the subshell should still inherit the funcs from the current shell
-# this is likely because we are running this without a #!
-
-
-#Move these to .config file
-
-export PIPELINE_PACKAGE=ensembl-hive
-
-# Move these to seq.env
-#env colour is red
-export ENV_NAME='ersa'
-export PS1_COLOUR=31
-#This should take a different colour for every env?
-#blue is base efg
-#green for arrays?  Arrays and motif should be handled in here now also. Using the same pipeline DB!
-#red for peaks/pipeline
 
 
 ### Some convenient aliases
 alias datahome='cd $DATA_HOME'
 alias workdir='cd $WORK_DIR' 
 alias aligndir='cd $DATA_HOME/alignments/$SPECIES'
-# Need to add default assembly here?
+# Need to add default assembly here? This would be set or fetched from the DB.
 # alias indexhome?
 alias mysqlefg='mysql $DB_MYSQL_ARGS'
 alias mysqlout='mysql $DB_MYSQL_ARGS'
@@ -133,41 +146,6 @@ alias mysqlhive='mysql $PDB_MYSQL_ARGS'
 
 
 
-# GENERAL NOTES #
-#1 Don't Execute anything else unless you really want to exit the env!
-#This is different to how previous pipline envs have worked by chaining functions together
-#This env is restricted to very simple wrapper funcs which should never need to exit(via Execute)
-
-#2 Is it valid to have two separate hive running some of the linking confs? e.g. the set definition stuff?
-#we could get race conditions here, so we would need to prevent this
-
-
-
-# GENERAL TODOs # (More specific todos inline)
-#1 Move the generic stuff to pipeline.env
-#then split out hive and ensembl-pipeline specific stuff?
-#or just maintain this as analysis.env
-#Although we want to be able to re-use some of the hive stuff in here
-#If we design it such that we can just add confs in here
-
-#2 pass DB passwords via environment for security, currently done on cmdline
-
-#3 Add GUI support!
-
-#4 Create a separate 'config' help (e.g. vars etc) which can be added to normal Help with -l
-
-#5 Add support for specifying Assembly. Will need to be mindful about how this is handled wrt set naming in the DB
-#  i.e. if it is not the default assembly, the we should add it as a suffix? Otherwise we will have to be really
-#  careful about handling multiple CoordSystem specifc data and states linked to the same set
-
-#6 Change functions to return 0 for the Check/Validate style methods
-#  Then we can handle returning from here, instead of exit the shell
-#  This may break the array mapping env. In the interim, add the funcs here
-#  until we have time to update/retro fit them into the array mapping env
-#  We can get around this by subshelling the call e.g. if [ ! $(ValidateVariablesOrUsage) ]; then return; fi
-#  This won't work as the value tested here is the string output, not the exit code 
-#  which needs to be test with $?
-#  And actually supresses the text output, hence we won't see usage output
 
 ################################################################################
 # Func      : _InitHiveEnv(
@@ -181,20 +159,21 @@ alias mysqlhive='mysql $PDB_MYSQL_ARGS'
 
 
 #TODO
-#1 CheckVariables $ARCHIVE_DIR? This is actually optional, 
-#but would need to  conditionally pass it in ConfigurePipeline
+# 1 CheckVariables $ARCHIVE_DIR? This is actually optional? 
+# but would need to  conditionally pass it in ConfigurePipeline
+
 #2 CheckVariables DNADB_SCRIPT_ARGS (or make it optional in ConfigurePipeline)
 
 
 # This is now actually a merge of generic pipeline and hive specific environments
 
-_InitHiveEnv(){
+_InitErsaEnv(){
 	#Set all generic pipeline stuff e.g. DB vars, PATH/PERL5LIB etc
 	#_InitPipelineEnv || \
   #    ( echo "Failed to initialise pipeline environment" && return 1 )
-
-  CheckGlobalVariables DB_PORT DB_NAME DB_HOST SPECIES DB_PASS PIPELINE_PACKAGE DATA_HOME || return 1
-  CheckDirs $DATA_HOME || return 1
+  echo $DB_PORT $DB_NAME $DB_HOST $SPECIES $DB_PASS $PIPELINE_PACKAGE $DATA_HOME
+  _CheckGlobalVariables DB_PORT DB_NAME DB_HOST SPECIES DB_PASS PIPELINE_PACKAGE DATA_HOME || return 1
+  _CheckDirs $DATA_HOME || return 1
 
   export EHIVE_ROOT_DIR=$SRC/ensembl-hive
   export LC_SPECIES=$(echo $SPECIES | tr [A-Z] [a-z])
@@ -223,7 +202,7 @@ _InitHiveEnv(){
 
   export QUEUE_MANAGER=${QUEUE_MANAGER:=LSF}
   # Only required for bsubJob from GenerateIndexes. Can be set to LOCAL
-  ValidateGlobalVariable QUEUE_MANAGER VALID_QUEUE_MANAGERS
+  ValidateGlobalVariable QUEUE_MANAGER VALID_QUEUE_MANAGERS 1 || return 1
 
   # This was originally part of an attempt to allow both ensembl-pipeline
   # and ensembl-hive support from the same base pipeline.env
@@ -241,14 +220,14 @@ _InitHiveEnv(){
       PERL5LIB=${ORIG_PERL5LIB:=$PERL5LIB}
       export EFG_SCRIPTS=${SRC}/ensembl-funcgen/scripts
       export PIPELINE_SCRIPTS=${SRC}/${PIPELINE_PACKAGE}/scripts
-      CheckDirs $PIPELINE_SCRIPTS $EFG_SCRIPTS
+      _CheckDirs $PIPELINE_SCRIPTS $EFG_SCRIPTS || return 1
       export PATH=${PIPELINE_SCRIPTS}:${EFG_SCRIPTS}:$PATH
       
       # Test for BioPerl here and suggest soft_link
       # TODO Validate these aren't already in $PERL5LIB and skip
       local d
       for d in $SRC/ensembl-funcgen/modules $SRC/current_bioperl $SRC/ensembl/modules $SRC/$PIPELINE_PACKAGE/modules; do
-          CheckDirs $d
+          _CheckDirs $d || return 1
           export PERL5LIB=$PERL5LIB:$d
       done
 
@@ -291,29 +270,8 @@ _InitHiveEnv(){
   export DB_SCRIPT_ARGS="-host $DB_HOST -user $DB_USER -pass $DB_PASS -dbname $DB_NAME -port $DB_PORT"
   echo ""
 
-# As config is no longer dynamically written from env functions (as was done in arrays.env)
-# Then we can likely drop this. Although it might be useful to have in the env for passing to configure pipeline
-#  # Set the name which LSF uses to monitor host load
-#  if [[ ! $DB_HOST_LSFNAME ]]; then
-#    DB_HOST_LSFNAME=$DB_HOST
-#    
-#    if [[ $DB_HOST_LSFNAME != 'localhost' ]] && [[ $DB_HOST_LSFNAME_host != '127.0.0.1' ]]; then
-#      DB_HOST_LSFNAME=$(echo $DB_HOST_LSFNAME | sed 's/-/_/')
-#      export DB_HOST_LSFNAME="my${DB_HOST_LSFNAME}"
-#      echo -e "\$DB_HOST_LSFNAME not set, defaulting to:\t$DB_HOST_LSFNAME"
-#    fi
-#  fi
-#
-#  if [[ ! $DNADB_HOST_LSFNAME ]]; then
-#    DNADB_HOST_LSFNAME=$DB_HOST
-#    
-#    if [[ ( $DNADB_HOST_LSFNAME != 'localhost' ) && 
-#          ( $DNADB_HOST_LSFNAME_host != '127.0.0.1' ) ]]; then
-#      DNADB_HOST_LSFNAME=$(echo $DNADB_HOST_LSFNAME | sed 's/-/_/')
-#      export DNADB_HOST_LSFNAME="my${DNADB_HOST_LSFNAME}"
-#      echo -e "\$DNADB_HOST_LSFNAME not set, defaulting to:\t$DNADB_HOST_LSFNAME"
-#    fi
-#  fi
+  # TODO  Improve this a little with some directoried
+  # Convert it to eval at runtime, such that it can be included in Help -l
 
   echo "DB:               ${DB_USER}@${DB_HOST}:${DB_NAME}:${DB_PORT}
 DNADB:            ${DNADB_USER}@${DNADB_HOST}:${DNADB_NAME}:${DNADB_PORT}
@@ -342,9 +300,6 @@ PIPELINEDB:       ${PDB_USER}@${PDB_HOST}:${PDB_NAME}:${PDB_PORT}"
   export HIVE_URL="mysql://${PDB_USER}:${PDB_PASS}@${PDB_HOST}:${PDB_PORT}/${PDB_NAME}"
   Execute perl $EFG_SCRIPTS/pipeline/add_hive_url_to_meta.pl $DB_SCRIPT_ARGS -url $HIVE_URL || return 1
 
-  # Removed as non-obvious behaviour and may not be created yet
-  #workdir 
-
   alias beekeeper="$PIPELINE_SCRIPTS/beekeeper.pl -url $HIVE_URL -hive_log_dir ${WORK_DIR}/debug"
 
   export PS1="\
@@ -352,20 +307,10 @@ PIPELINEDB:       ${PDB_USER}@${PDB_HOST}:${PDB_NAME}:${PDB_PORT}"
 ${ENV_NAME}:${DB_NAME}>\
 \[\033[0m\]"
   Help
-
-  #This works!! But we could also pass them explicitly through the _InitEnv call?
-  #echo "Passed args are $args"
 }
 
 
-# TODO Change to perl script wrapper
-# TODO add options for headers only or separate out?
-
-# NOTE Can't easily move this to the pipeline as there are many 
-# parallel entry points where this would need to be checked.
-# This would create race conditions and overly complicate the pipeline config.
-# Or it would have to be incorporated into a seed analyses  
-# at which point it starts doing something it's not spec'd for and may fail.
+# TODO Change to perl script wrapper. No see ENSREGULATION-253
 
 GenerateIndexes(){
 	local usage
@@ -391,7 +336,7 @@ GenerateIndexes(){
   
 
   if [[ $genders ]]; then
-      ValidateVariable -v $gender -V "$valid_genders" -n gender || echo $usage && return 1
+      _ValidateVariable -v $gender -V "$valid_genders" -n gender || echo $usage && return 1
   else
       genders=$valid_genders
   fi
@@ -497,6 +442,13 @@ GenerateIndexes(){
 # ConfigureArrayPipeline
 
 ConfigurePipeline(){
+  # Add the tracking procedures which maybe absent
+  # This will fail if the tracking tables are not present
+  echo ":: Loading tracking_procedures.sql"
+  Execute mysql $DB_MYSQL_ARGS < $EFG_SRC/sql/tracking_procedures.sql || return 1
+  # This is slightly redundant if we configure more than once, could put this in _InitErsaEnv
+  # but that would prevent using the env with a non-tracking DB
+
   perl $EFG_SCRIPTS/pipeline/configure_hive.pl -pdb_user $PDB_USER -pdb_pass $PDB_PASS -PDB_NAME $PDB_NAME \
     -pdb_host $PDB_HOST -pdb_port $PDB_PORT -user $DB_USER -pass $DB_PASS -host $DB_HOST -port $DB_PORT -dbname $DB_NAME \
     $DNADB_SCRIPT_ARGS -hive_script_dir $PIPELINE_SCRIPTS -species $LC_SPECIES -data_root $DATA_HOME \
@@ -547,7 +499,7 @@ SegmentationProgress(){
   mysqlefg -e"$cmd"
 }
 
-# TODO Add wrappers to views here too?
+# TODO Add ReguBuildProgress (and maybe wrappers to views here too?)
 
 
 SetSegmentationFeatureTypes(){
@@ -574,7 +526,7 @@ SetSegmentationFeatureTypes(){
 GetSegmentationFeatureTypes(){
   local ftype_ids
   ftype_ids=$(mysqlefg --skip-column-names -e "SELECT string from regbuild_string where name='segmentation.feature_type_ids'")
-  mysqlefg --skip-column-names -e "select group_concat(name) from feature_type where feature_type_id in($type_ids)"
+  mysqlefg --skip-column-names -e"select group_concat(name) from feature_type where feature_type_id in($ftype_ids)"
 }
 
 
@@ -749,7 +701,7 @@ DebugJob(){
   local status
   local cmd
 
-  CheckVariablesOrUsage "-j(ob_id) not specified\n$usage" job_id || return 1
+  _CheckVariablesOrUsage "-j(ob_id) not specified\n$usage" job_id || return 1
   status=$(mysqlpipe --skip-column-names -e "select status from job where job_id='$job_id'")
 
   echo "Job $job_id status is $status";
@@ -857,18 +809,15 @@ DeleteDownstreamJobs(){
   fi
 }
 
-
 GenerateGraph(){
   local format
   local no_display
   local usage
-  format=png
+  format=pnge
   usage="GenerateGraph
   Description: Calls the generate_graph.pl script. Default ouput is:
                  ${WORK_DIR}/hive_diagram.${format}
-  Usage:       GenerateGraph [ -f(ormat default=$format) \
-                               -d(isplay, automatically opens graph in firefox) \
-                               -h(elp prints this message) ]"
+  Usage:       GenerateGraph [ -f(ormat default=$format) -d(isplay, automatically opens graph in firefox) -h(elp prints this message) ]"
 
   OPTIND=1
   while getopts ":hf:d" opt; do
@@ -885,8 +834,11 @@ GenerateGraph(){
   if [[ $display ]]; then
       Execute firefox ${WORK_DIR}/hive_diagram.${format} &
       #this will likely fail if you are using screen
-  fi    
+  fi  
+
+  echo -e "Your pipeline diagram has been written to:\n\t${WORK_DIR}/hive_diagram.${format}"  
 }
+
 
 
 GenerateLSFReport(){
@@ -909,6 +861,7 @@ GenerateLSFReport(){
 }
 
 # TODO Will need updating
+# Include eval'd version of config summary
 
 Help(){
   #Declare vars local first!
@@ -930,9 +883,9 @@ Help(){
     esac 
   done
 
-  if [[ $long ]]; then
-      EFGHelp
-  fi
+  #if [[ $long ]]; then
+  #    EFGHelp
+  #fi
 
 
   PrintColour -c blue -s "
@@ -963,7 +916,7 @@ Useful functions (use -h for help where specified):
   DebugJob             [-h]
   DeleteDownstreamJobs [-h]
 
-  AnalysisProgress             - Selects * from progress table
+  AnalysisProgress             - Selects * from hive progress table
   SegBuildProgress             - Calls the SummariseSegBuild procedure. Useful selecting what to seed.
   ListJobs          [ job_id ] - Lists jobs (performing necessary join to analysis_data)
   GetFailedJobs     [ -h ] - Lists failing jobs
@@ -976,7 +929,7 @@ Useful functions (use -h for help where specified):
 # DropPipeline      [-h] - Drops the hive pipeline tables or DB
 # Left this in pipeline.env for now. Just do this manually, also safer.
 # Funcs to incorporate/remove
-# CheckDirs
+
 
 
 
@@ -1029,7 +982,7 @@ RunMotifMatch(){
   #At the moment this needs to be run in a specific folder. TODO update the scripts
   cd $map_dir
 
-  CheckGlobalVariables SCHEMA_BUILD
+  _CheckGlobalVariables SCHEMA_BUILD
   
 
   #todo make this use $DB_READ_SCRIPT_ARGS
@@ -1112,12 +1065,11 @@ ImportMotifMatch(){
 
 
 # TODO
-# Remove OrUsage functions, this should be easily handled in the caller
-
+# Remove OrUsage functions, this should be easily/more appropriately handled in the caller
 
 
 ################################################################################
-# Func      : ValidateVariable()
+# Func      : _ValidateVariable()
 # Desc      : Check that the passed variable is contained in pass valid variable
 #             array
 # Arg [1]   : Variable to validate 
@@ -1128,7 +1080,7 @@ ImportMotifMatch(){
 
 #warn if valid_var only contains 1 value?
 
-ValidateVariable(){
+_ValidateVariable(){
   #declare vars first before setting as they are only declared local after they are defined  
   local var_name= 
 	local var=
@@ -1199,9 +1151,6 @@ Execute(){
 	fi
 }
 
-#was submitJob, have just changed exits to returns
-#Change this to take opts so we can wait for jobs?
-
 
 bsubJob(){
   local job_name=
@@ -1229,6 +1178,7 @@ bsubJob(){
 
 		checkJob $job_name
     #Sets global $JOB_ID based on $job_name
+    # This can still exit if it fails to get the info 
 
 	#We should test for more than one job here?
 	#jid will currently catch all ids
@@ -1280,4 +1230,4 @@ bsubJob(){
 }
 
 
-_InitHiveEnv
+_InitErsaEnv
