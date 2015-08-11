@@ -988,7 +988,7 @@ RunMotifMatch(){
   #todo make this use $DB_READ_SCRIPT_ARGS
 
   #TODO extra job management...
-  bsub -J pwm_mappings_${DB_NAME} -e $map_dir/pwm_mappings_${DB_NAME}.err -o $map_dir/pwm_mappings_${DB_NAME}.out -q long -M35000 -R"select[mem>35000] rusage[mem=35000]" perl $EFG_SRC/scripts/pwm_mappings/run_pwm_mapping_pipeline.pl $DB_SCRIPT_ARGS $DNADB_SCRIPT_ARGS -species $LC_SPECIES -assembly $ASSEMBLY -workdir $DATA_HOME -schema $SCHEMA_BUILD -outputdir $map_dir $feature_list
+  bsub -J pwm_mappings_${DB_NAME} -e $map_dir/pwm_mappings_${DB_NAME}.err -o $map_dir/pwm_mappings_${DB_NAME}.out -q long -M35000 -R"select[mem>35000] rusage[mem=35000]" perl $EFG_SRC/scripts/pwm_mappings/run_pwm_mapping_pipeline.pl $DB_SCRIPT_ARGS $DNADB_SCRIPT_ARGS -species $LC_SPECIES -assembly $ASSEMBLY -workdir $DATA_HOME -outputdir $map_dir $feature_list
   #echo $cmd
   #Execute  $cmd 
 
