@@ -146,7 +146,7 @@ jobWait(){
 	return $complete
 }
 
-
+# TODO change this to return 1 instead of exit
 
 checkJob(){
   local job_name=
@@ -184,6 +184,8 @@ checkJob(){
 
 
 }
+
+# Remove this once new array mapping pipeline is up and running
 
 submitJob(){
 
@@ -280,7 +282,7 @@ submitJob(){
 #This is really low utility now, apart from in the _InitEnv
 #functions, and also in functions which require optional global vars
 
-CheckGlobalVariables(){
+_CheckGlobalVariables(){
   local line=
 
   if [[ ! $* ]]; then
@@ -371,6 +373,26 @@ CheckVariablesOrUsage(){
 		exit 1;
 	fi
 }
+
+_CheckVariablesOrUsage(){
+  usage=$1
+  shift
+  variable_names="$*"
+
+  #Could CheckVariabl
+
+  tmp=$(CheckGlobalVariables $variable_names)
+
+  if [ $? != 0 ]; then
+    echo -e "$tmp\n$usage"
+    #This get's flattened into one line if we capture the output for returning rather than exit
+    #So we don't get full error
+    return 1;
+  fi
+}
+
+
+
 
 ValidateVariableOrUsage(){
 	usage=$1
@@ -491,7 +513,17 @@ CheckDirs(){
 	done
 }
 
+_CheckDirs(){
 
+  for dir_name in $*
+    do
+    if [ ! -d $dir_name ]
+    then
+      echo "error : directory $dir_name does not exist"
+      return 203
+    fi
+  done
+}
 
 ################################################################################
 # Func      : MakeDirs() 
