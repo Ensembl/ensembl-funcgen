@@ -19,8 +19,10 @@ use Test::Exception;
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Funcgen::CellType;
 
+# use Bio::EnsEMBL::Test::MultiTestDB;
+
 # Module compiles
-ok( 1, 'Bio::EnsEMBL::Funcgen::CellType compiles' );
+BEGIN { use_ok('Bio::EnsEMBL::Funcgen::CellType'); }
 
 # Test constructor
 my $ct = Bio::EnsEMBL::Funcgen::CellType->new(
