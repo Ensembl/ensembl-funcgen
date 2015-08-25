@@ -339,6 +339,8 @@ sub new {
 sub DESTROY {
   my ($self) = @_;
 
+   my $save_the_exit_code = $?;
+  
   #This prevents having to explicitly call report
   $self->report;
 
@@ -361,6 +363,8 @@ sub DESTROY {
   }
 
   $self->debug( 2, "Bio::EnsEMBL::Helper class instance destroyed." );
+ 
+  $? = $save_the_exit_code;
 
   return;
 } ## end sub DESTROY
