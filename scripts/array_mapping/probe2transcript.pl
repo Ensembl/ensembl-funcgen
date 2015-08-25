@@ -222,8 +222,8 @@ $| = 1; # auto flush stdout
 
 #Helper params
 $main::_log_file = undef;
-$main::_tee      = 0;    
-our $Helper = new Bio::EnsEMBL::Funcgen::Utils::Helper;
+$main::_tee      = 0;
+our $Helper;
 my $debug = 0;
 
 #ARRAY FORMAT CONFIG
@@ -540,7 +540,7 @@ sub get_options {
   'debug'                  => \$options->{debug},
 #Helper params
   'tee'                    => \$main::_tee,
-  'filename'               => \$main::_log_file,
+  'filename=s'               => \$options->{filename},
 #add a reduced log to minimize memory usage?
   'help'                   => sub { pos2usage(-exitval => 0, -message => "Params are:\t@tmp_args"); }
   ) or pod2usage(
@@ -557,8 +557,11 @@ sub get_options {
 
 
   $options->{log_type} = $options->{format} || $$;
-  $options->{filename} ||= "$options->{xref_dbname}_$options->{log_type}_probe2transcript";
-  $main::_log_file ||=  "./$options->{filename}.log";
+  
+  $main::_log_file = $options->{filename};
+  
+  $Helper = new Bio::EnsEMBL::Funcgen::Utils::Helper;
+  
   $options->{hostname} = `hostname`;
   chomp($options->{hostname});
   $Helper->log_header('Running on probe2transcript.pl on: '.$options->{hostname}, 0, 'append_date');
