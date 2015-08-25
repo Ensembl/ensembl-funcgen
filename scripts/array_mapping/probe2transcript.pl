@@ -289,11 +289,54 @@ my %array_format_config =
 
 main();
 
+sub rollback_arrays {
+
+  my $options = shift;
+
+  my $rollback_array_script = 'rollback_array.pl';
+  
+  my $full_path = `which $rollback_array_script`;
+  
+  if (! $full_path) {
+    die ("Can't find the rollback script in the path. It is in the scripts/rollback/ subdirectory of the ensembl-funcgen checkout. Please consider adding this to you PATH environment variable.");
+  }  
+  
+  my $arrays = join " ", @{$options->{array_names}};
+  
+  my $cmd = 'rollback_array.pl'
+
+  . ' --species '     . $options->{species}
+  . ' -dbhost '       . $options->{xref_host}
+  . ' -dbname '       . $options->{xref_dbname}
+  . ' -dbuser '       . $options->{xref_user}
+  . ' -dbport '       . $options->{xref_port}
+
+  . ' -dnadb_pass '   . $options->{transcript_pass}
+  . ' -dnadb_port '   . $options->{transcript_port}
+  . ' -dnadb_name '   . $options->{transcript_dbname}
+  . ' -dnadb_host '   . $options->{transcript_host}
+  . ' -dnadb_user '   . $options->{transcript_user}
+
+  . ( $options->{xref_pass}       ? ' -dbpass '     . $options->{xref_pass}       : '' )
+  . ( $options->{transcript_pass} ? ' -dnadb_pass ' . $options->{transcript_pass} : '' )
+
+  . ' -arrays '.$arrays.' -m probe2transcript ';
+
+    print "\ncmd = $cmd\n";
+  
+    run($cmd);
+}
+
 sub main {
   my $options = get_options();
 
   $Helper->log("Setting global constant variables", 0, 'append_date');
   my ($probe_db, $transcript_db, $xref_db) = @{get_databases($options)};
+
+  $Helper->log("Rolling back results from previous runs of this type", 0, 'append_date');
+  rollback_arrays($options);  
+  $Helper->log("Done with rollbacks.", 0, 'append_date');
+  
   $options->{arrays} = get_arrays($xref_db, $options->{vendor}, $options->{array_names});
   my $schema_build = $xref_db->_get_schema_build($transcript_db);
   my $transc_edb_name = "$options->{species}_core_Transcript";
