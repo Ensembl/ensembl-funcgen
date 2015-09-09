@@ -177,3 +177,4 @@ my $expected_array_chip
 is_deeply( $array->get_ArrayChip_by_design_id('HG-U133A'),
     $expected_array_chip, 'Test get_ArrayChip_by_design_id() subroutine' );
 
+done_testing();
