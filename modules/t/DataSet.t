@@ -18,6 +18,7 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Analysis;
 use Test::More;
 use Test::Exception;               # throws_ok
 use Bio::EnsEMBL::Test::TestUtils  qw( test_getter_setter debug );
@@ -25,27 +26,155 @@ use Data::Dumper                   qw( Dumper );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Test::MultiTestDB;
 
-ok(1, 'Start up');
-
 # switch on the debug prints
 our $verbose = 0;
 
-my $multi  = Bio::EnsEMBL::Test::MultiTestDB->new();
-my $efgdba = $multi->get_DBAdaptor("funcgen");
+# ---------------
+# Module compiles
+# ---------------
+BEGIN { use_ok('Bio::EnsEMBL::Funcgen::DataSet'); }
+
+# ------------------------------
+# Setup test database connection
+# ------------------------------
+my $multi                = Bio::EnsEMBL::Test::MultiTestDB->new();
+my $efgdba               = $multi->get_DBAdaptor("funcgen");
+my $data_set_adaptor     = $efgdba->get_adaptor("dataset");
+my $feature_set_adaptor  = $efgdba->get_adaptor("featureset");
+my $result_set_adaptor   = $efgdba->get_adaptor("resultset");
+my $analysis_adaptor     = $efgdba->get_adaptor("analysis");
+my $cell_type_adaptor    = $efgdba->get_adaptor("celltype");
+my $feature_type_adaptor = $efgdba->get_adaptor("featuretype");
+
+# ----------------
+# Test constructor
+# ----------------
+my $result_set = $result_set_adaptor->fetch_by_name(
+    'HeLa-S3_CTCF_ENCODE_Broad_bwa_samse');
+my $feature_set = $feature_set_adaptor->fetch_by_name(
+    'HeLa-S3_CTCF_ENCODE_Broad_SWEmbl_R0005_IDR');
+
+my $supporting_sets=[$result_set];
+
+my $data_set = Bio::EnsEMBL::Funcgen::DataSet->new(
+    -NAME            => "test_name",
+    -SUPPORTING_SETS => $supporting_sets,
+    -FEATURESET      => $feature_set,
+    -DISPLAYBLE      => 5,
+);
+
+
+isa_ok(
+    $data_set,
+    'Bio::EnsEMBL::Funcgen::DataSet',
+    'DataSet constructor return type'
+);
+
+throws_ok {
+    my $data_set = Bio::EnsEMBL::Funcgen::DataSet->new(
+
+        # -NAME            => "test_name",
+        -SUPPORTING_SETS => [$result_set],
+        -FEATURESET      => $feature_set,
+        -DISPLAYBLE      => 5,
+    );
+}
+qr/Must defined a DataSet -name/, 'Test that a name is provided';
+
+# ----------------------------------
+# Test product_FeatureSet subroutine
+# ----------------------------------
+my $new_feature_set = $feature_set_adaptor->fetch_by_name(
+    'HeLa-S3_CTCF_ENCODE_Uta_SWEmbl_R0005_IDR');
+ok( test_getter_setter( $data_set, 'product_FeatureSet', $new_feature_set ),
+    'test_getter_setter DataSet::product_FeatureSet' );
+
+my $not_a_feature_set = $result_set;
+
+throws_ok {
+    $data_set->product_FeatureSet($not_a_feature_set);
+}
+qr/Need to pass a valid Bio::EnsEMBL::Funcgen::FeatureSet/,
+    'Test that a FeatureSet object is provided to product_FeatureSet()';
+
+throws_ok {
+    $data_set->product_FeatureSet($feature_set);
+}
+qr/The main feature_set has already been set for this DataSet, maybe you want add_SupportingSets?/,
+    'Test that the new FeatureSet object provided to product_FeatureSet() is not the same as the existing one';
+
+# -----------------------------------------------
+# Test get_supporting_sets_by_Analysis subroutine
+# -----------------------------------------------
+my $analysis = $analysis_adaptor->fetch_by_logic_name('bwa_samse');
+
+is_deeply( $data_set->get_supporting_sets_by_Analysis($analysis),
+    $supporting_sets, 'Test get_supporting_sets_by_Analysis() subroutine' );
+
+my $not_an_analysis = $result_set;
+
+throws_ok {
+    $data_set->get_supporting_sets_by_Analysis($not_an_analysis);
+}
+qr/Need to pass a valid stored Bio::EnsEMBL::Analysis/,
+    'Test that a Bio::EnsEMBL::Analysis object is provided to get_supporting_sets_by_Analysis()';
+
+# -----------------------------------
+# Test get_supporting_sets subroutine
+# -----------------------------------
+is_deeply( $data_set->get_supporting_sets(),
+    $supporting_sets, 'Test get_supporting_sets() subroutine' );
+
+throws_ok {
+    $data_set->get_supporting_sets('invalid_set_type');
+}
+qr/You have specified an invalid supporting set type/,
+    'Test that a valid $set_type is provided to get_supporting_sets()';
+
+# -----------------------------------------------
+# Test get_displayable_supporting_sets subroutine
+# -----------------------------------------------
+is_deeply( $data_set->get_displayable_supporting_sets,
+    $supporting_sets, 'Test get_displayable_supporting_sets() subroutine' );
+
+# --------------------------------------------------
+# Test get_displayable_product_FeatureSet subroutine
+# --------------------------------------------------
+is_deeply( $data_set->get_displayable_product_FeatureSet,
+    $new_feature_set,
+    'Test get_displayable_product_FeatureSet() subroutine' );
+
+# -------------------------------------------------------
+# Test name(), cell_type() and feature_type() subroutines
+# -------------------------------------------------------
+is( $data_set->name(), 'test_name', 'Test name() subroutine' );
+
+my $expected_cell_type = $cell_type_adaptor->fetch_by_name('HeLa-S3');
+is_deeply( $data_set->cell_type(), $expected_cell_type,
+    'Test cell_type() subroutine' );
+
+my $expected_feature_type = $feature_type_adaptor->fetch_by_name('CTCF');
+is_deeply( $data_set->feature_type(),
+    $expected_feature_type, 'Test feature_type() subroutine' );
+
+# -------------------------------
+# Test display_label() subroutine
+# -------------------------------
+is( $data_set->display_label(),
+    'CTCF - HeLa-S3 Enriched Sites',
+    'Test display_label() subroutine'
+);
+
 
 # This test uses the following comment conventions
 # START method_name testing
 # COMPLETED method_name testing
 
-
-
-my $dsa = $efgdba->get_adaptor("dataset");
-
 #Just grab a few data sets to work with
 #DISPLAYABLE ensure we should have an input_set defined
-#$dsa->fetch_all;
-my $dset   = $dsa->fetch_by_name('RegulatoryFeatures:MultiCell');
-my $dset_2 = $dsa->fetch_by_name('RegulatoryFeatures:NHEK');
+#$data_set_adaptor->fetch_all;
+my $dset   = $data_set_adaptor->fetch_by_name('RegulatoryFeatures:MultiCell');
+my $dset_2 = $data_set_adaptor->fetch_by_name('RegulatoryFeatures:NHEK');
 
 if(! (defined $dset && defined $dset_2)){
   throw('Failed to fetch 2 DataSets to test, please update DataSet.t');  
