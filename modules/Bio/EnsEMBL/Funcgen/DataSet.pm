@@ -156,7 +156,7 @@ sub product_FeatureSet {
 
 =head2 get_supporting_sets_by_Analysis
 
-  Arg [1]    : Bio::EnsEMBL::Funcgen:Analysis
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Analysis
   Arg [2]    : (optional) status - e.g 'DISPLAYABLE'
   Example    : my $anal_sets = @{$result_set->get_ResultSets_by_Analysis($analysis)};
   Description: Getter for the SupportingSet objects of a given Analysis.
@@ -180,7 +180,7 @@ sub get_supporting_sets_by_Analysis {
 
 
   if (! ($analysis->isa("Bio::EnsEMBL::Analysis") && $analysis->dbID())){
-	  throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::ResultSet");
+	  throw("Need to pass a valid stored Bio::EnsEMBL::Analysis");
   }
 
   #will have to generate new array of object here if we want to filter displayable

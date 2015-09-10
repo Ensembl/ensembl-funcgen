@@ -472,7 +472,7 @@ sub equals {
 sub is_top_level {
   my $self = shift;
 
-  throw('Not yet implmented, need to test against the core cache using dnadb/schema_build');
+  throw('Not yet implemented, need to test against the core cache using dnadb/schema_build');
 
   return $self->{'top_level'};
 }
