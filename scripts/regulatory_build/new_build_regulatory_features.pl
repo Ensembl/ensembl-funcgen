@@ -884,7 +884,12 @@ sub extract_segmentation_state_summaries_2 {
 sub extract_ChromHMM_state_summaries {
   my ($options, $segmentation) = @_;
   print_log("Going through output of segmentation $segmentation->{name}\n");
-  my @bedfiles = glob "$segmentation->{location}/*_segments.bed";
+  my @bedfiles;
+  if ($segmentation->{type} eq 'ChromHMM') {
+    @bedfiles = glob "$segmentation->{location}/*_segments.bed";
+  } else {
+    @bedfiles = glob "$segmentation->{location}/*.bed";
+  }
   $segmentation->{states} = extract_ChromHMM_states($options, $segmentation, \@bedfiles);
   $segmentation->{celltypes} = extract_ChromHMM_cells($options, $segmentation, \@bedfiles);
 
@@ -1680,11 +1685,13 @@ sub compute_regulatory_features {
   my $demoted = undef; 
   if (defined $tss_tmp2) {
     $tss = "$options->{working_dir}/build/tss.bed";
-    run("bedtools intersect -u -wa -a $tss_tmp2 -b $options->{tss} $final_filter > $tss");
+    run("bedtools intersect -u -wa -a $tss_tmp2 -b $options->{tss} $final_filter | sort -k1,1 -k2,2n > $tss");
 
     # All features that do not go into a demoted file
     $demoted = "$options->{working_dir}/build/demoted_tss.bed";
-    run("bedtools intersect -v -wa -a $tss_tmp2 -b $options->{tss} $final_filter > $demoted");
+    run("bedtools intersect -v -wa -a $tss_tmp2 -b $options->{tss} $final_filter | sort -k1,1 -k2,2n > $demoted");
+
+    $remove_tss = " | bedtools intersect -wa -v -a stdin -b $tss";
   }
 
   # Unaligned proximal sites are retained
@@ -1735,7 +1742,10 @@ sub expand_boundaries {
 
   my @defined_source_files = grep defined,  @{$source_files};
   if (scalar @defined_source_files) {
-    run("cat ".join(" ", @{$source_files}). " | bedtools intersect -loj -wa -wb -a $target_file -b stdin | $awk_move_boundaries > $output");
+    run("cat ".join(" ", @{$source_files}). " | bedtools intersect -wa -wb -a $target_file -b stdin | $awk_move_boundaries > $output");
+    run("cat ".join(" ", @{$source_files}). " | bedtools intersect -v -wa -a $target_file -b stdin >> $output");
+    run("sort -k1,1 -k2,2n $output > $output.sorted");
+    run("mv $output.sorted $output");
   } else {
     run("cp $target_file $output");
   }
@@ -1767,7 +1777,7 @@ sub weighted_summary_definition {
     push @summaries, "scale ".(1/$hash->{$state})." $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw";
   }
   if (scalar @summaries > 0) {
-    return " gt $cutoff sum " . join(" ", @summaries);
+    return " gt $cutoff sum " . join(" ", @summaries) . " :";
   } else {
     return "";
   }
