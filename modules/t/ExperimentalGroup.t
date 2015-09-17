@@ -17,7 +17,7 @@ use warnings;
 
 use Test::More;
 use Test::Exception;
-use Bio::EnsEMBL::Funcgen::ExperimentalGroup;
+# use Bio::EnsEMBL::Funcgen::ExperimentalGroup;
 use Bio::EnsEMBL::Funcgen::Experiment;
 #use Bio::EnsEMBL::Funcgen::Utils::EFGUtils   qw( get_date );
 use Bio::EnsEMBL::Test::TestUtils            qw( test_getter_setter debug );
@@ -26,16 +26,22 @@ use Bio::EnsEMBL::Test::MultiTestDB;
 local $| = 1;
 our $verbose = 0;  # switch on the debug prints
 
-ok(1, 'Startup test');
+# ---------------
+# Module compiles
+# ---------------
+BEGIN { use_ok('Bio::EnsEMBL::Funcgen::ExperimentalGroup'); }
+
+# ------------------------------
+# Setup test database connection
+# ------------------------------
 my $multi     = Bio::EnsEMBL::Test::MultiTestDB->new();
 my $db        = $multi->get_DBAdaptor( "funcgen" );
 my $ega       = $db->get_ExperimentalGroupAdaptor;
 my $ea        =  $db->get_ExperimentAdaptor;
-my $efg_group = $ega->fetch_by_name('Publication');
 
-isa_ok($efg_group, 'Bio::EnsEMBL::Funcgen::ExperimentalGroup', 'ExperimentalGroupAdaptor::fetch_by_name return type');
-is($efg_group->name, 'Publication', 'ExperimentalGroup::name');
-
+# ----------------
+# Test constructor
+# ----------------
 my $group = Bio::EnsEMBL::Funcgen::ExperimentalGroup->new(
 							   -name         => 'ebi_test',
 							   -location     => 'location',
@@ -44,15 +50,78 @@ my $group = Bio::EnsEMBL::Funcgen::ExperimentalGroup->new(
 							   -description  => 'Just a test group',
 							   -is_project	 => 0
 							 );
-   
+
+
 isa_ok($group, 'Bio::EnsEMBL::Funcgen::ExperimentalGroup', 'ExperimentalGroup::new return type');
 
-ok( test_getter_setter( $group, "name", "test name" ));
-ok( test_getter_setter( $group, "location", "test location" ));
-ok( test_getter_setter( $group, "contact", "test contact" ));
-ok( test_getter_setter( $group, "url", "test url" ));
-ok( test_getter_setter( $group, "description", "test description"));
-ok( test_getter_setter( $group, "is_project", 1));
+throws_ok {
+    my $group = Bio::EnsEMBL::Funcgen::ExperimentalGroup->new(
+        # -name        => 'ebi_test',
+        -location    => 'location',
+        -contact     => 'contact',
+        -url         => 'http://www.ebi.ac.uk/',
+        -description => 'Just a test group',
+        -is_project  => 0
+    );
+}
+qr/Must supply a name parameter/,
+    'Test that a name is provided to the constructor';
+
+
+my $efg_group = $ega->fetch_by_name('Publication');
+
+isa_ok($efg_group, 'Bio::EnsEMBL::Funcgen::ExperimentalGroup', 'ExperimentalGroupAdaptor::fetch_by_name return type');
+is($efg_group->name, 'Publication', 'ExperimentalGroup::name');
+
+# ----------------------
+# Test getters - setters
+# ----------------------
+ok( test_getter_setter( $group, "name", "test name" ),
+    'test_getter_setter ExperimentalGroup::name'
+);
+ok( test_getter_setter( $group, "location", "test location" ),
+    'test_getter_setter ExperimentalGroup::location'
+);
+ok( test_getter_setter( $group, "contact", "test contact" ),
+    'test_getter_setter ExperimentalGroup::contact'
+);
+ok( test_getter_setter( $group, "url", "test url" ),
+    'test_getter_setter ExperimentalGroup::url'
+);
+ok( test_getter_setter( $group, "description", "test description" ),
+    'test_getter_setter ExperimentalGroup::description'
+);
+ok( test_getter_setter( $group, "is_project", 1 ),
+    'test_getter_setter ExperimentalGroup::is_project'
+);
+
+# ----------------------------------
+# Test reset_relational_attributes()
+# ----------------------------------
+my $new_group = $group;
+my $existing_adaptor = $new_group->adaptor();
+my $existing_dbID    = $new_group->dbID();
+
+$new_group->reset_relational_attributes(undef,1);
+
+is_deeply(
+    [ $new_group->dbID, $new_group->adaptor, ],
+    [ $existing_dbID,   $existing_adaptor ],
+    'Test ExperimentalGroup::reset_relational_attributes()'
+);
+
+$new_group->reset_relational_attributes(undef);
+
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
+
+is_deeply(
+    [ $new_group->dbID, $new_group->adaptor, ],
+    [ undef,            undef ],
+    'Test ExperimentalGroup::reset_relational_attributes(), adaptor and dbID are undefined as expected'
+);
+
 
 #Prepare table for store tests....
 $multi->hide('funcgen', 'experimental_group', 'experiment');
