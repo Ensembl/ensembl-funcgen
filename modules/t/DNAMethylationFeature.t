@@ -17,6 +17,8 @@ use strict;
 use warnings;
 use diagnostics;
 use Test::More;
+use Test::Exception;
+use Bio::EnsEMBL::Test::TestUtils  qw( test_getter_setter debug );
 use Bio::EnsEMBL::Test::MultiTestDB;
 use Bio::EnsEMBL::Funcgen::DNAMethylationFeature;
 
@@ -68,6 +70,102 @@ isa_ok(
     'Bio::EnsEMBL::Funcgen::DNAMethylationFeature',
     'DNAMethylationFeature constructor return type'
 );
+
+# Test constructor's exceptions
+my $not_a_ResultSet;
+
+throws_ok {
+    my $dnamethylationfeature = Bio::EnsEMBL::Funcgen::DNAMethylationFeature->new(
+    -SLICE               => $slice,
+    -STRAND              => 1,
+    -START               => 1,
+    -END                 => 2,
+    -METHYLATED_READS    => 33,
+    -TOTAL_READS         => 37,
+    -PERCENT_METHYLATION => 89,
+    -DISPLAY_LABEL       => "display label test",
+    -CONTEXT             => "CG",
+    -ADAPTOR             => $dnaa,
+    -SET                 => $not_a_ResultSet,
+);
+}
+qr/You must pass a valid -set i\.e\. Bio::EnsEMBL::Funcgen::ResultSet/,
+    'Test that a ResultSet object is provided to constructor';
+
+throws_ok {
+    my $dnamethylationfeature = Bio::EnsEMBL::Funcgen::DNAMethylationFeature->new(
+    -SLICE               => $slice,
+    -STRAND              => 1,
+    -START               => 1,
+    -END                 => 2,
+    # -METHYLATED_READS    => 33,
+    -TOTAL_READS         => 37,
+    -PERCENT_METHYLATION => 89,
+    -DISPLAY_LABEL       => "display label test",
+    -CONTEXT             => "CG",
+    -ADAPTOR             => $dnaa,
+    -SET                 => $result_sets[0],
+);
+}
+qr/One or more attribute arguments are missing\. Please specify all of:/,
+    'Test that -METHYLATED_READS parameter is provided to constructor';
+
+throws_ok {
+    my $dnamethylationfeature = Bio::EnsEMBL::Funcgen::DNAMethylationFeature->new(
+    -SLICE               => $slice,
+    -STRAND              => 1,
+    -START               => 1,
+    -END                 => 2,
+    -METHYLATED_READS    => 33,
+    # -TOTAL_READS         => 37,
+    -PERCENT_METHYLATION => 89,
+    -DISPLAY_LABEL       => "display label test",
+    -CONTEXT             => "CG",
+    -ADAPTOR             => $dnaa,
+    -SET                 => $result_sets[0],
+);
+}
+qr/One or more attribute arguments are missing\. Please specify all of:/,
+    'Test that -TOTAL_READS parameter is provided to constructor';
+
+throws_ok {
+    my $dnamethylationfeature = Bio::EnsEMBL::Funcgen::DNAMethylationFeature->new(
+    -SLICE               => $slice,
+    -STRAND              => 1,
+    -START               => 1,
+    -END                 => 2,
+    -METHYLATED_READS    => 33,
+    -TOTAL_READS         => 37,
+    -PERCENT_METHYLATION => 89,
+    -DISPLAY_LABEL       => "display label test",
+    # -CONTEXT             => "CG",
+    -ADAPTOR             => $dnaa,
+    -SET                 => $result_sets[0],
+);
+}
+qr/One or more attribute arguments are missing\. Please specify all of:/,
+    'Test that -CONTEXT parameter is provided to constructor';
+
+throws_ok {
+    my $dnamethylationfeature = Bio::EnsEMBL::Funcgen::DNAMethylationFeature->new(
+    -SLICE               => $slice,
+    -STRAND              => 1,
+    -START               => 1,
+    -END                 => 2,
+    -METHYLATED_READS    => 33,
+    -TOTAL_READS         => 37,
+    # -PERCENT_METHYLATION => 89,
+    -DISPLAY_LABEL       => "display label test",
+    -CONTEXT             => "CG",
+    -ADAPTOR             => $dnaa,
+    -SET                 => $result_sets[0],
+);
+}
+qr/One or more attribute arguments are missing\. Please specify all of:/,
+    'Test that -PERCENT_METHYLATION parameter is provided to constructor';
+
+
+
 
 is( $dnamethylationfeature->methylated_reads, 33, 'methylated_reads' );
 
