@@ -1538,24 +1538,25 @@ sub print_progress {
   return $pc;
 }
 
-# ----------------------------------------------------------------------
-# For one trasncript, goes through each overlap
-# between that transcript and probe feature, and collects data.
-#
-# Params:
-# * transcript: Bio::EnsEMBL::Transcript object
-# * transcript_feature_info: hashref to be filled
-# * pf_transc_overlap_fh: filehandle to the dump file created by bedtools
-# * last_line: last line of the above file to be read
-# * unmapped_counts: hashref
-# * unmapped_objects: arrayref
-# * xrefs: arrayref
-# * xref_db:  Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
-# * options: hashref with constant parameters
-# * OUT: filehandle to log file
-#
-# Returns: last line read and first not processed (generally because it covers
-# another transcript
+=head2
+
+  Description: For one trasncript, goes through each overlap
+  between that transcript and probe feature, and collects data.
+  CalledBy : associate_probes_to_transcripts
+  Arg1: Bio::EnsEMBL::Transcript object
+  Arg2: hashref to be filled
+  Arg3: filehandle to the dump file created by bedtools
+  Arg4: last line of the above file to be read
+  Arg5: hashref for unmapped 
+  Arg6: arrayref of unmapped 
+  Arg7: arrayref of xrefs => create_final_xrefs
+  Arg8: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
+  Arg9: hashref with constant parameters
+  Arg10: filehandle to log file
+  Returntype: String, last line read and first not processed (generally because it covers another transcript)
+
+=cut
+
 sub examine_transcript {
   my ($transcript, $transcript_feature_info, $pf_transc_overlap_fh, $last_line, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $OUT) = @_;
 
@@ -1635,27 +1636,30 @@ sub examine_transcript {
   return $line;
 }
 
-# ----------------------------------------------------------------------
-# For one overlap between a trasncript and a probe feature, collects data
-#
-# Params:
-# * transcript: Bio::EnsEMBL::Transcript object
-# * feature_id: ProbeFeature DB id
-# * probe_id: Probe DB id
-# * probeset_id: ProbeSet DB id
-# * probeset_name: string
-# * start: start of probe
-# * end : end of probe
-# * strand: 1 or -1
-# * cigar_line: CIGAR string
-# * mismatch_count: number of mismatches
-# * transcript_feature_info: hashref to be filled
-# * unmapped_counts: hashref
-# * unmapped_objects: arrayref
-# * xrefs: arrayref
-# * xref_db:  Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
-# * options: hashref with constant parameters
-# * OUT: filehandle to log file
+=head2
+
+  Description: For one overlap between a trasncript and a probe feature, collects data
+  CalledBy: examine_transcript()
+  Arg1: Bio::EnsEMBL::Transcript object
+  Arg2: ProbeFeature DB id
+  Arg3: Probe DB id
+  Arg4: ProbeSet DB id
+  Arg5: ProbeSet name, string
+  Arg6: start of probe
+  Arg7: end of probe
+  Arg8: strand (1 or -1)
+  Arg9: CIGAR string of probefeature alignment
+  Arg10: number of mismatches
+  Arg11: hashref to be filled
+  Arg12: hashref of stats on unmapped objects
+  Arg13: arrayref of Bio::EnsEMBL::UnmappedObject objects
+  Arg14: arrayref for add_xref()
+  Arg15: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
+  Arg16: hashref with constant parameters
+  Arg17: filehandle to log file
+
+=cut 
+
 sub examine_probefeature {
   my ($transcript, $feature_id, $probe_id, $probe_name, $probeset_id, $probeset_name, $start, $end, $strand, $cigar_line, $mismatch_count, $transcript_feature_info,$unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $OUT) = @_;
   my $transcript_sid = $transcript->stable_id();
@@ -1693,22 +1697,25 @@ sub examine_probefeature {
   return;
 }
 
-# ----------------------------------------------------------------------
-# For one gapped overlap between a trasncript and a probe feature, collects data
-#
-# Params:
-# * feature_id: ProbeFeature DB id
-# * probe_id: Probe DB id
-# * probeset_id: ProbeSet DB id
-# * transcript: Bio::EnsEMBL::Transcript object
-# * transcript_feature_info: hashref to fill
-# * mm_link_txt: Text string describing overlap
-# * mismatches: boolean
-# * log_name: string describing the overlapped pair
-# * unmapped_counts: hashref
-# * unmapped_objects: arrayref
-# * options: hashref with constant parameters
-# * OUT: filehandle to log file
+=head2 
+
+  Description: For one gapped overlap between a trasncript and a probe feature, collects data
+  CalledBy: examine_probefeature
+  Arg1: ProbeFeature DB id
+  Arg2: Probe DB id
+  Arg3: ProbeSet DB id
+  Arg4: Bio::EnsEMBL::Transcript object
+  Arg5: hashref to fill
+  Arg6: Text string describing overlap
+  Arg7: boolean (contains mismatches?)
+  Arg8: string describing the overlapped pair
+  Arg9: hashref of stats on unmapped objects
+  Arg10: arrayref of Bio::EnsEMBL::UnmappedObject objects
+  Arg11: hashref with constant parameters
+  Arg12: filehandle to log file
+
+=cut
+
 sub record_gapped_probefeature {
   my ($feature_id, $probe_id, $probeset_id, $transcript, $transcript_feature_info, $mm_link_txt, $mismatches, $log_name, $unmapped_counts, $unmapped_objects, $options, $OUT) = @_;
   my $transcript_sid = $transcript->stable_id();
@@ -1738,29 +1745,31 @@ sub record_gapped_probefeature {
   return;
 }
 
-# ----------------------------------------------------------------------
-# For one ungapped overlap between a trasncript and a probe feature, collects data
-#
-# Params:
-# * feature_id: ProbeFeature DB id
-# * probe_id: Probe DB id
-# * probeset_id: ProbeSet DB id
-# * start: start of probe
-# * end : end of probe
-# * strand: 1 or -1
-# * cigar_line: CIGAR string
-# * mismatch_count: integer
-# * transcript_feature_info: hashref to fill
-# * transcript: Bio::EnsEMBL::Transcript object
-# * mm_link_txt: Text string describing overlap
-# * mismatches: boolean
-# * log_name: string describing the overlapped pair
-# * unmapped_counts: hashref
-# * unmapped_objects: arrayref
-# * xrefs: arrayref
-# * xref_db:  Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
-# * options: hashref with constant parameters
-# * OUT: filehandle to log file
+=head2
+
+  Description: For one ungapped overlap between a trasncript and a probe feature, collects data
+  CalledBy: examine_probefeature()
+  Arg1: ProbeFeature DB id
+  Arg2: Probe DB id
+  Arg3: ProbeSet DB id
+  Arg4: start of probe
+  Arg5: end of probe
+  Arg6: CIGAR string
+  Arg7: integer count of mismatches
+  Arg8: hashref to fill
+  Arg9: Bio::EnsEMBL::Transcript object
+  Arg10: Text string describing overlap
+  Arg11: boolean if contains mismatches
+  Arg12: string describing the overlapped pair
+  Arg13: hashref of stats on unmapped objects
+  Arg14: arrayref of Bio::EnsEMBL::UnmappedObject objects
+  Arg15: arrayref for add_xref()
+  Arg16: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
+  Arg17: hashref with constant parameters
+  Arg18: filehandle to log file
+
+=cut
+
 sub record_aligned_probefeature {
   my ($feature_id, $probe_id, $probeset_id, $start, $end, $cigar_line, $mismatch_count, $transcript_feature_info, $transcript, $mm_link_txt, $mismatches, $log_name, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $OUT) = @_;
   my $five_mismatch  = 0;
@@ -1854,9 +1863,8 @@ sub record_aligned_probefeature {
   Arg1: Bio::EnsEMBL::Transcript object
   Arg2: hash ref linking objects to hits
   Arg3: hash ref to be filled
-  Arg4: array ref with list of unmapped objects
+  Arg4: array ref of Bio::EnsEMBL::UnmappedObject objects
   Arg5: hash ref with stats on unmapped objects
-   made up of probesets
   Arg6: hash ref of global constants
   Arg7: File handle for detailed output
 
@@ -1866,7 +1874,7 @@ sub compute_hits {
   my ($transcript, $transcript_feature_info, $object_transcript_hits, $unmapped_objects, $unmapped_counts, $options, $OUT) = @_;
 
   foreach my $object_id (keys %$transcript_feature_info) {
-    compute_hits($object_id, $transcript, $transcript_feature_info, $object_transcript_hits, $unmapped_objects, $unmapped_counts, $options, $OUT);
+    compute_hits_2($object_id, $transcript, $transcript_feature_info, $object_transcript_hits, $unmapped_objects, $unmapped_counts, $options, $OUT);
   }
 
   return;
@@ -1880,9 +1888,8 @@ sub compute_hits {
   Arg2: Bio::EnsEMBL::Transcript object
   Arg3: hash ref linking objects to hits
   Arg4: hash ref to be filled
-  Arg5: array ref with list of unmapped objects
+  Arg5: array ref of Bio::EnsEMBL::UnmappedObject objects
   Arg6: hash ref with stats on unmapped objects
-   made up of probesets
   Arg7: hash ref of global constants
   Arg8: File handle for detailed output
 
@@ -1960,7 +1967,7 @@ sub store_sufficient_hit {
   Arg2: Bio::EnsEMBL::Transcript object
   Arg3: Number of hits 
   Arg4: Size of probeset
-  Arg5: array ref with list of unmapped objects
+  Arg5: array ref of Bio::EnsEMBL::UnmappedObject objects
   Arg6: hash ref with stats on unmapped objects
    made up of probesets
   Arg7: hash ref of global constants
@@ -1994,7 +2001,7 @@ sub store_insufficient_hit {
   table
   Arg1: hash ref of hash refs linking object_id x Bio::EnsEMBL::Transcript object => array ref
   Arg2: hash ref with stats on unmapped objects
-  Arg3: array ref with list of unmapped objects
+  Arg3: array ref of Bio::EnsEMBL::UnmappedObject objects
   Arg4: hash ref of global constants
   Arg5: File handle for detailed output
 
@@ -2025,7 +2032,7 @@ sub log_unmapped_objects {
   table
   Arg1: Ensembl ID of the object
   Arg2: hash ref with stats on unmapped objects
-  Arg3: array ref with list of unmapped objects
+  Arg3: array ref of Bio::EnsEMBL::UnmappedObject objects
   Arg4: hash ref of global constants
   Arg5: File handle for detailed output
 
@@ -2055,7 +2062,7 @@ sub log_unmapped_object {
   Arg1: hash ref linking objects to a count
   Arg2: list of candidate xref hits
   Arg3: hash ref with stats on unmapped objects
-  Arg4: array ref with list of unmapped objects
+  Arg4: array ref of Bio::EnsEMBL::UnmappedObject objects
   Arg5: hash ref with constant variables, in particular:
     * max_transcripts: integer cutoff
     * object_names: hash ref linking object_id => object name
@@ -2089,7 +2096,7 @@ sub remove_promiscuous_objects {
   Arg1: EnsemblID 
   Arg2: object_transcript_hits: list of candidate xref hits
   Arg3: unmapped_counts: hash ref with stats on unmapped objects
-  Arg4: unmapped_objects: array ref with list of unmapped objects
+  Arg4: unmapped_objects: array ref of Bio::EnsEMBL::UnmappedObject objects
   Arg5: hash ref with constant variables, in particular:
     - max_transcripts: integer cutoff
     - object_names: hash ref linking object_id => object name
@@ -2339,7 +2346,7 @@ sub add_mart_displayable_status {
   Description: Stores an objects into the unmapped_object table, with some caching
   Arg1: hash ref of global constants
   Arg2: hash ref with stats on unmapped objects
-  Arg3: array ref with list of unmapped objects
+  Arg3: array ref of Bio::EnsEMBL::UnmappedObject objects
   Arg4: stable id to potential hit
   Arg5: "Probe", "ProbeSet" or "ProbeFeature"
   Arg6: Ensembl ID of the object
