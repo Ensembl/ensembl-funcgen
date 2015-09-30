@@ -664,11 +664,14 @@ sub process_sam_bam {
     if(($out_format eq 'sam') &&
         $skip_rmdups          &&
         ! $sort){
-      $tmp_out = $tmp_out.'sam';
+      $tmp_out = $tmp_out.'.sam';
       $cmd = "samtools view -h${in_flag} $filter_opt $fasta_fai_opt $in_file > $tmp_out";
       warn $cmd."\n" if $debug;
-      run_system_cmd($cmd);
       run_system_cmd("rm -f $tmp_out");
+      run_system_cmd($cmd);
+
+      # mnuhn: Nothing to be done, so this is the output file
+      $out_file = $tmp_out;
     }
     else{ # FILTERING & SORTING 
       # Base view command to be piped to other commands
@@ -714,7 +717,7 @@ sub process_sam_bam {
       # in the LSF resource, and so can cause failures
       # As we are not using IPC::Run we only ever get the exit status of the first command
       # so failures downstream would go uncaught
-      $tmp_out = $tmp_out.'bam';
+      $tmp_out = $tmp_out.'.bam';
       my $rm_cmd = "rm -f $tmp_out";
 
       $cmd .= ($sort) ? ' | samtools sort - '.$sorted_prefix : ' > '.$tmp_out;
@@ -762,13 +765,18 @@ sub process_sam_bam {
 
       # TODO ENSREGULATION-201
 
-      warn $cmd."\n" if $debug;
+      warn $cmd."\n";
       run_system_cmd($cmd);
-      run_system_cmd($rm_cmd);
+
+      if ($rm_cmd) { 
+          warn $rm_cmd."\n";
+          run_system_cmd($rm_cmd); 
+      }
     }
+    if($checksum){  write_checksum($out_file, $params);  }
   }
  
-  if($checksum){  write_checksum($out_file, $params);  }
+
   return $out_file;
 }
 
@@ -998,8 +1006,14 @@ sub get_files_by_formats {
                   'Please add method or correct conversion path config hash');
               }
 
+              my $converted_file_name = $conv_method->($path.'.'.$from_format, $params);
+              my $better_file_name = $path.'.'.$to_format;
 
-              $done_formats->{$to_format} = $conv_method->($path.'.'.$from_format, $params);
+              if ($converted_file_name ne $better_file_name) {
+                run_system_cmd("mv $converted_file_name $better_file_name");
+              }
+
+              $done_formats->{$to_format} = $better_file_name;
 
               #Remove '.unfiltered' from path for subsequent conversion
               if(($i==0) &&
@@ -1339,11 +1353,11 @@ sub _init_peak_caller{
     }
 
     assert_ref($params, 'ARRAY', 'PeakCaller params');
+    
     @params_array = @$params;
     $peak_module = validate_package_path($peak_pkg);
   }
-
-
+  
   return $peak_module->new(@params_array);
 }
 
