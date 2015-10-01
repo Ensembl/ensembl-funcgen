@@ -134,7 +134,6 @@ sub fetch_by_array_probe_probeset_name {
 sub fetch_all_by_name{
   my ($self, $name) = @_;
 
-
   throw('Must provide a probe name argument') if ! defined $name;
 
   $self->bind_param_generic_fetch($name, SQL_VARCHAR);
@@ -431,16 +430,17 @@ sub store {
 
   my $new_sth = $self->prepare
     (
-     "INSERT INTO probe( probe_set_id, name, length, array_chip_id, class, description)".
-     "VALUES (?, ?, ?, ?, ?, ?)"
+     "INSERT INTO probe( probe_set_id, name, length, array_chip_id, class, description, probe_seq_id)".
+     "VALUES (?, ?, ?, ?, ?, ?, ?)"
     );
   
   my $existing_sth = $self->prepare
     (
-     "INSERT INTO probe( probe_id, probe_set_id, name, length, array_chip_id, class, description )".
-     "VALUES (?, ?, ?, ?, ?, ?, ?)"
+     "INSERT INTO probe( probe_id, probe_set_id, name, length, array_chip_id, class, description, probe_seq_id )".
+     "VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
     );
 
+  my $probe_seq_sth = $self->prepare('insert into probe_seq (probe_sha1, probe_dna) values (?, ?)');
 
  PROBE: foreach my $probe (@probes) {
      
@@ -473,7 +473,65 @@ sub store {
       my $ps_id = (defined $probe->probeset()) ? $probe->probeset()->dbID() : undef;
 
       foreach my $name (@{$probe->get_all_probenames($array_hashes{$ac_id}->name)}) {
-      
+
+# ------------------------------------------------------------------------------------------
+        my $probe_seq_id;
+        
+        use Digest::SHA1  qw(sha1_base64);
+        
+        my $probe_dna = $probe->sequence;
+        my $sha1_checksum = sha1_base64($probe_dna);
+        
+        eval {
+        
+	  $probe_seq_sth->bind_param(1, $sha1_checksum, SQL_VARCHAR);
+	  $probe_seq_sth->bind_param(2, $probe_dna,     SQL_VARCHAR);
+	  
+	  $probe_seq_sth->execute;
+	  $probe_seq_id = $probe_seq_sth->{mysql_insertid};
+	  
+	  #print "--- Was not in database already.\n";
+	};
+	if ($@) {
+
+	  my $error_msg = $@;      
+	  
+	  # Check, if the exception was triggered by the index on the probe_sha1 
+	  # column.
+	  #
+	  if ($error_msg=~/DBD::mysql::st execute failed: Duplicate entry/) {
+	  
+	    #print "--- Was in database already.\n";
+	    
+	    # If so, check, if the dna sequences are identical. If that is the 
+	    # case, the storing can be skipped. If they are differen however, we
+	    # have a hash key collision and might have to revisit the decision
+	    # of having a unique constraint on the probe_sha1 key.
+	    #
+	    my $sth = $self->prepare("select probe_seq_id, probe_sha1, probe_dna from probe_seq where probe_sha1 = ?");
+	    $sth->bind_param(1, $sha1_checksum);
+	    $sth->execute;
+	    my $data = $sth->fetchall_arrayref;
+	    
+	    my $probe_seq_id_from_db = $data->[0][0];
+	    my $probe_sha1_from_db   = $data->[0][1];
+	    my $probe_seq_from_db    = $data->[0][2];
+
+	    if ($probe_seq_from_db ne $probe_dna) {
+	      confess("Sha1 has a collision. The dna sequence $probe_dna and the dna sequence from the database $probe_seq_from_db have the same sha1 checksum $sha1_checksum.");
+	    } else {
+	      print "Probe with this sequence $probe_dna already exists, skipping.\n";
+	    }
+	    $probe_seq_id = $probe_seq_id_from_db;
+	  }
+	}
+	
+# 	if ($probe_seq_id == 1) {
+# 	  print "--- $probe_seq_id: $probe_dna\n";
+# 	}
+	
+# ------------------------------------------------------------------------------------------
+
         if ($probe->dbID) {    # Already stored
           $existing_sth->bind_param(1, $probe->dbID,        SQL_INTEGER);
           $existing_sth->bind_param(2, $ps_id,              SQL_INTEGER);
@@ -482,6 +540,7 @@ sub store {
           $existing_sth->bind_param(5, $ac_id,              SQL_INTEGER);
           $existing_sth->bind_param(6, $probe->class(),     SQL_VARCHAR);
           $existing_sth->bind_param(7, $probe->description, SQL_VARCHAR);
+          $existing_sth->bind_param(8, $probe_seq_id,       SQL_INTEGER);
           $existing_sth->execute();
         } else {
           # New probe
@@ -491,6 +550,7 @@ sub store {
           $new_sth->bind_param(4, $ac_id,              SQL_INTEGER);
           $new_sth->bind_param(5, $probe->class(),     SQL_VARCHAR);
           $new_sth->bind_param(6, $probe->description, SQL_VARCHAR);
+          $new_sth->bind_param(7, $probe_seq_id,       SQL_INTEGER);
           $new_sth->execute();
           $probe->dbID($self->last_insert_id);
           $probe->adaptor($self);
