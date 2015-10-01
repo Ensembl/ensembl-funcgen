@@ -150,7 +150,11 @@ foreach my $aname(@array_names){
 
   $array = $array_adaptor->fetch_by_name_vendor($aname, $vendor);
 
-  die ("Could not retrieve $vendor $aname Array") if ! $array;
+#   die ("Could not retrieve $vendor $aname Array") if ! $array;
+  if (!$array) {
+      warn ("Could not retrieve $vendor $aname Array");
+      next;
+  }
 
   push @arrays, $array;
 }
