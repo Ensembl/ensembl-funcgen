@@ -23,6 +23,7 @@ use Bio::EnsEMBL::Funcgen::InputSubset;
 use Bio::EnsEMBL::Funcgen::Experiment;
 use Bio::EnsEMBL::Utils::SqlHelper;
 
+use File::Temp                             qw( tempfile );
 use File::Basename                         qw( dirname basename );
 use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref );
 use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
@@ -62,6 +63,7 @@ use vars qw( @EXPORT );
   run_peak_caller
   split_fastqs
   validate_sam_header
+  write_chr_length_file
   );
 
 #This is designed to act as an object and as a standard package
@@ -348,18 +350,9 @@ sub split_fastqs{
 
 
 #todo
-# 1 add support for filter config i.e. which seq_regions to filter in/out
-# 2 Sorted but unfiltered and unconverted files may cause name clash here
-#   Handle this in caller outside of EFGUtils, by setting out_file appropriately
-# 3 add a DESTROY method to remove any tmp sorted files which may persist after an
+# 1 add a DESTROY method to remove any tmp sorted files which may persist after an
 #   ungraceful exit. These can be added to a global $main::files_to_delete array
 #   which should then also be undef'd in DESTROY so they don't persisnt to another instance
-
-#This warning occurs when only filtering bam to bam:
-#[bam_header_read] EOF marker is absent. The input is probably truncated.
-#This is not fatal, and not caught. Does not occur when filtering with sort
-#maybe we shoudl also be catchign $@ after samtools view -H $in_file?
-
 
 #We could use the existing Bio::SamTools package but:
 #1 This will add an extra requirement
@@ -367,59 +360,6 @@ sub split_fastqs{
 #3 It doesn't appear to support merge operations
 #4 It wouldn't support the piping/greping we do to filter the data
 
-#support sam input here
-#also separate this into merge_sam_bam
-#and merge_sam_bam_cmd
-#then we can use this to grab the pipe command and have 1 place for the sort/merge code
-
-#move to Utils::SamUtils?
-
-
-#Can we return the number of duplicates removes?
-
-#header should already be included in bams, but
-#we do want functionality to include it here
-#todo currently does nothing and header shoudl be specified as fai file!
-#shoudl validate this if they are both present
-#so we need an infile optional flag in _validate_sam_header_index_fai
-
-#when do we ever use sam_header and no fai?
-
-#We currently never use sam_header as the is the only things it is passed to and this
-#doesn't ever use it
-
-#This is for use with merge, and overwrites header which would otherwise
-#just be copied from the first bam file!
-#This maybe a subset of the complete header, dependant on the output of bwa
-#for that chunk. Does it omit header lines for which is has no alignments?
-
-#how do we create sam header from fai?
-#samtools faidx ref.fa; samtools view -ht ref.fa.fai myfile.sam
-#But this requires a sam file, and will this output the full header?
-
-#Do we really need the sam header here, can't we just validate
-#each bam header is a subset of the fai, then integrate the full header via view?
-
-#update to take a sam fai or header file
-#the header integration removes the need for the final view step
-#if ther headers aren't identical
-
-#Move rmdups to process_sam_bam?
-#Then unfiltered file, will be truly unfiltered.
-#This will just increase our footprint on warehouse
-#Keeping the unfiltered bam is not really necessary, we really only want the unfitlered QC report,
-#so we now how many didn't map, and how many duplicates there were. to give us an idea of the quality
-#of the fastq.
-#So change this to skip the rmdups, then perform the pre-filter qc
-#i.e. the alignement report, flagstat etc
-#Then immediately process_bam, to sort and filter out dups and unmapped
-#and call this unique_mappings
-
-#so we are effectively moving all filter processing to process_sam_bam
-
-#This is slightly inefficient,if we don't care about the intermediate unfiltered data
-
-#Integrate slign report in here?
 
 sub merge_bams{
   my $outfile     = shift;
@@ -449,7 +389,6 @@ sub merge_bams{
   my $no_checksum  = (exists $params->{no_checksum}) ? $params->{no_checksum} : undef;
   warn "merge_bam_params are:\n".dump_data($params)."\n" if $debug;
 
-
   #For safety we need to validate all the bam headers are the same?
   #or at least no LN clashed for the same SN?
   #Must all be subsets of sam_header if specified, and reheader output with
@@ -459,10 +398,7 @@ sub merge_bams{
   #are not identical for the same sequence
   #force sam header for safety?
   #For now, let just make sure they are identical
-  #if (! defined $sam_header){
-  #  throw('Must pass a sam_header argument');
-  #}
-  #sam_header check will be done in validate_sam_header with cross validate boolean
+ 
   my $view_header_opt;
 
   for(@$bams){
@@ -474,32 +410,10 @@ sub merge_bams{
   #just assume all aren bam for now
   my $cmd = '';
 
-  #samtools merge appears to output sorted file already
-  #but not @HD SO filed is set :(
-
-  #if(defined $sort){
-  #  throw('Not implemented sort yet');
-    # my $sorted_prefix = $tmp_bam.".sorted_$$";
-    #$tmp_bam .= ($sort) ? ".sorted_$$.bam" : '.tmp.bam';
-    #$cmd .= ' | samtools view -uShb - ';  #simply convert to bam using infile header
-    #$cmd .= ($sort) ? ' | samtools sort - '.$sorted_prefix : ' > '.$tmp_bam;
-  #}
-
-
-
   #-u uncompressed BAM output for pipe (header remains in sam format)
   #-f force overwrite output
   #-h is include header in output, seems to be in sam format i.e. not binary if output is bam??
-  # - To specify seding output to STDOUTT for
-
-
-
-  #rmdup samtools rmdup [-sS] <input.srt.bam> <out.bam>
-  #docs look like it only takes sorted bam?
-  #but there is no specific mention of this?
-  #I don't think so, this is probably just the optimal way of doing this
-  #but we never assume the file is sorted? or do we?
-  #look how this is handled in get_alignment_files_by_ResultSet
+  # - To specify seding output to STDOUT for
 
   my $skip_merge = 0;
 
@@ -516,7 +430,6 @@ sub merge_bams{
     warn 'Only 1 bam file has been specified, merge will be skipped, '.
       "otherwise file will be processed accordingly\n";
   }
-
 
 
   if((! $no_rmdups) || $view_header_opt){
@@ -539,51 +452,8 @@ sub merge_bams{
     if($view_header_opt){
       #We only need to do this if the validate_sam_header
       #method identifed some of the bams without the relevant header
-
-      warn "Currently integrating fai header via samtools view, but it is more efficient to integrate is with sam format header in merge";
-
+      #warn "Currently integrating fai header via samtools view, but it is more efficient to integrate is with sam format header in merge";
       $cmd .= "samtools view -t $sam_ref_fai -h${out_flag} - > $outfile";
-      #This is current failing on the first line of the fai file with?
-      #[sam_header_read2] 194 sequences loaded.
-      #[sam_read1] reference 'LN:133797422' is recognized as '*'.
-      #Parse error at line 1: invalid CIGAR character
-      # Aborted
-
-
-      #$? is set to 134 when this happens!
-      #Why is this working in BWA?
-      #Maybe it's not?
-
-      #Oddly enough this doesn't abort when running within this analysis
-      #but does on the cmdline, when runnign the commands separately
-      #even after exit handling fix
-
-      #scripts does give this output tho, which is totally different:
-      #sh: line 1:  1707 Done
-      #samtools merge -u - /lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/alignments/homo_sapiens/GRCh38
-      #/ENCODE_UW/NHEK_WCE_ENCODE_UW.0000.bam /lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/alignments/
-      #homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW.0001.bam
-      #
-      #/lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/alignments/homo_sapiens/GRCh38/ENCODE_UW/
-      #NHEK_WCE_ENCODE_UW.0002.bam /lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/alignments/
-      #homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW.0003.bam /lustre/scratch109/ensembl/funcgen/output/sequencing_nj1_tracking_homo_sapiens_funcgen_76_38/
-      #alignments/homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW.0004.bam
-      #1708                       | samtools rmdup -s - -
-      #1709 Aborted                 | samtools view -t /lustre/scratch109/ensembl/funcgen/sam_header/homo_sapiens/homo_sapiens_male_GRCh38_unmasked.fasta.fai -h - >
-      # /lustre/scratch109/ensembl/funcgen/alignments/homo_sapiens/GRCh38/ENCODE_UW/NHEK_WCE_ENCODE_UW_bwa_samse_1.unfiltered.bam
-
-      #Irt just seems to hang for a long time and then carry on with the script
-      #as though nothign had happened
-      #cmdline returns 134 in $?
-
-      #This appears to have been caused by using the wrong fai file
-      #it was using the male file by default (as it has the super set of seqs)
-      #So it seems that mismatched in file headers vs fai headers causes this error
-      #No! But getting the headers to match, did mean the merge avoids the problematic
-      #samtools view -ht command
-
-      #This is because only the first process exit status is captured by perl
-
     }
   }
   elsif(! $skip_merge){
@@ -626,17 +496,14 @@ sub merge_bams{
 
 
 
-#todo
-#1 We need to catch if consequence of opts is to actually do nothing
-#2 Make rmdups optional as this will have already been done in the merge_bams?
-#  No we should always rmdups here, in case we want to keep the truly unfiltered file?
-#3 Implement multi-mapping filter
-  #ENCODE removed multimapping reads, probably by filtering based on presence of XA tag
-  #-n is not defined. This seems only to apply to paired reads?
-  #It's unclear exactly what bwa does here.
-  #Repetitive hits will be chosen randoml(y, and XA will be written for alternate mappings)
-  #This means some duplicate reads will likely be slipping through if
-  #they map to multiple locations
+
+#TODO Implement multi-mapping filter
+#ENCODE removed multimapping reads, probably by filtering based on presence of XA tag
+#-n is not defined. This seems only to apply to paired reads?
+#It's unclear exactly what bwa does here.
+#Repetitive hits will be chosen randoml(y, and XA will be written for alternate mappings)
+#This means some duplicate reads will likely be slipping through if
+#they map to multiple locations
 #  To filter (given bwa samse -n wasn't used)
 #  -F 100 will remove non-primary mappings
 #  -v XA will remove remaining primary mappings will alternative mapping present in the
@@ -646,13 +513,12 @@ sub merge_bams{
 #and re-filter on that.
 #--> Implement and are_paired flag
 
-
 #checksum in params here acts to check and write checksums
 #checksum => undef tries to find a checksum file
 #checksum => MD%STRING checks using string
 #Probably need a new param here
 
-# ENSREGULATION-142 This is triggering an unnecessary sort when converting bam to sam
+# TODO Add max cpu to manage number of pipes?
 
 sub process_sam_bam {
   my $sam_bam_path = shift;
@@ -738,34 +604,23 @@ sub process_sam_bam {
   }
 
 
-  #Could do all of this with samtools view?
-  #Will fail if header is absent and $fasta_fai not specified
-  #$fasta_fai is ignored if infile header present
-  #Doing it like this would integrate the fai into the output file, which is probably what we want?
-  #This would also catch the absent header in the first command rather than further down the pipe
-  #chain which will not becaught gracefully
-
-  #This can result in mismatched headers, as it does seem like the fai file is used rather than the in file header
-  #here, at least for bams
-
-
   #Define and clean intermediate sorted files first
-  (my $tmp_bam = $in_file) =~ s/\.$in_format//;
-  my $sorted_prefix = $tmp_bam.".sorted";
-  $tmp_bam .= ($sort) ? ".sorted.bam" : '.tmp.bam';
-  my $cmd = "rm -f $tmp_bam*";
-  warn $cmd."\n" if $debug;
-  run_system_cmd($cmd, 1); #no exit flag
-  $cmd = '';
+  (my $tmp_out = $in_file) =~ s/\.$in_format//;
+  my $sorted_prefix = $tmp_out.'.sorted';
+  $tmp_out .= ($sort) ? '.sorted' : '.tmp';
+
+  # Simply over-write these
+  #my $cmd = "rm -f $tmp_bam*";  # Is * to handle possible checksum files
+  #warn $cmd."\n" if $debug;
+  #run_system_cmd($cmd, 1); #no exit flag
+  my $cmd;
 
   #Check header and define include option
-  my $fasta_fai_opt = validate_sam_header($in_file, $fasta_fai, undef $params);
+  my $fasta_fai_opt = validate_sam_header($in_file, $fasta_fai, undef, $params);
 
 
-  #Validate that we actually want to do something here
-  #filter, sort, format conversion or header include?
-  #othwerwise this is a simple mv operation
-  my $reheader = 0;
+  ### HANDLE SIMPLE REHEADER OR FILE COPY ###
+  #my $reheader = 0;
 
   if((! ($filter_format || $sort)) &&
      ($out_format eq $in_format) ){
@@ -774,14 +629,14 @@ sub process_sam_bam {
     if(! $fasta_fai_opt){
 
       if(! $force){
-      #arguably we should just do this but it is likely the options are wrong
-      #could provide a flag over-ride for this?
-      throw('The options provided do not require any processing of the input file:'.
-        "\n\t$in_file\nOther than copying to the output file destination:\n\t".
-        $out_file."\nPlease check/revise your options or specify the force_process_sam_bam parameter");
+        # arguably we should just do this but it is likely the options are wrong
+        # could provide a flag over-ride for this?
+        throw('The options provided do not require any processing of the input file:'.
+          "\n\t$in_file\nOther than copying to the output file destination:\n\t".
+          $out_file."\nPlease check/revise your options or specify the force_process_sam_bam parameter");
       }
       else{
-        $cmd = "mv $in_file $out_file";
+        $cmd = "cp $in_file $out_file"; 
       }
     }
     else{ #We simply want to reheader
@@ -800,140 +655,137 @@ sub process_sam_bam {
   }
 
 
+  ### FILTER/SORT/CONVERT ###
+
   if(! $cmd){ #We want to do some filtering/sorting
-
-    #No this may just be format conversion!
-    #So we need to extract that part into another block
-
     my $filter_opt = ($filter_format) ? '-F 4' : '';
-    $cmd = "samtools view -hub${in_flag} $filter_opt $fasta_fai_opt $in_file "; # -h include header
-    #if we are not filtering and the headers match then we don even need this step!
-    #We shoudl probably omit the MT filtering completely as these will be handled in the blacklist?
-    #we haven't omitted other repeats yet, so this would be consistent
 
-    #todo tidy up filter_format vs filter_mt modes
-    #drop MT filtering from here!
+    ### SIMPLE BAM TO SAM ###
+    if(($out_format eq 'sam') &&
+        $skip_rmdups          &&
+        ! $sort){
+      $tmp_out = $tmp_out.'sam';
+      $cmd = "samtools view -h${in_flag} $filter_opt $fasta_fai_opt $in_file > $tmp_out";
+      warn $cmd."\n" if $debug;
+      run_system_cmd($cmd);
+      run_system_cmd("rm -f $tmp_out");
+    }
+    else{ # FILTERING & SORTING 
+      # Base view command to be piped to other commands
+      # rmdups does not need this view unless there is a sort and filter in place
+      # or a reaheader?
+      # sort & rmdup only work on bam
+      $cmd = "samtools view -hu${in_flag} $filter_opt $fasta_fai_opt $in_file "; 
 
-    #if($filter_format){
-      #$cmd .= "-F 4 | ". #-F Skip alignments with bit set in flag (4 = unaligned)
-      #  " grep -vE '^[^[:blank:]]+[[:blank:]][^[:blank:]]+[[:blank:]]+(MT|chrM)' "; #Filter MTs or any reference seq with an MT prefix
-      #Could add blank after MT, just in case there are valid unassembed seq names with MT prefixes
-      #Fairly safe to assume that all things beginning with chrM are MT or unassembled MT
-    #}
+      #dropped MT filtering, should be handled by blacklist
+      #if($filter_format){
+        #$cmd .= "-F 4 | ". #-F Skip alignments with bit set in flag (4 = unaligned)
+        #  " grep -vE '^[^[:blank:]]+[[:blank:]][^[:blank:]]+[[:blank:]]+(MT|chrM)' "; #Filter MTs or any reference seq with an MT prefix
+        #Could add blank after MT, just in case there are valid unassembed seq names with MT prefixes
+        #Fairly safe to assume that all things beginning with chrM are MT or unassembled MT
+      #}
 
-    #-u uncompressed bam (as we are piping)
-    #-S SAM input
-    #-t  header file (could omit this if it is integrated into the sam/bam?)
-    #- (dash) here is placeholder for STDIN (as samtools doesn't fully support piping).
-    #This is interpreted by bash but probably better to specify /dev/stdin?
-    #for clarity and as some programs can treat is as STDOUT or anything else?
-    #-b output is bam
-    #-m 2000000 (don't use 2G here,a s G is just ignored and 2k is used, resulting in millions of tmp files)
-    #do we need an -m spec here for speed? Probably better to throttle this so jobs are predictable on the farm
-    #We could also test the sorted flag before doing this?
-    #But samtools sort does not set it (not in the spec)!
-    #samtools view -H unsort.bam
-    #@HD    VN:1.0    SO:unsorted
-    #samtools view -H sort.bam
-    #@HD    VN:1.0    SO:coordinate
-    #We could add it here, but VN is mandatory and we don't know the version of the sam format being used?
-    #bwa doesn't seem to output the HD field, not do the docs suggest which spec is used for a given version
-    #mailed Heng Lee regarding this
-    #$cmd .= ' | samtools view -uShb - ';  #simply convert to bam using infile header
-    $cmd .= ($sort) ? ' | samtools sort - '.$sorted_prefix : ' > '.$tmp_bam;
-    warn $cmd."\n" if $debug;
+      # -h include header
+      #-u uncompressed bam (as we are piping)
+      #-S SAM input    
+      #-t  header file (could omit this if it is integrated into the sam/bam?)
+      #- (dash) here is placeholder for STDIN (as samtools doesn't fully support piping).
+      #This is interpreted by bash but probably better to specify /dev/stdin?
+      #for clarity and as some programs can treat is as STDOUT or anything else?
+      #-b output is bam
+      #-m 2000000 (don't use 2G here,a s G is just ignored and 2k is used, resulting in millions of tmp files)
+      #do we need an -m spec here for speed? Probably better to throttle this so jobs are predictable on the farm
+      #We could also test the sorted flag before doing this?
+      #But samtools sort does not set it (not in the spec)!
+      #samtools view -H unsort.bam
+      #@HD    VN:1.0    SO:unsorted
+      #samtools view -H sort.bam
+      #@HD    VN:1.0    SO:coordinate
+      #We could add it here, but VN is mandatory and we don't know the version of the sam format being used?
+      #bwa doesn't seem to output the HD field, not do the docs suggest which spec is used for a given version
+      #mailed Heng Lee regarding this
 
-    # 
-    # This is doing a redundant view step if we are not sorting or filtering and the input is already bam and has the correct header
+ 
+      ### WRITE INTERMEDIATE BAM ###
+      # This uses a tmp_bam intermediate to keep the cpu usage down
+      # i.g. consider the potential pipe
+      # view bam | sort | rmdups | view >sam
+      # This would cause a spike in cpu usage which is likely not specified/expected
+      # in the LSF resource, and so can cause failures
+      # As we are not using IPC::Run we only ever get the exit status of the first command
+      # so failures downstream would go uncaught
+      $tmp_out = $tmp_out.'bam';
+      my $rm_cmd = "rm -f $tmp_out";
 
+      $cmd .= ($sort) ? ' | samtools sort - '.$sorted_prefix : ' > '.$tmp_out;
+      warn $cmd."\n" if $debug;
+      run_system_cmd($cmd);
 
-    run_system_cmd($cmd);
+      # TODO ENSREGULATION-200
 
+      if($filter_format){
 
-    #This is now giving
-    #[sam_header_read2] 194 sequences loaded.
-    #[sam_read1] reference 'LN:133797422' is recognized as '*'.
-    #Parse error at line 1: invalid CIGAR character
-    #[samopen] SAM header is present: 194 sequences.
-    #[sam_read1] reference 'SN:KI270740.1    LN:37240
+        if(! $skip_rmdups){
+          # Removed after alignment as opposed from fastqs as we expect multiple
+          # reads if they map across several loci but not necessarily at exactly
+          # the same loci which indicates PCR bias
+          #-s single end reads or samse (default is paired, sampe)
+          $cmd = "samtools rmdup -s $tmp_out ";
+        }
 
+        if($out_format eq 'sam'){
 
-    #' is recognized as '*'.
-    #[main_samview] truncated file.
+          if($skip_rmdups){
+            $cmd = "samtools view -h $tmp_out > $out_file";
+          }
+          else{
+            $cmd .= "- | samtools view -h - > $out_file";
+          }
 
-    #But this is not caught as an error!!!
-    #as the exit status is only caught for the last command
-    #let's write a run_piped_system_cmd which checks bash $PIPESTATUS array
-    #which contains all exit states for all commands in last pipe command
-
-    #why is the fasta_fai_opt being defined at all?
-    #surely the headers are the same?
-    #Is this error because there are headers in both files
-
-
-    #Add a remove duplicates step
-    #-s single end reads or samse (default is paired, sampe)
-    #Do this after alignment as we expect multiple reads if they map across several loci
-    #but not necessarily at exactly the same loci which indicates PCR bias
-
-    my $rm_cmd = "rm -f $tmp_bam";
-
-    if($filter_format){
-
-      if(! $skip_rmdups){
-        $cmd = "samtools rmdup -s $tmp_bam ";
-      }
-
-      if($out_format eq 'sam'){
-
-        if($skip_rmdups){
-          $cmd = "samtools view -h $tmp_bam > $out_file";
+        }
+        elsif($skip_rmdups){
+          $cmd = "mv $tmp_out $out_file";
+          $rm_cmd = ''
         }
         else{
-          $cmd .= "- | samtools view -h - > $out_file";
+          $cmd .= $out_file;
         }
-
       }
-      elsif($skip_rmdups){
-        $cmd = "mv $tmp_bam $out_file";
-        $rm_cmd = ''
+      elsif($out_format eq 'bam'){
+        # We know we have bam by now as we have done some sorting
+        $cmd = "mv $tmp_out $out_file";
+        $rm_cmd = '';
       }
-      else{
-        $cmd .= $out_file;
+      else{ #We need to convert to sam
+        $cmd = "samtools view -h $tmp_out > $out_file";
       }
+
+      # TODO ENSREGULATION-201
+
+      warn $cmd."\n" if $debug;
+      run_system_cmd($cmd);
+      run_system_cmd($rm_cmd);
     }
-    elsif($out_format eq 'bam'){
-      #We know we have bam by now as we have done some sorting
-      $cmd = "mv $tmp_bam $out_file";
-      $rm_cmd = '';
-    }
-    else{ #We need to convert to sam
-      $cmd = "samtools view -h $tmp_bam > $out_file";
-    }
-
-    warn $cmd."\n" if $debug;
-
-    run_system_cmd($cmd);
-    $cmd = $rm_cmd;
   }
-
-  if($cmd){
-    warn $cmd."\n" if $debug;
-    run_system_cmd($cmd);
-  }
-
-  if($checksum){
-    write_checksum($out_file, $params);
-  }
-
+ 
+  if($checksum){  write_checksum($out_file, $params);  }
   return $out_file;
 }
 
 
-#todo refactor get_files_by_formats complexity & nesting issues
-#This handles g/unzipping and conversion from bam > sam > bed
-#This also assumes that we only ever want to convert in this direction
-#i.e. assumes bam /sam will always exist if we have bed.
+# Consider refactoring get_files_by_formats
+# This handles g/unzipping and conversion from bam > sam > bed
+# This also assumes that we only ever want to convert in this direction
+# i.e. assumes bam /sam will always exist if we have bed.
+
+# Encapsulate conversion logic in wrapper methods
+# i.e. convert_bam_to_bed would call convert_bam_to_sam 
+# then convert_sam_to_bed.
+# This particular example is moot if we have bedtools bamToBed installed
+# So check that first?
+# Can still optionally keep or clean intermediates as required? No, that's 
+# only possible with the more generic get_files_by_formats
+# Let's just drop that functionality and let the caller handle it.
 
 #sam params contains:
 #ref_fai         => file_path
@@ -1105,8 +957,6 @@ sub get_files_by_formats {
 
     ### Attempt conversion ###
     if($can_convert){
-      #This now assumes that if $filter_format is set
-      #convert_${filter_format}_${to_format} provides filter functionality
 
       if(scalar(@{$conversion_paths{$format}}) != 1){      #already handled process_${format} above
         #Go through the conversion path backwards
@@ -1116,7 +966,6 @@ sub get_files_by_formats {
 
         for(my $i = $start_i; $i>=0; $i--){
           my $from_format = $conversion_paths{$format}->[$i];
-          warn "Checking $from_format";
 
           #Test for file here if we are not filtering! Else we will always go through
           #other formats and potentially redo conversion if we have tidied intermediate files
@@ -1136,8 +985,6 @@ sub get_files_by_formats {
               $i == 0){
             #then convert that to the next, and so on.
 
-            #Sub this out to process_format_conversion_path
-
             for(my $x = $i; $x < $#{$conversion_paths{$format}}; $x++){
 
               my $to_format   = $conversion_paths{$format}->[$x+1];
@@ -1154,7 +1001,7 @@ sub get_files_by_formats {
 
               $done_formats->{$to_format} = $conv_method->($path.'.'.$from_format, $params);
 
-              #Remove '.unfitlered' from path for subsequent conversion
+              #Remove '.unfiltered' from path for subsequent conversion
               if(($i==0) &&
                 defined $filter_format){
                 $path =~ s/\.unfiltered$//o;
@@ -1203,30 +1050,6 @@ sub get_files_by_formats {
 #Maybe all checksums should be done on gunzipped files
 
 
-#DAMMIT! Part of the filtering is currently done in SAM!!!!
-#Need to fix this so we can drop sam file completely.
-
-#There is a danger that a filter_format maybe specified but a pre_process_method
-#never get called. This will have to be handled in the first convert_method in the path
-#but we could put a method check in place?
-
-
-#All pre_process_$format methods need to handle filter_from_format
-#and should faciliatate filter and sort functions
-#Can we merge this with process_sam_bam?
-#and maintain this as a simple wrapper process_bam, which somply sets output format
-#then we can also have process_sam as another wrapper method
-#This would mean moving $params support to sort_and_filter_sam(process_bam)
-#and also filter_from_format support and generate_checksum
-
-#No this will make unflitered naming mandatory for process_sam!
-
-#Calling pre_process assumes we want to at least convert, filter or just sort
-#Otherwise we can simply just use the file
-#Need to support sort flag. We might not want to sort if we already have a sorted bam
-#Always sort when filtering?
-#
-
 sub process_bam{
   my $bam_file = shift;
   my $params   = shift || {};
@@ -1244,7 +1067,9 @@ sub convert_bam_to_sam{
 #sub process_sam would need to check_file with gz suffix!
 
 
-#Need to implement optional sort_and_filter_sam here?
+# Need to implement optional sort_and_filter_sam here?
+# Make this use process_sam_bam by adding support for bed output format
+# which would simply pipe sam through awk to reformat.
 
 sub convert_sam_to_bed{
   my $sam_file = shift;
@@ -1281,7 +1106,7 @@ sub convert_sam_to_bed{
 
 
 sub validate_sam_header {
-  my $sam_bam_file     = shift or throw("Mandatory argument not specified:\t sam/bam file");
+  my $sam_bam_file     = shift or throw("Mandatory argument not specified:\tsam/bam file");
   my $header_or_fai    = shift;
   my $xvalidate        = shift;
   my $params           = shift || {};
@@ -1297,7 +1122,8 @@ sub validate_sam_header {
   #samtools view -t
   #samtools merge -h
   my $header_opt    = ($is_fai) ? ' -t '.$header_or_fai : ' -h '.$header_or_fai;
-  my @infile_header = run_backtick_cmd("samtools view -H $sam_bam_file");
+  # Filter out non-@SQ lines
+  my @infile_header = run_backtick_cmd("samtools view -H $sam_bam_file | grep '\@SQ'");
 
   if($!){
     #$! not $@ here which will be null string
@@ -1319,7 +1145,7 @@ sub validate_sam_header {
     my @ref_header;
 
     if($is_fai){
-      @ref_header = run_backtick_cmd("samtools view -H $header_opt $sam_bam_file");;
+      @ref_header = run_backtick_cmd("samtools view -H $header_opt $sam_bam_file");
     }
     else{
       @ref_header = run_backtick_cmd("cat $header_or_fai");
@@ -1329,6 +1155,7 @@ sub validate_sam_header {
     if(! @ref_header){
        throw("Reference file has no header entries:\n\t$header_or_fai");
     }
+
 
     if(scalar(@infile_header) > scalar(@ref_header)){
       throw("Found in file header with more entries that the reference header:\n".
@@ -1462,7 +1289,6 @@ sub _init_peak_caller{
     $formats = [$format];
 
     #May need to specify checksum param separately
-
     my $get_files_params = {debug              => $debug,
                             ref_fai            => $sam_ref_fai,  #Just in case we need to convert
                             skip_rmdups        => 1, #This will have been done in merge_bams
@@ -1470,10 +1296,13 @@ sub _init_peak_caller{
                             #Specifying undef here turns on file based checksum generation/validation
                            };
 
-
     my $align_file = get_files_by_formats($align_prefix,
                                          $formats,
                                          $get_files_params)->{$format};
+
+    if(! defined $align_file){
+      throw("Failed to identify file using get_files_by_formats:\n\t".$align_prefix.".${format}");
+    }
 
     my $ctrl_file;
 
@@ -1598,6 +1427,13 @@ sub pre_process_IDR{
     # Ignore comments and header
     my $cmd       = "grep -vE '(#|(^Region[[:space:]]+Start))' $bed_file | wc -l | awk '{print \$1}'";
     my $num_peaks = run_backtick_cmd($cmd);
+
+    # $num_peaks can sometimes be 0. Throw here as it will just fail in the RunIDR step
+    # We likely need to remove a replicate? 
+
+    if($num_peaks == 0){
+      throw("Found bed file with 0 peaks. This will cause IDR to fail, please remove or fix:\n\t$bed_file");
+    }
 
     if($num_peaks > 100000){
       $mt_100k = 1;
@@ -2733,6 +2569,33 @@ sub explode_fasta_file{
 
   return \@lines;
 }
+
+# Environment should call ascript to write this and set path in env for pipeline config
+# else will be called in tmp file mode for each analysis
+
+
+sub write_chr_length_file{
+  my ($slices, $out_file) = @_;
+  my $fh;
+
+  if(! defined $out_file){ 
+    ($fh, $out_file) = tempfile(); 
+    #DIR => '/tmp/'); #, UNLINK => 0); # Do not delete on exit? 
+  }
+  else{
+    # Use flock here for safety?
+    # over-write by default?
+    $fh = open_file($out_file, '>');
+  }
+
+  foreach my $slice (@{$slices}) {
+    print $fh join("\t", ($slice->seq_region_name, $slice->end - $slice->start + 1)) . "\n";
+  }
+
+  close $fh;
+  return $out_file;
+}  
+
 
 1;
 

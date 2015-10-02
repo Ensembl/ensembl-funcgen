@@ -143,9 +143,9 @@ sub fetch_input {
       -program_file      => $pfile_path,
       -out_file_prefix   => $rset->name.'.'.$analysis->logic_name,
       -out_dir           => $self->output_dir,
-      -convert_half_open => 1,
-      -is_half_open      => $self->param_silent('is_half_open') || 0},    #default to closed coords
-   );
+      -convert_half_open => 1, # Before loading into DB
+      #-is_half_open      => $self->param_silent('is_half_open') || 0}, # Now defined by PeakCaller or subclass defined on out/input formats   
+    });
    
   $self->set_param_method( 'peak_runnable', $peak_runnable );
 
@@ -262,7 +262,7 @@ sub write_output {
     #No data flow to PeaksQC here as this is done via semaphore from PreprocessAlignment?
   }
   else{
-    warn "Failed load features as no FeatureSet is defined";
+    warn "Skipping load features as no FeatureSet is defined";
     #This is for the IDR replicate data, can we omit this error if we know that  
   }
 
@@ -271,6 +271,8 @@ sub write_output {
 
 #Should we attempt to skip features which overhang end of slices?
 #This may be a 'feature' of the peak caller?
+
+# Does not handle 1/2 open here
 
 sub store_AnnotatedFeature {
   my ( $self, $fset, $af_adaptor, $fhash ) = @_;

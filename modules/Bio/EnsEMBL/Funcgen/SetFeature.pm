@@ -181,7 +181,7 @@ sub feature_set {
   #??? deprecate
   #check webcode?
 
-  return $_[0]->{set};
+  return shift->{set};
 }
 
 
@@ -197,7 +197,7 @@ sub feature_set {
 =cut
 
 sub set {
-  return $_[0]->{set};
+  return shift->{set};
 }
 
 =head2 cell_type
@@ -213,7 +213,7 @@ sub set {
 =cut
 
 sub cell_type{
-	return $_[0]->set->cell_type;
+	return shift->set->cell_type;
 }
 
 
@@ -257,7 +257,7 @@ sub feature_type{
 #Do we ever actually have analysis at the feature level?
 
 sub analysis{
-  return $_[0]->set->analysis;
+  return shift->set->analysis;
 }
 
 
@@ -274,7 +274,7 @@ sub analysis{
 =cut
 
 sub display_label{
-  return $_[0]->{display_label};
+  return shift->{display_label};
 }
 
 

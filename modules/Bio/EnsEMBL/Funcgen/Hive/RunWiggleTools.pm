@@ -21,6 +21,7 @@ use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( generate_slices_from_names 
                                                run_system_cmd
                                                run_backtick_cmd );
+use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools qw( write_chr_length_file);
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
 
 use base ('Bio::EnsEMBL::Funcgen::Hive::BaseDB');
@@ -151,7 +152,9 @@ sub run {
     $output    = $write_out;
   }
   elsif(lc($self->output_format) eq 'bigwig'){
-    push @tmpfiles, $self->write_chrlen_file;
+    push @tmpfiles, write_chr_length_file($self->slice_objects);
+
+    # This is now in /tmp, so maybe add to DESTROY?
     $output       = $self->output_prefix.'.bw';
     $reformat_cmd = ' | wigToBigWig -fixedSummaries stdin '.$tmpfiles[0].' '.$output;
   }
@@ -216,34 +219,13 @@ sub _build_rpkm_cmd{
     # pipe causes uncaught failures on absence of bai file, so test here?
 
     if(! $total_mapped){
-      $self->throw_no_retry('Failed to get number of mapped reads from index. Does it exist?');
+      $self->throw_no_retry("Failed to get number of mapped reads from index of:\n\t".$file);
     }
 
     $cmd .= ' scale '.(10**9 / $total_mapped).' '.$file;
   }
 
   return $cmd;
-}
-
-
-sub write_chrlen_file {
-  my $self = shift;
-  my ($fh, $name) = tempfile(DIR => $self->work_dir); #, UNLINK => 0); # is default with function interface
-
-  my $slices = generate_slices_from_names($self->out_db->dnadb->get_SliceAdaptor,
-                                          $self->slices,
-                                          $self->skip_slices,
-                                          'toplevel', 0, 1);  # nonref, incdups
-  $self->helper->debug(1, 'Writing lengths for '.scalar(@{$slices}).' toplevel (inc_dups) slices');
-
-  foreach my $slice (@{$slices}) {
-    print $fh join("\t", ($slice->seq_region_name, $slice->end - $slice->start + 1)) . "\n";
-  }
-
-  # Ideally need to validate this has been written correctly
-
-  close $fh;
-  return $name;
 }
 
 

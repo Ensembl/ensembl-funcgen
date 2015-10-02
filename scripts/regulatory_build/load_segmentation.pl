@@ -60,7 +60,28 @@ use Bio::EnsEMBL::Utils::Exception         qw( throw stack_trace );
 
 main();
 
+=header2 main
+
+  Description: the works
+  Returntype: undef
+
+=cut
+
 sub main {
+  my $options = get_options();
+  my $clean_cell_type = clean_name($options->{cell_type});
+  my $file = "$options->{base_dir}/segmentations/$options->{segmentation}/$clean_cell_type.bb";
+  load_segmentation_features_from_file($options->{db}, $options->{segmentation}, $options->{cell_type}, $file);
+}
+
+=header2 get_options
+
+  Description: gets command line options
+  Returntype: hashref
+
+=cut
+
+sub get_options {
   my ($base_dir, $segmentation, $cell_type, $pass,$port,$host,$user,$dbname);
 
   GetOptions 
@@ -85,50 +106,88 @@ sub main {
      -port   => $port,
      -group  => 'funcgen',#Should be set as default in adaptor new method
     );
+ 
+  my %options = (
+    db => $db,
+    base_dir => $base_dir,
+    cell_type => $cell_type,
+    segmentation => $segmentation,
+  );
 
-#Test connections
-  $db->dbc->db_handle;
-
-#Test species
-  my $species = $db->species;
-
-  if(! defined $species){
-    die("Could not get a valid species from $dbname, please check the meta species.production_name");
-  }
-
-  defined $base_dir || die ("You must define the base directory!\t--base_dir XXXX\n");
-  defined $segmentation || die ("You must define the segmentation name!\t--segmentation XXXX\n");
-  defined $cell_type || die ("You must define the cell type name!\t--cell_type XXXX\n");
-
-  my $clean_cell_type = clean_name($cell_type);
-
-  load_segmentation_features_from_file($db, $segmentation, $cell_type, "$base_dir/segmentations/$segmentation/$clean_cell_type.bb");
+  test_options(\%options);
+  return \%options;
 }
 
-########################################################
-## Removing unwanted characters 
-## Quick string normalisation function tor remove weird 
-## characters froms file names and remove variants
-########################################################
+=header2 test_options
+
+  Description: sanity checks
+  Arg1: hashref
+  Returntype: undef
+  Side effects: may crash
+
+=cut
+
+sub test_options {
+  my ($options) = @_;
+
+#Test connections
+  $options->{db}->dbc->db_handle;
+
+#Test species
+  if(! defined $species->{db}->species){
+    die("Could not get a valid species from $options->{dbname}, please check the meta species.production_name");
+  }
+
+  defined $options->{base_dir} || die ("You must define the base directory!\t--base_dir XXXX\n");
+  defined $options->{segmentation} || die ("You must define the segmentation name!\t--segmentation XXXX\n");
+  defined $options->{cell_type} || die ("You must define the cell type name!\t--cell_type XXXX\n");
+}
+
+=header2 clean_name
+
+  Description: Removing unwanted characters 
+  Quick string normalisation function tor remove weird 
+  characters froms file names and remove variants
+  Arg1: String
+  Returntype: String
+
+=cut
 
 sub clean_name {
   my $string = shift;
   $string =~ s/[\-\(\)]//g;
   $string =~ s/_.*//g;
-  return uc($string);
+  $string = uc($string);
+  $string =~ s/:/x/g;
+  return $string;
 }
 
-#####################################################
-# Convenience wrapper to run the commandline safely 
-#####################################################
-# Params: command line command string
-#####################################################
+=header2 run
+
+  Description: Convenience wrapper to run the commandline safely 
+  Arg1: command line command string
+  Returntype: undef
+  Side effects: runs command
+
+=cut
 
 sub run {
   my ($cmd) = @_;
-  print cmd;
+  print $cmd;
   system($cmd) && die("Failed when running command:\n$cmd\n");
 }
+
+=header2 load_segmentation_features_from_file
+
+  Description: processing function
+  Description: Creates cell type segmentation Analysis
+  Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
+  Arg2: segmentation name
+  Arg3: cell type name
+  Arg4: BigBed file location
+  Returntype: undef
+
+=cut
 
 sub load_segmentation_features_from_file {
   my ($db, $segmentation, $cell_type, $file) = @_;
@@ -191,6 +250,16 @@ sub load_segmentation_features_from_file {
 
 }
 
+=header2 create_analysis
+
+  Description: Creates cell type segmentation Analysis
+  Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
+  Arg2: segmentation name
+  Arg3: cell type name
+  Returntype: Bio::EnsEMBL::Analysis
+
+=cut
+
 sub create_analysis {
 ### Check whether analysis is already stored
   my ($db, $segmentation, $cell_type) = @_;
@@ -199,17 +268,13 @@ sub create_analysis {
   my $aa  = $db->get_AnalysisAdaptor();
   my $ana = $aa->fetch_by_logic_name($logic_name);
 
-  if ( defined $ana ) {
-    return $ana;
-  }
-
-  $ana = Bio::EnsEMBL::Analysis->new
+  my $analysis = Bio::EnsEMBL::Analysis->new
     (
      -logic_name      => $logic_name,
      -db              => 'NULL',
      -db_version      => 'NULL',
      -db_file         => 'NULL',
-     -program         => "chromHMM/Segway",
+     -program         => $segmentation,
      -program_version => 'NULL',
      -program_file    => 'NULL', #Could use $program_name here, but this is only part of the build
      -gff_source      => 'NULL',
@@ -218,13 +283,36 @@ sub create_analysis {
      -module_version  => 'NULL',
      -parameters      => 'NULL',
      -created         => 'NULL',
-     -display_label   => "$segmentation Segmentation for cell type $cell_type",
      -displayable     => 1,
+     -display_label   => "$segmentation Regulatory Segmentation",
+     -description     => qq($cell_type <a href="/info/genome/funcgen/regulatory_segmentation.html">$segmentation</a> segmentation state analysis"),
+     -web_data        => qq({'type' =>'fg_segmentation_features', 'colourset' => 'fg_segmentation_features','display' =>'off', key=>'seg_$cell_type' }),
     );
 
-  $aa->store($ana);
-  return $ana;
+   if ( not defined $ana ) {
+    $aa->store($analysis);
+    return $analysis;
+  } else {
+
+    if(! (($ana->compare($analysis) == 1) &&
+          ($ana->description eq $analysis->description) &&
+          ($ana->web_data    eq $analysis->web_data))){
+      die("Found stored $logic_name analysis with unexepcted attributes. Please patch the database to match:\n".Dumper($analysis));
+    }
+
+    return $ana;
+  }  
 }
+
+=header2 rollback_segmentation_FeatureSet
+
+  Description: rolls back previous feature set
+  Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
+  Arg2: Bio::EnsEMBL::Funcgen::FeatureSet
+  Returntype: undef
+  Side effects: deletes rows from segmentation_feature
+
+=cut
 
 sub rollback_segmentation_FeatureSet {
   my ($db, $fset) = @_;
@@ -264,6 +352,18 @@ sub rollback_segmentation_FeatureSet {
   warn $sql;  
   $db->rollback_table( $sql, $table, "${table}_id" );
 }
+
+=header2 create_feature_set
+
+  Description: Create feature set for this cell's segmentation features
+  Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
+  Arg2: segmentation name
+  Arg3: cell type name
+  Arg4: Bio::EnsEMBL::Analysis object
+  Returntype: Bio::EnsEMBL::Funcgen::FeatureSet object
+  Side effects: may write into feature_set table
+
+=cut
 
 sub create_feature_set {
   my ($db, $segmentation, $cell_type, $analysis) = @_;
@@ -309,6 +409,15 @@ sub create_feature_set {
   return $feature_set;
 }
 
+=header2 create_feature_type
+
+  Description: creates segmentation feature types
+  Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
+  Arg2: Bio::EnsEMBL::Analysis
+  Returntype: hashref: label string => Bio::EnsEMBL::Funcgen::FeatureType
+
+=cut
+
 sub create_feature_type {
   my ($db, $analysis) = @_;
 
@@ -317,7 +426,7 @@ sub create_feature_type {
     proximal => "Predicted Promoter Flank",
     distal => "Predicted Enhancer",
     ctcf => "CTCF enriched",
-    dead => "Predicted heterochomatin",
+    dead => "Predicted heterochromatin",
     weak => "Predicted low activity",
     gene => "Predicted Transcribed Region",
     repressed => "Predicted Repressed",

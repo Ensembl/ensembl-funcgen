@@ -2,16 +2,20 @@ language: "perl"
 
 perl:
   - "5.14"
-  - "5.12"
   - "5.10"
 
 env:
   - COVERALLS=true  DB=mysql
   - COVERALLS=false DB=mysql
 
+sudo: false
+
+addons:
+  apt:
+    packages:
+    - unzip
+
 before_install:
-    - sudo apt-get -y update
-    - sudo apt-get -y install unzip
     - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-test.git
     - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl.git
     - wget https://github.com/bioperl/bioperl-live/archive/bioperl-release-1-2-3.zip
@@ -22,6 +26,7 @@ install:
     - cpanm -v --installdeps --with-recommends --notest --cpanfile ensembl/cpanfile .
     - cpanm -n Devel::Cover::Report::Coveralls
     - cpanm -n DBD::SQLite
+    - cpanm -n Data::Dumper
     - cp travisci/MultiTestDB.conf modules/t/MultiTestDB.conf
 
 script: "./travisci/harness.sh"
@@ -31,16 +36,10 @@ matrix:
   exclude:
     - perl: "5.10"
       env: COVERALLS=false DB=mysql
-    - perl: "5.12"
-      env: COVERALLS=false DB=sqlite
-    - perl: "5.12"
-      env: COVERALLS=true  DB=mysql
-    - perl: "5.14"
-      env: COVERALLS=false DB=sqlite
     - perl: "5.14"
       env: COVERALLS=true  DB=mysql
 
 notifications:
   email:
-    on_success: always
+    # on_success: always
     on_failure: always

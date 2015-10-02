@@ -1,4 +1,4 @@
-534	\N	schema_version	79
+534	\N	schema_version	81
 156	1	species.production_name	homo_sapiens
 223	\N	schema_type	funcgen
 595	1	regbuild.last_annotation_update	2015-3
@@ -6,3 +6,9 @@
 592	\N	patch	patch_78_79_b.sql|binding_matrix unique key
 594	1	regbuild.initial_release_date	2015-3
 593	1	regbuild.version	13
+596	\N	patch	patch_79_80_a.sql|schema_version
+597	\N	patch	patch_79_80_b.sql|dbfile_registry_unique_key
+598	\N	patch	patch_79_80_c.sql|stable_id_changed_to_varchar
+599	\N	patch	patch_80_81_a.sql|schema_version
+600	\N	patch	patch_80_81_b.sql|add gender: mixed to table cell_type 
+601	\N	patch	patch_80_81_c.sql|drop experiment.date

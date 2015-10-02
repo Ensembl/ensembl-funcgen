@@ -94,7 +94,7 @@ use Bio::EnsEMBL::Funcgen::DNAMethylationFeature;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 #use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor; 
 #Only need BaseFeatureAdaptor for non-DB based methods, e.g. projection, new_fast etc.
-use Bio::EnsEMBL::ExternalData::BigFile::BigBedAdaptor;
+use Bio::EnsEMBL::IO::Adaptor::BigBedAdaptor;
 
 use base qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor ); #Should also inherit from Funcgen BigBedAdaptor
 

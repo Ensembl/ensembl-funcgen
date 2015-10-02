@@ -34,25 +34,25 @@ Automatic run:
 new_build_regulatory_features.pl -o ./ -a hg38 -D $FUNCGEN_DB -h $HOST -P $PORT -u $USER -p $PASS
 
 Where:
-	* -o: directory for output
-	* -a: UCSC assembly name (for trackHub)
-	* -h: host server
-	* -D: host database
-	* -P: host port
-	* -u: host login 
-	* -p: host password 
+  * -o: directory for output
+  * -a: UCSC assembly name (for trackHub)
+  * -h: host server
+  * -D: host database
+  * -P: host port
+  * -u: host login 
+  * -p: host password 
 
 Manual run:
 new_build_regulatory_features.pl -o ./ -d dump.txt -a hg38 -l chrom_sizes.txt -t tss.bed -g exons.bed
 
 Where:
-	* -o: directory for output
-	* -a: UCSC assembly name (for trackHub)
-	* -l: tab delimited file, each line contains a chromosome name followed
-		by its length.  [Overrides database info]
-	* -t: Bed file with TSS. Can be Ensembl transcript TSS, CAGE tags... [Overrides database info]
-	* -g: Bed file with Exons. A BioMart dump would work. [Overrides database info]
-	* -d: dump file (described below) [Added to database datasets]
+  * -o: directory for output
+  * -a: UCSC assembly name (for trackHub)
+  * -l: tab delimited file, each line contains a chromosome name followed
+    by its length.  [Overrides database info]
+  * -t: Bed file with TSS. Can be Ensembl transcript TSS, CAGE tags... [Overrides database info]
+  * -g: Bed file with Exons. A BioMart dump would work. [Overrides database info]
+  * -d: dump file (described below) [Added to database datasets]
 
 =head1 DESCRIPTION
 
@@ -63,15 +63,15 @@ In particular you will need a dump file which describes all the available
 experimental data. The dump file is tab delimited, it contains two types of
 entries:
 * ChIPseq peaks
-peak	$assay	$cell	$location_bed_or_bigBed
+peak  $assay  $cell $location_bed_or_bigBed
 The assay type is generally a TF antibody name or DNAse
 
 * Segmentations
-segmentation	$name	$type	$location
-	- name: is just a free string, which will be used a directory name (avoid special characters and spaces).
-	- type: is ChromHMM or Segway
-	- location: directory which contains a bunch of bed files, each bedfile named $celltype.bed. In addition 
-	the directory must contain an emissions file (emissions*.txt for ChromHMM, *.tab for Segway).
+segmentation  $name $type $location
+  - name: is just a free string, which will be used a directory name (avoid special characters and spaces).
+  - type: is ChromHMM or Segway
+  - location: directory which contains a bunch of bed files, each bedfile named $celltype.bed. In addition 
+  the directory must contain an emissions file (emissions*.txt for ChromHMM, *.tab for Segway).
 
 =cut
 
@@ -85,6 +85,8 @@ use Storable;
 use Data::Dumper;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
+use Getopt::Long;
+
 
 ########################################################
 ## Global constants 
@@ -133,11 +135,13 @@ our %feature_states = (
 
 our $start_time = time;
 
-########################################################
-## Toplevel pipeline 
-########################################################
-
 main();
+
+=head2 main
+
+  Description: Top level pipeline.
+
+=cut
 
 sub main {
   print_log("Entering New Regulatory Build pipeline\n");
@@ -155,6 +159,7 @@ sub main {
   make_segmentation_bedfiles($options);
   # Set cutoffs to optimise the quality of the build (using TF binding as an indicator_
   set_cutoffs($options);
+  print_cutoffs($options);
   # Compute MultiCell features
   compute_regulatory_features($options);
   # Determine which features are active in which cell type
@@ -164,29 +169,93 @@ sub main {
   print_log("Exiting New Regulatory Build pipeline\n");
 }
 
-########################################################
-## Option reading
-## Parses the command line, checks the options
-########################################################
+=head2 get_options
+
+  Description: Option reading. Parses the command line, checks the options, 
+    creates directories, opens databases if necessary
+  Returntype: hash ref
+
+=cut 
 
 sub get_options {
   my $options = read_command_line();
   check_options($options);
+
+  mkpath $options->{working_dir};
+  mkpath $options->{trackhub_dir};
+
+  if (defined $options->{host}) {
+    $options->{db_adaptor} = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
+    (
+	-user   => $options->{user},
+	-dbname => $options->{db},
+	-host   => $options->{host},
+	-pass   => $options->{pass},
+	-port   => $options->{port},
+	-dnadb_user   => $options->{dnadb_user},
+	-dnadb_dbname => $options->{dnadb_name},
+	-dnadb_host   => $options->{dnadb_host},
+	-dnadb_pass   => $options->{dnadb_pass},
+	-dnadb_port   => $options->{dnadb_port}
+    );
+    $options->{dnadb_adaptor} = Bio::EnsEMBL::DBSQL::DBAdaptor->new
+    (
+	-user   => $options->{dnadb_user},
+	-dbname => $options->{dnadb_name},
+	-host   => $options->{dnadb_host},
+	-pass   => $options->{dnadb_pass},
+	-port   => $options->{dnadb_port}
+    );
+  }
+
   return $options;
 }
 
-use Getopt::Long;
+=head2 read_command_line
+
+  Description: Option reading. Parses the command line
+  Returntype: hash ref
+
+=cut 
 
 sub read_command_line {
   my %options = ();
 
-  GetOptions(\%options, "help=s", "tmp|t=s", "out|o=s", "dump=s", "assembly|a=s", "chrom_lengths|l=s", "tss|t=s", "exons|g=s", "host|h=s", "port|P=s", "db|D=s", "user|u=s", "pass|p=s",  "dnadb_host=s", "dnadb_port=s", "dnadb_name=s", "dnadb_user=s", "dnadb_pass=s", "mask=s");
+  GetOptions(\%options,
+    "help=s",
+    "tmp|t=s",
+    "out|o=s",
+    "dump=s",
+    "assembly|a=s",
+    "chrom_lengths|l=s",
+    "tss|t=s",
+    "exons|g=s",
+    "host|h=s",
+    "port|P=s",
+    "db|D=s",
+    "user|u=s",
+    "pass|p=s",
+    "dnadb_host=s",
+    "dnadb_port=s",
+    "dnadb_name=s",
+    "dnadb_user=s",
+    "dnadb_pass=s",
+    "mask=s"
+  );
 
   $options{output_dir} = $options{out};
   $options{working_dir} = $options{tmp};
 
   return \%options;
 }
+
+=head2 check_options
+
+  Description: Option reading. Checks the options, opens databases if needed.
+  Arg1: hash ref
+  Returntype: Null
+
+=cut 
 
 sub check_options {
   my $options = shift;
@@ -219,44 +288,24 @@ sub check_options {
     if (!defined $options->{dnadb_port}) {
       $options->{dnadb_port} = $options->{port};
     }
-    $options->{db_adaptor} = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
-    (
-	-user   => $options->{user},
-	-dbname => $options->{db},
-	-host   => $options->{host},
-	-pass   => $options->{pass},
-	-port   => $options->{port},
-	-dnadb_user   => $options->{dnadb_user},
-	-dnadb_dbname => $options->{dnadb_name},
-	-dnadb_host   => $options->{dnadb_host},
-	-dnadb_pass   => $options->{dnadb_pass},
-	-dnadb_port   => $options->{dnadb_port}
-    );
-    $options->{dnadb_adaptor} = Bio::EnsEMBL::DBSQL::DBAdaptor->new
-    (
-	-user   => $options->{dnadb_user},
-	-dbname => $options->{dnadb_name},
-	-host   => $options->{dnadb_host},
-	-pass   => $options->{dnadb_pass},
-	-port   => $options->{dnadb_port}
-    );
   }
 
   if (!defined $options->{working_dir}) {
     $options->{working_dir} = "$options->{output_dir}/tmp/";
   }
-  mkpath $options->{working_dir};
 
   $options->{trackhub_dir} = "$options->{output_dir}/$options->{assembly}";
-  mkpath $options->{trackhub_dir};
 }
 
-########################################################
-## Compute forcing:
-## * As long as all checked files exist, they are not recomputed
-## * As soon as a checked file needs to be recomputed, everything
-## downstream is recomputed
-########################################################
+=head2 must_compute
+
+  Description: Decides whether a computation is needed
+    * As long as all checked files exist, they are not recomputed
+    * As soon as a checked file needs to be recomputed, everything
+      after that is recomputed
+  Returntype: boolean
+
+=cut
 
 sub must_compute {
   my ($options, $file) = @_;
@@ -270,15 +319,16 @@ sub must_compute {
   }
 }
 
-########################################################
-## BigBed creation
-## Wrapper functions for BigFile indexing: 
-## Params:
-## - path to file
-## Actions:
-## - creates indexed file (BigWig or BigBed)
-## - deletes flat file
-########################################################
+=head2 convert_to_bigBed
+
+  Description: BigBed creation
+  Arg1: path to file
+  Returntype: undef
+  Side effects: 
+    - creates indexed file (BigWig or BigBed)
+    - deletes flat file
+
+=cut
 
 sub convert_to_bigBed {
   my ($options, $file) = @_;
@@ -287,6 +337,17 @@ sub convert_to_bigBed {
   run("bedToBigBed $file $options->{chrom_lengths} $new") ;
   unlink $file;
 }
+
+=head2 convert_to_bigWig
+
+  Description: BigWig creation
+  Arg1: path to file
+  Returntype: undef
+  Side effects: 
+    - creates indexed file (BigWig or BigWig)
+    - deletes flat file
+
+=cut
 
 sub convert_to_bigWig {
   my ($options, $file) = @_;
@@ -297,14 +358,14 @@ sub convert_to_bigWig {
   unlink $file;
 }
 
-########################################################
-## System calls 
-## Wrapper function for system calls
-## Params:
-## - Command line
-## Actions:
-## - Runs command, prints out error in case of failure
-########################################################
+=head2 run
+
+  Description: Wrapper function for system calls
+  Arg1: Command line
+  Returntype: undef
+  Side effects: Runs command, prints out error in case of failure
+
+=cut
 
 sub run {
   my ($cmd) = @_;
@@ -315,13 +376,14 @@ sub run {
   }
 }
 
-########################################################
-## Print conveninence
-## Params:
-## - String
-## Actions:
-## - Prints string, with time stamp in front
-########################################################
+=head2 print_log
+
+  Description: Print conveninence
+  Arg1: String
+  Returntype: undef
+  Side effects: Prints string, with time stamp in front
+
+=cut
 
 sub print_log {
   my ($str) = @_;
@@ -329,23 +391,30 @@ sub print_log {
   print "[$runtime] $str";
 }
 
-########################################################
-## Removing unwanted characters 
-## Quick string normalisation function tor remove weird 
-## characters froms file names and remove variants
-########################################################
+=head2 clean_name
+
+  Description: Removing unwanted characters for safe filenames
+  Arg1: String
+  Returntype: String
+
+=cut
 
 sub clean_name {
   my $string = shift;
   $string =~ s/[\-\(\)]//g;
   $string =~ s/_.*//g;
-  return uc($string);
+  $string = uc($string);
+  $string =~ s/:/x/g;
+  return $string;
 }
 
-########################################################
-## Serialising functions
-## Reads a list of strings from a text file
-########################################################
+=head2 deserialise
+
+  Description: Reads a list of strings from a text file
+  Arg1: filename
+  Returntype: list ref
+
+=cut
 
 sub deserialise {
   my ($filename) = shift;
@@ -359,6 +428,14 @@ sub deserialise {
   }
   return \@data;
 }
+
+=head2 deserialise_hash
+
+  Description: Reads a hash from a text file
+  Arg1: filename
+  Returntype: hash ref
+
+=cut
 
 sub deserialise_hash {
   my ($filename) = shift;
@@ -374,18 +451,19 @@ sub deserialise_hash {
   return \%data;
 }
 
-########################################################
-## Trimming to chromosome length 
-## Ensures that all features of a bed file fit within the 
-## exact coordinates of a chromosome
-## This is necessary for BigFile indexing, as ChromHMM 
-## rounds up coordinates to the nearest 200bp mark. 
-## Params:
-## - options hash
-## - filepath
-## Actions:
-## - Overwrites file with corrected coordinates
-########################################################
+=head2 trim_bed_to_chrom_lengths
+
+  Description: Trimming to chromosome length 
+    Ensures that all features of a bed file fit within the 
+    exact coordinates of a chromosome
+    This is necessary for BigFile indexing, as ChromHMM 
+    rounds up coordinates to the nearest 200bp mark. 
+  Arg1: options hash
+  Arg2: filepath
+  Returntype: undef
+  Side effects: Overwrites file with corrected coordinates
+
+=cut
 
 sub trim_bed_to_chrom_lengths {
   my ($options, $file) = @_;
@@ -420,6 +498,14 @@ sub trim_bed_to_chrom_lengths {
   }
 }
 
+=head2 read_chrom_lengths
+
+  Description: reads chromosome lengths from flat file
+  Arg1: options hash ref
+  Returntype: hashref
+
+=cut
+
 sub read_chrom_lengths {
   my ($options) = @_;
   my ($fh, $line);
@@ -437,22 +523,23 @@ sub read_chrom_lengths {
   return \%lengths;
 }
 
-########################################################
-## Parsing Ensembl dumps 
-## The Ensembl dumpfile is assumed to be a tab delimited 
-## file with two types of lines:
-## peaks  $TF  $celltype  $path
-## segmentation  $type  $path
-## The type of a segmentation is currently only ChromHMM
-## or Segway
-## but other segmentation software could crop up.
-## The path of a segmentation is the path to the directory
-## containing all the output files.
-## Params:
-## - options hash
-## Actions:
-## - Fills up options hash
-########################################################
+=head2 get_metadata
+
+  Description: Parsing Ensembl dumps 
+    The Ensembl dumpfile is assumed to be a tab delimited 
+    file with two types of lines:
+    peaks  $TF  $celltype  $path
+    segmentation  $type  $path
+    The type of a segmentation is currently only ChromHMM
+    or Segway
+    but other segmentation software could crop up.
+    The path of a segmentation is the path to the directory
+    containing all the output files.
+  Arg1: options hash
+  Returntype: undef
+  Side effects: Fills up options hash
+
+=cut
 
 sub get_metadata {
   my $options = shift;
@@ -511,6 +598,16 @@ sub get_metadata {
   }
 }
 
+=head2 read_dump
+
+  Description: reads content of metadata file
+  Arg1: options hash ref
+  Returntype: undef
+  Side effects: stores location of segmentation directories and chip-seq 
+    peak files in options
+
+=cut 
+
 sub read_dump {
   my ($options) = @_;
   print_log("Reading $options->{dump}\n");
@@ -533,6 +630,15 @@ sub read_dump {
   }
 }
 
+=head2 fetch_metadata
+
+  Description: pulls out useful data from database
+  Arg1: options hash ref
+  Returntype: undef
+  Side effects: Stores data into options
+
+=cut
+
 sub fetch_metadata {
   my ($options) = @_;
   print_log("Fetching metadata from funcgen DB\n");
@@ -540,23 +646,54 @@ sub fetch_metadata {
   foreach my $featureSet (@{$options->{db_adaptor}->get_adaptor("FeatureSet")->fetch_all_by_feature_class("annotated")}) {
     my $tf = $featureSet->feature_type->name;
     if ($tf =~ /^H[2-4][ABKZ]/) {
+      # It's a histone, ignore
       next;
     }
     my $cell = $featureSet->cell_type->name;
-    my $dir = "$options->{working_dir}/peaks/$tf/$cell/";
-    mkpath $dir;
-
-    my $fh = File::Temp->new(DIR => $dir, SUFFIX => '.bed');
-    my $filename = $fh->filename;
-    foreach my $slice (@slices) {
-      foreach my $feature (sort {$a->start <=> $b->start} @{$featureSet->get_Features_by_Slice($slice)}) {
-	print $fh join("\t", ($slice->seq_region_name, $feature->start - 1, $feature->end))."\n";
-      }
-    }
-    record_peak_file($options, $tf, $cell, $fh->filename);
+    record_peak_file($options, $tf, $cell, dump_peaks($featureSet, $tf, $cell, \@slices));
     close $fh;
   }
 }
+
+=head2 dump_peaks
+
+  Description: dumps feature set into flat file
+  Arg1: Bio::EnsEMBL::FeatureSet Object
+  Arg2: TF name (string)
+  Arg3: CellType name (String, processed by clean_name)
+  Arg4: Array ref of Bio::EnsEMBL::Slice objects
+  Returntype: String, file location
+  Side effects: creates and fills file
+
+=cut
+
+sub dump_peaks {
+  my ($featureSet, $tf, $cell, $slices) = @_;
+  my $dir = "$options->{working_dir}/peaks/$tf/$cell/";
+  mkpath $dir;
+
+  my $fh = File::Temp->new(DIR => $dir, SUFFIX => '.bed');
+  my $filename = $fh->filename;
+  foreach my $slice (@$slices) {
+    foreach my $feature (sort {$a->start <=> $b->start} @{$featureSet->get_Features_by_Slice($slice)}) {
+      print $fh join("\t", ($slice->seq_region_name, $feature->start - 1, $feature->end))."\n";
+    }
+  }
+
+  return $fh->filename;
+}
+
+=head2 record_peak_file
+
+  Description: stores location of Chip-Seq peak file
+  Arg1: options hash ref
+  Arg2: TF or histone mark name (string)
+  Arg3: CellType name
+  Arg4: File location
+  Returntype: undef
+  Side effects: stores location into relevant hash refs
+
+=cut
 
 sub record_peak_file {
   my ($options, $tf, $cell, $file) = @_;
@@ -584,6 +721,15 @@ sub record_peak_file {
   }
 }
 
+=head2 create_chrom_lengths
+
+  Descriptions: store chromosome lengths from DB into flat file for BigFile compression
+  Arg1: options hash ref
+  Returntype: undef
+  Side effects: Stores location of newly created file in options
+
+=cut
+
 sub create_chrom_lengths {
   my ($options) = @_;
   $options->{chrom_lengths} = "$options->{working_dir}/chrom_lengths.txt";
@@ -591,6 +737,16 @@ sub create_chrom_lengths {
   fetch_chrom_lengths($options, $fh);
   close $fh
 }
+
+=head2 fetch_chrom_lengths
+
+  Description: stores chromosome lengths from DB into filehandle
+  Arg1: options hash ref
+  Arg2: file handle
+  Returntype: undef
+  Side effects: Writes into file handle
+
+=cut
 
 sub fetch_chrom_lengths {
   my ($options, $fh) = @_;
@@ -603,6 +759,15 @@ sub fetch_chrom_lengths {
   }
 }
 
+=head2 create_tss
+
+  Description: stores TSS features from DB into flat file 
+  Arg1: options hash ref
+  Returntype: undef
+  Side effects: Stores location of new file into options hash ref
+
+=cut
+
 sub create_tss {
   my ($options) = @_;
   $options->{tss} = "$options->{working_dir}/tss.bed";
@@ -610,6 +775,16 @@ sub create_tss {
   fetch_tss($options, $fh);
   close $fh
 }
+
+=head2 fetch_tss
+
+  Description: writes TSS locations from DB into filehandle
+  Arg1: options hash ref
+  Arg2: file handle
+  Returntype: None
+  Side effects: writes into filehandle,
+
+=cut
 
 sub fetch_tss {
   my ($options, $fh) = @_;
@@ -627,13 +802,17 @@ sub fetch_tss {
       }
     }
   }
-
-  my @sorted_tss_coords = sort {comp_coords($a, $b)} @tss_coords;
-
-  foreach my $tss_coord (@sorted_tss_coords) {
-    print $fh join("\t", @{$tss_coord})."\n";
-  }
+  write_into_bedfile(\@tss_coords, $fh);
 }
+
+=head2 create_exons
+
+  Description: Stores exon locations from DB into flatfile
+  Arg1: options hash ref
+  Returntype: undef
+  Side effects: stores file location into options
+
+=cut
 
 sub create_exons {
   my ($options) = @_;
@@ -642,6 +821,16 @@ sub create_exons {
   fetch_exons($options, $fh);
   close $fh
 }
+
+=head2 fetch_exons
+
+  Description: Writes exon locations from DB into filehandle
+  Arg1: options hash ref
+  Arg2: filehandle
+  Returntype: undef
+  Side effects: writes into filehandle
+
+=cut
 
 sub fetch_exons {
   my ($options, $fh) = @_;
@@ -657,15 +846,17 @@ sub fetch_exons {
       }
     }
   }
-
-  my @sorted_exon_coords = sort {comp_coords($a, $b)} @exon_coords;
-
-  foreach my $exon_coord (@sorted_exon_coords) {
-    if ($exon_coord->[1] < $exon_coord->[2]) {
-      print $fh join("\t", @{$exon_coord})."\n";
-    }
-  }
+  write_into_bedfile(\@exon_coords, $fh);
 }
+
+=head2
+
+  Description: stores masked regions into flat file
+  Arg1: options hash ref
+  Returntype: undef
+  Side effects: stores file location into options
+
+=cut
 
 sub create_mask {
   my ($options) = @_;
@@ -674,6 +865,16 @@ sub create_mask {
   fetch_mask($options, $fh);
   close $fh
 }
+
+=head2 fetch_mask
+
+  Descriptions: writes masked regions from DB into file handle
+  Arg1: options hash ref
+  Arg2: filehandle
+  Returntype: undef
+  Side effects: writes into filehandle
+
+=cut
 
 sub fetch_mask {
   my ($options, $fh) = @_;
@@ -685,16 +886,39 @@ sub fetch_mask {
       push @mask_coords, [$slice->seq_region_name(), $mask->start() - 1, $mask->end()];
     }
   }
+  write_into_bedfile(\@mask_coords, $fh);
+}
 
-  my @sorted_mask_coords = sort {comp_coords($a, $b)} @mask_coords;
+=head2 write_into_bedfile
 
-  foreach my $mask_coord (@sorted_mask_coords) {
-    if ($mask_coord->[1] < $mask_coord->[2]) {
-      print $fh join("\t", @{$mask_coord})."\n";
+  Description: writes regions into sorted bed file
+  Arg1: Regions: list ref of list refs which each contain [chromosoms, start, end, ...]
+  Arg2: Filehandle
+  Returntype: undef
+  Side effects: write into filehandle
+
+=cut
+
+sub write_into_bedfile {
+  my ($regions, $fh) = @_;
+  my @sorted_regions = sort {comp_coords($a, $b)} @$regions;
+
+  foreach my $region (@sorted_regions) {
+    if ($region->[1] < $region->[2]) {
+      print $fh join("\t", @{$region})."\n";
     }
   }
 }
 
+=head2 comp_coords
+
+  Description: Simple comparator function for sorting regions
+    Works on list refs, containing [chromosoms, start, end, ...]
+  Arg1: $a: first element of comparison
+  Arg2: $b: second element of comparison
+  Returntype: -1 if $a before $b, 0 if overlap, 1 if $a after $b
+
+=cut
 
 sub comp_coords {
   my ($a, $b) = @_;
@@ -707,26 +931,26 @@ sub comp_coords {
   }
 }
 
-########################################################
-## Computing TF binding probs 
-##
-## Params:
-## * options hash with values:
-##   - $options->{trackhub_dir} (path to trackhub dir)
-##   - $options->{working_dir} (path to working tmp dir)
-##   - $options->{cell_type_open} (hash which assigns a list of peak calls to each cell type)
-##   - $options->{cell_type_tfs} (hash which assigns a list of peak calls to each cell type)
-##   - $options->{peak_calls} (hash which assigns a list of peak calls to each )
-## 
-## Writes into:
-## * Celltype specific summaries in:
-##   $options->{working_dir}/celltype_tf/$celltype.bed
-## * TF specific summaries in:
-##   $options->{trackhub_dir}/tfbs/$tf.wig
-## * An overall TF summary, computed as a disjunction of the 
-## TF specific probabilities, treated as independent variables.
-##   $options->{trackhub_dir}/overview/all_tfbs.bw
-########################################################
+=head2 compute_tf_probs
+  
+  Description: Computing TF binding probs 
+  Arg1: hash ref with values:
+   - $options->{trackhub_dir} (path to trackhub dir)
+   - $options->{working_dir} (path to working tmp dir)
+   - $options->{cell_type_open} (hash which assigns a list of peak calls to each cell type)
+   - $options->{cell_type_tfs} (hash which assigns a list of peak calls to each cell type)
+   - $options->{peak_calls} (hash which assigns a list of peak calls to each )
+  Returntype: undef 
+  Side effects: Writes into:
+   * Celltype specific summaries in:
+     $options->{working_dir}/celltype_tf/$celltype.bed
+   * TF specific summaries in:
+     $options->{trackhub_dir}/tfbs/$tf.wig
+   * An overall TF summary, computed as a disjunction of the 
+   TF specific probabilities, treated as independent variables.
+     $options->{trackhub_dir}/overview/all_tfbs.bw
+
+=cut
 
 sub compute_tf_probs {
   my $options = shift;
@@ -742,6 +966,22 @@ sub compute_tf_probs {
   compute_global_tf_prob($options, $tf_probs);
 }
 
+=head2 compute_celltype_tf_sites
+  
+  Description: Computing TF binding sites for each cell type
+  Arg1: hash ref with values:
+   - $options->{trackhub_dir} (path to trackhub dir)
+   - $options->{working_dir} (path to working tmp dir)
+   - $options->{cell_type_open} (hash which assigns a list of peak calls to each cell type)
+   - $options->{cell_type_tfs} (hash which assigns a list of peak calls to each cell type)
+   - $options->{peak_calls} (hash which assigns a list of peak calls to each )
+  Returntype: undef 
+  Side effects: Writes into:
+   * Celltype specific summaries in:
+     $options->{working_dir}/celltype_tf/$celltype.bed
+
+=cut
+
 sub compute_celltype_tf_sites {
   my ($options) = @_;
   my $celltype;
@@ -753,6 +993,23 @@ sub compute_celltype_tf_sites {
     compute_celltype_tf_sites_2($options, $celltype);
   }
 }
+
+=head2 compute_celltype_tf_sites_2
+  
+  Description: Computing TF binding sites for a given cell type
+  Arg1: hash ref with values:
+   - $options->{trackhub_dir} (path to trackhub dir)
+   - $options->{working_dir} (path to working tmp dir)
+   - $options->{cell_type_open} (hash which assigns a list of peak calls to each cell type)
+   - $options->{cell_type_tfs} (hash which assigns a list of peak calls to each cell type)
+   - $options->{peak_calls} (hash which assigns a list of peak calls to each )
+  Arg2: CellType name (String, processed by clean_name)
+  Returntype: undef 
+  Side effects: Writes into:
+   * Celltype specific summaries in:
+     $options->{working_dir}/celltype_tf/$celltype.bed
+
+=cut
 
 sub compute_celltype_tf_sites_2 {
   my ($options, $celltype) = @_;
@@ -774,6 +1031,22 @@ sub compute_celltype_tf_sites_2 {
   $options->{celltype_tfbs}->{$celltype} = $output2;
 }
 
+=head2 compute_antibody_specific_probs
+  
+  Description: Computing TF binding summaries for each TF
+  Arg1: hash ref with values:
+   - $options->{trackhub_dir} (path to trackhub dir)
+   - $options->{working_dir} (path to working tmp dir)
+   - $options->{cell_type_open} (hash which assigns a list of peak calls to each cell type)
+   - $options->{cell_type_tfs} (hash which assigns a list of peak calls to each cell type)
+   - $options->{peak_calls} (hash which assigns a list of peak calls to each )
+  Returntype: array ref of file locations 
+  Side effects: Writes into:
+   * TF specific summaries in:
+     $options->{trackhub_dir}/tfbs/$tf.wig
+
+=cut
+
 sub compute_antibody_specific_probs {
   my $options = shift;
   my @tfs = keys %{$options->{peak_calls}};
@@ -792,20 +1065,28 @@ sub compute_antibody_specific_probs {
   return \@tf_probs;
 }
 
+=head2 compute_antibody_specific_prob
+  
+  Description: Computing TF binding summaries for a given TF
+  Arg1: hash ref with values:
+   - $options->{trackhub_dir} (path to trackhub dir)
+   - $options->{working_dir} (path to working tmp dir)
+   - $options->{cell_type_open} (hash which assigns a list of peak calls to each cell type)
+   - $options->{cell_type_tfs} (hash which assigns a list of peak calls to each cell type)
+   - $options->{peak_calls} (hash which assigns a list of peak calls to each )
+  Arg2: TF name (string process by clean_name)
+  Returntype: array ref of file locations 
+  Side effects: Writes into:
+   * TF specific summaries in:
+     $options->{trackhub_dir}/tfbs/$tf.wig
+
+=cut
+
 sub compute_antibody_specific_prob {
   my ($options, $tf) = @_;
-  my @cells = keys(%{$options->{peak_calls}->{$tf}});
   my $output = "$options->{trackhub_dir}/tfbs/$tf.wig";
-  my @exps = ();
 
-  foreach my $cell (@cells) {
-     if (defined $options->{cell_type_open}->{$cell}) {
-  my $tf_peaks = $options->{peak_calls}->{$tf}->{$cell};
-  my $open_peaks = $options->{cell_type_open}->{$cell};
-        push @exps, "gt 1 sum " . join(" ", @$tf_peaks) . " unit sum " . join(" ", @$open_peaks) . " : :";
-     }
-  }
-
+  my @exps = @{antibody_regions($options, $tf)};
   my $exp_count = scalar(@exps);
   if ($exp_count > 0) {
     run("wiggletools write_bg $output scale " . (1 / $exp_count) . " sum " . join(" ", @exps));
@@ -817,6 +1098,51 @@ sub compute_antibody_specific_prob {
   }
 }
 
+=head2 antibody_regions
+  
+  Description: create summary string of antibody regions 
+  Arg1: hash ref with values:
+   - $options->{cell_type_open} (hash which assigns a list of peak calls to each cell type)
+   - $options->{cell_type_tfs} (hash which assigns a list of peak calls to each cell type)
+   - $options->{peak_calls} (hash which assigns a list of peak calls to each )
+  Arg2: TF name (string process by clean_name)
+  Returntype: wiggletools expression, string 
+
+=cut
+
+sub antibody_regions {
+  my ($options, $tf) = @_;
+  my @cells = keys(%{$options->{peak_calls}->{$tf}});
+  my @exps = ();
+
+  foreach my $cell (@cells) {
+     if (defined $options->{cell_type_open}->{$cell}) {
+       my $tf_peaks = $options->{peak_calls}->{$tf}->{$cell};
+       my $open_peaks = $options->{cell_type_open}->{$cell};
+       push @exps, "gt 1 sum " . join(" ", @$tf_peaks) . " unit sum " . join(" ", @$open_peaks) . " : :";
+     }
+  }
+
+  return \@exps;
+}
+
+=head2 compute_global_tf_prob
+  
+  Description: Computing global TF binding prob 
+  Arg1: hash ref with values:
+   - $options->{trackhub_dir} (path to trackhub dir)
+   - $options->{working_dir} (path to working tmp dir)
+   - $options->{cell_type_open} (hash which assigns a list of peak calls to each cell type)
+   - $options->{cell_type_tfs} (hash which assigns a list of peak calls to each cell type)
+   - $options->{peak_calls} (hash which assigns a list of peak calls to each )
+  Arg2: array ref of file locations containing TF specific binding probs in BigWig format
+  Returntype: undef 
+  Side effects: Writes an overall TF summary, computed as a disjunction of the 
+   TF specific probabilities, treated as independent variables.
+     $options->{trackhub_dir}/overview/all_tfbs.bw
+
+=cut
+
 sub compute_global_tf_prob {
   my ($options, $probs) = @_;
   mkdir "$options->{trackhub_dir}/overview/";
@@ -826,33 +1152,32 @@ sub compute_global_tf_prob {
   convert_to_bigWig($options, $output);
 }
 
-########################################################
-## Extracting segmentation summaries 
-## Computes for each segmentation and each state the 
-## number of celltypes with a given state at each position
-##
-## Params:
-## - An $options hash with values:
-##   * $options->{trackhub_dir}
-##   * $options->{working_dir}
-##   * $options->{segmentations} List of hashes containing:
-##     . $segmentation->{name} String
-##     . $segmentation->{location} Path to directory
-##
-## It fills out:
-##   * $segmentation->{states} List of strings 
-##   * $segmentation->{celltypes} List of strings
-##
-## Writes into:
-##   * List of states in segmentation:
-##     $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/states.txt
-##   * List of cell-types in segmentation:
-##     $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/cells.txt
-##   * Sorted copy of each cell type's segmentation:
-##     $options->{working_dir}/segmentation_summaries/$segmentation->{name}/$cell.bed
-##   * A summary statistic of each state:
-##     $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw
-########################################################
+=head2 extract_segmentation_state_summaries
+
+  Description: Extracting segmentation summaries 
+    Computes for each segmentation and each state the 
+    number of celltypes with a given state at each position
+  Arg1: An $options hash ref with values:
+    * $options->{trackhub_dir}
+    * $options->{working_dir}
+    * $options->{segmentations} List of hashes containing:
+      . $segmentation->{name} String
+      . $segmentation->{location} Path to directory
+  Returntype: undef
+  Side effects: It fills out:
+    * $segmentation->{states} List of strings 
+    * $segmentation->{celltypes} List of strings
+    Writes into:
+    * List of states in segmentation:
+      $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/states.txt
+    * List of cell-types in segmentation:
+      $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/cells.txt
+    * Sorted copy of each cell type's segmentation:
+      $options->{working_dir}/segmentation_summaries/$segmentation->{name}/$cell.bed
+    * A summary statistic of each state:
+      $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw
+
+=cut
 
 sub extract_segmentation_state_summaries {
   my $options = shift;
@@ -865,6 +1190,34 @@ sub extract_segmentation_state_summaries {
     extract_segmentation_state_summaries_2($options, $segmentation);
   }
 }
+
+=head2 extract_segmentation_state_summaries_2
+
+  Description: Extracting segmentation summaries 
+    Computes for a given segmentation and each state the 
+    number of celltypes with a given state at each position
+  Arg1: An $options hash ref with values:
+    * $options->{trackhub_dir}
+    * $options->{working_dir}
+    * $options->{segmentations} List of hashes containing:
+      . $segmentation->{name} String
+      . $segmentation->{location} Path to directory
+  Arg2: Segmentation name (string)
+  Returntype: undef
+  Side effects: It fills out:
+    * $segmentation->{states} List of strings 
+    * $segmentation->{celltypes} List of strings
+    Writes into:
+    * List of states in segmentation:
+      $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/states.txt
+    * List of cell-types in segmentation:
+      $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/cells.txt
+    * Sorted copy of each cell type's segmentation:
+      $options->{working_dir}/segmentation_summaries/$segmentation->{name}/$cell.bed
+    * A summary statistic of each state:
+      $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw
+
+=cut
 
 sub extract_segmentation_state_summaries_2 {
   my ($options, $segmentation) = @_;
@@ -879,10 +1232,43 @@ sub extract_segmentation_state_summaries_2 {
   }
 }
 
+=head2 extract_ChromHMM_state_summaries
+
+  Description: Extracting segmentation summaries 
+    Computes for a given ChromHMM, Segway or GMTK segmentation and each state the 
+    number of celltypes with a given state at each position
+  Arg1: An $options hash ref with values:
+    * $options->{trackhub_dir}
+    * $options->{working_dir}
+    * $options->{segmentations} List of hashes containing:
+      . $segmentation->{name} String
+      . $segmentation->{location} Path to directory
+  Arg2: Segmentation name (string)
+  Returntype: undef
+  Side effects: It fills out:
+    * $segmentation->{states} List of strings 
+    * $segmentation->{celltypes} List of strings
+    Writes into:
+    * List of states in segmentation:
+      $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/states.txt
+    * List of cell-types in segmentation:
+      $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/cells.txt
+    * Sorted copy of each cell type's segmentation:
+      $options->{working_dir}/segmentation_summaries/$segmentation->{name}/$cell.bed
+    * A summary statistic of each state:
+      $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw
+
+=cut
+
 sub extract_ChromHMM_state_summaries {
   my ($options, $segmentation) = @_;
   print_log("Going through output of segmentation $segmentation->{name}\n");
-  my @bedfiles = glob "$segmentation->{location}/*.bed";
+  my @bedfiles;
+  if ($segmentation->{type} eq 'ChromHMM') {
+    @bedfiles = glob "$segmentation->{location}/*_segments.bed";
+  } else {
+    @bedfiles = glob "$segmentation->{location}/*.bed";
+  }
   $segmentation->{states} = extract_ChromHMM_states($options, $segmentation, \@bedfiles);
   $segmentation->{celltypes} = extract_ChromHMM_cells($options, $segmentation, \@bedfiles);
 
@@ -899,6 +1285,21 @@ sub extract_ChromHMM_state_summaries {
   }
 }
 
+=head2 extract_ChromHMM_states
+
+  Description: Extracting list of states in a ChromHMM segmentation
+  Arg1: An $options hash ref with values:
+    * $options->{trackhub_dir}
+    * $options->{working_dir}
+    * $options->{segmentations} List of hashes containing:
+      . $segmentation->{name} String
+      . $segmentation->{location} Path to directory
+  Arg2: Segmentation name (string)
+  Arg3: Array ref of file locations containing cell type specific segmentation data
+  Returntype: Array ref
+
+=cut
+
 sub extract_ChromHMM_states {
   my ($options, $segmentation, $files) = @_;
   print_log("Extracting state names\n");
@@ -908,6 +1309,21 @@ sub extract_ChromHMM_states {
   }
   return deserialise($output);
 }
+
+=head2 extract_ChromHMM_states
+
+  Description: Extracting list of cell types in a ChromHMM segmentation
+  Arg1: An $options hash ref with values:
+    * $options->{trackhub_dir}
+    * $options->{working_dir}
+    * $options->{segmentations} List of hashes containing:
+      . $segmentation->{name} String
+      . $segmentation->{location} Path to directory
+  Arg2: Segmentation name (string)
+  Arg3: Array ref of file locations containing cell type specific segmentation data
+  Returntype: Array ref
+
+=cut
 
 sub extract_ChromHMM_cells {
   my ($options, $segmentation, $files) = @_;
@@ -925,6 +1341,28 @@ sub extract_ChromHMM_cells {
   }
   return deserialise_hash($output);
 }
+
+=head2 extract_ChromHMM_state_summary
+
+  Description: Extracting segmentation summaries 
+    Computes for a given ChromHMM, Segway or GMTK segmentation and a given state the 
+    number of celltypes with that state at each position
+  Arg1: An $options hash ref with values:
+    * $options->{trackhub_dir}
+    * $options->{working_dir}
+    * $options->{segmentations} List of hashes containing:
+      . $segmentation->{name} String
+      . $segmentation->{location} Path to directory
+  Arg2: Segmentation name (string)
+  Arg3: State name (string) 
+  Returntype: undef
+  Side effects: Writes into:
+    * Sorted copy of each cell type's segmentation:
+      $options->{working_dir}/segmentation_summaries/$segmentation->{name}/$cell.bed
+    * A summary statistic of each state:
+      $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw
+
+=cut
 
 sub extract_ChromHMM_state_summary {
   my ($options, $segmentation, $state) = @_;
@@ -954,34 +1392,31 @@ sub extract_ChromHMM_state_summary {
   convert_to_bigWig($options, $summary);
 }
 
-########################################################
-## Characterising segmentation states 
-## This first label assigns a label to each state of 
-## each segmentation, partly to color the segmentations 
-## partly to inform the next step.
-##
-## Params:
-## * A $options hash which contains:
-##   - $options->{working_dir}
-##   - $options->{trackhub_dir}
-##   - $options->{exons} Path to bed file with exonic regions
-##   - $options->{tss} Path to bed file with known TSSs
-##   - $options->{peak_calls}->{CTCF}->{$cell} A list of filepaths to CTCF peak calls of celltype $cell
-##   - $options->{segmentations} where each value is a hash containing:
-##     . $segmentation->{name} 
-##     . $segmentation->{states} 
-##
-## It expects:
-## * $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw
-## * ChromHMM segmentations: $segmentation->{location}/*.tab (1 file) Emission file
-## * Segway segmentations: $segmentation->{location}/*.txt (1 file) Emission file
-##
-## It fills out:
-## * $options->{assignments}->{$segmentation->{name}} Hash which assigns a label to each state
-##
-## It creates:
-## * $options->{working_dir}/assignments.txt (Tab delimited file)
-########################################################
+=head2 label_segmentation_states
+
+  Description: Characterising segmentation states 
+    This first label assigns a label to each state of 
+    each segmentation, partly to color the segmentations 
+    partly to inform the next step.
+  Arg1: A $options hash ref which contains:
+    - $options->{working_dir}
+    - $options->{trackhub_dir}
+    - $options->{exons} Path to bed file with exonic regions
+    - $options->{tss} Path to bed file with known TSSs
+    - $options->{peak_calls}->{CTCF}->{$cell} A list of filepaths to CTCF peak calls of celltype $cell
+    - $options->{segmentations} where each value is a hash containing:
+      . $segmentation->{name} 
+      . $segmentation->{states} 
+    It expects:
+    * $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw
+    * ChromHMM segmentations: $segmentation->{location}/*.tab (1 file) Emission file
+    * Segway segmentations: $segmentation->{location}/*.txt (1 file) Emission file
+  Side effects: It fills out:
+    * $options->{assignments}->{$segmentation->{name}} Hash which assigns a label to each state
+    It creates:
+    * $options->{working_dir}/assignments.txt (Tab delimited file)
+
+=cut
 
 sub label_segmentation_states {
   my $options = shift;
@@ -994,7 +1429,7 @@ sub label_segmentation_states {
     print_log("Assigning states to functional labels\n");
     $options->{assignments} = {};
     foreach $segmentation (@{$options->{segmentations}}) {
-      select_segmentation_states_2($options, $segmentation);
+      select_segmentation_states($options, $segmentation);
     }
     dump_assignments($options, "$options->{working_dir}/assignments.txt");
   }
@@ -1007,6 +1442,19 @@ sub label_segmentation_states {
   }
 }
 
+=head2 dump_assignments
+
+  Description: Serialises state labelling
+  Arg1: hash ref containing:
+    - segmentations: array ref of segmentation names
+    - assignments: hash ref mapping segmentation names to hash refs, which 
+        in turn map state names to labels
+  Arg2: file location
+  Returntype: undef
+  Side effect: writes into file
+
+=cut
+
 sub dump_assignments {
   my ($options, $file) = @_;
   open my $fh, ">", $file;
@@ -1018,6 +1466,15 @@ sub dump_assignments {
   }
   close $fh;
 }
+
+=head2 load_assignments
+
+  Description: Deserialises state labelling
+  Arg1: file location
+  Returntype: hash ref mapping segmentation names to hash refs, which 
+        in turn map state names to labels
+
+=cut
 
 sub load_assignments {
   my ($file) = @_;
@@ -1035,7 +1492,32 @@ sub load_assignments {
   return $assignments;
 }
 
-sub select_segmentation_states_2 {
+=head2 label_segmentation_states
+
+  Description: Characterising segmentation states 
+    This first label assigns a label to each state of 
+    a given segmentation, partly to color the segmentation
+    partly to inform the next step.
+  Arg1: A $options hash ref which contains:
+    - $options->{working_dir}
+    - $options->{trackhub_dir}
+    - $options->{exons} Path to bed file with exonic regions
+    - $options->{tss} Path to bed file with known TSSs
+    - $options->{peak_calls}->{CTCF}->{$cell} A list of filepaths to CTCF peak calls of celltype $cell
+    - $options->{segmentations} where each value is a hash containing:
+      . $segmentation->{name} 
+      . $segmentation->{states} 
+    It expects:
+    * $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw
+    * ChromHMM segmentations: $segmentation->{location}/*.tab (1 file) Emission file
+    * Segway segmentations: $segmentation->{location}/*.txt (1 file) Emission file
+  Arg2: segmentation name
+  Side effects: It fills out:
+    * $options->{assignments}->{$segmentation->{name}} Hash which assigns a label to each state
+
+=cut
+
+sub select_segmentation_states {
   my ($options, $segmentation) = @_;
   my $state;
 
@@ -1049,6 +1531,29 @@ sub select_segmentation_states_2 {
     label_segmentation_state($options, $segmentation, $state);
   }
 }
+
+=head2 label_segmentation_state
+
+  Description: assigns a label to a state of 
+    a given segmentation, partly to color the segmentation
+    partly to inform the next step.
+  Arg1: A $options hash ref which contains:
+    - assignments => hash ref:
+      - segmentation name => empty hash ref
+  Arg2: segmentation: hashref:
+    - name => string
+    - repressed_cutoff => numerical scalar 
+    - overlaps: hash ref:
+      - ctcf => correlation (-1 <= x <= 1)
+      - repressed => score
+      - tfbs => enrichment score (> 0)
+      - tss => enrichment score (> 0)
+      - gene => enrichment score (> 0)
+  Arg3: state name
+  Side effects: It fills out:
+    * $options->{assignments}->{$segmentation->{name}}->{state} with one of the different labels (See our @labels)
+
+=cut
 
 sub label_segmentation_state {
   my ($options, $segmentation, $state) = @_;
@@ -1077,6 +1582,32 @@ sub label_segmentation_state {
     $assignments->{$state} = 'distal';
   }
 }
+
+=head2 label_segmentation_states
+
+  Description: Characterising segmentation states 
+    with a number of scores
+  Arg1: A $options hash ref which contains:
+    - $options->{working_dir}
+    - $options->{trackhub_dir}
+    - $options->{exons} Path to bed file with exonic regions
+    - $options->{tss} Path to bed file with known TSSs
+    - $options->{peak_calls}->{CTCF}->{$cell} A list of filepaths to CTCF peak calls of celltype $cell
+    - $options->{segmentations} where each value is a hash containing:
+      . $segmentation->{name} 
+      . $segmentation->{states} 
+    It expects:
+    * $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw
+    * ChromHMM segmentations: $segmentation->{location}/*.tab (1 file) Emission file
+    * Segway segmentations: $segmentation->{location}/*.txt (1 file) Emission file
+  Arg2: segmentation hashref
+    - name => string
+    - type => string
+    - states => hash ref of strings
+  Side effects: It fills out:
+    * options->overlaps: hashref
+
+=cut
 
 sub compute_overlaps {
   my ($options, $segmentation) = @_;
@@ -1110,6 +1641,33 @@ sub compute_overlaps {
   close $out;
 }
 
+=head2 compute_overlap_scores 
+
+  Description: Characterising segmentation states 
+    with a score
+  Arg1: A $options hash ref which contains:
+    - $options->{working_dir}
+    - $options->{trackhub_dir}
+    - $options->{exons} Path to bed file with exonic regions
+    - $options->{tss} Path to bed file with known TSSs
+    - $options->{peak_calls}->{CTCF}->{$cell} A list of filepaths to CTCF peak calls of celltype $cell
+    - $options->{segmentations} where each value is a hash containing:
+      . $segmentation->{name} 
+      . $segmentation->{states} 
+    It expects:
+    * $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw
+    * ChromHMM segmentations: $segmentation->{location}/*.tab (1 file) Emission file
+    * Segway segmentations: $segmentation->{location}/*.txt (1 file) Emission file
+  Arg2: segmentation hashref
+    - name => string
+    - type => string
+    - states => hash ref of strings
+  Arg3: name of test (one of ctcf, tss, tfbs, gene or repressed)
+  Side effects: It fills out:
+    * options->overlaps: hashref
+
+=cut
+
 sub compute_overlap_scores {
   my ($options, $segmentation, $test) = @_;
   my $state;
@@ -1127,6 +1685,32 @@ sub compute_overlap_scores {
     store $segmentation->{overlaps}->{$test}, $output;
   }
 }
+
+=head2 compute_overlap_scores
+
+  Description: Characterising a segmentation state
+    with a score
+  Arg1: A $options hash ref which contains:
+    - $options->{working_dir}
+    - $options->{trackhub_dir}
+    - $options->{exons} Path to bed file with exonic regions
+    - $options->{tss} Path to bed file with known TSSs
+    - $options->{peak_calls}->{CTCF}->{$cell} A list of filepaths to CTCF peak calls of celltype $cell
+    - $options->{segmentations} where each value is a hash containing:
+      . $segmentation->{name} 
+      . $segmentation->{states} 
+    It expects:
+    * $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw
+    * ChromHMM segmentations: $segmentation->{location}/*.tab (1 file) Emission file
+    * Segway segmentations: $segmentation->{location}/*.txt (1 file) Emission file
+  Arg2: segmentation hashref
+    - name => string
+  Arg3: name of test (one of ctcf, tss, tfbs, gene or repressed)
+  Arg3: name of state
+  Side effects: It fills out:
+    * segmentation->{overlaps}: hashref
+
+=cut
 
 sub compute_overlap_score {
   my ($options, $segmentation, $test, $state) = @_;
@@ -1156,6 +1740,15 @@ sub compute_overlap_score {
   chomp $segmentation->{overlaps}->{$test}->{$state};
 }
 
+=head2 compute_enrichment_between_files
+
+  Description: compute enrichment between two bed files
+  Arg1: reference file location
+  Arg2: query file location
+  Returntype: scalar
+
+=cut 
+
 sub compute_enrichment_between_files {
   my ($reference, $file) = @_;
 
@@ -1169,6 +1762,30 @@ sub compute_enrichment_between_files {
     return ($auc / $breadth) / ($ref_auc / 3.09569e9);
   }
 }
+
+=head2 compute_ChromHMM_repressed_scores
+
+  Description: Characterising ChromHMM segmentation states
+    with a repression score
+  Arg1: A $options hash ref which contains:
+    - $options->{working_dir}
+    - $options->{trackhub_dir}
+    - $options->{exons} Path to bed file with exonic regions
+    - $options->{tss} Path to bed file with known TSSs
+    - $options->{peak_calls}->{CTCF}->{$cell} A list of filepaths to CTCF peak calls of celltype $cell
+    - $options->{segmentations} where each value is a hash containing:
+      . $segmentation->{name} 
+      . $segmentation->{states} 
+    It expects:
+    * $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw
+    * ChromHMM segmentations: $segmentation->{location}/*.tab (1 file) Emission file
+    * Segway segmentations: $segmentation->{location}/*.txt (1 file) Emission file
+  Arg2: segmentation hashref
+    - name => string
+  Side effects: It fills out:
+    * segmentation->{overlaps}->{repressed}: hashref
+
+=cut
 
 sub compute_ChromHMM_repressed_scores {
   my ($options, $segmentation) = @_;
@@ -1210,6 +1827,31 @@ sub compute_ChromHMM_repressed_scores {
   $segmentation->{repressed_cutoff} = $max / 3;
 }
 
+=head2 compute_GMTK_repressed_scores
+
+  Description: Characterising GMTK segmentation states
+    with a repression score
+  Arg1: A $options hash ref which contains:
+    - $options->{working_dir}
+    - $options->{trackhub_dir}
+    - $options->{exons} Path to bed file with exonic regions
+    - $options->{tss} Path to bed file with known TSSs
+    - $options->{peak_calls}->{CTCF}->{$cell} A list of filepaths to CTCF peak calls of celltype $cell
+    - $options->{segmentations} where each value is a hash containing:
+      . $segmentation->{name} 
+      . $segmentation->{states} 
+    It expects:
+    * $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw
+    * GMTK segmentations: $segmentation->{location}/*.tab (1 file) Emission file
+    * Segway segmentations: $segmentation->{location}/*.txt (1 file) Emission file
+  Arg2: segmentation hashref
+    - name => string
+  Side effects: It fills out:
+    * segmentation->{overlaps}->{repressed}: hashref
+      - state name => scalar
+
+=cut
+
 sub compute_GMTK_repressed_scores {
   my ($options, $segmentation) = @_;
   my @files = glob "$segmentation->{location}/*.tab";
@@ -1246,6 +1888,30 @@ sub compute_GMTK_repressed_scores {
   }
   $segmentation->{repressed_cutoff} = $max / 3;
 }
+
+=head2 compute_Segway_repressed_scores
+
+  Description: Characterising Segway segmentation states
+    with a repression score
+  Arg1: A $options hash ref which contains:
+    - $options->{working_dir}
+    - $options->{trackhub_dir}
+    - $options->{exons} Path to bed file with exonic regions
+    - $options->{tss} Path to bed file with known TSSs
+    - $options->{peak_calls}->{CTCF}->{$cell} A list of filepaths to CTCF peak calls of celltype $cell
+    - $options->{segmentations} where each value is a hash containing:
+      . $segmentation->{name} 
+      . $segmentation->{states} 
+    It expects:
+    * $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw
+    * Segway segmentations: $segmentation->{location}/*.tab (1 file) Emission file
+    * Segway segmentations: $segmentation->{location}/*.txt (1 file) Emission file
+  Arg2: segmentation hashref
+    - name => string
+  Side effects: It fills out:
+    * segmentation->{overlaps}->{repressed}: hashref
+
+=cut
 
 sub compute_Segway_repressed_scores {
   my ($options, $segmentation) = @_;
@@ -1284,27 +1950,26 @@ sub compute_Segway_repressed_scores {
   $segmentation->{repressed_cutoff} = $max / 3;
 }
 
-########################################################
-## Preparing segmentation bedfiles 
-## This function adds in color information to the bedfiles,
-## based on the assignment of states done above
-##
-## Params:
-## * A $options hash which contains:
-##   - $options->{trackhub_dir}
-##   - $options->{working_dir}
-##   - $options->{segmentations} list which each element is a hash containing:
-##     . $segmentation->{name} String
-##     . $segmentation->{type} (ChromHMM or Segway)
-##     . $segmentation->{states} List of strings
-##     . $segmentation->{celltypes} List of strings
-##
-## It expects files:
-## * $options->{working_dir}/segmentation_summaries/$segmentation->{name}/$state/$celltype.bed
-##
-## It creates:
-## * $options->{trackhub_dir}/segmentations/$segmentation->{name}/$celltype.bb
-########################################################
+=head2 make_segmentation_bedfiles
+
+  Description: Preparing segmentation bedfiles 
+    This function adds in color information to the bedfiles,
+    based on the assignment of states done above
+  Arg1: A $options hash which contains:
+    - $options->{trackhub_dir}
+    - $options->{working_dir}
+    - $options->{segmentations} list which each element is a hash containing:
+      . $segmentation->{name} String
+      . $segmentation->{type} (ChromHMM or Segway)
+      . $segmentation->{states} List of strings
+      . $segmentation->{celltypes} List of strings
+    It expects files:
+    * $options->{working_dir}/segmentation_summaries/$segmentation->{name}/$state/$celltype.bed
+  Returntype: undef
+  Side effects: it creates:
+  * $options->{trackhub_dir}/segmentations/$segmentation->{name}/$celltype.bb
+
+=cut
 
 sub make_segmentation_bedfiles {
   my $options = shift;
@@ -1314,6 +1979,30 @@ sub make_segmentation_bedfiles {
     make_segmentation_bedfiles_2($options, $segmentation);
   }
 }
+
+=head2 make_segmentation_bedfiles_2
+
+  Description: Preparing segmentation bedfiles for a given segmentation
+    This function adds in color information to the bedfiles,
+    based on the assignment of states done above
+  Arg1: A $options hash which contains:
+    - $options->{trackhub_dir}
+    - $options->{working_dir}
+    - $options->{segmentations} list which each element is a hash containing:
+      . $segmentation->{name} String
+      . $segmentation->{type} (ChromHMM or Segway)
+      . $segmentation->{states} List of strings
+      . $segmentation->{celltypes} List of strings
+    It expects files:
+    * $options->{working_dir}/segmentation_summaries/$segmentation->{name}/$state/$celltype.bed
+  Arg2: segmentation hash ref:
+    name => string
+    celltypes => array ref of strings
+  Returntype: undef
+  Side effects: it creates:
+  * $options->{trackhub_dir}/segmentations/$segmentation->{name}/$celltype.bb
+
+=cut
 
 sub make_segmentation_bedfiles_2 {
   my ($options, $segmentation) = @_;
@@ -1328,6 +2017,32 @@ sub make_segmentation_bedfiles_2 {
   }
 }
 
+=head2 make_segmentation_bedfile
+
+  Description: Preparing segmentation bedfiles for a given segmentation
+    and a given cell type
+    This function adds in color information to the bedfiles,
+    based on the assignment of states done above
+  Arg1: A $options hash which contains:
+    - $options->{trackhub_dir}
+    - $options->{working_dir}
+    - $options->{segmentations} list which each element is a hash containing:
+      . $segmentation->{name} String
+      . $segmentation->{type} (ChromHMM or Segway)
+      . $segmentation->{states} List of strings
+      . $segmentation->{celltypes} List of strings
+    It expects files:
+    * $options->{working_dir}/segmentation_summaries/$segmentation->{name}/$state/$celltype.bed
+  Arg2: segmentation hash ref:
+    name => string
+    celltypes => array ref of strings
+  Arg3: CellType name (string processed with clean_name)
+  Returntype: undef
+  Side effects: it creates:
+  * $options->{trackhub_dir}/segmentations/$segmentation->{name}/$celltype.bb
+
+=cut
+
 sub make_segmentation_bedfile {
   my ($options, $segmentation, $celltype) = @_;
 
@@ -1338,23 +2053,70 @@ sub make_segmentation_bedfile {
   }
 }
 
+=head2 make_ChromHMM_bedfile
+
+  Description: Preparing ChromHMM, Segway or GMTK bedfiles for a given segmentation
+    and a given cell type
+    This function adds in color information to the bedfiles,
+    based on the assignment of states done above
+  Arg1: A $options hash which contains:
+    - $options->{trackhub_dir}
+    - $options->{working_dir}
+    - $options->{segmentations} list which each element is a hash containing:
+      . $segmentation->{name} String
+      . $segmentation->{type} (ChromHMM or Segway)
+      . $segmentation->{states} List of strings
+      . $segmentation->{celltypes} List of strings
+    It expects files:
+    * $options->{working_dir}/segmentation_summaries/$segmentation->{name}/$state/$celltype.bed
+  Arg2: segmentation hash ref:
+    name => string
+    celltypes => array ref of strings
+  Arg3: CellType name (string processed with clean_name)
+  Returntype: undef
+  Side effects: it creates:
+  * $options->{trackhub_dir}/segmentations/$segmentation->{name}/$celltype.bb
+
+=cut
+
 sub make_ChromHMM_bedfile {
   my ($options, $segmentation, $celltype) = @_;
-  my $output = "$options->{trackhub_dir}/segmentations/$segmentation->{name}/$celltype.bed";
+  my $output = "$options->{trackhub_dir}/segmentations/$segmentation->{name}/$celltype.bb";
 
-  if (!must_compute($options,"$options->{trackhub_dir}/segmentations/$segmentation->{name}/$celltype.bb")) {
+  if (must_compute($options,$output)) {
+    my @files = ();
+    foreach my $state (@{$segmentation->{states}}) {
+      push @files, make_ChromHMM_state_bedfile($options, $segmentation, $celltype, $state);
+    }
+
+    $output =~ s/.bb$/.bed/;
+    run("sort -m ".join(" ", @files)." -k1,1 -k2,2n > $output");
+    convert_to_bigBed($options, $output);
+  } else {
     print_log("Colorised segmentation $output already exists, skipping...\n");
-    return;
   }
-
-  my @files = ();
-  foreach my $state (@{$segmentation->{states}}) {
-    push @files, make_ChromHMM_state_bedfile($options, $segmentation, $celltype, $state);
-  }
-
-  run("sort -m ".join(" ", @files)." -k1,1 -k2,2n > $output");
-  convert_to_bigBed($options, $output);
 }
+
+=head2 make_ChromHMM_state_bedfile
+
+  Description: Preparing ChromHMM, Segway or GMTK bedfiles for a given segmentation,
+    a given cell type and a given state
+    This function adds in color information to the bedfiles,
+    based on the assignment of states done above
+  Arg1: A $options hash which contains:
+    - $options->{working_dir}
+    - options->{assignments}: hashref:
+      segmentation name => hashref:
+        state name => label
+    It expects files:
+    * $options->{working_dir}/segmentation_summaries/$segmentation->{name}/$state/$celltype.bed
+  Arg2: segmentation hash ref:
+    name => string
+  Arg3: CellType name (string processed with clean_name)
+  Returntype: file location
+  Side effects: it creates a file and writes into it
+
+=cut
 
 sub make_ChromHMM_state_bedfile {
   my ($options, $segmentation, $celltype, $state) = @_;
@@ -1371,49 +2133,44 @@ sub make_ChromHMM_state_bedfile {
   return $output;
 }
 
-########################################################
-## Setting cutoffs 
-## This functions first selects which states are directly useful
-## to infer TF binding, then determines an optimal
-## cutoff so as to best fit the overall transcription factor binding
-## probability:
-##
-## Params:
-## * A $options hash which contains:
-##   - $options->{trackhub_dir}
-##   - $options->{working_dir}
-##   - $options->{segmentations} list which each element is a hash containing:
-##     . $segmentation->{name} String
-##     . $segmentation->{type} (ChromHMM or Segway)
-##     . $segmentation->{states} List of strings
-##     . $segmentation->{celltypes} List of strings
-##
-## It expects:
-## * $options->{trackhub_dir}/overview/all_tfbs.bw
-## * $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw
-##
-## It computes:
-## * $options->{selected_states}->{$segmentation->{name}}->{$label} 
-##   List of state names that given an appropriate cutoff can have a 5x enrichment 
-##   in the reference marker
-## * $options->{cutoffs}->{$segmentation->{name}}->{$label} Integer
-##   Cutoff on the sum of values of selected states that maximises 
-##   the F-score of detection of TF binding 
-##
-## It creates:
-## * $options->{working_dir}/selected serialised hash (see above)
-## * $options->{working_dir}/cutoffs serialised hash (see above)
-########################################################
+=head2
+
+  Description: Setting cutoffs 
+    This functions first selects which states are directly useful
+    to infer TF binding, then determines an optimal
+    cutoff so as to best fit the overall transcription factor binding
+    probability:
+  Arg1: A $options hash which contains:
+    - $options->{trackhub_dir}
+    - $options->{working_dir}
+    - $options->{segmentations} list which each element is a hash containing:
+      . $segmentation->{name} String
+      . $segmentation->{type} (ChromHMM or Segway)
+      . $segmentation->{states} List of strings
+      . $segmentation->{celltypes} List of strings
+    It expects:
+    * $options->{trackhub_dir}/overview/all_tfbs.bw
+    * $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw
+  Returntype: undef
+  Side effects: It computes:
+  * $options->{selected_states}->{$segmentation->{name}}->{$label} 
+    List of state names that given an appropriate cutoff can have a 5x enrichment 
+    in the reference marker
+  * $options->{cutoffs}->{$segmentation->{name}}->{$label} Integer
+    Cutoff on the sum of values of selected states that maximises 
+    the F-score of detection of TF binding 
+  It creates:
+  * $options->{working_dir}/selected serialised hash (see above)
+  * $options->{working_dir}/cutoffs serialised hash (see above)
+
+=cut
 
 sub set_cutoffs {
   my $options = shift;
   my $cutoffs_file = "$options->{working_dir}/cutoffs";
   my $selected_file = "$options->{working_dir}/selected";
 
-  if (!must_compute($options,$cutoffs_file) && !must_compute($options,$selected_file)) {
-    $options->{cutoffs} = retrieve $cutoffs_file;
-    $options->{selected_states} = retrieve $selected_file;
-  } else {
+  if (must_compute($options,$cutoffs_file) || must_compute($options,$selected_file)) {
     $options->{cutoffs} = {};
     $options->{selected_states} = {};
     foreach my $segmentation (@{$options->{segmentations}}) {
@@ -1421,8 +2178,22 @@ sub set_cutoffs {
     }
     store $options->{cutoffs}, $cutoffs_file;
     store $options->{selected_states}, $selected_file;
+  } else {
+    $options->{cutoffs} = retrieve $cutoffs_file;
+    $options->{selected_states} = retrieve $selected_file;
   }
+}
 
+=head print_cutoffs
+
+  Desription: print cutoffs into logs
+  Returntype: undef
+  Side effects: prints into stdout
+
+=cut
+
+sub print_cutoffs {
+  my $options = shift;
   foreach my $segmentation (@{$options->{segmentations}}) {
     foreach my $label (keys %{$options->{selected_states}->{$segmentation->{name}}}) {
       print_log("Selected\t$segmentation->{name}\t$label\t". join(" ", keys %{$options->{selected_states}->{$segmentation->{name}}->{$label}})."\n");
@@ -1436,6 +2207,38 @@ sub set_cutoffs {
   }
 }
 
+=head2 select_segmentation_cutoffs
+
+  Description: Setting cutoffs 
+    This functions first selects which states of a given segmentation are directly useful
+    to infer TF binding, then determines an optimal
+    cutoff so as to best fit the overall transcription factor binding
+    probability:
+  Arg1: A $options hash which contains:
+    - $options->{trackhub_dir}
+    - $options->{working_dir}
+    It expects:
+    * $options->{trackhub_dir}/overview/all_tfbs.bw
+    * $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw
+  Arg2: Segmentation, hash ref:
+    . $segmentation->{name} String
+    . $segmentation->{type} (ChromHMM or Segway)
+    . $segmentation->{states} List of strings
+    . $segmentation->{celltypes} List of strings
+  Returntype: undef
+  Side effects: It computes:
+  * $options->{selected_states}->{$segmentation->{name}}->{$label} 
+    List of state names that given an appropriate cutoff can have a 5x enrichment 
+    in the reference marker
+  * $options->{cutoffs}->{$segmentation->{name}}->{$label} Integer
+    Cutoff on the sum of values of selected states that maximises 
+    the F-score of detection of TF binding 
+  It creates:
+  * $options->{working_dir}/selected serialised hash (see above)
+  * $options->{working_dir}/cutoffs serialised hash (see above)
+
+=cut
+
 sub select_segmentation_cutoffs {
   my ($options, $segmentation) = @_;
   $options->{selected_states}->{$segmentation->{name}} = {};
@@ -1447,6 +2250,21 @@ sub select_segmentation_cutoffs {
   }
 }
 
+=head2 select_relevant_states
+
+  Description: for a given segmentations, returns weighted list of relevant states with a given label
+  Arg1: options: hashref
+  Arg2: Segmentation, hash ref:
+    . $segmentation->{name} String
+    . $segmentation->{type} (ChromHMM or Segway)
+    . $segmentation->{states} List of strings
+    . $segmentation->{celltypes} List of strings
+  Arg3: label, string contained in @labels
+  Returntype: hashref:
+    - state => weight scalar
+  
+=cut 
+
 sub select_relevant_states {
   my ($options, $segmentation, $label) = @_;
   my %states = ();
@@ -1454,8 +2272,6 @@ sub select_relevant_states {
   foreach my $state (@{$segmentation->{states}}) {
     if ($assignments->{$state} eq $label) {
       print_log("Selecting $state $label\n");
-    }
-    if ($assignments->{$state} eq $label) {
       my $weight = test_relevance($options, $segmentation, $label, $state);
       if ($weight > 0) {
         $states{$state} = $weight;
@@ -1465,6 +2281,21 @@ sub select_relevant_states {
   print_log("Selected\t$segmentation->{name}\t$label\t". join(" ", keys %states)."\n");
   return \%states;
 }
+
+=head2 select_relevant_states
+
+  Description: for a given segmentation, a given state and a given label, returns confidence in that state's labelling 
+  Arg1: options: hashref
+  Arg2: Segmentation, hash ref:
+    . $segmentation->{name} String
+    . $segmentation->{type} (ChromHMM or Segway)
+    . $segmentation->{states} List of strings
+    . $segmentation->{celltypes} List of strings
+  Arg3: label, string contained in @labels
+  Arg4: state, string
+  Returntype: weight scalar
+  
+=cut 
 
 sub test_relevance {
   my ($options, $segmentation, $label, $state) = @_;
@@ -1483,6 +2314,20 @@ sub test_relevance {
 
   return 0;
 }
+
+=head2 select_segmentation_cutoff
+
+  Description: for a given segmentation, and a given label, determine cutoff to call a new feature
+  Arg1: options: hashref
+  Arg2: Segmentation, hash ref:
+    . $segmentation->{name} String
+    . $segmentation->{type} (ChromHMM or Segway)
+    . $segmentation->{states} List of strings
+    . $segmentation->{celltypes} List of strings
+  Arg3: label, string contained in @labels
+  Returntype: cutoff scalar
+  
+=cut 
 
 sub select_segmentation_cutoff {
   my ($options, $segmentation, $label) = @_;
@@ -1514,74 +2359,93 @@ sub select_segmentation_cutoff {
 
   my $last_fscore = 0;
   my $last_cutoff = 0;
+  # Searching for cutoff which produces max fscore
   for (my $i = 0; $i < $celltype_count * $max_weight; $i += $min_step) {
-    my $auc = `wiggletools AUC mult $tfbs gt $i sum $files_string`;
-    my $sens = $auc / $tfbs_auc; 
-
-    my $overlap = `wiggletools AUC gt 0 mult $tfbs gt $i sum $files_string`; 
-    my $breadth = `wiggletools AUC gt $i sum $files_string`;
-    my $spec;
-    if ($breadth == 0) {
-      $spec = 0;
-    } else {
-      $spec = $overlap / $breadth; 
-    }
-
-    my $fscore;
-    if ($sens + $spec == 0) {
-      $fscore = 0;
-    } else {
-      $fscore = 2 * ($spec * $sens) / ($spec + $sens);
-    }
-
+    my $fscore($tfbs, $tfbs_auc, $files_string, $i)
     print_log("CutoffTest\t$label\t.\t$fscore\n");
+
+    # If current value smaller than previous, just got past peak (assuming convexity of fscore(i) )
     if ($fscore < $last_fscore) {
       print_log("cutoff set at $last_cutoff\n");
       return $last_cutoff;
-    }
-    $last_fscore = $fscore;
-    $last_cutoff = $i;
+    } else {
+      $last_fscore = $fscore;
+      $last_cutoff = $i;
+    } 
   }
 
   print_log("cutoff set at MAX\n");
   return $celltype_count * $max_weight - $min_step;
 }
 
-########################################################
-## Computing regions 
-## This is the secret sauce:
-## Foreach function ('tss', 'proximal', 'distal', 'ctcf'):
-##   Foreach segmentation:
-##     - Sum the summaries of all the states associated to
-##     that function
-##     - Select the regions where the sum is greater than
-##     the cutoff (determined above)
-##   Compute the union of these regions
-##
-## We then apply heuristic rules:
-## * TSSs which have no experimental validation (CAGE)
-## are downgraded to proximal
-## * Proximal enhancers which overlap with a TSS are added
-## to the TSS's whiskers (and do not exist separately)
-## * TFBS+DNase regions which do not overlap any chromatin
-## region are labelled 'tfbs'
-## * DNAse regions which do not overlap any of the above 
-## are labelled 'DNAse'
-## 
-## Params:
-## * $options: hash ref
-##   - $options->{trackhub_dir}
-##   - $options->{working_dir}
-##   - $options->{segmentations}: List of hashes with:
-##     . $segmentation->{name}
-##   - $options->{selected_states}->{$segmentation->{name}}->{$label}: List of strings
-##   - $options->{cutoffs}->{$segmentation->{name}}->{$label}: Scalar
-##   - $options->{tss} Path to BEd file with experimentally validated TSS
-## Expected files:
-## * $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw 
-## Writes into:
-## * $options->{trackhub_dir}/overview/RegBuild.bb
-########################################################
+=head2 fscore
+
+  Description: compute fscore of a composite wiggletools function with cutoff wrt general TF binding
+  Arg1: location of TFBS summary
+  Arg2: wiggletools expression
+  Arg3: coverage cutoff
+  Returntype: scalar
+
+=cut
+
+sub fscore {
+  my ($tfbs, $tfbs_auc, $files_string, $i) = @_;
+  # Compute fscore for that cutoff
+  my $auc = `wiggletools AUC mult $tfbs gt $i sum $files_string`;
+  my $sens = $auc / $tfbs_auc; 
+
+  my $overlap = `wiggletools AUC gt 0 mult $tfbs gt $i sum $files_string`; 
+  my $breadth = `wiggletools AUC gt $i sum $files_string`;
+  my $spec;
+  if ($breadth == 0) {
+    $spec = 0;
+  } else {
+    $spec = $overlap / $breadth; 
+  }
+
+  if ($sens + $spec == 0) {
+    return 0;
+  } else {
+    return 2 * ($spec * $sens) / ($spec + $sens);
+  }
+}
+
+=head2 compute_regulatory_features
+
+  Description: This is the secret sauce:
+  Foreach function ('tss', 'proximal', 'distal', 'ctcf'):
+    Foreach segmentation:
+      - Sum the summaries of all the states associated to
+      that function
+      - Select the regions where the sum is greater than
+      the cutoff (determined above)
+    Compute the union of these regions
+ 
+  We then apply heuristic rules:
+  * TSSs which have no experimental validation (CAGE)
+  are downgraded to proximal
+  * Proximal enhancers which overlap with a TSS are added
+  to the TSS's whiskers (and do not exist separately)
+  * TFBS+DNase regions which do not overlap any chromatin
+  region are labelled 'tfbs'
+  * DNAse regions which do not overlap any of the above 
+  are labelled 'DNAse'
+  
+  Arg1: $options: hash ref
+    - $options->{trackhub_dir}
+    - $options->{working_dir}
+    - $options->{segmentations}: List of hashes with:
+      . $segmentation->{name}
+    - $options->{selected_states}->{$segmentation->{name}}->{$label}: List of strings
+    - $options->{cutoffs}->{$segmentation->{name}}->{$label}: Scalar
+    - $options->{tss} Path to BEd file with experimentally validated TSS
+  Expected files:
+  * $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw 
+  Returntype: undef
+  Side effects: Writes into:
+  * $options->{trackhub_dir}/overview/RegBuild.bb
+
+=cut
 
 sub compute_regulatory_features {
   my $options = shift;
@@ -1663,7 +2527,7 @@ sub compute_regulatory_features {
   #############################################
 
   my $awk_mask = "";
-  if (defined $options->{mask}) {
+  if (defined $options->{mask} && -s $options->{mask} > 0) {
     $awk_mask = "| bedtools intersect -wa -v -a stdin -b $options->{mask}";
   }
   my $awk_contract = "awk 'BEGIN {OFS=\"\t\"} \$3 > \$2 + 1 {\$2 += 1; \$3 -= 1;} \$7 < \$2 {\$7 = \$2} \$8 > \$3 {\$8 = \$3} {print}'";
@@ -1678,11 +2542,13 @@ sub compute_regulatory_features {
   my $demoted = undef; 
   if (defined $tss_tmp2) {
     $tss = "$options->{working_dir}/build/tss.bed";
-    run("bedtools intersect -u -wa -a $tss_tmp2 -b $options->{tss} $final_filter > $tss");
+    run("bedtools intersect -u -wa -a $tss_tmp2 -b $options->{tss} $final_filter | sort -k1,1 -k2,2n > $tss");
 
     # All features that do not go into a demoted file
     $demoted = "$options->{working_dir}/build/demoted_tss.bed";
-    run("bedtools intersect -v -wa -a $tss_tmp2 -b $options->{tss} $final_filter > $demoted");
+    run("bedtools intersect -v -wa -a $tss_tmp2 -b $options->{tss} $final_filter | sort -k1,1 -k2,2n > $demoted");
+
+    $remove_tss = " | bedtools intersect -wa -v -a stdin -b $tss";
   }
 
   # Unaligned proximal sites are retained
@@ -1727,17 +2593,52 @@ sub compute_regulatory_features {
   convert_to_bigBed($options, $bed_output);
 }
 
+=header2 expand_boundaries
+
+  Description: expands the boundaries of a bed file
+    to encompass any overlapping regions contained in an array of bed files
+    Writes the results into a final output file
+  Arg1: source_files: array ref of file locations containing extensions 
+  Arg2: target_file: bed file location containing seed regions
+  Arg3: output: location of destination file
+  Returntype: undef
+  Side effects: writes into output
+
+=cut
+
 sub expand_boundaries {
   my ($source_files, $target_file, $output) = @_;
   my $awk_move_boundaries = "awk 'BEGIN {OFS=\"\\t\"} \$4 != name {if (name) {print chr, start, end, name, 1000, \".\", thickStart, thickEnd, rgb; } chr=\$1; start=\$2; end=\$3; name=\$4; thickStart=\$7; thickEnd=\$8; rgb=\$9} \$10 == chr && \$11+1 < start {start=\$11+1} \$10 == chr && \$12-1 > end {end=\$12-1} END {if (chr) {print chr, start, end, name, 1000, \".\", thickStart, thickEnd, rgb}}'";
 
   my @defined_source_files = grep defined,  @{$source_files};
   if (scalar @defined_source_files) {
-    run("cat ".join(" ", @{$source_files}). " | bedtools intersect -loj -wa -wb -a $target_file -b stdin | $awk_move_boundaries > $output");
+    run("cat ".join(" ", @{$source_files}). " | bedtools intersect -wa -wb -a $target_file -b stdin | $awk_move_boundaries > $output");
+    run("cat ".join(" ", @{$source_files}). " | bedtools intersect -v -wa -a $target_file -b stdin >> $output");
+    run("sort -k1,1 -k2,2n $output > $output.sorted");
+    run("mv $output.sorted $output");
   } else {
+    # No extension, just copy
     run("cp $target_file $output");
   }
 }
+
+=header2
+
+  Description: computes regions based on regions where a weighted 
+    sum of segmentation states are above the required threshold
+  Arg1: options hash ref
+    - working_dir => string
+    - selected_states => hash ref:
+      - segmentation name => hash ref:
+        - label string => hash ref
+          - state string => scalar
+    - cutoffs => hash ref:
+      - segmentation name => hash ref:
+        - label string => scalar
+  Arg2: label string
+  Returntype: file location
+
+=cut
 
 sub compute_initial_regions {
   my ($options, $label) = @_;
@@ -1756,6 +2657,25 @@ sub compute_initial_regions {
   }
 }
 
+=header2
+   
+  Description: Creates a wiggletools command which computes the weighted sum of segmentation
+    states which share a given label
+  Arg1: options hash ref:
+    - selected_states => hash ref:
+      - segmentation name => hash ref:
+        - label string => hash ref
+          - state string => scalar
+    - cutoffs => hash ref:
+      - segmentation name => hash ref:
+        - label string => scalar
+  Arg2: label string
+  Arg3: segmentation hash ref:
+    - name => string
+  Returntype: string
+
+=cut
+
 sub weighted_summary_definition {
   my ($options, $label, $segmentation) = @_;
   my $hash = $options->{selected_states}->{$segmentation->{name}}->{$label};
@@ -1765,40 +2685,48 @@ sub weighted_summary_definition {
     push @summaries, "scale ".(1/$hash->{$state})." $options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw";
   }
   if (scalar @summaries > 0) {
-    return " gt $cutoff sum " . join(" ", @summaries);
+    return " gt $cutoff sum " . join(" ", @summaries) . " :";
   } else {
     return "";
   }
 }
 
+=header2 make_awk_command
+  
+  Description: Creates an awk command that takes in a BedGraph and converts into a Bed9
+  Arg1: label assigned to the regions of the bedgraph
+  Arg2: boolean to decide whether to expand the regions by 1 bp in each direction to compute overlaps
+  Returntype: string
+
+=cut
+
 sub make_awk_command {
   my ($label, $expand) = @_;
-  # This awk one-liner takes in a BedGraph and converts into a Bed9
-  # Note that it IDs the lines with the line number
-  # It also optionally expands the coordinates by 1 to garantee overlaps of contiguous regions
   my $expansion = "if (\$2 > 0) \$2 -= 1; \$3 += 1;";
   if (defined $expand && $expand == 0) {
     $expansion = "";
   }
+  # Note that it IDs the lines with the line number
   return "awk \'BEGIN {OFS=\"\\t\"} {$expansion \$4=\"${label}_\"NR; \$5=1000; \$6=\".\"; \$7=\$2; \$8=\$3; \$9=\"$COLORS{$label}\"; print }\'";
 }
 
-########################################################
-## Computing cell-type specific state
-## Given the Regulatory Build, you want to know which 
-## Feature is active in which cell type
-## Params:
-## * $options: hash containing:
-##   - $options->{trackhub_dir}
-##   - $options->{working_dir}
-##   - $options->{segmentation}
-## Expected files:
-## * $options->{working_dir}/build/$label.bed
-## * $options->{working_dir}/celltype_tf/$celltype.bed
-## * $options->{working_dir}/celltype_dnase/$celltype.bed
-## Created files:
-## * $options->{trackhub_dir}/projected_segmentations/$celltype.bed
-########################################################
+=header2 compute_states
+
+  Description: Computing cell-type specific state
+    Given the Regulatory Build, you want to know which 
+    Feature is active in which cell type
+  Arg1: $options: hash containing:
+    - $options->{trackhub_dir}
+    - $options->{working_dir}
+    - $options->{segmentation}
+  Expected files:
+  * $options->{working_dir}/build/$label.bed
+  * $options->{working_dir}/celltype_tf/$celltype.bed
+  * $options->{working_dir}/celltype_dnase/$celltype.bed
+  Side effects: Created files:
+  * $options->{trackhub_dir}/projected_segmentations/$celltype.bed
+
+=cut
 
 sub compute_states {
   my $options = shift;
@@ -1811,6 +2739,25 @@ sub compute_states {
     compute_segmentation_states($options, $segmentation);
   }
 }
+
+=header2 compute_segmentation_states
+
+  Description: Computing cell-type specific state
+    Given the Regulatory Build, you want to know which 
+    Feature is active in which cell type in a given segmentation
+  Arg1: $options: hash containing:
+    - $options->{trackhub_dir}
+    - $options->{working_dir}
+    - $options->{segmentation}
+  Arg2: segmentation
+  Expected files:
+  * $options->{working_dir}/build/$label.bed
+  * $options->{working_dir}/celltype_tf/$celltype.bed
+  * $options->{working_dir}/celltype_dnase/$celltype.bed
+  Side effects: Created files:
+  * $options->{trackhub_dir}/projected_segmentations/$celltype.bed
+
+=cut
 
 sub compute_segmentation_states {
   my ($options, $segmentation) = @_;
@@ -1827,6 +2774,26 @@ sub compute_segmentation_states {
   }
 }
 
+=header2 compute_celltype_states
+
+  Description: Computing cell-type specific state
+    Given the Regulatory Build, you want to know which 
+    Feature is active in a given cell type 
+  Arg1: $options: hash containing:
+    - $options->{trackhub_dir}
+    - $options->{working_dir}
+    - $options->{segmentation}
+  Arg2: segmentation hash ref
+  Arg3: Bio::EnsEMBL::FuncgenCellType name
+  Expected files:
+  * $options->{working_dir}/build/$label.bed
+  * $options->{working_dir}/celltype_tf/$celltype.bed
+  * $options->{working_dir}/celltype_dnase/$celltype.bed
+  Side effects: Created files:
+  * $options->{trackhub_dir}/projected_segmentations/$celltype.bed
+
+=cut
+
 sub compute_celltype_state {
   my ($options, $segmentation, $celltype) = @_;
 
@@ -1838,6 +2805,26 @@ sub compute_celltype_state {
     die ("Unknown segmentation type $segmentation->{type}");
   }
 }
+
+=header2 compute_ChromHMM_celltype_states
+
+  Description: Computing cell-type specific state
+    Given the Regulatory Build, you want to know which 
+    Feature is active in a given cell type in a ChromHMM segmentation
+  Arg1: $options: hash containing:
+    - $options->{trackhub_dir}
+    - $options->{working_dir}
+    - $options->{segmentation}
+  Arg2: segmentation hash ref
+  Arg3: Bio::EnsEMBL::FuncgenCellType name
+  Expected files:
+  * $options->{working_dir}/build/$label.bed
+  * $options->{working_dir}/celltype_tf/$celltype.bed
+  * $options->{working_dir}/celltype_dnase/$celltype.bed
+  Side effects: Created files:
+  * $options->{trackhub_dir}/projected_segmentations/$celltype.bed
+
+=cut
 
 sub compute_ChromHMM_celltype_state {
   my ($options, $segmentation, $celltype) = @_;
@@ -1856,6 +2843,27 @@ sub compute_ChromHMM_celltype_state {
   convert_to_bigBed($options, $output);
 }
 
+=header2 precompute_ChromHMM_label_states
+
+  Description: Computing cell-type specific state
+    Given the Regulatory Build, you want to know where evidence
+    of a given label can be found in a given cell 
+    type in a ChromHMM segmentation
+  Arg1: $options: hash containing:
+    - $options->{trackhub_dir}
+    - $options->{working_dir}
+    - $options->{segmentation}
+  Arg2: segmentation hash ref
+  Arg3: Bio::EnsEMBL::FuncgenCellType name
+  Expected files:
+  * $options->{working_dir}/build/$label.bed
+  * $options->{working_dir}/celltype_tf/$celltype.bed
+  * $options->{working_dir}/celltype_dnase/$celltype.bed
+  Side effects: Created files:
+  * $options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$label.bed$
+
+=cut
+
 sub precompute_ChromHMM_label_state {
   my ($options, $segmentation, $celltype, $label) = @_;
   my $output = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$label.bed";
@@ -1872,6 +2880,28 @@ sub precompute_ChromHMM_label_state {
     run("echo > $output");
   }
 }
+
+=header2 compute_ChromHMM_celltype_states
+
+  Description: Computing cell-type specific state
+    Given the Regulatory Build, you want to know which 
+    Feature of a given label is active in a given cell type in a ChromHMM segmentation
+  Arg1: $options: hash containing:
+    - $options->{trackhub_dir}
+    - $options->{working_dir}
+    - $options->{segmentation}
+  Arg2: segmentation hash ref
+  Arg3: Bio::EnsEMBL::FuncgenCellType name
+  Arg4: label name
+  Expected files:
+  * $options->{working_dir}/build/$label.bed
+  * $options->{working_dir}/celltype_tf/$celltype.bed
+  * $options->{working_dir}/celltype_dnase/$celltype.bed
+  Side effects: Created files:
+  * $options->{trackhub_dir}/projected_segmentations/$celltype.bed
+  * $options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$label.bed$
+
+=cut
 
 sub compute_ChromHMM_label_state {
   my ($options, $segmentation, $celltype, $label) = @_;
@@ -1925,26 +2955,25 @@ sub compute_ChromHMM_label_state {
   }
 }
 
-########################################################
-## Track hub creation
-##
-## Params:
-## * $options: hash containing:
-##   - $options->{assembly} UCSC name of the assembly
-##   - $options->{trackhub_dir}
-##   - $options->{segmentations} List of hashes containing:
-##     . $segmentation->{name}
-##     . $segmentation->{states}
-##     . $segmentation->{celltypes}
-##
-## Expects files:
-## * $options->{trackhub_dir}/tfbs/$tf.bw
-##
-## Writes into:
-## * hub.txt
-## * genomes.txt
-## * $options->{trackhub_dir}/trackDb.txt    
-########################################################
+=head2 
+
+  Description: Track hub creation
+  Arg1: $options: hash containing:
+    - $options->{assembly} UCSC name of the assembly
+    - $options->{trackhub_dir}
+    - $options->{segmentations} List of hashes containing:
+      . $segmentation->{name}
+      . $segmentation->{states}
+      . $segmentation->{celltypes}
+    Expects files:
+    * $options->{trackhub_dir}/tfbs/$tf.bw
+  Returntype: undef
+  Side effects: Writes into:
+  * hub.txt
+  * genomes.txt
+  * $options->{trackhub_dir}/trackDb.txt    
+
+=cut
 
 sub make_track_hub {
   my $options = shift;
@@ -1952,6 +2981,25 @@ sub make_track_hub {
   make_track_hub_headers($options);
   make_track_hub_assembly($options);
 }
+
+=head2 
+
+  Description: Track hub header creation
+  Arg1: $options: hash containing:
+    - $options->{assembly} UCSC name of the assembly
+    - $options->{trackhub_dir}
+    - $options->{segmentations} List of hashes containing:
+      . $segmentation->{name}
+      . $segmentation->{states}
+      . $segmentation->{celltypes}
+    Expects files:
+    * $options->{trackhub_dir}/tfbs/$tf.bw
+  Returntype: undef
+  Side effects: Writes into:
+  * hub.txt
+  * genomes.txt
+
+=cut
 
 sub make_track_hub_headers {
   my $options = shift;
@@ -1971,6 +3019,24 @@ sub make_track_hub_headers {
   close($fh);
 }
 
+=head2 make_track_hub_assembly
+
+  Description: Track hub creation
+  Arg1: $options: hash containing:
+    - $options->{assembly} UCSC name of the assembly
+    - $options->{trackhub_dir}
+    - $options->{segmentations} List of hashes containing:
+      . $segmentation->{name}
+      . $segmentation->{states}
+      . $segmentation->{celltypes}
+    Expects files:
+    * $options->{trackhub_dir}/tfbs/$tf.bw
+  Returntype: undef
+  Side effects: Writes into:
+  * $options->{trackhub_dir}/trackDb.txt    
+
+=cut
+
 sub make_track_hub_assembly {
   my $options = shift;
 
@@ -1985,6 +3051,25 @@ sub make_track_hub_assembly {
 
   close $file;
 }
+
+=head2 make_track_hub_overview
+
+  Description: Track hub Overview composite track
+  Arg1: $options: hash containing:
+    - $options->{assembly} UCSC name of the assembly
+    - $options->{trackhub_dir}
+    - $options->{segmentations} List of hashes containing:
+      . $segmentation->{name}
+      . $segmentation->{states}
+      . $segmentation->{celltypes}
+    Expects files:
+    * $options->{trackhub_dir}/tfbs/$tf.bw
+  Arg2: filehandle
+  Returntype: undef
+  Side effects: Writes into:
+  * $options->{trackhub_dir}/trackDb.txt    
+
+=cut
 
 sub make_track_hub_overview {
   my ($options, $file) = @_;
@@ -2032,6 +3117,25 @@ sub make_track_hub_overview {
   print $file "\tvisibility full\n";
 }
 
+=head2 make_track_hub_segmentations
+
+  Description: Track hub Segmentations composite track
+  Arg1: $options: hash containing:
+    - $options->{assembly} UCSC name of the assembly
+    - $options->{trackhub_dir}
+    - $options->{segmentations} List of hashes containing:
+      . $segmentation->{name}
+      . $segmentation->{states}
+      . $segmentation->{celltypes}
+    Expects files:
+    * $options->{trackhub_dir}/tfbs/$tf.bw
+  Arg2: filehandle
+  Returntype: undef
+  Side effects: Writes into:
+  * $options->{trackhub_dir}/trackDb.txt    
+
+=cut
+
 sub make_track_hub_segmentations {
   my ($options, $file) = @_;
   my $segmentation;
@@ -2039,6 +3143,29 @@ sub make_track_hub_segmentations {
     make_track_hub_segmentations_2($options, $file, $segmentation);
   }
 }
+
+=head2 make_track_hub_segmentations_2
+
+  Description: Track hub Segmentations composite track for a 
+    given segmentation
+  Arg1: $options: hash containing:
+    - $options->{assembly} UCSC name of the assembly
+    - $options->{trackhub_dir}
+    - $options->{segmentations} List of hashes containing:
+      . $segmentation->{name}
+      . $segmentation->{states}
+      . $segmentation->{celltypes}
+    Expects files:
+    * $options->{trackhub_dir}/tfbs/$tf.bw
+  Arg2: filehandle
+  Arg3: segmentation hashref
+    - name => string
+    - celltypes => arrayref of strings
+  Returntype: undef
+  Side effects: Writes into:
+  * $options->{trackhub_dir}/trackDb.txt    
+
+=cut
 
 sub make_track_hub_segmentations_2 {
   my ($options, $file, $segmentation) = @_;
@@ -2091,6 +3218,25 @@ sub make_track_hub_segmentations_2 {
   }
 }
 
+=head2 make_track_hub_segmentation_summaries
+
+  Description: Track hub Segmentation_Summaries composite track
+  Arg1: $options: hash containing:
+    - $options->{assembly} UCSC name of the assembly
+    - $options->{trackhub_dir}
+    - $options->{segmentations} List of hashes containing:
+      . $segmentation->{name}
+      . $segmentation->{states}
+      . $segmentation->{celltypes}
+    Expects files:
+    * $options->{trackhub_dir}/tfbs/$tf.bw
+  Arg2: filehandle
+  Returntype: undef
+  Side effects: Writes into:
+  * $options->{trackhub_dir}/trackDb.txt    
+
+=cut
+
 sub make_track_hub_segmentation_summaries {
   my ($options, $file) = @_;
   my $segmentation;
@@ -2099,6 +3245,30 @@ sub make_track_hub_segmentation_summaries {
     make_track_hub_segmentation_summaries_2($options, $file, $segmentation);
   }
 }
+
+=head2 make_track_hub_segmentation_summaries_2
+
+  Description: Track hub Segmentation_Summaries composite track
+    for a given segmentation
+  Arg1: $options: hash containing:
+    - $options->{assembly} UCSC name of the assembly
+    - $options->{trackhub_dir}
+    - $options->{segmentations} List of hashes containing:
+      . $segmentation->{name}
+      . $segmentation->{states}
+      . $segmentation->{celltypes}
+    Expects files:
+    * $options->{trackhub_dir}/tfbs/$tf.bw
+  Arg2: filehandle
+  Arg3: segmentation hashref
+    - name => string
+    - celltypes => arrayref of strings
+    - states => arrayref of strings
+  Returntype: undef
+  Side effects: Writes into:
+  * $options->{trackhub_dir}/trackDb.txt    
+
+=cut
 
 sub make_track_hub_segmentation_summaries_2 {
   my ($options, $file, $segmentation) = @_;
@@ -2150,6 +3320,23 @@ sub make_track_hub_segmentation_summaries_2 {
   }
 }
 
+=head2 make_track_hub_projected_segmentations
+
+  Description: Track hub Segmentation_Summaries composite track
+  Arg1: $options: hash containing:
+    - $options->{assembly} UCSC name of the assembly
+    - $options->{trackhub_dir}
+    - $options->{segmentations} List of hashes containing:
+      . $segmentation->{name}
+      . $segmentation->{states}
+      . $segmentation->{celltypes}
+  Arg2: filehandle
+  Returntype: undef
+  Side effects: Writes into:
+  * $options->{trackhub_dir}/trackDb.txt    
+
+=cut
+
 sub make_track_hub_projected_segmentations {
   my ($options, $file) = @_;
   my $celltype;
@@ -2200,6 +3387,23 @@ sub make_track_hub_projected_segmentations {
   }
 }
 
+=head2 make_track_hub_tfbs
+
+  Description: Track hub TFBS_Summaries composite track
+  Arg1: $options: hash containing:
+    - $options->{assembly} UCSC name of the assembly
+    - $options->{trackhub_dir}
+    - $options->{segmentations} List of hashes containing:
+      . $segmentation->{name}
+      . $segmentation->{states}
+      . $segmentation->{celltypes}
+  Arg2: filehandle
+  Returntype: undef
+  Side effects: Writes into:
+  * $options->{trackhub_dir}/trackDb.txt    
+
+=cut
+
 sub make_track_hub_tfbs {
   my ($options, $file) = @_;
   my $tf;
@@ -2232,7 +3436,6 @@ sub make_track_hub_tfbs {
   print $file "priority 9\n";
   print $file "type bigWig\n";
   print $file "noInherit on\n";
-
 
   foreach $tf (@tfs) {
     my $short = $tf;

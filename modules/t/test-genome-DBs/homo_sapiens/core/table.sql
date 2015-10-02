@@ -329,7 +329,7 @@ CREATE TABLE `gene_attrib` (
 CREATE TABLE `genome_statistics` (
   `genome_statistics_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `statistic` varchar(128) NOT NULL,
-  `value` int(10) unsigned NOT NULL DEFAULT '0',
+  `value` bigint(11) unsigned NOT NULL DEFAULT '0',
   `species_id` int(10) unsigned DEFAULT '1',
   `attrib_type_id` int(10) unsigned DEFAULT NULL,
   `timestamp` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
@@ -468,7 +468,7 @@ CREATE TABLE `meta` (
   PRIMARY KEY (`meta_id`),
   UNIQUE KEY `species_key_value_idx` (`species_id`,`meta_key`,`meta_value`),
   KEY `species_value_idx` (`species_id`,`meta_value`)
-) ENGINE=MyISAM AUTO_INCREMENT=1810 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=1818 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `meta_coord` (
   `table_name` varchar(40) NOT NULL,
@@ -698,7 +698,7 @@ CREATE TABLE `seq_region` (
   PRIMARY KEY (`seq_region_id`),
   UNIQUE KEY `name_cs_idx` (`name`,`coord_system_id`),
   KEY `cs_idx` (`coord_system_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=1000859829 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=1001396040 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `seq_region_attrib` (
   `seq_region_id` int(10) unsigned NOT NULL DEFAULT '0',
@@ -720,10 +720,10 @@ CREATE TABLE `seq_region_mapping` (
 CREATE TABLE `seq_region_synonym` (
   `seq_region_synonym_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `seq_region_id` int(10) unsigned NOT NULL,
-  `synonym` varchar(40) NOT NULL,
+  `synonym` varchar(50) NOT NULL,
   `external_db_id` int(10) unsigned DEFAULT NULL,
   PRIMARY KEY (`seq_region_synonym_id`),
-  UNIQUE KEY `syn_idx` (`synonym`),
+  UNIQUE KEY `syn_idx` (`synonym`,`seq_region_id`),
   KEY `seq_region_idx` (`seq_region_id`)
 ) ENGINE=MyISAM AUTO_INCREMENT=182 DEFAULT CHARSET=latin1;
 
@@ -873,8 +873,8 @@ CREATE TABLE `unmapped_reason` (
 CREATE TABLE `xref` (
   `xref_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `external_db_id` int(10) unsigned NOT NULL,
-  `dbprimary_acc` varchar(40) NOT NULL,
-  `display_label` varchar(128) NOT NULL,
+  `dbprimary_acc` varchar(512) NOT NULL,
+  `display_label` varchar(512) NOT NULL,
   `version` varchar(10) NOT NULL DEFAULT '0',
   `description` text,
   `info_type` enum('NONE','PROJECTION','MISC','DEPENDENT','DIRECT','SEQUENCE_MATCH','INFERRED_PAIR','PROBE','UNMAPPED','COORDINATE_OVERLAP','CHECKSUM') NOT NULL DEFAULT 'NONE',

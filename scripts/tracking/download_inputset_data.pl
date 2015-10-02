@@ -12,7 +12,7 @@ You may obtain a copy of the License at
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
-WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either 405ress or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
@@ -147,7 +147,7 @@ use strict;
 use warnings;
 use Getopt::Long;
 use Pod::Usage;
-se Bio::EnsEMBL::Funcgen::DBSQL::TrackingAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::TrackingAdaptor;
 use File::Path qw(make_path);
 
 #use LWP::Simple;
@@ -217,6 +217,8 @@ elsif($ignore_date){
   $date = 'IGNORE';
 }
 
+=pod
+
 if(! $species ||
    ($tdb_host && $tdb_name) ){
   
@@ -237,12 +239,12 @@ elsif($species &&
   }
 }
 
-
+=cut
 
 # Connect to Tracking DB
 # We don't want this to be available via $efgdb->get_TrackingAdaptor
 # 
-my $tracking_adaptor = Bio::EnsEMBL::DBSQL::Funcgen::DBSQL::TrackingAdaptor->new
+my $tracking_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::TrackingAdaptor->new
   (
    -user     => $tdb_user,
    -pass     => $tdb_pass,
@@ -260,8 +262,8 @@ my $tracking_adaptor = Bio::EnsEMBL::DBSQL::Funcgen::DBSQL::TrackingAdaptor->new
 
 $species ||= $tracking_adaptor->db->species;
 
-$repository = $tracking_adaptor->repository_path($repository);
-$repository .= '/'.$species;
+$repository ||= $tracking_adaptor->repository_path($repository);
+#$repository .= '/'.$species;
 
 if(! -d $repository){
   die("Repository does not seem to exist\t$repository");
@@ -294,8 +296,8 @@ my $efg_db        = $tracking_adaptor->db;
 my $exp_adaptor   = $efg_db->get_ExperimentAdaptor;
 my $ftype_adaptor = $efg_db->get_FeatureTypeAdaptor;
 my $ctype_adaptor = $efg_db->get_CellTypeAdaptor;
-my $inp_set_adaptor = $efg_db->get_InputSetAdaptor;
-
+#my $inp_set_adaptor = $efg_db->get_InputSetAdaptor;
+my $inp_sset_adaptor = $efg_db->get_InputSubsetAdaptor;
 
 #Could probably do this dynamically by changing 
 #keys to class  name e.g. FeatureType rather than feature_type
@@ -330,21 +332,29 @@ if($cell_type){
   }
 }
 
-my @input_sets = @{$inp_set_adaptor->fetch_all({constraints => \%constraints})};
+#my @input_sets = @{$inp_set_adaptor->fetch_all({constraints => \%constraints})};
+my @input_ssets = @{$inp_sset_adaptor->fetch_all({constraints => \%constraints})};
 my ($exp, $ctype, $ftype, $inp_set_id, $iss_id, $url, @inp_ssets, @iss_tracking_rows);
 my ($rep, $target_dir, $target_file, $exp_dir);
 my $action = ($list_only) ? 'Listing' : 'Downloading';
 
-my %inp_set_info;
-
-foreach my $inp_set(@input_sets){
-  $inp_set_id = $inp_set->dbID;
-  $exp        = $inp_set->get_Experiment;
-  $ctype      = $inp_set->cell_type->name;
-  $ftype      = $inp_set->feature_type->name;
-  $exp_dir    = $exp."/".$ctype."_".$ftype;
+#my %inp_set_info;
+my $tracking_info;
+#foreach my $inp_set(@input_sets){
+foreach my $inp_sset(@input_ssets){
+  #$inp_set_id = $inp_set->dbID;
+  #$exp        = $inp_set->get_Experiment;
+  #$ctype      = $inp_set->cell_type->name;
+  #$ftype      = $inp_set->feature_type->name;
+  #$exp        = $inp_sset->experiment->archive_id;
+  #$ctype      = $inp_sset->cell_type->name;
+  #$ftype      = $inp_sset->feature_type->name;
+  #$exp_dir    = $exp."/".$ctype."_".$ftype;
   
-  @iss_tracking_rows = @{$tracking_adaptor->fetch_InputSubset_tracking_info($inp_set, $force_download, $date)};
+  #@iss_tracking_rows = @{$tracking_adaptor->fetch_InputSubset_tracking_info($inp_set, $force_download, $date)};
+  $tracking_info = $tracking_adaptor->fetch_tracking_info($inp_sset, $force_download, $date);
+
+
 
   #Would it be better to set the trackign data in the InputSubset object?
 
@@ -353,20 +363,27 @@ foreach my $inp_set(@input_sets){
   #This might be because the DOWNLOADED status was set incorrectly, 
   #or maybe some of the files have different availablility dates?
   
-  @inp_ssets = @{$inp_set->get_InputSubsets};
+  #@inp_ssets = @{$inp_set->get_InputSubsets};
+  @inp_ssets = ($inp_sset);
 
-  if(scalar(@inp_ssets) != scalar(@iss_tracking_rows)){
-	warn 'For InputSet '.$inp_set->name.' there is a mismatch between the number of registered InputSubsets('.
-	  scalar(@inp_ssets).') and the number of tracking info rows fetch('.
-		scalar(@iss_tracking_rows).") using -date(${date}) and -force_download(${force_download})\n".
-		  'Please set above params or correct database';
+  #if(scalar(@inp_ssets) != scalar(@iss_tracking_rows)){
+	#warn 'For InputSet '.$inp_set->name.' there is a mismatch between the number of registered InputSubsets('.
+	#  scalar(@inp_ssets).') and the number of tracking info rows fetch('.
+#		scalar(@iss_tracking_rows).") using -date(${date}) and -force_download(${force_download})\n".
+#		  'Please set above params or correct database';
+  if(! $tracking_info){
+      warn 'Failed to get tracking information for InputSubSet '.$inp_sset->name.
+       "\nUsing -date(${date}) and -force_download(${force_download})\n".
+      'Please set above params or correct database';
 	next;
   }
-	 
 
-	 
-  foreach my $iss_info_ref(@iss_tracking_rows){
-	($iss_id, $url, $rep) = @$iss_info_ref;#ignoring is_control and not_pooled
+  $iss_id = $inp_sset->dbID;
+  $url    = $tracking_info->{download_url};
+  #$rep    = $inp_sset->replicate;
+
+  #foreach my $iss_info_ref(@iss_tracking_rows){
+	#($iss_id, $url, $rep) = @$iss_info_ref;#ignoring is_control and not_pooled
 	#$url_replicate{$url} = $rep;
 	#$expers_download{$inp_set_id}{$url} = $iss_id;
 
@@ -374,15 +391,15 @@ foreach my $inp_set(@input_sets){
 
 	#foreach my $url (sort keys %{$expers_download{$ds_id}}){	  
 
-	$target_dir = $repository."/".$exp_dir."/".$rep;
-	  
-	if(! ($list_only &&
-		  -d $target_dir &&
-		  make_path($target_dir))){ 
-	  warn "Could not create directory:\t$target_dir";
-	  next; 
-	}
+	$target_dir = $repository."/".$inp_sset->experiment->archive_id;#.$rep;
 	
+  if((! $list_only) && ! -d $target_dir){
+
+    if(! make_path($target_dir)){ 
+      warn "Could not create directory:\t$target_dir";
+      next; 
+    }
+  }
 	
 	($target_file = $url) =~ s'.*/'';
 	$target_file = $target_dir.'/'.$target_file;
@@ -403,16 +420,16 @@ foreach my $inp_set(@input_sets){
 	  $tracking_adaptor->set_download_status_by_input_subset_id($iss_id, 'to_null');
 	  
 
-      #TODO Use Perl-based download system... hopefully integrated with SRA...
-      if(system("wget -nv $url -O $target_file")==0){
+    #warn "Running wget -nv $url -O $target_file";
 
-		#TODO Check md5sum...
-		
-		# WRITE LOG...
-		$tracking_adaptor->set_download_status_by_input_subset_id($iss_id, 'to_null');		
-      } 
+    #TODO Use Perl-based download system... hopefully integrated with SRA...
+    if(system("wget -nv $url -O $target_file")==0){
+      #TODO Check md5sum...?
+  		# WRITE LOG...
+      $tracking_adaptor->set_download_status_by_input_subset_id($iss_id, undef, $target_file);		
+    } 
 	  else {
-		my $error = "Problems downloading source:\t$url\n\t\t\t\tto:\t${target_file}";
+      my $error = "Problems downloading source:\t$url\n\t\t\t\tto:\t${target_file}";
 		
 		if($no_exit){
 		  warn $error;
@@ -422,7 +439,7 @@ foreach my $inp_set(@input_sets){
 		}
       }
     }
-  }
+  #}
 }
 
 

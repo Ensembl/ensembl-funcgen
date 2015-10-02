@@ -746,26 +746,37 @@ sub experiment{
 }
 
 
-### DEPRECATED ###
+### Stay of execution  ###
+# These methods were to be deprecated in v81
+# But due to limitations with the GRCh37 site, they must remain until the next 
+# data update of that site i.e. entirely new mouse DB with bigwigs and convert
+# existing human to bigwigs
 
-sub result_feature_set{  # DEPRECATED in v81
-  deprecate('ResultSet not longer supports ResultFeature retrieval. Access the underlying flat file by using dbfile_path and the appropriate library e.g. Bio::DB::BigFile');
-  return;
-}
+
+# Is this even required anymore? Isn't it based on RESULT_FEATURE_SET status?
+
 
 sub get_ResultFeatures_by_Slice{  # DEPRECATED in v81
-  deprecate('ResultSet not longer supports ResultFeature retrieval. Access the underlying flat file by using dbfile_path and the appropriate library e.g. Bio::DB::BigFile');
-  return;
+  #deprecate('ResultSet not longer supports ResultFeature retrieval. Access the underlying flat file by using dbfile_path and the appropriate library e.g. Bio::DB::BigFile');
+  my ($self, $slice, $max_bins, $window_size, $constraint) = @_;
+  return $self->adaptor->db->get_ResultFeatureAdaptor->fetch_all_by_Slice_ResultSet($slice, $self, $max_bins, $window_size, $constraint);
 }
 
-sub get_displayable_ResultFeatures_by_Slice{  # DEPRECATED in v81
-  deprecate('ResultSet not longer supports ResultFeature retrieval. Access the underlying flat file by using dbfile_path and the appropriate library e.g. Bio::DB::BigFile');
-  return;
-}
 
 sub get_dbfile_path_by_window_size{  # DEPRECATED IN v81
-  deprecate('Please use dbfile_path directly to get full file path');
-  return;
+  #deprecate('Please use dbfile_path directly to get full file path');
+  my ($self, $window_size, $slice) = @_;
+
+  if($slice){
+
+    if(! (ref($slice) && $slice->isa("Bio::EnsEMBL::Slice"))){
+      throw('You must provide a valid Bio::EnsEMBL::Slice');
+    }
+
+    $window_size .= '.'.$slice->seq_region_name;
+  }
+
+  return $self->dbfile_path.'/result_features.'.$self->name.'.'.$window_size.'.col';
 }
 
 

@@ -35,10 +35,6 @@ DELIMITER //
 CREATE PROCEDURE SummariseSegBuild()
 SummariseSegBuild: BEGIN
   DECLARE FT_IDS, CT_IDS VARCHAR(1000) DEFAULT NULL;
-  -- SELECT string INTO CT_IDS FROM regbuild_string WHERE name='regbuild.cell_type_ids';
-  
-  -- SELECT string INTO FT_IDS FROM regbuild_string WHERE name='segmentation.feature_type_ids';		
-  
   SET CT_IDS=GetRegBuildCellTypeIDs();
   SET FT_IDS=GetSegBuildFeatureTypeIDs();
   
@@ -235,6 +231,10 @@ DELIMITER ;
  * histones and TFs not required for the segmentation
  */
 
+/* TODO implement this without hardcoding for WCE, i.e. use is_control somehow
+   We really need to have is_control at the experiment or feature_type level too.
+*/
+/*
 DELIMITER //
 CREATE OR REPLACE VIEW reg_exp_view AS
   SELECT e.experiment_id, e.name as experiment, ft.class, rs.name as result_set, et.notes, group_concat(e1.name) as controls
@@ -246,6 +246,7 @@ CREATE OR REPLACE VIEW reg_exp_view AS
     AND e.feature_type_id=ft.feature_type_id GROUP by e.experiment_id, rs.name ORDER by e.name;
 //
 DELIMITER ;
+*/
 
 DELIMITER //
 CREATE OR REPLACE VIEW reg_exp_view AS

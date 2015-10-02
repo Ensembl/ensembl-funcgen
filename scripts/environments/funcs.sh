@@ -45,20 +45,6 @@ _TRUE=1;
 _FALSE=!$_
 
 
-#could set BACKUP_DIR here too?
-#Note: Using sym links for these DIR vars means the patch in the functions should also be symlinks!
-export ARCHIVE_DIR=$HOME/warehouse
-export GROUP_ARCHIVE_DIR=$HOME/warehouse_prd
-
-
-#Problems with which dir to use as EFG_DATA contains efg, so we can't sub that off the path
-#This require DATA_DIR (similar to SRC?)
-#Can now keep this outside of efg.env/config
-#Keep config in here for now, or move to .bashrc or funcs.config?
-#readlink here to make ArchiveData path matching easier
-export DATA_DIR=$(readlink -e $HOME/scratch)
-export GROUP_DATA_DIR=$(readlink -e $HOME/scratch_prd)  
-
 
 _setOptArgArray(){
     local array_var=
@@ -160,7 +146,7 @@ jobWait(){
 	return $complete
 }
 
-
+# TODO change this to return 1 instead of exit
 
 checkJob(){
   local job_name=
@@ -198,6 +184,8 @@ checkJob(){
 
 
 }
+
+# Remove this once new array mapping pipeline is up and running
 
 submitJob(){
 
@@ -294,7 +282,7 @@ submitJob(){
 #This is really low utility now, apart from in the _InitEnv
 #functions, and also in functions which require optional global vars
 
-CheckGlobalVariables(){
+_CheckGlobalVariables(){
   local line=
 
   if [[ ! $* ]]; then
@@ -305,16 +293,16 @@ CheckGlobalVariables(){
   local var=
 
   for var in $*; do
-      val=$(eval "echo \$$var")
-      
-      if [[ -z $val ]];  then 
-          line="$line \$$var"
-      fi
+    val=$(eval "echo \$$var")
+    
+    if [[ -z $val ]];  then 
+      line="$line \$$var"
+    fi
   done
   
   if [[ ! -z $line ]];  then
-      echo "Environment variable(s) :$line are not set"
-      return 1
+    echo "Environment variable(s) :$line are not set"
+    return 1
   fi
 
 }
@@ -385,6 +373,26 @@ CheckVariablesOrUsage(){
 		exit 1;
 	fi
 }
+
+_CheckVariablesOrUsage(){
+  usage=$1
+  shift
+  variable_names="$*"
+
+  #Could CheckVariabl
+
+  tmp=$(CheckGlobalVariables $variable_names)
+
+  if [ $? != 0 ]; then
+    echo -e "$tmp\n$usage"
+    #This get's flattened into one line if we capture the output for returning rather than exit
+    #So we don't get full error
+    return 1;
+  fi
+}
+
+
+
 
 ValidateVariableOrUsage(){
 	usage=$1
@@ -505,7 +513,17 @@ CheckDirs(){
 	done
 }
 
+_CheckDirs(){
 
+  for dir_name in $*
+    do
+    if [ ! -d $dir_name ]
+    then
+      echo "error : directory $dir_name does not exist"
+      return 203
+    fi
+  done
+}
 
 ################################################################################
 # Func      : MakeDirs() 
@@ -691,243 +709,6 @@ ArchiveData(){
 		fi
 	done
 }
-
-#Need to test for aliases before defining these
-#Was failing to compile as rm was already aliased
-
-#rm(){
-#	args=$*
-#	seen_file=
-#	i=0
-
-#	files=$(echo $args | sed -r s'/^-[^[:space:]]+//') #deal with leading - i.e. not preceded
-#	files=$(echo $files | sed -r s'/ -[^[:space:]]+//g') #deal with other opts
-	#This will not restrict opts to start of args
-
-	#echo files $files
-#	opts=$(echo $args | sed "s'$files''");
-# 	opts=$(echo $opts | sed "s'-'-o '");
- 	   
-	#echo del $opts $files
-#	del -r $opts $files
-
-	#Currently this is del'ing dirs from del roots
-	#even if -r isn't specified
-#}
-
-#Enables fast removal of files by moving to .del folder in root of current path
-#Post-pones actual rm to cron job, based on files last mod'd more than N days
-
-#Was failing to compile as del was already aliased
-
-#Probably want to hoik out delete > age code to separate func
-#so we can use it separately (for logs)
-
-
-#
-#del(){
-#	OPTIND=1
-#	days=
-#	del_verbose=
-#	rm_opts=
-#	rm_caller=
-#	
-#	cmd_line="del $*"
-#	usage='usage: del  [ -o(pt for rm)+ -d(ays, purge .del of files older than this value, at root defined by) ] FILES|DIRS'
-#
-#	while getopts ":d:o:vrh" opt; do
-#		case $opt in 
-#	        d  ) days=$OPTARG ;;
-#            o  ) rm_opts="$rm_opts -${OPTARG}" ;;
-#			r  ) rm_caller=1 ;;
-#			v  ) del_verbose=1 ;;
-#			h  ) echo $usage; return 0;;
-#			\? ) echo -r "$cmd_line\n$usage"; exit 1;;
-#		esac 
-#	done
-#  
-#	#Assume rm is okay if we have defined opt for rm
-#	if [ $rm_opts ]; then
-#		rm_caller=1
-#	fi
-#
-#	i=1
-#	while [ $i -lt $OPTIND ]; do
-#		shift
-#		let i+=1
-#	done
-#
-#	filedirs=$*
-#
-#	if [ ! $filedirs ]; then
-#		echo -e "You must define at least one file or directory\n$usage";
-#	fi
-#
-#
-#	#test $days is +ve int to avoid -gt test failure later
-#	if [ $days ] &&
-#		! [[ $days =~ ^[0-9]+$ ]]; then
-#		echo -e "Parameter -d must be an integer\t$usage"
-#		return 1
-#	fi
-#
-#	#Build error log rather than bailing out asap
-#	error_log=
-#
-#	for filedir in $filedirs; do
-#		_SetTargetAndSourceRoot -n $filedir
-#		#sets SOURCE_ROOT and derefd_filedir
-#		retval=$?
-#
-#	
-#		if [ ! $derefd_filedir ]; then
-#			error_log="${error_log}File/directory does not exist:\t$filedir\n"
-#			continue
-#		fi
-#
-#	
-#		if [ $retval -ne 0 ]; then
-#				
-#			if [ $rm_caller ]; then
-#				#Only rm if we are calling from rm func
-#			    #Not from del directly
-#			    #-i is over-ridden by -f
-#				rm_cmd="$(which rm) -i $rm_opts $filedir"
-#
-#				if [ $del_verbose ]; then
-#					echo $rm_cmd;
-#				fi
-#
-#				$rm_cmd
-#
-#				#capture $? here
-#				#Need to capture error message too for summary report
-#
-#			else
-#				error_log="${error_log}Failed to del as no .del dir available for:\t$filedir\nUse rm instead?\n"
-#			fi
-#
-#			#Or enable a .del in /nfs home too?
-#			#This would not work with _SetTargetAndSourceRoot
-#			continue
-#		fi
-#
-#		filedir=$derefd_filedir
-#		del_dir="${SOURCE_ROOT}/.del"
-#
-#		if [ ! -d $del_dir ]; then
-#			mkdir -p $del_dir
-#	
-#			if [ $? -ne 0 ]; then
-#				echo -e "Failed create .del dir:\t$del_dir"
-#				return $retval
-#			fi
-#		fi
-#
-#
-#		if [ $days ]; then # PURGE!
-#		
-#			#Test valid .del $filedir to purge
-#			#No need to match trailing as readlink strips this
-#			if [[ $filedir != $del_dir ]]; then
-#				echo -e "You must supply a valid .del dir to purge e.g.\n\t$del_dir\n$usage"
-#				return 1
-#			fi 
-#
-#			#Use find instead of ls to allow for many files
-#			#-mindepth ignores $del_dir dir itself
-#			#-depth processes dir contents before dir itself
-#			#to prevent deleting dir before finding the next file which has already been deleted
-#			#However, this means we are doing many deletes rather than one on the parent dir
-#
-#			find_cmd="find ${del_dir}/ -mindepth 1 -depth"
-#	
-#     		#could -delete here if we can implement an age test in find
-#			#could then remove for loop below
-#			#-ctime $days ? This seems to be an = rather than a -ge
-#			#we want changed age, so we don't delete moved but unmodified files straight away.
-#
-#			
-#			#This will currently delete files in subdirs
-#			#and maintain the parent dir if another more recent file is del'd
-#			#We want as the parent dir will keep getting refreshed and hence
-#			#old data may accrue in subdirs
-#
-#			if [ $del_verbose ]; then
-#				echo $find_cmd;
-#			fi
-#
-#			for delfile in $($find_cmd); do
-#
-#				age=$(GetFileAge -c $delfile)
-#					
-#				if [ $? -ne 0 ]; then
-#					#$age is error in this context
-#					error_log="${error_log}${age}Failed to purge deleted file:\t$delfile\n"
-#					continue
-#				fi
-#								
-#
-#				if [ $del_verbose ]; then
-#					echo -e "$age days old:\t$delfile";
-#				fi
-#
-#
-#				if [ $age -ge $days ]; then
-#					rm_cmd="$(which rm) -rf $delfile"
-#
-#					if [ $del_verbose ]; then
-#						echo $rm_cmd;
-#					fi
-#
-#					$rm_cmd
-#
-#					if [ $? -ne 0 ]; then
-#						error_log="${error_log}Failed to purge deleted file:\t$delfile\n"
-#						continue
-#					fi
-#				fi
-#			done
-#			
-#		else               # MV ENTIRE PATH TO .DEL
-#			del_path=$(echo $filedir | sed "s^${SOURCE_ROOT}^${del_dir}^")
-#			#readlink already stripped trailing / for dir mv
-#			del_path=$(GetDir $del_path)
-#
-#			if [ ! -d $del_path ]; then
-#				mkdir -p $del_path
-#				#catch error?
-#			fi
-#
-#			#Do we want to have interactive by default here and override with -f?
-#			mv_cmd="mv $filedir $del_path/$file"
-#
-#			if [ $del_verbose ]; then
-#				echo $mv_cmd;
-#			fi
-#
-#			$mv_cmd         	#mv'ing file updates last modified & changed date
-#		
-#			#Mirror the whole path under .del!
-#			# - handle redundant naming
-#			# - easier recovery/navigation
-#			#This will require a recursive find when purging!
-#
-#			if [ $? -ne 0 ]; then
-#				error_log="${error_log}Failed del file:\t$mv_cmd\n"
-#				continue
-#			fi
-#		fi
-#	done
-#
-#
-#	if [ "$error_log" ]; then
-#		echo -e "\nSummary of errors:\n$error_log"
-#		return 1
-#	fi
-#
-#
-#	}
 
 
 #This works slightly differently for ArchiveData, Distribute and del
@@ -1196,30 +977,6 @@ CheckFile(){
     fi
 }
 
-#Could change this to CheckFilesOrUsage?
-#And just pass variable names like CheckVariables
-
-CheckFilesOrUsage(){
-	usage_string=$1
-	shift
-	file_variables=$*
-	
-	usage='usage: CheckFilesOrUsage "usage string" [/file/path]+ '
- 	CheckVariablesOrUsage "$usage" usage_string $file_variables
-
-
-	for file_var in $file_variables; do
-		file=$(eval "echo \$$file_var")
-
-		if [ ! -f $file ]; then
-			echo "error : $file does not exist.
-$usage_string"
-			exit 204
-		fi
-	done
-}
-
-
 
 
 ################################################################################
@@ -1259,31 +1016,6 @@ Execute(){
 
 
 
-
-################################################################################
-# Func      : SedFile()
-# Desc      : executes a  given (simple) sed command on a given file 
-# Args [1]  : sed command 
-# Args [2]  : file name 
-# Return    : none
-# Exception : exits if MoveFile fails 
-################################################################################
-
-SedFile(){
-    _SED_CMD=$1
-    _FILE=$2
-
-    _TMP_FILE=/tmp/$(GetFilename $_FILE).$$
-  
-    sed "$_SED_CMD" $_FILE > $_TMP_FILE; _RTN=$?;
-
-    if [ $_RTN -eq 0 ]
-    then 
-        MoveFile -f $_TMP_FILE $_FILE;
-    else
-        exit $_RTN
-    fi
-}
 
 ################################################################################
 # Func      : GetDir() 
@@ -1393,24 +1125,6 @@ ContinueOverride(){
 
 
 ################################################################################
-# Func      : CheckCompressedFile()
-# Desc      : checks whether a file is of a compressed format or not
-# Args [1]  : file name
-# Return    : none
-# Exception : exits if not a compressed file and prints error msg
-################################################################################
-
-CheckCompressedFile(){
-    _FILE=$1
-
-    if [ $(isCompressedFile $_FILE) -eq $_FALSE ] 
-    then 
-        echo "Error: '$_FILE' is not a compressed file"
-        exit 202 
-    fi
-}
-
-################################################################################
 # Func      : isCompressedFile()
 # Desc      : tests whether a file is of a compressed format or not
 # Args [1]  : file name 
@@ -1429,125 +1143,6 @@ isCompressedFile(){
     else
         echo $_TRUE
     fi
-}
-
-################################################################################
-# Func      : getDay()
-# Desc      : gets the current day
-# Args [0]  : none
-# Return    : returns the current day in the format "1"
-# Exception : none
-################################################################################
-
-getDay(){
-    echo $(date '+%d') 
-}
-
-################################################################################
-# Func      : getMonth()
-# Desc      : gets the current month
-# Args [0]  : none
-# Return    : returns the current month in the format "1" 
-# Exception : none
-################################################################################
-
-getMonth(){
-    echo $(date '+%m') 
-}
-
-################################################################################
-# Func      : getPreviousMonth()
-# Desc      : gets the month previous to the current month
-# Args [0]  : none
-# Return    : returns the previous month in the format "1"
-# Exception : none
-################################################################################
-
-getPreviousMonth(){
-    if [ $(getMonth) -eq "01" ]
-    then
-        _PREV_MNTH=12
-    else
-        _PREV_MNTH=$(expr $(getMonth) - 1)
-    fi
-    echo $_PREV_MNTH
-}
-
-################################################################################
-# Func      : getDaysInMonth()
-# Desc      : gets the number of days in a given month
-# Args [1]  : month
-# Args [2]  : year
-# Return    : returns the number of days in a month
-# Exception : none
-################################################################################
-
-getDaysInMonth(){
-    _MNTH=$1
-    _YEAR=$2
-    
-    _DAYS=$(for i in `cal $_MNTH $_YEAR`; do echo; done; echo $i); _DAYS=$(expr $_DAYS);
-    echo $_DAYS
-}
-
-################################################################################
-# Func      : getYear()
-# Desc      : gets the current day
-# Args [0]  : none
-# Return    : returns the current year in the format "2003"
-# Exception : none
-################################################################################
-
-getYear(){
-    echo $(date '+%Y')
-}
-
-################################################################################
-# Func      : getPreviousYear()
-# Desc      : gets the year previous to the current year
-# Args [0]  : none
-# Return    : returns the previous year in the format "2003"
-# Exception : none
-################################################################################
-
-getPreviousYear(){
-    echo $(expr $(getYear) - 1) 
-}
-
-################################################################################
-# Func      : getPreviousRelativeYear()
-# Desc      : gets the year relative to the previous month
-#             eg  if the previous month was in the previous year it returns the
-#             the previous year else it returns the current year.
-# Args [0]  : none
-# Return    : returns the and relevant year in the string format
-#             "01 2003"
-# Exception : none
-################################################################################
-
-getPreviousRelativeYear(){
-    if [ $(getPreviousMonth) -eq "12" ]
-    then
-        _PREV_YEAR=$(getPreviousYear)
-    else
-        _PREV_YEAR=$(getYear)
-    fi
-    echo $_PREV_YEAR
-}
-
-################################################################################
-# Func      : PadNumber()
-# Desc      : reformats a number from "1" to "01"
-# Args [1]  : number
-# Return    : returns the given number in the format "01"
-# Exception : none
-################################################################################
-
-padNumber(){
-    _NUM=$1
-
-    _PAD_NUM=$(echo $_NUM | awk '{printf("%02d",$1)}')
-    echo $_PAD_NUM
 }
 
 
@@ -1601,3 +1196,40 @@ PrintColour(){
   printf "$colour_code%s $nocolour\n" "$string"
 
 }
+
+
+### 
+
+#This should always be called via subshell to return an array
+#e.g. $schema_build =($(GetSchemaBuild rattus_norvegicus_funcgen_57a_34y))
+#Hence always have to catch $?, and can use return instead of exit for nicer cmdline usage?
+
+GetSchemaBuild(){
+  dbname=$1
+
+  if [ ! $dbname ]; then
+    echo 'To GetSchemaBuild you must provide a dbname argument'
+    return 1
+  fi
+
+  dbname_array=$(echo $dbname | sed 's/_/ /g')
+  #Turn space separated string into array
+  dbname_array=($dbname_array)
+  schema_posn=${#dbname_array[*]}
+    
+  schema_posn=$(( $schema_posn - 2 )) 
+  schema_version=${dbname_array[$schema_posn]}
+  build=${dbname_array[(($schema_posn +1))]}
+  
+  #Does this =~ work in mac bash?
+
+  if [[ ! $schema_version =~ ^[[:digit:]]+$ ]] || [[ ! $build =~ ^[[:digit:]]+[a-z]*$ ]]; then
+    echo "WARNING: Could not identify a valid schema_version($schema_version) or build($build) from your dbname: $dbname"
+    echo "Please rename your db as follows: any_prefix_latin_species_funcgen_SCHEMA_BUILD[n] e.g. my_homo_sapiens_funcgen_54_36p"
+    return 1;
+  fi
+
+
+  echo $schema_version $build
+}
+

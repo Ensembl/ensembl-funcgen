@@ -1,3 +1,17 @@
+# Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 use strict;
 use warnings;
 
@@ -11,7 +25,6 @@ use Bio::EnsEMBL::Test::TestUtils qw( test_getter_setter debug );
 use Bio::EnsEMBL::Test::MultiTestDB;
 use Test::More;
 use Test::Exception;  # throws_ok
-#use Test::Output;     # stderr_is
 
 # Test DB slice is 13:32888400-32974305
 # switch on the debug prints
@@ -33,11 +46,11 @@ my $mf_a = $db->get_MotifFeatureAdaptor;
 
 # Create BindingMatrix
 
-my $freqs = ">CTCF_Test  
-A [ 87	167	281	56	8	744	40	107	851	5	333	54	12	56	104	372	82	117	402  ]
-C [ 291	145	49	800	903	13	528	433	11	0	3	12	0	8	733	13	482	322	181]
-G [ 76	414	449	21	0	65	334	48	32	903	566	504	890	775	5	507	307	73	266 ] 
-T [459	187	134	36	2	91	11	324	18	3	9	341	8	71	67	17	37	396	59 ] ";
+my $freqs = ">CTCF_Test
+A [ 87  167 281 56  8 744 40  107 851 5 333 54  12  56  104 372 82  117 402  ]
+C [ 291 145 49  800 903 13  528 433 11  0 3 12  0 8 733 13  482 322 181]
+G [ 76  414 449 21  0 65  334 48  32  903 566 504 890 775 5 507 307 73  266 ]
+T [459  187 134 36  2 91  11  324 18  3 9 341 8 71  67  17  37  396 59 ] ";
 
 my $ftype_a = $db->get_FeatureTypeAdaptor;
 my $ftype_name = 'CTCF';
@@ -52,13 +65,13 @@ my $analysis   = $analysis_a->fetch_by_logic_name($lname);
 
 
 my $matrix = Bio::EnsEMBL::Funcgen::BindingMatrix->new(
-													   -name         => $bm_name,
-													   -analysis     => $analysis,
+                             -name         => $bm_name,
+                             -analysis     => $analysis,
                              -feature_type => $ftype,
-													   -description  => $bm_desc,
-													   -frequencies  => $freqs,
-													   -threshold    => 0.1,
-													  );
+                             -description  => $bm_desc,
+                             -frequencies  => $freqs,
+                             -threshold    => 0.1,
+                            );
 my $m_ctcf = $matrix;
    
 # TODO Need to add test for 2d array passed to frequncies
@@ -84,14 +97,14 @@ $skip = ! isa_ok($matrix, 'Bio::EnsEMBL::Funcgen::BindingMatrix', 'Fetched store
 #ok (! $skip, 'Fetched stored BindingMatrix');
 
 SKIP:{  # Test stored values
-	$skip && skip "Failed to retrieve stored BindingMatrix", 6;	
-	ok( $matrix->dbID =~ /^[0-9]+$/, 'Stored dbID returned');
-	isa_ok($matrix->adaptor, 'Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixAdaptor', 
-		'BindingMatrixAdaptor set');
-	is($matrix->name, $bm_name, 'Stored name returned');
-	is($matrix->description, $bm_desc, 'Stored description returned' );
-	is($matrix->analysis->logic_name, $lname, 'Stored logic_name returned');
-	is($matrix->feature_type->name, $ftype_name, 'Stored FeatureType name returned' );
+  $skip && skip "Failed to retrieve stored BindingMatrix", 6; 
+  ok( $matrix->dbID =~ /^[0-9]+$/, 'Stored dbID returned');
+  isa_ok($matrix->adaptor, 'Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixAdaptor', 
+    'BindingMatrixAdaptor set');
+  is($matrix->name, $bm_name, 'Stored name returned');
+  is($matrix->description, $bm_desc, 'Stored description returned' );
+  is($matrix->analysis->logic_name, $lname, 'Stored logic_name returned');
+  is($matrix->feature_type->name, $ftype_name, 'Stored FeatureType name returned' );
 }
 
 $matrix = $m_ctcf; # in case store failed
@@ -111,17 +124,17 @@ is( $matrix->relative_affinity("TGGCCACCAGGGAGCGCTA"), '0.94541278085573', 'rela
 # New analysis so we can fetch 2 with the same name form diferent analyses
 $analysis = $analysis_a->fetch_by_logic_name('Regulatory_Build');
 $freqs = [
-	[ qw(4  1 13 24  0  0  6  4  9) ],  # A
-	[ qw(7  4  1  0  0  0  0  6  7) ],  # C
-	[ qw(4  5  7  0 24  0 18 12  5) ],  # G
-	[ qw(9 14  3  0  0 24  0  2  3) ]];  # T
+  [ qw(4  1 13 24  0  0  6  4  9) ],  # A
+  [ qw(7  4  1  0  0  0  0  6  7) ],  # C
+  [ qw(4  5  7  0 24  0 18 12  5) ],  # G
+  [ qw(9 14  3  0  0 24  0  2  3) ]];  # T
 $matrix = Bio::EnsEMBL::Funcgen::BindingMatrix->new(
-													-name         => $bm_name, #this is  a bit odd
-											  	-analysis     => $analysis,
-													-description  => 'Regulatory_Build Matrix',
-													-feature_type => $ftype,
-													-frequencies  => $freqs,
-												   );
+                          -name         => $bm_name, #this is  a bit odd
+                          -analysis     => $analysis,
+                          -description  => 'Regulatory_Build Matrix',
+                          -feature_type => $ftype,
+                          -frequencies  => $freqs,
+                           );
 
 ok( ! defined $matrix->threshold, 'Threshold undef');
 $matrix->threshold(0.81);
@@ -166,8 +179,8 @@ my ($af1, $af2)   = @{$db->get_AnnotatedFeatureAdaptor->fetch_all_by_Slice_Featu
 
 
 #SKIP:{
-#	($af1 && $af2) || 
-#		skip 'Test slice does not return enough AnnotatedFeatures, please change test set up', ;
+# ($af1 && $af2) || 
+#   skip 'Test slice does not return enough AnnotatedFeatures, please change test set up', ;
 
 #Now let's test the MotifFeatures
 
@@ -176,14 +189,14 @@ my ($af1, $af2)   = @{$db->get_AnnotatedFeatureAdaptor->fetch_all_by_Slice_Featu
 # We don't expose relative_affinity via a mf wrapper
 
 my $mf = Bio::EnsEMBL::Funcgen::MotifFeature->new(
-												  -binding_matrix => $matrix,
-												  -score          => 0.9,
-												  -start          => $af1->start,
-												  -end            => $af1->start + $matrix->length -1,
-												  -slice          => $af1->slice,
-												  -strand         => 1,
-												  #no -display_label here as we test default below	
-												 );
+                          -binding_matrix => $matrix,
+                          -score          => 0.9,
+                          -start          => $af1->start,
+                          -end            => $af1->start + $matrix->length -1,
+                          -slice          => $af1->slice,
+                          -strand         => 1,
+                          #no -display_label here as we test default below  
+                         );
 isa_ok($mf, 'Bio::EnsEMBL::Funcgen::MotifFeature', 'MotifFeature new');
 
 #ok( test_getter_setter( $mf, 'adaptor',       undef ) ); # Not a MotifFeature test
@@ -194,8 +207,8 @@ isa_ok($mf, 'Bio::EnsEMBL::Funcgen::MotifFeature', 'MotifFeatureAdaptor::fetch_b
 
 # Test the existing and default attrs
 is($mf->display_label, 
-	 $mf->binding_matrix->feature_type->name.':'.$mf->binding_matrix->name, 
-	 'MotifFeature::display_label default');
+   $mf->binding_matrix->feature_type->name.':'.$mf->binding_matrix->name, 
+   'MotifFeature::display_label default');
 # where is this set?
 
 
@@ -214,21 +227,21 @@ ok(! $mf->is_position_informative(1), 'MotifFeature position 1 is not informativ
 # Now store another downstream MF and make associations
 
 my $mf2 = Bio::EnsEMBL::Funcgen::MotifFeature->new(
-												   -binding_matrix => $matrix,
-												   -score          => 0.2,
-												   -start          => $af2->start + 1000,
-												   -end            => $af2->end + 1000, #Intentio
-												   -slice          => $af2->slice,
-												   -strand         => -1, 
-												   -display_label  => 'test',
-												 );
+                           -binding_matrix => $matrix,
+                           -score          => 0.2,
+                           -start          => $af2->start + 1000,
+                           -end            => $af2->end + 1000, #Intentio
+                           -slice          => $af2->slice,
+                           -strand         => -1, 
+                           -display_label  => 'test',
+                         );
 ($mf2) = @{$mf_a->store($mf2)};
 is($mf2->display_label, 'test', 'MotifFeature::display_label set via new');
 $mf  = $mf_a->store_associated_AnnotatedFeature($mf,  $af1);
 $mf2 = $mf_a->store_associated_AnnotatedFeature($mf2, $af2);
 
 is($mf->associated_annotated_features->[0]->dbID, $af1->dbID, 
-	'Stored associated_annotated_feature dbID match');
+  'Stored associated_annotated_feature dbID match');
 
 #Test other fetch methods
 
@@ -243,11 +256,11 @@ ok(! $mf2->is_position_informative(9), 'Position 9 revcomp is not informative');
 
 #Add a variation object
 my $vf = Bio::EnsEMBL::Variation::VariationFeature->new(
-  -start 				 => 5,
-  -end 	         => 5,
-  -slice 				 => $mf->feature_Slice,       # the variation must be attached to a slice
+  -start         => 5,
+  -end           => 5,
+  -slice         => $mf->feature_Slice,       # the variation must be attached to a slice
   -allele_string => 'A/G',    # the first allele should be the reference allele, always wrt +ve strand
-  -strand 			 => -1,  # what?
+  -strand        => -1,  # what?
 #  #-map_weight => 1,
 #  #-adaptor => $vfa,           # we must attach a variation feature adaptor
   -variation_name => 'testSNP',

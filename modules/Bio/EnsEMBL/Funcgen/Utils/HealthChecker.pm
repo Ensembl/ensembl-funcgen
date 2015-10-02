@@ -422,6 +422,10 @@ sub check_meta_species_version{
 sub check_regbuild_strings{
   my $self = shift;
   $self->log_header('Checking regbuild strings');
+  $self->report('DISABLED check_reg_build_strings until we start using them again in the new single record data model');
+  return;
+
+
   my $species_id = $self->db->species_id;
 
   my @regf_fsets;
@@ -901,9 +905,21 @@ sub validate_DataSets{
   return;
 } # End of validate_DataSets
 
+# The result_set and feature_set tables both contain a (denormalised) experiment_id field
+# which help support the experiment view. Currently done here to ensure data that data loaded 
+# via all possible import routes is handled. 
+# result_set.experiment_id is present to experiment view linkage for data which may not have
+# a feature set e.g. dna methylation
+
+sub update_denormalised_experiment_ids{
+  my $self = shift;
+
+  # feature_set
+
+  # Use api and work sets wise for validation and update, or just do blind batch sql update?
 
 
-
+}
 
 
 sub analyse_and_optimise_tables{

@@ -111,7 +111,7 @@ my %config_info =
 # These are separate as we sort based on priority which gives an undef warning below
 my %config_labels =
  ('Peaks_and_Collections' => [undef, 'Peaks', 'Collections'],
-  'UberPipe'              => [undef, 'Peaks', 'Collections', 'IDRPeaks', 'ReadAlignment'] );
+  'ErsaPipe'              => [undef, 'Peaks', 'Collections', 'IDRPeaks', 'ReadAlignment'] );
 
 
 # Some global variable to avoid excessive arg passing
@@ -158,17 +158,17 @@ sub main{
   }
 
   if(! defined $hive_script_dir){
-    throw('-hive_script_dir is a mandatory parameter');
+    croak('-hive_script_dir is a mandatory parameter');
   }
   elsif(! -d $hive_script_dir){
-    throw("-hive_script_dir is not a valid directory:\t${hive_script_dir}");
+    croak("-hive_script_dir is not a valid directory:\t${hive_script_dir}");
   }
 
   if(! defined $data_root){
-    throw('-data_root is a mandatory parameter');
+    croak('-data_root is a mandatory parameter');
   }
   elsif(! -d $data_root){
-    throw("-data_root is not a valid directory:\t${data_root}");
+    croak("-data_root is not a valid directory:\t${data_root}");
   }
 
   my $arch_params = '';
@@ -176,7 +176,7 @@ sub main{
   if(defined $archive_root){
 
     if(! -d $archive_root){
-      throw("-archive_root is not a valid directory:\t${archive_root}");
+      croak("-archive_root is not a valid directory:\t${archive_root}");
     }
 
     $arch_params .= " -archive_root $archive_root ";
@@ -215,7 +215,7 @@ sub main{
     $cmd = "perl $hive_script_dir/init_pipeline.pl ".
       "Bio::EnsEMBL::Funcgen::Hive::Config::${first_conf} $pipeline_params";
 
-    print "\n\nINITIALISING DATABASE:\t".$pdb_params->{'-dbname'}."\n";
+    print "\n\nDATABASE NOT FOUND...CREATING & INITIALISING HIVE DATABASE:\t".$pdb_params->{'-dbname'}."\n";
     run_system_cmd($cmd);
 
     $pdb      = create_DBAdaptor_from_params($pdb_params, 'hive');
@@ -249,6 +249,8 @@ sub main{
       # as there is a danger that a subsequent top up of an upsteam conf may reset this to 0
       # This would result dataflow not occuring from the conf just added through the link
       # analysis to the next conf(which has be added previously)
+
+      # Put this in SQL/DBAdaptorHelper as a fetchall_hashref wrapper?
       my $sth = $ntable_a->dbc->prepare('SELECT meta_key, meta_value from meta where meta_value like "can_%"');
       $sth->execute;
       my $meta_key_values = $sth->fetchall_hashref('meta_key');
@@ -360,7 +362,7 @@ sub _register_conf_in_meta{
   my $conf = shift;
 
   if(! eval { $ntable_a->store({meta_key => 'hive_conf', meta_value => $conf}); 1}){
-    throw("Failed to store hive conf meta entry:\t$conf\n$@");
+    croak("Failed to store hive conf meta entry:\t$conf\n$@");
   }
 
   return;
