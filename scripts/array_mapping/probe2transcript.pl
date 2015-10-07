@@ -30,9 +30,9 @@ probe2transcript.pl
 
 =head1 SYNOPSIS
 
-This script performs probe(set) to transcript mapping based on a few simple parameters. Overlap analysis
-of ProbeFeatures is performed and annotations are stored as xrefs for individual ProbeFeatures, Probes or
-ProbeSets as a whole. Any probe(set)s which fail the mapping procedure are by default stored in the
+This script performs probe(set) to transcript mapping based on a few simple parameters. Overlap analysis 
+of ProbeFeatures is performed and annotations are stored as xrefs for individual ProbeFeatures, Probes or 
+ProbeSets as a whole. Any probe(set)s which fail the mapping procedure are by default stored in the 
 UnmappedObject tables and a logfile is also written.
 
 e.g. perl probe2transcript.pl --species $SPECIES --transcript_dbname $DNADB_NAME --transcript_host $DNADB_HOST --transcript_port $DNADB_PORT --transcript_user $DNADB_USER --xref_host $DB_HOST --xref_dbname $DB_NAME --xref_user $DB_USER --xref_pass $DB_PASS --calculate_utrs --utr_multiplier 1 --arrays HT_MG-430A  -vendor AFFY -format AFFY_UTR
@@ -71,11 +71,11 @@ This is overridden by the following extend options
 -unannotated_3_utr           Default extension for transcripts with unannotated 3' UTRs
 -annotated_5_prime_extend    Default bp extension for all transcripts with annotated 5' UTRs
 -annotated_3_prime_extend    Default bp extension for all transcripts with annotated 3' UTRs
--utr_multiplier              Defines UTR extension as multiple of annotated UTR. This is overridden
+-utr_multiplier              Defines UTR extension as multiple of annotated UTR. This is overridden 
 if the above options are set.
--max_transcripts             Maximum number of transcripts probe(set) can map to before we call it
+-max_transcripts             Maximum number of transcripts probe(set) can map to before we call it 
 promiscuous, default is 100.
--threshold                   This is the fraction(0-1) of probes within a probeset required to call it
+-threshold                   This is the fraction(0-1) of probes within a probeset required to call it 
 mapped, default is 0.5
 
 
@@ -618,14 +618,14 @@ sub get_options {
 
   if(defined $options->{format} && ! exists $array_format_config{$options->{format}}) {
     die("-format is not valid:\t$options->{format}\nMust specify valid format e.g. ".join(', ', keys(%array_format_config)).
-      "\nOr maybe you want to use -probeset_arrays, -linked_arrays and -sense_interrogation to define the format parameters?");
+      "\nOr maybe you want to use -probeset_arrays, -linked_arrays and -sense_interrogation to define the format parameters?\n");
   }
 
   if(! ($options->{array_config}->{probeset_arrays} &&
         $options->{array_config}->{linked_arrays} &&
         $options->{array_config}->{sense_interrogation})
      && ! $options->{format}) {
-    die('You must specify a valid format parameter if you are not using -probeset_arrays, -linked_arrays and -sense_interrogation');
+    die('You must specify a valid format parameter if you are not using -probeset_arrays, -linked_arrays and -sense_interrogation\n');
   }
 
   foreach my $key (keys %{$options->{array_config}}) {
@@ -658,10 +658,10 @@ sub get_options {
 
   if(!$options->{reg_file} && !$options->{reg_host}) {
     if (!$options->{transcript_user} || !$options->{transcript_dbname} || !$options->{transcript_host}) {
-      die("You must specify a -transcript_user -transcript_dbname -transcript_host");
-    }
+      die("You must specify a -transcript_user -transcript_dbname -transcript_host\n");
+    } 
     if(!$options->{xref_user} || !$options->{xref_dbname} || !$options->{xref_host}) {
-      die("You must specify a -xref_user -xref_dbname and -xref_host");
+      die("You must specify a -xref_user -xref_dbname and -xref_host\n");
     }
   }
 
@@ -674,7 +674,7 @@ sub get_options {
   }
   elsif(!(defined  $options->{utr_extends}->{3} || defined $options->{utr_extends}{5} || defined $options->{utr_multiplier})) {#Can't have none
     die("You must set some extension rules using  -3/5_prime_extend values and/or -utr_multiplier\n".
-      "Set -utr_multiplier to 0 and omit -3/5_prime_extend to run against UTR only");
+      "Set -utr_multiplier to 0 and omit -3/5_prime_extend to run against UTR only\n");
   }
   else{
     $Helper->log("You have specified -utr_multiplier and a -3|5_prime_extend, -3|5_prime_extend will override where appropriate");
@@ -914,15 +914,13 @@ sub get_transcripts {
       die("Could not get slice from the DB:\t$slice");
     }
     $transcripts = $transcript_adaptor->fetch_all_by_Slice($slice);
-  }
-  elsif($test_transcript_sid) {
+  } elsif($test_transcript_sid) {
     $Helper->log("Running test mode with transcript:\t$test_transcript_sid\n".
       "WARNING:\tPromiscuous probeset will not be caught!\n".
       "WARNING:\t--calc_utrs will not work");
 
     $transcripts = $transcript_adaptor->fetch_by_stable_id($test_transcript_sid);
-  }
-  else{
+  } else{
     $transcripts = $transcript_adaptor->fetch_all();
   }
 
@@ -956,7 +954,7 @@ sub check_xrefs {
 
     if (! defined $transcript_xref_id->{$transcript->stable_id()}) {
       die("Transcript absent from xref table: ".$transcript->stable_id().
-        ", from external db: $transc_edb_id");
+        ", from external db: $transc_edb_id\n");
     }
   }
 }
@@ -2134,7 +2132,7 @@ sub store_xrefs {
   for my $xref (@$xrefs) {
     my ($transcript_id, $linkage_annotation, $object_id, $object_type) = @$xref;
     if (! defined $transcript_xref_id->{$transcript_id}) {
-      die("Transcript $transcript_id absent from xref table!");
+      die("Transcript $transcript_id absent from xref table!\n");
     }
     print $fh join("\t", ('\N', $object_id, $object_type, $transcript_xref_id->{$transcript_id}, $linkage_annotation, $analysis->dbID))."\n";
   }
@@ -2166,7 +2164,7 @@ sub run {
   $Helper->log("Running $cmd\n", 0, 'append_date');
   my $exit_code = system($cmd);
   if ($exit_code != 0) {
-    die("Failure when running command\n$cmd")
+    die("Failure when running command\n$cmd\n")
   }
 }
 
