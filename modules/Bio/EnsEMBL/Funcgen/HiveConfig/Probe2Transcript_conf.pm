@@ -80,7 +80,7 @@ sub pipeline_wide_parameters {
 	
     return {
         %{$self->SUPER::pipeline_wide_parameters},     
- 	pipeline_repository_dir => '/nfs/users/nfs_m/mn1/work/probemapping_pipeline/',     
+ 	pipeline_repository_dir => $self->o('pipeline_repository_dir'),
 	tracking_dba_hash => $self->o('tracking_dba_hash'),
     };
 }
