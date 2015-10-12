@@ -570,7 +570,7 @@ sub write_output {
 
   foreach my $aname(keys %{$self->{'_array_names'}}){
     print "\t".$aname."\n";
-    print OUTFILE $aname."\n";
+#     print OUTFILE $aname."\n";
     $self->{'_array_names'}->{$aname}->add_status('IMPORTED');
     $self->{'_arrays'}->{$aname}->add_status('DISPLAYABLE');#This should be on Array?!
     #$self->{'_arrays'}->{$aname}->add_status('MART_DISPLAYABLE');#Now done in probe2transcript
@@ -580,7 +580,7 @@ sub write_output {
   }
 
 
-  close(OUTFILE);
+#   close(OUTFILE);
   
   return;
 }
