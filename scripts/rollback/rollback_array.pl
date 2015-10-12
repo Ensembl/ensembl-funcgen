@@ -66,40 +66,44 @@ use Pod::Usage;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::Utils::Helper;
+use Data::Dumper;
 $| =1;
 
-my (@array_names, $pass, $force, @chips, $vendor, %achips);
+my (@array_names, $pass, $force, @chips, $vendor);
 my ($host, $dbname, $species, $mode, $port, $user, $dnadb_pass, $keep_xrefs);
 my ($dnadb_host, $dnadb_name, $dnadb_species, $dnadb_port, $dnadb_user);
 my @tmp_args = @ARGV;
 
 
 GetOptions (
-			"arrays|a=s{,}"      => \@array_names,
-			"chips|c=s{,}"    => \@chips,
-			"vendor|v=s"      => \$vendor,
-			"mode|m=s"        => \$mode,
-			"dbuser|u=s"      => \$user,
-			"dbpass|p=s"      => \$pass,
-			"dbport=s"        => \$port,
-			"dbname|n=s"      => \$dbname,
-			"dbhost|h=s"      => \$host,
-			"dnadb_pass=s"    => \$dnadb_pass,
-			"dnadb_port=s"    => \$dnadb_port,
-			"dnadb_name=s"    => \$dnadb_name,
-			"dnadb_host=s"    => \$dnadb_host,
-			"dnadb_user=s"    => \$dnadb_user,
-			"species=s"       => \$species,
-			"force|f"         => \$force,
-			"keep_xrefs|k"    => \$keep_xrefs,
-			"help|?"          => sub { pos2usage(-exitval => 0,  
-												 -verbose => 2, 
-												 -message => "Params are:\t@tmp_args");
-									 },
-		   ) or pod2usage(
-						 -exitval => 1,
-						 -message => "Params are:\t@tmp_args"
-						);
+    "arrays|a=s{,}"      => \@array_names,
+    "chips|c=s{,}"    => \@chips,
+    "vendor|v=s"      => \$vendor,
+    "mode|m=s"        => \$mode,
+    "dbuser|u=s"      => \$user,
+    "dbpass|p=s"      => \$pass,
+    "dbport=s"        => \$port,
+    "dbname|n=s"      => \$dbname,
+    "dbhost|h=s"      => \$host,
+    "dnadb_pass=s"    => \$dnadb_pass,
+    "dnadb_port=s"    => \$dnadb_port,
+    "dnadb_name=s"    => \$dnadb_name,
+    "dnadb_host=s"    => \$dnadb_host,
+    "dnadb_user=s"    => \$dnadb_user,
+    "species=s"       => \$species,
+    "force|f"         => \$force,
+    "keep_xrefs|k"    => \$keep_xrefs,
+    "help|?"          => sub { 
+      pos2usage(
+        -exitval => 0,  
+        -verbose => 2, 
+        -message => "Params are:\t@tmp_args"
+      );
+    },
+) or pod2usage(
+  -exitval => 1,
+  -message => "Params are:\t@tmp_args"
+);
 
 die('Must define a -user parameter')    if ! $user;
 die('Must define a -port parameter')    if ! $port;
@@ -127,68 +131,53 @@ if($dnadb_name){
 }
 
 my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-													  -host => $host,
-													  -dbname => $dbname,
-													  -user => $user,
-													  -pass => $pass,
-						   						      -port => $port,
-													  -species => $species,
-													  -dnadb => $dnadb,
-													  -group => 'funcgen',
-													 );
-$db->dbc->db_handle;#Test the DB connection
+  -host => $host,
+  -dbname => $dbname,
+  -user => $user,
+  -pass => $pass,
+  -port => $port,
+  -species => $species,
+  -dnadb => $dnadb,
+  -group => 'funcgen',
+);
+$db->dbc->db_handle || die("Can't connect to funcgen database!");
 
-
-
-#This needs putting in Helper::rollback_Arrays
 my $array_adaptor = $db->get_ArrayAdaptor;
 my @arrays;
+foreach my $array_name (@array_names){
 
-
-foreach my $aname(@array_names){
-  my $array;
-
-  $array = $array_adaptor->fetch_by_name_vendor($aname, $vendor);
-
-#   die ("Could not retrieve $vendor $aname Array") if ! $array;
+  my $array = $array_adaptor->fetch_by_name_vendor($array_name, $vendor);
   if (!$array) {
-      warn ("Could not retrieve $vendor $aname Array");
+      warn ("Could not retrieve $vendor $array_name Array");
       next;
   }
-
   push @arrays, $array;
 }
 
 my $Helper = new Bio::EnsEMBL::Funcgen::Utils::Helper(
-													  no_log => 1,#tees automatically with no_log
-													 );
+  no_log => 1,
+);
 
+my %array_chip_designId_to_arrayChip;
 
-my %acs;
-
-foreach my $array(@arrays){
-  map {$acs{$_->design_id} = $_} @{$array->get_ArrayChips};
+foreach my $array (@arrays){
+  map {$array_chip_designId_to_arrayChip { $_->design_id } = $_ } @{$array->get_ArrayChips};
 }
 
-#do chips belong to experiment?
-if(@chips){
-  
+my %array_chips;
+if(@chips){  
   foreach my $chip_name(@chips){
 	
-	if(! exists $acs{$chip_name}){
+	if(! exists $array_chip_designId_to_arrayChip{$chip_name}){
 	  die("$chip_name is not a valid ArrayChip design_id for the $vendor arrays:\t@array_names");
 	}
-
-	$achips{$chip_name} = $acs{$chip_name};	
+	$array_chips{$chip_name} = $array_chip_designId_to_arrayChip{$chip_name};	
   }
+} else{
+  # Design ids in array_chip seem to be the same as the name in the array table.
+  %array_chips = %array_chip_designId_to_arrayChip;
 }
-else{
-  %achips = %acs;
-}
 
-
-$Helper->rollback_ArrayChips([values(%achips)], $mode, $force, $keep_xrefs);
-
-
+$Helper->rollback_ArrayChips([values(%array_chips)], $mode, $force, $keep_xrefs);
 
 1;
