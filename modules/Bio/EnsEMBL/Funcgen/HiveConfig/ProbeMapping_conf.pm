@@ -106,20 +106,32 @@ sub _pipeline_analyses_probe_align {
             -rc_name    => '64Gb_job',
             -can_be_empty => 1,
         },
+        {   -logic_name  => 'CreateTemporaryIndices',
+            -meadow_type => 'LOCAL',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+            -input_ids   => [ {
+              db_conn => $self->_create_db_url_from_dba_hash($self->o('tracking_dba_hash')),
+              sql     => [ 
+                 'create index temp_probe_probe_seq_id on probe (probe_seq_id)',
+                 'create index temp_seq_region_probe_analysis_idx on probe_feature (`seq_region_id`,`seq_region_start`, `seq_region_end`, `probe_id`, `analysis_id`)',
+              ],
+            } ],
+            -wait_for    => [ 'ImportArrays', 'ImportArrays8Gb', 'ImportArrays16Gb', ],
+        },
         {   -logic_name  => 'DeleteOrphanTrackingData',
             -meadow_type => 'LOCAL',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
             -input_ids   => [ {
-	      db_conn => $self->_create_db_url_from_dba_hash($self->o('tracking_dba_hash')),
-	      sql     => [ 
-		'delete from probe_seq where probe_seq_id not in (select probe_seq_id from probe)',
-		'delete from probe_alias where probe_id not in (select probe_id from probe)',
-		# Takes too much time and then blocks table in the meantime
-		#
-		#'delete from probe_set where probe_set_id not in (select distinct probe_set_id from probe)'
-	      ],            
+              db_conn => $self->_create_db_url_from_dba_hash($self->o('tracking_dba_hash')),
+              sql     => [ 
+                # Takes too much time and then blocks table in the meantime
+#                 'delete from probe_seq where probe_seq_id not in (select probe_seq_id from probe)',
+#                 'delete from probe_alias where probe_id not in (select probe_id from probe)',
+                #
+                #'delete from probe_set where probe_set_id not in (select distinct probe_set_id from probe)'
+              ],
             } ],
-            -wait_for    => [ 'ImportArrays', 'ImportArrays8Gb', 'ImportArrays16Gb', ],
+            -wait_for    => [ 'CreateTemporaryIndices', ],
         },        
         {   -logic_name  => 'UseInnoDB',
             -meadow_type => 'LOCAL',
@@ -137,7 +149,7 @@ sub _pipeline_analyses_probe_align {
         {   -logic_name  => 'InsertAnalyses',
             -meadow_type => 'LOCAL',
             -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::InsertAnalyses',
-            -wait_for    => [ 'ImportArrays', 'ImportArrays8Gb', 'ImportArrays16Gb', ],
+            -wait_for    => [ 'ImportArrays', 'ImportArrays8Gb', 'ImportArrays16Gb', 'ImportArrays64Gb', ],
             -input_ids   => [ {} ],
         },
         {   -logic_name  => 'InsertExternalDb',
@@ -149,7 +161,7 @@ sub _pipeline_analyses_probe_align {
         {   -logic_name  => 'InsertProbeAlias',
             -meadow_type => 'LSF',
             -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::InsertProbeAlias',
-            -wait_for => [ 'ImportArrays', 'ImportArrays8Gb', 'ImportArrays16Gb', ],
+            -wait_for => [ 'ImportArrays', 'ImportArrays8Gb', 'ImportArrays16Gb', 'ImportArrays64Gb', 'CreateTemporaryIndices' ],
             -input_ids   => [ {} ],
             -rc_name     => '2Gb_job',
         },
@@ -331,16 +343,37 @@ sub _pipeline_analyses_probe_align {
             -priority => 30,
             -batch_size => 1,
             -max_retry_count => 1,
+            },
+        {   -logic_name  => 'DropTemporaryIndices',
+            -meadow_type => 'LOCAL',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+            -input_ids   => [ {
+              db_conn => $self->_create_db_url_from_dba_hash($self->o('tracking_dba_hash')),
+              sql     => [ 
+                 'drop index temp_probe_probe_seq_id on probe',
+                 'drop index temp_seq_region_probe_analysis_idx on probe_feature',
+              ],
+            } ],
+            -wait_for => [
+              'JobFactoryProbeAlign', 
+              'ProbeAlignGenomic8Gb', 
+              'ProbeAlignGenomic64Gb', 
+              'InsertProbeAlias',
+              'JobFactoryProbeAlign',
+              'ProbeAlignTranscript', 
+              'ProbeAlignTranscript8Gb', 
+              'ProbeAlignTranscript64Gb', 
+            ],
         },
         {   -logic_name  => 'Cleanup',
             -meadow_type => 'LSF',
             -max_retry_count => 1,
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -parameters => {            
+            -parameters => {
                 cmd => 'rm -rf #directory#'
             },
             -input_ids => [ 
-	      {           
+	      {
 		directory => $self->o('tempdir')
 	      },
             ],
