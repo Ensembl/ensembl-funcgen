@@ -27,8 +27,9 @@ sub run {
     use Bio::EnsEMBL::Utils::Logger;
     my $logger = Bio::EnsEMBL::Utils::Logger->new();
     $logger->info("There are $num_probe_seq_ids_in_probe_table probe seq ids in the probe table.\n");
-    
-    my $sth = $dbc_tracking->prepare('select min(probe_id) as default_probe_id, count(probe_id) as num_synonyms, probe_seq_id from probe group by probe_seq_id order by num_synonyms desc, default_probe_id asc');
+
+
+    my $sth = $dbc_tracking->prepare('select min(probe_id) as default_probe_id, count(probe_id) as num_synonyms, probe_seq_id from probe where probe_seq_id is not null group by probe_seq_id order by num_synonyms desc, default_probe_id asc');
     $sth->execute;
 
     my $sth_fetch_aliases = $dbc_tracking->prepare('select probe_id, name from probe where probe_seq_id=? and probe_id != ?');
