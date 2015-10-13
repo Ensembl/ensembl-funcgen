@@ -37,6 +37,10 @@ An extensive tutorial for the Regulation API can be found at:
 
 http://www.ensembl.org/info/docs/api/funcgen/regulation_tutorial.html
 
+## Contributions
+
+If you wish to contribute to this repository or any Ensembl repository, please refer to [our contribution guide](https://github.com/Ensembl/ensembl/blob/release/82/CONTRIBUTING.md).
+
 
 ## Contact us
 Please email comments or questions to the public Ensembl developers list at 
