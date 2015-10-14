@@ -208,7 +208,12 @@ sub main{
     $db_script_args->{funcgen}.' '.$db_script_args->{core}.' '.$db_script_args->{pipeline};
   if(defined $species){ $pipeline_params .= " -species $species " }
 
-  if(! eval { $pdb = create_DBAdaptor_from_params($pdb_params, 'hive', 1); 1;}){
+  eval {
+    $pdb = create_DBAdaptor_from_params($pdb_params, 'hive', 1);
+  };
+  
+  if(! $pdb){
+
     #Assume the DB hasn't been created yet  
     #init the pipline with the first conf
     my $first_conf = shift @confs;
@@ -218,14 +223,16 @@ sub main{
     print "\n\nDATABASE NOT FOUND...CREATING & INITIALISING HIVE DATABASE:\t".$pdb_params->{'-dbname'}."\n";
     run_system_cmd($cmd);
 
-    $pdb      = create_DBAdaptor_from_params($pdb_params, 'hive');
+
+    $pdb = create_DBAdaptor_from_params($pdb_params, 'hive');
+    
     $ntable_a = $pdb->get_NakedTableAdaptor;
-    $ntable_a->table_name('meta');
+    $ntable_a->table_name('hive_meta');
     _register_conf_in_meta($ntable_a, $first_conf);
   }
   else{
     $ntable_a = $pdb->get_NakedTableAdaptor;
-    $ntable_a->table_name('meta');
+    $ntable_a->table_name('hive_meta');
   }
 
   $hive_url = url_from_DB_params($pdb_params);
@@ -238,7 +245,7 @@ sub main{
   inject_DataflowRuleAdaptor_methods($dfr_adaptor);  # Injects get_semaphoring_analysis_ids
 
   foreach my $conf(@confs){
-
+  
     if( grep { /^$conf$/ } @meta_confs ){
       # Non-optimal grep on small array is fine
       warn "Skipping hive -analysis_topup. $conf config has already been added to the DB\n";
@@ -251,7 +258,7 @@ sub main{
       # analysis to the next conf(which has be added previously)
 
       # Put this in SQL/DBAdaptorHelper as a fetchall_hashref wrapper?
-      my $sth = $ntable_a->dbc->prepare('SELECT meta_key, meta_value from meta where meta_value like "can_%"');
+      my $sth = $ntable_a->dbc->prepare('SELECT meta_key, meta_value from hive_meta where meta_value like "can_%"');
       $sth->execute;
       my $meta_key_values = $sth->fetchall_hashref('meta_key');
       
@@ -260,8 +267,8 @@ sub main{
       }
 
       # Now do the top up
-      $cmd = "perl $hive_script_dir/init_pipeline.pl Bio::EnsEMBL::Funcgen::Hive::Config::${conf} ".
-        ' -analysis_topup '.$pipeline_params;
+      $cmd = "perl $hive_script_dir/init_pipeline.pl Bio::EnsEMBL::Funcgen::Hive::Config::${conf} -hive_no_init ".
+        ' '.$pipeline_params;
       print "\n\nPERFORMING ANALYSIS TOPUP:\t".$conf."\n";
       run_system_cmd($cmd);  # This will not catch non-fatal error output.
 
