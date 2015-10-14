@@ -109,30 +109,32 @@ sub _pipeline_analyses_probe_align {
         {   -logic_name  => 'CreateTemporaryIndices',
             -meadow_type => 'LOCAL',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
-            -input_ids   => [ {
+            # These jobs may fail, if index already exists for some reason.
+            -failed_job_tolerance => 100,
+            -parameters  => {
               db_conn => $self->_create_db_url_from_dba_hash($self->o('tracking_dba_hash')),
-              sql     => [ 
-                 'create index temp_probe_probe_seq_id on probe (probe_seq_id)',
-                 'create index temp_seq_region_probe_analysis_idx on probe_feature (`seq_region_id`,`seq_region_start`, `seq_region_end`, `probe_id`, `analysis_id`)',
-              ],
-            } ],
-            -wait_for    => [ 'ImportArrays', 'ImportArrays8Gb', 'ImportArrays16Gb', ],
+            },
+            -input_ids   => [ 
+              { sql     => [ 'create index temp_probe_probe_seq_id on probe (probe_seq_id)', ], },
+              { sql     => [ 'create index temp_seq_region_probe_analysis_idx on probe_feature (`seq_region_id`,`seq_region_start`, `seq_region_end`, `probe_id`, `analysis_id`)', ], },
+            ],
+            -wait_for    => [ 'ImportArrays', 'ImportArrays8Gb', 'ImportArrays16Gb', 'ImportArrays64Gb', ],
         },
-        {   -logic_name  => 'DeleteOrphanTrackingData',
-            -meadow_type => 'LOCAL',
-            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
-            -input_ids   => [ {
-              db_conn => $self->_create_db_url_from_dba_hash($self->o('tracking_dba_hash')),
-              sql     => [ 
-                # Takes too much time and then blocks table in the meantime
-#                 'delete from probe_seq where probe_seq_id not in (select probe_seq_id from probe)',
-#                 'delete from probe_alias where probe_id not in (select probe_id from probe)',
-                #
-                #'delete from probe_set where probe_set_id not in (select distinct probe_set_id from probe)'
-              ],
-            } ],
-            -wait_for    => [ 'CreateTemporaryIndices', ],
-        },        
+#         {   -logic_name  => 'DeleteOrphanTrackingData',
+#             -meadow_type => 'LOCAL',
+#             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+#             -input_ids   => [ {
+#               db_conn => $self->_create_db_url_from_dba_hash($self->o('tracking_dba_hash')),
+#               sql     => [ 
+#                 # Takes too much time and then blocks table in the meantime
+# #                 'delete from probe_seq where probe_seq_id not in (select probe_seq_id from probe)',
+# #                 'delete from probe_alias where probe_id not in (select probe_id from probe)',
+#                 #
+#                 #'delete from probe_set where probe_set_id not in (select distinct probe_set_id from probe)'
+#               ],
+#             } ],
+#             -wait_for    => [ 'CreateTemporaryIndices', ],
+#         },
         {   -logic_name  => 'UseInnoDB',
             -meadow_type => 'LOCAL',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
@@ -172,7 +174,7 @@ sub _pipeline_analyses_probe_align {
                 'cmd' => 'sequence_dump.pl -dbuser #dbuser# -dbname #dbname# -dbhost #dbhost# -toplevel -onefile -filename #filename# -mask_repeat Dust -mask_repeat RepeatMask',
             },
             -input_ids => [ 
-	      {           
+	      {
 		filename => $self->o('toplevel_dump_file'),
 		dbname   => $self->o('dnadb_name'),
 		dbhost   => $self->o('dnadb_host'),
@@ -181,6 +183,7 @@ sub _pipeline_analyses_probe_align {
 	      },
             ],
             -wait_for => [ 'PrePipelineChecks' ],
+            -can_be_empty => 1,
             -flow_into => {
 	       # MEMLIMIT
                -1 => [ 'DumpToplevel8Gb' ],
@@ -193,6 +196,7 @@ sub _pipeline_analyses_probe_align {
             -parameters  => {
                 'cmd'       => 'sequence_dump.pl -dbuser #dbuser# -dbname #dbname# -dbhost #dbhost# -toplevel -onefile -filename #filename#',
             },
+            -can_be_empty => 1,
         },
         {   -logic_name => 'DumpGenes',
             -meadow_type => 'LSF',
@@ -201,7 +205,7 @@ sub _pipeline_analyses_probe_align {
                 'cmd' => 'dump_genes.pl -dbuser #dbuser# -dbname #dbname# -dbhost #dbhost# -file #filename# -cdna -stable_id',
             },
             -input_ids => [ 
-	      {           
+	      {
 		filename => $self->o('transcript_dump_file'),
 		dbname   => $self->o('dnadb_name'),
 		dbhost   => $self->o('dnadb_host'),
@@ -210,6 +214,7 @@ sub _pipeline_analyses_probe_align {
 	      },
             ],
             -wait_for => [ 'PrePipelineChecks' ],
+            -can_be_empty => 1,
             -flow_into => {
 	       # MEMLIMIT
                -1 => [ 'DumpGenes8Gb' ],
@@ -222,16 +227,18 @@ sub _pipeline_analyses_probe_align {
             -parameters  => {
                 'cmd' => 'dump_genes.pl -dbuser #dbuser# -dbname #dbname# -dbhost #dbhost# -file #filename# -cdna -stable_id',
             },
+            -can_be_empty => 1,
         },
         {   -logic_name  => 'DumpUnmappedSeqs',
             -meadow_type => 'LOCAL',
             -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::DumpUnmappedSeqs',
             -input_ids => [ 
-	      {           
+	      {
 		unmapped_sequences_file => $self->o('unmapped_sequences_file'),
 	      },
             ],
             -wait_for => [ 'JobFactoryImportArrays', 'ImportArrays', 'ImportArrays8Gb', 'ImportArrays16Gb', 'ImportArrays64Gb', ],
+            -can_be_empty => 1,
         },
         {   -logic_name  => 'JobFactoryProbeAlign',
             -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::FastaFactory',
@@ -251,7 +258,7 @@ sub _pipeline_analyses_probe_align {
 	      'ImportArrays', 'ImportArrays8Gb', 'ImportArrays16Gb', 'ImportArrays64Gb',
 	      'DumpToplevel', 'DumpToplevel8Gb', 
 	      'DumpGenes', 'DumpGenes8Gb',
-	      'DumpUnmappedSeqs',
+	      'DumpUnmappedSeqs', 'CreateTemporaryIndices',
             ],
 	    -flow_into => {
 		'2' => [ 
@@ -309,8 +316,15 @@ sub _pipeline_analyses_probe_align {
             -flow_into => {
 	       # MEMLIMIT
                -1 => [ 'ProbeAlignTranscript8Gb' ],
-            },            
-        },        
+               },
+            -wait_for => [ 
+              'JobFactoryImportArrays', 
+              'ImportArrays', 'ImportArrays8Gb', 'ImportArrays16Gb', 'ImportArrays64Gb',
+              'DumpToplevel', 'DumpToplevel8Gb', 
+              'DumpGenes', 'DumpGenes8Gb',
+              'DumpUnmappedSeqs', 'CreateTemporaryIndices',
+            ],
+        },
         {   -logic_name  => 'ProbeAlignTranscript8Gb',
 	    -can_be_empty => 1,
             -meadow_type => 'LSF',
@@ -365,7 +379,7 @@ sub _pipeline_analyses_probe_align {
               'ProbeAlignTranscript64Gb', 
             ],
         },
-        {   -logic_name  => 'Cleanup',
+        {   -logic_name  => 'DeleteTempDir',
             -meadow_type => 'LSF',
             -max_retry_count => 1,
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
