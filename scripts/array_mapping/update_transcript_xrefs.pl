@@ -190,7 +190,7 @@ sub get_options {
 		-message => "Params are:\t@tmp_args"
 	);
 
-
+#use Data::Dumper; print Dumper($options); exit;
   # This is not working correctly, and is currently writing log file to default log dir, not workdir
   # no_log should be set in caller
 
@@ -455,7 +455,7 @@ sub load_new_transcript_xrefs {
 
 	chmod 0644, $filename; # Just in case default means mysql can't read it
 	$fh->autoflush;
-	my $cmd = "mysql -u $options->{xref_user} -h $options->{xref_host} -D $options->{xref_dbname} -e 'LOAD DATA LOCAL INFILE \"$filename\" INTO TABLE xref'";
+	my $cmd = "mysql --local-infile -u $options->{xref_user} -h $options->{xref_host} -D $options->{xref_dbname} -e 'LOAD DATA LOCAL INFILE \"$filename\" INTO TABLE xref'";
 	if (defined $options->{xref_port}) {
 	$cmd .= " -P $options->{xref_port}";
 	}
