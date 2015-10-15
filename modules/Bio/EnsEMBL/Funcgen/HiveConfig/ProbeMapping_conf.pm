@@ -115,8 +115,10 @@ sub _pipeline_analyses_probe_align {
               db_conn => $self->_create_db_url_from_dba_hash($self->o('tracking_dba_hash')),
             },
             -input_ids   => [ 
+              { sql     => [ 'create unique index temp_seq_region_probe_analysis_idx on probe_feature (`seq_region_id`,`seq_region_start`, `seq_region_end`, `probe_id`, `analysis_id`)', ], },
+              
+              # Not a unique index, because probes can share sequences.
               { sql     => [ 'create index temp_probe_probe_seq_id on probe (probe_seq_id)', ], },
-              { sql     => [ 'create index temp_seq_region_probe_analysis_idx on probe_feature (`seq_region_id`,`seq_region_start`, `seq_region_end`, `probe_id`, `analysis_id`)', ], },
             ],
             -wait_for    => [ 'ImportArrays', 'ImportArrays8Gb', 'ImportArrays16Gb', 'ImportArrays64Gb', ],
         },
