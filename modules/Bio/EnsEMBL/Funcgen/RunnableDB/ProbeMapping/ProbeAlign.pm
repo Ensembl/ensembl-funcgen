@@ -450,9 +450,15 @@ sub write_output {
 	eval { 
 	  $feature_adaptor->store($feature)
 	};
-	if ($@) {
-	  $self->throw('Unable to store ProbeFeature for probe '.$feature->probe_id." on slice:\t".$feature->slice->name."\n$@");
-	}
+        if ($@) {
+
+          # Don't terminate for duplicate features. This can happen, if a job 
+          # is restarted by hive.
+          #
+          if ($@!~/st execute failed: Duplicate entry/) {
+            $self->throw('Unable to store ProbeFeature for probe '.$feature->probe_id." on slice:\t".$feature->slice->name."\n$@");
+          }
+        }
 	if($xref){
 	  #Remove ignore release flag so we store on the correct schema build
 	  eval{ $dbe_adaptor->store($xref, $feature->dbID, 'ProbeFeature') };
