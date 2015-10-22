@@ -967,7 +967,12 @@ sub init_branching_by_analysis{
   if(! defined $self->{branch_config}){
     my $dfr_adaptor = $self->db->get_DataflowRuleAdaptor;  
     inject_DataflowRuleAdaptor_methods($dfr_adaptor);   
-    $self->{branch_config} = $dfr_adaptor->get_dataflow_config_by_analysis_id($self->analysis->dbID);
+    
+    my $job = $self->input_job;
+    
+    
+    #$self->{branch_config} = $dfr_adaptor->get_dataflow_config_by_analysis_id($self->analysis->dbID);
+    $self->{branch_config} = $dfr_adaptor->get_dataflow_config_by_analysis_id($job->analysis_id);
 
    
     
