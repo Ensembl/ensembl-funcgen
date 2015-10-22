@@ -63,14 +63,14 @@ sub fetch_input {   # fetch parameters...
  
   #This auto detection prevents having to do this in the SeedPipeline environment func
   if(! defined $set_type){
-    my $lname = $self->analysis->logic_name;  
+    my $logic_name = $self->analysis->logic_name;  
     
     foreach my $stype( keys %set_adaptor_methods ){
   
-      if($lname =~ /$stype/){
+      if($logic_name =~ /$stype/){
         
         if($set_type){ #Throw if we match is not unique
-          throw("Cannot auto detect unique set_type from analysis logic name:\t$lname\n",  
+          throw("Cannot auto detect unique set_type from analysis logic name:\t$logic_name\n",  
                 'Please defined the set_type analysis_parameter or rename analysis.');
         }
         
@@ -79,7 +79,7 @@ sub fetch_input {   # fetch parameters...
     }
     
     if(! defined $set_type){
-      throw("Cannot auto detect unique set_type from analysis logic name:\t$lname\n",  
+      throw("Cannot auto detect unique set_type from analysis logic name:\t$logic_name\n",  
             'Please defined the set_type analysis_parameter or rename analysis.'); 
     } 
     
@@ -261,19 +261,19 @@ sub run {   # Check parameters and do appropriate database/file operations...
   
   #For set_ids and set_names, catch undef return types
   if($self->set_ids || $self->set_names){
-    my ($ids_or_names, $method);
+    my ($ids_or_names, $fetch_method);
   
     if($self->set_ids){
-      $method       = 'fetch_by_dbID'; 
+      $fetch_method       = 'fetch_by_dbID'; 
       $ids_or_names = $self->set_ids; 
     }
     else{
       $ids_or_names = $self->set_names; 
-      $method = 'fetch_by_name';
+      $fetch_method = 'fetch_by_name';
     }
     
     foreach my $var(@{$ids_or_names}){
-      my $set = $set_adaptor->$method($var);
+      my $set = $set_adaptor->$fetch_method($var);
       
       if(! defined $set ){
         push @failed, $var;
@@ -556,6 +556,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
       if($branch){
 
         if($no_write){
+        #if(1){
           my $txt   = 'Experiments identified (';
           my $ctrls = '';
           
