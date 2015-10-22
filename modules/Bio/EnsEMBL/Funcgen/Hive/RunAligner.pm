@@ -74,7 +74,14 @@ sub fetch_input {   # fetch parameters...
   #Do we even need this? The fastq chunks will already be in a work dir?  
 
   my $logic_name = $self->param_required('analysis');
-  my $analysis   = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($logic_name);
+  #my $analysis   = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($logic_name);
+  my $analysis   = $self->out_db->get_AnalysisAdaptor->fetch_by_logic_name($logic_name);
+  
+#   use Data::Dumper;
+#   print Dumper($self->db);
+  
+  # $self->db is the hive adaptor
+  
   #program is no passed to Aligner so validate here
   my $aligner      = $analysis->program || 
     throw('Aligner analysis cannot have an undef program attribute:'.$analysis->logic_name);
