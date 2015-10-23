@@ -218,7 +218,7 @@ sub main{
     #init the pipline with the first conf
     my $first_conf = shift @confs;
     $cmd = "perl $hive_script_dir/init_pipeline.pl ".
-      "Bio::EnsEMBL::Funcgen::Hive::Config::${first_conf} $pipeline_params";
+      "Bio::EnsEMBL::Funcgen::Hive::Config::${first_conf} $pipeline_params -hive_force_init 1";
 
     print "\n\nDATABASE NOT FOUND...CREATING & INITIALISING HIVE DATABASE:\t".$pdb_params->{'-dbname'}."\n";
     run_system_cmd($cmd);
