@@ -235,7 +235,7 @@ sub process_features {
   while( ($feature_hash = $self->$parse_method) &&
          defined $feature_hash ){
     
-    $error_message = $process_cref->(@$process_args, $feature_hash);
+    my $error_message = $process_cref->(@$process_args, $feature_hash);
 
     if (defined $error_message) {
       push @retvals, $error_message;
