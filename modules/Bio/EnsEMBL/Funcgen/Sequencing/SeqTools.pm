@@ -53,6 +53,7 @@ use vars qw( @EXPORT );
   get_files_by_formats
   load_experiments_into_tracking_db
   merge_bams
+  merge_bams_with_picard
   modify_files_txt_for_regulation
   post_process_IDR
   pre_process_IDR
@@ -467,6 +468,7 @@ sub merge_bams{
   #piping like this may cause errors downstream of the pipe to be missed
   #could we try doing an open on the piped cmd to try and catch a SIGPIPE?
   warn "Merging with:\n$cmd\n" if $debug;
+  die;
   run_system_cmd($cmd);
   
   # samtools merge can create a truncated file which lacks an EOF marker
@@ -493,6 +495,120 @@ sub merge_bams{
 
   return;
 }
+
+sub merge_bams_with_picard {
+  my $outfile     = shift;
+  my $sam_ref_fai = shift;
+  my $bams        = shift;
+  my $params      = shift || {};
+  assert_ref($bams, 'ARRAY', 'bam files');
+
+  if(! scalar(@$bams)){
+    throw('Must provide an arrayref of bam files to merge');
+  }
+
+  my $out_flag = '';
+
+  if(! defined $outfile){
+    throw('Output file argument is not defined');
+  }
+  elsif($outfile !~ /\.(?:bam|sam)$/xo){
+    #?: does not assign to $1
+    $out_flag = 'b' if $1 eq 'bam';
+    throw('Output file argument must have a sam or bam file suffix');
+  }
+
+  assert_ref($params, 'HASH');
+  my $debug       = (exists $params->{debug})        ? $params->{debug}       : 0;
+  my $no_rmdups   = (exists $params->{no_rmdups})    ? $params->{no_rmdups}   : undef;
+  my $no_checksum  = (exists $params->{no_checksum}) ? $params->{no_checksum} : undef;
+  warn "merge_bam_params are:\n".dump_data($params)."\n" if $debug;
+
+  my $view_header_opt;
+
+  for(@$bams){
+    my $tmp_opt = validate_sam_header($_, $sam_ref_fai, 1, $params);
+    $view_header_opt = $tmp_opt if $tmp_opt;
+  }
+
+  my $cmd = '';
+
+  my $skip_merge = 0;
+
+  if(scalar(@$bams) == 1){
+    #samtools merge cannot handle a single input!
+    #Instead it throws a seemingly completely unrelated error message:
+    #Note: Samtools' merge does not reconstruct the @RG dictionary in the header. Users
+    #  must provide the correct header with -h, or uses Picard which properly maintains
+    #  the header dictionary in merging.
+
+    #Rather than having the caller have to handle this, let's just do the expected thing here
+    #and warn.
+    $skip_merge = 1;
+    warn 'Only 1 bam file has been specified, merge will be skipped, '.
+      "otherwise file will be processed accordingly\n";
+  }
+  
+  my $merged_bam_file = "${outfile}.merged.bam";
+
+  if ($skip_merge) {
+    # Nothing to do
+    $cmd = "mv ".$bams->[0]." $merged_bam_file";
+  } else {
+    $cmd = 'samtools merge - '.join(' ', @$bams) . " > $merged_bam_file";
+  }
+  warn "Running\n$cmd\n" if $debug;
+  run_system_cmd($cmd);
+  
+  my $duplicate_removed_bam_file = "${outfile}.merged_no_dups.bam";
+  my $metrics_file = "${outfile}.merged_duplication_removal_metrics.tab";
+
+  if( $no_rmdups ) {
+  
+    # Nothing to do
+    $cmd = "mv $merged_bam_file $duplicate_removed_bam_file";
+    
+  } else {
+
+    $cmd = qq(java -jar /nfs/users/nfs_m/mn1/work_dir_cttv/picard/dist/picard.jar MarkDuplicates REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=LENIENT ) 
+    . qq( INPUT=$merged_bam_file ) 
+    . qq( OUTPUT=$duplicate_removed_bam_file ) 
+    . qq( METRICS_FILE=$metrics_file );
+
+  }
+  warn "Running\n$cmd\n" if $debug;
+  run_system_cmd($cmd);
+
+  if($view_header_opt) {
+    $cmd = "samtools view -t $sam_ref_fai -h${out_flag} $duplicate_removed_bam_file > $outfile";
+  } else {  
+    # Nothing to do
+    $cmd = "mv $duplicate_removed_bam_file $outfile";
+  }
+  warn "Running\n$cmd\n" if $debug;
+  run_system_cmd($cmd);
+
+  if ($debug) {
+    warn "Finished merge to $outfile\n";
+    warn "Not deleting intermediary files. ($merged_bam_file, $duplicate_removed_bam_file, $metrics_file)\n";
+  } else {
+    if (-e $merged_bam_file) {
+      warn "Removing $merged_bam_file\n";
+      unlink($merged_bam_file);
+    }
+    if (-e $duplicate_removed_bam_file) {
+      warn "Removing $duplicate_removed_bam_file\n";
+      unlink($merged_bam_file);
+    }
+#     if (-e $metrics_file) {
+#       warn "Removing $metrics_file\n";
+#       unlink($metrics_file);
+#     }
+    
+  }
+  return;
+}
+
 
 
 
@@ -528,6 +644,8 @@ sub process_sam_bam {
   #undef checksum here mean try and find one to validate
   #but then we don't write one
 
+  delete $params->{checksum};
+  
   if(! ($in_file = check_file($sam_bam_path, undef, $params)) ){
     throw("Cannot find file:\n\t$sam_bam_path");
   }
@@ -905,6 +1023,8 @@ sub get_files_by_formats {
     #This is being undefd after we filter, so hence, might pick up a pre-exising file!
     if(! defined $filter_format){
 
+    delete $params->{checksum};
+    
        if(my $from_path = check_file($path.'.'.$format, 'gz', $params)){#we have found the required format
           #warn "Found:\t $from_path";
           $done_formats->{$format} = $from_path;
@@ -1095,7 +1215,8 @@ sub convert_sam_to_bed{
   }
 
   (my $bed_file = $in_file) =~ s/\.sam(\.gz)*?$/.bed/;
-  run_system_cmd($ENV{EFG_SRC}."/scripts/miscellaneous/sam2bed.pl -1_based -files $in_file");
+  #run_system_cmd($ENV{EFG_SRC}."/scripts/miscellaneous/sam2bed.pl -1_based -files $in_file");
+   run_system_cmd("/nfs/users/nfs_n/nj1/src/ensembl-funcgen/scripts/miscellaneous/sam2bed.pl -1_based -files $in_file");
 
   if(exists $params->{checksum}){
     #Currently just having this exist turns on write & validation
@@ -1269,6 +1390,9 @@ sub _init_peak_caller{
     if(! defined $align_prefix){
       throw('Must pass an -align_prefix in -analysis mode');
     }
+    
+    my $module = $analysis->module;
+    print "---------------------> module = $module\n";
 
     $peak_module = validate_package_path($analysis->module);
     my $formats = $peak_module->input_formats;
