@@ -1651,7 +1651,12 @@ sub check_analysis_can_run{
   if((defined $check) && $check){
     #Might be undef, in which case we can run
     #Not false i.e. not 0 but can be a string
-    my $lname     = $self->analysis->logic_name;
+    #my $lname     = $self->analysis->logic_name;
+    
+    my $input_job = $self->input_job;
+    
+    my $lname     = $input_job->analysis->logic_name;
+    
     my $run_param = 'can_'.$lname; 
     $can_run      = $self->param_required($run_param);
    
