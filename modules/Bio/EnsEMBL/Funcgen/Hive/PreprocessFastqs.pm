@@ -160,8 +160,8 @@ sub run {
     }
   }
   elsif($rset->has_status('ALIGNED')){
-    throw("Need to implement force/recover_alignment. Found ALIGNED ResultSet:\t".
-    $rset->name."\n");
+#     throw("Need to implement force/recover_alignment. Found ALIGNED ResultSet:\t".
+#     $rset->name."\n");
   }
   
   my @fastqs;
