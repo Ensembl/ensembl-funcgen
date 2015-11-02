@@ -291,8 +291,8 @@ sub pipeline_analyses {
        '2->A' => ['Run_bwa_samse_control_chunk'],
        'A->3' => ['MergeControlAlignments_and_QC'],
        },
-     -batch_size => 1, 
-     -analysis_capacity => 1,
+     -batch_size => 1, #max parallelisation???
+     -analysis_capacity => 200,
      -rc_name => 'normal_high_mem'},
 
 
@@ -305,7 +305,7 @@ sub pipeline_analyses {
        'A->3' => [ 'MergeAlignments_and_QC' ], #This is in Peaks.pm conf
        },
      -batch_size => 1, #max parallelisation???
-     -analysis_capacity => 1,
+     -analysis_capacity => 200,
      -rc_name => 'normal_high_mem'},
 
 
@@ -318,7 +318,7 @@ sub pipeline_analyses {
        'A->3' => [ 'MergeReplicateAlignments_and_QC' ],
        },
      -batch_size => 1, #max parallelisation???
-     -analysis_capacity => 1,
+     -analysis_capacity => 200,
      -rc_name => 'normal_high_mem'},
 
 
@@ -332,15 +332,13 @@ sub pipeline_analyses {
     {-logic_name => 'Run_bwa_samse_control_chunk',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunAligner',
      -batch_size => 1, #max parallelisation???
-     -analysis_capacity => 200,
-     -priority => 10,
+     -analysis_capacity => 1000,
      -rc_name => 'normal_10gb'},
 
     {-logic_name => 'Run_bwa_samse_merged_chunk',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunAligner',
      -batch_size => 1, #max parallelisation???
-     -analysis_capacity => 200,
-     -priority => 10,
+     -analysis_capacity => 1000,
      -rc_name => 'normal_10gb'},
 
     {-logic_name => 'Run_bwa_samse_replicate_chunk',
@@ -348,8 +346,7 @@ sub pipeline_analyses {
      # These jobs can be run in parallell... don't put too many since it may generate many jobs...jobs!
      #-limit => 1,#what is this?
      -batch_size => 1, #max parallelisation? Although probably want to up this so we don't hit pending time
-     -analysis_capacity => 200,
-     -priority => 10,
+     -analysis_capacity => 1000,
      -rc_name => 'normal_10gb'},
 
 
@@ -400,9 +397,8 @@ sub pipeline_analyses {
        '11->A' => ['Preprocess_bwa_samse_replicate'],
        },
      -batch_size => 1, #max parallelisation
-     -analysis_capacity => 20,
-     -priority => 20,
-     -rc_name => 'normal_5GB_2cpu_monitored',
+     -analysis_capacity => 200,
+     -rc_name => 'normal_30GB_2cpu',
     },
 
 
@@ -411,9 +407,8 @@ sub pipeline_analyses {
      -parameters => {flow_mode => 'merged'},
      -flow_into => { 2 => ['DefineMergedDataSet']},
      -batch_size => 1, #max parallelisation
-     -analysis_capacity => 20,
-     -priority => 20,
-     -rc_name => 'normal_5GB_2cpu_monitored',
+     -analysis_capacity => 200,
+     -rc_name => 'normal_30GB_2cpu',
     },
 
 
@@ -427,9 +422,8 @@ sub pipeline_analyses {
      #peaks analyses encoded from 100
      -flow_into => {'100' => ['run_SWEmbl_R0005_replicate']},
      -batch_size => 1, #max parallelisation
-     -analysis_capacity => 20,
-     -priority => 20,
-     -rc_name => 'normal_5GB_2cpu_monitored',
+     -analysis_capacity => 200,
+     -rc_name => 'normal_30GB_2cpu',
 
      #This will definitely have to write some accu data
      #such that Run_IDR can pick up on any QC failures
