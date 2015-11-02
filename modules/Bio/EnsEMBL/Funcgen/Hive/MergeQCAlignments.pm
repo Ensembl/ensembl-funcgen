@@ -128,7 +128,7 @@ sub run {
     $cmd = 'rm -f '.join(' ', @{$self->fastq_files});
     $self->helper->debug(3, "Removing fastq chunks:\n$cmd");
     #mnuhn
-    #run_system_cmd($cmd, 1);
+    run_system_cmd($cmd, 1);
   }
   
   ### MERGE BAMS ###

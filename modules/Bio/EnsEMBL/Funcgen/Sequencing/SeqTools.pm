@@ -468,7 +468,7 @@ sub merge_bams{
   #piping like this may cause errors downstream of the pipe to be missed
   #could we try doing an open on the piped cmd to try and catch a SIGPIPE?
   warn "Merging with:\n$cmd\n" if $debug;
-  die;
+  # die;
   run_system_cmd($cmd);
   
   # samtools merge can create a truncated file which lacks an EOF marker
