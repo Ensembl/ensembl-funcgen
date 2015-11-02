@@ -570,7 +570,10 @@ sub merge_bams_with_picard {
     
   } else {
 
-    $cmd = qq(java -jar /nfs/users/nfs_m/mn1/work_dir_cttv/picard/dist/picard.jar MarkDuplicates REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=LENIENT ) 
+    # Picatd must be in the classpath before running this module, e.g. like this:
+    # export CLASSPATH=/software/ensembl/funcgen/picard.jar
+    #
+    $cmd = qq(java picard.cmdline.PicardCommandLine MarkDuplicates REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=LENIENT ) 
     . qq( INPUT=$merged_bam_file ) 
     . qq( OUTPUT=$duplicate_removed_bam_file ) 
     . qq( METRICS_FILE=$metrics_file );
