@@ -62,7 +62,7 @@ sub fetch_input {
   
   $self->SUPER::fetch_input();
   my $rset = $self->fetch_Set_input('ResultSet');
-  $self->param_required('archive_root');#Do this here to fail early
+  #$self->param_required('archive_root');#Do this here to fail early
   #make this optional, as not everybody will want
   
   $self->get_param_method('output_dir', 'required');
@@ -121,12 +121,14 @@ sub run {
   my $sam_header = $self->sam_header;
   my $cmd;
   
+  
   ### CLEAN FASTQS ###
   if($self->fastq_files){
     #Run with no exit flag so we don't fail on retry
     $cmd = 'rm -f '.join(' ', @{$self->fastq_files});
     $self->helper->debug(3, "Removing fastq chunks:\n$cmd");
-    run_system_cmd($cmd, 1);
+    #mnuhn
+    #run_system_cmd($cmd, 1);
   }
   
   ### MERGE BAMS ###
@@ -136,7 +138,11 @@ sub run {
   #sam_header here is really optional if is probably present in each of the bam files but maybe incomplete 
   my @bam_files  = @{$self->bam_files};
      
-  merge_bams($unfiltered_bam, 
+#   merge_bams($unfiltered_bam, 
+#              $self->sam_ref_fai($rset->cell_type->gender), 
+#              \@bam_files, 
+#              {debug          => $self->debug});
+  merge_bams_with_picard($unfiltered_bam, 
              $self->sam_ref_fai($rset->cell_type->gender), 
              \@bam_files, 
              {debug          => $self->debug});
@@ -188,7 +194,7 @@ sub run {
   #alignement log for the unfiltered file
   #We would have to re-instate an unfiltered file if we ever introduce
   #more filtering filtering                                                
-  $self->archive_files([$unfiltered_bam, $unfiltered_bam.'.CHECKSUM'], 1);#mandatory flag
+  #$self->archive_files([$unfiltered_bam, $unfiltered_bam.'.CHECKSUM'], 1);#mandatory flag
   
   my %batch_params = %{$self->batch_params};
   my $flow_mode    = $self->flow_mode;
@@ -240,7 +246,10 @@ sub run {
       for my $i(0...$#{$rset_groups->{$rset_group}{dbIDs}}){
         push @rep_or_merged_jobs, 
           {%batch_params,
+          
+          # mnuhn: Something is going wrong during the merge, so deactivating garbage collection to make it rerunnable.
            garbage     => \@bam_files, 
+           
            #Passing rep bam here prevent us from redoing the peak calling
            #Disable? Or wait till we restructure and only ever keep the rep bams
            set_type    => 'ResultSet',
