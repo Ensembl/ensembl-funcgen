@@ -2730,7 +2730,7 @@ sub write_chr_length_file{
   }
 
   foreach my $slice (@{$slices}) {
-    print $fh join("\t", ($slice->seq_region_name, $slice->end - $slice->start + 1)) . "\n";
+    print $fh join("\t", ($slice->seq_region_name, $slice->length)) . "\n";
   }
 
   close $fh;
