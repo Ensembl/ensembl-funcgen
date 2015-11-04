@@ -40,7 +40,7 @@ use warnings;
 use strict;
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
 use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( validate_package_path );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( validate_package_path run_system_cmd );
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
   #We need a list of Aligner specific param requirements which are not specified
