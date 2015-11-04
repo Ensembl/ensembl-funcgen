@@ -147,6 +147,9 @@ sub run {
              {debug          => $self->debug});
   
   # This should fail, if there is any problem with the bam file.
+  $cmd = qq(samtools index $unfiltered_bam);
+  run_system_cmd($cmd, undef, 1);
+
   $cmd = qq(samtools idxstats $unfiltered_bam);
   run_system_cmd($cmd, undef, 1);
   
