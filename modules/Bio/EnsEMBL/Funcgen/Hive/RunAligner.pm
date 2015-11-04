@@ -161,12 +161,18 @@ sub fetch_input {   # fetch parameters...
 
 sub run {
   my $self = shift;
+  
+  my $bam_file;
     
-  if(! eval { $self->aligner->run; 1; }){
+  if(! eval { $bam_file = $self->aligner->run; 1; }){
     my $err = $@;
     $self->throw_no_retry('Failed to call run on '.ref($self->aligner)."\n$err"); 
   }
   
+  # This should fail, if there is any problem with the bam file.
+  $cmd = qq(samtools idxstats $bam_file);
+  run_system_cmd($cmd, undef, 1);
+
   $self->debug(1, "Finished running ".ref($self->aligner));
   return;
 }
