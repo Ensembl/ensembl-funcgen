@@ -127,7 +127,6 @@ sub run {
     #Run with no exit flag so we don't fail on retry
     $cmd = 'rm -f '.join(' ', @{$self->fastq_files});
     $self->helper->debug(3, "Removing fastq chunks:\n$cmd");
-    #mnuhn
     run_system_cmd($cmd, 1);
   }
   
@@ -146,6 +145,10 @@ sub run {
              $self->sam_ref_fai($rset->cell_type->gender), 
              \@bam_files, 
              {debug          => $self->debug});
+  
+  # This should fail, if there is any problem with the bam file.
+  $cmd = qq(samtools idxstats $unfiltered_bam);
+  run_system_cmd($cmd, undef, 1);
   
   ### ALIGNMENT REPORT ### 
   #todo convert this to wite to a result_set_report table
