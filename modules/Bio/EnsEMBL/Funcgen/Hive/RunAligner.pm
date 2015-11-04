@@ -170,7 +170,10 @@ sub run {
   }
   
   # This should fail, if there is any problem with the bam file.
-  my $cmd = qq(samtools idxstats $bam_file);
+  my $cmd = qq(samtools index $bam_file);
+  run_system_cmd($cmd, undef, 1);
+  
+  $cmd = qq(samtools idxstats $bam_file);
   run_system_cmd($cmd, undef, 1);
 
   $self->debug(1, "Finished running ".ref($self->aligner));
