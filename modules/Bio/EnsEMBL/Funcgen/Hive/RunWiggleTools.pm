@@ -156,6 +156,10 @@ sub run {
 
     # This is now in /tmp, so maybe add to DESTROY?
     $output       = $self->output_prefix.'.bw';
+    
+    # bigWigToWig can't cope with colons, so replacing with underscores
+    $output =~ s/:/_/g;
+    
     $reformat_cmd = ' | wigToBigWig -fixedSummaries stdin '.$tmpfiles[0].' '.$output;
   }
   else{
