@@ -568,22 +568,42 @@ sub merge_bams_with_picard {
     # Nothing to do
     $cmd = "mv $merged_bam_file $duplicate_removed_bam_file";
     
+    warn "Running\n$cmd\n";
+    run_system_cmd($cmd);
+
   } else {
 
     # Picatd must be in the classpath before running this module, e.g. like this:
     # export CLASSPATH=/software/ensembl/funcgen/picard.jar
     #
-    $cmd = qq(java picard.cmdline.PicardCommandLine MarkDuplicates REMOVE_DUPLICATES=true VALIDATION_STRINGENCY=LENIENT ) 
+    # The output is always a sam file, even if bam was specified.
+    #
+    $cmd = qq(java picard.cmdline.PicardCommandLine MarkDuplicates ) 
+    . qq( REMOVE_DUPLICATES=true ) 
+    . qq( VALIDATION_STRINGENCY=LENIENT ) 
+    . qq( ASSUME_SORTED=true ) 
     . qq( INPUT=$merged_bam_file ) 
-    . qq( OUTPUT=$duplicate_removed_bam_file ) 
+    . qq( OUTPUT=${duplicate_removed_bam_file}.sam ) 
     . qq( METRICS_FILE=$metrics_file );
 
+    warn "Running\n$cmd\n";
+    run_system_cmd($cmd);
+    
+    # Convert to bam here.
+    #
+    $cmd = qq(java picard.cmdline.PicardCommandLine SamFormatConverter ) 
+    . qq( INPUT=${duplicate_removed_bam_file}.sam ) 
+    . qq( VALIDATION_STRINGENCY=LENIENT ) 
+    . qq( OUTPUT=$duplicate_removed_bam_file );
+
+    warn "Running\n$cmd\n";
+    run_system_cmd($cmd);
   }
-  warn "Running\n$cmd\n" if $debug;
-  run_system_cmd($cmd);
 
   if($view_header_opt) {
-    $cmd = "samtools view -t $sam_ref_fai -h${out_flag} $duplicate_removed_bam_file > $outfile";
+    # -b is important or we get a sam file here.
+    #
+    $cmd = "samtools view -b -t $sam_ref_fai -h${out_flag} $duplicate_removed_bam_file > $outfile";
   } else {  
     # Nothing to do
     $cmd = "mv $duplicate_removed_bam_file $outfile";
@@ -593,7 +613,7 @@ sub merge_bams_with_picard {
 
   if ($debug) {
     warn "Finished merge to $outfile\n";
-    warn "Not deleting intermediary files. ($merged_bam_file, $duplicate_removed_bam_file, $metrics_file)\n";
+    warn "Not deleting intermediary files. ($merged_bam_file, $duplicate_removed_bam_file, $metrics_file, ${duplicate_removed_bam_file}.sam)\n";
   } else {
     if (-e $merged_bam_file) {
       warn "Removing $merged_bam_file\n";
@@ -602,6 +622,10 @@ sub merge_bams_with_picard {
     if (-e $duplicate_removed_bam_file) {
       warn "Removing $duplicate_removed_bam_file\n";
       unlink($merged_bam_file);
+    }
+    if (-e "${duplicate_removed_bam_file}.sam") {
+      warn "Removing ${duplicate_removed_bam_file}.sam\n";
+      unlink("${duplicate_removed_bam_file}.sam");
     }
 #     if (-e $metrics_file) {
 #       warn "Removing $metrics_file\n";
@@ -2731,6 +2755,7 @@ sub write_chr_length_file{
 
   foreach my $slice (@{$slices}) {
      if ($slice->seq_region_name eq 'Y') {
+       print $fh join("\t", ('chromosome:GRCh38:Y:1:57227415:1', 57227415)) . "\n";
        print $fh join("\t", ($slice->seq_region_name, 57227415)) . "\n";
      } else {
        print $fh join("\t", ($slice->seq_region_name, $slice->end - $slice->start + 1)) . "\n";
