@@ -172,7 +172,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
   my $fset_anal = $self->param('feature_set_analysis');
   my $set_prefix = get_set_prefix_from_Set($rset);
   my $set;    
-    
+  
   # Never set -FULL_DELETE here!
   # It is unwise to do this in a pipeline and should be handled
   # on a case by case basis using a separate rollback script    
