@@ -115,6 +115,7 @@ sub _are_signals{
 sub run {   # Check parameters and do appropriate database/file operations... 
   my $self         = shift;
   my $helper       = $self->helper;
+  
   my $rset_adaptor = $self->out_db->get_ResultSetAdaptor;
   my $issets       = $self->input_subset_ids;  
   my $ctrls        = [];  
@@ -144,27 +145,6 @@ sub run {   # Check parameters and do appropriate database/file operations...
     }
     
     $control_branch = 'Preprocess_'.$align_lname.'_control';
-    
-    
-    #Test control Experiment is ALIGNED_CONTROL
-    #if it has already been aligned then only submit then 
-    #undef the $control_branch and things should just flow directly
-    #onto the correct analyses
-    
-    #How are we going to handle rollback of the control alignments?
-    #This would require a rollback of all dependant data!
-    
-    
-    
-    #if it is ALIGNING_CONTROL
-    #Then we need to exit here
-    #it would be nice to set a retry perioud for this
-    #We need to output some query to enable easy polling of the 
-    #DB to allow identification of when the 
-    
-    
-    #We need to validate they are all from the same experiment, 
-    #although this os done in IdentifySetInputs?
     
     my %exps;
     
