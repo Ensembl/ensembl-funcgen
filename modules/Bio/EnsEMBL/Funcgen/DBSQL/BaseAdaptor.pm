@@ -340,8 +340,15 @@ sub store_states{
   my $states   = shift || [];
   assert_ref($storable, 'Bio::EnsEMBL::Funcgen::Storable');
   assert_ref($states, 'ARRAY', 'optional states');
+  
+  return unless (defined $states);
 
-  foreach my $state((@{$storable->get_all_states()}, @$states)){
+  my $all_states = $storable->get_all_states();
+  if (defined $all_states) {
+    push @$states, @$all_states;
+  }
+  
+  foreach my $state(@$states){
     
     if (! $self->has_stored_status($state, $storable)){
       $self->store_status($state, $storable) 
@@ -490,6 +497,12 @@ sub fetch_all_states{
   my $table = $self->_test_funcgen_table($obj);
   my $sql = "SELECT name FROM status_name sn, status s WHERE s.table_name='$table' ".
     "AND s.table_id='".$obj->dbID()."' and s.status_name_id=sn.status_name_id";
+  
+#   print "\n\n---------------------------------------\n\n";
+#   print "Sql to fetch the states:\n";
+#   print "\n\n$sql\n\n";
+#   print "\n\n---------------------------------------\n\n";
+  
   my @states = map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
 
   return \@states;
