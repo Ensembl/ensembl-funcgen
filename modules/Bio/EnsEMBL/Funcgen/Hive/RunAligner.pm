@@ -169,9 +169,21 @@ sub run {
     $self->throw_no_retry('Failed to call run on '.ref($self->aligner)."\n$err"); 
   }
   
-  # This should fail, if there is any problem with the bam file.
-  my $cmd = qq(samtools index $bam_file);
-  run_system_cmd($cmd, undef, 1);
+  my $cmd = qq(java picard.cmdline.PicardCommandLine CheckTerminatorBlock ) 
+  . qq( INPUT=$bam_file );
+
+  warn "Running\n$cmd\n";
+  run_system_cmd($cmd);
+
+#   # This should fail, if there is any problem with the bam file.
+#   $cmd = qq(samtools index $bam_file);
+#   run_system_cmd($cmd, undef, 1);
+  $cmd = qq(java picard.cmdline.PicardCommandLine BuildBamIndex ) 
+        . qq( VALIDATION_STRINGENCY=LENIENT ) 
+  . qq( INPUT=$bam_file );
+
+  warn "Running\n$cmd\n";
+  run_system_cmd($cmd);
   
   $cmd = qq(samtools idxstats $bam_file);
   run_system_cmd($cmd, undef, 1);
