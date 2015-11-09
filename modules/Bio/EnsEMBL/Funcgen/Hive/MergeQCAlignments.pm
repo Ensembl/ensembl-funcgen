@@ -133,22 +133,55 @@ sub run {
   ### MERGE BAMS ###
   my $file_prefix  = $self->get_alignment_path_prefix_by_ResultSet($rset, $self->run_controls); 
   my $unfiltered_bam     = $file_prefix.'.unfiltered.bam';
+  
+  #my $unfiltered_unsorted_bam     = $file_prefix.'.unsorted.bam';
+  
   $self->helper->debug(1, "Merging bams to:\t".$unfiltered_bam); 
   #sam_header here is really optional if is probably present in each of the bam files but maybe incomplete 
   my @bam_files  = @{$self->bam_files};
-     
-#   merge_bams($unfiltered_bam, 
-#              $self->sam_ref_fai($rset->cell_type->gender), 
-#              \@bam_files, 
-#              {debug          => $self->debug});
-  merge_bams_with_picard($unfiltered_bam, 
-             $self->sam_ref_fai($rset->cell_type->gender), 
-             \@bam_files, 
-             {debug          => $self->debug});
   
+#   if (! -e $unfiltered_bam) {
+    merge_bams_with_picard($unfiltered_bam, 
+              $self->sam_ref_fai($rset->cell_type->gender), 
+              \@bam_files, 
+              {debug          => $self->debug});
+#   } else {
+#   
+#     warn("The bam file $unfiltered_bam already exists, so skipping the merge.");
+#   
+#   }
   # This should fail, if there is any problem with the bam file.
-  $cmd = qq(samtools index $unfiltered_bam);
-  run_system_cmd($cmd, undef, 1);
+
+  # Old syntax has to be used, because the new one does not work.
+  # This creates a file with the name in $unfiltered_bam
+  # The file should be sorted already, but samtools index (version 1.2) fails 
+  # silently on it with exit code zero.
+  #
+#   if (! -e $unfiltered_bam) {
+#     $cmd = qq(samtools sort $unfiltered_unsorted_bam ${file_prefix}.unfiltered);
+#     run_system_cmd($cmd, undef, 1);
+#   } else {
+#     warn("The sorted bam file $unfiltered_bam already exists, so skipping the merge step.");
+#   }
+
+#   $cmd = qq(samtools index $unfiltered_bam);
+#   run_system_cmd($cmd, undef, 1);
+
+
+  $cmd = qq(java picard.cmdline.PicardCommandLine CheckTerminatorBlock ) 
+    . qq( VALIDATION_STRINGENCY=LENIENT ) 
+  . qq( INPUT=$unfiltered_bam );
+
+  warn "Running\n$cmd\n";
+  run_system_cmd($cmd);
+  
+  $cmd = qq(java picard.cmdline.PicardCommandLine BuildBamIndex ) 
+      . qq( VALIDATION_STRINGENCY=LENIENT ) 
+
+  . qq( INPUT=$unfiltered_bam );
+
+  warn "Running\n$cmd\n";
+  run_system_cmd($cmd);
 
   $cmd = qq(samtools idxstats $unfiltered_bam);
   run_system_cmd($cmd, undef, 1);
@@ -220,7 +253,8 @@ sub run {
                      dbID        => $self->ResultSet->dbID);
 
     if(! $self->debug){
-      $output_id{garbage} = \@bam_files;   
+      #$output_id{garbage} = [@bam_files, $unfiltered_unsorted_bam];
+      $output_id{garbage} = [@bam_files];
     }
     else{  #Do not garbage collect in debug mode. In case we need to rerun.
       warn "Skipping garbage collection for:\n".join("\n\t", @bam_files);
