@@ -139,6 +139,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
     $ctrls = &scalars_to_objects($self->out_db, 'InputSubset',
                                                 'fetch_by_dbID',
                                                 $controls);
+    
     if(! &_are_controls($ctrls)){
       throw("Found unexpected non-control InputSubsets specified as controls\n\t".
         join("\n\t", map($_->name, @$ctrls)));
@@ -156,34 +157,8 @@ sub run {   # Check parameters and do appropriate database/file operations...
       throw("Failed to identify a unique control Experiment for :\n".
         join(' ', keys(%exps)));  
     }
-    
     my ($exp) = values(%exps);#We only have one
-    
-    if ($exp->has_status('ALIGNED_CONTROL')){
-        $self->helper->debug(1, 'Skipping control processing as '.$exp->name.
-          ' Experiment has ALIGNED_CONTROL status');
-        $control_branch = '' 
-    }
-    else{
-      #Potential race condition here will fail on store
-      
-      if($exp->has_status('ALIGNING_CONTROL')){
-        $self->input_job->transient_error(0); #So we don't retry  
-        #Would be nice to set a retry delay of 60 mins
-        throw($exp->name.' is in the ALIGNING_CONTROL state, another job may already be aligning these controls'.
-          "\nPlease wait until ".$exp->name.' has the ALIGNED_CONTROL status before resubmitting this job');
-      }
-      
-      $exp->adaptor->store_status('ALIGNING_CONTROL', $exp); 
-      
-      #todo check success of this in case another job has pipped us
-       
-    }  
   }
-                                             
-  
-  #validate all input_subsets before we start creating anything, such that rerunning the job will be clean
-  
  
   my (%rsets, %rep_bams);
        
