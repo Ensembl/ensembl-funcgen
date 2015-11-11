@@ -1179,9 +1179,18 @@ sub branch_job_group{
   $fan_branch_codes = [$fan_branch_codes] if ! ref($fan_branch_codes);
   my $fan_branch    = $self->_get_branch_number($fan_branch_codes, $branch_config); 
   #this also asserts_ref for $fan_branch_codes
+  
+  if (!defined $fan_branch) {
+    use Carp;
+    use Data::Dumper;
+    confess(
+      "Can't find fan branch for (" 
+      . Dumper( [ $fan_branch_codes, $branch_config ] )
+      . ")");
+  }
     
   $self->helper->debug(1, "Branching ".scalar(@$fan_jobs).
-    " to branch(es) $fan_branch(codes=".join(' ', @$fan_branch_codes).')');
+    " jobs to branch(es) $fan_branch(codes=".join(' ', @$fan_branch_codes).')');
     
   if(! (check_ref($fan_jobs, 'ARRAY') &&
         scalar(@$fan_jobs) > 0)){
@@ -1271,8 +1280,7 @@ sub dataflow_job_groups{
       #why are we only getting 1 job in the group here?
       #is this how preprocess flows them?
     
-      #warn "Dataflowing ".scalar(@$id_array)." on branch $branch";
-    
+      warn "Dataflowing ".scalar(@$id_array)." jobs to branch $branch";
     
       $self->dataflow_output_id($id_array, $branch);  
       
