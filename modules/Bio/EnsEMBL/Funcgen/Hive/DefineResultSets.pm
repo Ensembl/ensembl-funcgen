@@ -246,7 +246,19 @@ sub run {   # Check parameters and do appropriate database/file operations...
     }
     
     #Reset if we have controls    
-    $branch = $control_branch if $control_branch;
+    #$branch = $control_branch if $control_branch;
+    
+    # Don't use control branch, if merge_idr_reps is set. In this case this 
+    # module is being used in the DefineMergedReplicateResultSet analysis. 
+    # This module also backs the DefineResultSets analysis. In the future, 
+    # this module should be split into two modules for each of the two 
+    # analyses. Until then, setting merge_idr_reps serves to tell the module, 
+    # which analysis it is currently running.
+    # 
+    if ($control_branch && !$merge_idr_reps) {
+      $branch = $control_branch;
+    }
+    
     
     foreach my $rep_set(@rep_sets){ 
       my $rset_name = $parent_set_name;#.'_'.$align_anal->logic_name;
