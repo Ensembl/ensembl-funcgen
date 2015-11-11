@@ -140,33 +140,10 @@ sub run {
   #sam_header here is really optional if is probably present in each of the bam files but maybe incomplete 
   my @bam_files  = @{$self->bam_files};
   
-#   if (! -e $unfiltered_bam) {
-    merge_bams_with_picard($unfiltered_bam, 
-              $self->sam_ref_fai($rset->cell_type->gender), 
-              \@bam_files, 
-              {debug          => $self->debug});
-#   } else {
-#   
-#     warn("The bam file $unfiltered_bam already exists, so skipping the merge.");
-#   
-#   }
-  # This should fail, if there is any problem with the bam file.
-
-  # Old syntax has to be used, because the new one does not work.
-  # This creates a file with the name in $unfiltered_bam
-  # The file should be sorted already, but samtools index (version 1.2) fails 
-  # silently on it with exit code zero.
-  #
-#   if (! -e $unfiltered_bam) {
-#     $cmd = qq(samtools sort $unfiltered_unsorted_bam ${file_prefix}.unfiltered);
-#     run_system_cmd($cmd, undef, 1);
-#   } else {
-#     warn("The sorted bam file $unfiltered_bam already exists, so skipping the merge step.");
-#   }
-
-#   $cmd = qq(samtools index $unfiltered_bam);
-#   run_system_cmd($cmd, undef, 1);
-
+  merge_bams_with_picard($unfiltered_bam, 
+            $self->sam_ref_fai($rset->cell_type->gender), 
+            \@bam_files, 
+            {debug          => $self->debug});
 
   $cmd = qq(java picard.cmdline.PicardCommandLine CheckTerminatorBlock ) 
     . qq( VALIDATION_STRINGENCY=LENIENT ) 
@@ -199,26 +176,6 @@ sub run {
   $self->helper->debug(1, "Generating alignment log with:\n".$cmd);
   run_system_cmd($cmd);
  
-  #Filter and QC here FastQC or FASTX?
-  #filter for MAPQ >= 15 here? before or after QC?
-  #PhantomPeakQualityTools? Use estimate of fragment length in the peak calling?
-
-  warn "Need to implement post alignment QC here. Filter out MAPQ <16. FastQC/FASTX/PhantomPeakQualityTools frag length?";
-  #todo Add ResultSet status setting here!
-  #ALIGNMENT_QC_OKAY
-  #Assuming all QC has passed, set status
-  
-  if($self->run_controls){
-    my $exp = $rset->experiment(1);#control flag
-    $exp->adaptor->store_status('ALIGNED_CONTROL', $exp);
-    $exp->adaptor->revoke_status('ALIGNING_CONTROL', $exp, 1);#validate status flag
-  }
-  else{
-    $rset->adaptor->store_status('ALIGNED', $rset);
-    # Do not set IMPORTED here, as this signifies that the collections have already been written
-    # i.e what would have been importing data into the DB before we moved it out to flat files
-  }
-
   #filter file here to prevent race condition between parallel peak
   #calling jobs which share the same control
   #This will also check the checksum we have just generated, which is a bit redundant
