@@ -165,16 +165,16 @@ sub run {
   
   ### ALIGNMENT REPORT ### 
   #todo convert this to wite to a result_set_report table
-  my $alignment_log = $file_prefix.".alignment.log";
-  $cmd ='echo -en "Alignment QC - samtools flagstat output:\n" > '.$alignment_log.
-    ";samtools flagstat $unfiltered_bam >> $alignment_log;".
-    'echo -en "Alignment QC - mapped reads:\t\t\t\t\t" >> '.$alignment_log.
-    ";samtools view -u -F 4 $unfiltered_bam | samtools flagstat - | head -n 1 >> $alignment_log;".
-    ' echo -en "Alignment QC - reliably aligned reads (mapping quality >= 1):\t" >> '.$alignment_log.
-    ";samtools view -u -F 4 -q 1 $unfiltered_bam | samtools flagstat - | head -n 1 >> $alignment_log";
-  #Maybe do some percentages?
-  $self->helper->debug(1, "Generating alignment log with:\n".$cmd);
-  run_system_cmd($cmd);
+#   my $alignment_log = $file_prefix.".alignment.log";
+#   $cmd ='echo -en "Alignment QC - samtools flagstat output:\n" > '.$alignment_log.
+#     ";samtools flagstat $unfiltered_bam >> $alignment_log;".
+#     'echo -en "Alignment QC - mapped reads:\t\t\t\t\t" >> '.$alignment_log.
+#     ";samtools view -u -F 4 $unfiltered_bam | samtools flagstat - | head -n 1 >> $alignment_log;".
+#     ' echo -en "Alignment QC - reliably aligned reads (mapping quality >= 1):\t" >> '.$alignment_log.
+#     ";samtools view -u -F 4 -q 1 $unfiltered_bam | samtools flagstat - | head -n 1 >> $alignment_log";
+#   #Maybe do some percentages?
+#   $self->helper->debug(1, "Generating alignment log with:\n".$cmd);
+#   run_system_cmd($cmd);
  
   #filter file here to prevent race condition between parallel peak
   #calling jobs which share the same control
