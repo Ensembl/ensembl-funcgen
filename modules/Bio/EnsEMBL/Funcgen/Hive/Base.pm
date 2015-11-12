@@ -1179,9 +1179,18 @@ sub branch_job_group{
   $fan_branch_codes = [$fan_branch_codes] if ! ref($fan_branch_codes);
   my $fan_branch    = $self->_get_branch_number($fan_branch_codes, $branch_config); 
   #this also asserts_ref for $fan_branch_codes
+  
+  if (!defined $fan_branch) {
+    use Carp;
+    use Data::Dumper;
+    confess(
+      "Can't find fan branch for (" 
+      . Dumper( [ $fan_branch_codes, $branch_config ] )
+      . ")");
+  }
     
   $self->helper->debug(1, "Branching ".scalar(@$fan_jobs).
-    " to branch(es) $fan_branch(codes=".join(' ', @$fan_branch_codes).')');
+    " jobs to branch(es) $fan_branch(codes=".join(' ', @$fan_branch_codes).')');
     
   if(! (check_ref($fan_jobs, 'ARRAY') &&
         scalar(@$fan_jobs) > 0)){
@@ -1271,8 +1280,7 @@ sub dataflow_job_groups{
       #why are we only getting 1 job in the group here?
       #is this how preprocess flows them?
     
-      #warn "Dataflowing ".scalar(@$id_array)." on branch $branch";
-    
+      warn "Dataflowing ".scalar(@$id_array)." jobs to branch $branch";
     
       $self->dataflow_output_id($id_array, $branch);  
       
@@ -1762,24 +1770,24 @@ sub sam_header{
 #in non-Hive code
 
 sub get_alignment_path_prefix_by_ResultSet{
-  my ($self, $rset, $control, $validate_aligned) = @_;
+  my ($self, $rset, $control) = @_;
   assert_ref($rset, 'Bio::EnsEMBL::Funcgen::ResultSet');
   my $ctrl_exp = ($control) ? $rset->experiment(1) : undef;
   return if $control && ! $ctrl_exp;
   
-  if($validate_aligned){
-  
-    if($control){
-      if($ctrl_exp && (! $ctrl_exp->has_status('ALIGNED_CONTROL'))){
-        throw('Cannot get control alignment files for a ResultSet('.$rset->name.
-          ') whose Experiment('.$ctrl_exp->name.') does not have the ALIGNED_CONTROL status');
-      }
-    }
-    elsif(! $rset->has_status('ALIGNED')){
-      throw("Cannot get alignment files for ResultSet which does not have ALIGNED status:\t".
-        $rset->name);
-    }
-  }
+#   if($validate_aligned){
+#   
+#     if($control){
+#       if($ctrl_exp && (! $ctrl_exp->has_status('ALIGNED_CONTROL'))){
+#         throw('Cannot get control alignment files for a ResultSet('.$rset->name.
+#           ') whose Experiment('.$ctrl_exp->name.') does not have the ALIGNED_CONTROL status');
+#       }
+#     }
+#     elsif(! $rset->has_status('ALIGNED')){
+#       throw("Cannot get alignment files for ResultSet which does not have ALIGNED status:\t".
+#         $rset->name);
+#     }
+#   }
   
   my @rep_numbers;
   
@@ -1829,7 +1837,8 @@ sub get_alignment_files_by_ResultSet_formats {
     #$align_files = { => validate_path($self->param($file_type)) };
   }
   else{ # Get default file
-    $path = $self->get_alignment_path_prefix_by_ResultSet($rset, $control, 1);#1 is validate aligned flag 
+    #$path = $self->get_alignment_path_prefix_by_ResultSet($rset, $control, 1);#1 is validate aligned flag
+    $path = $self->get_alignment_path_prefix_by_ResultSet($rset, $control);
     $path .= '.unfiltered' if $filter_format;
     
     my $params = {debug              => $self->debug,

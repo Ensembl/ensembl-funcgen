@@ -40,7 +40,7 @@ use warnings;
 use strict;
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
 use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( validate_package_path );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( validate_package_path run_system_cmd );
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
   #We need a list of Aligner specific param requirements which are not specified
@@ -161,12 +161,33 @@ sub fetch_input {   # fetch parameters...
 
 sub run {
   my $self = shift;
+  
+  my $bam_file;
     
-  if(! eval { $self->aligner->run; 1; }){
+  if(! eval { $bam_file = $self->aligner->run; 1; }){
     my $err = $@;
     $self->throw_no_retry('Failed to call run on '.ref($self->aligner)."\n$err"); 
   }
   
+  my $cmd = qq(java picard.cmdline.PicardCommandLine CheckTerminatorBlock ) 
+  . qq( INPUT=$bam_file );
+
+  warn "Running\n$cmd\n";
+  run_system_cmd($cmd);
+
+#   # This should fail, if there is any problem with the bam file.
+#   $cmd = qq(samtools index $bam_file);
+#   run_system_cmd($cmd, undef, 1);
+  $cmd = qq(java picard.cmdline.PicardCommandLine BuildBamIndex ) 
+        . qq( VALIDATION_STRINGENCY=LENIENT ) 
+  . qq( INPUT=$bam_file );
+
+  warn "Running\n$cmd\n";
+  run_system_cmd($cmd);
+  
+  $cmd = qq(samtools idxstats $bam_file);
+  run_system_cmd($cmd, undef, 1);
+
   $self->debug(1, "Finished running ".ref($self->aligner));
   return;
 }

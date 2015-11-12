@@ -154,10 +154,10 @@ sub run {
   if($run_controls){
     my $exp = $rset->experiment(1);#control flag
     
-    if($exp->has_status('ALIGNED_CONTROL')){
-      throw("Need to implement force/recover_control_alignment. Found ALIGNED_CONTROL ResultSet:\t".
-      $rset->name."(Control Experiment = ".$exp->name.")\n");
-    }
+#     if($exp->has_status('ALIGNED_CONTROL')){
+#       throw("Need to implement force/recover_control_alignment. Found ALIGNED_CONTROL ResultSet:\t".
+#       $rset->name."(Control Experiment = ".$exp->name.")\n");
+#     }
   }
   elsif($rset->has_status('ALIGNED')){
 #     throw("Need to implement force/recover_alignment. Found ALIGNED ResultSet:\t".

@@ -115,6 +115,7 @@ sub _are_signals{
 sub run {   # Check parameters and do appropriate database/file operations... 
   my $self         = shift;
   my $helper       = $self->helper;
+  
   my $rset_adaptor = $self->out_db->get_ResultSetAdaptor;
   my $issets       = $self->input_subset_ids;  
   my $ctrls        = [];  
@@ -138,33 +139,13 @@ sub run {   # Check parameters and do appropriate database/file operations...
     $ctrls = &scalars_to_objects($self->out_db, 'InputSubset',
                                                 'fetch_by_dbID',
                                                 $controls);
+    
     if(! &_are_controls($ctrls)){
       throw("Found unexpected non-control InputSubsets specified as controls\n\t".
         join("\n\t", map($_->name, @$ctrls)));
     }
     
     $control_branch = 'Preprocess_'.$align_lname.'_control';
-    
-    
-    #Test control Experiment is ALIGNED_CONTROL
-    #if it has already been aligned then only submit then 
-    #undef the $control_branch and things should just flow directly
-    #onto the correct analyses
-    
-    #How are we going to handle rollback of the control alignments?
-    #This would require a rollback of all dependant data!
-    
-    
-    
-    #if it is ALIGNING_CONTROL
-    #Then we need to exit here
-    #it would be nice to set a retry perioud for this
-    #We need to output some query to enable easy polling of the 
-    #DB to allow identification of when the 
-    
-    
-    #We need to validate they are all from the same experiment, 
-    #although this os done in IdentifySetInputs?
     
     my %exps;
     
@@ -176,34 +157,8 @@ sub run {   # Check parameters and do appropriate database/file operations...
       throw("Failed to identify a unique control Experiment for :\n".
         join(' ', keys(%exps)));  
     }
-    
     my ($exp) = values(%exps);#We only have one
-    
-    if ($exp->has_status('ALIGNED_CONTROL')){
-        $self->helper->debug(1, 'Skipping control processing as '.$exp->name.
-          ' Experiment has ALIGNED_CONTROL status');
-        $control_branch = '' 
-    }
-    else{
-      #Potential race condition here will fail on store
-      
-      if($exp->has_status('ALIGNING_CONTROL')){
-        $self->input_job->transient_error(0); #So we don't retry  
-        #Would be nice to set a retry delay of 60 mins
-        throw($exp->name.' is in the ALIGNING_CONTROL state, another job may already be aligning these controls'.
-          "\nPlease wait until ".$exp->name.' has the ALIGNED_CONTROL status before resubmitting this job');
-      }
-      
-      $exp->adaptor->store_status('ALIGNING_CONTROL', $exp); 
-      
-      #todo check success of this in case another job has pipped us
-       
-    }  
   }
-                                             
-  
-  #validate all input_subsets before we start creating anything, such that rerunning the job will be clean
-  
  
   my (%rsets, %rep_bams);
        
@@ -291,7 +246,19 @@ sub run {   # Check parameters and do appropriate database/file operations...
     }
     
     #Reset if we have controls    
-    $branch = $control_branch if $control_branch;
+    #$branch = $control_branch if $control_branch;
+    
+    # Don't use control branch, if merge_idr_reps is set. In this case this 
+    # module is being used in the DefineMergedReplicateResultSet analysis. 
+    # This module also backs the DefineResultSets analysis. In the future, 
+    # this module should be split into two modules for each of the two 
+    # analyses. Until then, setting merge_idr_reps serves to tell the module, 
+    # which analysis it is currently running.
+    # 
+    if ($control_branch && !$merge_idr_reps) {
+      $branch = $control_branch;
+    }
+    
     
     foreach my $rep_set(@rep_sets){ 
       my $rset_name = $parent_set_name;#.'_'.$align_anal->logic_name;

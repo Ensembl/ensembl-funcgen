@@ -1547,7 +1547,7 @@ sub rollback_ResultSet {
     #There is no way to know whether an import will be done as one or in parallel
     #so we have to rollback in both instances!
     #This is fine
-     
+    
     if( ! ($recover || $full_delete)){
       
       if(scalar (@dsets) > 1){

@@ -127,25 +127,41 @@ sub run {
     #Run with no exit flag so we don't fail on retry
     $cmd = 'rm -f '.join(' ', @{$self->fastq_files});
     $self->helper->debug(3, "Removing fastq chunks:\n$cmd");
-    #mnuhn
     run_system_cmd($cmd, 1);
   }
   
   ### MERGE BAMS ###
   my $file_prefix  = $self->get_alignment_path_prefix_by_ResultSet($rset, $self->run_controls); 
   my $unfiltered_bam     = $file_prefix.'.unfiltered.bam';
+  
+  #my $unfiltered_unsorted_bam     = $file_prefix.'.unsorted.bam';
+  
   $self->helper->debug(1, "Merging bams to:\t".$unfiltered_bam); 
   #sam_header here is really optional if is probably present in each of the bam files but maybe incomplete 
   my @bam_files  = @{$self->bam_files};
-     
-#   merge_bams($unfiltered_bam, 
-#              $self->sam_ref_fai($rset->cell_type->gender), 
-#              \@bam_files, 
-#              {debug          => $self->debug});
+  
   merge_bams_with_picard($unfiltered_bam, 
-             $self->sam_ref_fai($rset->cell_type->gender), 
-             \@bam_files, 
-             {debug          => $self->debug});
+            $self->sam_ref_fai($rset->cell_type->gender), 
+            \@bam_files, 
+            {debug          => $self->debug});
+
+  $cmd = qq(java picard.cmdline.PicardCommandLine CheckTerminatorBlock ) 
+    . qq( VALIDATION_STRINGENCY=LENIENT ) 
+  . qq( INPUT=$unfiltered_bam );
+
+  warn "Running\n$cmd\n";
+  run_system_cmd($cmd);
+  
+  $cmd = qq(java picard.cmdline.PicardCommandLine BuildBamIndex ) 
+      . qq( VALIDATION_STRINGENCY=LENIENT ) 
+
+  . qq( INPUT=$unfiltered_bam );
+
+  warn "Running\n$cmd\n";
+  run_system_cmd($cmd);
+
+  $cmd = qq(samtools idxstats $unfiltered_bam);
+  run_system_cmd($cmd, undef, 1);
   
   ### ALIGNMENT REPORT ### 
   #todo convert this to wite to a result_set_report table
@@ -160,26 +176,6 @@ sub run {
   $self->helper->debug(1, "Generating alignment log with:\n".$cmd);
   run_system_cmd($cmd);
  
-  #Filter and QC here FastQC or FASTX?
-  #filter for MAPQ >= 15 here? before or after QC?
-  #PhantomPeakQualityTools? Use estimate of fragment length in the peak calling?
-
-  warn "Need to implement post alignment QC here. Filter out MAPQ <16. FastQC/FASTX/PhantomPeakQualityTools frag length?";
-  #todo Add ResultSet status setting here!
-  #ALIGNMENT_QC_OKAY
-  #Assuming all QC has passed, set status
-  
-  if($self->run_controls){
-    my $exp = $rset->experiment(1);#control flag
-    $exp->adaptor->store_status('ALIGNED_CONTROL', $exp);
-    $exp->adaptor->revoke_status('ALIGNING_CONTROL', $exp, 1);#validate status flag
-  }
-  else{
-    $rset->adaptor->store_status('ALIGNED', $rset);
-    # Do not set IMPORTED here, as this signifies that the collections have already been written
-    # i.e what would have been importing data into the DB before we moved it out to flat files
-  }
-
   #filter file here to prevent race condition between parallel peak
   #calling jobs which share the same control
   #This will also check the checksum we have just generated, which is a bit redundant
@@ -214,7 +210,8 @@ sub run {
                      dbID        => $self->ResultSet->dbID);
 
     if(! $self->debug){
-      $output_id{garbage} = \@bam_files;   
+      #$output_id{garbage} = [@bam_files, $unfiltered_unsorted_bam];
+      $output_id{garbage} = [@bam_files];
     }
     else{  #Do not garbage collect in debug mode. In case we need to rerun.
       warn "Skipping garbage collection for:\n".join("\n\t", @bam_files);

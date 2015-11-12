@@ -132,6 +132,24 @@ sub fetch_input {
   my $pfile_path = ( defined $self->bin_dir ) ?
     $self->bin_dir.'/'.$analysis->program_file : $analysis->program_file;
 
+  my @init_peak_caller_args = (-analysis       => $analysis,
+    -align_prefix   => $align_prefix,
+    -control_prefix => $control_prefix,
+    -sam_ref_fai    => $sam_ref_fai,
+    -debug          => $self->debug,
+    -peak_module_params =>
+     {%$sensitive_caller_params,
+      -program_file      => $pfile_path,
+      -out_file_prefix   => $rset->name.'.'.$analysis->logic_name,
+      -out_dir           => $self->output_dir,
+      -convert_half_open => 1, # Before loading into DB
+      #-is_half_open      => $self->param_silent('is_half_open') || 0}, # Now defined by PeakCaller or subclass defined on out/input formats   
+    });
+  
+  print "\ninit_peak_caller_args:\n";
+  use Data::Dumper;
+  print Dumper(\@init_peak_caller_args);
+    
   my $peak_runnable = _init_peak_caller
    (-analysis       => $analysis,
     -align_prefix   => $align_prefix,
@@ -215,14 +233,14 @@ sub write_output {
     #test assignment, as we may have the FeatureSet method from a previous
     #job in this batch     
 
-    if ( $fset->has_status('IMPORTED') ) {
-      throw( "Cannot imported feature into a \'IMPORTED\' FeatureSet:\t" .
-             $fset->name );
-    }
-    else{ #Rollback
+#     if ( $fset->has_status('IMPORTED') ) {
+#       throw( "Cannot imported feature into a \'IMPORTED\' FeatureSet:\t" .
+#              $fset->name );
+#     }
+#     else{ #Rollback
       #Just in case we have some duplicate records from a previously failed job
       $self->helper->rollback_FeatureSet($fset);
-    }
+#     }
     
     my $af_adaptor = $fset->adaptor->db->get_AnnotatedFeatureAdaptor;    
     my $params     = 
