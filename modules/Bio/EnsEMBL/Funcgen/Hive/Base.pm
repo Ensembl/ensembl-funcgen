@@ -1770,24 +1770,24 @@ sub sam_header{
 #in non-Hive code
 
 sub get_alignment_path_prefix_by_ResultSet{
-  my ($self, $rset, $control, $validate_aligned) = @_;
+  my ($self, $rset, $control) = @_;
   assert_ref($rset, 'Bio::EnsEMBL::Funcgen::ResultSet');
   my $ctrl_exp = ($control) ? $rset->experiment(1) : undef;
   return if $control && ! $ctrl_exp;
   
-  if($validate_aligned){
-  
-    if($control){
-      if($ctrl_exp && (! $ctrl_exp->has_status('ALIGNED_CONTROL'))){
-        throw('Cannot get control alignment files for a ResultSet('.$rset->name.
-          ') whose Experiment('.$ctrl_exp->name.') does not have the ALIGNED_CONTROL status');
-      }
-    }
-    elsif(! $rset->has_status('ALIGNED')){
-      throw("Cannot get alignment files for ResultSet which does not have ALIGNED status:\t".
-        $rset->name);
-    }
-  }
+#   if($validate_aligned){
+#   
+#     if($control){
+#       if($ctrl_exp && (! $ctrl_exp->has_status('ALIGNED_CONTROL'))){
+#         throw('Cannot get control alignment files for a ResultSet('.$rset->name.
+#           ') whose Experiment('.$ctrl_exp->name.') does not have the ALIGNED_CONTROL status');
+#       }
+#     }
+#     elsif(! $rset->has_status('ALIGNED')){
+#       throw("Cannot get alignment files for ResultSet which does not have ALIGNED status:\t".
+#         $rset->name);
+#     }
+#   }
   
   my @rep_numbers;
   
@@ -1837,7 +1837,8 @@ sub get_alignment_files_by_ResultSet_formats {
     #$align_files = { => validate_path($self->param($file_type)) };
   }
   else{ # Get default file
-    $path = $self->get_alignment_path_prefix_by_ResultSet($rset, $control, 1);#1 is validate aligned flag 
+    #$path = $self->get_alignment_path_prefix_by_ResultSet($rset, $control, 1);#1 is validate aligned flag
+    $path = $self->get_alignment_path_prefix_by_ResultSet($rset, $control);
     $path .= '.unfiltered' if $filter_format;
     
     my $params = {debug              => $self->debug,
