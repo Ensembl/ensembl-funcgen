@@ -24,11 +24,37 @@ limitations under the License.
   Questions may also be sent to the Ensembl help desk at
   <http://www.ensembl.org/Help/Contact>.
 
-=head1 NAME
-
-load_fastqc_summary_file.pl
+=head1 load_fastqc_summary_file.pl
 
 =head1 SYNOPSIS
+
+CREATE TABLE `input_subset_qc` (
+  `input_subset_qc_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `input_subset_id` int(10) unsigned NOT NULL,
+  `status` varchar(100) NOT NULL,
+  `title` varchar(100) NOT NULL,
+  `file_name` varchar(100) NOT NULL,
+  PRIMARY KEY (`input_subset_qc_id`),
+  UNIQUE KEY `name_exp_idx` (`input_subset_id`,`title`)
+) ENGINE=MyISAM
+
+INPUT_SUBSET_ID=3436
+
+TEMP_DIR=/lustre/scratch109/ensembl/funcgen/mn1/qc/${INPUT_SUBSET_ID}
+mkdir -p $TEMP_DIR
+GZIPPED_FASTQ_FILE=$(mysql -N -B $DB_MYSQL_ARGS -e "select local_url from input_subset_tracking where input_subset_id = ${INPUT_SUBSET_ID}")
+
+echo $GZIPPED_FASTQ_FILE
+
+fastqc -o $TEMP_DIR $GZIPPED_FASTQ_FILE
+
+FASTQC_DIR=$(find $TEMP_DIR -maxdepth 1 -mindepth 1 -type d)
+
+SUMMARY_FILE=$FASTQC_DIR/summary.txt
+
+echo $SUMMARY_FILE
+
+./scripts/sequencing/load_fastqc_summary_file.pl --input_subset_id $INPUT_SUBSET_ID --summary_file $SUMMARY_FILE | mysql $DB_MYSQL_ARGS
 
 ./scripts/sequencing/load_fastqc_summary_file.pl --input_subset_id 3 --summary_file /lustre/scratch109/ensembl/funcgen/mn1/ersa/faang/alignments/homo_sapiens/GRCh38/3526/histone_control_fastqc/summary.txt | mysql $DB_MYSQL_ARGS
 
@@ -45,13 +71,11 @@ use Getopt::Long;
 my $summary_file;
 my $input_subset_id;
 
-# Mapping of command line paramters to variables
 my %config_hash = (
   "summary_file"    => \$summary_file,
   "input_subset_id" => \$input_subset_id,
 );
 
-# Loading command line paramters into variables and into a hash.
 my $result = GetOptions(
   \%config_hash,
   'input_subset_id=s',
@@ -72,9 +96,4 @@ while (my $current_line = <IN>) {
   
   print "$sql;\n";
 }
-
-
-
-
-
 
