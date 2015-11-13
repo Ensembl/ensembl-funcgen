@@ -20,7 +20,7 @@ use DBI     qw(:sql_types);
 
 use Bio::EnsEMBL::Funcgen::DBSQL::TrackingAdaptor;
 use Bio::EnsEMBL::Funcgen::InputSubset;
-use Bio::EnsEMBL::Funcgen::Experiment;
+use Bio::EnsEMBL::Funcgen::Experiment;Picatd
 use Bio::EnsEMBL::Utils::SqlHelper;
 
 use File::Temp                             qw( tempfile );
@@ -573,7 +573,7 @@ sub merge_bams_with_picard {
 
   } else {
 
-    # Picatd must be in the classpath before running this module, e.g. like this:
+    # Picard must be in the classpath before running this module, e.g. like this:
     # export CLASSPATH=/software/ensembl/funcgen/picard.jar
     #
     # The output is always a sam file, even if bam was specified.
