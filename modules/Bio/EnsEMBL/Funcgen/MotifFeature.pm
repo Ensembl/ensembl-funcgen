@@ -391,5 +391,26 @@ sub summary_as_hash {
 }
 
 
+=head2 description
+
+  Example       : $motif_feature_description = $motif_feature->description;
+  Description   : Retrieves a textual description of this MotifFeature.
+  Returns       : String
+  Status        : Intended for internal use (REST)
+
+=cut
+
+sub description {
+  my $self = shift;
+
+  my $description
+      = $self->binding_matrix->name . "_"
+      . $self->binding_matrix->analysis->logic_name . "_"
+      . $self->feature_type->description;
+
+  return $description;
+}
+
+
 1;
 
