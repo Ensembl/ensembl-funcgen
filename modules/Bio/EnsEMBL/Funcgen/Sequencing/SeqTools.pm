@@ -20,7 +20,7 @@ use DBI     qw(:sql_types);
 
 use Bio::EnsEMBL::Funcgen::DBSQL::TrackingAdaptor;
 use Bio::EnsEMBL::Funcgen::InputSubset;
-use Bio::EnsEMBL::Funcgen::Experiment;Picatd
+use Bio::EnsEMBL::Funcgen::Experiment;
 use Bio::EnsEMBL::Utils::SqlHelper;
 
 use File::Temp                             qw( tempfile );
