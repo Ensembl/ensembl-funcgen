@@ -573,7 +573,7 @@ sub merge_bams_with_picard {
 
   } else {
 
-    # Picatd must be in the classpath before running this module, e.g. like this:
+    # Picard must be in the classpath before running this module, e.g. like this:
     # export CLASSPATH=/software/ensembl/funcgen/picard.jar
     #
     # The output is always a sam file, even if bam was specified.

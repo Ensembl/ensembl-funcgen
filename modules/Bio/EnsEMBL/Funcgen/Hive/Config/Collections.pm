@@ -179,7 +179,7 @@ sub pipeline_analyses {
      #-input_ids     => [ dataflowed from PreprocessAlignments via branch 2 ]
      -analysis_capacity => 1000,
      #Change this to hive_capacity as it may be competing with parallel peak jobs
-     -rc_name => 'normal_16GB_2cpu',
+     -rc_name => 'normal_30GB_2cpu',
      # This resource usage is a product of the read depth, so it could be detected in
      # PreprocessAlignments and flowed selectively to WriteBigWig_10gb WriteBigWig_16gb
      # This would be beneficial if throughput is hampered by spec required for biggest jobs
