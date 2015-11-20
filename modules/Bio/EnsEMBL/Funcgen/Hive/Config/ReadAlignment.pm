@@ -332,13 +332,13 @@ sub pipeline_analyses {
     {-logic_name => 'Run_bwa_samse_control_chunk',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunAligner',
      -batch_size => 1, #max parallelisation???
-     -analysis_capacity => 1000,
+     -analysis_capacity => 100,
      -rc_name => 'normal_10gb'},
 
     {-logic_name => 'Run_bwa_samse_merged_chunk',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunAligner',
      -batch_size => 1, #max parallelisation???
-     -analysis_capacity => 1000,
+     -analysis_capacity => 100,
      -rc_name => 'normal_10gb'},
 
     {-logic_name => 'Run_bwa_samse_replicate_chunk',
@@ -346,7 +346,7 @@ sub pipeline_analyses {
      # These jobs can be run in parallell... don't put too many since it may generate many jobs...jobs!
      #-limit => 1,#what is this?
      -batch_size => 1, #max parallelisation? Although probably want to up this so we don't hit pending time
-     -analysis_capacity => 1000,
+     -analysis_capacity => 100,
      -rc_name => 'normal_10gb'},
 
 
