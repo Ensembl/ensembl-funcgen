@@ -27,6 +27,12 @@ limitations under the License.
 
 =head1 SYNOPSIS
 
+export R_LIBS=/software/ensembl/funcgen/R-modules
+
+/software/R-3.2.2/bin/Rscript /software/ensembl/funcgen/spp_package/run_spp.R \
+  -c=/lustre/scratch109/ensembl/funcgen/mn1/ersa/faang/testbams/K562:hist:BR1_H3K4me3_3526_bwa_samse_1.bam \
+  -savp -out=/lustre/scratch109/ensembl/funcgen/mn1/ersa/faang/testbams
+
 ./scripts/sequencing/load_phantom_peak_file.pl  \
     --result_set_id 20  \
     --result_file /lustre/scratch109/ensembl/funcgen/mn1/ersa/faang/testbams/test \
@@ -85,7 +91,7 @@ my @tracking_db_connection_details = (
     -dbname   => $dbname,
 );
 my $logic_name = 'phantom peak quality tools';
-my @flagstats_analysis_details = (
+my @phantom_peak_analysis_details = (
         -logic_name      => $logic_name,
         -program         => 'run_spp.R',
         -parameters      => '',
@@ -105,7 +111,7 @@ my $analysis = $analysis_adaptor->fetch_by_logic_name($logic_name);
 
 if (! $analysis && ! $dry_run) {
       $logger->info("No analysis with logic name $logic_name found. Creating one.");
-      $analysis = Bio::EnsEMBL::Analysis->new(@flagstats_analysis_details);
+      $analysis = Bio::EnsEMBL::Analysis->new(@phantom_peak_analysis_details);
       $analysis_adaptor->store($analysis);
 }
 my $analysis_id = $analysis->dbID;
@@ -222,7 +228,7 @@ sub create_table {
   my $sql_processor = $param->{sql_processor};
 
 my $sql = <<SQL
-CREATE TABLE `result_set_qc_phantom_peak` (
+CREATE TABLE if not exists `result_set_qc_phantom_peak` (
   `result_set_qc_phantom_peak_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `analysis_id`        int(10) unsigned,
   `result_set_id` int(10) unsigned NOT NULL,
