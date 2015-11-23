@@ -177,7 +177,7 @@ sub pipeline_analyses {
      -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunWiggleTools',
      -parameters    => {mode => 'RPKM'},
      #-input_ids     => [ dataflowed from PreprocessAlignments via branch 2 ]
-     -analysis_capacity => 1000,
+     -analysis_capacity => 100,
      #Change this to hive_capacity as it may be competing with parallel peak jobs
      -rc_name => 'normal_30GB_2cpu',
      # This resource usage is a product of the read depth, so it could be detected in
