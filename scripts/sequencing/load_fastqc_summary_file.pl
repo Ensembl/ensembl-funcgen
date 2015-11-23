@@ -28,7 +28,7 @@ limitations under the License.
 
 =head1 SYNOPSIS
 
-CREATE TABLE `input_subset_qc` (
+CREATE TABLE `input_subset_fastqc` (
   `input_subset_qc_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `input_subset_id` int(10) unsigned NOT NULL,
   `status` varchar(100) NOT NULL,
@@ -92,7 +92,7 @@ while (my $current_line = <IN>) {
   #print " - $current_line\n";
   my @f = split "\t", $current_line;
   #print Dumper(\@f);
-  my $sql = "INSERT INTO input_subset_qc (input_subset_id,status,title,file_name) VALUES (".$input_subset_id.", '".$f[0]."', '".$f[1]."', '".$f[2]."')";
+  my $sql = "INSERT INTO input_subset_fastqc (input_subset_id,status,title,file_name) VALUES (".$input_subset_id.", '".$f[0]."', '".$f[1]."', '".$f[2]."')";
   
   print "$sql;\n";
 }
