@@ -873,7 +873,10 @@ sub process_sam_bam {
 
       # TODO ENSREGULATION-200
 
-      if($filter_format){
+      if($filter_format) {
+      
+	use Carp;
+	confess("Deprecated code!");
 
         if(! $skip_rmdups){
           # Removed after alignment as opposed from fastqs as we expect multiple
