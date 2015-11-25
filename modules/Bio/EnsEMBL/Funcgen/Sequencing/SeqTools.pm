@@ -751,7 +751,8 @@ sub process_sam_bam {
 
   #Define and clean intermediate sorted files first
   (my $tmp_out = $in_file) =~ s/\.$in_format//;
-  my $sorted_prefix = $tmp_out.'.sorted';
+  # $tmp_out and $sorted_prefix are the same, so removing $sorted_prefix
+  #my $sorted_prefix = $tmp_out.'.sorted';
   $tmp_out .= ($sort) ? '.sorted' : '.tmp';
 
   # Simply over-write these
@@ -865,7 +866,7 @@ sub process_sam_bam {
       $tmp_out = $tmp_out.'.bam';
       my $rm_cmd = "rm -f $tmp_out";
 
-      $cmd .= ($sort) ? ' | samtools sort - '.$sorted_prefix : ' > '.$tmp_out;
+      $cmd .= ($sort) ? ' | samtools sort - '.$tmp_out : ' > '.$tmp_out;
       warn $cmd."\n" if $debug;
       run_system_cmd($cmd);
 
