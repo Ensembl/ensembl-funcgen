@@ -864,13 +864,10 @@ sub process_sam_bam {
       # As we are not using IPC::Run we only ever get the exit status of the first command
       # so failures downstream would go uncaught
       $tmp_out = $tmp_out.'.bam';
-      my $rm_cmd = "rm -f $tmp_out";
-      
-      warn $rm_cmd."\n" if $debug;
-      run_system_cmd($rm_cmd);
 
       #$cmd .= ($sort) ? ' | samtools sort -O bam - '.$tmp_out : ' > '.$tmp_out;
-      $cmd .= ($sort) ? ' | samtools sort -O bam - '.$tmp_out : ' | samtools view -b '.$tmp_out;
+      # -I 9 highest compression level
+      $cmd .= ($sort) ? ' | samtools sort -O bam -I 9 - '.$tmp_out : ' | samtools view -b '.$tmp_out;
       warn $cmd."\n" if $debug;
       run_system_cmd($cmd);
 
@@ -904,13 +901,16 @@ sub process_sam_bam {
           $cmd .= $out_file;
         }
       }
-      elsif($out_format eq 'bam'){
+      
+      my $rm_cmd;
+      if($out_format eq 'bam'){
         # We know we have bam by now as we have done some sorting
         $cmd = "mv $tmp_out $out_file";
         $rm_cmd = '';
       }
       else{ #We need to convert to sam
         $cmd = "samtools view -h $tmp_out > $out_file";
+        $rm_cmd = "rm -f $tmp_out";
       }
 
       # TODO ENSREGULATION-201
