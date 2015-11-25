@@ -690,6 +690,9 @@ sub process_sam_bam {
   my $filter_format = (exists $params->{filter_from_format})    ? $params->{filter_from_format}    : undef;
   my $force         = (exists $params->{force_process_sam_bam}) ? $params->{force_process_sam_bam} : undef;
 
+  use Carp;
+  confess('Deprecated code') if ($skip_rmdups);
+  
   #sam defaults
   $out_format     ||= 'sam';
   my $in_format = 'sam';
@@ -871,37 +874,38 @@ sub process_sam_bam {
       warn $cmd."\n" if $debug;
       run_system_cmd($cmd);
 
-      # TODO ENSREGULATION-200
-
       if($filter_format) {
       
-	use Carp;
-	confess("Deprecated code!");
 
-        if(! $skip_rmdups){
-          # Removed after alignment as opposed from fastqs as we expect multiple
-          # reads if they map across several loci but not necessarily at exactly
-          # the same loci which indicates PCR bias
-          #-s single end reads or samse (default is paired, sampe)
-          $cmd = "samtools rmdup -s $tmp_out ";
-        }
+#         if(! $skip_rmdups){
+#           # Removed after alignment as opposed from fastqs as we expect multiple
+#           # reads if they map across several loci but not necessarily at exactly
+#           # the same loci which indicates PCR bias
+#           #-s single end reads or samse (default is paired, sampe)
+#           $cmd = "samtools rmdup -s $tmp_out ";
+#         }
 
         if($out_format eq 'sam'){
+        
+	  confess("Sam format should not be generated anymore.");
 
-          if($skip_rmdups){
-            $cmd = "samtools view -h $tmp_out > $out_file";
-          }
-          else{
-            $cmd .= "- | samtools view -h - > $out_file";
-          }
+#           if($skip_rmdups){
+#             $cmd = "samtools view -h $tmp_out > $out_file";
+#           }
+#           else{
+#             $cmd .= "- | samtools view -h - > $out_file";
+#           }
 
         }
         elsif($skip_rmdups){
-          $cmd = "mv $tmp_out $out_file";
-          $rm_cmd = ''
+        
+	  confess("Deprecated code!");
+	  
+#           $cmd = "mv $tmp_out $out_file";
+#           $rm_cmd = ''
         }
         else{
-          $cmd .= $out_file;
+#           $cmd .= $out_file;
         }
       }
       
@@ -915,9 +919,7 @@ sub process_sam_bam {
         $cmd = "samtools view -h $tmp_out > $out_file";
         $rm_cmd = "rm -f $tmp_out";
       }
-
-      # TODO ENSREGULATION-201
-
+      
       warn $cmd."\n";
       run_system_cmd($cmd);
 
@@ -928,8 +930,6 @@ sub process_sam_bam {
     }
     if($checksum){  write_checksum($out_file, $params);  }
   }
- 
-
   return $out_file;
 }
 
