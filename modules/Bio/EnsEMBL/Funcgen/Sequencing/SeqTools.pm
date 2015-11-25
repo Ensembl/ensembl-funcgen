@@ -869,7 +869,8 @@ sub process_sam_bam {
       warn $rm_cmd."\n" if $debug;
       run_system_cmd($rm_cmd);
 
-      $cmd .= ($sort) ? ' | samtools sort - '.$tmp_out : ' > '.$tmp_out;
+      #$cmd .= ($sort) ? ' | samtools sort -O bam - '.$tmp_out : ' > '.$tmp_out;
+      $cmd .= ($sort) ? ' | samtools sort -O bam - '.$tmp_out : ' | samtools view -b '.$tmp_out;
       warn $cmd."\n" if $debug;
       run_system_cmd($cmd);
 
