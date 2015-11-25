@@ -865,6 +865,9 @@ sub process_sam_bam {
       # so failures downstream would go uncaught
       $tmp_out = $tmp_out.'.bam';
       my $rm_cmd = "rm -f $tmp_out";
+      
+      warn $rm_cmd."\n" if $debug;
+      run_system_cmd($rm_cmd);
 
       $cmd .= ($sort) ? ' | samtools sort - '.$tmp_out : ' > '.$tmp_out;
       warn $cmd."\n" if $debug;
