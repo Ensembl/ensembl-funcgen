@@ -84,7 +84,7 @@ use base qw( Bio::EnsEMBL::Funcgen::Storable );
         Used when the probe is on one array.
   Arg [-ARRAY_CHIP_IDS]  : Listref of ints - array_chip dbIDs
         Used when the probe is on multiple array chips
-  Arg [-NAMES]          : Listref of ints - arary_chip db IDs
+  Arg [-NAMES]          : Listref of ints - array_chip db IDs
         Used when the probe is on multiple arrays.
   Arg [-PROBE_SET]      : Bio::EnsEMBL::ProbeSet
         Each probe is part of one(and only one) probeset, if not probe set

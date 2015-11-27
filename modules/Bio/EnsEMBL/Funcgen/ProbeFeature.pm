@@ -506,8 +506,8 @@ sub get_result_by_ResultSet{
 
 =head2 summary_as_hash
 
-  Example       : $array_feature_summary = $array_feature->summary_as_hash;
-  Description   : Retrieves a textual summary of this ArrayFeature.
+  Example       : $probe_feature_summary = $probe_feature->summary_as_hash;
+  Description   : Retrieves a textual summary of this ProbeFeature.
   Returns       : Hashref of descriptive strings
   Status        : Intended for internal use (REST)
 
