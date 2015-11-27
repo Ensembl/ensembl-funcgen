@@ -18,7 +18,9 @@ use strict;
 use warnings;
 use diagnostics;
 
-use Data::Dumper qw( Dumper );
+use Data::Printer;
+
+# use Data::Dumper qw( Dumper );
 use Test::More;
 use Test::Exception;    # throws_ok
 use Test::Warn;
@@ -157,7 +159,7 @@ my $expected_probenames = [
     'ILMN_1677794', 'ILMN_1677794'
 ];
 
-is( @{$new_probe->get_all_probenames},
+is( @{ $new_probe->get_all_probenames },
     @{$expected_probenames}, 'Test get_all_probenames()' );
 
 # --------------------
@@ -165,6 +167,8 @@ is( @{$new_probe->get_all_probenames},
 # --------------------
 is( $new_probe->get_probename('HumanWG_6_V2'),
     'ILMN_1677794', 'Test get_probename()' );
+
+#TODO: More tests needed
 
 # -----------------------------
 # Test get_all_complete_names()
@@ -174,13 +178,44 @@ my $expected_complete_names = [
     'HumanRef-8_V3:ILMN_1677794', 'HumanWG_6_V1:0005670053',
     'HumanHT-12_V3:ILMN_1677794', 'HumanWG_6_V2:ILMN_1677794'
 ];
-is( @{$new_probe->get_all_complete_names},
-    @{$expected_complete_names}, 'Test get_all_complete_names()' );
+is( @{ $new_probe->get_all_complete_names },
+    @{$expected_complete_names},
+    'Test get_all_complete_names()'
+);
 
 # ------------------------
 # Test get_complete_name()
 # ------------------------
-print Dumper($new_probe->{probe_set});
-# print $new_probe->get_complete_name('HumanWG_6_V2');
+throws_ok { $new_probe->get_complete_name() }
+qr/Must provide and array name argument to retreive the complete name/,
+    'Test get_complete_name() no argument exception';
+
+throws_ok { $new_probe->get_complete_name('Invalid_array_name') }
+qr/Unknown array name/,
+    'Test get_complete_name() unknown array name exception';
+
+#TODO: More tests needed, not just for exceptions
+
+# ----------------------
+# Test getters - setters
+# ----------------------
+my $probeset = $psa->fetch_all_by_Array($array)->[0];
+
+ok( test_getter_setter( $new_probe, 'probeset', $probeset ),
+    'test_getter_setter Probe::probeset' );
+
+ok( test_getter_setter( $new_probe, 'class', 'EXPERIMENTAL' ),
+    'test_getter_setter Probe::class' );
+
+ok( test_getter_setter( $new_probe, 'length', 25 ),
+    'test_getter_setter Probe::length' );
+
+ok( test_getter_setter( $new_probe, 'description', 'Excellent probe' ),
+    'test_getter_setter Probe::description' );
+
+# --------------------
+# Test feature_count()
+# --------------------
+is( $new_probe->feature_count(), 1, 'Test feature_count()' );
 
 done_testing();
