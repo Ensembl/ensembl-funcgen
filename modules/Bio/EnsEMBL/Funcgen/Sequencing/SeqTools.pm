@@ -53,7 +53,7 @@ use vars qw( @EXPORT );
   get_files_by_formats
   load_experiments_into_tracking_db
   merge_bams
-  merge_bams_with_picard
+  remove_duplicates_from_bam
   modify_files_txt_for_regulation
   post_process_IDR
   pre_process_IDR
@@ -347,77 +347,22 @@ sub split_fastqs{
   return (\@new_fastqs);#, \%qc_results;
 }
 
+sub merge_bams {
 
+  my $param = shift;
+  
+  my $bams    = $param->{input_bams};
+  my $outfile = $param->{output_bam};
+  my $debug   = $param->{debug};
 
-
-#todo
-# 1 add a DESTROY method to remove any tmp sorted files which may persist after an
-#   ungraceful exit. These can be added to a global $main::files_to_delete array
-#   which should then also be undef'd in DESTROY so they don't persisnt to another instance
-
-#We could use the existing Bio::SamTools package but:
-#1 This will add an extra requirement
-#2 This will need to be isolated in a hive/analysis only module
-#3 It doesn't appear to support merge operations
-#4 It wouldn't support the piping/greping we do to filter the data
-
-
-sub merge_bams{
-  my $outfile     = shift;
-  my $sam_ref_fai = shift;
-  my $bams        = shift;
-  my $params      = shift || {};
   assert_ref($bams, 'ARRAY', 'bam files');
-
+  
   if(! scalar(@$bams)){
     throw('Must provide an arrayref of bam files to merge');
   }
 
-  my $out_flag = '';
-
-  if(! defined $outfile){
-    throw('Output file argument is not defined');
-  }
-  elsif($outfile !~ /\.(?:bam|sam)$/xo){
-    #?: does not assign to $1
-    $out_flag = 'b' if $1 eq 'bam';
-    throw('Output file argument must have a sam or bam file suffix');
-  }
-
-  assert_ref($params, 'HASH');
-  my $debug       = (exists $params->{debug})        ? $params->{debug}       : 0;
-  my $no_rmdups   = (exists $params->{no_rmdups})    ? $params->{no_rmdups}   : undef;
-  my $no_checksum  = (exists $params->{no_checksum}) ? $params->{no_checksum} : undef;
-  warn "merge_bam_params are:\n".dump_data($params)."\n" if $debug;
-
-  #For safety we need to validate all the bam headers are the same?
-  #or at least no LN clashed for the same SN?
-  #Must all be subsets of sam_header if specified, and reheader output with
-  #sam_header if defined
-  #else, with the merge of all the input headers?
-  #This later option would permit merges of redunant headers if the SN values
-  #are not identical for the same sequence
-  #force sam header for safety?
-  #For now, let just make sure they are identical
- 
-  my $view_header_opt;
-
-  for(@$bams){
-    my $tmp_opt = validate_sam_header($_, $sam_ref_fai, 1, $params);
-    $view_header_opt = $tmp_opt if $tmp_opt;
-  }
-
-  #validate/convert inputs here?
-  #just assume all aren bam for now
-  my $cmd = '';
-
-  #-u uncompressed BAM output for pipe (header remains in sam format)
-  #-f force overwrite output
-  #-h is include header in output, seems to be in sam format i.e. not binary if output is bam??
-  # - To specify seding output to STDOUT for
-
+  my $cmd;
   my $skip_merge = 0;
-
   if(scalar(@$bams) == 1){
     #samtools merge cannot handle a single input!
     #Instead it throws a seemingly completely unrelated error message:
@@ -431,237 +376,58 @@ sub merge_bams{
     warn 'Only 1 bam file has been specified, merge will be skipped, '.
       "otherwise file will be processed accordingly\n";
   }
-
-
-  if((! $no_rmdups) || $view_header_opt){
-    #-u uncompressed output for pipeing to rmdups or view
-    $cmd = 'samtools merge -u - '.join(' ', @$bams).' | ' if ! $skip_merge;
-
-    if( ! $no_rmdups ){
-       #rmdup converts the header into binary format
-       $cmd .= 'samtools rmdup -s ';
-       $cmd .= $skip_merge ? $bams->[0].' ' : ' - ';
-
-       if( $view_header_opt ){
-         $cmd .=  ' - | '
-       }
-       else{
-         $cmd .= $outfile;
-       }
-    }
-
-    if($view_header_opt){
-      #We only need to do this if the validate_sam_header
-      #method identifed some of the bams without the relevant header
-      #warn "Currently integrating fai header via samtools view, but it is more efficient to integrate is with sam format header in merge";
-      $cmd .= "samtools view -t $sam_ref_fai -h${out_flag} - > $outfile";
-    }
-  }
-  elsif(! $skip_merge){
-    $cmd = "samtools merge $outfile ".join(' ', @$bams);
-  }
-  else{ #skip merge
+  if(! $skip_merge) {
+    # -f option forces overwriting the outfile when it already exists. This
+    # is usefule, if a failed job is being rerun.
+    #
+    $cmd = "samtools merge -f $outfile ".join(' ', @$bams);
+  } else{ 
     $cmd = 'cp '.$bams->[0].' '.$outfile;
   }
-
-
-  #piping like this may cause errors downstream of the pipe to be missed
-  #could we try doing an open on the piped cmd to try and catch a SIGPIPE?
   warn "Merging with:\n$cmd\n" if $debug;
-  # die;
-  run_system_cmd($cmd);
-  
-  # samtools merge can create a truncated file which lacks an EOF marker
-  # unfortunately this does not raise an error and so will not be caught above
-  # samtools view -h will return $? == 2 here
-  # however, this is non-optimal as it slows down this step for the 99% of files which merge correctly
-  # samtools -H does not raise an error or a warning, 
-  # samtools -H(b|u) does not raise and but does output a warning:
-  # [bam_header_read] EOF marker is absent. The input is probably truncated.
-  # So let's capture output here via backticks..eugh.
-  # Backticks normally only capture STDOUT. So redirect STDERR to STDOUT before we discard STDOUT
-  $cmd = "samtools view -Hb $outfile 2>&1 > /dev/null";
-  my $uncaught_merge_error = run_backtick_cmd($cmd);
-
-  if($uncaught_merge_error){
-    throw("samtools merge appeared to create a truncated file:\n\t$uncaught_merge_error");
-  }
-
+  run_system_cmd($cmd);  
   warn "Finished merge to $outfile" if $debug;
-
-  if(! $no_checksum){
-    write_checksum($outfile, $params);
-  }
-
   return;
 }
 
-sub merge_bams_with_picard {
-  my $outfile     = shift;
-  my $sam_ref_fai = shift;
-  my $bams        = shift;
-  my $params      = shift || {};
-  assert_ref($bams, 'ARRAY', 'bam files');
+sub remove_duplicates_from_bam {
 
-  if(! scalar(@$bams)){
-    throw('Must provide an arrayref of bam files to merge');
-  }
-
-  my $out_flag = '';
-
-  if(! defined $outfile){
-    throw('Output file argument is not defined');
-  }
-  elsif($outfile !~ /\.(?:bam|sam)$/xo){
-    #?: does not assign to $1
-    $out_flag = 'b' if $1 eq 'bam';
-    throw('Output file argument must have a sam or bam file suffix');
-  }
-
-  assert_ref($params, 'HASH');
-  my $debug       = (exists $params->{debug})        ? $params->{debug}       : 0;
-  my $no_rmdups   = (exists $params->{no_rmdups})    ? $params->{no_rmdups}   : undef;
-  my $no_checksum  = (exists $params->{no_checksum}) ? $params->{no_checksum} : undef;
-  warn "merge_bam_params are:\n".dump_data($params)."\n" if $debug;
-
-  my $view_header_opt;
-
-  for(@$bams){
-    my $tmp_opt = validate_sam_header($_, $sam_ref_fai, 1, $params);
-    $view_header_opt = $tmp_opt if $tmp_opt;
-  }
-
-  my $cmd = '';
-
-  my $skip_merge = 0;
-
-  if(scalar(@$bams) == 1){
-    #samtools merge cannot handle a single input!
-    #Instead it throws a seemingly completely unrelated error message:
-    #Note: Samtools' merge does not reconstruct the @RG dictionary in the header. Users
-    #  must provide the correct header with -h, or uses Picard which properly maintains
-    #  the header dictionary in merging.
-
-    #Rather than having the caller have to handle this, let's just do the expected thing here
-    #and warn.
-    $skip_merge = 1;
-    warn 'Only 1 bam file has been specified, merge will be skipped, '.
-      "otherwise file will be processed accordingly\n";
-  }
+  my $param = shift;
   
-  my $merged_bam_file = "${outfile}.merged.bam";
+  my $input_bam  = $param->{input_bam};
+  my $output_bam = $param->{output_bam};
+  my $debug      = $param->{debug};
 
-  if ($skip_merge) {
-    # Nothing to do
-    $cmd = "mv ".$bams->[0]." $merged_bam_file";
-  } else {
-    $cmd = 'samtools merge - '.join(' ', @$bams) . " > $merged_bam_file";
-  }
-  warn "Running\n$cmd\n" if $debug;
-  run_system_cmd($cmd);
+  my $metrics_file = "${output_bam}.merged_duplication_removal_metrics.tab";
+
+  # Picard must be in the classpath before running this module, e.g. like this:
+  # export CLASSPATH=/software/ensembl/funcgen/picard.jar
+  #
+  # The output is always a sam file, even if bam was specified, hence 
+  # SamFormatConverter is run on the output.
+  #
+  my $cmd_MarkDuplicates = qq(java picard.cmdline.PicardCommandLine MarkDuplicates ) 
+  . qq( REMOVE_DUPLICATES=true ) 
+  . qq( VALIDATION_STRINGENCY=LENIENT ) 
+  . qq( ASSUME_SORTED=true ) 
+  . qq( INPUT=$input_bam ) 
+  . qq( OUTPUT=/dev/stdout ) 
+  # Prevent any messages from going into the pipe:
+  . qq( QUIET=true ) 
+  . qq( METRICS_FILE=$metrics_file );
+
+  my $cmd_SamFormatConverter = qq(java picard.cmdline.PicardCommandLine SamFormatConverter ) 
+  . qq( INPUT=/dev/stdin ) 
+  . qq( VALIDATION_STRINGENCY=LENIENT ) 
+  . qq( OUTPUT=$output_bam );
   
-  my $duplicate_removed_bam_file = "${outfile}.merged_no_dups.bam";
-  my $metrics_file = "${outfile}.merged_duplication_removal_metrics.tab";
-
-  if( $no_rmdups ) {
-  
-    # Nothing to do
-    $cmd = "mv $merged_bam_file $duplicate_removed_bam_file";
-    
-    warn "Running\n$cmd\n";
-    run_system_cmd($cmd);
-
-  } else {
-
-    # Picard must be in the classpath before running this module, e.g. like this:
-    # export CLASSPATH=/software/ensembl/funcgen/picard.jar
-    #
-    # The output is always a sam file, even if bam was specified.
-    #
-    $cmd = qq(java picard.cmdline.PicardCommandLine MarkDuplicates ) 
-    . qq( REMOVE_DUPLICATES=true ) 
-    . qq( VALIDATION_STRINGENCY=LENIENT ) 
-    . qq( ASSUME_SORTED=true ) 
-    . qq( INPUT=$merged_bam_file ) 
-    . qq( OUTPUT=${duplicate_removed_bam_file}.sam ) 
-    . qq( METRICS_FILE=$metrics_file );
-
-    warn "Running\n$cmd\n";
-    run_system_cmd($cmd);
-    
-    # Convert to bam here.
-    #
-    $cmd = qq(java picard.cmdline.PicardCommandLine SamFormatConverter ) 
-    . qq( INPUT=${duplicate_removed_bam_file}.sam ) 
-    . qq( VALIDATION_STRINGENCY=LENIENT ) 
-    . qq( OUTPUT=$duplicate_removed_bam_file );
-
-    warn "Running\n$cmd\n";
-    run_system_cmd($cmd);
-  }
-
-  if($view_header_opt) {
-    # -b is important or we get a sam file here.
-    #
-    $cmd = "samtools view -b -t $sam_ref_fai -h${out_flag} $duplicate_removed_bam_file > $outfile";
-  } else {  
-    # Nothing to do
-    $cmd = "mv $duplicate_removed_bam_file $outfile";
-  }
-  warn "Running\n$cmd\n" if $debug;
+  my $cmd = qq(bash -o pipefail -c "$cmd_MarkDuplicates | $cmd_SamFormatConverter");
+  warn "Running\n$cmd\n";
   run_system_cmd($cmd);
 
-  if ($debug) {
-    warn "Finished merge to $outfile\n";
-    warn "Not deleting intermediary files. ($merged_bam_file, $duplicate_removed_bam_file, $metrics_file, ${duplicate_removed_bam_file}.sam)\n";
-  } else {
-    if (-e $merged_bam_file) {
-      warn "Removing $merged_bam_file\n";
-      unlink($merged_bam_file);
-    }
-    if (-e $duplicate_removed_bam_file) {
-      warn "Removing $duplicate_removed_bam_file\n";
-      unlink($merged_bam_file);
-    }
-    if (-e "${duplicate_removed_bam_file}.sam") {
-      warn "Removing ${duplicate_removed_bam_file}.sam\n";
-      unlink("${duplicate_removed_bam_file}.sam");
-    }
-#     if (-e $metrics_file) {
-#       warn "Removing $metrics_file\n";
-#       unlink($metrics_file);
-#     }
-    
-  }
+  unlink($metrics_file);
   return;
 }
-
-
-
-
-
-#TODO Implement multi-mapping filter
-#ENCODE removed multimapping reads, probably by filtering based on presence of XA tag
-#-n is not defined. This seems only to apply to paired reads?
-#It's unclear exactly what bwa does here.
-#Repetitive hits will be chosen randoml(y, and XA will be written for alternate mappings)
-#This means some duplicate reads will likely be slipping through if
-#they map to multiple locations
-#  To filter (given bwa samse -n wasn't used)
-#  -F 100 will remove non-primary mappings
-#  -v XA will remove remaining primary mappings will alternative mapping present in the
-#  XA field.  samtools view -F 100 -h in.bam | grep -v XA
-#This only works for single end reads, and would potentially leave dangling reads if
-#the other half of a pair did not have an XA tag. So you would have to grep out the QNAME (query/pair name)
-#and re-filter on that.
-#--> Implement and are_paired flag
-
-#checksum in params here acts to check and write checksums
-#checksum => undef tries to find a checksum file
-#checksum => MD%STRING checks using string
-#Probably need a new param here
-
-# TODO Add max cpu to manage number of pipes?
 
 sub process_sam_bam {
   my $sam_bam_path = shift;
@@ -691,7 +457,17 @@ sub process_sam_bam {
   my $force         = (exists $params->{force_process_sam_bam}) ? $params->{force_process_sam_bam} : undef;
 
   use Carp;
-  confess('Deprecated code') if ($skip_rmdups);
+  
+  if (exists $params->{skip_rmdups}) {
+    confess('Deprecated option, duplicates are no longer handled here.');
+  }
+  
+  if ($out_format eq 'sam') {
+    confess('Conversion to sam is not supported!');
+  }
+  if (defined $sort) {
+    confess('Sorting is not supported anymore!');
+  }
   
   #sam defaults
   $out_format     ||= 'sam';
@@ -792,6 +568,9 @@ sub process_sam_bam {
       #in and out format are the same, so can just test in format
 
       if($in_format eq 'sam'){
+      
+	confess('We should not be using sam files anymore!');
+	
         $cmd = "samtools view -h${in_flag} $fasta_fai_opt $in_file ";
       }
       else{ #must be bam
@@ -813,14 +592,17 @@ sub process_sam_bam {
     if(($out_format eq 'sam') &&
         $skip_rmdups          &&
         ! $sort){
-      $tmp_out = $tmp_out.'.sam';
-      $cmd = "samtools view -h${in_flag} $filter_opt $fasta_fai_opt $in_file > $tmp_out";
-      warn $cmd."\n" if $debug;
-      run_system_cmd("rm -f $tmp_out");
-      run_system_cmd($cmd);
-
-      # mnuhn: Nothing to be done, so this is the output file
-      $out_file = $tmp_out;
+        
+      confess('There should be no need to convert to sam!');
+        
+#       $tmp_out = $tmp_out.'.sam';
+#       $cmd = "samtools view -h${in_flag} $filter_opt $fasta_fai_opt $in_file > $tmp_out";
+#       warn $cmd."\n" if $debug;
+#       run_system_cmd("rm -f $tmp_out");
+#       run_system_cmd($cmd);
+# 
+#       # mnuhn: Nothing to be done, so this is the output file
+#       $out_file = $tmp_out;
     }
     else{ # FILTERING & SORTING 
       # Base view command to be piped to other commands
@@ -870,7 +652,7 @@ sub process_sam_bam {
 
       #$cmd .= ($sort) ? ' | samtools sort -O bam - '.$tmp_out : ' > '.$tmp_out;
       # -I 9 highest compression level
-      $cmd .= ($sort) ? ' | samtools sort -O bam -I 9 - '.$tmp_out : ' | samtools view -b '.$tmp_out;
+      $cmd .= ($sort) ? ' | samtools sort -l 9 - '.$tmp_out : ' | samtools view -b -o '.$tmp_out. ' - ';
       warn $cmd."\n" if $debug;
       run_system_cmd($cmd);
 
@@ -916,8 +698,11 @@ sub process_sam_bam {
         $rm_cmd = '';
       }
       else{ #We need to convert to sam
-        $cmd = "samtools view -h $tmp_out > $out_file";
-        $rm_cmd = "rm -f $tmp_out";
+      
+	confess('There should be no need to convert to sam!');
+	
+#         $cmd = "samtools view -h $tmp_out > $out_file";
+#         $rm_cmd = "rm -f $tmp_out";
       }
       
       warn $cmd."\n";
@@ -928,7 +713,7 @@ sub process_sam_bam {
           run_system_cmd($rm_cmd); 
       }
     }
-    if($checksum){  write_checksum($out_file, $params);  }
+#     if($checksum){  write_checksum($out_file, $params);  }
   }
   return $out_file;
 }
@@ -1033,7 +818,9 @@ sub get_files_by_formats {
     #Set sort for safety, but can probably remove this when we refactor this method
     #sort should always be done when doign initial file sorting/merging
     #so if standard or unfiltered bam is present, then we don't need to sort
-    $params->{sort}     = 1 if ! defined $params->{sort};    #for safety
+    
+    # Sorting is taking up too much time, if it is necessary, should be turned on by default.
+    #$params->{sort}     = 1 if ! defined $params->{sort};    #for safety
 
     if(!  grep { /^$filter_format$/ } @$formats){
       unshift @$formats, $filter_format;
@@ -1230,6 +1017,10 @@ sub convert_bam_to_sam{
   my $bam_file = shift;
   my $params   = shift || {};
   assert_ref($params, 'HASH');
+  
+  use Data::Dumper;
+  print Dumper($params);
+  
   return process_sam_bam($bam_file, {%$params, output_format => 'sam'});
 }
 
@@ -1244,6 +1035,9 @@ sub convert_sam_to_bed{
   my $sam_file = shift;
   my $params   = shift || {};
   my $in_file;
+  
+  use Carp;
+  confess("This should not be used anymore!");
 
   if(! ($in_file = check_file($sam_file, 'gz', $params)) ){
     throw("Cannot find file:\n\t$sam_file(.gz)");
