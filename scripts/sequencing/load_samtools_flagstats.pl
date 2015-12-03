@@ -31,7 +31,6 @@ limitations under the License.
 
   ./scripts/sequencing/load_samtools_flagstats.pl \
     --result_set_id 3 \
-    --flagstats_file /lustre/scratch109/ensembl/funcgen/mn1/ersa/faang/alignments/homo_sapiens/GRCh38/3526/histone_control_fastqc/summary.txt \
     --flagstats_file /lustre/scratch109/ensembl/funcgen/mn1/qc/BR1_H3K27me3_3526_bwa_samse_1_2_3.alignment.log \
     --dry_run \
     --user ensro --host ens-genomics2 --dbname mn1_faang_tracking_homo_sapiens_funcgen_81_38 \
@@ -95,6 +94,7 @@ my @flagstats_analysis_details = (
 );
 
 my $logger = Bio::EnsEMBL::Utils::Logger->new();
+$logger->init_log;
 
 my $dbc = Bio::EnsEMBL::DBSQL::DBConnection->new(@tracking_db_connection_details);
 my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
