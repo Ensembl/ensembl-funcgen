@@ -396,107 +396,98 @@ sub no_write     { return $_[0]->param_silent('no_write');  }
 sub _set_out_db {
   my $self = $_[0];
   
-  my $db = $self->get_param_method('out_db', 'required');
   #This will either be the params hash or a DBADaptor
- 
-  
-  #This isn't catching out_db being ill-defined in the config. but this would 
-  #require extra control flow for every
+  my $db = $self->get_param_method('out_db', 'required');
  
   if(! ref($db)){ #Has been set to scalar in config?
      throw("out_db config is not a Hashref of DBAdaptor::new parameters:\t$db");
-  }  
-  else{
-    
-    if(ref($db) eq 'HASH'){
-      my $dnadb_params = $self->param_required('dnadb');  
-      #Always required as we don't want to default to ensembldb for a pipeline!
-          
-      #Create TrackingAdaptor here, as we can't get_TrackingAdaptor later
-      my $adaptor_class = ($self->use_tracking_db) ? 
-        'Bio::EnsEMBL::Funcgen::DBSQL::TrackingAdaptor' :
-        'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor';
-       
-      if(! eval{	$db = $adaptor_class->new(%{ $db }, %{ $dnadb_params }); 1 }){	  
-        throw("Error creating the Funcgen DBAdaptor and/or dna DBAdaptor\n$@");  
-      }  
-      
-      #Reset the $db to an actual DBAdaptor (rather than a Tracking/BaseAdaptor)
-      if ($self->use_tracking_db){
-        $self->set_param_method('tracking_adaptor', $db);
-        $db = $db->db; 
-      }
-        
-  	
-      #Actually test connections
-      $db->dbc->db_handle;
-      $db->dnadb->dbc->db_handle;
-  	
-      #To avoid farm issues...
-      if($self->param_silent('disconnect_if_idle')){
-        $db->dbc->disconnect_if_idle(1);
-        $db->dnadb->dbc->disconnect_if_idle(1);
-      }
-      
-          
-      # VALIDATE/SET Assembly
-      #This may clash with default assembly from DB if we are loading onto an old assembly
-      #normally we would project this across during import, but it might be valid to 
-      #actually load on an old assembly for comparison
-      #This can't be overloaded for assembly and new assembly as this will clash in the original input ids  
-      #Parameter should be -projection_assembly or -target_assembly?
-      my $assembly   = $self->get_param_method('assembly', 'silent');
-      my $cs_adaptor = $db->dnadb->get_CoordSystemAdaptor;
-    
-      if(! defined $assembly){
-        $assembly = $cs_adaptor->fetch_by_rank(1)->version; 
-        
-        if(! $assembly){
-          throw("Failed to identify default assembly from the DB");
-        }
-        
-        $self->assembly($assembly);
-      }
-      else{ #validate it exists in the dnadb
-         
-        my $cs = $cs_adaptor->fetch_all_by_version($assembly)->[0];
-      
-        if(! defined $cs){
-          throw("The -assembly $assembly does not exist in the database:\t".
-            $db->dnadb->dbc->dbname); 
-        }
-        #todo make sure all Slice/CoordSystem calls use this assembly explicitly.
-      }
-     
-      # VALIDATE/SET Species
-      my $param_species = $self->get_param_method('species', 'silent');
-      my $db_species = $db->species;
-      
-      if( ($param_species && $db_species) &&
-        (lc($param_species) ne lc($db_species)) ){
-          throw('Mismatch between the DB species (meta species.production_name) and'.
-          " -species parameter:\t".$db_species."\t".$param_species);      
-      }
-      elsif(! defined $param_species){
-      
-        if(! defined $db_species){
-          throw('Must either set -species or use a DB where the correct species '.
-            'name is set in the meta table as species.production name');  
-        }
-      
-        # Have to be mindful that we can't access the adaptors from the 
-        #Registry using the -species parameter. Hence it is unsafe to use the Registry!
-        #Always get the adaptors directly from the DB.
-        $self->species($db_species);
-      } 
-      #else we don't care so much about it not being set as db species/species.production name?
-      #if it isn't then registry based access won't work, as we know.      
-    }
-    elsif(! check_ref($db, 'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor')){
-      throw("The out_db param is set to an unexpected reference:\t$db\n".
-        "Please check the out_db config, which should be a Hashref of DBAdaptor parameters");
-    } 
   }
+  #Always required as we don't want to default to ensembldb for a pipeline!
+  my $dnadb_params = $self->param_required('dnadb');  
+      
+  #Create TrackingAdaptor here, as we can't get_TrackingAdaptor later
+  my $adaptor_class = ($self->use_tracking_db) ? 
+    'Bio::EnsEMBL::Funcgen::DBSQL::TrackingAdaptor' :
+    'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor';
+    
+  eval {
+    $db = $adaptor_class->new(%{ $db }, %{ $dnadb_params });
+  };
+  if($@){
+    throw("Error creating the Funcgen DBAdaptor and/or dna DBAdaptor\n$@");  
+  }
+  if(! $db->isa('Bio::EnsEMBL::DBSQL::BaseAdaptor')) {
+    throw("The out_db param is set to an unexpected reference:\t" . (ref $db) . "\n"
+      . Dumper($db)
+      . "Please check the out_db config, which should be a Hashref of DBAdaptor parameters");
+  } 
+
+  #Reset the $db to an actual DBAdaptor (rather than a Tracking/BaseAdaptor)
+  if ($self->use_tracking_db){
+    $self->set_param_method('tracking_adaptor', $db);
+    $db = $db->db; 
+  }
+    
+  # Test connections
+  $db->dbc->db_handle->ping();
+  $db->dnadb->dbc->db_handle->ping();
+
+  $db->dbc->disconnect_when_inactive(1);
+  $db->dnadb->dbc->disconnect_when_inactive(1);
+  $self->dbc->disconnect_when_inactive(1);
+
+  # VALIDATE/SET Assembly
+  #This may clash with default assembly from DB if we are loading onto an old assembly
+  #normally we would project this across during import, but it might be valid to 
+  #actually load on an old assembly for comparison
+  #This can't be overloaded for assembly and new assembly as this will clash in the original input ids  
+  #Parameter should be -projection_assembly or -target_assembly?
+  my $assembly   = $self->get_param_method('assembly', 'silent');
+  my $cs_adaptor = $db->dnadb->get_CoordSystemAdaptor;
+
+  if(! defined $assembly){
+    $assembly = $cs_adaptor->fetch_by_rank(1)->version; 
+    
+    if(! $assembly){
+      throw("Failed to identify default assembly from the DB");
+    }
+    
+    $self->assembly($assembly);
+  }
+  else{ #validate it exists in the dnadb
+      
+    my $cs = $cs_adaptor->fetch_all_by_version($assembly)->[0];
+  
+    if(! defined $cs){
+      throw("The -assembly $assembly does not exist in the database:\t".
+	$db->dnadb->dbc->dbname); 
+    }
+    #todo make sure all Slice/CoordSystem calls use this assembly explicitly.
+  }
+  
+  # VALIDATE/SET Species
+  my $param_species = $self->get_param_method('species', 'silent');
+  my $db_species = $db->species;
+  
+  if( ($param_species && $db_species) &&
+    (lc($param_species) ne lc($db_species)) ){
+      throw('Mismatch between the DB species (meta species.production_name) and'.
+      " -species parameter:\t".$db_species."\t".$param_species);      
+  }
+  elsif(! defined $param_species){
+  
+    if(! defined $db_species){
+      throw('Must either set -species or use a DB where the correct species '.
+	'name is set in the meta table as species.production name');  
+    }
+  
+    # Have to be mindful that we can't access the adaptors from the 
+    #Registry using the -species parameter. Hence it is unsafe to use the Registry!
+    #Always get the adaptors directly from the DB.
+    $self->species($db_species);
+  }
+
+
   
   return $self->out_db($db);
 }
@@ -1822,47 +1813,31 @@ sub get_alignment_files_by_ResultSet_formats {
   my $file_type = ($control) ? 'control_file' : 'alignment_file';
   my ($path, $align_files);
 
-  #Currently don't support > 1 result_file, but that is caught in the Importer somewhere
-  #Move this logic to the Importer and make input_files/data_dir optional
-  #Allow file over-ride here
-  #usage of get_param_method here will mean we can't call this again
-  #for the same file type
-  #hence, this will likely fail if the worker runs more than 1 job
-  
-  
-  if($self->get_param_method($file_type, 'silent')){ #Allow over-ride from config/input_id   
-    #Need to test in here that it matches one of the formats
-    #Need to add support for converting this non-standard path to other formats
-    throw("$file_type config over-ride is not yet implemented");
-    #$align_files = { => validate_path($self->param($file_type)) };
-  }
-  else{ # Get default file
-    #$path = $self->get_alignment_path_prefix_by_ResultSet($rset, $control, 1);#1 is validate aligned flag
     $path = $self->get_alignment_path_prefix_by_ResultSet($rset, $control);
-    $path .= '.unfiltered' if $filter_format;
+  $path .= '.unfiltered' if $filter_format;
+  
+  my $params = {debug              => $self->debug,
+		ref_fai            => $self->sam_ref_fai($rset->cell_type->gender),  #Just in case we need to convert
+		filter_from_format => $filter_format,
+		#skip_rmdups        => 1, # Duplicate removal no longer supported
+		all_formats        => $all_formats,
+		#checksum           => undef,  
+		#Specifying undef here turns on file based checksum generation/validation
+		};
+  #We never want to set checksum_optional here, as this is really
+  #just for fastq files for which we don't have a checksum
+  #This is currently bein interpreted at the actual check sum
+  #as is passed directly through to the provess method in EFGUtils
+  #and check_file
+  #This currently only call validate_checksum if checksum is defined
+  #but we also want this to support getting the checksum
+  #no, 
     
-    my $params = {debug              => $self->debug,
-                  ref_fai            => $self->sam_ref_fai($rset->cell_type->gender),  #Just in case we need to convert
-                  filter_from_format => $filter_format,
-                  skip_rmdups        => 1, #This will have been done in merge_bams
-                  all_formats        => $all_formats,
-                  checksum           => undef,  
-                  #Specifying undef here turns on file based checksum generation/validation
-                  };
-    #We never want to set checksum_optional here, as this is really
-    #just for fastq files for which we don't have a checksum
-    #This is currently bein interpreted at the actual check sum
-    #as is passed directly through to the provess method in EFGUtils
-    #and check_file
-    #This currently only call validate_checksum if checksum is defined
-    #but we also want this to support getting the checksum
-    #no, 
-     
-    $filter_format ||= '';#to avoid undef in debug 
-    $self->helper->debug(1, "Getting $file_type (formats: ".join(', ',@$formats).
-      " filter_from_format: $filter_format):\n\t".$path);
-    $align_files = get_files_by_formats($path, $formats, $params);
-  }  
+  $filter_format ||= '';#to avoid undef in debug 
+  $self->helper->debug(1, "Getting $file_type (formats: ".join(', ',@$formats).
+    " filter_from_format: $filter_format):\n\t".$path);
+  $align_files = get_files_by_formats($path, $formats, $params);
+
  
   #throw here and handle optional control file in caller. This should be done with 
   #a no_control/skip_control flag or similar  
