@@ -68,7 +68,10 @@ sub default_options {
     #Now linking via IdentifyInputSets to avoid creating the output data set
     #if running ReadAlignments in isolation
     
-    broad_peak_feature_types => ['H3K36me3', 'H3K27me3'],
+    #broad_peak_feature_types => ['H3K36me3', 'H3K27me3'],
+    broad_peak_feature_types => [
+      'H3K36me3', 'H3K79me2', 'H3K27me3', 'H3K9me3', 'H3K9me1'
+    ],
     #Slight redundancy here wrt default_peak_analyses
     #Can we switch this around, so they are all defined like this?
     #e.g. default_peak_feature_types = ['Histone', 'Transcription Factor'],
@@ -76,18 +79,17 @@ sub default_options {
     #But woudl eradicate potential for unsync'd broud peak analyses
     #or can we map this above?   
     
-    default_peak_analyses => 
-     {
-      #These $self->o methods interpolate above spec 
+    default_peak_analyses => {
       Histone             => $self->o('default_peaks'),
       'Transcription Factor' => $self->o('default_peaks'), 
       'Polymerase'        => $self->o('default_peaks'), 
       DNase1              => $self->o('default_tight_peaks'),
+      
       H3K36me3            => $self->o('default_broad_peaks'), 
-      H3K27me3            => $self->o('default_broad_peaks'),
-      #(map{ $_ => $self->o('default_broad_peaks') } @{$self->o('broad_peak_feature_types')}),
-      #(map{ $_ => $self->o('default_broad_peaks') } "@{#broad_peak_feature_types#}"),
-      #('#expr(map{ $_ => #default_broad_peaks# } @{#broad_peak_feature_types#})expr#'),
+      H3K79me2            => $self->o('default_broad_peaks'), 
+      H3K27me3            => $self->o('default_broad_peaks'), 
+      H3K9me3             => $self->o('default_broad_peaks'), 
+      H3K9me1             => $self->o('default_broad_peaks'), 
      }, 
    
  
