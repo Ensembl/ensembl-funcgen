@@ -255,7 +255,6 @@ create_insert_sql({
 });
 
 $logger->finish_log;
-exit;
 
 sub convert_ccat_peak_to_bed {
 
