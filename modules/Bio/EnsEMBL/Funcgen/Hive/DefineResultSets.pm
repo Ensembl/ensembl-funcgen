@@ -365,44 +365,11 @@ sub run {   # Check parameters and do appropriate database/file operations...
           #Can only do merge here, as this is the point we have access to the final ResultSet
           my $merged_file = $self->get_alignment_path_prefix_by_ResultSet($rset).'.bam'; 
       
-          #This also needs to use the get_alignment_files_by_ResultSet method!
-          
-          #This would use and existing merged file here if Pseudo rep IDR has already created the file
-          #Let's simply remove this test, and expect the file 
-          #once the pseudo rep code is implemented
-
-          # This is causing old buggy files to be used at present
-
-          # Let's add a checsum test if it already exists
-          
-          
-          if(! -f $merged_file || $self->param_silent('overwrite')){
-            
-            #In future we will treat align all replicates separately,
-            #and never archive merged files
-            
-            
-            $archive_files{to_archive} = $rep_bams{$rset->name}{rep_bams}; 
-     
-            
-            merge_bams($merged_file, 
-                       $self->sam_ref_fai($rset->cell_type->gender),
-                       $rep_bams{$rset->name}{rep_bams},
-                       {no_rmdups      => 1,        # Only necessary within a replicate
-                        debug          => $self->debug,
-                       });
-                       
-            $rset->adaptor->store_status('ALIGNED', $rset);
-            #IMPORTED not set here, as this is used to signify whether
-            #a collection file has been written.
-          }
-          else{
-            validate_checksum($merged_file);
-          }
-          
-          #Can't set IDR peak_analysis here, as we may lose this
-          #between pipelines i.e. when using IdentifyMergedResultSets after
-          #blowing away an old pipeline
+	  merge_bams({
+	    input_bams => $rep_bams{$rset->name}{rep_bams}, 
+	    output_bam => $merged_file,
+	    debug      => $self->debug,
+	  });
         }
         
         if($branch =~ /(_merged$|^DefineMergedDataSet$)/){# (no control) job will only ever have 1 rset
