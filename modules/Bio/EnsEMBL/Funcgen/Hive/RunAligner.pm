@@ -169,24 +169,40 @@ sub run {
     $self->throw_no_retry('Failed to call run on '.ref($self->aligner)."\n$err"); 
   }
   
-  my $cmd = qq(java picard.cmdline.PicardCommandLine CheckTerminatorBlock ) 
-  . qq( INPUT=$bam_file );
-
-  warn "Running\n$cmd\n";
-  run_system_cmd($cmd);
-
-#   # This should fail, if there is any problem with the bam file.
-#   $cmd = qq(samtools index $bam_file);
-#   run_system_cmd($cmd, undef, 1);
-  $cmd = qq(java picard.cmdline.PicardCommandLine BuildBamIndex ) 
-        . qq( VALIDATION_STRINGENCY=LENIENT ) 
-  . qq( INPUT=$bam_file );
-
-  warn "Running\n$cmd\n";
-  run_system_cmd($cmd);
+  my $no_dups_bam_file = "${bam_file}.nodups.bam";
   
-  $cmd = qq(samtools idxstats $bam_file);
-  run_system_cmd($cmd, undef, 1);
+  my $cmd = qq(samtools view -F 4 -b -o $no_dups_bam_file $bam_file);
+  run_system_cmd($cmd);
+  unlink($bam_file);
+  $cmd = qq(mv $no_dups_bam_file $bam_file);
+  run_system_cmd($cmd);
+
+# Commented out the following commands, because they were meant to check, if 
+# the bam file is valid. After fixing a bug that seems to always be the case,
+# so the code seems to just consume time.
+#
+#   my $cmd = qq(java picard.cmdline.PicardCommandLine CheckTerminatorBlock ) 
+#   . qq( INPUT=$bam_file );
+# 
+#   warn "Running\n$cmd\n";
+#   run_system_cmd($cmd);
+# 
+#   $cmd = qq(java picard.cmdline.PicardCommandLine BuildBamIndex ) 
+#         . qq( VALIDATION_STRINGENCY=LENIENT ) 
+#   . qq( INPUT=$bam_file );
+# 
+#   warn "Running\n$cmd\n";
+#   run_system_cmd($cmd);
+#   
+#   $cmd = qq(samtools idxstats $bam_file);
+#   run_system_cmd($cmd, undef, 1);
+#   
+#   # Does not work, because .bai is not appended, but .bam is substituted with .bai to get the file name.
+#   #my $index_name = $bam_file . '.bai';
+#   
+#   my $index_name = $bam_file;
+#   $index_name =~ s/\.bam$/\.bai/;
+#   unlink($index_name) if (-e $index_name);
 
   $self->debug(1, "Finished running ".ref($self->aligner));
   return;
