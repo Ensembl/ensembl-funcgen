@@ -184,7 +184,7 @@ sub run {
       
   }
   
-  foreach my $isset(@issets){
+  foreach my $isset(@issets) {
 
     if(($isset->is_control && ! $run_controls) ||
        ($run_controls && ! $isset->is_control)){
