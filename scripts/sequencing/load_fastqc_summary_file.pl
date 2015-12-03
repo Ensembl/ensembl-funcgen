@@ -60,8 +60,6 @@ echo $SUMMARY_FILE
 
 =head1 DESCRIPTION
 
-Downloads data for input sets registered in the data tracking database.
-
 =cut
 
 use strict;
