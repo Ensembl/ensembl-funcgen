@@ -127,7 +127,7 @@ sub new{
 }
 
 
-sub output_file{
+sub output_file {
   my ($self, $output_file) = @_;
   $self->{output_file} = $output_file if $output_file;  
   return $self->{output_file};
@@ -774,7 +774,7 @@ sub input_file_operator{
 
 
 
-sub read_and_import_data{
+sub read_and_import_data {
   my ($self, $preprocess) = @_;
 
   my $action = ($preprocess) ? 'preprocessing' : 'importing';
@@ -858,7 +858,7 @@ sub read_and_import_data{
   
   	  #We need to be able to optional open pipe to gzip | sort here
       #i.e. define open command
-      $fh = open_file($filepath, $self->input_file_operator);
+#       $fh = open_file($filepath, $self->input_file_operator);
 
       #This my become way too large for some reads files
       #Currently no problems
@@ -915,23 +915,21 @@ sub read_and_import_data{
         
         #Set as attr for parse_Features_by_Slice in format sepcific Parsers
 
-	
-        $self->file_handle(open_file($filepath, $self->input_file_operator));
-        
-        
+	# Commented out, never seems to be used:
+#         $self->file_handle(open_file($filepath, $self->input_file_operator));
         
         foreach my $slice(@$slices){
           $self->feature_adaptor->store_window_bins_by_Slice_Parser($slice, $self, 
-        															(
-        															 #Force needs reimplementing here?
-        															 -force            => $self->{force},
-        															 -dbfile_data_root => $self->{dbfile_data_root},
-        															));
+	    (
+	      #Force needs reimplementing here?
+	      -force            => $self->{force},
+	      -dbfile_data_root => $self->{dbfile_data_root},
+	    ));
         }  
 
         warn "Need to update InputSubset status to IMPORTED after all slices have been loaded";
         #Do we even need to set RESULT_FEATURE_SET for input_set ResultFeatures?
-        warn "Closing $filename\nDisregard the following 'Broken pipe' warning";
+#         warn "Closing $filename\nDisregard the following 'Broken pipe' warning";
 
         #Closing the read end of a pipe before the process writing to it at the other end 
         #is done writing results in the writer receiving a SIGPIPE. If the other end can't 
@@ -954,84 +952,90 @@ sub read_and_import_data{
         
         #IO::UnCompress::Gunzip?
 
-        if(! eval { close($fh); 1;}){
-          throw("Found errors when closing file\n$@");
-        }
+#         if(! eval { close($fh); 1;}){
+#           throw("Found errors when closing file\n$@");
+#         }
       }
-      else{
-	  
-        #Revoke FeatureSet IMPORTED state here incase we fail halfway through
-        #This will have already been rolled back, 
-        #todo remove this when we update the define sets method
-        #as stats should have been removed already?
-        if ($output_set->has_status('IMPORTED') && (! $preprocess)) {
-          $output_set->adaptor->revoke_status('IMPORTED', $output_set);
-        }
-        #What about IMPORTED_"CSVERSION"
-        #This may leave us with an incomplete import which still has
-        #an IMPORTED_CSVERSION state
-        #We need to depend on IMPORTED for completeness of set
-        #DAS currently only uses IMPORTED_CSVERSION
-        #This is okayish but we also need to write HCs for any sets 
-        #which do not have IMPORTED state!
-        my ($line, @outlines, $out_fh);
-
-        if($preprocess && ! $self->prepared){  
-          #Assume we want gzipped output
-          #filename is actually based on input, so may not have gz in file name
-          $out_fh = open_file($self->output_file, "| gzip -c > %s");
-        }
-
-   	    while(defined ($line=<$fh>)){
-          #Generic line processing
-          #Move these to parse_line?
-          $line =~ s/\r*\n//o;
-          next if $line =~ /^\#/;	
-          next if $line =~ /^$/;
-          
-          if($self->parse_line($line, $preprocess)){
-            #This counts all lines as oppose to cache_slice count, which only caches
-            #data lines where a slice can be cached
-            $self->count('total parsed lines');
-
-            #Cache or print to sorted file
-            if($preprocess && ! $self->prepared ){
-
-              if(scalar(@outlines) >1000){
-                print $out_fh join("\n", @outlines)."\n";
-                @outlines = ();
-              }
-              else{
-                push @outlines, $line;
-              }
-            }
-          }
-        }
-	 
-        if(! eval { close($fh); 1;}){
-          throw("Found errors when closing file\n$@");
-        }
-		  
-
-        #Print last of sorted file
-        if($preprocess && ! $self->prepared){
-          print $out_fh join("\n", @outlines)."\n";
-  
-          if(! eval { close($out_fh); 1;}){
-            throw("Found errors when closing file\n$@");
-          }
-        
-          @outlines = ();
-        }
-
-        if(! $preprocess){
-          #reset filename to that originally used to create the Inputsubsets
-          #some files may not have this prefix
-          $filename =~ s/^prepared\.// if $self->prepared;
-          my $sub_set = $eset->get_subset_by_name($filename);
-          $sub_set->adaptor->store_status('IMPORTED', $sub_set) if ! $self->batch_job;
-        }
-      }
+      
+      #
+      # Commenting out entire else block. It seems to be the code responsible 
+      # for creating the useless bed files in the result directory. The world
+      # will be a better place without them.
+      #
+#       else{
+# 	  
+#         #Revoke FeatureSet IMPORTED state here incase we fail halfway through
+#         #This will have already been rolled back, 
+#         #todo remove this when we update the define sets method
+#         #as stats should have been removed already?
+#         if ($output_set->has_status('IMPORTED') && (! $preprocess)) {
+#           $output_set->adaptor->revoke_status('IMPORTED', $output_set);
+#         }
+#         #What about IMPORTED_"CSVERSION"
+#         #This may leave us with an incomplete import which still has
+#         #an IMPORTED_CSVERSION state
+#         #We need to depend on IMPORTED for completeness of set
+#         #DAS currently only uses IMPORTED_CSVERSION
+#         #This is okayish but we also need to write HCs for any sets 
+#         #which do not have IMPORTED state!
+#         my ($line, @outlines, $out_fh);
+# 
+#         if($preprocess && ! $self->prepared){  
+#           #Assume we want gzipped output
+#           #filename is actually based on input, so may not have gz in file name
+#           $out_fh = open_file($self->output_file, "| gzip -c > %s");
+#         }
+# 
+#    	    while(defined ($line=<$fh>)){
+#           #Generic line processing
+#           #Move these to parse_line?
+#           $line =~ s/\r*\n//o;
+#           next if $line =~ /^\#/;	
+#           next if $line =~ /^$/;
+#           
+#           if($self->parse_line($line, $preprocess)){
+#             #This counts all lines as oppose to cache_slice count, which only caches
+#             #data lines where a slice can be cached
+#             $self->count('total parsed lines');
+# 
+#             #Cache or print to sorted file
+#             if($preprocess && ! $self->prepared ){
+# 
+#               if(scalar(@outlines) >1000){
+#                 print $out_fh join("\n", @outlines)."\n";
+#                 @outlines = ();
+#               }
+#               else{
+#                 push @outlines, $line;
+#               }
+#             }
+#           }
+#         }
+# 	 
+#         if(! eval { close($fh); 1;}){
+#           throw("Found errors when closing file\n$@");
+#         }
+# 		  
+# 
+#         #Print last of sorted file
+#         if($preprocess && ! $self->prepared){
+#           print $out_fh join("\n", @outlines)."\n";
+#   
+#           if(! eval { close($out_fh); 1;}){
+#             throw("Found errors when closing file\n$@");
+#           }
+#         
+#           @outlines = ();
+#         }
+# 
+#         if(! $preprocess){
+#           #reset filename to that originally used to create the Inputsubsets
+#           #some files may not have this prefix
+#           $filename =~ s/^prepared\.// if $self->prepared;
+#           my $sub_set = $eset->get_subset_by_name($filename);
+#           $sub_set->adaptor->store_status('IMPORTED', $sub_set) if ! $self->batch_job;
+#         }
+#       }
 
 
       #Could really do with warning if seen slices don't match
