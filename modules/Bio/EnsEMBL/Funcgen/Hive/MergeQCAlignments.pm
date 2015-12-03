@@ -121,7 +121,6 @@ sub run {
   my $sam_header = $self->sam_header;
   my $cmd;
   
-  
   ### CLEAN FASTQS ###
   if($self->fastq_files){
     #Run with no exit flag so we don't fail on retry
@@ -134,63 +133,70 @@ sub run {
   my $file_prefix  = $self->get_alignment_path_prefix_by_ResultSet($rset, $self->run_controls); 
   my $unfiltered_bam     = $file_prefix.'.unfiltered.bam';
   
-  #my $unfiltered_unsorted_bam     = $file_prefix.'.unsorted.bam';
-  
   $self->helper->debug(1, "Merging bams to:\t".$unfiltered_bam); 
-  #sam_header here is really optional if is probably present in each of the bam files but maybe incomplete 
-  my @bam_files  = @{$self->bam_files};
   
-  merge_bams_with_picard($unfiltered_bam, 
-            $self->sam_ref_fai($rset->cell_type->gender), 
-            \@bam_files, 
-            {debug          => $self->debug});
-
-  $cmd = qq(java picard.cmdline.PicardCommandLine CheckTerminatorBlock ) 
-    . qq( VALIDATION_STRINGENCY=LENIENT ) 
-  . qq( INPUT=$unfiltered_bam );
-
-  warn "Running\n$cmd\n";
-  run_system_cmd($cmd);
+  merge_bams({
+    input_bams => $self->bam_files, 
+    output_bam => $unfiltered_bam, 
+    debug => $self->debug,
+  });
   
-  $cmd = qq(java picard.cmdline.PicardCommandLine BuildBamIndex ) 
-      . qq( VALIDATION_STRINGENCY=LENIENT ) 
-
-  . qq( INPUT=$unfiltered_bam );
-
-  warn "Running\n$cmd\n";
-  run_system_cmd($cmd);
-
-  $cmd = qq(samtools idxstats $unfiltered_bam);
-  run_system_cmd($cmd, undef, 1);
+  my $tmp_bam = "${unfiltered_bam}.nodups.bam";
   
-  ### ALIGNMENT REPORT ### 
-  #todo convert this to wite to a result_set_report table
-#   my $alignment_log = $file_prefix.".alignment.log";
-#   $cmd ='echo -en "Alignment QC - samtools flagstat output:\n" > '.$alignment_log.
-#     ";samtools flagstat $unfiltered_bam >> $alignment_log;".
-#     'echo -en "Alignment QC - mapped reads:\t\t\t\t\t" >> '.$alignment_log.
-#     ";samtools view -u -F 4 $unfiltered_bam | samtools flagstat - | head -n 1 >> $alignment_log;".
-#     ' echo -en "Alignment QC - reliably aligned reads (mapping quality >= 1):\t" >> '.$alignment_log.
-#     ";samtools view -u -F 4 -q 1 $unfiltered_bam | samtools flagstat - | head -n 1 >> $alignment_log";
-#   #Maybe do some percentages?
-#   $self->helper->debug(1, "Generating alignment log with:\n".$cmd);
+  remove_duplicates_from_bam({
+    input_bam  => $unfiltered_bam,
+    output_bam => $tmp_bam, 
+    debug      => $self->debug,
+  });
+  
+  unlink($unfiltered_bam);
+  run_system_cmd("mv $tmp_bam $unfiltered_bam");
+
+# Commented out the following commands, because they were meant to check, if 
+# the bam file is valid. After fixing a bug that seems to always be the case,
+# so the code seems to just consume time.
+#
+#   $cmd = qq(java picard.cmdline.PicardCommandLine CheckTerminatorBlock ) 
+#     . qq( VALIDATION_STRINGENCY=LENIENT ) 
+#     . qq( INPUT=$unfiltered_bam );
+# 
+#   warn "Running\n$cmd\n";
 #   run_system_cmd($cmd);
- 
-  #filter file here to prevent race condition between parallel peak
-  #calling jobs which share the same control
-  #This will also check the checksum we have just generated, which is a bit redundant
-  $self->get_alignment_files_by_ResultSet_formats($rset, ['bam'], 
-                                                  $self->run_controls, 
-                                                  undef, 
-                                                  'bam');#Filter from format
-                                                  
-  #This is really only unmapped and duplicate reads (as we have dropped MT filtering)
-  #i.,e. unique_mapping
-  #so we can drop archiving of this for now, so long as we maintain the 
-  #alignement log for the unfiltered file
-  #We would have to re-instate an unfiltered file if we ever introduce
-  #more filtering filtering                                                
-  #$self->archive_files([$unfiltered_bam, $unfiltered_bam.'.CHECKSUM'], 1);#mandatory flag
+#   
+#   $cmd = qq(java picard.cmdline.PicardCommandLine BuildBamIndex ) 
+#       . qq( VALIDATION_STRINGENCY=LENIENT )
+#       . qq( INPUT=$unfiltered_bam );
+# 
+#   warn "Running\n$cmd\n";
+#   run_system_cmd($cmd);
+# 
+#   $cmd = qq(samtools idxstats $unfiltered_bam);
+#   run_system_cmd($cmd, undef, 1);
+#   
+#   # Get rid of the index file, whatever the name may be:
+#   #
+#   my $index_name = $unfiltered_bam . '.bai';
+#   unlink($index_name) if (-e $index_name);  
+#   my $index_name = $unfiltered_bam;
+#   $index_name =~ s/\.bam$/\.bai/;
+#   unlink($index_name) if (-e $index_name);
+  
+  # This calls code that generates the name of the previously merged bam file,
+  # with ".unfiltered". It performs some filtering and creates a file without
+  # ".unfiltered".
+  # Essentially, it seems to just run samtools view -F 4 (getting rid of 
+  # unaligned reads) on it. It this is the case, this call should be replaced with that.
+  #
+# Moved this into the RunAligner.
+#
+#   $self->get_alignment_files_by_ResultSet_formats($rset, ['bam'], 
+#                                                   $self->run_controls, 
+#                                                   undef, 
+#                                                   'bam');#Filter from format
+
+  # After the -F 4 filtering step above, the bam file should no longer be necessary.
+  #
+  unlink($unfiltered_bam) if (-e $unfiltered_bam);
   
   my %batch_params = %{$self->batch_params};
   my $flow_mode    = $self->flow_mode;
@@ -211,10 +217,10 @@ sub run {
 
     if(! $self->debug){
       #$output_id{garbage} = [@bam_files, $unfiltered_unsorted_bam];
-      $output_id{garbage} = [@bam_files];
+      $output_id{garbage} = $self->bam_files;
     }
     else{  #Do not garbage collect in debug mode. In case we need to rerun.
-      warn "Skipping garbage collection for:\n".join("\n\t", @bam_files);
+      warn "Skipping garbage collection for:\n".join("\n\t", @{$self->bam_files});
     }
   
     my $lname     = 'DefineMergedDataSet';  #flow mode eq merged
@@ -245,7 +251,7 @@ sub run {
           {%batch_params,
           
           # mnuhn: Something is going wrong during the merge, so deactivating garbage collection to make it rerunnable.
-           garbage     => \@bam_files, 
+           garbage     => $self->bam_files, 
            
            #Passing rep bam here prevent us from redoing the peak calling
            #Disable? Or wait till we restructure and only ever keep the rep bams
