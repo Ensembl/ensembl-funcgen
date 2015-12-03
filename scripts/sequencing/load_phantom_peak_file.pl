@@ -101,6 +101,7 @@ my @phantom_peak_analysis_details = (
 );
 
 my $logger = Bio::EnsEMBL::Utils::Logger->new();
+$logger->init_log;
 
 my $dbc = Bio::EnsEMBL::DBSQL::DBConnection->new(@tracking_db_connection_details);
 my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
