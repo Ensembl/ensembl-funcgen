@@ -176,7 +176,7 @@ sub set_config{
 #simply don't write the no sort!
 
 
-sub initialise_input_file{
+sub initialise_input_file {
   my ($self, $filepath, $prepare) = @_;
 
   #Test file format
