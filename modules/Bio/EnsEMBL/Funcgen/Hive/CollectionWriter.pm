@@ -16,31 +16,10 @@ use warnings;
 use strict;
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( generate_slices_from_names 
                                                run_system_cmd );
-                                        
-                                               #strip_param_args strip_param_flags run_system_cmd);
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 
-#use Data::Dumper;
-
-#global values for the Helper... maybe pass as parameters...
-$main::_debug_level = 0;
-$main::_tee = 0;
-$main::_no_log = 1;
-
-
-#params
-#output_dir  This is a generic over ride for the default output dir
-
-# TODO
-#1 default set up is that alignment will have already done the filter from bam
-#  hence we woudl need to set the filter_from_format param if we ever want to change this
-#2 Move a lot of the fetch_input_code to run, as it is actually converting bam to bed
-
-
-sub fetch_input {   # fetch parameters...
+sub fetch_input {  
   my $self = shift;
-  #Set some module defaults
-  $self->param('disconnect_if_idle', 1);
 
   $self->SUPER::fetch_input;    
   $self->helper->debug(1, "CollectionWriter::fetch_input after SUPER::fetch_input");  
@@ -51,8 +30,6 @@ sub fetch_input {   # fetch parameters...
   my $ftype_name = $rset->feature_type->name;
  
   $self->get_output_work_dir_methods($self->db_output_dir.'/result_feature/'.$rset->name, 1);#no work dir flag
-  #todo enable use of work dir in get_alignment_file_by_ResultSet_formats 
-  # and Importer for bed file generation
   
   # This is required by sam_ref_fai which is called by get_alignment_file_by_ResultSet_formats
   # Move this to get_alignment_file_by_ResultSet_formats?
@@ -77,55 +54,28 @@ sub fetch_input {   # fetch parameters...
   # use all formats by default
   # Can we update -input_files in the Importer after we have created it?
   
-  
+  my @file_to_delete_after_cell_line_has_been_processed;  
 
-  if($self->FeatureSet->analysis->program eq 'CCAT'){
+  if($self->FeatureSet->analysis->program eq 'CCAT') {
     
     my $exp = $rset->experiment(1);  # ctrl flag
-    # But only in PreprocessAlignments no in WriteCollections 
-    
-#     if(! $exp->has_status('CONTROL_CONVERTED_TO_BED')){
-#       #Make this status specific for now, just in case
-#     
-#       if($exp->has_status('CONVERTING_CONTROL_TO_BED')){
-#          $self->input_job->transient_error(0); #So we don't retry  
-#           #Would be nice to set a retry delay of 60 mins
-#           throw($exp->name.' is in the CONVERTING_CONTROL_TO_BED state, another job may already be converting these controls'.
-#             "\nPlease wait until ".$exp->name.' has the CONTROL_CONVERTED_TO_BED status before resubmitting this job');
-#       }
-#       else{
-#         #Potential race condition here will fail on store
-#         $exp->adaptor->store_status('CONVERTING_CONTROL_TO_BED', $exp); 
-       
-       my $path = $self->get_alignment_path_prefix_by_ResultSet($rset, 1);
-       
-       my $bam_file = $path . '.bam';
-       my $bed_file = $path . '.bed';
-       
-       if(! -e $bam_file) {
-	confess("Can't find bam file $bam_file!");
-       }
-       
-       if (! -e $bed_file) {
-	my $cmd = qq(bamToBed -i $bam_file > ${bed_file}.part);
-	run_system_cmd($cmd);
-	$cmd = qq(mv ${bed_file}.part $bed_file);
-	run_system_cmd($cmd);
-       }
-       
-#        die($path);
-       
-#         $self->get_alignment_files_by_ResultSet_formats($rset,
-#                                                         ['bed'],
-#                                                         1); #control flag
 
-#         # This is creating the prepared bed file in a subdir
-#       
-#         #todo check success of this in case another job has pipped us
-#         $exp->adaptor->store_status('CONTROL_CONVERTED_TO_BED',   $exp); 
-#         $exp->adaptor->revoke_status('CONVERTING_CONTROL_TO_BED', $exp, 1);#Validate status flag
-#       }   
-#     }
+    my $path = $self->get_alignment_path_prefix_by_ResultSet($rset, 1);
+    
+    my $bam_file = $path . '.bam';
+    my $bed_file = $path . '.bed';
+    
+    if(! -e $bam_file) {
+      confess("Can't find bam file $bam_file!");
+    }
+    
+    if (! -e $bed_file) {
+      my $cmd = qq(bamToBed -i $bam_file > ${bed_file}.part);
+      run_system_cmd($cmd);
+      $cmd = qq(mv ${bed_file}.part $bed_file);
+      run_system_cmd($cmd);
+      push @file_to_delete_after_cell_line_has_been_processed, $bed_file;
+    }
   }
   
   my $path = $self->get_alignment_path_prefix_by_ResultSet($rset);
@@ -142,51 +92,22 @@ sub fetch_input {   # fetch parameters...
     run_system_cmd($cmd);
     $cmd = qq(mv ${bed_file}.part $bed_file);
     run_system_cmd($cmd);
+    push @file_to_delete_after_cell_line_has_been_processed, $bed_file;
   }
   
-  #This currently keeps the sam files! Which is caning the lfs quota                                                                    
-  warn "Hardcoded PreprocessAlignments to get bed only, as sam intermediate was eating quota";
-   
-  #my $align_files = $self->get_alignment_files_by_ResultSet_formats($rset, ['bam', 'bed']);
+  push @file_to_delete_after_cell_line_has_been_processed, $bed_file;
+  
+  foreach my $current_file (@file_to_delete_after_cell_line_has_been_processed) {
+    $self->dataflow_output_id( {
+	file_to_delete_after_cell_line_has_been_processed => $current_file,
+    }, 7);
+  }
+  
   my $align_files = $self->get_alignment_files_by_ResultSet_formats($rset, ['bam']);
-                                                                #    $self->param_required('feature_formats'),
-                                                                #    undef, #control flag
-                                                                #    1);     #all formats
   $align_files->{bed} = $bed_file;
-                                                                                                                                                                            
+
   $self->set_param_method('bam_file', $align_files->{bam}, 'required');  # For bai test/creation 
-                                                                    
-  #No need to check as we have all_formats defined? Shouldn't we just specify bed here?
-  #other formats maybe required for other downstream analyses i.e. peak calls
-  #but we don't know what formats yet
-  #We have to do the conversion here, so we don't get parallel Collection slice jobs trying to do the conversion
-  #todo review this
-   
-  #Now we need to convert the control file for CCAT
-  #This is harcoded and needs revising, can't guarantee this will be grouped by control
-  #at this point, so will have to employ status checking to avoid clashes
-  #This analysis really needs to know the formats required for downstream analyses
-  #These are available via the config, but not the PeakCaller modules themselves
-  #So we will have to hardcode this in the config 
-  
-  #We can't test the filepaths, as 
-  #1 We don't know wether they are finished
-  #2 The code to build the file path is nested in get_alignment_files_by_ResultSet_formats 
-  #  and get_files_by_formats. Probably need a no_convert mode, which just returns what's there
-  #  already
-  
-  #This has to be on the experiment
-  #Let's just do it for all rather than just non-IDR ftypes??
-  
-  $self->helper->debug(1, 'CollectionWriter::fetch_input setting new_importer_params with align_files:', 
-                       $align_files);
-  #Arguably, some of the should be set in default_importer_params
-  #but this does the same job, and prevents having to flow two separate hashes
-  
 
-
-  #Default params, will not over-write new_importer_param
-  #which have been dataflowed
   $self->new_Importer_params( 
    {#-prepared            => 1, #Will be if derived from BAM in get_alignment_file_by_InputSets
     #but we aren't extracting the slice names in this process yet
@@ -220,7 +141,8 @@ sub fetch_input {   # fetch parameters...
 
 
 sub run {   # Check parameters and do appropriate database/file operations... 
-  my $self = shift;
+  my $self = shift; 
+
   my $Imp  = $self->get_Importer;
   
   if($self->param_silent('merge')){
@@ -231,11 +153,16 @@ sub run {   # Check parameters and do appropriate database/file operations...
   }
   #Prepare or write slice col
   
+  my $expected_bam_index_file = $self->bam_file.'.bai';
+  
   # Test/create bai index file
-  if(! -e $self->bam_file.'.bai'){
+  if(! -e $expected_bam_index_file) {
     my $cmd = 'samtools index '.$self->bam_file;  # -b option not require for this version
     run_system_cmd($cmd);
-  } 
+  }
+  $self->dataflow_output_id( {
+      file_to_delete_after_cell_line_has_been_processed => $expected_bam_index_file,
+  }, 7);
 
   $Imp->read_and_import_data('prepare');
 
