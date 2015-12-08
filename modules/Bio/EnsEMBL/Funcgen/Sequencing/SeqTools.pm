@@ -532,7 +532,8 @@ sub process_sam_bam {
   (my $tmp_out = $in_file) =~ s/\.$in_format//;
   # $tmp_out and $sorted_prefix are the same, so removing $sorted_prefix
   #my $sorted_prefix = $tmp_out.'.sorted';
-  $tmp_out .= ($sort) ? '.sorted' : '.tmp';
+  
+  $tmp_out .= $sort ? '.sorted' : '.tmp';
 
   # Simply over-write these
   #my $cmd = "rm -f $tmp_bam*";  # Is * to handle possible checksum files
