@@ -175,14 +175,23 @@ sub pipeline_analyses {
       },
      -flow_into =>
       {
-       '3->A' => [ 'DownloadInputSubset' ],
-       'A->2' => [ 'DefineResultSets' ],#This will not always have pre-req Download jobs
+#        '3->A' => [ 'DownloadInputSubset' ],
+#        'A->2' => [ 'DefineResultSets' ],
+
+       '2->A' => [ 'DefineResultSets'     ],
+       'A->4' => [ 'CleanupCellLineFiles' ],
       },
      -analysis_capacity => 1, #For safety, and can only run 1 LOCAL?
      -rc_name => 'default',   #NA as LOCAL?
      -failed_job_tolerance => 100,
      #We don't care about these failing, as we expect them too
     },
+    {
+      -logic_name => 'CleanupCellLineFiles',
+      -module     => 'Bio::EnsEMBL::Funcgen::Hive::ErsaCleanup',
+      -meadow_type=> 'LOCAL',
+    },
+
 
 
    # {-logic_name  => 'DownloadInputSubsetFactory',
@@ -215,13 +224,13 @@ sub pipeline_analyses {
 #    },
 
 
-    {-logic_name => 'DownloadInputSubset',
-     -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-     -parameters => {
-                    },
-     -analysis_capacity => 100,       #Could this go higher?
-     -rc_name           => 'default', #TODO change this to long?
-    },
+#     {-logic_name => 'DownloadInputSubset',
+#      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+#      -parameters => {
+#                     },
+#      -analysis_capacity => 100,       #Could this go higher?
+#      -rc_name           => 'default', #TODO change this to long?
+#     },
 
 
     {-logic_name => 'DefineResultSets',
