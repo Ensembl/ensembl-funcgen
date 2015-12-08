@@ -779,18 +779,15 @@ sub read_and_import_data {
 
   my $action = ($preprocess) ? 'preprocessing' : 'importing';
   $action .= ' prepared' if $self->prepared;
-  
 
   $self->log("Reading and $action ".$self->vendor()." data");
   my ($filename, $fh, $f_out, %feature_params, @lines);
-
 
   if($preprocess && 
      (! $self->prepared) &&
      (! $self->can('initialise_input_file')) ){
     throw('preprocess mode is not currently available in '.ref($self));
   }
-  
  
   #Test for conflicting run modes
   if($preprocess && $self->batch_job){ 
@@ -799,11 +796,8 @@ sub read_and_import_data {
 	#don't prepare if already prepared
     throw('You cannot run read_and_import_data in preprocess mode with a -batch_job');
   }
-  
-  
-  
 
-  my ($eset);
+  my $eset;
   my $output_set = $self->output_set;
   
   #todo integrate all this into define_sets?
@@ -1049,18 +1043,18 @@ sub read_and_import_data {
         }
       }
 
-      if($preprocess){
-        $self->log("Finished preparing import:\t".$self->output_file);
-      }
-      else{
-        #Need to tweak this for slice based import
-        $self->log('Finished importing '.$self->counts('features').' '.
-        $output_set->name." features from:\t$filepath");
-      }
+#       if($preprocess){
+#         $self->log("Finished preparing import:\t".$self->output_file);
+#       }
+#       else{
+#         #Need to tweak this for slice based import
+#         $self->log('Finished importing '.$self->counts('features').' '.
+#         $output_set->name." features from:\t$filepath");
+#       }
 	
-      foreach my $key (keys %{$self->counts}){
-        $self->log('Count '.sprintf("%-25s", "$key:").$self->counts($key));
-      }	  
+#       foreach my $key (keys %{$self->counts}){
+#         $self->log('Count '.sprintf("%-25s", "$key:").$self->counts($key));
+#       }	  
     }
   }
 
