@@ -63,7 +63,7 @@ sub fetch_input {
   
   $self->validate_dir_param
    ('db_output_dir',
-    undef,  #create/writeable? #should this be undef, and force the runnables to validate_dir_param output_dir?
+    1,  #create/writeable? #should this be undef, and force the runnables to validate_dir_param output_dir?
     $self->data_root_dir.'/output/'.$self->out_db->dbc->dbname); #default
   
   
