@@ -55,9 +55,9 @@ inputsz_parameter=$(samtools view -c $TEMPDIR/UT7:hist:BR2_WCE_3526_bwa_samse_1.
   outfile=argenrich.stdout.txt
 
 ./scripts/sequencing/load_argenrich_qc_file.pl \
-  --argenrich_file /lustre/scratch109/ensembl/funcgen/mn1/temp/argenrich/argenrich.stdout.txt \
+  --argenrich_file /lustre/scratch109/ensembl/funcgen/mn1/ersa/debug/F36P:hist:BR2_H3K27me3_3526/argenrich_outfile.txt \
   --control_result_set_id 1 \
-  --signal_result_set_id 2
+  --signal_result_set_id 2 --user ensadmin --pass xxx --host ens-genomics1 --dbname mn1_faang_tracking_homo_sapiens_funcgen_81_38
 
 =head1 DESCRIPTION
 
@@ -112,7 +112,28 @@ die unless($signal_result_set_id);
 my $logger = Bio::EnsEMBL::Utils::Logger->new();
 $logger->init_log;
 
+my @tracking_db_connection_details = (
+  -user     => $user,
+  -pass     => $pass,
+  -host     => $host,
+  -dbname   => $dbname,
+);
+my $dbc = Bio::EnsEMBL::DBSQL::DBConnection->new(@tracking_db_connection_details);
+my $analysis_id;
+
+if ($dry_run) {
+  $analysis_id = 'Dryrun';
+} else {
+  $analysis_id = create_analysis_if_not_exists($dbc);
+}
+
 open IN, $argenrich_file;
+
+my %other_column_name_for = (
+   'Control enrichment stronger than ChIP at bin' => '',
+   'Zero-enriched IP, maximum difference at bin' => '',
+   'PCR amplification bias in Input, coverage of 1% of genome' => '',
+);
 
 my %key_value_pairs;
 LINE: while (my $current_line = <IN>) {
@@ -126,9 +147,10 @@ LINE: while (my $current_line = <IN>) {
 use Hash::Util qw( lock_hash );
 lock_hash(%key_value_pairs);
 
-my $sql = qq(insert into table (control_result_set_id, signal_result_set_id, p, q, divergence, z_score, percent_genome_enriched, input_scaling_factor, differential_percentage_enrichment) values (
+my $sql = qq(insert into result_set_qc_chance (control_result_set_id, signal_result_set_id, analysis_id, p, q, divergence, z_score, percent_genome_enriched, input_scaling_factor, differential_percentage_enrichment) values (
     $control_result_set_id, 
     $signal_result_set_id,
+    $analysis_id,
     $key_value_pairs{'p'}, 
     $key_value_pairs{'q'}, 
     $key_value_pairs{'divergence'}, 
@@ -149,7 +171,7 @@ if ($dry_run) {
   $sql_processor = sub {
     my $sql = shift;
     $logger->info("Running: " . $sql . "\n");
-#     $dbc->do($sql);
+     $dbc->do($sql);
   };
 }
 
@@ -162,54 +184,33 @@ $sql_processor->($sql);
 $logger->finish_log;
 exit;
 
-my @tracking_db_connection_details = (
-    -user     => $user,
-    -pass     => $pass,
-    -host     => $host,
-    -dbname   => $dbname,
-);
-my $logic_name = 'QC Chance';
-my @phantom_peak_analysis_details = (
-        -logic_name      => $logic_name,
-        -program         => 'argenrich.R',
-        -parameters      => '',
-        -description     => '',
-        -display_label   => 'Chance',
-        -displayable     => undef,
-);
+sub create_analysis_if_not_exists {
 
-my $logger = Bio::EnsEMBL::Utils::Logger->new();
+  my $dbc = shift;
+  my $logic_name = 'QC Chance';
+  my @phantom_peak_analysis_details = (
+	  -logic_name      => $logic_name,
+	  -program         => 'argenrich.R',
+	  -parameters      => '',
+	  -description     => '',
+	  -display_label   => 'Chance',
+	  -displayable     => undef,
+  );
+  
+  my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+    -DBCONN => $dbc,  
+  );
+  my $analysis_adaptor = $dba->get_AnalysisAdaptor();
+  my $analysis = $analysis_adaptor->fetch_by_logic_name($logic_name);
 
-my $dbc = Bio::EnsEMBL::DBSQL::DBConnection->new(@tracking_db_connection_details);
-my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-  -DBCONN => $dbc,  
-);
-my $analysis_adaptor = $dba->get_AnalysisAdaptor();
-my $analysis = $analysis_adaptor->fetch_by_logic_name($logic_name);
-
-if (! $analysis && ! $dry_run) {
-      $logger->info("No analysis with logic name $logic_name found. Creating one.");
-      $analysis = Bio::EnsEMBL::Analysis->new(@phantom_peak_analysis_details);
-      $analysis_adaptor->store($analysis);
+  if (! $analysis && ! $dry_run) {
+	$logger->info("No analysis with logic name $logic_name found. Creating one.");
+	$analysis = Bio::EnsEMBL::Analysis->new(@phantom_peak_analysis_details);
+	$analysis_adaptor->store($analysis);
+  }
+  my $analysis_id = $analysis->dbID;
+  return $analysis_id;
 }
-my $analysis_id = $analysis->dbID;
-
-my $sql_processor;
-if ($dry_run) {
-  $sql_processor = sub {
-    my $sql = shift;
-    $logger->info($sql . "\n");
-  };
-} else {
-  $sql_processor = sub {
-    my $sql = shift;
-    $dbc->do($sql);
-  };
-}
-
-create_table({
-  sql_processor => $sql_processor
-});
 
 =head2 create_table
 =cut
