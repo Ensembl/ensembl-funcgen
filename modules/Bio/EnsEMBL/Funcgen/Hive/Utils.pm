@@ -90,11 +90,17 @@ sub inject_DataflowRuleAdaptor_methods{
     *{$dfr_ref.'::get_dataflow_config_by_analysis_id'} = sub { 
       my $self    = shift;
       my $anal_id = shift;
-      throw('Must provide and analysis id argument') if ! defined $anal_id;        
+      throw('Must provide and analysis id argument') if ! defined $anal_id;
       my %df_config;
         
-      foreach my $dfr(@{$self->fetch_all_by_analysis_id($anal_id)}){
+      foreach my $dfr(@{$self->fetch_all_by_analysis_id($anal_id)}) {
         #$anal_id here always represents the from analysis
+        
+#         use Data::Dumper;
+#         print Dumper($dfr->to_analysis);
+        
+        next if ($dfr->to_analysis->isa('Bio::EnsEMBL::Hive::Accumulator'));
+        
         my $to_analysis = $dfr->to_analysis->logic_name;
           
         #Is it valid to wire to the same analysis using two different branches
