@@ -58,7 +58,7 @@ my %valid_flow_modes = (replicate => undef,
 sub fetch_input {  
   my $self = shift;
   #Set some module defaults
-  $self->param('disconnect_if_idle', 1);
+  #$self->param('disconnect_if_idle', 1);
   
   $self->SUPER::fetch_input();
   my $rset = $self->fetch_Set_input('ResultSet');
@@ -131,7 +131,7 @@ sub run {
   
   ### MERGE BAMS ###
   my $file_prefix  = $self->get_alignment_path_prefix_by_ResultSet($rset, $self->run_controls); 
-  my $unfiltered_bam     = $file_prefix.'.unfiltered.bam';
+  my $unfiltered_bam     = $file_prefix.'.bam';
   
   $self->helper->debug(1, "Merging bams to:\t".$unfiltered_bam); 
   
@@ -196,7 +196,7 @@ sub run {
 
   # After the -F 4 filtering step above, the bam file should no longer be necessary.
   #
-  unlink($unfiltered_bam) if (-e $unfiltered_bam);
+  #unlink($unfiltered_bam) if (-e $unfiltered_bam);
   
   my %batch_params = %{$self->batch_params};
   my $flow_mode    = $self->flow_mode;
