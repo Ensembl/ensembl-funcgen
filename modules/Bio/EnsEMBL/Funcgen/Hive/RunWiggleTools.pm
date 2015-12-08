@@ -47,7 +47,7 @@ use base ('Bio::EnsEMBL::Funcgen::Hive::BaseDB');
 
 sub fetch_input {
   my $self = shift;
-  $self->param('disconnect_if_idle', 1);  # Set before DB connection via SUPER::fetch_input
+  #$self->param('disconnect_if_idle', 1);  # Set before DB connection via SUPER::fetch_input
   $self->SUPER::fetch_input;
   $self->get_param_method('reduce_operator', 'silent', '');
   $self->get_param_method('map_operator', 'silent', '');
@@ -223,18 +223,21 @@ sub _build_rpkm_cmd{
     # The file should be sorted already, but samtools index (version 1.2) fails 
     # silently on it with exit code zero.
     #
-    my $sorted_bam  = "${file}.sorted.bam";
-    if (! -e $sorted_bam) {
-      my $cmd = qq(samtools sort $file ${file}.sorted);
-      run_system_cmd($cmd, undef, 1);
-    } else {
-      warn("The sorted bam file $sorted_bam already exists, so skipping the merge step.");
-    }
+#     my $sorted_bam  = "${file}.sorted.bam";
+#     if (! -e $sorted_bam) {
+#       my $cmd = qq(samtools sort $file ${file}.sorted);
+#       run_system_cmd($cmd, undef, 1);
+#     } else {
+#       warn("The sorted bam file $sorted_bam already exists, so skipping the merge step.");
+#     }
+# 
+#     my $cmd = qq(samtools index $sorted_bam);
+#     run_system_cmd($cmd, undef, 1);
 
-    my $cmd = qq(samtools index $sorted_bam);
+    my $cmd = qq(samtools index $file);
     run_system_cmd($cmd, undef, 1);
-    
-    $count_cmd = 'samtools idxstats '.$sorted_bam.' | awk \'{total = total + $2} END{print total}\'';
+
+    $count_cmd = 'samtools idxstats '.$file.' | awk \'{total = total + $2} END{print total}\'';
     $self->helper->debug(2, "Running:\n\t".$count_cmd);
     $total_mapped = run_backtick_cmd($count_cmd);
     # pipe causes uncaught failures on absence of bai file, so test here?
@@ -243,7 +246,7 @@ sub _build_rpkm_cmd{
       $self->throw_no_retry("Failed to get number of mapped reads from index of:\n\t".$file);
     }
 
-    $wiggle_tools_cmd .= ' scale '.(10**9 / $total_mapped).' '.$sorted_bam;
+    $wiggle_tools_cmd .= ' scale '.(10**9 / $total_mapped).' '.$file;
   }
 
   return $wiggle_tools_cmd;
