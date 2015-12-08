@@ -248,7 +248,7 @@ sub alignment_root_dir {
    $self->set_dir_param_method('alignment_root_dir', [$self->data_root_dir,
                                                'alignments',
                                                lc($self->param('species')),
-                                               $self->param_required('assembly')]);
+                                               $self->param_required('assembly')], 1);
                                                
    #complete path will include study/experiment name and input_set logic_name
    #which will be the logic name of the alignment
@@ -961,6 +961,8 @@ sub init_branching_by_analysis{
     
     my $job = $self->input_job;
     
+#     use Data::Dumper;
+#     print Dumper($job);
     
     #$self->{branch_config} = $dfr_adaptor->get_dataflow_config_by_analysis_id($self->analysis->dbID);
     $self->{branch_config} = $dfr_adaptor->get_dataflow_config_by_analysis_id($job->analysis_id);
