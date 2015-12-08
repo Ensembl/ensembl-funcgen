@@ -583,8 +583,17 @@ sub run {   # Check parameters and do appropriate database/file operations...
           if(exists $oid->{input_subset_ids}->{controls}){
             $oid->{input_subset_ids}->{controls} = [keys(%{$oid->{input_subset_ids}{controls}{input_subsets}})];      
           }
-            
-          $self->branch_job_group($branch, [$oid]);              
+          
+          
+          my @funnel_input_id = (
+	    {
+		oid => $oid
+	    }
+	  );
+          
+          $self->branch_job_group($branch, [$oid]);
+          $self->branch_job_group($branch, [$oid], 4, \@funnel_input_id
+          );
         }
         else{#We have no signal subsets to flow!
           $warn_msg .= "No input_subsets to dataflow for control group:\t$key\n";
