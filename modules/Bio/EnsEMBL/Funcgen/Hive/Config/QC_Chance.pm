@@ -60,6 +60,12 @@ sub pipeline_analyses {
 		signal_result_set_id  => 2,
 		chrlenfile            => '/lustre/scratch109/ensembl/funcgen/mn1/ersa/faang/reference_files/CCAT/homo_sapiens_.CCAT_chr_lengths.txt',
 		chrlenfilesorted      => '/lustre/scratch109/ensembl/funcgen/mn1/ersa/faang/reference_files/CCAT/homo_sapiens_.CCAT_chr_lengths.chrlenfilesorted.txt',
+		
+		tracking_db_user   => 'ensadmin',
+		tracking_db_pass   => 'xxx',
+		tracking_db_host   => 'ens-genomics1',
+		tracking_db_name   => 'mn1_faang_tracking_homo_sapiens_funcgen_81_38',
+		
             }
             ],
             -flow_into => { 1 => 'MkTempDir', },
@@ -149,6 +155,7 @@ sub pipeline_analyses {
 		  . qq( --argenrich_file        #tempdir#/#argenrich_outfile#     )
 		  . qq( --control_result_set_id #control_result_set_id#           )
 		  . qq( --signal_result_set_id  #signal_result_set_id#            )
+		  . qq( --user #tracking_db_user# --pass #tracking_db_pass# --host #tracking_db_host# --dbname #tracking_db_name# )
             },
         },
     ];
