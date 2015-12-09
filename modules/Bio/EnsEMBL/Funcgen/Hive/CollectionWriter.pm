@@ -29,7 +29,7 @@ sub fetch_input {
   $self->init_branching_by_analysis;  #Set up the branch config
   my $ftype_name = $rset->feature_type->name;
  
-  $self->get_output_work_dir_methods($self->db_output_dir.'/result_feature/'.$rset->name, 1);#no work dir flag
+  #$self->get_output_work_dir_methods($self->db_output_dir.'/result_feature/'.$rset->name, 1);#no work dir flag
   
   # This is required by sam_ref_fai which is called by get_alignment_file_by_ResultSet_formats
   # Move this to get_alignment_file_by_ResultSet_formats?
@@ -126,7 +126,7 @@ sub fetch_input {
    });
   
   #todo why do we have to set EFG_DATA?
-  $ENV{EFG_DATA} = $self->output_dir;
+  #$ENV{EFG_DATA} = $self->output_dir;
   
   #This picks up the defaults param from the input_id
   my $imp = $self->get_Importer;
