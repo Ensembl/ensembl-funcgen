@@ -78,6 +78,10 @@ sub fetch_input {
   return;
 }
 
+sub peaks_output_dir {
+  my $self = shift;
+  return $self->db_output_dir . '/peaks/'
+}
 
 #This is starting to overlap with the BaseImporter/Importer a little
 #but new style Peak import is not supported by Importer just yet.

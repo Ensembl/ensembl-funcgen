@@ -119,7 +119,7 @@ sub fetch_input {
   #do we need both experiment name and logic name in here?
   #logic name will be in the otufile name anyway?
 
-  $self->get_output_work_dir_methods( $self->db_output_dir . '/peaks/' .
+  $self->get_output_work_dir_methods( $self->peaks_output_dir .
       $rset->experiment->name. '/' . $analysis->logic_name );
 
   my $align_prefix   = $self->get_alignment_path_prefix_by_ResultSet($rset, undef, 1);#validate aligned flag 
