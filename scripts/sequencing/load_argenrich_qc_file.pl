@@ -57,7 +57,7 @@ inputsz_parameter=$(samtools view -c $TEMPDIR/UT7:hist:BR2_WCE_3526_bwa_samse_1.
 ./scripts/sequencing/load_argenrich_qc_file.pl \
   --argenrich_file /lustre/scratch109/ensembl/funcgen/mn1/ersa/debug/F36P:hist:BR2_H3K27me3_3526/argenrich_outfile.txt \
   --control_result_set_id 1 \
-  --signal_result_set_id 2 --user ensadmin --pass xxx --host ens-genomics1 --dbname mn1_faang_tracking_homo_sapiens_funcgen_81_38
+  --signal_result_set_id 2 --user ensadmin --pass ensembl --host ens-genomics1 --dbname mn1_faang_tracking_homo_sapiens_funcgen_81_38
 
 =head1 DESCRIPTION
 
@@ -147,7 +147,12 @@ LINE: while (my $current_line = <IN>) {
 use Hash::Util qw( lock_hash );
 lock_hash(%key_value_pairs);
 
-my $sql = qq(insert into result_set_qc_chance (control_result_set_id, signal_result_set_id, analysis_id, p, q, divergence, z_score, percent_genome_enriched, input_scaling_factor, differential_percentage_enrichment) values (
+my $sql = qq(insert into result_set_qc_chance (
+      control_result_set_id, signal_result_set_id, analysis_id, p, q, divergence, z_score, percent_genome_enriched, input_scaling_factor, differential_percentage_enrichment,
+      control_enrichment_stronger_than_chip_at_bin,
+      zero_enriched_ip_maximum_difference_at_bin,
+      pcr_amplification_bias_in_Input_coverage_of_1_percent_of_genome
+    ) values (
     $control_result_set_id, 
     $signal_result_set_id,
     $analysis_id,
@@ -157,7 +162,10 @@ my $sql = qq(insert into result_set_qc_chance (control_result_set_id, signal_res
     $key_value_pairs{'z_score'}, 
     $key_value_pairs{'percent_genome_enriched'}, 
     $key_value_pairs{'input_scaling_factor'}, 
-    $key_value_pairs{'differential_percentage_enrichment'}
+    $key_value_pairs{'differential_percentage_enrichment'},
+    $key_value_pairs{'Control enrichment stronger than ChIP at bin'},
+    $key_value_pairs{'Zero-enriched IP, maximum difference at bin'},
+    $key_value_pairs{'PCR amplification bias in Input, coverage of 1% of genome'}
   )
 );
 
@@ -232,6 +240,10 @@ my $sql = <<SQL
   `percent_genome_enriched` double default NULL,
   `input_scaling_factor` double default NULL,
   `differential_percentage_enrichment` double default NULL,
+  `control_enrichment_stronger_than_chip_at_bin`double default NULL,
+  `zero_enriched_ip_maximum_difference_at_bin`double default NULL,
+  `pcr_amplification_bias_in_Input_coverage_of_1_percent_of_genome`double default NULL,
+
   PRIMARY KEY (`result_set_qc_chance_id`)
 );
 SQL
