@@ -1873,7 +1873,7 @@ sub archive_root{
 #validate archive_root is not the same as data_root_dir in new?
 
 
-sub archive_files{
+sub archive_files {
   my $self       = shift;
   my $files      = shift;
   my $mandatory  = shift;
