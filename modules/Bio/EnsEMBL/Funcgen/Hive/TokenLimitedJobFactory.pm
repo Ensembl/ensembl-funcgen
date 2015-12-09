@@ -22,7 +22,7 @@ sub run {
   my $self = shift;
   
   my $dfr_adaptor = $self->db->get_DataflowRuleAdaptor;
-  my $input_job = $self->input_job;    
+  my $input_job = $self->input_job;
   
   $input_job->autoflow(0);
   
