@@ -146,6 +146,21 @@ sub pipeline_analyses {
    [
     @{$self->SUPER::pipeline_analyses}, #To pick up BaseSequenceAnalysis-DefineMergedOutputSet
 
+    {   -logic_name => 'JobPool',
+	-module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+	-wait_for    => 'JobPool',
+	-flow_into => {
+	  '1' => [ 'TokenLimitedJobFactory' ],
+	},
+    },
+    {   -logic_name => 'TokenLimitedJobFactory',
+	-module     => 'Bio::EnsEMBL::Funcgen::Hive::TokenLimitedJobFactory',
+	-meadow_type=> 'LOCAL',
+	-flow_into => {
+	  '2->A' => [ 'IdentifyAlignInputSubsets' ],
+	  'A->1' => [ 'TokenLimitedJobFactory' ],
+	},
+    },
     {-logic_name => 'IdentifyAlignInputSubsets',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::IdentifySetInputs',
      -meadow_type => 'LOCAL',#should always be uppercase
