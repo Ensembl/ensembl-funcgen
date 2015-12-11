@@ -503,36 +503,6 @@ sub store{
   return \@rsets;
 }
 
-
-
-
-
-=head2 dbfile_data_root
-
-  Arg[1]     : Optional String: Root path of dbfile data directory
-  Example    : $rset_adaptor->dbfile_data_root('/data/root/dir/);
-  Description: This allows the root path to be defined.,as this will change
-               between installations. This can be over-ridden by the webcode 
-               by setting REGULATION_FILE_PATH in DEFAULTS.ini
-  Returntype : String
-  Exceptions : None
-  Caller     : Bio::EnsEMBL::Funcgen::DBAdaptor::ResultSet
-  Status     : at risk - move this to SetAdaptor/FileAdaptor?
-
-=cut
-
-sub dbfile_data_root{
-  my ($self, $root) = @_;
-
-  if($root){
-    $root =~ s/\/$//o;  # strip off trailing /, as this is present in dbfile_registry.path
-    $self->{dbfile_data_root} = $root;
-  }
- 
-  return $self->{dbfile_data_root} || '';  # Avoids concat warning
-}
-
-
 =head2 store_dbfile_path
 
   Arg[1]     : Bio::EnsEMBL::Funcgen::ResultSet
