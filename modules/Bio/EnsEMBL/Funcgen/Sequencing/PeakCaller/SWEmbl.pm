@@ -93,7 +93,17 @@ sub run {
 #For other PeakCallers, handling the file_type and converting it to a file
 #a file suffic is currently internal (see CCAT)
 
-sub filter_max_peaks{
+=head2 filter_max_peaks
+
+  Creates a new peak file with $max_peaks peaks. It takes the content of the 
+  original peak file, sorts it by column 7, which is the score and takes the
+  top $max_peaks peaks from there. The output is sorted by columns 1 and 2,
+  which is the sequence name and start position.
+  
+  The file_type argument is ignored.
+
+=cut
+sub filter_max_peaks {
   my $self      = shift;
   my $max_peaks = shift;
   my $file_type = shift; 
