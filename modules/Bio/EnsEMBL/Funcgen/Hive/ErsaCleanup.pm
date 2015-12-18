@@ -22,9 +22,12 @@ sub run {
   # Removes .sav files from the peaks directory. These are saved R sessions
   # for which there is no use case.
   #
-  my $rm_sav_cmd = qq(bash -o pipefail -c "find $peaks_output_dir -name '*.sav' | xargs rm -f ");
-  
-  run_system_cmd($rm_sav_cmd);
+  # Looks like RunIDR writes these and PostProcessIDRReplicates reads them, 
+  # so we have to be selective and use strain names here to narrow this down
+  # to the .sav files belonging to cell lines that are actually done.
+  #
+  # my $rm_sav_cmd = qq(bash -o pipefail -c "find $peaks_output_dir -name '*.sav' | xargs rm -f ");
+  # run_system_cmd($rm_sav_cmd);
   
   my $file_to_delete_after_cell_line_has_been_processed = $self->param('file_to_delete_after_cell_line_has_been_processed');
   
