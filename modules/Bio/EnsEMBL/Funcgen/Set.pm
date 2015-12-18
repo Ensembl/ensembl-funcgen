@@ -101,8 +101,11 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($name, $anal, $ftype, $ctype, $exp, $exp_id)
-    = rearrange(['NAME', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'EXPERIMENT', 'EXPERIMENT_ID'], @_);
+  my ( $name, $anal, $ftype, $ctype, $exp, $exp_id )
+    = rearrange( [ 'NAME',         'ANALYSIS',
+                   'FEATURE_TYPE', 'CELL_TYPE',
+                   'EXPERIMENT',   'EXPERIMENT_ID' ],
+                 @_ );
 
   #MANDATORY PARAMS
   throw('Need to specify a name')     if ! defined $name;

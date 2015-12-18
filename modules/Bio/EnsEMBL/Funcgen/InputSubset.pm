@@ -107,7 +107,7 @@ sub new {
   }
 
   if(! defined $is_control){
-    throw('Must defined an -is_control paramter'); 
+    throw('Must defined an -is_control parameter'); 
     #is_control cannot be undef, as this will resolve to false
     #when storing
   }
@@ -153,7 +153,10 @@ sub is_control { return shift->{is_control}; }
 =head2 reset_relational_attributes
 
   Arg[1]     : - Hashref containing the following parameters:
+                -cell_type      => Bio::EnsEMBL::Funcgen::CellType,
                 -experiment     => Bio::EnsEMBL::Funcgen::Experiment,
+                -feature_type   => Bio::EnsEMBL::Funcgen::FeatureType,
+                -analysis       => Bio::EnsEMBL::Funcgen::Analysis,
 
   Description: Resets all the relational attributes of a given InputSubset.
                Useful when creating a cloned object for migration beween DBs
