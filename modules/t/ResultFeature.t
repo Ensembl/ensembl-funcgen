@@ -20,7 +20,6 @@ use diagnostics;
 use autodie;
 use feature qw(say);
 
-# use Data::Printer;
 use Test::More;
 use Test::Exception;    # throws_ok
 use Bio::EnsEMBL::Test::TestUtils qw( test_getter_setter debug );

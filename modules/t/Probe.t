@@ -18,7 +18,6 @@ use strict;
 use warnings;
 use diagnostics;
 
-use Data::Printer;
 
 # use Data::Dumper qw( Dumper );
 use Test::More;
