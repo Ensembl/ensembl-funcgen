@@ -57,7 +57,7 @@ inputsz_parameter=$(samtools view -c $TEMPDIR/UT7:hist:BR2_WCE_3526_bwa_samse_1.
 ./scripts/sequencing/load_argenrich_qc_file.pl \
   --argenrich_file /lustre/scratch109/ensembl/funcgen/mn1/ersa/debug/F36P:hist:BR2_H3K27me3_3526/argenrich_outfile.txt \
   --control_result_set_id 1 \
-  --signal_result_set_id 2 --user ensadmin --pass ensembl --host ens-genomics1 --dbname mn1_faang_tracking_homo_sapiens_funcgen_81_38
+  --signal_result_set_id 2 --user ensadmin --pass xxx --host ens-genomics1 --dbname mn1_faang_tracking_homo_sapiens_funcgen_81_38
 
 =head1 DESCRIPTION
 
