@@ -682,8 +682,6 @@ sub _set_dnadb{
   }
 
   throw("Failed to find dnadb like $match_name.") if(scalar(@dbnames)==0);
-  warn ":: Auto-selecting build $assm_ver core DB as:\t".
-    $self->dnadb_user.'@'.$dbnames[$#dbnames].':'.$self->dnadb_host.':'.$host_port."\n";
 
   my $db = $reg->reset_DBAdaptor($reg_lspecies, 'core', $dbnames[$#dbnames],
                                  $self->dnadb_host, $host_port,
