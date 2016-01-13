@@ -209,6 +209,7 @@ use Pod::Usage;
 use Getopt::Long;
 use File::Temp qw/tempfile/;
 use DBI qw(:sql_types);
+use Carp qw( croak );
 
 use Bio::EnsEMBL::DBEntry;
 use Bio::EnsEMBL::UnmappedObject;
@@ -876,7 +877,7 @@ sub get_external_db_id {
     external_db
   WHERE
     db_name='$edb_name' 
-    AND db_release='$version'
+    AND db_release='$schema_build'
   ";
   my @ids = @{$xref_db->dbc->db_handle->selectall_arrayref($sql)};
   if (scalar @ids > 0) {
@@ -884,7 +885,7 @@ sub get_external_db_id {
   }
 
   if(! $import_edb) {
-    croak("Could not find current external_db $edb_name $schema_build from available versions:\t @tmp\nMaybe you have mis-spelt the -trans-species or you may need to manually add the external_db to the table and master file:\n\n$sql\n\n");
+    croak("Could not find current external_db $edb_name $schema_build from available versions.\nMaybe you have mis-spelt the -trans-species or you may need to manually add the external_db to the table and master file:\n\n$sql\n\n");
   } else {
     # Insert database details into xref system
     $sql = "
@@ -1032,12 +1033,12 @@ sub delete_existing_xrefs {
 
 # Don't restrict to db_version as this would result in DBEntries/UnmappedObjects for old
 # releases persisting.
-  if (scalar @arrays) {
-    while (my $array = pop @$arrays) {
+  while (my $array = pop @$arrays) {
+    if (scalar @$arrays) {
       $Helper->rollback_ArrayChips($array->get_ArrayChips, 'probe2transcript', undef, undef, 1, 0);
+    } else {
+      $Helper->rollback_ArrayChips($array->get_ArrayChips, 'probe2transcript', undef, undef, 0, 1);
     }
-  } else {
-    $Helper->rollback_ArrayChips($array->get_ArrayChips, 'probe2transcript', undef, undef, 0, 1);
   }
   return;
 }
@@ -1289,7 +1290,6 @@ sub calculate_utrs {
 	if ($remainder =~ /^[5-9]/) {
 	  $mean++;
 	}
-	@lengths = sort {$a <=> $b} @lengths;
 	my $median = median($lengths{side});
 	$unannotated_utrs->{$side}  = ($mean > $median)  ? $mean : $median;
 	$Helper->log("Calculated default unannotated ${side}' UTR length:\t$unannotated_utrs->{$side}");
@@ -1317,8 +1317,8 @@ sub write_extended_transcripts_into_file {
 
   $options->{flanks} = {};
   my $utr_counts = {};
-  $utr_counts{3} = [];
-  $utr_counts{5} = [];
+  $utr_counts->{3} = [];
+  $utr_counts->{5} = [];
 
   # Write each transcript into file
   my ($fh0, $filename0) = tempfile();
@@ -1365,7 +1365,7 @@ sub write_extended_transcript {
   # Computing UTR extension length
   $options->{flanks}{$transcript_sid} = {};
   foreach my $end(5, 3) {
-    $options->{flanks}{$transcript_sid}{$end} = extend_transcript($end, $transcript, $options);
+    $options->{flanks}{$transcript_sid}{$end} = extend_transcript($end, $transcript, $utr_counts, $options);
   }
 
   my $new_start;
@@ -1398,7 +1398,7 @@ sub write_extended_transcript {
 =cut
 
 sub extend_transcript {
-  my ($end, $transcript, $utrs, $options) = @_;
+  my ($end, $transcript, $utr_counts, $options) = @_;
   if($options->{utr_extends}{$end} || $options->{utr_multiplier} || $options->{unannotated_utrs}{$end}) {
     my $method = ($end == 5) ? 'five' : 'three';
     $method .= '_prime_utr';
@@ -1896,7 +1896,7 @@ sub compute_hits {
 =cut
 
 sub compute_hits_2 {
-  my ($object_id, $transcript, $transcript_feature_info, $object_transcript_hits, $unmapped_objects, $unmapped_counts, $options, $OUT) = @_;
+  my ($object_id, $transcript, $transcript_feature_info, $object_transcript_hits, $unmapped_objects, $unmapped_object_counts, $options, $OUT) = @_;
 
   # Count hits between object and transcript
   my $hits;
@@ -1915,7 +1915,7 @@ sub compute_hits_2 {
     store_sufficient_hit($object_id, $transcript, $transcript_feature_info, $object_transcript_hits, $options, $OUT);
   } else {
     # Failure, store unmapped object information
-    store_insufficient_hit($object_id, $trancript, $hits, $probeset_size, $unmapped_objects, $unmapped_object_counts, $options, $OUT);
+    store_insufficient_hit($object_id, $transcript, $hits, $probeset_size, $unmapped_objects, $unmapped_object_counts, $options, $OUT);
   }
 
   return;
@@ -1976,7 +1976,7 @@ sub store_sufficient_hit {
 =cut
 
 sub store_insufficient_hit {
-  my ($object_id, $trancript, $hits, $probeset_size, $unmapped_objects, $unmapped_object_counts, $options, $OUT) = @_;
+  my ($object_id, $transcript, $hits, $probeset_size, $unmapped_objects, $unmapped_object_counts, $options, $OUT) = @_;
 
   my $id_names = $object_id.'('.join(',', @{$options->{object_names}{$object_id}}).')';
 
@@ -1984,7 +1984,7 @@ sub store_insufficient_hit {
 
   cache_and_load_unmapped_objects(
     $options,
-    $unmapped_counts,
+    $unmapped_object_counts,
     $unmapped_objects,
     $transcript->stable_id,
     'ProbeSet',
@@ -2041,19 +2041,18 @@ sub log_unmapped_objects {
 sub log_unmapped_object {
   my ($object_id, $unmapped_counts, $unmapped_objects, $options, $OUT) = @_;
 
-    my $names = join(',', @{$options->{object_names}{$object_id}});
-    print $OUT "$options->{xref_object} $object_id($names)\tNo transcript mappings\n";
-    cache_and_load_unmapped_objects(
-      $options,
-      $unmapped_counts,
-      $unmapped_objects,
-      'NO_TRANSCRIPT_MAPPINGS',
-      $options->{xref_object},
-      $object_id,
-      'No transcript mappings',
-      $options->{xref_object}.' did not map to any transcripts'
-    );
-  }
+  my $names = join(',', @{$options->{object_names}{$object_id}});
+  print $OUT "$options->{xref_object} $object_id($names)\tNo transcript mappings\n";
+  cache_and_load_unmapped_objects(
+    $options,
+    $unmapped_counts,
+    $unmapped_objects,
+    'NO_TRANSCRIPT_MAPPINGS',
+    $options->{xref_object},
+    $object_id,
+    'No transcript mappings',
+    $options->{xref_object}.' did not map to any transcripts'
+  );
 }
 
 =head2 remove_promiscuous_objects
@@ -2080,7 +2079,8 @@ sub remove_promiscuous_objects {
     my $object_transcript_count = scalar keys %{$object_transcript_hits->{$object_id}};
     if ($object_transcript_count > $options->{max_transcripts}) {
       foreach my $transcript_id (keys %{$object_transcript_hits->{$object_id}}) {
-        remove_promiscuous_object($object_id, $transcript_id, $object_transcript_count, $unmapped_counts, $unmapped_objects, $options, $OUT);
+        my $pair_hit_count = $object_transcript_hits->{$object_id}{$transcript_id}[0];
+        remove_promiscuous_object_transcript_pair($object_id, $transcript_id, $pair_hit_count, $object_transcript_count, $unmapped_counts, $unmapped_objects, $options, $OUT);
       }
       # Cleaning up unecessary hash ref, opening its contents to garbage collection
       delete $object_transcript_hits->{$object_id};
@@ -2107,13 +2107,12 @@ sub remove_promiscuous_objects {
 
 =cut
 
-sub remove_promiscuous_object {
-  my ($object_id, $transcript_id, $object_transcript_count, $unmapped_counts, $unmapped_objects, $options, $OUT) = @_;
+sub remove_promiscuous_object_transcript_pair {
+  my ($object_id, $transcript_id, $pair_hit_count, $object_transcript_count, $unmapped_counts, $unmapped_objects, $options, $OUT) = @_;
 
   my $id_names = $object_id.'('.join(',', @{$options->{object_names}{$object_id}}).')';
   my $probeset_size = $options->{probeset_sizes}->{$object_id};
-  my $hits = $object_transcript_hits->{$object_id}{$transcript_id}[0];
-  print $OUT "$id_names\t$transcript_id\tpromiscuous\t$hits/$probeset_size\tCurrentTranscripts".$object_transcript_count."\n";
+  print $OUT "$id_names\t$transcript_id\tpromiscuous\t$pair_hit_count/$probeset_size\tCurrentTranscripts".$object_transcript_count."\n";
   cache_and_load_unmapped_objects(
     $options,
     $unmapped_counts,
@@ -2510,7 +2509,7 @@ sub create_unmapped_reason {
     FROM unmapped_reason 
       WHERE full_description = ?
     ';
-    my $sth_fetch_reason = $options->{unmapped_object_adaptor}->prepare($sql);
+    my $sth_fetch_reason = $unmapped_object_adaptor->prepare($sql_fetch_reason);
     $sth_fetch_reason->execute($unmapped_object->{'description'});
 
     my $unmapped_reasons = $sth_fetch_reason->fetchrow_arrayref();
