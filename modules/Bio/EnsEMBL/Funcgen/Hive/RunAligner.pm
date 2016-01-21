@@ -105,6 +105,10 @@ sub fetch_input {   # fetch parameters...
     #index file suffix may change between aligners
     #best to pass just the target file, index root dir, species, gender
     #and let the Aligner construct the appropriate index file
+    
+    my $file_gender;
+    $file_gender = 'female'
+      if ($gender eq 'mixed');
   
     $ref_fasta = join('/', ($self->param_required('data_root_dir'),
                             $aligner.'_indexes',
