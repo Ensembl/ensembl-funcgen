@@ -24,7 +24,7 @@ sub default_options {
     # If the "no_idr" parameter of the pipeline has been set however,
     # it will always return 0.
     #
-    broad_peak_feature_types => ['H3K36me3', 'H3K27me3'
+    broad_peak_feature_types => ['H3K36me3', 'H3K27me3',
       'H2AK5ac',
       'H2BK12ac',
       'H3K14ac',
