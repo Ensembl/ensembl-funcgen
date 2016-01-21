@@ -17,6 +17,13 @@ sub default_options {
      permissive_peaks    => 'SWEmbl_R0005',
      idr_peaks           => 'SWEmbl_R0005_IDR', 
 
+    # Used in Bio::EnsEMBL::Funcgen::Hive::Base::is_idr_FeatureType
+    # The method is true, if the feature type passed in matches
+    # one of the items in this list.
+    #
+    # If the "no_idr" parameter of the pipeline has been set however,
+    # it will always return 0.
+    #
     broad_peak_feature_types => ['H3K36me3', 'H3K27me3'
       'H2AK5ac',
       'H2BK12ac',
