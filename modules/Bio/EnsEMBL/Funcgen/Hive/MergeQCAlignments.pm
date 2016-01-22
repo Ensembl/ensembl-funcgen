@@ -104,7 +104,7 @@ sub fetch_input {
   #could have recreated output_dir and merged_file_name from ResultSet and run_controls
   #as we did in MergeChunkResultSetFastqs, but passed for convenience
   my $gender = $rset->cell_type->gender;
-  $file_gender = 'female'
+  my $file_gender = 'female'
       if ($gender eq 'mixed');
   
   $self->sam_header($file_gender);
