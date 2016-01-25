@@ -103,7 +103,7 @@ or
 
 -transcript_host          Mandatory
 -transcript_user          Mandatory
--transcript_port    
+-transcript_port
 -transcript_pass          Mandatory
 -transcript_dbname        Mandatory
 -transcript_multi_species
@@ -128,9 +128,9 @@ or
 Testing:
 
 -test_transcripts   Number of transcripts to perform a test run on.
--slice              Name of test slice to perform a test run on 
+-slice              Name of test slice to perform a test run on
 -transcript         Test transcript stable ID
--no_store           Not yet implemented        
+-no_store           Not yet implemented
 
 Other options:
 -import_edb         Automatically imports the external_db record if not present
@@ -152,28 +152,28 @@ ensembl-funcgen/scripts/environments/arrays.env
 
 # 1. Reimpliment validate arrays, see old script?
 # 2. Add unannotated UTR clipping dependant on nearest neighbour
-# 3. Extend UTRs to default length is they are less than defaults, so long as they don't overlap neighbour, 
-#    then use annotated if present or clip to neighbour start/end if not, also accounting for default UTRs 
+# 3. Extend UTRs to default length is they are less than defaults, so long as they don't overlap neighbour,
+#    then use annotated if present or clip to neighbour start/end if not, also accounting for default UTRs
 #    in the neighbour.
 # 4. Separate UTR multipliers for 3' and 5'?
-# 5. Implement incremental update from list of stable IDs. Consider unmapped probe changes etc. 
-# 6. Parallelise by probeset chunks, can't do this by chromosome slices as we need to know genomewide 
+# 5. Implement incremental update from list of stable IDs. Consider unmapped probe changes etc.
+# 6. Parallelise by probeset chunks, can't do this by chromosome slices as we need to know genomewide
 #    counts for a given probeset. Calc UTRs then submit chunks jobs to farm
-#    Chunk by retrieving all probesets and sorting an array of probeset names, then splice the array 
-#    according to the number of chunks. We're still going to have retrieve all the transcripts and retrieve 
-#    all probes for each, so we are really not gaining anything!! The only gain we can make is by chunking 
-#    by slice, but then we need to know how many times something has mapped. Can we do some clean up afterwards? 
-#    Let's add a clean up mode which simply deletes all probe sets which map too many times. We would need to 
-#    ignore this threshold as we were mapping!!! So we don't delete and then mess up the counts for post run 
+#    Chunk by retrieving all probesets and sorting an array of probeset names, then splice the array
+#    according to the number of chunks. We're still going to have retrieve all the transcripts and retrieve
+#    all probes for each, so we are really not gaining anything!! The only gain we can make is by chunking
+#    by slice, but then we need to know how many times something has mapped. Can we do some clean up afterwards?
+#    Let's add a clean up mode which simply deletes all probe sets which map too many times. We would need to
+#    ignore this threshold as we were mapping!!! So we don't delete and then mess up the counts for post run
 #    clean up.
 # 7. There is no reason to have separate probe and xref DBs???
 # 8. Validate array format against arrays specified? May want to just use an array format as a template???
-# 9. Add mismatch filter for ProbeTranscriptAlign xrefs as match rules can differ between alignment and 
+# 9. Add mismatch filter for ProbeTranscriptAlign xrefs as match rules can differ between alignment and
 #    annotation
-# 10.Handle ProbeAlign mismatch vs overlap mis match. Currently the overlap calculation is naive to the 
-#    presence of alignment mis-matches.  Which means there is a possiblity of including probes with a total 
+# 10.Handle ProbeAlign mismatch vs overlap mis match. Currently the overlap calculation is naive to the
+#    presence of alignment mis-matches.  Which means there is a possiblity of including probes with a total
 #    sequence mismatch of (align mismatch + overlap mismatch). This has always been the case.
-# 11.Move ProbeAlign unmapped object storage to write_output, then this will not get written in test mode and 
+# 11.Move ProbeAlign unmapped object storage to write_output, then this will not get written in test mode and
 #    we won't get duplication should the job fail halfway through. This is because hceck existing only check oxs, not uos.
 # 12.Enable probesets to have different sizes on different arrays, see notes in cache_arrays_per_object
 # 13.Collect warning into summary repoprt to list at very end.
@@ -184,15 +184,15 @@ ensembl-funcgen/scripts/environments/arrays.env
 # 18 PostAlign/PreXref processing
 #    Remove duplicated ProbeFeatures(from ProbeTranscriptAlign) and redirect Xrefs
 #    Being careful to make sure cigarlines are valid for both.
-#    Remove ProbeTranscriptAlign ProbeFeaturess which have been called promiscuous 
-#    by ProbeAlign, and update to promiscuous if sum of ProbeAlign and 
+#    Remove ProbeTranscriptAlign ProbeFeaturess which have been called promiscuous
+#    by ProbeAlign, and update to promiscuous if sum of ProbeAlign and
 #    ProbeTranscriptAlign features render a Probe promiscuous
 
 #Ensembl Genomes stuff
 # TEST Registry usage required as species will come from same DB
 # In which case we need to take a species param for each of the transcript, array and xref DBs
 # Or can we force delete to be species specific? We would need to do this anyway to support updating of species asynchronously
-# We probably need to think about this for the 1st stage too, 
+# We probably need to think about this for the 1st stage too,
 # but will be easy as we just need to dump the correct top level sequence
 # Validate species against registry alias and use this to generate species_core_Gene DB rather than ensembl_core_Gene
 # patch other efg DBs and alter External parsers accordingly.
@@ -228,7 +228,7 @@ my $debug = 0;
 
 #ARRAY FORMAT CONFIG
 
-my %array_format_config = 
+my %array_format_config =
 (
   AFFY_UTR => {
     probeset_arrays         => 1,
@@ -248,13 +248,18 @@ my %array_format_config =
     linked_arrays     => 1,
     sense_interrogation => 0,
   },
+  
+#   ILLUMINA_INFINIUM => {
+#     probeset_arrays        => 0,
+#     linked_arrays     => 1,
+#     sense_interrogation => 0,
+#   },
 
   AGILENT => {
     probeset_arrays        => 0,
     linked_arrays     => 1,
-    sense_interrogation => 0,                           
-  },                                        
-
+    sense_interrogation => 0,
+  },
 
   PHALANX => {
     probeset_arrays        => 0,
@@ -283,8 +288,8 @@ my %array_format_config =
   WUSTL =>  {
     probeset_arrays        => 0,
     linked_arrays     => 1,
-    sense_interrogation => 0,                           
-  },                        
+    sense_interrogation => 0,
+  },
 );
 
 main();
@@ -474,7 +479,7 @@ coding region as well. Defaults to 2000. Specify 'annotated' to use annotated le
 [--max_probesets]   Don't store mappings to any 'promiscuous' probesets that map
 to more than this number of transcripts. Defaults to 100.
 [--arrays]          Mandatory. Space separated list of arrays of same format e.g. AFFY or AFFY_ST etc.
-[--threshold]       Fraction of probes per probeset that have to map. Default 0.5 
+[--threshold]       Fraction of probes per probeset that have to map. Default 0.5
 MISCELLANEOUS:
 [--delete]          Delete existing xrefs and object_xrefs, and entries in unmapped_object.
 No deletion is done by default.
@@ -500,8 +505,8 @@ sub get_options {
   $options->{reg_verbose} = 0;
   ($options->{transcript_multi_species}, $options->{xref_multi_species}, $options->{probe_multi_species}) = (0,0,0);
   ($options->{transcript_species_id}, $options->{xref_species_id}, $options->{probe_species_id}) = (1,1,1);
-  $options->{transcript_port} = 3306; 
-  $options->{probe_port} = 3306; 
+  $options->{transcript_port} = 3306;
+  $options->{probe_port} = 3306;
   $options->{xref_port} = 3306;
   $options->{max_mismatches} = 1;
   $options->{max_transcripts} = 100;
@@ -591,13 +596,6 @@ sub get_options {
     -message => "Params are:\t@tmp_args"
   );
 
-#Set log type so we are no over writing to the same files for different 
-#format, or custom formats
-
-  # This is not working correctly, as is currently writing to default central log dir, not workdir
-  # if this file is not defined, default to STDOUT, so is captured by lsf .out file
-  # 
-
 
   $options->{log_type} = $options->{format} || $$;
   
@@ -623,8 +621,8 @@ sub get_options {
       "\nOr maybe you want to use -probeset_arrays, -linked_arrays and -sense_interrogation to define the format parameters?\n");
   }
 
-  if(! ($options->{array_config}->{probeset_arrays} && 
-        $options->{array_config}->{linked_arrays} && 
+  if(! ($options->{array_config}->{probeset_arrays} &&
+        $options->{array_config}->{linked_arrays} &&
         $options->{array_config}->{sense_interrogation})
      && ! $options->{format}) {
     die('You must specify a valid format parameter if you are not using -probeset_arrays, -linked_arrays and -sense_interrogation\n');
@@ -740,7 +738,7 @@ sub get_databases {
         -pass    => $options->{reg_pass},
         -verbose => $options->{reg_verbose},
       );
-    }        
+    }
 
     $transcript_db = $reg->get_DBAdaptor($options->{species}, 'Core');
     $xref_db       = $reg->get_DBAdaptor($options->{species}, 'Funcgen');
@@ -833,7 +831,7 @@ sub get_arrays {
 # Params:
 # - xref_db: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
 # - species: string name
-# - edb_name: MySQL database name 
+# - edb_name: MySQL database name
 # - schema build: string
 # - import_edb: boolean
 #
@@ -854,7 +852,7 @@ sub get_external_db_id {
     my ($edb_id, $version) = @$row;
     push @tmp, $version;
 
-    if($schema_build eq $version) { 
+    if($schema_build eq $version) {
       return $edb_id;
     }
   }
@@ -863,8 +861,8 @@ sub get_external_db_id {
   "'${edb_name}', '${schema_build}', 'KNOWNXREF', 1, 5, '$edb_display', 'MISC')";
 
   if(! $import_edb) {
-    die("Could not find current external_db $edb_name $schema_build from available versions:\t @tmp\nMaybe you have mis-spelt the -trans-species or you may need to manually add the external_db to the table and master file:\n\n$sql\n\n");
-  } 
+    die("Could not find current external_db $edb_name $schema_build from available versions:\t @tmp\nMaybe you have mis-spelt the -trans-species or you may need to manually add the external_db to the table and master file:\n\n$sql");
+  }
 
   $Helper->log("Importing external_db using: $sql");
   $xref_db->dbc->db_handle->do($sql);
@@ -875,7 +873,7 @@ sub get_external_db_id {
 # Params:
 # - xref_db: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
 #
-# Returns: Bio::EnsEMBL::Analysis object 
+# Returns: Bio::EnsEMBL::Analysis object
 
 sub get_or_create_analysis {
   my ($xref_db) = @_;
@@ -900,7 +898,7 @@ sub get_or_create_analysis {
 # - test_slice: string describing a slice (see Bio::EnsEMBL::DBSQL::SliceAdaptor::fetch_by_name)
 # - test_transcript_sid: Ensembl transcript stable identifier
 #
-# Returns: Array ref of Bio::EnsEMBL::Transcript objects 
+# Returns: Array ref of Bio::EnsEMBL::Transcript objects
 
 sub get_transcripts {
   my ($transcript_db, $test_slice, $test_transcript_sid) = @_;
@@ -951,7 +949,7 @@ sub get_transcript_xref_ids {
 
 sub check_xrefs {
   my ($xref_db, $transc_edb_id, $transcripts, $transcript_xref_id) = @_;
-  
+
   for my $transcript (@$transcripts) {
 
     if (! defined $transcript_xref_id->{$transcript->stable_id()}) {
@@ -1123,7 +1121,7 @@ sub calculate_utrs {
         $five_cnt++;
         push @five_lengths, $five_utr->length;
       } else{
-        $five_zero_cnt++;        
+        $five_zero_cnt++;
       }
     }
   }
@@ -1165,7 +1163,7 @@ sub calculate_utrs {
 
 # ----------------------------------------------------------------------
 
-sub write_extended_transcripts_into_file { 
+sub write_extended_transcripts_into_file {
   my ($transcripts, $filename, $options) = @_;
 
   my ($fh0, $filename0) = tempfile();
@@ -1190,7 +1188,7 @@ sub write_extended_transcripts_into_file {
   unlink $filename0;
 }
 
-sub write_extended_transcript { 
+sub write_extended_transcript {
   my ($transcript, $options) = @_;
   my $transcript_sid = $transcript->stable_id;
 
@@ -1203,7 +1201,7 @@ sub write_extended_transcript {
     3 => 0,
   };
 
-  foreach my $end('5', '3') {        
+  foreach my $end('5', '3') {
     if($options->{utr_extends}{$end} || $options->{utr_multiplier} || $options->{unannotated_utrs}{$end}) {
       my $method = ($end == 5) ? 'five' : 'three';
       $method .= '_prime_utr';
@@ -1226,10 +1224,10 @@ sub write_extended_transcript {
   my $new_start;
   my $new_end;
   if ($transcript->strand() >= 0) {
-    $new_start = $transcript->seq_region_start - $options->{$transcript_sid}{flanks}{5}; 
+    $new_start = $transcript->seq_region_start - $options->{$transcript_sid}{flanks}{5};
     $new_end = $transcript->seq_region_end + $options->{$transcript_sid}{flanks}{3};
   } else {
-    $new_start = $transcript->seq_region_start - $options->{$transcript_sid}{flanks}{3}; 
+    $new_start = $transcript->seq_region_start - $options->{$transcript_sid}{flanks}{3};
     $new_end = $transcript->seq_region_end + $options->{$transcript_sid}{flanks}{5};
   }
 
@@ -1270,11 +1268,11 @@ sub dump_probe_features {
 }
 
 # ----------------------------------------------------------------------
-# OK this is where the action happens mostly. Goes through each overlap 
+# OK this is where the action happens mostly. Goes through each overlap
 # between transcript and probe feature, and collects data.
 #
 # Params:
-# * transcripts: list of Bio::EnsEMBL::Transcript objects 
+# * transcripts: list of Bio::EnsEMBL::Transcript objects
 # * pf_transc_overlap_fh: filehandle to the dump file created by bedtools
 # * unmapped_counts: hashref
 # * unmapped_objects: arrayref
@@ -1299,7 +1297,7 @@ sub associate_probes_to_transcripts {
       last;
     }
     $last_pc = print_progress($index++, scalar @{$transcripts}, $last_pc);
-    $last_line = examine_transcript($transcript, $transcript_feature_info, $pf_transc_overlap_fh, $last_line, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $OUT); 
+    $last_line = examine_transcript($transcript, $transcript_feature_info, $pf_transc_overlap_fh, $last_line, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $OUT);
     compute_hits($transcript, $transcript_feature_info, $object_transcript_hits, $unmapped_objects, $unmapped_counts, $options, $OUT);
   }
 
@@ -1323,7 +1321,7 @@ sub print_progress {
 }
 
 # ----------------------------------------------------------------------
-# For one trasncript, goes through each overlap 
+# For one trasncript, goes through each overlap
 # between that transcript and probe feature, and collects data.
 #
 # Params:
@@ -1507,13 +1505,13 @@ sub record_gapped_probefeature {
   } else {
     print $OUT "Unmapped Gapped ProbeFeature ".$log_name."\n";
     cache_and_load_unmapped_objects(
-      $options, 
-      $unmapped_counts, 
-      $unmapped_objects, 
-      $transcript_sid, 
-      'ProbeFeature', 
-      $feature_id,  
-      "Unmapped Gapped ProbeFeature", 
+      $options,
+      $unmapped_counts,
+      $unmapped_objects,
+      $transcript_sid,
+      'ProbeFeature',
+      $feature_id,
+      "Unmapped Gapped ProbeFeature",
       "Gapped ProbeFeature did not match transcript structure"
     );
   }
@@ -1595,7 +1593,7 @@ sub record_aligned_probefeature {
       push @{$transcript_feature_info->{$probe_id}}, [$linkage_annotation, $mismatches];
     }
     add_xref($transcript->stable_id, $feature_id, 'ProbeFeature', $linkage_annotation, $xrefs, $xref_db, $options);
-  } else { 
+  } else {
     my ($summary, $region);
 
     if (!( $exon_overlap || $flank_overlap)) {
@@ -1609,26 +1607,26 @@ sub record_aligned_probefeature {
         $summary = "${flank_end}' flank boundary";
         $region  = $summary;
       }
-    } else {        
+    } else {
       $summary = "${flank_end}' flank boundary";
       $region  = $summary;
     }
     print $OUT "Unmapped $summary ".$log_name."\n";
     cache_and_load_unmapped_objects(
-      $options, 
-      $unmapped_counts, 
-      $unmapped_objects, 
-      $transcript->stable_id, 
-      'ProbeFeature',  
-      $feature_id, 
-      "Unmapped $summary", 
+      $options,
+      $unmapped_counts,
+      $unmapped_objects,
+      $transcript->stable_id,
+      'ProbeFeature',
+      $feature_id,
+      "Unmapped $summary",
       "Probe mapped to $region of transcript"
     );
   }
 }
 
 # ----------------------------------------------------------------------
-# Converts hash ref linking objects to hits into a more conveninent 
+# Converts hash ref linking objects to hits into a more conveninent
 # hash ref object -> transcript -> array ref -> 2 integers
 #
 # Params:
@@ -1654,7 +1652,7 @@ sub compute_hits {
 
     my $probeset_size = $options->{probeset_sizes}{$object_id};
 
-    if (($options->{xref_object} eq 'ProbeSet' && ($hits / $probeset_size) >= $options->{mapping_threshold}) 
+    if (($options->{xref_object} eq 'ProbeSet' && ($hits / $probeset_size) >= $options->{mapping_threshold})
           || ($hits && ($options->{xref_object} eq 'Probe'))) {
       my $num_mismatch_hits = 0;
       if($options->{array_config}{probeset_arrays}) {
@@ -1671,13 +1669,13 @@ sub compute_hits {
       my $id_names = $object_id.'('.join(',', @{$options->{object_names}{$object_id}}).')';
       print $OUT "$id_names\t".$transcript->stable_id."\tinsufficient\t$hits/$probeset_size in ProbeSet\n";
       cache_and_load_unmapped_objects(
-        $options, 
-        $unmapped_counts, 
-        $unmapped_objects, 
-        $transcript->stable_id, 
-        'ProbeSet',  
-        $object_id,  
-        "Insufficient hits", 
+        $options,
+        $unmapped_counts,
+        $unmapped_objects,
+        $transcript->stable_id,
+        'ProbeSet',
+        $object_id,
+        "Insufficient hits",
         "Insufficient number of hits $hits/$probeset_size in ProbeSet"
       );
     }
@@ -1689,7 +1687,7 @@ sub compute_hits {
 # table
 #
 # Params:
-# - object_transcript_hits: hash ref of hash refs linking 
+# - object_transcript_hits: hash ref of hash refs linking
 # object_id x Bio::EnsEMBL::Transcript object => array ref
 # - unmapped_counts: hash ref with stats on unmapped objects
 # - unmapped_objects: array ref with list of unmapped objects
@@ -1712,21 +1710,21 @@ sub log_unmapped_objects {
       my $names = join(',', @{$options->{object_names}{$object_id}});
       print $OUT "$options->{xref_object} $object_id($names)\tNo transcript mappings\n";
       cache_and_load_unmapped_objects(
-        $options, 
-        $unmapped_counts, 
-        $unmapped_objects, 
-        'NO_TRANSCRIPT_MAPPINGS', 
-        $options->{xref_object}, 
-        $object_id, 
-        'No transcript mappings', 
+        $options,
+        $unmapped_counts,
+        $unmapped_objects,
+        'NO_TRANSCRIPT_MAPPINGS',
+        $options->{xref_object},
+        $object_id,
+        'No transcript mappings',
         $options->{xref_object}.' did not map to any transcripts'
-      ); 
+      );
     }
   }
 }
 
 # ----------------------------------------------------------------------
-# Removes objects with too many hits from the list of candidate object+transcript hits 
+# Removes objects with too many hits from the list of candidate object+transcript hits
 #
 # Params:
 # - transcripts_per_object: hash ref linking objects to a count
@@ -1754,18 +1752,18 @@ sub remove_promiscuous_objects {
         my $hits = $object_transcript_hits->{$object_id}{$transcript_id}[0];
         print $OUT "$id_names\t$transcript_id\tpromiscuous\t$hits/$probeset_size\tCurrentTranscripts".$object_transcript_count."\n";
         cache_and_load_unmapped_objects(
-          $options, 
-          $unmapped_counts, 
-          $unmapped_objects, 
-          $transcript_id, 
-          'ProbeSet',  
-          $object_id,  
-          "Promiscuous $options->{xref_object}", 
+          $options,
+          $unmapped_counts,
+          $unmapped_objects,
+          $transcript_id,
+          'ProbeSet',
+          $object_id,
+          "Promiscuous $options->{xref_object}",
           "$options->{xref_object} maps to $object_transcript_count transcripts (max 100)."
         );
         delete $object_transcript_hits->{$object_id};
       }
-    } 
+    }
   }
 }
 
@@ -1774,7 +1772,7 @@ sub remove_promiscuous_objects {
 # loads those
 #
 # Params:
-# - object_transcript_hits: hash ref of hash refs linking 
+# - object_transcript_hits: hash ref of hash refs linking
 # object_id x Bio::EnsEMBL::Transcript object => array ref
 # - xrefs: temporary array storage for xref objects about to be loaded
 # - options: hash ref with constant variables, in particular:
@@ -1854,7 +1852,7 @@ sub print_unmapped_counts {
 # Params:
 # - xref_object: "Probe" or "ProbeSet"
 # - arrays_per_object: hash ref linking object_id => array name
-# - object_transcript_hits: hash ref of hash refs linking 
+# - object_transcript_hits: hash ref of hash refs linking
 # object_id x Bio::EnsEMBL::Transcript object => array ref
 sub print_xrefs_per_array {
   my ($xref_object, $arrays_per_object, $object_transcript_hits) = @_;
@@ -1883,15 +1881,15 @@ sub print_xrefs_per_array {
   $Helper->log("Found ".scalar(keys(%$object_transcript_hits))." hits");
 
   foreach my $aname(keys %total) {
-    $Helper->log("$aname distinct $xref_object xrefs mapped(total xrefs):\t". 
+    $Helper->log("$aname distinct $xref_object xrefs mapped(total xrefs):\t".
       scalar(keys(%{$covered_objects{$aname}}))."/$objects_per_array{$aname}($total{$aname})");
   }
 }
 
 # ----------------------------------------------------------------------
 # Params:
-# - Total: number of transcripts 
-# - object_transcript_hits: hash ref of hash refs linking 
+# - Total: number of transcripts
+# - object_transcript_hits: hash ref of hash refs linking
 # object_id x Bio::EnsEMBL::Transcript object => array ref
 # - xref_object: "Probe" or "ProbeSet"
 sub print_most_mapped_transcripts {
@@ -1917,7 +1915,7 @@ sub print_most_mapped_transcripts {
 
 # ----------------------------------------------------------------------
 # Params:
-# - object_transcript_hits: hash ref of hash refs linking 
+# - object_transcript_hits: hash ref of hash refs linking
 # object_id x Bio::EnsEMBL::Transcript object => array ref
 # - xref_object: "Probe" or "ProbeSet"
 sub print_most_mapped_probes {
@@ -1976,7 +1974,7 @@ sub cache_and_load_unmapped_objects {
       -ensembl_id => $object_id,
       -external_db_id => $options->{transc_edb_id},
     );
-    $unmapped_counts->{$um_obj->ensembl_object_type}{$um_obj->summary} ||= 0;  
+    $unmapped_counts->{$um_obj->ensembl_object_type}{$um_obj->summary} ||= 0;
     $unmapped_counts->{$um_obj->ensembl_object_type}{$um_obj->summary}++;
     $unmapped_counts->{Total}++;
     push @{$unmapped_objects}, $um_obj;
@@ -2003,12 +2001,12 @@ sub store_unmapped_objects {
 
   my $sth_fetch_reason =
   $options->{unmapped_object_adaptor}->prepare(
-    "SELECT 
+    "SELECT
     unmapped_reason_id
-    FROM 
+    FROM
     unmapped_reason
     WHERE
-    full_description = ? 
+    full_description = ?
     " );
 
   foreach my $unmapped_object ( @$unmapped_objects ) {
@@ -2018,7 +2016,7 @@ sub store_unmapped_objects {
     }
       if($unmapped_object->is_stored($db)){
       next;
-    } 
+    }
 
     my $analysis = $unmapped_object->analysis();
     throw("UnmappedObject must have an analysis object.".$unmapped_object->analysis."\n") if(!defined($analysis));
@@ -2038,7 +2036,7 @@ sub store_unmapped_objects {
       $sth_reason->bind_param(1,$unmapped_object->{'summary'},SQL_VARCHAR);
       $sth_reason->bind_param(2,$unmapped_object->{'description'},SQL_VARCHAR);
 
-      if(! eval{ $sth_reason->execute(); 1 }){    
+      if(! eval{ $sth_reason->execute(); 1 }){
 # DBI Trace possible here?
         warning($@); #
         my $msg;
@@ -2070,7 +2068,7 @@ sub store_unmapped_objects {
       $unmapped_object->{'unmapped_reason_id'} = $options->{desc_to_id}{$unmapped_object->{'description'}};
     }
   }
-  $sth_reason->finish();      
+  $sth_reason->finish();
 
   my ($fh, $filename) = tempfile();
   foreach my $unmapped_object ( @$unmapped_objects ) {
@@ -2094,7 +2092,7 @@ sub store_unmapped_objects {
 # Creates a hash ref describing an xref and appends it to the array ref
 #
 # Parameters:
-# - transcript stable id, 
+# - transcript stable id,
 # - object_id of the Probe/ProbeSet/ProbeFeature
 # - object_type ("Probe", "ProbeFeature" or "ProbeSet")
 # - linkage_annotation string,
@@ -2119,9 +2117,9 @@ sub add_xref {
 # Parameters:
 #  - xrefs: hash ref (table) of hash refs (rows), populated by add_xref.
 #  Each row contains:
-#    * transcript ref 
-#    * linkage_annotation, 
-#    * object_id, 
+#    * transcript ref
+#    * linkage_annotation,
+#    * object_id,
 #    * object_type ("Probe", "ProbeFeature" or "ProbeSet")
 # - xref_db: Bio::EnsEMBL::DBSQL::DBAdaptor object for the external transcript db
 # - transc_edb_id: id of the external transcript db in the xref system
@@ -2153,7 +2151,7 @@ sub store_xrefs {
 }
 
 ########################################################
-## System calls 
+## System calls
 ## Wrapper function for system calls
 ## Params:
 ## - Command line
