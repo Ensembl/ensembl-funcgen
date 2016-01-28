@@ -2,8 +2,6 @@ package Bio::EnsEMBL::Funcgen::Hive::Config::Collections;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Exception qw(throw warning stack_trace_dump);
-
 use base ('Bio::EnsEMBL::Funcgen::Hive::Config::BaseSequenceAnalysis');
 
 sub pipeline_analyses {
