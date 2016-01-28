@@ -1,4 +1,3 @@
-
 =head1 LICENSE
 
 Copyright [1999-2016] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
@@ -151,58 +150,58 @@ sub pipeline_analyses {
   return [
    @{$self->SUPER::pipeline_analyses}, #To pick up BaseSequenceAnalysis-DefineMergedOutputSet
    
-   {
-    -logic_name => 'IdentifyReplicateResultSets',
-	  -module     => 'Bio::EnsEMBL::Funcgen::Hive::IdentifySetInputs',	 
-	  
-
-    #Currently set to dummy until we define branch 4 output from IdentifySetInputs
-    #which will group replicate ResultSet outputs based on parent merged ResultSet
-    #how are we going to identify that if we don't have a parent set created?
-    #Could do this simply based on a set name match?
-    #by stripping off the _TR1 number
-    #better way would be to re-use the code which identified them as a merged set in the first place
-    #which is already in IdentifySetInputs
-	   
-	   
-	  -meadow_type => 'LOCAL',#should always be uppercase
-	  
-	  #general parameters to pass to all jobs, use_tracking_db?
-	  -parameters => {set_type        => 'ResultSet',
-	                  only_replicates      => 1, 
-	                 #This might need to take a -replicate flag
-	                 #to ensure we only identify single rep InputSets
-	                 #Probably need a naming convention i.e. suffix of TR_[1-9]*	                
-	                 },
-	             
-      #This will fan into the rep peak jobs
-      #and semaphore the IDR job, which will need all the input_set ids
-      #including the final InputSet
-      
-      #This IDR jobs needs to record the analysis params and associate them with the FeatureSet
-      #so we need to link on DefineOutputSets in here
-      #Hence we also need all of the collection config! which I have just deleted. doh!
-      
-	
-	#DOES THIS NEED TO BE A FACTORY Or do we need to flow into a factory?
-	#We need to semaphore the IDR job based on a batch of replicates
-	
-	
-	 #This needs to change now as we will have to fan the IDR jobs.
-	 #DefineReplicateDataSet can still do the post processing tho?
-	 #No wait, this is te wrong way around
-	   -flow_into => 
-	    {		
-	     # 'A->2' => ['PreprocessSelfIDR'],
-       'A->2' => ['PreprocessIDR'],  
-	     '3->A' => [ 'run_SWEmbl_R0005_replicate' ], #['DefineReplicateDataSet'],
-      },
-			 
-	   -analysis_capacity => 100, #although this runs on LOCAL
-     -rc_name => 'default',
-     -failed_job_tolerance => 100, 
-     #We don't care about these failing, as we expect them too
-    },
+#    {
+#     -logic_name => 'IdentifyReplicateResultSets',
+# 	  -module     => 'Bio::EnsEMBL::Funcgen::Hive::IdentifySetInputs',	 
+# 	  
+# 
+#     #Currently set to dummy until we define branch 4 output from IdentifySetInputs
+#     #which will group replicate ResultSet outputs based on parent merged ResultSet
+#     #how are we going to identify that if we don't have a parent set created?
+#     #Could do this simply based on a set name match?
+#     #by stripping off the _TR1 number
+#     #better way would be to re-use the code which identified them as a merged set in the first place
+#     #which is already in IdentifySetInputs
+# 	   
+# 	   
+# 	  -meadow_type => 'LOCAL',#should always be uppercase
+# 	  
+# 	  #general parameters to pass to all jobs, use_tracking_db?
+# 	  -parameters => {set_type        => 'ResultSet',
+# 	                  only_replicates      => 1, 
+# 	                 #This might need to take a -replicate flag
+# 	                 #to ensure we only identify single rep InputSets
+# 	                 #Probably need a naming convention i.e. suffix of TR_[1-9]*	                
+# 	                 },
+# 	             
+#       #This will fan into the rep peak jobs
+#       #and semaphore the IDR job, which will need all the input_set ids
+#       #including the final InputSet
+#       
+#       #This IDR jobs needs to record the analysis params and associate them with the FeatureSet
+#       #so we need to link on DefineOutputSets in here
+#       #Hence we also need all of the collection config! which I have just deleted. doh!
+#       
+# 	
+# 	#DOES THIS NEED TO BE A FACTORY Or do we need to flow into a factory?
+# 	#We need to semaphore the IDR job based on a batch of replicates
+# 	
+# 	
+# 	 #This needs to change now as we will have to fan the IDR jobs.
+# 	 #DefineReplicateDataSet can still do the post processing tho?
+# 	 #No wait, this is te wrong way around
+# 	   -flow_into => 
+# 	    {		
+# 	     # 'A->2' => ['PreprocessSelfIDR'],
+#        'A->2' => ['PreprocessIDR'],  
+# 	     '3->A' => [ 'run_SWEmbl_R0005_replicate' ], #['DefineReplicateDataSet'],
+#       },
+# 			 
+# 	   -analysis_capacity => 100, #although this runs on LOCAL
+#      -rc_name => 'default',
+#      -failed_job_tolerance => 100, 
+#      #We don't care about these failing, as we expect them too
+#     },
 	
       
     {
@@ -217,98 +216,98 @@ sub pipeline_analyses {
      -rc_name => 'normal_5GB_2cpu_monitored', # Better safe than sorry... size of datasets tends to increase...       
     },
   
-    {
-     -logic_name    => 'PreprocessSelfIDR',
-     -module        => 'Bio::EnsEMBL::Funcgen::Hive::PreprocessIDR',
-     #-meadow        => 'LOCAL', #Could potentially do this locally due to low load/runtime?
-     #although it is potentially a >1 cpu job due to triple pipe command
-     -analysis_capacity => 100,#Unlikely to get anywhere near this
-     -rc_name    => 'default',
-     -batch_size => 30, #Should really take ~1min to process each set of replicates
-            
-     -parameters => { permissive_peaks => $self->o('permissive_peaks') },
-      #This will not allow batch override
-           
-     -flow_into => 
-      {
-       '2->A' => [ 'RunSelfIDR' ],                   # fan
-       #'3->A' => [ 'RunPooledPseudoRepIDR ' ],   # fan #This doesn't need a separate analysis
-       'A->3' => [ 'PostProcessSelfIDRReplicates' ], # funnel
-      }, 
-    },
-    
-    
-       {
-     -logic_name    => 'RunSelfIDR',
-     -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunIDR',
-     -analysis_capacity => 100,
-     -rc_name    => 'normal_2GB', #~10mins + (memory?)
-     -batch_size => 6,#~30mins +
-
-     #No flow into here, but this analysis should update the DB with the calculated threshold
-     #This can't be in the feature_set_stats table, due to the combinations between the reps.
-     #If we accu this, then we will lose the data!!! Preventing us from being able to simply drop one rep and
-     #rerun the post process?
-     #do we need a stand alone table for idr_thresholds, which simply has the threshold and the 2 feature_set_ids
-     #should we store anything else here? 
-     
-    -flow_into => 
-     {
-      2 => [ ':////accu?self_idr_peak_counts=[accu_idx]' ],
-     }
-
-           
- 
-      #Or should this do all this in the same analysis
-      #where are we going to cache the run_idr output for the
-      #final peak calling threshold? Let's keep this in a tracking DB
-      #table to prevent proliferation of analyses based on this value differing between data sets.
-      
-      #are we going to have problems having these two analyses together
-      #if we want to rerun the analysis due to the creation of the merged rset failing?
-      #would have to rerun idr too?
-      
-      #This is extremely unlikely to happen
-      #and could do some funky job_id manipulation to set skip_idr
-      
-      #No we won't be able to reuse DefineResultSets here
-           
-    },
-  
-    {
-     -logic_name    => 'PostProcessSelfIDRReplicates',
-     -module        => 'Bio::EnsEMBL::Funcgen::Hive::PostprocessIDR',
-      #-meadow        => 'LOCAL', #Could potentially do this locally due to low load/runtime?
-     #although it is potentially a >1 cpu job due to triple pipe command
-     -analysis_capacity => 100,
-     -rc_name    => 'default', #<1mins
-     -batch_size => 10,#?
-     -parameters => 
-      { 
-       #result_set_mode              => 'none',#We never want one for an IDR DataSet
-       #default_feature_set_analyses => $self->o('permissive_feature_set_analyses'), 
-      },
-           
-     -flow_into => 
-      {
-       '2' => [ 'PreprocessIDR' ],
-      }, 
-      
-      #Or should this do all this in the same analysis
-      #where are we going to cache the run_idr output for the
-      #final peak calling threshold? Let's keep this in a tracking DB
-      #table to prevent proliferation of analyses based on this value differing between data sets.
-      
-      #are we going to have problems having these two analyses together
-      #if we want to rerun the analysis due to the creation of the merged rset failing?
-      #would have to rerun idr too?
-      
-      #This is extremely unlikely to happen
-      #and could do some funky job_id manipulation to set skip_idr
-      
-      #No we won't be able to reuse DefineResultSets here
-           
-    },
+#     {
+#      -logic_name    => 'PreprocessSelfIDR',
+#      -module        => 'Bio::EnsEMBL::Funcgen::Hive::PreprocessIDR',
+#      #-meadow        => 'LOCAL', #Could potentially do this locally due to low load/runtime?
+#      #although it is potentially a >1 cpu job due to triple pipe command
+#      -analysis_capacity => 100,#Unlikely to get anywhere near this
+#      -rc_name    => 'default',
+#      -batch_size => 30, #Should really take ~1min to process each set of replicates
+#             
+#      -parameters => { permissive_peaks => $self->o('permissive_peaks') },
+#       #This will not allow batch override
+#            
+#      -flow_into => 
+#       {
+#        '2->A' => [ 'RunSelfIDR' ],                   # fan
+#        #'3->A' => [ 'RunPooledPseudoRepIDR ' ],   # fan #This doesn't need a separate analysis
+#        'A->3' => [ 'PostProcessSelfIDRReplicates' ], # funnel
+#       }, 
+#     },
+#     
+#     
+#        {
+#      -logic_name    => 'RunSelfIDR',
+#      -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunIDR',
+#      -analysis_capacity => 100,
+#      -rc_name    => 'normal_2GB', #~10mins + (memory?)
+#      -batch_size => 6,#~30mins +
+# 
+#      #No flow into here, but this analysis should update the DB with the calculated threshold
+#      #This can't be in the feature_set_stats table, due to the combinations between the reps.
+#      #If we accu this, then we will lose the data!!! Preventing us from being able to simply drop one rep and
+#      #rerun the post process?
+#      #do we need a stand alone table for idr_thresholds, which simply has the threshold and the 2 feature_set_ids
+#      #should we store anything else here? 
+#      
+#     -flow_into => 
+#      {
+#       2 => [ ':////accu?self_idr_peak_counts=[accu_idx]' ],
+#      }
+# 
+#            
+#  
+#       #Or should this do all this in the same analysis
+#       #where are we going to cache the run_idr output for the
+#       #final peak calling threshold? Let's keep this in a tracking DB
+#       #table to prevent proliferation of analyses based on this value differing between data sets.
+#       
+#       #are we going to have problems having these two analyses together
+#       #if we want to rerun the analysis due to the creation of the merged rset failing?
+#       #would have to rerun idr too?
+#       
+#       #This is extremely unlikely to happen
+#       #and could do some funky job_id manipulation to set skip_idr
+#       
+#       #No we won't be able to reuse DefineResultSets here
+#            
+#     },
+#   
+#     {
+#      -logic_name    => 'PostProcessSelfIDRReplicates',
+#      -module        => 'Bio::EnsEMBL::Funcgen::Hive::PostprocessIDR',
+#       #-meadow        => 'LOCAL', #Could potentially do this locally due to low load/runtime?
+#      #although it is potentially a >1 cpu job due to triple pipe command
+#      -analysis_capacity => 100,
+#      -rc_name    => 'default', #<1mins
+#      -batch_size => 10,#?
+#      -parameters => 
+#       { 
+#        #result_set_mode              => 'none',#We never want one for an IDR DataSet
+#        #default_feature_set_analyses => $self->o('permissive_feature_set_analyses'), 
+#       },
+#            
+#      -flow_into => 
+#       {
+#        '2' => [ 'PreprocessIDR' ],
+#       }, 
+#       
+#       #Or should this do all this in the same analysis
+#       #where are we going to cache the run_idr output for the
+#       #final peak calling threshold? Let's keep this in a tracking DB
+#       #table to prevent proliferation of analyses based on this value differing between data sets.
+#       
+#       #are we going to have problems having these two analyses together
+#       #if we want to rerun the analysis due to the creation of the merged rset failing?
+#       #would have to rerun idr too?
+#       
+#       #This is extremely unlikely to happen
+#       #and could do some funky job_id manipulation to set skip_idr
+#       
+#       #No we won't be able to reuse DefineResultSets here
+#            
+#     },
     
     
     
@@ -351,8 +350,7 @@ sub pipeline_analyses {
      #do we need a stand alone table for idr_thresholds, which simply has the threshold and the 2 feature_set_ids
      #should we store anything else here? 
      
-    -flow_into => 
-     {
+    -flow_into => {
       2 => [ ':////accu?idr_peak_counts=[accu_idx]' ],
      }
 
@@ -423,15 +421,6 @@ sub pipeline_analyses {
   
      -flow_into => { '2' => [ 'DefineMergedDataSet' ] }, 
     },
-  
- 
- 
- 
- 
-  
- 
- 
- 
   #LINK ANALYSES TO OTHER CONFIGS ###
   
   #DefineMergedDataSet is in BaseSequenceAnalysis as it is common to all
@@ -446,16 +435,7 @@ sub pipeline_analyses {
  
   #no longer needing to subsamble  
   #java -jar ~/tools/picard-tools-1.70/DownsampleSam.jar I=accepted_hits.bam P=0.01 R=42 O=sample.bam  
-
-
- 
-
-
-	 
   ];
 }
-
-
-
 
 1;

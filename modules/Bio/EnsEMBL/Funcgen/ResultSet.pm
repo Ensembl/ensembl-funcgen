@@ -388,7 +388,7 @@ sub dbfile_path{
 
 =cut
 
-sub table_name{ return shift->{table_name}; }
+sub table_name { return shift->{table_name}; }
 
 
 =head2 _add_table_id

@@ -63,7 +63,7 @@ sub fetch_input {
   
   $self->validate_dir_param
    ('db_output_dir',
-    undef,  #create/writeable? #should this be undef, and force the runnables to validate_dir_param output_dir?
+    1,  #create/writeable? #should this be undef, and force the runnables to validate_dir_param output_dir?
     $self->data_root_dir.'/output/'.$self->out_db->dbc->dbname); #default
   
   
@@ -78,6 +78,10 @@ sub fetch_input {
   return;
 }
 
+sub peaks_output_dir {
+  my $self = shift;
+  return $self->db_output_dir . '/peaks/'
+}
 
 #This is starting to overlap with the BaseImporter/Importer a little
 #but new style Peak import is not supported by Importer just yet.

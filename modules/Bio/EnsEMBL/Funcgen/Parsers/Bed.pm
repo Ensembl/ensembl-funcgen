@@ -176,61 +176,30 @@ sub set_config{
 #simply don't write the no sort!
 
 
-sub initialise_input_file{
+sub initialise_input_file {
   my ($self, $filepath, $prepare) = @_;
 
-  #Test file format
   throw("Input file is not bed format:\t$filepath") if ! &is_bed($filepath);
   
-
   #separate sort keys stop lexical sorting of start/end
   #when faced with a non numerical seq_region_name
   my $sort = ($prepare || ! $self->prepared) ? 'sort -k1,1 -k2,2n -k3,3n ' : '';
   my $is_gzipped = &is_gzipped($filepath);
 
-
   if($is_gzipped){
 	$sort .= '|' if $sort;
 	$self->input_file_operator("gzip -dc %s | $sort ");
-  }
-  else{
-	#This is really only required for read alignments
-	#If we dont have sort why are we even piping here? Shouldn't this just be <?
-		
+  } else {
 	$self->input_file_operator("$sort %s |");
   }
 
-  
-
-  
   if(! defined  $self->output_file && $self->input_feature_class eq 'result'){
 	my ($name) = fileparse($filepath);
 	$name =~ s/\.gz// if $is_gzipped;
-
-	if($prepare){
-	  #This will be filtered for seq_region_name
-	  
+	if($prepare) {
 	  $self->output_file($self->get_dir('output')."/prepared.${name}.gz");
 	}
-	else{
-	  #Not currently used as we use direct import
-	  #via AnnotatedFeatures or ResultFeature Collections
-
-	  #output_file would only be used DAS read mysqlimport loading
-	  #This could also be used by SAM/BAM so put in InputSet
-
-	  #Or do we need a file for each discrete set?
-	  #Each import consititutes one discrete data set
-	  #So this is okay for replicates in a result set
-	  #But not for different cell/feature types
-	  #Use one file
-	  #This is imposed case in INputSet::validate_files
-	  #We can't pipe this to gzip as we need to mysqlimport it, which does not support gzip?
-	  #gzip -dc file.sql | mysql would work but would be much slower due ti individual inserts
-	  #$self->output_file($self->get_dir('output')."/result_feature.${name}.txt");
-	}
   }
-
   return $filepath;
 }
 

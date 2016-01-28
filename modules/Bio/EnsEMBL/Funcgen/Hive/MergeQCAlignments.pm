@@ -58,11 +58,11 @@ my %valid_flow_modes = (replicate => undef,
 sub fetch_input {  
   my $self = shift;
   #Set some module defaults
-  $self->param('disconnect_if_idle', 1);
+  #$self->param('disconnect_if_idle', 1);
   
   $self->SUPER::fetch_input();
   my $rset = $self->fetch_Set_input('ResultSet');
-  $self->param_required('archive_root');#Do this here to fail early
+  #$self->param_required('archive_root');#Do this here to fail early
   #make this optional, as not everybody will want
   
   $self->get_param_method('output_dir', 'required');
@@ -103,7 +103,11 @@ sub fetch_input {
   
   #could have recreated output_dir and merged_file_name from ResultSet and run_controls
   #as we did in MergeChunkResultSetFastqs, but passed for convenience
-  $self->sam_header($rset->cell_type->gender);
+  my $gender = $rset->cell_type->gender;
+  my $file_gender = 'female'
+      if ($gender eq 'mixed');
+  
+  $self->sam_header($file_gender);
  
   #my $repository = $self->_repository();
   #if(! -d $repository){
@@ -131,64 +135,72 @@ sub run {
   
   ### MERGE BAMS ###
   my $file_prefix  = $self->get_alignment_path_prefix_by_ResultSet($rset, $self->run_controls); 
-  my $unfiltered_bam     = $file_prefix.'.unfiltered.bam';
+  my $unfiltered_bam     = $file_prefix.'.bam';
+  
   $self->helper->debug(1, "Merging bams to:\t".$unfiltered_bam); 
-  #sam_header here is really optional if is probably present in each of the bam files but maybe incomplete 
-  my @bam_files  = @{$self->bam_files};
-     
-  merge_bams($unfiltered_bam, 
-             $self->sam_ref_fai($rset->cell_type->gender), 
-             \@bam_files, 
-             {debug          => $self->debug});
   
-  ### ALIGNMENT REPORT ### 
-  #todo convert this to wite to a result_set_report table
-  my $alignment_log = $file_prefix.".alignment.log";
-  $cmd ='echo -en "Alignment QC - samtools flagstat output:\n" > '.$alignment_log.
-    ";samtools flagstat $unfiltered_bam >> $alignment_log;".
-    'echo -en "Alignment QC - mapped reads:\t\t\t\t\t" >> '.$alignment_log.
-    ";samtools view -u -F 4 $unfiltered_bam | samtools flagstat - | head -n 1 >> $alignment_log;".
-    ' echo -en "Alignment QC - reliably aligned reads (mapping quality >= 1):\t" >> '.$alignment_log.
-    ";samtools view -u -F 4 -q 1 $unfiltered_bam | samtools flagstat - | head -n 1 >> $alignment_log";
-  #Maybe do some percentages?
-  $self->helper->debug(1, "Generating alignment log with:\n".$cmd);
-  run_system_cmd($cmd);
- 
-  #Filter and QC here FastQC or FASTX?
-  #filter for MAPQ >= 15 here? before or after QC?
-  #PhantomPeakQualityTools? Use estimate of fragment length in the peak calling?
-
-  warn "Need to implement post alignment QC here. Filter out MAPQ <16. FastQC/FASTX/PhantomPeakQualityTools frag length?";
-  #todo Add ResultSet status setting here!
-  #ALIGNMENT_QC_OKAY
-  #Assuming all QC has passed, set status
+  merge_bams({
+    input_bams => $self->bam_files, 
+    output_bam => $unfiltered_bam, 
+    debug => $self->debug,
+  });
   
-  if($self->run_controls){
-    my $exp = $rset->experiment(1);#control flag
-    $exp->adaptor->store_status('ALIGNED_CONTROL', $exp);
-    $exp->adaptor->revoke_status('ALIGNING_CONTROL', $exp, 1);#validate status flag
-  }
-  else{
-    $rset->adaptor->store_status('ALIGNED', $rset);
-    # Do not set IMPORTED here, as this signifies that the collections have already been written
-    # i.e what would have been importing data into the DB before we moved it out to flat files
-  }
+  my $tmp_bam = "${unfiltered_bam}.nodups.bam";
+  
+  remove_duplicates_from_bam({
+    input_bam  => $unfiltered_bam,
+    output_bam => $tmp_bam, 
+    debug      => $self->debug,
+  });
+  
+  unlink($unfiltered_bam);
+  run_system_cmd("mv $tmp_bam $unfiltered_bam");
 
-  #filter file here to prevent race condition between parallel peak
-  #calling jobs which share the same control
-  #This will also check the checksum we have just generated, which is a bit redundant
-  $self->get_alignment_files_by_ResultSet_formats($rset, ['bam'], 
-                                                  $self->run_controls, 
-                                                  undef, 
-                                                  'bam');#Filter from format
-                                                  
-  #This is really only unmapped and duplicate reads (as we have dropped MT filtering)
-  #i.,e. unique_mapping
-  #so we can drop archiving of this for now, so long as we maintain the 
-  #alignement log for the unfiltered file
-  #We would have to re-instate an unfiltered file if we ever introduce
-  #more filtering filtering                                                
-  $self->archive_files([$unfiltered_bam, $unfiltered_bam.'.CHECKSUM'], 1);#mandatory flag
+# Commented out the following commands, because they were meant to check, if 
+# the bam file is valid. After fixing a bug that seems to always be the case,
+# so the code seems to just consume time.
+#
+#   $cmd = qq(java picard.cmdline.PicardCommandLine CheckTerminatorBlock ) 
+#     . qq( VALIDATION_STRINGENCY=LENIENT ) 
+#     . qq( INPUT=$unfiltered_bam );
+# 
+#   warn "Running\n$cmd\n";
+#   run_system_cmd($cmd);
+#   
+#   $cmd = qq(java picard.cmdline.PicardCommandLine BuildBamIndex ) 
+#       . qq( VALIDATION_STRINGENCY=LENIENT )
+#       . qq( INPUT=$unfiltered_bam );
+# 
+#   warn "Running\n$cmd\n";
+#   run_system_cmd($cmd);
+# 
+#   $cmd = qq(samtools idxstats $unfiltered_bam);
+#   run_system_cmd($cmd, undef, 1);
+#   
+#   # Get rid of the index file, whatever the name may be:
+#   #
+#   my $index_name = $unfiltered_bam . '.bai';
+#   unlink($index_name) if (-e $index_name);  
+#   my $index_name = $unfiltered_bam;
+#   $index_name =~ s/\.bam$/\.bai/;
+#   unlink($index_name) if (-e $index_name);
+  
+  # This calls code that generates the name of the previously merged bam file,
+  # with ".unfiltered". It performs some filtering and creates a file without
+  # ".unfiltered".
+  # Essentially, it seems to just run samtools view -F 4 (getting rid of 
+  # unaligned reads) on it. It this is the case, this call should be replaced with that.
+  #
+# Moved this into the RunAligner.
+#
+#   $self->get_alignment_files_by_ResultSet_formats($rset, ['bam'], 
+#                                                   $self->run_controls, 
+#                                                   undef, 
+#                                                   'bam');#Filter from format
+
+  # After the -F 4 filtering step above, the bam file should no longer be necessary.
+  #
+  #unlink($unfiltered_bam) if (-e $unfiltered_bam);
   
   my %batch_params = %{$self->batch_params};
   my $flow_mode    = $self->flow_mode;
@@ -208,10 +220,11 @@ sub run {
                      dbID        => $self->ResultSet->dbID);
 
     if(! $self->debug){
-      $output_id{garbage} = \@bam_files;   
+      #$output_id{garbage} = [@bam_files, $unfiltered_unsorted_bam];
+      $output_id{garbage} = $self->bam_files;
     }
     else{  #Do not garbage collect in debug mode. In case we need to rerun.
-      warn "Skipping garbage collection for:\n".join("\n\t", @bam_files);
+      warn "Skipping garbage collection for:\n".join("\n\t", @{$self->bam_files});
     }
   
     my $lname     = 'DefineMergedDataSet';  #flow mode eq merged
@@ -240,7 +253,10 @@ sub run {
       for my $i(0...$#{$rset_groups->{$rset_group}{dbIDs}}){
         push @rep_or_merged_jobs, 
           {%batch_params,
-           garbage     => \@bam_files, 
+          
+          # mnuhn: Something is going wrong during the merge, so deactivating garbage collection to make it rerunnable.
+           garbage     => $self->bam_files, 
+           
            #Passing rep bam here prevent us from redoing the peak calling
            #Disable? Or wait till we restructure and only ever keep the rep bams
            set_type    => 'ResultSet',

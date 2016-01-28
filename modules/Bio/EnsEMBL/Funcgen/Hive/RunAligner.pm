@@ -40,7 +40,7 @@ use warnings;
 use strict;
 use Bio::EnsEMBL::Utils::Exception         qw( throw );
 use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( validate_package_path );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( validate_package_path run_system_cmd );
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
   #We need a list of Aligner specific param requirements which are not specified
@@ -74,7 +74,14 @@ sub fetch_input {   # fetch parameters...
   #Do we even need this? The fastq chunks will already be in a work dir?  
 
   my $logic_name = $self->param_required('analysis');
-  my $analysis   = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($logic_name);
+  #my $analysis   = $self->db->get_AnalysisAdaptor->fetch_by_logic_name($logic_name);
+  my $analysis   = $self->out_db->get_AnalysisAdaptor->fetch_by_logic_name($logic_name);
+  
+#   use Data::Dumper;
+#   print Dumper($self->db);
+  
+  # $self->db is the hive adaptor
+  
   #program is no passed to Aligner so validate here
   my $aligner      = $analysis->program || 
     throw('Aligner analysis cannot have an undef program attribute:'.$analysis->logic_name);
@@ -98,11 +105,15 @@ sub fetch_input {   # fetch parameters...
     #index file suffix may change between aligners
     #best to pass just the target file, index root dir, species, gender
     #and let the Aligner construct the appropriate index file
+    
+    my $file_gender;
+    $file_gender = 'female'
+      if ($gender eq 'mixed');
   
     $ref_fasta = join('/', ($self->param_required('data_root_dir'),
                             $aligner.'_indexes',
                             $species,
-                            $species.'_'.$gender.'_'.$self->assembly.'_unmasked.fasta'));
+                            $species.'_'.$file_gender.'_'.$self->assembly.'_unmasked.fasta'));
   }
   
   #$self->set_param_method('target_file', $ref_fasta);
@@ -154,12 +165,49 @@ sub fetch_input {   # fetch parameters...
 
 sub run {
   my $self = shift;
+  
+  my $bam_file;
     
-  if(! eval { $self->aligner->run; 1; }){
+  if(! eval { $bam_file = $self->aligner->run; 1; }){
     my $err = $@;
     $self->throw_no_retry('Failed to call run on '.ref($self->aligner)."\n$err"); 
   }
   
+  my $no_dups_bam_file = "${bam_file}.nodups.bam";
+  
+  my $cmd = qq(samtools view -F 4 -b -o $no_dups_bam_file $bam_file);
+  run_system_cmd($cmd);
+  unlink($bam_file);
+  $cmd = qq(mv $no_dups_bam_file $bam_file);
+  run_system_cmd($cmd);
+
+# Commented out the following commands, because they were meant to check, if 
+# the bam file is valid. After fixing a bug that seems to always be the case,
+# so the code seems to just consume time.
+#
+#   my $cmd = qq(java picard.cmdline.PicardCommandLine CheckTerminatorBlock ) 
+#   . qq( INPUT=$bam_file );
+# 
+#   warn "Running\n$cmd\n";
+#   run_system_cmd($cmd);
+# 
+#   $cmd = qq(java picard.cmdline.PicardCommandLine BuildBamIndex ) 
+#         . qq( VALIDATION_STRINGENCY=LENIENT ) 
+#   . qq( INPUT=$bam_file );
+# 
+#   warn "Running\n$cmd\n";
+#   run_system_cmd($cmd);
+#   
+#   $cmd = qq(samtools idxstats $bam_file);
+#   run_system_cmd($cmd, undef, 1);
+#   
+#   # Does not work, because .bai is not appended, but .bam is substituted with .bai to get the file name.
+#   #my $index_name = $bam_file . '.bai';
+#   
+#   my $index_name = $bam_file;
+#   $index_name =~ s/\.bam$/\.bai/;
+#   unlink($index_name) if (-e $index_name);
+
   $self->debug(1, "Finished running ".ref($self->aligner));
   return;
 }

@@ -146,8 +146,7 @@ sub pipeline_wide_parameters {
     return {
       %{$self->SUPER::pipeline_wide_parameters}, 
                
-       #todo make this optional to the extent we only specify a host
-       #and let the API do the rest  
+      disconnect_if_idle => 1,
       dnadb   => 
         {
          -dnadb_host   => $self->o('dnadb_host'),

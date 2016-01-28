@@ -1354,6 +1354,10 @@ sub add_DB_url_to_meta {
   my $url_type = shift;
   my $url      = shift;
   my $db       = shift;
+  
+  warn "add_DB_url_to_meta is deprected.";
+  return;
+  
 
   if(! defined $url_type){
     throw('Must provide URL_TYPE, URL and DBAdaptor arguments');

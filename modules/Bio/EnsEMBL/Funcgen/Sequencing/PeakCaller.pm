@@ -235,9 +235,13 @@ sub process_features {
   while( ($feature_hash = $self->$parse_method) &&
          defined $feature_hash ){
     
-    $retval = $process_cref->(@$process_args, $feature_hash);
-    push @retvals, $retval if defined $retval;
-    $feature_cnt++;
+    my $error_message = $process_cref->(@$process_args, $feature_hash);
+
+    if (defined $error_message) {
+      push @retvals, $error_message;
+    } else {
+      $feature_cnt++;
+    }
   }
 
   return ($feature_cnt, \@retvals);
