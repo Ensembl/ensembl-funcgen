@@ -106,7 +106,7 @@ my $result = GetOptions(
 );
 
 die unless(-e $argenrich_file);
-die unless($control_result_set_id);
+# die unless($control_result_set_id);
 die unless($signal_result_set_id);
 
 my $logger = Bio::EnsEMBL::Utils::Logger->new();
@@ -148,12 +148,11 @@ use Hash::Util qw( lock_hash );
 lock_hash(%key_value_pairs);
 
 my $sql = qq(insert into result_set_qc_chance (
-      control_result_set_id, signal_result_set_id, analysis_id, p, q, divergence, z_score, percent_genome_enriched, input_scaling_factor, differential_percentage_enrichment,
+      signal_result_set_id, analysis_id, p, q, divergence, z_score, percent_genome_enriched, input_scaling_factor, differential_percentage_enrichment,
       control_enrichment_stronger_than_chip_at_bin,
       zero_enriched_ip_maximum_difference_at_bin,
       pcr_amplification_bias_in_Input_coverage_of_1_percent_of_genome
     ) values (
-    $control_result_set_id, 
     $signal_result_set_id,
     $analysis_id,
     $key_value_pairs{'p'}, 
@@ -230,7 +229,6 @@ sub create_table {
 my $sql = <<SQL
  CREATE TABLE if not exists `result_set_qc_chance` (
   `result_set_qc_chance_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `control_result_set_id` int(10),
   `signal_result_set_id` int(10),
   `analysis_id`        int(10) unsigned,
   `p` double default NULL,
