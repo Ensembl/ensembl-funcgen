@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [1999-2016] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -247,6 +247,29 @@ sub new {
   return $self;
 }
 
+=head2 dbfile_data_root
+
+  Arg[1]     : Optional String: Root path of dbfile data directory
+  Example    : $rset_adaptor->dbfile_data_root('/data/root/dir/);
+  Description: This allows the root path to be defined. If an adaptor uses 
+               files, it will use this to find its data.
+  Returntype : String
+  Exceptions : None
+  Caller     : Bio::EnsEMBL::Funcgen::DBAdaptor::ResultSet
+  Status     : at risk - move this to SetAdaptor/FileAdaptor?
+
+=cut
+
+sub dbfile_data_root {
+  my ($self, $root) = @_;
+
+  if($root){
+    $root =~ s/\/$//o;  # strip off trailing /, as this is present in dbfile_registry.path
+    $self->{dbfile_data_root} = $root;
+  }
+ 
+  return $self->{dbfile_data_root} || '';  # Avoids concat warning
+}
 
 #This should be in Storable to mirror core is_stored method?
 #These do not fit in Storable, move these stored methods to BaseAdaptor?
@@ -659,8 +682,6 @@ sub _set_dnadb{
   }
 
   throw("Failed to find dnadb like $match_name.") if(scalar(@dbnames)==0);
-  warn ":: Auto-selecting build $assm_ver core DB as:\t".
-    $self->dnadb_user.'@'.$dbnames[$#dbnames].':'.$self->dnadb_host.':'.$host_port."\n";
 
   my $db = $reg->reset_DBAdaptor($reg_lspecies, 'core', $dbnames[$#dbnames],
                                  $self->dnadb_host, $host_port,
