@@ -206,22 +206,22 @@ sub pipeline_wide_parameters {
     #Maintain this here for now in case BaseDB is used by something other than BaseSequenceAnalysis
     #Could change this if we move the releveant code from the respective modules
   
-     batch_param_names => 
-      [
-       #From Base.pm       
-       'no_write', #For use with runWorker.pl -no_write, so we can write some STDOUT in run
-                   #is this already available in the job, or is it just passed ot the worker?
- #      'feature_file_format',
-   
-        #BaseDB.pm batch_params     
-        #Generic optional params (used in Helper and elsewhere)
-        'rollback',
-        'slices',
-        'skip_slices',
-        ### More optional Helper params (currently used in DefineOutputSet)
-        'result_set_only',
-        'result_set_mode', #Can only be set to recover at present
-        'recover',         #is this an Importer or a Helper param?
+#      batch_param_names => 
+#       [
+#        #From Base.pm       
+#        'no_write', #For use with runWorker.pl -no_write, so we can write some STDOUT in run
+#                    #is this already available in the job, or is it just passed ot the worker?
+#  #      'feature_file_format',
+#    
+#         #BaseDB.pm batch_params     
+#         #Generic optional params (used in Helper and elsewhere)
+#         'rollback',
+#         'slices',
+#         'skip_slices',
+#         ### More optional Helper params (currently used in DefineOutputSet)
+#         'result_set_only',
+#         'result_set_mode', #Can only be set to recover at present
+#         'recover',         #is this an Importer or a Helper param?
         
  #       ### Optional IdentifySetInputs parameters
  #       #comma separated or defined as list ref  
@@ -232,7 +232,7 @@ sub pipeline_wide_parameters {
 #        #'input_analyses'     => undef,
  #       #This is actually more like study, and omit for now as 
  #       #input_set will handle this         
-     ],
+#      ],
              
     };
 }
