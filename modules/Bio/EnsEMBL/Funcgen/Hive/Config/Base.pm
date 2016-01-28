@@ -136,7 +136,7 @@ sub default_options {
     #ensembl_cvs_root_dir => $ENV{'SRC'},   #Now set in env as is mandatory  requirement for loading default config 
     
     
-    bin_dir              => undef,#'/software/ensembl/funcgen',
+#    bin_dir              => undef,#'/software/ensembl/funcgen',
     #This is preventing things being picked up from $PATH
     #bin_dir should really only be defined if all programs are located in the same dir
     #or an an analysis level, to override $PATH or specify something which isn't in $PATH
@@ -147,23 +147,23 @@ sub default_options {
     #run with a custom bin_dir environment
     
     
-    pdb_port             => undef,
+#     pdb_port             => undef,
     #no_write             => undef, #For use with runWorker.pl -no_write, so we can write some STDOUT in run
     
        
     #Will need to define this below if we want access to it as a param
-    pipeline_db => 
-	  {
-     #  test => $self->o('GRR'),
-	    #CR enable different db params from output db
-	   -host   => $self->o('pdb_host'),
-	   -port   => $self->o('pdb_port'),
-	   -user   => $self->o('pdb_user'),
-	   -pass   => $self->o('ENV', 'PDB_PASS'),#Via env for security
-	   -dbname => $self->o('pipeline_name'),
-	   -driver => 'mysql',
-	   #todo deal with this in the env and don't corrupt pipeline_name add $ENV{USER}?
-	  },
+#     pipeline_db => 
+# 	  {
+#      #  test => $self->o('GRR'),
+# 	    #CR enable different db params from output db
+# 	   -host   => $self->o('pdb_host'),
+# 	   -port   => $self->o('pdb_port'),
+# 	   -user   => $self->o('pdb_user'),
+# 	   -pass   => $self->o('ENV', 'PDB_PASS'),#Via env for security
+# 	   -dbname => $self->o('pipeline_name'),
+# 	   -driver => 'mysql',
+# 	   #todo deal with this in the env and don't corrupt pipeline_name add $ENV{USER}?
+# 	  },
     
 	use_tracking_db     => 1,     
 	species             => undef,
@@ -318,7 +318,7 @@ sub pipeline_wide_parameters {
     allow_no_archive => $self->o('allow_no_archive'),
     
        
-    bin_dir           => $self->o('bin_dir'),
+#     bin_dir           => $self->o('bin_dir'),
   
     #root_output_dir => $self->o('root_output_dir'),
     #need root_output_dir for non-DB specific analyses e.g. alignments
@@ -355,9 +355,9 @@ sub pipeline_wide_parameters {
     #Only necessary if they are to be used
     #generic data flow method will catch them in write_output
     
-    batch_param_names => ['no_write', #For use with runWorker.pl -no_write, so we can write some STDOUT in run
-                                 #is this already available in the job, or is it just passed ot the worker?
-                    ],
+#     batch_param_names => ['no_write', #For use with runWorker.pl -no_write, so we can write some STDOUT in run
+#                                  #is this already available in the job, or is it just passed ot the worker?
+#                     ],
     
     #This should really only ever be defined
     #when running in debug mode, but here for clarity.
