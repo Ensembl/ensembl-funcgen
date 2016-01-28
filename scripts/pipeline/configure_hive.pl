@@ -163,7 +163,7 @@ sub main{
   elsif(! -d $hive_script_dir){
     croak("-hive_script_dir is not a valid directory:\t${hive_script_dir}");
   }
-
+  $data_root = $ENV{DATA_HOME};
   if(! defined $data_root){
     croak('-data_root is a mandatory parameter');
   }
