@@ -261,6 +261,11 @@ sub run {   # Check parameters and do appropriate database/file operations...
   
   #For set_ids and set_names, catch undef return types
   if($self->set_ids || $self->set_names){
+  
+  #
+  # Code review: The way we run the pipeline, this probably never is run.
+  #
+
     my ($ids_or_names, $fetch_method);
   
     if($self->set_ids){
@@ -294,6 +299,11 @@ sub run {   # Check parameters and do appropriate database/file operations...
     }
   }
   else{#Must have constraints or experiments
+  
+  #
+  # Code review: This is probably the branch that always gets run.
+  #
+  
     my $constraints = $self->constraints_hash;
   
     if($self->experiments){  #Preprocess experiment wildcards
@@ -314,6 +324,8 @@ sub run {   # Check parameters and do appropriate database/file operations...
       
       foreach my $wc(@exp_wildcards){
         my $sql = 'SELECT name from experiment where name like "'.$wc.'"';
+        
+        # Code review: Wildcard names
         my @wc_names = @{$sql_helper->execute_simple($sql)};
         
         if(! @wc_names){
@@ -332,6 +344,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
       );
     }
      
+    # Code review: We are probably dealing with names of experiments that fit the wild card here.
     $sets = $set_adaptor->fetch_all(
       {
         constraints => $constraints,
@@ -367,6 +380,8 @@ sub run {   # Check parameters and do appropriate database/file operations...
   my ($no_rel_date, $rel_date, $force, $ignore, $rel_month);
   @failed = ();
   my (@failed_ctrls, %ctrl_cache);
+  
+  # Code review: This probably about shared controls.
   my $x_grp_ctrls = $self->param_silent('allow_inter_group_controls');
   my $use_exp_id;
   
@@ -440,6 +455,10 @@ sub run {   # Check parameters and do appropriate database/file operations...
   #TODO add more STDOUT if in -no_write mode
   
   #Iterate through the sets 
+  
+  #
+  # Code review: This loop just runs tests on the $sets
+  #
  SET: foreach my $set( @$sets ){
     $self->helper->debug(1, 'Processing '.ref($set)." set:\t".$set->name.' (Experiment = '.$set->experiment->name.')');
     #"\n\tStates:\t".join(' ', @{$set->get_all_states}));
