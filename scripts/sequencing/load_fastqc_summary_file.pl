@@ -40,8 +40,14 @@ CREATE TABLE `input_subset_fastqc` (
 
 INPUT_SUBSET_ID=3436
 
+
+
 TEMP_DIR=/lustre/scratch109/ensembl/funcgen/mn1/qc/${INPUT_SUBSET_ID}
 mkdir -p $TEMP_DIR
+# GZIPPED_FASTQ_FILE=$(mysql -N -B $DB_MYSQL_ARGS -e "select local_url from input_subset_tracking where input_subset_id = ${INPUT_SUBSET_ID}")
+
+
+DB_MYSQL_ARGS="-hens-genomics2 -P3306 -uensadmin -pensembl mn1_faang_tracking_homo_sapiens_funcgen_81_38"
 GZIPPED_FASTQ_FILE=$(mysql -N -B $DB_MYSQL_ARGS -e "select local_url from input_subset_tracking where input_subset_id = ${INPUT_SUBSET_ID}")
 
 echo $GZIPPED_FASTQ_FILE
@@ -83,6 +89,8 @@ my $result = GetOptions(
 die unless(-e $summary_file);
 die unless($input_subset_id);
 
+print &create_table_sql;
+
 open IN, $summary_file;
 
 while (my $current_line = <IN>) {
@@ -94,4 +102,26 @@ while (my $current_line = <IN>) {
   
   print "$sql;\n";
 }
+
+=head2 create_table_sql
+=cut
+sub create_table_sql {
+
+my $sql = <<SQL
+CREATE TABLE if not exists `input_subset_fastqc` (
+  `input_subset_qc_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `input_subset_id` int(10) unsigned NOT NULL,
+  `status` varchar(100) NOT NULL,
+  `title` varchar(100) NOT NULL,
+  `file_name` varchar(100) NOT NULL,
+  PRIMARY KEY (`input_subset_qc_id`),
+  UNIQUE KEY `name_exp_idx` (`input_subset_id`,`title`)
+) ENGINE=MyISAM;
+
+SQL
+;
+  return $sql;
+}
+
+
 
