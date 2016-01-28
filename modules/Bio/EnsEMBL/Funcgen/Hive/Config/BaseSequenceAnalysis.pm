@@ -17,10 +17,26 @@ sub default_options {
      permissive_peaks    => 'SWEmbl_R0005',
      idr_peaks           => 'SWEmbl_R0005_IDR', 
 
-    broad_peak_feature_types => ['H3K36me3', 'H3K27me3'],
-#     broad_peak_feature_types => [
-#       'H3K36me3', 'H3K79me2', 'H3K27me3', 'H3K9me3', 'H3K9me1'
-#     ],
+    # Used in Bio::EnsEMBL::Funcgen::Hive::Base::is_idr_FeatureType
+    # The method is true, if the feature type passed in matches
+    # one of the items in this list.
+    #
+    # If the "no_idr" parameter of the pipeline has been set however,
+    # it will always return 0.
+    #
+    broad_peak_feature_types => ['H3K36me3', 'H3K27me3',
+      'H2AK5ac',
+      'H2BK12ac',
+      'H3K14ac',
+      'H3K23me2',
+      'H3K4me1',
+      'H3K79me1',
+      'H3K79me2',
+      'H3K9me1',
+      'H3K9me3',
+      'H4K20me1',
+      'H4K8ac',
+    ],
 
     default_peak_analyses => {
       Histone             => $self->o('default_peaks'),
@@ -30,9 +46,18 @@ sub default_options {
       
       H3K36me3            => $self->o('default_broad_peaks'), 
       H3K27me3            => $self->o('default_broad_peaks'), 
-#       H3K79me2            => $self->o('default_broad_peaks'), 
-#       H3K9me3             => $self->o('default_broad_peaks'), 
-#       H3K9me1             => $self->o('default_broad_peaks'), 
+      
+      H2AK5ac             => $self->o('default_broad_peaks'), 
+      H2BK12ac            => $self->o('default_broad_peaks'), 
+      H3K14ac             => $self->o('default_broad_peaks'), 
+      H3K23me2            => $self->o('default_broad_peaks'), 
+      H3K4me1             => $self->o('default_broad_peaks'), 
+      H3K79me1            => $self->o('default_broad_peaks'), 
+      H3K79me2            => $self->o('default_broad_peaks'), 
+      H3K9me1             => $self->o('default_broad_peaks'), 
+      H3K9me3             => $self->o('default_broad_peaks'), 
+      H4K20me1            => $self->o('default_broad_peaks'), 
+      H4K8ac              => $self->o('default_broad_peaks'), 
      }, 
    
  

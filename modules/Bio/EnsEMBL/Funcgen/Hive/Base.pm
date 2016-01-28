@@ -1699,7 +1699,7 @@ sub sam_ref_fai {
   my $gender      = shift; 
   
   if(! defined $self->param_silent('sam_ref_fai')){
-
+  
     if(! defined $gender){
       $gender = $self->param_silent('gender') || $self->param_silent('default_gender');
       
@@ -1708,8 +1708,12 @@ sub sam_ref_fai {
         'specific in the config');
       }
     }
-    
-    my $file_name = $self->species.'_'.$gender.'_'.$self->assembly.'_unmasked.fasta.fai';
+        my $file_gender;
+    $file_gender = 'female'
+      if ($gender eq 'mixed');
+
+
+    my $file_name = $self->species.'_'.$file_gender.'_'.$self->assembly.'_unmasked.fasta.fai';
     my $sam_ref_fai = validate_path([$self->data_root_dir,
                                      'sam_header',
                                     $self->species,

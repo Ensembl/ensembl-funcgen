@@ -134,7 +134,10 @@ sub run {
                       $conf_file,
                       $out_prefix,
                       '>',
-                      $out_prefix.'.log');
+                      $out_prefix.'.log',
+                      '2>',
+                      $out_prefix.'.stderr.log'
+                      );
   #WARNING!
   #Do not remove this redirect to log file, as th CCAT binary will expect that 
   #it is directly attached to a terminal and fails with:
