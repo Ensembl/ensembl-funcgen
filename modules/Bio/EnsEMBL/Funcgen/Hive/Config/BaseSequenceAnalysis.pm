@@ -52,8 +52,7 @@ sub pipeline_wide_parameters {
     'broad_peak_feature_types' => $self->o('broad_peak_feature_types'), 
     'checksum_optional'        => $self->o('checksum_optional'),
 
-    batch_param_names => 
-      [#From Base.pm       
+    batch_param_names => [
        'no_write', #For use with runWorker.pl -no_write, so we can write some STDOUT in run
                    #is this already available in the job, or is it just passed ot the worker?
         #Generic optional params (used in Helper and elsewhere)
@@ -73,43 +72,19 @@ sub pipeline_wide_parameters {
         
         #ReadAlignments.pm batch params
         'no_idr', #This is required
-        #'bam_filtered', #Required by CollectionWriter and RunPeaks
-        #Now we assume/expect the filtered files
-        #this is due to potential conflicts across parallel jobs asking for the 
-        #control files to be filtered.
-        #
-        
-        
-        #'alignment_analysis' #Needs to flow from IdentifyAlignInputSubsets>DefinesResultSets
-        #This is just a data flow param!! But we know we always want to flow this just between
-        #these two jobs, so do it explicitly    
-                  
-                  
-       #Don't need no_idr here, as this is only used by IdentifyAlignInputSubsets
-       #The rest of the IDR handling is implicit by the output and dataflow of this analysis           
-        
         'indexed_ref_fasta',
-        'idr_analysis', #Not currently used as this is done outside of the DB
         'max_peaks',
         'checksum_optional'
       ],
     };
 }
 
-
 sub pipeline_analyses {
   my $self = shift;
-  
   return [
-    #To use these the following must be placed in your subclass config:
-    #@{$self->SUPER::pipeline_analyses},   
     {
      -logic_name  => 'DefineMergedDataSet',
      -module      => 'Bio::EnsEMBL::Funcgen::Hive::DefineDataSet',     
-     #-meadow_type => 'LOCAL',#should always be uppercase
-     #Not a great idea as we maybe dealing with 100s, so will bottle neck 
-     #on the local node/machine
-
      -parameters  => {
        default_feature_set_analyses => $self->o('default_peak_analyses'),
        feature_set_analysis_type    => 'peak',
@@ -122,6 +97,4 @@ sub pipeline_analyses {
    ];
 }
 
-
 1;
-
