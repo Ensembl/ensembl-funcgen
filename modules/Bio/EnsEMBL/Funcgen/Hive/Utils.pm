@@ -93,7 +93,7 @@ sub inject_DataflowRuleAdaptor_methods{
       throw('Must provide and analysis id argument') if ! defined $anal_id;
       my %df_config;
         
-      foreach my $dfr(@{$self->fetch_all_by_analysis_id($anal_id)}) {
+      DFR: foreach my $dfr(@{$self->fetch_all_by_analysis_id($anal_id)}) {
         #$anal_id here always represents the from analysis
         
 #         use Data::Dumper;
@@ -105,7 +105,10 @@ sub inject_DataflowRuleAdaptor_methods{
           
         #Is it valid to wire to the same analysis using two different branches
         #We need to catch this and throw          
+        
         if(exists $df_config{$to_analysis}){
+	  # Skip, because we need this for the QC
+	  next DFR;
           throw('It appears that the pipeline configuration for '.$to_analysis.
             " has been wired via two separate branches:\t".$dfr->branch_code.
             ' & '.$df_config{$to_analysis}{branch}.
