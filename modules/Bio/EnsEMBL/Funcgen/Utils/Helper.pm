@@ -1547,7 +1547,6 @@ sub rollback_ResultSet {
     #There is no way to know whether an import will be done as one or in parallel
     #so we have to rollback in both instances!
     #This is fine
-
     if( ! ($recover || $full_delete)){
 
       if(scalar (@dsets) > 1){
@@ -1695,7 +1694,7 @@ sub rollback_ResultSet {
 #So IMPORTED status should be tied to CS id and Analysis id?
 
 sub rollback_ArrayChips {
-  my ( $self, $acs, $mode, $force, $keep_xrefs, $no_clean_up,
+  my ( $self, $array_chip_names, $mode, $force, $keep_xrefs, $no_clean_up,
        $force_clean_up ) = @_;
 
 #no_clean_up and force_clean_up allow analyze/optimize to be skipped until the last rollback
@@ -1703,6 +1702,21 @@ sub rollback_ArrayChips {
 #Need to implement in RollbackArrays
 
   $mode ||= 'probe';
+
+    use Data::Dumper;
+    print Dumper($array_chip_names);
+
+    use Carp;
+
+    if (!defined $array_chip_names) {
+        confess("Obligatory parameter array_chip_names missing!");
+    }
+    if (ref $array_chip_names ne "ARRAY") {
+        confess("Type error: Parameter array_chip_names must be an array ref!");
+    }
+    if (@$array_chip_names==0) {
+        confess("No array chip names have been passed in array_chip_names parameter!");
+    }
 
   if ( $mode &&
        ( $mode ne 'probe' &&
@@ -1745,55 +1759,37 @@ sub rollback_ArrayChips {
 
   my ( $adaptor, $db, %classes );
 
-  foreach my $ac (@$acs) {
+  foreach my $array_chip (@$array_chip_names) {
     $adaptor ||=
-      $ac->adaptor || throw('ArrayChip must have an adaptor');
+      $array_chip->adaptor || throw('ArrayChip must have an adaptor');
     $db ||= $adaptor->db;
-    $db->is_stored_and_valid( 'Bio::EnsEMBL::Funcgen::ArrayChip', $ac );
+    $db->is_stored_and_valid( 'Bio::EnsEMBL::Funcgen::ArrayChip', $array_chip );
 
-    if ( !$ac->get_Array->class ) {
+    if ( !$array_chip->get_Array->class ) {
       throw(
 'The ArrayChip you are trying to rollback does not have a class attribute'
       );
     }
 
-    $classes{ $ac->get_Array->class } = undef;
+    $classes{ $array_chip->get_Array->class } = undef;
 
-#if($class && ($class ne $ac->get_Array->class)){
-#  throw('You can only rollback_ArrayChips for ArrayChips with the same class');
-#}
   }
 
-#This is always the case as we register the association before we set the Import status
-#Hence the 2nd stage of the import fails as we have an associated ExperimentalChip
-#We need to make sure the ExperimentalChip and Channel have not been imported!!!
-  warn
-"NOTE: rollback_ArrayChips. Need to implement ExperimentlChip check, is the problem that ExperimentalChips are registered before ArrayChips imported?";
+  warn "NOTE: rollback_ArrayChips. Need to implement ExperimentlChip check, is the problem that ExperimentalChips are registered before ArrayChips imported?";
 
-#Check for dependent ExperimentalChips
-#if(my @echips = @{$db->get_ExperimentalChipAdaptor->fetch_all_by_ArrayChip($ac)}){
-#	my %exps;
-#	my $txt = "Experiment\t\t\t\tExperimentalChip Unique IDs\n";
-
-  #	foreach my $ec(@echips){
-  #	  $exps{$ec->get_Experiment->name} ||= '';
-
-  #	  $exps{$ec->get_Experiment->name} .= "\t".$ec->unique_id;
-  #	}
-
-  #	map {$txt.= "\t".$_.":".$exps{$_}."\n"} keys %exps;
-
-  #	throw("Cannot rollback ArrayChip:\t".$ac->name.
-  #		  "\nFound Dependent Experimental Data:\n".$txt);
-  #  }
-
-  my $ac_names = join( ', ', ( map { $_->name } @$acs ) );
-  my $ac_ids   = join( ', ', ( map { $_->dbID } @$acs ) );
+  my $ac_names = join( ', ', ( map { $_->name } @$array_chip_names ) );
+  my $ac_ids   = join( ', ', ( map { $_->dbID } @$array_chip_names ) );
 
   $self->log("Rolling back ArrayChips $mode entries:\t$ac_names");
   my ( $row_cnt, $probe_join, $sql );
 
 #$ac->adaptor->revoke_states($ac);#This need to be more specific to the type of rollback
+
+  if (!defined $db) {
+       use Carp;
+      confess("db is not defined!");
+  }
+
   my $species = $db->species;
 
   if ( !$species ) {
@@ -2123,15 +2119,12 @@ sub rollback_ArrayChips {
 #Don't need to rollback on a CS as we have no dependant EChips?
 #Is this true?  Should we enforce a 3rd CoordSystem argument, 'all' string we delete all?
 
-      foreach my $ac (@$acs) {
-        $ac->adaptor->revoke_states($ac)
-          ;    #Do we need to change this to revoke specific states?
-         #Current states are only IMPORTED, so not just yet, but we could change this for safety?
+      foreach my $ac (@$array_chip_names) {
+        $ac->adaptor->revoke_states($ac);
       }
 
       #ProbeSets
-      $sql =
-"DELETE ps from probe p, probe_set ps where p.array_chip_id IN($ac_ids) and p.probe_set_id=ps.probe_set_id";
+      $sql = "DELETE ps from probe p, probe_set ps where p.array_chip_id IN($ac_ids) and p.probe_set_id=ps.probe_set_id";
       $db->rollback_table( $sql, 'probe_set', 'probe_set_id', $no_clean_up );
 
       #Probes

@@ -86,7 +86,7 @@ base_name=$(basename -- "$0")
 
 if [[ "$base_name" != "bash" ]]; then
   echo -e "$base_name must be sourced not executed e.g.\n\t$ERSA_USAGE"
-  exit
+  # exit
 fi
 
 # Take existing $EFG_SRC or default to relative location of this file

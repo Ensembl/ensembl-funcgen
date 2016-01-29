@@ -513,7 +513,14 @@ sub create_DBAdaptor_from_params {
     $dba_modules{$db_type} = $dba_class;
   }
   
-  my $dba = $dba_modules{$db_type}->new(%$db_params);   
+  my $dba;
+  if ($db_type eq 'hive') {
+      use Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::Utils qw (create_db_url_from_dba_hash);
+      my $url = create_db_url_from_dba_hash($db_params);
+      $dba = $dba_modules{$db_type}->new(-url => $url);
+  } else {
+      $dba = $dba_modules{$db_type}->new(%$db_params);
+  }
   
   #Test connections  
   $dba->dbc->db_handle;

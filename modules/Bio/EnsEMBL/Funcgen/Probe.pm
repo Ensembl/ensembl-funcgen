@@ -128,13 +128,15 @@ sub new {
       $array_chip_ids, $array_chip_id,
       $arrays,         $array,
       $probeset,       $aclass,
-      $length,         $desc
+      $length,         $desc,
+      $sequence
      ) = rearrange([
 		    'NAMES',          'NAME',
 		    'ARRAY_CHIP_IDS', 'ARRAY_CHIP_ID',
 		    'ARRAYS',         'ARRAY',
 		    'PROBE_SET',      'CLASS',
-		    'LENGTH',         'DESCRIPTION'
+		    'LENGTH',         'DESCRIPTION',
+		    'SEQUENCE'
 		   ], @_);
 
 
@@ -180,8 +182,16 @@ sub new {
   $self->class($aclass)      if defined $aclass;
   $self->length($length)     if defined $length;
   $self->description($desc)  if defined $desc;
+  
+  $self->sequence($sequence)  if defined $sequence;
 
   return $self;
+}
+
+sub sequence {
+    my $self = shift;
+    $self->{'sequence'} = shift if @_;
+    return $self->{'sequence'};
 }
 
 #only takes single values for array and array_chip

@@ -146,6 +146,21 @@ sub pipeline_analyses {
    [
     @{$self->SUPER::pipeline_analyses}, #To pick up BaseSequenceAnalysis-DefineMergedOutputSet
 
+    {   -logic_name => 'JobPool',
+	-module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+	-wait_for    => 'JobPool',
+	-flow_into => {
+	  '1' => [ 'TokenLimitedJobFactory' ],
+	},
+    },
+    {   -logic_name => 'TokenLimitedJobFactory',
+	-module     => 'Bio::EnsEMBL::Funcgen::Hive::TokenLimitedJobFactory',
+	-meadow_type=> 'LOCAL',
+	-flow_into => {
+	  '2->A' => [ 'IdentifyAlignInputSubsets' ],
+	  'A->1' => [ 'TokenLimitedJobFactory' ],
+	},
+    },
     {-logic_name => 'IdentifyAlignInputSubsets',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::IdentifySetInputs',
      -meadow_type => 'LOCAL',#should always be uppercase
@@ -175,14 +190,23 @@ sub pipeline_analyses {
       },
      -flow_into =>
       {
-       '3->A' => [ 'DownloadInputSubset' ],
-       'A->2' => [ 'DefineResultSets' ],#This will not always have pre-req Download jobs
+#        '3->A' => [ 'DownloadInputSubset' ],
+#        'A->2' => [ 'DefineResultSets' ],
+
+       '2->A' => [ 'DefineResultSets'     ],
+       'A->4' => [ 'CleanupCellLineFiles' ],
       },
      -analysis_capacity => 1, #For safety, and can only run 1 LOCAL?
      -rc_name => 'default',   #NA as LOCAL?
      -failed_job_tolerance => 100,
      #We don't care about these failing, as we expect them too
     },
+    {
+      -logic_name => 'CleanupCellLineFiles',
+      -module     => 'Bio::EnsEMBL::Funcgen::Hive::ErsaCleanup',
+      -meadow_type=> 'LOCAL',
+    },
+
 
 
    # {-logic_name  => 'DownloadInputSubsetFactory',
@@ -215,13 +239,13 @@ sub pipeline_analyses {
 #    },
 
 
-    {-logic_name => 'DownloadInputSubset',
-     -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-     -parameters => {
-                    },
-     -analysis_capacity => 100,       #Could this go higher?
-     -rc_name           => 'default', #TODO change this to long?
-    },
+#     {-logic_name => 'DownloadInputSubset',
+#      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+#      -parameters => {
+#                     },
+#      -analysis_capacity => 100,       #Could this go higher?
+#      -rc_name           => 'default', #TODO change this to long?
+#     },
 
 
     {-logic_name => 'DefineResultSets',
@@ -332,13 +356,13 @@ sub pipeline_analyses {
     {-logic_name => 'Run_bwa_samse_control_chunk',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunAligner',
      -batch_size => 1, #max parallelisation???
-     -analysis_capacity => 1000,
+     -analysis_capacity => 100,
      -rc_name => 'normal_10gb'},
 
     {-logic_name => 'Run_bwa_samse_merged_chunk',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunAligner',
      -batch_size => 1, #max parallelisation???
-     -analysis_capacity => 1000,
+     -analysis_capacity => 100,
      -rc_name => 'normal_10gb'},
 
     {-logic_name => 'Run_bwa_samse_replicate_chunk',
@@ -346,7 +370,7 @@ sub pipeline_analyses {
      # These jobs can be run in parallell... don't put too many since it may generate many jobs...jobs!
      #-limit => 1,#what is this?
      -batch_size => 1, #max parallelisation? Although probably want to up this so we don't hit pending time
-     -analysis_capacity => 1000,
+     -analysis_capacity => 100,
      -rc_name => 'normal_10gb'},
 
 
@@ -398,7 +422,7 @@ sub pipeline_analyses {
        },
      -batch_size => 1, #max parallelisation
      -analysis_capacity => 200,
-     -rc_name => 'normal_5GB_2cpu_monitored',
+     -rc_name => 'normal_30GB_2cpu',
     },
 
 
@@ -408,7 +432,7 @@ sub pipeline_analyses {
      -flow_into => { 2 => ['DefineMergedDataSet']},
      -batch_size => 1, #max parallelisation
      -analysis_capacity => 200,
-     -rc_name => 'normal_5GB_2cpu_monitored',
+     -rc_name => 'normal_30GB_2cpu',
     },
 
 
@@ -423,7 +447,7 @@ sub pipeline_analyses {
      -flow_into => {'100' => ['run_SWEmbl_R0005_replicate']},
      -batch_size => 1, #max parallelisation
      -analysis_capacity => 200,
-     -rc_name => 'normal_5GB_2cpu_monitored',
+     -rc_name => 'normal_30GB_2cpu',
 
      #This will definitely have to write some accu data
      #such that Run_IDR can pick up on any QC failures

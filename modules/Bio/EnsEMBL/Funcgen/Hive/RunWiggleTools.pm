@@ -47,7 +47,7 @@ use base ('Bio::EnsEMBL::Funcgen::Hive::BaseDB');
 
 sub fetch_input {
   my $self = shift;
-  $self->param('disconnect_if_idle', 1);  # Set before DB connection via SUPER::fetch_input
+  #$self->param('disconnect_if_idle', 1);  # Set before DB connection via SUPER::fetch_input
   $self->SUPER::fetch_input;
   $self->get_param_method('reduce_operator', 'silent', '');
   $self->get_param_method('map_operator', 'silent', '');
@@ -92,8 +92,8 @@ sub fetch_input {
         $rset->adaptor->revoke_status('IMPORTED', $rset);
       }
       else{
-        $self->throw_no_retry("Cannot write bigWig as result set is already marked as IMPORTED:\t".
-          $rset->name.'('.$rset->dbID.")\nTo over-ride, run reseed_jobs.pl -append '{force>1}'");
+#         $self->throw_no_retry("Cannot write bigWig as result set is already marked as IMPORTED:\t".
+#           $rset->name.'('.$rset->dbID.")\nTo over-ride, run reseed_jobs.pl -append '{force>1}'");
         # DebugJob -f will not do this, as this is a beekeeper option
       }
     }
@@ -156,6 +156,10 @@ sub run {
 
     # This is now in /tmp, so maybe add to DESTROY?
     $output       = $self->output_prefix.'.bw';
+    
+    # bigWigToWig can't cope with colons, so replacing with underscores
+    $output =~ s/:/_/g;
+    
     $reformat_cmd = ' | wigToBigWig -fixedSummaries stdin '.$tmpfiles[0].' '.$output;
   }
   else{
@@ -207,12 +211,32 @@ sub write_output {  return; }  # Nothing to do/flow here?
 
 sub _build_rpkm_cmd{
   my $self = shift;
-  my $cmd  = 'mean ';
+  my $wiggle_tools_cmd  = 'mean ';
   my ($total_mapped, $count_cmd);
 
   # This assumes bam input with index
-  foreach my $file(@{$self->input_files}){
+  foreach my $file (@{$self->input_files}){
     
+    
+    # Old syntax has to be used, because the new one does not work.
+    # This creates a file with the name in $unfiltered_bam
+    # The file should be sorted already, but samtools index (version 1.2) fails 
+    # silently on it with exit code zero.
+    #
+#     my $sorted_bam  = "${file}.sorted.bam";
+#     if (! -e $sorted_bam) {
+#       my $cmd = qq(samtools sort $file ${file}.sorted);
+#       run_system_cmd($cmd, undef, 1);
+#     } else {
+#       warn("The sorted bam file $sorted_bam already exists, so skipping the merge step.");
+#     }
+# 
+#     my $cmd = qq(samtools index $sorted_bam);
+#     run_system_cmd($cmd, undef, 1);
+
+    my $cmd = qq(samtools index $file);
+    run_system_cmd($cmd, undef, 1);
+
     $count_cmd = 'samtools idxstats '.$file.' | awk \'{total = total + $2} END{print total}\'';
     $self->helper->debug(2, "Running:\n\t".$count_cmd);
     $total_mapped = run_backtick_cmd($count_cmd);
@@ -222,10 +246,10 @@ sub _build_rpkm_cmd{
       $self->throw_no_retry("Failed to get number of mapped reads from index of:\n\t".$file);
     }
 
-    $cmd .= ' scale '.(10**9 / $total_mapped).' '.$file;
+    $wiggle_tools_cmd .= ' scale '.(10**9 / $total_mapped).' '.$file;
   }
 
-  return $cmd;
+  return $wiggle_tools_cmd;
 }
 
 
