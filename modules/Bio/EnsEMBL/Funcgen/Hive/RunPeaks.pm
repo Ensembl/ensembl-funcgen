@@ -221,6 +221,17 @@ sub run {
 
 sub write_output {
   my $self = shift;
+  
+  # When loading results disconnecting when inactive can lead to very poor 
+  # performance. Hundreds of thousands or even millions of rows may have 
+  # to be inserted into the annotated_feature table. The default setting of 
+  # disconnecting after every statement would mean that a new connection has 
+  # to be established for every insert statement and it would be disconnected
+  # thereafter. Therefore this behaviour is deactivated here. 
+  # 
+  my $db = $self->get_param_method('out_db', 'required');
+  $db->dbc->disconnect_when_inactive(0);
+  
   my $fset;
   
   #Move this test to fetch_input based on -no_write status?
