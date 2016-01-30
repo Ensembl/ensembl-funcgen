@@ -58,10 +58,20 @@ use Bio::EnsEMBL::Analysis;
 use File::Temp qw/ tempfile tempdir /;
 ${File::Temp::KEEP_ALL} = 1;
 
-my $dead_rgb = '225,225,225';
-my $poised_rgb = "192,0,190";
-my $repressed_rgb = "127,127,127";
-my $na_rgb = "255,255,255";
+
+our %rgb_state = (
+  '225,225,225' => 0, # dead
+  "192,0,190" => 2, # poised
+  "127,127,127" => 3, # repressed
+  "255,255,255" => 4, # NA
+
+  "255,0,0" => 1, # TSS
+  "209,157,0" => 1, # TFBS
+  "255,252,4" => 1, # DNase
+  "255,105,105" => 1, # Proximal
+  "250,202,0" => 1, # Distal
+  "10,190,254" => 1, # CTCF
+);
 
 our %label_description= (
   'ctcf'=>'CTCF Binding Site',
@@ -745,7 +755,7 @@ sub count_active {
     if (!defined $count_hash->{$name}) {
       $count_hash->{$name} = 0;
     }
-    if ($rgb ne $dead_rgb && $rgb ne $poised_rgb && $rgb ne $repressed_rgb && $rgb ne $na_rgb) {
+    if ($rgb_state{$rgb} == 1) {
       $count_hash->{$name} += 1;
     }
   }
@@ -888,10 +898,7 @@ sub process_file {
     chomp $line;
     my ($chrom, $start, $end, $name, $score, $strand, $thickStart, $thickEnd, $rgb) = split /\t/, $line;;
     my ($feature_type_str, $number) = split /_/, $name;
-    my $has_evidence = 0;
-    if ($rgb ne $dead_rgb && $rgb ne $poised_rgb && $rgb ne $repressed_rgb && $rgb ne $na_rgb) {
-      $has_evidence = 1; # TODO 4 way
-    }
+    my $has_evidence = $rgb_state{$rgb};
 
     exists $feature_type->{$feature_type_str} || die("Could not find feature type for $feature_type_str\n".join("\t", keys %{$feature_type})."\n");
     exists $slice->{$chrom} || die("Could not find slice type for $chrom\n".join("\t", keys %{$slice})."\n");
