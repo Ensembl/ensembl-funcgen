@@ -231,49 +231,34 @@ sub connect_db {
 =cut
 
 sub get_analysis {
-  ### Check whether analysis is already stored
-  #TO DO Update the description text here? Use flat file import?
-  #my $program_name = ($0 =~ s'.*/''g);
   my ($db) = @_;
   my $aa   = $db->get_AnalysisAdaptor();
-
-  my $analysis = Bio::EnsEMBL::Analysis->new
-      (
-       -logic_name      => 'Regulatory_Build',
-       -db              => undef,
-       -db_version      => undef,
-       -db_file         => undef,
-       -program         => undef,
-       -program_version => undef,
-       -program_file    => undef, #Could use $program_name here, but this is only part of the build
-       -gff_source      => undef,
-       -gff_feature     => undef,
-       -module          => undef,
-       -module_version  => undef,
-       -parameters      => undef,
-       -created         => undef,
-       -description     => q({'reg_feats' => 'Features from <a href="/info/genome/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.',).
-        q('core' => 'Sites enriched for marks of open chromatin (e.g. DNase1) or transcription factor binding sites.', ).
-        q('non_core' =>  'Sites enriched for histone modifications or polymerase binding.'}),
-       -display_label   => 'Regulatory Build',
-       -displayable     => 1,
-       -web_data        => q({'type' => 'fg_regulatory_features', 'name' => 'Reg. Feats',  'display' =>'off', 'depth' => 10, ).
-        q('default' => {'contigviewbottom' => 'normal', 'generegview' => 'normal'} }),
-      );
-
   my $ana = $aa->fetch_by_logic_name('Regulatory_Build');
 
   if ( not defined $ana ) {
+    my $analysis = Bio::EnsEMBL::Analysis->new
+	(
+	 -logic_name      => 'Regulatory_Build',
+	 -db              => undef,
+	 -db_version      => undef,
+	 -db_file         => undef,
+	 -program         => undef,
+	 -program_version => undef,
+	 -program_file    => undef, #Could use $program_name here, but this is only part of the build
+	 -gff_source      => undef,
+	 -gff_feature     => undef,
+	 -module          => undef,
+	 -module_version  => undef,
+	 -parameters      => undef,
+	 -created         => undef,
+	 -description     => q({'reg_feats' => 'Features from <a href="/info/genome/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.','core' => 'Sites enriched for marks of open chromatin (e.g. DNase1) or transcription factor binding sites.','non_core' => 'Sites enriched for histone modifications or polymerase binding.'}),
+	 -display_label   => 'Regulatory Build',
+	 -displayable     => 1,
+	 -web_data        => q({'type' => 'fg_regulatory_features', 'name' => 'Reg. Feats', 'display' =>'off', 'depth' => 10, 'default' => {'contigviewbottom' => 'normal', 'generegview' => 'normal'} }),
+	);
     $aa->store($analysis);
     return $analysis;
   } else {
-
-    if(! (($ana->compare($analysis) == 1) &&
-          ($ana->description eq $analysis->description) &&
-          ($ana->web_data    eq $analysis->web_data))){
-      die("Found stored Regulatory_Build analysis with unexepcted attributes. Please patch the database to match:\n".Dumper($analysis));
-    }
-
     return $ana;
   }
 }
