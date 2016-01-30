@@ -622,7 +622,7 @@ sub get_cell_type_supporting_sets {
     my $CellType = $cta->fetch_by_name($ctype);
     my @ssets = ();
     foreach my $fs (@{$fsa->fetch_all_by_CellType($CellType)}) {
-      if ($fs->feature_type eq 'annotated' && $fs->has_status('IMPORTED')) {
+      if ($fs->{feature_class} eq 'annotated') {
         push @ssets, $fs;
       }
     }
