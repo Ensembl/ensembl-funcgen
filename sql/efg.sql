@@ -1149,7 +1149,7 @@ CREATE TABLE `cell_type` (
    `efo_id` varchar(20) DEFAULT NULL,
    `tissue` varchar(50) default NULL,
    PRIMARY KEY  (`cell_type_id`),
-   UNIQUE KEY `name_idx` (`name`),
+   UNIQUE KEY `name_idx` (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
