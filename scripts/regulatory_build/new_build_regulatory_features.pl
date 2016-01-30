@@ -650,8 +650,8 @@ sub fetch_metadata {
       next;
     }
     my $cell = $featureSet->cell_type->name;
-    record_peak_file($options, $tf, $cell, dump_peaks($featureSet, $tf, $cell, \@slices));
-    close $fh;
+    record_peak_file($options, $tf, $cell, dump_peaks($options, $featureSet, $tf, $cell, \@slices));
+    # close $fh;
   }
 }
 
@@ -668,7 +668,7 @@ sub fetch_metadata {
 =cut
 
 sub dump_peaks {
-  my ($featureSet, $tf, $cell, $slices) = @_;
+  my ($options, $featureSet, $tf, $cell, $slices) = @_;
   my $dir = "$options->{working_dir}/peaks/$tf/$cell/";
   mkpath $dir;
 
@@ -1057,7 +1057,7 @@ sub compute_antibody_specific_probs {
 
   foreach $tf (@tfs) {
     my $res = compute_antibody_specific_prob($options, $tf);
-    if (defined $res) {
+    if (defined $res && !($tf eq "CTCF")) {
       push @tf_probs, $res;
     }
   }
@@ -2361,15 +2361,15 @@ sub select_segmentation_cutoff {
   my $last_cutoff = 0;
   # Searching for cutoff which produces max fscore
   for (my $i = 0; $i < $celltype_count * $max_weight; $i += $min_step) {
-    my $fscore($tfbs, $tfbs_auc, $files_string, $i)
-    print_log("CutoffTest\t$label\t.\t$fscore\n");
+    my $score = fscore($tfbs, $tfbs_auc, $files_string, $i);
+    print_log("CutoffTest\t$label\t.\t$score\n");
 
     # If current value smaller than previous, just got past peak (assuming convexity of fscore(i) )
-    if ($fscore < $last_fscore) {
+    if ($score < $last_fscore) {
       print_log("cutoff set at $last_cutoff\n");
       return $last_cutoff;
     } else {
-      $last_fscore = $fscore;
+      $last_fscore = $score;
       $last_cutoff = $i;
     } 
   }

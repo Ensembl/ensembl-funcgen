@@ -58,10 +58,20 @@ use Bio::EnsEMBL::Analysis;
 use File::Temp qw/ tempfile tempdir /;
 ${File::Temp::KEEP_ALL} = 1;
 
-my $dead_rgb = '225,225,225';
-my $poised_rgb = "192,0,190";
-my $repressed_rgb = "127,127,127";
-my $na_rgb = "255,255,255";
+
+our %rgb_state = (
+  '225,225,225' => 0, # dead
+  "192,0,190" => 2, # poised
+  "127,127,127" => 3, # repressed
+  "255,255,255" => 4, # NA
+
+  "255,0,0" => 1, # TSS
+  "209,157,0" => 1, # TFBS
+  "255,252,4" => 1, # DNase
+  "255,105,105" => 1, # Proximal
+  "250,202,0" => 1, # Distal
+  "10,190,254" => 1, # CTCF
+);
 
 our %label_description= (
   'ctcf'=>'CTCF Binding Site',
@@ -221,49 +231,34 @@ sub connect_db {
 =cut
 
 sub get_analysis {
-  ### Check whether analysis is already stored
-  #TO DO Update the description text here? Use flat file import?
-  #my $program_name = ($0 =~ s'.*/''g);
   my ($db) = @_;
   my $aa   = $db->get_AnalysisAdaptor();
-
-  my $analysis = Bio::EnsEMBL::Analysis->new
-      (
-       -logic_name      => 'Regulatory_Build',
-       -db              => undef,
-       -db_version      => undef,
-       -db_file         => undef,
-       -program         => undef,
-       -program_version => undef,
-       -program_file    => undef, #Could use $program_name here, but this is only part of the build
-       -gff_source      => undef,
-       -gff_feature     => undef,
-       -module          => undef,
-       -module_version  => undef,
-       -parameters      => undef,
-       -created         => undef,
-       -description     => q({'reg_feats' => 'Features from <a href="/info/genome/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.',).
-        q('core' => 'Sites enriched for marks of open chromatin (e.g. DNase1) or transcription factor binding sites.', ).
-        q('non_core' =>  'Sites enriched for histone modifications or polymerase binding.'}),
-       -display_label   => 'Regulatory Build',
-       -displayable     => 1,
-       -web_data        => q({'type' => 'fg_regulatory_features', 'name' => 'Reg. Feats',  'display' =>'off', 'depth' => 10, ).
-        q('default' => {'contigviewbottom' => 'normal', 'generegview' => 'normal'} }),
-      );
-
   my $ana = $aa->fetch_by_logic_name('Regulatory_Build');
 
   if ( not defined $ana ) {
+    my $analysis = Bio::EnsEMBL::Analysis->new
+	(
+	 -logic_name      => 'Regulatory_Build',
+	 -db              => undef,
+	 -db_version      => undef,
+	 -db_file         => undef,
+	 -program         => undef,
+	 -program_version => undef,
+	 -program_file    => undef, #Could use $program_name here, but this is only part of the build
+	 -gff_source      => undef,
+	 -gff_feature     => undef,
+	 -module          => undef,
+	 -module_version  => undef,
+	 -parameters      => undef,
+	 -created         => undef,
+	 -description     => q({'reg_feats' => 'Features from <a href="/info/genome/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.','core' => 'Sites enriched for marks of open chromatin (e.g. DNase1) or transcription factor binding sites.','non_core' => 'Sites enriched for histone modifications or polymerase binding.'}),
+	 -display_label   => 'Regulatory Build',
+	 -displayable     => 1,
+	 -web_data        => q({'type' => 'fg_regulatory_features', 'name' => 'Reg. Feats', 'display' =>'off', 'depth' => 10, 'default' => {'contigviewbottom' => 'normal', 'generegview' => 'normal'} }),
+	);
     $aa->store($analysis);
     return $analysis;
   } else {
-
-    if(! (($ana->compare($analysis) == 1) &&
-          ($ana->description eq $analysis->description) &&
-          ($ana->web_data    eq $analysis->web_data))){
-      die("Found stored Regulatory_Build analysis with unexepcted attributes. Please patch the database to match:\n".Dumper($analysis));
-    }
-
     return $ana;
   }
 }
@@ -612,7 +607,7 @@ sub get_cell_type_supporting_sets {
     my $CellType = $cta->fetch_by_name($ctype);
     my @ssets = ();
     foreach my $fs (@{$fsa->fetch_all_by_CellType($CellType)}) {
-      if ($fs->feature_type eq 'annotated' && $fs->has_status('IMPORTED')) {
+      if ($fs->{feature_class} eq 'annotated') {
         push @ssets, $fs;
       }
     }
@@ -644,7 +639,7 @@ sub define_regbuild_meta_strings{
     die('You must provide a DataSet with associated supporting sets');
   }
   if ($dset->cell_type->name eq 'MultiCell') {
-    @ssets = grep {$_->feature_class != 'Polymerase' && $_->feature_class != 'Histone'}, @ssets;
+    @ssets = grep {$_->feature_class != 'Polymerase' && $_->feature_class != 'Histone'} @ssets;
   }
   
   ## Extract core supporting sets
@@ -745,7 +740,7 @@ sub count_active {
     if (!defined $count_hash->{$name}) {
       $count_hash->{$name} = 0;
     }
-    if ($rgb ne $dead_rgb && $rgb ne $poised_rgb && $rgb ne $repressed_rgb && $rgb ne $na_rgb) {
+    if ($rgb_state{$rgb} == 1) {
       $count_hash->{$name} += 1;
     }
   }
@@ -888,10 +883,7 @@ sub process_file {
     chomp $line;
     my ($chrom, $start, $end, $name, $score, $strand, $thickStart, $thickEnd, $rgb) = split /\t/, $line;;
     my ($feature_type_str, $number) = split /_/, $name;
-    my $has_evidence = 0;
-    if ($rgb ne $dead_rgb && $rgb ne $poised_rgb && $rgb ne $repressed_rgb && $rgb ne $na_rgb) {
-      $has_evidence = 1; # TODO 4 way
-    }
+    my $has_evidence = $rgb_state{$rgb};
 
     exists $feature_type->{$feature_type_str} || die("Could not find feature type for $feature_type_str\n".join("\t", keys %{$feature_type})."\n");
     exists $slice->{$chrom} || die("Could not find slice type for $chrom\n".join("\t", keys %{$slice})."\n");
