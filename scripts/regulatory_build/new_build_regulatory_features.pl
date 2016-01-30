@@ -1057,7 +1057,7 @@ sub compute_antibody_specific_probs {
 
   foreach $tf (@tfs) {
     my $res = compute_antibody_specific_prob($options, $tf);
-    if (defined $res) {
+    if (defined $res && !($tf eq "CTCF")) {
       push @tf_probs, $res;
     }
   }
