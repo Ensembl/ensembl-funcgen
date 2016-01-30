@@ -1150,7 +1150,6 @@ CREATE TABLE `cell_type` (
    `tissue` varchar(50) default NULL,
    PRIMARY KEY  (`cell_type_id`),
    UNIQUE KEY `name_idx` (`name`),
-   UNIQUE KEY `efo_idx` (`efo_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
@@ -1424,7 +1423,8 @@ CREATE TABLE `meta` (
 INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 
 -- Update and remove these for each release to avoid erroneous patching
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '83');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '84');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_83_84_b.sql|Drop unique key for cell_type.efo_id');
 
 
 /**
