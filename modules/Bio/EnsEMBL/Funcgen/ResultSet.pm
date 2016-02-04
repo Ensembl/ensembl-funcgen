@@ -160,7 +160,7 @@ sub new {
 
 
 sub _valid_feature_classes{
-  return qw( result dna_methylation );
+  return qw( result dna_methylation segmentation );
 }
 
 
