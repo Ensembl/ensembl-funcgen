@@ -49,7 +49,7 @@ use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
 sub run {
   my $self = shift;
-  my $input_subset_id = $self->param('input_subset_id');
+  #my $input_subset_id = $self->param('input_subset_id');
 
   my $rset;
   
@@ -80,17 +80,17 @@ sub create_input_id {
   my $result_set_id = $result_set->dbID;
 
   my $align_prefix   = $self->get_alignment_path_prefix_by_ResultSet($result_set, undef, 1);#validate aligned flag 
-  my $control_prefix = $self->get_alignment_path_prefix_by_ResultSet($result_set, 1, 1);#and control flag 
+  #my $control_prefix = $self->get_alignment_path_prefix_by_ResultSet($result_set, 1, 1);#and control flag 
   
   my $signal_bam_file  = $align_prefix   . '.bam';
-  my $control_bam_file = $control_prefix . '.bam';
+  #my $control_bam_file = $control_prefix . '.bam';
   
   if (! -e $signal_bam_file) {
     die("$signal_bam_file doesn't exist!");
   }
-  if (! -e $control_bam_file) {
-    die("$control_bam_file doesn't exist!");
-  }
+#   if (! -e $control_bam_file) {
+#     die("$control_bam_file doesn't exist!");
+#   }
   
   my $work_dir = $self->param_required('work_root_dir');
   my $temp_dir = "$work_dir/temp/Qc/PhantomPeaks/$result_set_id";
@@ -101,9 +101,9 @@ sub create_input_id {
   
   use File::Basename;
   (my $signal_bam_file_base_name,  my $signal_bam_directory)  = fileparse($signal_bam_file);
-  (my $control_bam_file_base_name, my $control_bam_directory) = fileparse($control_bam_file);
+#  (my $control_bam_file_base_name, my $control_bam_directory) = fileparse($control_bam_file);
   
-  die unless($signal_bam_directory eq $control_bam_directory);
+ # die unless($signal_bam_directory eq $control_bam_directory);
 
   my $input_id_common = [
       # Directory into which the bam files will be copied
@@ -119,7 +119,7 @@ sub create_input_id {
   ];
   
   my $signal_phantom_peaks_file  = "$temp_dir/${signal_bam_file_base_name}.signal_phantom_peaks.txt";
-  my $control_phantom_peaks_file = "$temp_dir/${control_bam_file_base_name}.control_phantom_peaks.txt";
+#  my $control_phantom_peaks_file = "$temp_dir/${control_bam_file_base_name}.control_phantom_peaks.txt";
   
   my $input_id = [
     {
@@ -128,12 +128,12 @@ sub create_input_id {
       bam_file => $signal_bam_file,
       is_control => undef,
     },
-    {
-      @$input_id_common,
-      phantom_peak_out_file  => $control_phantom_peaks_file,
-      bam_file => $control_bam_file,
-      is_control => 1,
-    }
+#     {
+#       @$input_id_common,
+#       phantom_peak_out_file  => $control_phantom_peaks_file,
+#       bam_file => $control_bam_file,
+#       is_control => 1,
+#     }
   ];
   return $input_id;
 }
