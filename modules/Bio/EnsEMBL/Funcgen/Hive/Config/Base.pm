@@ -54,8 +54,8 @@ sub pipeline_wide_parameters {
   my ($self) = @_;
 
   return {
-    %{$self->SUPER::pipeline_wide_parameters}, 
-    
+    %{$self->SUPER::pipeline_wide_parameters},
+
     dnadb   => {
 	-dnadb_host   => $self->o('dnadb_host'),
 	-dnadb_pass   => $self->o('dnadb_pass'),
@@ -78,7 +78,7 @@ sub pipeline_wide_parameters {
     work_root_dir     => $self->o('work_root_dir'),
     hive_output_dir => $self->o('hive_output_dir'),
     use_tracking_db => $self->o('use_tracking_db'),
-    
+
     default_gender => 'male',
   };
 }
@@ -110,4 +110,3 @@ sub resource_classes {
 }
 
 1;
-
