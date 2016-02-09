@@ -104,9 +104,18 @@ sub fetch_input {
   #could have recreated output_dir and merged_file_name from ResultSet and run_controls
   #as we did in MergeChunkResultSetFastqs, but passed for convenience
   my $gender = $rset->cell_type->gender;
-  my $file_gender = 'female'
-      if ($gender eq 'mixed');
   
+  # By default the file_gender is the same as the gender
+  my $file_gender = $gender;
+  
+  # There are no files for "mixed". The default we use is "female"
+  if ($gender eq 'mixed') {
+    $file_gender = 'female';
+  }
+  if (! defined $gender) {
+    $file_gender = 'male';
+  }
+
   $self->sam_header($file_gender);
  
   #my $repository = $self->_repository();
