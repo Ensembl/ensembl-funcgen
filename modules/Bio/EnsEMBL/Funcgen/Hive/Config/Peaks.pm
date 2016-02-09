@@ -23,11 +23,6 @@ sub pipeline_analyses {
 	  '100' => [  'run_peaks_custom' ],     #defined by feature_set_analysis
 	},
       },
-#       {
-# 	-logic_name    => 'QcChanceJobFactory',
-# 	-module        => 'Bio::EnsEMBL::Funcgen::Hive::QcChanceJobFactory',
-# 	-meadow        => 'LOCAL',
-#       },
       #Do not change these logic_names as they are used for dynamic dataflow/branching
       {
 	-logic_name    => 'run_SWEmbl_R015',  #SWEmbl normal (histones/Dnase?)
@@ -40,11 +35,10 @@ sub pipeline_analyses {
 	-parameters    => {
 	  process_file_types => ['significant_region'],
 	  CCAT_parameters => {
-	    #-chr_file => $self->o('data_root_dir'). '/reference_files/CCAT/'.$self->o('species').'_'.$self->o('assembly').'.CCAT_chr_lengths.txt'
 	    -chr_file => $self->o('chromosome_file')
 	  }
 	},
-	-rc_name => 'normal_monitored_2GB', # CCAT does not need much?
+	-rc_name => 'normal_monitored_4GB',
       },
       {
 	-logic_name    => 'run_SWEmbl_R0025', #SWEmbl TF
