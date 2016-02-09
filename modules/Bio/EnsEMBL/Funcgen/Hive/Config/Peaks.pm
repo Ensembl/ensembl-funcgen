@@ -2,7 +2,7 @@ package Bio::EnsEMBL::Funcgen::Hive::Config::Peaks;
 
 use strict;
 use warnings;
-use base ('Bio::EnsEMBL::Funcgen::Hive::Config::BaseDB');
+use base ('Bio::EnsEMBL::Funcgen::Hive::Config::Base');
 
 sub pipeline_analyses {
   my $self = shift;
