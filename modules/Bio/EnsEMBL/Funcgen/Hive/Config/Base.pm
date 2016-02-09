@@ -5,24 +5,16 @@ use warnings;
 use base qw(Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf);
 
 sub default_options {
-  my $self = $_[0];  
+  my $self = shift;
   
   return {
       %{$self->SUPER::default_options},
-      
-	dnadb_pass          => $self->o('ENV', 'DNADB_PASS'),
-	pass                => $self->o('ENV', 'DB_PASS'),
-	dnadb_port          => undef,
-	port                => undef,
-
-	# These can probably go:
-	#
-	ssh                 => undef, #Connect to DBs using ssh(use in Importer)
-	result_set_only    => 0, #why is this 0 rather than undef?
-
+      dnadb_pass          => $self->o('ENV', 'DNADB_PASS'),
+      pass                => $self->o('ENV', 'DB_PASS'),
+      dnadb_port          => undef,
+      port                => undef,
       use_tracking_db     => 1,
       species             => undef,
-
       assembly            => undef,
       work_root_dir     => $self->o('data_root_dir').'/output/'.$self->o('pipeline_name'),
       hive_output_dir   => $self->o('data_root_dir').'/output/'.$self->o('pipeline_name').'/hive_debug',
@@ -30,6 +22,11 @@ sub default_options {
       verbose => undef,
       archive_root     => undef,
       allow_no_archive => 0,
+      
+      # These can probably go:
+      #
+      ssh                 => undef, #Connect to DBs using ssh(use in Importer)
+      result_set_only    => 0, #why is this 0 rather than undef?
    };
 }
 
@@ -38,11 +35,26 @@ sub pipeline_wide_parameters {
 
   return {
     %{$self->SUPER::pipeline_wide_parameters}, 
+    
+    dnadb   => {
+	-dnadb_host   => $self->o('dnadb_host'),
+	-dnadb_pass   => $self->o('dnadb_pass'),
+	-dnadb_port   => $self->o('dnadb_port'),
+	-dnadb_user   => $self->o('dnadb_user'),
+	-dnadb_name   => $self->o('dnadb_name'),
+    },
+    out_db  => {
+	-host   => $self->o('host'),
+	-port   => $self->o('port'),
+	-user   => $self->o('user'),
+	-pass   => $self->o('pass'),
+	-dbname => $self->o('dbname'),
+    },
     pipeline_name => $self->o('pipeline_name'),
 
     species        => $self->o('species'),
     default_gender => 'male',
-    assembly     => $self->o('assembly'),
+    assembly      => $self->o('assembly'),
 
     data_root_dir     => $self->o('data_root_dir'),
     work_root_dir     => $self->o('work_root_dir'),
@@ -53,21 +65,6 @@ sub pipeline_wide_parameters {
 
     hive_output_dir => $self->o('hive_output_dir'),
     use_tracking_db => $self->o('use_tracking_db'),
-
-      dnadb   => {
-         -dnadb_host   => $self->o('dnadb_host'),
-         -dnadb_pass   => $self->o('dnadb_pass'),
-         -dnadb_port   => $self->o('dnadb_port'),
-         -dnadb_user   => $self->o('dnadb_user'),
-         -dnadb_name   => $self->o('dnadb_name'),
-        },
-      out_db  => {
-         -host   => $self->o('host'),
-         -port   => $self->o('port'),
-         -user   => $self->o('user'),
-         -pass   => $self->o('pass'),
-         -dbname => $self->o('dbname'),
-        },
   };
 }
 
