@@ -221,7 +221,7 @@ sub pipeline_analyses {
 	peak_analysis => $self->o('permissive_peaks'),
       },
       -analysis_capacity => 10,
-      -rc_name => 'long_monitored_high_mem',
+      -rc_name => 'normal_5GB_2cpu_monitored',
     },
     {
      -logic_name => 'PreprocessIDR',
