@@ -9,24 +9,11 @@ sub default_options {
   
   return {
       %{$self->SUPER::default_options},
-      dnadb_pass          => $self->o('ENV', 'DNADB_PASS'),
-      pass                => $self->o('ENV', 'DB_PASS'),
-      dnadb_port          => undef,
-      port                => undef,
-      use_tracking_db     => 1,
-      species             => undef,
-      assembly            => undef,
+      dnadb_pass        => $self->o('ENV', 'DNADB_PASS'),
+      pass              => $self->o('ENV', 'DB_PASS'),
+      use_tracking_db   => 1,
       work_root_dir     => $self->o('data_root_dir').'/output/'.$self->o('pipeline_name'),
       hive_output_dir   => $self->o('data_root_dir').'/output/'.$self->o('pipeline_name').'/hive_debug',
-      alt_data_root_dir => undef,
-      verbose => undef,
-      archive_root     => undef,
-      allow_no_archive => 0,
-      
-      # These can probably go:
-      #
-      ssh                 => undef, #Connect to DBs using ssh(use in Importer)
-      result_set_only    => 0, #why is this 0 rather than undef?
    };
 }
 
@@ -53,18 +40,13 @@ sub pipeline_wide_parameters {
     pipeline_name => $self->o('pipeline_name'),
 
     species        => $self->o('species'),
-    default_gender => 'male',
-    assembly      => $self->o('assembly'),
-
+    assembly       => $self->o('assembly'),
     data_root_dir     => $self->o('data_root_dir'),
     work_root_dir     => $self->o('work_root_dir'),
-    alt_data_root_dir => $self->o('alt_data_root_dir'), 
-    
-    archive_root     => $self->o('archive_root'),
-    allow_no_archive => $self->o('allow_no_archive'),
-
     hive_output_dir => $self->o('hive_output_dir'),
     use_tracking_db => $self->o('use_tracking_db'),
+    
+    default_gender => 'male',
   };
 }
 
