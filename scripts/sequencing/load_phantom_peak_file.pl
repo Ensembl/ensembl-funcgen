@@ -161,12 +161,25 @@ while (my $current_line = <IN>) {
     my $estFragLen3,
   ) = split ',', $estFragLenTriple;
   
+  if ($estFragLen2 eq '') {
+    $estFragLen2 = 'null';
+  }
+  if ($estFragLen3 eq '') {
+    $estFragLen3 = 'null';
+  }
+  
   (
     my $corr_estFragLen,
     my $corr_estFragLen2,
     my $corr_estFragLen3,
   ) = split ',', $estFragLenTriple;
   
+  if ($corr_estFragLen2 eq '') {
+    $corr_estFragLen2 = 'null';
+  }
+  if ($corr_estFragLen3 eq '') {
+    $corr_estFragLen3 = 'null';
+  }
 
   sub quote {
     my $string = shift;
