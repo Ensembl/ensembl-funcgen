@@ -1,4 +1,4 @@
-534	\N	schema_version	81
+534	\N	schema_version	82
 156	1	species.production_name	homo_sapiens
 223	\N	schema_type	funcgen
 595	1	regbuild.last_annotation_update	2015-3
