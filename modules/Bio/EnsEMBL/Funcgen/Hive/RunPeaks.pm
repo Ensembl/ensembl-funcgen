@@ -216,10 +216,15 @@ sub write_output {
   my $db = $self->get_param_method('out_db', 'required');
   $db->dbc->disconnect_when_inactive(0);
   
+  if (!$self->can('FeatureSet')) {
+    warn "Skipping load features as no FeatureSet is defined";
+    return;
+  }
+  
   my $fset = $self->FeatureSet;
   
   if (!$fset) {
-    warn "Skipping load features as no FeatureSet is defined";
+    die "The FeatureSet has been set, but is undefined!";
     return;
   }
   
