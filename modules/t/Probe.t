@@ -14,7 +14,7 @@
 
 use strict;
 use warnings;
-use diagnostics;
+# use diagnostics;
 
 
 # use Data::Dumper qw( Dumper );
@@ -137,7 +137,7 @@ is_deeply( $new_probe->get_all_ProbeFeatures(),
 # ---------------------
 # Test get_all_Arrays()
 # ---------------------
-my $expected_arrays = [ values $new_probe->{arrays} ];
+my $expected_arrays = [ values %{$new_probe->{arrays}} ];
 is_deeply( $new_probe->get_all_Arrays, $expected_arrays,
     'Test get_all_Arrays()' );
 
