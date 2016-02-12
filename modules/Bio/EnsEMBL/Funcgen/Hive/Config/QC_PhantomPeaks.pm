@@ -93,10 +93,10 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Funcgen::Hive::QcPhantomPeaksJobFactory',
             -meadow_type=> 'LOCAL',
             -flow_into => { 
-	      '2' => [ 'QcRunPhantomPeaks' ],
+	      '2' => [ 'QcRunPhantomPeaks4GB' ],
             },
         },
-        {   -logic_name  => 'QcRunPhantomPeaks',
+        {   -logic_name  => 'QcRunPhantomPeaks4GB',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -meadow_type => 'LSF',
             -parameters  => { 
@@ -105,9 +105,24 @@ sub pipeline_analyses {
 		  . qq(    -c=#bam_file# )
 		  . qq(    -savp -out=#phantom_peak_out_file# )
             },
-	    -rc_name    => 'normal_monitored_8GB_2cpu',
+	    -rc_name    => 'normal_4GB_2cpu',
             -flow_into  => { 
-	      '1' => [ 'QCLoadPhantomPeaksToDB' ],
+	      'MAIN'     => [ 'QCLoadPhantomPeaksToDB' ],
+	      'MEMLIMIT' => [ 'QcRunPhantomPeaks30GB' ],
+            },
+        },
+        {   -logic_name  => 'QcRunPhantomPeaks30GB',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -meadow_type => 'LSF',
+            -parameters  => { 
+		  cmd => 
+		    qq( /software/R-3.2.2/bin/Rscript /software/ensembl/funcgen/spp_package/run_spp.R )
+		  . qq(    -c=#bam_file# )
+		  . qq(    -savp -out=#phantom_peak_out_file# )
+            },
+	    -rc_name    => 'normal_30GB_2cpu',
+            -flow_into  => { 
+	      'MAIN' => [ 'QCLoadPhantomPeaksToDB' ],
             },
         },
         {   -logic_name => 'QCLoadPhantomPeaksToDB',
