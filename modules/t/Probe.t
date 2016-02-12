@@ -14,17 +14,13 @@
 
 use strict;
 use warnings;
-# use diagnostics;
 
-
-# use Data::Dumper qw( Dumper );
 use Test::More;
 use Test::Exception;    # throws_ok
 use Test::Warn;
 use Bio::EnsEMBL::Test::TestUtils qw( test_getter_setter debug );
 
 use Bio::EnsEMBL::Test::MultiTestDB;
-use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
 # ---------------
 # Module compiles
