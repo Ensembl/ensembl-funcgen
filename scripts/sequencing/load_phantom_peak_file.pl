@@ -186,7 +186,7 @@ while (my $current_line = <IN>) {
     return '"' . $string . '"'
   }
   
-  my $sql = "INSERT INTO result_set_qc_phantom_peak ("
+  my $sql = "INSERT ignore INTO result_set_qc_phantom_peak ("
 #  . "result_set_qc_phantom_peak_id, "
   . "result_set_id, "
   . "analysis_id, "
