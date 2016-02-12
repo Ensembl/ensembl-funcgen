@@ -105,7 +105,7 @@ sub pipeline_analyses {
 		  . qq(    -c=#bam_file# )
 		  . qq(    -savp -out=#phantom_peak_out_file# )
             },
-	    -rc_name    => 'normal_monitored_4GB',
+	    -rc_name    => 'normal_monitored_8GB_2cpu',
             -flow_into  => { 
 	      '1' => [ 'QCLoadPhantomPeaksToDB' ],
             },
