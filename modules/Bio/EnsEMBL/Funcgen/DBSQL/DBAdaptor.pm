@@ -444,12 +444,38 @@ sub get_available_adaptors{
 # 2 It may not be the current default schema_build used in the API if the coord_system.is_current flag
 #   has been moved to a different schema_build i.e. after the update_DB_for_release.pl script has been run
 
-sub _get_schema_build{
+sub _get_schema_build {
   my $self = shift;
   my $db   = shift;
 
   assert_ref($db, 'Bio::EnsEMBL::DBSQL::DBAdaptor');
   my $schema_build;
+  
+#   use Bio::EnsEMBL::DBSQL::MetaContainer;
+#   my $mca = Bio::EnsEMBL::DBSQL::MetaContainer->new($db);
+# 
+#   my $schema_version   = $mca->get_schema_version();
+#   
+#   my $assembly_version;
+#   if ($db->isa('Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor')) {
+#   
+#     use Bio::EnsEMBL::Utils::SqlHelper;
+# 
+#     my $helper = Bio::EnsEMBL::Utils::SqlHelper->new( -DB_CONNECTION => $db->dbc );
+#     $assembly_version = $helper->execute_single_result(
+#       -SQL => 'select distinct version from coord_system where is_current=true and version!=""',
+#     );
+#   
+#   } else {
+#   
+#     my ($cs) = @{$db->get_CoordSystemAdaptor->fetch_all()};
+#     $assembly_version = $cs->version();
+#     
+#   }
+# 
+#   $schema_build = $schema_version . "_" . $assembly_version;
+
+  
   my $name = $db->dbc->dbname;
 
   if ($name =~ /.*_([0-9]+_[0-9]+[a-z]*)$/o) {
@@ -462,7 +488,9 @@ sub _get_schema_build{
   else {
     warning("Wrong format: '$name' Release & Assembly expected at the end of dbname, e.g.: *_core_75_37");
   }
-
+  
+  print "\n------------------------------- schema_build = $schema_build\n";
+  
   return $schema_build;
 }
 
@@ -581,6 +609,8 @@ sub dnadb {
 
       #!!! This is a non-obvious store behaviour !!!
       #This can result in coord_system entries being written unknowingly if you are using the efg DB with a write user
+#       use Data::Dumper;
+#       print Dumper($cs);
       $self->get_FGCoordSystemAdaptor->validate_and_store_coord_system($cs);
     }
   }

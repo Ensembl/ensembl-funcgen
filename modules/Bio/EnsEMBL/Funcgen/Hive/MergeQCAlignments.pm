@@ -43,41 +43,24 @@ use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools;# merge_bams
 
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
-#TODO
-#1 Reimplement repository support
-#2 QC Status handling/setting?
-#3 Use and update the tracking database dependant on no_tracking
-#4 Drop signal flow_mode in favour of using result_set_groups as a proxy. 
-#  It is kinda nice to have this flow_mode vs result_set_group validation though.
-#5 Make archive optional, i.e. remove mandatory flag? 
-
 my %valid_flow_modes = (replicate => undef,
                         merged    => undef,
                         signal    => undef); 
 
 sub fetch_input {  
   my $self = shift;
-  #Set some module defaults
-  #$self->param('disconnect_if_idle', 1);
   
   $self->SUPER::fetch_input();
   my $rset = $self->fetch_Set_input('ResultSet');
-  #$self->param_required('archive_root');#Do this here to fail early
-  #make this optional, as not everybody will want
   
   $self->get_param_method('output_dir', 'required');
   $self->get_param_method('bam_files',  'silent');
   $self->get_param_method('fastq_files',  'silent');
     
-  if((! $self->bam_files ) && $self->fastq_files){
-    #$self->helper->debug(1, "Generating bam file names from fastqs:\n".join("\n", @{$self->fastq_files}));
+  if((! $self->bam_files ) && $self->fastq_files) {
     my $bam_file;
     $self->bam_files([ map {($bam_file = $_) =~ s/\.fastq_([0-9]+)$/.$1.bam/o; $bam_file} @{$self->fastq_files} ]);
-    #$self->helper->debug(1, "Fastqs now:\n".join("\n", @{$self->fastq_files}));
-    #$self->helper->debug(1, "Bams now:\n".join("\n", @{$self->bam_files}));
-   
-  }
-  elsif(! $self->bam_files){
+  } elsif(! $self->bam_files) {
     $self->throw_no_retry('No bam_files or fastq_files have been defined');    
   }
   
@@ -104,16 +87,20 @@ sub fetch_input {
   #could have recreated output_dir and merged_file_name from ResultSet and run_controls
   #as we did in MergeChunkResultSetFastqs, but passed for convenience
   my $gender = $rset->cell_type->gender;
-  my $file_gender = 'female'
-      if ($gender eq 'mixed');
   
+  # By default the file_gender is the same as the gender
+  my $file_gender = $gender;
+  
+  # There are no files for "mixed". The default we use is "female"
+  if ($gender eq 'mixed') {
+    $file_gender = 'female';
+  }
+  if (! defined $gender) {
+    $file_gender = 'male';
+  }
+
   $self->sam_header($file_gender);
  
-  #my $repository = $self->_repository();
-  #if(! -d $repository){
-  #  system("mkdir -p $repository") && throw("Couldn't create directory $repository");
-  #}
-
   $self->init_branching_by_analysis;
   return;
 }
@@ -156,52 +143,6 @@ sub run {
   unlink($unfiltered_bam);
   run_system_cmd("mv $tmp_bam $unfiltered_bam");
 
-# Commented out the following commands, because they were meant to check, if 
-# the bam file is valid. After fixing a bug that seems to always be the case,
-# so the code seems to just consume time.
-#
-#   $cmd = qq(java picard.cmdline.PicardCommandLine CheckTerminatorBlock ) 
-#     . qq( VALIDATION_STRINGENCY=LENIENT ) 
-#     . qq( INPUT=$unfiltered_bam );
-# 
-#   warn "Running\n$cmd\n";
-#   run_system_cmd($cmd);
-#   
-#   $cmd = qq(java picard.cmdline.PicardCommandLine BuildBamIndex ) 
-#       . qq( VALIDATION_STRINGENCY=LENIENT )
-#       . qq( INPUT=$unfiltered_bam );
-# 
-#   warn "Running\n$cmd\n";
-#   run_system_cmd($cmd);
-# 
-#   $cmd = qq(samtools idxstats $unfiltered_bam);
-#   run_system_cmd($cmd, undef, 1);
-#   
-#   # Get rid of the index file, whatever the name may be:
-#   #
-#   my $index_name = $unfiltered_bam . '.bai';
-#   unlink($index_name) if (-e $index_name);  
-#   my $index_name = $unfiltered_bam;
-#   $index_name =~ s/\.bam$/\.bai/;
-#   unlink($index_name) if (-e $index_name);
-  
-  # This calls code that generates the name of the previously merged bam file,
-  # with ".unfiltered". It performs some filtering and creates a file without
-  # ".unfiltered".
-  # Essentially, it seems to just run samtools view -F 4 (getting rid of 
-  # unaligned reads) on it. It this is the case, this call should be replaced with that.
-  #
-# Moved this into the RunAligner.
-#
-#   $self->get_alignment_files_by_ResultSet_formats($rset, ['bam'], 
-#                                                   $self->run_controls, 
-#                                                   undef, 
-#                                                   'bam');#Filter from format
-
-  # After the -F 4 filtering step above, the bam file should no longer be necessary.
-  #
-  #unlink($unfiltered_bam) if (-e $unfiltered_bam);
-  
   my %batch_params = %{$self->batch_params};
   my $flow_mode    = $self->flow_mode;
   
@@ -219,11 +160,10 @@ sub run {
                      set_name    => $self->ResultSet->name,
                      dbID        => $self->ResultSet->dbID);
 
-    if(! $self->debug){
-      #$output_id{garbage} = [@bam_files, $unfiltered_unsorted_bam];
+    if(! $self->debug) {
       $output_id{garbage} = $self->bam_files;
-    }
-    else{  #Do not garbage collect in debug mode. In case we need to rerun.
+    } else {  
+      # Do not garbage collect in debug mode. In case we need to rerun.
       warn "Skipping garbage collection for:\n".join("\n\t", @{$self->bam_files});
     }
   
@@ -235,57 +175,46 @@ sub run {
     }
         
     $self->branch_job_group($lname, [{%batch_params, %output_id}]);
-  }
-  else{ #Run signal fastqs
+  } else { 
+    # Run signal fastqs
     my $rset_groups = $self->result_set_groups;
     my $align_anal  = $rset->analysis->logic_name;
     
     #This bit is very similar to some of the code in DefineResultSets
     #just different enough not to be subbable tho 
     
-    foreach my $rset_group(keys %{$rset_groups}){
-      my @rep_or_merged_jobs;    
-      #If $rset_group is set to merged in DefineResultSets (dependant on ftype and run_idr)
-      #Then the dbIDs will be different merged result sets, and we won't be specifying a funnel
-      #else $rset_group will be the parent rset name and the dbIDs will be the replicate rset
-      #and we will specify a PreprocessIDR funnel
-           
+    foreach my $rset_group(keys %{$rset_groups}) {
+      my @rep_or_merged_jobs;
+
       for my $i(0...$#{$rset_groups->{$rset_group}{dbIDs}}){
-        push @rep_or_merged_jobs, 
-          {%batch_params,
-          
-          # mnuhn: Something is going wrong during the merge, so deactivating garbage collection to make it rerunnable.
-           garbage     => $self->bam_files, 
-           
-           #Passing rep bam here prevent us from redoing the peak calling
-           #Disable? Or wait till we restructure and only ever keep the rep bams
-           set_type    => 'ResultSet',
-           set_name    => $rset_groups->{$rset_group}{set_names}->[$i],
-           dbID        => $rset_groups->{$rset_group}{dbIDs}->[$i]};
+        push @rep_or_merged_jobs, {
+	  %batch_params,
+	  garbage     => $self->bam_files, 
+	  set_type    => 'ResultSet',
+	  set_name    => $rset_groups->{$rset_group}{set_names}->[$i],
+	  dbID        => $rset_groups->{$rset_group}{dbIDs}->[$i]
+	};
       }
-         
       my $branch = ($rset_group eq 'merged') ? 
         'Preprocess_'.$align_anal.'_merged' : 'Preprocess_'.$align_anal.'_replicate';   
       
       my @job_group = ($branch, \@rep_or_merged_jobs);   
          
-      if($rset_group ne 'merged'){ #Add PreprocessIDR semaphore
+      if($rset_group ne 'merged') {
+        # Add PreprocessIDR semaphore
         push @job_group, ('PreprocessIDR', 
                           [{%batch_params,
                             dbIDs     => $rset_groups->{$rset_group}{dbIDs},
                             set_names => $rset_groups->{$rset_group}{set_names},
-                            set_type  => 'ResultSet'}]);     
-      }  
-       
+                            set_type  => 'ResultSet'}]);
+      }
       $self->branch_job_group(@job_group);
     }
   }
-
   return;
 }
 
-
-sub write_output {  # Create the relevant jobs
+sub write_output {
   shift->dataflow_job_groups;
   return;
 }

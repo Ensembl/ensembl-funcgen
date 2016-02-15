@@ -250,10 +250,20 @@ sub fetch_Set_input{
   #can't $db->can($adaptor_method) as this doesn't work with autoload
   
   my $adaptor_method = 'get_'.$set_type.'Adaptor'; 
-  $self->helper->debug(1, "Fetching $set_name $set_type with dbID $dbid");
+  print("Fetching $set_name $set_type with dbID $dbid using adaptor $adaptor_method");
   my $set            = $db->$adaptor_method->fetch_by_dbID($dbid);
+#  my $set            = $db->$adaptor_method->fetch_all();
+#   print Dumper($set);
+#   die();
   
-  if(! defined $set){
+  if(! defined $set) {
+    use Data::Dumper;
+    print Dumper($db);
+    $Data::Dumper::Maxdepth = 0;
+    print Dumper($db->$adaptor_method);
+    print Dumper($adaptor_method);
+    print Dumper($set);
+    
     throw("Could not fetch $set_type with dbID $dbid ($set_name)"); 
   }
   elsif($set->name ne $set_name){

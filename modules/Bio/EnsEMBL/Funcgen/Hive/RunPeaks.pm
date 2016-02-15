@@ -203,87 +203,67 @@ sub run {
   return;
 }
 
-
-#TODO
-# 1 Log counts here, in tracking DB
-# 2 Dataflow to PeaksQC from here of PreprocessAlignments
-# 3 Add in optional QC and PeaksReport
-# 4 Handle >1 output files/formats e.g. CCAT significant.region significant.peak
-#  This is already handle in run, but there is no way to handle/specify the params
-#  for the process method i.e. extra feature sets?
-
-
-# Move the bulk of this to SeqTools?
-# This would require a pre-registered FeatureSets
-# unless we import some of the define_sets code in there
-# Will SeqTools ever be able to do an Feature/ResultSet import based on command line params?
-# Is this overkill?
-
 sub write_output {
   my $self = shift;
-  my $fset;
   
-  #Move this test to fetch_input based on -no_write status?
-  #Is -no_write available to the Process? I htink not, as we have had to specify it in the input_id
-  #for IdentifySetInputs
+  # When loading results disconnecting when inactive can lead to very poor 
+  # performance. Hundreds of thousands or even millions of rows may have 
+  # to be inserted into the annotated_feature table. The default setting of 
+  # disconnecting after every statement would mean that a new connection has 
+  # to be established for every insert statement and it would be disconnected
+  # thereafter. Therefore this behaviour is deactivated here. 
+  # 
+  my $db = $self->get_param_method('out_db', 'required');
+  $db->dbc->disconnect_when_inactive(0);
   
-  
-  if($self->can('FeatureSet') &&
-     ($fset = $self->FeatureSet) ){
-    #test assignment, as we may have the FeatureSet method from a previous
-    #job in this batch     
-
-#     if ( $fset->has_status('IMPORTED') ) {
-#       throw( "Cannot imported feature into a \'IMPORTED\' FeatureSet:\t" .
-#              $fset->name );
-#     }
-#     else{ #Rollback
-      #Just in case we have some duplicate records from a previously failed job
-      $self->helper->rollback_FeatureSet($fset);
-#     }
-    
-    my $af_adaptor = $fset->adaptor->db->get_AnnotatedFeatureAdaptor;    
-    my $params     = 
-     {-file_type      => $self->process_file_types->[0],
-      -processor_ref  => $self->can('store_AnnotatedFeature'),
-      -processor_args => [$self,#Need to pass self as this calls a code ref
-                          $fset,
-                          $af_adaptor]};  
-
-    #Need list context otherwise would get last value of list returned
-    #i.e. $retvals, which we don't need here
-    my ($feature_cnt) = $self->peak_runnable->process_features($params);
-    
-    #As CCAT is very oddly calling duplicate regions we need to skip over these in 
-    #store_AnnotatedFeature
-    #Hence we need to validate the feature_cnt returned matches a the DB count 
-    #else throw here, rather than in store_AnnotatedFeature
-    #so we can finish the load.
-    #Luckily there is now flow from the CCAT analysis, so we can review these and accept them
-    #throw before or after imported states?
-                        
-    $self->helper->debug(1, "Processed $feature_cnt features for ".$fset->name.'('.$fset->dbID.')');
-    my $stored_features = $af_adaptor->generic_count('af.feature_set_id='.$fset->dbID);
-    
-    #Arguably this should be after the follwing test
-    $fset->adaptor->set_imported_states_by_Set($fset);
-    
-    if($feature_cnt != $stored_features){
-      #coudl change to a normal throw if we move above the satus setting
-      $self->throw_no_retry('Processed feature count does not match stored '.
-        "feature count:\t$feature_cnt vs $stored_features");
-    }  
-      
-    #This is currently only setting IMPORTED_GRCh38, not IMPORTED too
-
-    # Log counts here in tracking?
-    #No data flow to PeaksQC here as this is done via semaphore from PreprocessAlignment?
-  }
-  else{
+  if (!$self->can('FeatureSet')) {
     warn "Skipping load features as no FeatureSet is defined";
-    #This is for the IDR replicate data, can we omit this error if we know that  
+    return;
   }
+  
+  my $fset = $self->FeatureSet;
+  
+  if (!$fset) {
+    die "The FeatureSet has been set, but is undefined!";
+    return;
+  }
+  
+  $self->helper->rollback_FeatureSet($fset);
 
+  my $af_adaptor = $fset->adaptor->db->get_AnnotatedFeatureAdaptor;    
+  my $params     = {
+    -file_type      => $self->process_file_types->[0],
+    -processor_ref  => $self->can('store_AnnotatedFeature'),
+    -processor_args => [
+	$self,#Need to pass self as this calls a code ref
+	$fset,
+	$af_adaptor
+      ]
+  };
+
+  #Need list context otherwise would get last value of list returned
+  #i.e. $retvals, which we don't need here
+  my ($feature_cnt) = $self->peak_runnable->process_features($params);
+  
+  #As CCAT is very oddly calling duplicate regions we need to skip over these in 
+  #store_AnnotatedFeature
+  #Hence we need to validate the feature_cnt returned matches a the DB count 
+  #else throw here, rather than in store_AnnotatedFeature
+  #so we can finish the load.
+  #Luckily there is now flow from the CCAT analysis, so we can review these and accept them
+  #throw before or after imported states?
+		      
+  $self->helper->debug(1, "Processed $feature_cnt features for ".$fset->name.'('.$fset->dbID.')');
+  my $stored_features = $af_adaptor->generic_count('af.feature_set_id='.$fset->dbID);
+  
+  #Arguably this should be after the follwing test
+  $fset->adaptor->set_imported_states_by_Set($fset);
+  
+  if($feature_cnt != $stored_features) {
+    # Could change to a normal throw if we move above the satus setting
+    $self->throw_no_retry('Processed feature count does not match stored '.
+      "feature count:\t$feature_cnt vs $stored_features");
+  }
   return;
 } ## end sub write_output
 

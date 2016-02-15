@@ -151,7 +151,7 @@ sub run {
 
 sub DESTROY{
   my $self = shift;
-  unlink($self->{conf_file}) if $self->{conf_file};  
+  #unlink($self->{conf_file}) if $self->{conf_file};  
 }
 
 sub init_significant_region_file {

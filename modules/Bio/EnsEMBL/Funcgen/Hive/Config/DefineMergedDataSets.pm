@@ -58,24 +58,6 @@ sub pipeline_analyses {
   my $self = shift;
 
   return [
-#     {
-#       -logic_name => 'IdentifyMergedResultSets',
-#       -module     => 'Bio::EnsEMBL::Funcgen::Hive::IdentifySetInputs',	  
-#       -meadow_type => 'LOCAL',#should always be uppercase
-#       -parameters => {set_type        => 'ResultSet'},
-#       -flow_into => {		 
-# 	#2 is used for potential fan jobs from a single result set
-# 	#3 is used as a funnel, or for jobs with no fan   
-# 	'3' => [ 'DefineMergedDataSet' ],
-# 	#'3->A' => [ 'DefineMergedDataSet' ],
-# 	#'A->4' => [ 'CleanupCellLineFiles' ],
-#       },
-#       #We don't care about these failing, as we expect them too
-#       -failed_job_tolerance => 100, 
-# 
-#       -analysis_capacity => 10,
-#       -rc_name => 'default',
-#     },
     {
       -logic_name => 'DefineMergedDataSet', 
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::DefineDataSet',

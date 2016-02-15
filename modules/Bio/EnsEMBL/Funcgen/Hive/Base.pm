@@ -434,7 +434,11 @@ sub _set_out_db {
 
   $db->dbc->disconnect_when_inactive(1);
   $db->dnadb->dbc->disconnect_when_inactive(1);
-  $self->dbc->disconnect_when_inactive(1);
+  
+  # Skip, if module is run as standalone job.
+  if ($self->dbc) {
+    $self->dbc->disconnect_when_inactive(1);
+  }  
 
   # VALIDATE/SET Assembly
   #This may clash with default assembly from DB if we are loading onto an old assembly
