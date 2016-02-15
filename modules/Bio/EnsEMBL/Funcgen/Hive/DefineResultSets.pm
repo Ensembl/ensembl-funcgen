@@ -44,21 +44,21 @@ sub fetch_input {   # fetch parameters...
   
   $self->set_param_method('controls', delete $isset_ids->{controls});
   
-  if(scalar(keys %$isset_ids) == 0){
+  if(scalar(keys %$isset_ids) == 0) {
     throw('No (signal) input_subset_ids defined. Must pass input_subset_ids hash of (optional) \'controls\''.
       ' and ResultSet name keys and input_subset_id arrayref values');
   }
 
+  # alignment_analysis is dataflowed explicitly from IdentifyAlignInputSubsets
+  # to allow batch over-ride of the default/pipeline_wide value.
+  # Could have put this in batch params, but it is only needed here
   $self->get_param_method('alignment_analysis', 'required');
-  #alignment_analysis is dataflowed explicitly from IdentifyAlignInputSubsets
-  #to allow batch over-ride of the default/pipeline_wide value.
-  #Could have put this in batch params, but it is only needed here
-                  
+
   my $merge = $self->get_param_method('merge_idr_replicates', 'silent');
 
-  if($merge){
+  if($merge) {
     
-    if( scalar(keys %$isset_ids) != 1 ){
+    if( scalar(keys %$isset_ids) != 1 ) {
       $self->throw_no_retry('Cannot currently specify > 1 input_subsets_ids group in merge_idr_replicate');
     }
     
@@ -386,7 +386,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
   
   
   #Now flow job_groups of rsets to control job/replicate & IDR 
-  foreach my $branch(keys %branch_sets){            
+  foreach my $branch(keys %branch_sets) {
     $self->helper->debug(1, "Processing cached branch $branch");
     #what about other branches in here
   
@@ -413,11 +413,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
                                dbID      => $branch_sets{$branch}{$any_group}{dbIDs}->[0],
                                set_name  => $branch_sets{$branch}{$any_group}{set_names}->[0]}]);   
     }
-    #else{
- #branch not supported     
-#    }
   }
-  
   return;
 }
 
