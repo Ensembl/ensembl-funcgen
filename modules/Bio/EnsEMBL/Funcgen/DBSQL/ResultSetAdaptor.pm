@@ -579,6 +579,12 @@ sub store_dbfile_path{
   return;
 }
 
+=head2 dbfile_data_root
+=cut
+sub dbfile_data_root {
+  my $self = shift; 
+  return $self->db->dbfile_data_root(@_);
+}
 
 #This is only used for validation in store_dbfile_path
 
