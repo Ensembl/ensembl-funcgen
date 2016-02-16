@@ -1708,11 +1708,14 @@ sub sam_ref_fai {
         'specific in the config');
       }
     }
-        my $file_gender;
+        my $file_gender = $gender;
     $file_gender = 'female'
       if ($gender eq 'mixed');
+    $file_gender = 'male'
+      if (! defined $gender || $gender eq '');
 
-
+      warn ("Gender is $gender");
+      
     my $file_name = $self->species.'_'.$file_gender.'_'.$self->assembly.'_unmasked.fasta.fai';
     my $sam_ref_fai = validate_path([$self->data_root_dir,
                                      'sam_header',
