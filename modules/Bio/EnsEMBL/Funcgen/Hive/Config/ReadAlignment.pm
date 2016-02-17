@@ -190,7 +190,7 @@ sub pipeline_analyses {
        },
      -batch_size => 1, #max parallelisation
      -analysis_capacity => 200,
-     -rc_name => 'normal_30GB_3cpu',
+     -rc_name => '64GB_3cpu',
     },
     {
       -logic_name => 'MergeAlignments_and_QC',
@@ -199,7 +199,7 @@ sub pipeline_analyses {
      -flow_into => { 2 => ['DefineMergedDataSet']},
      -batch_size => 1, #max parallelisation
      -analysis_capacity => 200,
-     -rc_name => 'normal_30GB_3cpu',
+     -rc_name => '64GB_3cpu',
     },
     {
      -logic_name => 'MergeReplicateAlignments_and_QC',
@@ -211,7 +211,7 @@ sub pipeline_analyses {
      -flow_into => {'100' => ['run_SWEmbl_R0005_replicate']},
      -batch_size => 1, #max parallelisation
      -analysis_capacity => 200,
-     -rc_name => 'normal_30GB_3cpu',
+     -rc_name => '64GB_3cpu',
     },
     {
       -logic_name    => 'run_SWEmbl_R0005_replicate',  #SWEmbl permissive
