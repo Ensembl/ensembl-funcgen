@@ -639,7 +639,7 @@ sub define_regbuild_meta_strings{
     die('You must provide a DataSet with associated supporting sets');
   }
   if ($dset->cell_type->name eq 'MultiCell') {
-    @ssets = grep {$_->feature_class != 'Polymerase' && $_->feature_class != 'Histone'} @ssets;
+    @ssets = grep {$_->feature_class ne 'Polymerase' && $_->feature_class ne 'Histone'} @ssets;
   }
   
   ## Extract core supporting sets
