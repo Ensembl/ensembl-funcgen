@@ -117,15 +117,15 @@ sub parse_and_load{
 
   if($self->species eq 'homo_sapiens'){
     $external_db_name    = 'homo_sapiens_core_Gene';
-    $external_db_release = '83_38';
+    $external_db_release = '84_38';
   }
   elsif($self->species eq 'mus_musculus'){
     $external_db_name    = 'mus_musculus_core_Gene';
-    $external_db_release = '83_38';
+    $external_db_release = '84_38';
   }
   elsif($self->species eq 'rattus_norvegicus'){
     $external_db_name    = 'rattus_norvegicus_core_Gene';
-    $external_db_release = '83_6';
+    $external_db_release = '84_6';
   }
   else{
     throw($self->species . " not implemented. Add here.")
