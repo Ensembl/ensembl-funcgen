@@ -57,28 +57,31 @@ sub fetch_input {   # fetch parameters...
   
   print "\n\n--------> $merge_idr_replicates \n\n";
 
-  if($merge_idr_replicates){
+  if($merge_idr_replicates) {
     
-    if( scalar(keys %$input_subset_ids) != 1 ){
+    if( scalar(keys %$input_subset_ids) != 1 ) {
       $self->throw_no_retry('Cannot currently specify > 1 input_subsets_ids group in merge_idr_replicate');
     }
-    
-    $self->get_param_method('max_peaks', 'required'); #dataflowed from PostprocessIDR
-    my $ppeak_lname = $self->param_required('permissive_peaks'); #batch flown
-    $self->set_param_method('idr_peak_analysis_id',
-                            scalars_to_objects($self->out_db,
-                                               'Analysis', 
-                                               'fetch_by_logic_name',
-                                               $ppeak_lname)->[0]->dbID);
+
+    # Dataflowed from PostprocessIDR
+    $self->get_param_method('max_peaks', 'required'); 
+
+    # Batch flown
+    my $permissive_peak_logic_name = $self->param_required('permissive_peaks');
+
+    $self->set_param_method(
+      'idr_peak_analysis_id',
+      scalars_to_objects($self->out_db, 'Analysis', 'fetch_by_logic_name', $permissive_peak_logic_name)->[0]->dbID
+    );
   }
   return;
 }
 
 sub _are_controls {
-  my $ctrls        = shift; 
+  my $control_input_subsets        = shift; 
   my $all_controls = 1;
   
-  foreach my $ctrl(@$ctrls){
+  foreach my $ctrl(@$control_input_subsets){
     
     if(! $ctrl->is_control){
       $all_controls = 0;
@@ -94,7 +97,7 @@ sub _are_signals {
   my $signal_input_subsets     = shift; 
   my $all_signal_input_subsets = 1;
   
-  foreach my $sig(@$signal_input_subsets){
+  foreach my $sig(@$signal_input_subsets) {
     
     if($sig->is_control){
       $all_signal_input_subsets = 0;
@@ -108,40 +111,37 @@ sub _are_signals {
 
 sub run {
 
-  my $self         = shift;
-  my $helper       = $self->helper;
-  my $result_set_adaptor = $self->out_db->get_ResultSetAdaptor;
-  my $input_subset_ids       = $self->input_subset_ids;
-  my $ctrls        = [];  
+  my $self                  = shift;
+  my $helper                = $self->helper;
+  my $result_set_adaptor    = $self->out_db->get_ResultSetAdaptor;
+  my $input_subset_ids      = $self->input_subset_ids;
+  my $control_input_subsets = [];
   my $branch;
   
-  #The branch will either be 2 for all, or may flip flop betwee 3 & for for idr and merged sets without controls
-  
   my $alignment_analysis = $self->alignment_analysis;
-  my $alignment_analysis_object  = &scalars_to_objects(
+  my $alignment_analysis_object = &scalars_to_objects(
     $self->out_db, 'Analysis', 'fetch_by_logic_name', [$alignment_analysis]
   )->[0];
-  
-  #We don't use fetch_Set_input here as we are dealing with many InputSubsets
- 
+
   my $control_branch = 'Preprocess_'.$alignment_analysis.'_control';
   my $controls = $self->controls;
+
+  # This is run in the DefineResultSets analysis
+  #
+  if ( $controls && assert_ref($controls, 'ARRAY', 'controls') && @$controls) {
   
-  if($controls && 
-     assert_ref($controls, 'ARRAY', 'controls') &&
-     @$controls){
-    $ctrls = &scalars_to_objects($self->out_db, 'InputSubset',
+    $control_input_subsets = &scalars_to_objects($self->out_db, 'InputSubset',
                                                 'fetch_by_dbID',
                                                 $controls);
     
-    if(! &_are_controls($ctrls)){
+    if(! &_are_controls($control_input_subsets)){
       throw("Found unexpected non-control InputSubsets specified as controls\n\t".
-        join("\n\t", map($_->name, @$ctrls)));
+        join("\n\t", map($_->name, @$control_input_subsets)));
     }
     
     my %exps;
     
-    foreach my $ctrl(@$ctrls){
+    foreach my $ctrl(@$control_input_subsets){
       $exps{$ctrl->experiment->name} = $ctrl->experiment;
     }
     
@@ -152,7 +152,7 @@ sub run {
     my ($exp) = values(%exps);#We only have one
   }
  
-  my (%result_sets, %rep_bams);
+  my (%result_sets, %replicate_bam_files);
 
   # merge_idr_replicates is undef in DefineResultSets analysis
   #
@@ -173,26 +173,27 @@ sub run {
       join("\n\t", map($_->name, @$signal_input_subsets)));
     }
 
-    my $ftype          = $signal_input_subsets->[0]->feature_type;
-    my $is_idr_ftype   = $self->is_idr_FeatureType($ftype);
-    my $cell_type          = $signal_input_subsets->[0]->cell_type;
+    my $feature_type        = $signal_input_subsets->[0]->feature_type;
+    my $is_idr_feature_type = $self->is_idr_FeatureType($feature_type);
+    my $cell_type           = $signal_input_subsets->[0]->cell_type;
     
     #Define a single rep set with all of the InputSubsets 
     #i.e. non-IDR merged or post-IDR merged     
     my @rep_sets = ($signal_input_subsets);
     my $has_signal_replicates = (scalar(@$signal_input_subsets) >1) ? 1 : 0;    
 
-    
-    if(!$is_idr_ftype || !$has_signal_replicates) {
+    # Only run in DefineResultSets analysis
+    #
+    if(!$is_idr_feature_type || !$has_signal_replicates) {
       # single rep ID or multi-rep non-IDR
       $branch = 'Preprocess_'.$alignment_analysis.'_merged';
     }
     
-    if($merge_idr_replicates && $is_idr_ftype && $has_signal_replicates) {
+    if($merge_idr_replicates && $is_idr_feature_type && $has_signal_replicates) {
     
         $branch = 'DefineMergedDataSet';
 
-        $rep_bams{$parent_set_name}{rep_bams} = [];
+        $replicate_bam_files{$parent_set_name}{rep_bams} = [];
 
         foreach my $rep (@$signal_input_subsets) {
           #Pull back the rep Rset to validate and get the alignment file for merging
@@ -210,12 +211,12 @@ sub run {
           #but probably a good idea to do here too
           #As we may get here by means other than PreprocessIDR?
                     
-          push @{$rep_bams{$parent_set_name}{rep_bams}}, 
+          push @{$replicate_bam_files{$parent_set_name}{rep_bams}}, 
             $self->get_alignment_files_by_ResultSet_formats($result_set, ['bam'])->{bam};
         }
     }
     
-    if(! $merge_idr_replicates && $is_idr_ftype && $has_signal_replicates) {
+    if(! $merge_idr_replicates && $is_idr_feature_type && $has_signal_replicates) {
         #RunIDR semaphore handled implicitly later 
         $branch = 'Preprocess_'.$alignment_analysis.'_replicate';
         
@@ -235,10 +236,10 @@ sub run {
     }
     
     
-    foreach my $rep_set(@rep_sets){ 
+    foreach my $rep_set (@rep_sets) {
       my $result_set_name = $parent_set_name;#.'_'.$alignment_analysis_object->logic_name;
     
-      if($is_idr_ftype && $has_signal_replicates && ! $merge_idr_replicates){
+      if($is_idr_feature_type && $has_signal_replicates && ! $merge_idr_replicates){
         #there will be only 1 in the $rep_set 
         $result_set_name .= '_TR'.$rep_set->[0]->replicate;
       }
@@ -265,14 +266,14 @@ sub run {
 
       push @$cache_ref, {
 	-RESULT_SET_NAME     => $result_set_name,
-	-SUPPORTING_SETS     => [@$rep_set, @$ctrls],
+	-SUPPORTING_SETS     => [@$rep_set, @$control_input_subsets],
 	-DBADAPTOR           => $self->out_db,
 	-RESULT_SET_ANALYSIS => $alignment_analysis_object,
 	-ROLLBACK            => $self->param_silent('rollback'),
 	-RECOVER             => $self->param_silent('recover'),
 	-FULL_DELETE         => $self->param_silent('full_delete'),
 	-CELL_TYPE           => $cell_type,
-	-FEATURE_TYPE        => $ftype
+	-FEATURE_TYPE        => $feature_type
       };
     }
   }
@@ -315,7 +316,7 @@ sub run {
           my $merged_file = $self->get_alignment_path_prefix_by_ResultSet($result_set).'.bam'; 
 
 	  merge_bams({
-	    input_bams => $rep_bams{$result_set->name}{rep_bams}, 
+	    input_bams => $replicate_bam_files{$result_set->name}{rep_bams}, 
 	    output_bam => $merged_file,
 	    debug      => $self->debug,
 	  });
