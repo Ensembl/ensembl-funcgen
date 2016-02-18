@@ -188,10 +188,8 @@ sub run {
       $branch = 'Preprocess_'.$alignment_analysis.'_merged';
     }
     
-    if($is_idr_ftype && $has_signal_replicates) {
-      
-      if($merge_idr_replicates) {
-
+    if($merge_idr_replicates && $is_idr_ftype && $has_signal_replicates) {
+    
         $branch = 'DefineMergedDataSet';
 
         $rep_bams{$parent_set_name}{rep_bams} = [];
@@ -215,15 +213,14 @@ sub run {
           push @{$rep_bams{$parent_set_name}{rep_bams}}, 
             $self->get_alignment_files_by_ResultSet_formats($result_set, ['bam'])->{bam};
         }
-      }
-      if(! $merge_idr_replicates) {
-
+    }
+    
+    if(! $merge_idr_replicates && $is_idr_ftype && $has_signal_replicates) {
         #RunIDR semaphore handled implicitly later 
         $branch = 'Preprocess_'.$alignment_analysis.'_replicate';
         
         # Split single rep sets
         @rep_sets = map {[$_]} @$signal_input_subsets;  
-      }
     }
 
     # Don't use control branch, if merge_idr_replicates is set. In this case this 
