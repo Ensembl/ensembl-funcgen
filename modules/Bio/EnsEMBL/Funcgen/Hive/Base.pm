@@ -152,6 +152,11 @@ sub fetch_input {   # nothing to fetch... just the DB parameters...
   
   #root_input_dir is mandatory and workdir and hive_output_dir have defaults based on this
   #Mandatory
+  my $data_root_dir = $self->param('data_root_dir');
+  if (! -d $data_root_dir) {
+    system("mkdir -p $data_root_dir");
+  }
+  
   $self->validate_dir_param('data_root_dir'); 
  
   $self->validate_dir_param('bin_dir',    undef, 1); #optional
