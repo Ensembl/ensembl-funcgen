@@ -108,7 +108,7 @@ use base qw( Bio::Root::Root );
 
 #default dump level
 #set this to debug level + 1?
-$Data::Dumper::Maxdepth = 2;
+#$Data::Dumper::Maxdepth = 2;
 
 my @rollback_tables = qw( data_set   feature_set
                           result_set input_set
