@@ -91,18 +91,18 @@ sub _are_controls {
 
 
 sub _are_signals {
-  my $sigs     = shift; 
-  my $all_sigs = 1;
+  my $signal_input_subsets     = shift; 
+  my $all_signal_input_subsets = 1;
   
-  foreach my $sig(@$sigs){
+  foreach my $sig(@$signal_input_subsets){
     
     if($sig->is_control){
-      $all_sigs = 0;
+      $all_signal_input_subsets = 0;
       last;
     }
   }
   
-  return $all_sigs;
+  return $all_signal_input_subsets;
 } 
 
 
@@ -110,8 +110,8 @@ sub run {
 
   my $self         = shift;
   my $helper       = $self->helper;
-  my $rset_adaptor = $self->out_db->get_ResultSetAdaptor;
-  my $issets       = $self->input_subset_ids;  
+  my $result_set_adaptor = $self->out_db->get_ResultSetAdaptor;
+  my $input_subset_ids       = $self->input_subset_ids;
   my $ctrls        = [];  
   my $branch;
   
@@ -124,7 +124,7 @@ sub run {
   
   #We don't use fetch_Set_input here as we are dealing with many InputSubsets
  
-  my $control_branch = '';
+  my $control_branch = 'Preprocess_'.$alignment_analysis.'_control';
   my $controls = $self->controls;
   
   if($controls && 
@@ -138,8 +138,6 @@ sub run {
       throw("Found unexpected non-control InputSubsets specified as controls\n\t".
         join("\n\t", map($_->name, @$ctrls)));
     }
-    
-    $control_branch = 'Preprocess_'.$alignment_analysis.'_control';
     
     my %exps;
     
@@ -164,57 +162,49 @@ sub run {
   print Dumper($merge_idr_replicates);
   print "\n-------------------------------------------------------------\n";
    
-  foreach my $set_name(keys %$issets){
+  foreach my $set_name(keys %$input_subset_ids) {
     my $parent_set_name = $set_name.'_'.$alignment_analysis_object->logic_name;
     
-    my $sigs = &scalars_to_objects($self->out_db, 'InputSubset',
+    my $signal_input_subsets = &scalars_to_objects($self->out_db, 'InputSubset',
                                                   'fetch_by_dbID',
-                                                  $issets->{$set_name});
-    if(! &_are_signals($sigs)){
+                                                  $input_subset_ids->{$set_name});
+    if(! &_are_signals($signal_input_subsets)){
       throw("Found unexpected controls in signal InputSubsets\n\t".
-      join("\n\t", map($_->name, @$sigs)));
+      join("\n\t", map($_->name, @$signal_input_subsets)));
     }
 
-    my $ftype          = $sigs->[0]->feature_type;
+    my $ftype          = $signal_input_subsets->[0]->feature_type;
     my $is_idr_ftype   = $self->is_idr_FeatureType($ftype);
-    my $cell_type          = $sigs->[0]->cell_type;
+    my $cell_type          = $signal_input_subsets->[0]->cell_type;
     
     #Define a single rep set with all of the InputSubsets 
     #i.e. non-IDR merged or post-IDR merged     
-    my @rep_sets = ($sigs);
-    my $has_reps = (scalar(@$sigs) >1) ? 1 : 0;    
+    my @rep_sets = ($signal_input_subsets);
+    my $has_signal_replicates = (scalar(@$signal_input_subsets) >1) ? 1 : 0;    
 
     
-    if($is_idr_ftype && $has_reps) {
+    if(!$is_idr_ftype || !$has_signal_replicates) {
+      # single rep ID or multi-rep non-IDR
+      $branch = 'Preprocess_'.$alignment_analysis.'_merged';
+    }
+    
+    if($is_idr_ftype && $has_signal_replicates) {
       
       if($merge_idr_replicates) {
-        #Merged control file should already be present
-        #Merged signal file maybe present if GeneratePseudoReplicates has been run
+
         $branch = 'DefineMergedDataSet';
-        
-        
-        #Merging of fastqs is normally done in PreprocessFastqs
-        #But now we need to merge bams (or other)
-        #Should we move this to PreprocessAlignments?
-        #This normally expects the bams to be in merged if required.
-        #It seem much more natural to do the merge here
-        
-        #Sanity check here the control file is available?
-        #Using the ResultSet below?
-        
-      
+
         $rep_bams{$parent_set_name}{rep_bams} = [];
-        #my $ctrl;
-        
-        foreach my $rep(@$sigs){
+
+        foreach my $rep (@$signal_input_subsets) {
           #Pull back the rep Rset to validate and get the alignment file for merging
-          my $rep_rset_name = $parent_set_name.'_TR'.$rep->replicate;
-          my $rset = $rset_adaptor->fetch_by_name($rep_rset_name);            
-          #Could also fetch them with $rset_a->fetch_all_by_supporting_Sets($rep).
+          my $rep_result_set_name = $parent_set_name.'_TR'.$rep->replicate;
+          my $result_set = $result_set_adaptor->fetch_by_name($rep_result_set_name);            
+          #Could also fetch them with $result_set_a->fetch_all_by_supporting_Sets($rep).
            
-          if(! defined $rset){
+          if(! defined $result_set){
             $self->throw_no_retry("Could not find ResultSet for post-IDR merged ResultSet:\t".
-              $rep_rset_name); 
+              $rep_result_set_name); 
           }
       
           #todo validate controls are the same
@@ -223,18 +213,17 @@ sub run {
           #As we may get here by means other than PreprocessIDR?
                     
           push @{$rep_bams{$parent_set_name}{rep_bams}}, 
-            $self->get_alignment_files_by_ResultSet_formats($rset, ['bam'])->{bam};
+            $self->get_alignment_files_by_ResultSet_formats($result_set, ['bam'])->{bam};
         }
       }
-      else{ #! $merge_idr_replicates
+      if(! $merge_idr_replicates) {
 
         #RunIDR semaphore handled implicitly later 
-        $branch = 'Preprocess_'.$alignment_analysis.'_replicate';       
-        @rep_sets = map {[$_]} @$sigs;  #split single rep sets
-      }   
-    }
-    else{ #single rep ID or multi-rep non-IDR
-      $branch = 'Preprocess_'.$alignment_analysis.'_merged';
+        $branch = 'Preprocess_'.$alignment_analysis.'_replicate';
+        
+        # Split single rep sets
+        @rep_sets = map {[$_]} @$signal_input_subsets;  
+      }
     }
 
     # Don't use control branch, if merge_idr_replicates is set. In this case this 
@@ -244,17 +233,17 @@ sub run {
     # analyses. Until then, setting merge_idr_replicates serves to tell the module, 
     # which analysis it is currently running.
     # 
-    if ($control_branch && !$merge_idr_replicates) {
+    if (!$merge_idr_replicates) {
       $branch = $control_branch;
     }
     
     
     foreach my $rep_set(@rep_sets){ 
-      my $rset_name = $parent_set_name;#.'_'.$alignment_analysis_object->logic_name;
+      my $result_set_name = $parent_set_name;#.'_'.$alignment_analysis_object->logic_name;
     
-      if($is_idr_ftype && $has_reps && ! $merge_idr_replicates){
+      if($is_idr_ftype && $has_signal_replicates && ! $merge_idr_replicates){
         #there will be only 1 in the $rep_set 
-        $rset_name .= '_TR'.$rep_set->[0]->replicate;
+        $result_set_name .= '_TR'.$rep_set->[0]->replicate;
       }
 
       my $cache_ref;
@@ -278,7 +267,7 @@ sub run {
       }
 
       push @$cache_ref, {
-	-RESULT_SET_NAME     => $rset_name,
+	-RESULT_SET_NAME     => $result_set_name,
 	-SUPPORTING_SETS     => [@$rep_set, @$ctrls],
 	-DBADAPTOR           => $self->out_db,
 	-RESULT_SET_ANALYSIS => $alignment_analysis_object,
@@ -309,15 +298,15 @@ sub run {
 
   foreach my $branch(keys %result_sets){
   
-    foreach my $rset_group_name (keys %{$result_sets{$branch}}){
-      my $rset_group = $result_sets{$branch}->{$rset_group_name};
+    foreach my $result_set_group_name (keys %{$result_sets{$branch}}){
+      my $result_set_group = $result_sets{$branch}->{$result_set_group_name};
 
-      foreach my $rset (@$rset_group) {
-        $rset = $helper->define_ResultSet(%{$rset});
+      foreach my $result_set (@$result_set_group) {
+        $result_set = $helper->define_ResultSet(%{$result_set});
 
         if($merge_idr_replicates) {
 
-	  $tracking_adaptor->store_tracking_info($rset, {
+	  $tracking_adaptor->store_tracking_info($result_set, {
 	      allow_update => 1,
 	      info         => {
 		idr_max_peaks        => $self->max_peaks,
@@ -326,37 +315,37 @@ sub run {
 	    }
 	  );
 
-          my $merged_file = $self->get_alignment_path_prefix_by_ResultSet($rset).'.bam'; 
+          my $merged_file = $self->get_alignment_path_prefix_by_ResultSet($result_set).'.bam'; 
 
 	  merge_bams({
-	    input_bams => $rep_bams{$rset->name}{rep_bams}, 
+	    input_bams => $rep_bams{$result_set->name}{rep_bams}, 
 	    output_bam => $merged_file,
 	    debug      => $self->debug,
 	  });
         }
 
-        if($branch =~ /(_merged$|^DefineMergedDataSet$)/){# (no control) job will only ever have 1 rset
+        if($branch =~ /(_merged$|^DefineMergedDataSet$)/){# (no control) job will only ever have 1 result_set
           $self->branch_job_group($branch, [{%batch_params,
-                                             dbID       => $rset->dbID, 
-                                             set_name   => $rset->name,
+                                             dbID       => $result_set->dbID, 
+                                             set_name   => $result_set->name,
                                              set_type    => 'ResultSet',
                                              }]);
         }
         elsif($branch =~ /(_control$|_replicate$)/){
           
-          $self->helper->debug(1, "Cacheing $branch branch jobs for ".$rset->name);
+          $self->helper->debug(1, "Cacheing $branch branch jobs for ".$result_set->name);
           
-          $branch_sets{$branch}{$rset_group_name}{set_names} ||= [];
-          $branch_sets{$branch}{$rset_group_name}{dbIDs}     ||= [];
-          push @{$branch_sets{$branch}{$rset_group_name}{set_names}}, $rset->name;
-          push @{$branch_sets{$branch}{$rset_group_name}{dbIDs}},     $rset->dbID;
+          $branch_sets{$branch}{$result_set_group_name}{set_names} ||= [];
+          $branch_sets{$branch}{$result_set_group_name}{dbIDs}     ||= [];
+          push @{$branch_sets{$branch}{$result_set_group_name}{set_names}}, $result_set->name;
+          push @{$branch_sets{$branch}{$result_set_group_name}{dbIDs}},     $result_set->dbID;
                     
           if($branch =~ /_replicate$/o){
             #Just create the individual fan output_ids
-            $branch_sets{$branch}{$rset_group_name}{output_ids} ||= [];
-            push @{$branch_sets{$branch}{$rset_group_name}{output_ids}}, {%batch_params,
-                                                                          dbID     => $rset->dbID,
-                                                                          set_name => $rset->name,
+            $branch_sets{$branch}{$result_set_group_name}{output_ids} ||= [];
+            push @{$branch_sets{$branch}{$result_set_group_name}{output_ids}}, {%batch_params,
+                                                                          dbID     => $result_set->dbID,
+                                                                          set_name => $result_set->name,
                                                                           set_type => 'ResultSet'};    
           }
         }
