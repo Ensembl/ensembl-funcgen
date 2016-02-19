@@ -237,19 +237,30 @@ sub run {
     
     
     foreach my $rep_set (@rep_sets) {
+    
       my $result_set_name = $parent_set_name;#.'_'.$alignment_analysis_object->logic_name;
     
-      if($is_idr_feature_type && $has_signal_replicates && ! $merge_idr_replicates){
-        #there will be only 1 in the $rep_set 
+      if($is_idr_feature_type && $has_signal_replicates && ! $merge_idr_replicates) {
+        # There will be only 1 in the $rep_set 
         $result_set_name .= '_TR'.$rep_set->[0]->replicate;
       }
 
-      my $cache_ref;
+      my $result_set_constructor_parameters = {
+	-RESULT_SET_NAME     => $result_set_name,
+	-SUPPORTING_SETS     => [@$rep_set, @$control_input_subsets],
+	-DBADAPTOR           => $self->out_db,
+	-RESULT_SET_ANALYSIS => $alignment_analysis_object,
+	-ROLLBACK            => $self->param_silent('rollback'),
+	-RECOVER             => $self->param_silent('recover'),
+	-FULL_DELETE         => $self->param_silent('full_delete'),
+	-CELL_TYPE           => $cell_type,
+	-FEATURE_TYPE        => $feature_type
+      };
 
       if(! $merge_idr_replicates) {
 	# branch can be replicate(no control) or control(with reps)  
         $result_sets{$branch}->{$parent_set_name} ||= [];  
-        $cache_ref                            = $result_sets{$branch}->{$parent_set_name};
+        push @{$result_sets{$branch}->{$parent_set_name}}, $result_set_constructor_parameters
       }
 
       if($merge_idr_replicates) {
@@ -261,20 +272,8 @@ sub run {
         #is used of merged key here correct for DefineMergedDataSet?
 
         $result_sets{$branch}{merged} ||= [];
-        $cache_ref                = $result_sets{$branch}{merged};
+        push @{$result_sets{$branch}{merged}}, $result_set_constructor_parameters
       }
-
-      push @$cache_ref, {
-	-RESULT_SET_NAME     => $result_set_name,
-	-SUPPORTING_SETS     => [@$rep_set, @$control_input_subsets],
-	-DBADAPTOR           => $self->out_db,
-	-RESULT_SET_ANALYSIS => $alignment_analysis_object,
-	-ROLLBACK            => $self->param_silent('rollback'),
-	-RECOVER             => $self->param_silent('recover'),
-	-FULL_DELETE         => $self->param_silent('full_delete'),
-	-CELL_TYPE           => $cell_type,
-	-FEATURE_TYPE        => $feature_type
-      };
     }
   }
   
@@ -287,12 +286,6 @@ sub run {
   my %batch_params = %{$self->batch_params};
   my %branch_sets;
   my $tracking_adaptor = $self->tracking_adaptor;
-
-  #We need to test for CONTROL_ALIGNED here
-  #but this is currently only set on the ResultSets
-  #and these maybe entirely new result sets
-  #so this has to be set on the experiment too!
-  #we can test that above and set the branch accordingly
 
   foreach my $branch(keys %result_sets){
   
@@ -322,67 +315,121 @@ sub run {
 	  });
         }
 
-        if($branch =~ /(_merged$|^DefineMergedDataSet$)/){# (no control) job will only ever have 1 result_set
-          $self->branch_job_group($branch, [{%batch_params,
-                                             dbID       => $result_set->dbID, 
-                                             set_name   => $result_set->name,
-                                             set_type    => 'ResultSet',
-                                             }]);
+        if($branch eq 'DefineMergedDataSet') {
+          $self->branch_job_group(
+	    'DefineMergedDataSet',
+	    [
+	      {
+		%batch_params,
+		dbID       => $result_set->dbID, 
+		set_name   => $result_set->name,
+		set_type   => 'ResultSet',
+	      }
+	    ]
+	  );
         }
-        elsif($branch =~ /(_control$|_replicate$)/){
-          
+
+        if($branch eq 'Preprocess_bwa_samse_merged') {
+          $self->branch_job_group(
+	    'Preprocess_bwa_samse_merged', 
+	    [
+	      {
+		%batch_params,
+		dbID       => $result_set->dbID, 
+		set_name   => $result_set->name,
+		set_type   => 'ResultSet',
+	      }
+	    ]
+	  );
+        }
+        
+        if ($branch eq 'Preprocess_bwa_samse_control') {
+
           $self->helper->debug(1, "Cacheing $branch branch jobs for ".$result_set->name);
-          
+
           $branch_sets{$branch}{$result_set_group_name}{set_names} ||= [];
           $branch_sets{$branch}{$result_set_group_name}{dbIDs}     ||= [];
           push @{$branch_sets{$branch}{$result_set_group_name}{set_names}}, $result_set->name;
           push @{$branch_sets{$branch}{$result_set_group_name}{dbIDs}},     $result_set->dbID;
-                    
-          if($branch =~ /_replicate$/o){
-            #Just create the individual fan output_ids
-            $branch_sets{$branch}{$result_set_group_name}{output_ids} ||= [];
-            push @{$branch_sets{$branch}{$result_set_group_name}{output_ids}}, {%batch_params,
-                                                                          dbID     => $result_set->dbID,
-                                                                          set_name => $result_set->name,
-                                                                          set_type => 'ResultSet'};    
-          }
+
         }
-        else{ #Sanity check
-          #branch is always defined within this module
-          $self->throw_no_retry("$branch is not supported by DefineResultSets");  
-        }
+        if ($branch eq 'Preprocess_bwa_samse_replicate') {
+
+          $self->helper->debug(1, "Cacheing $branch branch jobs for ".$result_set->name);
+
+          $branch_sets{$branch}{$result_set_group_name}{set_names} ||= [];
+          $branch_sets{$branch}{$result_set_group_name}{dbIDs}     ||= [];
+          push @{$branch_sets{$branch}{$result_set_group_name}{set_names}}, $result_set->name;
+          push @{$branch_sets{$branch}{$result_set_group_name}{dbIDs}},     $result_set->dbID;
+	
+	  #Just create the individual fan output_ids
+	  $branch_sets{$branch}{$result_set_group_name}{output_ids} ||= [];
+	  push @{$branch_sets{$branch}{$result_set_group_name}{output_ids}}, {%batch_params,
+									dbID     => $result_set->dbID,
+									set_name => $result_set->name,
+									set_type => 'ResultSet'};    
+	}
+
       }
     }
   }
   
   
   #Now flow job_groups of result_sets to control job/replicate & IDR 
-  foreach my $branch(keys %branch_sets){            
-    $self->helper->debug(1, "Processing cached branch $branch");
-    #what about other branches in here
+  foreach my $flow_to_branch (keys %branch_sets){
   
-    if($branch =~ /_replicate$/){
-      
-      foreach my $rep_set(keys %{$branch_sets{$branch}}){ 
+    $self->helper->debug(1, "Processing cached branch $flow_to_branch");
+
+    if ($flow_to_branch =~ /_replicate$/) {
+    
+      # This is where the replicates are seeded for processing. This should never be run and can be removed.
+      die();
+
+      foreach my $rep_set (keys %{$branch_sets{$flow_to_branch}}) {
         #Add semaphore RunIDR job
-        $self->branch_job_group($branch, $branch_sets{$branch}{$rep_set}{output_ids}, 'PreprocessIDR', 
-                                [{%batch_params,
-                                 dbIDs     => $branch_sets{$branch}{$rep_set}{dbIDs},
-                                 set_names => $branch_sets{$branch}{$rep_set}{set_names},
-                                 set_type  => 'ResultSet'}]);
-      }           
-    }       
-    elsif($branch =~ /_control$/){    
+        $self->branch_job_group(
+	  # Fan
+	  #
+	  $flow_to_branch, 
+	  $branch_sets{$flow_to_branch}{$rep_set}{output_ids}, 
+	  # Funnel
+	  #
+	  'PreprocessIDR', 
+	  [
+	    {
+	      %batch_params,
+	      dbIDs     => $branch_sets{$flow_to_branch}{$rep_set}{dbIDs},
+	      set_names => $branch_sets{$flow_to_branch}{$rep_set}{set_names},
+	      set_type  => 'ResultSet'
+	    }
+	  ]
+	);
+      }
+    }
+
+    if ($flow_to_branch =~ /_control$/) {
+    
+      # This is where the controls are seeded for processing.
+
       #Pick an arbitrary set for access to the controls 
-      my ($any_group) = keys(%{$branch_sets{$branch}});
-   
-      #result_set_groups here is used by MergeControlAlignments_and_QC to flow correctly
-      $self->branch_job_group($branch, 
-                              [{%batch_params,
-                               result_set_groups => $branch_sets{$branch},
-                               set_type  => 'ResultSet',
-                               dbID      => $branch_sets{$branch}{$any_group}{dbIDs}->[0],
-                               set_name  => $branch_sets{$branch}{$any_group}{set_names}->[0]}]);   
+      my ($any_group) = keys(%{$branch_sets{$flow_to_branch}});
+
+      # result_set_groups has all the information necessary for 
+      # MergeControlAlignments_and_QC to create jobs for running the bwa 
+      # analysis triplet on the signals.
+      #
+      $self->branch_job_group(
+	$flow_to_branch,
+	[
+	  {
+	    %batch_params,
+	    result_set_groups => $branch_sets{$flow_to_branch},
+	    set_type  => 'ResultSet',
+	    dbID      => $branch_sets{$flow_to_branch}{$any_group}{dbIDs}->[0],
+	    set_name  => $branch_sets{$flow_to_branch}{$any_group}{set_names}->[0]
+	  }
+	]
+      );
     }
   }
   return;
