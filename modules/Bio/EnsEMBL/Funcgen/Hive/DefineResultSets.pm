@@ -52,10 +52,12 @@ sub fetch_input {   # fetch parameters...
   $self->get_param_method('alignment_analysis', 'required');
 
   # Undef in analysis DefineResultSets
+  # 1 in DefineMergedReplicateResultSet
+  #
+  # This is how this module knows where it is in the ersa pipeline and 
+  # changes its behaviour accordingly.
   #
   my $merge_idr_replicates = $self->get_param_method('merge_idr_replicates', 'silent');
-  
-  print "\n\n--------> $merge_idr_replicates \n\n";
 
   if($merge_idr_replicates) {
     
@@ -158,29 +160,54 @@ sub run {
   #
   my $merge_idr_replicates = $self->merge_idr_replicates;
   
-  print "\n----- merge_idr_replicates ----------------------------------------\n";
-  print Dumper($merge_idr_replicates);
-  print "\n-------------------------------------------------------------\n";
-   
-  foreach my $set_name(keys %$input_subset_ids) {
+  # Looks like this:
+  #
+  # input_subset_ids => {'K562:hist:BR1_H3K27me3_3526' => [3219,3245,3429],'controls' => [3458]}
+  #
+  foreach my $set_name (keys %$input_subset_ids) {
+  
+    # $set_name is 'K562:hist:BR1_H3K27me3_3526'
+    #
+    # $parent_set_name is 'K562:hist:BR1_H3K27me3_3526_bwa_samse'
+    #
     my $parent_set_name = $set_name.'_'.$alignment_analysis_object->logic_name;
     
-    my $signal_input_subsets = &scalars_to_objects($self->out_db, 'InputSubset',
-                                                  'fetch_by_dbID',
-                                                  $input_subset_ids->{$set_name});
-    if(! &_are_signals($signal_input_subsets)){
+    # $signal_input_subsets is set to the input sub set objects of
+    #
+    # [3219,3245,3429]
+    #
+    my $signal_input_subsets = &scalars_to_objects(
+      $self->out_db, 'InputSubset', 'fetch_by_dbID', $input_subset_ids->{$set_name}
+    );
+    
+    if (! &_are_signals($signal_input_subsets)) {
       throw("Found unexpected controls in signal InputSubsets\n\t".
       join("\n\t", map($_->name, @$signal_input_subsets)));
     }
 
+    # The object representing H3K27me3
+    #
     my $feature_type        = $signal_input_subsets->[0]->feature_type;
+    
+    # False, because H3K27me3 is a broad feature type.
+    #
     my $is_idr_feature_type = $self->is_idr_FeatureType($feature_type);
+    
+    # Cell type object for 'K562:hist:BR1'
+    #
     my $cell_type           = $signal_input_subsets->[0]->cell_type;
     
     #Define a single rep set with all of the InputSubsets 
     #i.e. non-IDR merged or post-IDR merged     
+    
+    # This is an array with one element. The one element is an array 
+    # reference to $signal_input_subsets.
+    #
     my @rep_sets = ($signal_input_subsets);
-    my $has_signal_replicates = (scalar(@$signal_input_subsets) >1) ? 1 : 0;    
+
+    # Evaluates to 1 for our example dataset.
+    #
+    my $has_signal_replicates = (scalar(@$signal_input_subsets) > 1) ? 1 : 0;
 
     # Only run in DefineResultSets analysis
     #
@@ -206,11 +233,6 @@ sub run {
               $rep_result_set_name); 
           }
       
-          #todo validate controls are the same
-          #This should already have been done in PreprocessIDR
-          #but probably a good idea to do here too
-          #As we may get here by means other than PreprocessIDR?
-                    
           push @{$replicate_bam_files{$parent_set_name}{rep_bams}}, 
             $self->get_alignment_files_by_ResultSet_formats($result_set, ['bam'])->{bam};
         }
@@ -235,12 +257,13 @@ sub run {
       $branch = $control_branch;
     }
     
-    
     foreach my $rep_set (@rep_sets) {
     
-      my $result_set_name = $parent_set_name;#.'_'.$alignment_analysis_object->logic_name;
+      # Reminder: $parent_set_name is 'K562:hist:BR1_H3K27me3_3526_bwa_samse'
+      #
+      my $result_set_name = $parent_set_name;
     
-      if($is_idr_feature_type && $has_signal_replicates && ! $merge_idr_replicates) {
+      if(! $merge_idr_replicates && $is_idr_feature_type && $has_signal_replicates) {
         # There will be only 1 in the $rep_set 
         $result_set_name .= '_TR'.$rep_set->[0]->replicate;
       }
@@ -256,11 +279,31 @@ sub run {
 	-CELL_TYPE           => $cell_type,
 	-FEATURE_TYPE        => $feature_type
       };
-
+      
+      # $run_reps is false, if $is_idr_ftype && $has_reps &&  $merge_idr_replicates
+      # $run_reps is 1,     if $is_idr_ftype && $has_reps && !$merge_idr_replicates
+      
+      # If run_reps = 1, then push on parent_set_name
+      # If run_reps is false, then push on merge
+      
       if(! $merge_idr_replicates) {
-	# branch can be replicate(no control) or control(with reps)  
-        $result_sets{$branch}->{$parent_set_name} ||= [];  
-        push @{$result_sets{$branch}->{$parent_set_name}}, $result_set_constructor_parameters
+      
+	print "\n is_idr_feature_type (" . $feature_type->name . ") = $is_idr_feature_type , has_signal_replicates = $has_signal_replicates \n";
+      
+	if ($is_idr_feature_type && $has_signal_replicates) {
+	
+	  # This goes to the branch with replicate signals
+	
+	  $result_sets{$branch}->{$parent_set_name} ||= [];  
+	  push @{$result_sets{$branch}->{$parent_set_name}}, $result_set_constructor_parameters
+	  
+	} else {
+	  
+	  # This goes to the branch for merged signals
+	  
+	  $result_sets{$branch}{merged} ||= [];
+	  push @{$result_sets{$branch}{merged}}, $result_set_constructor_parameters
+        }
       }
 
       if($merge_idr_replicates) {
@@ -277,9 +320,9 @@ sub run {
     }
   }
   
-  use Data::Dumper;
-  $Data::Dumper::Maxdepth = 3;
-  print Dumper(\%result_sets);
+#   use Data::Dumper;
+#   $Data::Dumper::Maxdepth = 4;
+#   print Dumper(\%result_sets);
   
   
   #Now do the actual ResultSet generation and cache the output_ids on the correct branch
@@ -287,7 +330,7 @@ sub run {
   my %branch_sets;
   my $tracking_adaptor = $self->tracking_adaptor;
 
-  foreach my $branch(keys %result_sets){
+  foreach my $branch(keys %result_sets) {
   
     foreach my $result_set_group_name (keys %{$result_sets{$branch}}){
       my $result_set_group = $result_sets{$branch}->{$result_set_group_name};
@@ -330,6 +373,7 @@ sub run {
         }
 
         if($branch eq 'Preprocess_bwa_samse_merged') {
+        
           $self->branch_job_group(
 	    'Preprocess_bwa_samse_merged', 
 	    [
@@ -376,14 +420,14 @@ sub run {
   
   
   #Now flow job_groups of result_sets to control job/replicate & IDR 
-  foreach my $flow_to_branch (keys %branch_sets){
+  foreach my $flow_to_branch (keys %branch_sets) {
   
     $self->helper->debug(1, "Processing cached branch $flow_to_branch");
 
     if ($flow_to_branch =~ /_replicate$/) {
     
       # This is where the replicates are seeded for processing. This should never be run and can be removed.
-      die();
+      die('Nothing should go here anymore.');
 
       foreach my $rep_set (keys %{$branch_sets{$flow_to_branch}}) {
         #Add semaphore RunIDR job
@@ -407,7 +451,7 @@ sub run {
       }
     }
 
-    if ($flow_to_branch =~ /_control$/) {
+    if ($flow_to_branch eq 'Preprocess_bwa_samse_control') {
     
       # This is where the controls are seeded for processing.
 
