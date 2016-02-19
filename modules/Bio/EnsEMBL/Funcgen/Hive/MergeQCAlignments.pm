@@ -1,6 +1,6 @@
 =head1 LICENSE
 
-Copyright [1999-2016] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -43,17 +43,18 @@ use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools;# merge_bams
 
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
-my %valid_flow_modes = (replicate => undef,
-                        merged    => undef,
-                        signal    => undef); 
+my %valid_flow_modes = (
+  replicate => undef,
+  merged    => undef,
+  signal    => undef
+); 
 
 sub fetch_input {  
   my $self = shift;
   
   $self->SUPER::fetch_input();
-  my $rset = $self->fetch_Set_input('ResultSet');
+  my $result_set = $self->fetch_Set_input('ResultSet');
   
-  $self->get_param_method('output_dir', 'required');
   $self->get_param_method('bam_files',  'silent');
   $self->get_param_method('fastq_files',  'silent');
     
@@ -68,38 +69,39 @@ sub fetch_input {
   my $flow_mode = $self->get_param_method('flow_mode',  'required');
   $self->set_param_method('run_controls', 0); 
   
-  
-  if(! exists $valid_flow_modes{$flow_mode}){
+  if(! exists $valid_flow_modes{$flow_mode}) {
     throw("$flow_mode is now a valid flow_mode parameter, please specify one of:\t".
       join(' ', keys %valid_flow_modes));  
   }
-  elsif($flow_mode eq 'signal'){
+  
+  if(($flow_mode ne 'signal') && $self->get_param_method('result_set_groups', 'silent')) {
+    throw("The $flow_mode flow mode is not valid for use with result_set_groups"); 
+  }
+
+  # flow mode is set to signal as a pipeline wide parameter in the merge 
+  # analysis that processes the controls.
+  #
+  if($flow_mode eq 'signal') {
+  
+    # result_set_groups are set in the control processing analyses 
+    # - Preprocess_bwa_samse_control and
+    # - MergeControlAlignments_and_QC 
+    #
+    # It looks like this:
+    # 
+    # "result_set_groups" => {
+    #   "KU812:hist:BR2_H3K27ac_3526_bwa_samse" => {"dbIDs" => [2283,2284,2285,2286,2287],"set_names" => ["KU812:hist:BR2_H3K27ac_3526_bwa_samse_TR2","KU812:hist:BR2_H3K27ac_3526_bwa_samse_TR4","KU812:hist:BR2_H3K27ac_3526_bwa_samse_TR5","KU812:hist:BR2_H3K27ac_3526_bwa_samse_TR1","KU812:hist:BR2_H3K27ac_3526_bwa_samse_TR3"]},
+    #   "KU812:hist:BR2_H3K4me3_3526_bwa_samse" => {"dbIDs" => [2288,2289,2290,2291,2292],"set_names" => ["KU812:hist:BR2_H3K4me3_3526_bwa_samse_TR5","KU812:hist:BR2_H3K4me3_3526_bwa_samse_TR4","KU812:hist:BR2_H3K4me3_3526_bwa_samse_TR1","KU812:hist:BR2_H3K4me3_3526_bwa_samse_TR2","KU812:hist:BR2_H3K4me3_3526_bwa_samse_TR3"]},
+    #   "merged" => {"dbIDs" => [2293],"set_names" => ["KU812:hist:BR2_H3K27me3_3526_bwa_samse"]}
+    # },
+    # 
     $self->get_param_method('result_set_groups', 'required');
     $self->run_controls(1); 
   }
-  elsif($self->get_param_method('result_set_groups', 'silent')){
-    throw("The $flow_mode flow mode is not valid for use with result_set_groups"); 
-  }
-  elsif($flow_mode eq 'replicate'){
+
+  if($flow_mode eq 'replicate'){
     $self->get_param_method('permissive_peaks', 'required');
   }
-  
-  #could have recreated output_dir and merged_file_name from ResultSet and run_controls
-  #as we did in MergeChunkResultSetFastqs, but passed for convenience
-  my $gender = $rset->cell_type->gender;
-  
-  # By default the file_gender is the same as the gender
-  my $file_gender = $gender;
-  
-  # There are no files for "mixed". The default we use is "female"
-  if ($gender eq 'mixed') {
-    $file_gender = 'female';
-  }
-  if (! defined $gender) {
-    $file_gender = 'male';
-  }
-
-  $self->sam_header($file_gender);
  
   $self->init_branching_by_analysis;
   return;
@@ -108,8 +110,7 @@ sub fetch_input {
 
 sub run {
   my $self       = shift;
-  my $rset       = $self->ResultSet;
-  my $sam_header = $self->sam_header;
+  my $result_set = $self->ResultSet;
   my $cmd;
   
   ### CLEAN FASTQS ###
@@ -121,7 +122,7 @@ sub run {
   }
   
   ### MERGE BAMS ###
-  my $file_prefix  = $self->get_alignment_path_prefix_by_ResultSet($rset, $self->run_controls); 
+  my $file_prefix  = $self->get_alignment_path_prefix_by_ResultSet($result_set, $self->run_controls); 
   my $unfiltered_bam     = $file_prefix.'.bam';
   
   $self->helper->debug(1, "Merging bams to:\t".$unfiltered_bam); 
@@ -143,82 +144,107 @@ sub run {
   unlink($unfiltered_bam);
   run_system_cmd("mv $tmp_bam $unfiltered_bam");
 
-  my %batch_params = %{$self->batch_params};
-  my $flow_mode    = $self->flow_mode;
-  
-  if($flow_mode ne 'signal'){   #flow_mode is merged or replicate
-    #This is a prime example of pros/cons of using branch numbers vs analysis names
-    #Any change in the analysis name conventions in the config will break this runnable
-    #However, it does mean we can change the permissive peaks analysis
-    #and branch without having to change the runnable at all i.e. we don't need to handle 
-    #any new branches in here 
-    
-    #Can of course just piggy back an analysis on the same branch
-    #But that will duplicate the jobs between analyses on the same branch
-    
-    my %output_id = (set_type    => 'ResultSet',
-                     set_name    => $self->ResultSet->name,
-                     dbID        => $self->ResultSet->dbID);
-
-    if(! $self->debug) {
-      $output_id{garbage} = $self->bam_files;
-    } else {  
-      # Do not garbage collect in debug mode. In case we need to rerun.
-      warn "Skipping garbage collection for:\n".join("\n\t", @{$self->bam_files});
-    }
-  
-    my $lname     = 'DefineMergedDataSet';  #flow mode eq merged
-
-    if($flow_mode eq 'replicate'){
-      $output_id{peak_analysis} = $self->permissive_peaks;
-      $lname                    = 'run_'.$self->permissive_peaks.'_replicate';  
-    }
-        
-    $self->branch_job_group($lname, [{%batch_params, %output_id}]);
-  } else { 
-    # Run signal fastqs
-    my $rset_groups = $self->result_set_groups;
-    my $align_anal  = $rset->analysis->logic_name;
-    
-    #This bit is very similar to some of the code in DefineResultSets
-    #just different enough not to be subbable tho 
-    
-    foreach my $rset_group(keys %{$rset_groups}) {
-      my @rep_or_merged_jobs;
-
-      for my $i(0...$#{$rset_groups->{$rset_group}{dbIDs}}){
-        push @rep_or_merged_jobs, {
-	  %batch_params,
-	  garbage     => $self->bam_files, 
-	  set_type    => 'ResultSet',
-	  set_name    => $rset_groups->{$rset_group}{set_names}->[$i],
-	  dbID        => $rset_groups->{$rset_group}{dbIDs}->[$i]
-	};
-      }
-      my $branch = ($rset_group eq 'merged') ? 
-        'Preprocess_'.$align_anal.'_merged' : 'Preprocess_'.$align_anal.'_replicate';   
-      
-      my @job_group = ($branch, \@rep_or_merged_jobs);   
-         
-      if($rset_group ne 'merged') {
-        # Add PreprocessIDR semaphore
-        push @job_group, ('PreprocessIDR', 
-                          [{%batch_params,
-                            dbIDs     => $rset_groups->{$rset_group}{dbIDs},
-                            set_names => $rset_groups->{$rset_group}{set_names},
-                            set_type  => 'ResultSet'}]);
-      }
-      $self->branch_job_group(@job_group);
-    }
-  }
   return;
 }
 
 sub write_output {
-  shift->dataflow_job_groups;
+
+  my $self = shift;
+
+  my $result_set   = $self->ResultSet;
+  my %batch_params = %{$self->batch_params};
+  my $flow_mode    = $self->flow_mode;
+  
+  if ($flow_mode eq 'merged') {
+  
+    my %output_id = (
+      set_type    => 'ResultSet',
+      set_name    => $self->ResultSet->name,
+      dbID        => $self->ResultSet->dbID,
+      garbage     => $self->bam_files,
+    );
+
+    $self->branch_job_group('DefineMergedDataSet', [{%batch_params, %output_id}]);
+  }
+  
+  if ($flow_mode eq 'replicate') {
+  
+    my %output_id = (
+      set_type      => 'ResultSet',
+      set_name      => $self->ResultSet->name,
+      dbID          => $self->ResultSet->dbID,
+      garbage       => $self->bam_files,
+      
+      # If flowing to replicate processing, set the permissive_peaks parameter.
+      # permissive_peaks is always set to "SWEmbl_R0005" in our runs.
+      #
+      peak_analysis => $self->permissive_peaks,
+    );
+
+    $self->branch_job_group('run_'.$self->permissive_peaks.'_replicate', [{%batch_params, %output_id}]);
+  }
+  
+  if ($flow_mode eq 'signal') {
+    # Run signal fastqs
+    my $result_set_groups               = $self->result_set_groups;
+    my $result_set_analysis_logic_name  = $result_set->analysis->logic_name;
+    
+    foreach my $current_result_set_group (keys %{$result_set_groups}) {
+    
+      my @rep_or_merged_jobs;
+
+      # This builds the jobs for the signal fastqs. The job descriptions are
+      # taken from the "result_set_groups". This is a hash that holds the
+      # information to build the next sets of jobs.
+      #
+      for my $i(0...$#{$result_set_groups->{$current_result_set_group}{dbIDs}}) {
+        push @rep_or_merged_jobs, {
+	  %batch_params,
+	  garbage     => $self->bam_files, 
+	  set_type    => 'ResultSet',
+	  set_name    => $result_set_groups->{$current_result_set_group}{set_names}->[$i],
+	  dbID        => $result_set_groups->{$current_result_set_group}{dbIDs}->[$i]
+	};
+      }
+
+      if ($current_result_set_group eq 'merged') {
+      
+	# This flows to Preprocess_bwa_samse_merged.
+	#
+	$self->branch_job_group(
+	  'Preprocess_'.$result_set_analysis_logic_name.'_merged', 
+	  \@rep_or_merged_jobs
+	);
+      }
+
+      if ($current_result_set_group ne 'merged') {
+
+	# This is run when flowing from the merging of controls. The fan
+	# job goes to Preprocess_bwa_samse_replicate, the funnel job to
+	# PreprocessIDR.
+	#
+	$self->branch_job_group(
+	
+	  # Fan job
+	  'Preprocess_'.$result_set_analysis_logic_name.'_replicate',
+	  \@rep_or_merged_jobs,
+	  
+	  # Funnel job
+	  'PreprocessIDR', [
+	    {
+	      dbIDs     => $result_set_groups->{$current_result_set_group}{dbIDs},
+	      set_names => $result_set_groups->{$current_result_set_group}{set_names},
+	      set_type  => 'ResultSet',
+	      %batch_params,
+	    }
+	  ]
+	);
+      }
+    }
+  }
+  
+  $self->dataflow_job_groups;
   return;
 }
-
-
 
 1;
