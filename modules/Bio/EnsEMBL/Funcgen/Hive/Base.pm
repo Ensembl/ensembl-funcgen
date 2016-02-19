@@ -1974,7 +1974,14 @@ sub archive_files {
 #This ! grep is fine, although it returns an empty string instead of 0
 #as oppose to 1, when nothing is returned from grep
 
-sub is_idr_FeatureType{
+=head2 is_idr_FeatureType
+
+  Everything is an idr feature type unless it is a broad peak feature type.
+  
+  If no_idr has been set, nothing is an idr feature type.
+
+=cut
+sub is_idr_FeatureType {
   my $self  = shift;
   my $ftype = shift;
   assert_ref($ftype, 'Bio::EnsEMBL::Funcgen::FeatureType');
