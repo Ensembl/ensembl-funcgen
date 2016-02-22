@@ -313,7 +313,8 @@ sub _true_tables {
 #Allows for absent result_set_input entries, in conjunction with omiting _default_where
 
 sub _left_join {
-  return (['dbfile_registry', '(rs.result_set_id=dr.table_id AND dr.table_name="result_set")']);
+  return ([ 'result_set_input', '(rs.result_set_id=rsi.result_set_id)' ],
+          ['dbfile_registry', '(rs.result_set_id=dr.table_id AND dr.table_name="result_set")']);
 }
 
 
@@ -357,7 +358,7 @@ sub _columns {
 =cut
 
 sub _default_where_clause {
-  return 'rs.result_set_id = rsi.result_set_id';
+  return '';
 }
 
 
