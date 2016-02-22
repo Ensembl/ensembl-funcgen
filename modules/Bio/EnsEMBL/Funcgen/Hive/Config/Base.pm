@@ -71,7 +71,7 @@ sub resource_classes {
      normal_monitored_2GB    => {'LSF' => " -M2000 -R\"select[mem>2000]".
                                                 " rusage[mem=2000]\"" },
      normal_monitored_4GB    => {'LSF' => " -M4000 -R\"select[mem>4000] rusage[mem=4000]\"" },
-     normal_4GB_2cpu         => {'LSF' => " -n2 M4000 -R\"select[mem>4000] rusage[mem=4000]\"" },  
+     normal_4GB_2cpu         => {'LSF' => " -n2 -M4000 -R\"select[mem>4000] rusage[mem=4000]\"" },  
      normal_monitored_8GB    => {'LSF' => " -M8000 -R\"select[mem>8000] rusage[mem=8000]\"" },
      normal_monitored_8GB_2cpu => {'LSF' => " -n2 -M8000 -R\"select[mem>8000] rusage[mem=8000]\"" },   
      normal_monitored_16GB   => {'LSF' => " -M16000 -R\"select[mem>16000] rusage[mem=16000]\"" }, 
