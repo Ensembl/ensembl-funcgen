@@ -83,7 +83,9 @@ sub fetch_input {
   #
   if($flow_mode eq 'signal') {
   
-    # result_set_groups are set in the control processing analyses 
+    # result_set_groups are present in the jobs of the control processing
+    # analyses 
+    #
     # - Preprocess_bwa_samse_control and
     # - MergeControlAlignments_and_QC 
     #
@@ -112,7 +114,7 @@ sub run {
   my $self       = shift;
   my $result_set = $self->ResultSet;
   my $cmd;
-  
+
   ### CLEAN FASTQS ###
   if($self->fastq_files){
     #Run with no exit flag so we don't fail on retry
