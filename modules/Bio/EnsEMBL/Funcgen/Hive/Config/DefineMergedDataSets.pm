@@ -60,11 +60,10 @@ sub pipeline_analyses {
   return [
     {
       -logic_name => 'DefineMergedDataSet', 
-      -module     => 'Bio::EnsEMBL::Funcgen::Hive::DefineDataSet',
+      -module     => 'Bio::EnsEMBL::Funcgen::Hive::DefineMergedReplicateResultSet',
       -parameters => {
 	default_feature_set_analyses => $self->o('default_peak_analyses'),
 	feature_set_analysis_type    => 'peak',
-	check_analysis_can_run       => 1,
       },
       -flow_into => {
 	1 => [ 'PreprocessAlignments' ],
