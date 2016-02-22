@@ -61,9 +61,6 @@ use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
   
 sub fetch_input {   # fetch parameters...
   my $self = shift;
-  #Set some module defaults
-  $self->param('disconnect_if_idle', 1);
-  $self->check_analysis_can_run;
   
   $self->SUPER::fetch_input();
 

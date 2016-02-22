@@ -64,7 +64,6 @@ use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
 sub fetch_input {   # fetch parameters...
   my $self = shift;
-  $self->check_analysis_can_run;
   $self->SUPER::fetch_input;
   
   if($self->param_required('set_type') ne 'ResultSet'){

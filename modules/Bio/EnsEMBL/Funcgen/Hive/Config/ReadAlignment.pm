@@ -11,7 +11,8 @@ sub default_options {
     %{$self->SUPER::default_options},
 
       #Size of each sequence chunk to be aligned (nbr of reads * 4)
-      fastq_chunk_size      => 16000000, #This should run in 30min-1h
+      #fastq_chunk_size      => 16000000, #This should run in 30min-1h
+      fastq_chunk_size      => 64000000, #This should run in 30min-1h
       alignment_analysis    => 'bwa_samse',
       bwa_samse_param_methods     => ['sam_ref_fai'],
       fastq_root_dir => $self->o('data_root_dir').'/fastq',
@@ -157,22 +158,22 @@ sub pipeline_analyses {
     {
       -logic_name => 'Run_bwa_samse_control_chunk',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunAligner',
-      -batch_size => 1, #max parallelisation???
-      -analysis_capacity => 100,
+      -batch_size => 20,
+      #-analysis_capacity => 100,
       -rc_name => 'normal_10gb'
      },
     {
     -logic_name => 'Run_bwa_samse_merged_chunk',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunAligner',
-     -batch_size => 1, #max parallelisation???
-     -analysis_capacity => 100,
+     -batch_size => 20,
+     #-analysis_capacity => 100,
      -rc_name => 'normal_10gb'
      },
     {
       -logic_name => 'Run_bwa_samse_replicate_chunk',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunAligner',
-      -batch_size => 1, #max parallelisation? Although probably want to up this so we don't hit pending time
-      -analysis_capacity => 100,
+      -batch_size => 20,
+      #-analysis_capacity => 100,
       -rc_name => 'normal_10gb'
      },
     {
@@ -217,7 +218,6 @@ sub pipeline_analyses {
       -logic_name    => 'run_SWEmbl_R0005_replicate',  #SWEmbl permissive
       -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunPeaks',
       -parameters => {
-	check_analysis_can_run => 1,
 	peak_analysis => $self->o('permissive_peaks'),
       },
       -analysis_capacity => 10,
@@ -229,7 +229,6 @@ sub pipeline_analyses {
      -batch_size => 30,
      -rc_name    => 'default',
      -parameters => {
-	check_analysis_can_run => 1,
 	permissive_peaks => $self->o('permissive_peaks'),
       },
      },

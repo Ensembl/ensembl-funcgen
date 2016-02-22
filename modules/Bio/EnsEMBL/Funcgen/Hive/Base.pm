@@ -920,41 +920,6 @@ sub _dataflow_params_by_list {
   return \%param_values;
 }
 
-sub check_analysis_can_run{
-  my $self    = shift; 
-  my $check   = $self->param_silent('check_analysis_can_run');
-  my $can_run = 1;
-  
-  if((defined $check) && $check){
-    #Might be undef, in which case we can run
-    #Not false i.e. not 0 but can be a string
-    #my $lname     = $self->analysis->logic_name;
-    
-    my $input_job = $self->input_job;
-    
-    my $lname     = $input_job->analysis->logic_name;
-    
-    my $run_param = 'can_'.$lname; 
-    $can_run      = $self->param_required($run_param);
-   
-    if(! $can_run){ #0 or specified as undef
-    
-      #Set this as a success, as the beekeeper will bail
-      #if we start seeing persistant failures
-      #These jobs, will be reset by configure_hive.pl
-      #when topping up with the relevant conf
-    
-      $self->input_job->incomplete( 0 );
-      #so we don't retry and the job is not marked as Failed
-      
-      #$self->input_job->transient_error(0); #So we don't retry  
-      die("$lname has aborted as $run_param == 0 || undef"); 
-    }  
-  }
-    
-  return;
-}
-
 sub sam_ref_fai {
   my $self        = shift;
   my $gender      = shift; 
