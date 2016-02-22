@@ -261,6 +261,7 @@ CREATE TABLE if not exists `result_set_qc_phantom_peak` (
   `NSC`      double default NULL,
   `RSC`      double default NULL,
   `QualityTag` int(10),
+  `path` varchar(100) NOT NULL,
   PRIMARY KEY (`result_set_qc_phantom_peak_id`),
   UNIQUE KEY `filename_idx` (`filename`)
 );

@@ -520,6 +520,7 @@ CREATE TABLE if not exists `feature_set_qc_prop_reads_in_peaks` (
   `feature_set_id` int(10) unsigned NOT NULL,
   `prop_reads_in_peaks`       double default NULL,
   `total_reads`      int(10) default NULL,
+  `path` varchar(100) NOT NULL,
   PRIMARY KEY (`feature_set_qc_prop_reads_in_peaks_id`)
 );
 SQL

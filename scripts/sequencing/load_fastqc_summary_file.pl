@@ -114,6 +114,7 @@ CREATE TABLE if not exists `input_subset_fastqc` (
   `status` varchar(100) NOT NULL,
   `title` varchar(100) NOT NULL,
   `file_name` varchar(100) NOT NULL,
+  `path` varchar(100) NOT NULL,
   PRIMARY KEY (`input_subset_qc_id`),
   UNIQUE KEY `name_exp_idx` (`input_subset_id`,`title`)
 ) ENGINE=MyISAM;

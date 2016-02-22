@@ -182,6 +182,7 @@ CREATE TABLE if not exists `result_set_qc_flagstats` (
   `category` varchar(100) NOT NULL,
   `qc_passed_reads`    int(10) unsigned,
   `qc_failed_reads`    int(10) unsigned,
+  `path` varchar(100) NOT NULL,
   PRIMARY KEY (`result_set_qc_id`),
   UNIQUE KEY `name_exp_idx` (`result_set_qc_id`,`category`)
 );
