@@ -98,7 +98,7 @@ while (my $current_line = <IN>) {
   #print " - $current_line\n";
   my @f = split "\t", $current_line;
   #print Dumper(\@f);
-  my $sql = "INSERT INTO input_subset_fastqc (input_subset_id,status,title,file_name) VALUES (".$input_subset_id.", '".$f[0]."', '".$f[1]."', '".$f[2]."')";
+  my $sql = "INSERT ignore INTO input_subset_fastqc (input_subset_id,status,title,file_name) VALUES (".$input_subset_id.", '".$f[0]."', '".$f[1]."', '".$f[2]."')";
   
   print "$sql;\n";
 }
