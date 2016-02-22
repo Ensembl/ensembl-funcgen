@@ -98,8 +98,8 @@ sub pipeline_analyses {
       }, 
     },
     {
-      -logic_name    => 'DefineMergedReplicateResultSet',
-     -module        => 'Bio::EnsEMBL::Funcgen::Hive::DefineResultSets',
+     -logic_name    => 'DefineMergedReplicateResultSet',
+     -module        => 'Bio::EnsEMBL::Funcgen::Hive::DefineMergedReplicateResultSet',
      -analysis_capacity => 100,
      -rc_name => 'default',
      -flow_into => { '2' => [ 'DefineMergedDataSet' ] },
