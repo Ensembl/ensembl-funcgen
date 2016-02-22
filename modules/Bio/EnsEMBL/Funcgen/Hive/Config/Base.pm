@@ -64,14 +64,14 @@ sub resource_classes {
   my $self = shift;
   return {
      default                 => { 'LSF' => '' },    
-     normal_2GB              => { 'LSF' => ' -M2000 -R"select[mem>2000] rusage[mem=2000]"' },
+     normal_2GB              => { 'LSF' => ' -M2000 -R"select[mem>2000] rusage[mem=2000] span[hosts=1]"' },
      normal_monitored        => { 'LSF' => "" },
-     normal_high_mem         => { 'LSF' => ' -M5000 -R"select[mem>5000] rusage[mem=5000]"' },
+     normal_high_mem         => { 'LSF' => ' -M5000 -R"select[mem>5000] rusage[mem=5000] span[hosts=1]"' },
      normal_high_mem_2cpu    => { 'LSF' => ' -n2 -M5000 -R"select[mem>5000] rusage[mem=5000] span[hosts=1]"' },
      normal_monitored_2GB    => {'LSF' => " -M2000 -R\"select[mem>2000]".
-                                                " rusage[mem=2000]\"" },
-     normal_monitored_4GB    => {'LSF' => " -M4000 -R\"select[mem>4000] rusage[mem=4000]\"" },
-     normal_4GB_2cpu         => {'LSF' => " -n2 -M4000 -R\"select[mem>4000] rusage[mem=4000]\"" },  
+                                                " rusage[mem=2000] span[hosts=1]\"" },
+     normal_monitored_4GB    => {'LSF' => " -M4000 -R\"select[mem>4000] rusage[mem=4000] span[hosts=1]\"" },
+     normal_4GB_2cpu         => {'LSF' => " -n2 -M4000 -R\"select[mem>4000] rusage[mem=4000] span[hosts=1]\"" },
      normal_monitored_8GB    => {'LSF' => " -M8000 -R\"select[mem>8000] rusage[mem=8000]\"" },
      normal_monitored_8GB_2cpu => {'LSF' => " -n2 -M8000 -R\"select[mem>8000] rusage[mem=8000]\"" },   
      normal_monitored_16GB   => {'LSF' => " -M16000 -R\"select[mem>16000] rusage[mem=16000]\"" }, 
@@ -81,12 +81,12 @@ sub resource_classes {
      normal_30GB_2cpu        => {'LSF' => ' -n2 -M30000 -R"select[mem>30000] rusage[mem=30000] span[hosts=1]"' },
      normal_30GB_3cpu        => {'LSF' => ' -n3 -M30000 -R"select[mem>30000] rusage[mem=30000] span[hosts=1]"' },
      '64GB_3cpu'             => {'LSF' => ' -n3 -M64000 -R"select[mem>64000] rusage[mem=64000] span[hosts=1]"' },
-     normal_10gb_monitored   => {'LSF' => " -M10000 -R\"select[mem>10000] rusage[mem=10000]\"" },
+     normal_10gb_monitored   => {'LSF' => " -M10000 -R\"select[mem>10000] rusage[mem=10000] span[hosts=1]\"" },
      normal_5GB_2cpu_monitored => {'LSF' => " -n2 -M5000 -R\"select[mem>5000] rusage[mem=5000] span[hosts=1]\"" },
-     normal_10gb             => { 'LSF' => ' -M10000 -R"select[mem>10000] rusage[mem=10000]"' },
+     normal_10gb             => { 'LSF' => ' -M10000 -R"select[mem>10000] rusage[mem=10000] span[hosts=1]"' },
      long_monitored          => { 'LSF' => "-q long " },
-     long_high_mem           => { 'LSF' => '-q long -M4000 -R"select[mem>4000] rusage[mem=4000]"' },
-     long_monitored_high_mem => { 'LSF' => "-q long -M4000 -R\"select[mem>4000] rusage[mem=4000]\"" },
+     long_high_mem           => { 'LSF' => '-q long -M4000 -R"select[mem>4000] rusage[mem=4000] span[hosts=1]"' },
+     long_monitored_high_mem => { 'LSF' => "-q long -M4000 -R\"select[mem>4000] rusage[mem=4000] span[hosts=1]\"" },
     };
 }
 
