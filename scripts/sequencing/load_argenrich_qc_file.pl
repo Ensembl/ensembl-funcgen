@@ -241,7 +241,7 @@ my $sql = <<SQL
   `control_enrichment_stronger_than_chip_at_bin`double default NULL,
   `zero_enriched_ip_maximum_difference_at_bin`double default NULL,
   `pcr_amplification_bias_in_Input_coverage_of_1_percent_of_genome`double default NULL,
-
+  `path` varchar(100) NOT NULL,
   PRIMARY KEY (`result_set_qc_chance_id`)
 );
 SQL
