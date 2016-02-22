@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 =head1 LICENSE
 
 Copyright [1999-2016] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
@@ -32,8 +31,6 @@ limitations under the License.
     Please contact http://lists.ensembl.org/mailman/listinfo/dev mailing list with questions/suggestions.
 
 =cut
-=======
->>>>>>> Tidy up and created new resource classes
 package Bio::EnsEMBL::Funcgen::Hive::Config::Base;
 
 use strict;
@@ -114,14 +111,9 @@ sub resource_classes {
      normal_16GB_2cpu        => {'LSF' => ' -n2 -M16000 -R"select[mem>16000] rusage[mem=16000] span[hosts=1]"' },
      normal_20GB_2cpu        => {'LSF' => ' -n2 -M20000 -R"select[mem>20000] rusage[mem=20000] span[hosts=1]"' }, 
      normal_25GB_2cpu        => {'LSF' => ' -n2 -M25000 -R"select[mem>25000] rusage[mem=25000] span[hosts=1]"' }, 
-<<<<<<< HEAD
-     normal_30GB_2cpu        => {'LSF' => ' -n2 -M30000 -R"select[mem>30000] rusage[mem=30000] span[hosts=1]"' },      
-     normal_30GB_3cpu        => {'LSF' => ' -n3 -M30000 -R"select[mem>30000] rusage[mem=30000] span[hosts=1]"' },      
-=======
      normal_30GB_2cpu        => {'LSF' => ' -n2 -M30000 -R"select[mem>30000] rusage[mem=30000] span[hosts=1]"' },
      normal_30GB_3cpu        => {'LSF' => ' -n3 -M30000 -R"select[mem>30000] rusage[mem=30000] span[hosts=1]"' },
      '64GB_3cpu'             => {'LSF' => ' -n3 -M64000 -R"select[mem>64000] rusage[mem=64000] span[hosts=1]"' },
->>>>>>> Tidy up and created new resource classes
      normal_10gb_monitored   => {'LSF' => " -M10000 -R\"select[mem>10000] rusage[mem=10000]\"" },
      normal_5GB_2cpu_monitored => {'LSF' => " -n2 -M5000 -R\"select[mem>5000] rusage[mem=5000] span[hosts=1]\"" },
      normal_10gb             => { 'LSF' => ' -M10000 -R"select[mem>10000] rusage[mem=10000]"' },
