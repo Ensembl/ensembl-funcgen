@@ -115,6 +115,8 @@ sub run {
   my $result_set = $self->ResultSet;
   my $cmd;
 
+  return;
+  
   ### CLEAN FASTQS ###
   if($self->fastq_files){
     #Run with no exit flag so we don't fail on retry
@@ -191,16 +193,38 @@ sub write_output {
     my $result_set_groups               = $self->result_set_groups;
     my $result_set_analysis_logic_name  = $result_set->analysis->logic_name;
     
+    if (exists $result_set_groups->{'merged'}) {
+
+      my @merged_jobs;
+
+      for my $i(0...$#{$result_set_groups->{'merged'}{dbIDs}}) {
+        push @merged_jobs, {
+	  %batch_params,
+	  garbage     => $self->bam_files, 
+	  set_type    => 'ResultSet',
+	  set_name    => $result_set_groups->{'merged'}{set_names}->[$i],
+	  dbID        => $result_set_groups->{'merged'}{dbIDs}->[$i]
+	};
+      }
+      # This flows to Preprocess_bwa_samse_merged.
+      #
+      $self->branch_job_group(
+	'Preprocess_'.$result_set_analysis_logic_name.'_merged', 
+	\@merged_jobs
+      );
+      delete $result_set_groups->{'merged'};
+    }
+    
     foreach my $current_result_set_group (keys %{$result_set_groups}) {
     
-      my @rep_or_merged_jobs;
+      my @replicate_jobs;
 
       # This builds the jobs for the signal fastqs. The job descriptions are
       # taken from the "result_set_groups". This is a hash that holds the
       # information to build the next sets of jobs.
       #
       for my $i(0...$#{$result_set_groups->{$current_result_set_group}{dbIDs}}) {
-        push @rep_or_merged_jobs, {
+        push @replicate_jobs, {
 	  %batch_params,
 	  garbage     => $self->bam_files, 
 	  set_type    => 'ResultSet',
@@ -209,39 +233,27 @@ sub write_output {
 	};
       }
 
-      if ($current_result_set_group eq 'merged') {
+      # This is run when flowing from the merging of controls. The fan
+      # job goes to Preprocess_bwa_samse_replicate, the funnel job to
+      # PreprocessIDR.
+      #
+      $self->branch_job_group(
       
-	# This flows to Preprocess_bwa_samse_merged.
-	#
-	$self->branch_job_group(
-	  'Preprocess_'.$result_set_analysis_logic_name.'_merged', 
-	  \@rep_or_merged_jobs
-	);
-      }
-
-      if ($current_result_set_group ne 'merged') {
-
-	# This is run when flowing from the merging of controls. The fan
-	# job goes to Preprocess_bwa_samse_replicate, the funnel job to
-	# PreprocessIDR.
-	#
-	$self->branch_job_group(
+	# Fan job
+	'Preprocess_'.$result_set_analysis_logic_name.'_replicate',
+	\@replicate_jobs,
 	
-	  # Fan job
-	  'Preprocess_'.$result_set_analysis_logic_name.'_replicate',
-	  \@rep_or_merged_jobs,
-	  
-	  # Funnel job
-	  'PreprocessIDR', [
-	    {
-	      dbIDs     => $result_set_groups->{$current_result_set_group}{dbIDs},
-	      set_names => $result_set_groups->{$current_result_set_group}{set_names},
-	      set_type  => 'ResultSet',
-	      %batch_params,
-	    }
-	  ]
-	);
-      }
+	# Funnel job
+	'PreprocessIDR', [
+	  {
+	    dbIDs     => $result_set_groups->{$current_result_set_group}{dbIDs},
+	    set_names => $result_set_groups->{$current_result_set_group}{set_names},
+	    set_type  => 'ResultSet',
+	    %batch_params,
+	  }
+	]
+      );
+
     }
   }
   
