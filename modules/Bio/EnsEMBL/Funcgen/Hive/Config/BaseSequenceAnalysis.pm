@@ -84,7 +84,7 @@ sub pipeline_analyses {
   return [
     {
      -logic_name  => 'DefineMergedDataSet',
-     -module      => 'Bio::EnsEMBL::Funcgen::Hive::DefineMergedReplicateResultSet',
+     -module      => 'Bio::EnsEMBL::Funcgen::Hive::DefineDataSet',
      -parameters  => {
        default_feature_set_analyses => $self->o('default_peak_analyses'),
        feature_set_analysis_type    => 'peak',
