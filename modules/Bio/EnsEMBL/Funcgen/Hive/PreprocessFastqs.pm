@@ -174,14 +174,18 @@ sub run {
  
   my $set_prefix = get_set_prefix_from_Set($rset, $run_controls).
     '_'.$rset->analysis->logic_name.$set_rep_suffix; 
+    
+  my $current_working_directory = $self->work_dir . '/' . $rset->dbID;
+  
+  run_system_cmd("mkdir -p $current_working_directory");
 
   # For safety, clean away any that match the prefix
   # No exit flag, in case rm fails due to no old files
   #
-  run_system_cmd('rm -f '.$self->work_dir."/${set_prefix}.fastq_*", 1);
+  run_system_cmd('rm -f '.$current_working_directory."/${set_prefix}.fastq_*", 1);
 
   my $cmd = 'zcat '.join(' ', @fastqs).' | split --verbose -d -a 4 -l '.
-    $self->fastq_chunk_size.' - '.$self->work_dir.'/'.$set_prefix.'.fastq_';
+    $self->fastq_chunk_size.' - '.$current_working_directory.'/'.$set_prefix.'.fastq_';
 
   $self->helper->debug(1, "Running chunk command:\n$cmd");
   
@@ -194,7 +198,7 @@ sub run {
   }
   
   # Get files to data flow to individual alignment jobs
-  my @fastq_files = run_backtick_cmd('ls '.$self->work_dir."/${set_prefix}.fastq_*");
+  my @fastq_files = run_backtick_cmd('ls '.$current_working_directory."/${set_prefix}.fastq_*");
   @fastq_files    = sort {$a cmp $b} @fastq_files;
   
   # Now do some sanity checking to make sure we have all the files
@@ -220,7 +224,7 @@ sub run {
   foreach my $fastq_file(@{$self->fastq_files}) {
 
     $self->branch_job_group(2, [{%batch_params,
-                                 output_dir => $self->work_dir, #we could regenerate this from result_set and run controls
+                                 output_dir => $current_working_directory, #we could regenerate this from result_set and run controls
 
                                  gender     => $rset->cell_type->gender,
                                  analysis   => $rset->analysis->logic_name,   
