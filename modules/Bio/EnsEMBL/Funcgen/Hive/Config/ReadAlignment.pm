@@ -129,7 +129,7 @@ sub pipeline_analyses {
 	},
       -batch_size => 1, #max parallelisation???
       -analysis_capacity => 200,
-      -rc_name => 'normal_high_mem'
+      -rc_name => '10gb_1cpu_staggered'
      },
      {
       -logic_name => 'Preprocess_bwa_samse_merged',
@@ -142,7 +142,7 @@ sub pipeline_analyses {
 	},
       -batch_size => 1, #max parallelisation???
       -analysis_capacity => 200,
-      -rc_name => 'normal_high_mem'
+      -rc_name => '10gb_1cpu_staggered'
      },
      {
       -logic_name => 'Preprocess_bwa_samse_replicate',
@@ -153,7 +153,7 @@ sub pipeline_analyses {
 	},
       -batch_size => 1, #max parallelisation???
       -analysis_capacity => 200,
-      -rc_name => 'normal_high_mem'
+      -rc_name => '10gb_1cpu_staggered'
      },
     {
       -logic_name => 'Run_bwa_samse_control_chunk',
