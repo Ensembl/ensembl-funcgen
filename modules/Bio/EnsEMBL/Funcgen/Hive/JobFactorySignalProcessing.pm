@@ -32,6 +32,16 @@ use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
 sub fetch_input {
   my $self = shift;
+  
+  # This sets out_db which is needed to get a ResultSetAdapter in the next 
+  # command.
+  #
+  $self->SUPER::fetch_input();
+  
+  $self->fetch_Set_input('ResultSet');
+  $self->get_param_method('result_set_groups', 'required');
+  $self->get_param_method('bam_files',  'silent');
+  
   $self->init_branching_by_analysis;
   return;
 }
