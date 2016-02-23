@@ -78,29 +78,6 @@ sub fetch_input {
     throw("The $flow_mode flow mode is not valid for use with result_set_groups"); 
   }
 
-#   # flow mode is set to signal as a pipeline wide parameter in the merge 
-#   # analysis that processes the controls.
-#   #
-#   if($flow_mode eq 'signal') {
-#   
-#     # result_set_groups are present in the jobs of the control processing
-#     # analyses 
-#     #
-#     # - Preprocess_bwa_samse_control and
-#     # - MergeControlAlignments_and_QC 
-#     #
-#     # It looks like this:
-#     # 
-#     # "result_set_groups" => {
-#     #   "KU812:hist:BR2_H3K27ac_3526_bwa_samse" => {"dbIDs" => [2283,2284,2285,2286,2287],"set_names" => ["KU812:hist:BR2_H3K27ac_3526_bwa_samse_TR2","KU812:hist:BR2_H3K27ac_3526_bwa_samse_TR4","KU812:hist:BR2_H3K27ac_3526_bwa_samse_TR5","KU812:hist:BR2_H3K27ac_3526_bwa_samse_TR1","KU812:hist:BR2_H3K27ac_3526_bwa_samse_TR3"]},
-#     #   "KU812:hist:BR2_H3K4me3_3526_bwa_samse" => {"dbIDs" => [2288,2289,2290,2291,2292],"set_names" => ["KU812:hist:BR2_H3K4me3_3526_bwa_samse_TR5","KU812:hist:BR2_H3K4me3_3526_bwa_samse_TR4","KU812:hist:BR2_H3K4me3_3526_bwa_samse_TR1","KU812:hist:BR2_H3K4me3_3526_bwa_samse_TR2","KU812:hist:BR2_H3K4me3_3526_bwa_samse_TR3"]},
-#     #   "merged" => {"dbIDs" => [2293],"set_names" => ["KU812:hist:BR2_H3K27me3_3526_bwa_samse"]}
-#     # },
-#     # 
-#     $self->get_param_method('result_set_groups', 'required');
-#     $self->run_controls(1); 
-#   }
-
   if($flow_mode eq 'replicate') {
     $self->get_param_method('permissive_peaks', 'required');
   }
