@@ -230,7 +230,7 @@ sub get_Slice {
 #although each analysis 'should' know which methods will be available
 #due to the dataf flow input
 
-sub fetch_Set_input{
+sub fetch_Set_input {
   my ($self, $return_set_type) = @_;
   
   if(! defined $return_set_type){
@@ -251,18 +251,26 @@ sub fetch_Set_input{
   
   my $adaptor_method = 'get_'.$set_type.'Adaptor'; 
   print("Fetching $set_name $set_type with dbID $dbid using adaptor $adaptor_method");
-  my $set            = $db->$adaptor_method->fetch_by_dbID($dbid);
+  my $set;
+  
+  eval {
+    $set            = $db->$adaptor_method->fetch_by_dbID($dbid);
+  };
+  if ($@) {
+    use Carp;
+    confess($@);
+  }
 #  my $set            = $db->$adaptor_method->fetch_all();
 #   print Dumper($set);
 #   die();
   
   if(! defined $set) {
     use Data::Dumper;
-    print Dumper($db);
-    $Data::Dumper::Maxdepth = 0;
-    print Dumper($db->$adaptor_method);
-    print Dumper($adaptor_method);
-    print Dumper($set);
+#     print Dumper($db);
+#     $Data::Dumper::Maxdepth = 0;
+#     print Dumper($db->$adaptor_method);
+#     print Dumper($adaptor_method);
+#     print Dumper($set);
     
     throw("Could not fetch $set_type with dbID $dbid ($set_name)"); 
   }
