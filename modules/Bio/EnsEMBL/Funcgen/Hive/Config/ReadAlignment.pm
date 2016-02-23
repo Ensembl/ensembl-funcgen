@@ -220,10 +220,20 @@ sub pipeline_analyses {
 	flow_mode => 'replicate',
 	permissive_peaks => $self->o('permissive_peaks')
       },
-     -flow_into => {'100' => ['run_SWEmbl_R0005_replicate']},
+     -flow_into => {
+	1 => 'JobFactoryPermissivePeakCalling'
+     },
      -batch_size => 1, #max parallelisation
      -analysis_capacity => 200,
      -rc_name => '64GB_3cpu',
+    },
+    {
+      -logic_name => 'JobFactoryPermissivePeakCalling',
+      -module     => 'Bio::EnsEMBL::Funcgen::Hive::JobFactoryPermissivePeakCalling',
+      -flow_into => {
+	'100' => 'run_SWEmbl_R0005_replicate'
+      },
+      -meadow_type=> 'LOCAL',
     },
     {
       -logic_name    => 'run_SWEmbl_R0005_replicate',  #SWEmbl permissive
