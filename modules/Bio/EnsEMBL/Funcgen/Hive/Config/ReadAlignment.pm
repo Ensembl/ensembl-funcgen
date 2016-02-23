@@ -12,7 +12,7 @@ sub default_options {
 
       #Size of each sequence chunk to be aligned (nbr of reads * 4)
       #fastq_chunk_size      => 16000000, #This should run in 30min-1h
-      fastq_chunk_size      => 64000000, #This should run in 30min-1h
+      fastq_chunk_size      =>   1000000,
       alignment_analysis    => 'bwa_samse',
       bwa_samse_param_methods     => ['sam_ref_fai'],
       fastq_root_dir => $self->o('data_root_dir').'/fastq',
@@ -181,17 +181,28 @@ sub pipeline_analyses {
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::MergeQCAlignments',
      -parameters => {flow_mode => 'signal'},
      -flow_into => {
-       #2 is reserved for other Define DataSet flow (single vs multiple ResultSets).
-       # Although isn't really required as the branching is handled dynamically
-       #but let's keep it clean here for now.
-       'A->3'  => [ 'PreprocessIDR' ],
-       #alignment analyses encoded in blocks of 10
-       '10'    => ['Preprocess_bwa_samse_merged'],
-       '11->A' => ['Preprocess_bwa_samse_replicate'],
+#        #2 is reserved for other Define DataSet flow (single vs multiple ResultSets).
+#        # Although isn't really required as the branching is handled dynamically
+#        #but let's keep it clean here for now.
+#        'A->3'  => [ 'PreprocessIDR' ],
+#        #alignment analyses encoded in blocks of 10
+#        '10'    => ['Preprocess_bwa_samse_merged'],
+#        '11->A' => ['Preprocess_bwa_samse_replicate'],
+	  1 => 'JobFactorySignalProcessing',
        },
      -batch_size => 1, #max parallelisation
      -analysis_capacity => 200,
      -rc_name => '64GB_3cpu',
+    },
+    {
+      -logic_name => 'JobFactorySignalProcessing',
+      -module     => 'Bio::EnsEMBL::Funcgen::Hive::JobFactorySignalProcessing',
+      -flow_into => {
+	'A->3'  => [ 'PreprocessIDR'                 ],
+	'10'    => [ 'Preprocess_bwa_samse_merged'   ],
+	'11->A' => [ 'Preprocess_bwa_samse_replicate'],
+      },
+      -meadow_type=> 'LOCAL',
     },
     {
       -logic_name => 'MergeAlignments_and_QC',
