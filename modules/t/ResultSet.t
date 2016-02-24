@@ -37,7 +37,14 @@ use Test::Exception;  # throws_ok # This only work when Error objects are used
 # switch on the debug prints
 our $verbose = 0;
 
-#obtain Adaptors for dnabb and funcgen databases
+# ---------------
+# Module compiles
+# ---------------
+BEGIN { use_ok('Bio::EnsEMBL::Funcgen::ResultSet'); }
+
+# ------------------------------
+# Setup test database connection
+# ------------------------------
 my $multi  = Bio::EnsEMBL::Test::MultiTestDB->new();
 my $db     = $multi->get_DBAdaptor('funcgen');
 isa_ok($db, 'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor', 'Test database instantiated');
@@ -47,14 +54,79 @@ isa_ok($db, 'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor', 'Test database instantiat
 # START method_name testing
 # COMPLETED method_name testing
 
-#$db->dbc->db_handle; # Test DB
 
-my $rsa      = $db->get_adaptor('resultset');
-my $slice_a  = $db->dnadb->get_SliceAdaptor;
+my $rsa     = $db->get_adaptor('resultset');
+my $slice_a = $db->dnadb->get_SliceAdaptor;
+my $aa      = $db->get_adaptor("analysis");
+my $exp_a   = $db->get_adaptor('experiment');
+my $fta     = $db->get_adaptor("featuretype");
+my $issa    = $db->get_adaptor("inputsubset");
+
+# ----------------
+# Test constructor
+# ----------------
+my $analysis       = $aa->fetch_by_logic_name('SWEmbl_R0005_IDR');
+my $feature_type   = $fta->fetch_by_name('CTCF');
+my $new_result_set = Bio::EnsEMBL::Funcgen::ResultSet->new(
+    -analysis      => $analysis,
+    -feature_class => 'result',
+    -feature_type  => $feature_type,
+    -name          => 'new_result_set',
+    -table_name    => 'input_subset',
+    -replicate     => 3,
+    -adaptor       => $rsa,
+);
+
+isa_ok(
+    $new_result_set,
+    'Bio::EnsEMBL::Funcgen::ResultSet',
+    'ResultSet constructor result type'
+);
+
+throws_ok {
+    my $new_result_set = Bio::EnsEMBL::Funcgen::ResultSet->new(
+        -analysis      => $analysis,
+        -feature_class => 'result',
+        -feature_type  => $feature_type,
+        -name          => 'new_result_set',
+        -table_name    => 'invalid table_name',
+    );
+}
+qr/You need to pass a valid -table_name/,
+    "Test exception throw for invalid table_name ";
+
+
+throws_ok {
+    my $new_result_set = Bio::EnsEMBL::Funcgen::ResultSet->new(
+        -analysis      => $analysis,
+        -feature_class => 'result',
+        -feature_type  => $feature_type,
+        -name          => 'new_result_set',
+    );
+}
+qr/You must provide either a -support or a -table_name parameter/,
+    "Test exception throw for support or table name parameter";
+
+my $iss = $issa->fetch_by_name('SRR037563');
+
+throws_ok {
+    my $new_result_set = Bio::EnsEMBL::Funcgen::ResultSet->new(
+        -analysis      => $analysis,
+        -feature_class => 'result',
+        -feature_type  => $feature_type,
+        -name          => 'new_result_set',
+        -table_id      => 50,
+        -support       => [$iss],
+    );
+}
+qr/Unsafe to specify -support and -table_id, please use -support/,
+    "Test exception throw for support and table name parameter";
+
+
+
 my $exp_name = 'H1ESC_Tcf12_ENCODE_Hudsonalpha';
-my $exp      = $db->get_adaptor('experiment')->fetch_by_name($exp_name);
-    
-
+my $exp      = $exp_a->fetch_by_name($exp_name);
+ 
 SKIP:{
   if(! $exp){
     skip "Could not fetch test Experiment:\t$exp_name\nThis must have been removed from the DB, please choose another Experiment or fix the test DB";
@@ -90,7 +162,9 @@ if(! (defined $result_set && defined $result_set_2)){
   throw('Failed to fetch 2 ResultSets to test, please update ResultSet.t');  
 }
 
-
+# -----------------
+# Test compare_to()
+# -----------------
 # START testing compare_to
 
 my %diffs = %{$result_set->compare_to($result_set)};
@@ -127,7 +201,9 @@ throws_ok {$result_set->compare_to($result_set, undef, undef, [qw(name table_nam
 
 # COMPLETED testing compare_to
 
-
+# ----------------------------------
+# Test reset_relational_attributes()
+# ----------------------------------
 ## START testing reset_relational_attributes 
 
 # clone ResultSet, so we can change some attrs
@@ -220,6 +296,9 @@ ok($@, 'ResultSet::reset_relational_attributes no -support error');
 
 # COMPLETED testing reset_relational_attributes
 
+# ------------------
+# Test add_support()
+# ------------------
 # START testing add_support
 #my @orig_support   = @{$orig_support};
 #my @orig_support_2 = @{$result_set_2->get_support};
@@ -239,7 +318,9 @@ ok( ( ($new_support[0] eq $orig_support->[0])),
 eval { $clone_rset->add_support($orig_support) };
 ok($@, 'ResultSet::add_support caught duplicate support addition');  
 
-
+# ------------------
+# Test dbfile_path()
+# ------------------
 # START testing dbfile_path dbfile_data_root etc
 
 is($rsa->dbfile_data_root, '', 'ResultSetAdaptor default dbfile_data_root is null string');
@@ -258,4 +339,71 @@ is($result_set->dbfile_path,
 # hide table, store this result set and retest returned values
 
 
+# ----------------
+# Test replicate()
+# ----------------
+is($new_result_set->replicate(),3,'Test replicate()');
 
+# --------------------
+# Test display_label()
+# --------------------
+# TODO 
+
+# -----------------
+# Test table_name()
+# -----------------
+is($new_result_set->table_name(),'input_subset','Test table_name()');
+
+# --------------------
+# Test _add_table_id()
+# --------------------
+$new_result_set->_add_table_id(5, 1);
+is($new_result_set->{table_ids}->{'5'},1, 'Test _add_table_id()' );
+
+throws_ok {
+    $new_result_set->_add_table_id( 5, 1 );
+}
+qr/You are attempting to redefine a result_set_input_id which is already defined/,
+    "Test exception throw for already defined result_set_input_id";
+
+throws_ok {
+    $new_result_set->_add_table_id();
+}
+qr/Need to pass a table_id/,
+    "Test exception throw for mandatory table_id parameter";
+
+# ----------------
+# Test table_ids()
+# ----------------
+is_deeply($new_result_set->table_ids(), [5], 'Test table_ids()');
+
+# ---------------------------
+# Test result_set_input_ids()
+# ---------------------------
+is_deeply( $new_result_set->result_set_input_ids(),
+    [1], 'Test result_set_input_ids()' );
+
+# ---------------
+# Test contains()
+# ---------------
+# TODO
+
+# ------------------------------
+# Test get_result_set_input_id()
+# ------------------------------
+is($new_result_set->get_result_set_input_id(5), 1, 'Test get_result_set_input_id()');
+is($new_result_set->get_result_set_input_id(4), undef, 'Test get_result_set_input_id() again');
+
+# ------------------
+# Test get_support()
+# ------------------
+my $brand_new_result_set = Bio::EnsEMBL::Funcgen::ResultSet->new(
+        -analysis      => $analysis,
+        -feature_class => 'result',
+        -feature_type  => $feature_type,
+        -name          => 'new_result_set',
+        -support       => [$iss],
+    );
+is_deeply($brand_new_result_set->get_support(),[$iss], 'Test get_support()');
+
+print Dumper $new_result_set->get_support();
