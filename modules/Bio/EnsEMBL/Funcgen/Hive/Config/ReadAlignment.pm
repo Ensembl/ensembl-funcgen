@@ -69,8 +69,8 @@ sub pipeline_analyses {
 	dataflow_param_names => ['no_idr'], 
       },
       -flow_into => {
-	'2->A' => [ 'DefineResultSets'     ],
-	'A->4' => [ 'CleanupCellLineFiles' ],
+	'2->A' => 'DefineResultSets',
+	'A->4' => 'CleanupCellLineFiles',
       },
       -analysis_capacity => 1, #For safety, and can only run 1 LOCAL?
       -rc_name => 'default',   #NA as LOCAL?
@@ -87,10 +87,7 @@ sub pipeline_analyses {
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::DefineResultSets',
      -meadow     => 'LOCAL',
     -flow_into => {
-#       'A->2'  => ['PreprocessIDR'],#move to 2 'A->2' but make sure I flow this last for each control group
-      '10'    => ['Preprocess_bwa_samse_control'],
-#       '11'    => ['Preprocess_bwa_samse_merged'],
-#       '12->A' => ['Preprocess_bwa_samse_replicate'],
+      2 => 'Preprocess_bwa_samse_control',
      },
     },
 
@@ -98,8 +95,8 @@ sub pipeline_analyses {
       -logic_name => 'Preprocess_bwa_samse_control',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::PreprocessFastqs',
       -flow_into => {
-	'2->A' => ['Run_bwa_samse_control_chunk'],
-	'A->3' => ['MergeControlAlignments'],
+	'2->A' => 'Run_bwa_samse_control_chunk',
+	'A->3' => 'MergeControlAlignments',
 	},
       -batch_size => 1, #max parallelisation???
       -analysis_capacity => 200,
@@ -111,8 +108,8 @@ sub pipeline_analyses {
       -parameters => {merge => 1},
       -flow_into =>
 	{
-	'2->A' => ['Run_bwa_samse_merged_chunk'],
-	'A->3' => [ 'MergeAlignments' ],
+	'2->A' => 'Run_bwa_samse_merged_chunk',
+	'A->3' =>  'MergeAlignments',
 	},
       -batch_size => 1, #max parallelisation???
       -analysis_capacity => 200,
@@ -122,8 +119,8 @@ sub pipeline_analyses {
       -logic_name => 'Preprocess_bwa_samse_replicate',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::PreprocessFastqs',
       -flow_into => {
-	'2->A' => ['Run_bwa_samse_replicate_chunk'],
-	'A->3' => [ 'MergeReplicateAlignments' ],
+	'2->A' => 'Run_bwa_samse_replicate_chunk',
+	'A->3' => 'MergeReplicateAlignments' ,
 	},
       -batch_size => 1, #max parallelisation???
       -analysis_capacity => 200,
@@ -168,9 +165,9 @@ sub pipeline_analyses {
       -logic_name => 'JobFactorySignalProcessing',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::JobFactorySignalProcessing',
       -flow_into => {
-	'A->3'  => [ 'PreprocessIDR'                 ],
-	'10'    => [ 'Preprocess_bwa_samse_merged'   ],
-	'11->A' => [ 'Preprocess_bwa_samse_replicate'],
+	'A->3'  => 'PreprocessIDR',
+	'10'    => 'Preprocess_bwa_samse_merged' ,
+	'11->A' => 'Preprocess_bwa_samse_replicate',
       },
       -meadow_type=> 'LOCAL',
     },
