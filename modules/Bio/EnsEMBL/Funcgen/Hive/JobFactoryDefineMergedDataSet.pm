@@ -39,9 +39,7 @@ sub fetch_input {
   $self->SUPER::fetch_input();
   
   $self->fetch_Set_input('ResultSet');
-  $self->get_param_method('result_set_groups', 'required');
   $self->get_param_method('bam_files',  'silent');
-  $self->get_param_method('permissive_peaks', 'required');
   
   $self->init_branching_by_analysis;
   return;

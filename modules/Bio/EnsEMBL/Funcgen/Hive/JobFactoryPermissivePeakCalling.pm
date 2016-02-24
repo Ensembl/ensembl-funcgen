@@ -39,9 +39,7 @@ sub fetch_input {
   $self->SUPER::fetch_input();
   
   $self->fetch_Set_input('ResultSet');
-  $self->get_param_method('result_set_groups', 'required');
   $self->get_param_method('bam_files',  'silent');
-  $self->get_param_method('permissive_peaks', 'required');
   
   $self->init_branching_by_analysis;
   return;
@@ -62,10 +60,10 @@ sub run {
     # If flowing to replicate processing, set the permissive_peaks parameter.
     # permissive_peaks is always set to "SWEmbl_R0005" in our runs.
     #
-    peak_analysis => $self->permissive_peaks,
+    #peak_analysis => $self->permissive_peaks,
   );
 
-  $self->branch_job_group('run_'.$self->permissive_peaks.'_replicate', [{%batch_params, %output_id}]);
+  $self->branch_job_group('run_SWEmbl_R0005_replicate', [{%batch_params, %output_id}]);
 }
 
 sub write_output {
