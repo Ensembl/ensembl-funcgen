@@ -94,7 +94,7 @@ package Bio::EnsEMBL::Funcgen::RegulatoryFeature;
 use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
 use base qw( Bio::EnsEMBL::Funcgen::SetFeature );
 
@@ -141,15 +141,15 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($stable_id, $attr_cache, $bin_string, $projected, $has_evidence, $cell_type_count)
-    = rearrange(['STABLE_ID', 'ATTRIBUTE_CACHE', 'BINARY_STRING', 'PROJECTED', 'HAS_EVIDENCE', 'CELL_TYPE_COUNT'], @_);
+  my ($stable_id, $attr_cache, $bin_string, $projected, $activity, $cell_type_count)
+    = rearrange(['STABLE_ID', 'ATTRIBUTE_CACHE', 'BINARY_STRING', 'PROJECTED', 'ACTIVITY', 'CELL_TYPE_COUNT'], @_);
 
   #None of these are mandatory at creation
   #under different use cases
-  $self->{binary_string} = $bin_string    if defined $bin_string;
-  $self->{stable_id}     = $stable_id     if defined $stable_id;
-  $self->{projected}     = $projected     if defined $projected;
-  $self->{has_evidence}  = $has_evidence  if defined $has_evidence;
+  $self->{binary_string}    = $bin_string       if defined $bin_string;
+  $self->{stable_id}        = $stable_id        if defined $stable_id;
+  $self->{projected}        = $projected        if defined $projected;
+  $self->{activity}         = $activity         if defined $activity;
   $self->{cell_type_count}  = $cell_type_count  if defined $cell_type_count;
   $self->attribute_cache($attr_cache)     if $attr_cache;
 
@@ -218,7 +218,7 @@ sub binary_string{ return shift->{binary_string}; }
 
   Arg [1]    : (optional) string - stable_id e.g ENSR00000000001
   Example    : my $stable_id = $feature->stable_id();
-  Description: Getter and setter for the stable_id attribute for this feature. 
+  Description: Getter and setter for the stable_id attribute for this feature.
   Returntype : string
   Exceptions : None
   Caller     : General
@@ -263,12 +263,12 @@ sub regulatory_attributes{
 
     if (exists $adaptors{lc($feature_class)}) {
       @fclasses = (lc($feature_class));
-    } 
+    }
     else {
       throw("The feature class you specified is not valid:\t$feature_class\n".
             "Please use one of:\t".join(', ', keys %adaptors));
     }
-  } 
+  }
   else {
     @fclasses = keys %adaptors;
   }
@@ -277,20 +277,20 @@ sub regulatory_attributes{
     # Now structured as hash to facilitate faster has_attribute method
     # Very little difference to array based cache
     my @attr_dbIDs = keys %{$self->{attribute_cache}{$fclass}};
-	
+
     if (scalar(@attr_dbIDs) > 0) {
-	  
+
       if ( ! ( ref($self->{regulatory_attributes}{$fclass}->[0])  &&
                ref($self->{regulatory_attributes}{$fclass}->[0])->isa('Bio::EnsEMBL::Feature') )) {
-      
+
         $adaptors{$fclass}->force_reslice(1); #So we don't lose attrs which aren't on the slice
         # fetch_all_by_Slice_constraint does relevant normalised Slice projection i.e. PAR mappingg
-        $self->{'regulatory_attributes'}{$fclass} = 
+        $self->{'regulatory_attributes'}{$fclass} =
           $adaptors{$fclass}->fetch_all_by_Slice_constraint
             ($self->slice,
              lc($fclass).'_feature_id in('.join(',', @attr_dbIDs).')' );
 
-        # Forces reslice and inclusion for attributes not contained within slice 
+        # Forces reslice and inclusion for attributes not contained within slice
         $adaptors{$fclass}->force_reslice(0);
       }
     } else {
@@ -322,23 +322,21 @@ sub has_attribute{
   return exists ${$self->attribute_cache}{$fclass}{$dbID};
 }
 
-
-=head2 has_evidence
+=head2 activity
 
   Arg [1]     : None
-  Returntype  : Boolean 
+  Returntype  : Boolean
   Exceptions  : None
-  Description : Returns 1 if has_evidence = 1, nothing otherwise
+  Description : Returns 1 if activity = 1, nothing otherwise
 
 =cut
 
-sub has_evidence { return shift->{has_evidence}; }
-
+sub activity { return shift->{activity}; }
 
 =head2 cell_type_count
 
-  Arg [1]     : None 
-  Returntype  : SCALAR 
+  Arg [1]     : None
+  Returntype  : SCALAR
   Exceptions  : None
   Description : Returns the amount of cells where this RegFeat is active
 
@@ -375,7 +373,7 @@ sub get_focus_attributes{
 
   Arg [1]    : None
   Example    : my @non_focus_attrs = @{$regf->get_nonfocus_attributes};
-  Description: Getter for the non-focus features of this RegulatoryFeature, used to defined 
+  Description: Getter for the non-focus features of this RegulatoryFeature, used to defined
                the non core region i.e. the whiskers.
   Returntype : ARRAYREF
   Exceptions : None
@@ -422,12 +420,12 @@ sub _sort_attributes{
 
 =head2 attribute_cache
 
-  Arg [1]    : optional - HASHREF of attribute table keys with values as either a list of attribute 
+  Arg [1]    : optional - HASHREF of attribute table keys with values as either a list of attribute
                feature dbIDs or objects. If passing object, any MotifFeature objects should be in position
                order with respect to the slice.
   Example    : $feature->attribute_cache(\%attribute_feature_info);
-  Description: Setter for the regulatory_attribute cache for this feature. This is a short cut method used by the 
-               regulatory build and the webcode to avoid unnecessary fetching and enable enable lazy loading 
+  Description: Setter for the regulatory_attribute cache for this feature. This is a short cut method used by the
+               regulatory build and the webcode to avoid unnecessary fetching and enable enable lazy loading
   Returntype : HASHREF
   Exceptions : Throws if trying to overwrite existing cache
   Caller     : RegulatoryFeatureAdaptor.pm and build_regulatory_features.pl
@@ -505,12 +503,12 @@ sub _bound_lengths {
   if(! defined  $self->{_bound_lengths}){
 
     my @af_attrs = @{$self->regulatory_attributes('annotated')};
-    
+
     if (! @af_attrs) {
       throw('Unable to set bound length, no AnnotatedFeature attributes available for RegulatoryFeature: '
             .$self->dbID);
     }
-    
+
     #Adding self here accounts for core region i.e.
     #features extending beyond the core may be absent on this cell type.
     my @start_ends;
@@ -518,9 +516,9 @@ sub _bound_lengths {
     foreach my $feat (@af_attrs, $self) {
       push @start_ends, ($feat->seq_region_start, $feat->seq_region_end);
     }
-        
+
     @start_ends = sort { $a <=> $b } @start_ends;
-        
+
     $self->{_bound_lengths} = [ ($self->seq_region_start - $start_ends[0]),
                                 ($start_ends[$#start_ends] - $self->seq_region_end) ];
   }
@@ -619,13 +617,13 @@ sub bound_end { return $_[0]->end + $_[0]->bound_end_length; }
 
 sub is_projected {
   my $self = shift;
-  
+
   if(@_){
 	#added v67
     warn "RegulatoryFeature::is_projected setter functionality is being removed\n";
     $self->{'projected'} = shift;
   }
-  
+
   return $self->{'projected'};
 }
 
@@ -661,12 +659,12 @@ sub get_underlying_structure{
 
   if (! defined $self->{underlying_structure}) {
     my @mf_loci;
-    
+
     foreach my $mf (@{$self->regulatory_attributes('motif')}) {
       push @mf_loci, ($mf->start, $mf->end);
     }
 
-    $self->{underlying_structure} = [ 
+    $self->{underlying_structure} = [
                                      $self->bound_start, $self->start,
                                      @mf_loci,
                                      $self->end, $self->bound_end
@@ -680,13 +678,13 @@ sub get_underlying_structure{
 =head2 is_unique_to_FeatureSets
 
   Arg[1]     : optional - ARRAYREF of regualtory Bio::EnsEMBL::Funcgen::FeatureSet objects
-                          Default is FeatureSet of given RegulatoryFeature, else need to be 
+                          Default is FeatureSet of given RegulatoryFeature, else need to be
                           defined explicitly.
-  Arg[2]     : optional - HASHREF Params hash: 
+  Arg[2]     : optional - HASHREF Params hash:
                                     {
                                      include_projected => 0|1, # Boolean, include 'projected' features
                                     }
-  Example    : if($reg_feat->is_unique_to_FeatureSets($fsets)}{  
+  Example    : if($reg_feat->is_unique_to_FeatureSets($fsets)}{
                    #then do some analysis here
                }
   Description: Identifies whether this RegualtoryFeature is unique to a set of FeatureSets.
@@ -707,8 +705,8 @@ sub is_unique_to_FeatureSets{
 
   $fsets ||= [$self->feature_set];
   my @fset_ids;
-  
-  
+
+
   #define to avoid deref fails below.
   $params_hash ||= {};
   if(ref($params_hash) ne 'HASH'){
@@ -719,23 +717,23 @@ sub is_unique_to_FeatureSets{
   foreach my $fset(@$fsets){
 	#assume we have an adaptor set
 	$self->adaptor->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
-	
+
 	if($fset->feature_class ne 'regulatory'){
 	  throw('Found non-regulatory FeatureSet');
 	}
 
 	push @fset_ids, $fset->dbID;
   }
-  
+
   my $stable_id;
   ($stable_id = $self->stable_id) =~ s/^[A-Z0]+//;
 
-  
+
   my @other_rf_ids = @{$self->adaptor->_fetch_other_dbIDs_by_stable_feature_set_ids
-						 ($stable_id, 
-							 \@fset_ids, 
+						 ($stable_id,
+							 \@fset_ids,
 						  { include_projected => $params_hash->{include_projected}} )};
-  
+
   return (@other_rf_ids) ? 0 : 1;
 }
 
@@ -744,15 +742,15 @@ sub is_unique_to_FeatureSets{
 =head2 get_other_RegulatoryFeatures
 
   Arg[1]     : optional - ARRAYREF of regualtory Bio::EnsEMBL::Funcgen::FeatureSet objects
-                          Default is FeatureSet of given RegulatoryFeature, else need to be 
+                          Default is FeatureSet of given RegulatoryFeature, else need to be
                           defined explicitly.
-  Arg[2]     : optional - HASHREF Params hash: 
+  Arg[2]     : optional - HASHREF Params hash:
                                     {
                                      include_projected => 0|1, # Boolean, include 'projected' features
                                      include_multicell => 0|1, # Boolean, include MultiCell features
                                     }
   Example    : my @other_fsets = @{$reg_feat->get_other_FeatureSets($fsets)};
-  Description: Gets other RegualtoryFeatures (linked via the stable ID) which are present in the 
+  Description: Gets other RegualtoryFeatures (linked via the stable ID) which are present in the
                specified list of FeatureSets.
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::RegulatoryFeature objects
   Exceptions : Throw is arguments not stored or valid.
@@ -763,7 +761,7 @@ sub is_unique_to_FeatureSets{
 
 sub get_other_RegulatoryFeatures{
   my ($self, $fsets, $params_hash) = @_;
-  
+
   #define to avoid deref fails below.
   $params_hash ||= {};
   if(ref($params_hash) ne 'HASH'){
@@ -772,23 +770,23 @@ sub get_other_RegulatoryFeatures{
 
   $fsets ||= [$self->feature_set];
   my @fset_ids;
-  
+
   foreach my $fset(@$fsets){
 	#assume we have an adaptor set
 	$self->adaptor->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
-	
+
 	if($fset->feature_class ne 'regulatory'){
 	  throw('Found non-regulatory FeatureSet');
 	}
 
 	push @fset_ids, $fset->dbID;
   }
-    
+
   my $stable_id;
   ($stable_id = $self->stable_id) =~ s/^[A-Z0]+//;
 
   my @other_fsets_ids = @{$self->adaptor->_fetch_other_dbIDs_by_stable_feature_set_ids
-							($stable_id, \@fset_ids, 
+							($stable_id, \@fset_ids,
 							 {
 							  include_projected => $params_hash->{include_projected},
 							  include_multicell => $params_hash->{include_multicell},
@@ -807,23 +805,9 @@ sub get_other_RegulatoryFeatures{
 
 =cut
 
-#why has has_evidence been transposed to activity_evidence?
 
 sub summary_as_hash {
   my $self   = shift;
-
-  #Use cell_type count here to detect new build
-  #but this is set to 0 for cell type specific features
-  #my %build_specific_params;
-  #my $ctype_cnt = $self->cell_type_count;
-
-  #if($ctype_cnt){
-  #  $build_specific_params{cell_type_count}    = $ctype_cnt;
-  #  $build_specific_params{activity_envidence} = $self->has_evidence;
-  #}
-  #else{
-  #  $build_specific_params{projected} = $self->projected;
-  #}
 
   return
    {ID                      => $self->stable_id,
@@ -834,11 +818,29 @@ sub summary_as_hash {
     end                     => $self->seq_region_end,
     strand                  => $self->strand,
     seq_region_name         => $self->seq_region_name,
-    activity_evidence       => $self->has_evidence,
+    activity                => $self->activity,
     description             => $self->feature_type->description,
     feature_type            => "regulatory",
-    #%build_specific_params, 
+    #%build_specific_params,
    };
+}
+
+# Deprated methods
+
+=head2 has_evidence
+
+  Arg [1]     : None
+  Returntype  : Boolean
+  Exceptions  : None
+  Description : Returns 1 if has_evidence = 1, nothing otherwise
+  Deprecated  : e84
+
+=cut
+
+sub has_evidence {
+    deprecate('"has_evidence" is now deprecated. Please use "activity"
+        which reports the state of the Regulatory Feature');
+  return shift->{activity};
 }
 
 1;
