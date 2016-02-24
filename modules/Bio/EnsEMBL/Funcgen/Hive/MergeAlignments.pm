@@ -61,10 +61,7 @@ sub fetch_input {
   } elsif(! $self->bam_files) {
     $self->throw_no_retry('No bam_files or fastq_files have been defined');    
   }
-
-  my $flow_mode = $self->get_param_method('flow_mode',  'required');
   $self->get_param_method('run_controls',  'required');
-
   return;
 }
 
@@ -86,8 +83,6 @@ sub run {
   my $unfiltered_bam     = $file_prefix.'.bam';
   
   $self->helper->debug(1, "Merging bams to:\t".$unfiltered_bam); 
-  
-  die();
 
   merge_bams({
     input_bams => $self->bam_files, 
