@@ -66,6 +66,7 @@ sub fetch_input {
     my $bed_file = $path . '.bed';
     
     if(! -e $bam_file) {
+      use Carp;
       confess("Can't find bam file $bam_file!");
     }
     
