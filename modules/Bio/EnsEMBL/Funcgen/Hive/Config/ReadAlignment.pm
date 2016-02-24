@@ -176,7 +176,7 @@ sub pipeline_analyses {
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::MergeAlignments',
      -parameters => {
 #       flow_mode => 'merged',
-      	run_controls => 1,
+      	run_controls => 0,
      },
      -flow_into => {
 	1 => 'JobFactoryDefineMergedDataSet'
@@ -198,7 +198,7 @@ sub pipeline_analyses {
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::MergeAlignments',
      -parameters => {
 # 	flow_mode => 'replicate',
-	run_controls => 1,
+	run_controls => 0,
 	permissive_peaks => $self->o('permissive_peaks')
       },
      -flow_into => {
