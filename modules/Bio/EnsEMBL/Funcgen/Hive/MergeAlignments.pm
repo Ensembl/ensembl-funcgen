@@ -24,7 +24,7 @@ limitations under the License.
 
 =head1 NAME
 
-Bio::EnsEMBL::Hive::Funcgen::MergeQCAlignments
+Bio::EnsEMBL::Hive::Funcgen::MergeAlignments
 
 =head1 DESCRIPTION
 
@@ -32,7 +32,7 @@ Merges bam alignments from split (replicate or merged) fastq files.
 
 =cut
 
-package Bio::EnsEMBL::Funcgen::Hive::MergeQCAlignments;
+package Bio::EnsEMBL::Funcgen::Hive::MergeAlignments;
 
 use strict;
 
@@ -63,7 +63,7 @@ sub fetch_input {
   }
 
   my $flow_mode = $self->get_param_method('flow_mode',  'required');
-  $self->set_param_method('run_controls', 0); 
+  $self->get_param_method('run_controls',  'required');
 
   return;
 }
@@ -81,11 +81,13 @@ sub run {
     $self->helper->debug(3, "Removing fastq chunks:\n$cmd");
     run_system_cmd($cmd, 1);
   }
-
+  
   my $file_prefix  = $self->get_alignment_path_prefix_by_ResultSet($result_set, $self->run_controls); 
   my $unfiltered_bam     = $file_prefix.'.bam';
   
   $self->helper->debug(1, "Merging bams to:\t".$unfiltered_bam); 
+  
+  die();
 
   merge_bams({
     input_bams => $self->bam_files, 
@@ -103,6 +105,10 @@ sub run {
 
   unlink($unfiltered_bam);
   run_system_cmd("mv $tmp_bam $unfiltered_bam");
+  
+  foreach my $current_bam_file (@{$self->bam_files}) {
+    unlink($current_bam_file);
+  }
 
   return;
 }

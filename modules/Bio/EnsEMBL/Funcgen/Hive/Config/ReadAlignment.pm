@@ -86,46 +86,20 @@ sub pipeline_analyses {
      -logic_name => 'DefineResultSets',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::DefineResultSets',
      -meadow     => 'LOCAL',
-     #-module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-     #Inputs are either:
-     #1 A set of controls and a series of InputSubset batches(replicates) which share the control
-     #2 A series of unrelated InputSubset batches(replicates) which have no controls
-    -parameters => {dataflow_param_names => ['no_idr']},#this is now batch flowed as we need it in DefineMergedOutputSet????
     -flow_into => {
-      'A->2'  => ['PreprocessIDR'],#move to 2 'A->2' but make sure I flow this last for each control group
+#       'A->2'  => ['PreprocessIDR'],#move to 2 'A->2' but make sure I flow this last for each control group
       '10'    => ['Preprocess_bwa_samse_control'],
-      '11'    => ['Preprocess_bwa_samse_merged'],
-      '12->A' => ['Preprocess_bwa_samse_replicate'],
-
-      #Could add another alignment analysis here easily e.g.
-      #'20'    => ['Preprocess_NEWALIGNER_control'],
-      #'21'    => ['Preprocess_NEWALIGNER_merged'],
-      #'22->A' => ['Preprocess_NEWALIGNER_replicate'],
-
-      #Could support custom analyses like this
-      #i.e. before we start the decimal blocks of
-      #known resource optimised/branched analyses
-      #Assuming we will never have more the 7 outflow analyses
-      #allow_custom_branching would need to be an analysis level param
-      #'3'    => ['Preprocess_custom_control'],
-      #'4'    => ['Preprocess_custom_merged'],
-      #'5->A' => ['Preprocess_custom_replicate'],
-
+#       '11'    => ['Preprocess_bwa_samse_merged'],
+#       '12->A' => ['Preprocess_bwa_samse_replicate'],
      },
-     -analysis_capacity => 100,       #Will this just run 1 as LOCAL?
-     -rc_name           => 'default', #NA as LOCAL?
     },
-
-    ### PREPROCESS ANALYSES ###
-    #Currently averaging ~22mins
-    #But this depends entirely on the number and size of the reps in the control
 
     {
       -logic_name => 'Preprocess_bwa_samse_control',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::PreprocessFastqs',
       -flow_into => {
 	'2->A' => ['Run_bwa_samse_control_chunk'],
-	'A->3' => ['MergeControlAlignments_and_QC'],
+	'A->3' => ['MergeControlAlignments'],
 	},
       -batch_size => 1, #max parallelisation???
       -analysis_capacity => 200,
@@ -138,7 +112,7 @@ sub pipeline_analyses {
       -flow_into =>
 	{
 	'2->A' => ['Run_bwa_samse_merged_chunk'],
-	'A->3' => [ 'MergeAlignments_and_QC' ], #This is in Peaks.pm conf
+	'A->3' => [ 'MergeAlignments' ],
 	},
       -batch_size => 1, #max parallelisation???
       -analysis_capacity => 200,
@@ -149,7 +123,7 @@ sub pipeline_analyses {
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::PreprocessFastqs',
       -flow_into => {
 	'2->A' => ['Run_bwa_samse_replicate_chunk'],
-	'A->3' => [ 'MergeReplicateAlignments_and_QC' ],
+	'A->3' => [ 'MergeReplicateAlignments' ],
 	},
       -batch_size => 1, #max parallelisation???
       -analysis_capacity => 200,
@@ -177,17 +151,13 @@ sub pipeline_analyses {
       -rc_name => 'normal_10gb'
      },
     {
-      -logic_name => 'MergeControlAlignments_and_QC',
-     -module     => 'Bio::EnsEMBL::Funcgen::Hive::MergeQCAlignments',
-     -parameters => {flow_mode => 'signal'},
+      -logic_name => 'MergeControlAlignments',
+     -module     => 'Bio::EnsEMBL::Funcgen::Hive::MergeAlignments',
+     -parameters => {
+# 	flow_mode => 'signal',
+	run_controls => 1,
+     },
      -flow_into => {
-#        #2 is reserved for other Define DataSet flow (single vs multiple ResultSets).
-#        # Although isn't really required as the branching is handled dynamically
-#        #but let's keep it clean here for now.
-#        'A->3'  => [ 'PreprocessIDR' ],
-#        #alignment analyses encoded in blocks of 10
-#        '10'    => ['Preprocess_bwa_samse_merged'],
-#        '11->A' => ['Preprocess_bwa_samse_replicate'],
 	  1 => 'JobFactorySignalProcessing',
        },
      -batch_size => 1, #max parallelisation
@@ -205,19 +175,33 @@ sub pipeline_analyses {
       -meadow_type=> 'LOCAL',
     },
     {
-      -logic_name => 'MergeAlignments_and_QC',
-     -module     => 'Bio::EnsEMBL::Funcgen::Hive::MergeQCAlignments',
-     -parameters => {flow_mode => 'merged'},
-     -flow_into => { 2 => ['DefineMergedDataSet']},
+     -logic_name => 'MergeAlignments',
+     -module     => 'Bio::EnsEMBL::Funcgen::Hive::MergeAlignments',
+     -parameters => {
+#       flow_mode => 'merged',
+      	run_controls => 1,
+     },
+     -flow_into => {
+	1 => 'JobFactoryDefineMergedDataSet'
+     },
      -batch_size => 1, #max parallelisation
      -analysis_capacity => 200,
      -rc_name => '64GB_3cpu',
     },
     {
-     -logic_name => 'MergeReplicateAlignments_and_QC',
-     -module     => 'Bio::EnsEMBL::Funcgen::Hive::MergeQCAlignments',
+      -logic_name => 'JobFactoryDefineMergedDataSet',
+      -module     => 'Bio::EnsEMBL::Funcgen::Hive::JobFactoryDefineMergedDataSet',
+      -flow_into => {
+	2 => 'DefineMergedDataSet'
+      },
+      -meadow_type=> 'LOCAL',
+    },
+    {
+     -logic_name => 'MergeReplicateAlignments',
+     -module     => 'Bio::EnsEMBL::Funcgen::Hive::MergeAlignments',
      -parameters => {
-	flow_mode => 'replicate',
+# 	flow_mode => 'replicate',
+	run_controls => 1,
 	permissive_peaks => $self->o('permissive_peaks')
       },
      -flow_into => {
