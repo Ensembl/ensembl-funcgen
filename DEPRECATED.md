@@ -44,7 +44,6 @@ A year after deprecation (4 Ensembl releases), the method is removed from the AP
  - Bio::Ensembl::Funcgen::HiveConfig::**Annotation_conf.pm**
  - Bio::Ensembl::Funcgen::HiveConfig::**Dnase_profile_conf.pm**
  - Bio::Ensembl::Funcgen::HiveConfig::**MotifFinder_conf.pm**
- - Bio::Ensembl::Funcgen::HiveConfig::**Import.pm**
  - Bio::EnsEMBL::Funcgen::RunnableDB::**Alignment.pm**
  - Bio::EnsEMBL::Funcgen::RunnableDB::**AnnotateRegulatoryFeatures.pm**
  - Bio::EnsEMBL::Funcgen::RunnableDB::**Annotation.pm**
