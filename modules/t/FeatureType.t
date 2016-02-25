@@ -222,11 +222,11 @@ foreach my $ftype(@ftypes){
       ok(defined $evidence &&
          (ref(\$evidence) eq 'SCALAR'), 'evidence_type_name defined');
 
-      my $evidence = $ftype->evidence_type_long_name;
+      $evidence = $ftype->evidence_type_long_name;
       ok(defined $evidence &&
          (ref(\$evidence) eq 'SCALAR'), 'evidence_type_long_name defined');
       
-      my $evidence = $ftype->evidence_type_label;
+      $evidence = $ftype->evidence_type_label;
       ok(defined $evidence &&
          (ref(\$evidence) eq 'SCALAR'), 'evidence_type_label defined');
     }
