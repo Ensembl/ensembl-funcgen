@@ -61,7 +61,7 @@ sub pipeline_analyses {
     {
       -logic_name => 'IdentifyAlignInputSubsets',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::IdentifySetInputs',
-      -meadow_type => 'LOCAL',#should always be uppercase
+      -meadow_type => 'LOCAL',
       -parameters => {
       set_type                     => 'InputSubset',
 	feature_set_analysis_type    => 'peak',
@@ -72,10 +72,6 @@ sub pipeline_analyses {
 	'2->A' => 'DefineResultSets',
 	'A->4' => 'CleanupCellLineFiles',
       },
-      -analysis_capacity => 1, #For safety, and can only run 1 LOCAL?
-      -rc_name => 'default',   #NA as LOCAL?
-      # We don't care about these failing, as we expect them too
-      -failed_job_tolerance => 100,
     },
     {
       -logic_name => 'CleanupCellLineFiles',
@@ -90,7 +86,6 @@ sub pipeline_analyses {
       2 => 'Preprocess_bwa_samse_control',
      },
     },
-
     {
       -logic_name => 'Preprocess_bwa_samse_control',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::PreprocessFastqs',
@@ -98,8 +93,6 @@ sub pipeline_analyses {
 	'2->A' => 'Run_bwa_samse_control_chunk',
 	'A->3' => 'MergeControlAlignments',
 	},
-      -batch_size => 1, #max parallelisation???
-      -analysis_capacity => 200,
       -rc_name => '10gb_1cpu_staggered'
      },
      {
@@ -111,8 +104,6 @@ sub pipeline_analyses {
 	'2->A' => 'Run_bwa_samse_merged_chunk',
 	'A->3' =>  'MergeAlignments',
 	},
-      -batch_size => 1, #max parallelisation???
-      -analysis_capacity => 200,
       -rc_name => '10gb_1cpu_staggered'
      },
      {
@@ -122,29 +113,21 @@ sub pipeline_analyses {
 	'2->A' => 'Run_bwa_samse_replicate_chunk',
 	'A->3' => 'MergeReplicateAlignments' ,
 	},
-      -batch_size => 1, #max parallelisation???
-      -analysis_capacity => 200,
       -rc_name => '10gb_1cpu_staggered'
      },
     {
       -logic_name => 'Run_bwa_samse_control_chunk',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunAligner',
-      -batch_size => 20,
-      #-analysis_capacity => 100,
       -rc_name => 'normal_10gb'
      },
     {
     -logic_name => 'Run_bwa_samse_merged_chunk',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunAligner',
-     -batch_size => 20,
-     #-analysis_capacity => 100,
      -rc_name => 'normal_10gb'
      },
     {
       -logic_name => 'Run_bwa_samse_replicate_chunk',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunAligner',
-      -batch_size => 20,
-      #-analysis_capacity => 100,
       -rc_name => 'normal_10gb'
      },
     {
@@ -157,8 +140,6 @@ sub pipeline_analyses {
      -flow_into => {
 	  1 => 'JobFactorySignalProcessing',
        },
-     -batch_size => 1, #max parallelisation
-     -analysis_capacity => 200,
      -rc_name => '64GB_3cpu',
     },
     {
@@ -181,8 +162,6 @@ sub pipeline_analyses {
      -flow_into => {
 	1 => 'JobFactoryDefineMergedDataSet'
      },
-     -batch_size => 1, #max parallelisation
-     -analysis_capacity => 200,
      -rc_name => '64GB_3cpu',
     },
     {
@@ -204,8 +183,6 @@ sub pipeline_analyses {
      -flow_into => {
 	1 => 'JobFactoryPermissivePeakCalling'
      },
-     -batch_size => 1, #max parallelisation
-     -analysis_capacity => 200,
      -rc_name => '64GB_3cpu',
     },
     {
@@ -222,12 +199,12 @@ sub pipeline_analyses {
       -parameters => {
 	peak_analysis => $self->o('permissive_peaks'),
       },
-      -analysis_capacity => 10,
       -rc_name => 'normal_5GB_2cpu_monitored',
     },
     {
      -logic_name => 'PreprocessIDR',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::PreprocessIDR',
+     # They take an average of 7 seconds on the cttv dataset
      -batch_size => 30,
      -rc_name    => 'default',
      -parameters => {
