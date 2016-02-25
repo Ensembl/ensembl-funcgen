@@ -1,7 +1,7 @@
 Ensembl Deprecated Methods
 ===================
 
-This file contains the list of methods deprecated in the Ensembl Funcgen API.
+This file contains the list of methods, modules and scripts deprecated in the Ensembl Funcgen API.
 A method is deprecated when it is not functional any more (schema/data change) or has been replaced by a better one.
 Backwards compatibility is provided whenever possible.
 When a method is deprecated, a deprecation warning is thrown whenever the method is used.
@@ -45,6 +45,27 @@ A year after deprecation (4 Ensembl releases), the method is removed from the AP
  - Bio::Ensembl::Funcgen::HiveConfig::**Dnase_profile_conf.pm**
  - Bio::Ensembl::Funcgen::HiveConfig::**MotifFinder_conf.pm**
  - Bio::Ensembl::Funcgen::HiveConfig::**Import.pm**
+ - Bio::EnsEMBL::Funcgen::RunnableDB::**Alignment.pm**
+ - Bio::EnsEMBL::Funcgen::RunnableDB::**AnnotateRegulatoryFeatures.pm**
+ - Bio::EnsEMBL::Funcgen::RunnableDB::**Annotation.pm**
+ - Bio::EnsEMBL::Funcgen::RunnableDB::**ClusterMotifs.pm**
+ - Bio::EnsEMBL::Funcgen::RunnableDB::**ConvergeReplicates.pm**
+ - Bio::EnsEMBL::Funcgen::RunnableDB::**Funcgen.pm**
+ - Bio::EnsEMBL::Funcgen::RunnableDB::**Import.pm**
+ - Bio::EnsEMBL::Funcgen::RunnableDB::**InferMotifs.pm**
+ - Bio::EnsEMBL::Funcgen::RunnableDB::**MakeDnaseProfile.pm**
+ - Bio::EnsEMBL::Funcgen::RunnableDB::**Motif.pm**
+ - Bio::EnsEMBL::Funcgen::RunnableDB::**RunBWA.pm**
+ - Bio::EnsEMBL::Funcgen::RunnableDB::**RunCCAT.pm**
+ - Bio::EnsEMBL::Funcgen::RunnableDB::**RunCentipede.pm**
+ - Bio::EnsEMBL::Funcgen::RunnableDB::**RunMACS.pm**
+ - Bio::EnsEMBL::Funcgen::RunnableDB::**RunSWEmbl.pm**
+ - Bio::EnsEMBL::Funcgen::RunnableDB::**SWEmbl.pm**
+ - Bio::EnsEMBL::Funcgen::RunnableDB::**SetupAlignmentPipeline.pm**
+ - Bio::EnsEMBL::Funcgen::RunnableDB::**SetupAnnotationPipeline.pm**
+ - Bio::EnsEMBL::Funcgen::RunnableDB::**SetupMotifInference.pm**
+ - Bio::EnsEMBL::Funcgen::RunnableDB::**SetupPeaksPipeline.pm**
+ - Bio::EnsEMBL::Funcgen::RunnableDB::**WrapUpAlignment.pm**
 
  - scripts/pipeline/**configure_hive.pl**
  - scripts/regulatory_build/**load_segmentation.pl**
