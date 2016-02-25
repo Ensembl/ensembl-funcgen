@@ -143,7 +143,6 @@ sub product_FeatureSet {
       throw("The main feature_set has already been set for this DataSet, maybe you want add_SupportingSets?");
     }
 	else{
-	  $self->_validate_and_set_types($fset);
 	  $self->{'feature_set'} = $fset;
 	}
   }
