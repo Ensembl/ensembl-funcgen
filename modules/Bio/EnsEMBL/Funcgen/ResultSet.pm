@@ -4,7 +4,7 @@
 
 =head1 LICENSE
 
-Copyright [1999-2016] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -77,7 +77,6 @@ my %valid_table_names =
    experimental_chip => undef,
    input_subset      => undef,
    channel           => undef,
-   segmentation      => undef,
   );
 
 
@@ -138,6 +137,9 @@ sub new {
   if(defined $support){
     $self->add_support($support);
   }
+  elsif(! defined $table_name){
+    throw('You must provide either a -support or a -table_name parameter');
+  }
 
   #Remove this when -table_id fully deprecated
   if(defined $table_id){
@@ -158,7 +160,7 @@ sub new {
 
 
 sub _valid_feature_classes{
-  return qw( result dna_methylation segmentation );
+  return qw( result dna_methylation );
 }
 
 
@@ -386,7 +388,7 @@ sub dbfile_path{
 
 =cut
 
-sub table_name { return shift->{table_name}; }
+sub table_name{ return shift->{table_name}; }
 
 
 =head2 _add_table_id
@@ -408,7 +410,9 @@ sub table_name { return shift->{table_name}; }
 sub _add_table_id {
   my ($self, $table_id, $cc_id) = @_;
 
-  if ( defined $table_id){
+  if (! defined $table_id){
+    throw('Need to pass a table_id');
+  }else{
 
     #This allows setting of the cc_id on store
     if((exists $self->{table_ids}->{$table_id}) &&

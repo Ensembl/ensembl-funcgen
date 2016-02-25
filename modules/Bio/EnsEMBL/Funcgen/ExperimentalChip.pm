@@ -60,10 +60,13 @@ package Bio::EnsEMBL::Funcgen::ExperimentalChip;
 use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 
 use base qw(Bio::EnsEMBL::Funcgen::Storable);
 
+deprecate(
+    'Module ExperimentalChip.pm has been deprecated since release 84 and will be removed from the API in release 88'
+);
 
 =head2 new
 

@@ -61,11 +61,14 @@ package Bio::EnsEMBL::Funcgen::ResultFeature;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 use base qw( Bio::EnsEMBL::Feature );
 
 ### TO BE REMOVED IN FAVOUR OF Bio::EnsEMBL::Funcgen::Collection::ResultFeature
 
+deprecate(
+    'Module ResultFeature.pm has been deprecated since release 84 and will be removed from the API in release 88'
+);
 
 =head2 new_fast
 

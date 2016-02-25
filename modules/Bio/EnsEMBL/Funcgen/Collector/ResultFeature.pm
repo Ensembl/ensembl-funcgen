@@ -30,7 +30,7 @@ package Bio::EnsEMBL::Funcgen::Collector::ResultFeature;
 use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception         qw( throw);
+use Bio::EnsEMBL::Utils::Exception         qw( throw deprecate );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( open_file );
 use Bio::EnsEMBL::Funcgen::Collection::ResultFeature;
 use Bio::EnsEMBL::Funcgen::ProbeFeature; #Only used for _pre_storing slice/seq_region details
@@ -38,6 +38,9 @@ use Bio::EnsEMBL::Funcgen::ProbeFeature; #Only used for _pre_storing slice/seq_r
 
 use base qw( Bio::EnsEMBL::Utils::Collector Bio::EnsEMBL::DBFile::CollectionAdaptor );
 
+deprecate(
+    'Module Collector::ResultFeature.pm has been deprecated since release 84 and will be removed from the API in release 88'
+);
 
 ### Global config variables
 # See associated Collector methods for more info

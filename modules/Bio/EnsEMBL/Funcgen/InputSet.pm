@@ -68,6 +68,10 @@ use Bio::EnsEMBL::Utils::Exception qw( throw deprecate);
 
 use base qw(Bio::EnsEMBL::Funcgen::Set Bio::EnsEMBL::Funcgen::feature_class_Set);
 
+deprecate(
+    'Module InputSet.pm has been deprecated since release 84 and will be removed from the API in release 88'
+);
+
 =head2 new
 
   Example    : my $eset = Bio::EnsEMBL::Funcgen::InputSet->new

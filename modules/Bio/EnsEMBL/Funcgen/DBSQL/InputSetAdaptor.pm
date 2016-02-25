@@ -53,12 +53,15 @@ package Bio::EnsEMBL::Funcgen::DBSQL::InputSetAdaptor;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 use Bio::EnsEMBL::Funcgen::InputSet;
 use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor; #DBI sql_types import
 
 use base qw( Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor );
 
+deprecate(
+    'Module InputSetAdaptor.pm has been deprecated since release 84 and will be removed from the API in release 88'
+);
 
 =head2 fetch_all_by_Experiment
 

@@ -50,12 +50,15 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalChipAdaptor;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 use Bio::EnsEMBL::Funcgen::ExperimentalChip;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#DBI sql_types import
 
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
+deprecate(
+    'Module ExperimentalChipAdaptor.pm has been deprecated since release 84 and will be removed from the API in release 88'
+);
 
 =head2 fetch_all_by_experiment_dbID
 

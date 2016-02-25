@@ -70,6 +70,10 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor; #DBI sql_types import
 use base qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor
 			       Bio::EnsEMBL::Funcgen::Collector::ResultFeature  );
 
+deprecate(
+    'Module ResultFeatureAdaptor.pm has been deprecated since release 84 and will be removed from the API in release 88'
+);
+
 #Private vars to used to maintain simple implementation of Collector
 #Should be set in each method to enable trimmingof  the start and end bins. 
 #Cannot depend on $dest_slice_start/end in _objs_from_sth

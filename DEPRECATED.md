@@ -1,5 +1,5 @@
-Ensembl Deprecated Methods
-===================
+Ensembl Funcgen Deprecated Methods
+==================================
 
 This file contains the list of methods, modules and scripts deprecated in the Ensembl Funcgen API.
 A method is deprecated when it is not functional any more (schema/data change) or has been replaced by a better one.
@@ -7,6 +7,17 @@ Backwards compatibility is provided whenever possible.
 When a method is deprecated, a deprecation warning is thrown whenever the method is used.
 The warning also contains instructions on replacing the deprecated method and when it will be removed.
 A year after deprecation (4 Ensembl releases), the method is removed from the API.
+
+### Removed in Ensembl Release 88 ###
+ - Bio::Ensembl::Funcgen::**Channel**
+ - Bio::Ensembl::Funcgen::DBSQL::**ChannelAdaptor**
+ - Bio::Ensembl::Funcgen::**ExperimentalChip**
+ - Bio::Ensembl::Funcgen::DBSQL::**ExperimentalChipAdaptor**
+ - Bio::Ensembl::Funcgen::**InputSet**
+ - Bio::Ensembl::Funcgen::DBSQL::**InputSetAdaptor**
+ - Bio::Ensembl::Funcgen::**ResultFeature**
+ - Bio::Ensembl::Funcgen::DBSQL::**ResultFeatureAdaptor**
+ - Bio::Ensembl::Funcgen::Collector::**ResultFeature**
 
 ### Removed in Ensembl Release 85 ###
  - Bio::Ensembl::Funcgen::**Experiment**::*date()*
