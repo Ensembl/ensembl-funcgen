@@ -231,28 +231,5 @@ sub compare_to {
 }
 
 
-##### DEPRECATED METHODS ####
-
-
-sub input_set {#DEPRECATED in v74
-  throw('DEPRECATED please use InputSetAdaptor->fetch_all_by_InputSubsets');
-}
-
-
-#DEPRECATED in v76
-
-sub archive_id { 
-    throw('DEPRECATED: Please use \'name\' or access the Experiment archive_id method');
-    return shift->{archive_id}; 
-}
-
-sub display_url{ 
-  throw('DEPRECATED: Please use the Experiment display_url method');
-  return shift->{display_url}; 
-}
-
-
-
-
 1;
 

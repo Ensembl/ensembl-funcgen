@@ -39,8 +39,13 @@ A year after deprecation (4 Ensembl releases), the method is removed from the AP
  - Bio::Ensembl::Funcgen::**Probe**::*get_score_by_Analysis_CoordSystem()*
  - Bio::Ensembl::Funcgen::**Probe**::*get_all_design_scores()*
  - Bio::Ensembl::Funcgen::DBSQL::**DataSetAdaptor**::*store_updated_sets()*
+ - Bio::Ensembl::Funcgen::HiveConfig::**Alignment_conf.pm**
+ - Bio::Ensembl::Funcgen::HiveConfig::**Peaks_conf.pm**
+ - Bio::Ensembl::Funcgen::HiveConfig::**Annotation_conf.pm**
+ - Bio::Ensembl::Funcgen::HiveConfig::**Dnase_profile_conf.pm**
+ - Bio::Ensembl::Funcgen::HiveConfig::**MotifFinder_conf.pm**
+ - Bio::Ensembl::Funcgen::HiveConfig::**Import.pm**
 
  - scripts/pipeline/**configure_hive.pl**
  - scripts/regulatory_build/**load_segmentation.pl**
-
- - Bio::Ensembl::Funcgen::****::**
+ - scripts/regulatory_build/**unpack_swilder_segmentation.pl**
