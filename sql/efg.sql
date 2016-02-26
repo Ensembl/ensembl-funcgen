@@ -54,7 +54,7 @@
 @column binary_string           Binary representation for the underlying feature sets/types
 @column bound_start_length      Distance between start of the feature and start of the bound region
 @column bound_end_length        Distance between end of the bound region and end of this feature
-@column has_evidence            Boolean, indicates that this feature has evidence on this cell type
+@column activity                Indicates the type of activity of this feature in this cell type
 @column cell_type_count         Integer, precomupted number of cell type specific features with evidence
 
 @see feature_set
@@ -79,7 +79,7 @@ CREATE TABLE `regulatory_feature` (
   `projected` boolean default FALSE,
   `bound_start_length` mediumint(3) unsigned NOT NULL,
   `bound_end_length` mediumint(3) unsigned NOT NULL,
-  `has_evidence` tinyint(1),
+  `activity` tinyint(1),
   `cell_type_count` smallint(6),
   PRIMARY KEY  (`regulatory_feature_id`),
   UNIQUE KEY `fset_seq_region_idx` (`feature_set_id`, `seq_region_id`,`seq_region_start`, `feature_type_id`),
