@@ -61,7 +61,6 @@
 @see feature_type
 @see seq_region
 
-
 */
 
 DROP TABLE IF EXISTS `regulatory_feature`;
