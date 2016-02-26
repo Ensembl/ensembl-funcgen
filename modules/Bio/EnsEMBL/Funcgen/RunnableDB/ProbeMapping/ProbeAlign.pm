@@ -135,7 +135,7 @@ sub fetch_input {
   # We need 101 hits, so we can test later, if a probe sequencehad more than 100 hits.
   $self->OPTIONS(' --bestn 101 --dnahspthreshold 116 --fsmmemory 256 --dnawordlen 12 --dnawordlimit 0 ');
   $self->HIT_SATURATION_LEVEL(100);
-  $self->MAX_MISMATCHES(1);
+  $self->MAX_MISMATCHES(0);
   $self->QUERYTYPE('dna');
   $self->OUTDB($self->param('OUTDB'));
   $self->QUERYSEQS($self->param('QUERYSEQS'));
@@ -153,6 +153,10 @@ sub fetch_input {
   
   $funcgen_adaptor->dbc->reconnect_when_lost(1);
   $funcgen_adaptor->dnadb->dbc->reconnect_when_lost(1);  
+  $funcgen_adaptor->dbc->disconnect_when_inactive(1);
+  $funcgen_adaptor->dnadb->disconnect_when_inactive(1);
+  
+  $self->dbc->disconnect_when_inactive(1);
   
   my $analysis_adaptor = $funcgen_adaptor->get_AnalysisAdaptor;
   
@@ -411,6 +415,8 @@ sub write_output {
   $self->output($features);
   
   print 'Writing '.scalar(@{$features})." ProbeFeatures\n";
+  
+  $outdb->dbc->disconnect_when_inactive(0);
 
   foreach my $feature_xref(@{$features}){
   

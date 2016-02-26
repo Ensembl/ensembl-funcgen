@@ -176,7 +176,7 @@ sub parse_results {
   $self->{counts}{total_probe_alignments} =0;
   $self->{counts}{total_probe_mismatches} =0;
   
-  $self->probe_align_helper->dbc->disconnect_when_inactive(0);
+  #$self->probe_align_helper->dbc->disconnect_when_inactive(0);
 
   # Memory saving strategy, only put into global @features, if it is not a 
   # promiscuous match.
@@ -486,7 +486,7 @@ sub parse_results {
 
   }
 
-  $self->probe_align_helper->dbc->disconnect_when_inactive(1);
+  #$self->probe_align_helper->dbc->disconnect_when_inactive(1);
   
   print "Total alignments Probe/ProbeFeature:\t".
 	(keys (%{$self->{counts}{total_probes}})).'/'.$self->{counts}{total_probe_alignments}."\n";
