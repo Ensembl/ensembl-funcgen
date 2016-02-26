@@ -629,7 +629,7 @@ CREATE TABLE `result_set` (
    `cell_type_id`     int(10) unsigned default NULL,
    `experiment_id`    int(10) unsigned default NULL,
    `feature_type_id`  int(10) unsigned default NULL,
-   `feature_class`    enum('result', 'dna_methylation') DEFAULT NULL,
+   `feature_class`    enum('result', 'dna_methylation','segmentation') DEFAULT NULL,
    `name`             varchar(100) default NULL,
    `replicate`        tinyint(3) unsigned NOT NULL,
    PRIMARY KEY  (`result_set_id`),
@@ -1143,7 +1143,7 @@ DROP TABLE IF EXISTS `cell_type`;
 CREATE TABLE `cell_type` (
    `cell_type_id` int(10) unsigned NOT NULL auto_increment,
    `name`  varchar(120) not NULL,
-   `display_label` varchar(30) default NULL,
+   `display_label` varchar(30) default NOT NULL,
    `description` varchar(80) default NULL,
    `gender` enum('male', 'female', 'hermaphrodite', 'mixed') default NULL,
    `efo_id` varchar(20) DEFAULT NULL,
@@ -1292,7 +1292,7 @@ INSERT INTO status_name(name) VALUES ('VSN_GLOG');
 DROP TABLE IF EXISTS regbuild_string;
 CREATE TABLE `regbuild_string` (
   `regbuild_string_id` int(10) NOT NULL auto_increment,
-  `name` varchar(60) NOT NULL,
+  `name` varchar(150) NOT NULL,
   `species_id` smallint(5) unsigned NOT NULL default '1',
   `string` text NOT NULL,
   PRIMARY KEY  (`regbuild_string_id`),
@@ -1424,8 +1424,12 @@ INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 
 -- Update and remove these for each release to avoid erroneous patching
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '84');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_83_84_a.sql|schema_version');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_83_84_b.sql|Drop unique key for cell_type.efo_id');
-
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_83_84_c.sql|Add not null constraint to cell_type.display_label');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_83_84_d.sql|Add segmentation enum to result_set.feature_class');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_83_84_e.sql|Increase length of regbuild_string.name');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_83_84_f.sql|Change regulatory_feature has_evidence to activity');
 
 /**
 @table meta_coord
