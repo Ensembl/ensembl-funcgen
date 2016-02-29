@@ -488,22 +488,15 @@ sub filter_features {
   my $promiscuous_probes = $output->{promiscuous_probes};
   
   use Data::Dumper;  
-  
-#   open OUT, "promiscuous_probes.debug.pl";
-#   print OUT Dumper($promiscuous_probes);
-#   close (OUT);
-  
   my (%hits_by_probe, @kept_hits);
-  
-  #my $analysis     = $self->analysis;  
   
   my $mapping_type = $self->mapping_type;
   my $max_hits     = $self->HIT_SATURATION_LEVEL;
   my $uo_adaptor   = $self->outdb->get_UnmappedObjectAdaptor;
-#   my $pf_adaptor   = $self->outdb->get_ProbeFeatureAdaptor;
-#  my $pf_adaptor   = $self->outdb->get_AnalysisAdaptor;
   
-  foreach my $promiscuous_probe (@$promiscuous_probes) {  
+  # In ExonerateProbe, any probe that makes more than 100 hits is classifies as a promiscuous probe.
+  #
+  foreach my $promiscuous_probe (@$promiscuous_probes) {
   
     my $probe    = $promiscuous_probe->{probe};
     my $analysis = $promiscuous_probe->{analysis};
