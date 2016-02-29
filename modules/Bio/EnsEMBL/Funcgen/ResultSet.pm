@@ -77,6 +77,7 @@ my %valid_table_names =
    experimental_chip => undef,
    input_subset      => undef,
    channel           => undef,
+   segmentation      => undef,
   );
 
 
@@ -137,9 +138,6 @@ sub new {
   if(defined $support){
     $self->add_support($support);
   }
-  elsif(! defined $table_name){
-    throw('You must provide either a -support or a -table_name parameter');
-  }
 
   #Remove this when -table_id fully deprecated
   if(defined $table_id){
@@ -160,7 +158,7 @@ sub new {
 
 
 sub _valid_feature_classes{
-  return qw( result dna_methylation );
+  return qw( result dna_methylation segmentation );
 }
 
 
@@ -410,9 +408,7 @@ sub table_name{ return shift->{table_name}; }
 sub _add_table_id {
   my ($self, $table_id, $cc_id) = @_;
 
-  if (! defined $table_id){
-    throw('Need to pass a table_id');
-  }else{
+  if ( defined $table_id){
 
     #This allows setting of the cc_id on store
     if((exists $self->{table_ids}->{$table_id}) &&
