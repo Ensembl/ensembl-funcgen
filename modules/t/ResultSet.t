@@ -366,12 +366,6 @@ throws_ok {
 qr/You are attempting to redefine a result_set_input_id which is already defined/,
     "Test exception throw for already defined result_set_input_id";
 
-throws_ok {
-    $new_result_set->_add_table_id();
-}
-qr/Need to pass a table_id/,
-    "Test exception throw for mandatory table_id parameter";
-
 # ----------------
 # Test table_ids()
 # ----------------
@@ -405,5 +399,3 @@ my $brand_new_result_set = Bio::EnsEMBL::Funcgen::ResultSet->new(
         -support       => [$iss],
     );
 is_deeply($brand_new_result_set->get_support(),[$iss], 'Test get_support()');
-
-print Dumper $new_result_set->get_support();
