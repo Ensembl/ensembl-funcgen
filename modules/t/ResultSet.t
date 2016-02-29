@@ -96,17 +96,6 @@ qr/You need to pass a valid -table_name/,
     "Test exception throw for invalid table_name ";
 
 
-throws_ok {
-    my $new_result_set = Bio::EnsEMBL::Funcgen::ResultSet->new(
-        -analysis      => $analysis,
-        -feature_class => 'result',
-        -feature_type  => $feature_type,
-        -name          => 'new_result_set',
-    );
-}
-qr/You must provide either a -support or a -table_name parameter/,
-    "Test exception throw for support or table name parameter";
-
 my $iss = $issa->fetch_by_name('SRR037563');
 
 throws_ok {
