@@ -78,7 +78,7 @@ sub run {
 
   my $self                  = shift;
   my $helper                = $self->helper;
-  my $result_set_adaptor    = $self->out_db->get_ResultSetAdaptor;
+  #my $result_set_adaptor    = $self->out_db->get_ResultSetAdaptor;
   my $input_subset_ids      = $self->input_subset_ids;
   my $control_input_subsets = [];
   
@@ -232,6 +232,87 @@ sub run {
 
     foreach my $result_set (@$result_set_group) {
     
+=head1 A note on storing of result sets and their supporting sets
+
+How supporting sets for result sets are stored and get retrieved:
+
+They get stored when the result set is created like this:
+
+```
+ $result_set = $helper->define_ResultSet(%{$result_set});
+```
+
+This is the next command below.
+
+At the end of the define_ResultSet method there is a call to 
+_validate_rollback_Set like this:
+
+```
+ return $self->_validate_rollback_Set($stored_rset, $rset, 'result_set', $rollback_level,
+$rset_adaptor, $slices, $recover, $full_delete,
+$rset_mode);
+```
+
+https://github.com/Ensembl/ensembl-funcgen/blob/release/83/modules/Bio/EnsEMBL/Funcgen/Utils/Helper.pm#L893
+
+This is the method in which the result set object is stored in the database. 
+The result set is stored towards the end of _validate_rollback_Set, if the 
+full_delete flag has been set:
+
+```
+ # REDEFINE STORED SET AFTER FULL DELETE
+if($full_delete){
+($stored_set) = @{ $adaptor->store($new_set) };
+} 
+```
+
+https://github.com/Ensembl/ensembl-funcgen/blob/release/83/modules/Bio/EnsEMBL/Funcgen/Utils/Helper.pm#L1122
+
+When looking at the store method used above, it might not be immediately 
+obvious where the store method in the ResultSetAdaptor stores the supporting 
+sets:
+
+https://github.com/Ensembl/ensembl-funcgen/blob/release/83/modules/Bio/EnsEMBL/Funcgen/DBSQL/ResultSetAdaptor.pm#L461
+
+The line that triggers storing of the supporting sets is this one:
+
+```
+$self->store_chip_channels($rset);
+```
+
+https://github.com/Ensembl/ensembl-funcgen/blob/release/83/modules/Bio/EnsEMBL/Funcgen/DBSQL/ResultSetAdaptor.pm#L499
+
+Note that in the store_chip_channels method the supporting data is not stored in the 
+supporting_set table as the name might suggest, but in result_set_input:
+
+
+```
+ my $sth = $self->prepare('INSERT INTO result_set_input (result_set_id, table_id, table_name)'.
+' VALUES (?, ?, ?)');
+my $sth1 = $self->prepare('INSERT INTO result_set_input '.
+'(result_set_input_id, result_set_id, table_id, table_name) VALUES (?, ?, ?, ?)');
+```
+
+https://github.com/Ensembl/ensembl-funcgen/blob/release/83/modules/Bio/EnsEMBL/Funcgen/DBSQL/ResultSetAdaptor.pm#L661
+
+The supporting set table is used for objects that are supported by result 
+sets, not for storing support for a result set.
+
+For manual inspection the supporting sets for a result set can be selected 
+from the database like this:
+
+```
+select * from result_set join result_set_input using (result_set_id) join input_subset on (table_id=input_subset_id) where result_set.name = "K562:hist:BR2_H3K27ac_3526_bwa_samse"
+```
+
+Also note that when ResultSet objects are created, they don't have the 
+supporting sets added to them when they are constructed:
+
+https://github.com/Ensembl/ensembl-funcgen/blob/release/83/modules/Bio/EnsEMBL/Funcgen/DBSQL/ResultSetAdaptor.pm#L427
+
+They are lazy loaded when the support is requested using the table_ids.
+
+=cut
       $result_set = $helper->define_ResultSet(%{$result_set});
 
       $self->helper->debug(1, "Caching $foo_bar branch jobs for ".$result_set->name);
