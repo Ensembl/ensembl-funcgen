@@ -305,6 +305,20 @@ from the database like this:
 select * from result_set join result_set_input using (result_set_id) join input_subset on (table_id=input_subset_id) where result_set.name = "K562:hist:BR2_H3K27ac_3526_bwa_samse"
 ```
 
+Result sets missing controls can be found like this:
+
+```
+select result_set.name, sum(input_subset.is_control=1) as c from result_set 
+join result_set_input using (result_set_id) 
+join input_subset on (table_id=input_subset_id) 
+join experiment on (result_set.experiment_id = experiment.experiment_id) 
+join experimental_group using (experimental_group_id) 
+where experimental_group.name = "CTTV020"
+group by result_set.name
+having c=0
+
+```
+
 Also note that when ResultSet objects are created, they don't have the 
 supporting sets added to them when they are constructed:
 
@@ -328,6 +342,17 @@ They are lazy loaded when the support is requested using the table_ids.
 
   # Pick an arbitrary set for access to the controls 
   my ($any_group) = keys(%{$branch_sets{$foo_bar}});
+  
+  #
+  # Bio::EnsEMBL::Hive::DBSQL::DBConnection has a method to generate a url
+  # from a DBConnection object. Have to rebless in order to use it.
+  # (Yes, I know it is an evil thing to do)
+  #
+  my $out_db = $self->out_db;
+  my $original_class = ref $out_db->dbc;
+  my $out_db_hive_method_available = bless $out_db->dbc, "Bio::EnsEMBL::Hive::DBSQL::DBConnection";
+  my $url = $out_db_hive_method_available->url;
+  bless $out_db->dbc, $original_class;
 
   # result_set_groups has all the information necessary for 
   # JobFactorySignalProcessing to create jobs for running the bwa 
@@ -341,7 +366,8 @@ They are lazy loaded when the support is requested using the table_ids.
 	result_set_groups => $branch_sets{$foo_bar},
 	set_type  => 'ResultSet',
 	dbID      => $branch_sets{$foo_bar}{$any_group}{dbIDs}->[0],
-	set_name  => $branch_sets{$foo_bar}{$any_group}{set_names}->[0]
+	set_name  => $branch_sets{$foo_bar}{$any_group}{set_names}->[0],
+	db_conn   => $url,
       }
     ]
   );
