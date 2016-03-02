@@ -83,8 +83,30 @@ sub pipeline_analyses {
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::DefineResultSets',
      -meadow     => 'LOCAL',
     -flow_into => {
-      2 => 'Preprocess_bwa_samse_control',
+      2 => 'FixExperimentIds',
      },
+    },
+    {
+     -logic_name => 'FixExperimentIds',
+     -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+     -parameters => {
+	#
+	# Sets the experiment id for the current result set.
+	#
+	# This shold be set when creating the result set, but it is not. 
+	# Until this is fixed in the api we do it here in an extra step.
+	#
+	sql => qq(
+	  update result_set, cell_type, experiment 
+	  set result_set.experiment_id = experiment.experiment_id 
+	  where cell_type.cell_type_id=experiment.cell_type_id and cell_type.cell_type_id=result_set.cell_type_id and experiment.feature_type_id=result_set.feature_type_id
+	  and result_set_id = #dbID#
+	  ),
+	},
+      -meadow     => 'LOCAL',
+      -flow_into => {
+	1 => 'Preprocess_bwa_samse_control',
+      },
     },
     {
       -logic_name => 'Preprocess_bwa_samse_control',
