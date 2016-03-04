@@ -25,42 +25,13 @@ use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
-
-
-#todo rename logic_names to be generic e.g. SWEmbl_tight
-#then we can have different parameter sets between species
-
-#todo Move more to PeakCaller so it is available from SeqTools
-#Or move directly to SeqTools? Max peaks filtering. write_output and store_AnnotatedFeature?
-#
-
-#input_dir and work_dir can be separate
-#such that we can't point to remote fastqs
-#input_dir should never be altered
-#where as work_dir can be written to and cleaned up afterwards
-#is this fully supported?
-
-#params
-#-output dir should never be dataflowed! ANd is really only safe when running one analysis
-#as it will send all output there
-#-reload
-
-# todo
-# Should really generalise this and remove mandatory set dependancies
-# Allow passing the files required from the upstream analysis
-# And make the set operations optional
-
-#Make this optionally take a ResultSet and a peak analysis
-#to support calling without generation of Data/FeatureSet
-#if there is no feature set, we should also not load the peaks
-#if we define a max peaks value, then we rename to first output to unfiltered,
-#then add a filter step to the final expected output
-
 sub fetch_input {
   my $self = shift;
-  #Do some thing before we SUPER::fetch_input
-  #$self->param('disconnect_if_idle', 1);
+  
+  # This is used in slice_objects in BaseDB, who knows what it does
+  #
   $self->param('include_slice_duplicates',1);
+  
   $self->SUPER::fetch_input;
 
   my $set_type = $self->param_required('set_type');  
@@ -123,6 +94,14 @@ sub fetch_input {
 
   my $align_prefix   = $self->get_alignment_path_prefix_by_ResultSet($rset, undef, 1);#validate aligned flag 
   my $control_prefix = $self->get_alignment_path_prefix_by_ResultSet($rset, 1, 1);#and control flag 
+  
+  print "\n------------------ Dumper ---------------------------------\n";
+   #print Dumper([$align_prefix, $control_prefix]);  
+   print "\n------------------ Dumper ---------------------------------\n";
+   
+   
+   #die();
+  
   my $sam_ref_fai = $self->sam_ref_fai($rset->cell_type->gender);  #Just in case we need to convert
 
   #These maybe things like extra input/reference files
