@@ -76,7 +76,13 @@ sub run {
  
   my $cmd = $self->program_file." $format_switch -i $compressed ".
     $self->align_file.' '. $self->parameters.' -o '.$self->out_file;
-  $cmd .= " -r ".$self->control_file if $self->control_file;
+    
+  if ($self->control_file) {
+    $cmd .= " -r ".$self->control_file;
+  } else {
+    use Carp;
+    confess("No control file specified!");
+  }
   
   warn "Running:\t$cmd\n" if $self->debug;
   #This did no cause failure when failed
