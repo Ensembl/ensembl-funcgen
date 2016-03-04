@@ -83,17 +83,17 @@ sub pipeline_analyses {
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::DefineResultSets',
      -meadow     => 'LOCAL',
     -flow_into => {
-      2 => 'FixExperimentIds',
+      2 => 'FixResultSetsExperimentIds',
      },
     },
     {
-     -logic_name => 'FixExperimentIds',
+     -logic_name => 'FixResultSetsExperimentIds',
      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
      -parameters => {
 	#
 	# Sets the experiment id for the current result set.
 	#
-	# This shold be set when creating the result set, but it is not. 
+	# This should be set when creating the result set, but it is not. 
 	# Until this is fixed in the api we do it here in an extra step.
 	#
 	sql => qq(
