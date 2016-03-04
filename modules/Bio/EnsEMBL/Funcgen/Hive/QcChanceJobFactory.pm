@@ -40,7 +40,7 @@ sub run {
   
   my $input_id = $self->create_input_id($rset);
   
-#   use Data::Dumper;
+   use Data::Dumper;
 #   $Data::Dumper::Maxdepth = 0;
 #   print Dumper($input_id);
   $self->dataflow_output_id($input_id, 2);
@@ -58,8 +58,12 @@ sub create_input_id {
   my $result_set = shift;
   my $result_set_id = $result_set->dbID;
 
+  print "\n\nGetting prefix for signal\n\n";
   my $align_prefix   = $self->get_alignment_path_prefix_by_ResultSet($result_set, undef, 1);#validate aligned flag 
+  print "\n\nGetting prefix for control\n\n";
   my $control_prefix = $self->get_alignment_path_prefix_by_ResultSet($result_set, 1, 1);#and control flag 
+  
+#   print Dumper($result_set); print Dumper($align_prefix);   print Dumper($control_prefix);   die();
   
   my $signal_bam_file  = $align_prefix   . '.bam';
   my $control_bam_file = $control_prefix . '.bam';
