@@ -180,11 +180,13 @@ sub run {
 
     foreach my $rep_set (@rep_sets) {
     
+      my $replicate = $rep_set->[0]->replicate;
+    
       my $result_set_name;
       if($current_set_to_be_processed_with_idr) {
       
         # There will be only 1 in the $rep_set
-        $result_set_name = $parent_set_name . '_TR'.$rep_set->[0]->replicate;
+        $result_set_name = $parent_set_name . '_TR'.$replicate;
 
       } else {
 	# Reminder: $parent_set_name is 'K562:hist:BR1_H3K27me3_3526_bwa_samse'
@@ -193,15 +195,16 @@ sub run {
       }
 
       my $result_set_constructor_parameters = {
-	-RESULT_SET_NAME     => $result_set_name,
-	-SUPPORTING_SETS     => [@$rep_set, @$control_input_subsets],
-	-DBADAPTOR           => $self->out_db,
-	-RESULT_SET_ANALYSIS => $alignment_analysis_object,
-	-ROLLBACK            => $self->param_silent('rollback'),
-	-RECOVER             => $self->param_silent('recover'),
-	-FULL_DELETE         => $self->param_silent('full_delete'),
-	-CELL_TYPE           => $cell_type,
-	-FEATURE_TYPE        => $feature_type
+	-RESULT_SET_NAME      => $result_set_name,
+	-RESULT_SET_REPLICATE => $replicate,
+	-SUPPORTING_SETS      => [@$rep_set, @$control_input_subsets],
+	-DBADAPTOR            => $self->out_db,
+	-RESULT_SET_ANALYSIS  => $alignment_analysis_object,
+	-ROLLBACK             => $self->param_silent('rollback'),
+	-RECOVER              => $self->param_silent('recover'),
+	-FULL_DELETE          => $self->param_silent('full_delete'),
+	-CELL_TYPE            => $cell_type,
+	-FEATURE_TYPE         => $feature_type
       };
 
       if ($current_set_to_be_processed_with_idr) {
@@ -225,12 +228,13 @@ sub run {
   my %batch_params = %{$self->batch_params};
   my %branch_sets;
   my $tracking_adaptor = $self->tracking_adaptor;
-
+  
+  my @hive_jobs_fix_experiment_id;
   foreach my $result_set_group_name (keys %{$result_sets{$foo_bar}}) {
   
     my $result_set_group = $result_sets{$foo_bar}->{$result_set_group_name};
 
-    foreach my $result_set (@$result_set_group) {
+    foreach my $current_result_set_constructor_parameter (@$result_set_group) {
     
 =head1 A note on storing of result sets and their supporting sets
 
@@ -327,7 +331,12 @@ https://github.com/Ensembl/ensembl-funcgen/blob/release/83/modules/Bio/EnsEMBL/F
 They are lazy loaded when the support is requested using the table_ids.
 
 =cut
-      $result_set = $helper->define_ResultSet(%{$result_set});
+      my $result_set = $helper->define_ResultSet(%{$current_result_set_constructor_parameter});
+      
+      push @hive_jobs_fix_experiment_id, { 
+	dbID      => $result_set->dbID, 
+	replicate => $current_result_set_constructor_parameter->{-RESULT_SET_REPLICATE},
+      };
 
       $self->helper->debug(1, "Caching $foo_bar branch jobs for ".$result_set->name);
 
@@ -343,23 +352,14 @@ They are lazy loaded when the support is requested using the table_ids.
   # Pick an arbitrary set for access to the controls 
   my ($any_group) = keys(%{$branch_sets{$foo_bar}});
   
-  #
-  # Bio::EnsEMBL::Hive::DBSQL::DBConnection has a method to generate a url
-  # from a DBConnection object. Have to rebless in order to use it.
-  # (Yes, I know it is an evil thing to do)
-  #
-  my $out_db = $self->out_db;
-  my $original_class = ref $out_db->dbc;
-  my $out_db_hive_method_available = bless $out_db->dbc, "Bio::EnsEMBL::Hive::DBSQL::DBConnection";
-  my $url = $out_db_hive_method_available->url;
-  bless $out_db->dbc, $original_class;
-
   # result_set_groups has all the information necessary for 
   # JobFactorySignalProcessing to create jobs for running the bwa 
   # analysis triplet on the signals.
   #
   $self->branch_job_group(
     2,
+    \@hive_jobs_fix_experiment_id,
+    3,
     [
       {
 	%batch_params,
@@ -367,7 +367,6 @@ They are lazy loaded when the support is requested using the table_ids.
 	set_type  => 'ResultSet',
 	dbID      => $branch_sets{$foo_bar}{$any_group}{dbIDs}->[0],
 	set_name  => $branch_sets{$foo_bar}{$any_group}{set_names}->[0],
-	db_conn   => $url,
       }
     ]
   );
