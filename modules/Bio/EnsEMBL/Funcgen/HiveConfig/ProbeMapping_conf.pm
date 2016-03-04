@@ -65,7 +65,7 @@ sub _pipeline_analyses_probe_align {
 		  . ( $self->o('tracking_pass') ? ' -dbpass ' . $self->o('tracking_pass') : '' )
 		  
 		  . ' -arrays #all_array_names# -force',
-            },            
+            },
             -flow_into => {
                1 => [ 'ImportArrays' ],
             },
