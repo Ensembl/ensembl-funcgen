@@ -7,6 +7,13 @@ use base qw(Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf);
 sub default_options {
   my $self = shift;
   
+#   my $dnadb_pass = $self->o('dnadb_pass');
+#   # This is code for no password on the command line.
+#   #
+#   if (($dnadb_pass eq "''") || ($dnadb_pass eq "\"\"")) {
+#     $dnadb_pass = undef;
+#   }
+  
   return {
       %{$self->SUPER::default_options},
       dnadb_pass        => $self->o('ENV', 'DNADB_PASS'),
@@ -17,25 +24,10 @@ sub default_options {
       port              => 3306,
       dnadb_port        => 3306,
       pipeline_name     => 'ersa',
-   };
-}
-
-sub pipeline_wide_parameters {
-  my ($self) = @_;
-
-  my $dnadb_pass = $self->o('dnadb_pass');
-  # This is code for no password on the command line.
-  #
-  if (($dnadb_pass eq "''") || ($dnadb_pass eq "\"\"")) {
-    $dnadb_pass = undef;
-  }
-  
-  return {
-    %{$self->SUPER::pipeline_wide_parameters},
-
+      
     dnadb   => {
 	-dnadb_host   => $self->o('dnadb_host'),
-	-dnadb_pass   => $dnadb_pass,
+	-dnadb_pass   => undef,
 	-dnadb_port   => $self->o('dnadb_port'),
 	-dnadb_user   => $self->o('dnadb_user'),
 	-dnadb_name   => $self->o('dnadb_name'),
@@ -46,8 +38,23 @@ sub pipeline_wide_parameters {
 	-user   => $self->o('user'),
 	-pass   => $self->o('pass'),
 	-dbname => $self->o('dbname'),
+	-driver => 'mysql',
     },
+
+   };
+}
+
+sub pipeline_wide_parameters {
+  my ($self) = @_;
+  
+  return {
+    %{$self->SUPER::pipeline_wide_parameters},
+
+    dnadb         => $self->o('dnadb'),
+    out_db        => $self->o('out_db'),
     pipeline_name => $self->o('pipeline_name'),
+    
+    out_db_url => $self->dbconn_2_url('out_db'),
 
     species        => $self->o('species'),
     assembly       => $self->o('assembly'),
