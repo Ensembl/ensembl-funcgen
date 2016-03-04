@@ -83,7 +83,8 @@ sub pipeline_analyses {
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::DefineResultSets',
      -meadow     => 'LOCAL',
     -flow_into => {
-      2 => 'FixResultSetsExperimentIds',
+      '2->A' => 'FixResultSetsExperimentIds',
+      'A->3' => 'Preprocess_bwa_samse_control',
      },
     },
     {
@@ -98,15 +99,15 @@ sub pipeline_analyses {
 	#
 	sql => qq(
 	  update result_set, cell_type, experiment 
-	  set result_set.experiment_id = experiment.experiment_id 
+	  set result_set.experiment_id = experiment.experiment_id, result_set.replicate = #replicate#
 	  where cell_type.cell_type_id=experiment.cell_type_id and cell_type.cell_type_id=result_set.cell_type_id and experiment.feature_type_id=result_set.feature_type_id
 	  and result_set_id = #dbID#
 	  ),
+	  db_conn => '#out_db_url#'
 	},
       -meadow     => 'LOCAL',
-      -flow_into => {
-	1 => 'Preprocess_bwa_samse_control',
-      },
+      -analysis_capacity => 1,
+      -batch_size => 1000,
     },
     {
       -logic_name => 'Preprocess_bwa_samse_control',
