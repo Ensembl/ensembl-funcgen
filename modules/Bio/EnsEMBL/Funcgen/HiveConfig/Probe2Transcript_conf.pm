@@ -60,7 +60,7 @@ sub default_options {
 	transcript_dump_file    => $self->o('tempdir') . '/target_genes.fasta',
 	unmapped_sequences_file => $self->o('tempdir') . '/unmapped_probe_sequences.fasta',
 	
-	tempdir => '/lustre/scratch110/ensembl/funcgen/array_mapping/'.$ENV{USER}.'/temp/' .$self->o('species'),
+	tempdir => '/lustre/scratch109/ensembl/funcgen/array_mapping/'.$ENV{USER}.'/temp/' .$self->o('species'),
 	
 	tracking_dba_hash => {
 	    -user         => $self->o('tracking_user'),
