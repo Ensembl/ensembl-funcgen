@@ -6,7 +6,7 @@ DROP TABLE IF EXISTS `probe_seq`;
 
 CREATE TABLE `probe_seq` (
   `probe_seq_id` int(10) NOT NULL AUTO_INCREMENT,
-  `probe_sha1` char(27) NOT NULL,
+  `probe_sha1` char(40) NOT NULL,
   `probe_dna` text NOT NULL,
   `has_been_mapped` BOOL DEFAULT 0,
   PRIMARY KEY (`probe_seq_id`),
