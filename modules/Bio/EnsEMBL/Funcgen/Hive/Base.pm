@@ -981,8 +981,21 @@ sub sam_header{
 sub get_alignment_path_prefix_by_ResultSet{
   my ($self, $rset, $control) = @_;
   assert_ref($rset, 'Bio::EnsEMBL::Funcgen::ResultSet');
-  my $ctrl_exp = ($control) ? $rset->experiment(1) : undef;
+  my $ctrl_exp;
+  
+  if ($control) {
+    $ctrl_exp = $rset->experiment(1);
+    
+#      print Dumper($rset);
+#      print Dumper($ctrl_exp);
+#      die();
+  }
+  
   return if $control && ! $ctrl_exp;
+  
+#   use Data::Dumper;
+#   $Data::Dumper::Maxdepth = 3;
+#   print Dumper([$rset, $control]);
   
   my @rep_numbers;
   
