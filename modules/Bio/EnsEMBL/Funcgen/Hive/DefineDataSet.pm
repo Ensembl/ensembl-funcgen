@@ -136,7 +136,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
 sub write_output {  # Create the relevant jobs
   my $self = shift;
   $self->helper->debug(1, 'DefineDataSet data flowing:', $self->param('output_id'));
-  $self->dataflow_output_id($self->param('output_id'), 1);
+  $self->dataflow_output_id($self->param('output_id'), 2);
   return;
 }
 
