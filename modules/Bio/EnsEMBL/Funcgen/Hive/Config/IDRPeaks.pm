@@ -120,6 +120,7 @@ sub pipeline_analyses {
 	  where cell_type.cell_type_id=experiment.cell_type_id and cell_type.cell_type_id=result_set.cell_type_id and experiment.feature_type_id=result_set.feature_type_id
 	  and result_set_id = #dbID#
 	  ),
+	  db_conn => '#out_db_url#',
 	},
       -meadow     => 'LOCAL',
       -flow_into => {
