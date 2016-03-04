@@ -102,7 +102,6 @@ sub run {
   my $helper                = $self->helper;
   my $result_set_adaptor    = $self->out_db->get_ResultSetAdaptor;
   my $input_subset_ids      = $self->input_subset_ids;
-  my $control_input_subsets = [];
   my $branch;
   
   my $alignment_analysis = $self->alignment_analysis;
@@ -112,7 +111,25 @@ sub run {
 
   my $control_branch = 'Preprocess_'.$alignment_analysis.'_control';
   my $controls = $self->controls;
+  my $control_input_subsets = [];
+  
+  if(
+    $controls 
+    && assert_ref($controls, 'ARRAY', 'controls') 
+    && @$controls) {
+    $control_input_subsets = &scalars_to_objects(
+      $self->out_db, 'InputSubset', 'fetch_by_dbID', $controls
+    );
+    if(! &_are_controls($control_input_subsets)) {
+      throw("Found unexpected non-control InputSubsets specified as controls\n\t"
+      . join("\n\t", map($_->name, @$control_input_subsets)));
+    }
+  }
 
+#   use Data::Dumper;
+#   print Dumper($control_input_subsets);
+#   die();
+  
   my (%result_sets, %replicate_bam_files);
 
   # merge_idr_replicates is undef in DefineMergedReplicateResultSet analysis
@@ -243,7 +260,7 @@ sub run {
 	});
 
 	$self->branch_job_group(
-	  'DefineMergedDataSet',
+	  2,
 	  [
 	    {
 	      %batch_params,
