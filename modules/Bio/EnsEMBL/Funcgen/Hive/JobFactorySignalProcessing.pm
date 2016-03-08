@@ -42,7 +42,7 @@ sub fetch_input {
   $self->get_param_method('result_set_groups', 'required');
   $self->get_param_method('bam_files',  'silent');
   
-  $self->init_branching_by_analysis;
+  #$self->init_branching_by_analysis;
   return;
 }
 
@@ -70,10 +70,15 @@ sub run {
 	dbID        => $current_result_set_group->{dbIDs}->[$i]
       };
     }
+#     $self->branch_job_group(
+#       2, 
+#       \@merged_jobs
+#     );
     # This flows to Preprocess_bwa_samse_merged.
     #
     $self->branch_job_group(
-      'Preprocess_'.$result_set_analysis_logic_name.'_merged', 
+      #'Preprocess_'.$result_set_analysis_logic_name.'_merged', 
+      10,
       \@merged_jobs
     );
 =head2
@@ -149,11 +154,15 @@ Branch 10 is Preprocess_bwa_samse_merged
     $self->branch_job_group(
     
       # Fan job
-      'Preprocess_'.$result_set_analysis_logic_name.'_replicate',
+      #'Preprocess_'.$result_set_analysis_logic_name.'_replicate',
+      
+      11,
       \@replicate_jobs,
       
       # Funnel job
-      'PreprocessIDR', [
+      #'PreprocessIDR', 
+      3,
+      [
 	{
 	  dbIDs     => $current_result_set_group->{dbIDs},
 	  set_names => $current_result_set_group->{set_names},

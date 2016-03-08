@@ -663,6 +663,9 @@ sub _param_and_method {
 sub init_branching_by_analysis{  
   my $self = shift;
    
+  use Carp;
+  confess('init_branching_by_analysis is deprecated.');
+
   #my $branch_config = $self->get_param_method('branch_config', 'silent');  
   #Not a passed param anymore, as we get it from the dataflow rules
  
@@ -800,7 +803,7 @@ sub branch_job_group{
       my $funnel_name = $branch_config->{$fan_branch}{funnel};
       
       if($branch_config->{$funnel_name}{branch} ne $funnel_branch){
-        throw("$funnel_branch_code is not a valid funnel analysis for fan branches:\t".
+        throw("$funnel_branch_code (expected: ".$branch_config->{$funnel_name}{branch}.") is not a valid funnel analysis for fan branches:\t".
           join(', ', @$fan_branch_codes)."\nPlease check you dataflow configuration");  
       }   
     }

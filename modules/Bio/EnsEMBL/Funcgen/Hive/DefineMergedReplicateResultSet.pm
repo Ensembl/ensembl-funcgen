@@ -22,7 +22,7 @@ use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 sub fetch_input {
   my $self = shift;
   $self->SUPER::fetch_input;
-  $self->init_branching_by_analysis;
+  #$self->init_branching_by_analysis;
   
   my $input_subset_ids = $self->get_param_method('input_subset_ids',  'required');
   assert_ref($input_subset_ids, 'HASH', 'InputSubset dbIDs');
