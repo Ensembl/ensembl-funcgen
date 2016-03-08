@@ -77,13 +77,11 @@ my $user;
 my $pass;
 my $host;
 my $dbname;
-my $control_result_set_id;
 my $signal_result_set_id;
 
 my %config_hash = (
   "argenrich_file"        => \$argenrich_file,
   "result_set_id"         => \$result_set_id,
-  'control_result_set_id' => \$control_result_set_id,
   'signal_result_set_id'  => \$signal_result_set_id,
   'dry_run'         => \$dry_run,
   'user'            => \$user,
@@ -95,7 +93,6 @@ my %config_hash = (
 my $result = GetOptions(
   \%config_hash,
   'result_set_id=s',
-  'control_result_set_id=s',
   'signal_result_set_id=s',
   'argenrich_file=s',
   'dry_run',
@@ -106,7 +103,6 @@ my $result = GetOptions(
 );
 
 die unless(-e $argenrich_file);
-# die unless($control_result_set_id);
 die unless($signal_result_set_id);
 
 my $logger = Bio::EnsEMBL::Utils::Logger->new();
