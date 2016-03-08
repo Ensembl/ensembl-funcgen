@@ -10,7 +10,7 @@
 
 =head1 LICENSE
 
-    Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+    Copyright [1999-2016] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 
     Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
     You may obtain a copy of the License at
@@ -30,15 +30,8 @@ package Bio::EnsEMBL::Funcgen::Hive::Config::QC_Chance;
 use strict;
 use warnings;
 
-use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');  # All Hive databases configuration files should inherit from HiveGeneric, directly or indirectly
-
-
-sub pipeline_wide_parameters {
-    my ($self) = @_;
-    return {
-        %{$self->SUPER::pipeline_wide_parameters},          # here we inherit anything from the base class
-    };
-}
+use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
+use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
 
 sub pipeline_analyses {
     my ($self) = @_;
@@ -104,7 +97,6 @@ sub pipeline_analyses {
 	  -module        => 'Bio::EnsEMBL::Funcgen::Hive::QcChanceJobFactory',
 	  -meadow        => 'LOCAL',
 	  -parameters => {
-		#chromosome_file => $self->o('data_root_dir'). '/reference_files/CCAT/'.$self->o('species').'_'.$self->o('assembly').'.CCAT_chr_lengths.txt'
 		chromosome_file => $self->o('chromosome_file')
 	  },
 	  -flow_into => { 2 => 'MkTempDir', },
@@ -131,8 +123,10 @@ sub pipeline_analyses {
         {   -logic_name => 'argenrichformregions',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -meadow_type=> 'LOCAL',
-            -parameters => { 
-		  cmd => qq!/software/ensembl/funcgen/argenrichformregions.pl #chrlenfilesorted#!,
+            -parameters => {
+		  # Should be in /software/ensembl/funcgen/
+		  #
+		  cmd => qq!argenrichformregions.pl #chrlenfilesorted#!,
             },
         },
         {   -logic_name => 'JobFactoryArgenrich',
@@ -186,7 +180,7 @@ sub pipeline_analyses {
 		  . qq(   input=#tempdir#/#expr( #file#->{"control"}       )expr# )
 		  . qq( outfile=#argenrich_outfile#)
             },
-            -flow_into => { 1 => 'LoadChanceToDB', },
+            -flow_into => { MAIN => 'LoadChanceToDB', },
             -rc_name   => 'normal_monitored_16GB',
         },
         {   -logic_name => 'LoadChanceToDB',
@@ -195,7 +189,6 @@ sub pipeline_analyses {
 	    -parameters => {
                 'cmd' => qq(load_argenrich_qc_file.pl        )
 		  . qq( --argenrich_file        #tempdir#/#argenrich_outfile#     )
-		  #. qq( --control_result_set_id #control_result_set_id#           )
 		  . qq( --signal_result_set_id  #signal_result_set_id#            )
 		  . qq( --user #tracking_db_user# --pass #tracking_db_pass# --host #tracking_db_host# --dbname #tracking_db_name# )
             },
