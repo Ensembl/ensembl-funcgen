@@ -47,15 +47,15 @@ sub pipeline_analyses {
 	-module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
 	-wait_for    => 'JobPool',
 	-flow_into => {
-	  '1' => [ 'TokenLimitedJobFactory' ],
+	  MAIN => 'TokenLimitedJobFactory',
 	},
     },
     {   -logic_name => 'TokenLimitedJobFactory',
 	-module     => 'Bio::EnsEMBL::Funcgen::Hive::TokenLimitedJobFactory',
 	-meadow_type=> 'LOCAL',
 	-flow_into => {
-	  '2->A' => [ 'IdentifyAlignInputSubsets' ],
-	  'A->1' => [ 'TokenLimitedJobFactory' ],
+	  '2->A' => 'IdentifyAlignInputSubsets',
+	  'A->1' => 'TokenLimitedJobFactory',
 	},
     },
     {
@@ -157,11 +157,10 @@ sub pipeline_analyses {
       -logic_name => 'MergeControlAlignments',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::MergeAlignments',
      -parameters => {
-# 	flow_mode => 'signal',
 	run_controls => 1,
      },
      -flow_into => {
-	  1 => 'JobFactorySignalProcessing',
+	  'MAIN' => 'JobFactorySignalProcessing',
        },
      -rc_name => '64GB_3cpu',
     },
@@ -199,7 +198,7 @@ sub pipeline_analyses {
       	run_controls => 0,
      },
      -flow_into => {
-	1 => 'JobFactoryDefineMergedDataSet'
+	MAIN => 'JobFactoryDefineMergedDataSet'
      },
      -rc_name => '64GB_3cpu',
     },
@@ -207,12 +206,11 @@ sub pipeline_analyses {
      -logic_name => 'MergeReplicateAlignments',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::MergeAlignments',
      -parameters => {
-# 	flow_mode => 'replicate',
 	run_controls => 0,
 	permissive_peaks => $self->o('permissive_peaks')
       },
      -flow_into => {
-	1 => 'JobFactoryPermissivePeakCalling'
+	MAIN => 'JobFactoryPermissivePeakCalling'
      },
      -rc_name => '64GB_3cpu',
     },
