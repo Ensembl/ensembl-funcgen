@@ -78,17 +78,48 @@ sub pipeline_analyses {
 # 	      '1' => [ 'QcPhantomPeaksJobFactory' ],
 #             },
 #         },
-	{
-	    -logic_name => 'PreprocessAlignments',
-	    -module     => 'Bio::EnsEMBL::Funcgen::Hive::CollectionWriter',
-	    -flow_into => {
-		'3'   => [  'QcPhantomPeaksJobFactory' ],
-		'4'   => [  'QcPhantomPeaksJobFactory' ],
-		'5'   => [  'QcPhantomPeaksJobFactory' ],
-		'6'   => [  'QcPhantomPeaksJobFactory' ],
-		'100' => [  'QcPhantomPeaksJobFactory' ],
-	    },
-	},
+# 	{
+# 	    -logic_name => 'PreprocessAlignments',
+# 	    -module     => 'Bio::EnsEMBL::Funcgen::Hive::CollectionWriter',
+# 	    -flow_into => {
+# 		'3'   => [  'QcPhantomPeaksJobFactory' ],
+# 		'4'   => [  'QcPhantomPeaksJobFactory' ],
+# 		'5'   => [  'QcPhantomPeaksJobFactory' ],
+# 		'6'   => [  'QcPhantomPeaksJobFactory' ],
+# 		'100' => [  'QcPhantomPeaksJobFactory' ],
+# 	    },
+# 	},
+    {
+      -logic_name => 'JobFactorySignalProcessing',
+      -module     => 'Bio::EnsEMBL::Funcgen::Hive::JobFactorySignalProcessing',
+      -flow_into => {
+	2 => 'BamFileQc',
+      },
+    },
+    {
+      -logic_name => 'JobFactoryDefineMergedDataSet',
+      -module     => 'Bio::EnsEMBL::Funcgen::Hive::JobFactoryDefineMergedDataSet',
+      -flow_into => {
+	2 => 'BamFileQc'
+      },
+      -meadow_type=> 'LOCAL',
+    },
+    {
+      -logic_name => 'JobFactoryPermissivePeakCalling',
+      -module     => 'Bio::EnsEMBL::Funcgen::Hive::JobFactoryPermissivePeakCalling',
+      -flow_into => {
+	'100' => 'BamFileQc'
+      },
+      -meadow_type=> 'LOCAL',
+    },
+    {
+      -logic_name => 'BamFileQc',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -flow_into => {
+	1 => 'QcPhantomPeaksJobFactory'
+      },
+      -meadow_type=> 'LOCAL',
+    },
         {   -logic_name => 'QcPhantomPeaksJobFactory',
             -module     => 'Bio::EnsEMBL::Funcgen::Hive::QcPhantomPeaksJobFactory',
             -meadow_type=> 'LOCAL',
