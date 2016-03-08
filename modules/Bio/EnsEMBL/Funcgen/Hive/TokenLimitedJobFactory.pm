@@ -32,22 +32,23 @@ sub run {
   print "This logic name:  " . $this_logic_name . "\n";
   print "This analysis_id: " . $this_analysis_id . "\n";
   
-  my $pool_analysis_id;
-
-  my $data_flow_rule = $dfr_adaptor->fetch_all;
-  RULE: foreach my $current_data_flow_rule (@$data_flow_rule) {
-    
-    my $job_pool_found = 
-      $current_data_flow_rule->to_analysis_url eq $this_logic_name
-      && $current_data_flow_rule->from_analysis_id != $this_analysis_id;
-      
-    if ($job_pool_found) {
-      $pool_analysis_id = $current_data_flow_rule->from_analysis_id;
-      last RULE;
-    }
-  }
+  my $sql = qq(select from_analysis_id from dataflow_rule join dataflow_target on (dataflow_rule_id=source_dataflow_rule_id) where to_analysis_url = ? and dataflow_rule.from_analysis_id != ?);
   
-  die("Couldn't find job pool!") unless($pool_analysis_id);
+  my $sth = $self->dbc->prepare($sql);
+  
+  $sth->bind_param(1, $this_logic_name);
+  $sth->bind_param(2, $this_analysis_id);
+  
+  $sth->execute;
+  
+  my $x = $sth->fetchrow_arrayref();
+  
+  die() unless(ref $x eq 'ARRAY');
+  die("Couldn't find job pool!") unless(@$x==1);
+  
+  my $pool_analysis_id = $x->[0];
+  
+  print "The analysis_id of the job pool is: " . $pool_analysis_id . "\n";
   
   my $jobs_from_pool = $input_job->adaptor->fetch_all_by_analysis_id_status(
     $pool_analysis_id, 
@@ -56,8 +57,12 @@ sub run {
   
   # Pool is empty
   if (!@$jobs_from_pool) {
+    print "There are no available job in the job pool.\n";
     return;
   }
+  
+  print "Found " . @$jobs_from_pool . " jobs with status 'READY' in the job pool.\n";
+
   my $count = $num_jobs_a_token_seeds;  
   JOB: foreach my $current_job (@$jobs_from_pool) {
   
