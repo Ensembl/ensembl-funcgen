@@ -90,7 +90,7 @@ sub pipeline_analyses {
 	    and data_set.data_set_id=supporting_set.data_set_id 
 	    and supporting_set.supporting_set_id=result_set.result_set_id 
 	    and supporting_set.type="result" 
-	  and data_set_id = #dbID#
+	  and data_set.data_set_id = #dbID#
 	  ),
 	  db_conn => '#out_db_url#',
 	},
