@@ -176,6 +176,22 @@ sub pipeline_analyses {
       -meadow_type=> 'LOCAL',
     },
     {
+      -logic_name => 'JobFactoryDefineMergedDataSet',
+      -module     => 'Bio::EnsEMBL::Funcgen::Hive::JobFactoryDefineMergedDataSet',
+      -flow_into => {
+	2 => [ 'DefineMergedDataSet' ]
+      },
+      -meadow_type=> 'LOCAL',
+    },
+    {
+      -logic_name => 'JobFactoryPermissivePeakCalling',
+      -module     => 'Bio::EnsEMBL::Funcgen::Hive::JobFactoryPermissivePeakCalling',
+      -flow_into => {
+	'100' => [ 'run_SWEmbl_R0005_replicate' ]
+      },
+      -meadow_type=> 'LOCAL',
+    },
+    {
      -logic_name => 'MergeAlignments',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::MergeAlignments',
      -parameters => {
@@ -186,14 +202,6 @@ sub pipeline_analyses {
 	1 => 'JobFactoryDefineMergedDataSet'
      },
      -rc_name => '64GB_3cpu',
-    },
-    {
-      -logic_name => 'JobFactoryDefineMergedDataSet',
-      -module     => 'Bio::EnsEMBL::Funcgen::Hive::JobFactoryDefineMergedDataSet',
-      -flow_into => {
-	2 => 'DefineMergedDataSet'
-      },
-      -meadow_type=> 'LOCAL',
     },
     {
      -logic_name => 'MergeReplicateAlignments',
@@ -207,14 +215,6 @@ sub pipeline_analyses {
 	1 => 'JobFactoryPermissivePeakCalling'
      },
      -rc_name => '64GB_3cpu',
-    },
-    {
-      -logic_name => 'JobFactoryPermissivePeakCalling',
-      -module     => 'Bio::EnsEMBL::Funcgen::Hive::JobFactoryPermissivePeakCalling',
-      -flow_into => {
-	'100' => 'run_SWEmbl_R0005_replicate'
-      },
-      -meadow_type=> 'LOCAL',
     },
     {
       -logic_name    => 'run_SWEmbl_R0005_replicate',  #SWEmbl permissive
