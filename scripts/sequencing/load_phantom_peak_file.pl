@@ -186,6 +186,14 @@ while (my $current_line = <IN>) {
     return '"' . $string . '"'
   }
   
+  # This can happen, if the data is very bad. In that case the quality tag 
+  # will indicate that with
+  #
+  if ($RSC eq 'Inf') {
+    $RSC = 'null';
+    die unless ($QualityTag == 2);
+  }
+  
   my $sql = "INSERT ignore INTO result_set_qc_phantom_peak ("
 #  . "result_set_qc_phantom_peak_id, "
   . "result_set_id, "
