@@ -10,7 +10,7 @@
 
 =head1 LICENSE
 
-    Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+    Copyright [1999-2016] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 
     Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License.
     You may obtain a copy of the License at
@@ -30,15 +30,8 @@ package Bio::EnsEMBL::Funcgen::Hive::Config::QC_Fastqc;
 use strict;
 use warnings;
 
-use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');  # All Hive databases configuration files should inherit from HiveGeneric, directly or indirectly
-
-
-# sub pipeline_wide_parameters {
-#     my ($self) = @_;
-#     return {
-#         %{$self->SUPER::pipeline_wide_parameters},          # here we inherit anything from the base class
-#     };
-# }
+use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
+use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
 
 sub pipeline_analyses {
     my ($self) = @_;
@@ -63,21 +56,21 @@ sub pipeline_analyses {
 	  -logic_name => 'IdentifyAlignInputSubsets',
 	  -module     => 'Bio::EnsEMBL::Funcgen::Hive::IdentifySetInputs',
 	  -flow_into => {
-	    '2' => [ 'QcFastQcInputIdsFromInputSet' ],
+	    2 => 'QcFastQcInputIdsFromInputSet',
 	  },
 	},
         {   -logic_name => 'QcFastQcInputIdsFromInputSet',
             -module     => 'Bio::EnsEMBL::Funcgen::Hive::QcFastQcInputIdsFromInputSet',
             -meadow_type=> 'LOCAL',
             -flow_into => { 
-	      '2' => [ 'QcFastQcJobFactory' ],
+	      2 => 'QcFastQcJobFactory',
             },
         },
         {   -logic_name => 'QcFastQcJobFactory',
             -module     => 'Bio::EnsEMBL::Funcgen::Hive::QcFastQcJobFactory',
             -meadow_type=> 'LOCAL',
             -flow_into => { 
-	      '2' => [ 'MkFastQcTempDir' ],
+	      2 => 'MkFastQcTempDir',
             },
         },
         {   -logic_name => 'MkFastQcTempDir',
@@ -87,7 +80,7 @@ sub pipeline_analyses {
 		  cmd => qq!mkdir -p #tempdir#!,
             },
             -flow_into => { 
-	      '1' => [ 'JobFactoryFastQC' ],
+	      MAIN => 'JobFactoryFastQC',
             },
         },
         {   -logic_name => 'JobFactoryFastQC',
@@ -98,8 +91,8 @@ sub pipeline_analyses {
             },
             -meadow_type=> 'LOCAL',
             -flow_into => {
-                '2->A' => [ 'RunFastQC'        ],
-                'A->1' => [ 'QcFastQcLoaderJobFactory' ],
+                '2->A' => 'RunFastQC',
+                'A->1' => 'QcFastQcLoaderJobFactory',
             },
         },
         {   -logic_name => 'RunFastQC',
@@ -113,7 +106,7 @@ sub pipeline_analyses {
         {   -logic_name => 'QcFastQcLoaderJobFactory',
             -module     => 'Bio::EnsEMBL::Funcgen::Hive::QcFastQcLoaderJobFactory',
             -flow_into => {
-                '2' => [ 'QcLoadFastQcResults' ],
+                2 => 'QcLoadFastQcResults',
             },
         },
         {   -logic_name        => 'QcLoadFastQcResults',
