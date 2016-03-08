@@ -26,7 +26,7 @@ sub fetch_input {
   my $rset = $self->fetch_Set_input('ResultSet');  # Injects ResultSet, FeatureSet & DataSet methods
   $self->helper->debug(1, "CollectionWriter::fetch_input got ResultSet:\t".$rset);
   
-  $self->init_branching_by_analysis;  #Set up the branch config
+  #$self->init_branching_by_analysis;  #Set up the branch config
   my $ftype_name = $rset->feature_type->name;
  
   #$self->get_output_work_dir_methods($self->db_output_dir.'/result_feature/'.$rset->name, 1);#no work dir flag
@@ -193,9 +193,26 @@ sub run {   # Check parameters and do appropriate database/file operations...
   my $fset = $self->FeatureSet;
   
   if(defined $fset){
-    $self->branch_job_group('run_'.$fset->analysis->logic_name, [{%$output_id}]);
-  }
   
+    my %branch_names = (
+      'run_SWEmbl_R015'       => 3,
+      'run_ccat_histone'      => 4,
+      'run_SWEmbl_R0025'      => 5,
+      'run_SWEmbl_R0005_IDR'  => 6,
+    );
+    
+    my $logic_name = 'run_' . $fset->analysis->logic_name;
+    
+    if (! exists $branch_names{$logic_name}) {
+      use Carp;
+      confess("Unknown logic name: $logic_name");
+    }
+  
+    $self->branch_job_group(
+      $branch_names{$logic_name}, 
+      [{%$output_id}]
+    );
+  }
   return;
 }
 

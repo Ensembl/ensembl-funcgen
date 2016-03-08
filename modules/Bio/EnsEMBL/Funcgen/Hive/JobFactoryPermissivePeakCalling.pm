@@ -41,7 +41,7 @@ sub fetch_input {
   $self->fetch_Set_input('ResultSet');
   $self->get_param_method('bam_files',  'silent');
   
-  $self->init_branching_by_analysis;
+  #$self->init_branching_by_analysis;
   return;
 }
 
@@ -63,7 +63,7 @@ sub run {
     #peak_analysis => $self->permissive_peaks,
   );
 
-  $self->branch_job_group('run_SWEmbl_R0005_replicate', [{%batch_params, %output_id}]);
+  $self->branch_job_group(100, [{%batch_params, %output_id}]);
 }
 
 sub write_output {
