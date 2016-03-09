@@ -52,6 +52,9 @@ sub inject_DataflowRuleAdaptor_methods{
   my $dfr_adaptor = shift;
   my $helper      = shift;
   
+  use Carp;
+  confess('inject_DataflowRuleAdaptor_methods is deprecated.');
+  
   assert_ref($dfr_adaptor, 'Bio::EnsEMBL::Hive::DBSQL::DataflowRuleAdaptor');
   
   if(defined $helper){
