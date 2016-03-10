@@ -35,25 +35,6 @@ sub fetch_input {
   # Move this to get_alignment_file_by_ResultSet_formats?
   $self->set_param_method('cell_type', $rset->cell_type, 'required'); 
   
-  
-  # TODO: need to dataflow 'bam_filtered' from alignment pipeline
-  # Curretnly this is setin the alignment pipeline_wide params
-  # then use this to perform the filtering in the first place
-  # Of course we can data flow this, set it as a batch_param and flow it from the
-  # branching analysis i.e. DefineResultSets or MergeControlAlignments_and_QC 
-  # (and manually from IdentifyReplicateResultSets?)
-
-  
-  # This should be in run as it can do some conversion?
-  # also need to pass formats array through 
-  # dependant on which analysis we are running bam and bed for Preprocess and just bed for WriteCollections
-  # Currently no way to do this dynamically as we don't know what the analysis is (?)
-  # so we have to ad as analysis_params
-  # and there is no way of detecting what formats down stream analyses need
-  # so again, they have to be hardcoded in analysis params
-  # use all formats by default
-  # Can we update -input_files in the Importer after we have created it?
-  
   my @file_to_delete_after_cell_line_has_been_processed;  
 
   if($self->FeatureSet->analysis->program eq 'CCAT') {
@@ -195,21 +176,21 @@ sub run {   # Check parameters and do appropriate database/file operations...
   if(defined $fset){
   
     my %branch_names = (
-      'run_SWEmbl_R015'       => 3,
-      'run_ccat_histone'      => 4,
-      'run_SWEmbl_R0025'      => 5,
-      'run_SWEmbl_R0005_IDR'  => 6,
+      'SWEmbl_R015'       => 3,
+      'ccat_histone'      => 4,
+      'SWEmbl_R0025'      => 5,
+      'SWEmbl_R0005_IDR'  => 6,
     );
     
-    my $logic_name = 'run_' . $fset->analysis->logic_name;
+    my $feature_set_analysis_logic_name = $fset->analysis->logic_name;
     
-    if (! exists $branch_names{$logic_name}) {
+    if (! exists $branch_names{$feature_set_analysis_logic_name}) {
       use Carp;
-      confess("Unknown logic name: $logic_name");
+      confess("Unknown logic name: $feature_set_analysis_logic_name");
     }
   
     $self->branch_job_group(
-      $branch_names{$logic_name}, 
+      $branch_names{$feature_set_analysis_logic_name}, 
       [{%$output_id}]
     );
   }
