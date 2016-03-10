@@ -923,6 +923,23 @@ sub _dataflow_params_by_list {
   return \%param_values;
 }
 
+sub convert_gender_to_file_gender {
+
+  my $self   = shift;
+  my $gender = shift; 
+  
+  my $file_gender = $gender;
+  
+  if ($gender eq 'mixed') {
+    $file_gender = 'female'
+  }
+  if (! defined $gender || $gender eq '') {
+    $file_gender = 'male'
+  }
+
+  return $file_gender;
+}
+
 sub sam_ref_fai {
   my $self        = shift;
   my $gender      = shift; 
@@ -937,14 +954,9 @@ sub sam_ref_fai {
         'specific in the config');
       }
     }
-        my $file_gender = $gender;
-    $file_gender = 'female'
-      if ($gender eq 'mixed');
-    $file_gender = 'male'
-      if (! defined $gender || $gender eq '');
+    my $file_gender = $self->convert_gender_to_file_gender($gender);
+    warn ("Gender is $gender");
 
-      warn ("Gender is $gender");
-      
     my $file_name = $self->species.'_'.$file_gender.'_'.$self->assembly.'_unmasked.fasta.fai';
     my $sam_ref_fai = validate_path([$self->data_root_dir,
                                      'sam_header',
