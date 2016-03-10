@@ -116,7 +116,7 @@ sub pipeline_analyses {
 	'2->A' => 'Run_bwa_samse_control_chunk',
 	'A->3' => 'MergeControlAlignments',
 	},
-      -rc_name => '10gb_1cpu_staggered'
+      -rc_name => '10gb_1cpu'
      },
      {
       -logic_name => 'Preprocess_bwa_samse_merged',
@@ -127,7 +127,7 @@ sub pipeline_analyses {
 	'2->A' => 'Run_bwa_samse_merged_chunk',
 	'A->3' =>  'MergeAlignments',
 	},
-      -rc_name => '10gb_1cpu_staggered'
+      -rc_name => '10gb_1cpu'
      },
      {
       -logic_name => 'Preprocess_bwa_samse_replicate',
@@ -136,7 +136,7 @@ sub pipeline_analyses {
 	'2->A' => 'Run_bwa_samse_replicate_chunk',
 	'A->3' => 'MergeReplicateAlignments' ,
 	},
-      -rc_name => '10gb_1cpu_staggered'
+      -rc_name => '10gb_1cpu'
      },
     {
       -logic_name => 'Run_bwa_samse_control_chunk',
