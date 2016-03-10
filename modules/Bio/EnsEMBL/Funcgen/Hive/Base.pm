@@ -928,16 +928,11 @@ sub convert_gender_to_file_gender {
   my $self   = shift;
   my $gender = shift; 
   
-  my $file_gender = $gender;
-  
-  if ($gender eq 'mixed') {
-    $file_gender = 'female'
+  if ($gender eq 'male') {
+    return 'male';
   }
-  if (! defined $gender || $gender eq '') {
-    $file_gender = 'male'
-  }
+  return 'female'; 
 
-  return $file_gender;
 }
 
 sub sam_ref_fai {
