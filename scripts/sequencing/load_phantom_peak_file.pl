@@ -249,6 +249,10 @@ sub create_table {
   my $param = shift;
   my $sql_processor = $param->{sql_processor};
 
+# Test for 
+# - the specificity of the size selection step
+# - enrichment. (Poor enrichment would lead to higher backgound leading to lower correlation.)
+  
 my $sql = <<SQL
 CREATE TABLE if not exists `result_set_qc_phantom_peak` (
   `result_set_qc_phantom_peak_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -259,15 +263,44 @@ CREATE TABLE if not exists `result_set_qc_phantom_peak` (
   `estFragLen`       double default NULL,
   `estFragLen2`      double default NULL,
   `estFragLen3`      double default NULL,
+--
+-- Seems to always be the same as the above three. Should be removed.
+-- Check: Should be actual coorelations.
+--
   `corr_estFragLen`  double default NULL,
   `corr_estFragLen2` double default NULL,
   `corr_estFragLen3` double default NULL,
+-- Is an estimate of the read length
   `phantomPeak` int(10) unsigned NOT NULL,
   `corr_phantomPeak` double default NULL,
+--
+-- Shiftlength that minimizes correlation, (not important for qc purposes)
+-- See http://www.ncbi.nlm.nih.gov/pmc/articles/PMC3431496/figure/F5/
+-- for correlation graphs.
+--
   `argmin_corr` int(10),
+--
+-- The value at argmin_corr
+--
   `min_corr` double default NULL,
+--
+-- Normalised strand cross correlation coefficient
+--
+-- Correlation found at the estimated fragment length (what should be in corr_estFragLen) divided by the minimum found correlation. (min_corr)
+--
   `NSC`      double default NULL,
+--
+-- Relative strand cross correlation coefficient
+--
+-- This is the main statistic.
+--
+-- Ratio between correlations found from the fragment length and the phantom peak. Both values are corrected by subtracting min_corr.
+-- It shows how much greater the correlation from the fragment length is compared to background correlation.
+--
   `RSC`      double default NULL,
+--
+-- Quality values derived from the RSC
+--
   `QualityTag` int(10),
   `path` varchar(100) NOT NULL,
   PRIMARY KEY (`result_set_qc_phantom_peak_id`),
