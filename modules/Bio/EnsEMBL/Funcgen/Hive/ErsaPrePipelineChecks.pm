@@ -20,8 +20,13 @@ sub run {
     ENVIRONMENT_VARIABLE:
     foreach my $exported_variable (@exported_variables) {
     
-      $cmd = qq(set | grep $exported_variable);
+      $cmd = qq(set | grep -v BASH_EXECUTION_STRING | grep $exported_variable);
       my $set_command = `$cmd`;
+      chomp $set_command;
+      
+#       print("---> cmd = $cmd\n");
+#       print("---> set_command = $set_command\n");
+      
       if (! $set_command) {
 	$error_msg .= "$exported_variable has not been set!\n";
 	next ENVIRONMENT_VARIABLE;
@@ -57,12 +62,20 @@ sub run {
     if ($?) {
       $error_msg .= "Can't find run_spp.R in path.\n";
     }
-    
-    
-    my $picard_output = `java picard.cmdline.PicardCommandLine`;
-    if ($picard_output !~ /^USAGE: PicardCommandLine/) {
-      $error_msg .= qq(Can't run picard! "java picard.cmdline.PicardCommandLine".\n);
+    system("which argenrich_with_labels_and_rerunnable.R > /dev/null");
+    if ($?) {
+      # Should be /nfs/users/nfs_m/mn1/work_dir_faang/argenrich_with_labels_and_rerunnable.R
+      $error_msg .= "Can't find argenrich_with_labels_and_rerunnable.R in path.\n";
     }
+    system("which argenrichformregions.pl > /dev/null");
+    if ($?) {
+      $error_msg .= "Can't find argenrichformregions.pl in path.\n";
+    }
+    
+#     my $picard_output = `java picard.cmdline.PicardCommandLine`;
+#     if ($picard_output !~ /^USAGE: PicardCommandLine/) {
+#       $error_msg .= qq(Can't run picard! "java picard.cmdline.PicardCommandLine".\n);
+#     }
     
     system("which Rscript > /dev/null");    
     if ($?) {
@@ -72,9 +85,15 @@ sub run {
       # Should be something like 
       # "R scripting front-end version 3.2.2 (2015-08-14)"
       #
-      my $version_string = `Rscript --version`;
+      # The one in here
+      #
+      # /software/R-3.2.2/bin/
+      #
+      # should work.
+      #
+      my $version_string = `Rscript --version 2>&1`;
       
-      $version_string_found = $version_string =~ /R scripting front-end version (.+?) /;
+      my $version_string_found = $version_string =~ /R scripting front-end version ([^ ]+?) /;
       
       if ($version_string_found) {
       
@@ -93,7 +112,7 @@ sub run {
 	}
 	
       } else {
-	$error_msg .= "Can't find version from Rscript in string: '$version'\n";
+	$error_msg .= "Can't find version from Rscript in string: '$version_string'\n";
       }
     }
     
