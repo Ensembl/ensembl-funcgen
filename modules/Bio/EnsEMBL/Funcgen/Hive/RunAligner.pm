@@ -160,7 +160,6 @@ sub fetch_input {   # fetch parameters...
 
 sub run {
   my $self = shift;
-  
   my $bam_file;
     
   if(! eval { $bam_file = $self->aligner->run; 1; }){
