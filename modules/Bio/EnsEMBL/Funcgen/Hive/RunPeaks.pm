@@ -59,6 +59,10 @@ sub fetch_input {
   my ($fset, $rset, $analysis);
 
   if($set_type eq 'ResultSet'){
+    
+    # This is run in run_SWEmbl_R0005_replicate 
+    #die('This is never run!');
+  
     $rset = $self->fetch_Set_input('ResultSet'); 
     
     #This is likely permissive peaks for pre_IDR rep 
