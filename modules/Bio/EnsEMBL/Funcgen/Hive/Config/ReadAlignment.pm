@@ -54,9 +54,17 @@ sub pipeline_analyses {
 	-module     => 'Bio::EnsEMBL::Funcgen::Hive::TokenLimitedJobFactory',
 	-meadow_type=> 'LOCAL',
 	-flow_into => {
-	  '2->A' => 'IdentifyAlignInputSubsets',
+	  '2->A' => 'PrePipelineChecks',
 	  'A->1' => 'TokenLimitedJobFactory',
 	},
+    },
+    {
+      -logic_name => 'PrePipelineChecks',
+      -module     => 'Bio::EnsEMBL::Funcgen::Hive::ErsaPrePipelineChecks',
+      -meadow_type => 'LOCAL',
+      -flow_into => {
+	MAIN => 'IdentifyAlignInputSubsets'
+      },
     },
     {
       -logic_name => 'IdentifyAlignInputSubsets',
