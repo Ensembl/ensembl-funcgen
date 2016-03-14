@@ -39,7 +39,7 @@ sub pipeline_analyses {
       -logic_name => 'MergeControlAlignments',
       -flow_into => {
 	MAIN => {
-	  'BamFileQc' => INPUT_PLUS({ 
+	  BamFileQc => INPUT_PLUS({
 	      'is_control' => 1,
 	      'source' => 'MergeControlAlignments',
 	    } 
@@ -51,7 +51,7 @@ sub pipeline_analyses {
       -logic_name => 'MergeAlignments',
       -flow_into => {
 	MAIN => { 
-	  'BamFileQc' => INPUT_PLUS({ 
+	  BamFileQc => INPUT_PLUS({
 	    'is_control' => 0,
 	    'source' => 'MergeAlignments',
 	    } 
@@ -63,7 +63,7 @@ sub pipeline_analyses {
       -logic_name => 'MergeReplicateAlignments',
       -flow_into => {
 	MAIN => { 
-	  'BamFileQc' => INPUT_PLUS({
+	  BamFileQc => INPUT_PLUS({
 	    'is_control' => 0,
 	    'source' => 'MergeReplicateAlignments',
 	    }
@@ -84,7 +84,7 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Funcgen::Hive::QcFlagstatsJobFactory',
             -meadow_type=> 'LOCAL',
             -flow_into => { 
-	      '2' => [ 'QcRunFlagstats' ],
+	      2 => 'QcRunFlagstats',
             },
         },
         {   -logic_name => 'QcRunFlagstats',
@@ -101,7 +101,7 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -meadow_type=> 'LOCAL',
 	    -parameters => {
-                'cmd' => qq(load_samtools_flagstats.pl )
+                cmd => qq(load_samtools_flagstats.pl )
 		  . qq( --result_set_id #result_set_id# )
 		  . qq( --flagstats_file #flagstats_file# )
 		  . qq( --user #tracking_db_user# --pass #tracking_db_pass# --host #tracking_db_host# --dbname #tracking_db_name# )
