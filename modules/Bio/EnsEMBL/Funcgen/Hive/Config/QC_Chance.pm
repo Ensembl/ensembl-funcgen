@@ -36,60 +36,11 @@ use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
 sub pipeline_analyses {
     my ($self) = @_;
     return [
-#         {   -logic_name => 'ArgenrichJobDefinition',
-#             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-#             -meadow_type=> 'LOCAL',
-#             -input_ids => [
-#             {
-# 		
-#                 column_names => [ 'kind', 'file', 'sourcedir', 'tempdir' ],
-# 		inputlist    => [
-# 		  [ 'signal',  'F36P:hist:BR2_H3K27me3_3526_bwa_samse_1_2_3.bam', "#sourcedir#", "#tempdir#" ],
-# 		  [ 'control', 'F36P:hist:BR2_WCE_3526_bwa_samse_1.bam',          "#sourcedir#", "#tempdir#" ],
-# 		],
-# 		# Directory in which the bam files are
-# 		sourcedir             => '/warehouse/ensembl10/funcgen/alignments/homo_sapiens/GRCh38/3526',
-# 		
-# 		# Directory into which the bam files will be copied
-# 		tempdir               => '/lustre/scratch109/ensembl/funcgen/mn1/ersa/debug/F36P:hist:BR2_H3K27me3_3526',
-# 		
-# 		# Name of the output file that argenrich creates. This will be in #tempdir#
-# 		argenrich_outfile     => 'argenrich_outfile.txt',
-# 		
-# 		# result_set_id of the control to which this will be linked
-# 		control_result_set_id => 1,
-# 		
-# 		# result_set_id of the signal to which this will be linked
-# 		signal_result_set_id  => 2,
-# 		
-# 		# The file with chromosome lengths.
-# 		chrlenfile            => '/lustre/scratch109/ensembl/funcgen/mn1/ersa/faang/reference_files/CCAT/homo_sapiens_.CCAT_chr_lengths.txt',
-# 		
-# 		# #chrlenfile# needs to be sorted first.  This is done in the 
-# 		# SortChrLenFile analysis. #chrlenfilesorted# is the name of 
-# 		# the file to which the sorted file is written.
-# 		#
-# 		chrlenfilesorted      => '/lustre/scratch109/ensembl/funcgen/mn1/ersa/faang/reference_files/CCAT/homo_sapiens_.CCAT_chr_lengths.chrlenfilesorted.txt',
-# 		
-# 		# Connection details for the db to which the results will be written
-# 		tracking_db_user   => 'ensadmin',
-# 		tracking_db_pass   => 'xxx',
-# 		tracking_db_host   => 'ens-genomics2',
-# 		tracking_db_name   => 'mn1_faang_tracking_homo_sapiens_funcgen_81_38',
-# 		
-#             }
-#             ],
-#             -flow_into => { 1 => 'MkTempDir', },
-#         },
 	{
 	    -logic_name => 'PreprocessAlignments',
 	    -module     => 'Bio::EnsEMBL::Funcgen::Hive::CollectionWriter',
 	    -flow_into => {
-		'3'   => [  'QcChanceJobFactory' ],
-		'4'   => [  'QcChanceJobFactory' ],
-		'5'   => [  'QcChanceJobFactory' ],
-		'6'   => [  'QcChanceJobFactory' ],
-		'100' => [  'QcChanceJobFactory' ],
+		2  => 'QcChanceJobFactory',
 	    },
 	},
 	{
