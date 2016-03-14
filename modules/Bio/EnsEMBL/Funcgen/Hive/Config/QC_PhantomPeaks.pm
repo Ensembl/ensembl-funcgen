@@ -35,50 +35,50 @@ use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
 sub pipeline_analyses {
     my ($self) = @_;
     return [
-    {
-      -logic_name => 'MergeControlAlignments',
-      -flow_into => {
-	MAIN => {
-	  'BamFileQc' => INPUT_PLUS({ 
-	      'is_control' => 1,
-	      'source' => 'MergeControlAlignments',
-	    } 
-	  ) 
+	{
+	  -logic_name => 'MergeControlAlignments',
+	  -flow_into => {
+	    MAIN => {
+	      'BamFileQc' => INPUT_PLUS({ 
+		  'is_control' => 1,
+		  'source' => 'MergeControlAlignments',
+		} 
+	      ) 
+	    },
+	  },
 	},
-      },
-    },
-    {
-      -logic_name => 'MergeAlignments',
-      -flow_into => {
-	MAIN => { 
-	  'BamFileQc' => INPUT_PLUS({ 
-	    'is_control' => 0,
-	    'source' => 'MergeAlignments',
-	    } 
-	   ) 
+	{
+	  -logic_name => 'MergeAlignments',
+	  -flow_into => {
+	    MAIN => { 
+	      'BamFileQc' => INPUT_PLUS({ 
+		'is_control' => 0,
+		'source' => 'MergeAlignments',
+		} 
+	      ) 
+	    },
+	  },
 	},
-      },
-    },
-    {
-      -logic_name => 'MergeReplicateAlignments',
-      -flow_into => {
-	MAIN => { 
-	  'BamFileQc' => INPUT_PLUS({
-	    'is_control' => 0,
-	    'source' => 'MergeReplicateAlignments',
-	    }
-	  )
+	{
+	  -logic_name => 'MergeReplicateAlignments',
+	  -flow_into => {
+	    MAIN => { 
+	      'BamFileQc' => INPUT_PLUS({
+		'is_control' => 0,
+		'source' => 'MergeReplicateAlignments',
+		}
+	      )
+	    },
+	  },
 	},
-      },
-    },
-    {
-      -logic_name => 'BamFileQc',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -flow_into => {
-	MAIN => 'QcPhantomPeaksJobFactory'
-      },
-      -meadow_type=> 'LOCAL',
-    },
+	{
+	  -logic_name => 'BamFileQc',
+	  -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+	  -flow_into => {
+	    MAIN => 'QcPhantomPeaksJobFactory'
+	  },
+	  -meadow_type=> 'LOCAL',
+	},
         {   -logic_name => 'QcPhantomPeaksJobFactory',
             -module     => 'Bio::EnsEMBL::Funcgen::Hive::QcPhantomPeaksJobFactory',
             -meadow_type=> 'LOCAL',
