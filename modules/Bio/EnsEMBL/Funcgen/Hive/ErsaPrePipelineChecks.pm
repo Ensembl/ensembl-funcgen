@@ -49,11 +49,15 @@ sub run {
     if ($?) {
       $error_msg .= "Can't find bwa in path.\n";
     }
-    
     system("which R > /dev/null");    
     if ($?) {
       $error_msg .= "Can't find R in path.\n";
     }
+    system("which run_spp.R > /dev/null");
+    if ($?) {
+      $error_msg .= "Can't find run_spp.R in path.\n";
+    }
+    
     
     my $picard_output = `java picard.cmdline.PicardCommandLine`;
     if ($picard_output !~ /^USAGE: PicardCommandLine/) {
