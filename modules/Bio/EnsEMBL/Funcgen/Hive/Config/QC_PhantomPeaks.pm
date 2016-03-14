@@ -92,6 +92,8 @@ sub pipeline_analyses {
             -parameters  => { 
 		  cmd => 
 		    qq( /software/R-3.2.2/bin/Rscript /software/ensembl/funcgen/spp_package/run_spp.R )
+		    # Overwrite plotfile, if one already exists
+		  . qq(    -rf )
 		  . qq(    -c=#bam_file# )
 		  . qq(    -savp -out=#phantom_peak_out_file# )
             },
@@ -107,6 +109,8 @@ sub pipeline_analyses {
             -parameters  => { 
 		  cmd => 
 		    qq( /software/R-3.2.2/bin/Rscript /software/ensembl/funcgen/spp_package/run_spp.R )
+		    # Overwrite plotfile, if one already exists
+		  . qq(    -rf )
 		  . qq(    -c=#bam_file# )
 		  . qq(    -savp -out=#phantom_peak_out_file# )
             },
