@@ -35,79 +35,78 @@ use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
 sub pipeline_analyses {
     my ($self) = @_;
     return [
-    {
-      -logic_name => 'MergeControlAlignments',
-      -flow_into => {
-	MAIN => {
-	  BamFileQc => INPUT_PLUS({
-	      'is_control' => 1,
-	      'source' => 'MergeControlAlignments',
-	    } 
-	  ) 
+      {
+	-logic_name => 'MergeControlAlignments',
+	-flow_into => {
+	  MAIN => {
+	    BamFileQc => INPUT_PLUS({
+		'is_control' => 1,
+		'source' => 'MergeControlAlignments',
+	      } 
+	    ) 
+	  },
 	},
       },
-    },
-    {
-      -logic_name => 'MergeAlignments',
-      -flow_into => {
-	MAIN => { 
-	  BamFileQc => INPUT_PLUS({
-	    'is_control' => 0,
-	    'source' => 'MergeAlignments',
-	    } 
-	   ) 
+      {
+	-logic_name => 'MergeAlignments',
+	-flow_into => {
+	  MAIN => { 
+	    BamFileQc => INPUT_PLUS({
+	      'is_control' => 0,
+	      'source' => 'MergeAlignments',
+	      } 
+	    ) 
+	  },
 	},
       },
-    },
-    {
-      -logic_name => 'MergeReplicateAlignments',
-      -flow_into => {
-	MAIN => { 
-	  BamFileQc => INPUT_PLUS({
-	    'is_control' => 0,
-	    'source' => 'MergeReplicateAlignments',
-	    }
-	  )
+      {
+	-logic_name => 'MergeReplicateAlignments',
+	-flow_into => {
+	  MAIN => { 
+	    BamFileQc => INPUT_PLUS({
+	      'is_control' => 0,
+	      'source' => 'MergeReplicateAlignments',
+	      }
+	    )
+	  },
 	},
       },
-    },
-    {
-      -logic_name => 'BamFileQc',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-      -flow_into => {
-	MAIN => 'QcFlagstatsJobFactory'
+      {
+	-logic_name => 'BamFileQc',
+	-module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+	-flow_into => {
+	  MAIN => 'QcFlagstatsJobFactory'
+	},
+	-meadow_type=> 'LOCAL',
       },
-      -meadow_type=> 'LOCAL',
-    },
+      {   -logic_name => 'QcFlagstatsJobFactory',
+	  -module     => 'Bio::EnsEMBL::Funcgen::Hive::QcFlagstatsJobFactory',
+	  -meadow_type=> 'LOCAL',
+	  -flow_into => { 
+	    2 => 'QcRunFlagstats',
+	  },
+      },
+      {   -logic_name => 'QcRunFlagstats',
+	  -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+	  -meadow_type=> 'LSF',
+	  -parameters => { 
+		cmd => qq!samtools flagstat #bam_file# > #flagstats_file#!,
+	  },
+	  -flow_into => { 
+	    MAIN => 'LoadFlagstatsToDB',
+	  },
+      },
+      {   -logic_name => 'LoadFlagstatsToDB',
+	  -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+	  -meadow_type=> 'LOCAL',
+	  -parameters => {
+	      cmd => qq(load_samtools_flagstats.pl )
+		. qq( --result_set_id #result_set_id# )
+		. qq( --flagstats_file #flagstats_file# )
+		. qq( --user #tracking_db_user# --pass #tracking_db_pass# --host #tracking_db_host# --dbname #tracking_db_name# )
 
-        {   -logic_name => 'QcFlagstatsJobFactory',
-            -module     => 'Bio::EnsEMBL::Funcgen::Hive::QcFlagstatsJobFactory',
-            -meadow_type=> 'LOCAL',
-            -flow_into => { 
-	      2 => 'QcRunFlagstats',
-            },
-        },
-        {   -logic_name => 'QcRunFlagstats',
-            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -meadow_type=> 'LSF',
-            -parameters => { 
-		  cmd => qq!samtools flagstat #bam_file# > #flagstats_file#!,
-            },
-            -flow_into => { 
-	      MAIN => [ 'LoadFlagstatsToDB' ],
-            },
-        },
-        {   -logic_name => 'LoadFlagstatsToDB',
-            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -meadow_type=> 'LOCAL',
-	    -parameters => {
-                cmd => qq(load_samtools_flagstats.pl )
-		  . qq( --result_set_id #result_set_id# )
-		  . qq( --flagstats_file #flagstats_file# )
-		  . qq( --user #tracking_db_user# --pass #tracking_db_pass# --host #tracking_db_host# --dbname #tracking_db_name# )
-
-            },
-        },
+	  },
+      },
     ];
 }
 
