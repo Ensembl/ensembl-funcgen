@@ -2,6 +2,7 @@ package Bio::EnsEMBL::Funcgen::Hive::Config::Base;
 
 use strict;
 use warnings;
+
 use base qw(Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf);
 
 sub default_options {
@@ -88,7 +89,7 @@ sub resource_classes {
      normal_30GB_2cpu        => {'LSF' => ' -n2 -M30000 -R"select[mem>30000] rusage[mem=30000] span[hosts=1]"' },
      normal_30GB_3cpu        => {'LSF' => ' -n3 -M30000 -R"select[mem>30000] rusage[mem=30000] span[hosts=1]"' },
      '64GB_3cpu'             => {'LSF' => ' -n3 -M64000 -R"select[mem>64000] rusage[mem=64000] span[hosts=1]"' },
-     '10gb_1cpu_staggered'   => {'LSF' => q(-E 'sleep $(echo "$LSB_JOBINDEX * 1" | bc)' -M10000 -R"select[mem>10000] rusage[mem=10000] span[hosts=1]") },
+     #'10gb_1cpu_staggered'   => {'LSF' => q(-E 'sleep $(echo "$LSB_JOBINDEX * 1" | bc)' -M10000 -R"select[mem>10000] rusage[mem=10000] span[hosts=1]") },
      '10gb_1cpu'             => {'LSF' => q(-M10000 -R"select[mem>10000] rusage[mem=10000] span[hosts=1]") },
       
      normal_5GB_2cpu_monitored => {'LSF' => " -n2 -M5000 -R\"select[mem>5000] rusage[mem=5000] span[hosts=1]\"" },
