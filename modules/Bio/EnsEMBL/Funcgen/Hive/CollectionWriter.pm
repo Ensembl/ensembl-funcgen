@@ -148,52 +148,42 @@ sub run {   # Check parameters and do appropriate database/file operations...
 
   $Imp->read_and_import_data('prepare');
 
-  # This now only rebokes the IMPORTED status
-  # so we will need to manage that before we can remove the Importer usage
-  # We're not actually storing anything yet, so that can be done in
-  # the PeakCaller/BigWigWriter?
-  # This was also creating the prepared bed for collection generation
-  # Looks like this wasn't being used for CCAT peak calling
-  # There small potential that an unsorted bed file could be used for CCAT
-  # Although this is always generated from the sorted bam at present,
-  # as opposed to a pre-computed unverified/sorted bed file.
-
-
-  my $output_id = {%{$self->batch_params}, 
-		    # These are already param_required by fetch_Set_input
-		    dbID         => $self->param('dbID'),
-		    set_name     => $self->param('set_name'),  # mainly for readability
-		    set_type     => $self->param('set_type'),
-		    filter_from_format => undef,                 
-		  }; 
-
-  #Need to add a final semaphored job, to do the clean up
-  #bed files only, as we keep the bams
-  $self->branch_job_group(2, [$output_id]); #BigWigWriter data flow
-
   my $fset = $self->FeatureSet;
-  
-  if(defined $fset){
-  
-    my %branch_names = (
-      'SWEmbl_R015'       => 3,
-      'ccat_histone'      => 4,
-      'SWEmbl_R0025'      => 5,
-      'SWEmbl_R0005_IDR'  => 6,
-    );
-    
-    my $feature_set_analysis_logic_name = $fset->analysis->logic_name;
-    
-    if (! exists $branch_names{$feature_set_analysis_logic_name}) {
-      use Carp;
-      confess("Unknown logic name: $feature_set_analysis_logic_name");
-    }
-  
-    $self->branch_job_group(
-      $branch_names{$feature_set_analysis_logic_name}, 
-      [{%$output_id}]
-    );
-  }
+  my $feature_set_analysis_logic_name = $fset->analysis->logic_name;
+
+  my $output_id = {
+    %{$self->batch_params}, 
+    # These are already param_required by fetch_Set_input
+    dbID         => $self->param('dbID'),
+    set_name     => $self->param('set_name'),  # mainly for readability
+    set_type     => $self->param('set_type'),
+    filter_from_format => undef,
+    feature_set_analysis_logic_name => $feature_set_analysis_logic_name,
+  }; 
+
+  $self->branch_job_group(2, [$output_id]);
+
+#   if(defined $fset){
+#   
+#     my %branch_names = (
+#       'SWEmbl_R015'       => 3,
+#       'ccat_histone'      => 4,
+#       'SWEmbl_R0025'      => 5,
+#       'SWEmbl_R0005_IDR'  => 6,
+#     );
+#     
+#     my $feature_set_analysis_logic_name = $fset->analysis->logic_name;
+#     
+#     if (! exists $branch_names{$feature_set_analysis_logic_name}) {
+#       use Carp;
+#       confess("Unknown logic name: $feature_set_analysis_logic_name");
+#     }
+#   
+#     $self->branch_job_group(
+#       $branch_names{$feature_set_analysis_logic_name}, 
+#       [{%$output_id}]
+#     );
+#   }
   return;
 }
 
