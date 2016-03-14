@@ -124,7 +124,7 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -meadow_type=> 'LSF',
 	    -parameters => {
-                'cmd' => qq(/nfs/users/nfs_m/mn1/work_dir_faang/argenrich.R --args plot=TRUE outdir=#tempdir# )
+                'cmd' => qq(argenrich_with_labels_and_rerunnable.R --args plot=TRUE outdir=#tempdir# )
 		  . qq(    ipsz=#expr( #read_count#->{"signal"}            )expr# )
 		  . qq( inputsz=#expr( #read_count#->{"control"}           )expr# )
 		  . qq(      ip=#tempdir#/#expr( #file#->{"signal"}        )expr# )
