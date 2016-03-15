@@ -24,9 +24,6 @@ sub run {
       my $set_command = `$cmd`;
       chomp $set_command;
       
-#       print("---> cmd = $cmd\n");
-#       print("---> set_command = $set_command\n");
-      
       if (! $set_command) {
 	$error_msg .= "$exported_variable has not been set!\n";
 	next ENVIRONMENT_VARIABLE;
@@ -47,35 +44,32 @@ sub run {
       if (! $declare_command) {
 	$error_msg .= "$exported_variable has not been exported!\n";
       }
-      
     }
 
-    system("which bwa > /dev/null");    
-    if ($?) {
-      $error_msg .= "Can't find bwa in path.\n";
-    }
-    system("which R > /dev/null");    
-    if ($?) {
-      $error_msg .= "Can't find R in path.\n";
-    }
-    system("which run_spp.R > /dev/null");
-    if ($?) {
-      $error_msg .= "Can't find run_spp.R in path.\n";
-    }
-    system("which argenrich_with_labels_and_rerunnable.R > /dev/null");
-    if ($?) {
-      # Should be /nfs/users/nfs_m/mn1/work_dir_faang/argenrich_with_labels_and_rerunnable.R
-      $error_msg .= "Can't find argenrich_with_labels_and_rerunnable.R in path.\n";
-    }
-    system("which argenrichformregions.pl > /dev/null");
-    if ($?) {
-      $error_msg .= "Can't find argenrichformregions.pl in path.\n";
-    }
-    
 #     my $picard_output = `java picard.cmdline.PicardCommandLine`;
 #     if ($picard_output !~ /^USAGE: PicardCommandLine/) {
 #       $error_msg .= qq(Can't run picard! "java picard.cmdline.PicardCommandLine".\n);
 #     }
+    
+    my @programs_expected_in_path = qw(
+      bwa
+      R
+      samtools
+      run_spp.R
+      load_phantom_peak_file.pl
+      load_argenrich_qc_file.pl
+      load_fastqc_summary_file.pl
+      load_samtools_flagstats.pl
+      argenrichformregions.pl
+      argenrich_with_labels_and_rerunnable.R
+    );
+    
+    foreach my $current_program (@programs_expected_in_path) {
+      system("which $current_program > /dev/null");
+      if ($?) {
+	$error_msg .= "Can't find $current_program in path.\n";
+      }
+    }
     
     system("which Rscript > /dev/null");    
     if ($?) {
@@ -115,9 +109,6 @@ sub run {
 	$error_msg .= "Can't find version from Rscript in string: '$version_string'\n";
       }
     }
-    
-
-    
     if ($error_msg) {
       die($error_msg);
     }
