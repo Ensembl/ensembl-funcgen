@@ -91,7 +91,8 @@ sub pipeline_analyses {
             -meadow_type => 'LSF',
             -parameters  => { 
 		  cmd => 
-		    qq( Rscript run_spp.R )
+		    # Rscript does not search the path, so we use "which" to do that:
+		    qq( Rscript $(which run_spp.R) )
 		    # Overwrite plotfile, if one already exists
 		  . qq(    -rf )
 		  . qq(    -c=#bam_file# )
@@ -108,7 +109,8 @@ sub pipeline_analyses {
             -meadow_type => 'LSF',
             -parameters  => { 
 		  cmd => 
-		    qq( Rscript run_spp.R )
+		    # Rscript does not search the path, so we use "which" to do that:
+		    qq( Rscript $(which run_spp.R) )
 		    # Overwrite plotfile, if one already exists
 		  . qq(    -rf )
 		  . qq(    -c=#bam_file# )
