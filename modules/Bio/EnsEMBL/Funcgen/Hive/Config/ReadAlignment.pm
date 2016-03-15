@@ -48,9 +48,6 @@ sub pipeline_analyses {
       -input_ids  => [ {} ],
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::ErsaPrePipelineChecks',
       -meadow_type => 'LOCAL',
-      -flow_into => {
-	MAIN => 'IdentifyAlignInputSubsets'
-      },
     },
     {   -logic_name => 'JobPool',
 	-module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
