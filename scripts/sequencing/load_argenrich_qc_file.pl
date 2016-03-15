@@ -146,7 +146,7 @@ lock_hash(%key_value_pairs);
 my $sql = qq(insert into result_set_qc_chance (
       signal_result_set_id, analysis_id, p, q, divergence, z_score, percent_genome_enriched, input_scaling_factor, differential_percentage_enrichment,
       control_enrichment_stronger_than_chip_at_bin,
-      zero_enriched_ip_maximum_difference_at_bin,
+      first_nonzero_bin_at,
       pcr_amplification_bias_in_Input_coverage_of_1_percent_of_genome
     ) values (
     $signal_result_set_id,
