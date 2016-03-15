@@ -8,13 +8,9 @@ sub run {
 
     use Bio::EnsEMBL::Utils::Logger;
     my $logger = Bio::EnsEMBL::Utils::Logger->new();    
-    my $error_msg;
+    my @error_msg;
     
-    # - Has PERL5LIB been exported
-    # - Has JAVA_HOME been exported
-    # Are certain directories writeable? Like the one with the chromosome file in it
-    
-    my @exported_variables = qw( PERL5LIB JAVA_HOME R_LIBS CLASSPATH );
+    my @exported_variables = qw( PERL5LIB JAVA_HOME R_LIBS CLASSPATH CCAT_chr_lengths_file );
     my $cmd;
     
     ENVIRONMENT_VARIABLE:
@@ -25,7 +21,7 @@ sub run {
       chomp $set_command;
       
       if (! $set_command) {
-	$error_msg .= "$exported_variable has not been set!\n";
+	push @error_msg, "$exported_variable has not been set!";
 	next ENVIRONMENT_VARIABLE;
       }
 
@@ -42,13 +38,28 @@ sub run {
       my $declare_command = `$cmd`;
       
       if (! $declare_command) {
-	$error_msg .= "$exported_variable has not been exported!\n";
+	push @error_msg, "$exported_variable has not been exported!";
+      }
+    }
+    
+    my $CCAT_chr_lengths_file = $ENV{CCAT_chr_lengths_file};
+    
+    if (! $CCAT_chr_lengths_file) {
+      push @error_msg, "CCAT_chr_lengths_file has not been set!";
+    } elsif (! -e $CCAT_chr_lengths_file) {
+      push @error_msg, "$CCAT_chr_lengths_file is not a file!";
+    } else {
+      use File::Basename;
+      my $dir = dirname($CCAT_chr_lengths_file);
+      if (! -w $dir) {
+	# This is where the sorted file gets written to.
+	push @error_msg, "Can't write to directory $dir!";
       }
     }
 
 #     my $picard_output = `java picard.cmdline.PicardCommandLine`;
 #     if ($picard_output !~ /^USAGE: PicardCommandLine/) {
-#       $error_msg .= qq(Can't run picard! "java picard.cmdline.PicardCommandLine".\n);
+#       push @error_msg, qq(Can't run picard! "java picard.cmdline.PicardCommandLine".\n);
 #     }
     
     my @programs_expected_in_path = qw(
@@ -67,13 +78,13 @@ sub run {
     foreach my $current_program (@programs_expected_in_path) {
       system("which $current_program > /dev/null");
       if ($?) {
-	$error_msg .= "Can't find $current_program in path.\n";
+	push @error_msg, "Can't find $current_program in path.";
       }
     }
     
     system("which Rscript > /dev/null");    
     if ($?) {
-      $error_msg .= "Can't find Rscript in path.\n";
+      push @error_msg, "Can't find Rscript in path.";
     } else {
     
       # Should be something like 
@@ -83,7 +94,8 @@ sub run {
       #
       # /software/R-3.2.2/bin/
       #
-      # should work.
+      # should work. To make life more interesting, Rscript outputs the 
+      # version string to stderr.
       #
       my $version_string = `Rscript --version 2>&1`;
       
@@ -102,15 +114,23 @@ sub run {
 	;
 	
 	if (!$version_ok) {
-	  $error_msg .= "Rscript on PATH has version $version, this may cause trouble.\n";
-	}
-	
+	  push @error_msg, "Rscript on PATH has version $version, this may cause trouble.";
+	}	
       } else {
-	$error_msg .= "Can't find version from Rscript in string: '$version_string'\n";
+	push @error_msg, "Can't find version from Rscript in string: '$version_string'";
       }
     }
-    if ($error_msg) {
-      die($error_msg);
+    if (@error_msg) {
+    
+      my $err_string = join "\n", map { '  - ' . $_ } @error_msg;
+    
+      die(
+	"\n-------------------------------------------------------------------------------\n"
+	. "Prepipeline checks have failed with the following errors:\n\n"
+	. $err_string
+	. "\n\nPlease fix these first before continuing with the pipeline."
+	. "\n-------------------------------------------------------------------------------\n"
+      );
     }
     $logger->info("Pre pipeline checks have completed successfully. You can now run the rest of the pipeline.\n");
 }
