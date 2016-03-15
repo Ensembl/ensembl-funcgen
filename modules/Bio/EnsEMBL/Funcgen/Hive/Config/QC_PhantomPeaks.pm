@@ -59,6 +59,9 @@ sub pipeline_analyses {
 		  . qq(    -rf )
 		  . qq(    -c=#bam_file# )
 		  . qq(    -savp -out=#phantom_peak_out_file# )
+		  # In case the job gets terminated for memlimit, this 
+		  # ensures that the worker also dies. (or so we hope)
+		  . qq(    ; sleep 30 )
             },
 	    -rc_name    => 'normal_4GB_2cpu',
             -flow_into  => { 
@@ -77,6 +80,9 @@ sub pipeline_analyses {
 		  . qq(    -rf )
 		  . qq(    -c=#bam_file# )
 		  . qq(    -savp -out=#phantom_peak_out_file# )
+		  # In case the job gets terminated for memlimit, this 
+		  # ensures that the worker also dies. (or so we hope)
+		  . qq(    ; sleep 30 )
             },
 	    -rc_name    => 'normal_30GB_2cpu',
             -flow_into  => { 
