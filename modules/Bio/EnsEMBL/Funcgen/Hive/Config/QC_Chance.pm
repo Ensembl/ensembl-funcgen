@@ -69,7 +69,7 @@ sub pipeline_analyses {
             -parameters => { 
 		  cmd => qq!sort -k1,1 #chrlenfile# > #chrlenfilesorted#!,
             },
-            -flow_into => { 1 => 'argenrichformregions', },
+            -flow_into => { MAIN => 'argenrichformregions', },
         },
         {   -logic_name => 'argenrichformregions',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
@@ -77,7 +77,7 @@ sub pipeline_analyses {
             -parameters => {
 		  # Should be in /software/ensembl/funcgen/
 		  #
-		  cmd => qq!argenrichformregions.pl #chrlenfilesorted#!,
+		  cmd => qq(argenrichformregions.pl #chrlenfilesorted#),
             },
         },
         {   -logic_name => 'JobFactoryArgenrich',
@@ -85,8 +85,8 @@ sub pipeline_analyses {
             -meadow_type=> 'LOCAL',
             -flow_into => {
 		# Skipping copy, we can work on the files directly.
-                2 => [ 'CpToTemp' ],
-                #2 => [ 'IndexBam' ],
+                2 => 'CpToTemp',
+                #2 => 'IndexBam',
             },
         },
         {   -logic_name => 'CpToTemp',
@@ -96,7 +96,7 @@ sub pipeline_analyses {
 		  #cmd => qq!cp #sourcedir#/#file# #tempdir#!,
 		  cmd => qq!ln -s #sourcedir#/#file# #tempdir#!,
             },
-            -flow_into => { 1 => 'IndexBam' },
+            -flow_into => { MAIN => 'IndexBam' },
         },
         {   -logic_name => 'IndexBam',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
@@ -104,7 +104,7 @@ sub pipeline_analyses {
             -parameters => { 
 		  cmd => qq!samtools index #tempdir#/#file#!,
             },
-            -flow_into => { 1 => 'CountReads' },
+            -flow_into => { MAIN => 'CountReads' },
         },
         {   -logic_name => 'CountReads',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
@@ -124,7 +124,7 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -meadow_type=> 'LSF',
 	    -parameters => {
-                'cmd' => qq(argenrich_with_labels_and_rerunnable.R --args plot=TRUE outdir=#tempdir# )
+                cmd => qq(argenrich_with_labels_and_rerunnable.R --args plot=TRUE outdir=#tempdir# )
 		  . qq(    ipsz=#expr( #read_count#->{"signal"}            )expr# )
 		  . qq( inputsz=#expr( #read_count#->{"control"}           )expr# )
 		  . qq(      ip=#tempdir#/#expr( #file#->{"signal"}        )expr# )
@@ -138,16 +138,16 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -meadow_type=> 'LOCAL',
 	    -parameters => {
-                'cmd' => qq(load_argenrich_qc_file.pl        )
+                cmd => qq(load_argenrich_qc_file.pl   )
 		  . qq( --argenrich_file        #tempdir#/#argenrich_outfile#     )
 		  . qq( --signal_result_set_id  #signal_result_set_id#            )
-		  . qq( --user #tracking_db_user# --pass #tracking_db_pass# --host #tracking_db_host# --dbname #tracking_db_name# )
+		  . qq( --user   #tracking_db_user#   )
+		  . qq( --pass   #tracking_db_pass#   )
+		  . qq( --host   #tracking_db_host#   )
+		  . qq( --dbname #tracking_db_name#   )
             },
         },
     ];
 }
 
 1;
-
-
-
