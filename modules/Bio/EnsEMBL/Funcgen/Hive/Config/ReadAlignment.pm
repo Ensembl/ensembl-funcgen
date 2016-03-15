@@ -43,6 +43,15 @@ sub pipeline_analyses {
    [
     @{$self->SUPER::pipeline_analyses}, #To pick up BaseSequenceAnalysis-DefineMergedOutputSet
 
+    {
+      -logic_name => 'PrePipelineChecks',
+      -input_ids  => [ {} ],
+      -module     => 'Bio::EnsEMBL::Funcgen::Hive::ErsaPrePipelineChecks',
+      -meadow_type => 'LOCAL',
+      -flow_into => {
+	MAIN => 'IdentifyAlignInputSubsets'
+      },
+    },
     {   -logic_name => 'JobPool',
 	-module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
 	-wait_for    => 'JobPool',
@@ -54,17 +63,9 @@ sub pipeline_analyses {
 	-module     => 'Bio::EnsEMBL::Funcgen::Hive::TokenLimitedJobFactory',
 	-meadow_type=> 'LOCAL',
 	-flow_into => {
-	  '2->A' => 'PrePipelineChecks',
+	  '2->A' => 'IdentifyAlignInputSubsets',
 	  'A->1' => 'TokenLimitedJobFactory',
 	},
-    },
-    {
-      -logic_name => 'PrePipelineChecks',
-      -module     => 'Bio::EnsEMBL::Funcgen::Hive::ErsaPrePipelineChecks',
-      -meadow_type => 'LOCAL',
-      -flow_into => {
-	MAIN => 'IdentifyAlignInputSubsets'
-      },
     },
     {
       -logic_name => 'IdentifyAlignInputSubsets',
@@ -76,6 +77,7 @@ sub pipeline_analyses {
 	default_feature_set_analyses => $self->o('default_peak_analyses'),
 	dataflow_param_names => ['no_idr'], 
       },
+      -wait_for => 'PrePipelineChecks',
       -flow_into => {
 	'2->A' => 'DefineResultSets',
 	'A->4' => 'CleanupCellLineFiles',
@@ -115,7 +117,6 @@ sub pipeline_analyses {
 	},
       -meadow     => 'LOCAL',
       -analysis_capacity => 1,
-      -batch_size => 1000,
     },
     {
       -logic_name => 'Preprocess_bwa_samse_control',
@@ -129,9 +130,10 @@ sub pipeline_analyses {
      {
       -logic_name => 'Preprocess_bwa_samse_merged',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::PreprocessFastqs',
-      -parameters => {merge => 1},
-      -flow_into =>
-	{
+      -parameters => { 
+	merge => 1 
+      },
+      -flow_into => {
 	'2->A' => 'Run_bwa_samse_merged_chunk',
 	'A->3' =>  'MergeAlignments',
 	},
@@ -186,7 +188,7 @@ sub pipeline_analyses {
       -logic_name => 'JobFactoryDefineMergedDataSet',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::JobFactoryDefineMergedDataSet',
       -flow_into => {
-	2 => [ 'DefineMergedDataSet' ]
+	2 => 'DefineMergedDataSet'
       },
       -meadow_type=> 'LOCAL',
     },
@@ -194,7 +196,7 @@ sub pipeline_analyses {
       -logic_name => 'JobFactoryPermissivePeakCalling',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::JobFactoryPermissivePeakCalling',
       -flow_into => {
-	'100' => [ 'run_SWEmbl_R0005_replicate' ]
+	100 => 'run_SWEmbl_R0005_replicate'
       },
       -meadow_type=> 'LOCAL',
     },
