@@ -81,8 +81,15 @@ my $result = GetOptions(
   'dbname=s',
 );
 
-die unless(-e $result_file);
-die unless($result_set_id);
+if (! $result_file) {
+  die("The result_file parameter was not specified!");
+}
+if (! -e $result_file) {
+  die("The result_file ($result_file) specified on the command line does not exist!");
+}
+if (! $result_set_id) {
+  die("The result_set_id parameter was not specified!");
+}
 
 my @tracking_db_connection_details = (
     -user     => $user,
