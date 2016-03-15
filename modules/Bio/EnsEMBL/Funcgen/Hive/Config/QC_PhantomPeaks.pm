@@ -118,7 +118,7 @@ sub pipeline_analyses {
             },
 	    -rc_name    => 'normal_30GB_2cpu',
             -flow_into  => { 
-	      MAIN => [ 'QCLoadPhantomPeaksToDB' ],
+	      MAIN => 'QCLoadPhantomPeaksToDB',
             },
         },
         {   -logic_name => 'QCLoadPhantomPeaksToDB',
