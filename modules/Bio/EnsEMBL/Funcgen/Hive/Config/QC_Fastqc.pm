@@ -36,25 +36,8 @@ use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
 sub pipeline_analyses {
     my ($self) = @_;
     return [
-#         {   -logic_name => 'FastQCJobDefinition',
-#             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-#             -meadow_type=> 'LOCAL',
-#             -input_ids => [
-#             {
-# 		tempdir               => '/lustre/scratch109/ensembl/funcgen/mn1/qc/3436/',
-# 		input_subset_id       => 3436,
-# 		
-# 		tracking_db_user   => 'ensadmin',
-# 		tracking_db_pass   => 'ensembl',
-# 		tracking_db_host   => 'ens-genomics1',
-# 		tracking_db_name   => 'mn1_faang2_tracking_homo_sapiens_funcgen_81_38',
-#             }
-#             ],
-#             -flow_into => { 1 => 'MkFastQcTempDir', },
-#         },
 	{
 	  -logic_name => 'IdentifyAlignInputSubsets',
-	  -module     => 'Bio::EnsEMBL::Funcgen::Hive::IdentifySetInputs',
 	  -flow_into => {
 	    2 => 'QcFastQcInputIdsFromInputSet',
 	  },
@@ -114,11 +97,16 @@ sub pipeline_analyses {
             -meadow_type       => 'LOCAL',
             -use_bash_pipefail => 1,
             -parameters => { 
-		  cmd => qq!load_fastqc_summary_file.pl --input_subset_id #input_subset_id# --summary_file #fastqc_summary_file# | mysql --host #tracking_db_host# --port #tracking_db_port# --user #tracking_db_user# #tracking_db_name# -p#tracking_db_pass#!,
+		  cmd => qq(load_fastqc_summary_file.pl        )
+		    . qq( --input_subset_id #input_subset_id#  )
+		    . qq( --summary_file #fastqc_summary_file# )
+		    . qq( | mysql )
+		    . qq( --host #tracking_db_host#  )
+		    . qq( --port #tracking_db_port#  )
+		    . qq( --user #tracking_db_user#  )
+		    . qq( -p#tracking_db_pass#       )
+		    . qq( #tracking_db_name#         ),
             },
-#             -flow_into => { 
-# 	      '1' => [ 'JobFactoryFastQC' ],
-#             },
         },
     ];
 }
