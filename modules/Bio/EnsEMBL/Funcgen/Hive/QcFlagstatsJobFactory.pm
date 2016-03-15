@@ -18,17 +18,10 @@ use strict;
 
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
-sub fetch_input {
-  my $self = shift; 
-  $self->SUPER::fetch_input;
-  return;
-}
-
 sub run {
   my $self = shift;
   
   my $rset;
-  
   my $set_type = $self->param_required('set_type');
   if ($set_type eq 'ResultSet') {
     $rset = $self->fetch_Set_input('ResultSet'); 
@@ -39,16 +32,7 @@ sub run {
   }
   
   my $input_id = $self->create_input_id($rset);
-  
-#   use Data::Dumper;
-#   $Data::Dumper::Maxdepth = 0;
-#   print Dumper($input_id);
   $self->dataflow_output_id($input_id, 2);
-  return;
-}
-
-sub write_output {
-  my $self = shift;
   return;
 }
 
@@ -57,20 +41,29 @@ sub create_input_id {
   my $self = shift;
   my $result_set = shift;
   my $result_set_id = $result_set->dbID;
+  
+  my $is_control = $self->param('is_control') ? 1 : undef;
 
-  my $align_prefix   = $self->get_alignment_path_prefix_by_ResultSet($result_set, undef, 1);#validate aligned flag 
-  my $control_prefix = $self->get_alignment_path_prefix_by_ResultSet($result_set, 1, 1);#and control flag 
+  my $align_prefix   = $self->get_alignment_path_prefix_by_ResultSet($result_set, $is_control, 1);
   
-  my $signal_bam_file  = $align_prefix   . '.bam';
-  my $control_bam_file = $control_prefix . '.bam';
+  my $bam_file  = $align_prefix   . '.bam';
   
-  if (! -e $signal_bam_file) {
-    die("$signal_bam_file doesn't exist!");
+  if (! -e $bam_file) {
+  
+    use Bio::EnsEMBL::Utils::Logger;
+    my $logger = Bio::EnsEMBL::Utils::Logger->new();
+    $logger->error(
+      "The bam file $bam_file doesn't exist. This can happen, if it has just "
+      . "been created and the file system has not been updated yet on all "
+      . "nodes. In cases like these it may be resolved by restarting after "
+      . "waiting a bit. This job will sleep for 10 seconds now and then die. "
+      . "Hopefully upon retry it will work.\n"
+    );
+    sleep(10);
+    die("$bam_file doesn't exist. Dying now and hoping for more luck in "
+      . "the next life.");
   }
-  if (! -e $control_bam_file) {
-    die("$control_bam_file doesn't exist!");
-  }
-  
+
   my $out_db = $self->param('out_db');
   
   my $work_dir = $self->param_required('work_root_dir');
@@ -81,10 +74,7 @@ sub create_input_id {
   make_path($temp_dir);
   
   use File::Basename;
-  (my $signal_bam_file_base_name,  my $signal_bam_directory)  = fileparse($signal_bam_file);
-  (my $control_bam_file_base_name, my $control_bam_directory) = fileparse($control_bam_file);
-  
-  die unless($signal_bam_directory eq $control_bam_directory);
+  (my $bam_file_base_name,  my $bam_directory)  = fileparse($bam_file);
   
   my $input_id_common = [
       # Directory into which the bam files will be copied
@@ -100,23 +90,13 @@ sub create_input_id {
       tracking_db_port   => $out_db->dbc->port,
   ];
   
-  my $signal_flagstats_file  = "$temp_dir/${signal_bam_file_base_name}.signal_flagstats.txt";
-  my $control_flagstats_file = "$temp_dir/${control_bam_file_base_name}.control_flagstats.txt";
+  my $flagstats_file  = "$temp_dir/${bam_file_base_name}.flagstats.txt";
   
-  my $input_id = [
-    {
+  my $input_id = {
       @$input_id_common,
-      bam_file => $signal_bam_file,
-      flagstats_file => $signal_flagstats_file,
-      is_control => undef,
-    },
-    {
-      @$input_id_common,
-      bam_file => $control_bam_file,
-      flagstats_file => $control_flagstats_file,
-      is_control => 1,
-    }
-  ];
+      bam_file => $bam_file,
+      flagstats_file => $flagstats_file,
+    };
   
   return $input_id;
 }
