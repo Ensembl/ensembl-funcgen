@@ -140,8 +140,11 @@ if (! -e $peak_file) {
 if (! -e $bam_file) {
   $logger->error("The signal bam file $bam_file does not exist!\n");
 }
+
+$peak_caller = lc($peak_caller);
+
 if ($peak_caller ne 'ccat' && $peak_caller ne 'swembl') {
-  $logger->error("The parameter peak_caller must either be set to 'ccat' or 'swembl'!\n");
+  $logger->error("The parameter peak_caller must either be set to 'ccat' or 'swembl'! Got: $peak_caller\n");
 }
 if (! defined $feature_set_id) {
   $logger->error("The parameter feature_set_id was not provided!\n");
