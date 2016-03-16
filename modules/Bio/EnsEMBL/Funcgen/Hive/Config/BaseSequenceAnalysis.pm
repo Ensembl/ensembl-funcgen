@@ -10,12 +10,12 @@ sub default_options {
   return {
     %{$self->SUPER::default_options},
      
-     #default feature_set_analyses
-     default_peaks       => 'SWEmbl_R015', 
-     default_tight_peaks => 'SWEmbl_R0025', 
-     default_broad_peaks => 'ccat_histone',
-     permissive_peaks    => 'SWEmbl_R0005',
-     idr_peaks           => 'SWEmbl_R0005_IDR', 
+#      #default feature_set_analyses
+#      default_peaks       => 'SWEmbl_R015', 
+#      default_tight_peaks => 'SWEmbl_R0025', 
+#      default_broad_peaks => 'ccat_histone',
+#      permissive_peaks    => 'SWEmbl_R0005',
+#      idr_peaks           => 'SWEmbl_R0005_IDR', 
 
     # Used in Bio::EnsEMBL::Funcgen::Hive::Base::is_idr_FeatureType
     # The method is true, if the feature type passed in matches
@@ -59,8 +59,8 @@ sub default_options {
       H4K8ac                 => $self->o('default_broad_peaks'),
     },
  
-    'control_feature_types' => ['Goat-IgG', 'Rabbit-IgG', 'WCE', 'rat-IgG-control', 'rabbit-IgG-control', 'mouse-IgG-control', 'GFP'], 
-    'checksum_optional' => 0,   
+#     'control_feature_types' => ['Goat-IgG', 'Rabbit-IgG', 'WCE', 'rat-IgG-control', 'rabbit-IgG-control', 'mouse-IgG-control', 'GFP'], 
+#     'checksum_optional' => 0,   
    };
   
 }
@@ -71,9 +71,9 @@ sub pipeline_wide_parameters {
   return {
     %{$self->SUPER::pipeline_wide_parameters}, 
 
-    'control_feature_types'    => $self->o('control_feature_types'),    
+#     'control_feature_types'    => $self->o('control_feature_types'),    
     'broad_peak_feature_types' => $self->o('broad_peak_feature_types'), 
-    'checksum_optional'        => $self->o('checksum_optional'),
+#     'checksum_optional'        => $self->o('checksum_optional'),
 
     batch_param_names => [
        'no_write', #For use with runWorker.pl -no_write, so we can write some STDOUT in run
@@ -112,9 +112,7 @@ sub pipeline_analyses {
        default_feature_set_analyses => $self->o('default_peak_analyses'),
        feature_set_analysis_type    => 'peak',
       },
-     -analysis_capacity => 100,
      -rc_name           => 'default',
-     -batch_size        => 10, 
     },
    ];
 }
