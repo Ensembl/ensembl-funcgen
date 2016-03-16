@@ -26,14 +26,14 @@ sub pipeline_wide_parameters {
 
       #Size of each sequence chunk to be aligned (nbr of reads * 4)
       fastq_chunk_size      => $self->o('fastq_chunk_size'),   #Change to batch specific
-      alignment_analysis    => $self->o('alignment_analysis'), #Nope we may want this to be batch specific!
-      aligner_param_methods => $self->o('bwa_samse_param_methods'),
-      #This is stricly not required anymore as we use the local_url from the tracking tables
-      fastq_root_dir      => $self->o('fastq_root_dir'),
-      #This will should be set to one in downstream config
-      can_PreprocessIDR              => 0,
-      can_run_SWEmbl_R0005_replicate => 0,
-      can_DefineMergedDataSet       => 0,
+       alignment_analysis    => $self->o('alignment_analysis'), #Nope we may want this to be batch specific!
+#       aligner_param_methods => $self->o('bwa_samse_param_methods'),
+#       #This is stricly not required anymore as we use the local_url from the tracking tables
+#       fastq_root_dir      => $self->o('fastq_root_dir'),
+#       #This will should be set to one in downstream config
+#       can_PreprocessIDR              => 0,
+#       can_run_SWEmbl_R0005_replicate => 0,
+#       can_DefineMergedDataSet       => 0,
     };
 }
 
@@ -193,7 +193,7 @@ sub pipeline_analyses {
       -logic_name => 'JobFactoryPermissivePeakCalling',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::JobFactoryPermissivePeakCalling',
       -flow_into => {
-	100 => 'run_SWEmbl_R0005_replicate'
+	100 => 'PermissiveSWEmbl'
       },
       -meadow_type=> 'LOCAL',
     },
@@ -222,7 +222,7 @@ sub pipeline_analyses {
      -rc_name => '64GB_3cpu',
     },
     {
-      -logic_name    => 'run_SWEmbl_R0005_replicate',  #SWEmbl permissive
+      -logic_name    => 'PermissiveSWEmbl',  #SWEmbl permissive
       -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunPeaks',
       -parameters => {
 	peak_analysis => $self->o('permissive_peaks'),

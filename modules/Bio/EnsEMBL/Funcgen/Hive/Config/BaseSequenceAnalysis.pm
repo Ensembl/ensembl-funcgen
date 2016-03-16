@@ -10,12 +10,12 @@ sub default_options {
   return {
     %{$self->SUPER::default_options},
      
-#      #default feature_set_analyses
-#      default_peaks       => 'SWEmbl_R015', 
-#      default_tight_peaks => 'SWEmbl_R0025', 
-#      default_broad_peaks => 'ccat_histone',
-#      permissive_peaks    => 'SWEmbl_R0005',
-#      idr_peaks           => 'SWEmbl_R0005_IDR', 
+     #default feature_set_analyses
+     default_peaks       => 'SWEmbl_R015', 
+     default_tight_peaks => 'SWEmbl_R0025', 
+     default_broad_peaks => 'ccat_histone',
+     permissive_peaks    => 'SWEmbl_R0005',
+     idr_peaks           => 'SWEmbl_R0005_IDR', 
 
     # Used in Bio::EnsEMBL::Funcgen::Hive::Base::is_idr_FeatureType
     # The method is true, if the feature type passed in matches

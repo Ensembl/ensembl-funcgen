@@ -24,7 +24,7 @@ sub default_options {
       hive_output_dir   => $self->o('data_root_dir').'/output/'.$self->o('pipeline_name').'/hive_debug',
       port              => 3306,
       dnadb_port        => 3306,
-#       pipeline_name     => 'ersa',
+       pipeline_name     => 'ersa',
       
     dnadb   => {
 	-dnadb_host   => $self->o('dnadb_host'),
@@ -53,7 +53,7 @@ sub pipeline_wide_parameters {
 
     dnadb         => $self->o('dnadb'),
     out_db        => $self->o('out_db'),
-#     pipeline_name => $self->o('pipeline_name'),
+     pipeline_name => $self->o('pipeline_name'),
 
     out_db_url => $self->dbconn_2_url('out_db'),
 
