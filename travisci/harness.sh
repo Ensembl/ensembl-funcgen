@@ -11,7 +11,7 @@ SKIP_TESTS="--skip MultiTestDB.t,CoordSystem.t,Array_ArrayChip.t,Storable.t,Regu
 # SetFeature.t,Set.t,SegmentationFeature.t,ResultFeature.t,ProbeSet.t,ProbeFeature.t,MirnaTargetFeature.t,InputSubset.t,ExternalFeature.t,Experiment.t,ExperimentalGroup.t,DNAMethylationFeature.t,DataSet.t,CellType.t,Array.t,ArrayChip.t,AnnotatedFeature.t,Probe.t,feature_class_Set.t,FeatureSet.t,FeatureType.t,ResultSet.t,
 
 if [ "$COVERALLS" = 'true' ]; then
-  PERL5OPT='-MDevel::Cover=+ignore,bioperl,+ignore,ensembl-test,+ignore,ensembl,+ignore,\.t$$' perl $PWD/ensembl-test/scripts/runtests.pl -verbose $PWD/modules/t/ $SKIP_TESTS
+  PERL5OPT='-MDevel::Cover=+ignore,bioperl,+ignore,ensembl-test,+ignore,ensembl,+ignore,\.t$$,+ignore,Adaptor.pm$$,+ignore,EFGUtils.pm$$' perl $PWD/ensembl-test/scripts/runtests.pl -verbose $PWD/modules/t/ $SKIP_TESTS
 else
   perl $PWD/ensembl-test/scripts/runtests.pl $PWD/modules/t/ $SKIP_TESTS
 fi
