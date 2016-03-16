@@ -62,6 +62,7 @@ sub pipeline_analyses {
 	      . qq( --host   #tracking_db_host#   )
 	      . qq( --dbname #tracking_db_name#   )
 	  },
+	  -rc_name => 'normal_2GB',
       },
     ];
 }
