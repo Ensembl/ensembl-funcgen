@@ -53,8 +53,11 @@ sub pipeline_analyses {
             -meadow_type => 'LSF',
             -parameters  => { 
 		  cmd => 
-		    # Rscript does not search the path, so we use "which" to do that:
-		    qq( Rscript $(which run_spp.R) )
+		    # Rscript does not search the path, so we use "which" to 
+		    # do that. Also using single quotes to avoid interpolation
+		    # of the dollar sign.
+		    #
+		    q( Rscript $(which run_spp.R) )
 		    # Overwrite plotfile, if one already exists
 		  . qq(    -rf )
 		  . qq(    -c=#bam_file# )
@@ -74,8 +77,11 @@ sub pipeline_analyses {
             -meadow_type => 'LSF',
             -parameters  => { 
 		  cmd => 
-		    # Rscript does not search the path, so we use "which" to do that:
-		    qq( Rscript $(which run_spp.R) )
+		    # Rscript does not search the path, so we use "which" to 
+		    # do that. Also using single quotes to avoid interpolation
+		    # of the dollar sign.
+		    #
+		    q( Rscript $(which run_spp.R) )
 		    # Overwrite plotfile, if one already exists
 		  . qq(    -rf )
 		  . qq(    -c=#bam_file# )
@@ -94,10 +100,13 @@ sub pipeline_analyses {
             -meadow_type=> 'LOCAL',
 	    -parameters => {
                 cmd =>
-		    qq( load_phantom_peak_file.pl )
-		  . qq(    --result_set_id #result_set_id# )
+		    qq( load_phantom_peak_file.pl                )
+		  . qq(    --result_set_id #result_set_id#       )
 		  . qq(    --result_file #phantom_peak_out_file# )
-		  . qq(    --user #tracking_db_user# --pass #tracking_db_pass# --host #tracking_db_host# --dbname #tracking_db_name# )
+		  . qq(    --user   #tracking_db_user#   )
+		  . qq(    --pass   #tracking_db_pass#   )
+		  . qq(    --host   #tracking_db_host#   )
+		  . qq(    --dbname #tracking_db_name#   )
             },
         },
     ];
