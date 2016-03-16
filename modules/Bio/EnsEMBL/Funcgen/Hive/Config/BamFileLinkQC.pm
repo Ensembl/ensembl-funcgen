@@ -72,6 +72,18 @@ sub pipeline_analyses {
 	},
       },
       {
+	-logic_name => 'MergeIDRReplicateAlignments',
+	-flow_into => {
+	  MAIN => { 
+	    BamFileQc => INPUT_PLUS({
+	      'is_control' => 0,
+	      'source' => 'MergeReplicateResultSet',
+	      }
+	    )
+	  },
+	},
+      },
+      {
 	-logic_name => 'BamFileQc',
 	-module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
 	-meadow_type=> 'LOCAL',

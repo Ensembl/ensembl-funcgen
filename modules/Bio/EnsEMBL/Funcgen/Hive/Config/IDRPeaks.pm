@@ -92,12 +92,12 @@ sub pipeline_analyses {
      -rc_name    => 'default',
      -batch_size => 10,
      -flow_into => {
-       2 => 'DefineMergedReplicateResultSet',
+       2 => 'MergeIDRReplicateAlignments',
       }, 
     },
     {
-      -logic_name    => 'DefineMergedReplicateResultSet',
-      -module        => 'Bio::EnsEMBL::Funcgen::Hive::DefineMergedReplicateResultSet',
+      -logic_name    => 'MergeIDRReplicateAlignments',
+      -module        => 'Bio::EnsEMBL::Funcgen::Hive::MergeIDRReplicateAlignments',
       -rc_name => 'default',
       -flow_into => { 
 	2 => 'FixReplicateResultSetsExperimentIds'
