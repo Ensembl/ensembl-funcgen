@@ -179,7 +179,7 @@ while (my $current_line = <IN>) {
     my $corr_estFragLen,
     my $corr_estFragLen2,
     my $corr_estFragLen3,
-  ) = split ',', $estFragLenTriple;
+  ) = split ',', $corr_estFragLenTriple;
   
   if ($corr_estFragLen2 eq '') {
     $corr_estFragLen2 = 'null';
