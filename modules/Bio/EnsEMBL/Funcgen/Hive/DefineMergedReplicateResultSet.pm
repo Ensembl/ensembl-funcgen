@@ -1,13 +1,13 @@
 
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::Hive::DefineMergedReplicateResultSet
+Bio::EnsEMBL::Funcgen::Hive::MergeIDRReplicateAlignments
 
 =head1 DESCRIPTION
 
 =cut
 
-package Bio::EnsEMBL::Funcgen::Hive::DefineMergedReplicateResultSet;
+package Bio::EnsEMBL::Funcgen::Hive::MergeIDRReplicateAlignments;
 
 use warnings;
 use strict;
@@ -36,8 +36,8 @@ sub fetch_input {
 
   $self->get_param_method('alignment_analysis', 'required');
 
-  # Undef in analysis DefineMergedReplicateResultSet
-  # 1 in DefineMergedReplicateResultSet
+  # Undef in analysis MergeIDRReplicateAlignments
+  # 1 in MergeIDRReplicateAlignments
   #
   # This is how this module knows where it is in the ersa pipeline and 
   # changes its behaviour accordingly.
@@ -132,7 +132,7 @@ sub run {
   
   my (%result_sets, %replicate_bam_files);
 
-  # merge_idr_replicates is undef in DefineMergedReplicateResultSet analysis
+  # merge_idr_replicates is undef in MergeIDRReplicateAlignments analysis
   #
   my $merge_idr_replicates = $self->merge_idr_replicates;
   
