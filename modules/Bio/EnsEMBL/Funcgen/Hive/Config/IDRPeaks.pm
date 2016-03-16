@@ -61,44 +61,47 @@ sub pipeline_analyses {
   return [
    @{$self->SUPER::pipeline_analyses}, #To pick up BaseSequenceAnalysis-DefineMergedOutputSet
     {
-     -logic_name    => 'run_SWEmbl_R0005_replicate',  #SWEmbl permissive
+     -logic_name    => 'PermissiveSWEmbl',
      -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunPeaks',
-     -rc_name => 'normal_5GB_2cpu_monitored', # Better safe than sorry... size of datasets tends to increase...       
+     -rc_name       => 'normal_5GB_2cpu_monitored',
     },
-     {
+    {
      -logic_name    => 'PreprocessIDR',
      -module        => 'Bio::EnsEMBL::Funcgen::Hive::PreprocessIDR',
-     -rc_name    => 'default',
-     -batch_size => 30, #Should really take ~1min to process each set of replicates
-     -parameters => { permissive_peaks => $self->o('permissive_peaks') },
+     -rc_name       => 'default',
+     -batch_size    => 30,
+     -parameters    => { 
+	permissive_peaks => $self->o('permissive_peaks') 
+      },
      -flow_into => {
-       '2->A' => [ 'RunIDR' ],
-       'A->3' => [ 'PostProcessIDRReplicates' ], 
+       '2->A' => 'RunIDR',
+       'A->3' => 'PostProcessIDRReplicates', 
       }, 
     },
     {
-     -logic_name    => 'RunIDR',
-     -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunIDR',
-     -rc_name    => 'normal_2GB',
-     -batch_size => 6,
-    -flow_into => {
-      2 => [ ':////accu?idr_peak_counts=[accu_idx]' ],
-     }
+      -logic_name    => 'RunIDR',
+      -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunIDR',
+      -rc_name    => 'normal_2GB',
+      -flow_into => {
+	2 => ':////accu?idr_peak_counts=[accu_idx]',
+      }
     },
     {
      -logic_name    => 'PostProcessIDRReplicates',
      -module        => 'Bio::EnsEMBL::Funcgen::Hive::PostprocessIDR',
-     -rc_name    => 'default', #<1mins
-     -batch_size => 10,#?
+     -rc_name    => 'default',
+     -batch_size => 10,
      -flow_into => {
-       '2' => [ 'DefineMergedReplicateResultSet' ],
+       2 => 'DefineMergedReplicateResultSet',
       }, 
     },
     {
-     -logic_name    => 'DefineMergedReplicateResultSet',
-     -module        => 'Bio::EnsEMBL::Funcgen::Hive::DefineMergedReplicateResultSet',
-     -rc_name => 'default',
-     -flow_into => { '2' => [ 'FixReplicateResultSetsExperimentIds' ] },
+      -logic_name    => 'DefineMergedReplicateResultSet',
+      -module        => 'Bio::EnsEMBL::Funcgen::Hive::DefineMergedReplicateResultSet',
+      -rc_name => 'default',
+      -flow_into => { 
+	2 => 'FixReplicateResultSetsExperimentIds'
+      },
     },
     {
      -logic_name => 'FixReplicateResultSetsExperimentIds',
