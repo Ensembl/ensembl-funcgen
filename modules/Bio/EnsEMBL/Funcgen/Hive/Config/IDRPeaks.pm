@@ -68,7 +68,6 @@ sub pipeline_analyses {
      {
      -logic_name    => 'PreprocessIDR',
      -module        => 'Bio::EnsEMBL::Funcgen::Hive::PreprocessIDR',
-     -analysis_capacity => 100,#Unlikely to get anywhere near this
      -rc_name    => 'default',
      -batch_size => 30, #Should really take ~1min to process each set of replicates
      -parameters => { permissive_peaks => $self->o('permissive_peaks') },
@@ -80,7 +79,6 @@ sub pipeline_analyses {
     {
      -logic_name    => 'RunIDR',
      -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunIDR',
-     -analysis_capacity => 100,
      -rc_name    => 'normal_2GB',
      -batch_size => 6,
     -flow_into => {
@@ -90,7 +88,6 @@ sub pipeline_analyses {
     {
      -logic_name    => 'PostProcessIDRReplicates',
      -module        => 'Bio::EnsEMBL::Funcgen::Hive::PostprocessIDR',
-     -analysis_capacity => 100,
      -rc_name    => 'default', #<1mins
      -batch_size => 10,#?
      -flow_into => {
@@ -100,7 +97,6 @@ sub pipeline_analyses {
     {
      -logic_name    => 'DefineMergedReplicateResultSet',
      -module        => 'Bio::EnsEMBL::Funcgen::Hive::DefineMergedReplicateResultSet',
-     -analysis_capacity => 100,
      -rc_name => 'default',
      -flow_into => { '2' => [ 'FixReplicateResultSetsExperimentIds' ] },
     },
