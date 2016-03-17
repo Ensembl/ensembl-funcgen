@@ -15,7 +15,7 @@
 */
 
 ALTER TABLE epigenome change efo_id ontology_accession VARCHAR(20);
-ALTER TABLE epigenome add ontology VARCHAR(30) after ontology_accession;
+ALTER TABLE epigenome add ontology ENUM('EFO','CL') after ontology_accession;
 ALTER TABLE epigenome add production_name VARCHAR(120) after description;
 
 -- patch identifier
