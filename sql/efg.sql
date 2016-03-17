@@ -1129,13 +1129,13 @@ CREATE TABLE `result` (
 @colour  #808000
 
 @column epigenome_id         Internal ID
-@column name                 Name of epigenome, internal use only
+@column name                 Microformat to drive the ChIP-seq pipeline, used internally only.
 @column display_label        Short display label, used in the ensembl browser/website
-@column description          Text description
+@column description          Text description, used in the z-menu that appears when hovering over the epigenome name
 @column production_name      Used to generate file or directory names
-@column gender               Gender i.e. male or female
+@column gender               Gender i.e. 'male', 'female', 'hermaphrodite' or 'mixed'
 @column ontology_accession   External accession id
-@column ontology             The resource where the ontology_accession refers to
+@column ontology             The resource where the ontology_accession refers to, currently either EFO or CL
 @column tissue               Tissue origin/type
 
 */
@@ -1146,8 +1146,10 @@ CREATE TABLE `epigenome` (
    `name`  varchar(120) not NULL,
    `display_label` varchar(30) default NOT NULL,
    `description` varchar(80) default NULL,
+   `production_name` varchar(120) default NULL,
    `gender` enum('male', 'female', 'hermaphrodite', 'mixed') default NULL,
-   `efo_id` varchar(20) DEFAULT NULL,
+   `ontology_accession` varchar(20) DEFAULT NULL,
+   `ontology` ENUM('EFO','CL') DEFAULT NULL,
    `tissue` varchar(50) default NULL,
    PRIMARY KEY  (`epigenome_id`),
    UNIQUE KEY `name_idx` (`name`)
