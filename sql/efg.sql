@@ -50,12 +50,12 @@
 @column seq_region_strand       Strand orientation of this feature
 @column display_label           Text display label
 @column stable_id               Integer stable ID without ENSR prefix
-@column projected               Boolean, defines whether reg feat structure has been projected to this cell type
+@column projected               Boolean, defines whether reg feat structure has been projected to this epigenome
 @column binary_string           Binary representation for the underlying feature sets/types
 @column bound_start_length      Distance between start of the feature and start of the bound region
 @column bound_end_length        Distance between end of the bound region and end of this feature
-@column activity                Indicates the type of activity of this feature in this cell type
-@column cell_type_count         Integer, precomupted number of cell type specific features with evidence
+@column activity                Indicates the type of activity of this feature in this epigenome
+@column epigenome_count         Integer, precomupted number of epigenome specific features with evidence
 
 @see feature_set
 @see feature_type
@@ -79,7 +79,7 @@ CREATE TABLE `regulatory_feature` (
   `bound_start_length` mediumint(3) unsigned NOT NULL,
   `bound_end_length` mediumint(3) unsigned NOT NULL,
   `activity` tinyint(1),
-  `cell_type_count` smallint(6),
+  `epigenome_count` smallint(6),
   PRIMARY KEY  (`regulatory_feature_id`),
   UNIQUE KEY `fset_seq_region_idx` (`feature_set_id`, `seq_region_id`,`seq_region_start`, `feature_type_id`),
   KEY `feature_type_idx` (`feature_type_id`),
@@ -569,7 +569,7 @@ CREATE TABLE `supporting_set` (
 
 @column feature_set_id  Internal ID
 @column analysis_id     @link analysis ID
-@column cell_type_id    @link cell_type ID
+@column epigenome_id    @link epigenome ID
 @column experiment_id   @link experiment
 @column feature_type_id @link feature_type ID
 @column name            Name for this feature set
@@ -578,7 +578,7 @@ CREATE TABLE `supporting_set` (
 @column display_label   Shorter more readable version of name
 
 @see analysis
-@see cell_type
+@see epigenome
 @see experiment
 @see feature_type
 */
@@ -587,7 +587,7 @@ DROP TABLE IF EXISTS `feature_set`;
 CREATE TABLE `feature_set` (
    `feature_set_id` int(10) unsigned NOT NULL auto_increment,
    `analysis_id` smallint(5) unsigned NOT NULL,
-   `cell_type_id` int(10) unsigned default NULL,
+   `epigenome_id` int(10) unsigned default NULL,
    `experiment_id` int(10) unsigned default NULL,
    `feature_type_id` int(10) unsigned NOT NULL,
    `name` varchar(100) default NULL,
@@ -597,7 +597,7 @@ CREATE TABLE `feature_set` (
    PRIMARY KEY  (`feature_set_id`),
    KEY `feature_type_idx` (`feature_type_id`),
    UNIQUE KEY `name_idx` (name),
-   KEY cell_type_idx (cell_type_id),
+   KEY epigenome_idx (epigenome_id),
    KEY experiment_idx (experiment_id)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -608,7 +608,7 @@ CREATE TABLE `feature_set` (
 
 @column result_set_id     Internal ID
 @column analysis_id       @link analysis ID
-@column cell_type_id      @link cell_type ID
+@column epigenome_id      @link epigenome ID
 @column experiment_id     @link experiment ID
 @column feature_type_id   @link feature_type ID
 @column name              Name for this feature set
@@ -616,7 +616,7 @@ CREATE TABLE `feature_set` (
 @column replicate         Number of the replicate. 0 represents  a pooled subset, 255 is a subset we have not processed
 
 @see analysis
-@see cell_type
+@see epigenome
 @see experiment
 @see feature_type
 */
@@ -625,7 +625,7 @@ DROP TABLE IF EXISTS `result_set`;
 CREATE TABLE `result_set` (
    `result_set_id`    int(10) unsigned NOT NULL auto_increment,
    `analysis_id`      smallint(5) unsigned NOT NULL,
-   `cell_type_id`     int(10) unsigned default NULL,
+   `epigenome_id`     int(10) unsigned default NULL,
    `experiment_id`    int(10) unsigned default NULL,
    `feature_type_id`  int(10) unsigned default NULL,
    `feature_class`    enum('result', 'dna_methylation','segmentation') DEFAULT NULL,
@@ -633,7 +633,7 @@ CREATE TABLE `result_set` (
    `replicate`        tinyint(3) unsigned NOT NULL,
    PRIMARY KEY  (`result_set_id`),
    UNIQUE KEY `name_idx` (`name`),
-   KEY cell_type_idx (cell_type_id),
+   KEY epigenome_idx (epigenome_id),
    KEY feature_type_idx (feature_type_id),
    KEY analysis_idx (analysis_id),
    KEY feature_class_idx (feature_class),
@@ -702,7 +702,7 @@ CREATE TABLE `dbfile_registry` (
 
 @column input_set_id    Internal ID
 @column analysis_id     Table ID for @link analysis
-@column cell_type_id    Table ID for @link cell_type
+@column epigenome_id    Table ID for @link epigenome
 @column experiment_id   Table ID for @link experiment
 @column feature_type_id Table ID for @link feature_type
 @column name            Name of input_set
@@ -710,7 +710,7 @@ CREATE TABLE `dbfile_registry` (
 @column replicate       Number of the replicate. 0 represents  a pooled subset, 255 is a subset we have not processed
 
 @see analysis
-@see cell_type
+@see epigenome
 @see experiment
 @see feature_type
 @see result_set_input
@@ -720,7 +720,7 @@ DROP TABLE IF EXISTS `input_set`;
 CREATE TABLE `input_set` (
    `input_set_id` int(10) unsigned NOT NULL auto_increment,
    `analysis_id` smallint(5) unsigned NOT NULL,
-   `cell_type_id` int(10) unsigned default NULL,
+   `epigenome_id` int(10) unsigned default NULL,
    `experiment_id` int(10) unsigned default NULL,
    `feature_type_id` int(10) unsigned default NULL,
    `name` varchar(100) not NULL,
@@ -730,7 +730,7 @@ CREATE TABLE `input_set` (
    UNIQUE KEY `name_idx` (`name`),
    KEY `experiment_idx` (`experiment_id`),
    KEY `feature_type_idx` (`feature_type_id`),
-   KEY `cell_type_idx` (`cell_type_id`)
+   KEY `epigenome_idx` (`epigenome_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
 
 
@@ -742,7 +742,7 @@ CREATE TABLE `input_set` (
 
 @column input_subset_id  Internal ID
 @column analysis_id      @link analysis ID
-@column cell_type_id     @link cell_type ID
+@column epigenome_id     @link epigenome ID
 @column experiment_id    @link experiment ID
 @column feature_type_id  @link feature_type  ID
 @column name             Name of input_subset e.g. file name
@@ -750,7 +750,7 @@ CREATE TABLE `input_set` (
 @column is_control       Subset is a control
 
 @see analysis
-@see cell_type
+@see epigenome
 @see experiment
 @see feature_type
 
@@ -760,7 +760,7 @@ DROP TABLE IF EXISTS `input_subset`;
 CREATE TABLE `input_subset` (
     `input_subset_id` int(10)     unsigned NOT NULL auto_increment,
     `analysis_id`     smallint(5) unsigned NOT NULL,
-    `cell_type_id`    int(10)     unsigned DEFAULT NULL,
+    `epigenome_id`    int(10)     unsigned DEFAULT NULL,
     `experiment_id`   int(10)     unsigned NOT NULL,
     `feature_type_id` int(10)     unsigned NOT NULL,
     `name`            varchar(100)         NOT NULL,
@@ -772,7 +772,7 @@ CREATE TABLE `input_subset` (
    KEY experiment_idx (experiment_id)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
 
--- cell_type_id is default NULL to support flat file imports which have not defined cell type
+-- epigenome_id is default NULL to support flat file imports which have not defined epigenome
 
 /**
 @table  input_set_input_subset
@@ -928,7 +928,7 @@ CREATE TABLE `probe` (
 @colour  #00FF00
 
 @column experiment_id           Internal ID
-@column cell_type_id            @link cell_type ID
+@column epigenome_id            @link epigenome ID
 @column experimental_group_id   @link experimental_group ID
 @column feature_type_id         @link feature_type table ID
 @column mage_xml_id             @link mage_xml ID
@@ -938,7 +938,7 @@ CREATE TABLE `probe` (
 @column archive_id              ENA experiment identifier enabling access to specific raw data
 @column display_url             Http link to source file
 
-@see cell_type
+@see epigenome
 @see experimental_group
 @see feature_type
 @see mage_xml
@@ -947,7 +947,7 @@ CREATE TABLE `probe` (
 DROP TABLE IF EXISTS `experiment`;
 CREATE TABLE `experiment` (
    `experiment_id`          INT(10)     UNSIGNED  NOT NULL AUTO_INCREMENT,
-   `cell_type_id`           INT(10)     UNSIGNED  DEFAULT NULL,
+   `epigenome_id`           INT(10)     UNSIGNED  DEFAULT NULL,
    `experimental_group_id`  SMALLINT(6) UNSIGNED  DEFAULT NULL,
    `feature_type_id`        INT(10)     UNSIGNED  NOT NULL,
    `mage_xml_id`            INT(10)     UNSIGNED  DEFAULT NULL,
@@ -961,7 +961,7 @@ CREATE TABLE `experiment` (
    KEY `design_idx` (`primary_design_type`),
    KEY `experimental_group_idx` (`experimental_group_id`),
    KEY feature_type_idx(feature_type_id),
-   KEY cell_type_idx(cell_type_id)
+   KEY epigenome_idx(epigenome_id)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- Can probably remove now date (and primary_design_type?) as we don't support this level of meta data
@@ -1022,7 +1022,7 @@ CREATE TABLE `mage_xml` (
 
 @column experimental_chip_id  Internal ID
 @column array_chip_id         @link array_chip table ID
-@column cell_type_id          @link cell_type table ID
+@column epigenome_id          @link epigenome table ID
 @column experiment_id         @link experiment table ID
 @column feature_type_id       @link feature_type table ID
 @column biological_replicate  Name of biological replicate
@@ -1030,7 +1030,7 @@ CREATE TABLE `mage_xml` (
 @column unique_id             Unique ID assigned by vendor
 
 @see array_chip
-@see cell_type
+@see epigenome
 @see experiment
 @see feature_type
 */
@@ -1039,7 +1039,7 @@ DROP TABLE IF EXISTS `experimental_chip`;
 CREATE TABLE `experimental_chip` (
    `experimental_chip_id` int(10) unsigned NOT NULL auto_increment,
    `array_chip_id` int(10) unsigned default NULL,
-   `cell_type_id` int(10) unsigned default NULL,
+   `epigenome_id` int(10) unsigned default NULL,
    `experiment_id` int(10) unsigned default NULL,
    `feature_type_id` int(10) unsigned default NULL,
    `biological_replicate` varchar(100) default NULL,
@@ -1124,60 +1124,62 @@ CREATE TABLE `result` (
 
 
 /**
-@table  cell_type
-@desc   Contains information about cell/tissue types.
+@table  epigenome
+@desc   Contains information about epigenomes.
 @colour  #808000
 
-@column cell_type_id    Internal ID
-@column name            Name of cell/tissue
-@column display_label   Short display label
-@column description     Text description
-@column gender          Gender i.e. male or female
-@column efo_id          Experimental Factor Ontology ID
-@column tissue          Tissue origin/type
+@column epigenome_id         Internal ID
+@column name                 Name of epigenome, internal use only
+@column display_label        Short display label, used in the ensembl browser/website
+@column description          Text description
+@column production_name      Used to generate file or directory names
+@column gender               Gender i.e. male or female
+@column ontology_accession   External accession id
+@column ontology             The resource where the ontology_accession refers to
+@column tissue               Tissue origin/type
 
 */
 
-DROP TABLE IF EXISTS `cell_type`;
-CREATE TABLE `cell_type` (
-   `cell_type_id` int(10) unsigned NOT NULL auto_increment,
+DROP TABLE IF EXISTS `epigenome`;
+CREATE TABLE `epigenome` (
+   `epigenome_id` int(10) unsigned NOT NULL auto_increment,
    `name`  varchar(120) not NULL,
    `display_label` varchar(30) default NOT NULL,
    `description` varchar(80) default NULL,
    `gender` enum('male', 'female', 'hermaphrodite', 'mixed') default NULL,
    `efo_id` varchar(20) DEFAULT NULL,
    `tissue` varchar(50) default NULL,
-   PRIMARY KEY  (`cell_type_id`),
+   PRIMARY KEY  (`epigenome_id`),
    UNIQUE KEY `name_idx` (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 
 /**
-@table  cell_type_lineage
-@desc   Links cell_types to lineage terms
+@table  epigenome_lineage
+@desc   Links epigenomes to lineage terms
 @colour  #808000
 
-@column cell_type_id    @link cell_type ID
+@column epigenome_id    @link epigenome ID
 @column lineage_id      @link lineage ID
-@column most_specific   Denotes most specific term for this cell_type
+@column most_specific   Denotes most specific term for this epigenome
 
-@see cell_type
+@see epigenome
 @see lineage
 */
 
 
-DROP TABLE IF EXISTS `cell_type_lineage`;
-CREATE TABLE `cell_type_lineage` (
-   `cell_type_id` int(10) unsigned NOT NULL,
+DROP TABLE IF EXISTS `epigenome_lineage`;
+CREATE TABLE `epigenome_lineage` (
+   `epigenome_id` int(10) unsigned NOT NULL,
    `lineage_id` int(10) unsigned NOT NULL,
    `most_specific` boolean default NULL,
-   PRIMARY KEY  (`cell_type_id`, `lineage_id`)
+   PRIMARY KEY  (`epigenome_id`, `lineage_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- most_specific could be infered from lineage chain
 -- add description?
--- most_specific here as this may be dependant on the cell_type
+-- most_specific here as this may be dependant on the epigenome
 
 
 /**
@@ -1422,13 +1424,9 @@ CREATE TABLE `meta` (
 INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 
 -- Update and remove these for each release to avoid erroneous patching
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '84');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_83_84_a.sql|schema_version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_83_84_b.sql|Drop unique key for cell_type.efo_id');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_83_84_c.sql|Add not null constraint to cell_type.display_label');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_83_84_d.sql|Add segmentation enum to result_set.feature_class');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_83_84_e.sql|Increase length of regbuild_string.name');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_83_84_f.sql|Change regulatory_feature has_evidence to activity');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_b.sql|rename cell_type table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_c.sql|new epigenome table columns');
 
 /**
 @table meta_coord
