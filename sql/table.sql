@@ -648,7 +648,7 @@ CREATE TABLE `result_set` (
 
 @column result_set_input_id Internal ID
 @column result_set_id       @link result_set ID
-@column table_id            Table ID for input
+@column table_id            Texperimable ID for input
 @column table_name          Table name for input e.g. @link input_set, @link experimental_chip, @link channel
 
 @see result_set
@@ -949,6 +949,8 @@ CREATE TABLE `experiment` (
    `experiment_id`          INT(10)     UNSIGNED  NOT NULL AUTO_INCREMENT,
    `epigenome_id`           INT(10)     UNSIGNED  DEFAULT NULL,
    `experimental_group_id`  SMALLINT(6) UNSIGNED  DEFAULT NULL,
+   `control_id`             INT(10)     UNSIGNED,
+   `is_control`             tinyint(3)  unsigned DEFAULT 0,
    `feature_type_id`        INT(10)     UNSIGNED  NOT NULL,
    `mage_xml_id`            INT(10)     UNSIGNED  DEFAULT NULL,
    `description`            VARCHAR(255)          DEFAULT NULL,
