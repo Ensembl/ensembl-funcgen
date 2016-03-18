@@ -72,12 +72,12 @@ sub pipeline_analyses {
 	},
       },
       {
-	-logic_name => 'MergeIDRReplicateAlignments',
+	-logic_name => 'FixReplicateResultSetsExperimentIds',
 	-flow_into => {
 	  MAIN => { 
 	    BamFileQc => INPUT_PLUS({
 	      'is_control' => 0,
-	      'source' => 'MergeReplicateResultSet',
+	      'source' => 'FixReplicateResultSetsExperimentIds',
 	      }
 	    )
 	  },
