@@ -150,6 +150,7 @@ sub fetch_input {   # fetch parameters...
     -query_file        => $query_file,
     -target_file       => $ref_fasta,
     -debug             => $self->debug,
+    -sam_ref_fai       => $self->sam_ref_fai,
     %aparams                                    );
     
   $self->helper->debug(1, "Setting aligner:\t".$align_runnable); 
