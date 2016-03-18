@@ -59,6 +59,8 @@ my $user;
 my $pass;
 my $host;
 my $dbname;
+my $work_dir;
+my $bam_file;
 
 my %config_hash = (
   "result_file"   => \$result_file,
@@ -68,6 +70,8 @@ my %config_hash = (
   'pass'            => \$pass,
   'host'            => \$host,
   'dbname'          => \$dbname,
+  'work_dir'        => \$work_dir,
+  'bam_file'        => \$bam_file,
 );
 
 my $result = GetOptions(
@@ -79,6 +83,8 @@ my $result = GetOptions(
   'pass=s',
   'host=s',
   'dbname=s',
+  'work_dir=s',
+  'bam_file=s',
 );
 
 if (! $result_file) {
@@ -133,6 +139,7 @@ if ($dry_run) {
 } else {
   $sql_processor = sub {
     my $sql = shift;
+    $logger->info($sql . "\n");
     $dbc->do($sql);
   };
 }
@@ -219,13 +226,15 @@ while (my $current_line = <IN>) {
   . "min_corr, "
   . "NSC, "
   . "RSC, "
-  . "QualityTag "
+  . "QualityTag, "
+  . "path "
   . ")  VALUES ("
   . (
     join ', ', (
         $result_set_id,
         $analysis_id,
-        quote($filename),
+        #quote($filename),
+        quote($bam_file),
         $numReads,
 
         $estFragLen,
@@ -243,6 +252,7 @@ while (my $current_line = <IN>) {
         $NSC,
         $RSC,
         $QualityTag,
+        quote($work_dir)
       )
     )
   . ");";
@@ -265,7 +275,7 @@ CREATE TABLE if not exists `result_set_qc_phantom_peak` (
   `result_set_qc_phantom_peak_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `analysis_id`        int(10) unsigned,
   `result_set_id` int(10) unsigned NOT NULL,
-  `filename` varchar(100) NOT NULL,
+  `filename` varchar(512) NOT NULL,
   `numReads` int(10) unsigned NOT NULL,
   `estFragLen`       double default NULL,
   `estFragLen2`      double default NULL,
@@ -309,9 +319,10 @@ CREATE TABLE if not exists `result_set_qc_phantom_peak` (
 -- Quality values derived from the RSC
 --
   `QualityTag` int(10),
-  `path` varchar(100) NOT NULL,
+  `path` varchar(512) NOT NULL,
   PRIMARY KEY (`result_set_qc_phantom_peak_id`),
-  UNIQUE KEY `filename_idx` (`filename`)
+--  UNIQUE KEY `filename_idx` (`filename`)
+  KEY `filename_idx` (`filename`)
 );
 SQL
 ;

@@ -78,6 +78,7 @@ my $pass;
 my $host;
 my $dbname;
 my $signal_result_set_id;
+my $work_dir;
 
 my %config_hash = (
   "argenrich_file"        => \$argenrich_file,
@@ -88,6 +89,7 @@ my %config_hash = (
   'pass'            => \$pass,
   'host'            => \$host,
   'dbname'          => \$dbname,
+  'work_dir'        => \$work_dir,
 );
 
 my $result = GetOptions(
@@ -100,6 +102,7 @@ my $result = GetOptions(
   'pass=s',
   'host=s',
   'dbname=s',
+  'work_dir=s',
 );
 
 die unless(-e $argenrich_file);
@@ -147,7 +150,7 @@ my $sql = qq(insert into result_set_qc_chance (
       signal_result_set_id, analysis_id, p, q, divergence, z_score, percent_genome_enriched, input_scaling_factor, differential_percentage_enrichment,
       control_enrichment_stronger_than_chip_at_bin,
       first_nonzero_bin_at,
-      pcr_amplification_bias_in_Input_coverage_of_1_percent_of_genome
+      pcr_amplification_bias_in_Input_coverage_of_1_percent_of_genome, path
     ) values (
     $signal_result_set_id,
     $analysis_id,
@@ -160,7 +163,8 @@ my $sql = qq(insert into result_set_qc_chance (
     $key_value_pairs{'differential_percentage_enrichment'},
     $key_value_pairs{'Control enrichment stronger than ChIP at bin'},
     $key_value_pairs{'Zero-enriched IP, maximum difference at bin'},
-    $key_value_pairs{'PCR amplification bias in Input, coverage of 1% of genome'}
+    $key_value_pairs{'PCR amplification bias in Input, coverage of 1% of genome'},
+    '$work_dir'
   )
 );
 
@@ -276,7 +280,7 @@ my $sql = <<SQL
 -- greater deviations from that are reported.
 --
   `pcr_amplification_bias_in_Input_coverage_of_1_percent_of_genome`double default NULL,
-  `path` varchar(100) NOT NULL,
+  `path` varchar(512) NOT NULL,
   PRIMARY KEY (`result_set_qc_chance_id`)
 );
 SQL

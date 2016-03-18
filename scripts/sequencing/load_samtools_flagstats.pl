@@ -51,6 +51,8 @@ my $user;
 my $pass;
 my $host;
 my $dbname;
+my $work_dir;
+my $bam_file;
 
 my %config_hash = (
   'flagstats_file'  => \$flagstats_file,
@@ -60,6 +62,8 @@ my %config_hash = (
   'pass'            => \$pass,
   'host'            => \$host,
   'dbname'          => \$dbname,
+  'work_dir'        => \$work_dir,
+  'bam_file'        => \$bam_file,
 );
 
 # Loading command line paramters into variables and into a hash.
@@ -72,6 +76,8 @@ my $result = GetOptions(
   'pass=s',
   'host=s',
   'dbname=s',
+  'work_dir=s',
+  'bam_file=s',
 );
 
 die unless(-e $flagstats_file);
@@ -146,7 +152,7 @@ sub create_insert_sql {
   my $sql_processor = $param->{sql_processor};  
 
   open IN, $flagstats_file;
-
+  
   while (my $current_line = <IN>) {
     chomp $current_line;
     my $recognized = $current_line =~ /^(\d+) \+ (\d) (.+)$/;
@@ -156,9 +162,9 @@ sub create_insert_sql {
       my $category        = $3;
 
       my $sql = "INSERT INTO result_set_qc_flagstats "
-      . "(result_set_id,analysis_id,category,qc_passed_reads,qc_failed_reads) "
+      . "(result_set_id, analysis_id, category, qc_passed_reads, qc_failed_reads, path, bam_file) "
       . "VALUES "
-      . "($result_set_id, $analysis_id, '$category', $qc_passed_reads, $qc_failed_reads);";
+      . "($result_set_id, $analysis_id, '$category', $qc_passed_reads, $qc_failed_reads, '$work_dir', '$bam_file');";
       $sql_processor->($sql);
     } else {
       $logger->debug("Can't parse: " . $current_line . "\n");
@@ -182,7 +188,8 @@ CREATE TABLE if not exists `result_set_qc_flagstats` (
   `category` varchar(100) NOT NULL,
   `qc_passed_reads`    int(10) unsigned,
   `qc_failed_reads`    int(10) unsigned,
-  `path` varchar(100) NOT NULL,
+  `path` varchar(512) NOT NULL,
+  `bam_file` varchar(512) NOT NULL,
   PRIMARY KEY (`result_set_qc_id`),
   UNIQUE KEY `name_exp_idx` (`result_set_qc_id`,`category`)
 );

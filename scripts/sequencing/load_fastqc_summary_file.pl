@@ -74,16 +74,19 @@ use Getopt::Long;
 
 my $summary_file;
 my $input_subset_id;
+my $work_dir;
 
 my %config_hash = (
   "summary_file"    => \$summary_file,
   "input_subset_id" => \$input_subset_id,
+  "work_dir"        => \$work_dir,
 );
 
 my $result = GetOptions(
   \%config_hash,
   'input_subset_id=s',
   'summary_file=s',
+  'work_dir=s',
 );
 
 die unless(-e $summary_file);
@@ -98,7 +101,7 @@ while (my $current_line = <IN>) {
   #print " - $current_line\n";
   my @f = split "\t", $current_line;
   #print Dumper(\@f);
-  my $sql = "INSERT ignore INTO input_subset_fastqc (input_subset_id,status,title,file_name) VALUES (".$input_subset_id.", '".$f[0]."', '".$f[1]."', '".$f[2]."')";
+  my $sql = "INSERT ignore INTO input_subset_fastqc (input_subset_id,status,title,file_name,path) VALUES (".$input_subset_id.", '".$f[0]."', '".$f[1]."', '".$f[2]."', '".$work_dir."')";
   
   print "$sql;\n";
 }
@@ -114,7 +117,7 @@ CREATE TABLE if not exists `input_subset_fastqc` (
   `status` varchar(100) NOT NULL,
   `title` varchar(100) NOT NULL,
   `file_name` varchar(100) NOT NULL,
-  `path` varchar(100) NOT NULL,
+  `path` varchar(512) NOT NULL,
   PRIMARY KEY (`input_subset_qc_id`),
   UNIQUE KEY `name_exp_idx` (`input_subset_id`,`title`)
 ) ENGINE=MyISAM;

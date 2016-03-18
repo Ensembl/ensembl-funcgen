@@ -54,13 +54,13 @@ sub pipeline_analyses {
 	      cmd => qq( proportion_of_reads_in_peaks.pl )
 	      . qq( --peak_file #peak_file#              )
 	      . qq( --temp_dir #temp_dir#                )
-	      . qq( --bam_file #bam_file#                )
 	      . qq( --peak_caller #peak_caller#          )
 	      . qq( --feature_set_id #feature_set_id#    )
 	      . qq( --user   #tracking_db_user#   )
 	      . qq( --pass   #tracking_db_pass#   )
 	      . qq( --host   #tracking_db_host#   )
 	      . qq( --dbname #tracking_db_name#   )
+	      . qq( --bam_file #bam_file#         )
 	  },
 	  -rc_name => 'normal_2GB',
       },
