@@ -107,6 +107,9 @@ sub pipeline_analyses {
 		  . qq(    --pass   #tracking_db_pass#   )
 		  . qq(    --host   #tracking_db_host#   )
 		  . qq(    --dbname #tracking_db_name#   )
+		  . qq(    --work_dir #tempdir#          )
+		  . qq(    --bam_file #bam_file#         )
+
             },
         },
     ];

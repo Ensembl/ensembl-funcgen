@@ -100,6 +100,7 @@ sub pipeline_analyses {
 		  cmd => qq(load_fastqc_summary_file.pl        )
 		    . qq( --input_subset_id #input_subset_id#  )
 		    . qq( --summary_file #fastqc_summary_file# )
+		    . qq( --work_dir #tempdir#                 )
 		    . qq( | mysql )
 		    . qq( --host #tracking_db_host#  )
 		    . qq( --port #tracking_db_port#  )

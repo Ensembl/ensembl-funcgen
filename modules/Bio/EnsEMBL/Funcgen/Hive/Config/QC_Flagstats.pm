@@ -66,6 +66,9 @@ sub pipeline_analyses {
 		. qq( --result_set_id #result_set_id# )
 		. qq( --flagstats_file #flagstats_file# )
 		. qq( --user #tracking_db_user# --pass #tracking_db_pass# --host #tracking_db_host# --dbname #tracking_db_name# )
+		. qq( --work_dir #tempdir#  )
+		. qq( --bam_file #bam_file# )
+
 
 	  },
       },
