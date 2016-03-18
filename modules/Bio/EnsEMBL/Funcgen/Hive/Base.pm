@@ -939,18 +939,11 @@ sub sam_ref_fai {
   my $self        = shift;
   my $gender      = shift; 
   
-  if(! defined $self->param_silent('sam_ref_fai')){
+  my $file_gender = $self->convert_gender_to_file_gender($gender);
   
-    if(! defined $gender){
-      $gender = $self->param_silent('gender') || $self->param_silent('default_gender');
-      
-      if(! defined $gender){
-        $self->throw_no_retry('No gender argument or param defined and no default_gender '.
-        'specific in the config');
-      }
-    }
-    my $file_gender = $self->convert_gender_to_file_gender($gender);
-    warn ("Gender is $gender");
+  if(! defined $self->param_silent('sam_ref_fai')) {
+    
+    warn ("File gender is $file_gender");
 
     my $file_name = $self->species.'_'.$file_gender.'_'.$self->assembly.'_unmasked.fasta.fai';
     my $sam_ref_fai = validate_path([$self->data_root_dir,
