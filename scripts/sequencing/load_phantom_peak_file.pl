@@ -59,6 +59,8 @@ my $user;
 my $pass;
 my $host;
 my $dbname;
+my $work_dir;
+my $bam_file;
 
 my %config_hash = (
   "result_file"   => \$result_file,
@@ -68,6 +70,8 @@ my %config_hash = (
   'pass'            => \$pass,
   'host'            => \$host,
   'dbname'          => \$dbname,
+  'work_dir'        => \$work_dir,
+  'bam_file'        => \$bam_file,
 );
 
 my $result = GetOptions(
@@ -79,10 +83,19 @@ my $result = GetOptions(
   'pass=s',
   'host=s',
   'dbname=s',
+  'work_dir=s',
+  'bam_file=s',
 );
 
-die unless(-e $result_file);
-die unless($result_set_id);
+if (! $result_file) {
+  die("The result_file parameter was not specified!");
+}
+if (! -e $result_file) {
+  die("The result_file ($result_file) specified on the command line does not exist!");
+}
+if (! $result_set_id) {
+  die("The result_set_id parameter was not specified!");
+}
 
 my @tracking_db_connection_details = (
     -user     => $user,
@@ -126,6 +139,7 @@ if ($dry_run) {
 } else {
   $sql_processor = sub {
     my $sql = shift;
+    $logger->info($sql . "\n");
     $dbc->do($sql);
   };
 }
@@ -161,19 +175,40 @@ while (my $current_line = <IN>) {
     my $estFragLen3,
   ) = split ',', $estFragLenTriple;
   
+  if ($estFragLen2 eq '') {
+    $estFragLen2 = 'null';
+  }
+  if ($estFragLen3 eq '') {
+    $estFragLen3 = 'null';
+  }
+  
   (
     my $corr_estFragLen,
     my $corr_estFragLen2,
     my $corr_estFragLen3,
-  ) = split ',', $estFragLenTriple;
+  ) = split ',', $corr_estFragLenTriple;
   
+  if ($corr_estFragLen2 eq '') {
+    $corr_estFragLen2 = 'null';
+  }
+  if ($corr_estFragLen3 eq '') {
+    $corr_estFragLen3 = 'null';
+  }
 
   sub quote {
     my $string = shift;
     return '"' . $string . '"'
   }
   
-  my $sql = "INSERT INTO result_set_qc_phantom_peak ("
+  # This can happen, if the data is very bad. In that case the quality tag 
+  # will indicate that with
+  #
+  if ($RSC eq 'Inf') {
+    $RSC = 'null';
+    die unless ($QualityTag == 2);
+  }
+  
+  my $sql = "INSERT ignore INTO result_set_qc_phantom_peak ("
 #  . "result_set_qc_phantom_peak_id, "
   . "result_set_id, "
   . "analysis_id, "
@@ -191,13 +226,15 @@ while (my $current_line = <IN>) {
   . "min_corr, "
   . "NSC, "
   . "RSC, "
-  . "QualityTag "
+  . "QualityTag, "
+  . "path "
   . ")  VALUES ("
   . (
     join ', ', (
         $result_set_id,
         $analysis_id,
-        quote($filename),
+        #quote($filename),
+        quote($bam_file),
         $numReads,
 
         $estFragLen,
@@ -215,6 +252,7 @@ while (my $current_line = <IN>) {
         $NSC,
         $RSC,
         $QualityTag,
+        quote($work_dir)
       )
     )
   . ");";
@@ -228,28 +266,63 @@ sub create_table {
   my $param = shift;
   my $sql_processor = $param->{sql_processor};
 
+# Test for 
+# - the specificity of the size selection step
+# - enrichment. (Poor enrichment would lead to higher backgound leading to lower correlation.)
+  
 my $sql = <<SQL
 CREATE TABLE if not exists `result_set_qc_phantom_peak` (
   `result_set_qc_phantom_peak_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `analysis_id`        int(10) unsigned,
   `result_set_id` int(10) unsigned NOT NULL,
-  `filename` varchar(100) NOT NULL,
+  `filename` varchar(512) NOT NULL,
   `numReads` int(10) unsigned NOT NULL,
   `estFragLen`       double default NULL,
   `estFragLen2`      double default NULL,
   `estFragLen3`      double default NULL,
+--
+-- Seems to always be the same as the above three. Should be removed.
+-- Check: Should be actual coorelations.
+--
   `corr_estFragLen`  double default NULL,
   `corr_estFragLen2` double default NULL,
   `corr_estFragLen3` double default NULL,
+-- Is an estimate of the read length
   `phantomPeak` int(10) unsigned NOT NULL,
   `corr_phantomPeak` double default NULL,
+--
+-- Shiftlength that minimizes correlation, (not important for qc purposes)
+-- See http://www.ncbi.nlm.nih.gov/pmc/articles/PMC3431496/figure/F5/
+-- for correlation graphs.
+--
   `argmin_corr` int(10),
+--
+-- The value at argmin_corr
+--
   `min_corr` double default NULL,
+--
+-- Normalised strand cross correlation coefficient
+--
+-- Correlation found at the estimated fragment length (what should be in corr_estFragLen) divided by the minimum found correlation. (min_corr)
+--
   `NSC`      double default NULL,
+--
+-- Relative strand cross correlation coefficient
+--
+-- This is the main statistic.
+--
+-- Ratio between correlations found from the fragment length and the phantom peak. Both values are corrected by subtracting min_corr.
+-- It shows how much greater the correlation from the fragment length is compared to background correlation.
+--
   `RSC`      double default NULL,
+--
+-- Quality values derived from the RSC
+--
   `QualityTag` int(10),
+  `path` varchar(512) NOT NULL,
   PRIMARY KEY (`result_set_qc_phantom_peak_id`),
-  UNIQUE KEY `filename_idx` (`filename`)
+--  UNIQUE KEY `filename_idx` (`filename`)
+  KEY `filename_idx` (`filename`)
 );
 SQL
 ;

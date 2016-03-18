@@ -61,9 +61,6 @@ use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
   
 sub fetch_input {   # fetch parameters...
   my $self = shift;
-  #Set some module defaults
-  $self->param('disconnect_if_idle', 1);
-  $self->check_analysis_can_run;
   
   $self->SUPER::fetch_input();
 
@@ -106,10 +103,8 @@ sub fetch_input {   # fetch parameters...
     #best to pass just the target file, index root dir, species, gender
     #and let the Aligner construct the appropriate index file
     
-    my $file_gender;
-    $file_gender = 'female'
-      if ($gender eq 'mixed');
-  
+    my $file_gender = $self->convert_gender_to_file_gender($gender);
+
     $ref_fasta = join('/', ($self->param_required('data_root_dir'),
                             $aligner.'_indexes',
                             $species,
@@ -155,6 +150,7 @@ sub fetch_input {   # fetch parameters...
     -query_file        => $query_file,
     -target_file       => $ref_fasta,
     -debug             => $self->debug,
+    -sam_ref_fai       => $self->sam_ref_fai,
     %aparams                                    );
     
   $self->helper->debug(1, "Setting aligner:\t".$align_runnable); 
@@ -165,7 +161,6 @@ sub fetch_input {   # fetch parameters...
 
 sub run {
   my $self = shift;
-  
   my $bam_file;
     
   if(! eval { $bam_file = $self->aligner->run; 1; }){

@@ -1,25 +1,5 @@
-
-=head1 NAME
-
-Bio::EnsEMBL::Funcgen::Hive::DefineResultSets
-
+=head1 Bio::EnsEMBL::Funcgen::Hive::DefineResultSets
 =head1 DESCRIPTION
-
-The modules creates and stores ResultSet objects given a list of input_subset_ids. Dynamic data flow is performed 
-via the 'branching_by_analysis' mechanism which allows branch names to be used to data flow. This allows dataflow 
-to be defined by the inputs of an analysis wrt the pre-defined analysis config.
-
-It functions in two modes:
-
-  1 DefineResultSets analysis
-  This runs prior to any alignment analyses. For experiments which are destined for IDR analysis, 
-  it creates individual replicate ResultSets, else it creates a merged replicate ResultSet. Branching by
-  analysis data flows to:
-    Preprocess_${alignment_analysis}_(control|merged|replicate) & PreprocessIDR (dependant on 'replciate')
-    
-  2 DefineMergedReplicateResultSet analysis
-  This runs post IDR analysis and also merges the replicate alignments. This always dataflows to DefineMergedDataSet
-
 =cut
 
 package Bio::EnsEMBL::Funcgen::Hive::DefineResultSets;
@@ -37,54 +17,36 @@ use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 sub fetch_input {   # fetch parameters...
   my $self = shift;
   $self->SUPER::fetch_input;
-  $self->init_branching_by_analysis;
+  #$self->init_branching_by_analysis;
   
-  my $isset_ids = $self->get_param_method('input_subset_ids',  'required');
-  assert_ref($isset_ids, 'HASH', 'InputSubset dbIDs');
+  my $input_subset_ids = $self->get_param_method('input_subset_ids',  'required');
+  assert_ref($input_subset_ids, 'HASH', 'InputSubset dbIDs');
   
-  $self->set_param_method('controls', delete $isset_ids->{controls});
+  $self->set_param_method('controls', delete $input_subset_ids->{controls});
   
-  if(scalar(keys %$isset_ids) == 0){
+  if(scalar(keys %$input_subset_ids) == 0){
     throw('No (signal) input_subset_ids defined. Must pass input_subset_ids hash of (optional) \'controls\''.
       ' and ResultSet name keys and input_subset_id arrayref values');
   }
 
   $self->get_param_method('alignment_analysis', 'required');
-  #alignment_analysis is dataflowed explicitly from IdentifyAlignInputSubsets
-  #to allow batch over-ride of the default/pipeline_wide value.
-  #Could have put this in batch params, but it is only needed here
-                  
-  my $merge = $self->get_param_method('merge_idr_replicates', 'silent');
 
-  if($merge){
-    
-    if( scalar(keys %$isset_ids) != 1 ){
-      $self->throw_no_retry('Cannot currently specify > 1 input_subsets_ids group in merge_idr_replicate');
-    }
-    
-    $self->get_param_method('max_peaks', 'required'); #dataflowed from PostprocessIDR
-    my $ppeak_lname = $self->param_required('permissive_peaks'); #batch flown
-    $self->set_param_method('idr_peak_analysis_id',
-                            scalars_to_objects($self->out_db,
-                                               'Analysis', 
-                                               'fetch_by_logic_name',
-                                               $ppeak_lname)->[0]->dbID);
-  }
-
-  #probably need to batch flow just -no_idr
-  #as that will also be required in DefineMergedOutputSet? why?
-  #Or can we just omit analysis to use default there?
+  # Undef in analysis DefineResultSets
+  # 1 in DefineMergedReplicateResultSet
+  #
+  # This is how this module knows where it is in the ersa pipeline and 
+  # changes its behaviour accordingly.
+  #
+  my $merge_idr_replicates = $self->get_param_method('merge_idr_replicates', 'silent');
 
   return;
 }
 
-#Move these to Pipeline/EFGUtils?
-
-sub _are_controls{
-  my $ctrls        = shift; 
+sub _are_controls {
+  my $control_input_subsets        = shift; 
   my $all_controls = 1;
   
-  foreach my $ctrl(@$ctrls){
+  foreach my $ctrl(@$control_input_subsets){
     
     if(! $ctrl->is_control){
       $all_controls = 0;
@@ -96,60 +58,53 @@ sub _are_controls{
 }
 
 
-sub _are_signals{
-  my $sigs     = shift; 
-  my $all_sigs = 1;
+sub _are_signals {
+  my $signal_input_subsets     = shift; 
+  my $all_signal_input_subsets = 1;
   
-  foreach my $sig(@$sigs){
+  foreach my $sig(@$signal_input_subsets) {
     
     if($sig->is_control){
-      $all_sigs = 0;
+      $all_signal_input_subsets = 0;
       last;
     }
   }
   
-  return $all_sigs;
+  return $all_signal_input_subsets;
 } 
 
 
-sub run {   # Check parameters and do appropriate database/file operations... 
-  my $self         = shift;
-  my $helper       = $self->helper;
+sub run {
+
+  my $self                  = shift;
+  my $helper                = $self->helper;
+  #my $result_set_adaptor    = $self->out_db->get_ResultSetAdaptor;
+  my $input_subset_ids      = $self->input_subset_ids;
+  my $control_input_subsets = [];
   
-  my $rset_adaptor = $self->out_db->get_ResultSetAdaptor;
-  my $issets       = $self->input_subset_ids;  
-  my $ctrls        = [];  
-  my $branch;
-  
-  #The branch will either be 2 for all, or may flip flop betwee 3 & for for idr and merged sets without controls
-  
-  my $align_lname = $self->alignment_analysis;
-  my $align_anal  = &scalars_to_objects($self->out_db, 'Analysis',
-                                                       'fetch_by_logic_name',
-                                                       [$align_lname])->[0];
-  
-  #We don't use fetch_Set_input here as we are dealing with many InputSubsets
- 
-  my $control_branch = '';
+  my $alignment_analysis = $self->alignment_analysis;
+  my $alignment_analysis_object = &scalars_to_objects(
+    $self->out_db, 'Analysis', 'fetch_by_logic_name', [$alignment_analysis]
+  )->[0];
+
   my $controls = $self->controls;
+
+  # This is run in the DefineResultSets analysis
+  #
+  if ( $controls && assert_ref($controls, 'ARRAY', 'controls') && @$controls) {
   
-  if($controls && 
-     assert_ref($controls, 'ARRAY', 'controls') &&
-     @$controls){
-    $ctrls = &scalars_to_objects($self->out_db, 'InputSubset',
+    $control_input_subsets = &scalars_to_objects($self->out_db, 'InputSubset',
                                                 'fetch_by_dbID',
                                                 $controls);
     
-    if(! &_are_controls($ctrls)){
+    if(! &_are_controls($control_input_subsets)){
       throw("Found unexpected non-control InputSubsets specified as controls\n\t".
-        join("\n\t", map($_->name, @$ctrls)));
+        join("\n\t", map($_->name, @$control_input_subsets)));
     }
-    
-    $control_branch = 'Preprocess_'.$align_lname.'_control';
     
     my %exps;
     
-    foreach my $ctrl(@$ctrls){
+    foreach my $ctrl(@$control_input_subsets){
       $exps{$ctrl->experiment->name} = $ctrl->experiment;
     }
     
@@ -160,284 +115,261 @@ sub run {   # Check parameters and do appropriate database/file operations...
     my ($exp) = values(%exps);#We only have one
   }
  
-  my (%rsets, %rep_bams);
-       
-  #setname here might not actually be set name
-  #$issets is actually:
-  #{input_subset_ids => {$set_name => {$replicate => [dbID1]}}
-  #                       controls => have been deleted above
+  my (%result_sets, %replicate_bam_files);
+
+  # merge_idr_replicates is undef in DefineResultSets analysis
+  #
+  my $merge_idr_replicates = $self->merge_idr_replicates;
+  my $foo_bar = 'thisisdeprecatedandshouldntappearanywhereifitdoespleaseletmeknow';
   
+  # Looks like this:
+  #
+  # input_subset_ids => {'K562:hist:BR1_H3K27me3_3526' => [3219,3245,3429],'controls' => [3458]}
+  #
+  foreach my $set_name (keys %$input_subset_ids) {
   
-  #why did we need these rep keys?
-  my $merge_idr_reps = $self->merge_idr_replicates;
-   
-  foreach my $set_name(keys %$issets){
-    my $parent_set_name = $set_name.'_'.$align_anal->logic_name;
+    # $set_name is 'K562:hist:BR1_H3K27me3_3526'
+    #
+    # $parent_set_name is 'K562:hist:BR1_H3K27me3_3526_bwa_samse'
+    #
+    my $parent_set_name = $set_name.'_'.$alignment_analysis_object->logic_name;
     
-    my $sigs = &scalars_to_objects($self->out_db, 'InputSubset',
-                                                  'fetch_by_dbID',
-                                                  $issets->{$set_name});
-    if(! &_are_signals($sigs)){
+    # $signal_input_subsets is set to the input sub set objects of
+    #
+    # [3219,3245,3429]
+    #
+    my $signal_input_subsets = &scalars_to_objects(
+      $self->out_db, 'InputSubset', 'fetch_by_dbID', $input_subset_ids->{$set_name}
+    );
+    
+    if (! &_are_signals($signal_input_subsets)) {
       throw("Found unexpected controls in signal InputSubsets\n\t".
-      join("\n\t", map($_->name, @$sigs)));
+      join("\n\t", map($_->name, @$signal_input_subsets)));
     }
 
-    my $ftype          = $sigs->[0]->feature_type;
-    my $is_idr_ftype   = $self->is_idr_FeatureType($ftype);
-    my $ctype          = $sigs->[0]->cell_type;
+    # The object representing H3K27me3
+    #
+    my $feature_type        = $signal_input_subsets->[0]->feature_type;
+    
+    # False, because H3K27me3 is a broad feature type.
+    #
+    my $is_idr_feature_type = $self->is_idr_FeatureType($feature_type);
+    
+    # Cell type object for 'K562:hist:BR1'
+    #
+    my $cell_type           = $signal_input_subsets->[0]->cell_type;
     
     #Define a single rep set with all of the InputSubsets 
     #i.e. non-IDR merged or post-IDR merged     
-    my @rep_sets = ($sigs);
-    my $has_reps = (scalar(@$sigs) >1) ? 1 : 0;    
-    my $run_reps; 
     
-    if($is_idr_ftype && $has_reps){
-      
-      if($merge_idr_reps){
-        #Merged control file should already be present
-        #Merged signal file maybe present if GeneratePseudoReplicates has been run
-        $branch = 'DefineMergedDataSet';
-        
-        
-        #Merging of fastqs is normally done in PreprocessFastqs
-        #But now we need to merge bams (or other)
-        #Should we move this to PreprocessAlignments?
-        #This normally expects the bams to be in merged if required.
-        #It seem much more natural to do the merge here
-        
-        #Sanity check here the control file is available?
-        #Using the ResultSet below?
-        
-      
-        $rep_bams{$parent_set_name}{rep_bams} = [];
-        #my $ctrl;
-        
-        foreach my $rep(@$sigs){
-          #Pull back the rep Rset to validate and get the alignment file for merging
-          my $rep_rset_name = $parent_set_name.'_TR'.$rep->replicate;
-          my $rset = $rset_adaptor->fetch_by_name($rep_rset_name);            
-          #Could also fetch them with $rset_a->fetch_all_by_supporting_Sets($rep).
-           
-          if(! defined $rset){
-            $self->throw_no_retry("Could not find ResultSet for post-IDR merged ResultSet:\t".
-              $rep_rset_name); 
-          }
-      
-          #todo validate controls are the same
-          #This should already have been done in PreprocessIDR
-          #but probably a good idea to do here too
-          #As we may get here by means other than PreprocessIDR?
-                    
-          push @{$rep_bams{$parent_set_name}{rep_bams}}, 
-            $self->get_alignment_files_by_ResultSet_formats($rset, ['bam'])->{bam};
-        }
-      }
-      else{ #! $merge_idr_reps
-        $run_reps = 1;
-        #RunIDR semaphore handled implicitly later 
-        $branch = 'Preprocess_'.$align_lname.'_replicate';       
-        @rep_sets = map {[$_]} @$sigs;  #split single rep sets
-      }   
-    }
-    else{ #single rep ID or multi-rep non-IDR
-      $branch = 'Preprocess_'.$align_lname.'_merged';
-      #This is a pre-alignemnt fastq merge done by PreprocessFatsqs
-    }
-    
-    #Reset if we have controls    
-    #$branch = $control_branch if $control_branch;
-    
-    # Don't use control branch, if merge_idr_reps is set. In this case this 
-    # module is being used in the DefineMergedReplicateResultSet analysis. 
-    # This module also backs the DefineResultSets analysis. In the future, 
-    # this module should be split into two modules for each of the two 
-    # analyses. Until then, setting merge_idr_reps serves to tell the module, 
-    # which analysis it is currently running.
-    # 
-    if ($control_branch && !$merge_idr_reps) {
-      $branch = $control_branch;
-    }
-    
-    
-    foreach my $rep_set(@rep_sets){ 
-      my $rset_name = $parent_set_name;#.'_'.$align_anal->logic_name;
-    
-      if($is_idr_ftype && $has_reps && ! $merge_idr_reps){
-        #there will be only 1 in the $rep_set 
-        $rset_name .= '_TR'.$rep_set->[0]->replicate;
-      }
-      #else we want the parent name
-    
-      
-      #MergeControlALignments_and_QC will also need to know which way to branch
-      #This done with combination of flow_mode via the analysis config and the presence of 
-      #result_set_groups in the input_id
-      
-      #Do not create ResultSet here as we want to validate the whole lot of 
-      #input_subsets before we create any, this will help with recovery
-      #Also can't flow here directly as the control and replicates branches
-      #need group of ResultSets    
-      #Define a cache ref to push onto
-      my $cache_ref;
-  
-  
-      #change grouping here based on $run_reps and branch?
-      #This will mean we will have to break the dbIDs and set_names
-      #structure, but this is fine      
-      #???? What was this for? What does it mean?
-  
+    # This is an array with one element. The one element is an array 
+    # reference to $signal_input_subsets.
+    #
+    my @rep_sets = ($signal_input_subsets);
 
-        
-      if($run_reps){  #branch can be replicate(no control) or control(with reps)  
-        $rsets{$branch}->{$parent_set_name} ||= [];  
-        $cache_ref                            = $rsets{$branch}->{$parent_set_name};
-      }
-      else{
-        #branches can be
-        # merged (no controls)
-        # control (single rep IDR set or merged) 
-        # or DefineMergedDataSet i.e. this is the IDR analysis is DefineMergedReplicateResultSet
-        
-        #is used of merged key here correct for DefineMergedDataSet?
-        
-        $rsets{$branch}{merged} ||= [];
-        $cache_ref                = $rsets{$branch}{merged};
-      }
+    # Evaluates to 1 for our example dataset.
+    #
+    my $has_signal_replicates = (scalar(@$signal_input_subsets) > 1) ? 1 : 0;
+    
+    my $current_set_to_be_processed_with_idr = $is_idr_feature_type && $has_signal_replicates;
+
+    if($current_set_to_be_processed_with_idr) {
+        # Split single rep sets
+        @rep_sets = map {[$_]} @$signal_input_subsets;  
+    }
+
+    foreach my $rep_set (@rep_sets) {
+    
+      my $replicate = $rep_set->[0]->replicate;
+    
+      my $result_set_name;
+      if($current_set_to_be_processed_with_idr) {
       
-      push @$cache_ref,
-       {-RESULT_SET_NAME     => $rset_name,
-        -SUPPORTING_SETS     => [@$rep_set, @$ctrls],
-        -DBADAPTOR           => $self->out_db,
-        -RESULT_SET_ANALYSIS => $align_anal,
-        #change these to reference a specific rollback parameter
-        #e.g. rollback_result_set?
-        -ROLLBACK            => $self->param_silent('rollback'),
-        -RECOVER             => $self->param_silent('recover'),
-        -FULL_DELETE         => $self->param_silent('full_delete'),
-        -CELL_TYPE           => $ctype,
-        -FEATURE_TYPE        => $ftype};
+        # There will be only 1 in the $rep_set
+        $result_set_name = $parent_set_name . '_TR'.$replicate;
+
+      } else {
+	# Reminder: $parent_set_name is 'K562:hist:BR1_H3K27me3_3526_bwa_samse'
+	#
+	$result_set_name = $parent_set_name;
+      }
+
+      my $result_set_constructor_parameters = {
+	-RESULT_SET_NAME      => $result_set_name,
+	-RESULT_SET_REPLICATE => $replicate,
+	-SUPPORTING_SETS      => [@$rep_set, @$control_input_subsets],
+	-DBADAPTOR            => $self->out_db,
+	-RESULT_SET_ANALYSIS  => $alignment_analysis_object,
+	-ROLLBACK             => $self->param_silent('rollback'),
+	-RECOVER              => $self->param_silent('recover'),
+	-FULL_DELETE          => $self->param_silent('full_delete'),
+	-CELL_TYPE            => $cell_type,
+	-FEATURE_TYPE         => $feature_type
+      };
+
+      if ($current_set_to_be_processed_with_idr) {
+
+	# This goes to the branch with replicate signals
+      
+	$result_sets{$foo_bar}->{$parent_set_name} ||= [];  
+	push @{$result_sets{$foo_bar}->{$parent_set_name}}, $result_set_constructor_parameters
+	
+      } else {
+	
+	# This goes to the branch for merged signals
+	
+	$result_sets{$foo_bar}{merged} ||= [];
+	push @{$result_sets{$foo_bar}{merged}}, $result_set_constructor_parameters
+      }
+
     }
   }
   
-  #Now do the actual ResultSet generation and cache the output_ids on the correct branch
   my %batch_params = %{$self->batch_params};
   my %branch_sets;
   my $tracking_adaptor = $self->tracking_adaptor;
-
-  #We need to test for CONTROL_ALIGNED here
-  #but this is currently only set on the ResultSets
-  #and these maybe entirely new result sets
-  #so this has to be set on the experiment too!
-  #we can test that above and set the branch accordingly
-
-  foreach my $branch(keys %rsets){
   
-    foreach my $rset_group_name(keys %{$rsets{$branch}}){
-      my $rset_group = $rsets{$branch}->{$rset_group_name};
+  my @hive_jobs_fix_experiment_id;
+  foreach my $result_set_group_name (keys %{$result_sets{$foo_bar}}) {
+  
+    my $result_set_group = $result_sets{$foo_bar}->{$result_set_group_name};
 
-      foreach my $rset(@$rset_group){     
-        $rset = $helper->define_ResultSet(%{$rset});
-        
-        #How is this not failing? This is likely because there are not dependancies and 
-        #everythign matches, but it should match as we should have both reps in here
-        
-        my %archive_files;
+    foreach my $current_result_set_constructor_parameter (@$result_set_group) {
+    
+=head1 A note on storing of result sets and their supporting sets
+
+How supporting sets for result sets are stored and get retrieved:
+
+They get stored when the result set is created like this:
+
+```
+ $result_set = $helper->define_ResultSet(%{$result_set});
+```
+
+This is the next command below.
+
+At the end of the define_ResultSet method there is a call to 
+_validate_rollback_Set like this:
+
+```
+ return $self->_validate_rollback_Set($stored_rset, $rset, 'result_set', $rollback_level,
+$rset_adaptor, $slices, $recover, $full_delete,
+$rset_mode);
+```
+
+https://github.com/Ensembl/ensembl-funcgen/blob/release/83/modules/Bio/EnsEMBL/Funcgen/Utils/Helper.pm#L893
+
+This is the method in which the result set object is stored in the database. 
+The result set is stored towards the end of _validate_rollback_Set, if the 
+full_delete flag has been set:
+
+```
+ # REDEFINE STORED SET AFTER FULL DELETE
+if($full_delete){
+($stored_set) = @{ $adaptor->store($new_set) };
+} 
+```
+
+https://github.com/Ensembl/ensembl-funcgen/blob/release/83/modules/Bio/EnsEMBL/Funcgen/Utils/Helper.pm#L1122
+
+When looking at the store method used above, it might not be immediately 
+obvious where the store method in the ResultSetAdaptor stores the supporting 
+sets:
+
+https://github.com/Ensembl/ensembl-funcgen/blob/release/83/modules/Bio/EnsEMBL/Funcgen/DBSQL/ResultSetAdaptor.pm#L461
+
+The line that triggers storing of the supporting sets is this one:
+
+```
+$self->store_chip_channels($rset);
+```
+
+https://github.com/Ensembl/ensembl-funcgen/blob/release/83/modules/Bio/EnsEMBL/Funcgen/DBSQL/ResultSetAdaptor.pm#L499
+
+Note that in the store_chip_channels method the supporting data is not stored in the 
+supporting_set table as the name might suggest, but in result_set_input:
+
+
+```
+ my $sth = $self->prepare('INSERT INTO result_set_input (result_set_id, table_id, table_name)'.
+' VALUES (?, ?, ?)');
+my $sth1 = $self->prepare('INSERT INTO result_set_input '.
+'(result_set_input_id, result_set_id, table_id, table_name) VALUES (?, ?, ?, ?)');
+```
+
+https://github.com/Ensembl/ensembl-funcgen/blob/release/83/modules/Bio/EnsEMBL/Funcgen/DBSQL/ResultSetAdaptor.pm#L661
+
+The supporting set table is used for objects that are supported by result 
+sets, not for storing support for a result set.
+
+For manual inspection the supporting sets for a result set can be selected 
+from the database like this:
+
+```
+select * from result_set join result_set_input using (result_set_id) join input_subset on (table_id=input_subset_id) where result_set.name = "K562:hist:BR2_H3K27ac_3526_bwa_samse"
+```
+
+Result sets missing controls can be found like this:
+
+```
+select result_set.name, sum(input_subset.is_control=1) as c from result_set 
+join result_set_input using (result_set_id) 
+join input_subset on (table_id=input_subset_id) 
+join experiment on (result_set.experiment_id = experiment.experiment_id) 
+join experimental_group using (experimental_group_id) 
+where experimental_group.name = "CTTV020"
+group by result_set.name
+having c=0
+
+```
+
+Also note that when ResultSet objects are created, they don't have the 
+supporting sets added to them when they are constructed:
+
+https://github.com/Ensembl/ensembl-funcgen/blob/release/83/modules/Bio/EnsEMBL/Funcgen/DBSQL/ResultSetAdaptor.pm#L427
+
+They are lazy loaded when the support is requested using the table_ids.
+
+=cut
+      my $result_set = $helper->define_ResultSet(%{$current_result_set_constructor_parameter});
       
-        if($merge_idr_reps){
-          #Store the tracking info first!
-          #This is to ensure persistance of max_peaks and permissive_peaks analysis
-          #between instances of the pipeline configs.
-          #what is allow_update?
-          #This is to allow update of tracking info, if we have rerun
-          
-          $tracking_adaptor->store_tracking_info(
-            $rset, 
-            {allow_update => 1,
-             info         => {idr_max_peaks        => $self->max_peaks,
-                              idr_peak_analysis_id => $self->idr_peak_analysis_id,
-             }         
-            });
-          
-                
-          #if(!exists $rep_bams{$rset->name}){#throw?}
-          #Check we don't already have the file from the Generate PseudoReps step  
-          #Can only do merge here, as this is the point we have access to the final ResultSet
-          my $merged_file = $self->get_alignment_path_prefix_by_ResultSet($rset).'.bam'; 
-      
-	  merge_bams({
-	    input_bams => $rep_bams{$rset->name}{rep_bams}, 
-	    output_bam => $merged_file,
-	    debug      => $self->debug,
-	  });
-        }
-        
-        if($branch =~ /(_merged$|^DefineMergedDataSet$)/){# (no control) job will only ever have 1 rset
-          $self->branch_job_group($branch, [{%batch_params,
-                                             dbID       => $rset->dbID, 
-                                             set_name   => $rset->name,
-                                             set_type    => 'ResultSet',
-                                             %archive_files}]);
-        }
-        elsif($branch =~ /(_control$|_replicate$)/){
-          
-          $self->helper->debug(1, "Cacheing $branch branch jobs for ".$rset->name);
-          
-          $branch_sets{$branch}{$rset_group_name}{set_names} ||= [];
-          $branch_sets{$branch}{$rset_group_name}{dbIDs}     ||= [];
-          push @{$branch_sets{$branch}{$rset_group_name}{set_names}}, $rset->name;
-          push @{$branch_sets{$branch}{$rset_group_name}{dbIDs}},     $rset->dbID;
-                    
-          if($branch =~ /_replicate$/o){
-            #Just create the individual fan output_ids
-            $branch_sets{$branch}{$rset_group_name}{output_ids} ||= [];
-            push @{$branch_sets{$branch}{$rset_group_name}{output_ids}}, {%batch_params,
-                                                                          dbID     => $rset->dbID,
-                                                                          set_name => $rset->name,
-                                                                          set_type => 'ResultSet'};    
-          }
-        }
-        else{ #Sanity check
-          #branch is always defined within this module
-          $self->throw_no_retry("$branch is not supported by DefineResultSets");  
-        }
+      push @hive_jobs_fix_experiment_id, { 
+	dbID      => $result_set->dbID, 
+	replicate => $current_result_set_constructor_parameter->{-RESULT_SET_REPLICATE},
+      };
+
+      $self->helper->debug(1, "Caching $foo_bar branch jobs for ".$result_set->name);
+
+      $branch_sets{$foo_bar}{$result_set_group_name}{set_names} ||= [];
+      $branch_sets{$foo_bar}{$result_set_group_name}{dbIDs}     ||= [];
+      push @{$branch_sets{$foo_bar}{$result_set_group_name}{set_names}}, $result_set->name;
+      push @{$branch_sets{$foo_bar}{$result_set_group_name}{dbIDs}},     $result_set->dbID;
+    }
+  }
+  
+  $self->helper->debug(1, "Processing cached branch $foo_bar");
+
+  # Pick an arbitrary set for access to the controls 
+  my ($any_group) = keys(%{$branch_sets{$foo_bar}});
+  
+  # result_set_groups has all the information necessary for 
+  # JobFactorySignalProcessing to create jobs for running the bwa 
+  # analysis triplet on the signals.
+  #
+  $self->branch_job_group(
+    2,
+    \@hive_jobs_fix_experiment_id,
+    3,
+    [
+      {
+	%batch_params,
+	result_set_groups => $branch_sets{$foo_bar},
+	set_type  => 'ResultSet',
+	dbID      => $branch_sets{$foo_bar}{$any_group}{dbIDs}->[0],
+	set_name  => $branch_sets{$foo_bar}{$any_group}{set_names}->[0],
       }
-    }
-  }
-  
-  
-  #Now flow job_groups of rsets to control job/replicate & IDR 
-  foreach my $branch(keys %branch_sets){            
-    $self->helper->debug(1, "Processing cached branch $branch");
-    #what about other branches in here
-  
-    if($branch =~ /_replicate$/){
-      
-      foreach my $rep_set(keys %{$branch_sets{$branch}}){ 
-        #Add semaphore RunIDR job
-        $self->branch_job_group($branch, $branch_sets{$branch}{$rep_set}{output_ids}, 'PreprocessIDR', 
-                                [{%batch_params,
-                                 dbIDs     => $branch_sets{$branch}{$rep_set}{dbIDs},
-                                 set_names => $branch_sets{$branch}{$rep_set}{set_names},
-                                 set_type  => 'ResultSet'}]);
-      }           
-    }       
-    elsif($branch =~ /_control$/){    
-      #Pick an arbitrary set for access to the controls 
-      my ($any_group) = keys(%{$branch_sets{$branch}});
-   
-      #result_set_groups here is used by MergeControlAlignments_and_QC to flow correctly
-      $self->branch_job_group($branch, 
-                              [{%batch_params,
-                               result_set_groups => $branch_sets{$branch},
-                               set_type  => 'ResultSet',
-                               dbID      => $branch_sets{$branch}{$any_group}{dbIDs}->[0],
-                               set_name  => $branch_sets{$branch}{$any_group}{set_names}->[0]}]);   
-    }
-    #else{
- #branch not supported     
-#    }
-  }
+    ]
+  );
   
   return;
 }

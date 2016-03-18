@@ -77,25 +77,24 @@ my $user;
 my $pass;
 my $host;
 my $dbname;
-my $control_result_set_id;
 my $signal_result_set_id;
+my $work_dir;
 
 my %config_hash = (
   "argenrich_file"        => \$argenrich_file,
   "result_set_id"         => \$result_set_id,
-  'control_result_set_id' => \$control_result_set_id,
   'signal_result_set_id'  => \$signal_result_set_id,
   'dry_run'         => \$dry_run,
   'user'            => \$user,
   'pass'            => \$pass,
   'host'            => \$host,
   'dbname'          => \$dbname,
+  'work_dir'        => \$work_dir,
 );
 
 my $result = GetOptions(
   \%config_hash,
   'result_set_id=s',
-  'control_result_set_id=s',
   'signal_result_set_id=s',
   'argenrich_file=s',
   'dry_run',
@@ -103,10 +102,10 @@ my $result = GetOptions(
   'pass=s',
   'host=s',
   'dbname=s',
+  'work_dir=s',
 );
 
 die unless(-e $argenrich_file);
-die unless($control_result_set_id);
 die unless($signal_result_set_id);
 
 my $logger = Bio::EnsEMBL::Utils::Logger->new();
@@ -148,12 +147,11 @@ use Hash::Util qw( lock_hash );
 lock_hash(%key_value_pairs);
 
 my $sql = qq(insert into result_set_qc_chance (
-      control_result_set_id, signal_result_set_id, analysis_id, p, q, divergence, z_score, percent_genome_enriched, input_scaling_factor, differential_percentage_enrichment,
+      signal_result_set_id, analysis_id, p, q, divergence, z_score, percent_genome_enriched, input_scaling_factor, differential_percentage_enrichment,
       control_enrichment_stronger_than_chip_at_bin,
-      zero_enriched_ip_maximum_difference_at_bin,
-      pcr_amplification_bias_in_Input_coverage_of_1_percent_of_genome
+      first_nonzero_bin_at,
+      pcr_amplification_bias_in_Input_coverage_of_1_percent_of_genome, path
     ) values (
-    $control_result_set_id, 
     $signal_result_set_id,
     $analysis_id,
     $key_value_pairs{'p'}, 
@@ -165,7 +163,8 @@ my $sql = qq(insert into result_set_qc_chance (
     $key_value_pairs{'differential_percentage_enrichment'},
     $key_value_pairs{'Control enrichment stronger than ChIP at bin'},
     $key_value_pairs{'Zero-enriched IP, maximum difference at bin'},
-    $key_value_pairs{'PCR amplification bias in Input, coverage of 1% of genome'}
+    $key_value_pairs{'PCR amplification bias in Input, coverage of 1% of genome'},
+    '$work_dir'
   )
 );
 
@@ -230,20 +229,58 @@ sub create_table {
 my $sql = <<SQL
  CREATE TABLE if not exists `result_set_qc_chance` (
   `result_set_qc_chance_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `control_result_set_id` int(10),
   `signal_result_set_id` int(10),
   `analysis_id`        int(10) unsigned,
+-- Not really that important
+-- See slide 38 on 
+-- http://www.ebi.ac.uk/seqdb/confluence/download/attachments/18483313/UCL_ChIPseq_Wilder.pptx?version=2&modificationDate=1442910347000&api=v2
+-- dashed green line
+--
   `p` double default NULL,
+-- Not really that important
   `q` double default NULL,
+--
+-- This is the main statistic.
+-- It is a scaled version of differential_percentage_enrichment. The reason 
+-- is that the exact location is important and that is not reflected in 
+-- differential_percentage_enrichment.
+-- 
+--
   `divergence` double default NULL,
+--
+-- Distance from the mean, if the distribution was standardised to a normal distribution
+--
   `z_score` double default NULL,
+--
+-- Distance between dashed green line and 1
+--
   `percent_genome_enriched` double default NULL,
+--
+-- A suggestion on how to scale the control to equal the background noise 
+-- in the signal
+--
   `input_scaling_factor` double default NULL,
+--
+-- It is the greates distance between the cumulative coverage lines of the 
+-- control and the signal when plotted into a graph.
+--
   `differential_percentage_enrichment` double default NULL,
+--
+-- Usually the two curves would meet at one. If there is an enrichment in 
+-- the control, then this reports the bin number where this happens.
+-- A bit visible in diagram d, slide 40 http://www.ncbi.nlm.nih.gov/pmc/articles/PMC4053734/figure/F2/
+--
   `control_enrichment_stronger_than_chip_at_bin`double default NULL,
-  `zero_enriched_ip_maximum_difference_at_bin`double default NULL,
+-- 
+-- After sorting the bins from the signal, this is the rank of the first non zero bin.
+--
+  `first_nonzero_bin_at`double default NULL,
+--
+-- Proportion of control reads in the highest 1 percent of the bins. The expected value would be 0.01, but only
+-- greater deviations from that are reported.
+--
   `pcr_amplification_bias_in_Input_coverage_of_1_percent_of_genome`double default NULL,
-
+  `path` varchar(512) NOT NULL,
   PRIMARY KEY (`result_set_qc_chance_id`)
 );
 SQL

@@ -58,50 +58,54 @@ sub pipeline_analyses {
   my $self = shift;
 
   return [
-#     {
-#       -logic_name => 'IdentifyMergedResultSets',
-#       -module     => 'Bio::EnsEMBL::Funcgen::Hive::IdentifySetInputs',	  
-#       -meadow_type => 'LOCAL',#should always be uppercase
-#       -parameters => {set_type        => 'ResultSet'},
-#       -flow_into => {		 
-# 	#2 is used for potential fan jobs from a single result set
-# 	#3 is used as a funnel, or for jobs with no fan   
-# 	'3' => [ 'DefineMergedDataSet' ],
-# 	#'3->A' => [ 'DefineMergedDataSet' ],
-# 	#'A->4' => [ 'CleanupCellLineFiles' ],
-#       },
-#       #We don't care about these failing, as we expect them too
-#       -failed_job_tolerance => 100, 
-# 
-#       -analysis_capacity => 10,
-#       -rc_name => 'default',
-#     },
     {
       -logic_name => 'DefineMergedDataSet', 
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::DefineDataSet',
       -parameters => {
 	default_feature_set_analyses => $self->o('default_peak_analyses'),
 	feature_set_analysis_type    => 'peak',
-	check_analysis_can_run       => 1,
       },
       -flow_into => {
-	1 => [ 'PreprocessAlignments' ],
+	2 => [ 'FixFeatureSetsExperimentIds' ],
       },
       -analysis_capacity => 100,
       -rc_name           => 'default',
-      #None of these shoudl take > 2-3 mins unless there is some rolling back to do
-      #But this will only ever be deleting annotated_feature records
-      #and maybe some states or updating sets
-      #Keep this fairly low, so we a getting the parallel compute running asap.
       -batch_size        => 10, 
+    },
+    {
+     -logic_name => 'FixFeatureSetsExperimentIds',
+     -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+     -parameters => {
+	#
+	# Sets the experiment id for the current feature set.
+	#
+	# This should be set when creating the feature set, but it is not. 
+	# Until this is fixed we do it here in an extra step.
+	#
+	sql => qq(
+	  update feature_set, data_set, supporting_set, result_set
+	  set feature_set.experiment_id = result_set.experiment_id
+	  where 
+	    feature_set.feature_set_id=data_set.feature_set_id 
+	    and data_set.data_set_id=supporting_set.data_set_id 
+	    and supporting_set.supporting_set_id=result_set.result_set_id 
+	    and supporting_set.type="result" 
+	  and data_set.data_set_id = #dbID#
+	  ),
+	  db_conn => '#out_db_url#',
+	},
+      -meadow     => 'LOCAL',
+      -flow_into => {
+	1 => 'PreprocessAlignments',
+      },
     },
     {
       -logic_name => 'PreprocessAlignments',
       # This is basically making sure the input file is sorted wrt genomic locations
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::CollectionWriter',
-      #Need to maintain this here as will not be updated by -analysis_topup
       -parameters => {
-      feature_formats => ['bam', 'bed'],
+	# Need to maintain this here as will not be updated by -analysis_topup
+	feature_formats => ['bam', 'bed'],
       },
       -analysis_capacity => 100,
       -rc_name => 'normal_high_mem_2cpu',
