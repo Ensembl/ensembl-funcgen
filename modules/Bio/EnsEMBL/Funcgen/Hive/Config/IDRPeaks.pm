@@ -114,9 +114,9 @@ sub pipeline_analyses {
 	# Until this is fixed in the api we do it here in an extra step.
 	#
 	sql => qq(
-	  update result_set, cell_type, experiment 
+	  update result_set, epigenome, experiment 
 	  set result_set.experiment_id = experiment.experiment_id 
-	  where cell_type.cell_type_id=experiment.cell_type_id and cell_type.cell_type_id=result_set.cell_type_id and experiment.feature_type_id=result_set.feature_type_id
+	  where epigenome.epigenome_id=experiment.epigenome_id and epigenome.epigenome_id=result_set.epigenome_id and experiment.feature_type_id=result_set.feature_type_id
 	  and result_set_id = #dbID#
 	  ),
 	  db_conn => '#out_db_url#',
