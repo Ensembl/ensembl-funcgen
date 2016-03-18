@@ -49,13 +49,13 @@
 @column seq_region_end          End position of this feature
 @column seq_region_strand       Strand orientation of this feature
 @column display_label           Text display label
-@column stable_id               Integer stable ID without ENSR prefix
+@column stable_id               Integer stable ID without ENSR prefix *mnuhn: Not true, they do have this prefix*
 @column projected               Boolean, defines whether reg feat structure has been projected to this epigenome
-@column binary_string           Binary representation for the underlying feature sets/types
-@column bound_start_length      Distance between start of the feature and start of the bound region
+@column binary_string           *deprecated*
+@column bound_start_length      Distance between start of the feature and start of the bound region. Bound regions are used for promoters only. They define the flanking regions. It is an area that is predicted t
 @column bound_end_length        Distance between end of the bound region and end of this feature
 @column activity                Indicates the type of activity of this feature in this epigenome
-@column epigenome_count         Integer, precomupted number of epigenome specific features with evidence
+@column epigenome_count         Integer, number of cell types in which this feature is active
 
 @see feature_set
 @see feature_type
@@ -1283,6 +1283,33 @@ INSERT INTO status_name(name) VALUES ('VSN_GLOG');
 /**
 @table  regbuild_string
 @desc   Simple table to contain long id strings related to the regulatory build
+
+This is used for displaying regulatory data on the website.
+
+The website has menus for configuring which feature types can be selected for a given cell type. 
+
+Regbuild strings configure the following properties of the regulatory build:
+
+Feature types, sets and focus features
+--------------------------------------
+
+The regbuild string tells the webcode which of these are available for any cell type in the current regulatory build.
+
+The name is a microformat, composed as follows:
+
+regbuild. <cell type name>.<feature type ids|feature set ids|focus feature ids>
+
+
+Available cell types
+--------------------
+
+<Todo>
+
+segmentation.feature_type_ids
+------------------------------
+
+<Todo>
+
 @colour  #808000
 
 @column regbuild_string_id  Internal ID
