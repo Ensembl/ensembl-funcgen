@@ -8,6 +8,10 @@ When a method is deprecated, a deprecation warning is thrown whenever the method
 The warning also contains instructions on replacing the deprecated method and when it will be removed.
 A year after deprecation (4 Ensembl releases), the method is removed from the API.
 
+### Removed in Ensembl Release 89 ###
+ - Bio::Ensembl::Funcgen::DBSQL::**CellTypeAdaptor**
+ - Bio::Ensembl::Funcgen::**CellType**
+
 ### Removed in Ensembl Release 88 ###
  - Bio::Ensembl::Funcgen::**Channel**
  - Bio::Ensembl::Funcgen::DBSQL::**ChannelAdaptor**
