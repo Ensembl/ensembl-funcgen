@@ -13,7 +13,7 @@
 -- limitations under the License.
 
 /**
-@header patch_84_85_c.sql - schema version
+@header patch_84_85_c.sql - new columns to the epigenome table
 @desc   Modify existing or add new columns to the epigenome table
 */
 
