@@ -14,8 +14,6 @@ sub default_options {
       #fastq_chunk_size      => 16000000, #This should run in 30min-1h
       fastq_chunk_size      =>   1000000,
       alignment_analysis    => 'bwa_samse',
-      bwa_samse_param_methods     => ['sam_ref_fai'],
-      fastq_root_dir => $self->o('data_root_dir').'/fastq',
    };
 }
 
@@ -25,15 +23,8 @@ sub pipeline_wide_parameters {
       %{$self->SUPER::pipeline_wide_parameters},
 
       #Size of each sequence chunk to be aligned (nbr of reads * 4)
-      fastq_chunk_size      => $self->o('fastq_chunk_size'),   #Change to batch specific
-       alignment_analysis    => $self->o('alignment_analysis'), #Nope we may want this to be batch specific!
-#       aligner_param_methods => $self->o('bwa_samse_param_methods'),
-#       #This is stricly not required anymore as we use the local_url from the tracking tables
-#       fastq_root_dir      => $self->o('fastq_root_dir'),
-#       #This will should be set to one in downstream config
-#       can_PreprocessIDR              => 0,
-#       can_run_SWEmbl_R0005_replicate => 0,
-#       can_DefineMergedDataSet       => 0,
+      fastq_chunk_size      => $self->o('fastq_chunk_size'),
+      alignment_analysis    => $self->o('alignment_analysis'),
     };
 }
 
@@ -122,7 +113,15 @@ sub pipeline_analyses {
 	'2->A' => 'Run_bwa_samse_control_chunk',
 	'A->3' => 'MergeControlAlignments',
 	},
-      -rc_name => '10gb_1cpu'
+      # BWA only uses one cpu, but we are asking for two.
+      #
+      # The reason is that in extremely rare cases jobs were suspended by 
+      # LSF. This happened in 3 out of 20000 jobs, in one test run. Often this
+      # doesn't happen at all. However, when this happens, the pipeline can't
+      # move on, so we are asking for an extra cpu for these extremely rare
+      # cases.
+      #
+      -rc_name => '10gb_2cpu'
      },
      {
       -logic_name => 'Preprocess_bwa_samse_merged',
@@ -134,7 +133,7 @@ sub pipeline_analyses {
 	'2->A' => 'Run_bwa_samse_merged_chunk',
 	'A->3' =>  'MergeAlignments',
 	},
-      -rc_name => '10gb_1cpu'
+      -rc_name => '10gb_2cpu'
      },
      {
       -logic_name => 'Preprocess_bwa_samse_replicate',
@@ -143,7 +142,7 @@ sub pipeline_analyses {
 	'2->A' => 'Run_bwa_samse_replicate_chunk',
 	'A->3' => 'MergeReplicateAlignments' ,
 	},
-      -rc_name => '10gb_1cpu'
+      -rc_name => '10gb_2cpu'
      },
     {
       -logic_name => 'Run_bwa_samse_control_chunk',
@@ -167,7 +166,7 @@ sub pipeline_analyses {
 	run_controls => 1,
      },
      -flow_into => {
-	  'MAIN' => 'JobFactorySignalProcessing',
+	  MAIN => 'JobFactorySignalProcessing',
        },
      -rc_name => '64GB_3cpu',
     },
@@ -201,7 +200,6 @@ sub pipeline_analyses {
      -logic_name => 'MergeAlignments',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::MergeAlignments',
      -parameters => {
-#       flow_mode => 'merged',
       	run_controls => 0,
      },
      -flow_into => {
