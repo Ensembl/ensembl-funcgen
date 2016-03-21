@@ -602,15 +602,6 @@ sub get_replicate_set_by_result_set_input_id{
   return (exists $self->{_replicate_cache}{$cc_id}) ?  $self->{_replicate_cache}{$cc_id} : undef;
 }
 
-sub get_replicate_set_by_chip_channel_id{
-  my ($self, $cc_id) = @_;
-
-  deprecate('Please use get_replicate_set_by_result_set_input_id instead');
-  return $self->get_replicate_set_by_result_set_input_id($cc_id);
-}
-
-
-
 
 =head2 log_label
 

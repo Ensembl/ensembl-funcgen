@@ -397,22 +397,6 @@ sub _constrain_input_sets {
 
 ###DEPRECATED METHODS ###
 
-#should have been fetch_by_name_and_Experiment
-#Experiment is not needed in the majority of cases
-#was also returning Arrayref
-
-sub fetch_by_name_and_experiment { #Deprecated in 75
-  my ($self, $name, $exp) = @_;
-
-  deprecate('Please use the new fetch_by_name method. This method will be removed in release 79');
-
-  return $self->fetch_by_name($name, $exp);
-  #my $params =
-  # {constraints => {experiments => [$exp],
-  #                  name        => $name}};
-  #return $self->generic_fetch($self->compose_constraint_query($params));
-}
-
 sub _constrain_archive_ids {
   my ($self, $archive_ids) = @_;
 

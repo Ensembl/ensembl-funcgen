@@ -1237,33 +1237,5 @@ sub _constrain_states {
   return ($constraint, $constraint_conf);
 }
 
-
-
-### DEPRECATED ###
-
-sub list_dbIDs { #Deprecated in v69
-	my $self = shift;
-  deprecate('Please use _list_dbIDs.');
-	return $self->_list_dbIDs($self->_main_table->[0]);
-}
-
-sub _constrain_status { #Deprecated in v73
-  my ($self, $state) = @_;
-
-  deprecate("The 'state' contraint key is deprecated, please use the following instead:\n\t".
-    "'states' => ['state1', ...]");
-
-  return $self->_constrain_states([$state]);
-}
-
-sub fetch_all_by_status{ #deprecated in v51
-  my ($self, $status) = @_;
-
-  deprecate('Use fetch_all($status) instead');
-  return $self->fetch_all($status);
-
-}
-
-
 1;
 

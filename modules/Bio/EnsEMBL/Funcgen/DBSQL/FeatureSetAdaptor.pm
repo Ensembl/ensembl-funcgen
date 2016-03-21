@@ -619,34 +619,7 @@ sub _constrain_evidence_types {
   return ($constraint, $constraint_conf);
 }
 
-
-# These following are duplicated in ResultSetAdaptor and potentially InputSetAdaptor
-# Move to a new SetAdaptor? (not appropriate for DataSets/InputSubsets)
-
-# add other fetch args
-#type
-#name
-
-
-### DEPRECATED ###
-
-sub fetch_all_by_type { #deprecated in v74
-    my $self = shift;
-    my $type = shift;
-    my $status = shift;
-
-    deprecate('Please use fetch_all_by_feature_class');
-
-    return $self->fetch_all_by_feature_class($type, $status);
-}
-
-
-
-
 1;
 
 __END__
 
-#Methods to add?
-
-#fetch_all_by_InputSet - would require input_set_id index

@@ -675,21 +675,5 @@ sub store_chip_channels{
 ### GENERIC CONSTRAIN METHODS ###
 # See Base/SetAdaptor
 
-
-
-### DEPRECATED METHODS ###
-
-sub store_dbfile_data_dir{  # DEPRECATED IN v80
-  deprecate('Please use store_dbfile_path');
-  return store_dbfile_path(@_);
-}
-
-sub _fetch_dbfile_data_dir{
-  deprecate('Please use _fetch_dbfile_path');
-  return _fetch_dbfile_path(@_);
-}
-
-
-
 1;
 

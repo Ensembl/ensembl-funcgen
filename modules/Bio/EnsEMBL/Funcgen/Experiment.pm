@@ -582,14 +582,5 @@ sub source_info{
   return $self->{source_info};
 }
 
-
-### DEPRECATED METHODS ###
-sub date{  # deprecated in v81
-  deprecate('Experiment::date is no longer supported');
-}
-
-
-
-
 1;
 
