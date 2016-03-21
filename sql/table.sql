@@ -736,17 +736,18 @@ CREATE TABLE `input_set` (
 
 /**
 @table  input_subset
-@desc   Defines a file from an input_set, required for import tracking and recovery.
+@desc   Think: Sequencing run. Defines a file from an input_set, required for import tracking and recovery.
 @colour  #66CCFF
 
 @column input_subset_id  Internal ID
 @column analysis_id      @link analysis ID
 @column epigenome_id     @link epigenome ID
 @column experiment_id    @link experiment ID
-@column feature_type_id  @link feature_type  ID
+@column feature_type_id  @link feature_type  ID: The type of assay used to generate this sequencing run.
 @column name             Name of input_subset e.g. file name
-@column replicate        Number of the replicate. 0 represents  a pooled subset, 255 is a subset we have not processed
-@column is_control       Subset is a control
+@column biological_replicate  Number of the biological replicate.
+@column technical_replicate   Number of the technical replicate.
+@column is_control            Indicates whether this sequencing run is a control
 
 @see analysis
 @see epigenome
@@ -924,7 +925,7 @@ CREATE TABLE `probe` (
 
 /**
 @table  experiment
-@desc   Stores data high level meta data about individual experiments
+@desc   Represents a sequencing experiment. Sequencing runs (input_subsets) link to this.
 @colour  #00FF00
 
 @column experiment_id           Internal ID
@@ -973,7 +974,7 @@ CREATE TABLE `experiment` (
 
 /**
 @table  experimental_group
-@desc   Contains experimental group info i.e. who produced data sets.
+@desc   Think: Consortium or laboratory that produced sequencing experiments (@see experiment).
 @colour  #00FF00
 
 @column experimental_group_id  Internal ID
@@ -1137,7 +1138,7 @@ CREATE TABLE `result` (
 @column production_name      Used to generate file or directory names
 @column gender               Gender i.e. 'male', 'female', 'hermaphrodite' or 'mixed'
 @column ontology_accession   External accession id
-@column ontology             The resource where the ontology_accession refers to, currently either EFO or CL
+@column ontology             The resource the ontology_accession refers to, currently either EFO or CL
 @column tissue               Tissue origin/type
 
 */

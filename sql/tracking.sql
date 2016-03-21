@@ -60,6 +60,17 @@ CREATE TABLE `result_set_tracking` (
 -- also add in feature_set_stats here!
 
 
+/**
+@table  input_subset_tracking
+@desc   
+@colour  #66CCFF
+
+@column download_url  deprecated
+@column download_date 
+
+*/
+
+
 DROP TABLE IF EXISTS `input_subset_tracking`;
 
 CREATE TABLE `input_subset_tracking` (
