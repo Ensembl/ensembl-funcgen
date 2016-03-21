@@ -758,14 +758,15 @@ CREATE TABLE `input_set` (
 
 DROP TABLE IF EXISTS `input_subset`;
 CREATE TABLE `input_subset` (
-    `input_subset_id` int(10)     unsigned NOT NULL auto_increment,
-    `analysis_id`     smallint(5) unsigned NOT NULL,
-    `epigenome_id`    int(10)     unsigned DEFAULT NULL,
-    `experiment_id`   int(10)     unsigned NOT NULL,
-    `feature_type_id` int(10)     unsigned NOT NULL,
-    `name`            varchar(100)         NOT NULL,
-    `replicate`       tinyint(3) unsigned  NOT NULL,
-    `is_control`      tinyint(3) unsigned  NOT NULL,
+    `input_subset_id`      int(10)      unsigned NOT NULL auto_increment,
+    `analysis_id`          smallint(5)  unsigned NOT NULL,
+    `epigenome_id`         int(10)      unsigned DEFAULT NULL,
+    `experiment_id`        int(10)      unsigned NOT NULL,
+    `feature_type_id`      int(10)      unsigned NOT NULL,
+    `name`                 varchar(100) NOT NULL,
+    `biological_replicate` tinyint(3)   unsigned  DEFAULT 0 NOT NULL,
+    `technical_replicate`  tinyint(3)   unsigned  DEFAULT 0 NOT NULL,
+    `is_control`           tinyint(3)   unsigned  NOT NULL,
    PRIMARY KEY  (`input_subset_id`),
    UNIQUE `name_exp_idx` (`name`, `experiment_id`),
    KEY analysis_idx (analysis_id),
