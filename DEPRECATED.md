@@ -11,6 +11,11 @@ A year after deprecation (4 Ensembl releases), the method is removed from the AP
 ### Removed in Ensembl Release 89 ###
  - Bio::Ensembl::Funcgen::DBSQL::**CellTypeAdaptor**
  - Bio::Ensembl::Funcgen::**CellType**
+ - Bio::EnsEMBL::Funcgen::**DataSet**::*cell_type()*
+ - Bio::EnsEMBL::Funcgen::**Experiment**::*cell_type()*
+ - Bio::EnsEMBL::Funcgen::**Experiment**::*primary_design_type()*
+ - Bio::EnsEMBL::Funcgen::**Experiment**::*description()*
+ - Bio::EnsEMBL::Funcgen::**Experiment**::*mage_xml()*
 
 ### Removed in Ensembl Release 88 ###
  - Bio::Ensembl::Funcgen::**Channel**

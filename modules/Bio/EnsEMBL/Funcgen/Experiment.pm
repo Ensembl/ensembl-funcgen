@@ -136,7 +136,27 @@ sub new {
 
 =cut
 
-sub cell_type { return shift->{cell_type}; }
+sub cell_type {
+    deprecate(
+        "Bio::EnsEMBL::Funcgen::Experiment::cell_type has been deprecated and will be removed in Ensembl release 89."
+            . " Please use Bio::EnsEMBL::Funcgen::Experiment::epigenome instead"
+    );
+    return shift->{epigenome};
+}
+
+
+=head2 epigenome
+
+  Example    : my $epigenome_name = $exp->epigenome->name;
+  Description: Getter for the Epigenome
+  Returntype : Bio::EnsEMBL::Funcgen::Epigenome
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub epigenome { return shift->{epigenome}; }
 
 
 =head2 feature_type
@@ -215,6 +235,9 @@ sub get_ExperimentalGroup{ return shift->{group}; }
 =cut
 
 sub description{
+deprecate(
+    "Bio::EnsEMBL::Funcgen::Experiment::description has been deprecated."
+        . " It will be removed in Ensembl release 89." );
   return shift->{description};
 }
 
@@ -231,6 +254,9 @@ sub description{
 =cut
 
 sub primary_design_type{
+  deprecate(
+    "Bio::EnsEMBL::Funcgen::Experiment::primary_design_type has been deprecated."
+        . " It will be removed in Ensembl release 89." );
   return shift->{primary_design_type};
 }
 
@@ -248,6 +274,9 @@ sub primary_design_type{
 =cut
 
 sub mage_xml{
+  deprecate(
+    "Bio::EnsEMBL::Funcgen::Experiment::mage_xml has been deprecated."
+        . " It will be removed in Ensembl release 89." );
   my $self          = shift;    
   $self->{mage_xml} = shift if @_;
 

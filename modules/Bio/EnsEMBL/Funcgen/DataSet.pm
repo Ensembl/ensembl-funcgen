@@ -67,7 +67,7 @@ package Bio::EnsEMBL::Funcgen::DataSet;
 use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
 
 use base qw(Bio::EnsEMBL::Funcgen::Storable);
@@ -332,7 +332,29 @@ sub name { return $_[0]->{name}; }
 
 =cut
 
-sub cell_type { return $_[0]->{cell_type}; }
+sub cell_type {
+    deprecate(
+        "Bio::EnsEMBL::Funcgen::DataSet::cell_type has been deprecated and will be removed in Ensembl release 89."
+            . " Please use Bio::EnsEMBL::Funcgen::DataSet::epigenome instead"
+    );
+    return $_[0]->{epigenome};
+}
+
+
+
+
+=head2 epigenome
+
+  Example    : my $dset_ctype_name = $dset->epigenome->name();
+  Description: Getter for the epigenome for this DataSet.
+  Returntype : Bio::EnsEMBL::Funcgen::Epigenome
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub epigenome { return $_[0]->{epigenome}; }
 
 
 =head2 feature_type
