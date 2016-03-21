@@ -630,7 +630,6 @@ CREATE TABLE `result_set` (
    `feature_type_id`  int(10) unsigned default NULL,
    `feature_class`    enum('result', 'dna_methylation','segmentation') DEFAULT NULL,
    `name`             varchar(100) default NULL,
-   `replicate`        tinyint(3) unsigned NOT NULL,
    PRIMARY KEY  (`result_set_id`),
    UNIQUE KEY `name_idx` (`name`),
    KEY epigenome_idx (epigenome_id),
