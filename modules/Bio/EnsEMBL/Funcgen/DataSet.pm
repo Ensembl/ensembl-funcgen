@@ -328,7 +328,7 @@ sub name { return $_[0]->{name}; }
   Returntype : Bio::EnsEMBL::Funcgen::CellType
   Exceptions : None
   Caller     : General
-  Status     : Stable
+  Status     : Deprecated
 
 =cut
 

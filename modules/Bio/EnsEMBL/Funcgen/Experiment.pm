@@ -132,7 +132,7 @@ sub new {
   Returntype : Bio::EnsEMBL::Funcgen::CellType
   Exceptions : None
   Caller     : General
-  Status     : Stable
+  Status     : Deprecated
 
 =cut
 
@@ -230,7 +230,7 @@ sub get_ExperimentalGroup{ return shift->{group}; }
   Returntype  : String
   Exceptions  : None
   Caller      : General
-  Status      : At risk - Not used, was stable until v64
+  Status      : Deprecated
 
 =cut
 
@@ -249,7 +249,7 @@ deprecate(
   Returntype  : String - MGED term
   Exceptions  : None
   Caller      : General
-  Status      : At risk
+  Status      : Deprecated
 
 =cut
 
@@ -269,7 +269,7 @@ sub primary_design_type{
   Returntype  : String
   Exceptions  : None
   Caller      : General
-  Status      : at risk
+  Status      : Deprecated
 
 =cut
 
