@@ -732,22 +732,20 @@ CREATE TABLE `input_set` (
    KEY `epigenome_idx` (`epigenome_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
 
-
-
 /**
 @table  input_subset
-@desc   Think: Sequencing run. Defines a file from an input_set, required for import tracking and recovery.
+@desc   The name is not descriptive of its content, think of it as: "Fastq files from a sequencing run". The objects stored here are similar to ENA's run: http://www.ebi.ac.uk/ena/submit/preparing-xmls#run Every row in the table represents a fastq file. Fastq files link to the experiments from which they were created. Fastq files from one experiment are grouped into technical and biological replicates. If a sequencing run from one experiment generated multiple fastq files, then the technical and biological replicate numbers will be identical. Fastq files are linked to the method by which they were generated via the analysis_id column.
 @colour  #66CCFF
 
 @column input_subset_id  Internal ID
-@column analysis_id      @link analysis ID
-@column epigenome_id     @link epigenome ID
+@column analysis_id      @link analysis ID The analysis column links the sequencing run to the method that was used to generate it. The current analyses used are: ChIP-Seq, DNase-Seq and FAIRE. Fastq files from sequencing controls are registered as ChIP-Seq as well.
+@column epigenome_id     @link epigenome ID The epigenome that was sequenced to generate this fastq file. This is similar to ENA's sample: http://www.ebi.ac.uk/ena/submit/preparing-xmls#sample
 @column experiment_id    @link experiment ID
-@column feature_type_id  @link feature_type  ID: The type of assay used to generate this sequencing run.
-@column name             Name of input_subset e.g. file name
+@column feature_type_id  @link feature_type  ID: The type of assay used to generate the files from this sequencing run. Typical assays are: DNase1, CTCF, H3K4me3, PolII, H3K27me3, H3K36me3, H3K27ac, H3K4me1, NFKB, H4K20me1, H3K9ac, H3K4me2, H3K9me3 or FAIRE. Controls are linked to WCE. WCE stands for "Whole Cell Extract".
+@column name             This is the name of the fastq file. It is the base name only, so it is not useful for finding the file on the file system. Sometimes the extension is missing. If you want to find the fastq file you have to join to the input_subset_tracking table and use the column local_url.
 @column biological_replicate  Number of the biological replicate.
-@column technical_replicate   Number of the technical replicate.
-@column is_control            Indicates whether this sequencing run is a control
+@column technical_replicate   Number of the technical replicate. There can be more than one biological or technical replicate with the same number. In that case the sequencing run produced more than one fastq file.
+@column is_control            Indicates whether the files from this sequencing run are controls. This column is redundant, it should always coincide with the is_control column of the experiment it links to.
 
 @see analysis
 @see epigenome
