@@ -297,11 +297,14 @@ sub mage_xml{
   Returntype  : String
   Exceptions  : None
   Caller      : General
-  Status      : at risk
+  Status      : Deprecated
 
 =cut
 
 sub mage_xml_id{
+  deprecate(
+    "Bio::EnsEMBL::Funcgen::Experiment::mage_xml_id has been deprecated."
+        . " It will be removed in Ensembl release 89." );
   my $self             = shift; 
   $self->{mage_xml_id} = shift if @_;
   return $self->{mage_xml_id};
