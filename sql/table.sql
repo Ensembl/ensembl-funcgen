@@ -603,17 +603,16 @@ CREATE TABLE `feature_set` (
 
 /**
 @table  result_set
-@desc   Container for raw/signal data, used as input to an analysis or for visualisation of the raw signal i.e. a wiggle track.
+@desc   Think of this as an alignment. The query is found by linking from this table over result_set_input to the input_subset table. That entry in input_subset represents the fastq file that was aligned. The reference is based on the sequence of the species of this database. It may be gender specific depending on the use case.
 @colour  #66CCFF
 
 @column result_set_id     Internal ID
-@column analysis_id       @link analysis ID
-@column epigenome_id      @link epigenome ID
-@column experiment_id     @link experiment ID
-@column feature_type_id   @link feature_type ID
-@column name              Name for this feature set
-@column feature_class     Defines the class of the feature
-@column replicate         Number of the replicate. 0 represents  a pooled subset, 255 is a subset we have not processed
+@column analysis_id       @link analysis ID The aligner used to create this alignment.
+@column epigenome_id      @link epigenome ID The epigenome from which the query sequence was derived. This is just a shortcut. THe link is redundant. The same epigenome could be obtained by linking from the input_subset table to experiment to epigenome_id.
+@column experiment_id     @link experiment ID Another shortcut. This is the experiment that generated the query file for this alignment.
+@column feature_type_id   @link feature_type ID Probably another shortcut to the feature type of the experiment. This would indicate how the reads were enriched.
+@column name              Name of this result set, probably never used and could be dropped.
+@column feature_class     Defines the class of the feature, this is used by the api for building the name of an adaptor of unkown purpose.
 
 @see analysis
 @see epigenome
