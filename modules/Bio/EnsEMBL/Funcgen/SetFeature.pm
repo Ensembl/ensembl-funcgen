@@ -213,8 +213,30 @@ sub set {
 =cut
 
 sub cell_type{
-	return shift->set->cell_type;
+    deprecate(
+        "Bio::EnsEMBL::Funcgen::SetFeature::cell_type has been deprecated and will be removed in Ensembl release 89."
+            . " Please use Bio::EnsEMBL::Funcgen::SetFeature::epigenome instead"
+    );
+
+	return shift->set->epigenome;
 }
+
+=head2 epigenome
+
+  Example    : my $epigenome = $set_feature->epigenome->name;
+  Description: Getter for the Epigenome attribute for the Set of this Feature.
+  May not always be for some Set types e.g. ExternalFeatures.
+  Returntype : Bio::EnsEMBL::Funcgen::Epigenome
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub epigenome {
+    return shift->set->epigenome;
+}
+
 
 
 =head2 feature_type

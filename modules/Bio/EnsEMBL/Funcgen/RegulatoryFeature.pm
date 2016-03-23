@@ -339,10 +339,29 @@ sub activity { return shift->{activity}; }
   Returntype  : SCALAR
   Exceptions  : None
   Description : Returns the amount of cells where this RegFeat is active
+  Status      : Deprecated
 
 =cut
 
-sub cell_type_count { shift->{cell_type_count}; }
+sub cell_type_count { 
+  deprecate(
+        "Bio::EnsEMBL::Funcgen::RegulatoryFeature::cell_type_count has been deprecated and will be removed in Ensembl release 89."
+            . " Please use Bio::EnsEMBL::Funcgen::RegulatoryFeature::epigenome_count instead"
+  );
+  shift->{epigenome_count};
+}
+
+
+=head2 epigenome_count
+
+  Arg [1]     : None
+  Returntype  : SCALAR
+  Exceptions  : None
+  Description : Returns the amount of epigenomes where this RegFeat is active
+
+=cut
+
+sub epigenome_count { shift->{epigenome_count}; }
 
 
 =head2 get_focus_attributes

@@ -613,20 +613,54 @@ sub norm_analysis{
 =cut
 
 sub cell_type{
+  deprecate(
+        "Bio::EnsEMBL::Funcgen::Importer::cell_type has been deprecated and will be removed in Ensembl release 89."
+            . " Please use Bio::EnsEMBL::Funcgen::Importer::epigenome instead"
+  );  
   my ($self) = shift;
 
   if (@_) {
-    my $ctype = shift;
+    my $epigenome = shift;
 
     #do we need this as we're checking in new?
-    if (! ($ctype->isa('Bio::EnsEMBL::Funcgen::CellType') && $ctype->dbID())) {
-      throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::CellType");
+    if (! ($epigenome->isa('Bio::EnsEMBL::Funcgen::Epigenome') && $epigenome->dbID())) {
+      throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::Epigenome");
     }
 
-    $self->{'cell_type'} = $ctype;
+    $self->{'epigenome'} = $epigenome;
   }
 
-  return $self->{'cell_type'};
+  return $self->{'epigenome'};
+}
+
+
+=head2 epigenome
+
+  Example    : $imp->epigenome($epigenome);
+  Description: Getter/Setter for Experiment Epigenome
+  Arg [1]    : optional - Bio::EnsEMBL::Funcgen::Epigenome
+  Returntype : Bio::EnsEMBL::Funcgen::Epigenome
+  Exceptions : Throws if arg is not valid or stored
+  Caller     : general
+  Status     : at risk
+
+=cut
+
+sub epigenome{
+  my ($self) = shift;
+
+  if (@_) {
+    my $epigenome = shift;
+
+    #do we need this as we're checking in new?
+    if (! ($epigenome->isa('Bio::EnsEMBL::Funcgen::Epigenome') && $epigenome->dbID())) {
+      throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::Epigenome");
+    }
+
+    $self->{'epigenome'} = $epigenome;
+  }
+
+  return $self->{'epigenome'};
 }
 
 =head2 array_file

@@ -13,9 +13,16 @@ A year after deprecation (4 Ensembl releases), the method is removed from the AP
  - Bio::Ensembl::Funcgen::**CellType**
  - Bio::EnsEMBL::Funcgen::**DataSet**::*cell_type()*
  - Bio::EnsEMBL::Funcgen::**Experiment**::*cell_type()*
+ - Bio::EnsEMBL::Funcgen::**Importer**::*cell_type()*
+ - Bio::EnsEMBL::Funcgen::**SetFeature**::*cell_type()*
+ - Bio::EnsEMBL::Funcgen::**Set**::*cell_type()*
  - Bio::EnsEMBL::Funcgen::**Experiment**::*primary_design_type()*
  - Bio::EnsEMBL::Funcgen::**Experiment**::*description()*
  - Bio::EnsEMBL::Funcgen::**Experiment**::*mage_xml()*
+ - Bio::EnsEMBL::Funcgen::**RegulatoryFeature**::*cell_type_count()*
+ - Bio::EnsEMBL::Funcgen::DBSQL::**ExperimentAdaptor**::*fetch_all_by_CellType()*
+ - Bio::EnsEMBL::Funcgen::DBSQL::**MotifFeatureAdaptor**::*fetch_all_by_Slice_CellType()*
+ - Bio::EnsEMBL::Funcgen::DBSQL::**SetAdaptor**::*fetch_all_by_CellType()*
 
 ### Removed in Ensembl Release 88 ###
  - Bio::Ensembl::Funcgen::**Channel**
