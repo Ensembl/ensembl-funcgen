@@ -68,7 +68,7 @@ use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor);
                                            ('dna_methylation',
                                              {'constraints' =>
                                                {
-                                               cell_types     => [$cell_type],  #Bio::EnsEMBL::Funcgen::CellType
+                                               epigenomes     => [$epigenome],  #Bio::EnsEMBL::Funcgen::Epigenome
                                                #projects       => ['ENCODE'],
                                                feature_types  => [$ftype],      #Bio::EnsEMBL::Funcgen::FeatureType
                                                status         => 'DISPLAYABLE',
@@ -225,7 +225,7 @@ sub fetch_all_by_Experiment{
 
   Arg [0]    : Mandatory string - ResultSet name
   Arg [1]    : Optional Bio::EnsEMBL::Funcgen::FeatureType
-  Arg [2]    : Optional Bio::EnsEMBL::Funcgen::CellType
+  Arg [2]    : Optional Bio::EnsEMBL::Funcgen::Epigenome
   Arg [3]    : Optional Bio::EnsEMBL::Analysis
   Example    : ($rset) = @{$rseta->fetch_all_by_name($exp->name().'_IMPORT')};
   Description: Retrieves ResultSets based on the name attribute
@@ -240,7 +240,7 @@ sub fetch_all_by_Experiment{
 #this is to move to dbfile_registry.format
 
 sub fetch_all_by_name{
-  my ($self, $name, $ftype, $ctype, $anal) = @_;
+  my ($self, $name, $ftype, $epigenome, $anal) = @_;
 
   if ( ! defined $name) {
     throw('Need to pass a ResultSet name');
@@ -255,10 +255,10 @@ sub fetch_all_by_name{
     $self->bind_param_generic_fetch($ftype->dbID, SQL_INTEGER);
   }
 
-  if ($ctype) {
-    $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType',    $ctype);
-    $constraint .= ' AND rs.cell_type_id=?';
-    $self->bind_param_generic_fetch($ctype->dbID, SQL_INTEGER);
+  if ($epigenome) {
+    $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Epigenome',    $epigenome);
+    $constraint .= ' AND rs.epigenome_id=?';
+    $self->bind_param_generic_fetch($epigenome->dbID, SQL_INTEGER);
   }
 
   if ($anal) {
@@ -336,7 +336,7 @@ sub _columns {
             rs.result_set_id           rs.analysis_id
             rsi.table_name             rsi.result_set_input_id
             rsi.table_id               rs.name
-            rs.cell_type_id            rs.feature_type_id
+            rs.epigenome_id            rs.feature_type_id
             rs.feature_class           dr.path
             rs.replicate
            );
@@ -382,7 +382,7 @@ sub _default_where_clause {
 sub _final_clause {
   #do not mess with this!
   return ' GROUP by rsi.result_set_input_id, rsi.result_set_id '.
-    'ORDER BY rs.result_set_id, rs.cell_type_id, rs.feature_type_id';
+    'ORDER BY rs.result_set_id, rs.epigenome_id, rs.feature_type_id';
 }
 
 
@@ -404,14 +404,14 @@ sub _final_clause {
 sub _objs_from_sth {
   my $self = shift;
   my $sth  = shift;
-  my (@rsets, $rset, $dbid, $anal_id, $anal, $ftype, $ctype, $table_id);
-  my ($sql, $table_name, $cc_id, $ftype_id, $ctype_id, $dbfile_path);
+  my (@rsets, $rset, $dbid, $anal_id, $anal, $ftype, $epigenome, $table_id);
+  my ($sql, $table_name, $cc_id, $ftype_id, $epigenome_id, $dbfile_path);
   my ($name, $rep, $feat_class);
   my $a_adaptor  = $self->db->get_AnalysisAdaptor;
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor;
-  my $ct_adaptor = $self->db->get_CellTypeAdaptor;
+  my $epi_adaptor = $self->db->get_EpigenomeAdaptor;
   $sth->bind_columns(\$dbid, \$anal_id, \$table_name, \$cc_id, \$table_id,
-                     \$name, \$ctype_id, \$ftype_id, \$feat_class, \$dbfile_path, \$rep);
+                     \$name, \$epigenome_id, \$ftype_id, \$feat_class, \$dbfile_path, \$rep);
 
   while ( $sth->fetch ) {
 
@@ -419,7 +419,7 @@ sub _objs_from_sth {
       push @rsets, $rset if $rset;
       $anal  = (defined $anal_id)  ? $a_adaptor->fetch_by_dbID($anal_id)   : undef;
       $ftype = (defined $ftype_id) ? $ft_adaptor->fetch_by_dbID($ftype_id) : undef;
-      $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
+      $epigenome = (defined $epigenome_id) ? $epi_adaptor->fetch_by_dbID($epigenome_id) : undef;
     
       if(defined $dbfile_path){
         ($dbfile_path = $self->dbfile_data_root.'/'.$dbfile_path) =~ s:/+:/:g;
@@ -431,7 +431,7 @@ sub _objs_from_sth {
          -ANALYSIS        => $anal,
          -TABLE_NAME      => $table_name,
          -FEATURE_TYPE    => $ftype,
-         -CELL_TYPE       => $ctype,
+         -EPIGENOME       => $epigenome,
          -FEATURE_CLASS   => $feat_class,
          -ADAPTOR         => $self,
          -DBFILE_PATH     => $dbfile_path,
@@ -464,7 +464,7 @@ sub store{
   scalar(@rsets) || throw("Must provide a list of ResultSet objects");
 
   my $sth = $self->prepare('INSERT INTO result_set '.
-                           '(analysis_id, name, cell_type_id, feature_type_id, feature_class) '.
+                           '(analysis_id, name, epigenome_id, feature_type_id, feature_class) '.
                            'VALUES (?, ?, ?, ?, ?)');
   my $db = $self->db;
 
@@ -481,12 +481,12 @@ sub store{
 
     $self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis', $rset->analysis);
 
-    my $ct_id = (defined $rset->cell_type)    ? $rset->cell_type->dbID    : undef;
+    my $epi_id = (defined $rset->epigenome)    ? $rset->epigenome->dbID    : undef;
     my $ft_id = (defined $rset->feature_type) ? $rset->feature_type->dbID : undef;
 
     $sth->bind_param(1, $rset->analysis->dbID,   SQL_INTEGER);
     $sth->bind_param(2, $rset->name,             SQL_VARCHAR);
-    $sth->bind_param(3, $ct_id,                  SQL_INTEGER);
+    $sth->bind_param(3, $epi_id,                 SQL_INTEGER);
     $sth->bind_param(4, $ft_id,                  SQL_INTEGER);
     $sth->bind_param(5, $rset->feature_class,    SQL_VARCHAR);
 

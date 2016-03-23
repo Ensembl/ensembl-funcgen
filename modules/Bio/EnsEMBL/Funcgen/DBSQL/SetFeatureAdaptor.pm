@@ -506,13 +506,13 @@ sub _feature_class{
 #and resultset adaptor won't use these constraints as it is a file adaptor
 # and need separating from the BaseAdaptor
 
-sub _constrain_cell_types {
-  my $self = shift;
-  my $cts  = shift;
+sub _constrain_epigenomes {
+  my $self        = shift;
+  my $epigenomes  = shift;
 
   #Don't need to bind param this as we validate
-  my $constraint = " fs.cell_type_id IN (".
-    join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $cts, 'dbID')}).')';
+  my $constraint = " fs.epigenome_id IN (".
+    join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::Epigenome', $epigenomes, 'dbID')}).')';
 
   return ($constraint, {});  #{} = no further config
 }

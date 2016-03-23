@@ -61,14 +61,14 @@ use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor);
 
   Arg [1]    : String - feature class i.e. 'annotated', 'regulatory', 'segmentation', 'mirna' or 'external'
   Arg [2]    : String (optional) - status e.g. 'DISPLAYABLE'
-  Arg [2]    : Bio::EnsEMBL::Funcgen::CellType (optional) or a HASH parameters
+  Arg [2]    : Bio::EnsEMBL::Funcgen::Epigenome (optional) or a HASH parameters
                containing contraint config e.g.
 
                    $feature_set_adaptor->fetch_all_by_feature_class
                                            ('annotated',
                                              {'constraints' =>
                                                {
-                                               cell_types     => [$cell_type], #Bio::EnsEMBL::Funcgen::CellType
+                                               epigenomes     => [$epigenome], #Bio::EnsEMBL::Funcgen::Epigenome
                                                projects       => ['ENCODE'],
                                                evidence_types => ['Hists & Pols'],
                                                feature_types  => [$ftype], #Bio::EnsEMBL::Funcgen::FeatureType
@@ -90,12 +90,12 @@ sub fetch_all_by_feature_class {
   throw('Must provide a feature_set type') if(! defined $type);
   my $sql = "fs.type = '".$type."'";
 
-  if (defined $params) {        #Some redundancy over $ctype arg and $params cell_type
+  if (defined $params) {        #Some redundancy over $epigenome arg and $params epigenome
 
-    if ( ref($params) eq 'Bio::EnsEMBL::Funcgen::CellType') {
-      $params = {constraints => {cell_types => [$params]}};
+    if ( ref($params) eq 'Bio::EnsEMBL::Funcgen::Epigenome') {
+      $params = {constraints => {epigenomes => [$params]}};
     } elsif (ref($params) ne 'HASH') {
-      throw('Argument must be a Bio::EnsEMBL::Funcgen::CellType or a params HASH');
+      throw('Argument must be a Bio::EnsEMBL::Funcgen::Epigenome or a params HASH');
     }
   }
 
@@ -120,7 +120,7 @@ sub fetch_all_by_feature_class {
 =head2 fetch_all_displayable_by_type
 
   Arg [1]    : String - Type of feature set i.e. 'annotated', 'regulatory' or 'supporting'
-  Arg [2]    : Bio::EnsEMBL::Funcgen::CellType (optional) or parameters HASH
+  Arg [2]    : Bio::EnsEMBL::Funcgen::Epigenome (optional) or parameters HASH
   Example    : my @fsets = $fs_adaptopr->fetch_all_by_type('annotated');
   Description: Wrapper method for fetch_all_by_type
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::FeatureSet objects
@@ -131,10 +131,10 @@ sub fetch_all_by_feature_class {
 =cut
 
 sub fetch_all_displayable_by_type {
-    my ($self, $type, $ctype_or_params) = @_;
+    my ($self, $type, $epigenome_or_params) = @_;
 
 	#Move status to config hash
-	$self->fetch_all_by_feature_class($type, 'DISPLAYABLE', $ctype_or_params);
+	$self->fetch_all_by_feature_class($type, 'DISPLAYABLE', $epigenome_or_params);
 
 }
 
@@ -202,7 +202,7 @@ sub _columns {
 	my $self = shift;
 
 	return qw( fs.feature_set_id fs.feature_type_id
-			   fs.analysis_id fs.cell_type_id
+			   fs.analysis_id fs.epigenome_id
 			   fs.name fs.type
 			   fs.description fs.display_label
 			   fs.experiment_id);
@@ -228,19 +228,19 @@ sub _columns {
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
 
-	my (@fsets, $fset, $analysis, %analysis_hash, $feature_type, $cell_type, $name, $type, $display_label, $desc);
-	my ($feature_set_id, $ftype_id, $analysis_id, $ctype_id, $exp_id, %ftype_hash, %ctype_hash);
+	my (@fsets, $fset, $analysis, %analysis_hash, $feature_type, $epigenome, $name, $type, $display_label, $desc);
+	my ($feature_set_id, $ftype_id, $analysis_id, $epigenome_id, $exp_id, %ftype_hash, %epigenome_hash);
 
 	my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
 	my $anal_adaptor = $self->db->get_AnalysisAdaptor();
-	my $ct_adaptor = $self->db->get_CellTypeAdaptor();
-	$ctype_hash{'NULL'} = undef;
+	my $epigenome_adaptor = $self->db->get_EpigenomeAdaptor();
+	$epigenome_hash{'NULL'} = undef;
 
-	$sth->bind_columns(\$feature_set_id, \$ftype_id, \$analysis_id, \$ctype_id,
+	$sth->bind_columns(\$feature_set_id, \$ftype_id, \$analysis_id, \$epigenome_id,
                        \$name, \$type, \$desc, \$display_label, \$exp_id);
 
 	while ( $sth->fetch()) {
-		$ctype_id ||= 'NULL';
+		$epigenome_id ||= 'NULL';
 
 		# Get the analysis object
 		$analysis_hash{$analysis_id} = $anal_adaptor->fetch_by_dbID($analysis_id) if(! exists $analysis_hash{$analysis_id});
@@ -248,8 +248,11 @@ sub _objs_from_sth {
 		# Get the feature type object
 		$ftype_hash{$ftype_id} = $ft_adaptor->fetch_by_dbID($ftype_id) if(! exists $ftype_hash{$ftype_id});
 
-		# Get the cell_type object
-		$ctype_hash{$ctype_id} = $ct_adaptor->fetch_by_dbID($ctype_id) if(! exists $ctype_hash{$ctype_id});
+		# Get the epigenome object
+        $epigenome_hash{$epigenome_id}
+            = $epigenome_adaptor->fetch_by_dbID($epigenome_id)
+            if ( !exists $epigenome_hash{$epigenome_id} );
+
 
 		#Use new_fast here and strip the prefixed -'s
 		$fset = Bio::EnsEMBL::Funcgen::FeatureSet->new
@@ -258,7 +261,7 @@ sub _objs_from_sth {
 		   -adaptor       => $self,
 		   -feature_type  => $ftype_hash{$ftype_id},
 		   -analysis      => $analysis_hash{$analysis_id},
-		   -cell_type     => $ctype_hash{$ctype_id},
+		   -epigenome     => $epigenome_hash{$epigenome_id},
 		   -name          => $name,
 		   -feature_class => $type,
 		   -display_label => $display_label,
@@ -300,7 +303,7 @@ sub store {
 	my $sth = $self->prepare
 	  (
 	   "INSERT INTO feature_set
-        (feature_type_id, analysis_id, cell_type_id, name, type, description, display_label, experiment_id)
+        (feature_type_id, analysis_id, epigenome_id, name, type, description, display_label, experiment_id)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
 	  );
 
@@ -318,13 +321,13 @@ sub store {
 		  $self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis', $fset->analysis);
 
 
-		  # Check optional CellType and Experiment
-		  my $ctype_id;
-		  my $ctype = $fset->cell_type;
+		  # Check optional Epigenome and Experiment
+		  my $epigenome_id;
+		  my $epigenome = $fset->epigenome;
 
-		  if($ctype){
-			$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $ctype);
-			$ctype_id = $ctype->dbID;
+		  if($epigenome){
+			$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Epigenome', $epigenome);
+			$epigenome_id = $epigenome->dbID;
 		  }
 
 		  my $exp_id;
@@ -338,7 +341,7 @@ sub store {
 
 		  $sth->bind_param(1, $fset->feature_type->dbID, SQL_INTEGER);
 		  $sth->bind_param(2, $fset->analysis->dbID,     SQL_INTEGER);
-		  $sth->bind_param(3, $ctype_id,                 SQL_INTEGER);
+		  $sth->bind_param(3, $epigenome_id,             SQL_INTEGER);
 		  $sth->bind_param(4, $fset->name,               SQL_VARCHAR);
 		  $sth->bind_param(5, $fset->feature_class,      SQL_VARCHAR);
 		  $sth->bind_param(6, $fset->description,        SQL_VARCHAR);
@@ -416,7 +419,7 @@ sub fetch_attribute_set_config_by_FeatureSet{
 
 	if (! defined $self->{attribute_set_config}->{$fset->dbID}) {
 	  $self->{attribute_set_config}->{$fset->dbID} = 0; #set cache default
-	  my $string_key =  'regbuild.'.$fset->cell_type->name.'.feature_set_ids';
+	  my $string_key =  'regbuild.'.$fset->epigenome->name.'.feature_set_ids';
 
 	  #list_value_by_key caches, so we don't need to implement this in the adaptor
 	  #my ($attr_ids) = @{$self->db->get_MetaContainer->list_value_by_key($meta_key)};
@@ -444,15 +447,15 @@ sub fetch_attribute_set_config_by_FeatureSet{
 sub fetch_feature_set_filter_counts{
   my $self = shift;
 
-   my $sql = 'SELECT count(*), eg.name, eg.description, eg.is_project, ft.class, ct.name, ct.description '.
-    'FROM experimental_group eg, experiment e, feature_set fs, feature_type ft, cell_type ct, '.
+   my $sql = 'SELECT count(*), eg.name, eg.description, eg.is_project, ft.class, epi.name, epi.description '.
+    'FROM experimental_group eg, experiment e, feature_set fs, feature_type ft, epigenome epi, '.
       'status s, status_name sn '.
         'WHERE fs.experiment_id=e.experiment_id '.
           'AND e.experimental_group_id=eg.experimental_group_id '.
-          'AND fs.feature_type_id=ft.feature_type_id AND fs.cell_type_id=ct.cell_type_id '.
+          'AND fs.feature_type_id=ft.feature_type_id AND fs.epigenome_id=epi.epigenome_id '.
             'AND fs.feature_set_id=s.table_id AND fs.type="annotated" AND s.table_name="feature_set" '.
               'AND s.status_name_id=sn.status_name_id and sn.name="DISPLAYABLE" '.
-                'GROUP BY eg.name, eg.is_project, ft.class, ct.name';
+                'GROUP BY eg.name, eg.is_project, ft.class, epi.name';
 
   #warn $sql;
   #Need to write HC around this as we sometimes get less than expect.
@@ -477,7 +480,7 @@ sub fetch_feature_set_filter_counts{
 
   foreach my $row(@rows){
 
-    my ($count, $project, $proj_desc, $is_proj, $ft_class, $ct_name, $ct_desc) = @$row;
+    my ($count, $project, $proj_desc, $is_proj, $ft_class, $epigenome_name, $epigenome_desc) = @$row;
 
     #All counts
     $filter_info{All}{All}{count} += $count;
@@ -496,13 +499,13 @@ sub fetch_feature_set_filter_counts{
     }
 
     #Cell/Tissue counts
-    if(! exists $filter_info{'Cell/Tissue'}{$ct_name}){
-      $filter_info{'Cell/Tissue'}{$ct_name} =
+    if(! exists $filter_info{'Cell/Tissue'}{$epigenome_name}){
+      $filter_info{'Cell/Tissue'}{$epigenome_name} =
         { count       => 0,
-          description => $ct_desc,
+          description => $epigenome_desc,
         };
     }
-    $filter_info{'Cell/Tissue'}{$ct_name}{count} += $count;
+    $filter_info{'Cell/Tissue'}{$epigenome_name}{count} += $count;
 
     #Evidence class counts
     #Do we want to split this into ft.class

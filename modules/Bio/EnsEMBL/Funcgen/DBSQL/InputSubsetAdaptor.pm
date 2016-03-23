@@ -157,7 +157,7 @@ sub _columns {
 
   return qw(
       iss.input_subset_id
-      iss.cell_type_id
+      iss.epigenome_id
       iss.experiment_id
       iss.feature_type_id
       iss.is_control
@@ -203,7 +203,7 @@ sub _objs_from_sth {
 
   my (@result,
       $iss_id,
-      $ct_id,
+      $epi_id,
       $exp_id,
       $ft_id,
       $is_control,
@@ -220,7 +220,7 @@ sub _objs_from_sth {
 
   $sth->bind_columns(
       \$iss_id,
-      \$ct_id,
+      \$epi_id,
       \$exp_id,
       \$ft_id,
       \$is_control,
@@ -229,19 +229,19 @@ sub _objs_from_sth {
       \$analysis_id
       );
 
-  my $ct_adaptor  = $self->db->get_CellTypeAdaptor;
+  my $epi_adaptor  = $self->db->get_EpigenomeAdaptor;
   my $exp_adaptor = $self->db->get_ExperimentAdaptor;
   my $ft_adaptor  = $self->db->get_FeatureTypeAdaptor;
   my $analysis_adaptor = $self->db->get_AnalysisAdaptor; 
-  my (%ctypes, %ftypes, %exps);  
+  my (%epigenomes, %ftypes, %exps);  
  
   while($sth->fetch){
     
-    if(! exists $ctypes{$ct_id}){
-      $ctypes{$ct_id} = $ct_adaptor->fetch_by_dbID($ct_id);
+    if(! exists $epigenomes{$epi_id}){
+      $epigenomes{$epi_id} = $epi_adaptor->fetch_by_dbID($epi_id);
     
-      if(! defined $ctypes{$ct_id}){
-        throw("Could not fetch linked CellType (dbID: $ct_id) for InputSubset (dbID: $iss_id) ");
+      if(! defined $epigenomes{$epi_id}){
+        throw("Could not fetch linked Epigenome (dbID: $epi_id) for InputSubset (dbID: $iss_id) ");
       }
     }
     
@@ -267,7 +267,7 @@ sub _objs_from_sth {
 
     push @result, Bio::EnsEMBL::Funcgen::InputSubset->new (
        -dbID         => $iss_id,
-       -CELL_TYPE    => $ctypes{$ct_id},
+       -EPIGENOME    => $epigenomes{$epi_id},
        -EXPERIMENT   => $exps{$exp_id},
        -FEATURE_TYPE => $ftypes{$ft_id},
        -IS_CONTROL   => $is_control,
@@ -307,7 +307,7 @@ sub store{
   my $sth = $self->prepare("
         INSERT INTO
           input_subset (
-            cell_type_id,
+            epigenome_id,
             experiment_id,
             feature_type_id,
             is_control,
@@ -332,12 +332,12 @@ sub store{
     
     #Test object attrs are stored
     $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $subset->feature_type);
-    $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType',    $subset->cell_type);
+    $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Epigenome',    $subset->epigenome);
     $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Experiment',  $subset->experiment);
     $self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis',             $subset->analysis);
     
 
-    $sth->bind_param(1, $subset->cell_type->dbID,     SQL_INTEGER);
+    $sth->bind_param(1, $subset->epigenome->dbID,     SQL_INTEGER);
     $sth->bind_param(2, $subset->experiment->dbID,    SQL_INTEGER);
     $sth->bind_param(3, $subset->feature_type->dbID,  SQL_INTEGER);
     $sth->bind_param(4, $subset->is_control,          SQL_INTEGER);

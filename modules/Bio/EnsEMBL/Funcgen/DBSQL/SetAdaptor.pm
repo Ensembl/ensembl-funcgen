@@ -140,8 +140,8 @@ sub fetch_all_by_Epigenome {
 =cut
 
 sub fetch_all_by_Analysis {
-  my ($self, $ctype, $status) = @_;
-  my $params = {constraints => {analyses => [$ctype]}};
+  my ($self, $epigenome, $status) = @_;
+  my $params = {constraints => {analyses => [$epigenome]}};
   $params->{constraints}{states} = [$status] if defined $status;
   my $results = $self->generic_fetch($self->compose_constraint_query($params));
   $self->reset_true_tables; #As we may have added status
@@ -153,10 +153,10 @@ sub fetch_all_by_Analysis {
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureType
   Arg [2]    : Bio::EnsEMBL::Analysis
-  Arg [3]    : (optional) Bio::EnsEMBL::Funcgen::CellType
-  Example    : my @sets = $set_adaptopr->fetch_all_by_FeatureType_Analysis($ftype, $anal, $ctype);
+  Arg [3]    : (optional) Bio::EnsEMBL::Funcgen::Epigenome
+  Example    : my @sets = $set_adaptopr->fetch_all_by_FeatureType_Analysis($ftype, $anal, $epigenome);
   Description: Retrieves Set objects from the database based on FeatureType, Analysis and
-               CellType if defined.
+               Epigenome if defined.
   Returntype : Listref of Bio::EnsEMBL::Funcgen::Set objects
   Exceptions : Throws if args 1 and 2 are not valid or stored
   Caller     : General
@@ -167,7 +167,7 @@ sub fetch_all_by_Analysis {
 #Historical method from the FeatureSetAdaptor
 
 sub fetch_all_by_FeatureType_Analysis {
-  my ($self, $ftype, $anal, $ctype) = @_;
+  my ($self, $ftype, $anal, $epigenome) = @_;
   my $params = {constraints =>
                 {
                  feature_types => [$ftype],
@@ -175,7 +175,7 @@ sub fetch_all_by_FeatureType_Analysis {
                 }
                };
 
-  $params->{constraints}{cell_types} = [$ctype] if $ctype;
+  $params->{constraints}{epigenomes} = [$epigenome] if $epigenome;
   return $self->generic_fetch($self->compose_constraint_query($params));
 }
 
@@ -221,11 +221,11 @@ sub fetch_by_name {
 #and so could go in a SetAdaptor (doesn't exist yet)
 #currently have
 
-sub _constrain_cell_types {
-  my ($self, $cts) = @_;
+sub _constrain_epigenomes {
+  my ($self, $epigenomes) = @_;
 
-  my $constraint = $self->_table_syn.'.cell_type_id IN ('.
-        join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType', $cts, 'dbID')}
+  my $constraint = $self->_table_syn.'.epigenome_id IN ('.
+        join(', ', @{$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::Epigenome', $epigenomes, 'dbID')}
         ).')';
 
   #{} = no futher contraint config

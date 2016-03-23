@@ -45,11 +45,11 @@ my $regfeat_adaptor = $reg->get_adaptor($species, 'funcgen', 'RegulatoryFeature'
 #Fetch MultiCell RegulatoryFeatures
 my @features = @{$regfeat_adaptor->fetch_all_by_Slice($slice)};
 
-#Fetch cell type specific RegulatoryFeatures
-my @ctype_features = @{$regfeat_adaptor->fetch_all_by_Slice_FeatureSets($slice, [$ctype_fset1, $ctype_fset2])};
+#Fetch epigenome specific RegulatoryFeatures
+my @epigenome_features = @{$regfeat_adaptor->fetch_all_by_Slice_FeatureSets($slice, [$epigenome_fset1, $epigenome_fset2])};
 
-#Fetch all cell type RegulatoryFeatures for a given stable ID
-my @ctype_features = @{$regfeat_adaptor->fetch_all_by_stable_ID('ENSR00001348194')};
+#Fetch all epigenome RegulatoryFeatures for a given stable ID
+my @epigenome_features = @{$regfeat_adaptor->fetch_all_by_stable_ID('ENSR00001348194')};
 
 
 =head1 DESCRIPTION
@@ -275,7 +275,7 @@ sub _columns {
       rf.binary_string
 			rf.projected
       rf.activity
-			rf.cell_type_count
+			rf.epigenome_count
       ra.attribute_feature_id
 			ra.attribute_feature_table
 	   );
@@ -360,7 +360,7 @@ sub _objs_from_sth {
       $bin_string,
       $projected,
       $activity,
-      $cell_type_count
+      $epigenome_count
      );
 
 	$sth->bind_columns
@@ -379,7 +379,7 @@ sub _objs_from_sth {
      \$bin_string,
      \$projected,
      \$activity,
-     \$cell_type_count,
+     \$epigenome_count,
      \$attr_id,
      \$attr_type,
     );
@@ -573,7 +573,7 @@ sub _objs_from_sth {
           'feature_type'   => $ftype_hash{$ftype_id},
           'stable_id'      => $stable_id,
           'activity'       => $activity,
-          'cell_type_count'=> $cell_type_count,
+          'epigenome_count'=> $epigenome_count,
          });
 
 	  }
@@ -608,7 +608,7 @@ sub _objs_from_sth {
 			   duplicates. Sets dbID and adaptor on the objects that it stores.
   Returntype : Listref of stored RegulatoryFeatures
   Exceptions : Throws if a list of RegulatoryFeature objects is not provided or if
-               the Analysis, CellType and FeatureType objects are not attached or stored.
+               the Analysis, Epigenome and FeatureType objects are not attached or stored.
                Throws if analysis of set and feature do not match
                Warns if RegulatoryFeature already stored in DB and skips store.
   Caller     : General
@@ -638,7 +638,7 @@ sub store{
       binary_string,
       projected,
       activity,
-      cell_type_count
+      epigenome_count
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
  #bound_seq_region_start,	bound_seq_region_end
@@ -683,7 +683,7 @@ sub store{
     $sth->bind_param(11, $rf->binary_string,       SQL_VARCHAR);
     $sth->bind_param(12, $rf->is_projected,        SQL_BOOLEAN);
     $sth->bind_param(13, $rf->activity,            SQL_BOOLEAN);
-    $sth->bind_param(14, $rf->cell_type_count,     SQL_INTEGER);
+    $sth->bind_param(14, $rf->epigenome_count,     SQL_INTEGER);
     # Store and set dbID
     $sth->execute;
     $rf->dbID( $self->last_insert_id );
@@ -855,8 +855,8 @@ sub _fetch_other_dbIDs_by_stable_feature_set_ids{
 =head2 fetch_all_by_stable_ID
 
   Arg [1]    : string - stable ID e.g. ENSR00000000002
-  Example    : my @cell_type_regfs = @{$regf_adaptor->fetch_all_by_stable_ID('ENSR00000000001');
-  Description: Retrieves a list of RegulatoryFeatures with associated stable ID. One for each CellType or
+  Example    : my @epigenome_regfs = @{$regf_adaptor->fetch_all_by_stable_ID('ENSR00000000001');
+  Description: Retrieves a list of RegulatoryFeatures with associated stable ID. One for each Epigenome or
                'core' RegulatoryFeature set which contains the specified stable ID.
   Returntype : Listref of Bio::EnsEMBL::RegulatoryFeature objects
   Exceptions : None
@@ -924,7 +924,7 @@ sub fetch_all_by_attribute_feature {
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::RegulatoryFeature
   Example    : my $config = $regf_adaptor->fetch_type_config_by_RegualtoryFeature($rf);
-  Description: Retrieves a config hash of CellType and FeatureType names and dbIDs supporting
+  Description: Retrieves a config hash of Epigenome and FeatureType names and dbIDs supporting
                the given RegualtoryFeature
   Returntype : HASHREF
   Exceptions : None
@@ -956,21 +956,21 @@ sub fetch_type_config_by_RegulatoryFeature{
   #Don't need cell type query here if we have a cell type sepcific set
   #What is quicker here?
 
-  $sql = 'SELECT ct.name, ct.cell_type_id from '.
-	'cell_type ct, feature_set fs, regulatory_attribute ra, annotated_feature af '.
-	  'WHERE ct.cell_type_id=fs.cell_type_id AND fs.feature_set_id=af.feature_set_id AND '.
+  $sql = 'SELECT epi.name, epi.epigenome_id from '.
+	'epigenome epi, feature_set fs, regulatory_attribute ra, annotated_feature af '.
+	  'WHERE epi.epigenome_id=fs.epigenome_id AND fs.feature_set_id=af.feature_set_id AND '.
 		'af.annotated_feature_id=ra.attribute_feature_id and ra.attribute_feature_table="annotated" AND '.
-		  'ra.regulatory_feature_id=? group by ct.name order by ct.name';
+		  'ra.regulatory_feature_id=? group by epi.name order by epi.name';
 
   $sth = $self->prepare($sql);
   $sth->bind_param(1, $rf->dbID, SQL_INTEGER);
   $sth->execute;
-  my @ctype_config = @{$sth->fetchall_arrayref};
+  my @epigenome_config = @{$sth->fetchall_arrayref};
   $sth->finish;
 
   return {
 		  feature_types => \@ftype_config,
-		  cell_types    => \@ctype_config,
+		  epigenomes    => \@epigenome_config,
 		 };
 }
 

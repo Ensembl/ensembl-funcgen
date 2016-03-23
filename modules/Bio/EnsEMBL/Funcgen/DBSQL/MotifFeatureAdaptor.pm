@@ -28,7 +28,7 @@ storing MotifFeature objects.
 
 my $mfa = $db->get_MotifFeatureAdaptor();
 
-my @mfeatures = @{$mfa->fetch_all_by_Slice_CellType($slic, $ctype)};
+my @mfeatures = @{$mfa->fetch_all_by_Slice_Epigenome($slic, $epigenome)};
 
 
 =head1 DESCRIPTION
@@ -490,7 +490,7 @@ sub _objs_from_sth {
 			   duplicates. Sets dbID and adaptor on the objects that it stores.
   Returntype : Listref of stored MotifFeatures
   Exceptions : Throws if a list of MotifFeature objects is not provided or if
-               the Analysis, CellType and FeatureType objects are not attached or stored
+               the Analysis, Epigenome and FeatureType objects are not attached or stored
   Caller     : General
   Status     : At Risk
 
