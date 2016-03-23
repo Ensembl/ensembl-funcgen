@@ -608,7 +608,7 @@ sub norm_analysis{
   Returntype : Bio::EnsEMBL::Funcgen::CellType
   Exceptions : Throws if arg is not valid or stored
   Caller     : general
-  Status     : at risk
+  Status     : Deprecated
 
 =cut
 

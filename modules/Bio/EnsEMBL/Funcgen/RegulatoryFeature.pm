@@ -67,7 +67,7 @@ Bio::EnsEMBL::Funcgen::RegulatoryFeature
                     $reg_feat->bound_end)."\n";
 
 
- ### Getting some supporting evidence for a RegualtoryFeatures
+ ### Getting some supporting evidence for a RegulatoryFeatures
  my @reg_attrs = @{$reg_feat->regulatory_attributes('annotated')};
 
 
@@ -109,7 +109,7 @@ use base qw( Bio::EnsEMBL::Funcgen::SetFeature );
   Arg [-FEATURE_SET]       : Bio::EnsEMBL::Funcgen::FeatureSet - Regulatory Feature set
   Arg [-FEATURE_TYPE]      : Bio::EnsEMBL::Funcgen::FeatureType - Regulatory Feature sub type
   Arg [-BINARY_STRING]     : (optional) string - Regulatory Build binary string
-  Arg [-STABLE_ID]         : (optional) string - Stable ID for this RegualtoryFeature e.g. ENSR00000000001
+  Arg [-STABLE_ID]         : (optional) string - Stable ID for this RegulatoryFeature e.g. ENSR00000000001
   Arg [-DISPLAY_LABEL]     : (optional) string - Display label for this feature
   Arg [-ATTRIBUTE_CACHE]   : (optional) HASHREF of feature class dbID|Object lists
   Arg [-PROJECTED]         : (optional) boolean - Flag to specify whether this feature has been projected or not
@@ -231,7 +231,7 @@ sub stable_id {
 
   if (@_){
     #added v67
-    warn "RegualtoryFeature::stable_id setter functionality is being removed\n";
+    warn "RegulatoryFeature::stable_id setter functionality is being removed\n";
     #Still used in stable_id_mapper.pl
     $self->{stable_id} = shift;
   }
@@ -306,7 +306,7 @@ sub regulatory_attributes{
   Arg [1]    : Attribute Feature dbID
   Arg [2]    : Attribute Feature class e.g. motif or annotated
   Example    : if($regf->has_attribute($af->dbID, 'annotated'){ #do something here }
-  Description: Identifies whether this RegualtoryFeature has a given attribute
+  Description: Identifies whether this RegulatoryFeature has a given attribute
   Returntype : Boolean
   Exceptions : Throws if args are not defined
   Caller     : General
@@ -368,7 +368,7 @@ sub epigenome_count { shift->{epigenome_count}; }
 
   Arg [1]    : None
   Example    : my @focus_attrs = @{$regf->get_focus_attributes};
-  Description: Getter for the focus features of this RegualtoryFeature, used to defined the core region
+  Description: Getter for the focus features of this RegulatoryFeature, used to defined the core region
   Returntype : ARRAYREF
   Exceptions : None
   Caller     : General
@@ -696,7 +696,7 @@ sub get_underlying_structure{
 
 =head2 is_unique_to_FeatureSets
 
-  Arg[1]     : optional - ARRAYREF of regualtory Bio::EnsEMBL::Funcgen::FeatureSet objects
+  Arg[1]     : optional - ARRAYREF of regulatory Bio::EnsEMBL::Funcgen::FeatureSet objects
                           Default is FeatureSet of given RegulatoryFeature, else need to be
                           defined explicitly.
   Arg[2]     : optional - HASHREF Params hash:
@@ -706,7 +706,7 @@ sub get_underlying_structure{
   Example    : if($reg_feat->is_unique_to_FeatureSets($fsets)}{
                    #then do some analysis here
                }
-  Description: Identifies whether this RegualtoryFeature is unique to a set of FeatureSets.
+  Description: Identifies whether this RegulatoryFeature is unique to a set of FeatureSets.
   Returntype : boolean
   Exceptions : Throw is arguments not stored or valid.
   Caller     : General
@@ -760,7 +760,7 @@ sub is_unique_to_FeatureSets{
 
 =head2 get_other_RegulatoryFeatures
 
-  Arg[1]     : optional - ARRAYREF of regualtory Bio::EnsEMBL::Funcgen::FeatureSet objects
+  Arg[1]     : optional - ARRAYREF of regulatory Bio::EnsEMBL::Funcgen::FeatureSet objects
                           Default is FeatureSet of given RegulatoryFeature, else need to be
                           defined explicitly.
   Arg[2]     : optional - HASHREF Params hash:
@@ -769,7 +769,7 @@ sub is_unique_to_FeatureSets{
                                      include_multicell => 0|1, # Boolean, include MultiCell features
                                     }
   Example    : my @other_fsets = @{$reg_feat->get_other_FeatureSets($fsets)};
-  Description: Gets other RegualtoryFeatures (linked via the stable ID) which are present in the
+  Description: Gets other RegulatoryFeatures (linked via the stable ID) which are present in the
                specified list of FeatureSets.
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::RegulatoryFeature objects
   Exceptions : Throw is arguments not stored or valid.

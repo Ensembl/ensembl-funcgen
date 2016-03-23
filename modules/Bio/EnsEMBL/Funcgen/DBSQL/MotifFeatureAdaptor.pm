@@ -58,7 +58,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::MotifFeatureAdaptor;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 use Bio::EnsEMBL::Funcgen::MotifFeature;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;#DBI sql_types import
 

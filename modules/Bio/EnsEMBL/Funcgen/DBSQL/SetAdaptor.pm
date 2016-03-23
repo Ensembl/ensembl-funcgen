@@ -49,7 +49,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#DBI sql_types import
 use base qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor );
 

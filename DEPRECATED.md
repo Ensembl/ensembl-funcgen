@@ -51,6 +51,10 @@ A year after deprecation (4 Ensembl releases), the method is removed from the AP
  - Bio::Ensembl::Funcgen::DBSQL::**InputSubsetAdaptor**::*fetch_by_name_and_experiment()*
  - Bio::Ensembl::Funcgen::DBSQL::**ProbeFeatureAdaptor**::*fetch_all_by_probeset()*
  - Bio::Ensembl::Funcgen::DBSQL::**ResultFeatureAdaptor**::*fetch_all()*
+ - Bio::Ensembl::Funcgen::DBSQL::**ResultFeatureAdaptor**::*fetch_by_dbID()*
+ - Bio::Ensembl::Funcgen::DBSQL::**ResultFeatureAdaptor**::*fetch_all_by_dbID_list()*
+ - Bio::Ensembl::Funcgen::DBSQL::**ResultFeatureAdaptor**::*fetch_all_by_logic_name()*
+ - Bio::Ensembl::Funcgen::DBSQL::**ResultFeatureAdaptor**::*_list_seq_region_ids()*
  - Bio::Ensembl::Funcgen::DBSQL::**ResultSetAdaptor**::*store_dbfile_data_dir()*
  - Bio::Ensembl::Funcgen::DBSQL::**ResultSetAdaptor**::*_fetch_dbfile_data_dir()*
 

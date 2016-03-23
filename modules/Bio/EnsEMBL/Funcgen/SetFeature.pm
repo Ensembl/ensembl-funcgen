@@ -83,7 +83,7 @@ package Bio::EnsEMBL::Funcgen::SetFeature;
 use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
 use base qw( Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable );
 
@@ -208,7 +208,7 @@ sub set {
   Returntype : Bio::EnsEMBL::Funcgen::CellType
   Exceptions : None
   Caller     : General
-  Status     : stable
+  Status     : Deprecated
 
 =cut
 
