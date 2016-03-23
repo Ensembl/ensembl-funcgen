@@ -141,8 +141,8 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($stable_id, $attr_cache, $bin_string, $projected, $activity, $cell_type_count)
-    = rearrange(['STABLE_ID', 'ATTRIBUTE_CACHE', 'BINARY_STRING', 'PROJECTED', 'ACTIVITY', 'CELL_TYPE_COUNT'], @_);
+  my ($stable_id, $attr_cache, $bin_string, $projected, $activity, $epigenome_count)
+    = rearrange(['STABLE_ID', 'ATTRIBUTE_CACHE', 'BINARY_STRING', 'PROJECTED', 'ACTIVITY', 'EPIGENOME_COUNT'], @_);
 
   #None of these are mandatory at creation
   #under different use cases
@@ -150,7 +150,7 @@ sub new {
   $self->{stable_id}        = $stable_id        if defined $stable_id;
   $self->{projected}        = $projected        if defined $projected;
   $self->{activity}         = $activity         if defined $activity;
-  $self->{cell_type_count}  = $cell_type_count  if defined $cell_type_count;
+  $self->{epigenome_count}  = $epigenome_count  if defined $epigenome_count;
   $self->attribute_cache($attr_cache)     if $attr_cache;
 
   return $self;
@@ -174,8 +174,8 @@ sub display_label {
   if(! defined $self->{display_label}){
     $self->{'display_label'}  = $self->feature_type->name.' Regulatory Feature';
 
-    if( defined $self->cell_type ){
-      $self->{display_label} .= ' - '.$self->cell_type->name;
+    if( defined $self->epigenome ){
+      $self->{display_label} .= ' - '.$self->epigenome->name;
     }
   }
 
@@ -830,7 +830,7 @@ sub summary_as_hash {
 
   return
    {ID                      => $self->stable_id,
-    cell_type               => $self->cell_type->name,
+    epigenome               => $self->epigenome->name,
     bound_start             => $self->bound_seq_region_start,
     bound_end               => $self->bound_seq_region_end,
     start                   => $self->seq_region_start,

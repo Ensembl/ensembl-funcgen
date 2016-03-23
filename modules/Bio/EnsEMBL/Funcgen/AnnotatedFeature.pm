@@ -165,7 +165,7 @@ sub display_label {
     
     if(! $self->{'display_label'}  && $self->adaptor){
       $self->{'display_label'} = $self->feature_type->name()." -";
-      $self->{'display_label'} .= " ".$self->cell_type->name();
+      $self->{'display_label'} .= " ".$self->epigenome->name();
       $self->{'display_label'} .= " Enriched Site";
     }
 	
@@ -262,7 +262,7 @@ sub summary_as_hash {
 
   return
     {chipseq_feature_type => $self->feature_type->name,
-     cell_type              => $self->cell_type->name,
+     epigenome              => $self->epigenome->name,
      start                  => $self->seq_region_start,
      end                    => $self->seq_region_end,
      strand                 => $self->strand,

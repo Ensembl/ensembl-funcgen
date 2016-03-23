@@ -103,7 +103,7 @@ use vars qw(@ISA);
                                and file names will differ to those record in InputSubset
 
 
-                    #-use_defaults This changes some mandatory parameters to optional, instead using either DEFAULT or the input file name for the following options -name, -input_set, -feature_type, -cell_type etc ???
+                    #-use_defaults This changes some mandatory parameters to optional, instead using either DEFAULT or the input file name for the following options -name, -input_set, -feature_type, -epigenome etc ???
 
                     -verbose
  ReturnType  : Bio::EnsEMBL::Funcgen::Importer
@@ -393,7 +393,7 @@ sub init_experiment_import{
       -DATE                => $self->experiment_date,
       -PRIMARY_DESIGN_TYPE => $self->design_type,
       -DESCRIPTION         => $self->description,
-      -CELL_TYPE           => $self->cell_type,
+      -EPIGENOME           => $self->epigenome,
       -FEATURE_TYPE        => $self->feature_type);
 
     ($exp) =  @{$exp_adaptor->store($exp)};
@@ -1930,7 +1930,7 @@ sub get_import_ResultSet{
            -table_name => $table_name,
            -name       => $self->name()."_IMPORT",
            -feature_type => $self->feature_type(),
-           -cell_type    => $self->cell_type(),
+           -epigenome    => $self->epigenome(),
           );
 
         #These types should be set to NULL during the MAGE-XML validation if we have more than one type in an experiment

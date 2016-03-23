@@ -77,7 +77,7 @@ use base qw( Bio::EnsEMBL::Funcgen::Storable );
   Arg [-ANALYSIS]      : Bio::EnsEMBL::Analysis
 
   OPTIONAL ARGS:
-  Arg [-CELL_TYPE]     : Bio::EnsEMBL::Funcgen::CellType
+  Arg [-EPIGENOME]     : Bio::EnsEMBL::Funcgen::Epigenome
   Arg [-DBID]          : Int
   Arg [-ADAPTOR]       : Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor e.g. Result|Feature|InputSubSetAdaptor.
 
@@ -101,9 +101,9 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ( $name, $anal, $ftype, $ctype, $exp, $exp_id )
+  my ( $name, $anal, $ftype, $epigenome, $exp, $exp_id )
     = rearrange( [ 'NAME',         'ANALYSIS',
-                   'FEATURE_TYPE', 'CELL_TYPE',
+                   'FEATURE_TYPE', 'EPIGENOME',
                    'EXPERIMENT',   'EXPERIMENT_ID' ],
                  @_ );
 
@@ -119,8 +119,8 @@ sub new {
   }
 
   #OPTIONAL PARAMS
-  if(defined $ctype){
-    assert_ref($ctype, 'Bio::EnsEMBL::Funcgen::CellType', 'Set CellType'); 
+  if(defined $epigenome){
+    assert_ref($epigenome, 'Bio::EnsEMBL::Funcgen::Epigenome', 'Set Epigenome'); 
   }
 
   #Define set_type automatically
@@ -129,7 +129,7 @@ sub new {
 
   #Direct assignment as we have already validated
   $self->{name}          = $name;
-  $self->{cell_type}     = $ctype;
+  $self->{epigenome}     = $epigenome;
   $self->{feature_type}  = $ftype;
   $self->{analysis}      = $anal;
 

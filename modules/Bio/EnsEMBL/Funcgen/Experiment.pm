@@ -95,23 +95,24 @@ sub new {
   my $self   = $class->SUPER::new(@_);
 
   my ($name, $group, $p_dtype, 
-      $desc, $xml, $xml_id, $ftype, $ctype, $archive_id, $url) = rearrange
+      $desc, $xml, $xml_id, $ftype, $epigenome, $archive_id, $url) = rearrange
    ( ['NAME', 'EXPERIMENTAL_GROUP', 'PRIMARY_DESIGN_TYPE',
-      'DESCRIPTION', 'MAGE_XML', 'MAGE_XML_ID', 'FEATURE_TYPE', 'CELL_TYPE',
+      'DESCRIPTION', 'MAGE_XML', 'MAGE_XML_ID', 'FEATURE_TYPE', 'EPIGENOME',
       'ARCHIVE_ID', 'DISPLAY_URL'], @_ );
 
   # Mandatory attr checks
   throw('You must provide a name parameter') if ! defined $name;
-  assert_ref($group, 'Bio::EnsEMBL::Funcgen::ExperimentalGroup');
-  assert_ref($ctype, 'Bio::EnsEMBL::Funcgen::CellType');
-  assert_ref($ftype, 'Bio::EnsEMBL::Funcgen::FeatureType');
+assert_ref( $group,     'Bio::EnsEMBL::Funcgen::ExperimentalGroup' );
+assert_ref( $epigenome, 'Bio::EnsEMBL::Funcgen::Epigenome' );
+assert_ref( $ftype,     'Bio::EnsEMBL::Funcgen::FeatureType' );
+
   
   #Direct assignment here so we avoid setter test in methods
   $self->{name}                = $name;
   $self->{group}               = $group;
   $self->{primary_design_type} = $p_dtype    if defined $p_dtype; #MGED term for primary design type
   $self->{description}         = $desc       if defined $desc;
-  $self->{cell_type}           = $ctype;
+  $self->{epigenome}           = $epigenome;
   $self->{feature_type}        = $ftype;
   $self->{archive_id}          = $archive_id;
   $self->{display_url}         = $url;
@@ -462,11 +463,11 @@ sub reset_relational_attributes{
   my ($self, $params_hash, $no_db_reset) = @_;
 
   my (
-    $cell_type,
+    $epigenome,
     $experimental_group,
     $feature_type,
     ) = rearrange([
-    'CELL_TYPE',
+    'EPIGENOME',
     'EXPERIMENTAL_GROUP',
     'FEATURE_TYPE'
     ], %$params_hash);
@@ -474,7 +475,7 @@ sub reset_relational_attributes{
   #is_stored (in corresponding db) checks will be done in store method
   
   assert_ref($feature_type, 'Bio::EnsEMBL::Funcgen::FeatureType');
-  assert_ref($cell_type,    'Bio::EnsEMBL::Funcgen::CellType');
+  assert_ref($epigenome,    'Bio::EnsEMBL::Funcgen::Epigenome');
 
   if(! (defined $experimental_group &&
         ref($experimental_group) eq 'Bio::EnsEMBL::Funcgen::ExperimentalGroup') ){
@@ -483,7 +484,7 @@ sub reset_relational_attributes{
     throw($msg);
   }
 
-  $self->{cell_type}    = $cell_type;
+  $self->{epigenome}    = $epigenome;
   $self->{group}        = $experimental_group;
   $self->{feature_type} = $feature_type;
 

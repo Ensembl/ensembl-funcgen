@@ -156,7 +156,7 @@ sub display_label {
   if(! $self->{'display_label'}  && $self->adaptor){
 
 	$self->{'display_label'}  = $self->feature_set->feature_type->name().' - ';
-	$self->{'display_label'} .= $self->cell_type->name() if $self->cell_type();
+	$self->{'display_label'} .= $self->epigenome->name() if $self->epigenome();
 	$self->{'display_label'} .= $self->feature_type->name() if(defined $self->{'feature_type'});
   }
 

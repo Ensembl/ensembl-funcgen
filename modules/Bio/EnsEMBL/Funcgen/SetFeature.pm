@@ -64,7 +64,7 @@ Bio::EnsEMBL::Funcgen::SetFeature - Base class for features of a Set.
   my $end       = $feat->end;
   my $strand    = $feat->strand;
   my $fset      = $feat->set;
-  my $cell_type = $feat->cell_type;
+  my $epigenome = $feat->epigenome;
 
   # Printing some information
 

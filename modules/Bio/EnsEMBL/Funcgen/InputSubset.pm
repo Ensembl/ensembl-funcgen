@@ -37,7 +37,7 @@ Bio::EnsEMBL::Funcgen::InputSubset - A module to represent InputSubset object.
 use Bio::EnsEMBL::Funcgen::InputSubset;
 
 my $input_subset = Bio::EnsEMBL::Funcgen::InputSubset->new
-                    (-cell_type     => $cell_type,
+                    (-epigenome     => $epigenome,
                      -experiment    => $exp,
                      -feature_type  => $feature_type,
                      -is_control    => $is_control,
@@ -72,7 +72,7 @@ use base qw( Bio::EnsEMBL::Funcgen::Set );
 =head2 new
 
   Example    : my $iss = Bio::EnsEMBL::Funcgen::InputSubset->new
-                            (-cell_type     => $cell_type,
+                            (-epigenome     => $epigenome,
                              -experiment    => $exp,
                              -feature_type  => $feature_type,
                              -is_control    => $is_control,
@@ -96,10 +96,10 @@ sub new {
    (['IS_CONTROL', 'NAME', 'REPLICATE'], @_);
 
   #FeatureType and Analysis validated in Set
-  #CellType and Experiment validated in Set if defined  
+  #Epigenome and Experiment validated in Set if defined  
  
-  if(! defined $self->cell_type){
-    throw('Mandatory parameter -cell_type is not defined');
+  if(! defined $self->epigenome){
+    throw('Mandatory parameter -epigenome is not defined');
   }
 
   if(! defined $self->experiment){
@@ -153,7 +153,7 @@ sub is_control { return shift->{is_control}; }
 =head2 reset_relational_attributes
 
   Arg[1]     : - Hashref containing the following parameters:
-                -cell_type      => Bio::EnsEMBL::Funcgen::CellType,
+                -epigenome      => Bio::EnsEMBL::Funcgen::Epigenome,
                 -experiment     => Bio::EnsEMBL::Funcgen::Experiment,
                 -feature_type   => Bio::EnsEMBL::Funcgen::FeatureType,
                 -analysis       => Bio::EnsEMBL::Funcgen::Analysis,
@@ -174,16 +174,16 @@ sub reset_relational_attributes{
     throw('Must pass a HASHREF, not: ' .ref($params_hash));
   }
 
-  my ($cell_type, $experiment, $feature_type, $analysis) =
-    rearrange(['CELL_TYPE', 'EXPERIMENT', 'FEATURE_TYPE', 'ANALYSIS'],
+  my ($epigenome, $experiment, $feature_type, $analysis) =
+    rearrange(['EPIGENOME', 'EXPERIMENT', 'FEATURE_TYPE', 'ANALYSIS'],
         %$params_hash);
 
-  assert_ref($cell_type,    'Bio::EnsEMBL::Funcgen::CellType');
+  assert_ref($epigenome,    'Bio::EnsEMBL::Funcgen::Epigenome');
   assert_ref($experiment,   'Bio::EnsEMBL::Funcgen::Experiment');
   assert_ref($feature_type, 'Bio::EnsEMBL::Funcgen::FeatureType');
   assert_ref($analysis,     'Bio::EnsEMBL::Analysis');
   
-  $self->{cell_type}     = $cell_type;
+  $self->{epigenome}     = $epigenome;
   $self->{experiment}    = $experiment;
   $self->{experiment_id} = $experiment->dbID;
   $self->{feature_type}  = $feature_type;
@@ -208,7 +208,7 @@ sub reset_relational_attributes{
                Defaults to: name archive_id display_url replicate is_control
   Args[4]    : Arrayref - Optional list of InputSubset method names each
                returning a Storable or an Array or Arrayref of Storables.
-               Defaults to: cell_type, experiment, feature_type
+               Defaults to: epigenome, experiment, feature_type
   Example    : my %shallow_diffs = %{$rset->compare_to($other_rset, 1)};
   Description: Compare this InputSubset to another based on the defined scalar
                and storable methods.
@@ -228,7 +228,7 @@ sub compare_to {
   my ($self, $obj, $shallow, $scl_methods, $obj_methods) = @_;
 
   $scl_methods ||= [qw(name replicate is_control)];
-  $obj_methods ||= [qw(cell_type experiment feature_type analysis)];
+  $obj_methods ||= [qw(epigenome experiment feature_type analysis)];
 
   return $self->SUPER::compare_to($obj, $shallow, $scl_methods, $obj_methods);
 }

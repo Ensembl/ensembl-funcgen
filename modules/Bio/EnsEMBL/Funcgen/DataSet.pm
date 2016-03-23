@@ -392,8 +392,8 @@ sub display_label {
 	}
 	else{
 	  $self->{'display_label'}  = $self->feature_type->name()." - ";
-	  $self->{'display_label'} .= ($self->cell_type->display_label ||
-								   $self->cell_type->name)." Enriched Sites";
+	  $self->{'display_label'} .= ($self->epigenome->display_label ||
+								   $self->epigenome->name)." Enriched Sites";
 	}
   }
 
@@ -410,7 +410,7 @@ sub display_label {
                Defaults to: name table_name feature_class get_all_states
   Args[4]    : Arrayref - Optional list of DataSet method names each
                returning a Storable or an Array or Arrayref of Storables.
-               Defaults to: feature_type cell_type analysis get_support
+               Defaults to: feature_type epigenome analysis get_support
   Example    : my %shallow_diffs = %{$dset->compare_to($other_rset, 1)};
   Description: Compare this DataSet to another based on the defined scalar
                and storable methods.
@@ -448,7 +448,7 @@ sub compare_to {
   Arg[1] : Hashref containing the following mandatory parameters:
             -analysis     => Bio::EnsEMBL::Analysis,
             -feature_type => Bio::EnsEMBL::Funcgen::FeatureType,
-            -cell_type    => Bio::EnsEMBL::Funcgen::CellType,
+            -epigenome    => Bio::EnsEMBL::Funcgen::Epigenome,
             -support      => Arrayref of valid support objectse.g. InputSet
 
   Description: Resets all the relational attributes of a given DataSet.
@@ -465,7 +465,7 @@ sub reset_relational_attributes{
   my ($ssets, $feature_set) = rearrange(['SUPPORTING_SETS', 'FEATURE_SET'],
                                 %$params_hash);
 
-  #This also sets cell_type and feature_type
+  #This also sets epigenome and feature_type
   $self->_set_Sets_and_types($feature_set, $ssets);
 
   #also flush dynamically set display label
@@ -483,7 +483,7 @@ sub reset_relational_attributes{
 
 
 #Currently does not support DataSets with only mixed type support
-#i.e. not FeatureSet and CellTypes or FeatureTypes difference between
+#i.e. not FeatureSet and Epigenomes or FeatureTypes difference between
 #supporting sets
 
 
@@ -497,20 +497,21 @@ sub _set_Sets_and_types{
   }
   
   
-  my ($ftype, $ctype, $fclass, $ftype_name, $ctype_name);
+  my ($ftype, $epigenome, $fclass, $ftype_name, $epigenome_name);
 
   if(defined $fset){
     assert_ref($fset, 'Bio::EnsEMBL::Funcgen::FeatureSet');
-    $ftype      = $fset->feature_type;
-    $ctype      = $fset->cell_type;
-    $fclass     = $fset->feature_class;
-    $ftype_name = $ftype->name;
-    $ctype_name = $ctype->name;
+    $ftype          = $fset->feature_type;
+    $epigenome      = $fset->epigenome;
+    $fclass         = $fset->feature_class;
+    $ftype_name     = $ftype->name;
+    $epigenome_name = $epigenome->name;
+
   }
 
 
   ### Validate supporting sets
-  #Need to validate cell_type if the fset feature_class is not regulatory
+  #Need to validate epigenome if the fset feature_class is not regulatory
   #Need to validate feature_type if the fset feature class is not regulatory or segmentation
   $self->{'supporting_sets'} = {};
 
@@ -525,11 +526,11 @@ sub _set_Sets_and_types{
     
     if($fclass){
       
-      if($fclass ne 'regulatory'){ #Validate cell type
+      if($fclass ne 'regulatory'){ #Validate epigenome
         
-        if($set->cell_type->name ne $ctype_name){
-          throw('Cannot add '.$set->cell_type->name.
-                " support to a $ctype_name"." $fclass DataSet");
+        if($set->epigenome->name ne $epigenome_name){
+          throw('Cannot add '.$set->epigenome->name.
+                " support to a $epigenome_name"." $fclass DataSet");
         }
         
         if($fclass ne 'segmentation'){# and ne regulatory validate ftype
@@ -544,15 +545,15 @@ sub _set_Sets_and_types{
     }
     else{
       $ftype_name ||= $set->feature_type->name;
-      $ctype_name ||= $set->cell_type->name;
+      $epigenome_name ||= $set->epigenome->name;
   
       if($ftype_name ne $set->feature_type->name){
         throw('Unable to set distinct FeatureType for a mixed support '.
               "DataSet without a product FeatureSet:\t".$self->name);
       }
       
-      if($ctype_name ne $set->cell_type->name){
-        throw('Unable to set distinct CellType for a mixed support '.
+      if($epigenome_name ne $set->epigenome->name){
+        throw('Unable to set distinct Epigenome for a mixed support '.
               "DataSet without a product FeatureSet:\t".$self->name);
       }
     }
@@ -561,14 +562,14 @@ sub _set_Sets_and_types{
     push @{$self->{'supporting_sets'}->{$set->analysis->dbID()}}, $set;
   }
 
-  if(! defined $ftype){#and $ctype by proxy
+  if(! defined $ftype){#and $epigenome by proxy
     $ftype = $ssets->[0]->feature_type;
-    $ctype = $ssets->[0]->cell_type;
+    $epigenome = $ssets->[0]->epigenome;
   }
 
   #Reset dynamically defined attrs
   $self->{feature_type}    = $ftype;
-  $self->{cell_type}       = $ctype;
+  $self->{epigenome}       = $epigenome;
   $self->{feature_set}     = $fset;
   return;
 }
