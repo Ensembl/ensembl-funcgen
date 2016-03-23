@@ -107,7 +107,7 @@ sub fetch_input {   # fetch parameters...
   #can't process_params for experiments as it would actually fetch the Experiments
   #and fail with a widlcard
   $self->set_param_method('constraints_hash',
-                          $self->process_params([qw(feature_types cell_types states
+                          $self->process_params([qw(feature_types epigenomes states
                                                     analyses experimental_groups)],
                                                 1, 1));  #optional/as array flags
   #all these are OR filters except states which is an AND filter
@@ -120,13 +120,13 @@ sub fetch_input {   # fetch parameters...
       throw('You have specified mutually exclusive filter params for the '.
             "IdentifySetInputs analysis\nPlease specify restrict to ".
             'set_names, set_ids, experiments_like or a combination other filters '.
-            '(e.g. experimental_groups experiments feature_types cell_types analyses states');
+            '(e.g. experimental_groups experiments feature_types epigenomes analyses states');
     }
   }
   elsif( (grep {defined $_ } ($self->set_names, $self->set_ids, $self->experiments)) != 1){      
     throw('You must specify some IdentifySetInputs filter params either '.
           'set_names, set_ids, experiments_like or a combination of '.
-          'feature_types cell_types experiments experimental_groups states analyses');
+          'feature_types epigenomes experiments experimental_groups states analyses');
   }
 
   #Fetch set type specific inputs
@@ -778,7 +778,7 @@ sub _cache_InputSubset_output_id{
   if($set->is_control && 
      ($embargoed || $to_download)){ #Set embargoed/to_download in the ctrl cache
     #Recreate the cache key logic here
-    my $clabel = $set->cell_type->name;
+    my $clabel = $set->epigenome->name;
   
     if(! $x_grp_ctrls){
       $clabel .= '_'.$set->experiment->experimental_group->dbID;
@@ -801,7 +801,7 @@ sub _cache_InputSubset_output_id{
             
                 
     if($use_exp_id){
-      $clabel = $set->cell_type->name.'_'.$set->experiment->dbID;
+      $clabel = $set->epigenome->name.'_'.$set->experiment->dbID;
          
       if(exists $ctrl_cache->{$clabel} &&
          exists $ctrl_cache->{$clabel}->{input_subsets}->{$set->dbID}){
@@ -828,7 +828,7 @@ sub _cache_InputSubset_output_id{
     #how does this interact with control_experiments?
     #This should not cache as we don't want to identify_controls between experiments
     #too much? just auto identify controls?
-    my $clabel   = $set->cell_type->name;
+    my $clabel   = $set->epigenome->name;
       
     if(! $x_grp_ctrls){
       $clabel .= '_expgrp_'.$set->experiment->experimental_group->dbID;
@@ -839,7 +839,7 @@ sub _cache_InputSubset_output_id{
     my $exp_ctrl;
         
     if($use_exp_id){
-      $clabel   = $set->cell_type->name.'_exp_'.$set->experiment->dbID;
+      $clabel   = $set->epigenome->name.'_exp_'.$set->experiment->dbID;
       $self->helper->debug(3, 'Attempting to identify control for '.$set->name.' using control key '.$clabel);
       $exp_ctrl = $ctrl_cache->{$clabel} if exists $ctrl_cache->{$clabel};
     }
@@ -953,12 +953,12 @@ sub _cache_InputSubset_output_id{
         }       
       }
   
-      #Now add sig reps based on the exp/cell_type/feature_type input_subset_ids
+      #Now add sig reps based on the exp/epigenome/feature_type input_subset_ids
       #Currently exp ID is a synecdoche for this, but let's future proof
       #in case we do move to proper experiment definition i.e. a study with
       #>1 ctype/ftypes           
       #my $iset_cache_key = $set->experiment->dbID.'_'.
-      #                       $set->cell_type->dbID.'_'.
+      #                       $set->epigenome->dbID.'_'.
       #                       $set->feature_type->dbID;         
       #Cache key is essentially the set name
       #although this is more expensive to generate than a key just based on IDs
@@ -1042,7 +1042,7 @@ sub _cache_controls{
   foreach my $cexp_isset(@{$cexp_issets}){
        
     if($cexp_isset->is_control){   
-      $clabel    = $cexp_isset->cell_type->name;
+      $clabel    = $cexp_isset->epigenome->name;
       
       #Can we change this to u
       

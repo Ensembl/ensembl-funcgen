@@ -47,7 +47,7 @@ use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
   #in $analysis->parameters
   #bwa_index_root, gender, assembly fasta_fai
   #How are we going to genericise these?
-  #We can't specify ResultSet->cell_type->gender
+  #We can't specify ResultSet->epigenome->gender
   #and we don't want to tie the aligner to use of a ResultSet
   #Can we make these co-optional in the constructor?
   #i.e. we can pass gender 

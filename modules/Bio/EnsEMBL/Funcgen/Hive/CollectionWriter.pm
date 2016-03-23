@@ -33,7 +33,7 @@ sub fetch_input {
   
   # This is required by sam_ref_fai which is called by get_alignment_file_by_ResultSet_formats
   # Move this to get_alignment_file_by_ResultSet_formats?
-  $self->set_param_method('cell_type', $rset->cell_type, 'required'); 
+  $self->set_param_method('epigenome', $rset->epigenome, 'required'); 
   
   my @file_to_delete_after_cell_line_has_been_processed;  
 

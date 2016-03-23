@@ -131,7 +131,7 @@ sub get_Importer_params{
      -result_set_name     => undef, #$self->param('input_set'), #not implemented yet
      -feature_type_name   => undef,#$self->param('feature_type'),
      #-feature_analysis    => undef,
-     -cell_type_name      => undef, #$self->param('cell_type'),
+     -epigenome_name      => undef, #$self->param('epigenome'),
   
       
      #-batch_job      => undef,

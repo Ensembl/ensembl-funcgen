@@ -106,7 +106,7 @@ sub fetch_input {
    
    #die();
   
-  my $sam_ref_fai = $self->sam_ref_fai($rset->cell_type->gender);  #Just in case we need to convert
+  my $sam_ref_fai = $self->sam_ref_fai($rset->epigenome->gender);  #Just in case we need to convert
 
   #These maybe things like extra input/reference files
   #where we don't want to store the filepath in the DB.

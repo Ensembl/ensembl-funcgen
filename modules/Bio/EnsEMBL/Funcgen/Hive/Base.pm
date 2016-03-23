@@ -75,12 +75,12 @@ $main::_no_log      = 1;
 #Could our this to make it dynamically mutable, i.e. redefine it from a sub class
 #Need this here rather than EFGUtils so we can test
 my %param_class_info = 
- (cell_types          => ['CellType',          'fetch_by_name'],
+ (epigenomes          => ['Epigenome',         'fetch_by_name'],
   feature_types       => ['FeatureType',       'fetch_by_name'],
   analyses            => ['Analysis',          'fetch_by_logic_name'],
   experimental_groups => ['ExperimentalGroup', 'fetch_by_name'],
   experiments         => ['Experiment',        'fetch_by_name'],
-  cell_type           => ['CellType',          'fetch_by_name'],
+  epigenome           => ['Epigenome',         'fetch_by_name'],
   feature_type        => ['FeatureType',       'fetch_by_name'],
   analysis            => ['Analysis',          'fetch_by_logic_name'],
   experimental_group  => ['ExperimentalGroup', 'fetch_by_name']       );
@@ -1025,7 +1025,7 @@ sub get_alignment_files_by_ResultSet_formats {
   $path .= '.unfiltered' if $filter_format;
   
   my $params = {debug              => $self->debug,
-		ref_fai            => $self->sam_ref_fai($rset->cell_type->gender),  #Just in case we need to convert
+		ref_fai            => $self->sam_ref_fai($rset->epigenome->gender),  #Just in case we need to convert
 		filter_from_format => $filter_format,
 		#skip_rmdups        => 1, # Duplicate removal no longer supported
 		all_formats        => $all_formats,

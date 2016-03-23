@@ -122,7 +122,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
     -ROLLBACK             => $self->param('rollback'),
     -RECOVER              => $self->param('recover'),
     -SLICES               => $self->slices,    
-    -CELL_TYPE            => $rset->cell_type,
+    -EPIGENOME            => $rset->epigenome,
     -FEATURE_TYPE         => $rset->feature_type                    );  
 
   $self->param('output_id', 

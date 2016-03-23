@@ -226,7 +226,7 @@ sub run {
     $self->branch_job_group(2, [{%batch_params,
                                  output_dir => $current_working_directory, #we could regenerate this from result_set and run controls
 
-                                 gender     => $rset->cell_type->gender,
+                                 gender     => $rset->epigenome->gender,
                                  analysis   => $rset->analysis->logic_name,   
                                  query_file => $fastq_file}]);
   }

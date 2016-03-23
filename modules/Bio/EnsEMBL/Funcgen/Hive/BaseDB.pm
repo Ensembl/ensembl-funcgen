@@ -373,7 +373,7 @@ Only if they have been specified or are required
 
 
 #Are these mandatory if accessed?
-sub cell_type    { return $_[0]->param_silent('cell_type');} #optional!
+sub epigenome    { return $_[0]->param_silent('epigenome');} #optional!
 
 sub feature_type { return $_[0]->param('feature_type'); }
 

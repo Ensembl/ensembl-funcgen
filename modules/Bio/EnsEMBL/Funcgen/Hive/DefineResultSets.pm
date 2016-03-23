@@ -155,9 +155,9 @@ sub run {
     #
     my $is_idr_feature_type = $self->is_idr_FeatureType($feature_type);
     
-    # Cell type object for 'K562:hist:BR1'
+    # Epigenome object for 'K562:hist:BR1'
     #
-    my $cell_type           = $signal_input_subsets->[0]->cell_type;
+    my $epigenome           = $signal_input_subsets->[0]->epigenome;
     
     #Define a single rep set with all of the InputSubsets 
     #i.e. non-IDR merged or post-IDR merged     
@@ -203,7 +203,7 @@ sub run {
 	-ROLLBACK             => $self->param_silent('rollback'),
 	-RECOVER              => $self->param_silent('recover'),
 	-FULL_DELETE          => $self->param_silent('full_delete'),
-	-CELL_TYPE            => $cell_type,
+	-EPIGENOME            => $epigenome,
 	-FEATURE_TYPE         => $feature_type
       };
 
