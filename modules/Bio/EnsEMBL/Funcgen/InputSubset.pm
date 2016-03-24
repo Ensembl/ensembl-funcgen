@@ -37,12 +37,13 @@ Bio::EnsEMBL::Funcgen::InputSubset - A module to represent InputSubset object.
 use Bio::EnsEMBL::Funcgen::InputSubset;
 
 my $input_subset = Bio::EnsEMBL::Funcgen::InputSubset->new
-                    (-epigenome     => $epigenome,
-                     -experiment    => $exp,
-                     -feature_type  => $feature_type,
-                     -is_control    => $is_control,
-                     -name          => $name,
-                     -replicate     => $iss_rep);
+                    (-epigenome            => $epigenome,
+                     -experiment           => $exp,
+                     -feature_type         => $feature_type,
+                     -is_control           => $is_control,
+                     -name                 => $name,
+                     -biological_replicate => $iss_br,
+                     -technical_replicate) => $iss_tr,;
 
 ($input_subset) = @{$input_subset_adaptor->store($input_subset)};
 
@@ -72,12 +73,13 @@ use base qw( Bio::EnsEMBL::Funcgen::Set );
 =head2 new
 
   Example    : my $iss = Bio::EnsEMBL::Funcgen::InputSubset->new
-                            (-epigenome     => $epigenome,
-                             -experiment    => $exp,
-                             -feature_type  => $feature_type,
-                             -is_control    => $is_control,
-                             -name          => $name,
-                             -replicate     => $iss_rep);
+                            (-epigenome            => $epigenome,
+                             -experiment           => $exp,
+                             -feature_type         => $feature_type,
+                             -is_control           => $is_control,
+                             -name                 => $name,
+                             -biological_replicate => $iss_br,
+                             -technical_replicate  => $iss_tr,);
 
   Description: Constructor for InputSubset objects.
   Returntype : Bio::EnsEMBL::Funcgen::InputSubset
@@ -92,8 +94,8 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($is_control, $name, $rep) = rearrange
-   (['IS_CONTROL', 'NAME', 'REPLICATE'], @_);
+  my ($is_control, $name, $br, $tr) = rearrange
+   (['IS_CONTROL', 'NAME', 'BIOLOGICAL_REPLICATE', 'TECHNICAL_REPLICATE'], @_);
 
   #FeatureType and Analysis validated in Set
   #Epigenome and Experiment validated in Set if defined  
@@ -113,10 +115,12 @@ sub new {
   }
 
 
-  $self->{is_control}   = $is_control;
-  $self->{name}         = $name;
-  $self->{replicate}    = $rep;
-  #replicate is fine undef as it is not a boolean field
+  $self->{is_control}           = $is_control;
+  $self->{name}                 = $name;
+  $self->{biological_replicate} = $br;
+  $self->{technical_replicate}  = $tr;
+
+  #replicates are fine undef as they are not a boolean field
 
   return $self;
 }
@@ -129,11 +133,44 @@ sub new {
   Returntype : Integer
   Exceptions : None
   Caller     : General
+  Status     : Deprecated
+
+=cut
+
+sub replicate { 
+  deprecate(
+    'Bio::EnsEMBL::Funcgen::InputSubset::replicate has been deprecated and will be removed in Ensembl release 89 '
+        . 'Please use Bio::EnsEMBL::Funcgen::InputSubset::technical_replicate instead.'
+  );
+
+  return shift->{technical_replicate};
+}
+
+=head2 biological_replicate
+
+  Example    : my $br = $iss->biological_replicate;
+  Description: Getter for the biological replicate attribute of this InputSubset.
+  Returntype : Integer
+  Exceptions : None
+  Caller     : General
   Status     : Stable
 
 =cut
 
-sub replicate { return shift->{replicate}; }
+sub biological_replicate { return shift->{biological_replicate}; }
+
+=head2 technical_replicate
+
+  Example    : my $tr = $iss->technical_replicate;
+  Description: Getter for the technical replicate attribute of this InputSubset.
+  Returntype : Integer
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub technical_replicate { return shift->{technical_replicate}; }
 
 
 =head2 is_control

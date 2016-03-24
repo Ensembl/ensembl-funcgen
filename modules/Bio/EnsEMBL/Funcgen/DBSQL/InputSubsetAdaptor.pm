@@ -162,7 +162,8 @@ sub _columns {
       iss.feature_type_id
       iss.is_control
       iss.name
-      iss.replicate
+      iss.biological_replicate
+      iss.technical_replicate
       iss.analysis_id
       );
 }
@@ -208,7 +209,8 @@ sub _objs_from_sth {
       $ft_id,
       $is_control,
       $name,
-      $replicate,
+      $biological_replicate,
+      $technical_replicate,
       $analysis_id
      );
 
@@ -225,7 +227,8 @@ sub _objs_from_sth {
       \$ft_id,
       \$is_control,
       \$name,
-      \$replicate,
+      \$biological_replicate,
+      \$technical_replicate,
       \$analysis_id
       );
 
@@ -266,15 +269,16 @@ sub _objs_from_sth {
       throw("Could not fetch linked Analysis (dbID: $analysis_id) for InputSubset (dbID: $iss_id)");
 
     push @result, Bio::EnsEMBL::Funcgen::InputSubset->new (
-       -dbID         => $iss_id,
-       -EPIGENOME    => $epigenomes{$epi_id},
-       -EXPERIMENT   => $exps{$exp_id},
-       -FEATURE_TYPE => $ftypes{$ft_id},
-       -IS_CONTROL   => $is_control,
-       -NAME         => $name,
-       -REPLICATE    => $replicate,
-       -ANALYSIS     => $analysis,
-       -ADAPTOR      => $self,
+       -dbID                 => $iss_id,
+       -EPIGENOME            => $epigenomes{$epi_id},
+       -EXPERIMENT           => $exps{$exp_id},
+       -FEATURE_TYPE         => $ftypes{$ft_id},
+       -IS_CONTROL           => $is_control,
+       -NAME                 => $name,
+       -BIOLOGICAL_REPLICATE => $biological_replicate,
+       -TECHNICAL_REPLICATE  => $technical_replicate,
+       -ANALYSIS             => $analysis,
+       -ADAPTOR              => $self,
       );
   }
   
@@ -312,7 +316,8 @@ sub store{
             feature_type_id,
             is_control,
             name,
-            replicate,
+            biological_replicate,
+            technical_replicate,
             analysis_id
         )
         VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -337,13 +342,14 @@ sub store{
     $self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis',             $subset->analysis);
     
 
-    $sth->bind_param(1, $subset->epigenome->dbID,     SQL_INTEGER);
-    $sth->bind_param(2, $subset->experiment->dbID,    SQL_INTEGER);
-    $sth->bind_param(3, $subset->feature_type->dbID,  SQL_INTEGER);
-    $sth->bind_param(4, $subset->is_control,          SQL_INTEGER);
-    $sth->bind_param(5, $subset->name,                SQL_VARCHAR);
-    $sth->bind_param(6, $subset->replicate,           SQL_INTEGER);
-    $sth->bind_param(7, $subset->analysis->dbID,      SQL_INTEGER);
+    $sth->bind_param(1, $subset->epigenome->dbID,      SQL_INTEGER);
+    $sth->bind_param(2, $subset->experiment->dbID,     SQL_INTEGER);
+    $sth->bind_param(3, $subset->feature_type->dbID,   SQL_INTEGER);
+    $sth->bind_param(4, $subset->is_control,           SQL_INTEGER);
+    $sth->bind_param(5, $subset->name,                 SQL_VARCHAR);
+    $sth->bind_param(6, $subset->biological_replicate, SQL_INTEGER);
+    $sth->bind_param(7, $subset->technical_replicate,  SQL_INTEGER);
+    $sth->bind_param(8, $subset->analysis->dbID,       SQL_INTEGER);
     $sth->execute();
 
     $subset->dbID($self->last_insert_id);
