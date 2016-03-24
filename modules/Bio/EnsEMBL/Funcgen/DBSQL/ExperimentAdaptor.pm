@@ -233,6 +233,7 @@ sub _true_tables {
 
 sub _columns {
 	return qw( e.experiment_id e.name e.experimental_group_id
+             e.control_id e.is_control
 	           e.primary_design_type e.description e.mage_xml_id
 	           e.feature_type_id e.epigenome_id e.archive_id e.display_url);
 }
@@ -253,17 +254,18 @@ sub _columns {
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
 
-	my (@result, $exp_id, $name, $group_id, $p_design_type, 
+	my (@result, $exp_id, $name, $group_id, $control_id, $is_control, $p_design_type, 
 	    $description, $xml_id, $epigenome_id, $ft_id, $archive_id, $url);
 
 	my $eg_adaptor   = $self->db->get_ExperimentalGroupAdaptor;
   my $epi_adaptor  = $self->db->get_EpigenomeAdaptor;
   my $ft_adaptor   = $self->db->get_FeatureTypeAdaptor;
+  my $exp_adaptor  = $self->db->get_ExperimentAdaptor;
 
-	$sth->bind_columns(\$exp_id, \$name, \$group_id, \$p_design_type, 
+	$sth->bind_columns(\$exp_id, \$name, \$group_id, \$control_id, \$is_control,\$p_design_type, 
 	                   \$description, \$xml_id, \$ft_id, \$epigenome_id, \$archive_id, \$url);
 
-  my (%ftypes, %epigenomes);
+  my (%ftypes, %epigenomes, %controls);
 
 	while ( $sth->fetch() ) {
 
@@ -285,6 +287,14 @@ sub _objs_from_sth {
       }
     }
 
+    if(! exists $controls{$control_id}){
+      $controls{$control_id} = $exp_adaptor->fetch_by_dbID($control_id);
+    
+      if(! defined $controls{$control_id}){
+        throw("Could not fetch linked control Experiment (dbID: $control_id) for Experiment:\t$name");
+      }
+    }
+
 
 	  push @result, Bio::EnsEMBL::Funcgen::Experiment->new
      (
@@ -299,6 +309,8 @@ sub _objs_from_sth {
       -ARCHIVE_ID          => $archive_id,
       -DISPLAY_URL         => $url,
       -EXPERIMENTAL_GROUP  => $group,
+      -CONTROL             => $controls{$control_id},
+      -IS_CONTROL          => $is_control,
      );
 	}
 	
@@ -324,10 +336,10 @@ sub store {
   my $self = shift;
   my @exps = @_;
 
-	my $sth = $self->prepare('INSERT INTO experiment(name, experimental_group_id,
-	                          primary_design_type, description, mage_xml_id, feature_type_id, 
-	                          epigenome_id, archive_id, display_url)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)');
+	my $sth = $self->prepare('INSERT INTO experiment(name, experimental_group_id, control_id,
+	                          is_control, primary_design_type, description, mage_xml_id, 
+	                          feature_type_id, epigenome_id, archive_id, display_url)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
 
   foreach my $exp (@exps) {
     assert_ref($exp, 'Bio::EnsEMBL::Funcgen::Experiment');
@@ -337,7 +349,8 @@ sub store {
       my $exp_group = $exp->experimental_group;
       $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ExperimentalGroup', $exp_group);
       $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType',       $exp->feature_type);
-      $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Epigenome',          $exp->epigenome);
+      $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Epigenome',         $exp->epigenome);
+      $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Experiment',        $exp->get_control);
 
 		  #Validate doesn't exist aleady
 		
@@ -348,15 +361,17 @@ sub store {
   
   		$exp = $self->update_mage_xml_by_Experiment($exp) if(defined $exp->mage_xml());
 
-  		$sth->bind_param(1,  $exp->name,                     SQL_VARCHAR);
-  		$sth->bind_param(2,  $exp_group->dbID,               SQL_INTEGER);
-  		$sth->bind_param(3,  $exp->primary_design_type,      SQL_VARCHAR);
-  		$sth->bind_param(4,  $exp->description,              SQL_VARCHAR);
-      $sth->bind_param(5,  $exp->mage_xml_id,              SQL_INTEGER);
-      $sth->bind_param(6,  $exp->feature_type->dbID,       SQL_INTEGER); 
-      $sth->bind_param(7,  $exp->epigenome->dbID,          SQL_INTEGER);
-      $sth->bind_param(8,  $exp->archive_id,               SQL_VARCHAR); 
-      $sth->bind_param(9, $exp->display_url,               SQL_VARCHAR);
+  		$sth->bind_param(1,  $exp->name,                      SQL_VARCHAR);
+      $sth->bind_param(2,  $exp_group->dbID,                SQL_INTEGER);
+      $sth->bind_param(3,  $exp->get_control->dbID,         SQL_INTEGER);
+  		$sth->bind_param(4,  $exp->is_control,                SQL_TINYINT);
+  		$sth->bind_param(5,  $exp->primary_design_type,       SQL_VARCHAR);
+  		$sth->bind_param(6,  $exp->description,               SQL_VARCHAR);
+      $sth->bind_param(7,  $exp->mage_xml_id,               SQL_INTEGER);
+      $sth->bind_param(8,  $exp->feature_type->dbID,        SQL_INTEGER); 
+      $sth->bind_param(9,  $exp->epigenome->dbID,           SQL_INTEGER);
+      $sth->bind_param(10,  $exp->archive_id,               SQL_VARCHAR); 
+      $sth->bind_param(11, $exp->display_url,               SQL_VARCHAR);
   		$sth->execute();
   		$exp->dbID($self->last_insert_id);
   		$exp->adaptor($self);

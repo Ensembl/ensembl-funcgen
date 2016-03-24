@@ -68,6 +68,8 @@ use base qw( Bio::EnsEMBL::Funcgen::Storable );
 
   Arg [-NAME]                : String - experiment name
   Arg [-EXPERIMENTAL_GROUP]  : Bio::EnsEMBL::Funcgen ExperimentalGroup associated with this experiment
+  Arg [-CONTROL]             : Bio::EnsEMBL::Funcgen::Experiment object which is used as control for this experiment,
+  Arg [-IS_CONTROL]          : Boolean - defines whether this experiment is control or not
   Arg [-DATE]                : String - Date of the experiment (YYYY-MM-DD)
   Arg [-PRIMARY_DESIGN_TYPE] : String - MGED term for the primary design of teh experiment e.g. binding_site_identification
   Arg [-DESCRIPTION]         : String
@@ -75,6 +77,8 @@ use base qw( Bio::EnsEMBL::Funcgen::Storable );
   Example    : my $array = Bio::EnsEMBL::Funcgen::Experiment->new
                 (-NAME                => $name,
                  -EXPERIMENTAL_GROUP  => $group,
+                 -CONTROL             => $control,
+                 -IS_CONTROL          => 1,
                  -PRIMARY_DESIGN_TYPE => $p_design_type,
                  -DESCRIPTION         => $description,
                  -ARCHIVE_ID          => 'SRX000000',
@@ -94,22 +98,27 @@ sub new {
   my $class  = ref($caller) || $caller;
   my $self   = $class->SUPER::new(@_);
 
-  my ($name, $group, $p_dtype, 
+  my ($name, $group, $control, $is_control, $p_dtype, 
       $desc, $xml, $xml_id, $ftype, $epigenome, $archive_id, $url) = rearrange
-   ( ['NAME', 'EXPERIMENTAL_GROUP', 'PRIMARY_DESIGN_TYPE',
+   ( ['NAME', 'EXPERIMENTAL_GROUP', 'CONTROL', 'IS_CONTROL', 'PRIMARY_DESIGN_TYPE',
       'DESCRIPTION', 'MAGE_XML', 'MAGE_XML_ID', 'FEATURE_TYPE', 'EPIGENOME',
       'ARCHIVE_ID', 'DISPLAY_URL'], @_ );
 
   # Mandatory attr checks
   throw('You must provide a name parameter') if ! defined $name;
-assert_ref( $group,     'Bio::EnsEMBL::Funcgen::ExperimentalGroup' );
-assert_ref( $epigenome, 'Bio::EnsEMBL::Funcgen::Epigenome' );
-assert_ref( $ftype,     'Bio::EnsEMBL::Funcgen::FeatureType' );
+  throw('You must provide a is_control parameter') if ! defined $is_control;
+
+  assert_ref( $group,     'Bio::EnsEMBL::Funcgen::ExperimentalGroup' );
+  assert_ref( $epigenome, 'Bio::EnsEMBL::Funcgen::Epigenome' );
+  assert_ref( $ftype,     'Bio::EnsEMBL::Funcgen::FeatureType' );
+  assert_ref( $control,   'Bio::EnsEMBL::Funcgen::Experiment') if defined $control;
 
   
   #Direct assignment here so we avoid setter test in methods
   $self->{name}                = $name;
   $self->{group}               = $group;
+  $self->{control}             = $control if defined $control;
+  $self->{is_control}          = $is_control;
   $self->{primary_design_type} = $p_dtype    if defined $p_dtype; #MGED term for primary design type
   $self->{description}         = $desc       if defined $desc;
   $self->{epigenome}           = $epigenome;
@@ -223,6 +232,37 @@ sub experimental_group{
 
 sub get_ExperimentalGroup{ return shift->{group}; }
 
+
+=head2 is_control
+
+  Example     : my $is_control = $exp->is_control();
+  Description : Getter for the is_control attribute
+  Returntype  : Boolean
+  Exceptions  : None
+  Caller      : General
+  Status      : Stable
+
+=cut
+
+sub is_control{
+  return shift->{is_control};
+}
+
+
+=head2 get_control
+
+  Example     : my $control_exp = $exp->get_control();
+  Description : Getter for the experiment which is used as control
+  Returntype  : Bio::EnsEMBL::Funcgen::Experiment
+  Exceptions  : None
+  Caller      : General
+  Status      : Stable
+
+=cut
+
+sub get_control{
+  return shift->{control};
+}
 
 =head2 description
 
