@@ -338,7 +338,6 @@ sub _columns {
             rsi.table_id               rs.name
             rs.epigenome_id            rs.feature_type_id
             rs.feature_class           dr.path
-            rs.replicate
            );
 }
 
@@ -435,7 +434,7 @@ sub _objs_from_sth {
          -FEATURE_CLASS   => $feat_class,
          -ADAPTOR         => $self,
          -DBFILE_PATH     => $dbfile_path,
-         -REPLICATE       => $rep,        );
+         );
     }
 
     $rset->_add_table_id($table_id, $cc_id);

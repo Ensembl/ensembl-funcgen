@@ -109,8 +109,8 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($table_name, $table_id, $dbfile_path, $support, $rep)
-    = rearrange(['TABLE_NAME', 'TABLE_ID', 'DBFILE_PATH', 'SUPPORT', 'REPLICATE'], @_);
+  my ($table_name, $table_id, $dbfile_path, $support)
+    = rearrange(['TABLE_NAME', 'TABLE_ID', 'DBFILE_PATH', 'SUPPORT'], @_);
   # TEST MANDATORY PARAMS
   # explicit type check here to avoid invalid types being imported as NULL
   # and subsequently throwing errors on retrieval
@@ -118,7 +118,6 @@ sub new {
 
   # set default type until this is moved to db_file_registry.format
   # This is not possible yet as 5mC is classed as DNA not DNA Modification!!!
-  $self->{replicate}      = $rep;
   $self->{table_ids}      = {};
 
 
@@ -229,12 +228,15 @@ sub reset_relational_attributes{
   Returntype : Int
   Exceptions : None
   Caller     : Genereal
-  Status     : At risk
+  Status     : Deprecated
 
 =cut
 
 sub replicate{
-  return shift->{replicate};
+deprecate(
+          'Bio::EnsEMBL::Funcgen::ResultSet::replicate() has been deprecated '
+        . 'and will be removed in Ensembl release 89.' );
+  return 0;
 }
 
 sub add_support{
