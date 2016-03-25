@@ -8,7 +8,7 @@ When a method is deprecated, a deprecation warning is thrown whenever the method
 The warning also contains instructions on replacing the deprecated method and when it will be removed.
 A year after deprecation (4 Ensembl releases), the method is removed from the API.
 
-### Removed in Ensembl Release 89 ###
+### To be removed in Ensembl Release 89 ###
  - Bio::EnsEMBL::Funcgen::**ResultSet**::*replicate()*
  - Bio::Ensembl::Funcgen::DBSQL::**CellTypeAdaptor**
  - Bio::Ensembl::Funcgen::**CellType**
@@ -26,7 +26,7 @@ A year after deprecation (4 Ensembl releases), the method is removed from the AP
  - Bio::EnsEMBL::Funcgen::DBSQL::**MotifFeatureAdaptor**::*fetch_all_by_Slice_CellType()*
  - Bio::EnsEMBL::Funcgen::DBSQL::**SetAdaptor**::*fetch_all_by_CellType()*
 
-### Removed in Ensembl Release 88 ###
+### To be removed in Ensembl Release 88 ###
  - Bio::Ensembl::Funcgen::**Channel**
  - Bio::Ensembl::Funcgen::DBSQL::**ChannelAdaptor**
  - Bio::Ensembl::Funcgen::**ExperimentalChip**
