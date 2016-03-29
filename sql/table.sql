@@ -55,7 +55,7 @@
 @column bound_start_length      Distance between start of the feature and start of the bound region. Bound regions are used for promoters only. They define the flanking regions. It is an area that is predicted t
 @column bound_end_length        Distance between end of the bound region and end of this feature
 @column activity                Indicates the type of activity of this feature in this epigenome
-@column epigenome_count         Integer, number of epigenomes in which this feature is active
+@column epigenome_count         Integer, number of cell types in which this feature is active
 
 @see feature_set
 @see feature_type
@@ -1625,7 +1625,7 @@ CREATE TABLE external_synonym (
 
 DROP TABLE IF EXISTS external_db;
 CREATE TABLE external_db (
-  external_db_id              SMALLINT(5) UNSIGNED NOT NULL auto_increment,
+  external_db_id              INTEGER UNSIGNED NOT NULL AUTO_INCREMENT,
   db_name                     VARCHAR(100) NOT NULL,
   db_release                  VARCHAR(255),
   status                      ENUM('KNOWNXREF','KNOWN','XREF','PRED','ORTH', 'PSEUDO') NOT NULL,
@@ -1722,7 +1722,7 @@ Information about the database that the external object is stored in is held in 
 DROP TABLE IF EXISTS xref;
 CREATE TABLE xref (
    xref_id                    INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
-   external_db_id             SMALLINT UNSIGNED NOT NULL,
+   external_db_id             INTEGER UNSIGNED NOT NULL,
    dbprimary_acc              VARCHAR(40) NOT NULL,
    display_label              VARCHAR(128) NOT NULL,
    version                    VARCHAR(10) DEFAULT '0' NOT NULL,
@@ -1802,7 +1802,7 @@ CREATE TABLE `unmapped_object` (
   `unmapped_object_id` int(10) unsigned NOT NULL auto_increment,
   `type` enum('xref', 'probe2transcript', 'array_mapping') NOT NULL,
   `analysis_id` smallint(5) unsigned NOT NULL,
-  `external_db_id` smallint(5) unsigned default NULL,
+  `external_db_id` integer unsigned default NULL,
   `identifier` varchar(255) NOT NULL,
   `unmapped_reason_id` INT(10) unsigned NOT NULL,
   `query_score` double default NULL,
