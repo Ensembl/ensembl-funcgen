@@ -1623,7 +1623,7 @@ sub get_set_prefix_from_Set{
      $ftype = $set->feature_type->name;
   }
 
-  return $set->cell_type->name.'_'.$ftype.'_'.$study_name;
+  return $set->epigenome->name.'_'.$ftype.'_'.$study_name;
 }
 
 #This currently only works for Experiments
@@ -1646,7 +1646,13 @@ sub get_study_name_from_Set {
   }
 
   my ($exp_name, $ftype);
-  my $ctype = $set->cell_type->name;
+  
+  if (! defined $set->epigenome) {
+    use Carp;
+    confess("Epigenome from the set must be defined!");
+  }
+  
+  my $ctype = $set->epigenome->name;
 
   if($control){
     $control = _get_a_control_InputSubset($set);

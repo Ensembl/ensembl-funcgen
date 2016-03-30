@@ -850,10 +850,10 @@ sub define_ResultSet {
     assert_ref($set, 'Bio::EnsEMBL::Funcgen::InputSubset', 'InputSubset support');
 
     #This isn't fully robust as we are not testing if they are defined
-
-    if($ctype->name ne $set->cell_type->name){
+    
+    if($ctype->name ne $set->epigenome->name){
       throw('Found mismatch between InputSubset '.$set->name.
-        " CellType and CellType specified:\n\t".$set->cell_type->name.
+        " CellType and CellType specified:\n\t".$set->epigenome->name.
         "\t".$ctype->name);
     }
 
@@ -882,7 +882,7 @@ sub define_ResultSet {
   my $rset = Bio::EnsEMBL::Funcgen::ResultSet->new
     (-name          => $name,
      -feature_type  => $ftype,
-     -cell_type     => $ctype,
+     -epigenome     => $ctype,
      -support       => $sets,
      -analysis      => $anal,
      -feature_class => $fclass   );
@@ -914,7 +914,7 @@ sub define_FeatureSet {
     (
      -name          => $name,
      -feature_type  => $ftype,
-     -cell_type     => $ctype,
+     -epigenome     => $ctype,
      -analysis      => $anal,
      -feature_class => $fclass,
      -description   => $desc,
@@ -1136,7 +1136,7 @@ sub _validate_Set_config {
   my $self = shift;
   my ($db, $rollback, $slices, $ftype, $ctype, $fclass, $recover, $full_delete) =
    rearrange( ['DBADAPTOR', 'ROLLBACK', 'SLICES', 'FEATURE_TYPE',
-               'CELL_TYPE', 'FEATURE_CLASS', 'RECOVER', 'FULL_DELETE'], @_ );
+               'EPIGENOME', 'FEATURE_CLASS', 'RECOVER', 'FULL_DELETE'], @_ );
 
   my $rollback_level = 0;
 
@@ -1426,7 +1426,7 @@ sub rollback_FeatureSet {
 
     #Delete regbuild strings first
     if ( $fset->feature_class eq 'regulatory' ) {
-      $sql = "DELETE from regbuild_string where name like 'regbuild." . $fset->cell_type->name.".%'";
+      $sql = "DELETE from regbuild_string where name like 'regbuild." . $fset->epigenome->name.".%'";
       $db->rollback_table( $sql, 'regbuild_string', 'regbuild_string_id' );
       $self->log( "Deleted regbuild_string entries for:\t" . $fset->name );
     }

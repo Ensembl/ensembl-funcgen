@@ -40,7 +40,7 @@ use Bio::EnsEMBL::Funcgen::InputSet;
 my $inp_set = Bio::EnsEMBL::Funcgen::InputSet->new
                  (
                   -ANALYSIS     => $anal,
-                  -CELL_TYPE    => $ctype,
+                  -EPIGENOME    => $ctype,
                   -EXPERIMENT   => $exp,
                   -FEATURE_TYPE => $ftype,
                   -NAME         => 'SRR00000.fastq.gz',
@@ -79,7 +79,7 @@ deprecate(
 	                -DBID         => $dbID,
                   -ADAPTOR      => $self,
                   -ANALYSIS     => $anal,
-                  -CELL_TYPE    => $ctype,
+                  -EPIGENOME    => $ctype,
                   -EXPERIMENT   => $exp,
                   -FEATURE_TYPE => $ftype,
                   -NAME         => 'SRR00000.fastq.gz',
@@ -278,7 +278,7 @@ sub reset_relational_attributes{
   my ($self, $params_hash, $no_db_reset) = @_;
 
   my ($analysis, $cell_type, $experiment, $feature_type, $input_subsets) =
-      rearrange(['ANALYSIS', 'CELL_TYPE', 'EXPERIMENT', 'FEATURE_TYPE', 'SUBSETS'],
+      rearrange(['ANALYSIS', 'EPIGENOME', 'EXPERIMENT', 'FEATURE_TYPE', 'SUBSETS'],
       %$params_hash);
 
   if(! (defined $analysis &&
