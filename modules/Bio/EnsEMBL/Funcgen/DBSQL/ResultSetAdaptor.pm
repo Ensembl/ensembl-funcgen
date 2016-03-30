@@ -410,7 +410,7 @@ sub _objs_from_sth {
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor;
   my $epi_adaptor = $self->db->get_EpigenomeAdaptor;
   $sth->bind_columns(\$dbid, \$anal_id, \$table_name, \$cc_id, \$table_id,
-                     \$name, \$epigenome_id, \$ftype_id, \$feat_class, \$dbfile_path, \$rep);
+                     \$name, \$epigenome_id, \$ftype_id, \$feat_class, \$dbfile_path);
 
   while ( $sth->fetch ) {
 
