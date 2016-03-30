@@ -97,7 +97,7 @@ sub pipeline_analyses {
 	#
 	sql => qq(
 	  update result_set, epigenome, experiment 
-	  set result_set.experiment_id = experiment.experiment_id, result_set.replicate = #replicate#
+	  set result_set.experiment_id = experiment.experiment_id
 	  where epigenome.epigenome_id=experiment.epigenome_id and epigenome.epigenome_id=result_set.epigenome_id and experiment.feature_type_id=result_set.feature_type_id
 	  and result_set_id = #dbID#
 	  ),
@@ -166,6 +166,17 @@ sub pipeline_analyses {
 	run_controls => 1,
      },
      -flow_into => {
+	  MAIN => 'RemoveDuplicateControlAlignments',
+       },
+     -rc_name => 'normal_monitored_2GB',
+    },
+    {
+     -logic_name => 'RemoveDuplicateControlAlignments',
+     -module     => 'Bio::EnsEMBL::Funcgen::Hive::RemoveDuplicateAlignments',
+     -parameters => {
+	run_controls => 1,
+     },
+     -flow_into => {
 	  MAIN => 'JobFactorySignalProcessing',
        },
      -rc_name => '64GB_3cpu',
@@ -203,8 +214,19 @@ sub pipeline_analyses {
       	run_controls => 0,
      },
      -flow_into => {
-	MAIN => 'JobFactoryDefineMergedDataSet'
+	MAIN => 'RemoveDuplicateAlignments'
      },
+     -rc_name => 'normal_monitored_2GB',
+    },
+    {
+     -logic_name => 'RemoveDuplicateAlignments',
+     -module     => 'Bio::EnsEMBL::Funcgen::Hive::RemoveDuplicateAlignments',
+     -parameters => {
+	run_controls => 0,
+     },
+     -flow_into => {
+	  MAIN => 'JobFactoryDefineMergedDataSet',
+       },
      -rc_name => '64GB_3cpu',
     },
     {
@@ -215,8 +237,19 @@ sub pipeline_analyses {
 	permissive_peaks => $self->o('permissive_peaks')
       },
      -flow_into => {
-	MAIN => 'JobFactoryPermissivePeakCalling'
+	MAIN => 'RemoveDuplicateReplicateAlignments'
      },
+     -rc_name => 'normal_monitored_2GB',
+    },
+    {
+     -logic_name => 'RemoveDuplicateReplicateAlignments',
+     -module     => 'Bio::EnsEMBL::Funcgen::Hive::RemoveDuplicateAlignments',
+     -parameters => {
+	run_controls => 0,
+     },
+     -flow_into => {
+	  MAIN => 'JobFactoryPermissivePeakCalling',
+       },
      -rc_name => '64GB_3cpu',
     },
     {

@@ -24,43 +24,24 @@ limitations under the License.
 
 =head1 NAME
 
-Bio::EnsEMBL::Hive::Funcgen::MergeAlignments
-
-=head1 DESCRIPTION
-
-Merges bam alignments from split (replicate or merged) fastq files.
+Bio::EnsEMBL::Hive::Funcgen::RemoveDuplicateAlignments
 
 =cut
 
-package Bio::EnsEMBL::Funcgen::Hive::MergeAlignments;
+package Bio::EnsEMBL::Funcgen::Hive::RemoveDuplicateAlignments;
 
 use strict;
 
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd );
-use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools;# merge_bams 
+use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools;
 
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
 sub fetch_input {
 
   my $self = shift;
-
-  $self->SUPER::fetch_input();
+  $self->SUPER::fetch_input();  
   my $result_set = $self->fetch_Set_input('ResultSet');
-
-  $self->get_param_method('bam_files',  'silent');
-  $self->get_param_method('fastq_files',  'silent');
-
-  if((! $self->bam_files ) && $self->fastq_files) {
-    my $bam_file;
-    
-    # Creates the name of the bam files from the names of the fastq files
-    #
-    $self->bam_files([ map {($bam_file = $_) =~ s/\.fastq_([0-9]+)$/.$1.bam/o; $bam_file} @{$self->fastq_files} ]);
-    
-  } elsif(! $self->bam_files) {
-    $self->throw_no_retry('No bam_files or fastq_files have been defined');    
-  }
   $self->get_param_method('run_controls',  'required');
   return;
 }
@@ -71,28 +52,19 @@ sub run {
   my $result_set = $self->ResultSet;
   my $cmd;
   
-  if($self->fastq_files) {
-  
-    # Run with no exit flag so we don't fail on retry
-    $cmd = 'rm -f '.join(' ', @{$self->fastq_files});
-    $self->helper->debug(3, "Removing fastq chunks:\n$cmd");
-    run_system_cmd($cmd, 1);
-  }
-  
   my $file_prefix  = $self->get_alignment_path_prefix_by_ResultSet($result_set, $self->run_controls); 
   my $unfiltered_bam     = $file_prefix.'.bam';
   
-  $self->helper->debug(1, "Merging bams to:\t".$unfiltered_bam); 
+  my $tmp_bam = "${unfiltered_bam}.nodups.bam";
 
-  merge_bams({
-    input_bams => $self->bam_files, 
-    output_bam => $unfiltered_bam, 
-    debug => $self->debug,
+  remove_duplicates_from_bam({
+    input_bam  => $unfiltered_bam,
+    output_bam => $tmp_bam, 
+    debug      => $self->debug,
   });
 
-  foreach my $current_bam_file (@{$self->bam_files}) {
-    unlink($current_bam_file);
-  }
+  unlink($unfiltered_bam);
+  run_system_cmd("mv $tmp_bam $unfiltered_bam");
 
   return;
 }

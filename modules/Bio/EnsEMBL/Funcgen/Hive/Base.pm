@@ -1007,7 +1007,7 @@ sub get_alignment_path_prefix_by_ResultSet{
     if( ($control && $isset->is_control)  ||
         ((! $control) && 
          (! $isset->is_control)) ){ 
-       push @rep_numbers, $isset->replicate;
+       push @rep_numbers, $isset->technical_replicate;
     }
   }
   return $self->alignment_dir($rset, undef, $control).'/'.

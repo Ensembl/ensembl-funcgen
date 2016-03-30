@@ -265,7 +265,7 @@ sub _objs_from_sth {
 	$sth->bind_columns(\$exp_id, \$name, \$group_id, \$control_id, \$is_control,\$p_design_type, 
 	                   \$description, \$xml_id, \$ft_id, \$epigenome_id, \$archive_id, \$url);
 
-  my (%ftypes, %epigenomes, %controls);
+  my (%ftypes, %epigenomes, $control);
 
 	while ( $sth->fetch() ) {
 
@@ -287,10 +287,10 @@ sub _objs_from_sth {
       }
     }
 
-    if(! exists $controls{$control_id}){
-      $controls{$control_id} = $exp_adaptor->fetch_by_dbID($control_id);
+    if($control_id) {
+      $control = $exp_adaptor->fetch_by_dbID($control_id);
     
-      if(! defined $controls{$control_id}){
+      if(! $control) {
         throw("Could not fetch linked control Experiment (dbID: $control_id) for Experiment:\t$name");
       }
     }
@@ -309,7 +309,7 @@ sub _objs_from_sth {
       -ARCHIVE_ID          => $archive_id,
       -DISPLAY_URL         => $url,
       -EXPERIMENTAL_GROUP  => $group,
-      -CONTROL             => $controls{$control_id},
+      -CONTROL             => $control,
       -IS_CONTROL          => $is_control,
      );
 	}

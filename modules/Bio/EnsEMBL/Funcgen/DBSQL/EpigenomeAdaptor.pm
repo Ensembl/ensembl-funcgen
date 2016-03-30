@@ -113,7 +113,7 @@ sub _true_tables {
 
 sub _columns {
   return qw( eg.epigenome_id eg.name eg.display_label
-             eg.description eg.gender eg.efo_id eg.tissue );
+             eg.description eg.gender eg.ontology_accession eg.tissue );
   #type/class = enum cell, cell line, tissue
 }
 
