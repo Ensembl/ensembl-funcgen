@@ -1142,7 +1142,7 @@ DROP TABLE IF EXISTS `cell_type`;
 CREATE TABLE `cell_type` (
    `cell_type_id` int(10) unsigned NOT NULL auto_increment,
    `name`  varchar(120) not NULL,
-   `display_label` varchar(30) default NOT NULL,
+   `display_label` varchar(30) NOT NULL,
    `description` varchar(80) default NULL,
    `gender` enum('male', 'female', 'hermaphrodite', 'mixed') default NULL,
    `efo_id` varchar(20) DEFAULT NULL,
