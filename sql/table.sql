@@ -55,7 +55,7 @@
 @column bound_start_length      Distance between start of the feature and start of the bound region. Bound regions are used for promoters only. They define the flanking regions. It is an area that is predicted t
 @column bound_end_length        Distance between end of the bound region and end of this feature
 @column activity                Indicates the type of activity of this feature in this epigenome
-@column epigenome_count         Integer, number of epigenomes in which this feature is active
+@column epigenome_count         Integer, number of cell types in which this feature is active
 
 @see feature_set
 @see feature_type
@@ -1154,7 +1154,7 @@ DROP TABLE IF EXISTS `epigenome`;
 CREATE TABLE `epigenome` (
    `epigenome_id` int(10) unsigned NOT NULL auto_increment,
    `name`  varchar(120) not NULL,
-   `display_label` varchar(30) default NOT NULL,
+   `display_label` varchar(30) NOT NULL,
    `description` varchar(80) default NULL,
    `production_name` varchar(120) default NULL,
    `gender` enum('male', 'female', 'hermaphrodite', 'mixed') default NULL,
