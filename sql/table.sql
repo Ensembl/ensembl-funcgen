@@ -1702,38 +1702,43 @@ CREATE TABLE `unmapped_reason` (
 @table xref
 @desc Holds data about objects which are external to EnsEMBL, but need to be associated with EnsEMBL objects.
 Information about the database that the external object is stored in is held in the external_db table entry referred to by the external_db column.
-@colour  #000000
 
-@column xref_id                 Internal identifier.
+@column xref_id                 Primary key, internal identifier.
 @column external_db_id          Foreign key references to the @link external_db table.
 @column dbprimary_acc           Primary accession number.
 @column display_label           Display label for the EnsEMBL web site.
 @column version                 Object version.
 @column description             Object description.
-@column info_type               Class of the xref information e.g. CODING
+@column info_type               'PROJECTION', 'MISC', 'DEPENDENT','DIRECT', 'SEQUENCE_MATCH','INFERRED_PAIR', 'PROBE','UNMAPPED', 'COORDINATE_OVERLAP', 'CHECKSUM'.
 @column info_text               Text
 
 @see external_db
 @see external_synonym
-@see xref
 
 */
 
-DROP TABLE IF EXISTS xref;
+
 CREATE TABLE xref (
+
    xref_id                    INT(10) UNSIGNED NOT NULL AUTO_INCREMENT,
    external_db_id             INTEGER UNSIGNED NOT NULL,
-   dbprimary_acc              VARCHAR(40) NOT NULL,
-   display_label              VARCHAR(128) NOT NULL,
-   version                    VARCHAR(10) DEFAULT '0' NOT NULL,
-   description                VARCHAR(255),
-   info_type                  ENUM('PROJECTION', 'MISC', 'DEPENDENT', 'DIRECT', 'SEQUENCE_MATCH', 'INFERRED_PAIR', 'PROBE', 'UNMAPPED', 'CODING', 'TARGET') not NULL,
-   `info_text` varchar(255) NOT NULL DEFAULT '',
+   dbprimary_acc              VARCHAR(512) NOT NULL,
+   display_label              VARCHAR(512) NOT NULL,
+   version                    VARCHAR(10) DEFAULT NULL,
+   description                TEXT,
+   info_type                  ENUM( 'NONE', 'PROJECTION', 'MISC', 'DEPENDENT',
+                                    'DIRECT', 'SEQUENCE_MATCH',
+                                    'INFERRED_PAIR', 'PROBE',
+                                    'UNMAPPED', 'COORDINATE_OVERLAP', 
+                                    'CHECKSUM' ) DEFAULT 'NONE' NOT NULL,
+   info_text                  VARCHAR(255) DEFAULT '' NOT NULL,
+
    PRIMARY KEY (xref_id),
    UNIQUE KEY id_index (dbprimary_acc, external_db_id, info_type, info_text, version),
    KEY display_index (display_label),
    KEY info_type_idx (info_type)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=100;
+
+) COLLATE=latin1_swedish_ci ENGINE=MyISAM;
 
 
 
@@ -1767,11 +1772,7 @@ CREATE TABLE object_xref (
   UNIQUE KEY `xref_idx` (`xref_id`,`ensembl_object_type`,`ensembl_id`,`analysis_id`),
   KEY `analysis_idx` (`analysis_id`),
   KEY `ensembl_idx` (`ensembl_object_type`,`ensembl_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=40 MAX_ROWS=100000000;
-
--- Note we use case correct versions of object name to allow easy adaptor generation
--- AVG_ROW_LENGTH based on human v65 data from show table status
--- MAX_ROWS based on ~5* v65 data size. V unlikely to exceed this.
+) COLLATE=latin1_swedish_ci ENGINE=MyISAM;
 
 /**
 @table unmapped_object

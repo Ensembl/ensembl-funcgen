@@ -13,11 +13,21 @@
 -- limitations under the License.
 
 /**
-@header patch_84_85_h.sql - update ensembl_object_type enum
-@desc   Allows xrefs to be inserted for epigenomes.
+@header patch_84_85_h.sql - update ensembl_object_type enum and xref tables
+@desc   Allows xrefs to be inserted for epigenomes and catch up with developments from the core schema.
 */
 
 alter table object_xref modify ensembl_object_type ENUM('Epigenome', 'Experiment', 'RegulatoryFeature', 'ExternalFeature', 'AnnotatedFeature', 'FeatureType', 'MirnaTargetFeature','ProbeSet', 'Probe', 'ProbeFeature') not NULL;
 
+alter table xref modify dbprimary_acc VARCHAR(512) NOT NULL;
+alter table xref modify display_label VARCHAR(512) NOT NULL;
+alter table xref modify version VARCHAR(10) DEFAULT NULL;
+alter table xref modify description TEXT;
+alter table xref modify info_type ENUM( 'NONE', 'PROJECTION', 'MISC', 'DEPENDENT',
+                                    'DIRECT', 'SEQUENCE_MATCH',
+                                    'INFERRED_PAIR', 'PROBE',
+                                    'UNMAPPED', 'COORDINATE_OVERLAP', 
+                                    'CHECKSUM' ) DEFAULT 'NONE' NOT NULL;
+
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_h.sql|Allows xrefs to be inserted for epigenomes.');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_h.sql|Allows xrefs to be inserted for epigenomes and catch up with developments from the core schema.');
