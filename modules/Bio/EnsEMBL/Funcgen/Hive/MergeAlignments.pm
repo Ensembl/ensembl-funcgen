@@ -80,7 +80,7 @@ sub run {
   }
   
   my $file_prefix  = $self->get_alignment_path_prefix_by_ResultSet($result_set, $self->run_controls); 
-  my $unfiltered_bam     = $file_prefix.'.bam';
+  my $unfiltered_bam     = $file_prefix.'.with_duplicates.bam';
   
   $self->helper->debug(1, "Merging bams to:\t".$unfiltered_bam); 
 
@@ -90,6 +90,10 @@ sub run {
     debug => $self->debug,
   });
 
+  $result_set->adaptor->dbfile_data_root($self->db_output_dir);
+  $result_set->dbfile_path($unfiltered_bam);
+  $result_set->adaptor->store_dbfile_path($result_set, 'BAM');
+    
   foreach my $current_bam_file (@{$self->bam_files}) {
     unlink($current_bam_file);
   }

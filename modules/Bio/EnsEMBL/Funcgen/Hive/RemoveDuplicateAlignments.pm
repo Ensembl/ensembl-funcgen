@@ -53,9 +53,16 @@ sub run {
   my $cmd;
   
   my $file_prefix  = $self->get_alignment_path_prefix_by_ResultSet($result_set, $self->run_controls); 
-  my $unfiltered_bam     = $file_prefix.'.bam';
   
-  my $tmp_bam = "${unfiltered_bam}.nodups.bam";
+  # Name of the final deduplicated bam file
+  #
+  my $bam = $file_prefix . '.bam';
+  
+  # We want to keep this for quality checking.
+  #
+  my $unfiltered_bam = $file_prefix.'.with_duplicates.bam';
+  
+  my $tmp_bam = "${unfiltered_bam}.deduplication_in_progress.bam";
 
   remove_duplicates_from_bam({
     input_bam  => $unfiltered_bam,
@@ -63,8 +70,12 @@ sub run {
     debug      => $self->debug,
   });
 
-  unlink($unfiltered_bam);
-  run_system_cmd("mv $tmp_bam $unfiltered_bam");
+  $result_set->adaptor->dbfile_data_root($self->db_output_dir);
+  $result_set->dbfile_path($bam);
+  $result_set->adaptor->store_dbfile_path($result_set, 'BAM');
+
+  #unlink($unfiltered_bam);
+  run_system_cmd("mv $tmp_bam $bam");
 
   return;
 }

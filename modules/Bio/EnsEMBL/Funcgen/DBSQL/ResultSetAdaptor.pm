@@ -517,44 +517,50 @@ sub store{
 
 =cut
 
-sub store_dbfile_path{
+sub store_dbfile_path {
   my $self = shift;
   my $rset = shift;
+  my $file_type = shift;
+  
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
 
   my $path = $rset->dbfile_path;
-  if(! defined $path){ throw('ResultSet::dbfile_path attribute is not set') }
-
-  # Strip off dbfile_data_root and throw if now set.
+  if (! defined $path) {
+    throw('ResultSet::dbfile_path attribute is not set') 
+  }
+  if (! defined $file_type) {
+    throw('file_type parameter has not been set!');
+  }
   my $root = $self->dbfile_data_root;
-
-  if(! $root){  # not ! defined, as we default to the null string
+  if (! $root) {
     throw('It is unsafe to store_dbfile_path without setting the dbfile_data_root first');
   }
-
+  
   $path =~ s/$root//;
 
   #Check we have a record
   my $rset_id  = $rset->dbID;
-  my $db_path  = $self->_fetch_dbfile_path($rset_id);
+  my $db_path  = $self->_fetch_dbfile_path($rset_id, $file_type);
 
   if($db_path &&
 	 ($db_path ne $path)){  # UPDATE
     # Really should have rolled this back prior to this point
-    my $sql = 'UPDATE dbfile_registry set path=? where table_name="result_set" and table_id=?';
+    my $sql = 'UPDATE dbfile_registry set path=? where table_name="result_set" and table_id=? and file_type=?';
     my $sth = $self->prepare($sql);
     $sth->bind_param(1, $path,    SQL_VARCHAR);
     $sth->bind_param(2, $rset_id, SQL_INTEGER);
+    $sth->bind_param(3, $file_type);
 
     if(! eval {$sth->execute; 1}){
       throw('Failed to update dbfile_data_dir for '.$rset->name."\n$@");
     }
   }
   elsif(! defined $db_path){  # STORE
-    my $sql = 'INSERT INTO dbfile_registry(table_id, table_name, path) values(?, "result_set", ?)';
+    my $sql = 'INSERT INTO dbfile_registry(table_id, table_name, path, file_type) values(?, "result_set", ?, ?)';
     my $sth = $self->prepare($sql);
     $sth->bind_param(1, $rset_id, SQL_INTEGER);
     $sth->bind_param(2, $path,    SQL_VARCHAR);
+    $sth->bind_param(3, $file_type);
 
     if(! eval {$sth->execute; 1}){
       my $err = $@;
@@ -590,9 +596,14 @@ sub dbfile_data_root {
 sub _fetch_dbfile_path{
   my $self    = shift;
   my $rset_id = shift;
-  my $sql  = 'SELECT path from dbfile_registry where table_name="result_set" and table_id=?';
+  my $file_type = shift;
+  
+  my $sql  = 'SELECT path from dbfile_registry where table_name="result_set" and table_id=? and file_type=?';
   my $sth  = $self->prepare($sql);
-  $sth->bind_param(1, $rset_id, SQL_INTEGER);
+  $sth->bind_param(1, $rset_id,   SQL_INTEGER);
+  
+  # No idea what the :sql_types for an enum is, so not using typed parameter.
+  $sth->bind_param(2, $file_type);
 
   if(! eval {$sth->execute; 1} ){
     throw("Failed to fetch dbfile_registry using:\n$sql (dbID=$rset_id)\n$@");
