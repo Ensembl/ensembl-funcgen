@@ -42,6 +42,20 @@ sub pipeline_analyses {
 	    BamFileQc => INPUT_PLUS({
 		'is_control' => 1,
 		'source' => 'MergeControlAlignments',
+		'has_duplicates' => 1,
+	      } 
+	    ) 
+	  },
+	},
+      },
+      {
+	-logic_name => 'RemoveDuplicateControlAlignments',
+	-flow_into => {
+	  MAIN => {
+	    BamFileQc => INPUT_PLUS({
+		'is_control' => 1,
+		'source' => 'RemoveDuplicateControlAlignments',
+		'has_duplicates' => undef,
 	      } 
 	    ) 
 	  },
@@ -54,6 +68,20 @@ sub pipeline_analyses {
 	    BamFileQc => INPUT_PLUS({
 	      'is_control' => 0,
 	      'source' => 'MergeAlignments',
+	      'has_duplicates' => 1,
+	      } 
+	    ) 
+	  },
+	},
+      },
+      {
+	-logic_name => 'RemoveDuplicateAlignments',
+	-flow_into => {
+	  MAIN => { 
+	    BamFileQc => INPUT_PLUS({
+	      'is_control' => 0,
+	      'source' => 'RemoveDuplicateAlignments',
+	      'has_duplicates' => undef,
 	      } 
 	    ) 
 	  },
@@ -66,6 +94,20 @@ sub pipeline_analyses {
 	    BamFileQc => INPUT_PLUS({
 	      'is_control' => 0,
 	      'source' => 'MergeReplicateAlignments',
+	      'has_duplicates' => 1,
+	      }
+	    )
+	  },
+	},
+      },
+      {
+	-logic_name => 'RemoveDuplicateReplicateAlignments',
+	-flow_into => {
+	  MAIN => { 
+	    BamFileQc => INPUT_PLUS({
+	      'is_control' => 0,
+	      'source' => 'RemoveDuplicateReplicateAlignments',
+	      'has_duplicates' => undef,
 	      }
 	    )
 	  },
@@ -78,6 +120,7 @@ sub pipeline_analyses {
 	    BamFileQc => INPUT_PLUS({
 	      'is_control' => 0,
 	      'source' => 'FixReplicateResultSetsExperimentIds',
+	      'has_duplicates' => 1,
 	      }
 	    )
 	  },

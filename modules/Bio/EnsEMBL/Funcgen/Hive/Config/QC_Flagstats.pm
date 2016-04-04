@@ -38,7 +38,9 @@ sub pipeline_analyses {
       {
 	-logic_name => 'BamFileQc',
 	-flow_into => {
-	  MAIN => 'QcFlagstatsJobFactory'
+	  MAIN => WHEN(
+	    '#has_duplicates#' => 'QcFlagstatsJobFactory',
+	  ),
 	},
       },
       {   -logic_name => 'QcFlagstatsJobFactory',

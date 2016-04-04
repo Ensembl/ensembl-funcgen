@@ -32,7 +32,7 @@ sub create_input_id {
   my $is_control = $self->param('is_control') ? 1 : undef;
   my $align_prefix   = $self->get_alignment_path_prefix_by_ResultSet($result_set, $is_control, 1);
   
-  my $bam_file  = $align_prefix   . '.bam';
+  my $bam_file  = $align_prefix   . '.with_duplicates.bam';
   
   if (! -e $bam_file) {
   
