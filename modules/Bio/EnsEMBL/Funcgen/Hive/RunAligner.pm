@@ -175,6 +175,14 @@ sub run {
   unlink($bam_file);
   $cmd = qq(mv $no_dups_bam_file $bam_file);
   run_system_cmd($cmd);
+  
+  if (! -e $bam_file) {
+  
+    # If no bam file has been created, fail here, while the chunked fasta 
+    # sequences have not been deleted yet.
+    #
+    die("$bam_file does not exist!");
+  }
 
 # Commented out the following commands, because they were meant to check, if 
 # the bam file is valid. After fixing a bug that seems to always be the case,
