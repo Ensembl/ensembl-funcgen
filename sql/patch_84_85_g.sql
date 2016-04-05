@@ -13,14 +13,42 @@
 -- limitations under the License.
 
 /**
-@header patch_84_85_g.sql - update external_db_id data type
-@desc   Update external_db_id data type to align regulation with core schema
+@header patch_84_85_g.sql - update dbentry related tables.
+@desc   Updates to catch up with developments from the core schema and allow xrefs to be stored for epigenomes.
 */
 
-alter table external_db modify external_db_id INTEGER UNSIGNED NOT NULL AUTO_INCREMENT;
+alter table external_db     modify external_db_id INTEGER UNSIGNED NOT NULL AUTO_INCREMENT;
 alter table unmapped_object modify external_db_id INTEGER UNSIGNED;
+alter table object_xref     modify ensembl_object_type ENUM (
+  'Epigenome', 
+  'Experiment', 
+  'RegulatoryFeature', 
+  'ExternalFeature', 
+  'AnnotatedFeature', 
+  'FeatureType', 
+  'MirnaTargetFeature',
+  'ProbeSet',
+  'Probe',
+  'ProbeFeature'
+) not NULL;
 alter table xref modify external_db_id INTEGER UNSIGNED;
-
+alter table xref modify dbprimary_acc VARCHAR(512) NOT NULL;
+alter table xref modify display_label VARCHAR(512) NOT NULL;
+alter table xref modify version VARCHAR(10) DEFAULT NULL;
+alter table xref modify description TEXT;
+alter table xref modify info_type ENUM (
+  'NONE', 
+  'PROJECTION', 
+  'MISC', 
+  'DEPENDENT',
+  'DIRECT', 
+  'SEQUENCE_MATCH',
+  'INFERRED_PAIR', 
+  'PROBE',
+  'UNMAPPED', 
+  'COORDINATE_OVERLAP', 
+  'CHECKSUM' 
+) DEFAULT 'NONE' NOT NULL;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_g.sql|update external_db_id data type');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_g.sql|update dbentry related tables');
