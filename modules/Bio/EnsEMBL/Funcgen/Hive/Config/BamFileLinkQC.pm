@@ -130,6 +130,16 @@ sub pipeline_analyses {
 	-logic_name => 'BamFileQc',
 	-module     => 'Bio::EnsEMBL::Funcgen::Hive::BamFileQc',
 	-meadow_type=> 'LOCAL',
+	-flow_into => {
+	    2 => WHEN(
+                '#has_duplicates# eq "yes"' => { 
+                  ':////accu?file_to_delete=[]' => { 
+                    'file_to_delete' => '#bam_file#'
+                  } 
+                }
+	      ),
+	  },
+
       },
     ];
 }

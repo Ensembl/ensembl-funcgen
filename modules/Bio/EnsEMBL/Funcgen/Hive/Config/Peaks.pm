@@ -24,7 +24,11 @@ sub pipeline_analyses {
 	  ),
 	  'WriteBigWig'
 	],
-	7   => ':////accu?file_to_delete_after_cell_line_has_been_processed=[file]',
+        7 => { 
+            ':////accu?file_to_delete=[]' => { 
+              'file_to_delete' => '#file_to_delete#'
+            } 
+          }
       },
     },
     {
