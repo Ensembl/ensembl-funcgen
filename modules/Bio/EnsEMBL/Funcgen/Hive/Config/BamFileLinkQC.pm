@@ -128,7 +128,7 @@ sub pipeline_analyses {
       },
       {
 	-logic_name => 'BamFileQc',
-	-module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+	-module     => 'Bio::EnsEMBL::Funcgen::Hive::BamFileQc',
 	-meadow_type=> 'LOCAL',
       },
     ];
