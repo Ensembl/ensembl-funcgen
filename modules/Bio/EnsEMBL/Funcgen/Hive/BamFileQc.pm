@@ -48,15 +48,8 @@ sub run {
       . "the next life.");
   }
 
-#   my $param_hash = $self->input_job->hive_pipeline->params_as_hash;
-
   use Bio::EnsEMBL::Hive::Utils ('stringify', 'destringify');
   my $param_hash = destringify($self->input_id);
-  
-  
-#    use Data::Dumper;
-#    die(Dumper($param_hash));
-#   die($input_id);
   
   $param_hash->{bam_file} = $bam_file;
   $self->dataflow_output_id($param_hash, 2);
@@ -65,5 +58,3 @@ sub run {
 }
 
 1;
-
-
