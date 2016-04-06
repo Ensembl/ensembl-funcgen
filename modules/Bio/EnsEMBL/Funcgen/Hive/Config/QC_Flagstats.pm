@@ -72,19 +72,14 @@ sub pipeline_analyses {
 		. qq( --work_dir #tempdir#  )
 		. qq( --bam_file #bam_file# )
 	  },
-	  -flow_into => { 
-	    MAIN => WHEN(
-	      '#has_duplicates# eq "yes"' => 'DeleteBamWithDuplicates',
-	    ),
-	  },
       },
-      {   -logic_name => 'DeleteBamWithDuplicates',
-	  -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-	  -meadow_type=> 'LOCAL',
-	  -parameters => { 
-		cmd => qq(rm #bam_file#),
-	  },
-      },
+#       {   -logic_name => 'DeleteBamWithDuplicates',
+# 	  -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+# 	  -meadow_type=> 'LOCAL',
+# 	  -parameters => { 
+# 		cmd => qq(rm #bam_file#),
+# 	  },
+#       },
 
     ];
 }
