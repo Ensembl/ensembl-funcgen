@@ -30,6 +30,7 @@ CREATE TABLE regulatory_feature_nr (
   bound_start_length mediumint(3) unsigned NOT NULL,
   bound_end_length mediumint(3) unsigned NOT NULL,
   epigenome_count smallint(6),
+  activity tinyint(3),
   PRIMARY KEY  (regulatory_feature_id),
   UNIQUE KEY fset_seq_region_idx (seq_region_id,seq_region_start, feature_type_id),
   KEY feature_type_idx (feature_type_id),
@@ -46,7 +47,8 @@ insert into regulatory_feature_nr (
   projected,
   bound_start_length,
   bound_end_length,
-  epigenome_count 
+  epigenome_count,
+  activity
 ) select 
   seq_region_id,
   seq_region_start,
@@ -57,7 +59,8 @@ insert into regulatory_feature_nr (
   projected,
   bound_start_length,
   bound_end_length,
-  epigenome_count 
+  epigenome_count,
+  activity
 from regulatory_feature 
 group by 
   seq_region_id,
@@ -69,7 +72,8 @@ group by
   projected,
   bound_start_length,
   bound_end_length,
-  epigenome_count 
+  epigenome_count,
+  activity
 ;
 
 DROP TABLE IF EXISTS regulatory_feature_feature_set;
@@ -78,21 +82,18 @@ create table regulatory_feature_feature_set (
   regulatory_feature_id int(10) unsigned default NULL,
   stable_id  varchar(16) DEFAULT NULL,
   feature_set_id int(10) unsigned default NULL,
-  activity tinyint(3),
   PRIMARY KEY  (regulatory_feature_feature_set_id),
-  UNIQUE KEY uniqueness_constraint_idx (feature_set_id,regulatory_feature_id,activity),
+  UNIQUE KEY uniqueness_constraint_idx (feature_set_id,regulatory_feature_id),
   KEY feature_set_idx (feature_set_id),
   KEY regulatory_feature_idx (regulatory_feature_id)
 ) ENGINE=MyISAM;
 
 insert into regulatory_feature_feature_set (
   stable_id,
-  feature_set_id,
-  activity
+  feature_set_id
 ) select
   stable_id,
-  feature_set_id,
-  activity
+  feature_set_id
 from regulatory_feature;
 
 alter table regulatory_feature_feature_set add index foo (stable_id);
