@@ -17,7 +17,6 @@
 @desc   Normalise regulatory feature table.
 */
 
-DROP TABLE IF EXISTS regulatory_feature_nr;
 CREATE TABLE regulatory_feature_nr (
   regulatory_feature_id int(10) unsigned NOT NULL auto_increment,
   feature_type_id int(10) unsigned default NULL,
@@ -30,7 +29,6 @@ CREATE TABLE regulatory_feature_nr (
   bound_start_length mediumint(3) unsigned NOT NULL,
   bound_end_length mediumint(3) unsigned NOT NULL,
   epigenome_count smallint(6),
-  activity tinyint(3),
   PRIMARY KEY  (regulatory_feature_id),
   KEY feature_type_idx (feature_type_id),
   KEY stable_id_idx (stable_id)
@@ -46,8 +44,7 @@ insert into regulatory_feature_nr (
   projected,
   bound_start_length,
   bound_end_length,
-  epigenome_count,
-  activity
+  epigenome_count
 ) select 
   seq_region_id,
   seq_region_start,
@@ -58,8 +55,7 @@ insert into regulatory_feature_nr (
   projected,
   bound_start_length,
   bound_end_length,
-  epigenome_count,
-  activity
+  epigenome_count
 from regulatory_feature 
 group by 
   seq_region_id,
@@ -71,16 +67,14 @@ group by
   projected,
   bound_start_length,
   bound_end_length,
-  epigenome_count,
-  activity
+  epigenome_count
 ;
 
-DROP TABLE IF EXISTS regulatory_feature_feature_set;
 create table regulatory_feature_feature_set (
   regulatory_feature_feature_set_id int(10) unsigned NOT NULL auto_increment,
   regulatory_feature_id int(10) unsigned default NULL,
-  stable_id  varchar(16) DEFAULT NULL,
   feature_set_id int(10) unsigned default NULL,
+  activity tinyint(3)
   PRIMARY KEY  (regulatory_feature_feature_set_id),
   UNIQUE KEY uniqueness_constraint_idx (feature_set_id,regulatory_feature_id),
   KEY feature_set_idx (feature_set_id),
@@ -88,11 +82,11 @@ create table regulatory_feature_feature_set (
 ) ENGINE=MyISAM;
 
 insert into regulatory_feature_feature_set (
-  stable_id,
-  feature_set_id
+  feature_set_id,
+  activity
 ) select
-  stable_id,
-  feature_set_id
+  feature_set_id,
+  activity
 from regulatory_feature;
 
 alter table regulatory_feature_feature_set add index foo (stable_id);
