@@ -13,15 +13,100 @@
 -- limitations under the License.
 
 /**
-@header patch_84_85_i.sql - Store file types.
-@desc   Store file types along with the files.
+@header patch_84_85_i.sql - Normalise regulatory feature table.
+@desc   Normalise regulatory feature table.
 */
 
-alter table dbfile_registry add column file_type ENUM('BAM','BAMCOV','BIGBED','BIGWIG','VCF','CRAM');
-ALTER TABLE dbfile_registry DROP PRIMARY KEY, ADD PRIMARY KEY(`table_id`, `table_name`, `file_type`);
+DROP TABLE IF EXISTS regulatory_feature_nr;
+CREATE TABLE regulatory_feature_nr (
+  regulatory_feature_id int(10) unsigned NOT NULL auto_increment,
+  feature_type_id int(10) unsigned default NULL,
+  seq_region_id int(10) unsigned NOT NULL,
+  seq_region_strand tinyint(1) NOT NULL,
+  seq_region_start int(10) unsigned NOT NULL,
+  seq_region_end int(10) unsigned NOT NULL,
+  stable_id  varchar(16) DEFAULT NULL,
+  projected boolean default FALSE,
+  bound_start_length mediumint(3) unsigned NOT NULL,
+  bound_end_length mediumint(3) unsigned NOT NULL,
+  epigenome_count smallint(6),
+  activity tinyint(3),
+  PRIMARY KEY  (regulatory_feature_id),
+  KEY feature_type_idx (feature_type_id),
+  KEY stable_id_idx (stable_id)
+) ENGINE=MyISAM;
 
--- We currently only have bigwig in there.
-update dbfile_registry set file_type='BIGWIG';
+insert into regulatory_feature_nr (
+  seq_region_id,
+  seq_region_start,
+  seq_region_end,
+  seq_region_strand,
+  feature_type_id,
+  stable_id,
+  projected,
+  bound_start_length,
+  bound_end_length,
+  epigenome_count,
+  activity
+) select 
+  seq_region_id,
+  seq_region_start,
+  seq_region_end,
+  seq_region_strand,
+  feature_type_id,
+  stable_id,
+  projected,
+  bound_start_length,
+  bound_end_length,
+  epigenome_count,
+  activity
+from regulatory_feature 
+group by 
+  seq_region_id,
+  seq_region_start,
+  seq_region_end,
+  seq_region_strand,
+  feature_type_id,
+  stable_id,
+  projected,
+  bound_start_length,
+  bound_end_length,
+  epigenome_count,
+  activity
+;
+
+DROP TABLE IF EXISTS regulatory_feature_feature_set;
+create table regulatory_feature_feature_set (
+  regulatory_feature_feature_set_id int(10) unsigned NOT NULL auto_increment,
+  regulatory_feature_id int(10) unsigned default NULL,
+  stable_id  varchar(16) DEFAULT NULL,
+  feature_set_id int(10) unsigned default NULL,
+  PRIMARY KEY  (regulatory_feature_feature_set_id),
+  UNIQUE KEY uniqueness_constraint_idx (feature_set_id,regulatory_feature_id),
+  KEY feature_set_idx (feature_set_id),
+  KEY regulatory_feature_idx (regulatory_feature_id)
+) ENGINE=MyISAM;
+
+insert into regulatory_feature_feature_set (
+  stable_id,
+  feature_set_id
+) select
+  stable_id,
+  feature_set_id
+from regulatory_feature;
+
+alter table regulatory_feature_feature_set add index foo (stable_id);
+
+update regulatory_feature_feature_set, regulatory_feature_nr 
+set regulatory_feature_feature_set.regulatory_feature_id=regulatory_feature_nr.regulatory_feature_id
+where regulatory_feature_feature_set.stable_id=regulatory_feature_nr.stable_id;
+
+alter table regulatory_feature_feature_set drop index foo;
+alter table regulatory_feature_feature_set drop column stable_id;
+
+drop table regulatory_feature;
+
+rename table regulatory_feature_nr to regulatory_feature;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_i.sql|Store file types along with the files.');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_i.sql|Normalise regulatory feature table.');

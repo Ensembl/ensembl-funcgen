@@ -13,101 +13,24 @@
 -- limitations under the License.
 
 /**
-@header patch_84_85_j.sql - Normalise regulatory feature table.
-@desc   Normalise regulatory feature table.
+@header patch_84_85_j.sql - Make activity an enum.
+@desc   Make activity an enum.
 */
 
-DROP TABLE IF EXISTS regulatory_feature_nr;
-CREATE TABLE regulatory_feature_nr (
-  regulatory_feature_id int(10) unsigned NOT NULL auto_increment,
-  feature_type_id int(10) unsigned default NULL,
-  seq_region_id int(10) unsigned NOT NULL,
-  seq_region_strand tinyint(1) NOT NULL,
-  seq_region_start int(10) unsigned NOT NULL,
-  seq_region_end int(10) unsigned NOT NULL,
-  stable_id  varchar(16) DEFAULT NULL,
-  projected boolean default FALSE,
-  bound_start_length mediumint(3) unsigned NOT NULL,
-  bound_end_length mediumint(3) unsigned NOT NULL,
-  epigenome_count smallint(6),
-  activity tinyint(3),
-  PRIMARY KEY  (regulatory_feature_id),
-  UNIQUE KEY fset_seq_region_idx (seq_region_id,seq_region_start, feature_type_id),
-  KEY feature_type_idx (feature_type_id),
-  KEY stable_id_idx (stable_id)
-) ENGINE=MyISAM;
+alter table regulatory_feature add column activity_as_enum ENUM('INACTIVE', 'REPRESSED', 'POISED', 'ACTIVE', 'NA');
 
-insert into regulatory_feature_nr (
-  seq_region_id,
-  seq_region_start,
-  seq_region_end,
-  seq_region_strand,
-  feature_type_id,
-  stable_id,
-  projected,
-  bound_start_length,
-  bound_end_length,
-  epigenome_count,
-  activity
-) select 
-  seq_region_id,
-  seq_region_start,
-  seq_region_end,
-  seq_region_strand,
-  feature_type_id,
-  stable_id,
-  projected,
-  bound_start_length,
-  bound_end_length,
-  epigenome_count,
-  activity
-from regulatory_feature 
-group by 
-  seq_region_id,
-  seq_region_start,
-  seq_region_end,
-  seq_region_strand,
-  feature_type_id,
-  stable_id,
-  projected,
-  bound_start_length,
-  bound_end_length,
-  epigenome_count,
-  activity
-;
+update regulatory_feature set activity_as_enum = 
+case activity
+    when 0 then 'INACTIVE'
+    when 1 then 'ACTIVE'
+    when 2 then 'POISED'
+    when 3 then 'REPRESSED'
+    when 4 then 'NA'
+    else null
+end;
 
-DROP TABLE IF EXISTS regulatory_feature_feature_set;
-create table regulatory_feature_feature_set (
-  regulatory_feature_feature_set_id int(10) unsigned NOT NULL auto_increment,
-  regulatory_feature_id int(10) unsigned default NULL,
-  stable_id  varchar(16) DEFAULT NULL,
-  feature_set_id int(10) unsigned default NULL,
-  PRIMARY KEY  (regulatory_feature_feature_set_id),
-  UNIQUE KEY uniqueness_constraint_idx (feature_set_id,regulatory_feature_id),
-  KEY feature_set_idx (feature_set_id),
-  KEY regulatory_feature_idx (regulatory_feature_id)
-) ENGINE=MyISAM;
-
-insert into regulatory_feature_feature_set (
-  stable_id,
-  feature_set_id
-) select
-  stable_id,
-  feature_set_id
-from regulatory_feature;
-
-alter table regulatory_feature_feature_set add index foo (stable_id);
-
-update regulatory_feature_feature_set, regulatory_feature_nr 
-set regulatory_feature_feature_set.regulatory_feature_id=regulatory_feature_nr.regulatory_feature_id
-where regulatory_feature_feature_set.stable_id=regulatory_feature_nr.stable_id;
-
-alter table regulatory_feature_feature_set drop index foo;
-alter table regulatory_feature_feature_set drop column stable_id;
-
-drop table regulatory_feature;
-
-rename table regulatory_feature_nr to regulatory_feature;
+alter table regulatory_feature drop column activity;
+alter table regulatory_feature change activity_as_enum activity ENUM('INACTIVE', 'REPRESSED', 'POISED', 'ACTIVE', 'NA');
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_j.sql|Normalise regulatory feature table.');
+insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_j.sql|Make activity an enum.');
