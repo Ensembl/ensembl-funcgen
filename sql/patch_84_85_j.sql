@@ -13,7 +13,7 @@
 -- limitations under the License.
 
 /**
-@header patch_84_85_i.sql - Normalise regulatory feature table
+@header patch_84_85_j.sql - Normalise regulatory feature table
 @desc   Create a linking table between regulatory features and feature sets.
 */
 
@@ -33,6 +33,7 @@ create table if not exists regulatory_feature_feature_set (
   regulatory_feature_id int(10) unsigned default NULL,
   feature_set_id int(10) unsigned default NULL,
   stable_id_temp varchar(16) DEFAULT NULL,
+  activity tinyint(3),
   PRIMARY KEY  (regulatory_feature_feature_set_id),
   UNIQUE KEY uniqueness_constraint_idx (feature_set_id,regulatory_feature_id),
   KEY feature_set_idx (feature_set_id),
@@ -41,11 +42,19 @@ create table if not exists regulatory_feature_feature_set (
 
 insert into regulatory_feature_feature_set (
   stable_id_temp,
-  feature_set_id
+  feature_set_id,
+  activity
 ) select
   stable_id,
-  feature_set_id
-from regulatory_feature;
+  feature_set_id,
+  activity
+from 
+  regulatory_feature
+group by 
+  stable_id,
+  feature_set_id,
+  activity
+;
 
 -- patch identifier
 insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_j.sql|Normalise regulatory feature table: Create a linking table between regulatory features and feature sets.');

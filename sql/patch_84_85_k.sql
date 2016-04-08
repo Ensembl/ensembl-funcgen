@@ -13,7 +13,7 @@
 -- limitations under the License.
 
 /**
-@header patch_84_85_i.sql - Normalise regulatory feature table
+@header patch_84_85_k.sql - Normalise regulatory feature table
 @desc   Link up the new non redundant regulatory features.
 */
 

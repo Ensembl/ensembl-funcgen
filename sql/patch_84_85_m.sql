@@ -13,13 +13,13 @@
 -- limitations under the License.
 
 /**
-@header patch_84_85_i.sql - Make activity an enum.
+@header patch_84_85_m.sql - Make activity an enum.
 @desc   Make activity an enum.
 */
 
-alter table regulatory_feature add column activity_as_enum ENUM('INACTIVE', 'REPRESSED', 'POISED', 'ACTIVE', 'NA');
+alter table regulatory_feature_feature_set add column activity_as_enum ENUM('INACTIVE', 'REPRESSED', 'POISED', 'ACTIVE', 'NA');
 
-update regulatory_feature set activity_as_enum = 
+update regulatory_feature_feature_set set activity_as_enum = 
 case activity
     when 0 then 'INACTIVE'
     when 1 then 'ACTIVE'
@@ -29,8 +29,8 @@ case activity
     else null
 end;
 
-alter table regulatory_feature drop column activity;
-alter table regulatory_feature change activity_as_enum activity ENUM('INACTIVE', 'REPRESSED', 'POISED', 'ACTIVE', 'NA');
+alter table regulatory_feature_feature_set drop column activity;
+alter table regulatory_feature_feature_set change activity_as_enum activity ENUM('INACTIVE', 'REPRESSED', 'POISED', 'ACTIVE', 'NA');
 
 insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_m.sql|Make activity an enum.');
 
