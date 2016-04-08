@@ -13,75 +13,26 @@
 -- limitations under the License.
 
 /**
-@header patch_84_85_j.sql - Normalise regulatory feature table.
-@desc   Normalise regulatory feature table.
+@header patch_84_85_i.sql - Normalise regulatory feature table
+@desc   Create a linking table between regulatory features and feature sets.
 */
 
-DROP TABLE IF EXISTS regulatory_feature_nr;
-CREATE TABLE regulatory_feature_nr (
-  regulatory_feature_id int(10) unsigned NOT NULL auto_increment,
-  feature_type_id int(10) unsigned default NULL,
-  seq_region_id int(10) unsigned NOT NULL,
-  seq_region_strand tinyint(1) NOT NULL,
-  seq_region_start int(10) unsigned NOT NULL,
-  seq_region_end int(10) unsigned NOT NULL,
-  stable_id  varchar(16) DEFAULT NULL,
-  projected boolean default FALSE,
-  bound_start_length mediumint(3) unsigned NOT NULL,
-  bound_end_length mediumint(3) unsigned NOT NULL,
-  epigenome_count smallint(6),
-  activity tinyint(3),
-  PRIMARY KEY  (regulatory_feature_id),
-  UNIQUE KEY fset_seq_region_idx (seq_region_id,seq_region_start, feature_type_id),
-  KEY feature_type_idx (feature_type_id),
-  KEY stable_id_idx (stable_id)
-) ENGINE=MyISAM;
-
-insert into regulatory_feature_nr (
-  seq_region_id,
-  seq_region_start,
-  seq_region_end,
-  seq_region_strand,
-  feature_type_id,
-  stable_id,
-  projected,
-  bound_start_length,
-  bound_end_length,
-  epigenome_count,
-  activity
-) select 
-  seq_region_id,
-  seq_region_start,
-  seq_region_end,
-  seq_region_strand,
-  feature_type_id,
-  stable_id,
-  projected,
-  bound_start_length,
-  bound_end_length,
-  epigenome_count,
-  activity
-from regulatory_feature 
-group by 
-  seq_region_id,
-  seq_region_start,
-  seq_region_end,
-  seq_region_strand,
-  feature_type_id,
-  stable_id,
-  projected,
-  bound_start_length,
-  bound_end_length,
-  epigenome_count,
-  activity
-;
-
-DROP TABLE IF EXISTS regulatory_feature_feature_set;
-create table regulatory_feature_feature_set (
+--
+-- Stable ids are only included here so the entries in the 
+-- regulatory_feature_feature_set table can be linked up with their
+-- counterparts in the regulatory_feature. The stable_ids are needed,
+-- because the regulatory_feature_ids will change when the table is 
+-- normalised and identical regulatory features are grouped together. 
+--
+-- The next patch will use the stable_ids to set the regulatory_feature_id.
+-- After that the stable id column in the regulatory_feature_feature_set
+-- table will be dropped.
+--
+create table if not exists regulatory_feature_feature_set (
   regulatory_feature_feature_set_id int(10) unsigned NOT NULL auto_increment,
   regulatory_feature_id int(10) unsigned default NULL,
-  stable_id  varchar(16) DEFAULT NULL,
   feature_set_id int(10) unsigned default NULL,
+  stable_id_temp varchar(16) DEFAULT NULL,
   PRIMARY KEY  (regulatory_feature_feature_set_id),
   UNIQUE KEY uniqueness_constraint_idx (feature_set_id,regulatory_feature_id),
   KEY feature_set_idx (feature_set_id),
@@ -89,25 +40,12 @@ create table regulatory_feature_feature_set (
 ) ENGINE=MyISAM;
 
 insert into regulatory_feature_feature_set (
-  stable_id,
+  stable_id_temp,
   feature_set_id
 ) select
   stable_id,
   feature_set_id
 from regulatory_feature;
 
-alter table regulatory_feature_feature_set add index foo (stable_id);
-
-update regulatory_feature_feature_set, regulatory_feature_nr 
-set regulatory_feature_feature_set.regulatory_feature_id=regulatory_feature_nr.regulatory_feature_id
-where regulatory_feature_feature_set.stable_id=regulatory_feature_nr.stable_id;
-
-alter table regulatory_feature_feature_set drop index foo;
-alter table regulatory_feature_feature_set drop column stable_id;
-
-drop table regulatory_feature;
-
-rename table regulatory_feature_nr to regulatory_feature;
-
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_j.sql|Normalise regulatory feature table.');
+insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_j.sql|Normalise regulatory feature table: Create a linking table between regulatory features and feature sets.');
