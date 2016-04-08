@@ -28,7 +28,6 @@ CREATE TABLE regulatory_feature_nr (
   projected boolean default FALSE,
   bound_start_length mediumint(3) unsigned NOT NULL,
   bound_end_length mediumint(3) unsigned NOT NULL,
-  activity tinyint(3),
   epigenome_count smallint(6),
   PRIMARY KEY  (regulatory_feature_id),
   KEY feature_type_idx (feature_type_id),
@@ -45,7 +44,6 @@ insert into regulatory_feature_nr (
   projected,
   bound_start_length,
   bound_end_length,
-  activity,
   epigenome_count
 ) select 
   seq_region_id,
@@ -57,7 +55,6 @@ insert into regulatory_feature_nr (
   projected,
   bound_start_length,
   bound_end_length,
-  activity,
   epigenome_count
 from regulatory_feature 
 group by 
@@ -70,7 +67,6 @@ group by
   projected,
   bound_start_length,
   bound_end_length,
-  activity,
   epigenome_count
 ;
 
