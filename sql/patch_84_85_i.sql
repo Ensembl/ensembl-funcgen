@@ -13,8 +13,8 @@
 -- limitations under the License.
 
 /**
-@header patch_84_85_i.sql - Normalise regulatory feature table.
-@desc   Normalise regulatory feature table.
+@header patch_84_85_i.sql - 
+@desc   
 */
 
 CREATE TABLE regulatory_feature_nr (
@@ -28,6 +28,7 @@ CREATE TABLE regulatory_feature_nr (
   projected boolean default FALSE,
   bound_start_length mediumint(3) unsigned NOT NULL,
   bound_end_length mediumint(3) unsigned NOT NULL,
+  activity tinyint(3),
   epigenome_count smallint(6),
   PRIMARY KEY  (regulatory_feature_id),
   KEY feature_type_idx (feature_type_id),
@@ -44,6 +45,7 @@ insert into regulatory_feature_nr (
   projected,
   bound_start_length,
   bound_end_length,
+  activity,
   epigenome_count
 ) select 
   seq_region_id,
@@ -55,6 +57,7 @@ insert into regulatory_feature_nr (
   projected,
   bound_start_length,
   bound_end_length,
+  activity,
   epigenome_count
 from regulatory_feature 
 group by 
@@ -67,40 +70,9 @@ group by
   projected,
   bound_start_length,
   bound_end_length,
+  activity,
   epigenome_count
 ;
 
-create table regulatory_feature_feature_set (
-  regulatory_feature_feature_set_id int(10) unsigned NOT NULL auto_increment,
-  regulatory_feature_id int(10) unsigned default NULL,
-  feature_set_id int(10) unsigned default NULL,
-  activity tinyint(3)
-  PRIMARY KEY  (regulatory_feature_feature_set_id),
-  UNIQUE KEY uniqueness_constraint_idx (feature_set_id,regulatory_feature_id),
-  KEY feature_set_idx (feature_set_id),
-  KEY regulatory_feature_idx (regulatory_feature_id)
-) ENGINE=MyISAM;
-
-insert into regulatory_feature_feature_set (
-  feature_set_id,
-  activity
-) select
-  feature_set_id,
-  activity
-from regulatory_feature;
-
-alter table regulatory_feature_feature_set add index foo (stable_id);
-
-update regulatory_feature_feature_set, regulatory_feature_nr 
-set regulatory_feature_feature_set.regulatory_feature_id=regulatory_feature_nr.regulatory_feature_id
-where regulatory_feature_feature_set.stable_id=regulatory_feature_nr.stable_id;
-
-alter table regulatory_feature_feature_set drop index foo;
-alter table regulatory_feature_feature_set drop column stable_id;
-
-drop table regulatory_feature;
-
-rename table regulatory_feature_nr to regulatory_feature;
-
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_i.sql|Normalise regulatory feature table.');
+insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_i.sql|Normalise regulatory feature table: Create a non redundant version of the regulatory features.');

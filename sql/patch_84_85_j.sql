@@ -13,24 +13,39 @@
 -- limitations under the License.
 
 /**
-@header patch_84_85_j.sql - Make activity an enum.
-@desc   Make activity an enum.
+@header patch_84_85_i.sql - Normalise regulatory feature table
+@desc   Create a linking table between regulatory features and feature sets.
 */
 
-alter table regulatory_feature add column activity_as_enum ENUM('INACTIVE', 'REPRESSED', 'POISED', 'ACTIVE', 'NA');
+--
+-- Stable ids are only included here so the entries in the 
+-- regulatory_feature_feature_set table can be linked up with their
+-- counterparts in the regulatory_feature. The stable_ids are needed,
+-- because the regulatory_feature_ids will change when the table is 
+-- normalised and identical regulatory features are grouped together. 
+--
+-- The next patch will use the stable_ids to set the regulatory_feature_id.
+-- After that the stable id column in the regulatory_feature_feature_set
+-- table will be dropped.
+--
+create table if not exists regulatory_feature_feature_set (
+  regulatory_feature_feature_set_id int(10) unsigned NOT NULL auto_increment,
+  regulatory_feature_id int(10) unsigned default NULL,
+  feature_set_id int(10) unsigned default NULL,
+  stable_id_temp varchar(16) DEFAULT NULL,
+  PRIMARY KEY  (regulatory_feature_feature_set_id),
+  UNIQUE KEY uniqueness_constraint_idx (feature_set_id,regulatory_feature_id),
+  KEY feature_set_idx (feature_set_id),
+  KEY regulatory_feature_idx (regulatory_feature_id)
+) ENGINE=MyISAM;
 
-update regulatory_feature set activity_as_enum = 
-case activity
-    when 0 then 'INACTIVE'
-    when 1 then 'ACTIVE'
-    when 2 then 'POISED'
-    when 3 then 'REPRESSED'
-    when 4 then 'NA'
-    else null
-end;
-
-alter table regulatory_feature drop column activity;
-alter table regulatory_feature change activity_as_enum activity ENUM('INACTIVE', 'REPRESSED', 'POISED', 'ACTIVE', 'NA');
+insert into regulatory_feature_feature_set (
+  stable_id_temp,
+  feature_set_id
+) select
+  stable_id,
+  feature_set_id
+from regulatory_feature;
 
 -- patch identifier
-insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_j.sql|Make activity an enum.');
+insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_j.sql|Normalise regulatory feature table: Create a linking table between regulatory features and feature sets.');
