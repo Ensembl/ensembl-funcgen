@@ -72,3 +72,5 @@ group by
 
 -- patch identifier
 insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_i.sql|Normalise regulatory feature table: Create a non redundant version of the regulatory features.');
+
+

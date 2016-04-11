@@ -13,24 +13,14 @@
 -- limitations under the License.
 
 /**
-@header patch_84_85_m.sql - Make activity an enum.
-@desc   Make activity an enum.
+@header patch_84_85_m.sql - Normalise regulatory feature table
+@desc   Replace the redundant regulatory features with the non redundant ones.
 */
 
-alter table regulatory_feature_feature_set add column activity_as_enum ENUM('INACTIVE', 'REPRESSED', 'POISED', 'ACTIVE', 'NA');
+drop table regulatory_feature;
+rename table regulatory_feature_nr to regulatory_feature;
 
-update regulatory_feature_feature_set set activity_as_enum = 
-case activity
-    when 0 then 'INACTIVE'
-    when 1 then 'ACTIVE'
-    when 2 then 'POISED'
-    when 3 then 'REPRESSED'
-    when 4 then 'NA'
-    else null
-end;
+drop table regulatory_attribute;
+rename table regulatory_attribute_new to regulatory_attribute;
 
-alter table regulatory_feature_feature_set drop column activity;
-alter table regulatory_feature_feature_set change activity_as_enum activity ENUM('INACTIVE', 'REPRESSED', 'POISED', 'ACTIVE', 'NA');
-
-insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_m.sql|Make activity an enum.');
-
+insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_m.sql|Normalise regulatory feature table: Replace the redundant regulatory features with the non redundant ones.');
