@@ -14,11 +14,16 @@
 
 /**
 @header patch_84_85_l.sql - Normalise regulatory feature table
-@desc   Replace the redundant regulatory features with the non redundant ones.
+@desc   Link up the new non redundant regulatory features. The new regulatory_feature_ids are set. The connection is made using the stable ids.
 */
 
-drop table regulatory_feature;
+update 
+  regulatory_feature_feature_set, regulatory_feature_nr 
+set 
+  regulatory_feature_feature_set.regulatory_feature_id = regulatory_feature_nr.regulatory_feature_id
+where 
+  regulatory_feature_feature_set.stable_id_temp = regulatory_feature_nr.stable_id;
 
-rename table regulatory_feature_nr to regulatory_feature;
+alter table regulatory_feature_feature_set drop column stable_id_temp;
 
-insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_l.sql|Normalise regulatory feature table: Replace the redundant regulatory features with the non redundant ones.');
+insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_l.sql|Normalise regulatory feature table: Link up the new non redundant regulatory features.');
