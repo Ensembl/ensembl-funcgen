@@ -667,6 +667,8 @@ CREATE TABLE `result_set_input` (
    `result_set_id` int(10) unsigned NOT NULL,
    `table_id` int(10) unsigned NOT NULL,
    `table_name` enum('experimental_chip','channel','input_set', 'input_subset') DEFAULT NULL,
+   `file_type` enum('BAM','BAMCOV','BIGBED','BIGWIG','VCF','CRAM'),
+   `md5sum` varchar(45) default NULL,
    PRIMARY KEY  (`result_set_input_id`, `result_set_id`),
    UNIQUE KEY `rset_table_idname_idx` (`result_set_id`, `table_id`, `table_name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
