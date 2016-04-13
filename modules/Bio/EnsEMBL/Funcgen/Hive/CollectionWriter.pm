@@ -158,7 +158,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
     set_name     => $self->param('set_name'),  # mainly for readability
     set_type     => $self->param('set_type'),
     filter_from_format => undef,
-    feature_set_analysis_logic_name => $feature_set_analysis_logic_name,
+    logic_name => $feature_set_analysis_logic_name,
   }; 
 
   $self->branch_job_group(2, [$output_id]);
