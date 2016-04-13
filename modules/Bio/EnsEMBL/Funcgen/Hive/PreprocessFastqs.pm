@@ -1,4 +1,3 @@
-
 =head1 LICENSE
 
 Copyright [1999-2016] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
@@ -52,7 +51,7 @@ sub fetch_input {
   my $self = shift;
   
   $self->SUPER::fetch_input();
-  my $rset = $self->fetch_Set_input('ResultSet');
+  my $result_set = $self->fetch_Set_input('ResultSet');
 
   my $run_controls = $self->get_param_method('result_set_groups', 'silent') ? 1 : 0;
   $self->set_param_method('run_controls', $run_controls);
@@ -61,38 +60,36 @@ sub fetch_input {
 
   $self->get_param_method('fastq_chunk_size', 'silent', '16000000');#default should run in 30min-1h 
   
-  $self->get_output_work_dir_methods($self->alignment_dir($rset, 1, $run_controls));#default output_dir 
+  $self->get_output_work_dir_methods($self->alignment_dir($result_set, 1, $run_controls));#default output_dir 
   return;
 }
 
 sub run {
   my $self         = shift;
-  my $rset         = $self->ResultSet;
+  my $result_set         = $self->ResultSet;
   my $run_controls = $self->run_controls;
   my $merge        = $self->merge;
  
   if($run_controls){
-    my $exp = $rset->experiment(1);#control flag
+    my $exp = $result_set->experiment(1);#control flag
   }
 
   my @fastqs;
   my $throw = '';
   my $set_rep_suffix = '';
-  my @issets = @{$rset->get_support};
+  my @issets = @{$result_set->get_support};
   
   if((! $run_controls) && (! $merge) &&
-    ($self->is_idr_FeatureType($rset->feature_type))){
+    ($self->is_idr_FeatureType($result_set->feature_type))){
   
     my @signal_issets = grep { ! $_->is_control } @issets;
   
     if(scalar(@signal_issets) != 1){
       $self->throw_no_retry('Expected 1 InputSubset(replicate) for IDR ResultSet '.
-        $rset->name.' but found '.scalar(@signal_issets).' Specify merge, or restrict to 1 InputSubset');  
+        $result_set->name.' but found '.scalar(@signal_issets).' Specify merge, or restrict to 1 InputSubset');  
     }
-    
     #We are not filtering for controls here!!
     $set_rep_suffix = '_TR'.$signal_issets[0]->replicate;
-      
   }
   
   foreach my $isset(@issets) {
@@ -167,15 +164,15 @@ sub run {
   
   if((scalar(@fastqs) > 1) &&
      ! $merge){
-    throw('ResultSet '.$rset->name.
+    throw('ResultSet '.$result_set->name.
       " has more than one InputSubset, but merge has not been specified:\n\t".
       join("\n\t", @fastqs));    
   }  
  
-  my $set_prefix = get_set_prefix_from_Set($rset, $run_controls).
-    '_'.$rset->analysis->logic_name.$set_rep_suffix; 
+  my $set_prefix = get_set_prefix_from_Set($result_set, $run_controls).
+    '_'.$result_set->analysis->logic_name.$set_rep_suffix; 
     
-  my $current_working_directory = $self->work_dir . '/' . $rset->dbID;
+  my $current_working_directory = $self->work_dir . '/' . $result_set->dbID;
   
   run_system_cmd("mkdir -p $current_working_directory");
 
@@ -220,43 +217,54 @@ sub run {
   
   $self->set_param_method('fastq_files', \@fastq_files);
   my %batch_params = %{$self->batch_params};
- 
-  foreach my $fastq_file(@{$self->fastq_files}) {
-
-    $self->branch_job_group(2, [{%batch_params,
-                                 output_dir => $current_working_directory, #we could regenerate this from result_set and run controls
-
-                                 gender     => $rset->epigenome->gender,
-                                 analysis   => $rset->analysis->logic_name,   
-                                 query_file => $fastq_file}]);
-  }
-
-  my %signal_info;
   
-  if($run_controls){
+  # Create funnel job first so hive can start creating the jobs in the database.
+  #
+  my %signal_info;  
+  if($run_controls) {
     # for flow to MergeControlAlignments_and_QC
     %signal_info = (result_set_groups => $self->result_set_groups);
   }
-
-  # Data flow to the MergeQCAlignements job 
+ 
+  foreach my $fastq_file(@{$self->fastq_files}) {
+    $self->dataflow_output_id(
+      {
+	%batch_params,
+	# We could regenerate this from result_set and run controls
+	output_dir => $current_working_directory, 
+	gender     => $result_set->epigenome->gender,
+	analysis   => $result_set->analysis->logic_name,   
+	query_file => $fastq_file
+      }, 2
+    );
+  }
   
-  $self->branch_job_group(3, [{%batch_params,
-                             set_type   => 'ResultSet',
-                             set_name   => $rset->name,
-                             dbID       => $rset->dbID,
-                             fastq_files => $self->fastq_files,
-                             output_dir => $self->output_dir,
-                             set_prefix => $set_prefix,
-                             %signal_info}]);
+  my $file_prefix  = $self->get_alignment_path_prefix_by_ResultSet($result_set, $run_controls); 
+  
+  my $bam_file_with_unmapped_reads_and_duplicates = $file_prefix.'.with_unmapped_reads_and_duplicates.bam';
+  
+  # Name of the final deduplicated bam file
+  #
+  my $bam_file = $file_prefix . '.bam';
+
+  $self->dataflow_output_id(
+    {
+	%batch_params,
+	set_type   => 'ResultSet',
+	set_name   => $result_set->name,
+	dbID       => $result_set->dbID,
+	fastq_files => $self->fastq_files,
+	output_dir => $self->output_dir,
+	set_prefix => $set_prefix,
+	bam_file_with_unmapped_reads_and_duplicates => $bam_file_with_unmapped_reads_and_duplicates,
+	bam_file => $bam_file,
+	%signal_info
+      }, 3
+  );
+
   return;
 }
 
-
-sub write_output {  # Create the relevant jobs
-  shift->dataflow_job_groups;
-  return;
-}
-
-
+sub write_output {}
 
 1;
