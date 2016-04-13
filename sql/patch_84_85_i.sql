@@ -13,15 +13,64 @@
 -- limitations under the License.
 
 /**
-@header patch_84_85_i.sql - Store file types.
-@desc   Store file types along with the files.
+@header patch_84_85_i.sql - 
+@desc   
 */
 
-alter table dbfile_registry add column file_type ENUM('BAM','BAMCOV','BIGBED','BIGWIG','VCF','CRAM');
-ALTER TABLE dbfile_registry DROP PRIMARY KEY, ADD PRIMARY KEY(`table_id`, `table_name`, `file_type`);
+CREATE TABLE regulatory_feature_nr (
+  regulatory_feature_id int(10) unsigned NOT NULL auto_increment,
+  feature_type_id int(10) unsigned default NULL,
+  seq_region_id int(10) unsigned NOT NULL,
+  seq_region_strand tinyint(1) NOT NULL,
+  seq_region_start int(10) unsigned NOT NULL,
+  seq_region_end int(10) unsigned NOT NULL,
+  stable_id  varchar(16) DEFAULT NULL,
+  projected boolean default FALSE,
+  bound_start_length mediumint(3) unsigned NOT NULL,
+  bound_end_length mediumint(3) unsigned NOT NULL,
+  epigenome_count smallint(6),
+  PRIMARY KEY  (regulatory_feature_id),
+  KEY feature_type_idx (feature_type_id),
+  KEY stable_id_idx (stable_id)
+) ENGINE=MyISAM;
 
--- We currently only have bigwig in there.
-update dbfile_registry set file_type='BIGWIG';
+insert into regulatory_feature_nr (
+  seq_region_id,
+  seq_region_start,
+  seq_region_end,
+  seq_region_strand,
+  feature_type_id,
+  stable_id,
+  projected,
+  bound_start_length,
+  bound_end_length,
+  epigenome_count
+) select 
+  seq_region_id,
+  seq_region_start,
+  seq_region_end,
+  seq_region_strand,
+  feature_type_id,
+  stable_id,
+  projected,
+  bound_start_length,
+  bound_end_length,
+  epigenome_count
+from regulatory_feature 
+group by 
+  seq_region_id,
+  seq_region_start,
+  seq_region_end,
+  seq_region_strand,
+  feature_type_id,
+  stable_id,
+  projected,
+  bound_start_length,
+  bound_end_length,
+  epigenome_count
+;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_i.sql|Store file types along with the files.');
+insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_i.sql|Normalise regulatory feature table: Create a non redundant version of the regulatory features.');
+
+
