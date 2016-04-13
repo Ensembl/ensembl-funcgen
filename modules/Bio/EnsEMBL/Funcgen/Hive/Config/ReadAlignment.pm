@@ -68,11 +68,11 @@ sub pipeline_analyses {
       -wait_for => 'PrePipelineChecks',
       -flow_into => {
 	'2->A' => 'DefineResultSets',
-	'A->4' => 'CleanupCellLineFiles',
+	'A->4' => 'DeleteFilesFromJobFan',
       },
     },
     {
-      -logic_name => 'CleanupCellLineFiles',
+      -logic_name => 'DeleteFilesFromJobFan',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::ErsaCleanup',
       -meadow_type=> 'LOCAL',
     },
@@ -82,7 +82,7 @@ sub pipeline_analyses {
      -meadow     => 'LOCAL',
     -flow_into => {
       '2->A' => 'FixResultSetsExperimentIds',
-      'A->3' => 'Preprocess_bwa_samse_control',
+      'A->3' => 'SplitFastqFilesFromControls',
      },
     },
     {
@@ -107,10 +107,10 @@ sub pipeline_analyses {
       -analysis_capacity => 1,
     },
     {
-      -logic_name => 'Preprocess_bwa_samse_control',
+      -logic_name => 'SplitFastqFilesFromControls',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::PreprocessFastqs',
       -flow_into => {
-	'2->A' => 'Run_bwa_samse_control_chunk',
+	'2->A' => 'AlignChunksFromControls',
 	'A->3' => 'MergeControlAlignments',
 	},
       # BWA only uses one cpu, but we are asking for two.
@@ -124,38 +124,38 @@ sub pipeline_analyses {
       -rc_name => '10gb_2cpu'
      },
      {
-      -logic_name => 'Preprocess_bwa_samse_merged',
+      -logic_name => 'SplitMergedFastQ',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::PreprocessFastqs',
       -parameters => { 
 	merge => 1 
       },
       -flow_into => {
-	'2->A' => 'Run_bwa_samse_merged_chunk',
+	'2->A' => 'AlignChunksFromMergedFastqs',
 	'A->3' =>  'MergeAlignments',
 	},
       -rc_name => '10gb_2cpu'
      },
      {
-      -logic_name => 'Preprocess_bwa_samse_replicate',
+      -logic_name => 'SplitFastqsFromReplicatedExperiments',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::PreprocessFastqs',
       -flow_into => {
-	'2->A' => 'Run_bwa_samse_replicate_chunk',
+	'2->A' => 'AlignChunksFromReplicateExperiments',
 	'A->3' => 'MergeReplicateAlignments' ,
 	},
       -rc_name => '10gb_2cpu'
      },
     {
-      -logic_name => 'Run_bwa_samse_control_chunk',
+      -logic_name => 'AlignChunksFromControls',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunAligner',
       -rc_name => 'normal_10gb'
      },
     {
-    -logic_name => 'Run_bwa_samse_merged_chunk',
+    -logic_name => 'AlignChunksFromMergedFastqs',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunAligner',
      -rc_name => 'normal_10gb'
      },
     {
-      -logic_name => 'Run_bwa_samse_replicate_chunk',
+      -logic_name => 'AlignChunksFromReplicateExperiments',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunAligner',
       -rc_name => 'normal_10gb'
      },
@@ -166,7 +166,12 @@ sub pipeline_analyses {
 	run_controls => 1,
      },
      -flow_into => {
-	  MAIN => 'RemoveDuplicateControlAlignments',
+	  MAIN => {
+	    'RemoveDuplicateControlAlignments' => undef,
+	    ':////accu?file_to_delete=[]' => { 
+	      'file_to_delete' => '#bam_file_with_unmapped_reads#'
+	    }
+	  },
        },
      -rc_name => 'normal_monitored_2GB',
     },
@@ -185,9 +190,9 @@ sub pipeline_analyses {
       -logic_name => 'JobFactorySignalProcessing',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::JobFactorySignalProcessing',
       -flow_into => {
-	'A->3'  => 'PreprocessIDR',
-	'10'    => 'Preprocess_bwa_samse_merged' ,
-	'11->A' => 'Preprocess_bwa_samse_replicate',
+	'A->3'  => 'CleanupFilesFromPermissiveSWEmblJobFan',
+	'10'    => 'SplitMergedFastQ' ,
+	'11->A' => 'SplitFastqsFromReplicatedExperiments',
       },
       -meadow_type=> 'LOCAL',
     },
@@ -214,7 +219,13 @@ sub pipeline_analyses {
       	run_controls => 0,
      },
      -flow_into => {
-	MAIN => 'RemoveDuplicateAlignments'
+# 	MAIN => 'RemoveDuplicateAlignments'
+	MAIN => {
+	  'RemoveDuplicateAlignments' => undef,
+	  ':////accu?file_to_delete=[]' => { 
+	    'file_to_delete' => '#bam_file_with_unmapped_reads#'
+	  }
+	},
      },
      -rc_name => 'normal_monitored_2GB',
     },
@@ -237,7 +248,13 @@ sub pipeline_analyses {
 	permissive_peaks => $self->o('permissive_peaks')
       },
      -flow_into => {
-	MAIN => 'RemoveDuplicateReplicateAlignments'
+# 	MAIN => 'RemoveDuplicateReplicateAlignments'
+	MAIN => {
+	  'RemoveDuplicateReplicateAlignments' => undef,
+	  ':////accu?file_to_delete=[]' => { 
+	    'file_to_delete' => '#bam_file_with_unmapped_reads#'
+	  }
+	},
      },
      -rc_name => 'normal_monitored_2GB',
     },
@@ -253,12 +270,20 @@ sub pipeline_analyses {
      -rc_name => '64GB_3cpu',
     },
     {
-      -logic_name    => 'PermissiveSWEmbl',  #SWEmbl permissive
+      -logic_name    => 'PermissiveSWEmbl',
       -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunPeaks',
       -parameters => {
 	peak_analysis => $self->o('permissive_peaks'),
       },
       -rc_name => 'normal_5GB_2cpu_monitored',
+    },
+    {
+      -logic_name => 'CleanupFilesFromPermissiveSWEmblJobFan',
+      -module     => 'Bio::EnsEMBL::Funcgen::Hive::ErsaCleanup',
+      -meadow_type=> 'LOCAL',
+     -flow_into => {
+	  MAIN => 'PreprocessIDR',
+       },
     },
     {
      -logic_name => 'PreprocessIDR',

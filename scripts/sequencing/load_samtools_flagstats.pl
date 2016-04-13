@@ -160,7 +160,12 @@ sub create_insert_sql {
       my $qc_passed_reads = $1;
       my $qc_failed_reads = $2;
       my $category        = $3;
-
+      
+      # Remove the bits samtools puts in brackets. This makes it 
+      # easier to use when it is loaded into the database.
+      $category =~ s/\(.+\)//;
+      chomp($category);
+      
       my $sql = "INSERT INTO result_set_qc_flagstats "
       . "(result_set_id, analysis_id, category, qc_passed_reads, qc_failed_reads, path, bam_file) "
       . "VALUES "

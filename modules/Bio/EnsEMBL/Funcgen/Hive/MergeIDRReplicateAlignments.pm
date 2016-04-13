@@ -267,6 +267,7 @@ sub run {
 	      dbID       => $result_set->dbID, 
 	      set_name   => $result_set->name,
 	      set_type   => 'ResultSet',
+	      bam_file   => $merged_file,
 	    }
 	  ]
 	);

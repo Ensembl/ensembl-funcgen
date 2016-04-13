@@ -399,7 +399,14 @@ sub remove_duplicates_from_bam {
   my $debug      = $param->{debug};
 
   my $metrics_file = "${output_bam}.merged_duplication_removal_metrics.tab";
-
+  
+  # Remove unmapped reads
+  #
+  # Must set -b or picard will complain: "Error parsing text SAM file. Empty 
+  # sequence dictionary."
+  #
+  my $cmd_removeUnmappedReads = qq(samtools view -F 4 -b -o $output_bam -);
+  
   # Picard must be in the classpath before running this module, e.g. like this:
   # export CLASSPATH=/software/ensembl/funcgen/picard.jar
   #
@@ -409,19 +416,21 @@ sub remove_duplicates_from_bam {
   my $cmd_MarkDuplicates = qq(java picard.cmdline.PicardCommandLine MarkDuplicates ) 
   . qq( REMOVE_DUPLICATES=true ) 
   . qq( VALIDATION_STRINGENCY=LENIENT ) 
-  . qq( ASSUME_SORTED=true ) 
-  . qq( INPUT=$input_bam ) 
+  . qq( ASSUME_SORTED=true     ) 
+  . qq( INPUT=$input_bam       ) 
+  . qq( COMPRESSION_LEVEL=0    ) 
   . qq( OUTPUT=/dev/stdout ) 
   # Prevent any messages from going into the pipe:
   . qq( QUIET=true ) 
   . qq( METRICS_FILE=$metrics_file );
 
-  my $cmd_SamFormatConverter = qq(java picard.cmdline.PicardCommandLine SamFormatConverter ) 
-  . qq( INPUT=/dev/stdin ) 
-  . qq( VALIDATION_STRINGENCY=LENIENT ) 
-  . qq( OUTPUT=$output_bam );
+#   my $cmd_SamFormatConverter = qq(java picard.cmdline.PicardCommandLine SamFormatConverter ) 
+#   . qq( INPUT=/dev/stdin ) 
+#   . qq( VALIDATION_STRINGENCY=LENIENT ) 
+#   . qq( OUTPUT=$output_bam );
   
-  my $cmd = qq(bash -o pipefail -c "$cmd_MarkDuplicates | $cmd_SamFormatConverter");
+  #my $cmd = qq(bash -o pipefail -c "$cmd_removeUnmappedReads | $cmd_MarkDuplicates | $cmd_SamFormatConverter");
+  my $cmd = qq(bash -o pipefail -c "$cmd_MarkDuplicates | $cmd_removeUnmappedReads");
   warn "Running\n$cmd\n";
   run_system_cmd($cmd);
 

@@ -67,12 +67,12 @@ sub pipeline_analyses {
     },
     {
      -logic_name    => 'PreprocessIDR',
-     -module        => 'Bio::EnsEMBL::Funcgen::Hive::PreprocessIDR',
-     -rc_name       => 'default',
-     -batch_size    => 30,
-     -parameters    => { 
-	permissive_peaks => $self->o('permissive_peaks') 
-      },
+#      -module        => 'Bio::EnsEMBL::Funcgen::Hive::PreprocessIDR',
+#      -rc_name       => 'default',
+#      -batch_size    => 30,
+#      -parameters    => { 
+# 	permissive_peaks => $self->o('permissive_peaks') 
+#       },
      -flow_into => {
        '2->A' => 'RunIDR',
        'A->3' => 'PostProcessIDRReplicates', 

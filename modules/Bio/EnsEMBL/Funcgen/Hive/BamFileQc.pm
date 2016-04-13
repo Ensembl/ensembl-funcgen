@@ -3,34 +3,12 @@ package Bio::EnsEMBL::Funcgen::Hive::BamFileQc;
 use warnings;
 use strict;
 
-use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
+use base qw (Bio::EnsEMBL::Hive::Process );
 
 sub run {
   my $self = shift;
-  
-  my $result_set;
-  my $set_type = $self->param_required('set_type');
-  if ($set_type eq 'ResultSet') {
-    $result_set = $self->fetch_Set_input('ResultSet'); 
-  } else {
-    my $fset     = $self->fetch_Set_input('FeatureSet');
-    my $analysis = $fset->analysis;
-    $result_set  = $self->ResultSet; 
-  }
-
-  my $result_set_id = $result_set->dbID;
-  
-  my $is_control = $self->param('is_control') ? 1 : undef;
-  my $align_prefix   = $self->get_alignment_path_prefix_by_ResultSet($result_set, $is_control, 1);
-  
-  my $has_duplicates = $self->param('has_duplicates');
-  
-  my $bam_file;
-  if ($has_duplicates) {
-    $bam_file = $align_prefix   . '.with_duplicates.bam';
-  } else {
-    $bam_file = $align_prefix   . '.bam';
-  }
+   
+  my $bam_file = $self->param('bam_file_for_qc');
   
   if (! -e $bam_file) {
   
@@ -47,12 +25,6 @@ sub run {
     die("$bam_file doesn't exist. Dying now and hoping for more luck in "
       . "the next life.");
   }
-
-  use Bio::EnsEMBL::Hive::Utils ('stringify', 'destringify');
-  my $param_hash = destringify($self->input_id);
-  
-  $param_hash->{bam_file} = $bam_file;
-  $self->dataflow_output_id($param_hash, 2);
   
   return;
 }
