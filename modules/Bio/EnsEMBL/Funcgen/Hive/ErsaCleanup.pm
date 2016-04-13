@@ -31,9 +31,7 @@ sub run {
   my $file_to_delete = $self->param('file_to_delete');
   
   foreach my $current_file (@$file_to_delete) {
-    my $cmd = "rm -f $current_file";
-    print $cmd . "\n";
-    run_system_cmd($cmd); 
+    unlink($current_file);
   }
   return;
 }
