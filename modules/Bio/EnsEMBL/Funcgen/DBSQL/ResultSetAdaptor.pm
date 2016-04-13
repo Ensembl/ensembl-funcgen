@@ -458,7 +458,7 @@ sub _objs_from_sth {
 
 =cut
 
-sub store{
+sub store {
   my ($self, @rsets) = @_;
   scalar(@rsets) || throw("Must provide a list of ResultSet objects");
 
@@ -541,36 +541,39 @@ sub store_dbfile_path {
   #Check we have a record
   my $rset_id  = $rset->dbID;
   my $db_path  = $self->_fetch_dbfile_path($rset_id, $file_type);
+  
+  my $md5sum = generate_checksum($db_path);
 
   if($db_path &&
-	 ($db_path ne $path)){  # UPDATE
+	 ($db_path ne $path)) {  # UPDATE
     # Really should have rolled this back prior to this point
-    my $sql = 'UPDATE dbfile_registry set path=? where table_name="result_set" and table_id=? and file_type=?';
+    my $sql = 'UPDATE dbfile_registry set path=? where table_name="result_set" and table_id=? and file_type=? and md5sum=?';
     my $sth = $self->prepare($sql);
     $sth->bind_param(1, $path,    SQL_VARCHAR);
     $sth->bind_param(2, $rset_id, SQL_INTEGER);
     $sth->bind_param(3, $file_type);
+    $sth->bind_param(4, $md5sum,  SQL_VARCHAR);
 
-    if(! eval {$sth->execute; 1}){
+    if(! eval {$sth->execute; 1}) {
       throw('Failed to update dbfile_data_dir for '.$rset->name."\n$@");
     }
   }
-  elsif(! defined $db_path){  # STORE
-    my $sql = 'INSERT INTO dbfile_registry(table_id, table_name, path, file_type) values(?, "result_set", ?, ?)';
+  elsif(! defined $db_path) {  # STORE
+    my $sql = 'INSERT INTO dbfile_registry(table_id, table_name, path, file_type, md5sum) values(?, "result_set", ?, ?, ?)';
     my $sth = $self->prepare($sql);
     $sth->bind_param(1, $rset_id, SQL_INTEGER);
     $sth->bind_param(2, $path,    SQL_VARCHAR);
     $sth->bind_param(3, $file_type);
+    $sth->bind_param(4, $md5sum,  SQL_VARCHAR);
 
-    if(! eval {$sth->execute; 1}){
+    if(! eval {$sth->execute; 1}) {
       my $err = $@;
       #This could be a race condition if we have parallel writes going on
       #Attempt to validate stored value is same, else fail
       $db_path = $self->_fetch_dbfile_path($rset_id);
 
-      if(defined $db_path){
-
-        if($db_path ne $path){
+      if(defined $db_path) {
+        if($db_path ne $path) {
           throw('Failed to store dbfile_data_dir table '.$rset->name.
             "\n'Racing' process stored a differing value:\n\t$path\n\tvs\n\t$db_path\n$err");
         }  # else this was a race condition
@@ -580,7 +583,6 @@ sub store_dbfile_path {
       }
     }
   }
-
   return;
 }
 
