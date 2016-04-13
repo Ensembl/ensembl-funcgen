@@ -19,6 +19,7 @@
 
 alter table dbfile_registry add column file_type ENUM('BAM','BAMCOV','BIGBED','BIGWIG','VCF','CRAM');
 alter table dbfile_registry drop primary key, add primary key(table_id, table_name, file_type);
+alter table dbfile_registry add column md5sum varchar(45) default null;
 
 -- We currently only have bigwig in there.
 update dbfile_registry set file_type='BIGWIG';
