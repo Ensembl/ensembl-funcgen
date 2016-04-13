@@ -169,12 +169,17 @@ sub run {
   }
   
   my $no_dups_bam_file = "${bam_file}.nodups.bam";
+
   
-  my $cmd = qq(samtools view -F 4 -b -o $no_dups_bam_file $bam_file);
-  run_system_cmd($cmd);
-  unlink($bam_file);
-  $cmd = qq(mv $no_dups_bam_file $bam_file);
-  run_system_cmd($cmd);
+# We can't do this here, because we want to detect the number of unmapped 
+# reads in the quality checks. Removing them here makes the reads look
+# artificially good.
+#
+#   my $cmd = qq(samtools view -F 4 -b -o $no_dups_bam_file $bam_file);
+#   run_system_cmd($cmd);
+#   unlink($bam_file);
+#   $cmd = qq(mv $no_dups_bam_file $bam_file);
+#   run_system_cmd($cmd);
   
   if (! -e $bam_file) {
   
