@@ -52,15 +52,11 @@ sub run {
   my $result_set = $self->ResultSet;
   my $cmd;
   
-  my $file_prefix  = $self->get_alignment_path_prefix_by_ResultSet($result_set, $self->run_controls); 
-  
-  # Name of the final deduplicated bam file
-  #
-  my $bam = $file_prefix . '.bam';
+  my $bam = $self->param('bam_file');
   
   # We want to keep this for quality checking.
   #
-  my $unfiltered_bam = $file_prefix.'.with_duplicates.bam';
+  my $unfiltered_bam = $self->param('bam_file_with_unmapped_reads_and_duplicates');
   
   my $tmp_bam = "${unfiltered_bam}.deduplication_in_progress.bam";
 
@@ -74,7 +70,6 @@ sub run {
   $result_set->dbfile_path($bam);
   $result_set->adaptor->store_dbfile_path($result_set, 'BAM');
 
-  #unlink($unfiltered_bam);
   run_system_cmd("mv $tmp_bam $bam");
 
   return;
