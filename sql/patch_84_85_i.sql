@@ -14,7 +14,7 @@
 
 /**
 @header patch_84_85_i.sql - 
-@desc   
+@desc   Also removes column "projected".
 */
 
 CREATE TABLE regulatory_feature_nr (
@@ -25,7 +25,6 @@ CREATE TABLE regulatory_feature_nr (
   seq_region_start int(10) unsigned NOT NULL,
   seq_region_end int(10) unsigned NOT NULL,
   stable_id  varchar(16) DEFAULT NULL,
-  projected boolean default FALSE,
   bound_start_length mediumint(3) unsigned NOT NULL,
   bound_end_length mediumint(3) unsigned NOT NULL,
   epigenome_count smallint(6),
@@ -41,7 +40,6 @@ insert into regulatory_feature_nr (
   seq_region_strand,
   feature_type_id,
   stable_id,
-  projected,
   bound_start_length,
   bound_end_length,
   epigenome_count
@@ -52,7 +50,6 @@ insert into regulatory_feature_nr (
   seq_region_strand,
   feature_type_id,
   stable_id,
-  projected,
   bound_start_length,
   bound_end_length,
   epigenome_count
@@ -64,7 +61,6 @@ group by
   seq_region_strand,
   feature_type_id,
   stable_id,
-  projected,
   bound_start_length,
   bound_end_length,
   epigenome_count
