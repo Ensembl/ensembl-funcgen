@@ -50,7 +50,6 @@
 @column seq_region_strand       Strand orientation of this feature
 @column display_label           Text display label
 @column stable_id               Integer stable ID without ENSR prefix *mnuhn: Not true, they do have this prefix*
-@column projected               Boolean, defines whether reg feat structure has been projected to this epigenome
 @column binary_string           *deprecated*
 @column bound_start_length      Distance between start of the feature and start of the bound region. Bound regions are used for promoters only. They define the flanking regions. It is an area that is predicted t
 @column bound_end_length        Distance between end of the bound region and end of this feature
@@ -71,7 +70,6 @@ CREATE TABLE regulatory_feature (
   seq_region_start int(10) unsigned NOT NULL,
   seq_region_end int(10) unsigned NOT NULL,
   stable_id  varchar(16) DEFAULT NULL,
-  projected boolean default FALSE,
   bound_start_length mediumint(3) unsigned NOT NULL,
   bound_end_length mediumint(3) unsigned NOT NULL,
   epigenome_count smallint(6),
