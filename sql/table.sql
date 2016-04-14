@@ -50,7 +50,6 @@
 @column seq_region_strand       Strand orientation of this feature
 @column display_label           Text display label
 @column stable_id               Integer stable ID without ENSR prefix *mnuhn: Not true, they do have this prefix*
-@column projected               Boolean, defines whether reg feat structure has been projected to this epigenome
 @column binary_string           *deprecated*
 @column bound_start_length      Distance between start of the feature and start of the bound region. Bound regions are used for promoters only. They define the flanking regions. It is an area that is predicted t
 @column bound_end_length        Distance between end of the bound region and end of this feature
@@ -63,30 +62,32 @@
 
 */
 
-DROP TABLE IF EXISTS `regulatory_feature`;
-CREATE TABLE `regulatory_feature` (
-  `regulatory_feature_id` int(10) unsigned NOT NULL auto_increment,
-  `feature_set_id`  int(10) unsigned default NULL,
-  `feature_type_id` int(10) unsigned default NULL,
-  `seq_region_id` int(10) unsigned NOT NULL,
-  `seq_region_strand` tinyint(1) NOT NULL,
-  `seq_region_start` int(10) unsigned NOT NULL,
-  `seq_region_end` int(10) unsigned NOT NULL,
-  `display_label` varchar(80) default NULL,
-  `stable_id`  varchar(128) DEFAULT NULL,
-  `binary_string` varchar(500) default NULL,
-  `projected` boolean default FALSE,
-  `bound_start_length` mediumint(3) unsigned NOT NULL,
-  `bound_end_length` mediumint(3) unsigned NOT NULL,
-  `activity` tinyint(1),
-  `epigenome_count` smallint(6),
-  PRIMARY KEY  (`regulatory_feature_id`),
-  UNIQUE KEY `fset_seq_region_idx` (`feature_set_id`, `seq_region_id`,`seq_region_start`, `feature_type_id`),
-  KEY `feature_type_idx` (`feature_type_id`),
-  KEY `stable_id_idx` (`stable_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
+CREATE TABLE regulatory_feature (
+  regulatory_feature_id int(10) unsigned NOT NULL auto_increment,
+  feature_type_id int(10) unsigned default NULL,
+  seq_region_id int(10) unsigned NOT NULL,
+  seq_region_strand tinyint(1) NOT NULL,
+  seq_region_start int(10) unsigned NOT NULL,
+  seq_region_end int(10) unsigned NOT NULL,
+  stable_id  varchar(16) DEFAULT NULL,
+  bound_start_length mediumint(3) unsigned NOT NULL,
+  bound_end_length mediumint(3) unsigned NOT NULL,
+  epigenome_count smallint(6),
+  PRIMARY KEY  (regulatory_feature_id),
+  KEY feature_type_idx (feature_type_id),
+  KEY stable_id_idx (stable_id)
+) ENGINE=MyISAM;
 
-
+create table regulatory_feature_feature_set (
+  regulatory_feature_feature_set_id int(10) unsigned NOT NULL auto_increment,
+  regulatory_feature_id int(10) unsigned default NULL,
+  activity tinyint(3),
+  feature_set_id int(10) unsigned default NULL,
+  PRIMARY KEY  (regulatory_feature_feature_set_id),
+  UNIQUE KEY uniqueness_constraint_idx (feature_set_id,regulatory_feature_id),
+  KEY feature_set_idx (feature_set_id),
+  KEY regulatory_feature_idx (regulatory_feature_id)
+) ENGINE=MyISAM;
 
 /**
 @table  regulatory_attribute
