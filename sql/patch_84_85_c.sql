@@ -21,5 +21,14 @@ ALTER TABLE epigenome change efo_id ontology_accession VARCHAR(20);
 ALTER TABLE epigenome add ontology ENUM('EFO','CL') after ontology_accession;
 ALTER TABLE epigenome add production_name VARCHAR(120) after description;
 
+-- Create production names from the names.
+--
+update epigenome set production_name=name;
+
+update epigenome set production_name = replace(production_name, ':', '_');
+update epigenome set production_name = replace(production_name, '+', '');
+update epigenome set production_name = replace(production_name, '-', '_');
+update epigenome set production_name = replace(production_name, '.', '_');
+
 -- patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_c.sql|new epigenome table columns');
