@@ -161,10 +161,31 @@ sub create_insert_sql {
       my $qc_failed_reads = $2;
       my $category        = $3;
       
-      # Remove the bits samtools puts in brackets. This makes it 
-      # easier to use when it is loaded into the database.
-      $category =~ s/\(.+\)//;
-      chomp($category);
+      # We make an exception here, because flagstats looks like this:
+      #
+      #   13503488 + 0 in total (QC-passed reads + QC-failed reads)
+      #   0 + 0 secondary
+      #   0 + 0 supplementary
+      #   0 + 0 duplicates
+      #   13214414 + 0 mapped (97.86%:-nan%)
+      #   0 + 0 paired in sequencing
+      #   0 + 0 read1
+      #   0 + 0 read2
+      #   0 + 0 properly paired (-nan%:-nan%)
+      #   0 + 0 with itself and mate mapped
+      #   0 + 0 singletons (-nan%:-nan%)
+      #   0 + 0 with mate mapped to a different chr
+      #   0 + 0 with mate mapped to a different chr (mapQ>=5)
+      #
+      # If we strip the bits in brackets, then the last two lines will have 
+      # identical categories in the database.
+      #
+      if ($category ne 'with mate mapped to a different chr (mapQ>=5)') {
+	# Remove the bits samtools puts in brackets. This makes it 
+	# easier to use when it is loaded into the database.
+	$category =~ s/\(.+\)//;
+	chomp($category);
+      }
       
       my $sql = "INSERT INTO result_set_qc_flagstats "
       . "(result_set_id, analysis_id, category, qc_passed_reads, qc_failed_reads, path, bam_file) "
