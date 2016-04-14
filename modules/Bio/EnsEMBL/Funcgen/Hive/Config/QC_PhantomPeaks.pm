@@ -38,7 +38,10 @@ sub pipeline_analyses {
 	{
 	  -logic_name => 'BamFileQc',
 	  -flow_into => {
-	    MAIN => 'QcPhantomPeaksJobFactory'
+	    MAIN => WHEN(
+	      '#has_duplicates# eq "no"'  => 'QcPhantomPeaksJobFactory',
+	      '!defined #has_duplicates#' => 'QcPhantomPeaksJobFactory',
+	    ),
 	  },
 	},
         {   -logic_name => 'QcPhantomPeaksJobFactory',
@@ -57,11 +60,14 @@ sub pipeline_analyses {
 		    # do that. Also using single quotes to avoid interpolation
 		    # of the dollar sign.
 		    #
-		    q( Rscript $(which run_spp.R) )
+		    q( Rscript $(which run_spp.R)          )
 		    # Overwrite plotfile, if one already exists
-		  . qq(    -rf )
-		  . qq(    -c=#bam_file# )
-		  . qq(    -savp -out=#phantom_peak_out_file# )
+		  . qq(    -rf                             )
+		  . qq(    -c=#bam_file#                   )
+		  . qq(    -savp                           )
+		  . qq(    -out=#phantom_peak_out_file#    )
+		  . qq(    -odir=#tempdir#                 )
+		  . qq(    -tmpdir=#tempdir#               )
 		  # In case the job gets terminated for memlimit, this 
 		  # ensures that the worker also dies. (or so we hope)
 		  . qq(    ; sleep 30 )
@@ -83,9 +89,12 @@ sub pipeline_analyses {
 		    #
 		    q( Rscript $(which run_spp.R) )
 		    # Overwrite plotfile, if one already exists
-		  . qq(    -rf )
-		  . qq(    -c=#bam_file# )
-		  . qq(    -savp -out=#phantom_peak_out_file# )
+		  . qq(    -rf                             )
+		  . qq(    -c=#bam_file#                   )
+		  . qq(    -savp                           )
+                  . qq(    -out=#phantom_peak_out_file#    )
+                  . qq(    -odir=#tempdir#                 )
+                  . qq(    -tmpdir=#tempdir#               )
 		  # In case the job gets terminated for memlimit, this 
 		  # ensures that the worker also dies. (or so we hope)
 		  . qq(    ; sleep 30 )

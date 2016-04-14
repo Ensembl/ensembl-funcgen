@@ -376,6 +376,8 @@ sub run_counts {
     $current_cmd = "samtools view -c $bam_file";
     $logger->info("Running $current_cmd\n", 0, 1);
     $num_reads_in_total = run_backtick_cmd($current_cmd);
+    
+    unlink($READS_IN_PEAKS_BAM_FILE);
   }
 
   my $proportion_of_reads_in_peaks = $num_reads_in_peaks / $num_reads_in_total;

@@ -17,14 +17,18 @@ sub pipeline_analyses {
       -flow_into => {
 	2   => [ 
 	  WHEN(
-	    '#feature_set_analysis_logic_name# eq "SWEmbl_R015"'      => { 'CallDefaultPeaks' => INPUT_PLUS() },
-	    '#feature_set_analysis_logic_name# eq "ccat_histone"'     => { 'CallBroadPeaks'   => INPUT_PLUS() },
-	    '#feature_set_analysis_logic_name# eq "SWEmbl_R0025"'     => { 'CallTightPeaks'   => INPUT_PLUS() },
-	    '#feature_set_analysis_logic_name# eq "SWEmbl_R0005_IDR"' => { 'CallIDRPeaks'     => INPUT_PLUS() },
+	    '#logic_name# eq "SWEmbl_R015"'      => 'CallDefaultPeaks',
+	    '#logic_name# eq "ccat_histone"'     => 'CallBroadPeaks',
+	    '#logic_name# eq "SWEmbl_R0025"'     => 'CallTightPeaks',
+	    '#logic_name# eq "SWEmbl_R0005_IDR"' => 'CallIDRPeaks',
 	  ),
 	  'WriteBigWig'
 	],
-	7   => ':////accu?file_to_delete_after_cell_line_has_been_processed=[file]',
+        7 => { 
+            ':////accu?file_to_delete=[]' => { 
+              'file_to_delete' => '#file_to_delete#'
+            } 
+          }
       },
     },
     {

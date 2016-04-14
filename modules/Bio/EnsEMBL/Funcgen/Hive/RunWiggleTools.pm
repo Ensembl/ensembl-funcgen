@@ -197,7 +197,7 @@ sub run {
     my $rset = $self->ResultSet;
     $rset->adaptor->dbfile_data_root($self->db_output_dir);
     $rset->dbfile_path($output);
-    $rset->adaptor->store_dbfile_path($rset);
+    $rset->adaptor->store_dbfile_path($rset, 'BIGWIG');
     $rset->adaptor->set_imported_states_by_Set($rset);
   }
 

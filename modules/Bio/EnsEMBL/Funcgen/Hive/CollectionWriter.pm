@@ -35,7 +35,7 @@ sub fetch_input {
   # Move this to get_alignment_file_by_ResultSet_formats?
   $self->set_param_method('epigenome', $rset->epigenome, 'required'); 
   
-  my @file_to_delete_after_cell_line_has_been_processed;  
+  my @file_to_delete;  
 
   if($self->FeatureSet->analysis->program eq 'CCAT') {
     
@@ -56,7 +56,7 @@ sub fetch_input {
       run_system_cmd($cmd);
       $cmd = qq(mv ${bed_file}.part $bed_file);
       run_system_cmd($cmd);
-      push @file_to_delete_after_cell_line_has_been_processed, $bed_file;
+      push @file_to_delete, $bed_file;
     }
   }
   
@@ -74,14 +74,14 @@ sub fetch_input {
     run_system_cmd($cmd);
     $cmd = qq(mv ${bed_file}.part $bed_file);
     run_system_cmd($cmd);
-    push @file_to_delete_after_cell_line_has_been_processed, $bed_file;
+    push @file_to_delete, $bed_file;
   }
   
-  push @file_to_delete_after_cell_line_has_been_processed, $bed_file;
+  push @file_to_delete, $bed_file;
   
-  foreach my $current_file (@file_to_delete_after_cell_line_has_been_processed) {
+  foreach my $current_file (@file_to_delete) {
     $self->dataflow_output_id( {
-	file_to_delete_after_cell_line_has_been_processed => $current_file,
+	file_to_delete => $current_file,
     }, 7);
   }
   
@@ -143,7 +143,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
     run_system_cmd($cmd);
   }
   $self->dataflow_output_id( {
-      file_to_delete_after_cell_line_has_been_processed => $expected_bam_index_file,
+      file_to_delete => $expected_bam_index_file,
   }, 7);
 
   $Imp->read_and_import_data('prepare');
@@ -158,7 +158,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
     set_name     => $self->param('set_name'),  # mainly for readability
     set_type     => $self->param('set_type'),
     filter_from_format => undef,
-    feature_set_analysis_logic_name => $feature_set_analysis_logic_name,
+    logic_name => $feature_set_analysis_logic_name,
   }; 
 
   $self->branch_job_group(2, [$output_id]);

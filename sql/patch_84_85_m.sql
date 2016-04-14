@@ -13,16 +13,14 @@
 -- limitations under the License.
 
 /**
-@header patch_84_85_h.sql - Store file types.
-@desc   Store file types along with the files.
+@header patch_84_85_m.sql - Normalise regulatory feature table
+@desc   Replace the redundant regulatory features with the non redundant ones.
 */
 
-alter table dbfile_registry add column file_type ENUM('BAM','BAMCOV','BIGBED','BIGWIG','VCF','CRAM');
-alter table dbfile_registry drop primary key, add primary key(table_id, table_name, file_type);
-alter table dbfile_registry add column md5sum varchar(45) default null;
+drop table regulatory_feature;
+rename table regulatory_feature_nr to regulatory_feature;
 
--- We currently only have bigwig in there.
-update dbfile_registry set file_type='BIGWIG';
+drop table regulatory_attribute;
+rename table regulatory_attribute_new to regulatory_attribute;
 
--- patch identifier
-insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_h.sql|Store file types along with the files.');
+insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_m.sql|Normalise regulatory feature table: Replace the redundant regulatory features with the non redundant ones.');

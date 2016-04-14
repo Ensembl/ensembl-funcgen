@@ -836,9 +836,6 @@ sub dataflow_job_groups {
   my $self       = shift;
   my $job_groups = $self->{job_groups} || []; #allow no job groups
   
-  $Data::Dumper::Maxdepth = 6;
-  print Dumper($job_groups);
-  
   foreach my $job_group(@$job_groups){
     #we can detect funnel jobs here!
     #Is it possibl to have more than one semaphore from a fan?

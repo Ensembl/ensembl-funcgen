@@ -458,7 +458,7 @@ sub _objs_from_sth {
 
 =cut
 
-sub store{
+sub store {
   my ($self, @rsets) = @_;
   scalar(@rsets) || throw("Must provide a list of ResultSet objects");
 
@@ -517,54 +517,63 @@ sub store{
 
 =cut
 
-sub store_dbfile_path{
+sub store_dbfile_path {
   my $self = shift;
   my $rset = shift;
+  my $file_type = shift;
+  
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
 
   my $path = $rset->dbfile_path;
-  if(! defined $path){ throw('ResultSet::dbfile_path attribute is not set') }
-
-  # Strip off dbfile_data_root and throw if now set.
+  if (! defined $path) {
+    throw('ResultSet::dbfile_path attribute is not set') 
+  }
+  if (! defined $file_type) {
+    throw('file_type parameter has not been set!');
+  }
   my $root = $self->dbfile_data_root;
-
-  if(! $root){  # not ! defined, as we default to the null string
+  if (! $root) {
     throw('It is unsafe to store_dbfile_path without setting the dbfile_data_root first');
   }
-
+  
   $path =~ s/$root//;
 
   #Check we have a record
   my $rset_id  = $rset->dbID;
-  my $db_path  = $self->_fetch_dbfile_path($rset_id);
+  my $db_path  = $self->_fetch_dbfile_path($rset_id, $file_type);
+  
+  my $md5sum = generate_checksum($db_path);
 
   if($db_path &&
-	 ($db_path ne $path)){  # UPDATE
+	 ($db_path ne $path)) {  # UPDATE
     # Really should have rolled this back prior to this point
-    my $sql = 'UPDATE dbfile_registry set path=? where table_name="result_set" and table_id=?';
+    my $sql = 'UPDATE dbfile_registry set path=? where table_name="result_set" and table_id=? and file_type=? and md5sum=?';
     my $sth = $self->prepare($sql);
     $sth->bind_param(1, $path,    SQL_VARCHAR);
     $sth->bind_param(2, $rset_id, SQL_INTEGER);
+    $sth->bind_param(3, $file_type);
+    $sth->bind_param(4, $md5sum,  SQL_VARCHAR);
 
-    if(! eval {$sth->execute; 1}){
+    if(! eval {$sth->execute; 1}) {
       throw('Failed to update dbfile_data_dir for '.$rset->name."\n$@");
     }
   }
-  elsif(! defined $db_path){  # STORE
-    my $sql = 'INSERT INTO dbfile_registry(table_id, table_name, path) values(?, "result_set", ?)';
+  elsif(! defined $db_path) {  # STORE
+    my $sql = 'INSERT INTO dbfile_registry(table_id, table_name, path, file_type, md5sum) values(?, "result_set", ?, ?, ?)';
     my $sth = $self->prepare($sql);
     $sth->bind_param(1, $rset_id, SQL_INTEGER);
     $sth->bind_param(2, $path,    SQL_VARCHAR);
+    $sth->bind_param(3, $file_type);
+    $sth->bind_param(4, $md5sum,  SQL_VARCHAR);
 
-    if(! eval {$sth->execute; 1}){
+    if(! eval {$sth->execute; 1}) {
       my $err = $@;
       #This could be a race condition if we have parallel writes going on
       #Attempt to validate stored value is same, else fail
       $db_path = $self->_fetch_dbfile_path($rset_id);
 
-      if(defined $db_path){
-
-        if($db_path ne $path){
+      if(defined $db_path) {
+        if($db_path ne $path) {
           throw('Failed to store dbfile_data_dir table '.$rset->name.
             "\n'Racing' process stored a differing value:\n\t$path\n\tvs\n\t$db_path\n$err");
         }  # else this was a race condition
@@ -574,7 +583,6 @@ sub store_dbfile_path{
       }
     }
   }
-
   return;
 }
 
@@ -590,9 +598,14 @@ sub dbfile_data_root {
 sub _fetch_dbfile_path{
   my $self    = shift;
   my $rset_id = shift;
-  my $sql  = 'SELECT path from dbfile_registry where table_name="result_set" and table_id=?';
+  my $file_type = shift;
+  
+  my $sql  = 'SELECT path from dbfile_registry where table_name="result_set" and table_id=? and file_type=?';
   my $sth  = $self->prepare($sql);
-  $sth->bind_param(1, $rset_id, SQL_INTEGER);
+  $sth->bind_param(1, $rset_id,   SQL_INTEGER);
+  
+  # No idea what the :sql_types for an enum is, so not using typed parameter.
+  $sth->bind_param(2, $file_type);
 
   if(! eval {$sth->execute; 1} ){
     throw("Failed to fetch dbfile_registry using:\n$sql (dbID=$rset_id)\n$@");

@@ -38,7 +38,9 @@ sub pipeline_analyses {
       {
 	-logic_name => 'BamFileQc',
 	-flow_into => {
-	  MAIN => 'QcFlagstatsJobFactory'
+	  MAIN => WHEN(
+	    '#has_unmapped_reads# eq "yes"' => 'QcFlagstatsJobFactory',
+	  ),
 	},
       },
       {   -logic_name => 'QcFlagstatsJobFactory',
@@ -68,10 +70,16 @@ sub pipeline_analyses {
 		. qq( --user #tracking_db_user# --pass #tracking_db_pass# --host #tracking_db_host# --dbname #tracking_db_name# )
 		. qq( --work_dir #tempdir#  )
 		. qq( --bam_file #bam_file# )
-
-
 	  },
       },
+#       {   -logic_name => 'DeleteBamWithDuplicates',
+# 	  -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+# 	  -meadow_type=> 'LOCAL',
+# 	  -parameters => { 
+# 		cmd => qq(rm #bam_file#),
+# 	  },
+#       },
+
     ];
 }
 

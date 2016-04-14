@@ -79,16 +79,19 @@ sub run {
     run_system_cmd($cmd, 1);
   }
   
-  my $file_prefix  = $self->get_alignment_path_prefix_by_ResultSet($result_set, $self->run_controls); 
-  my $unfiltered_bam     = $file_prefix.'.bam';
+  my $bam_file_with_unmapped_reads_and_duplicates = $self->param('bam_file_with_unmapped_reads_and_duplicates');
   
-  $self->helper->debug(1, "Merging bams to:\t".$unfiltered_bam); 
+  $self->helper->debug(1, "Merging bams to:\t".$bam_file_with_unmapped_reads_and_duplicates); 
 
   merge_bams({
     input_bams => $self->bam_files, 
-    output_bam => $unfiltered_bam, 
+    output_bam => $bam_file_with_unmapped_reads_and_duplicates,
     debug => $self->debug,
   });
+
+  $result_set->adaptor->dbfile_data_root($self->db_output_dir);
+  $result_set->dbfile_path($bam_file_with_unmapped_reads_and_duplicates);
+  $result_set->adaptor->store_dbfile_path($result_set, 'BAM');
 
   foreach my $current_bam_file (@{$self->bam_files}) {
     unlink($current_bam_file);
