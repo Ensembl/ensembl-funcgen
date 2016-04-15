@@ -89,10 +89,6 @@ sub run {
     debug => $self->debug,
   });
 
-  $result_set->adaptor->dbfile_data_root($self->db_output_dir);
-  $result_set->dbfile_path($bam_file_with_unmapped_reads_and_duplicates);
-  $result_set->adaptor->store_dbfile_path($result_set, 'BAM');
-
   foreach my $current_bam_file (@{$self->bam_files}) {
     unlink($current_bam_file);
   }
