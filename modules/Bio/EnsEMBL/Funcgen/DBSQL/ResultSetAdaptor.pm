@@ -497,7 +497,7 @@ sub store {
     $rset->adaptor($self);
     $self->store_states($rset);
     $self->store_chip_channels($rset);
-    $self->store_dbfile_path($rset) if $rset->dbfile_path;
+    $self->store_dbfile_path($rset, 'DIR') if $rset->dbfile_path;
   }
 
   return \@rsets;
@@ -506,7 +506,8 @@ sub store {
 =head2 store_dbfile_path
 
   Arg[1]     : Bio::EnsEMBL::Funcgen::ResultSet
-  Example    : $rset_adaptor->store_dbfile_data_dir;
+  Arg[2]     : File type as a string
+  Example    : $rset_adaptor->store_dbfile_path($result_set, 'BAM');
   Description: Updater/Setter for the root dbfile data directory for this ResultSet
   Returntype : None
   Exceptions : Throws if ResultSet is not stored and valid
@@ -536,14 +537,15 @@ sub store_dbfile_path {
     throw('It is unsafe to store_dbfile_path without setting the dbfile_data_root first');
   }
   
+  use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( generate_checksum );
+  my $md5sum = generate_checksum($rset->dbfile_path);
+  
   $path =~ s/$root//;
 
   #Check we have a record
   my $rset_id  = $rset->dbID;
   my $db_path  = $self->_fetch_dbfile_path($rset_id, $file_type);
   
-  my $md5sum = generate_checksum($db_path);
-
   if($db_path &&
 	 ($db_path ne $path)) {  # UPDATE
     # Really should have rolled this back prior to this point
@@ -559,6 +561,7 @@ sub store_dbfile_path {
     }
   }
   elsif(! defined $db_path) {  # STORE
+
     my $sql = 'INSERT INTO dbfile_registry(table_id, table_name, path, file_type, md5sum) values(?, "result_set", ?, ?, ?)';
     my $sth = $self->prepare($sql);
     $sth->bind_param(1, $rset_id, SQL_INTEGER);
@@ -570,7 +573,7 @@ sub store_dbfile_path {
       my $err = $@;
       #This could be a race condition if we have parallel writes going on
       #Attempt to validate stored value is same, else fail
-      $db_path = $self->_fetch_dbfile_path($rset_id);
+      $db_path = $self->_fetch_dbfile_path($rset_id, $file_type);
 
       if(defined $db_path) {
         if($db_path ne $path) {
@@ -595,17 +598,14 @@ sub dbfile_data_root {
 
 #This is only used for validation in store_dbfile_path
 
-sub _fetch_dbfile_path{
+sub _fetch_dbfile_path {
   my $self    = shift;
   my $rset_id = shift;
   my $file_type = shift;
   
-  my $sql  = 'SELECT path from dbfile_registry where table_name="result_set" and table_id=? and file_type=?';
-  my $sth  = $self->prepare($sql);
-  $sth->bind_param(1, $rset_id,   SQL_INTEGER);
+  my $sql  = qw(SELECT path from dbfile_registry where table_name="result_set" and table_id=$rset_id and file_type="$file_type");
   
-  # No idea what the :sql_types for an enum is, so not using typed parameter.
-  $sth->bind_param(2, $file_type);
+  my $sth  = $self->prepare($sql);
 
   if(! eval {$sth->execute; 1} ){
     throw("Failed to fetch dbfile_registry using:\n$sql (dbID=$rset_id)\n$@");
