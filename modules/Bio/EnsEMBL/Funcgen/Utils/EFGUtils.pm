@@ -576,10 +576,6 @@ sub write_checksum{
 sub generate_checksum{
   my $file          = shift;
   my $digest_method = shift;
-  #if($file =~ /\.gz$/){
-    #warn("It is unsafe to generate checksums for a compressed file:\n\t$file");
-  #}
-
   $digest_method ||= 'hexdigest';
 
   my $ctx = Digest::MD5->new;
@@ -589,8 +585,9 @@ sub generate_checksum{
      'please choose a valid digest method or omit for default hexdigest method');
   }
 
-  #Don't use bareword (FILE) for descriptor as is stored in symbol table for this package
-  #meaning potential interference if FILE is used elsewhere. (PBP 203)
+  # Don't use bareword (FILE) for descriptor as is stored in symbol table for 
+  # this package meaning potential interference if FILE is used elsewhere.
+  #
   open(my $CHK_FILE, '<', $file) or throw("Cannot open file for md5 digest:\t$file\n$!");
   binmode $CHK_FILE;
   $ctx->addfile($CHK_FILE);#eval this?

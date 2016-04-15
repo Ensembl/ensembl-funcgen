@@ -8,11 +8,8 @@ Bio::EnsEMBL::Funcgen::Hive::ErsaCleanup
 
 package Bio::EnsEMBL::Funcgen::Hive::ErsaCleanup;
 
-use base ('Bio::EnsEMBL::Funcgen::Hive::BaseDB');
-
-use warnings;
+use base Bio::EnsEMBL::Hive::Process;
 use strict;
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd );
 
 sub run {
   my $self = shift; 
@@ -31,6 +28,10 @@ sub run {
   my $file_to_delete = $self->param('file_to_delete');
   
   foreach my $current_file (@$file_to_delete) {
+    if ($current_file eq 'undef') {
+      die("Got an undef file! This probably means that the dataflow to the "
+      . "accu is using a parameter name that doesn't exist or was renamed.");
+    }
     unlink($current_file);
   }
   return;
