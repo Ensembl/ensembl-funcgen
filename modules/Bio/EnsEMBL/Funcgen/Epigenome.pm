@@ -110,8 +110,8 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($name, $dlabel, $desc, $gender, $efo_id, $tissue) = rearrange
-    (['NAME', 'DISPLAY_LABEL', 'DESCRIPTION','GENDER', 'EFO_ID', 'TISSUE'], @_);
+  my ($name, $dlabel, $desc, $gender, $efo_id, $tissue, $production_name) = rearrange
+    (['NAME', 'DISPLAY_LABEL', 'DESCRIPTION','GENDER', 'EFO_ID', 'TISSUE', 'PRODUCTION_NAME'], @_);
 
   throw("Must supply an Epigenome name") if ! defined $name;
 
@@ -125,11 +125,13 @@ sub new {
   }
 
   #Set explicitly to enable faster getter only methods
-  $self->{name}          = $name;
-  $self->{display_label} = $dlabel || $name;
-  $self->{description}   = $desc   if defined $desc;
-  $self->{efo_id}        = $efo_id if defined $efo_id;
-  $self->{tissue}        = $tissue if defined $tissue;
+  $self->{name}            = $name;
+  $self->{display_label}   = $dlabel || $name;
+  $self->{description}     = $desc   if defined $desc;
+  $self->{efo_id}          = $efo_id if defined $efo_id;
+  $self->{tissue}          = $tissue if defined $tissue;
+  $self->{production_name} = $production_name;
+  
 
   return $self;
 }
@@ -147,6 +149,7 @@ sub new {
 
 sub name { return $_[0]->{name}; }
 
+sub production_name { return $_[0]->{production_name}; }
 
 =head2 gender
 
