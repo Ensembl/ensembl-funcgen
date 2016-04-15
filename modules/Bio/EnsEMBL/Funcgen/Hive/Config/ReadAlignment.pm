@@ -169,7 +169,7 @@ sub pipeline_analyses {
 	  MAIN => {
 	    'RemoveDuplicateControlAlignments' => undef,
 	    ':////accu?file_to_delete=[]' => { 
-	      'file_to_delete' => '#bam_file_with_unmapped_reads#'
+	      'file_to_delete' => '#bam_file_with_unmapped_reads_and_duplicates#'
 	    }
 	  },
        },
@@ -223,7 +223,7 @@ sub pipeline_analyses {
 	MAIN => {
 	  'RemoveDuplicateAlignments' => undef,
 	  ':////accu?file_to_delete=[]' => { 
-	    'file_to_delete' => '#bam_file_with_unmapped_reads#'
+	    'file_to_delete' => '#bam_file_with_unmapped_reads_and_duplicates#'
 	  }
 	},
      },
@@ -252,7 +252,7 @@ sub pipeline_analyses {
 	MAIN => {
 	  'RemoveDuplicateReplicateAlignments' => undef,
 	  ':////accu?file_to_delete=[]' => { 
-	    'file_to_delete' => '#bam_file_with_unmapped_reads#'
+	    'file_to_delete' => '#bam_file_with_unmapped_reads_and_duplicates#'
 	  }
 	},
      },
