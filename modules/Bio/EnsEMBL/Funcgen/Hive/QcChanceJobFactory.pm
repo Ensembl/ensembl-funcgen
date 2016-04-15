@@ -81,7 +81,9 @@ sub create_input_id {
   
   my $work_dir = $self->param_required('work_root_dir');
   
-  my $temp_dir = "$work_dir/temp/$result_set_id";
+  my $epigenome_production_name = $result_set->epigenome->production_name;
+  
+  my $temp_dir = "$work_dir/quality_checks/Chance/$epigenome_production_name/$result_set_id";
   
   use File::Basename;
   (my $signal_bam_file_base_name,  my $signal_bam_directory)  = fileparse($signal_bam_file);

@@ -25,10 +25,6 @@ sub run {
   my $input_subset_id = $self->param('input_subset_id');
   my $input_id = $self->create_input_id($input_subset_id);
   
-  use Data::Dumper;
-  $Data::Dumper::Maxdepth = 0;
-  print Dumper($input_id);
-
   $self->dataflow_output_id($input_id, 2);
   return;
 }
@@ -38,8 +34,12 @@ sub create_input_id {
   my $self = shift;
   my $input_subset_id = shift;
   my $work_dir = $self->param_required('work_root_dir');
-  my $temp_dir = "$work_dir/temp/Qc/FastQc/$input_subset_id";
+  
   my $out_db = $self->param('out_db');
+  my $input_subset = $out_db->get_InputSubsetAdaptor->fetch_by_dbID($input_subset_id);
+  my $epigenome_production_name = $input_subset->epigenome->production_name;
+
+  my $temp_dir = "$work_dir/quality_checks/FastQc/$epigenome_production_name/$input_subset_id";
 
   my $input_id = {
       tempdir               => $temp_dir,

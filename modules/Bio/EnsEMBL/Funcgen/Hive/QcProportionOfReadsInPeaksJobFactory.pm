@@ -74,7 +74,10 @@ sub create_input_id {
   my $feature_set_id = $feature_set->dbID;
   
   my $work_dir = $self->param_required('work_root_dir');
-  my $temp_dir = "$work_dir/temp/Qc/ProportionOfReadsInPeaks/$feature_set_id";
+  
+  my $epigenome_production_name = $feature_set->epigenome->production_name;
+  
+  my $temp_dir = "$work_dir/quality_checks/ProportionOfReadsInPeaks/$epigenome_production_name/$feature_set_id";
   my $out_db = $self->param('out_db');
   my $peak_caller = $self->param('peak_caller');
 
