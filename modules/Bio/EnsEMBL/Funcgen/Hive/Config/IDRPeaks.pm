@@ -83,7 +83,11 @@ sub pipeline_analyses {
       -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunIDR',
       -rc_name    => 'normal_2GB',
       -flow_into => {
-	2 => ':////accu?idr_peak_counts=[accu_idx]',
+	  2 => {
+	    ':////accu?idr_peak_counts=[]' => {
+	      'idr_peak_counts' => '#accu_idx#'
+	    },
+	  },
       }
     },
     {
