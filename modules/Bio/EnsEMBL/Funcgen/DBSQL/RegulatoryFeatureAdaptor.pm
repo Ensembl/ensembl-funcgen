@@ -33,24 +33,24 @@ Bio::EnsEMBL::DBSQL::Funcgen::RegulatoryFeatureAdaptor
 
 =head1 SYNOPSIS
 
-use Bio::EnsEMBL::Registry;
-use Bio::EnsEMBL::Funcgen::RegulatoryFeature;
+ use Bio::EnsEMBL::Registry;
+ use Bio::EnsEMBL::Funcgen::RegulatoryFeature;
 
-my $reg = Bio::EnsEMBL::Registry->load_adaptors_from_db(-host    => 'ensembldb.ensembl.org',
-                                                        -user    => 'anonymous');
-
-my $regfeat_adaptor = $reg->get_adaptor($species, 'funcgen', 'RegulatoryFeature');
-
-
-#Fetch MultiCell RegulatoryFeatures
-my @features = @{$regfeat_adaptor->fetch_all_by_Slice($slice)};
-
-#Fetch epigenome specific RegulatoryFeatures
-my @epigenome_features = @{$regfeat_adaptor->fetch_all_by_Slice_FeatureSets($slice, [$epigenome_fset1, $epigenome_fset2])};
-
-#Fetch all epigenome RegulatoryFeatures for a given stable ID
-my @epigenome_features = @{$regfeat_adaptor->fetch_all_by_stable_ID('ENSR00001348194')};
-
+ my $reg = Bio::EnsEMBL::Registry->load_adaptors_from_db(
+   -host    => 'ensembldb.ensembl.org',
+   -user    => 'anonymous'
+ );
+ 
+ my $regfeat_adaptor = $reg->get_adaptor($species, 'funcgen', 'RegulatoryFeature');
+ 
+ #Fetch MultiCell RegulatoryFeatures
+ my @features = @{$regfeat_adaptor->fetch_all_by_Slice($slice)};
+ 
+ #Fetch epigenome specific RegulatoryFeatures
+ my @epigenome_features = @{$regfeat_adaptor->fetch_all_by_Slice_FeatureSets($slice, [$epigenome_fset1, $epigenome_fset2])};
+ 
+ #Fetch all epigenome RegulatoryFeatures for a given stable ID
+ my @epigenome_features = @{$regfeat_adaptor->fetch_all_by_stable_ID('ENSR00001348194')};
 
 =head1 DESCRIPTION
 
@@ -67,75 +67,17 @@ use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::RegulatoryFeature;
-use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor;#DBI sql_types import
+
+# DBI sql_types import
+use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor;
 
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
 
 
 my %valid_attribute_features = (
-								'Bio::EnsEMBL::Funcgen::MotifFeature' => 'motif',
-								'Bio::EnsEMBL::Funcgen::AnnotatedFeature' => 'annotated',
-							   );
-
-
-
-sub fetch_MultiCell_by_stable_ID_Slice {
-  my ($self, $stable_id, $slice) = @_;
-  my  $fset = $self->_get_current_FeatureSet;
-  throw('You must provide a stable_id argument') if ! defined $stable_id;
-
-  $self->bind_param_generic_fetch($stable_id,  SQL_VARCHAR);
-  $self->bind_param_generic_fetch($fset->dbID, SQL_INTEGER);
-  return $self->fetch_all_by_Slice_constraint($slice, 'rf.stable_id=? and rf.feature_set_id=?')->[0];
-}
-
-
-
-=head2 fetch_all
-
-  Example    : my $rfs = $rf_adaptor->fetch_all;
-  Description: Over-ride generic fetch_all method to return only MultiCell features.
-  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::RegulatoryFeature objects
-  Exceptions : None
-  Caller     : General
-  Status     : At risk
-
-=cut
-
-sub fetch_all{
-  my $self = $_[0];
-
-  return $self->SUPER::generic_fetch(' rf.feature_set_id='.
-                                     $self->_get_current_FeatureSet->dbID);
-}
-
-
-=head2 _get_current_FeatureSet
-
-  Example    : my $regf_featureset = $self->_get_current_FeatureSet;
-  Description: Convenience method to get and test the current
-  Returntype : Bio::EnsEMBL::Funcgen::FeatureSet
-  Exceptions : Throws is FeatureSet is not available
-  Caller     : general
-  Status     : at risk - change to _get_core_FeatureSet?
-
-=cut
-
-sub _get_current_FeatureSet{
-  my $self = shift;
-
-
-  if(! $self->{'multicell_set'}){
-	$self->{'multicell_set'} = $self->db->get_FeatureSetAdaptor->fetch_by_name('RegulatoryFeatures:MultiCell');
-
-	if(! $self->{'multicell_set'}){
-	  warn('Could not retrieve current default RegulatoryFeatures:MultiCell FeatureSet');
-	}
-  }
-
-  return  $self->{'multicell_set'};
-}
-
+  'Bio::EnsEMBL::Funcgen::MotifFeature'     => 'motif',
+  'Bio::EnsEMBL::Funcgen::AnnotatedFeature' => 'annotated',
+);
 
 =head2 fetch_by_stable_id
 
@@ -151,78 +93,15 @@ sub _get_current_FeatureSet{
 =cut
 
 sub fetch_by_stable_id {
-  my ($self, $stable_id, $fset) = @_;
+    my $self      = shift;
+    my $stable_id = shift;
 
-  $fset ||= $self->_get_current_FeatureSet;
+    my $constraint = "rf.stable_id = ?";
+    $self->bind_param_generic_fetch($stable_id, SQL_VARCHAR);
+    my ($regulatory_feature) = @{$self->generic_fetch($constraint)};
 
-
-  #remove this ternary operatory when changes to fetch_all_by_stable_id_FeatureSets done?
-  #No, this should not die when no data is present!
-  return (defined $fset) ? $self->fetch_all_by_stable_id_FeatureSets($stable_id, $fset)->[0] : undef;
+    return $regulatory_feature;
 }
-
-=head2 fetch_all_by_stable_id_FeatureSets
-
-  Arg [1]    : String $stable_id - The stable id of the regulatory feature to retrieve
-  Arg [2]    : optional list of FeatureSets
-  Example    : my $rf = $rf_adaptor->fetch_by_stable_id('ENSR00000309301');
-  Description: Retrieves a regulatory feature via its stable id.
-  Returntype : Array ref of Bio::EnsEMBL::Funcgen::RegulatoryFeature objects
-  Exceptions : throws if no stable ID provided or FeatureSets aren't valid
-               warns if not FeatureSets defined
-  Caller     : general
-  Status     : at risk
-
-=cut
-
-#change this to fetch_all_by_stable_id and remove method of same name below or vice versa?
-#check usage of this method first
-
-
-sub fetch_all_by_stable_id_FeatureSets {
-  my $self      = shift;
-  my $stable_id = shift;
-  my @fsets     = @_;  # Change this to arrayref of fsets
-
-
-  throw('Must provide a stable ID') if ! defined $stable_id;
-  $self->bind_param_generic_fetch($stable_id, SQL_VARCHAR);
-  my $constraint = 'rf.stable_id=?';
-
-  #Change this to use _generate_feature_set_id_clause
-
-  if(@fsets){
-
-	  #need to catch empty array and invalid FeatureSets
-    if(scalar(@fsets == 0)){
-      warning("You have not specified any FeatureSets to fetch the RegulatoryFeature from, defaulting to all");
-    }
-    else{
-
-	    #validate FeatureSets
-	    #Need to check $fset->feature_class eq 'regulatory' too?
-      map { $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $_)} @fsets;
-
-      if(scalar(@fsets) == 1){
-        $constraint .= ' and rf.feature_set_id=?';
-        $self->bind_param_generic_fetch($fsets[0]->dbID, SQL_INTEGER);
-      }
-      else{
-        my @bind_slots;
-
-        foreach my $dbid(map $_->dbID, @fsets){
-          push @bind_slots, '?';
-          $self->bind_param_generic_fetch($dbid, SQL_INTEGER);
-        }
-
-        $constraint .= ' AND rf.feature_set_id IN ('.join(', ', @bind_slots).')';
-      }
-    }
-  }
-  return $self->generic_fetch($constraint);
-}
-
-
 
 =head2 _true_tables
 
@@ -238,10 +117,11 @@ sub fetch_all_by_stable_id_FeatureSets {
 
 sub _true_tables {
   return (
-		  [ 'regulatory_feature',   'rf' ],
-		  [ 'feature_set',          'fs' ],
-		  [ 'regulatory_attribute', 'ra' ],
-		 );
+    [ 'regulatory_feature',             'rf'  ],
+    [ 'regulatory_feature_feature_set', 'rfs' ],
+    [ 'feature_set',                    'fs'  ],
+    [ 'regulatory_attribute',           'ra'  ],
+  );
 }
 
 =head2 _columns
@@ -261,26 +141,24 @@ sub _columns {
   my $self = shift;
 
   return qw(
-			rf.regulatory_feature_id
-      rf.seq_region_id
-			rf.seq_region_start
-      rf.seq_region_end
-			rf.seq_region_strand
-      rf.bound_start_length
-			rf.bound_end_length
-      rf.display_label
-			rf.feature_type_id
-      rf.feature_set_id
-			rf.stable_id
-      rf.binary_string
-			rf.projected
-      rf.activity
-			rf.epigenome_count
-      ra.attribute_feature_id
-			ra.attribute_feature_table
-	   );
+    rf.regulatory_feature_id
+    rf.seq_region_id
+    rf.seq_region_start
+    rf.seq_region_end
+    rf.seq_region_strand
+    rf.bound_start_length
+    rf.bound_end_length
+    rf.feature_type_id
+    rfs.feature_set_id
+    rf.stable_id
+    rf.projected
+    rfs.activity
+    rf.epigenome_count
+    ra.attribute_feature_id
+    ra.attribute_feature_table
+    rfs.regulatory_feature_feature_set_id
+  );
 }
-#rf.bound_seq_region_start			rf.bound_seq_region_end
 
 =head2 _left_join
 
@@ -297,8 +175,6 @@ sub _columns {
 =cut
 
 sub _left_join {
-  my $self = shift;
-
   return (['regulatory_attribute', 'rf.regulatory_feature_id = ra.regulatory_feature_id']);
 }
 
@@ -320,6 +196,10 @@ sub _left_join {
 
 sub _objs_from_sth {
   my ($self, $sth, $mapper, $dest_slice) = @_;
+  
+  use Carp;
+  confess() if (defined $mapper);
+  #confess() if (defined $dest_slice);
 
   #For EFG this has to use a dest_slice from core/dnaDB whether specified or not.
   #So if it not defined then we need to generate one derived from the species_name and schema_build of the feature we're retrieving.
@@ -340,264 +220,229 @@ sub _objs_from_sth {
     (
      'annotated' => $self->db->get_AnnotatedFeatureAdaptor,
      'motif'     => $self->db->get_MotifFeatureAdaptor,
-     #external
     );
 
-	my (
-	    $dbID,
-      $efg_seq_region_id,
-	    $seq_region_start,
-      $seq_region_end,
-	    $seq_region_strand,
-      $bound_start_length,
-      $bound_end_length,
-      $display_label,
-      $ftype_id,
-      $fset_id,
-      $stable_id,
-      $attr_id,
-      $attr_type,
-      $bin_string,
-      $projected,
-      $activity,
-      $epigenome_count
-     );
+  my (
+    $sth_fetched_dbID,
+    $sth_fetched_efg_seq_region_id,
+    $sth_fetched_seq_region_start,
+    $sth_fetched_seq_region_end,
+    $sth_fetched_seq_region_strand,
+    $sth_fetched_bound_start_length,
+    $sth_fetched_bound_end_length,
+    $sth_fetched_feature_type_id,
+    $sth_fetched_feature_set_id,
+    $sth_fetched_stable_id,
+    $sth_fetched_attr_id,
+    $sth_fetched_attr_type,
+    $sth_fetched_bin_string,
+    $sth_fetched_projected,
+    $sth_fetched_activity,
+    $sth_fetched_epigenome_count,
+    $sth_fetched_regulatory_feature_feature_set_id
+  );
 
-	$sth->bind_columns
-    (
-     \$dbID,
-     \$efg_seq_region_id,
-     \$seq_region_start,
-     \$seq_region_end,
-     \$seq_region_strand,
-     \$bound_start_length,
-     \$bound_end_length,
-     \$display_label,
-     \$ftype_id,
-     \$fset_id,
-     \$stable_id,
-     \$bin_string,
-     \$projected,
-     \$activity,
-     \$epigenome_count,
-     \$attr_id,
-     \$attr_type,
-    );
+  $sth->bind_columns (
+    \$sth_fetched_dbID,
+    \$sth_fetched_efg_seq_region_id,
+    \$sth_fetched_seq_region_start,
+    \$sth_fetched_seq_region_end,
+    \$sth_fetched_seq_region_strand,
+    \$sth_fetched_bound_start_length,
+    \$sth_fetched_bound_end_length,
+    \$sth_fetched_feature_type_id,
+    \$sth_fetched_feature_set_id,
+    \$sth_fetched_stable_id,
+    \$sth_fetched_projected,
+    \$sth_fetched_activity,
+    \$sth_fetched_epigenome_count,
+    \$sth_fetched_attr_id,
+    \$sth_fetched_attr_type,
+    \$sth_fetched_regulatory_feature_feature_set_id
+  );
 
-	my ($asm_cs, $cmp_cs, $asm_cs_name);
-	my ($asm_cs_vers, $cmp_cs_name, $cmp_cs_vers);
+  my ($dest_slice_start, $dest_slice_end);
+  my ($dest_slice_strand, $dest_slice_length, $dest_slice_sr_name);
 
-	if ($mapper) {
-		$asm_cs      = $mapper->assembled_CoordSystem();
-		$cmp_cs      = $mapper->component_CoordSystem();
-		$asm_cs_name = $asm_cs->name();
-		$asm_cs_vers = $asm_cs->version();
-		$cmp_cs_name = $cmp_cs->name();
-		$cmp_cs_vers = $cmp_cs->version();
+  if ($dest_slice) {
+    $dest_slice_start   = $dest_slice->start();
+    $dest_slice_end     = $dest_slice->end();
+    $dest_slice_strand  = $dest_slice->strand();
+    $dest_slice_length  = $dest_slice->length();
+    $dest_slice_sr_name = $dest_slice->seq_region_name();
   }
 
-	my ($dest_slice_start, $dest_slice_end);
-	my ($dest_slice_strand, $dest_slice_length, $dest_slice_sr_name);
-
-	if ($dest_slice) {
-		$dest_slice_start   = $dest_slice->start();
-		$dest_slice_end     = $dest_slice->end();
-		$dest_slice_strand  = $dest_slice->strand();
-		$dest_slice_length  = $dest_slice->length();
-		$dest_slice_sr_name = $dest_slice->seq_region_name();
-	}
-
-  my $slice;
-  my %reg_attrs = (annotated => {}, motif => {}); # segmentation?
-
+  my %reg_attrs = (
+    annotated => {}, 
+    motif => {}
+  );
+  my %linked_feature_sets;
+  my %seen_linked_feature_sets;
   #Set 'unique' set of feature_set_ids
   my @fset_ids;
 
-  if($self->{params_hash}{unique}){
-    # FeatureSet have been pre-validated in the fetch method
-    @fset_ids = map {$_->dbID} @{$self->{params_hash}{feature_sets}};
-  }
-
-  my $skip_stable_id    = 0;#stable IDs are never 0
+  # stable IDs are never 0
+  my $skip_stable_id    = 0;
   my $no_skip_stable_id = 0;
   my @other_rf_ids;
 
+  my $slice;
  FEATURE: while ( $sth->fetch() ) {
 
-  if ( $stable_id &&      # Handle non-unique skipping first
-       ($skip_stable_id eq $stable_id) ) {
-      #Faster for queries which need to skip if we have this first
-      next;
-	  } elsif (@fset_ids) {
-      #have no_skip_stable_id too
-      #so we don't keep doing _fetch_other_feature_set_ids_by_stable_feature_set_ids
-      #for ID s we have already checked
+    if ( $sth_fetched_stable_id && ($skip_stable_id eq $sth_fetched_stable_id) ) {
+	next;
+    }
+    if (@fset_ids) {
 
-      if ($no_skip_stable_id ne $stable_id) {
-        @other_rf_ids = @{$self->_fetch_other_dbIDs_by_stable_feature_set_ids
-                            ($stable_id,
-                             \@fset_ids,
-                             {include_projected => $self->{params_hash}{include_projected}})};
+      if ($no_skip_stable_id ne $sth_fetched_stable_id) {
+	@other_rf_ids = @{
+	  $self->_fetch_other_dbIDs_by_stable_feature_set_ids(
+	    $sth_fetched_stable_id,
+	    \@fset_ids
+	  )
+	};
 
-        if (@other_rf_ids) {
-          $skip_stable_id = $stable_id;
-          #warn "skipping\n";
-          next;
-        } else {
-          $no_skip_stable_id = $stable_id;
-        }
-      }
-      #else don't skip this stable ID
-	  }
-
-	  if (! $reg_feat || ($reg_feat->dbID != $dbID)) {
-
-      if ($skip_feature) {
-        undef $reg_feat;        #so we don't duplicate the push for the feature previous to the skip feature
-        $skip_feature = 0;
-      }
-
-      if ($reg_feat) {          #Set the previous attr cache and reset
-        $reg_feat->attribute_cache(\%reg_attrs);
-        push @features, $reg_feat;
-        %reg_attrs = (annotated => {}, motif => {});
-      }
-
-	    #Would need to build a slice adaptor cache here to enable mapping between assemblies
-	    #Or if mapping between cs systems for a given schema_build
-      #which would have to be handled by the core api
-
-      #get core seq_region_id
-      $seq_region_id = $self->get_core_seq_region_id($efg_seq_region_id);
-
-      if (! $seq_region_id) {
-        warn "Cannot get slice for eFG seq_region_id $efg_seq_region_id\n".
-          "The region you are using is not present in the current dna DB";
-        next;
-      }
-
-	    #if($old_cs_id && ($old_cs_id+ != $cs_id)){
-	    #  throw("More than one coord_system for feature query, need to implement SliceAdaptor hash?");
-	    #}
-	    #$old_cs_id = $cs_id;
-	    #Need to make sure we are restricting calls to Experiment and channel(i.e. the same coord_system_id)
-
-      #Get the FeatureSet/Types objects
-      $fset_hash{$fset_id} = $fset_adaptor->fetch_by_dbID($fset_id) if ! exists $fset_hash{$fset_id};
-      $ftype_hash{$ftype_id} = $ft_adaptor->fetch_by_dbID($ftype_id) if ! exists $ftype_hash{$ftype_id};
-
-	    # Get the slice object
-	    $slice = $slice_hash{'ID:'.$seq_region_id};
-
-	    if (!$slice) {
-	      $slice                            = $sa->fetch_by_seq_region_id($seq_region_id);
-	      $slice_hash{'ID:'.$seq_region_id} = $slice;
-	      $sr_name_hash{$seq_region_id}     = $slice->seq_region_name();
-	      $sr_cs_hash{$seq_region_id}       = $slice->coord_system();
-	    }
-
-	    my $sr_name = $sr_name_hash{$seq_region_id};
-	    my $sr_cs   = $sr_cs_hash{$seq_region_id};
-
-	    # Remap the feature coordinates to another coord system if a mapper was provided
-	    if ($mapper) {
-
-	      throw("Not yet implmented mapper, check equals are Funcgen calls too!");
-
-	      ($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand)
-          = $mapper->fastmap($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand, $sr_cs);
-
-	      # Skip features that map to gaps or coord system boundaries
-        if (! defined $sr_name) {
-          $skip_feature = 1;
-          next FEATURE;
-        }
-
-	      # Get a slice in the coord system we just mapped to
-	      if ( $asm_cs == $sr_cs || ( $cmp_cs != $sr_cs && $asm_cs->equals($sr_cs) ) ) {
-          $slice = $slice_hash{"NAME:$sr_name:$cmp_cs_name:$cmp_cs_vers"}
-            ||= $sa->fetch_by_region($cmp_cs_name, $sr_name, undef, undef, undef, $cmp_cs_vers);
-	      } else {
-          $slice = $slice_hash{"NAME:$sr_name:$asm_cs_name:$asm_cs_vers"}
-            ||= $sa->fetch_by_region($asm_cs_name, $sr_name, undef, undef, undef, $asm_cs_vers);
-	      }
-	    }
-
-	    # If a destination slice was provided convert the coords
-	    # If the destination slice starts at 1 and is forward strand, nothing needs doing
-	    if ($dest_slice) {
-
-	      unless ($dest_slice_start == 1 && $dest_slice_strand == 1) {
-          #removed bound adjusts as this is now done dynamically
-
-          if ($dest_slice_strand == 1) {
-            $seq_region_start       = $seq_region_start - $dest_slice_start + 1;
-            $seq_region_end         = $seq_region_end   - $dest_slice_start + 1;
-          }
-          else {
-            my $tmp_seq_region_start       = $seq_region_start;
-            $seq_region_start        = $dest_slice_end - $seq_region_end       + 1;
-            $seq_region_end          = $dest_slice_end - $tmp_seq_region_start + 1;
-            $seq_region_strand      *= -1;
-          }
-	      }
-
-	      # Throw away features off the end of the requested slice
-        #Could account for bounds here. Currently this means we never
-        #get just bounds in the region in detail
-        #This would reintroduce calc here
-
-	      if ($seq_region_end < 1 || $seq_region_start > $dest_slice_length
-            || ( $dest_slice_sr_name ne $sr_name )) {
-          $skip_feature = 1;
-          next FEATURE;
-        }
-
-	      $slice = $dest_slice;
-	    }
-
-      $reg_feat = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new_fast
-        ({
-          'start'          => $seq_region_start,
-          'end'            => $seq_region_end,
-          '_bound_lengths' => [$bound_start_length, $bound_end_length],
-          'strand'         => $seq_region_strand,
-          'slice'          => $slice,
-          'analysis'       => $fset_hash{$fset_id}->analysis(),
-          'adaptor'        => $self,
-          'dbID'           => $dbID,
-          'display_label'  => $display_label,
-          'binary_string'  => $bin_string,
-          'projected'      => $projected,
-          'set'            => $fset_hash{$fset_id},
-          'feature_type'   => $ftype_hash{$ftype_id},
-          'stable_id'      => $stable_id,
-          'activity'       => $activity,
-          'epigenome_count'=> $epigenome_count,
-         });
-
-	  }
-
-	  #populate attributes cache
-	  if (defined $attr_id  && ! $skip_feature) {
-
-      $reg_attrs{$attr_type}->{$attr_id} = undef;
-	  }
+	if (@other_rf_ids) {
+	  $skip_stable_id = $sth_fetched_stable_id;
+	  next;
 	}
+	$no_skip_stable_id = $sth_fetched_stable_id;
+      }
+    }
+
+    # The statement is a join across multiple tables. Because of the one 
+    # to many relationships between the tables the data for one regulatory
+    # feature can span multiple rows. If the dbId that is fetched is different
+    # from the one that is currently being built, this means that this row
+    # belongs to a new regulatory feature.
+    #
+    my $current_row_belongs_to_new_regulatory_feature = ! $reg_feat || ($reg_feat->dbID != $sth_fetched_dbID);
+
+    if ($current_row_belongs_to_new_regulatory_feature) {
+
+	if ($skip_feature) {
+	  undef $reg_feat;        #so we don't duplicate the push for the feature previous to the skip feature
+	  $skip_feature = 0;
+	}
+
+	if ($reg_feat) {
+	
+	  # Set the previous attr cache and reset
+	  
+	  $reg_feat->attribute_cache(\%reg_attrs);	  
+	  $reg_feat->{_linked_feature_sets} = \%linked_feature_sets;
+	  
+	  push @features, $reg_feat;
+	  
+	  %reg_attrs = (annotated => {}, motif => {});
+	  %linked_feature_sets = ();
+	  %seen_linked_feature_sets = ();
+	}
+
+	$seq_region_id = $self->get_core_seq_region_id($sth_fetched_efg_seq_region_id);
+
+	if (! $seq_region_id) {
+	  warn "Cannot get slice for eFG seq_region_id $sth_fetched_efg_seq_region_id\n".
+	    "The region you are using is not present in the current dna DB";
+	  next;
+	}
+
+	$fset_hash{$sth_fetched_feature_set_id}   = $fset_adaptor->fetch_by_dbID($sth_fetched_feature_set_id)  if ! exists $fset_hash{$sth_fetched_feature_set_id};
+	$ftype_hash{$sth_fetched_feature_type_id} = $ft_adaptor  ->fetch_by_dbID($sth_fetched_feature_type_id) if ! exists $ftype_hash{$sth_fetched_feature_type_id};
+
+	# Get the slice object
+	$slice = $slice_hash{'ID:'.$seq_region_id};
+
+	if (!$slice) {
+	  $slice                            = $sa->fetch_by_seq_region_id($seq_region_id);
+	  $slice_hash{'ID:'.$seq_region_id} = $slice;
+	  $sr_name_hash{$seq_region_id}     = $slice->seq_region_name();
+	  $sr_cs_hash{$seq_region_id}       = $slice->coord_system();
+	}
+
+	my $sr_name = $sr_name_hash{$seq_region_id};
+	my $sr_cs   = $sr_cs_hash{$seq_region_id};
+
+	# If a destination slice was provided convert the coords
+	if ($dest_slice) {
+
+	  # If the destination slice starts at 1 and is forward strand, nothing needs doing
+	  unless ($dest_slice_start == 1 && $dest_slice_strand == 1) {
+
+	    if ($dest_slice_strand == 1) {
+	      $sth_fetched_seq_region_start       = $sth_fetched_seq_region_start - $dest_slice_start + 1;
+	      $sth_fetched_seq_region_end         = $sth_fetched_seq_region_end   - $dest_slice_start + 1;
+	    } else {
+	      my $tmp_seq_region_start = $sth_fetched_seq_region_start;
+	      $sth_fetched_seq_region_start        = $dest_slice_end - $sth_fetched_seq_region_end       + 1;
+	      $sth_fetched_seq_region_end          = $dest_slice_end - $tmp_seq_region_start + 1;
+	      $sth_fetched_seq_region_strand      *= -1;
+	    }
+	  }
+
+	  # Throw away features off the end of the requested slice
+	  if (
+	    $sth_fetched_seq_region_end < 1 
+	    || $sth_fetched_seq_region_start > $dest_slice_length
+	    || ( $dest_slice_sr_name ne $sr_name )
+	  ) {
+	    $skip_feature = 1;
+	    next FEATURE;
+	  }
+	  $slice = $dest_slice;
+	}
+
+	$reg_feat = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new_fast
+	  ({
+	    'start'          => $sth_fetched_seq_region_start,
+	    'end'            => $sth_fetched_seq_region_end,
+	    '_bound_lengths' => [$sth_fetched_bound_start_length, $sth_fetched_bound_end_length],
+	    'strand'         => $sth_fetched_seq_region_strand,
+	    'slice'          => $slice,
+	    'analysis'       => $fset_hash{$sth_fetched_feature_set_id}->analysis(),
+	    'adaptor'        => $self,
+	    'dbID'           => $sth_fetched_dbID,
+	    'binary_string'  => $sth_fetched_bin_string,
+	    'projected'      => $sth_fetched_projected,
+	    'set'            => $fset_hash{$sth_fetched_feature_set_id},
+	    'feature_type'   => $ftype_hash{$sth_fetched_feature_type_id},
+	    'stable_id'      => $sth_fetched_stable_id,
+	    'activity'       => $sth_fetched_activity,
+	    'epigenome_count'=> $sth_fetched_epigenome_count,
+	    });
+    }
+
+    #populate attributes cache
+    if (defined $sth_fetched_attr_id  && ! $skip_feature) {
+      $reg_attrs{$sth_fetched_attr_type}->{$sth_fetched_attr_id} = undef;
+    }
+    
+    if (
+      ! exists $seen_linked_feature_sets{$sth_fetched_regulatory_feature_feature_set_id}
+      && ! $skip_feature
+    ) {
+      $seen_linked_feature_sets{$sth_fetched_regulatory_feature_feature_set_id} = 1;
+    
+      if (! defined $linked_feature_sets{$sth_fetched_activity}) {
+	$linked_feature_sets{$sth_fetched_activity} = [];
+      }
+      
+      push @{$linked_feature_sets{$sth_fetched_activity}}, $sth_fetched_feature_set_id;
+    }
+    
+  }
 
   #handle last record
   if ($reg_feat) {
+  
     $reg_feat->attribute_cache(\%reg_attrs);
+    $reg_feat->{linked_feature_sets} = \%linked_feature_sets;
+    
     push @features, $reg_feat;
+    
   }
-
-  #reset params hash
-  $self->{params_hash} = undef;
-
   return \@features;
 }
-
-
 
 =head2 store
 
@@ -616,38 +461,35 @@ sub _objs_from_sth {
 
 =cut
 
-sub store{
+sub store {
   my ($self, @rfs) = @_;
 
   if (scalar(@rfs) == 0) {
-	throw('Must call store with a list of RegulatoryFeature objects');
+    throw('Must call store with a list of RegulatoryFeature objects');
   }
 
   my $sth = $self->prepare("
-		INSERT INTO regulatory_feature (
-			seq_region_id,
+    INSERT INTO regulatory_feature (
+      seq_region_id,
       seq_region_start,
-			seq_region_end,
+      seq_region_end,
       bound_start_length,
-			bound_end_length,
+      bound_end_length,
       seq_region_strand,
-      display_label,
       feature_type_id,
       feature_set_id,
       stable_id,
-      binary_string,
-      projected,
-      activity,
       epigenome_count
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
-
- #bound_seq_region_start,	bound_seq_region_end
-
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+  );
 
   my $sth2 = $self->prepare("
-		INSERT INTO regulatory_attribute (
-              regulatory_feature_id, attribute_feature_id, attribute_feature_table
-		) VALUES (?, ?, ?)");
+    INSERT INTO regulatory_attribute (
+      regulatory_feature_id, 
+      attribute_feature_id, 
+      attribute_feature_table
+    ) VALUES (?, ?, ?)"
+  );
 
   my $db = $self->db();
 
@@ -669,21 +511,16 @@ sub store{
     $rf->adaptor($self);  # Set adaptor first to allow attr feature retreival for bounds
     # This is only required when storing
 
-
     $sth->bind_param(1,  $seq_region_id,           SQL_INTEGER);
     $sth->bind_param(2,  $rf->start,               SQL_INTEGER);
     $sth->bind_param(3,  $rf->end,                 SQL_INTEGER);
     $sth->bind_param(4,  $rf->bound_start_length,  SQL_INTEGER);
     $sth->bind_param(5,  $rf->bound_end_length,    SQL_INTEGER);
     $sth->bind_param(6,  $rf->strand,              SQL_TINYINT);
-    $sth->bind_param(7,  $rf->{display_label},     SQL_VARCHAR);  # Deref so we don't store API default value
-    $sth->bind_param(8,  $rf->feature_type->dbID,  SQL_INTEGER);
-    $sth->bind_param(9,  $rf->feature_set->dbID,   SQL_INTEGER);
-    $sth->bind_param(10, $rf->stable_id,           SQL_VARCHAR);
-    $sth->bind_param(11, $rf->binary_string,       SQL_VARCHAR);
-    $sth->bind_param(12, $rf->is_projected,        SQL_BOOLEAN);
-    $sth->bind_param(13, $rf->activity,            SQL_BOOLEAN);
-    $sth->bind_param(14, $rf->epigenome_count,     SQL_INTEGER);
+    $sth->bind_param(7,  $rf->feature_type->dbID,  SQL_INTEGER);
+    $sth->bind_param(8,  $rf->feature_set->dbID,   SQL_INTEGER);
+    $sth->bind_param(9,  $rf->stable_id,           SQL_VARCHAR);
+    $sth->bind_param(10, $rf->epigenome_count,     SQL_INTEGER);
     # Store and set dbID
     $sth->execute;
     $rf->dbID( $self->last_insert_id );
@@ -702,13 +539,8 @@ sub store{
       }
     }
   }
-
   return \@rfs;
 }
-
-
-
-
 
 =head2 fetch_all_by_Slice
 
@@ -728,12 +560,10 @@ sub store{
 sub fetch_all_by_Slice {
   my $self  = shift;
   my $slice = shift;
-  my $fset  = shift;;
-  $fset ||= $self->_get_current_FeatureSet; #This get the MultiCell sets
-
-  return (defined $fset) ? $self->fetch_all_by_Slice_FeatureSets($slice, [$fset]) : undef;
+  my $fset  = shift;
+  
+  return (defined $fset) ? $self->fetch_all_by_Slice_FeatureSets($slice, [$fset]) : $self->fetch_all_by_Slice_FeatureSets($slice);
 }
-
 
 =head2 fetch_all_by_Slice_FeatureSets
 
@@ -755,102 +585,94 @@ sub fetch_all_by_Slice {
 
 =cut
 
-#These FeatureSets are not optional
-#otherwise could have just re-implemented fetch_all_by_Slice
-#with extra optional fsets args
-
-#To implement unique flag, would either need to self join on stable ID to compare counts
-#or set flag(would have to be array of fset IDs if we want more than one fset)
-#to do look up in objs_from_sth method
-#Would need to add wrapper for fetch_all_by_Slice_FeatureSets here
-
-#This will slow down all regfeat fetches
-#how can we do this without impacting obj_from_sth performance?
-#is this worth worrying about? It's a fairly fast track anyway?
-#could have method vars/code refs in obj_from_sth, but still adding method call instead of var test.
-#impact likely negligable
-
-#Could pre_store this in DB? 'Impossible' for 1 fset without doing self join comparison?
-
-#We really need to expose the constraint here to enable more complex combined queries
-#i.e. projected, FeatureType filter etc
-
-#Need to do full re-implementation here rather than wrapper as we can't
-#pass a preformed constraint to a method which might be exposed directly by the website
-#as this may enable someone to inject SQL via a URL.
-#Also can't handle unique/include_projected in generic SetFeatureAdaptor method
-
+#
+# This is used in
+#
+# ensembl-rest/lib/EnsEMBL/REST/Model/Overlap.pm
+#
+# There are two calls and neither uses the $params_hash parameter.
+#
 sub fetch_all_by_Slice_FeatureSets {
-  my ($self, $slice, $fsets, $params_hash) = @_;
+  my ($self, $slice, $fsets) = @_;
+  return $self->fetch_all_by_Slice_FeatureSets_Activity($slice, $fsets, undef);
+}
 
-  if($params_hash){
+sub fetch_all_by_Slice_Activity {
+  my ($self, $slice, $activity) = @_;
+  return $self->fetch_all_by_Slice_FeatureSets_Activity($slice, undef, $activity);
+}
 
-	if(ref($params_hash) eq 'HASH'){
-	  #Really only need feature_sets as unique is implicit at present
-	  #define unique for clarify
-	  $self->{params_hash}{unique}            = $params_hash->{unique};
-	  $self->{params_hash}{feature_sets}      = $fsets;
-	  $self->{params_hash}{include_projected} = $params_hash->{include_projected};
-	  #include_projected as we also need to constrain
-	  #_fetch_other_dbIDs_by_stable_feature_set_ids
-	  #Waht happens when we have include_projected on it's own and set to 0
-	}
-	else{
-	  throw("The params_hash argument must be a valid HASHREF, not:\t".ref($params_hash));
-	}
+sub _valid_activities {
+  return ('INACTIVE', 'REPRESSED', 'POISED', 'ACTIVE', 'NA');
+}
+
+sub _valid_activities_as_string {
+  return join ', ', _valid_activities;
+}
+
+sub _is_valid_activity {
+  my $self = shift;
+  my $activity_to_test = shift;
+  
+  my @valid_activity = _valid_activities;  
+  foreach my $current_valid_activity (@valid_activity) {
+    return 1 if ($activity_to_test eq $current_valid_activity);
   }
+  return;
+}
 
-
-  my $constraint = 'rf.feature_set_id '.$self->_generate_feature_set_id_clause($fsets);
-  $params_hash ||= {}; #To avoid deref fail below
-  my $inc_proj = $params_hash->{include_projected};
-
-  if( ($params_hash->{unique} && ( ! $inc_proj))  ||
-	(defined $inc_proj && ($inc_proj == 0) )){
-	$constraint .= ' AND '. ' rf.projected=0 ';
+sub _make_arrayref_if_not_arrayref {
+  my $obj = shift;
+  my $obj_as_arrayref;
+  
+  if (ref $obj eq 'ARRAY') {
+    $obj_as_arrayref = $obj;
+  } else {
+    $obj_as_arrayref = [ $obj ];
   }
+  return $obj_as_arrayref;
+}
 
+sub fetch_all_by_Slice_FeatureSets_Activity {
+  my ($self, $slice, $fsets, $activity) = @_;
+  
+  my @condition;
+
+  if (defined $activity && $activity ne '') {
+    if (! $self->_is_valid_activity($activity)) {
+      die(
+	qq(\"$activity\"is not a valid activity. Valid activities are: ) . _valid_activities_as_string
+      );
+    }
+    push @condition, qq(activity = "$activity");
+  }
+  
+  if(defined $fsets) {
+    push @condition, 'rfs.feature_set_id ' 
+      . $self->_generate_feature_set_id_clause(_make_arrayref_if_not_arrayref($fsets));
+  }
+  
+  my $constraint = join ' and ', @condition;
   #explicit super call, just in case we ever re-implement in here
   return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
 }
 
-
-
-
-sub _fetch_other_dbIDs_by_stable_feature_set_ids{
-  my ($self, $stable_id_int, $fset_ids, $params_hash) = @_;
-  #Args and originating objects have been prevalidated
-
-  #($stable_id = $stable_id) =~ s/^[A-Z0]+//;
-  #Do this in caller, as we already have the stripped ID from _objs_from_sth
-
-  my @fset_ids = @$fset_ids; #Deref here as we are pushing, and don't want modify in the caller
-  my $projected_constraint = '';
-
-  #This is internal, so we can assume $param_hash is a valid
-  #HASHREF if defined.
-  $params_hash ||= {};#quick way to prevent deref fail below
-
-  if(! $params_hash->{include_projected}){
-	$projected_constraint = ' AND projected=0  ';
-  }
-
-  #Handle MultiCell set, as this will always be present
-  if(! $params_hash->{include_multicell}){
-	push @fset_ids, $self->_get_current_FeatureSet->dbID;
-  }
-
-
-  my @other_rf_ids = @{$self->db->dbc->db_handle->selectcol_arrayref
-						 ('SELECT regulatory_feature_id from regulatory_feature '.
-						  "WHERE stable_id=${stable_id_int} ".$projected_constraint.
-						  ' AND feature_set_id not in('.join(',', @fset_ids).')')};
-
-  return \@other_rf_ids;
+sub _default_where_clause {
+  return 'rfs.feature_set_id = fs.feature_set_id and rfs.regulatory_feature_id = rf.regulatory_feature_id';
 }
 
+sub _fetch_other_dbIDs_by_stable_feature_set_ids {
+  my ($self, $stable_id_int, $fset_ids) = @_;
 
-
+  my @other_rf_ids = @{$self->db->dbc->db_handle->selectcol_arrayref(
+    'select regulatory_feature_id from regulatory_feature '
+    . "where stable_id=${stable_id_int}"
+    . ' and feature_set_id not in('.join(',', @$fset_ids).')'
+    . ' and activity != "NA"'
+    )
+  };
+  return \@other_rf_ids;
+}
 
 =head2 fetch_all_by_stable_ID
 
@@ -861,20 +683,17 @@ sub _fetch_other_dbIDs_by_stable_feature_set_ids{
   Returntype : Listref of Bio::EnsEMBL::RegulatoryFeature objects
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Deprecated
 
 =cut
-
-# Add fsets arg here?
-
 sub fetch_all_by_stable_ID {
-  my $self      = shift;
-  my $stable_id = shift;
-  throw('You must provide a stable_id argument') if ! defined $stable_id;
-  $self->bind_param_generic_fetch($stable_id, SQL_VARCHAR);
-  return $self->generic_fetch('rf.stable_id=?');
+  my $self = shift;
+  
+  use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
+  deprecate("fetch_all_by_stable_ID has been deprecated and will be removed in Ensembl release 89. Use fetch_by_stable_id instead!");
+  
+  return $self->fetch_by_stable_id(@_);
 }
-
 
 =head2 fetch_all_by_attribute_feature
 
@@ -891,88 +710,35 @@ sub fetch_all_by_stable_ID {
 sub fetch_all_by_attribute_feature {
   my ($self, $attr_feat) = @_;
 
-  #add fsets here as optional arg
-
   my $attr_class = ref($attr_feat);
 
-  if(! $valid_attribute_features{$attr_class}){
-	#This assigns null to the hash value but we throw straight away
-	throw("Attribute feature must be one of:\n\t".join("\n\t", keys(%valid_attribute_features)));
+  if(! exists $valid_attribute_features{$attr_class}) {
+    throw("Attribute feature must be one of:\n\t".join("\n\t", keys(%valid_attribute_features)));
   }
 
   $self->db->is_stored_and_valid($attr_class, $attr_feat);
   my $attr_feat_table = $valid_attribute_features{$attr_class};
 
-
-  #Don't retrict via existing left join as we want to get all
-  #the reg_attrs not just those define by this query
-
-  #Was originally doing a subselect, but this was doing a filesort on ALL rf with no key!
-  #Separating the queries makes this a range query and uses the primary key
-  #still files sort, but just on exact number of rows rather than ALL( I guess because it can't do it in the buffer for some reason)
-
-
-  my ($rf_ids) = $self->db->dbc->db_handle->selectrow_array("SELECT group_concat(regulatory_feature_id) from regulatory_attribute ".
-															 "WHERE attribute_feature_table='${attr_feat_table}' and attribute_feature_id=".$attr_feat->dbID);
-
-  return (defined $rf_ids) ? $self->generic_fetch("rf.regulatory_feature_id in(${rf_ids})") : [];
+  my $rf_ids = $self->db->dbc->db_handle->selectall_arrayref(
+    "select regulatory_feature_id from regulatory_attribute ".
+    "where attribute_feature_table='${attr_feat_table}' and attribute_feature_id=".$attr_feat->dbID
+  );
+  
+  my @rf_ids_flattened = map { @$_ } @$rf_ids;
+  my @results = $self->_fetch_by_dbID_list(@rf_ids_flattened);
+  return \@results;
 }
 
-
-
-=head2 fetch_type_config_by_RegulatoryFeatures
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::RegulatoryFeature
-  Example    : my $config = $regf_adaptor->fetch_type_config_by_RegualtoryFeature($rf);
-  Description: Retrieves a config hash of Epigenome and FeatureType names and dbIDs supporting
-               the given RegualtoryFeature
-  Returntype : HASHREF
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-
-sub fetch_type_config_by_RegulatoryFeature{
-  my ($self, $rf) = @_;
-
-  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::RegulatoryFeature', $rf);
-
-
-  my $sql = 'SELECT ft.name, ft.feature_type_id from '.
-	'feature_type ft, feature_set fs, regulatory_attribute ra, annotated_feature af '.
-	  'WHERE ft.feature_type_id=fs.feature_type_id AND fs.feature_set_id=af.feature_set_id AND '.
-		'af.annotated_feature_id=ra.attribute_feature_id and ra.attribute_feature_table="annotated" AND '.
-		  'ra.regulatory_feature_id=? group by ft.name order by ft.name';
-
-  my $sth = $self->prepare($sql);
-  $sth->bind_param(1, $rf->dbID, SQL_INTEGER);
-  $sth->execute;
-  my @ftype_config = @{$sth->fetchall_arrayref};
-  $sth->finish;
-
-
-  #Don't need cell type query here if we have a cell type sepcific set
-  #What is quicker here?
-
-  $sql = 'SELECT epi.name, epi.epigenome_id from '.
-	'epigenome epi, feature_set fs, regulatory_attribute ra, annotated_feature af '.
-	  'WHERE epi.epigenome_id=fs.epigenome_id AND fs.feature_set_id=af.feature_set_id AND '.
-		'af.annotated_feature_id=ra.attribute_feature_id and ra.attribute_feature_table="annotated" AND '.
-		  'ra.regulatory_feature_id=? group by epi.name order by epi.name';
-
-  $sth = $self->prepare($sql);
-  $sth->bind_param(1, $rf->dbID, SQL_INTEGER);
-  $sth->execute;
-  my @epigenome_config = @{$sth->fetchall_arrayref};
-  $sth->finish;
-
-  return {
-		  feature_types => \@ftype_config,
-		  epigenomes    => \@epigenome_config,
-		 };
+sub _fetch_by_dbID_list {
+  my $self = shift;
+  my @db_id = @_;
+  
+  my @fetched_objects;  
+  foreach my $current_db_id (@db_id) {  
+    my $object = $self->fetch_by_dbID($current_db_id);
+    push @fetched_objects, $object;
+  }
+  return @fetched_objects;
 }
-
 
 1;
