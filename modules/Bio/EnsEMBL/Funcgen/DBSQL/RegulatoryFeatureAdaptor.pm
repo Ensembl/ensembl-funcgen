@@ -661,19 +661,6 @@ sub _default_where_clause {
   return 'rfs.feature_set_id = fs.feature_set_id and rfs.regulatory_feature_id = rf.regulatory_feature_id';
 }
 
-sub _fetch_other_dbIDs_by_stable_feature_set_ids {
-  my ($self, $stable_id_int, $fset_ids) = @_;
-
-  my @other_rf_ids = @{$self->db->dbc->db_handle->selectcol_arrayref(
-    'select regulatory_feature_id from regulatory_feature '
-    . "where stable_id=${stable_id_int}"
-    . ' and feature_set_id not in('.join(',', @$fset_ids).')'
-    . ' and activity != "NA"'
-    )
-  };
-  return \@other_rf_ids;
-}
-
 =head2 fetch_all_by_stable_ID
 
   Arg [1]    : string - stable ID e.g. ENSR00000000002
