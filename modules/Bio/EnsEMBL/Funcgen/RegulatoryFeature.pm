@@ -28,48 +28,22 @@ Bio::EnsEMBL::Funcgen::RegulatoryFeature
 
 =head1 SYNOPSIS
 
- use Bio::EnsEMBL::Registry;
- use Bio::EnsEMBL::Funcgen::RegulatoryFeature;
+  use v5.10;
+  use Bio::EnsEMBL::Registry;
+  Bio::EnsEMBL::Registry->load_registry_from_url('mysql://anonymous@ensembldb.ensembl.org:3306/84/');
 
- my $reg = Bio::EnsEMBL::Registry->load_adaptors_from_db
-     (
-      -host    => 'ensembldb.ensembl.org',
-      -user    => 'anonymous'
-     );
+  my $regulatory_feature_adaptor = Bio::EnsEMBL::Registry->get_adaptor('human', 'funcgen', 'RegulatoryFeature');
 
- my $regfeat_adaptor = $reg->get_adaptor($species, 'funcgen', 'RegulatoryFeature');
+  my $regulatory_feat = $regulatory_feature_adaptor->fetch_by_stable_id('ENSR00000000021');
 
-
- ### Creating/storing a RegulatoryFeature Set ###
- my $feature = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new
-     (
-      -SLICE         => $chr_1_slice,
-      -START         => 1000000,
-	    -END           => 1000024,
-      -STRAND        => 0,
-      -DISPLAY_LABEL => $text,
-      -FEATURE_SET   => $fset,
-      -FEATURE_TYPE  => $reg_ftype,
-      -ATTRIBUTE_CACHE => \%attr_cache,
-     );
-
- my ($stored_feat) = @{$regfeat_adaptor->store([$feature])};
-
-
- ### Fetching some RegulatoryFeatures
- my @regfeats = @{$regfeat_adaptor->fetch_all_by_Slice_FeatureSets($slice, \@reg_feature_sets)};
-
-
- ### Print the bound and core loci
- print join(' - ', ($reg_feat->bound_start,
-                    $reg_feat->start,
-                    $reg_feat->end,
-                    $reg_feat->bound_end)."\n";
-
-
- ### Getting some supporting evidence for a RegulatoryFeatures
- my @reg_attrs = @{$reg_feat->regulatory_attributes('annotated')};
-
+  say 'Stable id:       ' . $regulatory_feat->stable_id;
+  say 'Analysis:        ' . $regulatory_feat->analysis->logic_name;
+  say 'Feature type:    ' . $regulatory_feat->feature_type->name;
+  say 'Feature set:     ' . $regulatory_feat->feature_set->name;
+  say 'Activity:        ' . $regulatory_feat->activity;
+  say 'Cell type count: ' . $regulatory_feat->cell_type_count;
+  say 'Slice name:      ' . $regulatory_feat->slice->name;
+  say 'Coordinates:     ' . $regulatory_feat->start .' - '. $regulatory_feat->end,;
 
 =head1 DESCRIPTION
 
@@ -171,10 +145,10 @@ sub new {
 sub display_label {
   my $self = shift;
 
-  if(! defined $self->{display_label}){
+  if(! defined $self->{display_label}) {
     $self->{'display_label'}  = $self->feature_type->name.' Regulatory Feature';
 
-    if( defined $self->epigenome ){
+    if( defined $self->epigenome ) {
       $self->{display_label} .= ' - '.$self->epigenome->name;
     }
   }
@@ -218,7 +192,7 @@ sub binary_string{ return shift->{binary_string}; }
 
   Arg [1]    : (optional) string - stable_id e.g ENSR00000000001
   Example    : my $stable_id = $feature->stable_id();
-  Description: Getter and setter for the stable_id attribute for this feature.
+  Description: Getter for the stable_id attribute for this feature.
   Returntype : string
   Exceptions : None
   Caller     : General
@@ -226,18 +200,7 @@ sub binary_string{ return shift->{binary_string}; }
 
 =cut
 
-sub stable_id {
-  my $self = shift;
-
-  if (@_){
-    #added v67
-    warn "RegulatoryFeature::stable_id setter functionality is being removed\n";
-    #Still used in stable_id_mapper.pl
-    $self->{stable_id} = shift;
-  }
-
-  return $self->{stable_id};
-}
+sub stable_id { return shift->{stable_id}; }
 
 
 =head2 regulatory_attributes
@@ -252,8 +215,7 @@ sub stable_id {
 
 =cut
 
-
-sub regulatory_attributes{
+sub regulatory_attributes {
   my ($self, $feature_class) = @_;
   my @fclasses;
   my %adaptors = ('annotated' => $self->adaptor->db->get_AnnotatedFeatureAdaptor,
@@ -314,7 +276,7 @@ sub regulatory_attributes{
 
 =cut
 
-sub has_attribute{
+sub has_attribute {
   my ($self, $dbID, $fclass) = @_;
 
   throw('Must provide a dbID and a Feature class argument') if ! $dbID && $fclass;
@@ -840,7 +802,6 @@ sub summary_as_hash {
     activity                => $self->activity,
     description             => $self->feature_type->description,
     feature_type            => "regulatory",
-    #%build_specific_params,
    };
 }
 
@@ -859,7 +820,7 @@ sub summary_as_hash {
 sub has_evidence {
     deprecate('"has_evidence" is now deprecated. Please use "activity"
         which reports the state of the Regulatory Feature');
-  return shift->{activity};
+  return shift->activity;
 }
 
 1;
