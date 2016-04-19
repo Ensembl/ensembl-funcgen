@@ -81,14 +81,13 @@ CREATE TABLE regulatory_feature (
 create table regulatory_feature_feature_set (
   regulatory_feature_feature_set_id int(10) unsigned NOT NULL auto_increment,
   regulatory_feature_id int(10) unsigned default NULL,
-  activity tinyint(3),
+  activity ENUM('INACTIVE', 'REPRESSED', 'POISED', 'ACTIVE', 'NA'),
   feature_set_id int(10) unsigned default NULL,
   PRIMARY KEY  (regulatory_feature_feature_set_id),
   UNIQUE KEY uniqueness_constraint_idx (feature_set_id,regulatory_feature_id),
   KEY feature_set_idx (feature_set_id),
   KEY regulatory_feature_idx (regulatory_feature_id)
 ) ENGINE=MyISAM;
-
 
 /**
 @table  regulatory_attribute
@@ -669,7 +668,6 @@ CREATE TABLE `result_set_input` (
    `result_set_id` int(10) unsigned NOT NULL,
    `table_id` int(10) unsigned NOT NULL,
    `table_name` enum('experimental_chip','channel','input_set', 'input_subset') DEFAULT NULL,
-   `file_type` enum('BAM','BAMCOV','BIGBED','BIGWIG','VCF','CRAM'),
    `md5sum` varchar(45) default NULL,
    PRIMARY KEY  (`result_set_input_id`, `result_set_id`),
    UNIQUE KEY `rset_table_idname_idx` (`result_set_id`, `table_id`, `table_name`)
@@ -699,6 +697,7 @@ CREATE TABLE `dbfile_registry` (
    `table_id` int(10) unsigned NOT NULL,
    `table_name` varchar(32)NOT NULL,
    `path` varchar(255) NOT NULL,
+   `file_type` enum('BAM','BAMCOV','BIGBED','BIGWIG','VCF','CRAM', 'DIR'),
    PRIMARY KEY  (`table_id`, `table_name`),
    UNIQUE KEY `table_id_name_path_idx` (`table_id`,`table_name`, `path`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;

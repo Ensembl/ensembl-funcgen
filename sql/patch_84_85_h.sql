@@ -17,7 +17,7 @@
 @desc   Store file types along with the files.
 */
 
-alter table dbfile_registry add column file_type ENUM('BAM','BAMCOV','BIGBED','BIGWIG','VCF','CRAM');
+alter table dbfile_registry add column file_type ENUM('BAM','BAMCOV','BIGBED','BIGWIG','VCF','CRAM', 'DIR');
 alter table dbfile_registry drop primary key, add primary key(table_id, table_name, file_type);
 alter table dbfile_registry add column md5sum varchar(45) default null;
 
