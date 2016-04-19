@@ -278,37 +278,37 @@ sub _objs_from_sth {
   );
   my %linked_feature_sets;
   my %seen_linked_feature_sets;
-  #Set 'unique' set of feature_set_ids
-  my @fset_ids;
+#   #Set 'unique' set of feature_set_ids
+#   my @fset_ids;
 
-  # stable IDs are never 0
-  my $skip_stable_id    = 0;
-  my $no_skip_stable_id = 0;
-  my @other_rf_ids;
+#   # stable IDs are never 0
+#   my $skip_stable_id    = 0;
+#   my $no_skip_stable_id = 0;
+#   my @other_rf_ids;
 
   my $slice;
- FEATURE: while ( $sth->fetch() ) {
+ ROW: while ( $sth->fetch() ) {
 
-    if ( $sth_fetched_stable_id && ($skip_stable_id eq $sth_fetched_stable_id) ) {
-	next;
-    }
-    if (@fset_ids) {
-
-      if ($no_skip_stable_id ne $sth_fetched_stable_id) {
-	@other_rf_ids = @{
-	  $self->_fetch_other_dbIDs_by_stable_feature_set_ids(
-	    $sth_fetched_stable_id,
-	    \@fset_ids
-	  )
-	};
-
-	if (@other_rf_ids) {
-	  $skip_stable_id = $sth_fetched_stable_id;
-	  next;
-	}
-	$no_skip_stable_id = $sth_fetched_stable_id;
-      }
-    }
+#     if ( $sth_fetched_stable_id && ($skip_stable_id eq $sth_fetched_stable_id) ) {
+# 	next;
+#     }
+#     if (@fset_ids) {
+# 
+#       if ($no_skip_stable_id ne $sth_fetched_stable_id) {
+# 	@other_rf_ids = @{
+# 	  $self->_fetch_other_dbIDs_by_stable_feature_set_ids(
+# 	    $sth_fetched_stable_id,
+# 	    \@fset_ids
+# 	  )
+# 	};
+# 
+# 	if (@other_rf_ids) {
+# 	  $skip_stable_id = $sth_fetched_stable_id;
+# 	  next;
+# 	}
+# 	$no_skip_stable_id = $sth_fetched_stable_id;
+#       }
+#     }
 
     # The statement is a join across multiple tables. Because of the one 
     # to many relationships between the tables the data for one regulatory
