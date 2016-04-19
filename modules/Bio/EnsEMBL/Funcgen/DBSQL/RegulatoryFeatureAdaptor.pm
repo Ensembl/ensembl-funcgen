@@ -198,23 +198,20 @@ sub _objs_from_sth {
   my ($self, $sth, $mapper, $dest_slice) = @_;
   
   use Carp;
-  confess() if (defined $mapper);
-  #confess() if (defined $dest_slice);
+  confess('Using a mapper is not supported!') if (defined $mapper);
 
   #For EFG this has to use a dest_slice from core/dnaDB whether specified or not.
   #So if it not defined then we need to generate one derived from the species_name and schema_build of the feature we're retrieving.
   # This code is ugly because caching is used to improve speed
 
-  my ($sa, $reg_feat);#, $old_cs_id);
-  $sa = ($dest_slice) ? $dest_slice->adaptor->db->get_SliceAdaptor() : $self->db->get_SliceAdaptor();
+  my $sa = ($dest_slice) ? $dest_slice->adaptor->db->get_SliceAdaptor() : $self->db->get_SliceAdaptor();
 
   #Some of this in now probably overkill as we'll always be using the DNADB as the slice DB
   #Hence it should always be on the same coord system
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
   my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
-  my (@features, $seq_region_id);
+  my (@feature_from_sth, $seq_region_id);
   my (%fset_hash, %slice_hash, %sr_name_hash, %sr_cs_hash, %ftype_hash);
-  my $skip_feature = 0;
 
   my %feature_adaptors =
     (
@@ -271,44 +268,85 @@ sub _objs_from_sth {
     $dest_slice_length  = $dest_slice->length();
     $dest_slice_sr_name = $dest_slice->seq_region_name();
   }
+  
+  my $project_slice_coordinates_to_destination_slice = sub {
+  
+    # If the destination slice starts at 1 and is forward strand, nothing needs doing
+    unless ($dest_slice_start == 1 && $dest_slice_strand == 1) {
 
-  my %reg_attrs = (
+      if ($dest_slice_strand == 1) {
+	$sth_fetched_seq_region_start       = $sth_fetched_seq_region_start - $dest_slice_start + 1;
+	$sth_fetched_seq_region_end         = $sth_fetched_seq_region_end   - $dest_slice_start + 1;
+      } else {
+	my $tmp_seq_region_start = $sth_fetched_seq_region_start;
+	$sth_fetched_seq_region_start        = $dest_slice_end - $sth_fetched_seq_region_end       + 1;
+	$sth_fetched_seq_region_end          = $dest_slice_end - $tmp_seq_region_start + 1;
+	$sth_fetched_seq_region_strand      *= -1;
+      }
+    }
+  };
+
+  # The current regulatory feature that is being constructed
+  my $regulatory_feature_under_construction;
+  
+  # The regulatory attribute component for the regulatory feature that is 
+  # being constructed
+  #
+  my %regulatory_attribute_component = (
     annotated => {}, 
-    motif => {}
+    motif     => {}
   );
-  my %linked_feature_sets;
+  
+  # The linked feature sets and their activities for the regulatory feature 
+  # that is being constructed
+  #
+  my %linked_feature_sets_component;
+  
+  # Closure that adds the components of a regulatory feature. This is called
+  # twice, so moved into a closure to avoid code duplication in the loop 
+  # below.
+  #
+  my $add_components_to_regulatory_feature_under_construction = sub {
+    # Set the previous attr cache and reset
+    $regulatory_feature_under_construction->attribute_cache(\%regulatory_attribute_component);	  
+    $regulatory_feature_under_construction->{_linked_feature_sets} = \%linked_feature_sets_component;
+  };
+  
+  # Closure that resets the variables holding the components. This is called
+  # after a regulatory feature is done.
+  #
+  my $reset_components = sub {
+    %regulatory_attribute_component = (annotated => {}, motif => {});
+    %linked_feature_sets_component = ();
+  };
+
+  # Because of the way the join works the rows from the linking table will 
+  # appear multiple times. This helps creating unique links to feature sets.
+  #
   my %seen_linked_feature_sets;
-#   #Set 'unique' set of feature_set_ids
-#   my @fset_ids;
+  
+  my $fetch_slice_with_cache = sub {
+    my $seq_region_id = shift;
+    
+    my $slice = $slice_hash{'ID:'.$seq_region_id};
 
-#   # stable IDs are never 0
-#   my $skip_stable_id    = 0;
-#   my $no_skip_stable_id = 0;
-#   my @other_rf_ids;
+    if (!$slice) {
+      $slice                            = $sa->fetch_by_seq_region_id($seq_region_id);
+      $slice_hash{'ID:'.$seq_region_id} = $slice;
+      $sr_name_hash{$seq_region_id}     = $slice->seq_region_name();
+      $sr_cs_hash{$seq_region_id}       = $slice->coord_system();
+    }
+    my $seq_region_name = $sr_name_hash{$seq_region_id};
+    my $sr_cs   = $sr_cs_hash{$seq_region_id};
+    return ($slice, $seq_region_name, $sr_cs);
+  };
 
-  my $slice;
- ROW: while ( $sth->fetch() ) {
-
-#     if ( $sth_fetched_stable_id && ($skip_stable_id eq $sth_fetched_stable_id) ) {
-# 	next;
-#     }
-#     if (@fset_ids) {
-# 
-#       if ($no_skip_stable_id ne $sth_fetched_stable_id) {
-# 	@other_rf_ids = @{
-# 	  $self->_fetch_other_dbIDs_by_stable_feature_set_ids(
-# 	    $sth_fetched_stable_id,
-# 	    \@fset_ids
-# 	  )
-# 	};
-# 
-# 	if (@other_rf_ids) {
-# 	  $skip_stable_id = $sth_fetched_stable_id;
-# 	  next;
-# 	}
-# 	$no_skip_stable_id = $sth_fetched_stable_id;
-#       }
-#     }
+  # Flag to indicate that this feature should be skipped. This can happen 
+  # when a feature is not on the destination slice.
+  #
+  my $current_feature_not_on_destination_slice = undef;
+  
+  ROW: while ( $sth->fetch() ) {
 
     # The statement is a join across multiple tables. Because of the one 
     # to many relationships between the tables the data for one regulatory
@@ -316,26 +354,29 @@ sub _objs_from_sth {
     # from the one that is currently being built, this means that this row
     # belongs to a new regulatory feature.
     #
-    my $current_row_belongs_to_new_regulatory_feature = ! $reg_feat || ($reg_feat->dbID != $sth_fetched_dbID);
+    my $current_row_belongs_to_new_regulatory_feature = 
+      ! $regulatory_feature_under_construction 
+      || ($regulatory_feature_under_construction->dbID != $sth_fetched_dbID);
 
     if ($current_row_belongs_to_new_regulatory_feature) {
 
-	if ($skip_feature) {
-	  undef $reg_feat;        #so we don't duplicate the push for the feature previous to the skip feature
-	  $skip_feature = 0;
+	if ($current_feature_not_on_destination_slice) {
+	
+	  # So we don't duplicate the push for the feature previous to the 
+	  # skip feature
+	  #
+	  undef $regulatory_feature_under_construction;
+	  undef $current_feature_not_on_destination_slice;
 	}
 
-	if ($reg_feat) {
+	# If a regulatory feature was created in the previous iteration, it 
+	# is done now and construction can be finalised.
+	#
+	if (defined $regulatory_feature_under_construction) {
 	
-	  # Set the previous attr cache and reset
-	  
-	  $reg_feat->attribute_cache(\%reg_attrs);	  
-	  $reg_feat->{_linked_feature_sets} = \%linked_feature_sets;
-	  
-	  push @features, $reg_feat;
-	  
-	  %reg_attrs = (annotated => {}, motif => {});
-	  %linked_feature_sets = ();
+	  $add_components_to_regulatory_feature_under_construction->();
+	  push @feature_from_sth, $regulatory_feature_under_construction;	  
+	  $reset_components->();	  
 	  %seen_linked_feature_sets = ();
 	}
 
@@ -349,51 +390,27 @@ sub _objs_from_sth {
 
 	$fset_hash{$sth_fetched_feature_set_id}   = $fset_adaptor->fetch_by_dbID($sth_fetched_feature_set_id)  if ! exists $fset_hash{$sth_fetched_feature_set_id};
 	$ftype_hash{$sth_fetched_feature_type_id} = $ft_adaptor  ->fetch_by_dbID($sth_fetched_feature_type_id) if ! exists $ftype_hash{$sth_fetched_feature_type_id};
-
+	
 	# Get the slice object
-	$slice = $slice_hash{'ID:'.$seq_region_id};
-
-	if (!$slice) {
-	  $slice                            = $sa->fetch_by_seq_region_id($seq_region_id);
-	  $slice_hash{'ID:'.$seq_region_id} = $slice;
-	  $sr_name_hash{$seq_region_id}     = $slice->seq_region_name();
-	  $sr_cs_hash{$seq_region_id}       = $slice->coord_system();
-	}
-
-	my $sr_name = $sr_name_hash{$seq_region_id};
-	my $sr_cs   = $sr_cs_hash{$seq_region_id};
-
+	my ($slice, $seq_region_name) = $fetch_slice_with_cache->($seq_region_id);
+	
 	# If a destination slice was provided convert the coords
 	if ($dest_slice) {
+	
+	  $project_slice_coordinates_to_destination_slice->();
 
-	  # If the destination slice starts at 1 and is forward strand, nothing needs doing
-	  unless ($dest_slice_start == 1 && $dest_slice_strand == 1) {
-
-	    if ($dest_slice_strand == 1) {
-	      $sth_fetched_seq_region_start       = $sth_fetched_seq_region_start - $dest_slice_start + 1;
-	      $sth_fetched_seq_region_end         = $sth_fetched_seq_region_end   - $dest_slice_start + 1;
-	    } else {
-	      my $tmp_seq_region_start = $sth_fetched_seq_region_start;
-	      $sth_fetched_seq_region_start        = $dest_slice_end - $sth_fetched_seq_region_end       + 1;
-	      $sth_fetched_seq_region_end          = $dest_slice_end - $tmp_seq_region_start + 1;
-	      $sth_fetched_seq_region_strand      *= -1;
-	    }
-	  }
-
-	  # Throw away features off the end of the requested slice
-	  if (
+	  my $current_feature_not_on_destination_slice = 
 	    $sth_fetched_seq_region_end < 1 
 	    || $sth_fetched_seq_region_start > $dest_slice_length
-	    || ( $dest_slice_sr_name ne $sr_name )
-	  ) {
-	    $skip_feature = 1;
-	    next FEATURE;
-	  }
+	    || ( $dest_slice_sr_name ne $seq_region_name );
+
+	  next ROW
+	    if ($current_feature_not_on_destination_slice);
+
 	  $slice = $dest_slice;
 	}
 
-	$reg_feat = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new_fast
-	  ({
+	$regulatory_feature_under_construction = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new_fast({
 	    'start'          => $sth_fetched_seq_region_start,
 	    'end'            => $sth_fetched_seq_region_end,
 	    '_bound_lengths' => [$sth_fetched_bound_start_length, $sth_fetched_bound_end_length],
@@ -412,36 +429,30 @@ sub _objs_from_sth {
 	    });
     }
 
-    #populate attributes cache
-    if (defined $sth_fetched_attr_id  && ! $skip_feature) {
-      $reg_attrs{$sth_fetched_attr_type}->{$sth_fetched_attr_id} = undef;
+    # Populate attributes cache
+    if (defined $sth_fetched_attr_id  && ! $current_feature_not_on_destination_slice) {
+      $regulatory_attribute_component{$sth_fetched_attr_type}->{$sth_fetched_attr_id} = undef;
     }
     
     if (
       ! exists $seen_linked_feature_sets{$sth_fetched_regulatory_feature_feature_set_id}
-      && ! $skip_feature
+      && ! $current_feature_not_on_destination_slice
     ) {
       $seen_linked_feature_sets{$sth_fetched_regulatory_feature_feature_set_id} = 1;
-    
-      if (! defined $linked_feature_sets{$sth_fetched_activity}) {
-	$linked_feature_sets{$sth_fetched_activity} = [];
+      if (! defined $linked_feature_sets_component{$sth_fetched_activity}) {
+	$linked_feature_sets_component{$sth_fetched_activity} = [];
       }
-      
-      push @{$linked_feature_sets{$sth_fetched_activity}}, $sth_fetched_feature_set_id;
+      push @{$linked_feature_sets_component{$sth_fetched_activity}}, $sth_fetched_feature_set_id;
     }
-    
   }
 
   #handle last record
-  if ($reg_feat) {
+  if (defined $regulatory_feature_under_construction) {
   
-    $reg_feat->attribute_cache(\%reg_attrs);
-    $reg_feat->{linked_feature_sets} = \%linked_feature_sets;
-    
-    push @features, $reg_feat;
-    
+    $add_components_to_regulatory_feature_under_construction->();
+    push @feature_from_sth, $regulatory_feature_under_construction;
   }
-  return \@features;
+  return \@feature_from_sth;
 }
 
 =head2 store
