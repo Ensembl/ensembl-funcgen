@@ -603,7 +603,7 @@ sub _fetch_dbfile_path {
   my $rset_id = shift;
   my $file_type = shift;
   
-  my $sql  = qw(SELECT path from dbfile_registry where table_name="result_set" and table_id=$rset_id and file_type="$file_type");
+  my $sql  = qq(SELECT path from dbfile_registry where table_name="result_set" and table_id=$rset_id and file_type="$file_type");
   
   my $sth  = $self->prepare($sql);
 
