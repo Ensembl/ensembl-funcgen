@@ -284,16 +284,60 @@ sub has_attribute {
   return exists ${$self->attribute_cache}{$fclass}{$dbID};
 }
 
+sub _linked_feature_sets {
+
+  my $self = shift;
+  my $linked_feature_sets = shift;
+
+  if($linked_feature_sets) {
+    $self->{_linked_feature_sets} = $linked_feature_sets;
+  }
+  return $self->{_linked_feature_sets};
+}
+
+=head2 get_feature_sets_by_activity
+
+  Arg [1]     : Activity
+  Returntype  : 
+  Exceptions  : 
+  Description : 
+
+=cut
+
+sub get_feature_sets_by_activity {
+
+  my $self     = shift;
+  my $activity = shift;
+  
+  if (!$self->adaptor->is_valid_activity($activity)) {
+    throw(
+      'Please pass a valid activity to this method. Valid activities are: ' 
+      . $self->adaptor->valid_activities_as_string
+    );
+  }
+  
+  my $feature_set_dbID_list = $self->_linked_feature_sets->{$activity};  
+  return unless(ref $feature_set_dbID_list eq 'ARRAY');
+  
+  my $feature_set_adaptor = $self->adaptor->db->get_FeatureSetAdaptor;  
+  return $feature_set_adaptor->fetch_all_by_dbID_list($feature_set_dbID_list);
+}
+
 =head2 activity
 
   Arg [1]     : None
   Returntype  : Boolean
   Exceptions  : None
-  Description : Returns 1 if activity = 1, nothing otherwise
+  Description : Obsolete
 
 =cut
 
-sub activity { return shift->{activity}; }
+sub activity {
+  use Carp;
+  confess(
+    "activity is no longer supported for regulatory features. You can use get_feature_sets_by_activity('ACTIVE') to find feature sets in which this regulatory feature is active."
+  );
+}
 
 =head2 cell_type_count
 
@@ -306,11 +350,12 @@ sub activity { return shift->{activity}; }
 =cut
 
 sub cell_type_count { 
+  my $self = shift;
   deprecate(
         "Bio::EnsEMBL::Funcgen::RegulatoryFeature::cell_type_count has been deprecated and will be removed in Ensembl release 89."
             . " Please use Bio::EnsEMBL::Funcgen::RegulatoryFeature::epigenome_count instead"
   );
-  shift->{epigenome_count};
+  return $self->epigenome_count;
 }
 
 
@@ -319,11 +364,17 @@ sub cell_type_count {
   Arg [1]     : None
   Returntype  : SCALAR
   Exceptions  : None
-  Description : Returns the amount of epigenomes where this RegFeat is active
+  Description : Returns the amount of epigenomes in which this regulatory feature is active
 
 =cut
 
-sub epigenome_count { shift->{epigenome_count}; }
+sub epigenome_count { 
+  my $self = shift;
+  return $self->{epigenome_count};
+#   my $feature_set_dbID_list = $self->_linked_feature_sets->{'ACTIVE'};
+#   return 0 unless(ref $feature_set_dbID_list eq 'ARRAY');
+#   return scalar @$feature_set_dbID_list;
+}
 
 
 =head2 get_focus_attributes
