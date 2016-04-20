@@ -309,7 +309,7 @@ sub _objs_from_sth {
   my $add_components_to_regulatory_feature_under_construction = sub {
     # Set the previous attr cache and reset
     $regulatory_feature_under_construction->attribute_cache(\%regulatory_attribute_component);	  
-    $regulatory_feature_under_construction->{_linked_feature_sets} = \%linked_feature_sets_component;
+    $regulatory_feature_under_construction->_linked_feature_sets(\%linked_feature_sets_component);
   };
   
   # Closure that resets the variables holding the components. This is called
@@ -613,19 +613,19 @@ sub fetch_all_by_Slice_Activity {
   return $self->fetch_all_by_Slice_FeatureSets_Activity($slice, undef, $activity);
 }
 
-sub _valid_activities {
+sub valid_activities {
   return ('INACTIVE', 'REPRESSED', 'POISED', 'ACTIVE', 'NA');
 }
 
-sub _valid_activities_as_string {
-  return join ', ', _valid_activities;
+sub valid_activities_as_string {
+  return join ', ', valid_activities;
 }
 
-sub _is_valid_activity {
+sub is_valid_activity {
   my $self = shift;
   my $activity_to_test = shift;
   
-  my @valid_activity = _valid_activities;  
+  my @valid_activity = valid_activities;  
   foreach my $current_valid_activity (@valid_activity) {
     return 1 if ($activity_to_test eq $current_valid_activity);
   }
@@ -650,9 +650,9 @@ sub fetch_all_by_Slice_FeatureSets_Activity {
   my @condition;
 
   if (defined $activity && $activity ne '') {
-    if (! $self->_is_valid_activity($activity)) {
+    if (! $self->is_valid_activity($activity)) {
       die(
-	qq(\"$activity\"is not a valid activity. Valid activities are: ) . _valid_activities_as_string
+	qq(\"$activity\"is not a valid activity. Valid activities are: ) . valid_activities_as_string
       );
     }
     push @condition, qq(activity = "$activity");
