@@ -33,11 +33,12 @@ sub create_input_id {
 
   my $out_db = $self->param('out_db');
   
-  my $work_dir = $self->param_required('work_root_dir');
+  #my $work_dir = $self->param_required('work_root_dir');
+  my $work_dir = $self->flagstats_output_dir;
   
   my $epigenome_production_name = $result_set->epigenome->production_name;
   
-  my $temp_dir = "$work_dir/quality_checks/Flagstats/$epigenome_production_name/$result_set_id";
+  my $temp_dir = "$work_dir/$epigenome_production_name/$result_set_id";
   
   use File::Path qw( make_path );
   make_path($temp_dir);

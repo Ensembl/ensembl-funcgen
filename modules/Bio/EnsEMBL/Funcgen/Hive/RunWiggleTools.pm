@@ -82,55 +82,22 @@ sub fetch_input {
         'Please remove input_files from input_id');
     }
 
-    if($rset->has_status('IMPORTED')){
-      # This is not handling assembly specific IMPROTED states!
-      # But we have moved to separate DBs for idfferent assemblies
-      # So we need to drop that?
-
-
-      if($self->param_silent('force')){ #force/recover
-        $rset->adaptor->revoke_status('IMPORTED', $rset);
-      }
-      else{
-#         $self->throw_no_retry("Cannot write bigWig as result set is already marked as IMPORTED:\t".
-#           $rset->name.'('.$rset->dbID.")\nTo over-ride, run reseed_jobs.pl -append '{force>1}'");
-        # DebugJob -f will not do this, as this is a beekeeper option
-      }
-    }
-
     # This could potentially trigger a filter/sort step to produce the 
     # filtered bam. This would be unsafe if parallel jobs are using the same file
     # This normally is done directly after merge, so should be safe, unless the sorted/filtered
     # bam has been deleted by mistake
     $self->input_files([$self->get_alignment_files_by_ResultSet_formats($rset, ['bam'])->{bam}]);
     $self->set_param_method('output_format', 'BigWig');
-    $self->get_param_method('output_prefix',
-                            'silent',
-                            $self->db_output_dir.'/result_feature/'.$rset->name);
+    
+    $self->get_param_method(
+      'output_prefix',
+      'silent',
+      $self->bigwig_output_dir . '/' . $rset->name
+    );
+    run_system_cmd("mkdir -p " . $self->bigwig_output_dir);
+
   }
-  else{  # File input params
-    my $inp_files = $self->get_param_method('input_files', 'required');  # Let's be forgiving
-
-    if(! ref($inp_files)){
-      $self->input_files([$inp_files]);
-    }
-    else{
-      assert_ref($inp_files, 'ARRAY', 'input_files');
-    }
-
-    $self->get_param_method('output_format', 'silent', 'wig');  # default to wig
-    $self->get_param_method('output_prefix', 'required');
-
-    $self->helper->debug(1, "RunWiggleTools::fetch_input got input_files:\n\t".
-      join("\n\t", @{$self->input_files}));
-  }
-
-
-  # TODO
-  # 
-
-  # This may not actually be used if output_file is specified
-  $self->get_output_work_dir_methods($self->db_output_dir.'/result_feature/');
+  
   return;
 }
 

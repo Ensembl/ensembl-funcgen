@@ -67,8 +67,8 @@ my %debug_modes = (no_tidy   => 1,
 
 #global values for the Helper... maybe pass as parameters...
 #$main::_debug_level = 0; Now set below
-$main::_tee         = 0;
-$main::_no_log      = 1;
+# $main::_tee         = 0;
+# $main::_no_log      = 1;
 
 
 #Used in set_param_arrays for scalars_to_objects
@@ -88,10 +88,10 @@ my %param_class_info =
 
 my %object_dataflow_methods = ('Bio::EnsEMBL::Analysis' => 'logic_name');
 
-my %valid_file_formats = 
- (bed  => 'Bed',
-  sam  => 'SAM',
-  bam  => 'BAM' );
+# my %valid_file_formats = 
+#  (bed  => 'Bed',
+#   sam  => 'SAM',
+#   bam  => 'BAM' );
 
 #Advantage of having separate fetch_input, run and write methods is to allow
 #calling of super methods at appropriate point.
@@ -200,22 +200,17 @@ sub validate_non_DB_inputs{
 }
 
 sub alignment_root_dir {
- my $self = $_[0];
+ my $self = shift;
  
- if(! $self->param_silent('alignment_root_dir')){
-   $self->set_dir_param_method('alignment_root_dir', [$self->data_root_dir,
-                                               'alignments',
-                                               lc($self->param('species')),
-                                               $self->param_required('assembly')], 1);
-                                               
-   #complete path will include study/experiment name and input_set logic_name
-   #which will be the logic name of the alignment
- } 
-  
+ if(! $self->param_silent('alignment_root_dir')) { 
+   $self->set_dir_param_method(
+      'alignment_root_dir', [
+	$self->bam_output_dir,
+      ], 1
+    );
+ }
  return $self->param('alignment_root_dir'); 
 }
-
-
 
 sub alignment_dir {
 
@@ -223,14 +218,87 @@ sub alignment_dir {
   
   if(defined $rset) {
 
-    $self->set_dir_param_method('alignment_dir', 
-                                [$self->alignment_root_dir, 
-                                 get_study_name_from_Set($rset, $control)],
-                                $create);    
+    $self->set_dir_param_method(
+      'alignment_dir',
+      [
+	$self->alignment_root_dir,
+ 	get_study_name_from_Set($rset, $control)
+#	$rset->epigenome->production_name
+      ],
+      $create
+    );
+
+#     $self->set_dir_param_method(
+#       'alignment_dir', 
+#       [$self->alignment_root_dir, 
+#       get_study_name_from_Set($rset, $control)],
+#       $create
+#     );
   }
   
   return $self->param('alignment_dir');
 }
+
+use File::Spec;
+
+=head1 regulation_directory
+
+  The directory in which the regulation files go. This is shared with the 
+  other teams, so best to put it in its own directory.
+
+=cut
+sub regulation_directory {
+  return 'funcgen';
+}
+
+=head1 version_directory
+
+  The Ensembl release version when the files were generated. Padded with a 
+  zero so it looks nice when we hit release 100.
+
+=cut
+sub version_directory {
+  return '085'
+}
+
+=head1 default_directory_by_table_and_file_type
+
+  Returns the names of directories in which the files should be stored by 
+  default. This is:
+  
+  <root directory> / <the directory forregulation specific files> / <the name of the table that represents it in the database> / < the release version > / ersa_signal / <the file type>
+
+=cut
+sub default_directory_by_table_and_file_type {
+  my $self      = shift;
+  my $table     = shift;
+  my $file_type = shift;
+  
+  return File::Spec->catfile(
+    $self->db_output_dir, &regulation_directory, $table, &version_directory, 'ersa_signal', $file_type
+  );
+}
+
+sub peaks_output_dir  {  return shift->default_directory_by_table_and_file_type('annotated_feature', 'peaks');  }
+sub bam_output_dir    {  return shift->default_directory_by_table_and_file_type('result_set',        'bam');    }
+sub bigwig_output_dir {  return shift->default_directory_by_table_and_file_type('result_set',        'bigiwg'); }
+
+=head1 quality_check_output_dir
+
+  The root directory for the output of all quality checks.
+
+=cut
+sub quality_check_output_dir {
+  return File::Spec->catfile(
+    shift->db_output_dir, &regulation_directory, 'quality_checks', &version_directory
+  )
+}
+
+sub fastqc_output_dir                       { File::Spec->catfile( shift->quality_check_output_dir, 'fastqc')                       }
+sub flagstats_output_dir                    { File::Spec->catfile( shift->quality_check_output_dir, 'flagstats')                    }
+sub phantom_peaks_output_dir                { File::Spec->catfile( shift->quality_check_output_dir, 'phantom_peaks')                }
+sub proportion_of_reads_in_peaks_output_dir { File::Spec->catfile( shift->quality_check_output_dir, 'proportion_of_reads_in_peaks') }
+sub chance_output_dir                       { File::Spec->catfile( shift->quality_check_output_dir, 'chance')                       }
 
 sub get_output_work_dir_methods {
 
@@ -660,50 +728,47 @@ sub _param_and_method {
   return $self->$param_method(@param_args);
 } 
   
-sub init_branching_by_analysis{  
-  my $self = shift;
-   
-  use Carp;
-  confess('init_branching_by_analysis is deprecated.');
-
-  #my $branch_config = $self->get_param_method('branch_config', 'silent');  
-  #Not a passed param anymore, as we get it from the dataflow rules
- 
- 
-  if(! defined $self->{branch_config}){
-    my $dfr_adaptor = $self->db->get_DataflowRuleAdaptor;  
-    inject_DataflowRuleAdaptor_methods($dfr_adaptor);   
-    
-    my $job = $self->input_job;
-    
-    $self->{branch_config} = $dfr_adaptor->get_dataflow_config_by_analysis_id($job->analysis_id);
-
-    my %bn_config;
-    my $branch_config = $self->{branch_config};
-    
-    foreach my $config(values(%$branch_config)){
-      my $branch = $config->{branch};
-      my $funnel = $config->{funnel};
-      
-      
-      if(exists $branch_config->{$branch}){
-        throw('Cannot init_branching_by_analysis as logic_name'.
-          " clashes with branch number:\t".$branch);  
-      }
-      
-      $bn_config{$branch} = $config;
-    }
-    
-    $self->{branch_config} = {%$branch_config, %bn_config}; 
-    $self->helper->debug(1, "Branch config is:\n", $self->{branch_config});
-    
-  }
-
-  return $self->{branch_config};
-}
-
-
-
+# sub init_branching_by_analysis{  
+#   my $self = shift;
+#    
+#   use Carp;
+#   confess('init_branching_by_analysis is deprecated.');
+# 
+#   #my $branch_config = $self->get_param_method('branch_config', 'silent');  
+#   #Not a passed param anymore, as we get it from the dataflow rules
+#  
+#  
+#   if(! defined $self->{branch_config}){
+#     my $dfr_adaptor = $self->db->get_DataflowRuleAdaptor;  
+#     inject_DataflowRuleAdaptor_methods($dfr_adaptor);   
+#     
+#     my $job = $self->input_job;
+#     
+#     $self->{branch_config} = $dfr_adaptor->get_dataflow_config_by_analysis_id($job->analysis_id);
+# 
+#     my %bn_config;
+#     my $branch_config = $self->{branch_config};
+#     
+#     foreach my $config(values(%$branch_config)){
+#       my $branch = $config->{branch};
+#       my $funnel = $config->{funnel};
+#       
+#       
+#       if(exists $branch_config->{$branch}){
+#         throw('Cannot init_branching_by_analysis as logic_name'.
+#           " clashes with branch number:\t".$branch);  
+#       }
+#       
+#       $bn_config{$branch} = $config;
+#     }
+#     
+#     $self->{branch_config} = {%$branch_config, %bn_config}; 
+#     $self->helper->debug(1, "Branch config is:\n", $self->{branch_config});
+#     
+#   }
+# 
+#   return $self->{branch_config};
+# }
 
 sub _get_branch_number{
   my $self          = shift;
@@ -953,30 +1018,30 @@ sub sam_ref_fai {
   return $self->param('sam_ref_fai');
 }
 
-sub sam_header{
-  my $self        = shift;
-  my $gender      = shift; 
-  
-  if(! defined $self->param_silent('sam_header')){
-  
-    if(! defined $gender){
-      $gender = $self->param_silent('gender') || $self->param_silent('default_gender');
-      
-      if(! defined $gender){
-        $self->throw_no_retry('No gender argument or param defined and no default_gender '.
-        'specific in the config');
-      }
-    }
-    my $file_name = $self->species.'_'.$gender.'_'.$self->assembly.'_unmasked.header.sam';
-    my $sam_header = validate_path([$self->data_root_dir,
-                                    'sam_header',
-                                    $self->species,
-                                    $file_name]);
-    $self->set_param_method('sam_header', $sam_header);
-  }
-  
-  return $self->param('sam_header'); 
-}
+# sub sam_header{
+#   my $self        = shift;
+#   my $gender      = shift; 
+#   
+#   if(! defined $self->param_silent('sam_header')){
+#   
+#     if(! defined $gender){
+#       $gender = $self->param_silent('gender') || $self->param_silent('default_gender');
+#       
+#       if(! defined $gender){
+#         $self->throw_no_retry('No gender argument or param defined and no default_gender '.
+#         'specific in the config');
+#       }
+#     }
+#     my $file_name = $self->species.'_'.$gender.'_'.$self->assembly.'_unmasked.header.sam';
+#     my $sam_header = validate_path([$self->data_root_dir,
+#                                     'sam_header',
+#                                     $self->species,
+#                                     $file_name]);
+#     $self->set_param_method('sam_header', $sam_header);
+#   }
+#   
+#   return $self->param('sam_header'); 
+# }
 
 sub get_alignment_path_prefix_by_ResultSet{
   my ($self, $rset, $control) = @_;
@@ -1041,64 +1106,64 @@ sub get_alignment_files_by_ResultSet_formats {
     return $align_files || throw("Failed to find $file_type (@$formats) for:\t$path");  
 }
 
-sub archive_root{
-  return shift->param_silent('archive_root');  
-}
+# sub archive_root{
+#   return shift->param_silent('archive_root');  
+# }
 
-sub archive_files {
-  my $self       = shift;
-  my $files      = shift;
-  my $mandatory  = shift;
-  
-  if(ref($files)){
-    assert_ref($files, 'ARRAY', 'archive files');  
-  }
-  else{
-    $files = [$files];  
-  }
-  
-  if(my $archive_root = $self->archive_root){
-    
-    my $data_root = $self->data_root_dir;
-
-    foreach my $file(@$files){
-    
-      if($file !~ /^$data_root/o){
-        $self->throw_no_retry('The file path to archive must be a full length path rooted in the data root directory:'.
-          "\nFile path:\t$file\nData root:\t$data_root\n");  
-      }
-        
-      (my $archive_file = $file) =~ s/$data_root/$archive_root/;
-    
-      #sanity check these are not the same 
-      if($archive_file eq $file){
-        $self->throw_no_retry("Source and archive filepath are the same:\n$file");  
-      }
-    
-      #Now we need to create the target directory if it doesn't exist
-      (my $target_root = $archive_file) =~ s/(.*\/)[^\/]+$/$1/;
-      
-      if((! -f $file) && (-f $archive_file)){
-        #File appears to have already been archived. This is probably a rerunning job
-        return;
-      }
-      
-    
-      if(! -d $target_root){
-        #Maybe this is an intermitent error?
-        $self->run_system_cmd_no_retry("mkdir -p $target_root");      
-      } 
-      
-        
-      $self->run_system_cmd_no_retry("mv $file $archive_file");    
-    }
-  }
-  elsif($mandatory && ! $self->param_silent('allow_no_archiving')){
-    $self->throw_no_retry('The mandatory flag has been set but not archive_root is defined');  
-  }
-  
-  return;
-}
+# sub archive_files {
+#   my $self       = shift;
+#   my $files      = shift;
+#   my $mandatory  = shift;
+#   
+#   if(ref($files)){
+#     assert_ref($files, 'ARRAY', 'archive files');  
+#   }
+#   else{
+#     $files = [$files];  
+#   }
+#   
+#   if(my $archive_root = $self->archive_root){
+#     
+#     my $data_root = $self->data_root_dir;
+# 
+#     foreach my $file(@$files){
+#     
+#       if($file !~ /^$data_root/o){
+#         $self->throw_no_retry('The file path to archive must be a full length path rooted in the data root directory:'.
+#           "\nFile path:\t$file\nData root:\t$data_root\n");  
+#       }
+#         
+#       (my $archive_file = $file) =~ s/$data_root/$archive_root/;
+#     
+#       #sanity check these are not the same 
+#       if($archive_file eq $file){
+#         $self->throw_no_retry("Source and archive filepath are the same:\n$file");  
+#       }
+#     
+#       #Now we need to create the target directory if it doesn't exist
+#       (my $target_root = $archive_file) =~ s/(.*\/)[^\/]+$/$1/;
+#       
+#       if((! -f $file) && (-f $archive_file)){
+#         #File appears to have already been archived. This is probably a rerunning job
+#         return;
+#       }
+#       
+#     
+#       if(! -d $target_root){
+#         #Maybe this is an intermitent error?
+#         $self->run_system_cmd_no_retry("mkdir -p $target_root");      
+#       } 
+#       
+#         
+#       $self->run_system_cmd_no_retry("mv $file $archive_file");    
+#     }
+#   }
+#   elsif($mandatory && ! $self->param_silent('allow_no_archiving')){
+#     $self->throw_no_retry('The mandatory flag has been set but not archive_root is defined');  
+#   }
+#   
+#   return;
+# }
 
 =head2 is_idr_FeatureType
 
@@ -1135,18 +1200,18 @@ sub is_idr_ResultSet {
   return $is_idr_rset;  
 }
 
-sub run_system_cmd_no_retry{
-  my $self = shift; 
-  my $cmd  = shift;
-  
-   $self->helper->debug(1, "run_system_cmd_no_retry\t$cmd"); 
-  
-  if(run_system_cmd($cmd, 1) != 0){
-    $self->throw_no_retry("Failed to run_system_cmd:\t$cmd");  
-  }  
-  
-  return;
-}
+# sub run_system_cmd_no_retry{
+#   my $self = shift; 
+#   my $cmd  = shift;
+#   
+#    $self->helper->debug(1, "run_system_cmd_no_retry\t$cmd"); 
+#   
+#   if(run_system_cmd($cmd, 1) != 0){
+#     $self->throw_no_retry("Failed to run_system_cmd:\t$cmd");  
+#   }  
+#   
+#   return;
+# }
   
 
 

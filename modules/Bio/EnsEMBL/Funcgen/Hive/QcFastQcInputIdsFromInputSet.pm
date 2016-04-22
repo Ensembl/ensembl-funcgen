@@ -1,7 +1,7 @@
 package Bio::EnsEMBL::Funcgen::Hive::QcFastQcInputIdsFromInputSet;
 
 use strict;
-use base Bio::EnsEMBL::Hive::Process;
+use base 'Bio::EnsEMBL::Hive::Process';
 
 sub run {
   my $self = shift;
