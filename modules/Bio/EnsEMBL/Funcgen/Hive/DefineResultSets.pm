@@ -69,10 +69,58 @@ sub _are_signals {
       last;
     }
   }
-  
   return $all_signal_input_subsets;
-} 
+}
 
+sub _throw_if_control_parameters_are_invalid {
+  my $self = shift;
+  my $controls = shift;
+  
+  my $control_parameters_are_valid = $controls && assert_ref($controls, 'ARRAY', 'controls') && @$controls;
+  
+  if ( !$control_parameters_are_valid ) {
+    throw("Invalid controls!");
+  }
+}
+
+sub _throw_if_control_input_subsets_are_invalid {
+  my $self = shift;
+  my $control_input_subsets = shift;
+  if(! &_are_controls($control_input_subsets)){
+    throw("Found unexpected non-control InputSubsets specified as controls\n\t".
+      join("\n\t", map($_->name, @$control_input_subsets)));
+  }
+  
+  my $control_experiments = $self->_fetch_control_experiments($control_input_subsets);
+  
+  if( scalar(keys(%$control_experiments)) != 1 ) {
+    throw("Failed to identify a unique control Experiment for :\n".
+      join(' ', keys(%$control_experiments)));
+  }
+}
+
+sub _fetch_control_experiment {
+  my $self = shift;
+  my $control_input_subsets = shift;
+  
+  my $control_experiments = $self->_fetch_control_experiments($control_input_subsets);
+  
+  # There should only ever be one.
+  #
+  my ($exp) = values(%$control_experiments);
+  return $exp;
+}
+
+sub _fetch_control_experiments {
+  my $self = shift;
+  my $control_input_subsets = shift;
+  
+  my %exps;
+  foreach my $ctrl(@$control_input_subsets) {
+    $exps{$ctrl->experiment->name} = $ctrl->experiment;
+  }
+  return \%exps;
+}
 
 sub run {
 
@@ -88,33 +136,41 @@ sub run {
   )->[0];
 
   my $controls = $self->controls;
-
-  # This is run in the DefineResultSets analysis
-  #
-  if ( $controls && assert_ref($controls, 'ARRAY', 'controls') && @$controls) {
   
-    $control_input_subsets = &scalars_to_objects($self->out_db, 'InputSubset',
-                                                'fetch_by_dbID',
-                                                $controls);
-    
-    if(! &_are_controls($control_input_subsets)){
-      throw("Found unexpected non-control InputSubsets specified as controls\n\t".
-        join("\n\t", map($_->name, @$control_input_subsets)));
-    }
-    
-    my %exps;
-    
-    foreach my $ctrl(@$control_input_subsets){
-      $exps{$ctrl->experiment->name} = $ctrl->experiment;
-    }
-    
-    if( scalar(keys(%exps)) != 1 ){
-      throw("Failed to identify a unique control Experiment for :\n".
-        join(' ', keys(%exps)));  
-    }
-    my ($exp) = values(%exps);#We only have one
-  }
- 
+  $self->_throw_if_control_parameters_are_invalid($controls);
+  
+  $control_input_subsets = &scalars_to_objects(
+    $self->out_db, 
+    'InputSubset',
+    'fetch_by_dbID',
+    $controls
+  );
+  
+  $self->_throw_if_control_input_subsets_are_invalid($control_input_subsets);
+  
+# ------------------------------------------------------------------------------
+
+  my $control_experiment = $self->_fetch_control_experiment($control_input_subsets);
+  
+  my $result_set_name = $control_experiment->name . '_control_alignment';
+  
+
+  my $control_result_set_constructor_parameters = {
+    -RESULT_SET_NAME      => $result_set_name,
+    -RESULT_SET_REPLICATE => undef,
+    -SUPPORTING_SETS      => [@$control_input_subsets],
+    -DBADAPTOR            => $self->out_db,
+    -RESULT_SET_ANALYSIS  => $alignment_analysis_object,
+    -ROLLBACK             => $self->param_silent('rollback'),
+    -RECOVER              => $self->param_silent('recover'),
+    -FULL_DELETE          => $self->param_silent('full_delete'),
+    -EPIGENOME            => $control_experiment->epigenome,
+    -FEATURE_TYPE         => $control_experiment->feature_type
+  };
+  my $control_result_set = $helper->define_ResultSet(%$control_result_set_constructor_parameters);
+
+# ------------------------------------------------------------------------------
+  
   my (%result_sets, %replicate_bam_files);
 
   # merge_idr_replicates is undef in DefineResultSets analysis
@@ -335,7 +391,7 @@ They are lazy loaded when the support is requested using the table_ids.
       
       push @hive_jobs_fix_experiment_id, { 
 	dbID      => $result_set->dbID, 
-	replicate => $current_result_set_constructor_parameter->{-RESULT_SET_REPLICATE},
+	#replicate => $current_result_set_constructor_parameter->{-RESULT_SET_REPLICATE},
       };
 
       $self->helper->debug(1, "Caching $foo_bar branch jobs for ".$result_set->name);
@@ -347,10 +403,14 @@ They are lazy loaded when the support is requested using the table_ids.
     }
   }
   
+  push @hive_jobs_fix_experiment_id, { 
+    dbID      => $control_result_set->dbID,
+  };
+
   $self->helper->debug(1, "Processing cached branch $foo_bar");
 
   # Pick an arbitrary set for access to the controls 
-  my ($any_group) = keys(%{$branch_sets{$foo_bar}});
+#   my ($any_group) = keys(%{$branch_sets{$foo_bar}});
   
   # result_set_groups has all the information necessary for 
   # JobFactorySignalProcessing to create jobs for running the bwa 
@@ -365,8 +425,10 @@ They are lazy loaded when the support is requested using the table_ids.
 	%batch_params,
 	result_set_groups => $branch_sets{$foo_bar},
 	set_type  => 'ResultSet',
-	dbID      => $branch_sets{$foo_bar}{$any_group}{dbIDs}->[0],
-	set_name  => $branch_sets{$foo_bar}{$any_group}{set_names}->[0],
+# 	dbID      => $branch_sets{$foo_bar}{$any_group}{dbIDs}->[0],
+# 	set_name  => $branch_sets{$foo_bar}{$any_group}{set_names}->[0],
+	dbID      => $control_result_set->dbID,
+	set_name  => $control_result_set->name,
       }
     ]
   );

@@ -79,9 +79,12 @@ sub create_input_id {
 #   my $chromosome_file = $self->param_required('chromosome_file');
   my $chromosome_file = '/lustre/scratch109/ensembl/funcgen/mn1/ersa/faang/reference_files/CCAT/homo_sapiens_.CCAT_chr_lengths.txt';
   
-  my $work_dir = $self->param_required('work_root_dir');
+  #my $work_dir = $self->param_required('work_root_dir');
+  my $work_dir = $self->chance_output_dir;
   
-  my $temp_dir = "$work_dir/temp/$result_set_id";
+  my $epigenome_production_name = $result_set->epigenome->production_name;
+  
+  my $temp_dir = "$work_dir/$epigenome_production_name/$result_set_id";
   
   use File::Basename;
   (my $signal_bam_file_base_name,  my $signal_bam_directory)  = fileparse($signal_bam_file);

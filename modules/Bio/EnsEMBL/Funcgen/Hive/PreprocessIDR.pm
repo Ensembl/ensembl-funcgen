@@ -107,7 +107,10 @@ sub run {   # Check parameters and do appropriate database/file operations...
   my $exp_name      = $rsets->[0]->experiment->name;
   #This is also done in RunPeaks, so we really need a single method to do this?
   my $lname         =  $peak_analysis->logic_name;
-  $self->get_output_work_dir_methods($self->db_output_dir.'/peaks/'.$exp_name.'/'.$lname);
+  
+  #$self->get_output_work_dir_methods($self->db_output_dir.'/peaks/'.$exp_name.'/'.$lname);
+  $self->get_output_work_dir_methods($self->peaks_output_dir . '/' . $exp_name . '/' . $lname);
+  
   my $out_dir = $self->output_dir;
   my $max_peaks     = 300000;
  

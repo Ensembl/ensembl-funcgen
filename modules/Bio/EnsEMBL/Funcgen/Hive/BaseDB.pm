@@ -1,16 +1,3 @@
-=pod 
-
-=head1 NAME
-
-Bio::EnsEMBL::Funcgen::RunnableDB::Funcgen
-
-=head1 DESCRIPTION
-
-'Funcgen' is a base class for other runnables of the Funcgen Hive Pipeline
-It performs common tasks such as connecting to the EFG DB etc...
-
-=cut
-
 package Bio::EnsEMBL::Funcgen::Hive::BaseDB;
 
 use warnings;
@@ -22,26 +9,6 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( generate_slices_from_names assert
 use Bio::EnsEMBL::Utils::Exception         qw( throw warning );
 
 use base ('Bio::EnsEMBL::Funcgen::Hive::Base');
-
-
-#This defines a set of parameters based on given parameters from the pipeline:
-#All params need to be in pipeline_wide_params else we will get warnings e.g.
-#ParamWarning: value for param('output_dir') is used before having been initialized!
-#However we don't really want these to be pipelinewide!
-#i.e. we don't want 
-
-#Is the solution here to remove all the defaults where possible, if we are not passing them
-#as pipeline wide or default analysis param
-#seed_pipeline or dataflow with add these
-#but there is still no way around the ParamWarnings
-
-#Need to be mindful about flowing things like slices etc.
-
-
-#params
-#db_output_dir
-#slices
-#skip_slices
 
 sub fetch_input {
   my $self = $_[0];
@@ -77,30 +44,6 @@ sub fetch_input {
 
   return;
 }
-
-sub peaks_output_dir {
-  my $self = shift;
-  return $self->db_output_dir . '/peaks/'
-}
-
-#This is starting to overlap with the BaseImporter/Importer a little
-#but new style Peak import is not supported by Importer just yet.
-
-#Move this (and similar methods) to a mix-in? so we can reuse this between objects (like a role)
-#
-
-#todo expose generate_slices_from_names args i.e. inc_dups!
-# change this to sub to use cache_slices, slices, slice_cache 
-# there is some support for this in the BaseImporter,
-# So we should probably move this code somewhere useable by all
-
-#Fix this here for now, then move everything to the Helper, so we can access it
-#here and from the Base/Importers
-
-#get_Slice does not handle seem to filter skip_slices/slices either
-
-#Slightly odd handling of non_PARs in here. But it the only way to safely
-#do it.
 
 sub slice_objects {
   my $self          = shift;
@@ -219,17 +162,6 @@ sub get_Slice {
   return $slice;
 }
 
-
-
-#todo
-#Add input here?
-#There is a potential clash between DataSet and ResultSet support here
-
-#This won't be recalled nicely
-#and will be unclear in the caller whether all set methods will be injected
-#although each analysis 'should' know which methods will be available
-#due to the dataf flow input
-
 sub fetch_Set_input{
   my ($self, $return_set_type) = @_;
   
@@ -316,61 +248,6 @@ sub fetch_Set_input{
   
   return $self->param_required($return_set_type);
 }
-
-=over
-
-=item data_set
-
-=item result_set
-
-=item feature_set
-
-=item slice_objects
-
-Only if they have been specified or are required
-
-=cut
-
-#Do same for input_set_name(no, this will just be the set name) and result_set_name?
-
-
-
-#todo move/remove the rest here
-
-#These are specific to batch job
-#Move to BaseBatch?
-#Or move IdentifySetInput array methods to here a different base class (factory?)
-#what else will be using feature_types etc. Need to see pipeline diagram!
-
-
-#these are only needed when adding the initial input_ids
-#analysis specific batch jobs can probably just use analysis
-
-
-#There are basically two types of jobs
-#One which uses arrays of meta data to identify sets
-
-#Then serial or batch jobs which take one or more input_ids of dbID and name
-#but these jobs will have access to the pipeline_wide_params from meta
-#only redefine with generic names if the runnable can be generic also (e.g.IdentifySetInputs)
-
-
-#These are always optional as they have defaults
-
-#TO DO remove these as they will be replaced with get/set_param_method in Runnables
-#where we can specify (ion context) whether they are required or not
-
-#sub feature_set_analysis { return $_[0]->param_silent('feature_set_analysis'); }
-
-#sub input_set_analysis   { return $_[0]->param_silent('input_set_analysis');   }
-
-#This has been superceded by more specific alignment_analysis 
-#we may have want to create different result_sets with different analyses
-#this translation between params and result_sets shoudl be done by the runnables
-#so we should really have generic set analyses here
-#TO DO, rename feature_set_analysis peak_analysis!
-#sub result_set_analysis  { return $_[0]->param_silent('result_set_analysis');  }
-
 
 #Are these mandatory if accessed?
 sub epigenome    { return $_[0]->param_silent('epigenome');} #optional!

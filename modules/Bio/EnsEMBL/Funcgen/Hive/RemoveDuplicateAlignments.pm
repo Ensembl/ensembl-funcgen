@@ -60,17 +60,17 @@ sub run {
   
   my $tmp_bam = "${unfiltered_bam}.deduplication_in_progress.bam";
 
+
   remove_duplicates_from_bam({
     input_bam  => $unfiltered_bam,
     output_bam => $tmp_bam, 
     debug      => $self->debug,
   });
-
+  run_system_cmd("mv $tmp_bam $bam");
+  
   $result_set->adaptor->dbfile_data_root($self->db_output_dir);
   $result_set->dbfile_path($bam);
   $result_set->adaptor->store_dbfile_path($result_set, 'BAM');
-
-  run_system_cmd("mv $tmp_bam $bam");
 
   return;
 }

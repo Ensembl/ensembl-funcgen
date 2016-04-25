@@ -33,8 +33,12 @@ sub create_input_id {
 
   my $bam_file = $self->param('bam_file_for_qc');
   
-  my $work_dir = $self->param_required('work_root_dir');
-  my $temp_dir = "$work_dir/temp/Qc/PhantomPeaks/$result_set_id";
+  #my $work_dir = $self->param_required('work_root_dir');
+  my $work_dir = $self->phantom_peaks_output_dir;
+  
+  my $epigenome_production_name = $result_set->epigenome->production_name;
+  
+  my $temp_dir = "$work_dir/$epigenome_production_name/$result_set_id";
   my $out_db = $self->param('out_db');  
   
   use File::Path qw( make_path );

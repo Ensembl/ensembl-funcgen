@@ -258,6 +258,10 @@ sub run {
 	  output_bam => $merged_file,
 	  debug      => $self->debug,
 	});
+	
+	$result_set->adaptor->dbfile_data_root($self->db_output_dir);
+	$result_set->dbfile_path($merged_file);
+	$result_set->adaptor->store_dbfile_path($result_set, 'BAM');
 
 	$self->branch_job_group(
 	  2,
