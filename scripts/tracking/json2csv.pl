@@ -30,7 +30,41 @@ sub main {
         check_mandatory_fields( $json_file, $json_data );
     }
 
+    print_csv($data);
+
     say 'success';
+}
+
+sub print_csv {
+    my ( $data, $output ) = @_;
+
+    for my $j ( values %{$data} ) {
+        print $j->{accession} . ","
+            . $j->{replicate}->{experiment}->{biosample_term_name} . ","
+            . $j->{replicate}->{experiment}->{target}->{label} . ","
+            . $j->{replicate}->{biological_replicate_number} . ","
+            . $j->{replicate}->{technical_replicate_number} . ","
+            . $j->{md5sum} . ","
+            . $j->{funcgen}->{local_url} . ","
+            . $j->{funcgen}->{is_control} . ","
+            . $j->{replicate}->{experiment}->{assay_title} . ","
+            . $j->{funcgen}->{experimental_group} . ",";
+
+        print join( ',',
+            @{ $j->{replicate}->{experiment}->{biosample_term_id} } );
+        print ",";
+
+        if ( $j->{funcgen}->{is_control} == 0 ) {
+            print join( ',', @{ $j->{controlled_by} } );
+            print ",";
+        }
+
+        print join( ',',
+            @{ $j->{replicate}->{experiment}->{biosample_synonyms} } );
+
+        print "\n";
+    }
+
 }
 
 sub get_data_from_jsons {
@@ -85,7 +119,8 @@ sub check_mandatory_fields {
             }
         }
 
-        say STDERR "ERROR: In file '$json_file' mandatory json attribute '$man_field' is not defined!"
+        say STDERR
+            "ERROR: In file '$json_file' mandatory json attribute '$man_field' is not defined!"
             if $error_flag == 1;
     }
 
