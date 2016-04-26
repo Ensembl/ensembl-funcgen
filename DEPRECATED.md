@@ -17,6 +17,7 @@ A year after deprecation (4 Ensembl releases), the method is removed from the AP
  - Bio::EnsEMBL::Funcgen::**Importer**::*cell_type()*
  - Bio::EnsEMBL::Funcgen::**SetFeature**::*cell_type()*
  - Bio::EnsEMBL::Funcgen::**Set**::*cell_type()*
+ - Bio::EnsEMBL::Funcgen::**Epigenome**::*efo_id()*
  - Bio::EnsEMBL::Funcgen::**Experiment**::*primary_design_type()*
  - Bio::EnsEMBL::Funcgen::**Experiment**::*description()*
  - Bio::EnsEMBL::Funcgen::**Experiment**::*mage_xml()*
