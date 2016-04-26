@@ -67,7 +67,7 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange ) ;
-use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
 use parent qw(Bio::EnsEMBL::Funcgen::Storable);
 
@@ -204,7 +204,27 @@ sub display_label {  return $_[0]->{display_label}; }
 
 =cut
 
-sub efo_id{  return $_[0]->{efo_id}; }
+sub efo_id {
+    deprecate(
+        "Bio::EnsEMBL::Funcgen::Epigenome::efo_id() has been deprecated and will be removed in Ensembl release 89."
+            . " Please use Bio::EnsEMBL::Funcgen::Epigenome::ontology_accession() instead."
+    );
+    return $_[0]->{ontology_accession};
+}
+
+
+=head2 ontology_accession
+
+  Example    : my $ontology_accession = $epigenome->ontology_accession;
+  Description: Getter of the ontology accession
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub ontology_accession{  return $_[0]->{ontology_accession}; }
 
 
 =head2 tissue
