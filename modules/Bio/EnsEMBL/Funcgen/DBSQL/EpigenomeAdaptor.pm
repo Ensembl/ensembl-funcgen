@@ -140,30 +140,35 @@ sub _columns {
 =cut
 
 sub _objs_from_sth {
-	my ($self, $sth) = @_;
+    my ( $self, $sth ) = @_;
 
-	my (@result, $eg_id, $name, $dlabel, $desc, $gender, $efo_id, $tissue, $production_name);
+    my (@result,             $eg_id,  $name,
+        $dlabel,             $desc,   $gender,
+        $ontology_accession, $tissue, $production_name
+    );
 
-	$sth->bind_columns(\$eg_id, \$name, \$dlabel, \$desc, \$gender, \$efo_id, \$tissue, \$production_name);
+    $sth->bind_columns( \$eg_id, \$name, \$dlabel, \$desc, \$gender,
+        \$ontology_accession, \$tissue, \$production_name );
 
-	while ( $sth->fetch() ) {
-		my $epigenome = Bio::EnsEMBL::Funcgen::Epigenome->new(
-		  -dbID            => $eg_id,
-		  -NAME            => $name,
-		  -DISPLAY_LABEL   => $dlabel,
-		  -DESCRIPTION     => $desc,
-		  -GENDER          => $gender,
-		  -EFO_ID          => $efo_id,
-		  -TISSUE          => $tissue,
-		  -ADAPTOR         => $self,
-		  -PRODUCTION_NAME => $production_name,
-		);
+    while ( $sth->fetch() ) {
+        my $epigenome = Bio::EnsEMBL::Funcgen::Epigenome->new(
+            -dbID               => $eg_id,
+            -NAME               => $name,
+            -DISPLAY_LABEL      => $dlabel,
+            -DESCRIPTION        => $desc,
+            -GENDER             => $gender,
+            -ONTOLOGY_ACCESSION => $ontology_accession,
+            -TISSUE             => $tissue,
+            -ADAPTOR            => $self,
+            -PRODUCTION_NAME    => $production_name,
+        );
 
-		push @result, $epigenome;
+        push @result, $epigenome;
 
-	}
-	return \@result;
+    }
+    return \@result;
 }
+
 
 
 
@@ -186,8 +191,8 @@ sub store {
 
   my $sth = $self->prepare("
 			INSERT INTO epigenome
-			(name, display_label, description, gender, efo_id, tissue, production_name)
-			VALUES (?, ?, ?, ?, ?, ?)");
+			(name, display_label, description, gender, ontology_accession, tissue, production_name)
+			VALUES (?, ?, ?, ?, ?, ?, ?)");
 
 
 
@@ -203,13 +208,14 @@ sub store {
 	  }
 
 
-	  $sth->bind_param(1, $eg->name,            SQL_VARCHAR);
-	  $sth->bind_param(2, $eg->display_label,   SQL_VARCHAR);
-	  $sth->bind_param(3, $eg->description,     SQL_VARCHAR);
-	  $sth->bind_param(4, $eg->gender,          SQL_VARCHAR);
-	  $sth->bind_param(5, $eg->efo_id,          SQL_VARCHAR);
-	  $sth->bind_param(6, $eg->tissue,          SQL_VARCHAR);
-	  $sth->bind_param(7, $eg->production_name, SQL_VARCHAR);
+    $sth->bind_param( 1, $eg->name,               SQL_VARCHAR );
+    $sth->bind_param( 2, $eg->display_label,      SQL_VARCHAR );
+    $sth->bind_param( 3, $eg->description,        SQL_VARCHAR );
+    $sth->bind_param( 4, $eg->gender,             SQL_VARCHAR );
+    $sth->bind_param( 5, $eg->ontology_accession, SQL_VARCHAR );
+    $sth->bind_param( 6, $eg->tissue,             SQL_VARCHAR );
+    $sth->bind_param( 7, $eg->production_name,    SQL_VARCHAR );
+
 	  
 	  $sth->execute();
 	  $eg->dbID($self->last_insert_id);

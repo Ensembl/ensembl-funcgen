@@ -350,7 +350,11 @@ sub store {
       $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ExperimentalGroup', $exp_group);
       $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType',       $exp->feature_type);
       $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Epigenome',         $exp->epigenome);
-      $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Experiment',        $exp->get_control);
+    if ( $exp->get_control ) {
+        $self->db->is_stored_and_valid( 'Bio::EnsEMBL::Funcgen::Experiment',
+            $exp->get_control );
+    }
+
 
 		  #Validate doesn't exist aleady
 		
@@ -359,18 +363,22 @@ sub store {
 			   "\nTo reuse/update this Experiment you must retrieve it using the ExperimentAdaptor");
 		  }
   
-  		$exp = $self->update_mage_xml_by_Experiment($exp) if(defined $exp->mage_xml());
-
   		$sth->bind_param(1,  $exp->name,                      SQL_VARCHAR);
       $sth->bind_param(2,  $exp_group->dbID,                SQL_INTEGER);
-      $sth->bind_param(3,  $exp->get_control->dbID,         SQL_INTEGER);
+
+      my $control_id = undef;
+      if ($exp->get_control){
+        $control_id = $exp->get_control->dbID;
+      }
+      
+      $sth->bind_param(3,  $control_id,                     SQL_INTEGER);
   		$sth->bind_param(4,  $exp->is_control,                SQL_TINYINT);
   		$sth->bind_param(5,  $exp->primary_design_type,       SQL_VARCHAR);
   		$sth->bind_param(6,  $exp->description,               SQL_VARCHAR);
       $sth->bind_param(7,  $exp->mage_xml_id,               SQL_INTEGER);
       $sth->bind_param(8,  $exp->feature_type->dbID,        SQL_INTEGER); 
       $sth->bind_param(9,  $exp->epigenome->dbID,           SQL_INTEGER);
-      $sth->bind_param(10,  $exp->archive_id,               SQL_VARCHAR); 
+      $sth->bind_param(10, $exp->archive_id,                SQL_VARCHAR); 
       $sth->bind_param(11, $exp->display_url,               SQL_VARCHAR);
   		$sth->execute();
   		$exp->dbID($self->last_insert_id);
