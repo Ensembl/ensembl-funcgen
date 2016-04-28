@@ -155,6 +155,19 @@ sub new {
   return $self;
 }
 
+sub production_name {
+  my $self = shift;
+  
+  my $epigenome_production_name = $self->epigenome->production_name;
+  my $analysis_logic_name = $self->analysis->logic_name;
+  my $dbID = $self->dbID;
+  
+  my $production_name = join '_', (
+    $epigenome_production_name,
+    $analysis_logic_name,
+    $dbID
+  );
+}
 
 sub _valid_feature_classes{
   return qw( result dna_methylation segmentation );
