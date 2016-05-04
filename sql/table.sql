@@ -62,6 +62,8 @@
 
 */
 
+drop table if exists regulatory_feature;
+
 CREATE TABLE regulatory_feature (
   regulatory_feature_id int(10) unsigned NOT NULL auto_increment,
   feature_type_id int(10) unsigned default NULL,
@@ -69,14 +71,23 @@ CREATE TABLE regulatory_feature (
   seq_region_strand tinyint(1) NOT NULL,
   seq_region_start int(10) unsigned NOT NULL,
   seq_region_end int(10) unsigned NOT NULL,
-  stable_id  varchar(16) DEFAULT NULL,
+  stable_id  varchar(18) DEFAULT NULL,
   bound_start_length mediumint(3) unsigned NOT NULL,
   bound_end_length mediumint(3) unsigned NOT NULL,
   epigenome_count smallint(6),
   PRIMARY KEY  (regulatory_feature_id),
+  
+  -- The name "uniqueness_constraint_idx" is used in the 
+  -- RegulatoryFeatureAdaptor to catch issues regarding its violation.
+  -- Changing the name means having to update it in the 
+  -- RegulatoryFeatureAdaptor as well.
+  --
+  UNIQUE KEY uniqueness_constraint_idx (feature_type_id,  seq_region_id, seq_region_strand, seq_region_start, seq_region_end, stable_id, bound_start_length, bound_end_length),
   KEY feature_type_idx (feature_type_id),
   KEY stable_id_idx (stable_id)
 ) ENGINE=MyISAM;
+
+drop table if exists regulatory_feature_feature_set;
 
 create table regulatory_feature_feature_set (
   regulatory_feature_feature_set_id int(10) unsigned NOT NULL auto_increment,
