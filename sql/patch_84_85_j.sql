@@ -32,7 +32,7 @@ create table if not exists regulatory_feature_feature_set (
   regulatory_feature_feature_set_id int(10) unsigned NOT NULL auto_increment,
   regulatory_feature_id int(10) unsigned default NULL,
   feature_set_id int(10) unsigned default NULL,
-  stable_id_temp varchar(16) DEFAULT NULL,
+  stable_id_temp varchar(18) DEFAULT NULL,
   activity tinyint(3),
   PRIMARY KEY  (regulatory_feature_feature_set_id),
   UNIQUE KEY uniqueness_constraint_idx (feature_set_id,regulatory_feature_id),
