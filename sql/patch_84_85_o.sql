@@ -19,5 +19,5 @@
 
 delete from regulatory_feature_feature_set where feature_set_id in (select feature_set_id from feature_set where name = "RegulatoryFeatures:MultiCell");
 
-insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_n.sql|Make activity an enum.');
+insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_o.sql|Make activity an enum.');
 
