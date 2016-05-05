@@ -44,7 +44,9 @@ sub run {
     $file_prefix . '.' . $file_extension
   );
 
-  die unless(-e $peaks_file);
+  if (! -e $peaks_file) {
+    die("Can't find peaks file $peaks_file");
+  }
   
   my $input_id = $self->create_input_id(
     $feature_set, 
