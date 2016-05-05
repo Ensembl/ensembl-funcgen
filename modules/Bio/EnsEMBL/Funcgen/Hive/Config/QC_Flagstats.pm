@@ -45,14 +45,13 @@ sub pipeline_analyses {
       },
       {   -logic_name => 'QcFlagstatsJobFactory',
 	  -module     => 'Bio::EnsEMBL::Funcgen::Hive::QcFlagstatsJobFactory',
-	  -meadow_type=> 'LOCAL',
+# 	  -meadow_type=> 'LOCAL',
 	  -flow_into => { 
 	    2 => 'QcRunFlagstats',
 	  },
       },
       {   -logic_name => 'QcRunFlagstats',
 	  -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-	  -meadow_type=> 'LSF',
 	  -parameters => { 
 		cmd => qq!samtools flagstat #bam_file# > #flagstats_file#!,
 	  },
@@ -62,7 +61,7 @@ sub pipeline_analyses {
       },
       {   -logic_name => 'LoadFlagstatsToDB',
 	  -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-	  -meadow_type=> 'LOCAL',
+# 	  -meadow_type=> 'LOCAL',
 	  -parameters => {
 	      cmd => qq(load_samtools_flagstats.pl )
 		. qq( --result_set_id #result_set_id# )

@@ -46,14 +46,13 @@ sub pipeline_analyses {
 	},
         {   -logic_name => 'QcPhantomPeaksJobFactory',
             -module     => 'Bio::EnsEMBL::Funcgen::Hive::QcPhantomPeaksJobFactory',
-            -meadow_type=> 'LOCAL',
+#             -meadow_type=> 'LOCAL',
             -flow_into => { 
 	      2 => 'QcRunPhantomPeaks4GB',
             },
         },
         {   -logic_name  => 'QcRunPhantomPeaks4GB',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -meadow_type => 'LSF',
             -parameters  => { 
 		  cmd => 
 		    # Rscript does not search the path, so we use "which" to 
@@ -80,7 +79,6 @@ sub pipeline_analyses {
         },
         {   -logic_name  => 'QcRunPhantomPeaks30GB',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -meadow_type => 'LSF',
             -parameters  => { 
 		  cmd => 
 		    # Rscript does not search the path, so we use "which" to 
@@ -106,7 +104,7 @@ sub pipeline_analyses {
         },
         {   -logic_name => 'QCLoadPhantomPeaksToDB',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -meadow_type=> 'LOCAL',
+#             -meadow_type=> 'LOCAL',
 	    -parameters => {
                 cmd =>
 		    qq( load_phantom_peak_file.pl                )
