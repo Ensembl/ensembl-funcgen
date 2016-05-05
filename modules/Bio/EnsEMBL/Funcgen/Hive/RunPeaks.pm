@@ -90,21 +90,17 @@ sub fetch_input {
     $rset     = $self->ResultSet; 
   }
 
-  #do we need both experiment name and logic name in here?
-  #logic name will be in the otufile name anyway?
-
-  $self->get_output_work_dir_methods( $self->peaks_output_dir .
-      $rset->experiment->name. '/' . $analysis->logic_name );
+  # The code for building this path is duplicated in PreProcessIDR. This 
+  # should be configured somewhere centrally.
+  #
+  $self->get_output_work_dir_methods(
+    $self->peaks_output_dir 
+    . '/' . $rset->experiment->name
+    . '/' . $analysis->logic_name 
+  );
 
   my $align_prefix   = $self->get_alignment_path_prefix_by_ResultSet($rset, undef, 1);#validate aligned flag 
   my $control_prefix = $self->get_alignment_path_prefix_by_ResultSet($rset, 1, 1);#and control flag 
-  
-  print "\n------------------ Dumper ---------------------------------\n";
-   #print Dumper([$align_prefix, $control_prefix]);  
-   print "\n------------------ Dumper ---------------------------------\n";
-   
-   
-   #die();
   
   my $sam_ref_fai = $self->sam_ref_fai($rset->epigenome->gender);  #Just in case we need to convert
 
@@ -128,10 +124,6 @@ sub fetch_input {
       #-is_half_open      => $self->param_silent('is_half_open') || 0}, # Now defined by PeakCaller or subclass defined on out/input formats   
     });
   
-  print "\ninit_peak_caller_args:\n";
-  use Data::Dumper;
-  print Dumper(\@init_peak_caller_args);
-    
   my $peak_runnable = _init_peak_caller
    (-analysis       => $analysis,
     -align_prefix   => $align_prefix,
@@ -143,6 +135,10 @@ sub fetch_input {
       -program_file      => $pfile_path,
       -out_file_prefix   => $rset->name.'.'.$analysis->logic_name,
       -out_dir           => $self->output_dir,
+      
+      # /lustre/scratch109/ensembl/funcgen/mn1/ersa/mn1_CTTV_newgrouping_homo_sapiens_funcgen_81_38/output/mn1_CTTV_newgrouping_homo_sapiens_funcgen_81_38/funcgen/annotated_feature/085/ersa_signal/peaksA549_CTCF_ChIP-Seq_3974/SWEmbl_R0005/A549_CTCF_ChIP-Seq_3974_bwa_samse_TR2.SWEmbl_R0005.txt
+      #
+      -output_file       => $self->output_dir . '/' . $rset->name . '.' . $analysis->logic_name . '.txt',
       -convert_half_open => 1, # Before loading into DB
       #-is_half_open      => $self->param_silent('is_half_open') || 0}, # Now defined by PeakCaller or subclass defined on out/input formats   
     });
@@ -177,8 +173,8 @@ sub run {
     if(! eval { _run_peak_caller(-peak_caller => $pcaller, 
                                  -max_peaks   => $self->max_peaks, 
                                  -file_types  => $self->process_file_types,
-                                 -debug       => $self->debug); 1 }){
-      $self->throw_no_retry('Failed to call run on '.ref($pcaller)."\n$@");                                
+                                 -debug       => $self->debug); 1 }) {
+      $self->throw_no_retry('Failed to call run on '.ref($pcaller)."\n$@");
     }
   }
   

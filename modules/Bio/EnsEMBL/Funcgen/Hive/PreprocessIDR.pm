@@ -108,8 +108,17 @@ sub run {   # Check parameters and do appropriate database/file operations...
   #This is also done in RunPeaks, so we really need a single method to do this?
   my $lname         =  $peak_analysis->logic_name;
   
-  #$self->get_output_work_dir_methods($self->db_output_dir.'/peaks/'.$exp_name.'/'.$lname);
-  $self->get_output_work_dir_methods($self->peaks_output_dir . '/' . $exp_name . '/' . $lname);
+#   $self->get_output_work_dir_methods($self->db_output_dir.'/peaks/'.$exp_name.'/'.$lname);
+
+  # The code for building this path is duplicated in RunPeaks. This should be 
+  # configured somewhere centrally.
+  #
+  $self->get_output_work_dir_methods(
+    $self->peaks_output_dir 
+    . '/' . $exp_name
+    . '/' . $lname
+  );
+
   
   my $out_dir = $self->output_dir;
   my $max_peaks     = 300000;
@@ -159,7 +168,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
             join("\n\t", map {$_->name} @issets)."\n");  
         }  
         
-        push @rep_nums, $isset->replicate;
+        push @rep_nums, $isset->technical_replicate;
         $seen_rep = 1;
       }
     }
@@ -185,7 +194,13 @@ sub run {   # Check parameters and do appropriate database/file operations...
     #too. Although this maybe desirable to avoid clashes between features sets with different alignments
     #The API does not handle this yet.
     
-    push @pre_idr_files, $out_dir.'/'.$rset->name.'.'.$lname.'.txt';
+    my $permissive_swembl_peak_file = $out_dir.'/'.$rset->name.'.'.$lname.'.txt';
+    
+    if (! -e $permissive_swembl_peak_file) {
+      $self->throw("Expected file $permissive_swembl_peak_file does not exist!");
+    }
+    
+    push @pre_idr_files, $permissive_swembl_peak_file;
     #do read counts in RunIDR to parallelise
     push @bams,         $self->get_alignment_files_by_ResultSet_formats($rset, ['bam'])->{bam};
   }

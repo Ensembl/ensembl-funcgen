@@ -44,7 +44,12 @@ sub new {
   my $class           = ref($caller) || $caller;
   my $self            = $class->SUPER::new(@_);  # @_ will over-ride -is_half_open
   #This needs setting here, ss we may need it for reload (i.e. without calling run)      
-  $self->{out_file} ||= $self->out_file_prefix.'.'.$self->out_file_types->[0];
+#   $self->{out_file} ||= $self->out_file_prefix.'.'.$self->out_file_types->[0];
+  
+  if (! exists $self->{out_file}) {
+    die("out_file parameter has not been set!");
+  }
+  
   return $self;
 }
 
@@ -70,12 +75,14 @@ sub run {
     throw("-i(input_file) and -r(eference/input file cannot have mixed compression states:\n\t".
       $align_file."\n\t".$control_file);  
   }
+  
+  my $output_file = $self->out_file;
  
   #Sometimes SWEmbl fails to open output file if it exists already
-  unlink($self->out_file);
+  unlink($output_file);
  
   my $cmd = $self->program_file." $format_switch -i $compressed ".
-    $self->align_file.' '. $self->parameters.' -o '.$self->out_file;
+    $self->align_file.' '. $self->parameters.' -o '.$output_file;
     
   if ($self->control_file) {
     $cmd .= " -r ".$self->control_file;
@@ -84,10 +91,14 @@ sub run {
     confess("No control file specified!");
   }
   
-  warn "Running:\t$cmd\n" if $self->debug;
+#   warn "Running:\t$cmd\n" if $self->debug;
+  warn "Running:\t$cmd\n";
   #This did no cause failure when failed
   run_system_cmd($cmd);
-     
+  
+  if (! -e $output_file) {
+    confess("The expected output file ($output_file) does not exist!");
+  }
   return;
 }
 

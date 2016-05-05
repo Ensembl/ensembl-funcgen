@@ -44,10 +44,10 @@ sub new {
 
   my ($prog_file, $prog_params, $align_file, $control_file,
     $out_dir, $out_file_prefix, $reload, $rerun, $no_load,
-    $is_half_open, $convert_half_open, $output_format, $debug) =
+    $is_half_open, $convert_half_open, $output_format, $debug, $output_file) =
     rearrange(['PROGRAM_FILE', 'PARAMETERS', 'ALIGN_FILE', 'CONTROL_FILE',
       'OUT_DIR', 'OUT_FILE_PREFIX', 'RELOAD', 'RERUN', 'NO_LOAD',
-      'IS_HALF_OPEN', 'CONVERT_HALF_OPEN', 'OUTPUT_FORMAT', 'DEBUG'], @_);
+      'IS_HALF_OPEN', 'CONVERT_HALF_OPEN', 'OUTPUT_FORMAT', 'DEBUG', 'output_file'], @_);
 
   if(! ($prog_file && (defined $prog_params) &&
         $align_file && $out_dir)){
@@ -104,6 +104,7 @@ sub new {
   $self->{is_half_open}      = $is_half_open;
   $self->{convert_half_open} = $convert_half_open;
   $self->{debug}             = $debug;
+  $self->{out_file}          = $output_file;
 
   $self->init_files;
   return $self;
