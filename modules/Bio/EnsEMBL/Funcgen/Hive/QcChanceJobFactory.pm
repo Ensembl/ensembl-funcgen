@@ -90,16 +90,22 @@ sub create_input_id {
   (my $signal_bam_file_base_name,  my $signal_bam_directory)  = fileparse($signal_bam_file);
   (my $control_bam_file_base_name, my $control_bam_directory) = fileparse($control_bam_file);
   
-  die unless($signal_bam_directory eq $control_bam_directory);
+  if ($signal_bam_directory ne $control_bam_directory) {
+    warn(
+      "Directories are not identical for signal_bam_file ($signal_bam_file) and control_bam_file ($control_bam_file)!"
+    );
+  }
   
   my $input_id = {
       column_names => [ 'kind', 'file', 'sourcedir', 'tempdir' ],
       inputlist    => [
-	[ 'signal',  $signal_bam_file_base_name, "#sourcedir#", "#tempdir#" ],
-	[ 'control', $control_bam_file_base_name,  "#sourcedir#", "#tempdir#" ],
+	[ 'signal',  $signal_bam_file_base_name,   $signal_bam_directory,  "#tempdir#" ],
+	[ 'control', $control_bam_file_base_name,  $control_bam_directory, "#tempdir#" ],
+# 	[ 'signal',  $signal_bam_file_base_name, "#sourcedir#", "#tempdir#" ],
+# 	[ 'control', $control_bam_file_base_name,  "#sourcedir#", "#tempdir#" ],
       ],
       # Directory in which the bam files are
-      sourcedir             => $signal_bam_directory,
+#       sourcedir             => $signal_bam_directory,
       
       # Directory into which the bam files will be copied
       tempdir               => $temp_dir,
