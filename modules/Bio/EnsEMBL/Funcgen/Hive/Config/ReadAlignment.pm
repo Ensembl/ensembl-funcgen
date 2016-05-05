@@ -2,7 +2,8 @@ package Bio::EnsEMBL::Funcgen::Hive::Config::ReadAlignment;
 
 use strict;
 use warnings;
-use Data::Dumper;
+
+use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 use base ('Bio::EnsEMBL::Funcgen::Hive::Config::BaseSequenceAnalysis');
 
 sub default_options {
@@ -49,16 +50,40 @@ sub pipeline_analyses {
     },
     {   -logic_name => 'TokenLimitedJobFactory',
 	-module     => 'Bio::EnsEMBL::Funcgen::Hive::TokenLimitedJobFactory',
-	-meadow_type=> 'LOCAL',
+# 	-meadow_type=> 'LOCAL',
 	-flow_into => {
-	  '2->A' => 'IdentifyAlignInputSubsets',
+	  '2->A' => 'Dummy',
 	  'A->1' => 'TokenLimitedJobFactory',
 	},
     },
     {
+      -logic_name => 'Dummy',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+#       -meadow_type=> 'LOCAL',
+	-flow_into => {
+	  MAIN => WHEN(
+	    '#identify_controls# == 1'  => { 'IdentifyAlignInputSubsets' => INPUT_PLUS() },
+	    ELSE { 'CreateJobBatchUsingNewGroupingMechanism' => INPUT_PLUS() },
+	  ),
+	},
+    },
+    {
+      -logic_name => 'CreateJobBatchUsingNewGroupingMechanism',
+      -module     => 'Bio::EnsEMBL::Funcgen::Hive::CreateJobBatchUsingNewGroupingMechanism',
+#       -meadow_type => 'LOCAL',
+      -parameters => {
+# 	out_db_url => $self->o('out_db_url'),
+      },
+      -wait_for => 'PrePipelineChecks',
+      -flow_into => {
+	'2->A' => 'DefineResultSets',
+	'A->2' => 'DeleteFilesFromJobFan',
+      },
+    },
+    {
       -logic_name => 'IdentifyAlignInputSubsets',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::IdentifySetInputs',
-      -meadow_type => 'LOCAL',
+#       -meadow_type => 'LOCAL',
       -parameters => {
       set_type                     => 'InputSubset',
 	feature_set_analysis_type    => 'peak',
@@ -74,12 +99,12 @@ sub pipeline_analyses {
     {
       -logic_name => 'DeleteFilesFromJobFan',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::ErsaCleanup',
-      -meadow_type=> 'LOCAL',
+#       -meadow_type=> 'LOCAL',
     },
     {
      -logic_name => 'DefineResultSets',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::DefineResultSets',
-     -meadow     => 'LOCAL',
+#      -meadow     => 'LOCAL',
     -flow_into => {
       '2->A' => 'FixResultSetsExperimentIds',
       'A->3' => 'SplitFastqFilesFromControls',
@@ -103,7 +128,7 @@ sub pipeline_analyses {
 	  ),
 	  db_conn => '#out_db_url#'
 	},
-      -meadow     => 'LOCAL',
+#       -meadow     => 'LOCAL',
       -analysis_capacity => 1,
     },
     {
@@ -194,7 +219,7 @@ sub pipeline_analyses {
 	'10'    => 'SplitMergedFastQ' ,
 	'11->A' => 'SplitFastqsFromReplicatedExperiments',
       },
-      -meadow_type=> 'LOCAL',
+#       -meadow_type=> 'LOCAL',
     },
     {
       -logic_name => 'JobFactoryDefineMergedDataSet',
@@ -202,7 +227,7 @@ sub pipeline_analyses {
       -flow_into => {
 	2 => 'DefineMergedDataSet'
       },
-      -meadow_type=> 'LOCAL',
+#       -meadow_type=> 'LOCAL',
     },
     {
       -logic_name => 'JobFactoryPermissivePeakCalling',
@@ -210,7 +235,7 @@ sub pipeline_analyses {
       -flow_into => {
 	100 => 'PermissiveSWEmbl'
       },
-      -meadow_type=> 'LOCAL',
+#       -meadow_type=> 'LOCAL',
     },
     {
      -logic_name => 'MergeAlignments',
@@ -280,7 +305,7 @@ sub pipeline_analyses {
     {
       -logic_name => 'CleanupFilesFromPermissiveSWEmblJobFan',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::ErsaCleanup',
-      -meadow_type=> 'LOCAL',
+#       -meadow_type=> 'LOCAL',
      -flow_into => {
 	  MAIN => 'PreprocessIDR',
        },
