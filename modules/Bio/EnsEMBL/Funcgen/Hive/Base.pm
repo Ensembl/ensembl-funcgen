@@ -41,7 +41,7 @@ use strict;
 use Devel::Peek;
 
 use Bio::EnsEMBL::Funcgen::Utils::Helper;
-use Bio::EnsEMBL::Utils::Exception         qw( throw );
+# use Bio::EnsEMBL::Utils::Exception         qw( throw );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( get_study_name_from_Set
                                                get_set_prefix_from_Set
                                                scalars_to_objects 
@@ -111,7 +111,7 @@ sub fetch_input {   # nothing to fetch... just the DB parameters...
     if($debug_level !~ /^[1-3]$/){
       
       if(! exists $debug_modes{$debug_level}){
-        throw("Not a valid -debug mode:\t$debug_level\nPlease specify one of:\t".
+        $self->throw("Not a valid -debug mode:\t$debug_level\nPlease specify one of:\t".
           join(' ', keys %debug_modes));  
       }
       
@@ -281,7 +281,7 @@ sub default_directory_by_table_and_file_type {
 
 sub peaks_output_dir  {  return shift->default_directory_by_table_and_file_type('annotated_feature', 'peaks');  }
 sub bam_output_dir    {  return shift->default_directory_by_table_and_file_type('result_set',        'bam');    }
-sub bigwig_output_dir {  return shift->default_directory_by_table_and_file_type('result_set',        'bigiwg'); }
+sub bigwig_output_dir {  return shift->default_directory_by_table_and_file_type('result_set',        'bigwig'); }
 
 =head1 quality_check_output_dir
 
@@ -312,7 +312,7 @@ sub get_output_work_dir_methods {
     my $dr_dir = $self->data_root_dir;
     
     if($out_dir !~ /$dr_dir/){
-      throw('Cannot set a work_dir from an output dir('.$out_dir.
+      $self->throw('Cannot set a work_dir from an output dir('.$out_dir.
         ") which is not in the data_root_dir:\n\t$dr_dir");   
     }    
                
@@ -342,7 +342,7 @@ sub _set_out_db {
   my $db = $self->get_param_method('out_db', 'required');
  
   if(! ref($db)){ #Has been set to scalar in config?
-     throw("out_db config is not a Hashref of DBAdaptor::new parameters:\t$db");
+     $self->throw("out_db config is not a Hashref of DBAdaptor::new parameters:\t$db");
   }
   #Always required as we don't want to default to ensembldb for a pipeline!
   my $dnadb_params = $self->param_required('dnadb');  
@@ -356,10 +356,10 @@ sub _set_out_db {
     $db = $adaptor_class->new(%{ $db }, %{ $dnadb_params });
   };
   if($@) {
-    throw("Error creating the Funcgen DBAdaptor and/or dna DBAdaptor\n$@");  
+    $self->throw("Error creating the Funcgen DBAdaptor and/or dna DBAdaptor\n$@");  
   }
   if(! $db->isa('Bio::EnsEMBL::DBSQL::BaseAdaptor')) {
-    throw("The out_db param is set to an unexpected reference:\t" . (ref $db) . "\n"
+    $self->throw("The out_db param is set to an unexpected reference:\t" . (ref $db) . "\n"
       . Dumper($db)
       . "Please check the out_db config, which should be a Hashref of DBAdaptor parameters");
   } 
@@ -395,7 +395,7 @@ sub _set_out_db {
     $assembly = $cs_adaptor->fetch_by_rank(1)->version; 
     
     if(! $assembly){
-      throw("Failed to identify default assembly from the DB");
+      $self->throw("Failed to identify default assembly from the DB");
     }
     
     $self->assembly($assembly);
@@ -405,7 +405,7 @@ sub _set_out_db {
     my $cs = $cs_adaptor->fetch_all_by_version($assembly)->[0];
   
     if(! defined $cs){
-      throw("The -assembly $assembly does not exist in the database:\t".
+      $self->throw("The -assembly $assembly does not exist in the database:\t".
 	$db->dnadb->dbc->dbname); 
     }
     #todo make sure all Slice/CoordSystem calls use this assembly explicitly.
@@ -417,13 +417,13 @@ sub _set_out_db {
   
   if( ($param_species && $db_species) &&
     (lc($param_species) ne lc($db_species)) ){
-      throw('Mismatch between the DB species (meta species.production_name) and'.
+      $self->throw('Mismatch between the DB species (meta species.production_name) and'.
       " -species parameter:\t".$db_species."\t".$param_species);      
   }
   elsif(! defined $param_species){
   
     if(! defined $db_species){
-      throw('Must either set -species or use a DB where the correct species '.
+      $self->throw('Must either set -species or use a DB where the correct species '.
 	'name is set in the meta table as species.production name');  
     }
   
@@ -455,12 +455,12 @@ sub process_params {
   if($ref_type){ #can be ''
     
     if($ref_type ne 'ARRAY'){
-      throw("Param names argument cannot be a $ref_type.\n".
+      $self->throw("Param names argument cannot be a $ref_type.\n".
         'Only a single scalar or an Arrayref of param names is permitted.');  
     }
     
     if(! scalar @$param_names){
-      throw("Cannot pass an empty Arrayref for param names argument\n".
+      $self->throw("Cannot pass an empty Arrayref for param names argument\n".
         'Only a single scalar or an Arrayref of param names is permitted.'); 
     }
 
@@ -490,7 +490,7 @@ sub process_params {
       }
       elsif( ($ref_type ne 'HASH') &&
               ($ref_type ne 'ARRAY') ){
-        throw('process_params can only handle scalar (comma separated), '.
+        $self->throw('process_params can only handle scalar (comma separated), '.
           'Arrayref of scalars or Hashref values');  
       } 
       
@@ -499,7 +499,7 @@ sub process_params {
       if(exists $param_class_info{$param_name}){
  
         if($ref_type eq 'HASH'){#can only be hash
-          throw("Need to implement $param_name fetch_all for process_params");
+          $self->throw("Need to implement $param_name fetch_all for process_params");
         }
         else{ #We have an Arrayref of scalars
           $values = scalars_to_objects($self->out_db, @{$param_class_info{$param_name}},
@@ -565,7 +565,7 @@ sub set_dir_param_method {
   
   if(! (defined $dir_param_name &&
         defined $path) ){
-    throw('You must provide directory parameter name and path arguments to validate');
+    $self->throw('You must provide directory parameter name and path arguments to validate');
   }
 
   $path = validate_path($path, $create, 1, $dir_param_name);#1 is dir flag
@@ -640,11 +640,11 @@ sub set_param_method {
     if($req ne 'required'){
       #do this instead of a boolean, to avoid someone specifying silent and getting unexpected
       #behaviour, also mirrors get_param_and_method interface
-      throw("$req is not a valid method type for set_param_and method, can only be 'required'");  
+      $self->throw("$req is not a valid method type for set_param_and method, can only be 'required'");  
     }
     elsif(! defined $param_value){
       # why not leave this to _param_and_method?
-      throw($param_name.' value is required but not defined');  
+      $self->throw($param_name.' value is required but not defined');  
     }
   }
   
@@ -666,7 +666,7 @@ sub _param_and_method {
       #Should not redefine non-Funcgen method
   
       if($package_method !~ /^Bio::EnsEMBL::Funcgen::/){
-        throw("Caught attempt to redefine non-Funcgen method:\t$package_method\n".
+        $self->throw("Caught attempt to redefine non-Funcgen method:\t$package_method\n".
           "Please use an alternative method name, or use the above method directly if appropriate");
       }
     }
@@ -680,7 +680,7 @@ sub _param_and_method {
     
       if( ($req_or_silent ne 'silent' ) &&
           ($req_or_silent ne 'required') ){
-        throw("Param method type can only be 'silent' or 'required', not:\t$req_or_silent");    
+        $self->throw("Param method type can only be 'silent' or 'required', not:\t$req_or_silent");    
       }
     
       $param_method .= '_'.$req_or_silent;
@@ -755,7 +755,7 @@ sub _param_and_method {
 #       
 #       
 #       if(exists $branch_config->{$branch}){
-#         throw('Cannot init_branching_by_analysis as logic_name'.
+#         $self->throw('Cannot init_branching_by_analysis as logic_name'.
 #           " clashes with branch number:\t".$branch);  
 #       }
 #       
@@ -794,7 +794,7 @@ sub _get_branch_number{
         $branch ||= $branch_config->{$bcode}{branch};
         
         if($branch_config->{$bcode}{branch} != $branch){
-          throw($bcode.' fan analysis/branch key has branch '.$branch_config->{$bcode}{branch}.
+          $self->throw($bcode.' fan analysis/branch key has branch '.$branch_config->{$bcode}{branch}.
             " which does not match other analysis/branch key:\t".$branch_codes->[0].' '.$branch);
         }  
       }
@@ -803,12 +803,12 @@ sub _get_branch_number{
   else{#We only expect 1 branch number
     
     if(scalar(@$branch_codes) != 1){
-      throw('Only 1 branch number is permitted if no branch config has been initialised, found '.
+      $self->throw('Only 1 branch number is permitted if no branch config has been initialised, found '.
         scalar(@$branch_codes)); 
     }
     
     if($branch_codes->[0] !~ /[0-9]+/o){
-      throw("Found analysis/branch key when no branch config has been initialised:\t".$branch_codes->[0].
+      $self->throw("Found analysis/branch key when no branch config has been initialised:\t".$branch_codes->[0].
             "\nPlease use a branch number or call init_branching_by_analysis or init_branching_by_config");
     }
     
@@ -840,21 +840,21 @@ sub branch_job_group{
     
   if(! (check_ref($fan_jobs, 'ARRAY') &&
         scalar(@$fan_jobs) > 0)){
-    throw("Must have at least 1 job in the job group for fan/branch $fan_branch");        
+    $self->throw("Must have at least 1 job in the job group for fan/branch $fan_branch");        
   }
   
   my $job_group = [$fan_branch, $fan_jobs]; 
    
   if(($funnel_branch_code && ! $funnel_jobs) ||
      ($funnel_jobs && ! $funnel_branch_code)){
-    throw('Must have both a funnel branch code and funnel job(s) to define a funnel in a job group');    
+    $self->throw('Must have both a funnel branch code and funnel job(s) to define a funnel in a job group');    
   }
   elsif($funnel_branch_code){ #implicit that $funnel_jobs are also true
     #check $funnel_branch_code is not ref?
      
     if(! (check_ref($funnel_jobs, 'ARRAY') &&
           scalar(@$funnel_jobs) > 0)){
-      throw('Must have at least 1 funnel job when defining a funnel in a job group'); 
+      $self->throw('Must have at least 1 funnel job when defining a funnel in a job group'); 
     }
    
     my $funnel_branch = $self->_get_branch_number([$funnel_branch_code], $branch_config); 
@@ -868,7 +868,7 @@ sub branch_job_group{
       my $funnel_name = $branch_config->{$fan_branch}{funnel};
       
       if($branch_config->{$funnel_name}{branch} ne $funnel_branch){
-        throw("$funnel_branch_code (expected: ".$branch_config->{$funnel_name}{branch}.") is not a valid funnel analysis for fan branches:\t".
+        $self->throw("$funnel_branch_code (expected: ".$branch_config->{$funnel_name}{branch}.") is not a valid funnel analysis for fan branches:\t".
           join(', ', @$fan_branch_codes)."\nPlease check you dataflow configuration");  
       }   
     }
@@ -938,7 +938,7 @@ sub dataflow_params {
   if(! $self->param_silent('dataflow_param_names')){
     
     if(! $optional){
-      throw('dataflow_param_names are required but not defined.'.
+      $self->throw('dataflow_param_names are required but not defined.'.
         ' Please define or set the optional flag');  
     }
   }
@@ -968,7 +968,7 @@ sub _dataflow_params_by_list {
     if( blessed($param) ){
       
       if(! exists $object_dataflow_methods{ref($param)}){
-        throw("Cannot dataflow $method_list_name $param_name as it is an object without a defined dataflow method:\t".
+        $self->throw("Cannot dataflow $method_list_name $param_name as it is an object without a defined dataflow method:\t".
           $param."\nPlease add to \%object_dataflow_methods");  
       }
       else{
@@ -1028,7 +1028,7 @@ sub sam_ref_fai {
 #       $gender = $self->param_silent('gender') || $self->param_silent('default_gender');
 #       
 #       if(! defined $gender){
-#         $self->throw_no_retry('No gender argument or param defined and no default_gender '.
+#         $self->$self->throw_no_retry('No gender argument or param defined and no default_gender '.
 #         'specific in the config');
 #       }
 #     }
@@ -1103,7 +1103,7 @@ sub get_alignment_files_by_ResultSet_formats {
  
   #throw here and handle optional control file in caller. This should be done with 
   #a no_control/skip_control flag or similar  
-    return $align_files || throw("Failed to find $file_type (@$formats) for:\t$path");  
+    return $align_files || $self->throw("Failed to find $file_type (@$formats) for:\t$path");  
 }
 
 # sub archive_root{
@@ -1261,7 +1261,7 @@ sub CvGV_name_or_bust {
 sub throw_no_retry {
   my $self = shift;
   $self->input_job->transient_error( 0 );
-  throw(@_);
+  $self->throw(@_);
 
 } ## end throw_no_retry  
 
