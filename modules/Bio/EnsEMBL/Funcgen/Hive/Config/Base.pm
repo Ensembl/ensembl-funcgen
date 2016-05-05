@@ -51,18 +51,16 @@ sub pipeline_wide_parameters {
   return {
     %{$self->SUPER::pipeline_wide_parameters},
 
-    dnadb         => $self->o('dnadb'),
-    out_db        => $self->o('out_db'),
-     pipeline_name => $self->o('pipeline_name'),
-
-    out_db_url => $self->dbconn_2_url('out_db'),
-
-    species        => $self->o('species'),
-    assembly       => $self->o('assembly'),
-    data_root_dir     => $self->o('data_root_dir'),
-    work_root_dir     => $self->o('work_root_dir'),
-    hive_output_dir => $self->o('hive_output_dir'),
-    use_tracking_db => $self->o('use_tracking_db'),
+    dnadb            => $self->o('dnadb'),
+    out_db           => $self->o('out_db'),
+    pipeline_name    => $self->o('pipeline_name'),
+    out_db_url       => $self->dbconn_2_url('out_db'),
+    species          => $self->o('species'),
+    assembly         => $self->o('assembly'),
+    data_root_dir    => $self->o('data_root_dir'),
+    work_root_dir    => $self->o('work_root_dir'),
+    hive_output_dir  => $self->o('hive_output_dir'),
+    use_tracking_db  => $self->o('use_tracking_db'),
 
 #     default_gender => 'male',
   };
