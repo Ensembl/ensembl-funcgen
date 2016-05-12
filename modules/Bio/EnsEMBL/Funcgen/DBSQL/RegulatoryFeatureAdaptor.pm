@@ -121,7 +121,7 @@ sub _true_tables {
     [ 'regulatory_feature',             'rf'  ],
     [ 'regulatory_feature_feature_set', 'rfs' ],
     [ 'feature_set',                    'fs'  ],
-    [ 'regulatory_attribute',           'ra'  ],
+    [ 'regulatory_evidence',           'ra'  ],
   );
 }
 
@@ -175,8 +175,8 @@ sub _columns {
 =cut
 
 sub _left_join {
-  #return (['regulatory_attribute', 'rf.regulatory_feature_id = ra.regulatory_feature_id']);
-  return (['regulatory_attribute', 'rfs.regulatory_feature_feature_set_id = ra.regulatory_feature_feature_set_id']);
+  #return (['regulatory_evidence', 'rf.regulatory_feature_id = ra.regulatory_feature_id']);
+  return (['regulatory_evidence', 'rfs.regulatory_feature_feature_set_id = ra.regulatory_feature_feature_set_id']);
 }
 
 
@@ -436,7 +436,10 @@ sub _objs_from_sth {
     if (! exists $linked_feature_sets_component->{$sth_fetched_feature_set_id}) {
     
       use Bio::EnsEMBL::Funcgen::RegulatoryActivity;
-      $linked_feature_sets_component->{$sth_fetched_feature_set_id} = Bio::EnsEMBL::Funcgen::RegulatoryActivity->new();
+      my $regulatory_activity = Bio::EnsEMBL::Funcgen::RegulatoryActivity->new();
+      $regulatory_activity->db($self->db);
+      
+      $linked_feature_sets_component->{$sth_fetched_feature_set_id} = $regulatory_activity;
     }
 
     # Populate attributes cache
@@ -444,12 +447,12 @@ sub _objs_from_sth {
 
       my $regulatory_activity = $linked_feature_sets_component->{$sth_fetched_feature_set_id};
       
-      my $current_attributes = $regulatory_activity->{_regulatory_attributes};
+      my $current_attributes = $regulatory_activity->{_regulatory_evidence};
       if (! defined $current_attributes) {
 	$current_attributes = { annotated => {}, motif => {} };
       }
       $current_attributes->{$sth_fetched_attr_type}->{$sth_fetched_attr_id} = undef;
-      $regulatory_activity->{_regulatory_attributes} = $current_attributes;
+      $regulatory_activity->{_regulatory_evidence} = $current_attributes;
     }
     
     if (
@@ -522,8 +525,8 @@ sub store {
   #
   $sth_store_regulatory_feature->{PrintError} = 0;
 
-  my $sth_store_regulatory_attribute = $self->prepare("
-    INSERT INTO regulatory_attribute (
+  my $sth_store_regulatory_evidence = $self->prepare("
+    INSERT INTO regulatory_evidence (
       regulatory_feature_id, 
       attribute_feature_id, 
       attribute_feature_table
@@ -617,7 +620,7 @@ sub store {
       }
     }
 
-    # Store the regulatory_attributes
+    # Store the regulatory_evidence
     #
     # Note that the regulatory build script bypasses the api for loading 
     # regulatory attributes, so this probably never gets called.
@@ -635,11 +638,11 @@ sub store {
 
       foreach my $attribute_id (keys %{$attribute_cache->{$feature_class}}) {
       
-        $sth_store_regulatory_attribute->bind_param(1, $current_regulatory_feature->dbID, SQL_INTEGER);
-        $sth_store_regulatory_attribute->bind_param(2, $attribute_id,  SQL_INTEGER);
-        $sth_store_regulatory_attribute->bind_param(3, $feature_class, SQL_VARCHAR);
+        $sth_store_regulatory_evidence->bind_param(1, $current_regulatory_feature->dbID, SQL_INTEGER);
+        $sth_store_regulatory_evidence->bind_param(2, $attribute_id,  SQL_INTEGER);
+        $sth_store_regulatory_evidence->bind_param(3, $feature_class, SQL_VARCHAR);
         
-        $sth_store_regulatory_attribute->execute();
+        $sth_store_regulatory_evidence->execute();
       }
     }
   }
@@ -858,7 +861,7 @@ sub fetch_all_by_attribute_feature {
 
   my $rf_ids = $self->db->dbc->db_handle->selectall_arrayref(
     "select regulatory_feature_id "
-    . "from regulatory_attribute join regulatory_feature_feature_set using (regulatory_feature_feature_set_id) "
+    . "from regulatory_evidence join regulatory_feature_feature_set using (regulatory_feature_feature_set_id) "
     . "where attribute_feature_table='${attr_feat_table}' and attribute_feature_id=".$attr_feat->dbID
   );
   

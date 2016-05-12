@@ -182,88 +182,83 @@ sub display_id {  return shift->{stable_id}; }
 sub stable_id { return shift->{stable_id}; }
 
 
-# =head2 regulatory_attributes
-# 
-#   Arg [1]    : String (optional) - Class of feature e.g. annotated or motif
-#   Example    : print "Regulatory Attributes:\n\t".join("\n\t", (map $_->feature_type->name, @{$feature->regulatory_attributes()}))."\n";
-#   Description: Getter for the regulatory_attributes for this feature.
-#   Returntype : ARRAYREF
-#   Exceptions : Throws if feature class not valid
-#   Caller     : General
-#   Status     : At Risk
-# 
-# =cut
-# 
-# sub regulatory_attributes {
-#   my ($self, $feature_class) = @_;
-#   my @feature_classes;
-#   my %adaptors = (
-#     'annotated' => $self->adaptor->db->get_AnnotatedFeatureAdaptor,
-#     'motif'     => $self->adaptor->db->get_MotifFeatureAdaptor     
-#   );
-# 
-#   if (defined $feature_class) {
-# 
-#     if (exists $adaptors{lc($feature_class)}) {
-#       @feature_classes = (lc($feature_class));
-#     }
-#     else {
-#       throw("The feature class you specified is not valid:\t$feature_class\n".
-#             "Please use one of:\t".join(', ', keys %adaptors));
-#     }
-#   }
-#   else {
-#     @feature_classes = keys %adaptors;
-#   }
-# 
-#   foreach my $feature_class (@feature_classes) {
-#     # Now structured as hash to facilitate faster has_attribute method
-#     # Very little difference to array based cache
-#     my @attr_dbIDs = keys %{$self->{attribute_cache}{$feature_class}};
-# 
-#     if (scalar(@attr_dbIDs) > 0) {
-# 
-#       if ( ! ( ref($self->{regulatory_attributes}{$feature_class}->[0])  &&
-#                ref($self->{regulatory_attributes}{$feature_class}->[0])->isa('Bio::EnsEMBL::Feature') )) {
-# 
-#         $adaptors{$feature_class}->force_reslice(1); #So we don't lose attrs which aren't on the slice
-#         # fetch_all_by_Slice_constraint does relevant normalised Slice projection i.e. PAR mappingg
-#         $self->{'regulatory_attributes'}{$feature_class} =
-#           $adaptors{$feature_class}->fetch_all_by_Slice_constraint
-#             ($self->slice,
-#              lc($feature_class).'_feature_id in('.join(',', @attr_dbIDs).')' );
-# 
-#         # Forces reslice and inclusion for attributes not contained within slice
-#         $adaptors{$feature_class}->force_reslice(0);
-#       }
-#     } else {
-#       $self->{regulatory_attributes}{$feature_class} = [];
-#     }
-#   }
-# 
-#   return [ map { @{$self->{regulatory_attributes}{$_}} } @feature_classes ];
-# }
+=head2 regulatory_evidence
 
-# =head2 has_attribute
-# 
-#   Arg [1]    : Attribute Feature dbID
-#   Arg [2]    : Attribute Feature class e.g. motif or annotated
-#   Example    : if($regf->has_attribute($af->dbID, 'annotated'){ #do something here }
-#   Description: Identifies whether this RegulatoryFeature has a given attribute
-#   Returntype : Boolean
-#   Exceptions : Throws if args are not defined
-#   Caller     : General
-#   Status     : Stable
-# 
-# =cut
-# 
-# sub has_attribute {
-#   my ($self, $dbID, $feature_class) = @_;
-# 
-#   throw('Must provide a dbID and a Feature class argument') if ! $dbID && $feature_class;
-# 
-#   return exists ${$self->attribute_cache}{$feature_class}{$dbID};
-# }
+  Arg [1]    : String (optional) - Class of feature e.g. annotated or motif
+  Example    : print "Regulatory Attributes:\n\t".join("\n\t", (map $_->feature_type->name, @{$feature->regulatory_evidence()}))."\n";
+  Description: Getter for the regulatory_evidence for this feature.
+  Returntype : ARRAYREF
+  Exceptions : Throws if feature class not valid
+  Caller     : General
+  Status     : At Risk
+
+=cut
+sub regulatory_evidence {
+  my ($self, $feature_class, $feature_set) = @_;
+  $self->_assert_feature_set_ok($feature_set);
+  my $regulatory_activity = $self->_regulatory_activity_for_feature_set($feature_set);
+  return $regulatory_activity->get_regulatory_evidence($feature_class);
+}
+
+sub _assert_feature_set_ok {
+  my $self = shift;
+  my $feature_set = shift;
+  if (! defined $feature_set) {
+    throw();
+  }
+  if (ref $feature_set ne 'Bio::EnsEMBL::Funcgen::FeatureSet') {
+    throw("feature_set parameter must have type Bio::EnsEMBL::Funcgen::FeatureSet!");
+  }
+}
+
+sub _regulatory_activity_for_feature_set {
+  my $self = shift;
+  my $feature_set = shift;
+
+  my $feature_set_id = $feature_set->dbID;
+  my @regulatory_activity = grep { $_->feature_set_id == $feature_set_id } @{$self->_linked_regulatory_activity};
+  
+  if (! @regulatory_activity) {
+    throw();
+  }
+  if (@regulatory_activity>1) {
+    throw();
+  }
+  return $regulatory_activity[0];
+}
+
+=head2 get_underlying_structure
+
+  Example    : my @web_image_structure = @{$regf->get_underlying_structure};
+  Description: Getter for the bound_end attribute for this feature.
+               Gives the 3' most end value of the underlying attribute
+               features.
+  Returntype : Arrayref
+  Exceptions : None
+  Caller     : Webcode
+  Status     : At Risk
+
+=cut
+
+sub get_underlying_structure {
+  my $self = shift;
+  my $feature_set = shift;
+  $self->_assert_feature_set_ok($feature_set);
+  
+  my $regulatory_activity = $self->_regulatory_activity_for_feature_set($feature_set);
+  
+  my $feature_set_specific_underlying_structure = $regulatory_activity->get_underlying_structure();
+
+  my $underlying_structure = [
+    0 + $self->bound_start, 
+    0 + $self->start,
+    @$feature_set_specific_underlying_structure,
+    0 + $self->end, 
+    0 + $self->bound_end
+  ];
+
+  return $underlying_structure;
+}
 
 =head2 _linked_regulatory_activity
 
@@ -335,9 +330,11 @@ sub get_feature_sets_by_activity {
     );
   }
   
-#   my $feature_set_dbID_list = $self->_linked_regulatory_activity->{$activity};
-  
-  my @feature_set_dbID_list = map { $_->feature_set_id } grep { $_->activity eq $activity } @{$self->_linked_regulatory_activity};
+  my @feature_set_dbID_list = map { 
+    $_->feature_set_id 
+  } grep { 
+    $_->activity eq $activity 
+  } @{$self->_linked_regulatory_activity};
   
   my $feature_set_adaptor = $self->adaptor->db->get_FeatureSetAdaptor;
   
@@ -373,7 +370,6 @@ sub epigenome_count {
 
 sub bound_seq_region_start { return $_[0]->seq_region_start - $_[0]->_bound_lengths->[0]; }
 
-
 =head2 bound_seq_region_end
 
   Example    : my $bound_sr_end = $feature->bound_seq_region_end;
@@ -389,15 +385,12 @@ sub bound_seq_region_start { return $_[0]->seq_region_start - $_[0]->_bound_leng
 
 sub bound_seq_region_end { return $_[0]->seq_region_end + $_[0]->_bound_lengths->[1]; }
 
-# As this 'private' method is not exposed or required to be poylymorphic,
-# it would theoretically, be quicker to have this as a sub.
-
 sub _bound_lengths {
   my $self = shift;
 
   if(! defined  $self->{_bound_lengths}){
 
-    my @af_attrs = @{$self->regulatory_attributes('annotated')};
+    my @af_attrs = @{$self->regulatory_evidence('annotated')};
 
     if (! @af_attrs) {
       throw('Unable to set bound length, no AnnotatedFeature attributes available for RegulatoryFeature: '
@@ -507,54 +500,6 @@ sub is_projected {
 
   return $self->{'projected'};
 }
-
-
-=head2 get_underlying_structure
-
-  Example    : my @web_image_structure = @{$regf->get_underlying_structure};
-  Description: Getter for the bound_end attribute for this feature.
-               Gives the 3' most end value of the underlying attribute
-               features.
-  Returntype : Arrayref
-  Exceptions : None
-  Caller     : Webcode
-  Status     : At Risk
-
-=cut
-
-#Could precompute these as core region loci
-#and store in the DB to avoid the MF attr fetch?
-
-#This is also sensitive to projection/transfer after we have called it.
-#Would have to do one of the following
-#1 Projecting all motif_features. This could be done by extending/overwriting
-#  Feature::project/transfer, and make all feature projection code use that e.g. BaseFeatureAdaptor
-#2 Cache the start, end and strand of slice, and update when changed by transforming motif_feature_loci
-
-# This is only ever used for web which will never call until any projection is complete.
-# Hence no real need for this to be sensitive to pre & post projection calling
-# Leave for now with above useage caveat
-
-sub get_underlying_structure{
-  my $self = shift;
-
-  if (! defined $self->{underlying_structure}) {
-    my @mf_loci;
-
-    foreach my $mf (@{$self->regulatory_attributes('motif')}) {
-      push @mf_loci, ($mf->start, $mf->end);
-    }
-
-    $self->{underlying_structure} = [
-                                     $self->bound_start, $self->start,
-                                     @mf_loci,
-                                     $self->end, $self->bound_end
-                                    ];
-  }
-
-  $self->{underlying_structure};
-}
-
 
 =head2 summary_as_hash
 
