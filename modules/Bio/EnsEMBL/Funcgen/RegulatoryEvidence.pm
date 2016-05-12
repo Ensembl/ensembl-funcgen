@@ -65,23 +65,23 @@ sub db {
   return $self->{'_db'};
 }
 
-=head2 get_regulatory_evidence
-=cut
-sub get_regulatory_evidence {
-  my $self = shift;
-  my $feature_class = shift;
-
-  if (! defined $feature_class) {
-    throw("Missing parameter for feature_class!");
-  }
-  if ($feature_class eq 'annotated') {
-    return $self->supporting_annotated_features;
-  }
-  if ($feature_class eq 'motif') {
-    return $self->supporting_motif_features;
-  }
-  throw("Unknown feature_class $feature_class!");
-}
+# =head2 get_regulatory_evidence
+# =cut
+# sub get_regulatory_evidence {
+#   my $self = shift;
+#   my $feature_class = shift;
+# 
+#   if (! defined $feature_class) {
+#     throw("Missing parameter for feature_class!");
+#   }
+#   if ($feature_class eq 'annotated') {
+#     return $self->supporting_annotated_features;
+#   }
+#   if ($feature_class eq 'motif') {
+#     return $self->supporting_motif_features;
+#   }
+#   throw("Unknown feature_class $feature_class!");
+# }
 
 sub supporting_annotated_features {
   my $self = shift;
@@ -129,7 +129,4 @@ sub get_underlying_structure {
   return \@motif_feature_loci;
 }
 
-
 1;
-
-

@@ -45,6 +45,16 @@ sub new {
   return $self;
 }
 
+sub db {
+  my $self = shift;
+  my $db   = shift;
+
+  if ($db) {
+    $self->{'_db'}  = $db;
+  }
+  return $self->{'_db'};
+}
+
 =head2 feature_set_id
 =cut
 sub feature_set_id {
@@ -69,89 +79,63 @@ sub activity {
   return $self->{'_activity'};
 }
 
-=head2 set_regulatory_evidence
+=head2 regulatory_evidence
 =cut
-sub set_regulatory_evidence {
+sub regulatory_evidence {
   my $self = shift;
   my $regulatory_evidence = shift;
 
-  $self->{'_regulatory_evidence'}  = $regulatory_evidence;
-  return;
-}
-
-sub db {
-  my $self = shift;
-  my $db   = shift;
-
-  if ($db) {
-    $self->{'_db'}  = $db;
+  if ($regulatory_evidence) {
+    $self->{'_regulatory_evidence'}  = $regulatory_evidence;
   }
-  return $self->{'_db'};
+  return $regulatory_evidence;
 }
 
-=head2 get_regulatory_evidence
-=cut
-sub get_regulatory_evidence {
-  my $self = shift;
-  my $feature_class = shift;
-
-  if (! defined $feature_class) {
-    throw("Missing parameter for feature_class!");
-  }
-  if ($feature_class eq 'annotated') {
-    return $self->supporting_annotated_features;
-  }
-  if ($feature_class eq 'motif') {
-    return $self->supporting_motif_features;
-  }
-  throw("Unknown feature_class $feature_class!");
-}
-
-sub supporting_annotated_features {
-  my $self = shift;
-  
-  my @id = $self->supporting_annotated_feature_ids;
-  my @annotated_feature = map {
-    $self->db->get_AnnotatedFeatureAdaptor->fetch_by_dbID($_);
-  } @id;
-  
-  return \@annotated_feature;
-}
-
-sub supporting_motif_features {
-  my $self = shift;
-  
-  my @id = $self->supporting_motif_feature_ids;
-  my @motif_feature = map {
-    $self->db->get_MotifFeatureAdaptor->fetch_by_dbID($_);
-  } @id;
-  
-  return \@motif_feature;
-}
-
-sub supporting_annotated_feature_ids {
-  my $self = shift;
-  return keys %{$self->{'_regulatory_evidence'}->{'annotated'}};
-}
-
-sub supporting_motif_feature_ids {
-  my $self = shift;
-  return keys %{$self->{'_regulatory_evidence'}->{'motif'}};
-}
-
-sub get_underlying_structure {
-  my $self = shift;
-  
-  my @motif_feature_loci;
-  foreach my $current_motif_feature (@{$self->supporting_motif_features}) {
-    push @motif_feature_loci, (
-      0 + $current_motif_feature->start, 
-      0 + $current_motif_feature->end
-    );
-  }
-
-  return \@motif_feature_loci;
-}
+# sub supporting_annotated_features {
+#   my $self = shift;
+#   
+#   my @id = $self->supporting_annotated_feature_ids;
+#   my @annotated_feature = map {
+#     $self->db->get_AnnotatedFeatureAdaptor->fetch_by_dbID($_);
+#   } @id;
+#   
+#   return \@annotated_feature;
+# }
+# 
+# sub supporting_motif_features {
+#   my $self = shift;
+#   
+#   my @id = $self->supporting_motif_feature_ids;
+#   my @motif_feature = map {
+#     $self->db->get_MotifFeatureAdaptor->fetch_by_dbID($_);
+#   } @id;
+#   
+#   return \@motif_feature;
+# }
+# 
+# sub supporting_annotated_feature_ids {
+#   my $self = shift;
+#   return keys %{$self->{'_regulatory_evidence'}->{'annotated'}};
+# }
+# 
+# sub supporting_motif_feature_ids {
+#   my $self = shift;
+#   return keys %{$self->{'_regulatory_evidence'}->{'motif'}};
+# }
+# 
+# sub get_underlying_structure {
+#   my $self = shift;
+#   
+#   my @motif_feature_loci;
+#   foreach my $current_motif_feature (@{$self->supporting_motif_features}) {
+#     push @motif_feature_loci, (
+#       0 + $current_motif_feature->start, 
+#       0 + $current_motif_feature->end
+#     );
+#   }
+# 
+#   return \@motif_feature_loci;
+# }
 
 
 1;

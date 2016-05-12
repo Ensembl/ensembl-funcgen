@@ -194,10 +194,22 @@ sub stable_id { return shift->{stable_id}; }
 
 =cut
 sub regulatory_evidence {
-  my ($self, $feature_class, $feature_set) = @_;
+  my $self = shift;
+  my $feature_class = shift;
+  my $feature_set   = shift;
+  
   $self->_assert_feature_set_ok($feature_set);
   my $regulatory_activity = $self->_regulatory_activity_for_feature_set($feature_set);
-  return $regulatory_activity->get_regulatory_evidence($feature_class);
+  
+  my $regulatory_evidence = $regulatory_activity->regulatory_evidence;
+    
+  if ($feature_class eq 'annotated') {
+    return $regulatory_evidence->supporting_annotated_features;
+  }
+  if ($feature_class eq 'motif') {
+    return $regulatory_evidence->supporting_motif_features;
+  }
+  throw("Invalid feature class $feature_class!");
 }
 
 sub _assert_feature_set_ok {
