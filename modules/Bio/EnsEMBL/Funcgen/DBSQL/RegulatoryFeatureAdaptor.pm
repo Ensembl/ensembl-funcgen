@@ -67,6 +67,7 @@ use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::RegulatoryFeature;
+use Data::Dumper;
 
 # DBI sql_types import
 use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor;
@@ -151,7 +152,6 @@ sub _columns {
     rf.feature_type_id
     rfs.feature_set_id
     rf.stable_id
-    rf.projected
     rfs.activity
     rf.epigenome_count
     ra.attribute_feature_id
@@ -175,7 +175,8 @@ sub _columns {
 =cut
 
 sub _left_join {
-  return (['regulatory_attribute', 'rf.regulatory_feature_id = ra.regulatory_feature_id']);
+  #return (['regulatory_attribute', 'rf.regulatory_feature_id = ra.regulatory_feature_id']);
+  return (['regulatory_attribute', 'rfs.regulatory_feature_feature_set_id = ra.regulatory_feature_feature_set_id']);
 }
 
 
@@ -197,8 +198,8 @@ sub _left_join {
 sub _objs_from_sth {
   my ($self, $sth, $mapper, $dest_slice) = @_;
   
-  use Carp;
-  confess('Using a mapper is not supported!') if (defined $mapper);
+  throw('Using a mapper is not supported!') if (defined $mapper);
+  
 
   #For EFG this has to use a dest_slice from core/dnaDB whether specified or not.
   #So if it not defined then we need to generate one derived from the species_name and schema_build of the feature we're retrieving.
@@ -233,7 +234,6 @@ sub _objs_from_sth {
     $sth_fetched_attr_id,
     $sth_fetched_attr_type,
     $sth_fetched_bin_string,
-    $sth_fetched_projected,
     $sth_fetched_activity,
     $sth_fetched_epigenome_count,
     $sth_fetched_regulatory_feature_feature_set_id
@@ -250,7 +250,6 @@ sub _objs_from_sth {
     \$sth_fetched_feature_type_id,
     \$sth_fetched_feature_set_id,
     \$sth_fetched_stable_id,
-    \$sth_fetched_projected,
     \$sth_fetched_activity,
     \$sth_fetched_epigenome_count,
     \$sth_fetched_attr_id,
@@ -289,41 +288,43 @@ sub _objs_from_sth {
   # The current regulatory feature that is being constructed
   my $regulatory_feature_under_construction;
   
-  # The regulatory attribute component for the regulatory feature that is 
-  # being constructed
-  #
-  my %regulatory_attribute_component = (
-    annotated => {}, 
-    motif     => {}
-  );
+#   # The regulatory attribute component for the regulatory feature that is 
+#   # being constructed
+#   #
+#   my %regulatory_attribute_component = (
+#     annotated => {}, 
+#     motif     => {}
+#   );
   
   # The linked feature sets and their activities for the regulatory feature 
   # that is being constructed
   #
-  my %linked_feature_sets_component;
+  my $linked_feature_sets_component;
   
   # Closure that adds the components of a regulatory feature. This is called
   # twice, so moved into a closure to avoid code duplication in the loop 
   # below.
   #
   my $add_components_to_regulatory_feature_under_construction = sub {
-    # Set the previous attr cache and reset
-    $regulatory_feature_under_construction->attribute_cache(\%regulatory_attribute_component);	  
-    $regulatory_feature_under_construction->_linked_feature_sets(\%linked_feature_sets_component);
+
+    my @flattened_regulatory_features;
+    foreach my $current_feature_set_id (keys %$linked_feature_sets_component) {
+      push @flattened_regulatory_features, $linked_feature_sets_component->{$current_feature_set_id};
+    }
+    $regulatory_feature_under_construction->_linked_regulatory_activity(\@flattened_regulatory_features);
   };
-  
+   
   # Closure that resets the variables holding the components. This is called
   # after a regulatory feature is done.
   #
   my $reset_components = sub {
-    %regulatory_attribute_component = (annotated => {}, motif => {});
-    %linked_feature_sets_component = ();
+    $linked_feature_sets_component = {};
   };
 
   # Because of the way the join works the rows from the linking table will 
   # appear multiple times. This helps creating unique links to feature sets.
   #
-  my %seen_linked_feature_sets;
+  my %seen_linked_regulatory_activity;
   
   my $fetch_slice_with_cache = sub {
     my $seq_region_id = shift;
@@ -375,9 +376,11 @@ sub _objs_from_sth {
 	if (defined $regulatory_feature_under_construction) {
 	
 	  $add_components_to_regulatory_feature_under_construction->();
-	  push @feature_from_sth, $regulatory_feature_under_construction;	  
-	  $reset_components->();	  
-	  %seen_linked_feature_sets = ();
+	  push @feature_from_sth, $regulatory_feature_under_construction;
+	  
+	  $reset_components->();
+
+	  %seen_linked_regulatory_activity = ();
 	}
 
 	$seq_region_id = $self->get_core_seq_region_id($sth_fetched_efg_seq_region_id);
@@ -419,30 +422,47 @@ sub _objs_from_sth {
 	    'analysis'       => $fset_hash{$sth_fetched_feature_set_id}->analysis(),
 	    'adaptor'        => $self,
 	    'dbID'           => $sth_fetched_dbID,
-	    'binary_string'  => $sth_fetched_bin_string,
-	    'projected'      => $sth_fetched_projected,
+# 	    'binary_string'  => $sth_fetched_bin_string,
 	    'set'            => $fset_hash{$sth_fetched_feature_set_id},
 	    'feature_type'   => $ftype_hash{$sth_fetched_feature_type_id},
 	    'stable_id'      => $sth_fetched_stable_id,
-	    'activity'       => $sth_fetched_activity,
 	    'epigenome_count'=> $sth_fetched_epigenome_count,
 	    });
+    }
+    
+    # Make sure there is a Bio::EnsEMBL::Funcgen::RegulatoryActivity component
+    # to hold the activity and attributes.
+    #
+    if (! exists $linked_feature_sets_component->{$sth_fetched_feature_set_id}) {
+    
+      use Bio::EnsEMBL::Funcgen::RegulatoryActivity;
+      $linked_feature_sets_component->{$sth_fetched_feature_set_id} = Bio::EnsEMBL::Funcgen::RegulatoryActivity->new();
     }
 
     # Populate attributes cache
     if (defined $sth_fetched_attr_id  && ! $current_feature_not_on_destination_slice) {
-      $regulatory_attribute_component{$sth_fetched_attr_type}->{$sth_fetched_attr_id} = undef;
+
+      my $regulatory_activity = $linked_feature_sets_component->{$sth_fetched_feature_set_id};
+      
+      my $current_attributes = $regulatory_activity->{_regulatory_attributes};
+      if (! defined $current_attributes) {
+	$current_attributes = { annotated => {}, motif => {} };
+      }
+      $current_attributes->{$sth_fetched_attr_type}->{$sth_fetched_attr_id} = undef;
+      $regulatory_activity->{_regulatory_attributes} = $current_attributes;
     }
     
     if (
-      ! exists $seen_linked_feature_sets{$sth_fetched_regulatory_feature_feature_set_id}
+      ! exists $seen_linked_regulatory_activity{$sth_fetched_regulatory_feature_feature_set_id}
       && ! $current_feature_not_on_destination_slice
     ) {
-      $seen_linked_feature_sets{$sth_fetched_regulatory_feature_feature_set_id} = 1;
-      if (! defined $linked_feature_sets_component{$sth_fetched_activity}) {
-	$linked_feature_sets_component{$sth_fetched_activity} = [];
-      }
-      push @{$linked_feature_sets_component{$sth_fetched_activity}}, $sth_fetched_feature_set_id;
+      $seen_linked_regulatory_activity{$sth_fetched_regulatory_feature_feature_set_id} = 1;
+      
+      my $regulatory_activity = $linked_feature_sets_component->{$sth_fetched_feature_set_id};
+
+      $regulatory_activity->feature_set_id($sth_fetched_feature_set_id);
+      $regulatory_activity->activity($sth_fetched_activity);
+
     }
   }
 
@@ -457,29 +477,33 @@ sub _objs_from_sth {
 
 =head2 store
 
-  Args       : List of Bio::EnsEMBL::Funcgen::RegulatoryFeature objects
-  Example    : $ofa->store(@features);
-  Description: Stores given RegulatoryFeature objects in the database. Should only
-               be called once per feature because no checks are made for
-			   duplicates. Sets dbID and adaptor on the objects that it stores.
+  Args       : Array of Bio::EnsEMBL::Funcgen::RegulatoryFeature objects
+  Example    : $regulatory_feature_adaptor->store(@regulatory_features);
+  Description: Stores given RegulatoryFeature objects in the database. Sets 
+		dbID and adaptor on the objects that it stores.
   Returntype : Listref of stored RegulatoryFeatures
-  Exceptions : Throws if a list of RegulatoryFeature objects is not provided or if
+  Exceptions : Throws, if a list of RegulatoryFeature objects is not provided or if
                the Analysis, Epigenome and FeatureType objects are not attached or stored.
-               Throws if analysis of set and feature do not match
+               Throws, if analysis of set and feature do not match
                Warns if RegulatoryFeature already stored in DB and skips store.
-  Caller     : General
-  Status     : At Risk
+  Caller     : Regulatory Build
+  Status     : Stable
 
 =cut
 
 sub store {
-  my ($self, @rfs) = @_;
+  my ($self, @regulatory_feature) = @_;
 
-  if (scalar(@rfs) == 0) {
+  if (scalar(@regulatory_feature) == 0) {
     throw('Must call store with a list of RegulatoryFeature objects');
   }
-
-  my $sth = $self->prepare("
+  foreach my $rf (@regulatory_feature) {
+    if( ! ref $rf || ! $rf->isa('Bio::EnsEMBL::Funcgen::RegulatoryFeature') ) {
+      throw('Feature must be an RegulatoryFeature object');
+    }
+  }
+  
+  my $sth_store_regulatory_feature = $self->prepare("
     INSERT INTO regulatory_feature (
       seq_region_id,
       seq_region_start,
@@ -488,69 +512,138 @@ sub store {
       bound_end_length,
       seq_region_strand,
       feature_type_id,
-      feature_set_id,
       stable_id,
       epigenome_count
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
   );
+  # When loading the regulatory build, this would lead to many error messages 
+  # about duplicate entries being printed to screen. Errors are either handled
+  # or rethrown.
+  #
+  $sth_store_regulatory_feature->{PrintError} = 0;
 
-  my $sth2 = $self->prepare("
+  my $sth_store_regulatory_attribute = $self->prepare("
     INSERT INTO regulatory_attribute (
       regulatory_feature_id, 
       attribute_feature_id, 
       attribute_feature_table
     ) VALUES (?, ?, ?)"
   );
+  
+  my $sth_regulatory_feature_feature_set = $self->prepare("
+    INSERT INTO regulatory_feature_feature_set (
+      regulatory_feature_id,
+      feature_set_id,
+      activity
+    ) VALUES (?,?,?);
+  ");
 
   my $db = $self->db();
 
-  foreach my $rf (@rfs) {
+  foreach my $current_regulatory_feature (@regulatory_feature) {
 
-    if( ! ref $rf || ! $rf->isa('Bio::EnsEMBL::Funcgen::RegulatoryFeature') ) {
-      throw('Feature must be an RegulatoryFeature object');
+    my $seq_region_id;
+    ($current_regulatory_feature, $seq_region_id) = $self->_pre_store($current_regulatory_feature);
+    $current_regulatory_feature->adaptor($self);
+
+    $sth_store_regulatory_feature->bind_param(1, $seq_region_id,                                   SQL_INTEGER);
+    $sth_store_regulatory_feature->bind_param(2, $current_regulatory_feature->start,               SQL_INTEGER);
+    $sth_store_regulatory_feature->bind_param(3, $current_regulatory_feature->end,                 SQL_INTEGER);
+    $sth_store_regulatory_feature->bind_param(4, $current_regulatory_feature->bound_start_length,  SQL_INTEGER);
+    $sth_store_regulatory_feature->bind_param(5, $current_regulatory_feature->bound_end_length,    SQL_INTEGER);
+    $sth_store_regulatory_feature->bind_param(6, $current_regulatory_feature->strand,              SQL_TINYINT);
+    $sth_store_regulatory_feature->bind_param(7, $current_regulatory_feature->feature_type->dbID,  SQL_INTEGER);
+    $sth_store_regulatory_feature->bind_param(8, $current_regulatory_feature->stable_id,           SQL_VARCHAR);
+    $sth_store_regulatory_feature->bind_param(9, $current_regulatory_feature->epigenome_count,     SQL_INTEGER);
+    
+    eval {
+      # Store and set dbID
+      $sth_store_regulatory_feature->execute;
+      $current_regulatory_feature->dbID( $self->last_insert_id );
+    };
+    if ($@) {
+      my $error_message = $@;
+      
+      # If the regulatory feature already exists, the error message will look 
+      # like this:
+      #
+      # DBD::mysql::st execute failed: Duplicate entry 
+      # '179363-1579-0-2-200-ENSR00000000001-0-0' for key 
+      # 'uniqueness_constraint_idx' at [..]/ensembl-funcgen/modules/Bio/EnsEMBL/Funcgen/DBSQL/RegulatoryFeatureAdaptor.pm line 539, <$fh> line 10001.
+      #
+      # It would be possible to check, whether the regulatory feature already 
+      # exists in the database, but doing so would make storing slower. (I guess)
+      #
+      my $regulatory_feature_already_exists = $error_message =~ /uniqueness_constraint_idx/;
+      
+      # The uniqueness constraint is in place to avoid duplicate entries in 
+      # the regulatory feature table. 
+      #
+      # The regulatory build script however creates a new regulatory feature
+      # for every possible activity of a regulatory feature and stores that as
+      # a new feature.
+      #
+      # The insertion of a duplicate regulatory feature is caught here. Then 
+      # the existing regulatory feature is retrieved and the new activity is 
+      # added to it.
+      #
+      if (! $regulatory_feature_already_exists) {
+      
+	# If the error message is about something else, then rethrow.
+	#
+	throw($error_message);
+      }
+      my $existing_regulatory_feature = $self->fetch_by_stable_id( $current_regulatory_feature->stable_id );
+      
+      # Set the database id so the attributes and activities can be linked to this.
+      $current_regulatory_feature->dbID( $existing_regulatory_feature->dbID );
+    }
+    
+    # Store the activities of the current regulatory feature in the various feature sets.
+    #
+    my @valid_activities = $self->valid_activities;
+    foreach my $valid_activity (@valid_activities) {
+    
+      my $feature_set_dbID_list = $current_regulatory_feature->_linked_regulatory_activity->{$valid_activity};
+      
+      foreach my $feature_set_dbID (@$feature_set_dbID_list) {
+      
+	$sth_regulatory_feature_feature_set->bind_param(1,  $current_regulatory_feature->dbID, SQL_INTEGER);
+	$sth_regulatory_feature_feature_set->bind_param(2,  $feature_set_dbID,                 SQL_INTEGER);
+	$sth_regulatory_feature_feature_set->bind_param(3,  $valid_activity);
+	
+	$sth_regulatory_feature_feature_set->execute();
+# 	$regulatory_feature_feature_set_id = $self->last_insert_id;
+      }
     }
 
-    if ( $rf->is_stored($db) ) {
-      # does not accomodate adding Feature to >1 feature_set
-      warning('Skipping RegulatoryFeature [' . $rf->dbID() . '] as it is already stored in the database');
-      next;
-    }
+    # Store the regulatory_attributes
+    #
+    # Note that the regulatory build script bypasses the api for loading 
+    # regulatory attributes, so this probably never gets called.
+    #
+    # That is a good thing, because this code links the attributes to the 
+    # regulatory features. In the new schema (v85 and above) regulatory
+    # attributes are linked to regulatory_feature_feature_sets.
+    #
+    my $attribute_cache = $current_regulatory_feature->attribute_cache;
 
-    $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $rf->feature_set);
-    my ($seq_region_id);
-    ($rf, $seq_region_id) = $self->_pre_store($rf);
-    $rf->adaptor($self);  # Set adaptor first to allow attr feature retreival for bounds
-    # This is only required when storing
+    foreach my $feature_class (keys %$attribute_cache) {
+    
+      use Carp;
+      confess("Does this ever get called?");
 
-    $sth->bind_param(1,  $seq_region_id,           SQL_INTEGER);
-    $sth->bind_param(2,  $rf->start,               SQL_INTEGER);
-    $sth->bind_param(3,  $rf->end,                 SQL_INTEGER);
-    $sth->bind_param(4,  $rf->bound_start_length,  SQL_INTEGER);
-    $sth->bind_param(5,  $rf->bound_end_length,    SQL_INTEGER);
-    $sth->bind_param(6,  $rf->strand,              SQL_TINYINT);
-    $sth->bind_param(7,  $rf->feature_type->dbID,  SQL_INTEGER);
-    $sth->bind_param(8,  $rf->feature_set->dbID,   SQL_INTEGER);
-    $sth->bind_param(9,  $rf->stable_id,           SQL_VARCHAR);
-    $sth->bind_param(10, $rf->epigenome_count,     SQL_INTEGER);
-    # Store and set dbID
-    $sth->execute;
-    $rf->dbID( $self->last_insert_id );
-
-    # Store regulatory_attributes
-    # Attr cache now only holds dbids not objs
-    my %attrs = %{$rf->attribute_cache};
-
-    foreach my $fclass(keys %attrs){
-
-      foreach my $attr_id(keys %{$attrs{$fclass}}){
-        $sth2->bind_param(1, $rf->dbID, SQL_INTEGER);
-        $sth2->bind_param(2, $attr_id,  SQL_INTEGER);
-        $sth2->bind_param(3, $fclass,   SQL_VARCHAR);
-        $sth2->execute();
+      foreach my $attribute_id (keys %{$attribute_cache->{$feature_class}}) {
+      
+        $sth_store_regulatory_attribute->bind_param(1, $current_regulatory_feature->dbID, SQL_INTEGER);
+        $sth_store_regulatory_attribute->bind_param(2, $attribute_id,  SQL_INTEGER);
+        $sth_store_regulatory_attribute->bind_param(3, $feature_class, SQL_VARCHAR);
+        
+        $sth_store_regulatory_attribute->execute();
       }
     }
   }
-  return \@rfs;
+  return @regulatory_feature;
 }
 
 =head2 fetch_all_by_Slice
@@ -644,28 +737,74 @@ sub _make_arrayref_if_not_arrayref {
   return $obj_as_arrayref;
 }
 
+# sub fetch_all_by_Slice_FeatureSets_Activity {
+#   my ($self, $slice, $fsets, $activity) = @_;
+#   
+#   my @condition;
+# 
+#   if (defined $activity && $activity ne '') {
+#     if (! $self->is_valid_activity($activity)) {
+#       die(
+# 	qq(\"$activity\"is not a valid activity. Valid activities are: ) . valid_activities_as_string
+#       );
+#     }
+#     push @condition, qq(activity = "$activity");
+#   }
+#   
+#   if(defined $fsets) {
+#     push @condition, 'rfs.feature_set_id ' 
+#       . $self->_generate_feature_set_id_clause(_make_arrayref_if_not_arrayref($fsets));
+#   }
+#   
+#   my $constraint = join ' and ', @condition;
+#   #explicit super call, just in case we ever re-implement in here
+#   return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+# }
+# 
 sub fetch_all_by_Slice_FeatureSets_Activity {
-  my ($self, $slice, $fsets, $activity) = @_;
+  my ($self, $slice, $requested_feature_sets, $requested_activity) = @_;
   
-  my @condition;
-
-  if (defined $activity && $activity ne '') {
-    if (! $self->is_valid_activity($activity)) {
+  if (defined $requested_activity) {
+    if (! $self->is_valid_activity($requested_activity)) {
       die(
-	qq(\"$activity\"is not a valid activity. Valid activities are: ) . valid_activities_as_string
+	qq(\"$requested_activity\"is not a valid activity. Valid activities are: ) . valid_activities_as_string
       );
     }
-    push @condition, qq(activity = "$activity");
   }
   
-  if(defined $fsets) {
-    push @condition, 'rfs.feature_set_id ' 
-      . $self->_generate_feature_set_id_clause(_make_arrayref_if_not_arrayref($fsets));
-  }
-  
-  my $constraint = join ' and ', @condition;
   #explicit super call, just in case we ever re-implement in here
-  return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+  my $all_regulatory_features = $self->SUPER::fetch_all_by_Slice($slice);
+  
+  if (defined $requested_feature_sets) {
+  
+    $requested_feature_sets = _make_arrayref_if_not_arrayref($requested_feature_sets);
+
+    my $filtered_regulatory_features;
+    
+    REGULATORY_FEATURE: foreach my $current_regulatory_feature (@$all_regulatory_features) {
+      foreach my $current_feature_set (@$requested_feature_sets) {
+	if ($current_regulatory_feature->has_activity_in($current_feature_set)) {
+	  push @$filtered_regulatory_features, $current_regulatory_feature;
+	  next REGULATORY_FEATURE;
+	}
+      }
+    }
+    $all_regulatory_features = $filtered_regulatory_features;
+  }
+  
+  if (defined $requested_activity) {
+  
+    my $filtered_regulatory_features;
+    
+    REGULATORY_FEATURE: foreach my $current_regulatory_feature (@$all_regulatory_features) {
+      if ($current_regulatory_feature->has_feature_sets_with_activity($requested_activity)) {
+	push @$filtered_regulatory_features, $current_regulatory_feature;
+	next REGULATORY_FEATURE;
+      }
+    }
+    $all_regulatory_features = $filtered_regulatory_features;
+  }
+  return $all_regulatory_features;
 }
 
 sub _default_where_clause {
@@ -690,7 +829,7 @@ sub fetch_all_by_stable_ID {
   use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
   deprecate("fetch_all_by_stable_ID has been deprecated and will be removed in Ensembl release 89. Use fetch_by_stable_id instead!");
   
-  return $self->fetch_by_stable_id(@_);
+  return [ $self->fetch_by_stable_id(@_) ];
 }
 
 =head2 fetch_all_by_attribute_feature
@@ -718,8 +857,9 @@ sub fetch_all_by_attribute_feature {
   my $attr_feat_table = $valid_attribute_features{$attr_class};
 
   my $rf_ids = $self->db->dbc->db_handle->selectall_arrayref(
-    "select regulatory_feature_id from regulatory_attribute ".
-    "where attribute_feature_table='${attr_feat_table}' and attribute_feature_id=".$attr_feat->dbID
+    "select regulatory_feature_id "
+    . "from regulatory_attribute join regulatory_feature_feature_set using (regulatory_feature_feature_set_id) "
+    . "where attribute_feature_table='${attr_feat_table}' and attribute_feature_id=".$attr_feat->dbID
   );
   
   my @rf_ids_flattened = map { @$_ } @$rf_ids;

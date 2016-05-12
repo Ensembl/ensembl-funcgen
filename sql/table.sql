@@ -114,7 +114,7 @@ create table regulatory_feature_feature_set (
 
 DROP TABLE IF EXISTS `regulatory_attribute`;
 CREATE TABLE `regulatory_attribute` (
-  `regulatory_feature_id` int(10) unsigned NOT NULL,
+  `regulatory_feature_feature_set_id` int(10) unsigned NOT NULL,
   `attribute_feature_id` int(10) unsigned NOT NULL,
   `attribute_feature_table` enum('annotated', 'motif') default NULL,
   PRIMARY KEY  (`regulatory_feature_id`, `attribute_feature_table`, `attribute_feature_id`),
