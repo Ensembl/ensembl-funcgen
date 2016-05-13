@@ -13,12 +13,12 @@
 -- limitations under the License.
 
 /**
-@header patch_84_85_o.sql - Delete MultiCell epigenome
-@desc   Delete all MultiCell regulatory features feature set entries.
+@header patch_84_85_p.sql - Delete MultiCell feature_set and epigenome
+@desc   Delete MultiCell feature_set and epigenome
 */
 
 delete from feature_set where name = "RegulatoryFeatures:MultiCell";
 delete from epigenome where name = "MultiCell";
 
-insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_p.sql|Delete MultiCell epigenome.');
+insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_p.sql|Delete MultiCell feature_set and epigenome.');
 

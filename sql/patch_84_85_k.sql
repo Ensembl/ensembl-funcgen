@@ -17,13 +17,11 @@
 @desc   Link up the new non redundant regulatory features. The new regulatory_feature_ids are set. The connection is made using the stable ids.
 */
 
--- mysql --host ens-genomics2 --user ensadmin -pensembl mn1_homo_sapiens_funcgen_85_38 -e "
 update 
   regulatory_feature_feature_set, regulatory_feature_nr 
 set 
   regulatory_feature_feature_set.regulatory_feature_id = regulatory_feature_nr.regulatory_feature_id
 where 
   regulatory_feature_feature_set.stable_id_temp = regulatory_feature_nr.stable_id;
--- "
 
 insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_k.sql|Normalise regulatory feature table: Link up the new non redundant regulatory features.');
