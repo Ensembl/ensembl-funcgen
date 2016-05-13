@@ -179,7 +179,32 @@ sub _left_join {
   return (['regulatory_evidence', 'rfs.regulatory_feature_feature_set_id = ra.regulatory_feature_feature_set_id']);
 }
 
+sub _fake_multicell_activity {
 
+  my $self = shift;
+  my $actual_regulatory_activity = shift;
+
+  my $multicell_regulatory_activity = Bio::EnsEMBL::Funcgen::RegulatoryActivity->new;
+  $multicell_regulatory_activity->activity('ACTIVE');
+  $multicell_regulatory_activity->feature_set_id('MultiCell');
+
+  my $multicell_regulatory_evidence = Bio::EnsEMBL::Funcgen::RegulatoryEvidence->new;
+  $multicell_regulatory_evidence->db($self->db);
+
+  foreach my $current_regulatory_activity (@$actual_regulatory_activity) {
+  
+    my $regulatory_evidence = $current_regulatory_activity->regulatory_evidence;
+  
+    $multicell_regulatory_evidence->add_supporting_annotated_feature_id(
+      $regulatory_evidence->supporting_annotated_feature_ids
+    );
+    $multicell_regulatory_evidence->add_supporting_motif_feature_id(
+      $regulatory_evidence->supporting_motif_feature_ids
+    );
+  }
+  $multicell_regulatory_activity->regulatory_evidence($multicell_regulatory_evidence);
+  return $multicell_regulatory_activity;
+}
 
 =head2 _objs_from_sth
 
@@ -199,7 +224,6 @@ sub _objs_from_sth {
   my ($self, $sth, $mapper, $dest_slice) = @_;
   
   throw('Using a mapper is not supported!') if (defined $mapper);
-  
 
   #For EFG this has to use a dest_slice from core/dnaDB whether specified or not.
   #So if it not defined then we need to generate one derived from the species_name and schema_build of the feature we're retrieving.
@@ -213,12 +237,6 @@ sub _objs_from_sth {
   my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
   my (@feature_from_sth, $seq_region_id);
   my (%fset_hash, %slice_hash, %sr_name_hash, %sr_cs_hash, %ftype_hash);
-
-  my %feature_adaptors =
-    (
-     'annotated' => $self->db->get_AnnotatedFeatureAdaptor,
-     'motif'     => $self->db->get_MotifFeatureAdaptor,
-    );
 
   my (
     $sth_fetched_dbID,
@@ -288,18 +306,10 @@ sub _objs_from_sth {
   # The current regulatory feature that is being constructed
   my $regulatory_feature_under_construction;
   
-#   # The regulatory attribute component for the regulatory feature that is 
-#   # being constructed
-#   #
-#   my %regulatory_attribute_component = (
-#     annotated => {}, 
-#     motif     => {}
-#   );
-  
   # The linked feature sets and their activities for the regulatory feature 
   # that is being constructed
   #
-  my $linked_feature_sets_component;
+  my $unique_set_of_regulatory_activities;
   
   # Closure that adds the components of a regulatory feature. This is called
   # twice, so moved into a closure to avoid code duplication in the loop 
@@ -308,17 +318,28 @@ sub _objs_from_sth {
   my $add_components_to_regulatory_feature_under_construction = sub {
 
     my @flattened_regulatory_features;
-    foreach my $current_feature_set_id (keys %$linked_feature_sets_component) {
-      push @flattened_regulatory_features, $linked_feature_sets_component->{$current_feature_set_id};
+    foreach my $current_feature_set_id (keys %$unique_set_of_regulatory_activities) {
+      push @flattened_regulatory_features, $unique_set_of_regulatory_activities->{$current_feature_set_id};
     }
-    $regulatory_feature_under_construction->_linked_regulatory_activity(\@flattened_regulatory_features);
+    $regulatory_feature_under_construction->regulatory_activity(\@flattened_regulatory_features);
+    
+    # Fake MultiCell regulatory behaviour.
+    #
+    my $multicell_regulatory_activity = $self->_fake_multicell_activity(
+      $regulatory_feature_under_construction->regulatory_activity
+    );
+
+    $regulatory_feature_under_construction->add_regulatory_activity(
+      $multicell_regulatory_activity
+    );
+
   };
    
   # Closure that resets the variables holding the components. This is called
   # after a regulatory feature is done.
   #
   my $reset_components = sub {
-    $linked_feature_sets_component = {};
+    $unique_set_of_regulatory_activities = {};
   };
 
   # Because of the way the join works the rows from the linking table will 
@@ -376,6 +397,7 @@ sub _objs_from_sth {
 	if (defined $regulatory_feature_under_construction) {
 	
 	  $add_components_to_regulatory_feature_under_construction->();
+
 	  push @feature_from_sth, $regulatory_feature_under_construction;
 	  
 	  $reset_components->();
@@ -422,7 +444,6 @@ sub _objs_from_sth {
 	    'analysis'       => $fset_hash{$sth_fetched_feature_set_id}->analysis(),
 	    'adaptor'        => $self,
 	    'dbID'           => $sth_fetched_dbID,
-# 	    'binary_string'  => $sth_fetched_bin_string,
 	    'set'            => $fset_hash{$sth_fetched_feature_set_id},
 	    'feature_type'   => $ftype_hash{$sth_fetched_feature_type_id},
 	    'stable_id'      => $sth_fetched_stable_id,
@@ -433,39 +454,42 @@ sub _objs_from_sth {
     # Make sure there is a Bio::EnsEMBL::Funcgen::RegulatoryActivity component
     # to hold the activity and attributes.
     #
-    if (! exists $linked_feature_sets_component->{$sth_fetched_feature_set_id}) {
+    if (! exists $unique_set_of_regulatory_activities->{$sth_fetched_feature_set_id}) {
     
       use Bio::EnsEMBL::Funcgen::RegulatoryActivity;
       my $regulatory_activity = Bio::EnsEMBL::Funcgen::RegulatoryActivity->new();
       $regulatory_activity->db($self->db);
       
-      $linked_feature_sets_component->{$sth_fetched_feature_set_id} = $regulatory_activity;
+      $unique_set_of_regulatory_activities->{$sth_fetched_feature_set_id} = $regulatory_activity;
     }
 
-    # Populate attributes cache
+    # Handle regulatory evidence from the regulatory_evidence table
+    #
     if (defined $sth_fetched_attr_id  && ! $current_feature_not_on_destination_slice) {
 
-      my $regulatory_activity = $linked_feature_sets_component->{$sth_fetched_feature_set_id};
+      my $regulatory_activity = $unique_set_of_regulatory_activities->{$sth_fetched_feature_set_id};
+      my $regulatory_evidence = $regulatory_activity->regulatory_evidence;
       
-      my $current_attributes = $regulatory_activity->{_regulatory_evidence};
-      if (! defined $current_attributes) {
-	$current_attributes = { annotated => {}, motif => {} };
+      if ($sth_fetched_attr_type eq 'annotated') {
+	$regulatory_evidence->add_supporting_annotated_feature_id($sth_fetched_attr_id);
       }
-      $current_attributes->{$sth_fetched_attr_type}->{$sth_fetched_attr_id} = undef;
-      $regulatory_activity->{_regulatory_evidence} = $current_attributes;
+      if ($sth_fetched_attr_type eq 'motif') {
+	$regulatory_evidence->add_supporting_motif_feature_id($sth_fetched_attr_id);
+      }
     }
-    
+
+    # Handle regulatory activity from the regulatory_feature_feature_set table
+    #
     if (
       ! exists $seen_linked_regulatory_activity{$sth_fetched_regulatory_feature_feature_set_id}
       && ! $current_feature_not_on_destination_slice
     ) {
       $seen_linked_regulatory_activity{$sth_fetched_regulatory_feature_feature_set_id} = 1;
-      
-      my $regulatory_activity = $linked_feature_sets_component->{$sth_fetched_feature_set_id};
+
+      my $regulatory_activity = $unique_set_of_regulatory_activities->{$sth_fetched_feature_set_id};
 
       $regulatory_activity->feature_set_id($sth_fetched_feature_set_id);
       $regulatory_activity->activity($sth_fetched_activity);
-
     }
   }
 
@@ -604,20 +628,13 @@ sub store {
     
     # Store the activities of the current regulatory feature in the various feature sets.
     #
-    my @valid_activities = $self->valid_activities;
-    foreach my $valid_activity (@valid_activities) {
-    
-      my $feature_set_dbID_list = $current_regulatory_feature->_linked_regulatory_activity->{$valid_activity};
-      
-      foreach my $feature_set_dbID (@$feature_set_dbID_list) {
-      
-	$sth_regulatory_feature_feature_set->bind_param(1,  $current_regulatory_feature->dbID, SQL_INTEGER);
-	$sth_regulatory_feature_feature_set->bind_param(2,  $feature_set_dbID,                 SQL_INTEGER);
-	$sth_regulatory_feature_feature_set->bind_param(3,  $valid_activity);
-	
-	$sth_regulatory_feature_feature_set->execute();
-# 	$regulatory_feature_feature_set_id = $self->last_insert_id;
-      }
+    foreach my $current_regulatory_activity (@{$current_regulatory_feature->regulatory_activity}) {
+
+      $sth_regulatory_feature_feature_set->bind_param(1,  $current_regulatory_feature->dbID,            SQL_INTEGER);
+      $sth_regulatory_feature_feature_set->bind_param(2,  $current_regulatory_activity->feature_set_id, SQL_INTEGER);
+      $sth_regulatory_feature_feature_set->bind_param(3,  $current_regulatory_activity->activity);
+
+      $sth_regulatory_feature_feature_set->execute();
     }
 
     # Store the regulatory_evidence
@@ -666,10 +683,14 @@ sub store {
 
 sub fetch_all_by_Slice {
   my $self  = shift;
-  my $slice = shift;
-  my $fset  = shift;
+  my $slice        = shift;
+  my $feature_set  = shift;
   
-  return (defined $fset) ? $self->fetch_all_by_Slice_FeatureSets($slice, [$fset]) : $self->fetch_all_by_Slice_FeatureSets($slice);
+  if (defined $feature_set) {
+    return $self->fetch_all_by_Slice_FeatureSets($slice, [$feature_set]);
+  }
+  
+  return $self->fetch_all_by_Slice_FeatureSets($slice);
 }
 
 =head2 fetch_all_by_Slice_FeatureSets
@@ -740,30 +761,7 @@ sub _make_arrayref_if_not_arrayref {
   return $obj_as_arrayref;
 }
 
-# sub fetch_all_by_Slice_FeatureSets_Activity {
-#   my ($self, $slice, $fsets, $activity) = @_;
-#   
-#   my @condition;
-# 
-#   if (defined $activity && $activity ne '') {
-#     if (! $self->is_valid_activity($activity)) {
-#       die(
-# 	qq(\"$activity\"is not a valid activity. Valid activities are: ) . valid_activities_as_string
-#       );
-#     }
-#     push @condition, qq(activity = "$activity");
-#   }
-#   
-#   if(defined $fsets) {
-#     push @condition, 'rfs.feature_set_id ' 
-#       . $self->_generate_feature_set_id_clause(_make_arrayref_if_not_arrayref($fsets));
-#   }
-#   
-#   my $constraint = join ' and ', @condition;
-#   #explicit super call, just in case we ever re-implement in here
-#   return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
-# }
-# 
+
 sub fetch_all_by_Slice_FeatureSets_Activity {
   my ($self, $slice, $requested_feature_sets, $requested_activity) = @_;
   

@@ -122,6 +122,8 @@ sub new {
   $self->{projected}        = $projected        if defined $projected;
   $self->{activity}         = $activity         if defined $activity;
   $self->{epigenome_count}  = $epigenome_count  if defined $epigenome_count;
+  
+  $self->{_regulatory_activity} = [];
 
   return $self;
 }
@@ -226,9 +228,15 @@ sub _assert_feature_set_ok {
 sub _regulatory_activity_for_feature_set {
   my $self = shift;
   my $feature_set = shift;
+  
+  if ($feature_set->name eq 'MultiCell') {
+  die('Todo');
+    my $multicell_regulatory_activity = $self->_fake_multicell_activity;
+    return $multicell_regulatory_activity;
+  }
 
   my $feature_set_id = $feature_set->dbID;
-  my @regulatory_activity = grep { $_->feature_set_id == $feature_set_id } @{$self->_linked_regulatory_activity};
+  my @regulatory_activity = grep { $_->feature_set_id == $feature_set_id } @{$self->regulatory_activity};
   
   if (! @regulatory_activity) {
     throw();
@@ -272,7 +280,7 @@ sub get_underlying_structure {
   return $underlying_structure;
 }
 
-=head2 _linked_regulatory_activity
+=head2 regulatory_activity
 
   Arg [1]     : 
   Returntype  : 
@@ -280,19 +288,23 @@ sub get_underlying_structure {
   Description : Guaranteed to return an arrayref. If there are no linked feature sets, returns [].
 
 =cut
-sub _linked_regulatory_activity {
+sub regulatory_activity {
 
   my $self = shift;
   my $linked_feature_sets = shift;
 
   if($linked_feature_sets) {
-    $self->{_linked_regulatory_activity} = $linked_feature_sets;
+    $self->{_regulatory_activity} = $linked_feature_sets;
   }
+  return $self->{_regulatory_activity};
+}
+
+sub add_regulatory_activity {
+
+  my $self = shift;
+  my $regulatory_activity = shift;
   
-  if (! defined $self->{_linked_regulatory_activity}) {
-    $self->{_linked_regulatory_activity} = [];
-  }
-  return $self->{_linked_regulatory_activity};
+  push @{$self->{_regulatory_activity}}, $regulatory_activity;
 }
 
 sub has_activity_in {
@@ -300,7 +312,12 @@ sub has_activity_in {
   my $self = shift;
   my $feature_set = shift;
   
-  foreach my $current_regulatory_activity (@{$self->_linked_regulatory_activity}) {
+#   if ($feature_set eq 'MultiCell') {
+#     use Carp; confess();
+#     return 1;
+#   }
+  
+  foreach my $current_regulatory_activity (@{$self->regulatory_activity}) {
     if ($current_regulatory_activity->feature_set_id == $feature_set->dbID) {
       return 1;
     }
@@ -313,7 +330,7 @@ sub has_feature_sets_with_activity {
   my $self = shift;
   my $activity = shift;
   
-  foreach my $current_regulatory_activity (@{$self->_linked_regulatory_activity}) {
+  foreach my $current_regulatory_activity (@{$self->regulatory_activity}) {
     if ($current_regulatory_activity->activity eq $activity) {
       return 1;
     }
@@ -346,7 +363,7 @@ sub get_feature_sets_by_activity {
     $_->feature_set_id 
   } grep { 
     $_->activity eq $activity 
-  } @{$self->_linked_regulatory_activity};
+  } @{$self->regulatory_activity};
   
   my $feature_set_adaptor = $self->adaptor->db->get_FeatureSetAdaptor;
   

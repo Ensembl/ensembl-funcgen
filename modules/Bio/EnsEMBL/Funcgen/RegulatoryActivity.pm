@@ -86,58 +86,15 @@ sub regulatory_evidence {
   my $regulatory_evidence = shift;
 
   if ($regulatory_evidence) {
-    $self->{'_regulatory_evidence'}  = $regulatory_evidence;
+    $self->{'_regulatory_evidence'} = $regulatory_evidence;
   }
-  return $regulatory_evidence;
+  if (! $self->{'_regulatory_evidence'}) {
+    use Bio::EnsEMBL::Funcgen::RegulatoryEvidence;
+    my $regulatory_evidence = Bio::EnsEMBL::Funcgen::RegulatoryEvidence->new;
+    $regulatory_evidence->db($self->db);
+    $self->{'_regulatory_evidence'} = $regulatory_evidence;
+  }
+  return $self->{'_regulatory_evidence'};
 }
 
-# sub supporting_annotated_features {
-#   my $self = shift;
-#   
-#   my @id = $self->supporting_annotated_feature_ids;
-#   my @annotated_feature = map {
-#     $self->db->get_AnnotatedFeatureAdaptor->fetch_by_dbID($_);
-#   } @id;
-#   
-#   return \@annotated_feature;
-# }
-# 
-# sub supporting_motif_features {
-#   my $self = shift;
-#   
-#   my @id = $self->supporting_motif_feature_ids;
-#   my @motif_feature = map {
-#     $self->db->get_MotifFeatureAdaptor->fetch_by_dbID($_);
-#   } @id;
-#   
-#   return \@motif_feature;
-# }
-# 
-# sub supporting_annotated_feature_ids {
-#   my $self = shift;
-#   return keys %{$self->{'_regulatory_evidence'}->{'annotated'}};
-# }
-# 
-# sub supporting_motif_feature_ids {
-#   my $self = shift;
-#   return keys %{$self->{'_regulatory_evidence'}->{'motif'}};
-# }
-# 
-# sub get_underlying_structure {
-#   my $self = shift;
-#   
-#   my @motif_feature_loci;
-#   foreach my $current_motif_feature (@{$self->supporting_motif_features}) {
-#     push @motif_feature_loci, (
-#       0 + $current_motif_feature->start, 
-#       0 + $current_motif_feature->end
-#     );
-#   }
-# 
-#   return \@motif_feature_loci;
-# }
-
-
 1;
-
-

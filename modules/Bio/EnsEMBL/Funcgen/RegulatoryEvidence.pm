@@ -51,7 +51,11 @@ sub set_regulatory_evidence {
   my $self = shift;
   my $regulatory_evidence = shift;
 
-  $self->{'_regulatory_evidence'}  = $regulatory_evidence;
+#   $self->{'_regulatory_evidence'}  = $regulatory_evidence;
+  
+  $self->{'_annotated'}  = $regulatory_evidence->{'annotated'};
+  $self->{'_motif'}      = $regulatory_evidence->{'motif'};
+  
   return;
 }
 
@@ -64,24 +68,6 @@ sub db {
   }
   return $self->{'_db'};
 }
-
-# =head2 get_regulatory_evidence
-# =cut
-# sub get_regulatory_evidence {
-#   my $self = shift;
-#   my $feature_class = shift;
-# 
-#   if (! defined $feature_class) {
-#     throw("Missing parameter for feature_class!");
-#   }
-#   if ($feature_class eq 'annotated') {
-#     return $self->supporting_annotated_features;
-#   }
-#   if ($feature_class eq 'motif') {
-#     return $self->supporting_motif_features;
-#   }
-#   throw("Unknown feature_class $feature_class!");
-# }
 
 sub supporting_annotated_features {
   my $self = shift;
@@ -105,14 +91,48 @@ sub supporting_motif_features {
   return \@motif_feature;
 }
 
+sub add_supporting_annotated_feature_id {
+  my $self = shift;
+  my $annotated_feature_id = shift;
+  
+  if (! defined $annotated_feature_id) {
+    return;
+  }
+  if (ref $annotated_feature_id eq 'ARRAY') {
+    foreach my $id (@$annotated_feature_id) {
+      $self->add_supporting_annotated_feature_id($id);
+    }
+  }
+  
+  $self->{'_annotated'}->{0 + $annotated_feature_id} = undef;
+}
+
+sub add_supporting_motif_feature_id {
+  my $self = shift;
+  my $motif_feature_id = shift;
+  
+  if (! defined $motif_feature_id) {
+    return;
+  }
+  if (ref $motif_feature_id eq 'ARRAY') {
+    foreach my $id (@$motif_feature_id) {
+      $self->add_supporting_motif_feature_id($id);
+    }
+  }
+  
+  $self->{'_motif'}->{0 + $motif_feature_id} = undef;
+}
+
 sub supporting_annotated_feature_ids {
   my $self = shift;
-  return keys %{$self->{'_regulatory_evidence'}->{'annotated'}};
+  my @supporting_annotated_feature_ids = keys %{$self->{'_annotated'}};
+  return \@supporting_annotated_feature_ids;
 }
 
 sub supporting_motif_feature_ids {
   my $self = shift;
-  return keys %{$self->{'_regulatory_evidence'}->{'motif'}};
+  my @supporting_motif_feature_ids = keys %{$self->{'_motif'}};
+  return \@supporting_motif_feature_ids;
 }
 
 sub get_underlying_structure {
