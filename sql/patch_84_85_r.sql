@@ -49,7 +49,7 @@ insert into regulatory_build (
 
 delete from feature_set where type = "regulatory";
 
-alter table regulatory_feature add column regulatory_build_id int(10) unsigned default null
+alter table regulatory_feature add column regulatory_build_id int(10) unsigned default null;
 
 update regulatory_feature, regulatory_build set regulatory_feature.regulatory_build_id = regulatory_build.regulatory_build_id;
 
