@@ -124,14 +124,14 @@ our %COLORS = (
   na => "255,255,255"
 );
 
-# These states describe the features at the cell-type level
-our %feature_states = (
-  active => 0,
-  poised => 1,
-  repressed => 2,
-  inactive => 3,
-  na => 4
-);
+# # These states describe the features at the cell-type level
+# our %feature_states = (
+#   active => 0,
+#   poised => 1,
+#   repressed => 2,
+#   inactive => 3,
+#   na => 4
+# );
 
 our $start_time = time;
 
@@ -150,21 +150,37 @@ sub main {
   # Read dump file with file locations and metadata
   get_metadata($options);
   # Compute summaries of TB binding peaks
+  print_log("Computing summaries of TB binding peaks\n");
   compute_tf_probs($options);
   # Compute summaries of segmentations
+  print_log("Computing summaries of segmentations\n");
   extract_segmentation_state_summaries($options);
   # Select the segmentation states that best match a label
+  print_log("Selecting the segmentation states that best match a label\n");
   label_segmentation_states($options);
   # Color the input segmentations based on the label assigments above
+  print_log("Coloring the input segmentations based on the label assigments above\n");
   make_segmentation_bedfiles($options);
-  # Set cutoffs to optimise the quality of the build (using TF binding as an indicator_
+  # Set cutoffs to optimise the quality of the build (using TF binding as an indicator
+  print_log("Setting cutoffs to optimise the quality of the build (using TF binding as an indicator\n");
   set_cutoffs($options);
   print_cutoffs($options);
   # Compute MultiCell features
+  print_log("Computing MultiCell features\n");
   compute_regulatory_features($options);
   # Determine which features are active in which cell type
+  print_log("Determine which features are active in which epigenome\n");
+  
+  # Problem:
+  #
+  # $options->{segmentations} is not being set!
+  #
+  print Dumper($options->{segmentations});
+#   die();
+  
   compute_states($options);
   # Prepare trackhub header files
+  print_log("Preparing trackhub header files\n");
   make_track_hub($options);
   print_log("Exiting New Regulatory Build pipeline\n");
 }
@@ -628,6 +644,9 @@ sub read_dump {
       push @{$options->{segmentations}}, $segmentation;
     }
   }
+#   use Data::Dumper;
+#   print Dumper($options->{segmentations});
+#   die;
 }
 
 =head2 fetch_metadata

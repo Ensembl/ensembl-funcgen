@@ -56,7 +56,6 @@ use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor; #DBI sql_types import
 
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor);
 
-
 =head2 fetch_all_by_feature_class
 
   Arg [1]    : String - feature class i.e. 'annotated', 'regulatory', 'segmentation', 'mirna' or 'external'
@@ -622,7 +621,18 @@ sub _constrain_evidence_types {
   return ($constraint, $constraint_conf);
 }
 
+
+sub fetch_all_by_type { # deprecated in v74, but still used by web
+  my $self = shift;
+  my $type = shift;
+  my $status = shift;
+  
+  deprecate('Please use fetch_all_by_feature_class');
+  
+  return $self->fetch_all_by_feature_class($type, $status);
+}
+
 1;
 
-__END__
+
 

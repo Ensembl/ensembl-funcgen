@@ -1414,8 +1414,15 @@ sub rollback_FeatureSet {
     # $db->rollback_table( $sql, 'associated_feature_type' );
 
     #Remove features
-    $sql = "DELETE f from $table f where f.feature_set_id=" .
-      $fset->dbID . $slice_join;
+    if ($table eq 'regulatory_feature') {
+      $sql = "delete regulatory_feature, regulatory_feature_feature_set "
+	. "from regulatory_feature join regulatory_feature_feature_set using (regulatory_feature_id) "
+	. "where regulatory_feature_feature_set.feature_set_id=" . $fset->dbID 
+	. $slice_join;
+    } else {
+      $sql = "DELETE f from $table f where f.feature_set_id=" .
+	$fset->dbID . $slice_join;
+    }
 
     # warn $sql;
     $db->rollback_table( $sql, $table, "${table}_id" );
