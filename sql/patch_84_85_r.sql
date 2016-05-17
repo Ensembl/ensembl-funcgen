@@ -26,4 +26,4 @@ DROP TABLE result;
 DROP TABLE result_feature;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_83_84_r.sql|Drop unused empty tables');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_r.sql|Drop unused empty tables');
