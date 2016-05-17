@@ -860,6 +860,30 @@ sub compute_regulatory_features {
 sub load_celltype_build {
   my ($base_dir, $feature_set, $stable_id, $count_hash, $slice, $cell_type, $feature_type, $rfa) = @_;
   my ($tmp, $tmp_name) = tempfile();
+
+#   my @processed_cell_type = qw(
+#     K562:hist:BR1
+#     HEL9217:hist:BR1
+#     MEG01:TF:BR2
+#     K562:TF:BR1
+#     UT7:TF:BR2
+#     F36P:hist:BR2
+#     UT7:hist:BR2
+#     HEL9217:TF:BR1
+#     F36P:TF:BR2
+#     KU812:hist:BR2
+#     F36P:TF:BR1
+#     HEL9217:hist:BR2
+#     K562:hist:BR2
+#   );
+#   
+#   my $has_been_processed = grep { $_ eq $cell_type } @processed_cell_type;
+#   
+#   if ($has_been_processed) {
+#     print_log("\tCell type $cell_type has already been processed. Skipping.\n");
+#     return;
+#   }
+
   print_log("\tProcessing data from cell type $cell_type\n");
   my $bigbed;
   if ($cell_type eq 'MultiCell') {
@@ -917,8 +941,15 @@ sub process_file {
     
     my $activity = $has_evidence_to_activity_enum{$has_evidence};
     my $feature_set_dbId = $feature_set->dbID;
+    
+    use Bio::EnsEMBL::Funcgen::RegulatoryActivity;
 
-    push @features, Bio::EnsEMBL::Funcgen::RegulatoryFeature->new_fast({
+    my $regulatory_activity = Bio::EnsEMBL::Funcgen::RegulatoryActivity->new;
+    
+    $regulatory_activity->activity($activity);
+    $regulatory_activity->feature_set_id($feature_set_dbId);
+    
+    my $regulatory_feature = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new_fast({
       slice           => $slice->{$chrom},
       start           => $thickStart + 1,
       end             => $thickEnd,
@@ -929,13 +960,11 @@ sub process_file {
       epigenome_count => $count_hash->{$name},
       stable_id       => $stable_id->{$name},
       analysis        => $feature_set->analysis,
-      projected       => 0,
-      _linked_feature_sets => {
-	$activity => [
-	  $feature_set_dbId
-	],
-      },
     });
+    
+    $regulatory_feature->add_regulatory_activity($regulatory_activity);
+   
+    push @features, $regulatory_feature;
 
     if (scalar @features > 10000) {
       $rfa->store(@features);
@@ -961,12 +990,10 @@ sub compute_regulatory_annotations {
   my $options = shift;
 
   my ($tmp_fh, $cell_type_regulatory_features) = tempfile();
-#   my ($tmp_fh1, $multicell_regulatory_features) = tempfile();
   my ($tmp_fh2, $annotations) = tempfile();
   my ($tmp_fh3, $motifs) = tempfile();
   my ($tmp_fh4, $out) = tempfile();
   close $tmp_fh;
-#   close $tmp_fh1;
   close $tmp_fh2;
   close $tmp_fh3;
   close $tmp_fh4;
@@ -974,31 +1001,6 @@ sub compute_regulatory_annotations {
   # Extract regulatory, annotated, and motif features into flat tab-delimited files.
   # The common format of these files is:
   # chrom	start	end	ID
-#   run(
-#     qq(
-#       bash -o pipefail -c "
-# 	mysql --quick -NB -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -e '
-# 	  select 
-# 	    rf.seq_region_id, 
-# 	    rf.seq_region_start - rf.bound_start_length, 
-# 	    rf.seq_region_end   + rf.bound_end_length, 
-# 	    regulatory_feature_feature_set_id,
-# 	    fs.epigenome_id 
-# 	  from 
-# 	    regulatory_feature rf 
-# 	    join regulatory_feature_feature_set using (regulatory_feature_id)
-# 	    left join feature_set fs using(feature_set_id) 
-# 	    left join epigenome using(epigenome_id) 
-# 	  where 
-# 	    epigenome.name LIKE \\\"MultiCell\\\"
-# 	    and activity != \\\"NA\\\"
-# 	  order by 
-# 	    rf.seq_region_id, 
-# 	    rf.seq_region_start - rf.bound_start_length
-# 	' \\\
-# 	| sort -k1,1 -k2,2n > $multicell_regulatory_features"
-#     )
-#   );
   
   run(
     qq(
@@ -1014,12 +1016,10 @@ sub compute_regulatory_annotations {
 	    join regulatory_feature_feature_set using (regulatory_feature_id)
 	    LEFT JOIN feature_set fs USING(feature_set_id) 
 	    LEFT JOIN epigenome USING(epigenome_id) 
-	  where 
-	    epigenome.name not like \"MultiCell\"
 	  order by 
 	    rf.seq_region_id, 
 	    rf.seq_region_start - rf.bound_start_length
-	' \
+	' \\
  	> $cell_type_regulatory_features
     )
   );
@@ -1039,7 +1039,7 @@ sub compute_regulatory_annotations {
 	  ORDER BY 
 	    af.seq_region_id, 
 	    af.seq_region_start;
-	' \
+	' \\
 	> $annotations
     )
   );
@@ -1051,9 +1051,9 @@ sub compute_regulatory_annotations {
 	    mf.seq_region_id, mf.seq_region_start, mf.seq_region_end, mf.motif_feature_id, fs.epigenome_id 
 	  from 
 	    motif_feature mf 
-	    LEFT JOIN associated_motif_feature amf USING(motif_feature_id) 
-	    LEFT JOIN annotated_feature af USING(annotated_feature_id) 
-	    LEFT JOIN feature_set fs USING(feature_set_id) 
+	    JOIN associated_motif_feature amf USING(motif_feature_id) 
+	    JOIN annotated_feature af USING(annotated_feature_id) 
+	    JOIN feature_set fs USING(feature_set_id) 
 	  GROUP BY 
 	    motif_feature_id, 
 	    epigenome_id 
@@ -1066,24 +1066,22 @@ sub compute_regulatory_annotations {
 
   # Overlap regulatory features with (annotated|motif) features. Store ID pairs into one flat file
   run("bedtools intersect -sorted -wa -wb -a $cell_type_regulatory_features -b $annotations | awk 'BEGIN {OFS = \"\\t\"} \$5==\$10 {print \$4,\$9,\"annotated\"} ' > $out");
-#   run("bedtools intersect -sorted -wa -wb -a $multicell_regulatory_features -b $motifs      | awk 'BEGIN {OFS = \"\\t\"} {print \$4,\$9,\"motif\"} ' >> $out");
-  run("bedtools intersect -sorted -wa -wb -a $cell_type_regulatory_features -b $motifs      | awk 'BEGIN {OFS = \"\\t\"} \$5==\$10 {print \$4,\$9,\"motif\"} ' >> $out");
+  run("bedtools intersect -sorted -wa -wb -a $cell_type_regulatory_features -b $motifs      | awk 'BEGIN {OFS = \"\\t\"} \$5==\$10 {print \$4,\$9,\"motif\"} ' > $out");
 
   # Load into database
   run("mysql -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -e 'TRUNCATE TABLE regulatory_evidence;'");
   run("mysql -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -e 'LOAD DATA LOCAL INFILE \"$out\" INTO TABLE regulatory_evidence;'");
 
-  print "cell_type_regulatory_features = $cell_type_regulatory_features\n";
-#   print "$multicell_regulatory_features\n";
-  print "annotations = $annotations\n";
-  print "motifs = $motifs\n";
-  print "out = $out\n";
+#   print "cell_type_regulatory_features = $cell_type_regulatory_features\n";
+#   print "annotations = $annotations\n";
+#   print "motifs = $motifs\n";
+#   print "out = $out\n";
 
-#   unlink $cell_type_regulatory_features;
-#   unlink $multicell_regulatory_features;
-#   unlink $annotations;
-#   unlink $motifs;
-#   unlink $out;
+  unlink $cell_type_regulatory_features;
+  unlink $multicell_regulatory_features;
+  unlink $annotations;
+  unlink $motifs;
+  unlink $out;
 }
 
 =header2 update_meta_table
