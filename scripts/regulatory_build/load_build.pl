@@ -85,7 +85,7 @@ our $start_time = time;
 
 main();
 
-=header2 main
+=head2 main
 
   Description: Overall process
   Returntype: undef
@@ -121,7 +121,7 @@ sub main {
   update_meta_table($options, $db);
 }
 
-=header2 print_log
+=head2 print_log
 
   Description: Print conveninence
   Arg1: String
@@ -136,7 +136,7 @@ sub print_log {
   print "[$runtime] $str";
 }
 
-=header2 get_options
+=head2 get_options
 
   Description: Command line options
   Returntype: hashreof
@@ -189,7 +189,7 @@ sub archive_previous_build {
   $options->{old_version} = $version;
 }
 
-=header2 connect_db
+=head2 connect_db
 
   Description: Connecting to the DB
   Arg1: options hash ref
@@ -223,7 +223,7 @@ sub connect_db {
   return $db;
 }
 
-=header2 get_analysis
+=head2 get_analysis
 
   Description: Create/Get analysis for Build
   Arg1: Bio::EnsEMBL::Funcgen::DBAdaptor
@@ -264,7 +264,7 @@ sub get_analysis {
   }
 }
 
-=header2 clean_name
+=head2 clean_name
 
   Description: Removing unwanted characters 
     Quick string normalisation function tor remove weird 
@@ -283,7 +283,7 @@ sub clean_name {
   return $string;
 }
 
-=header2 get_cell_type_names
+=head2 get_cell_type_names
 
   Description: Get list of cell types
   Arg1: The base_directory name
@@ -317,7 +317,7 @@ sub get_cell_type_names {
   return \@cell_types;
 }
 
-=header2 run
+=head2 run
 
   Description: Convenience wrapper to run the commandline safely 
   Arg1: command line command string
@@ -421,7 +421,7 @@ sub get_stable_id {
   return \%stable_id_hash;
 }
 
-=header2 get_overlaps_between_files
+=head2 get_overlaps_between_files
 
   Description: Computes overlaps between two builds contained in bed files
   Arg1: old build file location 
@@ -462,7 +462,7 @@ sub get_overlaps_between_files {
   return (\@overlaps, $max_id);
 }
 
-=header2 get_slices
+=head2 get_slices
 
   Description: Get slice for each chromosome
   Arg1: Bio::EnsEMBL::Funcgen::DBAdaptor object
@@ -481,7 +481,7 @@ sub get_slices {
   return \%hash;
 }
 
-=header2 get_regulatory_FeatureSets
+=head2 get_regulatory_FeatureSets
 
   Description: Create/Get FeatureSet for each cell type
   Arg1: Analysis object
@@ -598,7 +598,7 @@ sub get_regulatory_FeatureSets {
   return \%rf_sets;
 }
 
-=header2 get_cell_type_supporting_set
+=head2 get_cell_type_supporting_set
 
   Description: Gets supporting feature sets for cell type
   Arg1: arrayref of cell type names
@@ -627,7 +627,7 @@ sub get_cell_type_supporting_sets {
   return \%ctype_ssets;
 }
 
-=header2 define_regbuild_meta_strings
+=head2 define_regbuild_meta_strings
 
   Description: Store meta strings in regbuild_string table
   Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
@@ -682,7 +682,7 @@ sub define_regbuild_meta_strings{
   store_regbuild_meta_strings($ds_adaptor, \%reg_strings);
 }
 
-=header2 store_regbuild_meta_strings
+=head2 store_regbuild_meta_strings
 
   Description: Store meta strings in regbuild_string table
   Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DatasetAdaptor object
@@ -710,7 +710,7 @@ sub store_regbuild_meta_strings{
   }
 }
 
-=header2 compute_counts
+=head2 compute_counts
 
   Description: Count the number of active features for each temporary
   ID across all cell types
@@ -728,7 +728,7 @@ sub compute_counts {
   return $count_hash;
 }
 
-=header2 count_active
+=head2 count_active
 
   Description: Count the number of active features for each temporary
   ID across one cell types
@@ -758,7 +758,7 @@ sub count_active {
   unlink $tmp_name;
 }
 
-=header2 get_feature_types
+=head2 get_feature_types
 
   Description: Get a hashref from feature type name to FeatureType 
    object
@@ -815,7 +815,7 @@ sub get_feature_types {
   return $feature_type;
 }
 
-=header2 compute_regulatory_features
+=head2 compute_regulatory_features
 
   Description: Creates the actual RegulatoryFeature objects
   Arg1: Options hashref
@@ -842,7 +842,7 @@ sub compute_regulatory_features {
   }
 }
 
-=header2 load_celltype_build
+=head2 load_celltype_build
 
   Description: loads the data from the build's BigBed files into the database
   Arg1: filehandle into input file
@@ -898,7 +898,7 @@ sub load_celltype_build {
   unlink $tmp_name;
 }
 
-=header2 process_file
+=head2 process_file
 
   Description: loads the data from a Bed file into the database
   Arg1: filehandle into input file
@@ -977,7 +977,7 @@ sub process_file {
   }
 }
 
-=header2 compute_regulatory_annotations
+=head2 compute_regulatory_annotations
 
   Description: Assign motifs and annotations to regulatory features
   Arg1: options hash ref
@@ -1084,7 +1084,7 @@ sub compute_regulatory_annotations {
   unlink $out;
 }
 
-=header2 update_meta_table
+=head2 update_meta_table
 
   Description: Updates data in metatable 
   Arg1: options hash ref
