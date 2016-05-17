@@ -645,7 +645,7 @@ CREATE TABLE `result_set_input` (
    `result_set_input_id` int(10) unsigned NOT NULL auto_increment,
    `result_set_id` int(10) unsigned NOT NULL,
    `table_id` int(10) unsigned NOT NULL,
-   `table_name` enum('experimental_chip','channel','input_set', 'input_subset') DEFAULT NULL,
+   `table_name` enum('input_subset') DEFAULT NULL,
    `md5sum` varchar(45) default NULL,
    PRIMARY KEY  (`result_set_input_id`, `result_set_id`),
    UNIQUE KEY `rset_table_idname_idx` (`result_set_id`, `table_id`, `table_name`)
