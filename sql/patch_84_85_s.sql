@@ -33,10 +33,11 @@ rename table regulatory_feature_feature_set to regulatory_activity;
 drop table if exists regulatory_build;
 create table regulatory_build (
   regulatory_build_id int(4) unsigned not null auto_increment,
-  feature_type_id int(4) unsigned not null,
-  analysis_id int(4) unsigned not null,
-  version int(4) unsigned not null,
-  name varchar(45) not null,
+  name varchar(45)           not null,
+  version                    varchar(255) DEFAULT NULL,
+  feature_type_id int(4)     unsigned not null,
+  analysis_id int(4)         unsigned not null,
+  is_current                 boolean not null default 0,
   primary key  (regulatory_build_id)
 ) ENGINE=MyISAM;
 
@@ -44,8 +45,15 @@ insert into regulatory_build (
   feature_type_id,
   analysis_id,
   version,
+  is_current,
   name
-) select feature_type_id, analysis_id, 1, "Regulatory features" from feature_set where type = "regulatory" group by "feature_type_id, analysis_id";
+) select 
+  feature_type_id, 
+  analysis_id, 
+  "1",
+  true,
+  "Regulatory features" 
+from feature_set where type = "regulatory" group by "feature_type_id, analysis_id";
 
 delete from feature_set where type = "regulatory";
 
