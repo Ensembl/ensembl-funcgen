@@ -13,7 +13,7 @@
 -- limitations under the License.
 
 /**
-@header patch_84_85_i.sql - 
+@header patch_84_85_i.sql - Normalise regulatory feature table: Create a non redundant version of the regulatory features
 @desc   Also removes column "projected".
 */
 
