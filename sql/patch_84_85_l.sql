@@ -14,7 +14,7 @@
 
 /**
 @header patch_84_85_l.sql - Normalise regulatory feature table
-@desc   Link up the new non redundant regulatory features. The new regulatory_feature_ids are set. The connection is made using the stable ids.
+@desc   Link up the regulatory attributes with the linking table.
 */
 
 drop table if exists regulatory_feature_id_map;
@@ -59,4 +59,4 @@ group by
   attribute_feature_table
 ;
 
-insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_l.sql|Normalise regulatory feature table: Link up the new non redundant regulatory features.');
+insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_l.sql|Normalise regulatory feature table: Link up the regulatory attributes with the linking table.');
