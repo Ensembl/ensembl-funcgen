@@ -13,11 +13,10 @@
 -- limitations under the License.
 
 /**
-@header patch_83_84_r.sql - Drop unused empty tables
+@header patch_84_85_r.sql - Drop unused empty tables
 @desc   These tables are empty and of no use. No need to keep them
 */
 
-DROP TABLE associated_group;
 DROP TABLE channel;
 DROP TABLE experimental_chip;
 DROP TABLE input_set;

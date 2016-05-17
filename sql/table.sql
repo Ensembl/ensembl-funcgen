@@ -384,39 +384,6 @@ CREATE TABLE `external_feature` (
 
 
 /**
-@table  result_feature
-@desc   Represents the mapping of a raw/normalised signal. This is optimised for the web display in two ways:
-        <br>&nbsp;&nbsp;&nbsp;&nbsp;1 Data compression by collection into different sized windows or bins
-        <br>&nbsp;&nbsp;&nbsp;&nbsp;2 For array data it also provides an optimised view of a probe_feature and associated result.
-@colour  #FFCC66
-
-@column result_feature_id     Internal ID
-@column result_set_id         @link result_set table ID
-@column seq_region_id         @link seq_region table ID
-@column seq_region_start      Start position of this feature
-@column seq_region_end        End position of this feature
-@column seq_region_strand     Strand orientation of this feature
-@column scores                BLOB of window scores for this region
-
-@see result_set
-@see seq_region
-*/
-
-DROP TABLE IF EXISTS `result_feature`;
-CREATE TABLE `result_feature` (
-  `result_feature_id` int(10) unsigned NOT NULL auto_increment,
-  `result_set_id` int(10) unsigned NOT NULL,
-  `seq_region_id` int(10) unsigned NOT NULL,
-  `seq_region_start` int(10) NOT NULL,
-  `seq_region_end` int(10) NOT NULL,
-  `seq_region_strand` tinyint(4) NOT NULL,
-  `scores` longblob NOT NULL,
-  PRIMARY KEY  (`result_feature_id`),
-  KEY `set_seq_region_idx` (`result_set_id`,`seq_region_id`,`seq_region_start`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-
-/**
 @table  probe_feature
 @desc   The table contains genomic alignments @link probe entries.
 @colour  #FFCC66
@@ -714,45 +681,6 @@ CREATE TABLE `dbfile_registry` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
-
-/**
-@table  input_set
-@desc   Defines a distinct set input data which is not imported into the DB, but used for some analysis e.g. a BAM file.
-@colour  #66CCFF
-
-@column input_set_id    Internal ID
-@column analysis_id     Table ID for @link analysis
-@column epigenome_id    Table ID for @link epigenome
-@column experiment_id   Table ID for @link experiment
-@column feature_type_id Table ID for @link feature_type
-@column name            Name of input_set
-@column type            Type of feature imported as result of analysis e.g. result, annotated
-@column replicate       Number of the replicate. 0 represents  a pooled subset, 255 is a subset we have not processed
-
-@see analysis
-@see epigenome
-@see experiment
-@see feature_type
-@see result_set_input
-*/
-
-DROP TABLE IF EXISTS `input_set`;
-CREATE TABLE `input_set` (
-   `input_set_id` int(10) unsigned NOT NULL auto_increment,
-   `analysis_id` smallint(5) unsigned NOT NULL,
-   `epigenome_id` int(10) unsigned default NULL,
-   `experiment_id` int(10) unsigned default NULL,
-   `feature_type_id` int(10) unsigned default NULL,
-   `name` varchar(100) not NULL,
-   `type` enum('annotated', 'result', 'segmentation', 'dna_methylation') default NULL,
-   `replicate` tinyint(3) unsigned NOT NULL,
-   PRIMARY KEY  (`input_set_id`),
-   UNIQUE KEY `name_idx` (`name`),
-   KEY `experiment_idx` (`experiment_id`),
-   KEY `feature_type_idx` (`feature_type_id`),
-   KEY `epigenome_idx` (`epigenome_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
-
 /**
 @table  input_subset
 @desc   The name is not descriptive of its content, think of it as: "Fastq files from a sequencing run". The objects stored here are similar to ENA's run: http://www.ebi.ac.uk/ena/submit/preparing-xmls#run Every row in the table represents a fastq file. Fastq files link to the experiments from which they were created. Fastq files from one experiment are grouped into technical and biological replicates. If a sequencing run from one experiment generated multiple fastq files, then the technical and biological replicate numbers will be identical. Fastq files are linked to the method by which they were generated via the analysis_id column.
@@ -793,26 +721,6 @@ CREATE TABLE `input_subset` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
 
 -- epigenome_id is default NULL to support flat file imports which have not defined epigenome
-
-/**
-@table  input_set_input_subset
-@desc   Link table input_set / input_subset
-@colour  #66CCFF
-
-@column input_subset_id  @link input_subset table  ID
-@column input_set_id     @link input_set table ID
-
-@see input_set
-@see input_subset
-*/
-
-DROP TABLE IF EXISTS `input_set_input_subset`;
-CREATE TABLE `input_set_input_subset` (
-  `input_subset_id` int(10) unsigned NOT NULL,
-  `input_set_id`    int(10) unsigned NOT NULL,
-  UNIQUE KEY `iset_subset_table_idx` (`input_subset_id`,`input_set_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
 
 /**
 @header Array design tables
@@ -1021,121 +929,6 @@ CREATE TABLE `experimental_group` (
    UNIQUE KEY `name_idx` (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
-/**
-@table  mage_xml
-@desc   Contains MAGE-XML for array based experiments.
-@colour  #00FF00
-
-@column mage_xml_id  Internal table ID
-@column xml          XML text field
-
-*/
-
-DROP TABLE IF EXISTS `mage_xml`;
-CREATE TABLE `mage_xml` (
-   `mage_xml_id` int(10) unsigned NOT NULL auto_increment,
-   `xml` text,
-   PRIMARY KEY  (`mage_xml_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-
-/**
-@table  experimental_chip
-@desc   Represents the physical instance of an @link array_chip used in an @link experiment.
-@colour  #00FF00
-
-@column experimental_chip_id  Internal ID
-@column array_chip_id         @link array_chip table ID
-@column epigenome_id          @link epigenome table ID
-@column experiment_id         @link experiment table ID
-@column feature_type_id       @link feature_type table ID
-@column biological_replicate  Name of biological replicate
-@column technical_replicate   Name of technical replicate
-@column unique_id             Unique ID assigned by vendor
-
-@see array_chip
-@see epigenome
-@see experiment
-@see feature_type
-*/
-
-DROP TABLE IF EXISTS `experimental_chip`;
-CREATE TABLE `experimental_chip` (
-   `experimental_chip_id` int(10) unsigned NOT NULL auto_increment,
-   `array_chip_id` int(10) unsigned default NULL,
-   `epigenome_id` int(10) unsigned default NULL,
-   `experiment_id` int(10) unsigned default NULL,
-   `feature_type_id` int(10) unsigned default NULL,
-   `biological_replicate` varchar(100) default NULL,
-   `technical_replicate` varchar(100) default NULL,
-   `unique_id` varchar(20) NOT NULL,
-   PRIMARY KEY  (`experimental_chip_id`),
-   KEY `experiment_idx` (`experiment_id`),
-   KEY `feature_type_idx` (`feature_type_id`),
-   KEY `unique_id_idx` (`unique_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
--- Can't implement unique key for unique_id as there may be clashes between vendors
--- and chips could potentially be re-used in another exp
-
-
-/**
-@table  channel
-@desc   Represents an individual channel from an experimental_chip.
-@colour  #00FF00
-
-@column channel_id              Internal ID
-@column experimental_chip_id    @link external_chip ID
-@column sample_id               Sample ID
-@column dye                     Name of dye used for this channel e.g. Cy3, Cy5
-@column type                    Type of channel i.e. EXPERIMENTAL or TOTAL (input)
-
-@see  experimental_chip
-*/
-
-DROP TABLE IF EXISTS `channel`;
-CREATE TABLE `channel` (
-   `channel_id` int(10) unsigned NOT NULL auto_increment,
-   `experimental_chip_id` int(10) unsigned default NULL,
-   `sample_id` varchar(20) default NULL,
-   `dye`  varchar(20) default NULL,
-   `type` varchar(20) default NULL,
-   PRIMARY KEY  (`channel_id`),
-   KEY `experimental_chip_idx` (`experimental_chip_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-
-/**
-@table  result
-@desc   Contains a score or intensity value for an associated probe location on a particular experimental_chip.
-@colour  #00FF00
-
-@column result_id            Internal ID
-@column probe_id             @link probe ID
-@column score                Intensity value (raw or normalised)
-@column result_set_input_id  @link result_set_input ID
-@column X                    X coordinate of probe location on experimental_chip
-@column Y                    Y coordinate of probe location on experimental_chip
-
-@see probe
-@see result_set_input
-*/
-
-DROP TABLE IF EXISTS `result`;
-CREATE TABLE `result` (
-   `result_id` int(10) unsigned NOT NULL auto_increment,
-   `probe_id` int(10) unsigned default NULL,
-   `score` double default NULL,
-   `result_set_input_id` int(10) unsigned NOT NULL,
-   `X` smallint(4) unsigned default NULL,
-   `Y` smallint(4) unsigned default NULL,
-   PRIMARY KEY  (`result_id`),
-   KEY `probe_idx` (`probe_id`),
-   KEY `result_set_input_idx` (`result_set_input_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
-
--- result_id needed as we may have replicate probe on same chip
--- X Y here allows repicate probes on same ship
 
 /**
 @header  Ancilliary tables
@@ -1534,7 +1327,7 @@ CREATE TABLE `associated_xref` (
   KEY `associated_source_idx` (`source_xref_id`),
   KEY `associated_object_idx` (`object_xref_id`),
   KEY `associated_idx`        (`xref_id`),
-  KEY `associated_group_idx`  (`associated_group_id`)
+  KEY `associated_group_idx` channel (`associated_group_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
