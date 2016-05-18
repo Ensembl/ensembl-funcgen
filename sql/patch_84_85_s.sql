@@ -13,11 +13,11 @@
 -- limitations under the License.
 
 /**
-@header patch_84_85_o.sql - Delete all MultiCell regulatory features feature set entries.
-@desc   Delete all MultiCell regulatory features feature set entries.
+@header patch_84_85_s.sql - modify 'table_name' column in result_set_input table
+@desc   Remove enum values from 'table_name' column that are of no use
 */
 
-delete from regulatory_feature_feature_set where feature_set_id in (select feature_set_id from feature_set where name = "RegulatoryFeatures:MultiCell");
+ALTER TABLE result_set_input MODIFY 'table_name' enum('input_subset') DEFAULT NULL;
 
-insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_o.sql|Delete all MultiCell regulatory features feature set entries.');
-
+-- patch identifier
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_s.sql|modify table_name column in result_set_input table');

@@ -14,8 +14,10 @@
 
 /**
 @header patch_84_85_m.sql - Normalise regulatory feature table
-@desc   Replace the redundant regulatory features with the non redundant ones.
+@desc   Clean up temporary columns and tables.
 */
+
+alter table regulatory_feature_feature_set drop column stable_id_temp;
 
 drop table regulatory_feature;
 rename table regulatory_feature_nr to regulatory_feature;
@@ -23,4 +25,6 @@ rename table regulatory_feature_nr to regulatory_feature;
 drop table regulatory_attribute;
 rename table regulatory_attribute_new to regulatory_attribute;
 
-insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_m.sql|Normalise regulatory feature table: Replace the redundant regulatory features with the non redundant ones.');
+drop table regulatory_feature_id_map;
+
+insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_m.sql|Normalise regulatory feature table: Clean up temporary columns and tables.');
