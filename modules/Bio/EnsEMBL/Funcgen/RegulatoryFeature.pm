@@ -39,7 +39,7 @@ Bio::EnsEMBL::Funcgen::RegulatoryFeature
   say 'Stable id:       ' . $regulatory_feat->stable_id;
   say 'Analysis:        ' . $regulatory_feat->analysis->logic_name;
   say 'Feature type:    ' . $regulatory_feat->feature_type->name;
-  say 'Feature set:     ' . $regulatory_feat->feature_set->name;
+  say 'Feature set:     ' . $regulatory_feat->epigenome->name;
   say 'Activity:        ' . $regulatory_feat->activity;
   say 'Cell type count: ' . $regulatory_feat->cell_type_count;
   say 'Slice name:      ' . $regulatory_feat->slice->name;
@@ -112,8 +112,8 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($stable_id, $attr_cache, $bin_string, $projected, $activity, $epigenome_count)
-    = rearrange(['STABLE_ID', 'ATTRIBUTE_CACHE', 'BINARY_STRING', 'PROJECTED', 'ACTIVITY', 'EPIGENOME_COUNT'], @_);
+  my ($stable_id, $attr_cache, $bin_string, $projected, $activity, $epigenome_count, $analysis)
+    = rearrange(['STABLE_ID', 'ATTRIBUTE_CACHE', 'BINARY_STRING', 'PROJECTED', 'ACTIVITY', 'EPIGENOME_COUNT', 'ANALYSIS'], @_);
 
   #None of these are mandatory at creation
   #under different use cases
@@ -122,10 +122,16 @@ sub new {
   $self->{projected}        = $projected        if defined $projected;
   $self->{activity}         = $activity         if defined $activity;
   $self->{epigenome_count}  = $epigenome_count  if defined $epigenome_count;
+  $self->{epigenome_count}  = $epigenome_count  if defined $epigenome_count;
+  $self->{analysis}         = $analysis         if defined $analysis;
   
   $self->{_regulatory_activity} = [];
 
   return $self;
+}
+
+sub analysis{
+  return shift->{analysis};
 }
 
 =head2 display_label
@@ -198,10 +204,10 @@ sub stable_id { return shift->{stable_id}; }
 sub regulatory_evidence {
   my $self = shift;
   my $feature_class = shift;
-  my $feature_set   = shift;
+  my $epigenome   = shift;
   
-  $self->_assert_feature_set_ok($feature_set);
-  my $regulatory_activity = $self->_regulatory_activity_for_feature_set($feature_set);
+  $self->_assert_epigenome_ok($epigenome);
+  my $regulatory_activity = $self->_regulatory_activity_for_epigenome($epigenome);
   
   my $regulatory_evidence = $regulatory_activity->regulatory_evidence;
     
@@ -214,29 +220,32 @@ sub regulatory_evidence {
   throw("Invalid feature class $feature_class!");
 }
 
-sub _assert_feature_set_ok {
+sub _assert_epigenome_ok {
   my $self = shift;
-  my $feature_set = shift;
-  if (! defined $feature_set) {
+  my $epigenome = shift;
+  if (! defined $epigenome) {
     throw();
   }
-  if (ref $feature_set ne 'Bio::EnsEMBL::Funcgen::FeatureSet') {
-    throw("feature_set parameter must have type Bio::EnsEMBL::Funcgen::FeatureSet!");
+  if (ref $epigenome ne 'Bio::EnsEMBL::Funcgen::FeatureSet') {
+    throw("epigenome parameter must have type Bio::EnsEMBL::Funcgen::FeatureSet!");
   }
 }
 
-sub _regulatory_activity_for_feature_set {
+sub _regulatory_activity_for_epigenome {
   my $self = shift;
-  my $feature_set = shift;
+  my $epigenome = shift;
   
-  if ($feature_set->name eq 'MultiCell') {
-  die('Todo');
-    my $multicell_regulatory_activity = $self->_fake_multicell_activity;
-    return $multicell_regulatory_activity;
-  }
+#   if ($epigenome->_is_multicell) {
+#     die('Todo');
+#     my $multicell_regulatory_activity = $self->_fake_multicell_activity;
+#     return $multicell_regulatory_activity;
+#   }
 
-  my $feature_set_id = $feature_set->dbID;
-  my @regulatory_activity = grep { $_->feature_set_id == $feature_set_id } @{$self->regulatory_activity};
+  my $epigenome_id = $epigenome->dbID;
+  my @regulatory_activity = grep { 
+    !$_->_is_multicell 
+    && $_->epigenome_id == $epigenome_id 
+  } @{$self->regulatory_activity};
   
   if (! @regulatory_activity) {
     throw();
@@ -262,17 +271,17 @@ sub _regulatory_activity_for_feature_set {
 
 sub get_underlying_structure {
   my $self = shift;
-  my $feature_set = shift;
-  $self->_assert_feature_set_ok($feature_set);
+  my $epigenome = shift;
+  $self->_assert_epigenome_ok($epigenome);
   
-  my $regulatory_activity = $self->_regulatory_activity_for_feature_set($feature_set);
+  my $regulatory_activity = $self->_regulatory_activity_for_epigenome($epigenome);
   
-  my $feature_set_specific_underlying_structure = $regulatory_activity->get_underlying_structure();
+  my $epigenome_specific_underlying_structure = $regulatory_activity->get_underlying_structure();
 
   my $underlying_structure = [
     0 + $self->bound_start, 
     0 + $self->start,
-    @$feature_set_specific_underlying_structure,
+    @$epigenome_specific_underlying_structure,
     0 + $self->end, 
     0 + $self->bound_end
   ];
@@ -291,10 +300,10 @@ sub get_underlying_structure {
 sub regulatory_activity {
 
   my $self = shift;
-  my $linked_feature_sets = shift;
+  my $linked_epigenomes = shift;
 
-  if($linked_feature_sets) {
-    $self->{_regulatory_activity} = $linked_feature_sets;
+  if($linked_epigenomes) {
+    $self->{_regulatory_activity} = $linked_epigenomes;
   }
   return $self->{_regulatory_activity};
 }
@@ -310,22 +319,22 @@ sub add_regulatory_activity {
 sub has_activity_in {
 
   my $self = shift;
-  my $feature_set = shift;
+  my $epigenome = shift;
   
-#   if ($feature_set eq 'MultiCell') {
+#   if ($epigenome eq 'MultiCell') {
 #     use Carp; confess();
 #     return 1;
 #   }
   
   foreach my $current_regulatory_activity (@{$self->regulatory_activity}) {
-    if ($current_regulatory_activity->feature_set_id == $feature_set->dbID) {
+    if ($current_regulatory_activity->epigenome_id == $epigenome->dbID) {
       return 1;
     }
   }
   return;
 }
 
-sub has_feature_sets_with_activity {
+sub has_epigenomes_with_activity {
 
   my $self = shift;
   my $activity = shift;
@@ -338,7 +347,7 @@ sub has_feature_sets_with_activity {
   return;
 }
 
-=head2 get_feature_sets_by_activity
+=head2 get_epigenomes_by_activity
 
   Arg [1]     : Activity
   Returntype  : 
@@ -347,7 +356,7 @@ sub has_feature_sets_with_activity {
 
 =cut
 
-sub get_feature_sets_by_activity {
+sub get_epigenomes_by_activity {
 
   my $self     = shift;
   my $activity = shift;
@@ -359,15 +368,15 @@ sub get_feature_sets_by_activity {
     );
   }
   
-  my @feature_set_dbID_list = map { 
-    $_->feature_set_id 
+  my @epigenome_dbID_list = map { 
+    $_->epigenome_id 
   } grep { 
     $_->activity eq $activity 
   } @{$self->regulatory_activity};
   
-  my $feature_set_adaptor = $self->adaptor->db->get_FeatureSetAdaptor;
+  my $epigenome_adaptor = $self->adaptor->db->get_FeatureSetAdaptor;
   
-  return $feature_set_adaptor->fetch_all_by_dbID_list(\@feature_set_dbID_list);
+  return $epigenome_adaptor->fetch_all_by_dbID_list(\@epigenome_dbID_list);
 }
 
 =head2 epigenome_count
@@ -581,15 +590,15 @@ sub get_nonfocus_attributes { deprecate('"get_nonfocus_attributes" is deprecated
 sub activity {
   throw(
     "activity is no longer supported for regulatory features. You can use "
-    . "get_feature_sets_by_activity('ACTIVE') to find feature sets in which "
+    . "get_epigenomes_by_activity('ACTIVE') to find feature sets in which "
     . "this regulatory feature are active."
   );
 }
 
-sub feature_set {
+sub epigenome {
   throw(
-    "feature_set is no longer supported for regulatory features. You can use "
-    . "get_feature_sets_by_activity('ACTIVE') to find feature sets in which "
+    "epigenome is no longer supported for regulatory features. You can use "
+    . "get_epigenomes_by_activity('ACTIVE') to find feature sets in which "
     . "this regulatory feature are active."
   );
 }

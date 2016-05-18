@@ -47,7 +47,7 @@ Bio::EnsEMBL::DBSQL::Funcgen::RegulatoryFeatureAdaptor
  my @features = @{$regfeat_adaptor->fetch_all_by_Slice($slice)};
  
  #Fetch epigenome specific RegulatoryFeatures
- my @epigenome_features = @{$regfeat_adaptor->fetch_all_by_Slice_FeatureSets($slice, [$epigenome_fset1, $epigenome_fset2])};
+ my @epigenome_features = @{$regfeat_adaptor->fetch_all_by_Slice_Epigenomes($slice, [$epigenome_fset1, $epigenome_fset2])};
  
  #Fetch all epigenome RegulatoryFeatures for a given stable ID
  my @epigenome_features = @{$regfeat_adaptor->fetch_all_by_stable_ID('ENSR00001348194')};
@@ -118,10 +118,10 @@ sub fetch_by_stable_id {
 
 sub _true_tables {
   return (
-    [ 'regulatory_feature',             'rf'  ],
-    [ 'regulatory_feature_feature_set', 'rfs' ],
-    [ 'feature_set',                    'fs'  ],
-    [ 'regulatory_evidence',           'ra'  ],
+    [ 'regulatory_feature',  'rf'  ],
+    [ 'regulatory_activity', 'rfs' ],
+    [ 'regulatory_build',    'rb'  ],
+    [ 'regulatory_evidence', 'ra'  ],
   );
 }
 
@@ -150,13 +150,14 @@ sub _columns {
     rf.bound_start_length
     rf.bound_end_length
     rf.feature_type_id
-    rfs.feature_set_id
+    rfs.epigenome_id
     rf.stable_id
     rfs.activity
     rf.epigenome_count
     ra.attribute_feature_id
     ra.attribute_feature_table
-    rfs.regulatory_feature_feature_set_id
+    rfs.regulatory_activity_id
+    rb.analysis_id
   );
 }
 
@@ -176,7 +177,10 @@ sub _columns {
 
 sub _left_join {
   #return (['regulatory_evidence', 'rf.regulatory_feature_id = ra.regulatory_feature_id']);
-  return (['regulatory_evidence', 'rfs.regulatory_feature_feature_set_id = ra.regulatory_feature_feature_set_id']);
+  return (
+    ['regulatory_evidence', 'rfs.regulatory_activity_id = ra.regulatory_activity_id'],
+    ['regulatory_build',    'rf.regulatory_build_id = rb.regulatory_build_id']
+  );
 }
 
 sub _fake_multicell_activity {
@@ -186,7 +190,8 @@ sub _fake_multicell_activity {
 
   my $multicell_regulatory_activity = Bio::EnsEMBL::Funcgen::RegulatoryActivity->new;
   $multicell_regulatory_activity->activity('ACTIVE');
-  $multicell_regulatory_activity->feature_set_id('MultiCell');
+  $multicell_regulatory_activity->epigenome_id(undef);
+  $multicell_regulatory_activity->_is_multicell(1);
 
   my $multicell_regulatory_evidence = Bio::EnsEMBL::Funcgen::RegulatoryEvidence->new;
   $multicell_regulatory_evidence->db($self->db);
@@ -234,7 +239,8 @@ sub _objs_from_sth {
   #Some of this in now probably overkill as we'll always be using the DNADB as the slice DB
   #Hence it should always be on the same coord system
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
-  my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
+#   my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
+  my $analysis_adaptor = $self->db->get_AnalysisAdaptor();
   my (@feature_from_sth, $seq_region_id);
   my (%fset_hash, %slice_hash, %sr_name_hash, %sr_cs_hash, %ftype_hash);
 
@@ -247,14 +253,15 @@ sub _objs_from_sth {
     $sth_fetched_bound_start_length,
     $sth_fetched_bound_end_length,
     $sth_fetched_feature_type_id,
-    $sth_fetched_feature_set_id,
+    $sth_fetched_epigenome_id,
     $sth_fetched_stable_id,
     $sth_fetched_attr_id,
     $sth_fetched_attr_type,
     $sth_fetched_bin_string,
     $sth_fetched_activity,
     $sth_fetched_epigenome_count,
-    $sth_fetched_regulatory_feature_feature_set_id
+    $sth_fetched_regulatory_feature_epigenome_id,
+    $sth_fetched_analysis_id
   );
 
   $sth->bind_columns (
@@ -266,13 +273,14 @@ sub _objs_from_sth {
     \$sth_fetched_bound_start_length,
     \$sth_fetched_bound_end_length,
     \$sth_fetched_feature_type_id,
-    \$sth_fetched_feature_set_id,
+    \$sth_fetched_epigenome_id,
     \$sth_fetched_stable_id,
     \$sth_fetched_activity,
     \$sth_fetched_epigenome_count,
     \$sth_fetched_attr_id,
     \$sth_fetched_attr_type,
-    \$sth_fetched_regulatory_feature_feature_set_id
+    \$sth_fetched_regulatory_feature_epigenome_id,
+    \$sth_fetched_analysis_id
   );
 
   my ($dest_slice_start, $dest_slice_end);
@@ -318,8 +326,8 @@ sub _objs_from_sth {
   my $add_components_to_regulatory_feature_under_construction = sub {
 
     my @flattened_regulatory_features;
-    foreach my $current_feature_set_id (keys %$unique_set_of_regulatory_activities) {
-      push @flattened_regulatory_features, $unique_set_of_regulatory_activities->{$current_feature_set_id};
+    foreach my $current_epigenome_id (keys %$unique_set_of_regulatory_activities) {
+      push @flattened_regulatory_features, $unique_set_of_regulatory_activities->{$current_epigenome_id};
     }
     $regulatory_feature_under_construction->regulatory_activity(\@flattened_regulatory_features);
     
@@ -412,8 +420,10 @@ sub _objs_from_sth {
 	    "The region you are using is not present in the current dna DB";
 	  next;
 	}
+    
+	my $analysis = $analysis_adaptor->fetch_by_dbID($sth_fetched_analysis_id);
 
-	$fset_hash{$sth_fetched_feature_set_id}   = $fset_adaptor->fetch_by_dbID($sth_fetched_feature_set_id)  if ! exists $fset_hash{$sth_fetched_feature_set_id};
+# 	$fset_hash{$sth_fetched_epigenome_id}   = $fset_adaptor->fetch_by_dbID($sth_fetched_epigenome_id)  if ! exists $fset_hash{$sth_fetched_epigenome_id};
 	$ftype_hash{$sth_fetched_feature_type_id} = $ft_adaptor  ->fetch_by_dbID($sth_fetched_feature_type_id) if ! exists $ftype_hash{$sth_fetched_feature_type_id};
 	
 	# Get the slice object
@@ -441,10 +451,10 @@ sub _objs_from_sth {
 	    '_bound_lengths' => [$sth_fetched_bound_start_length, $sth_fetched_bound_end_length],
 	    'strand'         => $sth_fetched_seq_region_strand,
 	    'slice'          => $slice,
-	    'analysis'       => $fset_hash{$sth_fetched_feature_set_id}->analysis(),
+	    'analysis'       => $analysis,
 	    'adaptor'        => $self,
 	    'dbID'           => $sth_fetched_dbID,
-	    'set'            => $fset_hash{$sth_fetched_feature_set_id},
+# 	    'set'            => $fset_hash{$sth_fetched_epigenome_id},
 	    'feature_type'   => $ftype_hash{$sth_fetched_feature_type_id},
 	    'stable_id'      => $sth_fetched_stable_id,
 	    'epigenome_count'=> $sth_fetched_epigenome_count,
@@ -454,20 +464,20 @@ sub _objs_from_sth {
     # Make sure there is a Bio::EnsEMBL::Funcgen::RegulatoryActivity component
     # to hold the activity and attributes.
     #
-    if (! exists $unique_set_of_regulatory_activities->{$sth_fetched_feature_set_id}) {
+    if (! exists $unique_set_of_regulatory_activities->{$sth_fetched_epigenome_id}) {
     
       use Bio::EnsEMBL::Funcgen::RegulatoryActivity;
       my $regulatory_activity = Bio::EnsEMBL::Funcgen::RegulatoryActivity->new();
       $regulatory_activity->db($self->db);
       
-      $unique_set_of_regulatory_activities->{$sth_fetched_feature_set_id} = $regulatory_activity;
+      $unique_set_of_regulatory_activities->{$sth_fetched_epigenome_id} = $regulatory_activity;
     }
 
     # Handle regulatory evidence from the regulatory_evidence table
     #
     if (defined $sth_fetched_attr_id  && ! $current_feature_not_on_destination_slice) {
 
-      my $regulatory_activity = $unique_set_of_regulatory_activities->{$sth_fetched_feature_set_id};
+      my $regulatory_activity = $unique_set_of_regulatory_activities->{$sth_fetched_epigenome_id};
       my $regulatory_evidence = $regulatory_activity->regulatory_evidence;
       
       if ($sth_fetched_attr_type eq 'annotated') {
@@ -481,14 +491,14 @@ sub _objs_from_sth {
     # Handle regulatory activity from the regulatory_feature_feature_set table
     #
     if (
-      ! exists $seen_linked_regulatory_activity{$sth_fetched_regulatory_feature_feature_set_id}
+      ! exists $seen_linked_regulatory_activity{$sth_fetched_regulatory_feature_epigenome_id}
       && ! $current_feature_not_on_destination_slice
     ) {
-      $seen_linked_regulatory_activity{$sth_fetched_regulatory_feature_feature_set_id} = 1;
+      $seen_linked_regulatory_activity{$sth_fetched_regulatory_feature_epigenome_id} = 1;
 
-      my $regulatory_activity = $unique_set_of_regulatory_activities->{$sth_fetched_feature_set_id};
+      my $regulatory_activity = $unique_set_of_regulatory_activities->{$sth_fetched_epigenome_id};
 
-      $regulatory_activity->feature_set_id($sth_fetched_feature_set_id);
+      $regulatory_activity->epigenome_id($sth_fetched_epigenome_id);
       $regulatory_activity->activity($sth_fetched_activity);
     }
   }
@@ -557,10 +567,10 @@ sub store {
     ) VALUES (?, ?, ?)"
   );
   
-  my $sth_regulatory_feature_feature_set = $self->prepare("
-    INSERT INTO regulatory_feature_feature_set (
+  my $sth_regulatory_activity = $self->prepare("
+    INSERT INTO regulatory_activity (
       regulatory_feature_id,
-      feature_set_id,
+      epigenome_id,
       activity
     ) VALUES (?,?,?);
   ");
@@ -640,15 +650,39 @@ sub store {
       throw('Regulatory activity must be an array.');
     }
     
+    use Data::Dumper;
+    if (! defined $current_regulatory_feature->dbID) {
+      throw(
+	"Error storing the regulatory feature: "
+	. Dumper($current_regulatory_feature)
+      );
+    }
+    
     # Store the activities of the current regulatory feature in the various feature sets.
     #
+    REGULATORY_ACTIVITY:
     foreach my $current_regulatory_activity (@{$current_regulatory_feature->regulatory_activity}) {
 
-      $sth_regulatory_feature_feature_set->bind_param(1,  $current_regulatory_feature->dbID,            SQL_INTEGER);
-      $sth_regulatory_feature_feature_set->bind_param(2,  $current_regulatory_activity->feature_set_id, SQL_INTEGER);
-      $sth_regulatory_feature_feature_set->bind_param(3,  $current_regulatory_activity->activity);
+      next REGULATORY_ACTIVITY if ($current_regulatory_activity->_is_multicell);
 
-      $sth_regulatory_feature_feature_set->execute();
+      $sth_regulatory_activity->bind_param(1,  $current_regulatory_feature->dbID,          SQL_INTEGER);
+      $sth_regulatory_activity->bind_param(2,  $current_regulatory_activity->epigenome_id, SQL_INTEGER);
+      $sth_regulatory_activity->bind_param(3,  $current_regulatory_activity->activity);
+
+      eval {
+	$sth_regulatory_activity->execute();
+      };
+      if ($@) {
+	use Carp;
+	confess(
+	  Dumper({
+	    error => $@,
+	    regulatory_activity => $current_regulatory_activity,
+	    regulatory_feature => $current_regulatory_feature,
+	  })
+	);
+      }
+      
       
       # Store the regulatory_evidence
       #
@@ -708,25 +742,29 @@ sub fetch_all_by_Slice {
   my $feature_set  = shift;
   
   if (defined $feature_set) {
-    return $self->fetch_all_by_Slice_FeatureSets($slice, [$feature_set]);
+    return $self->fetch_all_by_Slice_Epigenomes($slice, [$feature_set]);
   }
   
-  return $self->fetch_all_by_Slice_FeatureSets($slice);
+  return $self->fetch_all_by_Slice_Epigenomes($slice);
 }
 
-=head2 fetch_all_by_Slice_FeatureSets
+sub fetch_all_by_Slice_FeatureSets {
+  die("Regulatory features are no longer linked ot feature sets. Use fetch_all_by_Slice_Epigenomes instead.");
+}
+
+=head2 fetch_all_by_Slice_Epigenomes
 
   Arg [1]    : Bio::EnsEMBL::Slice
   Arg [2]    : Arrayref of Bio::EnsEMBL::FeatureSet objects
   Arg [3]    : optional HASHREF - params:
                    {
-                    unique            => 0|1, #Get RegulatoryFeatures unique to these FeatureSets
+                    unique            => 0|1, #Get RegulatoryFeatures unique to these Epigenomes
                     include_projected => 0|1, #Consider projected features
                    }
   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $ofa->fetch_all_by_Slice_FeatureSets($slice, \@fsets);
+               my $features = $ofa->fetch_all_by_Slice_Epigenomes($slice, \@fsets);
   Description: Simple wrapper to set unique flag.
-               Retrieves a list of features on a given slice, specific for a given list of FeatureSets.
+               Retrieves a list of features on a given slice, specific for a given list of Epigenomes.
   Returntype : Listref of Bio::EnsEMBL::RegulatoryFeature objects
   Exceptions : Throws if params hash is not valid or keys are not recognised
   Caller     : General
@@ -741,14 +779,14 @@ sub fetch_all_by_Slice {
 #
 # There are two calls and neither uses the $params_hash parameter.
 #
-sub fetch_all_by_Slice_FeatureSets {
+sub fetch_all_by_Slice_Epigenomes {
   my ($self, $slice, $fsets) = @_;
-  return $self->fetch_all_by_Slice_FeatureSets_Activity($slice, $fsets, undef);
+  return $self->fetch_all_by_Slice_Epigenomes_Activity($slice, $fsets, undef);
 }
 
 sub fetch_all_by_Slice_Activity {
   my ($self, $slice, $activity) = @_;
-  return $self->fetch_all_by_Slice_FeatureSets_Activity($slice, undef, $activity);
+  return $self->fetch_all_by_Slice_Epigenomes_Activity($slice, undef, $activity);
 }
 
 sub valid_activities {
@@ -783,8 +821,8 @@ sub _make_arrayref_if_not_arrayref {
 }
 
 
-sub fetch_all_by_Slice_FeatureSets_Activity {
-  my ($self, $slice, $requested_feature_sets, $requested_activity) = @_;
+sub fetch_all_by_Slice_Epigenomes_Activity {
+  my ($self, $slice, $requested_epigenomes, $requested_activity) = @_;
   
   if (defined $requested_activity) {
     if (! $self->is_valid_activity($requested_activity)) {
@@ -797,15 +835,15 @@ sub fetch_all_by_Slice_FeatureSets_Activity {
   #explicit super call, just in case we ever re-implement in here
   my $all_regulatory_features = $self->SUPER::fetch_all_by_Slice($slice);
   
-  if (defined $requested_feature_sets) {
+  if (defined $requested_epigenomes) {
   
-    $requested_feature_sets = _make_arrayref_if_not_arrayref($requested_feature_sets);
+    $requested_epigenomes = _make_arrayref_if_not_arrayref($requested_epigenomes);
 
     my $filtered_regulatory_features;
     
     REGULATORY_FEATURE: foreach my $current_regulatory_feature (@$all_regulatory_features) {
-      foreach my $current_feature_set (@$requested_feature_sets) {
-	if ($current_regulatory_feature->has_activity_in($current_feature_set)) {
+      foreach my $current_epigenome (@$requested_epigenomes) {
+	if ($current_regulatory_feature->has_activity_in($current_epigenome)) {
 	  push @$filtered_regulatory_features, $current_regulatory_feature;
 	  next REGULATORY_FEATURE;
 	}
@@ -819,7 +857,7 @@ sub fetch_all_by_Slice_FeatureSets_Activity {
     my $filtered_regulatory_features;
     
     REGULATORY_FEATURE: foreach my $current_regulatory_feature (@$all_regulatory_features) {
-      if ($current_regulatory_feature->has_feature_sets_with_activity($requested_activity)) {
+      if ($current_regulatory_feature->has_epigenomes_with_activity($requested_activity)) {
 	push @$filtered_regulatory_features, $current_regulatory_feature;
 	next REGULATORY_FEATURE;
       }
@@ -830,7 +868,8 @@ sub fetch_all_by_Slice_FeatureSets_Activity {
 }
 
 sub _default_where_clause {
-  return 'rfs.feature_set_id = fs.feature_set_id and rfs.regulatory_feature_id = rf.regulatory_feature_id';
+#   return 'rfs.feature_set_id = fs.feature_set_id and rfs.regulatory_feature_id = rf.regulatory_feature_id';
+  return 'rfs.regulatory_feature_id = rf.regulatory_feature_id';
 }
 
 =head2 fetch_all_by_stable_ID
@@ -858,7 +897,7 @@ sub fetch_all_by_stable_ID {
 
   Arg [1]    : Bio::Ensembl::Funcgen::AnnotatedFeature or MotifFeature
   Example    : my @regfs = @{$regf_adaptor->fetch_all_by_attribute_feature($motif_feature)};
-  Description: Retrieves a list of RegulatoryFeatures which contain the givven attribute feature.
+  Description: Retrieves a list of RegulatoryFeatures which contain the given attribute feature.
   Returntype : Listref of Bio::EnsEMBL::RegulatoryFeature objects
   Exceptions : Throws is argument not valid
   Caller     : General
@@ -870,7 +909,10 @@ sub fetch_all_by_attribute_feature {
   my ($self, $attr_feat) = @_;
 
   my $attr_class = ref($attr_feat);
-
+  
+#   use Carp;
+#   confess("This is never used.");
+# 
   if(! exists $valid_attribute_features{$attr_class}) {
     throw("Attribute feature must be one of:\n\t".join("\n\t", keys(%valid_attribute_features)));
   }
@@ -880,7 +922,7 @@ sub fetch_all_by_attribute_feature {
 
   my $rf_ids = $self->db->dbc->db_handle->selectall_arrayref(
     "select regulatory_feature_id "
-    . "from regulatory_evidence join regulatory_feature_feature_set using (regulatory_feature_feature_set_id) "
+    . "from regulatory_evidence join regulatory_activity using (regulatory_activity_id) "
     . "where attribute_feature_table='${attr_feat_table}' and attribute_feature_id=".$attr_feat->dbID
   );
   
