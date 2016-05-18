@@ -13,7 +13,7 @@
 -- limitations under the License.
 
 /**
-@header patch_84_85_r.sql - Remove regulatory build entries from feature_set table, relink everything else.
+@header patch_84_85_u.sql - Remove regulatory build entries from feature_set table, relink everything else.
 @desc Remove regulatory build entries from feature_set table, relink everything else.
 */
 
@@ -30,11 +30,16 @@ alter table regulatory_feature_feature_set drop column feature_set_id;
 
 rename table regulatory_feature_feature_set to regulatory_activity;
 
+alter table regulatory_activity change regulatory_feature_feature_set_id regulatory_activity_id int(10) unsigned not null auto_increment;
+alter table regulatory_evidence change regulatory_feature_feature_set_id regulatory_activity_id int(10) unsigned not null;
+
 drop table if exists regulatory_build;
 create table regulatory_build (
   regulatory_build_id int(4) unsigned not null auto_increment,
   name varchar(45)           not null,
-  version                    varchar(255) DEFAULT NULL,
+  version                    varchar(50) DEFAULT NULL,
+  initial_release_date       varchar(50) DEFAULT NULL,
+  last_annotation_update     varchar(50) DEFAULT NULL,
   feature_type_id int(4)     unsigned not null,
   analysis_id int(4)         unsigned not null,
   is_current                 boolean not null default 0,
