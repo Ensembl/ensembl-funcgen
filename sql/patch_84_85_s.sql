@@ -17,7 +17,7 @@
 @desc   Remove enum values from 'table_name' column that are of no use
 */
 
-ALTER TABLE result_set_input MODIFY 'table_name' enum('input_subset') DEFAULT NULL;
+ALTER TABLE result_set_input MODIFY table_name enum('input_subset') DEFAULT NULL;
 
 -- patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_s.sql|modify table_name column in result_set_input table');
