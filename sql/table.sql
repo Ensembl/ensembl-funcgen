@@ -76,10 +76,10 @@ CREATE TABLE regulatory_feature (
   bound_end_length mediumint(3) unsigned NOT NULL,
   epigenome_count smallint(6),
   PRIMARY KEY  (regulatory_feature_id),
-  
-  -- The name "uniqueness_constraint_idx" is used in the 
+
+  -- The name "uniqueness_constraint_idx" is used in the
   -- RegulatoryFeatureAdaptor to catch issues regarding its violation.
-  -- Changing the name means having to update it in the 
+  -- Changing the name means having to update it in the
   -- RegulatoryFeatureAdaptor as well.
   --
   UNIQUE KEY uniqueness_constraint_idx (feature_type_id,  seq_region_id, seq_region_strand, seq_region_start, seq_region_end, stable_id, bound_start_length, bound_end_length),
@@ -616,7 +616,7 @@ CREATE TABLE `feature_set` (
 /**
 @table  result_set
 
-@desc   Think of this as an alignment or a summary of an alignment in form of a wiggleplot in bigWig format. The query used to generate the alignment is found by linking from this table over result_set_input to the input_subset table. The entry in input_subset represents the fastq file that was aligned. The reference to which it was aligned is based on the sequence of the species of the regulation database. It may be gender specific depending on the use case, so the query may have been aligned to the male or the female version of the genome depending on the details of the analysis. 
+@desc   Think of this as an alignment or a summary of an alignment in form of a wiggleplot in bigWig format. The query used to generate the alignment is found by linking from this table over result_set_input to the input_subset table. The entry in input_subset represents the fastq file that was aligned. The reference to which it was aligned is based on the sequence of the species of the regulation database. It may be gender specific depending on the use case, so the query may have been aligned to the male or the female version of the genome depending on the details of the analysis.
 
 Note that although the schema has objects to represent alignments, we don't store the actual alignments in the database. We only store summaries of the alignments as wiggleplots. If a result_set represents a wiggleplot, the location of the file can be found by the entry in the dbfile_registry pointing to it.
 
@@ -1282,84 +1282,6 @@ CREATE TABLE `status_name` (
 
 
 
--- Remove these to separate file and handle with import_type.pl?
-INSERT INTO status_name(name) VALUES ('ALIGNED');
-INSERT INTO status_name(name) VALUES ('ALIGNED_CONTROL');
-INSERT INTO status_name(name) VALUES ('DAS_DISPLAYABLE');
-INSERT INTO status_name(name) VALUES ('DISPLAYABLE');
-INSERT INTO status_name(name) VALUES ('DOWNLOADED');
-INSERT INTO status_name(name) VALUES ('IMPORTED');
-INSERT INTO status_name(name) VALUES ('IMPORTED_NCBI36');
-INSERT INTO status_name(name) VALUES ('IMPORTED_GRCh37');
-INSERT INTO status_name(name) VALUES ('IMPORTED_GRCh38');
-INSERT INTO status_name(name) VALUES ('IS_CONTROL');
-INSERT INTO status_name(name) VALUES ('IS_CURRENT');
-INSERT INTO status_name(name) VALUES ('LOESS');
-INSERT INTO status_name(name) VALUES ('MART_DISPLAYABLE');
-INSERT INTO status_name(name) VALUES ('Parzen');
-INSERT INTO status_name(name) VALUES ('RESOLVED');
-INSERT INTO status_name(name) VALUES ('RESULT_FEATURE_SET');
-INSERT INTO status_name(name) VALUES ('VSN_GLOG');
--- need to add more states, probably need to validate/insert required states in Importer
--- would need to get CoordSys objects and set IMPORTED_CS_"cs_id" for relevant data_version
-
-
-/**
-@table  regbuild_string
-@desc   Simple table to contain long id strings related to the regulatory build
-
-This is used for displaying regulatory data on the website.
-
-The website has menus for configuring which feature types can be selected for a given cell type. 
-
-Regbuild strings configure the following properties of the regulatory build:
-
-Feature types, sets and focus features
---------------------------------------
-
-The regbuild string tells the webcode which of these are available for any cell type in the current regulatory build.
-
-The name is a microformat, composed as follows:
-
-regbuild. <cell type name>.<feature type ids|feature set ids|focus feature ids>
-
-
-Available cell types
---------------------
-
-<Todo>
-
-segmentation.feature_type_ids
-------------------------------
-
-<Todo>
-
-@colour  #808000
-
-@column regbuild_string_id  Internal ID
-@column name                Name of the string e.g. regbuild.GM12878.feature_type_ids
-@column species_id          Indentifies the species for multi-species databases.
-@column string              Comma separated list of internal IDs
-
-*/
-
-DROP TABLE IF EXISTS regbuild_string;
-CREATE TABLE `regbuild_string` (
-  `regbuild_string_id` int(10) NOT NULL auto_increment,
-  `name` varchar(150) NOT NULL,
-  `species_id` smallint(5) unsigned NOT NULL default '1',
-  `string` text NOT NULL,
-  PRIMARY KEY  (`regbuild_string_id`),
-  UNIQUE KEY `name_species_idx` (`species_id`, `name`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
--- This table is queried directly by the web code to define the regulation config
--- Web must be consulted about impact if any changes are made
--- i.e. Must maintain regbuild.MultiCell.focus_feature_set_ids
--- even tho this is redundant wrt to feature_set_ids?
-
-
-
 /**
 
 @header  Core tables
@@ -1743,7 +1665,7 @@ CREATE TABLE xref (
    info_type                  ENUM( 'NONE', 'PROJECTION', 'MISC', 'DEPENDENT',
                                     'DIRECT', 'SEQUENCE_MATCH',
                                     'INFERRED_PAIR', 'PROBE',
-                                    'UNMAPPED', 'COORDINATE_OVERLAP', 
+                                    'UNMAPPED', 'COORDINATE_OVERLAP',
                                     'CHECKSUM' ) DEFAULT 'NONE' NOT NULL,
    info_text                  VARCHAR(255) DEFAULT '' NOT NULL,
 
