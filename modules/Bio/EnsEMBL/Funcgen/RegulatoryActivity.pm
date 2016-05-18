@@ -55,16 +55,28 @@ sub db {
   return $self->{'_db'};
 }
 
-=head2 feature_set_id
+=head2 epigenome_id
 =cut
-sub feature_set_id {
+sub epigenome_id {
   my $self = shift;
-  my $feature_set_id = shift;
+  my $epigenome_id = shift;
 
-  if(defined $feature_set_id) {
-    $self->{'_feature_set_id'}  = $feature_set_id;
+  if(defined $epigenome_id) {
+    $self->{'_epigenome_id'}  = $epigenome_id;
   }
-  return $self->{'_feature_set_id'};
+  return $self->{'_epigenome_id'};
+}
+
+=head2 _is_multicell
+=cut
+sub _is_multicell {
+  my $self = shift;
+  my $is_multicell = shift;
+
+  if(defined $is_multicell) {
+    $self->{'_is_multicell'}  = $is_multicell;
+  }
+  return $self->{'_is_multicell'};
 }
 
 =head2 activity

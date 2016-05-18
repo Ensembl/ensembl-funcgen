@@ -668,7 +668,7 @@ sub fetch_metadata {
       # It's a histone, ignore
       next;
     }
-    my $cell = $featureSet->cell_type->name;
+    my $cell = $featureSet->epigenome->name;
     record_peak_file($options, $tf, $cell, dump_peaks($options, $featureSet, $tf, $cell, \@slices));
     # close $fh;
   }
