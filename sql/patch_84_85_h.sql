@@ -21,8 +21,10 @@ alter table dbfile_registry add column file_type ENUM('BAM','BAMCOV','BIGBED','B
 alter table dbfile_registry drop primary key, add primary key(table_id, table_name, file_type);
 alter table dbfile_registry add column md5sum varchar(45) default null;
 
--- We currently only have bigwig in there.
-update dbfile_registry set file_type='BIGWIG';
+-- Some file names have trailing whitespaces, hence using RTRIM
+update dbfile_registry set file_type='BIGWIG' where distinct RIGHT(RTRIM(path),3) = ".bw";
+update dbfile_registry set file_type='BIGBED' where distinct RIGHT(RTRIM(path),3) = ".bb";
+
 
 -- patch identifier
 insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_h.sql|Store file types along with the files.');
