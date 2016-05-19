@@ -60,10 +60,10 @@ insert into regulatory_build (
   "Regulatory features" 
 from feature_set where type = "regulatory" group by "feature_type_id, analysis_id";
 
-delete from feature_set where type = "regulatory";
-
 alter table regulatory_feature add column regulatory_build_id int(10) unsigned default null;
+
+delete from feature_set where type = "regulatory";
 
 update regulatory_feature, regulatory_build set regulatory_feature.regulatory_build_id = regulatory_build.regulatory_build_id;
 
-insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_r.sql|Remove regulatory build entries from feature_set table, relink everything else.');
+insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_u.sql|Remove regulatory build entries from feature_set table, relink everything else.');
