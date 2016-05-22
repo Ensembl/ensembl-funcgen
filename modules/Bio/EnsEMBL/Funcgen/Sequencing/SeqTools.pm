@@ -1318,8 +1318,13 @@ sub _init_peak_caller{
     assert_ref($params, 'ARRAY', 'PeakCaller params');
     
     @params_array = @$params;
+    
     $peak_module = validate_package_path($peak_pkg);
   }
+  
+#     use Data::Dumper;
+#     print Dumper(\@params_array);
+#     die;
   
   return $peak_module->new(@params_array);
 }
@@ -1522,101 +1527,52 @@ sub pre_process_IDR{
   return (\@np_bed_files, $idr_threshold, $x_thresh_adjust);
 }
 
+sub run_IDR {
+  my ($out_dir, $output_prefix, $threshold, $bed_files, $batch_name) =
+    rearrange([ qw(out_dir output_prefix threshold bed_files batch_name ) ], @_);
 
-
-sub run_IDR{
-  my ($out_dir, $output_prefix, $threshold, $bed_files, $batch_name, $bam_files) =
-    rearrange([ qw(out_dir output_prefix threshold bed_files batch_name bam_files) ], @_);
-  #add max_npairs, this may have to be a denominator of scalar(@$idr_comparison_files)?
   defined $out_dir       or throw('Must provide an out_dir argument');
   defined $output_prefix or throw('Must provide an output_prefix argument');
   defined $threshold     or throw('Must provide an IDR threshold to count peaks');
   assert_ref($bed_files, 'ARRAY', 'bed_files');
   defined $batch_name    or throw('Must provide a batch name to log counts to idr-stats file');
-  assert_ref($bam_files, 'ARRAY', 'bam_files') if defined $bam_files;
 
-  #use a default for this? Currently defined in Preprocess_IDR
-
-  #Check we have different files
-  #This is not sensible as we will need to run self consistency IDR?
-
-  if($bed_files->[0] eq $bed_files->[1]){
-    throw("Pre-IDR peak files are identical:\t".join(' ', @$bed_files));
-  }
-
-  #Check we have 2 reps
-  if(scalar (@$bed_files) != 2){
+  # Check we have 2 reps
+  if(scalar (@$bed_files) != 2) {
     throw("run_IDR expect 2 replicate bed files:\t".join(' ', @$bed_files));
   }
 
-  #Check output dir exists
-  if(! -d $out_dir){
+  if($bed_files->[0] eq $bed_files->[1]) {
+    throw("Pre-IDR peak files are identical:\t".join(' ', @$bed_files));
+  }
+
+  # Check output dir exists
+  if(! -d $out_dir) {
     throw("Output directory does not exist:\t$out_dir");
   }
 
-  #IDR analysis
-  #TODO install idrCode in /software/ensembl/funcgen and add this an analysis?
-  #my $idr_name = $self->idr_name;
-  my $script_path = which_path('batch-consistency-analysis.r');
-  my $cmd = "Rscript $script_path ".join(' ', @{$bed_files}).
-    " -1 ${out_dir}/${output_prefix} 0 F signal.value";
-  #signal.value is ranking measure here i.e. SWEmbl score
+  my $idr_output_file = "${out_dir}/${output_prefix}-overlapped-peaks.new_idr.txt";
+  
+  my $cmd = "idr --idr-threshold $threshold --output-file $idr_output_file --plot --use-old-output-format --samples " . join(' ', @{$bed_files});
+
+  print "Running:\n$cmd";
   run_system_cmd($cmd);
-
-  #Do this here rather than in post_process so we parallelise the awk.
-  $cmd = "awk '\$11 <= ".$threshold.
-    " {print \$0}' ${out_dir}/${output_prefix}-overlapped-peaks.txt | wc -l";
-  my $num_peaks = run_backtick_cmd($cmd);
-
-  #Now, do we write this as an accu entry in the hive DB, or do we want it
-  #in the tracking DB?
-  #Probably the later, such that we can drop/add reps to an IDR set after we have dropped the hive DB.
-  #There is currently no logic place to put this in the tracking DB!
-  #We would have to add a result_set_idr_stats table to handle the multiplicity
-  #This is probably a good place to store the other IDR stats too?
-  #Just write to file for now until we know if/what we want in the table.
-  #Do we need to be concerned if thresholds differ between combinations?
-
-  my $unaltered_num_peaks = $num_peaks;
-
-  #Temporary solution to handle differeing pre-IDR peak counts, which cross threshold boundaries
-  #Do we have access to the ResultSet here? No!
-
-  if($bam_files){
-    my @align_counts;
-
-    #- the number of peaks is strongly correlated (from the couple of examples we looked at)
-    # to the number of reads.
-    #- the IDR gives an estimate on the number of realistic peaks at the intersection of two files.
-    #- obviously this intersection is limited by the smaller file
-
-    #We have two files, one with N reads and the other with n < N reads.
-    #From their intersection we call p peaks that look good. However, if n were greater,
-    #p would also be greater. So how big should n be? At first blush, n should be each to the mean (N+n)/2.
-    #p*((N+n)/2)/n
-
-    foreach my $bam(@$bam_files){
-      #Unfiltered counts are already available in the flagstat output
-      #in the alignment report
-
-      #We always want to counts of the input(filtered) bam file
-      #so let's recount here for safety, even though we aren't filtering at present
-      my $cmd = "samtools view $bam | wc -l";
-      push @align_counts, run_backtick_cmd($cmd);
-    }
-
-    my ($smalln, $bigN) = sort { $a <=> $b } @align_counts;
-    $num_peaks *= ( ($bigN + $smalln) / 2 ) / $smalln;
+  
+  my $png_file = $idr_output_file . '.png';
+  if (! -e $png_file) {
+    throw("Can't find expected png file $png_file for the idr!");
   }
 
+  $cmd = "cat $idr_output_file | wc -l";
+  my $num_peaks = run_backtick_cmd($cmd);
 
   # Warning: Parallelised appending to file!
   # This will also cause duplicate lines if the RunIDR jobs are rerun!
-  $cmd = "echo -e \"IDR Comparison\tIDR Peaks\n$output_prefix\t$num_peaks($unaltered_num_peaks)\"".
+  $cmd = "echo -e \"IDR Comparison\tIDR Peaks\n$output_prefix\t$num_peaks\"".
     " >> ${out_dir}/${batch_name}-idr-stats.txt";
   run_system_cmd($cmd);
 
-  return $num_peaks;
+  return ($num_peaks, $png_file);
 }
 
 # TODO

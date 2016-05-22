@@ -32,10 +32,9 @@ sub pipeline_analyses {
       },
     },
     {
-     -logic_name    => 'WriteBigWig',
-     -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunWiggleTools',
-     -parameters    => { mode => 'RPKM' },
-     -rc_name => 'normal_30GB_2cpu',
+     -logic_name => 'WriteBigWig',
+     -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunWiggleTools',
+     -rc_name    => 'normal_30GB_2cpu',
     },
     {
       # Normal peaks

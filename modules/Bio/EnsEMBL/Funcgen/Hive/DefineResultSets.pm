@@ -31,14 +31,6 @@ sub fetch_input {   # fetch parameters...
 
   $self->get_param_method('alignment_analysis', 'required');
 
-  # Undef in analysis DefineResultSets
-  # 1 in DefineMergedReplicateResultSet
-  #
-  # This is how this module knows where it is in the ersa pipeline and 
-  # changes its behaviour accordingly.
-  #
-  my $merge_idr_replicates = $self->get_param_method('merge_idr_replicates', 'silent');
-
   return;
 }
 
@@ -131,6 +123,8 @@ sub run {
   my $control_input_subsets = [];
   
   my $alignment_analysis = $self->alignment_analysis;
+#   my $alignment_analysis = 'alignment_analysis';
+  
   my $alignment_analysis_object = &scalars_to_objects(
     $self->out_db, 'Analysis', 'fetch_by_logic_name', [$alignment_analysis]
   )->[0];
@@ -167,15 +161,13 @@ sub run {
     -EPIGENOME            => $control_experiment->epigenome,
     -FEATURE_TYPE         => $control_experiment->feature_type
   };
+  
   my $control_result_set = $helper->define_ResultSet(%$control_result_set_constructor_parameters);
 
 # ------------------------------------------------------------------------------
   
   my (%result_sets, %replicate_bam_files);
 
-  # merge_idr_replicates is undef in DefineResultSets analysis
-  #
-  my $merge_idr_replicates = $self->merge_idr_replicates;
   my $foo_bar = 'thisisdeprecatedandshouldntappearanywhereifitdoespleaseletmeknow';
   
   # Looks like this:
@@ -277,7 +269,6 @@ sub run {
 	$result_sets{$foo_bar}{merged} ||= [];
 	push @{$result_sets{$foo_bar}{merged}}, $result_set_constructor_parameters
       }
-
     }
   }
   
@@ -409,9 +400,6 @@ They are lazy loaded when the support is requested using the table_ids.
 
   $self->helper->debug(1, "Processing cached branch $foo_bar");
 
-  # Pick an arbitrary set for access to the controls 
-#   my ($any_group) = keys(%{$branch_sets{$foo_bar}});
-  
   # result_set_groups has all the information necessary for 
   # JobFactorySignalProcessing to create jobs for running the bwa 
   # analysis triplet on the signals.
@@ -425,8 +413,6 @@ They are lazy loaded when the support is requested using the table_ids.
 	%batch_params,
 	result_set_groups => $branch_sets{$foo_bar},
 	set_type  => 'ResultSet',
-# 	dbID      => $branch_sets{$foo_bar}{$any_group}{dbIDs}->[0],
-# 	set_name  => $branch_sets{$foo_bar}{$any_group}{set_names}->[0],
 	dbID      => $control_result_set->dbID,
 	set_name  => $control_result_set->name,
       }

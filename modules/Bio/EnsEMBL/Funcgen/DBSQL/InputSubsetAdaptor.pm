@@ -84,7 +84,7 @@ sub fetch_all_by_InputSet {
 
 =head2 fetch_all_by_Experiments
 
-  Arg [1]    : Arrayref of Bio::EnsEMBL::Funcgen::Experiment objects
+  Arg [1]    : One Bio::EnsEMBL::Funcgen::Experiment object or an arrayref of Bio::EnsEMBL::Funcgen::Experiment objects
   Example    : my @subsets = @{$iss_adaptopr->fetch_all_by_Experiments($exp_objs)};
   Description: Retrieves InputSubset objects from the database that belong to
                the given Experiments
@@ -94,12 +94,13 @@ sub fetch_all_by_InputSet {
   Status     : Stable
 
 =cut
-
 sub fetch_all_by_Experiments {
   my ($self, $exps) = @_;
-
-  my $params = {constraints => {experiments => $exps}};
-	return $self->generic_fetch($self->compose_constraint_query($params));
+  
+  use Bio::EnsEMBL::Utils::Scalar qw (wrap_array );
+  
+  my $params = {constraints => {experiments => wrap_array($exps)}};
+  return $self->generic_fetch($self->compose_constraint_query($params));
 }
 
 #experiment is only a 2nd order index (unique)key and analysis_id is not indexe at all
@@ -320,7 +321,7 @@ sub store{
             technical_replicate,
             analysis_id
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
     ");
 
 

@@ -88,6 +88,7 @@ sub pipeline_analyses {
 	      'idr_peak_counts' => '#idr_peak_counts#'
 	    },
 	  },
+# 	  2 => '?accu_name=idr_peak_counts&accu_address=[#idr_peak_counts#]'
       }
     },
     {
