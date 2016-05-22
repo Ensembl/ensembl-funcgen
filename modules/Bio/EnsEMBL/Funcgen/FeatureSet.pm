@@ -158,7 +158,7 @@ sub new {
   $self->{experiment}    = $exp     if defined $exp;
   $self->{description}   = $desc    if defined $desc;
   $self->{display_label} = $dlabel  if defined $dlabel;
- 
+
 
   return $self;
 }                               ## end sub new
@@ -356,30 +356,19 @@ sub is_focus_set{
 
 =head2 is_attribute_set
 
-  Args       : None
-  Example    : if($fset->is_attribute_set){ ... }
-  Description: Returns true if FeatureSet is a supporting/attribute(focus or not) set used in the RegulatoryBuild
-  Returntype : Boolean
-  Exceptions : Throws if meta entry not present
-  Caller     : General
-  Status     : At Risk
+  Args       :
+  Example    :
+  Description:
+  Returntype :
+  Exceptions :
+  Caller     :
+  Status     : Deprecated
 
 =cut
 
 sub is_attribute_set{
-  my $self = shift;
-
-  if (! defined $self->{attribute_set}) {
-
-    if (! defined $self->epigenome) {
-      warn "FeatureSet without an associated Epigenome cannot be a attribute set:\t".$self->name;
-      $self->{attribute_set} = 0;
-    } else {
-      $self->{attribute_set} = $self->adaptor->fetch_attribute_set_config_by_FeatureSet($self);
-    }
-  }
-
-  return $self->{attribute_set};
+   deprecate(
+    "Bio::EnsEMBL::Funcgen::FeatureSet::is_attribute_set has been deprecated and will be removed in Ensembl release 89.");
 }
 
 
@@ -448,18 +437,18 @@ sub reset_relational_attributes{
   assert_ref($analysis,     'Bio::EnsEMBL::Analysis',             'Analysis');
   assert_ref($feature_type, 'Bio::EnsEMBL::Funcgen::FeatureType', 'FeatureType');
 
-  if( $self->epigenome && 
+  if( $self->epigenome &&
       ! check_ref($epigenome, 'Bio::EnsEMBL::Funcgen::Epigenome') ){
     throw("You must pass a valid Bio::EnsEMBL::Funcgen::Epigenome\n".
           "Passed:\t".ref($epigenome));
   }
-  
+
   if( $self->experiment &&
       ! check_ref($exp, 'Bio::EnsEMBL::Funcgen::Experiment') ){
     throw("You must pass a valid Bio::EnsEMBL::Funcgen::Experiment\n".
           "Passed:\t".ref($exp));
   }
-  
+
   if(defined $exp){
     #This will allow addition of an experiment
     #when it was not prevously defined

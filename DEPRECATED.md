@@ -26,6 +26,11 @@ A year after deprecation (4 Ensembl releases), the method is removed from the AP
  - Bio::EnsEMBL::Funcgen::DBSQL::**ExperimentAdaptor**::*fetch_all_by_CellType()*
  - Bio::EnsEMBL::Funcgen::DBSQL::**MotifFeatureAdaptor**::*fetch_all_by_Slice_CellType()*
  - Bio::EnsEMBL::Funcgen::DBSQL::**SetAdaptor**::*fetch_all_by_CellType()*
+ - Bio::EnsEMBL::Funcgen::**RegulatoryFeature**::*get_focus_attributes*
+ - Bio::EnsEMBL::Funcgen::**RegulatoryFeature**::*get_nonfocus_attributes*
+ - Bio::EnsEMBL::Funcgen::**RegulatoryFeature**::*is_unique_to_FeatureSets*
+ - Bio::EnsEMBL::Funcgen::**RegulatoryFeature**::*get_other_RegulatoryFeatures*
+ - Bio::EnsEMBL::Funcgen::**RegulatoryFeatureAdaptor**::*fetch_all_by_stable_ID*
 
 ### To be removed in Ensembl Release 88 ###
  - Bio::Ensembl::Funcgen::**Channel**

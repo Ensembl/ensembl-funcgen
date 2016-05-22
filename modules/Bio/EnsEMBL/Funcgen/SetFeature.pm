@@ -146,7 +146,12 @@ sub new {
   #Grab FeatureSet first so we can pass analysis to base Feature class
   #Funcgen analysis is currently always at the Set level
   #if this ever changes the SetFeature->analysis method will also need changing
-  my $self = $class->SUPER::new(@_, -analysis => $set->analysis);
+  my $self;
+  if ($set) {
+    $self = $class->SUPER::new(@_, -analysis => $set->analysis);
+  } else {
+    $self = $class->SUPER::new(@_);
+  }
  
   if($ftype){
 	

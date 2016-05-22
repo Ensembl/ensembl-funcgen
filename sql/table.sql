@@ -62,6 +62,8 @@
 
 */
 
+drop table if exists regulatory_feature;
+
 CREATE TABLE regulatory_feature (
   regulatory_feature_id int(10) unsigned NOT NULL auto_increment,
   feature_type_id int(10) unsigned default NULL,
@@ -69,19 +71,28 @@ CREATE TABLE regulatory_feature (
   seq_region_strand tinyint(1) NOT NULL,
   seq_region_start int(10) unsigned NOT NULL,
   seq_region_end int(10) unsigned NOT NULL,
-  stable_id  varchar(16) DEFAULT NULL,
+  stable_id  varchar(18) DEFAULT NULL,
   bound_start_length mediumint(3) unsigned NOT NULL,
   bound_end_length mediumint(3) unsigned NOT NULL,
   epigenome_count smallint(6),
   PRIMARY KEY  (regulatory_feature_id),
+
+  -- The name "uniqueness_constraint_idx" is used in the
+  -- RegulatoryFeatureAdaptor to catch issues regarding its violation.
+  -- Changing the name means having to update it in the
+  -- RegulatoryFeatureAdaptor as well.
+  --
+  UNIQUE KEY uniqueness_constraint_idx (feature_type_id,  seq_region_id, seq_region_strand, seq_region_start, seq_region_end, stable_id, bound_start_length, bound_end_length),
   KEY feature_type_idx (feature_type_id),
   KEY stable_id_idx (stable_id)
 ) ENGINE=MyISAM;
 
+drop table if exists regulatory_feature_feature_set;
+
 create table regulatory_feature_feature_set (
   regulatory_feature_feature_set_id int(10) unsigned NOT NULL auto_increment,
   regulatory_feature_id int(10) unsigned default NULL,
-  activity tinyint(3),
+  activity ENUM('INACTIVE', 'REPRESSED', 'POISED', 'ACTIVE', 'NA'),
   feature_set_id int(10) unsigned default NULL,
   PRIMARY KEY  (regulatory_feature_feature_set_id),
   UNIQUE KEY uniqueness_constraint_idx (feature_set_id,regulatory_feature_id),
@@ -101,9 +112,9 @@ create table regulatory_feature_feature_set (
 @see annotated_feature
 */
 
-DROP TABLE IF EXISTS `regulatory_attribute`;
-CREATE TABLE `regulatory_attribute` (
-  `regulatory_feature_id` int(10) unsigned NOT NULL,
+DROP TABLE IF EXISTS `regulatory_evidence`;
+CREATE TABLE `regulatory_evidence` (
+  `regulatory_feature_feature_set_id` int(10) unsigned NOT NULL,
   `attribute_feature_id` int(10) unsigned NOT NULL,
   `attribute_feature_table` enum('annotated', 'motif') default NULL,
   PRIMARY KEY  (`regulatory_feature_id`, `attribute_feature_table`, `attribute_feature_id`),
@@ -373,39 +384,6 @@ CREATE TABLE `external_feature` (
 
 
 /**
-@table  result_feature
-@desc   Represents the mapping of a raw/normalised signal. This is optimised for the web display in two ways:
-        <br>&nbsp;&nbsp;&nbsp;&nbsp;1 Data compression by collection into different sized windows or bins
-        <br>&nbsp;&nbsp;&nbsp;&nbsp;2 For array data it also provides an optimised view of a probe_feature and associated result.
-@colour  #FFCC66
-
-@column result_feature_id     Internal ID
-@column result_set_id         @link result_set table ID
-@column seq_region_id         @link seq_region table ID
-@column seq_region_start      Start position of this feature
-@column seq_region_end        End position of this feature
-@column seq_region_strand     Strand orientation of this feature
-@column scores                BLOB of window scores for this region
-
-@see result_set
-@see seq_region
-*/
-
-DROP TABLE IF EXISTS `result_feature`;
-CREATE TABLE `result_feature` (
-  `result_feature_id` int(10) unsigned NOT NULL auto_increment,
-  `result_set_id` int(10) unsigned NOT NULL,
-  `seq_region_id` int(10) unsigned NOT NULL,
-  `seq_region_start` int(10) NOT NULL,
-  `seq_region_end` int(10) NOT NULL,
-  `seq_region_strand` tinyint(4) NOT NULL,
-  `scores` longblob NOT NULL,
-  PRIMARY KEY  (`result_feature_id`),
-  KEY `set_seq_region_idx` (`result_set_id`,`seq_region_id`,`seq_region_start`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-
-/**
 @table  probe_feature
 @desc   The table contains genomic alignments @link probe entries.
 @colour  #FFCC66
@@ -605,7 +583,7 @@ CREATE TABLE `feature_set` (
 /**
 @table  result_set
 
-@desc   Think of this as an alignment or a summary of an alignment in form of a wiggleplot in bigWig format. The query used to generate the alignment is found by linking from this table over result_set_input to the input_subset table. The entry in input_subset represents the fastq file that was aligned. The reference to which it was aligned is based on the sequence of the species of the regulation database. It may be gender specific depending on the use case, so the query may have been aligned to the male or the female version of the genome depending on the details of the analysis. 
+@desc   Think of this as an alignment or a summary of an alignment in form of a wiggleplot in bigWig format. The query used to generate the alignment is found by linking from this table over result_set_input to the input_subset table. The entry in input_subset represents the fastq file that was aligned. The reference to which it was aligned is based on the sequence of the species of the regulation database. It may be gender specific depending on the use case, so the query may have been aligned to the male or the female version of the genome depending on the details of the analysis.
 
 Note that although the schema has objects to represent alignments, we don't store the actual alignments in the database. We only store summaries of the alignments as wiggleplots. If a result_set represents a wiggleplot, the location of the file can be found by the entry in the dbfile_registry pointing to it.
 
@@ -667,8 +645,7 @@ CREATE TABLE `result_set_input` (
    `result_set_input_id` int(10) unsigned NOT NULL auto_increment,
    `result_set_id` int(10) unsigned NOT NULL,
    `table_id` int(10) unsigned NOT NULL,
-   `table_name` enum('experimental_chip','channel','input_set', 'input_subset') DEFAULT NULL,
-   `file_type` enum('BAM','BAMCOV','BIGBED','BIGWIG','VCF','CRAM'),
+   `table_name` enum('input_subset') DEFAULT NULL,
    `md5sum` varchar(45) default NULL,
    PRIMARY KEY  (`result_set_input_id`, `result_set_id`),
    UNIQUE KEY `rset_table_idname_idx` (`result_set_id`, `table_id`, `table_name`)
@@ -698,49 +675,11 @@ CREATE TABLE `dbfile_registry` (
    `table_id` int(10) unsigned NOT NULL,
    `table_name` varchar(32)NOT NULL,
    `path` varchar(255) NOT NULL,
+   `file_type` enum('BAM','BAMCOV','BIGBED','BIGWIG','VCF','CRAM', 'DIR'),
    PRIMARY KEY  (`table_id`, `table_name`),
    UNIQUE KEY `table_id_name_path_idx` (`table_id`,`table_name`, `path`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
-
-
-/**
-@table  input_set
-@desc   Defines a distinct set input data which is not imported into the DB, but used for some analysis e.g. a BAM file.
-@colour  #66CCFF
-
-@column input_set_id    Internal ID
-@column analysis_id     Table ID for @link analysis
-@column epigenome_id    Table ID for @link epigenome
-@column experiment_id   Table ID for @link experiment
-@column feature_type_id Table ID for @link feature_type
-@column name            Name of input_set
-@column type            Type of feature imported as result of analysis e.g. result, annotated
-@column replicate       Number of the replicate. 0 represents  a pooled subset, 255 is a subset we have not processed
-
-@see analysis
-@see epigenome
-@see experiment
-@see feature_type
-@see result_set_input
-*/
-
-DROP TABLE IF EXISTS `input_set`;
-CREATE TABLE `input_set` (
-   `input_set_id` int(10) unsigned NOT NULL auto_increment,
-   `analysis_id` smallint(5) unsigned NOT NULL,
-   `epigenome_id` int(10) unsigned default NULL,
-   `experiment_id` int(10) unsigned default NULL,
-   `feature_type_id` int(10) unsigned default NULL,
-   `name` varchar(100) not NULL,
-   `type` enum('annotated', 'result', 'segmentation', 'dna_methylation') default NULL,
-   `replicate` tinyint(3) unsigned NOT NULL,
-   PRIMARY KEY  (`input_set_id`),
-   UNIQUE KEY `name_idx` (`name`),
-   KEY `experiment_idx` (`experiment_id`),
-   KEY `feature_type_idx` (`feature_type_id`),
-   KEY `epigenome_idx` (`epigenome_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
 
 /**
 @table  input_subset
@@ -782,26 +721,6 @@ CREATE TABLE `input_subset` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
 
 -- epigenome_id is default NULL to support flat file imports which have not defined epigenome
-
-/**
-@table  input_set_input_subset
-@desc   Link table input_set / input_subset
-@colour  #66CCFF
-
-@column input_subset_id  @link input_subset table  ID
-@column input_set_id     @link input_set table ID
-
-@see input_set
-@see input_subset
-*/
-
-DROP TABLE IF EXISTS `input_set_input_subset`;
-CREATE TABLE `input_set_input_subset` (
-  `input_subset_id` int(10) unsigned NOT NULL,
-  `input_set_id`    int(10) unsigned NOT NULL,
-  UNIQUE KEY `iset_subset_table_idx` (`input_subset_id`,`input_set_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
 
 /**
 @header Array design tables
@@ -1010,121 +929,6 @@ CREATE TABLE `experimental_group` (
    UNIQUE KEY `name_idx` (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
-/**
-@table  mage_xml
-@desc   Contains MAGE-XML for array based experiments.
-@colour  #00FF00
-
-@column mage_xml_id  Internal table ID
-@column xml          XML text field
-
-*/
-
-DROP TABLE IF EXISTS `mage_xml`;
-CREATE TABLE `mage_xml` (
-   `mage_xml_id` int(10) unsigned NOT NULL auto_increment,
-   `xml` text,
-   PRIMARY KEY  (`mage_xml_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-
-/**
-@table  experimental_chip
-@desc   Represents the physical instance of an @link array_chip used in an @link experiment.
-@colour  #00FF00
-
-@column experimental_chip_id  Internal ID
-@column array_chip_id         @link array_chip table ID
-@column epigenome_id          @link epigenome table ID
-@column experiment_id         @link experiment table ID
-@column feature_type_id       @link feature_type table ID
-@column biological_replicate  Name of biological replicate
-@column technical_replicate   Name of technical replicate
-@column unique_id             Unique ID assigned by vendor
-
-@see array_chip
-@see epigenome
-@see experiment
-@see feature_type
-*/
-
-DROP TABLE IF EXISTS `experimental_chip`;
-CREATE TABLE `experimental_chip` (
-   `experimental_chip_id` int(10) unsigned NOT NULL auto_increment,
-   `array_chip_id` int(10) unsigned default NULL,
-   `epigenome_id` int(10) unsigned default NULL,
-   `experiment_id` int(10) unsigned default NULL,
-   `feature_type_id` int(10) unsigned default NULL,
-   `biological_replicate` varchar(100) default NULL,
-   `technical_replicate` varchar(100) default NULL,
-   `unique_id` varchar(20) NOT NULL,
-   PRIMARY KEY  (`experimental_chip_id`),
-   KEY `experiment_idx` (`experiment_id`),
-   KEY `feature_type_idx` (`feature_type_id`),
-   KEY `unique_id_idx` (`unique_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
--- Can't implement unique key for unique_id as there may be clashes between vendors
--- and chips could potentially be re-used in another exp
-
-
-/**
-@table  channel
-@desc   Represents an individual channel from an experimental_chip.
-@colour  #00FF00
-
-@column channel_id              Internal ID
-@column experimental_chip_id    @link external_chip ID
-@column sample_id               Sample ID
-@column dye                     Name of dye used for this channel e.g. Cy3, Cy5
-@column type                    Type of channel i.e. EXPERIMENTAL or TOTAL (input)
-
-@see  experimental_chip
-*/
-
-DROP TABLE IF EXISTS `channel`;
-CREATE TABLE `channel` (
-   `channel_id` int(10) unsigned NOT NULL auto_increment,
-   `experimental_chip_id` int(10) unsigned default NULL,
-   `sample_id` varchar(20) default NULL,
-   `dye`  varchar(20) default NULL,
-   `type` varchar(20) default NULL,
-   PRIMARY KEY  (`channel_id`),
-   KEY `experimental_chip_idx` (`experimental_chip_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-
-/**
-@table  result
-@desc   Contains a score or intensity value for an associated probe location on a particular experimental_chip.
-@colour  #00FF00
-
-@column result_id            Internal ID
-@column probe_id             @link probe ID
-@column score                Intensity value (raw or normalised)
-@column result_set_input_id  @link result_set_input ID
-@column X                    X coordinate of probe location on experimental_chip
-@column Y                    Y coordinate of probe location on experimental_chip
-
-@see probe
-@see result_set_input
-*/
-
-DROP TABLE IF EXISTS `result`;
-CREATE TABLE `result` (
-   `result_id` int(10) unsigned NOT NULL auto_increment,
-   `probe_id` int(10) unsigned default NULL,
-   `score` double default NULL,
-   `result_set_input_id` int(10) unsigned NOT NULL,
-   `X` smallint(4) unsigned default NULL,
-   `Y` smallint(4) unsigned default NULL,
-   PRIMARY KEY  (`result_id`),
-   KEY `probe_idx` (`probe_id`),
-   KEY `result_set_input_idx` (`result_set_input_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
-
--- result_id needed as we may have replicate probe on same chip
--- X Y here allows repicate probes on same ship
 
 /**
 @header  Ancilliary tables
@@ -1268,84 +1072,6 @@ CREATE TABLE `status_name` (
    PRIMARY KEY  (`status_name_id`),
    UNIQUE KEY `status_name_idx` (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-
-
--- Remove these to separate file and handle with import_type.pl?
-INSERT INTO status_name(name) VALUES ('ALIGNED');
-INSERT INTO status_name(name) VALUES ('ALIGNED_CONTROL');
-INSERT INTO status_name(name) VALUES ('DAS_DISPLAYABLE');
-INSERT INTO status_name(name) VALUES ('DISPLAYABLE');
-INSERT INTO status_name(name) VALUES ('DOWNLOADED');
-INSERT INTO status_name(name) VALUES ('IMPORTED');
-INSERT INTO status_name(name) VALUES ('IMPORTED_NCBI36');
-INSERT INTO status_name(name) VALUES ('IMPORTED_GRCh37');
-INSERT INTO status_name(name) VALUES ('IMPORTED_GRCh38');
-INSERT INTO status_name(name) VALUES ('IS_CONTROL');
-INSERT INTO status_name(name) VALUES ('IS_CURRENT');
-INSERT INTO status_name(name) VALUES ('LOESS');
-INSERT INTO status_name(name) VALUES ('MART_DISPLAYABLE');
-INSERT INTO status_name(name) VALUES ('Parzen');
-INSERT INTO status_name(name) VALUES ('RESOLVED');
-INSERT INTO status_name(name) VALUES ('RESULT_FEATURE_SET');
-INSERT INTO status_name(name) VALUES ('VSN_GLOG');
--- need to add more states, probably need to validate/insert required states in Importer
--- would need to get CoordSys objects and set IMPORTED_CS_"cs_id" for relevant data_version
-
-
-/**
-@table  regbuild_string
-@desc   Simple table to contain long id strings related to the regulatory build
-
-This is used for displaying regulatory data on the website.
-
-The website has menus for configuring which feature types can be selected for a given cell type. 
-
-Regbuild strings configure the following properties of the regulatory build:
-
-Feature types, sets and focus features
---------------------------------------
-
-The regbuild string tells the webcode which of these are available for any cell type in the current regulatory build.
-
-The name is a microformat, composed as follows:
-
-regbuild. <cell type name>.<feature type ids|feature set ids|focus feature ids>
-
-
-Available cell types
---------------------
-
-<Todo>
-
-segmentation.feature_type_ids
-------------------------------
-
-<Todo>
-
-@colour  #808000
-
-@column regbuild_string_id  Internal ID
-@column name                Name of the string e.g. regbuild.GM12878.feature_type_ids
-@column species_id          Indentifies the species for multi-species databases.
-@column string              Comma separated list of internal IDs
-
-*/
-
-DROP TABLE IF EXISTS regbuild_string;
-CREATE TABLE `regbuild_string` (
-  `regbuild_string_id` int(10) NOT NULL auto_increment,
-  `name` varchar(150) NOT NULL,
-  `species_id` smallint(5) unsigned NOT NULL default '1',
-  `string` text NOT NULL,
-  PRIMARY KEY  (`regbuild_string_id`),
-  UNIQUE KEY `name_species_idx` (`species_id`, `name`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
--- This table is queried directly by the web code to define the regulation config
--- Web must be consulted about impact if any changes are made
--- i.e. Must maintain regbuild.MultiCell.focus_feature_set_ids
--- even tho this is redundant wrt to feature_set_ids?
 
 
 
@@ -1523,7 +1249,7 @@ CREATE TABLE `associated_xref` (
   KEY `associated_source_idx` (`source_xref_id`),
   KEY `associated_object_idx` (`object_xref_id`),
   KEY `associated_idx`        (`xref_id`),
-  KEY `associated_group_idx`  (`associated_group_id`)
+  KEY `associated_group_idx` channel (`associated_group_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
@@ -1732,7 +1458,7 @@ CREATE TABLE xref (
    info_type                  ENUM( 'NONE', 'PROJECTION', 'MISC', 'DEPENDENT',
                                     'DIRECT', 'SEQUENCE_MATCH',
                                     'INFERRED_PAIR', 'PROBE',
-                                    'UNMAPPED', 'COORDINATE_OVERLAP', 
+                                    'UNMAPPED', 'COORDINATE_OVERLAP',
                                     'CHECKSUM' ) DEFAULT 'NONE' NOT NULL,
    info_text                  VARCHAR(255) DEFAULT '' NOT NULL,
 

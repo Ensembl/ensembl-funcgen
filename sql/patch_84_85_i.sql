@@ -13,7 +13,7 @@
 -- limitations under the License.
 
 /**
-@header patch_84_85_i.sql - 
+@header patch_84_85_i.sql - Normalise regulatory feature table: Create a non redundant version of the regulatory features
 @desc   Also removes column "projected".
 */
 
@@ -24,7 +24,7 @@ CREATE TABLE regulatory_feature_nr (
   seq_region_strand tinyint(1) NOT NULL,
   seq_region_start int(10) unsigned NOT NULL,
   seq_region_end int(10) unsigned NOT NULL,
-  stable_id  varchar(16) DEFAULT NULL,
+  stable_id  varchar(18) DEFAULT NULL,
   bound_start_length mediumint(3) unsigned NOT NULL,
   bound_end_length mediumint(3) unsigned NOT NULL,
   epigenome_count smallint(6),

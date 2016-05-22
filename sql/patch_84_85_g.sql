@@ -17,7 +17,17 @@
 @desc   Updates to catch up with developments from the core schema and allow xrefs to be stored for epigenomes.
 */
 
-alter table external_db     modify external_db_id INTEGER UNSIGNED NOT NULL AUTO_INCREMENT;
+alter table external_db modify external_db_id INTEGER UNSIGNED NOT NULL AUTO_INCREMENT;
+alter table external_db modify type ENUM(
+  'ARRAY',
+  'ALT_TRANS',
+  'ALT_GENE',
+  'MISC',
+  'LIT',
+  'PRIMARY_DB_SYNONYM', 
+  'ENSEMBL'
+);
+
 alter table unmapped_object modify external_db_id INTEGER UNSIGNED;
 alter table object_xref     modify ensembl_object_type ENUM (
   'Epigenome', 

@@ -29,6 +29,8 @@ update epigenome set production_name = replace(production_name, ':', '_');
 update epigenome set production_name = replace(production_name, '+', '');
 update epigenome set production_name = replace(production_name, '-', '_');
 update epigenome set production_name = replace(production_name, '.', '_');
+update epigenome set production_name = replace(production_name, '/', '_');
+update epigenome set production_name = replace(production_name, ' ', '_');
 
 -- patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_c.sql|new epigenome table columns');

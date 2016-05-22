@@ -56,7 +56,6 @@ use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor; #DBI sql_types import
 
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor);
 
-
 =head2 fetch_all_by_feature_class
 
   Arg [1]    : String - feature class i.e. 'annotated', 'regulatory', 'segmentation', 'mirna' or 'external'
@@ -413,34 +412,8 @@ sub fetch_focus_set_config_by_FeatureSet{
 =cut
 
 sub fetch_attribute_set_config_by_FeatureSet{
-  my ($self, $fset) = @_;
-
-	$self->{attribute_set_config} ||= {};
-
-	if (! defined $self->{attribute_set_config}->{$fset->dbID}) {
-	  $self->{attribute_set_config}->{$fset->dbID} = 0; #set cache default
-	  my $string_key =  'regbuild.'.$fset->epigenome->name.'.feature_set_ids';
-
-	  #list_value_by_key caches, so we don't need to implement this in the adaptor
-	  #my ($attr_ids) = @{$self->db->get_MetaContainer->list_value_by_key($meta_key)};
-
-	  my $species_id = $self->db->species_id;
-	  my ($attr_ids) = $self->db->dbc->db_handle->selectrow_array(
-	   "SELECT string from regbuild_string where name='${string_key}' and species_id=$species_id");
-
-	  if (! defined $attr_ids) {
-        warn("Cannot detect attribute set as regbuild_string table does not contain $string_key");
-	  }
-      else {
-        my $regex = ',\s*';#to avoid syntax highlighting anomalies
-
-        foreach my $aid (split/$regex/, $attr_ids) {
-          $self->{attribute_set_config}->{$aid} = 1;
-        }
-	  }
-	}
-
-  return $self->{attribute_set_config}->{$fset->dbID};
+   deprecate(
+    "Bio::EnsEMBL::Funcgen::FeatureSet::fetch_attribute_set_config_by_FeatureSet has been deprecated and will be removed in Ensembl release 89.");
 }
 
 
@@ -622,7 +595,18 @@ sub _constrain_evidence_types {
   return ($constraint, $constraint_conf);
 }
 
+
+sub fetch_all_by_type { # deprecated in v74, but still used by web
+  my $self = shift;
+  my $type = shift;
+  my $status = shift;
+
+  deprecate('Please use fetch_all_by_feature_class');
+
+  return $self->fetch_all_by_feature_class($type, $status);
+}
+
 1;
 
-__END__
+
 
