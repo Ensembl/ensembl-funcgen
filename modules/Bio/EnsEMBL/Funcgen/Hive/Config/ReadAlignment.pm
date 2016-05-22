@@ -195,7 +195,9 @@ sub pipeline_analyses {
 	    'RemoveDuplicateControlAlignments' => undef,
 	    ':////accu?file_to_delete=[]' => { 
 	      'file_to_delete' => '#bam_file_with_unmapped_reads_and_duplicates#'
-	    }
+	    },
+# 	    # Create bigwigs for controls
+#  	    'WriteBigWig' => undef,
 	  },
        },
      -rc_name => 'normal_monitored_2GB',
@@ -207,7 +209,11 @@ sub pipeline_analyses {
 	run_controls => 1,
      },
      -flow_into => {
-	  MAIN => 'JobFactorySignalProcessing',
+	 MAIN => [ 
+	  'JobFactorySignalProcessing', 
+	  # Create bigwigs for controls
+	  WHEN('1' => { 'WriteBigWig' => INPUT_PLUS({ type => 'control' })})
+         ],
        },
      -rc_name => '64GB_3cpu',
     },
@@ -219,7 +225,6 @@ sub pipeline_analyses {
 	'10'    => 'SplitMergedFastQ' ,
 	'11->A' => 'SplitFastqsFromReplicatedExperiments',
       },
-#       -meadow_type=> 'LOCAL',
     },
     {
       -logic_name => 'JobFactoryDefineMergedDataSet',
@@ -227,7 +232,6 @@ sub pipeline_analyses {
       -flow_into => {
 	2 => 'DefineMergedDataSet'
       },
-#       -meadow_type=> 'LOCAL',
     },
     {
       -logic_name => 'JobFactoryPermissivePeakCalling',
@@ -235,7 +239,6 @@ sub pipeline_analyses {
       -flow_into => {
 	100 => 'PermissiveSWEmbl'
       },
-#       -meadow_type=> 'LOCAL',
     },
     {
      -logic_name => 'MergeAlignments',
@@ -261,7 +264,11 @@ sub pipeline_analyses {
 	run_controls => 0,
      },
      -flow_into => {
-	  MAIN => 'JobFactoryDefineMergedDataSet',
+	  MAIN => [
+	    'JobFactoryDefineMergedDataSet',
+# 	    # Create bigwigs for replicates
+# 	    WHEN('1' => { 'WriteBigWig' => INPUT_PLUS({ type => 'replicate' })})
+	  ]
        },
      -rc_name => '64GB_3cpu',
     },
@@ -273,13 +280,17 @@ sub pipeline_analyses {
 	permissive_peaks => $self->o('permissive_peaks')
       },
      -flow_into => {
-# 	MAIN => 'RemoveDuplicateReplicateAlignments'
+#  	MAIN => 'RemoveDuplicateReplicateAlignments',
 	MAIN => {
-	  'RemoveDuplicateReplicateAlignments' => undef,
-	  ':////accu?file_to_delete=[]' => { 
+ 	  'RemoveDuplicateReplicateAlignments' => undef,
+	  ':////accu?file_to_delete=[]' => {
 	    'file_to_delete' => '#bam_file_with_unmapped_reads_and_duplicates#'
 	  }
 	},
+# 	# Create bigwigs for technical replicates
+# 	MAIN => WHEN(
+# 	  '1'  => { 'WriteBigWig' => INPUT_PLUS({ type => 'technical replicate' }) },
+# 	),
      },
      -rc_name => 'normal_monitored_2GB',
     },
@@ -290,9 +301,18 @@ sub pipeline_analyses {
 	run_controls => 0,
      },
      -flow_into => {
-	  MAIN => 'JobFactoryPermissivePeakCalling',
+	  MAIN => [
+            'JobFactoryPermissivePeakCalling',
+            # Create bigwigs for replicates
+            WHEN('1' => { 'WriteBigWig' => INPUT_PLUS({ type => 'replicate' })}),
+	  ],
        },
      -rc_name => '64GB_3cpu',
+    },
+    {
+     -logic_name => 'WriteBigWig',
+     -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunWiggleTools',
+     -rc_name    => 'normal_30GB_2cpu',
     },
     {
       -logic_name    => 'PermissiveSWEmbl',
@@ -305,7 +325,6 @@ sub pipeline_analyses {
     {
       -logic_name => 'CleanupFilesFromPermissiveSWEmblJobFan',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::ErsaCleanup',
-#       -meadow_type=> 'LOCAL',
      -flow_into => {
 	  MAIN => 'PreprocessIDR',
        },

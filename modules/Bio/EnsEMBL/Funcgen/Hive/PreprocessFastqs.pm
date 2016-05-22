@@ -130,7 +130,7 @@ sub run {
     #issues.
 
     if(defined $isset->md5sum || ! $self->checksum_optional ){
-      $params->{checksum} = $isset->md5sum; 
+#       $params->{checksum} = $isset->md5sum;
     }
     
     my $local_url = $isset->local_url;

@@ -85,9 +85,10 @@ sub pipeline_analyses {
       -flow_into => {
 	  2 => {
 	    ':////accu?idr_peak_counts=[]' => {
-	      'idr_peak_counts' => '#accu_idx#'
+	      'idr_peak_counts' => '#idr_peak_counts#'
 	    },
 	  },
+# 	  2 => '?accu_name=idr_peak_counts&accu_address=[#idr_peak_counts#]'
       }
     },
     {

@@ -117,10 +117,8 @@ sub fetch_input {
     ($imp->prepared)){
     $self->param_required('slices');     
   }
-  
   return;
 }
-
 
 sub run {   # Check parameters and do appropriate database/file operations... 
   my $self = shift; 
@@ -163,35 +161,12 @@ sub run {   # Check parameters and do appropriate database/file operations...
 
   $self->branch_job_group(2, [$output_id]);
 
-#   if(defined $fset){
-#   
-#     my %branch_names = (
-#       'SWEmbl_R015'       => 3,
-#       'ccat_histone'      => 4,
-#       'SWEmbl_R0025'      => 5,
-#       'SWEmbl_R0005_IDR'  => 6,
-#     );
-#     
-#     my $feature_set_analysis_logic_name = $fset->analysis->logic_name;
-#     
-#     if (! exists $branch_names{$feature_set_analysis_logic_name}) {
-#       use Carp;
-#       confess("Unknown logic name: $feature_set_analysis_logic_name");
-#     }
-#   
-#     $self->branch_job_group(
-#       $branch_names{$feature_set_analysis_logic_name}, 
-#       [{%$output_id}]
-#     );
-#   }
   return;
 }
 
-
 sub write_output { 
-  my $self = shift;    
+  my $self = shift;
   $self->dataflow_job_groups;
-  return; 
 }
 
 

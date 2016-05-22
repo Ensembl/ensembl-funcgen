@@ -73,6 +73,7 @@ sub run {
       load_samtools_flagstats.pl
       argenrichformregions.pl
       argenrich_with_labels_and_rerunnable.R
+      idr
     );
     
     foreach my $current_program (@programs_expected_in_path) {

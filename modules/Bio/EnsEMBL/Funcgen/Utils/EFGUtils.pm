@@ -1668,8 +1668,10 @@ sub get_study_name_from_Set {
     if(! $ftype){   #We have a pure control experiment i.e. no signal InputSubsets
      $ftype = $exp->feature_type->name;
     }
-  }
-  else{
+  } else {
+    if (! defined $set->experiment) {
+      throw('Cannot find experiment for '.ref($set).":\t".$set->name);
+    }
     $exp_name = $set->experiment->name ||
       throw('Cannot find unique experiment name for '.ref($set).":\t".$set->name);
     $ftype = $set->feature_type->name;
