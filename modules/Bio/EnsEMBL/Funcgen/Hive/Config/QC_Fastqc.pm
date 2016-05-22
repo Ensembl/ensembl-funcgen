@@ -86,7 +86,7 @@ sub pipeline_analyses {
         },
         {   -logic_name => 'RunFastQC',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -meadow_type=> 'LSF',
+#             -meadow_type=> 'LSF',
             -parameters => { 
 		  cmd => qq(fastqc -o #tempdir# #local_url#),
             },
@@ -101,7 +101,7 @@ sub pipeline_analyses {
         {   -logic_name        => 'QcLoadFastQcResults',
             -module            => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
 #             -meadow_type       => 'LOCAL',
-            -use_bash_pipefail => 1,
+
             -parameters => { 
 		  cmd => qq(load_fastqc_summary_file.pl        )
 		    . qq( --input_subset_id #input_subset_id#  )
@@ -113,6 +113,8 @@ sub pipeline_analyses {
 		    . qq( --user #tracking_db_user#  )
 		    . qq( -p#tracking_db_pass#       )
 		    . qq( #tracking_db_name#         ),
+	-use_bash_pipefail => 1,
+
             },
         },
     ];

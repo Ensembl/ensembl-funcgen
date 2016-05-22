@@ -545,12 +545,7 @@ sub store_dbfile_path {
   #Check we have a record
   my $rset_id  = $rset->dbID;
   my $db_path  = $self->_fetch_dbfile_path($rset_id, $file_type);
-  
-<<<<<<< HEAD
-=======
-  my $md5sum = generate_checksum($db_path);
 
->>>>>>> 5570efed502fff7c7a8f973a58adc3fc75f300f0
   if($db_path &&
 	 ($db_path ne $path)) {  # UPDATE
     # Really should have rolled this back prior to this point
@@ -566,10 +561,7 @@ sub store_dbfile_path {
     }
   }
   elsif(! defined $db_path) {  # STORE
-<<<<<<< HEAD
 
-=======
->>>>>>> 5570efed502fff7c7a8f973a58adc3fc75f300f0
     my $sql = 'INSERT INTO dbfile_registry(table_id, table_name, path, file_type, md5sum) values(?, "result_set", ?, ?, ?)';
     my $sth = $self->prepare($sql);
     $sth->bind_param(1, $rset_id, SQL_INTEGER);
@@ -581,11 +573,7 @@ sub store_dbfile_path {
       my $err = $@;
       #This could be a race condition if we have parallel writes going on
       #Attempt to validate stored value is same, else fail
-<<<<<<< HEAD
       $db_path = $self->_fetch_dbfile_path($rset_id, $file_type);
-=======
-      $db_path = $self->_fetch_dbfile_path($rset_id);
->>>>>>> 5570efed502fff7c7a8f973a58adc3fc75f300f0
 
       if(defined $db_path) {
         if($db_path ne $path) {

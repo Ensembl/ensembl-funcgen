@@ -126,7 +126,7 @@ sub pipeline_analyses {
 	  ),
 	  db_conn => '#out_db_url#',
 	},
-      -meadow     => 'LOCAL',
+#       -meadow     => 'LOCAL',
       -flow_into => {
 	1 => 'DefineMergedDataSet',
       },
