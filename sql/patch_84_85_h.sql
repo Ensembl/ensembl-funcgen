@@ -22,8 +22,8 @@ alter table dbfile_registry drop primary key, add primary key(table_id, table_na
 alter table dbfile_registry add column md5sum varchar(45) default null;
 
 -- Some file names have trailing whitespaces, hence using RTRIM
-update dbfile_registry set file_type='BIGWIG' where distinct RIGHT(RTRIM(path),3) = ".bw";
-update dbfile_registry set file_type='BIGBED' where distinct RIGHT(RTRIM(path),3) = ".bb";
+update dbfile_registry set file_type='BIGWIG' where RIGHT(RTRIM(path),3) = ".bw";
+update dbfile_registry set file_type='BIGBED' where RIGHT(RTRIM(path),3) = ".bb";
 
 
 -- patch identifier
