@@ -61,6 +61,18 @@ insert into regulatory_build (
 from feature_set where type = "regulatory" group by "feature_type_id, analysis_id";
 
 alter table regulatory_feature add column regulatory_build_id int(10) unsigned default null;
+alter table regulatory_feature drop key uniqueness_constraint_idx;
+alter table regulatory_feature add unique key uniqueness_constraint_idx (
+  feature_type_id,
+  seq_region_id,
+  seq_region_strand,
+  seq_region_start,
+  seq_region_end,
+  stable_id,
+  bound_start_length,
+  bound_end_length,
+  regulatory_build_id
+);
 
 delete from feature_set where type = "regulatory";
 

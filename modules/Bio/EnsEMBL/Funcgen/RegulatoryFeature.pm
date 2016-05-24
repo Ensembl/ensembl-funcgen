@@ -130,8 +130,12 @@ sub new {
   return $self;
 }
 
-sub analysis{
+sub analysis {
   return shift->{analysis};
+}
+
+sub regulatory_build_id {
+  return shift->{regulatory_build_id};
 }
 
 =head2 display_label

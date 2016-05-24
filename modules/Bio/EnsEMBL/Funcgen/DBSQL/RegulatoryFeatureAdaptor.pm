@@ -550,8 +550,9 @@ sub store {
       seq_region_strand,
       feature_type_id,
       stable_id,
-      epigenome_count
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      epigenome_count,
+      regulatory_build_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
   );
   # When loading the regulatory build, this would lead to many error messages 
   # about duplicate entries being printed to screen. Errors are either handled
@@ -583,15 +584,16 @@ sub store {
     ($current_regulatory_feature, $seq_region_id) = $self->_pre_store($current_regulatory_feature);
     $current_regulatory_feature->adaptor($self);
 
-    $sth_store_regulatory_feature->bind_param(1, $seq_region_id,                                   SQL_INTEGER);
-    $sth_store_regulatory_feature->bind_param(2, $current_regulatory_feature->start,               SQL_INTEGER);
-    $sth_store_regulatory_feature->bind_param(3, $current_regulatory_feature->end,                 SQL_INTEGER);
-    $sth_store_regulatory_feature->bind_param(4, $current_regulatory_feature->bound_start_length,  SQL_INTEGER);
-    $sth_store_regulatory_feature->bind_param(5, $current_regulatory_feature->bound_end_length,    SQL_INTEGER);
-    $sth_store_regulatory_feature->bind_param(6, $current_regulatory_feature->strand,              SQL_TINYINT);
-    $sth_store_regulatory_feature->bind_param(7, $current_regulatory_feature->feature_type->dbID,  SQL_INTEGER);
-    $sth_store_regulatory_feature->bind_param(8, $current_regulatory_feature->stable_id,           SQL_VARCHAR);
-    $sth_store_regulatory_feature->bind_param(9, $current_regulatory_feature->epigenome_count,     SQL_INTEGER);
+    $sth_store_regulatory_feature->bind_param( 1, $seq_region_id,                                   SQL_INTEGER);
+    $sth_store_regulatory_feature->bind_param( 2, $current_regulatory_feature->start,               SQL_INTEGER);
+    $sth_store_regulatory_feature->bind_param( 3, $current_regulatory_feature->end,                 SQL_INTEGER);
+    $sth_store_regulatory_feature->bind_param( 4, $current_regulatory_feature->bound_start_length,  SQL_INTEGER);
+    $sth_store_regulatory_feature->bind_param( 5, $current_regulatory_feature->bound_end_length,    SQL_INTEGER);
+    $sth_store_regulatory_feature->bind_param( 6, $current_regulatory_feature->strand,              SQL_TINYINT);
+    $sth_store_regulatory_feature->bind_param( 7, $current_regulatory_feature->feature_type->dbID,  SQL_INTEGER);
+    $sth_store_regulatory_feature->bind_param( 8, $current_regulatory_feature->stable_id,           SQL_VARCHAR);
+    $sth_store_regulatory_feature->bind_param( 9, $current_regulatory_feature->epigenome_count,     SQL_INTEGER);
+    $sth_store_regulatory_feature->bind_param(10, $current_regulatory_feature->regulatory_build_id, SQL_INTEGER);
     
     eval {
       # Store and set dbID
