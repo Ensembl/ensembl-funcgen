@@ -29,4 +29,4 @@ where
 
 delete from meta where meta_key in ("regbuild.initial_release_date", "regbuild.version", "regbuild.last_annotation_update");
 
-insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_u.sql|Move meta entries regarding regulatory build to the regulatory_build table');
+insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_v.sql|Move meta entries regarding regulatory build to the regulatory_build table');
