@@ -17,8 +17,8 @@
 @desc   Add/modify columns in input_subset table
 */
 
-ALTER TABLE input_subset change replicate technical_replicate tinyint(3) unsigned DEFAULT 0 NOT NULL;
-ALTER TABLE input_subset add biological_replicate tinyint(3) unsigned DEFAULT 0 NOT NULL after `name`;
+ALTER TABLE input_subset change replicate technical_replicate tinyint(3) unsigned DEFAULT 1 NOT NULL;
+ALTER TABLE input_subset add biological_replicate tinyint(3) unsigned DEFAULT 1 NOT NULL after `name`;
 
 -- patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_e.sql|add/modify columns in input_subset table');
