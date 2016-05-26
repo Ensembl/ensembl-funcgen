@@ -208,10 +208,6 @@ sub run {
   my %batch_params = %{$self->batch_params};
   my %branch_sets;
 
-  $Data::Dumper::Maxdepth = 3;
-  print Dumper(\%result_sets);
-  die();
-  
   my @hive_jobs_fix_experiment_id;
   foreach my $result_set_group_name (keys %result_sets) {
   
@@ -263,7 +259,28 @@ sub run {
   return;
 }
 
-sub create_result_set_constructor_parameters_with_idr {
+sub hash_signal_input_subsets_by_biological_replicate {
+
+  my $self = shift;
+  my $signal_input_subsets = shift;
+  
+  my %signal_input_subsets_hashed_by_biological_replicate;
+  
+  foreach my $current_signal_input_subset (@$signal_input_subsets) {
+  
+    my $biological_replicate_number = $current_signal_input_subset->biological_replicate;
+    
+    if (! exists $signal_input_subsets_hashed_by_biological_replicate{$biological_replicate_number}) {
+      $signal_input_subsets_hashed_by_biological_replicate{$biological_replicate_number} = [];
+    }
+    push 
+      @{$signal_input_subsets_hashed_by_biological_replicate{$biological_replicate_number}},
+      $current_signal_input_subset;
+  }
+  return \%signal_input_subsets_hashed_by_biological_replicate;
+}
+
+sub create_result_set_constructor_parameters_with_idr_and_biological_replicates {
   my $self  = shift;
   my $param = shift;
   
@@ -271,7 +288,42 @@ sub create_result_set_constructor_parameters_with_idr {
   my $control_input_subsets     = $param->{control_input_subsets};
   my $alignment_analysis_object = $param->{alignment_analysis_object};
   my $parent_result_set_name    = $param->{parent_result_set_name};
+  
+  my $signal_input_subsets_hashed_by_biological_replicate = 
+    $self->hash_signal_input_subsets_by_biological_replicate($signal_input_subsets);
+  
+  my @constructor_parameters;
+  foreach my $biological_replicate_number (keys %$signal_input_subsets_hashed_by_biological_replicate) {
+  
+    my $technical_replicates = $signal_input_subsets_hashed_by_biological_replicate->{$biological_replicate_number};
+    
+    my $result_set_name = $parent_result_set_name . '_BR' . $biological_replicate_number;
 
+    my $result_set_constructor_parameters = {
+      -RESULT_SET_NAME      => $result_set_name,
+      -SUPPORTING_SETS      => [@$technical_replicates, @$control_input_subsets],
+      -DBADAPTOR            => $self->out_db,
+      -RESULT_SET_ANALYSIS  => $alignment_analysis_object,
+      -ROLLBACK             => $self->param_silent('rollback'),
+      -RECOVER              => $self->param_silent('recover'),
+      -FULL_DELETE          => $self->param_silent('full_delete'),
+      -EPIGENOME            => $technical_replicates->[0]->epigenome,
+      -FEATURE_TYPE         => $technical_replicates->[0]->feature_type
+    };
+    push @constructor_parameters, $result_set_constructor_parameters;
+  }
+  return ($parent_result_set_name, \@constructor_parameters);
+}
+
+sub create_result_set_constructor_parameters_with_idr_but_without_biological_replicates {
+  my $self  = shift;
+  my $param = shift;
+  
+  my $signal_input_subsets      = $param->{signal_input_subsets};
+  my $control_input_subsets     = $param->{control_input_subsets};
+  my $alignment_analysis_object = $param->{alignment_analysis_object};
+  my $parent_result_set_name    = $param->{parent_result_set_name};
+  
   my @constructor_parameters;
   foreach my $replicate_input_subset (@$signal_input_subsets) {
 
@@ -292,6 +344,22 @@ sub create_result_set_constructor_parameters_with_idr {
       push @constructor_parameters, $result_set_constructor_parameters;
     }
     return ($parent_result_set_name, \@constructor_parameters);
+}
+
+sub create_result_set_constructor_parameters_with_idr {
+  my $self  = shift;
+  my $param = shift;
+  
+  my $signal_input_subsets = $param->{signal_input_subsets};
+  
+  my $biological_replicates_present = grep {
+    $_->biological_replicate > 1;
+  } @$signal_input_subsets;
+  
+  if ($biological_replicates_present) {
+    return $self->create_result_set_constructor_parameters_with_idr_and_biological_replicates($param)
+  }
+  return $self->create_result_set_constructor_parameters_with_idr_but_without_biological_replicates($param);
 }
 
 sub create_result_set_constructor_parameters_merged {
