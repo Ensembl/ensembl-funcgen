@@ -420,6 +420,8 @@ sub get_available_adaptors{
                'UnmappedObject'     => 'Bio::EnsEMBL::DBSQL::UnmappedObjectAdaptor',
                'Analysis'           => 'Bio::EnsEMBL::DBSQL::AnalysisAdaptor',
                "MetaContainer"      => 'Bio::EnsEMBL::DBSQL::MetaContainer',
+               
+               "RegulatoryBuild"    => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildAdaptor',
               );
 
   return (\%pairs);
