@@ -239,12 +239,6 @@ sub _regulatory_activity_for_epigenome {
   my $self = shift;
   my $epigenome = shift;
   
-#   if ($epigenome->_is_multicell) {
-#     die('Todo');
-#     my $multicell_regulatory_activity = $self->_fake_multicell_activity;
-#     return $multicell_regulatory_activity;
-#   }
-
   my $epigenome_id = $epigenome->dbID;
   my @regulatory_activity = grep { 
     !$_->_is_multicell 
@@ -324,11 +318,6 @@ sub has_activity_in {
 
   my $self = shift;
   my $epigenome = shift;
-  
-#   if ($epigenome eq 'MultiCell') {
-#     use Carp; confess();
-#     return 1;
-#   }
   
   foreach my $current_regulatory_activity (@{$self->regulatory_activity}) {
     if ($current_regulatory_activity->epigenome_id == $epigenome->dbID) {

@@ -176,7 +176,6 @@ sub _columns {
 =cut
 
 sub _left_join {
-  #return (['regulatory_evidence', 'rf.regulatory_feature_id = ra.regulatory_feature_id']);
   return (
     ['regulatory_evidence', 'rfs.regulatory_activity_id = ra.regulatory_activity_id'],
     ['regulatory_build',    'rf.regulatory_build_id = rb.regulatory_build_id']
@@ -454,7 +453,6 @@ sub _objs_from_sth {
 	    'analysis'       => $analysis,
 	    'adaptor'        => $self,
 	    'dbID'           => $sth_fetched_dbID,
-# 	    'set'            => $fset_hash{$sth_fetched_epigenome_id},
 	    'feature_type'   => $ftype_hash{$sth_fetched_feature_type_id},
 	    'stable_id'      => $sth_fetched_stable_id,
 	    'epigenome_count'=> $sth_fetched_epigenome_count,
@@ -685,7 +683,6 @@ sub store {
 	);
       }
       
-      
       # Store the regulatory_evidence
       #
       # Note that the regulatory build script bypasses the api for loading 
@@ -695,7 +692,6 @@ sub store {
       # regulatory features. In the new schema (v85 and above) regulatory
       # attributes are linked to regulatory_feature_feature_sets.
       #
-  #     my $attribute_cache = $current_regulatory_feature->attribute_cache;
       my $regulatory_evidence = $current_regulatory_activity->regulatory_evidence;
 
       foreach my $id (@{$regulatory_evidence->supporting_motif_feature_ids}) {
@@ -782,8 +778,8 @@ sub fetch_all_by_Slice_FeatureSets {
 # There are two calls and neither uses the $params_hash parameter.
 #
 sub fetch_all_by_Slice_Epigenomes {
-  my ($self, $slice, $fsets) = @_;
-  return $self->fetch_all_by_Slice_Epigenomes_Activity($slice, $fsets, undef);
+  my ($self, $slice, $requested_epigenomes) = @_;
+  return $self->fetch_all_by_Slice_Epigenomes_Activity($slice, $requested_epigenomes, undef);
 }
 
 sub fetch_all_by_Slice_Activity {
