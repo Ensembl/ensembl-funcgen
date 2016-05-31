@@ -95,8 +95,22 @@ sub run {
     # Get the input_subset object with the signal
     my @signal_input_subsets = grep { ! $_->is_control } @input_subsets;
     
+    my %temp =  map {
+      ( $_->biological_replicate => 1 )
+    } @signal_input_subsets;
+    my @biological_replicate_number = keys %temp;
+    
+    %temp =  map {
+      ( $_->technical_replicate => 1 )
+    } @signal_input_subsets;
+    my @technical_replicate_number = keys %temp;
+    
+#     use Data::Dumper;
+#     print Dumper(\@biological_replicate_number);
+#     print Dumper(\@technical_replicate_number);
+    
     # Assert there is only one.
-    if(scalar(@signal_input_subsets) != 1){
+    if(scalar(@biological_replicate_number) != 1) {
       $self->throw_no_retry('Expected 1 InputSubset(replicate) for IDR ResultSet '.
         $result_set->name.' but found '.scalar(@signal_input_subsets).' Specify merge, or restrict to 1 InputSubset');  
     }
@@ -106,8 +120,9 @@ sub run {
     # analyses.
     #
     $set_rep_suffix = 
-      '_BR' . $signal_input_subsets[0]->biological_replicate . 
-      '_TR' . $signal_input_subsets[0]->technical_replicate;
+      '_BR_' . $biological_replicate_number[0] . 
+      '_TR_' . join '_', @technical_replicate_number;
+#     die ($set_rep_suffix);
   }
   
   foreach my $current_input_subset (@input_subsets) {
@@ -167,12 +182,12 @@ sub run {
  
   throw($throw) if $throw;
   
-  if((scalar(@fastqs) > 1) &&
-     ! $merge){
-    throw('ResultSet '.$result_set->name.
-      " has more than one InputSubset, but merge has not been specified:\n\t".
-      join("\n\t", @fastqs));    
-  }  
+#   if((scalar(@fastqs) > 1) &&
+#      ! $merge){
+#     throw('ResultSet '.$result_set->name.
+#       " has more than one InputSubset, but merge has not been specified:\n\t".
+#       join("\n\t", @fastqs));    
+#   }  
  
   my $set_prefix = get_set_prefix_from_Set($result_set, $run_controls).
     '_'.$result_set->analysis->logic_name.$set_rep_suffix; 

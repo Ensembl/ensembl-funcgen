@@ -146,7 +146,8 @@ sub run {
     #
     # $parent_set_name is 'K562:hist:BR1_H3K27me3_3526_bwa_samse'
     #
-    my $parent_set_name = $set_name.'_'.$alignment_analysis_object->logic_name;
+#     my $parent_set_name = $set_name.'_'.$alignment_analysis_object->logic_name;
+    
     
     # $signal_input_subsets is set to the input sub set objects of
     #
@@ -160,6 +161,7 @@ sub run {
       throw("Found unexpected controls in signal InputSubsets\n\t".
       join("\n\t", map($_->name, @$signal_input_subsets)));
     }
+    my $parent_set_name = $signal_input_subsets->[0]->experiment->name . '_' . $alignment_analysis_object->logic_name;
 
     # The object representing H3K27me3
     #
@@ -188,22 +190,36 @@ sub run {
     $branch = 'DefineMergedDataSet';
 
     $replicate_bam_files{$parent_set_name}{rep_bams} = [];
+    
+    my $biological_replicates_present = $self->signal_input_subsets_have_biological_replicates($signal_input_subsets);
+    
+    foreach my $current_replicate (@$signal_input_subsets) {
 
-    foreach my $rep (@$signal_input_subsets) {
-      #Pull back the rep Rset to validate and get the alignment file for merging
-      my $rep_result_set_name = $parent_set_name.'_TR'.$rep->replicate;
-      my $result_set = $result_set_adaptor->fetch_by_name($rep_result_set_name);            
-      #Could also fetch them with $result_set_a->fetch_all_by_supporting_Sets($rep).
-	
-      if(! defined $result_set){
-	$self->throw_no_retry("Could not find ResultSet for post-IDR merged ResultSet:\t".
-	  $rep_result_set_name); 
+      my $rep_result_set_name;
+      
+      if ($biological_replicates_present) {
+	$rep_result_set_name = $self->create_result_set_name_for_biological_replicate({
+	  parent_result_set_name => $parent_set_name,
+	  replicate_number       => $current_replicate->biological_replicate
+	});
+      } else {
+	$rep_result_set_name = $self->create_result_set_name_for_technical_replicate({
+	  parent_result_set_name => $parent_set_name,
+	  replicate_number       => $current_replicate->technical_replicate
+	});
       }
-  
-      push @{$replicate_bam_files{$parent_set_name}{rep_bams}}, 
-	$self->get_alignment_files_by_ResultSet_formats($result_set, ['bam'])->{bam};
+      
+      my $result_set = $result_set_adaptor->fetch_by_name($rep_result_set_name);
+	
+      if(! defined $result_set) {
+	$self->throw_no_retry(
+	  "Could not find ResultSet for post-IDR merged ResultSet: "
+	 . $rep_result_set_name
+	);
+      }
+      push @{$replicate_bam_files{$parent_set_name}{rep_bams}},
+	$self->get_alignment_files_by_ResultSet_formats($result_set);
     }
-
 
     foreach my $rep_set (@rep_sets) {
 

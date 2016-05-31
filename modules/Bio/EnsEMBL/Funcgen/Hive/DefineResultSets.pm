@@ -203,8 +203,20 @@ sub run {
 	parent_result_set_name    => $parent_result_set_name,
       }
     );
-    $result_sets{$key} = $constructor_parameters;
+    if ($key eq 'merged') {
+      if (ref $result_sets{'merged'} ne 'ARRAY') {
+	$result_sets{'merged'} = [];
+      }
+      push @{$result_sets{'merged'}}, @{$constructor_parameters};
+      
+    } else {
+      $result_sets{$key} = $constructor_parameters;
+    }
   }
+#   $Data::Dumper::Maxdepth = 3;
+#   print Dumper(\%result_sets);
+#   die;
+  
   my %batch_params = %{$self->batch_params};
   my %branch_sets;
 
@@ -234,7 +246,7 @@ sub run {
   push @hive_jobs_fix_experiment_id, { 
     dbID      => $control_result_set->dbID,
   };
-
+  
   $self->helper->debug(1, "Processing cached branch");
 
   # result_set_groups has all the information necessary for 
@@ -297,7 +309,10 @@ sub create_result_set_constructor_parameters_with_idr_and_biological_replicates 
   
     my $technical_replicates = $signal_input_subsets_hashed_by_biological_replicate->{$biological_replicate_number};
     
-    my $result_set_name = $parent_result_set_name . '_BR' . $biological_replicate_number;
+    my $result_set_name = $self->create_result_set_name_for_biological_replicate({
+      parent_result_set_name => $parent_result_set_name,
+      replicate_number       => $biological_replicate_number
+    });
 
     my $result_set_constructor_parameters = {
       -RESULT_SET_NAME      => $result_set_name,
@@ -328,8 +343,12 @@ sub create_result_set_constructor_parameters_with_idr_but_without_biological_rep
   foreach my $replicate_input_subset (@$signal_input_subsets) {
 
       my $technical_replicate_number = $replicate_input_subset->technical_replicate;
-      my $result_set_name = $parent_result_set_name . '_TR' . $technical_replicate_number;
-  
+
+      my $result_set_name = $self->create_result_set_name_for_technical_replicate({
+	parent_result_set_name => $parent_result_set_name,
+	replicate_number       => $technical_replicate_number
+      });
+
       my $result_set_constructor_parameters = {
 	-RESULT_SET_NAME      => $result_set_name,
 	-SUPPORTING_SETS      => [$replicate_input_subset, @$control_input_subsets],
@@ -352,9 +371,10 @@ sub create_result_set_constructor_parameters_with_idr {
   
   my $signal_input_subsets = $param->{signal_input_subsets};
   
-  my $biological_replicates_present = grep {
-    $_->biological_replicate > 1;
-  } @$signal_input_subsets;
+  my $biological_replicates_present 
+    = $self->signal_input_subsets_have_biological_replicates(
+    $signal_input_subsets
+  );
   
   if ($biological_replicates_present) {
     return $self->create_result_set_constructor_parameters_with_idr_and_biological_replicates($param)

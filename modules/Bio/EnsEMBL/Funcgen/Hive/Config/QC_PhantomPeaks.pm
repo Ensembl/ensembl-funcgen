@@ -59,7 +59,7 @@ sub pipeline_analyses {
 		    # do that. Also using single quotes to avoid interpolation
 		    # of the dollar sign.
 		    #
-		    q( Rscript $(which run_spp.R)          )
+		    q( Rscript /software/ensembl/funcgen/spp_package/run_spp_nodups.R          )
 		    # Overwrite plotfile, if one already exists
 		  . qq(    -rf                             )
 		  . qq(    -c=#bam_file#                   )
@@ -85,7 +85,7 @@ sub pipeline_analyses {
 		    # do that. Also using single quotes to avoid interpolation
 		    # of the dollar sign.
 		    #
-		    q( Rscript $(which run_spp.R) )
+		    q( Rscript /software/ensembl/funcgen/spp_package/run_spp_nodups.R )
 		    # Overwrite plotfile, if one already exists
 		  . qq(    -rf                             )
 		  . qq(    -c=#bam_file#                   )

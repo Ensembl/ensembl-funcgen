@@ -85,8 +85,10 @@ sub fetch_input {
     }, 7);
   }
   
-  my $align_files = $self->get_alignment_files_by_ResultSet_formats($rset, ['bam']);
-  $align_files->{bed} = $bed_file;
+  my $align_files = {
+    bam => $self->get_alignment_files_by_ResultSet_formats($rset),
+    bed => $bed_file
+  };
 
   $self->set_param_method('bam_file', $align_files->{bam}, 'required');  # For bai test/creation 
 

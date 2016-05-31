@@ -313,6 +313,14 @@ sub pipeline_analyses {
      -logic_name => 'WriteBigWig',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunWiggleTools',
      -rc_name    => 'normal_30GB_2cpu',
+     -flow_into => {
+	MEMLIMIT => 'WriteBigWig64GB',
+      }
+    },
+    {
+     -logic_name => 'WriteBigWig64GB',
+     -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunWiggleTools',
+     -rc_name    => '64GB_3cpu',
     },
     {
       -logic_name    => 'PermissiveSWEmbl',
