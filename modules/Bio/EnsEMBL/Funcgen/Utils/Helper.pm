@@ -1032,8 +1032,8 @@ sub _validate_rollback_Set {
       $full_delete  = ($rollback_level < $rollback_modes{$set_type}) ? 0 : $full_delete;
 
       if(%$diffs && ! $full_delete){
-        throw('Cannot rollback '.ref($new_set).' '.$new_set->name.
-          " without specifying full_delete as it has diffs (stored vs new):\n".$self->dump($diffs));
+#         throw('Cannot rollback '.ref($new_set).' '.$new_set->name.
+#           " without specifying full_delete as it has diffs (stored vs new):\n".$self->dump($diffs));
         #Some times it maybe valid to have diffs
         #but only when rolling back, either:
         #1 With full delete
@@ -1509,7 +1509,9 @@ sub rollback_ResultSet {
     ResultSet     = $rs_name\t
     recover       = $recover\t
     full_delete   = $full_delete\t
-    force_delete  = $force_delete");
+
+    "
+    );
 
   if($slices){
     warn "Slice rollback not supported, performing full rollback for ResultSet:\t$rs_name";
@@ -1606,7 +1608,7 @@ sub rollback_ResultSet {
 
   #This currently also revokes pre-imported states
   #i.e. ALIGNED/ING
-  $db->get_ResultSetAdaptor->revoke_imported_states_by_Set($rset);
+#   $db->get_ResultSetAdaptor->revoke_imported_states_by_Set($rset);
 
 
   if($rset->table_name ne 'input_subset'){
@@ -2254,8 +2256,8 @@ sub _compare_set_for_rollback {
             Dumper($diffs));
     }
     elsif($rollback_level < $rollback_modes{$set_type}){
-      throw("Found $set_type(".$new_set->name.') mismatch, please rectify manually or specify '.
-            "-rollback $set_type\n".Dumper($diffs));
+#       throw("Found $set_type(".$new_set->name.') mismatch, please rectify manually or specify '.
+#             "-rollback $set_type\n".Dumper($diffs));
     }
     elsif($slices){
       #Should never have diffs and slices set, this indicates we are
