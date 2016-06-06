@@ -13,12 +13,12 @@
 -- limitations under the License.
 
 /**
-@header patch_84_85_e.sql - add/modify columns in input_subset table
-@desc   Add/modify columns in input_subset table
+@header patch_84_85_w.sql - Extend the name length in the input_subset table
+@desc Extend the name length in the input_subset table
 */
 
-ALTER TABLE input_subset change replicate technical_replicate tinyint(3) unsigned DEFAULT 1 NOT NULL;
-ALTER TABLE input_subset add biological_replicate tinyint(3) unsigned DEFAULT 1 NOT NULL after `name`;
+
+ALTER TABLE input_subset modify `name` varchar(300) NOT NULL;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_e.sql|add/modify columns in input_subset table');
+insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_w.sql|Extend the name length in the input_subset table');

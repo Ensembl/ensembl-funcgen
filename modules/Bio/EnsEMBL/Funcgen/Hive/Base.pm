@@ -1065,24 +1065,119 @@ sub get_file_base_for_ResultSet {
   foreach my $isset(@{$rset->get_support}) {
     if( ($control && $isset->is_control)  ||
         ((! $control) && 
-         (! $isset->is_control)) ){ 
-       push @rep_numbers, $isset->technical_replicate;
+         (! $isset->is_control)) ) {
+       push @rep_numbers, $isset;
     }
   }
-  return 
-    get_set_prefix_from_Set($rset, $control).'_'.
-    $rset->analysis->logic_name.'_'.join('_', sort(@rep_numbers)); 
+  
+  my $replicate_input_subset_string = $self->create_replicate_input_subset_string(@rep_numbers);
+  
+  my $file_base_for_result_set = get_set_prefix_from_Set($rset, $control)
+    . '_'
+    . $rset->analysis->logic_name 
+    . '_'
+    . $replicate_input_subset_string;
+  
+  return $file_base_for_result_set;
+}
+
+sub create_replicate_input_subset_string {
+
+  my $self = shift;
+  my @input_subset_replicates = @_;
+
+  my @sorted_replicate_number = sort {
+       $a->biological_replicate <=> $b->biological_replicate
+    || $a->technical_replicate  <=> $b->technical_replicate
+  } @input_subset_replicates;
+  
+  my @replicate_number_strings;
+  foreach my $current_replicate_number (@sorted_replicate_number) {
+    push @replicate_number_strings,
+        'BR' . $current_replicate_number->biological_replicate
+      . 'TR' . $current_replicate_number->technical_replicate;
+  }
+  my $replicate_number_string = join('_', sort(@replicate_number_strings));
+  
+  return $replicate_number_string;
+}
+
+=head2 signal_input_subsets_have_biological_replicates
+
+  This code is used in two analysis modules and they rely on it returning
+  the same result both times.
+
+=cut
+sub signal_input_subsets_have_biological_replicates {
+
+  my $self  = shift;
+  my $signal_input_subsets = shift;
+  
+  my $biological_replicates_present = grep {
+    $_->biological_replicate > 1;
+  } @$signal_input_subsets;
+
+  return $biological_replicates_present;
+}
+
+sub create_result_set_name_for_biological_replicate {
+  my $self  = shift;
+  my $param = shift;
+  
+  my $parent_result_set_name = $param->{parent_result_set_name};
+  my $replicate_number       = $param->{replicate_number};
+  
+  return $self->_create_result_set_name_for_replicate(
+    $parent_result_set_name, 
+    'BR', 
+    $replicate_number
+  );
+}
+
+sub create_result_set_name_for_technical_replicate {
+  my $self  = shift;
+  my $param = shift;
+  
+  my $parent_result_set_name = $param->{parent_result_set_name};
+  my $replicate_number       = $param->{replicate_number};
+  
+  return $self->_create_result_set_name_for_replicate(
+    $parent_result_set_name, 
+    'TR', 
+    $replicate_number
+  );
+}
+
+sub _create_result_set_name_for_replicate {
+  my $self  = shift;
+  
+  my $parent_result_set_name = shift;
+  my $replicate_type         = shift;
+  my $replicate_number       = shift;
+  
+  return $parent_result_set_name . '_' . $replicate_type . $replicate_number;
 }
 
 sub get_alignment_files_by_ResultSet_formats {
-  my ($self, $rset, $formats, $control, $all_formats, $filter_format) = @_;
-  assert_ref($formats, 'ARRAY');  
-  my $file_type = ($control) ? 'control_file' : 'alignment_file';
+  my ($self, $rset, $control) = @_;
   my ($path, $align_files);
 
-    $path = $self->get_alignment_path_prefix_by_ResultSet($rset, $control);
-  $path .= '.unfiltered' if $filter_format;
+  $path = $self->get_alignment_path_prefix_by_ResultSet($rset, $control);
   
+  return $path . '.bam';
+  
+  my $all_formats;
+  my $filter_format;
+  my $formats = [];
+  assert_ref($formats, 'ARRAY');
+  
+  my $file_type = ($control) ? 'control_file' : 'alignment_file';
+  
+  $path .= '.unfiltered' if $filter_format;
+
+use Data::Dumper;
+die(Dumper($path));
+
   my $params = {debug              => $self->debug,
 		ref_fai            => $self->sam_ref_fai($rset->epigenome->gender),  #Just in case we need to convert
 		filter_from_format => $filter_format,
@@ -1097,7 +1192,9 @@ sub get_alignment_files_by_ResultSet_formats {
     " filter_from_format: $filter_format):\n\t".$path);
   $align_files = get_files_by_formats($path, $formats, $params);
 
- 
+use Data::Dumper;
+die(Dumper($align_files));
+
   #throw here and handle optional control file in caller. This should be done with 
   #a no_control/skip_control flag or similar  
     return $align_files || $self->throw("Failed to find $file_type (@$formats) for:\t$path");  

@@ -163,13 +163,13 @@ sub run {   # Check parameters and do appropriate database/file operations...
         push @ctrl_ids, $isset->dbID;;        
       }
       else{
-        if($seen_rep){
-          $self->throw_no_retry("Found more than 1 replicate (non-control) InputSet supporting an an IDR ResultSet:\n\t".
-            join("\n\t", map {$_->name} @issets)."\n");  
-        }  
+#         if($seen_rep){
+#           $self->throw_no_retry("Found more than 1 replicate (non-control) InputSet supporting an IDR ResultSet for experiment $exp_name:\n\t".
+#             join("\n\t", map {$_->name} @issets)."\n");  
+#         }  
         
-        push @rep_nums, $isset->technical_replicate;
-        $seen_rep = 1;
+        push @rep_nums, $isset;
+#         $seen_rep = 1;
       }
     }
     
@@ -202,12 +202,16 @@ sub run {   # Check parameters and do appropriate database/file operations...
     
     push @pre_idr_files, $permissive_swembl_peak_file;
     #do read counts in RunIDR to parallelise
-    push @bams,         $self->get_alignment_files_by_ResultSet_formats($rset, ['bam'])->{bam};
+    push @bams,         $self->get_alignment_files_by_ResultSet_formats($rset, ['bam']);
   }
   
   
   #Put batch_name code in BaseSequencing or Base? 
-  my $batch_name                 = $exp_name.'_'.$lname.'_'.join('_', sort @rep_nums);
+  my $replicate_input_subset_string = $self->create_replicate_input_subset_string(@rep_nums);
+  
+#   die($replicate_input_subset_string);
+
+  my $batch_name = $exp_name.'_'.$lname.'_'.$replicate_input_subset_string;
   my ($np_files, $threshold, $x_thresh_adjust);
   
   if(! eval { ($np_files, $threshold, $x_thresh_adjust) = 

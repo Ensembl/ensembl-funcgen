@@ -25,7 +25,7 @@ limitations under the License.
 
 =head1 NAME
 
-Bio::EnsEMBL::Hive::Funcgen::PrprocessFastqs
+Bio::EnsEMBL::Hive::Funcgen::PreprocessFastqs
 
 =head1 DESCRIPTION
 
@@ -66,74 +66,94 @@ sub fetch_input {
 
 sub run {
   my $self         = shift;
-  my $result_set         = $self->ResultSet;
+  my $result_set   = $self->ResultSet;
   my $run_controls = $self->run_controls;
   my $merge        = $self->merge;
  
-  if($run_controls){
-    my $exp = $result_set->experiment(1);#control flag
+  if($run_controls) {
+    # control flag
+    my $exp = $result_set->experiment(1);
   }
 
   my @fastqs;
   my $throw = '';
   my $set_rep_suffix = '';
-  my @issets = @{$result_set->get_support};
+  my @input_subsets = @{$result_set->get_support};
   
-  if((! $run_controls) && (! $merge) &&
-    ($self->is_idr_FeatureType($result_set->feature_type))){
+  # The code here is trying to figure out where in the pipeline it is being 
+  # run. If it realises it is splitting the fastq files in the idr step,
+  # it does something special.
+  #
+  my $is_run_during_idr_step
+    = 
+      (! $run_controls) && 
+      (! $merge) &&
+      ($self->is_idr_FeatureType($result_set->feature_type));
   
-    my @signal_issets = grep { ! $_->is_control } @issets;
+  if ($is_run_during_idr_step) {
   
-    if(scalar(@signal_issets) != 1){
+    # Get the input_subset object with the signal
+    my @signal_input_subsets = grep { ! $_->is_control } @input_subsets;
+    
+    my %temp =  map {
+      ( $_->biological_replicate => 1 )
+    } @signal_input_subsets;
+    my @biological_replicate_number = keys %temp;
+    
+    %temp =  map {
+      ( $_->technical_replicate => 1 )
+    } @signal_input_subsets;
+    my @technical_replicate_number = keys %temp;
+    
+#     use Data::Dumper;
+#     print Dumper(\@biological_replicate_number);
+#     print Dumper(\@technical_replicate_number);
+    
+    # Assert there is only one.
+    if(scalar(@biological_replicate_number) != 1) {
       $self->throw_no_retry('Expected 1 InputSubset(replicate) for IDR ResultSet '.
-        $result_set->name.' but found '.scalar(@signal_issets).' Specify merge, or restrict to 1 InputSubset');  
+        $result_set->name.' but found '.scalar(@signal_input_subsets).' Specify merge, or restrict to 1 InputSubset');  
     }
-    #We are not filtering for controls here!!
-    $set_rep_suffix = '_TR'.$signal_issets[0]->replicate;
+
+    # This is used for creating subdirectories. Then it is passed on as a 
+    # batch parameter, but probably never used in any of the following 
+    # analyses.
+    #
+    $set_rep_suffix = 
+      '_BR_' . $biological_replicate_number[0] . 
+      '_TR_' . join '_', @technical_replicate_number;
+#     die ($set_rep_suffix);
   }
   
-  foreach my $isset(@issets) {
+  foreach my $current_input_subset (@input_subsets) {
 
-    if(($isset->is_control && ! $run_controls) ||
-       ($run_controls && ! $isset->is_control)){
-      next;    
+    if(
+      (  $current_input_subset->is_control && ! $run_controls) || 
+      (! $current_input_subset->is_control &&   $run_controls)
+    ){
+      next;
     }
  
-    if(! $self->tracking_adaptor->fetch_tracking_info($isset)){
+    if(! $self->tracking_adaptor->fetch_tracking_info($current_input_subset)){
        $throw .= "Could not find tracking info for InputSubset:\t".
-        $isset->name."\n";
+        $current_input_subset->name."\n";
       next;
     }
     
-    if(! defined $isset->local_url){
+    if(! defined $current_input_subset->local_url){
       $throw .= "Found an InputSubset without a local_url, has this been downloaded?:\t".
-        $isset->name."\n";
-      next;  
+        $current_input_subset->name."\n";
+      next;
     }
 
     my $found_path;
-    my $params = {};#{gunzip => 1}; #NEVER DEFINE gunzip here!
-    #Instead of gunzipping in the warehouse, zcat is now used to 
-    #pipe directly split directly into the work area
-    #This reduces tidy up and keeps footprint low, so we don't hit
-    #out of space errors when running with a full warehouse
-    #or a nearly full scratch space
-    #This will also prevent any clashes between unzipping files in the warehouse
-    #188 secs to zcat 227MB gzipped fastq
-    #vs
-    #10 secs to gunzip (to 1.2GB) and cat
-    #This does not include rezip and tidy up time of ~90 secs 
-    #(which could arguably be defered to after the pipeline run)
-    #This is quite a large difference, but with and average of 2 or 3 reps 
-    #this will probably make this run to ~10mins, which is negligable
-    #compared to the down time from managing failed jobs due to out of space 
-    #issues.
+    my $params = {};
 
-    if(defined $isset->md5sum || ! $self->checksum_optional ){
-#       $params->{checksum} = $isset->md5sum;
+    if(defined $current_input_subset->md5sum || ! $self->checksum_optional ){
+#       $params->{checksum} = $current_input_subset->md5sum;
     }
     
-    my $local_url = $isset->local_url;
+    my $local_url = $current_input_subset->local_url;
     #Look for gz files too. These would normally already be gzipped
     #if downloaded from a repository
     #But they may have been gzipped after processing if produced locally
@@ -145,29 +165,29 @@ sub run {
       $throw .= "$@\n";
       next;  
     }
-    elsif(! defined $found_path){
-      $throw .= "Could not find fastq file, is either not downloaded, has been deleted or is in warehouse:\t".
-        $local_url."\n";
-      #Could try warehouse here?
-    }
-    elsif($found_path !~ /\.(?:t){0,1}gz$/o){
-      #use is_compressed here?
-      #This will also modify the original file! And potentially invalidate any checksumming
-      $self->throw_no_retry("Found unzipped path, aborting as gzipping will invalidate any further md5 checking:\t$found_path");
-      #run_system_cmd("gzip $found_path");
-      #$found_path .= '.gz';  
-    }
+#     elsif(! defined $found_path){
+#       $throw .= "Could not find fastq file, is either not downloaded, has been deleted or is in warehouse:\t".
+#         $local_url."\n";
+#       #Could try warehouse here?
+#     }
+#     elsif($found_path !~ /\.(?:t){0,1}gz$/o){
+#       #use is_compressed here?
+#       #This will also modify the original file! And potentially invalidate any checksumming
+#       $self->throw_no_retry("Found unzipped path, aborting as gzipping will invalidate any further md5 checking:\t$found_path");
+#       #run_system_cmd("gzip $found_path");
+#       #$found_path .= '.gz';  
+#     }
     push @fastqs, $found_path;  
   }
  
   throw($throw) if $throw;
   
-  if((scalar(@fastqs) > 1) &&
-     ! $merge){
-    throw('ResultSet '.$result_set->name.
-      " has more than one InputSubset, but merge has not been specified:\n\t".
-      join("\n\t", @fastqs));    
-  }  
+#   if((scalar(@fastqs) > 1) &&
+#      ! $merge){
+#     throw('ResultSet '.$result_set->name.
+#       " has more than one InputSubset, but merge has not been specified:\n\t".
+#       join("\n\t", @fastqs));    
+#   }  
  
   my $set_prefix = get_set_prefix_from_Set($result_set, $run_controls).
     '_'.$result_set->analysis->logic_name.$set_rep_suffix; 
@@ -264,7 +284,5 @@ sub run {
 
   return;
 }
-
-sub write_output {}
 
 1;

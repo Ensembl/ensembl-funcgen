@@ -1620,7 +1620,7 @@ sub get_set_prefix_from_Set{
      $ftype = $set->feature_type->name;
   }
 
-  return $set->epigenome->name.'_'.$ftype.'_'.$study_name;
+  return $set->epigenome->production_name.'_'.$ftype.'_'.$study_name;
 }
 
 #This currently only works for Experiments
@@ -1677,8 +1677,14 @@ sub get_study_name_from_Set {
     $ftype = $set->feature_type->name;
   }
 
-  #\Q..\E escape meta-characters in string variables
-  (my $study_name = $exp_name) =~ s/\Q${ctype}_${ftype}\E_(.*)/$1/i;
+#   #\Q..\E escape meta-characters in string variables
+#   (my $study_name = $exp_name) =~ s/\Q${ctype}_${ftype}\E_(.*)/$1/i;
+  
+  my @components = split '_', $exp_name;
+  my $study_name = pop @components;
+  
+#   die("study_name = $study_name");
+  
 
   if($study_name eq $exp_name){
     throw("Failed to create study name for Experiment $exp_name with cell type $ctype and feature type $ftype");

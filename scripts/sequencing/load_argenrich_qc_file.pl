@@ -141,6 +141,8 @@ LINE: while (my $current_line = <IN>) {
   my @f = split '=', $current_line;
   next LINE unless(@f == 2);
   
+  $f[1] = 'null' if ($f[1] eq 'NA');
+  
   $key_value_pairs{$f[0]} = $f[1];
 }
 use Hash::Util qw( lock_hash );

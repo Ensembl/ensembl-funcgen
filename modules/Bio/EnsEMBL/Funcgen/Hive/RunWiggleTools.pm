@@ -38,7 +38,7 @@ sub fetch_input {
     ) {
       $is_control = 1;
     }
-    $self->input_files([$self->get_alignment_files_by_ResultSet_formats($result_set, ['bam'], $is_control)->{bam}]);
+    $self->input_files([$self->get_alignment_files_by_ResultSet_formats($result_set, $is_control)]);
 
     my $output_prefix = $self->bigwig_output_dir . '/' . $result_set->name;
     
@@ -86,6 +86,9 @@ sub run {
   
   $self->helper->debug(1, "Running:\n\t".$cmd);
   run_system_cmd($cmd);
+  
+  # If job was killed for memlimit, allow for the worker to be killed as well.
+  sleep 10;
 
   if($self->set_type){
     my $result_set = $self->ResultSet;
