@@ -67,6 +67,22 @@ sub epigenome_id {
   return $self->{'_epigenome_id'};
 }
 
+=head2 epigenome
+=cut
+sub epigenome {
+  my $self = shift;
+
+  if(! defined $self->{'_epigenome'}) {
+    $self->{'_epigenome'} = $self
+      ->db
+      ->get_EpigenomeAdaptor()
+      ->fetch_by_dbID(
+	$self->epigenome_id
+      );
+  }
+  return $self->{'_epigenome'};
+}
+
 =head2 _is_multicell
 =cut
 sub _is_multicell {
@@ -91,6 +107,18 @@ sub activity {
   return $self->{'_activity'};
 }
 
+=head2 regulatory_feature
+=cut
+sub regulatory_feature {
+  my $self = shift;
+  my $regulatory_feature = shift;
+
+  if(defined $regulatory_feature) {
+    $self->{'_regulatory_feature'}  = $regulatory_feature;
+  }
+  return $self->{'_regulatory_feature'};
+}
+
 =head2 regulatory_evidence
 =cut
 sub regulatory_evidence {
@@ -107,6 +135,35 @@ sub regulatory_evidence {
     $self->{'_regulatory_evidence'} = $regulatory_evidence;
   }
   return $self->{'_regulatory_evidence'};
+}
+
+sub SO_term {
+  # http://www.sequenceontology.org/browser/current_svn/term/SO:0005836
+  return 'SO:0005836';
+}
+
+sub summary_as_hash {
+
+  my $self = shift;
+  
+  my $regulatory_feature = $self->regulatory_feature;
+  my $epigenome          = $self->epigenome;
+
+  return {
+#     ID                  => $regulatory_feature->stable_id,
+    regulatory_feature_stable_id => $regulatory_feature->stable_id,
+    epigenome           => $epigenome->display_label,
+    source              => 'Regulatory_Build',
+    bound_start         => $regulatory_feature->bound_seq_region_start,
+    bound_end           => $regulatory_feature->bound_seq_region_end,
+    start               => $regulatory_feature->seq_region_start,
+    end                 => $regulatory_feature->seq_region_end,
+    strand              => $regulatory_feature->strand,
+    seq_region_name     => $regulatory_feature->seq_region_name,
+    activity            => $self->activity,
+    description         => 'Activity of ' . $regulatory_feature->stable_id . ' in ' . $epigenome->display_label,
+    feature_type        => "regulatory activity",
+  };
 }
 
 1;

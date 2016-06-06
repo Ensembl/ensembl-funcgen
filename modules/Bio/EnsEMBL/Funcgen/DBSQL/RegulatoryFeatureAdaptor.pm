@@ -324,11 +324,16 @@ sub _objs_from_sth {
   #
   my $add_components_to_regulatory_feature_under_construction = sub {
 
-    my @flattened_regulatory_features;
+    my @flattened_regulatory_activities;
     foreach my $current_epigenome_id (keys %$unique_set_of_regulatory_activities) {
-      push @flattened_regulatory_features, $unique_set_of_regulatory_activities->{$current_epigenome_id};
+      push @flattened_regulatory_activities, $unique_set_of_regulatory_activities->{$current_epigenome_id};
     }
-    $regulatory_feature_under_construction->regulatory_activity(\@flattened_regulatory_features);
+    
+    foreach my $current_regulatory_activity (@flattened_regulatory_activities) {
+      $current_regulatory_activity->regulatory_feature($regulatory_feature_under_construction);
+    }
+    
+    $regulatory_feature_under_construction->regulatory_activity(\@flattened_regulatory_activities);
     
     # Fake MultiCell regulatory behaviour.
     #

@@ -211,7 +211,7 @@ sub regulatory_evidence {
   my $epigenome   = shift;
   
   $self->_assert_epigenome_ok($epigenome);
-  my $regulatory_activity = $self->_regulatory_activity_for_epigenome($epigenome);
+  my $regulatory_activity = $self->regulatory_activity_for_epigenome($epigenome);
   
   my $regulatory_evidence = $regulatory_activity->regulatory_evidence;
     
@@ -235,7 +235,7 @@ sub _assert_epigenome_ok {
   }
 }
 
-sub _regulatory_activity_for_epigenome {
+sub regulatory_activity_for_epigenome {
   my $self = shift;
   my $epigenome = shift;
   
@@ -246,7 +246,7 @@ sub _regulatory_activity_for_epigenome {
   } @{$self->regulatory_activity};
   
   if (! @regulatory_activity) {
-    throw();
+    throw('No regulatory activity for ' . $epigenome->display_label);
   }
   if (@regulatory_activity>1) {
     throw();
@@ -272,7 +272,7 @@ sub get_underlying_structure {
   my $epigenome = shift;
   $self->_assert_epigenome_ok($epigenome);
   
-  my $regulatory_activity = $self->_regulatory_activity_for_epigenome($epigenome);
+  my $regulatory_activity = $self->regulatory_activity_for_epigenome($epigenome);
   
   my $epigenome_specific_underlying_structure = $regulatory_activity->get_underlying_structure();
 
@@ -545,14 +545,15 @@ sub summary_as_hash {
 
   return {
     ID                      => $self->stable_id,
-    epigenome               => $self->epigenome->name,
+#     epigenome               => $self->epigenome->name,
+    source => 'Regulatory_Build',
     bound_start             => $self->bound_seq_region_start,
     bound_end               => $self->bound_seq_region_end,
     start                   => $self->seq_region_start,
     end                     => $self->seq_region_end,
     strand                  => $self->strand,
     seq_region_name         => $self->seq_region_name,
-    activity                => $self->activity,
+#     activity                => $self->activity,
     description             => $self->feature_type->description,
     feature_type            => "regulatory",
   };
