@@ -34,34 +34,20 @@ sub fetch_input {   # fetch parameters...
   return;
 }
 
-sub _are_controls {
-  my $control_input_subsets        = shift; 
-  my $all_controls = 1;
-  
-  foreach my $ctrl(@$control_input_subsets){
-    
-    if(! $ctrl->is_control){
-      $all_controls = 0;
-      last;
-    }
+sub _are_all_controls {
+  my $control_input_subsets = shift; 
+  foreach my $ctrl(@$control_input_subsets) {
+    return unless ($ctrl->is_control);
   }
-  
-  return $all_controls;
+  return 1;
 }
 
-
-sub _are_signals {
-  my $signal_input_subsets     = shift; 
-  my $all_signal_input_subsets = 1;
-  
+sub _are_all_signals {
+  my $signal_input_subsets = shift; 
   foreach my $sig(@$signal_input_subsets) {
-    
-    if($sig->is_control){
-      $all_signal_input_subsets = 0;
-      last;
-    }
+    return if ($sig->is_control)
   }
-  return $all_signal_input_subsets;
+  return 1;
 }
 
 sub _throw_if_control_parameters_are_invalid {
@@ -78,7 +64,7 @@ sub _throw_if_control_parameters_are_invalid {
 sub _throw_if_control_input_subsets_are_invalid {
   my $self = shift;
   my $control_input_subsets = shift;
-  if(! &_are_controls($control_input_subsets)){
+  if(! _are_all_controls($control_input_subsets)) {
     throw("Found unexpected non-control InputSubsets specified as controls\n\t".
       join("\n\t", map($_->name, @$control_input_subsets)));
   }
@@ -114,6 +100,39 @@ sub _fetch_control_experiments {
   return \%exps;
 }
 
+sub die_if_result_set_has_broken_support_links {
+
+  my $self = shift;
+  my $result_set = shift;
+  my $dbc = $self->out_db->dbc;
+  my $sth = $dbc->prepare(
+    'select * from result_set join result_set_input using (result_set_id) left join input_subset on (table_id = input_subset_id) where input_subset.input_subset_id is null and result_set_id = ' . $result_set->dbID
+  );
+  $sth->execute;
+  my $bad_things = $sth->fetchall_arrayref;
+  if (@$bad_things) {
+    warn("Result set has broken links!");
+    $sth = $dbc->prepare(
+      'delete from result_set_input where table_name="input_subset" and table_id not in select distinct input_subset_id from input_subset and result_set_id = ' . $result_set->dbID
+    );
+  }
+}
+
+sub die_if_control_result_set_has_signal_support {
+
+  my $self = shift;
+  my $result_set = shift;
+  my $dbc = $self->out_db->dbc;
+  my $sth = $dbc->prepare(
+    'select * from result_set join result_set_input using (result_set_id) left join input_subset on (table_id = input_subset_id) where input_subset.is_control = 1 and result_set.result_set_id = ' . $result_set->dbID
+  );
+  $sth->execute;
+  my $bad_things = $sth->fetchall_arrayref;
+  if (@$bad_things) {
+    die("Control result_set has signal support!");
+  }
+}
+
 sub run {
 
   my $self                  = shift;
@@ -142,12 +161,15 @@ sub run {
   
   $self->_throw_if_control_input_subsets_are_invalid($control_input_subsets);
   
+  $Data::Dumper::Maxdepth = 3;
+  print Dumper($control_input_subsets);
+  
 # ------------------------------------------------------------------------------
 
   my $control_experiment = $self->_fetch_control_experiment($control_input_subsets);
   
   my $result_set_name = $control_experiment->name . '_control_alignment';
-
+  
   my $control_result_set_constructor_parameters = {
     -RESULT_SET_NAME      => $result_set_name,
 #     -RESULT_SET_REPLICATE => undef,
@@ -162,6 +184,8 @@ sub run {
   };
   
   my $control_result_set = $helper->define_ResultSet(%$control_result_set_constructor_parameters);
+  
+  $self->die_if_result_set_has_broken_support_links($control_result_set);
 
 # ------------------------------------------------------------------------------
   
@@ -187,7 +211,7 @@ sub run {
       $self->out_db, 'InputSubset', 'fetch_by_dbID', $input_subset_ids->{$experiment_name}
     );
     
-    if (! &_are_signals($signal_input_subsets)) {
+    if (! _are_all_signals($signal_input_subsets)) {
       throw("Found unexpected controls in signal InputSubsets\n\t".
       join("\n\t", map($_->name, @$signal_input_subsets)));
     }
@@ -228,6 +252,8 @@ sub run {
     foreach my $current_result_set_constructor_parameter (@$result_set_group) {
     
       my $result_set = $helper->define_ResultSet(%{$current_result_set_constructor_parameter});
+      
+      $self->die_if_result_set_has_broken_support_links($result_set);
       
       push @hive_jobs_fix_experiment_id, { 
 	dbID      => $result_set->dbID, 
@@ -289,6 +315,9 @@ sub hash_signal_input_subsets_by_biological_replicate {
       @{$signal_input_subsets_hashed_by_biological_replicate{$biological_replicate_number}},
       $current_signal_input_subset;
   }
+  use Hash::Util qw( lock_keys );
+  lock_keys( %signal_input_subsets_hashed_by_biological_replicate );
+  
   return \%signal_input_subsets_hashed_by_biological_replicate;
 }
 
@@ -348,7 +377,7 @@ sub create_result_set_constructor_parameters_with_idr_but_without_biological_rep
 	parent_result_set_name => $parent_result_set_name,
 	replicate_number       => $technical_replicate_number
       });
-
+      
       my $result_set_constructor_parameters = {
 	-RESULT_SET_NAME      => $result_set_name,
 	-SUPPORTING_SETS      => [$replicate_input_subset, @$control_input_subsets],
