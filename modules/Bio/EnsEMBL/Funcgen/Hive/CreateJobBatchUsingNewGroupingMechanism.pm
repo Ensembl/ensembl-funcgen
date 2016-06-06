@@ -89,6 +89,7 @@ sub build_control_name_to_signal_name_hash {
   foreach my $current_experiment_name (@$experiment_name) {
     my $experiment = $experiment_adaptor->fetch_by_name($current_experiment_name);
     if (!defined $experiment) {
+      use Carp;
       confess("Can't find experiment with name $current_experiment_name!");
     }
     if (! $experiment->is_control) {
