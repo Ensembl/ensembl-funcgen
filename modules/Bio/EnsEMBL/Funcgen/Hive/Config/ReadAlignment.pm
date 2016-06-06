@@ -13,7 +13,8 @@ sub default_options {
 
       #Size of each sequence chunk to be aligned (nbr of reads * 4)
       #fastq_chunk_size      => 16000000, #This should run in 30min-1h
-      fastq_chunk_size      =>   1000000,
+#       fastq_chunk_size      =>   1000000,
+      fastq_chunk_size      =>  20000000,
       alignment_analysis    => 'bwa_samse',
    };
 }
@@ -304,7 +305,7 @@ sub pipeline_analyses {
 	  MAIN => [
             'JobFactoryPermissivePeakCalling',
             # Create bigwigs for replicates
-            WHEN('1' => { 'WriteBigWig' => INPUT_PLUS({ type => 'replicate' })}),
+#             WHEN('1' => { 'WriteBigWig' => INPUT_PLUS({ type => 'replicate' })}),
 	  ],
        },
      -rc_name => '64GB_3cpu',
