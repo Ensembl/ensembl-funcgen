@@ -3062,7 +3062,7 @@ sub make_track_hub_headers {
 sub make_track_hub_assembly {
   my $options = shift;
 
-  my $output = "trackDb_$options->{assembly}.txt";
+  my $output = "$options->{output_dir}/trackDb_$options->{assembly}.txt";
   open(my $file, ">", $output) || die("Could not open $output\n");
 
   make_track_hub_overview($options, $file);
