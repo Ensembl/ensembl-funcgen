@@ -301,7 +301,7 @@ sub get_analysis {
 sub clean_name {
   my $string = shift;
   $string =~ s/[\-\(\)]//g;
-  $string =~ s/_.*//g;
+#   $string =~ s/_.*//g;
   $string = uc($string);
   $string =~ s/:/x/g;
   return $string;
