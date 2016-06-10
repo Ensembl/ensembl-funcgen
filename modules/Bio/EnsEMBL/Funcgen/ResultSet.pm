@@ -719,7 +719,6 @@ sub experiment{
       my @support = @{$self->get_support};
 
       foreach my $support(@support){
-
         if($support->can('is_control')){
 
           if(($support->is_control && ! $control) ||

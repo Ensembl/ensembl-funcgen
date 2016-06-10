@@ -1577,6 +1577,13 @@ sub _get_a_control_InputSubset{
     @is_sets = ($set);
   }
 
+  foreach my $current_input_subset (@is_sets) {
+    if (! defined $current_input_subset) {
+      use Carp;
+      confess("Expected an input_subset, but got an undefined value!");
+    }
+  }
+  
   my @ctrls = grep { $_->is_control == 1 } @is_sets;
 
   if(! @ctrls){

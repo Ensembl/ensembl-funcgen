@@ -65,7 +65,7 @@ sub fetch_current_regulatory_build {
   my $regulatory_build = $self->generic_fetch($constraint);
   
   if (!$regulatory_build || @$regulatory_build==0) {
-    throw("No regulatory build found!");
+    return;
   }
   if (@$regulatory_build!=1) {
     throw("Found ". @$regulatory_build ." current regulatory builds!");

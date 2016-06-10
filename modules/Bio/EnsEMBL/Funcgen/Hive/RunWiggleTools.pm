@@ -88,7 +88,7 @@ sub run {
   run_system_cmd($cmd);
   
   # If job was killed for memlimit, allow for the worker to be killed as well.
-  sleep 10;
+  sleep 20;
 
   if($self->set_type){
     my $result_set = $self->ResultSet;
