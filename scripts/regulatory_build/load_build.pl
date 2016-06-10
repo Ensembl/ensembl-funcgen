@@ -323,8 +323,7 @@ sub get_cell_type_names {
   my $epigenome_adaptor = $db->get_EpigenomeAdaptor();  
   my %cell_type_from_clean = ();
   for my $epigenome (@{$epigenome_adaptor->fetch_all()}) {
-    $cell_type_from_clean{clean_name($epigenome->name)} = $epigenome;
-    defined $epigenome || die("Unrecognized cell type name $epigenome\n");
+    $cell_type_from_clean{clean_name($epigenome->production_name)} = $epigenome;
   }
 
 #   my $debug_max = 1;
@@ -621,6 +620,7 @@ sub get_feature_types {
   Arg4: Hash ref: temporary id -> count
   Arg5: hash ref: chromosome name -> seq_region_id
   Arg6: Bio::EnsEMBL::Funcgen::DBAdaptor object
+  Arg7: Bio::EnsEMBL::Funcgen::RegulatoryBuild
   Returntype: undef
   Side effects: writes into regulatory_feature table
 
@@ -630,94 +630,78 @@ sub compute_regulatory_features {
   my ($options, $cell_type, $feature_type, $stable_id, $count_hash, $slice, $db, $new_regulatory_build) = @_;
   my $rfa = $db->get_adaptor("RegulatoryFeature");
    
-#   foreach my $cell_type (keys %{$feature_set}) {
+  my $regulatory_features = load_regulatory_build($options->{base_dir}, $stable_id, $count_hash, $slice, $feature_type, $rfa, $new_regulatory_build);
+ 
+  print "Going through cell types ".(scalar @$cell_type)."\n";
   foreach my $current_cell_type (@$cell_type) {
-    load_celltype_build($options->{base_dir}, $current_cell_type, $stable_id, $count_hash, $slice, $current_cell_type, $feature_type, $rfa, $new_regulatory_build);
+    load_celltype_activity($options->{base_dir}, $current_cell_type, $regulatory_features);
   }
+
+  $rfa->store(values %$regulatory_features);
 }
 
-=head2 load_celltype_build
+=head2 load_regulatory_build
 
   Description: loads the data from the build's BigBed files into the database
-  Arg1: filehandle into input file
-  Arg2: Bio::EnsEMBL::Funcgen::FeatureSet
-  Arg3: hashref: bedfile id => stable id
-  Arg4: hashref: bedfile id => integer 
-  Arg5: hashref: slice name => Bio::EnsEMBL::Slice
-  Arg6: hashref: label => Bio::EnsEMBL::Funcgen::FeatureType
-  Arg7: Bio::EnsEMBL::Funcgen::RegulatoryFeatureAdaptor
-  Returntype: undef
+  Arg1: Location of base directory
+  Arg2: hashref: bedfile id => stable id
+  Arg3: hashref: bedfile id => integer 
+  Arg4: hashref: slice name => Bio::EnsEMBL::Slice
+  Arg5: hashref: label => Bio::EnsEMBL::Funcgen::FeatureType
+  Arg6: Bio::EnsEMBL::Funcgen::RegulatoryFeatureAdaptor
+  Arg7: Bio::EnsEMBL::Funcgen::RegulatoryBuild
+  Returntype: hashref bedfile id => Bio::EnsEMBL::Funcgen::RegulatoryFeature
   Side effects: writes into regulatory_feature table
 '
 =cut
 
-sub load_celltype_build {
-#   my ($base_dir, $feature_set, $stable_id, $count_hash, $slice, $cell_type, $feature_type, $rfa) = @_;
-  my ($base_dir, $cell_type, $stable_id, $count_hash, $slice, $cell_type, $feature_type, $rfa, $new_regulatory_build) = @_;
+sub load_regulatory_build {
+  my ($base_dir, $stable_id, $count_hash, $slice, $feature_type, $rfa, $new_regulatory_build) = @_;
   
+  print_log("\tLoading Regulatory Features\n");
+
   my ($tmp, $tmp_name) = tempfile();
-
-  print_log("\tProcessing data from cell type " . $cell_type->display_label . " (". $cell_type->name .")" . "\n");
-
-  my $cell_type_name = clean_name($cell_type->name);
-  my $bigbed = "$base_dir/projected_segmentations/$cell_type_name.bb";
-
+  my $bigbed = "$base_dir/overview/RegBuild.bb";
   run("bigBedToBed $bigbed $tmp_name");
-  process_file($tmp, $cell_type, $stable_id, $count_hash, $slice, $feature_type, $rfa, $new_regulatory_build);
+
+  my $regulatory_features = process_regulatory_build_file($tmp, $stable_id, $count_hash, $slice, $feature_type, $rfa, $new_regulatory_build);
+
   close $tmp;
   unlink $tmp_name;
+  return $regulatory_features;
 }
 
-=head2 process_file
+
+=head2 process_regulatory_build_file
 
   Description: loads the data from a Bed file into the database
   Arg1: filehandle into input file
-  Arg2: Bio::EnsEMBL::Funcgen::FeatureSet
   Arg3: hashref: bedfile id => stable id
   Arg4: hashref: bedfile id => integer 
   Arg5: hashref: slice name => Bio::EnsEMBL::Slice
   Arg6: hashref: label => Bio::EnsEMBL::Funcgen::FeatureType
   Arg7: Bio::EnsEMBL::Funcgen::RegulatoryFeatureAdaptor
-  Returntype: undef
+  Arg8: Bio::EnsEMBL::Funcgen::RegulatoryBuild
+  Returntype: hashref bedfile id => Bio::EnsEMBL::Funcgen::RegulatoryFeature
   Side effects: writes into regulatory_feature table
 
 =cut
 
-sub process_file {
-#   my ($fh, $feature_set, $stable_id, $count_hash, $slice, $feature_type, $rfa) = @_;
-  my ($fh, $cell_type, $stable_id, $count_hash, $slice, $feature_type, $rfa, $new_regulatory_build) = @_;
+sub process_regulatory_build_file {
+  my ($fh, $stable_id, $count_hash, $slice, $feature_type, $rfa, $new_regulatory_build) = @_;
   
-  my @features = ();
+  my $regulatory_features = {};
   
-#   my %has_evidence_to_activity_enum = (
-#     0 => 'INACTIVE',
-#     1 => 'ACTIVE',
-#     2 => 'POISED',
-#     3 => 'REPRESSED',
-#     4 => 'NA',
-#   );
-  
-#   use Hash::Util qw( lock_hash );
-#   lock_hash(%has_evidence_to_activity_enum);
-
   while (my $line = <$fh>) {
     chomp $line;
     my ($chrom, $start, $end, $name, $score, $strand, $thickStart, $thickEnd, $rgb) = split "\t", $line;
     my ($feature_type_str, $number) = split '_', $name;
-#     my $has_evidence = $rgb_state{$rgb};
 
     exists $feature_type->{$feature_type_str} || die("Could not find feature type for $feature_type_str\n".join("\t", keys %{$feature_type})."\n");
     exists $slice->{$chrom} || die("Could not find slice type for $chrom\n".join("\t", keys %{$slice})."\n");
     exists $stable_id->{$name} || die("Could not find stable ID for feature # $name\n");
 
     exists $count_hash->{$name} || die("Could not find count for feature # $name\n");
-    
-#     my $activity = $has_evidence_to_activity_enum{$has_evidence};
-    
-    use Bio::EnsEMBL::Funcgen::RegulatoryActivity;
-    my $regulatory_activity = Bio::EnsEMBL::Funcgen::RegulatoryActivity->new;
-    $regulatory_activity->activity($rgb_state{$rgb});
-    $regulatory_activity->epigenome_id($cell_type->dbID);
     
     my $regulatory_feature = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new_fast({
       slice               => $slice->{$chrom},
@@ -732,18 +716,63 @@ sub process_file {
       regulatory_build_id => $new_regulatory_build->dbID,
     });
     
-    $regulatory_feature->add_regulatory_activity($regulatory_activity);
-   
-    push @features, $regulatory_feature;
-
-    if (scalar @features > 10000) {
-      $rfa->store(@features);
-      @features = ();
-    }
+    $regulatory_features->{$name} = $regulatory_feature;
   }
 
-  if (scalar @features > 0) {
-    $rfa->store(@features);
+  return $regulatory_features;
+}
+
+=head2 load_celltype_activity
+
+  Description: loads the data from the build's BigBed files into the database
+  Arg1: Location of base directory
+  Arg2: Bio::EnsEMBL::Funcgen::Celltype
+  Arg3: hashref: bedfile id => Bio::EnsEMBL::Funcgen::RegulatoryFeature 
+  Returntype: undef
+  Side effects: writes into regulatory_feature table
+'
+=cut
+
+sub load_celltype_activity {
+  my ($base_dir, $cell_type, $regulatory_features) = @_;
+  
+  print_log("\tProcessing data from cell type " . $cell_type->display_label . " (". $cell_type->name .")" . "\n");
+
+  my $cell_type_name = clean_name($cell_type->production_name);
+  my $bigbed = "$base_dir/projected_segmentations/$cell_type_name.bb";
+  my ($tmp, $tmp_name) = tempfile();
+  run("bigBedToBed $bigbed $tmp_name");
+
+  process_celltype_file($tmp, $cell_type, $regulatory_features);
+
+  close $tmp;
+  unlink $tmp_name;
+}
+
+=head2 process_celltype_file
+
+  Description: loads the data from a Bed file into the database
+  Arg1: filehandle into input file
+  Arg2: Bio::EnsEMBL::Funcgen::Celltype
+  Arg3: hashref: bedfile id => Bio::EnsEMBL::Funcgen::RegulatoryFeature 
+  Returntype: undef
+  Side effects: writes into regulatory_feature table
+
+=cut
+
+sub process_celltype_file {
+  my ($fh, $cell_type, $regulatory_feature) = @_;
+  while (my $line = <$fh>) {
+    chomp $line;
+    my ($chrom, $start, $end, $name, $score, $strand, $thickStart, $thickEnd, $rgb) = split "\t", $line;
+
+    use Bio::EnsEMBL::Funcgen::RegulatoryActivity;
+    my $regulatory_activity = Bio::EnsEMBL::Funcgen::RegulatoryActivity->new;
+    $regulatory_activity->activity($rgb_state{$rgb});
+    $regulatory_activity->epigenome_id($cell_type->dbID);
+    
+    exists $regulatory_feature->{$name} || die("Could not find Regulatory Feature for $name\n");
+    $regulatory_feature->{$name}->add_regulatory_activity($regulatory_activity);
   }
 }
 
