@@ -42,23 +42,29 @@ sub pipeline_analyses {
 	    2 => 'QcFastQcInputIdsFromInputSet',
 	  },
 	},
+	{
+	  -logic_name => 'CreateJobBatchUsingNewGroupingMechanism',
+	  -flow_into => {
+	    2 => 'QcFastQcInputIdsFromInputSet',
+	  },
+	},
         {   -logic_name => 'QcFastQcInputIdsFromInputSet',
             -module     => 'Bio::EnsEMBL::Funcgen::Hive::QcFastQcInputIdsFromInputSet',
-            -meadow_type=> 'LOCAL',
+#             -meadow_type=> 'LOCAL',
             -flow_into => { 
 	      2 => 'QcFastQcJobFactory',
             },
         },
         {   -logic_name => 'QcFastQcJobFactory',
             -module     => 'Bio::EnsEMBL::Funcgen::Hive::QcFastQcJobFactory',
-            -meadow_type=> 'LOCAL',
+#             -meadow_type=> 'LOCAL',
             -flow_into => { 
 	      2 => 'MkFastQcTempDir',
             },
         },
         {   -logic_name => 'MkFastQcTempDir',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -meadow_type=> 'LOCAL',
+#             -meadow_type=> 'LOCAL',
             -parameters => { 
 		  cmd => qq!mkdir -p #tempdir#!,
             },
@@ -72,7 +78,7 @@ sub pipeline_analyses {
 		  inputquery => qq(select local_url, "#tempdir#" as tempdir from input_subset_tracking where input_subset_id = #input_subset_id#),
 		  db_conn    => "mysql://#tracking_db_user#:#tracking_db_pass#\@#tracking_db_host#/#tracking_db_name#"
             },
-            -meadow_type=> 'LOCAL',
+#             -meadow_type=> 'LOCAL',
             -flow_into => {
                 '2->A' => 'RunFastQC',
                 'A->1' => 'QcFastQcLoaderJobFactory',
@@ -80,7 +86,7 @@ sub pipeline_analyses {
         },
         {   -logic_name => 'RunFastQC',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -meadow_type=> 'LSF',
+#             -meadow_type=> 'LSF',
             -parameters => { 
 		  cmd => qq(fastqc -o #tempdir# #local_url#),
             },
@@ -94,8 +100,8 @@ sub pipeline_analyses {
         },
         {   -logic_name        => 'QcLoadFastQcResults',
             -module            => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -meadow_type       => 'LOCAL',
-            -use_bash_pipefail => 1,
+#             -meadow_type       => 'LOCAL',
+
             -parameters => { 
 		  cmd => qq(load_fastqc_summary_file.pl        )
 		    . qq( --input_subset_id #input_subset_id#  )
@@ -107,6 +113,8 @@ sub pipeline_analyses {
 		    . qq( --user #tracking_db_user#  )
 		    . qq( -p#tracking_db_pass#       )
 		    . qq( #tracking_db_name#         ),
+	-use_bash_pipefail => 1,
+
             },
         },
     ];

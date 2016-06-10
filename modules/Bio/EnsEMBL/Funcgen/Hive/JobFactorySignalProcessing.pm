@@ -40,9 +40,7 @@ sub fetch_input {
   
   $self->fetch_Set_input('ResultSet');
   $self->get_param_method('result_set_groups', 'required');
-  $self->get_param_method('bam_files',  'silent');
   
-  #$self->init_branching_by_analysis;
   return;
 }
 
@@ -64,16 +62,11 @@ sub run {
     for my $i(0...$#{$current_result_set_group->{dbIDs}}) {
       push @merged_jobs, {
 	%batch_params,
-	garbage     => $self->bam_files, 
 	set_type    => 'ResultSet',
 	set_name    => $current_result_set_group->{set_names}->[$i],
 	dbID        => $current_result_set_group->{dbIDs}->[$i]
       };
     }
-#     $self->branch_job_group(
-#       2, 
-#       \@merged_jobs
-#     );
     # This flows to Preprocess_bwa_samse_merged.
     #
     $self->branch_job_group(
@@ -140,7 +133,6 @@ Branch 10 is Preprocess_bwa_samse_merged
     for my $i(0...$#{$current_result_set_group->{dbIDs}}) {
       push @replicate_jobs, {
 	%batch_params,
-	garbage     => $self->bam_files, 
 	set_type    => 'ResultSet',
 	set_name    => $current_result_set_group->{set_names}->[$i],
 	dbID        => $current_result_set_group->{dbIDs}->[$i]
@@ -164,7 +156,13 @@ Branch 10 is Preprocess_bwa_samse_merged
       3,
       [
 	{
+	  # These are result set ids
+	  #
 	  dbIDs     => $current_result_set_group->{dbIDs},
+	  
+	  # These are the names of the results sets. This is a redundant 
+	  # piece of information.
+	  #
 	  set_names => $current_result_set_group->{set_names},
 	  set_type  => 'ResultSet',
 	  %batch_params,

@@ -43,7 +43,7 @@ sub pipeline_analyses {
       },
       {   -logic_name => 'QcProportionOfReadsInPeaksJobFactory',
 	  -module     => 'Bio::EnsEMBL::Funcgen::Hive::QcProportionOfReadsInPeaksJobFactory',
-	  -meadow_type=> 'LOCAL',
+# 	  -meadow_type=> 'LOCAL',
 	  -flow_into => { 
 	    2 => 'QcProportionOfReadsInPeaks',
 	  },

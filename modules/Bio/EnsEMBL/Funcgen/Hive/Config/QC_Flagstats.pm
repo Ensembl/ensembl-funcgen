@@ -38,19 +38,20 @@ sub pipeline_analyses {
       {
 	-logic_name => 'BamFileQc',
 	-flow_into => {
-	  MAIN => 'QcFlagstatsJobFactory'
+	  MAIN => WHEN(
+	    '#has_unmapped_reads# eq "yes"' => 'QcFlagstatsJobFactory',
+	  ),
 	},
       },
       {   -logic_name => 'QcFlagstatsJobFactory',
 	  -module     => 'Bio::EnsEMBL::Funcgen::Hive::QcFlagstatsJobFactory',
-	  -meadow_type=> 'LOCAL',
+# 	  -meadow_type=> 'LOCAL',
 	  -flow_into => { 
 	    2 => 'QcRunFlagstats',
 	  },
       },
       {   -logic_name => 'QcRunFlagstats',
 	  -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-	  -meadow_type=> 'LSF',
 	  -parameters => { 
 		cmd => qq!samtools flagstat #bam_file# > #flagstats_file#!,
 	  },
@@ -60,7 +61,7 @@ sub pipeline_analyses {
       },
       {   -logic_name => 'LoadFlagstatsToDB',
 	  -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-	  -meadow_type=> 'LOCAL',
+# 	  -meadow_type=> 'LOCAL',
 	  -parameters => {
 	      cmd => qq(load_samtools_flagstats.pl )
 		. qq( --result_set_id #result_set_id# )
@@ -68,10 +69,16 @@ sub pipeline_analyses {
 		. qq( --user #tracking_db_user# --pass #tracking_db_pass# --host #tracking_db_host# --dbname #tracking_db_name# )
 		. qq( --work_dir #tempdir#  )
 		. qq( --bam_file #bam_file# )
-
-
 	  },
       },
+#       {   -logic_name => 'DeleteBamWithDuplicates',
+# 	  -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+# 	  -meadow_type=> 'LOCAL',
+# 	  -parameters => { 
+# 		cmd => qq(rm #bam_file#),
+# 	  },
+#       },
+
     ];
 }
 

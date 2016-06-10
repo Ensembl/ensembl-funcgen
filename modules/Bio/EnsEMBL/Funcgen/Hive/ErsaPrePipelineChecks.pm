@@ -2,14 +2,68 @@ package Bio::EnsEMBL::Funcgen::Hive::ErsaPrePipelineChecks;
 
 use strict;
 use base ('Bio::EnsEMBL::Hive::Process');
+use Data::Dumper;
 
 sub run {
     my $self = shift;
 
     use Bio::EnsEMBL::Utils::Logger;
-    my $logger = Bio::EnsEMBL::Utils::Logger->new();    
+    my $logger = Bio::EnsEMBL::Utils::Logger->new();
     my @error_msg;
     
+    my $out_db_connetion_details = $self->param('out_db');
+
+    use Bio::EnsEMBL::DBSQL::DBAdaptor;
+    my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(%$out_db_connetion_details);
+    my $dbc = $dba->dbc;
+    
+    # Check that the values in the replicate column aren't duplicated.
+    
+    my $find_non_unique_replicate_specifications = 'select epigenome_id, experiment_id, biological_replicate, technical_replicate, count(*) c from input_subset group by epigenome_id, experiment_id, biological_replicate, technical_replicate having c > 1';
+    
+    my $sth = $dbc->prepare($find_non_unique_replicate_specifications);
+    $sth->execute;
+    my $non_unique_replicate_specifications = $sth->fetchall_hashref('experiment_id');
+    
+    my @experiment_ids = keys %$non_unique_replicate_specifications;
+    if (@experiment_ids) {
+      push @error_msg,
+	"The following experiments have non unique replicate specifications: (" 
+	. join ', ', @experiment_ids 
+	. ")";
+    }
+    
+    # Check that all sequence files exist
+    
+    my $input_subset_files_sql = 'select input_subset_id, local_url from input_subset_tracking';
+    $sth = $dbc->prepare($input_subset_files_sql);
+    $sth->execute;
+    
+    my $local_urls = $sth->fetchall_hashref('local_url');
+    my @input_subset_files = keys %$local_urls;
+    
+    foreach my $current_file (@input_subset_files) {
+      if (! -e $current_file) {
+	push @error_msg, 
+	  "The file $current_file is specified in the input_subset ("
+	  . $local_urls->{$current_file}->{input_subset_id}
+	  . ") table, but it doesn't exist!"
+      }
+    }
+    
+    # Check for orphan result_set_inputs
+    
+    my $count_orphans_sql = 'select count(*) as c from result_set_input left join result_set using (result_set_id) where result_set.result_set_id is null';
+    $sth = $dbc->prepare($count_orphans_sql);
+    $sth->execute;
+    
+    my $x = $sth->fetchall_arrayref;
+    my $num_orphans = $x->[0]->[0];
+    
+    if ($num_orphans) {
+        push @error_msg, "There are $num_orphans orphan entries in the result_set_input table. They must be removed or new result_sets might have arbitrary links to input_subsets. Suggestion: delete from result_set_input where result_set_id not in (select result_set_id from result_set);"; 
+    }
+
     my @exported_variables = qw( PERL5LIB JAVA_HOME R_LIBS CLASSPATH CCAT_chr_lengths_file );
     my $cmd;
     
@@ -73,6 +127,7 @@ sub run {
       load_samtools_flagstats.pl
       argenrichformregions.pl
       argenrich_with_labels_and_rerunnable.R
+      idr
     );
     
     foreach my $current_program (@programs_expected_in_path) {

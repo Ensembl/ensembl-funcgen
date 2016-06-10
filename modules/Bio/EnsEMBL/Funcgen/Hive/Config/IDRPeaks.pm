@@ -67,12 +67,12 @@ sub pipeline_analyses {
     },
     {
      -logic_name    => 'PreprocessIDR',
-     -module        => 'Bio::EnsEMBL::Funcgen::Hive::PreprocessIDR',
-     -rc_name       => 'default',
-     -batch_size    => 30,
-     -parameters    => { 
-	permissive_peaks => $self->o('permissive_peaks') 
-      },
+#      -module        => 'Bio::EnsEMBL::Funcgen::Hive::PreprocessIDR',
+#      -rc_name       => 'default',
+#      -batch_size    => 30,
+#      -parameters    => { 
+# 	permissive_peaks => $self->o('permissive_peaks') 
+#       },
      -flow_into => {
        '2->A' => 'RunIDR',
        'A->3' => 'PostProcessIDRReplicates', 
@@ -83,7 +83,12 @@ sub pipeline_analyses {
       -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunIDR',
       -rc_name    => 'normal_2GB',
       -flow_into => {
-	2 => ':////accu?idr_peak_counts=[accu_idx]',
+	  2 => {
+	    ':////accu?idr_peak_counts=[]' => {
+	      'idr_peak_counts' => '#idr_peak_counts#'
+	    },
+	  },
+# 	  2 => '?accu_name=idr_peak_counts&accu_address=[#idr_peak_counts#]'
       }
     },
     {
@@ -114,14 +119,14 @@ sub pipeline_analyses {
 	# Until this is fixed in the api we do it here in an extra step.
 	#
 	sql => qq(
-	  update result_set, cell_type, experiment 
+	  update result_set, epigenome, experiment 
 	  set result_set.experiment_id = experiment.experiment_id 
-	  where cell_type.cell_type_id=experiment.cell_type_id and cell_type.cell_type_id=result_set.cell_type_id and experiment.feature_type_id=result_set.feature_type_id
+	  where epigenome.epigenome_id=experiment.epigenome_id and epigenome.epigenome_id=result_set.epigenome_id and experiment.feature_type_id=result_set.feature_type_id
 	  and result_set_id = #dbID#
 	  ),
 	  db_conn => '#out_db_url#',
 	},
-      -meadow     => 'LOCAL',
+#       -meadow     => 'LOCAL',
       -flow_into => {
 	1 => 'DefineMergedDataSet',
       },

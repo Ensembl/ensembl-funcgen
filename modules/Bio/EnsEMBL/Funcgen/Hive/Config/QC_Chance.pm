@@ -46,7 +46,7 @@ sub pipeline_analyses {
 	{
 	  -logic_name    => 'QcChanceJobFactory',
 	  -module        => 'Bio::EnsEMBL::Funcgen::Hive::QcChanceJobFactory',
-	  -meadow        => 'LOCAL',
+# 	  -meadow        => 'LOCAL',
 	  -parameters => {
 		chromosome_file => $self->o('chromosome_file')
 	  },
@@ -54,7 +54,7 @@ sub pipeline_analyses {
 	},
         {   -logic_name => 'MkTempDir',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -meadow_type=> 'LOCAL',
+#             -meadow_type=> 'LOCAL',
             -parameters => {
 		  cmd => qq!mkdir -p #tempdir#!,
             },
@@ -65,7 +65,7 @@ sub pipeline_analyses {
         },
         {   -logic_name => 'SortChrLenFile',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -meadow_type=> 'LOCAL',
+#             -meadow_type=> 'LOCAL',
             -parameters => { 
 		  cmd => qq!sort -k1,1 #chrlenfile# > #chrlenfilesorted#!,
             },
@@ -73,7 +73,7 @@ sub pipeline_analyses {
         },
         {   -logic_name => 'argenrichformregions',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -meadow_type=> 'LOCAL',
+#             -meadow_type=> 'LOCAL',
             -parameters => {
 		  # Should be in /software/ensembl/funcgen/
 		  #
@@ -82,7 +82,7 @@ sub pipeline_analyses {
         },
         {   -logic_name => 'JobFactoryArgenrich',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
-            -meadow_type=> 'LOCAL',
+#             -meadow_type=> 'LOCAL',
             -flow_into => {
 		# Skipping copy, we can work on the files directly.
                 2 => 'CpToTemp',
@@ -91,7 +91,7 @@ sub pipeline_analyses {
         },
         {   -logic_name => 'CpToTemp',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -meadow_type=> 'LOCAL',
+#             -meadow_type=> 'LOCAL',
             -parameters => { 
 		  #cmd => qq!cp #sourcedir#/#file# #tempdir#!,
 		  cmd => qq!ln -s #sourcedir#/#file# #tempdir#!,
@@ -136,7 +136,7 @@ sub pipeline_analyses {
         },
         {   -logic_name => 'LoadChanceToDB',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -meadow_type=> 'LOCAL',
+#             -meadow_type=> 'LOCAL',
 	    -parameters => {
                 cmd => qq(load_argenrich_qc_file.pl   )
 		  . qq( --argenrich_file        #tempdir#/#argenrich_outfile#     )

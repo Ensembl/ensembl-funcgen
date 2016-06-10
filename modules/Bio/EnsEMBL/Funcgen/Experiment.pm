@@ -68,6 +68,8 @@ use base qw( Bio::EnsEMBL::Funcgen::Storable );
 
   Arg [-NAME]                : String - experiment name
   Arg [-EXPERIMENTAL_GROUP]  : Bio::EnsEMBL::Funcgen ExperimentalGroup associated with this experiment
+  Arg [-CONTROL]             : Bio::EnsEMBL::Funcgen::Experiment object which is used as control for this experiment,
+  Arg [-IS_CONTROL]          : Boolean - defines whether this experiment is control or not
   Arg [-DATE]                : String - Date of the experiment (YYYY-MM-DD)
   Arg [-PRIMARY_DESIGN_TYPE] : String - MGED term for the primary design of teh experiment e.g. binding_site_identification
   Arg [-DESCRIPTION]         : String
@@ -75,6 +77,8 @@ use base qw( Bio::EnsEMBL::Funcgen::Storable );
   Example    : my $array = Bio::EnsEMBL::Funcgen::Experiment->new
                 (-NAME                => $name,
                  -EXPERIMENTAL_GROUP  => $group,
+                 -CONTROL             => $control,
+                 -IS_CONTROL          => 1,
                  -PRIMARY_DESIGN_TYPE => $p_design_type,
                  -DESCRIPTION         => $description,
                  -ARCHIVE_ID          => 'SRX000000',
@@ -94,31 +98,54 @@ sub new {
   my $class  = ref($caller) || $caller;
   my $self   = $class->SUPER::new(@_);
 
-  my ($name, $group, $p_dtype, 
-      $desc, $xml, $xml_id, $ftype, $ctype, $archive_id, $url) = rearrange
-   ( ['NAME', 'EXPERIMENTAL_GROUP', 'PRIMARY_DESIGN_TYPE',
-      'DESCRIPTION', 'MAGE_XML', 'MAGE_XML_ID', 'FEATURE_TYPE', 'CELL_TYPE',
-      'ARCHIVE_ID', 'DISPLAY_URL'], @_ );
+  my ($name,
+      $group,
+       $control,
+      $is_control,
+ $p_dtype,
+      $desc,
+ $xml,
+ $xml_id,
+ $ftype,
+ $epigenome,
+ $archive_id,
+ $url) = rearrange
+   ( ['NAME',
+      'EXPERIMENTAL_GROUP',
+      'CONTROL',
+      'IS_CONTROL',
+      'DESCRIPTION',
+      'FEATURE_TYPE',
+      'EPIGENOME',
+      'ARCHIVE_ID',
+      ],
+ @_ );
 
   # Mandatory attr checks
   throw('You must provide a name parameter') if ! defined $name;
-  assert_ref($group, 'Bio::EnsEMBL::Funcgen::ExperimentalGroup');
-  assert_ref($ctype, 'Bio::EnsEMBL::Funcgen::CellType');
-  assert_ref($ftype, 'Bio::EnsEMBL::Funcgen::FeatureType');
-  
+  throw('You must provide a is_control parameter') if ! defined $is_control;
+
+  assert_ref( $group,     'Bio::EnsEMBL::Funcgen::ExperimentalGroup' );
+  assert_ref( $epigenome, 'Bio::EnsEMBL::Funcgen::Epigenome' );
+  assert_ref( $ftype,     'Bio::EnsEMBL::Funcgen::FeatureType' );
+  assert_ref( $control,   'Bio::EnsEMBL::Funcgen::Experiment') if defined $control;
+
+
   #Direct assignment here so we avoid setter test in methods
   $self->{name}                = $name;
   $self->{group}               = $group;
-  $self->{primary_design_type} = $p_dtype    if defined $p_dtype; #MGED term for primary design type
-  $self->{description}         = $desc       if defined $desc;
-  $self->{cell_type}           = $ctype;
+  $self->{control}             = $control if defined $control;
+  $self->{is_control}          = $is_control;
+#  $self->{primary_design_type} = $p_dtype    if defined $p_dtype; #MGED term for primary design type
+#  $self->{description}         = $desc       if defined $desc;
+  $self->{epigenome}           = $epigenome;
   $self->{feature_type}        = $ftype;
   $self->{archive_id}          = $archive_id;
-  $self->{display_url}         = $url;
+#  $self->{display_url}         = $url;
 
   #Maintain setter funcs here as these are populated after initialisation
-  $self->mage_xml_id($xml_id) if defined $xml_id;
-  $self->mage_xml($xml)       if defined $xml;
+#  $self->mage_xml_id($xml_id) if defined $xml_id;
+#  $self->mage_xml($xml)       if defined $xml;
 
   return $self;
 }
@@ -132,11 +159,31 @@ sub new {
   Returntype : Bio::EnsEMBL::Funcgen::CellType
   Exceptions : None
   Caller     : General
+  Status     : Deprecated
+
+=cut
+
+sub cell_type {
+    deprecate(
+        "Bio::EnsEMBL::Funcgen::Experiment::cell_type has been deprecated and will be removed in Ensembl release 89."
+            . " Please use Bio::EnsEMBL::Funcgen::Experiment::epigenome instead"
+    );
+    return shift->{epigenome};
+}
+
+
+=head2 epigenome
+
+  Example    : my $epigenome_name = $exp->epigenome->name;
+  Description: Getter for the Epigenome
+  Returntype : Bio::EnsEMBL::Funcgen::Epigenome
+  Exceptions : None
+  Caller     : General
   Status     : Stable
 
 =cut
 
-sub cell_type { return shift->{cell_type}; }
+sub epigenome { return shift->{epigenome}; }
 
 
 =head2 feature_type
@@ -203,6 +250,37 @@ sub experimental_group{
 sub get_ExperimentalGroup{ return shift->{group}; }
 
 
+=head2 is_control
+
+  Example     : my $is_control = $exp->is_control();
+  Description : Getter for the is_control attribute
+  Returntype  : Boolean
+  Exceptions  : None
+  Caller      : General
+  Status      : Stable
+
+=cut
+
+sub is_control{
+  return shift->{is_control};
+}
+
+
+=head2 get_control
+
+  Example     : my $control_exp = $exp->get_control();
+  Description : Getter for the experiment which is used as control
+  Returntype  : Bio::EnsEMBL::Funcgen::Experiment
+  Exceptions  : None
+  Caller      : General
+  Status      : Stable
+
+=cut
+
+sub get_control{
+  return shift->{control};
+}
+
 =head2 description
 
   Example     : my $exp_desc = $exp->description
@@ -210,12 +288,16 @@ sub get_ExperimentalGroup{ return shift->{group}; }
   Returntype  : String
   Exceptions  : None
   Caller      : General
-  Status      : At risk - Not used, was stable until v64
+  Status      : Deprecated
 
 =cut
 
 sub description{
-  return shift->{description};
+deprecate(
+    "Bio::EnsEMBL::Funcgen::Experiment::description has been deprecated."
+        . " It will be removed in Ensembl release 89." );
+#return shift->{description};
+  return;
 }
 
 
@@ -226,12 +308,16 @@ sub description{
   Returntype  : String - MGED term
   Exceptions  : None
   Caller      : General
-  Status      : At risk
+  Status      : Deprecated
 
 =cut
 
 sub primary_design_type{
-  return shift->{primary_design_type};
+  deprecate(
+    "Bio::EnsEMBL::Funcgen::Experiment::primary_design_type has been deprecated."
+        . " It will be removed in Ensembl release 89." );
+  return;
+#  return shift->{primary_design_type};
 }
 
 
@@ -243,19 +329,23 @@ sub primary_design_type{
   Returntype  : String
   Exceptions  : None
   Caller      : General
-  Status      : at risk
+  Status      : Deprecated
 
 =cut
 
 sub mage_xml{
-  my $self          = shift;    
-  $self->{mage_xml} = shift if @_;
-
-  if(! exists $self->{mage_xml} && $self->mage_xml_id()){
-    $self->{mage_xml} = $self->adaptor->fetch_mage_xml_by_Experiment($self);
-  }
-
-  return (exists $self->{'mage_xml'}) ? $self->{'mage_xml'} : undef;
+  deprecate(
+    "Bio::EnsEMBL::Funcgen::Experiment::mage_xml has been deprecated."
+        . " It will be removed in Ensembl release 89." );
+#  my $self          = shift;
+#  $self->{mage_xml} = shift if @_;
+#
+#  if(! exists $self->{mage_xml} && $self->mage_xml_id()){
+#    $self->{mage_xml} = $self->adaptor->fetch_mage_xml_by_Experiment($self);
+#  }
+#
+#  return (exists $self->{'mage_xml'}) ? $self->{'mage_xml'} : undef;
+  return;
 }
 
 
@@ -267,14 +357,18 @@ sub mage_xml{
   Returntype  : String
   Exceptions  : None
   Caller      : General
-  Status      : at risk
+  Status      : Deprecated
 
 =cut
 
 sub mage_xml_id{
-  my $self             = shift; 
-  $self->{mage_xml_id} = shift if @_;
-  return $self->{mage_xml_id};
+  deprecate(
+    "Bio::EnsEMBL::Funcgen::Experiment::mage_xml_id has been deprecated."
+        . " It will be removed in Ensembl release 89." );
+#  my $self             = shift;
+#  $self->{mage_xml_id} = shift if @_;
+#  return $self->{mage_xml_id};
+  return;
 }
 
 
@@ -291,10 +385,10 @@ sub mage_xml_id{
 
 sub get_InputSubsets{
   my $self = shift;
- 
+
   if(! exists $self->{'input_subsets'}){
     $self->{'input_subsets'} = {};
-  
+
     foreach my $isset(@{$self->adaptor->db->get_InputSubsetAdaptor->
                           fetch_all_by_Experiments([$self])}){
       $self->{'input_subsets'}->{$isset->dbID} = $isset;
@@ -321,7 +415,7 @@ sub get_ExperimentalChips{
 
   if(! exists $self->{experimental_chips}){
     $self->{experimental_chips} = {};
-  
+
     foreach my $echip(@{$self->adaptor->db->get_ExperimentalChipAdaptor->
                           fetch_all_by_experiment_dbID($self->dbID())}){
       $self->{experimental_chips}->{$echip->unique_id()} = $echip;
@@ -343,9 +437,9 @@ sub get_ExperimentalChips{
 =cut
 
 sub add_ExperimentalChip{
-  my $self  = shift; 
+  my $self  = shift;
   my $echip = shift;
- 
+
 
  throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::ExperimentalChip object")
     if(! $echip->isa("Bio::EnsEMBL::Funcgen::ExperimentalChip") || ! $echip->dbID());
@@ -377,7 +471,7 @@ sub add_ExperimentalChip{
 sub get_ExperimentalChip_by_unique_id{
   my $self = shift;
   my $uid  = shift;
-  
+
   my ($echip);
 
   throw("Must supply a ExperimentalChip unque_id") if(! defined $uid);
@@ -433,19 +527,19 @@ sub reset_relational_attributes{
   my ($self, $params_hash, $no_db_reset) = @_;
 
   my (
-    $cell_type,
+    $epigenome,
     $experimental_group,
     $feature_type,
     ) = rearrange([
-    'CELL_TYPE',
+    'EPIGENOME',
     'EXPERIMENTAL_GROUP',
     'FEATURE_TYPE'
     ], %$params_hash);
 
   #is_stored (in corresponding db) checks will be done in store method
-  
+
   assert_ref($feature_type, 'Bio::EnsEMBL::Funcgen::FeatureType');
-  assert_ref($cell_type,    'Bio::EnsEMBL::Funcgen::CellType');
+  assert_ref($epigenome,    'Bio::EnsEMBL::Funcgen::Epigenome');
 
   if(! (defined $experimental_group &&
         ref($experimental_group) eq 'Bio::EnsEMBL::Funcgen::ExperimentalGroup') ){
@@ -454,7 +548,7 @@ sub reset_relational_attributes{
     throw($msg);
   }
 
-  $self->{cell_type}    = $cell_type;
+  $self->{epigenome}    = $epigenome;
   $self->{group}        = $experimental_group;
   $self->{feature_type} = $feature_type;
 
@@ -495,7 +589,7 @@ Status     : At Risk
 sub compare_to {
   my ($self, $obj, $shallow, $scl_methods, $obj_methods) = @_;
 
-  $scl_methods ||= [qw(name primary_design_type description mage_xml_id)];
+  $scl_methods ||= [qw(name)];
   $obj_methods ||= [qw(experimental_group)];
 
   return $self->SUPER::compare_to($obj, $shallow, $scl_methods,
@@ -528,7 +622,13 @@ sub archive_id { return shift->{archive_id};  }
 
 =cut
 
-sub display_url{ return shift->{display_url}; }
+sub display_url{
+  deprecate(
+    "Bio::EnsEMBL::Funcgen::Experiment::display_url has been deprecated."
+        . " It will be removed in Ensembl release 89." );
+  #return shift->{display_url};
+    return;
+}
 
 
 
@@ -552,7 +652,7 @@ sub source_info{
     #so we link to the archive and not the old data url
 
     my $exp_group = $self->experimental_group;
-    my @source_info; 
+    my @source_info;
     my ($proj_name, $proj_link);
 
     if($exp_group->is_project){
@@ -563,9 +663,9 @@ sub source_info{
 
     if(defined $self->archive_id ){
       #Need to handled comma separated values in here
-      
+
       foreach my $archive_id(split/,/, $self->archive_id){
-      
+
         push @source_info, [$archive_id, $self->display_url];
         #source_link can be undef here as archive_id overrides display url
         #undef links will automatically go to the SRA
@@ -575,21 +675,12 @@ sub source_info{
     elsif(defined $proj_name){
       push @source_info, [$proj_name, ($self->display_url || $proj_link)];
     }
- 
+
     $self->{source_info} = \@source_info;
   }
 
   return $self->{source_info};
 }
-
-
-### DEPRECATED METHODS ###
-sub date{  # deprecated in v81
-  deprecate('Experiment::date is no longer supported');
-}
-
-
-
 
 1;
 

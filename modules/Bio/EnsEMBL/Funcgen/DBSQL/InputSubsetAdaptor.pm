@@ -84,7 +84,7 @@ sub fetch_all_by_InputSet {
 
 =head2 fetch_all_by_Experiments
 
-  Arg [1]    : Arrayref of Bio::EnsEMBL::Funcgen::Experiment objects
+  Arg [1]    : One Bio::EnsEMBL::Funcgen::Experiment object or an arrayref of Bio::EnsEMBL::Funcgen::Experiment objects
   Example    : my @subsets = @{$iss_adaptopr->fetch_all_by_Experiments($exp_objs)};
   Description: Retrieves InputSubset objects from the database that belong to
                the given Experiments
@@ -94,12 +94,13 @@ sub fetch_all_by_InputSet {
   Status     : Stable
 
 =cut
-
 sub fetch_all_by_Experiments {
   my ($self, $exps) = @_;
-
-  my $params = {constraints => {experiments => $exps}};
-	return $self->generic_fetch($self->compose_constraint_query($params));
+  
+  use Bio::EnsEMBL::Utils::Scalar qw (wrap_array );
+  
+  my $params = {constraints => {experiments => wrap_array($exps)}};
+  return $self->generic_fetch($self->compose_constraint_query($params));
 }
 
 #experiment is only a 2nd order index (unique)key and analysis_id is not indexe at all
@@ -157,12 +158,13 @@ sub _columns {
 
   return qw(
       iss.input_subset_id
-      iss.cell_type_id
+      iss.epigenome_id
       iss.experiment_id
       iss.feature_type_id
       iss.is_control
       iss.name
-      iss.replicate
+      iss.biological_replicate
+      iss.technical_replicate
       iss.analysis_id
       );
 }
@@ -203,12 +205,13 @@ sub _objs_from_sth {
 
   my (@result,
       $iss_id,
-      $ct_id,
+      $epi_id,
       $exp_id,
       $ft_id,
       $is_control,
       $name,
-      $replicate,
+      $biological_replicate,
+      $technical_replicate,
       $analysis_id
      );
 
@@ -220,28 +223,29 @@ sub _objs_from_sth {
 
   $sth->bind_columns(
       \$iss_id,
-      \$ct_id,
+      \$epi_id,
       \$exp_id,
       \$ft_id,
       \$is_control,
       \$name,
-      \$replicate,
+      \$biological_replicate,
+      \$technical_replicate,
       \$analysis_id
       );
 
-  my $ct_adaptor  = $self->db->get_CellTypeAdaptor;
+  my $epi_adaptor  = $self->db->get_EpigenomeAdaptor;
   my $exp_adaptor = $self->db->get_ExperimentAdaptor;
   my $ft_adaptor  = $self->db->get_FeatureTypeAdaptor;
   my $analysis_adaptor = $self->db->get_AnalysisAdaptor; 
-  my (%ctypes, %ftypes, %exps);  
+  my (%epigenomes, %ftypes, %exps);  
  
   while($sth->fetch){
     
-    if(! exists $ctypes{$ct_id}){
-      $ctypes{$ct_id} = $ct_adaptor->fetch_by_dbID($ct_id);
+    if(! exists $epigenomes{$epi_id}){
+      $epigenomes{$epi_id} = $epi_adaptor->fetch_by_dbID($epi_id);
     
-      if(! defined $ctypes{$ct_id}){
-        throw("Could not fetch linked CellType (dbID: $ct_id) for InputSubset (dbID: $iss_id) ");
+      if(! defined $epigenomes{$epi_id}){
+        throw("Could not fetch linked Epigenome (dbID: $epi_id) for InputSubset (dbID: $iss_id) ");
       }
     }
     
@@ -266,15 +270,16 @@ sub _objs_from_sth {
       throw("Could not fetch linked Analysis (dbID: $analysis_id) for InputSubset (dbID: $iss_id)");
 
     push @result, Bio::EnsEMBL::Funcgen::InputSubset->new (
-       -dbID         => $iss_id,
-       -CELL_TYPE    => $ctypes{$ct_id},
-       -EXPERIMENT   => $exps{$exp_id},
-       -FEATURE_TYPE => $ftypes{$ft_id},
-       -IS_CONTROL   => $is_control,
-       -NAME         => $name,
-       -REPLICATE    => $replicate,
-       -ANALYSIS     => $analysis,
-       -ADAPTOR      => $self,
+       -dbID                 => $iss_id,
+       -EPIGENOME            => $epigenomes{$epi_id},
+       -EXPERIMENT           => $exps{$exp_id},
+       -FEATURE_TYPE         => $ftypes{$ft_id},
+       -IS_CONTROL           => $is_control,
+       -NAME                 => $name,
+       -BIOLOGICAL_REPLICATE => $biological_replicate,
+       -TECHNICAL_REPLICATE  => $technical_replicate,
+       -ANALYSIS             => $analysis,
+       -ADAPTOR              => $self,
       );
   }
   
@@ -307,12 +312,13 @@ sub store{
   my $sth = $self->prepare("
         INSERT INTO
           input_subset (
-            cell_type_id,
+            epigenome_id,
             experiment_id,
             feature_type_id,
             is_control,
             name,
-            replicate,
+            biological_replicate,
+            technical_replicate,
             analysis_id
         )
         VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -332,18 +338,19 @@ sub store{
     
     #Test object attrs are stored
     $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $subset->feature_type);
-    $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType',    $subset->cell_type);
+    $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Epigenome',    $subset->epigenome);
     $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Experiment',  $subset->experiment);
     $self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis',             $subset->analysis);
     
 
-    $sth->bind_param(1, $subset->cell_type->dbID,     SQL_INTEGER);
-    $sth->bind_param(2, $subset->experiment->dbID,    SQL_INTEGER);
-    $sth->bind_param(3, $subset->feature_type->dbID,  SQL_INTEGER);
-    $sth->bind_param(4, $subset->is_control,          SQL_INTEGER);
-    $sth->bind_param(5, $subset->name,                SQL_VARCHAR);
-    $sth->bind_param(6, $subset->replicate,           SQL_INTEGER);
-    $sth->bind_param(7, $subset->analysis->dbID,      SQL_INTEGER);
+    $sth->bind_param(1, $subset->epigenome->dbID,      SQL_INTEGER);
+    $sth->bind_param(2, $subset->experiment->dbID,     SQL_INTEGER);
+    $sth->bind_param(3, $subset->feature_type->dbID,   SQL_INTEGER);
+    $sth->bind_param(4, $subset->is_control,           SQL_INTEGER);
+    $sth->bind_param(5, $subset->name,                 SQL_VARCHAR);
+    $sth->bind_param(6, $subset->biological_replicate, SQL_INTEGER);
+    $sth->bind_param(7, $subset->technical_replicate,  SQL_INTEGER);
+    $sth->bind_param(8, $subset->analysis->dbID,       SQL_INTEGER);
     $sth->execute();
 
     $subset->dbID($self->last_insert_id);
@@ -396,22 +403,6 @@ sub _constrain_input_sets {
 
 
 ###DEPRECATED METHODS ###
-
-#should have been fetch_by_name_and_Experiment
-#Experiment is not needed in the majority of cases
-#was also returning Arrayref
-
-sub fetch_by_name_and_experiment { #Deprecated in 75
-  my ($self, $name, $exp) = @_;
-
-  deprecate('Please use the new fetch_by_name method. This method will be removed in release 79');
-
-  return $self->fetch_by_name($name, $exp);
-  #my $params =
-  # {constraints => {experiments => [$exp],
-  #                  name        => $name}};
-  #return $self->generic_fetch($self->compose_constraint_query($params));
-}
 
 sub _constrain_archive_ids {
   my ($self, $archive_ids) = @_;

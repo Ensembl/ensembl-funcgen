@@ -44,7 +44,9 @@ sub run {
     $file_prefix . '.' . $file_extension
   );
 
-  die unless(-e $peaks_file);
+  if (! -e $peaks_file) {
+    die("Can't find peaks file $peaks_file");
+  }
   
   my $input_id = $self->create_input_id(
     $feature_set, 
@@ -73,8 +75,12 @@ sub create_input_id {
 
   my $feature_set_id = $feature_set->dbID;
   
-  my $work_dir = $self->param_required('work_root_dir');
-  my $temp_dir = "$work_dir/temp/Qc/ProportionOfReadsInPeaks/$feature_set_id";
+#   my $work_dir = $self->param_required('work_root_dir');
+  my $work_dir = $self->proportion_of_reads_in_peaks_output_dir;
+  
+  my $epigenome_production_name = $feature_set->epigenome->production_name;
+  
+  my $temp_dir = "$work_dir/$epigenome_production_name/$feature_set_id";
   my $out_db = $self->param('out_db');
   my $peak_caller = $self->param('peak_caller');
 

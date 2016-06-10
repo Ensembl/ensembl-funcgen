@@ -103,7 +103,7 @@ use vars qw(@ISA);
                                and file names will differ to those record in InputSubset
 
 
-                    #-use_defaults This changes some mandatory parameters to optional, instead using either DEFAULT or the input file name for the following options -name, -input_set, -feature_type, -cell_type etc ???
+                    #-use_defaults This changes some mandatory parameters to optional, instead using either DEFAULT or the input file name for the following options -name, -input_set, -feature_type, -epigenome etc ???
 
                     -verbose
  ReturnType  : Bio::EnsEMBL::Funcgen::Importer
@@ -393,7 +393,7 @@ sub init_experiment_import{
       -DATE                => $self->experiment_date,
       -PRIMARY_DESIGN_TYPE => $self->design_type,
       -DESCRIPTION         => $self->description,
-      -CELL_TYPE           => $self->cell_type,
+      -EPIGENOME           => $self->epigenome,
       -FEATURE_TYPE        => $self->feature_type);
 
     ($exp) =  @{$exp_adaptor->store($exp)};
@@ -608,25 +608,59 @@ sub norm_analysis{
   Returntype : Bio::EnsEMBL::Funcgen::CellType
   Exceptions : Throws if arg is not valid or stored
   Caller     : general
-  Status     : at risk
+  Status     : Deprecated
 
 =cut
 
 sub cell_type{
+  deprecate(
+        "Bio::EnsEMBL::Funcgen::Importer::cell_type has been deprecated and will be removed in Ensembl release 89."
+            . " Please use Bio::EnsEMBL::Funcgen::Importer::epigenome instead"
+  );  
   my ($self) = shift;
 
   if (@_) {
-    my $ctype = shift;
+    my $epigenome = shift;
 
     #do we need this as we're checking in new?
-    if (! ($ctype->isa('Bio::EnsEMBL::Funcgen::CellType') && $ctype->dbID())) {
-      throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::CellType");
+    if (! ($epigenome->isa('Bio::EnsEMBL::Funcgen::Epigenome') && $epigenome->dbID())) {
+      throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::Epigenome");
     }
 
-    $self->{'cell_type'} = $ctype;
+    $self->{'epigenome'} = $epigenome;
   }
 
-  return $self->{'cell_type'};
+  return $self->{'epigenome'};
+}
+
+
+=head2 epigenome
+
+  Example    : $imp->epigenome($epigenome);
+  Description: Getter/Setter for Experiment Epigenome
+  Arg [1]    : optional - Bio::EnsEMBL::Funcgen::Epigenome
+  Returntype : Bio::EnsEMBL::Funcgen::Epigenome
+  Exceptions : Throws if arg is not valid or stored
+  Caller     : general
+  Status     : at risk
+
+=cut
+
+sub epigenome{
+  my ($self) = shift;
+
+  if (@_) {
+    my $epigenome = shift;
+
+    #do we need this as we're checking in new?
+    if (! ($epigenome->isa('Bio::EnsEMBL::Funcgen::Epigenome') && $epigenome->dbID())) {
+      throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::Epigenome");
+    }
+
+    $self->{'epigenome'} = $epigenome;
+  }
+
+  return $self->{'epigenome'};
 }
 
 =head2 array_file
@@ -1896,7 +1930,7 @@ sub get_import_ResultSet{
            -table_name => $table_name,
            -name       => $self->name()."_IMPORT",
            -feature_type => $self->feature_type(),
-           -cell_type    => $self->cell_type(),
+           -epigenome    => $self->epigenome(),
           );
 
         #These types should be set to NULL during the MAGE-XML validation if we have more than one type in an experiment

@@ -47,7 +47,7 @@ use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
   #in $analysis->parameters
   #bwa_index_root, gender, assembly fasta_fai
   #How are we going to genericise these?
-  #We can't specify ResultSet->cell_type->gender
+  #We can't specify ResultSet->epigenome->gender
   #and we don't want to tie the aligner to use of a ResultSet
   #Can we make these co-optional in the constructor?
   #i.e. we can pass gender 
@@ -169,12 +169,25 @@ sub run {
   }
   
   my $no_dups_bam_file = "${bam_file}.nodups.bam";
+
   
-  my $cmd = qq(samtools view -F 4 -b -o $no_dups_bam_file $bam_file);
-  run_system_cmd($cmd);
-  unlink($bam_file);
-  $cmd = qq(mv $no_dups_bam_file $bam_file);
-  run_system_cmd($cmd);
+# We can't do this here, because we want to detect the number of unmapped 
+# reads in the quality checks. Removing them here makes the reads look
+# artificially good.
+#
+#   my $cmd = qq(samtools view -F 4 -b -o $no_dups_bam_file $bam_file);
+#   run_system_cmd($cmd);
+#   unlink($bam_file);
+#   $cmd = qq(mv $no_dups_bam_file $bam_file);
+#   run_system_cmd($cmd);
+  
+  if (! -e $bam_file) {
+  
+    # If no bam file has been created, fail here, while the chunked fasta 
+    # sequences have not been deleted yet.
+    #
+    die("$bam_file does not exist!");
+  }
 
 # Commented out the following commands, because they were meant to check, if 
 # the bam file is valid. After fixing a bug that seems to always be the case,

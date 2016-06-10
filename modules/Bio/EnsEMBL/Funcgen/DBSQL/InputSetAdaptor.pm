@@ -210,7 +210,7 @@ sub _objs_from_sth {
       );
 
   my $anal_adaptor  = $self->db->get_AnalysisAdaptor();
-  my $ct_adaptor    = $self->db->get_CellTypeAdaptor();
+  my $ct_adaptor    = $self->db->get_EpigenomeAdaptor();
   my $exp_adaptor   = $self->db->get_ExperimentAdaptor();
   my $ft_adaptor    = $self->db->get_FeatureTypeAdaptor();
 
@@ -224,7 +224,7 @@ sub _objs_from_sth {
       throw("Could not fetch Analysis with dbID '$anal_id' for InputSet '$name'") if ! $anal;
 
       $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
-      throw("Could not fetch CellType with dbID '$ctype_id' for InputSet '$name'") if ! $ctype;
+      throw("Could not fetch EpiGenome with dbID '$ctype_id' for InputSet '$name'") if ! $ctype;
 
       $exp = (defined $exp_id) ? $exp_adaptor->fetch_by_dbID($exp_id) : undef;
       throw("Could not fetch Experiment with dbID '$exp_id' for InputSet '$name'") if ! $exp;
@@ -236,7 +236,7 @@ sub _objs_from_sth {
       $input_set = Bio::EnsEMBL::Funcgen::InputSet->new(
           -DBID          => $dbid,
           -ANALYSIS      => $anal,
-          -CELL_TYPE     => $ctype,
+          -EPIGENOME     => $ctype,
           -EXPERIMENT    => $exp,
           -FEATURE_TYPE  => $ftype,
           -NAME          => $name,

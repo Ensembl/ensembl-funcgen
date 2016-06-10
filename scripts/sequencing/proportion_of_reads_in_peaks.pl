@@ -326,15 +326,19 @@ sub write_bed_if_not_exists {
 
   my $bed_file = shift;
   my $data     = shift;
-  
-  if (! -e $bed_file) {
+
+# Change of plans: Always write the bed file. If the script dies when writing 
+# out the bed file, it will use a faulty bed file when it is rerun.
+#
+
+#   if (! -e $bed_file) {
     open my $out, ">$bed_file" or die "Could not open file $bed_file $!";
     write_bed($out, $data);
     close($out);
     $logger->info("Written peaks to bed file.\n", 0, 1);
-  } else {
-    $logger->info("Bed file already exists. Reusing.\n");
-  }
+#   } else {
+#     $logger->info("Bed file already exists. Reusing.\n");
+#   }
 }
 
 =head2 run_counts
@@ -372,6 +376,8 @@ sub run_counts {
     $current_cmd = "samtools view -c $bam_file";
     $logger->info("Running $current_cmd\n", 0, 1);
     $num_reads_in_total = run_backtick_cmd($current_cmd);
+    
+    unlink($READS_IN_PEAKS_BAM_FILE);
   }
 
   my $proportion_of_reads_in_peaks = $num_reads_in_peaks / $num_reads_in_total;

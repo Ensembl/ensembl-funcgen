@@ -79,35 +79,21 @@ sub run {
     run_system_cmd($cmd, 1);
   }
   
-  my $file_prefix  = $self->get_alignment_path_prefix_by_ResultSet($result_set, $self->run_controls); 
-  my $unfiltered_bam     = $file_prefix.'.bam';
+  my $bam_file_with_unmapped_reads_and_duplicates = $self->param('bam_file_with_unmapped_reads_and_duplicates');
   
-  $self->helper->debug(1, "Merging bams to:\t".$unfiltered_bam); 
+  $self->helper->debug(1, "Merging bams to:\t".$bam_file_with_unmapped_reads_and_duplicates); 
 
   merge_bams({
     input_bams => $self->bam_files, 
-    output_bam => $unfiltered_bam, 
+    output_bam => $bam_file_with_unmapped_reads_and_duplicates,
     debug => $self->debug,
   });
 
-  my $tmp_bam = "${unfiltered_bam}.nodups.bam";
-
-  remove_duplicates_from_bam({
-    input_bam  => $unfiltered_bam,
-    output_bam => $tmp_bam, 
-    debug      => $self->debug,
-  });
-
-  unlink($unfiltered_bam);
-  run_system_cmd("mv $tmp_bam $unfiltered_bam");
-  
   foreach my $current_bam_file (@{$self->bam_files}) {
     unlink($current_bam_file);
   }
 
   return;
 }
-
-sub write_output {}
 
 1;

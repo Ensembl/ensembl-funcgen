@@ -386,6 +386,7 @@ sub get_available_adaptors{
                'ArrayChip'              => 'Bio::EnsEMBL::Funcgen::DBSQL::ArrayChipAdaptor',
                'BindingMatrix'          => 'Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixAdaptor',
                'CellType'               => 'Bio::EnsEMBL::Funcgen::DBSQL::CellTypeAdaptor',
+               'Epigenome'              => 'Bio::EnsEMBL::Funcgen::DBSQL::EpigenomeAdaptor',
                'CoordSystem'            => 'Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor',
                'DataSet'                => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
                'DataSet'                => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
@@ -419,6 +420,8 @@ sub get_available_adaptors{
                'UnmappedObject'     => 'Bio::EnsEMBL::DBSQL::UnmappedObjectAdaptor',
                'Analysis'           => 'Bio::EnsEMBL::DBSQL::AnalysisAdaptor',
                "MetaContainer"      => 'Bio::EnsEMBL::DBSQL::MetaContainer',
+               
+               "RegulatoryBuild"    => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildAdaptor',
               );
 
   return (\%pairs);

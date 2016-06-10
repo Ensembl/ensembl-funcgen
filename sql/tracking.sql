@@ -1,7 +1,7 @@
 -- Reasons for use of separate tracking/stats tables was two fold
 -- 1 For visibility (although some of this is now integrated into status)
 -- 2 As the data model was originally slightly broken, we needed
---   a way to model many to one relationships between merged input_subsets and 
+--   a way to model many to one relationships between merged input_subsets and
 --   individual records in input_subset_tracking
 
 -- TODO
@@ -17,7 +17,7 @@ CREATE TABLE `experiment_tracking` (
   PRIMARY KEY  (`experiment_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
---Slight overkill for one notes field, but keep tables separate for visibility
+-- Slight overkill for one notes field, but keep tables separate for visibility
 
 
 
@@ -60,6 +60,17 @@ CREATE TABLE `result_set_tracking` (
 -- also add in feature_set_stats here!
 
 
+/**
+@table  input_subset_tracking
+@desc
+@colour  #66CCFF
+
+@column download_url  deprecated
+@column download_date
+
+*/
+
+
 DROP TABLE IF EXISTS `input_subset_tracking`;
 
 CREATE TABLE `input_subset_tracking` (
@@ -74,38 +85,7 @@ CREATE TABLE `input_subset_tracking` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
--- add notes here as we have lost this from the input_set_tracking table?
 
--- Change this to current repository...
--- INSERT INTO meta (meta_key, meta_value) VALUES ('fastq_repository','/Your/species/specific/fastq/dir/');
--- INSERT INTO meta (meta_key, meta_value) VALUES ('current_coord_system','GRCh37');
-
--- Change this to something more appropriate tracking_only? (is_dev is ambiguous)
-ALTER TABLE status_name ADD tracking_only TINYINT(1) NOT NULL default 0;
-
-INSERT INTO status_name (name, tracking_only) values ('DOWNLOADED',              1);
-INSERT INTO status_name (name, tracking_only) values ('IS_CURRENT',              1);
-INSERT INTO status_name (name, tracking_only) values ('ADD_TO_REGULATORY_BUILD', 1);
-INSERT INTO status_name (name, tracking_only) values ('IN_REGULATORY_BUILD',     1);
-INSERT INTO status_name (name, tracking_only) values ('RELEASED',                1);
-INSERT INTO status_name (name, tracking_only) values ('TO_BE_REVOKED',           1);
-INSERT INTO status_name (name, tracking_only) values ('REVOKED',                 1);
-INSERT INTO status_name (name, tracking_only) values ('TO_BE_REBUILD',           1);
-INSERT INTO status_name (name, tracking_only) values ('REBUILT',                 1);
-INSERT INTO status_name (name, tracking_only) values ('IN_RELEASE',              1);
-INSERT INTO status_name (name, tracking_only) values ('ALIGNING_CONTROL',        1);
-INSERT INTO status_name (name, tracking_only) values ('ALIGNED',                 1);
-INSERT INTO status_name (name, tracking_only) values ('ALIGNED_CONTROL',                 1);
--- Are these last two ALIGN* states really tracking_only?
-
-
-
--- what about status history?
--- We need to be able to track when a set was released, and whether it was pulled and then re-release
--- Separate table?
-
-
---ALTER TABLE `data_set_tracking`     DROP `is_current`;
 DROP TABLE IF EXISTS `data_set_tracking`;
 CREATE TABLE `data_set_tracking` (
   `data_set_id` int(10) unsigned NOT NULL,
@@ -120,7 +100,6 @@ CREATE TABLE `data_set_tracking` (
 -- although we may also want to release stand alone result_sets
 
 
---ALTER TABLE `input_set_tracking`    DROP `status`;
 
 
 

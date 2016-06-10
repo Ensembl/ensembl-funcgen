@@ -40,7 +40,7 @@ my $feature_set = Bio::EnsEMBL::Funcgen::FeatureSet->new
    -dbid          => $dbid,
    -analysis      => $analysis,
    -feature_type  => $ftype,
-   -cell_type     => $ctype,
+   -epigenome     => $epigenome,
    -name          => 'HeLa-S3_H3K4me3_ExperimentalGroup_Analysis',
    -feature_class => 'annotated',
    -description   => 'HeLa-S3 H3K4me3 SWEmbl peaks replicate 1',
@@ -109,7 +109,7 @@ use base qw(Bio::EnsEMBL::Funcgen::Set Bio::EnsEMBL::Funcgen::feature_class_Set)
                -EXPERIMENT_ID => Int
                -DESCRIPTION   => String
                -DISPLAY_NAME  => String
-               -CELL_TYPE     => Bio::EnsEMBL::Funcgen::CellType
+               -EPIGENOME     => Bio::EnsEMBL::Funcgen::Epigenome
                -ANALYSIS      => Bio::EnsEMBL::Analysis
                -DBID          => Int
                -ADAPTOR       => Bio::EnsEMBL::Funcgen::DBSQL::FeatureSetAdaptor
@@ -119,7 +119,7 @@ use base qw(Bio::EnsEMBL::Funcgen::Set Bio::EnsEMBL::Funcgen::feature_class_Set)
                   -dbid          => $dbid,
                   -analysis      => $analysis,
                   -feature_type  => $ftype,
-                  -cell_type     => $ctype,
+                  -epigenome     => $epigenome,
                   -name          => 'HeLa-S3_H3K4me3_ExperimentalGroup_Analysis',
                   -feature_class => 'annotated',
                   -description   => 'HeLa-S3 H3K4me3 SWEmbl peaks replicate 1',
@@ -148,9 +148,9 @@ sub new {
   #subsequently throwing errors on retrieval
   my $type = $self->_validate_feature_class(\@_);
 
-  if(! defined $self->cell_type){
+  if(! defined $self->epigenome){
     if( ($type eq 'annotated') ||  ($type eq 'regulatory') ||  ($type eq 'segmentation')){
-      throw("FeatureSets with feature_class '$type' require a defined CellType");
+      throw("FeatureSets with feature_class '$type' require a defined Epigenome");
     }
   }
 
@@ -158,7 +158,7 @@ sub new {
   $self->{experiment}    = $exp     if defined $exp;
   $self->{description}   = $desc    if defined $desc;
   $self->{display_label} = $dlabel  if defined $dlabel;
- 
+
 
   return $self;
 }                               ## end sub new
@@ -220,10 +220,10 @@ sub display_label {
     if ( $self->feature_class eq 'regulatory' ) {
       $self->{display_label} = $self->name;
     } else {
-      #This still fails here if we don't have a class or a cell_type set
+      #This still fails here if we don't have a class or an epigenome set
 
       $self->{display_label} =
-        $self->feature_type->name.' - '. $self->cell_type->name.' enriched sites';
+        $self->feature_type->name.' - '. $self->epigenome->name.' enriched sites';
     }
   }
 
@@ -342,8 +342,8 @@ sub is_focus_set{
 
   if (! defined $self->{focus_set}) {
 
-    if (! defined $self->cell_type) {
-      warn "FeatureSet without an associated CellType cannot be a focus set:\t".$self->name;
+    if (! defined $self->epigenome) {
+      warn "FeatureSet without an associated Epigenome cannot be a focus set:\t".$self->name;
       $self->{focus_set} = 0;
     } else {
       $self->{focus_set} = $self->adaptor->fetch_focus_set_config_by_FeatureSet($self);
@@ -356,30 +356,19 @@ sub is_focus_set{
 
 =head2 is_attribute_set
 
-  Args       : None
-  Example    : if($fset->is_attribute_set){ ... }
-  Description: Returns true if FeatureSet is a supporting/attribute(focus or not) set used in the RegulatoryBuild
-  Returntype : Boolean
-  Exceptions : Throws if meta entry not present
-  Caller     : General
-  Status     : At Risk
+  Args       :
+  Example    :
+  Description:
+  Returntype :
+  Exceptions :
+  Caller     :
+  Status     : Deprecated
 
 =cut
 
 sub is_attribute_set{
-  my $self = shift;
-
-  if (! defined $self->{attribute_set}) {
-
-    if (! defined $self->cell_type) {
-      warn "FeatureSet without an associated CellType cannot be a attribute set:\t".$self->name;
-      $self->{attribute_set} = 0;
-    } else {
-      $self->{attribute_set} = $self->adaptor->fetch_attribute_set_config_by_FeatureSet($self);
-    }
-  }
-
-  return $self->{attribute_set};
+   deprecate(
+    "Bio::EnsEMBL::Funcgen::FeatureSet::is_attribute_set has been deprecated and will be removed in Ensembl release 89.");
 }
 
 
@@ -392,7 +381,7 @@ sub is_attribute_set{
                Defaults to: name description display_label feature_class get_all_states
   Args[4]    : Arrayref - Optional list of FeatureSet method names each
                returning a Storable or an Array or Arrayref of Storables.
-               Defaults to: feature_type cell_type analysis experiment
+               Defaults to: feature_type epigenome analysis experiment
   Example    : my %shallow_diffs = %{$rset->compare_to($other_rset, 1)};
   Description: Compare this FeatureSet to another based on the defined scalar
                and storable methods.
@@ -411,7 +400,7 @@ sub compare_to {
   my ($self, $obj, $shallow, $scl_methods, $obj_methods) = @_;
 
   $scl_methods ||= [qw(name description display_label feature_class get_all_states)];
-  $obj_methods ||= [qw(feature_type cell_type analysis experiment)];
+  $obj_methods ||= [qw(feature_type epigenome analysis experiment)];
 
   return $self->SUPER::compare_to($obj, $shallow, $scl_methods,
                                   $obj_methods);
@@ -427,7 +416,7 @@ sub compare_to {
             -feature_type => Bio::EnsEMBL::Funcgen::FeatureType,
 
            Optional if not presently defined:
-            -cell_type    => Bio::EnsEMBL::Funcgen::CellType,
+            -epigenome    => Bio::EnsEMBL::Funcgen::Epigenome,
             -experiment   => Bio::EnsEMBL::Funcgen::Experiment,
 
   Description: Resets all the relational attributes of a given FeatureSet.
@@ -441,25 +430,25 @@ sub compare_to {
 
 sub reset_relational_attributes{
   my ($self, $params_hash, $no_db_reset) = @_;
-  my ($analysis, $feature_type, $cell_type, $exp) =
-      rearrange(['ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'EXPERIMENT'],
+  my ($analysis, $feature_type, $epigenome, $exp) =
+      rearrange(['ANALYSIS', 'FEATURE_TYPE', 'EPIGENOME', 'EXPERIMENT'],
       %$params_hash);
 
   assert_ref($analysis,     'Bio::EnsEMBL::Analysis',             'Analysis');
   assert_ref($feature_type, 'Bio::EnsEMBL::Funcgen::FeatureType', 'FeatureType');
 
-  if( $self->cell_type && 
-      ! check_ref($cell_type, 'Bio::EnsEMBL::Funcgen::CellType') ){
-    throw("You must pass a valid Bio::EnsEMBL::Funcgen::CellType\n".
-          "Passed:\t".ref($cell_type));
+  if( $self->epigenome &&
+      ! check_ref($epigenome, 'Bio::EnsEMBL::Funcgen::Epigenome') ){
+    throw("You must pass a valid Bio::EnsEMBL::Funcgen::Epigenome\n".
+          "Passed:\t".ref($epigenome));
   }
-  
+
   if( $self->experiment &&
       ! check_ref($exp, 'Bio::EnsEMBL::Funcgen::Experiment') ){
     throw("You must pass a valid Bio::EnsEMBL::Funcgen::Experiment\n".
           "Passed:\t".ref($exp));
   }
-  
+
   if(defined $exp){
     #This will allow addition of an experiment
     #when it was not prevously defined
@@ -467,7 +456,7 @@ sub reset_relational_attributes{
     $self->{experiment}    = $exp;
   }
 
-  $self->{cell_type}    = $cell_type;
+  $self->{epigenome}    = $epigenome;
   $self->{feature_type} = $feature_type;
   $self->{analysis}     = $analysis;
 

@@ -109,8 +109,8 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($table_name, $table_id, $dbfile_path, $support, $rep)
-    = rearrange(['TABLE_NAME', 'TABLE_ID', 'DBFILE_PATH', 'SUPPORT', 'REPLICATE'], @_);
+  my ($table_name, $table_id, $dbfile_path, $support)
+    = rearrange(['TABLE_NAME', 'TABLE_ID', 'DBFILE_PATH', 'SUPPORT'], @_);
   # TEST MANDATORY PARAMS
   # explicit type check here to avoid invalid types being imported as NULL
   # and subsequently throwing errors on retrieval
@@ -118,7 +118,6 @@ sub new {
 
   # set default type until this is moved to db_file_registry.format
   # This is not possible yet as 5mC is classed as DNA not DNA Modification!!!
-  $self->{replicate}      = $rep;
   $self->{table_ids}      = {};
 
 
@@ -156,6 +155,19 @@ sub new {
   return $self;
 }
 
+sub production_name {
+  my $self = shift;
+  
+  my $epigenome_production_name = $self->epigenome->production_name;
+  my $analysis_logic_name = $self->analysis->logic_name;
+  my $dbID = $self->dbID;
+  
+  my $production_name = join '_', (
+    $epigenome_production_name,
+    $analysis_logic_name,
+    $dbID
+  );
+}
 
 sub _valid_feature_classes{
   return qw( result dna_methylation segmentation );
@@ -167,7 +179,7 @@ sub _valid_feature_classes{
   Arg[1] : Hashref containing the following mandatory parameters:
             -analysis     => Bio::EnsEMBL::Analysis,
             -feature_type => Bio::EnsEMBL::Funcgen::FeatureType,
-            -cell_type    => Bio::EnsEMBL::Funcgen::CellType,
+            -epigenome    => Bio::EnsEMBL::Funcgen::Epigenome,
             -support      => Arrayref of valid support objectse.g. InputSet
 
   Description: Resets all the relational attributes of a given ResultSet.
@@ -181,8 +193,8 @@ sub _valid_feature_classes{
 
 sub reset_relational_attributes{
   my ($self, $params_hash, $no_db_reset) = @_;
-  my ($support, $analysis, $feature_type, $cell_type, $exp) =
-    rearrange(['SUPPORT', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'EXPERIMENT'], %$params_hash);
+  my ($support, $analysis, $feature_type, $epigenome, $exp) =
+    rearrange(['SUPPORT', 'ANALYSIS', 'FEATURE_TYPE', 'EPIGENOME', 'EXPERIMENT'], %$params_hash);
 
   #flush table ID cache and add support
   $self->{table_ids} = undef;
@@ -193,7 +205,7 @@ sub reset_relational_attributes{
 
   assert_ref($analysis,     'Bio::EnsEMBL::Analysis');
   assert_ref($feature_type, 'Bio::EnsEMBL::Funcgen::FeatureType');
-  assert_ref($cell_type,    'Bio::EnsEMBL::Funcgen::CellType');
+  assert_ref($epigenome,    'Bio::EnsEMBL::Funcgen::Epigenome');
 
   if( $self->experiment &&
       ! check_ref($exp, 'Bio::EnsEMBL::Funcgen::Experiment') ){
@@ -209,7 +221,7 @@ sub reset_relational_attributes{
   }
 
 
-  $self->{cell_type}    = $cell_type;
+  $self->{epigenome}    = $epigenome;
   $self->{feature_type} = $feature_type;
   $self->{analysis}     = $analysis;
 
@@ -229,12 +241,15 @@ sub reset_relational_attributes{
   Returntype : Int
   Exceptions : None
   Caller     : Genereal
-  Status     : At risk
+  Status     : Deprecated
 
 =cut
 
 sub replicate{
-  return shift->{replicate};
+deprecate(
+          'Bio::EnsEMBL::Funcgen::ResultSet::replicate() has been deprecated '
+        . 'and will be removed in Ensembl release 89.' );
+  return 0;
 }
 
 sub add_support{
@@ -331,7 +346,7 @@ sub display_label {
   if(! defined $self->{display_label}){
 
     if($self->feature_class eq 'result'){ # We have a ChIP/DNase1/FAIRE signal set
-      $self->{display_label} = $self->feature_type->name.' '.$self->cell_type->name.' signal';
+      $self->{display_label} = $self->feature_type->name.' '.$self->epigenome->name.' signal';
     }
     elsif($self->feature_class eq 'dna_methylation'){
 
@@ -341,11 +356,11 @@ sub display_label {
         $project = ' '.$project;
       }
 
-      $self->{display_label} = $self->analysis->display_label.' '.$self->cell_type->name.$project;
+      $self->{display_label} = $self->analysis->display_label.' '.$self->epigenome->name.$project;
     }
     else{
       warn 'ResultSet feature class('.$self->feature_class.') not explicitly handled in display_label';
-      $self->{display_label} = $self->feature_type->name.' '.$self->cell_type->name;
+      $self->{display_label} = $self->feature_type->name.' '.$self->epigenome->name;
     }
   }
 
@@ -602,15 +617,6 @@ sub get_replicate_set_by_result_set_input_id{
   return (exists $self->{_replicate_cache}{$cc_id}) ?  $self->{_replicate_cache}{$cc_id} : undef;
 }
 
-sub get_replicate_set_by_chip_channel_id{
-  my ($self, $cc_id) = @_;
-
-  deprecate('Please use get_replicate_set_by_result_set_input_id instead');
-  return $self->get_replicate_set_by_result_set_input_id($cc_id);
-}
-
-
-
 
 =head2 log_label
 
@@ -634,10 +640,10 @@ sub log_label {
     $label = "Unknown FeatureType:";
   }
 
-  if(defined $self->cell_type){
-    $label .= $self->cell_type->name;
+  if(defined $self->epigenome){
+    $label .= $self->epigenome->name;
   }else{
-    $label .= "Unknown CellType";
+    $label .= "Unknown Epigenome";
   }
 
   return $self->name.":".$self->analysis->logic_name.":".$label;
@@ -653,7 +659,7 @@ sub log_label {
                Defaults to: name table_name feature_class get_all_states
   Args[4]    : Arrayref - Optional list of ResultSet method names each
                returning a Storable or an Array or Arrayref of Storables.
-               Defaults to: feature_type cell_type analysis get_support
+               Defaults to: feature_type epigenome analysis get_support
   Example    : my %shallow_diffs = %{$rset->compare_to($other_rset, 1)};
   Description: Compare this ResultSet to another based on the defined scalar
                and storable methods.
@@ -670,7 +676,7 @@ sub log_label {
 
 sub compare_to {
   my ($self, $obj, $shallow, $scl_methods, $obj_methods) = @_;
-  $obj_methods ||= [qw(feature_type cell_type analysis get_support)];
+  $obj_methods ||= [qw(feature_type epigenome analysis get_support)];
   $scl_methods ||= [qw(name table_name feature_class get_all_states)];
 
   return $self->SUPER::compare_to($obj, $shallow, $scl_methods, $obj_methods);
@@ -713,7 +719,6 @@ sub experiment{
       my @support = @{$self->get_support};
 
       foreach my $support(@support){
-
         if($support->can('is_control')){
 
           if(($support->is_control && ! $control) ||

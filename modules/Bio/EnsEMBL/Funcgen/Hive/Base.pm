@@ -41,7 +41,7 @@ use strict;
 use Devel::Peek;
 
 use Bio::EnsEMBL::Funcgen::Utils::Helper;
-use Bio::EnsEMBL::Utils::Exception         qw( throw );
+# use Bio::EnsEMBL::Utils::Exception         qw( throw );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( get_study_name_from_Set
                                                get_set_prefix_from_Set
                                                scalars_to_objects 
@@ -67,20 +67,20 @@ my %debug_modes = (no_tidy   => 1,
 
 #global values for the Helper... maybe pass as parameters...
 #$main::_debug_level = 0; Now set below
-$main::_tee         = 0;
-$main::_no_log      = 1;
+# $main::_tee         = 0;
+# $main::_no_log      = 1;
 
 
 #Used in set_param_arrays for scalars_to_objects
 #Could our this to make it dynamically mutable, i.e. redefine it from a sub class
 #Need this here rather than EFGUtils so we can test
 my %param_class_info = 
- (cell_types          => ['CellType',          'fetch_by_name'],
+ (epigenomes          => ['Epigenome',         'fetch_by_name'],
   feature_types       => ['FeatureType',       'fetch_by_name'],
   analyses            => ['Analysis',          'fetch_by_logic_name'],
   experimental_groups => ['ExperimentalGroup', 'fetch_by_name'],
   experiments         => ['Experiment',        'fetch_by_name'],
-  cell_type           => ['CellType',          'fetch_by_name'],
+  epigenome           => ['Epigenome',         'fetch_by_name'],
   feature_type        => ['FeatureType',       'fetch_by_name'],
   analysis            => ['Analysis',          'fetch_by_logic_name'],
   experimental_group  => ['ExperimentalGroup', 'fetch_by_name']       );
@@ -88,10 +88,10 @@ my %param_class_info =
 
 my %object_dataflow_methods = ('Bio::EnsEMBL::Analysis' => 'logic_name');
 
-my %valid_file_formats = 
- (bed  => 'Bed',
-  sam  => 'SAM',
-  bam  => 'BAM' );
+# my %valid_file_formats = 
+#  (bed  => 'Bed',
+#   sam  => 'SAM',
+#   bam  => 'BAM' );
 
 #Advantage of having separate fetch_input, run and write methods is to allow
 #calling of super methods at appropriate point.
@@ -111,7 +111,7 @@ sub fetch_input {   # nothing to fetch... just the DB parameters...
     if($debug_level !~ /^[1-3]$/){
       
       if(! exists $debug_modes{$debug_level}){
-        throw("Not a valid -debug mode:\t$debug_level\nPlease specify one of:\t".
+        $self->throw("Not a valid -debug mode:\t$debug_level\nPlease specify one of:\t".
           join(' ', keys %debug_modes));  
       }
       
@@ -200,22 +200,17 @@ sub validate_non_DB_inputs{
 }
 
 sub alignment_root_dir {
- my $self = $_[0];
+ my $self = shift;
  
- if(! $self->param_silent('alignment_root_dir')){
-   $self->set_dir_param_method('alignment_root_dir', [$self->data_root_dir,
-                                               'alignments',
-                                               lc($self->param('species')),
-                                               $self->param_required('assembly')], 1);
-                                               
-   #complete path will include study/experiment name and input_set logic_name
-   #which will be the logic name of the alignment
- } 
-  
+ if(! $self->param_silent('alignment_root_dir')) { 
+   $self->set_dir_param_method(
+      'alignment_root_dir', [
+	$self->bam_output_dir,
+      ], 1
+    );
+ }
  return $self->param('alignment_root_dir'); 
 }
-
-
 
 sub alignment_dir {
 
@@ -223,14 +218,87 @@ sub alignment_dir {
   
   if(defined $rset) {
 
-    $self->set_dir_param_method('alignment_dir', 
-                                [$self->alignment_root_dir, 
-                                 get_study_name_from_Set($rset, $control)],
-                                $create);    
+    $self->set_dir_param_method(
+      'alignment_dir',
+      [
+	$self->alignment_root_dir,
+ 	get_study_name_from_Set($rset, $control)
+#	$rset->epigenome->production_name
+      ],
+      $create
+    );
+
+#     $self->set_dir_param_method(
+#       'alignment_dir', 
+#       [$self->alignment_root_dir, 
+#       get_study_name_from_Set($rset, $control)],
+#       $create
+#     );
   }
   
   return $self->param('alignment_dir');
 }
+
+use File::Spec;
+
+=head1 regulation_directory
+
+  The directory in which the regulation files go. This is shared with the 
+  other teams, so best to put it in its own directory.
+
+=cut
+sub regulation_directory {
+  return 'funcgen';
+}
+
+=head1 version_directory
+
+  The Ensembl release version when the files were generated. Padded with a 
+  zero so it looks nice when we hit release 100.
+
+=cut
+sub version_directory {
+  return '085'
+}
+
+=head1 default_directory_by_table_and_file_type
+
+  Returns the names of directories in which the files should be stored by 
+  default. This is:
+  
+  <root directory> / <the directory forregulation specific files> / <the name of the table that represents it in the database> / < the release version > / ersa_signal / <the file type>
+
+=cut
+sub default_directory_by_table_and_file_type {
+  my $self      = shift;
+  my $table     = shift;
+  my $file_type = shift;
+  
+  return File::Spec->catfile(
+    $self->db_output_dir, &regulation_directory, $table, &version_directory, 'ersa_signal', $file_type
+  );
+}
+
+sub peaks_output_dir  {  return shift->default_directory_by_table_and_file_type('annotated_feature', 'peaks');  }
+sub bam_output_dir    {  return shift->default_directory_by_table_and_file_type('result_set',        'bam');    }
+sub bigwig_output_dir {  return shift->default_directory_by_table_and_file_type('result_set',        'bigwig'); }
+
+=head1 quality_check_output_dir
+
+  The root directory for the output of all quality checks.
+
+=cut
+sub quality_check_output_dir {
+  return File::Spec->catfile(
+    shift->db_output_dir, &regulation_directory, 'quality_checks', &version_directory
+  )
+}
+
+sub fastqc_output_dir                       { File::Spec->catfile( shift->quality_check_output_dir, 'fastqc')                       }
+sub flagstats_output_dir                    { File::Spec->catfile( shift->quality_check_output_dir, 'flagstats')                    }
+sub phantom_peaks_output_dir                { File::Spec->catfile( shift->quality_check_output_dir, 'phantom_peaks')                }
+sub proportion_of_reads_in_peaks_output_dir { File::Spec->catfile( shift->quality_check_output_dir, 'proportion_of_reads_in_peaks') }
+sub chance_output_dir                       { File::Spec->catfile( shift->quality_check_output_dir, 'chance')                       }
 
 sub get_output_work_dir_methods {
 
@@ -244,7 +312,7 @@ sub get_output_work_dir_methods {
     my $dr_dir = $self->data_root_dir;
     
     if($out_dir !~ /$dr_dir/){
-      throw('Cannot set a work_dir from an output dir('.$out_dir.
+      $self->throw('Cannot set a work_dir from an output dir('.$out_dir.
         ") which is not in the data_root_dir:\n\t$dr_dir");   
     }    
                
@@ -274,7 +342,7 @@ sub _set_out_db {
   my $db = $self->get_param_method('out_db', 'required');
  
   if(! ref($db)){ #Has been set to scalar in config?
-     throw("out_db config is not a Hashref of DBAdaptor::new parameters:\t$db");
+     $self->throw("out_db config is not a Hashref of DBAdaptor::new parameters:\t$db");
   }
   #Always required as we don't want to default to ensembldb for a pipeline!
   my $dnadb_params = $self->param_required('dnadb');  
@@ -288,10 +356,10 @@ sub _set_out_db {
     $db = $adaptor_class->new(%{ $db }, %{ $dnadb_params });
   };
   if($@) {
-    throw("Error creating the Funcgen DBAdaptor and/or dna DBAdaptor\n$@");  
+    $self->throw("Error creating the Funcgen DBAdaptor and/or dna DBAdaptor\n$@");  
   }
   if(! $db->isa('Bio::EnsEMBL::DBSQL::BaseAdaptor')) {
-    throw("The out_db param is set to an unexpected reference:\t" . (ref $db) . "\n"
+    $self->throw("The out_db param is set to an unexpected reference:\t" . (ref $db) . "\n"
       . Dumper($db)
       . "Please check the out_db config, which should be a Hashref of DBAdaptor parameters");
   } 
@@ -327,7 +395,7 @@ sub _set_out_db {
     $assembly = $cs_adaptor->fetch_by_rank(1)->version; 
     
     if(! $assembly){
-      throw("Failed to identify default assembly from the DB");
+      $self->throw("Failed to identify default assembly from the DB");
     }
     
     $self->assembly($assembly);
@@ -337,7 +405,7 @@ sub _set_out_db {
     my $cs = $cs_adaptor->fetch_all_by_version($assembly)->[0];
   
     if(! defined $cs){
-      throw("The -assembly $assembly does not exist in the database:\t".
+      $self->throw("The -assembly $assembly does not exist in the database:\t".
 	$db->dnadb->dbc->dbname); 
     }
     #todo make sure all Slice/CoordSystem calls use this assembly explicitly.
@@ -349,13 +417,13 @@ sub _set_out_db {
   
   if( ($param_species && $db_species) &&
     (lc($param_species) ne lc($db_species)) ){
-      throw('Mismatch between the DB species (meta species.production_name) and'.
+      $self->throw('Mismatch between the DB species (meta species.production_name) and'.
       " -species parameter:\t".$db_species."\t".$param_species);      
   }
   elsif(! defined $param_species){
   
     if(! defined $db_species){
-      throw('Must either set -species or use a DB where the correct species '.
+      $self->throw('Must either set -species or use a DB where the correct species '.
 	'name is set in the meta table as species.production name');  
     }
   
@@ -387,12 +455,12 @@ sub process_params {
   if($ref_type){ #can be ''
     
     if($ref_type ne 'ARRAY'){
-      throw("Param names argument cannot be a $ref_type.\n".
+      $self->throw("Param names argument cannot be a $ref_type.\n".
         'Only a single scalar or an Arrayref of param names is permitted.');  
     }
     
     if(! scalar @$param_names){
-      throw("Cannot pass an empty Arrayref for param names argument\n".
+      $self->throw("Cannot pass an empty Arrayref for param names argument\n".
         'Only a single scalar or an Arrayref of param names is permitted.'); 
     }
 
@@ -422,7 +490,7 @@ sub process_params {
       }
       elsif( ($ref_type ne 'HASH') &&
               ($ref_type ne 'ARRAY') ){
-        throw('process_params can only handle scalar (comma separated), '.
+        $self->throw('process_params can only handle scalar (comma separated), '.
           'Arrayref of scalars or Hashref values');  
       } 
       
@@ -431,7 +499,7 @@ sub process_params {
       if(exists $param_class_info{$param_name}){
  
         if($ref_type eq 'HASH'){#can only be hash
-          throw("Need to implement $param_name fetch_all for process_params");
+          $self->throw("Need to implement $param_name fetch_all for process_params");
         }
         else{ #We have an Arrayref of scalars
           $values = scalars_to_objects($self->out_db, @{$param_class_info{$param_name}},
@@ -497,7 +565,7 @@ sub set_dir_param_method {
   
   if(! (defined $dir_param_name &&
         defined $path) ){
-    throw('You must provide directory parameter name and path arguments to validate');
+    $self->throw('You must provide directory parameter name and path arguments to validate');
   }
 
   $path = validate_path($path, $create, 1, $dir_param_name);#1 is dir flag
@@ -572,11 +640,11 @@ sub set_param_method {
     if($req ne 'required'){
       #do this instead of a boolean, to avoid someone specifying silent and getting unexpected
       #behaviour, also mirrors get_param_and_method interface
-      throw("$req is not a valid method type for set_param_and method, can only be 'required'");  
+      $self->throw("$req is not a valid method type for set_param_and method, can only be 'required'");  
     }
     elsif(! defined $param_value){
       # why not leave this to _param_and_method?
-      throw($param_name.' value is required but not defined');  
+      $self->throw($param_name.' value is required but not defined');  
     }
   }
   
@@ -598,7 +666,7 @@ sub _param_and_method {
       #Should not redefine non-Funcgen method
   
       if($package_method !~ /^Bio::EnsEMBL::Funcgen::/){
-        throw("Caught attempt to redefine non-Funcgen method:\t$package_method\n".
+        $self->throw("Caught attempt to redefine non-Funcgen method:\t$package_method\n".
           "Please use an alternative method name, or use the above method directly if appropriate");
       }
     }
@@ -612,7 +680,7 @@ sub _param_and_method {
     
       if( ($req_or_silent ne 'silent' ) &&
           ($req_or_silent ne 'required') ){
-        throw("Param method type can only be 'silent' or 'required', not:\t$req_or_silent");    
+        $self->throw("Param method type can only be 'silent' or 'required', not:\t$req_or_silent");    
       }
     
       $param_method .= '_'.$req_or_silent;
@@ -660,50 +728,47 @@ sub _param_and_method {
   return $self->$param_method(@param_args);
 } 
   
-sub init_branching_by_analysis{  
-  my $self = shift;
-   
-  use Carp;
-  confess('init_branching_by_analysis is deprecated.');
-
-  #my $branch_config = $self->get_param_method('branch_config', 'silent');  
-  #Not a passed param anymore, as we get it from the dataflow rules
- 
- 
-  if(! defined $self->{branch_config}){
-    my $dfr_adaptor = $self->db->get_DataflowRuleAdaptor;  
-    inject_DataflowRuleAdaptor_methods($dfr_adaptor);   
-    
-    my $job = $self->input_job;
-    
-    $self->{branch_config} = $dfr_adaptor->get_dataflow_config_by_analysis_id($job->analysis_id);
-
-    my %bn_config;
-    my $branch_config = $self->{branch_config};
-    
-    foreach my $config(values(%$branch_config)){
-      my $branch = $config->{branch};
-      my $funnel = $config->{funnel};
-      
-      
-      if(exists $branch_config->{$branch}){
-        throw('Cannot init_branching_by_analysis as logic_name'.
-          " clashes with branch number:\t".$branch);  
-      }
-      
-      $bn_config{$branch} = $config;
-    }
-    
-    $self->{branch_config} = {%$branch_config, %bn_config}; 
-    $self->helper->debug(1, "Branch config is:\n", $self->{branch_config});
-    
-  }
-
-  return $self->{branch_config};
-}
-
-
-
+# sub init_branching_by_analysis{  
+#   my $self = shift;
+#    
+#   use Carp;
+#   confess('init_branching_by_analysis is deprecated.');
+# 
+#   #my $branch_config = $self->get_param_method('branch_config', 'silent');  
+#   #Not a passed param anymore, as we get it from the dataflow rules
+#  
+#  
+#   if(! defined $self->{branch_config}){
+#     my $dfr_adaptor = $self->db->get_DataflowRuleAdaptor;  
+#     inject_DataflowRuleAdaptor_methods($dfr_adaptor);   
+#     
+#     my $job = $self->input_job;
+#     
+#     $self->{branch_config} = $dfr_adaptor->get_dataflow_config_by_analysis_id($job->analysis_id);
+# 
+#     my %bn_config;
+#     my $branch_config = $self->{branch_config};
+#     
+#     foreach my $config(values(%$branch_config)){
+#       my $branch = $config->{branch};
+#       my $funnel = $config->{funnel};
+#       
+#       
+#       if(exists $branch_config->{$branch}){
+#         $self->throw('Cannot init_branching_by_analysis as logic_name'.
+#           " clashes with branch number:\t".$branch);  
+#       }
+#       
+#       $bn_config{$branch} = $config;
+#     }
+#     
+#     $self->{branch_config} = {%$branch_config, %bn_config}; 
+#     $self->helper->debug(1, "Branch config is:\n", $self->{branch_config});
+#     
+#   }
+# 
+#   return $self->{branch_config};
+# }
 
 sub _get_branch_number{
   my $self          = shift;
@@ -729,7 +794,7 @@ sub _get_branch_number{
         $branch ||= $branch_config->{$bcode}{branch};
         
         if($branch_config->{$bcode}{branch} != $branch){
-          throw($bcode.' fan analysis/branch key has branch '.$branch_config->{$bcode}{branch}.
+          $self->throw($bcode.' fan analysis/branch key has branch '.$branch_config->{$bcode}{branch}.
             " which does not match other analysis/branch key:\t".$branch_codes->[0].' '.$branch);
         }  
       }
@@ -738,12 +803,12 @@ sub _get_branch_number{
   else{#We only expect 1 branch number
     
     if(scalar(@$branch_codes) != 1){
-      throw('Only 1 branch number is permitted if no branch config has been initialised, found '.
+      $self->throw('Only 1 branch number is permitted if no branch config has been initialised, found '.
         scalar(@$branch_codes)); 
     }
     
     if($branch_codes->[0] !~ /[0-9]+/o){
-      throw("Found analysis/branch key when no branch config has been initialised:\t".$branch_codes->[0].
+      $self->throw("Found analysis/branch key when no branch config has been initialised:\t".$branch_codes->[0].
             "\nPlease use a branch number or call init_branching_by_analysis or init_branching_by_config");
     }
     
@@ -775,21 +840,21 @@ sub branch_job_group{
     
   if(! (check_ref($fan_jobs, 'ARRAY') &&
         scalar(@$fan_jobs) > 0)){
-    throw("Must have at least 1 job in the job group for fan/branch $fan_branch");        
+    $self->throw("Must have at least 1 job in the job group for fan/branch $fan_branch");        
   }
   
   my $job_group = [$fan_branch, $fan_jobs]; 
    
   if(($funnel_branch_code && ! $funnel_jobs) ||
      ($funnel_jobs && ! $funnel_branch_code)){
-    throw('Must have both a funnel branch code and funnel job(s) to define a funnel in a job group');    
+    $self->throw('Must have both a funnel branch code and funnel job(s) to define a funnel in a job group');    
   }
   elsif($funnel_branch_code){ #implicit that $funnel_jobs are also true
     #check $funnel_branch_code is not ref?
      
     if(! (check_ref($funnel_jobs, 'ARRAY') &&
           scalar(@$funnel_jobs) > 0)){
-      throw('Must have at least 1 funnel job when defining a funnel in a job group'); 
+      $self->throw('Must have at least 1 funnel job when defining a funnel in a job group'); 
     }
    
     my $funnel_branch = $self->_get_branch_number([$funnel_branch_code], $branch_config); 
@@ -803,7 +868,7 @@ sub branch_job_group{
       my $funnel_name = $branch_config->{$fan_branch}{funnel};
       
       if($branch_config->{$funnel_name}{branch} ne $funnel_branch){
-        throw("$funnel_branch_code (expected: ".$branch_config->{$funnel_name}{branch}.") is not a valid funnel analysis for fan branches:\t".
+        $self->throw("$funnel_branch_code (expected: ".$branch_config->{$funnel_name}{branch}.") is not a valid funnel analysis for fan branches:\t".
           join(', ', @$fan_branch_codes)."\nPlease check you dataflow configuration");  
       }   
     }
@@ -835,9 +900,6 @@ sub branch_job_group{
 sub dataflow_job_groups {
   my $self       = shift;
   my $job_groups = $self->{job_groups} || []; #allow no job groups
-  
-  $Data::Dumper::Maxdepth = 6;
-  print Dumper($job_groups);
   
   foreach my $job_group(@$job_groups){
     #we can detect funnel jobs here!
@@ -876,7 +938,7 @@ sub dataflow_params {
   if(! $self->param_silent('dataflow_param_names')){
     
     if(! $optional){
-      throw('dataflow_param_names are required but not defined.'.
+      $self->throw('dataflow_param_names are required but not defined.'.
         ' Please define or set the optional flag');  
     }
   }
@@ -906,7 +968,7 @@ sub _dataflow_params_by_list {
     if( blessed($param) ){
       
       if(! exists $object_dataflow_methods{ref($param)}){
-        throw("Cannot dataflow $method_list_name $param_name as it is an object without a defined dataflow method:\t".
+        $self->throw("Cannot dataflow $method_list_name $param_name as it is an object without a defined dataflow method:\t".
           $param."\nPlease add to \%object_dataflow_methods");  
       }
       else{
@@ -956,76 +1018,168 @@ sub sam_ref_fai {
   return $self->param('sam_ref_fai');
 }
 
-sub sam_header{
-  my $self        = shift;
-  my $gender      = shift; 
-  
-  if(! defined $self->param_silent('sam_header')){
-  
-    if(! defined $gender){
-      $gender = $self->param_silent('gender') || $self->param_silent('default_gender');
-      
-      if(! defined $gender){
-        $self->throw_no_retry('No gender argument or param defined and no default_gender '.
-        'specific in the config');
-      }
-    }
-    my $file_name = $self->species.'_'.$gender.'_'.$self->assembly.'_unmasked.header.sam';
-    my $sam_header = validate_path([$self->data_root_dir,
-                                    'sam_header',
-                                    $self->species,
-                                    $file_name]);
-    $self->set_param_method('sam_header', $sam_header);
-  }
-  
-  return $self->param('sam_header'); 
-}
+# sub sam_header{
+#   my $self        = shift;
+#   my $gender      = shift; 
+#   
+#   if(! defined $self->param_silent('sam_header')){
+#   
+#     if(! defined $gender){
+#       $gender = $self->param_silent('gender') || $self->param_silent('default_gender');
+#       
+#       if(! defined $gender){
+#         $self->$self->throw_no_retry('No gender argument or param defined and no default_gender '.
+#         'specific in the config');
+#       }
+#     }
+#     my $file_name = $self->species.'_'.$gender.'_'.$self->assembly.'_unmasked.header.sam';
+#     my $sam_header = validate_path([$self->data_root_dir,
+#                                     'sam_header',
+#                                     $self->species,
+#                                     $file_name]);
+#     $self->set_param_method('sam_header', $sam_header);
+#   }
+#   
+#   return $self->param('sam_header'); 
+# }
 
-sub get_alignment_path_prefix_by_ResultSet{
+sub get_alignment_path_prefix_by_ResultSet {
   my ($self, $rset, $control) = @_;
   assert_ref($rset, 'Bio::EnsEMBL::Funcgen::ResultSet');
-  my $ctrl_exp;
+
+  return $self->alignment_dir($rset, undef, $control).'/'.
+    $self->get_file_base_for_ResultSet($rset, $control); 
+}
+
+sub get_file_base_for_ResultSet {
+  my ($self, $rset, $control) = @_;
+  assert_ref($rset, 'Bio::EnsEMBL::Funcgen::ResultSet');
   
+  my $ctrl_exp;
   if ($control) {
     $ctrl_exp = $rset->experiment(1);
-    
-#      print Dumper($rset);
-#      print Dumper($ctrl_exp);
-#      die();
   }
-  
   return if $control && ! $ctrl_exp;
   
-#   use Data::Dumper;
-#   $Data::Dumper::Maxdepth = 3;
-#   print Dumper([$rset, $control]);
-  
   my @rep_numbers;
-  
-  foreach my $isset(@{$rset->get_support}){
-    
+  foreach my $isset(@{$rset->get_support}) {
     if( ($control && $isset->is_control)  ||
         ((! $control) && 
-         (! $isset->is_control)) ){ 
-       push @rep_numbers, $isset->replicate;
+         (! $isset->is_control)) ) {
+       push @rep_numbers, $isset;
     }
   }
-  return $self->alignment_dir($rset, undef, $control).'/'.
-    get_set_prefix_from_Set($rset, $control).'_'.
-    $rset->analysis->logic_name.'_'.join('_', sort(@rep_numbers)); 
+  
+  my $replicate_input_subset_string = $self->create_replicate_input_subset_string(@rep_numbers);
+  
+  my $file_base_for_result_set = get_set_prefix_from_Set($rset, $control)
+    . '_'
+    . $rset->analysis->logic_name 
+    . '_'
+    . $replicate_input_subset_string;
+  
+  return $file_base_for_result_set;
+}
+
+sub create_replicate_input_subset_string {
+
+  my $self = shift;
+  my @input_subset_replicates = @_;
+
+  my @sorted_replicate_number = sort {
+       $a->biological_replicate <=> $b->biological_replicate
+    || $a->technical_replicate  <=> $b->technical_replicate
+  } @input_subset_replicates;
+  
+  my @replicate_number_strings;
+  foreach my $current_replicate_number (@sorted_replicate_number) {
+    push @replicate_number_strings,
+        'BR' . $current_replicate_number->biological_replicate
+      . 'TR' . $current_replicate_number->technical_replicate;
+  }
+  my $replicate_number_string = join('_', sort(@replicate_number_strings));
+  
+  return $replicate_number_string;
+}
+
+=head2 signal_input_subsets_have_biological_replicates
+
+  This code is used in two analysis modules and they rely on it returning
+  the same result both times.
+
+=cut
+sub signal_input_subsets_have_biological_replicates {
+
+  my $self  = shift;
+  my $signal_input_subsets = shift;
+  
+  my $biological_replicates_present = grep {
+    $_->biological_replicate > 1;
+  } @$signal_input_subsets;
+
+  return $biological_replicates_present;
+}
+
+sub create_result_set_name_for_biological_replicate {
+  my $self  = shift;
+  my $param = shift;
+  
+  my $parent_result_set_name = $param->{parent_result_set_name};
+  my $replicate_number       = $param->{replicate_number};
+  
+  return $self->_create_result_set_name_for_replicate(
+    $parent_result_set_name, 
+    'BR', 
+    $replicate_number
+  );
+}
+
+sub create_result_set_name_for_technical_replicate {
+  my $self  = shift;
+  my $param = shift;
+  
+  my $parent_result_set_name = $param->{parent_result_set_name};
+  my $replicate_number       = $param->{replicate_number};
+  
+  return $self->_create_result_set_name_for_replicate(
+    $parent_result_set_name, 
+    'TR', 
+    $replicate_number
+  );
+}
+
+sub _create_result_set_name_for_replicate {
+  my $self  = shift;
+  
+  my $parent_result_set_name = shift;
+  my $replicate_type         = shift;
+  my $replicate_number       = shift;
+  
+  return $parent_result_set_name . '_' . $replicate_type . $replicate_number;
 }
 
 sub get_alignment_files_by_ResultSet_formats {
-  my ($self, $rset, $formats, $control, $all_formats, $filter_format) = @_;
-  assert_ref($formats, 'ARRAY');  
-  my $file_type = ($control) ? 'control_file' : 'alignment_file';
+  my ($self, $rset, $control) = @_;
   my ($path, $align_files);
 
-    $path = $self->get_alignment_path_prefix_by_ResultSet($rset, $control);
-  $path .= '.unfiltered' if $filter_format;
+  $path = $self->get_alignment_path_prefix_by_ResultSet($rset, $control);
   
+  return $path . '.bam';
+  
+  my $all_formats;
+  my $filter_format;
+  my $formats = [];
+  assert_ref($formats, 'ARRAY');
+  
+  my $file_type = ($control) ? 'control_file' : 'alignment_file';
+  
+  $path .= '.unfiltered' if $filter_format;
+
+use Data::Dumper;
+die(Dumper($path));
+
   my $params = {debug              => $self->debug,
-		ref_fai            => $self->sam_ref_fai($rset->cell_type->gender),  #Just in case we need to convert
+		ref_fai            => $self->sam_ref_fai($rset->epigenome->gender),  #Just in case we need to convert
 		filter_from_format => $filter_format,
 		#skip_rmdups        => 1, # Duplicate removal no longer supported
 		all_formats        => $all_formats,
@@ -1038,70 +1192,72 @@ sub get_alignment_files_by_ResultSet_formats {
     " filter_from_format: $filter_format):\n\t".$path);
   $align_files = get_files_by_formats($path, $formats, $params);
 
- 
+use Data::Dumper;
+die(Dumper($align_files));
+
   #throw here and handle optional control file in caller. This should be done with 
   #a no_control/skip_control flag or similar  
-    return $align_files || throw("Failed to find $file_type (@$formats) for:\t$path");  
+    return $align_files || $self->throw("Failed to find $file_type (@$formats) for:\t$path");  
 }
 
-sub archive_root{
-  return shift->param_silent('archive_root');  
-}
+# sub archive_root{
+#   return shift->param_silent('archive_root');  
+# }
 
-sub archive_files {
-  my $self       = shift;
-  my $files      = shift;
-  my $mandatory  = shift;
-  
-  if(ref($files)){
-    assert_ref($files, 'ARRAY', 'archive files');  
-  }
-  else{
-    $files = [$files];  
-  }
-  
-  if(my $archive_root = $self->archive_root){
-    
-    my $data_root = $self->data_root_dir;
-
-    foreach my $file(@$files){
-    
-      if($file !~ /^$data_root/o){
-        $self->throw_no_retry('The file path to archive must be a full length path rooted in the data root directory:'.
-          "\nFile path:\t$file\nData root:\t$data_root\n");  
-      }
-        
-      (my $archive_file = $file) =~ s/$data_root/$archive_root/;
-    
-      #sanity check these are not the same 
-      if($archive_file eq $file){
-        $self->throw_no_retry("Source and archive filepath are the same:\n$file");  
-      }
-    
-      #Now we need to create the target directory if it doesn't exist
-      (my $target_root = $archive_file) =~ s/(.*\/)[^\/]+$/$1/;
-      
-      if((! -f $file) && (-f $archive_file)){
-        #File appears to have already been archived. This is probably a rerunning job
-        return;
-      }
-      
-    
-      if(! -d $target_root){
-        #Maybe this is an intermitent error?
-        $self->run_system_cmd_no_retry("mkdir -p $target_root");      
-      } 
-      
-        
-      $self->run_system_cmd_no_retry("mv $file $archive_file");    
-    }
-  }
-  elsif($mandatory && ! $self->param_silent('allow_no_archiving')){
-    $self->throw_no_retry('The mandatory flag has been set but not archive_root is defined');  
-  }
-  
-  return;
-}
+# sub archive_files {
+#   my $self       = shift;
+#   my $files      = shift;
+#   my $mandatory  = shift;
+#   
+#   if(ref($files)){
+#     assert_ref($files, 'ARRAY', 'archive files');  
+#   }
+#   else{
+#     $files = [$files];  
+#   }
+#   
+#   if(my $archive_root = $self->archive_root){
+#     
+#     my $data_root = $self->data_root_dir;
+# 
+#     foreach my $file(@$files){
+#     
+#       if($file !~ /^$data_root/o){
+#         $self->throw_no_retry('The file path to archive must be a full length path rooted in the data root directory:'.
+#           "\nFile path:\t$file\nData root:\t$data_root\n");  
+#       }
+#         
+#       (my $archive_file = $file) =~ s/$data_root/$archive_root/;
+#     
+#       #sanity check these are not the same 
+#       if($archive_file eq $file){
+#         $self->throw_no_retry("Source and archive filepath are the same:\n$file");  
+#       }
+#     
+#       #Now we need to create the target directory if it doesn't exist
+#       (my $target_root = $archive_file) =~ s/(.*\/)[^\/]+$/$1/;
+#       
+#       if((! -f $file) && (-f $archive_file)){
+#         #File appears to have already been archived. This is probably a rerunning job
+#         return;
+#       }
+#       
+#     
+#       if(! -d $target_root){
+#         #Maybe this is an intermitent error?
+#         $self->run_system_cmd_no_retry("mkdir -p $target_root");      
+#       } 
+#       
+#         
+#       $self->run_system_cmd_no_retry("mv $file $archive_file");    
+#     }
+#   }
+#   elsif($mandatory && ! $self->param_silent('allow_no_archiving')){
+#     $self->throw_no_retry('The mandatory flag has been set but not archive_root is defined');  
+#   }
+#   
+#   return;
+# }
 
 =head2 is_idr_FeatureType
 
@@ -1138,18 +1294,18 @@ sub is_idr_ResultSet {
   return $is_idr_rset;  
 }
 
-sub run_system_cmd_no_retry{
-  my $self = shift; 
-  my $cmd  = shift;
-  
-   $self->helper->debug(1, "run_system_cmd_no_retry\t$cmd"); 
-  
-  if(run_system_cmd($cmd, 1) != 0){
-    $self->throw_no_retry("Failed to run_system_cmd:\t$cmd");  
-  }  
-  
-  return;
-}
+# sub run_system_cmd_no_retry{
+#   my $self = shift; 
+#   my $cmd  = shift;
+#   
+#    $self->helper->debug(1, "run_system_cmd_no_retry\t$cmd"); 
+#   
+#   if(run_system_cmd($cmd, 1) != 0){
+#     $self->throw_no_retry("Failed to run_system_cmd:\t$cmd");  
+#   }  
+#   
+#   return;
+# }
   
 
 
@@ -1199,7 +1355,7 @@ sub CvGV_name_or_bust {
 sub throw_no_retry {
   my $self = shift;
   $self->input_job->transient_error( 0 );
-  throw(@_);
+  $self->throw(@_);
 
 } ## end throw_no_retry  
 

@@ -42,6 +42,24 @@ sub pipeline_analyses {
 	    BamFileQc => INPUT_PLUS({
 		'is_control' => 1,
 		'source' => 'MergeControlAlignments',
+		'has_duplicates' => 'yes',
+		'has_unmapped_reads' => 'yes',
+		'bam_file_for_qc' => '#bam_file_with_unmapped_reads_and_duplicates#',
+	      } 
+	    ) 
+	  },
+	},
+      },
+      {
+	-logic_name => 'RemoveDuplicateControlAlignments',
+	-flow_into => {
+	  MAIN => {
+	    BamFileQc => INPUT_PLUS({
+		'is_control' => 1,
+		'source' => 'RemoveDuplicateControlAlignments',
+		'has_duplicates' => 'no',
+		'has_unmapped_reads' => 'no',
+		'bam_file_for_qc' => '#bam_file#',
 	      } 
 	    ) 
 	  },
@@ -54,6 +72,24 @@ sub pipeline_analyses {
 	    BamFileQc => INPUT_PLUS({
 	      'is_control' => 0,
 	      'source' => 'MergeAlignments',
+	      'has_duplicates' => 'yes',
+	      'has_unmapped_reads' => 'yes',
+	      'bam_file_for_qc' => '#bam_file_with_unmapped_reads_and_duplicates#',
+	      } 
+	    ) 
+	  },
+	},
+      },
+      {
+	-logic_name => 'RemoveDuplicateAlignments',
+	-flow_into => {
+	  MAIN => { 
+	    BamFileQc => INPUT_PLUS({
+	      'is_control' => 0,
+	      'source' => 'RemoveDuplicateAlignments',
+	      'has_duplicates' => 'no',
+	      'has_unmapped_reads' => 'no',
+	      'bam_file_for_qc' => '#bam_file#',
 	      } 
 	    ) 
 	  },
@@ -66,6 +102,24 @@ sub pipeline_analyses {
 	    BamFileQc => INPUT_PLUS({
 	      'is_control' => 0,
 	      'source' => 'MergeReplicateAlignments',
+	      'has_duplicates' => 'yes',
+	      'has_unmapped_reads' => 'yes',
+	      'bam_file_for_qc' => '#bam_file_with_unmapped_reads_and_duplicates#',
+	      }
+	    )
+	  },
+	},
+      },
+      {
+	-logic_name => 'RemoveDuplicateReplicateAlignments',
+	-flow_into => {
+	  MAIN => { 
+	    BamFileQc => INPUT_PLUS({
+	      'is_control' => 0,
+	      'source' => 'RemoveDuplicateReplicateAlignments',
+	      'has_duplicates' => 'no',
+	      'has_unmapped_reads' => 'no',
+	      'bam_file_for_qc' => '#bam_file#',
 	      }
 	    )
 	  },
@@ -78,6 +132,9 @@ sub pipeline_analyses {
 	    BamFileQc => INPUT_PLUS({
 	      'is_control' => 0,
 	      'source' => 'FixReplicateResultSetsExperimentIds',
+	      'has_duplicates' => undef,
+	      'has_unmapped_reads' => 'no',
+	      'bam_file_for_qc' => '#bam_file#',
 	      }
 	    )
 	  },
@@ -85,8 +142,18 @@ sub pipeline_analyses {
       },
       {
 	-logic_name => 'BamFileQc',
-	-module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+	-module     => 'Bio::EnsEMBL::Funcgen::Hive::BamFileQc',
 	-meadow_type=> 'LOCAL',
+# 	-flow_into => {
+# 	    2 => WHEN(
+#                 '#has_duplicates# eq "yes"' => { 
+#                   ':////accu?file_to_delete=[]' => { 
+#                     'file_to_delete' => '#bam_file#'
+#                   } 
+#                 }
+# 	      ),
+# 	  },
+
       },
     ];
 }

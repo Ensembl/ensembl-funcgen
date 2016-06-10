@@ -107,7 +107,19 @@ sub run {   # Check parameters and do appropriate database/file operations...
   my $exp_name      = $rsets->[0]->experiment->name;
   #This is also done in RunPeaks, so we really need a single method to do this?
   my $lname         =  $peak_analysis->logic_name;
-  $self->get_output_work_dir_methods($self->db_output_dir.'/peaks/'.$exp_name.'/'.$lname);
+  
+#   $self->get_output_work_dir_methods($self->db_output_dir.'/peaks/'.$exp_name.'/'.$lname);
+
+  # The code for building this path is duplicated in RunPeaks. This should be 
+  # configured somewhere centrally.
+  #
+  $self->get_output_work_dir_methods(
+    $self->peaks_output_dir 
+    . '/' . $exp_name
+    . '/' . $lname
+  );
+
+  
   my $out_dir = $self->output_dir;
   my $max_peaks     = 300000;
  
@@ -151,13 +163,13 @@ sub run {   # Check parameters and do appropriate database/file operations...
         push @ctrl_ids, $isset->dbID;;        
       }
       else{
-        if($seen_rep){
-          $self->throw_no_retry("Found more than 1 replicate (non-control) InputSet supporting an an IDR ResultSet:\n\t".
-            join("\n\t", map {$_->name} @issets)."\n");  
-        }  
+#         if($seen_rep){
+#           $self->throw_no_retry("Found more than 1 replicate (non-control) InputSet supporting an IDR ResultSet for experiment $exp_name:\n\t".
+#             join("\n\t", map {$_->name} @issets)."\n");  
+#         }  
         
-        push @rep_nums, $isset->replicate;
-        $seen_rep = 1;
+        push @rep_nums, $isset;
+#         $seen_rep = 1;
       }
     }
     
@@ -182,14 +194,24 @@ sub run {   # Check parameters and do appropriate database/file operations...
     #too. Although this maybe desirable to avoid clashes between features sets with different alignments
     #The API does not handle this yet.
     
-    push @pre_idr_files, $out_dir.'/'.$rset->name.'.'.$lname.'.txt';
+    my $permissive_swembl_peak_file = $out_dir.'/'.$rset->name.'.'.$lname.'.txt';
+    
+    if (! -e $permissive_swembl_peak_file) {
+      $self->throw("Expected file $permissive_swembl_peak_file does not exist!");
+    }
+    
+    push @pre_idr_files, $permissive_swembl_peak_file;
     #do read counts in RunIDR to parallelise
-    push @bams,         $self->get_alignment_files_by_ResultSet_formats($rset, ['bam'])->{bam};
+    push @bams,         $self->get_alignment_files_by_ResultSet_formats($rset, ['bam']);
   }
   
   
   #Put batch_name code in BaseSequencing or Base? 
-  my $batch_name                 = $exp_name.'_'.$lname.'_'.join('_', sort @rep_nums);
+  my $replicate_input_subset_string = $self->create_replicate_input_subset_string(@rep_nums);
+  
+#   die($replicate_input_subset_string);
+
+  my $batch_name = $exp_name.'_'.$lname.'_'.$replicate_input_subset_string;
   my ($np_files, $threshold, $x_thresh_adjust);
   
   if(! eval { ($np_files, $threshold, $x_thresh_adjust) = 
