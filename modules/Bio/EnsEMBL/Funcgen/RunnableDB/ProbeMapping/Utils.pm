@@ -27,7 +27,19 @@ sub create_db_url_from_dba_hash {
   # behaviour for missing values.
   #
   my $dbc = Bio::EnsEMBL::DBSQL::DBConnection->new(%$dba_hash);
-  return create_db_url_from_dbc($dbc);
+  
+  my $url = create_db_url_from_dbc($dbc);
+  
+  my @query_parameters;
+  if (exists $dba_hash->{-group}) {
+    push @query_parameters, 'group=' . $dba_hash->{-group};
+  }
+  if (exists $dba_hash->{-species}) {
+    push @query_parameters, 'species=' . $dba_hash->{-species};
+  }
+  $url .= '?' . join '&', @query_parameters;
+  
+  return $url;
 }
 
 sub create_db_server_url_from_dba_hash {
