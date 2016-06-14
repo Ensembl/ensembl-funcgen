@@ -169,7 +169,7 @@ sub fetch_all_by_Slice_constraint {
   }
 
   #build seq_region cache here once for entire query
-  $self->build_seq_region_cache($slice);
+   $self->build_seq_region_cache($slice);
 
   @result = @{$self->_fetch_all_by_Slice_constraint_schema_build($slice, $constraint)};
 
