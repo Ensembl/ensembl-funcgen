@@ -246,6 +246,10 @@ sub get_associated_MotifFeatures{
   return $self->{assoc_motif_features};
 }
 
+sub SO_term {
+  my $self = shift;
+  return $self->feature_type->so_accession;
+}
 
 =head2 summary_as_hash
 
@@ -258,15 +262,20 @@ sub get_associated_MotifFeatures{
 
 sub summary_as_hash {
   my $self = shift;
-  my $fset = $self->feature_set;
+  my $feature_set = $self->feature_set;
 
   return
-    {chipseq_feature_type => $self->feature_type->name,
-     epigenome              => $self->epigenome->name,
-     start                  => $self->seq_region_start,
-     end                    => $self->seq_region_end,
-     strand                 => $self->strand,
-     seq_region_name        => $self->seq_region_name              
+    {
+      feature_type     => $self->feature_type->name,
+      epigenome        => $self->epigenome->name,
+      source           => $feature_set->analysis->logic_name,
+      seq_region_name  => $self->seq_region_name,
+      start            => $self->seq_region_start,
+      end              => $self->seq_region_end,
+      description      => $feature_set->display_label,
+      strand           => $self->strand,
+      summit           => $self->summit,
+      score            => $self->score,
     };
 }
 1;
