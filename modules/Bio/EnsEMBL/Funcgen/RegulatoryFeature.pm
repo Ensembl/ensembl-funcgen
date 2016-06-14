@@ -246,7 +246,8 @@ sub regulatory_activity_for_epigenome {
   } @{$self->regulatory_activity};
   
   if (! @regulatory_activity) {
-    throw('No regulatory activity for ' . $epigenome->display_label);
+#     throw('No regulatory activity for ' . $epigenome->display_label);
+    return;
   }
   if (@regulatory_activity>1) {
     throw();
@@ -361,7 +362,16 @@ sub get_epigenomes_by_activity {
     );
   }
   
-  my @epigenome_dbID_list = map { 
+  my @epigenome_dbID_list = grep {
+  
+    # Multicell does not have an epigenome id. In the map statement below 
+    #
+    #   $_->epigenome_id 
+    #
+    # will come up with undef and the undef is removed here.
+    
+    $_ 
+  } map { 
     $_->epigenome_id 
   } grep { 
     $_->activity eq $activity 
