@@ -356,6 +356,10 @@ sub infer_variation_consequence{
 
 sub interdb_stable_id { return shift->{interdb_stable_id}; }
 
+sub SO_term {
+  my $self = shift;
+  return $self->feature_type->so_accession;
+}
 
 =head2 summary_as_hash
 
