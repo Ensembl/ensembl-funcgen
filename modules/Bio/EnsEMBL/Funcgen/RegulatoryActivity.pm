@@ -75,13 +75,9 @@ sub epigenome {
   if(! defined $self->{'_epigenome'}) {
   
     if ($self->_is_multicell) {
-      # Multicell belongs to no epigenome.
+      warn("This activity is for MultiCell. It does not belong to any one epigenome, but is a summary of the regulatory activities in the different epigenomes. ");
       return;
     }
-#     if (! defined $self->db) {
-#       use Carp;
-#       confess("No db defined " . $self->_is_multicell);
-#     }
   
     $self->{'_epigenome'} = $self
       ->db

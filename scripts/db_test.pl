@@ -64,7 +64,7 @@ sub connect_adaptor {
 sub connect_registry {
  my $hash = {};
   my $registry = 'Bio::EnsEMBL::Registry';
-#   $registry->load_registry_from_url('mysql://ensro@ens-genomics1:3306/dev_homo_sapiens_funcgen_85_38?group=funcgen&species=homo_sapiens', 1);
+
   $registry->load_registry_from_db(
   -host => 'ensembldb.ensembl.org',
   -user => 'anonymous',
