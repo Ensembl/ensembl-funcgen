@@ -73,6 +73,16 @@ sub epigenome {
   my $self = shift;
 
   if(! defined $self->{'_epigenome'}) {
+  
+    if ($self->_is_multicell) {
+      # Multicell belongs to no epigenome.
+      return;
+    }
+#     if (! defined $self->db) {
+#       use Carp;
+#       confess("No db defined " . $self->_is_multicell);
+#     }
+  
     $self->{'_epigenome'} = $self
       ->db
       ->get_EpigenomeAdaptor()

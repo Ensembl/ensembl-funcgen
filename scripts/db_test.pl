@@ -25,7 +25,13 @@ sub main {
   my $rf    = $rfa->fetch_by_stable_id('ENSR00001381357');
   say $rf->feature_type->name;
   my $hash = {};
+  
+  ACTIVITY:
   for my $ra (@{$rf->regulatory_activity}) {
+  
+    next ACTIVITY
+      if ($ra->_is_multicell);
+      
     $hash->{activity}->{$ra->activity}++;
      $hash->{epigenomes}->{$ra->epigenome->name}++;
   }
@@ -58,16 +64,15 @@ sub connect_adaptor {
 sub connect_registry {
  my $hash = {};
   my $registry = 'Bio::EnsEMBL::Registry';
-
+#   $registry->load_registry_from_url('mysql://ensro@ens-genomics1:3306/dev_homo_sapiens_funcgen_85_38?group=funcgen&species=homo_sapiens', 1);
   $registry->load_registry_from_db(
   -host => 'ensembldb.ensembl.org',
   -user => 'anonymous',
 #  -port   => 3337,
-
   );
 
-  $hash->{slice} = $registry->get_adaptor('human', 'core', 'slice');
-  $hash->{slice}->dbc->disconnect_if_idle;
+   $hash->{slice} = $registry->get_adaptor('human', 'core', 'slice');
+   $hash->{slice}->dbc->disconnect_if_idle;
 
   return $hash;
 }
