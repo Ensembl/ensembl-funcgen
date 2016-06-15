@@ -377,7 +377,7 @@ sub get_epigenomes_by_activity {
     $_->activity eq $activity 
   } @{$self->regulatory_activity};
   
-  my $epigenome_adaptor = $self->adaptor->db->get_FeatureSetAdaptor;
+  my $epigenome_adaptor = $self->adaptor->db->get_EpigenomeAdaptor;
   
   return $epigenome_adaptor->fetch_all_by_dbID_list(\@epigenome_dbID_list);
 }
