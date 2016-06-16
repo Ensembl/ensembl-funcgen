@@ -420,8 +420,11 @@ sub get_available_adaptors{
                'UnmappedObject'     => 'Bio::EnsEMBL::DBSQL::UnmappedObjectAdaptor',
                'Analysis'           => 'Bio::EnsEMBL::DBSQL::AnalysisAdaptor',
                "MetaContainer"      => 'Bio::EnsEMBL::DBSQL::MetaContainer',
-               
+
                "RegulatoryBuild"    => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildAdaptor',
+               "CrisprSitesFile"    => 'Bio::EnsEMBL::Funcgen::DBSQL::CrisprSitesFileAdaptor',
+               "DNAMethylationFile" => 'Bio::EnsEMBL::Funcgen::DBSQL::DNAMethylationFileAdaptor',
+               
               );
 
   return (\%pairs);
