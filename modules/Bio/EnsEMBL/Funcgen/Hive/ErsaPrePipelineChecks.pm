@@ -19,7 +19,7 @@ sub run {
     
     # Check that the values in the replicate column aren't duplicated.
     
-    my $find_non_unique_replicate_specifications = 'select epigenome_id, experiment_id, biological_replicate, technical_replicate, count(*) c from input_subset group by epigenome_id, experiment_id, biological_replicate, technical_replicate having c > 1';
+    my $find_non_unique_replicate_specifications = 'select epigenome_id, experiment_id, biological_replicate, technical_replicate, count(*) c from input_subset where is_control=0 group by epigenome_id, experiment_id, biological_replicate, technical_replicate having c > 1';
     
     my $sth = $dbc->prepare($find_non_unique_replicate_specifications);
     $sth->execute;
@@ -28,7 +28,7 @@ sub run {
     my @experiment_ids = keys %$non_unique_replicate_specifications;
     if (@experiment_ids) {
       push @error_msg,
-	"The following experiments have non unique replicate specifications: (" 
+	"The experiments with the following experiment ids have non unique replicate specifications: (" 
 	. join ', ', @experiment_ids 
 	. ")";
     }
