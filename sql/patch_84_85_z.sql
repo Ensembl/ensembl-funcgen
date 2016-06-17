@@ -13,13 +13,13 @@
 -- limitations under the License.
 
 /**
-@header patch_84_85_z.sql - Move segmentation entries from result_set table into the new segmentation table.
-@desc Move segmentation entries from result_set table into the new segmentation table.
+@header patch_84_85_z.sql - Move segmentation entries from result_set table into the new segmentation_file table.
+@desc Move segmentation entries from result_set table into the new segmentation_file table.
 */
 
-drop table if exists segmentation;
+drop table if exists segmentation_file;
 
-create table segmentation (
+create table segmentation_file (
   segmentation_id     int(10) unsigned NOT NULL auto_increment,
   regulatory_build_id int(10),
   name                varchar(100) default NULL,
@@ -31,7 +31,7 @@ create table segmentation (
   KEY analysis_idx (analysis_id)
 );
 
-insert into segmentation (
+insert into segmentation_file (
   name,
   analysis_id,
   epigenome_id
@@ -45,7 +45,7 @@ from
 where 
   feature_class="segmentation";
 
-update segmentation, regulatory_build set segmentation.regulatory_build_id=regulatory_build.regulatory_build_id;
+update segmentation_file, regulatory_build set segmentation_file.regulatory_build_id=regulatory_build.regulatory_build_id;
 
 -- patch identifier
-insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_z.sql|Move segmentation entries from result_set table into the new segmentation table.');
+insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_z.sql|Move segmentation entries from result_set table into the new segmentation_file table.');

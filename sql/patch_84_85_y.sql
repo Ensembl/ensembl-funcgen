@@ -11,59 +11,31 @@
 -- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
-
 /**
-@header patch_84_85_y.sql - Move entries provided by external sources from the result_set table into the new external_feature_file table.
-@desc Move entries provided by external sources from the result_set table into the new external_feature_file table.
+@header patch_84_85_y.sql - Table for storing epigenomes used in the regulatory build
+@desc Table for storing epigenomes used in the regulatory build
 */
 
-drop table if exists external_feature_file;
+drop table if exists regulatory_build_epigenome;
 
-create table external_feature_file (
-  external_feature_file_id  int(10) unsigned NOT NULL auto_increment,
-  name                      varchar(100) default NULL,
-  analysis_id               smallint(5) unsigned NOT NULL,
-  epigenome_id              int(10) unsigned default NULL,
-  feature_type_id           int(10) unsigned default NULL,
-  experiment_id             int(10) unsigned default NULL,
-  result_set_id             int(10) unsigned default NULL,
-  PRIMARY KEY  (external_feature_file_id),
-  UNIQUE KEY name_idx (name),
-  KEY epigenome_idx (epigenome_id),
-  KEY analysis_idx (analysis_id)
+create table regulatory_build_epigenome (
+  regulatory_build_epigenome_id int(10) unsigned NOT NULL auto_increment,
+  regulatory_build_id int(10) unsigned NOT NULL,
+  epigenome_id int(10) unsigned NOT NULL,
+  PRIMARY KEY  (regulatory_build_epigenome_id)
 );
 
-insert into external_feature_file (
-  name,
-  analysis_id,
-  epigenome_id,
-  feature_type_id,
-  experiment_id,
-  result_set_id
+insert into regulatory_build_epigenome(
+regulatory_build_id,
+epigenome_id
 )
 select 
-  name, 
-  analysis_id, 
-  epigenome_id, 
-  feature_type_id,
-  experiment_id,
-  result_set_id
+ distinct regulatory_build.regulatory_build_id, epigenome.epigenome_id
 from 
-  result_set 
-where feature_class="dna_methylation";
-
--- Adjust the table_names and table_ids in the dbfile_registry table
---
-update 
-  dbfile_registry, external_feature_file 
-set 
-  dbfile_registry.table_name="external_feature_file", 
-  dbfile_registry.table_id=external_feature_file.external_feature_file_id 
-where 
-  dbfile_registry.table_id=external_feature_file.result_set_id 
-  and dbfile_registry.table_name="result_set";
-
-delete from result_set where feature_class="dna_methylation";
+ epigenome 
+ join regulatory_activity using (epigenome_id) 
+ join regulatory_feature using (regulatory_feature_id) 
+ join regulatory_build using (regulatory_build_id);
 
 -- patch identifier
-insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_y.sql|Move entries provided by external sources from the result_set table into the new external_feature_file table.');
+insert into meta (species_id, meta_key, meta_value) values (null, 'patch', 'patch_84_85_y.sql|Table for storing epigenomes used in the regulatory build');
