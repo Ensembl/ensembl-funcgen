@@ -230,8 +230,8 @@ sub _assert_epigenome_ok {
   if (! defined $epigenome) {
     throw();
   }
-  if (ref $epigenome ne 'Bio::EnsEMBL::Funcgen::FeatureSet') {
-    throw("epigenome parameter must have type Bio::EnsEMBL::Funcgen::FeatureSet!");
+  if (ref $epigenome ne 'Bio::EnsEMBL::Funcgen::Epigenome') {
+    throw("epigenome parameter must have type Bio::EnsEMBL::Funcgen::Epigenome!");
   }
 }
 
