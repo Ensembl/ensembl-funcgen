@@ -77,7 +77,7 @@ sub new {
   $self->feature_type_id($feature_type_id);
   $self->analysis_id($analysis_id);
   $self->is_current($is_current);
-  $self->epigenomes($epigenomes);
+  $self->_epigenomes($epigenomes);
 
   return $self;
 }
@@ -90,7 +90,12 @@ sub last_annotation_update { return shift->_generic_get_or_set('last_annotation_
 sub feature_type_id        { return shift->_generic_get_or_set('feature_type_id',        @_) }
 sub analysis_id            { return shift->_generic_get_or_set('analysis_id',            @_) }
 sub is_current             { return shift->_generic_get_or_set('is_current',             @_) }
-sub epigenomes             { return shift->_generic_get_or_set('epigenomes',             @_) }
+sub _epigenomes            { return shift->_generic_get_or_set('epigenomes',             @_) }
+
+sub get_all_Epigenomes {
+  my $self = shift;
+  return $self->_epigenomes
+}
 
 sub _generic_get_or_set {
   my $self  = shift;
