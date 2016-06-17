@@ -40,7 +40,11 @@ use vars '@ISA';
 @ISA    = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
 sub _tables {
-  return (['regulatory_build', 'rb']);
+  return (
+    ['regulatory_build',           'rb'  ],
+    ['regulatory_build_epigenome', 'rbe' ],
+    ['epigenome',                  'e'   ]
+  );
 }
 
 sub _columns {
@@ -55,7 +59,14 @@ sub _columns {
     rb.feature_type_id
     rb.analysis_id
     rb.is_current
+    e.epigenome_id
   );
+}
+
+sub _default_where_clause {
+  return 'rb.regulatory_build_id = rbe.regulatory_build_id'
+    . ' and rbe.epigenome_id = e.epigenome_id'
+    ;
 }
 
 sub fetch_current_regulatory_build {
@@ -84,7 +95,8 @@ sub _objs_from_sth {
     $sth_fetched_last_annotation_update,
     $sth_fetched_feature_type_id,
     $sth_fetched_analysis_id,
-    $sth_fetched_is_current
+    $sth_fetched_is_current,
+    $sth_fetched_epigenome_id
   );
 
   $sth->bind_columns (
@@ -95,24 +107,41 @@ sub _objs_from_sth {
     \$sth_fetched_last_annotation_update,
     \$sth_fetched_feature_type_id,
     \$sth_fetched_analysis_id,
-    \$sth_fetched_is_current
+    \$sth_fetched_is_current,
+    \$sth_fetched_epigenome_id
   );
   
   use Bio::EnsEMBL::Funcgen::RegulatoryBuild;
   
   my @return_regulatory_build;
+  # Avoid warning "Use of uninitialized value $current_regulatory_build_id in numeric ne (!=) at ..."
+  my $current_regulatory_build_id = -1;
+  my $current_regulatory_build;
+  my $current_epigenome_list;
+  
+  my $epigenome_adaptor = $self->db->get_EpigenomeAdaptor;
+  
   ROW: while ( $sth->fetch() ) {
-    my $regulatory_build = Bio::EnsEMBL::Funcgen::RegulatoryBuild->new(
-      -dbID                   => $sth_fetched_dbID,
-      -name                   => $sth_fetched_name,
-      -version                => $sth_fetched_version,
-      -initial_release_date   => $sth_fetched_initial_release_date,
-      -last_annotation_update => $sth_fetched_last_annotation_update,
-      -feature_type_id        => $sth_fetched_feature_type_id,
-      -analysis_id            => $sth_fetched_analysis_id,
-      -is_current             => $sth_fetched_is_current,
-    );
-    push @return_regulatory_build, $regulatory_build
+  
+    if ($sth_fetched_dbID != $current_regulatory_build_id) {
+  
+      $current_regulatory_build_id = $sth_fetched_dbID;
+      $current_epigenome_list = [];
+    
+      $current_regulatory_build = Bio::EnsEMBL::Funcgen::RegulatoryBuild->new(
+	-dbID                   => $sth_fetched_dbID,
+	-name                   => $sth_fetched_name,
+	-version                => $sth_fetched_version,
+	-initial_release_date   => $sth_fetched_initial_release_date,
+	-last_annotation_update => $sth_fetched_last_annotation_update,
+	-feature_type_id        => $sth_fetched_feature_type_id,
+	-analysis_id            => $sth_fetched_analysis_id,
+	-is_current             => $sth_fetched_is_current,
+	-epigenomes             => $current_epigenome_list,
+      );
+      push @return_regulatory_build, $current_regulatory_build;
+    }
+    push @$current_epigenome_list, $epigenome_adaptor->fetch_by_dbID($sth_fetched_epigenome_id);
   }
   return \@return_regulatory_build;
 }
