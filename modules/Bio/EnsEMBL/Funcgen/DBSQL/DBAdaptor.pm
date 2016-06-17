@@ -417,14 +417,14 @@ sub get_available_adaptors{
 
                #add required EnsEMBL(core) adaptors here
                #Should write/retrieve from efg not dna db
-               'UnmappedObject'     => 'Bio::EnsEMBL::DBSQL::UnmappedObjectAdaptor',
-               'Analysis'           => 'Bio::EnsEMBL::DBSQL::AnalysisAdaptor',
-               "MetaContainer"      => 'Bio::EnsEMBL::DBSQL::MetaContainer',
+               'UnmappedObject'          => 'Bio::EnsEMBL::DBSQL::UnmappedObjectAdaptor',
+               'Analysis'                => 'Bio::EnsEMBL::DBSQL::AnalysisAdaptor',
+               'MetaContainer'           => 'Bio::EnsEMBL::DBSQL::MetaContainer',
 
-               "RegulatoryBuild"    => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildAdaptor',
-               "CrisprSitesFile"    => 'Bio::EnsEMBL::Funcgen::DBSQL::CrisprSitesFileAdaptor',
-               "DNAMethylationFile" => 'Bio::EnsEMBL::Funcgen::DBSQL::DNAMethylationFileAdaptor',
-               
+               'RegulatoryBuild'         => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildAdaptor',
+               'CrisprSitesFile'         => 'Bio::EnsEMBL::Funcgen::DBSQL::CrisprSitesFileAdaptor',
+               'DNAMethylationFile'      => 'Bio::EnsEMBL::Funcgen::DBSQL::DNAMethylationFileAdaptor',
+               'SegmentationFile'        => 'Bio::EnsEMBL::Funcgen::DBSQL::SegmentationFileAdaptor',
               );
 
   return (\%pairs);
