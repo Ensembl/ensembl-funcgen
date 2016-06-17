@@ -271,20 +271,36 @@ sub regulatory_activity_for_epigenome {
 sub get_underlying_structure {
   my $self = shift;
   my $epigenome = shift;
-  $self->_assert_epigenome_ok($epigenome);
+#   $self->_assert_epigenome_ok($epigenome);
   
-  my $regulatory_activity = $self->regulatory_activity_for_epigenome($epigenome);
-  
-  my $epigenome_specific_underlying_structure = $regulatory_activity->get_underlying_structure();
 
+  # Stopgap fix to prevent error messages for the missing 
+  # get_underlying_structure in regulatory_activity.
+  #
+  # Must have been lost in a git merge black hole.
+  #
+  # Hopefully resurrected soon and the real code below can be put in place 
+  # again.
+  #
   my $underlying_structure = [
     0 + $self->bound_start, 
     0 + $self->start,
-    @$epigenome_specific_underlying_structure,
     0 + $self->end, 
     0 + $self->bound_end
   ];
 
+#   my $regulatory_activity = $self->regulatory_activity_for_epigenome($epigenome);
+# 
+#   my $epigenome_specific_underlying_structure = $regulatory_activity->get_underlying_structure();
+# 
+#   my $underlying_structure = [
+#     0 + $self->bound_start, 
+#     0 + $self->start,
+#     @$epigenome_specific_underlying_structure,
+#     0 + $self->end, 
+#     0 + $self->bound_end
+#   ];
+# 
   return $underlying_structure;
 }
 
