@@ -552,20 +552,20 @@ sub is_projected {
 =cut
 sub summary_as_hash {
   my $self   = shift;
+  
+  my $feature_type = $self->feature_type;
 
   return {
-    ID                      => $self->stable_id,
-#     epigenome               => $self->epigenome->name,
-    source => 'Regulatory_Build',
-    bound_start             => $self->bound_seq_region_start,
-    bound_end               => $self->bound_seq_region_end,
-    start                   => $self->seq_region_start,
-    end                     => $self->seq_region_end,
-    strand                  => $self->strand,
-    seq_region_name         => $self->seq_region_name,
-#     activity                => $self->activity,
-    description             => $self->feature_type->description,
-    feature_type            => "regulatory",
+    ID                => $self->stable_id,
+    source            => $self->analysis->logic_name,,
+    bound_start       => $self->bound_seq_region_start,
+    bound_end         => $self->bound_seq_region_end,
+    start             => $self->seq_region_start,
+    end               => $self->seq_region_end,
+    strand            => $self->strand,
+    seq_region_name   => $self->seq_region_name,
+    description       => $self->feature_type->description,
+    feature_type      => $feature_type->name,
   };
 }
 

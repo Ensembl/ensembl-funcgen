@@ -137,10 +137,6 @@ sub regulatory_evidence {
   return $self->{'_regulatory_evidence'};
 }
 
-# sub SO_term {
-#   # http://www.sequenceontology.org/browser/current_svn/term/SO:0005836
-#   return 'SO:0005836';
-# }
 sub SO_term {
   my $self = shift;
   return $self->regulatory_feature->feature_type->so_accession;
@@ -151,11 +147,11 @@ sub summary_as_hash {
   
   my $regulatory_feature = $self->regulatory_feature;
   my $epigenome          = $self->epigenome;
+  my $feature_type       = $self->regulatory_feature->feature_type;
 
   return {
     regulatory_feature_stable_id => $regulatory_feature->stable_id,
     epigenome           => $epigenome->display_label,
-#     source              => 'Regulatory_Build',
     source              => $regulatory_feature->analysis->logic_name,
     bound_start         => $regulatory_feature->bound_seq_region_start,
     bound_end           => $regulatory_feature->bound_seq_region_end,
@@ -164,8 +160,8 @@ sub summary_as_hash {
     strand              => $regulatory_feature->strand,
     seq_region_name     => $regulatory_feature->seq_region_name,
     activity            => $self->activity,
-    description         => 'Activity of ' . $regulatory_feature->stable_id . ' in ' . $epigenome->display_label,
-    feature_type        => "regulatory activity",
+    description         => $feature_type->name . ' ' . lc($self->activity) . ' in ' . $epigenome->display_label,
+    feature_type        => $feature_type->name,
   };
 }
 
