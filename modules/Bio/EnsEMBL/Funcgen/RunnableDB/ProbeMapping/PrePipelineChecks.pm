@@ -27,7 +27,7 @@ sub run {
     # Files we are expecting but might not be there
     #    
     my $expected_files = [
-      'sql/efg.sql',
+      'sql/table.sql',
       'sql/array2organism.sql',
       'sql/probe_seq.sql',
       'sql/probe_alias.sql'
