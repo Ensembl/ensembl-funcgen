@@ -98,28 +98,17 @@ sub new {
   my $class  = ref($caller) || $caller;
   my $self   = $class->SUPER::new(@_);
 
-  my ($name,
-      $group,
-       $control,
-      $is_control,
- $p_dtype,
-      $desc,
- $xml,
- $xml_id,
- $ftype,
- $epigenome,
- $archive_id,
- $url) = rearrange
-   ( ['NAME',
-      'EXPERIMENTAL_GROUP',
-      'CONTROL',
-      'IS_CONTROL',
-      'DESCRIPTION',
-      'FEATURE_TYPE',
-      'EPIGENOME',
-      'ARCHIVE_ID',
-      ],
- @_ );
+  my ( $name, $group, $control, $is_control, $desc, $ftype, $epigenome,
+    $archive_id, )
+    = rearrange(
+    [   'NAME',        'EXPERIMENTAL_GROUP',
+        'CONTROL',     'IS_CONTROL',
+        'DESCRIPTION', 'FEATURE_TYPE',
+        'EPIGENOME',   'ARCHIVE_ID',
+    ],
+    @_
+    );
+
 
   # Mandatory attr checks
   throw('You must provide a name parameter') if ! defined $name;
