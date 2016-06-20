@@ -72,6 +72,16 @@ sub db {
 sub supporting_annotated_features {
   my $self = shift;
   
+  # Stopgap fix, web is getting this error:
+  #
+  # MSG: Trying to assign a non numerical parameter to an integer value in the database
+  # STACK Bio::EnsEMBL::DBSQL::BaseAdaptor::bind_param_generic_fetch /ensemblweb/ap5/www/reg_fixes/ensembl/modules/Bio/EnsEMBL/DBSQL/BaseAdaptor.pm:381
+  # STACK Bio::EnsEMBL::DBSQL::BaseAdaptor::_uncached_fetch_by_dbID /ensemblweb/ap5/www/reg_fixes/ensembl/modules/Bio/EnsEMBL/DBSQL/BaseAdaptor.pm:670
+  # STACK Bio::EnsEMBL::DBSQL::BaseAdaptor::fetch_by_dbID /ensemblweb/ap5/www/reg_fixes/ensembl/modules/Bio/EnsEMBL/DBSQL/BaseAdaptor.pm:653
+  # STACK Bio::EnsEMBL::Funcgen::RegulatoryEvidence::supporting_annotated_features /ensemblweb/ap5/www/reg_fixes/ensembl-funcgen/modules/Bio/EnsEMBL/Funcgen/RegulatoryEvidence.pm:76
+  #
+  return;
+  
   my @id = $self->supporting_annotated_feature_ids;
   my @annotated_feature = map {
     $self->db->get_AnnotatedFeatureAdaptor->fetch_by_dbID($_);
