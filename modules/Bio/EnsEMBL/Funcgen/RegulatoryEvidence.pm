@@ -93,6 +93,10 @@ sub supporting_annotated_features {
 sub supporting_motif_features {
   my $self = shift;
   
+  # Stopgap fix, web is getting the same error here as above with 
+  # supporting_annotated_features:
+  #
+  return;
   my @id = $self->supporting_motif_feature_ids;
   my @motif_feature = map {
     $self->db->get_MotifFeatureAdaptor->fetch_by_dbID($_);
