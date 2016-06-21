@@ -43,8 +43,6 @@ sub _tables {
   return (
     ['segmentation_file',     'sf' ],
     ['analysis',              'a'  ],
-    ['analysis_description',  'ad' ],
-    ['feature_type',          'ft' ],
     ['dbfile_registry',       'dr' ],
   );
 }
@@ -55,13 +53,9 @@ sub _columns {
   return qw(
     sf.segmentation_file_id
     sf.name
-    a.logic_name
-    ad.description
-    ad.display_label
-    ft.so_accession
-    ft.so_name
-    ft.class
-    ft.name
+    sf.epigenome_id
+    sf.regulatory_build_id
+    a.analysis_id
     dr.path
     dr.file_type
   );
@@ -69,8 +63,6 @@ sub _columns {
 
 sub _default_where_clause {
   return 'sf.analysis_id = a.analysis_id'
-    . ' and sf.analysis_id = ad.analysis_id'
-    . ' and sf.feature_type_id = ft.feature_type_id'
     . ' and dr.table_name="segmentation_file" and dr.table_id=segmentation_file_id'
     ;
 }
@@ -99,13 +91,9 @@ sub _objs_from_sth {
   my (
     $sth_fetched_dbID,
     $sth_fetched_sf_name,
-    $sth_fetched_a_logic_name,
-    $sth_fetched_ad_description,
-    $sth_fetched_ad_display_label,
-    $sth_fetched_ft_so_accession,
-    $sth_fetched_ft_so_name,
-    $sth_fetched_ft_class,
-    $sth_fetched_ft_name,
+    $sth_fetched_sf_epigenome_id,
+    $sth_fetched_sf_regulatory_build_id,
+    $sth_fetched_a_analysis_id,
     $sth_fetched_dr_path,
     $sth_fetched_dr_file_type,
   );
@@ -113,37 +101,96 @@ sub _objs_from_sth {
   $sth->bind_columns (
     \$sth_fetched_dbID,
     \$sth_fetched_sf_name,
-    \$sth_fetched_a_logic_name,
-    \$sth_fetched_ad_description,
-    \$sth_fetched_ad_display_label,
-    \$sth_fetched_ft_so_accession,
-    \$sth_fetched_ft_so_name,
-    \$sth_fetched_ft_class,
-    \$sth_fetched_ft_name,
+    \$sth_fetched_sf_epigenome_id,
+    \$sth_fetched_sf_regulatory_build_id,
+    \$sth_fetched_a_analysis_id,
     \$sth_fetched_dr_path,
     \$sth_fetched_dr_file_type,
   );
   
   use Bio::EnsEMBL::Funcgen::SegmentationFile;
   
+  my $analysis_adaptor         = $self->db->get_AnalysisAdaptor();
+  my $epigenome_adaptor        = $self->db->get_EpigenomeAdaptor();
+  my $regulatory_build_adaptor = $self->db->get_RegulatoryBuildAdaptor();
+  
   my @return_objects;
   ROW: while ( $sth->fetch() ) {
-    my $crispr_sites_file = Bio::EnsEMBL::Funcgen::SegmentationFile->new(
+    my $segmentation_file = Bio::EnsEMBL::Funcgen::SegmentationFile->new(
       -dbID          => $sth_fetched_dbID,
       -name          => $sth_fetched_sf_name,
-      -logic_name    => $sth_fetched_a_logic_name,
-      -description   => $sth_fetched_ad_description,
-      -display_label => $sth_fetched_ad_display_label,
-      -so_accession  => $sth_fetched_ft_so_accession,
-      -so_name       => $sth_fetched_ft_so_name,
-      -feature_class => $sth_fetched_ft_class,
-      -feature_name  => $sth_fetched_ft_name,
       -file          => $sth_fetched_dr_path,
       -file_type     => $sth_fetched_dr_file_type,
     );
-    push @return_objects, $crispr_sites_file
+    
+    my $analysis = $analysis_adaptor->fetch_by_dbID($sth_fetched_a_analysis_id);
+    $segmentation_file->_analysis($analysis);
+
+    my $epigenome = $epigenome_adaptor->fetch_by_dbID($sth_fetched_sf_epigenome_id);
+    $segmentation_file->_epigenome($epigenome);
+
+    my $regulatory_build = $regulatory_build_adaptor->fetch_by_dbID($sth_fetched_sf_regulatory_build_id);
+    $segmentation_file->_regulatory_build($regulatory_build);
+
+    push @return_objects, $segmentation_file
   }
   return \@return_objects;
+}
+
+sub store {
+  my ($self, @segmentation_file) = @_;
+
+  if (scalar(@segmentation_file) == 0) {
+    throw('Must call store with a list of crispr sites file objects');
+  }
+  foreach my $current_segmentation_file (@segmentation_file) {
+    if( ! ref $current_segmentation_file || ! $current_segmentation_file->isa('Bio::EnsEMBL::Funcgen::SegmentationFile') ) {
+      throw('Type error');
+    }
+  }
+
+  my $sth_store_segmentation_file = $self->prepare("
+    INSERT ignore INTO segmentation_file (
+      name,
+      analysis_id,
+      epigenome_id,
+      regulatory_build_id
+    )
+    VALUES (?, ?, ?, ?)"
+  );
+  $sth_store_segmentation_file->{PrintError} = 0;
+
+  my $sth_store_dbfile_registry = $self->prepare("
+    INSERT ignore INTO dbfile_registry (
+      table_id,
+      table_name,
+      path,
+      file_type
+    )
+    VALUES (?, 'segmentation_file', ?, 'BIGBED')"
+  );
+  
+  my $db = $self->db();
+
+  foreach my $current_segmentation_file (@segmentation_file) {
+
+    $current_segmentation_file->adaptor($self);
+
+    $sth_store_segmentation_file->bind_param( 1, $current_segmentation_file->name,                      SQL_VARCHAR);
+    $sth_store_segmentation_file->bind_param( 2, $current_segmentation_file->get_Analysis->dbID,        SQL_INTEGER);
+    $sth_store_segmentation_file->bind_param( 3, $current_segmentation_file->get_Epigenome->dbID,       SQL_INTEGER);
+    $sth_store_segmentation_file->bind_param( 4, $current_segmentation_file->get_RegulatoryBuild->dbID, SQL_INTEGER);
+    
+    # Store and set dbID
+    $sth_store_segmentation_file->execute;
+    $current_segmentation_file->dbID( $self->last_insert_id );
+
+    $sth_store_dbfile_registry->bind_param( 1, $current_segmentation_file->dbID, SQL_INTEGER);
+    $sth_store_dbfile_registry->bind_param( 2, $current_segmentation_file->file, SQL_VARCHAR);
+    
+    $sth_store_dbfile_registry->execute;
+  }
+  return @segmentation_file;
 }
 
 1;

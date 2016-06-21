@@ -47,13 +47,9 @@ sub new {
   my @field = qw(
     dbID
     name
-    logic_name
-    description
-    display_label
-    so_accession
-    so_name
-    feature_class
-    feature_name
+    analysis
+    epigenome
+    regulatory_build
     file
     file_type
   );
@@ -61,44 +57,48 @@ sub new {
   my (
     $dbID,
     $name,
-    $logic_name,
-    $description,
-    $display_label,
-    $so_accession,
-    $so_name,
-    $feature_class,
-    $feature_name,
+    $analysis,
+    $epigenome,
+    $regulatory_build,
     $file,
     $file_type,
   )
     = rearrange([ @field ], @_);
 
-  $self->dbID            ($dbID);
-  $self->name            ($name);
-  $self->logic_name      ($logic_name);
-  $self->description     ($description);
-  $self->display_label   ($display_label);
-  $self->so_accession    ($so_accession);
-  $self->so_name         ($so_name);
-  $self->feature_class   ($feature_class);
-  $self->feature_name    ($feature_name);
-  $self->file            ($file);
-  $self->file_type       ($file_type);
+  $self->dbID        ($dbID);
+  $self->name        ($name);
+  $self->_analysis   ($analysis);
+  $self->_epigenome  ($epigenome);
+  $self->_regulatory_build ($regulatory_build);
+  $self->file        ($file);
+  $self->file_type   ($file_type);
 
   return $self;
 }
 
-sub dbID           { return shift->_generic_get_or_set('dbID',            @_) }
-sub name           { return shift->_generic_get_or_set('name',            @_) }
-sub logic_name     { return shift->_generic_get_or_set('logic_name',      @_) }
-sub description    { return shift->_generic_get_or_set('description',     @_) }
-sub display_label  { return shift->_generic_get_or_set('display_label',   @_) }
-sub so_accession   { return shift->_generic_get_or_set('so_accession',    @_) }
-sub so_name        { return shift->_generic_get_or_set('so_name',         @_) }
-sub feature_class  { return shift->_generic_get_or_set('feature_class',   @_) }
-sub feature_name   { return shift->_generic_get_or_set('feature_name',    @_) }
-sub file           { return shift->_generic_get_or_set('file',            @_) }
-sub file_type      { return shift->_generic_get_or_set('file_type',       @_) }
+sub dbID              { return shift->_generic_get_or_set('dbID',               @_) }
+sub name              { return shift->_generic_get_or_set('name',               @_) }
+sub _analysis         { return shift->_generic_get_or_set('_analysis',          @_) }
+sub _epigenome        { return shift->_generic_get_or_set('_epigenome',         @_) }
+sub _regulatory_build { return shift->_generic_get_or_set('_regulatory_build',  @_) }
+sub file              { return shift->_generic_get_or_set('file',               @_) }
+sub file_type         { return shift->_generic_get_or_set('file_type',          @_) }
+sub adaptor           { return shift->_generic_get_or_set('adaptor',            @_) }
+
+sub get_Analysis {
+  my $self = shift;
+  return $self->_analysis
+}
+
+sub get_Epigenome {
+  my $self = shift;
+  return $self->_epigenome
+}
+
+sub get_RegulatoryBuild {
+  my $self = shift;
+  return $self->_regulatory_build
+}
 
 sub _generic_get_or_set {
   my $self  = shift;
