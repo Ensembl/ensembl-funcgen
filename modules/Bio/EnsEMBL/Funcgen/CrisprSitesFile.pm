@@ -47,58 +47,43 @@ sub new {
   my @field = qw(
     dbID
     name
-    logic_name
-    description
-    display_label
-    so_accession
-    so_name
-    feature_class
-    feature_name
     file
     file_type
+    analysis
+    adaptor
   );
   
   my (
     $dbID,
     $name,
-    $logic_name,
-    $description,
-    $display_label,
-    $so_accession,
-    $so_name,
-    $feature_class,
-    $feature_name,
     $file,
     $file_type,
+    $analysis,
+    $adaptor,
   )
     = rearrange([ @field ], @_);
 
   $self->dbID            ($dbID);
   $self->name            ($name);
-  $self->logic_name      ($logic_name);
-  $self->description     ($description);
-  $self->display_label   ($display_label);
-  $self->so_accession    ($so_accession);
-  $self->so_name         ($so_name);
-  $self->feature_class   ($feature_class);
-  $self->feature_name    ($feature_name);
   $self->file            ($file);
   $self->file_type       ($file_type);
+  $self->_analysis       ($analysis);
+  $self->adaptor         ($adaptor);
 
   return $self;
 }
 
 sub dbID           { return shift->_generic_get_or_set('dbID',            @_) }
 sub name           { return shift->_generic_get_or_set('name',            @_) }
-sub logic_name     { return shift->_generic_get_or_set('logic_name',      @_) }
-sub description    { return shift->_generic_get_or_set('description',     @_) }
-sub display_label  { return shift->_generic_get_or_set('display_label',   @_) }
-sub so_accession   { return shift->_generic_get_or_set('so_accession',    @_) }
-sub so_name        { return shift->_generic_get_or_set('so_name',         @_) }
-sub feature_class  { return shift->_generic_get_or_set('feature_class',   @_) }
-sub feature_name   { return shift->_generic_get_or_set('feature_name',    @_) }
 sub file           { return shift->_generic_get_or_set('file',            @_) }
 sub file_type      { return shift->_generic_get_or_set('file_type',       @_) }
+sub _analysis      { return shift->_generic_get_or_set('_analysis',       @_) }
+sub adaptor        { return shift->_generic_get_or_set('adaptor',         @_) }
+
+sub get_Analysis {
+  my $self = shift;
+  return $self->_analysis
+}
 
 sub _generic_get_or_set {
   my $self  = shift;

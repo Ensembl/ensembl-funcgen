@@ -43,8 +43,6 @@ sub _tables {
   return (
     ['external_feature_file', 'eff'],
     ['analysis',              'a'  ],
-    ['analysis_description',  'ad' ],
-    ['feature_type',          'ft' ],
     ['dbfile_registry',       'dr' ],
   );
 }
@@ -55,22 +53,14 @@ sub _columns {
   return qw(
     eff.external_feature_file_id
     eff.name
-    a.logic_name
-    ad.description
-    ad.display_label
-    ft.so_accession
-    ft.so_name
-    ft.class
-    ft.name
     dr.path
     dr.file_type
+    a.analysis_id
   );
 }
 
 sub _default_where_clause {
   return 'eff.analysis_id = a.analysis_id'
-    . ' and eff.analysis_id = ad.analysis_id'
-    . ' and eff.feature_type_id = ft.feature_type_id'
     . ' and dr.table_name="external_feature_file" and dr.table_id=external_feature_file_id'
     . ' and eff.name = "CRISPR"'
     ;
@@ -88,48 +78,35 @@ sub _objs_from_sth {
   my (
     $sth_fetched_dbID,
     $sth_fetched_eff_name,
-    $sth_fetched_a_logic_name,
-    $sth_fetched_ad_description,
-    $sth_fetched_ad_display_label,
-    $sth_fetched_ft_so_accession,
-    $sth_fetched_ft_so_name,
-    $sth_fetched_ft_class,
-    $sth_fetched_ft_name,
     $sth_fetched_dr_path,
     $sth_fetched_dr_file_type,
+    $sth_fetched_a_analysis_id
   );
 
   $sth->bind_columns (
     \$sth_fetched_dbID,
     \$sth_fetched_eff_name,
-    \$sth_fetched_a_logic_name,
-    \$sth_fetched_ad_description,
-    \$sth_fetched_ad_display_label,
-    \$sth_fetched_ft_so_accession,
-    \$sth_fetched_ft_so_name,
-    \$sth_fetched_ft_class,
-    \$sth_fetched_ft_name,
     \$sth_fetched_dr_path,
     \$sth_fetched_dr_file_type,
+    \$sth_fetched_a_analysis_id
   );
   
   use Bio::EnsEMBL::Funcgen::CrisprSitesFile;
+  
+  my $analysis_adaptor = $self->db->get_AnalysisAdaptor();
   
   my @return_crispr_file_objects;
   ROW: while ( $sth->fetch() ) {
     my $crispr_sites_file = Bio::EnsEMBL::Funcgen::CrisprSitesFile->new(
       -dbID          => $sth_fetched_dbID,
       -name          => $sth_fetched_eff_name,
-      -logic_name    => $sth_fetched_a_logic_name,
-      -description   => $sth_fetched_ad_description,
-      -display_label => $sth_fetched_ad_display_label,
-      -so_accession  => $sth_fetched_ft_so_accession,
-      -so_name       => $sth_fetched_ft_so_name,
-      -feature_class => $sth_fetched_ft_class,
-      -feature_name  => $sth_fetched_ft_name,
       -file          => $sth_fetched_dr_path,
       -file_type     => $sth_fetched_dr_file_type,
     );
+    
+    my $analysis = $analysis_adaptor->fetch_by_dbID($sth_fetched_a_analysis_id);
+    $crispr_sites_file->_analysis($analysis);
+    
     push @return_crispr_file_objects, $crispr_sites_file
   }
   if (@return_crispr_file_objects != 1) {
@@ -137,5 +114,59 @@ sub _objs_from_sth {
   }
   return \@return_crispr_file_objects;
 }
+
+sub store {
+  my ($self, @crispr_sites_file) = @_;
+
+  if (scalar(@crispr_sites_file) == 0) {
+    throw('Must call store with a list of crispr sites file objects');
+  }
+  foreach my $current_crispr_sites_file (@crispr_sites_file) {
+    if( ! ref $current_crispr_sites_file || ! $current_crispr_sites_file->isa('Bio::EnsEMBL::Funcgen::CrisprSitesFile') ) {
+      throw('Feature must be an RegulatoryFeature object');
+    }
+  }
+
+  my $sth_store_crispr_sites_file = $self->prepare("
+    INSERT ignore INTO external_feature_file (
+      name,
+      analysis_id
+    )
+    VALUES (?, ?)"
+  );
+
+  $sth_store_crispr_sites_file->{PrintError} = 0;
+
+  my $sth_store_dbfile_registry = $self->prepare("
+    INSERT ignore INTO dbfile_registry (
+      table_id,
+      table_name,
+      path,
+      file_type
+    )
+    VALUES (?, 'external_feature_file', ?, 'BIGBED')"
+  );
+  
+  my $db = $self->db();
+
+  foreach my $current_crispr_sites_file (@crispr_sites_file) {
+
+    $current_crispr_sites_file->adaptor($self);
+
+    $sth_store_crispr_sites_file->bind_param( 1, $current_crispr_sites_file->name,            SQL_VARCHAR);
+    $sth_store_crispr_sites_file->bind_param( 2, $current_crispr_sites_file->_analysis->dbID, SQL_INTEGER);
+    
+    # Store and set dbID
+    $sth_store_crispr_sites_file->execute;
+    $current_crispr_sites_file->dbID( $self->last_insert_id );
+
+    $sth_store_dbfile_registry->bind_param( 1, $current_crispr_sites_file->dbID, SQL_INTEGER);
+    $sth_store_dbfile_registry->bind_param( 2, $current_crispr_sites_file->file, SQL_VARCHAR);
+    
+    $sth_store_dbfile_registry->execute;
+  }
+  return @crispr_sites_file;
+}
+
 
 1;
