@@ -43,7 +43,6 @@ sub _tables {
   return (
     ['external_feature_file', 'eff'],
     ['analysis',              'a'  ],
-    ['analysis_description',  'ad' ],
     ['feature_type',          'ft' ],
     ['dbfile_registry',       'dr' ],
   );
@@ -55,21 +54,16 @@ sub _columns {
   return qw(
     eff.external_feature_file_id
     eff.name
-    a.logic_name
-    ad.description
-    ad.display_label
-    ft.so_accession
-    ft.so_name
-    ft.class
     ft.name
     dr.path
     dr.file_type
+    a.analysis_id
+    ft.feature_type_id
   );
 }
 
 sub _default_where_clause {
   return 'eff.analysis_id = a.analysis_id'
-    . ' and eff.analysis_id = ad.analysis_id'
     . ' and eff.feature_type_id = ft.feature_type_id'
     . ' and dr.table_name="external_feature_file" and dr.table_id=external_feature_file_id'
     . ' and ft.name = "5mC"'
@@ -100,49 +94,44 @@ sub _objs_from_sth {
   my (
     $sth_fetched_dbID,
     $sth_fetched_eff_name,
-    $sth_fetched_a_logic_name,
-    $sth_fetched_ad_description,
-    $sth_fetched_ad_display_label,
-    $sth_fetched_ft_so_accession,
-    $sth_fetched_ft_so_name,
-    $sth_fetched_ft_class,
     $sth_fetched_ft_name,
     $sth_fetched_dr_path,
     $sth_fetched_dr_file_type,
+    $sth_fetched_a_analysis_id,
+    $sth_fetched_ft_feature_type_id
   );
 
   $sth->bind_columns (
     \$sth_fetched_dbID,
     \$sth_fetched_eff_name,
-    \$sth_fetched_a_logic_name,
-    \$sth_fetched_ad_description,
-    \$sth_fetched_ad_display_label,
-    \$sth_fetched_ft_so_accession,
-    \$sth_fetched_ft_so_name,
-    \$sth_fetched_ft_class,
     \$sth_fetched_ft_name,
     \$sth_fetched_dr_path,
     \$sth_fetched_dr_file_type,
+    \$sth_fetched_a_analysis_id,
+    \$sth_fetched_ft_feature_type_id
   );
   
   use Bio::EnsEMBL::Funcgen::DNAMethylationFile;
   
+  my $analysis_adaptor = $self->db->get_AnalysisAdaptor();
+  my $feature_type_adaptor = $self->db->get_FeatureTypeAdaptor();
+  
   my @return_objects;
   ROW: while ( $sth->fetch() ) {
-    my $crispr_sites_file = Bio::EnsEMBL::Funcgen::DNAMethylationFile->new(
-      -dbID          => $sth_fetched_dbID,
-      -name          => $sth_fetched_eff_name,
-      -logic_name    => $sth_fetched_a_logic_name,
-      -description   => $sth_fetched_ad_description,
-      -display_label => $sth_fetched_ad_display_label,
-      -so_accession  => $sth_fetched_ft_so_accession,
-      -so_name       => $sth_fetched_ft_so_name,
-      -feature_class => $sth_fetched_ft_class,
-      -feature_name  => $sth_fetched_ft_name,
-      -file          => $sth_fetched_dr_path,
-      -file_type     => $sth_fetched_dr_file_type,
+    my $dna_methylation_file = Bio::EnsEMBL::Funcgen::DNAMethylationFile->new(
+      -dbID      => $sth_fetched_dbID,
+      -name      => $sth_fetched_eff_name,
+      -file      => $sth_fetched_dr_path,
+      -file_type => $sth_fetched_dr_file_type,
     );
-    push @return_objects, $crispr_sites_file
+    
+    my $analysis = $analysis_adaptor->fetch_by_dbID($sth_fetched_a_analysis_id);
+    $dna_methylation_file->_analysis($analysis);
+
+    my $feature_type = $feature_type_adaptor->fetch_by_dbID($sth_fetched_ft_feature_type_id);
+    $dna_methylation_file->_feature_type($feature_type);
+
+    push @return_objects, $dna_methylation_file
   }
   return \@return_objects;
 }
