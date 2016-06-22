@@ -62,7 +62,7 @@ sub _columns {
 sub _default_where_clause {
   return 'eff.analysis_id = a.analysis_id'
     . ' and dr.table_name="external_feature_file" and dr.table_id=external_feature_file_id'
-    . ' and eff.name = "CRISPR"'
+    . ' and a.logic_name = "Crispr"'
     ;
 }
 
