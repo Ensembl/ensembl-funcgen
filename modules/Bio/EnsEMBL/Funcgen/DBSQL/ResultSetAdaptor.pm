@@ -271,7 +271,27 @@ sub fetch_all_by_name{
   return $self->generic_fetch($constraint);
 }
 
-
+# sub fetch_by_Epigenome_FeatureType {
+# 
+#   my ($self, $epigenome, $feature_type) = @_;
+#   
+#   my @constraint;
+#   
+#   if ($feature_type) {
+#     $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $feature_type);
+#     push @constraint, 'rs.feature_type_id=?';
+#     $self->bind_param_generic_fetch($feature_type->dbID, SQL_INTEGER);
+#   }
+#   if ($epigenome) {
+#     $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Epigenome',    $epigenome);
+#     push @constraint, 'rs.epigenome_id=?';
+#     $self->bind_param_generic_fetch($epigenome->dbID, SQL_INTEGER);
+#   }
+#   
+#   my $constraint = join ' and ', @constraint;
+#   
+#   return $self->generic_fetch($constraint);
+# }
 
 =head2 _true_tables
 
@@ -314,9 +334,8 @@ sub _true_tables {
 
 sub _left_join {
   return ([ 'result_set_input', '(rs.result_set_id=rsi.result_set_id)' ],
-          ['dbfile_registry', '(rs.result_set_id=dr.table_id AND dr.table_name="result_set")']);
+          ['dbfile_registry', '(rs.result_set_id=dr.table_id AND dr.table_name="result_set" and dr.file_type="BIGWIG")']);
 }
-
 
 =head2 _columns
 
@@ -420,9 +439,9 @@ sub _objs_from_sth {
       $ftype = (defined $ftype_id) ? $ft_adaptor->fetch_by_dbID($ftype_id) : undef;
       $epigenome = (defined $epigenome_id) ? $epi_adaptor->fetch_by_dbID($epigenome_id) : undef;
     
-      if(defined $dbfile_path){
-        ($dbfile_path = $self->dbfile_data_root.'/'.$dbfile_path) =~ s:/+:/:g;
-      }
+#       if(defined $dbfile_path){
+#         ($dbfile_path = $self->dbfile_data_root.'/'.$dbfile_path) =~ s:/+:/:g;
+#       }
 
       $rset = Bio::EnsEMBL::Funcgen::ResultSet->new
         (-DBID            => $dbid,
@@ -438,6 +457,7 @@ sub _objs_from_sth {
     }
 
     $rset->_add_table_id($table_id, $cc_id);
+    
   }
 
   push @rsets, $rset if $rset;
