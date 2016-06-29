@@ -22,126 +22,239 @@ use autodie;
 use feature qw(say);
 
 use Cwd 'abs_path';
-
-# use Data::Dumper;
+use Data::Printer;
 use Config::Tiny;
 use Bio::EnsEMBL::Utils::Logger;
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 use Bio::EnsEMBL::OntologyXref;
+use Bio::EnsEMBL::DBEntry;
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Funcgen::DBSQL::TrackingAdaptor;
+use Bio::EnsEMBL::DBSQL::DBEntryAdaptor;
 use Getopt::Long;
 use File::Basename;
 
 # use DateTime;
 
+#TODO Confluence documentation
 #TODO Dry run implementation
 #TODO Confirm object creation
 #TODO POD for every subroutine
 #TODO Usage subroutine
 #TODO Logger
-#TODO Register controls first
-#TODO Input Subset exists error - throw exception
 #TODO Experiment exists error - throw exception
+#TODO PerlCritic
 
 #TODO Input subset tracking table: registration date?
-#TODO EFO IDs
 #TODO Partial registration warning
+#TODO fix db names mess
+#TODO remove cttv specific hardcoded values
+#TODO check for external db availability in verify_basic_objects
+#TODO healthchecks, ie.invalid br/tr values, invalid local/download url
 
 main();
 
 sub main {
     my ( $csv, $config, $help, $dry );
 
+    # ----------------------------
+    # read command line parameters
+    # ----------------------------
     GetOptions(
-        "i=s" => \$csv,
-        "c=s" => \$config,
-        "h"   => \$help,
-        "n"   => \$dry,
+        "i=s"  => \$csv,
+        "c=s"  => \$config,
+        "h"    => \$help,
+        "help" => \$help,
+        "n"    => \$dry,
     );
 
-    usage() if $help;
-    usage() unless $csv;
-    usage() unless $config;
+    # ------------------------------------------------------
+    # display usage and exit if anything critical is missing
+    # ------------------------------------------------------
+    if ( $help || !$csv || !$config ) {
+        usage();
+    }
 
-    my $cfg = Config::Tiny->new;
-    $cfg = Config::Tiny->read($config);
-
-    my $logger = Bio::EnsEMBL::Utils::Logger->new(
-
-        # -LOGAUTO     => 1,
-        # -LOGAUTOBASE => $cfg->{log}->{logautobase},
-        # -LOGLEVEL    => $cfg->{log}->{loglevel},
-    );
+    # -----------------
+    # initialize logger
+    # -----------------
+    my $logger = Bio::EnsEMBL::Utils::Logger->new();
     $logger->init_log();
 
-    $logger->info( "CSV file used: " . abs_path($csv) . "\n",       0, 1 );
-    $logger->info( "Config file used: " . abs_path($config) . "\n", 0, 1 );
+    # -------------------------------------
+    # check that config and csv files exist
+    # -------------------------------------
+    if ( !-e $config ) {
+        $logger->error(
+            'Config file ' . abs_path($config) . ' doesn\'t exist!',
+            0, 1 );
+    }
+    if ( !-e $csv ) {
+        $logger->error(
+            'Input csv file ' . abs_path($csv) . ' doesn\'t exist!',
+            0, 1 );
+    }
 
-    $logger->info( 'Connecting to ' . $cfg->{dna_db}->{dbname} . '... ',
-        0, 0 );
+    $logger->info( 'CSV file used: ' . abs_path($csv) . "\n",       0, 1 );
+    $logger->info( 'Config file used: ' . abs_path($config) . "\n", 0, 1 );
 
-    my $dba                  = connect_to_trackingDB($cfg);
-    my $tracking_db_adaptors = get_trackingDB_adaptors($cfg);
-    my $db_entry_adaptor     = Bio::EnsEMBL::DBSQL::DBEntryAdaptor->new($dba);
+    # --------------------
+    # read the config file
+    # --------------------
+    my $cfg = Config::Tiny->read($config);
+
+    # ----------------
+    # get current date
+    # ----------------
+    my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+    $cfg->{date} = (1900 + $year) . '-' . ++$mon . '-' . $mday;
+    say $cfg->{date};
+
+    # -------------------
+    # read input csv file
+    # -------------------
+    $logger->info( 'Reading metadata from ' . abs_path($csv) . '... ', 0, 0 );
+    my ( $control_data, $signal_data )
+        = get_data_from_csv( abs_path($csv), $logger );
     $logger->info( "done\n", 0, 1 );
 
-    $logger->info( 'Reading metadata from ' . abs_path($csv) . '... ', 0, 0 );
-    my $data = get_data_from_csv( abs_path($csv), $logger );
-    my $entries = keys %{$data};
-    $logger->info( "done\n",                0, 1 );
-    $logger->info( $entries . "imported\n", 1, 1 );
+    my $control_entries = keys %{$control_data};
+    my $signal_entries  = keys %{$signal_data};
+    $logger->info( $control_entries . " control entries found\n", 1, 1 );
+    $logger->info( $signal_entries . " signal entries found\n",   1, 1 );
 
-    verify_analysis_featureType_expGroup( $data, $tracking_db_adaptors,
+    # ------------------------------------------------------------
+    # connect to funcgen tracking db, fetch all necessary adaptors
+    # ------------------------------------------------------------
+    $logger->info( 'Connecting to ' . $cfg->{efg_db}->{dbname} . '... ',
+        0, 0 );
+    my $adaptors = fetch_adaptors($cfg);
+    $logger->info( "done\n", 0, 1 );
+
+    # -----------------------------------------------
+    # verify that fundamental objects exist in the db
+    # -----------------------------------------------
+    verify_basic_objects_in_db( $control_data, $signal_data, $adaptors,
         $logger );
 
-    for my $accession ( keys %{$data} ) {
-        $logger->info( "Registering $accession\n", 0, 1 );
+    # ------------
+    # registration
+    # ------------
+    my $control_db_ids = {};
 
-        my $entry = $data->$accession;
-        my $objects;
+    for my $accession ( keys %{$control_data}, keys %{$signal_data} ) {
 
-        fetch_analysis( $entry, $tracking_db_adaptors, $objects );
+        my $entry;
+        if ( $control_data->{$accession} ) {
+            $entry = $control_data->{$accession};
+        }
+        else {
+            $entry = $signal_data->{$accession};
+        }
 
-        fetch_epigenome( $entry, $tracking_db_adaptors, $objects );
+        register( $logger, $entry, $adaptors, $cfg, $control_db_ids );
+    }
 
-        fetch_ontology_xref( $entry, $db_entry_adaptor, $objects );
+    return 1;
+}
 
-        fetch_feature_type( $entry, $tracking_db_adaptors, $objects );
+sub get_data_from_csv {
+    my ( $csv, $logger ) = @_;
+    my ( %control_data, %signal_data );
 
-        fetch_exp_group( $entry, $tracking_db_adaptors, $objects );
+    open my $csv_fh, '<', $csv;
 
-        fetch_experiment( $entry, $tracking_db_adaptors, $objects );
+    while ( readline $csv_fh ) {
+        chomp;
 
-        fetch_input_subset();
+        my ($accession,             $epigenome_name,     $feature_type_name,
+            $br,                    $tr,                 $gender,
+            $md5,                   $local_url,          $analysis_name,
+            $exp_group_name,        $ontology_xref_accs, $xref_accs,
+            $epigenome_description, $controlled_by,      $download_url
+        ) = split /\t/;
 
-        $logger->info( "Successful Registration\n", 0, 1 );
+        my $entry = {};
+        $entry->{accession}             = $accession;
+        $entry->{epigenome_name}        = $epigenome_name;
+        $entry->{feature_type_name}     = $feature_type_name;
+        $entry->{br}                    = $br;
+        $entry->{tr}                    = $tr;
+        $entry->{md5}                   = $md5;
+        $entry->{gender}                = $gender;
+        $entry->{local_url}             = $local_url;
+        $entry->{analysis_name}         = $analysis_name;
+        $entry->{exp_group_name}        = $exp_group_name;
+        $entry->{ontology_xref_accs}    = $ontology_xref_accs;
+        $entry->{xref_accs}             = $xref_accs;
+        $entry->{epigenome_description} = $epigenome_description;
+        $entry->{controlled_by}         = $controlled_by;
+        $entry->{download_url}          = $download_url;
+
+        $entry = verify_entry_metadata( $entry, $logger );
+
+        if ( $control_data{$accession} || $signal_data{$accession} ) {
+            $logger->error( 'Accession ' . $accession . ' is NOT unique!',
+                0, 0 );
+        }
+
+        if ( $feature_type_name eq 'WCE' ) {
+            $entry->{is_control} = 1;
+            $control_data{$accession} = $entry;
+        }
+        else {
+            $entry->{is_control} = 0;
+            $signal_data{$accession} = $entry;
+        }
 
     }
 
+    close $csv_fh;
+
+    return ( \%control_data, \%signal_data );
 }
 
-sub connect_to_trackingDB {
-    my ($cfg) = @_;
+sub verify_entry_metadata {
+    my ( $entry, $logger ) = @_;
 
-    my $dba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-        -user       => $cfg->{efg_db}->{user},
-        -pass       => $cfg->{efg_db}->{pass},
-        -host       => $cfg->{efg_db}->{host},
-        -port       => $cfg->{efg_db}->{port},
-        -dbname     => $cfg->{efg_db}->{dbname},
-        -dnadb_name => $cfg->{dna_db}->{dbname},
+    my @mandatory = (
+        'accession',         'epigenome_name',
+        'feature_type_name', 'br',
+        'tr',                'md5',
+        'local_url',         'analysis_name',
+        'exp_group_name',    
     );
-    $dba->dbc->do("SET sql_mode='traditional'");
 
-    return \$dba;
+    for my $man (@mandatory) {
+        if ( !$entry->{$man} ) {
+            $logger->error(
+                'There is no ' . $man . ' value for ' . $entry->{accession},
+                0, 0 );
+        }
+    }
+
+    my @optional = (
+        'gender',        'ontology_xref_accs',
+        'xref_accs',     'epigenome_description',
+        'controlled_by', 'download_url'
+    );
+
+    for my $opt (@optional) {
+        if ( $entry->{$opt} eq '-' ) {
+            $entry->{$opt} = undef;
+        }
+    }
+
+    return $entry;
 }
 
-sub get_trackingDB_adaptors {
+sub fetch_adaptors {
     my ($cfg) = @_;
-    my %tracking_db_adaptors;
+    my %adaptors;
 
     # Tracking DB hidden from user, hence no get_TrackingAdaptor method.
     # TrackingAdaptor->new() does not YET accept DBAdaptor object
-
     my $tracking_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::TrackingAdaptor->new(
         -user       => $cfg->{efg_db}->{user},
         -pass       => $cfg->{efg_db}->{pass},
@@ -154,268 +267,262 @@ sub get_trackingDB_adaptors {
         -dnadb_host => $cfg->{dna_db}->{host},
         -dnadb_port => $cfg->{dna_db}->{port},
         -dnadb_name => $cfg->{dna_db}->{dbname},
+
     );
 
-    my $dba = $tracking_adaptor->db;
+    my $dba = $tracking_adaptor->db();
 
-    $tracking_db_adaptors{ep}  = $dba->get_EpigenomeAdaptor();
-    $tracking_db_adaptors{ft}  = $dba->get_FeatureTypeAdaptor();
-    $tracking_db_adaptors{an}  = $dba->get_AnalysisAdaptor();
-    $tracking_db_adaptors{eg}  = $dba->get_ExperimentalGroupAdaptor();
-    $tracking_db_adaptors{ex}  = $dba->get_ExperimentAdaptor();
-    $tracking_db_adaptors{iss} = $dba->get_InputSubsetAdaptor();
-    $tracking_db_adaptors{rs}  = $dba->get_ResultSetAdaptor();
-    $tracking_db_adaptors{rf}  = $dba->get_RegulatoryFeatureAdaptor();
-    $tracking_db_adaptors{fs}  = $dba->get_FeatureSetAdaptor();
-    $tracking_db_adaptors{ds}  = $dba->get_DataSetAdaptor();
-    $tracking_db_adaptors{af}  = $dba->get_AnnotatedFeatureAdaptor();
+    $adaptors{epigenome}    = $dba->get_EpigenomeAdaptor();
+    $adaptors{feature_type} = $dba->get_FeatureTypeAdaptor();
+    $adaptors{analysis}     = $dba->get_AnalysisAdaptor();
+    $adaptors{exp_group}    = $dba->get_ExperimentalGroupAdaptor();
+    $adaptors{experiment}   = $dba->get_ExperimentAdaptor();
+    $adaptors{input_subset} = $dba->get_InputSubsetAdaptor();
+    $adaptors{result_set}   = $dba->get_ResultSetAdaptor();
+    $adaptors{reg_feature}  = $dba->get_RegulatoryFeatureAdaptor();
+    $adaptors{feature_set}  = $dba->get_FeatureSetAdaptor();
+    $adaptors{data_set}     = $dba->get_DataSetAdaptor();
+    $adaptors{ann_feature}  = $dba->get_AnnotatedFeatureAdaptor();
 
-    return 1;
+    $adaptors{db}       = $dba;
+    $adaptors{tracking} = $tracking_adaptor;
+    $adaptors{db_entry} = Bio::EnsEMBL::DBSQL::DBEntryAdaptor->new($dba);
+
+    return \%adaptors;
 }
 
-sub get_data_from_csv {
-    my ( $csv, $logger ) = @_;
-    my %data;
-
-    open my $csv_fh, '<', $csv;
-
-    while ( readline $csv_fh ) {
-        my ($accession, $epigenome,           $feature_type,
-            $br,        $tr,                  $is_control,
-            $md5,       $local_url,           $analysis,
-            $exp_group, $ontology_accessions, $controlled_by,
-        ) = split /\t/;
-
-        $data{$accession} ||= {};
-
-        $data{$accession}->{accession}           = $accession;
-        $data{$accession}->{epigenome_name}      = $epigenome;
-        $data{$accession}->{feature_type}        = $feature_type;
-        $data{$accession}->{br}                  = $br;
-        $data{$accession}->{tr}                  = $tr;
-        $data{$accession}->{is_control}          = $is_control;
-        $data{$accession}->{md5}                 = $md5;
-        $data{$accession}->{local_url}           = $local_url;
-        $data{$accession}->{analysis}            = $analysis;
-        $data{$accession}->{exp_group}           = $exp_group;
-        $data{$accession}->{ontology_accessions} = $ontology_accessions;
-        $data{$accession}->{controlled_by}       = $controlled_by;
-
-    }
-
-    close $csv_fh;
-
-    return \%data;
-}
-
-sub verify_analysis_featureType_expGroup {
-    my ( $data, $tracking_db_adaptors, $logger ) = @_;
+sub verify_basic_objects_in_db {
+    my ( $control_data, $signal_data, $adaptors, $logger ) = @_;
     my $abort = 0;
     my %to_register;
 
-    for my $entry ( values %{$data} ) {
+    for my $entry ( values %{$control_data}, values %{$signal_data} ) {
 
-        my $analysis = $tracking_db_adaptors->{an}
-            ->fetch_by_logic_name( $entry->{analysis} );
+        my $analysis = $adaptors->{analysis}
+            ->fetch_by_logic_name( $entry->{analysis_name} );
 
-        my $feature_type = $tracking_db_adaptors->{ft}
-            ->fetch_by_name( $entry->{feature_type} );
+        my $feature_type = $adaptors->{feature_type}
+            ->fetch_by_name( $entry->{feature_type_name} );
 
-        my $exp_group = $tracking_db_adaptors->{eg}
-            ->fetch_by_name( $entry->{exp_group} );
+        my $exp_group = $adaptors->{exp_group}
+            ->fetch_by_name( $entry->{exp_group_name} );
 
         if ( !defined $analysis ) {
-
-            $to_register{Analysis} ||= [];
-            push @{ $to_register{Analysis} }, $entry->{analysis};
+            $to_register{Analysis} //= [];
+            push @{ $to_register{Analysis} }, $entry->{analysis_name};
             $abort = 1;
-
         }
 
         if ( !defined $feature_type ) {
-
-            $to_register{Feature_Type} ||= [];
-            push @{ $to_register{Feature_Type} }, $entry->{feature_type};
+            $to_register{Feature_Type} //= [];
+            push @{ $to_register{Feature_Type} }, $entry->{feature_type_name};
             $abort = 1;
-
         }
 
         if ( !defined $exp_group ) {
-
-            $to_register{Experimental_Group} ||= [];
-            push @{ $to_register{Experimental_Group} }, $entry->{exp_group};
+            $to_register{Experimental_Group} //= [];
+            push @{ $to_register{Experimental_Group} },
+                $entry->{exp_group_name};
             $abort = 1;
-
         }
     }
 
     if ($abort) {
-
         for my $object ( keys %to_register ) {
             for my $missing ( @{ $to_register{$object} } ) {
-                $logger->warn( 'Register ' . $object . ': ' . $missing . "\n",
+                $logger->warning(
+                    'Register ' . $object . ': ' . $missing . "\n",
                     0, 1 );
             }
         }
 
         $logger->error( 'Aborting registration' . "\n", 0, 1 );
-        exit 0;
     }
 
     return 1;
 }
 
-sub fetch_analysis {
-    my ( $entry, $tracking_db_adaptors, $objects ) = @_;
+sub register {
+    my ( $logger, $entry, $adaptors, $cfg, $control_db_ids ) = @_;
 
-    my $analysis = $tracking_db_adaptors->{an}
-        ->fetch_by_logic_name( $entry->{analysis} );
+    $logger->info( 'Registering ' . $entry->{accession} . "\n", 0, 1 );
 
-    if ( !defined $analysis ) {
-        throw "Register Analysis: '" . $entry->{analysis} . "'";
-    }
+    my $analysis = $adaptors->{analysis}
+        ->fetch_by_logic_name( $entry->{analysis_name} );
 
-    $objects->{analysis} = $analysis;
-
-    return 1;
-}
-
-sub fetch_epigenome {
-    my ( $entry, $tracking_db_adaptors, $objects ) = @_;
-
-    my $epigenome_name = $entry->{epigenome_name};
     my $epigenome
-        = $tracking_db_adaptors->{ep}->fetch_by_name($epigenome_name);
+        = $adaptors->{epigenome}->fetch_by_name( $entry->{epigenome_name} );
 
-    if ( !defined $epigenome ) {
-        $epigenome = Bio::EnsEMBL::Funcgen::Epigenome->new(
-            -name          => $epigenome_name,
-            -display_label => $epigenome_name,
-
-            # -description   => '',
-
-            # -gender        => $data->{sex},
-            # -tissue => 'blood',
-        );
-        $tracking_db_adaptors->{ep}->store($epigenome);
+    if ( !$epigenome ) {
+        $epigenome = store_epigenome( $entry, $adaptors );
     }
 
-    $objects->{epigenome} = $epigenome;
+    if ( $entry->{ontology_accessions} ) {
+        store_ontology_xref( $entry, $adaptors, $epigenome );
+    }
 
-    return 1;
+    if ( $entry->{xref} ) {
+        store_db_xref( $entry, $adaptors, $epigenome );
+    }
+
+    my $feature_type = fetch_feature_type( $entry, $adaptors, $analysis );
+
+    my $exp_group
+        = $adaptors->{exp_group}->fetch_by_name( $entry->{exp_group_name} );
+
+    my $experiment_name = create_experiment_name( $entry, $cfg, $epigenome );
+
+    my $experiment = $adaptors->{experiment}->fetch_by_name($experiment_name);
+
+    if ( !$experiment ) {
+        $experiment = store_experiment(
+            $entry,     $experiment_name, $adaptors, $control_db_ids,
+            $epigenome, $feature_type,    $exp_group
+        );
+    }
+
+    store_input_subset( $logger, $entry, $adaptors, $cfg, $analysis,
+        $epigenome, $experiment, $feature_type );
+
+    $logger->info( "Successful Registration\n", 1, 1 );
+}
+
+sub store_epigenome {
+    my ( $entry, $adaptors ) = @_;
+
+    my $production_name
+        = create_epigenome_production_name( $entry->{epigenome_name} );
+
+    my $epigenome = Bio::EnsEMBL::Funcgen::Epigenome->new(
+        -name            => $entry->{epigenome_name},
+        -display_label   => $entry->{epigenome_name},
+        -description     => $entry->{epi_description},
+        -production_name => $production_name,
+        -gender          => $entry->{gender}
+    );
+
+    $adaptors->{epigenome}->store($epigenome);
+
+    return $epigenome;
 }
 
 sub fetch_feature_type {
-    my ( $entry, $tracking_db_adaptors, $objects ) = @_;
+    my ( $entry, $adaptors, $analysis ) = @_;
 
-    my $ft_name = $entry->{feature_type};
+    my $ft_name = $entry->{feature_type_name};
 
-    my $feature_type = $tracking_db_adaptors->{ft}->fetch_by_name($ft_name);
+    my $feature_type;
 
-    if ( !defined $feature_type ) {
-        throw "Create new FeatureType for " . $ft_name;
-    }
+    # if ( $entry->{is_control} ) {
+    #     $feature_type = $adaptors->{feature_type}
+    #         ->fetch_by_name( $ft_name, 'DNA', $analysis );
+    # }
+    # else {
+    $feature_type = $adaptors->{feature_type}->fetch_by_name($ft_name);
 
-    $objects->{feature_type} = $feature_type;
+    # }
 
-    return 1;
+    return $feature_type;
 }
 
-sub fetch_exp_group {
-    my ( $entry, $tracking_db_adaptors, $objects ) = @_;
+sub create_experiment_name {
+    my ( $entry, $cfg, $epigenome ) = @_;
 
-    my $exp_group
-        = $tracking_db_adaptors->{eg}->fetch_by_name( $entry->{exp_group} );
+    my $experiment_name
+        = $epigenome->{production_name} . '_'
+        . $entry->{feature_type_name} . '_'
+        . $entry->{analysis_name} . '_'
+        . $entry->{exp_group_name}
+        . $cfg->{general}->{release};
 
-    if ( !defined $exp_group ) {
-        throw "Create an entry for the experimental group: "
-            . $entry->{exp_group};
-    }
+    $experiment_name =~ s/\s//g;
 
-    $objects->{exp_group} = $exp_group;
-
-    return 1;
+    return $experiment_name;
 }
 
-sub fetch_experiment {
-    my ( $entry, $tracking_db_adaptors, $objects, $cfg ) = @_;
+sub store_experiment {
+    my ($entry,     $experiment_name, $adaptors, $control_db_ids,
+        $epigenome, $feature_type,    $exp_group
+    ) = @_;
 
-    my $exp_name
-        = $entry->{epigenome_name} . '_'
-        . $entry->{feature_type} . '_'
-        . $cfg->{general}->{study};
+    my $control_experiment;
+    if ( !$entry->{is_control} ) {
 
-    my $experiment = $tracking_db_adaptors->{ex}->fetch_by_name($exp_name);
+        my $control_db_id = $control_db_ids->{ $entry->{controlled_by} };
 
-    if ( !defined $experiment ) {
+        $control_experiment
+            = $adaptors->{experiment}->fetch_by_dbID($control_db_id);
+    }
 
-        my $control_id;
-        unless ( $entry->{is_control} ) {
-            $control_id = $tracking_db_adaptors->{iss}
-                ->fetch_by_name( $entry->{controlled_by} )->dbID();
-        }
+    my $experiment = Bio::EnsEMBL::Funcgen::Experiment->new(
+        -NAME               => $experiment_name,
+        -EPIGENOME          => $epigenome,
+        -FEATURE_TYPE       => $feature_type,
+        -EXPERIMENTAL_GROUP => $exp_group,
+        -IS_CONTROL         => $entry->{is_control},
+        -CONTROL            => $control_experiment,
+    );
 
-        $experiment = Bio::EnsEMBL::Funcgen::Experiment->new(
-            -NAME               => $exp_name,
-            -EPIGENOME          => $objects->{epigenome},
-            -FEATURE_TYPE       => $objects->{feature_type},
-            -EXPERIMENTAL_GROUP => $objects->{experimental_group},
-            -IS_CONTROL         => $entry->{is_control},
-            -CONTROL_ID         => $control_id,
+    $adaptors->{experiment}->store($experiment);
+
+    # $adaptors->{tracking}->store_tracking_info( $experiment, $tr_info );
+
+    if ( $entry->{is_control} ) {
+        $control_db_ids->{ $entry->{accession} } = $experiment->dbID();
+    }
+
+    return $experiment;
+}
+
+sub store_input_subset {
+    my ( $logger, $entry, $adaptors, $cfg, $analysis, $epigenome, $experiment,
+        $feature_type )
+        = @_;
+
+    my $iss = $adaptors->{input_subset}->fetch_by_name( $entry->{accession} );
+
+    if ($iss) {
+        $logger->error(
+            'Input subset entry for accession '
+                . $entry->{accession}
+                . 'already exists in DB! ',
+            0, 1
         );
-
-        $tracking_db_adaptors->{ex}->store($experiment);
-
-  # $tracking_db_adaptors->{tr}->store_tracking_info( $experiment, $tr_info );
-
     }
 
-    $objects->{experiment} = $experiment;
+    $iss = Bio::EnsEMBL::Funcgen::InputSubset->new(
+        -name                 => $entry->{accession},
+        -analysis             => $analysis,
+        -epigenome            => $epigenome,
+        -experiment           => $experiment,
+        -feature_type         => $feature_type,
+        -is_control           => $entry->{is_control},
+        -biological_replicate => $entry->{br},
+        -technical_replicate  => $entry->{tr},
+    );
+    $adaptors->{input_subset}->store($iss);
+
+    if (! $entry->{download_url}){
+        $entry->{download_url} = 'Not Available';
+    }
+
+    my $tr_info->{info} = {
+
+        availability_date => $cfg->{date},
+        download_url => $entry->{download_url},
+        # download_date     => $data->{download_date},
+        local_url => $entry->{local_url},
+        md5sum    => $entry->{md5},
+
+        # notes             => $data->{experiment_name},
+    };
+    $adaptors->{tracking}->store_tracking_info( $iss, $tr_info );
 
     return 1;
 }
 
-sub fetch_input_subset {
-    my ( $entry, $tracking_db_adaptors, $objects ) = @_;
-
-    my $iss
-        = $tracking_db_adaptors->{iss}->fetch_by_name( $entry->{accession} );
-
-    if ( !defined $iss ) {
-
-        $iss = Bio::EnsEMBL::Funcgen::InputSubset->new(
-            -name                 => $entry->{accession},
-            -analysis             => $objects->{analysis},
-            -epigenome            => $objects->{epigenome},
-            -experiment           => $objects->{experiment},
-            -feature_type         => $objects->{feature_type},
-            -is_control           => $entry->{is_control},
-            -biological_replicate => $entry->{br},
-            -technical_replicate  => $entry->{tr},
-        );
-        $tracking_db_adaptors->{iss}->store($iss);
-
-        my $tr_info->{info} = {
-
-            # availability_date => '2015-10-13',
-            # download_url      => $data->{download_url},
-            # download_date     => $data->{download_date},
-            local_url => $entry->{local_url},
-            md5sum    => $entry->{md5sum},
-
-            # notes             => $data->{experiment_name},
-        };
-        $tracking_db_adaptors->{tr}->store_tracking_info( $iss, $tr_info );
-
-    }
-
-    push( @{ $objects->{input_subsets} }, $iss );
-
-    return 1;
-}
-
-sub fetch_ontology_xref {
-    my ( $entry, $db_entry_adaptor, $objects ) = @_;
+sub store_ontology_xref {
+    my ( $entry, $adaptors, $epigenome_obj ) = @_;
 
     my @ontology_accessions = split /;/, $entry->{ontology_accessions};
     my %valid_linkage_annotations
@@ -443,12 +550,47 @@ sub fetch_ontology_xref {
 
         my $ignore_release = 1;
 
-        my $epigenome_id = 1;
+        my $epigenome_id = $epigenome_obj->dbID();
 
-        $db_entry_adaptor->store( $ontology_xref, $epigenome_id, "epigenome",
+        $adaptors->{db_entry}
+            ->store( $ontology_xref, $epigenome_id, "epigenome",
             $ignore_release );
     }
 
+    return 1;
+}
+
+sub store_db_xref {
+    my ( $entry, $adaptors, $epigenome_obj ) = @_;
+
+    my $xref = Bio::EnsEMBL::DBEntry->new(
+        -primary_id => $entry->{xref},
+        -dbname     => 'EpiRR'
+    );
+
+    my $ignore_release = 1;
+
+    my $epigenome_id = $epigenome_obj->dbID();
+
+    $adaptors->{db_entry}
+        ->store( $xref, $epigenome_id, "epigenome", $ignore_release );
+
+    return 1;
+}
+
+sub create_epigenome_production_name {
+    my ($epigenome_name) = shift;
+
+    $epigenome_name =~ s/\:/_/g;
+    $epigenome_name =~ s/\+//g;
+    $epigenome_name =~ s/\(//g;
+    $epigenome_name =~ s/\)//g;
+    $epigenome_name =~ s/\-/_/g;
+    $epigenome_name =~ s/\./_/g;
+    $epigenome_name =~ s/\//_/g;
+    $epigenome_name =~ s/ /_/g;
+
+    return $epigenome_name;
 }
 
 sub usage {
