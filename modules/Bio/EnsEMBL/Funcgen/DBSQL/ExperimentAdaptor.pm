@@ -232,10 +232,9 @@ sub _true_tables {
 =cut
 
 sub _columns {
-	return qw( e.experiment_id e.name e.experimental_group_id
-             e.control_id e.is_control
-	           e.primary_design_type e.description e.mage_xml_id
-	           e.feature_type_id e.epigenome_id e.archive_id e.display_url);
+    return qw( e.experiment_id e.name e.experimental_group_id
+        e.control_id e.is_control
+        e.feature_type_id e.epigenome_id e.archive_id );
 }
 
 =head2 _objs_from_sth
@@ -254,16 +253,20 @@ sub _columns {
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
 
-	my (@result, $exp_id, $name, $group_id, $control_id, $is_control, $p_design_type, 
-	    $description, $xml_id, $epigenome_id, $ft_id, $archive_id, $url);
+    my (@result,       $exp_id,     $name,
+        $group_id,     $control_id, $is_control,
+        $epigenome_id, $ft_id,      $archive_id,
+    );
+
 
 	my $eg_adaptor   = $self->db->get_ExperimentalGroupAdaptor;
   my $epi_adaptor  = $self->db->get_EpigenomeAdaptor;
   my $ft_adaptor   = $self->db->get_FeatureTypeAdaptor;
   my $exp_adaptor  = $self->db->get_ExperimentAdaptor;
 
-	$sth->bind_columns(\$exp_id, \$name, \$group_id, \$control_id, \$is_control,\$p_design_type, 
-	                   \$description, \$xml_id, \$ft_id, \$epigenome_id, \$archive_id, \$url);
+    $sth->bind_columns( \$exp_id, \$name, \$group_id, \$control_id,
+        \$is_control, \$ft_id, \$epigenome_id, \$archive_id, );
+
 
   my (%ftypes, %epigenomes, $control);
 
@@ -301,13 +304,9 @@ sub _objs_from_sth {
       -DBID                => $exp_id,
       -ADAPTOR             => $self,
       -NAME                => $name,
-      -PRIMARY_DESIGN_TYPE => $p_design_type,
-      -DESCRIPTION         => $description,
-      -MAGE_XML_ID         => $xml_id,
       -FEATURE_TYPE        => $ftypes{$ft_id},
       -EPIGENOME           => $epigenomes{$epigenome_id},
       -ARCHIVE_ID          => $archive_id,
-      -DISPLAY_URL         => $url,
       -EXPERIMENTAL_GROUP  => $group,
       -CONTROL             => $control,
       -IS_CONTROL          => $is_control,
@@ -336,10 +335,14 @@ sub store {
   my $self = shift;
   my @exps = @_;
 
-	my $sth = $self->prepare('INSERT INTO experiment(name, experimental_group_id, control_id,
-	                          is_control, primary_design_type, description, mage_xml_id, 
-	                          feature_type_id, epigenome_id, archive_id, display_url)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+    my $sth = $self->prepare(
+        'INSERT INTO experiment(name, experimental_group_id, control_id,
+                            is_control,feature_type_id, epigenome_id, archive_id)
+                            VALUES (?, ?, ?, ?, ?, ?, ?)'
+    );
+
+
+
 
   foreach my $exp (@exps) {
     assert_ref($exp, 'Bio::EnsEMBL::Funcgen::Experiment');
@@ -373,13 +376,9 @@ sub store {
       
       $sth->bind_param(3,  $control_id,                     SQL_INTEGER);
   		$sth->bind_param(4,  $exp->is_control,                SQL_TINYINT);
-  		$sth->bind_param(5,  $exp->primary_design_type,       SQL_VARCHAR);
-  		$sth->bind_param(6,  $exp->description,               SQL_VARCHAR);
-      $sth->bind_param(7,  $exp->mage_xml_id,               SQL_INTEGER);
-      $sth->bind_param(8,  $exp->feature_type->dbID,        SQL_INTEGER); 
-      $sth->bind_param(9,  $exp->epigenome->dbID,           SQL_INTEGER);
-      $sth->bind_param(10, $exp->archive_id,                SQL_VARCHAR); 
-      $sth->bind_param(11, $exp->display_url,               SQL_VARCHAR);
+      $sth->bind_param(5,  $exp->feature_type->dbID,        SQL_INTEGER); 
+      $sth->bind_param(6,  $exp->epigenome->dbID,           SQL_INTEGER);
+      $sth->bind_param(7, $exp->archive_id,                SQL_VARCHAR); 
   		$sth->execute();
   		$exp->dbID($self->last_insert_id);
   		$exp->adaptor($self);
@@ -414,7 +413,7 @@ sub fetch_source_label_by_experiment_id{
   my $self   = shift;
   my $exp_id = shift or throw('Must provide an experiment_id argument');
 
-  my $sql = 'SELECT e.archive_id, e.display_url, eg.name, eg.is_project from experiment e '.
+  my $sql = 'SELECT e.archive_id,  eg.name, eg.is_project from experiment e '.
     'LEFT JOIN experimental_group eg using(experimental_group_id) where e.experiment_id=?';
 
   my $sth = $self->prepare($sql);
@@ -424,7 +423,7 @@ sub fetch_source_label_by_experiment_id{
     throw("Failed to fetch_source_label_by_experiment_id, SQL:\n$sql\n$@");
   }
   
-  my ($archive_id, $url, $eg_name, $is_project) = $sth->fetchrow_array;
+  my ($archive_id,  $eg_name, $is_project) = $sth->fetchrow_array;
   $sth->finish;
 
   # Handle multiple SRX IDs, just in case the submitters

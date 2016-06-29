@@ -321,7 +321,7 @@ sub store{
             technical_replicate,
             analysis_id
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     ");
 
 
