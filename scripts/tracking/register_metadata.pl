@@ -45,7 +45,7 @@ use File::Basename;
 #TODO Logger
 #TODO Experiment exists error - throw exception
 #TODO PerlCritic
-
+#TODO Deal with the csv header
 #TODO Input subset tracking table: registration date?
 #TODO Partial registration warning
 #TODO fix db names mess
@@ -66,7 +66,7 @@ sub main {
         "c=s"  => \$config,
         "h"    => \$help,
         "help" => \$help,
-        "n"    => \$dry,
+        "n"    => \$dry, #not implemented
     );
 
     # ------------------------------------------------------
@@ -167,6 +167,10 @@ sub get_data_from_csv {
 
     while ( readline $csv_fh ) {
         chomp;
+
+        if (/^accession/i){
+            next; # ignore input file header
+        }
 
         my ($accession,             $epigenome_name,     $feature_type_name,
             $br,                    $tr,                 $gender,
