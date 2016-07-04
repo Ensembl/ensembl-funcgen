@@ -72,8 +72,8 @@ use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
   Arg [3]    : String  - date of the initial release
   Arg [4]    : String  - date of the last update
   Arg [5]    : Integer - the feature type identifier
-  Arg [5]    : Integer - the analysis identifier
-  Arg [5]    : Integer - is current release
+  Arg [6]    : Integer - the analysis identifier
+  Arg [7]    : Integer - is current release
  
   
   Example              : my $reg_build = Bio::EnsEMBL::Funcgen::RegulatoryBuild->new
