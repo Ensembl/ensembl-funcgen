@@ -507,24 +507,6 @@
 530	179033	86	23	HMEC Segway_17 segmentation	segmentation	HMEC Segway_17 segmentation	HMEC segmentation	\N
 531	179033	87	103	Monocytes-CD14+ Segway_17 segmentation	segmentation	Monocytes-CD14+ Segway_17 segmentation	Monocytes-CD14+ segmentation	\N
 532	179033	88	102	NHDF-AD Segway_17 segmentation	segmentation	NHDF-AD Segway_17 segmentation	NHDF-AD segmentation	\N
-551	19	16	24	RegulatoryFeatures:A549	regulatory	A549 specific RegulatoryFeatures	Reg.Feats A549	\N
-552	19	16	240	RegulatoryFeatures:DND-41	regulatory	DND-41 specific RegulatoryFeatures	Reg.Feats DND-41	\N
-553	19	16	15	RegulatoryFeatures:GM12878	regulatory	GM12878 specific RegulatoryFeatures	Reg.Feats GM12878	\N
-554	19	16	18	RegulatoryFeatures:H1ESC	regulatory	H1ESC specific RegulatoryFeatures	Reg.Feats H1ESC	\N
-555	19	16	1	RegulatoryFeatures:HeLa-S3	regulatory	HeLa-S3 specific RegulatoryFeatures	Reg.Feats HeLa-S3	\N
-556	19	16	7	RegulatoryFeatures:HepG2	regulatory	HepG2 specific RegulatoryFeatures	Reg.Feats HepG2	\N
-557	19	16	23	RegulatoryFeatures:HMEC	regulatory	HMEC specific RegulatoryFeatures	Reg.Feats HMEC	\N
-558	19	16	22	RegulatoryFeatures:HSMM	regulatory	HSMM specific RegulatoryFeatures	Reg.Feats HSMM	\N
-559	19	16	92	RegulatoryFeatures:HSMMtube	regulatory	HSMMtube specific RegulatoryFeatures	Reg.Feats HSMMtube	\N
-560	19	16	16	RegulatoryFeatures:HUVEC	regulatory	HUVEC specific RegulatoryFeatures	Reg.Feats HUVEC	\N
-561	19	16	14	RegulatoryFeatures:K562	regulatory	K562 specific RegulatoryFeatures	Reg.Feats K562	\N
-562	19	16	103	RegulatoryFeatures:Monocytes-CD14+	regulatory	Monocytes-CD14+ specific RegulatoryFeatures	Reg.Feats Monocytes-CD14+	\N
-563	19	16	21	RegulatoryFeatures:NH-A	regulatory	NH-A specific RegulatoryFeatures	Reg.Feats NH-A	\N
-564	19	16	102	RegulatoryFeatures:NHDF-AD	regulatory	NHDF-AD specific RegulatoryFeatures	Reg.Feats NHDF-AD	\N
-565	19	16	17	RegulatoryFeatures:NHEK	regulatory	NHEK specific RegulatoryFeatures	Reg.Feats NHEK	\N
-566	19	16	78	RegulatoryFeatures:NHLF	regulatory	NHLF specific RegulatoryFeatures	Reg.Feats NHLF	\N
-567	19	16	93	RegulatoryFeatures:Osteobl	regulatory	Osteobl specific RegulatoryFeatures	Reg.Feats Osteobl	\N
-568	19	16	19	RegulatoryFeatures:MultiCell	regulatory	MultiCell consensus RegulatoryFeatures	Reg.Feats MultiCell	\N
 569	179284	71	\N	FANTOM	external	FANTOM predictions	FANTOM predictions	\N
 570	45	19	\N	VISTA enhancer set	external	Experimentally validated enhancers	VISTA Enhancers	\N
 571	179077	67	\N	TarBase miRNA	mirna_target	TarBase miRNA target predictions	TarBase miRNA target predictions	\N

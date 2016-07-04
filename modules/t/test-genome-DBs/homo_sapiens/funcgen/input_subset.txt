@@ -1,1362 +1,1362 @@
-6	14	4	178981	wgEncodeUchicagoTfbsK562InputControlgata2RawDataRep1	1	1	61
-7	14	4	178981	wgEncodeUchicagoTfbsK562InputControlnr4a1RawDataRep1	1	1	61
-8	14	4	178981	wgEncodeUchicagoTfbsK562InputControlfosRawDataRep1	1	1	61
-9	14	4	178981	wgEncodeUchicagoTfbsK562InputControlhdac8RawDataRep1	1	1	61
-10	14	4	178981	wgEncodeUchicagoTfbsK562InputControljunbRawDataRep2	2	1	61
-11	14	4	178981	wgEncodeUchicagoTfbsK562InputControlgata2RawDataRep2	2	1	61
-12	14	4	178981	wgEncodeUchicagoTfbsK562InputControljunbRawDataRep1	1	1	61
-13	14	4	178981	wgEncodeUchicagoTfbsK562InputControljundRawDataRep2	2	1	61
-14	14	4	178981	wgEncodeUchicagoTfbsK562InputControlnr4a1RawDataRep2	2	1	61
-15	14	4	178981	wgEncodeUchicagoTfbsK562InputControlfosRawDataRep2	2	1	61
-16	14	4	178981	wgEncodeUchicagoTfbsK562InputControljundRawDataRep1	1	1	61
-17	14	4	178981	wgEncodeUchicagoTfbsK562InputControlhdac8RawDataRep2	2	1	61
-18	14	4	178981	wgEncodeUchicagoTfbsK562InputControlfosRawDataRep3	3	1	61
-19	14	4	178981	wgEncodeUchicagoTfbsK562InputControljundRawDataRep3	3	1	61
-32	14	11	178980	wgEncodeHaibTfbsK562Usf1V0416101RawDataRep1	1	0	61
-33	14	11	178980	wgEncodeHaibTfbsK562Usf1V0416101RawDataRep2	2	0	61
-36	18	13	11	SRR018226	1	0	61
-37	18	13	11	SRR018477	2	0	61
-40	1	15	11	wgEncodeBroadHistoneHelas3H3k27me3StdRawDataRep1	1	0	61
-41	1	15	11	wgEncodeBroadHistoneHelas3H3k27me3StdRawDataRep2	2	0	61
-43	78	17	178981	wgEncodeBroadChipSeqRawDataRep1NhlfControl	1	1	61
-44	78	17	178981	wgEncodeBroadChipSeqRawDataRep2NhlfControl	2	1	61
-47	14	19	179019	wgEncodeHaibTfbsK562Fosl1sc183V0416101RawDataRep2	2	0	61
-48	14	19	179019	wgEncodeHaibTfbsK562Fosl1sc183V0416101RawDataRep1	1	0	61
-53	18	22	5	SRR067769	1	0	61
-54	18	22	5	SRR067948	2	0	61
-55	18	22	5	SRR067768	3	0	61
-58	18	24	179032	SRR067941	1	0	61
-59	18	24	179032	SRR067940	2	0	61
-75	18	34	12	SRR029346	1	0	61
-76	18	34	12	SRR018454	2	0	61
-77	18	34	12	SRR029341	3	0	61
-78	18	34	12	SRR067944	4	0	61
-79	18	34	12	SRR029340	5	0	61
-80	18	34	12	SRR029344	6	0	61
-81	18	34	12	SRR029342	7	0	61
-86	15	37	36	wgEncodeUtaChIPseqRawDataRep1Gm12878Pol2	1	0	61
-87	15	37	36	wgEncodeUtaChIPseqRawDataRep2Gm12878Pol2	2	0	61
-90	14	39	179029	wgEncodeUchicagoTfbsK562Ehdac8Controlhdac8RawDataRep2	2	0	61
-91	14	39	179029	wgEncodeUchicagoTfbsK562Ehdac8ControlRawDataRep1	1	0	61
-98	5	42	178417	SRR037593	4	0	61
-99	5	42	178417	SRR037594	5	0	61
-100	5	42	178417	SRR037596	2	0	61
-101	5	42	178417	SRR037595	3	0	61
-109	15	46	9	wgEncodeBroadHistoneGm12878CtcfStdRawDataRep2	2	0	61
-110	15	46	9	wgEncodeBroadHistoneGm12878CtcfStdRawDataRep1	1	0	61
-124	14	53	178932	wgEncodeHaibTfbsK562Gata2sc267Pcr1xRawDataRep1	1	0	61
-125	14	53	178932	wgEncodeHaibTfbsK562Gata2sc267Pcr1xRawDataRep2	2	0	61
-126	102	54	12	wgEncodeBroadHistoneNhdfadH3k36me3StdRawDataRep1	1	0	61
-127	102	54	12	wgEncodeBroadHistoneNhdfadH3k36me3StdRawDataRep2	2	0	61
-142	15	62	178956	wgEncodeHaibTfbsGm12878Pbx3Pcr1xRawDataRep1	1	0	61
-143	15	62	178956	wgEncodeHaibTfbsGm12878Pbx3Pcr1xRawDataRep2	2	0	61
-146	18	64	178981	wgEncodeHaibTfbsH1hescRxlchV0416102RawDataRep1	1	1	61
-147	18	64	178981	wgEncodeHaibTfbsH1hescRxlchPcr1xRawDataRep1	1	1	61
-148	22	65	23	wgEncodeBroadHistoneHsmmH2azStdRawDataRep2	2	0	61
-149	22	65	23	wgEncodeBroadHistoneHsmmH2azStdRawDataRep1	1	0	61
-153	18	68	9	wgEncodeUtaChIPseqRawDataH1hescCtcf	1	0	61
-156	7	70	178981	wgEncodeUwTfbsHepg2InputStdRawDataRep1	1	1	61
-162	14	73	179013	wgEncodeHaibTfbsK562Bclaf101388Pcr1xRawDataRep2	2	0	61
-163	14	73	179013	wgEncodeHaibTfbsK562Bclaf101388Pcr1xRawDataRep1	1	0	61
-193	1	85	178981	wgEncodeUtaustinChIPseqRawDataHelas3Input	1	1	61
-194	15	86	178980	wgEncodeHaibTfbsGm12878Usf1Pcr2xRawDataRep2	2	0	61
-195	15	86	178980	wgEncodeHaibTfbsGm12878Usf1Pcr2xRawDataRep1	1	0	61
-198	14	88	179031	wgEncodeUchicagoTfbsK562Enr4a1ControlRawDataRep1	1	0	61
-199	14	88	179031	wgEncodeUchicagoTfbsK562Enr4a1Controlnr4a1RawDataRep2	2	0	61
-204	14	91	178899	wgEncodeHaibTfbsK562GabpV0416101RawDataRep2	2	0	61
-205	14	91	178899	wgEncodeHaibTfbsK562GabpV0416101RawDataRep1	1	0	61
-208	1	93	178898	wgEncodeUtaChIPseqRawDataRep1Helas3CmycV2	1	0	61
-209	1	93	178898	wgEncodeUtaChIPseqRawDataRep2Helas3CmycV2	2	0	61
-218	14	98	178964	wgEncodeHaibTfbsK562Sin3ak20V0416101RawDataRep1	1	0	61
-219	14	98	178964	wgEncodeHaibTfbsK562Sin3ak20V0416101RawDataRep2	2	0	61
-222	1	100	5	wgEncodeBroadHistoneHelas3H3k4me2StdRawDataRep1	1	0	61
-223	1	100	5	wgEncodeBroadHistoneHelas3H3k4me2StdRawDataRep2	2	0	61
-238	15	108	179016	wgEncodeHaibTfbsGm12878Mef2aPcr1xRawDataRep1	1	0	61
-239	15	108	179016	wgEncodeHaibTfbsGm12878Mef2aPcr1xRawDataRep2	2	0	61
-244	14	110	178891	wgEncodeUchicagoTfbsK562EfosControlfosRawDataRep3	3	0	61
-245	14	110	178891	wgEncodeUchicagoTfbsK562EfosControlfosRawDataRep2	2	0	61
-246	14	110	178891	wgEncodeUchicagoTfbsK562EfosControlRawDataRep1	1	0	61
-249	17	113	30	wgEncodeBroadHistoneNhekH3k9me1StdRawDataRep2	2	0	61
-250	17	113	30	wgEncodeBroadHistoneNhekH3k9me1StdRawDataRep3	3	0	61
-251	17	113	30	wgEncodeBroadHistoneNhekH3k9me1StdRawDataRep1	1	0	61
-253	16	115	36	wgEncodeBroadHistoneHuvecPol2bStdRawDataRep2	2	0	61
-254	16	115	36	wgEncodeBroadHistoneHuvecPol2bStdRawDataRep3	3	0	61
-255	16	115	36	wgEncodeBroadHistoneHuvecPol2bStdRawDataRep1	1	0	61
-262	1	118	4	wgEncodeBroadHistoneHelas3H3k4me3StdRawDataRep2	2	0	61
-263	1	118	4	wgEncodeBroadHistoneHelas3H3k4me3StdRawDataRep1	1	0	61
-269	14	122	178960	wgEncodeHaibTfbsK562Rad21V0416102RawDataRep2	2	0	61
-270	14	122	178960	wgEncodeHaibTfbsK562Rad21V0416102RawDataRep1	1	0	61
-273	21	124	4	wgEncodeBroadHistoneNhaH3k4me3StdRawDataRep2	2	0	61
-274	21	124	4	wgEncodeBroadHistoneNhaH3k4me3StdRawDataRep1	1	0	61
-275	14	125	36	wgEncodeHaibTfbsK562Pol2V0416101RawDataRep2	2	0	61
-278	14	125	36	wgEncodeHaibTfbsK562Pol2V0416101RawDataRep1	1	0	61
-282	23	127	1	wgEncodeBroadHistoneHmecH3k9acStdRawDataRep1	1	0	61
-283	23	127	1	wgEncodeBroadHistoneHmecH3k9acStdRawDataRep2	2	0	61
-290	18	131	178981	SRR067970	1	1	61
-291	18	131	178981	SRR067977	1	1	61
-292	18	131	178981	SRR067972	1	1	61
-293	18	131	178981	SRR097975	1	1	61
-294	18	131	178981	SRR179764	1	1	61
-295	18	131	178981	SRR179765	1	1	61
-296	18	131	178981	SRR097974	1	1	61
-297	18	131	178981	SRR067971	1	1	61
-298	18	131	178981	SRR067973	1	1	61
-299	18	131	178981	SRR067974	1	1	61
-300	18	131	178981	SRR067975	1	1	61
-301	18	131	178981	SRR097976	1	1	61
-302	18	131	178981	SRR067976	1	1	61
-311	22	137	178981	wgEncodeBroadChipSeqRawDataRep1HsmmControl	1	1	61
-312	22	137	178981	wgEncodeBroadChipSeqRawDataRep2HsmmControl	2	1	61
-313	23	138	34	wgEncodeBroadHistoneHmecH4k20me1StdRawDataRep1	1	0	61
-314	23	138	34	wgEncodeBroadHistoneHmecH4k20me1StdRawDataRep2	2	0	61
-323	16	143	11	wgEncodeBroadHistoneHuvecH3k27me3StdRawDataRep1	1	0	61
-324	16	143	11	wgEncodeBroadHistoneHuvecH3k27me3StdRawDataRep2	2	0	61
-329	7	146	178898	wgEncodeUtaChIPseqRawDataRep1Hepg2CmycV2	1	0	61
-330	7	146	178898	wgEncodeUtaChIPseqRawDataRep2Hepg2CmycV2	2	0	61
-331	7	146	178898	wgEncodeUtaChIPseqRawDataRep3Hepg2CmycV2	3	0	61
-332	14	147	36	wgEncodeUtaChIPseqRawDataRep1K562Pol2	1	0	61
-333	14	147	36	wgEncodeUtaChIPseqRawDataRep2K562Pol2	2	0	61
-336	7	149	178984	wgEncodeHaibTfbsHepg2Zbtb33V0416101RawDataRep1	1	0	61
-339	7	149	178984	wgEncodeHaibTfbsHepg2Zbtb33V0416101RawDataRep2	2	0	61
-351	92	155	178981	wgEncodeBroadHistoneHsmmtControlStdRawDataRep1	1	1	61
-352	92	155	178981	wgEncodeBroadHistoneHsmmtControlStdRawDataRep2	2	1	61
-356	15	158	179192	wgEncodeHaibTfbsGm12878Ebfsc137065RawDataRep1	1	0	61
-357	15	158	179192	wgEncodeHaibTfbsGm12878Ebfsc137065RawDataRep2	2	0	61
-358	92	159	23	wgEncodeBroadHistoneHsmmtH2azStdRawDataRep1	1	0	61
-359	92	159	23	wgEncodeBroadHistoneHsmmtH2azStdRawDataRep2	2	0	61
-362	18	161	178960	wgEncodeHaibTfbsH1hescRad21V0416102RawDataRep2	2	0	61
-363	18	161	178960	wgEncodeHaibTfbsH1hescRad21V0416102RawDataRep1	1	0	61
-370	18	166	6	SRR018456	1	0	61
-371	18	166	6	SRR067947	2	0	61
-372	18	166	6	SRR029339	3	0	61
-373	18	166	6	SRR029619	4	0	61
-374	18	166	6	SRR029615	5	0	61
-375	18	167	178406	SRR067766	1	0	61
-376	18	167	178406	SRR067978	2	0	61
-392	15	173	178981	wgEncodeUwTfbsGm12878InputStdRawDataRep1	1	1	61
-393	17	174	5	wgEncodeBroadHistoneNhekH3k4me2StdRawDataRep1	1	0	61
-394	17	174	5	wgEncodeBroadHistoneNhekH3k4me2StdRawDataRep2	2	0	61
-395	17	174	5	wgEncodeBroadHistoneNhekH3k4me2StdRawDataRep3	3	0	61
-406	7	179	179024	wgEncodeHaibTfbsHepg2Hnf4gsc6558V0416101RawDataRep1	1	0	61
-407	7	179	179024	wgEncodeHaibTfbsHepg2Hnf4gsc6558V0416101RawDataRep2	2	0	61
-410	5	181	4	SRR029618	1	0	61
-411	5	181	4	SRR029610	2	0	61
-412	5	181	4	SRR037602	3	0	61
-413	5	181	4	SRR037601	4	0	61
-416	18	183	178981	wgEncodeBroadChipSeqRawDataRep1H1hescControl	1	1	61
-417	18	183	178981	wgEncodeBroadChipSeqRawDataRep2H1hescControl	2	1	61
-423	14	186	178924	wgEncodeHaibTfbsK562E2f6sc22823V0416102RawDataRep2	2	0	61
-424	14	186	178924	wgEncodeHaibTfbsK562E2f6sc22823V0416102RawDataRep1	1	0	61
-425	14	187	178893	wgEncodeUchicagoTfbsK562EjundControljundRawDataRep3	3	0	61
-426	14	187	178893	wgEncodeUchicagoTfbsK562EjundControljundRawDataRep2	2	0	61
-427	14	187	178893	wgEncodeUchicagoTfbsK562EjundControlRawDataRep1	1	0	61
-428	102	188	178405	wgEncodeBroadHistoneNhdfadH3k27acStdRawDataRep1	1	0	61
-429	102	188	178405	wgEncodeBroadHistoneNhdfadH3k27acStdRawDataRep2	2	0	61
-445	5	197	28	SRR037606	2	0	61
-446	5	197	28	SRR037608	3	0	61
-447	5	197	28	SRR037607	4	0	61
-448	5	197	28	SRR037610	5	0	61
-449	5	197	28	SRR037609	6	0	61
-450	5	197	28	SRR037611	7	0	61
-451	5	197	28	SRR037612	8	0	61
-452	14	198	178926	wgEncodeHaibTfbsK562Egr1V0416101RawDataRep1	1	0	61
-453	14	198	178926	wgEncodeHaibTfbsK562Egr1V0416101RawDataRep2	2	0	61
-456	14	200	178913	wgEncodeHaibTfbsK562Bcl3Pcr1xRawDataRep2	2	0	61
-457	14	200	178913	wgEncodeHaibTfbsK562Bcl3Pcr1xRawDataRep1	1	0	61
-458	15	201	178981	wgEncodeHaibTfbsGm12878RxlchPcr1xRawDataRep1	1	1	61
-459	15	201	178981	wgEncodeHaibTfbsGm12878RxlchV0416102RawDataRep1	1	1	61
-460	15	201	178981	wgEncodeHaibTfbsGm12878RxlchPcr2xRawDataRep2	2	1	61
-461	15	201	178981	wgEncodeHaibTfbsGm12878RxlchPcr1xRawDataRep4	4	1	61
-462	15	201	178981	wgEncodeHaibTfbsGm12878RxlchPcr1xRawDataRep2	2	1	61
-463	15	201	178981	wgEncodeHaibTfbsGm12878RxlchPcr1xRawDataRep3	3	1	61
-464	15	201	178981	wgEncodeHaibTfbsGm12878RxlchV0416101RawDataRep1	1	1	61
-465	15	201	178981	wgEncodeHaibTfbsGm12878RxlchPcr1xRawDataRep5	5	1	61
-466	15	201	178981	wgEncodeHaibTfbsGm12878RxlchPcr2xRawDataRep1	1	1	61
-467	18	202	179001	SRR067952	1	0	61
-468	18	202	179001	SRR179743	2	0	61
-469	18	202	179001	SRR179741	3	0	61
-470	18	202	179001	SRR179742	4	0	61
-487	18	211	178893	wgEncodeHaibTfbsH1hescJundV0416102RawDataRep2	2	0	61
-488	18	211	178893	wgEncodeHaibTfbsH1hescJundV0416102RawDataRep1	1	0	61
-492	14	214	178981	wgEncodeHaibTfbsK562RxlchV2RawDataRep1	1	1	61
-493	14	214	178981	wgEncodeHaibTfbsK562RxlchPcr1xRawDataRep4	4	1	61
-494	14	214	178981	wgEncodeHaibTfbsK562RxlchPcr1xRawDataRep3	3	1	61
-495	14	214	178981	wgEncodeHaibTfbsK562RxlchV2RawDataRep2	2	1	61
-496	14	214	178981	wgEncodeHaibTfbsK562RxlchV0416101RawDataRep2	2	1	61
-497	14	214	178981	wgEncodeHaibTfbsK562RxlchV0416101RawDataRep1	1	1	61
-510	15	221	23	wgEncodeBroadHistoneGm12878H2azStdRawDataRep2	2	0	61
-511	15	221	23	wgEncodeBroadHistoneGm12878H2azStdRawDataRep1	1	0	61
-512	14	222	34	wgEncodeBroadHistoneK562H4k20me1StdRawDataRep1	1	0	61
-513	14	222	34	wgEncodeBroadHistoneK562H4k20me1StdRawDataRep2	2	0	61
-519	18	226	179002	SRR067934	1	0	61
-520	18	226	179002	SRR067933	2	0	61
-521	24	227	8	wgEncodeOpenChromDnaseA549RawDataRep1	1	0	62
-522	24	227	8	wgEncodeOpenChromDnaseA549RawDataRep2	2	0	62
-523	92	228	9	wgEncodeBroadHistoneHsmmtCtcfStdRawDataRep2	2	0	61
-524	92	228	9	wgEncodeBroadHistoneHsmmtCtcfStdRawDataRep1	1	0	61
-527	18	230	178899	wgEncodeHaibTfbsH1hescGabpPcr1xRawDataRep1	1	0	61
-528	18	230	178899	wgEncodeHaibTfbsH1hescGabpPcr1xRawDataRep2	2	0	61
-529	1	231	178900	wgEncodeHaibTfbsHelas3NrsfPcr1xRawDataRep1	1	0	61
-530	1	231	178900	wgEncodeHaibTfbsHelas3NrsfPcr1xRawDataRep2	2	0	61
-531	15	232	178908	wgEncodeHaibTfbsGm12878Atf3Pcr1xRawDataRep2	2	0	61
-532	15	232	178908	wgEncodeHaibTfbsGm12878Atf3Pcr1xRawDataRep1	1	0	61
-535	18	234	12	SRR018486	1	0	61
-536	18	234	12	SRR018485	2	0	61
-537	18	234	12	SRR026666	3	0	61
-538	18	234	12	SRR026667	4	0	61
-545	17	238	178981	wgEncodeBroadHistoneNhekControlStdRawDataRep1	1	1	61
-546	17	238	178981	wgEncodeBroadHistoneNhekControlStdRawDataRep2	2	1	61
-547	18	239	36	wgEncodeUtaChIPseqRawDataH1hescPol2	1	0	61
-550	92	241	178405	wgEncodeBroadHistoneHsmmtH3k27acStdRawDataRep2	2	0	61
-551	92	241	178405	wgEncodeBroadHistoneHsmmtH3k27acStdRawDataRep1	1	0	61
-559	23	246	178981	wgEncodeUwTfbsHmecInputStdRawDataRep1	1	1	61
-560	17	247	1	wgEncodeBroadHistoneNhekH3k9acStdRawDataRep3	3	0	61
-561	17	247	1	wgEncodeBroadHistoneNhekH3k9acStdRawDataRep1	1	0	61
-562	17	247	1	wgEncodeBroadHistoneNhekH3k9acStdRawDataRep2	2	0	61
-565	17	249	8	wgEncodeUwDnaseNhekRawDataRep1	1	0	62
-566	17	249	8	wgEncodeUwDnaseNhekRawDataRep2	2	0	62
-576	17	255	11	wgEncodeBroadHistoneNhekH3k27me3StdRawDataRep2	2	0	61
-577	17	255	11	wgEncodeBroadHistoneNhekH3k27me3StdRawDataRep1	1	0	61
-578	17	255	11	wgEncodeBroadHistoneNhekH3k27me3StdRawDataRep3	3	0	61
-584	22	259	8	wgEncodeUwDnaseHsmmRawDataRep2	2	0	62
-585	22	259	8	wgEncodeUwDnaseHsmmRawDataRep1	1	0	62
-591	5	263	8	SRR029509	1	0	62
-592	5	263	8	SRR029510	2	0	62
-593	5	263	8	SRR039497	3	0	62
-594	5	263	8	SRR039498	4	0	62
-595	5	263	8	SRR029508	5	0	62
-596	5	263	8	SRR039397	6	0	62
-597	5	263	8	SRR029507	7	0	62
-598	5	263	8	SRR039500	8	0	62
-599	5	263	8	SRR039396	9	0	62
-600	5	263	8	SRR039398	10	0	62
-601	5	263	8	SRR039499	11	0	62
-602	18	264	6	SRR019560	1	0	61
-612	103	270	8	wgEncodeUwDnaseMonocd14RawDataRep1	1	0	62
-623	18	276	179007	wgEncodeHaibTfbsH1hescHdac2sc6296V0416102RawDataRep1	1	0	61
-624	18	276	179007	wgEncodeHaibTfbsH1hescHdac2sc6296V0416102RawDataRep2	2	0	61
-625	18	277	178412	SRR067939	1	0	61
-626	18	277	178412	SRR067767	2	0	61
-674	1	283	29	wgEncodeBroadHistoneHelas3H3k79me2StdRawDataRep2	2	0	61
-675	1	283	29	wgEncodeBroadHistoneHelas3H3k79me2StdRawDataRep1	1	0	61
-678	17	285	9	wgEncodeUtaChIPseqRawDataRep1NhekCtcf	1	0	61
-679	17	285	9	wgEncodeUtaChIPseqRawDataRep2NhekCtcf	2	0	61
-680	14	286	5	wgEncodeBroadHistoneK562H3k4me2StdRawDataRep2	2	0	61
-681	14	286	5	wgEncodeBroadHistoneK562H3k4me2StdRawDataRep1	1	0	61
-691	14	291	179027	wgEncodeHaibTfbsK562Thap1sc98174V0416101RawDataRep1	1	0	61
-692	14	291	179027	wgEncodeHaibTfbsK562Thap1sc98174V0416101RawDataRep2	2	0	61
-698	16	294	5	wgEncodeBroadHistoneHuvecH3k4me2StdRawDataRep2	2	0	61
-699	16	294	5	wgEncodeBroadHistoneHuvecH3k4me2StdRawDataRep1	1	0	61
-702	17	296	9	wgEncodeBroadHistoneNhekCtcfStdRawDataRep1	1	0	61
-703	17	296	9	wgEncodeBroadHistoneNhekCtcfStdRawDataRep3	3	0	61
-704	17	296	9	wgEncodeBroadHistoneNhekCtcfStdRawDataRep2	2	0	61
-708	21	299	6	wgEncodeBroadHistoneNhaH3k4me1StdRawDataRep2	2	0	61
-709	21	299	6	wgEncodeBroadHistoneNhaH3k4me1StdRawDataRep1	1	0	61
-719	18	303	178981	SRR018483	1	1	61
-720	18	303	178981	SRR018484	1	1	61
-721	18	303	178981	SRR018482	1	1	61
-722	18	303	178981	SRR026668	1	1	61
-723	18	303	178981	SRR026669	1	1	61
-730	1	307	1	wgEncodeBroadHistoneHelas3H3k9acStdRawDataRep1	1	0	61
-731	1	307	1	wgEncodeBroadHistoneHelas3H3k9acStdRawDataRep2	2	0	61
-732	14	308	179030	wgEncodeUchicagoTfbsK562EjunbControlRawDataRep1	1	0	61
-733	14	308	179030	wgEncodeUchicagoTfbsK562EjunbControljunbRawDataRep2	2	0	61
-734	14	309	23	wgEncodeBroadHistoneK562H2azStdRawDataRep2	2	0	61
-735	14	309	23	wgEncodeBroadHistoneK562H2azStdRawDataRep1	1	0	61
-740	18	312	178976	wgEncodeHaibTfbsH1hescTcf12Pcr1xRawDataRep1	1	0	61
-741	18	312	178976	wgEncodeHaibTfbsH1hescTcf12Pcr1xRawDataRep2	2	0	61
-745	18	314	178405	wgEncodeBroadHistoneH1hescH3k27acStdRawDataRep1	1	0	61
-746	18	314	178405	wgEncodeBroadHistoneH1hescH3k27acStdRawDataRep2	2	0	61
-761	14	322	179014	wgEncodeHaibTfbsK562Elf1sc631V0416102RawDataRep1	1	0	61
-762	14	322	179014	wgEncodeHaibTfbsK562Elf1sc631V0416102RawDataRep2	2	0	61
-765	5	324	178408	SRR037568	2	0	61
-766	5	324	178408	SRR037567	3	0	61
-767	5	324	178408	SRR037569	4	0	61
-768	5	324	178408	SRR037570	5	0	61
-769	22	325	29	wgEncodeBroadHistoneHsmmH3k79me2StdRawDataRep1	1	0	61
-770	22	325	29	wgEncodeBroadHistoneHsmmH3k79me2StdRawDataRep2	2	0	61
-784	15	332	178981	wgEncodeOpenChromChipGm12878InputRawData	1	1	61
-787	1	334	178405	wgEncodeBroadHistoneHelas3H3k27acStdRawDataRep2	2	0	61
-788	1	334	178405	wgEncodeBroadHistoneHelas3H3k27acStdRawDataRep1	1	0	61
-798	21	339	178981	wgEncodeBroadHistoneNhaControlStdRawDataRep2	2	1	61
-799	21	339	178981	wgEncodeBroadHistoneNhaControlStdRawDataRep1	1	1	61
-809	15	344	178958	wgEncodeHaibTfbsGm12878Pou2f2Pcr1xRawDataRep1	1	0	61
-810	15	344	178958	wgEncodeHaibTfbsGm12878Pou2f2Pcr1xRawDataRep2	2	0	61
-811	18	345	178908	wgEncodeHaibTfbsH1hescAtf3V0416102RawDataRep1	1	0	61
-812	18	345	178908	wgEncodeHaibTfbsH1hescAtf3V0416102RawDataRep2	2	0	61
-828	14	353	178901	wgEncodeHaibTfbsK562SrfV0416101RawDataRep1	1	0	61
-829	14	353	178901	wgEncodeHaibTfbsK562SrfV0416101RawDataRep2	2	0	61
-836	14	357	178959	wgEncodeHaibTfbsK562Pu1Pcr1xRawDataRep1	1	0	61
-837	14	357	178959	wgEncodeHaibTfbsK562Pu1RawDataRep2	2	0	61
-857	5	366	178413	SRR037587	2	0	61
-858	5	366	178413	SRR037588	3	0	61
-859	5	366	178413	SRR037590	4	0	61
-860	5	366	178413	SRR037589	5	0	61
-861	17	367	36	wgEncodeBroadHistoneNhekPol2bStdRawDataRep2	2	0	61
-862	17	367	36	wgEncodeBroadHistoneNhekPol2bStdRawDataRep1	1	0	61
-874	21	376	11	wgEncodeBroadHistoneNhaH3k27me3StdRawDataRep2	2	0	61
-875	21	376	11	wgEncodeBroadHistoneNhaH3k27me3StdRawDataRep1	1	0	61
-883	18	380	178981	SRR020520	1	1	61
-887	18	383	178901	wgEncodeHaibTfbsH1hescSrfPcr1xRawDataRep1	1	0	61
-888	18	383	178901	wgEncodeHaibTfbsH1hescSrfPcr1xRawDataRep2	2	0	61
-889	15	384	179017	wgEncodeHaibTfbsGm12878Mef2csc13268V0416101RawDataRep1	1	0	61
-890	15	384	179017	wgEncodeHaibTfbsGm12878Mef2csc13268V0416101RawDataRep2	2	0	61
-897	14	388	12	wgEncodeBroadHistoneK562H3k36me3StdRawDataRep1	1	0	61
-898	14	388	12	wgEncodeBroadHistoneK562H3k36me3StdRawDataRep2	2	0	61
-905	93	392	178981	wgEncodeBroadHistoneOsteoblControlStdRawDataRep1	1	1	61
-906	93	392	178981	wgEncodeBroadHistoneOsteoblControlStdRawDataRep2	2	1	61
-910	14	395	178898	wgEncodeUtaChIPseqRawDataRep1K562CmycV2	1	0	61
-911	14	395	178898	wgEncodeUtaChIPseqRawDataRep2K562CmycV2	2	0	61
-912	14	395	178898	wgEncodeUtaChIPseqRawDataRep3K562CmycV2	3	0	61
-926	5	401	178416	SRR037580	1	0	61
-927	5	401	178416	SRR037579	2	0	61
-928	5	401	178416	SRR037581	3	0	61
-929	5	401	178416	SRR037582	4	0	61
-932	93	403	6	wgEncodeBroadHistoneOsteoblH3k4me1StdRawDataRep2	2	0	61
-933	93	403	6	wgEncodeBroadHistoneOsteoblH3k4me1StdRawDataRep1	1	0	61
-934	18	404	178962	wgEncodeHaibTfbsH1hescRxraV0416102RawDataRep2	2	0	61
-935	18	404	178962	wgEncodeHaibTfbsH1hescRxraV0416102RawDataRep1	1	0	61
-936	14	405	178981	wgEncodeBroadHistoneK562ControlStdRawDataRep1	1	1	61
-964	7	418	178976	wgEncodeHaibTfbsHepg2Tcf12Pcr1xRawDataRep2	2	0	61
-965	7	418	178976	wgEncodeHaibTfbsHepg2Tcf12Pcr1xRawDataRep1	1	0	61
-968	102	420	8	wgEncodeUwDnaseNhdfadRawDataRep1	1	0	62
-969	102	420	8	wgEncodeUwDnaseNhdfadRawDataRep2	2	0	62
-972	14	422	179016	wgEncodeHaibTfbsK562Mef2aV0416101RawDataRep1	1	0	61
-973	14	422	179016	wgEncodeHaibTfbsK562Mef2aV0416101RawDataRep2	2	0	61
-980	16	426	9	wgEncodeBroadHistoneHuvecCtcfStdRawDataRep2	2	0	61
-981	16	426	9	wgEncodeBroadHistoneHuvecCtcfStdRawDataRep3	3	0	61
-982	16	426	9	wgEncodeBroadHistoneHuvecCtcfStdRawDataRep1	1	0	61
-996	18	434	29	SRR067957	1	0	61
-997	18	434	29	SRR067956	2	0	61
-1005	18	438	4	SRR018232	1	0	61
-1006	18	438	4	SRR019222	2	0	61
-1008	5	440	178411	SRR037626	2	0	61
-1009	5	440	178411	SRR037627	3	0	61
-1010	5	440	178411	SRR037628	4	0	61
-1011	5	440	178411	SRR037629	5	0	61
-1012	5	440	178411	SRR037630	6	0	61
-1013	93	441	12	wgEncodeBroadHistoneOsteoblH3k36me3StdRawDataRep2	2	0	61
-1014	93	441	12	wgEncodeBroadHistoneOsteoblH3k36me3StdRawDataRep1	1	0	61
-1015	18	442	34	SRR067966	1	0	61
-1020	1	445	36	wgEncodeBroadHistoneHelas3Pol2bStdRawDataRep2	2	0	61
-1021	1	445	36	wgEncodeBroadHistoneHelas3Pol2bStdRawDataRep1	1	0	61
-1024	14	447	30	wgEncodeBroadHistoneK562H3k9me1StdRawDataRep1	1	0	61
-1028	18	449	178416	SRR067935	1	0	61
-1029	18	449	178416	SRR067936	2	0	61
-1030	1	450	178899	wgEncodeHaibTfbsHelas3GabpPcr1xRawDataRep1	1	0	61
-1031	1	450	178899	wgEncodeHaibTfbsHelas3GabpPcr1xRawDataRep2	2	0	61
-1052	17	459	34	wgEncodeBroadHistoneNhekH4k20me1StdRawDataRep2	2	0	61
-1053	17	459	34	wgEncodeBroadHistoneNhekH4k20me1StdRawDataRep1	1	0	61
-1054	17	459	34	wgEncodeBroadHistoneNhekH4k20me1StdRawDataRep3	3	0	61
-1080	7	472	178899	wgEncodeHaibTfbsHepg2GabpPcr2xRawDataRep1	1	0	61
-1081	7	472	178899	wgEncodeHaibTfbsHepg2GabpPcr2xRawDataRep2	2	0	61
-1085	18	475	178408	SRR067930	1	0	61
-1086	14	476	178981	wgEncodeUwTfbsK562InputStdRawDataRep1	1	1	61
-1093	15	480	178962	wgEncodeHaibTfbsGm12878RxraPcr1xRawDataRep2	2	0	61
-1094	15	480	178962	wgEncodeHaibTfbsGm12878RxraPcr1xRawDataRep1	1	0	61
-1096	14	482	179015	wgEncodeHaibTfbsK562Ets1V0416101RawDataRep2	2	0	61
-1097	14	482	179015	wgEncodeHaibTfbsK562Ets1V0416101RawDataRep1	1	0	61
-1103	93	485	5	wgEncodeBroadHistoneOsteoblH3k4me2StdRawDataRep1	1	0	61
-1104	93	485	5	wgEncodeBroadHistoneOsteoblH3k4me2StdRawDataRep2	2	0	61
-1113	23	490	178981	wgEncodeBroadHistoneHmecControlStdRawDataRep2	2	1	61
-1114	23	490	178981	wgEncodeBroadHistoneHmecControlStdRawDataRep1	1	1	61
-1120	102	494	5	wgEncodeBroadHistoneNhdfadH3k4me2StdRawDataRep1	1	0	61
-1121	102	494	5	wgEncodeBroadHistoneNhdfadH3k4me2StdRawDataRep2	2	0	61
-1124	16	496	178405	wgEncodeBroadHistoneHuvecH3k27acStdRawDataRep1	1	0	61
-1125	16	496	178405	wgEncodeBroadHistoneHuvecH3k27acStdRawDataRep3	3	0	61
-1126	16	496	178405	wgEncodeBroadHistoneHuvecH3k27acStdRawDataRep2	2	0	61
-1130	18	499	178418	SRR067967	1	0	61
-1131	18	499	178418	SRR067968	2	0	61
-1151	15	509	178964	wgEncodeHudsonalphaChipSeqRawDataRep1Gm12878Sin3ak20Pcr2x	1	0	61
-1152	15	509	178964	wgEncodeHudsonalphaChipSeqRawDataRep2Gm12878Sin3ak20Pcr2x	2	0	61
-1155	21	511	12	wgEncodeBroadHistoneNhaH3k36me3StdRawDataRep2	2	0	61
-1156	21	511	12	wgEncodeBroadHistoneNhaH3k36me3StdRawDataRep1	1	0	61
-1158	14	513	179021	wgEncodeHaibTfbsK562Taf7sc101167V0416101RawDataRep2	2	0	61
-1159	14	513	179021	wgEncodeHaibTfbsK562Taf7sc101167V0416101RawDataRep1	1	0	61
-1160	15	514	178900	wgEncodeHaibTfbsGm12878NrsfPcr2xRawDataRep1	1	0	61
-1161	15	514	178900	wgEncodeHaibTfbsGm12878NrsfPcr2xRawDataRep2	2	0	61
-1162	17	515	178405	wgEncodeBroadHistoneNhekH3k27acStdRawDataRep2	2	0	61
-1163	17	515	178405	wgEncodeBroadHistoneNhekH3k27acStdRawDataRep1	1	0	61
-1164	17	515	178405	wgEncodeBroadHistoneNhekH3k27acStdRawDataRep3	3	0	61
-1166	18	517	178417	SRR179736	1	0	61
-1167	18	517	178417	SRR179735	2	0	61
-1168	18	517	178417	SRR179737	3	0	61
-1169	18	517	178417	SRR067946	4	0	61
-1170	16	518	34	wgEncodeBroadHistoneHuvecH4k20me1StdRawDataRep3	3	0	61
-1171	16	518	34	wgEncodeBroadHistoneHuvecH4k20me1StdRawDataRep2	2	0	61
-1172	16	518	34	wgEncodeBroadHistoneHuvecH4k20me1StdRawDataRep1	1	0	61
-1173	7	519	178969	wgEncodeHaibTfbsHepg2Sp1Pcr1xRawDataRep2	2	0	61
-1174	7	519	178969	wgEncodeHaibTfbsHepg2Sp1Pcr1xRawDataRep1	1	0	61
-1188	15	526	179015	wgEncodeHaibTfbsGm12878Ets1Pcr1xRawDataRep2	2	0	61
-1189	15	526	179015	wgEncodeHaibTfbsGm12878Ets1Pcr1xRawDataRep1	1	0	61
-1212	14	536	178935	wgEncodeYaleChIPseqRawDataRep1K562Gtf2b	1	0	61
-1213	14	536	178935	wgEncodeYaleChIPseqRawDataRep2K562Gtf2b	2	0	61
-1218	15	538	4	wgEncodeBroadHistoneGm12878H3k4me3StdRawDataRep1	1	0	61
-1220	14	540	9	wgEncodeUtaChIPseqRawDataRep1K562CtcfV2	1	0	61
-1221	14	540	9	wgEncodeUtaChIPseqRawDataRep2K562CtcfV2	2	0	61
-1222	14	540	9	wgEncodeUtaChIPseqRawDataRep3K562CtcfV2	3	0	61
-1225	15	542	178926	wgEncodeHaibTfbsGm12878Egr1V0416101RawDataRep2	2	0	61
-1226	15	542	178926	wgEncodeHaibTfbsGm12878Egr1V0416101RawDataRep1	1	0	61
-1229	15	544	178913	wgEncodeHaibTfbsGm12878Bcl3V0416101RawDataRep1	1	0	61
-1230	15	544	178913	wgEncodeHaibTfbsGm12878Bcl3V0416101RawDataRep2	2	0	61
-1247	18	551	28	SRR067955	1	0	61
-1248	18	551	28	SRR067953	2	0	61
-1249	18	551	28	SRR067954	3	0	61
-1250	18	552	178405	SRR029348	1	0	61
-1251	18	552	178405	SRR179707	2	0	61
-1252	18	552	178405	SRR029350	3	0	61
-1255	18	554	178946	wgEncodeHaibTfbsH1hescNanogsc33759V0416102RawDataRep1	1	0	61
-1256	18	554	178946	wgEncodeHaibTfbsH1hescNanogsc33759V0416102RawDataRep2	2	0	61
-1258	17	556	6	wgEncodeBroadHistoneNhekH3k4me1StdRawDataRep1	1	0	61
-1259	17	556	6	wgEncodeBroadHistoneNhekH3k4me1StdRawDataRep2	2	0	61
-1260	17	556	6	wgEncodeBroadHistoneNhekH3k4me1StdRawDataRep3	3	0	61
-1261	7	557	178915	wgEncodeHaibTfbsHepg2Bhlhe40V0416101RawDataRep2	2	0	61
-1262	7	557	178915	wgEncodeHaibTfbsHepg2Bhlhe40V0416101RawDataRep1	1	0	61
-1266	1	559	12	wgEncodeBroadHistoneHelas3H3k36me3StdRawDataRep1	1	0	61
-1267	1	559	12	wgEncodeBroadHistoneHelas3H3k36me3StdRawDataRep2	2	0	61
-1273	14	562	178983	wgEncodeHaibTfbsK562Yy1V0416102RawDataRep2	2	0	61
-1274	14	562	178983	wgEncodeHaibTfbsK562Yy1V0416102RawDataRep1	1	0	61
-1282	7	565	36	wgEncodeHaibTfbsHepg2Pol2Pcr2xRawDataRep2	2	0	61
-1283	7	565	36	wgEncodeHaibTfbsHepg2Pol2Pcr2xRawDataRep1	1	0	61
-1284	14	566	179026	wgEncodeHaibTfbsK562Sp2sc643V0416102RawDataRep2	2	0	61
-1285	14	566	179026	wgEncodeHaibTfbsK562Sp2sc643V0416102RawDataRep1	1	0	61
-1288	102	568	178981	wgEncodeBroadHistoneNhdfadControlStdRawDataRep1	1	1	61
-1289	102	568	178981	wgEncodeBroadHistoneNhdfadControlStdRawDataRep2	2	1	61
-1297	17	572	12	wgEncodeBroadHistoneNhekH3k36me3StdRawDataRep1	1	0	61
-1298	17	572	12	wgEncodeBroadHistoneNhekH3k36me3StdRawDataRep3	3	0	61
-1299	17	572	12	wgEncodeBroadHistoneNhekH3k36me3StdRawDataRep2	2	0	61
-1321	15	581	178959	wgEncodeHaibTfbsGm12878Pu1Pcr1xRawDataRep1	1	0	61
-1322	15	581	178959	wgEncodeHaibTfbsGm12878Pu1Pcr1xRawDataRep2	2	0	61
-1326	15	583	178894	wgEncodeYaleChIPseqRawDataRep1Gm12878Max	1	0	61
-1327	15	583	178894	wgEncodeYaleChIPseqRawDataRep2Gm12878Max	2	0	61
-1330	14	585	178966	wgEncodeHaibTfbsK562Six5V0416101RawDataRep1	1	0	61
-1333	14	585	178966	wgEncodeHaibTfbsK562Six5V0416101RawDataRep2	2	0	61
-1338	16	588	178898	wgEncodeUtaChIPseqRawDataHuvecCmyc	1	0	61
-1339	7	589	23	wgEncodeBroadHistoneHepg2H2azStdRawDataRep2	2	0	61
-1340	7	589	23	wgEncodeBroadHistoneHepg2H2azStdRawDataRep1	1	0	61
-1346	14	591	179007	wgEncodeHaibTfbsK562Hdac2sc6296V0416102RawDataRep1	1	0	61
-1347	14	591	179007	wgEncodeHaibTfbsK562Hdac2sc6296V0416102RawDataRep2	2	0	61
-1370	15	603	29	wgEncodeBroadHistoneGm12878H3k79me2StdRawDataRep2	2	0	61
-1371	15	603	29	wgEncodeBroadHistoneGm12878H3k79me2StdRawDataRep1	1	0	61
-1383	18	610	12	SRR020518	1	0	61
-1391	15	615	178948	wgEncodeYaleChIPseqRawDataRep1Gm12878NfkbIggrab	1	0	61
-1392	15	615	178948	wgEncodeYaleChIPseqRawDataRep2Gm12878NfkbIggrab	2	0	61
-1393	15	615	178948	wgEncodeYaleChIPseqRawDataRep3Gm12878NfkbIggrab	3	0	61
-1394	15	615	178948	wgEncodeYaleChIPseqRawDataRep4Gm12878NfkbIggrab	4	0	61
-1400	16	618	178981	wgEncodeUwTfbsHuvecInputStdRawDataRep1	1	1	61
-1401	23	619	4	wgEncodeUwHistoneHmecH3k4me3StdRawDataRep1	1	0	61
-1402	23	619	4	wgEncodeUwHistoneHmecH3k4me3StdRawDataRep2	2	0	61
-1405	15	621	178898	wgEncodeYaleChIPseqRawDataRep2Gm12878Cmyc	2	0	61
-1406	15	621	178898	wgEncodeYaleChIPseqRawDataRep1Gm12878Cmyc	1	0	61
-1415	18	626	179019	wgEncodeHaibTfbsH1hescFosl1sc183V0416102RawDataRep1	1	0	61
-1416	18	626	179019	wgEncodeHaibTfbsH1hescFosl1sc183V0416102RawDataRep2	2	0	61
-1427	18	630	14	SRR067960	1	0	61
-1428	18	630	14	SRR067962	2	0	61
-1429	18	630	14	SRR067964	3	0	61
-1430	18	630	14	SRR067963	4	0	61
-1431	18	630	14	SRR067961	5	0	61
-1432	18	630	14	SRR018453	6	0	61
-1433	18	630	14	SRR067965	7	0	61
-1434	92	631	4	wgEncodeBroadHistoneHsmmtH3k4me3StdRawDataRep1	1	0	61
-1435	92	631	4	wgEncodeBroadHistoneHsmmtH3k4me3StdRawDataRep2	2	0	61
-1439	7	634	178981	wgEncodeUtaustinChIPseqRawDataHepg2Input	1	1	61
-1463	5	643	34	SRR037620	2	0	61
-1464	5	643	34	SRR037621	3	0	61
-1465	5	643	34	SRR037622	4	0	61
-1466	5	643	34	SRR037623	5	0	61
-1467	18	644	178926	wgEncodeHaibTfbsH1hescEgr1V0416102RawDataRep2	2	0	61
-1468	18	644	178926	wgEncodeHaibTfbsH1hescEgr1V0416102RawDataRep1	1	0	61
-1471	92	646	29	wgEncodeBroadHistoneHsmmtH3k79me2StdRawDataRep1	1	0	61
-1472	92	646	29	wgEncodeBroadHistoneHsmmtH3k79me2StdRawDataRep2	2	0	61
-1475	14	648	29	wgEncodeBroadHistoneK562H3k79me2StdRawDataRep1	1	0	61
-1476	14	648	29	wgEncodeBroadHistoneK562H3k79me2StdRawDataRep2	2	0	61
-1481	15	651	178981	wgEncodeBroadChipSeqRawDataRep1Gm12878Control	1	1	61
-1482	15	651	178981	wgEncodeBroadChipSeqRawDataRep2Gm12878Control	2	1	61
-1483	14	652	179025	wgEncodeHaibTfbsK562Ctcflsc98982V0416101RawDataRep1	1	0	61
-1484	14	652	179025	wgEncodeHaibTfbsK562Ctcflsc98982V0416101RawDataRep2	2	0	61
-1490	16	656	8	wgEncodeUwDnaseHuvecRawDataRep2	2	0	62
-1491	16	656	8	wgEncodeUwDnaseHuvecRawDataRep1	1	0	62
-1492	14	657	178908	wgEncodeHaibTfbsK562Atf3V0416101RawDataRep2	2	0	61
-1493	14	657	178908	wgEncodeHaibTfbsK562Atf3V0416101RawDataRep1	1	0	61
-1497	5	660	12	SRR037592	1	0	61
-1498	5	660	12	SRR037546	2	0	61
-1499	5	660	12	SRR037550	3	0	61
-1500	5	660	12	SRR037553	4	0	61
-1501	5	660	12	SRR037562	5	0	61
-1502	18	661	178404	SRR067931	1	0	61
-1503	18	661	178404	SRR067932	2	0	61
-1508	18	664	178969	wgEncodeHaibTfbsH1hescSp1Pcr1xRawDataRep1	1	0	61
-1509	18	664	178969	wgEncodeHaibTfbsH1hescSp1Pcr1xRawDataRep2	2	0	61
-1516	102	668	4	wgEncodeBroadHistoneNhdfadH3k4me3StdRawDataRep1	1	0	61
-1517	102	668	4	wgEncodeBroadHistoneNhdfadH3k4me3StdRawDataRep2	2	0	61
-1522	14	671	11	wgEncodeSydhHistoneK562bH3k27me3bUcdRawDataRep2	2	0	61
-1523	14	671	11	wgEncodeSydhHistoneK562bH3k27me3bUcdRawDataRep1	1	0	61
-1524	14	672	4	wgEncodeSydhHistoneK562bH3k4me3bUcdRawDataRep2	2	0	61
-1525	14	672	4	wgEncodeSydhHistoneK562bH3k4me3bUcdRawDataRep1	1	0	61
-1530	18	675	178898	wgEncodeUtaChIPseqRawDataH1hescCmyc	1	0	61
-1545	15	683	14	wgEncodeBroadHistoneGm12878H3k9me3StdRawDataRep3	3	0	61
-1546	15	683	14	wgEncodeBroadHistoneGm12878H3k9me3StdRawDataRep2	2	0	61
-1547	15	683	14	wgEncodeBroadHistoneGm12878H3k9me3StdRawDataRep1	1	0	61
-1548	18	684	179021	wgEncodeHaibTfbsH1hescTaf7sc101167V0416102RawDataRep1	1	0	61
-1549	18	684	179021	wgEncodeHaibTfbsH1hescTaf7sc101167V0416102RawDataRep2	2	0	61
-1550	7	685	178964	wgEncodeHaibTfbsHepg2Sin3ak20Pcr1xRawDataRep1	1	0	61
-1551	7	685	178964	wgEncodeHaibTfbsHepg2Sin3ak20Pcr1xRawDataRep2	2	0	61
-1552	21	686	8	wgEncodeUwDnaseNhaRawDataRep2	2	0	62
-1553	21	686	8	wgEncodeUwDnaseNhaRawDataRep1	1	0	62
-1561	93	690	23	wgEncodeBroadHistoneOsteoblH2azStdRawDataRep2	2	0	61
-1562	93	690	23	wgEncodeBroadHistoneOsteoblH2azStdRawDataRep1	1	0	61
-1563	102	691	11	wgEncodeBroadHistoneNhdfadH3k27me3StdRawDataRep1	1	0	61
-1564	102	691	11	wgEncodeBroadHistoneNhdfadH3k27me3StdRawDataRep2	2	0	61
-1568	14	694	178981	wgEncodeYaleChIPseqRawDataRep1K562InputV2	1	1	61
-1569	14	694	178981	wgEncodeYaleChIPseqRawDataRep2K562InputV2	2	1	61
-1570	14	694	178981	wgEncodeYaleChIPseqRawDataK562Input	1	1	61
-1571	14	694	178981	wgEncodeYaleChIPseqRawDataRep1K562MusiggMusigg	1	1	61
-1572	14	694	178981	wgEncodeYaleChIPseqRawDataRep2K562MusiggMusigg	2	1	61
-1574	92	696	34	wgEncodeBroadHistoneHsmmtH4k20me1StdRawDataRep1	1	0	61
-1575	92	696	34	wgEncodeBroadHistoneHsmmtH4k20me1StdRawDataRep2	2	0	61
-1580	7	699	178983	wgEncodeHaibTfbsHepg2Yy1sc281V0416101RawDataRep2	2	0	61
-1581	7	699	178983	wgEncodeHaibTfbsHepg2Yy1sc281V0416101RawDataRep1	1	0	61
-1590	5	703	5	SRR037599	1	0	61
-1591	5	703	5	SRR037600	2	0	61
-1592	5	703	5	SRR037558	3	0	61
-1593	5	703	5	SRR037554	4	0	61
-1604	7	709	178900	wgEncodeHaibTfbsHepg2NrsfPcr2xRawDataRep1	1	0	61
-1605	7	709	178900	wgEncodeHaibTfbsHepg2NrsfPcr2xRawDataRep2	2	0	61
-1606	18	710	178980	wgEncodeHaibTfbsH1hescUsf1Pcr1xRawDataRep2	2	0	61
-1607	18	710	178980	wgEncodeHaibTfbsH1hescUsf1Pcr1xRawDataRep1	1	0	61
-1612	5	714	179001	SRR037604	2	0	61
-1613	5	714	179001	SRR037603	3	0	61
-1614	5	714	179001	SRR037605	4	0	61
-1618	78	716	5	wgEncodeBroadHistoneNhlfH3k4me2StdRawDataRep1	1	0	61
-1619	78	716	5	wgEncodeBroadHistoneNhlfH3k4me2StdRawDataRep2	2	0	61
-1622	18	718	1	SRR020516	1	0	61
-1624	7	719	179022	wgEncodeHaibTfbsHepg2Foxa1sc6553V0416101RawDataRep1	1	0	61
-1626	7	719	179022	wgEncodeHaibTfbsHepg2Foxa1sc6553V0416101RawDataRep2	2	0	61
-1632	15	722	178901	wgEncodeHaibTfbsGm12878SrfV0416101RawDataRep2	2	0	61
-1634	15	722	178901	wgEncodeHaibTfbsGm12878SrfV0416101RawDataRep1	1	0	61
-1635	14	723	178900	wgEncodeHaibTfbsK562NrsfV0416102RawDataRep2	2	0	61
-1636	14	723	178900	wgEncodeHaibTfbsK562NrsfV0416102RawDataRep1	1	0	61
-1644	14	727	1	wgEncodeSydhHistoneK562bH3k9acbUcdRawDataRep2	2	0	61
-1645	14	727	1	wgEncodeSydhHistoneK562bH3k9acbUcdRawDataRep1	1	0	61
-1653	7	733	36	wgEncodeUtaChIPseqRawDataRep1Hepg2Pol2	1	0	61
-1654	7	733	36	wgEncodeUtaChIPseqRawDataRep2Hepg2Pol2	2	0	61
-1655	7	733	36	wgEncodeUtaChIPseqRawDataRep3Hepg2Pol2	3	0	61
-1660	18	736	178964	wgEncodeHaibTfbsH1hescSin3ak20Pcr1xRawDataRep2	2	0	61
-1661	18	736	178964	wgEncodeHaibTfbsH1hescSin3ak20Pcr1xRawDataRep1	1	0	61
-1664	15	738	9	wgEncodeUtaChIPseqRawDataRep1Gm12878CtcfV2	1	0	61
-1665	15	738	9	wgEncodeUtaChIPseqRawDataRep2Gm12878CtcfV2	2	0	61
-1666	15	738	9	wgEncodeUtaChIPseqRawDataRep3Gm12878CtcfV2	3	0	61
-1670	7	740	178908	wgEncodeHaibTfbsHepg2Atf3V0416101RawDataRep2	2	0	61
-1671	7	740	178908	wgEncodeHaibTfbsHepg2Atf3V0416101RawDataRep1	1	0	61
-1674	92	742	5	wgEncodeBroadHistoneHsmmtH3k4me2StdRawDataRep1	1	0	61
-1675	92	742	5	wgEncodeBroadHistoneHsmmtH3k4me2StdRawDataRep2	2	0	61
-1676	14	743	178893	wgEncodeYaleChIPseqRawDataRep1K562Jund	1	0	61
-1677	14	743	178893	wgEncodeYaleChIPseqRawDataRep2K562Jund	2	0	61
-1678	14	744	179028	wgEncodeHaibTfbsK562Zbtb7asc34508V0416101RawDataRep2	2	0	61
-1679	14	744	179028	wgEncodeHaibTfbsK562Zbtb7asc34508V0416101RawDataRep1	1	0	61
-1685	15	746	179014	wgEncodeHaibTfbsGm12878Elf1sc631V0416101RawDataRep2	2	0	61
-1686	15	746	179014	wgEncodeHaibTfbsGm12878Elf1sc631V0416101RawDataRep1	1	0	61
-1695	23	751	8	wgEncodeUwDnaseHmecRawDataRep2	2	0	62
-1696	23	751	8	wgEncodeUwDnaseHmecRawDataRep1	1	0	62
-1701	5	754	178406	SRR037564	2	0	61
-1702	5	754	178406	SRR037565	3	0	61
-1703	5	754	178406	SRR037566	4	0	61
-1706	18	756	178966	wgEncodeHaibTfbsH1hescSix5Pcr1xRawDataRep2	2	0	61
-1707	18	756	178966	wgEncodeHaibTfbsH1hescSix5Pcr1xRawDataRep1	1	0	61
-1708	1	757	36	wgEncodeUtaChIPseqRawDataRep1Helas3Pol2	1	0	61
-1709	1	757	36	wgEncodeUtaChIPseqRawDataRep2Helas3Pol2	2	0	61
-1716	15	761	178955	wgEncodeHaibTfbsGm12878Pax5n19RawDataRep2	2	0	61
-1717	15	761	178955	wgEncodeHaibTfbsGm12878Pax5c20RawDataRep1	1	0	61
-1720	7	762	178893	wgEncodeHaibTfbsHepg2JundPcr1xRawDataRep2	2	0	61
-1721	7	762	178893	wgEncodeHaibTfbsHepg2JundPcr1xRawDataRep1	1	0	61
-1724	18	764	178912	wgEncodeHaibTfbsH1hescBcl11aPcr1xRawDataRep1	1	0	61
-1725	18	764	178912	wgEncodeHaibTfbsH1hescBcl11aV0416102RawDataRep2	2	0	61
-1727	93	766	14	wgEncodeBroadHistoneOsteoblH3k9me3StdRawDataRep1	1	0	61
-1728	93	766	14	wgEncodeBroadHistoneOsteoblH3k9me3StdRawDataRep2	2	0	61
-1729	7	767	11	wgEncodeBroadHistoneHepg2H3k27me3StdRawDataRep2	2	0	61
-1730	7	767	11	wgEncodeBroadHistoneHepg2H3k27me3StdRawDataRep1	1	0	61
-1736	5	770	178412	SRR029625	1	0	61
-1737	5	770	178412	SRR029629	2	0	61
-1738	5	770	178412	SRR037559	3	0	61
-1739	5	770	178412	SRR037557	4	0	61
-1748	15	775	179018	wgEncodeHaibTfbsGm12878Zeb1sc25388V0416102RawDataRep1	1	0	61
-1749	15	775	179018	wgEncodeHaibTfbsGm12878Zeb1sc25388V0416102RawDataRep2	2	0	61
-1752	15	777	178892	wgEncodeYaleChIPseqRawDataRep1Gm12878Cjun	1	0	61
-1753	15	777	178892	wgEncodeYaleChIPseqRawDataRep2Gm12878Cjun	2	0	61
-1754	21	778	178405	wgEncodeBroadHistoneNhaH3k27acStdRawDataRep1	1	0	61
-1755	21	778	178405	wgEncodeBroadHistoneNhaH3k27acStdRawDataRep2	2	0	61
-1758	14	780	6	wgEncodeSydhHistoneK562bH3k4me1UcdRawDataRep1	1	0	61
-1759	14	780	6	wgEncodeSydhHistoneK562bH3k4me1UcdRawDataRep2	2	0	61
-1773	7	787	178981	wgEncodeHaibTfbsHepg2RxlchPcr2xRawDataRep1	1	1	61
-1774	7	787	178981	wgEncodeHaibTfbsHepg2RxlchV0416101RawDataRep2	2	1	61
-1775	7	787	178981	wgEncodeHaibTfbsHepg2RxlchV0416101RawDataRep1	1	1	61
-1776	7	787	178981	wgEncodeHaibTfbsHepg2RxlchPcr1xRawDataRep3	3	1	61
-1777	7	787	178981	wgEncodeHaibTfbsHepg2RxlchPcr1xRawDataRep1	1	1	61
-1778	7	787	178981	wgEncodeHaibTfbsHepg2RxlchPcr1xRawDataRep2	2	1	61
-1779	7	787	178981	wgEncodeHaibTfbsHepg2RxlchPcr1xRawDataRep4	4	1	61
-1780	7	787	178981	wgEncodeHaibTfbsHepg2RxlchPcr2xRawDataRep2	2	1	61
-1781	18	788	14	SRR018480	1	0	61
-1782	18	788	14	SRR018481	2	0	61
-1783	18	788	14	SRR018478	3	0	61
-1784	18	788	14	SRR018479	4	0	61
-1785	18	788	14	SRR026664	5	0	61
-1786	18	788	14	SRR026665	6	0	61
-1789	7	790	178954	wgEncodeHaibTfbsHepg2P300V0416101RawDataRep2	2	0	61
-1790	7	790	178954	wgEncodeHaibTfbsHepg2P300V0416101RawDataRep1	1	0	61
-1794	18	792	178983	wgEncodeHaibTfbsH1hescYy1sc281V0416102RawDataRep2	2	0	61
-1795	18	792	178983	wgEncodeHaibTfbsH1hescYy1sc281V0416102RawDataRep1	1	0	61
-1800	7	796	178941	wgEncodeHaibTfbsHepg2Hnf4asc8987V0416101RawDataRep2	2	0	61
-1801	7	796	178941	wgEncodeHaibTfbsHepg2Hnf4asc8987V0416101RawDataRep1	1	0	61
-1804	7	798	179023	wgEncodeHaibTfbsHepg2Foxa2sc6554V0416101RawDataRep2	2	0	61
-1805	7	798	179023	wgEncodeHaibTfbsHepg2Foxa2sc6554V0416101RawDataRep1	1	0	61
-1815	1	802	178974	wgEncodeHaibTfbsHelas3Taf1Pcr1xRawDataRep1	1	0	61
-1816	1	802	178974	wgEncodeHaibTfbsHelas3Taf1Pcr1xRawDataRep2	2	0	61
-1819	15	804	179013	wgEncodeHaibTfbsGm12878Bclaf101388V0416101RawDataRep2	2	0	61
-1820	15	804	179013	wgEncodeHaibTfbsGm12878Bclaf101388V0416101RawDataRep1	1	0	61
-1824	1	806	178981	wgEncodeHaibTfbsHelas3RxlchPcr1xRawDataRep1	1	1	61
-1829	7	809	178974	wgEncodeHaibTfbsHepg2Taf1Pcr2xRawDataRep1	1	0	61
-1830	7	809	178974	wgEncodeHaibTfbsHepg2Taf1Pcr2xRawDataRep2	2	0	61
-1832	24	811	8	wgEncodeUwDnaseA549RawDataRep2	2	0	62
-1833	24	811	8	wgEncodeUwDnaseA549RawDataRep1	1	0	62
-1843	7	815	178960	wgEncodeHaibTfbsHepg2Rad21V0416101RawDataRep1	1	0	61
-1844	7	815	178960	wgEncodeHaibTfbsHepg2Rad21V0416101RawDataRep2	2	0	61
-1850	18	819	178413	SRR179726	1	0	61
-1851	18	819	178413	SRR179727	2	0	61
-1852	18	819	178413	SRR179725	3	0	61
-1853	18	819	178413	SRR179729	4	0	61
-1854	18	819	178413	SRR179728	5	0	61
-1855	18	819	178413	SRR179730	6	0	61
-1862	15	823	178899	wgEncodeHaibTfbsGm12878GabpPcr2xRawDataRep1	1	0	61
-1863	15	823	178899	wgEncodeHaibTfbsGm12878GabpPcr2xRawDataRep2	2	0	61
-1864	7	824	178981	wgEncodeBroadChipSeqRawDataRep1Hepg2Control	1	1	61
-1865	7	824	178981	wgEncodeBroadChipSeqRawDataRep2Hepg2Control	2	1	61
-1866	5	825	178404	SRR037571	2	0	61
-1867	5	825	178404	SRR037572	3	0	61
-1868	5	825	178404	SRR037573	4	0	61
-1869	5	825	178404	SRR037574	5	0	61
-1872	14	827	178894	wgEncodeHaibTfbsK562MaxV0416102RawDataRep2	2	0	61
-1873	14	827	178894	wgEncodeHaibTfbsK562MaxV0416102RawDataRep1	1	0	61
-1876	5	829	178414	SRR037583	2	0	61
-1877	5	829	178414	SRR037584	3	0	61
-1878	5	829	178414	SRR037586	4	0	61
-1879	5	829	178414	SRR037585	5	0	61
-1887	18	833	4	SRR029620	1	0	61
-1888	18	833	4	SRR018455	2	0	61
-1889	18	833	4	SRR029609	3	0	61
-1890	18	833	4	SRR067950	4	0	61
-1891	7	834	178901	wgEncodeHaibTfbsHepg2SrfV0416101RawDataRep1	1	0	61
-1892	7	834	178901	wgEncodeHaibTfbsHepg2SrfV0416101RawDataRep2	2	0	61
-1907	21	842	9	wgEncodeBroadHistoneNhaCtcfStdRawDataRep1	1	0	61
-1908	21	842	9	wgEncodeBroadHistoneNhaCtcfStdRawDataRep2	2	0	61
-1909	16	843	30	wgEncodeBroadHistoneHuvecH3k9me1StdRawDataRep1	1	0	61
-1910	16	843	30	wgEncodeBroadHistoneHuvecH3k9me1StdRawDataRep2	2	0	61
-1911	16	843	30	wgEncodeBroadHistoneHuvecH3k9me1StdRawDataRep3	3	0	61
-1918	16	847	12	wgEncodeBroadHistoneHuvecH3k36me3StdRawDataRep3	3	0	61
-1919	16	847	12	wgEncodeBroadHistoneHuvecH3k36me3StdRawDataRep1	1	0	61
-1920	16	847	12	wgEncodeBroadHistoneHuvecH3k36me3StdRawDataRep2	2	0	61
-1926	14	850	178981	wgEncodeOpenChromChipK562InputRawData	1	1	61
-1927	18	851	178410	SRR067937	1	0	61
-1928	18	851	178410	SRR067938	2	0	61
-1929	102	852	9	wgEncodeBroadHistoneNhdfadCtcfStdRawDataRep1	1	0	61
-1930	102	852	9	wgEncodeBroadHistoneNhdfadCtcfStdRawDataRep2	2	0	61
-1942	16	857	9	wgEncodeUtaChIPseqRawDataRep1HuvecCtcf	1	0	61
-1943	16	857	9	wgEncodeUtaChIPseqRawDataRep2HuvecCtcf	2	0	61
-1946	16	859	178981	wgEncodeBroadHistoneHuvecControlStdRawDataRep3	3	1	61
-1947	16	859	178981	wgEncodeBroadHistoneHuvecControlStdRawDataRep1	1	1	61
-1948	16	859	178981	wgEncodeBroadHistoneHuvecControlStdRawDataRep2	2	1	61
-1949	14	860	178932	wgEncodeUchicagoTfbsK562Egata2Controlgata2RawDataRep2	2	0	61
-1950	14	860	178932	wgEncodeUchicagoTfbsK562Egata2ControlRawDataRep1	1	0	61
-1952	22	862	14	wgEncodeBroadHistoneHsmmH3k9me3StdRawDataRep1	1	0	61
-1953	22	862	14	wgEncodeBroadHistoneHsmmH3k9me3StdRawDataRep2	2	0	61
-1954	16	863	4	wgEncodeBroadHistoneHuvecH3k4me3StdRawDataRep1	1	0	61
-1955	16	863	4	wgEncodeBroadHistoneHuvecH3k4me3StdRawDataRep2	2	0	61
-1956	16	863	4	wgEncodeBroadHistoneHuvecH3k4me3StdRawDataRep3	3	0	61
-1957	15	864	178981	wgEncodeYaleChIPseqRawDataGm12878Input	1	1	61
-1958	15	864	178981	wgEncodeYaleChIPseqRawDataRep1Gm12878InputIggrab	1	1	61
-1959	15	864	178981	wgEncodeYaleChIPseqRawDataRep1Gm12878MusiggMusigg	1	1	61
-1960	15	864	178981	wgEncodeYaleChIPseqRawDataRep2Gm12878InputIggrab	2	1	61
-1961	15	864	178981	wgEncodeYaleChIPseqRawDataRep2Gm12878MusiggMusigg	2	1	61
-1969	15	868	178898	wgEncodeUtaChIPseqRawDataRep1Gm12878Cmyc	1	0	61
-1970	15	868	178898	wgEncodeUtaChIPseqRawDataRep2Gm12878Cmyc	2	0	61
-1973	14	870	178405	wgEncodeBroadHistoneK562H3k27acStdRawDataRep2	2	0	61
-1974	14	870	178405	wgEncodeBroadHistoneK562H3k27acStdRawDataRep1	1	0	61
-1977	15	871	36	wgEncodeYaleChIPseqRawDataRep2Gm12878Pol2V3	2	0	61
-1982	15	871	36	wgEncodeYaleChIPseqRawDataRep1Gm12878Pol2V3	1	0	61
-1984	15	871	36	wgEncodeYaleChIPseqRawDataRep3Gm12878Pol2V3	3	0	61
-1999	16	880	1	wgEncodeBroadHistoneHuvecH3k9acStdRawDataRep3	3	0	61
-2000	16	880	1	wgEncodeBroadHistoneHuvecH3k9acStdRawDataRep2	2	0	61
-2001	16	880	1	wgEncodeBroadHistoneHuvecH3k9acStdRawDataRep1	1	0	61
-2005	18	883	178414	SRR179721	1	0	61
-2006	18	883	178414	SRR179719	2	0	61
-2007	18	883	178414	SRR179717	3	0	61
-2008	18	883	178414	SRR179720	4	0	61
-2009	18	883	178414	SRR179718	5	0	61
-2010	18	883	178414	SRR179716	6	0	61
-2011	18	884	1	SRR019562	1	0	61
-2012	18	884	1	SRR067958	2	0	61
-2017	18	887	11	SRR019561	1	0	61
-2018	18	887	11	SRR029343	2	0	61
-2019	18	887	11	SRR067943	3	0	61
-2020	18	887	11	SRR029349	4	0	61
-2021	18	887	11	SRR029345	5	0	61
-2022	18	887	11	SRR029347	6	0	61
-2024	14	889	178969	wgEncodeHaibTfbsK562Sp1Pcr1xRawDataRep1	1	0	61
-2025	14	889	178969	wgEncodeHaibTfbsK562Sp1Pcr1xRawDataRep2	2	0	61
-2029	7	892	179007	wgEncodeHaibTfbsHepg2Hdac2sc6296V0416101RawDataRep2	2	0	61
-2030	7	892	179007	wgEncodeHaibTfbsHepg2Hdac2sc6296V0416101RawDataRep1	1	0	61
-2037	92	896	6	wgEncodeBroadHistoneHsmmtH3k4me1StdRawDataRep1	1	0	61
-2038	92	896	6	wgEncodeBroadHistoneHsmmtH3k4me1StdRawDataRep2	2	0	61
-2044	17	899	4	wgEncodeBroadHistoneNhekH3k4me3StdRawDataRep1	1	0	61
-2045	17	899	4	wgEncodeBroadHistoneNhekH3k4me3StdRawDataRep2	2	0	61
-2046	17	899	4	wgEncodeBroadHistoneNhekH3k4me3StdRawDataRep3	3	0	61
-2052	16	903	178981	wgEncodeUtaustinChIPseqRawDataHuvecInput	1	1	61
-2074	1	915	178981	wgEncodeBroadHistoneHelas3ControlStdRawDataRep1	1	1	61
-2075	1	915	178981	wgEncodeBroadHistoneHelas3ControlStdRawDataRep2	2	1	61
-2083	102	919	1	wgEncodeBroadHistoneNhdfadH3k9acStdRawDataRep2	2	0	61
-2084	102	919	1	wgEncodeBroadHistoneNhdfadH3k9acStdRawDataRep1	1	0	61
-2088	15	922	8	wgEncodeOpenChromDnaseGm12878RawDataRep1	1	0	62
-2089	15	922	8	wgEncodeOpenChromDnaseGm12878RawDataRep2	2	0	62
-2090	15	922	8	wgEncodeOpenChromDnaseGm12878RawDataRep4	4	0	62
-2091	15	922	8	wgEncodeOpenChromDnaseGm12878RawDataRep5	5	0	62
-2092	15	922	8	wgEncodeOpenChromDnaseGm12878RawDataRep3	3	0	62
-2104	15	929	178983	wgEncodeHaibTfbsGm12878Yy1sc281Pcr1xRawDataRep1	1	0	61
-2105	15	929	178983	wgEncodeHaibTfbsGm12878Yy1sc281Pcr1xRawDataRep2	2	0	61
-2114	7	935	12	wgEncodeUwHistoneHepg2H3k36me3StdRawDataRep1	1	0	61
-2115	7	935	12	wgEncodeUwHistoneHepg2H3k36me3StdRawDataRep2	2	0	61
-2123	1	938	178981	wgEncodeYaleChIPseqRawDataHelas3Input	1	1	61
-2124	1	938	178981	wgEncodeYaleChIPseqRawDataRep1Helas3Largefragment	1	1	61
-2125	1	938	178981	wgEncodeYaleChIPseqRawDataRep1Helas3Mnase	1	1	61
-2126	1	938	178981	wgEncodeYaleChIPseqRawDataRep1Helas3Mouseigg	1	1	61
-2127	1	938	178981	wgEncodeYaleChIPseqRawDataRep1Helas3Nakeddna	1	1	61
-2128	1	938	178981	wgEncodeYaleChIPseqRawDataRep1Helas3Rabigg	1	1	61
-2129	1	938	178981	wgEncodeYaleChIPseqRawDataRep2Helas3Largefragment	2	1	61
-2130	1	938	178981	wgEncodeYaleChIPseqRawDataRep2Helas3Mnase	2	1	61
-2131	1	938	178981	wgEncodeYaleChIPseqRawDataRep2Helas3Mouseigg	2	1	61
-2132	1	938	178981	wgEncodeYaleChIPseqRawDataRep2Helas3Nakeddna	2	1	61
-2133	1	938	178981	wgEncodeYaleChIPseqRawDataRep3Helas3Nakeddna	3	1	61
-2134	93	939	178405	wgEncodeBroadHistoneOsteoblH3k27acStdRawDataRep1	1	0	61
-2135	93	939	178405	wgEncodeBroadHistoneOsteoblH3k27acStdRawDataRep2	2	0	61
-2140	15	941	178966	wgEncodeHaibTfbsGm12878Six5Pcr1xRawDataRep1	1	0	61
-2141	15	941	178966	wgEncodeHaibTfbsGm12878Six5Pcr1xRawDataRep2	2	0	61
-2142	5	942	178415	SRR037631	2	0	61
-2143	5	942	178415	SRR037632	3	0	61
-2144	5	942	178415	SRR037633	4	0	61
-2147	15	944	178974	wgEncodeHaibTfbsGm12878Taf1Pcr1xRawDataRep1	1	0	61
-2148	15	944	178974	wgEncodeHaibTfbsGm12878Taf1Pcr1xRawDataRep2	2	0	61
-2149	14	945	178974	wgEncodeHaibTfbsK562Taf1V0416101RawDataRep2	2	0	61
-2150	14	945	178974	wgEncodeHaibTfbsK562Taf1V0416101RawDataRep1	1	0	61
-2154	14	948	36	wgEncodeBroadHistoneK562Pol2bStdRawDataRep1	1	0	61
-2155	14	948	36	wgEncodeBroadHistoneK562Pol2bStdRawDataRep2	2	0	61
-2156	5	949	178418	SRR029622	1	0	61
-2157	5	949	178418	SRR029614	2	0	61
-2158	5	949	178418	SRR037625	3	0	61
-2159	5	949	178418	SRR037624	4	0	61
-2164	18	952	178954	wgEncodeHaibTfbsH1hescP300V0416102RawDataRep2	2	0	61
-2165	18	952	178954	wgEncodeHaibTfbsH1hescP300V0416102RawDataRep1	1	0	61
-2169	7	954	179014	wgEncodeHaibTfbsHepg2Elf1sc631V0416101RawDataRep2	2	0	61
-2170	7	954	179014	wgEncodeHaibTfbsHepg2Elf1sc631V0416101RawDataRep1	1	0	61
-2171	5	955	179002	SRR037575	2	0	61
-2172	5	955	179002	SRR037576	3	0	61
-2173	5	955	179002	SRR037577	4	0	61
-2174	5	955	179002	SRR037578	5	0	61
-2175	15	956	178891	wgEncodeYaleChIPseqRawDataRep2Gm12878CfosV3	2	0	61
-2176	15	956	178891	wgEncodeYaleChIPseqRawDataRep1Gm12878CfosV3	1	0	61
-2182	15	959	36	wgEncodeHaibTfbsGm12878Pol2Pcr2xRawDataRep1	1	0	61
-2183	15	959	36	wgEncodeHaibTfbsGm12878Pol2Pcr2xRawDataRep2	2	0	61
-2185	2	960	178981	wgEncodeUwTfbsGm06990InputStdRawDataRep1	1	1	61
-2186	18	961	178415	SRR067969	1	0	61
-2187	5	962	29	SRR037614	2	0	61
-2188	5	962	29	SRR037613	3	0	61
-2189	5	962	29	SRR037615	4	0	61
-2190	5	962	29	SRR037616	5	0	61
-2211	18	972	1	SRR018231	1	0	61
-2212	14	973	9	wgEncodeBroadHistoneK562CtcfStdRawDataRep1	1	0	61
-2213	14	973	9	wgEncodeBroadHistoneK562CtcfStdRawDataRep2	2	0	61
-2216	5	975	14	SRR029617	1	0	61
-2217	5	975	14	SRR029612	2	0	61
-2218	5	975	14	SRR029624	3	0	61
-2219	5	975	14	SRR029628	4	0	61
-2220	5	975	14	SRR037618	5	0	61
-2221	5	975	14	SRR037617	6	0	61
-2222	5	975	14	SRR037619	7	0	61
-2229	7	979	29	wgEncodeBroadHistoneHepg2H3k79me2StdRawDataRep1	1	0	61
-2230	7	979	29	wgEncodeBroadHistoneHepg2H3k79me2StdRawDataRep2	2	0	61
-2240	18	985	179020	wgEncodeHaibTfbsH1hescPou5f1sc9081V0416102RawDataRep2	2	0	61
-2241	18	985	179020	wgEncodeHaibTfbsH1hescPou5f1sc9081V0416102RawDataRep1	1	0	61
-2244	16	987	36	wgEncodeUtaChIPseqRawDataRep1HuvecPol2	1	0	61
-2245	16	987	36	wgEncodeUtaChIPseqRawDataRep2HuvecPol2	2	0	61
-2248	18	989	9	wgEncodeHaibTfbsH1hescCtcfsc5916V0416102RawDataRep2	2	0	61
-2249	18	989	9	wgEncodeHaibTfbsH1hescCtcfsc5916V0416102RawDataRep1	1	0	61
-2250	14	990	6	wgEncodeBroadHistoneK562H3k4me1StdRawDataRep2	2	0	61
-2251	14	990	6	wgEncodeBroadHistoneK562H3k4me1StdRawDataRep1	1	0	61
-2252	7	991	178980	wgEncodeHaibTfbsHepg2Usf1Pcr1xRawDataRep2	2	0	61
-2253	7	991	178980	wgEncodeHaibTfbsHepg2Usf1Pcr1xRawDataRep1	1	0	61
-2257	92	994	12	wgEncodeBroadHistoneHsmmtH3k36me3StdRawDataRep2	2	0	61
-2258	92	994	12	wgEncodeBroadHistoneHsmmtH3k36me3StdRawDataRep1	1	0	61
-2266	92	1000	8	wgEncodeUwDnaseHsmmtRawDataRep1	1	0	62
-2267	1	1001	9	wgEncodeBroadHistoneHelas3CtcfStdRawDataRep1	1	0	61
-2268	1	1001	9	wgEncodeBroadHistoneHelas3CtcfStdRawDataRep2	2	0	61
-2273	5	1004	11	SRR029616	1	0	61
-2274	5	1004	11	SRR029627	2	0	61
-2275	5	1004	11	SRR029623	3	0	61
-2276	5	1004	11	SRR029611	4	0	61
-2277	5	1004	11	SRR037555	5	0	61
-2278	5	1004	11	SRR037560	6	0	61
-2279	18	1005	14	SRR020517	1	0	61
-2287	18	1010	6	SRR020519	1	0	61
-2288	14	1011	178984	wgEncodeHaibTfbsK562Zbtb33Pcr1xRawDataRep2	2	0	61
-2289	14	1011	178984	wgEncodeHaibTfbsK562Zbtb33Pcr1xRawDataRep1	1	0	61
-2296	5	1015	178405	SRR029626	1	0	61
-2297	5	1015	178405	SRR029630	2	0	61
-2298	5	1015	178405	SRR029631	3	0	61
-2299	5	1015	178405	SRR029632	4	0	61
-2300	5	1015	178405	SRR037561	5	0	61
-2324	1	1023	34	wgEncodeBroadHistoneHelas3H4k20me1StdRawDataRep2	2	0	61
-2325	1	1023	34	wgEncodeBroadHistoneHelas3H4k20me1StdRawDataRep1	1	0	61
-2326	92	1024	1	wgEncodeBroadHistoneHsmmtH3k9acStdRawDataRep1	1	0	61
-2327	92	1024	1	wgEncodeBroadHistoneHsmmtH3k9acStdRawDataRep2	2	0	61
-2328	93	1025	9	wgEncodeBroadHistoneOsteoblCtcfStdRawDataRep2	2	0	61
-2329	93	1025	9	wgEncodeBroadHistoneOsteoblCtcfStdRawDataRep1	1	0	61
-2336	17	1029	178981	wgEncodeUwTfbsNhekInputStdRawDataRep1	1	1	61
-2342	5	1033	6	SRR037597	1	0	61
-2343	5	1033	6	SRR037547	2	0	61
-2344	5	1033	6	SRR037548	3	0	61
-2345	5	1033	6	SRR037552	4	0	61
-2346	5	1033	6	SRR037549	5	0	61
-2347	5	1033	6	SRR037551	6	0	61
-2348	5	1033	6	SRR037556	7	0	61
-2349	5	1033	6	SRR037598	8	0	61
-2352	18	1035	4	SRR020515	1	0	61
-2362	1	1040	36	wgEncodeHaibTfbsHelas3Pol2Pcr1xRawDataRep2	2	0	61
-2363	1	1040	36	wgEncodeHaibTfbsHelas3Pol2Pcr1xRawDataRep1	1	0	61
-2364	5	1041	1	SRR029621	1	0	61
-2365	5	1041	1	SRR029613	2	0	61
-2366	5	1041	1	SRR037563	3	0	61
-2367	5	1042	178981	SRR037635	1	1	61
-2368	5	1042	178981	SRR037636	1	1	61
-2369	5	1042	178981	SRR037634	1	1	61
-2370	5	1042	178981	SRR037637	1	1	61
-2371	5	1042	178981	SRR037638	2	1	61
-2372	5	1042	178981	SRR037639	2	1	61
-2373	5	1042	178981	SRR037652	2	1	61
-2374	5	1042	178981	SRR037640	2	1	61
-2375	5	1042	178981	SRR037641	2	1	61
-2376	5	1042	178981	SRR037642	2	1	61
-2379	18	1044	11	SRR020508	1	0	61
-2389	14	1049	14	wgEncodeBroadHistoneK562H3k9me3StdRawDataRep2	2	0	61
-2390	14	1049	14	wgEncodeBroadHistoneK562H3k9me3StdRawDataRep1	1	0	61
-2391	7	1050	9	wgEncodeHaibTfbsHepg2Ctcfsc5916V0416101RawDataRep1	1	0	61
-2392	7	1050	9	wgEncodeHaibTfbsHepg2Ctcfsc5916V0416101RawDataRep2	2	0	61
-2393	1	1051	178981	wgEncodeUwTfbsHelas3InputStdRawDataRep1	1	1	61
-2394	16	1052	6	wgEncodeBroadHistoneHuvecH3k4me1StdRawDataRep3	3	0	61
-2395	16	1052	6	wgEncodeBroadHistoneHuvecH3k4me1StdRawDataRep1	1	0	61
-2396	16	1052	6	wgEncodeBroadHistoneHuvecH3k4me1StdRawDataRep2	2	0	61
-2404	15	1058	178960	wgEncodeHaibTfbsGm12878Rad21V0416101RawDataRep1	1	0	61
-2405	15	1058	178960	wgEncodeHaibTfbsGm12878Rad21V0416101RawDataRep2	2	0	61
-2409	15	651	178981	wgEncodeBroadHistoneGm12878ControlStdRawDataRep1	1	1	61
-2410	15	413	178405	wgEncodeBroadHistoneGm12878H3k27acStdRawDataRep1	1	0	61
-2411	15	462	11	wgEncodeBroadHistoneGm12878H3k27me3StdRawDataRep1	1	0	61
-2412	15	278	12	wgEncodeBroadHistoneGm12878H3k36me3StdRawDataRep1	1	0	61
-2414	15	837	5	wgEncodeBroadHistoneGm12878H3k4me2StdRawDataRep1	1	0	61
-2415	15	23	1	wgEncodeBroadHistoneGm12878H3k9acStdRawDataRep1	1	0	61
-2416	15	370	34	wgEncodeBroadHistoneGm12878H4k20me1StdRawDataRep1	1	0	61
-2417	18	183	178981	wgEncodeBroadHistoneH1hescControlStdRawDataRep1	1	1	61
-2418	18	813	9	wgEncodeBroadHistoneH1hescCtcfStdRawDataRep1	1	0	61
-2419	18	1018	11	wgEncodeBroadHistoneH1hescH3k27me3StdRawDataRep1	1	0	61
-2420	18	779	12	wgEncodeBroadHistoneH1hescH3k36me3StdRawDataRep1	1	0	61
-2421	18	737	6	wgEncodeBroadHistoneH1hescH3k4me1StdRawDataRep1	1	0	61
-2422	18	814	5	wgEncodeBroadHistoneH1hescH3k4me2StdRawDataRep1	1	0	61
-2423	18	900	4	wgEncodeBroadHistoneH1hescH3k4me3StdRawDataRep1	1	0	61
-2424	18	82	1	wgEncodeBroadHistoneH1hescH3k9acStdRawDataRep1	1	0	61
-2425	18	904	34	wgEncodeBroadHistoneH1hescH4k20me1StdRawDataRep1	1	0	61
-2426	7	824	178981	wgEncodeBroadHistoneHepg2ControlStdRawDataRep2	2	1	61
-2427	7	1007	9	wgEncodeBroadHistoneHepg2CtcfStdRawDataRep2	2	0	61
-2428	7	474	178405	wgEncodeBroadHistoneHepg2H3k27acStdRawDataRep2	2	0	61
-2429	7	521	12	wgEncodeBroadHistoneHepg2H3k36me3StdRawDataRep2	2	0	61
-2430	7	682	5	wgEncodeBroadHistoneHepg2H3k4me2StdRawDataRep1	1	0	61
-2431	7	393	4	wgEncodeBroadHistoneHepg2H3k4me3StdRawDataRep2	2	0	61
-2432	7	350	1	wgEncodeBroadHistoneHepg2H3k9acStdRawDataRep2	2	0	61
-2433	7	505	34	wgEncodeBroadHistoneHepg2H4k20me1StdRawDataRep2	2	0	61
-2434	23	331	9	wgEncodeBroadHistoneHmecCtcfStdRawDataRep2	2	0	61
-2435	23	533	178405	wgEncodeBroadHistoneHmecH3k27acStdRawDataRep1	1	0	61
-2436	23	534	11	wgEncodeBroadHistoneHmecH3k27me3StdRawDataRep1	1	0	61
-2437	23	479	12	wgEncodeBroadHistoneHmecH3k36me3StdRawDataRep1	1	0	61
-2438	23	500	6	wgEncodeBroadHistoneHmecH3k4me1StdRawDataRep2	2	0	61
-2439	23	841	5	wgEncodeBroadHistoneHmecH3k4me2StdRawDataRep1	1	0	61
-2440	23	993	4	wgEncodeBroadHistoneHmecH3k4me3StdRawDataRep1	1	0	61
-2441	22	137	178981	wgEncodeBroadHistoneHsmmControlStdRawDataRep2	2	1	61
-2442	22	1002	9	wgEncodeBroadHistoneHsmmCtcfStdRawDataRep2	2	0	61
-2443	22	844	178405	wgEncodeBroadHistoneHsmmH3k27acStdRawDataRep2	2	0	61
-2444	22	378	11	wgEncodeBroadHistoneHsmmH3k27me3StdRawDataRep2	2	0	61
-2445	22	999	12	wgEncodeBroadHistoneHsmmH3k36me3StdRawDataRep2	2	0	61
-2446	22	1045	6	wgEncodeBroadHistoneHsmmH3k4me1StdRawDataRep2	2	0	61
-2447	22	44	5	wgEncodeBroadHistoneHsmmH3k4me2StdRawDataRep2	2	0	61
-2448	22	553	4	wgEncodeBroadHistoneHsmmH3k4me3StdRawDataRep2	2	0	61
-2449	22	87	1	wgEncodeBroadHistoneHsmmH3k9acStdRawDataRep2	2	0	61
-2450	22	464	34	wgEncodeBroadHistoneHsmmH4k20me1StdRawDataRep2	2	0	61
-2451	14	346	11	wgEncodeBroadHistoneK562H3k27me3StdRawDataRep1	1	0	61
-2452	14	169	4	wgEncodeBroadHistoneK562H3k4me3StdRawDataRep2	2	0	61
-2453	14	359	1	wgEncodeBroadHistoneK562H3k9acStdRawDataRep1	1	0	61
-2454	78	17	178981	wgEncodeBroadHistoneNhlfControlStdRawDataRep1	1	1	61
-2455	78	747	9	wgEncodeBroadHistoneNhlfCtcfStdRawDataRep2	2	0	61
-2456	78	1017	178405	wgEncodeBroadHistoneNhlfH3k27acStdRawDataRep2	2	0	61
-2457	78	717	11	wgEncodeBroadHistoneNhlfH3k27me3StdRawDataRep1	1	0	61
-2458	78	205	12	wgEncodeBroadHistoneNhlfH3k36me3StdRawDataRep2	2	0	61
-2459	78	290	6	wgEncodeBroadHistoneNhlfH3k4me1StdRawDataRep2	2	0	61
-2460	78	563	4	wgEncodeBroadHistoneNhlfH3k4me3StdRawDataRep2	2	0	61
-2461	78	6	1	wgEncodeBroadHistoneNhlfH3k9acStdRawDataRep1	1	0	61
-2462	78	567	34	wgEncodeBroadHistoneNhlfH4k20me1StdRawDataRep2	2	0	61
-2463	15	651	178981	wgEncodeBroadHistoneGm12878ControlStdRawDataRep2	2	1	61
-2464	15	413	178405	wgEncodeBroadHistoneGm12878H3k27acStdRawDataRep2	2	0	61
-2465	15	462	11	wgEncodeBroadHistoneGm12878H3k27me3StdRawDataRep2	2	0	61
-2466	15	278	12	wgEncodeBroadHistoneGm12878H3k36me3StdRawDataRep2	2	0	61
-2467	15	123	6	wgEncodeBroadHistoneGm12878H3k4me1StdRawDataRep2	2	0	61
-2468	15	837	5	wgEncodeBroadHistoneGm12878H3k4me2StdRawDataRep2	2	0	61
-2469	15	23	1	wgEncodeBroadHistoneGm12878H3k9acStdRawDataRep2	2	0	61
-2470	15	370	34	wgEncodeBroadHistoneGm12878H4k20me1StdRawDataRep2	2	0	61
-2471	18	183	178981	wgEncodeBroadHistoneH1hescControlStdRawDataRep2	2	1	61
-2472	18	813	9	wgEncodeBroadHistoneH1hescCtcfStdRawDataRep2	2	0	61
-2473	18	1018	11	wgEncodeBroadHistoneH1hescH3k27me3StdRawDataRep2	2	0	61
-2474	18	779	12	wgEncodeBroadHistoneH1hescH3k36me3StdRawDataRep2	2	0	61
-2475	18	737	6	wgEncodeBroadHistoneH1hescH3k4me1StdRawDataRep2	2	0	61
-2476	18	814	5	wgEncodeBroadHistoneH1hescH3k4me2StdRawDataRep2	2	0	61
-2477	18	900	4	wgEncodeBroadHistoneH1hescH3k4me3StdRawDataRep2	2	0	61
-2478	18	82	1	wgEncodeBroadHistoneH1hescH3k9acStdRawDataRep2	2	0	61
-2479	18	904	34	wgEncodeBroadHistoneH1hescH4k20me1StdRawDataRep2	2	0	61
-2480	7	824	178981	wgEncodeBroadHistoneHepg2ControlStdRawDataRep1	1	1	61
-2481	7	1007	9	wgEncodeBroadHistoneHepg2CtcfStdRawDataRep1	1	0	61
-2482	7	474	178405	wgEncodeBroadHistoneHepg2H3k27acStdRawDataRep1	1	0	61
-2483	7	521	12	wgEncodeBroadHistoneHepg2H3k36me3StdRawDataRep1	1	0	61
-2484	7	682	5	wgEncodeBroadHistoneHepg2H3k4me2StdRawDataRep2	2	0	61
-2485	7	393	4	wgEncodeBroadHistoneHepg2H3k4me3StdRawDataRep1	1	0	61
-2486	7	350	1	wgEncodeBroadHistoneHepg2H3k9acStdRawDataRep1	1	0	61
-2487	7	505	34	wgEncodeBroadHistoneHepg2H4k20me1StdRawDataRep1	1	0	61
-2488	23	331	9	wgEncodeBroadHistoneHmecCtcfStdRawDataRep1	1	0	61
-2489	23	533	178405	wgEncodeBroadHistoneHmecH3k27acStdRawDataRep2	2	0	61
-2490	23	534	11	wgEncodeBroadHistoneHmecH3k27me3StdRawDataRep2	2	0	61
-2491	23	479	12	wgEncodeBroadHistoneHmecH3k36me3StdRawDataRep2	2	0	61
-2492	23	500	6	wgEncodeBroadHistoneHmecH3k4me1StdRawDataRep1	1	0	61
-2493	23	841	5	wgEncodeBroadHistoneHmecH3k4me2StdRawDataRep2	2	0	61
-2494	23	993	4	wgEncodeBroadHistoneHmecH3k4me3StdRawDataRep2	2	0	61
-2495	22	137	178981	wgEncodeBroadHistoneHsmmControlStdRawDataRep1	1	1	61
-2496	22	1002	9	wgEncodeBroadHistoneHsmmCtcfStdRawDataRep1	1	0	61
-2497	22	844	178405	wgEncodeBroadHistoneHsmmH3k27acStdRawDataRep1	1	0	61
-2498	22	378	11	wgEncodeBroadHistoneHsmmH3k27me3StdRawDataRep1	1	0	61
-2499	22	999	12	wgEncodeBroadHistoneHsmmH3k36me3StdRawDataRep1	1	0	61
-2500	22	1045	6	wgEncodeBroadHistoneHsmmH3k4me1StdRawDataRep1	1	0	61
-2501	22	44	5	wgEncodeBroadHistoneHsmmH3k4me2StdRawDataRep1	1	0	61
-2502	22	553	4	wgEncodeBroadHistoneHsmmH3k4me3StdRawDataRep1	1	0	61
-2503	22	87	1	wgEncodeBroadHistoneHsmmH3k9acStdRawDataRep1	1	0	61
-2504	22	464	34	wgEncodeBroadHistoneHsmmH4k20me1StdRawDataRep1	1	0	61
-2505	14	346	11	wgEncodeBroadHistoneK562H3k27me3StdRawDataRep2	2	0	61
-2506	14	169	4	wgEncodeBroadHistoneK562H3k4me3StdRawDataRep1	1	0	61
-2507	14	359	1	wgEncodeBroadHistoneK562H3k9acStdRawDataRep2	2	0	61
-2508	78	17	178981	wgEncodeBroadHistoneNhlfControlStdRawDataRep2	2	1	61
-2509	78	747	9	wgEncodeBroadHistoneNhlfCtcfStdRawDataRep1	1	0	61
-2510	78	1017	178405	wgEncodeBroadHistoneNhlfH3k27acStdRawDataRep1	1	0	61
-2511	78	717	11	wgEncodeBroadHistoneNhlfH3k27me3StdRawDataRep2	2	0	61
-2512	78	205	12	wgEncodeBroadHistoneNhlfH3k36me3StdRawDataRep1	1	0	61
-2513	78	290	6	wgEncodeBroadHistoneNhlfH3k4me1StdRawDataRep1	1	0	61
-2514	78	563	4	wgEncodeBroadHistoneNhlfH3k4me3StdRawDataRep1	1	0	61
-2515	78	6	1	wgEncodeBroadHistoneNhlfH3k9acStdRawDataRep2	2	0	61
-2516	78	567	34	wgEncodeBroadHistoneNhlfH4k20me1StdRawDataRep1	1	0	61
-2524	18	611	8	wgEncodeOpenChromDnaseH1hescRawDataRep1	1	0	62
-2526	1	45	8	wgEncodeOpenChromDnaseHelas3RawDataRep1	1	0	62
-2527	7	351	8	wgEncodeOpenChromDnaseHepg2RawDataRep1	1	0	62
-2528	16	262	8	wgEncodeOpenChromDnaseHuvecRawDataRep1	1	0	62
-2529	14	219	8	wgEncodeOpenChromDnaseK562RawDataRep1	1	0	62
-2533	17	965	8	wgEncodeOpenChromDnaseNhekRawDataRep1	1	0	62
-2541	18	611	8	wgEncodeOpenChromDnaseH1hescRawDataRep2	2	0	62
-2543	1	45	8	wgEncodeOpenChromDnaseHelas3RawDataRep2	2	0	62
-2544	7	351	8	wgEncodeOpenChromDnaseHepg2RawDataRep2	2	0	62
-2545	16	262	8	wgEncodeOpenChromDnaseHuvecRawDataRep2	2	0	62
-2546	14	219	8	wgEncodeOpenChromDnaseK562RawDataRep2	2	0	62
-2550	17	965	8	wgEncodeOpenChromDnaseNhekRawDataRep2	2	0	62
-2552	1	45	8	wgEncodeOpenChromDnaseHelas3RawDataRep3	3	0	62
-2553	7	351	8	wgEncodeOpenChromDnaseHepg2RawDataRep3	3	0	62
-2554	15	379	178911	wgEncodeHaibTfbsGm12878BatfRawDataRep1	1	0	61
-2555	15	580	178912	wgEncodeHaibTfbsGm12878Bcl11aRawDataRep1	1	0	61
-2557	15	632	178944	wgEncodeHaibTfbsGm12878Irf4sc6059RawDataRep1	1	0	61
-2558	15	789	178954	wgEncodeHaibTfbsGm12878P300RawDataRep1	1	0	61
-2559	15	435	178969	wgEncodeHaibTfbsGm12878Pu1Pcr1xRawDataRep1	1	0	61
-2560	15	530	178976	wgEncodeHaibTfbsGm12878Tcf12Pcr1xRawDataRep1	1	0	61
-2561	15	1003	178984	wgEncodeHaibTfbsGm12878Zbtb33RawDataRep1	1	0	61
-2569	18	80	178900	wgEncodeHaibTfbsH1hescNrsfV0416102RawDataRep1	1	0	61
-2571	18	524	36	wgEncodeHaibTfbsH1hescPol2V0416102RawDataRep1	1	0	61
-2572	18	295	178974	wgEncodeHaibTfbsH1hescTaf1V0416102RawDataRep1	1	0	61
-2573	7	12	178930	wgEncodeHaibTfbsHepg2Fosl2V0416101RawDataRep1	1	0	61
-2575	7	609	178962	wgEncodeHaibTfbsHepg2RxraPcr1xRawDataRep1	1	0	61
-2576	14	1014	178939	wgEncodeHaibTfbsK562Hey1RawDataRep1	1	0	61
-2578	15	379	178911	wgEncodeHaibTfbsGm12878BatfRawDataRep2	2	0	61
-2579	15	580	178912	wgEncodeHaibTfbsGm12878Bcl11aRawDataRep2	2	0	61
-2581	15	632	178944	wgEncodeHaibTfbsGm12878Irf4sc6059RawDataRep2	2	0	61
-2582	15	789	178954	wgEncodeHaibTfbsGm12878P300RawDataRep2	2	0	61
-2583	15	435	178969	wgEncodeHaibTfbsGm12878Sp1Pcr1xRawDataRep2	2	0	61
-2584	15	530	178976	wgEncodeHaibTfbsGm12878Tcf12Pcr1xRawDataRep2	2	0	61
-2585	15	1003	178984	wgEncodeHaibTfbsGm12878Zbtb33RawDataRep2	2	0	61
-2594	18	80	178900	wgEncodeHaibTfbsH1hescNrsfV0416102RawDataRep2	2	0	61
-2596	18	524	36	wgEncodeHaibTfbsH1hescPol2V0416102RawDataRep2	2	0	61
-2597	18	295	178974	wgEncodeHaibTfbsH1hescTaf1V0416102RawDataRep2	2	0	61
-2598	7	12	178930	wgEncodeHaibTfbsHepg2Fosl2V0416101RawDataRep2	2	0	61
-2600	7	609	178962	wgEncodeHaibTfbsHepg2RxraPcr1xRawDataRep2	2	0	61
-2601	14	1014	178939	wgEncodeHaibTfbsK562Hey1RawDataRep2	2	0	61
-2617	2	546	11	wgEncodeUwHistoneGm06990H3k27me3StdRawDataRep1	1	0	61
-2618	2	720	12	wgEncodeUwHistoneGm06990H3k36me3StdRawDataRep1	1	0	61
-2627	15	352	9	wgEncodeUwTfbsGm12878CtcfStdRawDataRep1	1	0	61
-2628	15	41	11	wgEncodeUwHistoneGm12878H3k27me3StdRawDataRep1	1	0	61
-2629	15	750	12	wgEncodeUwHistoneGm12878H3k36me3StdRawDataRep1	1	0	61
-2630	15	531	4	wgEncodeUwHistoneGm12878H3k4me3StdRawDataRep1	1	0	61
-2632	1	1043	9	wgEncodeUwTfbsHelas3CtcfStdRawDataRep1	1	0	61
-2633	1	495	11	wgEncodeUwHistoneHelas3H3k27me3StdRawDataRep1	1	0	61
-2634	1	925	12	wgEncodeUwHistoneHelas3H3k36me3StdRawDataRep1	1	0	61
-2635	1	808	4	wgEncodeUwHistoneHelas3H3k4me3StdRawDataRep1	1	0	61
-2636	7	310	9	wgEncodeUwTfbsHepg2CtcfStdRawDataRep1	1	0	61
-2637	7	890	11	wgEncodeUwHistoneHepg2H3k27me3StdRawDataRep1	1	0	61
-2638	7	419	4	wgEncodeUwHistoneHepg2H3k4me3StdRawDataRep1	1	0	61
-2641	23	319	9	wgEncodeUwTfbsHmecCtcfStdRawDataRep1	1	0	61
-2642	23	665	11	wgEncodeUwHistoneHmecH3k27me3StdRawDataRep1	1	0	61
-2647	16	414	9	wgEncodeUwTfbsHuvecCtcfStdRawDataRep1	1	0	61
-2648	16	801	11	wgEncodeUwHistoneHuvecH3k27me3StdRawDataRep1	1	0	61
-2649	16	1055	12	wgEncodeUwHistoneHuvecH3k36me3StdRawDataRep1	1	0	61
-2650	16	363	4	wgEncodeUwHistoneHuvecH3k4me3StdRawDataRep1	1	0	61
-2651	14	1009	9	wgEncodeUwTfbsK562CtcfStdRawDataRep1	1	0	61
-2652	14	49	11	wgEncodeUwHistoneK562H3k27me3StdRawDataRep1	1	0	61
-2653	14	165	12	wgEncodeUwHistoneK562H3k36me3StdRawDataRep1	1	0	61
-2654	14	471	4	wgEncodeUwHistoneK562H3k4me3StdRawDataRep1	1	0	61
-2655	17	669	9	wgEncodeUwTfbsNhekCtcfStdRawDataRep1	1	0	61
-2656	17	523	11	wgEncodeUwHistoneNhekH3k27me3StdRawDataRep1	1	0	61
-2657	17	943	12	wgEncodeUwHistoneNhekH3k36me3StdRawDataRep1	1	0	61
-2658	17	730	4	wgEncodeUwHistoneNhekH3k4me3StdRawDataRep1	1	0	61
-2676	2	546	11	wgEncodeUwHistoneGm06990H3k27me3StdRawDataRep2	2	0	61
-2677	2	720	12	wgEncodeUwHistoneGm06990H3k36me3StdRawDataRep2	2	0	61
-2685	15	352	9	wgEncodeUwTfbsGm12878CtcfStdRawDataRep2	2	0	61
-2686	15	41	11	wgEncodeUwHistoneGm12878H3k27me3StdRawDataRep2	2	0	61
-2687	15	750	12	wgEncodeUwHistoneGm12878H3k36me3StdRawDataRep2	2	0	61
-2688	15	531	4	wgEncodeUwHistoneGm12878H3k4me3StdRawDataRep2	2	0	61
-2690	1	1043	9	wgEncodeUwTfbsHelas3CtcfStdRawDataRep2	2	0	61
-2691	1	495	11	wgEncodeUwHistoneHelas3H3k27me3StdRawDataRep2	2	0	61
-2692	1	925	12	wgEncodeUwHistoneHelas3H3k36me3StdRawDataRep2	2	0	61
-2693	1	808	4	wgEncodeUwHistoneHelas3H3k4me3StdRawDataRep2	2	0	61
-2694	7	310	9	wgEncodeUwTfbsHepg2CtcfStdRawDataRep2	2	0	61
-2695	7	890	11	wgEncodeUwHistoneHepg2H3k27me3StdRawDataRep2	2	0	61
-2696	7	419	4	wgEncodeUwHistoneHepg2H3k4me3StdRawDataRep2	2	0	61
-2702	16	414	9	wgEncodeUwTfbsHuvecCtcfStdRawDataRep2	2	0	61
-2703	16	801	11	wgEncodeUwHistoneHuvecH3k27me3StdRawDataRep2	2	0	61
-2704	16	1055	12	wgEncodeUwHistoneHuvecH3k36me3StdRawDataRep2	2	0	61
-2705	16	363	4	wgEncodeUwHistoneHuvecH3k4me3StdRawDataRep2	2	0	61
-2706	14	1009	9	wgEncodeUwTfbsK562CtcfStdRawDataRep2	2	0	61
-2707	14	49	11	wgEncodeUwHistoneK562H3k27me3StdRawDataRep2	2	0	61
-2708	14	165	12	wgEncodeUwHistoneK562H3k36me3StdRawDataRep2	2	0	61
-2709	17	669	9	wgEncodeUwTfbsNhekCtcfStdRawDataRep2	2	0	61
-2710	17	523	11	wgEncodeUwHistoneNhekH3k27me3StdRawDataRep2	2	0	61
-2711	17	943	12	wgEncodeUwHistoneNhekH3k36me3StdRawDataRep2	2	0	61
-2712	17	730	4	wgEncodeUwHistoneNhekH3k4me3StdRawDataRep2	2	0	61
-2731	15	502	8	wgEncodeUwDnaseGm12878RawDataRep1	1	0	62
-2732	18	902	8	wgEncodeUwDnaseH1hescRawDataRep1	1	0	62
-2738	1	21	8	wgEncodeUwDnaseHelas3RawDataRep1	1	0	62
-2739	7	508	8	wgEncodeUwDnaseHepg2RawDataRep1	1	0	62
-2746	14	171	8	wgEncodeUwDnaseK562RawDataRep1	1	0	62
-2750	78	734	8	wgEncodeUwDnaseNhlfRawDataRep1	1	0	62
-2765	15	502	8	wgEncodeUwDnaseGm12878RawDataRep2	2	0	62
-2771	1	21	8	wgEncodeUwDnaseHelas3RawDataRep2	2	0	62
-2772	7	508	8	wgEncodeUwDnaseHepg2RawDataRep2	2	0	62
-2779	14	171	8	wgEncodeUwDnaseK562RawDataRep2	2	0	62
-2783	78	734	8	wgEncodeUwDnaseNhlfRawDataRep2	2	0	62
-2788	15	864	178981	wgEncodeSydhTfbsGm12878InputRawData	1	1	61
-2791	1	938	178981	wgEncodeSydhTfbsHelas3InputRawData	1	1	61
-2793	20	1062	178981	wgEncodeSydhTfbsK562InputRawData	1	1	61
-2799	15	1066	178981	wgEncodeSydhTfbsGm12878InputTnfaIggrabRawDataRep1	1	1	61
-2800	15	951	178893	wgEncodeSydhTfbsGm12878JundRawDataRep1	1	0	61
-2801	15	1066	178981	wgEncodeSydhTfbsGm12878IggmusRawDataRep1	1	1	61
-2802	15	1067	36	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep1	1	0	61
-2803	15	616	178902	wgEncodeSydhTfbsGm12878Pol3RawDataRep1	1	0	61
-2804	15	1068	178960	wgEncodeSydhTfbsGm12878Rad21IggrabRawDataRep1	1	0	61
-2805	15	1069	178979	wgEncodeSydhTfbsGm12878Tr4RawDataRep1	1	0	61
-2806	15	1070	178983	wgEncodeSydhTfbsGm12878Yy1RawDataRep1	1	0	61
-2843	1	1098	178906	wgEncodeSydhTfbsHelas3Ap2alphaRawDataRep1	1	0	61
-2844	1	1099	178907	wgEncodeSydhTfbsHelas3Ap2gammaRawDataRep1	1	0	61
-2845	1	1100	178909	wgEncodeSydhTfbsHelas3Baf155IggmusRawDataRep1	1	0	61
-2846	1	1101	178910	wgEncodeSydhTfbsHelas3Baf170IggmusRawDataRep1	1	0	61
-2850	1	360	178918	wgEncodeSydhTfbsHelas3Brg1IggmusRawDataRep1	1	0	61
-2851	1	980	178891	wgEncodeSydhTfbsHelas3CfosRawDataRep1	1	0	61
-2852	1	1105	178892	wgEncodeSydhTfbsHelas3CjunRabiggRawDataRep1	1	0	61
-2853	1	279	178898	wgEncodeSydhTfbsHelas3CmycRawDataRep1	1	0	61
-2854	1	1106	178921	wgEncodeSydhTfbsHelas3E2f1RawDataRep1	1	0	61
-2855	1	1107	178923	wgEncodeSydhTfbsHelas3E2f4RawDataRep1	1	0	61
-2856	1	1108	178924	wgEncodeSydhTfbsHelas3E2f6RawDataRep1	1	0	61
-2857	1	1109	178943	wgEncodeSydhTfbsHelas3Ini1IggmusRawDataRep1	1	0	61
-2858	1	1110	178893	wgEncodeSydhTfbsHelas3JundRabiggRawDataRep1	1	0	61
-2859	1	938	178981	wgEncodeSydhTfbsHelas3LargefragmentRawDataRep1	1	1	61
-2860	1	858	178894	wgEncodeSydhTfbsHelas3MaxRawDataRep1	1	0	61
-2861	1	938	178981	wgEncodeSydhTfbsHelas3MnaseRawDataRep1	1	1	61
-2862	1	938	178981	wgEncodeSydhTfbsHelas3MouseiggRawDataRep1	1	1	61
-2863	1	938	178981	wgEncodeSydhTfbsHelas3NakeddnaRawDataRep1	1	1	61
-2864	1	1111	178952	wgEncodeSydhTfbsHelas3Nrf1IggmusRawDataRep1	1	0	61
-2865	1	397	36	wgEncodeSydhTfbsHelas3Pol2RawDataRep1	1	0	61
-2866	1	1112	178981	wgEncodeSydhTfbsHelas3RabiggRawDataRep1	1	1	61
-2869	1	1115	178979	wgEncodeSydhTfbsHelas3Tr4RawDataRep1	1	0	61
-2875	16	1117	178892	wgEncodeSydhTfbsHuvecCjunRawDataRep1	1	0	61
-2877	16	1118	178894	wgEncodeSydhTfbsHuvecMaxRawDataRep1	1	0	61
-2878	16	1119	36	wgEncodeSydhTfbsHuvecPol2RawDataRep1	1	0	61
-2883	14	1124	178918	wgEncodeSydhTfbsK562Brg1IggmusRawDataRep1	1	0	61
-2884	14	582	178891	wgEncodeSydhTfbsK562CfosRawDataRep1	1	0	61
-2885	14	602	178892	wgEncodeSydhTfbsK562CjunRawDataRep1	1	0	61
-2886	14	284	178898	wgEncodeSydhTfbsK562CmycRawDataRep1	1	0	61
-2887	14	1125	178943	wgEncodeSydhTfbsK562Ini1IggmusRawDataRep1	1	0	61
-2888	14	694	178981	wgEncodeSydhTfbsK562InputV2RawDataRep1	1	1	61
-2889	14	461	178894	wgEncodeSydhTfbsK562MaxRawDataRep1	1	0	61
-2890	14	1126	178981	wgEncodeSydhTfbsK562IggmusRawDataRep1	1	1	61
-2892	14	63	178895	wgEncodeSydhTfbsK562Nfe2RawDataRep1	1	0	61
-2893	14	937	36	wgEncodeSydhTfbsK562Pol2RawDataRep1	1	0	61
-2894	14	1128	36	wgEncodeSydhTfbsK562Pol2IggmusRawDataRep1	1	0	61
-2895	14	1129	178902	wgEncodeSydhTfbsK562Pol3RawDataRep1	1	0	61
-2896	14	570	178960	wgEncodeSydhTfbsK562Rad21RawDataRep1	1	0	61
-2899	14	828	178982	wgEncodeSydhTfbsK562Xrcc4RawDataRep1	1	0	61
-2900	20	1132	178923	wgEncodeSydhTfbsK562E2f4RawDataRep1	1	0	61
-2901	20	1133	178924	wgEncodeSydhTfbsK562E2f6RawDataRep1	1	0	61
-2902	20	1134	178896	wgEncodeSydhTfbsK562Gata1RawDataRep1	1	0	61
-2903	20	1135	178932	wgEncodeSydhTfbsK562Gata2RawDataRep1	1	0	61
-2904	20	1136	178963	wgEncodeSydhTfbsK562Setdb1RawDataRep1	1	0	61
-2905	20	1137	178979	wgEncodeSydhTfbsK562Tr4RawDataRep1	1	0	61
-2906	20	1138	178983	wgEncodeSydhTfbsK562Yy1RawDataRep1	1	0	61
-2907	20	1139	178897	wgEncodeSydhTfbsK562Znf263RawDataRep1	1	0	61
-2908	20	1140	178986	wgEncodeSydhTfbsK562Znf274RawDataRep1	1	0	61
-2918	15	1066	178981	wgEncodeSydhTfbsGm12878InputTnfaIggrabRawDataRep2	2	1	61
-2919	15	951	178893	wgEncodeSydhTfbsGm12878JundRawDataRep2	2	0	61
-2920	15	1066	178981	wgEncodeSydhTfbsGm12878IggmusRawDataRep2	2	1	61
-2921	15	1067	36	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep2	2	0	61
-2922	15	616	178902	wgEncodeSydhTfbsGm12878Pol3RawDataRep2	2	0	61
-2923	15	1068	178960	wgEncodeSydhTfbsGm12878Rad21IggrabRawDataRep2	2	0	61
-2924	15	1069	178979	wgEncodeSydhTfbsGm12878Tr4RawDataRep2	2	0	61
-2925	15	1070	178983	wgEncodeSydhTfbsGm12878Yy1RawDataRep2	2	0	61
-2961	1	1098	178906	wgEncodeSydhTfbsHelas3Ap2alphaRawDataRep2	2	0	61
-2962	1	1099	178907	wgEncodeSydhTfbsHelas3Ap2gammaRawDataRep2	2	0	61
-2963	1	1100	178909	wgEncodeSydhTfbsHelas3Baf155IggmusRawDataRep2	2	0	61
-2964	1	1101	178910	wgEncodeSydhTfbsHelas3Baf170IggmusRawDataRep2	2	0	61
-2968	1	360	178918	wgEncodeSydhTfbsHelas3Brg1IggmusRawDataRep2	2	0	61
-2969	1	980	178891	wgEncodeSydhTfbsHelas3CfosRawDataRep2	2	0	61
-2970	1	1105	178892	wgEncodeSydhTfbsHelas3CjunRabiggRawDataRep2	2	0	61
-2971	1	279	178898	wgEncodeSydhTfbsHelas3CmycRawDataRep2	2	0	61
-2972	1	1106	178921	wgEncodeSydhTfbsHelas3E2f1RawDataRep2	2	0	61
-2973	1	1107	178923	wgEncodeSydhTfbsHelas3E2f4RawDataRep2	2	0	61
-2974	1	1108	178924	wgEncodeSydhTfbsHelas3E2f6RawDataRep2	2	0	61
-2975	1	1109	178943	wgEncodeSydhTfbsHelas3Ini1IggmusRawDataRep2	2	0	61
-2976	1	1110	178893	wgEncodeSydhTfbsHelas3JundRabiggRawDataRep2	2	0	61
-2977	1	938	178981	wgEncodeSydhTfbsHelas3LargefragmentRawDataRep2	2	1	61
-2978	1	858	178894	wgEncodeSydhTfbsHelas3MaxRawDataRep2	2	0	61
-2979	1	938	178981	wgEncodeSydhTfbsHelas3MnaseRawDataRep2	2	1	61
-2980	1	938	178981	wgEncodeSydhTfbsHelas3MouseiggRawDataRep2	2	1	61
-2981	1	938	178981	wgEncodeSydhTfbsHelas3NakeddnaRawDataRep2	2	1	61
-2982	1	1111	178952	wgEncodeSydhTfbsHelas3Nrf1IggmusRawDataRep2	2	0	61
-2983	1	397	36	wgEncodeSydhTfbsHelas3Pol2RawDataRep2	2	0	61
-2986	1	1115	178979	wgEncodeSydhTfbsHelas3Tr4RawDataRep2	2	0	61
-2992	16	1117	178892	wgEncodeSydhTfbsHuvecCjunRawDataRep2	2	0	61
-2994	16	1118	178894	wgEncodeSydhTfbsHuvecMaxRawDataRep2	2	0	61
-2995	16	1119	36	wgEncodeSydhTfbsHuvecPol2RawDataRep2	2	0	61
-3000	14	1124	178918	wgEncodeSydhTfbsK562Brg1IggmusRawDataRep2	2	0	61
-3001	14	582	178891	wgEncodeSydhTfbsK562CfosRawDataRep2	2	0	61
-3002	14	602	178892	wgEncodeSydhTfbsK562CjunRawDataRep2	2	0	61
-3003	14	284	178898	wgEncodeSydhTfbsK562CmycRawDataRep2	2	0	61
-3004	14	1125	178943	wgEncodeSydhTfbsK562Ini1IggmusRawDataRep2	2	0	61
-3005	14	694	178981	wgEncodeSydhTfbsK562InputV2RawDataRep2	2	1	61
-3006	14	461	178894	wgEncodeSydhTfbsK562MaxRawDataRep2	2	0	61
-3007	14	1126	178981	wgEncodeSydhTfbsK562IggmusRawDataRep2	2	1	61
-3009	14	63	178895	wgEncodeSydhTfbsK562Nfe2RawDataRep2	2	0	61
-3010	14	937	36	wgEncodeSydhTfbsK562Pol2RawDataRep2	2	0	61
-3011	14	1128	36	wgEncodeSydhTfbsK562Pol2IggmusRawDataRep2	2	0	61
-3012	14	1129	178902	wgEncodeSydhTfbsK562Pol3RawDataRep2	2	0	61
-3013	14	570	178960	wgEncodeSydhTfbsK562Rad21RawDataRep2	2	0	61
-3016	14	828	178982	wgEncodeSydhTfbsK562Xrcc4RawDataRep2	2	0	61
-3017	20	1132	178923	wgEncodeSydhTfbsK562E2f4RawDataRep2	2	0	61
-3018	20	1133	178924	wgEncodeSydhTfbsK562E2f6RawDataRep2	2	0	61
-3019	20	1134	178896	wgEncodeSydhTfbsK562Gata1RawDataRep2	2	0	61
-3020	20	1135	178932	wgEncodeSydhTfbsK562Gata2RawDataRep2	2	0	61
-3021	20	1136	178963	wgEncodeSydhTfbsK562Setdb1RawDataRep2	2	0	61
-3022	20	1137	178979	wgEncodeSydhTfbsK562Tr4RawDataRep2	2	0	61
-3023	20	1138	178983	wgEncodeSydhTfbsK562Yy1RawDataRep2	2	0	61
-3024	20	1139	178897	wgEncodeSydhTfbsK562Znf263RawDataRep2	2	0	61
-3025	20	1140	178986	wgEncodeSydhTfbsK562Znf274RawDataRep2	2	0	61
-3032	15	1067	36	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep3	3	0	61
-3051	1	1100	178909	wgEncodeSydhTfbsHelas3Baf155IggmusRawDataRep3	3	0	61
-3052	1	1101	178910	wgEncodeSydhTfbsHelas3Baf170IggmusRawDataRep3	3	0	61
-3053	1	360	178918	wgEncodeSydhTfbsHelas3Brg1IggmusRawDataRep3	3	0	61
-3054	1	1109	178943	wgEncodeSydhTfbsHelas3Ini1IggmusRawDataRep3	3	0	61
-3055	1	938	178981	wgEncodeSydhTfbsHelas3NakeddnaRawDataRep3	3	1	61
-3056	1	397	36	wgEncodeSydhTfbsHelas3Pol2RawDataRep3	3	0	61
-3061	16	1119	36	wgEncodeSydhTfbsHuvecPol2RawDataRep3	3	0	61
-3065	14	582	178891	wgEncodeSydhTfbsK562CfosRawDataRep3	3	0	61
-3069	15	1067	36	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep4	4	0	61
-3078	15	1067	36	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep5	5	0	61
-3082	15	1067	36	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep6	6	0	61
-3084	15	1067	36	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep7	7	0	61
-3085	240	1145	6	wgEncodeBroadHistoneDnd41H3k04me1RawDataRep1	1	0	61
-3086	240	1145	6	wgEncodeBroadHistoneDnd41H3k04me1RawDataRep2	2	0	61
-3087	240	1146	5	wgEncodeBroadHistoneDnd41H3k04me2RawDataRep1	1	0	61
-3088	240	1146	5	wgEncodeBroadHistoneDnd41H3k04me2RawDataRep2	2	0	61
-3089	240	1147	4	wgEncodeBroadHistoneDnd41H3k04me3RawDataRep1	1	0	61
-3090	240	1147	4	wgEncodeBroadHistoneDnd41H3k04me3RawDataRep2	2	0	61
-3091	240	1148	1	wgEncodeBroadHistoneDnd41H3k09acRawDataRep1	1	0	61
-3092	240	1148	1	wgEncodeBroadHistoneDnd41H3k09acRawDataRep2	2	0	61
-3093	240	1149	178405	wgEncodeBroadHistoneDnd41H3k27acRawDataRep1	1	0	61
-3094	240	1149	178405	wgEncodeBroadHistoneDnd41H3k27acRawDataRep2	2	0	61
-3095	240	1150	11	wgEncodeBroadHistoneDnd41H3k27me3RawDataRep1	1	0	61
-3096	240	1150	11	wgEncodeBroadHistoneDnd41H3k27me3RawDataRep2	2	0	61
-3097	240	1151	12	wgEncodeBroadHistoneDnd41H3k36me3RawDataRep1	1	0	61
-3098	240	1151	12	wgEncodeBroadHistoneDnd41H3k36me3RawDataRep2	2	0	61
-3099	240	1152	34	wgEncodeBroadHistoneDnd41H4k20me1RawDataRep1	1	0	61
-3100	240	1152	34	wgEncodeBroadHistoneDnd41H4k20me1RawDataRep2	2	0	61
-3101	103	1153	6	wgEncodeBroadHistoneMonocd14ro1746H3k04me1RawDataRep1	1	0	61
-3102	103	1153	6	wgEncodeBroadHistoneMonocd14ro1746H3k04me1RawDataRep2	2	0	61
-3103	103	1154	5	wgEncodeBroadHistoneMonocd14ro1746H3k04me2RawDataRep1	1	0	61
-3104	103	1154	5	wgEncodeBroadHistoneMonocd14ro1746H3k04me2RawDataRep2	2	0	61
-3105	103	1155	4	wgEncodeBroadHistoneMonocd14ro1746H3k04me3RawDataRep1	1	0	61
-3106	103	1155	4	wgEncodeBroadHistoneMonocd14ro1746H3k04me3RawDataRep2	2	0	61
-3107	103	1156	1	wgEncodeBroadHistoneMonocd14ro1746H3k09acRawDataRep1	1	0	61
-3108	103	1156	1	wgEncodeBroadHistoneMonocd14ro1746H3k09acRawDataRep2	2	0	61
-3109	103	1157	178405	wgEncodeBroadHistoneMonocd14ro1746H3k27acRawDataRep1	1	0	61
-3110	103	1157	178405	wgEncodeBroadHistoneMonocd14ro1746H3k27acRawDataRep2	2	0	61
-3111	103	1158	11	wgEncodeBroadHistoneMonocd14ro1746H3k27me3RawDataRep1	1	0	61
-3112	103	1158	11	wgEncodeBroadHistoneMonocd14ro1746H3k27me3RawDataRep2	2	0	61
-3113	103	1159	12	wgEncodeBroadHistoneMonocd14ro1746H3k36me3RawDataRep1	1	0	61
-3114	103	1159	12	wgEncodeBroadHistoneMonocd14ro1746H3k36me3RawDataRep2	2	0	61
-3115	103	1160	34	wgEncodeBroadHistoneMonocd14ro1746H4k20me1RawDataRep1	1	0	61
-3116	103	1160	34	wgEncodeBroadHistoneMonocd14ro1746H4k20me1RawDataRep2	2	0	61
-3117	103	1161	4	wgEncodeUwHistoneMonocd14ro1746H3k04me3StdRawDataRep1	1	0	61
-3118	103	1162	11	wgEncodeUwHistoneMonocd14ro1746H3k27me3StdRawDataRep1	1	0	61
-3119	24	1163	6	wgEncodeBroadHistoneA549H3k04me1Etoh02RawDataRep1	1	0	61
-3120	24	1163	6	wgEncodeBroadHistoneA549H3k04me1Etoh02RawDataRep2	2	0	61
-3121	24	1164	5	wgEncodeBroadHistoneA549H3k04me2Etoh02RawDataRep1	1	0	61
-3122	24	1164	5	wgEncodeBroadHistoneA549H3k04me2Etoh02RawDataRep2	2	0	61
-3123	24	1165	4	wgEncodeBroadHistoneA549H3k04me3Etoh02RawDataRep1	1	0	61
-3124	24	1165	4	wgEncodeBroadHistoneA549H3k04me3Etoh02RawDataRep2	2	0	61
-3125	24	1166	1	wgEncodeBroadHistoneA549H3k09acEtoh02RawDataRep1	1	0	61
-3126	24	1166	1	wgEncodeBroadHistoneA549H3k09acEtoh02RawDataRep2	2	0	61
-3127	24	1167	178405	wgEncodeBroadHistoneA549H3k27acEtoh02RawDataRep1	1	0	61
-3128	24	1167	178405	wgEncodeBroadHistoneA549H3k27acEtoh02RawDataRep2	2	0	61
-3129	24	1168	11	wgEncodeBroadHistoneA549H3k27me3Etoh02RawDataRep1	1	0	61
-3130	24	1168	11	wgEncodeBroadHistoneA549H3k27me3Etoh02RawDataRep2	2	0	61
-3131	24	1169	12	wgEncodeBroadHistoneA549H3k36me3Etoh02RawDataRep1	1	0	61
-3132	24	1169	12	wgEncodeBroadHistoneA549H3k36me3Etoh02RawDataRep2	2	0	61
-3133	24	1170	34	wgEncodeBroadHistoneA549H4k20me1Etoh02RawDataRep1	1	0	61
-3134	24	1170	34	wgEncodeBroadHistoneA549H4k20me1Etoh02RawDataRep2	2	0	61
-3135	24	1171	9	wgEncodeBroadHistoneA549CtcfEtoh02RawDataRep1	1	0	61
-3136	24	1171	9	wgEncodeBroadHistoneA549CtcfEtoh02RawDataRep2	2	0	61
-3137	1	1173	6	wgEncodeBroadHistoneHelas3H3k04me1StdRawDataRep1	1	0	61
-3138	1	1173	6	wgEncodeBroadHistoneHelas3H3k04me1StdRawDataRep2	2	0	61
-3139	7	1175	6	wgEncodeBroadHistoneHepg2H3k04me1StdRawDataRep1	1	0	61
-3140	7	1175	6	wgEncodeBroadHistoneHepg2H3k04me1StdRawDataRep2	2	0	61
-3141	92	1177	11	wgEncodeBroadHistoneHsmmtH3k27me3RawDataRep1	1	0	61
-3142	92	1177	11	wgEncodeBroadHistoneHsmmtH3k27me3RawDataRep2	2	0	61
-3143	103	1178	9	wgEncodeBroadHistoneMonocd14ro1746CtcfRawDataRep1	1	0	61
-3144	103	1178	9	wgEncodeBroadHistoneMonocd14ro1746CtcfRawDataRep2	2	0	61
-3145	21	1180	5	wgEncodeBroadHistoneNhaH3k04me2RawDataRep1	1	0	61
-3146	21	1180	5	wgEncodeBroadHistoneNhaH3k04me2RawDataRep2	2	0	61
-3147	21	1181	1	wgEncodeBroadHistoneNhaH3k09acRawDataRep1	1	0	61
-3148	21	1181	1	wgEncodeBroadHistoneNhaH3k09acRawDataRep2	2	0	61
-3149	21	1182	34	wgEncodeBroadHistoneNhaH4k20me1RawDataRep1	1	0	61
-3150	21	1182	34	wgEncodeBroadHistoneNhaH4k20me1RawDataRep2	2	0	61
-3151	102	1184	6	wgEncodeBroadHistoneNhdfadH3k04me1RawDataRep1	1	0	61
-3152	102	1184	6	wgEncodeBroadHistoneNhdfadH3k04me1RawDataRep2	2	0	61
-3153	102	1185	34	wgEncodeBroadHistoneNhdfadH4k20me1RawDataRep1	1	0	61
-3154	102	1185	34	wgEncodeBroadHistoneNhdfadH4k20me1RawDataRep2	2	0	61
-3155	102	1185	34	wgEncodeBroadHistoneNhdfadH4k20me1RawDataRep3	3	0	61
-3156	93	1186	4	wgEncodeBroadHistoneOsteoH3k04me3RawDataRep1	1	0	61
-3157	93	1186	4	wgEncodeBroadHistoneOsteoH3k04me3RawDataRep2	2	0	61
-3158	93	1186	4	wgEncodeBroadHistoneOsteoH3k04me3RawDataRep3	3	0	61
-3159	93	1187	11	wgEncodeBroadHistoneOsteoH3k27me3RawDataRep1	1	0	61
-3160	93	1187	11	wgEncodeBroadHistoneOsteoH3k27me3RawDataRep2	2	0	61
-3161	93	1188	34	wgEncodeBroadHistoneOsteoH4k20me1RawDataRep1	1	0	61
-3162	93	1188	34	wgEncodeBroadHistoneOsteoH4k20me1RawDataRep2	2	0	61
-3163	1	541	9	wgEncodeOpenChromChipHelas3CtcfRawDataRep1	1	0	61
-3164	1	541	9	wgEncodeOpenChromChipHelas3CtcfRawDataRep2	2	0	61
-3165	1	85	178981	wgEncodeOpenChromChipHelas3InputRawData	1	1	61
-3166	7	853	9	wgEncodeOpenChromChipHepg2CtcfRawDataRep1	1	0	61
-3167	7	853	9	wgEncodeOpenChromChipHepg2CtcfRawDataRep2	2	0	61
-3168	7	634	178981	wgEncodeOpenChromChipHepg2InputRawData	1	1	61
-3170	1	1196	178981	wgEncodeSydhTfbsHelas3InputUcdRawData	1	1	61
-3171	1	938	178981	wgEncodeSydhTfbsHelas3ifngInputRawData	1	1	61
-3178	5	1201	178981	wgEncodeSydhTfbsImr90InputIggrabRawDataRep1	1	1	61
-3179	2	960	178981	wgEncodeUwHistoneGm06990InputStdRawDataRep1	1	1	61
-3180	1	1051	178981	wgEncodeUwHistoneHelas3InputStdRawDataRep1	1	1	61
-3181	7	70	178981	wgEncodeUwHistoneHepg2InputStdRawDataRep1	1	1	61
-3182	103	1205	178981	wgEncodeUwHistoneMonocd14ro1746InputStdRawDataRep1	1	1	61
-3183	103	1205	178981	wgEncodeUwTfbsMonocd14ro1746InputStdRawDataRep1	1	1	61
-3186	24	1208	178981	wgEncodeUwHistoneA549InputStdRawDataRep1	1	1	61
-3187	24	1208	178981	wgEncodeUwTfbsA549InputStdRawDataRep1	1	1	61
-3188	5	1209	9	wgEncodeSydhTfbsImr90CtcfbIggrabRawDataRep1	1	0	61
-3189	5	1209	9	wgEncodeSydhTfbsImr90CtcfbIggrabRawDataRep2	2	0	61
-3190	240	1210	178981	wgEncodeBroadHistoneDnd41ControlStdRawDataRep1	1	1	61
-3191	240	1210	178981	wgEncodeBroadHistoneDnd41ControlStdRawDataRep2	2	1	61
-3192	103	1211	178981	wgEncodeBroadHistoneMonocd14ro1746ControlRawDataRep1	1	1	61
-3193	103	1211	178981	wgEncodeBroadHistoneMonocd14ro1746ControlRawDataRep2	2	1	61
-3194	16	903	178981	wgEncodeOpenChromChipHuvecInputRawData	1	1	61
-3195	15	1066	178981	wgEncodeSydhTfbsGm12878InputIggrabRawDataRep1	1	1	61
-3197	14	694	178981	wgEncodeSydhTfbsK562Ifna30InputRawData	1	1	61
-3198	14	694	178981	wgEncodeSydhTfbsK562Ifna6hInputRawData	1	1	61
-3199	14	694	178981	wgEncodeSydhTfbsK562Ifng30InputRawData	1	1	61
-3200	14	694	178981	wgEncodeSydhTfbsK562Ifng6hInputRawData	1	1	61
-3201	14	1126	178981	wgEncodeSydhTfbsK562InputIggrabRawData	1	1	61
-3202	15	173	178981	wgEncodeUwHistoneGm12878InputStdRawDataRep1	1	1	61
-3203	23	246	178981	wgEncodeUwHistoneHmecInputStdRawDataRep1	1	1	61
-3204	16	618	178981	wgEncodeUwHistoneHuvecInputStdRawDataRep1	1	1	61
-3205	14	476	178981	wgEncodeUwHistoneK562InputStdRawDataRep1	1	1	61
-3206	17	1029	178981	wgEncodeUwHistoneNhekInputStdRawDataRep1	1	1	61
-3207	78	1214	178981	wgEncodeUwHistoneNhlfInputStdRawDataRep1	1	1	61
-3208	78	1214	178981	wgEncodeUwTfbsNhlfInputStdRawDataRep1	1	1	61
-3211	24	1215	178981	wgEncodeBroadHistoneA549ControlEtoh02RawDataRep1	1	1	61
-3212	24	1215	178981	wgEncodeBroadHistoneA549ControlEtoh02RawDataRep2	2	1	61
-3213	240	1216	9	wgEncodeBroadHistoneDnd41CtcfRawDataRep1	1	0	61
-3214	240	1216	9	wgEncodeBroadHistoneDnd41CtcfRawDataRep2	2	0	61
-3215	92	1000	8	wgEncodeUwDnaseHsmmtRawDataRep2	2	0	62
-3216	103	270	8	wgEncodeUwDnaseMonocd14ro1746RawDataRep2	2	0	62
-3217	15	123	6	wgEncodeBroadHistoneGm12878H3k04me1StdRawDataRep1V2	1	0	61
-3218	15	538	4	wgEncodeBroadHistoneGm12878H3k04me3StdRawDataRep2V2	2	0	61
-3219	25	1217	179076	wgEncodeHaibMethylRrbsAg04449UwstamgrowprotSitesfiltered_10.bb	0	0	65
-3220	26	1218	179076	wgEncodeHaibMethylRrbsAg04450UwstamgrowprotSitesfiltered_10.bb	0	0	65
-3221	27	1219	179076	wgEncodeHaibMethylRrbsAg09309UwstamgrowprotSitesfiltered_10.bb	0	0	65
-3222	28	1220	179076	wgEncodeHaibMethylRrbsAg09319UwstamgrowprotSitesfiltered_10.bb	0	0	65
-3223	29	1221	179076	wgEncodeHaibMethylRrbsAg10803UwstamgrowprotSitesfiltered_10.bb	0	0	65
-3224	32	1222	179076	wgEncodeHaibMethylRrbsCmkUwstamgrowprotSitesfiltered_10.bb	0	0	65
-3225	96	1223	179076	wgEncodeHaibMethylRrbsFibroblOpenchromgrowprotSitesfiltered_10.bb	0	0	65
-3226	15	1224	179076	wgEncodeHaibMethylRrbsGm12878HudsonalphagrowprotSitesfiltered_10.bb	0	0	65
-3227	41	1225	179076	wgEncodeHaibMethylRrbsGm12891HudsonalphagrowprotSitesfiltered_10.bb	0	0	65
-3228	42	1226	179076	wgEncodeHaibMethylRrbsGm12892HudsonalphagrowprotSitesfiltered_10.bb	0	0	65
-3229	51	1227	179076	wgEncodeHaibMethylRrbsGm19239OpenchromgrowprotSitesfiltered_10.bb	0	0	65
-3230	52	1228	179076	wgEncodeHaibMethylRrbsGm19240OpenchromgrowprotSitesfiltered_10.bb	0	0	65
-3231	18	1229	179076	wgEncodeHaibMethylRrbsH1hescHudsonalphagrowprotSitesfiltered_10.bb	0	0	65
-3232	55	1230	179076	wgEncodeHaibMethylRrbsHaeUwstamgrowprotSitesfiltered_10.bb	0	0	65
-3233	56	1231	179076	wgEncodeHaibMethylRrbsHcfUwstamgrowprotSitesfiltered_10.bb	0	0	65
-3234	57	1232	179076	wgEncodeHaibMethylRrbsHcmUwstamgrowprotSitesfiltered_10.bb	0	0	65
-3235	58	1233	179076	wgEncodeHaibMethylRrbsHcpeUwstamgrowprotSitesfiltered_10.bb	0	0	65
-3236	59	1234	179076	wgEncodeHaibMethylRrbsHct116YalegrowprotSitesfiltered_10.bb	0	0	65
-3237	60	1235	179076	wgEncodeHaibMethylRrbsHeeUwstamgrowprotSitesfiltered_10.bb	0	0	65
-3238	62	1236	179076	wgEncodeHaibMethylRrbsHek293UwstamgrowprotSitesfiltered_10.bb	0	0	65
-3239	7	1237	179076	wgEncodeHaibMethylRrbsHepg2HudsonalphagrowprotSitesfiltered_10.bb	0	0	65
-3240	65	1238	179076	wgEncodeHaibMethylRrbsHipeUwstamgrowprotSitesfiltered_10.bb	0	0	65
-3241	23	1239	179076	wgEncodeHaibMethylRrbsHmecUwstamgrowprotSitesfiltered_10.bb	0	0	65
-3242	66	1240	179076	wgEncodeHaibMethylRrbsHnpceUwstamgrowprotSitesfiltered_10.bb	0	0	65
-3243	95	1241	179076	wgEncodeHaibMethylRrbsHpaeUwstamgrowprotSitesfiltered_10.bb	0	0	65
-3244	67	1242	179076	wgEncodeHaibMethylRrbsHrceUwstamgrowprotSitesfiltered_10.bb	0	0	65
-3245	68	1243	179076	wgEncodeHaibMethylRrbsHreUwstamgrowprotSitesfiltered_10.bb	0	0	65
-3246	69	1244	179076	wgEncodeHaibMethylRrbsHrpeUwstamgrowprotSitesfiltered_10.bb	0	0	65
-3247	22	1245	179076	wgEncodeHaibMethylRrbsHsmmSitesfiltered_10.bb	0	0	65
-3248	92	1246	179076	wgEncodeHaibMethylRrbsHsmmtOpenchromgrowprotSitesfiltered_10.bb	0	0	65
-3249	5	1247	179076	wgEncodeHaibMethylRrbsImr90UwstamgrowprotSitesfiltered_10.bb	0	0	65
-3250	70	1248	179076	wgEncodeHaibMethylRrbsJurkatUwstamgrowprotSitesfiltered_10.bb	0	0	65
-3251	14	1249	179076	wgEncodeHaibMethylRrbsK562HudsonalphagrowprotSitesfiltered_10.bb	0	0	65
-3252	72	1250	179076	wgEncodeHaibMethylRrbsMcf7UwstamgrowprotSitesfiltered_10.bb	0	0	65
-3253	74	1251	179076	wgEncodeHaibMethylRrbsMelanoSitesfiltered_10.bb	0	0	65
-3254	75	1252	179076	wgEncodeHaibMethylRrbsNb4UwstamgrowprotSitesfiltered_10.bb	0	0	65
-3255	21	1253	179076	wgEncodeHaibMethylRrbsNhaUwstamgrowprotSitesfiltered_10.bb	0	0	65
-3256	76	1254	179076	wgEncodeHaibMethylRrbsNhbeUwstamgrowprotSitesfiltered_10.bb	0	0	65
-3257	77	1255	179076	wgEncodeHaibMethylRrbsNhdfneoUwstamgrowprotSitesfiltered_10.bb	0	0	65
-3258	79	1256	179076	wgEncodeHaibMethylRrbsNt2d1UwstamgrowprotSitesfiltered_10.bb	0	0	65
-3259	79	1256	179076	wgEncodeHaibMethylRrbsNt2d1YalegrowprotSitesfiltered_10.bb	0	0	65
-3260	93	1257	179076	wgEncodeHaibMethylRrbsOsteoblOpenchromgrowprotSitesfiltered_10.bb	0	0	65
-3261	81	1258	179076	wgEncodeHaibMethylRrbsPanisletsSitesfiltered_10.bb	0	0	65
-3262	83	1259	179076	wgEncodeHaibMethylRrbsSaecUwstamgrowprotSitesfiltered_10.bb	0	0	65
-3263	84	1260	179076	wgEncodeHaibMethylRrbsSkmcUwstamgrowprotSitesfiltered_10.bb	0	0	65
-3264	86	1261	179076	wgEncodeHaibMethylRrbsSknshraUwstamgrowprotSitesfiltered_10.bb	0	0	65
-3265	18	1262	179076	H1ESC_5mC_Lister2009_PMID19829295.bb	0	0	66
-3266	5	1263	179076	IMR90_5mC_Lister2009_PMID19829295.bb	0	0	66
-3267	15	1264	179076	GM12878_5mC_ENCODE_HAIB.bb	0	0	66
+6	14	4	178981	wgEncodeUchicagoTfbsK562InputControlgata2RawDataRep1	1	1	1	61
+7	14	4	178981	wgEncodeUchicagoTfbsK562InputControlnr4a1RawDataRep1	1	1	1	61
+8	14	4	178981	wgEncodeUchicagoTfbsK562InputControlfosRawDataRep1	1	1	1	61
+9	14	4	178981	wgEncodeUchicagoTfbsK562InputControlhdac8RawDataRep1	1	1	1	61
+10	14	4	178981	wgEncodeUchicagoTfbsK562InputControljunbRawDataRep2	1	2	1	61
+11	14	4	178981	wgEncodeUchicagoTfbsK562InputControlgata2RawDataRep2	1	2	1	61
+12	14	4	178981	wgEncodeUchicagoTfbsK562InputControljunbRawDataRep1	1	1	1	61
+13	14	4	178981	wgEncodeUchicagoTfbsK562InputControljundRawDataRep2	1	2	1	61
+14	14	4	178981	wgEncodeUchicagoTfbsK562InputControlnr4a1RawDataRep2	1	2	1	61
+15	14	4	178981	wgEncodeUchicagoTfbsK562InputControlfosRawDataRep2	1	2	1	61
+16	14	4	178981	wgEncodeUchicagoTfbsK562InputControljundRawDataRep1	1	1	1	61
+17	14	4	178981	wgEncodeUchicagoTfbsK562InputControlhdac8RawDataRep2	1	2	1	61
+18	14	4	178981	wgEncodeUchicagoTfbsK562InputControlfosRawDataRep3	1	3	1	61
+19	14	4	178981	wgEncodeUchicagoTfbsK562InputControljundRawDataRep3	1	3	1	61
+32	14	11	178980	wgEncodeHaibTfbsK562Usf1V0416101RawDataRep1	1	1	0	61
+33	14	11	178980	wgEncodeHaibTfbsK562Usf1V0416101RawDataRep2	1	2	0	61
+36	18	13	11	SRR018226	1	1	0	61
+37	18	13	11	SRR018477	1	2	0	61
+40	1	15	11	wgEncodeBroadHistoneHelas3H3k27me3StdRawDataRep1	1	1	0	61
+41	1	15	11	wgEncodeBroadHistoneHelas3H3k27me3StdRawDataRep2	1	2	0	61
+43	78	17	178981	wgEncodeBroadChipSeqRawDataRep1NhlfControl	1	1	1	61
+44	78	17	178981	wgEncodeBroadChipSeqRawDataRep2NhlfControl	1	2	1	61
+47	14	19	179019	wgEncodeHaibTfbsK562Fosl1sc183V0416101RawDataRep2	1	2	0	61
+48	14	19	179019	wgEncodeHaibTfbsK562Fosl1sc183V0416101RawDataRep1	1	1	0	61
+53	18	22	5	SRR067769	1	1	0	61
+54	18	22	5	SRR067948	1	2	0	61
+55	18	22	5	SRR067768	1	3	0	61
+58	18	24	179032	SRR067941	1	1	0	61
+59	18	24	179032	SRR067940	1	2	0	61
+75	18	34	12	SRR029346	1	1	0	61
+76	18	34	12	SRR018454	1	2	0	61
+77	18	34	12	SRR029341	1	3	0	61
+78	18	34	12	SRR067944	1	4	0	61
+79	18	34	12	SRR029340	1	5	0	61
+80	18	34	12	SRR029344	1	6	0	61
+81	18	34	12	SRR029342	1	7	0	61
+86	15	37	36	wgEncodeUtaChIPseqRawDataRep1Gm12878Pol2	1	1	0	61
+87	15	37	36	wgEncodeUtaChIPseqRawDataRep2Gm12878Pol2	1	2	0	61
+90	14	39	179029	wgEncodeUchicagoTfbsK562Ehdac8Controlhdac8RawDataRep2	1	2	0	61
+91	14	39	179029	wgEncodeUchicagoTfbsK562Ehdac8ControlRawDataRep1	1	1	0	61
+98	5	42	178417	SRR037593	1	4	0	61
+99	5	42	178417	SRR037594	1	5	0	61
+100	5	42	178417	SRR037596	1	2	0	61
+101	5	42	178417	SRR037595	1	3	0	61
+109	15	46	9	wgEncodeBroadHistoneGm12878CtcfStdRawDataRep2	1	2	0	61
+110	15	46	9	wgEncodeBroadHistoneGm12878CtcfStdRawDataRep1	1	1	0	61
+124	14	53	178932	wgEncodeHaibTfbsK562Gata2sc267Pcr1xRawDataRep1	1	1	0	61
+125	14	53	178932	wgEncodeHaibTfbsK562Gata2sc267Pcr1xRawDataRep2	1	2	0	61
+126	102	54	12	wgEncodeBroadHistoneNhdfadH3k36me3StdRawDataRep1	1	1	0	61
+127	102	54	12	wgEncodeBroadHistoneNhdfadH3k36me3StdRawDataRep2	1	2	0	61
+142	15	62	178956	wgEncodeHaibTfbsGm12878Pbx3Pcr1xRawDataRep1	1	1	0	61
+143	15	62	178956	wgEncodeHaibTfbsGm12878Pbx3Pcr1xRawDataRep2	1	2	0	61
+146	18	64	178981	wgEncodeHaibTfbsH1hescRxlchV0416102RawDataRep1	1	1	1	61
+147	18	64	178981	wgEncodeHaibTfbsH1hescRxlchPcr1xRawDataRep1	1	1	1	61
+148	22	65	23	wgEncodeBroadHistoneHsmmH2azStdRawDataRep2	1	2	0	61
+149	22	65	23	wgEncodeBroadHistoneHsmmH2azStdRawDataRep1	1	1	0	61
+153	18	68	9	wgEncodeUtaChIPseqRawDataH1hescCtcf	1	1	0	61
+156	7	70	178981	wgEncodeUwTfbsHepg2InputStdRawDataRep1	1	1	1	61
+162	14	73	179013	wgEncodeHaibTfbsK562Bclaf101388Pcr1xRawDataRep2	1	2	0	61
+163	14	73	179013	wgEncodeHaibTfbsK562Bclaf101388Pcr1xRawDataRep1	1	1	0	61
+193	1	85	178981	wgEncodeUtaustinChIPseqRawDataHelas3Input	1	1	1	61
+194	15	86	178980	wgEncodeHaibTfbsGm12878Usf1Pcr2xRawDataRep2	1	2	0	61
+195	15	86	178980	wgEncodeHaibTfbsGm12878Usf1Pcr2xRawDataRep1	1	1	0	61
+198	14	88	179031	wgEncodeUchicagoTfbsK562Enr4a1ControlRawDataRep1	1	1	0	61
+199	14	88	179031	wgEncodeUchicagoTfbsK562Enr4a1Controlnr4a1RawDataRep2	1	2	0	61
+204	14	91	178899	wgEncodeHaibTfbsK562GabpV0416101RawDataRep2	1	2	0	61
+205	14	91	178899	wgEncodeHaibTfbsK562GabpV0416101RawDataRep1	1	1	0	61
+208	1	93	178898	wgEncodeUtaChIPseqRawDataRep1Helas3CmycV2	1	1	0	61
+209	1	93	178898	wgEncodeUtaChIPseqRawDataRep2Helas3CmycV2	1	2	0	61
+218	14	98	178964	wgEncodeHaibTfbsK562Sin3ak20V0416101RawDataRep1	1	1	0	61
+219	14	98	178964	wgEncodeHaibTfbsK562Sin3ak20V0416101RawDataRep2	1	2	0	61
+222	1	100	5	wgEncodeBroadHistoneHelas3H3k4me2StdRawDataRep1	1	1	0	61
+223	1	100	5	wgEncodeBroadHistoneHelas3H3k4me2StdRawDataRep2	1	2	0	61
+238	15	108	179016	wgEncodeHaibTfbsGm12878Mef2aPcr1xRawDataRep1	1	1	0	61
+239	15	108	179016	wgEncodeHaibTfbsGm12878Mef2aPcr1xRawDataRep2	1	2	0	61
+244	14	110	178891	wgEncodeUchicagoTfbsK562EfosControlfosRawDataRep3	1	3	0	61
+245	14	110	178891	wgEncodeUchicagoTfbsK562EfosControlfosRawDataRep2	1	2	0	61
+246	14	110	178891	wgEncodeUchicagoTfbsK562EfosControlRawDataRep1	1	1	0	61
+249	17	113	30	wgEncodeBroadHistoneNhekH3k9me1StdRawDataRep2	1	2	0	61
+250	17	113	30	wgEncodeBroadHistoneNhekH3k9me1StdRawDataRep3	1	3	0	61
+251	17	113	30	wgEncodeBroadHistoneNhekH3k9me1StdRawDataRep1	1	1	0	61
+253	16	115	36	wgEncodeBroadHistoneHuvecPol2bStdRawDataRep2	1	2	0	61
+254	16	115	36	wgEncodeBroadHistoneHuvecPol2bStdRawDataRep3	1	3	0	61
+255	16	115	36	wgEncodeBroadHistoneHuvecPol2bStdRawDataRep1	1	1	0	61
+262	1	118	4	wgEncodeBroadHistoneHelas3H3k4me3StdRawDataRep2	1	2	0	61
+263	1	118	4	wgEncodeBroadHistoneHelas3H3k4me3StdRawDataRep1	1	1	0	61
+269	14	122	178960	wgEncodeHaibTfbsK562Rad21V0416102RawDataRep2	1	2	0	61
+270	14	122	178960	wgEncodeHaibTfbsK562Rad21V0416102RawDataRep1	1	1	0	61
+273	21	124	4	wgEncodeBroadHistoneNhaH3k4me3StdRawDataRep2	1	2	0	61
+274	21	124	4	wgEncodeBroadHistoneNhaH3k4me3StdRawDataRep1	1	1	0	61
+275	14	125	36	wgEncodeHaibTfbsK562Pol2V0416101RawDataRep2	1	2	0	61
+278	14	125	36	wgEncodeHaibTfbsK562Pol2V0416101RawDataRep1	1	1	0	61
+282	23	127	1	wgEncodeBroadHistoneHmecH3k9acStdRawDataRep1	1	1	0	61
+283	23	127	1	wgEncodeBroadHistoneHmecH3k9acStdRawDataRep2	1	2	0	61
+290	18	131	178981	SRR067970	1	1	1	61
+291	18	131	178981	SRR067977	1	1	1	61
+292	18	131	178981	SRR067972	1	1	1	61
+293	18	131	178981	SRR097975	1	1	1	61
+294	18	131	178981	SRR179764	1	1	1	61
+295	18	131	178981	SRR179765	1	1	1	61
+296	18	131	178981	SRR097974	1	1	1	61
+297	18	131	178981	SRR067971	1	1	1	61
+298	18	131	178981	SRR067973	1	1	1	61
+299	18	131	178981	SRR067974	1	1	1	61
+300	18	131	178981	SRR067975	1	1	1	61
+301	18	131	178981	SRR097976	1	1	1	61
+302	18	131	178981	SRR067976	1	1	1	61
+311	22	137	178981	wgEncodeBroadChipSeqRawDataRep1HsmmControl	1	1	1	61
+312	22	137	178981	wgEncodeBroadChipSeqRawDataRep2HsmmControl	1	2	1	61
+313	23	138	34	wgEncodeBroadHistoneHmecH4k20me1StdRawDataRep1	1	1	0	61
+314	23	138	34	wgEncodeBroadHistoneHmecH4k20me1StdRawDataRep2	1	2	0	61
+323	16	143	11	wgEncodeBroadHistoneHuvecH3k27me3StdRawDataRep1	1	1	0	61
+324	16	143	11	wgEncodeBroadHistoneHuvecH3k27me3StdRawDataRep2	1	2	0	61
+329	7	146	178898	wgEncodeUtaChIPseqRawDataRep1Hepg2CmycV2	1	1	0	61
+330	7	146	178898	wgEncodeUtaChIPseqRawDataRep2Hepg2CmycV2	1	2	0	61
+331	7	146	178898	wgEncodeUtaChIPseqRawDataRep3Hepg2CmycV2	1	3	0	61
+332	14	147	36	wgEncodeUtaChIPseqRawDataRep1K562Pol2	1	1	0	61
+333	14	147	36	wgEncodeUtaChIPseqRawDataRep2K562Pol2	1	2	0	61
+336	7	149	178984	wgEncodeHaibTfbsHepg2Zbtb33V0416101RawDataRep1	1	1	0	61
+339	7	149	178984	wgEncodeHaibTfbsHepg2Zbtb33V0416101RawDataRep2	1	2	0	61
+351	92	155	178981	wgEncodeBroadHistoneHsmmtControlStdRawDataRep1	1	1	1	61
+352	92	155	178981	wgEncodeBroadHistoneHsmmtControlStdRawDataRep2	1	2	1	61
+356	15	158	179192	wgEncodeHaibTfbsGm12878Ebfsc137065RawDataRep1	1	1	0	61
+357	15	158	179192	wgEncodeHaibTfbsGm12878Ebfsc137065RawDataRep2	1	2	0	61
+358	92	159	23	wgEncodeBroadHistoneHsmmtH2azStdRawDataRep1	1	1	0	61
+359	92	159	23	wgEncodeBroadHistoneHsmmtH2azStdRawDataRep2	1	2	0	61
+362	18	161	178960	wgEncodeHaibTfbsH1hescRad21V0416102RawDataRep2	1	2	0	61
+363	18	161	178960	wgEncodeHaibTfbsH1hescRad21V0416102RawDataRep1	1	1	0	61
+370	18	166	6	SRR018456	1	1	0	61
+371	18	166	6	SRR067947	1	2	0	61
+372	18	166	6	SRR029339	1	3	0	61
+373	18	166	6	SRR029619	1	4	0	61
+374	18	166	6	SRR029615	1	5	0	61
+375	18	167	178406	SRR067766	1	1	0	61
+376	18	167	178406	SRR067978	1	2	0	61
+392	15	173	178981	wgEncodeUwTfbsGm12878InputStdRawDataRep1	1	1	1	61
+393	17	174	5	wgEncodeBroadHistoneNhekH3k4me2StdRawDataRep1	1	1	0	61
+394	17	174	5	wgEncodeBroadHistoneNhekH3k4me2StdRawDataRep2	1	2	0	61
+395	17	174	5	wgEncodeBroadHistoneNhekH3k4me2StdRawDataRep3	1	3	0	61
+406	7	179	179024	wgEncodeHaibTfbsHepg2Hnf4gsc6558V0416101RawDataRep1	1	1	0	61
+407	7	179	179024	wgEncodeHaibTfbsHepg2Hnf4gsc6558V0416101RawDataRep2	1	2	0	61
+410	5	181	4	SRR029618	1	1	0	61
+411	5	181	4	SRR029610	1	2	0	61
+412	5	181	4	SRR037602	1	3	0	61
+413	5	181	4	SRR037601	1	4	0	61
+416	18	183	178981	wgEncodeBroadChipSeqRawDataRep1H1hescControl	1	1	1	61
+417	18	183	178981	wgEncodeBroadChipSeqRawDataRep2H1hescControl	1	2	1	61
+423	14	186	178924	wgEncodeHaibTfbsK562E2f6sc22823V0416102RawDataRep2	1	2	0	61
+424	14	186	178924	wgEncodeHaibTfbsK562E2f6sc22823V0416102RawDataRep1	1	1	0	61
+425	14	187	178893	wgEncodeUchicagoTfbsK562EjundControljundRawDataRep3	1	3	0	61
+426	14	187	178893	wgEncodeUchicagoTfbsK562EjundControljundRawDataRep2	1	2	0	61
+427	14	187	178893	wgEncodeUchicagoTfbsK562EjundControlRawDataRep1	1	1	0	61
+428	102	188	178405	wgEncodeBroadHistoneNhdfadH3k27acStdRawDataRep1	1	1	0	61
+429	102	188	178405	wgEncodeBroadHistoneNhdfadH3k27acStdRawDataRep2	1	2	0	61
+445	5	197	28	SRR037606	1	2	0	61
+446	5	197	28	SRR037608	1	3	0	61
+447	5	197	28	SRR037607	1	4	0	61
+448	5	197	28	SRR037610	1	5	0	61
+449	5	197	28	SRR037609	1	6	0	61
+450	5	197	28	SRR037611	1	7	0	61
+451	5	197	28	SRR037612	1	8	0	61
+452	14	198	178926	wgEncodeHaibTfbsK562Egr1V0416101RawDataRep1	1	1	0	61
+453	14	198	178926	wgEncodeHaibTfbsK562Egr1V0416101RawDataRep2	1	2	0	61
+456	14	200	178913	wgEncodeHaibTfbsK562Bcl3Pcr1xRawDataRep2	1	2	0	61
+457	14	200	178913	wgEncodeHaibTfbsK562Bcl3Pcr1xRawDataRep1	1	1	0	61
+458	15	201	178981	wgEncodeHaibTfbsGm12878RxlchPcr1xRawDataRep1	1	1	1	61
+459	15	201	178981	wgEncodeHaibTfbsGm12878RxlchV0416102RawDataRep1	1	1	1	61
+460	15	201	178981	wgEncodeHaibTfbsGm12878RxlchPcr2xRawDataRep2	1	2	1	61
+461	15	201	178981	wgEncodeHaibTfbsGm12878RxlchPcr1xRawDataRep4	1	4	1	61
+462	15	201	178981	wgEncodeHaibTfbsGm12878RxlchPcr1xRawDataRep2	1	2	1	61
+463	15	201	178981	wgEncodeHaibTfbsGm12878RxlchPcr1xRawDataRep3	1	3	1	61
+464	15	201	178981	wgEncodeHaibTfbsGm12878RxlchV0416101RawDataRep1	1	1	1	61
+465	15	201	178981	wgEncodeHaibTfbsGm12878RxlchPcr1xRawDataRep5	1	5	1	61
+466	15	201	178981	wgEncodeHaibTfbsGm12878RxlchPcr2xRawDataRep1	1	1	1	61
+467	18	202	179001	SRR067952	1	1	0	61
+468	18	202	179001	SRR179743	1	2	0	61
+469	18	202	179001	SRR179741	1	3	0	61
+470	18	202	179001	SRR179742	1	4	0	61
+487	18	211	178893	wgEncodeHaibTfbsH1hescJundV0416102RawDataRep2	1	2	0	61
+488	18	211	178893	wgEncodeHaibTfbsH1hescJundV0416102RawDataRep1	1	1	0	61
+492	14	214	178981	wgEncodeHaibTfbsK562RxlchV2RawDataRep1	1	1	1	61
+493	14	214	178981	wgEncodeHaibTfbsK562RxlchPcr1xRawDataRep4	1	4	1	61
+494	14	214	178981	wgEncodeHaibTfbsK562RxlchPcr1xRawDataRep3	1	3	1	61
+495	14	214	178981	wgEncodeHaibTfbsK562RxlchV2RawDataRep2	1	2	1	61
+496	14	214	178981	wgEncodeHaibTfbsK562RxlchV0416101RawDataRep2	1	2	1	61
+497	14	214	178981	wgEncodeHaibTfbsK562RxlchV0416101RawDataRep1	1	1	1	61
+510	15	221	23	wgEncodeBroadHistoneGm12878H2azStdRawDataRep2	1	2	0	61
+511	15	221	23	wgEncodeBroadHistoneGm12878H2azStdRawDataRep1	1	1	0	61
+512	14	222	34	wgEncodeBroadHistoneK562H4k20me1StdRawDataRep1	1	1	0	61
+513	14	222	34	wgEncodeBroadHistoneK562H4k20me1StdRawDataRep2	1	2	0	61
+519	18	226	179002	SRR067934	1	1	0	61
+520	18	226	179002	SRR067933	1	2	0	61
+521	24	227	8	wgEncodeOpenChromDnaseA549RawDataRep1	1	1	0	62
+522	24	227	8	wgEncodeOpenChromDnaseA549RawDataRep2	1	2	0	62
+523	92	228	9	wgEncodeBroadHistoneHsmmtCtcfStdRawDataRep2	1	2	0	61
+524	92	228	9	wgEncodeBroadHistoneHsmmtCtcfStdRawDataRep1	1	1	0	61
+527	18	230	178899	wgEncodeHaibTfbsH1hescGabpPcr1xRawDataRep1	1	1	0	61
+528	18	230	178899	wgEncodeHaibTfbsH1hescGabpPcr1xRawDataRep2	1	2	0	61
+529	1	231	178900	wgEncodeHaibTfbsHelas3NrsfPcr1xRawDataRep1	1	1	0	61
+530	1	231	178900	wgEncodeHaibTfbsHelas3NrsfPcr1xRawDataRep2	1	2	0	61
+531	15	232	178908	wgEncodeHaibTfbsGm12878Atf3Pcr1xRawDataRep2	1	2	0	61
+532	15	232	178908	wgEncodeHaibTfbsGm12878Atf3Pcr1xRawDataRep1	1	1	0	61
+535	18	234	12	SRR018486	1	1	0	61
+536	18	234	12	SRR018485	1	2	0	61
+537	18	234	12	SRR026666	1	3	0	61
+538	18	234	12	SRR026667	1	4	0	61
+545	17	238	178981	wgEncodeBroadHistoneNhekControlStdRawDataRep1	1	1	1	61
+546	17	238	178981	wgEncodeBroadHistoneNhekControlStdRawDataRep2	1	2	1	61
+547	18	239	36	wgEncodeUtaChIPseqRawDataH1hescPol2	1	1	0	61
+550	92	241	178405	wgEncodeBroadHistoneHsmmtH3k27acStdRawDataRep2	1	2	0	61
+551	92	241	178405	wgEncodeBroadHistoneHsmmtH3k27acStdRawDataRep1	1	1	0	61
+559	23	246	178981	wgEncodeUwTfbsHmecInputStdRawDataRep1	1	1	1	61
+560	17	247	1	wgEncodeBroadHistoneNhekH3k9acStdRawDataRep3	1	3	0	61
+561	17	247	1	wgEncodeBroadHistoneNhekH3k9acStdRawDataRep1	1	1	0	61
+562	17	247	1	wgEncodeBroadHistoneNhekH3k9acStdRawDataRep2	1	2	0	61
+565	17	249	8	wgEncodeUwDnaseNhekRawDataRep1	1	1	0	62
+566	17	249	8	wgEncodeUwDnaseNhekRawDataRep2	1	2	0	62
+576	17	255	11	wgEncodeBroadHistoneNhekH3k27me3StdRawDataRep2	1	2	0	61
+577	17	255	11	wgEncodeBroadHistoneNhekH3k27me3StdRawDataRep1	1	1	0	61
+578	17	255	11	wgEncodeBroadHistoneNhekH3k27me3StdRawDataRep3	1	3	0	61
+584	22	259	8	wgEncodeUwDnaseHsmmRawDataRep2	1	2	0	62
+585	22	259	8	wgEncodeUwDnaseHsmmRawDataRep1	1	1	0	62
+591	5	263	8	SRR029509	1	1	0	62
+592	5	263	8	SRR029510	1	2	0	62
+593	5	263	8	SRR039497	1	3	0	62
+594	5	263	8	SRR039498	1	4	0	62
+595	5	263	8	SRR029508	1	5	0	62
+596	5	263	8	SRR039397	1	6	0	62
+597	5	263	8	SRR029507	1	7	0	62
+598	5	263	8	SRR039500	1	8	0	62
+599	5	263	8	SRR039396	1	9	0	62
+600	5	263	8	SRR039398	1	10	0	62
+601	5	263	8	SRR039499	1	11	0	62
+602	18	264	6	SRR019560	1	1	0	61
+612	103	270	8	wgEncodeUwDnaseMonocd14RawDataRep1	1	1	0	62
+623	18	276	179007	wgEncodeHaibTfbsH1hescHdac2sc6296V0416102RawDataRep1	1	1	0	61
+624	18	276	179007	wgEncodeHaibTfbsH1hescHdac2sc6296V0416102RawDataRep2	1	2	0	61
+625	18	277	178412	SRR067939	1	1	0	61
+626	18	277	178412	SRR067767	1	2	0	61
+674	1	283	29	wgEncodeBroadHistoneHelas3H3k79me2StdRawDataRep2	1	2	0	61
+675	1	283	29	wgEncodeBroadHistoneHelas3H3k79me2StdRawDataRep1	1	1	0	61
+678	17	285	9	wgEncodeUtaChIPseqRawDataRep1NhekCtcf	1	1	0	61
+679	17	285	9	wgEncodeUtaChIPseqRawDataRep2NhekCtcf	1	2	0	61
+680	14	286	5	wgEncodeBroadHistoneK562H3k4me2StdRawDataRep2	1	2	0	61
+681	14	286	5	wgEncodeBroadHistoneK562H3k4me2StdRawDataRep1	1	1	0	61
+691	14	291	179027	wgEncodeHaibTfbsK562Thap1sc98174V0416101RawDataRep1	1	1	0	61
+692	14	291	179027	wgEncodeHaibTfbsK562Thap1sc98174V0416101RawDataRep2	1	2	0	61
+698	16	294	5	wgEncodeBroadHistoneHuvecH3k4me2StdRawDataRep2	1	2	0	61
+699	16	294	5	wgEncodeBroadHistoneHuvecH3k4me2StdRawDataRep1	1	1	0	61
+702	17	296	9	wgEncodeBroadHistoneNhekCtcfStdRawDataRep1	1	1	0	61
+703	17	296	9	wgEncodeBroadHistoneNhekCtcfStdRawDataRep3	1	3	0	61
+704	17	296	9	wgEncodeBroadHistoneNhekCtcfStdRawDataRep2	1	2	0	61
+708	21	299	6	wgEncodeBroadHistoneNhaH3k4me1StdRawDataRep2	1	2	0	61
+709	21	299	6	wgEncodeBroadHistoneNhaH3k4me1StdRawDataRep1	1	1	0	61
+719	18	303	178981	SRR018483	1	1	1	61
+720	18	303	178981	SRR018484	1	1	1	61
+721	18	303	178981	SRR018482	1	1	1	61
+722	18	303	178981	SRR026668	1	1	1	61
+723	18	303	178981	SRR026669	1	1	1	61
+730	1	307	1	wgEncodeBroadHistoneHelas3H3k9acStdRawDataRep1	1	1	0	61
+731	1	307	1	wgEncodeBroadHistoneHelas3H3k9acStdRawDataRep2	1	2	0	61
+732	14	308	179030	wgEncodeUchicagoTfbsK562EjunbControlRawDataRep1	1	1	0	61
+733	14	308	179030	wgEncodeUchicagoTfbsK562EjunbControljunbRawDataRep2	1	2	0	61
+734	14	309	23	wgEncodeBroadHistoneK562H2azStdRawDataRep2	1	2	0	61
+735	14	309	23	wgEncodeBroadHistoneK562H2azStdRawDataRep1	1	1	0	61
+740	18	312	178976	wgEncodeHaibTfbsH1hescTcf12Pcr1xRawDataRep1	1	1	0	61
+741	18	312	178976	wgEncodeHaibTfbsH1hescTcf12Pcr1xRawDataRep2	1	2	0	61
+745	18	314	178405	wgEncodeBroadHistoneH1hescH3k27acStdRawDataRep1	1	1	0	61
+746	18	314	178405	wgEncodeBroadHistoneH1hescH3k27acStdRawDataRep2	1	2	0	61
+761	14	322	179014	wgEncodeHaibTfbsK562Elf1sc631V0416102RawDataRep1	1	1	0	61
+762	14	322	179014	wgEncodeHaibTfbsK562Elf1sc631V0416102RawDataRep2	1	2	0	61
+765	5	324	178408	SRR037568	1	2	0	61
+766	5	324	178408	SRR037567	1	3	0	61
+767	5	324	178408	SRR037569	1	4	0	61
+768	5	324	178408	SRR037570	1	5	0	61
+769	22	325	29	wgEncodeBroadHistoneHsmmH3k79me2StdRawDataRep1	1	1	0	61
+770	22	325	29	wgEncodeBroadHistoneHsmmH3k79me2StdRawDataRep2	1	2	0	61
+784	15	332	178981	wgEncodeOpenChromChipGm12878InputRawData	1	1	1	61
+787	1	334	178405	wgEncodeBroadHistoneHelas3H3k27acStdRawDataRep2	1	2	0	61
+788	1	334	178405	wgEncodeBroadHistoneHelas3H3k27acStdRawDataRep1	1	1	0	61
+798	21	339	178981	wgEncodeBroadHistoneNhaControlStdRawDataRep2	1	2	1	61
+799	21	339	178981	wgEncodeBroadHistoneNhaControlStdRawDataRep1	1	1	1	61
+809	15	344	178958	wgEncodeHaibTfbsGm12878Pou2f2Pcr1xRawDataRep1	1	1	0	61
+810	15	344	178958	wgEncodeHaibTfbsGm12878Pou2f2Pcr1xRawDataRep2	1	2	0	61
+811	18	345	178908	wgEncodeHaibTfbsH1hescAtf3V0416102RawDataRep1	1	1	0	61
+812	18	345	178908	wgEncodeHaibTfbsH1hescAtf3V0416102RawDataRep2	1	2	0	61
+828	14	353	178901	wgEncodeHaibTfbsK562SrfV0416101RawDataRep1	1	1	0	61
+829	14	353	178901	wgEncodeHaibTfbsK562SrfV0416101RawDataRep2	1	2	0	61
+836	14	357	178959	wgEncodeHaibTfbsK562Pu1Pcr1xRawDataRep1	1	1	0	61
+837	14	357	178959	wgEncodeHaibTfbsK562Pu1RawDataRep2	1	2	0	61
+857	5	366	178413	SRR037587	1	2	0	61
+858	5	366	178413	SRR037588	1	3	0	61
+859	5	366	178413	SRR037590	1	4	0	61
+860	5	366	178413	SRR037589	1	5	0	61
+861	17	367	36	wgEncodeBroadHistoneNhekPol2bStdRawDataRep2	1	2	0	61
+862	17	367	36	wgEncodeBroadHistoneNhekPol2bStdRawDataRep1	1	1	0	61
+874	21	376	11	wgEncodeBroadHistoneNhaH3k27me3StdRawDataRep2	1	2	0	61
+875	21	376	11	wgEncodeBroadHistoneNhaH3k27me3StdRawDataRep1	1	1	0	61
+883	18	380	178981	SRR020520	1	1	1	61
+887	18	383	178901	wgEncodeHaibTfbsH1hescSrfPcr1xRawDataRep1	1	1	0	61
+888	18	383	178901	wgEncodeHaibTfbsH1hescSrfPcr1xRawDataRep2	1	2	0	61
+889	15	384	179017	wgEncodeHaibTfbsGm12878Mef2csc13268V0416101RawDataRep1	1	1	0	61
+890	15	384	179017	wgEncodeHaibTfbsGm12878Mef2csc13268V0416101RawDataRep2	1	2	0	61
+897	14	388	12	wgEncodeBroadHistoneK562H3k36me3StdRawDataRep1	1	1	0	61
+898	14	388	12	wgEncodeBroadHistoneK562H3k36me3StdRawDataRep2	1	2	0	61
+905	93	392	178981	wgEncodeBroadHistoneOsteoblControlStdRawDataRep1	1	1	1	61
+906	93	392	178981	wgEncodeBroadHistoneOsteoblControlStdRawDataRep2	1	2	1	61
+910	14	395	178898	wgEncodeUtaChIPseqRawDataRep1K562CmycV2	1	1	0	61
+911	14	395	178898	wgEncodeUtaChIPseqRawDataRep2K562CmycV2	1	2	0	61
+912	14	395	178898	wgEncodeUtaChIPseqRawDataRep3K562CmycV2	1	3	0	61
+926	5	401	178416	SRR037580	1	1	0	61
+927	5	401	178416	SRR037579	1	2	0	61
+928	5	401	178416	SRR037581	1	3	0	61
+929	5	401	178416	SRR037582	1	4	0	61
+932	93	403	6	wgEncodeBroadHistoneOsteoblH3k4me1StdRawDataRep2	1	2	0	61
+933	93	403	6	wgEncodeBroadHistoneOsteoblH3k4me1StdRawDataRep1	1	1	0	61
+934	18	404	178962	wgEncodeHaibTfbsH1hescRxraV0416102RawDataRep2	1	2	0	61
+935	18	404	178962	wgEncodeHaibTfbsH1hescRxraV0416102RawDataRep1	1	1	0	61
+936	14	405	178981	wgEncodeBroadHistoneK562ControlStdRawDataRep1	1	1	1	61
+964	7	418	178976	wgEncodeHaibTfbsHepg2Tcf12Pcr1xRawDataRep2	1	2	0	61
+965	7	418	178976	wgEncodeHaibTfbsHepg2Tcf12Pcr1xRawDataRep1	1	1	0	61
+968	102	420	8	wgEncodeUwDnaseNhdfadRawDataRep1	1	1	0	62
+969	102	420	8	wgEncodeUwDnaseNhdfadRawDataRep2	1	2	0	62
+972	14	422	179016	wgEncodeHaibTfbsK562Mef2aV0416101RawDataRep1	1	1	0	61
+973	14	422	179016	wgEncodeHaibTfbsK562Mef2aV0416101RawDataRep2	1	2	0	61
+980	16	426	9	wgEncodeBroadHistoneHuvecCtcfStdRawDataRep2	1	2	0	61
+981	16	426	9	wgEncodeBroadHistoneHuvecCtcfStdRawDataRep3	1	3	0	61
+982	16	426	9	wgEncodeBroadHistoneHuvecCtcfStdRawDataRep1	1	1	0	61
+996	18	434	29	SRR067957	1	1	0	61
+997	18	434	29	SRR067956	1	2	0	61
+1005	18	438	4	SRR018232	1	1	0	61
+1006	18	438	4	SRR019222	1	2	0	61
+1008	5	440	178411	SRR037626	1	2	0	61
+1009	5	440	178411	SRR037627	1	3	0	61
+1010	5	440	178411	SRR037628	1	4	0	61
+1011	5	440	178411	SRR037629	1	5	0	61
+1012	5	440	178411	SRR037630	1	6	0	61
+1013	93	441	12	wgEncodeBroadHistoneOsteoblH3k36me3StdRawDataRep2	1	2	0	61
+1014	93	441	12	wgEncodeBroadHistoneOsteoblH3k36me3StdRawDataRep1	1	1	0	61
+1015	18	442	34	SRR067966	1	1	0	61
+1020	1	445	36	wgEncodeBroadHistoneHelas3Pol2bStdRawDataRep2	1	2	0	61
+1021	1	445	36	wgEncodeBroadHistoneHelas3Pol2bStdRawDataRep1	1	1	0	61
+1024	14	447	30	wgEncodeBroadHistoneK562H3k9me1StdRawDataRep1	1	1	0	61
+1028	18	449	178416	SRR067935	1	1	0	61
+1029	18	449	178416	SRR067936	1	2	0	61
+1030	1	450	178899	wgEncodeHaibTfbsHelas3GabpPcr1xRawDataRep1	1	1	0	61
+1031	1	450	178899	wgEncodeHaibTfbsHelas3GabpPcr1xRawDataRep2	1	2	0	61
+1052	17	459	34	wgEncodeBroadHistoneNhekH4k20me1StdRawDataRep2	1	2	0	61
+1053	17	459	34	wgEncodeBroadHistoneNhekH4k20me1StdRawDataRep1	1	1	0	61
+1054	17	459	34	wgEncodeBroadHistoneNhekH4k20me1StdRawDataRep3	1	3	0	61
+1080	7	472	178899	wgEncodeHaibTfbsHepg2GabpPcr2xRawDataRep1	1	1	0	61
+1081	7	472	178899	wgEncodeHaibTfbsHepg2GabpPcr2xRawDataRep2	1	2	0	61
+1085	18	475	178408	SRR067930	1	1	0	61
+1086	14	476	178981	wgEncodeUwTfbsK562InputStdRawDataRep1	1	1	1	61
+1093	15	480	178962	wgEncodeHaibTfbsGm12878RxraPcr1xRawDataRep2	1	2	0	61
+1094	15	480	178962	wgEncodeHaibTfbsGm12878RxraPcr1xRawDataRep1	1	1	0	61
+1096	14	482	179015	wgEncodeHaibTfbsK562Ets1V0416101RawDataRep2	1	2	0	61
+1097	14	482	179015	wgEncodeHaibTfbsK562Ets1V0416101RawDataRep1	1	1	0	61
+1103	93	485	5	wgEncodeBroadHistoneOsteoblH3k4me2StdRawDataRep1	1	1	0	61
+1104	93	485	5	wgEncodeBroadHistoneOsteoblH3k4me2StdRawDataRep2	1	2	0	61
+1113	23	490	178981	wgEncodeBroadHistoneHmecControlStdRawDataRep2	1	2	1	61
+1114	23	490	178981	wgEncodeBroadHistoneHmecControlStdRawDataRep1	1	1	1	61
+1120	102	494	5	wgEncodeBroadHistoneNhdfadH3k4me2StdRawDataRep1	1	1	0	61
+1121	102	494	5	wgEncodeBroadHistoneNhdfadH3k4me2StdRawDataRep2	1	2	0	61
+1124	16	496	178405	wgEncodeBroadHistoneHuvecH3k27acStdRawDataRep1	1	1	0	61
+1125	16	496	178405	wgEncodeBroadHistoneHuvecH3k27acStdRawDataRep3	1	3	0	61
+1126	16	496	178405	wgEncodeBroadHistoneHuvecH3k27acStdRawDataRep2	1	2	0	61
+1130	18	499	178418	SRR067967	1	1	0	61
+1131	18	499	178418	SRR067968	1	2	0	61
+1151	15	509	178964	wgEncodeHudsonalphaChipSeqRawDataRep1Gm12878Sin3ak20Pcr2x	1	1	0	61
+1152	15	509	178964	wgEncodeHudsonalphaChipSeqRawDataRep2Gm12878Sin3ak20Pcr2x	1	2	0	61
+1155	21	511	12	wgEncodeBroadHistoneNhaH3k36me3StdRawDataRep2	1	2	0	61
+1156	21	511	12	wgEncodeBroadHistoneNhaH3k36me3StdRawDataRep1	1	1	0	61
+1158	14	513	179021	wgEncodeHaibTfbsK562Taf7sc101167V0416101RawDataRep2	1	2	0	61
+1159	14	513	179021	wgEncodeHaibTfbsK562Taf7sc101167V0416101RawDataRep1	1	1	0	61
+1160	15	514	178900	wgEncodeHaibTfbsGm12878NrsfPcr2xRawDataRep1	1	1	0	61
+1161	15	514	178900	wgEncodeHaibTfbsGm12878NrsfPcr2xRawDataRep2	1	2	0	61
+1162	17	515	178405	wgEncodeBroadHistoneNhekH3k27acStdRawDataRep2	1	2	0	61
+1163	17	515	178405	wgEncodeBroadHistoneNhekH3k27acStdRawDataRep1	1	1	0	61
+1164	17	515	178405	wgEncodeBroadHistoneNhekH3k27acStdRawDataRep3	1	3	0	61
+1166	18	517	178417	SRR179736	1	1	0	61
+1167	18	517	178417	SRR179735	1	2	0	61
+1168	18	517	178417	SRR179737	1	3	0	61
+1169	18	517	178417	SRR067946	1	4	0	61
+1170	16	518	34	wgEncodeBroadHistoneHuvecH4k20me1StdRawDataRep3	1	3	0	61
+1171	16	518	34	wgEncodeBroadHistoneHuvecH4k20me1StdRawDataRep2	1	2	0	61
+1172	16	518	34	wgEncodeBroadHistoneHuvecH4k20me1StdRawDataRep1	1	1	0	61
+1173	7	519	178969	wgEncodeHaibTfbsHepg2Sp1Pcr1xRawDataRep2	1	2	0	61
+1174	7	519	178969	wgEncodeHaibTfbsHepg2Sp1Pcr1xRawDataRep1	1	1	0	61
+1188	15	526	179015	wgEncodeHaibTfbsGm12878Ets1Pcr1xRawDataRep2	1	2	0	61
+1189	15	526	179015	wgEncodeHaibTfbsGm12878Ets1Pcr1xRawDataRep1	1	1	0	61
+1212	14	536	178935	wgEncodeYaleChIPseqRawDataRep1K562Gtf2b	1	1	0	61
+1213	14	536	178935	wgEncodeYaleChIPseqRawDataRep2K562Gtf2b	1	2	0	61
+1218	15	538	4	wgEncodeBroadHistoneGm12878H3k4me3StdRawDataRep1	1	1	0	61
+1220	14	540	9	wgEncodeUtaChIPseqRawDataRep1K562CtcfV2	1	1	0	61
+1221	14	540	9	wgEncodeUtaChIPseqRawDataRep2K562CtcfV2	1	2	0	61
+1222	14	540	9	wgEncodeUtaChIPseqRawDataRep3K562CtcfV2	1	3	0	61
+1225	15	542	178926	wgEncodeHaibTfbsGm12878Egr1V0416101RawDataRep2	1	2	0	61
+1226	15	542	178926	wgEncodeHaibTfbsGm12878Egr1V0416101RawDataRep1	1	1	0	61
+1229	15	544	178913	wgEncodeHaibTfbsGm12878Bcl3V0416101RawDataRep1	1	1	0	61
+1230	15	544	178913	wgEncodeHaibTfbsGm12878Bcl3V0416101RawDataRep2	1	2	0	61
+1247	18	551	28	SRR067955	1	1	0	61
+1248	18	551	28	SRR067953	1	2	0	61
+1249	18	551	28	SRR067954	1	3	0	61
+1250	18	552	178405	SRR029348	1	1	0	61
+1251	18	552	178405	SRR179707	1	2	0	61
+1252	18	552	178405	SRR029350	1	3	0	61
+1255	18	554	178946	wgEncodeHaibTfbsH1hescNanogsc33759V0416102RawDataRep1	1	1	0	61
+1256	18	554	178946	wgEncodeHaibTfbsH1hescNanogsc33759V0416102RawDataRep2	1	2	0	61
+1258	17	556	6	wgEncodeBroadHistoneNhekH3k4me1StdRawDataRep1	1	1	0	61
+1259	17	556	6	wgEncodeBroadHistoneNhekH3k4me1StdRawDataRep2	1	2	0	61
+1260	17	556	6	wgEncodeBroadHistoneNhekH3k4me1StdRawDataRep3	1	3	0	61
+1261	7	557	178915	wgEncodeHaibTfbsHepg2Bhlhe40V0416101RawDataRep2	1	2	0	61
+1262	7	557	178915	wgEncodeHaibTfbsHepg2Bhlhe40V0416101RawDataRep1	1	1	0	61
+1266	1	559	12	wgEncodeBroadHistoneHelas3H3k36me3StdRawDataRep1	1	1	0	61
+1267	1	559	12	wgEncodeBroadHistoneHelas3H3k36me3StdRawDataRep2	1	2	0	61
+1273	14	562	178983	wgEncodeHaibTfbsK562Yy1V0416102RawDataRep2	1	2	0	61
+1274	14	562	178983	wgEncodeHaibTfbsK562Yy1V0416102RawDataRep1	1	1	0	61
+1282	7	565	36	wgEncodeHaibTfbsHepg2Pol2Pcr2xRawDataRep2	1	2	0	61
+1283	7	565	36	wgEncodeHaibTfbsHepg2Pol2Pcr2xRawDataRep1	1	1	0	61
+1284	14	566	179026	wgEncodeHaibTfbsK562Sp2sc643V0416102RawDataRep2	1	2	0	61
+1285	14	566	179026	wgEncodeHaibTfbsK562Sp2sc643V0416102RawDataRep1	1	1	0	61
+1288	102	568	178981	wgEncodeBroadHistoneNhdfadControlStdRawDataRep1	1	1	1	61
+1289	102	568	178981	wgEncodeBroadHistoneNhdfadControlStdRawDataRep2	1	2	1	61
+1297	17	572	12	wgEncodeBroadHistoneNhekH3k36me3StdRawDataRep1	1	1	0	61
+1298	17	572	12	wgEncodeBroadHistoneNhekH3k36me3StdRawDataRep3	1	3	0	61
+1299	17	572	12	wgEncodeBroadHistoneNhekH3k36me3StdRawDataRep2	1	2	0	61
+1321	15	581	178959	wgEncodeHaibTfbsGm12878Pu1Pcr1xRawDataRep1	1	1	0	61
+1322	15	581	178959	wgEncodeHaibTfbsGm12878Pu1Pcr1xRawDataRep2	1	2	0	61
+1326	15	583	178894	wgEncodeYaleChIPseqRawDataRep1Gm12878Max	1	1	0	61
+1327	15	583	178894	wgEncodeYaleChIPseqRawDataRep2Gm12878Max	1	2	0	61
+1330	14	585	178966	wgEncodeHaibTfbsK562Six5V0416101RawDataRep1	1	1	0	61
+1333	14	585	178966	wgEncodeHaibTfbsK562Six5V0416101RawDataRep2	1	2	0	61
+1338	16	588	178898	wgEncodeUtaChIPseqRawDataHuvecCmyc	1	1	0	61
+1339	7	589	23	wgEncodeBroadHistoneHepg2H2azStdRawDataRep2	1	2	0	61
+1340	7	589	23	wgEncodeBroadHistoneHepg2H2azStdRawDataRep1	1	1	0	61
+1346	14	591	179007	wgEncodeHaibTfbsK562Hdac2sc6296V0416102RawDataRep1	1	1	0	61
+1347	14	591	179007	wgEncodeHaibTfbsK562Hdac2sc6296V0416102RawDataRep2	1	2	0	61
+1370	15	603	29	wgEncodeBroadHistoneGm12878H3k79me2StdRawDataRep2	1	2	0	61
+1371	15	603	29	wgEncodeBroadHistoneGm12878H3k79me2StdRawDataRep1	1	1	0	61
+1383	18	610	12	SRR020518	1	1	0	61
+1391	15	615	178948	wgEncodeYaleChIPseqRawDataRep1Gm12878NfkbIggrab	1	1	0	61
+1392	15	615	178948	wgEncodeYaleChIPseqRawDataRep2Gm12878NfkbIggrab	1	2	0	61
+1393	15	615	178948	wgEncodeYaleChIPseqRawDataRep3Gm12878NfkbIggrab	1	3	0	61
+1394	15	615	178948	wgEncodeYaleChIPseqRawDataRep4Gm12878NfkbIggrab	1	4	0	61
+1400	16	618	178981	wgEncodeUwTfbsHuvecInputStdRawDataRep1	1	1	1	61
+1401	23	619	4	wgEncodeUwHistoneHmecH3k4me3StdRawDataRep1	1	1	0	61
+1402	23	619	4	wgEncodeUwHistoneHmecH3k4me3StdRawDataRep2	1	2	0	61
+1405	15	621	178898	wgEncodeYaleChIPseqRawDataRep2Gm12878Cmyc	1	2	0	61
+1406	15	621	178898	wgEncodeYaleChIPseqRawDataRep1Gm12878Cmyc	1	1	0	61
+1415	18	626	179019	wgEncodeHaibTfbsH1hescFosl1sc183V0416102RawDataRep1	1	1	0	61
+1416	18	626	179019	wgEncodeHaibTfbsH1hescFosl1sc183V0416102RawDataRep2	1	2	0	61
+1427	18	630	14	SRR067960	1	1	0	61
+1428	18	630	14	SRR067962	1	2	0	61
+1429	18	630	14	SRR067964	1	3	0	61
+1430	18	630	14	SRR067963	1	4	0	61
+1431	18	630	14	SRR067961	1	5	0	61
+1432	18	630	14	SRR018453	1	6	0	61
+1433	18	630	14	SRR067965	1	7	0	61
+1434	92	631	4	wgEncodeBroadHistoneHsmmtH3k4me3StdRawDataRep1	1	1	0	61
+1435	92	631	4	wgEncodeBroadHistoneHsmmtH3k4me3StdRawDataRep2	1	2	0	61
+1439	7	634	178981	wgEncodeUtaustinChIPseqRawDataHepg2Input	1	1	1	61
+1463	5	643	34	SRR037620	1	2	0	61
+1464	5	643	34	SRR037621	1	3	0	61
+1465	5	643	34	SRR037622	1	4	0	61
+1466	5	643	34	SRR037623	1	5	0	61
+1467	18	644	178926	wgEncodeHaibTfbsH1hescEgr1V0416102RawDataRep2	1	2	0	61
+1468	18	644	178926	wgEncodeHaibTfbsH1hescEgr1V0416102RawDataRep1	1	1	0	61
+1471	92	646	29	wgEncodeBroadHistoneHsmmtH3k79me2StdRawDataRep1	1	1	0	61
+1472	92	646	29	wgEncodeBroadHistoneHsmmtH3k79me2StdRawDataRep2	1	2	0	61
+1475	14	648	29	wgEncodeBroadHistoneK562H3k79me2StdRawDataRep1	1	1	0	61
+1476	14	648	29	wgEncodeBroadHistoneK562H3k79me2StdRawDataRep2	1	2	0	61
+1481	15	651	178981	wgEncodeBroadChipSeqRawDataRep1Gm12878Control	1	1	1	61
+1482	15	651	178981	wgEncodeBroadChipSeqRawDataRep2Gm12878Control	1	2	1	61
+1483	14	652	179025	wgEncodeHaibTfbsK562Ctcflsc98982V0416101RawDataRep1	1	1	0	61
+1484	14	652	179025	wgEncodeHaibTfbsK562Ctcflsc98982V0416101RawDataRep2	1	2	0	61
+1490	16	656	8	wgEncodeUwDnaseHuvecRawDataRep2	1	2	0	62
+1491	16	656	8	wgEncodeUwDnaseHuvecRawDataRep1	1	1	0	62
+1492	14	657	178908	wgEncodeHaibTfbsK562Atf3V0416101RawDataRep2	1	2	0	61
+1493	14	657	178908	wgEncodeHaibTfbsK562Atf3V0416101RawDataRep1	1	1	0	61
+1497	5	660	12	SRR037592	1	1	0	61
+1498	5	660	12	SRR037546	1	2	0	61
+1499	5	660	12	SRR037550	1	3	0	61
+1500	5	660	12	SRR037553	1	4	0	61
+1501	5	660	12	SRR037562	1	5	0	61
+1502	18	661	178404	SRR067931	1	1	0	61
+1503	18	661	178404	SRR067932	1	2	0	61
+1508	18	664	178969	wgEncodeHaibTfbsH1hescSp1Pcr1xRawDataRep1	1	1	0	61
+1509	18	664	178969	wgEncodeHaibTfbsH1hescSp1Pcr1xRawDataRep2	1	2	0	61
+1516	102	668	4	wgEncodeBroadHistoneNhdfadH3k4me3StdRawDataRep1	1	1	0	61
+1517	102	668	4	wgEncodeBroadHistoneNhdfadH3k4me3StdRawDataRep2	1	2	0	61
+1522	14	671	11	wgEncodeSydhHistoneK562bH3k27me3bUcdRawDataRep2	1	2	0	61
+1523	14	671	11	wgEncodeSydhHistoneK562bH3k27me3bUcdRawDataRep1	1	1	0	61
+1524	14	672	4	wgEncodeSydhHistoneK562bH3k4me3bUcdRawDataRep2	1	2	0	61
+1525	14	672	4	wgEncodeSydhHistoneK562bH3k4me3bUcdRawDataRep1	1	1	0	61
+1530	18	675	178898	wgEncodeUtaChIPseqRawDataH1hescCmyc	1	1	0	61
+1545	15	683	14	wgEncodeBroadHistoneGm12878H3k9me3StdRawDataRep3	1	3	0	61
+1546	15	683	14	wgEncodeBroadHistoneGm12878H3k9me3StdRawDataRep2	1	2	0	61
+1547	15	683	14	wgEncodeBroadHistoneGm12878H3k9me3StdRawDataRep1	1	1	0	61
+1548	18	684	179021	wgEncodeHaibTfbsH1hescTaf7sc101167V0416102RawDataRep1	1	1	0	61
+1549	18	684	179021	wgEncodeHaibTfbsH1hescTaf7sc101167V0416102RawDataRep2	1	2	0	61
+1550	7	685	178964	wgEncodeHaibTfbsHepg2Sin3ak20Pcr1xRawDataRep1	1	1	0	61
+1551	7	685	178964	wgEncodeHaibTfbsHepg2Sin3ak20Pcr1xRawDataRep2	1	2	0	61
+1552	21	686	8	wgEncodeUwDnaseNhaRawDataRep2	1	2	0	62
+1553	21	686	8	wgEncodeUwDnaseNhaRawDataRep1	1	1	0	62
+1561	93	690	23	wgEncodeBroadHistoneOsteoblH2azStdRawDataRep2	1	2	0	61
+1562	93	690	23	wgEncodeBroadHistoneOsteoblH2azStdRawDataRep1	1	1	0	61
+1563	102	691	11	wgEncodeBroadHistoneNhdfadH3k27me3StdRawDataRep1	1	1	0	61
+1564	102	691	11	wgEncodeBroadHistoneNhdfadH3k27me3StdRawDataRep2	1	2	0	61
+1568	14	694	178981	wgEncodeYaleChIPseqRawDataRep1K562InputV2	1	1	1	61
+1569	14	694	178981	wgEncodeYaleChIPseqRawDataRep2K562InputV2	1	2	1	61
+1570	14	694	178981	wgEncodeYaleChIPseqRawDataK562Input	1	1	1	61
+1571	14	694	178981	wgEncodeYaleChIPseqRawDataRep1K562MusiggMusigg	1	1	1	61
+1572	14	694	178981	wgEncodeYaleChIPseqRawDataRep2K562MusiggMusigg	1	2	1	61
+1574	92	696	34	wgEncodeBroadHistoneHsmmtH4k20me1StdRawDataRep1	1	1	0	61
+1575	92	696	34	wgEncodeBroadHistoneHsmmtH4k20me1StdRawDataRep2	1	2	0	61
+1580	7	699	178983	wgEncodeHaibTfbsHepg2Yy1sc281V0416101RawDataRep2	1	2	0	61
+1581	7	699	178983	wgEncodeHaibTfbsHepg2Yy1sc281V0416101RawDataRep1	1	1	0	61
+1590	5	703	5	SRR037599	1	1	0	61
+1591	5	703	5	SRR037600	1	2	0	61
+1592	5	703	5	SRR037558	1	3	0	61
+1593	5	703	5	SRR037554	1	4	0	61
+1604	7	709	178900	wgEncodeHaibTfbsHepg2NrsfPcr2xRawDataRep1	1	1	0	61
+1605	7	709	178900	wgEncodeHaibTfbsHepg2NrsfPcr2xRawDataRep2	1	2	0	61
+1606	18	710	178980	wgEncodeHaibTfbsH1hescUsf1Pcr1xRawDataRep2	1	2	0	61
+1607	18	710	178980	wgEncodeHaibTfbsH1hescUsf1Pcr1xRawDataRep1	1	1	0	61
+1612	5	714	179001	SRR037604	1	2	0	61
+1613	5	714	179001	SRR037603	1	3	0	61
+1614	5	714	179001	SRR037605	1	4	0	61
+1618	78	716	5	wgEncodeBroadHistoneNhlfH3k4me2StdRawDataRep1	1	1	0	61
+1619	78	716	5	wgEncodeBroadHistoneNhlfH3k4me2StdRawDataRep2	1	2	0	61
+1622	18	718	1	SRR020516	1	1	0	61
+1624	7	719	179022	wgEncodeHaibTfbsHepg2Foxa1sc6553V0416101RawDataRep1	1	1	0	61
+1626	7	719	179022	wgEncodeHaibTfbsHepg2Foxa1sc6553V0416101RawDataRep2	1	2	0	61
+1632	15	722	178901	wgEncodeHaibTfbsGm12878SrfV0416101RawDataRep2	1	2	0	61
+1634	15	722	178901	wgEncodeHaibTfbsGm12878SrfV0416101RawDataRep1	1	1	0	61
+1635	14	723	178900	wgEncodeHaibTfbsK562NrsfV0416102RawDataRep2	1	2	0	61
+1636	14	723	178900	wgEncodeHaibTfbsK562NrsfV0416102RawDataRep1	1	1	0	61
+1644	14	727	1	wgEncodeSydhHistoneK562bH3k9acbUcdRawDataRep2	1	2	0	61
+1645	14	727	1	wgEncodeSydhHistoneK562bH3k9acbUcdRawDataRep1	1	1	0	61
+1653	7	733	36	wgEncodeUtaChIPseqRawDataRep1Hepg2Pol2	1	1	0	61
+1654	7	733	36	wgEncodeUtaChIPseqRawDataRep2Hepg2Pol2	1	2	0	61
+1655	7	733	36	wgEncodeUtaChIPseqRawDataRep3Hepg2Pol2	1	3	0	61
+1660	18	736	178964	wgEncodeHaibTfbsH1hescSin3ak20Pcr1xRawDataRep2	1	2	0	61
+1661	18	736	178964	wgEncodeHaibTfbsH1hescSin3ak20Pcr1xRawDataRep1	1	1	0	61
+1664	15	738	9	wgEncodeUtaChIPseqRawDataRep1Gm12878CtcfV2	1	1	0	61
+1665	15	738	9	wgEncodeUtaChIPseqRawDataRep2Gm12878CtcfV2	1	2	0	61
+1666	15	738	9	wgEncodeUtaChIPseqRawDataRep3Gm12878CtcfV2	1	3	0	61
+1670	7	740	178908	wgEncodeHaibTfbsHepg2Atf3V0416101RawDataRep2	1	2	0	61
+1671	7	740	178908	wgEncodeHaibTfbsHepg2Atf3V0416101RawDataRep1	1	1	0	61
+1674	92	742	5	wgEncodeBroadHistoneHsmmtH3k4me2StdRawDataRep1	1	1	0	61
+1675	92	742	5	wgEncodeBroadHistoneHsmmtH3k4me2StdRawDataRep2	1	2	0	61
+1676	14	743	178893	wgEncodeYaleChIPseqRawDataRep1K562Jund	1	1	0	61
+1677	14	743	178893	wgEncodeYaleChIPseqRawDataRep2K562Jund	1	2	0	61
+1678	14	744	179028	wgEncodeHaibTfbsK562Zbtb7asc34508V0416101RawDataRep2	1	2	0	61
+1679	14	744	179028	wgEncodeHaibTfbsK562Zbtb7asc34508V0416101RawDataRep1	1	1	0	61
+1685	15	746	179014	wgEncodeHaibTfbsGm12878Elf1sc631V0416101RawDataRep2	1	2	0	61
+1686	15	746	179014	wgEncodeHaibTfbsGm12878Elf1sc631V0416101RawDataRep1	1	1	0	61
+1695	23	751	8	wgEncodeUwDnaseHmecRawDataRep2	1	2	0	62
+1696	23	751	8	wgEncodeUwDnaseHmecRawDataRep1	1	1	0	62
+1701	5	754	178406	SRR037564	1	2	0	61
+1702	5	754	178406	SRR037565	1	3	0	61
+1703	5	754	178406	SRR037566	1	4	0	61
+1706	18	756	178966	wgEncodeHaibTfbsH1hescSix5Pcr1xRawDataRep2	1	2	0	61
+1707	18	756	178966	wgEncodeHaibTfbsH1hescSix5Pcr1xRawDataRep1	1	1	0	61
+1708	1	757	36	wgEncodeUtaChIPseqRawDataRep1Helas3Pol2	1	1	0	61
+1709	1	757	36	wgEncodeUtaChIPseqRawDataRep2Helas3Pol2	1	2	0	61
+1716	15	761	178955	wgEncodeHaibTfbsGm12878Pax5n19RawDataRep2	1	2	0	61
+1717	15	761	178955	wgEncodeHaibTfbsGm12878Pax5c20RawDataRep1	1	1	0	61
+1720	7	762	178893	wgEncodeHaibTfbsHepg2JundPcr1xRawDataRep2	1	2	0	61
+1721	7	762	178893	wgEncodeHaibTfbsHepg2JundPcr1xRawDataRep1	1	1	0	61
+1724	18	764	178912	wgEncodeHaibTfbsH1hescBcl11aPcr1xRawDataRep1	1	1	0	61
+1725	18	764	178912	wgEncodeHaibTfbsH1hescBcl11aV0416102RawDataRep2	1	2	0	61
+1727	93	766	14	wgEncodeBroadHistoneOsteoblH3k9me3StdRawDataRep1	1	1	0	61
+1728	93	766	14	wgEncodeBroadHistoneOsteoblH3k9me3StdRawDataRep2	1	2	0	61
+1729	7	767	11	wgEncodeBroadHistoneHepg2H3k27me3StdRawDataRep2	1	2	0	61
+1730	7	767	11	wgEncodeBroadHistoneHepg2H3k27me3StdRawDataRep1	1	1	0	61
+1736	5	770	178412	SRR029625	1	1	0	61
+1737	5	770	178412	SRR029629	1	2	0	61
+1738	5	770	178412	SRR037559	1	3	0	61
+1739	5	770	178412	SRR037557	1	4	0	61
+1748	15	775	179018	wgEncodeHaibTfbsGm12878Zeb1sc25388V0416102RawDataRep1	1	1	0	61
+1749	15	775	179018	wgEncodeHaibTfbsGm12878Zeb1sc25388V0416102RawDataRep2	1	2	0	61
+1752	15	777	178892	wgEncodeYaleChIPseqRawDataRep1Gm12878Cjun	1	1	0	61
+1753	15	777	178892	wgEncodeYaleChIPseqRawDataRep2Gm12878Cjun	1	2	0	61
+1754	21	778	178405	wgEncodeBroadHistoneNhaH3k27acStdRawDataRep1	1	1	0	61
+1755	21	778	178405	wgEncodeBroadHistoneNhaH3k27acStdRawDataRep2	1	2	0	61
+1758	14	780	6	wgEncodeSydhHistoneK562bH3k4me1UcdRawDataRep1	1	1	0	61
+1759	14	780	6	wgEncodeSydhHistoneK562bH3k4me1UcdRawDataRep2	1	2	0	61
+1773	7	787	178981	wgEncodeHaibTfbsHepg2RxlchPcr2xRawDataRep1	1	1	1	61
+1774	7	787	178981	wgEncodeHaibTfbsHepg2RxlchV0416101RawDataRep2	1	2	1	61
+1775	7	787	178981	wgEncodeHaibTfbsHepg2RxlchV0416101RawDataRep1	1	1	1	61
+1776	7	787	178981	wgEncodeHaibTfbsHepg2RxlchPcr1xRawDataRep3	1	3	1	61
+1777	7	787	178981	wgEncodeHaibTfbsHepg2RxlchPcr1xRawDataRep1	1	1	1	61
+1778	7	787	178981	wgEncodeHaibTfbsHepg2RxlchPcr1xRawDataRep2	1	2	1	61
+1779	7	787	178981	wgEncodeHaibTfbsHepg2RxlchPcr1xRawDataRep4	1	4	1	61
+1780	7	787	178981	wgEncodeHaibTfbsHepg2RxlchPcr2xRawDataRep2	1	2	1	61
+1781	18	788	14	SRR018480	1	1	0	61
+1782	18	788	14	SRR018481	1	2	0	61
+1783	18	788	14	SRR018478	1	3	0	61
+1784	18	788	14	SRR018479	1	4	0	61
+1785	18	788	14	SRR026664	1	5	0	61
+1786	18	788	14	SRR026665	1	6	0	61
+1789	7	790	178954	wgEncodeHaibTfbsHepg2P300V0416101RawDataRep2	1	2	0	61
+1790	7	790	178954	wgEncodeHaibTfbsHepg2P300V0416101RawDataRep1	1	1	0	61
+1794	18	792	178983	wgEncodeHaibTfbsH1hescYy1sc281V0416102RawDataRep2	1	2	0	61
+1795	18	792	178983	wgEncodeHaibTfbsH1hescYy1sc281V0416102RawDataRep1	1	1	0	61
+1800	7	796	178941	wgEncodeHaibTfbsHepg2Hnf4asc8987V0416101RawDataRep2	1	2	0	61
+1801	7	796	178941	wgEncodeHaibTfbsHepg2Hnf4asc8987V0416101RawDataRep1	1	1	0	61
+1804	7	798	179023	wgEncodeHaibTfbsHepg2Foxa2sc6554V0416101RawDataRep2	1	2	0	61
+1805	7	798	179023	wgEncodeHaibTfbsHepg2Foxa2sc6554V0416101RawDataRep1	1	1	0	61
+1815	1	802	178974	wgEncodeHaibTfbsHelas3Taf1Pcr1xRawDataRep1	1	1	0	61
+1816	1	802	178974	wgEncodeHaibTfbsHelas3Taf1Pcr1xRawDataRep2	1	2	0	61
+1819	15	804	179013	wgEncodeHaibTfbsGm12878Bclaf101388V0416101RawDataRep2	1	2	0	61
+1820	15	804	179013	wgEncodeHaibTfbsGm12878Bclaf101388V0416101RawDataRep1	1	1	0	61
+1824	1	806	178981	wgEncodeHaibTfbsHelas3RxlchPcr1xRawDataRep1	1	1	1	61
+1829	7	809	178974	wgEncodeHaibTfbsHepg2Taf1Pcr2xRawDataRep1	1	1	0	61
+1830	7	809	178974	wgEncodeHaibTfbsHepg2Taf1Pcr2xRawDataRep2	1	2	0	61
+1832	24	811	8	wgEncodeUwDnaseA549RawDataRep2	1	2	0	62
+1833	24	811	8	wgEncodeUwDnaseA549RawDataRep1	1	1	0	62
+1843	7	815	178960	wgEncodeHaibTfbsHepg2Rad21V0416101RawDataRep1	1	1	0	61
+1844	7	815	178960	wgEncodeHaibTfbsHepg2Rad21V0416101RawDataRep2	1	2	0	61
+1850	18	819	178413	SRR179726	1	1	0	61
+1851	18	819	178413	SRR179727	1	2	0	61
+1852	18	819	178413	SRR179725	1	3	0	61
+1853	18	819	178413	SRR179729	1	4	0	61
+1854	18	819	178413	SRR179728	1	5	0	61
+1855	18	819	178413	SRR179730	1	6	0	61
+1862	15	823	178899	wgEncodeHaibTfbsGm12878GabpPcr2xRawDataRep1	1	1	0	61
+1863	15	823	178899	wgEncodeHaibTfbsGm12878GabpPcr2xRawDataRep2	1	2	0	61
+1864	7	824	178981	wgEncodeBroadChipSeqRawDataRep1Hepg2Control	1	1	1	61
+1865	7	824	178981	wgEncodeBroadChipSeqRawDataRep2Hepg2Control	1	2	1	61
+1866	5	825	178404	SRR037571	1	2	0	61
+1867	5	825	178404	SRR037572	1	3	0	61
+1868	5	825	178404	SRR037573	1	4	0	61
+1869	5	825	178404	SRR037574	1	5	0	61
+1872	14	827	178894	wgEncodeHaibTfbsK562MaxV0416102RawDataRep2	1	2	0	61
+1873	14	827	178894	wgEncodeHaibTfbsK562MaxV0416102RawDataRep1	1	1	0	61
+1876	5	829	178414	SRR037583	1	2	0	61
+1877	5	829	178414	SRR037584	1	3	0	61
+1878	5	829	178414	SRR037586	1	4	0	61
+1879	5	829	178414	SRR037585	1	5	0	61
+1887	18	833	4	SRR029620	1	1	0	61
+1888	18	833	4	SRR018455	1	2	0	61
+1889	18	833	4	SRR029609	1	3	0	61
+1890	18	833	4	SRR067950	1	4	0	61
+1891	7	834	178901	wgEncodeHaibTfbsHepg2SrfV0416101RawDataRep1	1	1	0	61
+1892	7	834	178901	wgEncodeHaibTfbsHepg2SrfV0416101RawDataRep2	1	2	0	61
+1907	21	842	9	wgEncodeBroadHistoneNhaCtcfStdRawDataRep1	1	1	0	61
+1908	21	842	9	wgEncodeBroadHistoneNhaCtcfStdRawDataRep2	1	2	0	61
+1909	16	843	30	wgEncodeBroadHistoneHuvecH3k9me1StdRawDataRep1	1	1	0	61
+1910	16	843	30	wgEncodeBroadHistoneHuvecH3k9me1StdRawDataRep2	1	2	0	61
+1911	16	843	30	wgEncodeBroadHistoneHuvecH3k9me1StdRawDataRep3	1	3	0	61
+1918	16	847	12	wgEncodeBroadHistoneHuvecH3k36me3StdRawDataRep3	1	3	0	61
+1919	16	847	12	wgEncodeBroadHistoneHuvecH3k36me3StdRawDataRep1	1	1	0	61
+1920	16	847	12	wgEncodeBroadHistoneHuvecH3k36me3StdRawDataRep2	1	2	0	61
+1926	14	850	178981	wgEncodeOpenChromChipK562InputRawData	1	1	1	61
+1927	18	851	178410	SRR067937	1	1	0	61
+1928	18	851	178410	SRR067938	1	2	0	61
+1929	102	852	9	wgEncodeBroadHistoneNhdfadCtcfStdRawDataRep1	1	1	0	61
+1930	102	852	9	wgEncodeBroadHistoneNhdfadCtcfStdRawDataRep2	1	2	0	61
+1942	16	857	9	wgEncodeUtaChIPseqRawDataRep1HuvecCtcf	1	1	0	61
+1943	16	857	9	wgEncodeUtaChIPseqRawDataRep2HuvecCtcf	1	2	0	61
+1946	16	859	178981	wgEncodeBroadHistoneHuvecControlStdRawDataRep3	1	3	1	61
+1947	16	859	178981	wgEncodeBroadHistoneHuvecControlStdRawDataRep1	1	1	1	61
+1948	16	859	178981	wgEncodeBroadHistoneHuvecControlStdRawDataRep2	1	2	1	61
+1949	14	860	178932	wgEncodeUchicagoTfbsK562Egata2Controlgata2RawDataRep2	1	2	0	61
+1950	14	860	178932	wgEncodeUchicagoTfbsK562Egata2ControlRawDataRep1	1	1	0	61
+1952	22	862	14	wgEncodeBroadHistoneHsmmH3k9me3StdRawDataRep1	1	1	0	61
+1953	22	862	14	wgEncodeBroadHistoneHsmmH3k9me3StdRawDataRep2	1	2	0	61
+1954	16	863	4	wgEncodeBroadHistoneHuvecH3k4me3StdRawDataRep1	1	1	0	61
+1955	16	863	4	wgEncodeBroadHistoneHuvecH3k4me3StdRawDataRep2	1	2	0	61
+1956	16	863	4	wgEncodeBroadHistoneHuvecH3k4me3StdRawDataRep3	1	3	0	61
+1957	15	864	178981	wgEncodeYaleChIPseqRawDataGm12878Input	1	1	1	61
+1958	15	864	178981	wgEncodeYaleChIPseqRawDataRep1Gm12878InputIggrab	1	1	1	61
+1959	15	864	178981	wgEncodeYaleChIPseqRawDataRep1Gm12878MusiggMusigg	1	1	1	61
+1960	15	864	178981	wgEncodeYaleChIPseqRawDataRep2Gm12878InputIggrab	1	2	1	61
+1961	15	864	178981	wgEncodeYaleChIPseqRawDataRep2Gm12878MusiggMusigg	1	2	1	61
+1969	15	868	178898	wgEncodeUtaChIPseqRawDataRep1Gm12878Cmyc	1	1	0	61
+1970	15	868	178898	wgEncodeUtaChIPseqRawDataRep2Gm12878Cmyc	1	2	0	61
+1973	14	870	178405	wgEncodeBroadHistoneK562H3k27acStdRawDataRep2	1	2	0	61
+1974	14	870	178405	wgEncodeBroadHistoneK562H3k27acStdRawDataRep1	1	1	0	61
+1977	15	871	36	wgEncodeYaleChIPseqRawDataRep2Gm12878Pol2V3	1	2	0	61
+1982	15	871	36	wgEncodeYaleChIPseqRawDataRep1Gm12878Pol2V3	1	1	0	61
+1984	15	871	36	wgEncodeYaleChIPseqRawDataRep3Gm12878Pol2V3	1	3	0	61
+1999	16	880	1	wgEncodeBroadHistoneHuvecH3k9acStdRawDataRep3	1	3	0	61
+2000	16	880	1	wgEncodeBroadHistoneHuvecH3k9acStdRawDataRep2	1	2	0	61
+2001	16	880	1	wgEncodeBroadHistoneHuvecH3k9acStdRawDataRep1	1	1	0	61
+2005	18	883	178414	SRR179721	1	1	0	61
+2006	18	883	178414	SRR179719	1	2	0	61
+2007	18	883	178414	SRR179717	1	3	0	61
+2008	18	883	178414	SRR179720	1	4	0	61
+2009	18	883	178414	SRR179718	1	5	0	61
+2010	18	883	178414	SRR179716	1	6	0	61
+2011	18	884	1	SRR019562	1	1	0	61
+2012	18	884	1	SRR067958	1	2	0	61
+2017	18	887	11	SRR019561	1	1	0	61
+2018	18	887	11	SRR029343	1	2	0	61
+2019	18	887	11	SRR067943	1	3	0	61
+2020	18	887	11	SRR029349	1	4	0	61
+2021	18	887	11	SRR029345	1	5	0	61
+2022	18	887	11	SRR029347	1	6	0	61
+2024	14	889	178969	wgEncodeHaibTfbsK562Sp1Pcr1xRawDataRep1	1	1	0	61
+2025	14	889	178969	wgEncodeHaibTfbsK562Sp1Pcr1xRawDataRep2	1	2	0	61
+2029	7	892	179007	wgEncodeHaibTfbsHepg2Hdac2sc6296V0416101RawDataRep2	1	2	0	61
+2030	7	892	179007	wgEncodeHaibTfbsHepg2Hdac2sc6296V0416101RawDataRep1	1	1	0	61
+2037	92	896	6	wgEncodeBroadHistoneHsmmtH3k4me1StdRawDataRep1	1	1	0	61
+2038	92	896	6	wgEncodeBroadHistoneHsmmtH3k4me1StdRawDataRep2	1	2	0	61
+2044	17	899	4	wgEncodeBroadHistoneNhekH3k4me3StdRawDataRep1	1	1	0	61
+2045	17	899	4	wgEncodeBroadHistoneNhekH3k4me3StdRawDataRep2	1	2	0	61
+2046	17	899	4	wgEncodeBroadHistoneNhekH3k4me3StdRawDataRep3	1	3	0	61
+2052	16	903	178981	wgEncodeUtaustinChIPseqRawDataHuvecInput	1	1	1	61
+2074	1	915	178981	wgEncodeBroadHistoneHelas3ControlStdRawDataRep1	1	1	1	61
+2075	1	915	178981	wgEncodeBroadHistoneHelas3ControlStdRawDataRep2	1	2	1	61
+2083	102	919	1	wgEncodeBroadHistoneNhdfadH3k9acStdRawDataRep2	1	2	0	61
+2084	102	919	1	wgEncodeBroadHistoneNhdfadH3k9acStdRawDataRep1	1	1	0	61
+2088	15	922	8	wgEncodeOpenChromDnaseGm12878RawDataRep1	1	1	0	62
+2089	15	922	8	wgEncodeOpenChromDnaseGm12878RawDataRep2	1	2	0	62
+2090	15	922	8	wgEncodeOpenChromDnaseGm12878RawDataRep4	1	4	0	62
+2091	15	922	8	wgEncodeOpenChromDnaseGm12878RawDataRep5	1	5	0	62
+2092	15	922	8	wgEncodeOpenChromDnaseGm12878RawDataRep3	1	3	0	62
+2104	15	929	178983	wgEncodeHaibTfbsGm12878Yy1sc281Pcr1xRawDataRep1	1	1	0	61
+2105	15	929	178983	wgEncodeHaibTfbsGm12878Yy1sc281Pcr1xRawDataRep2	1	2	0	61
+2114	7	935	12	wgEncodeUwHistoneHepg2H3k36me3StdRawDataRep1	1	1	0	61
+2115	7	935	12	wgEncodeUwHistoneHepg2H3k36me3StdRawDataRep2	1	2	0	61
+2123	1	938	178981	wgEncodeYaleChIPseqRawDataHelas3Input	1	1	1	61
+2124	1	938	178981	wgEncodeYaleChIPseqRawDataRep1Helas3Largefragment	1	1	1	61
+2125	1	938	178981	wgEncodeYaleChIPseqRawDataRep1Helas3Mnase	1	1	1	61
+2126	1	938	178981	wgEncodeYaleChIPseqRawDataRep1Helas3Mouseigg	1	1	1	61
+2127	1	938	178981	wgEncodeYaleChIPseqRawDataRep1Helas3Nakeddna	1	1	1	61
+2128	1	938	178981	wgEncodeYaleChIPseqRawDataRep1Helas3Rabigg	1	1	1	61
+2129	1	938	178981	wgEncodeYaleChIPseqRawDataRep2Helas3Largefragment	1	2	1	61
+2130	1	938	178981	wgEncodeYaleChIPseqRawDataRep2Helas3Mnase	1	2	1	61
+2131	1	938	178981	wgEncodeYaleChIPseqRawDataRep2Helas3Mouseigg	1	2	1	61
+2132	1	938	178981	wgEncodeYaleChIPseqRawDataRep2Helas3Nakeddna	1	2	1	61
+2133	1	938	178981	wgEncodeYaleChIPseqRawDataRep3Helas3Nakeddna	1	3	1	61
+2134	93	939	178405	wgEncodeBroadHistoneOsteoblH3k27acStdRawDataRep1	1	1	0	61
+2135	93	939	178405	wgEncodeBroadHistoneOsteoblH3k27acStdRawDataRep2	1	2	0	61
+2140	15	941	178966	wgEncodeHaibTfbsGm12878Six5Pcr1xRawDataRep1	1	1	0	61
+2141	15	941	178966	wgEncodeHaibTfbsGm12878Six5Pcr1xRawDataRep2	1	2	0	61
+2142	5	942	178415	SRR037631	1	2	0	61
+2143	5	942	178415	SRR037632	1	3	0	61
+2144	5	942	178415	SRR037633	1	4	0	61
+2147	15	944	178974	wgEncodeHaibTfbsGm12878Taf1Pcr1xRawDataRep1	1	1	0	61
+2148	15	944	178974	wgEncodeHaibTfbsGm12878Taf1Pcr1xRawDataRep2	1	2	0	61
+2149	14	945	178974	wgEncodeHaibTfbsK562Taf1V0416101RawDataRep2	1	2	0	61
+2150	14	945	178974	wgEncodeHaibTfbsK562Taf1V0416101RawDataRep1	1	1	0	61
+2154	14	948	36	wgEncodeBroadHistoneK562Pol2bStdRawDataRep1	1	1	0	61
+2155	14	948	36	wgEncodeBroadHistoneK562Pol2bStdRawDataRep2	1	2	0	61
+2156	5	949	178418	SRR029622	1	1	0	61
+2157	5	949	178418	SRR029614	1	2	0	61
+2158	5	949	178418	SRR037625	1	3	0	61
+2159	5	949	178418	SRR037624	1	4	0	61
+2164	18	952	178954	wgEncodeHaibTfbsH1hescP300V0416102RawDataRep2	1	2	0	61
+2165	18	952	178954	wgEncodeHaibTfbsH1hescP300V0416102RawDataRep1	1	1	0	61
+2169	7	954	179014	wgEncodeHaibTfbsHepg2Elf1sc631V0416101RawDataRep2	1	2	0	61
+2170	7	954	179014	wgEncodeHaibTfbsHepg2Elf1sc631V0416101RawDataRep1	1	1	0	61
+2171	5	955	179002	SRR037575	1	2	0	61
+2172	5	955	179002	SRR037576	1	3	0	61
+2173	5	955	179002	SRR037577	1	4	0	61
+2174	5	955	179002	SRR037578	1	5	0	61
+2175	15	956	178891	wgEncodeYaleChIPseqRawDataRep2Gm12878CfosV3	1	2	0	61
+2176	15	956	178891	wgEncodeYaleChIPseqRawDataRep1Gm12878CfosV3	1	1	0	61
+2182	15	959	36	wgEncodeHaibTfbsGm12878Pol2Pcr2xRawDataRep1	1	1	0	61
+2183	15	959	36	wgEncodeHaibTfbsGm12878Pol2Pcr2xRawDataRep2	1	2	0	61
+2185	2	960	178981	wgEncodeUwTfbsGm06990InputStdRawDataRep1	1	1	1	61
+2186	18	961	178415	SRR067969	1	1	0	61
+2187	5	962	29	SRR037614	1	2	0	61
+2188	5	962	29	SRR037613	1	3	0	61
+2189	5	962	29	SRR037615	1	4	0	61
+2190	5	962	29	SRR037616	1	5	0	61
+2211	18	972	1	SRR018231	1	1	0	61
+2212	14	973	9	wgEncodeBroadHistoneK562CtcfStdRawDataRep1	1	1	0	61
+2213	14	973	9	wgEncodeBroadHistoneK562CtcfStdRawDataRep2	1	2	0	61
+2216	5	975	14	SRR029617	1	1	0	61
+2217	5	975	14	SRR029612	1	2	0	61
+2218	5	975	14	SRR029624	1	3	0	61
+2219	5	975	14	SRR029628	1	4	0	61
+2220	5	975	14	SRR037618	1	5	0	61
+2221	5	975	14	SRR037617	1	6	0	61
+2222	5	975	14	SRR037619	1	7	0	61
+2229	7	979	29	wgEncodeBroadHistoneHepg2H3k79me2StdRawDataRep1	1	1	0	61
+2230	7	979	29	wgEncodeBroadHistoneHepg2H3k79me2StdRawDataRep2	1	2	0	61
+2240	18	985	179020	wgEncodeHaibTfbsH1hescPou5f1sc9081V0416102RawDataRep2	1	2	0	61
+2241	18	985	179020	wgEncodeHaibTfbsH1hescPou5f1sc9081V0416102RawDataRep1	1	1	0	61
+2244	16	987	36	wgEncodeUtaChIPseqRawDataRep1HuvecPol2	1	1	0	61
+2245	16	987	36	wgEncodeUtaChIPseqRawDataRep2HuvecPol2	1	2	0	61
+2248	18	989	9	wgEncodeHaibTfbsH1hescCtcfsc5916V0416102RawDataRep2	1	2	0	61
+2249	18	989	9	wgEncodeHaibTfbsH1hescCtcfsc5916V0416102RawDataRep1	1	1	0	61
+2250	14	990	6	wgEncodeBroadHistoneK562H3k4me1StdRawDataRep2	1	2	0	61
+2251	14	990	6	wgEncodeBroadHistoneK562H3k4me1StdRawDataRep1	1	1	0	61
+2252	7	991	178980	wgEncodeHaibTfbsHepg2Usf1Pcr1xRawDataRep2	1	2	0	61
+2253	7	991	178980	wgEncodeHaibTfbsHepg2Usf1Pcr1xRawDataRep1	1	1	0	61
+2257	92	994	12	wgEncodeBroadHistoneHsmmtH3k36me3StdRawDataRep2	1	2	0	61
+2258	92	994	12	wgEncodeBroadHistoneHsmmtH3k36me3StdRawDataRep1	1	1	0	61
+2266	92	1000	8	wgEncodeUwDnaseHsmmtRawDataRep1	1	1	0	62
+2267	1	1001	9	wgEncodeBroadHistoneHelas3CtcfStdRawDataRep1	1	1	0	61
+2268	1	1001	9	wgEncodeBroadHistoneHelas3CtcfStdRawDataRep2	1	2	0	61
+2273	5	1004	11	SRR029616	1	1	0	61
+2274	5	1004	11	SRR029627	1	2	0	61
+2275	5	1004	11	SRR029623	1	3	0	61
+2276	5	1004	11	SRR029611	1	4	0	61
+2277	5	1004	11	SRR037555	1	5	0	61
+2278	5	1004	11	SRR037560	1	6	0	61
+2279	18	1005	14	SRR020517	1	1	0	61
+2287	18	1010	6	SRR020519	1	1	0	61
+2288	14	1011	178984	wgEncodeHaibTfbsK562Zbtb33Pcr1xRawDataRep2	1	2	0	61
+2289	14	1011	178984	wgEncodeHaibTfbsK562Zbtb33Pcr1xRawDataRep1	1	1	0	61
+2296	5	1015	178405	SRR029626	1	1	0	61
+2297	5	1015	178405	SRR029630	1	2	0	61
+2298	5	1015	178405	SRR029631	1	3	0	61
+2299	5	1015	178405	SRR029632	1	4	0	61
+2300	5	1015	178405	SRR037561	1	5	0	61
+2324	1	1023	34	wgEncodeBroadHistoneHelas3H4k20me1StdRawDataRep2	1	2	0	61
+2325	1	1023	34	wgEncodeBroadHistoneHelas3H4k20me1StdRawDataRep1	1	1	0	61
+2326	92	1024	1	wgEncodeBroadHistoneHsmmtH3k9acStdRawDataRep1	1	1	0	61
+2327	92	1024	1	wgEncodeBroadHistoneHsmmtH3k9acStdRawDataRep2	1	2	0	61
+2328	93	1025	9	wgEncodeBroadHistoneOsteoblCtcfStdRawDataRep2	1	2	0	61
+2329	93	1025	9	wgEncodeBroadHistoneOsteoblCtcfStdRawDataRep1	1	1	0	61
+2336	17	1029	178981	wgEncodeUwTfbsNhekInputStdRawDataRep1	1	1	1	61
+2342	5	1033	6	SRR037597	1	1	0	61
+2343	5	1033	6	SRR037547	1	2	0	61
+2344	5	1033	6	SRR037548	1	3	0	61
+2345	5	1033	6	SRR037552	1	4	0	61
+2346	5	1033	6	SRR037549	1	5	0	61
+2347	5	1033	6	SRR037551	1	6	0	61
+2348	5	1033	6	SRR037556	1	7	0	61
+2349	5	1033	6	SRR037598	1	8	0	61
+2352	18	1035	4	SRR020515	1	1	0	61
+2362	1	1040	36	wgEncodeHaibTfbsHelas3Pol2Pcr1xRawDataRep2	1	2	0	61
+2363	1	1040	36	wgEncodeHaibTfbsHelas3Pol2Pcr1xRawDataRep1	1	1	0	61
+2364	5	1041	1	SRR029621	1	1	0	61
+2365	5	1041	1	SRR029613	1	2	0	61
+2366	5	1041	1	SRR037563	1	3	0	61
+2367	5	1042	178981	SRR037635	1	1	1	61
+2368	5	1042	178981	SRR037636	1	1	1	61
+2369	5	1042	178981	SRR037634	1	1	1	61
+2370	5	1042	178981	SRR037637	1	1	1	61
+2371	5	1042	178981	SRR037638	1	2	1	61
+2372	5	1042	178981	SRR037639	1	2	1	61
+2373	5	1042	178981	SRR037652	1	2	1	61
+2374	5	1042	178981	SRR037640	1	2	1	61
+2375	5	1042	178981	SRR037641	1	2	1	61
+2376	5	1042	178981	SRR037642	1	2	1	61
+2379	18	1044	11	SRR020508	1	1	0	61
+2389	14	1049	14	wgEncodeBroadHistoneK562H3k9me3StdRawDataRep2	1	2	0	61
+2390	14	1049	14	wgEncodeBroadHistoneK562H3k9me3StdRawDataRep1	1	1	0	61
+2391	7	1050	9	wgEncodeHaibTfbsHepg2Ctcfsc5916V0416101RawDataRep1	1	1	0	61
+2392	7	1050	9	wgEncodeHaibTfbsHepg2Ctcfsc5916V0416101RawDataRep2	1	2	0	61
+2393	1	1051	178981	wgEncodeUwTfbsHelas3InputStdRawDataRep1	1	1	1	61
+2394	16	1052	6	wgEncodeBroadHistoneHuvecH3k4me1StdRawDataRep3	1	3	0	61
+2395	16	1052	6	wgEncodeBroadHistoneHuvecH3k4me1StdRawDataRep1	1	1	0	61
+2396	16	1052	6	wgEncodeBroadHistoneHuvecH3k4me1StdRawDataRep2	1	2	0	61
+2404	15	1058	178960	wgEncodeHaibTfbsGm12878Rad21V0416101RawDataRep1	1	1	0	61
+2405	15	1058	178960	wgEncodeHaibTfbsGm12878Rad21V0416101RawDataRep2	1	2	0	61
+2409	15	651	178981	wgEncodeBroadHistoneGm12878ControlStdRawDataRep1	1	1	1	61
+2410	15	413	178405	wgEncodeBroadHistoneGm12878H3k27acStdRawDataRep1	1	1	0	61
+2411	15	462	11	wgEncodeBroadHistoneGm12878H3k27me3StdRawDataRep1	1	1	0	61
+2412	15	278	12	wgEncodeBroadHistoneGm12878H3k36me3StdRawDataRep1	1	1	0	61
+2414	15	837	5	wgEncodeBroadHistoneGm12878H3k4me2StdRawDataRep1	1	1	0	61
+2415	15	23	1	wgEncodeBroadHistoneGm12878H3k9acStdRawDataRep1	1	1	0	61
+2416	15	370	34	wgEncodeBroadHistoneGm12878H4k20me1StdRawDataRep1	1	1	0	61
+2417	18	183	178981	wgEncodeBroadHistoneH1hescControlStdRawDataRep1	1	1	1	61
+2418	18	813	9	wgEncodeBroadHistoneH1hescCtcfStdRawDataRep1	1	1	0	61
+2419	18	1018	11	wgEncodeBroadHistoneH1hescH3k27me3StdRawDataRep1	1	1	0	61
+2420	18	779	12	wgEncodeBroadHistoneH1hescH3k36me3StdRawDataRep1	1	1	0	61
+2421	18	737	6	wgEncodeBroadHistoneH1hescH3k4me1StdRawDataRep1	1	1	0	61
+2422	18	814	5	wgEncodeBroadHistoneH1hescH3k4me2StdRawDataRep1	1	1	0	61
+2423	18	900	4	wgEncodeBroadHistoneH1hescH3k4me3StdRawDataRep1	1	1	0	61
+2424	18	82	1	wgEncodeBroadHistoneH1hescH3k9acStdRawDataRep1	1	1	0	61
+2425	18	904	34	wgEncodeBroadHistoneH1hescH4k20me1StdRawDataRep1	1	1	0	61
+2426	7	824	178981	wgEncodeBroadHistoneHepg2ControlStdRawDataRep2	1	2	1	61
+2427	7	1007	9	wgEncodeBroadHistoneHepg2CtcfStdRawDataRep2	1	2	0	61
+2428	7	474	178405	wgEncodeBroadHistoneHepg2H3k27acStdRawDataRep2	1	2	0	61
+2429	7	521	12	wgEncodeBroadHistoneHepg2H3k36me3StdRawDataRep2	1	2	0	61
+2430	7	682	5	wgEncodeBroadHistoneHepg2H3k4me2StdRawDataRep1	1	1	0	61
+2431	7	393	4	wgEncodeBroadHistoneHepg2H3k4me3StdRawDataRep2	1	2	0	61
+2432	7	350	1	wgEncodeBroadHistoneHepg2H3k9acStdRawDataRep2	1	2	0	61
+2433	7	505	34	wgEncodeBroadHistoneHepg2H4k20me1StdRawDataRep2	1	2	0	61
+2434	23	331	9	wgEncodeBroadHistoneHmecCtcfStdRawDataRep2	1	2	0	61
+2435	23	533	178405	wgEncodeBroadHistoneHmecH3k27acStdRawDataRep1	1	1	0	61
+2436	23	534	11	wgEncodeBroadHistoneHmecH3k27me3StdRawDataRep1	1	1	0	61
+2437	23	479	12	wgEncodeBroadHistoneHmecH3k36me3StdRawDataRep1	1	1	0	61
+2438	23	500	6	wgEncodeBroadHistoneHmecH3k4me1StdRawDataRep2	1	2	0	61
+2439	23	841	5	wgEncodeBroadHistoneHmecH3k4me2StdRawDataRep1	1	1	0	61
+2440	23	993	4	wgEncodeBroadHistoneHmecH3k4me3StdRawDataRep1	1	1	0	61
+2441	22	137	178981	wgEncodeBroadHistoneHsmmControlStdRawDataRep2	1	2	1	61
+2442	22	1002	9	wgEncodeBroadHistoneHsmmCtcfStdRawDataRep2	1	2	0	61
+2443	22	844	178405	wgEncodeBroadHistoneHsmmH3k27acStdRawDataRep2	1	2	0	61
+2444	22	378	11	wgEncodeBroadHistoneHsmmH3k27me3StdRawDataRep2	1	2	0	61
+2445	22	999	12	wgEncodeBroadHistoneHsmmH3k36me3StdRawDataRep2	1	2	0	61
+2446	22	1045	6	wgEncodeBroadHistoneHsmmH3k4me1StdRawDataRep2	1	2	0	61
+2447	22	44	5	wgEncodeBroadHistoneHsmmH3k4me2StdRawDataRep2	1	2	0	61
+2448	22	553	4	wgEncodeBroadHistoneHsmmH3k4me3StdRawDataRep2	1	2	0	61
+2449	22	87	1	wgEncodeBroadHistoneHsmmH3k9acStdRawDataRep2	1	2	0	61
+2450	22	464	34	wgEncodeBroadHistoneHsmmH4k20me1StdRawDataRep2	1	2	0	61
+2451	14	346	11	wgEncodeBroadHistoneK562H3k27me3StdRawDataRep1	1	1	0	61
+2452	14	169	4	wgEncodeBroadHistoneK562H3k4me3StdRawDataRep2	1	2	0	61
+2453	14	359	1	wgEncodeBroadHistoneK562H3k9acStdRawDataRep1	1	1	0	61
+2454	78	17	178981	wgEncodeBroadHistoneNhlfControlStdRawDataRep1	1	1	1	61
+2455	78	747	9	wgEncodeBroadHistoneNhlfCtcfStdRawDataRep2	1	2	0	61
+2456	78	1017	178405	wgEncodeBroadHistoneNhlfH3k27acStdRawDataRep2	1	2	0	61
+2457	78	717	11	wgEncodeBroadHistoneNhlfH3k27me3StdRawDataRep1	1	1	0	61
+2458	78	205	12	wgEncodeBroadHistoneNhlfH3k36me3StdRawDataRep2	1	2	0	61
+2459	78	290	6	wgEncodeBroadHistoneNhlfH3k4me1StdRawDataRep2	1	2	0	61
+2460	78	563	4	wgEncodeBroadHistoneNhlfH3k4me3StdRawDataRep2	1	2	0	61
+2461	78	6	1	wgEncodeBroadHistoneNhlfH3k9acStdRawDataRep1	1	1	0	61
+2462	78	567	34	wgEncodeBroadHistoneNhlfH4k20me1StdRawDataRep2	1	2	0	61
+2463	15	651	178981	wgEncodeBroadHistoneGm12878ControlStdRawDataRep2	1	2	1	61
+2464	15	413	178405	wgEncodeBroadHistoneGm12878H3k27acStdRawDataRep2	1	2	0	61
+2465	15	462	11	wgEncodeBroadHistoneGm12878H3k27me3StdRawDataRep2	1	2	0	61
+2466	15	278	12	wgEncodeBroadHistoneGm12878H3k36me3StdRawDataRep2	1	2	0	61
+2467	15	123	6	wgEncodeBroadHistoneGm12878H3k4me1StdRawDataRep2	1	2	0	61
+2468	15	837	5	wgEncodeBroadHistoneGm12878H3k4me2StdRawDataRep2	1	2	0	61
+2469	15	23	1	wgEncodeBroadHistoneGm12878H3k9acStdRawDataRep2	1	2	0	61
+2470	15	370	34	wgEncodeBroadHistoneGm12878H4k20me1StdRawDataRep2	1	2	0	61
+2471	18	183	178981	wgEncodeBroadHistoneH1hescControlStdRawDataRep2	1	2	1	61
+2472	18	813	9	wgEncodeBroadHistoneH1hescCtcfStdRawDataRep2	1	2	0	61
+2473	18	1018	11	wgEncodeBroadHistoneH1hescH3k27me3StdRawDataRep2	1	2	0	61
+2474	18	779	12	wgEncodeBroadHistoneH1hescH3k36me3StdRawDataRep2	1	2	0	61
+2475	18	737	6	wgEncodeBroadHistoneH1hescH3k4me1StdRawDataRep2	1	2	0	61
+2476	18	814	5	wgEncodeBroadHistoneH1hescH3k4me2StdRawDataRep2	1	2	0	61
+2477	18	900	4	wgEncodeBroadHistoneH1hescH3k4me3StdRawDataRep2	1	2	0	61
+2478	18	82	1	wgEncodeBroadHistoneH1hescH3k9acStdRawDataRep2	1	2	0	61
+2479	18	904	34	wgEncodeBroadHistoneH1hescH4k20me1StdRawDataRep2	1	2	0	61
+2480	7	824	178981	wgEncodeBroadHistoneHepg2ControlStdRawDataRep1	1	1	1	61
+2481	7	1007	9	wgEncodeBroadHistoneHepg2CtcfStdRawDataRep1	1	1	0	61
+2482	7	474	178405	wgEncodeBroadHistoneHepg2H3k27acStdRawDataRep1	1	1	0	61
+2483	7	521	12	wgEncodeBroadHistoneHepg2H3k36me3StdRawDataRep1	1	1	0	61
+2484	7	682	5	wgEncodeBroadHistoneHepg2H3k4me2StdRawDataRep2	1	2	0	61
+2485	7	393	4	wgEncodeBroadHistoneHepg2H3k4me3StdRawDataRep1	1	1	0	61
+2486	7	350	1	wgEncodeBroadHistoneHepg2H3k9acStdRawDataRep1	1	1	0	61
+2487	7	505	34	wgEncodeBroadHistoneHepg2H4k20me1StdRawDataRep1	1	1	0	61
+2488	23	331	9	wgEncodeBroadHistoneHmecCtcfStdRawDataRep1	1	1	0	61
+2489	23	533	178405	wgEncodeBroadHistoneHmecH3k27acStdRawDataRep2	1	2	0	61
+2490	23	534	11	wgEncodeBroadHistoneHmecH3k27me3StdRawDataRep2	1	2	0	61
+2491	23	479	12	wgEncodeBroadHistoneHmecH3k36me3StdRawDataRep2	1	2	0	61
+2492	23	500	6	wgEncodeBroadHistoneHmecH3k4me1StdRawDataRep1	1	1	0	61
+2493	23	841	5	wgEncodeBroadHistoneHmecH3k4me2StdRawDataRep2	1	2	0	61
+2494	23	993	4	wgEncodeBroadHistoneHmecH3k4me3StdRawDataRep2	1	2	0	61
+2495	22	137	178981	wgEncodeBroadHistoneHsmmControlStdRawDataRep1	1	1	1	61
+2496	22	1002	9	wgEncodeBroadHistoneHsmmCtcfStdRawDataRep1	1	1	0	61
+2497	22	844	178405	wgEncodeBroadHistoneHsmmH3k27acStdRawDataRep1	1	1	0	61
+2498	22	378	11	wgEncodeBroadHistoneHsmmH3k27me3StdRawDataRep1	1	1	0	61
+2499	22	999	12	wgEncodeBroadHistoneHsmmH3k36me3StdRawDataRep1	1	1	0	61
+2500	22	1045	6	wgEncodeBroadHistoneHsmmH3k4me1StdRawDataRep1	1	1	0	61
+2501	22	44	5	wgEncodeBroadHistoneHsmmH3k4me2StdRawDataRep1	1	1	0	61
+2502	22	553	4	wgEncodeBroadHistoneHsmmH3k4me3StdRawDataRep1	1	1	0	61
+2503	22	87	1	wgEncodeBroadHistoneHsmmH3k9acStdRawDataRep1	1	1	0	61
+2504	22	464	34	wgEncodeBroadHistoneHsmmH4k20me1StdRawDataRep1	1	1	0	61
+2505	14	346	11	wgEncodeBroadHistoneK562H3k27me3StdRawDataRep2	1	2	0	61
+2506	14	169	4	wgEncodeBroadHistoneK562H3k4me3StdRawDataRep1	1	1	0	61
+2507	14	359	1	wgEncodeBroadHistoneK562H3k9acStdRawDataRep2	1	2	0	61
+2508	78	17	178981	wgEncodeBroadHistoneNhlfControlStdRawDataRep2	1	2	1	61
+2509	78	747	9	wgEncodeBroadHistoneNhlfCtcfStdRawDataRep1	1	1	0	61
+2510	78	1017	178405	wgEncodeBroadHistoneNhlfH3k27acStdRawDataRep1	1	1	0	61
+2511	78	717	11	wgEncodeBroadHistoneNhlfH3k27me3StdRawDataRep2	1	2	0	61
+2512	78	205	12	wgEncodeBroadHistoneNhlfH3k36me3StdRawDataRep1	1	1	0	61
+2513	78	290	6	wgEncodeBroadHistoneNhlfH3k4me1StdRawDataRep1	1	1	0	61
+2514	78	563	4	wgEncodeBroadHistoneNhlfH3k4me3StdRawDataRep1	1	1	0	61
+2515	78	6	1	wgEncodeBroadHistoneNhlfH3k9acStdRawDataRep2	1	2	0	61
+2516	78	567	34	wgEncodeBroadHistoneNhlfH4k20me1StdRawDataRep1	1	1	0	61
+2524	18	611	8	wgEncodeOpenChromDnaseH1hescRawDataRep1	1	1	0	62
+2526	1	45	8	wgEncodeOpenChromDnaseHelas3RawDataRep1	1	1	0	62
+2527	7	351	8	wgEncodeOpenChromDnaseHepg2RawDataRep1	1	1	0	62
+2528	16	262	8	wgEncodeOpenChromDnaseHuvecRawDataRep1	1	1	0	62
+2529	14	219	8	wgEncodeOpenChromDnaseK562RawDataRep1	1	1	0	62
+2533	17	965	8	wgEncodeOpenChromDnaseNhekRawDataRep1	1	1	0	62
+2541	18	611	8	wgEncodeOpenChromDnaseH1hescRawDataRep2	1	2	0	62
+2543	1	45	8	wgEncodeOpenChromDnaseHelas3RawDataRep2	1	2	0	62
+2544	7	351	8	wgEncodeOpenChromDnaseHepg2RawDataRep2	1	2	0	62
+2545	16	262	8	wgEncodeOpenChromDnaseHuvecRawDataRep2	1	2	0	62
+2546	14	219	8	wgEncodeOpenChromDnaseK562RawDataRep2	1	2	0	62
+2550	17	965	8	wgEncodeOpenChromDnaseNhekRawDataRep2	1	2	0	62
+2552	1	45	8	wgEncodeOpenChromDnaseHelas3RawDataRep3	1	3	0	62
+2553	7	351	8	wgEncodeOpenChromDnaseHepg2RawDataRep3	1	3	0	62
+2554	15	379	178911	wgEncodeHaibTfbsGm12878BatfRawDataRep1	1	1	0	61
+2555	15	580	178912	wgEncodeHaibTfbsGm12878Bcl11aRawDataRep1	1	1	0	61
+2557	15	632	178944	wgEncodeHaibTfbsGm12878Irf4sc6059RawDataRep1	1	1	0	61
+2558	15	789	178954	wgEncodeHaibTfbsGm12878P300RawDataRep1	1	1	0	61
+2559	15	435	178969	wgEncodeHaibTfbsGm12878Pu1Pcr1xRawDataRep1	1	1	0	61
+2560	15	530	178976	wgEncodeHaibTfbsGm12878Tcf12Pcr1xRawDataRep1	1	1	0	61
+2561	15	1003	178984	wgEncodeHaibTfbsGm12878Zbtb33RawDataRep1	1	1	0	61
+2569	18	80	178900	wgEncodeHaibTfbsH1hescNrsfV0416102RawDataRep1	1	1	0	61
+2571	18	524	36	wgEncodeHaibTfbsH1hescPol2V0416102RawDataRep1	1	1	0	61
+2572	18	295	178974	wgEncodeHaibTfbsH1hescTaf1V0416102RawDataRep1	1	1	0	61
+2573	7	12	178930	wgEncodeHaibTfbsHepg2Fosl2V0416101RawDataRep1	1	1	0	61
+2575	7	609	178962	wgEncodeHaibTfbsHepg2RxraPcr1xRawDataRep1	1	1	0	61
+2576	14	1014	178939	wgEncodeHaibTfbsK562Hey1RawDataRep1	1	1	0	61
+2578	15	379	178911	wgEncodeHaibTfbsGm12878BatfRawDataRep2	1	2	0	61
+2579	15	580	178912	wgEncodeHaibTfbsGm12878Bcl11aRawDataRep2	1	2	0	61
+2581	15	632	178944	wgEncodeHaibTfbsGm12878Irf4sc6059RawDataRep2	1	2	0	61
+2582	15	789	178954	wgEncodeHaibTfbsGm12878P300RawDataRep2	1	2	0	61
+2583	15	435	178969	wgEncodeHaibTfbsGm12878Sp1Pcr1xRawDataRep2	1	2	0	61
+2584	15	530	178976	wgEncodeHaibTfbsGm12878Tcf12Pcr1xRawDataRep2	1	2	0	61
+2585	15	1003	178984	wgEncodeHaibTfbsGm12878Zbtb33RawDataRep2	1	2	0	61
+2594	18	80	178900	wgEncodeHaibTfbsH1hescNrsfV0416102RawDataRep2	1	2	0	61
+2596	18	524	36	wgEncodeHaibTfbsH1hescPol2V0416102RawDataRep2	1	2	0	61
+2597	18	295	178974	wgEncodeHaibTfbsH1hescTaf1V0416102RawDataRep2	1	2	0	61
+2598	7	12	178930	wgEncodeHaibTfbsHepg2Fosl2V0416101RawDataRep2	1	2	0	61
+2600	7	609	178962	wgEncodeHaibTfbsHepg2RxraPcr1xRawDataRep2	1	2	0	61
+2601	14	1014	178939	wgEncodeHaibTfbsK562Hey1RawDataRep2	1	2	0	61
+2617	2	546	11	wgEncodeUwHistoneGm06990H3k27me3StdRawDataRep1	1	1	0	61
+2618	2	720	12	wgEncodeUwHistoneGm06990H3k36me3StdRawDataRep1	1	1	0	61
+2627	15	352	9	wgEncodeUwTfbsGm12878CtcfStdRawDataRep1	1	1	0	61
+2628	15	41	11	wgEncodeUwHistoneGm12878H3k27me3StdRawDataRep1	1	1	0	61
+2629	15	750	12	wgEncodeUwHistoneGm12878H3k36me3StdRawDataRep1	1	1	0	61
+2630	15	531	4	wgEncodeUwHistoneGm12878H3k4me3StdRawDataRep1	1	1	0	61
+2632	1	1043	9	wgEncodeUwTfbsHelas3CtcfStdRawDataRep1	1	1	0	61
+2633	1	495	11	wgEncodeUwHistoneHelas3H3k27me3StdRawDataRep1	1	1	0	61
+2634	1	925	12	wgEncodeUwHistoneHelas3H3k36me3StdRawDataRep1	1	1	0	61
+2635	1	808	4	wgEncodeUwHistoneHelas3H3k4me3StdRawDataRep1	1	1	0	61
+2636	7	310	9	wgEncodeUwTfbsHepg2CtcfStdRawDataRep1	1	1	0	61
+2637	7	890	11	wgEncodeUwHistoneHepg2H3k27me3StdRawDataRep1	1	1	0	61
+2638	7	419	4	wgEncodeUwHistoneHepg2H3k4me3StdRawDataRep1	1	1	0	61
+2641	23	319	9	wgEncodeUwTfbsHmecCtcfStdRawDataRep1	1	1	0	61
+2642	23	665	11	wgEncodeUwHistoneHmecH3k27me3StdRawDataRep1	1	1	0	61
+2647	16	414	9	wgEncodeUwTfbsHuvecCtcfStdRawDataRep1	1	1	0	61
+2648	16	801	11	wgEncodeUwHistoneHuvecH3k27me3StdRawDataRep1	1	1	0	61
+2649	16	1055	12	wgEncodeUwHistoneHuvecH3k36me3StdRawDataRep1	1	1	0	61
+2650	16	363	4	wgEncodeUwHistoneHuvecH3k4me3StdRawDataRep1	1	1	0	61
+2651	14	1009	9	wgEncodeUwTfbsK562CtcfStdRawDataRep1	1	1	0	61
+2652	14	49	11	wgEncodeUwHistoneK562H3k27me3StdRawDataRep1	1	1	0	61
+2653	14	165	12	wgEncodeUwHistoneK562H3k36me3StdRawDataRep1	1	1	0	61
+2654	14	471	4	wgEncodeUwHistoneK562H3k4me3StdRawDataRep1	1	1	0	61
+2655	17	669	9	wgEncodeUwTfbsNhekCtcfStdRawDataRep1	1	1	0	61
+2656	17	523	11	wgEncodeUwHistoneNhekH3k27me3StdRawDataRep1	1	1	0	61
+2657	17	943	12	wgEncodeUwHistoneNhekH3k36me3StdRawDataRep1	1	1	0	61
+2658	17	730	4	wgEncodeUwHistoneNhekH3k4me3StdRawDataRep1	1	1	0	61
+2676	2	546	11	wgEncodeUwHistoneGm06990H3k27me3StdRawDataRep2	1	2	0	61
+2677	2	720	12	wgEncodeUwHistoneGm06990H3k36me3StdRawDataRep2	1	2	0	61
+2685	15	352	9	wgEncodeUwTfbsGm12878CtcfStdRawDataRep2	1	2	0	61
+2686	15	41	11	wgEncodeUwHistoneGm12878H3k27me3StdRawDataRep2	1	2	0	61
+2687	15	750	12	wgEncodeUwHistoneGm12878H3k36me3StdRawDataRep2	1	2	0	61
+2688	15	531	4	wgEncodeUwHistoneGm12878H3k4me3StdRawDataRep2	1	2	0	61
+2690	1	1043	9	wgEncodeUwTfbsHelas3CtcfStdRawDataRep2	1	2	0	61
+2691	1	495	11	wgEncodeUwHistoneHelas3H3k27me3StdRawDataRep2	1	2	0	61
+2692	1	925	12	wgEncodeUwHistoneHelas3H3k36me3StdRawDataRep2	1	2	0	61
+2693	1	808	4	wgEncodeUwHistoneHelas3H3k4me3StdRawDataRep2	1	2	0	61
+2694	7	310	9	wgEncodeUwTfbsHepg2CtcfStdRawDataRep2	1	2	0	61
+2695	7	890	11	wgEncodeUwHistoneHepg2H3k27me3StdRawDataRep2	1	2	0	61
+2696	7	419	4	wgEncodeUwHistoneHepg2H3k4me3StdRawDataRep2	1	2	0	61
+2702	16	414	9	wgEncodeUwTfbsHuvecCtcfStdRawDataRep2	1	2	0	61
+2703	16	801	11	wgEncodeUwHistoneHuvecH3k27me3StdRawDataRep2	1	2	0	61
+2704	16	1055	12	wgEncodeUwHistoneHuvecH3k36me3StdRawDataRep2	1	2	0	61
+2705	16	363	4	wgEncodeUwHistoneHuvecH3k4me3StdRawDataRep2	1	2	0	61
+2706	14	1009	9	wgEncodeUwTfbsK562CtcfStdRawDataRep2	1	2	0	61
+2707	14	49	11	wgEncodeUwHistoneK562H3k27me3StdRawDataRep2	1	2	0	61
+2708	14	165	12	wgEncodeUwHistoneK562H3k36me3StdRawDataRep2	1	2	0	61
+2709	17	669	9	wgEncodeUwTfbsNhekCtcfStdRawDataRep2	1	2	0	61
+2710	17	523	11	wgEncodeUwHistoneNhekH3k27me3StdRawDataRep2	1	2	0	61
+2711	17	943	12	wgEncodeUwHistoneNhekH3k36me3StdRawDataRep2	1	2	0	61
+2712	17	730	4	wgEncodeUwHistoneNhekH3k4me3StdRawDataRep2	1	2	0	61
+2731	15	502	8	wgEncodeUwDnaseGm12878RawDataRep1	1	1	0	62
+2732	18	902	8	wgEncodeUwDnaseH1hescRawDataRep1	1	1	0	62
+2738	1	21	8	wgEncodeUwDnaseHelas3RawDataRep1	1	1	0	62
+2739	7	508	8	wgEncodeUwDnaseHepg2RawDataRep1	1	1	0	62
+2746	14	171	8	wgEncodeUwDnaseK562RawDataRep1	1	1	0	62
+2750	78	734	8	wgEncodeUwDnaseNhlfRawDataRep1	1	1	0	62
+2765	15	502	8	wgEncodeUwDnaseGm12878RawDataRep2	1	2	0	62
+2771	1	21	8	wgEncodeUwDnaseHelas3RawDataRep2	1	2	0	62
+2772	7	508	8	wgEncodeUwDnaseHepg2RawDataRep2	1	2	0	62
+2779	14	171	8	wgEncodeUwDnaseK562RawDataRep2	1	2	0	62
+2783	78	734	8	wgEncodeUwDnaseNhlfRawDataRep2	1	2	0	62
+2788	15	864	178981	wgEncodeSydhTfbsGm12878InputRawData	1	1	1	61
+2791	1	938	178981	wgEncodeSydhTfbsHelas3InputRawData	1	1	1	61
+2793	20	1062	178981	wgEncodeSydhTfbsK562InputRawData	1	1	1	61
+2799	15	1066	178981	wgEncodeSydhTfbsGm12878InputTnfaIggrabRawDataRep1	1	1	1	61
+2800	15	951	178893	wgEncodeSydhTfbsGm12878JundRawDataRep1	1	1	0	61
+2801	15	1066	178981	wgEncodeSydhTfbsGm12878IggmusRawDataRep1	1	1	1	61
+2802	15	1067	36	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep1	1	1	0	61
+2803	15	616	178902	wgEncodeSydhTfbsGm12878Pol3RawDataRep1	1	1	0	61
+2804	15	1068	178960	wgEncodeSydhTfbsGm12878Rad21IggrabRawDataRep1	1	1	0	61
+2805	15	1069	178979	wgEncodeSydhTfbsGm12878Tr4RawDataRep1	1	1	0	61
+2806	15	1070	178983	wgEncodeSydhTfbsGm12878Yy1RawDataRep1	1	1	0	61
+2843	1	1098	178906	wgEncodeSydhTfbsHelas3Ap2alphaRawDataRep1	1	1	0	61
+2844	1	1099	178907	wgEncodeSydhTfbsHelas3Ap2gammaRawDataRep1	1	1	0	61
+2845	1	1100	178909	wgEncodeSydhTfbsHelas3Baf155IggmusRawDataRep1	1	1	0	61
+2846	1	1101	178910	wgEncodeSydhTfbsHelas3Baf170IggmusRawDataRep1	1	1	0	61
+2850	1	360	178918	wgEncodeSydhTfbsHelas3Brg1IggmusRawDataRep1	1	1	0	61
+2851	1	980	178891	wgEncodeSydhTfbsHelas3CfosRawDataRep1	1	1	0	61
+2852	1	1105	178892	wgEncodeSydhTfbsHelas3CjunRabiggRawDataRep1	1	1	0	61
+2853	1	279	178898	wgEncodeSydhTfbsHelas3CmycRawDataRep1	1	1	0	61
+2854	1	1106	178921	wgEncodeSydhTfbsHelas3E2f1RawDataRep1	1	1	0	61
+2855	1	1107	178923	wgEncodeSydhTfbsHelas3E2f4RawDataRep1	1	1	0	61
+2856	1	1108	178924	wgEncodeSydhTfbsHelas3E2f6RawDataRep1	1	1	0	61
+2857	1	1109	178943	wgEncodeSydhTfbsHelas3Ini1IggmusRawDataRep1	1	1	0	61
+2858	1	1110	178893	wgEncodeSydhTfbsHelas3JundRabiggRawDataRep1	1	1	0	61
+2859	1	938	178981	wgEncodeSydhTfbsHelas3LargefragmentRawDataRep1	1	1	1	61
+2860	1	858	178894	wgEncodeSydhTfbsHelas3MaxRawDataRep1	1	1	0	61
+2861	1	938	178981	wgEncodeSydhTfbsHelas3MnaseRawDataRep1	1	1	1	61
+2862	1	938	178981	wgEncodeSydhTfbsHelas3MouseiggRawDataRep1	1	1	1	61
+2863	1	938	178981	wgEncodeSydhTfbsHelas3NakeddnaRawDataRep1	1	1	1	61
+2864	1	1111	178952	wgEncodeSydhTfbsHelas3Nrf1IggmusRawDataRep1	1	1	0	61
+2865	1	397	36	wgEncodeSydhTfbsHelas3Pol2RawDataRep1	1	1	0	61
+2866	1	1112	178981	wgEncodeSydhTfbsHelas3RabiggRawDataRep1	1	1	1	61
+2869	1	1115	178979	wgEncodeSydhTfbsHelas3Tr4RawDataRep1	1	1	0	61
+2875	16	1117	178892	wgEncodeSydhTfbsHuvecCjunRawDataRep1	1	1	0	61
+2877	16	1118	178894	wgEncodeSydhTfbsHuvecMaxRawDataRep1	1	1	0	61
+2878	16	1119	36	wgEncodeSydhTfbsHuvecPol2RawDataRep1	1	1	0	61
+2883	14	1124	178918	wgEncodeSydhTfbsK562Brg1IggmusRawDataRep1	1	1	0	61
+2884	14	582	178891	wgEncodeSydhTfbsK562CfosRawDataRep1	1	1	0	61
+2885	14	602	178892	wgEncodeSydhTfbsK562CjunRawDataRep1	1	1	0	61
+2886	14	284	178898	wgEncodeSydhTfbsK562CmycRawDataRep1	1	1	0	61
+2887	14	1125	178943	wgEncodeSydhTfbsK562Ini1IggmusRawDataRep1	1	1	0	61
+2888	14	694	178981	wgEncodeSydhTfbsK562InputV2RawDataRep1	1	1	1	61
+2889	14	461	178894	wgEncodeSydhTfbsK562MaxRawDataRep1	1	1	0	61
+2890	14	1126	178981	wgEncodeSydhTfbsK562IggmusRawDataRep1	1	1	1	61
+2892	14	63	178895	wgEncodeSydhTfbsK562Nfe2RawDataRep1	1	1	0	61
+2893	14	937	36	wgEncodeSydhTfbsK562Pol2RawDataRep1	1	1	0	61
+2894	14	1128	36	wgEncodeSydhTfbsK562Pol2IggmusRawDataRep1	1	1	0	61
+2895	14	1129	178902	wgEncodeSydhTfbsK562Pol3RawDataRep1	1	1	0	61
+2896	14	570	178960	wgEncodeSydhTfbsK562Rad21RawDataRep1	1	1	0	61
+2899	14	828	178982	wgEncodeSydhTfbsK562Xrcc4RawDataRep1	1	1	0	61
+2900	20	1132	178923	wgEncodeSydhTfbsK562E2f4RawDataRep1	1	1	0	61
+2901	20	1133	178924	wgEncodeSydhTfbsK562E2f6RawDataRep1	1	1	0	61
+2902	20	1134	178896	wgEncodeSydhTfbsK562Gata1RawDataRep1	1	1	0	61
+2903	20	1135	178932	wgEncodeSydhTfbsK562Gata2RawDataRep1	1	1	0	61
+2904	20	1136	178963	wgEncodeSydhTfbsK562Setdb1RawDataRep1	1	1	0	61
+2905	20	1137	178979	wgEncodeSydhTfbsK562Tr4RawDataRep1	1	1	0	61
+2906	20	1138	178983	wgEncodeSydhTfbsK562Yy1RawDataRep1	1	1	0	61
+2907	20	1139	178897	wgEncodeSydhTfbsK562Znf263RawDataRep1	1	1	0	61
+2908	20	1140	178986	wgEncodeSydhTfbsK562Znf274RawDataRep1	1	1	0	61
+2918	15	1066	178981	wgEncodeSydhTfbsGm12878InputTnfaIggrabRawDataRep2	1	2	1	61
+2919	15	951	178893	wgEncodeSydhTfbsGm12878JundRawDataRep2	1	2	0	61
+2920	15	1066	178981	wgEncodeSydhTfbsGm12878IggmusRawDataRep2	1	2	1	61
+2921	15	1067	36	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep2	1	2	0	61
+2922	15	616	178902	wgEncodeSydhTfbsGm12878Pol3RawDataRep2	1	2	0	61
+2923	15	1068	178960	wgEncodeSydhTfbsGm12878Rad21IggrabRawDataRep2	1	2	0	61
+2924	15	1069	178979	wgEncodeSydhTfbsGm12878Tr4RawDataRep2	1	2	0	61
+2925	15	1070	178983	wgEncodeSydhTfbsGm12878Yy1RawDataRep2	1	2	0	61
+2961	1	1098	178906	wgEncodeSydhTfbsHelas3Ap2alphaRawDataRep2	1	2	0	61
+2962	1	1099	178907	wgEncodeSydhTfbsHelas3Ap2gammaRawDataRep2	1	2	0	61
+2963	1	1100	178909	wgEncodeSydhTfbsHelas3Baf155IggmusRawDataRep2	1	2	0	61
+2964	1	1101	178910	wgEncodeSydhTfbsHelas3Baf170IggmusRawDataRep2	1	2	0	61
+2968	1	360	178918	wgEncodeSydhTfbsHelas3Brg1IggmusRawDataRep2	1	2	0	61
+2969	1	980	178891	wgEncodeSydhTfbsHelas3CfosRawDataRep2	1	2	0	61
+2970	1	1105	178892	wgEncodeSydhTfbsHelas3CjunRabiggRawDataRep2	1	2	0	61
+2971	1	279	178898	wgEncodeSydhTfbsHelas3CmycRawDataRep2	1	2	0	61
+2972	1	1106	178921	wgEncodeSydhTfbsHelas3E2f1RawDataRep2	1	2	0	61
+2973	1	1107	178923	wgEncodeSydhTfbsHelas3E2f4RawDataRep2	1	2	0	61
+2974	1	1108	178924	wgEncodeSydhTfbsHelas3E2f6RawDataRep2	1	2	0	61
+2975	1	1109	178943	wgEncodeSydhTfbsHelas3Ini1IggmusRawDataRep2	1	2	0	61
+2976	1	1110	178893	wgEncodeSydhTfbsHelas3JundRabiggRawDataRep2	1	2	0	61
+2977	1	938	178981	wgEncodeSydhTfbsHelas3LargefragmentRawDataRep2	1	2	1	61
+2978	1	858	178894	wgEncodeSydhTfbsHelas3MaxRawDataRep2	1	2	0	61
+2979	1	938	178981	wgEncodeSydhTfbsHelas3MnaseRawDataRep2	1	2	1	61
+2980	1	938	178981	wgEncodeSydhTfbsHelas3MouseiggRawDataRep2	1	2	1	61
+2981	1	938	178981	wgEncodeSydhTfbsHelas3NakeddnaRawDataRep2	1	2	1	61
+2982	1	1111	178952	wgEncodeSydhTfbsHelas3Nrf1IggmusRawDataRep2	1	2	0	61
+2983	1	397	36	wgEncodeSydhTfbsHelas3Pol2RawDataRep2	1	2	0	61
+2986	1	1115	178979	wgEncodeSydhTfbsHelas3Tr4RawDataRep2	1	2	0	61
+2992	16	1117	178892	wgEncodeSydhTfbsHuvecCjunRawDataRep2	1	2	0	61
+2994	16	1118	178894	wgEncodeSydhTfbsHuvecMaxRawDataRep2	1	2	0	61
+2995	16	1119	36	wgEncodeSydhTfbsHuvecPol2RawDataRep2	1	2	0	61
+3000	14	1124	178918	wgEncodeSydhTfbsK562Brg1IggmusRawDataRep2	1	2	0	61
+3001	14	582	178891	wgEncodeSydhTfbsK562CfosRawDataRep2	1	2	0	61
+3002	14	602	178892	wgEncodeSydhTfbsK562CjunRawDataRep2	1	2	0	61
+3003	14	284	178898	wgEncodeSydhTfbsK562CmycRawDataRep2	1	2	0	61
+3004	14	1125	178943	wgEncodeSydhTfbsK562Ini1IggmusRawDataRep2	1	2	0	61
+3005	14	694	178981	wgEncodeSydhTfbsK562InputV2RawDataRep2	1	2	1	61
+3006	14	461	178894	wgEncodeSydhTfbsK562MaxRawDataRep2	1	2	0	61
+3007	14	1126	178981	wgEncodeSydhTfbsK562IggmusRawDataRep2	1	2	1	61
+3009	14	63	178895	wgEncodeSydhTfbsK562Nfe2RawDataRep2	1	2	0	61
+3010	14	937	36	wgEncodeSydhTfbsK562Pol2RawDataRep2	1	2	0	61
+3011	14	1128	36	wgEncodeSydhTfbsK562Pol2IggmusRawDataRep2	1	2	0	61
+3012	14	1129	178902	wgEncodeSydhTfbsK562Pol3RawDataRep2	1	2	0	61
+3013	14	570	178960	wgEncodeSydhTfbsK562Rad21RawDataRep2	1	2	0	61
+3016	14	828	178982	wgEncodeSydhTfbsK562Xrcc4RawDataRep2	1	2	0	61
+3017	20	1132	178923	wgEncodeSydhTfbsK562E2f4RawDataRep2	1	2	0	61
+3018	20	1133	178924	wgEncodeSydhTfbsK562E2f6RawDataRep2	1	2	0	61
+3019	20	1134	178896	wgEncodeSydhTfbsK562Gata1RawDataRep2	1	2	0	61
+3020	20	1135	178932	wgEncodeSydhTfbsK562Gata2RawDataRep2	1	2	0	61
+3021	20	1136	178963	wgEncodeSydhTfbsK562Setdb1RawDataRep2	1	2	0	61
+3022	20	1137	178979	wgEncodeSydhTfbsK562Tr4RawDataRep2	1	2	0	61
+3023	20	1138	178983	wgEncodeSydhTfbsK562Yy1RawDataRep2	1	2	0	61
+3024	20	1139	178897	wgEncodeSydhTfbsK562Znf263RawDataRep2	1	2	0	61
+3025	20	1140	178986	wgEncodeSydhTfbsK562Znf274RawDataRep2	1	2	0	61
+3032	15	1067	36	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep3	1	3	0	61
+3051	1	1100	178909	wgEncodeSydhTfbsHelas3Baf155IggmusRawDataRep3	1	3	0	61
+3052	1	1101	178910	wgEncodeSydhTfbsHelas3Baf170IggmusRawDataRep3	1	3	0	61
+3053	1	360	178918	wgEncodeSydhTfbsHelas3Brg1IggmusRawDataRep3	1	3	0	61
+3054	1	1109	178943	wgEncodeSydhTfbsHelas3Ini1IggmusRawDataRep3	1	3	0	61
+3055	1	938	178981	wgEncodeSydhTfbsHelas3NakeddnaRawDataRep3	1	3	1	61
+3056	1	397	36	wgEncodeSydhTfbsHelas3Pol2RawDataRep3	1	3	0	61
+3061	16	1119	36	wgEncodeSydhTfbsHuvecPol2RawDataRep3	1	3	0	61
+3065	14	582	178891	wgEncodeSydhTfbsK562CfosRawDataRep3	1	3	0	61
+3069	15	1067	36	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep4	1	4	0	61
+3078	15	1067	36	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep5	1	5	0	61
+3082	15	1067	36	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep6	1	6	0	61
+3084	15	1067	36	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep7	1	7	0	61
+3085	240	1145	6	wgEncodeBroadHistoneDnd41H3k04me1RawDataRep1	1	1	0	61
+3086	240	1145	6	wgEncodeBroadHistoneDnd41H3k04me1RawDataRep2	1	2	0	61
+3087	240	1146	5	wgEncodeBroadHistoneDnd41H3k04me2RawDataRep1	1	1	0	61
+3088	240	1146	5	wgEncodeBroadHistoneDnd41H3k04me2RawDataRep2	1	2	0	61
+3089	240	1147	4	wgEncodeBroadHistoneDnd41H3k04me3RawDataRep1	1	1	0	61
+3090	240	1147	4	wgEncodeBroadHistoneDnd41H3k04me3RawDataRep2	1	2	0	61
+3091	240	1148	1	wgEncodeBroadHistoneDnd41H3k09acRawDataRep1	1	1	0	61
+3092	240	1148	1	wgEncodeBroadHistoneDnd41H3k09acRawDataRep2	1	2	0	61
+3093	240	1149	178405	wgEncodeBroadHistoneDnd41H3k27acRawDataRep1	1	1	0	61
+3094	240	1149	178405	wgEncodeBroadHistoneDnd41H3k27acRawDataRep2	1	2	0	61
+3095	240	1150	11	wgEncodeBroadHistoneDnd41H3k27me3RawDataRep1	1	1	0	61
+3096	240	1150	11	wgEncodeBroadHistoneDnd41H3k27me3RawDataRep2	1	2	0	61
+3097	240	1151	12	wgEncodeBroadHistoneDnd41H3k36me3RawDataRep1	1	1	0	61
+3098	240	1151	12	wgEncodeBroadHistoneDnd41H3k36me3RawDataRep2	1	2	0	61
+3099	240	1152	34	wgEncodeBroadHistoneDnd41H4k20me1RawDataRep1	1	1	0	61
+3100	240	1152	34	wgEncodeBroadHistoneDnd41H4k20me1RawDataRep2	1	2	0	61
+3101	103	1153	6	wgEncodeBroadHistoneMonocd14ro1746H3k04me1RawDataRep1	1	1	0	61
+3102	103	1153	6	wgEncodeBroadHistoneMonocd14ro1746H3k04me1RawDataRep2	1	2	0	61
+3103	103	1154	5	wgEncodeBroadHistoneMonocd14ro1746H3k04me2RawDataRep1	1	1	0	61
+3104	103	1154	5	wgEncodeBroadHistoneMonocd14ro1746H3k04me2RawDataRep2	1	2	0	61
+3105	103	1155	4	wgEncodeBroadHistoneMonocd14ro1746H3k04me3RawDataRep1	1	1	0	61
+3106	103	1155	4	wgEncodeBroadHistoneMonocd14ro1746H3k04me3RawDataRep2	1	2	0	61
+3107	103	1156	1	wgEncodeBroadHistoneMonocd14ro1746H3k09acRawDataRep1	1	1	0	61
+3108	103	1156	1	wgEncodeBroadHistoneMonocd14ro1746H3k09acRawDataRep2	1	2	0	61
+3109	103	1157	178405	wgEncodeBroadHistoneMonocd14ro1746H3k27acRawDataRep1	1	1	0	61
+3110	103	1157	178405	wgEncodeBroadHistoneMonocd14ro1746H3k27acRawDataRep2	1	2	0	61
+3111	103	1158	11	wgEncodeBroadHistoneMonocd14ro1746H3k27me3RawDataRep1	1	1	0	61
+3112	103	1158	11	wgEncodeBroadHistoneMonocd14ro1746H3k27me3RawDataRep2	1	2	0	61
+3113	103	1159	12	wgEncodeBroadHistoneMonocd14ro1746H3k36me3RawDataRep1	1	1	0	61
+3114	103	1159	12	wgEncodeBroadHistoneMonocd14ro1746H3k36me3RawDataRep2	1	2	0	61
+3115	103	1160	34	wgEncodeBroadHistoneMonocd14ro1746H4k20me1RawDataRep1	1	1	0	61
+3116	103	1160	34	wgEncodeBroadHistoneMonocd14ro1746H4k20me1RawDataRep2	1	2	0	61
+3117	103	1161	4	wgEncodeUwHistoneMonocd14ro1746H3k04me3StdRawDataRep1	1	1	0	61
+3118	103	1162	11	wgEncodeUwHistoneMonocd14ro1746H3k27me3StdRawDataRep1	1	1	0	61
+3119	24	1163	6	wgEncodeBroadHistoneA549H3k04me1Etoh02RawDataRep1	1	1	0	61
+3120	24	1163	6	wgEncodeBroadHistoneA549H3k04me1Etoh02RawDataRep2	1	2	0	61
+3121	24	1164	5	wgEncodeBroadHistoneA549H3k04me2Etoh02RawDataRep1	1	1	0	61
+3122	24	1164	5	wgEncodeBroadHistoneA549H3k04me2Etoh02RawDataRep2	1	2	0	61
+3123	24	1165	4	wgEncodeBroadHistoneA549H3k04me3Etoh02RawDataRep1	1	1	0	61
+3124	24	1165	4	wgEncodeBroadHistoneA549H3k04me3Etoh02RawDataRep2	1	2	0	61
+3125	24	1166	1	wgEncodeBroadHistoneA549H3k09acEtoh02RawDataRep1	1	1	0	61
+3126	24	1166	1	wgEncodeBroadHistoneA549H3k09acEtoh02RawDataRep2	1	2	0	61
+3127	24	1167	178405	wgEncodeBroadHistoneA549H3k27acEtoh02RawDataRep1	1	1	0	61
+3128	24	1167	178405	wgEncodeBroadHistoneA549H3k27acEtoh02RawDataRep2	1	2	0	61
+3129	24	1168	11	wgEncodeBroadHistoneA549H3k27me3Etoh02RawDataRep1	1	1	0	61
+3130	24	1168	11	wgEncodeBroadHistoneA549H3k27me3Etoh02RawDataRep2	1	2	0	61
+3131	24	1169	12	wgEncodeBroadHistoneA549H3k36me3Etoh02RawDataRep1	1	1	0	61
+3132	24	1169	12	wgEncodeBroadHistoneA549H3k36me3Etoh02RawDataRep2	1	2	0	61
+3133	24	1170	34	wgEncodeBroadHistoneA549H4k20me1Etoh02RawDataRep1	1	1	0	61
+3134	24	1170	34	wgEncodeBroadHistoneA549H4k20me1Etoh02RawDataRep2	1	2	0	61
+3135	24	1171	9	wgEncodeBroadHistoneA549CtcfEtoh02RawDataRep1	1	1	0	61
+3136	24	1171	9	wgEncodeBroadHistoneA549CtcfEtoh02RawDataRep2	1	2	0	61
+3137	1	1173	6	wgEncodeBroadHistoneHelas3H3k04me1StdRawDataRep1	1	1	0	61
+3138	1	1173	6	wgEncodeBroadHistoneHelas3H3k04me1StdRawDataRep2	1	2	0	61
+3139	7	1175	6	wgEncodeBroadHistoneHepg2H3k04me1StdRawDataRep1	1	1	0	61
+3140	7	1175	6	wgEncodeBroadHistoneHepg2H3k04me1StdRawDataRep2	1	2	0	61
+3141	92	1177	11	wgEncodeBroadHistoneHsmmtH3k27me3RawDataRep1	1	1	0	61
+3142	92	1177	11	wgEncodeBroadHistoneHsmmtH3k27me3RawDataRep2	1	2	0	61
+3143	103	1178	9	wgEncodeBroadHistoneMonocd14ro1746CtcfRawDataRep1	1	1	0	61
+3144	103	1178	9	wgEncodeBroadHistoneMonocd14ro1746CtcfRawDataRep2	1	2	0	61
+3145	21	1180	5	wgEncodeBroadHistoneNhaH3k04me2RawDataRep1	1	1	0	61
+3146	21	1180	5	wgEncodeBroadHistoneNhaH3k04me2RawDataRep2	1	2	0	61
+3147	21	1181	1	wgEncodeBroadHistoneNhaH3k09acRawDataRep1	1	1	0	61
+3148	21	1181	1	wgEncodeBroadHistoneNhaH3k09acRawDataRep2	1	2	0	61
+3149	21	1182	34	wgEncodeBroadHistoneNhaH4k20me1RawDataRep1	1	1	0	61
+3150	21	1182	34	wgEncodeBroadHistoneNhaH4k20me1RawDataRep2	1	2	0	61
+3151	102	1184	6	wgEncodeBroadHistoneNhdfadH3k04me1RawDataRep1	1	1	0	61
+3152	102	1184	6	wgEncodeBroadHistoneNhdfadH3k04me1RawDataRep2	1	2	0	61
+3153	102	1185	34	wgEncodeBroadHistoneNhdfadH4k20me1RawDataRep1	1	1	0	61
+3154	102	1185	34	wgEncodeBroadHistoneNhdfadH4k20me1RawDataRep2	1	2	0	61
+3155	102	1185	34	wgEncodeBroadHistoneNhdfadH4k20me1RawDataRep3	1	3	0	61
+3156	93	1186	4	wgEncodeBroadHistoneOsteoH3k04me3RawDataRep1	1	1	0	61
+3157	93	1186	4	wgEncodeBroadHistoneOsteoH3k04me3RawDataRep2	1	2	0	61
+3158	93	1186	4	wgEncodeBroadHistoneOsteoH3k04me3RawDataRep3	1	3	0	61
+3159	93	1187	11	wgEncodeBroadHistoneOsteoH3k27me3RawDataRep1	1	1	0	61
+3160	93	1187	11	wgEncodeBroadHistoneOsteoH3k27me3RawDataRep2	1	2	0	61
+3161	93	1188	34	wgEncodeBroadHistoneOsteoH4k20me1RawDataRep1	1	1	0	61
+3162	93	1188	34	wgEncodeBroadHistoneOsteoH4k20me1RawDataRep2	1	2	0	61
+3163	1	541	9	wgEncodeOpenChromChipHelas3CtcfRawDataRep1	1	1	0	61
+3164	1	541	9	wgEncodeOpenChromChipHelas3CtcfRawDataRep2	1	2	0	61
+3165	1	85	178981	wgEncodeOpenChromChipHelas3InputRawData	1	1	1	61
+3166	7	853	9	wgEncodeOpenChromChipHepg2CtcfRawDataRep1	1	1	0	61
+3167	7	853	9	wgEncodeOpenChromChipHepg2CtcfRawDataRep2	1	2	0	61
+3168	7	634	178981	wgEncodeOpenChromChipHepg2InputRawData	1	1	1	61
+3170	1	1196	178981	wgEncodeSydhTfbsHelas3InputUcdRawData	1	1	1	61
+3171	1	938	178981	wgEncodeSydhTfbsHelas3ifngInputRawData	1	1	1	61
+3178	5	1201	178981	wgEncodeSydhTfbsImr90InputIggrabRawDataRep1	1	1	1	61
+3179	2	960	178981	wgEncodeUwHistoneGm06990InputStdRawDataRep1	1	1	1	61
+3180	1	1051	178981	wgEncodeUwHistoneHelas3InputStdRawDataRep1	1	1	1	61
+3181	7	70	178981	wgEncodeUwHistoneHepg2InputStdRawDataRep1	1	1	1	61
+3182	103	1205	178981	wgEncodeUwHistoneMonocd14ro1746InputStdRawDataRep1	1	1	1	61
+3183	103	1205	178981	wgEncodeUwTfbsMonocd14ro1746InputStdRawDataRep1	1	1	1	61
+3186	24	1208	178981	wgEncodeUwHistoneA549InputStdRawDataRep1	1	1	1	61
+3187	24	1208	178981	wgEncodeUwTfbsA549InputStdRawDataRep1	1	1	1	61
+3188	5	1209	9	wgEncodeSydhTfbsImr90CtcfbIggrabRawDataRep1	1	1	0	61
+3189	5	1209	9	wgEncodeSydhTfbsImr90CtcfbIggrabRawDataRep2	1	2	0	61
+3190	240	1210	178981	wgEncodeBroadHistoneDnd41ControlStdRawDataRep1	1	1	1	61
+3191	240	1210	178981	wgEncodeBroadHistoneDnd41ControlStdRawDataRep2	1	2	1	61
+3192	103	1211	178981	wgEncodeBroadHistoneMonocd14ro1746ControlRawDataRep1	1	1	1	61
+3193	103	1211	178981	wgEncodeBroadHistoneMonocd14ro1746ControlRawDataRep2	1	2	1	61
+3194	16	903	178981	wgEncodeOpenChromChipHuvecInputRawData	1	1	1	61
+3195	15	1066	178981	wgEncodeSydhTfbsGm12878InputIggrabRawDataRep1	1	1	1	61
+3197	14	694	178981	wgEncodeSydhTfbsK562Ifna30InputRawData	1	1	1	61
+3198	14	694	178981	wgEncodeSydhTfbsK562Ifna6hInputRawData	1	1	1	61
+3199	14	694	178981	wgEncodeSydhTfbsK562Ifng30InputRawData	1	1	1	61
+3200	14	694	178981	wgEncodeSydhTfbsK562Ifng6hInputRawData	1	1	1	61
+3201	14	1126	178981	wgEncodeSydhTfbsK562InputIggrabRawData	1	1	1	61
+3202	15	173	178981	wgEncodeUwHistoneGm12878InputStdRawDataRep1	1	1	1	61
+3203	23	246	178981	wgEncodeUwHistoneHmecInputStdRawDataRep1	1	1	1	61
+3204	16	618	178981	wgEncodeUwHistoneHuvecInputStdRawDataRep1	1	1	1	61
+3205	14	476	178981	wgEncodeUwHistoneK562InputStdRawDataRep1	1	1	1	61
+3206	17	1029	178981	wgEncodeUwHistoneNhekInputStdRawDataRep1	1	1	1	61
+3207	78	1214	178981	wgEncodeUwHistoneNhlfInputStdRawDataRep1	1	1	1	61
+3208	78	1214	178981	wgEncodeUwTfbsNhlfInputStdRawDataRep1	1	1	1	61
+3211	24	1215	178981	wgEncodeBroadHistoneA549ControlEtoh02RawDataRep1	1	1	1	61
+3212	24	1215	178981	wgEncodeBroadHistoneA549ControlEtoh02RawDataRep2	1	2	1	61
+3213	240	1216	9	wgEncodeBroadHistoneDnd41CtcfRawDataRep1	1	1	0	61
+3214	240	1216	9	wgEncodeBroadHistoneDnd41CtcfRawDataRep2	1	2	0	61
+3215	92	1000	8	wgEncodeUwDnaseHsmmtRawDataRep2	1	2	0	62
+3216	103	270	8	wgEncodeUwDnaseMonocd14ro1746RawDataRep2	1	2	0	62
+3217	15	123	6	wgEncodeBroadHistoneGm12878H3k04me1StdRawDataRep1V2	1	1	0	61
+3218	15	538	4	wgEncodeBroadHistoneGm12878H3k04me3StdRawDataRep2V2	1	2	0	61
+3219	25	1217	179076	wgEncodeHaibMethylRrbsAg04449UwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3220	26	1218	179076	wgEncodeHaibMethylRrbsAg04450UwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3221	27	1219	179076	wgEncodeHaibMethylRrbsAg09309UwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3222	28	1220	179076	wgEncodeHaibMethylRrbsAg09319UwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3223	29	1221	179076	wgEncodeHaibMethylRrbsAg10803UwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3224	32	1222	179076	wgEncodeHaibMethylRrbsCmkUwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3225	96	1223	179076	wgEncodeHaibMethylRrbsFibroblOpenchromgrowprotSitesfiltered_10.bb	1	0	0	65
+3226	15	1224	179076	wgEncodeHaibMethylRrbsGm12878HudsonalphagrowprotSitesfiltered_10.bb	1	0	0	65
+3227	41	1225	179076	wgEncodeHaibMethylRrbsGm12891HudsonalphagrowprotSitesfiltered_10.bb	1	0	0	65
+3228	42	1226	179076	wgEncodeHaibMethylRrbsGm12892HudsonalphagrowprotSitesfiltered_10.bb	1	0	0	65
+3229	51	1227	179076	wgEncodeHaibMethylRrbsGm19239OpenchromgrowprotSitesfiltered_10.bb	1	0	0	65
+3230	52	1228	179076	wgEncodeHaibMethylRrbsGm19240OpenchromgrowprotSitesfiltered_10.bb	1	0	0	65
+3231	18	1229	179076	wgEncodeHaibMethylRrbsH1hescHudsonalphagrowprotSitesfiltered_10.bb	1	0	0	65
+3232	55	1230	179076	wgEncodeHaibMethylRrbsHaeUwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3233	56	1231	179076	wgEncodeHaibMethylRrbsHcfUwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3234	57	1232	179076	wgEncodeHaibMethylRrbsHcmUwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3235	58	1233	179076	wgEncodeHaibMethylRrbsHcpeUwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3236	59	1234	179076	wgEncodeHaibMethylRrbsHct116YalegrowprotSitesfiltered_10.bb	1	0	0	65
+3237	60	1235	179076	wgEncodeHaibMethylRrbsHeeUwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3238	62	1236	179076	wgEncodeHaibMethylRrbsHek293UwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3239	7	1237	179076	wgEncodeHaibMethylRrbsHepg2HudsonalphagrowprotSitesfiltered_10.bb	1	0	0	65
+3240	65	1238	179076	wgEncodeHaibMethylRrbsHipeUwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3241	23	1239	179076	wgEncodeHaibMethylRrbsHmecUwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3242	66	1240	179076	wgEncodeHaibMethylRrbsHnpceUwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3243	95	1241	179076	wgEncodeHaibMethylRrbsHpaeUwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3244	67	1242	179076	wgEncodeHaibMethylRrbsHrceUwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3245	68	1243	179076	wgEncodeHaibMethylRrbsHreUwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3246	69	1244	179076	wgEncodeHaibMethylRrbsHrpeUwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3247	22	1245	179076	wgEncodeHaibMethylRrbsHsmmSitesfiltered_10.bb	1	0	0	65
+3248	92	1246	179076	wgEncodeHaibMethylRrbsHsmmtOpenchromgrowprotSitesfiltered_10.bb	1	0	0	65
+3249	5	1247	179076	wgEncodeHaibMethylRrbsImr90UwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3250	70	1248	179076	wgEncodeHaibMethylRrbsJurkatUwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3251	14	1249	179076	wgEncodeHaibMethylRrbsK562HudsonalphagrowprotSitesfiltered_10.bb	1	0	0	65
+3252	72	1250	179076	wgEncodeHaibMethylRrbsMcf7UwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3253	74	1251	179076	wgEncodeHaibMethylRrbsMelanoSitesfiltered_10.bb	1	0	0	65
+3254	75	1252	179076	wgEncodeHaibMethylRrbsNb4UwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3255	21	1253	179076	wgEncodeHaibMethylRrbsNhaUwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3256	76	1254	179076	wgEncodeHaibMethylRrbsNhbeUwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3257	77	1255	179076	wgEncodeHaibMethylRrbsNhdfneoUwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3258	79	1256	179076	wgEncodeHaibMethylRrbsNt2d1UwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3259	79	1256	179076	wgEncodeHaibMethylRrbsNt2d1YalegrowprotSitesfiltered_10.bb	1	0	0	65
+3260	93	1257	179076	wgEncodeHaibMethylRrbsOsteoblOpenchromgrowprotSitesfiltered_10.bb	1	0	0	65
+3261	81	1258	179076	wgEncodeHaibMethylRrbsPanisletsSitesfiltered_10.bb	1	0	0	65
+3262	83	1259	179076	wgEncodeHaibMethylRrbsSaecUwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3263	84	1260	179076	wgEncodeHaibMethylRrbsSkmcUwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3264	86	1261	179076	wgEncodeHaibMethylRrbsSknshraUwstamgrowprotSitesfiltered_10.bb	1	0	0	65
+3265	18	1262	179076	H1ESC_5mC_Lister2009_PMID19829295.bb	1	0	0	66
+3266	5	1263	179076	IMR90_5mC_Lister2009_PMID19829295.bb	1	0	0	66
+3267	15	1264	179076	GM12878_5mC_ENCODE_HAIB.bb	1	0	0	66
