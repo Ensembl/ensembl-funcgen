@@ -1,3 +1,8 @@
+#
+# Ensembl module for Bio::EnsEMBL::Funcgen::RegulatoryBuild
+#
+
+
 =head1 LICENSE
 
 Copyright [1999-2016] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
@@ -24,10 +29,33 @@ limitations under the License.
 
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::RegulatoryBuild
+Bio::EnsEMBL::Funcgen::RegulatoryBuild - A module to represent a Regulatory Build.
 
 =head1 SYNOPSIS
+
+use Bio::EnsEMBL::Funcgen::RegulatoryBuild;
+
+#Create from new
+my $reg_build = Bio::EnsEMBL::Funcgen::RegulatoryBuild->new
+  (
+   -name,    		   => 'The Ensembl Regulatory Build', 
+   -version		   => '14',
+   -initial_release_date   => '2016-6',
+   -last_annotation_update => '2016-6',
+   -feature_type_id	   => 19,
+   -analysis_id		   => 16,
+   -is_current		   => 1
+  );
+
+print $reg_build->name.' was last updated on '.$reg_build->last_annotation_update."\n";
+
+#The Ensembl Regulatory Build was last updated on 2016-6.
+
+
 =head1 DESCRIPTION
+
+This is a simple class to represent information about a regulatory build.
+
 =cut
 
 package Bio::EnsEMBL::Funcgen::RegulatoryBuild;
@@ -38,7 +66,35 @@ use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
 =head2 new
+
+  Arg [1]    : String  - name of regulatory build 
+  Arg [2]    : String  - version of regulatory build 
+  Arg [3]    : String  - date of the initial release
+  Arg [4]    : String  - date of the last update
+  Arg [5]    : Integer - the feature type identifier
+  Arg [5]    : Integer - the analysis identifier
+  Arg [5]    : Integer - is current release
+ 
+  
+  Example              : my $reg_build = Bio::EnsEMBL::Funcgen::RegulatoryBuild->new
+                		    (
+   				     -name,                  => 'The Ensembl Regulatory Build', 
+     				     -version                => '14',
+   				     -initial_release_date   => '2016-6',
+   				     -last_annotation_update => '2016-6',
+   			    	     -feature_type_id        => 19,
+   				     -analysis_id            => 16,
+   				     -is_current             => 1
+  				    );
+
+  Description: Constructor method for Regulatory Build class
+  Returntype : Bio::EnsEMBL::Funcgen::RegulatoryBuild
+  Exceptions : None 
+  Caller     : General
+  Status     : Stable
+
 =cut
+
 sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
@@ -83,9 +139,57 @@ sub new {
 }
 
 sub dbID                   { return shift->_generic_get_or_set('dbID',                   @_) }
+
+=head2 name
+
+  Example    : my $name = $reg_build->name;
+  Description: Getter of name attribute for Regulatory Build objects
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
 sub name                   { return shift->_generic_get_or_set('name',                   @_) }
+
+=head2 version
+
+  Example    : my $name = $reg_build->version;
+  Description: Getter of version attribute for Regulatory Build objects
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
 sub version                { return shift->_generic_get_or_set('version',                @_) }
+
+=head2 initial_release_date
+
+  Example    : my $name = $reg_build->initial_release_date;
+  Description: Getter of initial release date attribute for Regulatory Build objects
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
 sub initial_release_date   { return shift->_generic_get_or_set('initial_release_date',   @_) }
+
+=head2 last_annotation_update
+
+  Example    : my $name = $reg_build->last_annotation_update;
+  Description: Getter of last update attribute for Regulatory Build objects
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
 sub last_annotation_update { return shift->_generic_get_or_set('last_annotation_update', @_) }
 sub feature_type_id        { return shift->_generic_get_or_set('feature_type_id',        @_) }
 sub analysis_id            { return shift->_generic_get_or_set('analysis_id',            @_) }
