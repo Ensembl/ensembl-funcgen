@@ -9,12 +9,16 @@ use Getopt::Long;
 
 my $regulation_database_url;
 my $ontology_database_url;
-my $ftp_base_dir;
+my $output_file;
+my $min_id;
+my $max_id;
 
 GetOptions (
    'regulation_database_url=s' => \$regulation_database_url,
    'ontology_database_url=s'   => \$ontology_database_url,
-   'ftp_base_dir=s'            => \$ftp_base_dir,
+   'output_file=s'             => \$output_file,
+   'min_id=s'                  => \$min_id,
+   'max_id=s'                  => \$max_id,
 );
 
 my $ontology_dbc   = Bio::EnsEMBL::Hive::DBSQL::DBConnection->new(-url => $ontology_database_url);
@@ -34,9 +38,6 @@ my $funcgen_db_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
     -dbconn  => $regulation_dbc,
 );
 
-my $output_file = File::Spec->catfile(
-  $ftp_base_dir, 'AnnotatedFeatures.gff'
-);
 $logger->info("The features will be written to " . $output_file ."\n");
 
 use File::Basename;
@@ -58,11 +59,13 @@ my $helper = Bio::EnsEMBL::Utils::SqlHelper->new(
   -DB_CONNECTION => $regulation_dbc
 );
 
+my $batch_constraint = qq(annotated_feature_id<=$max_id and annotated_feature_id>=$min_id);
+
 my $number_of_annotated_features = $helper->execute_simple(
-  -SQL      => 'select count(annotated_feature_id) from annotated_feature',
+  -SQL      => "select count(annotated_feature_id) from annotated_feature where $batch_constraint",
 )->[0];
 
-$logger->info("There are " . $number_of_annotated_features ." annotated features\n");
+$logger->info("About to export " . $number_of_annotated_features ." annotated features\n");
 
 my $annotated_feature_adaptor = $funcgen_db_adaptor->get_AnnotatedFeatureAdaptor;
 my $progressbar_id = $logger->init_progress($number_of_annotated_features, 100);
@@ -70,21 +73,30 @@ my $i=0;
 
 my $last_id = 0;
 my $exported_something = 1;
-my $batch_size = 100000;
+my $batch_size = 1000;
 
 while ($exported_something) {
 
   $exported_something = undef;
 
   $helper->execute_no_return(
-    -SQL      => 'select annotated_feature_id from annotated_feature where annotated_feature_id > ? order by annotated_feature_id limit ?',
+    -SQL      => "select annotated_feature_id from annotated_feature where annotated_feature_id > ? and $batch_constraint order by annotated_feature_id limit ?",
     -PARAMS => [ $last_id, $batch_size ],
     -CALLBACK => sub {
       my @row = @{ shift @_ };
       my $annotated_feature_id = $row[0];
       my $annotated_feature = $annotated_feature_adaptor->fetch_by_dbID($annotated_feature_id);
 
-      $serializer->print_feature($annotated_feature);
+      eval {
+	$serializer->print_feature($annotated_feature);
+      };
+      if ($@) {
+	use Carp;
+	confess(
+	  "Unable to serialise feature! dbid:"
+	  . $annotated_feature->dbID
+	);
+      }
 
       # This prevents memory leaks.
       undef %$annotated_feature;
@@ -99,7 +111,7 @@ while ($exported_something) {
 
 }
 $logger->info("Export done.\n");
-$logger->info("Gzipping $output_file\n");
-
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd );
-run_system_cmd("gzip $output_file");
+# $logger->info("Gzipping $output_file\n");
+# 
+# use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd );
+# run_system_cmd("gzip $output_file");

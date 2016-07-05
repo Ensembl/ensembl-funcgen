@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Funcgen::Ftp::PipeConfig::ExportRegulatoryFeatures;
+package Bio::EnsEMBL::Funcgen::HiveConfig::Ftp::ExportRegulatoryFeatures;
 
 use strict;
 use warnings;
@@ -21,14 +21,14 @@ sub default_options {
 	  -db_version => $self->o('ensembl_release')
 	},
 	regulation_database => {
-	  -species => 'homo_sapiens',
+	  -species => 'mus_musculus',
 	  -group   => 'funcgen',
-	  -host    => 'ens-genomics2',
+	  -host    => 'ens-staging2',
 	  -user    => 'ensro',
 	  -pass    => undef,
 	  -driver  => 'mysql',
 	  -port    => 3306,
-	  -dbname  => 'mn1_e_homo_sapiens_funcgen_85_38',
+	  -dbname  => 'mus_musculus_funcgen_85_38',
 	  -db_version => $self->o('ensembl_release')
 	},
     };
@@ -45,7 +45,7 @@ sub pipeline_wide_parameters {
       regulation_database_url => $self->dbconn_2_url('regulation_database'),
       ontology_database_url   => $self->dbconn_2_url('ontology_database'),
 
-      ftp_base_dir        => '/lustre/scratch109/ensembl/funcgen/mn1/ersa/mn1_dev3_homo_sapiens_funcgen_85_38/output/mn1_dev3_homo_sapiens_funcgen_85_38/ftp_site',
+      ftp_base_dir  => '/lustre/scratch109/ensembl/funcgen/mn1/ersa/mn1_dev3_homo_sapiens_funcgen_85_38/output/mn1_dev3_homo_sapiens_funcgen_85_38/ftp_site/mus_musculus',
     };
 }
 
@@ -53,21 +53,12 @@ sub pipeline_analyses {
     my $self = shift;
 
     return [
-        {   -logic_name  => 'job_factory',
-            -meadow_type => 'LOCAL',
+        {   -logic_name  => 'job_factory_regulatory_features',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
             -parameters  => { db_conn => '#regulation_database#' },
             -input_ids   => [ {inputquery => 'select name as epigenome_name from epigenome' } ],
             -flow_into   => {
                2 => 'export_regulatory_features',
-            },
-        },
-        {   -logic_name  => 'export_annotated_features',
-            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -input_ids   => [ {} ],
-            -parameters  => {
-                cmd => 'export_annotated_features.pl --ftp_base_dir #ftp_base_dir# --regulation_database_url #regulation_database_url# --ontology_database_url #ontology_database_url#',
-
             },
         },
         {   -logic_name  => 'export_motif_features',
