@@ -598,6 +598,19 @@ sub create_epigenome_production_name {
 }
 
 sub usage {
-    say "Usage: ";
-    exit 0;
+    my $usage = << 'END_USAGE';
+
+Usage: register_metadata.pl -i <input_file> -c <config_file>
+
+Options:
+-i input_file:  this is the tab delimited text file that contains the metadata
+-c config_file: this is the configuration file that contains the database connection details
+-n dry_run:     run the script without storing any data into the database, NOT YET IMPLEMENTED
+-h help:        shows this help message
+ 
+END_USAGE
+
+    say $usage;
+
+    exit;
 }
