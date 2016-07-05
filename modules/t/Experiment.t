@@ -59,8 +59,9 @@ my $exp = Bio::EnsEMBL::Funcgen::Experiment->new(
     -PRIMARY_DESIGN_TYPE => 'test design',
     -ARCHIVE_ID          => 'GSEXXX',
     -DISPLAY_URL         => 'http://',
+    -IS_CONTROL          => 1,
     -DESCRIPTION         => 'test description',
-    -CELL_TYPE           => $db->get_CellTypeAdaptor->fetch_by_name('CD4'),
+    -EPIGENOME           => $db->get_EpigenomeAdaptor->fetch_by_name('CD4'),
     -FEATURE_TYPE => $db->get_FeatureTypeAdaptor->fetch_by_name('CTCF'),
 );
 
@@ -91,9 +92,9 @@ qr/You must provide a name parameter/,
 # Test getters
 # ------------
 is_deeply(
-    $exp->cell_type,
-    $db->get_CellTypeAdaptor->fetch_by_name('CD4'),
-    'Test cell_type() getter'
+    $exp->epigenome,
+    $db->get_EpigenomeAdaptor->fetch_by_name('CD4'),
+    'Test epigenome() getter'
 );
 
 is_deeply(
@@ -112,23 +113,23 @@ is_deeply( $exp->get_ExperimentalGroup(),
 
 is( $exp->description, 'test description', 'Test description() getter' );
 
-is( $exp->primary_design_type, 'test design',
-    'Test primary_design_type() getter' );
+# is( $exp->primary_design_type, 'test design',
+#     'Test primary_design_type() getter' );
 
 is( $exp->archive_id, 'GSEXXX', 'Test archive_id() getter' );
 
-is( $exp->display_url, 'http://', 'Test display_url() getter' );
+# is( $exp->display_url, 'http://', 'Test display_url() getter' );
 
 # ----------------------
 # Test getters - setters
 # ----------------------
-ok( test_getter_setter( $exp, 'mage_xml', 'test xml' ),
-    'test_getter_setter Experiment::mage_xml'
-);
+# ok( test_getter_setter( $exp, 'mage_xml', 'test xml' ),
+#     'test_getter_setter Experiment::mage_xml'
+# );
 
-ok( test_getter_setter( $exp, 'mage_xml_id', 5 ),
-    'test_getter_setter Experiment::mage_xml_id'
-);
+# ok( test_getter_setter( $exp, 'mage_xml_id', 5 ),
+#     'test_getter_setter Experiment::mage_xml_id'
+# );
 
 # ---------------------
 # Test get_InputSubsets
@@ -165,12 +166,12 @@ my $expected_source_info = [[
     'http://genome.ucsc.edu/cgi-bin/hgFileSearch?db=hg19&tsName=Broad&tsDescr=&tsGroup=regulation&fsFileType=fastq&hgt_mdbVar1=cell&hgt_mdbVal1=NHLF&hgt_mdbVar2=antibody&hgt_mdbVal2=H3K9ac&hgfs_Search=search'
 ]];
 
-is_deeply($new_exp->source_info(), $expected_source_info, 'Test source_info()');
+# is_deeply($new_exp->source_info(), $expected_source_info, 'Test source_info()');
 
 # ----------------------------------
 # Test reset_relational_attributes()
 # ----------------------------------
-my $new_cell_type = $db->get_CellTypeAdaptor->fetch_by_name('U2OS');
+my $new_cell_type = $db->get_EpigenomeAdaptor->fetch_by_name('U2OS');
 
 my $new_exp_group = Bio::EnsEMBL::Funcgen::ExperimentalGroup->new(
     -name        => 'new_ebi_test',
@@ -184,7 +185,7 @@ my $new_exp_group = Bio::EnsEMBL::Funcgen::ExperimentalGroup->new(
 my $new_feature_type = $db->get_FeatureTypeAdaptor->fetch_by_name('DNase1');
 
 my $params = {
-    -CELL_TYPE          => $new_cell_type,
+    -EPIGENOME          => $new_cell_type,
     -EXPERIMENTAL_GROUP => $new_exp_group,
     -FEATURE_TYPE       => $new_feature_type
 };

@@ -18,15 +18,14 @@ use warnings;
 use Test::More;
 use Test::Exception;
 use Bio::EnsEMBL::Test::TestUtils;
-use Bio::EnsEMBL::Funcgen::CellType;
 
 # use Bio::EnsEMBL::Test::MultiTestDB;
 
 # Module compiles
-BEGIN { use_ok('Bio::EnsEMBL::Funcgen::CellType'); }
+BEGIN { use_ok('Bio::EnsEMBL::Funcgen::Epigenome'); }
 
 # Test constructor
-my $ct = Bio::EnsEMBL::Funcgen::CellType->new(
+my $epigenome = Bio::EnsEMBL::Funcgen::Epigenome->new(
     -name               => 'H1-ESC',
     -display_label      => 'H1-ESC',
     -description        => 'Human Embryonic Stem Cell',
@@ -35,15 +34,15 @@ my $ct = Bio::EnsEMBL::Funcgen::CellType->new(
     -tissue             => 'embryonic stem cell',
 );
 
-isa_ok( $ct, 'Bio::EnsEMBL::Funcgen::CellType', 'CellType' );
+isa_ok( $epigenome, 'Bio::EnsEMBL::Funcgen::Epigenome', 'Epigenome' );
 
 # Test name definition
-throws_ok { Bio::EnsEMBL::Funcgen::CellType->new }
+throws_ok { Bio::EnsEMBL::Funcgen::Epigenome->new }
 qr/Must supply an Epigenome name/, 'Check that name is supplied';
 
 # Test gender definition
 throws_ok {
-    Bio::EnsEMBL::Funcgen::CellType->new(
+    Bio::EnsEMBL::Funcgen::Epigenome->new(
         -name               => 'H1-ESC',
         -display_label      => 'H1-ESC',
         -description        => 'Human Embryonic Stem Cell',
@@ -55,15 +54,15 @@ throws_ok {
 qr/Gender not valid, must be one of/, 'Check that the gender is valid';
 
 # Test getter subroutines
-is( $ct->name,          'H1-ESC', 'Retrieve cell type name' );
-is( $ct->display_label, 'H1-ESC', 'Retrieve cell type display name' );
-is( $ct->description,
+is( $epigenome->name,          'H1-ESC', 'Retrieve epigenome name' );
+is( $epigenome->display_label, 'H1-ESC', 'Retrieve epigenome display name' );
+is( $epigenome->description,
     'Human Embryonic Stem Cell',
-    'Retrieve cell type description'
+    'Retrieve epigenome description'
 );
-is( $ct->gender, 'female', 'Retrieve cell type gender' );
-is( $ct->ontology_accession, 'efo:EFO_0003042',
-    'Retrieve cell type ontology_accession' );
-is( $ct->tissue, 'embryonic stem cell', 'Retrieve cell type tissue' );
+is( $epigenome->gender, 'female', 'Retrieve epigenome gender' );
+is( $epigenome->ontology_accession,
+    'efo:EFO_0003042', 'Retrieve epigenome ontology_accession' );
+is( $epigenome->tissue, 'embryonic stem cell', 'Retrieve epigenome tissue' );
 
 done_testing();

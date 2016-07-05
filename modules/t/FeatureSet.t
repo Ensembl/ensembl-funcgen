@@ -122,7 +122,7 @@ SKIP: {
    (-experiment   => $alt_exp,
     -analysis     => $alt_anal,
     -feature_type => $alt_ftype,
-    -cell_type    => $alt_ctype);
+    -epigenome    => $alt_ctype);
 
   #Need to eval this in case of failure
   $clone_fset->reset_relational_attributes(\%relational_params, 'no_db_reset');
@@ -197,19 +197,19 @@ eval {
          {  
           -feature_type => $fset->feature_type,
           -analysis     => $fset->analysis,
-          -cell_type    => $fset->cell_type,
+          -epigenome    => $fset->cell_type,
          });
 };
 ok(! $@, 'FeatureSet::reset_relational_attributes optional -experiment');
           
-undef $clone_fset->{cell_type};
+undef $clone_fset->{epigenome};
 eval { $clone_fset->reset_relational_attributes(
          {  
           -feature_type => $fset->feature_type,
           -analysis     => $fset->analysis,
          })
 };
-ok(! $@, 'FeatureSet::reset_relational_attributes optional -cell_type');
+ok(! $@, 'FeatureSet::reset_relational_attributes optional -epigenome');
 
 # COMPLETED testing reset_relational_attributes  
 

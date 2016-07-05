@@ -127,7 +127,7 @@ sub new {
   $self->{control}             = $control if defined $control;
   $self->{is_control}          = $is_control;
 #  $self->{primary_design_type} = $p_dtype    if defined $p_dtype; #MGED term for primary design type
-#  $self->{description}         = $desc       if defined $desc;
+  $self->{description}         = $desc       if defined $desc;
   $self->{epigenome}           = $epigenome;
   $self->{feature_type}        = $ftype;
   $self->{archive_id}          = $archive_id;
@@ -286,8 +286,7 @@ sub description{
 deprecate(
     "Bio::EnsEMBL::Funcgen::Experiment::description has been deprecated."
         . " It will be removed in Ensembl release 89." );
-#return shift->{description};
-  return;
+return shift->{description};
 }
 
 

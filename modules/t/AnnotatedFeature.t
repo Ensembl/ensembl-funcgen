@@ -129,17 +129,23 @@ is( $anno_feature->display_label,
 is( $anno_feature->is_focus_feature(), 1,
     'Test is_focus_feature subroutine' );
 
-my %summary          = %{ $anno_feature->summary_as_hash() };
-my %expected_summary = (
-    'cell_type'            => 'A549',
-    'seq_region_name'      => '1',
-    'strand'               => -1,
-    'chipseq_feature_type' => 'CTCF',
-    'start'                => 1,
-    'end'                  => 100
-);
+my $summary          = $anno_feature->summary_as_hash();
 
-is( %summary, %expected_summary, 'Test summary_as_hash subroutine' );
+my $expected_summary = {
+    description     => "CTCF - A549 enriched sites",
+    end             => 100,
+    epigenome       => "A549",
+    feature_type    => "CTCF",
+    score           => 1.02,
+    seq_region_name => 1,
+    source          => "SWEmbl_R0005_IDR",
+    start           => 1,
+    strand          => -1,
+    summit          => 1900
+};
+
+
+is_deeply( $summary, $expected_summary, 'Test summary_as_hash subroutine' );
 
 done_testing();
 

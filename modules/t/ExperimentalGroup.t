@@ -146,8 +146,9 @@ my $exp = Bio::EnsEMBL::Funcgen::Experiment->new
   -ARCHIVE_ID	         => 'GSEXXX',
   -DISPLAY_URL         => 'http://',
   -DESCRIPTION         => 'test description',
-  -CELL_TYPE           => $db->get_CellTypeAdaptor->fetch_by_name('CD4'),
-  -FEATURE_TYPE        => $db->get_FeatureTypeAdaptor->fetch_by_name('CTCF'),     
+  -EPIGENOME           => $db->get_EpigenomeAdaptor->fetch_by_name('CD4'),
+  -FEATURE_TYPE        => $db->get_FeatureTypeAdaptor->fetch_by_name('CTCF'),
+  -IS_CONTROL          => 0,     
  );
 
 
@@ -156,9 +157,9 @@ isa_ok($exp, 'Bio::EnsEMBL::Funcgen::Experiment', 'Experiment::new return type')
 # These are only getters
 is($exp->experimental_group, $group, 'Experiment::experimental_group');
 #is($exp->date, $date, 'Experiment::date');
-is($exp->primary_design_type, 'test design', 'Experiment::primary_design_type');
+# is($exp->primary_design_type, 'test design', 'Experiment::primary_design_type');
 is($exp->archive_id, 'GSEXXX', 'Experiment::archive_id');
-is($exp->display_url, 'http://', 'Experiment::display_url');
+# is($exp->display_url, 'http://', 'Experiment::display_url');
 is($exp->description, 'test description', 'Experiment::description');
 
 $ea->store($exp);
@@ -172,10 +173,10 @@ ok( $exp->experimental_group->name eq 'ebi_test' );
 ok( $exp->experimental_group->description =~ /^Just/ );
 ok( $exp->experimental_group->url =~ /www.ebi/ );
 #is($exp->date, $date, 'Experiment::date after store/fetch');
-ok( $exp->primary_design_type eq 'test design' );
+# ok( $exp->primary_design_type eq 'test design' );
 ok( $exp->archive_id eq 'GSEXXX' );
-ok( $exp->display_url eq 'http://' );
-ok( $exp->description eq 'test description' );
+# ok( $exp->display_url eq 'http://' );
+# ok( $exp->description eq 'test description' );
 
 #Restore table
 $multi->restore();
