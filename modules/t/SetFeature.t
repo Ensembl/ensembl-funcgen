@@ -42,7 +42,7 @@ my $db    = $multi->get_DBAdaptor("funcgen");
 my $fsa   = $db->get_adaptor("featureset");
 my $fta   = $db->get_adaptor("featuretype");
 my $aa    = $db->get_adaptor("analysis");
-my $cta   = $db->get_adaptor("celltype");
+my $epia   = $db->get_adaptor("epigenome");
 
 # ----------------
 # Test constructor
@@ -91,9 +91,9 @@ is( $set_feature->feature_set(),
     $feature_set, 'Test SetFeature::set_feature() getter' );
 is( $set_feature->set(), $feature_set, 'Test SetFeature::set() getter' );
 
-my $cell_type = $cta->fetch_by_name('A549');
-is_deeply( $set_feature->cell_type(),
-           $cell_type, 'Test SetFeature::cell_type() getter' );
+my $epigenome = $epia->fetch_by_name('A549');
+is_deeply( $set_feature->epigenome(),
+           $epigenome, 'Test SetFeature::epigenome() getter' );
 
 is( $set_feature->feature_type(),
     $ft, 'Test SetFeature::feature_type() getter' );

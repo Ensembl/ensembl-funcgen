@@ -41,7 +41,7 @@ my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
 my $db    = $multi->get_DBAdaptor("funcgen");
 my $fta   = $db->get_adaptor("featuretype");
 my $aa    = $db->get_adaptor("analysis");
-my $cta   = $db->get_adaptor("celltype");
+my $epia   = $db->get_adaptor("epigenome");
 my $ea    = $db->get_adaptor("experiment");
 my $issa  = $db->get_adaptor("inputsubset");
 
@@ -50,14 +50,14 @@ my $issa  = $db->get_adaptor("inputsubset");
 # ----------------
 my $feature_type = $fta->fetch_by_name('CTCF');
 my $analysis     = $aa->fetch_by_logic_name('FANTOM_v5');
-my $cell_type    = $cta->fetch_by_name('HeLa-S3');
+my $epigenome    = $epia->fetch_by_name('HeLa-S3');
 my $exp          = $ea->fetch_by_name('K562_WCE_ENCODE_UCHICAGO');
 
 my $set =
     Bio::EnsEMBL::Funcgen::Set->new( -name         => 'set_name',
                                      -feature_type => $feature_type,
                                      -analysis     => $analysis,
-                                     -cell_type    => $cell_type,
+                                     -epigenome    => $epigenome,
                                      -dbID         => 1000,
                                      -adaptor      => $issa,
                                      -experiment   => $exp, );
@@ -69,7 +69,7 @@ throws_ok {
         # -name         => 'set_name',
         -feature_type => $feature_type,
         -analysis     => $analysis,
-        -cell_type    => $cell_type,
+        -epigenome    => $epigenome,
         -dbID         => 1000,
         -adaptor      => $issa,
         -experiment   => $exp, );
@@ -81,7 +81,7 @@ throws_ok {
         -name => 'set_name',
         # -feature_type => $feature_type,
         -analysis   => $analysis,
-        -cell_type  => $cell_type,
+        -epigenome  => $epigenome,
         -dbID       => 1000,
         -adaptor    => $issa,
         -experiment => $exp, );
@@ -93,7 +93,7 @@ throws_ok {
         -name         => 'set_name',
         -feature_type => $feature_type,
         # -analysis     => $analysis,
-        -cell_type  => $cell_type,
+        -epigenome  => $epigenome,
         -dbID       => 1000,
         -adaptor    => $issa,
         -experiment => $exp, );
@@ -105,19 +105,19 @@ throws_ok {
         Bio::EnsEMBL::Funcgen::Set->new( -name         => 'set_name',
                                          -feature_type => $feature_type,
                                          -analysis     => $analysis,
-                                         -cell_type    => 'not valid',
+                                         -epigenome    => 'not valid',
                                          -dbID         => 1000,
                                          -adaptor      => $issa,
                                          -experiment   => $exp, );
 }
-qr/Set CellType/, "Test constructor's cell_type exception";
+qr/Set Epigenome/, "Test constructor's epigenome exception";
 
 throws_ok {
     my $set =
         Bio::EnsEMBL::Funcgen::Set->new( -name         => 'set_name',
                                          -feature_type => $feature_type,
                                          -analysis     => $analysis,
-                                         -cell_type    => $cell_type,
+                                         -epigenome    => $epigenome,
                                          -dbID         => 1000,
                                          -adaptor      => $issa,
                                          -experiment   => 'not_valid', );
@@ -128,7 +128,7 @@ qr/Set Experiment/, "Test constructor's experiment exception";
 # Test getters
 # ------------
 is( $set->name,         'set_name',    "Test Set::name getter" );
-is( $set->cell_type,    $cell_type,    "Test Set::cell_type getter" );
+is( $set->epigenome,    $epigenome,    "Test Set::epigenome getter" );
 is( $set->feature_type, $feature_type, "Test Set::feature_type getter" );
 is( $set->analysis,     $analysis,     "Test Set::analysis getter" );
 is( $set->experiment_id, $set->{experiment_id},
@@ -143,7 +143,7 @@ my $new_set =
     Bio::EnsEMBL::Funcgen::Set->new( -name          => 'set_name',
                                      -feature_type  => $feature_type,
                                      -analysis      => $analysis,
-                                     -cell_type     => $cell_type,
+                                     -epigenome     => $epigenome,
                                      -dbID          => 1000,
                                      -adaptor       => $issa,
                                      -experiment_id => 4, );
