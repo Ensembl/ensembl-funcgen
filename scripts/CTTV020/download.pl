@@ -31,7 +31,7 @@ my $bsub_cmd
     . scalar @filenames
     . ']%15 -o download.%I.out -e download.%I.err \''
     . $cttv020_dir
-    . '/scripts/download_job.pl '
+    . '/lib/ensembl-funcgen/scripts/CTTV020/download_job.pl '
     . '\'';
 # say $bsub_cmd;
 my $exit_code = system($bsub_cmd);
