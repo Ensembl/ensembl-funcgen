@@ -37,7 +37,6 @@ use File::Basename;
 
 # use DateTime;
 
-#TODO Confluence documentation
 #TODO Dry run implementation
 #TODO Confirm object creation
 #TODO POD for every subroutine
@@ -62,11 +61,11 @@ sub main {
     # read command line parameters
     # ----------------------------
     GetOptions(
-        "i=s"  => \$csv,
-        "c=s"  => \$config,
-        "h"    => \$help,
-        "help" => \$help,
-        "n"    => \$dry, #not implemented
+        'i=s'  => \$csv,
+        'c=s'  => \$config,
+        'h'    => \$help,
+        'help' => \$help,
+        'n'    => \$dry,      #not implemented
     );
 
     # ------------------------------------------------------
@@ -74,6 +73,7 @@ sub main {
     # ------------------------------------------------------
     if ( $help || !$csv || !$config ) {
         usage();
+        exit;
     }
 
     # -----------------
@@ -107,9 +107,9 @@ sub main {
     # ----------------
     # get current date
     # ----------------
-    my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
-    $cfg->{date} = (1900 + $year) . '-' . ++$mon . '-' . $mday;
-    say $cfg->{date};
+    my ( $sec, $min, $hour, $mday, $mon, $year, $wday, $yday, $isdst )
+        = localtime(time);
+    $cfg->{date} = ( 1900 + $year ) . '-' . ++$mon . '-' . $mday;
 
     # -------------------
     # read input csv file
@@ -168,15 +168,16 @@ sub get_data_from_csv {
     while ( readline $csv_fh ) {
         chomp;
 
-        if (/^accession/i){
-            next; # ignore input file header
+        if (/^accession/i) {
+            next;    # ignore input file header
         }
 
         my ($accession,             $epigenome_name,     $feature_type_name,
             $br,                    $tr,                 $gender,
             $md5,                   $local_url,          $analysis_name,
             $exp_group_name,        $ontology_xref_accs, $xref_accs,
-            $epigenome_description, $controlled_by,      $download_url
+            $epigenome_description, $controlled_by,      $download_url,
+            $info
         ) = split /\t/;
 
         my $entry = {};
@@ -195,6 +196,7 @@ sub get_data_from_csv {
         $entry->{epigenome_description} = $epigenome_description;
         $entry->{controlled_by}         = $controlled_by;
         $entry->{download_url}          = $download_url;
+        $entry->{info}                  = $info;
 
         $entry = verify_entry_metadata( $entry, $logger );
 
@@ -222,12 +224,12 @@ sub get_data_from_csv {
 sub verify_entry_metadata {
     my ( $entry, $logger ) = @_;
 
-    my @mandatory = (
-        'accession',         'epigenome_name',
-        'feature_type_name', 'br',
-        'tr',                'md5',
-        'local_url',         'analysis_name',
-        'exp_group_name',    
+    my @mandatory = qw(
+        accession         epigenome_name
+        feature_type_name br
+        tr                md5
+        local_url         analysis_name
+        exp_group_name
     );
 
     for my $man (@mandatory) {
@@ -238,10 +240,11 @@ sub verify_entry_metadata {
         }
     }
 
-    my @optional = (
-        'gender',        'ontology_xref_accs',
-        'xref_accs',     'epigenome_description',
-        'controlled_by', 'download_url'
+    my @optional = qw(
+        gender        ontology_xref_accs
+        xref_accs     epigenome_description
+        controlled_by download_url
+        info
     );
 
     for my $opt (@optional) {
@@ -361,7 +364,7 @@ sub register {
         $epigenome = store_epigenome( $entry, $adaptors );
     }
 
-    if ( $entry->{ontology_accessions} ) {
+    if ( $entry->{ontology_xref_accs} ) {
         store_ontology_xref( $entry, $adaptors, $epigenome );
     }
 
@@ -389,6 +392,8 @@ sub register {
         $epigenome, $experiment, $feature_type );
 
     $logger->info( "Successful Registration\n", 1, 1 );
+
+    return 1;
 }
 
 sub store_epigenome {
@@ -436,8 +441,11 @@ sub create_experiment_name {
         = $epigenome->{production_name} . '_'
         . $entry->{feature_type_name} . '_'
         . $entry->{analysis_name} . '_'
-        . $entry->{exp_group_name}
-        . $cfg->{general}->{release};
+        . $entry->{exp_group_name};
+
+    if ( $cfg->{general}->{release} ) {
+        $experiment_name .= $cfg->{general}->{release};
+    }
 
     $experiment_name =~ s/\s//g;
 
@@ -450,7 +458,7 @@ sub store_experiment {
     ) = @_;
 
     my $control_experiment;
-    if ( !$entry->{is_control} ) {
+    if ( !$entry->{is_control} && $entry->{controlled_by}) {
 
         my $control_db_id = $control_db_ids->{ $entry->{controlled_by} };
 
@@ -506,19 +514,19 @@ sub store_input_subset {
     );
     $adaptors->{input_subset}->store($iss);
 
-    if (! $entry->{download_url}){
+    if ( !$entry->{download_url} ) {
         $entry->{download_url} = 'Not Available';
     }
 
     my $tr_info->{info} = {
 
         availability_date => $cfg->{date},
-        download_url => $entry->{download_url},
+        download_url      => $entry->{download_url},
+
         # download_date     => $data->{download_date},
         local_url => $entry->{local_url},
         md5sum    => $entry->{md5},
-
-        # notes             => $data->{experiment_name},
+        notes     => $entry->{info},
     };
     $adaptors->{tracking}->store_tracking_info( $iss, $tr_info );
 
@@ -528,7 +536,7 @@ sub store_input_subset {
 sub store_ontology_xref {
     my ( $entry, $adaptors, $epigenome_obj ) = @_;
 
-    my @ontology_accessions = split /;/, $entry->{ontology_accessions};
+    my @ontology_accessions = split /;/, $entry->{ontology_xref_accs};
     my %valid_linkage_annotations
         = ( 'SAMPLE' => 1, 'TISSUE' => 1, 'CONDITION' => 1 );
 
@@ -540,7 +548,7 @@ sub store_ontology_xref {
 
         if ( !$valid_linkage_annotations{$linkage_annotation} ) {
             throw
-                "Invalid linkage_annotation, please use 'SAMPLE', 'TISSUE' or 'CONDITION'";
+                'Invalid linkage_annotation, please use \'SAMPLE\', \'TISSUE\' or \'CONDITION\'';
         }
 
         my $ontology_xref = Bio::EnsEMBL::OntologyXref->new(
@@ -557,7 +565,7 @@ sub store_ontology_xref {
         my $epigenome_id = $epigenome_obj->dbID();
 
         $adaptors->{db_entry}
-            ->store( $ontology_xref, $epigenome_id, "epigenome",
+            ->store( $ontology_xref, $epigenome_id, 'epigenome',
             $ignore_release );
     }
 
@@ -577,7 +585,7 @@ sub store_db_xref {
     my $epigenome_id = $epigenome_obj->dbID();
 
     $adaptors->{db_entry}
-        ->store( $xref, $epigenome_id, "epigenome", $ignore_release );
+        ->store( $xref, $epigenome_id, 'epigenome', $ignore_release );
 
     return 1;
 }
@@ -612,5 +620,5 @@ END_USAGE
 
     say $usage;
 
-    exit;
+    return 1;
 }
