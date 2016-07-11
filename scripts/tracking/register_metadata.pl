@@ -147,7 +147,7 @@ sub main {
     # control files have to be registered first, because their db ids are used
     # in the registration of signal files
     for my $accession ( keys %{$control_data}, keys %{$signal_data} ) {
-
+        ###loop through values instead????
         my $entry;
         if ( $control_data->{$accession} ) {
             $entry = $control_data->{$accession};
