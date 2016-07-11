@@ -34,11 +34,12 @@ use Bio::EnsEMBL::Funcgen::DBSQL::TrackingAdaptor;
 use Bio::EnsEMBL::DBSQL::DBEntryAdaptor;
 use Getopt::Long;
 use File::Basename;
+use List::MoreUtils qw(uniq);
 
 # use DateTime;
 
 #TODO Dry run implementation
-#TODO Confirm object creation
+#TODO Rollback function
 #TODO POD for every subroutine
 #TODO Usage subroutine
 #TODO Logger
@@ -143,6 +144,8 @@ sub main {
     # ------------
     my $control_db_ids = {};
 
+    # control files have to be registered first, because their db ids are used
+    # in the registration of signal files
     for my $accession ( keys %{$control_data}, keys %{$signal_data} ) {
 
         my $entry;
@@ -336,7 +339,7 @@ sub verify_basic_objects_in_db {
 
     if ($abort) {
         for my $object ( keys %to_register ) {
-            for my $missing ( @{ $to_register{$object} } ) {
+            for my $missing ( uniq @{ $to_register{$object} } ) {
                 $logger->warning(
                     'Register ' . $object . ': ' . $missing . "\n",
                     0, 1 );
@@ -368,11 +371,11 @@ sub register {
         store_ontology_xref( $entry, $adaptors, $epigenome );
     }
 
-    if ( $entry->{xref} ) {
+    if ( $entry->{xref_accs} ) {
         store_db_xref( $entry, $adaptors, $epigenome );
     }
 
-    my $feature_type = fetch_feature_type( $entry, $adaptors, $analysis );
+    my $feature_type = fetch_feature_type( $entry, $adaptors );
 
     my $exp_group
         = $adaptors->{exp_group}->fetch_by_name( $entry->{exp_group_name} );
@@ -416,7 +419,7 @@ sub store_epigenome {
 }
 
 sub fetch_feature_type {
-    my ( $entry, $adaptors, $analysis ) = @_;
+    my ( $entry, $adaptors ) = @_;
 
     my $ft_name = $entry->{feature_type_name};
 
@@ -458,7 +461,7 @@ sub store_experiment {
     ) = @_;
 
     my $control_experiment;
-    if ( !$entry->{is_control} && $entry->{controlled_by}) {
+    if ( !$entry->{is_control} && $entry->{controlled_by} ) {
 
         my $control_db_id = $control_db_ids->{ $entry->{controlled_by} };
 
@@ -522,7 +525,6 @@ sub store_input_subset {
 
         availability_date => $cfg->{date},
         download_url      => $entry->{download_url},
-
         # download_date     => $data->{download_date},
         local_url => $entry->{local_url},
         md5sum    => $entry->{md5},
@@ -555,7 +557,6 @@ sub store_ontology_xref {
             -primary_id         => $primary_id,
             -dbname             => $dbname,
             -linkage_annotation => $linkage_annotation,
-
             # -display_id         => "",
             # -description        => "",
         );
@@ -575,17 +576,23 @@ sub store_ontology_xref {
 sub store_db_xref {
     my ( $entry, $adaptors, $epigenome_obj ) = @_;
 
-    my $xref = Bio::EnsEMBL::DBEntry->new(
-        -primary_id => $entry->{xref},
-        -dbname     => 'EpiRR'
-    );
+    my @xref_accessions = split /;/, $entry->{xref_accs};
 
-    my $ignore_release = 1;
+    for my $xref_acc (@xref_accessions) {
+        my ($primary_id, $dbname) = split /-/, $xref_acc;
 
-    my $epigenome_id = $epigenome_obj->dbID();
+        my $xref = Bio::EnsEMBL::DBEntry->new(
+            -primary_id => $primary_id,
+            -dbname     => $dbname
+        );
 
-    $adaptors->{db_entry}
-        ->store( $xref, $epigenome_id, 'epigenome', $ignore_release );
+        my $ignore_release = 1;
+
+        my $epigenome_id = $epigenome_obj->dbID();
+
+        $adaptors->{db_entry}
+            ->store( $xref, $epigenome_id, 'epigenome', $ignore_release );
+    }
 
     return 1;
 }
