@@ -41,15 +41,8 @@ use List::MoreUtils qw(uniq);
 #TODO Dry run implementation
 #TODO Rollback function
 #TODO POD for every subroutine
-#TODO Usage subroutine
 #TODO Logger
-#TODO Experiment exists error - throw exception
 #TODO PerlCritic
-#TODO Deal with the csv header
-#TODO Input subset tracking table: registration date?
-#TODO Partial registration warning
-#TODO fix db names mess
-#TODO remove cttv specific hardcoded values
 #TODO check for external db availability in verify_basic_objects
 #TODO healthchecks, ie.invalid br/tr values, invalid local/download url
 
@@ -146,16 +139,7 @@ sub main {
 
     # control files have to be registered first, because their db ids are used
     # in the registration of signal files
-    for my $accession ( keys %{$control_data}, keys %{$signal_data} ) {
-        ###loop through values instead????
-        my $entry;
-        if ( $control_data->{$accession} ) {
-            $entry = $control_data->{$accession};
-        }
-        else {
-            $entry = $signal_data->{$accession};
-        }
-
+    for my $entry ( values %{$control_data}, values %{$signal_data} ) {
         register( $logger, $entry, $adaptors, $cfg, $control_db_ids );
     }
 
@@ -259,6 +243,10 @@ sub verify_entry_metadata {
     return $entry;
 }
 
+# avoid using a register.conf file, use the existing mechanism
+#
+# use registry instead
+# list and expose TrackingAdaptor in DBAdaptor
 sub fetch_adaptors {
     my ($cfg) = @_;
     my %adaptors;
@@ -272,6 +260,7 @@ sub fetch_adaptors {
         -port       => $cfg->{efg_db}->{port},
         -dbname     => $cfg->{efg_db}->{dbname},
         -species    => $cfg->{general}->{species},
+        #do we really need these??
         -dnadb_user => $cfg->{dna_db}->{user},
         -dnadb_pass => $cfg->{dna_db}->{pass},
         -dnadb_host => $cfg->{dna_db}->{host},
@@ -288,11 +277,11 @@ sub fetch_adaptors {
     $adaptors{exp_group}    = $dba->get_ExperimentalGroupAdaptor();
     $adaptors{experiment}   = $dba->get_ExperimentAdaptor();
     $adaptors{input_subset} = $dba->get_InputSubsetAdaptor();
-    $adaptors{result_set}   = $dba->get_ResultSetAdaptor();
-    $adaptors{reg_feature}  = $dba->get_RegulatoryFeatureAdaptor();
-    $adaptors{feature_set}  = $dba->get_FeatureSetAdaptor();
-    $adaptors{data_set}     = $dba->get_DataSetAdaptor();
-    $adaptors{ann_feature}  = $dba->get_AnnotatedFeatureAdaptor();
+    # $adaptors{result_set}   = $dba->get_ResultSetAdaptor();
+    # $adaptors{reg_feature}  = $dba->get_RegulatoryFeatureAdaptor();
+    # $adaptors{feature_set}  = $dba->get_FeatureSetAdaptor();
+    # $adaptors{data_set}     = $dba->get_DataSetAdaptor();
+    # $adaptors{ann_feature}  = $dba->get_AnnotatedFeatureAdaptor();
 
     $adaptors{db}       = $dba;
     $adaptors{tracking} = $tracking_adaptor;
@@ -380,17 +369,15 @@ sub register {
     my $exp_group
         = $adaptors->{exp_group}->fetch_by_name( $entry->{exp_group_name} );
 
-    my $experiment_name = create_experiment_name( $entry, $cfg, $epigenome );
-
-    my $experiment = $adaptors->{experiment}->fetch_by_name($experiment_name);
-
-    if ( !$experiment ) {
-        $experiment = store_experiment(
+    my $experiment_name = create_experiment_name( $entry, $cfg, $epigenome, $adaptors );
+    
+    # don't use control_db_ids, fetch directly from db for every signal file
+    my $experiment = store_experiment(
             $entry,     $experiment_name, $adaptors, $control_db_ids,
             $epigenome, $feature_type,    $exp_group
         );
-    }
-
+    
+    # avoid passing too many parameters to subroutines
     store_input_subset( $logger, $entry, $adaptors, $cfg, $analysis,
         $epigenome, $experiment, $feature_type );
 
@@ -438,19 +425,26 @@ sub fetch_feature_type {
 }
 
 sub create_experiment_name {
-    my ( $entry, $cfg, $epigenome ) = @_;
+    my ( $entry, $cfg, $epigenome, $adaptors ) = @_;
 
-    my $experiment_name
-        = $epigenome->{production_name} . '_'
-        . $entry->{feature_type_name} . '_'
-        . $entry->{analysis_name} . '_'
-        . $entry->{exp_group_name};
+    my $experiment_name;
+    my $version = 1;
 
-    if ( $cfg->{general}->{release} ) {
-        $experiment_name .= $cfg->{general}->{release};
-    }
+    do {
+        $experiment_name
+            = $epigenome->{production_name} . '_'
+            . $entry->{feature_type_name} . '_'
+            . $entry->{analysis_name} . '_v'
+            . $version . '_'
+            . $entry->{exp_group_name};
 
-    $experiment_name =~ s/\s//g;
+        if ( $cfg->{general}->{release} ) {
+            $experiment_name .= $cfg->{general}->{release};
+        }
+
+        $experiment_name =~ s/\s//g;
+        $version++;
+    } while ( $adaptors->{experiment}->fetch_by_name($experiment_name) );
 
     return $experiment_name;
 }
@@ -517,11 +511,12 @@ sub store_input_subset {
     );
     $adaptors->{input_subset}->store($iss);
 
+    # do this in schema
     if ( !$entry->{download_url} ) {
         $entry->{download_url} = 'Not Available';
     }
 
-    my $tr_info->{info} = {
+    my $tracking_info->{info} = {
 
         availability_date => $cfg->{date},
         download_url      => $entry->{download_url},
@@ -530,7 +525,7 @@ sub store_input_subset {
         md5sum    => $entry->{md5},
         notes     => $entry->{info},
     };
-    $adaptors->{tracking}->store_tracking_info( $iss, $tr_info );
+    $adaptors->{tracking}->store_tracking_info( $iss, $tracking_info );
 
     return 1;
 }
