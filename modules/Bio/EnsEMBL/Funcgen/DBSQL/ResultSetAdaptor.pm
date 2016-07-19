@@ -516,7 +516,7 @@ sub store {
 
     $rset->dbID( $self->last_insert_id );
     $rset->adaptor($self);
-    $self->store_states($rset);
+#     $self->store_states($rset);
     $self->store_chip_channels($rset);
     $self->store_dbfile_path($rset, 'DIR') if $rset->dbfile_path;
   }

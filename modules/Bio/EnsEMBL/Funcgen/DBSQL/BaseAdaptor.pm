@@ -344,43 +344,43 @@ sub _table_name {
 
 
 
-=head2 store_states
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::Storable
-  Arg [2]    : Arrayref (optional) - States to store
-  Example    : $rset_adaptor->store_states($result_set);
-  Description: Stores states in status table. By default will store state
-               attributes, but will also store optioanlly specified states
-  Returntype : None
-  Exceptions : Throws if Storable is not stored
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub store_states{
-  my $self     = shift;
-  my $storable = shift;
-  my $states   = shift || [];
-  assert_ref($storable, 'Bio::EnsEMBL::Funcgen::Storable');
-  assert_ref($states, 'ARRAY', 'optional states');
-  
-  return unless (defined $states);
-
-  my $all_states = $storable->get_all_states();
-  if (defined $all_states) {
-    push @$states, @$all_states;
-  }
-  
-  foreach my $state(@$states){
-    
-    if (! $self->has_stored_status($state, $storable)){
-      $self->store_status($state, $storable) 
-    }
-  }
-
-  return;
-}
+# =head2 store_states
+# 
+#   Arg [1]    : Bio::EnsEMBL::Funcgen::Storable
+#   Arg [2]    : Arrayref (optional) - States to store
+#   Example    : $rset_adaptor->store_states($result_set);
+#   Description: Stores states in status table. By default will store state
+#                attributes, but will also store optioanlly specified states
+#   Returntype : None
+#   Exceptions : Throws if Storable is not stored
+#   Caller     : General
+#   Status     : At Risk
+# 
+# =cut
+# 
+# sub store_states{
+#   my $self     = shift;
+#   my $storable = shift;
+#   my $states   = shift || [];
+#   assert_ref($storable, 'Bio::EnsEMBL::Funcgen::Storable');
+#   assert_ref($states, 'ARRAY', 'optional states');
+#   
+#   return unless (defined $states);
+# 
+#   my $all_states = $storable->get_all_states();
+#   if (defined $all_states) {
+#     push @$states, @$all_states;
+#   }
+#   
+#   foreach my $state(@$states){
+#     
+#     if (! $self->has_stored_status($state, $storable)){
+#       $self->store_status($state, $storable) 
+#     }
+#   }
+# 
+#   return;
+# }
 
 
 =head2 fetch_all
@@ -571,46 +571,46 @@ sub has_stored_status{
 }
 
 
-=head2 store_status
-
-  Arg [1]    : string - status e.g. IMPORTED, DISPLAYABLE
-  Arg [2]    : Bio::EnsEMBL::"OBJECT"
-  Example    : $status_a->store_status('IMPORTED', $array_chip);
-  Description: Sets a state for a given object
-  Returntype : None
-  Exceptions : None
-  Caller     : general
-  Status     : At risk - Move to Status.pm?
-
-=cut
-
-sub store_status{
-  my $self   = shift;
-  my $state  = shift;
-  my $obj    = shift;
-  my $table  = $self->_test_funcgen_table($obj);
-
-  if(! $self->has_stored_status($state, $obj)){
-    my $status_id = $self->_get_status_name_id($state);
-
-    if(! $status_id){
-      throw("$state is not a valid status_name for $obj:\t".$obj->dbID);
-    }
-
-	  my $sql = "INSERT into status(table_id, table_name, status_name_id) VALUES('".
-	   $obj->dbID()."', '$table', '$status_id')";
-	  
-	  if(! eval { $self->db->dbc->do($sql); 1}){ 
-	   throw("Failed to store apparently unstored $state status for $obj (dbID=".
-	     $obj->dbID."\nPotential race condition with parallel process\n$@");
-	  }
-	  
-	  #Setting it in the obj if it is not already present.
-	  $obj->add_status($state) if ! $obj->has_status($state, $obj);
-  }
-  
-  return;
-}
+# =head2 store_status
+# 
+#   Arg [1]    : string - status e.g. IMPORTED, DISPLAYABLE
+#   Arg [2]    : Bio::EnsEMBL::"OBJECT"
+#   Example    : $status_a->store_status('IMPORTED', $array_chip);
+#   Description: Sets a state for a given object
+#   Returntype : None
+#   Exceptions : None
+#   Caller     : general
+#   Status     : At risk - Move to Status.pm?
+# 
+# =cut
+# 
+# sub store_status{
+#   my $self   = shift;
+#   my $state  = shift;
+#   my $obj    = shift;
+#   my $table  = $self->_test_funcgen_table($obj);
+# 
+#   if(! $self->has_stored_status($state, $obj)){
+#     my $status_id = $self->_get_status_name_id($state);
+# 
+#     if(! $status_id){
+#       throw("$state is not a valid status_name for $obj:\t".$obj->dbID);
+#     }
+# 
+# 	  my $sql = "INSERT into status(table_id, table_name, status_name_id) VALUES('".
+# 	   $obj->dbID()."', '$table', '$status_id')";
+# 	  
+# 	  if(! eval { $self->db->dbc->do($sql); 1}){ 
+# 	   throw("Failed to store apparently unstored $state status for $obj (dbID=".
+# 	     $obj->dbID."\nPotential race condition with parallel process\n$@");
+# 	  }
+# 	  
+# 	  #Setting it in the obj if it is not already present.
+# 	  $obj->add_status($state) if ! $obj->has_status($state, $obj);
+#   }
+#   
+#   return;
+# }
 
 
 =head2 revoke_status
@@ -721,136 +721,136 @@ sub revoke_states{
 }
 
 
-=head2 set_imported_states_by_Set
+# =head2 set_imported_states_by_Set
+# 
+#   Arg [1]    : Bio::EnsEMBL::Funcgen::Set e.g. a FeatureSet or ResultSet
+#   Example    : $self->set_imported_states_by_Set($set);
+#   Description: Sets default states for imported Feature|ResultSets
+#   Returntype : None
+#   Exceptions : None
+#   Caller     : Import parsers and RunnableDBs
+#   Status     : At risk - move to BaseImporter
+# 
+# =cut
+# 
+# #Move a wrapper to Storable, which handles the obj attributes
+# #which then call this method to remove the status entries?
+# 
+# #This needs to be used by RunnableDBs too!
+# #All state stuff is handled by BaseAdaptor?
+# #Can we put this in the SetAdaptor?
+# 
+# #CoordSystem specific status may go, if we are removing multi CoordSys support
+# 
+# sub set_imported_states_by_Set{
+#   my $self = shift;
+#   my $set  = shift;
+#   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Set', $set);
+#   return $self->store_states($set, $self->_imported_states);
+# }
+# 
+# sub revoke_imported_states_by_Set{
+#   my $self = shift;
+#   my $set  = shift;
+#   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Set', $set);
+#   return $self->revoke_states($set, $self->_imported_states);
+# }
+# 
+# 
+# 
+# 
+# sub _imported_states{
+#   my $self = shift;
+#   #Get default chromosome version for this dnadb
+#   
+#   if(! defined $self->{imported_states}){
+#     $self->{imported_states} = ['IMPORTED', 
+#                                  'IMPORTED_'.
+#                                   $self->db->dnadb->get_CoordSystemAdaptor->fetch_by_name('chromosome')->version];
+#   }
+#   
+#   return $self->{imported_states}; 
+# }
+# 
 
-  Arg [1]    : Bio::EnsEMBL::Funcgen::Set e.g. a FeatureSet or ResultSet
-  Example    : $self->set_imported_states_by_Set($set);
-  Description: Sets default states for imported Feature|ResultSets
-  Returntype : None
-  Exceptions : None
-  Caller     : Import parsers and RunnableDBs
-  Status     : At risk - move to BaseImporter
-
-=cut
-
-#Move a wrapper to Storable, which handles the obj attributes
-#which then call this method to remove the status entries?
-
-#This needs to be used by RunnableDBs too!
-#All state stuff is handled by BaseAdaptor?
-#Can we put this in the SetAdaptor?
-
-#CoordSystem specific status may go, if we are removing multi CoordSys support
-
-sub set_imported_states_by_Set{
-  my $self = shift;
-  my $set  = shift;
-  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Set', $set);
-  return $self->store_states($set, $self->_imported_states);
-}
-
-sub revoke_imported_states_by_Set{
-  my $self = shift;
-  my $set  = shift;
-  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Set', $set);
-  return $self->revoke_states($set, $self->_imported_states);
-}
-
-
-
-
-sub _imported_states{
-  my $self = shift;
-  #Get default chromosome version for this dnadb
-  
-  if(! defined $self->{imported_states}){
-    $self->{imported_states} = ['IMPORTED', 
-                                 'IMPORTED_'.
-                                  $self->db->dnadb->get_CoordSystemAdaptor->fetch_by_name('chromosome')->version];
-  }
-  
-  return $self->{imported_states}; 
-}
+# =head2 status_filter
+# 
+#   Arg [1]    : String - status e.g. IMPORTED, DISPLAYABLE
+#   Arg [2]    : String - table name e.g. experimental_chip
+#   Arg [3]    : List   - table dbIDs
+#   Exmaple    : my @displayable_ec_ids = @{$ec_adaptor->status_filter('DISPLAYABLE',
+#                                                                      'experimental_chip',
+#                                                                      (map $_->dbID, @echips))};
+#   Description: Quick method for filtering dbIDs based on their table and and status
+#   Returntype : ARRAYREF
+#   Exceptions : Warns if state already set
+#                Throws is status name is not already stored.
+#   Caller     : general
+#   Status     : At risk - Move to Status?
+# 
+# =cut
+# 
+# sub status_filter{
+#   my ($self, $status, $table_name, @table_ids) = @_;
+# 
+#   my @status_ids;
+#   my $status_id = $self->_get_status_name_id($status);
+# 
+#   if($status_id){
+# 
+#     if(! ($table_name && @table_ids)){
+#       throw("Must provide a table_name and table_ids to filter non-displayable ids");
+#     }      
+# 
+#     my $sql = "SELECT table_id from status where table_name='$table_name' and ".
+#                "table_id in (".join(", ", @table_ids).") and status.status_name_id".
+#                "='$status_id'";
+#     @status_ids = map $_ = "@$_",
+#                    @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
+#   }
+# 
+#   return \@status_ids;
+# }
 
 
-=head2 status_filter
-
-  Arg [1]    : String - status e.g. IMPORTED, DISPLAYABLE
-  Arg [2]    : String - table name e.g. experimental_chip
-  Arg [3]    : List   - table dbIDs
-  Exmaple    : my @displayable_ec_ids = @{$ec_adaptor->status_filter('DISPLAYABLE',
-                                                                     'experimental_chip',
-                                                                     (map $_->dbID, @echips))};
-  Description: Quick method for filtering dbIDs based on their table and and status
-  Returntype : ARRAYREF
-  Exceptions : Warns if state already set
-               Throws is status name is not already stored.
-  Caller     : general
-  Status     : At risk - Move to Status?
-
-=cut
-
-sub status_filter{
-  my ($self, $status, $table_name, @table_ids) = @_;
-
-  my @status_ids;
-  my $status_id = $self->_get_status_name_id($status);
-
-  if($status_id){
-
-    if(! ($table_name && @table_ids)){
-      throw("Must provide a table_name and table_ids to filter non-displayable ids");
-    }      
-
-    my $sql = "SELECT table_id from status where table_name='$table_name' and ".
-               "table_id in (".join(", ", @table_ids).") and status.status_name_id".
-               "='$status_id'";
-    @status_ids = map $_ = "@$_",
-                   @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
-  }
-
-  return \@status_ids;
-}
-
-
-=head2 _get_status_name_id
-
-  Arg [1]    : String - status_name e.g. IMPORTED, DISPLAYABLE
-  Arg [2]    : Boolean - optional flag to throw error if status_name is not
-               present in the DB.
-  Example    : my $status_id = $self->_get_status_name_id('IMPORTED');
-  Description: Retrieves the dbID of a given status_name record
-  Returntype : Int
-  Exceptions : Throws if status name argument not defined or if throw flag is
-               set and status_name is not in the DB.
-  Caller     : Bio::EnsEMBL::Funcgen::BaseAdaptor
-  Status     : At risk - Move to Status?
-
-=cut
-
-sub _get_status_name_id{
-  my ($self, $status, $throw) = @_;
-
-  if(! defined $status){
-    throw('You must provide a status_name string argument');
-  }
-
-  my $sql = "SELECT status_name_id from status_name where name='$status'";
-  my ($status_id) = $self->db->dbc->db_handle->selectrow_array($sql);
-
-  if (! $status_id){
-    if($throw){
-      throw("Status name $status is not valid. ".
-        'Maybe you need to add it to the status_name table?');
-    }
-    else{
-      warn("Status name $status is not valid. ".
-        'Maybe you need to add it to the status_name table?');
-    }
-  }
-
-  return $status_id;
-}
+# =head2 _get_status_name_id
+# 
+#   Arg [1]    : String - status_name e.g. IMPORTED, DISPLAYABLE
+#   Arg [2]    : Boolean - optional flag to throw error if status_name is not
+#                present in the DB.
+#   Example    : my $status_id = $self->_get_status_name_id('IMPORTED');
+#   Description: Retrieves the dbID of a given status_name record
+#   Returntype : Int
+#   Exceptions : Throws if status name argument not defined or if throw flag is
+#                set and status_name is not in the DB.
+#   Caller     : Bio::EnsEMBL::Funcgen::BaseAdaptor
+#   Status     : At risk - Move to Status?
+# 
+# =cut
+# 
+# sub _get_status_name_id{
+#   my ($self, $status, $throw) = @_;
+# 
+#   if(! defined $status){
+#     throw('You must provide a status_name string argument');
+#   }
+# 
+#   my $sql = "SELECT status_name_id from status_name where name='$status'";
+#   my ($status_id) = $self->db->dbc->db_handle->selectrow_array($sql);
+# 
+#   if (! $status_id){
+#     if($throw){
+#       throw("Status name $status is not valid. ".
+#         'Maybe you need to add it to the status_name table?');
+#     }
+#     else{
+#       warn("Status name $status is not valid. ".
+#         'Maybe you need to add it to the status_name table?');
+#     }
+#   }
+# 
+#   return $status_id;
+# }
 
 
 =head2 fetch_all_by_external_name
