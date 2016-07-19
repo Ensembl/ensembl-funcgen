@@ -111,7 +111,7 @@ sub get_Slice {
 
   #In case UCSC input is used... carefull names may not match with ensembl db!
   #This should not alter slice names
-  $name =~ s/^chr([^o])/$1/i;   
+#   $name =~ s/^chr([^o])/$1/i;   
 
   if( (! exists $slice_cache->{$name}) &&
       (! ($self->slices || $self->skip_slices) ) ){    
