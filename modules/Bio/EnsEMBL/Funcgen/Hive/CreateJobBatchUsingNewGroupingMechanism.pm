@@ -30,8 +30,8 @@ sub run {
     1
   );
   
-  my $experiment_adaptor   = Bio::EnsEMBL::Registry->get_adaptor('homo_sapiens', 'funcgen', 'Experiment');
-  my $input_subset_adaptor = Bio::EnsEMBL::Registry->get_adaptor('homo_sapiens', 'funcgen', 'InputSubSet');
+  my $experiment_adaptor   = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'Experiment');
+  my $input_subset_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'InputSubSet');
 
   # For a given experiment name, creates a list of all input_subset_ids 
   # belonging to this experiment.
@@ -47,7 +47,7 @@ sub run {
       return \@input_subset_id;
   };
 
-  my %control_name_to_signal_name = build_control_name_to_signal_name_hash($experiment_name);
+  my %control_name_to_signal_name = build_control_name_to_signal_name_hash($experiment_adaptor, $experiment_name);
   
   # Iterator over all control experiment names, for every signal experiment, 
   # create an ArrayRef of input_subset_ids that belong to this experiment.
@@ -82,8 +82,9 @@ sub run {
 =cut
 sub build_control_name_to_signal_name_hash {
 
-  my $experiment_name = shift;
-  my $experiment_adaptor = Bio::EnsEMBL::Registry->get_adaptor('homo_sapiens', 'funcgen', 'Experiment');
+  my $experiment_adaptor = shift;
+  my $experiment_name    = shift;
+#   my $experiment_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'Experiment');
 
   my %control_name_to_signal_name;
   foreach my $current_experiment_name (@$experiment_name) {
