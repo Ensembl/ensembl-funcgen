@@ -47,6 +47,7 @@ sub fetch_input {
       && $self->param('type') eq 'replicate'
     ) {
       $output_prefix = $self->bigwig_output_dir . '/' . $self->get_file_base_for_ResultSet($result_set, $is_control);
+      die("This should never be run!");
     }
     
     warn "output_prefix = $output_prefix";
@@ -68,9 +69,39 @@ sub fetch_input {
 ####################################################
 
 sub run {
-  my $self        = shift;
+  my $self       = shift;
+  my $result_set = $self->ResultSet;
   
-  my $chromosome_length_file = write_chr_length_file($self->slice_objects);
+#   my $chromosome_length_file = write_chr_length_file($self->slice_objects);
+  
+#   my $chromosome_length_file = '/lustre/scratch109/ensembl/funcgen/refbuilder/mus_musculus/GRCm38/genome_fasta/GRCm38.sizes';
+  
+  use Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator;
+  my $bwa_index_locator = Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator->new;
+  
+  my $species          = $self->param('species');
+  my $assembly         = $self->param('assembly');
+  my $epigenome_gender = $result_set->epigenome->gender;
+
+  my $chromosome_lengths_relative = $bwa_index_locator->locate({
+    species          => $species,
+    epigenome_gender => $epigenome_gender,
+    assembly         => $assembly,
+    file_type        => 'chromosome_lengths_by_species_assembly',
+  });
+  my $reference_data_root_dir = $self->param('reference_data_root_dir');
+  
+  my $chromosome_length_file = $reference_data_root_dir . '/' . $chromosome_lengths_relative;
+  
+#   use Data::Dumper;
+#   print Dumper({
+#     species          => $species,
+#     epigenome_gender => $epigenome_gender,
+#     assembly         => $assembly,
+#     chromosome_length_file => $chromosome_length_file,
+#   });
+#   die;
+  
   my $output = $self->output_prefix.'.bw';
 
   # bigWigToWig can't cope with colons, so replacing with underscores
@@ -90,12 +121,12 @@ sub run {
   # If job was killed for memlimit, allow for the worker to be killed as well.
   sleep 20;
 
-  if($self->set_type){
-    my $result_set = $self->ResultSet;
-    $result_set->adaptor->dbfile_data_root($self->db_output_dir);
-    $result_set->dbfile_path($output);
-    $result_set->adaptor->store_dbfile_path($result_set, 'BIGWIG');
-  }
+#   if($self->set_type){
+  
+  $result_set->adaptor->dbfile_data_root($self->db_output_dir);
+  $result_set->dbfile_path($output);
+  $result_set->adaptor->store_dbfile_path($result_set, 'BIGWIG');
+#   }
   return;
 }
 

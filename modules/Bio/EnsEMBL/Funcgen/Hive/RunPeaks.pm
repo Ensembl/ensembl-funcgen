@@ -56,14 +56,14 @@ sub fetch_input {
     $self->throw_no_retry('The filter_max_peaks param has been set, but no max_peaks param has been set');
   }
   
-  my ($fset, $rset, $analysis);
+  my ($fset, $result_set, $analysis);
 
   if($set_type eq 'ResultSet'){
     
     # This is run in run_SWEmbl_R0005_replicate 
     #die('This is never run!');
   
-    $rset = $self->fetch_Set_input('ResultSet'); 
+    $result_set = $self->fetch_Set_input('ResultSet'); 
     
     #This is likely permissive peaks for pre_IDR rep 
     
@@ -87,7 +87,7 @@ sub fetch_input {
   else{ 
     $fset     = $self->fetch_Set_input('FeatureSet');
     $analysis = $fset->analysis;
-    $rset     = $self->ResultSet; 
+    $result_set     = $self->ResultSet; 
   }
 
   # The code for building this path is duplicated in PreProcessIDR. This 
@@ -95,18 +95,42 @@ sub fetch_input {
   #
   $self->get_output_work_dir_methods(
     $self->peaks_output_dir 
-    . '/' . $rset->experiment->name
+    . '/' . $result_set->experiment->name
     . '/' . $analysis->logic_name 
   );
 
-  my $align_prefix   = $self->get_alignment_path_prefix_by_ResultSet($rset, undef, 1);#validate aligned flag 
-  my $control_prefix = $self->get_alignment_path_prefix_by_ResultSet($rset, 1, 1);#and control flag 
+  my $align_prefix   = $self->get_alignment_path_prefix_by_ResultSet($result_set, undef, 1);#validate aligned flag 
+  my $control_prefix = $self->get_alignment_path_prefix_by_ResultSet($result_set, 1, 1);#and control flag 
   
-  my $sam_ref_fai = $self->sam_ref_fai($rset->epigenome->gender);  #Just in case we need to convert
+  my $sam_ref_fai = $self->sam_ref_fai($result_set->epigenome->gender);  #Just in case we need to convert
 
   #These maybe things like extra input/reference files
   #where we don't want to store the filepath in the DB.
-  my $sensitive_caller_params = $self->param_silent($analysis->program.'_parameters') || {};
+#   my $sensitive_caller_params = $self->param_silent($analysis->program.'_parameters') || {};
+  use Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator;
+  my $bwa_index_locator = Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator->new;
+  
+  my $species          = $self->param('species');
+  my $assembly         = $self->param('assembly');
+  my $epigenome_gender = $result_set->epigenome->gender;
+
+  my $chromosome_lengths_relative = $bwa_index_locator->locate({
+    species          => $species,
+    epigenome_gender => $epigenome_gender,
+    assembly         => $assembly,
+    file_type        => 'chromosome_lengths_by_species_assembly',
+  });
+  my $reference_data_root_dir = $self->param('reference_data_root_dir');
+  
+  my $chromosome_length_file = $reference_data_root_dir . '/' . $chromosome_lengths_relative;
+  
+#   die($chromosome_length_file);
+
+  my $sensitive_caller_params = {
+    # This is used by CCAT
+    -chr_file => $chromosome_length_file
+  };
+  
   my $pfile_path = ( defined $self->bin_dir ) ?
     $self->bin_dir.'/'.$analysis->program_file : $analysis->program_file;
 
@@ -118,7 +142,7 @@ sub fetch_input {
     -peak_module_params =>
      {%$sensitive_caller_params,
       -program_file      => $pfile_path,
-      -out_file_prefix   => $rset->name.'.'.$analysis->logic_name,
+      -out_file_prefix   => $result_set->name.'.'.$analysis->logic_name,
       -out_dir           => $self->output_dir,
       -convert_half_open => 1, # Before loading into DB
       #-is_half_open      => $self->param_silent('is_half_open') || 0}, # Now defined by PeakCaller or subclass defined on out/input formats   
@@ -133,12 +157,12 @@ sub fetch_input {
     -peak_module_params =>
      {%$sensitive_caller_params,
       -program_file      => $pfile_path,
-      -out_file_prefix   => $rset->name.'.'.$analysis->logic_name,
+      -out_file_prefix   => $result_set->name.'.'.$analysis->logic_name,
       -out_dir           => $self->output_dir,
       
       # /lustre/scratch109/ensembl/funcgen/mn1/ersa/mn1_CTTV_newgrouping_homo_sapiens_funcgen_81_38/output/mn1_CTTV_newgrouping_homo_sapiens_funcgen_81_38/funcgen/annotated_feature/085/ersa_signal/peaksA549_CTCF_ChIP-Seq_3974/SWEmbl_R0005/A549_CTCF_ChIP-Seq_3974_bwa_samse_TR2.SWEmbl_R0005.txt
       #
-      -output_file       => $self->output_dir . '/' . $rset->name . '.' . $analysis->logic_name . '.txt',
+      -output_file       => $self->output_dir . '/' . $result_set->name . '.' . $analysis->logic_name . '.txt',
       -convert_half_open => 1, # Before loading into DB
       #-is_half_open      => $self->param_silent('is_half_open') || 0}, # Now defined by PeakCaller or subclass defined on out/input formats   
     });
@@ -235,7 +259,7 @@ sub write_output {
   my $stored_features = $af_adaptor->generic_count('af.feature_set_id='.$fset->dbID);
   
   #Arguably this should be after the follwing test
-  $fset->adaptor->set_imported_states_by_Set($fset);
+#   $fset->adaptor->set_imported_states_by_Set($fset);
   
   if($feature_cnt != $stored_features) {
     # Could change to a normal throw if we move above the satus setting
@@ -252,9 +276,15 @@ sub write_output {
 
 sub store_AnnotatedFeature {
   my ( $self, $fset, $af_adaptor, $fhash ) = @_;
-  my $err;  
+  my $err;
+  
+  my $slice;
+  
+  eval {  
+    $slice = $self->get_Slice( $fhash->{-seq_region} );
+  };
 
-  if ( my $slice = $self->get_Slice( $fhash->{-seq_region} ) ) {
+  if ( $slice ) {
     delete ${$fhash}{-seq_region};
     
     if(! eval {$af_adaptor->store( Bio::EnsEMBL::Funcgen::AnnotatedFeature->new

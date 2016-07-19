@@ -93,26 +93,43 @@ sub fetch_input {   # fetch parameters...
   my $pfile_path = ( defined $self->bin_dir ) ? $self->bin_dir.'/'.$pfile : $pfile;
   #$self->set_param_method('program_file', $pfile_path)
   
-  my $ref_fasta = $self->param_silent('indexed_ref_fasta');  # This is batch flown
-   
-  if(! defined $ref_fasta){ 
-    my $gender         = $self->param_silent('gender') || 'male';
-    my $species        = $self->species; 
-  
-    #TODO: Check if the index file is really there? Eventually the bwa output will tell you though
-    #index file suffix may change between aligners
-    #best to pass just the target file, index root dir, species, gender
-    #and let the Aligner construct the appropriate index file
-    
-    my $file_gender = $self->convert_gender_to_file_gender($gender);
-
-    $ref_fasta = join('/', ($self->param_required('data_root_dir'),
-                            $aligner.'_indexes',
-                            $species,
-                            $species.'_'.$file_gender.'_'.$self->assembly.'_unmasked.fasta'));
-  }
+#   my $ref_fasta = $self->param_silent('indexed_ref_fasta');  # This is batch flown
+#    
+#   if(! defined $ref_fasta){ 
+#     my $gender         = $self->param_silent('gender') || 'male';
+#     my $species        = $self->species; 
+#   
+#     #TODO: Check if the index file is really there? Eventually the bwa output will tell you though
+#     #index file suffix may change between aligners
+#     #best to pass just the target file, index root dir, species, gender
+#     #and let the Aligner construct the appropriate index file
+#     
+#     my $file_gender = $self->convert_gender_to_file_gender($gender);
+# 
+#     $ref_fasta = join('/', ($self->param_required('data_root_dir'),
+#                             $aligner.'_indexes',
+#                             $species,
+#                             $species.'_'.$file_gender.'_'.$self->assembly.'_unmasked.fasta'));
+#   }
   
   #$self->set_param_method('target_file', $ref_fasta);
+  
+  use Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator;
+  
+  my $bwa_index_locator = Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator->new;
+  
+  my $reference_file_root = $self->param('reference_data_root_dir');
+
+  my $bwa_index_relative = $bwa_index_locator->locate({
+#     species          => 'mus_musculus',
+    species          => $self->species,
+    assembly         => $self->assembly,
+    epigenome_gender => $self->param('gender'),
+    file_type        => 'bwa_index',
+  });
+  
+  my $bwa_index = $reference_file_root . '/' . $bwa_index_relative;
+
 
   my $aligner_methods = $self->get_param_method('aligner_param_methods', 'silent');
   my %aparams;
@@ -149,7 +166,8 @@ sub fetch_input {   # fetch parameters...
    (-program_file      => $pfile_path,
     -parameters        => $analysis->parameters, 
     -query_file        => $query_file,
-    -target_file       => $ref_fasta,
+#     -target_file       => $ref_fasta,
+    -target_file       => $bwa_index,
     -debug             => $self->debug,
     -sam_ref_fai       => $self->sam_ref_fai,
     %aparams                                    );

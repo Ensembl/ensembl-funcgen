@@ -55,44 +55,33 @@ sub pipeline_analyses {
 	},
         {   -logic_name => 'MkTempDir',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-#             -meadow_type=> 'LOCAL',
             -parameters => {
 		  cmd => qq!mkdir -p #tempdir#!,
             },
             -flow_into => { 
-	      '1->A' => [ 'JobFactoryArgenrich', 'SortChrLenFile' ],
-	      'A->1' => [ 'RunArgenrich' ],
+	      '1->A' => [ 'JobFactoryArgenrich', 'CreateChanceBins'],
+	      'A->1' => 'RunArgenrich',
             },
         },
-        {   -logic_name => 'SortChrLenFile',
+	{   -logic_name => 'CreateChanceBins',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-#             -meadow_type=> 'LOCAL',
-            -parameters => { 
-		  cmd => qq!sort -k1,1 #chrlenfile# > #chrlenfilesorted#!,
-            },
-            -flow_into => { MAIN => 'argenrichformregions', },
-        },
-        {   -logic_name => 'argenrichformregions',
-            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-#             -meadow_type=> 'LOCAL',
-            -parameters => {
-		  # Should be in /software/ensembl/funcgen/
-		  #
-		  cmd => qq(argenrichformregions.pl #chrlenfilesorted#),
+	    -parameters => {
+                cmd => qq(create_chance_bins.pl )
+		  . qq(  --species                 #species#                     )
+		  . qq(  --epigenome_gender        #epigenome_gender#            )
+		  . qq(  --assembly                #assembly#                    )
+		  . qq(  --outputfile              #tempdir#/#chance_bin_file#   )
+  		  . qq(  --reference_data_root_dir #reference_data_root_dir#     )
             },
         },
         {   -logic_name => 'JobFactoryArgenrich',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
-#             -meadow_type=> 'LOCAL',
             -flow_into => {
-		# Skipping copy, we can work on the files directly.
                 2 => 'CpToTemp',
-                #2 => 'IndexBam',
             },
         },
         {   -logic_name => 'CpToTemp',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-#             -meadow_type=> 'LOCAL',
             -parameters => { 
 		  #cmd => qq!cp #sourcedir#/#file# #tempdir#!,
 		  cmd => qq!ln -s #sourcedir#/#file# #tempdir#!,
@@ -101,7 +90,6 @@ sub pipeline_analyses {
         },
         {   -logic_name => 'IndexBam',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -meadow_type=> 'LSF',
             -parameters => { 
 		  cmd => qq!samtools index #tempdir#/#file#!,
             },
@@ -109,7 +97,6 @@ sub pipeline_analyses {
         },
         {   -logic_name => 'CountReads',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
-            -meadow_type=> 'LSF',
             -parameters => { 
 		  inputcmd        => "samtools view -c #tempdir#/#file#",
 		  column_names    => [ 'read_count' ],
@@ -123,13 +110,16 @@ sub pipeline_analyses {
         },
         {   -logic_name => 'RunArgenrich',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -meadow_type=> 'LSF',
 	    -parameters => {
                 cmd => qq(argenrich_with_labels_and_rerunnable.R --args plot=TRUE outdir=#tempdir# )
 		  . qq(    ipsz=#expr( #read_count#->{"signal"}            )expr# )
 		  . qq( inputsz=#expr( #read_count#->{"control"}           )expr# )
 		  . qq(      ip=#tempdir#/#expr( #file#->{"signal"}        )expr# )
 		  . qq(   input=#tempdir#/#expr( #file#->{"control"}       )expr# )
+		  
+		  # This ends up in #tempdir#, because of the parameter 
+		  # "outdir=#tempdir#" set further above.
+		  #
 		  . qq( outfile=#argenrich_outfile#)
             },
             -flow_into => { MAIN => 'LoadChanceToDB', },
@@ -137,7 +127,6 @@ sub pipeline_analyses {
         },
         {   -logic_name => 'LoadChanceToDB',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-#             -meadow_type=> 'LOCAL',
 	    -parameters => {
                 cmd => qq(load_argenrich_qc_file.pl   )
 		  . qq( --argenrich_file        #tempdir#/#argenrich_outfile#     )

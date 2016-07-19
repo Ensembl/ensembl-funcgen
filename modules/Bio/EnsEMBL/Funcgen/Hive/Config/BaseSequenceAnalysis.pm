@@ -58,9 +58,6 @@ sub default_options {
       H4K20me1               => $self->o('default_broad_peaks'),
       H4K8ac                 => $self->o('default_broad_peaks'),
     },
- 
-#     'control_feature_types' => ['Goat-IgG', 'Rabbit-IgG', 'WCE', 'rat-IgG-control', 'rabbit-IgG-control', 'mouse-IgG-control', 'GFP'], 
-#     'checksum_optional' => 0,   
    };
   
 }
@@ -70,10 +67,9 @@ sub pipeline_wide_parameters {
     
   return {
     %{$self->SUPER::pipeline_wide_parameters}, 
-
-#     'control_feature_types'    => $self->o('control_feature_types'),    
+    
+    'reference_data_root_dir'  => $self->o('reference_data_root_dir'), 
     'broad_peak_feature_types' => $self->o('broad_peak_feature_types'), 
-#     'checksum_optional'        => $self->o('checksum_optional'),
 
     batch_param_names => [
        'no_write', #For use with runWorker.pl -no_write, so we can write some STDOUT in run

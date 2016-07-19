@@ -64,7 +64,7 @@ sub run {
         push @error_msg, "There are $num_orphans orphan entries in the result_set_input table. They must be removed or new result_sets might have arbitrary links to input_subsets. Suggestion: delete from result_set_input where result_set_id not in (select result_set_id from result_set);"; 
     }
 
-    my @exported_variables = qw( PERL5LIB JAVA_HOME R_LIBS CLASSPATH CCAT_chr_lengths_file );
+    my @exported_variables = qw( PERL5LIB JAVA_HOME R_LIBS CLASSPATH );
     my $cmd;
     
     ENVIRONMENT_VARIABLE:
@@ -96,20 +96,20 @@ sub run {
       }
     }
     
-    my $CCAT_chr_lengths_file = $ENV{CCAT_chr_lengths_file};
-    
-    if (! $CCAT_chr_lengths_file) {
-      push @error_msg, "CCAT_chr_lengths_file has not been set!";
-    } elsif (! -e $CCAT_chr_lengths_file) {
-      push @error_msg, "$CCAT_chr_lengths_file is not a file!";
-    } else {
-      use File::Basename;
-      my $dir = dirname($CCAT_chr_lengths_file);
-      if (! -w $dir) {
-	# This is where the sorted file gets written to.
-	push @error_msg, "Can't write to directory $dir!";
-      }
-    }
+#     my $CCAT_chr_lengths_file = $ENV{CCAT_chr_lengths_file};
+#     
+#     if (! $CCAT_chr_lengths_file) {
+#       push @error_msg, "CCAT_chr_lengths_file has not been set!";
+#     } elsif (! -e $CCAT_chr_lengths_file) {
+#       push @error_msg, "$CCAT_chr_lengths_file is not a file!";
+#     } else {
+#       use File::Basename;
+#       my $dir = dirname($CCAT_chr_lengths_file);
+#       if (! -w $dir) {
+# 	# This is where the sorted file gets written to.
+# 	push @error_msg, "Can't write to directory $dir!";
+#       }
+#     }
 
 #     my $picard_output = `java picard.cmdline.PicardCommandLine`;
 #     if ($picard_output !~ /^USAGE: PicardCommandLine/) {
