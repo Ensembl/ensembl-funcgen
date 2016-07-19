@@ -37,10 +37,9 @@ sub pipeline_analyses {
     @{$self->SUPER::pipeline_analyses}, #To pick up BaseSequenceAnalysis-DefineMergedOutputSet
 
     {
-      -logic_name => 'PrePipelineChecks',
-      -input_ids  => [ {} ],
-      -module     => 'Bio::EnsEMBL::Funcgen::Hive::ErsaPrePipelineChecks',
-      -meadow_type => 'LOCAL',
+	-logic_name => 'PrePipelineChecks',
+	-input_ids  => [ {} ],
+	-module     => 'Bio::EnsEMBL::Funcgen::Hive::ErsaPrePipelineChecks',
     },
     {   -logic_name => 'JobPool',
 	-module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
@@ -51,7 +50,6 @@ sub pipeline_analyses {
     },
     {   -logic_name => 'TokenLimitedJobFactory',
 	-module     => 'Bio::EnsEMBL::Funcgen::Hive::TokenLimitedJobFactory',
-# 	-meadow_type=> 'LOCAL',
 	-flow_into => {
 	  '2->A' => 'Dummy',
 	  'A->1' => 'TokenLimitedJobFactory',
@@ -60,7 +58,6 @@ sub pipeline_analyses {
     {
       -logic_name => 'Dummy',
       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-#       -meadow_type=> 'LOCAL',
 	-flow_into => {
 	  MAIN => WHEN(
 	    '#identify_controls# == 1'  => { 'IdentifyAlignInputSubsets' => INPUT_PLUS() },
@@ -71,9 +68,7 @@ sub pipeline_analyses {
     {
       -logic_name => 'CreateJobBatchUsingNewGroupingMechanism',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::CreateJobBatchUsingNewGroupingMechanism',
-#       -meadow_type => 'LOCAL',
       -parameters => {
-# 	out_db_url => $self->o('out_db_url'),
       },
       -wait_for => 'PrePipelineChecks',
       -flow_into => {
@@ -84,7 +79,6 @@ sub pipeline_analyses {
     {
       -logic_name => 'IdentifyAlignInputSubsets',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::IdentifySetInputs',
-#       -meadow_type => 'LOCAL',
       -parameters => {
       set_type                     => 'InputSubset',
 	feature_set_analysis_type    => 'peak',
@@ -100,12 +94,10 @@ sub pipeline_analyses {
     {
       -logic_name => 'DeleteFilesFromJobFan',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::ErsaCleanup',
-#       -meadow_type=> 'LOCAL',
     },
     {
      -logic_name => 'DefineResultSets',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::DefineResultSets',
-#      -meadow     => 'LOCAL',
     -flow_into => {
       '2->A' => 'FixResultSetsExperimentIds',
       'A->3' => 'SplitFastqFilesFromControls',
