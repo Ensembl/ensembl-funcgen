@@ -122,7 +122,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
 
   
   my $out_dir = $self->output_dir;
-  my $max_peaks     = 300000;
+  my $max_peaks_for_this_peak_caller     = 300000;
  
   # Validate analysis  
   if($lname !~ /swembl/io){
@@ -132,7 +132,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
     #https://sites.google.com/site/anshulkundaje/projects/idr#TOC-CALL-PEAKS-ON-INDIVIDUAL-REPLICATES
   }
   elsif($lname =~ /macs/io){#future proofing as will currently never be tested
-    $max_peaks = 100000;
+    $max_peaks_for_this_peak_caller = 100000;
     warn "Reseting max filtered peaks value to 100000 for MACS analysis:\t$lname\n";   
   } 
       
@@ -216,7 +216,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
   my ($np_files, $threshold, $x_thresh_adjust);
   
   if(! eval { ($np_files, $threshold, $x_thresh_adjust) = 
-                pre_process_IDR($out_dir, \@pre_idr_files, $batch_name, $max_peaks); 1}){
+                pre_process_IDR($out_dir, \@pre_idr_files, $batch_name, $max_peaks_for_this_peak_caller); 1}){
     $self->throw_no_retry("Failed to pre_process_IDR $batch_name\n$@");                
   } 
   

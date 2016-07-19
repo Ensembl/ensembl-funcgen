@@ -1389,9 +1389,11 @@ sub pre_process_IDR{
   my $out_dir      = shift or throw('Must provide and out_dir argument');
   my $pre_idr_beds = shift;
   my $batch_name   = shift or throw('Must provide a batch_name argument');
-  my $max_peaks    = shift or throw('Must provide a max_peaks argument');
+  my $max_peaks_for_this_peak_caller    = shift or throw('Must provide a max_peaks_for_this_peak_caller argument');
   throw("out_dir does not exist:\t$out_dir") if ! -d $out_dir;
   assert_ref($pre_idr_beds, 'ARRAY');
+  
+  my $number_of_peaks_considered = $max_peaks_for_this_peak_caller;
 
   if(scalar(@$pre_idr_beds) < 2){
     throw("Cannot run IDR with less than 2 replicates:\n\t".$pre_idr_beds->[0]);
@@ -1429,16 +1431,16 @@ sub pre_process_IDR{
       $lt_100k = 1;
     }
 
-    if($num_peaks < $max_peaks){
+    if($num_peaks < $number_of_peaks_considered){
       # We take the lowest number of peaks, as we need comparable numbers of peaks across all inputs
-      $max_peaks = $num_peaks;
+      $number_of_peaks_considered = $num_peaks;
     }
 
     $log_txt .= $bed_file."\t".$num_peaks."\n";
   }
 
   # Note this does not yet support MACS yet, should prbably just ignore it as we filter to 100000
-  my $idr_threshold   = ($max_peaks < 100000) ? 0.05 : 0.01;
+  my $idr_threshold   = ($number_of_peaks_considered < 100000) ? 0.05 : 0.01;
   # Could alternatively pass all thresholds back to the caller
   my $x_thresh_adjust = 0;
 
@@ -1502,17 +1504,17 @@ sub pre_process_IDR{
     # TODO Get header skipping regex from PeakCaller. Currently hardcoded for SWEmbl
     # TODO Handle pipes with perl pipe or IPC::open/run
 
-    # Strip out the header and set signal.value to score, sort on score, filter based on $max_peaks, resort based on position
+    # Strip out the header and set signal.value to score, sort on score, filter based on $number_of_peaks_considered, resort based on position
     $cmd = 'awk \'BEGIN {OFS="\t"} { if($0 !~ /^(#|(Region[[:space:]]+Start))/) {print $1,$2,$3,".",$7,".",$7,-1,-1,int($9-$1)} }\' '.
-      "$bed_file | sort -k 7nr,7nr | head -n $max_peaks | sort -k 1,2n > ".$np_bed_file;
+      "$bed_file | sort -k 7nr,7nr | head -n $number_of_peaks_considered | sort -k 1,2n > ".$np_bed_file;
     run_system_cmd($cmd);
 
     # Sanity check we have the file with the correct number of lines
     $cmd = "wc -l $np_bed_file | awk '{print \$1}'";
     my $filtered_peaks = run_backtick_cmd($cmd);
 
-    if($max_peaks != $filtered_peaks){
-      throw("Expected $max_peaks in filtered pre-IDR bed file, but found $filtered_peaks:\n\t".$np_bed_file);
+    if($number_of_peaks_considered != $filtered_peaks){
+      throw("Expected $number_of_peaks_considered in filtered pre-IDR bed file, but found $filtered_peaks:\n\t".$np_bed_file);
     }
 
     # Need to check this is != 0?
