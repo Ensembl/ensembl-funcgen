@@ -950,11 +950,9 @@ sub dataflow_params {
   return $param_values;
 }
 
-
 sub batch_params {
   return shift->_dataflow_params_by_list('batch_param_names');
 }
-
 
 sub _dataflow_params_by_list {
   my ($self, $method_list_name) = @_;  
@@ -986,63 +984,46 @@ sub _dataflow_params_by_list {
   return \%param_values;
 }
 
-sub convert_gender_to_file_gender {
-
-  my $self   = shift;
-  my $gender = shift; 
-  
-  if ($gender eq 'male') {
-    return 'male';
-  }
-  return 'female'; 
-
-}
-
 sub sam_ref_fai {
   my $self        = shift;
-  my $gender      = shift; 
   
-  my $file_gender = $self->convert_gender_to_file_gender($gender);
+  use Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator;
   
-  if(! defined $self->param_silent('sam_ref_fai')) {
-    
-    warn ("File gender is $file_gender");
+  my $bwa_index_locator = Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator->new;
+  
+  my $reference_file_root = $self->param('reference_data_root_dir');
 
-    my $file_name = $self->species.'_'.$file_gender.'_'.$self->assembly.'_unmasked.fasta.fai';
-    my $sam_ref_fai = validate_path([$self->data_root_dir,
-                                     'sam_header',
-                                    $self->species,
-                                    $file_name]);
-    $self->param('sam_ref_fai', $sam_ref_fai);
-  }
+  my $samtools_fasta_index_relative = $bwa_index_locator->locate({
+    species          => $self->species,
+    assembly         => $self->assembly,
+    epigenome_gender => $self->param('gender'),
+    file_type        => 'samtools_fasta_index',
+  });
   
-  return $self->param('sam_ref_fai');
-}
-
-# sub sam_header{
-#   my $self        = shift;
+  my $samtools_fasta_index = $reference_file_root . '/' . $samtools_fasta_index_relative;
+  
+  $self->param('sam_ref_fai', $samtools_fasta_index);
+  
+  return $samtools_fasta_index;
+  
 #   my $gender      = shift; 
 #   
-#   if(! defined $self->param_silent('sam_header')){
+#   my $file_gender = $self->convert_gender_to_file_gender($gender);
 #   
-#     if(! defined $gender){
-#       $gender = $self->param_silent('gender') || $self->param_silent('default_gender');
-#       
-#       if(! defined $gender){
-#         $self->$self->throw_no_retry('No gender argument or param defined and no default_gender '.
-#         'specific in the config');
-#       }
-#     }
-#     my $file_name = $self->species.'_'.$gender.'_'.$self->assembly.'_unmasked.header.sam';
-#     my $sam_header = validate_path([$self->data_root_dir,
-#                                     'sam_header',
+#   if(! defined $self->param_silent('sam_ref_fai')) {
+#     
+#     warn ("File gender is $file_gender");
+# 
+#     my $file_name = $self->species.'_'.$file_gender.'_'.$self->assembly.'_unmasked.fasta.fai';
+#     my $sam_ref_fai = validate_path([$self->data_root_dir,
+#                                      'sam_header',
 #                                     $self->species,
 #                                     $file_name]);
-#     $self->set_param_method('sam_header', $sam_header);
+#     $self->param('sam_ref_fai', $sam_ref_fai);
 #   }
 #   
-#   return $self->param('sam_header'); 
-# }
+#   return $self->param('sam_ref_fai');
+}
 
 sub get_alignment_path_prefix_by_ResultSet {
   my ($self, $rset, $control) = @_;
