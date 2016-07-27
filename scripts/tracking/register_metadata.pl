@@ -300,8 +300,8 @@ sub verify_basic_objects_in_db {
         my $analysis = $adaptors->{analysis}
             ->fetch_by_logic_name( $entry->{analysis_name} );
 
-        my $feature_type = $adaptors->{feature_type}
-            ->fetch_by_name( $entry->{feature_type_name} );
+        my $feature_types = $adaptors->{feature_type}
+            ->fetch_all_by_name( $entry->{feature_type_name} );
 
         my $exp_group = $adaptors->{exp_group}
             ->fetch_by_name( $entry->{exp_group_name} );
@@ -312,7 +312,7 @@ sub verify_basic_objects_in_db {
             $abort = 1;
         }
 
-        if ( !defined $feature_type ) {
+        if ( !defined $feature_types->[0] ) {
             $to_register{Feature_Type} //= [];
             push @{ $to_register{Feature_Type} }, $entry->{feature_type_name};
             $abort = 1;
@@ -364,7 +364,7 @@ sub register {
         store_db_xref( $entry, $adaptors, $epigenome );
     }
 
-    my $feature_type = fetch_feature_type( $entry, $adaptors );
+    my $feature_type = fetch_feature_type( $entry, $adaptors, $analysis );
 
     my $exp_group
         = $adaptors->{exp_group}->fetch_by_name( $entry->{exp_group_name} );
@@ -406,20 +406,19 @@ sub store_epigenome {
 }
 
 sub fetch_feature_type {
-    my ( $entry, $adaptors ) = @_;
+    my ( $entry, $adaptors, $analysis ) = @_;
 
     my $ft_name = $entry->{feature_type_name};
 
     my $feature_type;
 
-    # if ( $entry->{is_control} ) {
-    #     $feature_type = $adaptors->{feature_type}
-    #         ->fetch_by_name( $ft_name, 'DNA', $analysis );
-    # }
-    # else {
-    $feature_type = $adaptors->{feature_type}->fetch_by_name($ft_name);
-
-    # }
+    if ( $entry->{is_control} ) {
+        $feature_type = $adaptors->{feature_type}
+            ->fetch_by_name( $ft_name, 'DNA', $analysis );
+    }
+    else {
+        $feature_type = $adaptors->{feature_type}->fetch_by_name($ft_name);
+    }
 
     return $feature_type;
 }
