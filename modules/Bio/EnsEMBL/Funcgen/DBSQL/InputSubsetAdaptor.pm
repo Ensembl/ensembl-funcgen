@@ -356,7 +356,6 @@ sub store{
 
     $subset->dbID($self->last_insert_id);
     $subset->adaptor($self);
-    $self->store_states($subset);
   }
 
   return \@subsets;
