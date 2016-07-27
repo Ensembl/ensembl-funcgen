@@ -499,6 +499,7 @@ CREATE TABLE `feature_type` (
   `description` varchar(255) DEFAULT NULL,
   `so_accession` varchar(64) DEFAULT NULL,
   `so_name` varchar(255) DEFAULT NULL,
+  `production_name` VARCHAR(120) DEFAULT NULL,
   PRIMARY KEY (`feature_type_id`),
   UNIQUE KEY `name_class_analysis_idx` (`name`,`class`,`analysis_id`),
   KEY `so_accession_idx` (`so_accession`)
