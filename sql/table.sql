@@ -1084,64 +1084,6 @@ CREATE TABLE `epigenome` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
-
-/**
-@table  epigenome_lineage
-@desc   Links epigenomes to lineage terms
-@colour  #808000
-
-@column epigenome_id    @link epigenome ID
-@column lineage_id      @link lineage ID
-@column most_specific   Denotes most specific term for this epigenome
-
-@see epigenome
-@see lineage
-*/
-
-
-DROP TABLE IF EXISTS `epigenome_lineage`;
-CREATE TABLE `epigenome_lineage` (
-  `epigenome_id` int(10) unsigned NOT NULL,
-  `lineage_id` int(10) unsigned NOT NULL,
-  `most_specific` tinyint(1) DEFAULT NULL,
-  PRIMARY KEY (`epigenome_id`,`lineage_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
--- most_specific could be infered from lineage chain
--- add description?
--- most_specific here as this may be dependant on the epigenome
-
-
-/**
-@table  lineage
-@desc   Contains cell lineage information
-@colour  #808000
-
-@column lineage_id        Internal ID
-@column name              Lineage name
-@column efo_id            Experimental Factor Ontology ID
-@column parent_lineage_id Internal ID of immediate parent term
-
-*/
-
-
-DROP TABLE IF EXISTS `lineage`;
-CREATE TABLE `lineage` (
-  `lineage_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `name` varchar(100) NOT NULL,
-  `efo_id` varchar(20) DEFAULT NULL,
-  `parent_lineage_id` int(10) unsigned DEFAULT NULL,
-  PRIMARY KEY (`lineage_id`),
-  UNIQUE KEY `name_idx` (`name`),
-  UNIQUE KEY `efo_idx` (`efo_id`),
-  KEY `parent_linage_idx` (`parent_lineage_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
--- EFO and CL ontology (and hence ensembl_ontology DB) do not handle lineage
--- very well, so model here for now.
--- If parent_lineage_id is 0, then is effectively root lineage term.
-
-
 /**
 @table  status
 @desc   Denormalised table associating funcgen records with a status.
