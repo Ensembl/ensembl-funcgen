@@ -369,14 +369,28 @@ sub register {
     my $exp_group
         = $adaptors->{exp_group}->fetch_by_name( $entry->{exp_group_name} );
 
-    my $experiment_name = create_experiment_name( $entry, $cfg, $epigenome, $adaptors );
-    
+    my $experiment_name;
+    if ( $entry->{is_control} ) {
+        $experiment_name
+            = create_control_experiment_name( $entry, $cfg, $epigenome,
+            $adaptors );
+    }
+    else {
+        $experiment_name
+            = create_signal_experiment_name( $entry, $cfg, $epigenome,
+            $adaptors );
+    }
+
+    my $experiment = $adaptors->{experiment}->fetch_by_name($experiment_name);
+
     # don't use control_db_ids, fetch directly from db for every signal file
-    my $experiment = store_experiment(
+    if ( !$experiment ) {
+        $experiment = store_experiment(
             $entry,     $experiment_name, $adaptors, $control_db_ids,
             $epigenome, $feature_type,    $exp_group
         );
-    
+    }
+
     # avoid passing too many parameters to subroutines
     store_input_subset( $logger, $entry, $adaptors, $cfg, $analysis,
         $epigenome, $experiment, $feature_type );
@@ -423,18 +437,18 @@ sub fetch_feature_type {
     return $feature_type;
 }
 
-sub create_experiment_name {
+sub create_control_experiment_name {
     my ( $entry, $cfg, $epigenome, $adaptors ) = @_;
 
     my $experiment_name;
-    my $version = 1;
+    my $number = 1;
 
     do {
         $experiment_name
             = $epigenome->{production_name} . '_'
             . $entry->{feature_type_name} . '_'
-            . $entry->{analysis_name} . '_v'
-            . $version . '_'
+            . $entry->{analysis_name} . '_no'
+            . $number . '_'
             . $entry->{exp_group_name};
 
         if ( $cfg->{general}->{release} ) {
@@ -442,8 +456,28 @@ sub create_experiment_name {
         }
 
         $experiment_name =~ s/\s//g;
-        $version++;
+        $number++;
     } while ( $adaptors->{experiment}->fetch_by_name($experiment_name) );
+
+    return $experiment_name;
+}
+
+sub create_signal_experiment_name {
+    my ( $entry, $cfg, $epigenome, $adaptors ) = @_;
+
+    my $experiment_name;
+
+    $experiment_name
+        = $epigenome->{production_name} . '_'
+        . $entry->{feature_type_name} . '_'
+        . $entry->{analysis_name} . '_'
+        . $entry->{exp_group_name};
+
+    if ( $cfg->{general}->{release} ) {
+        $experiment_name .= $cfg->{general}->{release};
+    }
+
+    $experiment_name =~ s/\s//g;
 
     return $experiment_name;
 }
@@ -487,13 +521,16 @@ sub store_input_subset {
         $feature_type )
         = @_;
 
-    my $iss = $adaptors->{input_subset}->fetch_by_name( $entry->{accession} );
+    my $iss = $adaptors->{input_subset}
+        ->fetch_by_name( $entry->{accession}, $experiment );
 
     if ($iss) {
-        $logger->error(
+        $logger->warning(
             'Input subset entry for accession '
                 . $entry->{accession}
-                . 'already exists in DB! ',
+                . ' with experiment name '
+                . $experiment->{name}
+                . ' already exists in DB! ',
             0, 1
         );
     }
