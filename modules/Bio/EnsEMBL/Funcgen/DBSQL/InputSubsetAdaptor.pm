@@ -126,7 +126,7 @@ sub fetch_by_name {
   my ($self, $name, $exp) = @_;
 
   my $params = {constraints => {name        => $name}};
-  $params->{contraints}{experiments} = [$exp] if $exp;
+  $params->{constraints}{experiments} = [$exp] if $exp;
   
   my $sets = $self->generic_fetch($self->compose_constraint_query($params));
   
