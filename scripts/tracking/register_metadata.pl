@@ -45,6 +45,7 @@ use List::MoreUtils qw(uniq);
 #TODO PerlCritic
 #TODO check for external db availability in verify_basic_objects
 #TODO healthchecks, ie.invalid br/tr values, invalid local/download url
+#TODO use state variable for $control_db_ids
 
 main();
 
@@ -254,12 +255,13 @@ sub fetch_adaptors {
     # Tracking DB hidden from user, hence no get_TrackingAdaptor method.
     # TrackingAdaptor->new() does not YET accept DBAdaptor object
     my $tracking_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::TrackingAdaptor->new(
-        -user       => $cfg->{efg_db}->{user},
-        -pass       => $cfg->{efg_db}->{pass},
-        -host       => $cfg->{efg_db}->{host},
-        -port       => $cfg->{efg_db}->{port},
-        -dbname     => $cfg->{efg_db}->{dbname},
-        -species    => $cfg->{general}->{species},
+        -user    => $cfg->{efg_db}->{user},
+        -pass    => $cfg->{efg_db}->{pass},
+        -host    => $cfg->{efg_db}->{host},
+        -port    => $cfg->{efg_db}->{port},
+        -dbname  => $cfg->{efg_db}->{dbname},
+        -species => $cfg->{general}->{species},
+
         #do we really need these??
         -dnadb_user => $cfg->{dna_db}->{user},
         -dnadb_pass => $cfg->{dna_db}->{pass},
@@ -277,11 +279,6 @@ sub fetch_adaptors {
     $adaptors{exp_group}    = $dba->get_ExperimentalGroupAdaptor();
     $adaptors{experiment}   = $dba->get_ExperimentAdaptor();
     $adaptors{input_subset} = $dba->get_InputSubsetAdaptor();
-    # $adaptors{result_set}   = $dba->get_ResultSetAdaptor();
-    # $adaptors{reg_feature}  = $dba->get_RegulatoryFeatureAdaptor();
-    # $adaptors{feature_set}  = $dba->get_FeatureSetAdaptor();
-    # $adaptors{data_set}     = $dba->get_DataSetAdaptor();
-    # $adaptors{ann_feature}  = $dba->get_AnnotatedFeatureAdaptor();
 
     $adaptors{db}       = $dba;
     $adaptors{tracking} = $tracking_adaptor;
@@ -507,8 +504,6 @@ sub store_experiment {
 
     $adaptors->{experiment}->store($experiment);
 
-    # $adaptors->{tracking}->store_tracking_info( $experiment, $tr_info );
-
     if ( $entry->{is_control} ) {
         $control_db_ids->{ $entry->{accession} } = $experiment->dbID();
     }
@@ -545,6 +540,7 @@ sub store_input_subset {
         -biological_replicate => $entry->{br},
         -technical_replicate  => $entry->{tr},
     );
+
     $adaptors->{input_subset}->store($iss);
 
     # do this in schema
@@ -556,7 +552,6 @@ sub store_input_subset {
 
         availability_date => $cfg->{date},
         download_url      => $entry->{download_url},
-        # download_date     => $data->{download_date},
         local_url => $entry->{local_url},
         md5sum    => $entry->{md5},
         notes     => $entry->{info},
@@ -588,8 +583,6 @@ sub store_ontology_xref {
             -primary_id         => $primary_id,
             -dbname             => $dbname,
             -linkage_annotation => $linkage_annotation,
-            # -display_id         => "",
-            # -description        => "",
         );
 
         my $ignore_release = 1;
@@ -610,7 +603,7 @@ sub store_db_xref {
     my @xref_accessions = split /;/, $entry->{xref_accs};
 
     for my $xref_acc (@xref_accessions) {
-        my ($primary_id, $dbname) = split /-/, $xref_acc;
+        my ( $primary_id, $dbname ) = split /-/, $xref_acc;
 
         my $xref = Bio::EnsEMBL::DBEntry->new(
             -primary_id => $primary_id,
