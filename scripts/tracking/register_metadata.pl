@@ -45,6 +45,7 @@ use List::MoreUtils qw(uniq);
 #TODO PerlCritic
 #TODO check for external db availability in verify_basic_objects
 #TODO healthchecks, ie.invalid br/tr values, invalid local/download url
+#TODO use state variable for $control_db_ids
 
 main();
 
@@ -254,12 +255,13 @@ sub fetch_adaptors {
     # Tracking DB hidden from user, hence no get_TrackingAdaptor method.
     # TrackingAdaptor->new() does not YET accept DBAdaptor object
     my $tracking_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::TrackingAdaptor->new(
-        -user       => $cfg->{efg_db}->{user},
-        -pass       => $cfg->{efg_db}->{pass},
-        -host       => $cfg->{efg_db}->{host},
-        -port       => $cfg->{efg_db}->{port},
-        -dbname     => $cfg->{efg_db}->{dbname},
-        -species    => $cfg->{general}->{species},
+        -user    => $cfg->{efg_db}->{user},
+        -pass    => $cfg->{efg_db}->{pass},
+        -host    => $cfg->{efg_db}->{host},
+        -port    => $cfg->{efg_db}->{port},
+        -dbname  => $cfg->{efg_db}->{dbname},
+        -species => $cfg->{general}->{species},
+
         #do we really need these??
         -dnadb_user => $cfg->{dna_db}->{user},
         -dnadb_pass => $cfg->{dna_db}->{pass},
@@ -277,11 +279,6 @@ sub fetch_adaptors {
     $adaptors{exp_group}    = $dba->get_ExperimentalGroupAdaptor();
     $adaptors{experiment}   = $dba->get_ExperimentAdaptor();
     $adaptors{input_subset} = $dba->get_InputSubsetAdaptor();
-    # $adaptors{result_set}   = $dba->get_ResultSetAdaptor();
-    # $adaptors{reg_feature}  = $dba->get_RegulatoryFeatureAdaptor();
-    # $adaptors{feature_set}  = $dba->get_FeatureSetAdaptor();
-    # $adaptors{data_set}     = $dba->get_DataSetAdaptor();
-    # $adaptors{ann_feature}  = $dba->get_AnnotatedFeatureAdaptor();
 
     $adaptors{db}       = $dba;
     $adaptors{tracking} = $tracking_adaptor;
@@ -300,8 +297,8 @@ sub verify_basic_objects_in_db {
         my $analysis = $adaptors->{analysis}
             ->fetch_by_logic_name( $entry->{analysis_name} );
 
-        my $feature_type = $adaptors->{feature_type}
-            ->fetch_by_name( $entry->{feature_type_name} );
+        my $feature_types = $adaptors->{feature_type}
+            ->fetch_all_by_name( $entry->{feature_type_name} );
 
         my $exp_group = $adaptors->{exp_group}
             ->fetch_by_name( $entry->{exp_group_name} );
@@ -312,7 +309,7 @@ sub verify_basic_objects_in_db {
             $abort = 1;
         }
 
-        if ( !defined $feature_type ) {
+        if ( !defined $feature_types->[0] ) {
             $to_register{Feature_Type} //= [];
             push @{ $to_register{Feature_Type} }, $entry->{feature_type_name};
             $abort = 1;
@@ -364,19 +361,33 @@ sub register {
         store_db_xref( $entry, $adaptors, $epigenome );
     }
 
-    my $feature_type = fetch_feature_type( $entry, $adaptors );
+    my $feature_type = fetch_feature_type( $entry, $adaptors, $analysis );
 
     my $exp_group
         = $adaptors->{exp_group}->fetch_by_name( $entry->{exp_group_name} );
 
-    my $experiment_name = create_experiment_name( $entry, $cfg, $epigenome, $adaptors );
-    
+    my $experiment_name;
+    if ( $entry->{is_control} ) {
+        $experiment_name
+            = create_control_experiment_name( $entry, $cfg, $epigenome,
+            $adaptors );
+    }
+    else {
+        $experiment_name
+            = create_signal_experiment_name( $entry, $cfg, $epigenome,
+            $adaptors );
+    }
+
+    my $experiment = $adaptors->{experiment}->fetch_by_name($experiment_name);
+
     # don't use control_db_ids, fetch directly from db for every signal file
-    my $experiment = store_experiment(
+    if ( !$experiment ) {
+        $experiment = store_experiment(
             $entry,     $experiment_name, $adaptors, $control_db_ids,
             $epigenome, $feature_type,    $exp_group
         );
-    
+    }
+
     # avoid passing too many parameters to subroutines
     store_input_subset( $logger, $entry, $adaptors, $cfg, $analysis,
         $epigenome, $experiment, $feature_type );
@@ -406,36 +417,35 @@ sub store_epigenome {
 }
 
 sub fetch_feature_type {
-    my ( $entry, $adaptors ) = @_;
+    my ( $entry, $adaptors, $analysis ) = @_;
 
     my $ft_name = $entry->{feature_type_name};
 
     my $feature_type;
 
-    # if ( $entry->{is_control} ) {
-    #     $feature_type = $adaptors->{feature_type}
-    #         ->fetch_by_name( $ft_name, 'DNA', $analysis );
-    # }
-    # else {
-    $feature_type = $adaptors->{feature_type}->fetch_by_name($ft_name);
-
-    # }
+    if ( $entry->{is_control} ) {
+        $feature_type = $adaptors->{feature_type}
+            ->fetch_by_name( $ft_name, 'DNA', $analysis );
+    }
+    else {
+        $feature_type = $adaptors->{feature_type}->fetch_by_name($ft_name);
+    }
 
     return $feature_type;
 }
 
-sub create_experiment_name {
+sub create_control_experiment_name {
     my ( $entry, $cfg, $epigenome, $adaptors ) = @_;
 
     my $experiment_name;
-    my $version = 1;
+    my $number = 1;
 
     do {
         $experiment_name
             = $epigenome->{production_name} . '_'
             . $entry->{feature_type_name} . '_'
-            . $entry->{analysis_name} . '_v'
-            . $version . '_'
+            . $entry->{analysis_name} . '_no'
+            . $number . '_'
             . $entry->{exp_group_name};
 
         if ( $cfg->{general}->{release} ) {
@@ -443,8 +453,28 @@ sub create_experiment_name {
         }
 
         $experiment_name =~ s/\s//g;
-        $version++;
+        $number++;
     } while ( $adaptors->{experiment}->fetch_by_name($experiment_name) );
+
+    return $experiment_name;
+}
+
+sub create_signal_experiment_name {
+    my ( $entry, $cfg, $epigenome, $adaptors ) = @_;
+
+    my $experiment_name;
+
+    $experiment_name
+        = $epigenome->{production_name} . '_'
+        . $entry->{feature_type_name} . '_'
+        . $entry->{analysis_name} . '_'
+        . $entry->{exp_group_name};
+
+    if ( $cfg->{general}->{release} ) {
+        $experiment_name .= $cfg->{general}->{release};
+    }
+
+    $experiment_name =~ s/\s//g;
 
     return $experiment_name;
 }
@@ -474,8 +504,6 @@ sub store_experiment {
 
     $adaptors->{experiment}->store($experiment);
 
-    # $adaptors->{tracking}->store_tracking_info( $experiment, $tr_info );
-
     if ( $entry->{is_control} ) {
         $control_db_ids->{ $entry->{accession} } = $experiment->dbID();
     }
@@ -488,13 +516,16 @@ sub store_input_subset {
         $feature_type )
         = @_;
 
-    my $iss = $adaptors->{input_subset}->fetch_by_name( $entry->{accession} );
+    my $iss = $adaptors->{input_subset}
+        ->fetch_by_name( $entry->{accession}, $experiment );
 
     if ($iss) {
-        $logger->error(
+        $logger->warning(
             'Input subset entry for accession '
                 . $entry->{accession}
-                . 'already exists in DB! ',
+                . ' with experiment name '
+                . $experiment->{name}
+                . ' already exists in DB! ',
             0, 1
         );
     }
@@ -509,6 +540,7 @@ sub store_input_subset {
         -biological_replicate => $entry->{br},
         -technical_replicate  => $entry->{tr},
     );
+
     $adaptors->{input_subset}->store($iss);
 
     # do this in schema
@@ -520,7 +552,6 @@ sub store_input_subset {
 
         availability_date => $cfg->{date},
         download_url      => $entry->{download_url},
-        # download_date     => $data->{download_date},
         local_url => $entry->{local_url},
         md5sum    => $entry->{md5},
         notes     => $entry->{info},
@@ -552,8 +583,6 @@ sub store_ontology_xref {
             -primary_id         => $primary_id,
             -dbname             => $dbname,
             -linkage_annotation => $linkage_annotation,
-            # -display_id         => "",
-            # -description        => "",
         );
 
         my $ignore_release = 1;
@@ -574,7 +603,7 @@ sub store_db_xref {
     my @xref_accessions = split /;/, $entry->{xref_accs};
 
     for my $xref_acc (@xref_accessions) {
-        my ($primary_id, $dbname) = split /-/, $xref_acc;
+        my ( $primary_id, $dbname ) = split /-/, $xref_acc;
 
         my $xref = Bio::EnsEMBL::DBEntry->new(
             -primary_id => $primary_id,
