@@ -200,6 +200,51 @@ sub validate_non_DB_inputs{
  return;
 }
 
+sub run_system_cmd {
+
+  my $self    = shift;
+  my $command = shift;
+  my $no_exit = shift;
+  my $verbose = shift;
+  
+  print "$command\n" if $verbose;
+  system($command);
+  return $self->_handle_exit_status($command, $?, $!, $no_exit);
+}
+
+sub _handle_exit_status {
+
+  my $self         = shift;
+  my $cmd          = shift;
+  my $exit_status  = shift;
+  my $errno        = shift;
+  my $no_exit      = shift;
+  
+  my ($exit_code, $err_string);
+
+  $exit_code = $exit_status >> 8;
+
+  if ($exit_status == -1) {
+    $err_string = "Failed to execute:\t$cmd\nError:\t$errno\n";
+  }
+  elsif ($exit_status & 127) {
+    $err_string = sprintf("Child process died with signal %d, %s coredump\n$cmd\nError:\t$errno\n",
+    ($exit_status & 127),
+    ($exit_status & 128) ? 'with' : 'without');
+  } elsif ($exit_status != 0) {
+    $err_string = sprintf("Child process exited with value %d:", $exit_code)."\t$cmd\nError:\t$errno\n";
+  }
+
+  if(defined $err_string) {
+    if(! $no_exit) {
+      $self->throw($err_string);
+    } else {
+      warn $err_string;
+    }
+  }
+  return $exit_code;
+}
+
 sub alignment_root_dir {
  my $self = shift;
  
@@ -259,7 +304,7 @@ sub regulation_directory {
 
 =cut
 sub version_directory {
-  return '085'
+  return '086'
 }
 
 =head1 default_directory_by_table_and_file_type
@@ -350,14 +395,16 @@ sub _set_out_db {
       
   #Create TrackingAdaptor here, as we can't get_TrackingAdaptor later
   my $adaptor_class = ($self->use_tracking_db) ? 
-    'Bio::EnsEMBL::Funcgen::DBSQL::TrackingAdaptor' :
-    'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor';
+    'Bio::EnsEMBL::Funcgen::DBSQL::TrackingAdaptor' 
+    :
+    'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor'
+    ;
     
   eval {
     $db = $adaptor_class->new(%{ $db }, %{ $dnadb_params });
   };
   if($@) {
-    $self->throw("Error creating the Funcgen DBAdaptor and/or dna DBAdaptor\n$@");  
+    $self->throw("Error creating the $adaptor_class\n$@");  
   }
   if(! $db->isa('Bio::EnsEMBL::DBSQL::BaseAdaptor')) {
     $self->throw("The out_db param is set to an unexpected reference:\t" . (ref $db) . "\n"
