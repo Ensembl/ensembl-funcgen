@@ -20,7 +20,7 @@ use Bio::EnsEMBL::Utils::Exception              qw( throw );
 use Bio::EnsEMBL::Utils::Scalar                 qw( assert_ref );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils      qw( scalars_to_objects );
 use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools qw( _init_peak_caller 
-                                                    _run_peak_caller );                                               
+                                                    _run_peak_caller );
 use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
