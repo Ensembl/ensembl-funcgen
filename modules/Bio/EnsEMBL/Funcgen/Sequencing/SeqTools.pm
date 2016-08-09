@@ -45,7 +45,6 @@ use vars qw( @EXPORT );
 @EXPORT = qw(
   _init_peak_caller
   _run_peak_caller
-  convert_bam_to_sam
   convert_sam_to_bed
   create_and_populate_files_txt
   download_all_files_txt
@@ -57,12 +56,10 @@ use vars qw( @EXPORT );
   modify_files_txt_for_regulation
   post_process_IDR
   pre_process_IDR
-  process_bam
   randomise_bed_file
   run_aligner
   run_IDR
   run_peak_caller
-  split_fastqs
   validate_sam_header
   write_chr_length_file
   );
@@ -160,192 +157,192 @@ sub run_aligner{
 #Or is this becuase all multi line records are 4 lines, so we just specify
 #a multiple of 4!
 
-sub split_fastqs{
-  my ($files, $out_prefix, $out_dir, $work_dir,
-      $check_sums, $merge, $chunk_size, $skip_qc, $debug) = rearrange(
-      [qw( files out_prefix out_dir work_dir
-       merge chunk_size skip_qc debug) ], @_);
-
-  assert_ref($files, 'ARRAY', '-files');
-
-  if(! (@$files &&
-        (grep {!/fastq.gz$/} @$files) )){
-    throw('-files must be an array ref of gzipped fastq files');
-  }
-
-  throw('-out_prefix is not defined') if ! defined $out_prefix;
-
-  if(! -d $out_dir){
-    throw("-out_dir $out_dir is not a valid output directory");
-  }
-
-  if(! defined $work_dir){
-    $work_dir = $out_dir;
-  }
-  elsif(! -d $work_dir){
-    throw("-work_dir $work_dir is not a valid work directory");
-  }
-
-  if($check_sums){
-    assert_ref($check_sums, 'ARRAY', '-check_sums');
-
-    if(scalar(@$check_sums) != scalar(@$files)){
-      throw(scalar(@$files).' -files have been specific but only '.scalar(@$check_sums).
-        " -check_sums have been specified\nTo ensure input validation these must ".
-        "match, even if undef checksums have to be specified");
-    }
-  }
-
-  $chunk_size ||= 16000000;#Optimised for ~ 30 mins bwa alignment bjob
-
-  if($chunk_size % 4){
-    throw("Chunk size($chunk_size) is not a multiple of 4. This is required to ensure safe splitting of 4 line fastq records.");
-  }
-
-  my (@fastqs, %params, $throw);
-
-  foreach my $i(0..$#{$files}){
-    my $found_path;
-    %params = ( debug => $debug, checksum => $check_sums->[$i] );
-
-    #Hmm, no undef checksum here means try and find one in a file
-
-    #Look for gz files too,
-    #we can't do a md5 check if we don't match the url exactly
-    if(! eval { $found_path = check_file($files->[$i], 'gz', \%params); 1}){
-      $throw .= "Failed to check_file:\t".$files->[$i]."\n$@";
-      next;
-    }
-    elsif(! defined $found_path){
-      $throw .= "Could not find fastq file, is either not downloaded, has been deleted or is in warehouse:\t".
-        $files->[$i]."\n";
-      #Could try warehouse here?
-    }
-    elsif($found_path !~ /\.(?:t){0,1}gz$/o){
-      #use is_compressed here?
-      #This will also modify the original file!
-      throw("Found unzipped path, aborting as gzipping may invalidate any further md5 checking:\t$found_path");
-      #run_system_cmd("gzip $found_path");
-      #$found_path .= '.gz';
-    }
-
-    push @fastqs, $found_path;
-  }
-
-  throw($throw) if $throw;
-
-  my (@results, @qc_results);
-
-
-
-  #if qc fails here, we still split?
-  #we need a way to signify QC failure easily without
-  #having to test hash keys?
-  #This could be an array of booleans?
-  #so we would return \@new_fastqs, \@pass_fail_booleans, \@qc_hashes
-
- #FastQC in here
-
-
-  #This currently fails as it tries to launch an X11 window!
-
-  ### RUN FASTQC
-  #18-06-10: Version 0.4 released ... Added full machine parsable output for integration into pipelines
-  #use -casava option for filtering
-
-  #We could set -t here to match the number of cpus on the node?
-  #This will need reflecting in the resource spec for this job
-  #How do we specify non-interactive mode???
-  #I think it just does this when file args are present
-
-  #Can fastqc take compressed files?
-  #Yes, but it seems to want to use Bzip to stream the data in
-  #This is currently failing with:
-  #Exception in thread "main" java.lang.NoClassDefFoundError: org/itadaki/bzip2/BZip2InputStream
-  #Seems like there are some odd requirements for installing fastqc
-  #although this seems galaxy specific
-  #http://lists.bx.psu.edu/pipermail/galaxy-dev/2011-October/007210.html
-
-  #This seems to happen even if the file is gunzipped!
-  #and when executed from /dsoftware/ensembl/funcgen
-  #and when done in interative mode by loading the fastq through the File menu
-
-  #This looks to be a problem with the fact that the wrapper script has been moved from the
-  #FastQC dir to the parent bin dir. Should be able to fix this with a softlink
-  #Nope, this did not fix things!
-
-  warn "DEACTIVATED FASTQC FOR NOW:\nfastqc -f fastq -o ".$out_dir." @fastqs";
-  #run_system_cmd('fastqc -o '.$self->output_dir." @fastqs");
-
-
-  #todo parse output for failures
-  #also fastscreen?
-
-  warn("Need to add parsing of fastqc report here to catch module failures");
-
-  #What about adaptor trimming? and quality score trimming?
-  #FASTX? quality_trimmer, clipper (do we have access to the primers?) and trimmer?
-
-
-
-  #For safety, clean away any that match the prefix
-  run_system_cmd('rm -f '.$work_dir."/${out_prefix}.fastq_*", 1);
-  #no exit flag, in case rm fails due to no old files
-
-  my @du = run_backtick_cmd("du -ck @fastqs");
-  (my $pre_du = $du[-1]) =~ s/[\s]+total//;
-
-  my $cmd = 'zcat '.join(' ', @fastqs).' | split --verbose -d -a 4 -l '.
-    $chunk_size.' - '.$work_dir.'/'.$out_prefix.'.fastq_';
-  #$self->helper->debug(1, "Running chunk command:\n$cmd");
-  warn "Running chunk command:\n$cmd\n" if $debug;
-
-  my @split_stdout = run_backtick_cmd($cmd);
-  (my $final_file = $split_stdout[-1]) =~ s/creating file \`(.*)\'/$1/;
-
-  if(! defined $final_file){
-    throw('Failed to parse (s/.*\`([0-9]+)\\\'/$1/) final file '.
-      ' from last split output line: '.$split_stdout[-1]);
-  }
-
-  #Get files to data flow to individual alignment jobs
-  my @new_fastqs = run_backtick_cmd('ls '.$work_dir."/${out_prefix}.fastq_*");
-  @new_fastqs    = sort {$a cmp $b} @new_fastqs;
-
-  #Now do some sanity checking to make sure we have all the files
-  if($new_fastqs[-1] ne $final_file){
-    throw("split output specified last chunk file was numbered \'$final_file\',".
-      " but found:\n".$new_fastqs[-1]);
-  }
-  else{
-    $final_file =~ s/.*_([0-9]+)$/$1/;
-    $final_file  =~ s/^[0]+//;
-
-    #$self->debug(1, "Matching final_file index $final_file vs new_fastq max index ".$#new_fastqs);
-    warn "Matching final_file index $final_file vs new_fastq max index ".$#new_fastqs."\n" if $debug;
-
-
-    if($final_file != $#new_fastqs){
-      throw('split output specified '.($final_file+1).
-        ' file(s) were created but only found '.scalar(@new_fastqs).":\n".join("\n", @new_fastqs));
-    }
-  }
-
-  #and the unzipped files are at least as big as the input gzipped files
-  @du = run_backtick_cmd("du -ck @new_fastqs");
-  (my $post_du = $du[-1]) =~ s/[\s]+total//;
-
-  #$self->helper->debug(1, 'Merged and split '.scalar(@fastqs).' (total '.$pre_du.'k) input fastq files into '.
-  #  scalar(@new_fastqs).' tmp fastq files (total'.$post_du.')');
-  warn 'Merged and split '.scalar(@fastqs).' (total '.$pre_du.'k) input fastq files into '.
-    scalar(@new_fastqs).' tmp fastq files (total'.$post_du.")\n" if $debug;
-
-  if($post_du < $pre_du){
-    throw("Input fastq files totaled ${pre_du}k, but output chunks totaled only ${post_du}k");
-  }
-
-  return (\@new_fastqs);#, \%qc_results;
-}
+# sub split_fastqs{
+#   my ($files, $out_prefix, $out_dir, $work_dir,
+#       $check_sums, $merge, $chunk_size, $skip_qc, $debug) = rearrange(
+#       [qw( files out_prefix out_dir work_dir
+#        merge chunk_size skip_qc debug) ], @_);
+# 
+#   assert_ref($files, 'ARRAY', '-files');
+# 
+#   if(! (@$files &&
+#         (grep {!/fastq.gz$/} @$files) )){
+#     throw('-files must be an array ref of gzipped fastq files');
+#   }
+# 
+#   throw('-out_prefix is not defined') if ! defined $out_prefix;
+# 
+#   if(! -d $out_dir){
+#     throw("-out_dir $out_dir is not a valid output directory");
+#   }
+# 
+#   if(! defined $work_dir){
+#     $work_dir = $out_dir;
+#   }
+#   elsif(! -d $work_dir){
+#     throw("-work_dir $work_dir is not a valid work directory");
+#   }
+# 
+#   if($check_sums){
+#     assert_ref($check_sums, 'ARRAY', '-check_sums');
+# 
+#     if(scalar(@$check_sums) != scalar(@$files)){
+#       throw(scalar(@$files).' -files have been specific but only '.scalar(@$check_sums).
+#         " -check_sums have been specified\nTo ensure input validation these must ".
+#         "match, even if undef checksums have to be specified");
+#     }
+#   }
+# 
+#   $chunk_size ||= 16000000;#Optimised for ~ 30 mins bwa alignment bjob
+# 
+#   if($chunk_size % 4){
+#     throw("Chunk size($chunk_size) is not a multiple of 4. This is required to ensure safe splitting of 4 line fastq records.");
+#   }
+# 
+#   my (@fastqs, %params, $throw);
+# 
+#   foreach my $i(0..$#{$files}){
+#     my $found_path;
+#     %params = ( debug => $debug, checksum => $check_sums->[$i] );
+# 
+#     #Hmm, no undef checksum here means try and find one in a file
+# 
+#     #Look for gz files too,
+#     #we can't do a md5 check if we don't match the url exactly
+#     if(! eval { $found_path = check_file($files->[$i], 'gz', \%params); 1}){
+#       $throw .= "Failed to check_file:\t".$files->[$i]."\n$@";
+#       next;
+#     }
+#     elsif(! defined $found_path){
+#       $throw .= "Could not find fastq file, is either not downloaded, has been deleted or is in warehouse:\t".
+#         $files->[$i]."\n";
+#       #Could try warehouse here?
+#     }
+#     elsif($found_path !~ /\.(?:t){0,1}gz$/o){
+#       #use is_compressed here?
+#       #This will also modify the original file!
+#       throw("Found unzipped path, aborting as gzipping may invalidate any further md5 checking:\t$found_path");
+#       #run_system_cmd("gzip $found_path");
+#       #$found_path .= '.gz';
+#     }
+# 
+#     push @fastqs, $found_path;
+#   }
+# 
+#   throw($throw) if $throw;
+# 
+#   my (@results, @qc_results);
+# 
+# 
+# 
+#   #if qc fails here, we still split?
+#   #we need a way to signify QC failure easily without
+#   #having to test hash keys?
+#   #This could be an array of booleans?
+#   #so we would return \@new_fastqs, \@pass_fail_booleans, \@qc_hashes
+# 
+#  #FastQC in here
+# 
+# 
+#   #This currently fails as it tries to launch an X11 window!
+# 
+#   ### RUN FASTQC
+#   #18-06-10: Version 0.4 released ... Added full machine parsable output for integration into pipelines
+#   #use -casava option for filtering
+# 
+#   #We could set -t here to match the number of cpus on the node?
+#   #This will need reflecting in the resource spec for this job
+#   #How do we specify non-interactive mode???
+#   #I think it just does this when file args are present
+# 
+#   #Can fastqc take compressed files?
+#   #Yes, but it seems to want to use Bzip to stream the data in
+#   #This is currently failing with:
+#   #Exception in thread "main" java.lang.NoClassDefFoundError: org/itadaki/bzip2/BZip2InputStream
+#   #Seems like there are some odd requirements for installing fastqc
+#   #although this seems galaxy specific
+#   #http://lists.bx.psu.edu/pipermail/galaxy-dev/2011-October/007210.html
+# 
+#   #This seems to happen even if the file is gunzipped!
+#   #and when executed from /dsoftware/ensembl/funcgen
+#   #and when done in interative mode by loading the fastq through the File menu
+# 
+#   #This looks to be a problem with the fact that the wrapper script has been moved from the
+#   #FastQC dir to the parent bin dir. Should be able to fix this with a softlink
+#   #Nope, this did not fix things!
+# 
+#   warn "DEACTIVATED FASTQC FOR NOW:\nfastqc -f fastq -o ".$out_dir." @fastqs";
+#   #run_system_cmd('fastqc -o '.$self->output_dir." @fastqs");
+# 
+# 
+#   #todo parse output for failures
+#   #also fastscreen?
+# 
+#   warn("Need to add parsing of fastqc report here to catch module failures");
+# 
+#   #What about adaptor trimming? and quality score trimming?
+#   #FASTX? quality_trimmer, clipper (do we have access to the primers?) and trimmer?
+# 
+# 
+# 
+#   #For safety, clean away any that match the prefix
+#   run_system_cmd('rm -f '.$work_dir."/${out_prefix}.fastq_*", 1);
+#   #no exit flag, in case rm fails due to no old files
+# 
+#   my @du = run_backtick_cmd("du -ck @fastqs");
+#   (my $pre_du = $du[-1]) =~ s/[\s]+total//;
+# 
+#   my $cmd = 'zcat '.join(' ', @fastqs).' | split --verbose -d -a 4 -l '.
+#     $chunk_size.' - '.$work_dir.'/'.$out_prefix.'.fastq_';
+#   #$self->helper->debug(1, "Running chunk command:\n$cmd");
+#   warn "Running chunk command:\n$cmd\n" if $debug;
+# 
+#   my @split_stdout = run_backtick_cmd($cmd);
+#   (my $final_file = $split_stdout[-1]) =~ s/creating file \`(.*)\'/$1/;
+# 
+#   if(! defined $final_file){
+#     throw('Failed to parse (s/.*\`([0-9]+)\\\'/$1/) final file '.
+#       ' from last split output line: '.$split_stdout[-1]);
+#   }
+# 
+#   #Get files to data flow to individual alignment jobs
+#   my @new_fastqs = run_backtick_cmd('ls '.$work_dir."/${out_prefix}.fastq_*");
+#   @new_fastqs    = sort {$a cmp $b} @new_fastqs;
+# 
+#   #Now do some sanity checking to make sure we have all the files
+#   if($new_fastqs[-1] ne $final_file){
+#     throw("split output specified last chunk file was numbered \'$final_file\',".
+#       " but found:\n".$new_fastqs[-1]);
+#   }
+#   else{
+#     $final_file =~ s/.*_([0-9]+)$/$1/;
+#     $final_file  =~ s/^[0]+//;
+# 
+#     #$self->debug(1, "Matching final_file index $final_file vs new_fastq max index ".$#new_fastqs);
+#     warn "Matching final_file index $final_file vs new_fastq max index ".$#new_fastqs."\n" if $debug;
+# 
+# 
+#     if($final_file != $#new_fastqs){
+#       throw('split output specified '.($final_file+1).
+#         ' file(s) were created but only found '.scalar(@new_fastqs).":\n".join("\n", @new_fastqs));
+#     }
+#   }
+# 
+#   #and the unzipped files are at least as big as the input gzipped files
+#   @du = run_backtick_cmd("du -ck @new_fastqs");
+#   (my $post_du = $du[-1]) =~ s/[\s]+total//;
+# 
+#   #$self->helper->debug(1, 'Merged and split '.scalar(@fastqs).' (total '.$pre_du.'k) input fastq files into '.
+#   #  scalar(@new_fastqs).' tmp fastq files (total'.$post_du.')');
+#   warn 'Merged and split '.scalar(@fastqs).' (total '.$pre_du.'k) input fastq files into '.
+#     scalar(@new_fastqs).' tmp fastq files (total'.$post_du.")\n" if $debug;
+# 
+#   if($post_du < $pre_du){
+#     throw("Input fastq files totaled ${pre_du}k, but output chunks totaled only ${post_du}k");
+#   }
+# 
+#   return (\@new_fastqs);#, \%qc_results;
+# }
 
 sub merge_bams {
 
@@ -378,8 +375,11 @@ sub merge_bams {
   }
   if(! $skip_merge) {
     # -f option forces overwriting the outfile when it already exists. This
-    # is usefule, if a failed job is being rerun.
+    # is useful, if a failed job is being rerun.
     #
+    use Data::Dumper;
+    print Dumper($bams);
+    
     $cmd = "samtools merge -f $outfile ".join(' ', @$bams);
   } else{ 
     $cmd = 'cp '.$bams->[0].' '.$outfile;
@@ -398,14 +398,14 @@ sub remove_duplicates_from_bam {
   my $output_bam = $param->{output_bam};
   my $debug      = $param->{debug};
 
-  my $metrics_file = "${output_bam}.merged_duplication_removal_metrics.tab";
+#   my $metrics_file = "${output_bam}.merged_duplication_removal_metrics.tab";
   
   # Remove unmapped reads
   #
   # Must set -b or picard will complain: "Error parsing text SAM file. Empty 
   # sequence dictionary."
   #
-  my $cmd_removeUnmappedReads = qq(samtools view -F 4 -b -o $output_bam -);
+  my $cmd_removeUnmappedReads = qq(samtools view -F 4 -b -o - -);
   
   # Picard must be in the classpath before running this module, e.g. like this:
   # export CLASSPATH=/software/ensembl/funcgen/picard.jar
@@ -413,320 +413,317 @@ sub remove_duplicates_from_bam {
   # The output is always a sam file, even if bam was specified, hence 
   # SamFormatConverter is run on the output.
   #
-  my $cmd_MarkDuplicates = qq(java picard.cmdline.PicardCommandLine MarkDuplicates ) 
-  . qq( REMOVE_DUPLICATES=true ) 
-  . qq( VALIDATION_STRINGENCY=LENIENT ) 
-  . qq( ASSUME_SORTED=true     ) 
-  . qq( INPUT=$input_bam       ) 
-  . qq( COMPRESSION_LEVEL=0    ) 
-  . qq( OUTPUT=/dev/stdout ) 
-  # Prevent any messages from going into the pipe:
-  . qq( QUIET=true ) 
-  . qq( METRICS_FILE=$metrics_file );
-
-#   my $cmd_SamFormatConverter = qq(java picard.cmdline.PicardCommandLine SamFormatConverter ) 
-#   . qq( INPUT=/dev/stdin ) 
+#   my $cmd_MarkDuplicates = qq(java picard.cmdline.PicardCommandLine MarkDuplicates ) 
+#   . qq( REMOVE_DUPLICATES=true ) 
 #   . qq( VALIDATION_STRINGENCY=LENIENT ) 
-#   . qq( OUTPUT=$output_bam );
+#   . qq( ASSUME_SORTED=true     ) 
+#   . qq( INPUT=$input_bam       ) 
+#   . qq( COMPRESSION_LEVEL=0    ) 
+#   . qq( OUTPUT=/dev/stdout ) 
+#   # Prevent any messages from going into the pipe:
+#   . qq( QUIET=true ) 
+#   . qq( METRICS_FILE=$metrics_file );
+
+  my $cmd_MarkDuplicates = qq(samtools rmdup $input_bam -);
   
   #my $cmd = qq(bash -o pipefail -c "$cmd_removeUnmappedReads | $cmd_MarkDuplicates | $cmd_SamFormatConverter");
-  my $cmd = qq(bash -o pipefail -c "$cmd_MarkDuplicates | $cmd_removeUnmappedReads");
+  my $cmd = qq(bash -o pipefail -c "$cmd_MarkDuplicates | $cmd_removeUnmappedReads > $output_bam");
   warn "Running\n$cmd\n";
   run_system_cmd($cmd);
 
-  unlink($metrics_file);
+#   unlink($metrics_file);
   return;
 }
 
-sub process_sam_bam {
-  my $sam_bam_path = shift;
-  my $params       = shift || {};
-  my $in_file;
-
-  #undef checksum here mean try and find one to validate
-  #but then we don't write one
-
-  delete $params->{checksum};
-  
-  if(! ($in_file = check_file($sam_bam_path, undef, $params)) ){
-    throw("Cannot find file:\n\t$sam_bam_path");
-  }
-
-  #Change this to use rearrange by prefixing keys with -
-  assert_ref($params, 'HASH');
-  my $out_file      = (exists $params->{out_file})              ? $params->{out_file}              : undef;
-  my $sort          = (exists $params->{sort})                  ? $params->{sort}                  : undef;
-  my $skip_rmdups   = (exists $params->{skip_rmdups})           ? $params->{skip_rmdups}           : undef;
-  #Turn on checksum writing
-  my $checksum      = (exists $params->{checksum})              ? 1                                : undef;
-  my $fasta_fai     = (exists $params->{ref_fai})               ? $params->{ref_fai}               : undef;
-  my $out_format    = (exists $params->{output_format})         ? $params->{output_format}         : undef;
-  my $debug         = (exists $params->{debug})                 ? $params->{debug}                 : 0;
-  my $filter_format = (exists $params->{filter_from_format})    ? $params->{filter_from_format}    : undef;
-  my $force         = (exists $params->{force_process_sam_bam}) ? $params->{force_process_sam_bam} : undef;
-
-  use Carp;
-  
-  if (exists $params->{skip_rmdups}) {
-    confess('Deprecated option, duplicates are no longer handled here.');
-  }
-  
-  if ($out_format eq 'sam') {
-    confess('Conversion to sam is not supported!');
-  }
-  if (defined $sort) {
-    confess('Sorting is not supported anymore!');
-  }
-  
-  #sam defaults
-  $out_format     ||= 'sam';
-  my $in_format = 'sam';
-  my $in_flag   = 'S';
-
-  if($out_format !~ /^(?:bam|sam)$/){
-    throw("$out_format is not a valid samtools output format");
-  }
-
-  if($in_file =~ /\.bam$/o){     # bam (not gzipped!)
-    $in_format = 'bam';
-    $in_flag   = '';
-  }
-  elsif($in_file !~ /\.sam(?:\.gz)*?$/o){ # sam (maybe gzipped)
-    throw("Unrecognised sam/bam file:\t".$in_file);
-  }
-
-  #This is odd, we really only need a flag here
-  #but we already have the filter_from_format in the params
-  if(defined $filter_format &&
-     ($filter_format ne $in_format) ){
-    throw("Input filter_from_format($filter_format) does not match input file:\n\t$in_file");
-  }
-
-
-  if(! $out_file){
-    ($out_file = $in_file) =~ s/\.${in_format}(?:.gz)*?$/.${out_format}/;
-
-    if(defined $filter_format){
-      $out_file =~ s/\.unfiltered//o;  #This needs doing only if is not defined
-    }
-  }
-
-  #Sanity checks
-  (my $unzipped_source = $in_file) =~ s/\.gz$//o;
-  (my $unzipped_target = $out_file)     =~ s/\.gz$//o;
-
-  if($unzipped_source eq $unzipped_target){
-    #This won't catch .gz difference
-    #so we may have an filtered file which matches the in file except for .gz in the infile
-    throw("Input and output (unzipped) files are not allowed to match:\n\t$in_file");
-  }
-
-  if($filter_format){
-
-    if($in_file !~ /unfiltered/o){
-      warn("Filter flag is set but input file name does not contain 'unfiltered':\n\t$in_file");
-    }
-
-    if($out_file =~ /unfiltered/o){
-      throw("Filter flag is set but output files contains 'unfiltered':\n\t$in_file");
-    }
-  }
-  elsif(! $sort &&
-        ($in_format eq $out_format) ){
-    throw("Parameters would result in no change for:\n\t$in_file");
-  }
-
-
-  #Define and clean intermediate sorted files first
-  (my $tmp_out = $in_file) =~ s/\.$in_format//;
-  # $tmp_out and $sorted_prefix are the same, so removing $sorted_prefix
-  #my $sorted_prefix = $tmp_out.'.sorted';
-  
-  $tmp_out .= $sort ? '.sorted' : '.tmp';
-
-  # Simply over-write these
-  #my $cmd = "rm -f $tmp_bam*";  # Is * to handle possible checksum files
-  #warn $cmd."\n" if $debug;
-  #run_system_cmd($cmd, 1); #no exit flag
-  my $cmd;
-
-  #Check header and define include option
-  my $fasta_fai_opt = validate_sam_header($in_file, $fasta_fai, undef, $params);
-
-
-  ### HANDLE SIMPLE REHEADER OR FILE COPY ###
-  #my $reheader = 0;
-
-  if((! ($filter_format || $sort)) &&
-     ($out_format eq $in_format) ){
-    #This could possibly be a reheader operation or simply a move
-
-    if(! $fasta_fai_opt){
-
-      if(! $force){
-        # arguably we should just do this but it is likely the options are wrong
-        # could provide a flag over-ride for this?
-        throw('The options provided do not require any processing of the input file:'.
-          "\n\t$in_file\nOther than copying to the output file destination:\n\t".
-          $out_file."\nPlease check/revise your options or specify the force_process_sam_bam parameter");
-      }
-      else{
-        $cmd = "cp $in_file $out_file"; 
-      }
-    }
-    else{ #We simply want to reheader
-      #in and out format are the same, so can just test in format
-
-      if($in_format eq 'sam'){
-      
-	confess('We should not be using sam files anymore!');
-	
-        $cmd = "samtools view -h${in_flag} $fasta_fai_opt $in_file ";
-      }
-      else{ #must be bam
-        throw('bam reheader is not yet supported as requires a sam format header file');
-        #actually fai format is not yet being validated, so this will fail if we pass a sam header
-        #as the $fasta_fai_opt will be -h (for merge) if it is in sam format
-        #$cmd = 'samtools reheader $sam_fai_or_header $in_file && mv $in_file $out_file';
-      }
-    }
-  }
-
-
-  ### FILTER/SORT/CONVERT ###
-
-  if(! $cmd){ #We want to do some filtering/sorting
-    my $filter_opt = ($filter_format) ? '-F 4' : '';
-
-    ### SIMPLE BAM TO SAM ###
-    if(($out_format eq 'sam') &&
-        $skip_rmdups          &&
-        ! $sort){
-        
-      confess('There should be no need to convert to sam!');
-        
-#       $tmp_out = $tmp_out.'.sam';
-#       $cmd = "samtools view -h${in_flag} $filter_opt $fasta_fai_opt $in_file > $tmp_out";
+# sub process_sam_bam {
+#   my $sam_bam_path = shift;
+#   my $params       = shift || {};
+#   my $in_file;
+# 
+#   #undef checksum here mean try and find one to validate
+#   #but then we don't write one
+# 
+#   delete $params->{checksum};
+#   
+#   if(! ($in_file = check_file($sam_bam_path, undef, $params)) ){
+#     throw("Cannot find file:\n\t$sam_bam_path");
+#   }
+# 
+#   #Change this to use rearrange by prefixing keys with -
+#   assert_ref($params, 'HASH');
+#   my $out_file      = (exists $params->{out_file})              ? $params->{out_file}              : undef;
+#   my $sort          = (exists $params->{sort})                  ? $params->{sort}                  : undef;
+#   my $skip_rmdups   = (exists $params->{skip_rmdups})           ? $params->{skip_rmdups}           : undef;
+#   #Turn on checksum writing
+#   my $checksum      = (exists $params->{checksum})              ? 1                                : undef;
+#   my $fasta_fai     = (exists $params->{ref_fai})               ? $params->{ref_fai}               : undef;
+#   my $out_format    = (exists $params->{output_format})         ? $params->{output_format}         : undef;
+#   my $debug         = (exists $params->{debug})                 ? $params->{debug}                 : 0;
+#   my $filter_format = (exists $params->{filter_from_format})    ? $params->{filter_from_format}    : undef;
+#   my $force         = (exists $params->{force_process_sam_bam}) ? $params->{force_process_sam_bam} : undef;
+# 
+#   use Carp;
+#   
+#   if (exists $params->{skip_rmdups}) {
+#     confess('Deprecated option, duplicates are no longer handled here.');
+#   }
+#   
+#   if ($out_format eq 'sam') {
+#     confess('Conversion to sam is not supported!');
+#   }
+#   if (defined $sort) {
+#     confess('Sorting is not supported anymore!');
+#   }
+#   
+#   #sam defaults
+#   $out_format     ||= 'sam';
+#   my $in_format = 'sam';
+#   my $in_flag   = 'S';
+# 
+#   if($out_format !~ /^(?:bam|sam)$/){
+#     throw("$out_format is not a valid samtools output format");
+#   }
+# 
+#   if($in_file =~ /\.bam$/o){     # bam (not gzipped!)
+#     $in_format = 'bam';
+#     $in_flag   = '';
+#   }
+#   elsif($in_file !~ /\.sam(?:\.gz)*?$/o){ # sam (maybe gzipped)
+#     throw("Unrecognised sam/bam file:\t".$in_file);
+#   }
+# 
+#   #This is odd, we really only need a flag here
+#   #but we already have the filter_from_format in the params
+#   if(defined $filter_format &&
+#      ($filter_format ne $in_format) ){
+#     throw("Input filter_from_format($filter_format) does not match input file:\n\t$in_file");
+#   }
+# 
+# 
+#   if(! $out_file){
+#     ($out_file = $in_file) =~ s/\.${in_format}(?:.gz)*?$/.${out_format}/;
+# 
+#     if(defined $filter_format){
+#       $out_file =~ s/\.unfiltered//o;  #This needs doing only if is not defined
+#     }
+#   }
+# 
+#   #Sanity checks
+#   (my $unzipped_source = $in_file) =~ s/\.gz$//o;
+#   (my $unzipped_target = $out_file)     =~ s/\.gz$//o;
+# 
+#   if($unzipped_source eq $unzipped_target){
+#     #This won't catch .gz difference
+#     #so we may have an filtered file which matches the in file except for .gz in the infile
+#     throw("Input and output (unzipped) files are not allowed to match:\n\t$in_file");
+#   }
+# 
+#   if($filter_format){
+# 
+#     if($in_file !~ /unfiltered/o){
+#       warn("Filter flag is set but input file name does not contain 'unfiltered':\n\t$in_file");
+#     }
+# 
+#     if($out_file =~ /unfiltered/o){
+#       throw("Filter flag is set but output files contains 'unfiltered':\n\t$in_file");
+#     }
+#   }
+#   elsif(! $sort &&
+#         ($in_format eq $out_format) ){
+#     throw("Parameters would result in no change for:\n\t$in_file");
+#   }
+# 
+# 
+#   #Define and clean intermediate sorted files first
+#   (my $tmp_out = $in_file) =~ s/\.$in_format//;
+#   # $tmp_out and $sorted_prefix are the same, so removing $sorted_prefix
+#   #my $sorted_prefix = $tmp_out.'.sorted';
+#   
+#   $tmp_out .= $sort ? '.sorted' : '.tmp';
+# 
+#   # Simply over-write these
+#   #my $cmd = "rm -f $tmp_bam*";  # Is * to handle possible checksum files
+#   #warn $cmd."\n" if $debug;
+#   #run_system_cmd($cmd, 1); #no exit flag
+#   my $cmd;
+# 
+#   #Check header and define include option
+#   my $fasta_fai_opt = validate_sam_header($in_file, $fasta_fai, undef, $params);
+# 
+# 
+#   ### HANDLE SIMPLE REHEADER OR FILE COPY ###
+#   #my $reheader = 0;
+# 
+#   if((! ($filter_format || $sort)) &&
+#      ($out_format eq $in_format) ){
+#     #This could possibly be a reheader operation or simply a move
+# 
+#     if(! $fasta_fai_opt){
+# 
+#       if(! $force){
+#         # arguably we should just do this but it is likely the options are wrong
+#         # could provide a flag over-ride for this?
+#         throw('The options provided do not require any processing of the input file:'.
+#           "\n\t$in_file\nOther than copying to the output file destination:\n\t".
+#           $out_file."\nPlease check/revise your options or specify the force_process_sam_bam parameter");
+#       }
+#       else{
+#         $cmd = "cp $in_file $out_file"; 
+#       }
+#     }
+#     else{ #We simply want to reheader
+#       #in and out format are the same, so can just test in format
+# 
+#       if($in_format eq 'sam'){
+#       
+# 	confess('We should not be using sam files anymore!');
+# 	
+#         $cmd = "samtools view -h${in_flag} $fasta_fai_opt $in_file ";
+#       }
+#       else{ #must be bam
+#         throw('bam reheader is not yet supported as requires a sam format header file');
+#         #actually fai format is not yet being validated, so this will fail if we pass a sam header
+#         #as the $fasta_fai_opt will be -h (for merge) if it is in sam format
+#         #$cmd = 'samtools reheader $sam_fai_or_header $in_file && mv $in_file $out_file';
+#       }
+#     }
+#   }
+# 
+# 
+#   ### FILTER/SORT/CONVERT ###
+# 
+#   if(! $cmd){ #We want to do some filtering/sorting
+#     my $filter_opt = ($filter_format) ? '-F 4' : '';
+# 
+#     ### SIMPLE BAM TO SAM ###
+#     if(($out_format eq 'sam') &&
+#         $skip_rmdups          &&
+#         ! $sort){
+#         
+#       confess('There should be no need to convert to sam!');
+#         
+# #       $tmp_out = $tmp_out.'.sam';
+# #       $cmd = "samtools view -h${in_flag} $filter_opt $fasta_fai_opt $in_file > $tmp_out";
+# #       warn $cmd."\n" if $debug;
+# #       run_system_cmd("rm -f $tmp_out");
+# #       run_system_cmd($cmd);
+# # 
+# #       # mnuhn: Nothing to be done, so this is the output file
+# #       $out_file = $tmp_out;
+#     }
+#     else{ # FILTERING & SORTING 
+#       # Base view command to be piped to other commands
+#       # rmdups does not need this view unless there is a sort and filter in place
+#       # or a reaheader?
+#       # sort & rmdup only work on bam
+#       $cmd = "samtools view -hu${in_flag} $filter_opt $fasta_fai_opt $in_file "; 
+# 
+#       #dropped MT filtering, should be handled by blacklist
+#       #if($filter_format){
+#         #$cmd .= "-F 4 | ". #-F Skip alignments with bit set in flag (4 = unaligned)
+#         #  " grep -vE '^[^[:blank:]]+[[:blank:]][^[:blank:]]+[[:blank:]]+(MT|chrM)' "; #Filter MTs or any reference seq with an MT prefix
+#         #Could add blank after MT, just in case there are valid unassembed seq names with MT prefixes
+#         #Fairly safe to assume that all things beginning with chrM are MT or unassembled MT
+#       #}
+# 
+#       # -h include header
+#       #-u uncompressed bam (as we are piping)
+#       #-S SAM input    
+#       #-t  header file (could omit this if it is integrated into the sam/bam?)
+#       #- (dash) here is placeholder for STDIN (as samtools doesn't fully support piping).
+#       #This is interpreted by bash but probably better to specify /dev/stdin?
+#       #for clarity and as some programs can treat is as STDOUT or anything else?
+#       #-b output is bam
+#       #-m 2000000 (don't use 2G here,a s G is just ignored and 2k is used, resulting in millions of tmp files)
+#       #do we need an -m spec here for speed? Probably better to throttle this so jobs are predictable on the farm
+#       #We could also test the sorted flag before doing this?
+#       #But samtools sort does not set it (not in the spec)!
+#       #samtools view -H unsort.bam
+#       #@HD    VN:1.0    SO:unsorted
+#       #samtools view -H sort.bam
+#       #@HD    VN:1.0    SO:coordinate
+#       #We could add it here, but VN is mandatory and we don't know the version of the sam format being used?
+#       #bwa doesn't seem to output the HD field, not do the docs suggest which spec is used for a given version
+#       #mailed Heng Lee regarding this
+# 
+#  
+#       ### WRITE INTERMEDIATE BAM ###
+#       # This uses a tmp_bam intermediate to keep the cpu usage down
+#       # i.g. consider the potential pipe
+#       # view bam | sort | rmdups | view >sam
+#       # This would cause a spike in cpu usage which is likely not specified/expected
+#       # in the LSF resource, and so can cause failures
+#       # As we are not using IPC::Run we only ever get the exit status of the first command
+#       # so failures downstream would go uncaught
+#       $tmp_out = $tmp_out.'.bam';
+# 
+#       #$cmd .= ($sort) ? ' | samtools sort -O bam - '.$tmp_out : ' > '.$tmp_out;
+#       # -I 9 highest compression level
+#       $cmd .= ($sort) ? ' | samtools sort -l 9 - '.$tmp_out : ' | samtools view -b -o '.$tmp_out. ' - ';
 #       warn $cmd."\n" if $debug;
-#       run_system_cmd("rm -f $tmp_out");
 #       run_system_cmd($cmd);
 # 
-#       # mnuhn: Nothing to be done, so this is the output file
-#       $out_file = $tmp_out;
-    }
-    else{ # FILTERING & SORTING 
-      # Base view command to be piped to other commands
-      # rmdups does not need this view unless there is a sort and filter in place
-      # or a reaheader?
-      # sort & rmdup only work on bam
-      $cmd = "samtools view -hu${in_flag} $filter_opt $fasta_fai_opt $in_file "; 
-
-      #dropped MT filtering, should be handled by blacklist
-      #if($filter_format){
-        #$cmd .= "-F 4 | ". #-F Skip alignments with bit set in flag (4 = unaligned)
-        #  " grep -vE '^[^[:blank:]]+[[:blank:]][^[:blank:]]+[[:blank:]]+(MT|chrM)' "; #Filter MTs or any reference seq with an MT prefix
-        #Could add blank after MT, just in case there are valid unassembed seq names with MT prefixes
-        #Fairly safe to assume that all things beginning with chrM are MT or unassembled MT
-      #}
-
-      # -h include header
-      #-u uncompressed bam (as we are piping)
-      #-S SAM input    
-      #-t  header file (could omit this if it is integrated into the sam/bam?)
-      #- (dash) here is placeholder for STDIN (as samtools doesn't fully support piping).
-      #This is interpreted by bash but probably better to specify /dev/stdin?
-      #for clarity and as some programs can treat is as STDOUT or anything else?
-      #-b output is bam
-      #-m 2000000 (don't use 2G here,a s G is just ignored and 2k is used, resulting in millions of tmp files)
-      #do we need an -m spec here for speed? Probably better to throttle this so jobs are predictable on the farm
-      #We could also test the sorted flag before doing this?
-      #But samtools sort does not set it (not in the spec)!
-      #samtools view -H unsort.bam
-      #@HD    VN:1.0    SO:unsorted
-      #samtools view -H sort.bam
-      #@HD    VN:1.0    SO:coordinate
-      #We could add it here, but VN is mandatory and we don't know the version of the sam format being used?
-      #bwa doesn't seem to output the HD field, not do the docs suggest which spec is used for a given version
-      #mailed Heng Lee regarding this
-
- 
-      ### WRITE INTERMEDIATE BAM ###
-      # This uses a tmp_bam intermediate to keep the cpu usage down
-      # i.g. consider the potential pipe
-      # view bam | sort | rmdups | view >sam
-      # This would cause a spike in cpu usage which is likely not specified/expected
-      # in the LSF resource, and so can cause failures
-      # As we are not using IPC::Run we only ever get the exit status of the first command
-      # so failures downstream would go uncaught
-      $tmp_out = $tmp_out.'.bam';
-
-      #$cmd .= ($sort) ? ' | samtools sort -O bam - '.$tmp_out : ' > '.$tmp_out;
-      # -I 9 highest compression level
-      $cmd .= ($sort) ? ' | samtools sort -l 9 - '.$tmp_out : ' | samtools view -b -o '.$tmp_out. ' - ';
-      warn $cmd."\n" if $debug;
-      run_system_cmd($cmd);
-
-      if($filter_format) {
-      
-
-#         if(! $skip_rmdups){
-#           # Removed after alignment as opposed from fastqs as we expect multiple
-#           # reads if they map across several loci but not necessarily at exactly
-#           # the same loci which indicates PCR bias
-#           #-s single end reads or samse (default is paired, sampe)
-#           $cmd = "samtools rmdup -s $tmp_out ";
+#       if($filter_format) {
+#       
+# 
+# #         if(! $skip_rmdups){
+# #           # Removed after alignment as opposed from fastqs as we expect multiple
+# #           # reads if they map across several loci but not necessarily at exactly
+# #           # the same loci which indicates PCR bias
+# #           #-s single end reads or samse (default is paired, sampe)
+# #           $cmd = "samtools rmdup -s $tmp_out ";
+# #         }
+# 
+#         if($out_format eq 'sam'){
+#         
+# 	  confess("Sam format should not be generated anymore.");
+# 
+# #           if($skip_rmdups){
+# #             $cmd = "samtools view -h $tmp_out > $out_file";
+# #           }
+# #           else{
+# #             $cmd .= "- | samtools view -h - > $out_file";
+# #           }
+# 
 #         }
-
-        if($out_format eq 'sam'){
-        
-	  confess("Sam format should not be generated anymore.");
-
-#           if($skip_rmdups){
-#             $cmd = "samtools view -h $tmp_out > $out_file";
-#           }
-#           else{
-#             $cmd .= "- | samtools view -h - > $out_file";
-#           }
-
-        }
-        elsif($skip_rmdups){
-        
-	  confess("Deprecated code!");
-	  
-#           $cmd = "mv $tmp_out $out_file";
-#           $rm_cmd = ''
-        }
-        else{
-#           $cmd .= $out_file;
-        }
-      }
-      
-      my $rm_cmd;
-      if($out_format eq 'bam'){
-        # We know we have bam by now as we have done some sorting
-        $cmd = "mv $tmp_out $out_file";
-        $rm_cmd = '';
-      }
-      else{ #We need to convert to sam
-      
-	confess('There should be no need to convert to sam!');
-	
-#         $cmd = "samtools view -h $tmp_out > $out_file";
-#         $rm_cmd = "rm -f $tmp_out";
-      }
-      
-      warn $cmd."\n";
-      run_system_cmd($cmd);
-
-      if ($rm_cmd) { 
-          warn $rm_cmd."\n";
-          run_system_cmd($rm_cmd); 
-      }
-    }
-#     if($checksum){  write_checksum($out_file, $params);  }
-  }
-  return $out_file;
-}
+#         elsif($skip_rmdups){
+#         
+# 	  confess("Deprecated code!");
+# 	  
+# #           $cmd = "mv $tmp_out $out_file";
+# #           $rm_cmd = ''
+#         }
+#         else{
+# #           $cmd .= $out_file;
+#         }
+#       }
+#       
+#       my $rm_cmd;
+#       if($out_format eq 'bam'){
+#         # We know we have bam by now as we have done some sorting
+#         $cmd = "mv $tmp_out $out_file";
+#         $rm_cmd = '';
+#       }
+#       else{ #We need to convert to sam
+#       
+# 	confess('There should be no need to convert to sam!');
+# 	
+# #         $cmd = "samtools view -h $tmp_out > $out_file";
+# #         $rm_cmd = "rm -f $tmp_out";
+#       }
+#       
+#       warn $cmd."\n";
+#       run_system_cmd($cmd);
+# 
+#       if ($rm_cmd) { 
+#           warn $rm_cmd."\n";
+#           run_system_cmd($rm_cmd); 
+#       }
+#     }
+# #     if($checksum){  write_checksum($out_file, $params);  }
+#   }
+#   return $out_file;
+# }
 
 
 # Consider refactoring get_files_by_formats
@@ -1011,30 +1008,30 @@ sub get_files_by_formats {
 
 
 
-#Is validate_checksum going to have problems as files are gunzipped
-#Should validate checksum also handle .gz files i.e. check for entry without .gz, gunzip and validate?
-#Maybe all checksums should be done on gunzipped files
-
-
-sub process_bam{
-  my $bam_file = shift;
-  my $params   = shift || {};
-  assert_ref($params, 'HASH');
-  return process_sam_bam($bam_file, {%$params, output_format => 'bam'});
-}
-
-sub convert_bam_to_sam{
-  my $bam_file = shift;
-  my $params   = shift || {};
-  assert_ref($params, 'HASH');
-  
-  use Data::Dumper;
-  print Dumper($params);
-  
-  return process_sam_bam($bam_file, {%$params, output_format => 'sam'});
-}
-
-#sub process_sam would need to check_file with gz suffix!
+# #Is validate_checksum going to have problems as files are gunzipped
+# #Should validate checksum also handle .gz files i.e. check for entry without .gz, gunzip and validate?
+# #Maybe all checksums should be done on gunzipped files
+# 
+# 
+# sub process_bam{
+#   my $bam_file = shift;
+#   my $params   = shift || {};
+#   assert_ref($params, 'HASH');
+#   return process_sam_bam($bam_file, {%$params, output_format => 'bam'});
+# }
+# 
+# sub convert_bam_to_sam{
+#   my $bam_file = shift;
+#   my $params   = shift || {};
+#   assert_ref($params, 'HASH');
+#   
+#   use Data::Dumper;
+#   print Dumper($params);
+#   
+#   return process_sam_bam($bam_file, {%$params, output_format => 'sam'});
+# }
+# 
+# #sub process_sam would need to check_file with gz suffix!
 
 
 # Need to implement optional sort_and_filter_sam here?
@@ -1188,11 +1185,11 @@ sub validate_sam_header {
 #processing here from RunPeaks::fetch_input
 
 sub _init_peak_caller{
-  my($peak_pkg, $params, $analysis, $align_prefix, $control_prefix,
+  my($peak_pkg, $params, $analysis, $signal_alignment, $control_alignment,
     $sam_ref_fai,$debug) = rearrange(
-     [qw(peak_module peak_module_params analysis align_prefix control_prefix
+     [qw(peak_module peak_module_params analysis signal_alignment control_alignment
      sam_ref_fai debug)], @_);
-
+     
   my (@params_array, $peak_module);
 
   if(defined $analysis){ #API mode
@@ -1205,33 +1202,11 @@ sub _init_peak_caller{
     assert_ref($params, 'HASH', 'PeakCaller parameters');
     assert_ref($analysis, 'Bio::EnsEMBL::Analysis');
 
-    #Identify potentially clashing params which woudl be derived from analysis
-    #or FeatureSet
-    #-program_file
-    #-parameters
-    #-align_file
-    #-control_file
-
-    #TODO identify conflict and throw
-    #foreach my $conflict()
-
-    #Let's just overwrite the params with the Analysis derived stuff for now?
-
-    #Things we require in params but can be left to PeakCaller to validate?
-    #-out_file_prefix
-
-    #we don't expect any peak_module or analysis params!?
-
-    #but we do require an signal prefix
-
-    #get align file and control file
-
-    if(! defined $align_prefix){
-      throw('Must pass an -align_prefix in -analysis mode');
-    }
-    
+#     if(! defined $align_prefix){
+#       throw('Must pass an -align_prefix in -analysis mode');
+#     }
+#     
     my $module = $analysis->module;
-    print "---------------------> module = $module\n";
 
     $peak_module = validate_package_path($analysis->module);
     my $formats = $peak_module->input_formats;
@@ -1273,25 +1248,25 @@ sub _init_peak_caller{
                             #Specifying undef here turns on file based checksum generation/validation
                            };
 
-    my $align_file = get_files_by_formats($align_prefix,
-                                         $formats,
-                                         $get_files_params)->{$format};
-
-    if(! defined $align_file){
-      throw("Failed to identify file using get_files_by_formats:\n\t".$align_prefix.".${format}");
-    }
-
-    my $ctrl_file;
-
-    if($control_prefix){
-      $ctrl_file = get_files_by_formats($control_prefix,
-                                       $formats,
-                                       $get_files_params)->{$format};
-    }
+#     my $align_file = get_files_by_formats($align_prefix,
+#                                          $formats,
+#                                          $get_files_params)->{$format};
+# 
+#     if(! defined $align_file){
+#       throw("Failed to identify file using get_files_by_formats:\n\t".$align_prefix.".${format}");
+#     }
+# 
+#     my $ctrl_file;
+# 
+#     if($control_prefix){
+#       $ctrl_file = get_files_by_formats($control_prefix,
+#                                        $formats,
+#                                        $get_files_params)->{$format};
+#     }
 
     $params->{-debug}          = $debug;
-    $params->{-align_file}     = $align_file;
-    $params->{-control_file}   = $ctrl_file;
+    $params->{-align_file}     = $signal_alignment;
+    $params->{-control_file}   = $control_alignment;
     $params->{-parameters}     = $analysis->parameters;
     $params->{-program_file} ||= $analysis->program_file;
     #All the rest are passed in $params from RunPeaks
@@ -2038,188 +2013,188 @@ sub modify_files_txt_for_regulation {
 =cut
 
 
-sub load_experiments_into_tracking_db {
-  my ($cfg, $db, $constraints, $exp_data, $cell_type_data, $feature_type_data) = @_;
-
-  assert_ref($cfg, 'HASH');
-  assert_ref($db, 'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor');
-  assert_ref($constraints, 'HASH');
-
-  my $helper  = Bio::EnsEMBL::Utils::SqlHelper->new( -DB_CONNECTION => $db->dbc );
-
-  my $exp_a = $db->get_ExperimentAdaptor;
-  my $eg_a  = $db->get_ExperimentalGroupAdaptor;
-
-  my $ct_a = $db->get_CellTypeAdaptor;
-  my $ft_a = $db->get_FeatureTypeAdaptor;
-
-  my $anal_adaptor = $db->get_AnalysisAdaptor;
-  my $iss_a = $db->get_InputSubsetAdaptor;
-
-  my $tr_a  = Bio::EnsEMBL::Funcgen::DBSQL::TrackingAdaptor->new(
-        -user       => $db->dbc->user,
-        -pass       => $db->dbc->pass,
-        -host       => $db->dbc->host,
-        -port       => $db->dbc->port,
-        -dbname     => $db->dbc->dbname,
-        -dnadb_name => $db->dnadb_name,
-  );
-
-
-  my $sql = "
-    SELECT
-      cell_type,
-      dateUnrestricted,
-      ens_lab,
-      feature_type,
-      filename,
-      logic_name,
-      md5sum,
-      name,
-      objStatus,
-      path,
-      replicate
-    FROM
-      files_txt
-  ";
-  # Adding constraints
-  if(defined $constraints){
-    $sql .= 'WHERE ';
-
-   for my $cst(@$constraints){
-     my $table = shift @$cst;
-     my $values = join(', ', map { qq/"$_"/ } @$cst);
-     $sql .= "$table IN ($values)";
-     $sql .= " AND\n " if($cst != $constraints->[-1]);
-   }
-  }
-  # say $sql;
-  # DBI->trace(2);
-  my $files = $helper->execute(
-    -SQL      => $sql,
-    -CALLBACK => sub {
-      my @row = @{shift @_};
-      return {
-        cell_type         => $row[0],
-        dateUnrestricted  => $row[1],
-        ens_lab           => $row[2],
-        feature_type      => $row[3],
-        filename          => $row[4],
-        logic_name        => $row[5],
-        md5sum            => $row[6],
-        name              => $row[7],
-        objStatus         => $row[8],
-        path              => $row[9],
-        replicate         => $row[10],
-      }
-    }
-  );
-      # say dump_data($files,1,1);
-  # die;
-  foreach my $file (@$files){
-    my $ft_name  = $file->{feature_type};
-    my $ct_name  = $file->{cell_type};
-
-
-    # type determines the style of the experiment name
-    my $type = $cfg->{general}->{type};
-
-    my $exp_name;
-    if($type eq 'ENCODE'){
-      $exp_name = $ct_name .'_' . $ft_name . '_' . $type . '_' . $file->{ens_lab};
-    }
-    else{
-      throw "'$type' not implemted.";
-    }
-
-    # CellType
-    my $ct  = $ct_a ->fetch_by_name($ct_name);
-    if(!$ct){
-      $ct =_store_cell_feature_type ($db, $ct_name, $cell_type_data);
-    }
-
-    # FeatureType
-    my $ft  = $ft_a ->fetch_by_name($ft_name);
-    if(!$ft){
-      $ft = _store_cell_feature_type ($db, $ft_name, $feature_type_data);
-    }
-
-    # Implement store method
-    my $anal = $anal_adaptor->fetch_by_logic_name($file->{logic_name});
-    if(not $anal){
-      warn "Analysis $file->{logic_name} not in DB. Skipping...";
-      next;
-    };
-
-    # Risky me thinks
-    my $control = 0;
-    $control = 1 if($ft_name eq "WCE");
-
-
-    my $exp = $exp_a->fetch_by_name($exp_name);
-    my $iss = $iss_a->fetch_by_name($file->{name}, $exp);
-
-    # Check if InputSubset is already linked to a different Experiment
-    if(!$exp and $iss){
-      if($exp_name ne $iss->experiment->name){
-        throw($iss->name . ' is linked to ' . $iss->experiment->name . ' not ' . $exp_name );
-      }
-    }
-
-    if(! $exp){
-      my $eg = $eg_a->fetch_by_name($exp_data->{experimental_group});
-
-      my $exp_new = Bio::EnsEMBL::Funcgen::Experiment->new
-                       (
-                        -cell_type           => $ct,
-                        -experimental_group  => $eg,
-                        -feature_type        => $ft,
-                        -date                => DateTime::Format::MySQL->format_datetime(DateTime->now),
-                        -description         => $exp_data->{description},
-                        -name                => $exp_name,
-                       );
-       ($exp) = @{$exp_a->store($exp_new)};
-       say "Added Experiment " . $exp->name . ' [dbID: ' . $exp->dbID .']';
-    }
-
-    if(!$iss){
-      my $iss_new = Bio::EnsEMBL::Funcgen::InputSubset->new
-                     (
-                      -cell_type     => $ct,
-                      -experiment    => $exp,
-                      -feature_type  => $ft,
-                      -analysis      => $anal,
-                      -is_control    => $control,
-                      -name          => $file->{name},
-                      -replicate     => $file->{replicate},
-                     );
-      ($iss) = @{$iss_a->store($iss_new)};
-      say "Added InputSubset " . $iss->name . ' [dbID: ' .$iss->dbID .']';
-
-      my $web_url = File::Spec->catfile($cfg->{urls}->{base}, $file->{path}, $file->{filename});
-      # catfile replaces // with /
-      $web_url =~ s!:/!://!;
-
-      if($file->{objStatus}){
-        if($file->{objStatus} !~ /^[revoked|replaced]/){
-          throw('Status: '. $file->{objStatus}. ' not implemted');
-        }
-      }
-
-      my $tr_info->{info} = {
-        availability_date => 1,
-        download_url      => $web_url,
-        download_date     => undef,
-        local_url         => undef,
-        md5sum            => $file->{md5sum},
-        notes             => $file->{objStatus},
-      };
-      my $out = $tr_a->store_tracking_info($iss, $tr_info);
-      say "Added TrackingInfo for " . $iss->name . ' [dbID: ' .$iss->dbID .']';
-
-    }
-  }
-}
+# sub load_experiments_into_tracking_db {
+#   my ($cfg, $db, $constraints, $exp_data, $cell_type_data, $feature_type_data) = @_;
+# 
+#   assert_ref($cfg, 'HASH');
+#   assert_ref($db, 'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor');
+#   assert_ref($constraints, 'HASH');
+# 
+#   my $helper  = Bio::EnsEMBL::Utils::SqlHelper->new( -DB_CONNECTION => $db->dbc );
+# 
+#   my $exp_a = $db->get_ExperimentAdaptor;
+#   my $eg_a  = $db->get_ExperimentalGroupAdaptor;
+# 
+#   my $ct_a = $db->get_CellTypeAdaptor;
+#   my $ft_a = $db->get_FeatureTypeAdaptor;
+# 
+#   my $anal_adaptor = $db->get_AnalysisAdaptor;
+#   my $iss_a = $db->get_InputSubsetAdaptor;
+# 
+#   my $tr_a  = Bio::EnsEMBL::Funcgen::DBSQL::TrackingAdaptor->new(
+#         -user       => $db->dbc->user,
+#         -pass       => $db->dbc->pass,
+#         -host       => $db->dbc->host,
+#         -port       => $db->dbc->port,
+#         -dbname     => $db->dbc->dbname,
+#         -dnadb_name => $db->dnadb_name,
+#   );
+# 
+# 
+#   my $sql = "
+#     SELECT
+#       cell_type,
+#       dateUnrestricted,
+#       ens_lab,
+#       feature_type,
+#       filename,
+#       logic_name,
+#       md5sum,
+#       name,
+#       objStatus,
+#       path,
+#       replicate
+#     FROM
+#       files_txt
+#   ";
+#   # Adding constraints
+#   if(defined $constraints){
+#     $sql .= 'WHERE ';
+# 
+#    for my $cst(@$constraints){
+#      my $table = shift @$cst;
+#      my $values = join(', ', map { qq/"$_"/ } @$cst);
+#      $sql .= "$table IN ($values)";
+#      $sql .= " AND\n " if($cst != $constraints->[-1]);
+#    }
+#   }
+#   # say $sql;
+#   # DBI->trace(2);
+#   my $files = $helper->execute(
+#     -SQL      => $sql,
+#     -CALLBACK => sub {
+#       my @row = @{shift @_};
+#       return {
+#         cell_type         => $row[0],
+#         dateUnrestricted  => $row[1],
+#         ens_lab           => $row[2],
+#         feature_type      => $row[3],
+#         filename          => $row[4],
+#         logic_name        => $row[5],
+#         md5sum            => $row[6],
+#         name              => $row[7],
+#         objStatus         => $row[8],
+#         path              => $row[9],
+#         replicate         => $row[10],
+#       }
+#     }
+#   );
+#       # say dump_data($files,1,1);
+#   # die;
+#   foreach my $file (@$files){
+#     my $ft_name  = $file->{feature_type};
+#     my $ct_name  = $file->{cell_type};
+# 
+# 
+#     # type determines the style of the experiment name
+#     my $type = $cfg->{general}->{type};
+# 
+#     my $exp_name;
+#     if($type eq 'ENCODE'){
+#       $exp_name = $ct_name .'_' . $ft_name . '_' . $type . '_' . $file->{ens_lab};
+#     }
+#     else{
+#       throw "'$type' not implemted.";
+#     }
+# 
+#     # CellType
+#     my $ct  = $ct_a ->fetch_by_name($ct_name);
+#     if(!$ct){
+#       $ct =_store_cell_feature_type ($db, $ct_name, $cell_type_data);
+#     }
+# 
+#     # FeatureType
+#     my $ft  = $ft_a ->fetch_by_name($ft_name);
+#     if(!$ft){
+#       $ft = _store_cell_feature_type ($db, $ft_name, $feature_type_data);
+#     }
+# 
+#     # Implement store method
+#     my $anal = $anal_adaptor->fetch_by_logic_name($file->{logic_name});
+#     if(not $anal){
+#       warn "Analysis $file->{logic_name} not in DB. Skipping...";
+#       next;
+#     };
+# 
+#     # Risky me thinks
+#     my $control = 0;
+#     $control = 1 if($ft_name eq "WCE");
+# 
+# 
+#     my $exp = $exp_a->fetch_by_name($exp_name);
+#     my $iss = $iss_a->fetch_by_name($file->{name}, $exp);
+# 
+#     # Check if InputSubset is already linked to a different Experiment
+#     if(!$exp and $iss){
+#       if($exp_name ne $iss->experiment->name){
+#         throw($iss->name . ' is linked to ' . $iss->experiment->name . ' not ' . $exp_name );
+#       }
+#     }
+# 
+#     if(! $exp){
+#       my $eg = $eg_a->fetch_by_name($exp_data->{experimental_group});
+# 
+#       my $exp_new = Bio::EnsEMBL::Funcgen::Experiment->new
+#                        (
+#                         -cell_type           => $ct,
+#                         -experimental_group  => $eg,
+#                         -feature_type        => $ft,
+#                         -date                => DateTime::Format::MySQL->format_datetime(DateTime->now),
+#                         -description         => $exp_data->{description},
+#                         -name                => $exp_name,
+#                        );
+#        ($exp) = @{$exp_a->store($exp_new)};
+#        say "Added Experiment " . $exp->name . ' [dbID: ' . $exp->dbID .']';
+#     }
+# 
+#     if(!$iss){
+#       my $iss_new = Bio::EnsEMBL::Funcgen::InputSubset->new
+#                      (
+#                       -cell_type     => $ct,
+#                       -experiment    => $exp,
+#                       -feature_type  => $ft,
+#                       -analysis      => $anal,
+#                       -is_control    => $control,
+#                       -name          => $file->{name},
+#                       -replicate     => $file->{replicate},
+#                      );
+#       ($iss) = @{$iss_a->store($iss_new)};
+#       say "Added InputSubset " . $iss->name . ' [dbID: ' .$iss->dbID .']';
+# 
+#       my $web_url = File::Spec->catfile($cfg->{urls}->{base}, $file->{path}, $file->{filename});
+#       # catfile replaces // with /
+#       $web_url =~ s!:/!://!;
+# 
+#       if($file->{objStatus}){
+#         if($file->{objStatus} !~ /^[revoked|replaced]/){
+#           throw('Status: '. $file->{objStatus}. ' not implemted');
+#         }
+#       }
+# 
+#       my $tr_info->{info} = {
+#         availability_date => 1,
+#         download_url      => $web_url,
+#         download_date     => undef,
+#         local_url         => undef,
+#         md5sum            => $file->{md5sum},
+#         notes             => $file->{objStatus},
+#       };
+#       my $out = $tr_a->store_tracking_info($iss, $tr_info);
+#       say "Added TrackingInfo for " . $iss->name . ' [dbID: ' .$iss->dbID .']';
+# 
+#     }
+#   }
+# }
 
 
 
@@ -2333,81 +2308,81 @@ sub _read_md5sum_txt {
 #This is dependant on the following fasta header format:  >seq_region_name NA slice_name
 #e.g. >18 dna:chromosome chromosome:GRCh37:18:1:78077248:1 chromosome 18
 
-sub randomise_bed_file{
-  my ($input_bed, $output_bed, $fasta_header_file, $sort_options) =
-   rearrange([qw(INPUT_BED OUTPUT_BED FASTA_HEADER_FILE SORT_OPTIONS)], @_);
-
-  $sort_options ||= '-k1,1 -k2,2n -k3,3n';
-  my $ifh     = open_file($input_bed);
-  my $ofh     = open_file($output_bed.'.tmp', "| sort $sort_options > \%s");
-  #This sort is not working!! But the print is?
-
-  my $headers = open_file($fasta_header_file);
-  my ($line, %chrom, @orig);
-
-  while(($line = $headers->getline) && defined $line){
-    chomp $line;
-    #This is new fasta header format as of release 76
-    #This needs moving to SeqTools or similar, so we always use the same code for fasta header handling!
-
-    my($sr_name, undef, $slice_name) = split(/\s+/, $line);
-    $sr_name =~ s/^>//;
-    (undef, undef, undef, $chrom{$sr_name}->{min}, $chrom{$sr_name}->{max}) = split(/:/, $slice_name);
-
-    if(! $chrom{$sr_name}->{min}){
-      throw("no min found for $line");
-    }
-
-    if($chrom{$sr_name}->{min} != 1){
-      throw("$sr_name has high start in genome file:\t$$fasta_header_file\n".
-        "Script needs updating to deal with this");
-    }
-  }
-  $headers->close;
-
-  my $wrote   = 0;
-  my $skipped = 0;
-
-  while(($line = $ifh->getline) && defined $line){
-    chomp $line;
-    #push @orig, [split("\t", $line)];
-    my ($sr_name, $start, $end, $id, undef, $strand) = split("\t", $line);
-
-    #Now assumes bed standard 0 based coords
-    my $len = $end - $start; ##  +1;
-
-    if($len >= $chrom{$sr_name}->{max}){
-      warn "Length of feature($len) greater than length of genome region(".
-        $chrom{$sr_name}->{max}.
-        ")\nSkipping likely artefactual region:\t$sr_name\t$start\t$end\n";
-      $skipped++;
-      next;
-    }
-
-    my $new_start = int(rand($chrom{$sr_name}->{max} - $len +1));
-    # +1 as we want to use 0 to iradicate the int rounding bias towards 0
-    # if we get 0, then we set it to the under-represented max
-    $new_start  ||= $chrom{$sr_name}->{max} - $len + 1;
-    $new_start--; #Make 1/2 open
-    my $new_end   = $new_start + $len;
-    $strand = '.' if ! defined $strand; #Avoid undef warnings
-    #Buffer here!
-    $wrote++;
-    print $ofh join("\t", ($sr_name, $new_start, $new_end, '.', '.', $strand))."\n";
-  }
-  $ifh->close;
-  $ofh->close;
-  run_system_cmd("mv ${output_bed}.tmp $output_bed");
-
-  if(! $wrote){
-    throw("Failed to write any mock peaks to:\t$output_bed");
-  }
-  else{
-    warn "Wrote ${wrote}/".($wrote + $skipped)." mock peaks to:\t$output_bed\n";
-  }
-
-  return;
-}
+# sub randomise_bed_file{
+#   my ($input_bed, $output_bed, $fasta_header_file, $sort_options) =
+#    rearrange([qw(INPUT_BED OUTPUT_BED FASTA_HEADER_FILE SORT_OPTIONS)], @_);
+# 
+#   $sort_options ||= '-k1,1 -k2,2n -k3,3n';
+#   my $ifh     = open_file($input_bed);
+#   my $ofh     = open_file($output_bed.'.tmp', "| sort $sort_options > \%s");
+#   #This sort is not working!! But the print is?
+# 
+#   my $headers = open_file($fasta_header_file);
+#   my ($line, %chrom, @orig);
+# 
+#   while(($line = $headers->getline) && defined $line){
+#     chomp $line;
+#     #This is new fasta header format as of release 76
+#     #This needs moving to SeqTools or similar, so we always use the same code for fasta header handling!
+# 
+#     my($sr_name, undef, $slice_name) = split(/\s+/, $line);
+#     $sr_name =~ s/^>//;
+#     (undef, undef, undef, $chrom{$sr_name}->{min}, $chrom{$sr_name}->{max}) = split(/:/, $slice_name);
+# 
+#     if(! $chrom{$sr_name}->{min}){
+#       throw("no min found for $line");
+#     }
+# 
+#     if($chrom{$sr_name}->{min} != 1){
+#       throw("$sr_name has high start in genome file:\t$$fasta_header_file\n".
+#         "Script needs updating to deal with this");
+#     }
+#   }
+#   $headers->close;
+# 
+#   my $wrote   = 0;
+#   my $skipped = 0;
+# 
+#   while(($line = $ifh->getline) && defined $line){
+#     chomp $line;
+#     #push @orig, [split("\t", $line)];
+#     my ($sr_name, $start, $end, $id, undef, $strand) = split("\t", $line);
+# 
+#     #Now assumes bed standard 0 based coords
+#     my $len = $end - $start; ##  +1;
+# 
+#     if($len >= $chrom{$sr_name}->{max}){
+#       warn "Length of feature($len) greater than length of genome region(".
+#         $chrom{$sr_name}->{max}.
+#         ")\nSkipping likely artefactual region:\t$sr_name\t$start\t$end\n";
+#       $skipped++;
+#       next;
+#     }
+# 
+#     my $new_start = int(rand($chrom{$sr_name}->{max} - $len +1));
+#     # +1 as we want to use 0 to iradicate the int rounding bias towards 0
+#     # if we get 0, then we set it to the under-represented max
+#     $new_start  ||= $chrom{$sr_name}->{max} - $len + 1;
+#     $new_start--; #Make 1/2 open
+#     my $new_end   = $new_start + $len;
+#     $strand = '.' if ! defined $strand; #Avoid undef warnings
+#     #Buffer here!
+#     $wrote++;
+#     print $ofh join("\t", ($sr_name, $new_start, $new_end, '.', '.', $strand))."\n";
+#   }
+#   $ifh->close;
+#   $ofh->close;
+#   run_system_cmd("mv ${output_bed}.tmp $output_bed");
+# 
+#   if(! $wrote){
+#     throw("Failed to write any mock peaks to:\t$output_bed");
+#   }
+#   else{
+#     warn "Wrote ${wrote}/".($wrote + $skipped)." mock peaks to:\t$output_bed\n";
+#   }
+# 
+#   return;
+# }
 
 
 
@@ -2509,32 +2484,32 @@ sub explode_fasta_file{
 # else will be called in tmp file mode for each analysis
 
 
-sub write_chr_length_file{
-  my ($slices, $out_file) = @_;
-  my $fh;
-
-  if(! defined $out_file){ 
-    ($fh, $out_file) = tempfile(); 
-    #DIR => '/tmp/'); #, UNLINK => 0); # Do not delete on exit? 
-  }
-  else{
-    # Use flock here for safety?
-    # over-write by default?
-    $fh = open_file($out_file, '>');
-  }
-
-  foreach my $slice (@{$slices}) {
-     if ($slice->seq_region_name eq 'Y') {
-       print $fh join("\t", ('chromosome:GRCh38:Y:1:57227415:1', 57227415)) . "\n";
-       print $fh join("\t", ($slice->seq_region_name, 57227415)) . "\n";
-     } else {
-       print $fh join("\t", ($slice->seq_region_name, $slice->end - $slice->start + 1)) . "\n";
-     }
-  }
-
-  close $fh;
-  return $out_file;
-}  
+# sub write_chr_length_file{
+#   my ($slices, $out_file) = @_;
+#   my $fh;
+# 
+#   if(! defined $out_file){ 
+#     ($fh, $out_file) = tempfile(); 
+#     #DIR => '/tmp/'); #, UNLINK => 0); # Do not delete on exit? 
+#   }
+#   else{
+#     # Use flock here for safety?
+#     # over-write by default?
+#     $fh = open_file($out_file, '>');
+#   }
+# 
+#   foreach my $slice (@{$slices}) {
+#      if ($slice->seq_region_name eq 'Y') {
+#        print $fh join("\t", ('chromosome:GRCh38:Y:1:57227415:1', 57227415)) . "\n";
+#        print $fh join("\t", ($slice->seq_region_name, 57227415)) . "\n";
+#      } else {
+#        print $fh join("\t", ($slice->seq_region_name, $slice->end - $slice->start + 1)) . "\n";
+#      }
+#   }
+# 
+#   close $fh;
+#   return $out_file;
+# }  
 
 
 1;

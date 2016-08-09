@@ -100,7 +100,13 @@ sub run {
 
   my $self                  = shift;
   my $helper                = $self->helper;
-  my $result_set_adaptor    = $self->out_db->get_ResultSetAdaptor;
+  
+  # HACK
+  my $db = $self->param_required('out_db');
+  my $result_set_adaptor = $db->get_ResultSetAdaptor;
+  $result_set_adaptor->{file_type} = 'BAM';
+  
+#   my $result_set_adaptor    = $self->out_db->get_ResultSetAdaptor;
   my $input_subset_ids      = $self->input_subset_ids;
   my $branch;
   
@@ -141,6 +147,8 @@ sub run {
   # input_subset_ids => {'K562:hist:BR1_H3K27me3_3526' => [3219,3245,3429],'controls' => [3458]}
   #
   foreach my $set_name (keys %$input_subset_ids) {
+  
+#     die;
   
     # $set_name is 'K562:hist:BR1_H3K27me3_3526'
     #
@@ -217,10 +225,16 @@ sub run {
 	 . $rep_result_set_name
 	);
       }
-      push @{$replicate_bam_files{$parent_set_name}{rep_bams}},
-	$self->get_alignment_files_by_ResultSet_formats($result_set);
+      
+      my $current_bam_file = $self->db_output_dir
+      . '/' . $self->get_alignment_files_by_ResultSet_formats($result_set);
+      
+      push @{$replicate_bam_files{$parent_set_name}{rep_bams}},	$current_bam_file;
     }
 
+#     use Data::Dumper;
+#     die(Dumper(\%replicate_bam_files));
+    
     foreach my $rep_set (@rep_sets) {
 
       # Reminder: $parent_set_name is 'K562:hist:BR1_H3K27me3_3526_bwa_samse'

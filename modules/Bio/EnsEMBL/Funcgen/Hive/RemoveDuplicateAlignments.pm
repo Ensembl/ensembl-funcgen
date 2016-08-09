@@ -56,8 +56,8 @@ sub run {
   
   my $tmp_bam = "${unfiltered_bam}.deduplication_in_progress.bam";
   
-  $self->run_system_cmd("rm -f $tmp_bam", undef, 1);
-  $self->run_system_cmd("rm -f $bam",    undef, 1);
+  $self->hive_run_system_cmd("rm -f $tmp_bam", undef, 1);
+  $self->hive_run_system_cmd("rm -f $bam",    undef, 1);
 
   eval {
     remove_duplicates_from_bam({
@@ -69,7 +69,10 @@ sub run {
   if ($@) {
     $self->throw($@);
   }
-  $self->run_system_cmd("mv $tmp_bam $bam", undef, 1);
+  
+  sleep(30);
+  
+  $self->hive_run_system_cmd("mv $tmp_bam $bam", undef, 1);
   
   $result_set->adaptor->dbfile_data_root($self->db_output_dir);
   $result_set->dbfile_path($bam);

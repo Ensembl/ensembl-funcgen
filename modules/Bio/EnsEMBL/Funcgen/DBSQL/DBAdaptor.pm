@@ -781,9 +781,9 @@ sub rollback_table {
   $row_cnt = 0 if $row_cnt eq '0E0';
   #$self->log("Deleted $row_cnt $table records");
 
-  if ( $force_clean_up || ( $row_cnt && !$no_clean_up ) ) {
-    $self->refresh_table( $table, $id_field );
-  }
+#   if ( $force_clean_up || ( $row_cnt && !$no_clean_up ) ) {
+#     $self->refresh_table( $table, $id_field );
+#   }
 
   return;
 }
@@ -853,6 +853,10 @@ sub reset_table_autoinc {
   my $sql = "select $autoinc_field from $table_name order by $autoinc_field desc limit 1";
   my ($current_auto_inc) = $self->dbc->db_handle->selectrow_array($sql);
   my $new_autoinc = ($current_auto_inc) ? ( $current_auto_inc + 1 ) : 1;
+  
+  use Carp;
+  confess("reset_table_autoinc was called!\n" . $sql);
+  
   $sql = "ALTER TABLE $table_name AUTO_INCREMENT=$new_autoinc";
   $self->dbc->do($sql);
   return;

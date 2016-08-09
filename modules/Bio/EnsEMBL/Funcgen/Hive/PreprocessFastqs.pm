@@ -75,6 +75,10 @@ sub run {
     # control flag
     my $exp = $result_set->experiment(1);
   }
+#   use Data::Dumper;
+#   $Data::Dumper::Maxdepth = 3;
+#   print Dumper($result_set);
+#   die;
 
   my @fastqs;
   my $throw = '';
@@ -202,8 +206,8 @@ sub run {
   #
   run_system_cmd('rm -f '.$current_working_directory."/${set_prefix}.fastq_*", 1);
 
-  my $cmd = 'zcat '.join(' ', @fastqs).' | split --verbose -d -a 4 -l '.
-    $self->fastq_chunk_size.' - '.$current_working_directory.'/'.$set_prefix.'.fastq_';
+  my $cmd = 'zcat ' . join(' ', @fastqs) . ' | perl -pe \'s/\@SRR[^ ]+? /@/g\' | ' . ' split --verbose -d -a 4 -l ' 
+    . $self->fastq_chunk_size . ' - ' . $current_working_directory . '/' . $set_prefix.'.fastq_';
 
   $self->helper->debug(1, "Running chunk command:\n$cmd");
   

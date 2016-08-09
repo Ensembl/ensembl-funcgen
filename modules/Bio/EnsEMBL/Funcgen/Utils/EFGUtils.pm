@@ -1628,7 +1628,22 @@ sub get_set_prefix_from_Set{
      $ftype = $set->feature_type->name;
   }
 
-  return $set->epigenome->production_name.'_'.$ftype.'_'.$study_name;
+#   if ($set->isa('Bio::EnsEMBL::Funcgen::ResultSet')) {
+#     return $set->epigenome->production_name.'_'.$ftype.'_'.$study_name;
+#   }
+  
+#   return $set->epigenome->production_name.'_'.$ftype.'_'.$study_name;
+
+  my $prefix;
+  
+  eval {
+    $prefix = $set->experiment->name.'_'.$ftype.'_'.$study_name;
+  };
+#   die($prefix);
+  if ($@) {
+    confess($@);
+  }
+  return $prefix;
 }
 
 #This currently only works for Experiments

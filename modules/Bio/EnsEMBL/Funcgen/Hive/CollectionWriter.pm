@@ -23,6 +23,13 @@ sub fetch_input {
 
   $self->SUPER::fetch_input;    
   $self->helper->debug(1, "CollectionWriter::fetch_input after SUPER::fetch_input");  
+  
+  # HACK
+  my $db = $self->param_required('out_db');
+  my $result_set_adaptor = $db->get_ResultSetAdaptor;
+  $result_set_adaptor->{file_type} = 'BAM';
+  
+  
   my $rset = $self->fetch_Set_input('ResultSet');  # Injects ResultSet, FeatureSet & DataSet methods
   $self->helper->debug(1, "CollectionWriter::fetch_input got ResultSet:\t".$rset);
   
@@ -41,10 +48,19 @@ sub fetch_input {
     
     my $exp = $rset->experiment(1);  # ctrl flag
 
-    my $path = $self->get_alignment_path_prefix_by_ResultSet($rset, 1);
+#     my $path = $self->get_alignment_path_prefix_by_ResultSet($rset, 1);
+#     my $path = $self->get_alignment_path_prefix_by_ResultSet($rset, 1);
+
+    my $bam_file = $self->db_output_dir . '/' . $self->get_alignment_files_by_ResultSet_formats($rset, 1);
+
+#     my $bam_file = $self->db_output_dir . '/' . $rset->dbfile_path;
+    my $bed_file = $bam_file;
+    $bed_file =~ s/.bam$/.bed/;
+
+#     die("bed_file $bed_file");
     
-    my $bam_file = $path . '.bam';
-    my $bed_file = $path . '.bed';
+#     my $bam_file = $path . '.bam';
+#     my $bed_file = $path . '.bed';
     
     if(! -e $bam_file) {
       use Carp;
@@ -53,17 +69,28 @@ sub fetch_input {
     
     if (! -e $bed_file) {
       my $cmd = qq(bamToBed -i $bam_file > ${bed_file}.part);
-      run_system_cmd($cmd);
+      $self->hive_run_system_cmd($cmd);
       $cmd = qq(mv ${bed_file}.part $bed_file);
-      run_system_cmd($cmd);
+      $self->hive_run_system_cmd($cmd);
       push @file_to_delete, $bed_file;
     }
   }
   
-  my $path = $self->get_alignment_path_prefix_by_ResultSet($rset);
+#   my $path = $self->get_alignment_path_prefix_by_ResultSet($rset);
 
-  my $bam_file = $path . '.bam';
-  my $bed_file = $path . '.bed';
+#   use Data::Dumper;
+#   $Data::Dumper::Maxdepth = 3;
+#   print Dumper($rset);
+  
+  my $bam_file = $self->db_output_dir . '/' . $rset->dbfile_path;
+  my $bed_file = $bam_file;
+  $bed_file =~ s/.bam$/.bed/;
+  
+#   die(
+#     $bam_file
+#     . "\n"
+#     . $bed_file
+#   );
   
   if(! -e $bam_file) {
     confess("Can't find bam file $bam_file!");
@@ -71,9 +98,9 @@ sub fetch_input {
   
   if (! -e $bed_file) {
     my $cmd = qq(bamToBed -i $bam_file > ${bed_file}.part);
-    run_system_cmd($cmd);
+    $self->hive_run_system_cmd($cmd);
     $cmd = qq(mv ${bed_file}.part $bed_file);
-    run_system_cmd($cmd);
+    $self->hive_run_system_cmd($cmd);
     push @file_to_delete, $bed_file;
   }
   

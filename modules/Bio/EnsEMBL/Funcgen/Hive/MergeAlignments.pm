@@ -72,8 +72,6 @@ sub run {
   my $result_set = $self->ResultSet;
   my $cmd;
   
-  $self->run_system_cmd("echo Lets see if this works.");
-  
   if($self->fastq_files) {
   
     # Run with no exit flag so we don't fail on retry
@@ -92,14 +90,8 @@ sub run {
     debug => $self->debug,
   });
 
-  my $cmd=qq(java picard.cmdline.PicardCommandLine ValidateSamFile INPUT=$bam_file_with_unmapped_reads_and_duplicates);
-  $self->run_system_cmd($cmd);
-#   if ($@) {
-#     $self->throw(
-#       "Error runnning command:\n\n$cmd\n\n"
-#       . $@
-#     );
-#   }
+#   my $cmd=qq(java picard.cmdline.PicardCommandLine ValidateSamFile INPUT=$bam_file_with_unmapped_reads_and_duplicates);
+#   $self->hive_run_system_cmd($cmd);
   
   foreach my $current_bam_file (@{$self->bam_files}) {
     unlink($current_bam_file);

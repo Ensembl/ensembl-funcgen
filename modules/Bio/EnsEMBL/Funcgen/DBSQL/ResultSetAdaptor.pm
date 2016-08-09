@@ -167,37 +167,37 @@ sub _get_Experiment_join_clause{
 
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Experiment', $exp);
   my $constraint;
-  my @ecs = @{$exp->get_ExperimentalChips()};
-
-  if (@ecs) { # We have an Array based experiment
-
-    my $ec_ids = join(', ', map {$_->dbID} @ecs); #get ' separated list of ecids
-
-
-    my @chans = map { @$_ } (map {$_->get_Channels} @ecs);
-    my $chan_ids = join(', ', map {$_->dbID} @chans); #get ' separated list of chanids
-    #These give empty strings which are defined
-    #This will not work for single IDs of 0, but this will never happen.
-
-    if ($ec_ids && $chan_ids) {
-      $constraint = '(((rsi.table_name="experimental_chip" AND rsi.table_id IN ('.$ec_ids.
-        ')) OR (rsi.table_name="channel" AND rsi.table_id IN ('.$chan_ids.'))))';
-      #This could probably be sped up using UNION
-      #But result set is too small for cost of implementation
-    }
-    elsif ($ec_ids) {
-      $constraint = 'rsi.table_name="experimental_chip" AND rsi.table_id IN ('.$ec_ids.')';
-    }
-    elsif ($chan_ids) {
-      $constraint = 'rsi.table_name="channel" AND rsi.table_id IN ('.$chan_ids.')';
-    }
-
-  }
-  else {     #We have an InputSet/InputSubset Experiment
+#   my @ecs = @{$exp->get_ExperimentalChips()};
+# 
+#   if (@ecs) { # We have an Array based experiment
+# 
+#     my $ec_ids = join(', ', map {$_->dbID} @ecs); #get ' separated list of ecids
+# 
+# 
+#     my @chans = map { @$_ } (map {$_->get_Channels} @ecs);
+#     my $chan_ids = join(', ', map {$_->dbID} @chans); #get ' separated list of chanids
+#     #These give empty strings which are defined
+#     #This will not work for single IDs of 0, but this will never happen.
+# 
+#     if ($ec_ids && $chan_ids) {
+#       $constraint = '(((rsi.table_name="experimental_chip" AND rsi.table_id IN ('.$ec_ids.
+#         ')) OR (rsi.table_name="channel" AND rsi.table_id IN ('.$chan_ids.'))))';
+#       #This could probably be sped up using UNION
+#       #But result set is too small for cost of implementation
+#     }
+#     elsif ($ec_ids) {
+#       $constraint = 'rsi.table_name="experimental_chip" AND rsi.table_id IN ('.$ec_ids.')';
+#     }
+#     elsif ($chan_ids) {
+#       $constraint = 'rsi.table_name="channel" AND rsi.table_id IN ('.$chan_ids.')';
+#     }
+# 
+#   }
+#   else {     #We have an InputSet/InputSubset Experiment
     my $setids = join(', ', map {$_->dbID} 
       @{$self->db->get_InputSubsetAdaptor->fetch_all_by_Experiments([$exp])});
     $constraint = "rsi.table_name='input_subset' AND rsi.table_id IN (${setids})";
-  }
+#   }
 
   return $constraint;
 }
@@ -312,6 +312,9 @@ sub _true_tables {
   return ([ 'result_set',        'rs' ],
           [ 'result_set_input',  'rsi'],
           [ 'dbfile_registry',   'dr' ]);
+#           [ 'dbfile_registry',   'dr_bigwig' ],
+#           [ 'dbfile_registry',   'dr_bam'    ]);
+          ;
 }
 
 
@@ -333,9 +336,22 @@ sub _true_tables {
 #}
 #Allows for absent result_set_input entries, in conjunction with omiting _default_where
 
+
 sub _left_join {
+#   return ([ 'result_set_input', '(rs.result_set_id=rsi.result_set_id)' ],
+#           ['dbfile_registry', '(rs.result_set_id=dr.table_id AND dr.table_name="result_set" and dr.file_type="BIGWIG")']);
+
+  my $self = shift;
+  
+  my $file_type = $self->{file_type};
+  
+  $file_type = "BIGWIG" unless($self->{file_type});
+
   return ([ 'result_set_input', '(rs.result_set_id=rsi.result_set_id)' ],
-          ['dbfile_registry', '(rs.result_set_id=dr.table_id AND dr.table_name="result_set" and dr.file_type="BIGWIG")']);
+          ['dbfile_registry', '(rs.result_set_id=dr.table_id AND dr.table_name="result_set" and dr.file_type="' . $file_type . '")']);
+#   return ([ 'result_set_input', '(rs.result_set_id=rsi.result_set_id)' ],
+#           ['dr_bigwig', '(rs.result_set_id=dr_bigwig.table_id AND dr_bigwig.table_name="result_set" and dr_bigwig.file_type="BIGWIG")'],
+#           ['dr_bam', '(rs.result_set_id=dr_bam.table_id AND dr_bam.table_name="result_set" and dr_bam.file_type="BAM")']);
 }
 
 =head2 _columns
@@ -358,6 +374,7 @@ sub _columns {
             rsi.table_id               rs.name
             rs.epigenome_id            rs.feature_type_id
             rs.feature_class           dr.path
+            rs.experiment_id
            );
 }
 
@@ -423,22 +440,25 @@ sub _final_clause {
 sub _objs_from_sth {
   my $self = shift;
   my $sth  = shift;
-  my (@rsets, $rset, $dbid, $anal_id, $anal, $ftype, $epigenome, $table_id);
+  my (@rsets, $rset, $dbid, $anal_id, $anal, $ftype, $epigenome, $table_id, $experiment);
   my ($sql, $table_name, $cc_id, $ftype_id, $epigenome_id, $dbfile_path);
   my ($name, $rep, $feat_class);
+  my $experiment_id;
   my $a_adaptor  = $self->db->get_AnalysisAdaptor;
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor;
   my $epi_adaptor = $self->db->get_EpigenomeAdaptor;
+  my $experiment_adaptor = $self->db->get_ExperimentAdaptor;
   $sth->bind_columns(\$dbid, \$anal_id, \$table_name, \$cc_id, \$table_id,
-                     \$name, \$epigenome_id, \$ftype_id, \$feat_class, \$dbfile_path);
+                     \$name, \$epigenome_id, \$ftype_id, \$feat_class, \$dbfile_path, \$experiment_id);
 
   while ( $sth->fetch ) {
 
     if( (! defined $rset) || ($rset->dbID != $dbid) ){
       push @rsets, $rset if $rset;
-      $anal  = (defined $anal_id)  ? $a_adaptor->fetch_by_dbID($anal_id)   : undef;
-      $ftype = (defined $ftype_id) ? $ft_adaptor->fetch_by_dbID($ftype_id) : undef;
-      $epigenome = (defined $epigenome_id) ? $epi_adaptor->fetch_by_dbID($epigenome_id) : undef;
+      $anal       = (defined $anal_id)       ? $a_adaptor->fetch_by_dbID($anal_id)   : undef;
+      $ftype      = (defined $ftype_id)      ? $ft_adaptor->fetch_by_dbID($ftype_id) : undef;
+      $epigenome  = (defined $epigenome_id)  ? $epi_adaptor->fetch_by_dbID($epigenome_id) : undef;
+      $experiment = (defined $experiment_id) ? $experiment_adaptor->fetch_by_dbID($experiment_id) : undef;
     
 #       if(defined $dbfile_path){
 #         ($dbfile_path = $self->dbfile_data_root.'/'.$dbfile_path) =~ s:/+:/:g;
@@ -454,6 +474,7 @@ sub _objs_from_sth {
          -FEATURE_CLASS   => $feat_class,
          -ADAPTOR         => $self,
          -DBFILE_PATH     => $dbfile_path,
+         -EXPERIMENT      => $experiment,
          );
     }
 

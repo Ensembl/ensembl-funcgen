@@ -200,7 +200,7 @@ sub validate_non_DB_inputs{
  return;
 }
 
-sub run_system_cmd {
+sub hive_run_system_cmd {
 
   my $self    = shift;
   my $command = shift;
@@ -209,10 +209,10 @@ sub run_system_cmd {
   
   print "$command\n" if $verbose;
   system($command);
-  return $self->_handle_exit_status($command, $?, $!, $no_exit);
+  return $self->_hive_handle_exit_status($command, $?, $!, $no_exit);
 }
 
-sub _handle_exit_status {
+sub _hive_handle_exit_status {
 
   my $self         = shift;
   my $cmd          = shift;
@@ -345,6 +345,12 @@ sub flagstats_output_dir                    { File::Spec->catfile( shift->qualit
 sub phantom_peaks_output_dir                { File::Spec->catfile( shift->quality_check_output_dir, 'phantom_peaks')                }
 sub proportion_of_reads_in_peaks_output_dir { File::Spec->catfile( shift->quality_check_output_dir, 'proportion_of_reads_in_peaks') }
 sub chance_output_dir                       { File::Spec->catfile( shift->quality_check_output_dir, 'chance')                       }
+
+sub temporary_directory_root {
+  return File::Spec->catfile(
+    shift->work_root_dir, 'temp'
+  )
+}
 
 sub get_output_work_dir_methods {
 
@@ -1188,45 +1194,38 @@ sub _create_result_set_name_for_replicate {
 }
 
 sub get_alignment_files_by_ResultSet_formats {
-  my ($self, $rset, $control) = @_;
-  my ($path, $align_files);
-
-  $path = $self->get_alignment_path_prefix_by_ResultSet($rset, $control);
+  my ($self, $result_set, $control) = @_;
+   my ($path, $align_files);
+ 
+  if (!$control) {
+    $path = $result_set->dbfile_path;
+  }
   
-  return $path . '.bam';
+  if ($control) {
   
-  my $all_formats;
-  my $filter_format;
-  my $formats = [];
-  assert_ref($formats, 'ARRAY');
+    my $control_experiment = $result_set->experiment(1);
+    
+#     if ($experiment->is_control) {
+#       $self->throw("This experiment (". $experiment->name .") from the result set " . $result_set->name . " is already the control. It does not have a control.");
+#     }
+#     my $control_experiment = $experiment->get_control;
+
+    my $control_result_set_array_ref = $result_set->adaptor->fetch_all_by_Experiment($control_experiment);
+    
+    die("Couldn't find control result set!") unless($control_result_set_array_ref);
+    die("Couldn't find unique control result set!") unless(@$control_result_set_array_ref>1);
+    
+    my $control_result_set = $control_result_set_array_ref->[0];
+    
+#     use Data::Dumper;
+#     die( Dumper($control_result_set->[0]) );
+#     die;
+    
+    $path = $control_result_set->dbfile_path;
+  }
   
-  my $file_type = ($control) ? 'control_file' : 'alignment_file';
-  
-  $path .= '.unfiltered' if $filter_format;
+  return $path;
 
-use Data::Dumper;
-die(Dumper($path));
-
-  my $params = {debug              => $self->debug,
-		ref_fai            => $self->sam_ref_fai($rset->epigenome->gender),  #Just in case we need to convert
-		filter_from_format => $filter_format,
-		#skip_rmdups        => 1, # Duplicate removal no longer supported
-		all_formats        => $all_formats,
-		#checksum           => undef,  
-		#Specifying undef here turns on file based checksum generation/validation
-		};
-		
-  $filter_format ||= '';#to avoid undef in debug 
-  $self->helper->debug(1, "Getting $file_type (formats: ".join(', ',@$formats).
-    " filter_from_format: $filter_format):\n\t".$path);
-  $align_files = get_files_by_formats($path, $formats, $params);
-
-use Data::Dumper;
-die(Dumper($align_files));
-
-  #throw here and handle optional control file in caller. This should be done with 
-  #a no_control/skip_control flag or similar  
-    return $align_files || $self->throw("Failed to find $file_type (@$formats) for:\t$path");  
 }
 
 # sub archive_root{
