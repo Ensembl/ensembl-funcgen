@@ -323,7 +323,7 @@ sub get_cell_type_names {
   my $epigenome_adaptor = $db->get_EpigenomeAdaptor();  
   my %cell_type_from_clean = ();
   for my $epigenome (@{$epigenome_adaptor->fetch_all()}) {
-    $cell_type_from_clean{clean_name($epigenome->name)} = $epigenome;
+    $cell_type_from_clean{clean_name($epigenome->production_name)} = $epigenome;
     defined $epigenome || die("Unrecognized cell type name $epigenome\n");
   }
 
@@ -333,8 +333,16 @@ sub get_cell_type_names {
   foreach my $file (glob "$base_dir/projected_segmentations/*.bb") {
     my $cell_type_name = basename $file;
     $cell_type_name =~ s/\.bb//;
+#     $cell_type_name =~ s/_\d+_SEGMENTS\.bb//;
     if (!exists $cell_type_from_clean{$cell_type_name}) {
-      die("Celltype $cell_type_name unknown!");
+    
+      my @known_cell_types = sort keys %cell_type_from_clean;
+      my $known_cell_types_as_string = join "\n", map { ' - ' . $_ } @known_cell_types;
+    
+      die(
+	"Celltype $cell_type_name has a projected segmentation in $file, but is unknown! Known cell types are:\n$known_cell_types_as_string"
+	
+      );
     }
     push @cell_types, $cell_type_from_clean{$cell_type_name};
 #     last if (@cell_types == $debug_max);
@@ -657,9 +665,9 @@ sub load_celltype_build {
   
   my ($tmp, $tmp_name) = tempfile();
 
-  print_log("\tProcessing data from cell type " . $cell_type->display_label . " (". $cell_type->name .")" . "\n");
+  print_log("\tProcessing data from cell type " . $cell_type->display_label . " (". $cell_type->production_name .")" . "\n");
 
-  my $cell_type_name = clean_name($cell_type->name);
+  my $cell_type_name = clean_name($cell_type->production_name);
   my $bigbed = "$base_dir/projected_segmentations/$cell_type_name.bb";
 
   run("bigBedToBed $bigbed $tmp_name");
