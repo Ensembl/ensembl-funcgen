@@ -105,6 +105,20 @@ sub fetch_by_stable_id {
     return $regulatory_feature;
 }
 
+sub fetch_by_stable_id_regbuild_id {
+    my $self      = shift;
+    my $stable_id = shift;
+    my $regulatory_build_id = shift;
+
+    my $constraint = "rf.stable_id = ? and rf.regulatory_build_id";
+    $self->bind_param_generic_fetch($stable_id,           SQL_VARCHAR);
+    $self->bind_param_generic_fetch($regulatory_build_id, SQL_VARCHAR);
+    
+    my ($regulatory_feature) = @{$self->generic_fetch($constraint)};
+
+    return $regulatory_feature;
+}
+
 =head2 _true_tables
 
   Args       : None
@@ -636,7 +650,9 @@ sub store {
 	#
 	throw($error_message);
       }
-      my $existing_regulatory_feature = $self->fetch_by_stable_id( $current_regulatory_feature->stable_id );
+#       my $existing_regulatory_feature = $self->fetch_by_stable_id( $current_regulatory_feature->stable_id );
+      my $existing_regulatory_feature = $self->fetch_by_stable_id_regbuild_id( $current_regulatory_feature->stable_id, $current_regulatory_feature->regulatory_build_id );
+      
       
       # This can happen during the regulatory build, when there are features,
       # but not stable ids yet. And the script is being rerun.
@@ -680,6 +696,7 @@ sub store {
       };
       if ($@) {
 	use Carp;
+	$Data::Dumper::Maxdepth = 3;
 	confess(
 	  Dumper({
 	    error => $@,
