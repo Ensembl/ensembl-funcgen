@@ -150,8 +150,8 @@ sub main {
   my $options = get_options();
   # Read dump file with file locations and metadata
   get_metadata($options);
-  # Compute summaries of TB binding peaks
-  print_log("Computing summaries of TB binding peaks\n");
+  # Compute summaries of TF binding peaks
+  print_log("Computing summaries of TF binding peaks\n");
   compute_tf_probs($options);
   # Compute summaries of segmentations
   print_log("Computing summaries of segmentations\n");
@@ -671,7 +671,23 @@ sub fetch_metadata {
       # It's a histone, ignore
       next;
     }
-    my $cell = $featureSet->epigenome->name;
+    my $cell = $featureSet->epigenome->production_name;
+    
+    my $cell_display_label = $featureSet->epigenome->display_label;
+    
+    my $epigenome_is_excluded = 
+         ($cell_display_label eq "CD38- naïve B cell (CB)")
+      || ($cell_display_label eq "CD38- naive B cell (VB)")
+      || ($cell_display_label eq "CD4+ ab T cell (CB)")
+      || ($cell_display_label eq "CD8+ ab T cell (VB)")
+      || ($cell_display_label eq "EM CD8+ ab T cell (VB)")
+      || ($cell_display_label eq "Naïve B cell (To)")
+    ;
+    if ($epigenome_is_excluded) {
+      print_log("Skipping $cell_display_label, because it has been excluded from the regulatory build.\n");
+      next;
+    }
+    
     record_peak_file($options, $tf, $cell, dump_peaks($options, $featureSet, $tf, $cell, \@slices));
     # close $fh;
   }
@@ -1170,6 +1186,8 @@ sub compute_global_tf_prob {
   mkdir "$options->{trackhub_dir}/overview/";
   my $output = "$options->{trackhub_dir}/overview/all_tfbs.wig";
 
+  # Probability of seeing at least one transcription factor
+  #
   run("wiggletools write_bg $output offset 1 scale -1 mult map offset 1 map scale -1 " . join(" ", @$probs)) ;
   convert_to_bigWig($options, $output);
 }
