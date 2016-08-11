@@ -97,9 +97,13 @@ my %valid_attribute_features = (
 sub fetch_by_stable_id {
     my $self      = shift;
     my $stable_id = shift;
+    
+    my $selected_regulatory_build_id = $self->selected_regulatory_build->dbID;
 
-    my $constraint = "rf.stable_id = ?";
+    my $constraint = "rf.stable_id = ? and rb.regulatory_build_id = ?";
     $self->bind_param_generic_fetch($stable_id, SQL_VARCHAR);
+    $self->bind_param_generic_fetch($selected_regulatory_build_id, SQL_INTEGER);
+    
     my ($regulatory_feature) = @{$self->generic_fetch($constraint)};
 
     return $regulatory_feature;
@@ -173,6 +177,7 @@ sub _columns {
     ra.attribute_feature_table
     rfs.regulatory_activity_id
     rb.analysis_id
+    rb.regulatory_build_id
   );
 }
 
@@ -255,6 +260,9 @@ sub _objs_from_sth {
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
 #   my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
   my $analysis_adaptor = $self->db->get_AnalysisAdaptor();
+  
+  my $regulatory_build_adaptor = $self->db->get_RegulatoryBuildAdaptor();
+  
   my (@feature_from_sth, $seq_region_id);
   my (%fset_hash, %slice_hash, %sr_name_hash, %sr_cs_hash, %ftype_hash);
 
@@ -275,7 +283,8 @@ sub _objs_from_sth {
     $sth_fetched_activity,
     $sth_fetched_epigenome_count,
     $sth_fetched_regulatory_feature_epigenome_id,
-    $sth_fetched_analysis_id
+    $sth_fetched_analysis_id,
+    $sth_fetched_rb_dbid
   );
 
   $sth->bind_columns (
@@ -294,7 +303,8 @@ sub _objs_from_sth {
     \$sth_fetched_attr_id,
     \$sth_fetched_attr_type,
     \$sth_fetched_regulatory_feature_epigenome_id,
-    \$sth_fetched_analysis_id
+    \$sth_fetched_analysis_id,
+    \$sth_fetched_rb_dbid
   );
 
   my ($dest_slice_start, $dest_slice_end);
@@ -407,6 +417,8 @@ sub _objs_from_sth {
       ! $regulatory_feature_under_construction 
       || ($regulatory_feature_under_construction->dbID != $sth_fetched_dbID);
 
+    my %regulatory_build_cache;
+      
     if ($current_row_belongs_to_new_regulatory_feature) {
 
 	if ($current_feature_not_on_destination_slice) {
@@ -463,19 +475,24 @@ sub _objs_from_sth {
 
 	  $slice = $dest_slice;
 	}
+	
+	if (! exists $regulatory_build_cache{$sth_fetched_rb_dbid}) {
+	  $regulatory_build_cache{$sth_fetched_rb_dbid} = $regulatory_build_adaptor->fetch_by_dbID($sth_fetched_rb_dbid);
+	}
 
 	$regulatory_feature_under_construction = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new_fast({
-	    'start'          => $sth_fetched_seq_region_start,
-	    'end'            => $sth_fetched_seq_region_end,
-	    '_bound_lengths' => [$sth_fetched_bound_start_length, $sth_fetched_bound_end_length],
-	    'strand'         => $sth_fetched_seq_region_strand,
-	    'slice'          => $slice,
-	    'analysis'       => $analysis,
-	    'adaptor'        => $self,
-	    'dbID'           => $sth_fetched_dbID,
-	    'feature_type'   => $ftype_hash{$sth_fetched_feature_type_id},
-	    'stable_id'      => $sth_fetched_stable_id,
-	    'epigenome_count'=> $sth_fetched_epigenome_count,
+	    'start'             => $sth_fetched_seq_region_start,
+	    'end'               => $sth_fetched_seq_region_end,
+	    '_bound_lengths'    => [$sth_fetched_bound_start_length, $sth_fetched_bound_end_length],
+	    'strand'            => $sth_fetched_seq_region_strand,
+	    'slice'             => $slice,
+	    'analysis'          => $analysis,
+	    'adaptor'           => $self,
+	    'dbID'              => $sth_fetched_dbID,
+	    'feature_type'      => $ftype_hash{$sth_fetched_feature_type_id},
+	    'stable_id'         => $sth_fetched_stable_id,
+	    'epigenome_count'   => $sth_fetched_epigenome_count,
+ 	    '_regulatory_build' => $regulatory_build_cache{$sth_fetched_rb_dbid},
 	    });
     }
     
@@ -742,6 +759,21 @@ sub store {
   return @regulatory_feature;
 }
 
+sub selected_regulatory_build {
+
+  my $self = shift;
+  my $regulatory_build = shift;
+
+  if ($regulatory_build) {
+    $self->{_regulatory_build} = $regulatory_build;
+  }
+  if (! defined $self->{_regulatory_build}) {
+    my $regulatory_build_adaptor = $self->db->get_RegulatoryBuildAdaptor();
+    $self->{_regulatory_build} = $regulatory_build_adaptor->fetch_current_regulatory_build;
+  }
+  return $self->{_regulatory_build};
+}
+
 =head2 fetch_all_by_Slice
 
   Arg [1]    : Bio::EnsEMBL::Slice
@@ -856,12 +888,24 @@ sub fetch_all_by_Slice_Epigenomes_Activity {
   #explicit super call, just in case we ever re-implement in here
   my $all_regulatory_features = $self->SUPER::fetch_all_by_Slice($slice);
   
+  my $selected_regulatory_build = $self->selected_regulatory_build;
+  
+  # Discard regulatory features that are not part of the selected regulatory build.
+  my $filtered_regulatory_features;
+  REGULATORY_FEATURE: foreach my $current_regulatory_feature (@$all_regulatory_features) {
+    if ($current_regulatory_feature->get_regulatory_build->dbID == $selected_regulatory_build->dbID) {
+      push @$filtered_regulatory_features, $current_regulatory_feature;
+      next REGULATORY_FEATURE;
+    }
+  }
+  $all_regulatory_features = $filtered_regulatory_features;
+
   if (defined $requested_epigenomes) {
   
     $requested_epigenomes = _make_arrayref_if_not_arrayref($requested_epigenomes);
 
     my $filtered_regulatory_features;
-    
+
     REGULATORY_FEATURE: foreach my $current_regulatory_feature (@$all_regulatory_features) {
       foreach my $current_epigenome (@$requested_epigenomes) {
 	if ($current_regulatory_feature->has_activity_in($current_epigenome)) {

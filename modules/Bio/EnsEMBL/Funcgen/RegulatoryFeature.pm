@@ -324,6 +324,11 @@ sub regulatory_activity {
   return $self->{_regulatory_activity};
 }
 
+sub get_regulatory_build {
+  my $self = shift;
+  return $self->{_regulatory_build};
+}
+
 sub add_regulatory_activity {
 
   my $self = shift;
