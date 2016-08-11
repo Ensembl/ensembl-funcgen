@@ -12,10 +12,9 @@ package Bio::EnsEMBL::Funcgen::Hive::RunWiggleTools;
 
 use warnings;
 use strict;
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd
-                                               run_backtick_cmd );
-use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools qw( write_chr_length_file);
-use Bio::EnsEMBL::Utils::Exception         qw( throw );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_backtick_cmd );
+# use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools qw( write_chr_length_file);
+# use Bio::EnsEMBL::Utils::Exception         qw( throw );
 
 use base ('Bio::EnsEMBL::Funcgen::Hive::BaseDB');
 
@@ -24,6 +23,12 @@ sub fetch_input {
   $self->SUPER::fetch_input;
 
   if($self->get_param_method('set_type', 'silent')) {
+  
+    # HACK
+    my $db = $self->param_required('out_db');
+    my $result_set_adaptor = $db->get_ResultSetAdaptor;
+    $result_set_adaptor->{file_type} = 'BAM';
+  
     my $result_set = $self->fetch_Set_input('ResultSet');
     $self->helper->debug(1, "RunWiggleTools::fetch_input got ResultSet:\t".$result_set->name);
 
@@ -38,7 +43,13 @@ sub fetch_input {
     ) {
       $is_control = 1;
     }
-    $self->input_files([$self->get_alignment_files_by_ResultSet_formats($result_set, $is_control)]);
+    $self->input_files([
+      $self->db_output_dir
+      . '/' . $self->get_alignment_files_by_ResultSet_formats($result_set, $is_control)
+    ]);
+    
+#     print Dumper($self->input_files);
+#     die;
 
     my $output_prefix = $self->bigwig_output_dir . '/' . $result_set->name;
     
@@ -58,7 +69,7 @@ sub fetch_input {
       'silent',
       $output_prefix
     );
-    run_system_cmd("mkdir -p " . $self->bigwig_output_dir);
+    $self->hive_run_system_cmd("mkdir -p " . $self->bigwig_output_dir);
   }
   return;
 }
@@ -71,10 +82,6 @@ sub fetch_input {
 sub run {
   my $self       = shift;
   my $result_set = $self->ResultSet;
-  
-#   my $chromosome_length_file = write_chr_length_file($self->slice_objects);
-  
-#   my $chromosome_length_file = '/lustre/scratch109/ensembl/funcgen/refbuilder/mus_musculus/GRCm38/genome_fasta/GRCm38.sizes';
   
   use Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator;
   my $bwa_index_locator = Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator->new;
@@ -93,40 +100,61 @@ sub run {
   
   my $chromosome_length_file = $reference_data_root_dir . '/' . $chromosome_lengths_relative;
   
-#   use Data::Dumper;
-#   print Dumper({
-#     species          => $species,
-#     epigenome_gender => $epigenome_gender,
-#     assembly         => $assembly,
-#     chromosome_length_file => $chromosome_length_file,
-#   });
-#   die;
-  
   my $output = $self->output_prefix.'.bw';
 
   # bigWigToWig can't cope with colons, so replacing with underscores
-  $output =~ s/:/_/g;
+#   $output =~ s/:/_/g;
 
   $self->throw_no_retry("bigWigToWig can't cope with colons, these should not be in the experiment names! ($output)")
     if ($output =~ /:/);
 
-  # RUN THE COMMAND
-  # Presence of index files is input format specific, so not explicitly tested/generated here
-  # Always use write to avoid redirects
-  my $cmd = "wiggletools write - ". $self->_build_rpkm_cmd . ' | wigToBigWig -fixedSummaries stdin ' . $chromosome_length_file . ' ' . $output;
+  my $cmd_wiggletools = "wiggletools write - ". $self->_build_rpkm_cmd;
+  my $cmd_wigToBigWig = 'wigToBigWig -fixedSummaries stdin ' . $chromosome_length_file . ' ' . $output;
   
-  $self->helper->debug(1, "Running:\n\t".$cmd);
-  run_system_cmd($cmd);
+  my $cmd = $cmd_wiggletools . ' | ' . $cmd_wigToBigWig;
   
-  # If job was killed for memlimit, allow for the worker to be killed as well.
-  sleep 20;
+  my $cmd = "wiggletools write - ". $self->_build_rpkm_cmd . ' | '.'wigToBigWig -fixedSummaries stdin ' . $chromosome_length_file . ' ' . $output;
 
-#   if($self->set_type){
-  
+  $self->helper->debug(1, "Running:\n\t".$cmd);
+  eval {
+    $self->hive_run_system_cmd($cmd);
+  };
+  if ($@) {
+    sleep(20);
+    # If job was killed for memlimit, allow for the worker to be killed as well.
+    die($@);
+  }
+#   my $temporary_directory_root = $self->temporary_directory_root;
+#   
+#   my $hostname       = `hostname`;
+#   chomp($hostname);
+#   my $pid            = $$;
+#   my $temporary_file = $hostname . '.' . $pid . '.wig';
+#   
+#   my $temporary_directory = File::Spec->catfile($temporary_directory_root, 'wiggletools');
+#   
+#   use File::Path qw(make_path remove_tree);
+#   make_path($temporary_directory);
+#   
+#   my $temporary_file_full_path = "$temporary_directory/$temporary_file";
+#   
+#   my $cmd_wiggletools_redirected = $cmd_wiggletools . " > " . $temporary_file_full_path;
+#   
+#   $self->hive_run_system_cmd("rm -f $temporary_file_full_path", undef, 1);
+#   $self->hive_run_system_cmd($cmd_wiggletools_redirected, undef, 1);
+#   $self->hive_run_system_cmd(
+#     "wigToBigWig -fixedSummaries $temporary_file_full_path " . $chromosome_length_file . ' ' . $output, 
+#     undef, 1
+#   );  
+#   $self->hive_run_system_cmd("rm -f $temporary_file_full_path", undef, 1);
+#   
+#   # If job was killed for memlimit, allow for the worker to be killed as well.
+#   sleep 20;
+
   $result_set->adaptor->dbfile_data_root($self->db_output_dir);
   $result_set->dbfile_path($output);
   $result_set->adaptor->store_dbfile_path($result_set, 'BIGWIG');
-#   }
+
   return;
 }
 
@@ -139,7 +167,7 @@ sub _build_rpkm_cmd {
   my $bam_file = $one_bam[0];
 
   my $cmd = qq(samtools index $bam_file);
-  run_system_cmd($cmd, undef, 1);
+  $self->hive_run_system_cmd($cmd, undef, 1);
 
   my $count_cmd = 'samtools idxstats '.$bam_file.' | awk \'{total = total + $2} END{print total}\'';
   $self->helper->debug(2, "Running:\n\t".$count_cmd);

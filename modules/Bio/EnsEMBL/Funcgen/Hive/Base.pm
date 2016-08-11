@@ -200,6 +200,51 @@ sub validate_non_DB_inputs{
  return;
 }
 
+sub hive_run_system_cmd {
+
+  my $self    = shift;
+  my $command = shift;
+  my $no_exit = shift;
+  my $verbose = shift;
+  
+  print "$command\n" if $verbose;
+  system($command);
+  return $self->_hive_handle_exit_status($command, $?, $!, $no_exit);
+}
+
+sub _hive_handle_exit_status {
+
+  my $self         = shift;
+  my $cmd          = shift;
+  my $exit_status  = shift;
+  my $errno        = shift;
+  my $no_exit      = shift;
+  
+  my ($exit_code, $err_string);
+
+  $exit_code = $exit_status >> 8;
+
+  if ($exit_status == -1) {
+    $err_string = "Failed to execute:\t$cmd\nError:\t$errno\n";
+  }
+  elsif ($exit_status & 127) {
+    $err_string = sprintf("Child process died with signal %d, %s coredump\n$cmd\nError:\t$errno\n",
+    ($exit_status & 127),
+    ($exit_status & 128) ? 'with' : 'without');
+  } elsif ($exit_status != 0) {
+    $err_string = sprintf("Child process exited with value %d:", $exit_code)."\t$cmd\nError:\t$errno\n";
+  }
+
+  if(defined $err_string) {
+    if(! $no_exit) {
+      $self->throw($err_string);
+    } else {
+      warn $err_string;
+    }
+  }
+  return $exit_code;
+}
+
 sub alignment_root_dir {
  my $self = shift;
  
@@ -259,7 +304,7 @@ sub regulation_directory {
 
 =cut
 sub version_directory {
-  return '085'
+  return '086'
 }
 
 =head1 default_directory_by_table_and_file_type
@@ -300,6 +345,12 @@ sub flagstats_output_dir                    { File::Spec->catfile( shift->qualit
 sub phantom_peaks_output_dir                { File::Spec->catfile( shift->quality_check_output_dir, 'phantom_peaks')                }
 sub proportion_of_reads_in_peaks_output_dir { File::Spec->catfile( shift->quality_check_output_dir, 'proportion_of_reads_in_peaks') }
 sub chance_output_dir                       { File::Spec->catfile( shift->quality_check_output_dir, 'chance')                       }
+
+sub temporary_directory_root {
+  return File::Spec->catfile(
+    shift->work_root_dir, 'temp'
+  )
+}
 
 sub get_output_work_dir_methods {
 
@@ -350,14 +401,16 @@ sub _set_out_db {
       
   #Create TrackingAdaptor here, as we can't get_TrackingAdaptor later
   my $adaptor_class = ($self->use_tracking_db) ? 
-    'Bio::EnsEMBL::Funcgen::DBSQL::TrackingAdaptor' :
-    'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor';
+    'Bio::EnsEMBL::Funcgen::DBSQL::TrackingAdaptor' 
+    :
+    'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor'
+    ;
     
   eval {
     $db = $adaptor_class->new(%{ $db }, %{ $dnadb_params });
   };
   if($@) {
-    $self->throw("Error creating the Funcgen DBAdaptor and/or dna DBAdaptor\n$@");  
+    $self->throw("Error creating the $adaptor_class\n$@");  
   }
   if(! $db->isa('Bio::EnsEMBL::DBSQL::BaseAdaptor')) {
     $self->throw("The out_db param is set to an unexpected reference:\t" . (ref $db) . "\n"
@@ -950,11 +1003,9 @@ sub dataflow_params {
   return $param_values;
 }
 
-
 sub batch_params {
   return shift->_dataflow_params_by_list('batch_param_names');
 }
-
 
 sub _dataflow_params_by_list {
   my ($self, $method_list_name) = @_;  
@@ -986,63 +1037,46 @@ sub _dataflow_params_by_list {
   return \%param_values;
 }
 
-sub convert_gender_to_file_gender {
-
-  my $self   = shift;
-  my $gender = shift; 
-  
-  if ($gender eq 'male') {
-    return 'male';
-  }
-  return 'female'; 
-
-}
-
 sub sam_ref_fai {
   my $self        = shift;
-  my $gender      = shift; 
   
-  my $file_gender = $self->convert_gender_to_file_gender($gender);
+  use Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator;
   
-  if(! defined $self->param_silent('sam_ref_fai')) {
-    
-    warn ("File gender is $file_gender");
+  my $bwa_index_locator = Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator->new;
+  
+  my $reference_file_root = $self->param('reference_data_root_dir');
 
-    my $file_name = $self->species.'_'.$file_gender.'_'.$self->assembly.'_unmasked.fasta.fai';
-    my $sam_ref_fai = validate_path([$self->data_root_dir,
-                                     'sam_header',
-                                    $self->species,
-                                    $file_name]);
-    $self->param('sam_ref_fai', $sam_ref_fai);
-  }
+  my $samtools_fasta_index_relative = $bwa_index_locator->locate({
+    species          => $self->species,
+    assembly         => $self->assembly,
+    epigenome_gender => $self->param('gender'),
+    file_type        => 'samtools_fasta_index',
+  });
   
-  return $self->param('sam_ref_fai');
-}
-
-# sub sam_header{
-#   my $self        = shift;
+  my $samtools_fasta_index = $reference_file_root . '/' . $samtools_fasta_index_relative;
+  
+  $self->param('sam_ref_fai', $samtools_fasta_index);
+  
+  return $samtools_fasta_index;
+  
 #   my $gender      = shift; 
 #   
-#   if(! defined $self->param_silent('sam_header')){
+#   my $file_gender = $self->convert_gender_to_file_gender($gender);
 #   
-#     if(! defined $gender){
-#       $gender = $self->param_silent('gender') || $self->param_silent('default_gender');
-#       
-#       if(! defined $gender){
-#         $self->$self->throw_no_retry('No gender argument or param defined and no default_gender '.
-#         'specific in the config');
-#       }
-#     }
-#     my $file_name = $self->species.'_'.$gender.'_'.$self->assembly.'_unmasked.header.sam';
-#     my $sam_header = validate_path([$self->data_root_dir,
-#                                     'sam_header',
+#   if(! defined $self->param_silent('sam_ref_fai')) {
+#     
+#     warn ("File gender is $file_gender");
+# 
+#     my $file_name = $self->species.'_'.$file_gender.'_'.$self->assembly.'_unmasked.fasta.fai';
+#     my $sam_ref_fai = validate_path([$self->data_root_dir,
+#                                      'sam_header',
 #                                     $self->species,
 #                                     $file_name]);
-#     $self->set_param_method('sam_header', $sam_header);
+#     $self->param('sam_ref_fai', $sam_ref_fai);
 #   }
 #   
-#   return $self->param('sam_header'); 
-# }
+#   return $self->param('sam_ref_fai');
+}
 
 sub get_alignment_path_prefix_by_ResultSet {
   my ($self, $rset, $control) = @_;
@@ -1160,45 +1194,38 @@ sub _create_result_set_name_for_replicate {
 }
 
 sub get_alignment_files_by_ResultSet_formats {
-  my ($self, $rset, $control) = @_;
-  my ($path, $align_files);
-
-  $path = $self->get_alignment_path_prefix_by_ResultSet($rset, $control);
+  my ($self, $result_set, $control) = @_;
+   my ($path, $align_files);
+ 
+  if (!$control) {
+    $path = $result_set->dbfile_path;
+  }
   
-  return $path . '.bam';
+  if ($control) {
   
-  my $all_formats;
-  my $filter_format;
-  my $formats = [];
-  assert_ref($formats, 'ARRAY');
+    my $control_experiment = $result_set->experiment(1);
+    
+#     if ($experiment->is_control) {
+#       $self->throw("This experiment (". $experiment->name .") from the result set " . $result_set->name . " is already the control. It does not have a control.");
+#     }
+#     my $control_experiment = $experiment->get_control;
+
+    my $control_result_set_array_ref = $result_set->adaptor->fetch_all_by_Experiment($control_experiment);
+    
+    die("Couldn't find control result set!") unless($control_result_set_array_ref);
+    die("Couldn't find unique control result set!") unless(@$control_result_set_array_ref>1);
+    
+    my $control_result_set = $control_result_set_array_ref->[0];
+    
+#     use Data::Dumper;
+#     die( Dumper($control_result_set->[0]) );
+#     die;
+    
+    $path = $control_result_set->dbfile_path;
+  }
   
-  my $file_type = ($control) ? 'control_file' : 'alignment_file';
-  
-  $path .= '.unfiltered' if $filter_format;
+  return $path;
 
-use Data::Dumper;
-die(Dumper($path));
-
-  my $params = {debug              => $self->debug,
-		ref_fai            => $self->sam_ref_fai($rset->epigenome->gender),  #Just in case we need to convert
-		filter_from_format => $filter_format,
-		#skip_rmdups        => 1, # Duplicate removal no longer supported
-		all_formats        => $all_formats,
-		#checksum           => undef,  
-		#Specifying undef here turns on file based checksum generation/validation
-		};
-		
-  $filter_format ||= '';#to avoid undef in debug 
-  $self->helper->debug(1, "Getting $file_type (formats: ".join(', ',@$formats).
-    " filter_from_format: $filter_format):\n\t".$path);
-  $align_files = get_files_by_formats($path, $formats, $params);
-
-use Data::Dumper;
-die(Dumper($align_files));
-
-  #throw here and handle optional control file in caller. This should be done with 
-  #a no_control/skip_control flag or similar  
-    return $align_files || $self->throw("Failed to find $file_type (@$formats) for:\t$path");  
 }
 
 # sub archive_root{

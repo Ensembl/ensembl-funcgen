@@ -31,10 +31,7 @@ Bio::EnsEMBL::Hive::Funcgen::RemoveDuplicateAlignments
 package Bio::EnsEMBL::Funcgen::Hive::RemoveDuplicateAlignments;
 
 use strict;
-
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd );
 use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools;
-
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
 sub fetch_input {
@@ -45,7 +42,6 @@ sub fetch_input {
   $self->get_param_method('run_controls',  'required');
   return;
 }
-
 
 sub run {
   my $self       = shift;
@@ -59,14 +55,24 @@ sub run {
   my $unfiltered_bam = $self->param('bam_file_with_unmapped_reads_and_duplicates');
   
   my $tmp_bam = "${unfiltered_bam}.deduplication_in_progress.bam";
+  
+  $self->hive_run_system_cmd("rm -f $tmp_bam", undef, 1);
+  $self->hive_run_system_cmd("rm -f $bam",    undef, 1);
 
-
-  remove_duplicates_from_bam({
-    input_bam  => $unfiltered_bam,
-    output_bam => $tmp_bam, 
-    debug      => $self->debug,
-  });
-  run_system_cmd("mv $tmp_bam $bam");
+  eval {
+    remove_duplicates_from_bam({
+      input_bam  => $unfiltered_bam,
+      output_bam => $tmp_bam, 
+      debug      => $self->debug,
+    });
+  };
+  if ($@) {
+    $self->throw($@);
+  }
+  
+  sleep(30);
+  
+  $self->hive_run_system_cmd("mv $tmp_bam $bam", undef, 1);
   
   $result_set->adaptor->dbfile_data_root($self->db_output_dir);
   $result_set->dbfile_path($bam);

@@ -90,6 +90,9 @@ sub run {
     debug => $self->debug,
   });
 
+#   my $cmd=qq(java picard.cmdline.PicardCommandLine ValidateSamFile INPUT=$bam_file_with_unmapped_reads_and_duplicates);
+#   $self->hive_run_system_cmd($cmd);
+  
   foreach my $current_bam_file (@{$self->bam_files}) {
     unlink($current_bam_file);
   }

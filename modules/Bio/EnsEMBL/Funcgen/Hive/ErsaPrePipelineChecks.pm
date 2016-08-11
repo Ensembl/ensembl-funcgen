@@ -19,18 +19,18 @@ sub run {
     
     # Check that the values in the replicate column aren't duplicated.
     
-    my $find_non_unique_replicate_specifications = 'select epigenome_id, experiment_id, biological_replicate, technical_replicate, count(*) c from input_subset where is_control=0 group by epigenome_id, experiment_id, biological_replicate, technical_replicate having c > 1';
+    my $find_non_unique_replicate_specifications = 'select epigenome_id, experiment_id, biological_replicate, technical_replicate, count(*) c from input_subset where is_control=0 group by epigenome_id, experiment_id, biological_replicate, technical_replicate having c > 1 order by experiment_id';
     
     my $sth = $dbc->prepare($find_non_unique_replicate_specifications);
     $sth->execute;
     my $non_unique_replicate_specifications = $sth->fetchall_hashref('experiment_id');
     
-    my @experiment_ids = keys %$non_unique_replicate_specifications;
+    my @experiment_ids = sort { $a <=> $b } keys %$non_unique_replicate_specifications;
     if (@experiment_ids) {
       push @error_msg,
 	"The experiments with the following experiment ids have non unique replicate specifications: (" 
-	. join ', ', @experiment_ids 
-	. ")";
+	. (join ', ', @experiment_ids)
+	. ") Useful sql: $find_non_unique_replicate_specifications";
     }
     
     # Check that all sequence files exist

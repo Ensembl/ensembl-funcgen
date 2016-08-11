@@ -34,7 +34,10 @@ sub run {
     $file_extension = 'significant.region';
   }
   if ($peak_caller eq 'SWEmbl') {
-    $file_extension = 'txt';
+    $file_extension = '.txt';
+# HACK Put better name generation into RunPeaks, then dataflow the name here.
+#     $file_prefix = 'peaks';
+#     $file_extension = 'swembl';
   }
   
   die unless ($file_extension);

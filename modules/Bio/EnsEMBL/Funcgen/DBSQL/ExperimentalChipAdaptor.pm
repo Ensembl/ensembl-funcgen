@@ -73,36 +73,36 @@ deprecate(
 
 =cut
 
-sub fetch_all_by_experiment_dbID {
-    my $self = shift;
-    my $e_dbid = shift;
-
-	my ($ec_id, @results);
-
-	throw("Must specify an experiemntal dbID") if(! $e_dbid);
-
-
-	my $sth = $self->prepare("
-		SELECT ec.experimental_chip_id
-		FROM experimental_chip ec, experiment e
-		WHERE ec.experiment_id = $e_dbid
-	");
-
-
-
-	#can we do a generic fetch here?
-
-
-	$sth->execute();
-
-
-	while ($ec_id = $sth->fetchrow()){
-	  #warn("got ec id $ec_id\n");
-	  push @results, $self->fetch_by_dbID($ec_id);
-	}
-
-	return \@results;
-}
+# sub fetch_all_by_experiment_dbID {
+#     my $self = shift;
+#     my $e_dbid = shift;
+# 
+# 	my ($ec_id, @results);
+# 
+# 	throw("Must specify an experiemntal dbID") if(! $e_dbid);
+# 
+# 
+# 	my $sth = $self->prepare("
+# 		SELECT ec.experimental_chip_id
+# 		FROM experimental_chip ec, experiment e
+# 		WHERE ec.experiment_id = $e_dbid
+# 	");
+# 
+# 
+# 
+# 	#can we do a generic fetch here?
+# 
+# 
+# 	$sth->execute();
+# 
+# 
+# 	while ($ec_id = $sth->fetchrow()){
+# 	  #warn("got ec id $ec_id\n");
+# 	  push @results, $self->fetch_by_dbID($ec_id);
+# 	}
+# 
+# 	return \@results;
+# }
 
 =head2 fetch_all_by_Experiment
 

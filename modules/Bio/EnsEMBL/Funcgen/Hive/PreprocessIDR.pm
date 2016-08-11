@@ -195,7 +195,10 @@ sub run {   # Check parameters and do appropriate database/file operations...
     #too. Although this maybe desirable to avoid clashes between features sets with different alignments
     #The API does not handle this yet.
     
-    my $permissive_swembl_peak_file = $out_dir.'/'.$rset->name.'.'.$lname.'.txt';
+    # HACK It shouldn't be '..txt', but '.txt'
+    # The file isn't being created properly and we shouldn't be building 
+    # in different places for the same file.
+    my $permissive_swembl_peak_file = $out_dir.'/'.$rset->name.'.'.$lname.'..txt';
     
     if (! -e $permissive_swembl_peak_file) {
       $self->throw("Expected file $permissive_swembl_peak_file does not exist!");

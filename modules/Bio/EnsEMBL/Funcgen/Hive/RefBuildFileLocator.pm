@@ -23,7 +23,7 @@ sub locate {
   my $directory_species_gender;
   
   if ($species eq 'homo_sapiens') {
-    $directory_species_gender = $self->epigenome_gender_to_directory_species_gender($epigenome_gender);
+    $directory_species_gender = $species . '_' . $self->epigenome_gender_to_directory_species_gender($epigenome_gender) . '/' . $species;
   } else {
     $directory_species_gender = $species;
   }

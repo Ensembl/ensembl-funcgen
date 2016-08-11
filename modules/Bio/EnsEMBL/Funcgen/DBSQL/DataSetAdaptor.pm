@@ -416,7 +416,7 @@ sub store{
       $sth2->bind_param(2, $sset->dbID(),                SQL_INTEGER);
       $sth2->bind_param(3, $sset->set_type(),            SQL_VARCHAR); #enum feature/result/experimental
       $sth2->execute();
-      $self->store_states($dset);
+#       $self->store_states($dset);
     }
   }
 

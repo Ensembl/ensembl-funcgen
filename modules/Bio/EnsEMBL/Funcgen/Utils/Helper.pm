@@ -1356,7 +1356,7 @@ sub rollback_FeatureSet {
     }
 
     # Now do the rollback
-    $fset->adaptor->revoke_states($fset);
+#     $fset->adaptor->revoke_states($fset);
 
     if ( $fset->feature_class eq 'regulatory' ) {   #Rollback reg attributes
       $sql = "
@@ -1440,7 +1440,14 @@ sub rollback_FeatureSet {
     }
 
     $sql = "DELETE from feature_set where feature_set_id=" . $fset->dbID;
-    $db->rollback_table( $sql, 'feature_set', 'feature_set_id' );
+#     $db->rollback_table( $sql, 'feature_set', 'feature_set_id' );
+    
+    print "Doing something different here!\n\n";
+    
+    if(! eval { $db->dbc->do($sql); 1 }) {
+      throw("Failed sql:\t$sql\n$@");
+    }
+
     $self->log( "Deleted feature_set entry for:\t" . $fset->name );
 
     $sql = 'DELETE ss, ds from data_set ds, supporting_set ss where '.
@@ -1655,7 +1662,7 @@ sub rollback_ResultSet {
       # $db->rollback_table($sql, 'supporting_set' );
     }
 
-    $db->get_ResultSetAdaptor->revoke_states($rset);
+#     $db->get_ResultSetAdaptor->revoke_states($rset);
 
     $sql = '
       DELETE
@@ -2130,7 +2137,7 @@ sub rollback_ArrayChips {
 #Is this true?  Should we enforce a 3rd CoordSystem argument, 'all' string we delete all?
 
       foreach my $ac (@$array_chip_names) {
-        $ac->adaptor->revoke_states($ac);
+#         $ac->adaptor->revoke_states($ac);
       }
 
       #ProbeSets

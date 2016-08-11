@@ -115,6 +115,10 @@ sub regulatory_feature {
 
   if(defined $regulatory_feature) {
     $self->{'_regulatory_feature'}  = $regulatory_feature;
+    
+    use Scalar::Util qw( weaken );
+    # Avoid circular reference and the memory leak that comes with it
+    weaken($self->{'_regulatory_feature'});
   }
   return $self->{'_regulatory_feature'};
 }

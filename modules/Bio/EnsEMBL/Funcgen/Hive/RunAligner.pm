@@ -121,7 +121,6 @@ sub fetch_input {   # fetch parameters...
   my $reference_file_root = $self->param('reference_data_root_dir');
 
   my $bwa_index_relative = $bwa_index_locator->locate({
-#     species          => 'mus_musculus',
     species          => $self->species,
     assembly         => $self->assembly,
     epigenome_gender => $self->param('gender'),
@@ -130,6 +129,15 @@ sub fetch_input {   # fetch parameters...
   
   my $bwa_index = $reference_file_root . '/' . $bwa_index_relative;
 
+  my $samtools_fasta_index_relative = $bwa_index_locator->locate({
+    species          => $self->species,
+    assembly         => $self->assembly,
+    epigenome_gender => $self->param('gender'),
+    file_type        => 'samtools_fasta_index',
+  });
+  
+  my $samtools_fasta_index = $reference_file_root . '/' . $samtools_fasta_index_relative;
+  
 
   my $aligner_methods = $self->get_param_method('aligner_param_methods', 'silent');
   my %aparams;
@@ -169,7 +177,7 @@ sub fetch_input {   # fetch parameters...
 #     -target_file       => $ref_fasta,
     -target_file       => $bwa_index,
     -debug             => $self->debug,
-    -sam_ref_fai       => $self->sam_ref_fai,
+    -sam_ref_fai       => $samtools_fasta_index,
     %aparams                                    );
     
   $self->helper->debug(1, "Setting aligner:\t".$align_runnable); 

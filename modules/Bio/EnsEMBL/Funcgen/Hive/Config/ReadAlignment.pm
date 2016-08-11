@@ -13,8 +13,8 @@ sub default_options {
 
       #Size of each sequence chunk to be aligned (nbr of reads * 4)
       #fastq_chunk_size      => 16000000, #This should run in 30min-1h
-#       fastq_chunk_size      =>   1000000,
-      fastq_chunk_size      =>  20000000,
+      fastq_chunk_size      =>     5000000,
+#       fastq_chunk_size      =>  20000000,
       alignment_analysis    => 'bwa_samse',
    };
 }
@@ -113,10 +113,12 @@ sub pipeline_analyses {
 	# This should be set when creating the result set, but it is not. 
 	# Until this is fixed in the api we do it here in an extra step.
 	#
+	# HACK the "and result_set.name like concat(experiment.name, "%")" bit is necessary, because there can be more than on experiment with the same feature type and epigenome, so to meet deadline using the fact that the names match up by convention. But this has to be set properly.
+	#
 	sql => qq(
 	  update result_set, epigenome, experiment 
 	  set result_set.experiment_id = experiment.experiment_id
-	  where epigenome.epigenome_id=experiment.epigenome_id and epigenome.epigenome_id=result_set.epigenome_id and experiment.feature_type_id=result_set.feature_type_id
+	  where epigenome.epigenome_id=experiment.epigenome_id and epigenome.epigenome_id=result_set.epigenome_id and experiment.feature_type_id=result_set.feature_type_id and result_set.name like concat(experiment.name, "%")
 	  and result_set_id = #dbID#
 	  ),
 	  db_conn => '#out_db_url#'
@@ -208,7 +210,8 @@ sub pipeline_analyses {
 	  WHEN('1' => { 'WriteBigWig' => INPUT_PLUS({ type => 'control' })})
          ],
        },
-     -rc_name => '64GB_3cpu',
+#      -rc_name => '64GB_3cpu',
+      -rc_name => 'normal_4GB_2cpu',
     },
     {
       -logic_name => 'JobFactorySignalProcessing',
@@ -263,7 +266,8 @@ sub pipeline_analyses {
 # 	    WHEN('1' => { 'WriteBigWig' => INPUT_PLUS({ type => 'replicate' })})
 	  ]
        },
-     -rc_name => '64GB_3cpu',
+#      -rc_name => '64GB_3cpu',
+     -rc_name => 'normal_4GB_2cpu',
     },
     {
      -logic_name => 'MergeReplicateAlignments',
@@ -300,7 +304,8 @@ sub pipeline_analyses {
 #             WHEN('1' => { 'WriteBigWig' => INPUT_PLUS({ type => 'replicate' })}),
 	  ],
        },
-     -rc_name => '64GB_3cpu',
+#      -rc_name => '64GB_3cpu',
+      -rc_name => 'normal_4GB_2cpu',
     },
     {
      -logic_name => 'WriteBigWig',

@@ -718,6 +718,9 @@ sub experiment{
     else{
       #These are likely InputSubsets, but could be others e.g. InputSets, ExperimentalChips etc
       my @support = @{$self->get_support};
+      
+#       print Dumper(\@support);
+#       die();
 
       foreach my $support(@support){
         if($support->can('is_control')){

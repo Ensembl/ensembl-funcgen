@@ -107,25 +107,35 @@ sub run {   # Check parameters and do appropriate database/file operations...
   my $set_prefix = get_set_prefix_from_Set($rset);
   my $set;    
   
-  # Never set -FULL_DELETE here!
-  # It is unwise to do this in a pipeline and should be handled
-  # on a case by case basis using a separate rollback script    
-  # Should also never really specify recover here either?
-  # This bascailly ignores the fact that a ResultSet may be linked to other DataSets
-  $set = $helper->define_DataSet
-   (-NAME                 => $set_prefix.'_'.$fset_anal->logic_name,
-    -FEATURE_CLASS        => 'annotated', #Is there overlap with rset feature_class here?
-    -SUPPORTING_SETS      => [$rset],
-    -DBADAPTOR            => $self->out_db,
-    -FEATURE_SET_ANALYSIS => $fset_anal,
-    -RESULT_SET_ANALYSIS  => $self->param('result_set_analysis'),
-    -RESULT_SET_MODE      => $self->param('result_set_mode'),
-    -ROLLBACK             => $self->param('rollback'),
-    -RECOVER              => $self->param('recover'),
-    -SLICES               => $self->slices,    
-    -EPIGENOME            => $rset->epigenome,
-    -FEATURE_TYPE         => $rset->feature_type                    );  
-
+    warn(
+      "result set name:" . $rset->name . "\n"
+      . "set_prefix:" . $set_prefix
+    );
+#    die($set_prefix);
+  
+  eval {
+    # Never set -FULL_DELETE here!
+    # It is unwise to do this in a pipeline and should be handled
+    # on a case by case basis using a separate rollback script    
+    # Should also never really specify recover here either?
+    # This bascailly ignores the fact that a ResultSet may be linked to other DataSets
+    $set = $helper->define_DataSet
+    (-NAME                 => $set_prefix.'_'.$fset_anal->logic_name,
+      -FEATURE_CLASS        => 'annotated', #Is there overlap with rset feature_class here?
+      -SUPPORTING_SETS      => [$rset],
+      -DBADAPTOR            => $self->out_db,
+      -FEATURE_SET_ANALYSIS => $fset_anal,
+      -RESULT_SET_ANALYSIS  => $self->param('result_set_analysis'),
+      -RESULT_SET_MODE      => $self->param('result_set_mode'),
+      -ROLLBACK             => $self->param('rollback'),
+      -RECOVER              => $self->param('recover'),
+      -SLICES               => $self->slices,    
+      -EPIGENOME            => $rset->epigenome,
+      -FEATURE_TYPE         => $rset->feature_type                    );  
+  };
+  if ($@) {
+    $self->throw($@);
+  }
   $self->param('output_id', 
                {%{$self->batch_params},
                 dbID       => $set->dbID, 

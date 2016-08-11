@@ -251,7 +251,19 @@ sub run {
 
     foreach my $current_result_set_constructor_parameter (@$result_set_group) {
     
-      my $result_set = $helper->define_ResultSet(%{$current_result_set_constructor_parameter});
+      my $result_set;
+      
+      eval {
+	$result_set = $helper->define_ResultSet(%{$current_result_set_constructor_parameter});
+      };
+      if ($@) {
+	$self->throw(
+	  "Error creating this result set:\n" 
+	  . Dumper($current_result_set_constructor_parameter)
+	  . "\n"
+	  . $@
+	);
+      }
       
       $self->die_if_result_set_has_broken_support_links($result_set);
       

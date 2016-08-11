@@ -94,7 +94,7 @@ sub new {
   }
 
   if(! -f $target_file){
-    throw("Target file does not exist or is not a file:\n\t$target_file");  
+#     throw("Target file does not exist or is not a file:\n\t$target_file");  
   }
 
   my $input_dir;

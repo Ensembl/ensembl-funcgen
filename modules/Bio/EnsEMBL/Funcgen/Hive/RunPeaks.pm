@@ -20,7 +20,7 @@ use Bio::EnsEMBL::Utils::Exception              qw( throw );
 use Bio::EnsEMBL::Utils::Scalar                 qw( assert_ref );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils      qw( scalars_to_objects );
 use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools qw( _init_peak_caller 
-                                                    _run_peak_caller );                                               
+                                                    _run_peak_caller );
 use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
@@ -56,6 +56,11 @@ sub fetch_input {
     $self->throw_no_retry('The filter_max_peaks param has been set, but no max_peaks param has been set');
   }
   
+  # HACK
+  my $db = $self->param_required('out_db');
+  my $result_set_adaptor = $db->get_ResultSetAdaptor;
+  $result_set_adaptor->{file_type} = 'BAM';
+
   my ($fset, $result_set, $analysis);
 
   if($set_type eq 'ResultSet'){
@@ -89,6 +94,11 @@ sub fetch_input {
     $analysis = $fset->analysis;
     $result_set     = $self->ResultSet; 
   }
+  
+#   my $signal_alignment = $result_set->dbfile_path;
+  my $signal_alignment  = $self->db_output_dir . '/' . $self->get_alignment_files_by_ResultSet_formats($result_set,  undef);
+  my $control_alignment = $self->db_output_dir . '/' . $self->get_alignment_files_by_ResultSet_formats($result_set, 1);
+#   die($control_alignment);
 
   # The code for building this path is duplicated in PreProcessIDR. This 
   # should be configured somewhere centrally.
@@ -99,8 +109,8 @@ sub fetch_input {
     . '/' . $analysis->logic_name 
   );
 
-  my $align_prefix   = $self->get_alignment_path_prefix_by_ResultSet($result_set, undef, 1);#validate aligned flag 
-  my $control_prefix = $self->get_alignment_path_prefix_by_ResultSet($result_set, 1, 1);#and control flag 
+#   my $align_prefix   = $self->get_alignment_path_prefix_by_ResultSet($result_set, undef, 1);#validate aligned flag 
+#   my $control_prefix = $self->get_alignment_path_prefix_by_ResultSet($result_set, 1, 1);#and control flag 
   
   my $sam_ref_fai = $self->sam_ref_fai($result_set->epigenome->gender);  #Just in case we need to convert
 
@@ -133,10 +143,35 @@ sub fetch_input {
   
   my $pfile_path = ( defined $self->bin_dir ) ?
     $self->bin_dir.'/'.$analysis->program_file : $analysis->program_file;
-
-  my @init_peak_caller_args = (-analysis       => $analysis,
-    -align_prefix   => $align_prefix,
-    -control_prefix => $control_prefix,
+    
+  my $dirname = join '/', (
+    $self->peaks_output_dir,
+    $result_set->experiment->name,
+    $analysis->logic_name
+  );
+  my $file_prefix    = $result_set->name.'.'.$analysis->logic_name;
+  
+  my $file_extension = '.txt';
+  
+  my $peaks_file = join '/', (
+    $dirname,
+    $file_prefix . '.' . $file_extension
+  );
+  
+  # HACK CCAT can't use bam files, but the previous analysis created appropriate bed files.
+  if ($analysis->logic_name eq 'ccat_histone') {
+    $signal_alignment  =~ s/.bam$/.bed/;
+    $control_alignment =~ s/.bam$/.bed/;
+  }
+  
+  my @init_peak_caller_args = (
+    -analysis       => $analysis,
+#     -align_prefix   => $align_prefix,
+#     -control_prefix => $control_prefix,
+    
+    -signal_alignment  => $signal_alignment,
+    -control_alignment => $control_alignment,
+    
     -sam_ref_fai    => $sam_ref_fai,
     -debug          => $self->debug,
     -peak_module_params =>
@@ -144,28 +179,12 @@ sub fetch_input {
       -program_file      => $pfile_path,
       -out_file_prefix   => $result_set->name.'.'.$analysis->logic_name,
       -out_dir           => $self->output_dir,
+      -output_file       => $peaks_file,
       -convert_half_open => 1, # Before loading into DB
       #-is_half_open      => $self->param_silent('is_half_open') || 0}, # Now defined by PeakCaller or subclass defined on out/input formats   
     });
   
-  my $peak_runnable = _init_peak_caller
-   (-analysis       => $analysis,
-    -align_prefix   => $align_prefix,
-    -control_prefix => $control_prefix,
-    -sam_ref_fai    => $sam_ref_fai,
-    -debug          => $self->debug,
-    -peak_module_params =>
-     {%$sensitive_caller_params,
-      -program_file      => $pfile_path,
-      -out_file_prefix   => $result_set->name.'.'.$analysis->logic_name,
-      -out_dir           => $self->output_dir,
-      
-      # /lustre/scratch109/ensembl/funcgen/mn1/ersa/mn1_CTTV_newgrouping_homo_sapiens_funcgen_81_38/output/mn1_CTTV_newgrouping_homo_sapiens_funcgen_81_38/funcgen/annotated_feature/085/ersa_signal/peaksA549_CTCF_ChIP-Seq_3974/SWEmbl_R0005/A549_CTCF_ChIP-Seq_3974_bwa_samse_TR2.SWEmbl_R0005.txt
-      #
-      -output_file       => $self->output_dir . '/' . $result_set->name . '.' . $analysis->logic_name . '.txt',
-      -convert_half_open => 1, # Before loading into DB
-      #-is_half_open      => $self->param_silent('is_half_open') || 0}, # Now defined by PeakCaller or subclass defined on out/input formats   
-    });
+  my $peak_runnable = _init_peak_caller(@init_peak_caller_args);
    
   $self->set_param_method( 'peak_runnable', $peak_runnable );
 

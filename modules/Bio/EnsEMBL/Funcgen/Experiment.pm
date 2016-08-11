@@ -388,31 +388,31 @@ sub get_InputSubsets{
 }
 
 
-=head2 get_ExperimentalChips
-
-  Example     : my $exp_chips = @{$exp->get_ExperimentalChips()}
-  Description : Retrieves all ExperiemntalChips
-  Returntype  : Listref of ExperimentalChips
-  Exceptions  : None
-  Caller      : General
-  Status      : At risk
-
-=cut
-
-sub get_ExperimentalChips{
-  my $self = shift;
-
-  if(! exists $self->{experimental_chips}){
-    $self->{experimental_chips} = {};
-
-    foreach my $echip(@{$self->adaptor->db->get_ExperimentalChipAdaptor->
-                          fetch_all_by_experiment_dbID($self->dbID())}){
-      $self->{experimental_chips}->{$echip->unique_id()} = $echip;
-    }
-  }
-
-  return [values %{$self->{experimental_chips}}];
-}
+# =head2 get_ExperimentalChips
+# 
+#   Example     : my $exp_chips = @{$exp->get_ExperimentalChips()}
+#   Description : Retrieves all ExperiemntalChips
+#   Returntype  : Listref of ExperimentalChips
+#   Exceptions  : None
+#   Caller      : General
+#   Status      : At risk
+# 
+# =cut
+# 
+# sub get_ExperimentalChips{
+#   my $self = shift;
+# 
+#   if(! exists $self->{experimental_chips}){
+#     $self->{experimental_chips} = {};
+# 
+#     foreach my $echip(@{$self->adaptor->db->get_ExperimentalChipAdaptor->
+#                           fetch_all_by_experiment_dbID($self->dbID())}){
+#       $self->{experimental_chips}->{$echip->unique_id()} = $echip;
+#     }
+#   }
+# 
+#   return [values %{$self->{experimental_chips}}];
+# }
 
 =head2 add_ExperimentalChip
 
@@ -425,26 +425,26 @@ sub get_ExperimentalChips{
 
 =cut
 
-sub add_ExperimentalChip{
-  my $self  = shift;
-  my $echip = shift;
-
-
- throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::ExperimentalChip object")
-    if(! $echip->isa("Bio::EnsEMBL::Funcgen::ExperimentalChip") || ! $echip->dbID());
-
-  if(! exists $self->{'experimental_chips'}){
-    $self->get_ExperimentalChips();
-    $self->{'experimental_chips'}->{$echip->unique_id()} = $echip;
-    #do this here without checking to avoid probelm of retrieving first stored chip
-  }elsif(exists  $self->{'experimental_chips'}->{$echip->unique_id()}){
-    warn("You cannot add the same ExperimentalChip(".$echip->unique_id().")to an Experiment more than once, check your code");
-  }else{
-    $self->{'experimental_chips'}->{$echip->unique_id()} = $echip;
-  }
-
-  return;
-}
+# sub add_ExperimentalChip{
+#   my $self  = shift;
+#   my $echip = shift;
+# 
+# 
+#  throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::ExperimentalChip object")
+#     if(! $echip->isa("Bio::EnsEMBL::Funcgen::ExperimentalChip") || ! $echip->dbID());
+# 
+#   if(! exists $self->{'experimental_chips'}){
+#     $self->get_ExperimentalChips();
+#     $self->{'experimental_chips'}->{$echip->unique_id()} = $echip;
+#     #do this here without checking to avoid probelm of retrieving first stored chip
+#   }elsif(exists  $self->{'experimental_chips'}->{$echip->unique_id()}){
+#     warn("You cannot add the same ExperimentalChip(".$echip->unique_id().")to an Experiment more than once, check your code");
+#   }else{
+#     $self->{'experimental_chips'}->{$echip->unique_id()} = $echip;
+#   }
+# 
+#   return;
+# }
 
 =head2 get_ExperimentalChip_by_unique_id
 
@@ -457,23 +457,23 @@ sub add_ExperimentalChip{
 
 =cut
 
-sub get_ExperimentalChip_by_unique_id{
-  my $self = shift;
-  my $uid  = shift;
-
-  my ($echip);
-
-  throw("Must supply a ExperimentalChip unque_id") if(! defined $uid);
-
-  $self->{'experimental_chips'} || $self->get_ExperimentalChips();
-
-  if(exists $self->{'experimental_chips'}->{$uid}){
-    $echip = $self->{'experimental_chips'}->{$uid};
-  }
-  #should we warn here if not exists?
-
-  return $echip;
-}
+# sub get_ExperimentalChip_by_unique_id{
+#   my $self = shift;
+#   my $uid  = shift;
+# 
+#   my ($echip);
+# 
+#   throw("Must supply a ExperimentalChip unque_id") if(! defined $uid);
+# 
+#   $self->{'experimental_chips'} || $self->get_ExperimentalChips();
+# 
+#   if(exists $self->{'experimental_chips'}->{$uid}){
+#     $echip = $self->{'experimental_chips'}->{$uid};
+#   }
+#   #should we warn here if not exists?
+# 
+#   return $echip;
+# }
 
 
 =head2 get_ExperimentalChip_unique_ids
@@ -487,13 +487,13 @@ sub get_ExperimentalChip_by_unique_id{
 
 =cut
 
-sub get_ExperimentalChip_unique_ids{
-  my $self = shift;
-
-  $self->{'experimental_chips'} || $self->get_ExperimentalChips();
-
-  return [keys %{ $self->{'experimental_chips'}}];
-}
+# sub get_ExperimentalChip_unique_ids{
+#   my $self = shift;
+# 
+#   $self->{'experimental_chips'} || $self->get_ExperimentalChips();
+# 
+#   return [keys %{ $self->{'experimental_chips'}}];
+# }
 
 
 

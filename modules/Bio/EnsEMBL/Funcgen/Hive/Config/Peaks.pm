@@ -47,9 +47,9 @@ sub pipeline_analyses {
       -module        => 'Bio::EnsEMBL::Funcgen::Hive::RunPeaks', 
       -parameters    => {
 	process_file_types => ['significant_region'],
-	CCAT_parameters => {
-	  -chr_file => $self->o('chromosome_file')
-	}
+# 	CCAT_parameters => {
+# 	  -chr_file => $self->o('chromosome_file')
+# 	}
       },
       -rc_name => 'normal_monitored_4GB',
     },
