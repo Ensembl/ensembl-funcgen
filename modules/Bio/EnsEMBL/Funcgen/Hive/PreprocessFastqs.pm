@@ -75,10 +75,6 @@ sub run {
     # control flag
     my $exp = $result_set->experiment(1);
   }
-#   use Data::Dumper;
-#   $Data::Dumper::Maxdepth = 3;
-#   print Dumper($result_set);
-#   die;
 
   my @fastqs;
   my $throw = '';
@@ -110,10 +106,6 @@ sub run {
     } @signal_input_subsets;
     my @technical_replicate_number = keys %temp;
     
-#     use Data::Dumper;
-#     print Dumper(\@biological_replicate_number);
-#     print Dumper(\@technical_replicate_number);
-    
     # Assert there is only one.
     if(scalar(@biological_replicate_number) != 1) {
       $self->throw_no_retry('Expected 1 InputSubset(replicate) for IDR ResultSet '.
@@ -127,7 +119,6 @@ sub run {
     $set_rep_suffix = 
       '_BR_' . $biological_replicate_number[0] . 
       '_TR_' . join '_', @technical_replicate_number;
-#     die ($set_rep_suffix);
   }
   
   foreach my $current_input_subset (@input_subsets) {
@@ -151,49 +142,12 @@ sub run {
       next;
     }
 
-    my $found_path;
-    my $params = {};
-
-    if(defined $current_input_subset->md5sum || ! $self->checksum_optional ){
-#       $params->{checksum} = $current_input_subset->md5sum;
-    }
-    
     my $local_url = $current_input_subset->local_url;
-    #Look for gz files too. These would normally already be gzipped
-    #if downloaded from a repository
-    #But they may have been gzipped after processing if produced locally
-    #add .tgz support here?
-    #we can't do a md5 check if we don't match the url exactly
-    eval { $found_path = check_file($local_url, 'gz', $params); };
- 
-    if($@){
-      $throw .= "$@\n";
-      next;  
-    }
-#     elsif(! defined $found_path){
-#       $throw .= "Could not find fastq file, is either not downloaded, has been deleted or is in warehouse:\t".
-#         $local_url."\n";
-#       #Could try warehouse here?
-#     }
-#     elsif($found_path !~ /\.(?:t){0,1}gz$/o){
-#       #use is_compressed here?
-#       #This will also modify the original file! And potentially invalidate any checksumming
-#       $self->throw_no_retry("Found unzipped path, aborting as gzipping will invalidate any further md5 checking:\t$found_path");
-#       #run_system_cmd("gzip $found_path");
-#       #$found_path .= '.gz';  
-#     }
-    push @fastqs, $found_path;  
+    push @fastqs, $local_url;  
   }
  
   throw($throw) if $throw;
   
-#   if((scalar(@fastqs) > 1) &&
-#      ! $merge){
-#     throw('ResultSet '.$result_set->name.
-#       " has more than one InputSubset, but merge has not been specified:\n\t".
-#       join("\n\t", @fastqs));    
-#   }  
- 
   my $set_prefix = get_set_prefix_from_Set($result_set, $run_controls).
     '_'.$result_set->analysis->logic_name.$set_rep_suffix; 
     
@@ -206,6 +160,15 @@ sub run {
   #
   run_system_cmd('rm -f '.$current_working_directory."/${set_prefix}.fastq_*", 1);
 
+  # The 
+  #
+  # perl -pe \'s/\@SRR[^ ]+? /@/g\'
+  #
+  # part is a hack for fastqs from sra. This removes their accession and 
+  # restores the original header. The original header seems to be used by
+  # bwa to assign reads into readgroups based on their sequencing lane of
+  # origin. This might be used later somehow when removing duplicates.
+  #
   my $cmd = 'zcat ' . join(' ', @fastqs) . ' | perl -pe \'s/\@SRR[^ ]+? /@/g\' | ' . ' split --verbose -d -a 4 -l ' 
     . $self->fastq_chunk_size . ' - ' . $current_working_directory . '/' . $set_prefix.'.fastq_';
 
