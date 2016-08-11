@@ -110,7 +110,7 @@ sub fetch_by_stable_id_regbuild_id {
     my $stable_id = shift;
     my $regulatory_build_id = shift;
 
-    my $constraint = "rf.stable_id = ? and rf.regulatory_build_id";
+    my $constraint = "rf.stable_id = ? and rf.regulatory_build_id = ?";
     $self->bind_param_generic_fetch($stable_id,           SQL_VARCHAR);
     $self->bind_param_generic_fetch($regulatory_build_id, SQL_VARCHAR);
     
