@@ -102,6 +102,72 @@ sub fetch_by_stable_id {
     return $regulatory_feature;
 }
 
+sub fetch_Iterator {
+    my $self      = shift;
+    my $constraint = "regulatory_build.is_current = true";
+   return $self->_generic_fetch_Iterator(10, $constraint);
+}
+
+sub fetch_Iterator_by_RegulatoryBuild {
+    my $self             = shift;
+    my $regulatory_build = shift;
+    my $constraint = "regulatory_feature.regulatory_build_id = " . $regulatory_build->dbID;
+    return $self->_generic_fetch_Iterator(10, $constraint);
+}
+
+# Nicked from Bio::EnsEMBL::Variation::DBSQL::VariationAdaptor and customised.
+#
+sub _generic_fetch_Iterator {
+
+    my ($self, $cache_size, $full_constraint) = @_;
+
+    # prepare and execute a query to fetch all dbIDs
+    my $sth = $self->prepare(qq{
+        SELECT      regulatory_feature_id
+        FROM        regulatory_feature JOIN regulatory_build using (regulatory_build_id)
+        WHERE       $full_constraint
+    });
+    $sth->execute;
+
+    my $regulatory_feature_id;
+    $sth->bind_columns(\$regulatory_feature_id);
+
+    $cache_size ||= 1000;
+    
+    my @cache;
+
+    my $items_to_fetch = 1;
+
+    return Bio::EnsEMBL::Utils::Iterator->new(sub{
+
+        if (@cache == 0 && $items_to_fetch) {
+            
+            # our cache is empty, and there are still items to fetch, so
+            # fetch the next chunk of dbIDs and create objects from them
+	    #
+            my @dbIDs;
+
+            my $item_count = 0;
+
+            while( $sth->fetch ) {
+
+                push @dbIDs, $regulatory_feature_id;
+                if (++$item_count == $cache_size) {
+                    # we have fetched a cache's worth of dbIDs, so flag that
+                    # there are still items to fetch and last out of the loop
+                    $items_to_fetch = 1;
+                    last;
+                }
+                # if this is the last row, this flag will be 0 outside the loop
+                $items_to_fetch = 0;
+            }
+            $sth->finish unless $items_to_fetch;
+            @cache = @{ $self->fetch_all_by_dbID_list(\@dbIDs) } if @dbIDs;
+        }
+        return shift @cache;
+    });
+}
+
 sub fetch_by_stable_id_RegulatoryBuild {
     my $self             = shift;
     my $stable_id        = shift;
