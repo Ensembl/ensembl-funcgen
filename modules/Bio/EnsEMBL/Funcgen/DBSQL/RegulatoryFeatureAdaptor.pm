@@ -64,7 +64,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 use Bio::EnsEMBL::Funcgen::RegulatoryFeature;
 use Data::Dumper;
 
@@ -804,14 +804,14 @@ sub _make_arrayref_if_not_arrayref {
 sub fetch_all_by_Slice {
   my ($self, $slice) = @_;
   
-  return $self->fetch_all_by_Slice_Epigenomes_Activity_RegulatoryBuild(
+  return $self->_fetch_all_by_Slice_Epigenomes_Activity_RegulatoryBuild(
     $slice, undef, undef, undef
   );
 }
 sub fetch_all_by_Slice_RegulatoryBuild {
   my ($self, $slice, $regulatory_build) = @_;
   
-  return $self->fetch_all_by_Slice_Epigenomes_Activity_RegulatoryBuild(
+  return $self->_fetch_all_by_Slice_Epigenomes_Activity_RegulatoryBuild(
     $slice, undef, undef, $regulatory_build
   );
 }
@@ -820,48 +820,38 @@ sub fetch_all_by_Slice_FeatureSets {
   die("Regulatory features are no longer linked ot feature sets. Use fetch_all_by_Slice_Epigenomes instead.");
 }
 
-=head2 fetch_all_by_Slice_Epigenomes
-
-  Arg [1]    : Bio::EnsEMBL::Slice
-  Arg [2]    : Arrayref of Bio::EnsEMBL::FeatureSet objects
-  Arg [3]    : optional HASHREF - params:
-                   {
-                    unique            => 0|1, #Get RegulatoryFeatures unique to these Epigenomes
-                    include_projected => 0|1, #Consider projected features
-                   }
-  Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $ofa->fetch_all_by_Slice_Epigenomes($slice, \@fsets);
-  Description: Simple wrapper to set unique flag.
-               Retrieves a list of features on a given slice, specific for a given list of Epigenomes.
-  Returntype : Listref of Bio::EnsEMBL::RegulatoryFeature objects
-  Exceptions : Throws if params hash is not valid or keys are not recognised
-  Caller     : General
-  Status     : At Risk
-
-=cut
 sub fetch_all_by_Slice_Epigenomes {
   my ($self, $slice, $epigenomes) = @_;
-  return $self->fetch_all_by_Slice_Epigenomes_Activity_RegulatoryBuild(
+  
+  deprecate("Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor::fetch_all_by_Slice_Epigenomes() has been deprecated and will be removed in Ensembl release 90.");
+  
+  return $self->_fetch_all_by_Slice_Epigenomes_Activity_RegulatoryBuild(
     $slice, $epigenomes, undef, undef
   );
 }
 
 sub fetch_all_by_Slice_Activity {
   my ($self, $slice, $activity) = @_;
-  return $self->fetch_all_by_Slice_Epigenomes_Activity_RegulatoryBuild(
+
+  deprecate("Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor::fetch_all_by_Slice_Activity() has been deprecated and will be removed in Ensembl release 90.");
+
+  return $self->_fetch_all_by_Slice_Epigenomes_Activity_RegulatoryBuild(
     $slice, undef, $activity, undef
   );
 }
 
 sub fetch_all_by_Slice_Epigenomes_Activity {
   my ($self, $slice, $epigenomes, $activity) = @_;  
-  return $self->fetch_all_by_Slice_Epigenomes_Activity_RegulatoryBuild(
+  
+  deprecate("Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor::fetch_all_by_Slice_Epigenomes_Activity has been deprecated and will be removed in Ensembl release 90.");
+
+  return $self->_fetch_all_by_Slice_Epigenomes_Activity_RegulatoryBuild(
     $slice, $epigenomes, $activity, undef);
 }
 
-sub fetch_all_by_Slice_Epigenomes_Activity_RegulatoryBuild {
+sub _fetch_all_by_Slice_Epigenomes_Activity_RegulatoryBuild {
   my ($self, $slice, $epigenomes, $activity, $selected_regulatory_build) = @_;
-  
+
   if (defined $activity) {
     if (! $self->is_valid_activity($activity)) {
       die(
