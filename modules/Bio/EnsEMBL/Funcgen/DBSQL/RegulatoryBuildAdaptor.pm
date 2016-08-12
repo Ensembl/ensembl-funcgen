@@ -69,6 +69,24 @@ sub _default_where_clause {
     ;
 }
 
+sub fetch_by_name {
+  my $self = shift;
+  my $name = shift;
+
+  my $constraint = "rb.name = ?";
+  $self->bind_param_generic_fetch($name, SQL_VARCHAR);
+  
+  my $regulatory_build = $self->generic_fetch($constraint);
+  
+  if (!$regulatory_build || @$regulatory_build==0) {
+    return;
+  }
+  if (@$regulatory_build!=1) {
+    throw("Found ". @$regulatory_build ." current regulatory builds!");
+  }
+  return $regulatory_build->[0];
+}
+
 sub fetch_current_regulatory_build {
   my $self  = shift;
 
