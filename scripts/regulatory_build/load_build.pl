@@ -122,14 +122,16 @@ sub main {
   my $current_regulatory_build = $regulatory_build_adaptor->fetch_current_regulatory_build;
   
   if (! defined $current_regulatory_build) {
-    die("Couldn't find regulatory build in the database!");
+#     die("Couldn't find regulatory build in the database!");
   }
-  print "Found regulatory build: " 
+  if (defined $current_regulatory_build) {
+    print "Found regulatory build: " 
     . $current_regulatory_build->name 
     . " " . $current_regulatory_build->version 
     . " from  " 
     . $current_regulatory_build->initial_release_date 
     . " in the database.\n";
+  }
   
 #   print_log("Getting analysis\n");
 #   my $analysis = get_analysis($db);
@@ -165,8 +167,10 @@ sub main {
   compute_regulatory_annotations($options);
   print_log("Updating meta table\n");
   
-  $current_regulatory_build->is_current(0);
-  $regulatory_build_adaptor->update($current_regulatory_build);
+  if (defined $current_regulatory_build) {
+    $current_regulatory_build->is_current(0);
+    $regulatory_build_adaptor->update($current_regulatory_build);
+  }
 
   $new_regulatory_build->is_current(1);
   $regulatory_build_adaptor->update($new_regulatory_build);
@@ -904,19 +908,39 @@ sub create_regulatory_build_object {
   my ($current_regulatory_build, $is_small_update) = @_;
   
   use Bio::EnsEMBL::Funcgen::RegulatoryBuild;
-  my $new_regulatory_build = Bio::EnsEMBL::Funcgen::RegulatoryBuild->new(
-    -name            => 'The new ' . $current_regulatory_build->name,
-    -feature_type_id => $current_regulatory_build->feature_type_id,
-    -analysis_id     => $current_regulatory_build->analysis_id,
-    -is_current      => 0,
-  );
+  
+  my $new_regulatory_build;
+  
+  my $current_build_version;
+  my $current_build_initial_release_date;
+  
+  if (defined $current_regulatory_build) {
+    $new_regulatory_build = Bio::EnsEMBL::Funcgen::RegulatoryBuild->new(
+        -name            => 'The new ' . $current_regulatory_build->name,
+        -feature_type_id => $current_regulatory_build->feature_type_id,
+        -analysis_id     => $current_regulatory_build->analysis_id,
+        -is_current      => 0,
+    );
+    $current_build_version = $current_regulatory_build->version;
+    $current_build_initial_release_date = $current_regulatory_build->initial_release_date;
+  } else {
+      $new_regulatory_build = Bio::EnsEMBL::Funcgen::RegulatoryBuild->new(
+        -name            => 'The Ensembl Regulatory Build' ,
+        # HACK: These values should not be hardcoded!
+        -feature_type_id => 174992,
+        -analysis_id     => 25,
+        -is_current      => 0,
+    );
+    $current_build_version = '0.0';
+    $current_build_initial_release_date = '';
+  }
   
   my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
   # Seriously localtime, you're useless
   $year += 1900;
   $mon += 1;
   my ($main, $update);
-  my $version = $current_regulatory_build->version;
+  my $version = $current_build_version;
   if (defined $version) {
     ($main, $update) = split('.', $version);
     if ($is_small_update) {
