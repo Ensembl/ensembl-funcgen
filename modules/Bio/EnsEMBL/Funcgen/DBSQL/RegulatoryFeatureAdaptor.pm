@@ -102,7 +102,7 @@ sub fetch_by_stable_id {
     return $regulatory_feature;
 }
 
-sub fetch_by_stable_id_regulatory_build {
+sub fetch_by_stable_id_RegulatoryBuild {
     my $self             = shift;
     my $stable_id        = shift;
     my $regulatory_build = shift;
