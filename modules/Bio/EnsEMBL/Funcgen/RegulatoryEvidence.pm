@@ -139,12 +139,18 @@ sub add_supporting_motif_feature_id {
 
 sub supporting_annotated_feature_ids {
   my $self = shift;
+  if (! defined $self->{'_annotated'}) {
+	return 
+  }
   my @supporting_annotated_feature_ids = keys %{$self->{'_annotated'}};
   return \@supporting_annotated_feature_ids;
 }
 
 sub supporting_motif_feature_ids {
   my $self = shift;
+  if (! defined $self->{'_motif'}) {
+	return;
+  }
   my @supporting_motif_feature_ids = keys %{$self->{'_motif'}};
   return \@supporting_motif_feature_ids;
 }
