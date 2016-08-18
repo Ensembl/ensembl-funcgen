@@ -272,7 +272,7 @@ sub _fake_multicell_activity {
 
   my $self = shift;
   my $actual_regulatory_activity = shift;
-
+  
   my $multicell_regulatory_activity = Bio::EnsEMBL::Funcgen::RegulatoryActivity->new;
   $multicell_regulatory_activity->activity('ACTIVE');
   $multicell_regulatory_activity->epigenome_id(undef);
@@ -416,10 +416,6 @@ sub _objs_from_sth {
       push @flattened_regulatory_activities, $unique_set_of_regulatory_activities->{$current_epigenome_id};
     }
     
-    foreach my $current_regulatory_activity (@flattened_regulatory_activities) {
-      $current_regulatory_activity->regulatory_feature($regulatory_feature_under_construction);
-    }
-    
     $regulatory_feature_under_construction->regulatory_activity(\@flattened_regulatory_activities);
     
     # Fake MultiCell regulatory behaviour.
@@ -431,6 +427,10 @@ sub _objs_from_sth {
     $regulatory_feature_under_construction->add_regulatory_activity(
       $multicell_regulatory_activity
     );
+
+    foreach my $current_regulatory_activity (@flattened_regulatory_activities) {
+      $current_regulatory_activity->regulatory_feature($regulatory_feature_under_construction);
+    }
 
   };
    
@@ -572,6 +572,7 @@ sub _objs_from_sth {
     # Handle regulatory evidence from the regulatory_evidence table
     #
     if (defined $sth_fetched_attr_id  && ! $current_feature_not_on_destination_slice) {
+    
 
       my $regulatory_activity = $unique_set_of_regulatory_activities->{$sth_fetched_epigenome_id};
       my $regulatory_evidence = $regulatory_activity->regulatory_evidence;
