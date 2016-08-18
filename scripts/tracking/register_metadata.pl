@@ -16,13 +16,10 @@
 
 use strict;
 use warnings;
-
-# use diagnostics;
 use autodie;
 use feature qw(say);
 
 use Cwd 'abs_path';
-use Data::Printer;
 use Config::Tiny;
 use Bio::EnsEMBL::Utils::Logger;
 use Bio::EnsEMBL::Utils::Exception qw(throw);
