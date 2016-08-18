@@ -1187,9 +1187,10 @@ sub stable_id_prefix{
 #todo move string_params_exists to caller or just use directly?
 #and never assume if exists is true?
 
-# sub _constrain_states {
-#   my ($self, $states, $params) = @_;
-# 
+sub _constrain_states {
+  my ($self, $states, $params) = @_;
+  return ("", {});
+
 #   if(! (defined $states &&
 #         (ref($states) eq 'ARRAY') &&
 #         (scalar(@$states) > 0) )){
@@ -1236,7 +1237,7 @@ sub stable_id_prefix{
 #     "s.table_name='$table_name' AND ".$sn_ids_clause;
 # 
 #   return ($constraint, $constraint_conf);
-# }
+}
 
 1;
 
