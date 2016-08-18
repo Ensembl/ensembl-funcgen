@@ -1189,53 +1189,54 @@ sub stable_id_prefix{
 
 sub _constrain_states {
   my ($self, $states, $params) = @_;
+  return ("1=1", {});
 
-  if(! (defined $states &&
-        (ref($states) eq 'ARRAY') &&
-        (scalar(@$states) > 0) )){
-    throw('Must pass an Arrayref of states (strings) to contrain by');
-  }
-
-  if(defined $params &&
-     (ref($params) ne 'HASH') ){
-    throw('Params argument must be a Hashref');     
-  }
-
-
-  my @tables = $self->_tables;
-  my ($table_name, $syn) = @{$self->_main_table};
-  my ($status_table, $sn_ids_clause);
-
-
-  my @sn_ids = sort {$a<=>$b}
-                (map $self->_get_status_name_id($_, $params->{string_param_exists}) ||
-                 'NULL', @$states);
-  #|| NULL here accounts for absent status_names
-  #i.e. $sn_ids_clause will never be true
-
-  if(scalar(@$states) != 1){
-    #add in table_name to make it faster
-    #can't put in table_id as this would be a join between select and subselect
-    $status_table = '(SELECT table_id, table_name, group_concat(status_name_id) ids '.
-                    'FROM status WHERE table_name="'.$table_name.'" and ('.
-                    join(' OR ', (map "status_name_id=$_", @sn_ids)).
-                    ') group by table_id order by status_name_id)';
-
-    #This enforces AND logic, whilst allowing for records with a superset of states
-    $sn_ids_clause = ' s.ids like "%'.join('%,', @sn_ids).'%"';
-  }
-  else{
-    $status_table  = 'status';
-    $sn_ids_clause = 's.status_name_id='.$sn_ids[0];
-  }
-
-
-  my $constraint_conf = { tables => [[$status_table, 's']]};  #,['status_name', 'sn']),
-
-  my $constraint = " $syn.${table_name}_id=s.table_id AND ".
-    "s.table_name='$table_name' AND ".$sn_ids_clause;
-
-  return ($constraint, $constraint_conf);
+#   if(! (defined $states &&
+#         (ref($states) eq 'ARRAY') &&
+#         (scalar(@$states) > 0) )){
+#     throw('Must pass an Arrayref of states (strings) to contrain by');
+#   }
+# 
+#   if(defined $params &&
+#      (ref($params) ne 'HASH') ){
+#     throw('Params argument must be a Hashref');     
+#   }
+# 
+# 
+#   my @tables = $self->_tables;
+#   my ($table_name, $syn) = @{$self->_main_table};
+#   my ($status_table, $sn_ids_clause);
+# 
+# 
+#   my @sn_ids = sort {$a<=>$b}
+#                 (map $self->_get_status_name_id($_, $params->{string_param_exists}) ||
+#                  'NULL', @$states);
+#   #|| NULL here accounts for absent status_names
+#   #i.e. $sn_ids_clause will never be true
+# 
+#   if(scalar(@$states) != 1){
+#     #add in table_name to make it faster
+#     #can't put in table_id as this would be a join between select and subselect
+#     $status_table = '(SELECT table_id, table_name, group_concat(status_name_id) ids '.
+#                     'FROM status WHERE table_name="'.$table_name.'" and ('.
+#                     join(' OR ', (map "status_name_id=$_", @sn_ids)).
+#                     ') group by table_id order by status_name_id)';
+# 
+#     #This enforces AND logic, whilst allowing for records with a superset of states
+#     $sn_ids_clause = ' s.ids like "%'.join('%,', @sn_ids).'%"';
+#   }
+#   else{
+#     $status_table  = 'status';
+#     $sn_ids_clause = 's.status_name_id='.$sn_ids[0];
+#   }
+# 
+# 
+#   my $constraint_conf = { tables => [[$status_table, 's']]};  #,['status_name', 'sn']),
+# 
+#   my $constraint = " $syn.${table_name}_id=s.table_id AND ".
+#     "s.table_name='$table_name' AND ".$sn_ids_clause;
+# 
+#   return ($constraint, $constraint_conf);
 }
 
 1;
