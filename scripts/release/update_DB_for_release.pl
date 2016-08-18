@@ -28,18 +28,18 @@ limitations under the License.
 =head1 NAME
 
 update_DB_for_release.pl
-  
+
 
 =head1 SYNOPSIS
 
 This script performs several updates to the eFG DBs as part of the release cycle.
 
- perl update_DB_for_release.pl <mandatory paramters> [ optional parameters ] 
+ perl update_DB_for_release.pl <mandatory paramters> [ optional parameters ]
 
 
 =head1 DESCRIPTION
 
-This script uses the Bio::EnsEMBL::Funcgen::Utils::Healthchecker module to perform critical updates and checks on the funcgen DBs during the release cycle. 
+This script uses the Bio::EnsEMBL::Funcgen::Utils::Healthchecker module to perform critical updates and checks on the funcgen DBs during the release cycle.
 
 
 This default behaviour can be over-ridden by specifying a space separated list of method names e.g.
@@ -57,11 +57,11 @@ See Bio::EnsEMBL::Funcgen::Utils::HealthChecker for more details.
   -host         DB host
   -user         DB user
   -pass         DB pass
-  -data_version Suffix of DB name e.g. 58_37k 
-  
+  -data_version Suffix of DB name e.g. 58_37k
+
 
  Optional
-  -builds            Override the default assembly build to update 
+  -builds            Override the default assembly build to update
   -dbname            DB name (default production name will be used if not specified)
   -dnadb_host        Host for core DB
   -dnadb_name        Name for core DB
@@ -75,7 +75,7 @@ See Bio::EnsEMBL::Funcgen::Utils::HealthChecker for more details.
   -methods           Override default method with a list of method names
   -method_params     List of a method name and associated method parameters/arguments
   -tee               Tees output to STDOUT
-  -log_file           
+  -log_file
   -no_log            No log file, but turns on tee
   -help              Prints a short help page
   -man               Prints the entire POD documentation
@@ -141,12 +141,12 @@ GetOptions
 
 
 if(! defined $dbname){
-  
+
   if(! defined $schema_build){
     die('A -dbname or a -data_version (schema_build) must be specified');
   }
-  
-  $dbname = "${species}_funcgen_${schema_build}" 
+
+  $dbname = "${species}_funcgen_${schema_build}"
 }
 
 if(! $main::_no_log){
@@ -179,24 +179,25 @@ my $hchecker = Bio::EnsEMBL::Funcgen::Utils::HealthChecker->new
 	-skip_xref_cleanup => $skip_xref_cleanup,
 	-check_displayable => $check_displayable);
 
-
-if(@methods){
-  foreach my $method(@methods){
-    if(! eval {$hchecker->$method; 1;}){
-      die("Failed to run HealthChecker::$method\n$@");
-    }
-  }
-}
-elsif(@method_params){
-  my ($method, @params);
-  ($method, @params) = @method_params;
-
-  if(! eval {$hchecker->$method(@params); 1;}){
-    die("Failed to run HealthChecker::$method(",join(',', @params).")\n$@");
-  }
-}
-else{
  $hchecker->update_db_for_release;
-}
+
+#if(@methods){
+#  foreach my $method(@methods){
+#    if(! eval {$hchecker->$method; 1;}){
+#      die("Failed to run HealthChecker::$method\n$@");
+#    }
+#  }
+#}
+#elsif(@method_params){
+#  my ($method, @params);
+#  ($method, @params) = @method_params;
+#
+#  if(! eval {$hchecker->$method(@params); 1;}){
+#    die("Failed to run HealthChecker::$method(",join(',', @params).")\n$@");
+#  }
+#}
+#else{
+# $hchecker->update_db_for_release;
+#}
 
 1;

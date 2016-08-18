@@ -137,12 +137,12 @@ sub update_db_for_release {
 
   #do seq_region_update to validate dnadb first
   #hence avoiding redoing longer methods
+
   $self->validate_new_seq_regions;
-  $self->check_meta_species_version;
   $self->set_current_coord_system;
   $self->update_meta_coord;
-  $self->clean_xrefs;
-  $self->log_data_sets();
+#  $self->clean_xrefs;
+#  $self->log_data_sets();
   $self->analyse_and_optimise_tables;#ALWAYS LAST!!
 
   $self->log_header('??? Have you dumped/copied GFF dumps ???');
@@ -319,9 +319,22 @@ sub update_meta_coord{
     #would need to select distinct coord_system_id for table first
     #This may well slow down quite a bit doing it this way
 
-    $sql = 'select distinct s.coord_system_id from coord_system cs, seq_region s, '.
-     "$table_name t WHERE t.seq_region_id = s.seq_region_id and s.coord_system_id = ".
-     "cs.coord_system_id and cs.species_id = $species_id";
+#    $sql = 'select distinct s.coord_system_id from coord_system cs, seq_region s, '.
+#     "$table_name t WHERE t.seq_region_id = s.seq_region_id and s.coord_system_id = ".
+#     "cs.coord_system_id and cs.species_id = $species_id";
+    $sql = "
+      SELECT DISTINCT
+        coord_system_id
+      FROM
+        seq_region
+      WHERE
+        seq_region_id
+      IN (
+          SELECT DISTINCT
+            seq_region_id
+          FROM
+            $table_name
+          )";
 
     my @cs_ids = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
 	  #Convert single element arrayrefs to scalars
@@ -374,92 +387,12 @@ sub update_meta_coord{
 }
 
 
-sub check_meta_species_version{
-  my $self = shift;
-
-  $self->log_header('Checking meta species.production_name and schema_version against dbname');
-
-  my $dbname = $self->db->dbc->dbname;
-  (my $dbname_species = $dbname) =~ s/_funcgen_.*//;
-  my $mc = $self->db->get_MetaContainer;
-  my $schema_version = $mc->list_value_by_key('schema_version')->[0];
-
-  if(! defined $schema_version){
-    $self->report_fail("No meta schema_version defined");
-  }
-  elsif($dbname !~ /funcgen_${schema_version}_/){
-    $self->report_fail("Meta schema_version ($schema_version) does not match the dbname ($dbname).");
-  }
-
-  my @latin_names = @{$mc->list_value_by_key('species.production_name')};
-
-  if(scalar(@latin_names) > 1){
-    $self->report_fail("Found more than one species.production_name in meta:\t".join(", ", @latin_names));
-  }
-  elsif(scalar(@latin_names) == 1 && ($latin_names[0] ne $dbname_species)){
-    $self->report_fail("Found mismatch between meta species.production_name and dbname:\t".$latin_names[0]." vs $dbname_species");
-  }
-  elsif(scalar(@latin_names) == 0){
-    $self->report("WARNING:\tFound no meta species.production_name setting as:\t$dbname_species");
-    $self->db->dbc->db_handle->do("INSERT into meta(species_id, meta_key, meta_value) values(1, 'species.production_name', '$dbname_species')");
-  }
-  #else is okay
-
-  return;
-}
-
-sub log_data_sets {
-  my $self = shift;
-
-  my $dset_adaptor = $self->db->get_DataSetAdaptor;
-  my @dsets;
-  my $dsets = $dset_adaptor->fetch_all;
-  @dsets = @$dsets if defined $dsets;
-
-  $self->log('Found '.scalar(@dsets).' DataSets');
-
-  foreach my $dset(@dsets){
-	$self->log_set("DataSet:\t\t", $dset) ;
-
-	my $fset = $dset->product_FeatureSet;
-	$self->log_set("Product FeatureSet:\t", $fset) if $fset;
-
-	my @supporting_sets = @{$dset->get_supporting_sets};
-
-	$self->log('Found '.scalar(@supporting_sets).' supporting sets:');
-
-	if(my @supporting_sets = @{$dset->get_supporting_sets}){
-	  #type here could be result, experimental or feature
-	  #and feature could be annotated or experimental
-	  #Move this to log set?
-
-	  map { my $type = ref($_);
-			$type =~ s/.*://;
-			$type .= '('.$_->feature_class.')' if($type eq 'FeatureSet');
-			#Need to sprintf $type here to fixed width
-			$self->log_set($type.":\t", $_)} @supporting_sets;
-	}
-	$self->log();
-  }
-
-  return;
-}
-
-sub log_set{
-  my ($self, $text, $set) = @_;
-    $text .= $set->name();
-    $text .= "\tDISPLAYABLE" if($set->is_displayable);
-    $self->log($text);
-  return;
-}
 
 #This is for mart to enable them to join to the seq_region table without
 #creating a product from all the reundant seq_region entries for each schema_build
 
 sub set_current_coord_system{
   my ($self) = @_;
-
-
 
   my $schema_build = $self->db->_get_schema_build($self->db->dnadb);
   $self->log_header("Setting current coord_system on $schema_build");
@@ -470,22 +403,6 @@ sub set_current_coord_system{
   $self->db->dbc->do($sql);
 
   return;
-}
-
-# The result_set and feature_set tables both contain a (denormalised) experiment_id field
-# which help support the experiment view. Currently done here to ensure data that data loaded 
-# via all possible import routes is handled. 
-# result_set.experiment_id is present to experiment view linkage for data which may not have
-# a feature set e.g. dna methylation
-
-sub update_denormalised_experiment_ids{
-  my $self = shift;
-
-  # feature_set
-
-  # Use api and work sets wise for validation and update, or just do blind batch sql update?
-
-
 }
 
 

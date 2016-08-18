@@ -1212,7 +1212,7 @@ sub cache_arrays_per_object {
        USING(probe_set_id)
       JOIN array_chip ac
         USING(array_chip_id)
-      JON array a
+      JOIN array a
         USING(array_id)
     WHERE
       a.name in ("'.join('", "', @{$options->{array_names}}).'")
