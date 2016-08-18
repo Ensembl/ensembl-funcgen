@@ -214,6 +214,9 @@ sub regulatory_evidence {
   $self->_assert_epigenome_ok($epigenome);
   my $regulatory_activity = $self->regulatory_activity_for_epigenome($epigenome);
   
+  # See https://github.com/Ensembl/ensembl-funcgen/pull/6
+  return [] unless $regulatory_activity;
+  
   my $regulatory_evidence = $regulatory_activity->regulatory_evidence;
     
   if ($feature_class eq 'annotated') {
