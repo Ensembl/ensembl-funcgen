@@ -86,7 +86,7 @@ CREATE TABLE `regulatory_feature` (
   UNIQUE KEY `uniqueness_constraint_idx` (`feature_type_id`,`seq_region_id`,`seq_region_strand`,`seq_region_start`,`seq_region_end`,`stable_id`,`bound_start_length`,`bound_end_length`,`regulatory_build_id`),
   KEY `feature_type_idx` (`feature_type_id`),
   KEY `stable_id_idx` (`stable_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=286084 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1;
 
 /**
 @table  regulatory_evidence
@@ -120,7 +120,7 @@ CREATE TABLE `regulatory_activity` (
   PRIMARY KEY (`regulatory_activity_id`),
   UNIQUE KEY `uniqueness_constraint_idx` (`epigenome_id`,`regulatory_feature_id`),
   KEY `regulatory_feature_idx` (`regulatory_feature_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=21170143 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 
@@ -136,7 +136,7 @@ CREATE TABLE `regulatory_build` (
   `analysis_id` int(4) unsigned NOT NULL,
   `is_current` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`regulatory_build_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=2 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 
@@ -147,7 +147,7 @@ CREATE TABLE `regulatory_build_epigenome` (
   `regulatory_build_id` int(10) unsigned NOT NULL,
   `epigenome_id` int(10) unsigned NOT NULL,
   PRIMARY KEY (`regulatory_build_epigenome_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=75 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
 @table  segmentation_feature
@@ -198,7 +198,7 @@ CREATE TABLE `segmentation_file` (
   UNIQUE KEY `name_idx` (`name`),
   KEY `epigenome_idx` (`epigenome_id`),
   KEY `analysis_idx` (`analysis_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=75 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
 @table  annotated_feature
@@ -233,7 +233,7 @@ CREATE TABLE `annotated_feature` (
   PRIMARY KEY (`annotated_feature_id`),
   UNIQUE KEY `seq_region_feature_set_idx` (`seq_region_id`,`seq_region_start`,`feature_set_id`),
   KEY `feature_set_idx` (`feature_set_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=66303180 DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=39;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=39;
 
 
 /**
@@ -271,7 +271,7 @@ CREATE TABLE `motif_feature` (
   UNIQUE KEY `interdb_stable_id_idx` (`interdb_stable_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
   KEY `binding_matrix_idx` (`binding_matrix_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=1290348 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
 @table  mirna_target_feature
@@ -318,7 +318,7 @@ CREATE TABLE `mirna_target_feature` (
   KEY `feature_type_idx` (`feature_type_id`),
   KEY `feature_set_idx` (`feature_set_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`)
-) ENGINE=MyISAM AUTO_INCREMENT=316842 DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
 
 
 /**
@@ -371,7 +371,7 @@ CREATE TABLE `binding_matrix` (
   PRIMARY KEY (`binding_matrix_id`),
   UNIQUE KEY `name_analysis_idx` (`name`,`analysis_id`),
   KEY `feature_type_idx` (`feature_type_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=196 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 /**
@@ -410,7 +410,7 @@ CREATE TABLE `external_feature` (
   KEY `feature_type_idx` (`feature_type_id`),
   KEY `feature_set_idx` (`feature_set_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`)
-) ENGINE=MyISAM AUTO_INCREMENT=935450 DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
 
 
 
@@ -427,7 +427,7 @@ CREATE TABLE `external_feature_file` (
   UNIQUE KEY `name_idx` (`name`),
   KEY `epigenome_idx` (`epigenome_id`),
   KEY `analysis_idx` (`analysis_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=49 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
 @table  probe_feature
@@ -471,7 +471,7 @@ CREATE TABLE `probe_feature` (
   PRIMARY KEY (`probe_feature_id`),
   KEY `probe_idx` (`probe_id`),
   KEY `seq_region_probe_probe_feature_idx` (`seq_region_id`,`seq_region_start`,`seq_region_end`,`probe_id`,`probe_feature_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=32691448 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 /**
@@ -499,10 +499,11 @@ CREATE TABLE `feature_type` (
   `description` varchar(255) DEFAULT NULL,
   `so_accession` varchar(64) DEFAULT NULL,
   `so_name` varchar(255) DEFAULT NULL,
+  `production_name` VARCHAR(120) DEFAULT NULL,
   PRIMARY KEY (`feature_type_id`),
   UNIQUE KEY `name_class_analysis_idx` (`name`,`class`,`analysis_id`),
   KEY `so_accession_idx` (`so_accession`)
-) ENGINE=MyISAM AUTO_INCREMENT=180511 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 /**
@@ -554,7 +555,7 @@ CREATE TABLE `data_set` (
   `name` varchar(100) DEFAULT NULL,
   PRIMARY KEY (`data_set_id`,`feature_set_id`),
   UNIQUE KEY `name_idx` (`name`)
-) ENGINE=MyISAM AUTO_INCREMENT=694 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 
@@ -619,7 +620,7 @@ CREATE TABLE `feature_set` (
   KEY `feature_type_idx` (`feature_type_id`),
   KEY `experiment_idx` (`experiment_id`),
   KEY `epigenome_idx` (`epigenome_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=697 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 DROP TABLE IF EXISTS `feature_set_qc_prop_reads_in_peaks`;
@@ -632,7 +633,7 @@ CREATE TABLE `feature_set_qc_prop_reads_in_peaks` (
   `path` varchar(512) NOT NULL,
   `bam_file` varchar(512) NOT NULL,
   PRIMARY KEY (`feature_set_qc_prop_reads_in_peaks_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=694 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
 @table  result_set
@@ -675,7 +676,7 @@ CREATE TABLE `result_set` (
   KEY `feature_class_idx` (`feature_class`),
   KEY `experiment_idx` (`experiment_id`),
   KEY `epigenome_idx` (`epigenome_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=1661 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 DROP TABLE IF EXISTS `result_set_qc_chance`;
 CREATE TABLE `result_set_qc_chance` (
@@ -694,7 +695,7 @@ CREATE TABLE `result_set_qc_chance` (
   `pcr_amplification_bias_in_Input_coverage_of_1_percent_of_genome` double DEFAULT NULL,
   `path` varchar(512) NOT NULL,
   PRIMARY KEY (`result_set_qc_chance_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=527 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 
@@ -710,7 +711,7 @@ CREATE TABLE `result_set_qc_flagstats` (
   `bam_file` varchar(512) NOT NULL,
   PRIMARY KEY (`result_set_qc_id`),
   UNIQUE KEY `name_exp_idx` (`result_set_qc_id`,`category`)
-) ENGINE=MyISAM AUTO_INCREMENT=16862 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 
@@ -738,7 +739,7 @@ CREATE TABLE `result_set_qc_phantom_peak` (
   `path` varchar(512) NOT NULL,
   PRIMARY KEY (`result_set_qc_phantom_peak_id`),
   KEY `filename_idx` (`filename`)
-) ENGINE=MyISAM AUTO_INCREMENT=1620 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 /**
@@ -765,7 +766,7 @@ CREATE TABLE `result_set_input` (
   `table_name` enum('input_subset') DEFAULT NULL,
   PRIMARY KEY (`result_set_input_id`,`result_set_id`),
   UNIQUE KEY `rset_table_idname_idx` (`result_set_id`,`table_id`,`table_name`)
-) ENGINE=MyISAM AUTO_INCREMENT=21454 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
 @table  dbfile_registry
@@ -829,11 +830,15 @@ CREATE TABLE `input_subset` (
   `technical_replicate` tinyint(3) unsigned NOT NULL DEFAULT '0',
   `is_control` tinyint(3) unsigned NOT NULL,
   `analysis_id` smallint(5) unsigned NOT NULL,
+  `read_length` int(10) DEFAULT NULL,
+  `is_paired_end` tinyint(1) DEFAULT NULL,
+  `paired_with` int(10) DEFAULT NULL,
+  `file_size` bigint(20) DEFAULT NULL,
   PRIMARY KEY (`input_subset_id`),
   UNIQUE KEY `name_exp_idx` (`name`,`experiment_id`),
   KEY `analysis_idx` (`analysis_id`),
   KEY `experiment_idx` (`experiment_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=4886 DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
 
 
 -- epigenome_id is default NULL to support flat file imports which have not defined epigenome
@@ -872,7 +877,7 @@ CREATE TABLE `array` (
   PRIMARY KEY (`array_id`),
   UNIQUE KEY `vendor_name_idx` (`vendor`,`name`),
   UNIQUE KEY `class_name_idx` (`class`,`name`)
-) ENGINE=MyISAM AUTO_INCREMENT=64 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- Could clean up/rename format, type and class
 
@@ -898,7 +903,7 @@ CREATE TABLE `array_chip` (
   `name` varchar(100) DEFAULT NULL,
   PRIMARY KEY (`array_chip_id`),
   UNIQUE KEY `array_design_idx` (`array_id`,`design_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=104 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
 @table  probe_set
@@ -920,7 +925,7 @@ CREATE TABLE `probe_set` (
   `family` varchar(20) DEFAULT NULL,
   PRIMARY KEY (`probe_set_id`),
   KEY `name` (`name`)
-) ENGINE=MyISAM AUTO_INCREMENT=2326708 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- Clashing names may(unlikely) exist between array vendors, this is currently allowed
 -- and handled with the API via the probe associations
@@ -956,7 +961,7 @@ CREATE TABLE `probe` (
   KEY `probe_set_idx` (`probe_set_id`),
   KEY `array_chip_idx` (`array_chip_id`),
   KEY `name_idx` (`name`)
-) ENGINE=MyISAM AUTO_INCREMENT=20948327 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
 @header Experiment tables
@@ -1005,7 +1010,7 @@ CREATE TABLE `experiment` (
   KEY `experimental_group_idx` (`experimental_group_id`),
   KEY `feature_type_idx` (`feature_type_id`),
   KEY `epigenome_idx` (`epigenome_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=845 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- Can probably remove now date (and primary_design_type?) as we don't support this level of meta data
 -- also have associated_design_types/experimental_design table, containing MGED/EFO ontology types?
@@ -1038,7 +1043,7 @@ CREATE TABLE `experimental_group` (
   `is_project` tinyint(1) DEFAULT '0',
   PRIMARY KEY (`experimental_group_id`),
   UNIQUE KEY `name_idx` (`name`)
-) ENGINE=MyISAM AUTO_INCREMENT=5 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 /**
@@ -1081,65 +1086,7 @@ CREATE TABLE `epigenome` (
   `tissue` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`epigenome_id`),
   UNIQUE KEY `name_idx` (`name`)
-) ENGINE=MyISAM AUTO_INCREMENT=88 DEFAULT CHARSET=latin1;
-
-
-
-/**
-@table  epigenome_lineage
-@desc   Links epigenomes to lineage terms
-@colour  #808000
-
-@column epigenome_id    @link epigenome ID
-@column lineage_id      @link lineage ID
-@column most_specific   Denotes most specific term for this epigenome
-
-@see epigenome
-@see lineage
-*/
-
-
-DROP TABLE IF EXISTS `epigenome_lineage`;
-CREATE TABLE `epigenome_lineage` (
-  `epigenome_id` int(10) unsigned NOT NULL,
-  `lineage_id` int(10) unsigned NOT NULL,
-  `most_specific` tinyint(1) DEFAULT NULL,
-  PRIMARY KEY (`epigenome_id`,`lineage_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
--- most_specific could be infered from lineage chain
--- add description?
--- most_specific here as this may be dependant on the epigenome
-
-
-/**
-@table  lineage
-@desc   Contains cell lineage information
-@colour  #808000
-
-@column lineage_id        Internal ID
-@column name              Lineage name
-@column efo_id            Experimental Factor Ontology ID
-@column parent_lineage_id Internal ID of immediate parent term
-
-*/
-
-
-DROP TABLE IF EXISTS `lineage`;
-CREATE TABLE `lineage` (
-  `lineage_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `name` varchar(100) NOT NULL,
-  `efo_id` varchar(20) DEFAULT NULL,
-  `parent_lineage_id` int(10) unsigned DEFAULT NULL,
-  PRIMARY KEY (`lineage_id`),
-  UNIQUE KEY `name_idx` (`name`),
-  UNIQUE KEY `efo_idx` (`efo_id`),
-  KEY `parent_linage_idx` (`parent_lineage_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=4 DEFAULT CHARSET=latin1;
-
--- EFO and CL ontology (and hence ensembl_ontology DB) do not handle lineage
--- very well, so model here for now.
--- If parent_lineage_id is 0, then is effectively root lineage term.
 
 
 /**
@@ -1183,7 +1130,7 @@ CREATE TABLE `status_name` (
   `tracking_only` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`status_name_id`),
   UNIQUE KEY `status_name_idx` (`name`)
-) ENGINE=MyISAM AUTO_INCREMENT=32 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 
@@ -1243,7 +1190,7 @@ CREATE TABLE `analysis` (
   `gff_feature` varchar(40) DEFAULT NULL,
   PRIMARY KEY (`analysis_id`),
   UNIQUE KEY `logic_name_idx` (`logic_name`)
-) ENGINE=MyISAM AUTO_INCREMENT=121 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 /**
@@ -1297,41 +1244,17 @@ CREATE TABLE `meta` (
   PRIMARY KEY (`meta_id`),
   UNIQUE KEY `species_key_value_idx` (`species_id`,`meta_key`,`meta_value`),
   KEY `species_value_idx` (`species_id`,`meta_value`)
-) ENGINE=MyISAM AUTO_INCREMENT=630 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 -- Add necessary meta values
 INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 
 -- Update and remove these for each release to avoid erroneous patching
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_a.sql|schema_version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_b.sql|rename cell_type table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_c.sql|new epigenome table columns');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_d.sql|add columns to experiment table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_e.sql|add/modify columns in input_subset table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_f.sql|drop replicate column from result_set table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_g.sql|update dbentry related tables');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_h.sql|Store file types along with the files.');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_i.sql|Normalise regulatory feature table: Create a non redundant version of the regulatory features.');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_j.sql|Normalise regulatory feature table: Create a linking table between regulatory features and feature sets.');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_k.sql|Normalise regulatory feature table: Link up the new non redundant regulatory features.');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_l.sql|Normalise regulatory feature table: Link up the regulatory attributes with the linking table.');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_m.sql|Normalise regulatory feature table: Clean up temporary columns and tables.');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_n.sql|Make activity an enum.');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_o.sql|Delete all MultiCell regulatory features feature set entries.');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_p.sql|Delete MultiCell feature_set and epigenome.');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_q.sql|Rename table regulatory_attribute to regulatory_evidence.');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_r.sql|Drop unused empty tables');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_s.sql|modify table_name column in result_set_input table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_t.sql|Drop table regbuild_string');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_u.sql|Remove regulatory build entries from feature_set table, relink everything else.');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_v.sql|Move meta entries regarding regulatory build to the regulatory_build table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_w.sql|Extend the name length in the input_subset table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_x.sql|Remove unused columns in the experiment table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_y.sql|Table for storing epigenomes used in the regulatory build');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_z.sql|Move segmentation entries from result_set table into the new segmentation_file table.');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_za.sql|Move entries provided by external sources from the result_set table into the new external_feature_file table.');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_84_85_zb.sql|Bugfix, the primary key was wrongly named.');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_85_86_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_85_86_b.sql|Drop tables epigenome_lineage and lineage');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_85_86_c.sql|Add production name column to feature_type table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_85_86_d.sql|Add new columns to input_subset table to accommodate paired-end data');
 
 /**
 @table meta_coord
@@ -1503,7 +1426,7 @@ CREATE TABLE `external_db` (
   `description` text,
   PRIMARY KEY (`external_db_id`),
   UNIQUE KEY `db_name_release_idx` (`db_name`,`db_release`)
-) ENGINE=MyISAM AUTO_INCREMENT=50834 DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=80;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=80;
 
 
 /**
@@ -1550,7 +1473,7 @@ CREATE TABLE `unmapped_reason` (
   `summary_description` varchar(255) DEFAULT NULL,
   `full_description` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`unmapped_reason_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=641452 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 /**
@@ -1595,7 +1518,7 @@ CREATE TABLE `xref` (
   UNIQUE KEY `id_index` (`dbprimary_acc`,`external_db_id`,`info_type`,`info_text`,`version`),
   KEY `display_index` (`display_label`),
   KEY `info_type_idx` (`info_type`)
-) ENGINE=MyISAM AUTO_INCREMENT=5503374 DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=100;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 AVG_ROW_LENGTH=100;
 
 
 
@@ -1629,7 +1552,7 @@ CREATE TABLE `object_xref` (
   UNIQUE KEY `xref_idx` (`xref_id`,`ensembl_object_type`,`ensembl_id`,`analysis_id`),
   KEY `analysis_idx` (`analysis_id`),
   KEY `ensembl_idx` (`ensembl_object_type`,`ensembl_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=197114947 DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=40;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=40;
 
 /**
 @table unmapped_object
@@ -1673,7 +1596,7 @@ CREATE TABLE `unmapped_object` (
   KEY `anal_exdb_idx` (`analysis_id`,`external_db_id`),
   KEY `id_idx` (`identifier`(50)),
   KEY `ext_db_identifier_idx` (`external_db_id`,`identifier`)
-) ENGINE=MyISAM AUTO_INCREMENT=261695127 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 /**
@@ -1714,7 +1637,7 @@ CREATE TABLE `coord_system` (
   KEY `name_version_idx` (`name`,`version`),
   KEY `coord_species_idx` (`species_id`),
   KEY `coord_system_id_idx` (`coord_system_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=2474 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- Currently does not use attrib or rank
 
@@ -1745,7 +1668,7 @@ CREATE TABLE `seq_region` (
   PRIMARY KEY (`name`,`schema_build`,`coord_system_id`),
   KEY `coord_system_id` (`coord_system_id`),
   KEY `seq_region_id_idx` (`seq_region_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=2478 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- it maybe possible to have 2 seq_regions on different levels with the same name
 -- hence schema_build denormalisation
