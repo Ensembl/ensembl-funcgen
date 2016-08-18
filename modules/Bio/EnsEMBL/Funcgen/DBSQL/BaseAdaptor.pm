@@ -1189,7 +1189,7 @@ sub stable_id_prefix{
 
 sub _constrain_states {
   my ($self, $states, $params) = @_;
-  return ("", {});
+  return ("1=1", {});
 
 #   if(! (defined $states &&
 #         (ref($states) eq 'ARRAY') &&
