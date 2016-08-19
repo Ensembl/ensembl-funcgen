@@ -101,6 +101,7 @@ sub new {
   my $self = bless {}, $class;
 
   my @field = qw(
+    db
     dbID
     name
     version
@@ -109,10 +110,10 @@ sub new {
     feature_type_id
     analysis_id
     is_current
-    epigenomes
   );
   
   my (
+    $db,
     $dbID,
     $name,
     $version,
@@ -121,10 +122,10 @@ sub new {
     $feature_type_id,
     $analysis_id,
     $is_current,
-    $epigenomes
   )
     = rearrange([ @field ], @_);
 
+  $self->db($db);
   $self->dbID($dbID);
   $self->name($name);
   $self->version($version);
@@ -133,12 +134,12 @@ sub new {
   $self->feature_type_id($feature_type_id);
   $self->analysis_id($analysis_id);
   $self->is_current($is_current);
-  $self->_epigenomes($epigenomes);
 
   return $self;
 }
 
 sub dbID                   { return shift->_generic_get_or_set('dbID',                   @_) }
+sub db                     { return shift->_generic_get_or_set('db',                     @_) }
 
 =head2 name
 
@@ -194,11 +195,33 @@ sub last_annotation_update { return shift->_generic_get_or_set('last_annotation_
 sub feature_type_id        { return shift->_generic_get_or_set('feature_type_id',        @_) }
 sub analysis_id            { return shift->_generic_get_or_set('analysis_id',            @_) }
 sub is_current             { return shift->_generic_get_or_set('is_current',             @_) }
-sub _epigenomes            { return shift->_generic_get_or_set('epigenomes',             @_) }
+# sub _epigenomes            { return shift->_generic_get_or_set('epigenomes',             @_) }
 
 sub get_all_Epigenomes {
   my $self = shift;
-  return $self->_epigenomes
+  
+  my $epigenome_ids = $self->_get_all_epigenome_ids;
+  my $epigenome_adaptor = $self->db->get_EpigenomeAdaptor;
+  my $epigenomes = $epigenome_adaptor->fetch_all_by_dbID_list($epigenome_ids);
+  return $epigenomes
+}
+
+sub _get_all_epigenome_ids {
+  my $self = shift;
+  
+  my $db = $self->db;
+  
+  my $regulatory_build_id = $self->dbID;
+  
+  my $sql = qq(select epigenome_id from regulatory_build_epigenome where regulatory_build_id = ) . $regulatory_build_id;
+  
+  my $sth = $db->prepare( $sql );
+  my $rv  = $sth->execute();
+  my $res = $sth->fetchall_arrayref;
+  
+  my @epigenome_id = map { $_->[0] } @$res;
+
+  return \@epigenome_id
 }
 
 sub _generic_get_or_set {

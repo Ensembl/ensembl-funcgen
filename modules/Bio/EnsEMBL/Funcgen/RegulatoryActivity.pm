@@ -55,9 +55,19 @@ sub db {
   return $self->{'_db'};
 }
 
-=head2 epigenome_id
+sub dbID {
+  my $self = shift;
+  my $dbID = shift;
+
+  if ($dbID) {
+    $self->{'_dbID'}  = $dbID;
+  }
+  return $self->{'_dbID'};
+}
+
+=head2 _epigenome_id
 =cut
-sub epigenome_id {
+sub _epigenome_id {
   my $self = shift;
   my $epigenome_id = shift;
 
@@ -68,8 +78,18 @@ sub epigenome_id {
 }
 
 =head2 epigenome
+
+  Deprecated
+
 =cut
 sub epigenome {
+  my $self = shift;
+  return $self->get_Epigenome;
+}
+
+=head2 get_Epigenome
+=cut
+sub get_Epigenome {
   my $self = shift;
 
   if(! defined $self->{'_epigenome'}) {
@@ -77,7 +97,7 @@ sub epigenome {
       ->db
       ->get_EpigenomeAdaptor()
       ->fetch_by_dbID(
-	$self->epigenome_id
+	$self->_epigenome_id
       );
   }
   return $self->{'_epigenome'};
@@ -107,20 +127,96 @@ sub activity {
   return $self->{'_activity'};
 }
 
+=head2 _regulatory_feature_id
+=cut
+sub _regulatory_feature_id {
+  my $self = shift;
+  my $regulatory_feature_id = shift;
+
+  if(defined $regulatory_feature_id) {
+    $self->{'_regulatory_feature_id'} = $regulatory_feature_id;
+  }
+  return $self->{'_regulatory_feature_id'};
+}
+
+=head2 get_RegulatoryFeature
+=cut
+sub get_RegulatoryFeature {
+  my $self = shift;
+
+  if (defined $self->{'_regulatory_feature'}) {
+    return $self->{'_regulatory_feature'}
+  }
+  if (defined $self->_regulatory_feature_id) {
+  
+    $self->{'_regulatory_feature'} = $self
+      ->db
+      ->get_RegulatoryFeatureAdaptor
+      ->fetch_by_dbID(
+	$self->_regulatory_feature_id
+      );
+      return $self->{'_regulatory_feature'};
+  }
+  throw("Can't get regulatory feature. No regulatory feature object has been set nor a regulatory feature id by which to fetch one.");
+}
+
+=head2 get_RegulatoryEvidenceLink
+=cut
+sub get_RegulatoryEvidenceLink {
+  my $self = shift;
+
+  if (defined $self->{'_regulatory_evidence_link'}) {
+    return $self->{'_regulatory_evidence_link'}
+  }
+
+  $self->{'_regulatory_evidence_link'} = $self
+    ->db
+    ->get_RegulatoryEvidenceLinkAdaptor
+    ->fetch_all_by_RegulatoryActivity($self);
+
+    return $self->{'_regulatory_evidence_link'};
+}
+
+=head2 get_RegulatoryEvidence
+=cut
+sub get_RegulatoryEvidence {
+  my $self = shift;
+
+  if (defined $self->{'_regulatory_evidence'}) {
+    return $self->{'_regulatory_evidence'}
+  }
+
+  my $regulatory_evidence_link = $self->get_RegulatoryEvidenceLink;
+  my @regulatory_evidence = map { $_->get_Evidence } @$regulatory_evidence_link;
+  $self->{'_regulatory_evidence'} = \@regulatory_evidence;
+  return $self->{'_regulatory_evidence'};
+}
+
+=head2 set_RegulatoryFeature
+=cut
+sub set_RegulatoryFeature {
+  my $self = shift;
+  my $regulatory_feature = shift;
+  $self->{'_regulatory_feature'}  = $regulatory_feature;
+  use Scalar::Util qw( weaken );
+  # Avoid circular reference and the memory leak that comes with it
+  weaken($self->{'_regulatory_feature'});
+  return;
+}
+
 =head2 regulatory_feature
+
+  Deprecated, use set and get methods instead.
+
 =cut
 sub regulatory_feature {
-  my $self = shift;
+  my $self               = shift;
   my $regulatory_feature = shift;
 
   if(defined $regulatory_feature) {
-    $self->{'_regulatory_feature'}  = $regulatory_feature;
-    
-    use Scalar::Util qw( weaken );
-    # Avoid circular reference and the memory leak that comes with it
-    weaken($self->{'_regulatory_feature'});
+    $self->set_RegulatoryFeature($regulatory_feature);
   }
-  return $self->{'_regulatory_feature'};
+  return $self->get_RegulatoryFeature;
 }
 
 =head2 regulatory_evidence
@@ -143,15 +239,15 @@ sub regulatory_evidence {
 
 sub SO_term {
   my $self = shift;
-  return $self->regulatory_feature->feature_type->so_accession;
+  return $self->get_RegulatoryFeature->feature_type->so_accession;
 }
 
 sub summary_as_hash {
   my $self = shift;
   
-  my $regulatory_feature = $self->regulatory_feature;
-  my $epigenome          = $self->epigenome;
-  my $feature_type       = $self->regulatory_feature->feature_type;
+  my $regulatory_feature = $self->get_RegulatoryFeature;
+  my $epigenome          = $self->get_Epigenome;
+  my $feature_type       = $regulatory_feature->feature_type;
 
   return {
     regulatory_feature_stable_id => $regulatory_feature->stable_id,

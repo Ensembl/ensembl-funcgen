@@ -409,7 +409,9 @@ sub get_available_adaptors{
                'ProbeFeature'           => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeFeatureAdaptor',
                'ProbeSet'               => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeSetAdaptor',
 
-               'RegulatoryFeature'      => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor',
+               'RegulatoryActivity'           => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryActivityAdaptor',
+               'RegulatoryEvidenceLink'       => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryEvidenceLinkAdaptor',
+               'RegulatoryFeature'            => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor',
                'LazyLoadingRegulatoryFeature' => 'Bio::EnsEMBL::Funcgen::DBSQL::LazyLoadingRegulatoryFeatureAdaptor',
                
                'ResultFeature'          => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultFeatureAdaptor',

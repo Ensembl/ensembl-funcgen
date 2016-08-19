@@ -131,8 +131,28 @@ sub new {
   return $self;
 }
 
+# deprecated, use get_Analysis
 sub analysis {
-  return shift->{analysis};
+  return shift->get_Analysis;
+}
+
+sub _analysis_id {
+  return shift->{_analysis_id};
+}
+
+sub get_Analysis {
+  my $self = shift;
+
+  if(! defined $self->{'_analysis'}) {
+    $self->{'_analysis'} = $self
+      ->adaptor
+      ->db
+      ->get_AnalysisAdaptor()
+      ->fetch_by_dbID(
+	$self->_analysis_id
+      );
+  }
+  return $self->{'_analysis'};
 }
 
 sub regulatory_build_id {
@@ -319,17 +339,29 @@ sub get_underlying_structure {
 sub regulatory_activity {
 
   my $self = shift;
-  my $linked_epigenomes = shift;
-
-  if($linked_epigenomes) {
-    $self->{_regulatory_activity} = $linked_epigenomes;
+  if(! defined $self->{'_regulatory_activity'}) {
+    $self->{'_regulatory_activity'} = $self
+      ->adaptor
+      ->db
+      ->get_RegulatoryActivityAdaptor()
+      ->fetch_all_by_RegulatoryFeature($self);
   }
-  return $self->{_regulatory_activity};
+  return $self->{'_regulatory_activity'};
 }
 
 sub get_regulatory_build {
   my $self = shift;
-  return $self->{_regulatory_build};
+
+  if(! defined $self->{'_regulatory_build'}) {
+    $self->{'_regulatory_build'} = $self
+      ->adaptor
+      ->db
+      ->get_RegulatoryBuildAdaptor()
+      ->fetch_by_dbID(
+	$self->regulatory_build_id
+      );
+  }
+  return $self->{'_regulatory_build'};
 }
 
 sub add_regulatory_activity {
