@@ -412,7 +412,6 @@ sub get_available_adaptors{
                'RegulatoryActivity'           => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryActivityAdaptor',
                'RegulatoryEvidenceLink'       => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryEvidenceLinkAdaptor',
                'RegulatoryFeature'            => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor',
-               'LazyLoadingRegulatoryFeature' => 'Bio::EnsEMBL::Funcgen::DBSQL::LazyLoadingRegulatoryFeatureAdaptor',
                
                'ResultFeature'          => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultFeatureAdaptor',
                'ResultSet'              => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor',
