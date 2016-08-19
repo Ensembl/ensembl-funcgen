@@ -76,6 +76,7 @@ CREATE TABLE `regulatory_feature` (
   `bound_end_length` mediumint(3) unsigned NOT NULL,
   `epigenome_count` smallint(6) DEFAULT NULL,
   `regulatory_build_id` int(10) unsigned DEFAULT NULL,
+  `production_name` VARCHAR(120) DEFAULT NULL;
   PRIMARY KEY (`regulatory_feature_id`),
 
   -- The name "uniqueness_constraint_idx" is used in the
