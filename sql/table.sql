@@ -486,6 +486,7 @@ CREATE TABLE `probe_feature` (
 @column description       Text description
 @column so_accession      Sequence ontology accession
 @column so_name           Sequence ontology name
+@column production_name   Name used in production
 
 @see analysis
 */
