@@ -827,8 +827,8 @@ CREATE TABLE `input_subset` (
   `experiment_id` int(10) unsigned NOT NULL,
   `feature_type_id` int(10) unsigned NOT NULL,
   `name` varchar(300) NOT NULL,
-  `biological_replicate` tinyint(3) unsigned NOT NULL DEFAULT '0',
-  `technical_replicate` tinyint(3) unsigned NOT NULL DEFAULT '0',
+  `biological_replicate` tinyint(3) unsigned NOT NULL DEFAULT '1',
+  `technical_replicate` tinyint(3) unsigned NOT NULL DEFAULT '1',
   `is_control` tinyint(3) unsigned NOT NULL,
   `analysis_id` smallint(5) unsigned NOT NULL,
   `read_length` int(10) DEFAULT NULL,
@@ -1128,7 +1128,6 @@ DROP TABLE IF EXISTS `status_name`;
 CREATE TABLE `status_name` (
   `status_name_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(60) DEFAULT NULL,
-  `tracking_only` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`status_name_id`),
   UNIQUE KEY `status_name_idx` (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
