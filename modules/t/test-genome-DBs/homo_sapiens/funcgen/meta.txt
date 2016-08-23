@@ -1,4 +1,4 @@
-534	\N	schema_version	85
+534	\N	schema_version	86
 156	1	species.production_name	homo_sapiens
 223	\N	schema_type	funcgen
 589	\N	patch	patch_78_79_a.sql|schema_version
@@ -45,3 +45,8 @@
 635	\N	patch	patch_84_85_z.sql|Move segmentation entries from result_set table into the new segmentation_file table.
 636	\N	patch	patch_84_85_za.sql|Move entries provided by external sources from the result_set table into the new external_feature_file table.
 637	\N	patch	patch_84_85_zb.sql|Bugfix, the primary key was wrongly named.
+638	\N	patch	patch_85_86_a.sql|schema_version
+639	\N	patch	patch_85_86_b.sql|Drop tables epigenome_lineage and lineage
+640	\N	patch	patch_85_86_c.sql|Add production name column to feature_type table
+641	\N	patch	patch_85_86_d.sql|Add new columns to input_subset table to accommodate paired-end data
+642	\N	patch	patch_85_86_e.sql|Add QC tables
