@@ -48,6 +48,9 @@ A year after deprecation (4 Ensembl releases), the method is removed from the AP
  - Bio::Ensembl::Funcgen::DBSQL::**ResultFeatureAdaptor**
  - Bio::Ensembl::Funcgen::Collector::**ResultFeature**
 
+### Removed in Ensembl Release 86 ###
+ - Bio::Ensembl::Funcgen::**ResultSet**::* - Bio::Ensembl::Funcgen::**ResultSet**::*get_ResultFeatures_by_Slice*
+
 ### Removed in Ensembl Release 85 ###
  - Bio::Ensembl::Funcgen::**Experiment**::*date()*
  - Bio::Ensembl::Funcgen::**ResultSet**::*get_replicate_set_by_chip_channel_id()*
