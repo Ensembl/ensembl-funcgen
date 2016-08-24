@@ -623,6 +623,22 @@ CREATE TABLE `feature_set` (
   KEY `epigenome_idx` (`epigenome_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+/**
+@table  feature_set_qc_prop_reads_in_peaks
+@desc
+@colour  #66CCFF
+
+@column feature_set_qc_prop_reads_in_peaks_id  Internal ID
+@column analysis_id                            @link analysis ID
+@column feature_set_id                         @link feature set ID
+@column prop_reads_in_peaks                    Proportion of reads in peaks
+@column total_reads                            Total number of reads
+@column path
+@column bam_file
+
+@see analysis
+@see feature_set
+*/
 
 DROP TABLE IF EXISTS `feature_set_qc_prop_reads_in_peaks`;
 CREATE TABLE `feature_set_qc_prop_reads_in_peaks` (
@@ -679,6 +695,29 @@ CREATE TABLE `result_set` (
   KEY `epigenome_idx` (`epigenome_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+/**
+@table  result_set_qc_chance
+@desc
+@colour  #66CCFF
+
+@column result_set_qc_chance                                             Internal ID
+@column signal_result_set_id
+@column analysis_id                                                      @link analysis ID
+@column p
+@column q
+@column divergence
+@column z_score
+@column percent_genome_enriched
+@column input_scaling_factor
+@column differential_percentage_enrichment
+@column control_enrichment_stronger_than_chip_at_bin
+@column first_nonzero_bin_at
+@column pcr_amplification_bias_in_Input_coverage_of_1_percent_of_genome
+@column path
+
+@see analysis
+*/
+
 DROP TABLE IF EXISTS `result_set_qc_chance`;
 CREATE TABLE `result_set_qc_chance` (
   `result_set_qc_chance_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -698,7 +737,23 @@ CREATE TABLE `result_set_qc_chance` (
   PRIMARY KEY (`result_set_qc_chance_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+/**
+@table  result_set_qc_flagstats
+@desc
+@colour  #66CCFF
 
+@column result_set_qc_id  Internal ID
+@column result_set_id     @link result set ID
+@column analysis_id       @link analysis ID
+@column category
+@column qc_passed_reads
+@column qc_failed_reads
+@column path
+@column bam_file
+
+@see result_set
+@see analysis
+*/
 
 DROP TABLE IF EXISTS `result_set_qc_flagstats`;
 CREATE TABLE `result_set_qc_flagstats` (
@@ -714,8 +769,34 @@ CREATE TABLE `result_set_qc_flagstats` (
   UNIQUE KEY `name_exp_idx` (`result_set_qc_id`,`category`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+/**
+@table  result_set_qc_phantom_peak
+@desc
+@colour  #66CCFF
 
+@column result_set_qc_phantom_peak_id  Internal ID
+@column analysis_id                    @link analysis ID
+@column result_set_id                  @link result set ID
+@column filename
+@column numReads
+@column estFragLen
+@column estFragLen2
+@column estFragLen3
+@column corr_estFragLen
+@column corr_estFragLen2
+@column corr_estFragLen3
+@column phantomPeak
+@column corr_phantomPeak
+@column argmin_corr
+@column min_corr
+@column NSC
+@column RSC
+@column QualityTag
+@column path
 
+@see analysis
+@see result_set
+*/
 
 DROP TABLE IF EXISTS `result_set_qc_phantom_peak`;
 CREATE TABLE `result_set_qc_phantom_peak` (
