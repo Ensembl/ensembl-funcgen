@@ -6,9 +6,13 @@ use base ('Bio::EnsEMBL::Hive::Process');
 
 sub run {
   my $self = shift;
-  my $db_conn  = $self->param('regulation_database');
+#   my $db_conn  = $self->param('regulation_database');
   my $temp_dir = $self->param('temp_dir');
-  
+  my $species  = $self->param('species');
+
+
+  my $annotated_feature_adaptor = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Funcgen', 'AnnotatedFeature' );
+
 #   use Data::Dumper;
 #   print Dumper($self->data_dbc);
   use File::Path qw(make_path remove_tree);
@@ -17,7 +21,10 @@ sub run {
   my $batch_size = 10000;
   my $sql = 'select floor(annotated_feature_id / ?) as batch_number, min(annotated_feature_id) as min_id, max(annotated_feature_id) as max_id from annotated_feature group by batch_number order by batch_number asc';
   
-  my $dbc = $self->data_dbc;
+#   my $dbc = $self->data_dbc;
+  my $funcgen_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor( $species, 'Funcgen' );
+  my $dbc = $funcgen_adaptor->dbc;
+  
   my $sth = $dbc->prepare($sql);
   $sth->bind_param(1, $batch_size);
   $sth->execute();

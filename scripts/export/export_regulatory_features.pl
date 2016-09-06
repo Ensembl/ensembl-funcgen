@@ -6,42 +6,32 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Hive::DBSQL::DBConnection;
 use Getopt::Long;
 
-my $epigenome_name;
-my $regulation_database_url;
+my $registry;
+my $species;
 my $ontology_database_url;
 my $ftp_base_dir;
+my $epigenome_name;
 
 GetOptions (
-   'epigenome_name=s'          => \$epigenome_name,
-   'regulation_database_url=s' => \$regulation_database_url,
-   'ontology_database_url=s'   => \$ontology_database_url,
+   'registry=s'                => \$registry,
+   'species=s'                 => \$species,
    'ftp_base_dir=s'            => \$ftp_base_dir,
+   'epigenome_name=s'          => \$epigenome_name,
 );
 
-my $ontology_dbc   = Bio::EnsEMBL::Hive::DBSQL::DBConnection->new(-url => $ontology_database_url);
-my $regulation_dbc = Bio::EnsEMBL::Hive::DBSQL::DBConnection->new(-url => $regulation_database_url);
+Bio::EnsEMBL::Registry->load_all($registry);
+my $ontology_term_adaptor = Bio::EnsEMBL::Registry->get_adaptor( 'Multi', 'Ontology', 'OntologyTerm' );
 
-use Bio::EnsEMBL::Utils::Logger;
-my $logger = Bio::EnsEMBL::Utils::Logger->new();
+my $epigenome_adaptor = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Funcgen', 'Epigenome' );
 
-use Bio::EnsEMBL::DBSQL::OntologyTermAdaptor;
-my $ontology_term_adaptor = Bio::EnsEMBL::DBSQL::OntologyTermAdaptor->new(
-  Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-    -dbconn  => $ontology_dbc,
-  )
-);
-
-my $funcgen_db_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-    -dbconn  => $regulation_dbc,
-);
-
-my $epigenome_adaptor = $funcgen_db_adaptor->get_EpigenomeAdaptor;
 my $epigenome = $epigenome_adaptor->fetch_by_name($epigenome_name);
 
 if (! defined $epigenome) {
   die("Can't find epigenome with name " . $epigenome_name);
 }
 
+use Bio::EnsEMBL::Utils::Logger;
+my $logger = Bio::EnsEMBL::Utils::Logger->new();
 $logger->info("Exporting regulatory features for " . $epigenome->display_label ."\n");
 
 my $output_file = File::Spec->catfile(
@@ -50,8 +40,11 @@ my $output_file = File::Spec->catfile(
 );
 $logger->info("The features will be written to " . $output_file ."\n");
 
+my $regulatory_feature_adaptor = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Funcgen', 'RegulatoryFeature' );
+my $funcgen_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor( $species, 'Funcgen' );
+
 my $helper = Bio::EnsEMBL::Utils::SqlHelper->new(
-  -DB_CONNECTION => $regulation_dbc
+  -DB_CONNECTION => $funcgen_adaptor->dbc
 );
 
 my $number_of_regulatory_features = $helper->execute_simple(
@@ -80,8 +73,6 @@ my $serializer = Bio::EnsEMBL::Utils::IO::GFFSerializer->new(
   $ontology_term_adaptor,
   $output_fh
 );
-
-my $regulatory_feature_adaptor = $funcgen_db_adaptor->get_RegulatoryFeatureAdaptor;
 
 my $progressbar_id = $logger->init_progress($number_of_regulatory_features, 100);
 my $i=0;

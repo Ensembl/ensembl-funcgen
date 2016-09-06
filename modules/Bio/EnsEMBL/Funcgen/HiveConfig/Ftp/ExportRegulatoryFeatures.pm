@@ -3,69 +3,68 @@ package Bio::EnsEMBL::Funcgen::HiveConfig::Ftp::ExportRegulatoryFeatures;
 use strict;
 use warnings;
 use base 'Bio::EnsEMBL::Hive::PipeConfig::EnsemblGeneric_conf';
-
-sub default_options {
-    my ($self) = @_;
-    return {
-        %{ $self->SUPER::default_options() },
-	
-	ontology_database => {
-	  -species => 'multi',
-	  -group   => 'ontology',
-	  -host    => 'ens-staging2',
-	  -user    => 'ensro',
-	  -pass    => undef,
-	  -driver  => 'mysql',
-	  -port    => 3306,
-	  -dbname  => 'ensembl_ontology_85',
-	  -db_version => $self->o('ensembl_release')
-	},
-	regulation_database => {
-	  -species => 'mus_musculus',
-	  -group   => 'funcgen',
-	  -host    => 'ens-staging2',
-	  -user    => 'ensro',
-	  -pass    => undef,
-	  -driver  => 'mysql',
-	  -port    => 3306,
-	  -dbname  => 'mus_musculus_funcgen_85_38',
-	  -db_version => $self->o('ensembl_release')
-	},
-    };
-}
+use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 
 sub pipeline_wide_parameters {
     my ($self) = @_;
     return {
       %{$self->SUPER::pipeline_wide_parameters},
 
-      regulation_database => $self->o('regulation_database'),
-      ontology_database   => $self->o('ontology_database'),
-
-      regulation_database_url => $self->dbconn_2_url('regulation_database'),
-      ontology_database_url   => $self->dbconn_2_url('ontology_database'),
-
-      ftp_base_dir  => '/lustre/scratch109/ensembl/funcgen/mn1/ersa/mn1_dev3_homo_sapiens_funcgen_85_38/output/mn1_dev3_homo_sapiens_funcgen_85_38/ftp_site/mus_musculus',
+      ftp_base_dir  => $self->o('ftp_base_dir'),
+      reg_conf      => $self->o('reg_conf'),
     };
+}
+
+sub beekeeper_extra_cmdline_options {
+    my ($self) = @_;
+    return '-reg_conf ' . $self->o('reg_conf') . ' -keep_alive -can_respecialize 1';
 }
 
 sub pipeline_analyses {
     my $self = shift;
 
     return [
+        {   -logic_name  => 'split_species_string',
+            -module      => 'Bio::EnsEMBL::Funcgen::Hive::Ftp::SplitString',
+            -parameters  => { 
+	      string         => '#species_list#',
+	      separator      => ',',
+	      list_item_name => 'species'
+            },
+            -input_ids   => [{
+	      species_list => $self->o('species_list')
+            }
+            ],
+            -flow_into   => {
+               2 => [ 
+		'dbconn_for_species', 
+		'export_motif_features' 
+               ],
+            },
+        },
+        {   -logic_name  => 'dbconn_for_species',
+            -module      => 'Bio::EnsEMBL::Funcgen::Hive::Ftp::DbconnForSpecies',
+            -parameters  => { 
+	      group => 'funcgen'
+            },
+            -flow_into   => {
+               2 => 'job_factory_regulatory_features',
+            },
+        },
         {   -logic_name  => 'job_factory_regulatory_features',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
-            -parameters  => { db_conn => '#regulation_database#' },
-            -input_ids   => [ {inputquery => 'select name as epigenome_name from epigenome' } ],
+            -parameters  => { 
+	      db_conn    => '#url#',
+	      inputquery => 'select name as epigenome_name from epigenome',
+            },
             -flow_into   => {
-               2 => 'export_regulatory_features',
+               2 => { 'export_regulatory_features', INPUT_PLUS() },
             },
         },
         {   -logic_name  => 'export_motif_features',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -input_ids   => [ {} ],
             -parameters  => {
-                cmd => 'export_motif_features.pl --ftp_base_dir #ftp_base_dir# --regulation_database_url #regulation_database_url# --ontology_database_url #ontology_database_url#',
+                cmd => 'export_motif_features.pl --ftp_base_dir #ftp_base_dir#/#species# --registry #reg_conf# --species #species#',
 
             },
         },
@@ -73,7 +72,7 @@ sub pipeline_analyses {
 	    -analysis_capacity => 20,
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'export_regulatory_features.pl --epigenome_name "#epigenome_name#" --ftp_base_dir #ftp_base_dir# --regulation_database_url #regulation_database_url# --ontology_database_url #ontology_database_url#',
+                cmd => 'export_regulatory_features.pl --epigenome_name "#epigenome_name#" --ftp_base_dir #ftp_base_dir#/#species# --registry #reg_conf# --species #species#',
             },
         },
     ]

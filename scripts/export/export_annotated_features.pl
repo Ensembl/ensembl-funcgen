@@ -7,37 +7,24 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Hive::DBSQL::DBConnection;
 use Getopt::Long;
 
-my $regulation_database_url;
-my $ontology_database_url;
+my $registry;
+my $species;
 my $output_file;
 my $min_id;
 my $max_id;
 
 GetOptions (
-   'regulation_database_url=s' => \$regulation_database_url,
-   'ontology_database_url=s'   => \$ontology_database_url,
+   'registry=s'                => \$registry,
+   'species=s'                 => \$species,
    'output_file=s'             => \$output_file,
    'min_id=s'                  => \$min_id,
    'max_id=s'                  => \$max_id,
 );
 
-my $ontology_dbc   = Bio::EnsEMBL::Hive::DBSQL::DBConnection->new(-url => $ontology_database_url);
-my $regulation_dbc = Bio::EnsEMBL::Hive::DBSQL::DBConnection->new(-url => $regulation_database_url);
+Bio::EnsEMBL::Registry->load_all($registry);
 
 use Bio::EnsEMBL::Utils::Logger;
 my $logger = Bio::EnsEMBL::Utils::Logger->new();
-
-use Bio::EnsEMBL::DBSQL::OntologyTermAdaptor;
-my $ontology_term_adaptor = Bio::EnsEMBL::DBSQL::OntologyTermAdaptor->new(
-  Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-    -dbconn  => $ontology_dbc,
-  )
-);
-
-my $funcgen_db_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-    -dbconn  => $regulation_dbc,
-);
-
 $logger->info("The features will be written to " . $output_file ."\n");
 
 use File::Basename;
@@ -49,14 +36,19 @@ make_path($ftp_dir);
 use IO::File;
 my $output_fh = IO::File->new(">$output_file");
 
+my $ontology_term_adaptor = Bio::EnsEMBL::Registry->get_adaptor( 'Multi', 'Ontology', 'OntologyTerm' );
+
 use Bio::EnsEMBL::Utils::IO::GFFSerializer;
 my $serializer = Bio::EnsEMBL::Utils::IO::GFFSerializer->new(
   $ontology_term_adaptor,
   $output_fh
 );
 
+my $annotated_feature_adaptor = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Funcgen', 'AnnotatedFeature' );
+my $funcgen_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor( $species, 'Funcgen' );
+
 my $helper = Bio::EnsEMBL::Utils::SqlHelper->new(
-  -DB_CONNECTION => $regulation_dbc
+  -DB_CONNECTION => $funcgen_adaptor->dbc
 );
 
 my $batch_constraint = qq(annotated_feature_id<=$max_id and annotated_feature_id>=$min_id);
@@ -67,7 +59,6 @@ my $number_of_annotated_features = $helper->execute_simple(
 
 $logger->info("About to export " . $number_of_annotated_features ." annotated features\n");
 
-my $annotated_feature_adaptor = $funcgen_db_adaptor->get_AnnotatedFeatureAdaptor;
 my $progressbar_id = $logger->init_progress($number_of_annotated_features, 100);
 my $i=0;
 

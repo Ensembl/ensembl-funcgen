@@ -7,32 +7,22 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Hive::DBSQL::DBConnection;
 use Getopt::Long;
 
-my $regulation_database_url;
-my $ontology_database_url;
+my $registry;
+my $species;
 my $ftp_base_dir;
 
 GetOptions (
-   'regulation_database_url=s' => \$regulation_database_url,
-   'ontology_database_url=s'   => \$ontology_database_url,
+   'registry=s'                => \$registry,
+   'species=s'                 => \$species,
    'ftp_base_dir=s'            => \$ftp_base_dir,
 );
 
-my $ontology_dbc   = Bio::EnsEMBL::Hive::DBSQL::DBConnection->new(-url => $ontology_database_url);
-my $regulation_dbc = Bio::EnsEMBL::Hive::DBSQL::DBConnection->new(-url => $regulation_database_url);
+Bio::EnsEMBL::Registry->load_all($registry);
 
 use Bio::EnsEMBL::Utils::Logger;
 my $logger = Bio::EnsEMBL::Utils::Logger->new();
 
-use Bio::EnsEMBL::DBSQL::OntologyTermAdaptor;
-my $ontology_term_adaptor = Bio::EnsEMBL::DBSQL::OntologyTermAdaptor->new(
-  Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-    -dbconn  => $ontology_dbc,
-  )
-);
-
-my $funcgen_db_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-    -dbconn  => $regulation_dbc,
-);
+my $ontology_term_adaptor = Bio::EnsEMBL::Registry->get_adaptor( 'Multi', 'Ontology', 'OntologyTerm' );
 
 my $output_file = File::Spec->catfile(
   $ftp_base_dir, 'MotifFeatures.gff'
@@ -54,17 +44,19 @@ my $serializer = Bio::EnsEMBL::Utils::IO::GFFSerializer->new(
   $output_fh
 );
 
+my $motif_feature_adaptor = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Funcgen', 'MotifFeature' );
+my $funcgen_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor( $species, 'Funcgen' );
+
 my $helper = Bio::EnsEMBL::Utils::SqlHelper->new(
-  -DB_CONNECTION => $regulation_dbc
+  -DB_CONNECTION => $funcgen_adaptor->dbc
 );
 
 my $number_of_motif_features = $helper->execute_simple(
   -SQL      => 'select count(motif_feature_id) from motif_feature',
 )->[0];
 
-$logger->info("There are " . $number_of_motif_features ." annotated features\n");
+$logger->info("There are " . $number_of_motif_features ." motif features\n");
 
-my $motif_feature_adaptor = $funcgen_db_adaptor->get_MotifFeatureAdaptor;
 my $progressbar_id = $logger->init_progress($number_of_motif_features, 100);
 my $i=0;
 
