@@ -177,6 +177,26 @@ sub get_RegulatoryEvidenceLink {
     return $self->{'_regulatory_evidence_link'};
 }
 
+=head2 get_RegulatoryEvidence_by_type
+=cut
+sub get_RegulatoryEvidence_by_type {
+  my $self = shift;
+  
+  # 'motif' or 'annotated'
+  my $type = shift;
+  
+  my $all_regulatory_evidence = $self->get_RegulatoryEvidence;
+  my @evidence_by_type;
+  
+  if ($type eq 'motif') {
+    @evidence_by_type = grep { $_->isa('Bio::EnsEMBL::Funcgen::MotifFeature')  } @$all_regulatory_evidence;
+  }
+  if ($type eq 'annotated') {
+    @evidence_by_type = grep { $_->isa('Bio::EnsEMBL::Funcgen::AnnotatedFeature')  } @$all_regulatory_evidence;
+  }
+  return \@evidence_by_type;
+}
+
 =head2 get_RegulatoryEvidence
 =cut
 sub get_RegulatoryEvidence {
@@ -219,23 +239,23 @@ sub regulatory_feature {
   return $self->get_RegulatoryFeature;
 }
 
-=head2 regulatory_evidence
-=cut
-sub regulatory_evidence {
-  my $self = shift;
-  my $regulatory_evidence = shift;
-
-  if ($regulatory_evidence) {
-    $self->{'_regulatory_evidence'} = $regulatory_evidence;
-  }
-  if (! $self->{'_regulatory_evidence'}) {
-    use Bio::EnsEMBL::Funcgen::RegulatoryEvidence;
-    my $regulatory_evidence = Bio::EnsEMBL::Funcgen::RegulatoryEvidence->new;
-    $regulatory_evidence->db($self->db);
-    $self->{'_regulatory_evidence'} = $regulatory_evidence;
-  }
-  return $self->{'_regulatory_evidence'};
-}
+# =head2 regulatory_evidence
+# =cut
+# sub regulatory_evidence {
+#   my $self = shift;
+#   my $regulatory_evidence = shift;
+# 
+#   if ($regulatory_evidence) {
+#     $self->{'_regulatory_evidence'} = $regulatory_evidence;
+#   }
+#   if (! $self->{'_regulatory_evidence'}) {
+#     use Bio::EnsEMBL::Funcgen::RegulatoryEvidence;
+#     my $regulatory_evidence = Bio::EnsEMBL::Funcgen::RegulatoryEvidence->new;
+#     $regulatory_evidence->db($self->db);
+#     $self->{'_regulatory_evidence'} = $regulatory_evidence;
+#   }
+#   return $self->{'_regulatory_evidence'};
+# }
 
 sub SO_term {
   my $self = shift;
