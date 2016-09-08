@@ -10,7 +10,7 @@ sub run {
   my $temp_dir = $self->param('temp_dir');
   my $species  = $self->param('species');
 
-
+  use Bio::EnsEMBL::Registry;
   my $annotated_feature_adaptor = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Funcgen', 'AnnotatedFeature' );
 
 #   use Data::Dumper;
@@ -39,6 +39,7 @@ sub run {
     
     my @directory_components = $temp_dir;
     push @directory_components, reverse split '', $batch_number;
+    push @directory_components, $species;
     
     my $min_id = $current_batch->{min_id};
     my $max_id = $current_batch->{max_id};

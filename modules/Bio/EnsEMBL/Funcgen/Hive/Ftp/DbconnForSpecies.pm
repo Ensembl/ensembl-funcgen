@@ -13,12 +13,9 @@ sub run {
   my $adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor( $species, $group );  
   my $dbc = Bio::EnsEMBL::Hive::DBSQL::DBConnection->new(-dbconn => $adaptor->dbc);
   
-  use Bio::EnsEMBL::Hive::Utils qw( destringify );
-  my $input_job = $self->input_job;
-  my $input_id = destringify($input_job->input_id);
-  $input_id->{url} = $dbc->url;
-  
-  $self->dataflow_output_id($input_id, 2);
+  $self->dataflow_output_id({
+    url => $dbc->url
+  }, 2);
 }
 
 1;

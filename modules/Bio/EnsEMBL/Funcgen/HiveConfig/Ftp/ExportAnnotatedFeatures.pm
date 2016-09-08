@@ -12,7 +12,7 @@ sub pipeline_wide_parameters {
 
       ftp_base_dir  => $self->o('ftp_base_dir'),
       reg_conf      => $self->o('reg_conf'),
-      temp_dir      => '#ftp_base_dir#/tempdir/annotated_features',
+      temp_dir      => '#ftp_base_dir#/#species#/tempdir/annotated_features',
     };
 }
 
@@ -25,38 +25,17 @@ sub pipeline_analyses {
     my $self = shift;
 
     return [
-        {   -logic_name  => 'split_species_string',
-            -module      => 'Bio::EnsEMBL::Funcgen::Hive::Ftp::SplitString',
-            -parameters  => { 
-	      string         => '#species_list#',
-	      separator      => ',',
-	      list_item_name => 'species'
-            },
-            -input_ids   => [{
-	      species_list => $self->o('species_list')
-            }
-            ],
+        {   -logic_name  => 'start_export',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
-               2 => [ 
-		'dbconn_for_species', 
-		'export_motif_features' 
-               ],
-            },
-        },
-        {   -logic_name  => 'dbconn_for_species',
-            -module      => 'Bio::EnsEMBL::Funcgen::Hive::Ftp::DbconnForSpecies',
-            -parameters  => { 
-	      group => 'funcgen'
-            },
-            -flow_into   => {
-               2 => { 'job_factory_annotated_features', INPUT_PLUS() },
+               'MAIN' => 'job_factory_annotated_features'
             },
         },
         {   -logic_name  => 'job_factory_annotated_features',
             -module      => 'Bio::EnsEMBL::Funcgen::Hive::Ftp::JobFactoryAnnotatedFeatures',
             -flow_into   => {
-               '2->A' => 'export_annotated_features',
-               'A->1' => 'merge_annotated_features',
+               '2->A' => { 'export_annotated_features' => INPUT_PLUS() },
+               'A->1' => { 'merge_annotated_features'  => INPUT_PLUS() }
             },
         },
         {   -logic_name  => 'export_annotated_features',
@@ -64,7 +43,7 @@ sub pipeline_analyses {
             -analysis_capacity => 10,
             -batch_size => 50,
             -parameters  => {
-                cmd => 'export_annotated_features.pl --output_file #directory#/#species#/#file# --registry #reg_conf# --species #species# --min_id #min_id# --max_id #max_id#',
+                cmd => 'export_annotated_features.pl --output_file #directory#/#file# --registry #reg_conf# --species #species# --min_id #min_id# --max_id #max_id#',
             },
         },
         {   -logic_name  => 'merge_annotated_features',
@@ -88,7 +67,7 @@ sub pipeline_analyses {
         {   -logic_name  => 'mv_annotated_features_to_ftp',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'mv #merged_gff#.gz #ftp_base_dir#',
+                cmd => 'mv #merged_gff#.gz #ftp_base_dir#/#species#',
             },
             -flow_into   => {
                MAIN => 'rm_annotated_features_temp_dir',

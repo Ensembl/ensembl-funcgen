@@ -24,22 +24,10 @@ sub pipeline_analyses {
     my $self = shift;
 
     return [
-        {   -logic_name  => 'split_species_string',
-            -module      => 'Bio::EnsEMBL::Funcgen::Hive::Ftp::SplitString',
-            -parameters  => { 
-	      string         => '#species_list#',
-	      separator      => ',',
-	      list_item_name => 'species'
-            },
-            -input_ids   => [{
-	      species_list => $self->o('species_list')
-            }
-            ],
+        {   -logic_name  => 'start_export',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
-               2 => [ 
-		'dbconn_for_species', 
-		'export_motif_features' 
-               ],
+               'MAIN' => [ 'dbconn_for_species', 'export_regulatory_features' ]
             },
         },
         {   -logic_name  => 'dbconn_for_species',
@@ -48,31 +36,31 @@ sub pipeline_analyses {
 	      group => 'funcgen'
             },
             -flow_into   => {
-               2 => 'job_factory_regulatory_features',
+               2 => { 'job_factory_regulatory_activities', INPUT_PLUS() },
             },
         },
-        {   -logic_name  => 'job_factory_regulatory_features',
+        {   -logic_name  => 'job_factory_regulatory_activities',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
             -parameters  => { 
 	      db_conn    => '#url#',
-	      inputquery => 'select name as epigenome_name from epigenome',
+	      inputquery => 'select epigenome.name as epigenome_name from regulatory_build join regulatory_build_epigenome using (regulatory_build_id) join epigenome using (epigenome_id) where regulatory_build.is_current=1',
             },
             -flow_into   => {
-               2 => { 'export_regulatory_features', INPUT_PLUS() },
+               2 => { 'export_regulatory_activities', INPUT_PLUS() },
             },
         },
-        {   -logic_name  => 'export_motif_features',
+        {   -logic_name  => 'export_regulatory_activities',
+	    -analysis_capacity => 20,
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'export_motif_features.pl --ftp_base_dir #ftp_base_dir#/#species# --registry #reg_conf# --species #species#',
-
+                cmd => 'export_regulatory_features.pl --epigenome_name "#epigenome_name#" --output_dir #ftp_base_dir#/#species#/RegulatoryFeatureActivity --registry #reg_conf# --species #species#',
             },
         },
         {   -logic_name  => 'export_regulatory_features',
 	    -analysis_capacity => 20,
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'export_regulatory_features.pl --epigenome_name "#epigenome_name#" --ftp_base_dir #ftp_base_dir#/#species# --registry #reg_conf# --species #species#',
+                cmd => 'export_regulatory_features.pl --only_summary --output_dir #ftp_base_dir#/#species# --registry #reg_conf# --species #species#',
             },
         },
     ]
