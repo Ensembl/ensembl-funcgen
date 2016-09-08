@@ -422,13 +422,11 @@ sub fetch_feature_set_filter_counts{
   my $self = shift;
 
    my $sql = 'SELECT count(*), eg.name, eg.description, eg.is_project, ft.class, epi.name, epi.description '.
-    'FROM experimental_group eg, experiment e, feature_set fs, feature_type ft, epigenome epi, '.
-      'status s, status_name sn '.
+    'FROM experimental_group eg, experiment e, feature_set fs, feature_type ft, epigenome epi '.
         'WHERE fs.experiment_id=e.experiment_id '.
           'AND e.experimental_group_id=eg.experimental_group_id '.
           'AND fs.feature_type_id=ft.feature_type_id AND fs.epigenome_id=epi.epigenome_id '.
-            'AND fs.feature_set_id=s.table_id AND fs.type="annotated" AND s.table_name="feature_set" '.
-              'AND s.status_name_id=sn.status_name_id and sn.name="DISPLAYABLE" '.
+            'AND fs.type="annotated" '.
                 'GROUP BY eg.name, eg.is_project, ft.class, epi.name';
 
   #warn $sql;
