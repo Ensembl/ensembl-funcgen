@@ -429,7 +429,7 @@ sub get_epigenomes_by_activity {
     
     $_ 
   } map { 
-    $_->epigenome_id 
+    $_->_epigenome_id 
   } grep { 
     $_->activity eq $activity 
   } @{$self->regulatory_activity};
