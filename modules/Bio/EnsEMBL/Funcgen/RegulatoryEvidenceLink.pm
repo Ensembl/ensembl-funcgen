@@ -112,4 +112,31 @@ sub get_Evidence {
   throw("Unknown evidence type: " . $self->evidence_type);
 }
 
+sub get_Evidence_on_Slice {
+  my $self  = shift;
+  my $slice = shift;
+
+  if($self->evidence_type eq 'motif') {
+    return $self
+      ->db
+      ->get_MotifFeatureAdaptor
+      ->fetch_all_by_Slice_constraint(
+	$slice,
+	'motif_feature_id=' . $self->_attribute_feature_id
+	# The constraint is an id, so this will return an array with one
+	# element. Dereferencing here, so this returns the object only.
+      )->[0];
+  }
+  if($self->evidence_type eq 'annotated') {
+    return $self
+      ->db
+      ->get_AnnotatedFeatureAdaptor
+      ->fetch_all_by_Slice_constraint(
+	$slice,
+	'annotated_feature_id=' . $self->_attribute_feature_id
+      )->[0];
+  }
+  throw("Unknown evidence type: " . $self->evidence_type);
+}
+
 1;

@@ -215,7 +215,7 @@ sub _get_all_epigenome_ids {
   
   my $sql = qq(select epigenome_id from regulatory_build_epigenome where regulatory_build_id = ) . $regulatory_build_id;
   
-  my $sth = $db->prepare( $sql );
+  my $sth = $db->dbc->prepare( $sql );
   my $rv  = $sth->execute();
   my $res = $sth->fetchall_arrayref;
   

@@ -287,6 +287,7 @@ sub _get_underlying_structure_motifs_by_epigenome {
 
   my $regulatory_activity = $self->regulatory_activity_for_epigenome($epigenome);
   my $motif_evidence = $regulatory_activity->get_RegulatoryEvidence_by_type('motif');
+  
   return $motif_evidence;
 }
 
@@ -295,7 +296,6 @@ sub _get_underlying_structure_motifs_by_epigenome_list {
   my $epigenome_list = shift;
   
   my @all_motifs;
-  my %seen_motif_coordinates;
   
   foreach my $current_epigenome (@$epigenome_list) {
     my $motif_evidence = $self->_get_underlying_structure_motifs_by_epigenome($current_epigenome);
@@ -346,8 +346,9 @@ sub get_underlying_structure {
     my $epigenome_list = $regulatory_build->get_all_Epigenomes;
     $motif_evidence = $self->_get_underlying_structure_motifs_by_epigenome_list($epigenome_list);
   }
-
+  
   foreach my $current_motif_evidence (@$motif_evidence) {
+
     push @$epigenome_specific_underlying_structure, (
       0 + $current_motif_evidence->start, 
       0 + $current_motif_evidence->end

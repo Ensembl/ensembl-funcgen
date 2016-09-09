@@ -187,7 +187,7 @@ sub get_RegulatoryEvidence_by_type {
   
   my $all_regulatory_evidence = $self->get_RegulatoryEvidence;
   my @evidence_by_type;
-  
+
   if ($type eq 'motif') {
     @evidence_by_type = grep { $_->isa('Bio::EnsEMBL::Funcgen::MotifFeature')  } @$all_regulatory_evidence;
   }
@@ -206,8 +206,21 @@ sub get_RegulatoryEvidence {
     return $self->{'_regulatory_evidence'}
   }
 
+  my $regulatory_feature = $self->get_RegulatoryFeature;
+  my $regulatory_feature_slice = $self->db->get_SliceAdaptor->fetch_by_region(
+    undef,
+    $regulatory_feature->slice->seq_region_name,
+    $regulatory_feature->start,
+    $regulatory_feature->end,
+  );
+
   my $regulatory_evidence_link = $self->get_RegulatoryEvidenceLink;
-  my @regulatory_evidence = map { $_->get_Evidence } @$regulatory_evidence_link;
+  
+#   my @regulatory_evidence = map { $_->get_Evidence } @$regulatory_evidence_link;
+  my @regulatory_evidence = map {
+    $_->get_Evidence_on_Slice($regulatory_feature_slice) 
+  } @$regulatory_evidence_link;
+
   $self->{'_regulatory_evidence'} = \@regulatory_evidence;
   return $self->{'_regulatory_evidence'};
 }
@@ -238,24 +251,6 @@ sub regulatory_feature {
   }
   return $self->get_RegulatoryFeature;
 }
-
-# =head2 regulatory_evidence
-# =cut
-# sub regulatory_evidence {
-#   my $self = shift;
-#   my $regulatory_evidence = shift;
-# 
-#   if ($regulatory_evidence) {
-#     $self->{'_regulatory_evidence'} = $regulatory_evidence;
-#   }
-#   if (! $self->{'_regulatory_evidence'}) {
-#     use Bio::EnsEMBL::Funcgen::RegulatoryEvidence;
-#     my $regulatory_evidence = Bio::EnsEMBL::Funcgen::RegulatoryEvidence->new;
-#     $regulatory_evidence->db($self->db);
-#     $self->{'_regulatory_evidence'} = $regulatory_evidence;
-#   }
-#   return $self->{'_regulatory_evidence'};
-# }
 
 sub SO_term {
   my $self = shift;
