@@ -347,11 +347,14 @@ sub get_underlying_structure {
     $motif_evidence = $self->_get_underlying_structure_motifs_by_epigenome_list($epigenome_list);
   }
   
+  # This makes the coordinates rela
+   my $slice_start = $self->slice->start;
+  
   foreach my $current_motif_evidence (@$motif_evidence) {
 
     push @$epigenome_specific_underlying_structure, (
-      0 + $current_motif_evidence->start, 
-      0 + $current_motif_evidence->end
+      0 + $current_motif_evidence->start - $slice_start +1, 
+      0 + $current_motif_evidence->end   - $slice_start +1, 
     );
   }
 

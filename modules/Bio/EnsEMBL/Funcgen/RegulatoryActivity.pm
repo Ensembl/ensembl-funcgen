@@ -207,12 +207,14 @@ sub get_RegulatoryEvidence {
   }
 
   my $regulatory_feature = $self->get_RegulatoryFeature;
-  my $regulatory_feature_slice = $self->db->get_SliceAdaptor->fetch_by_region(
-    undef,
-    $regulatory_feature->slice->seq_region_name,
-    $regulatory_feature->start,
-    $regulatory_feature->end,
-  );
+  my $regulatory_feature_slice = $regulatory_feature->slice;
+  
+#   my $regulatory_feature_slice = $self->db->get_SliceAdaptor->fetch_by_region(
+#     undef,
+#     $regulatory_feature->slice->seq_region_name,
+#     $regulatory_feature->start,
+#     $regulatory_feature->end,
+#   );
 
   my $regulatory_evidence_link = $self->get_RegulatoryEvidenceLink;
   
