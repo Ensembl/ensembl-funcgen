@@ -132,7 +132,7 @@ CREATE TABLE `regulatory_build` (
   `initial_release_date` varchar(50) DEFAULT NULL,
   `last_annotation_update` varchar(50) DEFAULT NULL,
   `feature_type_id` int(4) unsigned NOT NULL,
-  `analysis_id` int(4) unsigned NOT NULL,
+  `analysis_id` smallint(5) unsigned NOT NULL,
   `is_current` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`regulatory_build_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -189,7 +189,7 @@ CREATE TABLE `segmentation_feature` (
 DROP TABLE IF EXISTS `segmentation_file`;
 CREATE TABLE `segmentation_file` (
   `segmentation_file_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `regulatory_build_id` int(10) DEFAULT NULL,
+  `regulatory_build_id` int(4) unsigned DEFAULT NULL,
   `name` varchar(100) DEFAULT NULL,
   `analysis_id` smallint(5) unsigned NOT NULL,
   `epigenome_id` int(10) unsigned DEFAULT NULL,
@@ -641,7 +641,7 @@ CREATE TABLE `feature_set` (
 DROP TABLE IF EXISTS `feature_set_qc_prop_reads_in_peaks`;
 CREATE TABLE `feature_set_qc_prop_reads_in_peaks` (
   `feature_set_qc_prop_reads_in_peaks_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `analysis_id` int(10) unsigned DEFAULT NULL,
+  `analysis_id` smallint(5) unsigned DEFAULT NULL,
   `feature_set_id` int(10) unsigned NOT NULL,
   `prop_reads_in_peaks` double DEFAULT NULL,
   `total_reads` int(10) DEFAULT NULL,
@@ -719,8 +719,8 @@ CREATE TABLE `result_set` (
 DROP TABLE IF EXISTS `result_set_qc_chance`;
 CREATE TABLE `result_set_qc_chance` (
   `result_set_qc_chance_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `signal_result_set_id` int(10) DEFAULT NULL,
-  `analysis_id` int(10) unsigned DEFAULT NULL,
+  `signal_result_set_id` int(10) unsigned DEFAULT NULL,
+  `analysis_id` smallint(5) unsigned DEFAULT NULL,
   `p` double DEFAULT NULL,
   `q` double DEFAULT NULL,
   `divergence` double DEFAULT NULL,
@@ -757,7 +757,7 @@ DROP TABLE IF EXISTS `result_set_qc_flagstats`;
 CREATE TABLE `result_set_qc_flagstats` (
   `result_set_qc_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `result_set_id` int(10) unsigned DEFAULT NULL,
-  `analysis_id` int(10) unsigned DEFAULT NULL,
+  `analysis_id` smallint(5) unsigned DEFAULT NULL,
   `category` varchar(100) NOT NULL,
   `qc_passed_reads` int(10) unsigned DEFAULT NULL,
   `qc_failed_reads` int(10) unsigned DEFAULT NULL,
@@ -799,7 +799,7 @@ CREATE TABLE `result_set_qc_flagstats` (
 DROP TABLE IF EXISTS `result_set_qc_phantom_peak`;
 CREATE TABLE `result_set_qc_phantom_peak` (
   `result_set_qc_phantom_peak_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `analysis_id` int(10) unsigned DEFAULT NULL,
+  `analysis_id` smallint(5) unsigned DEFAULT NULL,
   `result_set_id` int(10) unsigned NOT NULL,
   `filename` varchar(512) NOT NULL,
   `numReads` int(10) unsigned NOT NULL,
