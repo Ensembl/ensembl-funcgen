@@ -44,7 +44,6 @@
 @colour  #FFCC66
 
 @column regulatory_feature_id   Internal ID
-@column feature_set_id          @link feature_set ID
 @column feature_type_id         @link feature_type ID
 @column seq_region_id           @link seq_region ID
 @column seq_region_start        Start position of this feature
@@ -330,7 +329,6 @@ CREATE TABLE `mirna_target_feature` (
 @column motif_feature_id        @link motif_feature table ID
 
 @see associated_motif_feature
-@see regulatory_attribute
 */
 
 DROP TABLE IF EXISTS `associated_motif_feature`;
@@ -1064,7 +1062,6 @@ CREATE TABLE `probe` (
 @column control_id              @link experiment ID
 @column is_control              Boolean, true means that this experiment is a control.
 @column feature_type_id         @link feature_type table ID
-@column mage_xml_id             @link mage_xml ID
 @column description             Text description
 @column name                    Name of experiment
 @column primary_design_type     e.g. binding_site_identification, preferably EFO term
@@ -1336,6 +1333,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patc
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_85_86_b.sql|Drop tables epigenome_lineage and lineage');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_85_86_c.sql|Add production name column to feature_type table');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_85_86_d.sql|Add new columns to input_subset table to accommodate paired-end data');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_85_86_e.sql|Add QC tables');
 
 /**
 @table meta_coord
