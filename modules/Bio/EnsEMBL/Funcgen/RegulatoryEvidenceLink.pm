@@ -24,11 +24,31 @@ limitations under the License.
 
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::RegulatoryEvidence
+  Bio::EnsEMBL::Funcgen::RegulatoryEvidenceLink
 
 =head1 SYNOPSIS
+
+  use Bio::EnsEMBL::Registry;
+  use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
+
+  Bio::EnsEMBL::Registry->load_registry_from_db(
+    -host => 'ensembldb.ensembl.org', # alternatively 'useastdb.ensembl.org'
+    -user => 'anonymous'
+  );
+
+  my $regulatory_evidence_link_adaptor = Bio::EnsEMBL::Registry->get_adaptor('homo_sapiens', 'funcgen', 'RegulatoryEvidenceLink');
+  my $regulatory_evidence_link_list = $regulatory_evidence_link_adaptor->fetch_all_by_regulatory_activity_id(3);
+
+  foreach my $current_regulatory_evidence_link (@$regulatory_evidence_link_list) {
+    my $evidence = $current_regulatory_evidence_link->get_Evidence;
+    print $evidence->display_label . ': ' . $evidence->start . '..' . $evidence->end . "\n";
+
+  }
+
 =head1 DESCRIPTION
-=head1 SEE ALSO
+
+  Object to handle evidence for the activities of regulatory features.
+
 =cut
 
 package Bio::EnsEMBL::Funcgen::RegulatoryEvidenceLink;
@@ -85,10 +105,41 @@ sub _attribute_feature_table {
   return $self->{'_attribute_feature_table'};
 }
 
+=head2 evidence_type
+
+  Example    : if ($regulatory_evidence_link->evidence_type eq 'motif') { 
+                 print "Doing something with motif evidence.\n"; 
+               };
+
+  Description: Returns either 'motif' or 'annotated', depending on whether 
+               the evidence is linking to Bio::EnsEMBL::Funcgen::MotifFeature 
+               or Bio::EnsEMBL::Funcgen::AnnotatedFeature
+
+  Returntype : String, either 'motif' or 'annotated'.
+  Exceptions : None
+  Caller     : General
+  Status     : At risk
+
+=cut
+
 sub evidence_type {
   my $self = shift;
   return $self->_attribute_feature_table;
 }
+
+=head2 get_Evidence
+
+  Example    : my $evidence = $regulatory_evidence_link->get_Evidence;
+
+  Description: Returns the object this is linking to.
+
+  Returntype : Bio::EnsEMBL::Funcgen::MotifFeature or 
+               Bio::EnsEMBL::Funcgen::AnnotatedFeature
+  Exceptions : None
+  Caller     : General
+  Status     : At risk
+
+=cut
 
 sub get_Evidence {
   my $self = shift;
@@ -111,6 +162,34 @@ sub get_Evidence {
   }
   throw("Unknown evidence type: " . $self->evidence_type);
 }
+
+=head2 get_Evidence_on_Slice
+
+  Arg 1      : (mandatory) Bio::EnsEMBL::Slice
+
+  Example    : my $regulatory_feature_slice = $regulatory_feature->slice;
+               my $regulatory_evidence_link = $self->get_RegulatoryEvidenceLink;
+               my @regulatory_evidence = map {
+                 $_->get_Evidence_on_Slice($regulatory_feature_slice) 
+               } @$regulatory_evidence_link;
+
+  Description: Returns the object this is linking to on a given slice.
+  
+               The difference to get_Evidence is that this method accepts a 
+               slice object and the evidence returned will be on the same 
+               slice.
+
+               This is useful, if you want to make sure that the coordinates 
+               match up. E.g.: When you want to use the coordinates of the
+               motif feature evidence to find bases in a regulatory feature.
+
+  Returntype : Bio::EnsEMBL::Funcgen::MotifFeature or 
+               Bio::EnsEMBL::Funcgen::AnnotatedFeature
+  Exceptions : None
+  Caller     : General
+  Status     : At risk
+
+=cut
 
 sub get_Evidence_on_Slice {
   my $self  = shift;

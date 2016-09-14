@@ -24,10 +24,40 @@ limitations under the License.
 
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::CrisprSitesFile
+  Bio::EnsEMBL::Funcgen::CrisprSitesFile
 
 =head1 SYNOPSIS
+
+  use Bio::EnsEMBL::Registry;
+  use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
+
+  Bio::EnsEMBL::Registry->load_registry_from_db(
+    -host => 'ensembldb.ensembl.org', # alternatively 'useastdb.ensembl.org'
+    -user => 'anonymous'
+  );
+
+  for my $species ('homo_sapiens', 'mus_musculus') {
+
+    my $crispr_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'CrisprSitesFile');
+    my $crispr_file = $crispr_adaptor->fetch_file;
+
+    if (! defined $crispr_file) {
+      die('No crispr file configured!');
+    }
+    
+    print "\n---- Crispr confiugration for $species ----\n";
+    
+    print "The name of the crispr file is:  " . $crispr_file->file ."\n";
+    print "The name of the crispr track is: " . $crispr_file->name ."\n";
+    print "The crispr description is:       " . $crispr_file->get_Analysis->description . "\n";
+    
+  }
+
 =head1 DESCRIPTION
+
+  Crispr sites are not stored in the database, but in an external file. The
+  CrisprSitesFile object helps users locate the file.
+
 =cut
 
 package Bio::EnsEMBL::Funcgen::CrisprSitesFile;
@@ -37,8 +67,6 @@ use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
-=head2 new
-=cut
 sub new {
   my $caller = shift;
   my $class = ref($caller) || $caller;
@@ -75,10 +103,35 @@ sub new {
 
 sub dbID           { return shift->_generic_get_or_set('dbID',            @_) }
 sub name           { return shift->_generic_get_or_set('name',            @_) }
+
+=head2 file
+
+  Example    : print "The name of the crispr file is:  " . $crispr_file->file;
+  Description: Returns the location of the file on the file system. This is a 
+               relative path that has to be prefixed with your document root 
+               for the species and assembly. E.g.: For human is would be here:
+               ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/
+
+  Returntype : String
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub file           { return shift->_generic_get_or_set('file',            @_) }
 sub file_type      { return shift->_generic_get_or_set('file_type',       @_) }
 sub _analysis      { return shift->_generic_get_or_set('_analysis',       @_) }
 sub adaptor        { return shift->_generic_get_or_set('adaptor',         @_) }
+
+=head2 get_Analysis
+
+  Example    : print "The crispr description is: " . $crispr_file->get_Analysis->description;
+  Description: Fetches the analysis used to generate the crispr files.
+  Returntype : Bio::EnsEMBL::Analysis
+  Exceptions : none
+  Status     : At Risk
+
+=cut
 
 sub get_Analysis {
   my $self = shift;

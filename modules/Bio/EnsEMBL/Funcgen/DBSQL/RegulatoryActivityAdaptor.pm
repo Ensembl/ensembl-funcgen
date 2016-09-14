@@ -26,9 +26,47 @@ limitations under the License.
 
 =head1 NAME
 
-Bio::EnsEMBL::DBSQL::Funcgen::RegulatoryActivityAdaptor
+  Bio::EnsEMBL::DBSQL::Funcgen::RegulatoryActivityAdaptor
 
 =head1 SYNOPSIS
+
+  use Bio::EnsEMBL::Registry;
+  use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
+
+  Bio::EnsEMBL::Registry->load_registry_from_db(
+      -host => 'ensembldb.ensembl.org', # alternatively 'useastdb.ensembl.org'
+      -user => 'anonymous'
+  );
+
+  my $regulatory_feature_adaptor       = Bio::EnsEMBL::Registry->get_adaptor('homo_sapiens', 'funcgen', 'RegulatoryFeature');
+  my $regulatory_activity_adaptor      = Bio::EnsEMBL::Registry->get_adaptor('homo_sapiens', 'funcgen', 'RegulatoryActivity');
+  my $regulatory_evidence_link_adaptor = Bio::EnsEMBL::Registry->get_adaptor('homo_sapiens', 'funcgen', 'RegulatoryEvidenceLink');
+
+  my $regulatory_feature = $regulatory_feature_adaptor->fetch_by_stable_id('ENSR00000054736');
+
+  print "The regulatory feature with stable id: "  . $regulatory_feature->stable_id . " has the following activities: \n";
+
+  my $regulatory_activity_list = $regulatory_activity_adaptor->fetch_all_by_RegulatoryFeature($regulatory_feature);
+
+  foreach my $current_regulatory_activity (@$regulatory_activity_list) {
+
+    print "The activity in the epigenome "  
+      . $current_regulatory_activity->get_Epigenome->display_label 
+      . ' is: ' 
+      . $current_regulatory_activity->activity 
+      . "\n";
+
+    my $regulatory_evidence_link_list = $regulatory_evidence_link_adaptor->fetch_all_by_RegulatoryActivity($current_regulatory_activity);
+
+    if (@$regulatory_evidence_link_list) {
+      print "  It is supported by the following evidence:\n";
+
+      foreach my $current_regulatory_evidence_link (@$regulatory_evidence_link_list) {
+        my $evidence = $current_regulatory_evidence_link->get_Evidence;
+        print "  - " . $evidence->display_label . ': ' . $evidence->start . '..' . $evidence->end . "\n";
+      }
+    }
+  }
 
 =head1 DESCRIPTION
 

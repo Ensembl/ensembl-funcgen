@@ -25,7 +25,12 @@ limitations under the License.
 
 =head1 NAME
 
-Bio::EnsEMBL::DBSQL::Funcgen::CrisprSitesFileAdaptor
+  Bio::EnsEMBL::DBSQL::Funcgen::CrisprSitesFileAdaptor
+
+=head1 SYNOPSIS
+
+  my $crispr_adaptor = Bio::EnsEMBL::Registry->get_adaptor('homo_sapiens', 'funcgen', 'CrisprSitesFile');
+  my $crispr_file = $crispr_adaptor->fetch_file;
 
 =cut
 
@@ -65,6 +70,22 @@ sub _default_where_clause {
     . ' and a.logic_name = "Crispr"'
     ;
 }
+
+=head2 fetch_file
+
+  Example    :   my $crispr_adaptor = Bio::EnsEMBL::Registry->get_adaptor('homo_sapiens', 'funcgen', 'CrisprSitesFile');
+                 my $crispr_file = $crispr_adaptor->fetch_file;
+
+  Description: Returns the location of the file on the file system. This is a 
+               relative path that has to be prefixed with your document root 
+               for the species and assembly. E.g.: For human is would be here:
+               ftp://ftp.ensembl.org/pub/data_files/homo_sapiens/GRCh38/
+
+  Returntype : String
+  Exceptions : none
+  Status     : At Risk
+
+=cut
 
 sub fetch_file {
   my $self  = shift;

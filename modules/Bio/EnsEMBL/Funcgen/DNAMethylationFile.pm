@@ -24,10 +24,44 @@ limitations under the License.
 
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::DNAMethylationFile
+  Bio::EnsEMBL::Funcgen::DNAMethylationFile
 
 =head1 SYNOPSIS
+
+  use Bio::EnsEMBL::Registry;
+  use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
+
+  Bio::EnsEMBL::Registry->load_registry_from_db(
+    -host => 'ensembldb.ensembl.org', # alternatively 'useastdb.ensembl.org'
+    -user => 'anonymous'
+  );
+
+  my $species = 'homo_sapiens';
+
+  my $dna_methylation_file_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'DNAMethylationFile');
+  my $dna_methylation_file = $dna_methylation_file_adaptor->fetch_all;
+
+  print "\nThere are " . @$dna_methylation_file . " dna methylation files in the database for $species.\n";
+
+  foreach my $current_dna_methylation_file (@$dna_methylation_file) {
+    print to_string($current_dna_methylation_file);
+    print "\n\n";
+  }
+
+  sub to_string {
+    my $dna_methylation_file = shift;
+
+    return join "\n", 
+      "The name of the dna methylation track is: " . $dna_methylation_file->name,
+      "The description is:                       " . $dna_methylation_file->get_Analysis->description,
+      "The name of the dna methylation file is:  " . $dna_methylation_file->file;
+  }
+
 =head1 DESCRIPTION
+
+  DNA methylation sites are not stored in the database, but in an external file. The
+  DNAMethylationFile object helps users locate the file.
+
 =cut
 
 package Bio::EnsEMBL::Funcgen::DNAMethylationFile;

@@ -1,8 +1,3 @@
-#
-# Ensembl module for Bio::EnsEMBL::Funcgen::RegulatoryBuild
-#
-
-
 =head1 LICENSE
 
 Copyright [1999-2016] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
@@ -33,28 +28,25 @@ Bio::EnsEMBL::Funcgen::RegulatoryBuild - A module to represent a Regulatory Buil
 
 =head1 SYNOPSIS
 
-use Bio::EnsEMBL::Funcgen::RegulatoryBuild;
+  use Bio::EnsEMBL::Registry;
+  use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
-#Create from new
-my $reg_build = Bio::EnsEMBL::Funcgen::RegulatoryBuild->new
-  (
-   -name,    		   => 'The Ensembl Regulatory Build', 
-   -version		   => '14',
-   -initial_release_date   => '2016-6',
-   -last_annotation_update => '2016-6',
-   -feature_type_id	   => 19,
-   -analysis_id		   => 16,
-   -is_current		   => 1
+  Bio::EnsEMBL::Registry->load_registry_from_db(
+    -host => 'ensembldb.ensembl.org', # alternatively 'useastdb.ensembl.org'
+    -user => 'anonymous'
   );
 
-print $reg_build->name.' was last updated on '.$reg_build->last_annotation_update."\n";
+  my $regulatory_build_adaptor = Bio::EnsEMBL::Registry->get_adaptor('homo_sapiens', 'funcgen', 'RegulatoryBuild');
+  my $regulatory_build = $regulatory_build_adaptor->fetch_current_regulatory_build;
+  my $epigenomes_in_regulatory_build = $regulatory_build->get_all_Epigenomes;
 
-#The Ensembl Regulatory Build was last updated on 2016-6.
-
+  print "There are " . @$epigenomes_in_regulatory_build . " epigenomes in the regulatory build:\n";
+  print join "\n", map { '  - ' . $_->display_label } @$epigenomes_in_regulatory_build;
+  print  "\n";
 
 =head1 DESCRIPTION
 
-This is a simple class to represent information about a regulatory build.
+  This is a class represents a regulatory build.
 
 =cut
 
@@ -66,32 +58,37 @@ use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
 =head2 new
+  Arg [-db] :
+  Arg [-dbID] :
+  Arg [-name] :
+        name of regulatory build
+  Arg [-version] :
+        version of regulatory build
+  Arg [-initial_release_date]   :
+        date of the initial release
+  Arg [-last_annotation_update] :
+        date of the last update
+  Arg [-feature_type_id] :
+        the feature type id
+  Arg [-analysis_id] :
+        the analysis id
+  Arg [-is_current] :
+        is current release
 
-  Arg [1]    : String  - name of regulatory build 
-  Arg [2]    : String  - version of regulatory build 
-  Arg [3]    : String  - date of the initial release
-  Arg [4]    : String  - date of the last update
-  Arg [5]    : Integer - the feature type identifier
-  Arg [6]    : Integer - the analysis identifier
-  Arg [7]    : Integer - is current release
- 
-  
-  Example              : my $reg_build = Bio::EnsEMBL::Funcgen::RegulatoryBuild->new
-                		    (
-   				     -name,                  => 'The Ensembl Regulatory Build', 
-     				     -version                => '14',
-   				     -initial_release_date   => '2016-6',
-   				     -last_annotation_update => '2016-6',
-   			    	     -feature_type_id        => 19,
-   				     -analysis_id            => 16,
-   				     -is_current             => 1
-  				    );
-
-  Description: Constructor method for Regulatory Build class
-  Returntype : Bio::EnsEMBL::Funcgen::RegulatoryBuild
-  Exceptions : None 
-  Caller     : General
-  Status     : Stable
+  Example      : my $regulatory_build = Bio::EnsEMBL::Funcgen::RegulatoryBuild->new(
+                            -name,                  => 'The Ensembl Regulatory Build', 
+                            -version                => '14',
+                            -initial_release_date   => '2016-6',
+                            -last_annotation_update => '2016-6',
+                            -feature_type_id        => 19,
+                            -analysis_id            => 16,
+                            -is_current             => 1
+                          );
+  Description : Constructor method for Regulatory Build class
+  Returntype  : Bio::EnsEMBL::Funcgen::RegulatoryBuild
+  Exceptions  : None 
+  Caller      : General
+  Status      : Stable
 
 =cut
 
@@ -143,7 +140,7 @@ sub db                     { return shift->_generic_get_or_set('db',            
 
 =head2 name
 
-  Example    : my $name = $reg_build->name;
+  Example    : my $name = $regulatory_build->name;
   Description: Getter of name attribute for Regulatory Build objects
   Returntype : String
   Exceptions : None
@@ -156,7 +153,7 @@ sub name                   { return shift->_generic_get_or_set('name',          
 
 =head2 version
 
-  Example    : my $name = $reg_build->version;
+  Example    : my $name = $regulatory_build->version;
   Description: Getter of version attribute for Regulatory Build objects
   Returntype : String
   Exceptions : None
@@ -169,7 +166,7 @@ sub version                { return shift->_generic_get_or_set('version',       
 
 =head2 initial_release_date
 
-  Example    : my $name = $reg_build->initial_release_date;
+  Example    : my $name = $regulatory_build->initial_release_date;
   Description: Getter of initial release date attribute for Regulatory Build objects
   Returntype : String
   Exceptions : None
@@ -182,7 +179,7 @@ sub initial_release_date   { return shift->_generic_get_or_set('initial_release_
 
 =head2 last_annotation_update
 
-  Example    : my $name = $reg_build->last_annotation_update;
+  Example    : my $name = $regulatory_build->last_annotation_update;
   Description: Getter of last update attribute for Regulatory Build objects
   Returntype : String
   Exceptions : None
@@ -194,8 +191,31 @@ sub initial_release_date   { return shift->_generic_get_or_set('initial_release_
 sub last_annotation_update { return shift->_generic_get_or_set('last_annotation_update', @_) }
 sub feature_type_id        { return shift->_generic_get_or_set('feature_type_id',        @_) }
 sub analysis_id            { return shift->_generic_get_or_set('analysis_id',            @_) }
+
+=head2 is_current
+
+  Example    : if ($regulatory_build->is_current) { 
+                 print "The current regulatory build was released on: " . $regulatory_build->initial_release_date . "\n";
+               };
+  Description: Indicates whether this regulatory build is the current one.
+  Returntype : Boolean
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
 sub is_current             { return shift->_generic_get_or_set('is_current',             @_) }
-# sub _epigenomes            { return shift->_generic_get_or_set('epigenomes',             @_) }
+
+=head2 get_all_Epigenomes
+
+  Example    : my $epigenome_in_regulatory_build = $regulatory_build->get_all_Epigenomes;
+  Description: Gets all epigenomes used in this regulatory build.
+  Returntype : ArrayRef[Bio::EnsEMBL::Funcgen::Epigenome]
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
 
 sub get_all_Epigenomes {
   my $self = shift;
