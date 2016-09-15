@@ -182,10 +182,6 @@ sub display_label {
 
   if(! defined $self->{display_label}) {
     $self->{'display_label'}  = $self->feature_type->name.' Regulatory Feature';
-
-    if( defined $self->epigenome ) {
-      $self->{display_label} .= ' - '.$self->epigenome->name;
-    }
   }
 
   return $self->{display_label};
