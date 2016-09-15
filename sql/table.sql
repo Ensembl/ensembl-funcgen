@@ -1327,6 +1327,7 @@ CREATE TABLE `meta` (
 
 -- Add necessary meta values
 INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '86');
 
 -- Update and remove these for each release to avoid erroneous patching
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_85_86_a.sql|schema_version');
