@@ -80,7 +80,7 @@ sub fetch_by_name {
     return;
   }
   if (@$segmentation_file!=1) {
-    throw("Found ". @$segmentation_file ." dna methylation files with the same name!");
+    throw("Found ". @$segmentation_file ." segmentation files with the same name!");
   }
   return $segmentation_file->[0];
 }

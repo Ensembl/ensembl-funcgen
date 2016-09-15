@@ -24,9 +24,33 @@ limitations under the License.
 
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::RegulatoryActivity
+  Bio::EnsEMBL::Funcgen::RegulatoryActivity
 
 =head1 SYNOPSIS
+
+  use Bio::EnsEMBL::Registry;
+  use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
+
+  Bio::EnsEMBL::Registry->load_registry_from_db(
+    -host => 'ensembldb.ensembl.org', # alternatively 'useastdb.ensembl.org'
+    -user => 'anonymous'
+  );
+
+  my $regulatory_feature_adaptor = Bio::EnsEMBL::Registry->get_adaptor('homo_sapiens', 'funcgen', 'RegulatoryFeature');
+  my $regulatory_feature = $regulatory_feature_adaptor->fetch_by_stable_id('ENSR00000000011');
+
+  my $regulatory_activity_list = $regulatory_activity_adaptor->fetch_all_by_RegulatoryFeature($regulatory_feature);
+
+  print "The regulatory feature with stable id: "  . $regulatory_feature->stable_id . " has the following activities: \n";
+
+  foreach my $current_regulatory_activity (@$regulatory_activity_list) {
+    print "The activity in the epigenome "  
+      . $current_regulatory_activity->get_Epigenome->display_label 
+      . ' is: ' 
+      . $current_regulatory_activity->activity 
+      . "\n";
+  }
+
 =head1 DESCRIPTION
 =head1 SEE ALSO
 =cut
@@ -65,8 +89,6 @@ sub dbID {
   return $self->{'_dbID'};
 }
 
-=head2 _epigenome_id
-=cut
 sub _epigenome_id {
   my $self = shift;
   my $epigenome_id = shift;
@@ -77,18 +99,26 @@ sub _epigenome_id {
   return $self->{'_epigenome_id'};
 }
 
-=head2 epigenome
+=head2 get_Epigenome
 
-  Deprecated
+  Description   : Deprecated, use get_Epigenome instead.
 
 =cut
+
 sub epigenome {
   my $self = shift;
   return $self->get_Epigenome;
 }
 
 =head2 get_Epigenome
+
+  Example       : $regulatory_feature_summary = $regulatory_feature->get_Epigenome;
+  Description   : Retrieves a textual summary of this RegulatoryFeature.
+  Returns       : Hashref of descriptive strings
+  Status        : Intended for internal use (REST)
+
 =cut
+
 sub get_Epigenome {
   my $self = shift;
 
@@ -103,8 +133,6 @@ sub get_Epigenome {
   return $self->{'_epigenome'};
 }
 
-=head2 _is_multicell
-=cut
 sub _is_multicell {
   my $self = shift;
   my $is_multicell = shift;
@@ -116,7 +144,14 @@ sub _is_multicell {
 }
 
 =head2 activity
+
+  Example       : say "Activity: "  .  $regulatory_activity->activity;
+  Description   : The activity this object represents as a string. 
+  Returns       : String, one of 'INACTIVE','REPRESSED','POISED','ACTIVE' or 'NA'.
+  Status        : At risk
+
 =cut
+
 sub activity {
   my $self = shift;
   my $activity = shift;
@@ -127,8 +162,6 @@ sub activity {
   return $self->{'_activity'};
 }
 
-=head2 _regulatory_feature_id
-=cut
 sub _regulatory_feature_id {
   my $self = shift;
   my $regulatory_feature_id = shift;
@@ -140,7 +173,14 @@ sub _regulatory_feature_id {
 }
 
 =head2 get_RegulatoryFeature
+
+  Example       : say "Activity: "  .  $regulatory_activity->get_RegulatoryFeature;
+  Description   : The regulatory feature this activity belongs to.
+  Returns       : Bio::EnsEMBL::Funcgen::RegulatoryFeature
+  Status        : At risk
+
 =cut
+
 sub get_RegulatoryFeature {
   my $self = shift;
 
@@ -161,7 +201,15 @@ sub get_RegulatoryFeature {
 }
 
 =head2 get_RegulatoryEvidenceLink
+
+  Example       : my $regulatory_evidence_link = $regulatory_activity->get_RegulatoryEvidenceLink;
+  Description   : Returns links to regulatory evidence supporting this
+                  regulatory activity.
+  Returns       : ArrayRef[Bio::EnsEMBL::Funcgen::RegulatoryEvidenceLink]
+  Status        : At risk
+
 =cut
+
 sub get_RegulatoryEvidenceLink {
   my $self = shift;
 
@@ -178,7 +226,28 @@ sub get_RegulatoryEvidenceLink {
 }
 
 =head2 get_RegulatoryEvidence_by_type
+
+  Arg [1]       : (mandatory) String, 'motif' or 'annotated'
+
+  Example       : my $motif_evidence = $regulatory_activity->get_RegulatoryEvidence_by_type('motif');
+
+  Description   : Returns links to regulatory evidence supporting this
+                  regulatory activity.
+
+                  There are two types of regulatory evidence: MotifFeatues 
+                  and AnnotatedFeatures.
+
+                  Depending on which type is needed, the first argument has 
+                  to be either 'motif' or 'annotated'.
+
+  Returns       : 
+                  If Arg [1] is 'motif':     ArrayRef[Bio::EnsEMBL::Funcgen::MotifFeature]
+                  If Arg [1] is 'annotated': ArrayRef[Bio::EnsEMBL::Funcgen::AnnotatedFeature]
+
+  Status        : At risk
+
 =cut
+
 sub get_RegulatoryEvidence_by_type {
   my $self = shift;
   
@@ -198,7 +267,18 @@ sub get_RegulatoryEvidence_by_type {
 }
 
 =head2 get_RegulatoryEvidence
+
+  Example       : my $all_regulatory_evidence = $self->get_RegulatoryEvidence;
+
+  Description   : Returns the regulatory evidence supporting this regulatory 
+                  activity. Regulatory evidence can be MotifFeatues 
+                  or AnnotatedFeatures.
+
+  Returns       : ArrayRef[Bio::EnsEMBL::Funcgen::MotifFeature or Bio::EnsEMBL::Funcgen::AnnotatedFeature]
+  Status        : At risk
+
 =cut
+
 sub get_RegulatoryEvidence {
   my $self = shift;
 
@@ -209,16 +289,8 @@ sub get_RegulatoryEvidence {
   my $regulatory_feature = $self->get_RegulatoryFeature;
   my $regulatory_feature_slice = $regulatory_feature->slice;
   
-#   my $regulatory_feature_slice = $self->db->get_SliceAdaptor->fetch_by_region(
-#     undef,
-#     $regulatory_feature->slice->seq_region_name,
-#     $regulatory_feature->start,
-#     $regulatory_feature->end,
-#   );
-
   my $regulatory_evidence_link = $self->get_RegulatoryEvidenceLink;
   
-#   my @regulatory_evidence = map { $_->get_Evidence } @$regulatory_evidence_link;
   my @regulatory_evidence = map {
     $_->get_Evidence_on_Slice($regulatory_feature_slice) 
   } @$regulatory_evidence_link;
@@ -227,8 +299,6 @@ sub get_RegulatoryEvidence {
   return $self->{'_regulatory_evidence'};
 }
 
-=head2 set_RegulatoryFeature
-=cut
 sub set_RegulatoryFeature {
   my $self = shift;
   my $regulatory_feature = shift;
@@ -241,7 +311,8 @@ sub set_RegulatoryFeature {
 
 =head2 regulatory_feature
 
-  Deprecated, use set and get methods instead.
+  Description   : Deprecated, use set_RegulatoryFeature and 
+                  get_RegulatoryFeature methods instead.
 
 =cut
 sub regulatory_feature {
@@ -253,6 +324,18 @@ sub regulatory_feature {
   }
   return $self->get_RegulatoryFeature;
 }
+
+=head2 SO_term
+
+  Example       : print $regulatory_activity->SO_term;
+
+  Description   : Returns the sequence ontology term for this type of 
+                  regulatory feature.
+
+  Returntype    : String
+  Status        : At risk
+
+=cut
 
 sub SO_term {
   my $self = shift;

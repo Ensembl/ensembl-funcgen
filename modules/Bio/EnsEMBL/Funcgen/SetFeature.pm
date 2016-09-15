@@ -219,12 +219,12 @@ sub set {
 =cut
 
 sub cell_type{
-    deprecate(
-        "Bio::EnsEMBL::Funcgen::SetFeature::cell_type has been deprecated and will be removed in Ensembl release 89."
-            . " Please use Bio::EnsEMBL::Funcgen::SetFeature::epigenome instead"
-    );
+  deprecate(
+      "Bio::EnsEMBL::Funcgen::SetFeature::cell_type has been deprecated and will be removed in Ensembl release 89."
+          . " Please use Bio::EnsEMBL::Funcgen::SetFeature::epigenome instead"
+  );
 
-	return shift->set->epigenome;
+  return shift->set->epigenome;
 }
 
 =head2 epigenome

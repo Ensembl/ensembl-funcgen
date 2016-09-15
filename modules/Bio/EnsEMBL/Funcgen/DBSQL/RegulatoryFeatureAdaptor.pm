@@ -1,7 +1,3 @@
-#
-# Ensembl module for Bio::EnsEMBL::DBSQL::Funcgen::RegulatoryFeatureAdaptor
-#
-
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
@@ -30,34 +26,34 @@ limitations under the License.
 
 =head1 NAME
 
-Bio::EnsEMBL::DBSQL::Funcgen::RegulatoryFeatureAdaptor
+  Bio::EnsEMBL::DBSQL::Funcgen::RegulatoryFeatureAdaptor
 
 =head1 SYNOPSIS
 
- use Bio::EnsEMBL::Registry;
- use Bio::EnsEMBL::Funcgen::RegulatoryFeature;
+  use Bio::EnsEMBL::Registry;
+  use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
- my $reg = Bio::EnsEMBL::Registry->load_adaptors_from_db(
-   -host    => 'ensembldb.ensembl.org',
-   -user    => 'anonymous'
- );
- 
- my $regfeat_adaptor = $reg->get_adaptor($species, 'funcgen', 'RegulatoryFeature');
- 
- #Fetch MultiCell RegulatoryFeatures
- my @features = @{$regfeat_adaptor->fetch_all_by_Slice($slice)};
- 
- #Fetch epigenome specific RegulatoryFeatures
- my @epigenome_features = @{$regfeat_adaptor->fetch_all_by_Slice_Epigenomes($slice, [$epigenome_fset1, $epigenome_fset2])};
- 
- #Fetch all epigenome RegulatoryFeatures for a given stable ID
- my @epigenome_features = @{$regfeat_adaptor->fetch_all_by_stable_ID('ENSR00001348194')};
+  Bio::EnsEMBL::Registry->load_registry_from_db(
+    -host => 'ensembldb.ensembl.org', # alternatively 'useastdb.ensembl.org'
+    -user => 'anonymous'
+  );
+
+  my $regulatory_feature_adaptor = Bio::EnsEMBL::Registry->get_adaptor('homo_sapiens', 'funcgen', 'RegulatoryFeature');
+  my $regulatory_feature = $regulatory_feature_adaptor->fetch_by_stable_id('ENSR00000000011');
+
+  print 'Stable id:        ' . $regulatory_feature->stable_id                              . "\n";
+  print 'Analysis:         ' . $regulatory_feature->analysis->logic_name                   . "\n";
+  print 'Feature type:     ' . $regulatory_feature->feature_type->name                     . "\n";
+  print 'Epigenome count:  ' . $regulatory_feature->epigenome_count                        . "\n";
+  print 'Slice name:       ' . $regulatory_feature->slice->name                            . "\n";
+  print 'Coordinates:      ' . $regulatory_feature->start .' - '. $regulatory_feature->end . "\n";
+  print 'Regulatory build: ' . $regulatory_feature->get_regulatory_build->name             . "\n";
 
 =head1 DESCRIPTION
 
-The RegulatoryFeatureAdaptor is a database adaptor for storing and retrieving
-RegulatoryFeature objects. The FeatureSet class provides convenient wrapper
-methods to the Slice functionality within this adaptor.
+  The RegulatoryFeatureAdaptor is a database adaptor for storing and retrieving
+  RegulatoryFeature objects. The FeatureSet class provides convenient wrapper
+  methods to the Slice functionality within this adaptor.
 
 =cut
 package Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor;

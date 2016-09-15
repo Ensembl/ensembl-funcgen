@@ -25,26 +25,28 @@ limitations under the License.
 
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::RegulatoryFeature
+  Bio::EnsEMBL::Funcgen::RegulatoryFeature
 
 =head1 SYNOPSIS
 
-  use v5.10;
   use Bio::EnsEMBL::Registry;
-  Bio::EnsEMBL::Registry->load_registry_from_url('mysql://anonymous@ensembldb.ensembl.org:3306/84/');
+  use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
-  my $regulatory_feature_adaptor = Bio::EnsEMBL::Registry->get_adaptor('human', 'funcgen', 'RegulatoryFeature');
+  Bio::EnsEMBL::Registry->load_registry_from_db(
+    -host => 'ensembldb.ensembl.org', # alternatively 'useastdb.ensembl.org'
+    -user => 'anonymous'
+  );
 
-  my $regulatory_feat = $regulatory_feature_adaptor->fetch_by_stable_id('ENSR00000000021');
+  my $regulatory_feature_adaptor = Bio::EnsEMBL::Registry->get_adaptor('homo_sapiens', 'funcgen', 'RegulatoryFeature');
+  my $regulatory_feature = $regulatory_feature_adaptor->fetch_by_stable_id('ENSR00000000011');
 
-  say 'Stable id:       ' . $regulatory_feat->stable_id;
-  say 'Analysis:        ' . $regulatory_feat->analysis->logic_name;
-  say 'Feature type:    ' . $regulatory_feat->feature_type->name;
-  say 'Feature set:     ' . $regulatory_feat->epigenome->name;
-  say 'Activity:        ' . $regulatory_feat->activity;
-  say 'Cell type count: ' . $regulatory_feat->cell_type_count;
-  say 'Slice name:      ' . $regulatory_feat->slice->name;
-  say 'Coordinates:     ' . $regulatory_feat->start .' - '. $regulatory_feat->end,;
+  print 'Stable id:        ' . $regulatory_feature->stable_id                              . "\n";
+  print 'Analysis:         ' . $regulatory_feature->analysis->logic_name                   . "\n";
+  print 'Feature type:     ' . $regulatory_feature->feature_type->name                     . "\n";
+  print 'Epigenome count:  ' . $regulatory_feature->epigenome_count                        . "\n";
+  print 'Slice name:       ' . $regulatory_feature->slice->name                            . "\n";
+  print 'Coordinates:      ' . $regulatory_feature->start .' - '. $regulatory_feature->end . "\n";
+  print 'Regulatory build: ' . $regulatory_feature->get_regulatory_build->name             . "\n";
 
 =head1 DESCRIPTION
 
@@ -59,7 +61,6 @@ classification of the regulatory status at a given loci.
 =head1 SEE ALSO
 
 Bio::EnsEMBL:Funcgen::DBSQL::RegulatoryFeatureAdaptor
-Bio::EnsEMBL::Funcgen::SetFeature
 
 =cut
 
@@ -82,23 +83,20 @@ use base qw( Bio::EnsEMBL::Funcgen::SetFeature );
                     	     it is sitting on. Coordinates start at 1 and are inclusive.
   Arg [-FEATURE_SET]       : Bio::EnsEMBL::Funcgen::FeatureSet - Regulatory Feature set
   Arg [-FEATURE_TYPE]      : Bio::EnsEMBL::Funcgen::FeatureType - Regulatory Feature sub type
-  Arg [-BINARY_STRING]     : (optional) string - Regulatory Build binary string
   Arg [-STABLE_ID]         : (optional) string - Stable ID for this RegulatoryFeature e.g. ENSR00000000001
   Arg [-DISPLAY_LABEL]     : (optional) string - Display label for this feature
-  Arg [-ATTRIBUTE_CACHE]   : (optional) HASHREF of feature class dbID|Object lists
   Arg [-PROJECTED]         : (optional) boolean - Flag to specify whether this feature has been projected or not
   Arg [-dbID]              : (optional) int - Internal database ID.
   Arg [-ADAPTOR]           : (optional) Bio::EnsEMBL::DBSQL::BaseAdaptor - Database adaptor.
 
   Example    : my $feature = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new(
-		    -SLICE         => $chr_1_slice,
-		    -START         => 1000000,
-		    -END           => 1000024,
-		    -DISPLAY_LABEL => $text,
-		    -FEATURE_SET   => $fset,
-		    -FEATURE_TYPE  => $reg_ftype,
-                 );
-
+                -SLICE         => $chr_1_slice,
+                -START         => 1000000,
+                -END           => 1000024,
+                -DISPLAY_LABEL => $text,
+                -FEATURE_SET   => $fset,
+                -FEATURE_TYPE  => $reg_ftype,
+              );
 
   Description: Constructor for RegulatoryFeature objects.
   Returntype : Bio::EnsEMBL::Funcgen::RegulatoryFeature
@@ -113,16 +111,14 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($stable_id, $attr_cache, $bin_string, $projected, $activity, $epigenome_count, $analysis)
-    = rearrange(['STABLE_ID', 'ATTRIBUTE_CACHE', 'BINARY_STRING', 'PROJECTED', 'ACTIVITY', 'EPIGENOME_COUNT', 'ANALYSIS'], @_);
+  my ($stable_id, $attr_cache, $projected, $activity, $epigenome_count, $analysis)
+    = rearrange(['STABLE_ID', 'PROJECTED', 'ACTIVITY', 'EPIGENOME_COUNT', 'ANALYSIS'], @_);
 
   #None of these are mandatory at creation
   #under different use cases
-  $self->{binary_string}    = $bin_string       if defined $bin_string;
   $self->{stable_id}        = $stable_id        if defined $stable_id;
   $self->{projected}        = $projected        if defined $projected;
   $self->{activity}         = $activity         if defined $activity;
-  $self->{epigenome_count}  = $epigenome_count  if defined $epigenome_count;
   $self->{epigenome_count}  = $epigenome_count  if defined $epigenome_count;
   $self->{analysis}         = $analysis         if defined $analysis;
   
@@ -131,7 +127,6 @@ sub new {
   return $self;
 }
 
-# deprecated, use get_Analysis
 sub analysis {
   return shift->get_Analysis;
 }
@@ -139,6 +134,18 @@ sub analysis {
 sub _analysis_id {
   return shift->{_analysis_id};
 }
+
+=head2 get_Analysis
+
+  Arg : none
+  Example    : $analysis = $regulatory_feature->get_Analysis
+  Description: Fetches the analysis used to generate this regulatory feature.
+               This is the analysis of the regulatory build.
+  Returntype : Bio::EnsEMBL::Analysis
+  Exceptions : none
+  Status     : At Risk
+
+=cut
 
 sub get_Analysis {
   my $self = shift;
@@ -175,22 +182,17 @@ sub display_label {
 
   if(! defined $self->{display_label}) {
     $self->{'display_label'}  = $self->feature_type->name.' Regulatory Feature';
-
-    if( defined $self->epigenome ) {
-      $self->{display_label} .= ' - '.$self->epigenome->name;
-    }
   }
 
   return $self->{display_label};
 }
 
-
 =head2 display_id
 
   Example    : print $feature->display_id();
   Description: This method returns a string that is considered to be
-               the 'display' identifier. In this case the stable Id is
-               preferred
+               the 'display' identifier. In this case it is the stable id of 
+               the regulatory feature.
   Returntype : String
   Exceptions : none
   Caller     : web drawing code, Region Report tool
@@ -202,7 +204,6 @@ sub display_id {  return shift->{stable_id}; }
 
 =head2 stable_id
 
-  Arg [1]    : (optional) string - stable_id e.g ENSR00000000001
   Example    : my $stable_id = $feature->stable_id();
   Description: Getter for the stable_id attribute for this feature.
   Returntype : string
@@ -214,11 +215,13 @@ sub display_id {  return shift->{stable_id}; }
 
 sub stable_id { return shift->{stable_id}; }
 
-
 =head2 regulatory_evidence
 
-  Arg [1]    : String (optional) - Class of feature e.g. annotated or motif
-  Example    : print "Regulatory Attributes:\n\t".join("\n\t", (map $_->feature_type->name, @{$feature->regulatory_evidence()}))."\n";
+  Arg [1]    : String (optional) - Class of feature e.g. 'annotated' 
+               or 'motif'
+  Arg [2]    : Bio::EnsEMBL::Funcgen::Epigenome - The epigenome for which 
+               the evidence for it regulatory activity is requested.
+  Example    : 
   Description: Getter for the regulatory_evidence for this feature.
   Returntype : ARRAYREF
   Exceptions : Throws if feature class not valid
@@ -226,6 +229,7 @@ sub stable_id { return shift->{stable_id}; }
   Status     : At Risk
 
 =cut
+
 sub regulatory_evidence {
   my $self = shift;
   my $feature_class = shift;
@@ -259,6 +263,21 @@ sub _assert_epigenome_ok {
   }
 }
 
+=head2 regulatory_activity_for_epigenome
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Epigenome - The epigenome for which 
+               the evidence for it regulatory activity is requested.
+  Example    : 
+  Description: Getter for the regulatory_activity_for_epigenome for this 
+               feature. Returns undef, if no activity was predicted for the
+               epigenome. 
+  Returntype : Bio::EnsEMBL::Funcgen::RegulatoryActivity
+  Exceptions : none
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
 sub regulatory_activity_for_epigenome {
   my $self = shift;
   my $epigenome = shift;
@@ -270,7 +289,6 @@ sub regulatory_activity_for_epigenome {
   } @{$self->regulatory_activity};
   
   if (! @regulatory_activity) {
-#     throw('No regulatory activity for ' . $epigenome->display_label);
     return;
   }
   if (@regulatory_activity>1) {
@@ -320,11 +338,21 @@ sub _get_underlying_structure_motifs_by_epigenome_list {
 
 =head2 get_underlying_structure
 
-  Example    : my @web_image_structure = @{$regf->get_underlying_structure};
-  Description: Getter for the bound_end attribute for this feature.
-               Gives the 3' most end value of the underlying attribute
-               features.
-  Returntype : Arrayref
+  Example    : my @web_image_structure = @{$regulatory_feature->get_underlying_structure};
+  
+  Description: Returns the underlying structure of the regulatory feature in a
+               given epigenome. 
+
+               This structure is the bound start and end and the boundaries 
+               of all motifs linked to this regulatory feature for this 
+               epigenome. 
+
+               If no epigenome is provided, it will return a summary, which 
+               is the union of all underlying structures of all epigenomes in 
+               the regulatory build.
+
+  Returntype : Arrayref of slice coordinates relative to the slice of the 
+               regulatory feature.
   Exceptions : None
   Caller     : Webcode
   Status     : At Risk
@@ -347,8 +375,10 @@ sub get_underlying_structure {
     $motif_evidence = $self->_get_underlying_structure_motifs_by_epigenome_list($epigenome_list);
   }
   
-  # This makes the coordinates rela
-   my $slice_start = $self->slice->start;
+  # This is used to make the coordinates relative to the start of the current
+  # slice. The webcode expects it that way.
+  #
+  my $slice_start = $self->slice->start;
   
   foreach my $current_motif_evidence (@$motif_evidence) {
 
@@ -357,7 +387,6 @@ sub get_underlying_structure {
       0 + $current_motif_evidence->end   - $slice_start +1, 
     );
   }
-
   my $underlying_structure = [
     0 + $self->bound_start, 
     0 + $self->start,
@@ -365,18 +394,22 @@ sub get_underlying_structure {
     0 + $self->end, 
     0 + $self->bound_end
   ];
-
   return $underlying_structure;
 }
 
 =head2 regulatory_activity
 
-  Arg [1]     : 
-  Returntype  : 
-  Exceptions  : 
-  Description : Guaranteed to return an arrayref. If there are no linked feature sets, returns [].
+  Example    : my $regulatory_activity = $regulatory_feature->regulatory_activity;
+  
+  Description: Fetches a list of regulatory activities associated to this 
+               regulatory feature.
+
+  Returntype : ArrayRef[Bio::EnsEMBL::Funcgen::RegulatoryActivity]
+  Exceptions : None
+  Status     : At Risk
 
 =cut
+
 sub regulatory_activity {
 
   my $self = shift;
@@ -389,6 +422,19 @@ sub regulatory_activity {
   }
   return $self->{'_regulatory_activity'};
 }
+
+=head2 get_regulatory_build
+
+  Example    : my $regulatory_build = $regulatory_feature->get_regulatory_build;
+  
+  Description: Fetches the regulatory build used to generate this regulatory 
+               feature.
+
+  Returntype : Bio::EnsEMBL::Funcgen::RegulatoryBuild
+  Exceptions : None
+  Status     : At Risk
+
+=cut
 
 sub get_regulatory_build {
   my $self = shift;
@@ -441,10 +487,18 @@ sub has_epigenomes_with_activity {
 
 =head2 get_epigenomes_by_activity
 
-  Arg [1]     : Activity
-  Returntype  : 
-  Exceptions  : 
-  Description : 
+  Example    : my $regulatory_build = $regulatory_feature->get_epigenomes_by_activity($regulatory_activity);
+  
+  Description: Returns an array of epigenomes in which this regulatory 
+               feature has the regulatory activity given to this method as
+               parameter.
+               
+               This can be used to get a list of epigenomes in which a 
+               regulatory feature is active.
+
+  Returntype : ArrayRef[Bio::EnsEMBL::Funcgen::Epigenome]
+  Exceptions : None
+  Status     : At Risk
 
 =cut
 
@@ -642,12 +696,13 @@ sub is_projected {
 
 =head2 summary_as_hash
 
-  Example       : $regf_summary = $regf->summary_as_hash;
+  Example       : $regulatory_feature_summary = $regulatory_feature->summary_as_hash;
   Description   : Retrieves a textual summary of this RegulatoryFeature.
   Returns       : Hashref of descriptive strings
   Status        : Intended for internal use (REST)
 
 =cut
+
 sub summary_as_hash {
   my $self   = shift;
   
