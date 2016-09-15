@@ -109,10 +109,28 @@ sub _analysis      { return shift->_generic_get_or_set('_analysis',       @_) }
 sub _feature_type  { return shift->_generic_get_or_set('_feature_type',   @_) }
 sub adaptor        { return shift->_generic_get_or_set('adaptor',         @_) }
 
+=head2 get_Analysis
+
+  Description: Fetches the analysis used for DNAMethylation files.
+  Returntype : Bio::EnsEMBL::Analysis
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
 sub get_Analysis {
   my $self = shift;
   return $self->_analysis
 }
+
+=head2 get_FeatureType
+
+  Description: Fetches the feature type used for DNAMethylation files.
+  Returntype : Bio::EnsEMBL::Funcgen::FeatureType
+  Exceptions : none
+  Status     : At Risk
+
+=cut
 
 sub get_FeatureType {
   my $self = shift;
