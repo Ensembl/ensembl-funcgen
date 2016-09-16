@@ -31,9 +31,7 @@ use strict;
 use warnings;
 use Bio::EnsEMBL::Registry;
 
-my $registry = 'Bio::EnsEMBL::Registry';
-
-$registry->load_registry_from_db(
+Bio::EnsEMBL::Registry->load_registry_from_db(
     -host => 'ensembldb.ensembl.org',
     -user => 'anonymous'
 );
@@ -72,8 +70,8 @@ foreach my $annot_feat (@annotated_features){
 
 
 sub print_feature {
-	my $feature = shift;
-	print 	$feature->display_label. 	
-	 	"\t(".$feature->seq_region_name.":".
-		$feature->seq_region_start."-".$feature->seq_region_end.")\n";
+  my $feature = shift;
+  print $feature->display_label.
+     " (".$feature->seq_region_name.":".
+    $feature->seq_region_start."-".$feature->seq_region_end.")\n";
 }

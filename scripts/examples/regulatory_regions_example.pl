@@ -39,59 +39,52 @@ $registry->load_registry_from_db(
 );
 
 
-my $regfeat_adaptor = $registry->get_adaptor('Human', 'funcgen', 'regulatoryfeature');
-my $slice_adaptor = $registry->get_adaptor('Human', 'core', 'slice');
+my $slice_adaptor = $registry->get_adaptor('Human', 'Core',    'Slice');
+my $slice = $slice_adaptor->fetch_by_region('chromosome', 1, 54_960_000, 54_980_000);
 
-my $slice = $slice_adaptor->fetch_by_region('chromosome',1,54960000,54980000);
-#Global 'MultiCell' Regulatory Features
-my @reg_feats = @{$regfeat_adaptor->fetch_all_by_Slice($slice)};
-foreach my $rf (@reg_feats){ 	
-	print $rf->stable_id.": "; 	
-	print_feature($rf);
-	print "\tCell: ".$rf->cell_type->name."\n"; 	
-	print "\tFeature Type: ".$rf->feature_type->name."\n"; 
+my $regulatory_feature_adaptor = $registry->get_adaptor('Human', 'Funcgen', 'RegulatoryFeature');
+my @regulatory_features = @{$regulatory_feature_adaptor->fetch_all_by_Slice($slice)};
+
+foreach my $current_regulatory_feature (@regulatory_features) {
+  print $current_regulatory_feature->stable_id.": ";
+  print_feature($current_regulatory_feature);
+  print "\tFeature Type: ".$current_regulatory_feature->feature_type->name."\n";
 }
 
-#This gets the global 'MultiCell' Regulatory Feature
-print "\nRegulatory Feature ENSR00000165384\n";
-my $rf = $regfeat_adaptor->fetch_by_stable_id('ENSR00000165384'); 
-#And prints the evidence supporting it
-foreach my $feature (@{$rf->regulatory_attributes()}){
-	print "\t";
-	print_feature($feature);
-}
+my $regulatory_feature_demo_stable_id = 'ENSR00000165384';
 
-#this gets all cell-specific annotations for this regulatory feature
-my $rfs = $regfeat_adaptor->fetch_all_by_stable_ID('ENSR00000165384'); 
-foreach my $cell_rf (@{$rfs}){
-	#The stable id will always be 'ENSR00000165384' 	
-	print $cell_rf->stable_id.": \n"; 	
-	#But now it will be for a specific cell type
-	print "\tCell: ".$cell_rf->cell_type->name."\n";
-	#It will also contain cell-specific annotation
-	print "\tType: ".$cell_rf->feature_type->name."\n";
-	#And cell-specific extra boundaries
-	print 	"\t".$cell_rf->seq_region_name.":".	$cell_rf->bound_start."..".
-		$cell_rf->start."-".$cell_rf->end."..".$cell_rf->bound_end."\n";	
-	#Unlike the generic MultiCell Regulatory Features, Histone
-	# modifications and Polymerase are also used as attributes	
-	print "\tEvidence Features: \n"; 	
-	foreach my $attr_feat (@{$cell_rf->regulatory_attributes()}){
-		print "\t\t";
-		print_feature($attr_feat);
-	}	
-}
+my $regulatory_activity_adaptor      = Bio::EnsEMBL::Registry->get_adaptor('homo_sapiens', 'funcgen', 'RegulatoryActivity');
+my $regulatory_evidence_link_adaptor = Bio::EnsEMBL::Registry->get_adaptor('homo_sapiens', 'funcgen', 'RegulatoryEvidenceLink');
 
-# Get all Regulatory Feature Sets
-my $fset_adaptor = $registry->get_adaptor('Human', 'funcgen', 'featureset');
-my @reg_fsets = @{$fset_adaptor->fetch_all_by_type('regulatory')};
-print "Regulatory Feature Sets\n";
-foreach my $fset (@reg_fsets) { print "\t".$fset->name."\n"; }
+my $regulatory_feature = $regulatory_feature_adaptor->fetch_by_stable_id($regulatory_feature_demo_stable_id);
+
+print "The regulatory feature with stable id: "  . $regulatory_feature->stable_id . " has the following activities: \n";
+
+my $regulatory_activity_list = $regulatory_activity_adaptor->fetch_all_by_RegulatoryFeature($regulatory_feature);
+
+foreach my $current_regulatory_activity (@$regulatory_activity_list) {
+
+  print "\tIn the epigenome "  
+    . $current_regulatory_activity->get_Epigenome->display_label 
+    . ' it is: ' 
+    . $current_regulatory_activity->activity 
+    . "\n";
+
+  my $regulatory_evidence_link_list = $regulatory_evidence_link_adaptor->fetch_all_by_RegulatoryActivity($current_regulatory_activity);
+
+  if (@$regulatory_evidence_link_list) {
+    print "  This is supported by the following evidence:\n";
+
+    foreach my $current_regulatory_evidence_link (@$regulatory_evidence_link_list) {
+      my $evidence = $current_regulatory_evidence_link->get_Evidence;
+      print "  - " . $evidence->display_label . ': ' . $evidence->start . '..' . $evidence->end . "\n";
+    }
+  }
+}
 
 sub print_feature {
-	my $feature = shift;
-	print 	$feature->display_label. 	
-	 	"\t(".$feature->seq_region_name.":".
-		$feature->seq_region_start."-".$feature->seq_region_end.")\n";
+  my $feature = shift;
+  print $feature->display_label.
+     " (".$feature->seq_region_name.":".
+    $feature->seq_region_start."-".$feature->seq_region_end.")\n";
 }
-

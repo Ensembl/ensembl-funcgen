@@ -38,30 +38,29 @@ $registry->load_registry_from_db(
     -user => 'anonymous'
 );
 
-my $regfeat_adaptor = $registry->get_adaptor('Human', 'funcgen', 'regulatoryfeature');
+my $regulatory_feature_adaptor = $registry->get_adaptor('homo_sapiens', 'Funcgen', 'RegulatoryFeature');
 
-my $rf = $regfeat_adaptor->fetch_by_stable_id('ENSR00000165384'); 
-my @annotated_features = @{$rf->regulatory_attributes('annotated')};
+my $slice_adaptor = $registry->get_adaptor('homo_sapiens', 'Core',    'Slice');
+my $slice = $slice_adaptor->fetch_by_region('chromosome', 1, 54_960_000, 54_960_500);
 
-#An example to print annotated feature properties
+my $annotated_feature_adaptor  = $registry->get_adaptor('homo_sapiens', 'Funcgen', 'AnnotatedFeature');
+my @annotated_features = @{$annotated_feature_adaptor->fetch_all_by_Slice($slice)};
+
 foreach my $annotated_feature (@annotated_features) {
-	print_feature($annotated_feature);
-	print "\tFeature Type: ".$annotated_feature->feature_type->name."\n";
-	print "\tFeature Set: ".$annotated_feature->feature_set->name."\n";
-	#Analysis-depends property
-	print "\tScore: ".$annotated_feature->score."\n";
-	#Summit is usually present, but may not exist
-	print "\tSummit: ".$annotated_feature->summit."\n" if defined($annotated_feature->summit);
+  print_feature($annotated_feature);
+  print "\tFeature Type: " . $annotated_feature->feature_type->name . "\n";
+  print "\tFeature Set:  " . $annotated_feature->feature_set->name  . "\n";
+  print "\tScore:        " . $annotated_feature->score              . "\n";
+  print "\tSummit:       " . $annotated_feature->summit             . "\n" if defined($annotated_feature->summit);
 }
 
-#Get all Annotated Feature Sets
-my $fset_adaptor = $registry->get_adaptor('Human', 'funcgen', 'featureset');
-my @annot_fsets = @{$fset_adaptor->fetch_all_by_type('annotated')};
-print "There are ".scalar(@annot_fsets)." Annotated Feature Sets\n";
+my $feature_set_adaptor = $registry->get_adaptor('homo_sapiens', 'Funcgen', 'FeatureSet');
+my $annotated_feature_sets = $feature_set_adaptor->fetch_all_by_feature_class('annotated');
+print "There are " . @$annotated_feature_sets . " Annotated Feature Sets\n";
 
 sub print_feature {
-	my $feature = shift;
-	print 	$feature->display_label. 	
-	 	"\t(".$feature->seq_region_name.":".
-		$feature->seq_region_start."-".$feature->seq_region_end.")\n";
+  my $feature = shift;
+  print $feature->display_label.
+     " (".$feature->seq_region_name.":".
+    $feature->seq_region_start."-".$feature->seq_region_end.")\n";
 }

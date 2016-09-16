@@ -27,33 +27,23 @@ limitations under the License.
 
 =cut
 
-
 use strict;
 use Bio::EnsEMBL::Registry;
 
-my $registry = 'Bio::EnsEMBL::Registry';
+Bio::EnsEMBL::Registry->load_registry_from_db(
+  -host => 'ensembldb.ensembl.org',
+  -user => 'anonymous',
+);
 
-$registry->load_registry_from_db
-  (
-   -host => 'ensembldb.ensembl.org',
-   -user => 'anonymous',
-  );
+my $array_adaptor = Bio::EnsEMBL::Registry->get_adaptor('human', 'Funcgen', 'Array');
 
+my $array       = $array_adaptor->fetch_by_name_vendor('WholeGenome_4x44k_v1', 'AGILENT');
+my $array_chips = $array->get_ArrayChips;
 
-#Grab the adaptors
-my $efg_db        = $registry->get_DBAdaptor('Human', 'funcgen');
-my $array_adaptor = $efg_db->get_ArrayAdaptor;
-#my $ac_adaptor    = $efg_db->get_ArrayChipAdaptor;
-
-#Grab the Nimblegen array
-my $array         = $array_adaptor->fetch_by_name_vendor
-  ('2005-05-10_HG17Tiling_Set', 'NIMBLEGEN');
-
-#Grab the ArrayChips
-my @array_chips   = @{$array->get_ArrayChips};
-#my @array_chips   = @{$ac_adaptor->fetch_all_by_array_id($array->dbID)};
-
-#Print some ArrayChip info
-foreach my $ac ( @array_chips ){
-  print "ArrayChip:".$ac->name."\tDesignID:".$ac->design_id."\n";
+# Print some ArrayChip info
+foreach my $current_array_chip (@$array_chips) {
+  print "ArrayChip: " 
+    . $current_array_chip->name 
+    . " DesignID: " 
+    . $current_array_chip->design_id . "\n";
 }

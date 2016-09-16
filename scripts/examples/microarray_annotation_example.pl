@@ -25,98 +25,49 @@ limitations under the License.
   Questions may also be sent to the Ensembl help desk at
   <http://www.ensembl.org/Help/Contact>.
 
-=head1 NAME
-
-micro_array_annotation_example.pl
-
-=head1 DESCRIPTION
-
-This script extracts probes mapping and probeset annotations for the Mouse
-Affy array MOE430A, on the chromosome 2:26771920:26789448
-
 =cut
-
-# Remember to add the ensembl and ensembl-funcgen packages to your PERL5LIB
-
 
 use strict;
 use Bio::EnsEMBL::Registry;
-use Data::Dumper;
-use Config::Tiny;
-use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
-use feature qw(say);
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(dump_data);
 
-####################################
-# Use the Registry
-# Load database details
-# Then get the slice/array adaptors
-####################################
+Bio::EnsEMBL::Registry->load_registry_from_db(
+    -host => 'ensembldb.ensembl.org',
+    -user => 'anonymous'
+);
 
-my $registry = "Bio::EnsEMBL::Registry";
-$registry->load_registry_from_db(-host => 'ensembldb.ensembl.org',
+my $gene_adaptor          = Bio::EnsEMBL::Registry->get_adaptor("mus musculus", "Core",    "Gene");
+my $transcript_adaptor    = Bio::EnsEMBL::Registry->get_adaptor("mus musculus", "Core",    "Transcript");
+my $slice_adaptor         = Bio::EnsEMBL::Registry->get_adaptor("mus musculus", "Core",    "Slice");
 
-my $slice_adaptor = $registry->get_adaptor("mus musculus","core","Slice");
-my $pfa           = $registry->get_adaptor("mus musculus","funcgen","ProbeFeature");
-my $aa            = $registry->get_adaptor("mus musculus","funcgen","Array");
-my $pba           = $registry->get_adaptor("mus musculus","funcgen","ProbeSet");
-my $tx_adaptor    = $registry->get_adaptor("mus musculus","core","Transcript");
-my $gene_adaptor  = $registry->get_adaptor("mus musculus","core","Gene");
-
-#my $cfg = Config::Tiny->new;
-#   $cfg = Config::Tiny->read('../test_db.ini');
-#
-#my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new (
-#  -user       => $cfg->{staging}->{user},
-#  # -pass       => $cfg->{staging}->{pass},
-#  -host       => $cfg->{staging}->{host},
-#  -port       => $cfg->{staging}->{port},
-#  -dbname     => $cfg->{staging}->{dbname},
-#  -dnadb_host => $cfg->{staging}->{host},
-#  -dnadb_user => $cfg->{staging}->{user},
-#  );
-#
-#my $dna_db = Bio::EnsEMBL::DBSQL::DBAdaptor->new (
-#  -user       => $cfg->{dna_db}->{user},
-#  # -pass       => $cfg->{staging}->{pass},
-#  -host       => $cfg->{dna_db}->{host},
-#  -port       => $cfg->{dna_db}->{port},
-#  -dbname     => $cfg->{dna_db}->{dbname},
-#  );
-
-
-#print "Using api: ",$registry->software_version,"\n";
-
-my $slice_adaptor = $db->get_SliceAdaptor;
-my $pfa           = $db->get_ProbeFeatureAdaptor;
-my $aa            = $db->get_ArrayAdaptor;
-my $pba           = $db->get_ProbeSetAdaptor;
-my $tx_adaptor    = $dna_db->get_TranscriptAdaptor;
-my $gene_adaptor  = $dna_db->get_GeneAdaptor;
+my $array_adaptor         = Bio::EnsEMBL::Registry->get_adaptor("mus musculus", "Funcgen", "Array");
+my $probe_feature_adaptor = Bio::EnsEMBL::Registry->get_adaptor("mus musculus", "Funcgen", "ProbeFeature");
+my $probe_set_adaptor     = Bio::EnsEMBL::Registry->get_adaptor("mus musculus", "Funcgen", "ProbeSet");
 
 #####################################################
 # Get the slice for gene Cntnap1 with 100000bp flanks
 # Get the MOE430A array
 #####################################################
 
-my ($gene)  = @{$gene_adaptor->fetch_all_by_external_name('Cntnap1')};
+# Fetch first gene that goes by Cntnap1
+my ($gene) = @{$gene_adaptor->fetch_all_by_external_name('Cntnap1')};
 my $slice = $gene->feature_Slice->expand(10000, 10000);
-my $array = $aa->fetch_by_name_vendor('HuEx-1_0-st-v2', 'AFFY');
+my $array = $array_adaptor->fetch_by_name_vendor('MG-U74B', 'AFFY');
 
-############################################
-# Get mapped probes for that slice and array
-############################################
 
-my $oligo_features = $pfa->fetch_all_by_Slice_Array($slice,$array);
+# Get the locations to which this probe has mapped, "probe features" on this 
+# slice and array
+#
+my $probe_features = $probe_feature_adaptor->fetch_all_by_Slice_Array($slice,$array);
 
-print "\n".scalar(@$oligo_features)." ProbeFeatures for Array ".$array->name." on slice ".$slice->name."\n\n";
+print "\n".scalar(@$probe_features)." ProbeFeatures for Array ".$array->name." on slice ".$slice->name."\n\n";
 
-foreach my $pf(@$oligo_features){
-  my $probeset   = $pf->probeset->name;
-  my $probename  = $pf->probe->get_probename($array->name);
-	my $slice_name = $pf->feature_Slice->name;
-	#extended cigar_string as defined by SAMTools group
-  print "\tProbe $probeset $probename is aligned on $slice_name with cigar string ".$pf->cigar_string."\n";
+foreach my $current_probe_feature (@$probe_features) {
+
+  my $probeset   = $current_probe_feature->probeset->name;
+  my $probename  = $current_probe_feature->probe->get_probename($array->name);
+  my $slice_name = $current_probe_feature->feature_Slice->name;
+
+  print "\tProbe $probeset $probename is aligned on $slice_name with cigar string ".$current_probe_feature->cigar_string."\n";
 }
 
 ############################################
@@ -126,69 +77,72 @@ foreach my $pf(@$oligo_features){
 print "\nProbeFeatures xref'd to Transcripts on slice ".$slice->name."\n";
 my @genes = @{ $slice->get_all_Genes() };
 
-foreach my $gene  (@genes) {
+foreach my $gene (@genes) {
+
   print "\n",$gene->external_name," ",$gene->display_id(),"\n";
 
-  foreach my $transcript(@{$gene->get_all_Transcripts}){
-	print  "  ",$transcript->external_name," ",$transcript->display_id()," has the following probes matches:\n";
+  foreach my $transcript (@{$gene->get_all_Transcripts}) {
 
-	#Grab all the ProbeFeatures which are xref'd to this transcript
-	foreach my $pf(@{$pfa->fetch_all_by_external_name($transcript->stable_id)}){
+    print "  ", $transcript->external_name, " ", $transcript->display_id(), " has the following probes matches:\n";
 
-	  #Now filter ProbeFeatures which are on our array
-	  my $on_our_array = 0;
+    my $probe_feature_on_transcript = $probe_feature_adaptor->fetch_all_by_external_name($transcript->stable_id);
+    
+    PROBE_FEATURE:
+    foreach my $current_probe_feature (@$probe_feature_on_transcript) {
 
-	  foreach my $pf_array(@{$pf->probe->get_all_Arrays}){
+      # Now filter ProbeFeatures which are on our array
+      my $on_our_array = 0;
+      foreach my $array_having_current_probe_feature (@{$current_probe_feature->probe->get_all_Arrays}) {
+        if($array_having_current_probe_feature->name eq $array->name) {
+          $on_our_array = 1;
+          last;
+        }
+      }
+      next PROBE_FEATURE if ! $on_our_array;
 
-		if($pf_array->name eq $array->name){
-		  $on_our_array = 1;
-		  last;
-		}
-	  }
+      my $probeset = $current_probe_feature->probeset->name;
 
-	  next if ! $on_our_array;#Go to next ProbeFeature
+      # Get the DBEntry information
+      # Filter for transcript by passing optional argument
+      foreach my $current_db_entry (@{$current_probe_feature->get_all_Transcript_DBEntries($transcript)}) {
 
-	  my $probeset = $pf->probeset->name;
+        # Probe can have different names on different arrays
+        # So have to specify which array we are dealing with
+        #
+        my $complete_name = $current_probe_feature->probe->get_complete_name($array->name);
+        my $slice_name = $current_probe_feature->feature_Slice->name;
+        my $dbe_info = $current_db_entry->linkage_annotation;
 
-	  #Get the DBEntry information
-	  #Filter for transcript by passing optional argument
-	  foreach my $dbe(@{$pf->get_all_Transcript_DBEntries($transcript)}){
-		#Probe can have different names on different arrays
-		#So have to specify which array we are dealing with
-		my $complete_name = $pf->probe->get_complete_name($array->name);
-		my $slice_name = $pf->feature_Slice->name;
-		my $dbe_info = $dbe->linkage_annotation;
-		print "\t$complete_name $slice_name\t\tHits $dbe_info\n";
-	  }
-	}
+        print "\t$complete_name $slice_name\t\tHits $dbe_info\n";
+      }
+    }
   }
 }
 
+# Get All the probesets that have been mapped to a transcript
+#
+my $demo_transcript_stable_id = 'ENSMUST00000103109';
 
-############################################
-# Get All the probesets annotated
-# to a given transcripts
-############################################
-print "\nAll probesets annotated on ENST00000515683:\n";
-#Could also do this with the probe adaptor to get annotations for non probe set arrays
-#e.g. Illumina etc
-my $transcript = $tx_adaptor->fetch_by_stable_id('ENST00000515683');
-my @probesets = @{$pba->fetch_all_by_external_name($transcript->stable_id)};
+print "\nAll probesets annotated on $demo_transcript_stable_id:\n";
 
-foreach my $probeset (@probesets){
+my $transcript = $transcript_adaptor->fetch_by_stable_id($demo_transcript_stable_id);
+
+if (! defined $transcript) {
+  die("Can't find transcript with stable id ${demo_transcript_stable_id}!");
+}
+
+my $probesets = $probe_set_adaptor->fetch_all_by_external_name($transcript->stable_id);
+
+foreach my $probeset (@$probesets) {
 
   my $arrays_string = join(', ', (map $_->name, @{$probeset->get_all_Arrays}));
   my $dbe_info;
 
   #Now get linkage_annotation
-  foreach my $dbe(@{$probeset->get_all_Transcript_DBEntries($transcript)}){
-	#This will return all ProbeSet DBEntries for this transcript
-	#There should really be one max per transcript per probeset/probe
-	$dbe_info = $dbe->linkage_annotation;
+  foreach my $current_db_entry (@{$probeset->get_all_Transcript_DBEntries($transcript)}) {
+    $dbe_info = $current_db_entry->linkage_annotation;
   }
-
   print "\t".$probeset->name." on arrays ".$arrays_string." with Probe hits $dbe_info\n";
-
 }
 
 #############################################################
@@ -197,77 +151,32 @@ foreach my $probeset (@probesets){
 
 print "\nAll probesets associated with transcript of Cntnap1:\n";
 
-
-foreach my $pset(@{$pba->fetch_all_by_linked_transcript_Gene($gene)}){
-	print $pset->name."\n";
-
-	#Use the loop above to get all of the xref info for each probeset,
-	#which may include mappings to other genes/transcript
+foreach my $probe_set (@{$probe_set_adaptor->fetch_all_by_linked_transcript_Gene($gene)}) {
+  print $probe_set->name."\n";
 }
-
-
-
 
 ############################################
 # Probeset centric access
 ############################################
-print "\nProbeset centric access. All transcripts annotated to  ProbeSet 1418625_s_at";
-my $probeset = $pba->fetch_by_array_probeset_name('HuGene-2_0-st-v1', '16740948');
 
-my @trans_dbentries = @{$probeset->get_all_Transcript_DBEntries};
+print "\nProbeset centric access. All transcripts annotated to  ProbeSet 96567_at";
 
-foreach my $dbe (@trans_dbentries){
+my $probeset = $probe_set_adaptor->fetch_by_array_probeset_name('MG-U74A', '96567_at');
 
-  #Fetch transcript using primary ID of DBEntry object
-  my $tx = $tx_adaptor->fetch_by_stable_id($dbe->primary_id);
-  my $dbe_info = $dbe->linkage_annotation;
+my $transcript_db_entries = $probeset->get_all_Transcript_DBEntries;
 
-  #Grab the gene using the transcript stable ID stored in the DBEntry primary ID
-  my $gene_sid = $gene_adaptor->fetch_by_transcript_stable_id($dbe->primary_id)->stable_id;
+foreach my $current_db_entry (@$transcript_db_entries) {
 
-  print "\t".$dbe->db_display_name.' '.$dbe->primary_id."($gene_sid) at ".$tx->feature_Slice->name." with Probe hits $dbe_info\n";
-}
+  # Fetch transcript using primary ID of DBEntry object
+  my $transcript = $transcript_adaptor->fetch_by_stable_id($current_db_entry->primary_id);
+  my $dbe_info = $current_db_entry->linkage_annotation;
 
+  # Grab the gene using the transcript stable ID stored in the DBEntry primary ID
+  my $gene_sid = $gene_adaptor->fetch_by_transcript_stable_id($current_db_entry->primary_id)->stable_id;
 
-
-##########################################
-# Get details of unmapped objects
-###########################################
-#
-#print "\nUnmapped objects\n";
-#
-#foreach my $ps_name('1960566' ){
-#  my $ps = $pba->fetch_by_array_probeset_name($array->name, $ps_name);
-#
-#  print "\n\tUnmappedObjects for ProbeSet $ps_name are:\n";
-#  &list_uos($ps->get_all_UnmappedObjects);
-#
-#  foreach my $probe(@{$ps->get_all_Probes}){
-#	my $pname = $probe->get_complete_name($array->name);
-#	my @uos = @{$probe->get_all_UnmappedObjects};
-#
-#	if(@uos){
-#	  	print "\tUnmappedObjects for Probe $pname are:\n";
-#		&list_uos(\@uos);
-#	  }
-#
-#	foreach my $pf(@{$probe->get_all_ProbeFeatures}){
-#	  my $pname = $pf->probe->get_complete_name($array->name);
-#	  @uos = @{$pf->get_all_UnmappedObjects};
-#
-#	  if(@uos){
-#		print "\tUnmappedObjects for ProbeFeature $pname ".$pf->feature_Slice->name.":\n";
-#		&list_uos(\@uos);
-#	  }
-#	}
-#  }
-#}
-
-sub list_uos{
-  my ($uos) = @_;
-
-  foreach my $uo(@$uos){
-	print "\t".$uo->identifier."\t".$uo->description."\n";
-
-  }
+  print "\t" 
+    . $current_db_entry->db_display_name 
+    . ' ' . $current_db_entry->primary_id 
+    . ' ' . "($gene_sid) at ".$transcript->feature_Slice->name 
+    . ' ' . " with Probe hits $dbe_info\n";
 }
