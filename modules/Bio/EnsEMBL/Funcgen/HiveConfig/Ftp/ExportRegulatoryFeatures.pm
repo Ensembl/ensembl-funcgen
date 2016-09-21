@@ -28,7 +28,7 @@ sub pipeline_analyses {
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
             -parameters  => { 
 	      db_conn    => '#url#',
-	      inputquery => 'select epigenome.name as epigenome_name from regulatory_build join regulatory_build_epigenome using (regulatory_build_id) join epigenome using (epigenome_id) where regulatory_build.is_current=1',
+	      inputquery => 'select epigenome.name as epigenome_name, epigenome.production_name as epigenome_production_name from regulatory_build join regulatory_build_epigenome using (regulatory_build_id) join epigenome using (epigenome_id) where regulatory_build.is_current=1',
             },
             -flow_into   => {
                2 => { 'export_regulatory_activities', INPUT_PLUS() },
@@ -38,16 +38,35 @@ sub pipeline_analyses {
 	    -analysis_capacity => 20,
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'export_regulatory_features.pl --epigenome_name "#epigenome_name#" --output_dir #ftp_base_dir#/#species#/RegulatoryFeatureActivity --registry #reg_conf# --species #species#',
+                cmd => 'export_regulatory_features.pl --epigenome_name "#epigenome_name#" --output_file #ftp_base_dir#/#species#/RegulatoryFeatureActivity/#epigenome_production_name#.gff --registry #reg_conf# --species #species#',
+            },
+            -flow_into   => {
+               MAIN => 'gzip_regulatory_activities'
+            },
+        },
+        {   -logic_name  => 'gzip_regulatory_activities',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters  => {
+                cmd => 'gzip #ftp_base_dir#/#species#/RegulatoryFeatureActivity/#epigenome_production_name#.gff',
             },
         },
         {   -logic_name  => 'export_regulatory_features',
 	    -analysis_capacity => 20,
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'export_regulatory_features.pl --only_summary --output_dir #ftp_base_dir#/#species# --registry #reg_conf# --species #species#',
+                cmd => 'export_regulatory_features.pl --only_summary --output_file #ftp_base_dir#/#species#/RegulatoryFeatures.gff --registry #reg_conf# --species #species#',
+            },
+            -flow_into   => {
+               MAIN => 'gzip_regulatory_features'
             },
         },
+        {   -logic_name  => 'gzip_regulatory_features',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters  => {
+                cmd => 'gzip #ftp_base_dir#/#species#/RegulatoryFeatures.gff',
+            },
+        },
+
     ]
 }
 

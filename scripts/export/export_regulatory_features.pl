@@ -9,14 +9,14 @@ use Getopt::Long;
 my $registry;
 my $species;
 my $ontology_database_url;
-my $output_dir;
+my $output_file;
 my $epigenome_name;
 my $only_summary;
 
 GetOptions (
    'registry=s'       => \$registry,
    'species=s'        => \$species,
-   'output_dir=s'     => \$output_dir,
+   'output_file=s'     => \$output_file,
    'epigenome_name=s' => \$epigenome_name,
    'only_summary!'    => \$only_summary,
 );
@@ -30,7 +30,6 @@ my $ontology_term_adaptor      = Bio::EnsEMBL::Registry->get_adaptor( 'Multi', '
 my $regulatory_feature_adaptor = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Funcgen', 'RegulatoryFeature' );
 my $epigenome_adaptor          = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Funcgen', 'Epigenome' );
 
-my $output_file;
 my $serialiser_callback;
 
 my $exported_something = 1;
@@ -44,19 +43,26 @@ my $parameters = {
 };
 
 if ($only_summary) {
-  ($output_file, $serialiser_callback) = create_file_and_serialiser_for_summary($parameters);
+  $serialiser_callback = create_file_and_serialiser_for_summary($parameters);
 } else {
-  ($output_file, $serialiser_callback) = create_file_and_serialiser($parameters);
+  $serialiser_callback = create_file_and_serialiser($parameters);
 }
 
-use File::Basename;
-my $ftp_dir = dirname($output_file);
+my $output_fh;
+if ($output_file) {
+  $logger->info("The features will be written to " . $output_file ."\n");
 
-use File::Path qw(make_path);
-make_path($ftp_dir);
+  use File::Basename;
+  my $ftp_dir = dirname($output_file);
 
-use IO::File;
-my $output_fh = IO::File->new(">$output_file");
+  use File::Path qw(make_path);
+  make_path($ftp_dir);
+
+  use IO::File;
+  $output_fh = IO::File->new(">$output_file");
+} else {
+  $output_fh = *STDOUT;
+}
 
 use Bio::EnsEMBL::Utils::IO::GFFSerializer;
 my $serializer = Bio::EnsEMBL::Utils::IO::GFFSerializer->new(
@@ -85,10 +91,6 @@ while ($exported_something) {
 }
 
 $logger->info("Export done.\n");
-$logger->info("Gzipping $output_file\n");
-
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd );
-run_system_cmd("gzip $output_file");
 
 sub create_file_and_serialiser_for_summary {
 
@@ -97,13 +99,7 @@ sub create_file_and_serialiser_for_summary {
   my $logger                     = $param->{logger};
   my $regulatory_feature_adaptor = $param->{regulatory_feature_adaptor};
   my $exported_something         = $param->{exported_something};
-
-  my $output_file = File::Spec->catfile(
-    $output_dir,
-    'RegulatoryFeatures.gff'
-  );
-  $logger->info("The features will be written to " . $output_file ."\n");
-
+  
   my $regulatory_activity_serialiser = sub {
     my @row  = @{ shift @_ };
     my $dbid = $row[0];
@@ -118,7 +114,7 @@ sub create_file_and_serialiser_for_summary {
     $last_id = $dbid;
     return;
   };
-  return ($output_file, $regulatory_activity_serialiser);
+  return $regulatory_activity_serialiser;
 }
 
 sub create_file_and_serialiser {
@@ -138,12 +134,6 @@ sub create_file_and_serialiser {
   }
   $logger->info("Exporting regulatory features for " . $epigenome->display_label ."\n");
 
-  my $output_file = File::Spec->catfile(
-    $output_dir,
-    $epigenome->production_name . '.gff'
-  );
-  $logger->info("The features will be written to " . $output_file ."\n");
-
   my $regulatory_activity_serialiser = sub {
     my @row  = @{ shift @_ };
     my $dbid = $row[0];
@@ -160,19 +150,5 @@ sub create_file_and_serialiser {
     $last_id = $dbid;
     return;
   };
-  return ($output_file, $regulatory_activity_serialiser);
+  return $regulatory_activity_serialiser;
 }
-
-# sub create_filename_from_epigenome {
-#   my $epigenome = shift;
-#   return
-#     File::Spec->catfile(
-#       &gff_output_directory,
-#       $epigenome->production_name
-#       . '.gff'
-#     )
-# }
-# 
-# sub gff_output_directory {
-#   return 'RegulatoryFeatureActivity'
-# }

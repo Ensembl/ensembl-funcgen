@@ -25,16 +25,22 @@ Bio::EnsEMBL::Registry->load_all($registry);
 
 use Bio::EnsEMBL::Utils::Logger;
 my $logger = Bio::EnsEMBL::Utils::Logger->new();
-$logger->info("The features will be written to " . $output_file ."\n");
 
-use File::Basename;
-my $ftp_dir = dirname($output_file);
+my $output_fh;
+if ($output_file) {
+  $logger->info("The features will be written to " . $output_file ."\n");
 
-use File::Path qw(make_path);
-make_path($ftp_dir);
+  use File::Basename;
+  my $ftp_dir = dirname($output_file);
 
-use IO::File;
-my $output_fh = IO::File->new(">$output_file");
+  use File::Path qw(make_path);
+  make_path($ftp_dir);
+
+  use IO::File;
+  $output_fh = IO::File->new(">$output_file");
+} else {
+  $output_fh = *STDOUT;
+}
 
 my $ontology_term_adaptor = Bio::EnsEMBL::Registry->get_adaptor( 'Multi', 'Ontology', 'OntologyTerm' );
 
@@ -88,7 +94,6 @@ while ($exported_something) {
 	  . $annotated_feature->dbID
 	);
       }
-
       # This prevents memory leaks.
       undef %$annotated_feature;
 
@@ -99,10 +104,5 @@ while ($exported_something) {
   );
   $i+=$batch_size;
   $logger->log_progressbar($progressbar_id, $i);
-
 }
 $logger->info("Export done.\n");
-# $logger->info("Gzipping $output_file\n");
-# 
-# use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd );
-# run_system_cmd("gzip $output_file");

@@ -9,12 +9,12 @@ use Getopt::Long;
 
 my $registry;
 my $species;
-my $ftp_base_dir;
+my $output_file;
 
 GetOptions (
-   'registry=s'                => \$registry,
-   'species=s'                 => \$species,
-   'ftp_base_dir=s'            => \$ftp_base_dir,
+   'registry=s'    => \$registry,
+   'species=s'     => \$species,
+   'output_file=s' => \$output_file,
 );
 
 Bio::EnsEMBL::Registry->load_all($registry);
@@ -24,19 +24,21 @@ my $logger = Bio::EnsEMBL::Utils::Logger->new();
 
 my $ontology_term_adaptor = Bio::EnsEMBL::Registry->get_adaptor( 'Multi', 'Ontology', 'OntologyTerm' );
 
-my $output_file = File::Spec->catfile(
-  $ftp_base_dir, 'MotifFeatures.gff'
-);
-$logger->info("The features will be written to " . $output_file ."\n");
+my $output_fh;
+if ($output_file) {
+  $logger->info("The features will be written to " . $output_file ."\n");
 
-use File::Basename;
-my $ftp_dir = dirname($output_file);
+  use File::Basename;
+  my $ftp_dir = dirname($output_file);
 
-use File::Path qw(make_path);
-make_path($ftp_dir);
+  use File::Path qw(make_path);
+  make_path($ftp_dir);
 
-use IO::File;
-my $output_fh = IO::File->new(">$output_file");
+  use IO::File;
+  $output_fh = IO::File->new(">$output_file");
+} else {
+  $output_fh = *STDOUT;
+}
 
 use Bio::EnsEMBL::Utils::IO::GFFSerializer;
 my $serializer = Bio::EnsEMBL::Utils::IO::GFFSerializer->new(
@@ -91,7 +93,3 @@ while ($exported_something) {
 
 }
 $logger->info("Export done.\n");
-$logger->info("Gzipping $output_file\n");
-
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd );
-run_system_cmd("gzip $output_file");
