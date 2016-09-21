@@ -173,6 +173,10 @@ sub display_label {
     return $self->{'display_label'};
 }
 
+sub display_id {
+  return shift->display_label;
+}
+
 
 =head2 is_focus_feature
 
