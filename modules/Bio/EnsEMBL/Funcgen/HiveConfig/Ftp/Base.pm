@@ -12,7 +12,7 @@ sub pipeline_wide_parameters {
 
       ftp_base_dir  => $self->o('ftp_base_dir'),
       reg_conf      => $self->o('reg_conf'),
-      temp_dir      => '#ftp_base_dir#/#species#/tempdir',
+      temp_dir      => '#ftp_base_dir#/../tempdir/#species#',
     };
 }
 

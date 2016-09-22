@@ -9,16 +9,20 @@ use Getopt::Long;
 
 my $registry;
 my $species;
-my $output_file;
+my $gff_file;
+my $bed_file;
 my $min_id;
 my $max_id;
+my $feature_set_id;
 
 GetOptions (
-   'registry=s'                => \$registry,
-   'species=s'                 => \$species,
-   'output_file=s'             => \$output_file,
-   'min_id=s'                  => \$min_id,
-   'max_id=s'                  => \$max_id,
+   'registry=s' => \$registry,
+   'species=s'  => \$species,
+   'gff_file=s' => \$gff_file,
+   'bed_file=s' => \$bed_file,
+   'min_id=s'   => \$min_id,
+   'max_id=s'   => \$max_id,
+   'feature_set_id=s' => \$feature_set_id,
 );
 
 Bio::EnsEMBL::Registry->load_all($registry);
@@ -26,29 +30,36 @@ Bio::EnsEMBL::Registry->load_all($registry);
 use Bio::EnsEMBL::Utils::Logger;
 my $logger = Bio::EnsEMBL::Utils::Logger->new();
 
-my $output_fh;
-if ($output_file) {
-  $logger->info("The features will be written to " . $output_file ."\n");
-
-  use File::Basename;
-  my $ftp_dir = dirname($output_file);
-
-  use File::Path qw(make_path);
-  make_path($ftp_dir);
-
-  use IO::File;
-  $output_fh = IO::File->new(">$output_file");
-} else {
-  $output_fh = *STDOUT;
-}
+use Bio::EnsEMBL::Funcgen::Ftp::Utils qw( create_file_handle );
 
 my $ontology_term_adaptor = Bio::EnsEMBL::Registry->get_adaptor( 'Multi', 'Ontology', 'OntologyTerm' );
 
+my $gff_fh = create_file_handle($gff_file);
+
 use Bio::EnsEMBL::Utils::IO::GFFSerializer;
-my $serializer = Bio::EnsEMBL::Utils::IO::GFFSerializer->new(
+my $gff_serializer = Bio::EnsEMBL::Utils::IO::GFFSerializer->new(
   $ontology_term_adaptor,
-  $output_fh
+  $gff_fh
 );
+
+my $bed_fh = create_file_handle($bed_file);
+
+use Bio::EnsEMBL::Utils::IO::BEDSerializer;
+my $bed_serializer = Bio::EnsEMBL::Utils::IO::BEDSerializer->new(
+  $bed_fh
+);
+
+my @batch_constraint_list;
+if ($min_id) {
+  push @batch_constraint_list, qq(annotated_feature_id>=$min_id);
+}
+if ($max_id) {
+  push @batch_constraint_list, qq(annotated_feature_id<=$max_id);
+}
+if ($feature_set_id) {
+  push @batch_constraint_list, qq(feature_set_id=$feature_set_id);
+}
+my $batch_constraint = join ' and ', @batch_constraint_list;
 
 my $annotated_feature_adaptor = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Funcgen', 'AnnotatedFeature' );
 my $funcgen_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor( $species, 'Funcgen' );
@@ -56,9 +67,6 @@ my $funcgen_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor( $species, 'Funcgen'
 my $helper = Bio::EnsEMBL::Utils::SqlHelper->new(
   -DB_CONNECTION => $funcgen_adaptor->dbc
 );
-
-my $batch_constraint = qq(annotated_feature_id<=$max_id and annotated_feature_id>=$min_id);
-
 my $number_of_annotated_features = $helper->execute_simple(
   -SQL      => "select count(annotated_feature_id) from annotated_feature where $batch_constraint",
 )->[0];
@@ -85,7 +93,8 @@ while ($exported_something) {
       my $annotated_feature = $annotated_feature_adaptor->fetch_by_dbID($annotated_feature_id);
 
       eval {
-	$serializer->print_feature($annotated_feature);
+	$gff_serializer->print_feature($annotated_feature);
+	$bed_serializer->print_feature($annotated_feature);
       };
       if ($@) {
 	use Carp;
@@ -106,3 +115,19 @@ while ($exported_something) {
   $logger->log_progressbar($progressbar_id, $i);
 }
 $logger->info("Export done.\n");
+
+$gff_fh->close;
+$bed_fh->close;
+
+# Make sure that empty files exist so subsequent analyses don't fail.
+# The gff serialiser might not be creating a file, 
+#
+
+if (-z $gff_file) {
+  `touch $gff_file`;
+}
+if (-z $bed_file) {
+  `touch $bed_file`;
+}
+
+

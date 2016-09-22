@@ -24,9 +24,6 @@ limitations under the License.
 
 =head1 NAME
 =head1 DESCRIPTION
-
-  This is a class represents a regulatory build.
-
 =cut
 
 package Bio::EnsEMBL::Funcgen::Ftp::FetchQCRelatedData;
