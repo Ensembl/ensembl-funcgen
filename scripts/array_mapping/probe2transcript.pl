@@ -13,7 +13,7 @@ http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
-WITH$OUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
@@ -135,7 +135,7 @@ Testing:
 
 Other options:
 -import_edb         Automatically imports the external_db record if not present
--tee                Tees output to STD$OUT
+-tee                Tees output to STDOUT
 -filename           Sets name to be used in output and logfile, default is xref_dbname_probe2transcript.log|out
 -help               Prints this POD documentation and exits
 
