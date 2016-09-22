@@ -325,17 +325,18 @@ sub rollback_arrays {
   }
 
   my $arrays = join " ", @{$options->{array_names}};
-
+  
   my $cmd = 'rollback_array.pl'
 
   . ' --species '     . $options->{species}
   . ' -dbhost '       . $options->{xref_host}
   . ' -dbname '       . $options->{xref_dbname}
   . ' -dbuser '       . $options->{xref_user}
-  . ' -dbport '       . $options->{xref_port}
+  . ($options->{xref_port} ? ' -dbport '       . $options->{xref_port} : '')
+  . ($options->{xref_pass} ? ' -dbpass '       . $options->{xref_pass} : '')
 
-  . ' -dnadb_pass '   . $options->{transcript_pass}
-  . ' -dnadb_port '   . $options->{transcript_port}
+  . ($options->{transcript_pass} ? ' -dnadb_pass '   . $options->{transcript_pass}: "")
+  . ($options->{transcript_port} ? ' -dnadb_port '   . $options->{transcript_port}: "")
   . ' -dnadb_name '   . $options->{transcript_dbname}
   . ' -dnadb_host '   . $options->{transcript_host}
   . ' -dnadb_user '   . $options->{transcript_user}
@@ -381,7 +382,7 @@ sub main {
     delete_existing_xrefs($options->{array_names});
   } else{
     $Helper->log_header('Checking existing Xrefs');
-    check_existing_and_exit($xref_db, $options);
+    check_existing_and_exit($xref_db, $transc_edb_name, $options);
   }
   $Helper->log('Checking that all probes link to analyses', 0, 'append_date');
   check_probe_analysis_join($probe_db);
@@ -914,7 +915,7 @@ sub get_external_db_id {
     ";
     $Helper->log("Importing external_db using: $sql");
     $xref_db->dbc->db_handle->do($sql);
-    return $xref_db->last_insert_id();
+    return $xref_db->db_handle->last_insert_id();
   }
 }
 
@@ -1082,16 +1083,16 @@ sub check_existing_and_exit {
   SELECT
     COUNT(*)
   FROM
-     xref x, object_xref ox, external_db e, probe p, array_chip ac, array a
+     xref x
+     JOIN object_xref ox USING(xref_id)
+     JOIN external_db e USING(external_db_id)
+     JOIN probe p ON (ensembl_id = $probe_join)
+     JOIN array_chip ac USING(array_chip_id)
+     JOIN array a USING(array_id)
   WHERE
-     x.xref_id=ox.xref_id
-     AND e.external_db_id=x.external_db_id
-     AND e.db_name ='$transc_edb_name'
-     AND ox.ensembl_object_type='$options->{xref_object}'
-     AND ox.ensembl_id=${probe_join}
-     AND ox.linkage_annotation!='ProbeTranscriptAlign'
-     AND p.array_chip_id=ac.array_chip_id
-     AND ac.array_id=a.array_id
+     e.db_name = '$transc_edb_name'
+     AND ox.ensembl_object_type= '$options->{xref_object}'
+     AND ox.linkage_annotation!= 'ProbeTranscriptAlign'
      AND a.name=?
   ";
 
@@ -1298,20 +1299,20 @@ sub calculate_utrs {
   # Compute a typical utr length from the measured values
   foreach my $side (5,3) {
     if(! defined $unannotated_utrs->{$side}) {
-      my $count = scalar @{$lengths{side}};
+      my $count = scalar @{$lengths{$side}};
       my $zero_count = (scalar @$transcripts) - $count;
       $Helper->log("Seen $count ${side}' UTRs, $zero_count have length 0");
 
       if($count) {
-	my ($mean, $remainder) = split/\./, mean($lengths{side});
-	if ($remainder =~ /^[5-9]/) {
-	  $mean++;
-	}
-	my $median = median($lengths{side});
-	$unannotated_utrs->{$side}  = ($mean > $median)  ? $mean : $median;
-	$Helper->log("Calculated default unannotated ${side}' UTR length:\t$unannotated_utrs->{$side}");
+        my ($mean, $remainder) = split/\./, mean($lengths{$side});
+        if ($remainder =~ /^[5-9]/) {
+          $mean++;
+        }
+        my $median = median($lengths{$side});
+        $unannotated_utrs->{$side}  = ($mean > $median)  ? $mean : $median;
+        $Helper->log("Calculated default unannotated ${side}' UTR length:\t$unannotated_utrs->{$side}");
       } else{
-	croak('Found no 5\' UTRs, you must specify a -unannotated_5_utr');
+        croak('Found no 5\' UTRs, you must specify a -unannotated_5_utr');
       }
     }
   }
@@ -1352,7 +1353,7 @@ sub write_extended_transcripts_into_file {
   foreach my $end(5, 3) {
     my $total_length = 0;
     foreach my $utr_count (@{$utr_counts->{$end}}) {
-      $total_length += $_;
+      $total_length += $utr_count;
     }
     my $num_utrs = scalar(@{$utr_counts->{$end}});
     my $average = ($num_utrs) ? ($total_length/$num_utrs) : 0;
@@ -1389,11 +1390,11 @@ sub write_extended_transcript {
   my $new_end;
   # Check whether the transcript is on the postive/undefined or negative strand
   if ($transcript->strand() >= 0) {
-    $new_start = $transcript->seq_region_start - $options->{$transcript_sid}{flanks}{5};
-    $new_end   = $transcript->seq_region_end + $options->{$transcript_sid}{flanks}{3};
+    $new_start = $transcript->seq_region_start - $options->{flanks}{$transcript_sid}{5};
+    $new_end   = $transcript->seq_region_end + $options->{flanks}{$transcript_sid}{3};
   } else {
-    $new_start = $transcript->seq_region_start - $options->{$transcript_sid}{flanks}{3};
-    $new_end = $transcript->seq_region_end + $options->{$transcript_sid}{flanks}{5};
+    $new_start = $transcript->seq_region_start - $options->{flanks}{$transcript_sid}{3};
+    $new_end = $transcript->seq_region_end + $options->{flanks}{$transcript_sid}{5};
   }
 
   if ($new_start < 0) {
@@ -1424,10 +1425,10 @@ sub extend_transcript {
     if(defined $utr) {
       push @{$utr_counts->{$end}}, $utr->length;
       if(defined $options->{utr_extends}{$end}) {
-	return $options->{utr_extends}{$end};
+        return $options->{utr_extends}{$end};
       }
       else{
-	return $utr->length * $options->{utr_multiplier};
+        return $utr->length * $options->{utr_multiplier};
       }
     } elsif (defined  $options->{unannotated_utrs}{$end}) {
       return $options->{unannotated_utrs}{$end};
@@ -1470,7 +1471,7 @@ sub dump_probe_features {
     JOIN seq_region
       USING(seq_region_id)
   WHERE
-    array.name IN \"$names\"
+    array.name IN (\"$names\")
     AND array.vendor=\"$options->{vendor}\"
   GROUP BY
     probe_feature_id, probe_id, probe_set_id
@@ -2178,7 +2179,7 @@ sub create_final_xrefs {
           }
         }
       } else {
-	if($hits > 1) {
+        if($hits > 1) {
           $linkage_annotation = "Matches $hits times";
           if ($num_mismatch_hits) {
             $linkage_annotation .= " ($num_mismatch_hits times with mismatches)";
@@ -2348,9 +2349,9 @@ sub add_mart_displayable_status {
       FROM
         array a, status_name sn
       WHERE
-        a.name in ($names_string)
+        a.name in (\"$names_string\")
         AND a.vendor='$vendor'
-	AND sn.name in ('MART_DISPLAYABLE')
+        AND sn.name in ('MART_DISPLAYABLE')
   ";
   $Helper->log_header('Adding MART_DISPLAYABLE status entries');
   $xref_db->dbc->do($sql);
@@ -2492,7 +2493,7 @@ sub set_unmapped_reason_id {
 =cut
 
 sub create_unmapped_reason {
-  my ($unmapped_object, $unmapped_object_adaptor) = @_;
+  my ($db, $unmapped_object) = @_;
   # Insert new reason into unmapped reason table
   my $sql_reason = '
   INSERT INTO
@@ -2501,7 +2502,7 @@ sub create_unmapped_reason {
     VALUES
     (?,?)
   ';
-  my $sth_reason = $unmapped_object_adaptor->prepare($sql_reason);
+  my $sth_reason = $db->dbc->prepare($sql_reason);
 
   $sth_reason->bind_param(1,$unmapped_object->{'summary'},SQL_VARCHAR);
   $sth_reason->bind_param(2,$unmapped_object->{'description'},SQL_VARCHAR);
@@ -2526,7 +2527,7 @@ sub create_unmapped_reason {
     FROM unmapped_reason
       WHERE full_description = ?
     ';
-    my $sth_fetch_reason = $unmapped_object_adaptor->prepare($sql_fetch_reason);
+    my $sth_fetch_reason = $db->prepare($sql_fetch_reason);
     $sth_fetch_reason->execute($unmapped_object->{'description'});
 
     my $unmapped_reasons = $sth_fetch_reason->fetchrow_arrayref();
@@ -2539,7 +2540,7 @@ sub create_unmapped_reason {
     $id = $unmapped_reasons->[0];
     $sth_fetch_reason->finish();
   } else{
-    $id = $unmapped_object_adaptor->last_insert_id;
+    $id = $db->dbc->db_handle->last_insert_id(undef, undef, undef, undef);
   }
   $sth_reason->finish();
   return $id;
