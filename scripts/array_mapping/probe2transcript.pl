@@ -13,7 +13,7 @@ http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
-WITH$OUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 
@@ -135,7 +135,7 @@ Testing:
 
 Other options:
 -import_edb         Automatically imports the external_db record if not present
--tee                Tees output to STD$OUT
+-tee                Tees output to STDOUT
 -filename           Sets name to be used in output and logfile, default is xref_dbname_probe2transcript.log|out
 -help               Prints this POD documentation and exits
 
@@ -205,6 +205,7 @@ ensembl-funcgen/scripts/environments/arrays.env
 
 use strict;
 use warnings;
+use locale; # Needed to ensure consistent ordering between Perl and UNIX sort
 
 use Pod::Usage;
 use Getopt::Long;
@@ -324,17 +325,18 @@ sub rollback_arrays {
   }
 
   my $arrays = join " ", @{$options->{array_names}};
-
+  
   my $cmd = 'rollback_array.pl'
 
   . ' --species '     . $options->{species}
   . ' -dbhost '       . $options->{xref_host}
   . ' -dbname '       . $options->{xref_dbname}
   . ' -dbuser '       . $options->{xref_user}
-  . ' -dbport '       . $options->{xref_port}
+  . ($options->{xref_port} ? ' -dbport '       . $options->{xref_port} : '')
+  . ($options->{xref_pass} ? ' -dbpass '       . $options->{xref_pass} : '')
 
-  . ' -dnadb_pass '   . $options->{transcript_pass}
-  . ' -dnadb_port '   . $options->{transcript_port}
+  . ($options->{transcript_pass} ? ' -dnadb_pass '   . $options->{transcript_pass}: "")
+  . ($options->{transcript_port} ? ' -dnadb_port '   . $options->{transcript_port}: "")
   . ' -dnadb_name '   . $options->{transcript_dbname}
   . ' -dnadb_host '   . $options->{transcript_host}
   . ' -dnadb_user '   . $options->{transcript_user}
@@ -380,14 +382,14 @@ sub main {
     delete_existing_xrefs($options->{array_names});
   } else{
     $Helper->log_header('Checking existing Xrefs');
-    check_existing_and_exit($xref_db, $options);
+    check_existing_and_exit($xref_db, $transc_edb_name, $options);
   }
   $Helper->log('Checking that all probes link to analyses', 0, 'append_date');
   check_probe_analysis_join($probe_db);
   $Helper->log("Caching arrays per $options->{xref_object}", 0, 'append_date');
   ($options->{arrays_per_object}, $options->{probeset_sizes}, $options->{object_names}) = @{cache_arrays_per_object($probe_db, $options)};
   $Helper->log('Caching transcript / probe feature xrefs', 0, 'append_date');
-  $options->{transcripts_per_probefeature} = get_transcripts_per_probefeature($xref_db, $options);
+  $options->{transcripts_per_probefeature} = get_transcripts_per_probefeature($xref_db, $options, $Helper);
   if($options->{calc_utrs}) {
     $Helper->log('Calculating default UTR lengths from greatest of max median|mean', 0, 'append_date');
     calculate_utrs($options->{unannotated_utrs}, $transcripts);
@@ -415,23 +417,21 @@ sub main {
   my $unmapped_objects = [];
   my $unmapped_counts = {};
 
-  open (my $OUT, ">", "$options->{filename}.out");
   $Helper->log('Performing overlap analysis.', 0, 'append_date');
-  my $object_transcript_hits = associate_probes_to_transcripts($transcripts, $fh3, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $OUT);
+  my $object_transcript_hits = associate_probes_to_transcripts($transcripts, $fh3, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $Helper);
   unlink $filename3;
 
   $Helper->log('Logging probesets that don\'t map to any transcripts', 0, 'append_date');
-  log_unmapped_objects($object_transcript_hits, $unmapped_counts, $unmapped_objects, $options, $OUT);
+  log_unmapped_objects($object_transcript_hits, $unmapped_counts, $unmapped_objects, $options, $Helper);
   $Helper->log('Filtering out promiscuous objects', 0 , 'append_date');
-  remove_promiscuous_objects($object_transcript_hits, $unmapped_counts, $unmapped_objects, $options, $OUT);
+  remove_promiscuous_objects($object_transcript_hits, $unmapped_counts, $unmapped_objects, $options, $Helper);
   $Helper->log('Flushing last unmapped probesets', 0 , 'append_date');
   if(scalar @$unmapped_objects) {
     $options->{unmapped_object_adaptor}->store(@$unmapped_objects);
   }
 
   $Helper->log('Creating final xrefs', 0, 'append_date');
-  create_final_xrefs($object_transcript_hits, $xrefs, $xref_db, $options, $OUT);
-  close ($OUT);
+  create_final_xrefs($object_transcript_hits, $xrefs, $xref_db, $options, $Helper);
   $Helper->log('Loading xrefs info DB', 0 , 'append_date');
   if (scalar @$xrefs) {
     store_xrefs($xrefs, $xref_db, $options->{transc_edb_id}, $options->{analysis}, $options->{transcript_xref_id}, $options);
@@ -913,7 +913,7 @@ sub get_external_db_id {
     ";
     $Helper->log("Importing external_db using: $sql");
     $xref_db->dbc->db_handle->do($sql);
-    return $xref_db->last_insert_id();
+    return $xref_db->db_handle->last_insert_id();
   }
 }
 
@@ -1081,16 +1081,16 @@ sub check_existing_and_exit {
   SELECT
     COUNT(*)
   FROM
-     xref x, object_xref ox, external_db e, probe p, array_chip ac, array a
+     xref x
+     JOIN object_xref ox USING(xref_id)
+     JOIN external_db e USING(external_db_id)
+     JOIN probe p ON (ensembl_id = $probe_join)
+     JOIN array_chip ac USING(array_chip_id)
+     JOIN array a USING(array_id)
   WHERE
-     x.xref_id=ox.xref_id
-     AND e.external_db_id=x.external_db_id
-     AND e.db_name ='$transc_edb_name'
-     AND ox.ensembl_object_type='$options->{xref_object}'
-     AND ox.ensembl_id=${probe_join}
-     AND ox.linkage_annotation!='ProbeTranscriptAlign'
-     AND p.array_chip_id=ac.array_chip_id
-     AND ac.array_id=a.array_id
+     e.db_name = '$transc_edb_name'
+     AND ox.ensembl_object_type= '$options->{xref_object}'
+     AND ox.linkage_annotation!= 'ProbeTranscriptAlign'
      AND a.name=?
   ";
 
@@ -1144,11 +1144,12 @@ sub check_probe_analysis_join {
   Arg2: Hash ref containing:
   - array_names: array ref
   - transc_edb_id: id of the core database in the external_db table of the xref system
+  Arg3: Output file handle
 
 =cut
 
 sub get_transcripts_per_probefeature {
-  my ($xref_db, $options) = @_;
+  my ($xref_db, $options, $Helper) = @_;
   my $sql = '
   SELECT
     ensembl_id, dbprimary_acc
@@ -1174,7 +1175,13 @@ sub get_transcripts_per_probefeature {
   my %transcripts_per_probefeature = ();
   my ($probeset_id, $transcript_sid);
   $sth->bind_columns(\$probeset_id, \$transcript_sid);
+  if ($debug) {
+    $Helper->log($sql."\n");
+  }
   while($sth->fetch()) {
+    if ($debug) {
+      $Helper->log("ALIGNMENT\t$probeset_id\t$transcript_sid\n");
+    }
     $transcripts_per_probefeature{$probeset_id} ||= {};
     $transcripts_per_probefeature{$probeset_id}{$transcript_sid}++;
     # TODO Check for duplicates, i.e. check number == 1
@@ -1297,20 +1304,20 @@ sub calculate_utrs {
   # Compute a typical utr length from the measured values
   foreach my $side (5,3) {
     if(! defined $unannotated_utrs->{$side}) {
-      my $count = scalar @{$lengths{side}};
+      my $count = scalar @{$lengths{$side}};
       my $zero_count = (scalar @$transcripts) - $count;
       $Helper->log("Seen $count ${side}' UTRs, $zero_count have length 0");
 
       if($count) {
-	my ($mean, $remainder) = split/\./, mean($lengths{side});
-	if ($remainder =~ /^[5-9]/) {
-	  $mean++;
-	}
-	my $median = median($lengths{side});
-	$unannotated_utrs->{$side}  = ($mean > $median)  ? $mean : $median;
-	$Helper->log("Calculated default unannotated ${side}' UTR length:\t$unannotated_utrs->{$side}");
+        my ($mean, $remainder) = split/\./, mean($lengths{$side});
+        if ($remainder =~ /^[5-9]/) {
+          $mean++;
+        }
+        my $median = median($lengths{$side});
+        $unannotated_utrs->{$side}  = ($mean > $median)  ? $mean : $median;
+        $Helper->log("Calculated default unannotated ${side}' UTR length:\t$unannotated_utrs->{$side}");
       } else{
-	croak('Found no 5\' UTRs, you must specify a -unannotated_5_utr');
+        croak('Found no 5\' UTRs, you must specify a -unannotated_5_utr');
       }
     }
   }
@@ -1351,7 +1358,7 @@ sub write_extended_transcripts_into_file {
   foreach my $end(5, 3) {
     my $total_length = 0;
     foreach my $utr_count (@{$utr_counts->{$end}}) {
-      $total_length += $_;
+      $total_length += $utr_count;
     }
     my $num_utrs = scalar(@{$utr_counts->{$end}});
     my $average = ($num_utrs) ? ($total_length/$num_utrs) : 0;
@@ -1388,11 +1395,11 @@ sub write_extended_transcript {
   my $new_end;
   # Check whether the transcript is on the postive/undefined or negative strand
   if ($transcript->strand() >= 0) {
-    $new_start = $transcript->seq_region_start - $options->{$transcript_sid}{flanks}{5};
-    $new_end   = $transcript->seq_region_end + $options->{$transcript_sid}{flanks}{3};
+    $new_start = $transcript->seq_region_start - $options->{flanks}{$transcript_sid}{5};
+    $new_end   = $transcript->seq_region_end + $options->{flanks}{$transcript_sid}{3};
   } else {
-    $new_start = $transcript->seq_region_start - $options->{$transcript_sid}{flanks}{3};
-    $new_end = $transcript->seq_region_end + $options->{$transcript_sid}{flanks}{5};
+    $new_start = $transcript->seq_region_start - $options->{flanks}{$transcript_sid}{3};
+    $new_end = $transcript->seq_region_end + $options->{flanks}{$transcript_sid}{5};
   }
 
   if ($new_start < 0) {
@@ -1423,10 +1430,10 @@ sub extend_transcript {
     if(defined $utr) {
       push @{$utr_counts->{$end}}, $utr->length;
       if(defined $options->{utr_extends}{$end}) {
-	return $options->{utr_extends}{$end};
+        return $options->{utr_extends}{$end};
       }
       else{
-	return $utr->length * $options->{utr_multiplier};
+        return $utr->length * $options->{utr_multiplier};
       }
     } elsif (defined  $options->{unannotated_utrs}{$end}) {
       return $options->{unannotated_utrs}{$end};
@@ -1469,7 +1476,7 @@ sub dump_probe_features {
     JOIN seq_region
       USING(seq_region_id)
   WHERE
-    array.name IN \"$names\"
+    array.name IN (\"$names\")
     AND array.vendor=\"$options->{vendor}\"
   GROUP BY
     probe_feature_id, probe_id, probe_set_id
@@ -1510,7 +1517,7 @@ sub dump_probe_features {
 =cut
 
 sub associate_probes_to_transcripts {
-  my ($transcripts, $pf_transc_overlap_fh, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $OUT) = @_;
+  my ($transcripts, $pf_transc_overlap_fh, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $Helper) = @_;
   # Number of processed transcripts
   my $index = 0;
   # Last percentage point to be processed for progress display
@@ -1528,8 +1535,8 @@ sub associate_probes_to_transcripts {
     $last_pc = print_progress($index++, scalar @{$transcripts}, $last_pc);
     # Stores overlaps temporarily
     my $transcript_feature_info = {};
-    $last_line = examine_transcript($transcript, $transcript_feature_info, $pf_transc_overlap_fh, $last_line, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $OUT);
-    compute_hits($transcript, $transcript_feature_info, $object_transcript_hits, $unmapped_objects, $unmapped_counts, $options, $OUT);
+    $last_line = examine_transcript($transcript, $transcript_feature_info, $pf_transc_overlap_fh, $last_line, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $Helper);
+    compute_hits($transcript, $transcript_feature_info, $object_transcript_hits, $unmapped_objects, $unmapped_counts, $options, $Helper);
   }
 
   return $object_transcript_hits;
@@ -1574,7 +1581,7 @@ sub print_progress {
 =cut
 
 sub examine_transcript {
-  my ($transcript, $transcript_feature_info, $pf_transc_overlap_fh, $last_line, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $OUT) = @_;
+  my ($transcript, $transcript_feature_info, $pf_transc_overlap_fh, $last_line, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $Helper) = @_;
 
   my $range_registry = $options->{rr};
   $range_registry->flush();
@@ -1587,6 +1594,9 @@ sub examine_transcript {
 
   my %exonutrs;
   my $transcript_sid = $transcript->stable_id;
+  if ($debug) {
+    $Helper->log("TRANSCRIPT $transcript_sid\n");
+  }
   my $transcript_slice = $transcript->feature_Slice();
   my $slice            = $transcript_slice->expand($options->{$transcript_sid}{flanks}{5}, $options->{$transcript_sid}{flanks}{3});
   # Find flanking regions
@@ -1622,11 +1632,14 @@ sub examine_transcript {
   if (defined $line) {
     chomp $line;
     my ($tx_chr, $tx_start, $tx_end, $transcript_sid_2, $chr, $start, $end, $strand, $cigar, $mismatches, $feature_id, $probe_id, $probe_name, $probeset_id, $probeset_name) = split "\t", $line;
+    if ($debug) {
+      $Helper->log("LINE (2nd pass)| $line\n");
+    }
     if ($transcript_sid_2 gt $transcript_sid) {
       $overran = 1;
     }
     if ($transcript_sid_2 eq $transcript_sid) {
-      examine_probefeature($transcript, $feature_id, $probe_id, $probe_name, $probeset_id, $probeset_name, $start, $end, $strand, $cigar, $mismatches, $transcript_feature_info, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $OUT);
+      examine_probefeature($transcript, $feature_id, $probe_id, $probe_name, $probeset_id, $probeset_name, $start, $end, $strand, $cigar, $mismatches, $transcript_feature_info, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $Helper);
       $count++;
     }
   }
@@ -1634,12 +1647,15 @@ sub examine_transcript {
   # Process all following lines until you hit another transcript stable id
   while (!$overran && defined ($line = <$pf_transc_overlap_fh>)) {
     chomp $line;
+    if ($debug) {
+      $Helper->log("LINE:$line\n");
+    }
     my ($tx_chr, $tx_start, $tx_end, $transcript_sid_2, $chr, $start, $end, $strand, $cigar, $mismatches, $feature_id, $probe_id, $probe_name, $probeset_id, $probeset_name) = split "\t", $line;
     if ($transcript_sid_2 gt $transcript_sid) {
       last;
     }
     if ($transcript_sid_2 eq $transcript_sid) {
-      examine_probefeature($transcript, $feature_id, $probe_id, $probe_name, $probeset_id, $probeset_name, $start, $end, $strand, $cigar, $mismatches, $transcript_feature_info, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $OUT);
+      examine_probefeature($transcript, $feature_id, $probe_id, $probe_name, $probeset_id, $probeset_name, $start, $end, $strand, $cigar, $mismatches, $transcript_feature_info, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $Helper);
       $count++;
     }
   }
@@ -1648,7 +1664,6 @@ sub examine_transcript {
     $Helper->log("DEBUG:\tProbeFeatures $count for ".join("\t", (map {$_->name} values(%{$options->{arrays}}))));
   }
 
-  print $OUT "\n";
   return $line;
 }
 
@@ -1677,7 +1692,7 @@ sub examine_transcript {
 =cut
 
 sub examine_probefeature {
-  my ($transcript, $feature_id, $probe_id, $probe_name, $probeset_id, $probeset_name, $start, $end, $strand, $cigar_line, $mismatch_count, $transcript_feature_info,$unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $OUT) = @_;
+  my ($transcript, $feature_id, $probe_id, $probe_name, $probeset_id, $probeset_name, $start, $end, $strand, $cigar_line, $mismatch_count, $transcript_feature_info,$unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $Helper) = @_;
   my $transcript_sid = $transcript->stable_id();
   my $transcript_version     = $transcript->version;
   my $log_name;
@@ -1690,11 +1705,15 @@ sub examine_probefeature {
 
   if($options->{array_config}{sense_interrogation}) {
     if($transcript->seq_region_strand == $strand) {
-      print $OUT 'Unmapped sense '.$log_name."\n";
+      if ($debug) {
+        $Helper->log('Unmapped sense '.$log_name."\n");
+      }
       return;
     }
   } elsif ($transcript->seq_region_strand != $strand) {
-    print $OUT 'Unmapped anti-sense '.$log_name."\n";
+    if ($debug) {
+      $Helper->log('Unmapped anti-sense '.$log_name."\n");
+    }
     return;
   }
 
@@ -1706,9 +1725,9 @@ sub examine_probefeature {
   }
 
   if($cigar_line =~ /D/) {
-    record_gapped_probefeature($feature_id, $probe_id, $probeset_id, $transcript, $transcript_feature_info, $mm_link_txt, $mismatches, $log_name, $unmapped_counts, $unmapped_objects, $options, $OUT);
+    record_gapped_probefeature($feature_id, $probe_id, $probeset_id, $transcript, $transcript_feature_info, $mm_link_txt, $mismatches, $log_name, $unmapped_counts, $unmapped_objects, $options, $Helper);
   } else {
-    record_aligned_probefeature($feature_id, $probe_id, $probeset_id, $start, $end, $cigar_line, $mismatch_count, $transcript_feature_info, $transcript, $mm_link_txt, $mismatches, $log_name, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $OUT);
+    record_aligned_probefeature($feature_id, $probe_id, $probeset_id, $start, $end, $cigar_line, $mismatch_count, $transcript_feature_info, $transcript, $mm_link_txt, $mismatches, $log_name, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $Helper);
   }
   return;
 }
@@ -1733,10 +1752,13 @@ sub examine_probefeature {
 =cut
 
 sub record_gapped_probefeature {
-  my ($feature_id, $probe_id, $probeset_id, $transcript, $transcript_feature_info, $mm_link_txt, $mismatches, $log_name, $unmapped_counts, $unmapped_objects, $options, $OUT) = @_;
+  my ($feature_id, $probe_id, $probeset_id, $transcript, $transcript_feature_info, $mm_link_txt, $mismatches, $log_name, $unmapped_counts, $unmapped_objects, $options, $Helper) = @_;
   my $transcript_sid = $transcript->stable_id();
 
   if(exists $options->{transcripts_per_probefeature}{$feature_id}{$transcript_sid}) {
+    if ($debug) {
+      $Helper->log('Mapped Gapped ProbeFeature '.$log_name."\n");
+    }
     if ($options->{array_config}{probeset_arrays}) {
       $transcript_feature_info->{$probeset_id}{$probe_id} ||= [0, 0];
       $transcript_feature_info->{$probeset_id}{$probe_id}->[0]++;
@@ -1746,7 +1768,9 @@ sub record_gapped_probefeature {
       push @{$transcript_feature_info->{$probe_id}}, ["exon-exon match${mm_link_txt}", $mismatches];
     }
   } else {
-    print $OUT 'Unmapped Gapped ProbeFeature '.$log_name."\n";
+    if ($debug) {
+      $Helper->log('Unmapped Gapped ProbeFeature '.$log_name."\n");
+    }
     cache_and_load_unmapped_objects(
       $options,
       $unmapped_counts,
@@ -1787,7 +1811,7 @@ sub record_gapped_probefeature {
 =cut
 
 sub record_aligned_probefeature {
-  my ($feature_id, $probe_id, $probeset_id, $start, $end, $cigar_line, $mismatch_count, $transcript_feature_info, $transcript, $mm_link_txt, $mismatches, $log_name, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $OUT) = @_;
+  my ($feature_id, $probe_id, $probeset_id, $start, $end, $cigar_line, $mismatch_count, $transcript_feature_info, $transcript, $mm_link_txt, $mismatches, $log_name, $unmapped_counts, $unmapped_objects, $xrefs, $xref_db, $options, $Helper) = @_;
   my $five_mismatch  = 0;
   my $three_mismatch = 0;
   my $feature_start  = $start;
@@ -1838,6 +1862,9 @@ sub record_aligned_probefeature {
       $transcript_feature_info->{$probe_id} ||= [];
       push @{$transcript_feature_info->{$probe_id}}, [$linkage_annotation, $mismatches];
     }
+    if ($debug) {
+      $Helper->log("Mapped\t$probe_id\t$probeset_id\t".$transcript->stable_id()."\n");
+    }
     add_xref($transcript->stable_id, $feature_id, 'ProbeFeature', $linkage_annotation, $xrefs, $xref_db, $options);
   } else {
     my ($summary, $region);
@@ -1857,7 +1884,9 @@ sub record_aligned_probefeature {
       $summary = "${flank_end}' flank boundary";
       $region  = $summary;
     }
-    print $OUT "Unmapped $summary ".$log_name."\n";
+    if ($debug) {
+      $Helper->log("Unmapped $summary ".$log_name."\n");
+    }
     cache_and_load_unmapped_objects(
       $options,
       $unmapped_counts,
@@ -1887,10 +1916,10 @@ sub record_aligned_probefeature {
 =cut
 
 sub compute_hits {
-  my ($transcript, $transcript_feature_info, $object_transcript_hits, $unmapped_objects, $unmapped_counts, $options, $OUT) = @_;
+  my ($transcript, $transcript_feature_info, $object_transcript_hits, $unmapped_objects, $unmapped_counts, $options, $Helper) = @_;
 
   foreach my $object_id (keys %$transcript_feature_info) {
-    compute_hits_2($object_id, $transcript, $transcript_feature_info, $object_transcript_hits, $unmapped_objects, $unmapped_counts, $options, $OUT);
+    compute_hits_2($object_id, $transcript, $transcript_feature_info, $object_transcript_hits, $unmapped_objects, $unmapped_counts, $options, $Helper);
   }
 
   return;
@@ -1912,7 +1941,7 @@ sub compute_hits {
 =cut
 
 sub compute_hits_2 {
-  my ($object_id, $transcript, $transcript_feature_info, $object_transcript_hits, $unmapped_objects, $unmapped_object_counts, $options, $OUT) = @_;
+  my ($object_id, $transcript, $transcript_feature_info, $object_transcript_hits, $unmapped_objects, $unmapped_object_counts, $options, $Helper) = @_;
 
   # Count hits between object and transcript
   my $hits;
@@ -1926,12 +1955,12 @@ sub compute_hits_2 {
 
   # Verifiy whether the number of hits is above threshold
   if (($options->{xref_object} eq 'ProbeSet' && ($hits / $probeset_size) >= $options->{mapping_threshold})
-	|| ($hits && ($options->{xref_object} eq 'Probe'))) {
+        || ($hits && ($options->{xref_object} eq 'Probe'))) {
     # Success: store the hit information
-    store_sufficient_hit($object_id, $transcript, $transcript_feature_info, $object_transcript_hits, $options, $OUT);
+    store_sufficient_hit($object_id, $transcript, $hits, $transcript_feature_info, $object_transcript_hits, $options, $Helper);
   } else {
     # Failure, store unmapped object information
-    store_insufficient_hit($object_id, $transcript, $hits, $probeset_size, $unmapped_objects, $unmapped_object_counts, $options, $OUT);
+    store_insufficient_hit($object_id, $transcript, $hits, $probeset_size, $unmapped_objects, $unmapped_object_counts, $options, $Helper);
   }
 
   return;
@@ -1953,24 +1982,27 @@ sub compute_hits_2 {
 =cut
 
 sub store_sufficient_hit {
-  my ($object_id, $transcript, $hits, $transcript_feature_info, $object_transcript_hits, $options, $OUT) = @_;
+  my ($object_id, $transcript, $hits, $transcript_feature_info, $object_transcript_hits, $options, $Helper) = @_;
   # Count mismatches
   my $num_mismatch_hits = 0;
   if($options->{array_config}{probeset_arrays}) {
     foreach my $value (values %{$transcript_feature_info->{$object_id}}) {
       if ($_->[1] == $_->[0]) {
-	$num_mismatch_hits += 1;
+        $num_mismatch_hits += 1;
       }
     }
   } else{
     foreach my $value (@{$transcript_feature_info->{$object_id}}) {
       if ($_->[1]) {
-	$num_mismatch_hits += 1;
+        $num_mismatch_hits += 1;
       }
     }
   }
 
   $object_transcript_hits->{$object_id}{$transcript->stable_id} = [$hits, $num_mismatch_hits];
+  if ($debug) {
+    $Helper->log("Sufficient hit\t$object_id\t".$transcript->stable_id()."\t$hits\t$num_mismatch_hits\n");
+  }
   if ($options->{xref_object} eq 'Probe' && $hits == 1) {
     push @{$object_transcript_hits->{$object_id}{$transcript->stable_id}}, $transcript_feature_info->{$object_id}[0][0];
   }
@@ -1992,11 +2024,13 @@ sub store_sufficient_hit {
 =cut
 
 sub store_insufficient_hit {
-  my ($object_id, $transcript, $hits, $probeset_size, $unmapped_objects, $unmapped_object_counts, $options, $OUT) = @_;
+  my ($object_id, $transcript, $hits, $probeset_size, $unmapped_objects, $unmapped_object_counts, $options, $Helper) = @_;
 
   my $id_names = $object_id.'('.join(',', @{$options->{object_names}{$object_id}}).')';
 
-  print $OUT "$id_names\t".$transcript->stable_id."\tinsufficient\t$hits/$probeset_size in ProbeSet\n";
+  if ($debug) {
+    $Helper->log("$id_names\t".$transcript->stable_id."\tinsufficient\t$hits/$probeset_size in ProbeSet\n");
+  }
 
   cache_and_load_unmapped_objects(
     $options,
@@ -2024,7 +2058,7 @@ sub store_insufficient_hit {
 =cut
 
 sub log_unmapped_objects {
-  my ($object_transcript_hits, $unmapped_counts, $unmapped_objects, $options, $OUT) = @_;
+  my ($object_transcript_hits, $unmapped_counts, $unmapped_objects, $options, $Helper) = @_;
 
   # Skip if running in test mode
   if($options->{test_slice} || $options->{test_transcript_sid}) {
@@ -2035,7 +2069,7 @@ sub log_unmapped_objects {
 
   foreach my $object_id (keys %{$options->{arrays_per_object}}) {
     if (!exists $object_transcript_hits->{$object_id}) {
-      log_unmapped_object($object_id, $unmapped_counts, $unmapped_objects, $options, $OUT);
+      log_unmapped_object($object_id, $unmapped_counts, $unmapped_objects, $options, $Helper);
     }
   }
 
@@ -2055,10 +2089,10 @@ sub log_unmapped_objects {
 =cut
 
 sub log_unmapped_object {
-  my ($object_id, $unmapped_counts, $unmapped_objects, $options, $OUT) = @_;
+  my ($object_id, $unmapped_counts, $unmapped_objects, $options, $Helper) = @_;
 
   my $names = join(',', @{$options->{object_names}{$object_id}});
-  print $OUT "$options->{xref_object} $object_id($names)\tNo transcript mappings\n";
+  $Helper->log("$options->{xref_object} $object_id($names)\tNo transcript mappings\n");
   cache_and_load_unmapped_objects(
     $options,
     $unmapped_counts,
@@ -2089,14 +2123,14 @@ sub log_unmapped_object {
 =cut
 
 sub remove_promiscuous_objects {
-  my ($object_transcript_hits, $unmapped_counts, $unmapped_objects, $options, $OUT) = @_;
+  my ($object_transcript_hits, $unmapped_counts, $unmapped_objects, $options, $Helper) = @_;
 
   foreach my $object_id (keys %$object_transcript_hits) {
     my $object_transcript_count = scalar keys %{$object_transcript_hits->{$object_id}};
     if ($object_transcript_count > $options->{max_transcripts}) {
       foreach my $transcript_id (keys %{$object_transcript_hits->{$object_id}}) {
         my $pair_hit_count = $object_transcript_hits->{$object_id}{$transcript_id}[0];
-        remove_promiscuous_object_transcript_pair($object_id, $transcript_id, $pair_hit_count, $object_transcript_count, $unmapped_counts, $unmapped_objects, $options, $OUT);
+        remove_promiscuous_object_transcript_pair($object_id, $transcript_id, $pair_hit_count, $object_transcript_count, $unmapped_counts, $unmapped_objects, $options, $Helper);
       }
       # Cleaning up unecessary hash ref, opening its contents to garbage collection
       delete $object_transcript_hits->{$object_id};
@@ -2124,11 +2158,11 @@ sub remove_promiscuous_objects {
 =cut
 
 sub remove_promiscuous_object_transcript_pair {
-  my ($object_id, $transcript_id, $pair_hit_count, $object_transcript_count, $unmapped_counts, $unmapped_objects, $options, $OUT) = @_;
+  my ($object_id, $transcript_id, $pair_hit_count, $object_transcript_count, $unmapped_counts, $unmapped_objects, $options, $Helper) = @_;
 
   my $id_names = $object_id.'('.join(',', @{$options->{object_names}{$object_id}}).')';
   my $probeset_size = $options->{probeset_sizes}->{$object_id};
-  print $OUT "$id_names\t$transcript_id\tpromiscuous\t$pair_hit_count/$probeset_size\tCurrentTranscripts".$object_transcript_count."\n";
+  $Helper->log("$id_names\t$transcript_id\tpromiscuous\t$pair_hit_count/$probeset_size\tCurrentTranscripts".$object_transcript_count."\n");
   cache_and_load_unmapped_objects(
     $options,
     $unmapped_counts,
@@ -2158,7 +2192,7 @@ sub remove_promiscuous_object_transcript_pair {
 =cut
 
 sub create_final_xrefs {
-  my ($object_transcript_hits, $xrefs, $xref_db, $options, $OUT) = @_;
+  my ($object_transcript_hits, $xrefs, $xref_db, $options, $Helper) = @_;
 
   foreach my $object_id (keys %$object_transcript_hits) {
     foreach my $transcript_id (keys %{$object_transcript_hits->{$object_id}}) {
@@ -2177,7 +2211,7 @@ sub create_final_xrefs {
           }
         }
       } else {
-	if($hits > 1) {
+        if($hits > 1) {
           $linkage_annotation = "Matches $hits times";
           if ($num_mismatch_hits) {
             $linkage_annotation .= " ($num_mismatch_hits times with mismatches)";
@@ -2197,7 +2231,11 @@ sub create_final_xrefs {
       }
 
       add_xref($transcript_id, $object_id, $options->{xref_object}, $linkage_annotation, $xrefs, $xref_db, $options);
-      print $OUT "$id_names\t$transcript_id\tmapped\t$hits/$options->{probeset_size}{$object_id}\n";
+      if($options->{xref_object} eq 'ProbeSet') {
+        $Helper->log("$id_names\t$transcript_id\tmapped\t$hits/$options->{probeset_size}{$object_id}\n");
+      } else {
+        $Helper->log("$id_names\t$transcript_id\tmapped\t$hits\n");
+      }
     }
   }
   return;
@@ -2347,9 +2385,9 @@ sub add_mart_displayable_status {
       FROM
         array a, status_name sn
       WHERE
-        a.name in ($names_string)
+        a.name in (\"$names_string\")
         AND a.vendor='$vendor'
-	AND sn.name in ('MART_DISPLAYABLE')
+        AND sn.name in ('MART_DISPLAYABLE')
   ";
   $Helper->log_header('Adding MART_DISPLAYABLE status entries');
   $xref_db->dbc->do($sql);
@@ -2491,7 +2529,7 @@ sub set_unmapped_reason_id {
 =cut
 
 sub create_unmapped_reason {
-  my ($unmapped_object, $unmapped_object_adaptor) = @_;
+  my ($db, $unmapped_object) = @_;
   # Insert new reason into unmapped reason table
   my $sql_reason = '
   INSERT INTO
@@ -2500,7 +2538,7 @@ sub create_unmapped_reason {
     VALUES
     (?,?)
   ';
-  my $sth_reason = $unmapped_object_adaptor->prepare($sql_reason);
+  my $sth_reason = $db->dbc->prepare($sql_reason);
 
   $sth_reason->bind_param(1,$unmapped_object->{'summary'},SQL_VARCHAR);
   $sth_reason->bind_param(2,$unmapped_object->{'description'},SQL_VARCHAR);
@@ -2525,7 +2563,7 @@ sub create_unmapped_reason {
     FROM unmapped_reason
       WHERE full_description = ?
     ';
-    my $sth_fetch_reason = $unmapped_object_adaptor->prepare($sql_fetch_reason);
+    my $sth_fetch_reason = $db->prepare($sql_fetch_reason);
     $sth_fetch_reason->execute($unmapped_object->{'description'});
 
     my $unmapped_reasons = $sth_fetch_reason->fetchrow_arrayref();
@@ -2538,7 +2576,7 @@ sub create_unmapped_reason {
     $id = $unmapped_reasons->[0];
     $sth_fetch_reason->finish();
   } else{
-    $id = $unmapped_object_adaptor->last_insert_id;
+    $id = $db->dbc->db_handle->last_insert_id(undef, undef, undef, undef);
   }
   $sth_reason->finish();
   return $id;
