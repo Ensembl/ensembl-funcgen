@@ -205,6 +205,7 @@ ensembl-funcgen/scripts/environments/arrays.env
 
 use strict;
 use warnings;
+use locale; # Needed to ensure consistent ordering between Perl and UNIX sort
 
 use Pod::Usage;
 use Getopt::Long;
