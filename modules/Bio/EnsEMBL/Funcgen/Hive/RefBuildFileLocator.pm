@@ -17,7 +17,7 @@ sub locate {
   
   my $species          = $param->{species};
   my $assembly         = $param->{assembly};
-  my $epigenome_gender = $param->{assembly};
+  my $epigenome_gender = $param->{epigenome_gender};
   my $file_type        = $param->{file_type};
   
   my $directory_species_gender;

@@ -12,8 +12,26 @@ sub pipeline_analyses {
         {   -logic_name  => 'start_export',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
-              '1->A' => 'job_factory_annotated_features',
+              '1->A' => 'mk_temp_dir',
               'A->1' => 'rm_annotated_features_temp_dir',
+            },
+        },
+        {   -logic_name  => 'mk_temp_dir',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters  => {
+              cmd => 'mkdir -p #temp_dir#',
+            },
+            -flow_into   => {
+               MAIN => 'create_chromosome_length_file_for_bigbed_conversion',
+            },
+        },
+        {   -logic_name  => 'create_chromosome_length_file_for_bigbed_conversion',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters  => {
+              cmd => 'create_chromosome_length_file_for_bigbed_conversion.pl --registry #reg_conf# --species #species# > #temp_dir#/#species#.ucsc.sizes',
+            },
+            -flow_into   => {
+               MAIN => 'job_factory_annotated_features',
             },
         },
         {   -logic_name  => 'job_factory_annotated_features',
@@ -43,11 +61,11 @@ sub pipeline_analyses {
         {   -logic_name  => 'merge_annotated_features_gff',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'cat #gff_files_from_batches# | xargs --max-args=50 cat >> #merged_gff#',
+                cmd => 'cat #gff_files_from_batches# | xargs --max-args=50 cat >> #merged_gff#.unsorted',
             },
             -flow_into   => {
                MAIN => [
-                'gzip_annotated_features_gff',
+                'sort_annotated_features_gff',
                 'rm_temp_files_gff',
                ]
             },
@@ -56,6 +74,15 @@ sub pipeline_analyses {
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
                 cmd => 'cat #gff_files_from_batches# | xargs --max-args=50 rm -f',
+            },
+        },
+        {   -logic_name  => 'sort_annotated_features_gff',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters  => {
+                cmd => 'sort -k1,1 -k4,4n -o #merged_gff# #merged_gff#.unsorted',
+            },
+            -flow_into   => {
+               MAIN => 'gzip_annotated_features_gff',
             },
         },
         {   -logic_name  => 'gzip_annotated_features_gff',
@@ -85,11 +112,11 @@ sub pipeline_analyses {
         {   -logic_name  => 'merge_annotated_features_bed',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'cat #bed_files_from_batches# | xargs --max-args=50 cat >> #merged_bed#',
+                cmd => 'cat #bed_files_from_batches# | xargs --max-args=50 cat >> #merged_bed#.unsorted',
             },
             -flow_into   => {
                MAIN => [
-                'gzip_annotated_features_bed',
+                'sort_annotated_features_bed',
                 'rm_temp_files_bed',
                ]
             },
@@ -98,6 +125,24 @@ sub pipeline_analyses {
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
                 cmd => 'cat #bed_files_from_batches# | xargs --max-args=50 rm -f',
+            },
+        },
+        {   -logic_name  => 'sort_annotated_features_bed',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters  => {
+                cmd => 'sort -k1,1 -k2,2n -o #merged_bed# #merged_bed#.unsorted',
+            },
+            -flow_into   => {
+               MAIN => 'convert_to_bigbed',
+            },
+        },
+        {   -logic_name  => 'convert_to_bigbed',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters  => {
+                cmd => 'bedToBigBed #merged_bed# #temp_dir#/#species#.ucsc.sizes #converted_big_bed#',
+            },
+            -flow_into   => {
+               MAIN => 'gzip_annotated_features_bed',
             },
         },
         {   -logic_name  => 'gzip_annotated_features_bed',
@@ -115,13 +160,22 @@ sub pipeline_analyses {
                 cmd => 'mkdir -p #ftp_base_dir#/#species#/AnnotatedFeatures/#epigenome_production_name#/#feature_type_name#',
             },
             -flow_into   => {
-               MAIN => 'mv_annotated_features_bed_to_ftp',
+               MAIN => [
+                'mv_annotated_features_bed_to_ftp',
+                'mv_annotated_feature_bigbed_to_ftp'
+                ],
             },
         },
         {   -logic_name  => 'mv_annotated_features_bed_to_ftp',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
                 cmd => 'mv #merged_bed#.gz #ftp_base_dir#/#species#/AnnotatedFeatures/#epigenome_production_name#/#feature_type_name#',
+            },
+        },
+        {   -logic_name  => 'mv_annotated_feature_bigbed_to_ftp',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters  => {
+                cmd => 'mv #converted_big_bed# #ftp_base_dir#/#species#/AnnotatedFeatures/#epigenome_production_name#/#feature_type_name#',
             },
         },
         {   -logic_name  => 'rm_annotated_features_temp_dir',

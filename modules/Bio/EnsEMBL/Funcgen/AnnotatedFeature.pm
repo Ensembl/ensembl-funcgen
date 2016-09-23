@@ -166,15 +166,36 @@ sub display_label {
     
     if(! $self->{'display_label'}  && $self->adaptor){
       $self->{'display_label'} = $self->feature_type->name()." -";
-      $self->{'display_label'} .= " ".$self->epigenome->name();
+      $self->{'display_label'} .= " ".$self->epigenome->display_label();
       $self->{'display_label'} .= " Enriched Site";
     }
 	
     return $self->{'display_label'};
 }
 
+=head2 display_id
+
+  Example    : my $label = $feature->display_id;
+  Description: Getter for the display_id of this feature. This was created 
+               for generating the display id used in big bed files. Converting
+               from bed to bigbed causes problems, if 
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Medium Risk
+
+=cut
+
 sub display_id {
-  return shift->display_label;
+    my $self = shift;
+
+    if(! $self->{'display_id'}  && $self->adaptor){
+      $self->{'display_id'} = join '_', 
+        $self->feature_type->name(),
+        $self->epigenome->production_name(),
+        "_Enriched_Site";
+    }
+    return $self->{'display_id'};
 }
 
 

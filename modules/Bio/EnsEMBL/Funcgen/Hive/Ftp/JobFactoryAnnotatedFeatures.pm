@@ -29,6 +29,18 @@ sub run {
 SQL
 ;
 
+  my $coord_system_adaptor = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Core', 'CoordSystem' );
+  if (!$coord_system_adaptor) {
+    die("Can't get coord system adaptor! Please configure your registry accordingly.")
+  }
+  my ($cs) = @{$coord_system_adaptor->fetch_all()};
+  my $assembly = $cs->version();
+  if (!$assembly) {
+    die("Can't work out assembly for $species!")
+  }
+#   use Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator;
+#   my $ref_build_file_locator = Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator->new;
+  
   my $funcgen_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor( $species, 'Funcgen' );
   my $dbc = $funcgen_adaptor->dbc;
   
@@ -61,14 +73,16 @@ SQL
   my $sql_fetch_feature_sets = <<SQL
     select 
       feature_set.feature_set_id as feature_set_id, 
-      feature_type.name as feature_type_name, 
-      epigenome.production_name as epigenome_production_name 
+      feature_type.name          as feature_type_name, 
+      epigenome.production_name  as epigenome_production_name,
+      epigenome.gender           as epigenome_gender
     from 
       feature_set 
       join feature_type using (feature_type_id) 
       join epigenome using (epigenome_id) 
     where 
       feature_set.type="annotated"
+      and feature_set_id in (select distinct feature_set_id from annotated_feature)
 SQL
 ;
   my $sth_fetch_feature_sets = $dbc->prepare($sql_fetch_feature_sets);
@@ -153,15 +167,28 @@ SQL
     close(GFF_OUT);
     close(BED_OUT);
     
+#     my $chromosome_sizes_file = $ref_build_file_locator->locate({
+#       species          => $species,
+#       assembly         => $assembly,
+#       epigenome_gender => $current_feature_set->{epigenome_gender},
+#       file_type        => 'chromosome_lengths_by_species_assembly',
+#     });
+#     my $chromosome_sizes_file_ucsc = "$temp_dir/$species.$assembly";
+
     $self->dataflow_output_id({
-      gff_files_from_batches    => $gff_files_from_batches,
-      bed_files_from_batches    => $bed_files_from_batches,
-      merged_gff                => $temp_dir . '/AnnotatedFeatures.'.$current_feature_set->{epigenome_production_name}.'.'.$current_feature_set->{feature_type_name}.'.gff',
-      merged_bed                => $temp_dir . '/AnnotatedFeatures.'.$current_feature_set->{epigenome_production_name}.'.'.$current_feature_set->{feature_type_name}.'.bed',
-      species                   => $species,
-      feature_type_name         => $current_feature_set->{feature_type_name},
-      feature_set_id            => $current_feature_set->{feature_set_id},
-      epigenome_production_name => $current_feature_set->{epigenome_production_name},
+      gff_files_from_batches     => $gff_files_from_batches,
+      bed_files_from_batches     => $bed_files_from_batches,
+      merged_gff                 => $temp_dir . '/AnnotatedFeatures.'.$current_feature_set->{epigenome_production_name}.'.'.$current_feature_set->{feature_type_name}.'.gff',
+      merged_bed                 => $temp_dir . '/AnnotatedFeatures.'.$current_feature_set->{epigenome_production_name}.'.'.$current_feature_set->{feature_type_name}.'.bed',
+      converted_big_bed          => $temp_dir . '/AnnotatedFeatures.'.$current_feature_set->{epigenome_production_name}.'.'.$current_feature_set->{feature_type_name}.'.bb',
+      species                    => $species,
+      feature_type_name          => $current_feature_set->{feature_type_name},
+      feature_set_id             => $current_feature_set->{feature_set_id},
+      epigenome_production_name  => $current_feature_set->{epigenome_production_name},
+      epigenome_gender           => $current_feature_set->{epigenome_gender},
+      assembly                   => $assembly,
+#       chromosome_sizes_file      => $chromosome_sizes_file,
+#       chromosome_sizes_file_ucsc => $chromosome_sizes_file_ucsc
     }, 1);
   }
 }
