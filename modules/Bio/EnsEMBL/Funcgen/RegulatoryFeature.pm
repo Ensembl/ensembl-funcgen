@@ -222,7 +222,7 @@ sub stable_id { return shift->{stable_id}; }
   Arg [2]    : Bio::EnsEMBL::Funcgen::Epigenome - The epigenome for which 
                the evidence for it regulatory activity is requested.
   Example    : 
-  Description: Getter for the regulatory_evidence for this feature.
+  Description: Deprecated: Use get_RegulatoryEvidence instead.
   Returntype : ARRAYREF
   Exceptions : Throws if feature class not valid
   Caller     : General
@@ -237,6 +237,21 @@ sub regulatory_evidence {
   
   return $self->get_RegulatoryEvidence($feature_class, $epigenome);
 }
+
+=head2 get_RegulatoryEvidence
+
+  Arg [1]    : String (optional) - Class of feature e.g. 'annotated' 
+               or 'motif'
+  Arg [2]    : Bio::EnsEMBL::Funcgen::Epigenome - The epigenome for which 
+               the evidence for it regulatory activity is requested.
+  Example    : 
+  Description: Getter for the regulatory_evidence for this feature.
+  Returntype : ARRAYREF
+  Exceptions : Throws if feature class not valid
+  Caller     : General
+  Status     : At Risk
+
+=cut
 
 sub get_RegulatoryEvidence {
   my $self = shift;
