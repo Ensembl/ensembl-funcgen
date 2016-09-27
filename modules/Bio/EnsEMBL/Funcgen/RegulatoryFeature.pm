@@ -265,14 +265,8 @@ sub get_RegulatoryEvidence {
   return [] unless $regulatory_activity;
   
   my $regulatory_evidence = $regulatory_activity->get_RegulatoryEvidence;
-    
-  if ($feature_class eq 'annotated') {
-    return $regulatory_evidence->supporting_annotated_features;
-  }
-  if ($feature_class eq 'motif') {
-    return $regulatory_evidence->supporting_motif_features;
-  }
-  throw("Invalid feature class $feature_class!");
+
+  return $regulatory_evidence;
 }
 
 sub _assert_epigenome_ok {
