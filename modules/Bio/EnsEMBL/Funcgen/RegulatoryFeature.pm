@@ -235,6 +235,14 @@ sub regulatory_evidence {
   my $feature_class = shift;
   my $epigenome   = shift;
   
+  return $self->get_RegulatoryEvidence($feature_class, $epigenome);
+}
+
+sub get_RegulatoryEvidence {
+  my $self = shift;
+  my $feature_class = shift;
+  my $epigenome   = shift;
+  
   $self->_assert_epigenome_ok($epigenome);
   my $regulatory_activity = $self->regulatory_activity_for_epigenome($epigenome);
   
