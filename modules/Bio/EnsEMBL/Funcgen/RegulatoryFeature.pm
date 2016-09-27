@@ -301,9 +301,12 @@ sub _get_underlying_structure_motifs_by_epigenome {
   my $self = shift;
   my $epigenome = shift;
   
-  my $epigenome_specific_underlying_structure = [];
-
   my $regulatory_activity = $self->regulatory_activity_for_epigenome($epigenome);
+  
+  if (! defined $regulatory_activity) {
+    warn("No regulatory activity found for epigenome " . $epigenome->display_label . ".");
+    return [];
+  }
   my $motif_evidence = $regulatory_activity->get_RegulatoryEvidence_by_type('motif');
   
   return $motif_evidence;
