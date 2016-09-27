@@ -264,7 +264,7 @@ sub get_RegulatoryEvidence {
   # See https://github.com/Ensembl/ensembl-funcgen/pull/6
   return [] unless $regulatory_activity;
   
-  my $regulatory_evidence = $regulatory_activity->regulatory_evidence;
+  my $regulatory_evidence = $regulatory_activity->get_RegulatoryEvidence;
     
   if ($feature_class eq 'annotated') {
     return $regulatory_evidence->supporting_annotated_features;
