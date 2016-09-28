@@ -75,11 +75,13 @@ SQL
       feature_set.feature_set_id as feature_set_id, 
       feature_type.name          as feature_type_name, 
       epigenome.production_name  as epigenome_production_name,
-      epigenome.gender           as epigenome_gender
+      epigenome.gender           as epigenome_gender,
+      analysis.logic_name        as analysis_logic_name
     from 
       feature_set 
       join feature_type using (feature_type_id) 
       join epigenome using (epigenome_id) 
+      join analysis on (feature_set.analysis_id = analysis.analysis_id) 
     where 
       feature_set.type="annotated"
       and feature_set_id in (select distinct feature_set_id from annotated_feature)
@@ -115,10 +117,15 @@ SQL
   
     lock_hash( %$current_feature_set );
     
-    my $gff_files_from_batches = $temp_dir . "/gff_files_from_batches.".$current_feature_set->{epigenome_production_name}.'.'.$current_feature_set->{feature_type_name}.".txt";
+    my $tempdir_for_current_batch = $temp_dir . '/AnnotatedFeaturePartialExports/' . $current_feature_set->{epigenome_production_name} . '/' . $current_feature_set->{feature_type_name};
+    
+    use File::Path qw( make_path );
+    make_path($tempdir_for_current_batch);
+    
+    my $gff_files_from_batches = $tempdir_for_current_batch . "/partial_gff_files.".$current_feature_set->{epigenome_production_name}.'.'.$current_feature_set->{feature_type_name}.".txt";
     open GFF_OUT, ">$gff_files_from_batches";
 
-    my $bed_files_from_batches = $temp_dir . "/bed_files_from_batches.".$current_feature_set->{epigenome_production_name}.'.'.$current_feature_set->{feature_type_name}.".txt";
+    my $bed_files_from_batches = $tempdir_for_current_batch . "/partial_bed_files.".$current_feature_set->{epigenome_production_name}.'.'.$current_feature_set->{feature_type_name}.".txt";
     open BED_OUT, ">$bed_files_from_batches";
   
     foreach my $current_annotated_feature_batch (@all_annotated_feature_batches) {
@@ -126,7 +133,7 @@ SQL
       lock_hash( %$current_annotated_feature_batch );
   
       my @directory_components;
-      push @directory_components, $temp_dir;
+      push @directory_components, $tempdir_for_current_batch;
       push @directory_components, reverse split '', $current_annotated_feature_batch->{batch_number};
       push @directory_components, $species;
       push @directory_components, $current_feature_set->{epigenome_production_name};
@@ -152,12 +159,13 @@ SQL
       
       unlock_hash(%$current_annotated_feature_batch);
       
-      $current_annotated_feature_batch->{temporary_directory} = $directory;
-      $current_annotated_feature_batch->{partial_gff_file}  = $gff_file;
-      $current_annotated_feature_batch->{partial_bed_file}  = $bed_file;
+      $current_annotated_feature_batch->{temporary_directory}        = $directory;
+      $current_annotated_feature_batch->{partial_gff_file}           = $gff_file;
+      $current_annotated_feature_batch->{partial_bed_file}           = $bed_file;
       $current_annotated_feature_batch->{feature_type_name}          = $current_feature_set->{feature_type_name};
       $current_annotated_feature_batch->{feature_set_id}             = $current_feature_set->{feature_set_id};
       $current_annotated_feature_batch->{epigenome_production_name}  = $current_feature_set->{epigenome_production_name};
+      $current_annotated_feature_batch->{analysis_logic_name}        = $current_feature_set->{analysis_logic_name};
       
       lock_hash(%$current_annotated_feature_batch);
       
@@ -178,15 +186,16 @@ SQL
     $self->dataflow_output_id({
       gff_files_from_batches     => $gff_files_from_batches,
       bed_files_from_batches     => $bed_files_from_batches,
-      merged_gff                 => $temp_dir . '/AnnotatedFeatures.'.$current_feature_set->{epigenome_production_name}.'.'.$current_feature_set->{feature_type_name}.'.gff',
-      merged_bed                 => $temp_dir . '/AnnotatedFeatures.'.$current_feature_set->{epigenome_production_name}.'.'.$current_feature_set->{feature_type_name}.'.bed',
-      converted_big_bed          => $temp_dir . '/AnnotatedFeatures.'.$current_feature_set->{epigenome_production_name}.'.'.$current_feature_set->{feature_type_name}.'.bb',
+      merged_gff                 => $tempdir_for_current_batch . '/AnnotatedFeaturesMerged.'.$current_feature_set->{epigenome_production_name}.'.'.$current_feature_set->{feature_type_name}.'.gff',
+      merged_bed                 => $tempdir_for_current_batch . '/AnnotatedFeaturesMerged.'.$current_feature_set->{epigenome_production_name}.'.'.$current_feature_set->{feature_type_name}.'.bed',
+      converted_big_bed          => $tempdir_for_current_batch . '/AnnotatedFeaturesMerged.'.$current_feature_set->{epigenome_production_name}.'.'.$current_feature_set->{feature_type_name}.'.bb',
       species                    => $species,
       feature_type_name          => $current_feature_set->{feature_type_name},
       feature_set_id             => $current_feature_set->{feature_set_id},
       epigenome_production_name  => $current_feature_set->{epigenome_production_name},
       epigenome_gender           => $current_feature_set->{epigenome_gender},
       assembly                   => $assembly,
+      analysis_logic_name        => $current_feature_set->{analysis_logic_name},
 #       chromosome_sizes_file      => $chromosome_sizes_file,
 #       chromosome_sizes_file_ucsc => $chromosome_sizes_file_ucsc
     }, 1);

@@ -4,9 +4,24 @@ use strict;
 use warnings;
 use base 'Bio::EnsEMBL::Funcgen::HiveConfig::Ftp::Base';
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
+use Hash::Util qw( lock_hash );
 
 sub pipeline_analyses {
     my $self = shift;
+    
+    my $data_freeze_date = '20160926';
+    
+    my $ftp_layout_configuration = {
+      annotated_features_gff_file_dir    => '#ftp_base_dir#/#species#/Peaks/#epigenome_production_name#/#feature_type_name#',
+      annotated_features_bed_file_dir    => '#ftp_base_dir#/#species#/Peaks/#epigenome_production_name#/#feature_type_name#',
+      annotated_features_bigbed_file_dir => '#ftp_base_dir#/#species#/Peaks/#epigenome_production_name#/#feature_type_name#',
+      
+      annotated_features_gff_file_base_name    => "#species#.#assembly#.#epigenome_production_name#.#feature_type_name#.#analysis_logic_name#.peaks.${data_freeze_date}.gff.gz",
+      annotated_features_bed_file_base_name    => "#species#.#assembly#.#epigenome_production_name#.#feature_type_name#.#analysis_logic_name#.peaks.${data_freeze_date}.bed.gz",
+      annotated_features_bigbed_file_base_name => "#species#.#assembly#.#epigenome_production_name#.#feature_type_name#.#analysis_logic_name#.peaks.${data_freeze_date}.bb",
+    };
+
+    lock_hash(%$ftp_layout_configuration);
 
     return [
         {   -logic_name  => 'start_export',
@@ -84,6 +99,7 @@ sub pipeline_analyses {
             -flow_into   => {
                MAIN => 'gzip_annotated_features_gff',
             },
+            -rc_name    => '2Gb_job',
         },
         {   -logic_name  => 'gzip_annotated_features_gff',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
@@ -97,7 +113,7 @@ sub pipeline_analyses {
         {   -logic_name  => 'mk_annotated_features_gff_to_ftp_dir',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'mkdir -p #ftp_base_dir#/#species#/AnnotatedFeatures/#epigenome_production_name#/#feature_type_name#',
+                cmd => 'mkdir -p ' . $ftp_layout_configuration->{annotated_features_gff_file_dir},
             },
             -flow_into   => {
                MAIN => 'mv_annotated_features_gff_to_ftp',
@@ -106,7 +122,7 @@ sub pipeline_analyses {
         {   -logic_name  => 'mv_annotated_features_gff_to_ftp',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'mv #merged_gff#.gz #ftp_base_dir#/#species#/AnnotatedFeatures/#epigenome_production_name#/#feature_type_name#',
+                cmd => 'mv #merged_gff#.gz ' . $ftp_layout_configuration->{annotated_features_gff_file_dir} . '/' . $ftp_layout_configuration->{annotated_features_gff_file_base_name},
             },
         },
         {   -logic_name  => 'merge_annotated_features_bed',
@@ -135,6 +151,7 @@ sub pipeline_analyses {
             -flow_into   => {
                MAIN => 'convert_to_bigbed',
             },
+            -rc_name    => '2Gb_job',
         },
         {   -logic_name  => 'convert_to_bigbed',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
@@ -144,6 +161,7 @@ sub pipeline_analyses {
             -flow_into   => {
                MAIN => 'gzip_annotated_features_bed',
             },
+            -rc_name    => '2Gb_job',
         },
         {   -logic_name  => 'gzip_annotated_features_bed',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
@@ -151,31 +169,40 @@ sub pipeline_analyses {
                 cmd => 'gzip #merged_bed#',
             },
             -flow_into   => {
-               MAIN => 'mk_annotated_features_bed_to_ftp_dir',
+               MAIN => [
+                'mk_annotated_features_bed_to_ftp_dir',
+                'mk_annotated_features_bigbed_to_ftp_dir',
+               ]
             },
         },
         {   -logic_name  => 'mk_annotated_features_bed_to_ftp_dir',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'mkdir -p #ftp_base_dir#/#species#/AnnotatedFeatures/#epigenome_production_name#/#feature_type_name#',
+                cmd => 'mkdir -p ' . $ftp_layout_configuration->{annotated_features_bed_file_dir},
             },
             -flow_into   => {
-               MAIN => [
-                'mv_annotated_features_bed_to_ftp',
-                'mv_annotated_feature_bigbed_to_ftp'
-                ],
+               MAIN => 'mv_annotated_features_bed_to_ftp',
+            },
+        },
+        {   -logic_name  => 'mk_annotated_features_bigbed_to_ftp_dir',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters  => {
+                cmd => 'mkdir -p ' . $ftp_layout_configuration->{annotated_features_bigbed_file_dir},
+            },
+            -flow_into   => {
+               MAIN => 'mv_annotated_feature_bigbed_to_ftp'
             },
         },
         {   -logic_name  => 'mv_annotated_features_bed_to_ftp',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'mv #merged_bed#.gz #ftp_base_dir#/#species#/AnnotatedFeatures/#epigenome_production_name#/#feature_type_name#',
+                cmd => 'mv #merged_bed#.gz ' . $ftp_layout_configuration->{annotated_features_bed_file_dir} . '/' . $ftp_layout_configuration->{annotated_features_bed_file_base_name},
             },
         },
         {   -logic_name  => 'mv_annotated_feature_bigbed_to_ftp',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'mv #converted_big_bed# #ftp_base_dir#/#species#/AnnotatedFeatures/#epigenome_production_name#/#feature_type_name#',
+                cmd => 'mv #converted_big_bed# ' . $ftp_layout_configuration->{annotated_features_bigbed_file_dir} . '/' . $ftp_layout_configuration->{annotated_features_bigbed_file_base_name},
             },
         },
         {   -logic_name  => 'rm_annotated_features_temp_dir',
