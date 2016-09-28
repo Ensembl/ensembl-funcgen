@@ -222,7 +222,7 @@ sub stable_id { return shift->{stable_id}; }
   Arg [2]    : Bio::EnsEMBL::Funcgen::Epigenome - The epigenome for which 
                the evidence for it regulatory activity is requested.
   Example    : 
-  Description: Getter for the regulatory_evidence for this feature.
+  Description: Deprecated: Use get_RegulatoryEvidence instead.
   Returntype : ARRAYREF
   Exceptions : Throws if feature class not valid
   Caller     : General
@@ -235,21 +235,38 @@ sub regulatory_evidence {
   my $feature_class = shift;
   my $epigenome   = shift;
   
+  return $self->get_RegulatoryEvidence($feature_class, $epigenome);
+}
+
+=head2 get_RegulatoryEvidence
+
+  Arg [1]    : String (optional) - Class of feature e.g. 'annotated' 
+               or 'motif'
+  Arg [2]    : Bio::EnsEMBL::Funcgen::Epigenome - The epigenome for which 
+               the evidence for it regulatory activity is requested.
+  Example    : 
+  Description: Getter for the regulatory_evidence for this feature.
+  Returntype : ARRAYREF
+  Exceptions : Throws if feature class not valid
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub get_RegulatoryEvidence {
+  my $self = shift;
+  my $feature_class = shift;
+  my $epigenome   = shift;
+  
   $self->_assert_epigenome_ok($epigenome);
   my $regulatory_activity = $self->regulatory_activity_for_epigenome($epigenome);
   
   # See https://github.com/Ensembl/ensembl-funcgen/pull/6
   return [] unless $regulatory_activity;
   
-  my $regulatory_evidence = $regulatory_activity->regulatory_evidence;
-    
-  if ($feature_class eq 'annotated') {
-    return $regulatory_evidence->supporting_annotated_features;
-  }
-  if ($feature_class eq 'motif') {
-    return $regulatory_evidence->supporting_motif_features;
-  }
-  throw("Invalid feature class $feature_class!");
+  my $regulatory_evidence = $regulatory_activity->get_RegulatoryEvidence;
+
+  return $regulatory_evidence;
 }
 
 sub _assert_epigenome_ok {
@@ -301,9 +318,11 @@ sub _get_underlying_structure_motifs_by_epigenome {
   my $self = shift;
   my $epigenome = shift;
   
-  my $epigenome_specific_underlying_structure = [];
-
   my $regulatory_activity = $self->regulatory_activity_for_epigenome($epigenome);
+  
+  if (! defined $regulatory_activity) {
+    die("No regulatory activity found for epigenome " . $epigenome->display_label . ".");
+  }
   my $motif_evidence = $regulatory_activity->get_RegulatoryEvidence_by_type('motif');
   
   return $motif_evidence;
