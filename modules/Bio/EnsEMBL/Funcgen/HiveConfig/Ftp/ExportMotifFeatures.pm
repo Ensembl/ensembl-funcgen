@@ -8,7 +8,7 @@ use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 sub pipeline_analyses {
     my $self = shift;
 
-    my $data_freeze_date = '20160926';
+    my $data_freeze_date = $self->o('data_freeze_date');
     
     my $ftp_layout_configuration = {
       motif_features_dir             => '#ftp_base_dir#/#species#',

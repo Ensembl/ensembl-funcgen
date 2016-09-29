@@ -9,7 +9,7 @@ use Hash::Util qw( lock_hash );
 sub pipeline_analyses {
     my $self = shift;
 
-    my $data_freeze_date = '20160926';
+    my $data_freeze_date = $self->o('data_freeze_date');
     
     my $ftp_layout_configuration = {
       qc_chance_dir                       => '#ftp_base_dir#/#species#/QualityChecks',

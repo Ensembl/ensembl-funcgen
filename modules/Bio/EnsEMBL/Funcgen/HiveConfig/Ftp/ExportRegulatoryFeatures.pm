@@ -8,8 +8,8 @@ use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 sub pipeline_analyses {
     my $self = shift;
     
-    my $data_freeze_date = '20160926';
-    
+    my $data_freeze_date = $self->o('data_freeze_date');
+
     my $ftp_layout_configuration = {
       regulatory_activities_gff_file_dir       => '#ftp_base_dir#/#species#/RegulatoryFeatureActivity/#epigenome_production_name#',
       regulatory_activities_gff_file_base_name => "#species#.#assembly#.#epigenome_production_name#.#analysis_logic_name#.regulatory_activity.${data_freeze_date}.gff",

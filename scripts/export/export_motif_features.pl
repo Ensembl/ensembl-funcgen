@@ -66,6 +66,19 @@ my $last_id = 0;
 my $exported_something = 1;
 my $batch_size = 100000;
 
+# Avoid error 99 mysql problem. Otherwise the serialisers will connect and 
+# disconnect to the ontology (gff serialiser) or core (bed serialiser for 
+# fetching ucsc synonyms) database and eventually fail with aforementioned 
+# error.
+#
+# Especially tricky, because the core database connection is never used in the
+# script, but heavily used when serialising all features to bed.
+#
+my $core_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor( $species, 'Core' );
+$core_adaptor->dbc->disconnect_when_inactive(0);
+$ontology_term_adaptor->db->dbc->disconnect_when_inactive(0);
+$funcgen_adaptor->dbc->disconnect_when_inactive(0);
+
 while ($exported_something) {
 
   $exported_something = undef;

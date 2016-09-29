@@ -186,9 +186,9 @@ SQL
     $self->dataflow_output_id({
       gff_files_from_batches     => $gff_files_from_batches,
       bed_files_from_batches     => $bed_files_from_batches,
-      merged_gff                 => $tempdir_for_current_batch . '/AnnotatedFeaturesMerged.'.$current_feature_set->{epigenome_production_name}.'.'.$current_feature_set->{feature_type_name}.'.gff',
-      merged_bed                 => $tempdir_for_current_batch . '/AnnotatedFeaturesMerged.'.$current_feature_set->{epigenome_production_name}.'.'.$current_feature_set->{feature_type_name}.'.bed',
-      converted_big_bed          => $tempdir_for_current_batch . '/AnnotatedFeaturesMerged.'.$current_feature_set->{epigenome_production_name}.'.'.$current_feature_set->{feature_type_name}.'.bb',
+      merged_gff                 => $tempdir_for_current_batch . '/AnnotatedFeaturesMerged.'.$current_feature_set->{epigenome_production_name}.'.'.$current_feature_set->{feature_type_name} . '.' . $current_feature_set->{analysis_logic_name} . '.gff',
+      merged_bed                 => $tempdir_for_current_batch . '/AnnotatedFeaturesMerged.'.$current_feature_set->{epigenome_production_name}.'.'.$current_feature_set->{feature_type_name} . '.' . $current_feature_set->{analysis_logic_name} . '.bed',
+      converted_big_bed          => $tempdir_for_current_batch . '/AnnotatedFeaturesMerged.'.$current_feature_set->{epigenome_production_name}.'.'.$current_feature_set->{feature_type_name} . '.' . $current_feature_set->{analysis_logic_name} . '.bb',
       species                    => $species,
       feature_type_name          => $current_feature_set->{feature_type_name},
       feature_set_id             => $current_feature_set->{feature_set_id},

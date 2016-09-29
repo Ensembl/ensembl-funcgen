@@ -19,7 +19,7 @@ sub pipeline_analyses {
         {   -logic_name  => 'backbone_fire_createmetafiles',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
-               '1->A' => 'create_readme_files',
+               '1->A' => 'create_manifest_file',
                'A->1' => 'backbone_pipeline_finished'
             },
         },

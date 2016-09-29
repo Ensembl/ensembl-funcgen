@@ -9,7 +9,7 @@ use Hash::Util qw( lock_hash );
 sub pipeline_analyses {
     my $self = shift;
     
-    my $data_freeze_date = '20160926';
+    my $data_freeze_date = $self->o('data_freeze_date');
     
     my $ftp_layout_configuration = {
       annotated_features_gff_file_dir    => '#ftp_base_dir#/#species#/Peaks/#epigenome_production_name#/#feature_type_name#',
@@ -94,7 +94,7 @@ sub pipeline_analyses {
         {   -logic_name  => 'sort_annotated_features_gff',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'sort -k1,1 -k4,4n -o #merged_gff# #merged_gff#.unsorted',
+                cmd => 'sort -k1,1 -k4,4n -o #merged_gff# #merged_gff#.unsorted ; sleep 10',
             },
             -flow_into   => {
                MAIN => 'gzip_annotated_features_gff',
@@ -146,7 +146,7 @@ sub pipeline_analyses {
         {   -logic_name  => 'sort_annotated_features_bed',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'sort -k1,1 -k2,2n -o #merged_bed# #merged_bed#.unsorted',
+                cmd => 'sort -k1,1 -k2,2n -o #merged_bed# #merged_bed#.unsorted ; sleep 10',
             },
             -flow_into   => {
                MAIN => 'convert_to_bigbed',

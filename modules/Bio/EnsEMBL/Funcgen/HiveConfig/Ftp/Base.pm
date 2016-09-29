@@ -5,6 +5,19 @@ use warnings;
 use base 'Bio::EnsEMBL::Hive::PipeConfig::EnsemblGeneric_conf';
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 
+sub default_options {
+    my ($self) = @_;
+    
+    use Date::Format;
+    # Looks like: 20160928
+    my $data_freeze_date = time2str('%Y%m%d', time);
+
+    return {
+        %{$self->SUPER::default_options},
+        'data_freeze_date' => $data_freeze_date,
+    }
+}
+
 sub pipeline_wide_parameters {
     my ($self) = @_;
     return {
