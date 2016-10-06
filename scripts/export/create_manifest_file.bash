@@ -1,4 +1,8 @@
 #!/bin/sh
+
+# Using the script from here:
+# https://github.com/EMBL-EBI-GCA/gca-tools/blob/master/submissions/file-manifest
+
 usage="Usage: $(basename "$0") [-h | --help] [path]...
 Generate a file manifest for submitting to GCA at EMBL-EBI
 -h | --help display this help and exit
