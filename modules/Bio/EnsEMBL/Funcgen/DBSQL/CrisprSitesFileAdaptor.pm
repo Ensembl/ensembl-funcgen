@@ -130,8 +130,11 @@ sub _objs_from_sth {
     
     push @return_crispr_file_objects, $crispr_sites_file
   }
+  if (@return_crispr_file_objects == 0) {
+    die("Can't find crispr file in the database!");
+  }
   if (@return_crispr_file_objects != 1) {
-    die("There should only be one crispr file in the database!");
+    die("There should only be one crispr file in the database! Got " . scalar @return_crispr_file_objects . " entries.");
   }
   return \@return_crispr_file_objects;
 }
