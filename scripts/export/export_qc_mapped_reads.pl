@@ -78,6 +78,10 @@ if ($output_file) {
   $output_fh = *STDOUT;
 }
 
+my $is_first = 1;
+
+$output_fh->print("[\n");
+
 while (my $hash_ref = $sth->fetchrow_hashref) {
 
   $hash_ref->{sequence_files} = $fetchQCRelatedData->fetch_input_subset_data_for_result_set($hash_ref->{alignment_name});
@@ -85,9 +89,15 @@ while (my $hash_ref = $sth->fetchrow_hashref) {
 
   translate($hash_ref);
 
+  if ($is_first) {
+    $is_first = undef;
+  } else {
+    $output_fh->print(",\n");
+  }
   $output_fh->print($json->encode($hash_ref));
-  $output_fh->print(";\n");
 }
+
+$output_fh->print("\n]");
 
 sub translate {
   my $hash_ref = shift;
