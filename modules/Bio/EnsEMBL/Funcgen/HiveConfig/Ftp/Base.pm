@@ -14,7 +14,7 @@ sub default_options {
 
     return {
         %{$self->SUPER::default_options},
-        'data_freeze_date' => $data_freeze_date,
+        data_freeze_date => $data_freeze_date,
     }
 }
 
@@ -23,9 +23,10 @@ sub pipeline_wide_parameters {
     return {
       %{$self->SUPER::pipeline_wide_parameters},
 
-      ftp_base_dir  => $self->o('ftp_base_dir'),
-      reg_conf      => $self->o('reg_conf'),
-      temp_dir      => '#ftp_base_dir#/../tempdir/#species#',
+      ftp_base_dir     => $self->o('ftp_base_dir'),
+      reg_conf         => $self->o('reg_conf'),
+      data_freeze_date => $self->o('data_freeze_date'),
+      temp_dir         => '#ftp_base_dir#/../tempdir/#species#',
     };
 }
 

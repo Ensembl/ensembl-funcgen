@@ -11,8 +11,9 @@ use Getopt::Long;
 =head1 Examples
 
 export_data_files.pl  \
-  --destination_root_path /lustre/scratch109/ensembl/funcgen/mn1/ftp_data_file/alignments  \
+  --destination_root_path /lustre/scratch109/ensembl/funcgen/mn1/ftp_data_file/homo_sapiens/Alignments  \
   --file_type bam  \
+  --assembly GrCh38 \
   --species_assembly_data_file_base_path /nfs/ensnfs-webdev/staging/homo_sapiens/GRCh38  \
   --species_assembly_data_file_base_path /lustre/scratch109/ensembl/funcgen/mn1/ersa/mn1_homo_sapiens_funcgen_86_38/output/mn1_homo_sapiens_funcgen_86_38/funcgen  \
   --species_assembly_data_file_base_path /lustre/scratch109/ensembl/funcgen/mn1/ersa/mn1_dev3_homo_sapiens_funcgen_85_38/output/mn1_dev3_homo_sapiens_funcgen_85_38/funcgen  \
@@ -24,6 +25,7 @@ export_data_files.pl  \
 export_data_files.pl  \
   --destination_root_path /lustre/scratch109/ensembl/funcgen/mn1/ftp_data_file/alignments  \
   --file_type bigwig  \
+  --assembly GrCh38 \
   --species_assembly_data_file_base_path /nfs/ensnfs-webdev/staging/homo_sapiens/GRCh38  \
   --species_assembly_data_file_base_path /lustre/scratch109/ensembl/funcgen/mn1/ersa/mn1_homo_sapiens_funcgen_86_38/output/mn1_homo_sapiens_funcgen_86_38/funcgen  \
   --species_assembly_data_file_base_path /lustre/scratch109/ensembl/funcgen/mn1/ersa/mn1_dev3_homo_sapiens_funcgen_85_38/output/mn1_dev3_homo_sapiens_funcgen_85_38/funcgen  \
@@ -36,28 +38,38 @@ export_data_files.pl  \
 
 my $registry;
 my $species;
-my $output_file;
+# my $output_file;
 my @species_assembly_data_file_base_path;
 my $destination_root_path;
 my $file_type;
 my $die_if_source_files_missing = 0;
+my $assembly;
+
+use Date::Format;
+# Looks like: 20160928
+my $data_freeze_date = time2str('%Y%m%d', time);
 
 GetOptions (
-   'registry=s'    => \$registry,
-   'species=s'     => \$species,
-   'output_file=s' => \$output_file,
-   'file_type=s'   => \$file_type,
+   'registry=s'           => \$registry,
+   'species=s'            => \$species,
+#    'output_file=s'        => \$output_file,
+   'file_type=s'          => \$file_type,
+   'assembly=s'           => \$assembly,
+   'data_freeze_date=s'   => \$data_freeze_date,
    'species_assembly_data_file_base_path=s' => \@species_assembly_data_file_base_path,
    'die_if_source_files_missing=s'          => \$die_if_source_files_missing,
    'destination_root_path=s'                => \$destination_root_path,
 );
 
+if (! defined $assembly) {
+  die("assembly (used in the file name only) has not been set!");
+}
 if (@species_assembly_data_file_base_path==0) {
   die("species_assembly_data_file_base_path has not been set!");
 }
-if (! -d $species_assembly_data_file_base_path[0]) {
-  die($species_assembly_data_file_base_path[0] . " is not an existing directory!");
-}
+# if (! -d $species_assembly_data_file_base_path[0]) {
+#   die($species_assembly_data_file_base_path[0] . " is not an existing directory!");
+# }
 if (! defined $file_type) {
   die("file_type has not been set!");
 }
@@ -121,24 +133,21 @@ order by
 );
 $sth->execute;
 
-my $output_fh;
-if ($output_file) {
-  $logger->info("The features will be written to " . $output_file ."\n");
-
-  use File::Basename;
-  my $ftp_dir = dirname($output_file);
-
-  use File::Path qw(make_path);
-  make_path($ftp_dir);
-
-  use IO::File;
-  $output_fh = IO::File->new(">$output_file");
-} else {
-  $output_fh = *STDOUT;
-}
-
-my $assembly = 'GrCh38';
-my $data_freeze_date = '20161005';
+# my $output_fh;
+# if ($output_file) {
+#   $logger->info("The features will be written to " . $output_file ."\n");
+# 
+#   use File::Basename;
+#   my $ftp_dir = dirname($output_file);
+# 
+#   use File::Path qw(make_path);
+#   make_path($ftp_dir);
+# 
+#   use IO::File;
+#   $output_fh = IO::File->new(">$output_file");
+# } else {
+#   $output_fh = *STDOUT;
+# }
 
 my %source_file_to_destination_file_map;
 while (my $hash_ref = $sth->fetchrow_hashref) {
