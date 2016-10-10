@@ -40,4 +40,4 @@ exit 1
 esac
 done
 shift $(($OPTIND - 1))
-find $@ -type f -printf '%p\t%s\t' -execdir sh -c 'md5sum "{}" | sed s/\ .*//' \;
+find $@ -xtype f -printf '%p\t%s\t' -execdir sh -c 'md5sum "{}" | sed s/\ .*//' \;
