@@ -5,6 +5,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -89,12 +90,12 @@ sub _true_tables {
 
 sub _columns {
   return qw(
-			af.annotated_feature_id  af.seq_region_id
-			af.seq_region_start      af.seq_region_end
-			af.seq_region_strand     af.feature_set_id
-			af.display_label         af.score
-			af.summit
-			);
+    af.annotated_feature_id  af.seq_region_id
+    af.seq_region_start      af.seq_region_end
+    af.seq_region_strand     af.feature_set_id
+    af.display_label         af.score
+    af.summit
+  );
 }
 
 

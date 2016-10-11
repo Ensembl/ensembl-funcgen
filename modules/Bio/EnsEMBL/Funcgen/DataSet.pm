@@ -5,6 +5,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -67,7 +68,7 @@ package Bio::EnsEMBL::Funcgen::DataSet;
 use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
 
 use base qw(Bio::EnsEMBL::Funcgen::Storable);
@@ -143,7 +144,6 @@ sub product_FeatureSet {
       throw("The main feature_set has already been set for this DataSet, maybe you want add_SupportingSets?");
     }
 	else{
-	  $self->_validate_and_set_types($fset);
 	  $self->{'feature_set'} = $fset;
 	}
   }
@@ -156,7 +156,7 @@ sub product_FeatureSet {
 
 =head2 get_supporting_sets_by_Analysis
 
-  Arg [1]    : Bio::EnsEMBL::Funcgen:Analysis
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Analysis
   Arg [2]    : (optional) status - e.g 'DISPLAYABLE'
   Example    : my $anal_sets = @{$result_set->get_ResultSets_by_Analysis($analysis)};
   Description: Getter for the SupportingSet objects of a given Analysis.
@@ -180,7 +180,7 @@ sub get_supporting_sets_by_Analysis {
 
 
   if (! ($analysis->isa("Bio::EnsEMBL::Analysis") && $analysis->dbID())){
-	  throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::ResultSet");
+	  throw("Need to pass a valid stored Bio::EnsEMBL::Analysis");
   }
 
   #will have to generate new array of object here if we want to filter displayable
@@ -329,11 +329,33 @@ sub name { return $_[0]->{name}; }
   Returntype : Bio::EnsEMBL::Funcgen::CellType
   Exceptions : None
   Caller     : General
+  Status     : Deprecated
+
+=cut
+
+sub cell_type {
+    deprecate(
+        "Bio::EnsEMBL::Funcgen::DataSet::cell_type has been deprecated and will be removed in Ensembl release 89."
+            . " Please use Bio::EnsEMBL::Funcgen::DataSet::epigenome instead"
+    );
+    return $_[0]->{epigenome};
+}
+
+
+
+
+=head2 epigenome
+
+  Example    : my $dset_ctype_name = $dset->epigenome->name();
+  Description: Getter for the epigenome for this DataSet.
+  Returntype : Bio::EnsEMBL::Funcgen::Epigenome
+  Exceptions : None
+  Caller     : General
   Status     : Stable
 
 =cut
 
-sub cell_type { return $_[0]->{cell_type}; }
+sub epigenome { return $_[0]->{epigenome}; }
 
 
 =head2 feature_type
@@ -371,8 +393,8 @@ sub display_label {
 	}
 	else{
 	  $self->{'display_label'}  = $self->feature_type->name()." - ";
-	  $self->{'display_label'} .= ($self->cell_type->display_label ||
-								   $self->cell_type->name)." Enriched Sites";
+	  $self->{'display_label'} .= ($self->epigenome->display_label ||
+								   $self->epigenome->name)." Enriched Sites";
 	}
   }
 
@@ -389,7 +411,7 @@ sub display_label {
                Defaults to: name table_name feature_class get_all_states
   Args[4]    : Arrayref - Optional list of DataSet method names each
                returning a Storable or an Array or Arrayref of Storables.
-               Defaults to: feature_type cell_type analysis get_support
+               Defaults to: feature_type epigenome analysis get_support
   Example    : my %shallow_diffs = %{$dset->compare_to($other_rset, 1)};
   Description: Compare this DataSet to another based on the defined scalar
                and storable methods.
@@ -427,7 +449,7 @@ sub compare_to {
   Arg[1] : Hashref containing the following mandatory parameters:
             -analysis     => Bio::EnsEMBL::Analysis,
             -feature_type => Bio::EnsEMBL::Funcgen::FeatureType,
-            -cell_type    => Bio::EnsEMBL::Funcgen::CellType,
+            -epigenome    => Bio::EnsEMBL::Funcgen::Epigenome,
             -support      => Arrayref of valid support objectse.g. InputSet
 
   Description: Resets all the relational attributes of a given DataSet.
@@ -444,7 +466,7 @@ sub reset_relational_attributes{
   my ($ssets, $feature_set) = rearrange(['SUPPORTING_SETS', 'FEATURE_SET'],
                                 %$params_hash);
 
-  #This also sets cell_type and feature_type
+  #This also sets epigenome and feature_type
   $self->_set_Sets_and_types($feature_set, $ssets);
 
   #also flush dynamically set display label
@@ -462,7 +484,7 @@ sub reset_relational_attributes{
 
 
 #Currently does not support DataSets with only mixed type support
-#i.e. not FeatureSet and CellTypes or FeatureTypes difference between
+#i.e. not FeatureSet and Epigenomes or FeatureTypes difference between
 #supporting sets
 
 
@@ -476,20 +498,21 @@ sub _set_Sets_and_types{
   }
   
   
-  my ($ftype, $ctype, $fclass, $ftype_name, $ctype_name);
+  my ($ftype, $epigenome, $fclass, $ftype_name, $epigenome_name);
 
   if(defined $fset){
     assert_ref($fset, 'Bio::EnsEMBL::Funcgen::FeatureSet');
-    $ftype      = $fset->feature_type;
-    $ctype      = $fset->cell_type;
-    $fclass     = $fset->feature_class;
-    $ftype_name = $ftype->name;
-    $ctype_name = $ctype->name;
+    $ftype          = $fset->feature_type;
+    $epigenome      = $fset->epigenome;
+    $fclass         = $fset->feature_class;
+    $ftype_name     = $ftype->name;
+    $epigenome_name = $epigenome->name;
+
   }
 
 
   ### Validate supporting sets
-  #Need to validate cell_type if the fset feature_class is not regulatory
+  #Need to validate epigenome if the fset feature_class is not regulatory
   #Need to validate feature_type if the fset feature class is not regulatory or segmentation
   $self->{'supporting_sets'} = {};
 
@@ -504,11 +527,11 @@ sub _set_Sets_and_types{
     
     if($fclass){
       
-      if($fclass ne 'regulatory'){ #Validate cell type
+      if($fclass ne 'regulatory'){ #Validate epigenome
         
-        if($set->cell_type->name ne $ctype_name){
-          throw('Cannot add '.$set->cell_type->name.
-                " support to a $ctype_name"." $fclass DataSet");
+        if($set->epigenome->name ne $epigenome_name){
+          throw('Cannot add '.$set->epigenome->name.
+                " support to a $epigenome_name"." $fclass DataSet");
         }
         
         if($fclass ne 'segmentation'){# and ne regulatory validate ftype
@@ -523,15 +546,15 @@ sub _set_Sets_and_types{
     }
     else{
       $ftype_name ||= $set->feature_type->name;
-      $ctype_name ||= $set->cell_type->name;
+      $epigenome_name ||= $set->epigenome->name;
   
       if($ftype_name ne $set->feature_type->name){
         throw('Unable to set distinct FeatureType for a mixed support '.
               "DataSet without a product FeatureSet:\t".$self->name);
       }
       
-      if($ctype_name ne $set->cell_type->name){
-        throw('Unable to set distinct CellType for a mixed support '.
+      if($epigenome_name ne $set->epigenome->name){
+        throw('Unable to set distinct Epigenome for a mixed support '.
               "DataSet without a product FeatureSet:\t".$self->name);
       }
     }
@@ -540,97 +563,17 @@ sub _set_Sets_and_types{
     push @{$self->{'supporting_sets'}->{$set->analysis->dbID()}}, $set;
   }
 
-  if(! defined $ftype){#and $ctype by proxy
+  if(! defined $ftype){#and $epigenome by proxy
     $ftype = $ssets->[0]->feature_type;
-    $ctype = $ssets->[0]->cell_type;
+    $epigenome = $ssets->[0]->epigenome;
   }
 
   #Reset dynamically defined attrs
   $self->{feature_type}    = $ftype;
-  $self->{cell_type}       = $ctype;
+  $self->{epigenome}       = $epigenome;
   $self->{feature_set}     = $fset;
   return;
 }
-
-
-### DEPRECATED
-
-
-
-sub add_supporting_sets { #deprecated in v72
-  my ($self, $sets) = @_;
-
-	throw('add_supporting_set is deprecated, please use -supporting_sets in DataSet::new');
-
-  #should we handle displayable here, and propogate to the ResultSet if update_status is set
-  #is there scope to write a Funcgen::Storable, which provides convenience methods to StatusAdaptor?
-  #would have to make sure Feature object also inherited from Funcgen::Storable aswell as BaseFeature
-
-  throw("Supporting sets need to be a reference to an ARRAY:\t".$sets) if ref($sets) ne 'ARRAY';
-
-  foreach my $set(@$sets){
-
-	if(!(ref($set) &&  $set->isa('Bio::EnsEMBL::Funcgen::Set') && $set->set_type ne 'data' && $set->dbID)){
-	  throw("Need to pass a valid stored Bio::EnsEMBL::Funcgen::Set which is not a DataSet:\t$set");
-	}
-	#set type cannot be data at present as it does not inherit from Set.pm
-
-
-
-	#Only validate if we are dealing with result type data
-	#As we can have various cell/feature_types for compound analyses e.g. RegulatoryFeatures
-
-	$self->_validate_and_set_types($set) if $set->set_type() ne 'feature';
-
-	#should ResultSet/Adaptor contain all the fetch_methods, and leave DataSet as a kind of organisational class as a single point of access.
-	#DataSetAdaptor to perform the ordering according to feature/celltype
-	#This will still not resolve the complex data sets which can be accomodated by the DB.
-	#Maybe we can keep the data sets as simple as there are and confer the association by tracking back to the experiment?
-	#Would there only ever be one experiment for a complex data_set?
-
-
-	#Can have more than one experiment for a compound feature set, would we ever want to display raw data?
-	#This is actually an easier problem unless we are displaying two feature types(i.e. complex and compound)
-
-
-	$self->{'supporting_sets'}->{$set->analysis->dbID()} ||= ();
-	push @{$self->{'supporting_sets'}->{$set->analysis->dbID()}}, $set;
-  }
-
-  return;
-}
-
-
-sub _validate_and_set_types{ #in v72, remove immediately as is *private*?
-  my ($self, $set) = @_;
-
-  #slightly dodgy bypassing methods, but extendable
-
-  #This currently restricts all set types to one cell and feature type
-  #this is incorrect for feature_set types as we want to munge several feature and possibly cell types
-  #into one combined data set.
-  #this should set it to the FeatureSet type if is feature_set data_set
-  #this only works as we only validate supporting_sets if type is not feature
-
-  for my $type('feature_type', 'cell_type'){
-
-    if(defined $self->{$type}){
-
-#Need to test isa here?  Why is this passing the defined test if not set?
-      if($set->{$type}->name() ne $self->{$type}->name()){
-
-        throw(ref($set)." $type(".$set->{$type}->name().
-            ") does not match DataSet $type(".$self->{$type}->name().")");
-      }
-    }
-    else{
-      $self->{$type} = $set->{$type};
-    }
-  }
-
-  return;
-}
-
 
 1;
 

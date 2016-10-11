@@ -5,6 +5,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -169,7 +170,7 @@ sub fetch_all_by_Slice_constraint {
   }
 
   #build seq_region cache here once for entire query
-  $self->build_seq_region_cache($slice);
+   $self->build_seq_region_cache($slice);
 
   @result = @{$self->_fetch_all_by_Slice_constraint_schema_build($slice, $constraint)};
 

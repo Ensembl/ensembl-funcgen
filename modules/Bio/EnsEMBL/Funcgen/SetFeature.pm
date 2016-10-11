@@ -5,6 +5,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -64,7 +65,7 @@ Bio::EnsEMBL::Funcgen::SetFeature - Base class for features of a Set.
   my $end       = $feat->end;
   my $strand    = $feat->strand;
   my $fset      = $feat->set;
-  my $cell_type = $feat->cell_type;
+  my $epigenome = $feat->epigenome;
 
   # Printing some information
 
@@ -83,7 +84,7 @@ package Bio::EnsEMBL::Funcgen::SetFeature;
 use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
 use base qw( Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable );
 
@@ -146,7 +147,12 @@ sub new {
   #Grab FeatureSet first so we can pass analysis to base Feature class
   #Funcgen analysis is currently always at the Set level
   #if this ever changes the SetFeature->analysis method will also need changing
-  my $self = $class->SUPER::new(@_, -analysis => $set->analysis);
+  my $self;
+  if ($set) {
+    $self = $class->SUPER::new(@_, -analysis => $set->analysis);
+  } else {
+    $self = $class->SUPER::new(@_);
+  }
  
   if($ftype){
 	
@@ -208,13 +214,35 @@ sub set {
   Returntype : Bio::EnsEMBL::Funcgen::CellType
   Exceptions : None
   Caller     : General
-  Status     : stable
+  Status     : Deprecated
 
 =cut
 
 sub cell_type{
-	return shift->set->cell_type;
+  deprecate(
+      "Bio::EnsEMBL::Funcgen::SetFeature::cell_type has been deprecated and will be removed in Ensembl release 89."
+          . " Please use Bio::EnsEMBL::Funcgen::SetFeature::epigenome instead"
+  );
+
+  return shift->set->epigenome;
 }
+
+=head2 epigenome
+
+  Example    : my $epigenome = $set_feature->epigenome->name;
+  Description: Getter for the Epigenome attribute for the Set of this Feature.
+  May not always be for some Set types e.g. ExternalFeatures.
+  Returntype : Bio::EnsEMBL::Funcgen::Epigenome
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub epigenome {
+    return shift->set->epigenome;
+}
+
 
 
 =head2 feature_type

@@ -3,6 +3,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -30,23 +31,24 @@ use strict;
 use warnings;
 use Bio::EnsEMBL::Registry;
 
-my $registry = 'Bio::EnsEMBL::Registry';
-
-$registry->load_registry_from_db(
+Bio::EnsEMBL::Registry->load_registry_from_db(
     -host => 'ensembldb.ensembl.org',
     -user => 'anonymous'
 );
 
-my $ftype_adaptor = $registry->get_adaptor('Human', 'funcgen', 'featuretype');
-my $fset_adaptor = $registry->get_adaptor('Human', 'funcgen', 'featureset');
+my $feature_type_adaptor = Bio::EnsEMBL::Registry->get_adaptor('Human', 'Funcgen', 'FeatureType');
+my $feature_set_adaptor  = Bio::EnsEMBL::Registry->get_adaptor('Human', 'funcgen', 'FeatureSet');
 
-#Print all feature sets for Transcription Factors (note that this does not include CTCF, an insulator)
-my @tfs = @{$ftype_adaptor->fetch_all_by_class('Transcription Factor')}; 
-foreach my $ft (@tfs){
-	print "Feature Type: ".$ft->name."\n";
-	my @fsets = @{$fset_adaptor->fetch_all_by_FeatureType($ft)};
-	print "\t".scalar(@fsets)." Feature Sets available:\n";
-	foreach my $fset (@fsets){ 
-		print "\t\t".$fset->name."\n"; 
-	}
+my @transcription_factor_feature_types =  @{$feature_type_adaptor->fetch_all_by_class('Transcription Factor')}; 
+
+foreach my $current_transcription_factor_feature_type (@transcription_factor_feature_types) {
+
+    print $current_transcription_factor_feature_type->name . "\n";
+    
+    my $feature_sets = $feature_set_adaptor->fetch_all_by_FeatureType($current_transcription_factor_feature_type);
+    
+    foreach my $feature_set (@$feature_sets) {
+      print "\thas feature set " . $feature_set->name."\n"; 
+    }
+    print "\n";
 }

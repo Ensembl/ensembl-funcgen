@@ -5,6 +5,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -50,7 +51,7 @@ print "Total reads" .$df->total_reads . "\n";
 print "Percent Methylation" . $df->percent_methylation . "\n";
 print "Context" . $df->context . "\n";
 print "Display label" . $df->display_label . "\n";
-print "Cell Type" . $df->cell_type->name . "\n";
+print "Epigenome" . $df->epigenome->name . "\n";
 print "Feature Type" . $df->feature_type->name . "\n";
 print "Analysis Method" . $df->analysis->logic_name . "\n";
 
@@ -338,7 +339,7 @@ sub display_label {
   if ( ! defined $self->{display_label} ) {
     
     #Change this to include analysis display_label?
-    $self->{display_label} =  $self->cell_type()->name.' '.$self->feature_type->name;
+    $self->{display_label} =  $self->epigenome()->name.' '.$self->feature_type->name;
   }
 
   return $self->{display_label};

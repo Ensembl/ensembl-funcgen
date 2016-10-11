@@ -5,6 +5,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -50,12 +51,15 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalChipAdaptor;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 use Bio::EnsEMBL::Funcgen::ExperimentalChip;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#DBI sql_types import
 
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
+deprecate(
+    'Module ExperimentalChipAdaptor.pm has been deprecated since release 84 and will be removed from the API in release 88'
+);
 
 =head2 fetch_all_by_experiment_dbID
 
@@ -69,36 +73,36 @@ use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 =cut
 
-sub fetch_all_by_experiment_dbID {
-    my $self = shift;
-    my $e_dbid = shift;
-
-	my ($ec_id, @results);
-
-	throw("Must specify an experiemntal dbID") if(! $e_dbid);
-
-
-	my $sth = $self->prepare("
-		SELECT ec.experimental_chip_id
-		FROM experimental_chip ec, experiment e
-		WHERE ec.experiment_id = $e_dbid
-	");
-
-
-
-	#can we do a generic fetch here?
-
-
-	$sth->execute();
-
-
-	while ($ec_id = $sth->fetchrow()){
-	  #warn("got ec id $ec_id\n");
-	  push @results, $self->fetch_by_dbID($ec_id);
-	}
-
-	return \@results;
-}
+# sub fetch_all_by_experiment_dbID {
+#     my $self = shift;
+#     my $e_dbid = shift;
+# 
+# 	my ($ec_id, @results);
+# 
+# 	throw("Must specify an experiemntal dbID") if(! $e_dbid);
+# 
+# 
+# 	my $sth = $self->prepare("
+# 		SELECT ec.experimental_chip_id
+# 		FROM experimental_chip ec, experiment e
+# 		WHERE ec.experiment_id = $e_dbid
+# 	");
+# 
+# 
+# 
+# 	#can we do a generic fetch here?
+# 
+# 
+# 	$sth->execute();
+# 
+# 
+# 	while ($ec_id = $sth->fetchrow()){
+# 	  #warn("got ec id $ec_id\n");
+# 	  push @results, $self->fetch_by_dbID($ec_id);
+# 	}
+# 
+# 	return \@results;
+# }
 
 =head2 fetch_all_by_Experiment
 

@@ -93,11 +93,8 @@ sub new {
       ' checksum validation.');  
   }
 
-
-  #
-
   if(! -f $target_file){
-    throw("Target file does not exist or is not a file:\n\t$target_file");  
+#     throw("Target file does not exist or is not a file:\n\t$target_file");  
   }
 
   my $input_dir;
@@ -114,21 +111,6 @@ sub new {
   else{
     $self->{output_dir}      = $input_dir;
   }
-  
-  #if($format){
-  #  
-  #  if(! grep(/^${format}$/, @{$self->valid_output_formats}) ){
-  #    throw("Output format($format) is not valid. Please specify one of:\t".
-  #      join("\t", @{$self->valid_output_formats}));  
-  #  }
-  #  
-  #  #This assumes valid_output_formats are in order of general preference
-  #  #i.e. most optimsed/performant/binary first
-  #  $self->{output_format} = $self->valid_output_formats->[0]; 
-  #  #}
-  #else{
-  #  $self->{output_format} = $self->valid_input_formats
-  #}
   
   $self->{input_dir}    = $input_dir;
   $self->{program_file} = $prog_file;

@@ -1,8 +1,8 @@
 #!/usr/bin/env perl
-
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -37,29 +37,32 @@ $registry->load_registry_from_db(
     -user => 'anonymous'
 );
 
-my $fset_adaptor = $registry->get_adaptor('Human', 'funcgen', 'featureset');
-#Grab and list all the external feature sets
-my @ext_fsets = @{$fset_adaptor->fetch_all_by_type('external')};
+my $feature_set_adaptor = $registry->get_adaptor('Human', 'Funcgen', 'FeatureSet');
 
-foreach my $ext_fset (@ext_fsets){
-  print "External FeatureSet: ".$ext_fset->name."\n";
+# Grab and list all the external feature sets
+my @external_feature_sets = @{$feature_set_adaptor->fetch_all_by_feature_class('external')};
+
+foreach my $current_external_feature_set (@external_feature_sets) {
+  print "External FeatureSet: " . $current_external_feature_set->name . "\n";
 }
 
-#Grab the specific Vista set
-my $vista_fset = $fset_adaptor->fetch_by_name('VISTA enhancer set');
+my $vista_feature_set = $feature_set_adaptor->fetch_by_name('VISTA enhancer set');
 
-#Now you can get all the features (in this case external features) 
-#You can also get features by Slice using get_Features_by_Slice: 
-foreach my $vista_feature (@{$vista_fset->get_all_Features()}){
-	print_feature($vista_feature);
-	#There is no cell type for these features
-	#Feature type indicates vista annotation (eg. active enhancer)
-	print "\tFeature Type: ".$vista_feature->feature_type->name."\n";
+# Now you can get all the features (in this case external features) 
+# You can also get features by Slice using get_Features_by_Slice: 
+#
+foreach my $current_vista_feature (@{$vista_feature_set->get_all_Features}){
+    print_feature($current_vista_feature);
+    
+    # There is no epigenome for these features
+    # Feature type indicates vista annotation (eg. active enhancer)
+    #
+    print $current_vista_feature->feature_type->name."\n";
 }
 
 sub print_feature {
-	my $feature = shift;
-	print 	$feature->display_label. 	
-	 	"\t(".$feature->seq_region_name.":".
-		$feature->seq_region_start."-".$feature->seq_region_end.")\n";
+  my $feature = shift;
+  print $feature->display_label
+    . "\t(".$feature->seq_region_name.":"
+    . $feature->seq_region_start . "-" . $feature->seq_region_end.")\n";
 }

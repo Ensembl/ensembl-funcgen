@@ -3,6 +3,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -29,23 +30,19 @@ limitations under the License.
 use strict;
 use Bio::EnsEMBL::Registry;
 
-my $registry = 'Bio::EnsEMBL::Registry';
-
-$registry->load_registry_from_db
-  (
-   -host => 'ensembldb.ensembl.org',
-   -user => 'anonymous',
-  );
-
+Bio::EnsEMBL::Registry->load_registry_from_db(
+  -host => 'ensembldb.ensembl.org',
+  -user => 'anonymous',
+);
 
 #Grab the adaptors
-my $efg_db           = $registry->get_DBAdaptor('Human', 'funcgen');
+my $efg_db           = Bio::EnsEMBL::Registry->get_DBAdaptor('Human', 'funcgen');
 my $probe_adaptor    = $efg_db->get_ProbeAdaptor;
 my $pfeature_adaptor = $efg_db->get_ProbeFeatureAdaptor;
 
 #Grab a probe from the HG17 array
-my $probe            = $probe_adaptor->fetch_by_array_probe_probeset_name
-  ('2005-05-10_HG17Tiling_Set', 'chr22P38797630');
+my $probe            = $probe_adaptor->fetch_all_by_name('273:421');
+
 print "Got ".$probe->class." probe ".$probe->get_probename."\n";
 
 #Grab the feature associated with this probe

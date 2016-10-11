@@ -2,7 +2,8 @@
 
 =head1 LICENSE
 
-Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -30,18 +31,16 @@ convert_big_files.pl
 
 =head1 SYNOPSIS
 
-perl convert_big_files.pl $directory $name_map $chrom_lengths
+perl convert_big_files.pl $directory --species $SPECIES --from $FROM --to $TO
 
 =head1 DESCRIPTION
 
 Used to change the chrosomome names in all the BigBed and BigWig files
 contained in a directory (recursively)
 
-To run, you will need to provide two files:
-* A name mapping file: tab delimited, each line contains the name of
-a chromsome followed by the replacement name
-* A chromosome length file: tab delimited: each line contains a replacement 
-chromosome name and the length of that chromosome
+You need to specify the species of interest, what naming scheme (typically ensembl
+or UCSC) you wish to convert to and from. If these parameters are not provided
+it is assumed that the conversion is from Ensembl to UCSC. 
 
 You must also ensure that the following executables are on your path:
 * bigBedToBed
@@ -52,52 +51,98 @@ You must also ensure that the following executables are on your path:
 =cut
 
 use strict;
+use Getopt::Long;
 use File::Temp qw/tempfile/;
+use Bio::EnsEMBL::Registry;
+use Data::Dumper;
+use Bio::EnsEMBL::DBSQL::SliceAdaptor;
+use Bio::EnsEMBL::Slice;
 
 main();
 
 sub main {
-  scalar @ARGV == 3 || die ("Three arguments needed");
-
-  my ($dir, $name_map, $chrom_lengths) = @ARGV;
-  print "Directory=$dir\n";
-  print "Chromosome name conversion =$name_map\n";
-  print "Chromosome lengths =$chrom_lengths\n";
-
-  foreach my $arg (@ARGV) {
-    -e $arg || die("$arg does not exist!\n");
-  }
-  if (! -d $dir) {
-    die ("$dir is not a directory\n");
-  }
-  if (! -f $name_map) {
-    die ("$name_map is not a file\n");
-  }
-  if (! -f $chrom_lengths) {
-    die ("$chrom_lengths is not a file\n");
-  }
-
-  my $new_name = read_hash($name_map);
-  my @files = split (/\n/,  `find $dir`);
+  my $options = get_options();
+  my ($name_map, $lengths) = get_chrom_data($options);
+  my @files = split (/\n/,  `find $options->{dir}`);
   foreach my $file (@files) {
     if ((substr($file, -3) eq '.bb') || (substr($file, -3) eq '.bw')) {
-      convert_big_file($file, $new_name, $chrom_lengths);
+      convert_big_file($file, $name_map, $lengths);
     }
   }
 }
 
-sub read_hash {
-  my ($file_name) = @_;
-  my %hash = ();
-  open my $fh, "<", $file_name;
-  while (my $line = <$fh>) {
-    chomp $line;
-    my @items = split /\t/, $line;
-    scalar(@items) == 2 || die("Malformed line in $file_name:\n$line\n");
-    $hash{$items[0]} = $items[1];
+sub get_options {
+  my %options = ();
+
+  GetOptions(\%options,
+    "species=s",
+    "dir=s",
+    "from=s",
+    "to=s",
+    "host|h=s",
+    "port|P=s",
+    "user|u=s",
+    "pass|p=s",
+  );
+
+  if (!defined $options{dir}) {
+    die("Target directory not defined!\n");
   }
-  close $fh;
-  return \%hash;
+
+  $options{species} ||= 'Human';
+  $options{host} ||= 'ensembldb.ensembl.org';
+  $options{user} ||= 'anonymous';
+  $options{from} ||= 'ensembl';
+  $options{to} ||= 'ucsc';
+  $options{registry} = 'Bio::EnsEMBL::Registry';
+  $options{registry}->load_registry_from_db(
+    -host    => $options{host},
+    -user    => $options{user},
+    -pass    => $options{pass},
+    -port    => $options{port},
+  );
+  
+  return \%options;
+}
+
+sub get_chrom_data {
+  my ($options) = @_;
+  my %hash = ();
+  my ($fh, $name) = tempfile();
+
+  my $slice_adaptor = $options->{registry}->get_adaptor($options->{species}, 'Core', 'Slice' );
+  foreach my $slice (@{$slice_adaptor->fetch_all('toplevel')}) {
+    my $keys;
+    if ($options->{from} eq 'ensembl') {
+      $keys = [ $slice->seq_region_name ];
+    } else {
+      my @array = map { $_->name } @{$slice->get_all_synonyms($options->{from})};
+      $keys = \@array;
+    }
+
+    if ((!defined $keys) || scalar (@$keys) == 0 ) {
+      die("Could not find sysnonym of ".$slice->seq_region_name." in $options->{from}");
+    }
+
+    my $value;
+    if ($options->{to} eq 'ensembl') {
+      $value = $slice->seq_region_name;
+    } else {
+      $value = $slice->get_all_synonyms($options->{to})->[0]->name;
+    }
+
+    if (!defined $value ) {
+      die("Could not find sysnonym of ".$slice->seq_region_name." in $options->{to}");
+    }
+
+    foreach my $key (@$keys) {
+      $hash{$key} = $value;
+      print "$key\t=>\t$value\t".$slice->length." bp\n";
+      print $fh "$value\t".$slice->length."\n";
+    }
+  }
+
+  return \%hash, $name;
 }
 
 sub convert_big_file {

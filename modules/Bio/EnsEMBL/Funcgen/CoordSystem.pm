@@ -5,6 +5,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -472,7 +473,7 @@ sub equals {
 sub is_top_level {
   my $self = shift;
 
-  throw('Not yet implmented, need to test against the core cache using dnadb/schema_build');
+  throw('Not yet implemented, need to test against the core cache using dnadb/schema_build');
 
   return $self->{'top_level'};
 }

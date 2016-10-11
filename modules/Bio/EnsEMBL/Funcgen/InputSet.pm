@@ -5,6 +5,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -40,7 +41,7 @@ use Bio::EnsEMBL::Funcgen::InputSet;
 my $inp_set = Bio::EnsEMBL::Funcgen::InputSet->new
                  (
                   -ANALYSIS     => $anal,
-                  -CELL_TYPE    => $ctype,
+                  -EPIGENOME    => $ctype,
                   -EXPERIMENT   => $exp,
                   -FEATURE_TYPE => $ftype,
                   -NAME         => 'SRR00000.fastq.gz',
@@ -68,6 +69,10 @@ use Bio::EnsEMBL::Utils::Exception qw( throw deprecate);
 
 use base qw(Bio::EnsEMBL::Funcgen::Set Bio::EnsEMBL::Funcgen::feature_class_Set);
 
+deprecate(
+    'Module InputSet.pm has been deprecated since release 84 and will be removed from the API in release 88'
+);
+
 =head2 new
 
   Example    : my $eset = Bio::EnsEMBL::Funcgen::InputSet->new
@@ -75,7 +80,7 @@ use base qw(Bio::EnsEMBL::Funcgen::Set Bio::EnsEMBL::Funcgen::feature_class_Set)
 	                -DBID         => $dbID,
                   -ADAPTOR      => $self,
                   -ANALYSIS     => $anal,
-                  -CELL_TYPE    => $ctype,
+                  -EPIGENOME    => $ctype,
                   -EXPERIMENT   => $exp,
                   -FEATURE_TYPE => $ftype,
                   -NAME         => 'SRR00000.fastq.gz',
@@ -274,7 +279,7 @@ sub reset_relational_attributes{
   my ($self, $params_hash, $no_db_reset) = @_;
 
   my ($analysis, $cell_type, $experiment, $feature_type, $input_subsets) =
-      rearrange(['ANALYSIS', 'CELL_TYPE', 'EXPERIMENT', 'FEATURE_TYPE', 'SUBSETS'],
+      rearrange(['ANALYSIS', 'EPIGENOME', 'EXPERIMENT', 'FEATURE_TYPE', 'SUBSETS'],
       %$params_hash);
 
   if(! (defined $analysis &&

@@ -20,48 +20,18 @@ use Bio::EnsEMBL::Utils::Exception              qw( throw );
 use Bio::EnsEMBL::Utils::Scalar                 qw( assert_ref );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils      qw( scalars_to_objects );
 use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools qw( _init_peak_caller 
-                                                    _run_peak_caller );                                               
+                                                    _run_peak_caller );
 use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
 
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
-
-
-#todo rename logic_names to be generic e.g. SWEmbl_tight
-#then we can have different parameter sets between species
-
-#todo Move more to PeakCaller so it is available from SeqTools
-#Or move directly to SeqTools? Max peaks filtering. write_output and store_AnnotatedFeature?
-#
-
-#input_dir and work_dir can be separate
-#such that we can't point to remote fastqs
-#input_dir should never be altered
-#where as work_dir can be written to and cleaned up afterwards
-#is this fully supported?
-
-#params
-#-output dir should never be dataflowed! ANd is really only safe when running one analysis
-#as it will send all output there
-#-reload
-
-# todo
-# Should really generalise this and remove mandatory set dependancies
-# Allow passing the files required from the upstream analysis
-# And make the set operations optional
-
-#Make this optionally take a ResultSet and a peak analysis
-#to support calling without generation of Data/FeatureSet
-#if there is no feature set, we should also not load the peaks
-#if we define a max peaks value, then we rename to first output to unfiltered,
-#then add a filter step to the final expected output
-
 sub fetch_input {
   my $self = shift;
-  #Do some thing before we SUPER::fetch_input
-  $self->param('disconnect_if_idle', 1);
+  
+  # This is used in slice_objects in BaseDB, who knows what it does
+  #
   $self->param('include_slice_duplicates',1);
-  $self->check_analysis_can_run;
+  
   $self->SUPER::fetch_input;
 
   my $set_type = $self->param_required('set_type');  
@@ -86,10 +56,19 @@ sub fetch_input {
     $self->throw_no_retry('The filter_max_peaks param has been set, but no max_peaks param has been set');
   }
   
-  my ($fset, $rset, $analysis);
+  # HACK
+  my $db = $self->param_required('out_db');
+  my $result_set_adaptor = $db->get_ResultSetAdaptor;
+  $result_set_adaptor->{file_type} = 'BAM';
+
+  my ($fset, $result_set, $analysis);
 
   if($set_type eq 'ResultSet'){
-    $rset = $self->fetch_Set_input('ResultSet'); 
+    
+    # This is run in run_SWEmbl_R0005_replicate 
+    #die('This is never run!');
+  
+    $result_set = $self->fetch_Set_input('ResultSet'); 
     
     #This is likely permissive peaks for pre_IDR rep 
     
@@ -113,39 +92,99 @@ sub fetch_input {
   else{ 
     $fset     = $self->fetch_Set_input('FeatureSet');
     $analysis = $fset->analysis;
-    $rset     = $self->ResultSet; 
+    $result_set     = $self->ResultSet; 
   }
+  
+#   my $signal_alignment = $result_set->dbfile_path;
+  my $signal_alignment  = $self->db_output_dir . '/' . $self->get_alignment_files_by_ResultSet_formats($result_set,  undef);
+  my $control_alignment = $self->db_output_dir . '/' . $self->get_alignment_files_by_ResultSet_formats($result_set, 1);
+#   die($control_alignment);
 
-  #do we need both experiment name and logic name in here?
-  #logic name will be in the otufile name anyway?
+  # The code for building this path is duplicated in PreProcessIDR. This 
+  # should be configured somewhere centrally.
+  #
+  $self->get_output_work_dir_methods(
+    $self->peaks_output_dir 
+    . '/' . $result_set->experiment->name
+    . '/' . $analysis->logic_name 
+  );
 
-  $self->get_output_work_dir_methods( $self->db_output_dir . '/peaks/' .
-      $rset->experiment->name. '/' . $analysis->logic_name );
-
-  my $align_prefix   = $self->get_alignment_path_prefix_by_ResultSet($rset, undef, 1);#validate aligned flag 
-  my $control_prefix = $self->get_alignment_path_prefix_by_ResultSet($rset, 1, 1);#and control flag 
-  my $sam_ref_fai = $self->sam_ref_fai($rset->cell_type->gender);  #Just in case we need to convert
+#   my $align_prefix   = $self->get_alignment_path_prefix_by_ResultSet($result_set, undef, 1);#validate aligned flag 
+#   my $control_prefix = $self->get_alignment_path_prefix_by_ResultSet($result_set, 1, 1);#and control flag 
+  
+  my $sam_ref_fai = $self->sam_ref_fai($result_set->epigenome->gender);  #Just in case we need to convert
 
   #These maybe things like extra input/reference files
   #where we don't want to store the filepath in the DB.
-  my $sensitive_caller_params = $self->param_silent($analysis->program.'_parameters') || {};
+#   my $sensitive_caller_params = $self->param_silent($analysis->program.'_parameters') || {};
+  use Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator;
+  my $bwa_index_locator = Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator->new;
+  
+  my $species          = $self->param('species');
+  my $assembly         = $self->param('assembly');
+  my $epigenome_gender = $result_set->epigenome->gender;
+
+  my $chromosome_lengths_relative = $bwa_index_locator->locate({
+    species          => $species,
+    epigenome_gender => $epigenome_gender,
+    assembly         => $assembly,
+    file_type        => 'chromosome_lengths_by_species_assembly',
+  });
+  my $reference_data_root_dir = $self->param('reference_data_root_dir');
+  
+  my $chromosome_length_file = $reference_data_root_dir . '/' . $chromosome_lengths_relative;
+  
+#   die($chromosome_length_file);
+
+  my $sensitive_caller_params = {
+    # This is used by CCAT
+    -chr_file => $chromosome_length_file
+  };
+  
   my $pfile_path = ( defined $self->bin_dir ) ?
     $self->bin_dir.'/'.$analysis->program_file : $analysis->program_file;
-
-  my $peak_runnable = _init_peak_caller
-   (-analysis       => $analysis,
-    -align_prefix   => $align_prefix,
-    -control_prefix => $control_prefix,
+    
+  my $dirname = join '/', (
+    $self->peaks_output_dir,
+    $result_set->experiment->name,
+    $analysis->logic_name
+  );
+  my $file_prefix    = $result_set->name.'.'.$analysis->logic_name;
+  
+  my $file_extension = '.txt';
+  
+  my $peaks_file = join '/', (
+    $dirname,
+    $file_prefix . '.' . $file_extension
+  );
+  
+  # HACK CCAT can't use bam files, but the previous analysis created appropriate bed files.
+  if ($analysis->logic_name eq 'ccat_histone') {
+    $signal_alignment  =~ s/.bam$/.bed/;
+    $control_alignment =~ s/.bam$/.bed/;
+  }
+  
+  my @init_peak_caller_args = (
+    -analysis       => $analysis,
+#     -align_prefix   => $align_prefix,
+#     -control_prefix => $control_prefix,
+    
+    -signal_alignment  => $signal_alignment,
+    -control_alignment => $control_alignment,
+    
     -sam_ref_fai    => $sam_ref_fai,
     -debug          => $self->debug,
     -peak_module_params =>
      {%$sensitive_caller_params,
       -program_file      => $pfile_path,
-      -out_file_prefix   => $rset->name.'.'.$analysis->logic_name,
+      -out_file_prefix   => $result_set->name.'.'.$analysis->logic_name,
       -out_dir           => $self->output_dir,
+      -output_file       => $peaks_file,
       -convert_half_open => 1, # Before loading into DB
       #-is_half_open      => $self->param_silent('is_half_open') || 0}, # Now defined by PeakCaller or subclass defined on out/input formats   
     });
+  
+  my $peak_runnable = _init_peak_caller(@init_peak_caller_args);
    
   $self->set_param_method( 'peak_runnable', $peak_runnable );
 
@@ -177,95 +216,75 @@ sub run {
     if(! eval { _run_peak_caller(-peak_caller => $pcaller, 
                                  -max_peaks   => $self->max_peaks, 
                                  -file_types  => $self->process_file_types,
-                                 -debug       => $self->debug); 1 }){
-      $self->throw_no_retry('Failed to call run on '.ref($pcaller)."\n$@");                                
+                                 -debug       => $self->debug); 1 }) {
+      $self->throw_no_retry('Failed to call run on '.ref($pcaller)."\n$@");
     }
   }
   
   return;
 }
 
-
-#TODO
-# 1 Log counts here, in tracking DB
-# 2 Dataflow to PeaksQC from here of PreprocessAlignments
-# 3 Add in optional QC and PeaksReport
-# 4 Handle >1 output files/formats e.g. CCAT significant.region significant.peak
-#  This is already handle in run, but there is no way to handle/specify the params
-#  for the process method i.e. extra feature sets?
-
-
-# Move the bulk of this to SeqTools?
-# This would require a pre-registered FeatureSets
-# unless we import some of the define_sets code in there
-# Will SeqTools ever be able to do an Feature/ResultSet import based on command line params?
-# Is this overkill?
-
 sub write_output {
   my $self = shift;
-  my $fset;
   
-  #Move this test to fetch_input based on -no_write status?
-  #Is -no_write available to the Process? I htink not, as we have had to specify it in the input_id
-  #for IdentifySetInputs
+  # When loading results disconnecting when inactive can lead to very poor 
+  # performance. Hundreds of thousands or even millions of rows may have 
+  # to be inserted into the annotated_feature table. The default setting of 
+  # disconnecting after every statement would mean that a new connection has 
+  # to be established for every insert statement and it would be disconnected
+  # thereafter. Therefore this behaviour is deactivated here. 
+  # 
+  my $db = $self->get_param_method('out_db', 'required');
+  $db->dbc->disconnect_when_inactive(0);
   
-  
-  if($self->can('FeatureSet') &&
-     ($fset = $self->FeatureSet) ){
-    #test assignment, as we may have the FeatureSet method from a previous
-    #job in this batch     
-
-    if ( $fset->has_status('IMPORTED') ) {
-      throw( "Cannot imported feature into a \'IMPORTED\' FeatureSet:\t" .
-             $fset->name );
-    }
-    else{ #Rollback
-      #Just in case we have some duplicate records from a previously failed job
-      $self->helper->rollback_FeatureSet($fset);
-    }
-    
-    my $af_adaptor = $fset->adaptor->db->get_AnnotatedFeatureAdaptor;    
-    my $params     = 
-     {-file_type      => $self->process_file_types->[0],
-      -processor_ref  => $self->can('store_AnnotatedFeature'),
-      -processor_args => [$self,#Need to pass self as this calls a code ref
-                          $fset,
-                          $af_adaptor]};  
-
-    #Need list context otherwise would get last value of list returned
-    #i.e. $retvals, which we don't need here
-    my ($feature_cnt) = $self->peak_runnable->process_features($params);
-    
-    #As CCAT is very oddly calling duplicate regions we need to skip over these in 
-    #store_AnnotatedFeature
-    #Hence we need to validate the feature_cnt returned matches a the DB count 
-    #else throw here, rather than in store_AnnotatedFeature
-    #so we can finish the load.
-    #Luckily there is now flow from the CCAT analysis, so we can review these and accept them
-    #throw before or after imported states?
-                        
-    $self->helper->debug(1, "Processed $feature_cnt features for ".$fset->name.'('.$fset->dbID.')');
-    my $stored_features = $af_adaptor->generic_count('af.feature_set_id='.$fset->dbID);
-    
-    #Arguably this should be after the follwing test
-    $fset->adaptor->set_imported_states_by_Set($fset);
-    
-    if($feature_cnt != $stored_features){
-      #coudl change to a normal throw if we move above the satus setting
-      $self->throw_no_retry('Processed feature count does not match stored '.
-        "feature count:\t$feature_cnt vs $stored_features");
-    }  
-      
-    #This is currently only setting IMPORTED_GRCh38, not IMPORTED too
-
-    # Log counts here in tracking?
-    #No data flow to PeaksQC here as this is done via semaphore from PreprocessAlignment?
-  }
-  else{
+  if (!$self->can('FeatureSet')) {
     warn "Skipping load features as no FeatureSet is defined";
-    #This is for the IDR replicate data, can we omit this error if we know that  
+    return;
   }
+  
+  my $fset = $self->FeatureSet;
+  
+  if (!$fset) {
+    die "The FeatureSet has been set, but is undefined!";
+    return;
+  }
+  
+  $self->helper->rollback_FeatureSet($fset);
 
+  my $af_adaptor = $fset->adaptor->db->get_AnnotatedFeatureAdaptor;    
+  my $params     = {
+    -file_type      => $self->process_file_types->[0],
+    -processor_ref  => $self->can('store_AnnotatedFeature'),
+    -processor_args => [
+	$self,#Need to pass self as this calls a code ref
+	$fset,
+	$af_adaptor
+      ]
+  };
+
+  #Need list context otherwise would get last value of list returned
+  #i.e. $retvals, which we don't need here
+  my ($feature_cnt) = $self->peak_runnable->process_features($params);
+  
+  #As CCAT is very oddly calling duplicate regions we need to skip over these in 
+  #store_AnnotatedFeature
+  #Hence we need to validate the feature_cnt returned matches a the DB count 
+  #else throw here, rather than in store_AnnotatedFeature
+  #so we can finish the load.
+  #Luckily there is now flow from the CCAT analysis, so we can review these and accept them
+  #throw before or after imported states?
+		      
+  $self->helper->debug(1, "Processed $feature_cnt features for ".$fset->name.'('.$fset->dbID.')');
+  my $stored_features = $af_adaptor->generic_count('af.feature_set_id='.$fset->dbID);
+  
+  #Arguably this should be after the follwing test
+#   $fset->adaptor->set_imported_states_by_Set($fset);
+  
+  if($feature_cnt != $stored_features) {
+    # Could change to a normal throw if we move above the satus setting
+    $self->throw_no_retry('Processed feature count does not match stored '.
+      "feature count:\t$feature_cnt vs $stored_features");
+  }
   return;
 } ## end sub write_output
 
@@ -276,9 +295,15 @@ sub write_output {
 
 sub store_AnnotatedFeature {
   my ( $self, $fset, $af_adaptor, $fhash ) = @_;
-  my $err;  
+  my $err;
+  
+  my $slice;
+  
+  eval {  
+    $slice = $self->get_Slice( $fhash->{-seq_region} );
+  };
 
-  if ( my $slice = $self->get_Slice( $fhash->{-seq_region} ) ) {
+  if ( $slice ) {
     delete ${$fhash}{-seq_region};
     
     if(! eval {$af_adaptor->store( Bio::EnsEMBL::Funcgen::AnnotatedFeature->new

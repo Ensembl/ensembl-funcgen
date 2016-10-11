@@ -1,6 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,52 +25,28 @@ limitations under the License.
 
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::RegulatoryFeature
+  Bio::EnsEMBL::Funcgen::RegulatoryFeature
 
 =head1 SYNOPSIS
 
- use Bio::EnsEMBL::Registry;
- use Bio::EnsEMBL::Funcgen::RegulatoryFeature;
+  use Bio::EnsEMBL::Registry;
+  use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
- my $reg = Bio::EnsEMBL::Registry->load_adaptors_from_db
-     (
-      -host    => 'ensembldb.ensembl.org',
-      -user    => 'anonymous'
-     );
+  Bio::EnsEMBL::Registry->load_registry_from_db(
+    -host => 'ensembldb.ensembl.org', # alternatively 'useastdb.ensembl.org'
+    -user => 'anonymous'
+  );
 
- my $regfeat_adaptor = $reg->get_adaptor($species, 'funcgen', 'RegulatoryFeature');
+  my $regulatory_feature_adaptor = Bio::EnsEMBL::Registry->get_adaptor('homo_sapiens', 'funcgen', 'RegulatoryFeature');
+  my $regulatory_feature = $regulatory_feature_adaptor->fetch_by_stable_id('ENSR00000000011');
 
-
- ### Creating/storing a RegulatoryFeature Set ###
- my $feature = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new
-     (
-      -SLICE         => $chr_1_slice,
-      -START         => 1000000,
-	    -END           => 1000024,
-      -STRAND        => 0,
-      -DISPLAY_LABEL => $text,
-      -FEATURE_SET   => $fset,
-      -FEATURE_TYPE  => $reg_ftype,
-      -ATTRIBUTE_CACHE => \%attr_cache,
-     );
-
- my ($stored_feat) = @{$regfeat_adaptor->store([$feature])};
-
-
- ### Fetching some RegulatoryFeatures
- my @regfeats = @{$regfeat_adaptor->fetch_all_by_Slice_FeatureSets($slice, \@reg_feature_sets)};
-
-
- ### Print the bound and core loci
- print join(' - ', ($reg_feat->bound_start,
-                    $reg_feat->start,
-                    $reg_feat->end,
-                    $reg_feat->bound_end)."\n";
-
-
- ### Getting some supporting evidence for a RegualtoryFeatures
- my @reg_attrs = @{$reg_feat->regulatory_attributes('annotated')};
-
+  print 'Stable id:        ' . $regulatory_feature->stable_id                              . "\n";
+  print 'Analysis:         ' . $regulatory_feature->analysis->logic_name                   . "\n";
+  print 'Feature type:     ' . $regulatory_feature->feature_type->name                     . "\n";
+  print 'Epigenome count:  ' . $regulatory_feature->epigenome_count                        . "\n";
+  print 'Slice name:       ' . $regulatory_feature->slice->name                            . "\n";
+  print 'Coordinates:      ' . $regulatory_feature->start .' - '. $regulatory_feature->end . "\n";
+  print 'Regulatory build: ' . $regulatory_feature->get_regulatory_build->name             . "\n";
 
 =head1 DESCRIPTION
 
@@ -84,7 +61,6 @@ classification of the regulatory status at a given loci.
 =head1 SEE ALSO
 
 Bio::EnsEMBL:Funcgen::DBSQL::RegulatoryFeatureAdaptor
-Bio::EnsEMBL::Funcgen::SetFeature
 
 =cut
 
@@ -94,10 +70,9 @@ package Bio::EnsEMBL::Funcgen::RegulatoryFeature;
 use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
 use base qw( Bio::EnsEMBL::Funcgen::SetFeature );
-
 
 =head2 new
 
@@ -108,25 +83,20 @@ use base qw( Bio::EnsEMBL::Funcgen::SetFeature );
                     	     it is sitting on. Coordinates start at 1 and are inclusive.
   Arg [-FEATURE_SET]       : Bio::EnsEMBL::Funcgen::FeatureSet - Regulatory Feature set
   Arg [-FEATURE_TYPE]      : Bio::EnsEMBL::Funcgen::FeatureType - Regulatory Feature sub type
-  Arg [-BINARY_STRING]     : (optional) string - Regulatory Build binary string
-  Arg [-STABLE_ID]         : (optional) string - Stable ID for this RegualtoryFeature e.g. ENSR00000000001
+  Arg [-STABLE_ID]         : (optional) string - Stable ID for this RegulatoryFeature e.g. ENSR00000000001
   Arg [-DISPLAY_LABEL]     : (optional) string - Display label for this feature
-  Arg [-ATTRIBUTE_CACHE]   : (optional) HASHREF of feature class dbID|Object lists
   Arg [-PROJECTED]         : (optional) boolean - Flag to specify whether this feature has been projected or not
   Arg [-dbID]              : (optional) int - Internal database ID.
   Arg [-ADAPTOR]           : (optional) Bio::EnsEMBL::DBSQL::BaseAdaptor - Database adaptor.
 
-  Example    : my $feature = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new
-                 (
-									-SLICE         => $chr_1_slice,
-									-START         => 1000000,
-									-END           => 1000024,
-                  -DISPLAY_LABEL => $text,
-									-FEATURE_SET   => $fset,
-                  -FEATURE_TYPE  => $reg_ftype,
-                  -ATTRIBUTE_CACHE => \%attr_cache,
-                 );
-
+  Example    : my $feature = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new(
+                -SLICE         => $chr_1_slice,
+                -START         => 1000000,
+                -END           => 1000024,
+                -DISPLAY_LABEL => $text,
+                -FEATURE_SET   => $fset,
+                -FEATURE_TYPE  => $reg_ftype,
+              );
 
   Description: Constructor for RegulatoryFeature objects.
   Returntype : Bio::EnsEMBL::Funcgen::RegulatoryFeature
@@ -141,21 +111,60 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($stable_id, $attr_cache, $bin_string, $projected, $has_evidence, $cell_type_count)
-    = rearrange(['STABLE_ID', 'ATTRIBUTE_CACHE', 'BINARY_STRING', 'PROJECTED', 'HAS_EVIDENCE', 'CELL_TYPE_COUNT'], @_);
+  my ($stable_id, $attr_cache, $projected, $activity, $epigenome_count, $analysis)
+    = rearrange(['STABLE_ID', 'PROJECTED', 'ACTIVITY', 'EPIGENOME_COUNT', 'ANALYSIS'], @_);
 
   #None of these are mandatory at creation
   #under different use cases
-  $self->{binary_string} = $bin_string    if defined $bin_string;
-  $self->{stable_id}     = $stable_id     if defined $stable_id;
-  $self->{projected}     = $projected     if defined $projected;
-  $self->{has_evidence}  = $has_evidence  if defined $has_evidence;
-  $self->{cell_type_count}  = $cell_type_count  if defined $cell_type_count;
-  $self->attribute_cache($attr_cache)     if $attr_cache;
+  $self->{stable_id}        = $stable_id        if defined $stable_id;
+  $self->{projected}        = $projected        if defined $projected;
+  $self->{activity}         = $activity         if defined $activity;
+  $self->{epigenome_count}  = $epigenome_count  if defined $epigenome_count;
+  $self->{analysis}         = $analysis         if defined $analysis;
+  
+  $self->{_regulatory_activity} = [];
 
   return $self;
 }
 
+sub analysis {
+  return shift->get_Analysis;
+}
+
+sub _analysis_id {
+  return shift->{_analysis_id};
+}
+
+=head2 get_Analysis
+
+  Arg : none
+  Example    : $analysis = $regulatory_feature->get_Analysis
+  Description: Fetches the analysis used to generate this regulatory feature.
+               This is the analysis of the regulatory build.
+  Returntype : Bio::EnsEMBL::Analysis
+  Exceptions : none
+  Status     : At Risk
+
+=cut
+
+sub get_Analysis {
+  my $self = shift;
+
+  if(! defined $self->{'_analysis'}) {
+    $self->{'_analysis'} = $self
+      ->adaptor
+      ->db
+      ->get_AnalysisAdaptor()
+      ->fetch_by_dbID(
+	$self->_analysis_id
+      );
+  }
+  return $self->{'_analysis'};
+}
+
+sub regulatory_build_id {
+  return shift->{regulatory_build_id};
+}
 
 =head2 display_label
 
@@ -171,24 +180,19 @@ sub new {
 sub display_label {
   my $self = shift;
 
-  if(! defined $self->{display_label}){
+  if(! defined $self->{display_label}) {
     $self->{'display_label'}  = $self->feature_type->name.' Regulatory Feature';
-
-    if( defined $self->cell_type ){
-      $self->{display_label} .= ' - '.$self->cell_type->name;
-    }
   }
 
   return $self->{display_label};
 }
 
-
 =head2 display_id
 
   Example    : print $feature->display_id();
   Description: This method returns a string that is considered to be
-               the 'display' identifier. In this case the stable Id is
-               preferred
+               the 'display' identifier. In this case it is the stable id of 
+               the regulatory feature.
   Returntype : String
   Exceptions : none
   Caller     : web drawing code, Region Report tool
@@ -198,27 +202,10 @@ sub display_label {
 
 sub display_id {  return shift->{stable_id}; }
 
-
-=head2 binary_string
-
-  Arg [1]    : optional string - binary string from regulatory build
-  Example    : my $bin_string = $feature->binary_string();
-  Description: Getter for the binary_string for this feature.
-  Returntype : String
-  Exceptions : None
-  Caller     : Regulatory build analyses
-  Status     : At Risk - May change to BLOB
-
-=cut
-
-sub binary_string{ return shift->{binary_string}; }
-
-
 =head2 stable_id
 
-  Arg [1]    : (optional) string - stable_id e.g ENSR00000000001
   Example    : my $stable_id = $feature->stable_id();
-  Description: Getter and setter for the stable_id attribute for this feature. 
+  Description: Getter for the stable_id attribute for this feature.
   Returntype : string
   Exceptions : None
   Caller     : General
@@ -226,25 +213,16 @@ sub binary_string{ return shift->{binary_string}; }
 
 =cut
 
-sub stable_id {
-  my $self = shift;
+sub stable_id { return shift->{stable_id}; }
 
-  if (@_){
-    #added v67
-    warn "RegualtoryFeature::stable_id setter functionality is being removed\n";
-    #Still used in stable_id_mapper.pl
-    $self->{stable_id} = shift;
-  }
+=head2 regulatory_evidence
 
-  return $self->{stable_id};
-}
-
-
-=head2 regulatory_attributes
-
-  Arg [1]    : String (optional) - Class of feature e.g. annotated or motif
-  Example    : print "Regulatory Attributes:\n\t".join("\n\t", (map $_->feature_type->name, @{$feature->regulatory_attributes()}))."\n";
-  Description: Getter for the regulatory_attributes for this feature.
+  Arg [1]    : String (optional) - Class of feature e.g. 'annotated' 
+               or 'motif'
+  Arg [2]    : Bio::EnsEMBL::Funcgen::Epigenome - The epigenome for which 
+               the evidence for it regulatory activity is requested.
+  Example    : 
+  Description: Deprecated: Use get_RegulatoryEvidence instead.
   Returntype : ARRAYREF
   Exceptions : Throws if feature class not valid
   Caller     : General
@@ -252,218 +230,342 @@ sub stable_id {
 
 =cut
 
-
-sub regulatory_attributes{
-  my ($self, $feature_class) = @_;
-  my @fclasses;
-  my %adaptors = ('annotated' => $self->adaptor->db->get_AnnotatedFeatureAdaptor,
-                  'motif'     => $self->adaptor->db->get_MotifFeatureAdaptor     );
-
-  if (defined $feature_class) {
-
-    if (exists $adaptors{lc($feature_class)}) {
-      @fclasses = (lc($feature_class));
-    } 
-    else {
-      throw("The feature class you specified is not valid:\t$feature_class\n".
-            "Please use one of:\t".join(', ', keys %adaptors));
-    }
-  } 
-  else {
-    @fclasses = keys %adaptors;
-  }
-
-  foreach my $fclass (@fclasses) {
-    # Now structured as hash to facilitate faster has_attribute method
-    # Very little difference to array based cache
-    my @attr_dbIDs = keys %{$self->{attribute_cache}{$fclass}};
-	
-    if (scalar(@attr_dbIDs) > 0) {
-	  
-      if ( ! ( ref($self->{regulatory_attributes}{$fclass}->[0])  &&
-               ref($self->{regulatory_attributes}{$fclass}->[0])->isa('Bio::EnsEMBL::Feature') )) {
-      
-        $adaptors{$fclass}->force_reslice(1); #So we don't lose attrs which aren't on the slice
-        # fetch_all_by_Slice_constraint does relevant normalised Slice projection i.e. PAR mappingg
-        $self->{'regulatory_attributes'}{$fclass} = 
-          $adaptors{$fclass}->fetch_all_by_Slice_constraint
-            ($self->slice,
-             lc($fclass).'_feature_id in('.join(',', @attr_dbIDs).')' );
-
-        # Forces reslice and inclusion for attributes not contained within slice 
-        $adaptors{$fclass}->force_reslice(0);
-      }
-    } else {
-      $self->{regulatory_attributes}{$fclass} = [];
-    }
-  }
-
-  return [ map { @{$self->{regulatory_attributes}{$_}} } @fclasses ];
+sub regulatory_evidence {
+  my $self = shift;
+  my $feature_class = shift;
+  my $epigenome   = shift;
+  
+  return $self->get_RegulatoryEvidence($feature_class, $epigenome);
 }
 
-=head2 has_attribute
+=head2 get_RegulatoryEvidence
 
-  Arg [1]    : Attribute Feature dbID
-  Arg [2]    : Attribute Feature class e.g. motif or annotated
-  Example    : if($regf->has_attribute($af->dbID, 'annotated'){ #do something here }
-  Description: Identifies whether this RegualtoryFeature has a given attribute
-  Returntype : Boolean
-  Exceptions : Throws if args are not defined
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-sub has_attribute{
-  my ($self, $dbID, $fclass) = @_;
-
-  throw('Must provide a dbID and a Feature class argument') if ! $dbID && $fclass;
-
-  return exists ${$self->attribute_cache}{$fclass}{$dbID};
-}
-
-
-=head2 has_evidence
-
-  Arg [1]     : None
-  Returntype  : Boolean 
-  Exceptions  : None
-  Description : Returns 1 if has_evidence = 1, nothing otherwise
-
-=cut
-
-sub has_evidence { return shift->{has_evidence}; }
-
-
-=head2 cell_type_count
-
-  Arg [1]     : None 
-  Returntype  : SCALAR 
-  Exceptions  : None
-  Description : Returns the amount of cells where this RegFeat is active
-
-=cut
-
-sub cell_type_count { shift->{cell_type_count}; }
-
-
-=head2 get_focus_attributes
-
-  Arg [1]    : None
-  Example    : my @focus_attrs = @{$regf->get_focus_attributes};
-  Description: Getter for the focus features of this RegualtoryFeature, used to defined the core region
+  Arg [1]    : String (optional) - Class of feature e.g. 'annotated' 
+               or 'motif'
+  Arg [2]    : Bio::EnsEMBL::Funcgen::Epigenome - The epigenome for which 
+               the evidence for it regulatory activity is requested.
+  Example    : 
+  Description: Getter for the regulatory_evidence for this feature.
   Returntype : ARRAYREF
-  Exceptions : None
+  Exceptions : Throws if feature class not valid
   Caller     : General
-  Status     : Stable
-
-=cut
-
-sub get_focus_attributes{
-  my $self = shift;
-
-  if(! exists $self->{'focus_attributes'} ||
-	 ! @{$self->{'focus_attributes'}}){
-   $self->_sort_attributes;
-  }
-
-  return $self->{'focus_attributes'};
-}
-
-
-=head2 get_nonfocus_attributes
-
-  Arg [1]    : None
-  Example    : my @non_focus_attrs = @{$regf->get_nonfocus_attributes};
-  Description: Getter for the non-focus features of this RegulatoryFeature, used to defined 
-               the non core region i.e. the whiskers.
-  Returntype : ARRAYREF
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-sub get_nonfocus_attributes{
-  my $self = shift;
-
-  #Test focus here as we may not have any nonfocus
-  #But focus will show that we have sorted already
-  if(! exists $self->{'focus_attributes'} ||
-	 ! @{$self->{'focus_attributes'}}){
-	$self->_sort_attributes;
-  }
-
-  return $self->{'nonfocus_attributes'};
-}
-
-#Add pod here
-
-sub _sort_attributes{
-  my $self = shift;
-
-  $self->{'focus_attributes'} = [];
-  $self->{'nonfocus_attributes'} = [];
-
-  foreach my $attrf(@{$self->regulatory_attributes}){
-
-    if($attrf->isa('Bio::EnsEMBL::Funcgen::MotifFeature') ||
-       $attrf->feature_set->is_focus_set){
-      push @{$self->{'focus_attributes'}}, $attrf;
-    }
-    else{
-      push @{$self->{'nonfocus_attributes'}}, $attrf;
-    }
-  }
-
-  return;
-}
-
-
-=head2 attribute_cache
-
-  Arg [1]    : optional - HASHREF of attribute table keys with values as either a list of attribute 
-               feature dbIDs or objects. If passing object, any MotifFeature objects should be in position
-               order with respect to the slice.
-  Example    : $feature->attribute_cache(\%attribute_feature_info);
-  Description: Setter for the regulatory_attribute cache for this feature. This is a short cut method used by the 
-               regulatory build and the webcode to avoid unnecessary fetching and enable enable lazy loading 
-  Returntype : HASHREF
-  Exceptions : Throws if trying to overwrite existing cache
-  Caller     : RegulatoryFeatureAdaptor.pm and build_regulatory_features.pl
   Status     : At Risk
 
 =cut
 
+sub get_RegulatoryEvidence {
+  my $self = shift;
+  my $feature_class = shift;
+  my $epigenome   = shift;
+  
+  $self->_assert_epigenome_ok($epigenome);
+  my $regulatory_activity = $self->regulatory_activity_for_epigenome($epigenome);
+  
+  # See https://github.com/Ensembl/ensembl-funcgen/pull/6
+  return [] unless $regulatory_activity;
+  
+  my $regulatory_evidence = $regulatory_activity->get_RegulatoryEvidence;
 
-sub attribute_cache{
-  my ($self, $attr_hash) = @_;
-
-  if(defined $attr_hash){
-
-	foreach my $fclass(keys %{$attr_hash}){
-
-	  if(exists $self->{'attribute_cache'}{$fclass}){
-		throw("You are trying to overwrite a pre-existing regulatory attribute cache entry for feature class:\t$fclass");
-	  }
-	  else{
-		$self->{'attribute_cache'}{$fclass} = $attr_hash->{$fclass};
-	  }
-	}
-  }
-
-  return $self->{'attribute_cache'} || {};
+  return $regulatory_evidence;
 }
 
+sub _assert_epigenome_ok {
+  my $self = shift;
+  my $epigenome = shift;
+  if (! defined $epigenome) {
+    throw();
+  }
+  if (ref $epigenome ne 'Bio::EnsEMBL::Funcgen::Epigenome') {
+    throw("epigenome parameter must have type Bio::EnsEMBL::Funcgen::Epigenome!");
+  }
+}
 
+=head2 regulatory_activity_for_epigenome
 
-# The bound_seq_region_start/end methods are dynamic to support
-# HAP/PAR projection. Reverting this (not advised), would require
-# changes in _objs_from_sth to remap the loci to a dest slice
-# These are now 'lazy calculated' rather than pre-defined. Hence no
-# change in performace unless they are called multiple times
-# for the same slice
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Epigenome - The epigenome for which 
+               the evidence for it regulatory activity is requested.
+  Example    : 
+  Description: Getter for the regulatory_activity_for_epigenome for this 
+               feature. Returns undef, if no activity was predicted for the
+               epigenome. 
+  Returntype : Bio::EnsEMBL::Funcgen::RegulatoryActivity
+  Exceptions : none
+  Caller     : General
+  Status     : At Risk
 
+=cut
+
+sub regulatory_activity_for_epigenome {
+  my $self = shift;
+  my $epigenome = shift;
+  
+  my $epigenome_id = $epigenome->dbID;
+  my @regulatory_activity = grep { 
+    !$_->_is_multicell 
+    && $_->get_Epigenome->dbID == $epigenome_id 
+  } @{$self->regulatory_activity};
+  
+  if (! @regulatory_activity) {
+    return;
+  }
+  if (@regulatory_activity>1) {
+    throw();
+  }
+  return $regulatory_activity[0];
+}
+
+sub _get_underlying_structure_motifs_by_epigenome {
+  my $self = shift;
+  my $epigenome = shift;
+  
+  my $regulatory_activity = $self->regulatory_activity_for_epigenome($epigenome);
+  
+  if (! defined $regulatory_activity) {
+    die("No regulatory activity found for epigenome " . $epigenome->display_label . ".");
+  }
+  my $motif_evidence = $regulatory_activity->get_RegulatoryEvidence_by_type('motif');
+  
+  return $motif_evidence;
+}
+
+sub _get_underlying_structure_motifs_by_epigenome_list {
+  my $self = shift;
+  my $epigenome_list = shift;
+  
+  my @all_motifs;
+  
+  foreach my $current_epigenome (@$epigenome_list) {
+    my $motif_evidence = $self->_get_underlying_structure_motifs_by_epigenome($current_epigenome);
+    push @all_motifs, @$motif_evidence;
+  }
+  
+  my @unique_motifs;
+  my %seen_motif_coordinates;
+
+  MOTIF: foreach my $current_motif (@all_motifs) {
+  
+    my $unique_key = $current_motif->start . '_' . $current_motif->end;
+    if (exists $seen_motif_coordinates{$unique_key}) {
+      next MOTIF;
+    }
+    push @unique_motifs, $current_motif;
+    $seen_motif_coordinates{$unique_key} = 1;
+  }
+  my @sorted_motifs = sort { $a->start <=> $b->start } @unique_motifs;
+  return \@sorted_motifs;
+}
+
+=head2 get_underlying_structure
+
+  Example    : my @web_image_structure = @{$regulatory_feature->get_underlying_structure};
+  
+  Description: Returns the underlying structure of the regulatory feature in a
+               given epigenome. 
+
+               This structure is the bound start and end and the boundaries 
+               of all motifs linked to this regulatory feature for this 
+               epigenome. 
+
+               If no epigenome is provided, it will return a summary, which 
+               is the union of all underlying structures of all epigenomes in 
+               the regulatory build.
+
+  Returntype : Arrayref of slice coordinates relative to the slice of the 
+               regulatory feature.
+  Exceptions : None
+  Caller     : Webcode
+  Status     : At Risk
+
+=cut
+
+sub get_underlying_structure {
+  my $self = shift;
+  my $epigenome = shift;
+  
+  my $epigenome_specific_underlying_structure = [];
+  my $motif_evidence;
+  
+  if ($epigenome) {
+    $self->_assert_epigenome_ok($epigenome);
+    $motif_evidence = $self->_get_underlying_structure_motifs_by_epigenome($epigenome);
+  } else {
+    my $regulatory_build = $self->get_regulatory_build;
+    my $epigenome_list = $regulatory_build->get_all_Epigenomes;
+    $motif_evidence = $self->_get_underlying_structure_motifs_by_epigenome_list($epigenome_list);
+  }
+  
+  # This is used to make the coordinates relative to the start of the current
+  # slice. The webcode expects it that way.
+  #
+  my $slice_start = $self->slice->start;
+  
+  foreach my $current_motif_evidence (@$motif_evidence) {
+
+    push @$epigenome_specific_underlying_structure, (
+      0 + $current_motif_evidence->start - $slice_start +1, 
+      0 + $current_motif_evidence->end   - $slice_start +1, 
+    );
+  }
+  my $underlying_structure = [
+    0 + $self->bound_start, 
+    0 + $self->start,
+    @$epigenome_specific_underlying_structure,
+    0 + $self->end, 
+    0 + $self->bound_end
+  ];
+  return $underlying_structure;
+}
+
+=head2 regulatory_activity
+
+  Example    : my $regulatory_activity = $regulatory_feature->regulatory_activity;
+  
+  Description: Fetches a list of regulatory activities associated to this 
+               regulatory feature.
+
+  Returntype : ArrayRef[Bio::EnsEMBL::Funcgen::RegulatoryActivity]
+  Exceptions : None
+  Status     : At Risk
+
+=cut
+
+sub regulatory_activity {
+
+  my $self = shift;
+  if(! defined $self->{'_regulatory_activity'}) {
+    $self->{'_regulatory_activity'} = $self
+      ->adaptor
+      ->db
+      ->get_RegulatoryActivityAdaptor()
+      ->fetch_all_by_RegulatoryFeature($self);
+  }
+  return $self->{'_regulatory_activity'};
+}
+
+=head2 get_regulatory_build
+
+  Example    : my $regulatory_build = $regulatory_feature->get_regulatory_build;
+  
+  Description: Fetches the regulatory build used to generate this regulatory 
+               feature.
+
+  Returntype : Bio::EnsEMBL::Funcgen::RegulatoryBuild
+  Exceptions : None
+  Status     : At Risk
+
+=cut
+
+sub get_regulatory_build {
+  my $self = shift;
+
+  if(! defined $self->{'_regulatory_build'}) {
+    $self->{'_regulatory_build'} = $self
+      ->adaptor
+      ->db
+      ->get_RegulatoryBuildAdaptor()
+      ->fetch_by_dbID(
+	$self->regulatory_build_id
+      );
+  }
+  return $self->{'_regulatory_build'};
+}
+
+sub add_regulatory_activity {
+
+  my $self = shift;
+  my $regulatory_activity = shift;
+  
+  push @{$self->{_regulatory_activity}}, $regulatory_activity;
+}
+
+sub has_activity_in {
+
+  my $self = shift;
+  my $epigenome = shift;
+  
+  foreach my $current_regulatory_activity (@{$self->regulatory_activity}) {
+    if ($current_regulatory_activity->epigenome_id == $epigenome->dbID) {
+      return 1;
+    }
+  }
+  return;
+}
+
+sub has_epigenomes_with_activity {
+
+  my $self = shift;
+  my $activity = shift;
+  
+  foreach my $current_regulatory_activity (@{$self->regulatory_activity}) {
+    if ($current_regulatory_activity->activity eq $activity) {
+      return 1;
+    }
+  }
+  return;
+}
+
+=head2 get_epigenomes_by_activity
+
+  Example    : my $regulatory_build = $regulatory_feature->get_epigenomes_by_activity($regulatory_activity);
+  
+  Description: Returns an array of epigenomes in which this regulatory 
+               feature has the regulatory activity given to this method as
+               parameter.
+               
+               This can be used to get a list of epigenomes in which a 
+               regulatory feature is active.
+
+  Returntype : ArrayRef[Bio::EnsEMBL::Funcgen::Epigenome]
+  Exceptions : None
+  Status     : At Risk
+
+=cut
+
+sub get_epigenomes_by_activity {
+
+  my $self     = shift;
+  my $activity = shift;
+  
+  if (!$self->adaptor->is_valid_activity($activity)) {
+    throw(
+      'Please pass a valid activity to this method. Valid activities are: ' 
+      . $self->adaptor->valid_activities_as_string
+    );
+  }
+  
+  my @epigenome_dbID_list = grep {
+  
+    # Multicell does not have an epigenome id. In the map statement below 
+    #
+    #   $_->epigenome_id 
+    #
+    # will come up with undef and the undef is removed here.
+    
+    $_ 
+  } map { 
+    $_->_epigenome_id 
+  } grep { 
+    $_->activity eq $activity 
+  } @{$self->regulatory_activity};
+  
+  my $epigenome_adaptor = $self->adaptor->db->get_EpigenomeAdaptor;
+  
+  return $epigenome_adaptor->fetch_all_by_dbID_list(\@epigenome_dbID_list);
+}
+
+=head2 epigenome_count
+
+  Arg [1]     : None
+  Returntype  : SCALAR
+  Exceptions  : None
+  Description : Returns the amount of epigenomes in which this regulatory feature is active
+
+=cut
+
+sub epigenome_count { 
+  my $self = shift;
+  return $self->{epigenome_count};
+}
 
 =head2 bound_seq_region_start
 
@@ -480,7 +582,6 @@ sub attribute_cache{
 
 sub bound_seq_region_start { return $_[0]->seq_region_start - $_[0]->_bound_lengths->[0]; }
 
-
 =head2 bound_seq_region_end
 
   Example    : my $bound_sr_end = $feature->bound_seq_region_end;
@@ -496,21 +597,18 @@ sub bound_seq_region_start { return $_[0]->seq_region_start - $_[0]->_bound_leng
 
 sub bound_seq_region_end { return $_[0]->seq_region_end + $_[0]->_bound_lengths->[1]; }
 
-# As this 'private' method is not exposed or required to be poylymorphic,
-# it would theoretically, be quicker to have this as a sub.
-
 sub _bound_lengths {
   my $self = shift;
 
   if(! defined  $self->{_bound_lengths}){
 
-    my @af_attrs = @{$self->regulatory_attributes('annotated')};
-    
+    my @af_attrs = @{$self->regulatory_evidence('annotated')};
+
     if (! @af_attrs) {
       throw('Unable to set bound length, no AnnotatedFeature attributes available for RegulatoryFeature: '
             .$self->dbID);
     }
-    
+
     #Adding self here accounts for core region i.e.
     #features extending beyond the core may be absent on this cell type.
     my @start_ends;
@@ -518,24 +616,15 @@ sub _bound_lengths {
     foreach my $feat (@af_attrs, $self) {
       push @start_ends, ($feat->seq_region_start, $feat->seq_region_end);
     }
-        
+
     @start_ends = sort { $a <=> $b } @start_ends;
-        
+
     $self->{_bound_lengths} = [ ($self->seq_region_start - $start_ends[0]),
                                 ($start_ends[$#start_ends] - $self->seq_region_end) ];
   }
 
   return $self->{_bound_lengths};
 }
-
-#This appears to be slower than foreach
-#my @start_ends = map { $_->start, $_->end } (@af_attrs, $self);
-
-
-
-
-# The following methods are all dynamic wrt slice strand and projection/transfer
-# and return local values
 
 =head2 bound_start_length
 
@@ -572,7 +661,6 @@ sub bound_end_length {
   return ($self->slice->strand == 1) ? $self->_bound_lengths->[1] : $self->_bound_lengths->[0];
 }
 
-
 =head2 bound_start
 
   Example    : my $bound_start = $feature->bound_start;
@@ -585,7 +673,6 @@ sub bound_end_length {
   Status     : Stable
 
 =cut
-
 sub bound_start { return $_[0]->start - $_[0]->bound_start_length; }
 
 
@@ -601,9 +688,7 @@ sub bound_start { return $_[0]->start - $_[0]->bound_start_length; }
   Status     : Stable
 
 =cut
-
 sub bound_end { return $_[0]->end + $_[0]->bound_end_length; }
-
 
 =head2 is_projected
 
@@ -616,229 +701,82 @@ sub bound_end { return $_[0]->end + $_[0]->bound_end_length; }
   Status     : At risk - remove setter functionality
 
 =cut
-
 sub is_projected {
   my $self = shift;
-  
+
   if(@_){
 	#added v67
     warn "RegulatoryFeature::is_projected setter functionality is being removed\n";
     $self->{'projected'} = shift;
   }
-  
+
   return $self->{'projected'};
 }
 
-
-=head2 get_underlying_structure
-
-  Example    : my @web_image_structure = @{$regf->get_underlying_structure};
-  Description: Getter for the bound_end attribute for this feature.
-               Gives the 3' most end value of the underlying attribute
-               features.
-  Returntype : Arrayref
-  Exceptions : None
-  Caller     : Webcode
-  Status     : At Risk
-
-=cut
-
-#Could precompute these as core region loci
-#and store in the DB to avoid the MF attr fetch?
-
-#This is also sensitive to projection/transfer after we have called it.
-#Would have to do one of the following
-#1 Projecting all motif_features. This could be done by extending/overwriting
-#  Feature::project/transfer, and make all feature projection code use that e.g. BaseFeatureAdaptor
-#2 Cache the start, end and strand of slice, and update when changed by transforming motif_feature_loci
-
-# This is only ever used for web which will never call until any projection is complete.
-# Hence no real need for this to be sensitive to pre & post projection calling
-# Leave for now with above useage caveat
-
-sub get_underlying_structure{
-  my $self = shift;
-
-  if (! defined $self->{underlying_structure}) {
-    my @mf_loci;
-    
-    foreach my $mf (@{$self->regulatory_attributes('motif')}) {
-      push @mf_loci, ($mf->start, $mf->end);
-    }
-
-    $self->{underlying_structure} = [ 
-                                     $self->bound_start, $self->start,
-                                     @mf_loci,
-                                     $self->end, $self->bound_end
-                                    ];
-  }
-
-  $self->{underlying_structure};
-}
-
-
-=head2 is_unique_to_FeatureSets
-
-  Arg[1]     : optional - ARRAYREF of regualtory Bio::EnsEMBL::Funcgen::FeatureSet objects
-                          Default is FeatureSet of given RegulatoryFeature, else need to be 
-                          defined explicitly.
-  Arg[2]     : optional - HASHREF Params hash: 
-                                    {
-                                     include_projected => 0|1, # Boolean, include 'projected' features
-                                    }
-  Example    : if($reg_feat->is_unique_to_FeatureSets($fsets)}{  
-                   #then do some analysis here
-               }
-  Description: Identifies whether this RegualtoryFeature is unique to a set of FeatureSets.
-  Returntype : boolean
-  Exceptions : Throw is arguments not stored or valid.
-  Caller     : General
-  Status     : At risk
-
-=cut
-
-#Probably want to add in an FeatureType constraint here
-#e.g. so we can compare active vs inactive or poised promoters
-
-#omit include_multi doesn't make sense here
-
-sub is_unique_to_FeatureSets{
-  my ($self, $fsets, $params_hash) = @_;
-
-  $fsets ||= [$self->feature_set];
-  my @fset_ids;
-  
-  
-  #define to avoid deref fails below.
-  $params_hash ||= {};
-  if(ref($params_hash) ne 'HASH'){
-	throw("The params hash argument must be a valid HASHREF:\t".ref($params_hash));
-  }
-
-
-  foreach my $fset(@$fsets){
-	#assume we have an adaptor set
-	$self->adaptor->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
-	
-	if($fset->feature_class ne 'regulatory'){
-	  throw('Found non-regulatory FeatureSet');
-	}
-
-	push @fset_ids, $fset->dbID;
-  }
-  
-  my $stable_id;
-  ($stable_id = $self->stable_id) =~ s/^[A-Z0]+//;
-
-  
-  my @other_rf_ids = @{$self->adaptor->_fetch_other_dbIDs_by_stable_feature_set_ids
-						 ($stable_id, 
-							 \@fset_ids, 
-						  { include_projected => $params_hash->{include_projected}} )};
-  
-  return (@other_rf_ids) ? 0 : 1;
-}
-
-
-
-=head2 get_other_RegulatoryFeatures
-
-  Arg[1]     : optional - ARRAYREF of regualtory Bio::EnsEMBL::Funcgen::FeatureSet objects
-                          Default is FeatureSet of given RegulatoryFeature, else need to be 
-                          defined explicitly.
-  Arg[2]     : optional - HASHREF Params hash: 
-                                    {
-                                     include_projected => 0|1, # Boolean, include 'projected' features
-                                     include_multicell => 0|1, # Boolean, include MultiCell features
-                                    }
-  Example    : my @other_fsets = @{$reg_feat->get_other_FeatureSets($fsets)};
-  Description: Gets other RegualtoryFeatures (linked via the stable ID) which are present in the 
-               specified list of FeatureSets.
-  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::RegulatoryFeature objects
-  Exceptions : Throw is arguments not stored or valid.
-  Caller     : General
-  Status     : At risk
-
-=cut
-
-sub get_other_RegulatoryFeatures{
-  my ($self, $fsets, $params_hash) = @_;
-  
-  #define to avoid deref fails below.
-  $params_hash ||= {};
-  if(ref($params_hash) ne 'HASH'){
-	throw("The params hash argument must be a valid HASHREF:\t".ref($params_hash));
-  }
-
-  $fsets ||= [$self->feature_set];
-  my @fset_ids;
-  
-  foreach my $fset(@$fsets){
-	#assume we have an adaptor set
-	$self->adaptor->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fset);
-	
-	if($fset->feature_class ne 'regulatory'){
-	  throw('Found non-regulatory FeatureSet');
-	}
-
-	push @fset_ids, $fset->dbID;
-  }
-    
-  my $stable_id;
-  ($stable_id = $self->stable_id) =~ s/^[A-Z0]+//;
-
-  my @other_fsets_ids = @{$self->adaptor->_fetch_other_dbIDs_by_stable_feature_set_ids
-							($stable_id, \@fset_ids, 
-							 {
-							  include_projected => $params_hash->{include_projected},
-							  include_multicell => $params_hash->{include_multicell},
-							 })};
-
-  return $self->adaptor->fetch_all_by_dbID_list(\@other_fsets_ids);
-}
-
-
 =head2 summary_as_hash
 
-  Example       : $regf_summary = $regf->summary_as_hash;
+  Example       : $regulatory_feature_summary = $regulatory_feature->summary_as_hash;
   Description   : Retrieves a textual summary of this RegulatoryFeature.
   Returns       : Hashref of descriptive strings
   Status        : Intended for internal use (REST)
 
 =cut
 
-#why has has_evidence been transposed to activity_evidence?
-
 sub summary_as_hash {
   my $self   = shift;
+  
+  my $feature_type = $self->feature_type;
 
-  #Use cell_type count here to detect new build
-  #but this is set to 0 for cell type specific features
-  #my %build_specific_params;
-  #my $ctype_cnt = $self->cell_type_count;
+  return {
+    ID                => $self->stable_id,
+    source            => $self->analysis->logic_name,,
+    bound_start       => $self->bound_seq_region_start,
+    bound_end         => $self->bound_seq_region_end,
+    start             => $self->seq_region_start,
+    end               => $self->seq_region_end,
+    strand            => $self->strand,
+    seq_region_name   => $self->seq_region_name,
+    description       => $self->feature_type->description,
+    feature_type      => $feature_type->name,
+  };
+}
 
-  #if($ctype_cnt){
-  #  $build_specific_params{cell_type_count}    = $ctype_cnt;
-  #  $build_specific_params{activity_envidence} = $self->has_evidence;
-  #}
-  #else{
-  #  $build_specific_params{projected} = $self->projected;
-  #}
+# Deprecated methods
 
-  return
-   {ID                      => $self->stable_id,
-    cell_type               => $self->cell_type->name,
-    bound_start             => $self->bound_seq_region_start,
-    bound_end               => $self->bound_seq_region_end,
-    start                   => $self->seq_region_start,
-    end                     => $self->seq_region_end,
-    strand                  => $self->strand,
-    seq_region_name         => $self->seq_region_name,
-    activity_evidence       => $self->has_evidence,
-    description             => $self->feature_type->description,
-    feature_type            => "regulatory",
-    #%build_specific_params, 
-   };
+sub has_evidence {
+    deprecate('"has_evidence" is now deprecated. Please use "activity"
+        which reports the state of the Regulatory Feature');
+  return shift->activity;
+}
+
+sub cell_type_count { 
+  my $self = shift;
+  deprecate(
+        "Bio::EnsEMBL::Funcgen::RegulatoryFeature::cell_type_count has been deprecated and will be removed in Ensembl release 89."
+            . " Please use Bio::EnsEMBL::Funcgen::RegulatoryFeature::epigenome_count instead"
+  );
+  return $self->epigenome_count;
+}
+
+sub is_unique_to_FeatureSets { deprecate('"is_unique_to_FeatureSets" is deprecated. '); return; }
+sub get_other_RegulatoryFeatures { deprecate('"get_other_RegulatoryFeatures" is deprecated. '); return; }
+sub get_focus_attributes    { deprecate('"get_focus_attributes" is deprecated.');  return; }
+sub get_nonfocus_attributes { deprecate('"get_nonfocus_attributes" is deprecated.');  return; }
+
+sub activity {
+  throw(
+    "activity is no longer supported for regulatory features. You can use "
+    . "get_epigenomes_by_activity('ACTIVE') to find feature sets in which "
+    . "this regulatory feature are active."
+  );
+}
+
+sub epigenome {
+  throw(
+    "epigenome is no longer supported for regulatory features. You can use "
+    . "get_epigenomes_by_activity('ACTIVE') to find feature sets in which "
+    . "this regulatory feature are active."
+  );
 }
 
 1;

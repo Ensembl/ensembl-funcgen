@@ -2,7 +2,8 @@
 
 =head1 LICENSE
 
-Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -124,14 +125,14 @@ our %COLORS = (
   na => "255,255,255"
 );
 
-# These states describe the features at the cell-type level
-our %feature_states = (
-  active => 0,
-  poised => 1,
-  repressed => 2,
-  inactive => 3,
-  na => 4
-);
+# # These states describe the features at the cell-type level
+# our %feature_states = (
+#   active => 0,
+#   poised => 1,
+#   repressed => 2,
+#   inactive => 3,
+#   na => 4
+# );
 
 our $start_time = time;
 
@@ -149,22 +150,38 @@ sub main {
   my $options = get_options();
   # Read dump file with file locations and metadata
   get_metadata($options);
-  # Compute summaries of TB binding peaks
+  # Compute summaries of TF binding peaks
+  print_log("Computing summaries of TF binding peaks\n");
   compute_tf_probs($options);
   # Compute summaries of segmentations
+  print_log("Computing summaries of segmentations\n");
   extract_segmentation_state_summaries($options);
   # Select the segmentation states that best match a label
+  print_log("Selecting the segmentation states that best match a label\n");
   label_segmentation_states($options);
   # Color the input segmentations based on the label assigments above
+  print_log("Coloring the input segmentations based on the label assigments above\n");
   make_segmentation_bedfiles($options);
-  # Set cutoffs to optimise the quality of the build (using TF binding as an indicator_
+  # Set cutoffs to optimise the quality of the build (using TF binding as an indicator
+  print_log("Setting cutoffs to optimise the quality of the build (using TF binding as an indicator\n");
   set_cutoffs($options);
   print_cutoffs($options);
   # Compute MultiCell features
+  print_log("Computing MultiCell features\n");
   compute_regulatory_features($options);
   # Determine which features are active in which cell type
+  print_log("Determine which features are active in which epigenome\n");
+  
+  # Problem:
+  #
+  # $options->{segmentations} is not being set!
+  #
+  print Dumper($options->{segmentations});
+#   die();
+  
   compute_states($options);
   # Prepare trackhub header files
+  print_log("Preparing trackhub header files\n");
   make_track_hub($options);
   print_log("Exiting New Regulatory Build pipeline\n");
 }
@@ -402,7 +419,9 @@ sub print_log {
 sub clean_name {
   my $string = shift;
   $string =~ s/[\-\(\)]//g;
-  $string =~ s/_.*//g;
+#   $string =~ s/_.*//g;
+# $string =~ s/ /_/g;
+# $string =~ s/\+/_/g;
   $string = uc($string);
   $string =~ s/:/x/g;
   return $string;
@@ -628,6 +647,9 @@ sub read_dump {
       push @{$options->{segmentations}}, $segmentation;
     }
   }
+#   use Data::Dumper;
+#   print Dumper($options->{segmentations});
+#   die;
 }
 
 =head2 fetch_metadata
@@ -649,9 +671,25 @@ sub fetch_metadata {
       # It's a histone, ignore
       next;
     }
-    my $cell = $featureSet->cell_type->name;
-    record_peak_file($options, $tf, $cell, dump_peaks($featureSet, $tf, $cell, \@slices));
-    close $fh;
+    my $cell = $featureSet->epigenome->production_name;
+    
+    my $cell_display_label = $featureSet->epigenome->display_label;
+    
+    my $epigenome_is_excluded = 
+         ($cell_display_label eq "CD38- naïve B cell (CB)")
+      || ($cell_display_label eq "CD38- naive B cell (VB)")
+      || ($cell_display_label eq "CD4+ ab T cell (CB)")
+      || ($cell_display_label eq "CD8+ ab T cell (VB)")
+      || ($cell_display_label eq "EM CD8+ ab T cell (VB)")
+      || ($cell_display_label eq "Naïve B cell (To)")
+    ;
+    if ($epigenome_is_excluded) {
+      print_log("Skipping $cell_display_label, because it has been excluded from the regulatory build.\n");
+      next;
+    }
+    
+    record_peak_file($options, $tf, $cell, dump_peaks($options, $featureSet, $tf, $cell, \@slices));
+    # close $fh;
   }
 }
 
@@ -668,7 +706,7 @@ sub fetch_metadata {
 =cut
 
 sub dump_peaks {
-  my ($featureSet, $tf, $cell, $slices) = @_;
+  my ($options, $featureSet, $tf, $cell, $slices) = @_;
   my $dir = "$options->{working_dir}/peaks/$tf/$cell/";
   mkpath $dir;
 
@@ -1057,7 +1095,7 @@ sub compute_antibody_specific_probs {
 
   foreach $tf (@tfs) {
     my $res = compute_antibody_specific_prob($options, $tf);
-    if (defined $res) {
+    if (defined $res && !($tf eq "CTCF")) {
       push @tf_probs, $res;
     }
   }
@@ -1148,6 +1186,8 @@ sub compute_global_tf_prob {
   mkdir "$options->{trackhub_dir}/overview/";
   my $output = "$options->{trackhub_dir}/overview/all_tfbs.wig";
 
+  # Probability of seeing at least one transcription factor
+  #
   run("wiggletools write_bg $output offset 1 scale -1 mult map offset 1 map scale -1 " . join(" ", @$probs)) ;
   convert_to_bigWig($options, $output);
 }
@@ -2361,15 +2401,15 @@ sub select_segmentation_cutoff {
   my $last_cutoff = 0;
   # Searching for cutoff which produces max fscore
   for (my $i = 0; $i < $celltype_count * $max_weight; $i += $min_step) {
-    my $fscore($tfbs, $tfbs_auc, $files_string, $i)
-    print_log("CutoffTest\t$label\t.\t$fscore\n");
+    my $score = fscore($tfbs, $tfbs_auc, $files_string, $i);
+    print_log("CutoffTest\t$label\t.\t$score\n");
 
     # If current value smaller than previous, just got past peak (assuming convexity of fscore(i) )
-    if ($fscore < $last_fscore) {
+    if ($score < $last_fscore) {
       print_log("cutoff set at $last_cutoff\n");
       return $last_cutoff;
     } else {
-      $last_fscore = $fscore;
+      $last_fscore = $score;
       $last_cutoff = $i;
     } 
   }
@@ -3040,7 +3080,7 @@ sub make_track_hub_headers {
 sub make_track_hub_assembly {
   my $options = shift;
 
-  my $output = "trackDb_$options->{assembly}.txt";
+  my $output = "$options->{output_dir}/trackDb_$options->{assembly}.txt";
   open(my $file, ">", $output) || die("Could not open $output\n");
 
   make_track_hub_overview($options, $file);

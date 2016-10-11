@@ -1,6 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -58,7 +59,7 @@ sub new {
 
   $self->{static_config}{analysis} = {
     TarBase =>  {
-      -logic_name    => 'TarBase_v6.0',
+      -logic_name    => 'TarBase_v7.0',
       -description   => '<a>TarBase</a> miRNA target predictions (http://diana.imis.athena-innovation.gr/)',
       -display_label => 'TarBase miRNA',
       -displayable   => 1,
@@ -88,7 +89,7 @@ sub new {
         -feature_type      => 'TarBase miRNA target', #feature_types config key name not object
         -display_label     => 'TarBase miRNA target predictions',
         -description       => 'TarBase miRNA target predictions',
-        -analysis          => 'TarBase_v6.0', #analysis config key name not object
+        -analysis          => 'TarBase_v7.0', #analysis config key name not object
         -feature_class     => 'mirna_target'
       },
     }
@@ -117,15 +118,15 @@ sub parse_and_load{
 
   if($self->species eq 'homo_sapiens'){
     $external_db_name    = 'homo_sapiens_core_Gene';
-    $external_db_release = '79_38';
+    $external_db_release = '84_38';
   }
   elsif($self->species eq 'mus_musculus'){
     $external_db_name    = 'mus_musculus_core_Gene';
-    $external_db_release = '79_37';
+    $external_db_release = '84_38';
   }
   elsif($self->species eq 'rattus_norvegicus'){
     $external_db_name    = 'rattus_norvegicus_core_Gene';
-    $external_db_release = '79_5';
+    $external_db_release = '84_6';
   }
   else{
     throw($self->species . " not implemented. Add here.")
@@ -356,6 +357,7 @@ sub parse_and_load{
 
       # project if necessary
       if ($new_assembly) {
+        throw("Not correctly implemented");
        $feature = $self->project_feature($feature, $new_assembly);
 
         if (! defined $feature) {

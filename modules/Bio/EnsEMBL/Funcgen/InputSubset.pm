@@ -5,6 +5,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -37,12 +38,13 @@ Bio::EnsEMBL::Funcgen::InputSubset - A module to represent InputSubset object.
 use Bio::EnsEMBL::Funcgen::InputSubset;
 
 my $input_subset = Bio::EnsEMBL::Funcgen::InputSubset->new
-                    (-cell_type     => $cell_type,
-                     -experiment    => $exp,
-                     -feature_type  => $feature_type,
-                     -is_control    => $is_control,
-                     -name          => $name,
-                     -replicate     => $iss_rep);
+                    (-epigenome            => $epigenome,
+                     -experiment           => $exp,
+                     -feature_type         => $feature_type,
+                     -is_control           => $is_control,
+                     -name                 => $name,
+                     -biological_replicate => $iss_br,
+                     -technical_replicate) => $iss_tr,;
 
 ($input_subset) = @{$input_subset_adaptor->store($input_subset)};
 
@@ -72,12 +74,13 @@ use base qw( Bio::EnsEMBL::Funcgen::Set );
 =head2 new
 
   Example    : my $iss = Bio::EnsEMBL::Funcgen::InputSubset->new
-                            (-cell_type     => $cell_type,
-                             -experiment    => $exp,
-                             -feature_type  => $feature_type,
-                             -is_control    => $is_control,
-                             -name          => $name,
-                             -replicate     => $iss_rep);
+                            (-epigenome            => $epigenome,
+                             -experiment           => $exp,
+                             -feature_type         => $feature_type,
+                             -is_control           => $is_control,
+                             -name                 => $name,
+                             -biological_replicate => $iss_br,
+                             -technical_replicate  => $iss_tr,);
 
   Description: Constructor for InputSubset objects.
   Returntype : Bio::EnsEMBL::Funcgen::InputSubset
@@ -92,14 +95,14 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($is_control, $name, $rep) = rearrange
-   (['IS_CONTROL', 'NAME', 'REPLICATE'], @_);
+  my ($is_control, $name, $br, $tr) = rearrange
+   (['IS_CONTROL', 'NAME', 'BIOLOGICAL_REPLICATE', 'TECHNICAL_REPLICATE'], @_);
 
   #FeatureType and Analysis validated in Set
-  #CellType and Experiment validated in Set if defined  
+  #Epigenome and Experiment validated in Set if defined  
  
-  if(! defined $self->cell_type){
-    throw('Mandatory parameter -cell_type is not defined');
+  if(! defined $self->epigenome){
+    throw('Mandatory parameter -epigenome is not defined');
   }
 
   if(! defined $self->experiment){
@@ -107,16 +110,18 @@ sub new {
   }
 
   if(! defined $is_control){
-    throw('Must defined an -is_control paramter'); 
+    throw('Must defined an -is_control parameter'); 
     #is_control cannot be undef, as this will resolve to false
     #when storing
   }
 
 
-  $self->{is_control}   = $is_control;
-  $self->{name}         = $name;
-  $self->{replicate}    = $rep;
-  #replicate is fine undef as it is not a boolean field
+  $self->{is_control}           = $is_control;
+  $self->{name}                 = $name;
+  $self->{biological_replicate} = $br;
+  $self->{technical_replicate}  = $tr;
+
+  #replicates are fine undef as they are not a boolean field
 
   return $self;
 }
@@ -129,11 +134,44 @@ sub new {
   Returntype : Integer
   Exceptions : None
   Caller     : General
+  Status     : Deprecated
+
+=cut
+
+sub replicate { 
+  deprecate(
+    'Bio::EnsEMBL::Funcgen::InputSubset::replicate has been deprecated and will be removed in Ensembl release 89 '
+        . 'Please use Bio::EnsEMBL::Funcgen::InputSubset::technical_replicate instead.'
+  );
+
+  return shift->{technical_replicate};
+}
+
+=head2 biological_replicate
+
+  Example    : my $br = $iss->biological_replicate;
+  Description: Getter for the biological replicate attribute of this InputSubset.
+  Returntype : Integer
+  Exceptions : None
+  Caller     : General
   Status     : Stable
 
 =cut
 
-sub replicate { return shift->{replicate}; }
+sub biological_replicate { return shift->{biological_replicate}; }
+
+=head2 technical_replicate
+
+  Example    : my $tr = $iss->technical_replicate;
+  Description: Getter for the technical replicate attribute of this InputSubset.
+  Returntype : Integer
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub technical_replicate { return shift->{technical_replicate}; }
 
 
 =head2 is_control
@@ -153,7 +191,10 @@ sub is_control { return shift->{is_control}; }
 =head2 reset_relational_attributes
 
   Arg[1]     : - Hashref containing the following parameters:
+                -epigenome      => Bio::EnsEMBL::Funcgen::Epigenome,
                 -experiment     => Bio::EnsEMBL::Funcgen::Experiment,
+                -feature_type   => Bio::EnsEMBL::Funcgen::FeatureType,
+                -analysis       => Bio::EnsEMBL::Funcgen::Analysis,
 
   Description: Resets all the relational attributes of a given InputSubset.
                Useful when creating a cloned object for migration beween DBs
@@ -171,16 +212,16 @@ sub reset_relational_attributes{
     throw('Must pass a HASHREF, not: ' .ref($params_hash));
   }
 
-  my ($cell_type, $experiment, $feature_type, $analysis) =
-    rearrange(['CELL_TYPE', 'EXPERIMENT', 'FEATURE_TYPE', 'ANALYSIS'],
+  my ($epigenome, $experiment, $feature_type, $analysis) =
+    rearrange(['EPIGENOME', 'EXPERIMENT', 'FEATURE_TYPE', 'ANALYSIS'],
         %$params_hash);
 
-  assert_ref($cell_type,    'Bio::EnsEMBL::Funcgen::CellType');
+  assert_ref($epigenome,    'Bio::EnsEMBL::Funcgen::Epigenome');
   assert_ref($experiment,   'Bio::EnsEMBL::Funcgen::Experiment');
   assert_ref($feature_type, 'Bio::EnsEMBL::Funcgen::FeatureType');
   assert_ref($analysis,     'Bio::EnsEMBL::Analysis');
   
-  $self->{cell_type}     = $cell_type;
+  $self->{epigenome}     = $epigenome;
   $self->{experiment}    = $experiment;
   $self->{experiment_id} = $experiment->dbID;
   $self->{feature_type}  = $feature_type;
@@ -205,7 +246,7 @@ sub reset_relational_attributes{
                Defaults to: name archive_id display_url replicate is_control
   Args[4]    : Arrayref - Optional list of InputSubset method names each
                returning a Storable or an Array or Arrayref of Storables.
-               Defaults to: cell_type, experiment, feature_type
+               Defaults to: epigenome, experiment, feature_type
   Example    : my %shallow_diffs = %{$rset->compare_to($other_rset, 1)};
   Description: Compare this InputSubset to another based on the defined scalar
                and storable methods.
@@ -225,33 +266,10 @@ sub compare_to {
   my ($self, $obj, $shallow, $scl_methods, $obj_methods) = @_;
 
   $scl_methods ||= [qw(name replicate is_control)];
-  $obj_methods ||= [qw(cell_type experiment feature_type analysis)];
+  $obj_methods ||= [qw(epigenome experiment feature_type analysis)];
 
   return $self->SUPER::compare_to($obj, $shallow, $scl_methods, $obj_methods);
 }
-
-
-##### DEPRECATED METHODS ####
-
-
-sub input_set {#DEPRECATED in v74
-  throw('DEPRECATED please use InputSetAdaptor->fetch_all_by_InputSubsets');
-}
-
-
-#DEPRECATED in v76
-
-sub archive_id { 
-    throw('DEPRECATED: Please use \'name\' or access the Experiment archive_id method');
-    return shift->{archive_id}; 
-}
-
-sub display_url{ 
-  throw('DEPRECATED: Please use the Experiment display_url method');
-  return shift->{display_url}; 
-}
-
-
 
 
 1;

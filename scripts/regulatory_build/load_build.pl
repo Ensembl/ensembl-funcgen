@@ -2,7 +2,8 @@
 
 =head1 LICENSE
 
-Copyright [1999-2013] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -30,7 +31,7 @@ load_build.pl
 
 =head1 SYNOPSIS
 
-perl load_new_assembly.pl --host $host --user $user --pass $pass --dbname homo_sapiens_funcgen_76_38 --base_dir hg38/
+perl load_build.pl --host $host --user $user --pass $pass --dbname homo_sapiens_funcgen_76_38 --base_dir hg38/
 
 =head1 DESCRIPTION
 
@@ -56,26 +57,54 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use Bio::EnsEMBL::Analysis;
 use File::Temp qw/ tempfile tempdir /;
+use Hash::Util qw( lock_hash );
+
 ${File::Temp::KEEP_ALL} = 1;
 
-my $dead_rgb = '225,225,225';
-my $poised_rgb = "192,0,190";
-my $repressed_rgb = "127,127,127";
-my $na_rgb = "255,255,255";
-
-our %label_description= (
-  'ctcf'=>'CTCF Binding Site',
-  'distal'=>'Predicted enhancer',
-  'proximal'=>'Predicted promoter flanking region',
-  'tss'=>'Predicted promoter',
-  'tfbs'=>'Transcription factor binding site',
-  'dnase'=>'Open chromatin region'
+# our %rgb_state = (
+#   '225,225,225' => 0, # dead
+#   "192,0,190" => 2, # poised
+#   "127,127,127" => 3, # repressed
+#   "255,255,255" => 4, # NA
+# 
+#   "255,0,0" => 1, # TSS
+#   "209,157,0" => 1, # TFBS
+#   "255,252,4" => 1, # DNase
+#   "255,105,105" => 1, # Proximal
+#   "250,202,0" => 1, # Distal
+#   "10,190,254" => 1, # CTCF
+# );
+my %rgb_state = (
+  '225,225,225' => 'INACTIVE',
+  
+  '255,0,0'     => 'ACTIVE', # TSS
+  '209,157,0'   => 'ACTIVE', # TFBS
+  '255,252,4'   => 'ACTIVE', # DNase
+  '255,105,105' => 'ACTIVE', # Proximal
+  '250,202,0'   => 'ACTIVE', # Distal
+  '10,190,254'  => 'ACTIVE', # CTCF
+  
+  '192,0,190'   => 'POISED',
+  '127,127,127' => 'REPRESSED',
+  '255,255,255' => 'NA',
 );
-our $start_time = time;
+lock_hash(%rgb_state);
+
+my %label_description= (
+  'ctcf'     => 'CTCF Binding Site',
+  'distal'   => 'Predicted enhancer',
+  'proximal' => 'Predicted promoter flanking region',
+  'tss'      => 'Predicted promoter',
+  'tfbs'     => 'Transcription factor binding site',
+  'dnase'    => 'Open chromatin region'
+);
+lock_hash(%label_description);
+
+my $start_time = time;
 
 main();
 
-=header2 main
+=head2 main
 
   Description: Overall process
   Returntype: undef
@@ -87,31 +116,67 @@ sub main {
   my $options = get_options();
   print_log("Connecting to database\n");
   my $db = connect_db($options);
-  print_log("Ensuring previous build is archived\n");
-  archive_previous_build($options, $db);
-  print_log("Getting analysis\n");
-  my $analysis = get_analysis($db);
+  
+  use Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildAdaptor;
+  my $regulatory_build_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildAdaptor->new($db);
+  my $current_regulatory_build = $regulatory_build_adaptor->fetch_current_regulatory_build;
+  
+  if (! defined $current_regulatory_build) {
+#     die("Couldn't find regulatory build in the database!");
+  }
+  if (defined $current_regulatory_build) {
+    print "Found regulatory build: " 
+    . $current_regulatory_build->name 
+    . " " . $current_regulatory_build->version 
+    . " from  " 
+    . $current_regulatory_build->initial_release_date 
+    . " in the database.\n";
+  }
+  
+#   print_log("Getting analysis\n");
+#   my $analysis = get_analysis($db);
   print_log("Getting cell types\n");
   my $ctypes = get_cell_type_names($options->{base_dir}, $db);
   print_log("Getting stable ids\n");
   my $stable_id = get_stable_id($options, $db);
   print_log("Getting slices\n");
   my $slice = get_slices($db);
-  print_log("Getting feature sets\n");
-  my $feature_set = get_regulatory_FeatureSets($analysis, $ctypes, $db);
   print_log("Getting feature types\n");
   my $feature_type = get_feature_types($db);
   print_log("Counting active features\n");
   my $count_hash = compute_counts($options->{base_dir});
+
+  print_log("Creating regulatory build object\n");
+  
+  my $is_small_update = defined $options->{small_update};
+  
+  my $new_regulatory_build = create_regulatory_build_object(
+    $current_regulatory_build, 
+    $is_small_update
+  );
+
+  # This sets the dbID of the regulatory build object. The regulatory 
+  # features are linked to that.
+  #
+  $regulatory_build_adaptor->store($new_regulatory_build);
+
   print_log("Creating regulatory_feature table\n");
-  compute_regulatory_features($options, $feature_set, $feature_type, $stable_id, $count_hash, $slice, $db);
+  compute_regulatory_features($options, $ctypes, $feature_type, $stable_id, $count_hash, $slice, $db, $new_regulatory_build);
+  
   print_log("Creating regulatory_annotation table\n");
   compute_regulatory_annotations($options);
   print_log("Updating meta table\n");
-  update_meta_table($options, $db);
+  
+  if (defined $current_regulatory_build) {
+    $current_regulatory_build->is_current(0);
+    $regulatory_build_adaptor->update($current_regulatory_build);
+  }
+
+  $new_regulatory_build->is_current(1);
+  $regulatory_build_adaptor->update($new_regulatory_build);
 }
 
-=header2 print_log
+=head2 print_log
 
   Description: Print conveninence
   Arg1: String
@@ -126,7 +191,7 @@ sub print_log {
   print "[$runtime] $str";
 }
 
-=header2 get_options
+=head2 get_options
 
   Description: Command line options
   Returntype: hashreof
@@ -135,6 +200,7 @@ sub print_log {
 
 sub get_options {
   my %options = ();
+  use Pod::Usage;
   GetOptions (
     \%options,
     "base_dir|b=s",
@@ -152,33 +218,7 @@ sub get_options {
   return \%options;
 }
 
-=header2
-
-  Description: Archiving old build
-  Arg1: options hash ref
-  Arg2: Bio::EnsEMBL::Funcgen::DBAdaptor object
-  Side effect: write into database
-  
-=cut
-
-sub archive_previous_build {
-  my ($options, $db) = @_;
-  my $connection = "mysql -u $options->{user} -h $options->{host} -D $options->{dbname}";
-  if (defined $options->{port}) {
-    $connection .= " -P $options->{port}";
-  }
-  if (defined $options->{pass}) {
-    $connection .= " -p$options->{pass}";
-  }
-  my $version = $db->get_MetaContainer->single_value_by_key('regbuild.version');
-  run("$connection -e 'UPDATE data_set SET name = CONCAT(name, \"_v$version\") WHERE name LIKE \"RegulatoryFeatures:%\" AND name NOT LIKE \"%_v$version\"'");
-  run("$connection -e 'UPDATE feature_set SET name = CONCAT(name, \"_v$version\") WHERE name LIKE \"RegulatoryFeatures:%\" AND name NOT LIKE \"%_v$version\"'");
-  run("$connection -e 'UPDATE meta SET meta_key = CONCAT(meta_key, \"_v$version\") WHERE meta_key LIKE \"regbuild.%\" AND meta_key NOT LIKE \"%_v$version\"'");
-  run("$connection -e 'UPDATE regbuild_string SET name = CONCAT(name, \"_v$version\") WHERE name NOT LIKE \"%_v$version\"'");
-  $options->{old_version} = $version;
-}
-
-=header2 connect_db
+=head2 connect_db
 
   Description: Connecting to the DB
   Arg1: options hash ref
@@ -212,7 +252,7 @@ sub connect_db {
   return $db;
 }
 
-=header2 get_analysis
+=head2 get_analysis
 
   Description: Create/Get analysis for Build
   Arg1: Bio::EnsEMBL::Funcgen::DBAdaptor
@@ -221,54 +261,39 @@ sub connect_db {
 =cut
 
 sub get_analysis {
-  ### Check whether analysis is already stored
-  #TO DO Update the description text here? Use flat file import?
-  #my $program_name = ($0 =~ s'.*/''g);
   my ($db) = @_;
   my $aa   = $db->get_AnalysisAdaptor();
-
-  my $analysis = Bio::EnsEMBL::Analysis->new
-      (
-       -logic_name      => 'Regulatory_Build',
-       -db              => undef,
-       -db_version      => undef,
-       -db_file         => undef,
-       -program         => undef,
-       -program_version => undef,
-       -program_file    => undef, #Could use $program_name here, but this is only part of the build
-       -gff_source      => undef,
-       -gff_feature     => undef,
-       -module          => undef,
-       -module_version  => undef,
-       -parameters      => undef,
-       -created         => undef,
-       -description     => q({'reg_feats' => 'Features from <a href="/info/genome/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.',).
-        q('core' => 'Sites enriched for marks of open chromatin (e.g. DNase1) or transcription factor binding sites.', ).
-        q('non_core' =>  'Sites enriched for histone modifications or polymerase binding.'}),
-       -display_label   => 'Regulatory Build',
-       -displayable     => 1,
-       -web_data        => q({'type' => 'fg_regulatory_features', 'name' => 'Reg. Feats',  'display' =>'off', 'depth' => 10, ).
-        q('default' => {'contigviewbottom' => 'normal', 'generegview' => 'normal'} }),
-      );
-
   my $ana = $aa->fetch_by_logic_name('Regulatory_Build');
 
   if ( not defined $ana ) {
+    my $analysis = Bio::EnsEMBL::Analysis->new
+	(
+	 -logic_name      => 'Regulatory_Build',
+	 -db              => undef,
+	 -db_version      => undef,
+	 -db_file         => undef,
+	 -program         => undef,
+	 -program_version => undef,
+	 -program_file    => undef, #Could use $program_name here, but this is only part of the build
+	 -gff_source      => undef,
+	 -gff_feature     => undef,
+	 -module          => undef,
+	 -module_version  => undef,
+	 -parameters      => undef,
+	 -created         => undef,
+	 -description     => q({'reg_feats' => 'Features from <a href="/info/genome/funcgen/index.html" class="cp-external">Ensembl Regulatory Build</a>.','core' => 'Sites enriched for marks of open chromatin (e.g. DNase1) or transcription factor binding sites.','non_core' => 'Sites enriched for histone modifications or polymerase binding.'}),
+	 -display_label   => 'Regulatory Build',
+	 -displayable     => 1,
+	 -web_data        => q({'type' => 'fg_regulatory_features', 'name' => 'Reg. Feats', 'display' =>'off', 'depth' => 10, 'default' => {'contigviewbottom' => 'normal', 'generegview' => 'normal'} }),
+	);
     $aa->store($analysis);
     return $analysis;
   } else {
-
-    if(! (($ana->compare($analysis) == 1) &&
-          ($ana->description eq $analysis->description) &&
-          ($ana->web_data    eq $analysis->web_data))){
-      die("Found stored Regulatory_Build analysis with unexepcted attributes. Please patch the database to match:\n".Dumper($analysis));
-    }
-
     return $ana;
   }
 }
 
-=header2 clean_name
+=head2 clean_name
 
   Description: Removing unwanted characters 
     Quick string normalisation function tor remove weird 
@@ -281,15 +306,15 @@ sub get_analysis {
 sub clean_name {
   my $string = shift;
   $string =~ s/[\-\(\)]//g;
-  $string =~ s/_.*//g;
+#   $string =~ s/_.*//g;
   $string = uc($string);
   $string =~ s/:/x/g;
   return $string;
 }
 
-=header2 get_cell_type_names
+=head2 get_cell_type_names
 
-  Description: Get list of cell types
+  Description: Get list of cell types used in the regulatory build.
   Arg1: The base_directory name
   Arg2: Bio::EnsEMBL::Funcgen::DBAdaptor object
   Returntype: array ref
@@ -298,26 +323,38 @@ sub clean_name {
 
 sub get_cell_type_names {
   my ($base_dir, $db) = @_;
-  my $cta = $db->get_CellTypeAdaptor();  
+  
+  my $epigenome_adaptor = $db->get_EpigenomeAdaptor();  
   my %cell_type_from_clean = ();
-  for my $cell_type (@{$cta->fetch_all()}) {
-    $cell_type_from_clean{clean_name($cell_type->name)} = $cell_type;
-    defined $cell_type || die("Unrecognized cell type name $cell_type\n");
+  for my $epigenome (@{$epigenome_adaptor->fetch_all()}) {
+    $cell_type_from_clean{clean_name($epigenome->production_name)} = $epigenome;
+    defined $epigenome || die("Unrecognized cell type name $epigenome\n");
   }
 
+#   my $debug_max = 1;
+  
   my @cell_types = ();
   foreach my $file (glob "$base_dir/projected_segmentations/*.bb") {
     my $cell_type_name = basename $file;
     $cell_type_name =~ s/\.bb//;
+#     $cell_type_name =~ s/_\d+_SEGMENTS\.bb//;
     if (!exists $cell_type_from_clean{$cell_type_name}) {
-      die("Celltype $cell_type_name unknown!");
+    
+      my @known_cell_types = sort keys %cell_type_from_clean;
+      my $known_cell_types_as_string = join "\n", map { ' - ' . $_ } @known_cell_types;
+    
+      die(
+	"Celltype $cell_type_name has a projected segmentation in $file, but is unknown! Known cell types are:\n$known_cell_types_as_string"
+	
+      );
     }
-    push @cell_types, $cell_type_from_clean{$cell_type_name}->name;
+    push @cell_types, $cell_type_from_clean{$cell_type_name};
+#     last if (@cell_types == $debug_max);
   }
   return \@cell_types;
 }
 
-=header2 run
+=head2 run
 
   Description: Convenience wrapper to run the commandline safely 
   Arg1: command line command string
@@ -332,7 +369,7 @@ sub run {
   system($cmd) && die("Failed when running command:\n$cmd\n");
 }
 
-=header2
+=head2
 
   Description: Assign stable ids to features
   Arg1: options hash ref
@@ -421,13 +458,13 @@ sub get_stable_id {
   return \%stable_id_hash;
 }
 
-=header2 get_overlaps_between_files
+=head2 get_overlaps_between_files
 
   Description: Computes overlaps between two builds contained in bed files
   Arg1: old build file location 
   Arg2: new build file location
   Returntype: list ref containing: array ref of overlaps, maximum of the old build's stable ids
-
+'
 =cut 
 
 sub get_overlaps_between_files {
@@ -462,7 +499,7 @@ sub get_overlaps_between_files {
   return (\@overlaps, $max_id);
 }
 
-=header2 get_slices
+=head2 get_slices
 
   Description: Get slice for each chromosome
   Arg1: Bio::EnsEMBL::Funcgen::DBAdaptor object
@@ -481,231 +518,7 @@ sub get_slices {
   return \%hash;
 }
 
-=header2 get_regulatory_FeatureSets
-
-  Description: Create/Get FeatureSet for each cell type
-  Arg1: Analysis object
-  Arg2: Array ref of cell types
-  Arg2: Bio::EnsEMBL::Funcgen::DBAdaptor object
-  Returntype: hashref: cell type name => Bio::EnsEMBL::Funcgen::FeatureSet
-
-=cut
-
-sub get_regulatory_FeatureSets {
-  my ($analysis, $ctypes, $db) = @_;
-  my %rf_sets;
-  my $fta = $db->get_FeatureTypeAdaptor();
-  my $ftype = $fta->fetch_by_name('RegulatoryFeature');
-  
-  if (! $ftype) {
-    $ftype = Bio::EnsEMBL::Funcgen::FeatureType->new
-      (
-       -name        => 'RegulatoryFeature',
-       -description => 'Ensembl Regulatory Feature',
-       -class       => 'Regulatory Feature',
-      );
-    
-    ($ftype) = @{$fta->store($ftype)};
-  }
-  
-  my (@dsets, @fsets);
-  my $helper = new Bio::EnsEMBL::Funcgen::Utils::Helper();
-  my $dsa = $db->get_DataSetAdaptor();
-  my $fsa = $db->get_FeatureSetAdaptor();
-  my $cta = $db->get_CellTypeAdaptor();
-  my $ctype_ssets = get_cell_type_supporting_sets($ctypes, $cta, $fsa);
-
-# make sure that attribute sets also contain focus sets 
-# and ctype_fsets contain core fsets
-
-  foreach my $ctype (@{$ctypes},('MultiCell')) {  
-    print_log("\tCreating feature set for cell type $ctype\n");
-    my ($desc, $dlabel, $fset_name);
-    
-    $fset_name = "RegulatoryFeatures:$ctype";
-    $dlabel    = "Reg.Feats $ctype";
-
-    if($ctype eq 'MultiCell') {
-      $desc = 'Consensus RegulatoryFeature regions';
-    }
-    else {
-      $desc = "$ctype specific RegulatoryFeatures";
-    }
-
-    print_log("Defining FeatureSet:\t$fset_name");
-
-    my $description;
-    if ($ctype eq 'MultiCell') {
-      $description = "MultiCell consensus RegulatoryFeatures";
-    } else {
-      $description = "$ctype specific RegulatoryFeatures";
-    }
-
-    my $dset = $helper->define_DataSet
-      (
-      -NAME                 => "RegulatoryFeatures:$ctype", 
-      -FEATURE_CLASS        => 'regulatory', 
-      -SUPPORTING_SETS      => $ctype_ssets->{$ctype},
-      -DBADAPTOR            => $db,
-      -FEATURE_SET_ANALYSIS => $analysis,#i.e. RegulatoryBuild
-      -CELL_TYPE            => $cta->fetch_by_name($ctype),
-      -FEATURE_TYPE         => $ftype,
-      -ROLLBACK             => 'feature_set',
-      -display_label        => "Reg.Feats $ctype",
-      -description          => $description,
-      ); 
-
-    #Always overwrite in case we have redefined the sets
-    define_regbuild_meta_strings($db, $dset);
-    $rf_sets{$ctype} = $dset->product_FeatureSet;
-
-    #Set states
-    #Move to Utils/RegBuilder.pm?
-     
-    push @dsets, $dset;
-
-    foreach my $sset(@{$ctype_ssets->{$ctype}}){
-      my $ss_dset = $dsa->fetch_by_product_FeatureSet($sset);
-
-      if(! $ss_dset){
-      die("Could not find DataSet for FeatureSet:\t".$sset->name);
-      }
-      
-      push @dsets, $ss_dset;
-    }
-
-    push @dsets, ($dset->product_FeatureSet, @{$ctype_ssets->{$ctype}});  
-  }
-
-  #Set states
-  foreach my $dset(@dsets){
-    $dsa->store_status('DISPLAYABLE', $dset);
-  }
-    
-  my $assembly = $db->dnadb->get_MetaContainer->single_value_by_key('assembly.default');
-  foreach my $fset(@fsets){
-    foreach my $fs_state(('DISPLAYABLE','IMPORTED','IMPORTED_' . $assembly, 'MART_DISPLAYABLE')) {
-      $fsa->store_status($fs_state, $fset);
-    }
-  }
-
-  print_log("Got RegulatoryFeature sets for CellTypes:\t".join(', ', keys %rf_sets));
-  return \%rf_sets;
-}
-
-=header2 get_cell_type_supporting_set
-
-  Description: Gets supporting feature sets for cell type
-  Arg1: arrayref of cell type names
-  Arg2: Bio::EnsEMBL::Funcgen::DBSQL::CellTypeAdaptor object
-  Arg3: Bio::EnsEMBL::Funcgen::DBSQL::FeatureSetAdaptor object
-  Returntype: hash ref: celltype name => array ref of Bio::EnsEMBL::Funcgen::FeatureSet objects
-
-=cut
-
-sub get_cell_type_supporting_sets {
-  my ($ctypes, $cta, $fsa) = @_;
-  my %ctype_ssets;
-  $ctype_ssets{MultiCell} = [];
-  foreach my $ctype (@{$ctypes}) {  
-    print_log("\tSearching for supporting sets on cell type $ctype\n");
-    my $CellType = $cta->fetch_by_name($ctype);
-    my @ssets = ();
-    foreach my $fs (@{$fsa->fetch_all_by_CellType($CellType)}) {
-      if ($fs->feature_type eq 'annotated' && $fs->has_status('IMPORTED')) {
-        push @ssets, $fs;
-      }
-    }
-    $ctype_ssets{$ctype} = \@ssets;
-    push @{$ctype_ssets{MultiCell}}, @ssets;
-  }
-  return \%ctype_ssets;
-}
-
-=header2 define_regbuild_meta_strings
-
-  Description: Store meta strings in regbuild_string table
-  Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
-  Arg2: Bio::EnsEMBL::Funcgen::Dataset object
-  Returntype: undef
-  Side effects: enters rows into regbuild_string table 
-
-=cut
-
-sub define_regbuild_meta_strings{
-  my ($db, $dset) = @_;
-
-  my $ds_adaptor = $dset->adaptor;
-  $ds_adaptor->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::DataSet', $dset);
-
-  ## Extract supporting sets, sorted by name
-  my @ssets = sort {$a->name cmp $b->name} @{$dset->get_supporting_sets};
-  if (! @ssets) {
-    die('You must provide a DataSet with associated supporting sets');
-  }
-  if ($dset->cell_type->name eq 'MultiCell') {
-    @ssets = grep {$_->feature_class != 'Polymerase' && $_->feature_class != 'Histone'}, @ssets;
-  }
-  
-  ## Extract core supporting sets
-  my @ffset_ids = ();
-  foreach my $class ("Transcription Factor", "Transcription Factor Complex", "Open Chromatin") {
-    foreach my $ft (@{$db->get_adaptor('FeatureType')->fetch_all_by_class($class)}) {
-      foreach my $fset (@{$db->get_adaptor('FeatureSet')->fetch_all_by_FeatureType($ft)}) {
-	if ($dset->cell_type->name eq 'MultiCell' || $fset->cell_type->name eq $dset->cell_type->name) {
-          push @ffset_ids, $fset;
-        }
-      }
-    }
-  }
-  @ffset_ids = sort {$a->name cmp $b->name} @ffset_ids;
-
-  my $fset = $dset->product_FeatureSet;
-  if (! defined $fset ||
-      $fset->feature_class ne 'regulatory') {
-    die('You must provide a DataSet with an associated \'regulatory\' product FeatureSet');
-  }
-  my $ctype = (defined $fset->cell_type) ?  $fset->cell_type->name : 'core';
-
-  my %reg_strings = 
-    (
-     "regbuild.${ctype}.feature_set_ids" => join(',', map {$_->dbID} @ssets),
-     "regbuild.${ctype}.feature_type_ids" => join(',', map {$_->feature_type->dbID} @ssets),
-     "regbuild.${ctype}.focus_feature_set_ids" => join(', ', map{$_->dbID} @ffset_ids)
-    );
-
-  store_regbuild_meta_strings($ds_adaptor, \%reg_strings);
-}
-
-=header2 store_regbuild_meta_strings
-
-  Description: Store meta strings in regbuild_string table
-  Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DatasetAdaptor object
-  Arg2: Hashref containing celltype name => regbuild string
-  Returntype: undef
-  Side effects: adds rows to regbuild_string table
-
-=cut
-
-sub store_regbuild_meta_strings{
-  my ($ds_adaptor, $reg_strings) = @_;
-
-  foreach my $meta_key (keys %$reg_strings) {
-    my ($meta_value) = $ds_adaptor->db->dbc->db_handle->selectrow_array("select string from regbuild_string where name='${meta_key}'");
-
-    if (! defined $meta_value){
-      eval { $ds_adaptor->db->dbc->do("insert into regbuild_string (name, string) values ('${meta_key}', '$reg_strings->{${meta_key}}')") };
-      die("Couldn't store $meta_key in regbuild_string table.\n$@") if $@;
-    } 
-    elsif ($meta_value ne $reg_strings->{$meta_key}) {
-      warn "Overwriting old $meta_key regbuild_string entry:\t$meta_value\nwith:\t\t\t\t\t\t\t\t\t\t".$reg_strings->{$meta_key}."\n";
-      eval { $ds_adaptor->db->dbc->do("update regbuild_string set string='$reg_strings->{${meta_key}}' where name ='${meta_key}'") };
-      die("Couldn't store $meta_key in regbuild_string table.\n$@") if $@;
-    }
-  }
-}
-
-=header2 compute_counts
+=head2 compute_counts
 
   Description: Count the number of active features for each temporary
   ID across all cell types
@@ -723,7 +536,7 @@ sub compute_counts {
   return $count_hash;
 }
 
-=header2 count_active
+=head2 count_active
 
   Description: Count the number of active features for each temporary
   ID across one cell types
@@ -745,7 +558,7 @@ sub count_active {
     if (!defined $count_hash->{$name}) {
       $count_hash->{$name} = 0;
     }
-    if ($rgb ne $dead_rgb && $rgb ne $poised_rgb && $rgb ne $repressed_rgb && $rgb ne $na_rgb) {
+    if ($rgb_state{$rgb} eq 'ACTIVE') {
       $count_hash->{$name} += 1;
     }
   }
@@ -753,7 +566,7 @@ sub count_active {
   unlink $tmp_name;
 }
 
-=header2 get_feature_types
+=head2 get_feature_types
 
   Description: Get a hashref from feature type name to FeatureType 
    object
@@ -810,127 +623,178 @@ sub get_feature_types {
   return $feature_type;
 }
 
-=header2 compute_regulatory_features
+=head2 compute_regulatory_features
 
   Description: Creates the actual RegulatoryFeature objects
   Arg1: Options hashref
-  Arg2: Hash ref: cell type name -> FeatureSet
+  Arg2: Array ref: cell types
   Arg3: Hash ref: label -> FeatureType
   Arg3: Hash ref: temporary id -> stable id
   Arg4: Hash ref: temporary id -> count
   Arg5: hash ref: chromosome name -> seq_region_id
   Arg6: Bio::EnsEMBL::Funcgen::DBAdaptor object
+  Arg7: Bio::EnsEMBL::Funcgen::RegulatoryBuild
   Returntype: undef
   Side effects: writes into regulatory_feature table
 
 =cut
 
 sub compute_regulatory_features {
-  my ($options, $feature_set, $feature_type, $stable_id, $count_hash, $slice, $db) = @_;
+  my ($options, $cell_type, $feature_type, $stable_id, $count_hash, $slice, $db, $new_regulatory_build) = @_;
   my $rfa = $db->get_adaptor("RegulatoryFeature");
-  foreach my $cell_type (keys %{$feature_set}) {
-    load_celltype_build($options->{base_dir}, $feature_set->{$cell_type}, $stable_id, $count_hash, $slice, $cell_type, $feature_type, $rfa);
+   
+  my $regulatory_features = load_regulatory_build($options->{base_dir}, $stable_id, $count_hash, $slice, $feature_type, $rfa, $new_regulatory_build);
+ 
+  print "Going through cell types ".(scalar @$cell_type)."\n";
+  foreach my $current_cell_type (@$cell_type) {
+    load_celltype_activity($options->{base_dir}, $current_cell_type, $regulatory_features);
   }
+
+  $rfa->store(values %$regulatory_features);
 }
 
-=header2 load_celltype_build
+=head2 load_regulatory_build
 
   Description: loads the data from the build's BigBed files into the database
-  Arg1: filehandle into input file
-  Arg2: Bio::EnsEMBL::Funcgen::FeatureSet
-  Arg3: hashref: bedfile id => stable id
-  Arg4: hashref: bedfile id => integer 
-  Arg5: hashref: slice name => Bio::EnsEMBL::Slice
-  Arg6: hashref: label => Bio::EnsEMBL::Funcgen::FeatureType
-  Arg7: Bio::EnsEMBL::Funcgen::RegulatoryFeatureAdaptor
-  Returntype: undef
+  Arg1: Location of base directory
+  Arg2: hashref: bedfile id => stable id
+  Arg3: hashref: bedfile id => integer 
+  Arg4: hashref: slice name => Bio::EnsEMBL::Slice
+  Arg5: hashref: label => Bio::EnsEMBL::Funcgen::FeatureType
+  Arg6: Bio::EnsEMBL::Funcgen::RegulatoryFeatureAdaptor
+  Arg7: Bio::EnsEMBL::Funcgen::RegulatoryBuild
+  Returntype: hashref bedfile id => Bio::EnsEMBL::Funcgen::RegulatoryFeature
   Side effects: writes into regulatory_feature table
-
+'
 =cut
 
-sub load_celltype_build {
-  my ($base_dir, $feature_set, $stable_id, $count_hash, $slice, $cell_type, $feature_type, $rfa) = @_;
+sub load_regulatory_build {
+  my ($base_dir, $stable_id, $count_hash, $slice, $feature_type, $rfa, $new_regulatory_build) = @_;
+  
+  print_log("\tLoading Regulatory Features\n");
+
   my ($tmp, $tmp_name) = tempfile();
-  print_log("\tProcessing data from cell type $cell_type\n");
-  my $bigbed;
-  if ($cell_type eq 'MultiCell') {
-    $bigbed = "$base_dir/overview/RegBuild.bb";
-  } else {
-    my $cell_type_name = clean_name($cell_type);
-    $bigbed = "$base_dir/projected_segmentations/$cell_type_name.bb";
-  }
+  my $bigbed = "$base_dir/overview/RegBuild.bb";
   run("bigBedToBed $bigbed $tmp_name");
-  process_file($tmp, $feature_set, $stable_id, $count_hash, $slice, $feature_type, $rfa);
+
+  my $regulatory_features = process_regulatory_build_file($tmp, $stable_id, $count_hash, $slice, $feature_type, $rfa, $new_regulatory_build);
+
   close $tmp;
   unlink $tmp_name;
+  return $regulatory_features;
 }
 
-=header2 process_file
+
+=head2 process_regulatory_build_file
 
   Description: loads the data from a Bed file into the database
   Arg1: filehandle into input file
-  Arg2: Bio::EnsEMBL::Funcgen::FeatureSet
   Arg3: hashref: bedfile id => stable id
   Arg4: hashref: bedfile id => integer 
   Arg5: hashref: slice name => Bio::EnsEMBL::Slice
   Arg6: hashref: label => Bio::EnsEMBL::Funcgen::FeatureType
   Arg7: Bio::EnsEMBL::Funcgen::RegulatoryFeatureAdaptor
-  Returntype: undef
+  Arg8: Bio::EnsEMBL::Funcgen::RegulatoryBuild
+  Returntype: hashref bedfile id => Bio::EnsEMBL::Funcgen::RegulatoryFeature
   Side effects: writes into regulatory_feature table
 
 =cut
 
-sub process_file {
-  my ($fh, $feature_set, $stable_id, $count_hash, $slice, $feature_type, $rfa) = @_;
-  my @features = ();
-
+sub process_regulatory_build_file {
+  my ($fh, $stable_id, $count_hash, $slice, $feature_type, $rfa, $new_regulatory_build) = @_;
+  
+  my $regulatory_features = {};
+  
   while (my $line = <$fh>) {
     chomp $line;
-    my ($chrom, $start, $end, $name, $score, $strand, $thickStart, $thickEnd, $rgb) = split /\t/, $line;;
-    my ($feature_type_str, $number) = split /_/, $name;
-    my $has_evidence = 0;
-    if ($rgb ne $dead_rgb && $rgb ne $poised_rgb && $rgb ne $repressed_rgb && $rgb ne $na_rgb) {
-      $has_evidence = 1; # TODO 4 way
-    }
+    my ($chrom, $start, $end, $name, $score, $strand, $thickStart, $thickEnd, $rgb) = split "\t", $line;
+    my ($feature_type_str, $number) = split '_', $name;
 
     exists $feature_type->{$feature_type_str} || die("Could not find feature type for $feature_type_str\n".join("\t", keys %{$feature_type})."\n");
     exists $slice->{$chrom} || die("Could not find slice type for $chrom\n".join("\t", keys %{$slice})."\n");
     exists $stable_id->{$name} || die("Could not find stable ID for feature # $name\n");
+
     exists $count_hash->{$name} || die("Could not find count for feature # $name\n");
-
-    push @features, Bio::EnsEMBL::Funcgen::RegulatoryFeature->new_fast({
-      slice         => $slice->{$chrom},
-      start         => $thickStart + 1,
-      end           => $thickEnd,
-      strand        => 0,
-      set           => $feature_set,
-      feature_type  => $feature_type->{$feature_type_str},
-      _bound_lengths => [$thickStart - $start, $end - $thickEnd],
-      has_evidence  => $has_evidence,
-      cell_type_count => $count_hash->{$name},
-      stable_id     => $stable_id->{$name},
-      analysis      => $feature_set->analysis,
-      #     adaptor       => $rfa,
-      projected     => 0,
+    
+    my $regulatory_feature = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new_fast({
+      slice               => $slice->{$chrom},
+      start               => $thickStart + 1,
+      end                 => $thickEnd,
+      strand              => 0,
+      feature_type        => $feature_type->{$feature_type_str},
+      _bound_lengths      => [$thickStart - $start, $end - $thickEnd],
+      epigenome_count     => $count_hash->{$name},
+      stable_id           => $stable_id->{$name},
+#       analysis            => $analysis,
+      regulatory_build_id => $new_regulatory_build->dbID,
     });
-
-    if (scalar @features > 10000) {
-      $rfa->store(@features);
-      @features = ();
-    }
+    
+    $regulatory_features->{$name} = $regulatory_feature;
   }
 
-  if (scalar @features > 0) {
-    $rfa->store(@features);
+  return $regulatory_features;
+}
+
+=head2 load_celltype_activity
+
+  Description: loads the data from the build's BigBed files into the database
+  Arg1: Location of base directory
+  Arg2: Bio::EnsEMBL::Funcgen::Celltype
+  Arg3: hashref: bedfile id => Bio::EnsEMBL::Funcgen::RegulatoryFeature 
+  Returntype: undef
+  Side effects: writes into regulatory_feature table
+'
+=cut
+
+sub load_celltype_activity {
+  my ($base_dir, $cell_type, $regulatory_features) = @_;
+  
+  print_log("\tProcessing data from cell type " . $cell_type->display_label . " (". $cell_type->name .")" . "\n");
+
+  my $cell_type_name = clean_name($cell_type->production_name);
+  my $bigbed = "$base_dir/projected_segmentations/$cell_type_name.bb";
+  my ($tmp, $tmp_name) = tempfile();
+  run("bigBedToBed $bigbed $tmp_name");
+
+  process_celltype_file($tmp, $cell_type, $regulatory_features);
+
+  close $tmp;
+  unlink $tmp_name;
+}
+
+=head2 process_celltype_file
+
+  Description: loads the data from a Bed file into the database
+  Arg1: filehandle into input file
+  Arg2: Bio::EnsEMBL::Funcgen::Celltype
+  Arg3: hashref: bedfile id => Bio::EnsEMBL::Funcgen::RegulatoryFeature 
+  Returntype: undef
+  Side effects: writes into regulatory_feature table
+
+=cut
+
+sub process_celltype_file {
+  my ($fh, $cell_type, $regulatory_feature) = @_;
+  while (my $line = <$fh>) {
+    chomp $line;
+    my ($chrom, $start, $end, $name, $score, $strand, $thickStart, $thickEnd, $rgb) = split "\t", $line;
+
+    use Bio::EnsEMBL::Funcgen::RegulatoryActivity;
+    my $regulatory_activity = Bio::EnsEMBL::Funcgen::RegulatoryActivity->new;
+    $regulatory_activity->activity($rgb_state{$rgb});
+    $regulatory_activity->epigenome_id($cell_type->dbID);
+    
+    exists $regulatory_feature->{$name} || die("Could not find Regulatory Feature for $name\n");
+    $regulatory_feature->{$name}->add_regulatory_activity($regulatory_activity);
   }
 }
 
-=header2 compute_regulatory_annotations
+=head2 compute_regulatory_annotations
 
   Description: Assign motifs and annotations to regulatory features
   Arg1: options hash ref
   Returntype: undef
-  Side effects: writes into regulatory_attributes table
+  Side effects: writes into regulatory_evidences table
 
 =cut
 
@@ -938,12 +802,10 @@ sub compute_regulatory_annotations {
   my $options = shift;
 
   my ($tmp_fh, $cell_type_regulatory_features) = tempfile();
-  my ($tmp_fh1, $multicell_regulatory_features) = tempfile();
   my ($tmp_fh2, $annotations) = tempfile();
   my ($tmp_fh3, $motifs) = tempfile();
   my ($tmp_fh4, $out) = tempfile();
   close $tmp_fh;
-  close $tmp_fh1;
   close $tmp_fh2;
   close $tmp_fh3;
   close $tmp_fh4;
@@ -951,63 +813,158 @@ sub compute_regulatory_annotations {
   # Extract regulatory, annotated, and motif features into flat tab-delimited files.
   # The common format of these files is:
   # chrom	start	end	ID
-  run("mysql --quick -NB -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -e 'select rf.seq_region_id, rf.seq_region_start - rf.bound_start_length, rf.seq_region_end + rf.bound_end_length, rf.regulatory_feature_id, fs.cell_type_id FROM regulatory_feature rf LEFT JOIN feature_set fs USING(feature_set_id) LEFT JOIN cell_type USING(cell_type_id) WHERE cell_type.name LIKE \"MultiCell\" ORDER by rf.seq_region_id, rf.seq_region_start - rf.bound_start_length'| sort -k1,1 -k2,2n > $multicell_regulatory_features");
-  run("mysql --quick -NB -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -e 'select rf.seq_region_id, rf.seq_region_start - rf.bound_start_length, rf.seq_region_end + rf.bound_end_length, rf.regulatory_feature_id, fs.cell_type_id FROM regulatory_feature rf LEFT JOIN feature_set fs USING(feature_set_id) LEFT JOIN cell_type USING(cell_type_id) WHERE cell_type.name NOT LIKE \"MultiCell\" ORDER by rf.seq_region_id, rf.seq_region_start - rf.bound_start_length'| sort -k1,1 -k2,2n > $cell_type_regulatory_features");
-  run("mysql --quick -NB -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -e 'select af.seq_region_id, af.seq_region_start, af.seq_region_end, af.annotated_feature_id, fs.cell_type_id FROM annotated_feature af LEFT JOIN feature_set fs USING(feature_set_id) ORDER BY af.seq_region_id, af.seq_region_start;' | awk '\$2 <= \$3' > $annotations");
-  run("mysql --quick -NB -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -e 'select mf.seq_region_id, mf.seq_region_start, mf.seq_region_end, mf.motif_feature_id, fs.cell_type_id from motif_feature mf LEFT JOIN associated_motif_feature amf USING(motif_feature_id) LEFT JOIN annotated_feature af USING(annotated_feature_id) LEFT JOIN feature_set fs USING(feature_set_id) GROUP BY motif_feature_id, cell_type_id ORDER BY seq_region_id, seq_region_start;' > $motifs");
+  
+  run(
+    qq(
+	mysql --quick -NB -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -e '
+	  select 
+	    rf.seq_region_id, 
+	    rf.seq_region_start - rf.bound_start_length as start,
+	    rf.seq_region_end + rf.bound_end_length as end, 
+	    regulatory_activity_id,
+	    epigenome_id 
+	  from
+	    regulatory_feature rf 
+	    join regulatory_activity using (regulatory_feature_id)
+	  order by 
+	    rf.seq_region_id, 
+	    start
+	' \\
+ 	> $cell_type_regulatory_features
+    )
+  );
+  
+  run(
+    qq(
+	mysql --quick -NB -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -e '
+	  select 
+	    af.seq_region_id, 
+	    af.seq_region_start, 
+	    af.seq_region_end, 
+	    af.annotated_feature_id, 
+	    fs.epigenome_id 
+	  FROM 
+	    annotated_feature af 
+	    LEFT JOIN feature_set fs USING(feature_set_id) 
+	  ORDER BY 
+	    af.seq_region_id, 
+	    af.seq_region_start;
+	' \\
+	> $annotations
+    )
+  );
+  
+  run(
+    qq(
+	mysql --quick -NB -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -e '
+	  select 
+	    mf.seq_region_id, mf.seq_region_start, mf.seq_region_end, mf.motif_feature_id, fs.epigenome_id 
+	  from 
+	    motif_feature mf 
+	    JOIN associated_motif_feature amf USING(motif_feature_id) 
+	    JOIN annotated_feature af USING(annotated_feature_id) 
+	    JOIN feature_set fs USING(feature_set_id) 
+	  GROUP BY 
+	    motif_feature_id, 
+	    epigenome_id 
+	  ORDER BY 
+	    seq_region_id, 
+	    seq_region_start;
+	 ' > $motifs
+    )
+  );
 
   # Overlap regulatory features with (annotated|motif) features. Store ID pairs into one flat file
   run("bedtools intersect -sorted -wa -wb -a $cell_type_regulatory_features -b $annotations | awk 'BEGIN {OFS = \"\\t\"} \$5==\$10 {print \$4,\$9,\"annotated\"} ' > $out");
-  run("bedtools intersect -sorted -wa -wb -a $multicell_regulatory_features -b $motifs | awk 'BEGIN {OFS = \"\\t\"} {print \$4,\$9,\"motif\"} ' >> $out");
-  run("bedtools intersect -sorted -wa -wb -a $cell_type_regulatory_features -b $motifs | awk 'BEGIN {OFS = \"\\t\"} \$5==\$10 {print \$4,\$9,\"motif\"} ' >> $out");
+  run("bedtools intersect -sorted -wa -wb -a $cell_type_regulatory_features -b $motifs      | awk 'BEGIN {OFS = \"\\t\"} \$5==\$10 {print \$4,\$9,\"motif\"} ' > $out");
 
   # Load into database
-  run("mysql -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -e 'TRUNCATE TABLE regulatory_attribute;'");
-  run("mysql -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -e 'LOAD DATA LOCAL INFILE \"$out\" INTO TABLE regulatory_attribute;'");
+  run("mysql -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -e 'TRUNCATE TABLE regulatory_evidence;'");
+  run("mysql -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -e 'LOAD DATA LOCAL INFILE \"$out\" INTO TABLE regulatory_evidence;'");
 
-  unlink $cell_type_regulatory_features;
-  unlink $multicell_regulatory_features;
-  unlink $annotations;
-  unlink $motifs;
-  unlink $out;
+#   print "cell_type_regulatory_features = $cell_type_regulatory_features\n";
+#   print "annotations = $annotations\n";
+#   print "motifs = $motifs\n";
+#   print "out = $out\n";
+
+    # Unlink should be unnecessary, if the temporary files should go, unset KEEP_ALL at the beginning of the script.
+#   unlink $cell_type_regulatory_features;
+#   unlink $annotations;
+#   unlink $motifs;
+#   unlink $out;
 }
 
-=header2 update_meta_table
+=head2 create_regulatory_build_object
 
   Description: Updates data in metatable 
-  Arg1: options hash ref
-  Arg2: Bio::EnsEMBL::Funcgen::DBAdaptor
-  Returntype: undef
-  Side effects: enters new values in meta table
+  Arg1: Bio::EnsEMBL::Funcgen::RegulatoryBuild - The object representing the current regulatory build
+  Arg2: boolean - Flag indicating whether this is to be considered a small update. This affects how the version string is incremented.
+  Returntype: Bio::EnsEMBL::Funcgen::RegulatoryBuild
+  Side effects: None
 
 =cut 
 
-sub update_meta_table {
-  my ($options, $db) = @_;
-  my $mc = $db->get_MetaContainer();
+sub create_regulatory_build_object {
+  my ($current_regulatory_build, $is_small_update) = @_;
+  
+  use Bio::EnsEMBL::Funcgen::RegulatoryBuild;
+  
+  my $new_regulatory_build;
+  
+  my $current_build_version;
+  my $current_build_initial_release_date;
+  
+  if (defined $current_regulatory_build) {
+    $new_regulatory_build = Bio::EnsEMBL::Funcgen::RegulatoryBuild->new(
+        -name            => 'The new ' . $current_regulatory_build->name,
+        -feature_type_id => $current_regulatory_build->feature_type_id,
+        -analysis_id     => $current_regulatory_build->analysis_id,
+        -is_current      => 0,
+    );
+    $current_build_version = $current_regulatory_build->version;
+    $current_build_initial_release_date = $current_regulatory_build->initial_release_date;
+  } else {
+      $new_regulatory_build = Bio::EnsEMBL::Funcgen::RegulatoryBuild->new(
+        -name            => 'The Ensembl Regulatory Build' ,
+        # HACK: These values should not be hardcoded!
+        -feature_type_id => 174992,
+        -analysis_id     => 25,
+        -is_current      => 0,
+    );
+    $current_build_version = '0.0';
+    $current_build_initial_release_date = '';
+  }
+  
   my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
   # Seriously localtime, you're useless
   $year += 1900;
   $mon += 1;
   my ($main, $update);
-  my $version = $options->{old_version};
+  my $version = $current_build_version;
   if (defined $version) {
-    ($main, $update) = split(/\./, $version);
-    if (defined $options->{small_update}) {
-      $mc->store_key_value('regbuild.initial_release_date', $mc->single_value_by_key('regbuild.initial_release_date_v'.$options->{old_version}));
+    ($main, $update) = split('.', $version);
+    if ($is_small_update) {
+
+      my $initial_release_date = $current_regulatory_build->initial_release_date;
+      $new_regulatory_build->initial_release_date($initial_release_date);
+
       $update += 1;
     } else {
-      $mc->store_key_value('regbuild.initial_release_date', "$year-$mon");
+
+      $new_regulatory_build->initial_release_date("$year-$mon");
+
       $main += 1;
       $update = 0;
     }
   } else {
-    $mc->store_key_value('regbuild.initial_release_date', "$year-$mon");
+
+    $new_regulatory_build->initial_release_date("$year-$mon");
     $main = 1;
     $update = 0;
   }
-  $mc->store_key_value('regbuild.version', join(".", ($main, $update)));
-  $mc->store_key_value('regbuild.last_annotation_update', "$year-$mon");
+  $new_regulatory_build->version(join('.', ($main, $update)));
+  $new_regulatory_build->last_annotation_update("$year-$mon");
+  return $new_regulatory_build;
 }
 
 1;

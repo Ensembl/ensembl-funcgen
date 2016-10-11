@@ -5,6 +5,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -68,7 +69,7 @@ use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor);
                                            ('dna_methylation',
                                              {'constraints' =>
                                                {
-                                               cell_types     => [$cell_type],  #Bio::EnsEMBL::Funcgen::CellType
+                                               epigenomes     => [$epigenome],  #Bio::EnsEMBL::Funcgen::Epigenome
                                                #projects       => ['ENCODE'],
                                                feature_types  => [$ftype],      #Bio::EnsEMBL::Funcgen::FeatureType
                                                status         => 'DISPLAYABLE',
@@ -166,37 +167,37 @@ sub _get_Experiment_join_clause{
 
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Experiment', $exp);
   my $constraint;
-  my @ecs = @{$exp->get_ExperimentalChips()};
-
-  if (@ecs) { # We have an Array based experiment
-
-    my $ec_ids = join(', ', map {$_->dbID} @ecs); #get ' separated list of ecids
-
-
-    my @chans = map { @$_ } (map {$_->get_Channels} @ecs);
-    my $chan_ids = join(', ', map {$_->dbID} @chans); #get ' separated list of chanids
-    #These give empty strings which are defined
-    #This will not work for single IDs of 0, but this will never happen.
-
-    if ($ec_ids && $chan_ids) {
-      $constraint = '(((rsi.table_name="experimental_chip" AND rsi.table_id IN ('.$ec_ids.
-        ')) OR (rsi.table_name="channel" AND rsi.table_id IN ('.$chan_ids.'))))';
-      #This could probably be sped up using UNION
-      #But result set is too small for cost of implementation
-    }
-    elsif ($ec_ids) {
-      $constraint = 'rsi.table_name="experimental_chip" AND rsi.table_id IN ('.$ec_ids.')';
-    }
-    elsif ($chan_ids) {
-      $constraint = 'rsi.table_name="channel" AND rsi.table_id IN ('.$chan_ids.')';
-    }
-
-  }
-  else {     #We have an InputSet/InputSubset Experiment
+#   my @ecs = @{$exp->get_ExperimentalChips()};
+# 
+#   if (@ecs) { # We have an Array based experiment
+# 
+#     my $ec_ids = join(', ', map {$_->dbID} @ecs); #get ' separated list of ecids
+# 
+# 
+#     my @chans = map { @$_ } (map {$_->get_Channels} @ecs);
+#     my $chan_ids = join(', ', map {$_->dbID} @chans); #get ' separated list of chanids
+#     #These give empty strings which are defined
+#     #This will not work for single IDs of 0, but this will never happen.
+# 
+#     if ($ec_ids && $chan_ids) {
+#       $constraint = '(((rsi.table_name="experimental_chip" AND rsi.table_id IN ('.$ec_ids.
+#         ')) OR (rsi.table_name="channel" AND rsi.table_id IN ('.$chan_ids.'))))';
+#       #This could probably be sped up using UNION
+#       #But result set is too small for cost of implementation
+#     }
+#     elsif ($ec_ids) {
+#       $constraint = 'rsi.table_name="experimental_chip" AND rsi.table_id IN ('.$ec_ids.')';
+#     }
+#     elsif ($chan_ids) {
+#       $constraint = 'rsi.table_name="channel" AND rsi.table_id IN ('.$chan_ids.')';
+#     }
+# 
+#   }
+#   else {     #We have an InputSet/InputSubset Experiment
     my $setids = join(', ', map {$_->dbID} 
       @{$self->db->get_InputSubsetAdaptor->fetch_all_by_Experiments([$exp])});
     $constraint = "rsi.table_name='input_subset' AND rsi.table_id IN (${setids})";
-  }
+#   }
 
   return $constraint;
 }
@@ -225,7 +226,7 @@ sub fetch_all_by_Experiment{
 
   Arg [0]    : Mandatory string - ResultSet name
   Arg [1]    : Optional Bio::EnsEMBL::Funcgen::FeatureType
-  Arg [2]    : Optional Bio::EnsEMBL::Funcgen::CellType
+  Arg [2]    : Optional Bio::EnsEMBL::Funcgen::Epigenome
   Arg [3]    : Optional Bio::EnsEMBL::Analysis
   Example    : ($rset) = @{$rseta->fetch_all_by_name($exp->name().'_IMPORT')};
   Description: Retrieves ResultSets based on the name attribute
@@ -240,7 +241,7 @@ sub fetch_all_by_Experiment{
 #this is to move to dbfile_registry.format
 
 sub fetch_all_by_name{
-  my ($self, $name, $ftype, $ctype, $anal) = @_;
+  my ($self, $name, $ftype, $epigenome, $anal) = @_;
 
   if ( ! defined $name) {
     throw('Need to pass a ResultSet name');
@@ -255,10 +256,10 @@ sub fetch_all_by_name{
     $self->bind_param_generic_fetch($ftype->dbID, SQL_INTEGER);
   }
 
-  if ($ctype) {
-    $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CellType',    $ctype);
-    $constraint .= ' AND rs.cell_type_id=?';
-    $self->bind_param_generic_fetch($ctype->dbID, SQL_INTEGER);
+  if ($epigenome) {
+    $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Epigenome',    $epigenome);
+    $constraint .= ' AND rs.epigenome_id=?';
+    $self->bind_param_generic_fetch($epigenome->dbID, SQL_INTEGER);
   }
 
   if ($anal) {
@@ -271,7 +272,27 @@ sub fetch_all_by_name{
   return $self->generic_fetch($constraint);
 }
 
-
+# sub fetch_by_Epigenome_FeatureType {
+# 
+#   my ($self, $epigenome, $feature_type) = @_;
+#   
+#   my @constraint;
+#   
+#   if ($feature_type) {
+#     $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $feature_type);
+#     push @constraint, 'rs.feature_type_id=?';
+#     $self->bind_param_generic_fetch($feature_type->dbID, SQL_INTEGER);
+#   }
+#   if ($epigenome) {
+#     $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Epigenome',    $epigenome);
+#     push @constraint, 'rs.epigenome_id=?';
+#     $self->bind_param_generic_fetch($epigenome->dbID, SQL_INTEGER);
+#   }
+#   
+#   my $constraint = join ' and ', @constraint;
+#   
+#   return $self->generic_fetch($constraint);
+# }
 
 =head2 _true_tables
 
@@ -291,6 +312,9 @@ sub _true_tables {
   return ([ 'result_set',        'rs' ],
           [ 'result_set_input',  'rsi'],
           [ 'dbfile_registry',   'dr' ]);
+#           [ 'dbfile_registry',   'dr_bigwig' ],
+#           [ 'dbfile_registry',   'dr_bam'    ]);
+          ;
 }
 
 
@@ -312,10 +336,23 @@ sub _true_tables {
 #}
 #Allows for absent result_set_input entries, in conjunction with omiting _default_where
 
-sub _left_join {
-  return (['dbfile_registry', '(rs.result_set_id=dr.table_id AND dr.table_name="result_set")']);
-}
 
+sub _left_join {
+#   return ([ 'result_set_input', '(rs.result_set_id=rsi.result_set_id)' ],
+#           ['dbfile_registry', '(rs.result_set_id=dr.table_id AND dr.table_name="result_set" and dr.file_type="BIGWIG")']);
+
+  my $self = shift;
+  
+  my $file_type = $self->{file_type};
+  
+  $file_type = "BIGWIG" unless($self->{file_type});
+
+  return ([ 'result_set_input', '(rs.result_set_id=rsi.result_set_id)' ],
+          ['dbfile_registry', '(rs.result_set_id=dr.table_id AND dr.table_name="result_set" and dr.file_type="' . $file_type . '")']);
+#   return ([ 'result_set_input', '(rs.result_set_id=rsi.result_set_id)' ],
+#           ['dr_bigwig', '(rs.result_set_id=dr_bigwig.table_id AND dr_bigwig.table_name="result_set" and dr_bigwig.file_type="BIGWIG")'],
+#           ['dr_bam', '(rs.result_set_id=dr_bam.table_id AND dr_bam.table_name="result_set" and dr_bam.file_type="BAM")']);
+}
 
 =head2 _columns
 
@@ -335,9 +372,9 @@ sub _columns {
             rs.result_set_id           rs.analysis_id
             rsi.table_name             rsi.result_set_input_id
             rsi.table_id               rs.name
-            rs.cell_type_id            rs.feature_type_id
+            rs.epigenome_id            rs.feature_type_id
             rs.feature_class           dr.path
-            rs.replicate
+            rs.experiment_id
            );
 }
 
@@ -357,7 +394,7 @@ sub _columns {
 =cut
 
 sub _default_where_clause {
-  return 'rs.result_set_id = rsi.result_set_id';
+  return '';
 }
 
 
@@ -381,7 +418,7 @@ sub _default_where_clause {
 sub _final_clause {
   #do not mess with this!
   return ' GROUP by rsi.result_set_input_id, rsi.result_set_id '.
-    'ORDER BY rs.result_set_id, rs.cell_type_id, rs.feature_type_id';
+    'ORDER BY rs.result_set_id, rs.epigenome_id, rs.feature_type_id';
 }
 
 
@@ -403,26 +440,29 @@ sub _final_clause {
 sub _objs_from_sth {
   my $self = shift;
   my $sth  = shift;
-  my (@rsets, $rset, $dbid, $anal_id, $anal, $ftype, $ctype, $table_id);
-  my ($sql, $table_name, $cc_id, $ftype_id, $ctype_id, $dbfile_path);
+  my (@rsets, $rset, $dbid, $anal_id, $anal, $ftype, $epigenome, $table_id, $experiment);
+  my ($sql, $table_name, $cc_id, $ftype_id, $epigenome_id, $dbfile_path);
   my ($name, $rep, $feat_class);
+  my $experiment_id;
   my $a_adaptor  = $self->db->get_AnalysisAdaptor;
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor;
-  my $ct_adaptor = $self->db->get_CellTypeAdaptor;
+  my $epi_adaptor = $self->db->get_EpigenomeAdaptor;
+  my $experiment_adaptor = $self->db->get_ExperimentAdaptor;
   $sth->bind_columns(\$dbid, \$anal_id, \$table_name, \$cc_id, \$table_id,
-                     \$name, \$ctype_id, \$ftype_id, \$feat_class, \$dbfile_path, \$rep);
+                     \$name, \$epigenome_id, \$ftype_id, \$feat_class, \$dbfile_path, \$experiment_id);
 
   while ( $sth->fetch ) {
 
     if( (! defined $rset) || ($rset->dbID != $dbid) ){
       push @rsets, $rset if $rset;
-      $anal  = (defined $anal_id)  ? $a_adaptor->fetch_by_dbID($anal_id)   : undef;
-      $ftype = (defined $ftype_id) ? $ft_adaptor->fetch_by_dbID($ftype_id) : undef;
-      $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
+      $anal       = (defined $anal_id)       ? $a_adaptor->fetch_by_dbID($anal_id)   : undef;
+      $ftype      = (defined $ftype_id)      ? $ft_adaptor->fetch_by_dbID($ftype_id) : undef;
+      $epigenome  = (defined $epigenome_id)  ? $epi_adaptor->fetch_by_dbID($epigenome_id) : undef;
+      $experiment = (defined $experiment_id) ? $experiment_adaptor->fetch_by_dbID($experiment_id) : undef;
     
-      if(defined $dbfile_path){
-        ($dbfile_path = $self->dbfile_data_root.'/'.$dbfile_path) =~ s:/+:/:g;
-      }
+#       if(defined $dbfile_path){
+#         ($dbfile_path = $self->dbfile_data_root.'/'.$dbfile_path) =~ s:/+:/:g;
+#       }
 
       $rset = Bio::EnsEMBL::Funcgen::ResultSet->new
         (-DBID            => $dbid,
@@ -430,14 +470,16 @@ sub _objs_from_sth {
          -ANALYSIS        => $anal,
          -TABLE_NAME      => $table_name,
          -FEATURE_TYPE    => $ftype,
-         -CELL_TYPE       => $ctype,
+         -EPIGENOME       => $epigenome,
          -FEATURE_CLASS   => $feat_class,
          -ADAPTOR         => $self,
          -DBFILE_PATH     => $dbfile_path,
-         -REPLICATE       => $rep,        );
+         -EXPERIMENT      => $experiment,
+         );
     }
 
     $rset->_add_table_id($table_id, $cc_id);
+    
   }
 
   push @rsets, $rset if $rset;
@@ -458,12 +500,12 @@ sub _objs_from_sth {
 
 =cut
 
-sub store{
+sub store {
   my ($self, @rsets) = @_;
   scalar(@rsets) || throw("Must provide a list of ResultSet objects");
 
   my $sth = $self->prepare('INSERT INTO result_set '.
-                           '(analysis_id, name, cell_type_id, feature_type_id, feature_class) '.
+                           '(analysis_id, name, epigenome_id, feature_type_id, feature_class) '.
                            'VALUES (?, ?, ?, ?, ?)');
   my $db = $self->db;
 
@@ -480,12 +522,12 @@ sub store{
 
     $self->db->is_stored_and_valid('Bio::EnsEMBL::Analysis', $rset->analysis);
 
-    my $ct_id = (defined $rset->cell_type)    ? $rset->cell_type->dbID    : undef;
+    my $epi_id = (defined $rset->epigenome)    ? $rset->epigenome->dbID    : undef;
     my $ft_id = (defined $rset->feature_type) ? $rset->feature_type->dbID : undef;
 
     $sth->bind_param(1, $rset->analysis->dbID,   SQL_INTEGER);
     $sth->bind_param(2, $rset->name,             SQL_VARCHAR);
-    $sth->bind_param(3, $ct_id,                  SQL_INTEGER);
+    $sth->bind_param(3, $epi_id,                 SQL_INTEGER);
     $sth->bind_param(4, $ft_id,                  SQL_INTEGER);
     $sth->bind_param(5, $rset->feature_class,    SQL_VARCHAR);
 
@@ -495,48 +537,19 @@ sub store{
 
     $rset->dbID( $self->last_insert_id );
     $rset->adaptor($self);
-    $self->store_states($rset);
+#     $self->store_states($rset);
     $self->store_chip_channels($rset);
-    $self->store_dbfile_path($rset) if $rset->dbfile_path;
+    $self->store_dbfile_path($rset, 'DIR') if $rset->dbfile_path;
   }
 
   return \@rsets;
 }
 
-
-
-
-
-=head2 dbfile_data_root
-
-  Arg[1]     : Optional String: Root path of dbfile data directory
-  Example    : $rset_adaptor->dbfile_data_root('/data/root/dir/);
-  Description: This allows the root path to be defined.,as this will change
-               between installations. This can be over-ridden by the webcode 
-               by setting REGULATION_FILE_PATH in DEFAULTS.ini
-  Returntype : String
-  Exceptions : None
-  Caller     : Bio::EnsEMBL::Funcgen::DBAdaptor::ResultSet
-  Status     : at risk - move this to SetAdaptor/FileAdaptor?
-
-=cut
-
-sub dbfile_data_root{
-  my ($self, $root) = @_;
-
-  if($root){
-    $root =~ s/\/$//o;  # strip off trailing /, as this is present in dbfile_registry.path
-    $self->{dbfile_data_root} = $root;
-  }
- 
-  return $self->{dbfile_data_root} || '';  # Avoids concat warning
-}
-
-
 =head2 store_dbfile_path
 
   Arg[1]     : Bio::EnsEMBL::Funcgen::ResultSet
-  Example    : $rset_adaptor->store_dbfile_data_dir;
+  Arg[2]     : File type as a string
+  Example    : $rset_adaptor->store_dbfile_path($result_set, 'BAM');
   Description: Updater/Setter for the root dbfile data directory for this ResultSet
   Returntype : None
   Exceptions : Throws if ResultSet is not stored and valid
@@ -547,54 +560,65 @@ sub dbfile_data_root{
 
 =cut
 
-sub store_dbfile_path{
+sub store_dbfile_path {
   my $self = shift;
   my $rset = shift;
+  my $file_type = shift;
+  
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
 
   my $path = $rset->dbfile_path;
-  if(! defined $path){ throw('ResultSet::dbfile_path attribute is not set') }
-
-  # Strip off dbfile_data_root and throw if now set.
+  if (! defined $path) {
+    throw('ResultSet::dbfile_path attribute is not set') 
+  }
+  if (! defined $file_type) {
+    throw('file_type parameter has not been set!');
+  }
   my $root = $self->dbfile_data_root;
-
-  if(! $root){  # not ! defined, as we default to the null string
+  if (! $root) {
     throw('It is unsafe to store_dbfile_path without setting the dbfile_data_root first');
   }
-
+  
+  use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( generate_checksum );
+  my $md5sum = generate_checksum($rset->dbfile_path);
+  
   $path =~ s/$root//;
 
   #Check we have a record
   my $rset_id  = $rset->dbID;
-  my $db_path  = $self->_fetch_dbfile_path($rset_id);
+  my $db_path  = $self->_fetch_dbfile_path($rset_id, $file_type);
 
   if($db_path &&
-	 ($db_path ne $path)){  # UPDATE
+	 ($db_path ne $path)) {  # UPDATE
     # Really should have rolled this back prior to this point
-    my $sql = 'UPDATE dbfile_registry set path=? where table_name="result_set" and table_id=?';
+    my $sql = 'UPDATE dbfile_registry set path=? where table_name="result_set" and table_id=? and file_type=? and md5sum=?';
     my $sth = $self->prepare($sql);
     $sth->bind_param(1, $path,    SQL_VARCHAR);
     $sth->bind_param(2, $rset_id, SQL_INTEGER);
+    $sth->bind_param(3, $file_type);
+    $sth->bind_param(4, $md5sum,  SQL_VARCHAR);
 
-    if(! eval {$sth->execute; 1}){
+    if(! eval {$sth->execute; 1}) {
       throw('Failed to update dbfile_data_dir for '.$rset->name."\n$@");
     }
   }
-  elsif(! defined $db_path){  # STORE
-    my $sql = 'INSERT INTO dbfile_registry(table_id, table_name, path) values(?, "result_set", ?)';
+  elsif(! defined $db_path) {  # STORE
+
+    my $sql = 'INSERT INTO dbfile_registry(table_id, table_name, path, file_type, md5sum) values(?, "result_set", ?, ?, ?)';
     my $sth = $self->prepare($sql);
     $sth->bind_param(1, $rset_id, SQL_INTEGER);
     $sth->bind_param(2, $path,    SQL_VARCHAR);
+    $sth->bind_param(3, $file_type);
+    $sth->bind_param(4, $md5sum,  SQL_VARCHAR);
 
-    if(! eval {$sth->execute; 1}){
+    if(! eval {$sth->execute; 1}) {
       my $err = $@;
       #This could be a race condition if we have parallel writes going on
       #Attempt to validate stored value is same, else fail
-      $db_path = $self->_fetch_dbfile_path($rset_id);
+      $db_path = $self->_fetch_dbfile_path($rset_id, $file_type);
 
-      if(defined $db_path){
-
-        if($db_path ne $path){
+      if(defined $db_path) {
+        if($db_path ne $path) {
           throw('Failed to store dbfile_data_dir table '.$rset->name.
             "\n'Racing' process stored a differing value:\n\t$path\n\tvs\n\t$db_path\n$err");
         }  # else this was a race condition
@@ -604,19 +628,26 @@ sub store_dbfile_path{
       }
     }
   }
-
   return;
 }
 
+=head2 dbfile_data_root
+=cut
+sub dbfile_data_root {
+  my $self = shift; 
+  return $self->db->dbfile_data_root(@_);
+}
 
 #This is only used for validation in store_dbfile_path
 
-sub _fetch_dbfile_path{
+sub _fetch_dbfile_path {
   my $self    = shift;
   my $rset_id = shift;
-  my $sql  = 'SELECT path from dbfile_registry where table_name="result_set" and table_id=?';
+  my $file_type = shift;
+  
+  my $sql  = qq(SELECT path from dbfile_registry where table_name="result_set" and table_id=$rset_id and file_type="$file_type");
+  
   my $sth  = $self->prepare($sql);
-  $sth->bind_param(1, $rset_id, SQL_INTEGER);
 
   if(! eval {$sth->execute; 1} ){
     throw("Failed to fetch dbfile_registry using:\n$sql (dbID=$rset_id)\n$@");
@@ -697,22 +728,6 @@ sub store_chip_channels{
 
 ### GENERIC CONSTRAIN METHODS ###
 # See Base/SetAdaptor
-
-
-
-### DEPRECATED METHODS ###
-
-sub store_dbfile_data_dir{  # DEPRECATED IN v80
-  deprecate('Please use store_dbfile_path');
-  return store_dbfile_path(@_);
-}
-
-sub _fetch_dbfile_data_dir{
-  deprecate('Please use _fetch_dbfile_path');
-  return _fetch_dbfile_path(@_);
-}
-
-
 
 1;
 

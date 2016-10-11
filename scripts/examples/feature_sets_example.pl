@@ -3,6 +3,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -37,36 +38,31 @@ $registry->load_registry_from_db(
     -user => 'anonymous'
 );
 
-my $fset_adaptor = $registry->get_adaptor('Human', 'funcgen', 'featureset');
-my $slice_adaptor = $registry->get_adaptor('Human', 'core', 'slice');
+my $feature_set_adaptor = $registry->get_adaptor('Human', 'funcgen', 'featureset');
+my $slice_adaptor = $registry->get_adaptor('Human', 'Core', 'Slice');
+my $slice = $slice_adaptor->fetch_by_region('chromosome', 1, 54_960_000, 54_980_000);
 
-my $slice = $slice_adaptor->fetch_by_region('chromosome',1,54960000,54980000);
+my $annotated_feature_sets = $feature_set_adaptor->fetch_all_by_feature_class('annotated');
 
-
-#Classes of feature set: 'regulatory', 'annotated', 'external'
-my @reg_fsets = @{$fset_adaptor->fetch_all_by_type('regulatory')};
-
-foreach my $reg_fset (@reg_fsets) {
-	print "Feature Set name: ".$reg_fset->name."\n";
-	#Regulatory Feature Sets
-	print "\tClass of Feature Set: ".$reg_fset->feature_class."\n";
-	#The Regulatory Build
-	print "\tAnalysis: ".$reg_fset->analysis->logic_name."\n";
-	#Regulatory Feature Type (only makes sense when used together with class)
-	print "\tFeature Type: ".$reg_fset->feature_type->name."\n";
-	#Regulatory Feature Sets have Cell Type defined
-	print "\tCell Type: ".$reg_fset->cell_type->name."\n";
-	#Finally, you can also get features from this set
-	print "\tSome Features for this Feature Set: \n";
-	my @features = @{$reg_fset->get_Features_by_Slice($slice)};
-	foreach my $feat (@features) { print "\t\t"; print_feature($feat); }
+foreach my $current_annotated_feature_set (@$annotated_feature_sets) {
+    print "---- " . $current_annotated_feature_set->name . " ----\n";
+    print $current_annotated_feature_set->feature_class."\n";
+    print $current_annotated_feature_set->analysis->logic_name."\n";
+    print $current_annotated_feature_set->feature_type->name."\n";
+    print $current_annotated_feature_set->epigenome->name."\n";
+    
+    # Finally, you can also get features from this set
+    #
+    my @annotated_features = @{$current_annotated_feature_set->get_Features_by_Slice($slice)};
+    foreach my $current_feature (@annotated_features) {
+      print_feature($current_feature);
+    }
+    print "\n";
 }
 
-
-
 sub print_feature {
-	my $feature = shift;
-	print 	$feature->display_label. 	
-	 	"\t(".$feature->seq_region_name.":".
-		$feature->seq_region_start."-".$feature->seq_region_end.")\n";
+  my $feature = shift;
+  print "\t" . $feature->display_label
+    . "\t(".$feature->seq_region_name.":"
+    . $feature->seq_region_start . "-" . $feature->seq_region_end.")\n";
 }

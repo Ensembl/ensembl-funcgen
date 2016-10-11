@@ -3,6 +3,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -29,27 +30,32 @@ limitations under the License.
 use strict;
 use Bio::EnsEMBL::Registry;
 
-my $registry = 'Bio::EnsEMBL::Registry';
+Bio::EnsEMBL::Registry->load_registry_from_db(
+  -host => 'ensembldb.ensembl.org',
+  -user => 'anonymous',
+);
 
-$registry->load_registry_from_db
-  (
-   -host => 'ensembldb.ensembl.org',
-   -user => 'anonymous',
-   -db_version => 67,
-   -verbose => 1,
-  );
+my $array_adaptor = Bio::EnsEMBL::Registry->get_adaptor('Human', 'Funcgen', 'Array');
+my $array = $array_adaptor->fetch_all;
 
+my $array = $array_adaptor->fetch_all;
 
-#Grab the adaptors
-my $efg_db        = $registry->get_DBAdaptor('homo_sapiens', 'funcgen');#'Human', 'funcgen');
-my $array_adaptor = $efg_db->get_ArrayAdaptor;
+foreach my $current_array (@$array) {
 
-#Grab all the arrays
-my @array         = @{$array_adaptor->fetch_all};
+  # Print some array info
+  print "Array:  " . $current_array->name   ."\n";
+  print "Type:   " . $current_array->type   ."\n";
+  print "Vendor: " . $current_array->vendor ."\n";
+  
+  #Grab the ArrayChips from the array design
+  my $array_chips   = $current_array->get_ArrayChips;
 
-#Print some array info
-foreach my $array ( @array ){
-  print "\nArray:\t".$array->name."\n";
-  print "Type:\t".$array->type."\n";
-  print "Vendor:\t".$array->vendor."\n";
+  #Print some ArrayChip info
+  foreach my $current_array_chip (@$array_chips) {
+    print "ArrayChip: " 
+      . $current_array_chip->name 
+      . " DesignID: " 
+      . $current_array_chip->design_id . "\n";
+  }
+  print "\n";
 }

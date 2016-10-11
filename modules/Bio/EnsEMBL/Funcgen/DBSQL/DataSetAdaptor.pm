@@ -5,6 +5,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -171,7 +172,7 @@ sub fetch_all_by_supporting_set {
   #self join here to make sure we get all linked result_sets
   my $sql = ' ds.data_set_id IN (SELECT data_set_id from supporting_set where type="'.$set->set_type.'" and supporting_set_id='.$set->dbID().')';
 
-  warn "SQL $sql";
+#  warn "SQL $sql";
 
 
 
@@ -415,122 +416,12 @@ sub store{
       $sth2->bind_param(2, $sset->dbID(),                SQL_INTEGER);
       $sth2->bind_param(3, $sset->set_type(),            SQL_VARCHAR); #enum feature/result/experimental
       $sth2->execute();
-      $self->store_states($dset);
+#       $self->store_states($dset);
     }
   }
 
   return \@dsets
 }
 
-
-
-### DEPRECATED ###
-
-sub store_updated_sets{ #DEPRECATED IN v72
-	my ($self, $dsets, $overwrite) = @_;
-
-	throw('store_updated_sets is not longer supported, please rollback and recreate the DataSet');
-
-	throw('Must pass a list of DataSet objects to store') if(! @$dsets || $#{$dsets} < 0);
-	my ($sql);
-	my $db = $self->db();
-	my $sth = $self->prepare("INSERT INTO supporting_set (data_set_id, supporting_set_id, type)
-                            VALUES (?, ?, ?)");
-
-	foreach my $dset (@$dsets) {
-	  throw('Must pass a DataSet object to update') if( ! ( ref $dset &&
-															$dset->isa('Bio::EnsEMBL::Funcgen::DataSet')));
-
-	  throw('DataSet [' . $dset->dbID() . '] must be previous stored in the database') if (! $dset->is_stored($db) );
-	  my $stored_dset = $self->fetch_by_name($dset->name);
-
-
-	  #Update product FeatureSet
-	  #We need to do this first so we cacn check wether we're updated supporting_sets
-	  #for a data set which has already got a product FeatureSet...not wise
-
-	  my $fset = $dset->product_FeatureSet;
-	  my $stored_fset = $stored_dset->product_FeatureSet;
-	  #This fset check is slight overkill, as you have to severly mangle a dataset to fail this validation
-
-	  if (defined $stored_fset) {
-
-		if (! defined $fset) {
-		  #How will this have ever happened?
-		  warn("Populating absent product FeatureSet from DB for DataSet:\t".$dset->name);
-		} else {
-		  #validate sets
-		  if ($fset->dbID != $stored_fset->dbID) {
-			my $msg = 'Found product FeatureSet mismatch whilst updating DataSet('.$dset->name.
-			  "):\tStored:".$stored_fset->name."\tUpdate:".$fset->name;
-			throw($msg) if ! $overwrite;
-			warn $msg;
-		  }
-		}
-	  } else {
-		#update data_set table
-		$sql = 'update data_set set feature_set_id='.$fset->dbID.' where data_set_id='.$dset->dbID;
-		$self->dbc->do($sql);
-	  }
-
-	  my @sorted_ssets = sort {$a->dbID <=> $b->dbID} @{$dset->get_supporting_sets};
-	  my @stored_ssets = sort {$a->dbID <=> $b->dbID} @{$stored_dset->get_supporting_sets};
-	  my $mismatch = 0;
-
-	  $mismatch = 1 if(scalar(@sorted_ssets) != scalar(@stored_ssets));
-
-	  if (! $mismatch) {
-
-		for my $i (0..$#stored_ssets) {
-
-		  if ($stored_ssets[$i]->dbID != $sorted_ssets[$i]->dbID) {
-			$mismatch=1;
-			last;
-		  }
-		}
-	  }
-
-	  #Delete old supporting_sets
-	  #We really only want to do this if there is a difference
-	  #batched jobs cause race condition here
-	  #unless updated once before submission
-	  if ($mismatch &&
-		  $overwrite) {
-		$sql = 'DELETE from supporting_set where data_set_id='.$dset->dbID;
-		eval { $self->db->dbc->do($sql) };
-		throw("Couldn\'t delete supporting_sets for DataSet:\t".$stored_dset->name."\n$@") if $@;
-		@stored_ssets = ();
-	  }
-
-
-	  #Update supporting sets
-	  my %stored_dbids;
-	  map {$stored_dbids{$_->dbID} = undef} @stored_ssets if @stored_ssets;
-
-	  foreach my $sset (@sorted_ssets) {
-		my $dbid = $sset->dbID;
-
-		if (! grep(/^${dbid}$/, keys %stored_dbids)) {
-		  throw("All supporting sets must be stored previously.") if(! $sset->is_stored($db));
-
-		  #This causes problems when we want to re-run by slice
-		  #Currently need
-		  #warn "temporarily suspended throw for existing feature_set";
-		  throw('You are trying to update supporting sets for a data set which already has a product FeatureSet('.$stored_fset->name.').  Either rollback the FeatureSet before adding more supporting sets or specify the overwrite flag.') if defined $stored_fset && ! $overwrite;
-
-		  $sth->bind_param(1, $dset->dbID,            SQL_INTEGER);
-		  $sth->bind_param(2, $sset->dbID,            SQL_INTEGER);
-		  $sth->bind_param(3, $sset->set_type,        SQL_VARCHAR);
-		  #How is this failing?
-		  #Is the index not being updated after the delete
-		  $sth->execute();
-		}
-	  }
-	}
-
-	return $dsets
-  }
-
-
-  1;
+1;
 

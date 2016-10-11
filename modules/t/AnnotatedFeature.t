@@ -1,4 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+# Copyright [2016] EMBL-European Bioinformatics Institute
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -12,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-#!usr/bin/env perl
+
 use strict;
 use warnings;
 use Test::More;
@@ -21,8 +22,7 @@ use Bio::EnsEMBL::Test::MultiTestDB;
 
 BEGIN {
     $| = 1;
-
-    #plan tests => 15;
+    use_ok('Bio::EnsEMBL::Funcgen::AnnotatedFeature');
 }
 
 #obtain Adaptors for dnabb and funcgen databases
@@ -43,60 +43,60 @@ my $slice = $slice_adaptor->fetch_by_region( undef, 1 );
 
 #Get all FeatureTypers from DB that have defined annotated features
 
-my @histone_feature_types = @{ $ftype_adaptor->fetch_all_by_class('Histone') };
-my @tf_feature_types =
-  @{ $ftype_adaptor->fetch_all_by_class('Transcription Factor') };
-my @open_feature_types =
-  @{ $ftype_adaptor->fetch_all_by_class('Open Chromatin') };
+my @histone_feature_types
+    = @{ $ftype_adaptor->fetch_all_by_class('Histone') };
+my @tf_feature_types
+    = @{ $ftype_adaptor->fetch_all_by_class('Transcription Factor') };
+my @open_feature_types
+    = @{ $ftype_adaptor->fetch_all_by_class('Open Chromatin') };
 my @pol_feature_types = @{ $ftype_adaptor->fetch_all_by_class('Polymerase') };
 
+# #Test annotated features from database for all defined FetureTypes
+# foreach my $ftype (
+#     @histone_feature_types, @tf_feature_types,
+#     @open_feature_types,    @pol_feature_types
+#   )
+# {
+#     my @anno_features =
+#       @{ $af_adaptor->fetch_all_by_Slice_FeatureType( $slice, $ftype ) };
 
-#Test annotated features from database for all defined FetureTypes
-foreach my $ftype (
-    @histone_feature_types, @tf_feature_types,
-    @open_feature_types,    @pol_feature_types
-  )
-{
-    my @anno_features =
-      @{ $af_adaptor->fetch_all_by_Slice_FeatureType( $slice, $ftype ) };
+#     ok( @anno_features, $ftype->name . ' for annotated features' );
 
-    ok( @anno_features, $ftype->name . ' for annotated features' );
+#     next if !defined @anno_features;
 
-    next if !defined @anno_features;
+#     my $af1 = $anno_features[ rand @anno_features ];
 
-    my $af1 = $anno_features[ rand @anno_features ];
+#     ok( defined $af1, $ftype->name . ' AnnotatedFeature object from DB' );
 
-    ok( defined $af1, $ftype->name . ' AnnotatedFeature object from DB' );
+#     is(
+#         $af1->display_label,
+#         $af1->{'set'}->display_label,
+#         'display_label for AnnotatedFeature object with dbID ' . $af1->dbID
+#     );
 
-    is(
-        $af1->display_label,
-        $af1->{'set'}->display_label,
-        'display_label for AnnotatedFeature object with dbID ' . $af1->dbID
-    );
+#     ok(
+#         defined $af1->score,
+#         'score for '
+#           . $af1->display_label
+#           . ' with AnnotatedFeature dbID '
+#           . $af1->dbID
+#     );
 
-    ok(
-        defined $af1->score,
-        'score for '
-          . $af1->display_label
-          . ' with AnnotatedFeature dbID '
-          . $af1->dbID
-    );
+#     ok(
+#         defined $af1->summit,
+#         'summit for '
+#           . $af1->display_label
+#           . ' with AnnotatedFeature dbID '
+#           . $af1->dbID
+#     );
 
-    ok(
-        defined $af1->summit,
-        'summit for '
-          . $af1->display_label
-          . ' with AnnotatedFeature dbID '
-          . $af1->dbID
-    );
+#     can_ok( $af1, ('is_focus_feature') );
 
-    can_ok( $af1, ('is_focus_feature') );
-
-}
+# }
 
 #Get FeatureSet object
-my $fset1 =
-  $fset_adaptor->fetch_by_name("K562_DNase1_ENCODE_Uw_SWEmbl_R0025_D150");
+my $fset1
+    = $fset_adaptor->fetch_by_name("A549_CTCF_ENCODE_Broad_SWEmbl_R0005_IDR");
 
 # create a test AnnotatedFeature object
 
@@ -109,12 +109,13 @@ my $anno_feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new(
     -SUMMIT        => 1900,
     -SCORE         => 1.02,
     -FEATURE_SET   => $fset1,
+
+    # -ADAPTOR       => $db,
 );
 
 ok( defined $anno_feature, 'new object created' );
 
-ok(
-    $anno_feature->isa('Bio::EnsEMBL::Funcgen::AnnotatedFeature'),
+ok( $anno_feature->isa('Bio::EnsEMBL::Funcgen::AnnotatedFeature'),
     "the object belongs to the right class - AnnotatedFeature"
 );
 
@@ -123,7 +124,30 @@ is( $anno_feature->score, 1.02, 'score () method works' );
 is( $anno_feature->summit, 1900, 'summit () method works' );
 
 is( $anno_feature->display_label,
-    "DNase1_K562", 'display_label () method works' . "\n" );
+    "DNase1_K562", 'display_label () method works');
+
+is( $anno_feature->is_focus_feature(), 1,
+    'Test is_focus_feature subroutine' );
+
+my $summary          = $anno_feature->summary_as_hash();
+
+my $expected_summary = {
+    description     => "CTCF - A549 enriched sites",
+    end             => 100,
+    epigenome       => "A549",
+    feature_type    => "CTCF",
+    score           => 1.02,
+    seq_region_name => 1,
+    source          => "SWEmbl_R0005_IDR",
+    start           => 1,
+    strand          => -1,
+    summit          => 1900
+};
+
+
+is_deeply( $summary, $expected_summary, 'Test summary_as_hash subroutine' );
+
+done_testing();
 
 #store the test AnnotatedFeature in database
 #my @stored_afs=$af_adaptor->store($anno_feature);

@@ -2,6 +2,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -45,87 +46,15 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( scalars_to_objects
                                                validate_package_path );
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
-
-
-#todo -slice_import_status?
-
-
 my %set_adaptor_methods = 
  (
   InputSubset => 'get_InputSubsetAdaptor',
   ResultSet   => 'get_ResultSetAdaptor',
  );
 
-
-#TODO 
-
-#1 DONE Check we have experiment/experimetal_group support for the composable queries
-#  validate set type if not all SetAdaptors support this.
-
-#2 Could do with a way of listing embargoed, when no_write is defined
-
-#3 DONE Implement is_InputSubset_downloaded in run
-
-#4 Genericse no_idr into something like merge_reps_only? #This is aimed at restricting to non-idr sets
-# and is not yet implemented. We really need a difference flag here. As no_idr is for turning off idr
-# not set selection and maintaining idr. Change this to run_idr as a boolean? This is still a bit ambiguous
-
-#5 Review force/ignore_embargoed/ not downloaded. Should we skip these by default? Or have separate skip options?
-#  Skip non-downloaded by default unless -download is specified (it might be okay to down load a few files on the farm
-#  but bulk download should be done on the head node, apparently systems prefer this
-#  non cpu optimised overloading of a head node rather than tying up a farm node)
-#  Then we are still left with the force/ignore_embargoed options.
-
-#6 Review throw string building once we support download
-
-#7 Revise control handling. This needs to be restricted to experimental sub groups
-#  i.e. ENCODE_Yale not ENCODE
-#  DONE experiments_like => 'K562_%_ENCODE_Yale', control_experiments => 'K562_WCE_ENCODE_Yale'
-#  This will also identify control sets.
-
-#  Drop allow_inter_group controls in favour of -control_experiments?
-#  Also, will specifying control_experiments allow association with any other experiment
-#  i.e. check whether we are still validating the control is within the project? We probably 
-#  just want to trust the -control_experiments and simply make the assocition based on cell type.
-#
-#  Actually this is going to cause trouble if we have already processed some experiments which would match 
-#  the string. The way around this is to simply add in the control_feature_types to a normal filter query
-#  
-
-# 8 DESPERATELY NEED THIS!! 
-## select e.name from experiment e left join result_set rs on rs.name like concat(e.name, '%') where e.name like "HepG2%" and rs.name is NULL;
-#We also need a no_write mode which quickly lists all those which have not be aligned yet
-#   So this is an inverse of the ALIGNED status query. We need this for the other entry points too.
-#   How will this protect against set which have already been seeded?
-#   Do we need a SEEDED status? Would this be on the Experiment or InputSubset level?
-#   This is only relevant to a particular instance of the hive. So this is not really safe.
-#   We need a way to just skip over/stop flow of ResultSets which arleady exist
-#   This is going to be tricky as this could be seen as a failure too
-#   Maybe configure_hive and DropPipeline could check/delete these states?
-#   So we really need a two prong approach here. 
-#   1 Throw if the ResultSet exists and is aligned. (this is currently done in DefineResultSets)
-#   2 Check if the Experiment has been seeded already? This does not apply to control experiments
-#     Race condition between redundant controls is already being handled by ALIGNING_CONTROL in DefineResultSets
-#   This is really tying the IdentifyInputSubset analysis to DefineResultSets, but it is much more logical
-#   to do the checks here, rather than having to manage a failing DefinedResultSets job and reeseding
-#   We need an ignore aligned mode. This will be mutually exclusive with the rollback result_set mode 
-#
-# 9 Split this out into separate subs for different sets. 
-#   Move a lot of this to EFGUtils or Hive Utils so we can use 
-#   some of this functionality outside of the pipeline
-
-#
-# 10 DONE Fully remove InputSet support
-
-# 11 DONE Tidy up only_replicates/handle_replicates 
-
-
-
 my @iset_only_params = qw( allow_no_controls skip_absent
                            force_embargoed  ignore_embargoed  identify_controls  control_experiments );
-# No longer iset_only as defaults are present in BaseSequenceAnalysis config
-#control_feature_types 
-                          
+
 my @rset_only_params = qw( only_replicates );
 
 sub fetch_input {   # fetch parameters...
@@ -135,14 +64,14 @@ sub fetch_input {   # fetch parameters...
  
   #This auto detection prevents having to do this in the SeedPipeline environment func
   if(! defined $set_type){
-    my $lname = $self->analysis->logic_name;  
+    my $logic_name = $self->analysis->logic_name;  
     
     foreach my $stype( keys %set_adaptor_methods ){
   
-      if($lname =~ /$stype/){
+      if($logic_name =~ /$stype/){
         
         if($set_type){ #Throw if we match is not unique
-          throw("Cannot auto detect unique set_type from analysis logic name:\t$lname\n",  
+          throw("Cannot auto detect unique set_type from analysis logic name:\t$logic_name\n",  
                 'Please defined the set_type analysis_parameter or rename analysis.');
         }
         
@@ -151,7 +80,7 @@ sub fetch_input {   # fetch parameters...
     }
     
     if(! defined $set_type){
-      throw("Cannot auto detect unique set_type from analysis logic name:\t$lname\n",  
+      throw("Cannot auto detect unique set_type from analysis logic name:\t$logic_name\n",  
             'Please defined the set_type analysis_parameter or rename analysis.'); 
     } 
     
@@ -179,7 +108,7 @@ sub fetch_input {   # fetch parameters...
   #can't process_params for experiments as it would actually fetch the Experiments
   #and fail with a widlcard
   $self->set_param_method('constraints_hash',
-                          $self->process_params([qw(feature_types cell_types states
+                          $self->process_params([qw(feature_types epigenomes states
                                                     analyses experimental_groups)],
                                                 1, 1));  #optional/as array flags
   #all these are OR filters except states which is an AND filter
@@ -192,13 +121,13 @@ sub fetch_input {   # fetch parameters...
       throw('You have specified mutually exclusive filter params for the '.
             "IdentifySetInputs analysis\nPlease specify restrict to ".
             'set_names, set_ids, experiments_like or a combination other filters '.
-            '(e.g. experimental_groups experiments feature_types cell_types analyses states');
+            '(e.g. experimental_groups experiments feature_types epigenomes analyses states');
     }
   }
   elsif( (grep {defined $_ } ($self->set_names, $self->set_ids, $self->experiments)) != 1){      
     throw('You must specify some IdentifySetInputs filter params either '.
           'set_names, set_ids, experiments_like or a combination of '.
-          'feature_types cell_types experiments experimental_groups states analyses');
+          'feature_types epigenomes experiments experimental_groups states analyses');
   }
 
   #Fetch set type specific inputs
@@ -207,14 +136,6 @@ sub fetch_input {   # fetch parameters...
 
   return;
 }
-
-
-#todo Should identify_controls be on by default?
-#add mode to fetch expected controls form the DB, based on known control ftypes, 
-#and ctypes and experimental_groups of signal experiments. This will be problematic
-#until we model subgroups as experimental groups. And may not even be necessary if we associate controls
-#during registration
-
 
 sub _fetch_InputSubset_input{
   my $self = shift;    
@@ -264,55 +185,13 @@ sub _fetch_InputSubset_input{
         "control_experiments & allow_no_controls\nPlease omit one of these.");  
     }
     
-    if($self->experiments){
-#      warn "experiments is ".$self->experiments;
-      #assert_ref
-      
-      #if($self->experiments !~ /^[^%]+_%_[^%]+$/o){
-      #  #We could be more strict here and force the % to be in the expected ftype location
-      #  throw('The -experiments_like string does not have a single % mysql wildcard '.
-      #    "where the expected feature type should be:\n\t".$self->experiments_like);
-      #}
-      
-      #do we assume identify_controls here?
-      #This was originally working by harvesting control subsets from other signal experiments
-      #This would still work the same, as the experiments_like string would pick up the controls
-      #and these will be marked as such in the DB. so we don't even need the control_feature_types
-      
-      #if identify controls is specified and the normal filters are set (i.e. not ids, names or experiments_like)
-      #then we should probably add the control_feature_types
-      
-      #The problem with identify_controls at present is that allows control association withint projects (e.g. ENCODE)
-      #and does not have sub project specificity (e.g. ENCODE_Yale).
-      
-      #Does specifying
-      
-      if(! $self->control_experiments){
-                
-      } 
-    }
-    
-                    
+
     if($self->control_experiments  && $self->identify_controls){
       throw("Mutually exclusive parameters have been specified:\t".
         "control_experiments & identify_controls\nPlease omit one of these."); 
       #This prevents redundancy issues between the (unkown) identified and specified controls
       #We generally know which experiments we want to run with specified controls   
     }
-    
-    
-    #if(! ($self->control_experiments || 
-    #      $self->identify_controls ||
-    #      $self->allow_no_controls) ){
-    #  throw("For set_type InputSubset, one of the following must be defined:\t".
-    #    'control_experiments identify_controls or allow_no_controls');
-    #}
-    #Currently this is valid as the controls are loaded as a separate experiment
-    #However, this might not always be the case, so it has been disabled
-    
-    #controls *should* be identified automatically if they are pre-associated
-    
-
     
   return;
 }
@@ -344,15 +223,6 @@ sub _fetch_ResultSet_input{
   return;
 }
 
-#We are only using only_replicates for IdentifyReplicateResultSets
- 
-#Validate there is just 1 supporting signal InputSubset
-#and the replicate number matches the TR suffix
-#Healthy replicate paranoia here
-#All InputSubsets should be replicates
-#but historically we have had merged InputSubsets
-    
-
 sub _is_replicate_ResultSet{
   my $self = shift;
   my $rset = shift; 
@@ -371,17 +241,9 @@ sub _is_replicate_ResultSet{
   return $rep_set;
 }
 
-
-#todo This needs splitting out into separate sub for each set type (and then some)
-
-
 sub run {   # Check parameters and do appropriate database/file operations... 
   my $self = shift;
-  #Grab dataflow_params here as these params will not 
-  #change as we iterate through sets below
-  #These will only be flowed to the next job
-  #where as batch_params flow across all jobs in this seeded batch
-  #(for those that support/require batch params)
+  
   my $dataflow_params = $self->dataflow_params(1);#optional flag
   my $batch_params    = $self->batch_params; 
   my $set_type        = $self->set_type;
@@ -400,19 +262,24 @@ sub run {   # Check parameters and do appropriate database/file operations...
   
   #For set_ids and set_names, catch undef return types
   if($self->set_ids || $self->set_names){
-    my ($ids_or_names, $method);
+  
+  #
+  # Code review: The way we run the pipeline, this probably never is run.
+  #
+
+    my ($ids_or_names, $fetch_method);
   
     if($self->set_ids){
-      $method       = 'fetch_by_dbID'; 
+      $fetch_method       = 'fetch_by_dbID'; 
       $ids_or_names = $self->set_ids; 
     }
     else{
       $ids_or_names = $self->set_names; 
-      $method = 'fetch_by_name';
+      $fetch_method = 'fetch_by_name';
     }
     
     foreach my $var(@{$ids_or_names}){
-      my $set = $set_adaptor->$method($var);
+      my $set = $set_adaptor->$fetch_method($var);
       
       if(! defined $set ){
         push @failed, $var;
@@ -433,6 +300,11 @@ sub run {   # Check parameters and do appropriate database/file operations...
     }
   }
   else{#Must have constraints or experiments
+  
+  #
+  # Code review: This is probably the branch that always gets run.
+  #
+  
     my $constraints = $self->constraints_hash;
   
     if($self->experiments){  #Preprocess experiment wildcards
@@ -453,6 +325,8 @@ sub run {   # Check parameters and do appropriate database/file operations...
       
       foreach my $wc(@exp_wildcards){
         my $sql = 'SELECT name from experiment where name like "'.$wc.'"';
+        
+        # Code review: Wildcard names
         my @wc_names = @{$sql_helper->execute_simple($sql)};
         
         if(! @wc_names){
@@ -463,32 +337,29 @@ sub run {   # Check parameters and do appropriate database/file operations...
         }
       }
       
-      $constraints->{experiments} =  scalars_to_objects($self->out_db, 
-                                                        'Experiment',
-                                                        'fetch_by_name',
-                                                        \@exp_names);
+      $constraints->{experiments} =  scalars_to_objects(
+        $self->out_db, 
+        'Experiment',
+        'fetch_by_name',
+        \@exp_names
+      );
     }
-      
      
-    #Need to account for analysis or format or type?
-    #i.e. we don't want to queue up the dna meth input_subsets
-    #Add string_param_exists here to validate states
-    $sets = $set_adaptor->fetch_all( {constraints         => $constraints,
-                                      string_param_exists => 1} ); 
+    # Code review: We are probably dealing with names of experiments that fit the wild card here.
+    $sets = $set_adaptor->fetch_all(
+      {
+        constraints => $constraints,
+        string_param_exists => 1
+      } 
+    ); 
     
-    #Alternatively we could add a contraint for is_replicate
-    #not for ResultSets at present, as they do not have the replicate field
-                                        
-    if($only_reps){  #Implicit that set type is ResultSet
-      
-      my @rep_sets;
-      
+    if($only_reps){  #Implicit that set type is ResultSet      
+      my @rep_sets;      
       foreach my $set(@$sets){
         if(my $rep_set = $self->_is_replicate_ResultSet($set)){
           push @rep_sets, $rep_set;  
         }
-      }
-      
+      }      
       #Redefine only_replicate sets
       @$sets = @rep_sets;
     }
@@ -510,12 +381,11 @@ sub run {   # Check parameters and do appropriate database/file operations...
   my ($no_rel_date, $rel_date, $force, $ignore, $rel_month);
   @failed = ();
   my (@failed_ctrls, %ctrl_cache);
+  
+  # Code review: This probably about shared controls.
   my $x_grp_ctrls = $self->param_silent('allow_inter_group_controls');
   my $use_exp_id;
   
-  
-  #This can be moved to a _preprocess_InputSubsets methods
-  #Then we can 
   
   if($set_type eq 'InputSubset'){
     
@@ -563,24 +433,6 @@ sub run {   # Check parameters and do appropriate database/file operations...
     }
      
     $use_exp_id = 1 if ! $self->identify_controls;
-    #The subtlety here is that we may use a control for an isset which
-    #which is not in the control_experiment and not directly associated
-    #with that experiment. i.e. we are turning on identify_controls
-    #for those experiments which aren't supported by control_experiments  
-    #This is why we need to exp_name in the clabel!
-    #We can simply test both keys below
-    #Which will allow us to use control_experiments or experiment associated controls
-    #If they are both defined, then they must match, else we don't know which ones to use!
-    #Using associated controls would simply require omitting control_experiments
-    #Over-riding associated controls with control_experiments would require deleting them 
-    #from the DB
-    #Or we could have a control over-ride flag?
-    #Which would either use control_experiments preferentially or exclusively?
-    
-    #The other option is to simply turn on identify_controls, when we specify 
-    #control_experiments?
-    #This would cause problems when we have the simple case of having controls associated
-    #with each experiment
         
     @failed_ctrls = ();
     $self->_cache_controls($sets,
@@ -595,13 +447,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
     
     $rel_month   = $self->get_param_method('release_month',    'silent');
     $no_rel_date = (defined $rel_month) ? 0 : 1;
-    #currently in american format, hence we have a release month for safety
-    #rather than a full date string  
-    #Don't handle days here as release day is likely to shift, 
-    #and we can just manage by reseeding with force_embargoed?
   }
-
-  
 
   ### BUILD THE OUTPUT ID FOR EACH SET ###
   my (%output_ids, %rep_cache, %embargoed_issets, %to_download_issets, %control_reqd);
@@ -610,6 +456,10 @@ sub run {   # Check parameters and do appropriate database/file operations...
   #TODO add more STDOUT if in -no_write mode
   
   #Iterate through the sets 
+  
+  #
+  # Code review: This loop just runs tests on the $sets
+  #
  SET: foreach my $set( @$sets ){
     $self->helper->debug(1, 'Processing '.ref($set)." set:\t".$set->name.' (Experiment = '.$set->experiment->name.')');
     #"\n\tStates:\t".join(' ', @{$set->get_all_states}));
@@ -638,29 +488,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
      #%output_ids is populated in _cache_ResultSet_output_id
       $self->_cache_ResultSet_output_id($set, \%output_ids, $batch_params, $dataflow_params);
     }
- 
-
-    #Need to submit input_subsets them based on shared controls!
-    #As we need to wait for the control jobs to download/align 
-    #first before we can perform any other analyses
-    
-    #This is only true if the control has not already been aligned!
-    #as we need to semaphore downstream analysis based on success of control alignment
-    #this does not however stop us from doing the signal alignments
-    #we just don't want to sempahore the whole fan, as we don't want jobs blocking each other
-    #only the control job
-    
-    #WE can't actually do this as this would require semaphore from different analysis
-    
-    #Can we do this with an accu output from the control?
-    #No, as the control job may not finish before the signal jobs dataflow
-    #Also, this would create failures of downstream analyses, when really on the 
-    #control analysis has failed.
-    #This is messy and also pollutes the error output, so real errors would be easily overlooked
   } 
-    
-  
-  #Now iterate through output_ids doing the right thing
   
   my $warn_msg = '';
   
@@ -748,6 +576,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
       if($branch){
 
         if($no_write){
+        #if(1){
           my $txt   = 'Experiments identified (';
           my $ctrls = '';
           
@@ -774,8 +603,17 @@ sub run {   # Check parameters and do appropriate database/file operations...
           if(exists $oid->{input_subset_ids}->{controls}){
             $oid->{input_subset_ids}->{controls} = [keys(%{$oid->{input_subset_ids}{controls}{input_subsets}})];      
           }
-            
-          $self->branch_job_group($branch, [$oid]);              
+          
+          
+          my @funnel_input_id = (
+	    {
+		oid => $oid
+	    }
+	  );
+          
+          $self->branch_job_group($branch, [$oid]);
+          $self->branch_job_group($branch, [$oid], 4, \@funnel_input_id
+          );
         }
         else{#We have no signal subsets to flow!
           $warn_msg .= "No input_subsets to dataflow for control group:\t$key\n";
@@ -941,7 +779,7 @@ sub _cache_InputSubset_output_id{
   if($set->is_control && 
      ($embargoed || $to_download)){ #Set embargoed/to_download in the ctrl cache
     #Recreate the cache key logic here
-    my $clabel = $set->cell_type->name;
+    my $clabel = $set->epigenome->name;
   
     if(! $x_grp_ctrls){
       $clabel .= '_'.$set->experiment->experimental_group->dbID;
@@ -964,7 +802,7 @@ sub _cache_InputSubset_output_id{
             
                 
     if($use_exp_id){
-      $clabel = $set->cell_type->name.'_'.$set->experiment->dbID;
+      $clabel = $set->epigenome->name.'_'.$set->experiment->dbID;
          
       if(exists $ctrl_cache->{$clabel} &&
          exists $ctrl_cache->{$clabel}->{input_subsets}->{$set->dbID}){
@@ -991,7 +829,7 @@ sub _cache_InputSubset_output_id{
     #how does this interact with control_experiments?
     #This should not cache as we don't want to identify_controls between experiments
     #too much? just auto identify controls?
-    my $clabel   = $set->cell_type->name;
+    my $clabel   = $set->epigenome->name;
       
     if(! $x_grp_ctrls){
       $clabel .= '_expgrp_'.$set->experiment->experimental_group->dbID;
@@ -1002,7 +840,7 @@ sub _cache_InputSubset_output_id{
     my $exp_ctrl;
         
     if($use_exp_id){
-      $clabel   = $set->cell_type->name.'_exp_'.$set->experiment->dbID;
+      $clabel   = $set->epigenome->name.'_exp_'.$set->experiment->dbID;
       $self->helper->debug(3, 'Attempting to identify control for '.$set->name.' using control key '.$clabel);
       $exp_ctrl = $ctrl_cache->{$clabel} if exists $ctrl_cache->{$clabel};
     }
@@ -1116,12 +954,12 @@ sub _cache_InputSubset_output_id{
         }       
       }
   
-      #Now add sig reps based on the exp/cell_type/feature_type input_subset_ids
+      #Now add sig reps based on the exp/epigenome/feature_type input_subset_ids
       #Currently exp ID is a synecdoche for this, but let's future proof
       #in case we do move to proper experiment definition i.e. a study with
       #>1 ctype/ftypes           
       #my $iset_cache_key = $set->experiment->dbID.'_'.
-      #                       $set->cell_type->dbID.'_'.
+      #                       $set->epigenome->dbID.'_'.
       #                       $set->feature_type->dbID;         
       #Cache key is essentially the set name
       #although this is more expensive to generate than a key just based on IDs
@@ -1205,7 +1043,7 @@ sub _cache_controls{
   foreach my $cexp_isset(@{$cexp_issets}){
        
     if($cexp_isset->is_control){   
-      $clabel    = $cexp_isset->cell_type->name;
+      $clabel    = $cexp_isset->epigenome->name;
       
       #Can we change this to u
       

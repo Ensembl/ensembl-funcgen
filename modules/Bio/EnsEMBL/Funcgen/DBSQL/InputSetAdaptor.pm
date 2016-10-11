@@ -5,6 +5,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -53,12 +54,15 @@ package Bio::EnsEMBL::Funcgen::DBSQL::InputSetAdaptor;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 use Bio::EnsEMBL::Funcgen::InputSet;
 use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor; #DBI sql_types import
 
 use base qw( Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor );
 
+deprecate(
+    'Module InputSetAdaptor.pm has been deprecated since release 84 and will be removed from the API in release 88'
+);
 
 =head2 fetch_all_by_Experiment
 
@@ -207,7 +211,7 @@ sub _objs_from_sth {
       );
 
   my $anal_adaptor  = $self->db->get_AnalysisAdaptor();
-  my $ct_adaptor    = $self->db->get_CellTypeAdaptor();
+  my $ct_adaptor    = $self->db->get_EpigenomeAdaptor();
   my $exp_adaptor   = $self->db->get_ExperimentAdaptor();
   my $ft_adaptor    = $self->db->get_FeatureTypeAdaptor();
 
@@ -221,7 +225,7 @@ sub _objs_from_sth {
       throw("Could not fetch Analysis with dbID '$anal_id' for InputSet '$name'") if ! $anal;
 
       $ctype = (defined $ctype_id) ? $ct_adaptor->fetch_by_dbID($ctype_id) : undef;
-      throw("Could not fetch CellType with dbID '$ctype_id' for InputSet '$name'") if ! $ctype;
+      throw("Could not fetch EpiGenome with dbID '$ctype_id' for InputSet '$name'") if ! $ctype;
 
       $exp = (defined $exp_id) ? $exp_adaptor->fetch_by_dbID($exp_id) : undef;
       throw("Could not fetch Experiment with dbID '$exp_id' for InputSet '$name'") if ! $exp;
@@ -233,7 +237,7 @@ sub _objs_from_sth {
       $input_set = Bio::EnsEMBL::Funcgen::InputSet->new(
           -DBID          => $dbid,
           -ANALYSIS      => $anal,
-          -CELL_TYPE     => $ctype,
+          -EPIGENOME     => $ctype,
           -EXPERIMENT    => $exp,
           -FEATURE_TYPE  => $ftype,
           -NAME          => $name,

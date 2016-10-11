@@ -3,6 +3,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -33,7 +34,7 @@ update_transcript_xrefs.pl
 
 =head1 SYNOPSIS
 
-e.g. perl update_xref_transcripts.pl --out_dir $WORK_DIR --species $SPECIES --transcript_dbname $DNADB_NAME --transcript_host $DNADB_HOST --transcript_port $DNADB_PORT --transcript_user $DNADB_USER --xref_host $DB_HOST --xref_dbname $DB_NAME --xref_user $DB_USER --xref_pass $DB_PASS 
+e.g. perl update_transcript_xrefs.pl --out_dir $WORK_DIR --species $SPECIES --transcript_dbname $DNADB_NAME --transcript_host $DNADB_HOST --transcript_port $DNADB_PORT --transcript_user $DNADB_USER --xref_host $DB_HOST --xref_dbname $DB_NAME --xref_user $DB_USER --xref_pass $DB_PASS 
 
 
 =head1 DESCRIPTION
@@ -136,8 +137,11 @@ sub main {
 	my ($transcript_db, $xref_db) = @{get_databases($options)};
 	my $schema_build = $xref_db->_get_schema_build($transcript_db);
 	my $transc_edb_name = "$options->{species}_core_Transcript";
-	my $transc_edb_id = get_external_db_id($xref_db, $options->{species}, $transc_edb_name, $schema_build, $options->{import_edb});
+	$Helper->log("Getting or creating external DB id\n");
+	my $transc_edb_id = get_external_db_id($xref_db, $options->{species}, $transc_edb_name, $schema_build);
+	$Helper->log("Extracting transcripts from core database\n");
 	my $transcripts = get_transcripts($transcript_db, $options->{test_slice}, $options->{test_transcript_sid});
+	$Helper->log("Count unknown transcripts\n");
 	my $new_transcripts = get_unknown_transcript_list($transcripts, $xref_db, $transc_edb_id);
 	if (! scalar @$new_transcripts) {
 		$Helper->log("No transcripts need adding\n", 0, 1);
@@ -347,40 +351,36 @@ sub get_databases {
 # - species: string name
 # - edb_name: MySQL database name 
 # - schema build: string
-# - import_edb: boolean
 #
 # Returns: ID number of external id in external_db table (xref system)
 
 sub get_external_db_id {
-	my($xref_db, $species, $edb_name, $schema_build, $import_edb) = @_;
+	my($xref_db, $species, $edb_name, $schema_build) = @_;
 #Check for external_db records for species DBs
 	my ($transc_edb_display_name, $edb_display);
 	$transc_edb_display_name = "EnsemblTranscript";
 	$edb_display             = $transc_edb_display_name;
 
-	my $sql = "SELECT external_db_id, db_release from external_db where db_name='$edb_name'";
-	my @versions = @{$xref_db->dbc->db_handle->selectall_arrayref($sql)};
-	my @tmp;
-
-	foreach my $row(@versions) {
-		my ($edb_id, $version) = @$row;
-		push @tmp, $version;
-
-		if($schema_build eq $version) { 
-			return $edb_id;
-		}
-	}
+	# Look for pre-existing
+	my $sql = "
+	SELECT 
+		external_db_id
+	FROM
+		external_db
+	WHERE	
+		db_name='$edb_name'
+		AND db_release = '$schema_build'";
+	my @ids = @{$xref_db->dbc->db_handle->selectall_arrayref($sql)};
+  	if (scalar @ids > 0) {
+		return $ids[0][0];
+  	}
 
 	$sql = 'INSERT into external_db(db_name, db_release, status, dbprimary_acc_linkable, priority, db_display_name, type) values('.
 	"'${edb_name}', '${schema_build}', 'KNOWNXREF', 1, 5, '$edb_display', 'MISC')";
 
-	if(! $import_edb) {
-		die("Could not find current external_db $edb_name $schema_build from available versions:\t @tmp\nMaybe you have mis-spelt the -trans-species or you may need to manually add the external_db to the table and master file:\n\n$sql\n\n");
-	} 
-
 	$Helper->log("Importing external_db using: $sql");
 	$xref_db->dbc->do($sql);
-	return $xref_db->last_insert_id();
+	return $xref_db->db_handle->last_insert_id();
 }
 
 

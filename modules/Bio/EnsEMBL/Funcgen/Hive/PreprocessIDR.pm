@@ -2,6 +2,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -64,7 +65,6 @@ use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
 sub fetch_input {   # fetch parameters...
   my $self = shift;
-  $self->check_analysis_can_run;
   $self->SUPER::fetch_input;
   
   if($self->param_required('set_type') ne 'ResultSet'){
@@ -108,9 +108,21 @@ sub run {   # Check parameters and do appropriate database/file operations...
   my $exp_name      = $rsets->[0]->experiment->name;
   #This is also done in RunPeaks, so we really need a single method to do this?
   my $lname         =  $peak_analysis->logic_name;
-  $self->get_output_work_dir_methods($self->db_output_dir.'/peaks/'.$exp_name.'/'.$lname);
+  
+#   $self->get_output_work_dir_methods($self->db_output_dir.'/peaks/'.$exp_name.'/'.$lname);
+
+  # The code for building this path is duplicated in RunPeaks. This should be 
+  # configured somewhere centrally.
+  #
+  $self->get_output_work_dir_methods(
+    $self->peaks_output_dir 
+    . '/' . $exp_name
+    . '/' . $lname
+  );
+
+  
   my $out_dir = $self->output_dir;
-  my $max_peaks     = 300000;
+  my $max_peaks_for_this_peak_caller     = 300000;
  
   # Validate analysis  
   if($lname !~ /swembl/io){
@@ -120,7 +132,7 @@ sub run {   # Check parameters and do appropriate database/file operations...
     #https://sites.google.com/site/anshulkundaje/projects/idr#TOC-CALL-PEAKS-ON-INDIVIDUAL-REPLICATES
   }
   elsif($lname =~ /macs/io){#future proofing as will currently never be tested
-    $max_peaks = 100000;
+    $max_peaks_for_this_peak_caller = 100000;
     warn "Reseting max filtered peaks value to 100000 for MACS analysis:\t$lname\n";   
   } 
       
@@ -152,13 +164,13 @@ sub run {   # Check parameters and do appropriate database/file operations...
         push @ctrl_ids, $isset->dbID;;        
       }
       else{
-        if($seen_rep){
-          $self->throw_no_retry("Found more than 1 replicate (non-control) InputSet supporting an an IDR ResultSet:\n\t".
-            join("\n\t", map {$_->name} @issets)."\n");  
-        }  
+#         if($seen_rep){
+#           $self->throw_no_retry("Found more than 1 replicate (non-control) InputSet supporting an IDR ResultSet for experiment $exp_name:\n\t".
+#             join("\n\t", map {$_->name} @issets)."\n");  
+#         }  
         
-        push @rep_nums, $isset->replicate;
-        $seen_rep = 1;
+        push @rep_nums, $isset;
+#         $seen_rep = 1;
       }
     }
     
@@ -183,18 +195,31 @@ sub run {   # Check parameters and do appropriate database/file operations...
     #too. Although this maybe desirable to avoid clashes between features sets with different alignments
     #The API does not handle this yet.
     
-    push @pre_idr_files, $out_dir.'/'.$rset->name.'.'.$lname.'.txt';
+    # HACK It shouldn't be '..txt', but '.txt'
+    # The file isn't being created properly and we shouldn't be building 
+    # in different places for the same file.
+    my $permissive_swembl_peak_file = $out_dir.'/'.$rset->name.'.'.$lname.'..txt';
+    
+    if (! -e $permissive_swembl_peak_file) {
+      $self->throw("Expected file $permissive_swembl_peak_file does not exist!");
+    }
+    
+    push @pre_idr_files, $permissive_swembl_peak_file;
     #do read counts in RunIDR to parallelise
-    push @bams,         $self->get_alignment_files_by_ResultSet_formats($rset, ['bam'])->{bam};
+    push @bams,         $self->get_alignment_files_by_ResultSet_formats($rset, ['bam']);
   }
   
   
   #Put batch_name code in BaseSequencing or Base? 
-  my $batch_name                 = $exp_name.'_'.$lname.'_'.join('_', sort @rep_nums);
+  my $replicate_input_subset_string = $self->create_replicate_input_subset_string(@rep_nums);
+  
+#   die($replicate_input_subset_string);
+
+  my $batch_name = $exp_name.'_'.$lname.'_'.$replicate_input_subset_string;
   my ($np_files, $threshold, $x_thresh_adjust);
   
   if(! eval { ($np_files, $threshold, $x_thresh_adjust) = 
-                pre_process_IDR($out_dir, \@pre_idr_files, $batch_name, $max_peaks); 1}){
+                pre_process_IDR($out_dir, \@pre_idr_files, $batch_name, $max_peaks_for_this_peak_caller); 1}){
     $self->throw_no_retry("Failed to pre_process_IDR $batch_name\n$@");                
   } 
   

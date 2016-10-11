@@ -62,7 +62,7 @@ sub get_Importer_params{
      -species    => $self->species,#This should be lc already?
      -assembly   => $self->assembly, 
      -parser     => $self->get_param_method('feature_file_format'), 
-     -output_dir => $self->output_dir,
+     #-output_dir => $self->output_dir,
      #we really want to send the intermediate files to work_dir
      #but we don't have support for this in the Importer
  
@@ -131,7 +131,7 @@ sub get_Importer_params{
      -result_set_name     => undef, #$self->param('input_set'), #not implemented yet
      -feature_type_name   => undef,#$self->param('feature_type'),
      #-feature_analysis    => undef,
-     -cell_type_name      => undef, #$self->param('cell_type'),
+     -epigenome_name      => undef, #$self->param('epigenome'),
   
       
      #-batch_job      => undef,

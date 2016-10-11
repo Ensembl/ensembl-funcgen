@@ -3,6 +3,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -105,13 +106,13 @@ sub get_options {
 sub compute_regulatory_attributes {
   my $options = shift;
 
-  my ($tmp_fh,  $cell_type_regulatory_features) = tempfile();
-  my ($tmp_fh1, $multicell_regulatory_features) = tempfile();
+  my ($tmp_fh,  $epigenome_regulatory_features) = tempfile();
+#   my ($tmp_fh1, $multicell_regulatory_features) = tempfile();
   my ($tmp_fh2, $annotations) = tempfile();
   my ($tmp_fh3, $motifs) = tempfile();
   my ($tmp_fh4, $out) = tempfile();
   close $tmp_fh;
-  close $tmp_fh1;
+#   close $tmp_fh1;
   close $tmp_fh2;
   close $tmp_fh3;
   close $tmp_fh4;
@@ -120,53 +121,57 @@ sub compute_regulatory_attributes {
   # The common format of these files is:
   # chrom	start	end	ID 
 
-  run_system_cmd("mysql --quick -NB -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} ".
-    '-e "select rf.seq_region_id, rf.seq_region_start - rf.bound_start_length as start, rf.seq_region_end + rf.bound_end_length, rf.regulatory_feature_id, fs.cell_type_id '.
-    'FROM regulatory_feature rf  JOIN feature_set fs USING(feature_set_id) JOIN cell_type USING(cell_type_id) '.
-    "WHERE cell_type.name LIKE \'MultiCell\' ORDER by rf.seq_region_id, start\" > $multicell_regulatory_features",
-    undef, 1); # verbose
-
-  run_system_cmd("mysql --quick -NB -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} ".
-    '-e "select rf.seq_region_id, rf.seq_region_start - rf.bound_start_length as start, rf.seq_region_end + rf.bound_end_length, rf.regulatory_feature_id, fs.cell_type_id '.
-    'FROM regulatory_feature rf JOIN feature_set fs USING(feature_set_id) JOIN cell_type USING(cell_type_id) '.
-    "WHERE cell_type.name NOT LIKE \'MultiCell\' ORDER by rf.seq_region_id, start\" > $cell_type_regulatory_features",
+  run_system_cmd(
+    "mysql --quick -NB -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} "
+    . q( -e "
+    select 
+      rf.seq_region_id, 
+      rf.seq_region_start - rf.bound_start_length as start, 
+      rf.seq_region_end + rf.bound_end_length, 
+      rf.regulatory_feature_id, 
+      ra.epigenome_id 
+    FROM 
+      regulatory_feature rf
+    JOIN 
+      regulatory_activity ra 
+    USING 
+      (regulatory_feature_id)
+    JOIN 
+      epigenome USING (epigenome_id) 
+    ORDER by 
+      rf.seq_region_id, start" ) . " > $epigenome_regulatory_features",
      undef, 1); 
 
   run_system_cmd("mysql --quick -NB -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} ".
-    '-e "select af.seq_region_id, af.seq_region_start, af.seq_region_end, af.annotated_feature_id, fs.cell_type_id '.
-    'FROM annotated_feature af JOIN feature_set fs USING(feature_set_id) ORDER BY af.seq_region_id, af.seq_region_start" '.
-    " | awk '\$2 <= \$3' > $annotations",  # filter out features where start > end. These should have been caught by now in the SeqQC.
+    '-e "select af.seq_region_id, af.seq_region_start, af.seq_region_end, af.annotated_feature_id, fs.epigenome_id '.
+    'FROM annotated_feature af JOIN feature_set fs USING(feature_set_id) where af.seq_region_start <= af.seq_region_end ORDER BY af.seq_region_id, af.seq_region_start" '.
+    " > $annotations",  # filter out features where start > end. These should have been caught by now in the SeqQC.
     undef, 1); 
   
   run_system_cmd("mysql --quick -NB -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} ".
-    '-e "select mf.seq_region_id, mf.seq_region_start, mf.seq_region_end, mf.motif_feature_id, fs.cell_type_id '.
+    '-e "select mf.seq_region_id, mf.seq_region_start, mf.seq_region_end, mf.motif_feature_id, fs.epigenome_id '.
     'FROM motif_feature mf JOIN associated_motif_feature amf USING(motif_feature_id) '.
     'JOIN annotated_feature af USING(annotated_feature_id) JOIN feature_set fs USING(feature_set_id) '.
-    "GROUP BY motif_feature_id, cell_type_id ORDER BY seq_region_id, seq_region_start\" > $motifs",
+    "GROUP BY motif_feature_id, epigenome_id ORDER BY seq_region_id, seq_region_start\" > $motifs",
     undef, 1); 
 
   # Overlap regulatory features with (annotated|motif) features. Store ID pairs into one flat file
-  run_system_cmd("bedtools intersect -wa -wb -a $cell_type_regulatory_features -b $annotations ".
+  run_system_cmd("bedtools intersect -wa -wb -a $epigenome_regulatory_features -b $annotations ".
     "| awk 'BEGIN {OFS = \"\\t\"} \$5==\$10 {print \$4,\$9,\"annotated\"} ' > $out",
      undef, 1); 
 
-  run_system_cmd("bedtools intersect -wa -wb -a $multicell_regulatory_features -b $motifs ".
-    "| awk 'BEGIN {OFS = \"\\t\"} {print \$4,\$9,\"motif\"} ' >> $out",
-    undef, 1); 
-
-  run_system_cmd("bedtools intersect -wa -wb -a $cell_type_regulatory_features -b $motifs ".
+  run_system_cmd("bedtools intersect -wa -wb -a $epigenome_regulatory_features -b $motifs ".
     "| awk 'BEGIN {OFS = \"\\t\"} \$5==\$10 {print \$4,\$9,\"motif\"} ' >> $out",
      undef, 1); 
 
   # Load into database
   run_system_cmd("mysql -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} ".
-    '-e "TRUNCATE TABLE regulatory_attribute;"', undef, 1); 
+    '-e "TRUNCATE TABLE regulatory_evidence;"', undef, 1); 
 
   run_system_cmd("mysql -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} ".
-    "-e 'LOAD DATA LOCAL INFILE \"$out\" INTO TABLE regulatory_attribute;'", undef, 1);
+    "-e 'LOAD DATA LOCAL INFILE \"$out\" INTO TABLE regulatory_evidence;'", undef, 1);
 
-  unlink $cell_type_regulatory_features;
-  unlink $multicell_regulatory_features;
+  unlink $epigenome_regulatory_features;
   unlink $annotations;
   unlink $motifs;
   unlink $out;

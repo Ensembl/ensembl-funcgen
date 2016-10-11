@@ -5,6 +5,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -828,17 +829,6 @@ sub count_probe_features_by_probe_id {
 
   return $self->count_features_by_field_id('probe_id', $probe_id);
 }
-
-### DEPRECATED METHODS ###
-
-sub fetch_all_by_probeset { #deprecated in v68
-  my ($self, @args) = @_;
-
-  deprecate('This method is deprecated, please use fetch_all_by_probeset_name or fetch_all_by_ProbeSet');
-
-  return $self->fetch_all_by_probeset_name(@args);
-}
-
 
 1;
 

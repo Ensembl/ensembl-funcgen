@@ -1,14 +1,52 @@
-534	\N	schema_version	81
+534	\N	schema_version	86
 156	1	species.production_name	homo_sapiens
 223	\N	schema_type	funcgen
-595	1	regbuild.last_annotation_update	2015-3
 589	\N	patch	patch_78_79_a.sql|schema_version
 592	\N	patch	patch_78_79_b.sql|binding_matrix unique key
-594	1	regbuild.initial_release_date	2015-3
-593	1	regbuild.version	13
 596	\N	patch	patch_79_80_a.sql|schema_version
 597	\N	patch	patch_79_80_b.sql|dbfile_registry_unique_key
 598	\N	patch	patch_79_80_c.sql|stable_id_changed_to_varchar
 599	\N	patch	patch_80_81_a.sql|schema_version
 600	\N	patch	patch_80_81_b.sql|add gender: mixed to table cell_type 
 601	\N	patch	patch_80_81_c.sql|drop experiment.date
+602	\N	patch	patch_81_82_a.sql|schema_version
+603	\N	patch	patch_82_83_a.sql|schema_version
+604	\N	patch	patch_83_84_a.sql|schema_version
+605	\N	patch	patch_83_84_b.sql|Drop unique key for cell_type.efo_id
+606	\N	patch	patch_83_84_c.sql|Add not null constraint to cell_type.display_label
+607	\N	patch	patch_83_84_d.sql|Add segmentation enum to result_set.feature_class
+608	\N	patch	patch_83_84_e.sql|Increase length of regbuild_string.name
+609	\N	patch	patch_83_84_f.sql|Change regulatory_feature has_evidence to activity
+610	\N	patch	patch_84_85_a.sql|schema_version
+611	\N	patch	patch_84_85_b.sql|rename cell_type table
+612	\N	patch	patch_84_85_c.sql|new epigenome table columns
+613	\N	patch	patch_84_85_d.sql|add columns to experiment table
+614	\N	patch	patch_84_85_e.sql|add/modify columns in input_subset table
+615	\N	patch	patch_84_85_f.sql|drop replicate column from result_set table
+616	\N	patch	patch_84_85_g.sql|update dbentry related tables
+617	\N	patch	patch_84_85_h.sql|Store file types along with the files.
+618	\N	patch	patch_84_85_i.sql|Normalise regulatory feature table: Create a non redundant version of the regulatory features.
+619	\N	patch	patch_84_85_j.sql|Normalise regulatory feature table: Create a linking table between regulatory features and feature sets.
+620	\N	patch	patch_84_85_k.sql|Normalise regulatory feature table: Link up the new non redundant regulatory features.
+621	\N	patch	patch_84_85_l.sql|Normalise regulatory feature table: Link up the regulatory attributes with the linking table.
+622	\N	patch	patch_84_85_m.sql|Normalise regulatory feature table: Clean up temporary columns and tables.
+623	\N	patch	patch_84_85_n.sql|Make activity an enum.
+624	\N	patch	patch_84_85_o.sql|Delete all MultiCell regulatory features feature set entries.
+625	\N	patch	patch_84_85_p.sql|Delete MultiCell feature_set and epigenome.
+626	\N	patch	patch_84_85_q.sql|Rename table regulatory_attribute to regulatory_evidence.
+627	\N	patch	patch_84_85_r.sql|Drop unused empty tables
+628	\N	patch	patch_84_85_s.sql|modify table_name column in result_set_input table
+629	\N	patch	patch_84_85_t.sql|Drop table regbuild_string
+630	\N	patch	patch_84_85_u.sql|Remove regulatory build entries from feature_set table, relink everything else.
+631	\N	patch	patch_84_85_v.sql|Move meta entries regarding regulatory build to the regulatory_build table
+632	\N	patch	patch_84_85_w.sql|Extend the name length in the input_subset table
+633	\N	patch	patch_84_85_x.sql|Remove unused columns in the experiment table
+634	\N	patch	patch_84_85_y.sql|Table for storing epigenomes used in the regulatory build
+635	\N	patch	patch_84_85_z.sql|Move segmentation entries from result_set table into the new segmentation_file table.
+636	\N	patch	patch_84_85_za.sql|Move entries provided by external sources from the result_set table into the new external_feature_file table.
+637	\N	patch	patch_84_85_zb.sql|Bugfix, the primary key was wrongly named.
+638	\N	patch	patch_85_86_a.sql|schema_version
+639	\N	patch	patch_85_86_b.sql|Drop tables epigenome_lineage and lineage
+640	\N	patch	patch_85_86_c.sql|Add production name column to feature_type table
+641	\N	patch	patch_85_86_d.sql|Add new columns to input_subset table to accommodate paired-end data
+642	\N	patch	patch_85_86_e.sql|Add QC tables

@@ -5,6 +5,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -77,7 +78,7 @@ use base qw( Bio::EnsEMBL::Funcgen::Storable );
   Arg [-ANALYSIS]      : Bio::EnsEMBL::Analysis
 
   OPTIONAL ARGS:
-  Arg [-CELL_TYPE]     : Bio::EnsEMBL::Funcgen::CellType
+  Arg [-EPIGENOME]     : Bio::EnsEMBL::Funcgen::Epigenome
   Arg [-DBID]          : Int
   Arg [-ADAPTOR]       : Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor e.g. Result|Feature|InputSubSetAdaptor.
 
@@ -101,8 +102,11 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($name, $anal, $ftype, $ctype, $exp, $exp_id)
-    = rearrange(['NAME', 'ANALYSIS', 'FEATURE_TYPE', 'CELL_TYPE', 'EXPERIMENT', 'EXPERIMENT_ID'], @_);
+  my ( $name, $anal, $ftype, $epigenome, $exp, $exp_id )
+    = rearrange( [ 'NAME',         'ANALYSIS',
+                   'FEATURE_TYPE', 'EPIGENOME',
+                   'EXPERIMENT',   'EXPERIMENT_ID' ],
+                 @_ );
 
   #MANDATORY PARAMS
   throw('Need to specify a name')     if ! defined $name;
@@ -116,8 +120,8 @@ sub new {
   }
 
   #OPTIONAL PARAMS
-  if(defined $ctype){
-    assert_ref($ctype, 'Bio::EnsEMBL::Funcgen::CellType', 'Set CellType'); 
+  if(defined $epigenome){
+    assert_ref($epigenome, 'Bio::EnsEMBL::Funcgen::Epigenome', 'Set Epigenome'); 
   }
 
   #Define set_type automatically
@@ -126,7 +130,7 @@ sub new {
 
   #Direct assignment as we have already validated
   $self->{name}          = $name;
-  $self->{cell_type}     = $ctype;
+  $self->{epigenome}     = $epigenome;
   $self->{feature_type}  = $ftype;
   $self->{analysis}      = $anal;
 
@@ -163,11 +167,31 @@ sub name { return shift->{name}; }
   Returntype : Bio::EnsEMBL::Funcgen::CellType
   Exceptions : None
   Caller     : General
+  Status     : Deprecated
+
+=cut
+
+sub cell_type {
+    deprecate(
+        "Bio::EnsEMBL::Funcgen::Set::cell_type has been deprecated and will be removed in Ensembl release 89."
+            . " Please use Bio::EnsEMBL::Funcgen::Set::epigenome instead" );
+    return shift->{epigenome};
+}
+
+=head2 epigenome
+
+  Example    : my $epigenome = $set->epigenome->name;
+  Description: Getter for the Epigenome for this Set.
+  Returntype : Bio::EnsEMBL::Funcgen::Epigenome
+  Exceptions : None
+  Caller     : General
   Status     : Stable
 
 =cut
 
-sub cell_type { return shift->{cell_type}; }
+sub epigenome {
+    return shift->{epigenome};
+}
 
 
 =head2 feature_type

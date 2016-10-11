@@ -5,6 +5,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -156,7 +157,7 @@ sub display_label {
   if(! $self->{'display_label'}  && $self->adaptor){
 
 	$self->{'display_label'}  = $self->feature_set->feature_type->name().' - ';
-	$self->{'display_label'} .= $self->cell_type->name() if $self->cell_type();
+	$self->{'display_label'} .= $self->epigenome->name() if $self->epigenome();
 	$self->{'display_label'} .= $self->feature_type->name() if(defined $self->{'feature_type'});
   }
 

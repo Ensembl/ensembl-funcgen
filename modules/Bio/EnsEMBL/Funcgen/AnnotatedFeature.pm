@@ -5,6 +5,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -165,11 +166,36 @@ sub display_label {
     
     if(! $self->{'display_label'}  && $self->adaptor){
       $self->{'display_label'} = $self->feature_type->name()." -";
-      $self->{'display_label'} .= " ".$self->cell_type->name();
+      $self->{'display_label'} .= " ".$self->epigenome->display_label();
       $self->{'display_label'} .= " Enriched Site";
     }
 	
     return $self->{'display_label'};
+}
+
+=head2 display_id
+
+  Example    : my $label = $feature->display_id;
+  Description: Getter for the display_id of this feature. This was created 
+               for generating the display id used in big bed files. Converting
+               from bed to bigbed causes problems, if 
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Medium Risk
+
+=cut
+
+sub display_id {
+    my $self = shift;
+
+    if(! $self->{'display_id'}  && $self->adaptor){
+      $self->{'display_id'} = join '_', 
+        $self->feature_type->name(),
+        $self->epigenome->production_name(),
+        "_Enriched_Site";
+    }
+    return $self->{'display_id'};
 }
 
 
@@ -246,6 +272,10 @@ sub get_associated_MotifFeatures{
   return $self->{assoc_motif_features};
 }
 
+sub SO_term {
+  my $self = shift;
+  return $self->feature_type->so_accession;
+}
 
 =head2 summary_as_hash
 
@@ -258,15 +288,20 @@ sub get_associated_MotifFeatures{
 
 sub summary_as_hash {
   my $self = shift;
-  my $fset = $self->feature_set;
+  my $feature_set = $self->feature_set;
 
   return
-    {chipseq_feature_type => $self->feature_type->name,
-     cell_type              => $self->cell_type->name,
-     start                  => $self->seq_region_start,
-     end                    => $self->seq_region_end,
-     strand                 => $self->strand,
-     seq_region_name        => $self->seq_region_name              
+    {
+      feature_type     => $self->feature_type->name,
+      epigenome        => $self->epigenome->name,
+      source           => $feature_set->analysis->logic_name,
+      seq_region_name  => $self->seq_region_name,
+      start            => $self->seq_region_start,
+      end              => $self->seq_region_end,
+      description      => $feature_set->display_label,
+      strand           => $self->strand,
+      summit           => $self->summit,
+      score            => $self->score,
     };
 }
 1;

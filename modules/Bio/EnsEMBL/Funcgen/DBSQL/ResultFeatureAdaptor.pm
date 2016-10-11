@@ -6,6 +6,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -69,6 +70,10 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor; #DBI sql_types import
 
 use base qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor
 			       Bio::EnsEMBL::Funcgen::Collector::ResultFeature  );
+
+deprecate(
+    'Module ResultFeatureAdaptor.pm has been deprecated since release 84 and will be removed from the API in release 88'
+);
 
 #Private vars to used to maintain simple implementation of Collector
 #Should be set in each method to enable trimmingof  the start and end bins. 
@@ -965,48 +970,12 @@ sub fetch_collection_Iterator_by_Slice_method{
   return Bio::EnsEMBL::Utils::Iterator->new($coderef);
 }
 
-
-
-# Over-ride/deprecate generic methods
-# which do not work with ResultFeature Collections
-
-sub fetch_all{
-  deprecate('The fetch_all method has been disabled as it is not appropriate for the ResultFeatureAdaptor');
-  return;
-}
-
-sub fetch_by_dbID{
-  warn 'The fetch_by_dbID method has been disabled as it is not appropriate for the ResultFeatureAdaptor';
-  #Could use it for 0 wsize DB based data, but not useful.
-  return;
-}
-
-sub fetch_all_by_dbID_list {
-  warn 'The fetch_all_by_dbID_list method has been disabled as it is not appropriate for the ResultFeatureAdaptor';
-  #Could use it for 0 wsize DB based data, but not useful.
-  return;
-}
-
-sub fetch_all_by_logic_name {
-  warn 'The fetch_all_by_logic_name method has been disabled as it is not appropriate for the ResultFeatureAdaptor';
-  #Could use it for 0 wsize DB based data, but not useful.
-  return;
-}
-
-sub _list_seq_region_ids{
- warn 'The _list_seq_region_ids method has been disabled as it is not appropriate for the ResultFeatureAdaptor';
- #Could use it for 0 wsize DB based data, but not useful.
- return
-}
-
 #Over-ride fetch_all_by_display_label? Or move this to the individual FeatureAdaptors?
 #Same with fetch_all_by_stable_Storable_FeatureSEts and wrappers (fetch_all_by_external_name)?
 #Basically this is not a DBAdaptor anymore so should inherit from somewhere else. 
 #Need to separate the common utility methods and have co-inheritance e.g.
 #DBFile::Adaptor    Utils::FeatureAdaptor
 #DBAdaptor::Adaptor Utils::FeatureAdaptor
-
-
 
 1;
 

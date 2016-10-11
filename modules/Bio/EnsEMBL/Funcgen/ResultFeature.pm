@@ -5,6 +5,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -61,11 +62,14 @@ package Bio::EnsEMBL::Funcgen::ResultFeature;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 use base qw( Bio::EnsEMBL::Feature );
 
 ### TO BE REMOVED IN FAVOUR OF Bio::EnsEMBL::Funcgen::Collection::ResultFeature
 
+deprecate(
+    'Module ResultFeature.pm has been deprecated since release 84 and will be removed from the API in release 88'
+);
 
 =head2 new_fast
 

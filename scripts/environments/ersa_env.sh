@@ -1,6 +1,7 @@
 #!/usr/local/bin/bash
 
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+# Copyright [2016] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -86,7 +87,7 @@ base_name=$(basename -- "$0")
 
 if [[ "$base_name" != "bash" ]]; then
   echo -e "$base_name must be sourced not executed e.g.\n\t$ERSA_USAGE"
-  exit
+  # exit
 fi
 
 # Take existing $EFG_SRC or default to relative location of this file

@@ -5,6 +5,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -506,8 +507,8 @@ sub get_result_by_ResultSet{
 
 =head2 summary_as_hash
 
-  Example       : $array_feature_summary = $array_feature->summary_as_hash;
-  Description   : Retrieves a textual summary of this ArrayFeature.
+  Example       : $probe_feature_summary = $probe_feature->summary_as_hash;
+  Description   : Retrieves a textual summary of this ProbeFeature.
   Returns       : Hashref of descriptive strings
   Status        : Intended for internal use (REST)
 

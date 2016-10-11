@@ -6,6 +6,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+Copyright [2016] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -92,6 +93,29 @@ sub new {
   return $self;
 }
 
+=head2 dbfile_data_root
+
+  Arg[1]     : Optional String: Root path of dbfile data directory
+  Example    : $rset_adaptor->dbfile_data_root('/data/root/dir/);
+  Description: This allows the root path to be defined. If an adaptor uses 
+               files, it will use this to find its data.
+  Returntype : String
+  Exceptions : None
+  Caller     : Bio::EnsEMBL::Funcgen::DBAdaptor::ResultSet
+  Status     : at risk - move this to SetAdaptor/FileAdaptor?
+
+=cut
+
+sub dbfile_data_root {
+  my ($self, $root) = @_;
+
+  if($root){
+    $root =~ s/\/$//o;  # strip off trailing /, as this is present in dbfile_registry.path
+    $self->{dbfile_data_root} = $root;
+  }
+ 
+  return $self->{dbfile_data_root} || '';  # Avoids concat warning
+}
 
 =head2 compose_constraint_query
 
@@ -320,36 +344,43 @@ sub _table_name {
 
 
 
-=head2 store_states
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::Storable
-  Arg [2]    : Arrayref (optional) - States to store
-  Example    : $rset_adaptor->store_states($result_set);
-  Description: Stores states in status table. By default will store state
-               attributes, but will also store optioanlly specified states
-  Returntype : None
-  Exceptions : Throws if Storable is not stored
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub store_states{
-  my $self     = shift;
-  my $storable = shift;
-  my $states   = shift || [];
-  assert_ref($storable, 'Bio::EnsEMBL::Funcgen::Storable');
-  assert_ref($states, 'ARRAY', 'optional states');
-
-  foreach my $state((@{$storable->get_all_states()}, @$states)){
-    
-    if (! $self->has_stored_status($state, $storable)){
-      $self->store_status($state, $storable) 
-    }
-  }
-
-  return;
-}
+# =head2 store_states
+# 
+#   Arg [1]    : Bio::EnsEMBL::Funcgen::Storable
+#   Arg [2]    : Arrayref (optional) - States to store
+#   Example    : $rset_adaptor->store_states($result_set);
+#   Description: Stores states in status table. By default will store state
+#                attributes, but will also store optioanlly specified states
+#   Returntype : None
+#   Exceptions : Throws if Storable is not stored
+#   Caller     : General
+#   Status     : At Risk
+# 
+# =cut
+# 
+# sub store_states{
+#   my $self     = shift;
+#   my $storable = shift;
+#   my $states   = shift || [];
+#   assert_ref($storable, 'Bio::EnsEMBL::Funcgen::Storable');
+#   assert_ref($states, 'ARRAY', 'optional states');
+#   
+#   return unless (defined $states);
+# 
+#   my $all_states = $storable->get_all_states();
+#   if (defined $all_states) {
+#     push @$states, @$all_states;
+#   }
+#   
+#   foreach my $state(@$states){
+#     
+#     if (! $self->has_stored_status($state, $storable)){
+#       $self->store_status($state, $storable) 
+#     }
+#   }
+# 
+#   return;
+# }
 
 
 =head2 fetch_all
@@ -490,6 +521,12 @@ sub fetch_all_states{
   my $table = $self->_test_funcgen_table($obj);
   my $sql = "SELECT name FROM status_name sn, status s WHERE s.table_name='$table' ".
     "AND s.table_id='".$obj->dbID()."' and s.status_name_id=sn.status_name_id";
+  
+#   print "\n\n---------------------------------------\n\n";
+#   print "Sql to fetch the states:\n";
+#   print "\n\n$sql\n\n";
+#   print "\n\n---------------------------------------\n\n";
+  
   my @states = map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
 
   return \@states;
@@ -534,46 +571,46 @@ sub has_stored_status{
 }
 
 
-=head2 store_status
-
-  Arg [1]    : string - status e.g. IMPORTED, DISPLAYABLE
-  Arg [2]    : Bio::EnsEMBL::"OBJECT"
-  Example    : $status_a->store_status('IMPORTED', $array_chip);
-  Description: Sets a state for a given object
-  Returntype : None
-  Exceptions : None
-  Caller     : general
-  Status     : At risk - Move to Status.pm?
-
-=cut
-
-sub store_status{
-  my $self   = shift;
-  my $state  = shift;
-  my $obj    = shift;
-  my $table  = $self->_test_funcgen_table($obj);
-
-  if(! $self->has_stored_status($state, $obj)){
-    my $status_id = $self->_get_status_name_id($state);
-
-    if(! $status_id){
-      throw("$state is not a valid status_name for $obj:\t".$obj->dbID);
-    }
-
-	  my $sql = "INSERT into status(table_id, table_name, status_name_id) VALUES('".
-	   $obj->dbID()."', '$table', '$status_id')";
-	  
-	  if(! eval { $self->db->dbc->do($sql); 1}){ 
-	   throw("Failed to store apparently unstored $state status for $obj (dbID=".
-	     $obj->dbID."\nPotential race condition with parallel process\n$@");
-	  }
-	  
-	  #Setting it in the obj if it is not already present.
-	  $obj->add_status($state) if ! $obj->has_status($state, $obj);
-  }
-  
-  return;
-}
+# =head2 store_status
+# 
+#   Arg [1]    : string - status e.g. IMPORTED, DISPLAYABLE
+#   Arg [2]    : Bio::EnsEMBL::"OBJECT"
+#   Example    : $status_a->store_status('IMPORTED', $array_chip);
+#   Description: Sets a state for a given object
+#   Returntype : None
+#   Exceptions : None
+#   Caller     : general
+#   Status     : At risk - Move to Status.pm?
+# 
+# =cut
+# 
+# sub store_status{
+#   my $self   = shift;
+#   my $state  = shift;
+#   my $obj    = shift;
+#   my $table  = $self->_test_funcgen_table($obj);
+# 
+#   if(! $self->has_stored_status($state, $obj)){
+#     my $status_id = $self->_get_status_name_id($state);
+# 
+#     if(! $status_id){
+#       throw("$state is not a valid status_name for $obj:\t".$obj->dbID);
+#     }
+# 
+# 	  my $sql = "INSERT into status(table_id, table_name, status_name_id) VALUES('".
+# 	   $obj->dbID()."', '$table', '$status_id')";
+# 	  
+# 	  if(! eval { $self->db->dbc->do($sql); 1}){ 
+# 	   throw("Failed to store apparently unstored $state status for $obj (dbID=".
+# 	     $obj->dbID."\nPotential race condition with parallel process\n$@");
+# 	  }
+# 	  
+# 	  #Setting it in the obj if it is not already present.
+# 	  $obj->add_status($state) if ! $obj->has_status($state, $obj);
+#   }
+#   
+#   return;
+# }
 
 
 =head2 revoke_status
@@ -684,136 +721,136 @@ sub revoke_states{
 }
 
 
-=head2 set_imported_states_by_Set
+# =head2 set_imported_states_by_Set
+# 
+#   Arg [1]    : Bio::EnsEMBL::Funcgen::Set e.g. a FeatureSet or ResultSet
+#   Example    : $self->set_imported_states_by_Set($set);
+#   Description: Sets default states for imported Feature|ResultSets
+#   Returntype : None
+#   Exceptions : None
+#   Caller     : Import parsers and RunnableDBs
+#   Status     : At risk - move to BaseImporter
+# 
+# =cut
+# 
+# #Move a wrapper to Storable, which handles the obj attributes
+# #which then call this method to remove the status entries?
+# 
+# #This needs to be used by RunnableDBs too!
+# #All state stuff is handled by BaseAdaptor?
+# #Can we put this in the SetAdaptor?
+# 
+# #CoordSystem specific status may go, if we are removing multi CoordSys support
+# 
+# sub set_imported_states_by_Set{
+#   my $self = shift;
+#   my $set  = shift;
+#   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Set', $set);
+#   return $self->store_states($set, $self->_imported_states);
+# }
+# 
+# sub revoke_imported_states_by_Set{
+#   my $self = shift;
+#   my $set  = shift;
+#   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Set', $set);
+#   return $self->revoke_states($set, $self->_imported_states);
+# }
+# 
+# 
+# 
+# 
+# sub _imported_states{
+#   my $self = shift;
+#   #Get default chromosome version for this dnadb
+#   
+#   if(! defined $self->{imported_states}){
+#     $self->{imported_states} = ['IMPORTED', 
+#                                  'IMPORTED_'.
+#                                   $self->db->dnadb->get_CoordSystemAdaptor->fetch_by_name('chromosome')->version];
+#   }
+#   
+#   return $self->{imported_states}; 
+# }
+# 
 
-  Arg [1]    : Bio::EnsEMBL::Funcgen::Set e.g. a FeatureSet or ResultSet
-  Example    : $self->set_imported_states_by_Set($set);
-  Description: Sets default states for imported Feature|ResultSets
-  Returntype : None
-  Exceptions : None
-  Caller     : Import parsers and RunnableDBs
-  Status     : At risk - move to BaseImporter
-
-=cut
-
-#Move a wrapper to Storable, which handles the obj attributes
-#which then call this method to remove the status entries?
-
-#This needs to be used by RunnableDBs too!
-#All state stuff is handled by BaseAdaptor?
-#Can we put this in the SetAdaptor?
-
-#CoordSystem specific status may go, if we are removing multi CoordSys support
-
-sub set_imported_states_by_Set{
-  my $self = shift;
-  my $set  = shift;
-  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Set', $set);
-  return $self->store_states($set, $self->_imported_states);
-}
-
-sub revoke_imported_states_by_Set{
-  my $self = shift;
-  my $set  = shift;
-  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Set', $set);
-  return $self->revoke_states($set, $self->_imported_states);
-}
-
-
-
-
-sub _imported_states{
-  my $self = shift;
-  #Get default chromosome version for this dnadb
-  
-  if(! defined $self->{imported_states}){
-    $self->{imported_states} = ['IMPORTED', 
-                                 'IMPORTED_'.
-                                  $self->db->dnadb->get_CoordSystemAdaptor->fetch_by_name('chromosome')->version];
-  }
-  
-  return $self->{imported_states}; 
-}
+# =head2 status_filter
+# 
+#   Arg [1]    : String - status e.g. IMPORTED, DISPLAYABLE
+#   Arg [2]    : String - table name e.g. experimental_chip
+#   Arg [3]    : List   - table dbIDs
+#   Exmaple    : my @displayable_ec_ids = @{$ec_adaptor->status_filter('DISPLAYABLE',
+#                                                                      'experimental_chip',
+#                                                                      (map $_->dbID, @echips))};
+#   Description: Quick method for filtering dbIDs based on their table and and status
+#   Returntype : ARRAYREF
+#   Exceptions : Warns if state already set
+#                Throws is status name is not already stored.
+#   Caller     : general
+#   Status     : At risk - Move to Status?
+# 
+# =cut
+# 
+# sub status_filter{
+#   my ($self, $status, $table_name, @table_ids) = @_;
+# 
+#   my @status_ids;
+#   my $status_id = $self->_get_status_name_id($status);
+# 
+#   if($status_id){
+# 
+#     if(! ($table_name && @table_ids)){
+#       throw("Must provide a table_name and table_ids to filter non-displayable ids");
+#     }      
+# 
+#     my $sql = "SELECT table_id from status where table_name='$table_name' and ".
+#                "table_id in (".join(", ", @table_ids).") and status.status_name_id".
+#                "='$status_id'";
+#     @status_ids = map $_ = "@$_",
+#                    @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
+#   }
+# 
+#   return \@status_ids;
+# }
 
 
-=head2 status_filter
-
-  Arg [1]    : String - status e.g. IMPORTED, DISPLAYABLE
-  Arg [2]    : String - table name e.g. experimental_chip
-  Arg [3]    : List   - table dbIDs
-  Exmaple    : my @displayable_ec_ids = @{$ec_adaptor->status_filter('DISPLAYABLE',
-                                                                     'experimental_chip',
-                                                                     (map $_->dbID, @echips))};
-  Description: Quick method for filtering dbIDs based on their table and and status
-  Returntype : ARRAYREF
-  Exceptions : Warns if state already set
-               Throws is status name is not already stored.
-  Caller     : general
-  Status     : At risk - Move to Status?
-
-=cut
-
-sub status_filter{
-  my ($self, $status, $table_name, @table_ids) = @_;
-
-  my @status_ids;
-  my $status_id = $self->_get_status_name_id($status);
-
-  if($status_id){
-
-    if(! ($table_name && @table_ids)){
-      throw("Must provide a table_name and table_ids to filter non-displayable ids");
-    }      
-
-    my $sql = "SELECT table_id from status where table_name='$table_name' and ".
-               "table_id in (".join(", ", @table_ids).") and status.status_name_id".
-               "='$status_id'";
-    @status_ids = map $_ = "@$_",
-                   @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
-  }
-
-  return \@status_ids;
-}
-
-
-=head2 _get_status_name_id
-
-  Arg [1]    : String - status_name e.g. IMPORTED, DISPLAYABLE
-  Arg [2]    : Boolean - optional flag to throw error if status_name is not
-               present in the DB.
-  Example    : my $status_id = $self->_get_status_name_id('IMPORTED');
-  Description: Retrieves the dbID of a given status_name record
-  Returntype : Int
-  Exceptions : Throws if status name argument not defined or if throw flag is
-               set and status_name is not in the DB.
-  Caller     : Bio::EnsEMBL::Funcgen::BaseAdaptor
-  Status     : At risk - Move to Status?
-
-=cut
-
-sub _get_status_name_id{
-  my ($self, $status, $throw) = @_;
-
-  if(! defined $status){
-    throw('You must provide a status_name string argument');
-  }
-
-  my $sql = "SELECT status_name_id from status_name where name='$status'";
-  my ($status_id) = $self->db->dbc->db_handle->selectrow_array($sql);
-
-  if (! $status_id){
-    if($throw){
-      throw("Status name $status is not valid. ".
-        'Maybe you need to add it to the status_name table?');
-    }
-    else{
-      warn("Status name $status is not valid. ".
-        'Maybe you need to add it to the status_name table?');
-    }
-  }
-
-  return $status_id;
-}
+# =head2 _get_status_name_id
+# 
+#   Arg [1]    : String - status_name e.g. IMPORTED, DISPLAYABLE
+#   Arg [2]    : Boolean - optional flag to throw error if status_name is not
+#                present in the DB.
+#   Example    : my $status_id = $self->_get_status_name_id('IMPORTED');
+#   Description: Retrieves the dbID of a given status_name record
+#   Returntype : Int
+#   Exceptions : Throws if status name argument not defined or if throw flag is
+#                set and status_name is not in the DB.
+#   Caller     : Bio::EnsEMBL::Funcgen::BaseAdaptor
+#   Status     : At risk - Move to Status?
+# 
+# =cut
+# 
+# sub _get_status_name_id{
+#   my ($self, $status, $throw) = @_;
+# 
+#   if(! defined $status){
+#     throw('You must provide a status_name string argument');
+#   }
+# 
+#   my $sql = "SELECT status_name_id from status_name where name='$status'";
+#   my ($status_id) = $self->db->dbc->db_handle->selectrow_array($sql);
+# 
+#   if (! $status_id){
+#     if($throw){
+#       throw("Status name $status is not valid. ".
+#         'Maybe you need to add it to the status_name table?');
+#     }
+#     else{
+#       warn("Status name $status is not valid. ".
+#         'Maybe you need to add it to the status_name table?');
+#     }
+#   }
+# 
+#   return $status_id;
+# }
 
 
 =head2 fetch_all_by_external_name
@@ -1152,82 +1189,55 @@ sub stable_id_prefix{
 
 sub _constrain_states {
   my ($self, $states, $params) = @_;
+  return ("1=1", {});
 
-  if(! (defined $states &&
-        (ref($states) eq 'ARRAY') &&
-        (scalar(@$states) > 0) )){
-    throw('Must pass an Arrayref of states (strings) to contrain by');
-  }
-
-  if(defined $params &&
-     (ref($params) ne 'HASH') ){
-    throw('Params argument must be a Hashref');     
-  }
-
-
-  my @tables = $self->_tables;
-  my ($table_name, $syn) = @{$self->_main_table};
-  my ($status_table, $sn_ids_clause);
-
-
-  my @sn_ids = sort {$a<=>$b}
-                (map $self->_get_status_name_id($_, $params->{string_param_exists}) ||
-                 'NULL', @$states);
-  #|| NULL here accounts for absent status_names
-  #i.e. $sn_ids_clause will never be true
-
-  if(scalar(@$states) != 1){
-    #add in table_name to make it faster
-    #can't put in table_id as this would be a join between select and subselect
-    $status_table = '(SELECT table_id, table_name, group_concat(status_name_id) ids '.
-                    'FROM status WHERE table_name="'.$table_name.'" and ('.
-                    join(' OR ', (map "status_name_id=$_", @sn_ids)).
-                    ') group by table_id order by status_name_id)';
-
-    #This enforces AND logic, whilst allowing for records with a superset of states
-    $sn_ids_clause = ' s.ids like "%'.join('%,', @sn_ids).'%"';
-  }
-  else{
-    $status_table  = 'status';
-    $sn_ids_clause = 's.status_name_id='.$sn_ids[0];
-  }
-
-
-  my $constraint_conf = { tables => [[$status_table, 's']]};  #,['status_name', 'sn']),
-
-  my $constraint = " $syn.${table_name}_id=s.table_id AND ".
-    "s.table_name='$table_name' AND ".$sn_ids_clause;
-
-  return ($constraint, $constraint_conf);
+#   if(! (defined $states &&
+#         (ref($states) eq 'ARRAY') &&
+#         (scalar(@$states) > 0) )){
+#     throw('Must pass an Arrayref of states (strings) to contrain by');
+#   }
+# 
+#   if(defined $params &&
+#      (ref($params) ne 'HASH') ){
+#     throw('Params argument must be a Hashref');     
+#   }
+# 
+# 
+#   my @tables = $self->_tables;
+#   my ($table_name, $syn) = @{$self->_main_table};
+#   my ($status_table, $sn_ids_clause);
+# 
+# 
+#   my @sn_ids = sort {$a<=>$b}
+#                 (map $self->_get_status_name_id($_, $params->{string_param_exists}) ||
+#                  'NULL', @$states);
+#   #|| NULL here accounts for absent status_names
+#   #i.e. $sn_ids_clause will never be true
+# 
+#   if(scalar(@$states) != 1){
+#     #add in table_name to make it faster
+#     #can't put in table_id as this would be a join between select and subselect
+#     $status_table = '(SELECT table_id, table_name, group_concat(status_name_id) ids '.
+#                     'FROM status WHERE table_name="'.$table_name.'" and ('.
+#                     join(' OR ', (map "status_name_id=$_", @sn_ids)).
+#                     ') group by table_id order by status_name_id)';
+# 
+#     #This enforces AND logic, whilst allowing for records with a superset of states
+#     $sn_ids_clause = ' s.ids like "%'.join('%,', @sn_ids).'%"';
+#   }
+#   else{
+#     $status_table  = 'status';
+#     $sn_ids_clause = 's.status_name_id='.$sn_ids[0];
+#   }
+# 
+# 
+#   my $constraint_conf = { tables => [[$status_table, 's']]};  #,['status_name', 'sn']),
+# 
+#   my $constraint = " $syn.${table_name}_id=s.table_id AND ".
+#     "s.table_name='$table_name' AND ".$sn_ids_clause;
+# 
+#   return ($constraint, $constraint_conf);
 }
-
-
-
-### DEPRECATED ###
-
-sub list_dbIDs { #Deprecated in v69
-	my $self = shift;
-  deprecate('Please use _list_dbIDs.');
-	return $self->_list_dbIDs($self->_main_table->[0]);
-}
-
-sub _constrain_status { #Deprecated in v73
-  my ($self, $state) = @_;
-
-  deprecate("The 'state' contraint key is deprecated, please use the following instead:\n\t".
-    "'states' => ['state1', ...]");
-
-  return $self->_constrain_states([$state]);
-}
-
-sub fetch_all_by_status{ #deprecated in v51
-  my ($self, $status) = @_;
-
-  deprecate('Use fetch_all($status) instead');
-  return $self->fetch_all($status);
-
-}
-
 
 1;
 

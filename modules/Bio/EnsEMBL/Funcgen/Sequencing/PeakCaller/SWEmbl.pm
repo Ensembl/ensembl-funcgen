@@ -44,7 +44,12 @@ sub new {
   my $class           = ref($caller) || $caller;
   my $self            = $class->SUPER::new(@_);  # @_ will over-ride -is_half_open
   #This needs setting here, ss we may need it for reload (i.e. without calling run)      
-  $self->{out_file} ||= $self->out_file_prefix.'.'.$self->out_file_types->[0];
+#   $self->{out_file} ||= $self->out_file_prefix.'.'.$self->out_file_types->[0];
+  
+  if (! exists $self->{out_file}) {
+    die("out_file parameter has not been set!");
+  }
+  
   return $self;
 }
 
@@ -70,18 +75,30 @@ sub run {
     throw("-i(input_file) and -r(eference/input file cannot have mixed compression states:\n\t".
       $align_file."\n\t".$control_file);  
   }
+  
+  my $output_file = $self->out_file;
  
   #Sometimes SWEmbl fails to open output file if it exists already
-  unlink($self->out_file);
+  unlink($output_file);
  
   my $cmd = $self->program_file." $format_switch -i $compressed ".
-    $self->align_file.' '. $self->parameters.' -o '.$self->out_file;
-  $cmd .= " -r ".$self->control_file if $self->control_file;
+    $self->align_file.' '. $self->parameters.' -o '.$output_file;
+    
+  if ($self->control_file) {
+    $cmd .= " -r ".$self->control_file;
+  } else {
+    use Carp;
+    confess("No control file specified!");
+  }
   
-  warn "Running:\t$cmd\n" if $self->debug;
+#   warn "Running:\t$cmd\n" if $self->debug;
+  warn "Running:\t$cmd\n";
   #This did no cause failure when failed
   run_system_cmd($cmd);
-     
+  
+  if (! -e $output_file) {
+    confess("The expected output file ($output_file) does not exist!");
+  }
   return;
 }
 
@@ -93,7 +110,17 @@ sub run {
 #For other PeakCallers, handling the file_type and converting it to a file
 #a file suffic is currently internal (see CCAT)
 
-sub filter_max_peaks{
+=head2 filter_max_peaks
+
+  Creates a new peak file with $max_peaks peaks. It takes the content of the 
+  original peak file, sorts it by column 7, which is the score and takes the
+  top $max_peaks peaks from there. The output is sorted by columns 1 and 2,
+  which is the sequence name and start position.
+  
+  The file_type argument is ignored.
+
+=cut
+sub filter_max_peaks {
   my $self      = shift;
   my $max_peaks = shift;
   my $file_type = shift; 
