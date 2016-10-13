@@ -847,7 +847,7 @@ sub get_databases {
 
 sub get_arrays {
   my ($xref_db, $vendor, $array_names) = @_;
-  my $array_format;
+  my $first_array_format;
   my $aa = $xref_db->get_ArrayAdaptor();
   my %arrays = ();
 
@@ -857,11 +857,11 @@ sub get_arrays {
     if(! $array) {
       croak("Could not find $vendor $name array in DB");
     }
-
-    $array_format ||= $array->format();
-
-    if($array->format ne $array_format) {
-      croak('You must not map arrays of different formats in the same process');
+    $first_array_format ||= $array->format;
+    if($array->format ne $first_array_format) {
+      croak(
+        "You must not map arrays of different formats in the same process. The first array format was: $first_array_format but one of them has the format " . $array->format
+      );
     }
 
     $arrays{$name} = $array;

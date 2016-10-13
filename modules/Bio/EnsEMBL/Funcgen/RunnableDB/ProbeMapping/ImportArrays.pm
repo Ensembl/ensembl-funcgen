@@ -544,45 +544,8 @@ sub write_output {
        $probe->probeset($probeset) if $probeset ne 'NO_PROBESET';
        
        ($probe) = @{$probe_adaptor->store($probe)};
-       
-#       print OUTFILE ">".$probe->dbID."\n".$sequence."\n";
      }
   }
-
-#   close(OUTFILE);
-
-
-  #No we record imported as we need the nr_fasta dump?
-  #Or are we going to allow this to run if already import
-  #and just create the nr_fasta by querying the db for probe dbID
-  #and using the sequence from the input file?
-
-
-  #And now the array names and states
-#   $outfile = $self->NAMES_FILE;
-#   open (OUTFILE, ">".$outfile) || throw("Failed to open ouput file:\t".$outfile);
-
-
-  print "Setting IMPORTED & DISPLAYABLE states for:\n";
-
-  #MART_DISPLAYABLE & DISPLAYABLE should be on Array level
-  #IMPORTED should be on ArrayChip
-  #This all looks good, but everything for AGILENT re-imported is on array_chip?!!
-
-  foreach my $aname(keys %{$self->{'_array_names'}}){
-    print "\t".$aname."\n";
-#     print OUTFILE $aname."\n";
-    $self->{'_array_names'}->{$aname}->add_status('IMPORTED');
-    $self->{'_arrays'}->{$aname}->add_status('DISPLAYABLE');#This should be on Array?!
-    #$self->{'_arrays'}->{$aname}->add_status('MART_DISPLAYABLE');#Now done in probe2transcript
-
-    $self->{'_array_names'}->{$aname}->adaptor->store_states($self->{'_array_names'}->{$aname});	
-    $self->{'_arrays'}->{$aname}->adaptor->store_states($self->{'_arrays'}->{$aname});	
-  }
-
-
-#   close(OUTFILE);
-  
   return;
 }
 
@@ -622,7 +585,9 @@ sub outdb {
 	  );
    
 	if(! $self->DNADB->{-dbname}){
-	  print "WARNING: Using default DNADB ". $self->{'_outdb'}->dnadb->dbname."\n";
+#           use Data::Dumper;
+#           print Dumper($self->{'_outdb'}->dnadb);
+	  print "WARNING: Using default DNADB ". $self->{'_outdb'}->dnadb->dbc->dbname."\n";
 	}
 	
   }
