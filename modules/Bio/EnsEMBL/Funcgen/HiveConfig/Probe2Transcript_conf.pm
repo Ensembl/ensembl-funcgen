@@ -137,11 +137,11 @@ sub _pipeline_analyses_probe2transcript {
             },
             -input_ids => [ 
 	      {
- 		inputquery => 'select group_concat(name separator " ") as arrays, vendor, class from array where format!="METHYLATION" group by vendor, class',
+ 		inputquery => 'select group_concat(name separator " ") as arrays, vendor, class from array where format!="METHYLATION" group by vendor, class, format',
 	      },
             ],
             -flow_into => {
-               2 => [ 'Probe2Transcript' ],              
+               2 => [ 'Probe2Transcript' ],
             },
             -wait_for => [ 
 	      'UpdateTranscriptXrefs', 
