@@ -10,48 +10,35 @@ sub run {
     my $logger = Bio::EnsEMBL::Utils::Logger->new();    
     my $error_msg;
 
-#     #
-#     # pipeline_repository_dir is needed to find other files
-#     # 
-#     my $pipeline_repository_dir = $self->param('pipeline_repository_dir');    
-#     if (! $pipeline_repository_dir) {    
-#       $error_msg .= "pipeline_repository_dir parameter has not been set.\n";
-#     } elsif (! -d $pipeline_repository_dir) {    
-#       $error_msg .= "The directory $pipeline_repository_dir does not exist.\n";
-#     }
-#     
-#     if ($error_msg) {
-#       die($error_msg);
-#     }    
-#     #
-#     # Files we are expecting but might not be there
-#     #    
-#     my $expected_files = [
-#       'sql/table.sql',
-# #       'sql/array2organism.sql',
-#       'sql/probe_seq.sql',
-# #       'sql/probe_alias.sql'
-#     ];
-#     
-#     foreach my $current_expected_file (@$expected_files) {
-# 	my $file_name_with_full_path = $pipeline_repository_dir . '/' . $current_expected_file;
-#     
-# 	if (! -e $file_name_with_full_path) {
-# 	  $error_msg .= "File $current_expected_file in $pipeline_repository_dir is missing.\n";
-# 	}
-#     }
-
-    my @programs_expected_in_path = qw(
-      import_parse_probe_fasta_file.pl
-      import_create_array_objects.pl
-      import_store_array_objects.pl
-    );
+    #
+    # pipeline_repository_dir is needed to find other files
+    # 
+    my $pipeline_repository_dir = $self->param('pipeline_repository_dir');    
+    if (! $pipeline_repository_dir) {    
+      $error_msg .= "pipeline_repository_dir parameter has not been set.\n";
+    } elsif (! -d $pipeline_repository_dir) {    
+      $error_msg .= "The directory $pipeline_repository_dir does not exist.\n";
+    }
     
-    foreach my $current_program (@programs_expected_in_path) {
-      system("which $current_program > /dev/null");
-      if ($?) {
-        $error_msg .= "Can't find $current_program in path. These scripts are part of the ensembl-funcgen repository.\n";
-      }
+    if ($error_msg) {
+      die($error_msg);
+    }    
+    #
+    # Files we are expecting but might not be there
+    #    
+    my $expected_files = [
+      'sql/table.sql',
+#       'sql/array2organism.sql',
+      'sql/probe_seq.sql',
+#       'sql/probe_alias.sql'
+    ];
+    
+    foreach my $current_expected_file (@$expected_files) {    
+	my $file_name_with_full_path = $pipeline_repository_dir . '/' . $current_expected_file;
+    
+	if (! -e $file_name_with_full_path) {
+	  $error_msg .= "File $current_expected_file in $pipeline_repository_dir is missing.\n";
+	}
     }
 
     my $mysql_bin = `which mysql`;

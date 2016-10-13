@@ -160,7 +160,7 @@ sub fetch_input {
   $funcgen_adaptor->dbc->reconnect_when_lost(1);
   $funcgen_adaptor->dnadb->dbc->reconnect_when_lost(1);  
   $funcgen_adaptor->dbc->disconnect_when_inactive(1);
-  $funcgen_adaptor->dnadb->disconnect_when_inactive(1);
+  $funcgen_adaptor->dnadb->dbc->disconnect_when_inactive(1);
   
   $self->dbc->disconnect_when_inactive(1);
   
