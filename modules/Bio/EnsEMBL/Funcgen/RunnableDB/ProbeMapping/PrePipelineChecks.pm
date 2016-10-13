@@ -28,9 +28,9 @@ sub run {
     #    
     my $expected_files = [
       'sql/table.sql',
-      'sql/array2organism.sql',
+#       'sql/array2organism.sql',
       'sql/probe_seq.sql',
-      'sql/probe_alias.sql'
+#       'sql/probe_alias.sql'
     ];
     
     foreach my $current_expected_file (@$expected_files) {    

@@ -154,7 +154,7 @@ sub fetch_input {
   $funcgen_adaptor->dbc->reconnect_when_lost(1);
   $funcgen_adaptor->dnadb->dbc->reconnect_when_lost(1);  
   $funcgen_adaptor->dbc->disconnect_when_inactive(1);
-  $funcgen_adaptor->dnadb->disconnect_when_inactive(1);
+  $funcgen_adaptor->dnadb->dbc->disconnect_when_inactive(1);
   
   $self->dbc->disconnect_when_inactive(1);
   
@@ -227,7 +227,7 @@ sub fetch_input {
 
 
   my $sql = "select external_db_id from external_db where db_name='$db_name' and db_release='$schema_build'";
-  my ($extdb_id) = $self->outdb->db_handle->selectrow_array($sql);
+  my ($extdb_id) = $self->outdb->dbc->db_handle->selectrow_array($sql);
 	
  
   #This is causing redundant edb entries as parallel job store the same entry, which is not constrained by unique key.
