@@ -248,7 +248,7 @@ sub _pipeline_analyses_probe_align {
             -input_ids => [ 
 	      {
 		inputfile => $self->o('unmapped_sequences_file'),
-		max_chunk_length => 1000,
+		max_chunk_length => 100000,
 		output_dir => $self->o('tempdir'),
 		output_prefix => 'probe_chunk_',
 		output_suffix => '.fasta',
