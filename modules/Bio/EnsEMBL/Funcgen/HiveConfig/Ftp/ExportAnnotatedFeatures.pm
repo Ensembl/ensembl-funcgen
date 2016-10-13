@@ -94,7 +94,8 @@ sub pipeline_analyses {
         {   -logic_name  => 'sort_annotated_features_gff',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'sort -k1,1 -k4,4n -o #merged_gff# #merged_gff#.unsorted ; sleep 10',
+#                 cmd => 'sort -k1,1 -k4,4n -o #merged_gff# #merged_gff#.unsorted ; sleep 10',
+                cmd => 'bedSort #merged_bed#.unsorted #merged_bed# ; sleep 10',
             },
             -flow_into   => {
                MAIN => 'gzip_annotated_features_gff',
