@@ -1159,7 +1159,7 @@ CREATE TABLE `epigenome` (
   `display_label` varchar(30) NOT NULL,
   `description` varchar(80) DEFAULT NULL,
   `production_name` varchar(120) DEFAULT NULL,
-  `gender` enum('male','female','hermaphrodite','mixed') DEFAULT NULL,
+  `gender` enum('male','female','hermaphrodite','mixed','unknown') DEFAULT NULL,
   `ontology_accession` varchar(20) DEFAULT NULL,
   `ontology` enum('EFO','CL') DEFAULT NULL,
   `tissue` varchar(50) DEFAULT NULL,
@@ -1330,11 +1330,10 @@ INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '86');
 
 -- Update and remove these for each release to avoid erroneous patching
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_85_86_a.sql|schema_version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_85_86_b.sql|Drop tables epigenome_lineage and lineage');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_85_86_c.sql|Add production name column to feature_type table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_85_86_d.sql|Add new columns to input_subset table to accommodate paired-end data');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_85_86_e.sql|Add QC tables');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_86_87_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_86_87_b.sql|Change data type of certain columns to facilitate foreing key constraints');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_86_87_c.sql|Remove obsolete coloumns from external_feature_file');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_86_87_d.sql|Add \'unknown\' as a valid gender in the epigenome table');
 
 /**
 @table meta_coord

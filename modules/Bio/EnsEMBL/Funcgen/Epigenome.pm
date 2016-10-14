@@ -71,13 +71,12 @@ use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
 use parent qw(Bio::EnsEMBL::Funcgen::Storable);
 
-my %valid_genders = (
-	male   => 1,
-	female => 1,
-	hermaphrodite => 1,
-	mixed => 1,
-	unknown => 1
-);
+my %valid_genders = (male   => 1,
+                     female => 1,
+                     hermaphrodite => 1,
+                     mixed => 1,
+                     unknown => 1 
+                    );
 
 =head2 new
 
