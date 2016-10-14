@@ -551,7 +551,7 @@ DROP TABLE IF EXISTS `data_set`;
 CREATE TABLE `data_set` (
   `data_set_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `feature_set_id` int(10) unsigned NOT NULL DEFAULT '0',
-  `name` varchar(100) DEFAULT NULL,
+  `name` varchar(200) DEFAULT NULL,
   PRIMARY KEY (`data_set_id`,`feature_set_id`),
   UNIQUE KEY `name_idx` (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -1334,6 +1334,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patc
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_86_87_b.sql|Change data type of certain columns to facilitate foreing key constraints');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_86_87_c.sql|Remove obsolete coloumns from external_feature_file');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_86_87_d.sql|Add \'unknown\' as a valid gender in the epigenome table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_86_87_e.sql|Increase data_set.name length');
 
 /**
 @table meta_coord
