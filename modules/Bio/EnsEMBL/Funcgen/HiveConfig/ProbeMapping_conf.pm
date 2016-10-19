@@ -65,7 +65,7 @@ sub _pipeline_analyses_probe_align {
 		  . ( $self->o('tracking_pass') ? ' -dbpass ' . $self->o('tracking_pass') : '' )
 		  
 		  . ' -arrays #all_array_names# -force',
-            },
+            },            
             -flow_into => {
                1 => [ 'ImportArrays' ],
             },
@@ -115,10 +115,8 @@ sub _pipeline_analyses_probe_align {
               db_conn => $self->_create_db_url_from_dba_hash($self->o('tracking_dba_hash')),
             },
             -input_ids   => [ 
-              { sql     => [ 'create unique index temp_seq_region_probe_analysis_idx on probe_feature (`seq_region_id`,`seq_region_start`, `seq_region_end`, `probe_id`, `analysis_id`)', ], },
-              
-              # Not a unique index, because probes can share sequences.
               { sql     => [ 'create index temp_probe_probe_seq_id on probe (probe_seq_id)', ], },
+              { sql     => [ 'create index temp_seq_region_probe_analysis_idx on probe_feature (`seq_region_id`,`seq_region_start`, `seq_region_end`, `probe_id`, `analysis_id`)', ], },
             ],
             -wait_for    => [ 'ImportArrays', 'ImportArrays8Gb', 'ImportArrays16Gb', 'ImportArrays64Gb', ],
         },
@@ -248,7 +246,7 @@ sub _pipeline_analyses_probe_align {
             -input_ids => [ 
 	      {
 		inputfile => $self->o('unmapped_sequences_file'),
-		max_chunk_length => 100000,
+		max_chunk_length => 1000,
 		output_dir => $self->o('tempdir'),
 		output_prefix => 'probe_chunk_',
 		output_suffix => '.fasta',
