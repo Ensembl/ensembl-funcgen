@@ -30,6 +30,11 @@ sub _dereference_hash {
   return %{&_hash_placeholder};
 }
 
+sub beekeeper_extra_cmdline_options {
+    my ($self) = @_;
+    return '-keep_alive -can_respecialize 1';
+}
+
 sub default_options {
     my ($self) = @_;
     return {
@@ -55,7 +60,7 @@ sub default_options {
 	transcript_dump_file    => $self->o('tempdir') . '/target_genes.fasta',
 	unmapped_sequences_file => $self->o('tempdir') . '/unmapped_probe_sequences.fasta',
 	
-	tempdir => '/lustre/scratch109/ensembl/funcgen/array_mapping/'.$ENV{USER}.'/temp/' .$self->o('species'),
+	tempdir => '/lustre/scratch110/ensembl/funcgen/array_mapping/'.$ENV{USER}.'/temp/' .$self->o('species'),
 	
 	tracking_dba_hash => {
 	    -user         => $self->o('tracking_user'),
@@ -96,7 +101,7 @@ sub _pipeline_analyses_probe2transcript {
             -can_be_empty => 1,
             -rc_name    => '4Gb_job',
             -parameters => {
-                'cmd' => 'update_transcript_xrefs.pl --species #species# --transcript_dbname #dnadb_name# --transcript_host #dnadb_host# --transcript_port #dnadb_port# --transcript_user #dnadb_user# #dnadb_pass# --xref_host #xref_host# --xref_dbname #xref_dbname# --xref_user #xref_user# #xref_pass#',
+                'cmd' => 'update_transcript_xrefs.pl --species #species# --transcript_dbname #dnadb_name# --transcript_host #dnadb_host# --transcript_port #dnadb_port# --transcript_user #dnadb_user# #dnadb_pass# --xref_host #xref_host# --xref_dbname #xref_dbname# --xref_user #xref_user# #xref_pass# --xref_port #xref_port#',
             },
             -input_ids => [ 
 	      {           
@@ -137,11 +142,11 @@ sub _pipeline_analyses_probe2transcript {
             },
             -input_ids => [ 
 	      {
- 		inputquery => 'select group_concat(name separator " ") as arrays, vendor, class from array where format!="METHYLATION" group by vendor, class, format',
+ 		inputquery => 'select replace(group_concat(name), ",", " " ) as arrays, vendor, class from array where format!="METHYLATION" group by vendor, class',
 	      },
             ],
             -flow_into => {
-               2 => [ 'Probe2Transcript' ],
+               2 => [ 'Probe2Transcript' ],              
             },
             -wait_for => [ 
 	      'UpdateTranscriptXrefs', 
