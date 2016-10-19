@@ -136,7 +136,7 @@ my $logger = Bio::EnsEMBL::Utils::Logger->new();
 $logger->init_log;
 
 if (! -e $peak_file) {
-  $logger->error("The peak file $bam_file does not exist!\n");
+  $logger->error("The peak file $peak_file does not exist!\n");
 }
 if (! -e $bam_file) {
   $logger->error("The signal bam file $bam_file does not exist!\n");
