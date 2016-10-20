@@ -6,6 +6,11 @@ use File::Spec;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Hive::DBSQL::DBConnection;
 use Getopt::Long;
+use Data::Dumper;
+use Bio::EnsEMBL::Funcgen::Utils::ExportUtils qw(
+  assert_source_files_exist
+  assert_destination_file_names_uniqe
+);
 
 =head1
 
@@ -27,6 +32,7 @@ my $assembly;
 my $data_freeze_date;
 my $destination_root_path;
 my @species_assembly_data_file_base_path;
+my $die_if_source_files_missing = 1;
 
 GetOptions (
    'registry=s'              => \$registry,
@@ -34,6 +40,7 @@ GetOptions (
    'assembly=s'              => \$assembly,
    'data_freeze_date=s'      => \$data_freeze_date,
    'destination_root_path=s' => \$destination_root_path,
+   'die_if_source_files_missing=s'          => \$die_if_source_files_missing,
    'species_assembly_data_file_base_path=s' => \@species_assembly_data_file_base_path,
 );
 
@@ -83,6 +90,20 @@ foreach my $current_segmentation_file (@$all_segmentation_files) {
   my $destination_file = $destination_root_path . '/' .$destination_file_name;
   
   $source_file_to_destination_file_map{$source_file} = $destination_file;
+}
+
+my @non_existing_source_files = assert_source_files_exist(keys %source_file_to_destination_file_map);
+
+if (@non_existing_source_files) {
+  if ($die_if_source_files_missing) {
+    die(
+      "The following files from the database do not exist: " . Dumper(@non_existing_source_files) . "\n"
+    );
+  } else {
+    $logger->warning(
+      "The following files from the database do not exist: " . Dumper(@non_existing_source_files) . "\n"
+    );
+  }
 }
 
 $logger->info("Generating commands for creating the ftp site\n");
