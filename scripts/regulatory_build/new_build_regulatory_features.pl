@@ -2948,11 +2948,17 @@ sub compute_ChromHMM_label_state {
   my $output = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$label.final.bed";
   my $reference = "$options->{working_dir}/build/$label.bed";
 
+  ## Hack to resolve issue https://www.ebi.ac.uk/panda/jira/browse/ENSREGULATION-417
+  (my $epigenome_name = $celltype) =~ s/_25_SEGMENTS//;
+  my $clean_epigenome_name = clean_name($epigenome_name);
+
   my $temp;
   if ($label eq 'tfbs') {
-    $temp = "$options->{working_dir}/celltype_tf/$celltype.bed";
+    #$temp = "$options->{working_dir}/celltype_tf/$celltype.bed";
+    $temp = "$options->{working_dir}/celltype_tf/$clean_epigenome_name.bed";
   } elsif ($label eq 'dnase') {
-    $temp = "$options->{working_dir}/celltype_dnase/$celltype.bed";
+    #$temp = "$options->{working_dir}/celltype_dnase/$celltype.bed";
+    $temp = "$options->{working_dir}/celltype_dnase/$clean_epigenome_name.bed";
   } else {
     $temp = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$label.bed";
   }
