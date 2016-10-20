@@ -7,6 +7,10 @@ use File::Spec;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Hive::DBSQL::DBConnection;
 use Getopt::Long;
+use Bio::EnsEMBL::Funcgen::Utils::ExportUtils qw(
+  assert_source_files_exist
+  assert_destination_file_names_uniqe
+);
 
 =head1 Examples
 
@@ -42,7 +46,7 @@ my $species;
 my @species_assembly_data_file_base_path;
 my $destination_root_path;
 my $file_type;
-my $die_if_source_files_missing = 0;
+my $die_if_source_files_missing = 1;
 my $assembly;
 
 use Date::Format;
@@ -61,12 +65,20 @@ GetOptions (
    'destination_root_path=s'                => \$destination_root_path,
 );
 
+use Bio::EnsEMBL::Utils::Logger;
+my $logger = Bio::EnsEMBL::Utils::Logger->new();
+
 if (! defined $assembly) {
   die("assembly (used in the file name only) has not been set!");
 }
 if (@species_assembly_data_file_base_path==0) {
   die("species_assembly_data_file_base_path has not been set!");
 }
+# foreach my $current_path (@species_assembly_data_file_base_path) {
+#   if (! -d $current_path) {
+#     $logger->error("$current_path is not an existing directory!");
+#   }
+# }
 # if (! -d $species_assembly_data_file_base_path[0]) {
 #   die($species_assembly_data_file_base_path[0] . " is not an existing directory!");
 # }
@@ -78,9 +90,6 @@ if ($file_type ne 'bam' && $file_type ne 'bigwig') {
 }
 
 Bio::EnsEMBL::Registry->load_all($registry);
-
-use Bio::EnsEMBL::Utils::Logger;
-my $logger = Bio::EnsEMBL::Utils::Logger->new();
 
 my $funcgen_db_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
 
@@ -121,8 +130,8 @@ from
   join feature_type using (feature_type_id)
   join dbfile_registry signal_file    on (signal_file.table_name='result_set'    and signal_file.table_id=result_set_id    and signal_file.file_type='$db_file_type')
   join analysis on (result_set.analysis_id=analysis.analysis_id)
-  join experiment signal using (experiment_id)
-  left join experiment control on (signal.control_id=control.experiment_id)
+  join experiment the_signal using (experiment_id)
+  left join experiment control on (the_signal.control_id=control.experiment_id)
   join result_set control_alignment on (control.experiment_id=control_alignment.experiment_id)
   join feature_type control_feature_type on (control_alignment.feature_type_id=control_feature_type.feature_type_id)
   left join dbfile_registry control_file    on (control_file.table_name='result_set'    and control_file.table_id=control_alignment.result_set_id    and control_file.file_type='$db_file_type')
@@ -150,6 +159,7 @@ $sth->execute;
 # }
 
 my %source_file_to_destination_file_map;
+my @file_not_found;
 while (my $hash_ref = $sth->fetchrow_hashref) {
 
   translate($hash_ref);
@@ -166,13 +176,18 @@ while (my $hash_ref = $sth->fetchrow_hashref) {
   # Find the right base path among the ones provided, if none can be found, leave empty.
   #
   my $this_files_species_assembly_data_file_base_path;
+  my $found_file_in_path = undef;
   POSSIBLE_ROOT_BASE_PATH:
   foreach my $current_species_assembly_data_file_base_path (@species_assembly_data_file_base_path) {
     my $source_file_candidate = $current_species_assembly_data_file_base_path . '/' . $hash_ref->{signal_alignment}->{file};
     if (-e $source_file_candidate) {
       $this_files_species_assembly_data_file_base_path = $current_species_assembly_data_file_base_path;
+      $found_file_in_path = 1;
       last POSSIBLE_ROOT_BASE_PATH;
     }
+  }
+  if (!$found_file_in_path) {
+    push @file_not_found, $hash_ref->{signal_alignment}->{file};
   }
   my $source_file = $this_files_species_assembly_data_file_base_path . '/' . $hash_ref->{signal_alignment}->{file};
   
@@ -188,8 +203,14 @@ while (my $hash_ref = $sth->fetchrow_hashref) {
     $data_freeze_date,
     $destination_file_extension
   );
-  
   $source_file_to_destination_file_map{$source_file} = "$destination_root_path/$destination_directory/$destination_file";
+}
+
+if (@file_not_found) {
+  $logger->error(
+    "The following files were not found:\n" . join "\n", map { '  - ' . $_ } @file_not_found
+  );
+  die;
 }
 
 my @non_existing_source_files = assert_source_files_exist(keys %source_file_to_destination_file_map);
@@ -210,7 +231,9 @@ foreach my $current_not_existing_file (@non_existing_source_files) {
   delete $source_file_to_destination_file_map{$current_not_existing_file};
 }
 
-$logger->info("Checking that destination files are unique\n");
+my $number_of_destination_files = scalar values %source_file_to_destination_file_map;
+
+$logger->info("Planning for " . $number_of_destination_files . " destination files. Checking that the names are unique\n");
 assert_destination_file_names_uniqe(\%source_file_to_destination_file_map);
 
 $logger->info("Generating commands for creating the ftp site\n");
@@ -230,84 +253,14 @@ foreach my $current_source_file (keys %source_file_to_destination_file_map) {
   push @cmd, qq(ln -s $current_source_file $destination_file);
 }
 
-$logger->info("Running commands for creating the ftp site\n");
+$logger->info("Running ".scalar @cmd." commands for creating the ftp site\n");
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd );
 foreach my $current_cmd (@cmd) {
+  $logger->info("$current_cmd\n");
   run_system_cmd($current_cmd, undef, 1);
 }
 
 $logger->info("All done.\n");
-
-# 
-# use Data::Dumper;
-# print Dumper(\%source_file_to_destination_file_map);
-
-sub assert_source_files_exist {
-
-  my @file_list = @_;
-  my @not_existing_files;
-  foreach my $current_file (@file_list) {
-    if (!-e $current_file) {
-      push @not_existing_files, $current_file;
-    }
-  }
-  return @not_existing_files;
-}
-
-sub assert_destination_file_names_uniqe {
-
-  my $source_file_to_destination_file_map = shift;
-  my $destination_file_to_more_than_one_source_file = find_duplicates(\%source_file_to_destination_file_map);
-  
-  my $duplicates_found = keys $destination_file_to_more_than_one_source_file;
-  
-  if ($duplicates_found) {
-    use Data::Dumper;
-    use Carp;
-    confess(
-      "There is a problem with naming the new files. The following have more "
-      . "than one source file that would map to it: " 
-      . Dumper(\$destination_file_to_more_than_one_source_file)
-    );
-  }
-  return
-}
-
-sub find_duplicates {
-
-  my $source_file_to_destination_file_map = shift;
-  
-  # Map from destination file to the source files that map to it. If
-  # there is more than one, we have a problem.
-  #
-  my %destination_file_to_source_file_list;
-  
-  my %bam_file_to_from = reverse %$source_file_to_destination_file_map;
-  my @destination_file_list = values %bam_file_to_from;
-  
-  for my $current_destination_file (@destination_file_list) {
-    if (!exists $destination_file_to_source_file_list{$current_destination_file}) {
-      $destination_file_to_source_file_list{$current_destination_file} = [];
-    }
-    my $source_file = $bam_file_to_from{$current_destination_file};
-    push $destination_file_to_source_file_list{$current_destination_file}, $source_file;
-  }
-  
-  # Like %destination_file_to_source_file_list, but only with those 
-  # destination files to which more than one source file maps. These are the
-  # ones that will cause problems.
-  #
-  my %destination_file_to_more_than_one_source_file;
-  foreach my $destination_file (keys %destination_file_to_source_file_list) {
-  
-    my $number_of_source_files_mapped_to_this_file = @{$destination_file_to_source_file_list{$destination_file}};
-    
-    if ($number_of_source_files_mapped_to_this_file > 1) {
-      $destination_file_to_more_than_one_source_file{$destination_file} = $destination_file_to_source_file_list{$destination_file};
-    }
-  }
-  return \%destination_file_to_more_than_one_source_file;
-}
 
 sub create_replicate_description_string {
 
