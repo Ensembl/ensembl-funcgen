@@ -336,8 +336,8 @@ sub get_cell_type_names {
   my @cell_types = ();
   foreach my $file (glob "$base_dir/projected_segmentations/*.bb") {
     my $cell_type_name = basename $file;
-    $cell_type_name =~ s/\.bb//;
-#     $cell_type_name =~ s/_\d+_SEGMENTS\.bb//;
+#     $cell_type_name =~ s/\.bb//;
+     $cell_type_name =~ s/_\d+_SEGMENTS\.bb//;
     if (!exists $cell_type_from_clean{$cell_type_name}) {
     
       my @known_cell_types = sort keys %cell_type_from_clean;
@@ -366,7 +366,8 @@ sub get_cell_type_names {
 sub run {
   my ($cmd) = @_;
   print_log($cmd . "\n");
-  system($cmd) && die("Failed when running command:\n$cmd\n");
+  use Carp;
+  system($cmd) && confess("Failed when running command:\n$cmd\n");
 }
 
 =head2
@@ -641,16 +642,16 @@ sub get_feature_types {
 
 sub compute_regulatory_features {
   my ($options, $cell_type, $feature_type, $stable_id, $count_hash, $slice, $db, $new_regulatory_build) = @_;
-  my $rfa = $db->get_adaptor("RegulatoryFeature");
+  my $regulatory_feature_adaptor = $db->get_adaptor("RegulatoryFeature");
    
-  my $regulatory_features = load_regulatory_build($options->{base_dir}, $stable_id, $count_hash, $slice, $feature_type, $rfa, $new_regulatory_build);
+  my $regulatory_features = load_regulatory_build($options->{base_dir}, $stable_id, $count_hash, $slice, $feature_type, $regulatory_feature_adaptor, $new_regulatory_build);
  
-  print "Going through cell types ".(scalar @$cell_type)."\n";
+  print "Going through ".(scalar @$cell_type)." cell types\n";
   foreach my $current_cell_type (@$cell_type) {
     load_celltype_activity($options->{base_dir}, $current_cell_type, $regulatory_features);
   }
 
-  $rfa->store(values %$regulatory_features);
+  $regulatory_feature_adaptor->store(values %$regulatory_features);
 }
 
 =head2 load_regulatory_build
@@ -669,7 +670,7 @@ sub compute_regulatory_features {
 =cut
 
 sub load_regulatory_build {
-  my ($base_dir, $stable_id, $count_hash, $slice, $feature_type, $rfa, $new_regulatory_build) = @_;
+  my ($base_dir, $stable_id, $count_hash, $slice, $feature_type, $regulatory_feature_adaptor, $new_regulatory_build) = @_;
   
   print_log("\tLoading Regulatory Features\n");
 
@@ -677,7 +678,7 @@ sub load_regulatory_build {
   my $bigbed = "$base_dir/overview/RegBuild.bb";
   run("bigBedToBed $bigbed $tmp_name");
 
-  my $regulatory_features = process_regulatory_build_file($tmp, $stable_id, $count_hash, $slice, $feature_type, $rfa, $new_regulatory_build);
+  my $regulatory_features = process_regulatory_build_file($tmp, $stable_id, $count_hash, $slice, $feature_type, $regulatory_feature_adaptor, $new_regulatory_build);
 
   close $tmp;
   unlink $tmp_name;
@@ -752,7 +753,8 @@ sub load_celltype_activity {
   print_log("\tProcessing data from cell type " . $cell_type->display_label . " (". $cell_type->name .")" . "\n");
 
   my $cell_type_name = clean_name($cell_type->production_name);
-  my $bigbed = "$base_dir/projected_segmentations/$cell_type_name.bb";
+#   my $bigbed = "$base_dir/projected_segmentations/$cell_type_name.bb";
+  my $bigbed = "$base_dir/projected_segmentations/${cell_type_name}_25_SEGMENTS.bb";
   my ($tmp, $tmp_name) = tempfile();
   run("bigBedToBed $bigbed $tmp_name");
 
@@ -782,7 +784,7 @@ sub process_celltype_file {
     use Bio::EnsEMBL::Funcgen::RegulatoryActivity;
     my $regulatory_activity = Bio::EnsEMBL::Funcgen::RegulatoryActivity->new;
     $regulatory_activity->activity($rgb_state{$rgb});
-    $regulatory_activity->epigenome_id($cell_type->dbID);
+    $regulatory_activity->_epigenome_id($cell_type->dbID);
     
     exists $regulatory_feature->{$name} || die("Could not find Regulatory Feature for $name\n");
     $regulatory_feature->{$name}->add_regulatory_activity($regulatory_activity);
