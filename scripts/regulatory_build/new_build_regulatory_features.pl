@@ -177,6 +177,10 @@ sub main {
   # $options->{segmentations} is not being set!
   #
   print Dumper($options->{segmentations});
+  if (@{$options->{segmentations}} == 0) {
+    use Carp;
+    confess("No segmentations have been set!");
+  }
 #   die();
   
   compute_states($options);
@@ -262,6 +266,13 @@ sub read_command_line {
 
   $options{output_dir} = $options{out};
   $options{working_dir} = $options{tmp};
+
+  if (! exists $options{dump}) {
+    die('"dump" is a mandatory parameter and has not been set.');
+  }
+  if (! -e $options{dump}) {
+    die("The file " . $options{dump} . " does not exist!");
+  }
 
   return \%options;
 }
@@ -389,7 +400,8 @@ sub run {
   print_log("Running $cmd\n");
   my $exit_code = system($cmd);
   if ($exit_code != 0) {
-    die("Failure when running command\n$cmd\n")
+    use Carp;
+    confess("Failure when running command\n$cmd\n")
   }
 }
 
@@ -571,9 +583,9 @@ sub get_metadata {
     $options->{peak_calls} = {};
     $options->{segmentations} = [];
 
-    if (defined $options->{dump}) {
+#     if (defined $options->{dump}) {
       read_dump($options);
-    }
+#     }
 
     if (defined $options->{db_adaptor}) {
       fetch_metadata($options);
@@ -630,7 +642,7 @@ sub get_metadata {
 sub read_dump {
   my ($options) = @_;
   print_log("Reading $options->{dump}\n");
-
+# die;
   open my $fh, "<", $options->{dump};
   while (my $line = <$fh>) {
     chomp $line;
@@ -808,10 +820,16 @@ sub fetch_chrom_lengths {
 
 sub create_tss {
   my ($options) = @_;
-  $options->{tss} = "$options->{working_dir}/tss.bed";
-  open my $fh, ">", $options->{tss};
+  
+  my $transcription_start_sites_file = "$options->{working_dir}/tss.bed";
+  $options->{tss} = $transcription_start_sites_file;
+  open my $fh, ">", $transcription_start_sites_file;
   fetch_tss($options, $fh);
-  close $fh
+  close $fh;
+  if (! -e $transcription_start_sites_file) {
+    use Carp;
+    confess("The transcription start sites file ($transcription_start_sites_file) was not created!");
+  }
 }
 
 =head2 fetch_tss
@@ -1001,6 +1019,12 @@ sub compute_tf_probs {
   print_log("Computing TF binding tracks\n");
   compute_celltype_tf_sites($options);
   my $tf_probs = compute_antibody_specific_probs($options);
+  
+  if (@$tf_probs == 0) {
+    use Carp;
+    confess('No transcription factor probabilities found!');
+  }
+  
   compute_global_tf_prob($options, $tf_probs);
 }
 
@@ -1058,15 +1082,28 @@ sub compute_celltype_tf_sites_2 {
 
   if (defined $open_exps) {
     my $output1 = "$options->{working_dir}/celltype_dnase/$celltype.bed"; 
-    run("wiggletools write_bg $output1 unit sum " . join(" ", @{$open_exps}));
+#     run("wiggletools write_bg $output1 unit sum " . join(" ", @{$open_exps}));
+    run_unless_file_exists("wiggletools write_bg $output1 unit sum " . join(" ", @{$open_exps}), $output1);
     $options->{celltype_dnase}->{$celltype} = $output1;
     trim_bed_to_chrom_lengths($options, $output1);
-    run("wiggletools write_bg $output2 gt 1 sum ".join(" ", @{$tf_exps}). " $output1 ");
+#     run("wiggletools write_bg $output2 gt 1 sum ".join(" ", @{$tf_exps}). " $output1 ");
+    run_unless_file_exists("wiggletools write_bg $output2 gt 1 sum ".join(" ", @{$tf_exps}). " $output1 ", $output2);
+    
   } else {
-    run("wiggletools write_bg $output2 unit sum ".join(" ", @{$tf_exps}));
+#     run("wiggletools write_bg $output2 unit sum ".join(" ", @{$tf_exps}));
+    run_unless_file_exists("wiggletools write_bg $output2 unit sum ".join(" ", @{$tf_exps}), $output2);
   }
   trim_bed_to_chrom_lengths($options, $output2);
   $options->{celltype_tfbs}->{$celltype} = $output2;
+}
+
+sub run_unless_file_exists {
+  my $cmd  = shift;
+  my $file = shift;
+  
+  if (! -e $file) {
+    run($cmd);
+  }
 }
 
 =head2 compute_antibody_specific_probs
@@ -1188,7 +1225,15 @@ sub compute_global_tf_prob {
 
   # Probability of seeing at least one transcription factor
   #
-  run("wiggletools write_bg $output offset 1 scale -1 mult map offset 1 map scale -1 " . join(" ", @$probs)) ;
+#   run("wiggletools write_bg $output offset 1 scale -1 mult map offset 1 map scale -1 " . join(" ", @$probs)) ;
+
+  if (@$probs == 0) {
+    use Carp;
+    confess("Probabilities are empty!");
+  }
+
+  run_unless_file_exists("wiggletools write_bg $output offset 1 scale -1 mult map offset 1 map scale -1 " . join(" ", @$probs), $output) ;
+
   convert_to_bigWig($options, $output);
 }
 
