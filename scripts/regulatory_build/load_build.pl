@@ -44,8 +44,8 @@ In short, the file $base_dir/segmentations/$segmentation/$cell_type_name.bb must
 
 Also bigBedToBed must be on the commandline.
 
-This script is pretty database intensive (think inserting 4Mo entries) so keep an eye 
-when running in parallel. In the good times, each job takes ~1h to run. 
+This script is pretty database intensive (think inserting 4Mo entries) so keep an eye
+when running in parallel. In the good times, each job takes ~1h to run.
 
 =cut
 
@@ -66,7 +66,7 @@ ${File::Temp::KEEP_ALL} = 1;
 #   "192,0,190" => 2, # poised
 #   "127,127,127" => 3, # repressed
 #   "255,255,255" => 4, # NA
-# 
+#
 #   "255,0,0" => 1, # TSS
 #   "209,157,0" => 1, # TFBS
 #   "255,252,4" => 1, # DNase
@@ -76,14 +76,14 @@ ${File::Temp::KEEP_ALL} = 1;
 # );
 my %rgb_state = (
   '225,225,225' => 'INACTIVE',
-  
+
   '255,0,0'     => 'ACTIVE', # TSS
   '209,157,0'   => 'ACTIVE', # TFBS
   '255,252,4'   => 'ACTIVE', # DNase
   '255,105,105' => 'ACTIVE', # Proximal
   '250,202,0'   => 'ACTIVE', # Distal
   '10,190,254'  => 'ACTIVE', # CTCF
-  
+
   '192,0,190'   => 'POISED',
   '127,127,127' => 'REPRESSED',
   '255,255,255' => 'NA',
@@ -116,23 +116,23 @@ sub main {
   my $options = get_options();
   print_log("Connecting to database\n");
   my $db = connect_db($options);
-  
+
   use Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildAdaptor;
   my $regulatory_build_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildAdaptor->new($db);
   my $current_regulatory_build = $regulatory_build_adaptor->fetch_current_regulatory_build;
-  
+
   if (! defined $current_regulatory_build) {
 #     die("Couldn't find regulatory build in the database!");
   }
   if (defined $current_regulatory_build) {
-    print "Found regulatory build: " 
-    . $current_regulatory_build->name 
-    . " " . $current_regulatory_build->version 
-    . " from  " 
-    . $current_regulatory_build->initial_release_date 
+    print "Found regulatory build: "
+    . $current_regulatory_build->name
+    . " " . $current_regulatory_build->version
+    . " from  "
+    . $current_regulatory_build->initial_release_date
     . " in the database.\n";
   }
-  
+
 #   print_log("Getting analysis\n");
 #   my $analysis = get_analysis($db);
   print_log("Getting cell types\n");
@@ -147,26 +147,26 @@ sub main {
   my $count_hash = compute_counts($options->{base_dir});
 
   print_log("Creating regulatory build object\n");
-  
+
   my $is_small_update = defined $options->{small_update};
-  
+
   my $new_regulatory_build = create_regulatory_build_object(
-    $current_regulatory_build, 
+    $current_regulatory_build,
     $is_small_update
   );
 
-  # This sets the dbID of the regulatory build object. The regulatory 
+  # This sets the dbID of the regulatory build object. The regulatory
   # features are linked to that.
   #
   $regulatory_build_adaptor->store($new_regulatory_build);
 
   print_log("Creating regulatory_feature table\n");
   compute_regulatory_features($options, $ctypes, $feature_type, $stable_id, $count_hash, $slice, $db, $new_regulatory_build);
-  
+
   print_log("Creating regulatory_annotation table\n");
   compute_regulatory_annotations($options);
   print_log("Updating meta table\n");
-  
+
   if (defined $current_regulatory_build) {
     $current_regulatory_build->is_current(0);
     $regulatory_build_adaptor->update($current_regulatory_build);
@@ -224,7 +224,7 @@ sub get_options {
   Arg1: options hash ref
   Returntype: Bio::EnsEMBL::Funcgen::DBAdaptor object
 
-=cut 
+=cut
 
 sub connect_db {
   my ($options) = @_;
@@ -295,8 +295,8 @@ sub get_analysis {
 
 =head2 clean_name
 
-  Description: Removing unwanted characters 
-    Quick string normalisation function tor remove weird 
+  Description: Removing unwanted characters
+    Quick string normalisation function tor remove weird
     characters froms file names and remove variants
   Arg1: String
   Returntype: String
@@ -323,8 +323,8 @@ sub clean_name {
 
 sub get_cell_type_names {
   my ($base_dir, $db) = @_;
-  
-  my $epigenome_adaptor = $db->get_EpigenomeAdaptor();  
+
+  my $epigenome_adaptor = $db->get_EpigenomeAdaptor();
   my %cell_type_from_clean = ();
   for my $epigenome (@{$epigenome_adaptor->fetch_all()}) {
     $cell_type_from_clean{clean_name($epigenome->production_name)} = $epigenome;
@@ -332,20 +332,20 @@ sub get_cell_type_names {
   }
 
 #   my $debug_max = 1;
-  
+
   my @cell_types = ();
   foreach my $file (glob "$base_dir/projected_segmentations/*.bb") {
     my $cell_type_name = basename $file;
 #     $cell_type_name =~ s/\.bb//;
      $cell_type_name =~ s/_\d+_SEGMENTS\.bb//;
     if (!exists $cell_type_from_clean{$cell_type_name}) {
-    
+
       my @known_cell_types = sort keys %cell_type_from_clean;
       my $known_cell_types_as_string = join "\n", map { ' - ' . $_ } @known_cell_types;
-    
+
       die(
 	"Celltype $cell_type_name has a projected segmentation in $file, but is unknown! Known cell types are:\n$known_cell_types_as_string"
-	
+
       );
     }
     push @cell_types, $cell_type_from_clean{$cell_type_name};
@@ -356,7 +356,7 @@ sub get_cell_type_names {
 
 =head2 run
 
-  Description: Convenience wrapper to run the commandline safely 
+  Description: Convenience wrapper to run the commandline safely
   Arg1: command line command string
   Returntype: undef
   Side effects: runs command
@@ -375,7 +375,7 @@ sub run {
   Description: Assign stable ids to features
   Arg1: options hash ref
   Arg2: Bio::EnsEMBL::Funcgen::DBAdaptor
-  Returntype: hashref 
+  Returntype: hashref
 
 =cut
 
@@ -407,8 +407,8 @@ sub get_stable_id {
     ($overlaps, $max_id) = ([], 0);
   }
 
-# Go through overlaps in order of increasing overlap length. This means that you should always 
-# overwrite an overlap with a later one. 
+# Go through overlaps in order of increasing overlap length. This means that you should always
+# overwrite an overlap with a later one.
   sub cmp_overlaps {
     return $a->[14] <=> $b->[14];
   }
@@ -419,7 +419,7 @@ sub get_stable_id {
     $new_pref{$entry->[8]} = $entry->[4];
   }
 
-# Output new_id/old_id pairs if mutual best hits, else create new ids starting from 
+# Output new_id/old_id pairs if mutual best hits, else create new ids starting from
 # the maximum of pre-existing IDs + 1
   my %stable_id_hash = ();
   my $next_free_id = $max_id + 1;
@@ -445,12 +445,12 @@ sub get_stable_id {
     } elsif ($species eq 'mus_musculus') {
       $stable_id_hash{$new_id} = "ENSMUSR" . sprintf("%011d", $stable_id);
     } else {
-      # The general strategy (excluding human and mouse) is first letter of genus followed 
+      # The general strategy (excluding human and mouse) is first letter of genus followed
       # by first two letters of species
       my @components = split('_', $species);
       my $triletter_code = substr($components[0], 0, 1) . substr($components[1], 0, 2);
       $stable_id_hash{$new_id} = "ENS" . uc($triletter_code) . 'R' . sprintf("%011d", $stable_id);
-    } 
+    }
   }
   close $in;
   unlink $new;
@@ -462,15 +462,15 @@ sub get_stable_id {
 =head2 get_overlaps_between_files
 
   Description: Computes overlaps between two builds contained in bed files
-  Arg1: old build file location 
+  Arg1: old build file location
   Arg2: new build file location
   Returntype: list ref containing: array ref of overlaps, maximum of the old build's stable ids
 '
-=cut 
+=cut
 
 sub get_overlaps_between_files {
   my ($old, $new) = @_;
-  
+
 # Compute overlaps between regions defined in both file
   my ($fh, $filename) = tempfile();
   run("bedtools intersect -a $old -b $new -wo > $filename");
@@ -496,7 +496,7 @@ sub get_overlaps_between_files {
     }
   }
   unlink $filename;
-  
+
   return (\@overlaps, $max_id);
 }
 
@@ -569,13 +569,13 @@ sub count_active {
 
 =head2 get_feature_types
 
-  Description: Get a hashref from feature type name to FeatureType 
+  Description: Get a hashref from feature type name to FeatureType
    object
   Arg1: Bio::EnsEMBL::Funcgen::DBAdaptor object
   Returntype: Bio::EnsEMBL::Funcgen::FeatureType object
 
 =cut
- 
+
 sub get_feature_types {
   my ($db) = @_;
   my $fta = $db->get_adaptor("FeatureType");
@@ -642,11 +642,13 @@ sub get_feature_types {
 
 sub compute_regulatory_features {
   my ($options, $cell_type, $feature_type, $stable_id, $count_hash, $slice, $db, $new_regulatory_build) = @_;
+
   my $regulatory_feature_adaptor = $db->get_adaptor("RegulatoryFeature");
    
   my $regulatory_features = load_regulatory_build($options->{base_dir}, $stable_id, $count_hash, $slice, $feature_type, $regulatory_feature_adaptor, $new_regulatory_build);
  
   print "Going through ".(scalar @$cell_type)." cell types\n";
+  
   foreach my $current_cell_type (@$cell_type) {
     load_celltype_activity($options->{base_dir}, $current_cell_type, $regulatory_features);
   }
@@ -659,7 +661,7 @@ sub compute_regulatory_features {
   Description: loads the data from the build's BigBed files into the database
   Arg1: Location of base directory
   Arg2: hashref: bedfile id => stable id
-  Arg3: hashref: bedfile id => integer 
+  Arg3: hashref: bedfile id => integer
   Arg4: hashref: slice name => Bio::EnsEMBL::Slice
   Arg5: hashref: label => Bio::EnsEMBL::Funcgen::FeatureType
   Arg6: Bio::EnsEMBL::Funcgen::RegulatoryFeatureAdaptor
@@ -670,6 +672,7 @@ sub compute_regulatory_features {
 =cut
 
 sub load_regulatory_build {
+
   my ($base_dir, $stable_id, $count_hash, $slice, $feature_type, $regulatory_feature_adaptor, $new_regulatory_build) = @_;
   
   print_log("\tLoading Regulatory Features\n");
@@ -691,7 +694,7 @@ sub load_regulatory_build {
   Description: loads the data from a Bed file into the database
   Arg1: filehandle into input file
   Arg3: hashref: bedfile id => stable id
-  Arg4: hashref: bedfile id => integer 
+  Arg4: hashref: bedfile id => integer
   Arg5: hashref: slice name => Bio::EnsEMBL::Slice
   Arg6: hashref: label => Bio::EnsEMBL::Funcgen::FeatureType
   Arg7: Bio::EnsEMBL::Funcgen::RegulatoryFeatureAdaptor
@@ -703,9 +706,9 @@ sub load_regulatory_build {
 
 sub process_regulatory_build_file {
   my ($fh, $stable_id, $count_hash, $slice, $feature_type, $rfa, $new_regulatory_build) = @_;
-  
+
   my $regulatory_features = {};
-  
+
   while (my $line = <$fh>) {
     chomp $line;
     my ($chrom, $start, $end, $name, $score, $strand, $thickStart, $thickEnd, $rgb) = split "\t", $line;
@@ -716,7 +719,7 @@ sub process_regulatory_build_file {
     exists $stable_id->{$name} || die("Could not find stable ID for feature # $name\n");
 
     exists $count_hash->{$name} || die("Could not find count for feature # $name\n");
-    
+
     my $regulatory_feature = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new_fast({
       slice               => $slice->{$chrom},
       start               => $thickStart + 1,
@@ -729,7 +732,7 @@ sub process_regulatory_build_file {
 #       analysis            => $analysis,
       regulatory_build_id => $new_regulatory_build->dbID,
     });
-    
+
     $regulatory_features->{$name} = $regulatory_feature;
   }
 
@@ -741,7 +744,7 @@ sub process_regulatory_build_file {
   Description: loads the data from the build's BigBed files into the database
   Arg1: Location of base directory
   Arg2: Bio::EnsEMBL::Funcgen::Celltype
-  Arg3: hashref: bedfile id => Bio::EnsEMBL::Funcgen::RegulatoryFeature 
+  Arg3: hashref: bedfile id => Bio::EnsEMBL::Funcgen::RegulatoryFeature
   Returntype: undef
   Side effects: writes into regulatory_feature table
 '
@@ -749,7 +752,7 @@ sub process_regulatory_build_file {
 
 sub load_celltype_activity {
   my ($base_dir, $cell_type, $regulatory_features) = @_;
-  
+
   print_log("\tProcessing data from cell type " . $cell_type->display_label . " (". $cell_type->name .")" . "\n");
 
   my $cell_type_name = clean_name($cell_type->production_name);
@@ -769,7 +772,7 @@ sub load_celltype_activity {
   Description: loads the data from a Bed file into the database
   Arg1: filehandle into input file
   Arg2: Bio::EnsEMBL::Funcgen::Celltype
-  Arg3: hashref: bedfile id => Bio::EnsEMBL::Funcgen::RegulatoryFeature 
+  Arg3: hashref: bedfile id => Bio::EnsEMBL::Funcgen::RegulatoryFeature
   Returntype: undef
   Side effects: writes into regulatory_feature table
 
@@ -784,6 +787,7 @@ sub process_celltype_file {
     use Bio::EnsEMBL::Funcgen::RegulatoryActivity;
     my $regulatory_activity = Bio::EnsEMBL::Funcgen::RegulatoryActivity->new;
     $regulatory_activity->activity($rgb_state{$rgb});
+
     $regulatory_activity->_epigenome_id($cell_type->dbID);
     
     exists $regulatory_feature->{$name} || die("Could not find Regulatory Feature for $name\n");
@@ -816,73 +820,91 @@ sub compute_regulatory_annotations {
   # The common format of these files is:
   # chrom	start	end	ID
   
+  # "convert" in the "order by" clause makes MySql sort lexicographically. 
+  # This is necessary, or bedtools will complain later.
+  #
+  
   run(
     qq(
-	mysql --quick -NB -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -e '
-	  select 
-	    rf.seq_region_id, 
+	mysql --quick -NB -h $options->{host} -u $options->{user} -p$options->{pass} -P $options->{port} -D $options->{dbname} -e '
+	  select
+	    rf.seq_region_id,
 	    rf.seq_region_start - rf.bound_start_length as start,
-	    rf.seq_region_end + rf.bound_end_length as end, 
+	    rf.seq_region_end + rf.bound_end_length as end,
 	    regulatory_activity_id,
-	    epigenome_id 
+	    epigenome_id
 	  from
-	    regulatory_feature rf 
+	    regulatory_feature rf
 	    join regulatory_activity using (regulatory_feature_id)
-	  order by 
-	    rf.seq_region_id, 
-	    start
+	  order by
+	    convert(rf.seq_region_id, char),
+	    start;
 	' \\
  	> $cell_type_regulatory_features
     )
   );
-  
+
   run(
     qq(
-	mysql --quick -NB -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -e '
-	  select 
-	    af.seq_region_id, 
-	    af.seq_region_start, 
-	    af.seq_region_end, 
-	    af.annotated_feature_id, 
-	    fs.epigenome_id 
-	  FROM 
-	    annotated_feature af 
-	    LEFT JOIN feature_set fs USING(feature_set_id) 
-	  ORDER BY 
-	    af.seq_region_id, 
+	mysql --quick -NB -h $options->{host} -u $options->{user} -p$options->{pass} -P $options->{port} -D $options->{dbname} -e '
+	  select
+	    af.seq_region_id,
+	    af.seq_region_start,
+	    af.seq_region_end,
+	    af.annotated_feature_id,
+	    fs.epigenome_id
+	  FROM
+	    annotated_feature af
+	    LEFT JOIN feature_set fs USING(feature_set_id)
+	  ORDER BY
+	    convert(af.seq_region_id,    char),
 	    af.seq_region_start;
 	' \\
 	> $annotations
     )
   );
-  
+
+  # run(
+  #   qq(
+	# mysql --quick -NB -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -e '
+	#   select
+	#     mf.seq_region_id, mf.seq_region_start, mf.seq_region_end, mf.motif_feature_id, fs.epigenome_id
+	#   from
+	#     motif_feature mf
+	#     JOIN associated_motif_feature amf USING(motif_feature_id)
+	#     JOIN annotated_feature af USING(annotated_feature_id)
+	#     JOIN feature_set fs USING(feature_set_id)
+	#   GROUP BY
+	#     motif_feature_id,
+	#     epigenome_id
+	#   ORDER BY
+	#     seq_region_id,
+	#     seq_region_start;
+	#  ' > $motifs
+  #   )
+  # );
+
   run(
     qq(
-	mysql --quick -NB -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -e '
-	  select 
-	    mf.seq_region_id, mf.seq_region_start, mf.seq_region_end, mf.motif_feature_id, fs.epigenome_id 
-	  from 
-	    motif_feature mf 
-	    JOIN associated_motif_feature amf USING(motif_feature_id) 
-	    JOIN annotated_feature af USING(annotated_feature_id) 
-	    JOIN feature_set fs USING(feature_set_id) 
-	  GROUP BY 
-	    motif_feature_id, 
-	    epigenome_id 
-	  ORDER BY 
-	    seq_region_id, 
-	    seq_region_start;
-	 ' > $motifs
+    mysql --quick -NB -h $options->{host} -u $options->{user} -p$options->{pass} -P $options->{port} -D $options->{dbname} -e '
+      select
+        mf.seq_region_id, mf.seq_region_start, mf.seq_region_end, mf.motif_feature_id, "PHONY" 
+      from
+        motif_feature mf
+      ORDER BY
+        convert(seq_region_id,    char),
+        seq_region_start;
+  ' > $motifs
     )
   );
 
   # Overlap regulatory features with (annotated|motif) features. Store ID pairs into one flat file
   run("bedtools intersect -sorted -wa -wb -a $cell_type_regulatory_features -b $annotations | awk 'BEGIN {OFS = \"\\t\"} \$5==\$10 {print \$4,\$9,\"annotated\"} ' > $out");
-  run("bedtools intersect -sorted -wa -wb -a $cell_type_regulatory_features -b $motifs      | awk 'BEGIN {OFS = \"\\t\"} \$5==\$10 {print \$4,\$9,\"motif\"} ' > $out");
+  run("bedtools intersect -sorted -wa -wb -a $cell_type_regulatory_features -b $motifs      | awk 'BEGIN {OFS = \"\\t\"} {print \$4,\$9,\"motif\"} ' > $out");
 
   # Load into database
-  run("mysql -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -e 'TRUNCATE TABLE regulatory_evidence;'");
-  run("mysql -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -e 'LOAD DATA LOCAL INFILE \"$out\" INTO TABLE regulatory_evidence;'");
+  run("mysql -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -P $options->{port} -e 'TRUNCATE TABLE regulatory_evidence;'");
+  run("mysql -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -P $options->{port} -e 'LOAD DATA LOCAL INFILE \"$out\" INTO TABLE regulatory_evidence;'");
 
 #   print "cell_type_regulatory_features = $cell_type_regulatory_features\n";
 #   print "annotations = $annotations\n";
@@ -898,24 +920,24 @@ sub compute_regulatory_annotations {
 
 =head2 create_regulatory_build_object
 
-  Description: Updates data in metatable 
+  Description: Updates data in metatable
   Arg1: Bio::EnsEMBL::Funcgen::RegulatoryBuild - The object representing the current regulatory build
   Arg2: boolean - Flag indicating whether this is to be considered a small update. This affects how the version string is incremented.
   Returntype: Bio::EnsEMBL::Funcgen::RegulatoryBuild
   Side effects: None
 
-=cut 
+=cut
 
 sub create_regulatory_build_object {
   my ($current_regulatory_build, $is_small_update) = @_;
-  
+
   use Bio::EnsEMBL::Funcgen::RegulatoryBuild;
-  
+
   my $new_regulatory_build;
-  
+
   my $current_build_version;
   my $current_build_initial_release_date;
-  
+
   if (defined $current_regulatory_build) {
     $new_regulatory_build = Bio::EnsEMBL::Funcgen::RegulatoryBuild->new(
         -name            => 'The new ' . $current_regulatory_build->name,
@@ -936,7 +958,7 @@ sub create_regulatory_build_object {
     $current_build_version = '0.0';
     $current_build_initial_release_date = '';
   }
-  
+
   my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
   # Seriously localtime, you're useless
   $year += 1900;
