@@ -152,7 +152,7 @@ sub _objs_from_sth {
 
 sub _unset_all_current {
   my $self = shift;
-  my $sth_unset_current = $self->prepare('update regulatory_build set is_current=null');
+  my $sth_unset_current = $self->prepare('update regulatory_build set is_current=0');
   $sth_unset_current->execute;
 }
 

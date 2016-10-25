@@ -197,7 +197,8 @@ sub get_RegulatoryFeature {
       );
       return $self->{'_regulatory_feature'};
   }
-  throw("Can't get regulatory feature. No regulatory feature object has been set nor a regulatory feature id by which to fetch one.");
+#   throw("Can't get regulatory feature. No regulatory feature object has been set nor a regulatory feature id by which to fetch one.");
+  return undef;
 }
 
 =head2 get_RegulatoryEvidenceLink
@@ -285,11 +286,17 @@ sub get_RegulatoryEvidence {
   if (defined $self->{'_regulatory_evidence'}) {
     return $self->{'_regulatory_evidence'}
   }
-
+  my $regulatory_evidence_link = $self->get_RegulatoryEvidenceLink;
+  
+  if (! defined $regulatory_evidence_link) {
+    return;
+  }
+  if (@$regulatory_evidence_link == 0) {
+    return;
+  }
+  
   my $regulatory_feature = $self->get_RegulatoryFeature;
   my $regulatory_feature_slice = $regulatory_feature->slice;
-  
-  my $regulatory_evidence_link = $self->get_RegulatoryEvidenceLink;
   
   my @regulatory_evidence = map {
     $_->get_Evidence_on_Slice($regulatory_feature_slice) 

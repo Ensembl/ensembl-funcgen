@@ -71,11 +71,13 @@ use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
 use parent qw(Bio::EnsEMBL::Funcgen::Storable);
 
-my %valid_genders = (male   => 1,
-                     female => 1,
-                     hermaphrodite => 1,
-                     mixed => 1 
-                    );
+my %valid_genders = (
+	male   => 1,
+	female => 1,
+	hermaphrodite => 1,
+	mixed => 1,
+	unknown => 1
+);
 
 =head2 new
 
@@ -118,7 +120,7 @@ sub new {
   if (defined $gender) {
 
     if ( ! exists $valid_genders{lc($gender)} ) { #enum will not force this so validate here
-      throw("Gender not valid, must be one of:\t".join(' ', keys %valid_genders));
+      throw("Gender $gender not valid, must be one of:\t".join(' ', keys %valid_genders));
     }
 
     $self->{gender} = $gender;

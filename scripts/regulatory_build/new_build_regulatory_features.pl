@@ -1842,7 +1842,8 @@ sub compute_overlap_score {
     print_log("Running wiggletools pearson $reference $file\n");
     $segmentation->{overlaps}->{$test}->{$state} = `wiggletools pearson $reference $file`;
   } else {
-    $segmentation->{overlaps}->{$test}->{$state} = compute_enrichment_between_files($reference, $file);
+    my $genome_length = $options->{genome_length};
+    $segmentation->{overlaps}->{$test}->{$state} = compute_enrichment_between_files($reference, $file, $genome_length);
   }
 
   chomp $segmentation->{overlaps}->{$test}->{$state};
@@ -1858,7 +1859,7 @@ sub compute_overlap_score {
 =cut
 
 sub compute_enrichment_between_files {
-  my ($reference, $file) = @_;
+  my ($reference, $file, $genome_length) = @_;
 
   my $auc = `wiggletools AUC mult $reference unit $file`;
   my $breadth = `wiggletools AUC unit $file`;
@@ -1867,7 +1868,7 @@ sub compute_enrichment_between_files {
   if ($breadth == 0) {
     return 0;
   } else {
-    return ($auc / $breadth) / ($ref_auc / $options->{genome_length} );
+    return ($auc / $breadth) / ($ref_auc / $genome_length );
   }
 }
 
@@ -2410,12 +2411,14 @@ sub test_relevance {
   my $reference = "$options->{trackhub_dir}/overview/all_tfbs.bw";
   my $file = "$options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw";
 
+  my $genome_length = $options->{genome_length};
+  
   for (my $i = 1; $i < scalar(keys %{$segmentation->{celltypes}}); $i++) {
     my $enrichment = compute_enrichment_between_files($reference, "gt $i $file");
     print_log("Enrichment\t$state\t$i:\t$enrichment\n");
     if ($enrichment == 0) {
       return 0;
-    } elsif (compute_enrichment_between_files($reference, "gt $i $file") > $weak_cutoff) {
+    } elsif (compute_enrichment_between_files($reference, "gt $i $file", $genome_length) > $weak_cutoff) {
       return $i;
     }
   }
