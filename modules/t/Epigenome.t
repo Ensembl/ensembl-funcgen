@@ -51,7 +51,7 @@ throws_ok {
         -tissue             => 'embryonic stem cell',
     );
 }
-qr/Gender not valid, must be one of/, 'Check that the gender is valid';
+qr/Gender .+ not valid, must be one of/, 'Check that the gender is valid';
 
 # Test getter subroutines
 is( $epigenome->name,          'H1-ESC', 'Retrieve epigenome name' );
