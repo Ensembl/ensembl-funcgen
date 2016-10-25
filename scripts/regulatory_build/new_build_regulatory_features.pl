@@ -828,8 +828,14 @@ sub compute_genome_length {
   if (!defined $options->{length_hash}) {
     $options->{length_hash} = read_chrom_lengths($options);
   }
-
-  $options->{genome_length} = sum values %{$options->{length_hash}};
+  my @genome_sequences_lengths = values %{$options->{length_hash}};
+  
+  my $genome_length = 0;
+  foreach my $current_genome_sequence_length (@genome_sequences_lengths) {
+    $genome_length += $current_genome_sequence_length;
+  }
+  $options->{genome_length} = $genome_length;
+  print "\nThe genome length is: $genome_length\n";
 }
 
 =head2 create_tss
@@ -1861,6 +1867,11 @@ sub compute_overlap_score {
 sub compute_enrichment_between_files {
   my ($reference, $file, $genome_length) = @_;
 
+  if ($genome_length == 0) {
+    use Carp;
+    confess("genome_length parameter is zero! ($genome_length)");
+  }
+  
   my $auc = `wiggletools AUC mult $reference unit $file`;
   my $breadth = `wiggletools AUC unit $file`;
   my $ref_auc = `wiggletools AUC $reference`;
