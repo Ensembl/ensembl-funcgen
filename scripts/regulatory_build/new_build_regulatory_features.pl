@@ -589,6 +589,7 @@ sub get_metadata {
     if (! defined $options->{genome_length}) {
       $options->{genome_length} = compute_genome_length($options);
     }
+    warn("The genome length is: " . $options->{genome_length} . "\n");
     
     if (defined $options->{db_adaptor}) {
       fetch_metadata($options);
@@ -614,6 +615,7 @@ sub get_metadata {
     $hash{tss} = $options->{tss};
     $hash{exons} = $options->{exons};
     $hash{mask} = $options->{mask};
+    $hash{genome_length} = $options->{genome_length};
     store \%hash, $location;
   } else {
     my $prev_options = retrieve($location);
@@ -625,6 +627,7 @@ sub get_metadata {
     $options->{tss} = $prev_options->{tss};
     $options->{exons} = $prev_options->{exons};
     $options->{mask} = $prev_options->{mask};
+    $options->{genome_length} = $prev_options->{genome_length};
   }
 }
 
@@ -2473,7 +2476,7 @@ sub test_relevance {
   my $genome_length = $options->{genome_length};
   
   for (my $i = 1; $i < scalar(keys %{$segmentation->{celltypes}}); $i++) {
-    my $enrichment = compute_enrichment_between_files($reference, "gt $i $file");
+    my $enrichment = compute_enrichment_between_files($reference, "gt $i $file", $genome_length);
     print_log("Enrichment\t$state\t$i:\t$enrichment\n");
     if ($enrichment == 0) {
       return 0;
