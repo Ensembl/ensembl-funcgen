@@ -249,6 +249,7 @@ sub read_command_line {
     "dump=s",
     "assembly|a=s",
     "chrom_lengths|l=s",
+    "genome_length|g=s",
     "tss|t=s",
     "exons|g=s",
     "host|h=s",
@@ -582,21 +583,16 @@ sub get_metadata {
     $options->{cell_type_open} = {};
     $options->{peak_calls} = {};
     $options->{segmentations} = [];
-    $options->{genome_length} = 0;
 
-#     if (defined $options->{dump}) {
-      read_dump($options);
-#     }
+    read_dump($options);
 
+    if (! defined $options->{genome_length}) {
+      $options->{genome_length} = compute_genome_length($options);
+    }
+    
     if (defined $options->{db_adaptor}) {
       fetch_metadata($options);
     }
-
-    #if (!defined $options->{chrom_lengths}) {
-    #  create_chrom_lengths($options);
-    #} else {
-      compute_genome_length($options);
-    #}
 
     if (!defined $options->{tss}) {
       create_tss($options);
@@ -774,56 +770,108 @@ sub record_peak_file {
   }
 }
 
-=head2 create_chrom_lengths
+#
+# Removed, because for human this returns three entries for the Y chromosome.
+#
+# Two of these are short. When these are used later for trimming bed files, 
+# feaatures are lost.
+#
 
-  Descriptions: store chromosome lengths from DB into flat file for BigFile compression
-  Arg1: options hash ref
-  Returntype: undef
-  Side effects: Stores location of newly created file in options
+# =head2 create_chrom_lengths
+# 
+#   Descriptions: store chromosome lengths from DB into flat file for BigFile compression
+#   Arg1: options hash ref
+#   Returntype: undef
+#   Side effects: Stores location of newly created file in options
+# 
+# =cut
+# 
+# sub create_chrom_lengths {
+#   my ($options) = @_;
+#   $options->{chrom_lengths} = "$options->{working_dir}/chrom_lengths.txt";
+#   open my $fh, ">", $options->{chrom_lengths};
+#   fetch_chrom_lengths($options, $fh);
+#   close $fh
+# }
 
-=cut
-
-sub create_chrom_lengths {
-  my ($options) = @_;
-  $options->{chrom_lengths} = "$options->{working_dir}/chrom_lengths.txt";
-  open my $fh, ">", $options->{chrom_lengths};
-  fetch_chrom_lengths($options, $fh);
-  close $fh
-}
-
-=head2 fetch_chrom_lengths
-
-  Description: stores chromosome lengths from DB into filehandle
-  Arg1: options hash ref
-  Arg2: file handle
-  Returntype: undef
-  Side effects: Writes into file handle
-
-=cut
-
-sub fetch_chrom_lengths {
-  my ($options, $fh) = @_;
-  print_log("Fetching chromosome lengths from core DB\n");
-  my $slice_adaptor = $options->{dnadb_adaptor}->get_SliceAdaptor();
-  my @slices = @{ $slice_adaptor->fetch_all('toplevel', undef, undef, 0) };
-
-  foreach my $slice (@slices) {
-    print $fh join("\t", ($slice->seq_region_name(), $slice->end() - $slice->start())) . "\n";
-    $options->{genome_length} += $slice->length();
-  }
-   print_log("$options->{assembly} length: $options->{genome_length} \n");
-}
+# =head2 fetch_chrom_lengths
+# 
+#   Description: stores chromosome lengths from DB into filehandle
+#   Arg1: options hash ref
+#   Arg2: file handle
+#   Returntype: undef
+#   Side effects: Writes into file handle
+# 
+# =cut
+# 
+# sub fetch_chrom_lengths {
+#   my ($options, $fh) = @_;
+#   print_log("Fetching chromosome lengths from core DB\n");
+#   my $slice_adaptor = $options->{dnadb_adaptor}->get_SliceAdaptor();
+#   my @slices = @{ $slice_adaptor->fetch_all('toplevel', undef, undef, 0) };
+# 
+#   foreach my $slice (@slices) {
+#     print $fh join("\t", ($slice->seq_region_name(), $slice->end() - $slice->start())) . "\n";
+#     $options->{genome_length} += $slice->length();
+#   }
+#    print_log("$options->{assembly} length: $options->{genome_length} \n");
+# }
 
 =head2 compute_genome_length
 
-Description: computes genome length by adding the chromosome lengths
-Arg1: options hash ref
-Returntype: undef
+  Description: computes genome length
+  Arg1: options hash ref
+  Returntype: undef
 
 =cut
-
 sub compute_genome_length {
-  my ($options) = @_;
+
+  my $options = shift;
+  
+  my $core_database_available = exists $options->{dnadb_adaptor};
+  my $genome_length;
+
+  if ($core_database_available) {
+    $genome_length = compute_genome_length_by_querying_the_core_database($options);
+  } else {
+    die(
+      "You have not specified the genome length on the command line with "
+      . "the -genome_length parameter and no core database to "
+      . "fetch this from!\n\n"
+      . "The genome length can be computed by summing the lengths from your "
+      . "chromosome length file, if you comment out this line from the script."
+    );
+    warn(
+      "The genome length will be computed from the chromosome length file, "
+      . "because no core database was provided and no genome length was "
+      . "specified on the command line.\n"
+    );
+    $genome_length = compute_genome_length_from_chromosome_length_file($options);
+    warn("The genome length computed is: $genome_length\n");
+  }
+  return $genome_length;
+}
+
+sub compute_genome_length_by_querying_the_core_database {
+  my $options = shift;
+  
+  my $dnadb_adaptor = $options->{dnadb_adaptor};
+  
+  my $genome_container = $dnadb_adaptor->get_adaptor('GenomeContainer');
+  my $genome_length    = $genome_container->get_ref_length;
+
+  return $genome_length;
+}
+
+=head2 compute_genome_length_from_chromosome_length_file
+
+  Description: computes genome length by adding the chromosome lengths
+  Arg1: options hash ref
+  Returntype: undef
+
+=cut
+sub compute_genome_length_from_chromosome_length_file {
+  my $options = shift;
 
   if (!defined $options->{length_hash}) {
     $options->{length_hash} = read_chrom_lengths($options);
@@ -834,8 +882,8 @@ sub compute_genome_length {
   foreach my $current_genome_sequence_length (@genome_sequences_lengths) {
     $genome_length += $current_genome_sequence_length;
   }
-  $options->{genome_length} = $genome_length;
-  print "\nThe genome length is: $genome_length\n";
+
+  return $genome_length;
 }
 
 =head2 create_tss
