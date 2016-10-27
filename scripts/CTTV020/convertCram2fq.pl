@@ -20,7 +20,7 @@ my $bsub_cmd
     . scalar @filenames
     . '] -o convert.%I.out -e convert.%I.err \''
     . $cttv020_dir
-    . '/scripts/convertCram2fq_job.pl ' . '\'';
+    . '/lib/ensembl-funcgen/scripts/CTTV020/convertCram2fq_job.pl ' . '\'';
 
 my $exit_code = system($bsub_cmd);
 if ( $exit_code != 0 ) {

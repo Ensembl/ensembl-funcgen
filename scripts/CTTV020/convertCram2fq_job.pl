@@ -15,10 +15,16 @@ my @filenames = @{ retrieve( $study_dir . '/filenames_variable' ) };
 
 my ( $filename, $extension ) = split /\./, $filenames[ $job_index - 1 ];
 
+# my $command
+#     = 'cat '
+#     . $filenames[ $job_index - 1 ]
+#     . ' | /software/solexa/pkg/biobambam/current/bin/bamtofastq inputformat=cram exclude=SECONDARY,SUPPLEMENTARY,QCFAIL'
+#     . ' | gzip >'
+#     . $filename
+#     . '.fastq.gz';
 my $command
-    = 'cat '
+    = '/software/ensembl/funcgen//samtools bam2fq '
     . $filenames[ $job_index - 1 ]
-    . ' | /software/solexa/pkg/biobambam/current/bin/bamtofastq inputformat=cram exclude=SECONDARY,SUPPLEMENTARY,QCFAIL'
     . ' | gzip >'
     . $filename
     . '.fastq.gz';
