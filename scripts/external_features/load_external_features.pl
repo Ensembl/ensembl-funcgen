@@ -47,6 +47,7 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Pod::Usage;
 use Getopt::Long;
+use feature qw(say);
 
 my ($host, $user, $dnadb_host, $dnadb_user, $pass, $port, $dbname, $dnadb_name, $dnadb_port);
 my ($species, $clobber, $type, $old_assembly, $new_assembly, $archive, $dnadb_pass, $release);
@@ -61,7 +62,7 @@ my @tmp_args = @ARGV;
 
 
 GetOptions
-  ( 
+  (
    "host=s",       => \$host,
    "dnadb_host=s"  => \$dnadb_host,
    "user=s",       => \$user,
@@ -75,14 +76,14 @@ GetOptions
    "dnadb_pass=s"  => \$dnadb_pass,
    "type=s",       => \$type,
    "tee",          => \$main::_tee,
-   "logfile=s"     => \$main::_log_file, 
-   "debugfile=s"   => \$main::_debug_file, 
+   "logfile=s"     => \$main::_log_file,
+   "debugfile=s"   => \$main::_debug_file,
    "archive=s",    => \$archive,
    "clobber",      => \$clobber,#This is not behaving like a boolean flag??
    "help",         => \&usage,
    "old_assembly=s", => \$old_assembly,
    "new_assembly=s", => \$new_assembly,
-  ) 
+  )
   or pod2usage( -exitval => 1,
                 -message => "Params are:\t@tmp_args"
               );
@@ -161,7 +162,7 @@ Usage: perl $0 <options>
 
   -old_assembly, -new_assembly If *both* these options are specified, co-ordinates will be
            projected from the old assembly to the new assembly before being stored. This
-           relies on a suitable mapping between the two assemblies having already been 
+           relies on a suitable mapping between the two assemblies having already been
            carried out.
 
   -help    This message
