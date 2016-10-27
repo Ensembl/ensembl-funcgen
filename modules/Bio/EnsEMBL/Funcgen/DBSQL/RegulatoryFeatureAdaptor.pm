@@ -832,8 +832,8 @@ sub fetch_all_by_attribute_feature {
 
   my $rf_ids = $self->db->dbc->db_handle->selectall_arrayref(
     "select regulatory_feature_id "
-    . "from regulatory_evidence join regulatory_activity using (regulatory_activity_id) "
-    . "where attribute_feature_table='${attr_feat_table}' and attribute_feature_id=".$attr_feat->dbID
+    . "from regulatory_evidence join regulatory_activity using (regulatory_activity_id) join regulatory_feature using (regulatory_feature_id) join regulatory_build using (regulatory_build_id) "
+    . "where attribute_feature_table='${attr_feat_table}' and attribute_feature_id=".$attr_feat->dbID. " and regulatory_build.is_current=1"
   );
   
   my @rf_ids_flattened = map { @$_ } @$rf_ids;
