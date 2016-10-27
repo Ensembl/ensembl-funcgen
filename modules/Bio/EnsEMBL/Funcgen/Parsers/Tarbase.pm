@@ -106,10 +106,12 @@ sub new {
 
 sub parse_and_load{
   my ($self, $files, $old_assembly, $new_assembly) = @_;
+  # shift @_;
+  # say dump_data(@_,1,1);die;
 
-  if (scalar(@$files) != 2) {
-    throw('2 files expected, Tarbase data(1) and aliases.txt(2) from miRBase\t'.join(' ', @$files));;
-  }
+  # if (scalar(@$files) != 2) {
+  #   throw('2 files expected, Tarbase data(1) and aliases.txt(2) from miRBase\t'.join(' ', @$files));;
+  # }
 
   # Set release to the release TarBase used to map their miRNA targets
   # Change load_external_features to also pass release version
@@ -118,7 +120,7 @@ sub parse_and_load{
 
   if($self->species eq 'homo_sapiens'){
     $external_db_name    = 'homo_sapiens_core_Gene';
-    $external_db_release = '84_38';
+    $external_db_release = '87_37';
   }
   elsif($self->species eq 'mus_musculus'){
     $external_db_name    = 'mus_musculus_core_Gene';
@@ -289,8 +291,8 @@ sub parse_and_load{
       -name         => $mi_rna_name,
       -class        => 'RNA',
       -description  => 'miRNA target site',
-      -so_name      => 'SO:0000934',
-      -so_accession => 'miRNA_target_site',
+      -so_accession => 'SO:0000934',
+      -so_name      => 'miRNA_target_site',
       );
       $feattype_a->store($ft);
     }
@@ -333,14 +335,42 @@ sub parse_and_load{
         next;
       }
     }
+    if($new_assembly){
+      for my $loci (@coords){
+        my $chr = $gene->seq_region_name;
+        my $start = $loci->{start};
+        my $stop  = $loci->{stop};
+          # say $chr;
+          # say $start;
+          # say $stop;
+        my $slice = $slice_a->fetch_by_region( 'chromosome', $chr, $start, $stop );
+        my $tmp = $slice->project('chromosome', $new_assembly);
+        my $ps = shift(@{$tmp});
+        if(! defined $ps){
+          $log->{not_projected}->{"$chr\t$start\t$stop"}++;
+          $log2->{not_projected}++;
+          next;
+        }
+        my $slice_37 = $ps->to_Slice;
+
+        $loci->{start} = $slice_37->start;
+        $loci->{stop}  = $slice_37->end;
+        #   say "**** $new_assembly  ****";
+        # say $slice_37->seq_region_name;
+        # say $slice_37->start;
+        # say $slice_37->end;
+      }
+
+    }
+
     $log->{stored_miRNA}->{$mi_rna_name}++;
     $log2->{stored_miRNA}++;
+
 
 
     for my $sites(@coords) {
       # my $transcript_mi_rna_seq = $transcript->seq->subseq($mi_rna_start, $mi_rna_end);
       #  my @genomic_coords        = $transcript->cdna2genomic($mi_rna_start, $mi_rna_end);
-
       my $feature = Bio::EnsEMBL::Funcgen::MirnaTargetFeature->new (
        -feature_type  => $feature_type,
        -feature_set   => $fset,
@@ -355,17 +385,13 @@ sub parse_and_load{
        -supporting_information =>"$mre; $spliced",
        );
 
-      # project if necessary
-      if ($new_assembly) {
-        throw("Not correctly implemented");
-       $feature = $self->project_feature($feature, $new_assembly);
 
-        if (! defined $feature) {
-          $log->{projecting}->{$mi_rna_name}++;
-          $log2->{projecting}++;
-          next;
-        }
-      }
+      #   if (! defined $feature) {
+      #     $log->{projecting}->{$mi_rna_name}++;
+      #     $log2->{projecting}++;
+      #     next;
+      #   }
+      # }
       $mirnafeat_a->store($feature);
 
       my $dbentry = Bio::EnsEMBL::DBEntry->new(
@@ -422,9 +448,9 @@ sub parse_and_load{
   $self->log_header("Successfully stored: $total");
 
   #Now set states
-  foreach my $status (qw(DISPLAYABLE MART_DISPLAYABLE)) {
-   $fset->adaptor->store_status($status, $fset);
-  }
+  # foreach my $status (qw(DISPLAYABLE MART_DISPLAYABLE)) {
+  #  $fset->adaptor->store_status($status, $fset);
+  # }
   return;
 
 }

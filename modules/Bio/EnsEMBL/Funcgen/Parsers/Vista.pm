@@ -30,6 +30,9 @@ package Bio::EnsEMBL::Funcgen::Parsers::Vista;
 use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils  qw(dump_data);
+use feature qw(say);
+
 
 use base qw( Bio::EnsEMBL::Funcgen::Parsers::BaseExternalParser );
 
@@ -130,7 +133,7 @@ sub parse_and_load{
   if (scalar(@$files) != 1) {
     throw('You must provide a unique file path to load VISTA features from:\t'.join(' ', @$files));;
   }
-
+  say "Projecting to $new_assembly" if(defined $new_assembly);
   my $file = $files->[0];
   $self->log_header("Parsing and loading LBNL VISTA enhancer data from:\t$file");
 
@@ -152,6 +155,13 @@ sub parse_and_load{
        (! exists $id_prefixes{$species}) ) {
     throw("Failed to get a VISTA ID prefix for species alias:\t$species");
   }
+  my $vista_species;
+  if ($species eq 'homo_sapiens') {
+    $vista_species = 'Human';
+  }
+  elsif ($species eq 'mus_musculus') {
+    $vista_species = 'Mouse';
+  }
 
   $species = $id_prefixes{$species};
 
@@ -164,7 +174,7 @@ sub parse_and_load{
   while (<FILE>) {
 
     next if ($_ !~ /^>/o);      # only read headers
-
+    next if ($_ !~ /$vista_species/o );
     # OLD >chr16:84987588-84988227 | element 1 | positive  | neural tube[12/12] | hindbrain (rhombencephalon)[12/12] | limb[3/12] | cranial nerve[8/12]
     # from v66 >Mouse|chr12:112380949-112381824 | element 3 | positive  | neural tube[4/4] | hindbrain (rhombencephalon)[4/4] | forebrain[4/4]
 
@@ -181,22 +191,52 @@ sub parse_and_load{
     # parse co-ordinates & id
     my ($chr, $start, $end) = $coords =~ /chr([^:]+):(\d+)-(\d+)/o;
     my ($element_number) = $element =~ /\s*element\s*(\d+)/o;
-
+    
+    my $display_label = $species.$element_number;
     # seq_region ID and co-ordinates
-    my $chr_slice;
+    my $slice_a = $self->slice_adaptor;
+    my $slice   = $slice_a->fetch_by_region( 'chromosome', $chr, $start, $end );
+    # This should work for Mouse, but not 
+    # my $slice   = $slice_a->fetch_by_region( 'chromosome', $chr, $start, $end, 1, $old_assembly );
 
-    if ($old_assembly) {
-      $chr_slice = $self->slice_adaptor->fetch_by_region('chromosome', $chr, undef, undef, undef, $old_assembly);
-    } else {
-      $chr_slice = $self->slice_adaptor->fetch_by_region('chromosome', $chr);
+    if($new_assembly ){
+        my $tmp   = $slice->project('chromosome', $new_assembly);
+        # say $slice->name; 
+        # say $slice->coord_system->name;
+
+        my $ps    = shift(@{$tmp});
+        if(! defined $ps) {
+          warn "Could not project: $display_label";
+          $skipped++;
+          next;
+        }
+        my $slice_new = $ps->to_Slice;
+        # say "**** $old_assembly  ****";
+        # say $chr;
+        # say $start;
+        # say $end;
+        $start = $slice_new->start;
+        $end   = $slice_new->end;
+
+        # say "**** $new_assembly  ****";
+        # say $chr;
+        # say $start;
+        # say $end;
+        # say ' ' ;
+        # die;
     }
+    # if ($old_assembly) {
+    #   $chr_slice = $self->slice_adaptor->fetch_by_region('chromosome', $chr, undef, undef, undef, $old_assembly);
+    # } else {
+    #   $chr_slice = $self->slice_adaptor->fetch_by_region('chromosome', $chr);
+    # }
 
-    if (!$chr_slice) {
-      warn "Can't get slice for chromosme $chr\n";
-      next;
-    }
+    # if (!$chr_slice) {
+    #   warn "Can't get slice for chromosme $chr\n";
+    #   next;
+    # }
 
-    my $seq_region_id = $chr_slice->get_seq_region_id;
+    my $seq_region_id = $slice->get_seq_region_id;
     throw("Can't get seq_region_id for chromosome $chr") if (!$seq_region_id);
 
     # Assume these are all on the positive strand? Is this correct?
@@ -209,22 +249,10 @@ sub parse_and_load{
        -end           => $end,  #is this in UCSC coords?
        -strand        => $strand,
        -feature_type  => $posneg eq 'positive' ? $feature_positive : $feature_negative,
-       -slice         => $self->slice_adaptor->fetch_by_region('chromosome', $chr, undef, undef, $strand, $old_assembly),
+       -slice         => $slice,
        -display_label => $species.$element_number, #"LBNL-$element_number",
        -feature_set   => $set,
       );
-
-
-    # project if necessary
-    if ($new_assembly) {
-
-      $feature = $self->project_feature($feature, $new_assembly);
-
-      if (! defined $feature) {
-        $skipped ++;
-        next;
-      }
-    }
 
     $cnt ++;
     $extfeat_adaptor->store($feature);
@@ -236,10 +264,7 @@ sub parse_and_load{
   $self->log("Loaded $cnt features");
   $self->log("Skipped $skipped features");
 
-  #Now set states
-  foreach my $status (qw(DISPLAYABLE MART_DISPLAYABLE)) {
-    $set->adaptor->store_status($status, $set);
-  }
+
 
 
   return;
