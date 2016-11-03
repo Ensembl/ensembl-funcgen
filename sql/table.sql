@@ -419,8 +419,6 @@ CREATE TABLE `external_feature_file` (
   `analysis_id` smallint(5) unsigned NOT NULL,
   `epigenome_id` int(10) unsigned DEFAULT NULL,
   `feature_type_id` int(10) unsigned DEFAULT NULL,
-  `experiment_id` int(10) unsigned DEFAULT NULL,
-  `result_set_id` int(10) unsigned DEFAULT NULL,
   PRIMARY KEY (`external_feature_file_id`),
   UNIQUE KEY `name_idx` (`name`),
   KEY `epigenome_idx` (`epigenome_id`),
