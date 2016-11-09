@@ -79,17 +79,17 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($states, $assoc_ftypes) = rearrange(['STATES', 'ASSOCIATED_FEATURE_TYPES'] ,@_);
+  my ($assoc_ftypes) = rearrange(['ASSOCIATED_FEATURE_TYPES'] ,@_);
 
-  if ($self->adaptor() && (! $self->adaptor->isa("Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor"))){
-    throw("Adaptor muct be a valid Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor");
-  }
+#   if ($self->adaptor() && (! $self->adaptor->isa("Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor"))){
+#     throw("Adaptor muct be a valid Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor");
+#   }
 
-  if($states){
-    assert_ref($states, 'ARRAY');
-    #Deref so we don't get unwanted update behaviour
-    @{$self->{'states'}} = @$states if $states;
-  }
+#   if($states){
+#     assert_ref($states, 'ARRAY');
+#     #Deref so we don't get unwanted update behaviour
+#     @{$self->{'states'}} = @$states if $states;
+#   }
   
   $self->associated_feature_types($assoc_ftypes) if(defined $assoc_ftypes);
 
