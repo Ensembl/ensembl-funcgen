@@ -87,6 +87,7 @@ sub pipeline_wide_parameters {
         %{$self->SUPER::pipeline_wide_parameters},     
  	pipeline_repository_dir => $self->o('pipeline_repository_dir'),
 	tracking_dba_hash => $self->o('tracking_dba_hash'),
+	tempdir => $self->o('tempdir'),
     };
 }
 

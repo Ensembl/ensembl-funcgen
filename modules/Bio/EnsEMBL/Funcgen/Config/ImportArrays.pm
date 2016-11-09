@@ -58,286 +58,166 @@ use vars qw( %Config );
 
 %Config = 
   (
+   ARRAY_CONFIG => {
+    DEFAULT => {
+#      DNADB => {
+#       -dbname          => $ENV{'DNADB_NAME'},
+#       -host            => $ENV{'DNADB_HOST'},
+#       -port            => $ENV{'DNADB_PORT'},
+#       -user            => $ENV{'DNADB_USER'},
+#       -pass            => $ENV{'DNADB_PASS'},
+#       -species         => $ENV{'SPECIES'},
+#       -multispecies_db => $ENV{'DNADB_MULTISPECIES_DB'},
+#       -species_id      => $ENV{'DNADB_SPECIES_ID'}
+#      },
+#      OUTPUT_DIR           => $ENV{'WORK_DIR'},
 
-   #This entire hash is exported as the global $ARRAY_CONFIG var
-   #each key will be exported as $ARRAY_CONFIG->{'_CONFIG_'.$key}
-   #Dependant on logic name of RunnableDB
+     # Regular expression for parsing file headers
+     #
+     IIDREGEXP =>  '^>probe:(\S+):(\S+):(\S+:\S+;).*$',
 
-   ARRAY_CONFIG => 
-   {
-    DEFAULT => 
-    {
-     #These are now defined dynamically or via the ImportArrays.conf file
-     # All input probes must be kept in one huge (possibly redundant) fasta file
-     #QUERYSEQS            => $ENV{'RAW_FASTA'},
-     # The output of this module writes a set of affy probes into the OUTDB.affy_probe table,
-     # and also writes the nonredundant probes into this fasta file,
-     # with the fasta headers keyed with the affy probes' internal id. 
-     #NON_REDUNDANT_PROBE_SEQS => $ENV{'NR_FASTA'},
-	 
-     # DB containing all affy_arrays, affy_probes and (next step) affy_features
-#      OUTDB => {
-#                -dbname          => $ENV{'DB_NAME'},
-#                -host            => $ENV{'DB_HOST'},
-#                -port            => $ENV{'DB_PORT'},
-#                -user            => $ENV{'DB_USER'},
-#                -pass            => $ENV{'DB_PASS'},
-#                -species         => $ENV{'SPECIES'}, #Only here until we fix the DBAadptor new method
-#                -multispecies_db => $ENV{'MULTISPECIES_DB'},
-#                -species_id      => $ENV{'SPECIES_ID'}
-#               },
+     IFIELDORDER  => {},
+     ARRAY_PARAMS => {},
+    },
+    IMPORT_AFFY_UTR_ARRAYS => {
 
+      IIDREGEXP => '^>probe:(\S+):(\S+):(\S+:\S+;).*$',
 
-     #Optional, must define if dnadb is not on ensembldb
-     #Not used, but will fail if dnadb autoguessing fails
-     DNADB => {
-               -dbname          => $ENV{'DNADB_NAME'},
-               -host            => $ENV{'DNADB_HOST'},
-               -port            => $ENV{'DNADB_PORT'},
-               -user            => $ENV{'DNADB_USER'},
-               -pass            => $ENV{'DNADB_PASS'},
-               -species         => $ENV{'SPECIES'},
-               -multispecies_db => $ENV{'DNADB_MULTISPECIES_DB'},
-               -species_id      => $ENV{'DNADB_SPECIES_ID'}
-              },
-	 
-     #Used for building the format specific NR fasta file
-     OUTPUT_DIR           => $ENV{'WORK_DIR'},
-
-
-     #This defines how to parse the file headers
-     IIDREGEXP =>  '^>probe:(\S+):(\S+):(\S+:\S+;).*$', #AFFY
-				  
-     #We also need a has to define the input field order
-     #This will be used to set the relevant hash values
-     IFIELDORDER => {
-                     #do we need to add fields for class to enable skipping on control probes
-                     #here and in regexp
-                     #We duplicate the field 0 between array.name and array_chip.design_id
-                     #-name       => 2,
-                     #-array      => 0,
-                     #-array_chip => 0,
-                     #-probe_set   => 1,
-                    },
-
-     #ISKIPLIST/REGEX
-     #ISKIPFIELD
-
-
-
-	 
+      IFIELDORDER => {
+        -name       => 2,
+        -array_chip => 0,
+        -array      => 0,
+        -probe_set  => 1
+      },
 
      ARRAY_PARAMS => {
-                      #'MG-U74Cv2' => {
-                      #				  -name => 'MG-U74Cv2',
-                      #				  -vendor => 'AFFY',
-                      #				  #-setsize => undef,
-                      #				  -format  => 'EXPRESSION',
-                      #				  -type    => 'OLIGO', 
-                      #  -class => 'AFFY_ST',
-                      #				  #-description => '',
-                      #				 },
-
-                      # 'MoGene-1_0-st-v1' => {
-                      #						 -name => 'MoGene-1_0-st-v1',
-                      #						 -vendor => 'AFFY',
-                      #						 #-setsize => undef,
-                      #						 -format  => 'EXPRESSION',
-                      #						 -type    => 'OLIGO',
-                      #						 #-description => '',
-                      #  -class => 'AFFY_ST',
-                      #						},
-
-
-                     },
-
-	 
-    },
-
-
-    #%{$Config::ArrayMapping::import_arrays},
-
-    IMPORT_AFFY_UTR_ARRAYS => 
-    {
-     IIDREGEXP => '^>probe:(\S+):(\S+):(\S+:\S+;).*$',
-	
-     IFIELDORDER => {
-                     -name       => 2, -array_chip => 0,
-                     -array      => 0, -probe_set   => 1
-                    },
- 	 
-     #Can we remove name from these hashes?
-
-     ARRAY_PARAMS => 
-     {
-
-      #Remove all the redundant values and set them in ImportArrays?
 
       Porcine =>  {
-                   -name => 'Porcine',
-                   -vendor => 'AFFY',
-                   #-setsize => undef,
-                   -format  => 'EXPRESSION',
-                   -type    => 'OLIGO',
-                   #-description => '',
-                   -class   => 'AFFY_UTR',
-                  },
+        -name    => 'Porcine',
+        -vendor  => 'AFFY',
+        -format  => 'EXPRESSION',
+        -type    => 'OLIGO',
+        -class   => 'AFFY_UTR',
+      },
 
+      platypus_exon => {
+        -name    => 'platypus_exon',
+        -vendor  => 'CUSTOM',
+        -format  => 'EXPRESSION',
+        -type    => 'OLIGO',
+        -class   => 'CUSTOM',
+      },
 
-
-      #Platypus
-      #NOTE: This is not actually AFFY_UTR, but a custom array 
-      #which we are treating the same. Remember to manually change
-      #array.vendor/class to CUSTOM after RunTranscriptXrefs!
-
-      #IIDREGEXP => '^>probe:(\S+):(\S+):(\S+);.*$',
-      'platypus_exon' => {
-                          -name => 'platypus_exon',
-                          -vendor => 'CUSTOM',
-                          #-setsize => undef,
-                          -format  => 'EXPRESSION',
-                          -type    => 'OLIGO',
-                          #-description => '',
-                          -class   => 'CUSTOM',
-                         },
-					  
-
-
-
-      #Frog
+      # Frog
       'X_tropicalis' => {
-                         -name => 'X_tropicalis',
-                         -vendor => 'AFFY',
-                         -format  => 'EXPRESSION',
-                         -type    => 'OLIGO',
-                         #-description => '',
-                         -class   => 'AFFY_UTR',
-                        },
+        -name    => 'X_tropicalis',
+        -vendor  => 'AFFY',
+        -format  => 'EXPRESSION',
+        -type    => 'OLIGO',
+        -class   => 'AFFY_UTR',
+      },
 
-
-
-      #Dog
+      # Dog
       'Canine_2' => {
-                     -name => 'Canine_2',
-                     -vendor => 'AFFY',
-                     -format  => 'EXPRESSION',
-                     -type    => 'OLIGO',
-                     #-description => '',
-                     -class   => 'AFFY_UTR',
-                    },
+        -name => 'Canine_2',
+        -vendor => 'AFFY',
+        -format  => 'EXPRESSION',
+        -type    => 'OLIGO',
+        -class   => 'AFFY_UTR',
+      },
 
-
-      #Macaque
+      # Macaque
       'Rhesus' => {
-                   -name => 'Rhesus',
-                   -vendor => 'AFFY',
-                   -format  => 'EXPRESSION',
-                   -type    => 'OLIGO',
-                   #-description => '',
-                   -class   => 'AFFY_UTR',
-                  },
+        -name => 'Rhesus',
+        -vendor => 'AFFY',
+        -format  => 'EXPRESSION',
+        -type    => 'OLIGO',
+        -class   => 'AFFY_UTR',
+      },
 
-      #C intestinalis
+      # C intestinalis
       'CINT06a520380F' => {
-                           -name => 'CINT06a520380F',
-                           -vendor => 'AFFY',
-                           -format  => 'EXPRESSION',
-                           -type    => 'OLIGO',
-                           #-description => '',
-                           -class   => 'AFFY_UTR',
-                          },
+        -name    => 'CINT06a520380F',
+        -vendor  => 'AFFY',
+        -format  => 'EXPRESSION',
+        -type    => 'OLIGO',
+        -class   => 'AFFY_UTR',
+      },
 
-      #Cow
+      # Cow
       'Bovine' => {
-                   -name => 'Bovine',
-                   -vendor => 'AFFY',
-                   -format  => 'EXPRESSION',
-                   -type    => 'OLIGO',
-                   #-description => '',
-                   -class   => 'AFFY_UTR',
-                  },
+        -name => 'Bovine',
+        -vendor => 'AFFY',
+        -format  => 'EXPRESSION',
+        -type    => 'OLIGO',
+        -class   => 'AFFY_UTR',
+       },
 
-
-
-      #Chicken
       'Chicken' => {
-                    -name => 'Chicken',
-                    -vendor => 'AFFY',
-                    -format  => 'EXPRESSION',
-                    -type    => 'OLIGO',
-                    #-description => '',
-                    -class   => 'AFFY_UTR',
-                   },
+        -name => 'Chicken',
+        -vendor => 'AFFY',
+        -format  => 'EXPRESSION',
+        -type    => 'OLIGO',
+        -class   => 'AFFY_UTR',
+       },
 
-
-      #C_elegans
-
+      # C_elegans
       'C_elegans' => {
-                      -name => 'C_elegans',
-                      -vendor => 'AFFY',
-                      -format  => 'EXPRESSION',
-                      -type    => 'OLIGO',
-                      #-description => '',
-                      -class   => 'AFFY_UTR',
-                     },
+        -name => 'C_elegans',
+        -vendor => 'AFFY',
+        -format  => 'EXPRESSION',
+        -type    => 'OLIGO',
 
+        -class   => 'AFFY_UTR',
+      },
 
-      #Zebra fish
+      # Zebra fish
       'Zebrafish' => {
-                      -name => 'Zebrafish',
-                      -vendor => 'AFFY',
-                      -format  => 'EXPRESSION',
-                      -type    => 'OLIGO',
-                      #-description => '',
-                      -class   => 'AFFY_UTR',
-                     },
+        -name => 'Zebrafish',
+        -vendor => 'AFFY',
+        -format  => 'EXPRESSION',
+        -type    => 'OLIGO',
+        -class   => 'AFFY_UTR',
+      },
 
-
-      #Rat
-
+      # Rat
       'RAE230A' => {
-                    -name => 'RAE230A',
-                    -vendor => 'AFFY',
-                    -format  => 'EXPRESSION',
-                    -type    => 'OLIGO',
-                    #-description => '',
-                    -class   => 'AFFY_UTR',
-                   },
-
+        -name => 'RAE230A',
+        -vendor => 'AFFY',
+        -format  => 'EXPRESSION',
+        -type    => 'OLIGO',
+        -class   => 'AFFY_UTR',
+      },
 
       'RAE230B' => {
-                    -name => 'RAE230B',
-                    -vendor => 'AFFY',
-                    -format  => 'EXPRESSION',
-                    -type    => 'OLIGO',
-                    #-description => '',
-                    -class   => 'AFFY_UTR',
-                   },
+        -name => 'RAE230B',
+        -vendor => 'AFFY',
+        -format  => 'EXPRESSION',
+        -type    => 'OLIGO',
+        -class   => 'AFFY_UTR',
+      },
+
       'Rat230_2' => {
-                     -name => 'Rat230_2',
-                     -vendor => 'AFFY',
-                     -format  => 'EXPRESSION',
-                     -type    => 'OLIGO',
-                     #-description => '',
-                     -class   => 'AFFY_UTR',
-                    },
-
-
+        -name => 'Rat230_2',
+        -vendor => 'AFFY',
+        -format  => 'EXPRESSION',
+        -type    => 'OLIGO',
+        -class   => 'AFFY_UTR',
+      },
 
       'RG-U34A' => {
-                    -name => 'RG-U34A',
-                    -vendor => 'AFFY',
-                    -format  => 'EXPRESSION',
-                    -type    => 'OLIGO',
-                    #-description => '',
-                    -class   => 'AFFY_UTR',
-                   },
+        -name => 'RG-U34A',
+        -vendor => 'AFFY',
+        -format  => 'EXPRESSION',
+        -type    => 'OLIGO',
+        -class   => 'AFFY_UTR',
+      },
       'RG-U34B' => {
                     -name => 'RG-U34B',
                     -vendor => 'AFFY',
                     -format  => 'EXPRESSION',
                     -type    => 'OLIGO',
-                    #-description => '',
+            
                     -class   => 'AFFY_UTR',
                    },
 
@@ -346,7 +226,7 @@ use vars qw( %Config );
                     -vendor => 'AFFY',
                     -format  => 'EXPRESSION',
                     -type    => 'OLIGO',
-                    #-description => '',
+            
                     -class   => 'AFFY_UTR',
                    },
 
@@ -355,7 +235,7 @@ use vars qw( %Config );
                    -vendor => 'AFFY',
                    -format  => 'EXPRESSION',
                    -type    => 'OLIGO',
-                   #-description => '',
+           
                    -class   => 'AFFY_UTR',
                   },
 
@@ -365,7 +245,7 @@ use vars qw( %Config );
                    -vendor => 'AFFY',
                    -format  => 'EXPRESSION',
                    -type    => 'OLIGO',
-                   #-description => '',
+           
                    -class   => 'AFFY_UTR',
                   },
 
@@ -377,7 +257,7 @@ use vars qw( %Config );
                       -vendor => 'AFFY',
                       -format  => 'EXPRESSION',
                       -type    => 'OLIGO',
-                      #-description => '',
+              
                       -class   => 'AFFY_UTR',
                      },
 
@@ -386,7 +266,7 @@ use vars qw( %Config );
                     -vendor => 'AFFY',
                     -format  => 'EXPRESSION',
                     -type    => 'OLIGO',
-                    #-description => '',
+            
                     -class   => 'AFFY_UTR',
                    },
 
@@ -396,7 +276,7 @@ use vars qw( %Config );
                      -vendor => 'AFFY',
                      -format  => 'EXPRESSION',
                      -type    => 'OLIGO',
-                     #-description => '',
+             
                      -class   => 'AFFY_UTR',
                     },
 
@@ -405,84 +285,84 @@ use vars qw( %Config );
                      -vendor => 'AFFY',
                      -format  => 'EXPRESSION',
                      -type    => 'OLIGO',
-                     #-description => '',
+             
                      -class   => 'AFFY_UTR'},
 
       'HG_U95A' => {-name => 'HG-U95A',
                     -vendor => 'AFFY',
                     -format  => 'EXPRESSION',
                     -type    => 'OLIGO',
-                    #-description => '',
+            
                     -class   => 'AFFY_UTR'},
 
       'HG-U95E' => {-name => 'HG-U95E',
                     -vendor => 'AFFY',
                     -format  => 'EXPRESSION',
                     -type    => 'OLIGO',
-                    #-description => '',
+            
                     -class   => 'AFFY_UTR'},
 
       'HG-U95D' => {-name => 'HG-U95D',
                     -vendor => 'AFFY',
                     -format  => 'EXPRESSION',
                     -type    => 'OLIGO',
-                    #-description => '',
+            
                     -class   => 'AFFY_UTR'},
 
       'HG-U95C' => {-name => 'HG-U95C',
                     -vendor => 'AFFY',
                     -format  => 'EXPRESSION',
                     -type    => 'OLIGO',
-                    #-description => '',
+            
                     -class   => 'AFFY_UTR'},
 
       'HG-U95B' => {-name => 'HG-U95B',
                     -vendor => 'AFFY',
                     -format  => 'EXPRESSION',
                     -type    => 'OLIGO',
-                    #-description => '',
+            
                     -class   => 'AFFY_UTR'},
 	  
       'HG_U95Av2' => {-name => 'HG-U95Av2',
                       -vendor => 'AFFY',
                       -format  => 'EXPRESSION',
                       -type    => 'OLIGO',
-                      #-description => '',
+              
                       -class   => 'AFFY_UTR'},
 
       'HG-U133_Plus_2' => {-name => 'HG-U133_Plus_2',
                            -vendor => 'AFFY',
                            -format  => 'EXPRESSION',
                            -type    => 'OLIGO',
-                           #-description => '',
+                   
                            -class   => 'AFFY_UTR'},
 
       'HG-U133B' => {-name => 'HG-U133B',
                      -vendor => 'AFFY',
                      -format  => 'EXPRESSION',
                      -type    => 'OLIGO',
-                     #-description => '',
+             
                      -class   => 'AFFY_UTR'},
 
       'HG-U133A' => {-name => 'HG-U133A',
                      -vendor => 'AFFY',
                      -format  => 'EXPRESSION',
                      -type    => 'OLIGO',
-                     #-description => '',
+             
                      -class   => 'AFFY_UTR'},
 
       'HG-U133A_2' => {-name => 'HG-U133A_2',
                        -vendor => 'AFFY',
                        -format  => 'EXPRESSION',
                        -type    => 'OLIGO',
-                       #-description => '',
+               
                        -class   => 'AFFY_UTR'},
 
       'HG-Focus' => {-name => 'HG-Focus',
                      -vendor => 'AFFY',
                      -format  => 'EXPRESSION',
                      -type    => 'OLIGO',
-                     #-description => '',
+             
                      -class   => 'AFFY_UTR'},
 
 
@@ -495,7 +375,7 @@ use vars qw( %Config );
                       -vendor => 'AFFY',
                       -format  => 'EXPRESSION',
                       -type    => 'OLIGO',
-                      #-description => '',
+              
                       -class   => 'AFFY_UTR',
                      },
 
@@ -505,7 +385,7 @@ use vars qw( %Config );
                     -vendor => 'AFFY',
                     -format  => 'EXPRESSION',
                     -type    => 'OLIGO',
-                    #-description => '',
+            
                     -class   => 'AFFY_UTR',
 					  
                    },
@@ -515,7 +395,7 @@ use vars qw( %Config );
                       -vendor => 'AFFY',
                       -format  => 'EXPRESSION',
                       -type    => 'OLIGO',
-                      #-description => '',
+              
                       -class   => 'AFFY_UTR',
                      },
 	  
@@ -526,7 +406,7 @@ use vars qw( %Config );
                     -vendor => 'AFFY',
                     -format  => 'EXPRESSION',
                     -type    => 'OLIGO',
-                    #-description => '',
+            
                     -class   => 'AFFY_UTR',
                    },
 	  
@@ -535,7 +415,7 @@ use vars qw( %Config );
                       -vendor => 'AFFY',
                       -format  => 'EXPRESSION',
                       -type    => 'OLIGO',
-                      #-description => '',
+              
                       -class   => 'AFFY_UTR',
                      },
 	  
@@ -545,7 +425,7 @@ use vars qw( %Config );
                     -vendor => 'AFFY',
                     -format  => 'EXPRESSION',
                     -type    => 'OLIGO',
-                    #-description => '',
+            
                     -class   => 'AFFY_UTR',
                    },
 
@@ -554,7 +434,7 @@ use vars qw( %Config );
                     -vendor => 'AFFY',
                     -format  => 'EXPRESSION',
                     -type    => 'OLIGO',
-                    #-description => '',
+            
                     -class   => 'AFFY_UTR',
                    },
 
@@ -563,7 +443,7 @@ use vars qw( %Config );
                     -vendor => 'AFFY',
                     -format  => 'EXPRESSION',
                     -type    => 'OLIGO',
-                    #-description => '',
+            
                     -class   => 'AFFY_UTR',
                    },
 
@@ -572,7 +452,7 @@ use vars qw( %Config );
                         -vendor => 'AFFY',
                         -format  => 'EXPRESSION',
                         -type    => 'OLIGO',
-                        #-description => '',
+                
                         -class   => 'AFFY_UTR',
                        },
 
@@ -582,7 +462,7 @@ use vars qw( %Config );
                        -vendor => 'AFFY',
                        -format  => 'EXPRESSION',
                        -type    => 'OLIGO',
-                       #-description => '',
+               
                        -class   => 'AFFY_UTR',
                       },
 
@@ -593,7 +473,7 @@ use vars qw( %Config );
                       -vendor => 'AFFY',
                       -format  => 'EXPRESSION',
                       -type    => 'OLIGO',
-                      #-description => '',
+              
                       -class   => 'AFFY_UTR',
                      },
       'Mu11KsubB' => {
@@ -601,7 +481,7 @@ use vars qw( %Config );
                       -vendor => 'AFFY',
                       -format  => 'EXPRESSION',
                       -type    => 'OLIGO',
-                      #-description => '',
+              
                       -class   => 'AFFY_UTR',
                      },
 	  
@@ -610,14 +490,14 @@ use vars qw( %Config );
                         -vendor => 'AFFY',
                         -format  => 'EXPRESSION',
                         -type    => 'OLIGO',
-                        #-description => '',
+                
                         -class   => 'AFFY_UTR'},
 	  
       'Drosophila_2' => {-name => 'Drosophila_2',
                          -vendor => 'AFFY',
                          -format  => 'EXPRESSION',
                          -type    => 'OLIGO',
-                         #-description => '',
+                 
                          -class   => 'AFFY_UTR'},
 	  	
 
@@ -628,7 +508,7 @@ use vars qw( %Config );
                     #-setsize => undef,
                     -format  => 'EXPRESSION', #? UTR?
                     -type    => 'OLIGO',
-                    #-description => '',
+            
                     -class   => 'AFFY_UTR',
                    },
 
@@ -638,7 +518,7 @@ use vars qw( %Config );
                    #-setsize => undef,
                    -format  => 'EXPRESSION', #? UTR?
                    -type    => 'OLIGO',
-                   #-description => '',
+           
                    -class   => 'AFFY_UTR',
                   },
 
@@ -710,20 +590,14 @@ use vars qw( %Config );
                            -format => 'EXPRESSION',
                            -type=>'OLIGO',
                            -class=>'AFFY_UTR'
-                          },				     
-
-
-      #Then add user defined/custom ones here?
-      #values %{$ArrayConfig->{ARRAY_PARAMS}}
-      #Could write this automatically from env or script?
-
+                          },
      },
 	 
      INPUT_FORMAT => 'FASTA',
     },
 
-    IMPORT_AFFY_ST_ARRAYS => 
-    {
+    IMPORT_AFFY_ST_ARRAYS => {
+    
      IIDREGEXP => '^>probe:(\S+?):([0-9]+).*[TranscriptCluster|ProbeSet]ID=(\S+);',
 
      #Can't use ProbeID=([0-9]+) as control probes only have there ProbeID in the concat'd full name string
@@ -745,7 +619,7 @@ use vars qw( %Config );
                             #-setsize => undef,
                             -format  => 'EXPRESSION',
                             -type    => 'OLIGO',
-                            #-description => '',
+                    
                             -class   => 'AFFY_ST',
                           },
 					  
@@ -755,7 +629,7 @@ use vars qw( %Config );
                               #-setsize => undef,
                               -format  => 'EXPRESSION',
                               -type    => 'OLIGO',
-                              #-description => '',
+                      
                               -class   => 'AFFY_ST',
                              },
 
@@ -765,7 +639,7 @@ use vars qw( %Config );
                               #-setsize => undef,
                               -format  => 'EXPRESSION',
                               -type    => 'OLIGO',
-                              #-description => '',
+                      
                               -class   => 'AFFY_ST',
                              },                             
 
@@ -775,7 +649,7 @@ use vars qw( %Config );
                               #-setsize => undef,
                               -format  => 'EXPRESSION',
                               -type    => 'OLIGO',
-                              #-description => '',
+                      
                               -class   => 'AFFY_ST',
                              },
 
@@ -784,7 +658,7 @@ use vars qw( %Config );
                               #-setsize => undef,
                               -format  => 'EXPRESSION',
                               -type    => 'OLIGO',
-                              #-description => '',
+                      
                               -class   => 'AFFY_ST',
                              },
 
@@ -792,7 +666,7 @@ use vars qw( %Config );
                             -vendor => 'AFFY',
                             -format  => 'EXPRESSION',
                             -type    => 'OLIGO',
-                            #-description => '',
+                    
                             -class   => 'AFFY_ST',
                            }, 
        
@@ -810,7 +684,7 @@ use vars qw( %Config );
                               #-setsize => undef,
                               -format  => 'EXPRESSION',
                               -type    => 'OLIGO',
-                              #-description => '',
+                      
                               -class   => 'AFFY_ST',
                              },
 
@@ -818,7 +692,7 @@ use vars qw( %Config );
                             -vendor => 'AFFY',
                             -format  => 'EXPRESSION',
                             -type    => 'OLIGO',
-                            #-description => '',
+                    
                             -class   => 'AFFY_ST',
                            },
 
@@ -826,7 +700,7 @@ use vars qw( %Config );
                               -vendor => 'AFFY',
                               -format  => 'EXPRESSION',
                               -type    => 'OLIGO',
-                              #-description => '',
+                      
                               -class   => 'AFFY_ST',
                              },
      },
@@ -854,7 +728,7 @@ use vars qw( %Config );
                          #-setsize => undef,
                          -format  => 'EXPRESSION',
                          -type    => 'OLIGO',
-                         #-description => '',
+                 
                          -class   => 'ILLUMINA_WG',
                         },
       
@@ -865,7 +739,7 @@ use vars qw( %Config );
                          #-setsize => undef,
                          -format  => 'EXPRESSION',
                          -type    => 'OLIGO',
-                         #-description => '',
+                 
                          -class   => 'ILLUMINA_WG',
                         },
       
@@ -875,7 +749,7 @@ use vars qw( %Config );
                          #-setsize => undef,
                          -format  => 'EXPRESSION',
                          -type    => 'OLIGO',
-                         #-description => '',
+                 
                          -class   => 'ILLUMINA_WG',
                         },
       
@@ -889,7 +763,7 @@ use vars qw( %Config );
                          #-setsize => undef,
                          -format  => 'EXPRESSION',
                          -type    => 'OLIGO',
-                         #-description => '',
+                 
                          -class   => 'ILLUMINA_WG',
                         },
       
@@ -899,7 +773,7 @@ use vars qw( %Config );
                        #-setsize => undef,
                        -format  => 'EXPRESSION',
                        -type    => 'OLIGO',
-                       #-description => '',
+               
                        -class   => 'ILLUMINA_WG',
                       },
       
@@ -909,7 +783,7 @@ use vars qw( %Config );
                        #-setsize => undef,
                        -format  => 'EXPRESSION',
                        -type    => 'OLIGO',
-                       #-description => '',
+               
                        -class   => 'ILLUMINA_WG',
                       },
 
@@ -919,7 +793,7 @@ use vars qw( %Config );
                           #-setsize => undef,
                           -format  => 'EXPRESSION',
                           -type    => 'OLIGO',
-                          #-description => '',
+                  
                           -class   => 'ILLUMINA_WG',
                          },
       
@@ -930,7 +804,7 @@ use vars qw( %Config );
                          #-setsize => undef,
                          -format  => 'EXPRESSION',
                          -type    => 'OLIGO',
-                         #-description => '',
+                 
                          -class   => 'ILLUMINA_WG',
                         },
       
@@ -940,7 +814,7 @@ use vars qw( %Config );
                          #-setsize => undef,
                          -format  => 'EXPRESSION',
                          -type    => 'OLIGO',
-                         #-description => '',
+                 
                          -class   => 'ILLUMINA_WG',
                         },
 
@@ -950,7 +824,7 @@ use vars qw( %Config );
                       #-setsize => undef,
                       -format  => 'EXPRESSION',
                       -type    => 'OLIGO',
-                      #-description => '',
+              
                       -class   => 'ILLUMINA_WG',
                      },
 
@@ -962,48 +836,31 @@ use vars qw( %Config );
      INPUT_FORMAT => 'FASTA',
     },
 
-
-
-    IMPORT_ILLUMINA_INFINIUM_ARRAYS => 
-    {
-
-     #These are DNA methylation arrays so need a reverse strand mapping?
-     #Or are SourceSeqs target seqs? So we don't need to do anything?
-
+    IMPORT_ILLUMINA_INFINIUM_ARRAYS => {
      IIDREGEXP => '^>(\S+):(\S+).*$',
-	 
      IFIELDORDER => {
-                     -name       => 1,
-                     -array_chip => 0,
-                     -array      => 0,
-                     #-probe_set   => 2,#This could be annotation
-                    },
-	 	 
-     ARRAY_PARAMS => 
-      {	              'HumanMethylation27' => {
-                                               -name => 'HumanMethylation27',
-                                               -vendor => 'ILLUMINA',
-                                               -format  => 'METHYLATION',
-                                               -type    => 'OLIGO',
-                                               #-description => '',
-                                               -class   => 'ILLUMINA_INFINIUM',
-                                               #-version => '1.2',
-                                              },
-
-                      'HumanMethylation450' => {
-                                                -name => 'HumanMethylation450',
-                                                -vendor => 'ILLUMINA',
-                                                -format  => 'METHYLATION',
-                                                -type    => 'OLIGO',
-                                                #-description => '',
-                                                -class   => 'ILLUMINA_INFINIUM',
-                                                #-version => '1.1',
-                                               },
-					  
-                     },
-	 
-     INPUT_FORMAT => 'FASTA',
+      -name       => 1,
+      -array_chip => 0,
+      -array      => 0,
     },
+    ARRAY_PARAMS => {
+      'HumanMethylation27' => {
+        -name    => 'HumanMethylation27',
+        -vendor  => 'ILLUMINA',
+        -format  => 'METHYLATION',
+        -type    => 'OLIGO',
+        -class   => 'ILLUMINA_INFINIUM',
+      },
+      'HumanMethylation450' => {
+        -name => 'HumanMethylation450',
+        -vendor => 'ILLUMINA',
+        -format  => 'METHYLATION',
+        -type    => 'OLIGO',
+        -class   => 'ILLUMINA_INFINIUM',
+      },
+    },
+    INPUT_FORMAT => 'FASTA',
+  },
 
 
 
@@ -1029,7 +886,7 @@ use vars qw( %Config );
                                      #-setsize => undef,
                                      -format  => 'EXPRESSION',
                                      -type    => 'OLIGO',
-                                     #-description => '',
+                             
                                      -class   => 'CODELINK',
                                     },
 					  
@@ -1062,7 +919,7 @@ use vars qw( %Config );
                    #-setsize => undef,
                    -format  => 'EXPRESSION',
                    -type    => 'OLIGO',
-                   #-description => '',
+           
                    -class   => 'AGILENT',
                   },
 
@@ -1072,7 +929,7 @@ use vars qw( %Config );
                    #-setsize => undef,
                    -format  => 'EXPRESSION',
                    -type    => 'OLIGO',
-                   #-description => '',
+           
                    -class   => 'AGILENT',
                   },
 
@@ -1093,7 +950,7 @@ use vars qw( %Config );
                           #-setsize => undef,
                           -format  => 'EXPRESSION',
                           -type    => 'OLIGO',
-                          #-description => '',
+                  
                           -class   => 'AGILENT',
                          },
       'G2519F-021169' => {
@@ -1102,7 +959,7 @@ use vars qw( %Config );
                           #-setsize => undef,
                           -format  => 'EXPRESSION',
                           -type    => 'OLIGO',
-                          #-description => '',
+                  
                           -class   => 'AGILENT',
                          },
 
@@ -1116,7 +973,7 @@ use vars qw( %Config );
                           #-setsize => undef,
                           -format  => 'EXPRESSION',
                           -type    => 'OLIGO',
-                          #-description => '',
+                  
                           -class   => 'AGILENT',
                          },
       'G4138A-012106' => {
@@ -1125,7 +982,7 @@ use vars qw( %Config );
                           #-setsize => undef,
                           -format  => 'EXPRESSION',
                           -type    => 'OLIGO',
-                          #-description => '',
+                  
                           -class   => 'AGILENT',
                          },
 
@@ -1140,7 +997,7 @@ use vars qw( %Config );
                                  #-setsize => undef,
                                  -format  => 'EXPRESSION',
                                  -type    => 'OLIGO',
-                                 #-description => '',
+                         
                                  -class   => 'AGILENT',	
                                 },
 
@@ -1150,7 +1007,7 @@ use vars qw( %Config );
                                  #-setsize => undef,
                                  -format  => 'EXPRESSION',
                                  -type    => 'OLIGO',
-                                 #-description => '',
+                         
                                  -class   => 'AGILENT',	
                                 },
 
@@ -1161,7 +1018,7 @@ use vars qw( %Config );
                                   #-setsize => undef,
                                   -format  => 'EXPRESSION',
                                   -type    => 'OLIGO',
-                                  #-description => '',
+                          
                                   -class   => 'AGILENT',	
 
 
@@ -1173,7 +1030,7 @@ use vars qw( %Config );
                                   #-setsize => undef,
                                   -format  => 'EXPRESSION',
                                   -type    => 'OLIGO',
-                                  #-description => '',
+                          
                                   -class   => 'AGILENT',	
 
 
@@ -1187,7 +1044,7 @@ use vars qw( %Config );
       #                            #-setsize => undef,
       #                            -format  => 'EXPRESSION',
       #                            -type    => 'OLIGO',
-      #                            #-description => '',
+      #                    
       #                            -class   => 'AGILENT',	
       #                            },
 
@@ -1222,7 +1079,7 @@ use vars qw( %Config );
                                  #-setsize => undef,
                                  -format  => 'EXPRESSION',
                                  -type    => 'OLIGO',
-                                 #-description => '',
+                         
                                  -class   => 'AGILENT',	
                                 },
 
@@ -1233,7 +1090,7 @@ use vars qw( %Config );
                     #-setsize => undef,
                     -format  => 'CGH',
                     -type    => 'OLIGO',
-                    #-description => '',
+            
                     -class   => 'AGILENT',	
                    },
 
@@ -1367,7 +1224,7 @@ use vars qw( %Config );
            #-setsize => undef,
            -format  => 'EXPRESSION',
            -type    => 'OLIGO',
-           #-description => '',
+   
            -class   => 'WUSTL',
          },
        },
@@ -1393,7 +1250,7 @@ use vars qw( %Config );
            #-setsize => undef,
            -format  => 'EXPRESSION',
            -type    => 'OLIGO',
-           #-description => '',
+   
            -class   => 'SLRI',
          },
        },
@@ -1420,7 +1277,7 @@ use vars qw( %Config );
            #-setsize => undef,
            -format  => 'EXPRESSION',
            -type    => 'OLIGO',
-           #-description => '',
+   
            -class   => 'UCSF',
          },
        },
@@ -1453,7 +1310,7 @@ use vars qw( %Config );
                                      #-setsize => undef,
                                      -format  => 'EXPRESSION',
                                      -type    => 'OLIGO',
-                                     #-description => '',
+                             
                                      -class   => 'PHALANX',
                                     },
 					  
@@ -1485,7 +1342,7 @@ use vars qw( %Config );
                                     #-setsize => undef,
                                     -format  => 'EXPRESSION',
                                     -type    => 'OLIGO',
-                                    #-description => '',
+                            
                                     -class   => 'LEIDEN',
                                    },
 
@@ -1496,7 +1353,7 @@ use vars qw( %Config );
                                     #-setsize => undef,
                                     -format  => 'EXPRESSION',
                                     -type    => 'OLIGO',
-                                    #-description => '',
+                            
                                     -class   => 'LEIDEN',
                                    },
 
@@ -1527,7 +1384,7 @@ use vars qw( %Config );
                                        #-setsize => undef,
                                        -format  => 'EXPRESSION',
                                        -type    => 'OLIGO',
-                                       #-description => '',
+                               
                                        -class   => 'STEMPLE_LAB_SANGER',
                                       },
 					  
@@ -1538,7 +1395,7 @@ use vars qw( %Config );
                                        #-setsize => undef,
                                        -format  => 'EXPRESSION',
                                        -type    => 'OLIGO',
-                                       #-description => '',
+                               
                                        -class   => 'STEMPLE_LAB_SANGER',
                                       },
 					  
@@ -1565,7 +1422,7 @@ use vars qw( %Config );
                                   #-setsize => undef,
                                   -format  => 'EXPRESSION',
                                   -type    => 'OLIGO',
-                                  #-description => '',
+                          
                                   -class   => 'CATMA',
                                  },
                      },
@@ -1594,7 +1451,7 @@ use vars qw( %Config );
                                     #-setsize => undef,
                                     -format  => 'EXPRESSION',
                                     -type    => 'OLIGO',
-                                    #-description => '',
+                            
                                     -class   => 'NSF',
                                    },
 
@@ -1605,7 +1462,7 @@ use vars qw( %Config );
                                    #-setsize => undef,
                                    -format  => 'EXPRESSION',
                                    -type    => 'OLIGO',
-                                   #-description => '',
+                           
                                    -class   => 'NSF',
                                   },
 
@@ -1615,7 +1472,7 @@ use vars qw( %Config );
                                    #-setsize => undef,
                                    -format  => 'EXPRESSION',
                                    -type    => 'OLIGO',
-                                   #-description => '',
+                           
                                    -class   => 'NSF',
                                   },
 
