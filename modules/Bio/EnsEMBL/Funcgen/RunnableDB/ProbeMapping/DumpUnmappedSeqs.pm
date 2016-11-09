@@ -7,11 +7,10 @@ sub run {
     my $self = shift;
     
     my $unmapped_sequences_file = $self->param('unmapped_sequences_file');
-    my $tracking_dba_hash       = $self->param('tracking_dba_hash');
-
-    use Bio::EnsEMBL::DBSQL::DBConnection;
-    my $dbc_tracking = Bio::EnsEMBL::DBSQL::DBConnection->new(%$tracking_dba_hash);
-    $dbc_tracking->connect();
+    my $species                 = $self->param('species');
+    
+    my $funcgen_adaptor         = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
+    my $dbc_tracking = $funcgen_adaptor->dbc;
 
     my $helper = Bio::EnsEMBL::Utils::SqlHelper->new(
       -DB_CONNECTION => $dbc_tracking 
