@@ -546,7 +546,7 @@ sub store {
           $existing_sth->bind_param(2, $ps_id,              SQL_INTEGER);
           $existing_sth->bind_param(3, $name,               SQL_VARCHAR);
           $existing_sth->bind_param(4, $probe->length(),    SQL_INTEGER);
-          $existing_sth->bind_param(5, $ac_id,              SQL_INTEGER);
+          $existing_sth->bind_param(5, $probe->array_chip->dbID, SQL_INTEGER);
           $existing_sth->bind_param(6, $probe->class(),     SQL_VARCHAR);
           $existing_sth->bind_param(7, $probe->description, SQL_VARCHAR);
           $existing_sth->bind_param(8, $probe_seq_id,       SQL_INTEGER);
@@ -556,7 +556,7 @@ sub store {
           $new_sth->bind_param(1, $ps_id,              SQL_INTEGER);
           $new_sth->bind_param(2, $name,               SQL_VARCHAR);
           $new_sth->bind_param(3, $probe->length(),    SQL_INTEGER);
-          $new_sth->bind_param(4, $ac_id,              SQL_INTEGER);
+          $new_sth->bind_param(4, $probe->array_chip->dbID, SQL_INTEGER);
           $new_sth->bind_param(5, $probe->class(),     SQL_VARCHAR);
           $new_sth->bind_param(6, $probe->description, SQL_VARCHAR);
           $new_sth->bind_param(7, $probe_seq_id,       SQL_INTEGER);
