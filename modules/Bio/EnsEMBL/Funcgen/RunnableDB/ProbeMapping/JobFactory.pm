@@ -18,9 +18,7 @@ sub run {
     my @list = grep !/^\.\.?$/, readdir(D);
     closedir(D);
 
-    my $tracking_dba_hash = $self->param('tracking_dba_hash');
-    use Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::Utils qw( create_funcgen_adaptor );
-    my $funcgen_adaptor = create_funcgen_adaptor($tracking_dba_hash);
+    my $funcgen_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
     
     my $input_id = [];
     DIR: foreach my $subdirectory (@list) {
@@ -37,21 +35,24 @@ sub run {
 	qq(select name from array where class="$subdirectory")
       );
 
-      # Dereference the individual array refs so we get an array of array 
-      # names
-      #
-      my @array_of_array_names = map { @$_ } @$arrayref_of_arrayref_with_one_element_which_is_the_name;
+#       # Dereference the individual array refs so we get an array of array 
+#       # names
+#       #
+#       my @array_of_array_names = map { @$_ } @$arrayref_of_arrayref_with_one_element_which_is_the_name;
+# 
+#       if (! @array_of_array_names) {
+# 	die("Can't find an array with class $subdirectory");
+#       }
 
-      if (! @array_of_array_names) {
-	die("Can't find an array with class $subdirectory");
-      }
-      
-      my $all_array_names = join " ", @array_of_array_names;
+#       my $all_array_names = join " ", @array_of_array_names;
 
       push @$input_id, {
-	array_format    => $subdirectory,
-	QUERYSEQS       => File::Spec->catfile($full_path, 'arrays.'.$subdirectory.'.fasta'),
-	all_array_names => $all_array_names,
+	array_class    => $subdirectory,
+	probe_file     => File::Spec->catfile($full_path, 'arrays.'.$subdirectory.'.fasta'),
+	species        => $species,
+	
+	# Used for rollback
+# 	all_array_names => $all_array_names,
       };
     }
     foreach my $current_input_id (@$input_id) {
