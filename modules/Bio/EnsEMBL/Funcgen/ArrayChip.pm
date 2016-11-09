@@ -137,7 +137,15 @@ sub new {
 
 =cut
 
-sub array_id {  return shift->{array_id}; }
+sub array_id {
+    my $self     = shift;
+    my $array_id = shift;
+    
+    if (defined $array_id) {
+      $self->{'_array_id'} = $array_id;
+    }
+    return $self->{'_array_id'};
+}
 
 =head2 name
 
