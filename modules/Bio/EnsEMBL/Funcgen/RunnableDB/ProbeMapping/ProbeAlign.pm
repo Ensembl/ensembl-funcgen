@@ -137,7 +137,13 @@ sub fetch_input {
   $self->HIT_SATURATION_LEVEL(100);
   $self->MAX_MISMATCHES(0);
   $self->QUERYTYPE('dna');
-  $self->OUTDB($self->param('OUTDB'));
+  
+  my $species                 = $self->param('species');
+  my $funcgen_adaptor         = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
+
+  my $out_db = 
+  
+  $self->OUTDB($funcgen_adaptor);
   $self->QUERYSEQS($self->param('QUERYSEQS'));
   
   use Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::Utils qw( create_dna_db_params_from_funcgen_hash );    
