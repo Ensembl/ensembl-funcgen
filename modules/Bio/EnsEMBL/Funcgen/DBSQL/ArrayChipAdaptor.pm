@@ -79,6 +79,17 @@ sub fetch_all_by_array_id {
   return $self->generic_fetch('ac.array_id= ?');
 }
 
+sub fetch_by_name {
+
+  my ($self, $name) = @_;
+
+  my $arrays = $self->generic_fetch("ac.name = '$name'");
+  
+  if(scalar(@$arrays) > 1) {
+    throw("There is more than one array with this name.");
+  }
+  return $arrays->[0];
+}
 
 =head2 fetch_all_by_Array
 
