@@ -142,9 +142,9 @@ sub array_id {
     my $array_id = shift;
     
     if (defined $array_id) {
-      $self->{'array_id'} = $array_id;
+      $self->{'_array_id'} = $array_id;
     }
-    return $self->{'array_id'};
+    return $self->{'_array_id'};
 }
 
 =head2 name
