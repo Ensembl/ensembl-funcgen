@@ -67,6 +67,26 @@ while (my $current_annotated_feature_id = <$in>) {
 
   chomp($current_annotated_feature_id);
   my $annotated_feature = $annotated_feature_adaptor->fetch_by_dbID($current_annotated_feature_id);
+  
+  #
+  # Check, if the peak extends beyond the seq region. If so, trim to the 
+  # length of the sequence region. Generating peaks that extend beyond the
+  # seq region is a known bug in SWEmbl and these should be corrected before
+  # storing them in the database, but sometimes they still creep through.
+  #
+  my $feature_end    = $annotated_feature->end;
+  my $seq_region_end = $annotated_feature->slice->end;
+  
+  my $feature_extends_beyond_seq_region_bounds = $feature_end > $seq_region_end;
+  
+  if ($feature_extends_beyond_seq_region_bounds) {
+    $annotated_feature->end($seq_region_end);
+  }
+  
+  # Another known bug: peaks that start at position zero.
+  if ($annotated_feature->start == 0) {
+    $annotated_feature->start(1);
+  }
 
   eval {
     $gff_serializer->print_feature($annotated_feature);
