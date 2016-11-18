@@ -47,10 +47,9 @@ sub pipeline_analyses {
 	{
 	  -logic_name    => 'QcChanceJobFactory',
 	  -module        => 'Bio::EnsEMBL::Funcgen::Hive::QcChanceJobFactory',
-# 	  -meadow        => 'LOCAL',
-	  -parameters => {
-		chromosome_file => $self->o('chromosome_file')
-	  },
+# 	  -parameters => {
+# 		chromosome_file => $self->o('chromosome_file')
+# 	  },
 	  -flow_into => { 2 => 'MkTempDir', },
 	},
         {   -logic_name => 'MkTempDir',
