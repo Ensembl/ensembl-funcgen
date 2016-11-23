@@ -1,4 +1,4 @@
-534	\N	schema_version	86
+534	\N	schema_version	87
 156	1	species.production_name	homo_sapiens
 223	\N	schema_type	funcgen
 589	\N	patch	patch_78_79_a.sql|schema_version
@@ -50,3 +50,8 @@
 640	\N	patch	patch_85_86_c.sql|Add production name column to feature_type table
 641	\N	patch	patch_85_86_d.sql|Add new columns to input_subset table to accommodate paired-end data
 642	\N	patch	patch_85_86_e.sql|Add QC tables
+643	\N	patch	patch_86_87_a.sql|schema_version
+644	\N	patch	patch_86_87_b.sql|Change data type of certain columns to facilitate foreing key constraints
+645	\N	patch	patch_86_87_c.sql|Remove obsolete coloumns from external_feature_file
+646	\N	patch	patch_86_87_d.sql|Add 'unknown' as a valid gender in the epigenome table
+647	\N	patch	patch_86_87_e.sql|Increase data_set.name length
