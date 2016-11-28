@@ -111,6 +111,17 @@ sub new {
   #MANDATORY PARAMS
   throw('Need to specify a name')     if ! defined $name;
   assert_ref($ftype, 'Bio::EnsEMBL::Funcgen::FeatureType', 'Set FeatureType'); 
+  
+  use Carp;
+  
+  if (! defined $ftype) {
+    confess("The feature type was undefined!");
+  }
+  
+  if (! $ftype->isa('Bio::EnsEMBL::Funcgen::FeatureType')) {
+    confess("The feature type passed was a " . (ref $ftype));
+  }
+  
   assert_ref($anal, 'Bio::EnsEMBL::Analysis', 'Set Analysis');
 
   if($exp){
