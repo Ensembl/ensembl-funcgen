@@ -110,8 +110,7 @@ sub new {
 
   #MANDATORY PARAMS
   throw('Need to specify a name')     if ! defined $name;
-  assert_ref($ftype, 'Bio::EnsEMBL::Funcgen::FeatureType', 'Set FeatureType'); 
-  
+
   use Carp;
   
   if (! defined $ftype) {
