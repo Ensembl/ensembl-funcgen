@@ -79,14 +79,14 @@ qr/Need to specify a name/, "Test constructor's name exception";
 throws_ok {
     my $set = Bio::EnsEMBL::Funcgen::Set->new(
         -name => 'set_name',
-        -feature_type => $feature_type,
+#        -feature_type => $feature_type,
         -analysis   => $analysis,
         -epigenome  => $epigenome,
         -dbID       => 1000,
         -adaptor    => $issa,
         -experiment => $exp, );
 }
-qr/Set FeatureType/, "Test constructor's feature_type exception";
+qr/The feature type was undefined/, "Test constructor's feature_type exception";
 
 throws_ok {
     my $set = Bio::EnsEMBL::Funcgen::Set->new(
