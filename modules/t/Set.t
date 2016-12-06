@@ -86,7 +86,7 @@ throws_ok {
         -adaptor    => $issa,
         -experiment => $exp, );
 }
-qr/Set FeatureType/, "Test constructor's feature_type exception";
+qr/The feature type was undefined/, "Test constructor's feature_type exception";
 
 throws_ok {
     my $set = Bio::EnsEMBL::Funcgen::Set->new(
