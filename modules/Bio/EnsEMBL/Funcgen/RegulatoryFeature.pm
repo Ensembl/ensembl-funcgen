@@ -299,6 +299,13 @@ sub regulatory_activity_for_epigenome {
   my $self = shift;
   my $epigenome = shift;
   
+  if (! defined $epigenome) {
+    throw("Epigenome parameter was undefined!");
+  }
+  if (ref $epigenome ne 'Bio::EnsEMBL::Funcgen::Epigenome') {
+    throw("Wrong parameter, expected an epigenome, but got a " . ref $epigenome);
+  }
+  
   my $epigenome_id = $epigenome->dbID;
   my @regulatory_activity = grep { 
     !$_->_is_multicell 
