@@ -109,16 +109,3 @@ $logger->info("Export done.\n");
 
 $gff_fh->close;
 $bed_fh->close;
-
-# # Make sure that empty files exist so subsequent analyses don't fail.
-# # The gff serialiser might not be creating a file, 
-# #
-# 
-# if (-z $gff_file) {
-#   `touch $gff_file`;
-# }
-# if (-z $bed_file) {
-#   `touch $bed_file`;
-# }
-# 
-# 

@@ -89,6 +89,16 @@ my $batch_size = 10000;
 #
 my $core_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor( $species, 'Core' );
 $core_adaptor->dbc->disconnect_when_inactive(0);
+
+# Try to prevent 
+#
+# DBD::mysql::st execute failed: Lost connection to MySQL server during query 
+# at /nfs/users/nfs_m/mn1/work_dir_ftp/lib/ensembl/modules/Bio/EnsEMBL/DBSQL/SliceAdaptor.pm 
+# line 825. DBD::mysql::st execute failed: Lost connection to MySQL server 
+# during query at /nfs/users/nfs_m/mn1/work_dir_ftp/lib/ensembl/modules/Bio/EnsEMBL/DBSQL/SliceAdaptor.pm 
+# line 825.
+#
+$core_adaptor->dbc->reconnect_when_lost(1);
 $ontology_term_adaptor->db->dbc->disconnect_when_inactive(0);
 $funcgen_adaptor->dbc->disconnect_when_inactive(0);
 
