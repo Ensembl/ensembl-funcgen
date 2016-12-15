@@ -105,7 +105,9 @@ sub new {
     initial_release_date
     last_annotation_update
     feature_type_id
+    feature_type
     analysis_id
+    analysis
     is_current
   );
   
@@ -117,10 +119,27 @@ sub new {
     $initial_release_date,
     $last_annotation_update,
     $feature_type_id,
+    $feature_type,
     $analysis_id,
+    $analysis,
     $is_current,
   )
     = rearrange([ @field ], @_);
+
+  #
+  # Analysis and FeatureType can be passed in either as objects or by their 
+  # dbIDs. The RegulatoryFeatureAdaptor uses database ids only, the objects
+  # are lazy loaded as needed.
+  #
+  # The regulatory build script uses proper objects to create the regulatory
+  # build object.
+  #
+  
+  $self->set_Analysis($analysis);
+  $self->set_FeatureType($feature_type);
+  
+  $self->feature_type_id($feature_type_id);
+  $self->analysis_id($analysis_id);
 
   $self->db($db);
   $self->dbID($dbID);
@@ -128,8 +147,6 @@ sub new {
   $self->version($version);
   $self->initial_release_date($initial_release_date);
   $self->last_annotation_update($last_annotation_update);
-  $self->feature_type_id($feature_type_id);
-  $self->analysis_id($analysis_id);
   $self->is_current($is_current);
 
   return $self;
@@ -191,6 +208,54 @@ sub initial_release_date   { return shift->_generic_get_or_set('initial_release_
 sub last_annotation_update { return shift->_generic_get_or_set('last_annotation_update', @_) }
 sub feature_type_id        { return shift->_generic_get_or_set('feature_type_id',        @_) }
 sub analysis_id            { return shift->_generic_get_or_set('analysis_id',            @_) }
+
+sub set_Analysis {
+  my $self     = shift;
+  my $analysis = shift;
+  
+  $self->{analysis} = $analysis;
+  $self->analysis_id($analysis->dbID);
+}
+
+sub fetch_Analysis {
+  my $self = shift;
+  
+  if ($self->{analysis}) {
+    return $self->{analysis};
+  }
+  my $analysis_id = $self->analysis_id;
+  if ($analysis_id) {
+    my $analysis_adaptor = $self->db->get_AnalysisAdaptor;
+    my $analysis = $analysis_adaptor->fetch_by_dbID($analysis_id);
+    $self->{analysis} = $analysis;
+    return $analysis;
+  }
+  die;
+}
+
+sub set_FeatureType {
+  my $self         = shift;
+  my $feature_type = shift;
+  
+  $self->{feature_type} = $feature_type;
+  $self->feature_type_id($feature_type->dbID);
+}
+
+sub fetch_FeatureType {
+  my $self = shift;
+  
+  if ($self->{feature_type}) {
+    return $self->{feature_type};
+  }
+  my $feature_type_id = $self->feature_type_id;
+  if ($feature_type_id) {
+    my $feature_type_adaptor = $self->db->get_FeatureTypeAdaptor;
+    my $feature_type = $feature_type_adaptor->fetch_by_dbID($feature_type_id);
+    $self->{feature_type} = $feature_type;
+    return $feature_type;
+  }
+  die;
+}
 
 =head2 is_current
 
