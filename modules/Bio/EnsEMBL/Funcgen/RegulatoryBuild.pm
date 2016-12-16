@@ -134,9 +134,12 @@ sub new {
   # The regulatory build script uses proper objects to create the regulatory
   # build object.
   #
-  
-  $self->set_Analysis($analysis);
-  $self->set_FeatureType($feature_type);
+  if (defined $analysis) {
+    $self->set_Analysis($analysis);
+  }
+  if (defined $feature_type) {
+    $self->set_FeatureType($feature_type);
+  }
   
   $self->feature_type_id($feature_type_id);
   $self->analysis_id($analysis_id);
@@ -214,6 +217,11 @@ sub set_Analysis {
   my $analysis = shift;
   
   $self->{analysis} = $analysis;
+
+  if (! defined $analysis) {
+    throw('Analysis was not defined!');
+  }
+  
   $self->analysis_id($analysis->dbID);
 }
 
@@ -237,6 +245,9 @@ sub set_FeatureType {
   my $self         = shift;
   my $feature_type = shift;
   
+  if (! defined $feature_type) {
+    throw('Feature type was not defined!');
+  }
   $self->{feature_type} = $feature_type;
   $self->feature_type_id($feature_type->dbID);
 }
