@@ -105,7 +105,9 @@ sub new {
     initial_release_date
     last_annotation_update
     feature_type_id
+    feature_type
     analysis_id
+    analysis
     is_current
   );
   
@@ -117,7 +119,9 @@ sub new {
     $initial_release_date,
     $last_annotation_update,
     $feature_type_id,
+    $feature_type,
     $analysis_id,
+    $analysis,
     $is_current,
   )
     = rearrange([ @field ], @_);
@@ -146,8 +150,6 @@ sub new {
   $self->version($version);
   $self->initial_release_date($initial_release_date);
   $self->last_annotation_update($last_annotation_update);
-  $self->feature_type_id($feature_type_id);
-  $self->analysis_id($analysis_id);
   $self->is_current($is_current);
 
   return $self;
