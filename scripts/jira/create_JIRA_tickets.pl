@@ -75,9 +75,9 @@ sub main {
         = set_parameters( $relco, $release, $password, $tickets_csv, $config,
         $logger );
 
-    # ----------------
-    # read config file
-    # ----------------
+    # ---------------------------
+    # read config file parameters
+    # ---------------------------
     my $parameters = Config::Tiny->read($config);
 
     # check_dates($parameters);
@@ -114,12 +114,13 @@ sub set_parameters {
     my ( $relco, $release, $password, $tickets_csv, $config, $logger ) = @_;
 
     $relco = $ENV{'USER'} if !$relco;
-    $relco = check_relco_name_is_valid( $relco, $logger );
+    $relco = validate_relco_name( $relco, $logger );
 
     $release = Bio::EnsEMBL::ApiVersion->software_version() if !$release;
 
     $tickets_csv = $FindBin::Bin . '/jira_recurrent_tickets.csv'
         if !$tickets_csv;
+
     if ( !-e $tickets_csv ) {
         $logger->error(
             'Tickets file '
@@ -130,6 +131,7 @@ sub set_parameters {
     }
 
     $config = $FindBin::Bin . '/jira.conf' if !$config;
+
     if ( !-e $config ) {
         $logger->error(
             'Config file '
@@ -153,17 +155,30 @@ sub set_parameters {
     if ( !$password ) {
         print 'Please type your JIRA password:';
 
-        ReadMode('noecho');
+        ReadMode('noecho'); # make password invisible on terminal
         $password = ReadLine(0);
         chomp $password;
-        ReadMode(0);
+        ReadMode(0); # restore terminal
         print "\n";
     }
 
     return ( $relco, $release, $password, $tickets_csv, $config );
 }
 
-sub check_relco_name_is_valid {
+=head2 validate_relco_name
+
+  Arg[1]      : String $relco - the coordinator of the current release
+  Arg[2]      : Bio::EnsEMBL::Utils::Logger $logger - object used for logging
+  Example     : my $valid_relco = validate_relco_name($relco, $logger)
+  Description : Checks if the provided relco name is valid, returns valid JIRA
+                username
+  Return type : String
+  Exceptions  : none
+  Caller      : general
+
+=cut
+
+sub validate_relco_name {
     my ( $relco, $logger ) = @_;
 
     my %valid_relco_names = (
@@ -212,7 +227,7 @@ sub parse_tickets_file {
     my $header = readline $csv;
     chomp $header;
 
-    my @jira_fields = split /\t/, $header;
+#    my @jira_fields = split /\t/, $header;
 
     while ( readline $csv ) {
         my $line = $_;
