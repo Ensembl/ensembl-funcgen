@@ -1,25 +1,25 @@
-Project	IssueType	Summary	Reporter	Priority	Status	Created	FixVersion	DueDate	Component	Description
-ENSREGULATION	Task	Run Healthchecks before the pre handover	<RelCo>	Major	Reported	<date_created>	release-<version>_preHandover, release-<version>	<preHandover_date>	Healthcheck	
-ENSREGULATION	Task	Patch funcgen databases on ens-staging & ens-staging-grch37	<RelCo>	Major	Reported	<date_created>	release-<version>_handover, release-<version>	<handover_date>		
-ENSREGULATION	Task	Update DBs for release	<RelCo>	Major	Reported	<date_created>	release-<version>_handover, release-<version>	<handover_date>		
-ENSREGULATION	Task	Update table.sql in order to comply with all new schema patches	<RelCo>	Major	Reported	<date_created>	release-<version>_handover, release-<version>	<handover_date>	Schema	
-ENSREGULATION	Task	Run probe2transcript for all species with new genebuild	<RelCo>	Major	Reported	<date_created>	release-<version>_handover, release-<version>	<handover_date>	Data	
-ENSREGULATION	Task	Copy data files to webdev directory	<RelCo>	Major	Reported	<date_created>	release-<version>_handover, release-<version>	<handover_date>		Newly generated bigwig and bigbed files need to be copied to /nfs/ensnfs-webdev/staging/
-ENSREGULATION	Task	Copy DBs to staging	<RelCo>	Major	Reported	<date_created>	release-<version>_handover, release-<version>	<handover_date>		Please don't forget to keep a copy of the tracking dbs in our genomics server.Also make sure that there are no tracking tables on staging
-ENSREGULATION	Task	Run Healthchecks before the handover	<RelCo>	Major	Reported	<date_created>	release-<version>_handover, release-<version>	<handover_date>	Healthcheck	
-ENSREGULATION	Task	Check staging.ensembl.org	<RelCo>	Major	Reported	<date_created>	release-<version>_codeBranching, release-<version>	<codeBranching_date>		
-ENSREGULATION	Task	FTP dumps	<RelCo>	Major	Reported	<date_created>	release-<version>_codeBranching, release-<version>	<codeBranching_date>	Data	
-ENSREGULATION	Task	Make sure that the master branch passes all unit tests on Travis CI	<RelCo>	Major	Reported	<date_created>	release-<version>_codeBranching, release-<version>	<codeBranching_date>	API	
-ENSREGULATION	Improvement	Update Static Content	<RelCo>	Major	Reported	<date_created>	release-<version>_codeBranching, release-<version>	<codeBranching_date>	Documentation	https://www.ebi.ac.uk/seqdb/confluence/display/ensf/Release+Coordination#ReleaseCoordination-StaticContent
-ENSREGULATION	Task	Create new git branch for release <version>	<RelCo>	Major	Reported	<date_created>	release-<version>_codeBranching, release-<version>	<codeBranching_date>		
-ENSREGULATION	Task	Patch test database schema	<RelCo>	Major	Reported	<date_created>	release-<version>_codeBranching, release-<version>	<codeBranching_date>		
-ENSREGULATION	Task	Update declarations	<RelCo>	Major	Reported	<date_created>	release-<version>_codeBranching, release-<version>	<codeBranching_date>		
-ENSREGULATION	Task	Make sure that DEPRECATED.md is up to date	<RelCo>	Major	Reported	<date_created>	release-<version>_codeBranching, release-<version>	<codeBranching_date>	Documentation	All module / method deprecations should be listed in this file. Make sure that every API component that has been deprecated during the release period is in the list.
-ENSREGULATION	Task	Update API tutorial	<RelCo>	Major	Reported	<date_created>	release-<version>_codeBranching, release-<version>	<codeBranching_date>	API	
-ENSREGULATION	Task	Create copies of tracking DBs on genomics servers	<RelCo>	Major	Reported	<date_created>	release-<version>_codeBranching, release-<version>	<codeBranching_date>		Copy the final dbs from staging to genomics and add the tracking tables
-ENSREGULATION	Improvement	Updating database schema documentation	<RelCo>	Major	Reported	<date_created>	release-<version>_codeBranching, release-<version>	<codeBranching_date>	Documentation	Update the documentation around the data base schema as described here: https://www.ebi.ac.uk/seqdb/confluence/display/ensf/Creating+the+schema+documentation
-ENSREGULATION	Improvement	Update regulation tutorial	<RelCo>	Major	Reported	<date_created>	release-<version>_codeBranching, release-<version>	<codeBranching_date>	Documentation	Update the Regulation tutorial, which can be found here: http://www.ensembl.org/info/docs/api/funcgen/regulation_tutorial.html
-ENSREGULATION	Task	Check test.ensembl.org	<RelCo>	Major	Reported	<date_created>	release-<version>_grandFinale, release-<version>	<release_date>		
-ENSREGULATION	Task	Make blog post for known bugs	<RelCo>	Major	Reported	<date_created>	release-<version>_grandFinale, release-<version>	<release_date>		
-ENSREGULATION	Task	Housekeeping of release-related JIRA tickets	<RelCo>	Major	Reported	<date_created>	release-<version>_grandFinale, release-<version>	<release_date>		
-ENSREGULATION	Task	Clean unnecessary DBs from internal servers	<RelCo>	Major	Reported	<date_created>	release-<version>_grandFinale, release-<version>	<release_date>		
+Project	IssueType	Summary	Reporter	Priority	Created	FixVersion	DueDate	Component	Description
+ENSREGULATION	Task	Run Healthchecks before the pre handover	<RelCo>	Major	<date_created>	release-<version>_preHandover, release-<version>	<preHandover_date>	Healthcheck	
+ENSREGULATION	Task	Patch funcgen databases on ens-staging & ens-staging-grch37	<RelCo>	Major	<date_created>	release-<version>_handover, release-<version>	<handover_date>		
+ENSREGULATION	Task	Update DBs for release	<RelCo>	Major	<date_created>	release-<version>_handover, release-<version>	<handover_date>		
+ENSREGULATION	Task	Update table.sql in order to comply with all new schema patches	<RelCo>	Major	<date_created>	release-<version>_handover, release-<version>	<handover_date>	Schema	
+ENSREGULATION	Task	Run probe2transcript for all species with new genebuild	<RelCo>	Major	<date_created>	release-<version>_handover, release-<version>	<handover_date>	Data	
+ENSREGULATION	Task	Copy data files to webdev directory	<RelCo>	Major	<date_created>	release-<version>_handover, release-<version>	<handover_date>		Newly generated bigwig and bigbed files need to be copied to /nfs/ensnfs-webdev/staging/
+ENSREGULATION	Task	Copy DBs to staging	<RelCo>	Major	<date_created>	release-<version>_handover, release-<version>	<handover_date>		Please don't forget to keep a copy of the tracking dbs in our genomics server.Also make sure that there are no tracking tables on staging
+ENSREGULATION	Task	Run Healthchecks before the handover	<RelCo>	Major	<date_created>	release-<version>_handover, release-<version>	<handover_date>	Healthcheck	
+ENSREGULATION	Task	Check staging.ensembl.org	<RelCo>	Major	<date_created>	release-<version>_codeBranching, release-<version>	<codeBranching_date>		
+ENSREGULATION	Task	FTP dumps	<RelCo>	Major	<date_created>	release-<version>_codeBranching, release-<version>	<codeBranching_date>	Data	
+ENSREGULATION	Task	Make sure that the master branch passes all unit tests on Travis CI	<RelCo>	Major	<date_created>	release-<version>_codeBranching, release-<version>	<codeBranching_date>	API	
+ENSREGULATION	Improvement	Update Static Content	<RelCo>	Major	<date_created>	release-<version>_codeBranching, release-<version>	<codeBranching_date>	Documentation	https://www.ebi.ac.uk/seqdb/confluence/display/ensf/Release+Coordination#ReleaseCoordination-StaticContent
+ENSREGULATION	Task	Create new git branch for release <version>	<RelCo>	Major	<date_created>	release-<version>_codeBranching, release-<version>	<codeBranching_date>		
+ENSREGULATION	Task	Patch test database schema	<RelCo>	Major	<date_created>	release-<version>_codeBranching, release-<version>	<codeBranching_date>		
+ENSREGULATION	Task	Update declarations	<RelCo>	Major	<date_created>	release-<version>_codeBranching, release-<version>	<codeBranching_date>		
+ENSREGULATION	Task	Make sure that DEPRECATED.md is up to date	<RelCo>	Major	<date_created>	release-<version>_codeBranching, release-<version>	<codeBranching_date>	Documentation	All module / method deprecations should be listed in this file. Make sure that every API component that has been deprecated during the release period is in the list.
+ENSREGULATION	Task	Update API tutorial	<RelCo>	Major	<date_created>	release-<version>_codeBranching, release-<version>	<codeBranching_date>	API	
+ENSREGULATION	Task	Create copies of tracking DBs on genomics servers	<RelCo>	Major	<date_created>	release-<version>_codeBranching, release-<version>	<codeBranching_date>		Copy the final dbs from staging to genomics and add the tracking tables
+ENSREGULATION	Improvement	Updating database schema documentation	<RelCo>	Major	<date_created>	release-<version>_codeBranching, release-<version>	<codeBranching_date>	Documentation	Update the documentation around the data base schema as described here: https://www.ebi.ac.uk/seqdb/confluence/display/ensf/Creating+the+schema+documentation
+ENSREGULATION	Improvement	Update regulation tutorial	<RelCo>	Major	<date_created>	release-<version>_codeBranching, release-<version>	<codeBranching_date>	Documentation	Update the Regulation tutorial, which can be found here: http://www.ensembl.org/info/docs/api/funcgen/regulation_tutorial.html
+ENSREGULATION	Task	Check test.ensembl.org	<RelCo>	Major	<date_created>	release-<version>_grandFinale, release-<version>	<release_date>		
+ENSREGULATION	Task	Make blog post for known bugs	<RelCo>	Major	<date_created>	release-<version>_grandFinale, release-<version>	<release_date>		
+ENSREGULATION	Task	Housekeeping of release-related JIRA tickets	<RelCo>	Major	<date_created>	release-<version>_grandFinale, release-<version>	<release_date>		
+ENSREGULATION	Task	Clean unnecessary DBs from internal servers	<RelCo>	Major	<date_created>	release-<version>_grandFinale, release-<version>	<release_date>		

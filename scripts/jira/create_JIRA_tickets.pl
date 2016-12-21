@@ -96,6 +96,7 @@ sub main {
     # validate JIRA fields
     # --------------------
     for my $ticket ( @{$tickets} ) {
+
         # validate_fields( $ticket, $parameters, $logger );
 
         # die;
@@ -155,10 +156,10 @@ sub set_parameters {
     if ( !$password ) {
         print 'Please type your JIRA password:';
 
-        ReadMode('noecho'); # make password invisible on terminal
+        ReadMode('noecho');    # make password invisible on terminal
         $password = ReadLine(0);
         chomp $password;
-        ReadMode(0); # restore terminal
+        ReadMode(0);           # restore terminal
         print "\n";
     }
 
@@ -227,7 +228,7 @@ sub parse_tickets_file {
     my $header = readline $csv;
     chomp $header;
 
-#    my @jira_fields = split /\t/, $header;
+    #    my @jira_fields = split /\t/, $header;
 
     while ( readline $csv ) {
         my $line = $_;
@@ -235,9 +236,9 @@ sub parse_tickets_file {
 
         $line = replace_placeholders( $line, $parameters );
 
-        my ($project,  $issue_type, $summary, $reporter,
-            $priority, $status,     $created, $fix_versions,
-            $due_date, $components, $description
+        my ($project,    $issue_type, $summary,      $reporter,
+            $priority,   $created,    $fix_versions, $due_date,
+            $components, $description
         ) = split /\t/, $line;
 
         # if ( scalar @jira_fields != scalar @jira_values ) {
@@ -252,15 +253,15 @@ sub parse_tickets_file {
         my @components  = split /,/, $components;
 
         my %ticket = (
-            'project'     => { 'key'  => $project },
-            'issuetype'   => { 'name' => $issue_type },
-            'summary'     => $summary,
-            'reporter'    => { 'name' => $reporter },
-            'priority'    => { 'name' => $priority },
-            'status'      => { 'name' => $status },
+            'project'   => { 'key'  => $project },
+            'issuetype' => { 'name' => $issue_type },
+            'summary'   => $summary,
+            'reporter'  => { 'name' => $reporter },
+            'priority'  => { 'name' => $priority },
+
             # 'created'     => { 'name' => $created },
             # 'fixVersions' => \@fixVersions,
-            'duedate'     => $due_date,
+            # 'duedate'     => $due_date,
             # 'components'  => \@components,
             'description' => $description,
         );
@@ -308,13 +309,13 @@ sub validate_fields {
     my ( $ticket, $parameters, $logger ) = @_;
 
     my %fields_to_be_validated = (
-        'project'    => 1,
-        'issuetype'  => 1,
-        'reporter'   => 1,
-        'priority'   => 1,
-        'status'     => 1,
-        'fixversion' => 1,
-        'component'  => 1,
+        'project'   => 1,
+        'issuetype' => 1,
+        'reporter'  => 1,
+        'priority'  => 1,
+
+        # 'fixversion' => 1,
+        # 'component'  => 1,
     );
 
     my $endpoint = 'rest/api/latest/search';
@@ -350,11 +351,11 @@ sub validate_fields {
 sub create_ticket {
     my ( $ticket, $parameters, $logger ) = @_;
     my $endpoint = 'rest/api/latest/issue';
-    my $content  = $ticket;
 
-    # my $content = {'fields' => $ticket};
+    # my $content  = $ticket;
+
+    my $content = { 'fields' => $ticket };
     my $response = post_request( $endpoint, $content, $parameters, $logger );
-    p $response->code();
 }
 
 sub post_request {
@@ -364,7 +365,6 @@ sub post_request {
     my $url  = $host . $endpoint;
 
     my $json_content = encode_json($content);
-    p $json_content;
 
     my $request = HTTP::Request->new( 'POST', $url );
 
@@ -381,20 +381,24 @@ sub post_request {
             0, 0 );
     }
 
-    if ( $response->code() != 200 ) {
+    if ( $response->code() == 403 ) {
+        $logger->error(
+            'Your do not have permission to submit JIRA tickets programmatically',
+            0, 0
+        );
+    }
+
+    if ( !$response->is_success() ) {
         p $response;
-        my $error_message
-            = decode_json( $response->content() )->{errorMessages}->[0];
+
+        # my $error_message
+        #     = decode_json( $response->content() )->{errorMessages}->[0];
+
+        my $error_message = $response->code() . ' ' . $response->message();
 
         $logger->error( $error_message, 0, 0 );
     }
 
-    # if ( $response->is_success ) {
-    #     return 0;
-    # }
-    # else { return $response->code }
-
-    # $response->is_success ? return 0 : return $response->code;
     return $response;
 }
 
