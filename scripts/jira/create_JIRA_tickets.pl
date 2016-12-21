@@ -211,11 +211,6 @@ sub validate_relco_name {
 }
 
 # sub check_dates {
-#   my $parameters = shift;
-
-#   my $preHandover = DateTime->new()
-
-#   if
 # }
 
 sub parse_tickets_file {
@@ -352,11 +347,23 @@ sub create_ticket {
     my ( $ticket, $parameters, $logger ) = @_;
     my $endpoint = 'rest/api/latest/issue';
 
-    # my $content  = $ticket;
-
     my $content = { 'fields' => $ticket };
     my $response = post_request( $endpoint, $content, $parameters, $logger );
 }
+
+=head2 post_request
+
+  Arg[1]      : String $endpoint - the request's endpoint
+  Arg[2]      : Hashref $content - the request's content
+  Arg[3]      : Hashref $parameters - parameters used for authorization
+  Arg[4]      : Bio::EnsEMBL::Utils::Logger $logger - object used for logging
+  Example     : my $response = post_request( $endpoint, $content, $parameters, $logger )
+  Description : Sends a POST request to the JIRA server
+  Return type : HTTP::Response object
+  Exceptions  : none
+  Caller      : general
+
+=cut
 
 sub post_request {
     my ( $endpoint, $content, $parameters, $logger ) = @_;
@@ -389,7 +396,7 @@ sub post_request {
     }
 
     if ( !$response->is_success() ) {
-        p $response;
+        # p $response;
 
         # my $error_message
         #     = decode_json( $response->content() )->{errorMessages}->[0];
