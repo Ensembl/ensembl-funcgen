@@ -1,12 +1,12 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 # Copyright [2016] EMBL-European Bioinformatics Institute
-# 
+#
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-# 
+#
 #      http://www.apache.org/licenses/LICENSE-2.0
-# 
+#
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -26,10 +26,10 @@ Bio::EnsEMBL::Analysis::Config::ImportArrays
 =head1 DESCRIPTION
 
 This contains the configuration for importing arrays from flat files.
-It is entirely dependant on the arrays.env environment which can be used 
-to set up and run the pipeline in an easy and interactive way. This contains 
+It is entirely dependant on the arrays.env environment which can be used
+to set up and run the pipeline in an easy and interactive way. This contains
 all possible configurations which will then be set dynamically by the RunnableDB
-for each instance using the input_id as a key into a separate ImportArrays.conf 
+for each instance using the input_id as a key into a separate ImportArrays.conf
 file, listed here as ARRAY_FORMAT_FILE.
 
 
@@ -56,7 +56,7 @@ use vars qw( %Config );
 # -- one hashnode per logic name, with a 'DEFAULT' logic name provided
 #
 
-%Config = 
+%Config =
   (
    ARRAY_CONFIG => {
     DEFAULT => {
@@ -90,10 +90,10 @@ use vars qw( %Config );
         -probe_set  => 1
       },
 
-     ARRAY_PARAMS => {
+      ARRAY_PARAMS => {
 
-      Porcine =>  {
-        -name    => 'Porcine',
+      Default =>  {
+        #-name    => 'Porcine',
         -vendor  => 'AFFY',
         -format  => 'EXPRESSION',
         -type    => 'OLIGO',
@@ -101,508 +101,85 @@ use vars qw( %Config );
       },
 
       platypus_exon => {
-        -name    => 'platypus_exon',
+        #-name    => 'platypus_exon',
         -vendor  => 'CUSTOM',
         -format  => 'EXPRESSION',
         -type    => 'OLIGO',
         -class   => 'CUSTOM',
       },
-
-      # Frog
-      'X_tropicalis' => {
-        -name    => 'X_tropicalis',
-        -vendor  => 'AFFY',
-        -format  => 'EXPRESSION',
-        -type    => 'OLIGO',
-        -class   => 'AFFY_UTR',
-      },
-
-      # Dog
-      'Canine_2' => {
-        -name => 'Canine_2',
-        -vendor => 'AFFY',
-        -format  => 'EXPRESSION',
-        -type    => 'OLIGO',
-        -class   => 'AFFY_UTR',
-      },
-
-      # Macaque
-      'Rhesus' => {
-        -name => 'Rhesus',
-        -vendor => 'AFFY',
-        -format  => 'EXPRESSION',
-        -type    => 'OLIGO',
-        -class   => 'AFFY_UTR',
-      },
-
-      # C intestinalis
-      'CINT06a520380F' => {
-        -name    => 'CINT06a520380F',
-        -vendor  => 'AFFY',
-        -format  => 'EXPRESSION',
-        -type    => 'OLIGO',
-        -class   => 'AFFY_UTR',
-      },
-
-      # Cow
-      'Bovine' => {
-        -name => 'Bovine',
-        -vendor => 'AFFY',
-        -format  => 'EXPRESSION',
-        -type    => 'OLIGO',
-        -class   => 'AFFY_UTR',
-       },
-
-      'Chicken' => {
-        -name => 'Chicken',
-        -vendor => 'AFFY',
-        -format  => 'EXPRESSION',
-        -type    => 'OLIGO',
-        -class   => 'AFFY_UTR',
-       },
-
-      # C_elegans
-      'C_elegans' => {
-        -name => 'C_elegans',
-        -vendor => 'AFFY',
-        -format  => 'EXPRESSION',
-        -type    => 'OLIGO',
-
-        -class   => 'AFFY_UTR',
-      },
-
-      # Zebra fish
-      'Zebrafish' => {
-        -name => 'Zebrafish',
-        -vendor => 'AFFY',
-        -format  => 'EXPRESSION',
-        -type    => 'OLIGO',
-        -class   => 'AFFY_UTR',
-      },
-
-      # Rat
-      'RAE230A' => {
-        -name => 'RAE230A',
-        -vendor => 'AFFY',
-        -format  => 'EXPRESSION',
-        -type    => 'OLIGO',
-        -class   => 'AFFY_UTR',
-      },
-
-      'RAE230B' => {
-        -name => 'RAE230B',
-        -vendor => 'AFFY',
-        -format  => 'EXPRESSION',
-        -type    => 'OLIGO',
-        -class   => 'AFFY_UTR',
-      },
-
-      'Rat230_2' => {
-        -name => 'Rat230_2',
-        -vendor => 'AFFY',
-        -format  => 'EXPRESSION',
-        -type    => 'OLIGO',
-        -class   => 'AFFY_UTR',
-      },
-
-      'RG-U34A' => {
-        -name => 'RG-U34A',
-        -vendor => 'AFFY',
-        -format  => 'EXPRESSION',
-        -type    => 'OLIGO',
-        -class   => 'AFFY_UTR',
-      },
-      'RG-U34B' => {
-                    -name => 'RG-U34B',
-                    -vendor => 'AFFY',
-                    -format  => 'EXPRESSION',
-                    -type    => 'OLIGO',
-            
-                    -class   => 'AFFY_UTR',
-                   },
-
-      'RG-U34C' => {
-                    -name => 'RG-U34C',
-                    -vendor => 'AFFY',
-                    -format  => 'EXPRESSION',
-                    -type    => 'OLIGO',
-            
-                    -class   => 'AFFY_UTR',
-                   },
-
-      'RN-U34' => {
-                   -name => 'RN-U34',
-                   -vendor => 'AFFY',
-                   -format  => 'EXPRESSION',
-                   -type    => 'OLIGO',
-           
-                   -class   => 'AFFY_UTR',
-                  },
-
-
-      'RT-U34' => {
-                   -name => 'RT-U34',
-                   -vendor => 'AFFY',
-                   -format  => 'EXPRESSION',
-                   -type    => 'OLIGO',
-           
-                   -class   => 'AFFY_UTR',
-                  },
-
-
-      #Human
-      
-      'PrimeView' => {
-                      -name => 'PrimeView',
-                      -vendor => 'AFFY',
-                      -format  => 'EXPRESSION',
-                      -type    => 'OLIGO',
-              
-                      -class   => 'AFFY_UTR',
-                     },
-
-      'HC-G110' => {
-                    -name => 'HC-G110',
-                    -vendor => 'AFFY',
-                    -format  => 'EXPRESSION',
-                    -type    => 'OLIGO',
-            
-                    -class   => 'AFFY_UTR',
-                   },
-
-
-      'U133_X3P' => {
-                     -name => 'U133_X3P',
-                     -vendor => 'AFFY',
-                     -format  => 'EXPRESSION',
-                     -type    => 'OLIGO',
-             
-                     -class   => 'AFFY_UTR',
-                    },
-
-	  
-      'HuGeneFL' => {-name => 'HuGeneFL',
-                     -vendor => 'AFFY',
-                     -format  => 'EXPRESSION',
-                     -type    => 'OLIGO',
-             
-                     -class   => 'AFFY_UTR'},
-
-      'HG_U95A' => {-name => 'HG-U95A',
-                    -vendor => 'AFFY',
-                    -format  => 'EXPRESSION',
-                    -type    => 'OLIGO',
-            
-                    -class   => 'AFFY_UTR'},
-
-      'HG-U95E' => {-name => 'HG-U95E',
-                    -vendor => 'AFFY',
-                    -format  => 'EXPRESSION',
-                    -type    => 'OLIGO',
-            
-                    -class   => 'AFFY_UTR'},
-
-      'HG-U95D' => {-name => 'HG-U95D',
-                    -vendor => 'AFFY',
-                    -format  => 'EXPRESSION',
-                    -type    => 'OLIGO',
-            
-                    -class   => 'AFFY_UTR'},
-
-      'HG-U95C' => {-name => 'HG-U95C',
-                    -vendor => 'AFFY',
-                    -format  => 'EXPRESSION',
-                    -type    => 'OLIGO',
-            
-                    -class   => 'AFFY_UTR'},
-
-      'HG-U95B' => {-name => 'HG-U95B',
-                    -vendor => 'AFFY',
-                    -format  => 'EXPRESSION',
-                    -type    => 'OLIGO',
-            
-                    -class   => 'AFFY_UTR'},
-	  
-      'HG_U95Av2' => {-name => 'HG-U95Av2',
-                      -vendor => 'AFFY',
-                      -format  => 'EXPRESSION',
-                      -type    => 'OLIGO',
-              
-                      -class   => 'AFFY_UTR'},
-
-      'HG-U133_Plus_2' => {-name => 'HG-U133_Plus_2',
-                           -vendor => 'AFFY',
-                           -format  => 'EXPRESSION',
-                           -type    => 'OLIGO',
-                   
-                           -class   => 'AFFY_UTR'},
-
-      'HG-U133B' => {-name => 'HG-U133B',
-                     -vendor => 'AFFY',
-                     -format  => 'EXPRESSION',
-                     -type    => 'OLIGO',
-             
-                     -class   => 'AFFY_UTR'},
-
-      'HG-U133A' => {-name => 'HG-U133A',
-                     -vendor => 'AFFY',
-                     -format  => 'EXPRESSION',
-                     -type    => 'OLIGO',
-             
-                     -class   => 'AFFY_UTR'},
-
-      'HG-U133A_2' => {-name => 'HG-U133A_2',
-                       -vendor => 'AFFY',
-                       -format  => 'EXPRESSION',
-                       -type    => 'OLIGO',
-               
-                       -class   => 'AFFY_UTR'},
-
-      'HG-Focus' => {-name => 'HG-Focus',
-                     -vendor => 'AFFY',
-                     -format  => 'EXPRESSION',
-                     -type    => 'OLIGO',
-             
-                     -class   => 'AFFY_UTR'},
-
-
-
-
-
-      #Mouse
-      'MG-U74Cv2' => {
-                      -name => 'MG-U74Cv2',
-                      -vendor => 'AFFY',
-                      -format  => 'EXPRESSION',
-                      -type    => 'OLIGO',
-              
-                      -class   => 'AFFY_UTR',
-                     },
-
-
-      'MG-U74A' => {
-                    -name => 'MG-U74A',
-                    -vendor => 'AFFY',
-                    -format  => 'EXPRESSION',
-                    -type    => 'OLIGO',
-            
-                    -class   => 'AFFY_UTR',
-					  
-                   },
-	  
-      'MG-U74Av2' => {
-                      -name => 'MG-U74Av2',
-                      -vendor => 'AFFY',
-                      -format  => 'EXPRESSION',
-                      -type    => 'OLIGO',
-              
-                      -class   => 'AFFY_UTR',
-                     },
-	  
-
-
-      'MG-U74B' => {
-                    -name => 'MG-U74B',
-                    -vendor => 'AFFY',
-                    -format  => 'EXPRESSION',
-                    -type    => 'OLIGO',
-            
-                    -class   => 'AFFY_UTR',
-                   },
-	  
-      'MG-U74Bv2' => {
-                      -name => 'MG-U74Bv2',
-                      -vendor => 'AFFY',
-                      -format  => 'EXPRESSION',
-                      -type    => 'OLIGO',
-              
-                      -class   => 'AFFY_UTR',
-                     },
-	  
-
-      'MG-U74C' => {
-                    -name => 'MG-U74C',
-                    -vendor => 'AFFY',
-                    -format  => 'EXPRESSION',
-                    -type    => 'OLIGO',
-            
-                    -class   => 'AFFY_UTR',
-                   },
-
-      'MOE430A' => {
-                    -name => 'MOE430A',
-                    -vendor => 'AFFY',
-                    -format  => 'EXPRESSION',
-                    -type    => 'OLIGO',
-            
-                    -class   => 'AFFY_UTR',
-                   },
-
-      'MOE430B' => {
-                    -name => 'MOE430B',
-                    -vendor => 'AFFY',
-                    -format  => 'EXPRESSION',
-                    -type    => 'OLIGO',
-            
-                    -class   => 'AFFY_UTR',
-                   },
-
-      'Mouse430A_2' => {
-                        -name => 'Mouse430A_2',
-                        -vendor => 'AFFY',
-                        -format  => 'EXPRESSION',
-                        -type    => 'OLIGO',
-                
-                        -class   => 'AFFY_UTR',
-                       },
-
-	  
-      'Mouse430_2' => {
-                       -name => 'Mouse430_2',
-                       -vendor => 'AFFY',
-                       -format  => 'EXPRESSION',
-                       -type    => 'OLIGO',
-               
-                       -class   => 'AFFY_UTR',
-                      },
-
-
-
-	    'Mu11KsubA' => {
-                      -name => 'Mu11KsubA',
-                      -vendor => 'AFFY',
-                      -format  => 'EXPRESSION',
-                      -type    => 'OLIGO',
-              
-                      -class   => 'AFFY_UTR',
-                     },
-      'Mu11KsubB' => {
-                      -name => 'Mu11KsubB',
-                      -vendor => 'AFFY',
-                      -format  => 'EXPRESSION',
-                      -type    => 'OLIGO',
-              
-                      -class   => 'AFFY_UTR',
-                     },
-	  
-      #Drosophila
-      'DrosGenome1' => {-name => 'DrosGenome1',
-                        -vendor => 'AFFY',
-                        -format  => 'EXPRESSION',
-                        -type    => 'OLIGO',
-                
-                        -class   => 'AFFY_UTR'},
-	  
-      'Drosophila_2' => {-name => 'Drosophila_2',
-                         -vendor => 'AFFY',
-                         -format  => 'EXPRESSION',
-                         -type    => 'OLIGO',
-                 
-                         -class   => 'AFFY_UTR'},
-	  	
-
-      #Yeast
-      'Yeast_2' => {
-                    -name => 'Yeast_2',
-                    -vendor => 'AFFY',
-                    #-setsize => undef,
-                    -format  => 'EXPRESSION', #? UTR?
-                    -type    => 'OLIGO',
-            
-                    -class   => 'AFFY_UTR',
-                   },
-
-      'YG-S98' => {
-                   -name => 'YG-S98',
-                   -vendor => 'AFFY',
-                   #-setsize => undef,
-                   -format  => 'EXPRESSION', #? UTR?
-                   -type    => 'OLIGO',
-           
-                   -class   => 'AFFY_UTR',
-                  },
-
-
-					
-      #EColi
-      'E_coli_2' => {
-                     -name => 'E_coli_2',
-                     -vendor=>'AFFY',
-                     -format => 'EXPRESSION',
-                     -type=>'OLIGO',
-                     -class=>'AFFY_UTR'
-                    },	  
-
-      'E_coli_Antisense' => {
-                             -name => 'E_coli_Antisense',
-                             -vendor => 'AFFY',
-                             -format => 'EXPRESSION',
-                             -type => 'OLIGO',
-                             -class => 'AFFY_UTR'
-                            },
-      #S_aureus
-
-      'S_aureus' => {
-                     -name => 'S_aureus',
-                     -vendor=>'AFFY',
-                     -format => 'EXPRESSION',
-                     -type=>'OLIGO',
-                     -class=>'AFFY_UTR'
-                    },
-					    
-      # plants
-
-      'ATH1-121501' => {
-                        -name => 'ATH1-121501',
-                        -vendor=>'AFFY',
-                        -format => 'EXPRESSION',
-                        -type=>'OLIGO',
-                        -class=>'AFFY_UTR'
-                       },
-
-      'Barley1' => {
-			    -name => 'Hordeum_vulgare',
-			    -vendor => 'AFFY',
-			    -format => 'EXPRESSION',
-			    -type => 'OLIGO',
-			    -class => 'AFFY_UTR'
-			    },
-
-      'Rice' => {
-                 -name => 'Rice',
-                 -vendor=>'AFFY',
-                 -format => 'EXPRESSION',
-                 -type=>'OLIGO',
-                 -class=>'AFFY_UTR'
-                },
-
-      'Poplar' => {
-                   -name => 'Poplar',
-                   -vendor=>'AFFY',
-                   -format => 'EXPRESSION',
-                   -type=>'OLIGO',
-                   -class=>'AFFY_UTR'
-                  },
-
-      'Vitis_Vinifera' => {
-                           -name => 'Vitis_Vinifera',
-                           -vendor=>'AFFY',
-                           -format => 'EXPRESSION',
-                           -type=>'OLIGO',
-                           -class=>'AFFY_UTR'
-                          },
      },
-	 
+
      INPUT_FORMAT => 'FASTA',
+
+     ARRAYS_WITH_DEFAULT_PARAMS => [
+        'Porcine',
+        'X_tropicalis',
+        'Canine_2',
+ 	      'Rhesus',
+        'CINT06a520380F',
+        'Bovine',
+        'Chicken',
+        'C_elegans',
+        'Zebrafish',
+        'RAE230A',
+        'RAE230B',
+        'Rat230_2',
+        'RG-U34A',
+        'RG-U34B',
+        'RG-U34C',
+        'RN-U34',
+        'RT-U34',
+        'RG-U34B',
+        'PrimeView',
+        'HC-G110',
+        'U133_X3P',
+        'HuGeneFL',
+        'HG_U95A',
+        'HG-U95E',
+        'HG-U95D',
+        'HG-U95C',
+        'HG-U95B',
+        'HG_U95Av2',
+        'HG-U133_Plus_2',
+        'HG-U133B',
+        'HG-U133A',
+        'HG-U133A_2',
+        'HG-Focus'
+        'MG-U74Cv2',
+        'MG-U74A'
+        'MG-U74Av2',
+        'MG-U74B',
+        'MG-U74Bv2',
+        'MG-U74C',
+        'MOE430A',
+        'MOE430B',
+        'Mouse430A_2',
+        'Mouse430_2',
+        'Mu11KsubA',
+        'Mu11KsubB',
+        'DrosGenome1',
+        'Drosophila_2',
+        'Yeast_2',
+        'YG-S98',
+        'E_coli_2',
+        'E_coli_Antisense',
+        'S_aureus',
+        'ATH1-121501',
+        'Barley1',
+        'Rice',
+        'Poplar',
+        'Vitis_Vinifera',
+      ],
+
     },
 
     IMPORT_AFFY_ST_ARRAYS => {
-    
+
      IIDREGEXP => '^>probe:(\S+?):([0-9]+).*[TranscriptCluster|ProbeSet]ID=(\S+);',
 
      #Can't use ProbeID=([0-9]+) as control probes only have there ProbeID in the concat'd full name string
-     #Hence the match will fail. 
-    
+     #Hence the match will fail.
+
 
      IFIELDORDER => {
                      -name       => 1,
@@ -610,230 +187,81 @@ use vars qw( %Config );
                      -array      => 0,
                      -probe_set   => 2,
                     },
-	 	 
-     ARRAY_PARAMS => 
-      {#Rat
-       'RaEx-1_0-st-v1' => {
-                            -name => 'RaEx-1_0-st-v1',
-                            -vendor => 'AFFY',
-                            #-setsize => undef,
-                            -format  => 'EXPRESSION',
-                            -type    => 'OLIGO',
-                    
-                            -class   => 'AFFY_ST',
-                          },
-					  
-       'RaGene-1_0-st-v1' => {
-                              -name => 'RaGene-1_0-st-v1',
-                              -vendor => 'AFFY',
-                              #-setsize => undef,
-                              -format  => 'EXPRESSION',
-                              -type    => 'OLIGO',
-                      
-                              -class   => 'AFFY_ST',
-                             },
 
-       'RaGene-2_1-st-v1' => {
-                              -name => 'RaGene-2_1-st-v1',
-                              -vendor => 'AFFY',
-                              #-setsize => undef,
-                              -format  => 'EXPRESSION',
-                              -type    => 'OLIGO',
-                      
-                              -class   => 'AFFY_ST',
-                             },                             
+     ARRAY_PARAMS =>
+     {
+       'Default' => {
+                     -name => 'RaEx-1_0-st-v1',
+                     -vendor => 'AFFY',
+                     #-setsize => undef,
+                     -format  => 'EXPRESSION',
+                     -type    => 'OLIGO',
+                     -class   => 'AFFY_ST',
+                    },
 
-       #Human
-       'HuGene-1_0-st-v1' => {-name => 'HuGene-1_0-st-v1',
-                              -vendor => 'AFFY',
-                              #-setsize => undef,
-                              -format  => 'EXPRESSION',
-                              -type    => 'OLIGO',
-                      
-                              -class   => 'AFFY_ST',
-                             },
-
-       'HuGene-2_0-st-v1' => {-name => 'HuGene-2_0-st-v1',
-                              -vendor => 'AFFY',
-                              #-setsize => undef,
-                              -format  => 'EXPRESSION',
-                              -type    => 'OLIGO',
-                      
-                              -class   => 'AFFY_ST',
-                             },
-
-       'HuEx-1_0-st-v2' => {-name => 'HuEx-1_0-st-v2',
-                            -vendor => 'AFFY',
-                            -format  => 'EXPRESSION',
-                            -type    => 'OLIGO',
-                    
-                            -class   => 'AFFY_ST',
-                           }, 
-       
-       'HTA-2_0' => {-name => 'HTA-2_0',
+       'HTA-2_0' => {
+                     -name => 'HTA-2_0',
                      -vendor => 'AFFY',
                      -format  => 'EXPRESSION',
                      -type    => 'OLIGO',
                      -description => 'Human Transcriptome Array 2.0',
                      -class   => 'AFFY_ST',
-                    }, 
-
-       #Mouse
-       'MoGene-1_0-st-v1' => {-name => 'MoGene-1_0-st-v1',
-                              -vendor => 'AFFY',
-                              #-setsize => undef,
-                              -format  => 'EXPRESSION',
-                              -type    => 'OLIGO',
-                      
-                              -class   => 'AFFY_ST',
-                             },
-
-       'MoEx-1_0-st-v1' => {-name => 'MoEx-1_0-st-v1',
-                            -vendor => 'AFFY',
-                            -format  => 'EXPRESSION',
-                            -type    => 'OLIGO',
-                    
-                            -class   => 'AFFY_ST',
-                           },
-
-       'MoGene-2_1-st-v1' => {-name => 'MoGene-2_1-st-v1',
-                              -vendor => 'AFFY',
-                              -format  => 'EXPRESSION',
-                              -type    => 'OLIGO',
-                      
-                              -class   => 'AFFY_ST',
-                             },
+                    },
      },
-	 
+
      INPUT_FORMAT => 'FASTA',
+
+     ARRAYS_WITH_DEFAULT_PARAMS => [
+      'RaEx-1_0-st-v1',
+      'RaGene-1_0-st-v1',
+      'RaGene-2_1-st-v1',
+      'HuGene-1_0-st-v1',
+      'HuGene-2_0-st-v1',
+      'HuEx-1_0-st-v2',
+      'MoGene-1_0-st-v1',
+      'MoEx-1_0-st-v1',
+      'MoGene-2_1-st-v1',
+     ],
     },
 
-    IMPORT_ILLUMINA_WG_ARRAYS => 
+    IMPORT_ILLUMINA_WG_ARRAYS =>
     {
      IIDREGEXP => '^>(\S+):(\S+).*$',
-	 
+
      IFIELDORDER => {
                      -name       => 1,
                      -array_chip => 0,
                      -array      => 0,
                      #-probe_set   => 2,#This could be annotation
                     },
-	 	 
-     ARRAY_PARAMS => 
+
+     ARRAY_PARAMS =>
      {
-      
-      'MouseWG_6_V1' => {
+
+      'Default' => {
                          -name => 'MouseWG_6_V1',
                          -vendor => 'ILLUMINA',
                          #-setsize => undef,
                          -format  => 'EXPRESSION',
                          -type    => 'OLIGO',
-                 
                          -class   => 'ILLUMINA_WG',
                         },
-      
-      
-      'MouseWG_6_V2' => {
-                         -name => 'MouseWG_6_V2',
-                         -vendor => 'ILLUMINA',
-                         #-setsize => undef,
-                         -format  => 'EXPRESSION',
-                         -type    => 'OLIGO',
-                 
-                         -class   => 'ILLUMINA_WG',
-                        },
-      
-      'MouseRef-8_V2' => {
-                         -name => 'MouseRef-8_V2',
-                         -vendor => 'ILLUMINA',
-                         #-setsize => undef,
-                         -format  => 'EXPRESSION',
-                         -type    => 'OLIGO',
-                 
-                         -class   => 'ILLUMINA_WG',
-                        },
-      
-
-      
-                      #V1 is no longer accesible via website?
-                      #Only on ftp site
-      'HumanWG_6_V1' => {
-                         -name => 'HumanWG_6_V1',
-                         -vendor => 'ILLUMINA',
-                         #-setsize => undef,
-                         -format  => 'EXPRESSION',
-                         -type    => 'OLIGO',
-                 
-                         -class   => 'ILLUMINA_WG',
-                        },
-      
-      'HumanHT-12_V3' => {
-                       -name => 'HumanHT-12_V3',
-                       -vendor => 'ILLUMINA',
-                       #-setsize => undef,
-                       -format  => 'EXPRESSION',
-                       -type    => 'OLIGO',
-               
-                       -class   => 'ILLUMINA_WG',
-                      },
-      
-       'HumanHT-12_V4' => {
-                       -name => 'HumanHT-12_V4',
-                       -vendor => 'ILLUMINA',
-                       #-setsize => undef,
-                       -format  => 'EXPRESSION',
-                       -type    => 'OLIGO',
-               
-                       -class   => 'ILLUMINA_WG',
-                      },
-
-      'HumanRef-8_V3' => {
-                          -name => 'HumanRef-8_V3',
-                          -vendor => 'ILLUMINA',
-                          #-setsize => undef,
-                          -format  => 'EXPRESSION',
-                          -type    => 'OLIGO',
-                  
-                          -class   => 'ILLUMINA_WG',
-                         },
-      
-      
-      'HumanWG_6_V2' => {
-                         -name => 'HumanWG_6_V2',
-                         -vendor => 'ILLUMINA',
-                         #-setsize => undef,
-                         -format  => 'EXPRESSION',
-                         -type    => 'OLIGO',
-                 
-                         -class   => 'ILLUMINA_WG',
-                        },
-      
-      'HumanWG_6_V3' => {
-                         -name => 'HumanWG_6_V3',
-                         -vendor => 'ILLUMINA',
-                         #-setsize => undef,
-                         -format  => 'EXPRESSION',
-                         -type    => 'OLIGO',
-                 
-                         -class   => 'ILLUMINA_WG',
-                        },
-
-      'RatRef-12_V1' => {
-                      -name => 'RatRef-12_V1',
-                      -vendor => 'ILLUMINA',
-                      #-setsize => undef,
-                      -format  => 'EXPRESSION',
-                      -type    => 'OLIGO',
-              
-                      -class   => 'ILLUMINA_WG',
-                     },
-
-      
-					  
-      
      },
-     
+
      INPUT_FORMAT => 'FASTA',
+
+     ARRAYS_WITH_DEFAULT_PARAMS => [
+      'MouseWG_6_V1',
+      'MouseWG_6_V2',
+      'MouseRef-8_V2',
+      'HumanWG_6_V1',
+      'HumanHT-12_V3',
+      'HumanHT-12_V4',
+      'HumanRef-8_V3',
+      'HumanWG_6_V2'
+      'HumanWG_6_V3',
+      'RatRef-12_V1',
+     ],
     },
 
     IMPORT_ILLUMINA_INFINIUM_ARRAYS => {
@@ -844,32 +272,28 @@ use vars qw( %Config );
       -array      => 0,
     },
     ARRAY_PARAMS => {
-      'HumanMethylation27' => {
-        -name    => 'HumanMethylation27',
+      'Default' => {
+        #-name    => 'HumanMethylation27',
         -vendor  => 'ILLUMINA',
-        -format  => 'METHYLATION',
-        -type    => 'OLIGO',
-        -class   => 'ILLUMINA_INFINIUM',
-      },
-      'HumanMethylation450' => {
-        -name => 'HumanMethylation450',
-        -vendor => 'ILLUMINA',
         -format  => 'METHYLATION',
         -type    => 'OLIGO',
         -class   => 'ILLUMINA_INFINIUM',
       },
     },
     INPUT_FORMAT => 'FASTA',
+
+     ARRAYS_WITH_DEFAULT_PARAMS => [
+	    'HumanMethylation27',
+	    'HumanMethylation450',
+    ],
   },
-
-
 
     #CODELINK
 
-    IMPORT_CODELINK_ARRAYS => 
+    IMPORT_CODELINK_ARRAYS =>
     {
      IIDREGEXP => '^>(\S+):(\S+).*$',
-	 
+
      IFIELDORDER => {
                      -name       => 1,
                      -array_chip => 0,
@@ -877,32 +301,34 @@ use vars qw( %Config );
 
                      #-probe_set   => 2,#This could be annotation
                     },
-	 	 
+
      ARRAY_PARAMS => {
-					  
-                      'CODELINK' => {
-                                     -name => 'CODELINK',
-                                     -vendor => 'CODELINK',
-                                     #-setsize => undef,
-                                     -format  => 'EXPRESSION',
-                                     -type    => 'OLIGO',
-                             
-                                     -class   => 'CODELINK',
-                                    },
-					  
-                     },
-	 
+
+                      'Default' => {
+                                    -name => 'CODELINK',
+                                    -vendor => 'CODELINK',
+                                    #-setsize => undef,
+                                    -format  => 'EXPRESSION',
+                                    -type    => 'OLIGO',
+                             	     -class   => 'CODELINK',
+                                   },
+     },
+
      INPUT_FORMAT => 'FASTA',
+
+     ARRAYS_WITH_DEFAULT_PARAMS => [
+	    'CODELINK',
+     ],
     },
 
     #AGILENT
 
-    IMPORT_AGILENT_ARRAYS => 
+    IMPORT_AGILENT_ARRAYS =>
     {
-	 
+
      IIDREGEXP => '^>(\S+):(\S+)\s*(.*)$',
      #IIDREGEXP => '^>(\S+):(.+)', #EG HACK
-	 
+
      IFIELDORDER => {
                      -name       => 1,
                      -array_chip => 0,
@@ -910,133 +336,21 @@ use vars qw( %Config );
                      -description => 2,
                      #-probe_set   => 2,#This could be annotation
                     },
-	 	 
-     ARRAY_PARAMS => 
-     {#Danio
-      'G2518A' => {
+
+     ARRAY_PARAMS =>
+     {
+      'Default' => {
                    -name => 'G2518A',
                    -vendor => 'AGILENT',
                    #-setsize => undef,
                    -format  => 'EXPRESSION',
                    -type    => 'OLIGO',
-           
+
                    -class   => 'AGILENT',
                   },
 
-      'G2519F' => {
-                   -name => 'G2519F',
-                   -vendor => 'AGILENT',
-                   #-setsize => undef,
-                   -format  => 'EXPRESSION',
-                   -type    => 'OLIGO',
-           
-                   -class   => 'AGILENT',
-                  },
-
-
-      #plant - potato
-      'A-MEXP-2203' => {
- 			-name => 'A-MEXP-2203',
- 			-vendor => 'AGILENT',
- 			-format => 'EXPRESSION',
- 			-type => 'OLIGO',
- 			-class => 'AGILENT',
- 		       },
-
-      #plant - ara
-      'G2519F-015059' => {
-                          -name => 'G2519F-015059',
-                          -vendor => 'AGILENT',
-                          #-setsize => undef,
-                          -format  => 'EXPRESSION',
-                          -type    => 'OLIGO',
-                  
-                          -class   => 'AGILENT',
-                         },
-      'G2519F-021169' => {
-                          -name => 'G2519F-021169',
-                          -vendor => 'AGILENT',
-                          #-setsize => undef,
-                          -format  => 'EXPRESSION',
-                          -type    => 'OLIGO',
-                  
-                          -class   => 'AGILENT',
-                         },
-
-
-
-      #plant - Rice 
-
-      'G2519F-015241' => {
-                          -name => 'G2519F-015241',
-                          -vendor => 'AGILENT',
-                          #-setsize => undef,
-                          -format  => 'EXPRESSION',
-                          -type    => 'OLIGO',
-                  
-                          -class   => 'AGILENT',
-                         },
-      'G4138A-012106' => {
-                          -name => 'G4138A-012106',
-                          -vendor => 'AGILENT',
-                          #-setsize => undef,
-                          -format  => 'EXPRESSION',
-                          -type    => 'OLIGO',
-                  
-                          -class   => 'AGILENT',
-                         },
-
-
-					
-
-				
-      #human/mouse/rat
-      'WholeGenome_4x44k_v1' => {
-                                 -name => 'WholeGenome_4x44k_v1',
-                                 -vendor => 'AGILENT',
-                                 #-setsize => undef,
-                                 -format  => 'EXPRESSION',
-                                 -type    => 'OLIGO',
-                         
-                                 -class   => 'AGILENT',	
-                                },
-
-      'WholeGenome_4x44k_v2' => {
-                                 -name => 'WholeGenome_4x44k_v2',
-                                 -vendor => 'AGILENT',
-                                 #-setsize => undef,
-                                 -format  => 'EXPRESSION',
-                                 -type    => 'OLIGO',
-                         
-                                 -class   => 'AGILENT',	
-                                },
-
-
-      'SurePrint_G3_GE_8x60k' => {
-                                  -name => 'SurePrint_G3_GE_8x60k',
-                                  -vendor => 'AGILENT',
-                                  #-setsize => undef,
-                                  -format  => 'EXPRESSION',
-                                  -type    => 'OLIGO',
-                          
-                                  -class   => 'AGILENT',	
-
-
-                                 },
-					  
-       'SurePrint_G3_GE_8x60k_v2' => {
-                                  -name => 'SurePrint_G3_GE_8x60k_v2',
-                                  -vendor => 'AGILENT',
-                                  #-setsize => undef,
-                                  -format  => 'EXPRESSION',
-                                  -type    => 'OLIGO',
-                          
-                                  -class   => 'AGILENT',	
-
-
-                                 },             
       #Rabbit only
-      
+
       #This naming was erronoes and non-species specific
       #'SurePrint_G2519F_4x44k' => {
       #                             -name => 'SurePrint_G2519F_4x44k',
@@ -1044,11 +358,11 @@ use vars qw( %Config );
       #                            #-setsize => undef,
       #                            -format  => 'EXPRESSION',
       #                            -type    => 'OLIGO',
-      #                    
-      #                            -class   => 'AGILENT',	
+      #
+      #                            -class   => 'AGILENT',
       #                            },
 
-      'SurePrint_GPL16709_4x44k' => 
+      'SurePrint_GPL16709_4x44k' =>
       {
        -name => 'SurePrint_GPL16709_4x44k',
        -vendor => 'AGILENT',
@@ -1056,11 +370,11 @@ use vars qw( %Config );
        -format  => 'EXPRESSION',
        -type    => 'OLIGO',
        #-description => '',
-       -class   => 'AGILENT',	
+       -class   => 'AGILENT',
        skip_config => {skip_reps =>1, skip_non_unique_names=>1},
       },
 
-      'SurePrint_GPL7083_4x44k' => 
+      'SurePrint_GPL7083_4x44k' =>
       {
        -name => 'SurePrint_GPL7083_4x44k',
        -vendor => 'AGILENT',
@@ -1068,221 +382,138 @@ use vars qw( %Config );
        -format  => 'EXPRESSION',
        -type    => 'OLIGO',
        #-description => '',
-       -class   => 'AGILENT',	
+       -class   => 'AGILENT',
        skip_config => {skip_reps =>1, skip_non_unique_names=>1},
       },
-      
-      #Rat only
-      'WholeGenome_4x44k_v3' => {
-                                 -name => 'WholeGenome_4x44k_v3',
-                                 -vendor => 'AGILENT',
-                                 #-setsize => undef,
-                                 -format  => 'EXPRESSION',
-                                 -type    => 'OLIGO',
-                         
-                                 -class   => 'AGILENT',	
-                                },
 
-      #human
       'CGH_44b' => {
                     -name => 'CGH_44b',
                     -vendor => 'AGILENT',
                     #-setsize => undef,
                     -format  => 'CGH',
                     -type    => 'OLIGO',
-            
-                    -class   => 'AGILENT',	
+                    -class   => 'AGILENT',
                    },
-
-      #Celegans
-      
-      '012795' => {
-        -name => '012795',
-        -vendor => 'AGILENT',
-        -format  => 'EXPRESSION',
-        -type    => 'OLIGO',
-        -class   => 'AGILENT',
-      },
-      '015061' => {
-        -name => '015061',
-        -vendor => 'AGILENT',
-        -format  => 'EXPRESSION',
-        -type => 'OLIGO',
-        -class => 'AGILENT',
-      },
-      '020186' => {
-        -name => '020186',
-        -vendor => 'AGILENT',
-        -format  => 'EXPRESSION',
-        -type => 'OLIGO',
-        -class => 'AGILENT',
-      },
-      'GPL13394' => {
-        -name => 'GPL13394',
-        -vendor => 'AGILENT',
-        -format  => 'EXPRESSION',
-        -type => 'OLIGO',
-        -class => 'AGILENT',
-      },
-      
-      'GPL14144' => {
-        -name => 'GPL14144',
-        -vendor => 'AGILENT',
-        -format  => 'EXPRESSION',
-        -type => 'OLIGO',
-        -class => 'AGILENT',
-      },
-      
-      'GPL8304' => {
-        -name => 'GPL8304',
-        -vendor => 'AGILENT',
-        -format  => 'EXPRESSION',
-        -type => 'OLIGO',
-        -class => 'AGILENT',
-      },
-
-      
-      # C.briggsae
-
-      'GPL14143' => {
-        -name => 'GPL14143',
-        -vendor => 'AGILENT',
-        -format  => 'EXPRESSION',
-        -type => 'OLIGO',
-        -class => 'AGILENT',
-      },
-      
-      'GPL8303' => {
-        -name => 'GPL8303',
-        -vendor => 'AGILENT',
-        -format  => 'EXPRESSION',
-        -type => 'OLIGO',
-        -class => 'AGILENT',
-      },
-      
-      # C. brenneri
-
-      'GPL14142' => {
-        -name => 'GPL14142',
-        -vendor => 'AGILENT',
-        -format  => 'EXPRESSION',
-        -type => 'OLIGO',
-        -class => 'AGILENT',
-      },
-      
-      # C. remanei
-
-      'GPL14146' => {
-        -name => 'GPL14146',
-        -vendor => 'AGILENT',
-        -format  => 'EXPRESSION',
-        -type => 'OLIGO',
-        -class => 'AGILENT',
-      },
-      
-      # C. japonica
-
-      'GPL14145' => {
-        -name => 'GPL14145',
-        -vendor => 'AGILENT',
-        -format  => 'EXPRESSION',
-        -type => 'OLIGO',
-        -class => 'AGILENT',
-      },
-         
-      # P. pacificus
-
-      'GPL14372' => {
-        -name => 'GPL14372',
-        -vendor => 'AGILENT',
-        -format  => 'EXPRESSION',
-        -type => 'OLIGO',
-        -class => 'AGILENT',
-      },
-      
      },
-	 
+
      INPUT_FORMAT => 'FASTA',
+
+     ARRAYS_WITH_DEFAULT_PARAMS => [
+	    'G2518A',
+	    'G2519F',
+	    'A-MEXP-2203',
+	    'G2519F-015059',
+	    'G2519F-021169',
+	    'G2519F-015241',
+	    'G4138A-012106',
+	    'WholeGenome_4x44k_v1',
+	    'WholeGenome_4x44k_v2',
+      'SurePrint_G3_GE_8x60k',
+	    'SurePrint_G3_GE_8x60k_v2',
+	    'WholeGenome_4x44k_v3',
+	    '012795',
+	    '015061',
+	    '020186',
+	    'GPL13394',
+	    'GPL14144',
+	    'GPL8304',
+	    'GPL14143',
+	    'GPL8303',
+	    'GPL14142',
+	    'GPL14146',
+	    'GPL14145',
+	    'GPL14372',
+      ],
     },
 
-	
     IMPORT_WUSTL_ARRAYS =>
-     {
+    {
        IIDREGEXP => '^>(\S+):(\S+)',#Need to add desc field here
-       
+
        IFIELDORDER => {
          -name       => 1,
          -array_chip => 0,
          -array      => 0,
        },
-       
+
        ARRAY_PARAMS => {
-         
-         'WUSTL-C_elegans' => {
+
+         'Default' => {
            -name => 'WUSTL-C_elegans',
            -vendor => 'WUSTL',
            #-setsize => undef,
            -format  => 'EXPRESSION',
            -type    => 'OLIGO',
-   
+
            -class   => 'WUSTL',
          },
        },
 
        INPUT_FORMAT => 'FASTA',
-     },
-	
+
+       ARRAYS_WITH_DEFAULT_PARAMS => [
+        'WUSTL-C_elegans',
+       ],
+    },
+
     IMPORT_SLRI_ARRAYS =>
      {
        IIDREGEXP => '^>(\S+):(\S+)',#Need to add desc field here
-       
+
        IFIELDORDER => {
          -name       => 1,
          -array_chip => 0,
          -array      => 0,
        },
-       
+
        ARRAY_PARAMS => {
-         
-         'GPL3518' => {
+
+         'Default' => {
            -name => 'GPL3518',
            -vendor => 'SLRI',
            #-setsize => undef,
            -format  => 'EXPRESSION',
            -type    => 'OLIGO',
-   
+
            -class   => 'SLRI',
          },
        },
 
        INPUT_FORMAT => 'FASTA',
+
+       ARRAYS_WITH_DEFAULT_PARAMS => [
+        'GPL3518',
+       ],
      },
 
-	
     IMPORT_UCSF_ARRAYS =>
      {
        IIDREGEXP => '^>(\S+):(\S+)',#Need to add desc field here
-       
+
        IFIELDORDER => {
          -name       => 1,
          -array_chip => 0,
          -array      => 0,
        },
-       
+
        ARRAY_PARAMS => {
-         
-         'GPL9450' => {
+
+         'Default' => {
            -name => 'GPL9450',
            -vendor => 'UCSF',
            #-setsize => undef,
            -format  => 'EXPRESSION',
            -type    => 'OLIGO',
-   
+
            -class   => 'UCSF',
          },
        },
 
        INPUT_FORMAT => 'FASTA',
+
+       ARRAYS_WITH_DEFAULT_PARAMS => [
+        'GPL9450',
+       ],
      },
 
 
@@ -1291,41 +522,43 @@ use vars qw( %Config );
     #ftp://ftp.phalanxbiotech.com/pub/probe_sequences/hoa
     #Mouse
     #ftp://ftp.phalanxbiotech.com/pub/probe_sequences/moa
-    IMPORT_PHALANX_ARRAYS => 
+    IMPORT_PHALANX_ARRAYS =>
     {
      IIDREGEXP => '^>(\S+):(\S+).*$',
-	 
+
      IFIELDORDER => {
                      -name       => 1,
                      -array_chip => 0,
                      -array      => 0,
                      #-probe_set   => 2,#This could be annotation
                     },
-	 	 
+
      ARRAY_PARAMS => {
-					  
-                      'OneArray' => {
+                      'Default' => {
                                      -name => 'OneArray',
                                      -vendor => 'PHALANX',
                                      #-setsize => undef,
                                      -format  => 'EXPRESSION',
                                      -type    => 'OLIGO',
-                             
+
                                      -class   => 'PHALANX',
                                     },
-					  
                      },
-	 
-     INPUT_FORMAT => 'FASTA',
-    },
 
+     INPUT_FORMAT => 'FASTA',
+
+     ARRAYS_WITH_DEFAULT_PARAMS => [
+      'OneArray',
+     ],
+
+    },
 
     #LEIDEN
 
-    IMPORT_LEIDEN_ARRAYS => 
+    IMPORT_LEIDEN_ARRAYS =>
     {
      IIDREGEXP => '^>(\S+):(\S+)\s*(.*)$',
-	 
+
      IFIELDORDER => {
                      -name        => 1,
                      -array_chip  => 0,
@@ -1333,76 +566,60 @@ use vars qw( %Config );
                      -description => 2,
                      #-probe_set   => 2,#This could be annotation
                     },
-	 	 
+
      ARRAY_PARAMS => {
                       #Danio
-                      'LEIDEN2' => {
+                      'Default' => {
                                     -name => 'LEIDEN2',
                                     -vendor => 'LEIDEN',
                                     #-setsize => undef,
                                     -format  => 'EXPRESSION',
                                     -type    => 'OLIGO',
-                            
+
                                     -class   => 'LEIDEN',
                                    },
-
-					  
-                      'LEIDEN3' => {
-                                    -name => 'LEIDEN3',
-                                    -vendor => 'LEIDEN',
-                                    #-setsize => undef,
-                                    -format  => 'EXPRESSION',
-                                    -type    => 'OLIGO',
-                            
-                                    -class   => 'LEIDEN',
-                                   },
-
-					  
                      },
-	 
+
      INPUT_FORMAT => 'FASTA',
+
+     ARRAYS_WITH_DEFAULT_PARAMS => [
+      'LEIDEN2',
+      'LEIDEN3',
+     ],
     },
 
     #STEMPLE
 
-    IMPORT_STEMPLE_LAB_SANGER_ARRAYS => 
+    IMPORT_STEMPLE_LAB_SANGER_ARRAYS =>
     {
      IIDREGEXP => '^>(\S+):(\S+)\s*(.*)$', #Need to add desc field here
-	 
+
      IFIELDORDER => {
                      -name       => 1,
                      -array_chip => 0,
                      -array      => 0,
                      -description   => 2,
                     },
-	 	 
+
      ARRAY_PARAMS => {
                       #Danio
-                      'MattArray1' => {
+                      'Default' => {
                                        -name => 'MattArray1',
                                        -vendor => 'STEMPLE_LAB_SANGER',
                                        #-setsize => undef,
                                        -format  => 'EXPRESSION',
                                        -type    => 'OLIGO',
-                               
+
                                        -class   => 'STEMPLE_LAB_SANGER',
                                       },
-					  
-					  
-                      'MattArray2' => {
-                                       -name => 'MattArray2',
-                                       -vendor => 'STEMPLE_LAB_SANGER',
-                                       #-setsize => undef,
-                                       -format  => 'EXPRESSION',
-                                       -type    => 'OLIGO',
-                               
-                                       -class   => 'STEMPLE_LAB_SANGER',
-                                      },
-					  
-					  
                      },
-	 
+
      INPUT_FORMAT => 'FASTA',
+
+     ARRAYS_WITH_DEFAULT_PARAMS => [
+      'MattArray1',
+      'MattArray2',
+     ],
     },
 
     IMPORT_CATMA_ARRAYS =>
@@ -1416,25 +633,25 @@ use vars qw( %Config );
                     },
 
      ARRAY_PARAMS => {
-                      'CATMA' => {
+                      'Default' => {
                                   -name => 'CATMA',
                                   -vendor => 'CATMA',
                                   #-setsize => undef,
                                   -format  => 'EXPRESSION',
                                   -type    => 'OLIGO',
-                          
+
                                   -class   => 'CATMA',
                                  },
                      },
      INPUT_FORMAT => 'FASTA',
-    },
 
+     ARRAYS_WITH_DEFAULT_PARAMS => [
+      'CATMA',
+     ],
+   },
 
-
-
-
-    IMPORT_NSF_ARRAYS =>
-    {
+   IMPORT_NSF_ARRAYS =>
+   {
      IIDREGEXP => '^>(\S+):(\S+)', #Need to add desc field here
 
      IFIELDORDER => {
@@ -1444,43 +661,21 @@ use vars qw( %Config );
                     },
 
      ARRAY_PARAMS => {
-
-                      'BGIYale' => {
+                      'Default' => {
                                     -name => 'BGIYale',
                                     -vendor => 'NSF',
                                     #-setsize => undef,
                                     -format  => 'EXPRESSION',
                                     -type    => 'OLIGO',
-                            
                                     -class   => 'NSF',
                                    },
-
-
-                      'NSF20K' => {
-                                   -name => 'NSF20K',
-                                   -vendor => 'NSF',
-                                   #-setsize => undef,
-                                   -format  => 'EXPRESSION',
-                                   -type    => 'OLIGO',
-                           
-                                   -class   => 'NSF',
-                                  },
-
-                      'NSF45K' => {
-                                   -name => 'NSF45K',
-                                   -vendor => 'NSF',
-                                   #-setsize => undef,
-                                   -format  => 'EXPRESSION',
-                                   -type    => 'OLIGO',
-                           
-                                   -class   => 'NSF',
-                                  },
-
-
-
-
                      },
      INPUT_FORMAT => 'FASTA',
+     ARRAYS_WITH_DEFAULT_PARAMS => [
+      'BGIYale',
+      'NSF20K',
+      'NSF45K',
+     ],
     },
 
    }
@@ -1493,7 +688,7 @@ sub import {
   # Get list of variables supplied, or else everything
   my @vars = @_ ? @_ : keys( %Config );
   return unless @vars;
-  
+
   # Predeclare global variables in calling package
   eval "package $callpack; use vars qw("
     . join(' ', map { '$'.$_ } @vars) . ")";
