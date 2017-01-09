@@ -1,16 +1,9 @@
-
-=pod 
-
+=pod
 =head1 NAME
 
 Bio::EnsEMBL::Funcgen::Hive::QcFastQcJobFactory
 
 =head1 DESCRIPTION
-
-default_stuff='out_db => {"-dbname" => "mn1_faang2_tracking_homo_sapiens_funcgen_81_38","-host" => "ens-genomics1","-pass" => "ensembl","-port" => 3306,"-user" => "ensadmin"}, work_root_dir => "/lustre/scratch109/ensembl/funcgen/mn1/ersa/faang/debug", data_root_dir => "/lustre/scratch109/ensembl/funcgen/mn1/ersa/faang/", pipeline_name => "blah", use_tracking_db => 1, dnadb => {"-dnadb_host" => "ens-livemirror","-dnadb_name" => "homo_sapiens_core_82_38","-dnadb_pass" => "","-dnadb_port" => 3306,"-dnadb_user" => "ensro"}'
-
-standaloneJob.pl Bio::EnsEMBL::Funcgen::Hive::QcFastQcJobFactory -input_id "{ $default_stuff, input_subset_id => 1234, }"
-
 =cut
 
 package Bio::EnsEMBL::Funcgen::Hive::QcFastQcJobFactory;
@@ -58,5 +51,3 @@ sub create_input_id {
 }
 
 1;
-
-

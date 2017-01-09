@@ -48,7 +48,7 @@ mkdir -p $TEMP_DIR
 # GZIPPED_FASTQ_FILE=$(mysql -N -B $DB_MYSQL_ARGS -e "select local_url from input_subset_tracking where input_subset_id = ${INPUT_SUBSET_ID}")
 
 
-DB_MYSQL_ARGS="-hens-genomics2 -P3306 -uensadmin -pensembl mn1_faang_tracking_homo_sapiens_funcgen_81_38"
+DB_MYSQL_ARGS="-hens-genomics2 -P3306 -uensadmin -psecret mn1_faang_tracking_homo_sapiens_funcgen_81_38"
 GZIPPED_FASTQ_FILE=$(mysql -N -B $DB_MYSQL_ARGS -e "select local_url from input_subset_tracking where input_subset_id = ${INPUT_SUBSET_ID}")
 
 echo $GZIPPED_FASTQ_FILE
