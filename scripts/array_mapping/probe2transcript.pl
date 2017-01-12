@@ -364,31 +364,38 @@ sub main {
   $options->{arrays} = get_arrays($xref_db, $options->{vendor}, $options->{array_names});
   my $schema_build = $xref_db->_get_schema_build($transcript_db);
   my $transc_edb_name = "$options->{species}_core_Transcript";
-  $options->{transc_edb_id} = get_external_db_id($xref_db, $options->{species}, $transc_edb_name, $schema_build, $options->{import_edb});
+  
+#   $options->{transc_edb_id} = get_external_db_id($xref_db, $options->{species}, $transc_edb_name, $schema_build, $options->{import_edb});
+  
   $options->{analysis} = get_or_create_analysis($xref_db);
   my $transcripts = get_transcripts($transcript_db, $options->{test_slice}, $options->{test_transcript_sid});
   $options->{rr} = Bio::EnsEMBL::Mapper::RangeRegistry->new();
   $options->{unmapped_object_adaptor} = $xref_db->get_UnmappedObjectAdaptor();
-  $options->{transcript_xref_id} = get_transcript_xref_ids($xref_db, $options->{transc_edb_id});
+#   $options->{transcript_xref_id} = get_transcript_xref_ids($xref_db, $options->{transc_edb_id});
   # DEBUG: Naughty hidden global
   $options->{desc_to_id} = {};
 
-  check_xrefs($xref_db, $options->{transc_edb_id}, $transcripts, $options->{transcript_xref_id});
-  $Helper->log('Cleaning xrefs to avoid duplicate entries', 0, 'append_date');
-  if($options->{delete}) {
-    my $array_names = '"'.join('", "', @{$options->{array_names}}).'"';
-    my $text = "Deleting $options->{species}" . ($array_names) ? "($array_names)" : 'ALL';
-    $Helper->log("$text unmapped records and xrefs for probe2transcript...this may take a while");
-    delete_existing_xrefs($options->{array_names});
-  } else{
-    $Helper->log_header('Checking existing Xrefs');
-    check_existing_and_exit($xref_db, $transc_edb_name, $options);
-  }
-  $Helper->log('Checking that all probes link to analyses', 0, 'append_date');
-  check_probe_analysis_join($probe_db);
+#   check_xrefs($xref_db, $options->{transc_edb_id}, $transcripts, $options->{transcript_xref_id});
+#   $Helper->log('Cleaning xrefs to avoid duplicate entries', 0, 'append_date');
+#   if($options->{delete}) {
+#     my $array_names = '"'.join('", "', @{$options->{array_names}}).'"';
+#     my $text = "Deleting $options->{species}" . ($array_names) ? "($array_names)" : 'ALL';
+#     $Helper->log("$text unmapped records and xrefs for probe2transcript...this may take a while");
+#     delete_existing_xrefs($options->{array_names});
+#   } else{
+#     $Helper->log_header('Checking existing Xrefs');
+#     check_existing_and_exit($xref_db, $transc_edb_name, $options);
+#   }
+#   $Helper->log('Checking that all probes link to analyses', 0, 'append_date');
+#   check_probe_analysis_join($probe_db);
   $Helper->log("Caching arrays per $options->{xref_object}", 0, 'append_date');
   ($options->{arrays_per_object}, $options->{probeset_sizes}, $options->{object_names}) = @{cache_arrays_per_object($probe_db, $options)};
   $Helper->log('Caching transcript / probe feature xrefs', 0, 'append_date');
+  
+  # This ($options->{transcripts_per_probefeature}) is later used by 
+  # "sub record_gapped_probefeature" and gets covertly passed in via the 
+  # $options hashref.
+  #
   $options->{transcripts_per_probefeature} = get_transcripts_per_probefeature($xref_db, $options, $Helper);
   if($options->{calc_utrs}) {
     $Helper->log('Calculating default UTR lengths from greatest of max median|mean', 0, 'append_date');
@@ -433,9 +440,9 @@ sub main {
   $Helper->log('Creating final xrefs', 0, 'append_date');
   create_final_xrefs($object_transcript_hits, $xrefs, $xref_db, $options, $Helper);
   $Helper->log('Loading xrefs info DB', 0 , 'append_date');
-  if (scalar @$xrefs) {
-    store_xrefs($xrefs, $xref_db, $options->{transc_edb_id}, $options->{analysis}, $options->{transcript_xref_id}, $options);
-  }
+#   if (scalar @$xrefs) {
+#     store_xrefs($xrefs, $xref_db, $options->{transc_edb_id}, $options->{analysis}, $options->{transcript_xref_id}, $options);
+#   }
 
   print_unmapped_counts($unmapped_counts);
   print_xrefs_per_array($options->{xref_object}, $options->{arrays_per_object}, $object_transcript_hits);
@@ -869,53 +876,53 @@ sub get_arrays {
   return \%arrays;
 }
 
-=head2 get_external_db_id
-
-  Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
-  Arg2: species string name
-  Arg3: MySQL database name
-  Arg4: schema build string
-  Arg5: import_edb: boolean determines whether to create new entry in xref system if none found
-  Returntype: ID number of external id in external_db table (xref system)
-
-=cut
-
-sub get_external_db_id {
-  my($xref_db, $species, $edb_name, $schema_build, $import_edb) = @_;
-  my $transc_edb_display_name = 'EnsemblTranscript';
-  my $edb_display             = $transc_edb_display_name;
-
-  #Check for external_db records for species DBs
-  my $sql = "
-  SELECT
-    external_db_id
-  FROM
-    external_db
-  WHERE
-    db_name='$edb_name'
-    AND db_release='$schema_build'
-  ";
-  my @ids = @{$xref_db->dbc->db_handle->selectall_arrayref($sql)};
-  if (scalar @ids > 0) {
-    return $ids[0][0];
-  }
-
-  if(! $import_edb) {
-    croak("Could not find current external_db $edb_name $schema_build from available versions.\nMaybe you have mis-spelt the -trans-species or you may need to manually add the external_db to the table and master file:\n\n$sql\n\n");
-  } else {
-    # Insert database details into xref system
-    $sql = "
-    INSERT
-      INTO external_db
-        (db_name, db_release, status, dbprimary_acc_linkable, priority, db_display_name, type)
-      VALUES
-        ('$edb_name', '$schema_build', 'KNOWNXREF', 1, 5, '$edb_display', 'MISC')
-    ";
-    $Helper->log("Importing external_db using: $sql");
-    $xref_db->dbc->db_handle->do($sql);
-    return $xref_db->db_handle->last_insert_id();
-  }
-}
+# =head2 get_external_db_id
+# 
+#   Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
+#   Arg2: species string name
+#   Arg3: MySQL database name
+#   Arg4: schema build string
+#   Arg5: import_edb: boolean determines whether to create new entry in xref system if none found
+#   Returntype: ID number of external id in external_db table (xref system)
+# 
+# =cut
+# 
+# sub get_external_db_id {
+#   my($xref_db, $species, $edb_name, $schema_build, $import_edb) = @_;
+#   my $transc_edb_display_name = 'EnsemblTranscript';
+#   my $edb_display             = $transc_edb_display_name;
+# 
+#   #Check for external_db records for species DBs
+#   my $sql = "
+#   SELECT
+#     external_db_id
+#   FROM
+#     external_db
+#   WHERE
+#     db_name='$edb_name'
+#     AND db_release='$schema_build'
+#   ";
+#   my @ids = @{$xref_db->dbc->db_handle->selectall_arrayref($sql)};
+#   if (scalar @ids > 0) {
+#     return $ids[0][0];
+#   }
+# 
+#   if(! $import_edb) {
+#     croak("Could not find current external_db $edb_name $schema_build from available versions.\nMaybe you have mis-spelt the -trans-species or you may need to manually add the external_db to the table and master file:\n\n$sql\n\n");
+#   } else {
+#     # Insert database details into xref system
+#     $sql = "
+#     INSERT
+#       INTO external_db
+#         (db_name, db_release, status, dbprimary_acc_linkable, priority, db_display_name, type)
+#       VALUES
+#         ('$edb_name', '$schema_build', 'KNOWNXREF', 1, 5, '$edb_display', 'MISC')
+#     ";
+#     $Helper->log("Importing external_db using: $sql");
+#     $xref_db->dbc->db_handle->do($sql);
+#     return $xref_db->db_handle->last_insert_id();
+#   }
+# }
 
 =head2 get_or_create_analysis
 
@@ -933,7 +940,7 @@ sub get_or_create_analysis {
     my $id = $analysis_adaptor->store(Bio::EnsEMBL::Analysis->new(
         -logic_name    => 'probe2transcript',
         -program       => 'probe2transcript.pl',
-        -description   => 'Microarray probes from manufacturers are aligned to the genome by Ensembl, if the probe sequences are provided. The mapping is a two-step procedure outlined <a href="/info/docs/microarray_probe_set_mapping.html">here</a>.',
+        -description   => 'Microarray probes from manufacturers are aligned to the genome by Ensembl, if the probe sequences are provided. The mapping is a two-step procedure outlined <a href="/info/genome/microarray_probe_set_mapping.html">here</a>.',
         -displayable   => '0')
     );
     $analysis = $analysis_adaptor->fetch_by_logic_name('probe2transcript');
@@ -987,154 +994,154 @@ sub get_transcripts {
   return \@final;
 }
 
-=head2 get_transcript_xreF_ids
+# =head2 get_transcript_xreF_ids
+# 
+#   Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
+#   Arg2: Xref external DB id
+#   Returntype: Hashref of transcript stable ID => Funcgen xref_id for all transcripts
+#   in the xref table
+# 
+# =cut
+# 
+# sub get_transcript_xref_ids {
+#   my ($xref_db, $transc_edb_id) = @_;
+#   my $hash = {};
+#   my $sql = "
+#   SELECT
+#     dbprimary_acc, xref_id
+#   FROM
+#     xref
+#   WHERE
+#     external_db_id = $transc_edb_id;
+#   ";
+#   foreach my $row (@{$xref_db->dbc->db_handle->selectall_arrayref($sql)}) {
+#     $hash->{$row->[0]} = $row->[1];
+#   }
+#   return $hash;
+# }
+# 
+# =head2 check_xrefs
+# 
+#   Description: Checks whether all known transcripts are stored in the Xref table
+#   Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
+#   Arg2: Xref external DB ID
+#   Arg3: Array ref of Bio::EnsEMBL::Transcript objects
+#   Arg4: Hash ref of stable id => Funcgen xref_id
+# 
+# =cut
+# 
+# sub check_xrefs {
+#   my ($xref_db, $transc_edb_id, $transcripts, $transcript_xref_id) = @_;
+# 
+#   for my $transcript (@$transcripts) {
+# 
+#     if (! defined $transcript_xref_id->{$transcript->stable_id()}) {
+#       croak('Transcript absent from xref table: '.$transcript->stable_id().
+#         ", from external db: $transc_edb_id\n");
+#     }
+#   }
+#   return;
+# }
 
-  Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
-  Arg2: Xref external DB id
-  Returntype: Hashref of transcript stable ID => Funcgen xref_id for all transcripts
-  in the xref table
+# =head2 delete_existing_xrefs
+# 
+#   Description: Delete existing xrefs & object xrefs & unmapped objects. Use user-specified arrays if
+#   defined, otherwise all arrays.
+#   Arg: Array ref of microarray names:
+# 
+# =cut
+# 
+# sub delete_existing_xrefs {
+#   my ($arrays) = @_;
+# 
+# # Don't restrict to db_version as this would result in DBEntries/UnmappedObjects for old
+# # releases persisting.
+#   while (my $array = pop @$arrays) {
+#     if (scalar @$arrays) {
+#       $Helper->rollback_ArrayChips($array->get_ArrayChips, 'probe2transcript', undef, undef, 1, 0);
+#     } else {
+#       $Helper->rollback_ArrayChips($array->get_ArrayChips, 'probe2transcript', undef, undef, 0, 1);
+#     }
+#   }
+#   return;
+# }
 
-=cut
+# =head2 check_existing_and_exit
+# 
+#   Description: Check if there are already xrefs defined, and exit if there are.
+#   Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
+#   Arg2: Name of core database
+#   Arg3: Hash ref containing:
+#    - array_names: array ref
+#    - array_config: hash ref with vendor array configs
+#    - xref_object: "probe" or "probe_set"
+# 
+# =cut
+# 
+# sub check_existing_and_exit {
+#   my ($xref_db, $transc_edb_name, $options) = @_;
+# # Use user-specified arrays if defined, otherwise all arrays.
+# # Assumes external_db.dbname == probe_array.name
+#   my $probe_join = ($options->{array_config}{probeset_arrays}) ? 'p.probe_set_id' : 'p.probe_id';
+# 
+#   my $sql = "
+#   SELECT
+#     COUNT(*)
+#   FROM
+#      xref x
+#      JOIN object_xref ox USING(xref_id)
+#      JOIN external_db e USING(external_db_id)
+#      JOIN probe p ON (ensembl_id = $probe_join)
+#      JOIN array_chip ac USING(array_chip_id)
+#      JOIN array a USING(array_id)
+#   WHERE
+#      e.db_name = '$transc_edb_name'
+#      AND ox.ensembl_object_type= '$options->{xref_object}'
+#      AND ox.linkage_annotation!= 'ProbeTranscriptAlign'
+#      AND a.name=?
+#   ";
+# 
+#   my $xref_sth = $xref_db->dbc()->prepare($sql);
+# 
+#   foreach my $array (@{$options->{array_names}}) {
+#     $xref_sth->execute($array);
+#     my $cnt = $xref_sth->fetchrow_array();
+#     if ($cnt > 0) {
+#       warn "Array $array already has $cnt xrefs, exiting.\nThere may be other arrays with xrefs. Use -delete to remove them if required.\n";
+#       exit(1);
+#     }
+#   }
+#   $xref_sth->finish();
+#   return;
+# }
 
-sub get_transcript_xref_ids {
-  my ($xref_db, $transc_edb_id) = @_;
-  my $hash = {};
-  my $sql = "
-  SELECT
-    dbprimary_acc, xref_id
-  FROM
-    xref
-  WHERE
-    external_db_id = $transc_edb_id;
-  ";
-  foreach my $row (@{$xref_db->dbc->db_handle->selectall_arrayref($sql)}) {
-    $hash->{$row->[0]} = $row->[1];
-  }
-  return $hash;
-}
-
-=head2 check_xrefs
-
-  Description: Checks whether all known transcripts are stored in the Xref table
-  Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
-  Arg2: Xref external DB ID
-  Arg3: Array ref of Bio::EnsEMBL::Transcript objects
-  Arg4: Hash ref of stable id => Funcgen xref_id
-
-=cut
-
-sub check_xrefs {
-  my ($xref_db, $transc_edb_id, $transcripts, $transcript_xref_id) = @_;
-
-  for my $transcript (@$transcripts) {
-
-    if (! defined $transcript_xref_id->{$transcript->stable_id()}) {
-      croak('Transcript absent from xref table: '.$transcript->stable_id().
-        ", from external db: $transc_edb_id\n");
-    }
-  }
-  return;
-}
-
-=head2 delete_existing_xrefs
-
-  Description: Delete existing xrefs & object xrefs & unmapped objects. Use user-specified arrays if
-  defined, otherwise all arrays.
-  Arg: Array ref of microarray names:
-
-=cut
-
-sub delete_existing_xrefs {
-  my ($arrays) = @_;
-
-# Don't restrict to db_version as this would result in DBEntries/UnmappedObjects for old
-# releases persisting.
-  while (my $array = pop @$arrays) {
-    if (scalar @$arrays) {
-      $Helper->rollback_ArrayChips($array->get_ArrayChips, 'probe2transcript', undef, undef, 1, 0);
-    } else {
-      $Helper->rollback_ArrayChips($array->get_ArrayChips, 'probe2transcript', undef, undef, 0, 1);
-    }
-  }
-  return;
-}
-
-=head2 check_existing_and_exit
-
-  Description: Check if there are already xrefs defined, and exit if there are.
-  Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
-  Arg2: Name of core database
-  Arg3: Hash ref containing:
-   - array_names: array ref
-   - array_config: hash ref with vendor array configs
-   - xref_object: "probe" or "probe_set"
-
-=cut
-
-sub check_existing_and_exit {
-  my ($xref_db, $transc_edb_name, $options) = @_;
-# Use user-specified arrays if defined, otherwise all arrays.
-# Assumes external_db.dbname == probe_array.name
-  my $probe_join = ($options->{array_config}{probeset_arrays}) ? 'p.probe_set_id' : 'p.probe_id';
-
-  my $sql = "
-  SELECT
-    COUNT(*)
-  FROM
-     xref x
-     JOIN object_xref ox USING(xref_id)
-     JOIN external_db e USING(external_db_id)
-     JOIN probe p ON (ensembl_id = $probe_join)
-     JOIN array_chip ac USING(array_chip_id)
-     JOIN array a USING(array_id)
-  WHERE
-     e.db_name = '$transc_edb_name'
-     AND ox.ensembl_object_type= '$options->{xref_object}'
-     AND ox.linkage_annotation!= 'ProbeTranscriptAlign'
-     AND a.name=?
-  ";
-
-  my $xref_sth = $xref_db->dbc()->prepare($sql);
-
-  foreach my $array (@{$options->{array_names}}) {
-    $xref_sth->execute($array);
-    my $cnt = $xref_sth->fetchrow_array();
-    if ($cnt > 0) {
-      warn "Array $array already has $cnt xrefs, exiting.\nThere may be other arrays with xrefs. Use -delete to remove them if required.\n";
-      exit(1);
-    }
-  }
-  $xref_sth->finish();
-  return;
-}
-
-=head2 check_probe_analysis_join
-
-  Description: Checks that all probe_feature rows have a corresponding analysis entry
-  Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
-
-=cut
-
-sub check_probe_analysis_join {
-  my ($probe_db) = @_;
-
-  my $sql = '
-  SELECT
-    DISTINCT analysis_id, logic_name
-  FROM
-    probe_feature pf
-    LEFT JOIN analysis a
-      USING(analysis_id)
-  ';
-
-  foreach my $row (@{$probe_db->dbc->db_handle->selectall_arrayref($sql)}) {
-    my ($anal_id, $lname) = @$row;
-    if(! $lname) {
-      croak("Found probe_feature analysis without a corresponding analysis entry:\t$anal_id");
-    }
-  }
-  return;
-}
+# =head2 check_probe_analysis_join
+# 
+#   Description: Checks that all probe_feature rows have a corresponding analysis entry
+#   Arg1: Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor object
+# 
+# =cut
+# 
+# sub check_probe_analysis_join {
+#   my ($probe_db) = @_;
+# 
+#   my $sql = '
+#   SELECT
+#     DISTINCT analysis_id, logic_name
+#   FROM
+#     probe_feature pf
+#     LEFT JOIN analysis a
+#       USING(analysis_id)
+#   ';
+# 
+#   foreach my $row (@{$probe_db->dbc->db_handle->selectall_arrayref($sql)}) {
+#     my ($anal_id, $lname) = @$row;
+#     if(! $lname) {
+#       croak("Found probe_feature analysis without a corresponding analysis entry:\t$anal_id");
+#     }
+#   }
+#   return;
+# }
 
 
 =head2 get_transcripts_per_probefeature
@@ -1182,6 +1189,7 @@ sub get_transcripts_per_probefeature {
     if ($debug) {
       $Helper->log("ALIGNMENT\t$probeset_id\t$transcript_sid\n");
     }
+    # It is called probe set, but it is actually a probefeature id.
     $transcripts_per_probefeature{$probeset_id} ||= {};
     $transcripts_per_probefeature{$probeset_id}{$transcript_sid}++;
     # TODO Check for duplicates, i.e. check number == 1
@@ -1325,89 +1333,89 @@ sub calculate_utrs {
   return;
 }
 
-=head2 write_extended_transcripts_into_file
+# =head2 write_extended_transcripts_into_file
+# 
+#   Description: Dumps transcript regions into sorted BED file
+#   Stores a hash ref into the options hash ref
+#   Arg1: Array ref of Bio::EnsEMBL::Transcript objects
+#   Arg2: Filename to be written into
+#   Arg3: Hash ref to collect stats
+# 
+# =cut
+# 
+# sub write_extended_transcripts_into_file {
+#   my ($transcripts, $filename, $options) = @_;
+# 
+#   $options->{flanks} = {};
+#   my $utr_counts = {};
+#   $utr_counts->{3} = [];
+#   $utr_counts->{5} = [];
+# 
+#   # Write each transcript into file
+#   my ($fh0, $filename0) = tempfile();
+#   foreach my $transcript (@$transcripts) {
+#     print $fh0 write_extended_transcript($transcript, $utr_counts, $options)."\n";
+#   }
+# 
+#   # Sort by chromosome name then start coordinate
+#   run("sort -k1,1 -k2,2n $filename0 > $filename");
+#   close $fh0;
+#   unlink $filename0;
+# 
+#   # Prints out some random stats
+#   foreach my $end(5, 3) {
+#     my $total_length = 0;
+#     foreach my $utr_count (@{$utr_counts->{$end}}) {
+#       $total_length += $utr_count;
+#     }
+#     my $num_utrs = scalar(@{$utr_counts->{$end}});
+#     my $average = ($num_utrs) ? ($total_length/$num_utrs) : 0;
+#     $Helper->log("Seen $num_utrs $end prime UTRs with and average length of $average");
+#   }
+# 
+#   return;
+# }
 
-  Description: Dumps transcript regions into sorted BED file
-  Stores a hash ref into the options hash ref
-  Arg1: Array ref of Bio::EnsEMBL::Transcript objects
-  Arg2: Filename to be written into
-  Arg3: Hash ref to collect stats
-
-=cut
-
-sub write_extended_transcripts_into_file {
-  my ($transcripts, $filename, $options) = @_;
-
-  $options->{flanks} = {};
-  my $utr_counts = {};
-  $utr_counts->{3} = [];
-  $utr_counts->{5} = [];
-
-  # Write each transcript into file
-  my ($fh0, $filename0) = tempfile();
-  foreach my $transcript (@$transcripts) {
-    print $fh0 write_extended_transcript($transcript, $utr_counts, $options)."\n";
-  }
-
-  # Sort by chromosome name then start coordinate
-  run("sort -k1,1 -k2,2n $filename0 > $filename");
-  close $fh0;
-  unlink $filename0;
-
-  # Prints out some random stats
-  foreach my $end(5, 3) {
-    my $total_length = 0;
-    foreach my $utr_count (@{$utr_counts->{$end}}) {
-      $total_length += $utr_count;
-    }
-    my $num_utrs = scalar(@{$utr_counts->{$end}});
-    my $average = ($num_utrs) ? ($total_length/$num_utrs) : 0;
-    $Helper->log("Seen $num_utrs $end prime UTRs with and average length of $average");
-  }
-
-  return;
-}
-
-=head2 write_extended_transcript
-
-  Arg1: Bio::EnsEMBL::Transcript object
-  Arg2: Hash ref for UTR stats collection
-  Arg3: Hash ref to collect stats
-  Returntype: line for BED file
-
-=cut
-
-sub write_extended_transcript {
-  my ($transcript, $utr_counts, $options) = @_;
-  my $transcript_sid = $transcript->stable_id;
-
-  if ($debug) {
-    $Helper->log("\nDEBUG:\tTranscript ".$transcript_sid);
-  }
-
-  # Computing UTR extension length
-  $options->{flanks}{$transcript_sid} = {};
-  foreach my $end(5, 3) {
-    $options->{flanks}{$transcript_sid}{$end} = extend_transcript($end, $transcript, $utr_counts, $options);
-  }
-
-  my $new_start;
-  my $new_end;
-  # Check whether the transcript is on the postive/undefined or negative strand
-  if ($transcript->strand() >= 0) {
-    $new_start = $transcript->seq_region_start - $options->{flanks}{$transcript_sid}{5};
-    $new_end   = $transcript->seq_region_end + $options->{flanks}{$transcript_sid}{3};
-  } else {
-    $new_start = $transcript->seq_region_start - $options->{flanks}{$transcript_sid}{3};
-    $new_end = $transcript->seq_region_end + $options->{flanks}{$transcript_sid}{5};
-  }
-
-  if ($new_start < 0) {
-    $new_start = 0;
-  }
-
-  return join("\t", ($transcript->seq_region_name, $new_start, $new_end, $transcript->stable_id));
-}
+# =head2 write_extended_transcript
+# 
+#   Arg1: Bio::EnsEMBL::Transcript object
+#   Arg2: Hash ref for UTR stats collection
+#   Arg3: Hash ref to collect stats
+#   Returntype: line for BED file
+# 
+# =cut
+# 
+# sub write_extended_transcript {
+#   my ($transcript, $utr_counts, $options) = @_;
+#   my $transcript_sid = $transcript->stable_id;
+# 
+#   if ($debug) {
+#     $Helper->log("\nDEBUG:\tTranscript ".$transcript_sid);
+#   }
+# 
+#   # Computing UTR extension length
+#   $options->{flanks}{$transcript_sid} = {};
+#   foreach my $end(5, 3) {
+#     $options->{flanks}{$transcript_sid}{$end} = extend_transcript($end, $transcript, $utr_counts, $options);
+#   }
+# 
+#   my $new_start;
+#   my $new_end;
+#   # Check whether the transcript is on the postive/undefined or negative strand
+#   if ($transcript->strand() >= 0) {
+#     $new_start = $transcript->seq_region_start - $options->{flanks}{$transcript_sid}{5};
+#     $new_end   = $transcript->seq_region_end + $options->{flanks}{$transcript_sid}{3};
+#   } else {
+#     $new_start = $transcript->seq_region_start - $options->{flanks}{$transcript_sid}{3};
+#     $new_end = $transcript->seq_region_end + $options->{flanks}{$transcript_sid}{5};
+#   }
+# 
+#   if ($new_start < 0) {
+#     $new_start = 0;
+#   }
+# 
+#   return join("\t", ($transcript->seq_region_name, $new_start, $new_end, $transcript->stable_id));
+# }
 
 
 =head2 extend_transcript
@@ -1420,85 +1428,85 @@ sub write_extended_transcript {
 
 =cut
 
-sub extend_transcript {
-  my ($end, $transcript, $utr_counts, $options) = @_;
-  if($options->{utr_extends}{$end} || $options->{utr_multiplier} || $options->{unannotated_utrs}{$end}) {
-    my $method = ($end == 5) ? 'five' : 'three';
-    $method .= '_prime_utr';
-    my $utr = $transcript->$method;
+# sub extend_transcript {
+#   my ($end, $transcript, $utr_counts, $options) = @_;
+#   if($options->{utr_extends}{$end} || $options->{utr_multiplier} || $options->{unannotated_utrs}{$end}) {
+#     my $method = ($end == 5) ? 'five' : 'three';
+#     $method .= '_prime_utr';
+#     my $utr = $transcript->$method;
+# 
+#     if(defined $utr) {
+#       push @{$utr_counts->{$end}}, $utr->length;
+#       if(defined $options->{utr_extends}{$end}) {
+#         return $options->{utr_extends}{$end};
+#       }
+#       else{
+#         return $utr->length * $options->{utr_multiplier};
+#       }
+#     } elsif (defined  $options->{unannotated_utrs}{$end}) {
+#       return $options->{unannotated_utrs}{$end};
+#     }
+#   } else {
+#     return 0;
+#   }
+# }
 
-    if(defined $utr) {
-      push @{$utr_counts->{$end}}, $utr->length;
-      if(defined $options->{utr_extends}{$end}) {
-        return $options->{utr_extends}{$end};
-      }
-      else{
-        return $utr->length * $options->{utr_multiplier};
-      }
-    } elsif (defined  $options->{unannotated_utrs}{$end}) {
-      return $options->{unannotated_utrs}{$end};
-    }
-  } else {
-    return 0;
-  }
-}
-
-=head2 dump_probe_features
-
-  Description: Prints out bed file with probe feature data
-  Arg1: filename for destination file
-  Arg2: hashref with constants, in particular:
-  - xref_user
-  - xref_host
-  - xref_dbname
-  - xref_port
-  - xref_pass
-
-=cut
-
-sub dump_probe_features {
-  my ($filename2, $options) = @_;
-  my $names = join('", "', @{$options->{array_names}});
-  # Selecting all probe features for selected arrays in sorted BED format with useful metadata on the same line
-  my $sql = "
-  SELECT
-    seq_region.name, seq_region_start, seq_region_end, seq_region_strand, cigar_line, mismatches, probe_feature_id, probe_id, probe.name, probe_set_id, probe_set.name
-  FROM
-    probe_feature
-    JOIN probe
-      USING(probe_id)
-    LEFT JOIN probe_set
-      USING(probe_set_id)
-    JOIN array_chip
-      USING(array_chip_id)
-    JOIN array
-      USING(array_id)
-    JOIN seq_region
-      USING(seq_region_id)
-  WHERE
-    array.name IN (\"$names\")
-    AND array.vendor=\"$options->{vendor}\"
-  GROUP BY
-    probe_feature_id, probe_id, probe_set_id
-  ORDER BY
-    seq_region.name, seq_region_start
-  ";
-
-  # Dump straight into file, without perl getting in the way
-  # Note the use of --quick which prevent the MySQL client from squirreling all the data in memory,
-  # instead this forces it to stream the data stright into the file
-  my $cmd = "mysql --quick -NB -u $options->{xref_user} -h $options->{xref_host} -D $options->{xref_dbname} -e '$sql'";
-  if (defined $options->{xref_port}) {
-    $cmd .= " -P $options->{xref_port}";
-  }
-  if (defined $options->{xref_pass}) {
-    $cmd .= " -p$options->{xref_pass}";
-  }
-
-  ## Quick filter for trailing semi-colons in database names
-  run("$cmd | sed -e 's/;\$//' > $filename2");
-  return;
-}
+# =head2 dump_probe_features
+# 
+#   Description: Prints out bed file with probe feature data
+#   Arg1: filename for destination file
+#   Arg2: hashref with constants, in particular:
+#   - xref_user
+#   - xref_host
+#   - xref_dbname
+#   - xref_port
+#   - xref_pass
+# 
+# =cut
+# 
+# sub dump_probe_features {
+#   my ($filename2, $options) = @_;
+#   my $names = join('", "', @{$options->{array_names}});
+#   # Selecting all probe features for selected arrays in sorted BED format with useful metadata on the same line
+#   my $sql = "
+#   SELECT
+#     seq_region.name, seq_region_start, seq_region_end, seq_region_strand, cigar_line, mismatches, probe_feature_id, probe_id, probe.name, probe_set_id, probe_set.name
+#   FROM
+#     probe_feature
+#     JOIN probe
+#       USING(probe_id)
+#     LEFT JOIN probe_set
+#       USING(probe_set_id)
+#     JOIN array_chip
+#       USING(array_chip_id)
+#     JOIN array
+#       USING(array_id)
+#     JOIN seq_region
+#       USING(seq_region_id)
+#   WHERE
+#     array.name IN (\"$names\")
+#     AND array.vendor=\"$options->{vendor}\"
+#   GROUP BY
+#     probe_feature_id, probe_id, probe_set_id
+#   ORDER BY
+#     seq_region.name, seq_region_start
+#   ";
+# 
+#   # Dump straight into file, without perl getting in the way
+#   # Note the use of --quick which prevent the MySQL client from squirreling all the data in memory,
+#   # instead this forces it to stream the data stright into the file
+#   my $cmd = "mysql --quick -NB -u $options->{xref_user} -h $options->{xref_host} -D $options->{xref_dbname} -e '$sql'";
+#   if (defined $options->{xref_port}) {
+#     $cmd .= " -P $options->{xref_port}";
+#   }
+#   if (defined $options->{xref_pass}) {
+#     $cmd .= " -p$options->{xref_pass}";
+#   }
+# 
+#   ## Quick filter for trailing semi-colons in database names
+#   run("$cmd | sed -e 's/;\$//' > $filename2");
+#   return;
+# }
 
 =head2
 
@@ -1735,6 +1743,10 @@ sub examine_probefeature {
 =head2
 
   Description: For one gapped overlap between a trasncript and a probe feature, collects data
+  
+  The data is returned by making changes to the hash referenced by 
+  $transcript_feature_info instead of a return value.
+  
   CalledBy: examine_probefeature
   Arg1: ProbeFeature DB id
   Arg2: Probe DB id
@@ -1782,12 +1794,19 @@ sub record_gapped_probefeature {
       'Gapped ProbeFeature did not match transcript structure'
     );
   }
+  # The real return value is in $transcript_feature_info
   return;
 }
 
 =head2
 
   Description: For one ungapped overlap between a trasncript and a probe feature, collects data
+  
+  The data is returned by making changes to the hash referenced by 
+  $transcript_feature_info instead of a return value.
+  
+  It also stores xrefs.
+  
   CalledBy: examine_probefeature()
   Arg1: ProbeFeature DB id
   Arg2: Probe DB id
@@ -1855,6 +1874,8 @@ sub record_aligned_probefeature {
     }
 
     if ($options->{array_config}{probeset_arrays}) {
+    
+      # This is the output of the function
       $transcript_feature_info->{$probeset_id}{$probe_id} ||= [0, 0];
       $transcript_feature_info->{$probeset_id}{$probe_id}->[0]++;
       $transcript_feature_info->{$probeset_id}{$probe_id}->[1] += $mismatches;
@@ -1898,6 +1919,7 @@ sub record_aligned_probefeature {
       "Probe mapped to $region of transcript"
     );
   }
+  # The real return value is in $transcript_feature_info
   return;
 }
 
@@ -2585,6 +2607,9 @@ sub create_unmapped_reason {
 =head2 add_xref
 
   Description: Creates a hash ref describing an xref and appends it to the array ref (arg6)
+  
+  If the array has more than 10000 xrefs, they are stored and the array is reset.
+  
   Arg1: transcript stable id,
   Arg2: object_id of the Probe/ProbeSet/ProbeFeature
   Arg3: object_type ("Probe", "ProbeFeature" or "ProbeSet")
@@ -2606,52 +2631,52 @@ sub add_xref {
   return;
 }
 
-=head2 store_xrefs
-
-  Description: Loads a bunch of xrefs in a single MySQL command
-  rather than one-by-one.
-  Arg1: hash ref (table) of hash refs (rows), populated by add_xref.
-  Each row contains:
-    * transcript ref
-    * linkage_annotation,
-    * object_id,
-    * object_type ("Probe", "ProbeFeature" or "ProbeSet")
-  Arg2: Bio::EnsEMBL::DBSQL::DBAdaptor object for the external transcript db
-  Arg3: id of the external transcript db in the xref system
-  Arg4: Bio::EnsEMBL::Analysis object
-  Arg5: hash ref linking Bio::EnsEMBL::Transcript objects to xref_id numbers
-
-=cut
-
-sub store_xrefs {
-  my ($xrefs, $xref_db, $transc_edb_id, $analysis, $transcript_xref_id, $options) = @_;
-
-  # Dump table into flat file
-  my ($fh, $filename) = tempfile();
-  for my $xref (@$xrefs) {
-    my ($transcript_id, $linkage_annotation, $object_id, $object_type) = @$xref;
-    if (! defined $transcript_xref_id->{$transcript_id}) {
-      croak("Transcript $transcript_id absent from xref table!\n");
-    }
-    print $fh join("\t", ('\N', $object_id, $object_type, $transcript_xref_id->{$transcript_id}, $linkage_annotation, $analysis->dbID))."\n";
-  }
-  chmod 0644, $filename;
-  # Remember to flush after you're done
-  $fh->autoflush;
-
-  # Load into database
-  my $cmd = "mysql -u $options->{xref_user} -h $options->{xref_host} -D $options->{xref_dbname} -e 'LOAD DATA LOCAL INFILE \"$filename\" INTO TABLE object_xref'";
-  if (defined $options->{xref_port}) {
-    $cmd .= " -P $options->{xref_port}";
-  }
-  if (defined $options->{xref_pass}) {
-    $cmd .= " -p$options->{xref_pass}";
-  }
-  run($cmd);
-  close $fh;
-  unlink $filename;
-  return;
-}
+# =head2 store_xrefs
+# 
+#   Description: Loads a bunch of xrefs in a single MySQL command
+#   rather than one-by-one.
+#   Arg1: hash ref (table) of hash refs (rows), populated by add_xref.
+#   Each row contains:
+#     * transcript ref
+#     * linkage_annotation,
+#     * object_id,
+#     * object_type ("Probe", "ProbeFeature" or "ProbeSet")
+#   Arg2: Bio::EnsEMBL::DBSQL::DBAdaptor object for the external transcript db
+#   Arg3: id of the external transcript db in the xref system
+#   Arg4: Bio::EnsEMBL::Analysis object
+#   Arg5: hash ref linking Bio::EnsEMBL::Transcript objects to xref_id numbers
+# 
+# =cut
+# 
+# sub store_xrefs {
+#   my ($xrefs, $xref_db, $transc_edb_id, $analysis, $transcript_xref_id, $options) = @_;
+# 
+#   # Dump table into flat file
+#   my ($fh, $filename) = tempfile();
+#   for my $xref (@$xrefs) {
+#     my ($transcript_id, $linkage_annotation, $object_id, $object_type) = @$xref;
+#     if (! defined $transcript_xref_id->{$transcript_id}) {
+#       croak("Transcript $transcript_id absent from xref table!\n");
+#     }
+#     print $fh join("\t", ('\N', $object_id, $object_type, $transcript_xref_id->{$transcript_id}, $linkage_annotation, $analysis->dbID))."\n";
+#   }
+#   chmod 0644, $filename;
+#   # Remember to flush after you're done
+#   $fh->autoflush;
+# 
+#   # Load into database
+#   my $cmd = "mysql -u $options->{xref_user} -h $options->{xref_host} -D $options->{xref_dbname} -e 'LOAD DATA LOCAL INFILE \"$filename\" INTO TABLE object_xref'";
+#   if (defined $options->{xref_port}) {
+#     $cmd .= " -P $options->{xref_port}";
+#   }
+#   if (defined $options->{xref_pass}) {
+#     $cmd .= " -p$options->{xref_pass}";
+#   }
+#   run($cmd);
+#   close $fh;
+#   unlink $filename;
+#   return;
+# }
 
 =head2 run
 

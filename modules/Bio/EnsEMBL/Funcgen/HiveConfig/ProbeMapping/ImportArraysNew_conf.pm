@@ -14,43 +14,13 @@ use base ('Bio::EnsEMBL::Funcgen::HiveConfig::ProbeMapping::Base');
 
 =cut
 
-sub pipeline_wide_parameters {
-    my $self = shift;
-    return {
-      %{$self->SUPER::pipeline_wide_parameters},
-
-      tempdir          => $self->o('tempdir'),
-      probe_directory  => $self->o('probe_directory'),
-      reg_conf         => $self->o('reg_conf'),
-    };
-}
-
-sub default_options {
-    my ($self) = @_;
-    return {
-      %{ $self->SUPER::default_options() },
-
-      tempdir          => '/lustre/scratch109/ensembl/funcgen/array_mapping_temp',
-      probe_directory  => '/lustre/scratch109/ensembl/funcgen/array_mapping/',
-      reg_conf         => '/nfs/users/nfs_m/mn1/work_dir_probemapping/lib/ensembl-funcgen/registry.pm',
-    };
-}
-
-sub beekeeper_extra_cmdline_options {
-    my ($self) = @_;
-    return '-reg_conf ' . $self->o('reg_conf') . ' -keep_alive -can_respecialize 1';
-}
-
 sub pipeline_analyses {
     my $self = shift;
     
     return [
         {
-            -logic_name  => 'start',
+            -logic_name  => 'start_import',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-            -input_ids => [
-              { species => 'homo_sapiens', },
-            ],
             -flow_into => {
                 MAIN => 'pre_pipeline_checks',
             },
@@ -83,6 +53,8 @@ sub pipeline_analyses {
                   "truncate probe_alias;",
                   "truncate probe_seq;",
                   "truncate probe_set;",
+                  "truncate unmapped_object;",
+                  "truncate unmapped_reason;",
                 ],
                 db_conn => 'funcgen:#species#',
             },
@@ -144,7 +116,6 @@ sub pipeline_analyses {
             },
           -flow_into => {
               MEMLIMIT => 'store_array_objects_himem',
-              MAIN     => 'insert_probe_alias',
           },
         },
         {
@@ -160,46 +131,8 @@ sub pipeline_analyses {
                 ',
             },
             -rc_name     => '16Gb_job',
-            -flow_into => {
-                MAIN     => 'insert_probe_alias',
-            },
-        },
-        {
-            -logic_name  => 'insert_probe_alias',
-            -meadow_type => 'LSF',
-            -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::InsertProbeAlias',
-            -rc_name     => '2Gb_job',
         },
     ];
 }
-
-sub resource_classes {
-    my ($self) = @_;
-    return {
-        %{$self->SUPER::resource_classes},  # inherit 'default' from the parent class
-
-        'default' => {
-          'LSF'   => ['', '--reg_conf '.$self->o('reg_conf')], 
-          'LOCAL' => ['', '--reg_conf '.$self->o('reg_conf')] 
-        },
-        '250Mb_job'    => {'LSF' => '-M250   -R"select[mem>250]   rusage[mem=250]"' },
-        '500Mb_job'    => {'LSF' => '-M500   -R"select[mem>500]   rusage[mem=500]"' },
-        '1Gb_job'      => {'LSF' => '-M1000  -R"select[mem>1000]  rusage[mem=1000]"' },
-        '2Gb_job'      => {'LSF' => '-M2000  -R"select[mem>2000]  rusage[mem=2000]"' },
-        '4Gb_job'      => {'LSF' => '-M4000  -R"select[mem>4000]  rusage[mem=4000]"' },
-        '8Gb_job'      => {'LSF' => '-M8000  -R"select[mem>8000]  rusage[mem=8000]"' },
-        '16Gb_job'     => {
-          'LSF' => [ 
-            '-M16000 -R"select[mem>16000] rusage[mem=16000]"', 
-            '--reg_conf ' . $self->o('reg_conf') 
-          ]
-        },
-        '24Gb_job'     => {'LSF' => '-M24000 -R"select[mem>24000] rusage[mem=24000]"' },
-        '32Gb_job'     => {'LSF' => '-M32000 -R"select[mem>32000] rusage[mem=32000]"' },
-        '48Gb_job'     => {'LSF' => '-M48000 -R"select[mem>48000] rusage[mem=48000]"' },
-        '64Gb_job'     => {'LSF' => '-M64000 -R"select[mem>64000] rusage[mem=64000]"' },
-    };
-}
-
 
 1;
