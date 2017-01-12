@@ -16,36 +16,23 @@ perl /nfs/users/nfs_m/mn1/various_scripts/probemapping/test_store_array_objects.
 =cut
 
 my $registry;
-# my $url;
 my $species;
 my $array_objects_file;
 
 GetOptions (
-   'registry=s'      => \$registry,
-#    'url=s'      => \$url,
-   'species=s'         => \$species,
+   'registry=s'           => \$registry,
+   'species=s'            => \$species,
    'array_objects_file=s' => \$array_objects_file,
 );
 
 Bio::EnsEMBL::Registry->load_all($registry);
-# Bio::EnsEMBL::Registry->load_registry_from_url($url, 1);
 
 my $array_adaptor      = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'array');
 my $array_chip_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'arraychip');
 my $probe_adaptor      = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'probe');
 my $probe_set_adaptor  = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'probeset');
 
-=head2
-
-truncate array;
-truncate array_chip;
-truncate probe;
-truncate probe_feature;
-truncate probe_alias;
-truncate probe_seq;
-truncate probe_set;
-
-=cut
+my %probe_set_name_to_object;
 
 my %array_name_to_object;
 my $fetch_array_from_db = sub {
@@ -107,7 +94,6 @@ my $fetch_array_chip_from_db = sub {
   return $array_chip;
 };
 
-my %probe_set_name_to_object;
 my $fetch_probe_set_from_db = sub {
 
   my $array_name = shift;
@@ -118,12 +104,14 @@ my $fetch_probe_set_from_db = sub {
   } else {
   
     my $probe_set_from_db = $probe_set_adaptor->fetch_by_array_probeset_name($array_name, $probe_set->name);
+#     my $probe_set_from_db = $fetch_by_array_probeset_name_cache{$array_name}{$probe_set->name};
     
     if (defined $probe_set_from_db) {
       $probe_set = $probe_set_from_db;
     } else {
       $probe_set->size(1);
       $probe_set_adaptor->store($probe_set);
+#       $fetch_by_array_probeset_name_cache{$array_name}{$probe_set->name} = $probe_set;
     }
     $probe_set_name_to_object{$probe_set->name} = $probe_set;
   }
@@ -155,7 +143,6 @@ my $process_array_objects = sub {
     $probe->probeset($probeset_from_db);
   }
   
-#   print Dumper($probe);
   $probe_adaptor->store($probe);
 };
 

@@ -10,16 +10,13 @@ sub pipeline_analyses {
     
     return [
       {
-          -logic_name  => 'start',
+          -logic_name  => 'start_export',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-          -input_ids => [
-            { species => 'homo_sapiens', },
-          ],
           -flow_into => {
               MAIN => [
-                'dump_unmapped_sequences',
                 'connection_details_as_parameters',
-              ],
+                'dump_unmapped_sequences'
+              ]
           },
       },
       {
@@ -71,11 +68,7 @@ sub pipeline_analyses {
       },
       {
         -logic_name  => 'dump_unmapped_sequences',
-        -analysis_capacity => 0,
         -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::DumpUnmappedSeqs',
-        -parameters => {
-          unmapped_sequences_file => '#unmapped_sequences_file#',
-        },
       },
     ];
 }

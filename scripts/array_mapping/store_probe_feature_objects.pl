@@ -35,7 +35,9 @@ if (! -e $probe_features) {
 use Bio::EnsEMBL::Registry;
 Bio::EnsEMBL::Registry->load_all($registry);
 
-my $funcgen_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
+my $funcgen_adaptor       = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
+
+print Dumper($funcgen_adaptor);
 
 my $sth_store_probe_feature_transcript_mapping = $funcgen_adaptor->dbc->prepare("insert into probe_feature_transcript(probe_feature_id, stable_id) values (?, ?);");
 
@@ -73,11 +75,6 @@ my $process_data = sub {
     return if ($raw_probe_feature eq " Only one genomic block!");
     my $transcript_stable_id = $raw_probe_feature->{t_id};
     my $transcript = $transcript_adaptor->fetch_by_stable_id($transcript_stable_id);
-    
-    if (!defined $transcript) {
-      die("Can't find transcript for $transcript_stable_id");
-    }
-    
     $slice = $transcript->slice;
     
   } else {
@@ -104,9 +101,12 @@ my $process_data = sub {
     my $transcript_stable_id = $raw_probe_feature->{t_id};
     my $probe_feature_id     = $probe_feature->dbID;
     
-    $sth_store_probe_feature_transcript_mapping->bind_param(1, $probe_feature_id);
+#     insert into probe_feature_transcript(probe_feature_id, stable_id) values (10, 'buh');
+    $sth_store_probe_feature_transcript_mapping->bind_param(1,  $probe_feature_id);
     $sth_store_probe_feature_transcript_mapping->bind_param(2, $transcript_stable_id);
     $sth_store_probe_feature_transcript_mapping->execute;
+
+#     print "$probe_feature_id\t$transcript_stable_id\n";
   }
 };
 

@@ -13,23 +13,19 @@
 -- limitations under the License.
 
 /**
-@header patch_87_88_b.sql - do stuff
-@desc   This does stuff.
+@header patch_87_88_g.sql - create probe_feature_transcript table
+@desc   Creates probe_feature_transcript table, moves data from object_xref and xref into it.
 */
 
---
--- Table structure for table `probe_seq`
---
+delete 
+  xref
+from 
+  xref, object_xref
+where 
+  object_xref.xref_id=xref.xref_id
+  and object_xref.ensembl_object_type="ProbeSet";
 
-DROP TABLE IF EXISTS `probe_seq`;
-
-CREATE TABLE `probe_seq` (
-  `probe_seq_id` int(10) NOT NULL AUTO_INCREMENT,
-  `probe_sha1` char(40) NOT NULL,
-  `probe_dna` text NOT NULL,
-  `has_been_mapped` BOOL DEFAULT 0,
-  PRIMARY KEY (`probe_seq_id`),
-  UNIQUE KEY `probe_sha1_idx` (`probe_sha1`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-ALTER TABLE probe ADD COLUMN probe_seq_id int(10) DEFAULT NULL;
+delete from 
+  object_xref
+where 
+  object_xref.ensembl_object_type="ProbeSet";

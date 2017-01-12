@@ -87,29 +87,17 @@ sub calculate_utrs {
       $logger->info("Seen $count ${side}' UTRs, $zero_count have length 0\n");
 
       if($count) {
-        my $mean   = round(mean($lengths{$side}));
-        my $median = round(median($lengths{$side}));
+        my ($mean, $remainder) = split/\./, mean($lengths{$side});
+        if ($remainder =~ /^[5-9]/) {
+          $mean++;
+        }
+        my $median = median($lengths{$side});
         $unannotated_utrs->{$side}  = ($mean > $median)  ? $mean : $median;
         $logger->info("Calculated default unannotated ${side}' UTR length:\t$unannotated_utrs->{$side}\n");
       } else{
-        use Carp;
-        warn("Found no ${side}' UTRs, you must specify a -unannotated_${side}_utr");
-        $unannotated_utrs->{$side}  = 0;
+        croak('Found no 5\' UTRs, you must specify a -unannotated_5_utr');
       }
     }
   }
   return $unannotated_utrs;
 }
-
-sub round {
-  my $number = shift;
-
-  my ($rounded, $remainder) = split/\./, $number;
-  if ($remainder =~ /^[5-9]/) {
-    $rounded++;
-  }
-  return $rounded;
-}
-
-
-

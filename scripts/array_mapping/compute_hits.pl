@@ -18,6 +18,8 @@ compute_hits.pl \
 
 =cut
 
+# Constants:
+
 my $mapping_threshold = 0.5;
 
 my $transcript_info_file;
@@ -108,7 +110,15 @@ sub assign_probes_to_transcripts {
     next ARRAY if (! exists $probe_hits_by_array->{$current_array_name});
   
     my $hit_summary = $probe_hits_by_array->{$current_array_name};
-
+    
+#     print Dumper($hit_summary);
+#     
+#     if (ref $hit_summary ne 'HASH') {
+#       print "Not a hash reference for $current_array_name\n";
+#     } else {
+#       print "Got a " . (ref $hit_summary) . " for $current_array_name\n";
+#     }
+    
     lock_hash(%$hit_summary);
     
     my $is_probeset_array = $hit_summary->{probeset_array};
@@ -133,38 +143,21 @@ sub assign_probes_to_transcripts {
       write_results_as_tsv($probeset_transcript_assignments_fh, $assignments);
       write_results_as_tsv($probeset_transcript_rejections_fh,  $rejections);
     } else {
-      (
-        my $assignments,
-        my $annotation
-      )
-        = assign_all_probes({
+        my $assignments = assign_all_probes({
           transcript_stable_id => $transcript_stable_id,
           hit_summary          => $hit_summary,
       });
-      write_results_as_tsv($probe_transcript_assignments_fh,$assignments,$annotation);
+      write_results_as_tsv($probe_transcript_assignments_fh,$assignments);
     }
   }
   return;
 }
 
-=head2 write_results_as_tsv
-
-  Takes two hashes, the first for the transcripts, the second for the descriptions.
-
-=cut
 sub write_results_as_tsv {
   my $fh   = shift;
-  my $hash1 = shift;
-  my $hash2 = shift;
-  
-  foreach my $key (keys %$hash1) {
-    $fh->print(
-      join "\t", 
-        $key,
-        $hash1->{$key},
-        $hash2->{$key}
-    );
-    $fh->print("\n");
+  my $hash = shift;
+  foreach my $key (keys %$hash) {
+    $fh->print($key . "\t" . $hash->{$key} . "\n");
   }
 }
 
@@ -213,7 +206,7 @@ sub assign_probsets_with_sufficient_probe_matches {
     # The number of probes from that probeset that have a probefeature
     # on this transcript.
     #
-    my $hits = scalar keys %{$probesets_matching_transcript->{$current_probeset_id}->{probe_id}};
+    my $hits = scalar keys %{$probesets_matching_transcript->{$current_probeset_id}};
     
     my $probeset_size = $probeset_sizes->{$current_probeset_id};
     
@@ -237,7 +230,6 @@ sub assign_all_probes {
   my $hit_summary          = $param->{hit_summary};
 
   my %assignments;
-  my %annotation;
   
   # The hash looks like this;
   #
@@ -288,29 +280,6 @@ sub assign_all_probes {
   
   foreach my $current_probe_id (@probe_ids_with_valid_hits) {
     $assignments{$current_probe_id} = $transcript_stable_id;
-    
-    my $condensed_annotation = condense_annotations($hit_summary->{probe}->{$current_probe_id});
-    $annotation{$current_probe_id}  = $condensed_annotation;
   }
-  return \%assignments, \%annotation;
+  return \%assignments;
 }
-
-sub condense_annotations {
-
-  my $annotation_list = shift;
-  my %unique;
-  
-  foreach my $annotation_item (@$annotation_list) {
-    $unique{$annotation_item->{annotation}} = 1;
-  }
-  
-  my @annotations = keys %unique;
-  my $condensed_annotation = join ' and ', @annotations;
-  return $condensed_annotation;
-}
-
-
-
-
-
-
