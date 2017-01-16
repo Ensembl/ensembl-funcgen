@@ -13,8 +13,8 @@
 -- limitations under the License.
 
 /**
-@header patch_87_88_g.sql - create probe_feature_transcript table
-@desc   Creates probe_feature_transcript table, moves data from object_xref and xref into it.
+@header patch_87_88_g.sql - Remove probe set mappings from the xref tables.
+@desc   Remove probe set mappings from the xref tables.
 */
 
 delete 
