@@ -47,14 +47,14 @@ sub main {
     # ----------------------------
     # read command line parameters
     # ----------------------------
-    my ( $relco, $release, $password, $help, $tickets_csv, $config );
+    my ( $relco, $release, $password, $help, $tickets_tsv, $config );
 
     GetOptions(
         'relco=s'    => \$relco,
         'release=i'  => \$release,
         'password=s' => \$password,
         'p=s'        => \$password,
-        'tickets=s'  => \$tickets_csv,
+        'tickets=s'  => \$tickets_tsv,
         'config=s'   => \$config,
         'c=s'        => \$config,
         'help'       => \$help,
@@ -71,8 +71,8 @@ sub main {
     # ---------------------------------
     # deal with command line parameters
     # ---------------------------------
-    ( $relco, $release, $password, $tickets_csv, $config )
-        = set_parameters( $relco, $release, $password, $tickets_csv, $config,
+    ( $relco, $release, $password, $tickets_tsv, $config )
+        = set_parameters( $relco, $release, $password, $tickets_tsv, $config,
         $logger );
 
     # ---------------------------
@@ -90,7 +90,7 @@ sub main {
     # ------------------
     # parse tickets file
     # ------------------
-    my $tickets = parse_tickets_file( $parameters, $tickets_csv, $logger );
+    my $tickets = parse_tickets_file( $parameters, $tickets_tsv, $logger );
 
     # --------------------
     # validate JIRA fields
@@ -112,20 +112,20 @@ sub main {
 }
 
 sub set_parameters {
-    my ( $relco, $release, $password, $tickets_csv, $config, $logger ) = @_;
+    my ( $relco, $release, $password, $tickets_tsv, $config, $logger ) = @_;
 
     $relco = $ENV{'USER'} if !$relco;
     $relco = validate_relco_name( $relco, $logger );
 
     $release = Bio::EnsEMBL::ApiVersion->software_version() if !$release;
 
-    $tickets_csv = $FindBin::Bin . '/jira_recurrent_tickets.csv'
-        if !$tickets_csv;
+    $tickets_tsv = $FindBin::Bin . '/jira_recurrent_tickets.tsv'
+        if !$tickets_tsv;
 
-    if ( !-e $tickets_csv ) {
+    if ( !-e $tickets_tsv ) {
         $logger->error(
             'Tickets file '
-                . $tickets_csv
+                . $tickets_tsv
                 . ' not found! Please specify one using the -tickets option!',
             0, 0
         );
@@ -143,7 +143,7 @@ sub set_parameters {
     }
 
     printf( "\trelco: %s\n\trelease: %i\n\ttickets: %s\n\tconfig: %s\n",
-        $relco, $release, $tickets_csv, $config );
+        $relco, $release, $tickets_tsv, $config );
     print "Are the above parameters correct? (y,N) : ";
     my $response = readline();
     chomp $response;
@@ -163,7 +163,7 @@ sub set_parameters {
         print "\n";
     }
 
-    return ( $relco, $release, $password, $tickets_csv, $config );
+    return ( $relco, $release, $password, $tickets_tsv, $config );
 }
 
 =head2 validate_relco_name
@@ -215,17 +215,17 @@ sub validate_relco_name {
 
 sub parse_tickets_file {
 
-    my ( $parameters, $tickets_csv, $logger ) = @_;
+    my ( $parameters, $tickets_tsv, $logger ) = @_;
     my @tickets;
 
-    open my $csv, '<', $tickets_csv;
+    open my $tsv, '<', $tickets_tsv;
 
-    my $header = readline $csv;
+    my $header = readline $tsv;
     chomp $header;
 
     #    my @jira_fields = split /\t/, $header;
 
-    while ( readline $csv ) {
+    while ( readline $tsv ) {
         my $line = $_;
         chomp $line;
 
