@@ -23,7 +23,7 @@ use feature qw(say);
 use FindBin;
 use Getopt::Long;
 use Config::Tiny;
-use DateTime;
+
 use Data::Printer;
 use JSON;
 use HTTP::Request;
@@ -99,14 +99,15 @@ sub main {
 
         # validate_fields( $ticket, $parameters, $logger );
 
-        # die;
     }
 
     # -------------------
     # create JIRA tickets
     # -------------------
     for my $ticket ( @{$tickets} ) {
+        $logger->info( 'Creating' . ' "' . $ticket->{summary} . '" ... ' );
         create_ticket( $ticket, $parameters, $logger );
+        $logger->info( "Done\n" );
     }
 
 }
@@ -115,7 +116,7 @@ sub set_parameters {
     my ( $relco, $release, $password, $tickets_tsv, $config, $logger ) = @_;
 
     $relco = $ENV{'USER'} if !$relco;
-    $relco = validate_relco_name( $relco, $logger );
+    $relco = validate_user_name( $relco, $logger );
 
     $release = Bio::EnsEMBL::ApiVersion->software_version() if !$release;
 
@@ -159,19 +160,19 @@ sub set_parameters {
         ReadMode('noecho');    # make password invisible on terminal
         $password = ReadLine(0);
         chomp $password;
-        ReadMode(0);           # restore terminal
+        ReadMode(0);           # restore typing visibility on terminal
         print "\n";
     }
 
     return ( $relco, $release, $password, $tickets_tsv, $config );
 }
 
-=head2 validate_relco_name
+=head2 validate_user_name
 
-  Arg[1]      : String $relco - the coordinator of the current release
+  Arg[1]      : String $user - a Regulation team member name or JIRA username
   Arg[2]      : Bio::EnsEMBL::Utils::Logger $logger - object used for logging
-  Example     : my $valid_relco = validate_relco_name($relco, $logger)
-  Description : Checks if the provided relco name is valid, returns valid JIRA
+  Example     : my $valid_user = validate_user_name($user, $logger)
+  Description : Checks if the provided user name is valid, returns valid JIRA
                 username
   Return type : String
   Exceptions  : none
@@ -179,10 +180,10 @@ sub set_parameters {
 
 =cut
 
-sub validate_relco_name {
-    my ( $relco, $logger ) = @_;
+sub validate_user_name {
+    my ( $user, $logger ) = @_;
 
-    my %valid_relco_names = (
+    my %valid_user_names = (
         'ilavidas' => 'ilavidas',
         'ilias'    => 'ilavidas',
         'Ilias'    => 'ilavidas',
@@ -197,13 +198,13 @@ sub validate_relco_name {
         'Michael'  => 'mnuhn',
     );
 
-    if ( exists $valid_relco_names{$relco} ) {
-        return $valid_relco_names{$relco};
+    if ( exists $valid_user_names{$user} ) {
+        return $valid_user_names{$user};
     }
     else {
-        my $valid_names = join( "\n", sort keys %valid_relco_names );
+        my $valid_names = join( "\n", sort keys %valid_user_names );
         $logger->error(
-            "Relco name not valid! Here is a list of valid names:\n"
+            "User name $user not valid! Here is a list of valid names:\n"
                 . $valid_names,
             0, 0
         );
@@ -223,8 +224,6 @@ sub parse_tickets_file {
     my $header = readline $tsv;
     chomp $header;
 
-    #    my @jira_fields = split /\t/, $header;
-
     while ( readline $tsv ) {
         my $line = $_;
         chomp $line;
@@ -237,13 +236,6 @@ sub parse_tickets_file {
             $description
         ) = split /\t/, $line;
 
-        # if ( scalar @jira_fields != scalar @jira_values ) {
-        #     $logger->error(
-        #         "Mismatch between header and values. Check JIRA ticket:\n"
-        #             . $line,
-        #         0, 0
-        #     );
-        # }
         if ($assignee) {
             $assignee = validate_user_name( $assignee, $logger );
         }
@@ -275,21 +267,11 @@ sub parse_tickets_file {
             'description' => $description,
         );
 
+        # delete empty fields from ticket
         for my $key ( keys %ticket ) {
-
-            #delete empty fields
             if ( !$ticket{$key} ) {
                 delete $ticket{$key};
             }
-
-            # # store multiple values to arrayrefs
-            # if ( lc $key eq 'fixversion' || lc $key eq 'component' ) {
-            #     if ( $ticket{$key} =~ /,/ ) {
-            #         $ticket{$key} =~ s/\s//g;
-            #         my @values = split /,/, $ticket{$key};
-            #         $ticket{$key} = \@values;
-            #     }
-            # }
         }
 
         push @tickets, \%ticket;
@@ -301,15 +283,12 @@ sub parse_tickets_file {
 sub replace_placeholders {
     my ( $line, $parameters ) = @_;
 
-    my $today = DateTime->now();
-
     $line =~ s/<RelCo>/$parameters->{relco}/g;
     $line =~ s/<version>/$parameters->{release}/g;
     $line =~ s/<preHandover_date>/$parameters->{dates}->{preHandover}/g;
     $line =~ s/<handover_date>/$parameters->{dates}->{handover}/g;
     $line =~ s/<codeBranching_date>/$parameters->{dates}->{codeBranching}/g;
     $line =~ s/<release_date>/$parameters->{dates}->{release}/g;
-    $line =~ s/<date_created>/$today/g;
 
     return $line;
 }
@@ -363,6 +342,7 @@ sub create_ticket {
 
     my $content = { 'fields' => $ticket };
     my $response = post_request( $endpoint, $content, $parameters, $logger );
+    #TODO return ticket identifier
 }
 
 =head2 post_request
@@ -410,13 +390,7 @@ sub post_request {
     }
 
     if ( !$response->is_success() ) {
-        # p $response;
-
-        # my $error_message
-        #     = decode_json( $response->content() )->{errorMessages}->[0];
-
         my $error_message = $response->code() . ' ' . $response->message();
-
         $logger->error( $error_message, 0, 0 );
     }
 
