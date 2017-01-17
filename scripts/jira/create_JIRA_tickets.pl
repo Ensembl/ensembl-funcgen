@@ -231,9 +231,10 @@ sub parse_tickets_file {
 
         $line = replace_placeholders( $line, $parameters );
 
-        my ($project,    $issue_type, $summary,      $reporter,
-            $priority,   $created,    $fix_versions, $due_date,
-            $components, $description
+        my ($project,            $issue_type, $summary,
+            $reporter,           $assignee,   $priority,
+            $fix_version_string, $due_date,   $component_string,
+            $description
         ) = split /\t/, $line;
 
         # if ( scalar @jira_fields != scalar @jira_values ) {
@@ -243,21 +244,34 @@ sub parse_tickets_file {
         #         0, 0
         #     );
         # }
+        if ($assignee) {
+            $assignee = validate_user_name( $assignee, $logger );
+        }
 
-        my @fixVersions = split /,/, $fix_versions;
-        my @components  = split /,/, $components;
+        my @fix_versions;
+        my @fvs = split /,/, $fix_version_string;
+
+        for my $fv (@fvs) {
+            push @fix_versions, { 'name' => $fv };
+        }
+
+        my @components;
+        my @comps = split /,/, $component_string;
+
+        for my $comp (@comps) {
+            push @components, { 'name' => $comp };
+        }
 
         my %ticket = (
-            'project'   => { 'key'  => $project },
-            'issuetype' => { 'name' => $issue_type },
-            'summary'   => $summary,
-            'reporter'  => { 'name' => $reporter },
-            'priority'  => { 'name' => $priority },
-
-            # 'created'     => { 'name' => $created },
-            # 'fixVersions' => \@fixVersions,
-            # 'duedate'     => $due_date,
-            # 'components'  => \@components,
+            'project'     => { 'key'  => $project },
+            'issuetype'   => { 'name' => $issue_type },
+            'summary'     => $summary,
+            'reporter'    => { 'name' => $reporter },
+            'assignee'    => { 'name' => $assignee },
+            'priority'    => { 'name' => $priority },
+            'fixVersions' => \@fix_versions,
+            'duedate'     => $due_date,
+            'components'  => \@components,
             'description' => $description,
         );
 
