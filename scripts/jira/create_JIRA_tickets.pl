@@ -92,6 +92,29 @@ sub main {
     # ------------------
     my $tickets = parse_tickets_file( $parameters, $tickets_tsv, $logger );
 
+    # --------------------------------
+    # get existing tickets for current
+    # release from the JIRA server
+    # --------------------------------
+    my $existing_tickets_response
+        = post_request( 'rest/api/latest/search',
+        { "jql" => "fixVersion = release-" . $parameters->{release} },
+        $parameters, $logger );
+    my $existing_tickets
+        = decode_json( $existing_tickets_response->content() );
+
+    # --------------------
+    # check for duplicates
+    # --------------------
+    my %tickets_to_skip;
+    for my $ticket ( @{$tickets} ) {
+        my $duplicate = check_for_duplicate( $ticket, $existing_tickets );
+
+        if ($duplicate) {
+            $tickets_to_skip{ $ticket->{summary} } = $duplicate;
+        }
+    }
+
     # --------------------
     # validate JIRA fields
     # --------------------
@@ -101,13 +124,23 @@ sub main {
 
     }
 
-    # -------------------
-    # create JIRA tickets
-    # -------------------
+    # -----------------------
+    # create new JIRA tickets
+    # -----------------------
     for my $ticket ( @{$tickets} ) {
         $logger->info( 'Creating' . ' "' . $ticket->{summary} . '" ... ' );
-        create_ticket( $ticket, $parameters, $logger );
-        $logger->info( "Done\n" );
+
+        if ( $tickets_to_skip{ $ticket->{summary} } ) {
+            $logger->info(
+                'Skipped: This seems to be a duplicate of https://www.ebi.ac.uk/panda/jira/browse/'
+                    . $tickets_to_skip{ $ticket->{summary} }
+                    . "\n" );
+        }
+        else {
+            my $ticket_key = create_ticket( $ticket, $parameters, $logger );
+            $logger->info( "Done\t" . $ticket_key . "\n" );
+        }
+
     }
 
 }
@@ -342,7 +375,8 @@ sub create_ticket {
 
     my $content = { 'fields' => $ticket };
     my $response = post_request( $endpoint, $content, $parameters, $logger );
-    #TODO return ticket identifier
+
+    return decode_json( $response->content() )->{'key'};
 }
 
 =head2 post_request
@@ -395,6 +429,20 @@ sub post_request {
     }
 
     return $response;
+}
+
+sub check_for_duplicate {
+    my ( $ticket, $existing_tickets ) = @_;
+    my $duplicate;
+
+    for my $existing_ticket ( @{ $existing_tickets->{issues} } ) {
+        if ( $ticket->{summary} eq $existing_ticket->{fields}->{summary} ) {
+            $duplicate = $existing_ticket->{key};
+            last;
+        }
+    }
+
+    return $duplicate;
 }
 
 sub usage {
