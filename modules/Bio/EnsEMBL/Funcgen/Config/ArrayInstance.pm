@@ -2,6 +2,7 @@ package Bio::EnsEMBL::Funcgen::Config::ArrayInstance;
 
 use strict;
 use Data::Dumper;
+use List::Util 1.33 'any';
 use Bio::EnsEMBL::Funcgen::Config::ImportArrays;
 use Bio::EnsEMBL::Analysis::Tools::Utilities qw(parse_config);
 
@@ -33,10 +34,10 @@ sub get_ARRAY_PARAMS_by_array_name {
   {
     $self->{'_CONFIG_ARRAY_PARAMS'}->{$array_name} = $self->{'_CONFIG_ARRAY_PARAMS'}->{'Default'};
     $self->{'_CONFIG_ARRAY_PARAMS'}->{$array_name}->{'-name'} = $array_name;
-  } elsif(! exists $self->{'_CONFIG_ARRAY_PARAMS'}{$array_name}) {
-        use Carp;
-        confess("No ARRAY_PARAMS config available for $array_name.  You must add this to the ImportArrays config before importing");
-  }
+   } elsif(! exists $self->{'_CONFIG_ARRAY_PARAMS'}{$array_name}) {
+    use Carp;
+    confess("No ARRAY_PARAMS config available for $array_name.  You must add this to the ImportArrays config before importing");
+ }
 
   return $self->{'_CONFIG_ARRAY_PARAMS'}{$array_name};
 }
