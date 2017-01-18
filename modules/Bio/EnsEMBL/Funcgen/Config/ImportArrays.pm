@@ -78,6 +78,7 @@ use vars qw( %Config );
 
      IFIELDORDER  => {},
      ARRAY_PARAMS => {},
+     ARRAYS_WITH_DEFAULT_PARAMS => [],
     },
     IMPORT_AFFY_UTR_ARRAYS => {
 
@@ -144,9 +145,9 @@ use vars qw( %Config );
         'HG-U133B',
         'HG-U133A',
         'HG-U133A_2',
-        'HG-Focus'
+        'HG-Focus',
         'MG-U74Cv2',
-        'MG-U74A'
+        'MG-U74A',
         'MG-U74Av2',
         'MG-U74B',
         'MG-U74Bv2',
@@ -258,7 +259,7 @@ use vars qw( %Config );
       'HumanHT-12_V3',
       'HumanHT-12_V4',
       'HumanRef-8_V3',
-      'HumanWG_6_V2'
+      'HumanWG_6_V2',
       'HumanWG_6_V3',
       'RatRef-12_V1',
      ],
