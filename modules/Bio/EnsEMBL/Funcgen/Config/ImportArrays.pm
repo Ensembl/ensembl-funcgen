@@ -424,6 +424,7 @@ use vars qw( %Config );
 	    'GPL14146',
 	    'GPL14145',
 	    'GPL14372',
+      'AGILENT_059389_Custom_Chicken_GE_8X60k',
       ],
     },
 
