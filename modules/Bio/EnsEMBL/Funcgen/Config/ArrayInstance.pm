@@ -2,7 +2,7 @@ package Bio::EnsEMBL::Funcgen::Config::ArrayInstance;
 
 use strict;
 use Data::Dumper;
-use List::Util 1.33 'any';
+use List::Util qw(any);
 use Bio::EnsEMBL::Funcgen::Config::ImportArrays;
 use Bio::EnsEMBL::Analysis::Tools::Utilities qw(parse_config);
 
