@@ -24,7 +24,6 @@ use FindBin;
 use Getopt::Long;
 use Config::Tiny;
 
-use Data::Printer;
 use JSON;
 use HTTP::Request;
 use LWP::UserAgent;
@@ -294,21 +293,14 @@ sub parse_tickets_file {
 
         $line = replace_placeholders( $line, $parameters );
 
-        my ($project,            $issue_type, $summary,
-            $reporter,           $assignee,   $priority,
-            $fix_version_string, $due_date,   $component_string,
+        my ($project,     $issue_type, $summary,
+            $reporter,    $assignee,   $priority,
+            $fixVersions, $due_date,   $component_string,
             $description
         ) = split /\t/, $line;
 
         if ($assignee) {
             $assignee = validate_user_name( $assignee, $logger );
-        }
-
-        my @fix_versions;
-        my @fvs = split /,/, $fix_version_string;
-
-        for my $fv (@fvs) {
-            push @fix_versions, { 'name' => $fv };
         }
 
         my @components;
@@ -325,7 +317,10 @@ sub parse_tickets_file {
             'reporter'    => { 'name' => $reporter },
             'assignee'    => { 'name' => $assignee },
             'priority'    => { 'name' => $priority },
-            'fixVersions' => \@fix_versions,
+            'fixVersions' => [
+                { 'name' => $fixVersions },
+                { 'name' => 'release-' . $parameters->{release} }
+            ],
             'duedate'     => $due_date,
             'components'  => \@components,
             'description' => $description,
