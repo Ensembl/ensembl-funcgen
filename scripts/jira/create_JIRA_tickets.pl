@@ -532,9 +532,13 @@ create_JIRA_tickets.pl -relco <string> -password <string> -release <integer> -ti
 
 -relco               JIRA username. Optional, will be inferred from current system user if not supplied.
 -password | -p       JIRA password. Will need to be typed in standard input if not supplied.
--release             EnsEMBL Release. Optional, will be inferred from ensembl API if not supplied.
+-release             EnsEMBL Release. Optional, will be inferred from EnsEMBL API if not supplied.
 -tickets             File that holds the input data for creating the JIRA tickets in tab separated format.
--config              Configuration parameters file, currently holds the handover deadlines, may be expanded in the future.
+                     If not supplied, the script is looking for the default one 'jira_recurrent_tickets.tsv'
+                     in the same directory as the executable.
+-config              Configuration parameters file, currently holds the handover deadlines, may be expanded
+                     in the future. If not supplied, the script is looking for the default one 'jira.conf'
+                     in the same directory as the executable.
 -help | -h           Prints this help text.
 
 Reads the -tickets input file and creates JIRA tickets
