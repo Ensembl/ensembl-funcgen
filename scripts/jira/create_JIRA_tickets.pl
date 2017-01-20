@@ -148,6 +148,22 @@ sub main {
 
 }
 
+=head2 set_parameters
+
+  Arg[1]      : String $relco - a Regulation team member name or JIRA username
+  Arg[2]      : Integer $release - the EnsEMBL release version
+  Arg[3]      : String $password - user's JIRA password
+  Arg[4]      : String $tickets_tsv - path to the tsv file that holds the input
+  Arg[5]      : String $config - path to the config file holding handover dates
+  Arg[6]      : Bio::EnsEMBL::Utils::Logger $logger - object used for logging
+  Description : Makes sure that the parameters provided through the command line
+                are valid and assigns default values to the ones which where not 
+                supplied
+  Return type : Listref
+  Exceptions  : none
+
+=cut
+
 sub set_parameters {
     my ( $relco, $release, $password, $tickets_tsv, $config, $logger ) = @_;
 
@@ -212,7 +228,6 @@ sub set_parameters {
                 username
   Return type : String
   Exceptions  : none
-  Caller      : general
 
 =cut
 
@@ -249,6 +264,19 @@ sub validate_user_name {
 
 # sub check_dates {
 # }
+
+=head2 parse_tickets_file
+
+  Arg[1]      : Hashref $parameters - parameters from command line and config
+  Arg[2]      : String $tickets_tsv - path to the tsv file that holds the input
+  Arg[3]      : Bio::EnsEMBL::Utils::Logger $logger - object used for logging
+  Example     : my $tickets = parse_tickets_file( $parameters, $tickets_tsv, $logger );
+  Description : Reads the tsv input file, replaces placeholder tags and returns
+                a listref of tickets to be submitted
+  Return type : Listref
+  Exceptions  : none
+
+=cut
 
 sub parse_tickets_file {
 
@@ -315,6 +343,18 @@ sub parse_tickets_file {
 
     return \@tickets;
 }
+
+=head2 replace_placeholders
+
+  Arg[1]      : String $line - One line from the tsv input file
+  Arg[2]      : Hashref $parameters - parameters from command line and config
+  Example     : $line = replace_placeholders( $line, $parameters );
+  Description : Replaces the placeholder tags with valid values and returns a
+                a new string
+  Return type : String
+  Exceptions  : none
+
+=cut
 
 sub replace_placeholders {
     my ( $line, $parameters ) = @_;
@@ -383,9 +423,16 @@ sub validate_fields {
         # }
         # }
 
-    }
+  Arg[1]      : Hashref $line - Holds the ticket data
+  Arg[2]      : Hashref $parameters - parameters from command line and config
+  Arg[3]      : Bio::EnsEMBL::Utils::Logger $logger - object used for logging
+  Example     : my $ticket_key = create_ticket( $ticket, $parameters, $logger );
+  Description : Submits a post request to the JIRA server that creates a new
+                ticket. Returns the key of the created ticket
+  Return type : String
+  Exceptions  : none
 
-}
+=cut
 
 sub create_ticket {
     my ( $ticket, $parameters, $logger ) = @_;
@@ -407,7 +454,6 @@ sub create_ticket {
   Description : Sends a POST request to the JIRA server
   Return type : HTTP::Response object
   Exceptions  : none
-  Caller      : general
 
 =cut
 
@@ -449,6 +495,21 @@ sub post_request {
     return $response;
 }
 
+=head2 check_for_duplicate
+
+  Arg[1]      : Hashref $ticket - holds the data for the ticket which is about
+                to be submitted
+  Arg[2]      : Hashref $existing_tickets - holds the data for all tickets that
+                already exist on the JIRA server for the current EnsEMBL release
+  Example     : my $duplicate = check_for_duplicate($ticket, $existing_tickets);
+  Description : Checks whether the ticket which is about to be submitted exists
+                already on the JIRA server and returns the relevant key if this
+                is true
+  Return type : String
+  Exceptions  : none
+
+=cut
+
 sub check_for_duplicate {
     my ( $ticket, $existing_tickets ) = @_;
     my $duplicate;
@@ -464,7 +525,20 @@ sub check_for_duplicate {
 }
 
 sub usage {
-    exit;
+    print <<EOF;
+=head1
+create_JIRA_tickets.pl -relco <string> -password <string> -release <integer> -tickets <file> -config <file> 
+
+-relco               JIRA username. Optional, will be inferred from current system user if not supplied.
+-password | -p       JIRA password. Will need to be typed in standard input if not supplied.
+-release             EnsEMBL Release. Optional, will be inferred from ensembl API if not supplied.
+-tickets             File that holds the input data for creating the JIRA tickets in tab separated format.
+-config              Configuration parameters file, currently holds the handover deadlines, may be expanded in the future.
+-help | -h           Prints this help text.
+
+Reads the -tickets input file and creates JIRA tickets
+EOF
+    exit 0;
 }
 
 #TODO check date timeline
