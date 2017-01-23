@@ -82,7 +82,8 @@ use vars qw( %Config );
     },
     IMPORT_AFFY_UTR_ARRAYS => {
 
-      IIDREGEXP => '^>probe:(\S+):(\S+):(\S+:\S+;).*$',
+       IIDREGEXP => '^>probe:(\S+?):(\S+?):(\S+;).*$',
+#      IIDREGEXP => '^>probe:(\S+?):(\S+?):(\S+:\S+;).*$',
 
       IFIELDORDER => {
         -name       => 2,
@@ -102,11 +103,11 @@ use vars qw( %Config );
       },
 
       platypus_exon => {
-        #-name    => 'platypus_exon',
-        -vendor  => 'CUSTOM',
+        -name    => 'platypus_exon',
+        -vendor  => 'AFFY',
         -format  => 'EXPRESSION',
         -type    => 'OLIGO',
-        -class   => 'CUSTOM',
+        -class   => 'AFFY_UTR',
       },
      },
 
@@ -116,7 +117,7 @@ use vars qw( %Config );
         'Porcine',
         'X_tropicalis',
         'Canine_2',
- 	      'Rhesus',
+        'Rhesus',
         'CINT06a520380F',
         'Bovine',
         'Chicken',
@@ -192,7 +193,7 @@ use vars qw( %Config );
      ARRAY_PARAMS =>
      {
        'Default' => {
-                     -name => 'RaEx-1_0-st-v1',
+#                      -name => 'RaEx-1_0-st-v1',
                      -vendor => 'AFFY',
                      #-setsize => undef,
                      -format  => 'EXPRESSION',
@@ -240,9 +241,16 @@ use vars qw( %Config );
      {
 
       'Default' => {
-                         -name => 'MouseWG_6_V1',
+#                          -name => 'MouseWG_6_V1',
                          -vendor => 'ILLUMINA',
                          #-setsize => undef,
+                         -format  => 'EXPRESSION',
+                         -type    => 'OLIGO',
+                         -class   => 'ILLUMINA_WG',
+                        },
+      'RatRef-12' => {
+                         -name => 'RatRef-12_V1',
+                         -vendor => 'ILLUMINA',
                          -format  => 'EXPRESSION',
                          -type    => 'OLIGO',
                          -class   => 'ILLUMINA_WG',
@@ -261,7 +269,6 @@ use vars qw( %Config );
       'HumanRef-8_V3',
       'HumanWG_6_V2',
       'HumanWG_6_V3',
-      'RatRef-12_V1',
      ],
     },
 
@@ -306,7 +313,7 @@ use vars qw( %Config );
      ARRAY_PARAMS => {
 
                       'Default' => {
-                                    -name => 'CODELINK',
+#                                     -name => 'CODELINK',
                                     -vendor => 'CODELINK',
                                     #-setsize => undef,
                                     -format  => 'EXPRESSION',
@@ -327,7 +334,7 @@ use vars qw( %Config );
     IMPORT_AGILENT_ARRAYS =>
     {
 
-     IIDREGEXP => '^>(\S+):(\S+)\s*(.*)$',
+     IIDREGEXP => '^>(\S+?):(\S+)\s*(.*)$',
      #IIDREGEXP => '^>(\S+):(.+)', #EG HACK
 
      IFIELDORDER => {
@@ -341,7 +348,7 @@ use vars qw( %Config );
      ARRAY_PARAMS =>
      {
       'Default' => {
-                   -name => 'G2518A',
+#                    -name => 'G2518A',
                    -vendor => 'AGILENT',
                    #-setsize => undef,
                    -format  => 'EXPRESSION',
@@ -367,10 +374,8 @@ use vars qw( %Config );
       {
        -name => 'SurePrint_GPL16709_4x44k',
        -vendor => 'AGILENT',
-       #-setsize => undef,
        -format  => 'EXPRESSION',
        -type    => 'OLIGO',
-       #-description => '',
        -class   => 'AGILENT',
        skip_config => {skip_reps =>1, skip_non_unique_names=>1},
       },
@@ -421,9 +426,16 @@ use vars qw( %Config );
 	    'GPL14143',
 	    'GPL8303',
 	    'GPL14142',
+	    
+	    'GPL13914',
+	    'GPL19516',
+	    
 	    'GPL14146',
 	    'GPL14145',
 	    'GPL14372',
+	    'AgilentTiling',
+	    'WholeGenome',
+	    'OligoArray_012795',
       'AGILENT_059389_Custom_Chicken_GE_8X60k',
       ],
     },
@@ -441,7 +453,7 @@ use vars qw( %Config );
        ARRAY_PARAMS => {
 
          'Default' => {
-           -name => 'WUSTL-C_elegans',
+#            -name => 'WUSTL-C_elegans',
            -vendor => 'WUSTL',
            #-setsize => undef,
            -format  => 'EXPRESSION',
@@ -471,7 +483,7 @@ use vars qw( %Config );
        ARRAY_PARAMS => {
 
          'Default' => {
-           -name => 'GPL3518',
+#            -name => 'GPL3518',
            -vendor => 'SLRI',
            #-setsize => undef,
            -format  => 'EXPRESSION',
@@ -501,12 +513,9 @@ use vars qw( %Config );
        ARRAY_PARAMS => {
 
          'Default' => {
-           -name => 'GPL9450',
            -vendor => 'UCSF',
-           #-setsize => undef,
            -format  => 'EXPRESSION',
            -type    => 'OLIGO',
-
            -class   => 'UCSF',
          },
        },
@@ -515,6 +524,37 @@ use vars qw( %Config );
 
        ARRAYS_WITH_DEFAULT_PARAMS => [
         'GPL9450',
+       ],
+     },
+
+    IMPORT_NIMBLEGEN_MODENCODE_ARRAYS =>
+     {
+       IIDREGEXP => '^>(\S+):(\S+)',
+
+       IFIELDORDER => {
+          -name       => 1,
+          -array_chip => 0,
+          -array      => 0,
+       },
+
+       ARRAY_PARAMS => {
+
+         'Default' => {
+           -vendor => 'NIMBLEGEN',
+#          -array_chip => 0,
+#          -array      => 0,
+           -format  => 'EXPRESSION',
+           -type    => 'OLIGO',
+           -class   => 'NIMBLEGEN_MODENCODE',
+         },
+       },
+
+       INPUT_FORMAT => 'FASTA',
+
+       ARRAYS_WITH_DEFAULT_PARAMS => [
+        'GPL9450',
+        'Nimblegen_modencode',
+        'GPL8673'
        ],
      },
 
@@ -537,7 +577,7 @@ use vars qw( %Config );
 
      ARRAY_PARAMS => {
                       'Default' => {
-                                     -name => 'OneArray',
+#                                      -name => 'OneArray',
                                      -vendor => 'PHALANX',
                                      #-setsize => undef,
                                      -format  => 'EXPRESSION',
@@ -572,7 +612,7 @@ use vars qw( %Config );
      ARRAY_PARAMS => {
                       #Danio
                       'Default' => {
-                                    -name => 'LEIDEN2',
+#                                     -name => 'LEIDEN2',
                                     -vendor => 'LEIDEN',
                                     #-setsize => undef,
                                     -format  => 'EXPRESSION',
@@ -606,7 +646,7 @@ use vars qw( %Config );
      ARRAY_PARAMS => {
                       #Danio
                       'Default' => {
-                                       -name => 'MattArray1',
+#                                        -name => 'MattArray1',
                                        -vendor => 'STEMPLE_LAB_SANGER',
                                        #-setsize => undef,
                                        -format  => 'EXPRESSION',
@@ -636,7 +676,7 @@ use vars qw( %Config );
 
      ARRAY_PARAMS => {
                       'Default' => {
-                                  -name => 'CATMA',
+#                                   -name => 'CATMA',
                                   -vendor => 'CATMA',
                                   #-setsize => undef,
                                   -format  => 'EXPRESSION',
@@ -664,7 +704,7 @@ use vars qw( %Config );
 
      ARRAY_PARAMS => {
                       'Default' => {
-                                    -name => 'BGIYale',
+#                                     -name => 'BGIYale',
                                     -vendor => 'NSF',
                                     #-setsize => undef,
                                     -format  => 'EXPRESSION',

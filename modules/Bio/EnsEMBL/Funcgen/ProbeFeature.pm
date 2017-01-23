@@ -117,24 +117,14 @@ sub new {
 	
   my ($probe, $mismatchcount, $pid, $cig_line)
     = rearrange(['PROBE', 'MISMATCHCOUNT', 'PROBE_ID', 'CIGAR_STRING'], @_);
-
-  #remove mismatch?
-  #mandatory args?
-  
-  #warn "creating probe feature with $pid";
+    
   $self->{'probe_id'} = $pid if $pid;
   $self->probe($probe) if $probe;
   $self->mismatchcount($mismatchcount)  if defined $mismatchcount;#do not remove until probe mapping pipeline fixed
   $self->cigar_string($cig_line)          if defined $cig_line;
-   
-  #do we need to validate this against the db?  Grab from slice and create new if not present?  Will this be from the dnadb?
-  
-  #do we need this coordsys id if we're passing a slice?  We should have the method but not in here?
 
   return $self;
 }
-
-
 
 =head2 new_fast
 
@@ -207,15 +197,9 @@ sub probeset_id{
 
 sub mismatchcount {
     my $self = shift;
-	
-
-    #replace with dynamic check of cigarline?
-
     $self->{'mismatchcount'} = shift if @_;
-	
     return $self->{'mismatchcount'};
 }
-
 
 =head2 cigar_string
 
@@ -231,12 +215,9 @@ sub mismatchcount {
 
 sub cigar_string {
   my $self = shift;
-  
   $self->{'cigar_string'} = shift if @_;
-	
   return $self->{'cigar_string'};
 }
-
 
 =head2 probe
 
@@ -244,8 +225,8 @@ sub cigar_string {
   Example    : my $probe = $feature->probe();
   Description: Getter, setter and lazy loader of probe attribute for
                ProbeFeature objects. Features are retrieved from the database
-			   without attached probes, so retrieving probe information for a
-			   feature will involve another query.
+               without attached probes, so retrieving probe information for a
+               feature will involve another query.
   Returntype : Bio::EnsEMBL::Funcgen::Probe
   Exceptions : None
   Caller     : General
@@ -254,19 +235,10 @@ sub cigar_string {
 =cut
 
 sub probe {
-  my $self = shift;
+  my $self  = shift;
   my $probe = shift;
   
-  #can we not use _probe_id here?
-  #why is probe_id not set sometimes?
-  
-  
-  #warn "in pf and probe is ".$self->{'probe_id'};
-
   if ($probe) {
-
-	#warn "Probe defined and is ".$probe. "and probe id is".$self->{'probe_id'};
-    
     if ( !ref $probe || !$probe->isa('Bio::EnsEMBL::Funcgen::Probe') ) {
       throw('Probe must be a Bio::EnsEMBL::Funcgen::Probe object');
     }
@@ -274,14 +246,10 @@ sub probe {
   }
 
   if ( ! defined $self->{'probe'}){
-	# && $self->dbID() && $self->adaptor() ) {
-    #$self->{'probe'} = $self->adaptor()->db()->get_ProbeAdaptor()->fetch_by_ProbeFeature($self);
-	#warn "fetching probe with dbID ".$self->probe_id();
-	$self->{'probe'} = $self->adaptor()->db()->get_ProbeAdaptor()->fetch_by_dbID($self->probe_id());
+    $self->{'probe'} = $self->adaptor()->db()->get_ProbeAdaptor()->fetch_by_dbID($self->probe_id());
   }
   return $self->{'probe'};
 }
-
 
 =head2 probe_id
 
@@ -294,215 +262,9 @@ sub probe {
 
 =cut
 
-sub probe_id{
+sub probe_id {
   my $self = shift;
-
   return $self->{'probe_id'} || $self->probe->dbID();
-}
-
-=head2 get_results_by_channel_id
-
-  Arg [1]    : int - channel_id (mandatory)
-  Arg [2]    : string - Analysis name e.g. RawValue, VSN (optional)
-  Example    : my @results = $feature->results();
-  Description: Getter, setter and lazy loader of results attribute for
-               ProbeFeature objects.
-  Returntype : List ref to arrays containing ('score', 'Analysis logic_name');
-  Exceptions : None
-  Caller     : General
-  Status     : Medium Risk
-
-=cut
-
-sub get_results_by_channel_id {
-    my $self = shift;
-    my $channel_id = shift;
-    my $anal_name = shift;
-
-    warn("This method not fully implemented, remove/deprecate?");
-
-    #$self->{'results'} ||= {};
-    $self->{'results_complete'} ||= 0;
-	
-    if(! $self->{'results'} || ($anal_name && ! exists $self->{'results'}{$anal_name})){
-      #fetch all, set complete set flag
-      $self->{'results_complete'} ||= 1 	if(! $anal_name);
-      
-      foreach my $results_ref(@{$self->adaptor->fetch_results_by_channel_analysis($self->probe->dbID(), 
-										  $channel_id, $anal_name)}){
-	
-	$self->{'results'}{$$results_ref[1]} = $$results_ref[0];
-      }
-    }
-    
-    return $self->{'results'}
-}
-
-
-#The experiment/al chip specificity has already been done by the ofa->fetch_all_by_Slice_Experiment
-#This may be called with no preceding Experiment specificity
-#this would return results for all experiments
-#do we need to set a default Experiment?
-
-
-#THis should return both Chip and Channel based results
-#just Chip for now
-#maybe retrieve and hash all if not Analysis object passed?  Then return what?  
-
-
-=head2 get_result_by_Analysis_ExperimentalChips
-
-  Arg [1]    : Bio::EnsEMBL::Analysis
-  Arg [2]    : listref - Bio::EnsEMBL::Funcgen::ExperimentalChip
-  Example    : my $result = $feature->get_result_by_Analysis_ExperimentalChips($anal, \@echips);
-  Description: Getter of results attribute for a given Analysis and set of ExperimentalChips
-  Returntype : float
-  Exceptions : Throws is no Analysis or ExperimentalChips are not passed?
-  Caller     : General
-  Status     : High Risk
-
-=cut
-
-
-#make ExperimentalChips optional?
-
-#or have ResultSetAdaptor?  Do we need a ResultSet?
-#may not have ExperimentalChip, so would need to return ec dbID aswell
-
-
-######This will break/return anomalous if
-#ECs are passed from different experiments
-#ECs are passed from different Arrays
-
-
-sub get_result_by_Analysis_ExperimentalChips{
-    my ($self, $anal, $exp_chips) = @_;
-
-    throw("Need to pass listref of ExperiemntalChips") if(scalar(@$exp_chips) == 0);
-    throw("Need to pass a valid Bio::EnsEMBL::Analysis") if ! $anal->isa("Bio::EnsEMBL::Analysis");
-
-    my (%query_ids, %all_ids, %ac_ids);
-    my $anal_name = $anal->logic_name();
-    
-    foreach my $ec(@$exp_chips){
-				
-      throw("Need to pass a listref of Bio::EnsEMBL::Funcgen::ExperimentalChip objects") 
-	if ! $ec->isa("Bio::EnsEMBL::Funcgen::ExperimentalChip");
-
-		#my $tmp_id = $self->adaptor->db->get_ArrayAdaptor->fetch_by_array_chip_dbID($ec->array_chip_id())->dbID();
-      
-		#$array_id ||= $tmp_id;
-      
-      #throw("You have passed ExperimentalChips from different if($array_id != $tmp_id)
-      
-      #if(exists  $ac_ids{$ec->array_chip_id()}){
-#	throw("Multiple chip query only works with contiguous chips within an array, rather than duplicates");
- #     }
-      
-      $ac_ids{$ec->array_chip_id()} = 1;
-      $all_ids{$ec->dbID()} = 1;
-      $query_ids{$ec->dbID()} = 1 if(! exists $self->{'results'}{$anal_name}{$ec->dbID()});
-      
-    }
-    
-    
-    my @ec_ids = keys %query_ids;
-    my @all_ids = keys %all_ids;
-    
-    
-    #warn "ec ids @ec_ids\n";
-    #warn "all ids @all_ids\n";
-    
-    #$self->{'results'} ||= {};
-    #$self->{'results_complete'} ||= 0;#do we need this now?
-    
-    if((scalar(@all_ids) - scalar(@ec_ids))> 1){
-      throw("DATA ERROR - There is more than one result stored for the following ExperimentalChip ids: @all_ids");
-    }		
-    elsif(! $self->{'results'} || (($anal_name && scalar(@ec_ids) > 0) && scalar(@all_ids) == scalar(@ec_ids))){
-      #fetch all, set complete set flag
-      #$self->{'results_complete'} ||= 1 	if(! $anal_name);
-      #would need to look up chip and channel analyses here and call relevant fetch
-      #or pass the chip and then build the query as = or IN dependent on context of logic name
-      #if there are multiple results, last one will overwrite others
-      #could do foreach here to deal with retrieving all i.e. no logic name
-      #Can supply mutliple chips, but probe ids "should" be unique(in the DB at least) amongst contiguous array_chips
-      #build the cache based on logic name and table_id
-      #cahce key??  should we cat the ec_ids together?
-
-      my @result_refs = @{$self->adaptor->fetch_results_by_Probe_Analysis_experimental_chip_ids($self->probe(), 
-												$anal,
-												\@ec_ids)};
-
-      #Remove lines with no result
-      while(@result_refs && (! $result_refs[0]->[0])){
-	shift @result_refs;
-      }
-
-      my $num_results = scalar(@result_refs);
-      my ($result, $mpos);
-      #throw("Fetched more than one result for this ProbeFeature, Analysis and ExperimentalChips") if (scalar(@result_refs) >1);
-
-      #No sort needed as we sort in the query
-
-      if($num_results == 1){
-	$result = $result_refs[0]->[0];
-      }
-      elsif($num_results == 2){#mean
-	$result = ($result_refs[0]->[0] + $result_refs[1]->[0])/2;
-    
-      }
-      elsif($num_results > 2){#median or mean of median flanks
-	$mpos = $num_results/2;
-    
-	if($mpos =~ /\./){#true median
-	  $mpos =~ s/\..*//;
-	  $mpos ++;
-	  $result =  $result_refs[$mpos]->[0];
-	}else{
-	  $result = ($result_refs[$mpos]->[0] + $result_refs[($mpos+1)]->[0])/2 ;
-	}
-      }
-      
-      $self->{'results'}{$anal_name}{":".join(":", @ec_ids).":"} = $result;
-    }
-
-	#do we return the ec ids here to, or do we trust that the user will know to only pass contiguous rather than duplicate chips
-
-	#how are we going to retrieve the result for one of many possible ec id keys?
-	#options, cat ec dbids as key, and grep them to find full key, then return result
-	#this may hide the duplicate chip problem
-	#If a query has already been made and cached,another query with one differing ID(duplicate result) may never be queried as we already have a cahced result
-	#We shoulld pick up duplicates before this happens
-	#If we try and mix ExperimentalChips from different experiments, then this would also cause multiple results, and hence hide some data
-	
-	my @keys;
-	foreach my $id(@all_ids){
-	  my @tmp = grep(/:${id}:/, keys %{$self->{'results'}{$anal_name}});
-	  #Hacky needs sorting, quick fix for release!!
-
-	  if(@tmp){
-	    push @keys, grep(/:${id}:/, keys %{$self->{'results'}{$anal_name}});
-
-	    last;
-	  }
-
-	}
-
-    throw("Got more than one key for the results cache") if scalar(@keys) > 1;
-
-    return $self->{'results'}{$anal_name}{$keys[0]};
-}
-
-
-#Will this be too slow, can we not do one query across all tables
-
-sub get_result_by_ResultSet{
-    my ($self, $rset) = @_;
-
-    my $results = $rset->adaptor->fetch_results_by_probe_id_ResultSet($self->probe_id(), $rset);
-   
-    return median($results);
 }
 
 =head2 summary_as_hash
@@ -526,8 +288,7 @@ sub summary_as_hash {
     }
   }
 
-  return
-   {
+  return {
     start                   => $self->seq_region_start,
     end                     => $self->seq_region_end,
     strand                  => $self->strand,

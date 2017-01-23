@@ -50,9 +50,11 @@ sub pipeline_analyses {
                   "truncate array_chip;",
                   "truncate probe;",
                   "truncate probe_feature;",
-                  "truncate probe_alias;",
                   "truncate probe_seq;",
                   "truncate probe_set;",
+                  "truncate probe_transcript;",
+                  "truncate probeset_transcript;",
+                  "truncate probe_feature_transcript;",
                   "truncate unmapped_object;",
                   "truncate unmapped_reason;",
                 ],
@@ -105,7 +107,7 @@ sub pipeline_analyses {
         {
             -logic_name  => 'store_array_objects',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -analysis_capacity => 1,
+            -analysis_capacity => 3,
             -parameters => {
                 cmd       => '
                   import_store_array_objects.pl \

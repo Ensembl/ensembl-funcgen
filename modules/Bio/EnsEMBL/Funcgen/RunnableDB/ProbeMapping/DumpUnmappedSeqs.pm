@@ -18,7 +18,7 @@ sub run {
 
     my $unmapped_sequences_count =
       $helper->execute_single_result(
-	-SQL => 'select count(*) from probe_seq where has_been_mapped is false',
+	-SQL => 'select count(*) from probe_seq',
     );
 
     use Bio::EnsEMBL::Utils::Logger;
@@ -29,7 +29,7 @@ sub run {
       die("There are no unmapped probes in the database.");
     }
 
-    my $sth = $dbc_tracking->prepare('select probe_seq_id, probe_dna from probe_seq where has_been_mapped is false');
+    my $sth = $dbc_tracking->prepare('select probe_seq_id, probe_dna from probe_seq');
     $sth->execute;
 
     use Bio::Seq;

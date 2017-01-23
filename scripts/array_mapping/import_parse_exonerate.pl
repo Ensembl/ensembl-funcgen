@@ -32,6 +32,9 @@ open my $exonerate_fh, '<', $exonerate_file;
 my $current_probe_id;
 my $current_list_of_hits_for_this_probe;
 
+# This makes debugging easier, if someone has to inspect the output of this 
+# script.
+#
 $Data::Dumper::Sortkeys = 1;
 
 HIT: while (my $current_line = <$exonerate_fh>) {

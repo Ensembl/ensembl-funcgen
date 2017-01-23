@@ -410,6 +410,17 @@ sub _objs_from_sth {
 	return \@result;
 }
 
+# sub _prepared_store_sequence_sth {
+#     my $self = shift;
+#     my $prepared_store_sequence_sth = shift;
+#     
+#     if ($prepared_store_sequence_sth) {
+#       $self->{'_prepared_store_sequence_sth'} = $prepared_store_sequence_sth;
+#     }
+#     return $self->{'_prepared_store_sequence_sth'};
+# }
+
+
 =head2 store
 
   Arg [1]    : List of Bio::EnsEMBL::Funcgen::Probe objects
@@ -501,38 +512,46 @@ sub store {
 	  # Check, if the exception was triggered by the index on the probe_sha1 
 	  # column.
 	  #
-	  if ($error_msg=~/DBD::mysql::st execute failed: Duplicate entry/) {
-	  
-	    #print "--- Was in database already.\n";
-	    
-	    # If so, check, if the dna sequences are identical. If that is the 
-	    # case, the storing can be skipped. If they are differen however, we
-	    # have a hash key collision and might have to revisit the decision
-	    # of having a unique constraint on the probe_sha1 key.
-            #
-            my $sql_cmd = 'select probe_seq_id, probe_sha1, probe_dna from probe_seq where probe_sha1 = cast(sha1(?) as char)';
-	    my $sth = $self->prepare($sql_cmd);
-            #$sth->bind_param(1, $sha1_checksum);
-            $sth->bind_param(1, $probe_dna);
-	    $sth->execute;
-	    my $data = $sth->fetchall_arrayref;
-	    
-	    my $probe_seq_id_from_db = $data->[0][0];
-	    my $probe_sha1_from_db   = $data->[0][1];
-	    my $probe_seq_from_db    = $data->[0][2];
-
-	    if ($probe_seq_from_db ne $probe_dna) {
-              #confess("Sha1 has a collision. The dna sequence $probe_dna and the dna sequence from the database $probe_seq_from_db have the same sha1 checksum $sha1_checksum.");
-                use Carp;
-                use Data::Dumper;
-                confess("There has been a sha1 collision. The dna sequence $probe_dna and the dna sequence from the database $probe_seq_from_db have the same sha1 checksum."
-                  . "\n" . Dumper($data)
-                );
-	    } else {
-	      print "Probe with this sequence $probe_dna already exists, skipping.\n";
-	    }
-	    $probe_seq_id = $probe_seq_id_from_db;
-	  }
+# 	  if ($error_msg=~/DBD::mysql::st execute failed: Duplicate entry/) {
+# 	  
+# 	    #print "--- Was in database already.\n";
+# 	    
+# 	    # If so, check, if the dna sequences are identical. If that is the 
+# 	    # case, the storing can be skipped. If they are differen however, we
+# 	    # have a hash key collision and might have to revisit the decision
+# 	    # of having a unique constraint on the probe_sha1 key.
+#             #
+#             my $sth;
+#             if ($self->_prepared_store_sequence_sth) {
+#             
+#               $sth = $self->_prepared_store_sequence_sth;
+#             
+#             } else {
+#               my $sql_cmd = 'select probe_seq_id, probe_sha1, probe_dna from probe_seq where probe_sha1 = cast(sha1(?) as char)';
+#               $sth = $self->prepare($sql_cmd);
+#               $self->_prepared_store_sequence_sth($sth);
+#             }
+#             #$sth->bind_param(1, $sha1_checksum);
+#             $sth->bind_param(1, $probe_dna);
+# 	    $sth->execute;
+# 	    my $data = $sth->fetchall_arrayref;
+# 	    
+# 	    my $probe_seq_id_from_db = $data->[0][0];
+# 	    my $probe_sha1_from_db   = $data->[0][1];
+# 	    my $probe_seq_from_db    = $data->[0][2];
+# 
+# 	    if ($probe_seq_from_db ne $probe_dna) {
+#               #confess("Sha1 has a collision. The dna sequence $probe_dna and the dna sequence from the database $probe_seq_from_db have the same sha1 checksum $sha1_checksum.");
+#                 use Carp;
+#                 use Data::Dumper;
+#                 confess("There has been a sha1 collision. The dna sequence $probe_dna and the dna sequence from the database $probe_seq_from_db have the same sha1 checksum."
+#                   . "\n" . Dumper($data)
+#                 );
+# 	    } else {
+# 	      print "Probe with this sequence $probe_dna already exists, skipping.\n";
+# 	    }
+# 	    $probe_seq_id = $probe_seq_id_from_db;
+# 	  }
 	}
 	
 # 	if ($probe_seq_id == 1) {

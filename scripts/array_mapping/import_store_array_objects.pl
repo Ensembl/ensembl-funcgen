@@ -7,12 +7,6 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Getopt::Long;
 
 =head1
-
-perl /nfs/users/nfs_m/mn1/various_scripts/probemapping/test_store_array_objects.pl \
-  --url 'mysql://ensadmin:ensembl@ens-genomics2:3306/mn1_tracking_homo_sapiens_funcgen_87_38?group=funcgen&species=homo_sapiens' \
-  --species homo_sapiens \
-  --array_objects_file /lustre/scratch109/ensembl/funcgen/array_mapping/array_objects.pl
-
 =cut
 
 my $registry;
@@ -104,14 +98,12 @@ my $fetch_probe_set_from_db = sub {
   } else {
   
     my $probe_set_from_db = $probe_set_adaptor->fetch_by_array_probeset_name($array_name, $probe_set->name);
-#     my $probe_set_from_db = $fetch_by_array_probeset_name_cache{$array_name}{$probe_set->name};
     
     if (defined $probe_set_from_db) {
       $probe_set = $probe_set_from_db;
     } else {
       $probe_set->size(1);
       $probe_set_adaptor->store($probe_set);
-#       $fetch_by_array_probeset_name_cache{$array_name}{$probe_set->name} = $probe_set;
     }
     $probe_set_name_to_object{$probe_set->name} = $probe_set;
   }

@@ -438,7 +438,7 @@ sub get_probename {
   Example    : my @compnames = @{$probe->get_all_complete_names()};
   Description: Retrieves all complete names for this probe. The complete name
                is a concatenation of the array name, the probeset name and the
-			   probe name.
+               probe name.
   Returntype : Arrayref of strings
   Exceptions : None
   Caller     : General
@@ -450,40 +450,25 @@ sub get_all_complete_names {
   my $self = shift;
 
   my ($probeset, @result);
-	my $pset = $self->probeset;
+  my $pset = $self->probeset;
 
-	if ($pset) {
-	  $probeset = $pset->name;
-	}
+  if ($pset) {
+    $probeset = $pset->name;
+  }
 
   if(defined $probeset){
     $probeset = ':'.$probeset.':';
-  }
-  else{
+  } else {
     $probeset = ':';
   }
 
-
-  #warn "For Nimblegen this need to be Container:Seqid::probeid?";
-
   while ( my (undef, $array) = each %{$self->{'arrays'}} ) {
-    #would have to put test in here for $self->arrays()->vendor()
-    #if($array->vendor() eq "AFFY"){
-
-	  foreach my $name ( @{$self->{'probenames'}{$array->name()}} ) {
+    foreach my $name ( @{$self->{'probenames'}{$array->name()}} ) {
       push @result, $array->name . $probeset . $name;
-	  }
+    }
   }
-
   return \@result;
 }
-
-
-
-#For affy this matters as name will be different, but not for Nimblegen
-#Need to consolidate this
-#have get name method which throws if there is more than one array
-#detects array vendor and does appropriate method
 
 =head2 get_complete_name
 
@@ -498,22 +483,21 @@ sub get_all_complete_names {
 =cut
 
 sub get_complete_name {
-    my $self = shift;
-    my $arrayname = shift;
+  my $self = shift;
+  my $arrayname = shift;
 
+  throw('Must provide and array name argument to retreive the complete name') if ! defined $arrayname;
 
-	throw('Must provide and array name argument to retreive the complete name') if ! defined $arrayname;
+  my $probename = $self->get_probename($arrayname);
 
-    my $probename = $self->get_probename($arrayname);
+  if (!defined $probename) {
+    throw('Unknown array name');
+  }
 
-    if (!defined $probename) {
-		throw('Unknown array name');
-    }
+  my $probeset = $self->probeset()->name();
+  $probeset .= ':' if $probeset;
 
-	my $probeset = $self->probeset()->name();
-	$probeset .= ':' if $probeset;
-
-	return "$arrayname:$probeset$probename";
+  return "$arrayname:$probeset$probename";
 }
 
 =head2 probeset
@@ -615,13 +599,11 @@ sub feature_count{
   my ($self, $recount) = @_;
 
   if($recount ||
-	 (! $self->{feature_count})){
-	$self->{feature_count} = $self->adaptor->db->get_ProbeFeatureAdaptor->count_probe_features_by_probe_id($self->dbID);
+    (! $self->{feature_count})){
+    $self->{feature_count} = $self->adaptor->db->get_ProbeFeatureAdaptor->count_probe_features_by_probe_id($self->dbID);
   }
 
   return $self->{feature_count};
 }
 
-
 1;
-

@@ -49,11 +49,6 @@ my $whatsthis = associate_probes_to_transcripts({
 
 $transcript_probe_features_overlaps_fh->close;
 
-# open my $transcript_utr_file_fh, '>', $transcript_utr_file;
-# $transcript_utr_file_fh->print(Dumper($whatsthis));
-# $transcript_utr_file_fh->close;
-
-
 =head2
 
   Description: OK this is where the action happens mostly. Goes through each overlap

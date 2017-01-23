@@ -3,6 +3,7 @@
 use strict;
 use Data::Dumper;
 use Getopt::Long;
+use Carp;
 
 =head1
 
@@ -36,12 +37,21 @@ my $process_probe_data = sub {
   my $array_name      = $probe_data->{'-array'};
   my $array_chip_name = $probe_data->{'-array_chip'};
   
+#   if ($array_name eq '') {
+#     confess(
+#       "No array name for\n" 
+#       . Dumper($probe_data)
+#     );
+#   }
+  
   if (! defined $array_name || $array_name eq '') {
-    use Carp;
     confess("Array name was not defined for probe: " . Dumper($probe_data));
   }
 
   my $array_data = $probemapping_config->get_ARRAY_PARAMS_by_array_name($array_name);
+  
+#   print Dumper($array_name);
+#   print Dumper($array_data);
   
   use Bio::EnsEMBL::Funcgen::Array;
   my $array = Bio::EnsEMBL::Funcgen::Array->new(%$array_data);

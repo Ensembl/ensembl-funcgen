@@ -80,16 +80,6 @@ avaliable these will be analagous to Nimblegen feature sets.
 For Affy arrays, a probeset can be part of more than one array, containing unique
 probes. 
 
-#Need to rewrite this bit
-#Something about array_chip_id i.e. experimental validation etc
-On each Affy array the probe has a slightly different name. For
-example, two different complete names for the same probe might be
-DrosGenome1:AFFX-LysX-5_at:535:35; and Drosophila_2:AFFX-LysX-5_at:460:51;. In
-the database, these two probes will have the same probe_id. Thus the same
-Affy probe can have a number of different names and complete names depending on
-which array it is on.
-
-
 =head1 SEE ALSO
 
   Bio::EnsEMBL::Funcgen::ProbeSetAdaptor
@@ -109,19 +99,18 @@ use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 
 use base qw( Bio::EnsEMBL::Funcgen::Storable );
 
-
 =head2 new
 
   Arg [-NAME]           : string - probeset name
   Arg [-SIZE]           : int - probe set size
         Will be the same for all probes sets if same probe set
-		is on multiple arrays.
+        is on multiple arrays.
   Arg [-FAMILY]         : string - probe set family, generic descriptor for probe set e.g. ENCODE REGIONS, RANDOM
         Will be the same for all probes sets if same probe set is on multiple arrays.
   Example    : my $probeset = Bio::EnsEMBL::Funcgen::ProbeSet->new(
-                   -NAME          => 'ProbeSet-1',
-				   -SIZE          => 1,
-                   -FAMILY        => "ENCODE_REGIONS",
+                -NAME          => 'ProbeSet-1',
+                -SIZE          => 1,
+                -FAMILY        => "ENCODE_REGIONS",
                );
   Description: Creates a new Bio::EnsEMBL::Funcgen::ProbeSet object.
   Returntype : Bio::EnsEMBL::Funcgen::ProbeSet
@@ -132,57 +121,26 @@ use base qw( Bio::EnsEMBL::Funcgen::Storable );
 =cut
 
 sub new {
-	my $caller = shift;
-	
-	my $class = ref($caller) || $caller;
-	
-	my $self = $class->SUPER::new(@_);
+  my $caller = shift;
 
-	#warn("The only way to get array names/ids, is to retrieve all the probes!!!");
+  my $class = ref($caller) || $caller;
+  my $self = $class->SUPER::new(@_);
 
-	
-	my (
-		$name,          $size,
-		$family
-	) = rearrange([
-		'NAME',          'SIZE',
-		'FAMILY',
-	], @_);
-	
-		
-	$self->name($name)     if defined $name;
-	$self->family($family) if defined $family;
-	$self->size($size)     if defined $size;
-	
-	return $self;
-}
+  my (
+    $name, 
+    $size,
+    $family
+  ) = rearrange([
+    'NAME', 
+    'SIZE',
+    'FAMILY',
+  ], @_);
 
+  $self->name($name)     if defined $name;
+  $self->family($family) if defined $family;
+  $self->size($size)     if defined $size;
 
-
-#=head2 get_all_ProbeFeatures
-
-#  Args       : None
-#  Example    : my $features = $probeset->get_all_ProbeFeatures();
-#  Description: Get all features produced by this probeset. The probeset needs to be
-#               database persistent.
-#  Returntype : Listref of Bio::EnsEMBL::Funcgen::ProbeFeature objects
-#  Exceptions : None
-#  Caller     : General
-#  Status     : Medium Risk
-
-#=cut
-
-sub get_all_ProbeFeatures {
-	my $self = shift;
-
-	throw("Not implemented yet, do we want to do this for ProbeSet or just probe?");
-
-	if ( $self->adaptor() && $self->dbID() ) {
-		return $self->adaptor()->db()->get_ProbeFeatureAdaptor()->fetch_all_by_ProbeSet($self);
-	} else {
-		warning('Need database connection to retrieve Features');
-		return [];
-	}    
+  return $self;
 }
 
 =head2 get_all_Arrays
@@ -190,8 +148,8 @@ sub get_all_ProbeFeatures {
   Args       : None
   Example    : my $arrays = $probeset->get_all_Arrays();
   Description: Returns all arrays that this probeset is part of. Only works if the
-               probedet was retrieved from the database or created using
-			   add_Array_probename.
+               probeset was retrieved from the database or created using
+               add_Array_probename.
   Returntype : Listref of Bio::EnsEMBL::Funcgen::Array objects
   Exceptions : None
   Caller     : General
@@ -203,13 +161,11 @@ sub get_all_Arrays {
   my $self = shift;
 
   if (defined $self->{'arrays'}) {
-	return $self->{'arrays'};
-  } 
-  else{
-	$self->{arrays} = $self->adaptor->db->get_ArrayAdaptor->fetch_all_by_ProbeSet($self);
+    return $self->{'arrays'};
+  } else {
+    $self->{arrays} = $self->adaptor->db->get_ArrayAdaptor->fetch_all_by_ProbeSet($self);
   }
-  
-  $self->{arrays}
+  return $self->{arrays};
 }
 
 
@@ -229,19 +185,13 @@ sub get_all_Probes {
   my $self = shift;
 
   if (defined $self->{'probes'}) {
-	return $self->{'probes'};
+    return $self->{'probes'};
   } 
   else{
-	$self->{probes} = $self->adaptor->db->get_ProbeAdaptor->fetch_all_by_ProbeSet($self);
+    $self->{probes} = $self->adaptor->db->get_ProbeAdaptor->fetch_all_by_ProbeSet($self);
   }
-  
-  $self->{probes}
+  return $self->{probes};
 }
-
-
-
-#sub get_all_array_chips_ids?
-#sub get_all_Results? from_Experiment?
 
 =head2 name
 
@@ -256,9 +206,9 @@ sub get_all_Probes {
 =cut
 
 sub name {
-    my $self = shift;
-	$self->{'name'} = shift if @_;
-    return $self->{'name'};
+  my $self = shift;
+  $self->{'name'} = shift if @_;
+  return $self->{'name'};
 }
 
 
@@ -276,9 +226,9 @@ sub name {
 =cut
 
 sub family {
-    my $self = shift;
-    $self->{'family'} = shift if @_;
-    return $self->{'family'};
+  my $self = shift;
+  $self->{'family'} = shift if @_;
+  return $self->{'family'};
 }
 
 =head2 size
@@ -295,9 +245,9 @@ sub family {
 =cut
 
 sub size {
-    my $self = shift;
-    $self->{'size'} = shift if @_;
-    return $self->{'size'};
+  my $self = shift;
+  $self->{'size'} = shift if @_;
+  return $self->{'size'};
 }
 
 1;
