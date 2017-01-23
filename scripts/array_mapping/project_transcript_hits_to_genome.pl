@@ -27,9 +27,6 @@ perl scripts/array_mapping/project_transcript_hits_to_genome.pl \
   --registry /nfs/gns/homes/mnuhn/work_dir_probemapping/lib/ensembl-funcgen/registry.pm \
   --species homo_sapiens > probe_chunk_615.fasta_transcript.probe_features_projected_from_transcript_coords_nogenedups_.txt
 
-
-
-
 =cut
 
 my $probe_features;
@@ -422,47 +419,4 @@ sub project_hit_to_genomic_coordinates {
 #     -version => $transcript_cache{$seq_id}->version, #version of transcript sid?
 #   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

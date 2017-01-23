@@ -56,35 +56,24 @@ sub get_transcripts_per_probefeature {
   my $xref_db = shift;
   my $sql = 'select probe_feature_id, stable_id from probe_feature_transcript';
   
-  
   my $sth = $xref_db->dbc->prepare($sql);
   $sth->{mysql_use_result}=1; 
   $sth->execute();
-  
 
   my %transcripts_per_probefeature;
-#   my ($probe_feature_id, $transcript_sid);
-#   $sth->bind_columns(\$probe_feature_id, \$transcript_sid);
   if ($debug) {
     $logger->info($sql."\n");
   }
   
   PROBE_FEATURE_ID:
   while(my $hash = $sth->fetchrow_hashref) {
-#     use Data::Dumper;
-#     print Dumper($hash);
     
     my $probe_feature_id = $hash->{probe_feature_id};
     my $transcript_sid   = $hash->{stable_id};
     
-#     die;
     if ($debug) {
       $logger->info("ALIGNMENT\t$probe_feature_id\t$transcript_sid\n");
     }
-
-#     $transcripts_per_probefeature{$probe_feature_id} ||= {};
-#     $transcripts_per_probefeature{$probe_feature_id}{$transcript_sid}++;
-
 
     if (
          (! exists $transcripts_per_probefeature{$probe_feature_id})
@@ -96,15 +85,7 @@ sub get_transcripts_per_probefeature {
       next PROBE_FEATURE_ID;
     }
     $transcripts_per_probefeature{$probe_feature_id}{$transcript_sid}++;
-    
   }
 
   return \%transcripts_per_probefeature;
 }
-
-
-
-
-
-
-

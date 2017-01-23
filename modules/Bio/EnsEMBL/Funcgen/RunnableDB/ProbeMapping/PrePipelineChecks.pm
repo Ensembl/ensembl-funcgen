@@ -45,10 +45,6 @@ sub run {
       import_parse_probe_fasta_file.pl
       import_create_array_objects.pl
       import_store_array_objects.pl
-      
-      probe2transcript.pl
-      rollback_array.pl
-      update_transcript_xrefs.pl
     );
     
     foreach my $current_program (@programs_expected_in_path) {

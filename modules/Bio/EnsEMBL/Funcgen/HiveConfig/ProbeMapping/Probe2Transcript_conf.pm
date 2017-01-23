@@ -8,36 +8,51 @@ use base ('Bio::EnsEMBL::Funcgen::HiveConfig::ProbeMapping::Base');
 sub pipeline_analyses {
     my $self = shift;
     
-    my $transcript_utr_file                            = '#tempdir#/unannotated_utrs.pl';
-    my $extended_transcripts_file                      = '#tempdir#/extended_transcripts.bed';
-    my $sorted_extended_transcripts_file               = '#tempdir#/extended_transcripts.sorted.bed';
-    my $flanks_file                                    = '#tempdir#/flanks.pl';
-    my $ungrouped_probe_feature_file                   = '#tempdir#/ungrouped_probe_features.bed';
-    my $sorted_probe_feature_file                      = '#tempdir#/sorted_probe_features.bed';
-    my $transcript_probe_features_overlaps_file        = '#tempdir#/transcript_probe_features_overlaps.bed';
-    my $sorted_transcript_probe_features_overlaps_file = '#tempdir#/transcript_probe_features_overlaps.sorted.bed';
-    my $arrays_per_object_file                         = '#tempdir#/arrays_per_object.pl';
-    my $probeset_sizes_file                            = '#tempdir#/probeset_sizes.pl';
-    my $object_names_file                              = '#tempdir#/object_names.pl';
-    my $transcript_info_file                           = '#tempdir#/transcript_info.pl';
-    my $probeset_transcript_assignments                = '#tempdir#/probeset_transcript_assignments.pl';
-    my $probeset_transcript_rejections                 = '#tempdir#/probeset_transcript_rejections.pl';
-    my $probe_transcript_assignments                   = '#tempdir#/probe_transcript_assignments.pl';
+    my $transcript_utr_file                            = '#tempdir#/#species#/unannotated_utrs.pl';
+    my $extended_transcripts_file                      = '#tempdir#/#species#/extended_transcripts.bed';
+    my $sorted_extended_transcripts_file               = '#tempdir#/#species#/extended_transcripts.sorted.bed';
+    my $flanks_file                                    = '#tempdir#/#species#/flanks.pl';
+    my $bedtools_genome_file                           = '#tempdir#/#species#/bedtools_genome_file';
+    my $ungrouped_probe_feature_file                   = '#tempdir#/#species#/ungrouped_probe_features.bed';
+    my $sorted_probe_feature_file                      = '#tempdir#/#species#/sorted_probe_features.bed';
+    my $transcript_probe_features_overlaps_file        = '#tempdir#/#species#/transcript_probe_features_overlaps.bed';
+    my $sorted_transcript_probe_features_overlaps_file = '#tempdir#/#species#/transcript_probe_features_overlaps.sorted.bed';
+    my $arrays_per_object_file                         = '#tempdir#/#species#/arrays_per_object.pl';
+    my $probeset_sizes_file                            = '#tempdir#/#species#/probeset_sizes.pl';
+    my $object_names_file                              = '#tempdir#/#species#/object_names.pl';
+    my $transcript_info_file                           = '#tempdir#/#species#/transcript_info.pl';
+    my $probeset_transcript_assignments                = '#tempdir#/#species#/probeset_transcript_assignments.pl';
+    my $probeset_transcript_rejections                 = '#tempdir#/#species#/probeset_transcript_rejections.pl';
+    my $probe_transcript_assignments                   = '#tempdir#/#species#/probe_transcript_assignments.pl';
 
     return [
       {
           -logic_name  => 'start_probe2transcript',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
           -flow_into => {
-              'MAIN->A' => [ 'calculate_utrs', 'export_probe_features_to_bed', 'calculate_arrays_per_object' ],
-              'A->MAIN' => [ 'compute_transcript_probe_feature_overlaps'      ]
+              MAIN => 'p2t_mk_tempdir'
+          },
+      },
+      {   -logic_name  => 'p2t_mk_tempdir',
+          -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -parameters  => {
+              cmd => 'mkdir -p #tempdir#/#species#/'
+          },
+          -flow_into => {
+              'MAIN->A' => [ 
+                'calculate_utrs', 
+                'export_probe_features_to_bed', 
+                'create_bedtools_genome_file', 
+                'calculate_arrays_per_object' 
+              ],
+              'A->MAIN' => [ 'compute_transcript_probe_feature_overlaps' ]
           },
       },
       {   -logic_name  => 'calculate_arrays_per_object',
           -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters  => {
               cmd => 
-                  ' calculate_arrays_per_object.pl'
+                  'calculate_arrays_per_object.pl'
                 . ' --registry #reg_conf#'
                 . ' --species  #species#'
                 . ' --arrays_per_object_file ' . $arrays_per_object_file
@@ -79,25 +94,18 @@ sub pipeline_analyses {
 #               cmd => 'bedSort ' . $extended_transcripts_file . ' ' . $extended_transcripts_file
               # Can't use bedSort or the chromosome names won't be consistent with $sorted_probe_feature_file
               #
-              cmd => "sort -u -k1,1 -k2,2n -k3,3n $extended_transcripts_file > $sorted_extended_transcripts_file"
+              cmd => "sort -k1,1 -k2,2n -k3,3n $extended_transcripts_file | uniq > $sorted_extended_transcripts_file"
           },
           -rc_name     => '8Gb_job',
       },
-      
-      mysql -N $(mysql-ens-reg-prod-1-ensadmin details mysql) homo_sapiens_core_86_38 -e 'select seq_region.name, seq_region.length from seq_region join seq_region_attrib using (seq_region_id) join attrib_type using (attrib_type_id) where code="toplevel" group by seq_region.name, seq_region.length order by seq_region.name' | sort -k1,1 > deleteme.txt
-      
-      
-      {   -logic_name  => 'export_probe_features_to_bed',
+      {   -logic_name  => 'create_bedtools_genome_file',
           -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters  => {
               cmd => 
                 'create_bedtools_genome_file.pl '
                 . ' --registry #reg_conf#'
                 . ' --species  #species#'
-                . ' --file      ' . $bedtools_genome_file
-          },
-          -flow_into => {
-              MAIN => 'sort_probe_feature_file',
+                . ' --bedtools_genome_file ' . $bedtools_genome_file
           },
       },
       {   -logic_name  => 'export_probe_features_to_bed',
@@ -122,14 +130,16 @@ sub pipeline_analyses {
               cmd => 
                 'sort'
                 . ' --parallel=16'
-                . ' -u' <--- Problem!?!
+#                 . ' -u'
                 . ' -T #tempdir#/#species#'
                 . ' --buffer-size=31G'
                 . ' -k1,1'
                 . ' -k2,2n'
                 . ' -k3,3n'
-                .  ' --output=' . $sorted_probe_feature_file
+#                 .  ' --output=' . $sorted_probe_feature_file
                 . ' ' . $ungrouped_probe_feature_file
+                . ' | uniq '
+                . ' > ' . $sorted_probe_feature_file
           },
           -rc_name     => 'parallel_sort',
       },
@@ -139,8 +149,9 @@ sub pipeline_analyses {
               cmd => 
                 'bedtools'
                 . ' intersect'
+                . ' -g ' . $bedtools_genome_file
                 . ' -sorted'
-                . ' -wa -wb -a '.$extended_transcripts_file.' -b ' . $sorted_probe_feature_file
+                . ' -wa -wb -a '.$sorted_extended_transcripts_file .' -b ' . $sorted_probe_feature_file
                 . ' > ' . $transcript_probe_features_overlaps_file
           },
           -flow_into => {
@@ -153,12 +164,12 @@ sub pipeline_analyses {
               cmd => 
                 'sort'
                 . ' --parallel=16'
-                . ' -u'
-                . ' -T #tempdir#'
+#                 . ' -u'
+                . ' -T #tempdir#/#species#/'
                 . ' --buffer-size=31G'
                 . ' -k4,4'
                 . ' ' . $transcript_probe_features_overlaps_file
-                .  ' > '
+                .  ' | uniq > '
                 . $sorted_transcript_probe_features_overlaps_file
           },
           -rc_name     => 'parallel_sort',
@@ -194,9 +205,22 @@ sub pipeline_analyses {
                 . ' --probeset_transcript_rejections  ' . $probeset_transcript_rejections
                 . ' --probe_transcript_assignments    ' . $probe_transcript_assignments
           },
+          -flow_into => {
+              MAIN => 'load_probe_to_transcript_assignments',
+          },
       },
-
-
+      {   -logic_name  => 'load_probe_to_transcript_assignments',
+          -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -parameters  => {
+              cmd => 
+                  'load_probe_to_transcript_assignments.pl'
+                . ' --registry #reg_conf#'
+                . ' --species  #species#'
+                . ' --probeset_transcript_assignments ' . $probeset_transcript_assignments
+                . ' --probeset_transcript_rejections  ' . $probeset_transcript_rejections
+                . ' --probe_transcript_assignments    ' . $probe_transcript_assignments
+          },
+      },
     ]
 }
 

@@ -56,6 +56,7 @@ where
   ensembl_object_type="ProbeFeature"
 );
 
-create unique index probe_feature_id_idx on probe_feature_transcript(probe_feature_id);
+-- create unique index probe_feature_id_idx on probe_feature_transcript(probe_feature_id);
+create index probe_feature_id_idx on probe_feature_transcript(probe_feature_id);
 
 drop table if exists `temp_probe_feature_transcript`;

@@ -64,7 +64,7 @@ sub run {
     # This places header values into @match_refs
     if ($header_as_our_regex_expects_it !~ /$header_regex/) {
       use Carp;
-      confess("Problem with header: ${header}, it does not match the regular expression ${header_regex}!");
+      confess("Problem with header: ${header_as_our_regex_expects_it}, it does not match the regular expression ${header_regex}!");
     }
     
     if ($sequence =~ /^>/) {
