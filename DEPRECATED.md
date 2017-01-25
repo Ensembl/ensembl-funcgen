@@ -42,7 +42,7 @@ A year after deprecation (4 Ensembl releases), the method is removed from the AP
  - Bio::EnsEMBL::Funcgen::**RegulatoryFeature**::*get_other_RegulatoryFeatures*
  - Bio::EnsEMBL::Funcgen::**RegulatoryFeatureAdaptor**::*fetch_all_by_stable_ID*
 
-### To be removed in Ensembl Release 88 ###
+### Removed in Ensembl Release 88 ###
  - Bio::Ensembl::Funcgen::**Channel**
  - Bio::Ensembl::Funcgen::DBSQL::**ChannelAdaptor**
  - Bio::Ensembl::Funcgen::**ExperimentalChip**
