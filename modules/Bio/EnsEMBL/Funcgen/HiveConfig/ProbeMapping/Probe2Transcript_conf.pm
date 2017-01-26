@@ -8,35 +8,62 @@ use base ('Bio::EnsEMBL::Funcgen::HiveConfig::ProbeMapping::Base');
 sub pipeline_analyses {
     my $self = shift;
     
-    my $transcript_utr_file                            = '#tempdir#/#species#/unannotated_utrs.pl';
-    my $extended_transcripts_file                      = '#tempdir#/#species#/extended_transcripts.bed';
-    my $sorted_extended_transcripts_file               = '#tempdir#/#species#/extended_transcripts.sorted.bed';
-    my $flanks_file                                    = '#tempdir#/#species#/flanks.pl';
-    my $bedtools_genome_file                           = '#tempdir#/#species#/bedtools_genome_file';
-    my $ungrouped_probe_feature_file                   = '#tempdir#/#species#/ungrouped_probe_features.bed';
-    my $sorted_probe_feature_file                      = '#tempdir#/#species#/sorted_probe_features.bed';
-    my $transcript_probe_features_overlaps_file        = '#tempdir#/#species#/transcript_probe_features_overlaps.bed';
-    my $sorted_transcript_probe_features_overlaps_file = '#tempdir#/#species#/transcript_probe_features_overlaps.sorted.bed';
-    my $arrays_per_object_file                         = '#tempdir#/#species#/arrays_per_object.pl';
-    my $probeset_sizes_file                            = '#tempdir#/#species#/probeset_sizes.pl';
-    my $object_names_file                              = '#tempdir#/#species#/object_names.pl';
-    my $transcript_info_file                           = '#tempdir#/#species#/transcript_info.pl';
-    my $probeset_transcript_assignments                = '#tempdir#/#species#/probeset_transcript_assignments.pl';
-    my $probeset_transcript_rejections                 = '#tempdir#/#species#/probeset_transcript_rejections.pl';
-    my $probe_transcript_assignments                   = '#tempdir#/#species#/probe_transcript_assignments.pl';
+    my $probe2transcript_temp_dir                = '#tempdir#/#species#/probe2transcript';
+    my $probe2transcript_array_specific_temp_dir = $probe2transcript_temp_dir . '/#array_name#';
+
+    my $transcript_utr_file                            = $probe2transcript_temp_dir . '/unannotated_utrs.pl';
+    my $extended_transcripts_file                      = $probe2transcript_temp_dir . '/extended_transcripts.bed';
+    my $sorted_extended_transcripts_file               = $probe2transcript_temp_dir . '/extended_transcripts.sorted.bed';
+    my $flanks_file                                    = $probe2transcript_temp_dir . '/flanks.pl';
+    my $bedtools_genome_file                           = $probe2transcript_temp_dir . '/bedtools_genome_file';
+    my $ungrouped_probe_feature_file                   = $probe2transcript_temp_dir . '/ungrouped_probe_features.bed';
+    my $sorted_probe_feature_file                      = $probe2transcript_temp_dir . '/sorted_probe_features.bed';
+    my $transcript_probe_features_overlaps_file        = $probe2transcript_temp_dir . '/transcript_probe_features_overlaps.bed';
+    my $sorted_transcript_probe_features_overlaps_file = $probe2transcript_temp_dir . '/transcript_probe_features_overlaps.sorted.bed';
+    my $arrays_per_object_file                         = $probe2transcript_temp_dir . '/arrays_per_object.pl';
+    my $probeset_sizes_file                            = $probe2transcript_temp_dir . '/probeset_sizes.pl';
+    my $object_names_file                              = $probe2transcript_temp_dir . '/object_names.pl';
+    my $transcript_info_file                           = $probe2transcript_temp_dir . '/transcript_info.pl';
+    
+    my $probeset_transcript_hits_by_array_file         = $probe2transcript_array_specific_temp_dir . '/probeset_transcript_hits_file.pl';
+    my $probe_transcript_hits_by_array_file            = $probe2transcript_array_specific_temp_dir . '/probe_transcript_hits_file.pl';
+    my $probeset_to_transcript_by_array_file           = $probe2transcript_array_specific_temp_dir . '/probeset_to_transcript_file.pl';
+    my $probe_transcript_assignments_by_array_file     = $probe2transcript_array_specific_temp_dir . '/probes_transcript_assignments.tsv';
+    my $probeset_transcript_assignments_by_array       = $probe2transcript_array_specific_temp_dir . '/probeset_transcript_assignments.tsv';
+    
+    my $probe_feature_transcript_assignment_file       = $probe2transcript_temp_dir . '/probe_feature_transcript_assignments.tsv';
+    
+    
+    my $probeset_transcript_rejections                 = $probe2transcript_temp_dir . '/probeset_transcript_rejections.tsv';
+    my $probe_transcript_assignments                   = $probe2transcript_temp_dir . '/probe_transcript_assignments.tsv';
 
     return [
       {
           -logic_name  => 'start_probe2transcript',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
           -flow_into => {
-              MAIN => 'p2t_mk_tempdir'
+              MAIN => 'truncate_p2t_tables'
+          },
+      },
+      {
+          -logic_name  => 'truncate_p2t_tables',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+          -parameters => {
+              sql     => [
+                "truncate probe_transcript;",
+                "truncate probeset_transcript;",
+                "truncate probe_feature_transcript;",
+              ],
+              db_conn => 'funcgen:#species#',
+          },
+          -flow_into => {
+              MAIN => 'p2t_mk_tempdir',
           },
       },
       {   -logic_name  => 'p2t_mk_tempdir',
           -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters  => {
-              cmd => 'mkdir -p #tempdir#/#species#/'
+              cmd => 'mkdir -p ' . $probe2transcript_temp_dir
           },
           -flow_into => {
               'MAIN->A' => [ 
@@ -45,7 +72,7 @@ sub pipeline_analyses {
                 'create_bedtools_genome_file', 
                 'calculate_arrays_per_object' 
               ],
-              'A->MAIN' => [ 'compute_transcript_probe_feature_overlaps' ]
+              'A->MAIN' => 'compute_transcript_probe_feature_overlaps'
           },
       },
       {   -logic_name  => 'calculate_arrays_per_object',
@@ -130,14 +157,15 @@ sub pipeline_analyses {
               cmd => 
                 'sort'
                 . ' --parallel=16'
-#                 . ' -u'
-                . ' -T #tempdir#/#species#'
+                . ' -T ' . $probe2transcript_temp_dir
                 . ' --buffer-size=31G'
                 . ' -k1,1'
                 . ' -k2,2n'
                 . ' -k3,3n'
-#                 .  ' --output=' . $sorted_probe_feature_file
                 . ' ' . $ungrouped_probe_feature_file
+                # Sort has a -u option, but it doesn't seem to look at the 
+                # entire line, only the columns from the -k parameters.
+                #
                 . ' | uniq '
                 . ' > ' . $sorted_probe_feature_file
           },
@@ -164,8 +192,7 @@ sub pipeline_analyses {
               cmd => 
                 'sort'
                 . ' --parallel=16'
-#                 . ' -u'
-                . ' -T #tempdir#/#species#/'
+                . ' -T ' . $probe2transcript_temp_dir
                 . ' --buffer-size=31G'
                 . ' -k4,4'
                 . ' ' . $transcript_probe_features_overlaps_file
@@ -188,39 +215,124 @@ sub pipeline_analyses {
                 . ' --flanks_file                        ' . $flanks_file
                 . ' --transcript_utr_file                ' . $transcript_utr_file 
                 . ' --transcript_info_file               ' . $transcript_info_file
+                . ' --probe_feature_transcript_assignments_file ' . $probe_feature_transcript_assignment_file
           },
           -flow_into => {
-              MAIN => 'compute_hits',
+              MAIN => [
+                'compute_probeset_transcript_assignments_per_array',
+                'load_probe_feature_to_transcript_assignments'
+              ]
           },
           -rc_name     => '4Gb_job',
       },
-      {   -logic_name  => 'compute_hits',
-          -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-          -parameters  => {
-              cmd => 
-                  'compute_hits.pl'
-                . ' --probeset_sizes_file             ' . $probeset_sizes_file
-                . ' --transcript_info_file            ' . $transcript_info_file
-                . ' --probeset_transcript_assignments ' . $probeset_transcript_assignments
-                . ' --probeset_transcript_rejections  ' . $probeset_transcript_rejections
-                . ' --probe_transcript_assignments    ' . $probe_transcript_assignments
-          },
-          -flow_into => {
-              MAIN => 'load_probe_to_transcript_assignments',
-          },
-      },
-      {   -logic_name  => 'load_probe_to_transcript_assignments',
-          -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-          -parameters  => {
-              cmd => 
-                  'load_probe_to_transcript_assignments.pl'
-                . ' --registry #reg_conf#'
-                . ' --species  #species#'
-                . ' --probeset_transcript_assignments ' . $probeset_transcript_assignments
-                . ' --probeset_transcript_rejections  ' . $probeset_transcript_rejections
-                . ' --probe_transcript_assignments    ' . $probe_transcript_assignments
-          },
-      },
+        {   -logic_name  => 'load_probe_feature_to_transcript_assignments',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters  => {
+                cmd => 
+                    'load_probe_feature_to_transcript_assignments.pl'
+                  . ' --registry    #reg_conf#'
+                  . ' --species     #species#'
+                  . ' --array_name  foo'
+                  . ' --probe_feature_transcript_assignments_file ' . $probe_feature_transcript_assignment_file
+            },
+        },
+        {   -logic_name  => 'compute_probeset_transcript_assignments_per_array',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
+            -parameters => {
+                db_conn    => 'funcgen:#species#',
+                inputquery => 'select "#species#" as species, array.name as array_name from array where format!="METHYLATION"',
+            },
+            -flow_into => {
+               2 => 'p2t_mk_arrays_tempdir',
+            },
+        },
+        {   -logic_name  => 'p2t_mk_arrays_tempdir',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters  => {
+                cmd => 'mkdir -p ' . $probe2transcript_array_specific_temp_dir
+            },
+            -flow_into => {
+                MAIN => [
+                  'compute_probeset_transcript_hits',
+                  'compute_probe_transcript_hits'
+                ]
+            },
+        },
+        {   -logic_name  => 'compute_probeset_transcript_hits',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters  => {
+                cmd => 
+                    'compute_probeset_transcript_hits.pl'
+                  . '  --array_name #array_name#'
+                  . '  --transcript_info_file       ' . $transcript_info_file
+                  . '  --probeset_transcript_hits_file ' . $probeset_transcript_hits_by_array_file
+            },
+            -flow_into => {
+                MAIN => 'create_probeset_to_transcript_descriptions',
+            },
+        },
+        {   -logic_name  => 'create_probeset_to_transcript_descriptions',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters  => {
+                cmd => 
+                    'create_probeset_to_transcript_descriptions.pl '
+                  . '  --array_name #array_name#'
+                  . '  --probeset_sizes                      '    . $probeset_sizes_file
+                  . '  --probeset_transcript_hits_by_array_file ' . $probeset_transcript_hits_by_array_file
+                  . '  --probeset_to_transcript_file         '    . $probeset_transcript_assignments_by_array
+            },
+            -flow_into => {
+                MAIN => 'load_probeset_to_transcript_assignments',
+            },
+        },
+        {   -logic_name  => 'load_probeset_to_transcript_assignments',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters  => {
+                cmd => 
+                    'load_probeset_to_transcript_assignments.pl'
+                  . ' --registry    #reg_conf#'
+                  . ' --species     #species#'
+                  . ' --array_name  #array_name#'
+                  . ' --probeset_transcript_assignments_file ' . $probeset_transcript_assignments_by_array
+            },
+        },
+        {   -logic_name  => 'compute_probe_transcript_hits',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters  => {
+                cmd => 
+                    'compute_probe_transcript_hits.pl'
+                  . '  --array_name #array_name#'
+                  . '  --transcript_info_file       ' . $transcript_info_file
+                  . '  --probe_transcript_hits_file ' . $probe_transcript_hits_by_array_file
+            },
+            -flow_into => {
+                MAIN => 'create_probe_to_transcript_descriptions',
+            },           
+        },
+        {   -logic_name  => 'create_probe_to_transcript_descriptions',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters  => {
+                cmd => 
+                    'create_probe_to_transcript_descriptions.pl'
+                  . '  --array_name #array_name#'
+                  . '  --probe_transcript_hits_by_array_file ' . $probe_transcript_hits_by_array_file
+                  . '  --probe_to_transcript_file            ' . $probe_transcript_assignments_by_array_file
+            },
+            -flow_into => {
+                MAIN => 'load_probe_to_transcript_assignments',
+            },
+        },
+        {   -logic_name  => 'load_probe_to_transcript_assignments',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters  => {
+                cmd => 
+                    'load_probe_to_transcript_assignments.pl'
+                  . ' --registry    #reg_conf#'
+                  . ' --species     #species#'
+                  . ' --array_name  #array_name#'
+                  . ' --probe_transcript_assignments_file ' . $probe_transcript_assignments_by_array_file
+            },
+        },
     ]
 }
 
@@ -228,7 +340,7 @@ sub resource_classes {
     my ($self) = @_;
     return {
         %{$self->SUPER::resource_classes},
-        'parallel_sort'     => {'LSF' => '-q production-rh7 -n 16 -M32000 -R"select[mem>32000] rusage[mem=32000]"' },
+        'parallel_sort'     => { 'LSF' => '-q production-rh7 -n 16 -M32000 -R"select[mem>32000] rusage[mem=32000]"' },
     };
 }
 

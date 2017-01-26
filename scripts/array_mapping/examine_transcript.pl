@@ -27,15 +27,11 @@ my $flanks_file;
 my $transcript_utr_file;
 my $transcript_probe_features_overlaps;
 my $transcript_info_file;
+my $probe_feature_transcript_assignment_file;
 
 # Constants
 my $debug = undef;
 my $max_mismatches = 1;
-
-sub add_xref {
-#   TODO
-  return;
-}
 
 =head2 cache_and_load_unmapped_objects
 
@@ -80,13 +76,14 @@ sub cache_and_load_unmapped_objects {
 }
 
 GetOptions (
-   'registry=s'                            => \$registry,
-   'species=s'                             => \$species,
-   'transcript_file=s'                     => \$transcript_file,
-   'flanks_file=s'                         => \$flanks_file,
-   'transcript_utr_file=s'                 => \$transcript_utr_file,
-   'transcript_probe_features_overlaps=s'  => \$transcript_probe_features_overlaps,
-   'transcript_info_file=s'                => \$transcript_info_file,
+   'registry=s'                                 => \$registry,
+   'species=s'                                  => \$species,
+   'transcript_file=s'                          => \$transcript_file,
+   'flanks_file=s'                              => \$flanks_file,
+   'transcript_utr_file=s'                      => \$transcript_utr_file,
+   'transcript_probe_features_overlaps=s'       => \$transcript_probe_features_overlaps,
+   'transcript_info_file=s'                     => \$transcript_info_file,
+   'probe_feature_transcript_assignment_file=s' => \$probe_feature_transcript_assignment_file,
 );
 
 use Bio::EnsEMBL::Utils::Logger;
@@ -112,6 +109,25 @@ my $transcripts        = $transcript_adaptor->fetch_all();
 
 open my $transcript_probe_features_overlaps_fh, '<', $transcript_probe_features_overlaps;
 open my $transcript_info_fh , '>', $transcript_info_file;
+open my $probe_feature_transcript_assignment_fh , '>', $probe_feature_transcript_assignment_file;
+
+# TODO turn HACK into something proper
+sub add_xref {
+
+  my $transcript_stable_id = shift;
+  my $probe_feature_id     = shift;
+  my $linkage_annotation   = shift;
+
+  $probe_feature_transcript_assignment_fh->print(
+    join "\t",
+      $probe_feature_id,
+      $transcript_stable_id,
+      $linkage_annotation,
+  );
+  $probe_feature_transcript_assignment_fh->print("\n");
+  return;
+}
+
 
 associate_probes_to_transcripts({
   transcripts             => $transcripts,
@@ -455,10 +471,6 @@ sub examine_probefeature {
   my $transcript_version     = $transcript->version;
   my $log_name;
 
-  if (!exists $array_format_config->{$array_class}) {
-    die("The available keys are:" . Dumper(keys %$array_format_config));
-  }
-  
   my $array_configuration = $array_format_config->{$array_class};
   lock_hash(%$array_configuration);
   
@@ -588,67 +600,7 @@ sub record_gapped_probefeature {
     ]
   );
   
-#   $logger->info(" done " );
-  
-  if($num_transcripts>0) {
-    if ($debug) {
-      $logger->info('Mapped Gapped ProbeFeature '.$log_name."\n");
-    }
-    if ($array_configuration->{probeset_arrays}) {
-    
-      if (! exists $transcript_feature_info->{$array_name}) {
-      
-        # The structure for probesets:
-        $transcript_feature_info->{$array_name} = {
-          probeset_array => 1,
-          array_name     => $array_name,
-          probesets      => {},
-        };
-        lock_keys(%{$transcript_feature_info->{$array_name}});
-      }
-
-      if (! exists $transcript_feature_info->{$array_name}->{probesets}->{$probeset_id}) {
-        $transcript_feature_info->{$array_name}->{probesets}->{$probeset_id} = {
-          probe_id                   => {},
-          num_probes_with_mismatches => 0,
-          num_probe_features         => 0,
-        };
-        lock_keys(%{$transcript_feature_info->{$array_name}->{probesets}->{$probeset_id}});
-      }
-      if (! exists $transcript_feature_info->{$array_name}->{probesets}->{$probeset_id}->{probe_id}->{$probe_id}) {
-        $transcript_feature_info->{$array_name}->{probesets}->{$probeset_id}->{probe_id}->{$probe_id} = { count => 0 };
-      }
-      
-      $transcript_feature_info->{$array_name}->{probesets}->{$probeset_id}->{num_probe_features} += 1;
-      if ($has_mismatches) {
-        $transcript_feature_info->{$array_name}->{probesets}->{$probeset_id}->{num_probes_with_mismatches} += 1;
-      }
-      $transcript_feature_info->{$array_name}->{probesets}->{$probeset_id}->{probe_id}->{$probe_id}->{count}++;
-
-    } else {
-
-      if (! exists $transcript_feature_info->{$array_name}) {
-        #
-        # The structure for arrays without probesets:
-        #
-        $transcript_feature_info->{$array_name} = {
-          probeset_array => undef,
-          array_name     => $array_name,
-          probe          => {},
-        };
-        lock_keys(%{$transcript_feature_info->{$array_name}});
-      }
-      if (! exists $transcript_feature_info->{$array_name}->{probe}->{$probe_id}) {
-        $transcript_feature_info->{$array_name}->{probe}->{$probe_id} = [];
-      }
-      push 
-        @{$transcript_feature_info->{$array_name}->{probe}->{$probe_id}}, 
-        {
-          annotation => "exon-exon match${mm_link_txt}", 
-          has_mismatches => $has_mismatches,
-        };
-    }
-  } else {
+  if($num_transcripts==0) {
     if ($debug) {
       $logger->info('Unmapped Gapped ProbeFeature '.$log_name."\n");
     }
@@ -659,6 +611,69 @@ sub record_gapped_probefeature {
       summary     => 'Unmapped Gapped ProbeFeature',
       description => 'Gapped ProbeFeature did not match transcript structure',
     });
+    return
+  }
+
+  if ($debug) {
+    $logger->info('Mapped Gapped ProbeFeature '.$log_name."\n");
+  }
+  my $probe_match_annotation = {
+    annotation => "exon-exon match${mm_link_txt}", 
+    has_mismatches => $has_mismatches,
+  };
+
+  if ($array_configuration->{probeset_arrays}) {
+  
+    if (! exists $transcript_feature_info->{$array_name}) {
+    
+      # The structure for probesets:
+      $transcript_feature_info->{$array_name} = {
+        probeset_array => 1,
+        array_name     => $array_name,
+        probesets      => {},
+      };
+      lock_keys(%{$transcript_feature_info->{$array_name}});
+    }
+
+    if (! exists $transcript_feature_info->{$array_name}->{probesets}->{$probeset_id}) {
+      $transcript_feature_info->{$array_name}->{probesets}->{$probeset_id} = {
+        probe_id                   => {},
+        num_probes_with_mismatches => 0,
+        num_probe_features         => 0,
+      };
+      lock_keys(%{$transcript_feature_info->{$array_name}->{probesets}->{$probeset_id}});
+    }
+    if (! exists $transcript_feature_info->{$array_name}->{probesets}->{$probeset_id}->{probe_id}->{$probe_id}) {
+      $transcript_feature_info->{$array_name}->{probesets}->{$probeset_id}->{probe_id}->{$probe_id} = [];
+    }
+    
+    $transcript_feature_info->{$array_name}->{probesets}->{$probeset_id}->{num_probe_features} += 1;
+    if ($has_mismatches) {
+      $transcript_feature_info->{$array_name}->{probesets}->{$probeset_id}->{num_probes_with_mismatches} += 1;
+    }
+    push 
+      @{$transcript_feature_info->{$array_name}->{probesets}->{$probeset_id}->{probe_id}->{$probe_id}}, 
+      $probe_match_annotation;
+
+  } else {
+
+    if (! exists $transcript_feature_info->{$array_name}) {
+      #
+      # The structure for arrays without probesets:
+      #
+      $transcript_feature_info->{$array_name} = {
+        probeset_array => undef,
+        array_name     => $array_name,
+        probe          => {},
+      };
+      lock_keys(%{$transcript_feature_info->{$array_name}});
+    }
+    if (! exists $transcript_feature_info->{$array_name}->{probe}->{$probe_id}) {
+      $transcript_feature_info->{$array_name}->{probe}->{$probe_id} = [];
+    }
+    push 
+      @{$transcript_feature_info->{$array_name}->{probe}->{$probe_id}}, 
+      $probe_match_annotation;
   }
   # The real return value is in $transcript_feature_info and data is written in cache_and_load_unmapped_objects
   return;
@@ -761,6 +776,10 @@ sub record_aligned_probefeature {
     } else {                                #only flank over lap
       $linkage_annotation = "${flank_end}' flank${mm_link_txt}";
     }
+    my $probe_match_annotation = {
+      annotation     => $linkage_annotation, 
+      has_mismatches => $has_mismatches,
+    };
 
     if ($array_configuration->{probeset_arrays}) {
     
@@ -780,19 +799,23 @@ sub record_aligned_probefeature {
         $transcript_feature_info->{$array_name}->{probesets}->{$probeset_id} = {
           probe_id           => {},
           num_mismatches     => 0,
+          
+          # Number of probe features from this probe set that match on this transcript.
           num_probe_features => 0,
         };
         lock_keys(%{$transcript_feature_info->{$array_name}->{probesets}->{$probeset_id}});
       }
       if (! exists $transcript_feature_info->{$array_name}->{probesets}->{$probeset_id}->{probe_id}->{$probe_id}) {
-        $transcript_feature_info->{$array_name}->{probesets}->{$probeset_id}->{probe_id}->{$probe_id} = { count => 0 };
+        $transcript_feature_info->{$array_name}->{probesets}->{$probeset_id}->{probe_id}->{$probe_id} = [];
       }
       
       $transcript_feature_info->{$array_name}->{probesets}->{$probeset_id}->{num_probe_features} += 1;
       if ($has_mismatches) {
         $transcript_feature_info->{$array_name}->{probesets}->{$probeset_id}->{num_mismatches} += 1;
       }
-      $transcript_feature_info->{$array_name}->{probesets}->{$probeset_id}->{probe_id}->{$probe_id}->{count}++;
+      push 
+        @{$transcript_feature_info->{$array_name}->{probesets}->{$probeset_id}->{probe_id}->{$probe_id}},
+        $probe_match_annotation;
       
     } else {
     
@@ -812,15 +835,12 @@ sub record_aligned_probefeature {
       }
       push 
         @{$transcript_feature_info->{$array_name}->{probe}->{$probe_id}}, 
-        {
-          annotation     => $linkage_annotation, 
-          has_mismatches => $has_mismatches,
-        };
+        $probe_match_annotation;
     }
     if ($debug) {
       $logger->info("Mapped\t$probe_id\t$probeset_id\t".$transcript->stable_id()."\n");
     }
-    add_xref($transcript->stable_id, $feature_id, 'ProbeFeature', $linkage_annotation, $xrefs, $xref_db);
+    add_xref($transcript->stable_id, $feature_id, $linkage_annotation);
   } else {
     my ($summary, $region);
 

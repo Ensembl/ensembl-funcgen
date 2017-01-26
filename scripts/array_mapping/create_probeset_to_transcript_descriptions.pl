@@ -27,29 +27,21 @@ time create_probeset_to_transcript_descriptions.pl \
 =cut
 
 # Constants:
-
-# The proportion of probes from a probeset that have to match to qualify for a probeset to transcript assignment.
 my $mapping_threshold = 0.5;
-
-# Maximum allowed number of transcript matches. Any probeset making more than this will be considered promiscuous and go unmapped.
-my $max_transcripts = 100;
 
 my $array_name;
 my $probeset_sizes_file;
 my $probeset_transcript_hits_by_array_file;
 my $probeset_to_transcript_file;
-my $rejected_probesets_file;
 
 GetOptions (
-   'array_name=s'                             => \$array_name,
-   'probeset_sizes_file=s'                    => \$probeset_sizes_file,
+   'array_name=s'                 => \$array_name,
+   'probeset_sizes_file=s'        => \$probeset_sizes_file,
    'probeset_transcript_hits_by_array_file=s' => \$probeset_transcript_hits_by_array_file,
-   'probeset_to_transcript_file=s'            => \$probeset_to_transcript_file,
-   'rejected_probesets_file=s'                => \$rejected_probesets_file,
+   'probeset_to_transcript_file=s'      => \$probeset_to_transcript_file,
 );
 
-open my $probeset_to_transcript_fh,  '>', $probeset_to_transcript_file;
-open my $rejected_probesets_file_fh, '>', $rejected_probesets_file;
+open my $probeset_to_transcript_fh, '>', $probeset_to_transcript_file;
 
 use Bio::EnsEMBL::Utils::Logger;
 my $logger = Bio::EnsEMBL::Utils::Logger->new();
@@ -77,106 +69,76 @@ my $probe_transcript_hits_by_array;
 $parser->parse({
   data_dumper_file => $probeset_transcript_hits_by_array_file,
   call_back        => sub {
-    my $probeset_transcript_hits_by_array = shift;
-    create_probeset_transcript_description(
-      $probeset_transcript_hits_by_array,
-      $probeset_to_transcript_fh
-    );
+    my $x = shift;
+    if ($probe_transcript_hits_by_array) {
+      # There should only be one hash in this.
+      die;
+    }
+    $probe_transcript_hits_by_array = $x;
   },
 });
 
-
-
 $logger->info("Done reading probe transcript hits file\n");
 
-$rejected_probesets_file_fh->close;
-$probeset_to_transcript_fh->close;
+my @array_names = keys %$probe_transcript_hits_by_array;
 
-$logger->finish_log;
-$logger->info("All done.\n");
+$logger->info("Found " . scalar @array_names . " arrays in the probe transcript hits file.\n");
 
-sub create_probeset_transcript_description {
+foreach my $current_array (@array_names) {
 
-  my $probe_transcript_hits_by_array = shift;
-  my $probeset_to_transcript_fh = shift;  
+  $logger->info("The current array is " . $current_array . " .\n");
 
-  my @array_names = keys %$probe_transcript_hits_by_array;
+  my $probe_transcript_hits = $probe_transcript_hits_by_array->{$current_array};
+  my @probeset_names = keys %$probe_transcript_hits;
 
-  foreach my $current_array (@array_names) {
-
-    my $probe_transcript_hits = $probe_transcript_hits_by_array->{$current_array};
-    my @probeset_names = keys %$probe_transcript_hits;
+  $logger->info("It has " . scalar @probeset_names . " probesets.\n");
+  
+  my $this_arrays_probeset_sizes = $probeset_sizes{$current_array}->{probeset_sizes};
+  
+  
+  foreach my $current_probeset_name (@probeset_names) {
+  
+    my @final_probeset_assignments;
+  
+    my $current_probeset_hits = $probe_transcript_hits->{$current_probeset_name};
+    my @stable_ids_mapped_to = keys %$current_probeset_hits;
     
-    my $this_arrays_probeset_sizes = $probeset_sizes{$current_array}->{probeset_sizes};
+    my $current_probeset_size = $this_arrays_probeset_sizes->{$current_probeset_name};
     
-    foreach my $current_probeset_name (@probeset_names) {
-    
-      my @final_probeset_assignments;
-    
-      my $current_probeset_hits = $probe_transcript_hits->{$current_probeset_name};
-      my @stable_ids_mapped_to = keys %$current_probeset_hits;
+    foreach my $current_stable_id (@stable_ids_mapped_to) {
       
-      my $current_probeset_size = $this_arrays_probeset_sizes->{$current_probeset_name};
+      my $num_probes_mapped = keys %{$current_probeset_hits->{$current_stable_id}->{probe_id}};
       
-      foreach my $current_stable_id (@stable_ids_mapped_to) {
-        
-        my $num_probes_mapped = keys %{$current_probeset_hits->{$current_stable_id}->{probe_id}};
-        
-        my $match_summary = {
-            type                  => 'probe2transcript',
-            num_probes_mapped     => $num_probes_mapped,
-            current_probeset_size => $current_probeset_size,
-            stable_id             => $current_stable_id,
-            dbID                  => $current_probeset_name,
-          };
-        
-        my $probeset_match_accepted = ($num_probes_mapped / $current_probeset_size) >= $mapping_threshold;
-        
-        if ($probeset_match_accepted) {
-          push @final_probeset_assignments, $match_summary;
-        } else {
-          $match_summary->{summary} = 'Insufficient hits';
-          $match_summary->{object_type} = 'ProbeSet';
-          $match_summary->{num_probes_mapped} = $num_probes_mapped;
-          
-          $match_summary->{full_description} = "Insufficient number of hits, only $num_probes_mapped probes out of $current_probeset_size in the ProbeSet matched the transcript.";
-        
-          $rejected_probesets_file_fh->print( Dumper($match_summary) );
-        }
+      my $probeset_match_accepted = ($num_probes_mapped / $current_probeset_size) >= $mapping_threshold;
+      
+      if ($probeset_match_accepted) {
+        push @final_probeset_assignments, {
+          num_probes_mapped     => $num_probes_mapped,
+          current_probeset_size => $current_probeset_size,
+          stable_id             => $current_stable_id,
+        };
       }
-      if (scalar @final_probeset_assignments > $max_transcripts) {
-      
-        my $number_of_mappings = scalar @final_probeset_assignments;
-      
-        foreach my $current_probeset_assignment (@final_probeset_assignments) {
-        
-          $current_probeset_assignment->{summary} = 'Promiscuous ProbeSet';
-          $current_probeset_assignment->{object_type} = 'ProbeSet';
-          $current_probeset_assignment->{number_of_mappings} = $number_of_mappings;
-          $current_probeset_assignment->{full_description} = "ProbeSet maps to "
-            . $number_of_mappings
-            . " transcripts (maximum allowed: $max_transcripts).";
-        
-          $rejected_probesets_file_fh->print( Dumper($current_probeset_assignment) );
-        }
-      }
+    }
 
-      my $num_stable_ids_assigned_minus_one = -1 + scalar @final_probeset_assignments;
+    my $num_stable_ids_assigned_minus_one = -1 + scalar @final_probeset_assignments;
+    
+    foreach my $current_final_probeset_assignment (@final_probeset_assignments) {
+    
+      my $num_probes_mapped     = $current_final_probeset_assignment->{num_probes_mapped};
+      my $current_probeset_size = $current_final_probeset_assignment->{current_probeset_size};
+      my $stable_id             = $current_final_probeset_assignment->{stable_id};
+    
+      my $probeset_transcript_description = "$num_probes_mapped out of $current_probeset_size probes from this probeset have been mapped to this transcript. The probeset matches $num_stable_ids_assigned_minus_one other transcripts.";
       
-      foreach my $current_final_probeset_assignment (@final_probeset_assignments) {
-      
-        my $num_probes_mapped     = $current_final_probeset_assignment->{num_probes_mapped};
-        my $current_probeset_size = $current_final_probeset_assignment->{current_probeset_size};
-        my $stable_id             = $current_final_probeset_assignment->{stable_id};
-      
-        my $probeset_transcript_description = "$num_probes_mapped out of $current_probeset_size probes from this probeset have been mapped to this transcript. The probeset matches $num_stable_ids_assigned_minus_one other transcripts.";
-        
-        $probeset_to_transcript_fh->print(
-          join "\t", $current_probeset_name, $stable_id, $probeset_transcript_description
-        );
-        $probeset_to_transcript_fh->print("\n");
-      }
+      $probeset_to_transcript_fh->print(
+        join "\t", $current_probeset_name, $stable_id, $probeset_transcript_description
+      );
+      $probeset_to_transcript_fh->print("\n");
     }
   }
 }
 
+$probeset_to_transcript_fh->close;
+
+$logger->finish_log;
+$logger->info("All done.\n");
