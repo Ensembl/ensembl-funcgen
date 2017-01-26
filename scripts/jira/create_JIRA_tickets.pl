@@ -132,6 +132,14 @@ sub main {
     for my $ticket ( @{$tickets} ) {
         $logger->info( 'Creating' . ' "' . $ticket->{summary} . '" ... ' );
 
+        # if the ticket to be submitted is a subtask then fetch the parent key and
+        # replace the parent summary with the parent key
+        if ( $ticket->{'issuetype'}->{'name'} eq 'Sub-task' ) {
+            my $parent_key
+                = get_parent_key( $ticket->{'parent'}, $parameters, $logger );
+                $ticket->{'parent'} = { 'key'  => $parent_key };
+        }
+
         if ( $tickets_to_skip{ $ticket->{summary} } ) {
             $logger->info(
                 'Skipped: This seems to be a duplicate of https://www.ebi.ac.uk/panda/jira/browse/'
@@ -293,10 +301,10 @@ sub parse_tickets_file {
 
         $line = replace_placeholders( $line, $parameters );
 
-        my ($project,     $issue_type, $summary,
-            $reporter,    $assignee,   $priority,
-            $fixVersions, $due_date,   $component_string,
-            $description
+        my ($project,          $issue_type,  $summary,
+            $parent_summary,   $reporter,    $assignee,
+            $priority,         $fixVersions, $due_date,
+            $component_string, $description
         ) = split /\t/, $line;
 
         if ($assignee) {
@@ -314,6 +322,9 @@ sub parse_tickets_file {
             'project'     => { 'key'  => $project },
             'issuetype'   => { 'name' => $issue_type },
             'summary'     => $summary,
+            # the parent summary is replaced by the parent key
+            # just before the ticket submission
+            'parent'      => $parent_summary,
             'reporter'    => { 'name' => $reporter },
             'assignee'    => { 'name' => $assignee },
             'priority'    => { 'name' => $priority },
@@ -362,6 +373,37 @@ sub replace_placeholders {
     $line =~ s/<release_date>/$parameters->{dates}->{release}/g;
 
     return $line;
+}
+
+=head2 get_parent_key
+
+  Arg[1]      : String $line - One line from the tsv input file
+  Arg[2]      : Hashref $parameters - parameters from command line and config
+  Example     : $line = replace_placeholders( $line, $parameters );
+  Description : Replaces the placeholder tags with valid values and returns a
+                a new string
+  Return type : String
+  Exceptions  : none
+
+=cut
+
+sub get_parent_key {
+    my ( $summary, $parameters, $logger ) = @_;
+
+    # jql=summary ~ "Update declarations" AND fixVersion %3D release-88
+    my $content
+        = {   "jql" => 'fixVersion = release-'
+            . $parameters->{release}
+            . ' and summary ~ "'
+            . $summary
+            . '"' };
+
+    my $response = post_request( 'rest/api/latest/search',
+        $content, $parameters, $logger );
+
+    my $parent = decode_json( $response->content() )->{'issues'}->[0];
+
+    return $parent->{'key'};
 }
 
 # sub validate_fields {
@@ -489,7 +531,8 @@ sub post_request {
     }
 
     if ( !$response->is_success() ) {
-        my $error_message = $response->code() . ' ' . $response->message();
+        my $error_message = $response->as_string();
+
         $logger->error( $error_message, 0, 0 );
     }
 
