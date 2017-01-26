@@ -11,12 +11,12 @@ load_probeset_to_transcript_assignments.pl \
   --registry /homes/mnuhn/work_dir_probemapping/lib/ensembl-funcgen/registry.pm \
   --species  homo_sapiens \
   --array_name foobar \
-  --probe_transcript_assignments_file /nfs/nobackup/ensembl/mnuhn/array_mapping/temp/homo_sapiens/probeset_to_transcript_file.pl
+  --probeset_transcript_assignments_file /nfs/nobackup/ensembl/mnuhn/array_mapping/temp/homo_sapiens/probeset_to_transcript_file.pl
 
 =cut
 
 
-my $probe_transcript_assignments_file;
+my $probeset_transcript_assignments_file;
 my $species;
 my $registry;
 my $array_name;
@@ -25,7 +25,7 @@ GetOptions (
    'registry=s'    => \$registry,
    'species=s'     => \$species,
    'array_name=s'  => \$array_name,
-   'probe_transcript_assignments_file=s' => \$probe_transcript_assignments_file,
+   'probeset_transcript_assignments_file=s' => \$probeset_transcript_assignments_file,
 );
 
 use Bio::EnsEMBL::Utils::Logger;
@@ -46,7 +46,7 @@ my $mysql_base_cmd = 'mysql'
 ;
 
 my @load_command = map { $mysql_base_cmd . "'" . $_ . "'" } (
-  'load data local infile "' . $probe_transcript_assignments_file . '" into table probe_transcript (probe_id, stable_id, description);',
+  'load data local infile "' . $probeset_transcript_assignments_file . '" into table probeset_transcript (probeset_id, stable_id, description);',
 );
 
 foreach my $current_load_command (@load_command) {

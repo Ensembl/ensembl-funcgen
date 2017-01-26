@@ -18,8 +18,6 @@ compute_hits.pl \
 
 =cut
 
-# Constants:
-
 my $mapping_threshold = 0.5;
 
 my $transcript_info_file;
@@ -149,6 +147,11 @@ sub assign_probes_to_transcripts {
   return;
 }
 
+=head2 write_results_as_tsv
+
+  Takes two hashes, the first for the transcripts, the second for the descriptions.
+
+=cut
 sub write_results_as_tsv {
   my $fh   = shift;
   my $hash1 = shift;
@@ -210,7 +213,7 @@ sub assign_probsets_with_sufficient_probe_matches {
     # The number of probes from that probeset that have a probefeature
     # on this transcript.
     #
-    my $hits = scalar keys %{$probesets_matching_transcript->{$current_probeset_id}};
+    my $hits = scalar keys %{$probesets_matching_transcript->{$current_probeset_id}->{probe_id}};
     
     my $probeset_size = $probeset_sizes->{$current_probeset_id};
     
