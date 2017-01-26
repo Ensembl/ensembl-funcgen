@@ -377,11 +377,12 @@ sub replace_placeholders {
 
 =head2 get_parent_key
 
-  Arg[1]      : String $line - One line from the tsv input file
+  Arg[1]      : String $summary - Summary of the parent ticket
   Arg[2]      : Hashref $parameters - parameters from command line and config
-  Example     : $line = replace_placeholders( $line, $parameters );
-  Description : Replaces the placeholder tags with valid values and returns a
-                a new string
+  Arg[3]      : Bio::EnsEMBL::Utils::Logger $logger - object used for logging
+  Example     : my $parent_key
+                = get_parent_key( $ticket->{'parent'}, $parameters, $logger );
+  Description : Gets the ticket key of the parent task
   Return type : String
   Exceptions  : none
 
