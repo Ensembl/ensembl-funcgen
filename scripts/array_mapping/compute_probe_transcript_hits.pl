@@ -38,7 +38,48 @@ $logger->info("Reading transcript info " . $transcript_info_file . ".\n");
 my $num_transcripts_seen        = 0;
 my $print_life_sign_after_every = 1000;
 
+open my $probe_transcript_hits_file_fh,    '>', $probe_transcript_hits_file;
+
 my %probe_transcript_hits;
+
+$parser->parse({
+  data_dumper_file => $transcript_info_file,
+  call_back        => sub {
+    my $transcript_info = shift;
+    process_transcript_info(
+      $transcript_info
+    );
+  },
+});
+$logger->info("Done reading transcript info\n");
+
+$logger->info("Writing probe transcript hits from array $array_name\n");
+
+my $probe_transcript_hits_for_current_array = $probe_transcript_hits{$array_name};
+
+my @probe_ids = keys %$probe_transcript_hits_for_current_array;
+foreach my $current_probe_id (@probe_ids) {
+
+  my $probe_transcript_hits_for_current_probe = $probe_transcript_hits_for_current_array->{$current_probe_id};
+
+  $probe_transcript_hits_file_fh->print(
+    Dumper(
+      {
+        $array_name => 
+          {
+            $current_probe_id => $probe_transcript_hits_for_current_probe
+          }
+      }
+    )
+  );
+}
+
+$logger->info("Done.\n");
+
+$probe_transcript_hits_file_fh->close;
+
+$logger->finish_log;
+$logger->info("All done.\n");
 
 sub process_transcript_info {
 
@@ -73,11 +114,8 @@ sub process_transcript_info {
           my $current_hits = $current_probe_hits->{probesets}->{$current_probe_set_id}->{probe_id}->{$current_probe_id};
           $probe_transcript_hits{$current_array_name}{$current_probe_id}{$transcript_stable_id} = $current_hits;
         }
-      
       }
-      
     } else {
-    
       add_probe_hits_to_probe_transcript_hits(
         $current_array_name,
         $current_probe_hits, 
@@ -104,22 +142,3 @@ sub add_probe_hits_to_probe_transcript_hits {
   }
 }
 
-open my $probe_transcript_hits_file_fh,    '>', $probe_transcript_hits_file;
-
-$parser->parse({
-  data_dumper_file => $transcript_info_file,
-  call_back        => \&process_transcript_info,
-});
-
-$logger->info("Done reading transcript info\n");
-
-$logger->info("Writing file $probe_transcript_hits_file\n");
-
-use Data::Dumper;
-$probe_transcript_hits_file_fh->print(Dumper(\%probe_transcript_hits));
-
-$logger->info("Done.\n");
-
-$logger->finish_log;
-
-$logger->info("All done.\n");

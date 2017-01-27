@@ -83,7 +83,7 @@ GetOptions (
    'transcript_utr_file=s'                      => \$transcript_utr_file,
    'transcript_probe_features_overlaps=s'       => \$transcript_probe_features_overlaps,
    'transcript_info_file=s'                     => \$transcript_info_file,
-   'probe_feature_transcript_assignment_file=s' => \$probe_feature_transcript_assignment_file,
+   'probe_feature_transcript_assignments_file=s' => \$probe_feature_transcript_assignment_file,
 );
 
 use Bio::EnsEMBL::Utils::Logger;
@@ -109,6 +109,9 @@ my $transcripts        = $transcript_adaptor->fetch_all();
 
 open my $transcript_probe_features_overlaps_fh, '<', $transcript_probe_features_overlaps;
 open my $transcript_info_fh , '>', $transcript_info_file;
+
+$logger->info("Writing to $probe_feature_transcript_assignment_file");
+
 open my $probe_feature_transcript_assignment_fh , '>', $probe_feature_transcript_assignment_file;
 
 # TODO turn HACK into something proper

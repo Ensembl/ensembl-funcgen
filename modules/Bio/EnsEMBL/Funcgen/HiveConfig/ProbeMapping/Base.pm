@@ -41,10 +41,11 @@ sub resource_classes {
     return {
         %{$self->SUPER::resource_classes},
 
-        'default' => {
-          'LSF'   => ['', '--reg_conf '.$self->o('reg_conf')], 
-          'LOCAL' => ['', '--reg_conf '.$self->o('reg_conf')] 
-        },
+#         'default' => {
+#           'LSF'   => ['-q production-rh7 ', '--reg_conf '.$self->o('reg_conf')], 
+#           'LOCAL' => ['', '--reg_conf '.$self->o('reg_conf')] 
+#         },
+        'default'    => {'LSF' => '-q production-rh7' },
         '250Mb_job'    => {'LSF' => '-q production-rh7 -M250   -R"select[mem>250]   rusage[mem=250]"' },
         '500Mb_job'    => {'LSF' => '-q production-rh7 -M500   -R"select[mem>500]   rusage[mem=500]"' },
         '1Gb_job'      => {'LSF' => '-q production-rh7 -M1000  -R"select[mem>1000]  rusage[mem=1000]"' },
