@@ -104,10 +104,10 @@ use vars qw( %Config );
 
       platypus_exon => {
         -name    => 'platypus_exon',
-        -vendor  => 'AFFY',
+        -vendor  => 'CUSTOM',
         -format  => 'EXPRESSION',
         -type    => 'OLIGO',
-        -class   => 'AFFY_UTR',
+        -class   => 'CUSTOM',
       },
      },
 
@@ -263,6 +263,7 @@ use vars qw( %Config );
       'MouseWG_6_V1',
       'MouseWG_6_V2',
       'MouseRef-8_V2',
+      'MouseRef-8',
       'HumanWG_6_V1',
       'HumanHT-12_V3',
       'HumanHT-12_V4',
