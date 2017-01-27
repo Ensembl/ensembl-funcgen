@@ -99,7 +99,7 @@ my $process_data = sub {
     my $transcript_stable_id = $raw_probe_feature->{t_id};
     my $probe_feature_id     = $probe_feature->dbID;
     
-    $sth_store_probe_feature_transcript_mapping->bind_param(1,  $probe_feature_id);
+    $sth_store_probe_feature_transcript_mapping->bind_param(1, $probe_feature_id);
     $sth_store_probe_feature_transcript_mapping->bind_param(2, $transcript_stable_id);
     $sth_store_probe_feature_transcript_mapping->execute;
   }

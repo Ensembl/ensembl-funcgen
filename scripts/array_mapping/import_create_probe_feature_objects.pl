@@ -30,17 +30,57 @@ GetOptions (
 open my $promiscuous_hits_fh, '>', $promiscuous_hits;
 open my $accepted_hits_fh,    '>', $accepted_hits;
 
+# my $process_probe_data = sub {
+# 
+#   my $probe_hit_list = shift;
+#   
+#   if (@$probe_hit_list > $max_allowed_hits_per_probe) {
+#     $promiscuous_hits_fh->print(Dumper($probe_hit_list));
+#     return;
+#   }
+#   
+#   foreach my $current_probe_hit (@$probe_hit_list) {
+#     $accepted_hits_fh->print(Dumper($current_probe_hit));
+#   }
+# };
+
+my %count_probe_match_counts;
+
+my $count_probe_matches = sub {
+
+  my $probe_hit_list = shift;
+  
+  foreach my $current_probe_hit (@$probe_hit_list) {
+  
+    my $probe_id = $current_probe_hit->{probe_id};
+  
+    if (!exists $count_probe_match_counts{$probe_id}) {
+      $count_probe_match_counts{$probe_id} = 1;
+    } else {
+      $count_probe_match_counts{$probe_id}++
+    }
+  }
+};
+
+$promiscuous_hits_fh->print(Dumper(\%count_probe_match_counts));
+
 my $process_probe_data = sub {
 
   my $probe_hit_list = shift;
   
-  if (@$probe_hit_list > $max_allowed_hits_per_probe) {
-    $promiscuous_hits_fh->print(Dumper($probe_hit_list));
-    return;
-  }
-  
   foreach my $current_probe_hit (@$probe_hit_list) {
-    $accepted_hits_fh->print(Dumper($current_probe_hit));
+  
+    my $probe_id = $current_probe_hit->{probe_id};
+    
+    if (!exists $count_probe_match_counts{$probe_id}) {
+      die;
+    }
+    
+    my $number_of_probe_matches = $count_probe_match_counts{$probe_id};
+    
+    if ($number_of_probe_matches<$max_allowed_hits_per_probe) {
+      $accepted_hits_fh->print(Dumper($current_probe_hit));
+    }
   }
 };
 
@@ -49,5 +89,19 @@ my $parser = Bio::EnsEMBL::Funcgen::Parsers::DataDumper->new;
 
 $parser->parse({
   data_dumper_file => $parsed_data,
+  call_back        => $count_probe_matches,
+});
+
+$parser->parse({
+  data_dumper_file => $parsed_data,
   call_back        => $process_probe_data,
 });
+
+
+
+
+
+
+
+
+
