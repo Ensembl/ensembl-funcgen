@@ -71,6 +71,40 @@ my $print_life_sign_after_every = 1000;
 
 my %object_transcript_hits;
 
+open my $probeset_transcript_hits_file_fh,    '>', $probeset_transcript_hits_file;
+
+$parser->parse({
+  data_dumper_file => $transcript_info_file,
+  call_back        => \&process_transcript_info,
+});
+
+$logger->info("Done reading transcript info\n");
+$logger->info("Writing file $probeset_transcript_hits_file\n");
+
+# $probeset_transcript_hits_file_fh->print(Dumper(\%object_transcript_hits));
+my $probe_transcript_hits_for_current_array = $object_transcript_hits{$array_name};
+
+my @probe_ids = keys %$probe_transcript_hits_for_current_array;
+foreach my $current_probe_id (@probe_ids) {
+
+  my $probe_transcript_hits_for_current_probe = $probe_transcript_hits_for_current_array->{$current_probe_id};
+
+  $probeset_transcript_hits_file_fh->print(
+    Dumper(
+      {
+        $array_name => 
+          {
+            $current_probe_id => $probe_transcript_hits_for_current_probe
+          }
+      }
+    )
+  );
+}
+
+$logger->info("Done.\n");
+$logger->finish_log;
+$logger->info("All done.\n");
+
 sub process_transcript_info {
 
   my $transcript_info = shift;
@@ -109,22 +143,3 @@ sub process_transcript_info {
   }
 }
 
-open my $probeset_transcript_hits_file_fh,    '>', $probeset_transcript_hits_file;
-
-$parser->parse({
-  data_dumper_file => $transcript_info_file,
-  call_back        => \&process_transcript_info,
-});
-
-$logger->info("Done reading transcript info\n");
-
-$logger->info("Writing file $probeset_transcript_hits_file\n");
-
-use Data::Dumper;
-$probeset_transcript_hits_file_fh->print(Dumper(\%object_transcript_hits));
-
-$logger->info("Done.\n");
-
-$logger->finish_log;
-
-$logger->info("All done.\n");

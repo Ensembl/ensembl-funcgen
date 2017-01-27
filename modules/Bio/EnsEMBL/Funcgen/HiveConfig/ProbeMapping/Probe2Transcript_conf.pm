@@ -268,6 +268,20 @@ sub pipeline_analyses {
                   . '  --probeset_transcript_hits_file ' . $probeset_transcript_hits_by_array_file
             },
             -flow_into => {
+                MAIN     => 'create_probeset_to_transcript_descriptions',
+                MEMLIMIT => 'compute_probeset_transcript_hits_32gb',
+            },
+        },
+        {   -logic_name  => 'compute_probeset_transcript_hits_32gb',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters  => {
+                cmd => 
+                    'compute_probeset_transcript_hits.pl'
+                  . '  --array_name #array_name#'
+                  . '  --transcript_info_file       ' . $transcript_info_file
+                  . '  --probeset_transcript_hits_file ' . $probeset_transcript_hits_by_array_file
+            },
+            -flow_into => {
                 MAIN => 'create_probeset_to_transcript_descriptions',
             },
         },
@@ -306,8 +320,23 @@ sub pipeline_analyses {
                   . '  --probe_transcript_hits_file ' . $probe_transcript_hits_by_array_file
             },
             -flow_into => {
+                MAIN     => 'create_probe_to_transcript_descriptions',
+                MEMLIMIT => 'compute_probe_transcript_hits_32gb',
+            },
+        },
+        {   -logic_name  => 'compute_probe_transcript_hits_32gb',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters  => {
+                cmd => 
+                    'compute_probe_transcript_hits.pl'
+                  . '  --array_name #array_name#'
+                  . '  --transcript_info_file       ' . $transcript_info_file
+                  . '  --probe_transcript_hits_file ' . $probe_transcript_hits_by_array_file
+            },
+            -flow_into => {
                 MAIN => 'create_probe_to_transcript_descriptions',
-            },           
+            },
+          -rc_name     => '32Gb_job',
         },
         {   -logic_name  => 'create_probe_to_transcript_descriptions',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
