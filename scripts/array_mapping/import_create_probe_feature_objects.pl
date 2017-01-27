@@ -46,6 +46,8 @@ open my $accepted_hits_fh,    '>', $accepted_hits;
 
 my %count_probe_match_counts;
 
+$count_probe_match_counts{'foo'} = 'bar';
+
 my $count_probe_matches = sub {
 
   my $probe_hit_list = shift;
@@ -61,8 +63,6 @@ my $count_probe_matches = sub {
     }
   }
 };
-
-$promiscuous_hits_fh->print(Dumper(\%count_probe_match_counts));
 
 my $process_probe_data = sub {
 
@@ -91,6 +91,10 @@ $parser->parse({
   data_dumper_file => $parsed_data,
   call_back        => $count_probe_matches,
 });
+
+# print Dumper(\%count_probe_match_counts);
+
+$promiscuous_hits_fh->print(Dumper(\%count_probe_match_counts));
 
 $parser->parse({
   data_dumper_file => $parsed_data,
