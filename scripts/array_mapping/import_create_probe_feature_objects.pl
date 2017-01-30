@@ -30,20 +30,6 @@ GetOptions (
 open my $promiscuous_hits_fh, '>', $promiscuous_hits;
 open my $accepted_hits_fh,    '>', $accepted_hits;
 
-# my $process_probe_data = sub {
-# 
-#   my $probe_hit_list = shift;
-#   
-#   if (@$probe_hit_list > $max_allowed_hits_per_probe) {
-#     $promiscuous_hits_fh->print(Dumper($probe_hit_list));
-#     return;
-#   }
-#   
-#   foreach my $current_probe_hit (@$probe_hit_list) {
-#     $accepted_hits_fh->print(Dumper($current_probe_hit));
-#   }
-# };
-
 my %count_probe_match_counts;
 
 $count_probe_match_counts{'foo'} = 'bar';
@@ -92,20 +78,9 @@ $parser->parse({
   call_back        => $count_probe_matches,
 });
 
-# print Dumper(\%count_probe_match_counts);
-
 $promiscuous_hits_fh->print(Dumper(\%count_probe_match_counts));
 
 $parser->parse({
   data_dumper_file => $parsed_data,
   call_back        => $process_probe_data,
 });
-
-
-
-
-
-
-
-
-
