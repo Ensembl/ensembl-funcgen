@@ -46,7 +46,10 @@ my $process_data = sub {
 
   my $count_probe_match_counts = shift;
   
+  PROBE_ID:
   foreach my $current_probe_id (keys %$count_probe_match_counts) {
+  
+    next PROBE_ID if ($current_probe_id eq 'foo');
   
     my $match_count = $count_probe_match_counts->{$current_probe_id};
 
