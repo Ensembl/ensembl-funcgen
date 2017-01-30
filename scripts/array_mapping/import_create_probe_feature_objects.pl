@@ -32,7 +32,7 @@ open my $accepted_hits_fh,    '>', $accepted_hits;
 
 my %count_probe_match_counts;
 
-$count_probe_match_counts{'foo'} = 'bar';
+# $count_probe_match_counts{'foo'} = 'bar';
 
 my $count_probe_matches = sub {
 

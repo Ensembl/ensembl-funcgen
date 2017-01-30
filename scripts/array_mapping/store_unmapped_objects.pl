@@ -20,6 +20,7 @@ my $registry;
 my $species;
 my $analysis_logic_name;
 my $target_type;
+my $max_allowed_hits_per_probe = 100;
 
 GetOptions (
    'promiscuous_hits=s'    => \$promiscuous_hits,
@@ -27,6 +28,7 @@ GetOptions (
    'species=s'             => \$species,
    'analysis_logic_name=s' => \$analysis_logic_name,
    'target_type=s'         => \$target_type,
+   'max_allowed_hits_per_probe=s' => \$max_allowed_hits_per_probe,
 );
 
 if (! -e $promiscuous_hits) {
@@ -53,18 +55,21 @@ my $process_data = sub {
   
     my $match_count = $count_probe_match_counts->{$current_probe_id};
 
-    use Bio::EnsEMBL::UnmappedObject;
-    my $unmapped_object = Bio::EnsEMBL::UnmappedObject->new (
-      -type                => 'array_mapping',
-      -analysis            => $analysis,
-      -ensembl_id          => $current_probe_id,
-      -ensembl_object_type => 'Probe',
-      -external_db_id      => undef,
-      -identifier          => $target_type,
-      -summary             => 'Promiscuous probe',
-      -full_desc           => "Probe exceeded maximum allowed number of mappings. ($match_count matches)"
-    );
-    $unmapped_object_adaptor->store($unmapped_object);
+    if ($match_count>$max_allowed_hits_per_probe) {
+    
+      use Bio::EnsEMBL::UnmappedObject;
+      my $unmapped_object = Bio::EnsEMBL::UnmappedObject->new (
+        -type                => 'array_mapping',
+        -analysis            => $analysis,
+        -ensembl_id          => $current_probe_id,
+        -ensembl_object_type => 'Probe',
+        -external_db_id      => undef,
+        -identifier          => $target_type,
+        -summary             => 'Promiscuous probe',
+        -full_desc           => "Probe exceeded maximum allowed number of mappings. ($match_count matches)"
+      );
+      $unmapped_object_adaptor->store($unmapped_object);
+    }
   }
 };
 

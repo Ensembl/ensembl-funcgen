@@ -30,9 +30,10 @@ sub pipeline_analyses {
     my $probeset_to_transcript_by_array_file           = $probe2transcript_array_specific_temp_dir . '/probeset_to_transcript_file.pl';
     my $probe_transcript_assignments_by_array_file     = $probe2transcript_array_specific_temp_dir . '/probes_transcript_assignments.tsv';
     my $probeset_transcript_assignments_by_array       = $probe2transcript_array_specific_temp_dir . '/probeset_transcript_assignments.tsv';
+    my $probeset_rejections_file                       = $probe2transcript_array_specific_temp_dir . '/rejected_probesets.pl';
+    
     
     my $probe_feature_transcript_assignment_file       = $probe2transcript_temp_dir . '/probe_feature_transcript_assignments.tsv';
-    
     
     my $probeset_transcript_rejections                 = $probe2transcript_temp_dir . '/probeset_transcript_rejections.tsv';
     my $probe_transcript_assignments                   = $probe2transcript_temp_dir . '/probe_transcript_assignments.tsv';
@@ -264,7 +265,7 @@ sub pipeline_analyses {
                 cmd => 
                     'compute_probeset_transcript_hits.pl'
                   . '  --array_name #array_name#'
-                  . '  --transcript_info_file       ' . $transcript_info_file
+                  . '  --transcript_info_file '          . $transcript_info_file
                   . '  --probeset_transcript_hits_file ' . $probeset_transcript_hits_by_array_file
             },
             -flow_into => {
@@ -294,9 +295,24 @@ sub pipeline_analyses {
                   . '  --probeset_sizes                      '    . $probeset_sizes_file
                   . '  --probeset_transcript_hits_by_array_file ' . $probeset_transcript_hits_by_array_file
                   . '  --probeset_to_transcript_file         '    . $probeset_transcript_assignments_by_array
+                  . '  --rejected_probesets_file ' . $probeset_rejections_file
             },
             -flow_into => {
-                MAIN => 'load_probeset_to_transcript_assignments',
+                MAIN => [
+                  'load_probeset_to_transcript_assignments',
+                  'load_probeset_to_transcript_rejections'
+                ]
+            },
+        },
+        {   -logic_name  => 'load_probeset_to_transcript_rejections',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters  => {
+                cmd => 
+                    'load_probeset_to_transcript_rejections.pl '
+                  . ' --registry    #reg_conf#'
+                  . ' --species     #species#'
+                  . ' --analysis_logic_name  ProbeAlign_transcript'
+                  . ' --probeset_rejections_file ' . $probeset_rejections_file
             },
         },
         {   -logic_name  => 'load_probeset_to_transcript_assignments',
