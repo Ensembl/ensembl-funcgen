@@ -104,10 +104,10 @@ use vars qw( %Config );
 
       platypus_exon => {
         -name    => 'platypus_exon',
-        -vendor  => 'CUSTOM',
+        -vendor  => 'AFFY',
         -format  => 'EXPRESSION',
         -type    => 'OLIGO',
-        -class   => 'CUSTOM',
+        -class   => 'AFFY_UTR',
       },
      },
 
