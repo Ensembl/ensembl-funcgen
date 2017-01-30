@@ -34,6 +34,7 @@ sub pipeline_analyses {
       },
       {   -logic_name  => 'filter_features_from_promiscuous_probes',
           -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -batch_size  => 50,
           -parameters => {
               cmd => '
                 import_create_probe_feature_objects.pl \
