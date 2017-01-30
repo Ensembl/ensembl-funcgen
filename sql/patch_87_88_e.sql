@@ -26,7 +26,7 @@ CREATE TABLE `probeset_transcript` (
   `description` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`probeset_transcript_id`),
   KEY `probeset_transcript_id_idx` (`probeset_transcript_id`)
-);
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 insert into `probeset_transcript` (`probeset_id`, `stable_id`, `description`) (
   select 
