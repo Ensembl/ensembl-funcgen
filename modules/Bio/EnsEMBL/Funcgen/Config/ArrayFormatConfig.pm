@@ -19,8 +19,9 @@ sub for_array_class {
   }
 
   if (! exists $self->array_format_config->{$array_class}) {
-    warn("Unknown array class ${array_class}. Using default values.");
-    return ArrayClassConfiguration->new($self->default_array_format_config);
+    die("Unknown array class ${array_class}. Please make sure the array has been registered correctly in the Bio::EnsEMBL::Funcgen::Config::ImportArrays module.");
+#     warn("Unknown array class ${array_class}. Using default values.");
+#     return ArrayClassConfiguration->new($self->default_array_format_config);
   }
   
   return ArrayClassConfiguration->new(
