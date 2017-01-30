@@ -93,7 +93,8 @@ $logger->init_log;
 Bio::EnsEMBL::Registry->load_all($registry);
 
 use Bio::EnsEMBL::Funcgen::Config::ArrayFormatConfig;
-my $array_format_config = Bio::EnsEMBL::Funcgen::Config::ArrayFormatConfig->new->array_format_config;
+# my $array_format_config = Bio::EnsEMBL::Funcgen::Config::ArrayFormatConfig->new->array_format_config;
+my $array_format_config = Bio::EnsEMBL::Funcgen::Config::ArrayFormatConfig->new;
 
 use Bio::EnsEMBL::Funcgen::Parsers::DataDumper;
 my $transcript_utr = Bio::EnsEMBL::Funcgen::Parsers::DataDumper->new->load_first_item_from_data_dump_file($transcript_utr_file);
@@ -474,8 +475,9 @@ sub examine_probefeature {
   my $transcript_version     = $transcript->version;
   my $log_name;
 
-  my $array_configuration = $array_format_config->{$array_class};
-  lock_hash(%$array_configuration);
+#   my $array_configuration = $array_format_config->{$array_class};
+#   lock_hash(%$array_configuration);
+  my $array_configuration = $array_format_config->for_array_class($array_class);
   
   if($array_configuration->{probeset_arrays}) {
     $log_name       = $transcript_sid."\t(${probeset_name})\t${probe_id}";
