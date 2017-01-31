@@ -57,13 +57,32 @@ sub pipeline_analyses {
                   "truncate probe_feature_transcript;",
                   "truncate unmapped_object;",
                   "truncate unmapped_reason;",
+                  "delete analysis_description from analysis_description, analysis where analysis.analysis_id=analysis_description.analysis_id and logic_name like '%Probe%Align';",
+                  "delete from analysis where logic_name like '%Probe%Align';",
+                  "delete analysis_description from analysis_description, analysis where analysis.analysis_id=analysis_description.analysis_id and logic_name = 'probe2transcript';",
+                  "delete from analysis where logic_name = 'probe2transcript';",
+                  
                 ],
                 db_conn => 'funcgen:#species#',
             },
             -flow_into => {
-               MAIN => 'job_factory_import_arrays',
+               MAIN => 'create_probe_mapping_analyses',
             },
         },
+        {
+            -logic_name  => 'create_probe_mapping_analyses',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters => {
+                cmd       => 
+                    'create_probe_mapping_analyses.pl'
+                  . ' --registry #reg_conf#'
+                  . ' --species  #species#'
+            },
+            -flow_into => {
+                MAIN => 'job_factory_import_arrays',
+            },
+        },
+
         {
           -logic_name  => 'job_factory_import_arrays',
           -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::JobFactory',
@@ -107,7 +126,7 @@ sub pipeline_analyses {
         {
             -logic_name  => 'store_array_objects',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -analysis_capacity => 3,
+            -analysis_capacity => 1,
             -parameters => {
                 cmd       => '
                   import_store_array_objects.pl \
