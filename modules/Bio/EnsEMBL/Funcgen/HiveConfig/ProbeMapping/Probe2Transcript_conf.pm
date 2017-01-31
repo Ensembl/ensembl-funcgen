@@ -24,14 +24,14 @@ sub pipeline_analyses {
     my $probeset_sizes_file                            = $probe2transcript_temp_dir . '/probeset_sizes.pl';
     my $object_names_file                              = $probe2transcript_temp_dir . '/object_names.pl';
     my $transcript_info_file                           = $probe2transcript_temp_dir . '/transcript_info.pl';
-    
+    my $probe_feature_transcript_rejection_file        = $probe2transcript_temp_dir . '/rejected_probe_features.pl';
+
     my $probeset_transcript_hits_by_array_file         = $probe2transcript_array_specific_temp_dir . '/probeset_transcript_hits_file.pl';
     my $probe_transcript_hits_by_array_file            = $probe2transcript_array_specific_temp_dir . '/probe_transcript_hits_file.pl';
     my $probeset_to_transcript_by_array_file           = $probe2transcript_array_specific_temp_dir . '/probeset_to_transcript_file.pl';
     my $probe_transcript_assignments_by_array_file     = $probe2transcript_array_specific_temp_dir . '/probes_transcript_assignments.tsv';
     my $probeset_transcript_assignments_by_array       = $probe2transcript_array_specific_temp_dir . '/probeset_transcript_assignments.tsv';
     my $probeset_rejections_file                       = $probe2transcript_array_specific_temp_dir . '/rejected_probesets.pl';
-    
     
     my $probe_feature_transcript_assignment_file       = $probe2transcript_temp_dir . '/probe_feature_transcript_assignments.tsv';
     
@@ -217,15 +217,29 @@ sub pipeline_analyses {
                 . ' --transcript_utr_file                ' . $transcript_utr_file 
                 . ' --transcript_info_file               ' . $transcript_info_file
                 . ' --probe_feature_transcript_assignments_file ' . $probe_feature_transcript_assignment_file
+                . ' --probe_feature_transcript_rejection_file '   . $probe_feature_transcript_rejection_file
           },
           -flow_into => {
               MAIN => [
                 'compute_probeset_transcript_assignments_per_array',
-                'load_probe_feature_to_transcript_assignments'
+                'load_probe_feature_to_transcript_assignments',
+                'load_probe_feature_to_transcript_rejections',
               ]
           },
           -rc_name     => '4Gb_job',
       },
+        {   -logic_name  => 'load_probe_feature_to_transcript_rejections',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters  => {
+                cmd => 
+                    'load_probeset_to_transcript_rejections.pl '
+                  . ' --registry    #reg_conf#'
+                  . ' --species     #species#'
+                  . ' --analysis_logic_name  ProbeAlign_transcript'
+                  . ' --probeset_rejections_file ' . $probe_feature_transcript_rejection_file
+            },
+        },
+
         {   -logic_name  => 'load_probe_feature_to_transcript_assignments',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {

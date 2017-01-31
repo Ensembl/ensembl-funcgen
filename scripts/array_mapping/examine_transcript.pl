@@ -28,62 +28,22 @@ my $transcript_utr_file;
 my $transcript_probe_features_overlaps;
 my $transcript_info_file;
 my $probe_feature_transcript_assignment_file;
+my $probe_feature_transcript_rejection_file;
 
 # Constants
 my $debug = undef;
 my $max_mismatches = 1;
 
-=head2 cache_and_load_unmapped_objects
-
-  Description: Stores an objects into the unmapped_object table, with some caching
-  Arg1: hash ref of global constants
-  Arg2: hash ref with stats on unmapped objects
-  Arg3: array ref of Bio::EnsEMBL::UnmappedObject objects
-  Arg4: stable id to potential hit
-  Arg5: "Probe", "ProbeSet" or "ProbeFeature"
-  Arg6: Ensembl ID of the object
-  Arg7: short string description
-  Arg8: longer string description
-
-=cut
-
-sub cache_and_load_unmapped_objects {
-
-  my $param = shift;
-  lock_hash(%$param);
-
-  my $identifier       = $param->{identifier};
-  my $object_type      = $param->{object_type};
-  my $object_id        = $param->{object_id};
-  my $summary          = $param->{summary};
-  my $description      = $param->{description};
-
-#   use Bio::EnsEMBL::UnmappedObject;
-#   my $um_obj = Bio::EnsEMBL::UnmappedObject->new(
-#     -type                => 'probe2transcript',
-#     -analysis            => 'Put probe2transcript analysis object here',
-#     -identifier          => $identifier,
-#     -summary             => $summary,
-#     -full_desc           => $description,
-#     -ensembl_object_type => $object_type,
-#     -ensembl_id          => $object_id,
-# #     -external_db_id      => $options->{transc_edb_id},
-#   );
-  
-  # Todo: Write this to file
-#   print "Todo: Write this to file\n";
-  return;
-}
-
 GetOptions (
-   'registry=s'                                 => \$registry,
-   'species=s'                                  => \$species,
-   'transcript_file=s'                          => \$transcript_file,
-   'flanks_file=s'                              => \$flanks_file,
-   'transcript_utr_file=s'                      => \$transcript_utr_file,
-   'transcript_probe_features_overlaps=s'       => \$transcript_probe_features_overlaps,
-   'transcript_info_file=s'                     => \$transcript_info_file,
+   'registry=s'                                  => \$registry,
+   'species=s'                                   => \$species,
+   'transcript_file=s'                           => \$transcript_file,
+   'flanks_file=s'                               => \$flanks_file,
+   'transcript_utr_file=s'                       => \$transcript_utr_file,
+   'transcript_probe_features_overlaps=s'        => \$transcript_probe_features_overlaps,
+   'transcript_info_file=s'                      => \$transcript_info_file,
    'probe_feature_transcript_assignments_file=s' => \$probe_feature_transcript_assignment_file,
+   'probe_feature_transcript_rejection_file=s'   => \$probe_feature_transcript_rejection_file,
 );
 
 use Bio::EnsEMBL::Utils::Logger;
@@ -110,6 +70,7 @@ my $transcripts        = $transcript_adaptor->fetch_all();
 
 open my $transcript_probe_features_overlaps_fh, '<', $transcript_probe_features_overlaps;
 open my $transcript_info_fh , '>', $transcript_info_file;
+open my $probe_feature_transcript_rejection_fh , '>', $probe_feature_transcript_rejection_file;
 
 $logger->info("Writing to $probe_feature_transcript_assignment_file");
 
@@ -132,6 +93,29 @@ sub add_xref {
   return;
 }
 
+sub cache_and_load_unmapped_objects {
+
+  my $param = shift;
+  lock_hash(%$param);
+
+  my $identifier       = $param->{identifier};
+  my $object_type      = $param->{object_type};
+  my $object_id        = $param->{object_id};
+  my $summary          = $param->{summary};
+  my $description      = $param->{description};
+  
+  my $unmapped_object_description = {
+    dbID             => $object_id,
+    object_type      => $object_type,
+    stable_id        => $identifier,
+    summary          => $summary,
+    full_description => $description,
+    type             => 'probe2transcript',
+  };
+  
+  $probe_feature_transcript_rejection_fh->print(Dumper($unmapped_object_description));
+  return;
+}
 
 associate_probes_to_transcripts({
   transcripts             => $transcripts,
