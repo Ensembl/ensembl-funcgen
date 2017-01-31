@@ -123,10 +123,11 @@ sub create_probeset_transcript_description {
         my $num_probes_mapped = keys %{$current_probeset_hits->{$current_stable_id}->{probe_id}};
         
         my $match_summary = {
+            type                  => 'probe2transcript',
             num_probes_mapped     => $num_probes_mapped,
             current_probeset_size => $current_probeset_size,
             stable_id             => $current_stable_id,
-            current_probeset_name => $current_probeset_name,
+            dbID                  => $current_probeset_name,
           };
         
         my $probeset_match_accepted = ($num_probes_mapped / $current_probeset_size) >= $mapping_threshold;
@@ -135,6 +136,7 @@ sub create_probeset_transcript_description {
           push @final_probeset_assignments, $match_summary;
         } else {
           $match_summary->{summary} = 'Insufficient hits';
+          $match_summary->{object_type} = 'ProbeSet';
           $match_summary->{num_probes_mapped} = $num_probes_mapped;
           
           $match_summary->{full_description} = "Insufficient number of hits, only $num_probes_mapped probes out of $current_probeset_size in the ProbeSet matched the transcript.";
@@ -149,6 +151,7 @@ sub create_probeset_transcript_description {
         foreach my $current_probeset_assignment (@final_probeset_assignments) {
         
           $current_probeset_assignment->{summary} = 'Promiscuous ProbeSet';
+          $current_probeset_assignment->{object_type} = 'ProbeSet';
           $current_probeset_assignment->{number_of_mappings} = $number_of_mappings;
           $current_probeset_assignment->{full_description} = "ProbeSet maps to "
             . $number_of_mappings

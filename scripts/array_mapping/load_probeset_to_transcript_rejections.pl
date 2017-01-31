@@ -51,10 +51,10 @@ my $process_data = sub {
   
   use Bio::EnsEMBL::UnmappedObject;
   my $unmapped_object = Bio::EnsEMBL::UnmappedObject->new (
-    -type                => 'array_mapping',
+    -type                => $probeset_rejection->{type},
     -analysis            => $analysis,
-    -ensembl_id          => $probeset_rejection->{current_probeset_name},
-    -ensembl_object_type => 'ProbeSet',
+    -ensembl_id          => $probeset_rejection->{dbID},
+    -ensembl_object_type => $probeset_rejection->{object_type},
     -external_db_id      => undef,
     -identifier          => $probeset_rejection->{stable_id},
     -summary             => $probeset_rejection->{summary},
