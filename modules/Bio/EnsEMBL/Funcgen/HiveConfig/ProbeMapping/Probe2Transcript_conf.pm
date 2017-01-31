@@ -235,7 +235,7 @@ sub pipeline_analyses {
                     'load_probeset_to_transcript_rejections.pl '
                   . ' --registry    #reg_conf#'
                   . ' --species     #species#'
-                  . ' --analysis_logic_name  ProbeAlign_transcript'
+                  . ' --analysis_logic_name  probe2transcript'
                   . ' --probeset_rejections_file ' . $probe_feature_transcript_rejection_file
             },
         },
