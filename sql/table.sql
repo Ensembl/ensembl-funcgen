@@ -134,6 +134,7 @@ CREATE TABLE `regulatory_build` (
   `feature_type_id` int(4) unsigned NOT NULL,
   `analysis_id` smallint(5) unsigned NOT NULL,
   `is_current` tinyint(1) NOT NULL DEFAULT '0',
+  `sample_regulatory_feature_id` int(10) unsigned,
   PRIMARY KEY (`regulatory_build_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -1035,6 +1036,7 @@ CREATE TABLE `probe` (
   `array_chip_id` int(10) unsigned NOT NULL,
   `class` varchar(20) DEFAULT NULL,
   `description` varchar(255) DEFAULT NULL,
+  `probe_seq_id` int(10) DEFAULT NULL,
   PRIMARY KEY (`probe_id`,`name`,`array_chip_id`),
   KEY `probe_set_idx` (`probe_set_id`),
   KEY `array_chip_idx` (`array_chip_id`),
@@ -1325,16 +1327,22 @@ CREATE TABLE `meta` (
 
 -- Add necessary meta values
 INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '86');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '88');
 
 
 -- Update and remove these for each release to avoid erroneous patching
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_86_87_a.sql|schema_version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_86_87_b.sql|Change data type of certain columns to facilitate foreing key constraints');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_86_87_c.sql|Remove obsolete coloumns from external_feature_file');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_86_87_d.sql|Add \'unknown\' as a valid gender in the epigenome table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_86_87_e.sql|Increase data_set.name length');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_87_88_b.sql|seq_region_name_255');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_87_88_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_87_88_b.sql|Create probe_seq table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_87_88_c.sql|create probe_feature_transcript table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_87_88_d.sql|create probe_transcript table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_87_88_e.sql|create probeset_transcript table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_87_88_f.sql|Remove probe features from object_xref and xref table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_87_88_g.sql|Remove probe mappings from the xref tables');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_87_88_h.sql|Remove probe set mappings from the xref tables');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_87_88_i.sql|sample_regulatory_feature_id field for regulatory build');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_87_88_j.sql|seq_region_name_255');
+
+
 
 /**
 @table meta_coord
@@ -1757,5 +1765,46 @@ CREATE TABLE `seq_region` (
 -- It will never be used to retrieve a slice as we do that via the core DB
 -- Usage: Pull back seq_region_id based schema_build and core_seq_region_id
 
+#TODO add documentation
+DROP TABLE IF EXISTS `probe_seq`;
+CREATE TABLE `probe_seq` (
+  `probe_seq_id` int(10) NOT NULL AUTO_INCREMENT,
+  `probe_sha1` char(40) NOT NULL,
+  `probe_dna` text NOT NULL,
+  PRIMARY KEY (`probe_seq_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+#TODO add documentation
+DROP TABLE IF EXISTS `probe_feature_transcript`;
+CREATE TABLE `probe_feature_transcript` (
+  `probe_feature_transcript_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `probe_feature_id` int(10) unsigned DEFAULT NULL,
+  `stable_id`   varchar(18) DEFAULT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`probe_feature_transcript_id`),
+  KEY `probe_feature_transcript_id_idx` (`probe_feature_transcript_id`),
+  KEY `probe_feature_id_idx` (`probe_feature_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+#TODO add documentation
+DROP TABLE IF EXISTS `probe_transcript`;
+CREATE TABLE `probe_transcript` (
+  `probe_transcript_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `probe_id`    int(10) unsigned NOT NULL,
+  `stable_id`   varchar(18)      NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`probe_transcript_id`),
+  KEY `probe_transcript_id` (`probe_transcript_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+#TODO add documentation
+DROP TABLE IF EXISTS `probeset_transcript`;
+CREATE TABLE `probeset_transcript` (
+  `probeset_transcript_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `probeset_id`    int(10) unsigned NOT NULL,
+  `stable_id`   varchar(18)      NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`probeset_transcript_id`),
+  KEY `probeset_transcript_id_idx` (`probeset_transcript_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
