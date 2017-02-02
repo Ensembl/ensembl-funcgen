@@ -39,3 +39,5 @@ insert into `probe_transcript` (`probe_id`, `stable_id`, `description`) (
   where ensembl_object_type="Probe"
 );
 
+# Patch identifier
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_87_88_d.sql|create probe_transcript table');

@@ -32,3 +32,5 @@ CREATE TABLE `probe_seq` (
 
 ALTER TABLE probe ADD COLUMN probe_seq_id int(10) DEFAULT NULL;
 
+# Patch identifier
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_87_88_b.sql|Create probe_seq table');

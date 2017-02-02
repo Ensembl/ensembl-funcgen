@@ -73,3 +73,6 @@ where
 
 drop table `temp_sample_id_max_activities`;
 drop table `temp_sample_id`;
+
+# Patch identifier
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_87_88_i.sql|sample_regulatory_feature_id field for regulatory build');

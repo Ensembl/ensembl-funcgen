@@ -13,7 +13,7 @@
 -- See the License for the specific language governing permissions and
 -- limitations under the License.
 
-# patch_87_88_b.sql
+# patch_87_88_j.sql
 #
 # Title: Allow seq_region name to be longer
 #
@@ -23,5 +23,4 @@
 ALTER TABLE seq_region MODIFY COLUMN name VARCHAR(255) NOT NULL;
 
 # Patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value)
-  VALUES (NULL, 'patch', 'patch_87_88_b.sql|seq_region_name_255');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_87_88_j.sql|seq_region_name_255');
