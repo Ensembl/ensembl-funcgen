@@ -171,6 +171,7 @@ use vars qw( %Config );
         'Rice',
         'Poplar',
         'Vitis_Vinifera',
+        'maize',
       ],
 
     },
