@@ -9,17 +9,17 @@ use feature qw(say);
 use Data::Printer;
 use Storable;
 
-my $cttv020_dir = $ENV{'CTTV020_DIR'};
-my $study_dir   = $ENV{'STUDY_DIR'};
+my $workdir = $ENV{'workdir'};
+my $data_dir   = $ENV{'DATA_DIR'};
 
-my @filenames = @{ retrieve( $study_dir . '/filenames_variable' ) };
+my @filenames = @{ retrieve( $data_dir . '/filenames_variable' ) };
 # s/\.cram// for @filenames;    # remove .cram extension from filenames
 
 my $bsub_cmd
     = 'bsub -M6000 -R"select[mem>6000] rusage[mem=6000]" -J convert[1-'
     . scalar @filenames
     . '] -o convert.%I.out -e convert.%I.err \''
-    . $cttv020_dir
+    . $workdir
     . '/lib/ensembl-funcgen/scripts/CTTV020/convertCram2fq_job.pl ' . '\'';
 
 my $exit_code = system($bsub_cmd);

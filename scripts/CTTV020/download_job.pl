@@ -9,12 +9,12 @@ use feature qw(say);
 use Storable;
 use Expect;
 
-my $study_dir = $ENV{'STUDY_DIR'};
+my $data_dir = $ENV{'DATA_DIR'};
 my $job_index = $ENV{'LSB_JOBINDEX'};
 my $user = $ENV{'USER'};
 my $password = $ENV{'SANG_PASS'};
 
-my @filenames = @{retrieve($study_dir . '/filenames_variable')};
+my @filenames = @{retrieve($data_dir . '/filenames_variable')};
 
 my $filename = $filenames[$job_index - 1];
 my ( $parent_dir, $junk ) = split /_/, $filename;

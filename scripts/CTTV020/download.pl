@@ -8,7 +8,7 @@ use feature qw(say);
 
 use Storable;
 
-my $cttv020_dir = $ENV{'CTTV020_DIR'};
+my $workdir = $ENV{'workdir'};
 
 my @filenames;
 my $file_list = shift or die "Please provide a file list";
@@ -23,14 +23,14 @@ while (<$fh>) {
 
 close $fh;
 
-my $study_dir = $ENV{'STUDY_DIR'};
-store \@filenames, $study_dir . '/filenames_variable';
+my $data_dir = $ENV{'DATA_DIR'};
+store \@filenames, $data_dir . '/filenames_variable';
 
 my $bsub_cmd
     = 'bsub -J download[1-'
     . scalar @filenames
     . ']%15 -o download.%I.out -e download.%I.err \''
-    . $cttv020_dir
+    . $workdir
     . '/lib/ensembl-funcgen/scripts/CTTV020/download_job.pl '
     . '\'';
 # say $bsub_cmd;

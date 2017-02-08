@@ -8,10 +8,10 @@ use feature qw(say);
 
 use Storable;
 
-my $study_dir = $ENV{'STUDY_DIR'};
+my $data_dir = $ENV{'DATA_DIR'};
 my $job_index = $ENV{'LSB_JOBINDEX'};
 
-my @filenames = @{ retrieve( $study_dir . '/filenames_variable' ) };
+my @filenames = @{ retrieve( $data_dir . '/filenames_variable' ) };
 
 my ( $filename, $extension ) = split /\./, $filenames[ $job_index - 1 ];
 
