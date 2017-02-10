@@ -123,12 +123,8 @@ sub get_Epigenome {
   my $self = shift;
 
   if(! defined $self->{'_epigenome'}) {
-    $self->{'_epigenome'} = $self
-      ->db
-      ->get_EpigenomeAdaptor()
-      ->fetch_by_dbID(
-	$self->_epigenome_id
-      );
+    my $ea = $self->db->{'_epigenome_adaptor'} ||= $self->db->get_EpigenomeAdaptor();
+    $self->{'_epigenome'} = $ea->fetch_by_dbID($self->_epigenome_id);
   }
   return $self->{'_epigenome'};
 }

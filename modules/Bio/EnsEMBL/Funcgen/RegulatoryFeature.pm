@@ -440,11 +440,12 @@ sub regulatory_activity {
 
   my $self = shift;
   if(! defined $self->{'_regulatory_activity'}) {
-    $self->{'_regulatory_activity'} = $self
+    my $raa = $self->adaptor->db->{'_regulatory_activity_adaptor'} ||= $self
       ->adaptor
       ->db
-      ->get_RegulatoryActivityAdaptor()
-      ->fetch_all_by_RegulatoryFeature($self);
+      ->get_RegulatoryActivityAdaptor();
+
+    $self->{'_regulatory_activity'} = $raa->fetch_all_by_RegulatoryFeature($self);
   }
   return $self->{'_regulatory_activity'};
 }
