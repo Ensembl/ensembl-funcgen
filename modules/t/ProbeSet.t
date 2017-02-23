@@ -78,11 +78,4 @@ foreach my $probe ( @{$probes} ) {
     isa_ok( $probe, 'Bio::EnsEMBL::Funcgen::Probe' );
 }
 
-# -------------------------------------
-# Test get_all_ProbeFeatures subroutine
-# -------------------------------------
-throws_ok { $ps->get_all_ProbeFeatures(); }
-qr/Not implemented yet, do we want to do this for ProbeSet or just probe?/,
-    'Test get_all_ProbeFeatures subroutine';
-
 done_testing();

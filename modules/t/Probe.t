@@ -96,7 +96,7 @@ qr /You need to provide a probe name \(or names\) to create an Probe/,
 # -------------------------------
 # Test add_array_chip_probename()
 # -------------------------------
-$probe->add_array_chip_probename( 68, 'another_random_probe_name', $array );
+$probe->add_array_chip_probename( 'another_random_probe_name', $array );
 
 is_deeply(
     $probe->{probenames},
@@ -106,15 +106,15 @@ is_deeply(
     'Test add_array_chip_probename()'
 );
 
-is_deeply(
-    $probe->{arrays},
-    { '68' => $array },
-    'Test add_array_chip_probename() again'
-);
+# is_deeply(
+#     $probe->{arrays},
+#     { '68' => $array },
+#     'Test add_array_chip_probename() again'
+# );
 
 my $not_an_array;
 throws_ok {
-    $probe->add_array_chip_probename( 68, 'new_probe', $not_an_array );
+    $probe->add_array_chip_probename( 'new_probe', $not_an_array );
 }
 qr/You must pass a valid Bio::EnsEMBL::Funcgen::Array/,
     'Test add_array_chip_probename() exception';

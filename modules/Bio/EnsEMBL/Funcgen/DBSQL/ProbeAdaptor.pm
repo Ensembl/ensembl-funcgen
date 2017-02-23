@@ -404,7 +404,8 @@ sub _objs_from_sth {
 		} else {
 		  # Extend existing probe
 		  # Probe methods depend on preloading of Array objects
-		  $probe->add_array_chip_probename($arraychip_id, $name, $array);
+      # $probe->add_array_chip_probename($arraychip_id, $name, $array);
+		  $probe->add_array_chip_probename( $name, $array);
 		}
 	}
 	return \@result;
