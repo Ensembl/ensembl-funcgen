@@ -28,7 +28,7 @@ sub assert_destination_file_names_uniqe {
   my $source_file_to_destination_file_map = shift;
   my $destination_file_to_more_than_one_source_file = find_duplicates($source_file_to_destination_file_map);
   
-  my $duplicates_found = keys $destination_file_to_more_than_one_source_file;
+  my $duplicates_found = keys %$destination_file_to_more_than_one_source_file;
   
   if ($duplicates_found) {
     use Data::Dumper;
@@ -59,7 +59,7 @@ sub find_duplicates {
       $destination_file_to_source_file_list{$current_destination_file} = [];
     }
     my $source_file = $bam_file_to_from{$current_destination_file};
-    push $destination_file_to_source_file_list{$current_destination_file}, $source_file;
+    push @{$destination_file_to_source_file_list{$current_destination_file}}, $source_file;
   }
   
   # Like %destination_file_to_source_file_list, but only with those 
