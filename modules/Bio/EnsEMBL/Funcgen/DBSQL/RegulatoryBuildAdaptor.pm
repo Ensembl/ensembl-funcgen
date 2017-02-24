@@ -42,8 +42,6 @@ use vars '@ISA';
 sub _tables {
   return (
     ['regulatory_build',           'rb'  ],
-#     ['regulatory_build_epigenome', 'rbe' ],
-#     ['epigenome',                  'e'   ]
   );
 }
 
@@ -64,9 +62,6 @@ sub _columns {
 
 sub _default_where_clause {
   return '';
-#   return 'rb.regulatory_build_id = rbe.regulatory_build_id'
-#     . ' and rbe.epigenome_id = e.epigenome_id'
-#     ;
 }
 
 sub fetch_by_name {
@@ -130,7 +125,6 @@ sub _objs_from_sth {
   use Bio::EnsEMBL::Funcgen::RegulatoryBuild;
   
   my @return_regulatory_build;
-#   my $epigenome_adaptor = $self->db->get_EpigenomeAdaptor;
   
   ROW: while ( $sth->fetch() ) {
 
