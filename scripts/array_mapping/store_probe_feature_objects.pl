@@ -73,6 +73,11 @@ my $process_data = sub {
     return if ($raw_probe_feature eq " Only one genomic block!");
     my $transcript_stable_id = $raw_probe_feature->{t_id};
     my $transcript = $transcript_adaptor->fetch_by_stable_id($transcript_stable_id);
+    
+    if (!defined $transcript) {
+      die("Can't find transcript for $transcript_stable_id");
+    }
+    
     $slice = $transcript->slice;
     
   } else {
