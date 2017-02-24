@@ -41,7 +41,7 @@ use vars '@ISA';
 
 sub _tables {
   return (
-    ['regulatory_build',           'rb'  ],
+    ['regulatory_build', 'rb'  ],
   );
 }
 
