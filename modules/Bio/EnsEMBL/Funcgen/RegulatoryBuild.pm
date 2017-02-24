@@ -28,6 +28,8 @@ Bio::EnsEMBL::Funcgen::RegulatoryBuild - A module to represent a Regulatory Buil
 
 =head1 SYNOPSIS
 
+  use strict;
+  use warnings;
   use Bio::EnsEMBL::Registry;
   use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
@@ -43,6 +45,15 @@ Bio::EnsEMBL::Funcgen::RegulatoryBuild - A module to represent a Regulatory Buil
   print "There are " . @$epigenomes_in_regulatory_build . " epigenomes in the regulatory build:\n";
   print join "\n", map { '  - ' . $_->display_label } @$epigenomes_in_regulatory_build;
   print  "\n";
+
+  print "Name: "                                   . $regulatory_build->name                                      . "\n";
+  print "Version: "                                . $regulatory_build->version                                   . "\n";
+  print "Initial release date: "                   . $regulatory_build->initial_release_date                      . "\n";
+  print "Last annotation update: "                 . $regulatory_build->last_annotation_update                    . "\n";
+  print "feature type id: "                        . $regulatory_build->feature_type_id                           . "\n";
+  print "Analysis id: "                            . $regulatory_build->analysis_id                               . "\n";
+  print "Is current: "                             . $regulatory_build->is_current                                . "\n";
+  print "Stable id of sample regulatory feature: " . $regulatory_build->fetch_sample_RegulatoryFeature->stable_id . "\n";
 
 =head1 DESCRIPTION
 
@@ -109,6 +120,7 @@ sub new {
     analysis_id
     analysis
     is_current
+    sample_regulatory_feature_id
   );
   
   my (
@@ -123,6 +135,7 @@ sub new {
     $analysis_id,
     $analysis,
     $is_current,
+    $sample_regulatory_feature_id,
   )
     = rearrange([ @field ], @_);
 
@@ -151,6 +164,8 @@ sub new {
   $self->initial_release_date($initial_release_date);
   $self->last_annotation_update($last_annotation_update);
   $self->is_current($is_current);
+  $self->sample_regulatory_feature_id($sample_regulatory_feature_id);
+  
 
   return $self;
 }
@@ -319,6 +334,30 @@ sub _get_all_epigenome_ids {
 
   return \@epigenome_id
 }
+
+=head2 fetch_sample_regulatory_feature
+
+  Example    : print "Stable id of sample regulatory feature: " . $regulatory_build->fetch_sample_RegulatoryFeature->stable_id . "\n";
+  Description: Gets all epigenomes used in this regulatory build.
+  Returntype : ArrayRef[Bio::EnsEMBL::Funcgen::Epigenome]
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub fetch_sample_RegulatoryFeature {
+  my $self = shift;
+  
+  my $sample_regulatory_feature_id = $self->sample_regulatory_feature_id;
+  return if (! defined $sample_regulatory_feature_id);
+  
+  my $regulatory_feature_adaptor = $self->db->get_RegulatoryFeatureAdaptor;
+  my $sample_regulatory_feature = $regulatory_feature_adaptor->fetch_by_dbID($sample_regulatory_feature_id);
+  return $sample_regulatory_feature
+}
+
+sub sample_regulatory_feature_id { return shift->_generic_get_or_set('sample_regulatory_feature_id', @_) }
 
 sub _generic_get_or_set {
   my $self  = shift;
