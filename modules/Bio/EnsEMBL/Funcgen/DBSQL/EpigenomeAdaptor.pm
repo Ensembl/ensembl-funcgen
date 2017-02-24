@@ -90,6 +90,11 @@ sub fetch_by_display_label {
   return $self->generic_fetch('eg.display_label = ?')->[0];
 }
 
+sub fetch_by_dbID {
+  my ($self, $dbID) = @_;
+  $self->{_cache}->{dbID} ||= $self->SUPER::fetch_by_dbID($dbID);
+  return $self->{_cache}->{dbID};
+}
 
 =head2 _true_tables
 
