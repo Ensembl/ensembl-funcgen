@@ -604,7 +604,9 @@ sub store_db_xref {
 
         my $xref = Bio::EnsEMBL::DBEntry->new(
             -primary_id => $primary_id,
-            -dbname     => $dbname
+            -dbname     => $dbname,
+            -display_id => undef, # if not set to undef, an empty string will be stored in the display_label column
+            -info_text  => undef # if not set to undef, an empty string will be stored in the info_text column
         );
 
         my $ignore_release = 1;
