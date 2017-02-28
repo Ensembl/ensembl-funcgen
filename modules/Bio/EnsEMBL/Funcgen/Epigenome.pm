@@ -214,6 +214,58 @@ sub efo_id {
     return $_[0]->{ontology_accession};
 }
 
+=head2 efo_db_entry
+
+  Example    : 
+  Description: 
+  Returntype : 
+  Exceptions : 
+  Caller     : 
+  Status     : 
+
+=cut
+
+sub efo_accession {
+
+  my $self = shift;
+  return $self->efo_db_entry->primary_id
+}
+
+=head2 efo_db_entry
+
+  Example    : 
+  Description: 
+  Returntype : 
+  Exceptions : 
+  Caller     : 
+  Status     : 
+
+=cut
+
+sub efo_db_entry {
+
+  my $self = shift;
+
+  my $dbentry_adaptor = $self->adaptor->db->get_DBEntryAdaptor;
+
+  my $efo_db_entry = $dbentry_adaptor->_fetch_by_object_type(
+    $self->dbID,
+    'epigenome',
+    'EFO'
+  );
+  
+  if (
+    (ref $efo_db_entry eq 'ARRAY')
+    && (@$efo_db_entry == 1)
+  ) {
+    return $efo_db_entry->[0];
+  }
+  if (! defined $efo_db_entry) {
+    warn("No efo id defined for " . $self->name . "!\n");
+    return undef;
+  }
+  throw("Unexpected return value for efo id!");
+}
 
 =head2 ontology_accession
 
