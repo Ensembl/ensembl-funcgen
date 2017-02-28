@@ -226,14 +226,13 @@ sub efo_id {
 =cut
 
 sub efo_accession {
-
   my $self = shift;
   return $self->efo_db_entry->primary_id
 }
 
 =head2 efo_db_entry
 
-  Example    : $epigenome->efo_db_entry->primary_id
+  Example    : print $epigenome->efo_db_entry->primary_id;
   Description: Returns the DBEntry of the external reference to the Experimental Factor Ontology (EFO).
   Returntype : Bio::EnsEMBL::Funcgen::DBEntry
   Exceptions : 
@@ -243,15 +242,53 @@ sub efo_accession {
 =cut
 
 sub efo_db_entry {
+  my $self = shift;
+  return $self->_unique_db_entry('EFO');
+}
+
+=head2 epirr_accession
+
+  Example    : print $epigenome->epirr_accession;
+  Description: Returns the EpiRR accession for this epigenome.
+  Returntype : String
+  Exceptions : 
+  Caller     : 
+  Status     : 
+
+=cut
+
+sub epirr_accession {
+  my $self = shift;
+  return $self->epirr_db_entry->primary_id
+}
+
+=head2 epirr_db_entry
+
+  Example    : print $epigenome->epirr_db_entry->primary_id;
+  Description: Returns the DBEntry of the external reference to EpiRR.
+  Returntype : Bio::EnsEMBL::Funcgen::DBEntry
+  Exceptions : 
+  Caller     : 
+  Status     : 
+
+=cut
+
+sub epirr_db_entry {
+  my $self = shift;
+  return $self->_unique_db_entry('EpiRR')
+}
+
+sub _unique_db_entry {
 
   my $self = shift;
+  my $external_db_name = shift;
 
   my $dbentry_adaptor = $self->adaptor->db->get_DBEntryAdaptor;
 
   my $efo_db_entry = $dbentry_adaptor->_fetch_by_object_type(
     $self->dbID,
     'epigenome',
-    'EFO'
+    $external_db_name
   );
   
   if (
@@ -261,10 +298,10 @@ sub efo_db_entry {
     return $efo_db_entry->[0];
   }
   if (! defined $efo_db_entry) {
-    warn("No efo id defined for " . $self->name . "!\n");
+    warn("No $external_db_name id defined for " . $self->name . "!\n");
     return undef;
   }
-  throw("Unexpected return value for efo id!");
+  throw("Unexpected return value for $external_db_name id!");
 }
 
 =head2 ontology_accession
