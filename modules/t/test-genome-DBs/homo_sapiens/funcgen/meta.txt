@@ -1,4 +1,4 @@
-534	\N	schema_version	87
+534	\N	schema_version	88
 156	1	species.production_name	homo_sapiens
 223	\N	schema_type	funcgen
 589	\N	patch	patch_78_79_a.sql|schema_version
@@ -55,3 +55,6 @@
 645	\N	patch	patch_86_87_c.sql|Remove obsolete coloumns from external_feature_file
 646	\N	patch	patch_86_87_d.sql|Add 'unknown' as a valid gender in the epigenome table
 647	\N	patch	patch_86_87_e.sql|Increase data_set.name length
+648	\N	patch	patch_87_88_a.sql|schema_version
+649	\N	patch	patch_87_88_b.sql|seq_region_name_255
+650	\N	patch	patch_87_88_c.sql|sample_regulatory_feature_id field for regulatory build
