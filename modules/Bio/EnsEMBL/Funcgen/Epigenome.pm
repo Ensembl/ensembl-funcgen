@@ -227,7 +227,11 @@ sub efo_id {
 
 sub efo_accession {
   my $self = shift;
-  return $self->efo_db_entry->primary_id
+  my $efo_db_entry = $self->efo_db_entry;
+  if (! defined $efo_db_entry) {
+    return undef;
+  }
+  return $efo_db_entry->primary_id
 }
 
 =head2 efo_db_entry
@@ -259,7 +263,11 @@ sub efo_db_entry {
 
 sub epirr_accession {
   my $self = shift;
-  return $self->epirr_db_entry->primary_id
+  my $epirr_db_entry = $self->epirr_db_entry;
+  if (! defined $epirr_db_entry) {
+    return undef;
+  }
+  return $epirr_db_entry->primary_id
 }
 
 =head2 epirr_db_entry
@@ -297,11 +305,15 @@ sub _unique_db_entry {
   ) {
     return $efo_db_entry->[0];
   }
-  if (! defined $efo_db_entry) {
-    warn("No $external_db_name id defined for " . $self->name . "!\n");
+  if (
+    (ref $efo_db_entry eq 'ARRAY')
+    && (@$efo_db_entry == 0)
+  ) {
+#     warn("No $external_db_name id defined for " . $self->name . "!\n");
     return undef;
   }
-  throw("Unexpected return value for $external_db_name id!");
+  use Data::Dumper;
+  throw("Unexpected return value for $external_db_name id!\n" . Dumper($efo_db_entry));
 }
 
 =head2 ontology_accession
