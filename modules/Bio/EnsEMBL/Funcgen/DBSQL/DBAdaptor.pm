@@ -390,7 +390,6 @@ sub get_available_adaptors{
                'Epigenome'              => 'Bio::EnsEMBL::Funcgen::DBSQL::EpigenomeAdaptor',
                'CoordSystem'            => 'Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor',
                'DataSet'                => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
-               'DataSet'                => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
                'DBEntry'                => 'Bio::EnsEMBL::Funcgen::DBSQL::DBEntryAdaptor',
                'Experiment'             => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor',
                'ExperimentalGroup'      => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalGroupAdaptor',
