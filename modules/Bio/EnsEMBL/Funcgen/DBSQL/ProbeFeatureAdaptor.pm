@@ -826,8 +826,7 @@ sub delete_features{
 
 sub count_probe_features_by_probe_id {
   my ($self, $probe_id) = @_;
-
-  return $self->count_features_by_field_id('probe_id', $probe_id);
+  return $self->_count_features_by_field_id('probe_id', $probe_id);
 }
 
 1;
