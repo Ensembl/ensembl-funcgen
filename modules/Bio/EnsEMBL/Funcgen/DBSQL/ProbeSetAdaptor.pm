@@ -75,6 +75,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ProbeSetAdaptor;
 use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use Bio::EnsEMBL::Utils::Exception qw( deprecate );
 use Bio::EnsEMBL::Funcgen::ProbeSet;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#DBI sql_types import
 
@@ -116,6 +117,44 @@ sub fetch_by_array_probeset_name{
 	return $pset;
 }
 
+sub fetch_all_by_external_name {
+  my $self = shift;
+  my $transcript_stable_id = shift;
+  deprecate(
+    "display_id has been deprecated and will be removed in Ensembl release 92."
+        . " Please use stable_id instead."
+  );
+  return $self->fetch_all_by_transcript_stable_id($transcript_stable_id);
+}
+
+=head2 fetch_all_by_transcript_stable_id
+
+  Arg [1]    : string - transcript stable id
+  Example    : my $probeset_list = $probeset_adaptor->fetch_all_by_transcript_stable_id('ENST00000489935');
+  Description: Fetches all probesets that have been mapped to this transcript by the 
+               probe2transcript step in the probemapping pipeline.
+  Returntype : Arrayref
+  Caller     : General
+
+=cut
+
+sub fetch_all_by_transcript_stable_id {
+  my $self = shift;
+  my $transcript_stable_id = shift;
+
+  my $probeset_transcript_mappings = $self->db->get_ProbeSetTranscriptMappingAdaptor->fetch_all_by_transcript_stable_id($transcript_stable_id);
+  
+  if (! defined $probeset_transcript_mappings) {
+    return;
+  }
+  
+  my @probesets_mapped_to_transcript;
+  foreach my $current_probeset_transcript_mapping (@$probeset_transcript_mappings) {
+    push @probesets_mapped_to_transcript,
+      $self->fetch_by_dbID($current_probeset_transcript_mapping->probeset_id);
+  }
+  return \@probesets_mapped_to_transcript;
+}
 
 =head2 fetch_all_by_name
 

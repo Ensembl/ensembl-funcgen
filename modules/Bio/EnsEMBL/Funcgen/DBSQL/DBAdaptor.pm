@@ -428,7 +428,8 @@ sub get_available_adaptors{
                'DNAMethylationFile'      => 'Bio::EnsEMBL::Funcgen::DBSQL::DNAMethylationFileAdaptor',
                'SegmentationFile'        => 'Bio::EnsEMBL::Funcgen::DBSQL::SegmentationFileAdaptor',
 
-               'ProbeTranscriptMapping'  => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeTranscriptMappingAdaptor',
+               'ProbeTranscriptMapping'    => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeTranscriptMappingAdaptor',
+               'ProbeSetTranscriptMapping' => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeSetTranscriptMappingAdaptor',
 
               );
 
