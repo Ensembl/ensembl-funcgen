@@ -427,6 +427,9 @@ sub get_available_adaptors{
                'CrisprSitesFile'         => 'Bio::EnsEMBL::Funcgen::DBSQL::CrisprSitesFileAdaptor',
                'DNAMethylationFile'      => 'Bio::EnsEMBL::Funcgen::DBSQL::DNAMethylationFileAdaptor',
                'SegmentationFile'        => 'Bio::EnsEMBL::Funcgen::DBSQL::SegmentationFileAdaptor',
+
+               'ProbeTranscriptMapping'  => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeTranscriptMappingAdaptor',
+
               );
 
   return (\%pairs);

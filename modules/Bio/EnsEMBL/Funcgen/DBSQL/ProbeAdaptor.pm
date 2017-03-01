@@ -59,6 +59,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ProbeAdaptor;
 use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use Bio::EnsEMBL::Utils::Exception qw( deprecate );
 use Bio::EnsEMBL::Funcgen::Probe;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#DBI sql_types import
 
@@ -110,8 +111,44 @@ sub fetch_by_array_probe_probeset_name {
 	return (defined $dbid) ? $self->fetch_by_dbID($dbid) : undef;
 }
 
+sub fetch_all_by_external_name {
+  my $self = shift;
+  my $transcript_stable_id = shift;
+  deprecate(
+    "display_id has been deprecated and will be removed in Ensembl release 92."
+        . " Please use stable_id instead."
+  );
+  return $self->fetch_all_by_transcript_stable_id($transcript_stable_id);
+}
 
+=head2 fetch_all_by_transcript_stable_id
 
+  Arg [1]    : string - transcript stable id
+  Example    : my $probe_list = $probe_adaptor->fetch_all_by_transcript_stable_id('ENST00000489935');
+  Description: Fetches all probes that have been mapped to this transcript by the 
+               probe2transcript step in the probemapping pipeline.
+  Returntype : Arrayref
+  Caller     : General
+
+=cut
+
+sub fetch_all_by_transcript_stable_id {
+  my $self = shift;
+  my $transcript_stable_id = shift;
+
+  my $probe_transcript_mappings = $self->db->get_ProbeTranscriptMappingAdaptor->fetch_all_by_transcript_stable_id($transcript_stable_id);
+  
+  if (! defined $probe_transcript_mappings) {
+    return;
+  }
+  
+  my @probes_mapped_to_transcript;
+  foreach my $current_probe_transcript_mapping (@$probe_transcript_mappings) {
+    push @probes_mapped_to_transcript,
+      $self->fetch_by_dbID($current_probe_transcript_mapping->probe_id);
+  }
+  return \@probes_mapped_to_transcript;
+}
 
 =head2 fetch_all_by_name
 
@@ -131,19 +168,12 @@ sub fetch_by_array_probe_probeset_name {
 
 =cut
 
-
-sub fetch_all_by_name{
+sub fetch_all_by_name {
   my ($self, $name) = @_;
-
   throw('Must provide a probe name argument') if ! defined $name;
-
   $self->bind_param_generic_fetch($name, SQL_VARCHAR);
-
   return $self->generic_fetch('p.name=?');
 }
-
-
-
 
 =head2 fetch_all_by_ProbeSet
 
@@ -158,13 +188,10 @@ sub fetch_all_by_name{
 =cut
 
 sub fetch_all_by_ProbeSet {
-	my ($self, $probeset) = @_;
-
-	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ProbeSet', $probeset);
-	return $self->generic_fetch('p.probe_set_id = '.$probeset->dbID);
+  my ($self, $probeset) = @_;
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ProbeSet', $probeset);
+  return $self->generic_fetch('p.probe_set_id = '.$probeset->dbID);
 }
-
-
 
 =head2 fetch_all_by_Array
 
@@ -182,11 +209,9 @@ sub fetch_all_by_Array {
   my $self  = shift;
   my $array = shift;
 
-   if(! (ref($array) && $array->isa('Bio::EnsEMBL::Funcgen::Array') && $array->dbID())){
-     throw('Need to pass a valid stored Bio::EnsEMBL::Funcgen::Array');
-   }
-
-  #get all array_chip_ids, for array and do a multiple OR statement with generic fetch
+  if(! (ref($array) && $array->isa('Bio::EnsEMBL::Funcgen::Array') && $array->dbID())) {
+    throw('Need to pass a valid stored Bio::EnsEMBL::Funcgen::Array');
+  }
 
   return $self->generic_fetch('p.array_chip_id IN ('.join(',', @{$array->get_array_chip_ids()}).')');
 }
@@ -241,7 +266,6 @@ sub fetch_by_ProbeFeature {
   return $self->fetch_by_dbID($feature->{'probe_id'});
 }
 
-
 =head2 _true_tables
 
   Args       : None
@@ -257,7 +281,6 @@ sub fetch_by_ProbeFeature {
 sub _true_tables {
   return (['probe', 'p']);
 }
-
 
 =head2 _columns
 
@@ -282,7 +305,7 @@ sub _columns {
   Example    : None
   Description: PROTECTED implementation of superclass abstract method.
                Creates Probe objects from an executed DBI statement
-			   handle.
+               handle.
   Returntype : Listref of Bio::EnsEMBL::Funcgen::Probe objects
   Exceptions : None
   Caller     : Internal
@@ -291,136 +314,45 @@ sub _columns {
 =cut
 
 sub _objs_from_sth {
-	my ($self, $sth) = @_;
+  my ($self, $sth) = @_;
 
-	my (@result, $current_dbid, $arraychip_id, $probe_id, $probe_set_id, $name, $class, $probelength, $desc);
-	my ($array, %array_cache, %probe_set_cache);
+  my (@result, $current_dbid, $arraychip_id, $probe_id, $probe_set_id, $name, $class, $probelength, $desc);
+  my ($array, %array_cache, %probe_set_cache);
 
-	$sth->bind_columns(\$probe_id, \$probe_set_id, \$name, \$probelength, \$arraychip_id, \$class, \$desc);
+  $sth->bind_columns(\$probe_id, \$probe_set_id, \$name, \$probelength, \$arraychip_id, \$class, \$desc);
 
+  my $probe;
+  while ( $sth->fetch() ) {
 
-	#Complex query extension
-	#We want the arrays, array_chip and probeset information setting
-	#So the probe feature zmenu can just do one query to populate the zmenu unstead of 4
-	#Let's just do this with probset to start with as this is more simple
-	#The object creation for the linked adaptors need to be commodotised
-	#So we can say something like $probeset_adaptor->create_obj_from_sth_args
-	#Caches will need to be built in the calling adaptor rather than the true object adaptor
+    $array = $array_cache{$arraychip_id} || $self->db->get_ArrayAdaptor()->fetch_by_array_chip_dbID($arraychip_id);
 
-	#No group required as we will always want intermediate data
-	#Therefore cannot use this in combined with simple extension???
-	#Unless we explicitly state group by primary keys.
+    my ($probeset);
 
-	#Need to build array of adaptor column hashes(order important)
-	#Need to build and array of bound columns dependant
-	#Then we need to parse output dependant on primary keys of each table
-	#So we would need bolumns bound to hash values
+    if($probe_set_id) {
+      $probeset = $probe_set_cache{$probe_set_id} || $self->db->get_ProbeSetAdaptor()->fetch_by_dbID($probe_set_id);
+    }
 
-	#We need a way to define the extended tables
-	#Pass param hash to caller which uses BaseAdaptor method to add tables and columns
-	#This would have to take into account anything added by the caller
+    if (!$current_dbid || $current_dbid != $probe_id) {
 
-	#Maybe the better way of doing this test would be to include all probes in a probeset?
-	#Or maybe all probe_features for a probe?
-
-
-
-
-	my $probe;
-
-	while ( $sth->fetch() ) {
-
-		#warn("Need to sort array cacheing, have redundant cache!!");
-		#This is nesting array and probeset objects in probe!
-
-
-		#Is this required? or should we lazy load this?
-		#Should we also do the same for probe i.e. nest or lazy load probeset
-		#Setting here prevents, multiple queries, but if we store the array cache in the adaptor we can overcome this
-		#danger of eating memory here, but it's onld the same as would be used for generating all the probesets
-		#what about clearing the cache?
-		#also as multiple array_chips map to same array, cache would be redundant
-		#need to store only once and reference.
-		#have array_cache and arraychip_map
-		#arraychip_map would give array_id which would be key in array cache
-		#This is kinda reinventing the wheel, but reducing queries and redundancy of global cache
-		#cache would never be populated if method not called
-		#there for reducing calls and memory, increasing speed of generation/initation
-		#if method were called
-		#would slightly slow down processing, and would slightly increase memory as cache(small as non-redundant)
-		#and map hashes would persist
-
-
-	  ####MAKE THIS LAZY LOADED!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-	  #Can we even do this given we won't then have the array context?
-	  #We should just force this for efficiency and make people keep the array if they ever want to use that info?
-	  #Will this affect any other methods?
-
-
-
-	  #Can we not change this to an ArrayChip cache and just reimplement the array method?
-
-		$array = $array_cache{$arraychip_id} || $self->db->get_ArrayAdaptor()->fetch_by_array_chip_dbID($arraychip_id);
-
-
-		#I don't think we need this?  Certainly not for storing
-
-		#$probe_set = $probe_set_cache{$probe_set_id} || $self->db->get_ArrayAdaptor()->fetch_by_array_chip_dbID($arraychip_id);
-		#probe_set cache would be substantially bigger!!
-		#potentially as many as the probes
-
-		#Just build cache and nest for now,may want to just return ID and lazy load
-
-		#This is a prime target for compound query extension
-		#Either extend query by default and nest probe_set
-		#Or lazy load probeset using cache somehow?
-		#Use persistant probeset cache in ProbeSetAdaptor for dbID/Probe style queries
-
-		my ($probeset);
-
-		if($probe_set_id){
-			$probeset = $probe_set_cache{$probe_set_id} || $self->db->get_ProbeSetAdaptor()->fetch_by_dbID($probe_set_id);
-		}
-
-		if (!$current_dbid || $current_dbid != $probe_id) {
-			# New probe
-
-			#UC??? or does rearrange handle this?
-
-			$probe = Bio::EnsEMBL::Funcgen::Probe->new
-			  (
-			   -dbID          => $probe_id,
-			   -name          => $name,
-			   -array_chip_id => $arraychip_id,
-			   -array         => $array,
-			   -probe_set     => $probeset,
-			   -length        => $probelength,
-			   -class         => $class,
-			   -description   => $desc,
-			   -adaptor       => $self,
-			);
-			push @result, $probe;
-			$current_dbid = $probe_id;
-		} else {
-		  # Extend existing probe
-		  # Probe methods depend on preloading of Array objects
-      # $probe->add_array_chip_probename($arraychip_id, $name, $array);
-		  $probe->add_array_chip_probename( $name, $array);
-		}
-	}
-	return \@result;
+      $probe = Bio::EnsEMBL::Funcgen::Probe->new(
+        -dbID          => $probe_id,
+        -name          => $name,
+        -array_chip_id => $arraychip_id,
+        -array         => $array,
+        -probe_set     => $probeset,
+        -length        => $probelength,
+        -class         => $class,
+        -description   => $desc,
+        -adaptor       => $self,
+      );
+      push @result, $probe;
+      $current_dbid = $probe_id;
+    } else {
+      $probe->add_array_chip_probename( $name, $array);
+    }
+  }
+  return \@result;
 }
-
-# sub _prepared_store_sequence_sth {
-#     my $self = shift;
-#     my $prepared_store_sequence_sth = shift;
-#     
-#     if ($prepared_store_sequence_sth) {
-#       $self->{'_prepared_store_sequence_sth'} = $prepared_store_sequence_sth;
-#     }
-#     return $self->{'_prepared_store_sequence_sth'};
-# }
-
 
 =head2 store
 
@@ -428,7 +360,7 @@ sub _objs_from_sth {
   Example    : $opa->store($probe1, $probe2, $probe3);
   Description: Stores given Probe objects in the database. Should only be
                called once per probe because no checks are made for duplicates
-			   Sets dbID and adaptor on the objects that it stores.
+                           Sets dbID and adaptor on the objects that it stores.
   Returntype : ARRAYREF
   Exceptions : Throws if arguments are not Probe objects
   Caller     : General
@@ -499,66 +431,58 @@ sub store {
         
           #$probe_seq_sth->bind_param(1, $sha1_checksum, SQL_VARCHAR);
           $probe_seq_sth->bind_param(1, $probe_dna, SQL_VARCHAR);
-	  $probe_seq_sth->bind_param(2, $probe_dna, SQL_VARCHAR);
-	  
-	  $probe_seq_sth->execute;
-	  $probe_seq_id = $probe_seq_sth->{mysql_insertid};
-	  
-	  #print "--- Was not in database already.\n";
-	};
-	if ($@) {
+          $probe_seq_sth->bind_param(2, $probe_dna, SQL_VARCHAR);
+          
+          $probe_seq_sth->execute;
+          $probe_seq_id = $probe_seq_sth->{mysql_insertid};
+          
+          #print "--- Was not in database already.\n";
+        };
+        if ($@) {
 
-	  my $error_msg = $@;      
-	  
-	  # Check, if the exception was triggered by the index on the probe_sha1 
-	  # column.
-	  #
-# 	  if ($error_msg=~/DBD::mysql::st execute failed: Duplicate entry/) {
-# 	  
-# 	    #print "--- Was in database already.\n";
-# 	    
-# 	    # If so, check, if the dna sequences are identical. If that is the 
-# 	    # case, the storing can be skipped. If they are differen however, we
-# 	    # have a hash key collision and might have to revisit the decision
-# 	    # of having a unique constraint on the probe_sha1 key.
-#             #
-#             my $sth;
-#             if ($self->_prepared_store_sequence_sth) {
-#             
-#               $sth = $self->_prepared_store_sequence_sth;
-#             
-#             } else {
-#               my $sql_cmd = 'select probe_seq_id, probe_sha1, probe_dna from probe_seq where probe_sha1 = cast(sha1(?) as char)';
-#               $sth = $self->prepare($sql_cmd);
-#               $self->_prepared_store_sequence_sth($sth);
-#             }
-#             #$sth->bind_param(1, $sha1_checksum);
-#             $sth->bind_param(1, $probe_dna);
-# 	    $sth->execute;
-# 	    my $data = $sth->fetchall_arrayref;
-# 	    
-# 	    my $probe_seq_id_from_db = $data->[0][0];
-# 	    my $probe_sha1_from_db   = $data->[0][1];
-# 	    my $probe_seq_from_db    = $data->[0][2];
-# 
-# 	    if ($probe_seq_from_db ne $probe_dna) {
-#               #confess("Sha1 has a collision. The dna sequence $probe_dna and the dna sequence from the database $probe_seq_from_db have the same sha1 checksum $sha1_checksum.");
-#                 use Carp;
-#                 use Data::Dumper;
-#                 confess("There has been a sha1 collision. The dna sequence $probe_dna and the dna sequence from the database $probe_seq_from_db have the same sha1 checksum."
-#                   . "\n" . Dumper($data)
-#                 );
-# 	    } else {
-# 	      print "Probe with this sequence $probe_dna already exists, skipping.\n";
-# 	    }
-# 	    $probe_seq_id = $probe_seq_id_from_db;
-# 	  }
-	}
-	
-# 	if ($probe_seq_id == 1) {
-# 	  print "--- $probe_seq_id: $probe_dna\n";
-# 	}
-	
+          my $error_msg = $@;      
+          
+          # Check, if the exception was triggered by the index on the probe_sha1 
+          # column.
+          #
+          if ($error_msg=~/DBD::mysql::st execute failed: Duplicate entry/) {
+          
+            #print "--- Was in database already.\n";
+            
+            # If so, check, if the dna sequences are identical. If that is the 
+            # case, the storing can be skipped. If they are differen however, we
+            # have a hash key collision and might have to revisit the decision
+            # of having a unique constraint on the probe_sha1 key.
+            #
+            my $sql_cmd = 'select probe_seq_id, probe_sha1, probe_dna from probe_seq where probe_sha1 = cast(sha1(?) as char)';
+            my $sth = $self->prepare($sql_cmd);
+            #$sth->bind_param(1, $sha1_checksum);
+            $sth->bind_param(1, $probe_dna);
+            $sth->execute;
+            my $data = $sth->fetchall_arrayref;
+            
+            my $probe_seq_id_from_db = $data->[0][0];
+            my $probe_sha1_from_db   = $data->[0][1];
+            my $probe_seq_from_db    = $data->[0][2];
+
+            if ($probe_seq_from_db ne $probe_dna) {
+              #confess("Sha1 has a collision. The dna sequence $probe_dna and the dna sequence from the database $probe_seq_from_db have the same sha1 checksum $sha1_checksum.");
+                use Carp;
+                use Data::Dumper;
+                confess("There has been a sha1 collision. The dna sequence $probe_dna and the dna sequence from the database $probe_seq_from_db have the same sha1 checksum."
+                  . "\n" . Dumper($data)
+                );
+            } else {
+              print "Probe with this sequence $probe_dna already exists, skipping.\n";
+            }
+            $probe_seq_id = $probe_seq_id_from_db;
+          }
+        }
+        
+#       if ($probe_seq_id == 1) {
+#         print "--- $probe_seq_id: $probe_dna\n";
+#       }
+        
 # ------------------------------------------------------------------------------------------
 
         if ($probe->dbID) {    # Already stored
@@ -566,7 +490,7 @@ sub store {
           $existing_sth->bind_param(2, $ps_id,              SQL_INTEGER);
           $existing_sth->bind_param(3, $name,               SQL_VARCHAR);
           $existing_sth->bind_param(4, $probe->length(),    SQL_INTEGER);
-          $existing_sth->bind_param(5, $probe->array_chip->dbID, SQL_INTEGER);
+          $existing_sth->bind_param(5, $ac_id,              SQL_INTEGER);
           $existing_sth->bind_param(6, $probe->class(),     SQL_VARCHAR);
           $existing_sth->bind_param(7, $probe->description, SQL_VARCHAR);
           $existing_sth->bind_param(8, $probe_seq_id,       SQL_INTEGER);
@@ -576,7 +500,7 @@ sub store {
           $new_sth->bind_param(1, $ps_id,              SQL_INTEGER);
           $new_sth->bind_param(2, $name,               SQL_VARCHAR);
           $new_sth->bind_param(3, $probe->length(),    SQL_INTEGER);
-          $new_sth->bind_param(4, $probe->array_chip->dbID, SQL_INTEGER);
+          $new_sth->bind_param(4, $ac_id,              SQL_INTEGER);
           $new_sth->bind_param(5, $probe->class(),     SQL_VARCHAR);
           $new_sth->bind_param(6, $probe->description, SQL_VARCHAR);
           $new_sth->bind_param(7, $probe_seq_id,       SQL_INTEGER);
@@ -590,32 +514,6 @@ sub store {
   
   return \@probes;
 }
-
-
-
-=head2 fetch_all_design_scores
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::Probe
-  Example    : my @probe_analyses = @{$pa->fetch_all_design_scores($probe)};
-  Description: Fetchs all probe design analysis records as analysis_id, score and coord_system_id
-  Returntype : ARRAYREF
-  Exceptions : throws if not passed a valid stored Probe
-  Caller     : General
-  Status     : at risk
-
-=cut
-
-sub fetch_all_design_scores{
-  my ($self, $probe) = @_;
-
-  if(! ($probe && $probe->isa('Bio::EnsEMBL::Funcgen::Probe') && $probe->dbID())){
-    throw('Must pass a valid stored Bio::EnsEMBL::Funcgen::Probe');
-  }
-
-  my $sql = 'SELECT analysis_id, score, coord_system_id from probe_design WHERE probe_id='.$probe->dbID.';';
-  return @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
-}
-
 
 1;
 
