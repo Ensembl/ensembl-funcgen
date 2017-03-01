@@ -1179,7 +1179,7 @@ sub _get_coord_system_ids{
 }
 
 
-=head2 count_features_by_field_id
+=head2 _count_features_by_field_id
 
   Arg [1]    : string     - table field to count
   Arg [2]    : string/int - id to count
@@ -1196,7 +1196,7 @@ sub _get_coord_system_ids{
 #But does assume primary key if ${table_name}_id
 #Can't move to core due to cs issues, but could mirror implementation.
 
-sub count_features_by_field_id{
+sub _count_features_by_field_id {
   my ($self, $count_field, $count_id) = @_;
   #Any other params here?
 
