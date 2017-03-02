@@ -24,13 +24,13 @@ CREATE TABLE `probe_set_transcript` (
   `probe_set_id`    int(10) unsigned NOT NULL,
   `stable_id`   varchar(18)      NOT NULL,
   `description` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`probeset_transcript_id`),
-  KEY `probe_set_transcript_id_idx` (`probeset_transcript_id`)
+  PRIMARY KEY (`probe_set_transcript_id`),
+  KEY `probe_set_transcript_id_idx` (`probe_set_transcript_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
-insert into `probe_set_transcript` (`probeset_id`, `stable_id`, `description`) (
+insert into `probe_set_transcript` (`probe_set_id`, `stable_id`, `description`) (
   select 
-    ensembl_id as probeset_id, 
+    ensembl_id as probe_set_id, 
     dbprimary_acc as stable_id, 
     linkage_annotation as description 
   from 
