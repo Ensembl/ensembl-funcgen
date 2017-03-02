@@ -356,7 +356,7 @@ sub _objs_from_sth {
   my $is_linked_array;
   my $has_sense_interrogation;
 
-  $sth->bind_columns(\$array_id, \$name, \$format, \$vendor, \$description, \$type, \$class
+  $sth->bind_columns(\$array_id, \$name, \$format, \$vendor, \$description, \$type, \$class,
     \$is_probeset_array,
     \$is_linked_array,
     \$has_sense_interrogation
