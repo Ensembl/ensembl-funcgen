@@ -386,6 +386,9 @@ sub store {
     );
 
   my $probe_seq_sth = $self->prepare('insert into probe_seq (probe_sha1, probe_dna) values (cast(sha1(?) as char), ?)');
+  
+#   my $array_chip_adaptor = $self->db->get_ArrayChipAdaptor;
+#   print Dumper($array_chip_adaptor);
 
  PROBE: foreach my $probe (@probes) {
      
@@ -415,6 +418,11 @@ sub store {
     # Insert separate entry (with same probe_id) for each array/array_chip the probe is on
 
     foreach my $ac_id (keys %array_hashes) {
+    
+#       my $array_chip = $array_chip_adaptor->fetch_by_name($ac_id);
+#       print Dumper($probe->array_chip->dbID);
+#       die;
+    
       my $ps_id = (defined $probe->probeset()) ? $probe->probeset()->dbID() : undef;
 
       foreach my $name (@{$probe->get_all_probenames($array_hashes{$ac_id}->name)}) {
@@ -490,7 +498,7 @@ sub store {
           $existing_sth->bind_param(2, $ps_id,              SQL_INTEGER);
           $existing_sth->bind_param(3, $name,               SQL_VARCHAR);
           $existing_sth->bind_param(4, $probe->length(),    SQL_INTEGER);
-          $existing_sth->bind_param(5, $ac_id,              SQL_INTEGER);
+          $existing_sth->bind_param(5, $probe->array_chip->dbID,              SQL_INTEGER);
           $existing_sth->bind_param(6, $probe->class(),     SQL_VARCHAR);
           $existing_sth->bind_param(7, $probe->description, SQL_VARCHAR);
           $existing_sth->bind_param(8, $probe_seq_id,       SQL_INTEGER);
@@ -500,7 +508,7 @@ sub store {
           $new_sth->bind_param(1, $ps_id,              SQL_INTEGER);
           $new_sth->bind_param(2, $name,               SQL_VARCHAR);
           $new_sth->bind_param(3, $probe->length(),    SQL_INTEGER);
-          $new_sth->bind_param(4, $ac_id,              SQL_INTEGER);
+          $new_sth->bind_param(4, $probe->array_chip->dbID,              SQL_INTEGER);
           $new_sth->bind_param(5, $probe->class(),     SQL_VARCHAR);
           $new_sth->bind_param(6, $probe->description, SQL_VARCHAR);
           $new_sth->bind_param(7, $probe_seq_id,       SQL_INTEGER);
