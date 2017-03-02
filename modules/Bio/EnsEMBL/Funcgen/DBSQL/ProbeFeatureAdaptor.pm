@@ -207,37 +207,37 @@ sub fetch_all_by_ProbeSet {
 }
 
 
-=head2 fetch_all_by_Slice_ExperimentalChips
-
-  Arg [1]    : Bio::EnsEMBL::Slice
-  Arg [2]    : ARRAY ref of Bio::EnsEMBL::Funcgen::ExperimentalChip objects
-  Example    : my $features = $pfa->fetch_all_by_Slice_ExperimentalChips($slice, \@echips);
-  Description: Retrieves a list of features on a given slice that are created
-               by probes from the given ExperimentalChips.
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::ProbeFeature objects
-  Exceptions : Throws if args not valid
-  Caller     :
-  Status     : At Risk
-
-=cut
-
-sub fetch_all_by_Slice_ExperimentalChips {
-  my ($self, $slice, $exp_chips) = @_;
-
-  my %nr;
-
-  foreach my $ec(@$exp_chips){
-
-    throw("Need pass listref of valid Bio::EnsEMBL::Funcgen::ExperimentalChip objects")
-      if ! $ec->isa("Bio::EnsEMBL::Funcgen::ExperimentalChip");
-
-    $nr{$ec->array_chip_id()} = 1;
-  }
-
-  my $constraint = " p.array_chip_id IN (".join(", ", keys %nr).") AND p.probe_id = pf.probe_id ";
-
-  return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
-}
+# =head2 fetch_all_by_Slice_ExperimentalChips
+# 
+#   Arg [1]    : Bio::EnsEMBL::Slice
+#   Arg [2]    : ARRAY ref of Bio::EnsEMBL::Funcgen::ExperimentalChip objects
+#   Example    : my $features = $pfa->fetch_all_by_Slice_ExperimentalChips($slice, \@echips);
+#   Description: Retrieves a list of features on a given slice that are created
+#                by probes from the given ExperimentalChips.
+#   Returntype : Listref of Bio::EnsEMBL::Funcgen::ProbeFeature objects
+#   Exceptions : Throws if args not valid
+#   Caller     :
+#   Status     : At Risk
+# 
+# =cut
+# 
+# sub fetch_all_by_Slice_ExperimentalChips {
+#   my ($self, $slice, $exp_chips) = @_;
+# 
+#   my %nr;
+# 
+#   foreach my $ec(@$exp_chips){
+# 
+#     throw("Need pass listref of valid Bio::EnsEMBL::Funcgen::ExperimentalChip objects")
+#       if ! $ec->isa("Bio::EnsEMBL::Funcgen::ExperimentalChip");
+# 
+#     $nr{$ec->array_chip_id()} = 1;
+#   }
+# 
+#   my $constraint = " p.array_chip_id IN (".join(", ", keys %nr).") AND p.probe_id = pf.probe_id ";
+# 
+#   return $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+# }
 
 
 
@@ -259,7 +259,7 @@ sub fetch_all_by_Slice_ExperimentalChips {
                by probes from the specified array.
   Returntype : Listref of Bio::EnsEMBL::Funcgen::ProbeFeature objects
   Exceptions : Throws if no array name is provided
-  #Caller     : Slice->get_all_ProbesFeatures()
+  Caller     : Used by web
   Status     : At Risk
 
 =cut
@@ -287,107 +287,107 @@ sub fetch_all_by_Slice_array_vendor {
 }
 
 
-=head2 fetch_all_by_Slice_Array
+# =head2 fetch_all_by_Slice_Array
+# 
+#   Arg [1]    : Bio::EnsEMBL::Slice
+#   Arg [2]    : Bio::EnsEMBL::Funcgen::Array
+#   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
+#                my $features = $pfa->fetch_all_by_Slice_Array($slice, $array);
+#   Description: Retrieves a list of features on a given slice that are created
+#                by probes from the given Array.
+#   Returntype : Listref of Bio::EnsEMBL::Funcgen::ProbeFeature objects
+#   Exceptions : Throws if no array name is provided
+#   Caller     :
+#   Status     : At Risk
+# 
+# =cut
+# 
+# sub fetch_all_by_Slice_Array {
+#   my ($self, $slice, $array) = @_;
+# 
+#   throw("Need pass a valid stored Bio::EnsEMBL::Funcgen::Array object")
+# 	if (! (ref($array) && $array->isa("Bio::EnsEMBL::Funcgen::Array") && $array->dbID));
+# 
+#   $self->_tables([['array_chip', 'ac']]);
+#   my $constraint = ' ac.array_id='.$array->dbID.' and ac.array_chip_id=p.array_chip_id ';
+#   $final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;
+# 
+#   my $features  = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+#   $self->reset_true_tables;
+#   $final_clause = $true_final_clause;
+# 
+#   return $features;
+# }
+# 
+# 
+# =head2 fetch_all_by_Slice_Arrays
+# 
+#   Arg [1]    : Bio::EnsEMBL::Slice
+#   Arg [2]    : ARRAYREF of Bio::EnsEMBL::Funcgen::Array objects
+#   Arg [3]    : HASHREF - optional params hash e.g. {logic_name => 'AFFY_ProbeTranscriptAlign'}
+#   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
+#                my $features = $pfa->fetch_all_by_Slice_Arrays($slice, \@arrays);
+#   Description: Retrieves a list of features on a given slice that are created
+#                by probes from the given Arrays.
+#   Returntype : Listref of Bio::EnsEMBL::Funcgen::ProbeFeature objects
+#   Exceptions : Throws if ARRAYREF of arrays is not provided
+#   Caller     :
+#   Status     : At Risk
+# 
+# =cut
+# 
+# sub fetch_all_by_Slice_Arrays{
+#   my ($self, $slice, $arrays, $params) = @_;
+# 
+#   my $logic_name;
+#   $logic_name = $params->{'logic_name'} if exists ${$params}{'logic_names'};
+# 
+# 
+#   if(!(ref($arrays) eq 'ARRAY' &&  @$arrays)){
+# 	throw('Must pass an ARRAYREF of Bio::EnsEMBL::Funcgen::Array objects');
+#   }
+# 
+#   my $array_ids = join(',', (map $_->dbID, @$arrays));
+# 
+#   $self->_tables([['array_chip', 'ac']]);
+#   my $constraint = " ac.array_id IN ($array_ids) and ac.array_chip_id=p.array_chip_id ";
+# 
+#   $final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;
+#   my $features  = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name);
+#   $self->reset_true_tables;
+#   $final_clause = $true_final_clause;
+# 
+#   return $features;
+# }
 
-  Arg [1]    : Bio::EnsEMBL::Slice
-  Arg [2]    : Bio::EnsEMBL::Funcgen::Array
-  Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $pfa->fetch_all_by_Slice_Array($slice, $array);
-  Description: Retrieves a list of features on a given slice that are created
-               by probes from the given Array.
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::ProbeFeature objects
-  Exceptions : Throws if no array name is provided
-  Caller     :
-  Status     : At Risk
-
-=cut
-
-sub fetch_all_by_Slice_Array {
-  my ($self, $slice, $array) = @_;
-
-  throw("Need pass a valid stored Bio::EnsEMBL::Funcgen::Array object")
-	if (! (ref($array) && $array->isa("Bio::EnsEMBL::Funcgen::Array") && $array->dbID));
-
-  $self->_tables([['array_chip', 'ac']]);
-  my $constraint = ' ac.array_id='.$array->dbID.' and ac.array_chip_id=p.array_chip_id ';
-  $final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;
-
-  my $features  = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
-  $self->reset_true_tables;
-  $final_clause = $true_final_clause;
-
-  return $features;
-}
-
-
-=head2 fetch_all_by_Slice_Arrays
-
-  Arg [1]    : Bio::EnsEMBL::Slice
-  Arg [2]    : ARRAYREF of Bio::EnsEMBL::Funcgen::Array objects
-  Arg [3]    : HASHREF - optional params hash e.g. {logic_name => 'AFFY_ProbeTranscriptAlign'}
-  Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $pfa->fetch_all_by_Slice_Arrays($slice, \@arrays);
-  Description: Retrieves a list of features on a given slice that are created
-               by probes from the given Arrays.
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::ProbeFeature objects
-  Exceptions : Throws if ARRAYREF of arrays is not provided
-  Caller     :
-  Status     : At Risk
-
-=cut
-
-sub fetch_all_by_Slice_Arrays{
-  my ($self, $slice, $arrays, $params) = @_;
-
-  my $logic_name;
-  $logic_name = $params->{'logic_name'} if exists ${$params}{'logic_names'};
-
-
-  if(!(ref($arrays) eq 'ARRAY' &&  @$arrays)){
-	throw('Must pass an ARRAYREF of Bio::EnsEMBL::Funcgen::Array objects');
-  }
-
-  my $array_ids = join(',', (map $_->dbID, @$arrays));
-
-  $self->_tables([['array_chip', 'ac']]);
-  my $constraint = " ac.array_id IN ($array_ids) and ac.array_chip_id=p.array_chip_id ";
-
-  $final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;
-  my $features  = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name);
-  $self->reset_true_tables;
-  $final_clause = $true_final_clause;
-
-  return $features;
-}
-
-
-=head2 fetch_Iterator_by_Slice_Arrays
-
-  Arg [1]    : Bio::EnsEMBL::Slice
-  Arg [2]    : ARRAYREF of Bio::EnsEMBL::Funcgen::Array objects
-  Arg [3]    : HASHREF - optional params hash e.g. {logic_name => 'AFFY_ProbeTranscriptAlign'}
-  Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $pfa->fetch_Iterator_by_Slice_Arrays($slice, \@arrays);
-  Description: Retrieves a list of features on a given slice that are created
-               by probes from the given Array.
-  Returntype : Bio::EnsEMBL::Utils::Iterator
-  Exceptions : Throws if ARRAYREF of arrays is not provided
-  Caller     :
-  Status     : At Risk
-
-=cut
-
-sub fetch_Iterator_by_Slice_Arrays{
-  my ($self, $slice, $arrays, $params) = @_;
-
-
-  return $self->fetch_Iterator_by_Slice_method
-	($self->can('fetch_all_by_Slice_Arrays'),
-	 [$slice, $arrays, $params],
-	 0,#Slice idx
-	 #500 #chunk length
-	);
-}
+# 
+# =head2 fetch_Iterator_by_Slice_Arrays
+# 
+#   Arg [1]    : Bio::EnsEMBL::Slice
+#   Arg [2]    : ARRAYREF of Bio::EnsEMBL::Funcgen::Array objects
+#   Arg [3]    : HASHREF - optional params hash e.g. {logic_name => 'AFFY_ProbeTranscriptAlign'}
+#   Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
+#                my $features = $pfa->fetch_Iterator_by_Slice_Arrays($slice, \@arrays);
+#   Description: Retrieves a list of features on a given slice that are created
+#                by probes from the given Array.
+#   Returntype : Bio::EnsEMBL::Utils::Iterator
+#   Exceptions : Throws if ARRAYREF of arrays is not provided
+#   Caller     :
+#   Status     : At Risk
+# 
+# =cut
+# 
+# sub fetch_Iterator_by_Slice_Arrays{
+#   my ($self, $slice, $arrays, $params) = @_;
+# 
+# 
+#   return $self->fetch_Iterator_by_Slice_method
+# 	($self->can('fetch_all_by_Slice_Arrays'),
+# 	 [$slice, $arrays, $params],
+# 	 0,#Slice idx
+# 	 #500 #chunk length
+# 	);
+# }
 
 =head2 _true_tables
 
@@ -405,7 +405,34 @@ sub _true_tables {
   return ([ 'probe_feature', 'pf' ], [ 'probe',   'p' ]);
 }
 
+=head2 fetch_all_by_transcript_stable_id
 
+  Arg [1]    : string - transcript stable id
+  Example    : my $probeset_list = $probeset_adaptor->fetch_all_by_transcript_stable_id('ENST00000489935');
+  Description: Fetches all probesets that have been mapped to this transcript by the 
+               probe2transcript step in the probemapping pipeline.
+  Returntype : Arrayref
+  Caller     : General
+
+=cut
+
+sub fetch_all_by_transcript_stable_id {
+  my $self = shift;
+  my $transcript_stable_id = shift;
+
+  my $probe_feature_transcript_mappings = $self->db->get_ProbeFeatureTranscriptMappingAdaptor->fetch_all_by_transcript_stable_id($transcript_stable_id);
+  
+  if (! defined $probe_feature_transcript_mappings) {
+    return [];
+  }
+  
+  my @probe_features_mapped_to_transcript;
+  foreach my $current_probeset_transcript_mapping (@$probe_feature_transcript_mappings) {
+    push @probe_features_mapped_to_transcript,
+      $self->fetch_by_dbID($current_probeset_transcript_mapping->probe_feature_id);
+  }
+  return \@probe_features_mapped_to_transcript;
+}
 
 =head2 _columns
 
@@ -422,13 +449,13 @@ sub _true_tables {
 
 sub _columns {
   return qw(
-            pf.probe_feature_id  pf.seq_region_id
-			pf.seq_region_start  pf.seq_region_end
-			pf.seq_region_strand pf.probe_id
-			pf.analysis_id	   pf.mismatches
-			pf.cigar_line        p.name
-			p.probe_set_id
-		    );
+    pf.probe_feature_id    pf.seq_region_id
+    pf.seq_region_start    pf.seq_region_end
+    pf.seq_region_strand   pf.probe_id
+    pf.analysis_id         pf.mismatches
+    pf.cigar_line          p.name
+    p.probe_set_id
+  );
 }
 
 =head2 _default_where_clause
@@ -445,9 +472,8 @@ sub _columns {
 
 =cut
 sub _default_where_clause {
-	my $self = shift;
-
-	return 'pf.probe_id = p.probe_id';
+  my $self = shift;
+  return 'pf.probe_id = p.probe_id';
 }
 
 =head2 _final_clause
@@ -467,7 +493,7 @@ sub _default_where_clause {
 
 
 sub _final_clause {
-	return $final_clause;
+  return $final_clause;
 }
 
 
@@ -756,78 +782,78 @@ sub store{
 
 #Probe cache methods?
 
-=head2 reassign_feature_to_probe
+# =head2 reassign_feature_to_probe
+# 
+#   Arg[0]     : ARRAYREF - feature dbIDs to reassign
+#   Arg[1]     : int - probe dbID to reassign to
+#   Example    : $ofa->reassign_feature_to_probe(\@fids, $pid);
+#   Description: Update features to link to given probe dbID
+#   Returntype : None
+#   Exceptions : Throws is args not met
+#   Caller     : Importer
+#   Status     : At Risk
+# 
+# =cut
+# 
+# sub reassign_feature_to_probe{
+# 	my ($self, $fids_ref, $pid) = @_;
+# 
+# 	if(! @$fids_ref || ! $pid){
+# 	  throw('Need to pass a ref to an array of feature ids and a probe id to reassign to');
+# 	}
+# 
+# 	my $cmd = 'UPDATE probe_feature SET probe_id='.$pid.' WHERE probe_feature_id IN ('.join(',', @$fids_ref).')';
+# 	$self->db->dbc->do($cmd);
+# 
+# 	return;
+# }
 
-  Arg[0]     : ARRAYREF - feature dbIDs to reassign
-  Arg[1]     : int - probe dbID to reassign to
-  Example    : $ofa->reassign_feature_to_probe(\@fids, $pid);
-  Description: Update features to link to given probe dbID
-  Returntype : None
-  Exceptions : Throws is args not met
-  Caller     : Importer
-  Status     : At Risk
-
-=cut
-
-sub reassign_feature_to_probe{
-	my ($self, $fids_ref, $pid) = @_;
-
-	if(! @$fids_ref || ! $pid){
-	  throw('Need to pass a ref to an array of feature ids and a probe id to reassign to');
-	}
-
-	my $cmd = 'UPDATE probe_feature SET probe_id='.$pid.' WHERE probe_feature_id IN ('.join(',', @$fids_ref).')';
-	$self->db->dbc->do($cmd);
-
-	return;
-}
-
-=head2 delete_features
-
-  Arg[0]     : ARRAYREF - feature dbIDs to reassign
-  Example    : $pfa->delete_feature(\@fids);
-  Description: Deletes feature with given probe_feature_ids
-  Returntype : None
-  Exceptions : Throws if not arg defines
-  Caller     : Importer
-  Status     : At Risk
-
-=cut
-
-
-#This does not rollback associated xrefs!
-
-sub delete_features{
-	my ($self, $fids_ref) = @_;
-
-	if(! @$fids_ref){
-	  throw('Need to pass a ref to an array of feature ids');
-	}
-
-	my $cmd = 'DELETE from probe_feature WHERE probe_feature_id IN ('.join(',', @$fids_ref).')';
-	$self->db->dbc->do($cmd);
-
-	return;
-}
-
-
-=head2 count_probe_features_by_probe_id
-
-  Arg [1]    : string/int - id to count
-  Example    : my $probe_feature_count = $pfa->count_features_by_probe_id($probe_id);
-  Description: Returns a count of ProbeFeatures for a given probe id
-  Returntype : string/int - count of features
-  Exceptions : None
-  Caller     : FeatureAdaptors
-  Status     : At risk
-
-=cut
+# =head2 delete_features
+# 
+#   Arg[0]     : ARRAYREF - feature dbIDs to reassign
+#   Example    : $pfa->delete_feature(\@fids);
+#   Description: Deletes feature with given probe_feature_ids
+#   Returntype : None
+#   Exceptions : Throws if not arg defines
+#   Caller     : Importer
+#   Status     : At Risk
+# 
+# =cut
+# 
+# 
+# #This does not rollback associated xrefs!
+# 
+# sub delete_features{
+# 	my ($self, $fids_ref) = @_;
+# 
+# 	if(! @$fids_ref){
+# 	  throw('Need to pass a ref to an array of feature ids');
+# 	}
+# 
+# 	my $cmd = 'DELETE from probe_feature WHERE probe_feature_id IN ('.join(',', @$fids_ref).')';
+# 	$self->db->dbc->do($cmd);
+# 
+# 	return;
+# }
 
 
-sub count_probe_features_by_probe_id {
-  my ($self, $probe_id) = @_;
-  return $self->_count_features_by_field_id('probe_id', $probe_id);
-}
+# =head2 count_probe_features_by_probe_id
+# 
+#   Arg [1]    : string/int - id to count
+#   Example    : my $probe_feature_count = $pfa->count_features_by_probe_id($probe_id);
+#   Description: Returns a count of ProbeFeatures for a given probe id
+#   Returntype : string/int - count of features
+#   Exceptions : None
+#   Caller     : FeatureAdaptors
+#   Status     : At risk
+# 
+# =cut
+# 
+# 
+# sub count_probe_features_by_probe_id {
+#   my ($self, $probe_id) = @_;
+#   return $self->_count_features_by_field_id('probe_id', $probe_id);
+# }
 
 1;
 

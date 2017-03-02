@@ -556,29 +556,29 @@ sub description {
 }
 
 
-=head2 feature_count
-
-  Arg[0]     : recount flag
-  Example    : my $num_features = $probe->feature_count();
-  Description: Counts the number of ProbeFeatures associated with this Probe
-  Returntype : int
-  Exceptions : None
-  Caller     : General
-  Status     : Medium Risk
-
-=cut
-
-
-sub feature_count{
-  my ($self, $recount) = @_;
-
-  if($recount ||
-    (! $self->{feature_count})){
-    $self->{feature_count} = $self->adaptor->db->get_ProbeFeatureAdaptor->count_probe_features_by_probe_id($self->dbID);
-  }
-
-  return $self->{feature_count};
-}
+# =head2 feature_count
+# 
+#   Arg[0]     : recount flag
+#   Example    : my $num_features = $probe->feature_count();
+#   Description: Counts the number of ProbeFeatures associated with this Probe
+#   Returntype : int
+#   Exceptions : None
+#   Caller     : General
+#   Status     : Medium Risk
+# 
+# =cut
+# 
+# 
+# sub feature_count{
+#   my ($self, $recount) = @_;
+# 
+#   if($recount ||
+#     (! $self->{feature_count})){
+#     $self->{feature_count} = $self->adaptor->db->get_ProbeFeatureAdaptor->count_probe_features_by_probe_id($self->dbID);
+#   }
+# 
+#   return $self->{feature_count};
+# }
 
 =head2 get_all_Transcript_DBEntries
 

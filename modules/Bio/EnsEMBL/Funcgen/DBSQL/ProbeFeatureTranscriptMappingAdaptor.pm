@@ -25,13 +25,13 @@ limitations under the License.
 
 =head1 NAME
 
-  Bio::EnsEMBL::Funcgen::DBSQL::ProbeTranscriptMappingAdaptor
+  Bio::EnsEMBL::Funcgen::DBSQL::ProbeFeatureTranscriptMappingAdaptor
 
 =head1 SYNOPSIS
 
 =cut
 
-package Bio::EnsEMBL::Funcgen::DBSQL::ProbeTranscriptMappingAdaptor;
+package Bio::EnsEMBL::Funcgen::DBSQL::ProbeFeatureTranscriptMappingAdaptor;
 
 use strict;
 use warnings;
@@ -42,15 +42,15 @@ use vars '@ISA';
 @ISA    = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
 sub _tables {
-  return ['probe_transcript', 'pt'];
+  return ['probe_feature_transcript', 'pt'];
 }
 
 sub _columns {
   my $self = shift;
   
   return qw(
-    pt.probe_transcript_id
-    pt.probe_id
+    pt.probe_feature_transcript_id
+    pt.probe_feature_id
     pt.stable_id
     pt.description
   );
@@ -68,13 +68,13 @@ sub fetch_all_by_transcript_stable_id {
   return $mapping;
 }
 
-sub fetch_all_by_probe_id {
+sub fetch_all_by_probe_feature_id {
   my $self  = shift;
-  my $probe_id = shift;
+  my $probe_feature_id = shift;
 
-  my $constraint = "pt.probe_id = ?";
+  my $constraint = "pt.probe_feature_id = ?";
   
-  $self->bind_param_generic_fetch($probe_id, SQL_VARCHAR);
+  $self->bind_param_generic_fetch($probe_feature_id, SQL_VARCHAR);
   my $mapping = $self->generic_fetch($constraint);
   
   return $mapping;
@@ -85,14 +85,14 @@ sub _objs_from_sth {
 
   my (
     $sth_fetched_dbID,
-    $sth_fetched_probe_id,
+    $sth_fetched_probe_feature_id,
     $sth_fetched_stable_id,
     $sth_fetched_description,
   );
 
   $sth->bind_columns (
     \$sth_fetched_dbID,
-    \$sth_fetched_probe_id,
+    \$sth_fetched_probe_feature_id,
     \$sth_fetched_stable_id,
     \$sth_fetched_description,
   );
@@ -102,14 +102,14 @@ sub _objs_from_sth {
   my @return_objects;
   ROW: while ( $sth->fetch() ) {
   
-    my $probe_transcript_mapping = Bio::EnsEMBL::Funcgen::ProbeTranscriptMapping->new(
-      -dbID          => $sth_fetched_dbID,
-      -probe_id      => $sth_fetched_probe_id,
-      -stable_id     => $sth_fetched_stable_id,
-      -description   => $sth_fetched_description,
-      -adaptor       => $self->db,
+    my $probe_feature_transcript_mapping = Bio::EnsEMBL::Funcgen::ProbeFeatureTranscriptMapping->new(
+      -dbID             => $sth_fetched_dbID,
+      -probe_feature_id => $sth_fetched_probe_feature_id,
+      -stable_id        => $sth_fetched_stable_id,
+      -description      => $sth_fetched_description,
+      -adaptor          => $self->db,
     );
-    push @return_objects, $probe_transcript_mapping
+    push @return_objects, $probe_feature_transcript_mapping
   }
   return \@return_objects;
 }

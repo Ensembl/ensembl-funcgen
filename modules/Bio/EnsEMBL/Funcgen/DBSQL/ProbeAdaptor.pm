@@ -139,7 +139,7 @@ sub fetch_all_by_transcript_stable_id {
   my $probe_transcript_mappings = $self->db->get_ProbeTranscriptMappingAdaptor->fetch_all_by_transcript_stable_id($transcript_stable_id);
   
   if (! defined $probe_transcript_mappings) {
-    return;
+    return [];
   }
   
   my @probes_mapped_to_transcript;

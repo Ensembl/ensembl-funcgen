@@ -25,13 +25,16 @@ limitations under the License.
 
 =head1 NAME
 
-  Bio::EnsEMBL::Funcgen::DBSQL::ProbeTranscriptMappingAdaptor
+  Bio::EnsEMBL::Funcgen::DBSQL::ProbeSetTranscriptMappingAdaptor
 
 =head1 SYNOPSIS
 
+  my $crispr_adaptor = Bio::EnsEMBL::Registry->get_adaptor('homo_sapiens', 'funcgen', 'CrisprSitesFile');
+  my $crispr_file = $crispr_adaptor->fetch_file;
+
 =cut
 
-package Bio::EnsEMBL::Funcgen::DBSQL::ProbeTranscriptMappingAdaptor;
+package Bio::EnsEMBL::Funcgen::DBSQL::ProbeSetTranscriptMappingAdaptor;
 
 use strict;
 use warnings;
@@ -42,15 +45,15 @@ use vars '@ISA';
 @ISA    = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
 sub _tables {
-  return ['probe_transcript', 'pt'];
+  return ['probeset_transcript', 'pt'];
 }
 
 sub _columns {
   my $self = shift;
   
   return qw(
-    pt.probe_transcript_id
-    pt.probe_id
+    pt.probeset_transcript_id
+    pt.probeset_id
     pt.stable_id
     pt.description
   );
@@ -68,13 +71,13 @@ sub fetch_all_by_transcript_stable_id {
   return $mapping;
 }
 
-sub fetch_all_by_probe_id {
+sub fetch_all_by_probeset_id {
   my $self  = shift;
-  my $probe_id = shift;
+  my $probeset_id = shift;
 
-  my $constraint = "pt.probe_id = ?";
+  my $constraint = "pt.probeset_id = ?";
   
-  $self->bind_param_generic_fetch($probe_id, SQL_VARCHAR);
+  $self->bind_param_generic_fetch($probeset_id, SQL_VARCHAR);
   my $mapping = $self->generic_fetch($constraint);
   
   return $mapping;
@@ -85,31 +88,31 @@ sub _objs_from_sth {
 
   my (
     $sth_fetched_dbID,
-    $sth_fetched_probe_id,
+    $sth_fetched_probeset_id,
     $sth_fetched_stable_id,
     $sth_fetched_description,
   );
 
   $sth->bind_columns (
     \$sth_fetched_dbID,
-    \$sth_fetched_probe_id,
+    \$sth_fetched_probeset_id,
     \$sth_fetched_stable_id,
     \$sth_fetched_description,
   );
   
-  use Bio::EnsEMBL::Funcgen::ProbeTranscriptMapping;
+  use Bio::EnsEMBL::Funcgen::ProbeSetTranscriptMapping;
 
   my @return_objects;
   ROW: while ( $sth->fetch() ) {
   
-    my $probe_transcript_mapping = Bio::EnsEMBL::Funcgen::ProbeTranscriptMapping->new(
+    my $probeset_transcript_mapping = Bio::EnsEMBL::Funcgen::ProbeSetTranscriptMapping->new(
       -dbID          => $sth_fetched_dbID,
-      -probe_id      => $sth_fetched_probe_id,
+      -probeset_id      => $sth_fetched_probeset_id,
       -stable_id     => $sth_fetched_stable_id,
       -description   => $sth_fetched_description,
       -adaptor       => $self->db,
     );
-    push @return_objects, $probe_transcript_mapping
+    push @return_objects, $probeset_transcript_mapping
   }
   return \@return_objects;
 }
