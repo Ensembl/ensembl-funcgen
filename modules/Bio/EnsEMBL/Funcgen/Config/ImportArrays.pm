@@ -73,6 +73,11 @@ use vars qw( %Config );
         -format  => 'EXPRESSION',
         -type    => 'OLIGO',
         -class   => 'AFFY_UTR',
+        
+        -probeset_arrays      => 1,
+        -linked_arrays        => 0,
+        -sense_interrogation  => 0,
+
       },
 
       platypus_exon => {
@@ -168,6 +173,11 @@ use vars qw( %Config );
           -format  => 'EXPRESSION',
           -type    => 'OLIGO',
           -class   => 'AFFY_ST',
+          
+          -probeset_arrays      => 1,
+          -linked_arrays        => 1,
+          -sense_interrogation  => 1,
+
         },
 
       'HTA-2_0' => {
@@ -212,6 +222,11 @@ use vars qw( %Config );
         -format  => 'EXPRESSION',
         -type    => 'OLIGO',
         -class   => 'ILLUMINA_WG',
+
+        -probeset_arrays      => 0,
+        -linked_arrays        => 0,
+        -sense_interrogation  => 0,
+
       },
       
       'RatRef-12' => {
@@ -255,6 +270,11 @@ use vars qw( %Config );
         -format  => 'METHYLATION',
         -type    => 'OLIGO',
         -class   => 'ILLUMINA_INFINIUM',
+
+        -probeset_arrays      => 0,
+        -linked_arrays        => 0,
+        -sense_interrogation  => 0,
+
       },
     },
     INPUT_FORMAT => 'FASTA',
@@ -283,6 +303,10 @@ use vars qw( %Config );
         -format  => 'EXPRESSION',
         -type    => 'OLIGO',
         -class   => 'CODELINK',
+
+        -probeset_arrays      => 0,
+        -linked_arrays        => 1,
+        -sense_interrogation  => 0,
       },
      },
 
@@ -313,6 +337,11 @@ use vars qw( %Config );
         -format  => 'EXPRESSION',
         -type    => 'OLIGO',
         -class   => 'AGILENT',
+        
+        -probeset_arrays      => 0,
+        -linked_arrays        => 1,
+        -sense_interrogation  => 0,
+
       },
 
       'SurePrint_GPL16709_4x44k' => {
@@ -394,6 +423,11 @@ use vars qw( %Config );
            -format  => 'EXPRESSION',
            -type    => 'OLIGO',
            -class   => 'WUSTL',
+
+            -probeset_arrays      => 0,
+            -linked_arrays        => 1,
+            -sense_interrogation  => 0,
+
          },
        },
 
@@ -419,6 +453,11 @@ use vars qw( %Config );
            -format  => 'EXPRESSION',
            -type    => 'OLIGO',
            -class   => 'SLRI',
+
+            -probeset_arrays      => 0,
+            -linked_arrays        => 1,
+            -sense_interrogation  => 0,
+
          },
        },
 
@@ -445,6 +484,12 @@ use vars qw( %Config );
            -format  => 'EXPRESSION',
            -type    => 'OLIGO',
            -class   => 'UCSF',
+
+            -probeset_arrays      => 0,
+            -linked_arrays        => 1,
+            -sense_interrogation  => 0,
+
+
          },
        },
 
@@ -471,6 +516,11 @@ use vars qw( %Config );
            -format  => 'EXPRESSION',
            -type    => 'OLIGO',
            -class   => 'NIMBLEGEN_MODENCODE',
+
+            -probeset_arrays      => 0,
+            -linked_arrays        => 1,
+            -sense_interrogation  => 0,
+
          },
        },
 
@@ -504,6 +554,11 @@ use vars qw( %Config );
           -format  => 'EXPRESSION',
           -type    => 'OLIGO',
           -class   => 'PHALANX',
+
+          -probeset_arrays      => 0,
+          -linked_arrays        => 1,
+          -sense_interrogation  => 0,
+
         },
      },
 
@@ -534,6 +589,11 @@ use vars qw( %Config );
         -format  => 'EXPRESSION',
         -type    => 'OLIGO',
         -class   => 'LEIDEN',
+
+        -probeset_arrays      => 0,
+        -linked_arrays        => 1,
+        -sense_interrogation  => 0,
+
       },
     },
 
@@ -564,6 +624,11 @@ use vars qw( %Config );
           -format  => 'EXPRESSION',
           -type    => 'OLIGO',
           -class   => 'STEMPLE_LAB_SANGER',
+          
+          -probeset_arrays      => 0,
+          -linked_arrays        => 1,
+          -sense_interrogation  => 0,
+
         },
       },
 
