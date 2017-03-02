@@ -53,7 +53,7 @@ sub pipeline_analyses {
                   "truncate probe_seq;",
                   "truncate probe_set;",
                   "truncate probe_transcript;",
-                  "truncate probeset_transcript;",
+                  "truncate probe_set_transcript;",
                   "truncate probe_feature_transcript;",
                   "truncate unmapped_object;",
                   "truncate unmapped_reason;",
