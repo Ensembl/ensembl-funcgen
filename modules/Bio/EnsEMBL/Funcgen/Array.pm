@@ -150,30 +150,30 @@ sub get_all_Probes {
   }
 }
 
-=head2 get_all_Probe_dbIDs
-
-  Args       : None
-  Example    : my @dbids = @{$array->get_all_Probe_dbIDs};
-  Description: Returns an array ref of all the Probe database IDs for this array
-  Returntype : arrayref of ints
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub get_all_Probe_dbIDs {
-  my $self = shift;
-
-  if(!  $self->{probe_dbids}) {
-    if(! $self->adaptor) {
-      throw('Must have set an adaptor to get_all_Probe_dbIDs');
-    }
-
-    $self->{probe_dbids} = $self->adaptor->fetch_Probe_dbIDs_by_Array($self);
-  }
-  return  $self->{probe_dbids};
-}
+# =head2 get_all_Probe_dbIDs
+# 
+#   Args       : None
+#   Example    : my @dbids = @{$array->get_all_Probe_dbIDs};
+#   Description: Returns an array ref of all the Probe database IDs for this array
+#   Returntype : arrayref of ints
+#   Exceptions : None
+#   Caller     : General
+#   Status     : At Risk
+# 
+# =cut
+# 
+# sub get_all_Probe_dbIDs {
+#   my $self = shift;
+# 
+#   if(!  $self->{probe_dbids}) {
+#     if(! $self->adaptor) {
+#       throw('Must have set an adaptor to get_all_Probe_dbIDs');
+#     }
+# 
+#     $self->{probe_dbids} = $self->adaptor->fetch_Probe_dbIDs_by_Array($self);
+#   }
+#   return  $self->{probe_dbids};
+# }
 
 
 =head2 get_all_ProbeSets

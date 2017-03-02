@@ -277,7 +277,7 @@ sub fetch_all_by_Experiment{
 #Removed 1 query and hash loop
 #This is only 1.04 times faster or ~ 4%
 
-sub fetch_all_by_ProbeSet{
+sub fetch_all_by_ProbeSet {
   my ($self, $pset) = @_;
 
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ProbeSet', $pset);
@@ -347,32 +347,24 @@ sub _objs_from_sth {
   my ($self, $sth) = @_;
 
   my (@result, $array_id, $name, $format, $vendor, $description, $type, $class);
-
   $sth->bind_columns(\$array_id, \$name, \$format, \$vendor, \$description, \$type, \$class);
 
   while ( $sth->fetch() ) {
 
-    my $array = Bio::EnsEMBL::Funcgen::Array->new
-	  (
-	   -dbID        => $array_id,
-	   -adaptor     => $self,
-	   -name        => $name,
-	   -format      => $format,
-	   -vendor      => $vendor,
-	   -description => $description,
-	   -type        => $type,
-	   -class       => $class,
-	  );
-
+    my $array = Bio::EnsEMBL::Funcgen::Array->new(
+      -dbID        => $array_id,
+      -adaptor     => $self,
+      -name        => $name,
+      -format      => $format,
+      -vendor      => $vendor,
+      -description => $description,
+      -type        => $type,
+      -class       => $class,
+    );
     push @result, $array;
-
-
   }
   return \@result;
 }
-
-
-
 
 =head2 store
 
@@ -388,10 +380,6 @@ sub _objs_from_sth {
 
 =cut
 
-
-#This works slightly differently as arary_chip are not stored as objects,
-#yet we need to retrieve a dbID for the array before we know about all the array_chips
-
 sub store {
   my $self = shift;
   my @args = @_;
@@ -399,10 +387,9 @@ sub store {
   my ($sarray);
 
   my $sth = $self->prepare("
-			INSERT INTO array
-			(name, format, vendor, description, type, class)
-			VALUES (?, ?, ?, ?, ?, ?)");
-
+    INSERT INTO array
+    (name, format, vendor, description, type, class)
+    VALUES (?, ?, ?, ?, ?, ?)");
 
   foreach my $array (@args) {
     if ( !$array->isa('Bio::EnsEMBL::Funcgen::Array') ) {
@@ -496,54 +483,51 @@ sub fetch_Probe_dbIDs_by_Array{
   return \@dbids;
 }
 
-=head2 fetch_Probe_name2dbID_by_Array
-
-Arg [1]    : Bio::EnsEMBL::Funcgen::Array
-Example    : my %name2dbid = %{$array_adaptor->fetch_Probe_name2dbID_by_Array($array)}
-Description: Fetches a hashref of Probe dbIDs keyed by probe name
-             for all Probes of a given Array
-Returntype : Hashref for Probe dbIDs keyed by probe name
-Exceptions : None
-Caller     : General
-Status     : at risk
-
-=cut
-
-sub fetch_Probe_name2dbID_by_Array{
-  my ($self, $array) = @_;
-  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Array', $array);
-
-  my $sql = sprintf(qq/
-SELECT p.name, p.probe_id
-FROM   probe p
-WHERE  array_chip_id in( %s ) /, join( ',', @{$array->get_array_chip_ids} ) );
-
-  my $sth = $self->prepare( $sql );
-  $sth->execute || die ($sth->errstr);
-  my %mapping;
-  map{$mapping{$_->[0]}=$_->[1]} @{$sth->fetchall_arrayref};
-  return \%mapping;
-}
-
-
-
-sub check_status_by_class{
-  my ($self, $status, $class) = @_;
-
-  foreach my $array(@{$self->fetch_all_by_class($class)}){
-
-	foreach my $ac(@{$array->get_ArrayChips}){
-
-	  if(! $ac->has_status($status)){
-		throw('Found '.$class.' ArrayChip '.$ac->name." without $status status");
-	  }
-	}
-  }
-
-  return;
-}
-
-
+# =head2 fetch_Probe_name2dbID_by_Array
+# 
+# Arg [1]    : Bio::EnsEMBL::Funcgen::Array
+# Example    : my %name2dbid = %{$array_adaptor->fetch_Probe_name2dbID_by_Array($array)}
+# Description: Fetches a hashref of Probe dbIDs keyed by probe name
+#              for all Probes of a given Array
+# Returntype : Hashref for Probe dbIDs keyed by probe name
+# Exceptions : None
+# Caller     : General
+# Status     : at risk
+# 
+# =cut
+# 
+# sub fetch_Probe_name2dbID_by_Array{
+#   my ($self, $array) = @_;
+#   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Array', $array);
+# 
+#   my $sql = sprintf(qq/
+# SELECT p.name, p.probe_id
+# FROM   probe p
+# WHERE  array_chip_id in( %s ) /, join( ',', @{$array->get_array_chip_ids} ) );
+# 
+#   my $sth = $self->prepare( $sql );
+#   $sth->execute || die ($sth->errstr);
+#   my %mapping;
+#   map{$mapping{$_->[0]}=$_->[1]} @{$sth->fetchall_arrayref};
+#   return \%mapping;
+# }
+# 
+# 
+# 
+# sub check_status_by_class{
+#   my ($self, $status, $class) = @_;
+# 
+#   foreach my $array(@{$self->fetch_all_by_class($class)}){
+# 
+# 	foreach my $ac(@{$array->get_ArrayChips}){
+# 
+# 	  if(! $ac->has_status($status)){
+# 		throw('Found '.$class.' ArrayChip '.$ac->name." without $status status");
+# 	  }
+# 	}
+#   }
+# 
+#   return;
+# }
 
 1;
-
