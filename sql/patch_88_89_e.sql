@@ -13,22 +13,22 @@
 -- limitations under the License.
 
 /**
-@header patch_87_88_e.sql - create probeset_transcript table
+@header patch_88_89_e.sql - create probeset_transcript table
 @desc   Creates probeset_transcript table, moves data from object_xref and xref into it.
 */
 
-DROP TABLE IF EXISTS `probeset_transcript`;
+DROP TABLE IF EXISTS `probe_set_transcript`;
 
-CREATE TABLE `probeset_transcript` (
-  `probeset_transcript_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `probeset_id`    int(10) unsigned NOT NULL,
+CREATE TABLE `probe_set_transcript` (
+  `probe_set_transcript_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `probe_set_id`    int(10) unsigned NOT NULL,
   `stable_id`   varchar(18)      NOT NULL,
   `description` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`probeset_transcript_id`),
-  KEY `probeset_transcript_id_idx` (`probeset_transcript_id`)
+  KEY `probe_set_transcript_id_idx` (`probeset_transcript_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
-insert into `probeset_transcript` (`probeset_id`, `stable_id`, `description`) (
+insert into `probe_set_transcript` (`probeset_id`, `stable_id`, `description`) (
   select 
     ensembl_id as probeset_id, 
     dbprimary_acc as stable_id, 
@@ -39,5 +39,5 @@ insert into `probeset_transcript` (`probeset_id`, `stable_id`, `description`) (
   where ensembl_object_type="ProbeSet"
 );
 
-
-
+--  Patch identifier
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_e.sql');

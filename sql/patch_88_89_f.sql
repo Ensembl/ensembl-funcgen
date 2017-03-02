@@ -13,7 +13,7 @@
 -- limitations under the License.
 
 /**
-@header patch_87_88_f.sql - Remove probe features from object_xref and xref table
+@header patch_88_89_f.sql - Remove probe features from object_xref and xref table
 @desc   Remove probe features from xref table, they are now in probe_feature_transcript
 */
 
@@ -29,3 +29,6 @@ delete from
   object_xref
 where 
   object_xref.ensembl_object_type="ProbeFeature";
+
+--  Patch identifier
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_f.sql');

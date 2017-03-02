@@ -13,11 +13,11 @@
 -- limitations under the License.
 
 /**
-@header patch_87_88_a.sql - schema version
+@header patch_88_89_a.sql - schema version
 @desc   Update schema_version in meta table to 88
 */
 
 UPDATE meta SET meta_value='89' WHERE meta_key='schema_version';
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_87_88_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_a.sql|schema_version');

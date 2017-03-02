@@ -13,7 +13,7 @@
 -- limitations under the License.
 
 /**
-@header patch_87_88_d.sql - create probe_transcript table
+@header patch_88_89_d.sql - create probe_transcript table
 @desc   Creates probe_transcript table, moves data from object_xref and xref into it.
 */
 
@@ -39,3 +39,5 @@ insert into `probe_transcript` (`probe_id`, `stable_id`, `description`) (
   where ensembl_object_type="Probe"
 );
 
+--  Patch identifier
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_d.sql');

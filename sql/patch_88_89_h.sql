@@ -13,7 +13,7 @@
 -- limitations under the License.
 
 /**
-@header patch_87_88_g.sql - Remove probe set mappings from the xref tables.
+@header patch_88_89_h.sql - Remove probe set mappings from the xref tables.
 @desc   Remove probe set mappings from the xref tables.
 */
 
@@ -29,3 +29,6 @@ delete from
   object_xref
 where 
   object_xref.ensembl_object_type="ProbeSet";
+
+--  Patch identifier
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_h.sql');

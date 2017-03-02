@@ -13,63 +13,17 @@
 -- limitations under the License.
 
 /**
-@header patch_87_88_i.sql - sample_regulatory_feature_id field for regulatory build
-@desc   Adds a sample_regulatory_feature_id column to the regulatory build table and puts an id in for every regulatory build.
+@header patch_88_89_i.sql - 
+@desc   
 */
 
-alter table regulatory_build add column sample_regulatory_feature_id int(10) unsigned;
+alter table array add column is_probeset_array       tinyint(1) NOT NULL DEFAULT 0;
+alter table array add column is_linked_array         tinyint(1) NOT NULL DEFAULT 0;
+alter table array add column has_sense_interrogation tinyint(1) NOT NULL DEFAULT 0;
 
--- Find a sample regulatory feature with many activities
+update array set is_probeset_array       = 1 where class in ("AFFY_UTR", "AFFY_ST");
+update array set is_linked_array         = 1 where class in ("AFFY_ST", "AGILENT", "PHALANX", "CODELINK", "LEIDEN", "STEMPLE_LAB_SANGER", "NIMBLEGEN_MODENCODE", "SLRI", "UCSF", "WUSTL");
+update array set has_sense_interrogation = 1 where class in ("AFFY_ST");
 
-drop table if exists `temp_sample_id_max_activities`;
-drop table if exists `temp_sample_id`;
-
-create table temp_sample_id_max_activities as 
-select 
-  regulatory_build_id, max(num_activities) as max_num_activities 
-from (
-  select 
-    regulatory_build_id, regulatory_feature_id, count(distinct activity) num_activities 
-  from 
-    regulatory_build 
-    join regulatory_feature using (regulatory_build_id) 
-    join regulatory_activity using (regulatory_feature_id) 
-  group by 
-    regulatory_build_id, regulatory_feature_id 
-  order by 
-    num_activities desc
-) a group by regulatory_build_id;
-
-create table temp_sample_id as 
-select 
-  temp_sample_id_max_activities.regulatory_build_id, min(regulatory_feature_id) as sample_regulatory_feature_id 
-from 
-  temp_sample_id_max_activities join (
-    select 
-      regulatory_build_id, regulatory_feature_id, count(distinct activity) num_activities 
-    from 
-      regulatory_build 
-      join regulatory_feature using (regulatory_build_id) 
-      join regulatory_activity using (regulatory_feature_id) 
-    group by 
-      regulatory_build_id, regulatory_feature_id 
-    order by 
-      num_activities desc
-) a on (
-  a.regulatory_build_id=temp_sample_id_max_activities.regulatory_build_id 
-  and temp_sample_id_max_activities.max_num_activities=a.num_activities
-)
-group by 
-  temp_sample_id_max_activities.regulatory_build_id
-;
-
-update 
-  regulatory_build, temp_sample_id 
-set 
-  regulatory_build.sample_regulatory_feature_id=temp_sample_id.sample_regulatory_feature_id 
-where 
-  regulatory_build.regulatory_build_id=temp_sample_id.regulatory_build_id
-;
-
-drop table `temp_sample_id_max_activities`;
-drop table `temp_sample_id`;
+--  Patch identifier
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_i.sql');
