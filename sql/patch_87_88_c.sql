@@ -13,50 +13,66 @@
 -- limitations under the License.
 
 /**
-@header patch_87_88_c.sql - create probe_feature_transcript table
-@desc   Creates probe_feature_transcript table, moves data from object_xref and xref into it.
+@header patch_87_88_c.sql - sample_regulatory_feature_id field for regulatory build
+@desc   Adds a sample_regulatory_feature_id column to the regulatory build table and puts an id in for every regulatory build.
 */
 
-drop table if exists `temp_probe_feature_transcript`;
+alter table regulatory_build add column sample_regulatory_feature_id int(10) unsigned;
 
-create table temp_probe_feature_transcript as 
+-- Find a sample regulatory feature with many activities
+
+drop table if exists `temp_sample_id_max_activities`;
+drop table if exists `temp_sample_id`;
+
+create table temp_sample_id_max_activities as 
 select 
-  ensembl_id as probe_feature_id, 
-  max(version) as max_version
+  regulatory_build_id, max(num_activities) as max_num_activities 
+from (
+  select 
+    regulatory_build_id, regulatory_feature_id, count(distinct activity) num_activities 
+  from 
+    regulatory_build 
+    join regulatory_feature using (regulatory_build_id) 
+    join regulatory_activity using (regulatory_feature_id) 
+  group by 
+    regulatory_build_id, regulatory_feature_id 
+  order by 
+    num_activities desc
+) a group by regulatory_build_id;
+
+create table temp_sample_id as 
+select 
+  temp_sample_id_max_activities.regulatory_build_id, min(regulatory_feature_id) as sample_regulatory_feature_id 
 from 
-  object_xref 
-  join xref using (xref_id) 
-where 
-  ensembl_object_type="ProbeFeature"
+  temp_sample_id_max_activities join (
+    select 
+      regulatory_build_id, regulatory_feature_id, count(distinct activity) num_activities 
+    from 
+      regulatory_build 
+      join regulatory_feature using (regulatory_build_id) 
+      join regulatory_activity using (regulatory_feature_id) 
+    group by 
+      regulatory_build_id, regulatory_feature_id 
+    order by 
+      num_activities desc
+) a on (
+  a.regulatory_build_id=temp_sample_id_max_activities.regulatory_build_id 
+  and temp_sample_id_max_activities.max_num_activities=a.num_activities
+)
 group by 
-  ensembl_id;
+  temp_sample_id_max_activities.regulatory_build_id
+;
 
-drop table if exists `probe_feature_transcript`;
-
-CREATE TABLE `probe_feature_transcript` (
-  `probe_feature_transcript_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `probe_feature_id` int(10) unsigned DEFAULT NULL,
-  `stable_id`   varchar(18) DEFAULT NULL,
-  `description` varchar(255) DEFAULT NULL,
-  PRIMARY KEY (`probe_feature_transcript_id`),
-  KEY `probe_feature_transcript_id_idx` (`probe_feature_transcript_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-
-insert into `probe_feature_transcript` (`probe_feature_id`, `stable_id`, `description`) (
-select 
-  ensembl_id as probe_feature_id, 
-  dbprimary_acc as stable_id, 
-  linkage_annotation as description
-from 
-  temp_probe_feature_transcript
-  join object_xref on (probe_feature_id=ensembl_id)
-  join xref on (object_xref.xref_id=xref.xref_id and temp_probe_feature_transcript.max_version=version) 
+update 
+  regulatory_build, temp_sample_id 
+set 
+  regulatory_build.sample_regulatory_feature_id=temp_sample_id.sample_regulatory_feature_id 
 where 
-  ensembl_object_type="ProbeFeature"
-);
+  regulatory_build.regulatory_build_id=temp_sample_id.regulatory_build_id
+;
 
--- create unique index probe_feature_id_idx on probe_feature_transcript(probe_feature_id);
-create index probe_feature_id_idx on probe_feature_transcript(probe_feature_id);
+drop table `temp_sample_id_max_activities`;
+drop table `temp_sample_id`;
 
-drop table if exists `temp_probe_feature_transcript`;
+# Patch identifier
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_87_88_c.sql|sample_regulatory_feature_id field for regulatory build');
