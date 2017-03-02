@@ -326,7 +326,12 @@ sub _true_tables {
 =cut
 
 sub _columns {
-  return qw( a.array_id a.name a.format a.vendor a.description a.type a.class );
+  return qw( 
+    a.array_id a.name a.format a.vendor a.description a.type a.class  
+    a.is_probeset_array
+    a.is_linked_array
+    a.has_sense_interrogation
+  );
 }
 
 =head2 _objs_from_sth
@@ -347,7 +352,15 @@ sub _objs_from_sth {
   my ($self, $sth) = @_;
 
   my (@result, $array_id, $name, $format, $vendor, $description, $type, $class);
-  $sth->bind_columns(\$array_id, \$name, \$format, \$vendor, \$description, \$type, \$class);
+  my $is_probeset_array;
+  my $is_linked_array;
+  my $has_sense_interrogation;
+
+  $sth->bind_columns(\$array_id, \$name, \$format, \$vendor, \$description, \$type, \$class
+    \$is_probeset_array,
+    \$is_linked_array,
+    \$has_sense_interrogation
+  );
 
   while ( $sth->fetch() ) {
 
@@ -360,6 +373,9 @@ sub _objs_from_sth {
       -description => $description,
       -type        => $type,
       -class       => $class,
+      -is_probeset_array       => $is_probeset_array,
+      -is_linked_array         => $is_linked_array,
+      -has_sense_interrogation => $has_sense_interrogation,
     );
     push @result, $array;
   }

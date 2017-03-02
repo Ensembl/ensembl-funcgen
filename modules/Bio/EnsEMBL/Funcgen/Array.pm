@@ -98,8 +98,16 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
   
-  my ($name, $format, $vendor, $type, $desc, $aclass)
-    = rearrange( ['NAME', 'FORMAT', 'VENDOR', 'TYPE', 'DESCRIPTION', 'CLASS'], @_ );
+  my ($name, $format, $vendor, $type, $desc, $aclass,
+    $is_probeset_array,
+    $is_linked_array,
+    $has_sense_interrogation,
+  )
+    = rearrange( ['NAME', 'FORMAT', 'VENDOR', 'TYPE', 'DESCRIPTION', 'CLASS',
+        'IS_PROBESET_ARRAY',
+        'IS_LINKED_ARRAY',
+        'HAS_SENSE_INTERROGATION'
+      ], @_ );
   
   my @stack = caller();
 
@@ -114,7 +122,7 @@ sub new {
   $self->format($format)    if defined $format;
 
   if(defined $format && $format eq 'EXPRESSION' && ! defined $class){
-	throw('You must defined a class if you are importing and array with an EXPRESSION format');
+    throw('You must defined a class if you are importing and array with an EXPRESSION format');
   }
 
   $self->class(uc($aclass))     if defined $aclass;
@@ -122,7 +130,62 @@ sub new {
   $self->description($desc) if defined $desc;
   $self->type($type)        if defined $type;
   
+  $self->is_probeset_array($is_probeset_array)             if defined $is_probeset_array;
+  $self->is_linked_array($is_linked_array)                 if defined $is_linked_array;
+  $self->has_sense_interrogation($has_sense_interrogation) if defined $has_sense_interrogation,;
+  
   return $self;
+}
+
+=head2 is_probeset_array
+
+  Arg [1]    : (optional) boolean
+  Example    : $array->is_probeset_array
+  Description: Getter, setter for is_probeset_array
+  Returntype : boolean
+  Exceptions : None
+  Caller     : General
+
+=cut
+
+sub is_probeset_array {
+  my $self = shift;
+  $self->{'is_probeset_array'} = shift if @_;
+  return $self->{'is_probeset_array'};
+}
+
+=head2 is_linked_array
+
+  Arg [1]    : (optional) boolean
+  Example    : $array->is_linked_array
+  Description: Getter, setter for is_linked_array
+  Returntype : boolean
+  Exceptions : None
+  Caller     : General
+
+=cut
+
+sub is_linked_array {
+  my $self = shift;
+  $self->{'is_linked_array'} = shift if @_;
+  return $self->{'is_linked_array'};
+}
+
+=head2 has_sense_interrogation
+
+  Arg [1]    : (optional) boolean
+  Example    : $array->has_sense_interrogation
+  Description: Getter, setter for has_sense_interrogation
+  Returntype : boolean
+  Exceptions : None
+  Caller     : General
+
+=cut
+
+sub has_sense_interrogation {
+  my $self = shift;
+  $self->{'has_sense_interrogation'} = shift if @_;
+  return $self->{'has_sense_interrogation'};
 }
 
 =head2 get_all_Probes
