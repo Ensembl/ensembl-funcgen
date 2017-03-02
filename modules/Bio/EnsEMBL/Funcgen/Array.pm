@@ -34,22 +34,21 @@ Bio::EnsEMBL::Funcgen::Array - A module to represent a nucleotide microarray.
 
 =head1 SYNOPSIS
 
-use Bio::EnsEMBL::Funcgen::Array;
+  use Bio::EnsEMBL::Funcgen::Array;
 
-my $array = Bio::EnsEMBL::Funcgen::Array->new
- (
-	-NAME        => 'Array-1',
-  -FORMAT      => 'Tiled',
-  -SIZE        => '1',
-  -VENDOR      => 'Nimblegen',
-  -DESCRIPTION => $desc,
-  -TYPE        => 'OLIGO',
-  -CLASS       => 'VENDOR_FORMAT'
- );
+  my $array = Bio::EnsEMBL::Funcgen::Array->new(
+    -NAME        => 'Array-1',
+    -FORMAT      => 'Tiled',
+    -SIZE        => '1',
+    -VENDOR      => 'Nimblegen',
+    -DESCRIPTION => $desc,
+    -TYPE        => 'OLIGO',
+    -CLASS       => 'VENDOR_FORMAT'
+  );
 
-my $db_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(...);
-my $array_adaptor = $db_adaptor->get_ArrayAdaptor();
-my $array = $array_adaptor->fetch_by_name($array_name)
+  my $db_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(...);
+  my $array_adaptor = $db_adaptor->get_ArrayAdaptor();
+  my $array = $array_adaptor->fetch_by_name($array_name)
 
 =head1 DESCRIPTION
 
@@ -69,15 +68,6 @@ use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 
 use base qw(Bio::EnsEMBL::Funcgen::Storable);
 
-
-# Possible types for OligoArray objects
-#This should match the vendor enum values?
-#%VALID_TYPE = (
-#	'AFFY'  => 1,
-#	'OLIGO' => 1,
-#);
-
-
 =head2 new
 
   Arg [-NAME]        : String - the name of this array
@@ -86,15 +76,14 @@ use base qw(Bio::EnsEMBL::Funcgen::Storable);
   Arg [-FORMAT]      : String - the format of this array (TILED, TARGETTED, GENE etc)
   Arg [-DESCRIPTION] : String - description of the array 
 
-  Example    : my $array = Bio::EnsEMBL::Funcgen::Array->new
-                (
-								 -NAME        => 'Array-1',
-								 -FORMAT      => 'Tiled',
-								 -VENDOR      => 'Nimblegen',
-                 -TYPE        => 'OLIGO',
-								 -DESCRIPTION => $desc,
-                 -CLASS       => 'VENDOR_FORMAT',#e.g. AFFY_UTR, ILLUMINA_WG
-							  );
+  Example    : my $array = Bio::EnsEMBL::Funcgen::Array->new(
+      -NAME        => 'Array-1',
+      -FORMAT      => 'Tiled',
+      -VENDOR      => 'Nimblegen',
+      -TYPE        => 'OLIGO',
+      -DESCRIPTION => $desc,
+      -CLASS       => 'VENDOR_FORMAT',# e.g. AFFY_UTR, ILLUMINA_WG
+    );
   Description: Creates a new Bio::EnsEMBL::Funcgen::Array object.
   Returntype : Bio::EnsEMBL::Funcgen::Array
   Exceptions : Throws if mandatory params not set/valid
@@ -112,16 +101,11 @@ sub new {
   my ($name, $format, $vendor, $type, $desc, $aclass)
     = rearrange( ['NAME', 'FORMAT', 'VENDOR', 'TYPE', 'DESCRIPTION', 'CLASS'], @_ );
   
-  #mandatory params?
-  #name, format, vendor
-  #enum on format?
-
   my @stack = caller();
 
   if($self->dbID() && $stack[0] ne "Bio::EnsEMBL::Funcgen::DBSQL::ArrayAdaptor"){
     throw("You must use the ArrayAdaptor($stack[0]) to generate Arrays with a dbID i.e. from the DB, as this module accomodates updating which may cause incorrect data if the object is not generated form the DB");
   } 
-
 
   throw("Must provide a vendor parameter") if ! $vendor;
   throw("Must provide a name parameter")   if ! $name;
@@ -154,16 +138,16 @@ sub new {
 =cut
 
 sub get_all_Probes {
-	my $self = shift;
+  my $self = shift;
 
-	if ( $self->dbID() && $self->adaptor() ) {
-		my $opa = $self->adaptor()->db()->get_ProbeAdaptor();
-		my $probes = $opa->fetch_all_by_Array($self);
-		return $probes;
-	} else {
-		warning('Need database connection to retrieve Probes');
-		return [];
-	}
+  if ( $self->dbID() && $self->adaptor() ) {
+    my $opa = $self->adaptor()->db()->get_ProbeAdaptor();
+    my $probes = $opa->fetch_all_by_Array($self);
+    return $probes;
+  } else {
+    warning('Need database connection to retrieve Probes');
+  return [];
+  }
 }
 
 =head2 get_all_Probe_dbIDs
@@ -181,16 +165,13 @@ sub get_all_Probes {
 sub get_all_Probe_dbIDs {
   my $self = shift;
 
-  if(!  $self->{probe_dbids}){
-	#check for adaptor here?
-	
-	if(! $self->adaptor){
-	  throw('Must have set an adaptor to get_all_Probe_dbIDs');
-	}
-	
-	$self->{probe_dbids} = $self->adaptor->fetch_Probe_dbIDs_by_Array($self);
-  }
+  if(!  $self->{probe_dbids}) {
+    if(! $self->adaptor) {
+      throw('Must have set an adaptor to get_all_Probe_dbIDs');
+    }
 
+    $self->{probe_dbids} = $self->adaptor->fetch_Probe_dbIDs_by_Array($self);
+  }
   return  $self->{probe_dbids};
 }
 
@@ -208,20 +189,17 @@ sub get_all_Probe_dbIDs {
 =cut
 
 sub get_all_ProbeSets {
-	my $self = shift;
+  my $self = shift;
 
-	if ( $self->dbID() && $self->adaptor() ) {
-		my $opsa = $self->adaptor()->db()->get_ProbeSetAdaptor();
-		my $probesets = $opsa->fetch_all_by_Array($self);
-		return $probesets;
-	} else {
-		warning('Need database connection to retrieve ProbeSets');
-		return [];
-	}
+  if ( $self->dbID() && $self->adaptor() ) {
+    my $opsa = $self->adaptor()->db()->get_ProbeSetAdaptor();
+    my $probesets = $opsa->fetch_all_by_Array($self);
+    return $probesets;
+  } else {
+    warning('Need database connection to retrieve ProbeSets');
+  return [];
+  }
 }
-
-
-#All the array_chip methods will be migrated to ArrayChip.pm
 
 =head2 get_array_chip_ids
 
@@ -239,12 +217,7 @@ sub get_array_chip_ids {
 
   my @ac_ids;
 
-
   $self->get_ArrayChips();
-
-  #should we get_ArrayChips is we have none cached?
-  #this may cause problem
-
 
   foreach my $achip(values %{$self->{'array_chips'}}){
     push @ac_ids, $achip->dbID();
@@ -268,14 +241,10 @@ sub get_array_chip_ids {
 
 =cut
 
-
-
-sub get_design_ids{
+sub get_design_ids {
   my $self = shift;
-  return [keys %{$self->{'array_chips'}}];
+  return [ keys %{$self->{'array_chips'}} ];
 }
-    
-
 
 =head2 name
 
@@ -292,17 +261,9 @@ sub get_design_ids{
 
 sub name{
   my $self = shift;
-  
   $self->{'name'} = shift if @_;
-  
-  #do we need this?
-  #if ( !exists $self->{'name'} && $self->dbID() && $self->adaptor() ) {
-  #  $self->adaptor->fetch_attributes($self);
-  #}
-  
   return $self->{'name'};
 }
-
 
 =head2 type
 
@@ -317,14 +278,11 @@ sub name{
 
 =cut
 
-sub type{
+sub type {
   my $self = shift;
-  
   $self->{'type'} = shift if @_;
-    
   return $self->{'type'};
 }
-
 
 =head2 format
 
@@ -341,14 +299,7 @@ sub type{
 
 sub format {
   my $self = shift;
-  
   $self->{'format'} = shift if @_;
-  
-  #do we need this?
-  #if ( !exists $self->{'format'} && $self->dbID() && $self->adaptor() ) {
-  #  $self->adaptor->fetch_attributes($self);
-  #}
-  
   return $self->{'format'};
 }
 
@@ -367,12 +318,9 @@ sub format {
 
 sub class {
   my $self = shift;
-  
   $self->{'class'} = shift if @_;
-  
   return $self->{'class'};
 }
-
 
 =head2 vendor
 
@@ -390,12 +338,6 @@ sub class {
 sub vendor {
   my $self = shift;
   $self->{'vendor'} = shift if @_;
-  
-  #do we need this?
-  #if ( !exists $self->{'vendor'} && $self->dbID() && $self->adaptor() ) {
-  #  $self->adaptor->fetch_attributes($self);
-  #}
-
   return $self->{'vendor'};
 }
 
@@ -415,12 +357,6 @@ sub vendor {
 sub description {
   my $self = shift;
   $self->{'description'} = shift if @_;
-  
-  #do we need this?
-  #if ( !exists $self->{'description'} && $self->dbID() && $self->adaptor() ) {
-  #  $self->adaptor->fetch_attributes($self);
-  #}
-
   return $self->{'description'};
 }
 
@@ -437,16 +373,11 @@ sub description {
 
 sub probe_count {
   my ($self)  = @_;
-  #Do we want a distinct flag here?
-
   if(! defined $self->{'probe_count'}){
-	$self->{'probe_count'} = $self->adaptor->fetch_probe_count_by_Array($self);
+    $self->{'probe_count'} = $self->adaptor->fetch_probe_count_by_Array($self);
   }
-  
   return $self->{'probe_count'};
 }
-
-
 
 =head2 get_ArrayChips
 
@@ -461,27 +392,19 @@ sub probe_count {
 
 sub get_ArrayChips {
   my $self = shift;
- 
-  #lazy loaded as we won't want this for light DB
-  #should do meta check and want here
 
-  if ( ! exists $self->{'array_chips'}){
+  if ( ! exists $self->{'array_chips'}) {
 
     if( $self->dbID() && $self->adaptor() ) {
-      #$self->adaptor->fetch_attributes($self);
-      #need to do this differently as we're accessing a different table
       $self->{'array_chips'} = {};
 
-      foreach my $achip(@{$self->adaptor->db->get_ArrayChipAdaptor->fetch_all_by_array_id($self->dbID())}){
-	$self->{'array_chips'}{$achip->design_id} = $achip;
-	#%{$self->{'array_chips'}} = %{$self->adaptor->db->get_ArrayAdaptor->_fetch_array_chips_by_array_dbID($self->dbID())};
+      foreach my $achip(@{$self->adaptor->db->get_ArrayChipAdaptor->fetch_all_by_array_id($self->dbID())}) {
+        $self->{'array_chips'}{$achip->design_id} = $achip;
       }
-    }
-    else{
+    } else{
       throw("Need array dbID and DB connection to retrieve array_chips");
     }
   }
-
   return [ values %{$self->{'array_chips'}} ];
 }
 
@@ -497,22 +420,14 @@ sub get_ArrayChips {
 
 =cut
 
-sub get_ArrayChip_by_design_id{
+sub get_ArrayChip_by_design_id {
   my ($self, $design_id) = @_;
-
-
-  #warn "This needs to get the array chip if not defined?? but we're using it to test whether is has been stored same problem as probe_design?";
-
-  my ($achip);
   throw("Must supply a valid array chip design_id") if (! defined $design_id);
 
-  if(defined $self->{'array_chips'}{$design_id}){
+  my $achip;
+  if(defined $self->{'array_chips'}{$design_id}) {
     $achip = $self->{'array_chips'}{$design_id};
-  }else{
-    #No we use this to check whether it has been stored with the array
-    #warn("should this throw? Array does not contain ArrayChip:$design_id\n"); 
   }
-
   return $achip;
 }
 
@@ -529,28 +444,21 @@ sub get_ArrayChip_by_design_id{
 
 =cut
 
-sub add_ArrayChip{
+sub add_ArrayChip {
   my ($self, $array_chip) = @_;
 
-  if ($self->adaptor){
+  if ($self->adaptor) {
     $self->adaptor->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ArrayChip', $array_chip, 'array_chip');
     $self->get_ArrayChips if ! $self->{array_chips};
 
     if(! exists $self->{array_chips}{$array_chip->design_id}){
       $self->{'array_chips'}{$array_chip->design_id} = $array_chip;
     }
-  }
-  else{
+  } else{
     throw('Array needs an adaptor before adding an array_chip');
   }
-
   return;
 }
-
-
-### DEPRECATED METHODS ###
-
-
 
 1;
 
