@@ -81,48 +81,55 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#DBI sql_types import
 
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
-=head2 fetch_by_array_probeset_name
+sub fetch_by_array_probeset_name{
+  my $self = shift;
+  deprecate(
+    "fetch_by_array_probeset_name has been deprecated and will be removed in Ensembl release 92."
+        . " Please use fetch_by_array_probe_set_name instead."
+  );
+  return $self->fetch_by_array_probe_set_name(@_);
+}
+
+=head2 fetch_by_array_probe_set_name
 
   Arg [1]    : string - name of array
   Arg [2]    : string - name of probeset
   Example    : my $probeset = $opsa->fetch_by_array_probeset_name('Array-1', 'Probeset-1');
   Description: Returns a probeset given the array name and probeset name
-               This will uniquely define a probeset. Only one
-			   probeset is ever returned.
+               This will uniquely define a probeset. Only one probeset is ever returned.
   Returntype : Bio::EnsEMBL::ProbeSet
   Exceptions : None
   Caller     : General
   Status     : At Risk
 
 =cut
+sub fetch_by_array_probe_set_name {
+  my ($self, $array_name, $probeset_name) = @_;
 
-sub fetch_by_array_probeset_name{
-	my ($self, $array_name, $probeset_name) = @_;
+  if(! ($array_name && $probeset_name)){
+    throw('Must provide array_name and probeset_name arguments');
+  }
 
-	if(! ($array_name && $probeset_name)){
-	  throw('Must provide array_name and probeset_name arguments');
-	}
+  #Extend query tables
+  $self->_tables([['probe', 'p'], ['array_chip', 'ac'], ['array', 'a']]);
+  my $constraint = 'ps.name= ? AND ps.probe_set_id=p.probe_set_id AND p.array_chip_id=ac.array_chip_id AND ac.array_id=a.array_id AND a.name= ? GROUP by ps.probe_set_id';
 
-	#Extend query tables
-    $self->_tables([['probe', 'p'], ['array_chip', 'ac'], ['array', 'a']]);
-	my $constraint = 'ps.name= ? AND ps.probe_set_id=p.probe_set_id AND p.array_chip_id=ac.array_chip_id AND ac.array_id=a.array_id AND a.name= ? GROUP by ps.probe_set_id';
+  #bind params as we have unsafe string args
+  $self->bind_param_generic_fetch($probeset_name, SQL_VARCHAR);
+  $self->bind_param_generic_fetch($array_name,    SQL_VARCHAR);
 
-	#bind params as we have unsafe string args
-    $self->bind_param_generic_fetch($probeset_name, SQL_VARCHAR);
-	$self->bind_param_generic_fetch($array_name,    SQL_VARCHAR);
+  my $pset =  $self->generic_fetch($constraint)->[0];
+  $self->reset_true_tables;
 
-	my $pset =  $self->generic_fetch($constraint)->[0];
-    $self->reset_true_tables;
-
-	return $pset;
+  return $pset;
 }
 
 sub fetch_all_by_external_name {
   my $self = shift;
   my $transcript_stable_id = shift;
   deprecate(
-    "display_id has been deprecated and will be removed in Ensembl release 92."
-        . " Please use stable_id instead."
+    "fetch_all_by_external_name has been deprecated and will be removed in Ensembl release 92."
+        . " Please use fetch_all_by_transcript_stable_id instead."
   );
   return $self->fetch_all_by_transcript_stable_id($transcript_stable_id);
 }
@@ -130,8 +137,8 @@ sub fetch_all_by_external_name {
 =head2 fetch_all_by_transcript_stable_id
 
   Arg [1]    : string - transcript stable id
-  Example    : my $probeset_list = $probeset_adaptor->fetch_all_by_transcript_stable_id('ENST00000489935');
-  Description: Fetches all probesets that have been mapped to this transcript by the 
+  Example    : my $probeset_list = $probe_set_adaptor->fetch_all_by_transcript_stable_id('ENST00000489935');
+  Description: Fetches all probe_sets that have been mapped to this transcript by the 
                probe2transcript step in the probemapping pipeline.
   Returntype : Arrayref
   Caller     : General
@@ -142,18 +149,18 @@ sub fetch_all_by_transcript_stable_id {
   my $self = shift;
   my $transcript_stable_id = shift;
 
-  my $probeset_transcript_mappings = $self->db->get_ProbeSetTranscriptMappingAdaptor->fetch_all_by_transcript_stable_id($transcript_stable_id);
+  my $probe_set_transcript_mappings = $self->db->get_ProbeSetTranscriptMappingAdaptor->fetch_all_by_transcript_stable_id($transcript_stable_id);
   
-  if (! defined $probeset_transcript_mappings) {
+  if (! defined $probe_set_transcript_mappings) {
     return [];
   }
   
-  my @probesets_mapped_to_transcript;
-  foreach my $current_probeset_transcript_mapping (@$probeset_transcript_mappings) {
-    push @probesets_mapped_to_transcript,
-      $self->fetch_by_dbID($current_probeset_transcript_mapping->probeset_id);
+  my @probe_sets_mapped_to_transcript;
+  foreach my $current_probe_set_transcript_mapping (@$probe_set_transcript_mappings) {
+    push @probe_sets_mapped_to_transcript,
+      $self->fetch_by_dbID($current_probe_set_transcript_mapping->probe_set_id);
   }
-  return \@probesets_mapped_to_transcript;
+  return \@probe_sets_mapped_to_transcript;
 }
 
 =head2 fetch_all_by_name
@@ -161,11 +168,11 @@ sub fetch_all_by_transcript_stable_id {
   Arg [1]    : string - probe set name
   Example    : my @probes = @{$pdaa->fetch_all_by_name('ProbeSet1')};
   Description: Convenience method to re-instate the functionality of
-               $core_dbentry_adpator->fetch_all_by_external_name('probeset_name');
-               WARNING: This may not be the probeset you are expecting as
-               probeset names are not unqiue across arrays and vendors.
+               $core_dbentry_adpator->fetch_all_by_external_name('probe_set_name');
+               WARNING: This may not be the probe_set you are expecting as
+               probe_set names are not unqiue across arrays and vendors.
                These should ideally be validated using the attached array
-               information or alternatively use fetch_by_array_probeset_name
+               information or alternatively use fetch_by_array_probe_set_name
                Returns a probe with the given name.
   Returntype : Arrayref
   Exceptions : Throws if name not passed
@@ -174,16 +181,14 @@ sub fetch_all_by_transcript_stable_id {
 
 =cut
 
-
-sub fetch_all_by_name{
+sub fetch_all_by_name {
   my ($self, $name) = @_;
 
-  throw('Must provide a probeset name argument') if ! defined $name;
+  throw('Must provide a probe_set name argument') if ! defined $name;
   $self->bind_param_generic_fetch($name, SQL_VARCHAR);
 
   return $self->generic_fetch('ps.name=?');
 }
-
 
 =head2 fetch_by_ProbeFeature
 
@@ -197,62 +202,48 @@ sub fetch_all_by_name{
 
 =cut
 
-#This is a good candidate for complex query extension
-#As we will most likely want the probe also if we are fetching the ProbeSet
-#For a given feature.
-#We could also set the probe in the ProbeFeature object, so we don't re-query
-#should the user use ProbeFeature->get_probe
-#This is also a case for passing the array name to automatically set
-#the probe name? As we will likely know the array name beforehand.
-
-#Could we also bring back annotations for this Probe/ProbeSet?
-#
-
 sub fetch_by_ProbeFeature {
-	my ($self, $pfeature) = @_;
-	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ProbeFeature', $pfeature);
+  my $self = shift;
+  my $probe_feature = shift;
+  
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ProbeFeature', $probe_feature);
 
-	#Extend query
-    $self->_tables([['probe', 'p']]);
-	my $pset =  $self->generic_fetch('p.probe_id='.$pfeature->probe_id.' and p.probe_set_id=ps.probe_set_id GROUP by ps.probe_set_id')->[0];
-    $self->reset_true_tables;
-	return $pset;
+  # Extend query
+  $self->_tables([['probe', 'p']]);
+  my $probe_set =  $self->generic_fetch('p.probe_id='.$probe_feature->probe_id.' and p.probe_set_id=ps.probe_set_id GROUP by ps.probe_set_id')->[0];
+  $self->reset_true_tables;
+  return $probe_set;
 }
-
 
 =head2 fetch_all_by_Array
 
-Arg [1]    : Bio::EnsEMBL::Funcgen::Array
-Example    : my @probesets = @{$pset_adaptor->fetch_all_by_Array($array)};
-Description: Fetch all ProbeSets on a particular array.
-Returntype : Listref of Bio::EnsEMBL::ProbeSet objects.
-Exceptions : throws if arg is not valid or stored
-Caller     : General
-Status     : At Risk
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Array
+  Example    : my @probe_sets = @{$pset_adaptor->fetch_all_by_Array($array)};
+  Description: Fetch all ProbeSets on a particular array.
+  Returntype : Listref of Bio::EnsEMBL::ProbeSet objects.
+  Exceptions : throws if arg is not valid or stored
+  Caller     : General
+  Status     : At Risk
 
 =cut
-
-#This is quicker than query extension?
 
 sub fetch_all_by_Array {
   my $self  = shift;
   my $array = shift;
 
   if(! (ref($array) && $array->isa('Bio::EnsEMBL::Funcgen::Array') && $array->dbID())){
-	throw('Need to pass a valid stored Bio::EnsEMBL::Funcgen::Array');
+    throw('Need to pass a valid stored Bio::EnsEMBL::Funcgen::Array');
   }
 
   #get all array_chip_ids, for array and do a subselect statement with generic fetch
   my $constraint = (  " ps.probe_set_id in"
-					  ." ( SELECT distinct(p.probe_set_id)"
-					  ."   from probe p where"
-					  ."   p.array_chip_id IN (".join(",", @{$array->get_array_chip_ids()}).")"
-					  ." )" );
+    ." ( SELECT distinct(p.probe_set_id)"
+    ."   from probe p where"
+    ."   p.array_chip_id IN (".join(",", @{$array->get_array_chip_ids()}).")"
+    ." )" );
 
   return $self->generic_fetch($constraint);
 }
-
-
 
 =head2 _true_tables
 
@@ -293,7 +284,7 @@ sub _columns {
   Example    : None
   Description: PROTECTED implementation of superclass abstract method.
                Creates ProbeSet objects from an executed DBI statement
-			   handle.
+               handle.
   Returntype : Listref of Bio::EnsEMBL::ProbeSet objects
   Exceptions : None
   Caller     : Internal
@@ -302,68 +293,25 @@ sub _columns {
 =cut
 
 sub _objs_from_sth {
-	my ($self, $sth) = @_;
+  my ($self, $sth) = @_;
 
-	my (@result, $current_dbid, $probeset_id, $name, $size, $family);
-	my ($array, %array_cache);
+  my (@result, $probeset_id, $name, $size, $family);
 
-	$sth->bind_columns( \$probeset_id,  \$name, \$size, \$family);
+  $sth->bind_columns( \$probeset_id,  \$name, \$size, \$family);
 
-
-	#do not have array_chip adaptor
-	#use array adaptor directly
-	#how are we going ot handle the cache here?????
-
-	my $probeset;
-	while ( $sth->fetch() ) {
-		#$array = $array_cache{$array_id} || $self->db->get_ArrayAdaptor()->fetch_by_dbID($array_id);
-
-		#This is nesting array object in probeset!
-		#$array = $array_cache{$arraychip_id} || $self->db->get_ArrayAdaptor()->fetch_by_array_chip_dbID($arraychip_id);
-
-		#Is this required? or should we lazy load this?
-		#Should we also do the same for probe i.e. nest or lazy load probeset
-		#Setting here prevents, multiple queries, but if we store the array cache in the adaptor we can overcome this
-		#danger of eating memory here, but it's onld the same as would be used for generating all the probesets
-		#what about clearing the cache?
-		#also as multiple array_chips map to same array, cache would be redundant
-		#need to store only once and reference.
-		#have array_cache and arraychip_map
-		#arraychip_map would give array_id which would be key in array cache
-		#This is kinda reinventing the wheel, but reducing queries and redundancy of global cache
-		#cache would never be populated if method not called
-		#there for reducing calls and memory, increasing speed of generation/initation
-		#if method were called
-		#would slightly slow down processing, and would slightly increase memory as cache(small as non-redundant)
-		#and map hashes would persist
-
-		#Do we even need this????
-
-		#warn("Can we lazy load the arrays from a global cache, which is itself lazy loaded and non-redundant?\n");
-
-
-		#this current id stuff is due to lack of probeset table in core
-		#if (!$current_dbid || $current_dbid != $probeset_id) {
-
-		  # New probeset
-		  $probeset = Bio::EnsEMBL::Funcgen::ProbeSet->new
-			(
-			 -dbID         => $probeset_id,
-			 -name         => $name,
-			 -size         => $size,
-			 #			 -array        => $array,
-			 -family       => $family,
-			 -adaptor     => $self,
-			);
-		push @result, $probeset;
-
-			#$current_dbid = $probeset_id;
-		#} else {
-		#	# Extend existing probe
-		#	$probe->add_Array_probename($array, $name);
-		#}
-	}
-	return \@result;
+  my $probeset;
+  while ( $sth->fetch() ) {
+    # New probeset
+    $probeset = Bio::EnsEMBL::Funcgen::ProbeSet->new(
+      -dbID    => $probeset_id,
+      -name    => $name,
+      -size    => $size,
+      -family  => $family,
+      -adaptor => $self,
+    );
+    push @result, $probeset;
+  }
+  return \@result;
 }
 
 =head2 store
@@ -372,7 +320,7 @@ sub _objs_from_sth {
   Example    : $opa->store($probeset1, $probeset2, $probeset3);
   Description: Stores given ProbeSet objects in the database. Should only be
                called once per probe because no checks are made for duplicates.??? It certainly looks like there is :/
-			   Sets dbID and adaptor on the objects that it stores.
+               Sets dbID and adaptor on the objects that it stores.
   Returntype : None
   Exceptions : Throws if arguments are not Probe objects
   Caller     : General
@@ -381,45 +329,37 @@ sub _objs_from_sth {
 =cut
 
 sub store {
-	my ($self, @probesets) = @_;
+  my ($self, @probesets) = @_;
 
-	my ($sth, $array);
+  if (scalar @probesets == 0) {
+    throw('Must call store with a list of Probe objects');
+  }
 
-	if (scalar @probesets == 0) {
-		throw('Must call store with a list of Probe objects');
-	}
+  my $db = $self->db();
 
-	my $db = $self->db();
+  PROBESET: foreach my $probeset (@probesets) {
 
-	PROBESET: foreach my $probeset (@probesets) {
+    if ( !ref $probeset || !$probeset->isa('Bio::EnsEMBL::Funcgen::ProbeSet') ) {
+      throw('ProbeSet must be an ProbeSet object');
+    }
 
-		if ( !ref $probeset || !$probeset->isa('Bio::EnsEMBL::Funcgen::ProbeSet') ) {
-			throw('ProbeSet must be an ProbeSet object');
-		}
+    if ( $probeset->is_stored($db) ) {
+      warning('ProbeSet [' . $probeset->dbID() . '] is already stored in the database');
+      next PROBESET;
+    }
 
-		if ( $probeset->is_stored($db) ) {
-			warning('ProbeSet [' . $probeset->dbID() . '] is already stored in the database');
-			next PROBESET;
-		}
+    my $sth = $self->prepare("INSERT INTO probe_set (name, size, family) VALUES (?, ?, ?)");
 
-		$sth = $self->prepare("
-					INSERT INTO probe_set
-					(name, size, family)
-					VALUES (?, ?, ?)
-				");
-		$sth->bind_param(1, $probeset->name(),                     SQL_VARCHAR);
-		$sth->bind_param(2, $probeset->size(),                     SQL_INTEGER);
-		$sth->bind_param(3, $probeset->family(),                   SQL_VARCHAR);
+    $sth->bind_param(1, $probeset->name(),                     SQL_VARCHAR);
+    $sth->bind_param(2, $probeset->size(),                     SQL_INTEGER);
+    $sth->bind_param(3, $probeset->family(),                   SQL_VARCHAR);
 
-		$sth->execute();
-		$probeset->dbID($self->last_insert_id);
-		$probeset->adaptor($self);
-	  }
-
-	return \@probesets;
+    $sth->execute();
+    
+    $probeset->dbID($self->last_insert_id);
+    $probeset->adaptor($self);
+  }
+  return \@probesets;
 }
 
-
-
 1;
-
