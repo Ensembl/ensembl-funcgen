@@ -53,7 +53,7 @@ sub pipeline_analyses {
               sql     => [
                 "truncate probe_transcript;",
                 "truncate probe_set_transcript;",
-#                 "truncate probe_feature_transcript;",
+                "truncate probe_feature_transcript;",
               ],
               db_conn => 'funcgen:#species#',
           },
