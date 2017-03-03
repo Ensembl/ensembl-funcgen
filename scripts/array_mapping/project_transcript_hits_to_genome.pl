@@ -75,8 +75,8 @@ my $map_transcript_to_genome = sub {
   
   my $transcript_mapper = Bio::EnsEMBL::TranscriptMapper->new($transcript);
   my @genomic_blocks = $transcript_mapper->cdna2genomic(
-    $probe_feature_hash->{q_start},
-    $probe_feature_hash->{q_end},
+    $probe_feature_hash->{t_start},
+    $probe_feature_hash->{t_end},
   );
 
   my $projected_hit = project_hit_to_genomic_coordinates({
