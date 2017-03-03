@@ -46,7 +46,7 @@ my $mysql_base_cmd = 'mysql'
 ;
 
 my @load_command = map { $mysql_base_cmd . "'" . $_ . "'" } (
-  'load data local infile "' . $probeset_transcript_assignments_file . '" into table probeset_transcript (probeset_id, stable_id, description);',
+  'load data local infile "' . $probeset_transcript_assignments_file . '" into table probe_set_transcript (probe_set_id, stable_id, description);',
 );
 
 foreach my $current_load_command (@load_command) {
