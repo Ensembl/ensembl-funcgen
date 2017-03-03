@@ -400,52 +400,62 @@ sub store {
   my $self = shift;
   my @args = @_;
 
-  my ($sarray);
+  my $stored_array;
+  my @stored_arrays;
 
   my $sth = $self->prepare("
     INSERT INTO array
     (name, format, vendor, description, type, class, is_probeset_array, is_linked_array, has_sense_interrogation)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
-  foreach my $array (@args) {
+  ARRAY: foreach my $array (@args) {
+  
     if ( !$array->isa('Bio::EnsEMBL::Funcgen::Array') ) {
       warning('Can only store Array objects, skipping $array');
-      next;
+      next ARRAY;
+    }
+    if (length($array->name) > 40) {
+      throw("Array name must not be longer than 40 characters");
     }
 
-    if (!( $array->dbID() && $array->adaptor() == $self )){
-      #try and fetch array here and set to array if valid
-      $sarray = $self->fetch_by_name_vendor($array->name(), $array->vendor());#this should be name_vendor?
+    if (!( $array->dbID() && $array->adaptor() == $self )) {
 
-      if( ! $sarray){
-		#sanity check here
-		throw("Array name must not be longer than 30 characters") if (length($array->name) > 40);
-		$sth->bind_param(1, $array->name,         SQL_VARCHAR);
-		$sth->bind_param(2, $array->format,       SQL_VARCHAR);
-		$sth->bind_param(3, $array->vendor,       SQL_VARCHAR);
-		$sth->bind_param(4, $array->description,  SQL_VARCHAR);
-		$sth->bind_param(5, $array->type,         SQL_VARCHAR);
-		$sth->bind_param(6, $array->class,        SQL_VARCHAR);
-                $sth->bind_param(7, $array->is_probeset_array,        SQL_INTEGER);
-                $sth->bind_param(8, $array->is_linked_array,        SQL_INTEGER);
-                $sth->bind_param(9, $array->has_sense_interrogation,        SQL_INTEGER);
-
-
-		$sth->execute();
-		$array->dbID($self->last_insert_id);
-		$array->adaptor($self);
+      # Try and fetch array here and set to array if valid:
+      #
+      $stored_array = $self->fetch_by_name_vendor($array->name(), $array->vendor());
+      if($stored_array) {
+        push @stored_arrays, $stored_array;
+        next ARRAY;
       }
-      else{
-		#warn("Array already stored, using previously stored array\n");# validating array_chips\n");
-		$array = $sarray;
-      }
+
+      $sth->bind_param(1, $array->name,         SQL_VARCHAR);
+      $sth->bind_param(2, $array->format,       SQL_VARCHAR);
+      $sth->bind_param(3, $array->vendor,       SQL_VARCHAR);
+      $sth->bind_param(4, $array->description,  SQL_VARCHAR);
+      $sth->bind_param(5, $array->type,         SQL_VARCHAR);
+      $sth->bind_param(6, $array->class,        SQL_VARCHAR);
+      $sth->bind_param(7, _zero_if_undef($array->is_probeset_array),       SQL_INTEGER);
+      $sth->bind_param(8, _zero_if_undef($array->is_linked_array),         SQL_INTEGER);
+      $sth->bind_param(9, _zero_if_undef($array->has_sense_interrogation), SQL_INTEGER);
+
+      $sth->execute();
+
+      $array->dbID($self->last_insert_id);
+      $array->adaptor($self);
+
+      push @stored_arrays, $array;
     }
   }
-
-  return \@args;
+  return \@stored_arrays;
 }
 
-
+sub _zero_if_undef {
+  my $value = shift;
+  if (! defined $value) {
+    return 0;
+  }
+  return $value;
+}
 
 
 =head2 fetch_probe_count_by_Array
