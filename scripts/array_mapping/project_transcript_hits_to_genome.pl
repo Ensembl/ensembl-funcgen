@@ -53,7 +53,7 @@ my $transcript_adaptor    = Bio::EnsEMBL::Registry->get_adaptor($species, 'core'
 my $slice_adaptor         = Bio::EnsEMBL::Registry->get_adaptor($species, 'core',    'slice');
 
 $Data::Dumper::Sortkeys = 1;
-$Data::Dumper::Maxdepth = 3;
+# $Data::Dumper::Maxdepth = 3;
 
 my %gene_hits;
 
