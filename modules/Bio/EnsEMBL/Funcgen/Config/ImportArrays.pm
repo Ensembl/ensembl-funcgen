@@ -74,9 +74,9 @@ use vars qw( %Config );
         -type    => 'OLIGO',
         -class   => 'AFFY_UTR',
         
-        -is_probeset_array      => 1,
-        -is_linked_array        => 0,
-        -has_sense_interrogation  => 0,
+        -is_probeset_array       => 1,
+        -is_linked_array         => 0,
+        -has_sense_interrogation => 0,
 
       },
 
@@ -86,6 +86,9 @@ use vars qw( %Config );
         -format  => 'EXPRESSION',
         -type    => 'OLIGO',
         -class   => 'AFFY_UTR',
+        -is_probeset_array       => 1,
+        -is_linked_array         => 0,
+        -has_sense_interrogation => 0,
       },
      },
 
@@ -174,9 +177,9 @@ use vars qw( %Config );
           -type    => 'OLIGO',
           -class   => 'AFFY_ST',
           
-          -is_probeset_array      => 1,
-          -is_linked_array        => 1,
-          -has_sense_interrogation  => 1,
+          -is_probeset_array       => 1,
+          -is_linked_array         => 1,
+          -has_sense_interrogation => 1,
 
         },
 
@@ -187,6 +190,10 @@ use vars qw( %Config );
         -type    => 'OLIGO',
         -description => 'Human Transcriptome Array 2.0',
         -class   => 'AFFY_ST',
+
+          -is_probeset_array       => 1,
+          -is_linked_array         => 1,
+          -has_sense_interrogation => 1,
       },
      },
 
@@ -235,6 +242,11 @@ use vars qw( %Config );
         -format  => 'EXPRESSION',
         -type    => 'OLIGO',
         -class   => 'ILLUMINA_WG',
+
+        -is_probeset_array      => 0,
+        -is_linked_array        => 0,
+        -has_sense_interrogation  => 0,
+
       },
      },
 
@@ -350,6 +362,11 @@ use vars qw( %Config );
        -format  => 'EXPRESSION',
        -type    => 'OLIGO',
        -class   => 'AGILENT',
+
+        -is_probeset_array      => 0,
+        -is_linked_array        => 1,
+        -has_sense_interrogation  => 0,
+
        skip_config => {skip_reps =>1, skip_non_unique_names=>1},
       },
 
@@ -360,6 +377,11 @@ use vars qw( %Config );
        -format  => 'EXPRESSION',
        -type    => 'OLIGO',
        -class   => 'AGILENT',
+
+        -is_probeset_array      => 0,
+        -is_linked_array        => 1,
+        -has_sense_interrogation  => 0,
+
        skip_config => {skip_reps =>1, skip_non_unique_names=>1},
       },
 
@@ -369,6 +391,11 @@ use vars qw( %Config );
         -format  => 'CGH',
         -type    => 'OLIGO',
         -class   => 'AGILENT',
+
+        -is_probeset_array      => 0,
+        -is_linked_array        => 1,
+        -has_sense_interrogation  => 0,
+
       },
      },
 
