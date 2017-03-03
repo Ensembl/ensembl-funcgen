@@ -404,8 +404,8 @@ sub store {
 
   my $sth = $self->prepare("
     INSERT INTO array
-    (name, format, vendor, description, type, class)
-    VALUES (?, ?, ?, ?, ?, ?)");
+    (name, format, vendor, description, type, class, is_probeset_array, is_linked_array, has_sense_interrogation)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
   foreach my $array (@args) {
     if ( !$array->isa('Bio::EnsEMBL::Funcgen::Array') ) {
@@ -420,12 +420,15 @@ sub store {
       if( ! $sarray){
 		#sanity check here
 		throw("Array name must not be longer than 30 characters") if (length($array->name) > 40);
-		$sth->bind_param(1, $array->name(),         SQL_VARCHAR);
-		$sth->bind_param(2, $array->format(),       SQL_VARCHAR);
-		$sth->bind_param(3, $array->vendor(),       SQL_VARCHAR);
-		$sth->bind_param(4, $array->description(),  SQL_VARCHAR);
-		$sth->bind_param(5, $array->type(),         SQL_VARCHAR);
-		$sth->bind_param(6, $array->class(),        SQL_VARCHAR);
+		$sth->bind_param(1, $array->name,         SQL_VARCHAR);
+		$sth->bind_param(2, $array->format,       SQL_VARCHAR);
+		$sth->bind_param(3, $array->vendor,       SQL_VARCHAR);
+		$sth->bind_param(4, $array->description,  SQL_VARCHAR);
+		$sth->bind_param(5, $array->type,         SQL_VARCHAR);
+		$sth->bind_param(6, $array->class,        SQL_VARCHAR);
+                $sth->bind_param(7, $array->is_probeset_array,        SQL_INTEGER);
+                $sth->bind_param(8, $array->is_linked_array,        SQL_INTEGER);
+                $sth->bind_param(9, $array->has_sense_interrogation,        SQL_INTEGER);
 
 
 		$sth->execute();
