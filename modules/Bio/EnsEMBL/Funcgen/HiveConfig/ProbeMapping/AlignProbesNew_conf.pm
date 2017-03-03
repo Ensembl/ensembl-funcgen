@@ -18,7 +18,7 @@ sub pipeline_analyses {
           },
       },
         {   -logic_name  => 'job_factory_probe_align',
-            -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::FastaFactory',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::FastaFactory',
             -parameters => {
               inputfile        => '#unmapped_sequences_file#',
               output_dir       => '#tempdir#/#species#/probe_chunks',
