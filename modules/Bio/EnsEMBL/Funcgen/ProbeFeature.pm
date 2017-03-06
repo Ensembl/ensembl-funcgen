@@ -176,11 +176,25 @@ sub probeset {
 
 #Only ever needs to be set in _objs_from_sth
 #This is to allow linkage of probe_feature glyphs without retrieving the probeset.
-
-sub probeset_id{
+# DEPRECATED Use probe_set_id
+sub probeset_id {
   my $self = shift;
+  return $self->probe_set_id;
+}
 
-  return $self->{'_probeset_id'};
+sub probe_set_id {
+  my $self = shift;
+  
+  if (! defined $self->{'_probe_set_id'}) {
+    $self->{'_probe_set_id'} = $self->probeset->dbID;
+  }
+  return $self->{'_probe_set_id'};
+}
+
+# probe_set is more logical.
+sub probe_set_id {
+  my $self = shift;
+  return $self->probeset;
 }
 
 =head2 mismatchcount
