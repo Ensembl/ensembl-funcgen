@@ -130,7 +130,8 @@ sub new {
       $probeset,       $aclass,
       $length,         $desc,
       $sequence,
-      $array_chip
+      $array_chip,
+      $probe_seq_id
      ) = rearrange([
       'NAMES',          'NAME',
       'ARRAY_CHIP_IDS', 'ARRAY_CHIP_ID',
@@ -138,7 +139,8 @@ sub new {
       'PROBE_SET',      'CLASS',
       'LENGTH',         'DESCRIPTION',
       'SEQUENCE',
-      'array_chip'
+      'array_chip',
+      'probe_seq_id'
       ], @_);
 
 
@@ -180,6 +182,7 @@ sub new {
   $self->array_chip($array_chip)  if defined $array_chip;
   
   $self->sequence($sequence)  if defined $sequence;
+  $self->_probe_seq_id($probe_seq_id)  if defined $probe_seq_id;
 
   return $self;
 }
@@ -187,7 +190,24 @@ sub new {
 sub sequence {
     my $self = shift;
     $self->{'sequence'} = shift if @_;
+    
+    if (! defined $self->{'sequence'}) {
+      $self->{'sequence'} = $self->fetch_ProbeSequence->probe_dna;
+    }
+    
     return $self->{'sequence'};
+}
+
+sub _probe_seq_id {
+    my $self = shift;
+    $self->{'probe_seq_id'} = shift if @_;
+    return $self->{'probe_seq_id'};
+}
+
+sub fetch_ProbeSequence {
+    my $self = shift;
+    $self->{'probe_sequence'} = shift if @_;
+    return $self->adaptor()->db()->get_ProbeSequenceAdaptor()->fetch_by_dbID($self->_probe_seq_id);
 }
 
 sub array_chip {
