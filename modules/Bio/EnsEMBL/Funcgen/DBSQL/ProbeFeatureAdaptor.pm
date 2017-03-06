@@ -402,7 +402,8 @@ sub fetch_all_by_Slice_array_vendor {
 =cut
 
 sub _true_tables {
-  return ([ 'probe_feature', 'pf' ], [ 'probe',   'p' ]);
+  return ([ 'probe_feature', 'pf' ]);
+#   return ([ 'probe_feature', 'pf' ], [ 'probe',   'p' ]);
 }
 
 =head2 fetch_all_by_transcript_stable_id
@@ -453,28 +454,35 @@ sub _columns {
     pf.seq_region_start    pf.seq_region_end
     pf.seq_region_strand   pf.probe_id
     pf.analysis_id         pf.mismatches
-    pf.cigar_line          p.name
-    p.probe_set_id
+    pf.cigar_line
   );
+#   return qw(
+#     pf.probe_feature_id    pf.seq_region_id
+#     pf.seq_region_start    pf.seq_region_end
+#     pf.seq_region_strand   pf.probe_id
+#     pf.analysis_id         pf.mismatches
+#     pf.cigar_line          p.name
+#     p.probe_set_id
+#   );
 }
 
-=head2 _default_where_clause
-
-  Args       : None
-  Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Returns an additional table joining constraint to use for
-			   queries.
-  Returntype : List of strings
-  Exceptions : None
-  Caller     : Internal
-  Status     : At Risk
-
-=cut
-sub _default_where_clause {
-  my $self = shift;
-  return 'pf.probe_id = p.probe_id';
-}
+# =head2 _default_where_clause
+# 
+#   Args       : None
+#   Example    : None
+#   Description: PROTECTED implementation of superclass abstract method.
+#                Returns an additional table joining constraint to use for
+# 			   queries.
+#   Returntype : List of strings
+#   Exceptions : None
+#   Caller     : Internal
+#   Status     : At Risk
+# 
+# =cut
+# sub _default_where_clause {
+#   my $self = shift;
+#   return 'pf.probe_id = p.probe_id';
+# }
 
 =head2 _final_clause
 
@@ -540,12 +548,11 @@ sub _objs_from_sth {
 		$probeset_id
 	);
 	$sth->bind_columns(
-					   \$probe_feature_id,  \$efg_seq_region_id,
-					   \$seq_region_start,  \$seq_region_end,
-					   \$seq_region_strand, \$probe_id,
-					   \$analysis_id,       \$mismatches,
-					   \$cigar_line,        \$probe_name,
-					   \$probeset_id
+          \$probe_feature_id,  \$efg_seq_region_id,
+          \$seq_region_start,  \$seq_region_end,
+          \$seq_region_strand, \$probe_id,
+          \$analysis_id,       \$mismatches,
+          \$cigar_line
 	);
 
 	my ($asm_cs, $cmp_cs, $asm_cs_name, $asm_cs_vers ,$cmp_cs_name, $cmp_cs_vers);
@@ -686,9 +693,9 @@ sub _objs_from_sth {
 			'mismatchcount' => $mismatches,
 			'cigar_string'    => $cigar_line,
 			'probe_id'      => $probe_id,
-			#Do these need to be private?
-			'_probeset_id'  => $probeset_id,#Used for linking feature glyphs
-			'_probe_name'   => $probe_name,#?? There can be >1. Is this for array design purposes?
+# 			#Do these need to be private?
+# 			'_probe_set_id' => $probeset_id,#Used for linking feature glyphs
+# 			'_probe_name'   => $probe_name,#?? There can be >1. Is this for array design purposes?
 		   } );
 
 
