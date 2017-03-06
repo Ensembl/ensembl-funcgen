@@ -1,0 +1,85 @@
+=head1 LICENSE
+
+Copyright [1999-2016] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+=head1 CONTACT
+
+  Please email comments or questions to the public Ensembl
+  developers list at <http://lists.ensembl.org/mailman/listinfo/dev>.
+
+  Questions may also be sent to the Ensembl help desk at
+  <http://www.ensembl.org/Help/Contact>.
+
+
+=head1 NAME
+
+  Bio::EnsEMBL::Funcgen::DBSQL::ProbeFeatureTranscriptMappingAdaptor
+
+=head1 SYNOPSIS
+
+=cut
+
+package Bio::EnsEMBL::Funcgen::DBSQL::ProbeSequenceAdaptor;
+
+use strict;
+use warnings;
+use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use DBI qw(:sql_types);
+
+use vars '@ISA';
+@ISA    = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
+
+sub _tables {
+  return ['probe_seq', 'ps'];
+}
+
+sub _columns {
+  my $self = shift;
+  
+  return qw(
+    ps.probe_seq_id
+    ps.probe_dna
+  );
+}
+
+sub _objs_from_sth {
+  my ($self, $sth) = @_;
+
+  my (
+    $sth_fetched_dbID,
+    $sth_fetched_probe_dna,
+  );
+
+  $sth->bind_columns (
+    \$sth_fetched_dbID,
+    \$sth_fetched_probe_dna,
+  );
+  
+  use Bio::EnsEMBL::Funcgen::ProbeSequence;
+
+  my @return_objects;
+  ROW: while ( $sth->fetch() ) {
+  
+    my $probe_sequence = Bio::EnsEMBL::Funcgen::ProbeSequence->new(
+      -dbID         => $sth_fetched_dbID,
+      -probe_dna    => $sth_fetched_probe_dna,
+      -adaptor      => $self->db,
+    );
+    push @return_objects, $probe_sequence
+  }
+  return \@return_objects;
+}
+
+1;

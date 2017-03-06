@@ -431,6 +431,8 @@ sub get_available_adaptors{
                'ProbeTranscriptMapping'        => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeTranscriptMappingAdaptor',
                'ProbeSetTranscriptMapping'     => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeSetTranscriptMappingAdaptor',
                'ProbeFeatureTranscriptMapping' => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeFeatureTranscriptMappingAdaptor',
+               
+               'ProbeSequence' => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeSequenceAdaptor',
               );
 
   return (\%pairs);
