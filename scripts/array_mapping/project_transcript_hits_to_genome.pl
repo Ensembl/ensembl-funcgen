@@ -61,9 +61,9 @@ my $map_transcript_to_genome = sub {
 
   my $probe_feature_hash = shift;
   
-  if ($probe_feature_hash->{'q_strand'} != $probe_feature_hash->{'t_strand'}) {  
-    return;
-  }
+#   if ($probe_feature_hash->{'q_strand'} != $probe_feature_hash->{'t_strand'}) {  
+#     return;
+#   }
   
   my $transcript_stable_id = $probe_feature_hash->{t_id};
   
