@@ -41,8 +41,8 @@ Bio::EnsEMBL::Registry->load_all($registry);
 my $funcgen_db_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
 my $array_adaptor      = Bio::EnsEMBL::Registry->get_adaptor  ($species, 'funcgen', 'array');
 
-use Bio::EnsEMBL::Funcgen::Config::ArrayFormatConfig;
-my $array_format_config = Bio::EnsEMBL::Funcgen::Config::ArrayFormatConfig->new;
+# use Bio::EnsEMBL::Funcgen::Config::ArrayFormatConfig;
+# my $array_format_config = Bio::EnsEMBL::Funcgen::Config::ArrayFormatConfig->new;
 
 my $arrays_per_object_fh;
 my $probeset_sizes_fh;
@@ -52,7 +52,6 @@ open $arrays_per_object_fh, '>' , $arrays_per_object_file;
 open $probeset_sizes_fh,    '>' , $probeset_sizes_file;
 open $object_names_fh,      '>' , $object_names_file;
 
-
 my $arrays = $array_adaptor->fetch_all;
 
 foreach my $current_array (@$arrays) {
@@ -61,7 +60,7 @@ foreach my $current_array (@$arrays) {
   my $array_class = $current_array->class;
 
   $logger->info("Processing " . $array_class . "\t" . $array_name . "\n" );
-  my $current_array_format_config = $array_format_config->for_array_class($array_class);
+#   my $current_array_format_config = $array_format_config->for_array_class($array_class);
   
   (
     my $arrays_per_object, 
@@ -69,7 +68,8 @@ foreach my $current_array (@$arrays) {
     my $object_names,
   ) = cache_arrays_per_object(
     $funcgen_db_adaptor, 
-    $current_array_format_config,
+#     $current_array_format_config,
+    $current_array->is_probeset_array,
     $array_name,
   );
   
@@ -114,10 +114,10 @@ $logger->finish_log;
 =cut
 
 sub cache_arrays_per_object {
-  my ($probe_db, $current_array_format_config, $array_name) = @_;
+  my ($probe_db, $is_probeset_array, $array_name) = @_;
 
   my $sql;
-  if($current_array_format_config->has_probesets) {
+  if($is_probeset_array) {
     # Find all probesets belonging to the chosen microarrays
     $sql = '
       select
@@ -171,7 +171,7 @@ sub cache_arrays_per_object {
     $arrays_per_object{$object_id} ||= [];
     push @{$arrays_per_object{$object_id}}, $array;
     $object_names{$object_id} ||= [];
-    if($current_array_format_config->has_probesets) {
+    if ($is_probeset_array) {
       push @{$object_names{$object_id}}, $object_name;
       if ( defined $probeset_sizes{$object_id} && $probeset_size !=  $probeset_sizes{$object_id}) {
         warn("Found probeset(dbID=$object_id) with differing size between arrays:\ti".join(", ", @{$arrays_per_object{$object_id}})." and $array($probeset_size)\n");
