@@ -296,7 +296,7 @@ sub _true_tables {
 =cut
 
 sub _columns {
-  return qw( p.probe_id p.probe_set_id p.name p.length p.array_chip_id p.class p.description);
+  return qw( p.probe_id p.probe_set_id p.name p.length p.array_chip_id p.class p.description p.probe_seq_id);
 }
 
 =head2 _objs_from_sth
@@ -316,10 +316,10 @@ sub _columns {
 sub _objs_from_sth {
   my ($self, $sth) = @_;
 
-  my (@result, $current_dbid, $arraychip_id, $probe_id, $probe_set_id, $name, $class, $probelength, $desc);
+  my (@result, $current_dbid, $arraychip_id, $probe_id, $probe_set_id, $name, $class, $probelength, $desc, $probe_seq_id);
   my ($array, %array_cache, %probe_set_cache);
 
-  $sth->bind_columns(\$probe_id, \$probe_set_id, \$name, \$probelength, \$arraychip_id, \$class, \$desc);
+  $sth->bind_columns(\$probe_id, \$probe_set_id, \$name, \$probelength, \$arraychip_id, \$class, \$desc, \$probe_seq_id);
 
   my $probe;
   while ( $sth->fetch() ) {
@@ -343,6 +343,7 @@ sub _objs_from_sth {
         -length        => $probelength,
         -class         => $class,
         -description   => $desc,
+        -probe_seq_id  => $probe_seq_id,
         -adaptor       => $self,
       );
       push @result, $probe;
