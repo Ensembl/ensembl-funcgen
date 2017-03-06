@@ -61,7 +61,6 @@ sub pipeline_analyses {
                   "delete from analysis where logic_name like '%Probe%Align';",
                   "delete analysis_description from analysis_description, analysis where analysis.analysis_id=analysis_description.analysis_id and logic_name = 'probe2transcript';",
                   "delete from analysis where logic_name = 'probe2transcript';",
-                  
                 ],
                 db_conn => 'funcgen:#species#',
             },
