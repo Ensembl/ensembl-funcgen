@@ -170,7 +170,9 @@ sub project_hit_to_genomic_coordinates {
 
     $projected_hit{t_start}      = $genomic_blocks->[0]->start;
     $projected_hit{t_end}        = $genomic_blocks->[0]->end;
-    $projected_hit{strand}       = $transcript->strand;
+#     $projected_hit{strand}       = $transcript->strand;
+    $projected_hit{strand}       = $genomic_blocks->[0]->strand;
+    
     $projected_hit{cigar_line} = join ' foo ', @stranded_cigar_line;
     
     return \%projected_hit;
@@ -201,10 +203,16 @@ sub project_hit_to_genomic_coordinates {
   my @gaps;
   my $genomic_start;
   my $genomic_end;
+  my $genomic_strand;
+  
   GENOMIC_BLOCK: foreach my $block (@$genomic_blocks) {
 
     if(! $genomic_start) {
       if($block->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
+      
+        # All coordinate blocks will be on the same strand.
+        $genomic_strand = $block->strand;
+      
         # Set genomic_start
         if($gap_lengths{5}){
           # We have seen a gap
@@ -386,7 +394,9 @@ sub project_hit_to_genomic_coordinates {
 
   $projected_hit{t_start}    = $genomic_start;
   $projected_hit{t_end}      = $genomic_end;
-  $projected_hit{strand}     = $transcript->strand;
+#   $projected_hit{strand}     = $transcript->strand;
+  $projected_hit{strand}     = $genomic_strand;
+  
   $projected_hit{cigar_line} = $cigar_line;
   
   return \%projected_hit;
