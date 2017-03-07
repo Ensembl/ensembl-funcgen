@@ -85,7 +85,7 @@ my $map_transcript_to_genome = sub {
     transcript     => $transcript,
   });
 
-  if ($probe_feature_hash->{'q_strand'} != $probe_feature_hash->{'t_strand'}) {  
+  if ($probe_feature_hash->{'q_strand'} != $probe_feature_hash->{'t_strand'}) {
     $projected_hit->{t_strand} = -1 * $projected_hit->{t_strand}
   }
 
