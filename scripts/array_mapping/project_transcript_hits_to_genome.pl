@@ -85,6 +85,10 @@ my $map_transcript_to_genome = sub {
     transcript     => $transcript,
   });
 
+  if ($probe_feature_hash->{'q_strand'} != $probe_feature_hash->{'t_strand'}) {  
+    $projected_hit->{t_strand} = -1 * $projected_hit->{t_strand}
+  }
+
   # Test, if we have already seen this alignment
   my $gene = $gene_adaptor->fetch_by_transcript_stable_id($transcript_stable_id);
   #The only way of doing this is to test the genomic_start/end and the genomic cigarline with the gene_stable_id and the probe_id
@@ -171,7 +175,7 @@ sub project_hit_to_genomic_coordinates {
     $projected_hit{t_start}      = $genomic_blocks->[0]->start;
     $projected_hit{t_end}        = $genomic_blocks->[0]->end;
 #     $projected_hit{strand}       = $transcript->strand;
-    $projected_hit{strand}       = $genomic_blocks->[0]->strand;
+    $projected_hit{t_strand}       = $genomic_blocks->[0]->strand;
     
     $projected_hit{cigar_line} = join ' foo ', @stranded_cigar_line;
     
@@ -395,7 +399,7 @@ sub project_hit_to_genomic_coordinates {
   $projected_hit{t_start}    = $genomic_start;
   $projected_hit{t_end}      = $genomic_end;
 #   $projected_hit{strand}     = $transcript->strand;
-  $projected_hit{strand}     = $genomic_strand;
+  $projected_hit{t_strand}     = $genomic_strand;
   
   $projected_hit{cigar_line} = $cigar_line;
   
