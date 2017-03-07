@@ -5,7 +5,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016] EMBL-European Bioinformatics Institute
+Copyright [2016-2017] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -130,15 +130,17 @@ sub new {
       $arrays,         $array,
       $probeset,       $aclass,
       $length,         $desc,
-      $sequence
+      $sequence,
+      $array_chip
      ) = rearrange([
-		    'NAMES',          'NAME',
-		    'ARRAY_CHIP_IDS', 'ARRAY_CHIP_ID',
-		    'ARRAYS',         'ARRAY',
-		    'PROBE_SET',      'CLASS',
-		    'LENGTH',         'DESCRIPTION',
-		    'SEQUENCE'
-		   ], @_);
+      'NAMES',          'NAME',
+      'ARRAY_CHIP_IDS', 'ARRAY_CHIP_ID',
+      'ARRAYS',         'ARRAY',
+      'PROBE_SET',      'CLASS',
+      'LENGTH',         'DESCRIPTION',
+      'SEQUENCE',
+      'array_chip'
+      ], @_);
 
 
   @$names = ($name) if(ref($names) ne "ARRAY");
@@ -173,7 +175,8 @@ sub new {
     # Different names reflect different array
 
     for my $i(0..$#{$names}){
-      $self->add_array_chip_probename($$array_chip_ids[$i], $$names[$i], $$arrays[$i]);
+#       $self->add_array_chip_probename($$array_chip_ids[$i], $$names[$i], $$arrays[$i]);
+      $self->add_array_chip_probename($$names[$i], $$arrays[$i]);
     }
   } else {
     throw('You need to provide a probe name (or names) to create an Probe');
@@ -183,6 +186,7 @@ sub new {
   $self->class($aclass)      if defined $aclass;
   $self->length($length)     if defined $length;
   $self->description($desc)  if defined $desc;
+  $self->array_chip($array_chip)  if defined $array_chip;
   
   $self->sequence($sequence)  if defined $sequence;
 
@@ -193,6 +197,17 @@ sub sequence {
     my $self = shift;
     $self->{'sequence'} = shift if @_;
     return $self->{'sequence'};
+}
+
+sub array_chip {
+    my $self       = shift;
+    my $array_chip = shift;
+    
+    if (defined $array_chip) {
+      $self->{'_array_chip'} = $array_chip;
+    }
+    
+    return $self->{'_array_chip'};
 }
 
 #only takes single values for array and array_chip
@@ -221,10 +236,9 @@ sub new_fast {
 
 =head2 add_array_chip_probename
 
-  Arg [1]    : int - db ID of array_chip
-  Arg [2]    : string - probe name
-  Arg [3]    : Bio::EnsEMBL::Funcgen::Array
-  Example    : $probe->add_array_chip_probename($ac_dbid, $probename, $array);
+  Arg [1]    : string - probe name
+  Arg [2]    : Bio::EnsEMBL::Funcgen::Array
+  Example    : $probe->add_array_chip_probename($probename, $array);
   Description: Adds a probe name / array pair to a probe, allowing incremental
                generation of a probe.
   Returntype : None
@@ -237,36 +251,19 @@ sub new_fast {
 
 =cut
 
-#mapping between probename and ac_dbid is conserved through array name between hashes
-#only easily linked from arrays to probenames,as would have to do foreach on array name
-  
-#Can we change the implementation of this so we're only storing the array once, reverse
-#the cache? But we want access to the array and using an object reference as a key is ????
-#How would this impact on method functionality?
-  
-#We now handle multiple names per probe/array
-#This will not capture the relationship between
-#probe name and position on array!
-#Not a problem for affy as name is position
-#Currently not a problem for nimblegen as probes never have more than 1 name???
-  
-#This does not however accomodate multiple names on the same ArrayChip
-#and there is currently no way of validating this with the current data model
-#This is however, caught by ImportArrays
-
-
 sub add_array_chip_probename {
   my $self = shift;
-  my ($ac_dbid, $probename, $array) = @_;
+#   my ($ac_dbid, $probename, $array) = @_;
+  my ($probename, $array) = @_;
   $self->{arrays}     ||= {};
   $self->{probenames} ||= {};
     
-  if(! (ref($array) && $array->isa('Bio::EnsEMBL::Funcgen::Array') && $array->dbID)){
-	  throw('You must pass a valid Bio::EnsEMBL::Funcgen::Array. '.
-          'Maybe you want to generate a cache in the caller?');
-	}
+  if(! (ref($array) && $array->isa('Bio::EnsEMBL::Funcgen::Array'))){
+    throw('You must pass a valid Bio::EnsEMBL::Funcgen::Array. ')
+  }
 
-  $self->{arrays}->{$ac_dbid}           = $array;
+  $self->{arrays}->{$array->name}           = $array;
+#   $self->{arrays}->{$ac_dbid}           = $array;
   $self->{probenames}->{$array->name} ||= [];
   push @{$self->{probenames}->{$array->name}}, $probename;
   
@@ -440,7 +437,7 @@ sub get_probename {
   Example    : my @compnames = @{$probe->get_all_complete_names()};
   Description: Retrieves all complete names for this probe. The complete name
                is a concatenation of the array name, the probeset name and the
-			   probe name.
+               probe name.
   Returntype : Arrayref of strings
   Exceptions : None
   Caller     : General
@@ -452,40 +449,25 @@ sub get_all_complete_names {
   my $self = shift;
 
   my ($probeset, @result);
-	my $pset = $self->probeset;
+  my $pset = $self->probeset;
 
-	if ($pset) {
-	  $probeset = $pset->name;
-	}
+  if ($pset) {
+    $probeset = $pset->name;
+  }
 
   if(defined $probeset){
     $probeset = ':'.$probeset.':';
-  }
-  else{
+  } else {
     $probeset = ':';
   }
 
-
-  #warn "For Nimblegen this need to be Container:Seqid::probeid?";
-
   while ( my (undef, $array) = each %{$self->{'arrays'}} ) {
-    #would have to put test in here for $self->arrays()->vendor()
-    #if($array->vendor() eq "AFFY"){
-
-	  foreach my $name ( @{$self->{'probenames'}{$array->name()}} ) {
+    foreach my $name ( @{$self->{'probenames'}{$array->name()}} ) {
       push @result, $array->name . $probeset . $name;
-	  }
+    }
   }
-
   return \@result;
 }
-
-
-
-#For affy this matters as name will be different, but not for Nimblegen
-#Need to consolidate this
-#have get name method which throws if there is more than one array
-#detects array vendor and does appropriate method
 
 =head2 get_complete_name
 
@@ -500,22 +482,21 @@ sub get_all_complete_names {
 =cut
 
 sub get_complete_name {
-    my $self = shift;
-    my $arrayname = shift;
+  my $self = shift;
+  my $arrayname = shift;
 
+  throw('Must provide and array name argument to retreive the complete name') if ! defined $arrayname;
 
-	throw('Must provide and array name argument to retreive the complete name') if ! defined $arrayname;
+  my $probename = $self->get_probename($arrayname);
 
-    my $probename = $self->get_probename($arrayname);
+  if (!defined $probename) {
+    throw('Unknown array name');
+  }
 
-    if (!defined $probename) {
-		throw('Unknown array name');
-    }
+  my $probeset = $self->probeset()->name();
+  $probeset .= ':' if $probeset;
 
-	my $probeset = $self->probeset()->name();
-	$probeset .= ':' if $probeset;
-
-	return "$arrayname:$probeset$probename";
+  return "$arrayname:$probeset$probename";
 }
 
 =head2 probeset
@@ -572,6 +553,11 @@ sub class {
 sub length {
     my $self = shift;
     $self->{'length'} = shift if @_;
+    
+    if (! defined $self->{'length'}) {
+      $self->{'length'} = length($self->sequence);
+    }
+    
     return $self->{'length'};
 }
 
@@ -612,13 +598,11 @@ sub feature_count{
   my ($self, $recount) = @_;
 
   if($recount ||
-	 (! $self->{feature_count})){
-	$self->{feature_count} = $self->adaptor->db->get_ProbeFeatureAdaptor->count_probe_features_by_probe_id($self->dbID);
+    (! $self->{feature_count})){
+    $self->{feature_count} = $self->adaptor->db->get_ProbeFeatureAdaptor->count_probe_features_by_probe_id($self->dbID);
   }
 
   return $self->{feature_count};
 }
 
-
 1;
-

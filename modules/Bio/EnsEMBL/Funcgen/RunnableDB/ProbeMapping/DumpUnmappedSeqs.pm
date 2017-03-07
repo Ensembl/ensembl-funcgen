@@ -7,11 +7,10 @@ sub run {
     my $self = shift;
     
     my $unmapped_sequences_file = $self->param('unmapped_sequences_file');
-    my $tracking_dba_hash       = $self->param('tracking_dba_hash');
-
-    use Bio::EnsEMBL::DBSQL::DBConnection;
-    my $dbc_tracking = Bio::EnsEMBL::DBSQL::DBConnection->new(%$tracking_dba_hash);
-    $dbc_tracking->connect();
+    my $species                 = $self->param('species');
+    
+    my $funcgen_adaptor         = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
+    my $dbc_tracking = $funcgen_adaptor->dbc;
 
     my $helper = Bio::EnsEMBL::Utils::SqlHelper->new(
       -DB_CONNECTION => $dbc_tracking 
@@ -19,7 +18,7 @@ sub run {
 
     my $unmapped_sequences_count =
       $helper->execute_single_result(
-	-SQL => 'select count(*) from probe_seq where has_been_mapped is false',
+	-SQL => 'select count(*) from probe_seq',
     );
 
     use Bio::EnsEMBL::Utils::Logger;
@@ -30,7 +29,7 @@ sub run {
       die("There are no unmapped probes in the database.");
     }
 
-    my $sth = $dbc_tracking->prepare('select probe_seq_id, probe_dna from probe_seq where has_been_mapped is false');
+    my $sth = $dbc_tracking->prepare('select probe_seq_id, probe_dna from probe_seq');
     $sth->execute;
 
     use Bio::Seq;

@@ -3,7 +3,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016] EMBL-European Bioinformatics Institute
+Copyright [2016-2017] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ mkdir -p $TEMP_DIR
 # GZIPPED_FASTQ_FILE=$(mysql -N -B $DB_MYSQL_ARGS -e "select local_url from input_subset_tracking where input_subset_id = ${INPUT_SUBSET_ID}")
 
 
-DB_MYSQL_ARGS="-hens-genomics2 -P3306 -uensadmin -pensembl mn1_faang_tracking_homo_sapiens_funcgen_81_38"
+DB_MYSQL_ARGS="-hens-genomics2 -P3306 -uensadmin -psecret mn1_faang_tracking_homo_sapiens_funcgen_81_38"
 GZIPPED_FASTQ_FILE=$(mysql -N -B $DB_MYSQL_ARGS -e "select local_url from input_subset_tracking where input_subset_id = ${INPUT_SUBSET_ID}")
 
 echo $GZIPPED_FASTQ_FILE

@@ -71,13 +71,12 @@ use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
 use parent qw(Bio::EnsEMBL::Funcgen::Storable);
 
-my %valid_genders = (
-	male   => 1,
-	female => 1,
-	hermaphrodite => 1,
-	mixed => 1,
-	unknown => 1
-);
+my %valid_genders = (male   => 1,
+                     female => 1,
+                     hermaphrodite => 1,
+                     mixed => 1,
+                     unknown => 1 
+                    );
 
 =head2 new
 
@@ -215,6 +214,107 @@ sub efo_id {
     return $_[0]->{ontology_accession};
 }
 
+=head2 efo_db_entry
+
+  Example    : $epigenome->efo_accession
+  Description: Returns the accession in the Experimental Factor Ontology (EFO) for this epigenome.
+  Returntype : String
+  Exceptions : 
+  Caller     : 
+  Status     : 
+
+=cut
+
+sub efo_accession {
+  my $self = shift;
+  my $efo_db_entry = $self->efo_db_entry;
+  if (! defined $efo_db_entry) {
+    return undef;
+  }
+  return $efo_db_entry->primary_id
+}
+
+=head2 efo_db_entry
+
+  Example    : print $epigenome->efo_db_entry->primary_id;
+  Description: Returns the DBEntry of the external reference to the Experimental Factor Ontology (EFO).
+  Returntype : Bio::EnsEMBL::Funcgen::DBEntry
+  Exceptions : 
+  Caller     : 
+  Status     : 
+
+=cut
+
+sub efo_db_entry {
+  my $self = shift;
+  return $self->_unique_db_entry('EFO');
+}
+
+=head2 epirr_accession
+
+  Example    : print $epigenome->epirr_accession;
+  Description: Returns the EpiRR accession for this epigenome.
+  Returntype : String
+  Exceptions : 
+  Caller     : 
+  Status     : 
+
+=cut
+
+sub epirr_accession {
+  my $self = shift;
+  my $epirr_db_entry = $self->epirr_db_entry;
+  if (! defined $epirr_db_entry) {
+    return undef;
+  }
+  return $epirr_db_entry->primary_id
+}
+
+=head2 epirr_db_entry
+
+  Example    : print $epigenome->epirr_db_entry->primary_id;
+  Description: Returns the DBEntry of the external reference to EpiRR.
+  Returntype : Bio::EnsEMBL::Funcgen::DBEntry
+  Exceptions : 
+  Caller     : 
+  Status     : 
+
+=cut
+
+sub epirr_db_entry {
+  my $self = shift;
+  return $self->_unique_db_entry('EpiRR')
+}
+
+sub _unique_db_entry {
+
+  my $self = shift;
+  my $external_db_name = shift;
+
+  my $dbentry_adaptor = $self->adaptor->db->get_DBEntryAdaptor;
+
+  my $efo_db_entry = $dbentry_adaptor->_fetch_by_object_type(
+    $self->dbID,
+    'epigenome',
+    $external_db_name
+  );
+  
+  if (
+    (ref $efo_db_entry eq 'ARRAY')
+    && (@$efo_db_entry == 1)
+  ) {
+    return $efo_db_entry->[0];
+  }
+  if (
+    (ref $efo_db_entry eq 'ARRAY')
+    && (@$efo_db_entry == 0)
+  ) {
+#     warn("No $external_db_name id defined for " . $self->name . "!\n");
+    return undef;
+  }
+  use Data::Dumper;
+  throw("Unexpected return value for $external_db_name id!\n" . Dumper($efo_db_entry));
+}
 
 =head2 ontology_accession
 

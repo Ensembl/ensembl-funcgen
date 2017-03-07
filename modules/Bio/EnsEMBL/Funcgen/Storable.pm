@@ -5,7 +5,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016] EMBL-European Bioinformatics Institute
+Copyright [2016-2017] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -79,17 +79,17 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($states, $assoc_ftypes) = rearrange(['STATES', 'ASSOCIATED_FEATURE_TYPES'] ,@_);
+  my ($assoc_ftypes) = rearrange(['ASSOCIATED_FEATURE_TYPES'] ,@_);
 
-  if ($self->adaptor() && (! $self->adaptor->isa("Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor"))){
-    throw("Adaptor muct be a valid Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor");
-  }
+#   if ($self->adaptor() && (! $self->adaptor->isa("Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor"))){
+#     throw("Adaptor muct be a valid Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor");
+#   }
 
-  if($states){
-    assert_ref($states, 'ARRAY');
-    #Deref so we don't get unwanted update behaviour
-    @{$self->{'states'}} = @$states if $states;
-  }
+#   if($states){
+#     assert_ref($states, 'ARRAY');
+#     #Deref so we don't get unwanted update behaviour
+#     @{$self->{'states'}} = @$states if $states;
+#   }
   
   $self->associated_feature_types($assoc_ftypes) if(defined $assoc_ftypes);
 

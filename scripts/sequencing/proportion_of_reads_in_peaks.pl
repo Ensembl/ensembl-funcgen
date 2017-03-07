@@ -3,7 +3,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016] EMBL-European Bioinformatics Institute
+Copyright [2016-2017] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -136,7 +136,7 @@ my $logger = Bio::EnsEMBL::Utils::Logger->new();
 $logger->init_log;
 
 if (! -e $peak_file) {
-  $logger->error("The peak file $bam_file does not exist!\n");
+  $logger->error("The peak file $peak_file does not exist!\n");
 }
 if (! -e $bam_file) {
   $logger->error("The signal bam file $bam_file does not exist!\n");

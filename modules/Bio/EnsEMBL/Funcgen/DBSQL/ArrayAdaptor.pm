@@ -5,7 +5,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016] EMBL-European Bioinformatics Institute
+Copyright [2016-2017] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -118,23 +118,31 @@ sub fetch_by_name_vendor {
     my ($self, $name, $vendor) = @_;
 
     throw("Must provide and name") if (! $name);
-	my @arrays;
+    
+    my @arrays;
 
-	if(! $vendor){
-	  @arrays = @{$self->generic_fetch("a.name = '$name'")};
-
-	  if(scalar(@arrays) > 1){
-		throw("There is more than one array with this name please specify a vendor argument as one of:\t".join(' ', (map $_->vendor, @arrays)));
-	  }
-	}
-	else{
-	  #name vendor is unique key so will only ever return 1
-	  @arrays = @{$self->generic_fetch("a.name = '$name' and a.vendor='".uc($vendor)."'")};
-	}
-
+    if(! $vendor) {
+      $self->fetch_by_name($name);
+    } else {
+      # name vendor is unique key so will only ever return 1
+      @arrays = @{$self->generic_fetch("a.name = '$name' and a.vendor='".uc($vendor)."'")};
+    }
     return $arrays[0];
 }
 
+sub fetch_by_name {
+
+  my ($self, $name) = @_;
+
+  throw("Must provide and name") if (! $name);
+
+  my $arrays = $self->generic_fetch("a.name = '$name'");
+  
+  if(scalar(@$arrays) > 1) {
+    throw("There is more than one array with this name please use \"fetch_by_name_vendor\" and specify a vendor argument as one of:\t".join(' ', (map $_->vendor, @$arrays)));
+  }
+  return $arrays->[0];
+}
 
 =head2 fetch_by_name_class
 

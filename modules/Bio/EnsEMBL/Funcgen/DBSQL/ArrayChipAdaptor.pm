@@ -5,7 +5,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016] EMBL-European Bioinformatics Institute
+Copyright [2016-2017] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -79,6 +79,17 @@ sub fetch_all_by_array_id {
   return $self->generic_fetch('ac.array_id= ?');
 }
 
+sub fetch_by_name {
+
+  my ($self, $name) = @_;
+
+  my $arrays = $self->generic_fetch("ac.name = '$name'");
+  
+  if(scalar(@$arrays) > 1) {
+    throw("There is more than one array with this name.");
+  }
+  return $arrays->[0];
+}
 
 =head2 fetch_all_by_Array
 

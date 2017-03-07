@@ -87,55 +87,6 @@ sub create_input_id {
   my $out_db = $self->param('out_db');
   my $peak_caller = $self->param('peak_caller');
 
-=head1
-
- {
- "aligner_param_methods" => ["sam_ref_fai"],
- "alignment_analysis" => "bwa_samse",
- "assembly" => "GRCh38",
- "batch_param_names" => ["no_write","rollback","full_delete","slices","skip_slices","result_set_only","result_set_mode","recover","alignment_analysis","peak_analysis","permissive_peaks","control_feature","no_idr","indexed_ref_fasta","max_peaks","checksum_optional"],
- "broad_peak_feature_types" => ["H3K36me3","H3K27me3","H2AK5ac","H2BK12ac","H3K14ac","H3K23me2","H3K4me1","H3K79me1","H3K79me2","H3K9me1","H3K9me3","H4K20me1","H4K8ac"],
- "can_DefineMergedDataSet" => 1,
- "can_PreprocessIDR" => 1,
- "can_run_SWEmbl_R0005_replicate" => 1,
- "checksum_optional" => 0,
- "control_feature_types" => ["Goat-IgG","Rabbit-IgG","WCE","rat-IgG-control","rabbit-IgG-control","mouse-IgG-control","GFP"],
- "data_root_dir" => "/lustre/scratch109/ensembl/funcgen/mn1/ersa/mn1_refactorMerge2_tracking_homo_sapiens_funcgen_81_38",
- "dbID" => 1016,
- "default_gender" => "male",
- "dnadb" => {"-dnadb_host" => "ens-livemirror","-dnadb_name" => "homo_sapiens_core_83_38","-dnadb_pass" => undef,"-dnadb_port" => 3306,"-dnadb_user" => "ensro"},
- "fastq_chunk_size" => 1000000,
- "fastq_root_dir" => "/lustre/scratch109/ensembl/funcgen/mn1/ersa/mn1_refactorMerge2_tracking_homo_sapiens_funcgen_81_38/fastq",
- "feature_set_analysis_logic_name" => "ccat_histone",
- "filter_from_format" => undef,
- "hive_output_dir" => "/lustre/scratch109/ensembl/funcgen/mn1/ersa/mn1_refactorMerge2_tracking_homo_sapiens_funcgen_81_38/output/ersa4ever/hive_debug",
- "out_db" => {"-dbname" => "mn1_refactorMerge2_tracking_homo_sapiens_funcgen_81_38","-driver" => "mysql","-host" => "ens-genomics1","-pass" => "ensembl","-port" => 3306,"-user" => "ensadmin"},
- "out_db_url" => "mysql://ensadmin:ensembl\@ens-genomics1:3306/mn1_refactorMerge2_tracking_homo_sapiens_funcgen_81_38",
- "peak_caller" => "CCAT",
- "pipeline_name" => "ersa4ever",
- "set_name" => "UT7:hist:BR1_H3K27me3_3526_ccat_histone",
- "set_type" => "DataSet",
- "source" => "CallBroadPeaks",
- "species" => "homo_sapiens",
- "use_tracking_db" => 1,
- "work_root_dir" => "/lustre/scratch109/ensembl/funcgen/mn1/ersa/mn1_refactorMerge2_tracking_homo_sapiens_funcgen_81_38/output/ersa4ever"
- }
- 
-/lustre/scratch109/ensembl/funcgen/mn1/ersa/mn1_refactorMerge2_tracking_homo_sapiens_funcgen_81_38/output/mn1_refactorMerge2_tracking_homo_sapiens_funcgen_81_38/result_feature/
-
-  cmd => qq( proportion_of_reads_in_peaks.pl )
-  . qq( --peak_file #peak_file#              )
-  . qq( --temp_dir #temp_dir#                )
-  . qq( --bam_file #bam_file#                )
-  . qq( --peak_caller #peak_caller#          )
-  . qq( --feature_set_id #feature_set_id#    )
-  . qq( --user   #tracking_db_user#   )
-  . qq( --pass   #tracking_db_pass#   )
-  . qq( --host   #tracking_db_host#   )
-  . qq( --dbname #tracking_db_name#   )
-
-=cut
-
   # Undef means: not the control
   my $file_prefix  = $self->get_alignment_path_prefix_by_ResultSet($result_set, undef); 
   my $bam_file     = $file_prefix.'.bam';

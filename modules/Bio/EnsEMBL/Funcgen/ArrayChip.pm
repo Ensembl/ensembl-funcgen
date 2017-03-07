@@ -5,7 +5,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016] EMBL-European Bioinformatics Institute
+Copyright [2016-2017] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -137,7 +137,15 @@ sub new {
 
 =cut
 
-sub array_id {  return shift->{array_id}; }
+sub array_id {
+    my $self     = shift;
+    my $array_id = shift;
+    
+    if (defined $array_id) {
+      $self->{'array_id'} = $array_id;
+    }
+    return $self->{'array_id'};
+}
 
 =head2 name
 

@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016] EMBL-European Bioinformatics Institute
+Copyright [2016-2017] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -299,6 +299,13 @@ sub regulatory_activity_for_epigenome {
   my $self = shift;
   my $epigenome = shift;
   
+  if (! defined $epigenome) {
+    throw("Epigenome parameter was undefined!");
+  }
+  if (ref $epigenome ne 'Bio::EnsEMBL::Funcgen::Epigenome') {
+    throw("Wrong parameter, expected an epigenome, but got a " . ref $epigenome);
+  }
+  
   my $epigenome_id = $epigenome->dbID;
   my @regulatory_activity = grep { 
     !$_->_is_multicell 
@@ -433,11 +440,12 @@ sub regulatory_activity {
 
   my $self = shift;
   if(! defined $self->{'_regulatory_activity'}) {
-    $self->{'_regulatory_activity'} = $self
+    my $raa = $self->adaptor->db->{'_regulatory_activity_adaptor'} ||= $self
       ->adaptor
       ->db
-      ->get_RegulatoryActivityAdaptor()
-      ->fetch_all_by_RegulatoryFeature($self);
+      ->get_RegulatoryActivityAdaptor();
+
+    $self->{'_regulatory_activity'} = $raa->fetch_all_by_RegulatoryFeature($self);
   }
   return $self->{'_regulatory_activity'};
 }

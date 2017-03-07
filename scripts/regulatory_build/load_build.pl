@@ -3,7 +3,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016] EMBL-European Bioinformatics Institute
+Copyright [2016-2017] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -115,10 +115,10 @@ sub main {
   print_log("Getting options\n");
   my $options = get_options();
   print_log("Connecting to database\n");
-  my $db = connect_db($options);
+  my $funcgen_db_adaptor = connect_db($options);
 
   use Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildAdaptor;
-  my $regulatory_build_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildAdaptor->new($db);
+  my $regulatory_build_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildAdaptor->new($funcgen_db_adaptor);
   my $current_regulatory_build = $regulatory_build_adaptor->fetch_current_regulatory_build;
 
   if (! defined $current_regulatory_build) {
@@ -134,15 +134,15 @@ sub main {
   }
 
 #   print_log("Getting analysis\n");
-#   my $analysis = get_analysis($db);
+#   my $analysis = get_analysis($funcgen_db_adaptor);
   print_log("Getting cell types\n");
-  my $ctypes = get_cell_type_names($options->{base_dir}, $db);
+  my $ctypes = get_cell_type_names($options->{base_dir}, $funcgen_db_adaptor);
   print_log("Getting stable ids\n");
-  my $stable_id = get_stable_id($options, $db);
+  my $stable_id = get_stable_id($options, $funcgen_db_adaptor);
   print_log("Getting slices\n");
-  my $slice = get_slices($db);
+  my $slice = get_slices($funcgen_db_adaptor);
   print_log("Getting feature types\n");
-  my $feature_type = get_feature_types($db);
+  my $feature_type = get_feature_types($funcgen_db_adaptor);
   print_log("Counting active features\n");
   my $count_hash = compute_counts($options->{base_dir});
 
@@ -152,7 +152,8 @@ sub main {
 
   my $new_regulatory_build = create_regulatory_build_object(
     $current_regulatory_build,
-    $is_small_update
+    $is_small_update,
+    $funcgen_db_adaptor
   );
 
   # This sets the dbID of the regulatory build object. The regulatory
@@ -161,7 +162,7 @@ sub main {
   $regulatory_build_adaptor->store($new_regulatory_build);
 
   print_log("Creating regulatory_feature table\n");
-  compute_regulatory_features($options, $ctypes, $feature_type, $stable_id, $count_hash, $slice, $db, $new_regulatory_build);
+  compute_regulatory_features($options, $ctypes, $feature_type, $stable_id, $count_hash, $slice, $funcgen_db_adaptor, $new_regulatory_build);
 
   print_log("Creating regulatory_annotation table\n");
   compute_regulatory_annotations($options);
@@ -929,7 +930,7 @@ sub compute_regulatory_annotations {
 =cut
 
 sub create_regulatory_build_object {
-  my ($current_regulatory_build, $is_small_update) = @_;
+  my ($current_regulatory_build, $is_small_update, $funcgen_db_adaptor) = @_;
 
   use Bio::EnsEMBL::Funcgen::RegulatoryBuild;
 
@@ -948,15 +949,41 @@ sub create_regulatory_build_object {
     $current_build_version = $current_regulatory_build->version;
     $current_build_initial_release_date = $current_regulatory_build->initial_release_date;
   } else {
-      $new_regulatory_build = Bio::EnsEMBL::Funcgen::RegulatoryBuild->new(
-        -name            => 'The Ensembl Regulatory Build' ,
-        # HACK: These values should not be hardcoded!
-        -feature_type_id => 174992,
-        -analysis_id     => 25,
-        -is_current      => 0,
-    );
-    $current_build_version = '0.0';
-    $current_build_initial_release_date = '';
+    
+      use Bio::EnsEMBL::Analysis;
+      use Bio::EnsEMBL::Funcgen::FeatureType;
+      
+      my $regulatory_build_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildAdaptor->new($funcgen_db_adaptor);
+      my $analysis_adaptor         = Bio::EnsEMBL::Analysis->new($funcgen_db_adaptor);
+      my $feature_type_adaptor     = Bio::EnsEMBL::Funcgen::FeatureType->new($funcgen_db_adaptor);
+
+      my $regulatory_build_logic_name        = 'Regulatory_Build';
+      my $regulatory_build_feature_type_name = 'RegulatoryFeature';
+
+      my $regulatory_build_analysis = $analysis_adaptor->fetch_by_logic_name($regulatory_build_logic_name);
+
+      if (! defined $regulatory_build_analysis) {
+        die();
+      }
+
+      my $regulatory_build_feature_type = $feature_type_adaptor->fetch_by_name($regulatory_build_feature_type_name);
+
+      if (! defined $regulatory_build_feature_type) {
+        die();
+      }
+
+      my $new_regulatory_build = Bio::EnsEMBL::Funcgen::RegulatoryBuild->new(
+              -name            => 'The Ensembl Regulatory Build',
+              -feature_type    => $regulatory_build_feature_type,
+              -analysis        => $regulatory_build_analysis,
+              -is_current      => 0,
+          );
+
+#       print Dumper($regulatory_build);
+      $regulatory_build_adaptor->store($new_regulatory_build);
+
+      $current_build_version = '0.0';
+      $current_build_initial_release_date = '';
   }
 
   my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();

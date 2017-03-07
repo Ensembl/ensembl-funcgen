@@ -1,6 +1,6 @@
 #!/bin/sh
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016] EMBL-European Bioinformatics Institute
+# Copyright [2016-2017] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ for db in $dbs; do
 	latin=$(echo $latin | sed 's/dev_//')
 	data_version=$(echo $db | sed 's/.*funcgen_//')
 
-	bsub_cmd="bsub -o $HOME/logs/update_DB_for_release.${latin}_${data_version}.out  -e $HOME/logs/update_DB_for_release.${latin}_${data_version}.err -J update_DB_for_release.${latin}_${data_version} -q long -R\"select[mem>2000] rusage[mem=2000]\" -M 2000000"
+	bsub_cmd="bsub -o $HOME/logs/update_DB_for_release.${latin}_${data_version}.out  -e $HOME/logs/update_DB_for_release.${latin}_${data_version}.err -J update_DB_for_release.${latin}_${data_version} -R\"select[mem>2000] rusage[mem=2000]\" -M 2000000"
 
 
 	job_cmd="perl -w $EFG_SRC/scripts/release/update_DB_for_release.pl\

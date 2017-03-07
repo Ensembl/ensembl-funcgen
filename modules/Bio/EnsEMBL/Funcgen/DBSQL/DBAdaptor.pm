@@ -1,7 +1,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016] EMBL-European Bioinformatics Institute
+Copyright [2016-2017] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -390,11 +390,8 @@ sub get_available_adaptors{
                'Epigenome'              => 'Bio::EnsEMBL::Funcgen::DBSQL::EpigenomeAdaptor',
                'CoordSystem'            => 'Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor',
                'DataSet'                => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
-               'DataSet'                => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
                'DBEntry'                => 'Bio::EnsEMBL::Funcgen::DBSQL::DBEntryAdaptor',
-               'DNAMethylationFeature'  => 'Bio::EnsEMBL::Funcgen::DBSQL::DNAMethylationFeatureAdaptor',
                'Experiment'             => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor',
-               'ExperimentalChip'       => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalChipAdaptor',
                'ExperimentalGroup'      => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalGroupAdaptor',
                'ExternalFeature'        => 'Bio::EnsEMBL::Funcgen::DBSQL::ExternalFeatureAdaptor',
                'FeatureSet'             => 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureSetAdaptor',

@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016] EMBL-European Bioinformatics Institute
+# Copyright [2016-2017] EMBL-European Bioinformatics Institute
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -77,12 +77,5 @@ my $probes = $ps->get_all_Probes();
 foreach my $probe ( @{$probes} ) {
     isa_ok( $probe, 'Bio::EnsEMBL::Funcgen::Probe' );
 }
-
-# -------------------------------------
-# Test get_all_ProbeFeatures subroutine
-# -------------------------------------
-throws_ok { $ps->get_all_ProbeFeatures(); }
-qr/Not implemented yet, do we want to do this for ProbeSet or just probe?/,
-    'Test get_all_ProbeFeatures subroutine';
 
 done_testing();

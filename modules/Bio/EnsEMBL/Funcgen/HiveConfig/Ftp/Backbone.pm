@@ -16,12 +16,18 @@ sub pipeline_analyses {
                'A->1' => 'backbone_fire_createmetafiles'
             },
         },
+        {   -logic_name  => 'start_export',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+        },
         {   -logic_name  => 'backbone_fire_createmetafiles',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
                '1->A' => 'create_manifest_file',
                'A->1' => 'backbone_pipeline_finished'
             },
+        },
+        {   -logic_name  => 'create_manifest_file',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
         {   -logic_name => 'backbone_pipeline_finished',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',

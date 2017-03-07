@@ -1,0 +1,7 @@
+Project	IssueType	Summary	Parent_Summary	Reporter	Assignee	Priority	FixVersion	DueDate	Component	Description
+ENSREGULATION	Task	Patch funcgen databases on staging servers		<RelCo>	<RelCo>	Major	release-<version>_handover	<handover_date>	Schema	https://www.ebi.ac.uk/seqdb/confluence/display/ensf/Schema+patching
+ENSREGULATION	Task	Update DBs for release		<RelCo>	<RelCo>	Major	release-<version>_handover	<handover_date>		
+ENSREGULATION	Task	Make sure that DEPRECATED.md is up to date		<RelCo>		Major	release-<version>_codeBranching	<codeBranching_date>	Documentation	All module / method deprecations should be listed in this file. Make sure that every API component that has been deprecated during the release period is in the list.
+ENSREGULATION	Task	Update API tutorial		<RelCo>		Major	release-<version>_codeBranching	<codeBranching_date>	API,Documentation	
+ENSREGULATION	Sub-task	Create copies of tracking DBs on genomics servers	Update DBs for release	<RelCo>	<RelCo>	Major	release-<version>_codeBranching	<codeBranching_date>		Copy the final dbs from staging to genomics and add the tracking tables
+ENSREGULATION	Improvement	Updating database schema documentation		<RelCo>		Minor	release-<version>_codeBranching	<codeBranching_date>	Documentation	Update the documentation around the data base schema as described here: https://www.ebi.ac.uk/seqdb/confluence/display/ensf/Creating+the+schema+documentation

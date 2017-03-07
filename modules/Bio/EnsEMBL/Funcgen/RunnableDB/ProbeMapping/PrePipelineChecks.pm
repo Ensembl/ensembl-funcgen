@@ -10,44 +10,50 @@ sub run {
     my $logger = Bio::EnsEMBL::Utils::Logger->new();    
     my $error_msg;
 
-    #
-    # pipeline_repository_dir is needed to find other files
-    # 
-    my $pipeline_repository_dir = $self->param('pipeline_repository_dir');    
-    if (! $pipeline_repository_dir) {    
-      $error_msg .= "pipeline_repository_dir parameter has not been set.\n";
-    } elsif (! -d $pipeline_repository_dir) {    
-      $error_msg .= "The directory $pipeline_repository_dir does not exist.\n";
-    }
+#     #
+#     # pipeline_repository_dir is needed to find other files
+#     # 
+#     my $pipeline_repository_dir = $self->param('pipeline_repository_dir');    
+#     if (! $pipeline_repository_dir) {    
+#       $error_msg .= "pipeline_repository_dir parameter has not been set.\n";
+#     } elsif (! -d $pipeline_repository_dir) {    
+#       $error_msg .= "The directory $pipeline_repository_dir does not exist.\n";
+#     }
+#     
+#     if ($error_msg) {
+#       die($error_msg);
+#     }    
+#     #
+#     # Files we are expecting but might not be there
+#     #    
+#     my $expected_files = [
+#       'sql/table.sql',
+# #       'sql/array2organism.sql',
+#       'sql/probe_seq.sql',
+# #       'sql/probe_alias.sql'
+#     ];
+#     
+#     foreach my $current_expected_file (@$expected_files) {
+# 	my $file_name_with_full_path = $pipeline_repository_dir . '/' . $current_expected_file;
+#     
+# 	if (! -e $file_name_with_full_path) {
+# 	  $error_msg .= "File $current_expected_file in $pipeline_repository_dir is missing.\n";
+# 	}
+#     }
+
+    my @programs_expected_in_path = qw(
+      import_parse_probe_fasta_file.pl
+      import_create_array_objects.pl
+      import_store_array_objects.pl
+    );
     
-    if ($error_msg) {
-      die($error_msg);
-    }    
-    #
-    # Files we are expecting but might not be there
-    #    
-    my $expected_files = [
-      'sql/table.sql',
-      'sql/array2organism.sql',
-      'sql/probe_seq.sql',
-      'sql/probe_alias.sql'
-    ];
-    
-    foreach my $current_expected_file (@$expected_files) {    
-	my $file_name_with_full_path = $pipeline_repository_dir . '/' . $current_expected_file;
-    
-	if (! -e $file_name_with_full_path) {
-	  $error_msg .= "File $current_expected_file in $pipeline_repository_dir is missing.\n";
-	}
+    foreach my $current_program (@programs_expected_in_path) {
+      system("which $current_program > /dev/null");
+      if ($?) {
+        $error_msg .= "Can't find $current_program in path. These scripts are part of the ensembl-funcgen repository.\n";
+      }
     }
 
-    # "> /dev/null", because otherwise the location would be printed to the 
-    # screen.
-    #
-    #system("which mysql > /dev/null");
-#     if ($?) {
-#       $error_msg .= "Can't find mysql command in path. Mysql has to be in the path.\n";
-#     }
     my $mysql_bin = `which mysql`;
     if (! $mysql_bin) {
       $error_msg .= "Can't find mysql command in path. Mysql has to be in the path.\n";
@@ -76,20 +82,6 @@ sub run {
       $error_msg .= "Can't find dump_genes.pl in path. dump_genes.pl is a script from scripts/export/ in the ensembl-funcgen repository. Please make sure it is in the PATH.\n";
     }
     
-    system("which probe2transcript.pl > /dev/null");    
-    if ($?) {
-      $error_msg .= "Can't find probe2transcript.pl in path. probe2transcript.pl is a script from scripts/array_mapping/ in the ensembl-funcgen repository. Please make sure it is in the PATH and that it is executable.\n";
-    }
-    
-    system("which rollback_array.pl > /dev/null");    
-    if ($?) {
-      $error_msg .= "Can't find the rollback script in the path. It is in the scripts/rollback/ subdirectory of the ensembl-funcgen checkout. Please consider adding this to you PATH environment variable.\n";
-    }    
-    system("which update_transcript_xrefs.pl > /dev/null");    
-    if ($?) {
-      $error_msg .= "Can't find update_transcript_xrefs.pl in path. update_transcript_xrefs.pl is a script from scripts/array_mapping/ in the ensembl-funcgen repository. Please make sure it is in the PATH and that it is executable.\n";
-    }
-    
     system("which bedtools > /dev/null");    
     if ($?) {
       $error_msg .= "Can't find bedtools in path. On the sanger farm there is an installation in /software/ensembl/funcgen/. Please make sure the bedtools binary is in the PATH.\n";
@@ -113,41 +105,42 @@ sub run {
 #        $error_msg .= "Couldn't connect to the database server defined in funcgen_dba_hash. Please review the connection details.\n\n";
 #        $error_msg .= "The error message was:\n\n$@";
 #      }
-    my $tracking_dba_hash = $self->param('tracking_dba_hash');
-    
-    # The database might not exist yet. Deleting this key makes the 
-    # DBConnection object not connect to it.
-    #
-    delete $tracking_dba_hash->{-dbname};
-    
-    $dbc = Bio::EnsEMBL::DBSQL::DBConnection->new(%$tracking_dba_hash);
-    
-    eval {
-      $dbc->connect();
-     };
-     if ($@) {
-       $error_msg .= "Couldn't connect to the database server defined in tracking_dba_hash. Please review the connection details.\n\n";
-       $error_msg .= "The error message was:\n\n$@";
-     }
-    
-    if ($error_msg) {
-      die($error_msg);
-    }
-    
-    use Bio::EnsEMBL::DBSQL::DBAdaptor;
-    eval {
-      my $dnadb =  Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-	  -dbname          => $tracking_dba_hash->{'-dnadb_name'},
-	  -host            => $tracking_dba_hash->{'-dnadb_host'},
-	  -port            => $tracking_dba_hash->{'-dnadb_port'},
-	  -user            => $tracking_dba_hash->{'-dnadb_user'},
-	  -species         => $tracking_dba_hash->{'-species'}, 
-      );
-    };
-    if ($@) {
-       $error_msg .= "Couldn't connect to the dnadb database defined in tracking_dba_hash. Please review the connection details.\n\n";
-       $error_msg .= "The error message was:\n\n$@";
-    }
+#     my $tracking_dba_hash = $self->param('tracking_dba_hash');
+#     
+#     # The database might not exist yet. Deleting this key makes the 
+#     # DBConnection object not connect to it.
+#     #
+#     delete $tracking_dba_hash->{-dbname};
+#     
+# #     $dbc = Bio::EnsEMBL::DBSQL::DBConnection->new(%$tracking_dba_hash);
+#     $dbc = Bio::EnsEMBL::DBSQL::DBConnection->new(%$tracking_dba_hash);
+#     
+#     eval {
+#       $dbc->connect();
+#      };
+#      if ($@) {
+#        $error_msg .= "Couldn't connect to the database server defined in tracking_dba_hash. Please review the connection details.\n\n";
+#        $error_msg .= "The error message was:\n\n$@";
+#      }
+#     
+#     if ($error_msg) {
+#       die($error_msg);
+#     }
+#     
+#     use Bio::EnsEMBL::DBSQL::DBAdaptor;
+#     eval {
+#       my $dnadb =  Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+# 	  -dbname          => $tracking_dba_hash->{'-dnadb_name'},
+# 	  -host            => $tracking_dba_hash->{'-dnadb_host'},
+# 	  -port            => $tracking_dba_hash->{'-dnadb_port'},
+# 	  -user            => $tracking_dba_hash->{'-dnadb_user'},
+# 	  -species         => $tracking_dba_hash->{'-species'}, 
+#       );
+#     };
+#     if ($@) {
+#        $error_msg .= "Couldn't connect to the dnadb database defined in tracking_dba_hash. Please review the connection details.\n\n";
+#        $error_msg .= "The error message was:\n\n$@";
+#     }
     if ($error_msg) {
       die($error_msg);
     }

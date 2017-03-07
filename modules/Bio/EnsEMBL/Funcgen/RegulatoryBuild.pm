@@ -28,6 +28,8 @@ Bio::EnsEMBL::Funcgen::RegulatoryBuild - A module to represent a Regulatory Buil
 
 =head1 SYNOPSIS
 
+  use strict;
+  use warnings;
   use Bio::EnsEMBL::Registry;
   use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
@@ -43,6 +45,15 @@ Bio::EnsEMBL::Funcgen::RegulatoryBuild - A module to represent a Regulatory Buil
   print "There are " . @$epigenomes_in_regulatory_build . " epigenomes in the regulatory build:\n";
   print join "\n", map { '  - ' . $_->display_label } @$epigenomes_in_regulatory_build;
   print  "\n";
+
+  print "Name: "                                   . $regulatory_build->name                                      . "\n";
+  print "Version: "                                . $regulatory_build->version                                   . "\n";
+  print "Initial release date: "                   . $regulatory_build->initial_release_date                      . "\n";
+  print "Last annotation update: "                 . $regulatory_build->last_annotation_update                    . "\n";
+  print "feature type id: "                        . $regulatory_build->feature_type_id                           . "\n";
+  print "Analysis id: "                            . $regulatory_build->analysis_id                               . "\n";
+  print "Is current: "                             . $regulatory_build->is_current                                . "\n";
+  print "Stable id of sample regulatory feature: " . $regulatory_build->fetch_sample_RegulatoryFeature->stable_id . "\n";
 
 =head1 DESCRIPTION
 
@@ -105,8 +116,11 @@ sub new {
     initial_release_date
     last_annotation_update
     feature_type_id
+    feature_type
     analysis_id
+    analysis
     is_current
+    sample_regulatory_feature_id
   );
   
   my (
@@ -117,10 +131,31 @@ sub new {
     $initial_release_date,
     $last_annotation_update,
     $feature_type_id,
+    $feature_type,
     $analysis_id,
+    $analysis,
     $is_current,
+    $sample_regulatory_feature_id,
   )
     = rearrange([ @field ], @_);
+
+  #
+  # Analysis and FeatureType can be passed in either as objects or by their 
+  # dbIDs. The RegulatoryFeatureAdaptor uses database ids only, the objects
+  # are lazy loaded as needed.
+  #
+  # The regulatory build script uses proper objects to create the regulatory
+  # build object.
+  #
+  if (defined $analysis) {
+    $self->set_Analysis($analysis);
+  }
+  if (defined $feature_type) {
+    $self->set_FeatureType($feature_type);
+  }
+  
+  $self->feature_type_id($feature_type_id);
+  $self->analysis_id($analysis_id);
 
   $self->db($db);
   $self->dbID($dbID);
@@ -128,9 +163,9 @@ sub new {
   $self->version($version);
   $self->initial_release_date($initial_release_date);
   $self->last_annotation_update($last_annotation_update);
-  $self->feature_type_id($feature_type_id);
-  $self->analysis_id($analysis_id);
   $self->is_current($is_current);
+  $self->sample_regulatory_feature_id($sample_regulatory_feature_id);
+  
 
   return $self;
 }
@@ -192,6 +227,62 @@ sub last_annotation_update { return shift->_generic_get_or_set('last_annotation_
 sub feature_type_id        { return shift->_generic_get_or_set('feature_type_id',        @_) }
 sub analysis_id            { return shift->_generic_get_or_set('analysis_id',            @_) }
 
+sub set_Analysis {
+  my $self     = shift;
+  my $analysis = shift;
+  
+  $self->{analysis} = $analysis;
+
+  if (! defined $analysis) {
+    throw('Analysis was not defined!');
+  }
+  
+  $self->analysis_id($analysis->dbID);
+}
+
+sub fetch_Analysis {
+  my $self = shift;
+  
+  if ($self->{analysis}) {
+    return $self->{analysis};
+  }
+  my $analysis_id = $self->analysis_id;
+  if ($analysis_id) {
+    my $analysis_adaptor = $self->db->get_AnalysisAdaptor;
+    my $analysis = $analysis_adaptor->fetch_by_dbID($analysis_id);
+    $self->{analysis} = $analysis;
+    return $analysis;
+  }
+  die;
+}
+
+sub set_FeatureType {
+  my $self         = shift;
+  my $feature_type = shift;
+  
+  if (! defined $feature_type) {
+    throw('Feature type was not defined!');
+  }
+  $self->{feature_type} = $feature_type;
+  $self->feature_type_id($feature_type->dbID);
+}
+
+sub fetch_FeatureType {
+  my $self = shift;
+  
+  if ($self->{feature_type}) {
+    return $self->{feature_type};
+  }
+  my $feature_type_id = $self->feature_type_id;
+  if ($feature_type_id) {
+    my $feature_type_adaptor = $self->db->get_FeatureTypeAdaptor;
+    my $feature_type = $feature_type_adaptor->fetch_by_dbID($feature_type_id);
+    $self->{feature_type} = $feature_type;
+    return $feature_type;
+  }
+  die;
+}
+
 =head2 is_current
 
   Example    : if ($regulatory_build->is_current) { 
@@ -243,6 +334,30 @@ sub _get_all_epigenome_ids {
 
   return \@epigenome_id
 }
+
+=head2 fetch_sample_regulatory_feature
+
+  Example    : print "Stable id of sample regulatory feature: " . $regulatory_build->fetch_sample_RegulatoryFeature->stable_id . "\n";
+  Description: Gets all epigenomes used in this regulatory build.
+  Returntype : ArrayRef[Bio::EnsEMBL::Funcgen::Epigenome]
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub fetch_sample_RegulatoryFeature {
+  my $self = shift;
+  
+  my $sample_regulatory_feature_id = $self->sample_regulatory_feature_id;
+  return if (! defined $sample_regulatory_feature_id);
+  
+  my $regulatory_feature_adaptor = $self->db->get_RegulatoryFeatureAdaptor;
+  my $sample_regulatory_feature = $regulatory_feature_adaptor->fetch_by_dbID($sample_regulatory_feature_id);
+  return $sample_regulatory_feature
+}
+
+sub sample_regulatory_feature_id { return shift->_generic_get_or_set('sample_regulatory_feature_id', @_) }
 
 sub _generic_get_or_set {
   my $self  = shift;

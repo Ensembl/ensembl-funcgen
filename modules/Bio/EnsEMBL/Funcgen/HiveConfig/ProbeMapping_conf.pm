@@ -171,7 +171,7 @@ sub _pipeline_analyses_probe_align {
             -meadow_type => 'LSF',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters => {
-                'cmd' => 'sequence_dump.pl -dbuser #dbuser# -dbname #dbname# -dbhost #dbhost# -toplevel -onefile -filename #filename# -mask_repeat Dust -mask_repeat RepeatMask',
+                'cmd' => 'sequence_dump.pl -dbuser #dbuser# -dbname #dbname# -dbhost #dbhost# -dbport #dbport# -toplevel -onefile -filename #filename# -mask_repeat Dust -mask_repeat RepeatMask',
             },
             -input_ids => [ 
 	      {
@@ -194,7 +194,7 @@ sub _pipeline_analyses_probe_align {
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -rc_name     => '8Gb_job',
             -parameters  => {
-                'cmd'       => 'sequence_dump.pl -dbuser #dbuser# -dbname #dbname# -dbhost #dbhost# -toplevel -onefile -filename #filename#',
+                'cmd' => 'sequence_dump.pl -dbuser #dbuser# -dbname #dbname# -dbhost #dbhost# -dbport #dbport# -toplevel -onefile -filename #filename# -mask_repeat Dust -mask_repeat RepeatMask',
             },
             -can_be_empty => 1,
         },
@@ -202,7 +202,7 @@ sub _pipeline_analyses_probe_align {
             -meadow_type => 'LSF',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters => {
-                'cmd' => 'dump_genes.pl -dbuser #dbuser# -dbname #dbname# -dbhost #dbhost# -file #filename# -cdna -stable_id',
+                'cmd' => 'dump_genes.pl -dbuser #dbuser# -dbname #dbname# -dbhost #dbhost# -dbport #dbport# -file #filename# -cdna -stable_id',
             },
             -input_ids => [ 
 	      {
@@ -225,7 +225,7 @@ sub _pipeline_analyses_probe_align {
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -rc_name     => '8Gb_job',
             -parameters  => {
-                'cmd' => 'dump_genes.pl -dbuser #dbuser# -dbname #dbname# -dbhost #dbhost# -file #filename# -cdna -stable_id',
+                'cmd' => 'dump_genes.pl -dbuser #dbuser# -dbname #dbname# -dbhost #dbhost# -dbport #dbport# -file #filename# -cdna -stable_id',
             },
             -can_be_empty => 1,
         },

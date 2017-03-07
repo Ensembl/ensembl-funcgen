@@ -26,10 +26,6 @@ sub pipeline_analyses {
     return [
         {   -logic_name  => 'start_export',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-#             -flow_into   => {
-#               '1->A' => 'mk_temp_dir',
-#               'A->1' => 'rm_annotated_features_temp_dir',
-#             },
             -flow_into   => 'mk_temp_dir',
         },
         {   -logic_name  => 'mk_temp_dir',

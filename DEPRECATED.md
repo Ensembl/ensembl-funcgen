@@ -42,7 +42,7 @@ A year after deprecation (4 Ensembl releases), the method is removed from the AP
  - Bio::EnsEMBL::Funcgen::**RegulatoryFeature**::*get_other_RegulatoryFeatures*
  - Bio::EnsEMBL::Funcgen::**RegulatoryFeatureAdaptor**::*fetch_all_by_stable_ID*
 
-### To be removed in Ensembl Release 88 ###
+### Removed in Ensembl Release 88 ###
  - Bio::Ensembl::Funcgen::**Channel**
  - Bio::Ensembl::Funcgen::DBSQL::**ChannelAdaptor**
  - Bio::Ensembl::Funcgen::**ExperimentalChip**
@@ -54,7 +54,7 @@ A year after deprecation (4 Ensembl releases), the method is removed from the AP
  - Bio::Ensembl::Funcgen::Collector::**ResultFeature**
 
 ### Removed in Ensembl Release 86 ###
- - Bio::Ensembl::Funcgen::**ResultSet**::* - Bio::Ensembl::Funcgen::**ResultSet**::*get_ResultFeatures_by_Slice*
+ - Bio::Ensembl::Funcgen::**ResultSet**::*get_ResultFeatures_by_Slice*
 
 ### Removed in Ensembl Release 85 ###
  - Bio::Ensembl::Funcgen::**Experiment**::*date()*

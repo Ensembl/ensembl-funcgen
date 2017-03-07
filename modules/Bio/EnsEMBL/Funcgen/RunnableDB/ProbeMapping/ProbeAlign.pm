@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016] EMBL-European Bioinformatics Institute
+# Copyright [2016-2017] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -135,9 +135,15 @@ sub fetch_input {
   # We need 101 hits, so we can test later, if a probe sequencehad more than 100 hits.
   $self->OPTIONS(' --bestn 101 --dnahspthreshold 116 --fsmmemory 256 --dnawordlen 12 --dnawordlimit 0 ');
   $self->HIT_SATURATION_LEVEL(100);
-  $self->MAX_MISMATCHES(1);
+  $self->MAX_MISMATCHES(0);
   $self->QUERYTYPE('dna');
-  $self->OUTDB($self->param('OUTDB'));
+  
+  my $species                 = $self->param('species');
+  my $funcgen_adaptor         = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
+
+  my $out_db = 
+  
+  $self->OUTDB($funcgen_adaptor);
   $self->QUERYSEQS($self->param('QUERYSEQS'));
   
   use Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::Utils qw( create_dna_db_params_from_funcgen_hash );    
@@ -153,6 +159,10 @@ sub fetch_input {
   
   $funcgen_adaptor->dbc->reconnect_when_lost(1);
   $funcgen_adaptor->dnadb->dbc->reconnect_when_lost(1);  
+  $funcgen_adaptor->dbc->disconnect_when_inactive(1);
+  $funcgen_adaptor->dnadb->dbc->disconnect_when_inactive(1);
+  
+  $self->dbc->disconnect_when_inactive(1);
   
   my $analysis_adaptor = $funcgen_adaptor->get_AnalysisAdaptor;
   
@@ -223,7 +233,7 @@ sub fetch_input {
 
 
   my $sql = "select external_db_id from external_db where db_name='$db_name' and db_release='$schema_build'";
-  my ($extdb_id) = $self->outdb->db_handle->selectrow_array($sql);
+  my ($extdb_id) = $self->outdb->dbc->db_handle->selectrow_array($sql);
 	
  
   #This is causing redundant edb entries as parallel job store the same entry, which is not constrained by unique key.
@@ -411,6 +421,8 @@ sub write_output {
   $self->output($features);
   
   print 'Writing '.scalar(@{$features})." ProbeFeatures\n";
+  
+  $outdb->dbc->disconnect_when_inactive(0);
 
   foreach my $feature_xref(@{$features}){
   
@@ -451,9 +463,15 @@ sub write_output {
 	eval { 
 	  $feature_adaptor->store($feature)
 	};
-	if ($@) {
-	  $self->throw('Unable to store ProbeFeature for probe '.$feature->probe_id." on slice:\t".$feature->slice->name."\n$@");
-	}
+        if ($@) {
+
+          # Don't terminate for duplicate features. This can happen, if a job 
+          # is restarted by hive.
+          #
+          if ($@!~/st execute failed: Duplicate entry/) {
+            $self->throw('Unable to store ProbeFeature for probe '.$feature->probe_id." on slice:\t".$feature->slice->name."\n$@");
+          }
+        }
 	if($xref){
 	  #Remove ignore release flag so we store on the correct schema build
 	  eval{ $dbe_adaptor->store($xref, $feature->dbID, 'ProbeFeature') };
@@ -476,22 +494,15 @@ sub filter_features {
   my $promiscuous_probes = $output->{promiscuous_probes};
   
   use Data::Dumper;  
-  
-#   open OUT, "promiscuous_probes.debug.pl";
-#   print OUT Dumper($promiscuous_probes);
-#   close (OUT);
-  
   my (%hits_by_probe, @kept_hits);
-  
-  #my $analysis     = $self->analysis;  
   
   my $mapping_type = $self->mapping_type;
   my $max_hits     = $self->HIT_SATURATION_LEVEL;
   my $uo_adaptor   = $self->outdb->get_UnmappedObjectAdaptor;
-#   my $pf_adaptor   = $self->outdb->get_ProbeFeatureAdaptor;
-#  my $pf_adaptor   = $self->outdb->get_AnalysisAdaptor;
   
-  foreach my $promiscuous_probe (@$promiscuous_probes) {  
+  # In ExonerateProbe, any probe that makes more than 100 hits is classifies as a promiscuous probe.
+  #
+  foreach my $promiscuous_probe (@$promiscuous_probes) {
   
     my $probe    = $promiscuous_probe->{probe};
     my $analysis = $promiscuous_probe->{analysis};

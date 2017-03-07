@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016] EMBL-European Bioinformatics Institute
+# Copyright [2016-2017] EMBL-European Bioinformatics Institute
 # 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -140,29 +140,22 @@ sub run{
 }
 
 
-#The idea is that we could handle other formats here.
-#This overlaps with the idea of Parsers, so need to merge these at some point
-#Fastas are not design files, parsers handle design files.
-
 sub run_FASTA{
-  my ($self) = @_;
+  my $self = shift;
  
   my (%probes_by_sequence, %array_chips, %probe_attrs, $probe_set);
   my ($current_array_chip, $existing_probe, $current_sequence, $sequence_fragment);
   
-  #These get_CONFIGFIELD methods use the ARRAY_FORMAT to retrieve the correct config
   my $header_regex = $self->get_IIDREGEXP;
-  my %valid_fields = 
-    (
-     -probe_set   => undef,
-     -name        => undef,
-     -array       => undef,
-     -array_chip  => undef,
-     -description => undef,
-    );
+  my %valid_fields = (
+    -probe_set   => undef,
+    -name        => undef,
+    -array       => undef,
+    -array_chip  => undef,
+    -description => undef,
+  );
   my %field_order = %{$self->get_IFIELDORDER};
 
-  #Validate field
   foreach my $config_field (keys(%field_order)) {
 
     if (! exists $valid_fields{$config_field}) {
@@ -171,50 +164,26 @@ sub run_FASTA{
     }
   }
 
-  #This is done so we can dynamically assign fields using their match order
-  #Don't actually use 4 and 5 here, but here just in case config regexps are extended
+  # This is done so we can dynamically assign fields using their match order
+  # Don't actually use 4 and 5 here, but here just in case config regexps are 
+  # extended.
+  #
   my @match_refs = (\$1, \$2, \$3, \$4, \$5);
-  #or is there a special array to hold these?
-
-  #  warn "We need to count and report the number of probes imported, else throw if none imported\n".
-  #"or if it doesn't match half the wc of the input file";
   
-  open( PROBES, "<".$self->query_file);
+  open( PROBES, "<" . $self->query_file);
  
-  #todo count these in an array specific way
-  my $cnt     = 0;
-  my $nr_cnt  = 0;
+  my $number_of_fasta_records_seen = 0;
+  my $number_of_unique_fasta_records_seen  = 0;
   my $skipped_reps = 0;
   my $redundant_seq = 0;
   
   use IO::File;
   
-#   my $hashed_probe_seq   = IO::File->new('>' . $self->param('tracking_hashed_probe_seq'));
-#   my $hashed_probe_alias = IO::File->new('>' . $self->param('tracking_hashed_probe_alias'));  
-# 
-#   $hashed_probe_alias->print(
-#     join "\t",
-#       'probe_name',
-#       'name',
-#       'array_chip',
-#       'array_chip_id',
-#       'current_sequence',
-#   );
-#   $hashed_probe_alias->print("\n");
-  
   while (<PROBES>) {
     chomp;
-	
-    if (/$header_regex/) {     #This places header values into @match_refs
-      $cnt++;
-
-      #Annoyingly some probes have IDs of '0', but have differing probe seqs (and x;y; coords)
-      #This is prevalent on AFFY_ST arrays e.g.
-      #>probe:HuGene-1_0-st-v1:0;780:205; TranscriptClusterID=8180325; Sense; ProbeSetType=rescue->FLmRNA->unmapped
-      #GGGCTGTCGCACACTGCACAGTTTG
-      #>probe:HuGene-1_0-st-v1:0;956:935; TranscriptClusterID=8180325; Sense; ProbeSetType=rescue->FLmRNA->unmapped
-      #CATGTCATGCGAAGGCAAGTCTGAA
-
+    # This places header values into @match_refs
+    if (/$header_regex/) {
+      $number_of_fasta_records_seen++;
 
       if ($current_sequence) {
 		
@@ -234,92 +203,46 @@ sub run_FASTA{
         #Hence these, will be stored as separate probes, which will look identical apart from their probe_features
 
         if (! $existing_probe) {
-          $nr_cnt++;
+          $number_of_unique_fasta_records_seen++;
           warn "Creating new probe:\t".$probe_attrs{'-name'}."\n";
 
-            # This sets the following fields of probe_attrs:
-            # 
-            # $probe_hash->{'-length'} = $length;
-            # $probe_hash->{'-class'}  = 'EXPERIMENTAL';
-            # $probe_hash->{'-array_chip_id'} = $array_chip->dbID;
-            # $probe_hash->{'-array'}  = $array_chip->get_Array;
-            # 
+          # This sets the following fields of probe_attrs:
+          # 
+          # $probe_hash->{'-length'} = $length;
+          # $probe_hash->{'-class'}  = 'EXPERIMENTAL';
+          # $probe_hash->{'-array_chip_id'} = $array_chip->dbID;
+          # $probe_hash->{'-array'}  = $array_chip->get_Array;
+          # 
           $existing_probe = $self->create_new_probe(
-                                                    $current_array_chip, 
-                                                    \%probe_attrs,
-                                                    length($current_sequence),
-                                                    $current_sequence
-                                                   );
-
+            $current_array_chip, 
+            \%probe_attrs,
+            length($current_sequence),
+            $current_sequence
+          );
           $probes_by_sequence{$probe_set}{$current_sequence} = $existing_probe;
-          
-          
-#           $hashed_probe_seq->print(
-# 	    join "\t",
-# 	      $probe_attrs{-name},
-# 	      #$existing_probe->dbID(),
-# 	      $probe_attrs{-length},
-# 	      $probe_attrs{-array_chip},
-# 	      $probe_attrs{-array_chip_id},
-# 	      $probe_set,
-# 	      $current_sequence,
-#           );
-#           $hashed_probe_seq->print("\n");
-          
         } else {
-          #Sanity check here that it is not a technical replicate
-          #as these will break the primary key of the probe table
-          #due to the fact we don't model spatial differences here (e.g. x/y coords)
-          #This is done implicitly for Affy arrays as they integrate the x/y coords into the probe names
 
+          my $probe_name_exists = $existing_probe->get_probename($probe_attrs{'-array'});
 
-          my $existing_name = $existing_probe->get_probename($probe_attrs{'-array'});
-
-          if((defined $existing_name) && 
-             ($existing_name eq $probe_attrs{'-name'}) ){
+          if((defined $probe_name_exists) && 
+             ($probe_name_exists eq $probe_attrs{'-name'}) ){
           
-            #Must have found either a technical replicate with an identical name
-            #Currently the model only allows one unique name per probeset per array
-
-            #Check $current_sequence matches here also?
             warn "Skipping identical technical replicate probe:\t".
               $probe_attrs{'-name'}.' '.$current_sequence."\n";
             $skipped_reps ++;  
           }
           else {
-           
-            if(defined ($existing_name)){
-              warn "Found replicate probe for ($existing_name) replicate:\t".
+            if(defined ($probe_name_exists)) {
+              warn "Found replicate probe for ($probe_name_exists) replicate:\t".
                 $probe_attrs{'-name'}."\n";
               $redundant_seq ++;
-              
-              # get_probename in Bio::EnsEMBL::Funcgen::Probe joins these 
-              # names with commas.
-              #
-              #my $has_replicate_probes_on_same_array = $existing_name =~ /,/, $existing_name;
-              
-#               my @probe_names = split ',', $existing_name;
-#               
-#               foreach my $probe_name (@probe_names) {
-# 		$hashed_probe_alias->print(
-# 		  join "\t",
-# 		    $probe_name,
-# 		    $probe_attrs{'-name'},
-# 		    $probe_attrs{-array_chip},
-# 		    $probe_attrs{-array_chip_id},
-# 		    $current_sequence,
-# 		);
-# 		$hashed_probe_alias->print("\n");
-#               }
-  
             }
-            
+
             $existing_probe->add_array_chip_probename($current_array_chip->dbID, 
                                                       $probe_attrs{'-name'}, 
                                                       $current_array_chip->get_Array);
           }
         }
-
         $current_sequence = undef;
       }
 
@@ -362,49 +285,45 @@ sub run_FASTA{
   $existing_probe = $probes_by_sequence{$probe_set}{$current_sequence};
 
   if (! $existing_probe) {
-    $nr_cnt++;
+    $number_of_unique_fasta_records_seen++;
     $existing_probe =  $self->create_new_probe(
-                                               $current_array_chip, 
-                                               \%probe_attrs,
-                                               length($current_sequence),
-                                               $current_sequence,
-                                              );
+      $current_array_chip, 
+      \%probe_attrs,
+      length($current_sequence),
+      $current_sequence,
+    );
 
     $probes_by_sequence{$probe_set}{$current_sequence} = $existing_probe;
   } else {
 
-    my $existing_name = $existing_probe->get_probename($probe_attrs{'-array'});
+    my $probe_name_exists = $existing_probe->get_probename($probe_attrs{'-array'});
 
-    if($existing_name && 
-       ($existing_name eq $probe_attrs{'-name'})){
-      
-      warn "Skipping identical technical replicate probe:\t".
-        $probe_attrs{'-name'}.' '.$current_sequence."\n";
+    if($probe_name_exists && ($probe_name_exists eq $probe_attrs{'-name'})) {
+
+      warn "Skipping identical technical replicate probe:\t".$probe_attrs{'-name'}.' '.$current_sequence."\n";
       $skipped_reps ++;  
-    }
-    else{
-
-      if($existing_name){
-        warn "Found replicate probe for ($existing_name) replicate:\t".
-                $probe_attrs{'-name'}."\n";
-              $redundant_seq ++;
-      }
       
-      $existing_probe->add_array_chip_probename($current_array_chip->dbID, 
-                                                $probe_attrs{'-name'}, 
-                                                $current_array_chip->get_Array);
+    } else {
+    
+      if ($probe_name_exists) {
+        warn "Found replicate probe for ($probe_name_exists) replicate:\t".$probe_attrs{'-name'}."\n";$redundant_seq ++;
+      }
+      $existing_probe->add_array_chip_probename(
+        $current_array_chip->dbID, 
+        $probe_attrs{'-name'}, 
+        $current_array_chip->get_Array
+      );
     }
-  }  
+  }
 
-  print "Seen $cnt fasta records\n";
-  print "Created $nr_cnt probes\n";
+  print "Seen $number_of_fasta_records_seen fasta records\n";
+  print "Created $number_of_unique_fasta_records_seen probes\n";
   print "Skipped $skipped_reps identical replicates\n";
   print "Found $redundant_seq replicates with non-unique names\n";
-  
 
-  throw('No probes stored! Maybe you need to tweak your IIDREGEXP config for this format') if($nr_cnt == 0);
+  throw('No probes stored! Maybe you need to tweak your IIDREGEXP config for this format') if($number_of_unique_fasta_records_seen == 0);
   $self->probes(\%probes_by_sequence);
-  
+
   return;
 }
 
@@ -544,45 +463,8 @@ sub write_output {
        $probe->probeset($probeset) if $probeset ne 'NO_PROBESET';
        
        ($probe) = @{$probe_adaptor->store($probe)};
-       
-#       print OUTFILE ">".$probe->dbID."\n".$sequence."\n";
      }
   }
-
-#   close(OUTFILE);
-
-
-  #No we record imported as we need the nr_fasta dump?
-  #Or are we going to allow this to run if already import
-  #and just create the nr_fasta by querying the db for probe dbID
-  #and using the sequence from the input file?
-
-
-  #And now the array names and states
-#   $outfile = $self->NAMES_FILE;
-#   open (OUTFILE, ">".$outfile) || throw("Failed to open ouput file:\t".$outfile);
-
-
-  print "Setting IMPORTED & DISPLAYABLE states for:\n";
-
-  #MART_DISPLAYABLE & DISPLAYABLE should be on Array level
-  #IMPORTED should be on ArrayChip
-  #This all looks good, but everything for AGILENT re-imported is on array_chip?!!
-
-  foreach my $aname(keys %{$self->{'_array_names'}}){
-    print "\t".$aname."\n";
-#     print OUTFILE $aname."\n";
-    $self->{'_array_names'}->{$aname}->add_status('IMPORTED');
-    $self->{'_arrays'}->{$aname}->add_status('DISPLAYABLE');#This should be on Array?!
-    #$self->{'_arrays'}->{$aname}->add_status('MART_DISPLAYABLE');#Now done in probe2transcript
-
-    $self->{'_array_names'}->{$aname}->adaptor->store_states($self->{'_array_names'}->{$aname});	
-    $self->{'_arrays'}->{$aname}->adaptor->store_states($self->{'_arrays'}->{$aname});	
-  }
-
-
-#   close(OUTFILE);
-  
   return;
 }
 
@@ -622,7 +504,9 @@ sub outdb {
 	  );
    
 	if(! $self->DNADB->{-dbname}){
-	  print "WARNING: Using default DNADB ". $self->{'_outdb'}->dnadb->dbname."\n";
+#           use Data::Dumper;
+#           print Dumper($self->{'_outdb'}->dnadb);
+	  print "WARNING: Using default DNADB ". $self->{'_outdb'}->dnadb->dbc->dbname."\n";
 	}
 	
   }
@@ -694,9 +578,6 @@ sub read_and_check_config {
 
   foreach my $config_var (
       qw(
-	      IIDREGEXP
-	      INPUT_FORMAT
-	      IFIELDORDER
 	      IIDREGEXP
 	      IFIELDORDER
 	      INPUT_FORMAT
