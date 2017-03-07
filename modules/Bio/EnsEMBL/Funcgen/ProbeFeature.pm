@@ -192,7 +192,7 @@ sub probe_set_id {
 }
 
 # probe_set is more logical.
-sub probe_set_id {
+sub probe_set {
   my $self = shift;
   return $self->probeset;
 }
