@@ -65,6 +65,7 @@ sub new {
 sub dbID             { return shift->_generic_get_or_set('dbID',      @_) }
 sub adaptor          { return shift->_generic_get_or_set('adaptor',   @_) }
 sub probe_dna        { return shift->_generic_get_or_set('probe_dna', @_) }
+sub sequence         { return shift->_generic_get_or_set('probe_dna', @_) }
 
 sub _generic_get_or_set {
   my $self  = shift;
