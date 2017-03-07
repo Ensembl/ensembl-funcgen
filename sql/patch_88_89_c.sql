@@ -36,7 +36,7 @@ drop table if exists `probe_feature_transcript`;
 CREATE TABLE `probe_feature_transcript` (
   `probe_feature_transcript_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `probe_feature_id` int(10) unsigned DEFAULT NULL,
-  `stable_id`   varchar(18) DEFAULT NULL,
+  `stable_id`   varchar(128) DEFAULT NULL,
   `description` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`probe_feature_transcript_id`),
   KEY `probe_feature_transcript_id_idx` (`probe_feature_transcript_id`)

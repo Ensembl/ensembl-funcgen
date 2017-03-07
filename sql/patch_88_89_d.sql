@@ -22,7 +22,7 @@ DROP TABLE IF EXISTS `probe_transcript`;
 CREATE TABLE `probe_transcript` (
   `probe_transcript_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `probe_id`    int(10) unsigned NOT NULL,
-  `stable_id`   varchar(18)      NOT NULL,
+  `stable_id`   varchar(128)      NOT NULL,
   `description` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`probe_transcript_id`),
   KEY `probe_transcript_id` (`probe_transcript_id`)
