@@ -39,12 +39,18 @@ sub pipeline_analyses {
       {   -logic_name => 'PeaksQc',
 	  -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
 	  -flow_into => {
-	    MAIN => 'QcProportionOfReadsInPeaksJobFactory'
+	    MAIN => 'qc_proportion_of_reads_in_peaks_start'
 	  },
+      },
+      {   -logic_name => 'qc_proportion_of_reads_in_peaks_start',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+          -flow_into => { 
+            'MAIN->A' => 'QcProportionOfReadsInPeaksJobFactory',
+            'A->MAIN' => 'qc_proportion_of_reads_in_peaks_done',
+          },
       },
       {   -logic_name => 'QcProportionOfReadsInPeaksJobFactory',
 	  -module     => 'Bio::EnsEMBL::Funcgen::Hive::QcProportionOfReadsInPeaksJobFactory',
-# 	  -meadow_type=> 'LOCAL',
 	  -flow_into => { 
 	    2 => 'QcProportionOfReadsInPeaks',
 	  },
@@ -64,6 +70,9 @@ sub pipeline_analyses {
 	      . qq( --bam_file #bam_file#         )
 	  },
 	  -rc_name => 'normal_2GB',
+      },
+      {   -logic_name => 'qc_proportion_of_reads_in_peaks_done',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       },
     ];
 }

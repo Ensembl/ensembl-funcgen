@@ -40,27 +40,34 @@ sub pipeline_analyses {
 	  -logic_name => 'BamFileQc',
 	  -flow_into => {
 	    MAIN => WHEN(
-	      '#has_duplicates# eq "no"'  => 'QcPhantomPeaksJobFactory',
-	      '!defined #has_duplicates#' => 'QcPhantomPeaksJobFactory',
+	      '#has_duplicates# eq "no"'  => 'qc_phantom_peaks_start',
+	      '!defined #has_duplicates#' => 'qc_phantom_peaks_start',
 	    ),
 	  },
 	},
+        {   -logic_name => 'qc_phantom_peaks_start',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into => { 
+              'MAIN->A' => 'QcPhantomPeaksJobFactory',
+              'A->MAIN' => 'qc_phantom_peaks_done',
+            },
+        },
         {   -logic_name => 'QcPhantomPeaksJobFactory',
             -module     => 'Bio::EnsEMBL::Funcgen::Hive::QcPhantomPeaksJobFactory',
-#             -meadow_type=> 'LOCAL',
             -flow_into => { 
 	      2 => 'QcRunPhantomPeaks4GB',
             },
         },
         {   -logic_name  => 'QcRunPhantomPeaks4GB',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -parameters  => { 
+            -parameters  => {
+                  use_bash_pipefail => 1,
 		  cmd => 
 		    # Rscript does not search the path, so we use "which" to 
 		    # do that. Also using single quotes to avoid interpolation
 		    # of the dollar sign.
 		    #
-		    q( Rscript /software/ensembl/funcgen/spp_package/run_spp_nodups.R          )
+		    q( Rscript $(which run_spp_nodups.R)   )
 		    # Overwrite plotfile, if one already exists
 		  . qq(    -rf                             )
 		  . qq(    -c=#bam_file#                   )
@@ -70,7 +77,7 @@ sub pipeline_analyses {
 		  . qq(    -tmpdir=#tempdir#               )
 		  # In case the job gets terminated for memlimit, this 
 		  # ensures that the worker also dies. (or so we hope)
-		  . qq(    ; sleep 30 )
+		  . qq(    | sleep 30 )
             },
 	    -rc_name    => 'normal_4GB_2cpu',
             -flow_into  => { 
@@ -80,13 +87,14 @@ sub pipeline_analyses {
         },
         {   -logic_name  => 'QcRunPhantomPeaks30GB',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -parameters  => { 
+            -parameters  => {
+                  use_bash_pipefail => 1,
 		  cmd => 
 		    # Rscript does not search the path, so we use "which" to 
 		    # do that. Also using single quotes to avoid interpolation
 		    # of the dollar sign.
 		    #
-		    q( Rscript /software/ensembl/funcgen/spp_package/run_spp_nodups.R )
+		    q( Rscript $(which run_spp_nodups.R)   )
 		    # Overwrite plotfile, if one already exists
 		  . qq(    -rf                             )
 		  . qq(    -c=#bam_file#                   )
@@ -96,7 +104,7 @@ sub pipeline_analyses {
                   . qq(    -tmpdir=#tempdir#               )
 		  # In case the job gets terminated for memlimit, this 
 		  # ensures that the worker also dies. (or so we hope)
-		  . qq(    ; sleep 30 )
+		  . qq(    | sleep 30 )
             },
 	    -rc_name    => 'normal_30GB_2cpu',
             -flow_into  => { 
@@ -105,7 +113,6 @@ sub pipeline_analyses {
         },
         {   -logic_name => 'QCLoadPhantomPeaksToDB',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-#             -meadow_type=> 'LOCAL',
 	    -parameters => {
                 cmd =>
 		    qq( load_phantom_peak_file.pl                )
@@ -119,6 +126,9 @@ sub pipeline_analyses {
 		  . qq(    --bam_file #bam_file#         )
 
             },
+        },
+        {   -logic_name => 'qc_phantom_peaks_done',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
     ];
 }

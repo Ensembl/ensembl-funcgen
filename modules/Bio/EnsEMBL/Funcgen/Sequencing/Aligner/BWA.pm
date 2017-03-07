@@ -193,7 +193,7 @@ sub run {
   #This is actually a known bug and can be ignored
   #https://github.com/samtools/samtools/issues/18
   
-  $cmd = "${bin_dir}/samtools sort $unsorted_file ${output_dir}/${outfile_prefix}";
+  $cmd = "${bin_dir}/samtools sort $unsorted_file -o $bam_file";
   warn "Running:\n$cmd\n" if $self->debug;
   run_system_cmd($cmd);
   

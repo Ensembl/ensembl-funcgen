@@ -41,9 +41,16 @@ sub pipeline_analyses {
 	    -logic_name => 'PreprocessAlignments',
 	    -module     => 'Bio::EnsEMBL::Funcgen::Hive::CollectionWriter',
 	    -flow_into => {
-		2  => 'QcChanceJobFactory',
+		2  => 'qc_chance_start',
 	    },
 	},
+        {   -logic_name => 'qc_chance_start',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into => { 
+              'MAIN->A' => 'QcChanceJobFactory',
+              'A->MAIN' => 'qc_chance_done',
+            },
+        },
 	{
 	  -logic_name    => 'QcChanceJobFactory',
 	  -module        => 'Bio::EnsEMBL::Funcgen::Hive::QcChanceJobFactory',
@@ -136,6 +143,9 @@ sub pipeline_analyses {
 		  . qq( --dbname #tracking_db_name#   )
 		  . qq( --work_dir #tempdir#  )
             },
+        },
+        {   -logic_name => 'qc_chance_done',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
     ];
 }

@@ -50,6 +50,7 @@ my $result_set_id;
 my $dry_run;
 my $user;
 my $pass;
+my $port;
 my $host;
 my $dbname;
 my $work_dir;
@@ -61,6 +62,7 @@ my %config_hash = (
   'dry_run'         => \$dry_run,
   'user'            => \$user,
   'pass'            => \$pass,
+  'port'            => \$port,
   'host'            => \$host,
   'dbname'          => \$dbname,
   'work_dir'        => \$work_dir,
@@ -75,6 +77,7 @@ my $result = GetOptions(
   'dry_run',
   'user=s',
   'pass=s',
+  'port=s',
   'host=s',
   'dbname=s',
   'work_dir=s',
@@ -87,6 +90,7 @@ die unless($result_set_id);
 my @tracking_db_connection_details = (
     -user     => $user,
     -pass     => $pass,
+    -port     => $port,
     -host     => $host,
     -dbname   => $dbname,
 );

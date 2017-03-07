@@ -24,12 +24,16 @@ sub fetch_input {
 
   if($self->get_param_method('set_type', 'silent')) {
   
-    # HACK
-    my $db = $self->param_required('out_db');
+    my $db            = $self->param_required('out_db');
+    my $type          = $self->param_required('type');
+    my $result_set_id = $self->param_required('result_set_id');
     my $result_set_adaptor = $db->get_ResultSetAdaptor;
+    
+    # HACK
     $result_set_adaptor->{file_type} = 'BAM';
+    my $result_set = $result_set_adaptor->fetch_by_dbID($result_set_id);
   
-    my $result_set = $self->fetch_Set_input('ResultSet');
+#     my $result_set = $self->fetch_Set_input('ResultSet');
     $self->helper->debug(1, "RunWiggleTools::fetch_input got ResultSet:\t".$result_set->name);
 
     if($self->get_param_method('input_files', 'silent')) {
@@ -37,32 +41,17 @@ sub fetch_input {
       'Please remove input_files from input_id');
     }
     my $is_control;
-    if (
-      defined $self->param('type')
-      && $self->param('type') eq 'control'
-    ) {
+    if ($type eq 'control') {
       $is_control = 1;
     }
     $self->input_files([
       $self->db_output_dir
       . '/' . $self->get_alignment_files_by_ResultSet_formats($result_set, $is_control)
     ]);
-    
-#     print Dumper($self->input_files);
-#     die;
 
     my $output_prefix = $self->bigwig_output_dir . '/' . $result_set->name;
     
-    if (
-      defined $self->param('type')
-      && $self->param('type') eq 'replicate'
-    ) {
-      $output_prefix = $self->bigwig_output_dir . '/' . $self->get_file_base_for_ResultSet($result_set, $is_control);
-      die("This should never be run!");
-    }
-    
     warn "output_prefix = $output_prefix";
-#      die();
     
     $self->get_param_method(
       'output_prefix',

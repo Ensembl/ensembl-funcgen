@@ -23,6 +23,12 @@ sub run {
   
   my $tempdir = $self->param_required('tempdir');
   
+#   my $zip_file = `find $tempdir -maxdepth 2 -mindepth 2 -type f -name "*.zip"`;
+#   chomp($zip_file);
+#   die("Can't find zip file $zip_file!") unless(-e $zip_file);
+#   
+#   system("unzip $zip_file");
+  
   my $fastqc_summary_file = `find $tempdir -maxdepth 2 -mindepth 2 -type f -name summary.txt`;
   chomp($fastqc_summary_file);
   die("Can't find file $fastqc_summary_file!") unless(-e $fastqc_summary_file);

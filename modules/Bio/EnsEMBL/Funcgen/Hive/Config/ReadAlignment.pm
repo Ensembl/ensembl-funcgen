@@ -203,12 +203,21 @@ sub pipeline_analyses {
      -parameters => {
 	run_controls => 1,
      },
+#           -flow_into => {
+#               MAIN => WHEN(
+#                   '#type# eq "genomic"'    => { 'store_probe_feature_objects'       => INPUT_PLUS },
+#                   '#type# eq "transcript"' => { 'project_transcript_hits_to_genome' => INPUT_PLUS },
+#               ),
+#           },
+
      -flow_into => {
-	 MAIN => [ 
-	  'JobFactorySignalProcessing', 
-	  # Create bigwigs for controls
-	  WHEN('1' => { 'WriteBigWig' => INPUT_PLUS({ type => 'control' })})
-         ],
+         MAIN => {
+          'JobFactorySignalProcessing' => undef,
+          'WriteBigWig' => INPUT_PLUS({
+            type          => 'control',
+            result_set_id => '#dbID#'
+          })
+         },
        },
 #      -rc_name => '64GB_3cpu',
       -rc_name => 'normal_4GB_2cpu',

@@ -40,13 +40,19 @@ sub pipeline_analyses {
 	-logic_name => 'BamFileQc',
 	-flow_into => {
 	  MAIN => WHEN(
-	    '#has_unmapped_reads# eq "yes"' => 'QcFlagstatsJobFactory',
+	    '#has_unmapped_reads# eq "yes"' => 'qc_flagstats_start',
 	  ),
 	},
       },
+        {   -logic_name => 'qc_flagstats_start',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into => { 
+              'MAIN->A' => 'QcFlagstatsJobFactory',
+              'A->MAIN' => 'qc_flagstats_done',
+            },
+        },
       {   -logic_name => 'QcFlagstatsJobFactory',
 	  -module     => 'Bio::EnsEMBL::Funcgen::Hive::QcFlagstatsJobFactory',
-# 	  -meadow_type=> 'LOCAL',
 	  -flow_into => { 
 	    2 => 'QcRunFlagstats',
 	  },
@@ -62,19 +68,21 @@ sub pipeline_analyses {
       },
       {   -logic_name => 'LoadFlagstatsToDB',
 	  -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-# 	  -meadow_type=> 'LOCAL',
 	  -parameters => {
 	      cmd => qq(load_samtools_flagstats.pl )
 		. qq( --result_set_id #result_set_id# )
 		. qq( --flagstats_file #flagstats_file# )
-		. qq( --user #tracking_db_user# --pass #tracking_db_pass# --host #tracking_db_host# --dbname #tracking_db_name# )
+		. qq( --user #tracking_db_user# --pass #tracking_db_pass# --host #tracking_db_host# --port #tracking_db_port# --dbname #tracking_db_name# )
 		. qq( --work_dir #tempdir#  )
 		. qq( --bam_file #bam_file# )
 	  },
       },
+      {   -logic_name => 'qc_flagstats_done',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      },
+
 #       {   -logic_name => 'DeleteBamWithDuplicates',
 # 	  -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-# 	  -meadow_type=> 'LOCAL',
 # 	  -parameters => { 
 # 		cmd => qq(rm #bam_file#),
 # 	  },
