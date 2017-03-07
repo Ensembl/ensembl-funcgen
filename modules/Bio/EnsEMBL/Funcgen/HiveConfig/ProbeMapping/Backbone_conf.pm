@@ -52,11 +52,22 @@ sub pipeline_analyses {
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
                '1->A' => 'start_probe2transcript',
-               'A->1' => 'backbone_pipeline_finished'
+               'A->1' => 'backbone_fire_healthchecks'
             },
         },
         {
             -logic_name  => 'start_probe2transcript',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+        },
+        {   -logic_name  => 'backbone_fire_healthchecks',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into   => {
+               '1->A' => 'start_healthchecks',
+               'A->1' => 'backbone_pipeline_finished'
+            },
+        },
+        {
+            -logic_name  => 'start_healthchecks',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
         {   -logic_name => 'backbone_pipeline_finished',
