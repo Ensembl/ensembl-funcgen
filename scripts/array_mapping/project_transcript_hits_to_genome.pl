@@ -73,17 +73,30 @@ my $map_transcript_to_genome = sub {
     $probe_feature_hash->{q_start} = 1;
   }
   
+  my $length_before_projecting = $probe_feature_hash->{t_end} - $probe_feature_hash->{t_start};
+  
   my $transcript_mapper = Bio::EnsEMBL::TranscriptMapper->new($transcript);
   my @genomic_blocks = $transcript_mapper->cdna2genomic(
     $probe_feature_hash->{t_start},
     $probe_feature_hash->{t_end},
   );
-
   my $projected_hit = project_hit_to_genomic_coordinates({
     hit            => $probe_feature_hash,
     genomic_blocks => \@genomic_blocks,
     transcript     => $transcript,
   });
+  
+  my $length_after_projecting = $projected_hit->{t_end} - $projected_hit->{t_start};
+  
+  my $length_changed_during_projection = $length_before_projecting != $length_after_projecting;
+  my $cigar_line_shows_insertion = $projected_hit->{cigar_line} =~ /D/;
+  
+  if ($length_changed_during_projection && !$cigar_line_shows_insertion) {
+    die(
+      "Cigar line was not adjusted correctly!"
+      . Dumper($projected_hit)
+    );
+  }
 
   if ($probe_feature_hash->{'q_strand'} != $probe_feature_hash->{'t_strand'}) {
     $projected_hit->{t_strand} = -1 * $projected_hit->{t_strand}
@@ -98,7 +111,59 @@ my $map_transcript_to_genome = sub {
   my $genomic_end   = $projected_hit->{t_end};
   my $cigar_line    = $projected_hit->{cigar_line};
   my $probe_id      = $projected_hit->{probe_id};
+  
+  if (!$cigar_line_shows_insertion) {
+  
+    my $transcript = $transcript_adaptor->fetch_by_stable_id($transcript_stable_id);
+    
+    my $transcript_matched_seq = $transcript->seq;
+    
+    my $matched_sequence = $transcript_matched_seq->subseq(
+      $probe_feature_hash->{t_start},
+      $probe_feature_hash->{t_end}
+    );
 
+    if ($probe_feature_hash->{t_strand} == -1) {
+      use Bio::PrimarySeq;
+      $matched_sequence = Bio::PrimarySeq->new( -seq => $matched_sequence )->revcom->seq;
+    }
+    
+    my $probe_adaptor = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Funcgen', 'Probe' );
+    my $probe = $probe_adaptor->fetch_by_dbID($probe_id);
+    my $probe_sequence = uc($probe->fetch_ProbeSequence->sequence);
+
+    my $match_ok = $matched_sequence eq $probe_sequence;
+
+    if (!$match_ok) {
+      die(
+        "The probe sequence is not identical to the sequence on the transcript:\n\n"
+        . ">" . $transcript->stable_id  . "\n"
+        . $transcript->seq->seq . "\n"
+        . "\n"
+        . "Transcript sequence matched: $matched_sequence\n"
+        . "Probe sequence:              $probe_sequence\n\n"
+        . Dumper($probe_feature_hash)
+      );
+    }
+  
+    my $probe_feature_passes = check_projection_for_perfect_matches(
+      $probe_id,
+      $genomic_start,
+      $genomic_end,
+      $projected_hit->{t_strand},
+      $projected_hit->{t_id},
+    );
+    
+    if (!$probe_feature_passes) {
+      die(
+        "Probe feature didn't pass the projection test!\n"
+        . "Before:\n"
+        . Dumper($probe_feature_hash)
+        . "After:\n"
+        . Dumper($projected_hit)
+      );
+    }
+  }
   my $gene_hit_key = "${gene_stable_id}:${probe_id}:${genomic_start}:${genomic_end}:${cigar_line}";
 
   if (! exists $gene_hits{$gene_hit_key}) {
@@ -106,6 +171,49 @@ my $map_transcript_to_genome = sub {
     print Dumper($projected_hit);
   }
 };
+
+sub check_projection_for_perfect_matches {
+
+  my $probe_id             = shift;
+  my $probe_feature_start  = shift;
+  my $probe_feature_end    = shift;
+  my $probe_feature_strand = shift;
+  my $transcript_stable_id = shift;
+
+  my $transcript = $transcript_adaptor->fetch_by_stable_id($transcript_stable_id);
+  
+  if (! defined $transcript) {
+    die(
+      "Can't find transcript for $transcript_stable_id"
+      . Dumper($transcript_adaptor)
+    );
+  }
+  
+  my $slice = $transcript->slice;
+
+  my $matched_sequence = $slice->subseq(
+    $probe_feature_start,
+    $probe_feature_end,
+    $probe_feature_strand,
+  );
+  
+  my $probe_adaptor = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Funcgen', 'Probe' );
+  my $probe = $probe_adaptor->fetch_by_dbID($probe_id);
+  my $probe_sequence = uc($probe->fetch_ProbeSequence->sequence);
+  
+  my $match_ok = $matched_sequence eq $probe_sequence;
+  
+  my $planned_probe_feature_passed;
+  
+  if ($match_ok) {
+    $planned_probe_feature_passed = 1;
+  }
+  if (! $match_ok) {
+    $planned_probe_feature_passed = undef;
+    warn "Not ok: " . $matched_sequence . " != " . $probe_sequence . " " . $probe_feature_strand . "\n";
+  }
+  return $planned_probe_feature_passed;
+}
 
 use Bio::EnsEMBL::Funcgen::Parsers::DataDumper;
 my $parser = Bio::EnsEMBL::Funcgen::Parsers::DataDumper->new;
