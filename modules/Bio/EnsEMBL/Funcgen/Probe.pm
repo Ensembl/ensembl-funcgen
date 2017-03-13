@@ -127,7 +127,7 @@ sub new {
       $names,          $name,
       $array_chip_ids, $array_chip_id,
       $arrays,         $array,
-      $probeset,       $aclass,
+      $probe_set,       $aclass,
       $length,         $desc,
       $sequence,
       $array_chip,
@@ -175,7 +175,7 @@ sub new {
     throw('You need to provide a probe name (or names) to create an Probe');
   }
 
-  $self->probeset($probeset) if defined $probeset;
+  $self->probe_set($probe_set) if defined $probe_set;
   $self->class($aclass)      if defined $aclass;
   $self->length($length)     if defined $length;
   $self->description($desc)  if defined $desc;
@@ -495,7 +495,7 @@ sub get_all_complete_names {
 #   return "$arrayname:$probeset$probename";
 # }
 
-=head2 probeset
+=head2 probe_set
 
   Arg [1]    : (optional) Bio::EnsEMBL::Funcgen::ProbeSet
   Example    : my $probe_set = $probe->probeset();
@@ -507,11 +507,16 @@ sub get_all_complete_names {
 
 =cut
 
-sub probeset {
+sub probe_set {
     my $self = shift;
 
     $self->{'probe_set'} = shift if @_;
     return $self->{'probe_set'};
+}
+
+sub probeset {
+    my $self = shift;
+    return $self->probe_set(@_);
 }
 
 =head2 class
