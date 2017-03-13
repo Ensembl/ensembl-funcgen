@@ -28,16 +28,6 @@ use Bio::EnsEMBL::Test::TestUtils; # warns_like test_getter_setter
 
 use Test::Exception;  # throws_ok # This only work when Error objects are used
 
-
-# TODO 
-# 1 Change all $@ tests to use throws_ok
-
-#
-
-# Test DB slice is 13:32888400-32974305
-# switch on the debug prints
-our $verbose = 0;
-
 # ---------------
 # Module compiles
 # ---------------
@@ -57,11 +47,12 @@ isa_ok($db, 'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor', 'Test database instantiat
 
 
 my $rsa     = $db->get_adaptor('resultset');
-my $slice_a = $db->dnadb->get_SliceAdaptor;
+# my $slice_a = $db->dnadb->get_SliceAdaptor;
 my $aa      = $db->get_adaptor("analysis");
 my $exp_a   = $db->get_adaptor('experiment');
 my $fta     = $db->get_adaptor("featuretype");
 my $issa    = $db->get_adaptor("inputsubset");
+my $epi_a   = $db->get_adaptor("epigenome");
 
 # ----------------
 # Test constructor
@@ -327,11 +318,48 @@ my $exp      = $exp_a->fetch_by_name($exp_name);
 #   'ResultSet::dbfile_path');
 # # hide table, store this result set and retest returned values
 
+# ----------------------
+# Test production_name()
+# ----------------------
+# TODO Without production names for epigenomes in the test db this is never going to pass
+# is($new_result_set->production_name(),'', 'Test production_name()');
+
+# -----------------------------
+# Test _valid_feature_classes()
+# -----------------------------
+use Data::Printer;
+my @valid_feature_classes = $new_result_set->_valid_feature_classes();
+my @expected_classes = ('result','dna_methylation','segmentation');
+is(@valid_feature_classes, @expected_classes,'Test _valid_feature_classes()');
+
+# ----------------------------------
+# Test reset_relational_attributes()
+# ----------------------------------
+# my $epigenome        = $epi_a->fetch_by_name('H7ESC');
+# my $reset_parameters = {
+#     -analysis     => $analysis,
+#     -feature_type => $feature_type,
+#     -epigenome    => $epigenome
+# };
+# # my $reset_parameters = [$analysis,$feature_type, $epigenome];
+
+
+# throws_ok {
+#     $new_result_set->reset_relational_attributes($reset_parameters);
+# }
+# qr/You must pass a valid Bio::EnsEMBL::Funcgen::Experiment/,
+#     "Test exception throw for reset_relational_attributes()";
+
 
 # ----------------
 # Test replicate()
 # ----------------
 # is($new_result_set->replicate(),3,'Test replicate()');
+
+# ------------------
+# Test add_support()
+# ------------------
+# TODO 
 
 # --------------------
 # Test display_label()
