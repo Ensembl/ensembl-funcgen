@@ -97,7 +97,7 @@ my $fetch_probe_set_from_db = sub {
     $probe_set = $probe_set_name_to_object{$probe_set->name};
   } else {
   
-    my $probe_set_from_db = $probe_set_adaptor->fetch_by_array_probeset_name($array_name, $probe_set->name);
+    my $probe_set_from_db = $probe_set_adaptor->fetch_by_array_probe_set_name($array_name, $probe_set->name);
     
     if (defined $probe_set_from_db) {
       $probe_set = $probe_set_from_db;
