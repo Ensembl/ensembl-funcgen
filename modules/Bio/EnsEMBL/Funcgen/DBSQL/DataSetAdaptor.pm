@@ -319,7 +319,6 @@ sub _objs_from_sth {
   my %set_adaptors = (
 	  feature      => $self->db->get_FeatureSetAdaptor,
 	  result       => $self->db->get_ResultSetAdaptor,
-    input        => $self->db->get_InputSetAdaptor,
 	 );
   $sth->bind_columns(\$dbID, \$fset_id, \$name, \$ss_type, \$ss_id);
 
