@@ -231,6 +231,11 @@ sub stable_id { return shift->{stable_id}; }
 =cut
 
 sub regulatory_evidence {
+  deprecate(
+    "Bio::EnsEMBL::Funcgen::RegulatoryFeature::regulatory_evidence() has been deprecated and will be removed in Ensembl release 91."
+        . " Please use Bio::EnsEMBL::Funcgen::RegulatoryFeature::get_RegulatoryEvidence() instead."
+);
+
   my $self = shift;
   my $feature_class = shift;
   my $epigenome   = shift;
