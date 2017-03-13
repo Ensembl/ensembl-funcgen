@@ -25,7 +25,6 @@ use Bio::EnsEMBL::Test::TestUtils            qw( test_getter_setter debug );
 use Bio::EnsEMBL::Test::MultiTestDB;
 
 local $| = 1;
-our $verbose = 0;  # switch on the debug prints
 
 # ---------------
 # Module compiles
