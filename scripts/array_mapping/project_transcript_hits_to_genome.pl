@@ -130,11 +130,15 @@ my $map_transcript_to_genome = sub {
     
     my $probe_adaptor = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Funcgen', 'Probe' );
     my $probe = $probe_adaptor->fetch_by_dbID($probe_id);
-    my $probe_sequence = uc($probe->fetch_ProbeSequence->sequence);
+    my $probe_sequence = uc($probe->get_ProbeSequence->sequence);
 
     my $match_ok = $matched_sequence eq $probe_sequence;
 
     if (!$match_ok) {
+    
+      $Data::Dumper::Sortkeys = 1;
+      $Data::Dumper::Maxdepth = 3;
+      
       die(
         "The probe sequence is not identical to the sequence on the transcript:\n\n"
         . ">" . $transcript->stable_id  . "\n"
@@ -143,6 +147,8 @@ my $map_transcript_to_genome = sub {
         . "Transcript sequence matched: $matched_sequence\n"
         . "Probe sequence:              $probe_sequence\n\n"
         . Dumper($probe_feature_hash)
+        . Dumper($probe)
+
       );
     }
   
@@ -199,7 +205,7 @@ sub check_projection_for_perfect_matches {
   
   my $probe_adaptor = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Funcgen', 'Probe' );
   my $probe = $probe_adaptor->fetch_by_dbID($probe_id);
-  my $probe_sequence = uc($probe->fetch_ProbeSequence->sequence);
+  my $probe_sequence = uc($probe->get_ProbeSequence->sequence);
   
   my $match_ok = $matched_sequence eq $probe_sequence;
   

@@ -390,6 +390,7 @@ sub store {
   
 #   my $array_chip_adaptor = $self->db->get_ArrayChipAdaptor;
 #   print Dumper($array_chip_adaptor);
+  my $probe_sequence_adaptor = $self->db->get_ProbeSequenceAdaptor;
 
  PROBE: foreach my $probe (@probes) {
      
@@ -402,6 +403,23 @@ sub store {
       next PROBE;
     }
     
+    # ------------------------------------------------------------------------------------------
+    
+    my $probe_sequence = $probe->get_ProbeSequence;
+    
+    if (! defined $probe_sequence->sequence) {
+      use Carp;
+      confess(
+        "Probe sequence not defined in probe:\n"
+        . Dumper($probe)
+      );
+    }
+    
+    $probe_sequence_adaptor->store($probe_sequence);
+    my $probe_seq_id = $probe_sequence->dbID;
+    
+    # ------------------------------------------------------------------------------------------
+
     # Get all the arrays this probe is on and check they're all in the database
     my %array_hashes;
     
@@ -419,80 +437,10 @@ sub store {
     # Insert separate entry (with same probe_id) for each array/array_chip the probe is on
 
     foreach my $ac_id (keys %array_hashes) {
-    
-#       my $array_chip = $array_chip_adaptor->fetch_by_name($ac_id);
-#       print Dumper($probe->array_chip->dbID);
-#       die;
-    
+
       my $ps_id = (defined $probe->probeset()) ? $probe->probeset()->dbID() : undef;
 
       foreach my $name (@{$probe->get_all_probenames($array_hashes{$ac_id}->name)}) {
-
-# ------------------------------------------------------------------------------------------
-        my $probe_seq_id;
-        
-        #use Digest::SHA1  qw(sha1_base64);
-        
-        my $probe_dna = $probe->sequence;
-        #my $sha1_checksum = sha1_base64($probe_dna);
-        
-        eval {
-        
-          #$probe_seq_sth->bind_param(1, $sha1_checksum, SQL_VARCHAR);
-          $probe_seq_sth->bind_param(1, $probe_dna, SQL_VARCHAR);
-          $probe_seq_sth->bind_param(2, $probe_dna, SQL_VARCHAR);
-          
-          $probe_seq_sth->execute;
-          $probe_seq_id = $probe_seq_sth->{mysql_insertid};
-          
-          #print "--- Was not in database already.\n";
-        };
-        if ($@) {
-
-          my $error_msg = $@;      
-          
-          # Check, if the exception was triggered by the index on the probe_sha1 
-          # column.
-          #
-          if ($error_msg=~/DBD::mysql::st execute failed: Duplicate entry/) {
-          
-            #print "--- Was in database already.\n";
-            
-            # If so, check, if the dna sequences are identical. If that is the 
-            # case, the storing can be skipped. If they are differen however, we
-            # have a hash key collision and might have to revisit the decision
-            # of having a unique constraint on the probe_sha1 key.
-            #
-            my $sql_cmd = 'select probe_seq_id, probe_sha1, probe_dna from probe_seq where probe_sha1 = cast(sha1(?) as char)';
-            my $sth = $self->prepare($sql_cmd);
-            #$sth->bind_param(1, $sha1_checksum);
-            $sth->bind_param(1, $probe_dna);
-            $sth->execute;
-            my $data = $sth->fetchall_arrayref;
-            
-            my $probe_seq_id_from_db = $data->[0][0];
-            my $probe_sha1_from_db   = $data->[0][1];
-            my $probe_seq_from_db    = $data->[0][2];
-
-            if ($probe_seq_from_db ne $probe_dna) {
-              #confess("Sha1 has a collision. The dna sequence $probe_dna and the dna sequence from the database $probe_seq_from_db have the same sha1 checksum $sha1_checksum.");
-                use Carp;
-                use Data::Dumper;
-                confess("There has been a sha1 collision. The dna sequence $probe_dna and the dna sequence from the database $probe_seq_from_db have the same sha1 checksum."
-                  . "\n" . Dumper($data)
-                );
-            } else {
-              print "Probe with this sequence $probe_dna already exists, skipping.\n";
-            }
-            $probe_seq_id = $probe_seq_id_from_db;
-          }
-        }
-        
-#       if ($probe_seq_id == 1) {
-#         print "--- $probe_seq_id: $probe_dna\n";
-#       }
-        
-# ------------------------------------------------------------------------------------------
 
         if ($probe->dbID) {    # Already stored
           $existing_sth->bind_param(1, $probe->dbID,        SQL_INTEGER);

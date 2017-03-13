@@ -59,12 +59,12 @@ sub _objs_from_sth {
 
   my (
     $sth_fetched_dbID,
-    $sth_fetched_probe_dna,
+    $sth_fetched_sequence,
   );
 
   $sth->bind_columns (
     \$sth_fetched_dbID,
-    \$sth_fetched_probe_dna,
+    \$sth_fetched_sequence,
   );
   
   use Bio::EnsEMBL::Funcgen::ProbeSequence;
@@ -74,12 +74,72 @@ sub _objs_from_sth {
   
     my $probe_sequence = Bio::EnsEMBL::Funcgen::ProbeSequence->new(
       -dbID         => $sth_fetched_dbID,
-      -probe_dna    => $sth_fetched_probe_dna,
+      -sequence     => $sth_fetched_sequence,
       -adaptor      => $self->db,
     );
     push @return_objects, $probe_sequence
   }
   return \@return_objects;
+}
+
+sub fetch_by_sequence {
+  my $self     = shift;
+  my $sequence = shift;
+
+  my $constraint = "ps.probe_dna = ?";
+  $self->bind_param_generic_fetch($sequence, SQL_VARCHAR);
+  
+  my $probe_sequence = $self->generic_fetch($constraint);
+  
+  if (!$probe_sequence || @$probe_sequence==0) {
+    return;
+  }
+  if (@$probe_sequence!=1) {
+    throw("Found ". @$probe_sequence ." entries in the probe sequence table with the same probe sequence!");
+  }
+  return $probe_sequence->[0];
+}
+
+sub store {
+  my $self = shift;
+  my $probe_sequence = shift;
+  
+  if (! defined $probe_sequence->sequence) {
+    use Carp;
+    confess(
+      "Probe sequence not set:\n"
+      . Dumper($probe_sequence)
+    );
+  }
+
+  my $probe_seq_sth = $self->prepare('insert into probe_seq (probe_sha1, probe_dna) values (cast(sha1(?) as char), ?)');
+  my $probe_seq_id;
+  
+  eval {
+    $probe_seq_sth->bind_param(1, $probe_sequence->sequence, SQL_VARCHAR);
+    $probe_seq_sth->bind_param(2, $probe_sequence->sequence, SQL_VARCHAR);
+
+    $probe_seq_sth->execute;
+    $probe_seq_id = $probe_seq_sth->{mysql_insertid};
+  };
+  
+  if ($@) {
+    my $error_msg = $@;
+
+    # Check, if the exception was triggered by the index on the probe_sha1 
+    # column.
+    #
+    if ($error_msg=~/DBD::mysql::st execute failed: Duplicate entry/) {
+      $self->fetch_by_sequence($probe_sequence->sequence);
+      $probe_seq_id = $probe_sequence->dbID;
+    } else {
+      use Carp;
+      confess($@);
+    }
+  }
+  $probe_sequence->dbID($probe_seq_id);
+  $probe_sequence->adaptor($self);
+  return $probe_sequence;
 }
 
 1;

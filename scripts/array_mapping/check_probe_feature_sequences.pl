@@ -129,7 +129,7 @@ sub check_probe_feature {
     $probe_feature->strand,
   );
 
-  my $probe_sequence = uc($probe_feature->probe->fetch_ProbeSequence->sequence);
+  my $probe_sequence = uc($probe_feature->probe->get_ProbeSequence->sequence);
   
   my $match_ok = $matched_sequence eq $probe_sequence;
   $total_checked++;

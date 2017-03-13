@@ -181,8 +181,15 @@ sub new {
   $self->description($desc)  if defined $desc;
   $self->array_chip($array_chip)  if defined $array_chip;
   
-  $self->sequence($sequence)  if defined $sequence;
   $self->_probe_seq_id($probe_seq_id)  if defined $probe_seq_id;
+  
+  if (defined $sequence) {
+    use Bio::EnsEMBL::Funcgen::ProbeSequence;
+    my $probe_sequence = Bio::EnsEMBL::Funcgen::ProbeSequence->new(
+      -sequence => $sequence
+    );
+    $self->set_ProbeSequence($probe_sequence);
+  }
 
   return $self;
 }
@@ -192,7 +199,7 @@ sub sequence {
     $self->{'sequence'} = shift if @_;
     
     if (! defined $self->{'sequence'}) {
-      $self->{'sequence'} = $self->fetch_ProbeSequence->probe_dna;
+      $self->{'sequence'} = $self->get_ProbeSequence->sequence;
     }
     
     return $self->{'sequence'};
@@ -204,10 +211,27 @@ sub _probe_seq_id {
     return $self->{'probe_seq_id'};
 }
 
-sub fetch_ProbeSequence {
+sub _fetch_ProbeSequence {
     my $self = shift;
-    $self->{'probe_sequence'} = shift if @_;
     return $self->adaptor()->db()->get_ProbeSequenceAdaptor()->fetch_by_dbID($self->_probe_seq_id);
+}
+
+sub get_ProbeSequence {
+    my $self = shift;
+    
+    if (
+         (! defined $self->{'probe_sequence'})
+      && (defined $self->_probe_seq_id)
+    ) {
+        $self->{'probe_sequence'} = $self->_fetch_ProbeSequence;
+    }
+    return $self->{'probe_sequence'};
+}
+
+sub set_ProbeSequence {
+    my $self = shift;
+    my $probe_sequence = shift;
+    $self->{'probe_sequence'} = $probe_sequence;
 }
 
 sub array_chip {

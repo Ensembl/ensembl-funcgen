@@ -44,19 +44,19 @@ sub new {
 
   my @field = qw(
     dbID
-    probe_dna
+    sequence
     adaptor
   );
   
   my (
     $dbID,
-    $probe_dna,
+    $sequence,
     $adaptor
   )
     = rearrange([ @field ], @_);
 
   $self->dbID      ($dbID);
-  $self->probe_dna ($probe_dna);
+  $self->sequence  ($sequence);
   $self->adaptor   ($adaptor);
 
   return $self;
@@ -64,8 +64,8 @@ sub new {
 
 sub dbID             { return shift->_generic_get_or_set('dbID',      @_) }
 sub adaptor          { return shift->_generic_get_or_set('adaptor',   @_) }
-sub probe_dna        { return shift->_generic_get_or_set('probe_dna', @_) }
-sub sequence         { return shift->_generic_get_or_set('probe_dna', @_) }
+sub probe_dna        { return shift->_generic_get_or_set('sequence', @_) }
+sub sequence         { return shift->_generic_get_or_set('sequence', @_) }
 
 sub _generic_get_or_set {
   my $self  = shift;
