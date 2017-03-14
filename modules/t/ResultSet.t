@@ -327,7 +327,6 @@ my $exp      = $exp_a->fetch_by_name($exp_name);
 # -----------------------------
 # Test _valid_feature_classes()
 # -----------------------------
-use Data::Printer;
 my @valid_feature_classes = $new_result_set->_valid_feature_classes();
 my @expected_classes = ('result','dna_methylation','segmentation');
 is(@valid_feature_classes, @expected_classes,'Test _valid_feature_classes()');
