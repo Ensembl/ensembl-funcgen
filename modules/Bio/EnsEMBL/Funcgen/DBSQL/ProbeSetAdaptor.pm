@@ -314,6 +314,29 @@ sub _objs_from_sth {
   return \@result;
 }
 
+sub update {
+  my $self = shift;
+  my @probe_sets = @_;
+  
+  foreach my $current_probe_set (@probe_sets) {
+    $self->_update_one($current_probe_set);
+  }
+}
+
+sub _update_one {
+  my $self = shift;
+  my $probe_set = shift;
+
+  my $sth = $self->prepare('update probe_set set name=?, size=?, family=? where probe_set_id=?');
+
+  $sth->bind_param(1, $current_probe_set->name,   SQL_VARCHAR);
+  $sth->bind_param(2, $current_probe_set->size,   SQL_INTEGER);
+  $sth->bind_param(3, $current_probe_set->family, SQL_VARCHAR);
+  $sth->bind_param(4, $current_probe_set->dbID,   SQL_INTEGER);
+
+  $sth->execute();
+}
+
 =head2 store
 
   Arg [1]    : List of Bio::EnsEMBL::Funcgen::ProbeSet objects

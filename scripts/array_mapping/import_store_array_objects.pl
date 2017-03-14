@@ -102,6 +102,7 @@ my $fetch_probe_set_from_db = sub {
     if (defined $probe_set_from_db) {
       $probe_set = $probe_set_from_db;
       $probe_set->size($probe_set->size + 1);
+      $probe_set_adaptor->update($probe_set);
     } else {
       $probe_set->size(1);
       $probe_set_adaptor->store($probe_set);
