@@ -29,7 +29,7 @@ if (! -e $exonerate_file) {
 
 open my $exonerate_fh, '<', $exonerate_file;
 
-my $current_probe_id;
+my $current_probe_seq_id;
 my $current_list_of_hits_for_this_probe;
 
 # This makes debugging easier, if someone has to inspect the output of this 
@@ -46,7 +46,7 @@ HIT: while (my $current_line = <$exonerate_fh>) {
   
   my %hit;
   
-  $hit{probe_id}       = $f[1];
+  $hit{probe_seq_id}   = $f[1];
   $hit{q_start}        = $f[2];
   $hit{q_end}          = $f[3];
   $hit{q_strand}       = $f[4];
@@ -69,7 +69,7 @@ HIT: while (my $current_line = <$exonerate_fh>) {
 
   next HIT if ($hit_ensembl->{total_mismatches} > $max_allowed_mismatches_per_hit);
   
-  if ($current_probe_id != $hit{probe_id}) {
+  if ($current_probe_seq_id != $hit{probe_seq_id}) {
   
     # This will be empty in the first iteration and any probe that doesn't 
     # make any hits.
@@ -78,7 +78,7 @@ HIT: while (my $current_line = <$exonerate_fh>) {
       print Dumper($current_list_of_hits_for_this_probe);
     }
     $current_list_of_hits_for_this_probe = [];
-    $current_probe_id = $hit_ensembl->{probe_id};
+    $current_probe_seq_id = $hit_ensembl->{probe_seq_id};
     
   }
   push @$current_list_of_hits_for_this_probe, $hit_ensembl;

@@ -104,13 +104,13 @@ my $map_transcript_to_genome = sub {
 
   # Test, if we have already seen this alignment
   my $gene = $gene_adaptor->fetch_by_transcript_stable_id($transcript_stable_id);
-  #The only way of doing this is to test the genomic_start/end and the genomic cigarline with the gene_stable_id and the probe_id
+  #The only way of doing this is to test the genomic_start/end and the genomic cigarline with the gene_stable_id and the probe_seq_id
   my $gene_stable_id = $gene->stable_id;
   
   my $genomic_start = $projected_hit->{t_start};
   my $genomic_end   = $projected_hit->{t_end};
   my $cigar_line    = $projected_hit->{cigar_line};
-  my $probe_id      = $projected_hit->{probe_id};
+  my $probe_seq_id  = $projected_hit->{probe_seq_id};
   
   if (!$cigar_line_shows_insertion) {
   
@@ -128,9 +128,9 @@ my $map_transcript_to_genome = sub {
       $matched_sequence = Bio::PrimarySeq->new( -seq => $matched_sequence )->revcom->seq;
     }
     
-    my $probe_adaptor = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Funcgen', 'Probe' );
-    my $probe = $probe_adaptor->fetch_by_dbID($probe_id);
-    my $probe_sequence = uc($probe->get_ProbeSequence->sequence);
+    my $probe_sequence_adaptor = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Funcgen', 'ProbeSequence' );
+    my $probe_sequence_obj = $probe_sequence_adaptor->fetch_by_dbID($probe_seq_id);
+    my $probe_sequence = uc($probe_sequence_obj->sequence);
 
     my $match_ok = $matched_sequence eq $probe_sequence;
 
@@ -147,13 +147,13 @@ my $map_transcript_to_genome = sub {
         . "Transcript sequence matched: $matched_sequence\n"
         . "Probe sequence:              $probe_sequence\n\n"
         . Dumper($probe_feature_hash)
-        . Dumper($probe)
+        . Dumper($probe_sequence)
 
       );
     }
   
     my $probe_feature_passes = check_projection_for_perfect_matches(
-      $probe_id,
+      $probe_seq_id,
       $genomic_start,
       $genomic_end,
       $projected_hit->{t_strand},
@@ -170,7 +170,7 @@ my $map_transcript_to_genome = sub {
       );
     }
   }
-  my $gene_hit_key = "${gene_stable_id}:${probe_id}:${genomic_start}:${genomic_end}:${cigar_line}";
+  my $gene_hit_key = "${gene_stable_id}:${probe_seq_id}:${genomic_start}:${genomic_end}:${cigar_line}";
 
   if (! exists $gene_hits{$gene_hit_key}) {
     $gene_hits{$gene_hit_key} = undef;
@@ -180,7 +180,7 @@ my $map_transcript_to_genome = sub {
 
 sub check_projection_for_perfect_matches {
 
-  my $probe_id             = shift;
+  my $probe_seq_id             = shift;
   my $probe_feature_start  = shift;
   my $probe_feature_end    = shift;
   my $probe_feature_strand = shift;
@@ -204,7 +204,7 @@ sub check_projection_for_perfect_matches {
   );
   
   my $probe_adaptor = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Funcgen', 'Probe' );
-  my $probe = $probe_adaptor->fetch_by_dbID($probe_id);
+  my $probe = $probe_adaptor->fetch_by_dbID($probe_seq_id);
   my $probe_sequence = uc($probe->get_ProbeSequence->sequence);
   
   my $match_ok = $matched_sequence eq $probe_sequence;
@@ -242,7 +242,7 @@ $VAR1 = {
           'cigar_line' => '60=',
           'mismatch_count' => '0',
           'perc_id' => '100.00',
-          'probe_id' => '542',
+          'probe_seq_id' => '542',
           'q_end' => 60,
           'q_length' => 60,
           'q_start' => 0,
@@ -521,9 +521,9 @@ sub project_hit_to_genomic_coordinates {
 
 #   # Test if we have already seen this alignment
 #   my $gene = $gene_adaptor->fetch_by_transcript_stable_id($seq_id);
-#   # The only way of doing this is to test the genomic_start/end and the genomic cigarline with the gene_stable_id and the probe_id
+#   # The only way of doing this is to test the genomic_start/end and the genomic cigarline with the gene_stable_id and the probe_seq_id
 #   $gene_sid = $gene->stable_id;
-#   $gene_hit_key = "${gene_sid}:${probe_id}:${genomic_start}:${genomic_end}:${cigar_line}";
+#   $gene_hit_key = "${gene_sid}:${probe_seq_id}:${genomic_start}:${genomic_end}:${cigar_line}";
 # 
 #   if(exists $gene_hits{$gene_hit_key}) {
 #     $load_feature = 0;
