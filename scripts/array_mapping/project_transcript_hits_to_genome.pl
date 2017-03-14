@@ -203,9 +203,9 @@ sub check_projection_for_perfect_matches {
     $probe_feature_strand,
   );
   
-  my $probe_adaptor = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Funcgen', 'Probe' );
-  my $probe = $probe_adaptor->fetch_by_dbID($probe_seq_id);
-  my $probe_sequence = uc($probe->get_ProbeSequence->sequence);
+  my $probe_sequence_adaptor = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Funcgen', 'ProbeSequence' );
+  my $probe_sequence_obj = $probe_sequence_adaptor->fetch_by_dbID($probe_seq_id);
+  my $probe_sequence = uc($probe_sequence_obj->sequence);
   
   my $match_ok = $matched_sequence eq $probe_sequence;
   
