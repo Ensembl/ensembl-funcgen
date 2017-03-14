@@ -92,8 +92,15 @@ sub fetch_by_display_label {
 
 sub fetch_by_dbID {
   my ($self, $dbID) = @_;
-  $self->{_cache}->{dbID} ||= $self->SUPER::fetch_by_dbID($dbID);
-  return $self->{_cache}->{dbID};
+  
+  if (defined $self->{_cache}->{$dbID}) {
+    return $self->{_cache}->{$dbID};
+  }
+  
+  my $epigenome = $self->SUPER::fetch_by_dbID($dbID);
+  $self->{_cache}->{$dbID} = $epigenome;
+  
+  return $self->{_cache}->{$dbID};
 }
 
 =head2 _true_tables
