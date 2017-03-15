@@ -113,6 +113,12 @@ sub store {
   }
 
   my $probe_seq_sth = $self->prepare('insert into probe_seq (probe_sha1, probe_dna) values (cast(sha1(?) as char), ?)');
+  # Supress flurry of error messages that can appear when trying to store 
+  # probes with the same sequence. The error is caught and handled below.
+  #
+  my $saved_printerror_value = $self->db->dbc->db_handle->{PrintError};
+  $self->db->dbc->db_handle->{PrintError} = 0;
+  
   my $probe_seq_id;
   
   eval {
@@ -139,6 +145,9 @@ sub store {
   }
   $probe_sequence->dbID($probe_seq_id);
   $probe_sequence->adaptor($self);
+  
+  $self->db->dbc->db_handle->{PrintError} = $saved_printerror_value;
+  
   return $probe_sequence;
 }
 
