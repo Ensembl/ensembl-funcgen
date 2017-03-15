@@ -121,6 +121,32 @@ sub fetch_all_by_external_name {
   return $self->fetch_all_by_transcript_stable_id($transcript_stable_id);
 }
 
+sub fetch_all_by_sequence {
+  my $self = shift;
+  my $sequence = shift;
+
+  my $probe_sequence = $self->db->get_ProbeSequenceAdaptor->fetch_by_sequence($sequence);
+  return $self->fetch_all_by_ProbeSequence($probe_sequence);
+}
+
+sub fetch_all_by_ProbeSequence {
+  my $self = shift;
+  my $probe_sequence = shift;
+  
+  if (! defined $probe_sequence->dbID) {
+    die;
+  }
+  return $self->fetch_all_by_probe_sequence_id($probe_sequence->dbID);
+}
+
+sub fetch_all_by_probe_sequence_id {
+  my $self = shift;
+  my $probe_sequence_id = shift;
+
+  $self->bind_param_generic_fetch($probe_sequence_id, SQL_INTEGER);
+  return $self->generic_fetch('p.probe_seq_id=?');
+}
+
 =head2 fetch_all_by_transcript_stable_id
 
   Arg [1]    : string - transcript stable id
