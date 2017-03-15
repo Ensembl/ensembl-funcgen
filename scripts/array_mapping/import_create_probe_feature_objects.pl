@@ -3,6 +3,7 @@
 use strict;
 use Data::Dumper;
 use Getopt::Long;
+use Hash::Util qw( lock_keys );
 
 =head1
 
@@ -40,12 +41,12 @@ my $count_probe_matches = sub {
   
   foreach my $current_probe_hit (@$probe_hit_list) {
   
-    my $probe_id = $current_probe_hit->{probe_id};
+    my $probe_seq_id = $current_probe_hit->{probe_seq_id};
   
-    if (!exists $count_probe_match_counts{$probe_id}) {
-      $count_probe_match_counts{$probe_id} = 1;
+    if (!exists $count_probe_match_counts{$probe_seq_id}) {
+      $count_probe_match_counts{$probe_seq_id} = 1;
     } else {
-      $count_probe_match_counts{$probe_id}++
+      $count_probe_match_counts{$probe_seq_id}++
     }
   }
 };
@@ -56,13 +57,15 @@ my $process_probe_data = sub {
   
   foreach my $current_probe_hit (@$probe_hit_list) {
   
-    my $probe_id = $current_probe_hit->{probe_id};
+    lock_keys( %$current_probe_hit);
+  
+    my $probe_seq_id = $current_probe_hit->{probe_seq_id};
     
-    if (!exists $count_probe_match_counts{$probe_id}) {
+    if (!exists $count_probe_match_counts{$probe_seq_id}) {
       die;
     }
     
-    my $number_of_probe_matches = $count_probe_match_counts{$probe_id};
+    my $number_of_probe_matches = $count_probe_match_counts{$probe_seq_id};
     
     if ($number_of_probe_matches<$max_allowed_hits_per_probe) {
       $accepted_hits_fh->print(Dumper($current_probe_hit));

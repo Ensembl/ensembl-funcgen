@@ -41,6 +41,7 @@ my $sth_store_probe_feature_transcript_mapping = $funcgen_adaptor->dbc->prepare(
 
 my $probe_feature_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'probefeature');
 my $analysis_adaptor      = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'analysis');
+my $probe_adaptor         = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'probe');
 my $slice_adaptor         = Bio::EnsEMBL::Registry->get_adaptor($species, 'core',    'slice');
 my $transcript_adaptor    = Bio::EnsEMBL::Registry->get_adaptor($species, 'core',    'transcript');
 
@@ -84,21 +85,7 @@ my $process_data = sub {
     $slice = $slice_adaptor->fetch_by_name($raw_probe_feature->{t_id});
   }
   
-  $probe->dbID($raw_probe_feature->{probe_id});
-  
-  use Bio::EnsEMBL::Funcgen::ProbeFeature;
-  my $probe_feature = Bio::EnsEMBL::Funcgen::ProbeFeature->new(
-    -PROBE         => $probe,
-    -MISMATCHCOUNT => $raw_probe_feature->{total_mismatches},
-    -START         => $raw_probe_feature->{t_start},
-    -END           => $raw_probe_feature->{t_end},
-    -STRAND        => $raw_probe_feature->{t_strand},
-    -ANALYSIS      => $analysis,
-    -CIGAR_STRING  => $raw_probe_feature->{cigar_line},
-    -slice         => $slice,
-  );
-
-  $probe_feature_adaptor->store($probe_feature);
+  my $probe_with_this_sequence = $probe_adaptor->fetch_all_by_probe_sequence_id($raw_probe_feature->{probe_seq_id});
   
 #   if ($target_type eq 'transcript') {
 #     my $transcript_stable_id = $raw_probe_feature->{t_id};
@@ -108,6 +95,22 @@ my $process_data = sub {
 #     $sth_store_probe_feature_transcript_mapping->bind_param(2, $transcript_stable_id);
 #     $sth_store_probe_feature_transcript_mapping->execute;
 #   }
+  foreach my $current_probe (@$probe_with_this_sequence) {
+    
+    use Bio::EnsEMBL::Funcgen::ProbeFeature;
+    my $probe_feature = Bio::EnsEMBL::Funcgen::ProbeFeature->new(
+      -PROBE         => $current_probe,
+      -MISMATCHCOUNT => $raw_probe_feature->{total_mismatches},
+      -START         => $raw_probe_feature->{t_start},
+      -END           => $raw_probe_feature->{t_end},
+      -STRAND        => $raw_probe_feature->{t_strand},
+      -ANALYSIS      => $analysis,
+      -CIGAR_STRING  => $raw_probe_feature->{cigar_line},
+      -slice         => $slice,
+    );
+
+    $probe_feature_adaptor->store($probe_feature);
+  }
 };
 
 use Bio::EnsEMBL::Funcgen::Parsers::DataDumper;
