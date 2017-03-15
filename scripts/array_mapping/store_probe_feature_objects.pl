@@ -68,6 +68,9 @@ my $process_data = sub {
 
   my $raw_probe_feature = shift;
   
+  use Hash::Util qw( lock_keys );
+  lock_keys( %$raw_probe_feature );
+  
   my $slice;
   if ($target_type eq 'transcript') {
     # The next statement has to go

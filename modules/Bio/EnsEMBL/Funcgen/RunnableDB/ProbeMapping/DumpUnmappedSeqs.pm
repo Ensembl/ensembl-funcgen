@@ -2,6 +2,7 @@ package Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::DumpUnmappedSeqs;
 
 use strict;
 use base ('Bio::EnsEMBL::Hive::Process');
+use Hash::Util qw( lock_keys );
 
 sub run {
     my $self = shift;
@@ -45,6 +46,12 @@ sub run {
 
     my $num_sequence_written=0;
     while (my $data = $sth->fetchrow_hashref) {
+    
+      lock_keys(%$data);
+      
+      if (!$data->{sequence}) {
+        die;
+      }
 
       my $seq_obj = Bio::Seq->new(
 	-id       => $data->{probe_seq_id},
