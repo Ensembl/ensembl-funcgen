@@ -48,19 +48,6 @@ my $transcript_adaptor    = Bio::EnsEMBL::Registry->get_adaptor($species, 'core'
 use Bio::EnsEMBL::Analysis;
 my $analysis = Bio::EnsEMBL::Analysis->new(-logic_name => $analysis_logic_name);
 
-use Bio::EnsEMBL::Funcgen::Array;
-# So sad that we need this
-my $fake_array = Bio::EnsEMBL::Funcgen::Array->new(
-  -name   => 'fake',
-  -vendor => 'fake'
-);
-
-use Bio::EnsEMBL::Funcgen::Probe;
-my $probe = Bio::EnsEMBL::Funcgen::Probe->new(
-  -name  => 'fake probe',
-  -array => $fake_array
-);
-
 $Data::Dumper::Sortkeys = 1;
 # $Data::Dumper::Maxdepth = 3;
 
@@ -90,14 +77,6 @@ my $process_data = sub {
   
   my $probe_with_this_sequence = $probe_adaptor->fetch_all_by_probe_sequence_id($raw_probe_feature->{probe_seq_id});
   
-#   if ($target_type eq 'transcript') {
-#     my $transcript_stable_id = $raw_probe_feature->{t_id};
-#     my $probe_feature_id     = $probe_feature->dbID;
-#     
-#     $sth_store_probe_feature_transcript_mapping->bind_param(1, $probe_feature_id);
-#     $sth_store_probe_feature_transcript_mapping->bind_param(2, $transcript_stable_id);
-#     $sth_store_probe_feature_transcript_mapping->execute;
-#   }
   foreach my $current_probe (@$probe_with_this_sequence) {
     
     use Bio::EnsEMBL::Funcgen::ProbeFeature;
