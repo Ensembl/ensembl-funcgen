@@ -29,7 +29,7 @@ sub run {
       die("There are no unmapped probes in the database.");
     }
 
-    my $sth = $dbc_tracking->prepare('select probe_seq_id, probe_dna from probe_seq');
+    my $sth = $dbc_tracking->prepare('select probe_seq_id, sequence from probe_seq');
     $sth->execute;
 
     use Bio::Seq;
@@ -48,7 +48,7 @@ sub run {
 
       my $seq_obj = Bio::Seq->new(
 	-id       => $data->{probe_seq_id},
-	-seq      => $data->{probe_dna},
+	-seq      => $data->{sequence},
 	-alphabet => 'dna',
       );
       $out->write_seq($seq_obj);

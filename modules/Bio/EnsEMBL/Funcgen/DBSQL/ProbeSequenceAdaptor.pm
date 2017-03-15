@@ -50,7 +50,7 @@ sub _columns {
   
   return qw(
     ps.probe_seq_id
-    ps.probe_dna
+    ps.sequence
   );
 }
 
@@ -86,7 +86,7 @@ sub fetch_by_sequence {
   my $self     = shift;
   my $sequence = shift;
 
-  my $constraint = "ps.probe_dna = ?";
+  my $constraint = "ps.sequence_upper_sha1 = sha1(upper(?))";
   $self->bind_param_generic_fetch($sequence, SQL_VARCHAR);
   
   my $probe_sequence = $self->generic_fetch($constraint);
@@ -112,18 +112,19 @@ sub store {
     );
   }
 
-  my $probe_seq_sth = $self->prepare('insert into probe_seq (probe_sha1, probe_dna) values (cast(sha1(?) as char), ?)');
   # Supress flurry of error messages that can appear when trying to store 
   # probes with the same sequence. The error is caught and handled below.
   #
   my $saved_printerror_value = $self->db->dbc->db_handle->{PrintError};
   $self->db->dbc->db_handle->{PrintError} = 0;
   
+  my $probe_seq_sth = $self->prepare('insert into probe_seq (sequence, sequence_upper, sequence_upper_sha1) values (?, upper(?), cast(sha1(upper(?)) as char))');
   my $probe_seq_id;
   
   eval {
     $probe_seq_sth->bind_param(1, $probe_sequence->sequence, SQL_VARCHAR);
     $probe_seq_sth->bind_param(2, $probe_sequence->sequence, SQL_VARCHAR);
+    $probe_seq_sth->bind_param(3, $probe_sequence->sequence, SQL_VARCHAR);
 
     $probe_seq_sth->execute;
     $probe_seq_id = $probe_seq_sth->{mysql_insertid};

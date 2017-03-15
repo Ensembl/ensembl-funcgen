@@ -25,12 +25,15 @@ DROP TABLE IF EXISTS `probe_seq`;
 
 CREATE TABLE `probe_seq` (
   `probe_seq_id` int(10) NOT NULL AUTO_INCREMENT,
-  `probe_sha1` char(40) NOT NULL,
-  `probe_dna` text NOT NULL,
-  PRIMARY KEY (`probe_seq_id`)
+  `sequence`       text NOT NULL,
+  `sequence_upper` text NOT NULL,
+  `sequence_upper_sha1` char(40) NOT NULL,
+  PRIMARY KEY (`probe_seq_id`),
+  UNIQUE KEY  (`sequence_upper_sha1`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 ALTER TABLE probe ADD COLUMN probe_seq_id int(10) DEFAULT NULL;
+alter table probe add index `probe_seq_idx` (`probe_seq_id`); 
 
 --  Patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_b.sql|seq_region_name_255');
