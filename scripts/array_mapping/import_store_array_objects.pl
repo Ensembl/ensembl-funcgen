@@ -132,9 +132,9 @@ my $process_array_objects = sub {
   my $array_chip_from_db = $fetch_array_chip_from_db->($array, $array_chip);
   $probe->array_chip($array_chip_from_db);
   
-  if ($probe->probeset) {
-    my $probeset_from_db = $fetch_probe_set_from_db->($array->name, $probe->probeset);
-    $probe->probeset($probeset_from_db);
+  if ($probe->probe_set) {
+    my $probe_set_from_db = $fetch_probe_set_from_db->($array->name, $probe->probe_set);
+    $probe->probe_set($probe_set_from_db);
   }
   
   $probe_adaptor->store($probe);
