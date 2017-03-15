@@ -329,10 +329,10 @@ sub _update_one {
 
   my $sth = $self->prepare('update probe_set set name=?, size=?, family=? where probe_set_id=?');
 
-  $sth->bind_param(1, $current_probe_set->name,   SQL_VARCHAR);
-  $sth->bind_param(2, $current_probe_set->size,   SQL_INTEGER);
-  $sth->bind_param(3, $current_probe_set->family, SQL_VARCHAR);
-  $sth->bind_param(4, $current_probe_set->dbID,   SQL_INTEGER);
+  $sth->bind_param(1, $probe_set->name,   SQL_VARCHAR);
+  $sth->bind_param(2, $probe_set->size,   SQL_INTEGER);
+  $sth->bind_param(3, $probe_set->family, SQL_VARCHAR);
+  $sth->bind_param(4, $probe_set->dbID,   SQL_INTEGER);
 
   $sth->execute();
 }
