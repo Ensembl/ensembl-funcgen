@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Funcgen::HiveConfig::ProbeMapping::RunHealthchecks_conf;
+package Bio::EnsEMBL::Funcgen::HiveConfig::ProbeMapping::RunAlignHealthchecks_conf;
 
 use strict;
 use warnings;
@@ -12,7 +12,7 @@ sub pipeline_analyses {
     
     return [
       {
-          -logic_name  => 'start_healthchecks',
+          -logic_name  => 'start_align_healthchecks',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
           -flow_into => {
               MAIN => 'check_probe_feature_sequences_from_transcripts_matches'
