@@ -89,7 +89,9 @@ sub pipeline_analyses {
               probe_directories => '#probe_directory#/#species#',
           },
           -flow_into => {
-            MAIN => 'parse_probe_fasta_file',
+#             MAIN => 'parse_probe_fasta_file',
+            'MAIN->A' => 'parse_probe_fasta_file',
+            'A->MAIN' => 'import_arrays_done',
           },
         },
         {
@@ -134,51 +136,25 @@ sub pipeline_analyses {
                     --array_objects_file #tempdir#/#species#/#array_class#_array_objects.pl
                 ',
             },
-          -flow_into => {
-              MAIN => 'hc_probes_link_to_sequence',
-          },
         },
         {
-            -logic_name  => 'hc_probes_link_to_sequence',
-            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlHealthcheck',
-            -analysis_capacity => 1,
-            -parameters => {
-              db_conn       => 'funcgen:#species#',
-              description   => 'Assert all probes have a probe sequence',
-              query         => 'select * from probe join array_chip using (array_chip_id) join array using (array_id) where probe_seq_id is null and array.class="#array_class#"',
-              expected_size => '0'
+            -logic_name  => 'import_arrays_done',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into => {
+                MAIN => 'set_probe_set_sizes'
             },
-          -flow_into => {
-              MAIN => 'hc_probe_sequence_not_empty',
-          },
         },
         {
-            -logic_name  => 'hc_probe_sequence_not_empty',
-            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlHealthcheck',
+            -logic_name  => 'set_probe_set_sizes',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
             -analysis_capacity => 1,
             -parameters => {
               db_conn       => 'funcgen:#species#',
-              description   => 'Assert probe sequences are not empty strings',
-              query         => 'select * from probe_seq join probe using (probe_seq_id) join array_chip using (array_chip_id) join array using (array_id) where sequence = "" and array.class="#array_class#"',
-              expected_size => '0'
-            },
-          -flow_into => {
-              MAIN => 'hc_probe_set_sizes_ok',
-          },
-        },
-        {
-            -logic_name  => 'hc_probe_set_sizes_ok',
-            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlHealthcheck',
-            -analysis_capacity => 1,
-            -parameters => {
-              db_conn       => 'funcgen:#species#',
-              description   => 'Assert probe sets are set to the correct size',
-              query         => '
-                select * from probe_set join (
+              sql           => '
+                update probe_set join (
                   select probe_set_id, count(*) as counted_size from probe group by probe_set_id
-                ) as count_them using (probe_set_id) where count_them.counted_size != probe_set.size
+                ) as count_them using (probe_set_id) set probe_set.size = counted_size;
               ',
-              expected_size => '0'
             },
         },
     ];
