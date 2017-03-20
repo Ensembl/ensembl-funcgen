@@ -59,7 +59,7 @@ sub pipeline_analyses {
             },
         },
         {
-            -logic_name  => 'start_healthchecks',
+            -logic_name  => 'start_align_healthchecks',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
         
