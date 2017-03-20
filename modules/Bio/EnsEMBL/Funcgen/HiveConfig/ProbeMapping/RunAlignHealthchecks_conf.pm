@@ -15,11 +15,26 @@ sub pipeline_analyses {
           -logic_name  => 'start_align_healthchecks',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
           -flow_into => {
-              MAIN => 'check_probe_feature_sequences_from_transcripts_matches'
+              MAIN => 'check_complex_probe_features_from_transcripts_matches'
           },
       },
       {
-          -logic_name  => 'check_probe_feature_sequences_from_transcripts_matches',
+          -logic_name  => 'check_complex_probe_features_from_transcripts_matches',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -parameters => {
+              cmd => 'check_probe_feature_sequences.pl '
+                . ' --registry #reg_conf#'
+                . ' --species  #species#'
+                . ' --logic_name ProbeAlign_transcript '
+                . ' --check_probe_features_with_nontrivial_cigar_lines 1'
+                . ' --max_check ' . $max_probe_features_to_check
+          },
+          -flow_into => {
+              MAIN => 'check_simple_probe_features_from_transcripts_matches',
+          },
+        },
+      {
+          -logic_name  => 'check_simple_probe_features_from_transcripts_matches',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters => {
               cmd => 'check_probe_feature_sequences.pl '

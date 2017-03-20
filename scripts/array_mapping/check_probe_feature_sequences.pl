@@ -19,6 +19,7 @@ $Data::Dumper::Maxdepth = 3;
     --registry /homes/mnuhn/work_dir_probemapping/lib/ensembl-funcgen/registry.pm \
     --species saccharomyces_cerevisiae \
     --logic_name ProbeAlign_transcript \
+    --check_probe_features_with_nontrivial_cigar_lines 1 \
     --max_check 10000
 
 =cut
@@ -27,12 +28,14 @@ my $registry;
 my $species;
 my $max_check;
 my $logic_name;
+my $check_probe_features_with_nontrivial_cigar_lines;
 
 GetOptions (
    'registry=s'   => \$registry,
    'species=s'    => \$species,
    'max_check=s'  => \$max_check,
    'logic_name=s' => \$logic_name,
+   'check_probe_features_with_nontrivial_cigar_lines=s' => \$check_probe_features_with_nontrivial_cigar_lines,
 );
 
 Bio::EnsEMBL::Registry->load_all($registry);
@@ -46,7 +49,6 @@ my $helper = Bio::EnsEMBL::Utils::SqlHelper->new(
 );
 
 my $total_checked = 0;
-my $total_skipped = 0;
 my $total_failed  = 0;
 my $total_probe_features_considered = 0;
 
@@ -55,10 +57,19 @@ if ($max_check) {
   $limit_clause = "limit $max_check";
 }
 
-my $where_clause = '';
+my @condition;
+
 if ($logic_name) {
-  $where_clause = "where logic_name = \"$logic_name\"";
+  push @condition, "logic_name = \"$logic_name\"";
 }
+
+if ($check_probe_features_with_nontrivial_cigar_lines) {
+  push @condition, "cigar_line like '%D%'";
+} else {
+  push @condition, "cigar_line not like '%D%'";
+}
+
+my $where_clause = 'where ' . join ' and ', @condition;
 
 my $sql = "select probe_feature_id from probe_feature join analysis using (analysis_id) $where_clause $limit_clause";
 
@@ -79,7 +90,6 @@ my $msg = <<MESSAGE
 total_probe_features_considered = $total_probe_features_considered
 
 total_checked = $total_checked
-total_skipped = $total_skipped
 total_failed  = $total_failed
 
 MESSAGE
@@ -93,49 +103,150 @@ print $msg;
 sub check_probe_feature_with_id {
 
   my $probe_feature_id = shift;
-  my $probe_feature_with_better_slice = $probe_feature_adaptor->fetch_by_dbID($probe_feature_id);
-  return check_probe_feature($probe_feature_with_better_slice);
+  my $probe_feature = $probe_feature_adaptor->fetch_by_dbID($probe_feature_id);
+  return check_probe_feature_and_update_stats($probe_feature);
+}
+
+sub check_probe_feature_and_update_stats {
+
+  my $probe_feature = shift;
+  
+  $total_probe_features_considered++;
+  (
+    my $has_passed,
+    my $message,
+  ) = check_probe_feature($probe_feature);
+  $total_checked++;
+
+  if (! $has_passed) {
+    $total_failed++;
+    return $message;
+  }
+  return undef;
 }
 
 sub check_probe_feature {
 
   my $probe_feature = shift;
   
-  $total_probe_features_considered++;
-
-  # Either 'ProbeAlign_transcript' or 'ProbeAlign_genomic'
-  #
-  if ($probe_feature->analysis->logic_name eq 'ProbeAlign_transcript') {
+  my $parsed_cigar_string;
+  eval {
+    $parsed_cigar_string = parse_cigar_string($probe_feature->cigar_string);
+  };
+  if ($@) {
+    die "Can't parse cigar string ". $probe_feature->cigar_string . " of probe feature with id: " . $probe_feature->dbID . "!\n";
+  }
   
-    my $probe_feature_alignment_has_deletions = $probe_feature->cigar_string =~ /D/;
+#   print Dumper($parsed_cigar_string);
   
-    # If there are deletions, then the sequences are not expected to be identical.
-    #
-    if ($probe_feature_alignment_has_deletions) {
-      $total_skipped++;
-      return;
+  my $probe_feature_slice  = $probe_feature->slice;
+  my $probe_feature_start  = $probe_feature->start;
+  my $probe_feature_strand = $probe_feature->strand;
+  
+  my @matched_sequence_parts;
+  
+  ALIGNMENT_PART: foreach my $current_alignment_part (@$parsed_cigar_string) {
+  
+    my $is_a_match_region = $current_alignment_part->{type} eq '=';
+    
+    if (! $is_a_match_region) {
+      next ALIGNMENT_PART;
     }
+    
+    my $matched_sequence_part = $probe_feature_slice->subseq(
+      $probe_feature_start + $current_alignment_part->{start_on_alignment},
+      $probe_feature_start + $current_alignment_part->{end_on_alignment},
+      $probe_feature_strand,
+    );
+    push @matched_sequence_parts, $matched_sequence_part;
   }
   
-  # The pipeline doesn't currently allow mismatches.
-  #
-  if ($probe_feature->mismatchcount != 0) {
-    print Dumper($probe_feature);
-    die;
+  if ($probe_feature_strand == -1) {
+    @matched_sequence_parts = reverse @matched_sequence_parts;
   }
-  my $matched_sequence = $probe_feature->slice->subseq(
-    $probe_feature->start,
-    $probe_feature->end,
-    $probe_feature->strand,
-  );
+  
+  my $matched_sequence = join '', @matched_sequence_parts;
+  
+  my $probe_sequence = $probe_feature->probe->get_ProbeSequence->sequence;
+  
+  my $has_passed = uc($matched_sequence) eq uc($probe_sequence);
+  
+  my $summarise_test = 0;
+  
+  my $must_build_summary = $summarise_test || !$has_passed;
 
-  my $probe_sequence = uc($probe_feature->probe->get_ProbeSequence->sequence);
-  
-  my $match_ok = $matched_sequence eq $probe_sequence;
-  $total_checked++;
-  
-  if (! $match_ok) {
-    $total_failed++;
-    return "Not ok: " . $probe_feature->analysis->logic_name . " " . $probe_feature->dbID . " $matched_sequence !=  $probe_sequence " . $probe_feature->cigar_string . " " . $probe_feature->strand  . "\n";
+  my $summary;
+  if ($must_build_summary) {
+    $summary = 
+        "Has passed: $has_passed\n"
+      . "Cigar string:" . $probe_feature->cigar_string . "\n"
+      . "Sequence in genome: " . (join '..', @matched_sequence_parts) . "\n"
+      . "Probe sequence:     $probe_sequence\n";
   }
+  
+  if ($summarise_test) {
+    print "--------------------------------------------------------------------\n";
+    print "$summary";
+  }
+  return $has_passed, $summary;
+}
+
+sub parse_cigar_string {
+  my $cigar_string = shift;
+  
+  my $parsed_cigar_lines = parse_cigar_string_generic($cigar_string);
+  
+  my $start_on_alignment = 0;
+  my $end_on_alignment   = 0;
+
+  foreach my $current_parsed_cigar_line (@$parsed_cigar_lines) {
+  
+    my $length = $current_parsed_cigar_line->{length};
+
+    $end_on_alignment += $length;
+
+    $current_parsed_cigar_line->{start_on_alignment} = $start_on_alignment;
+    $current_parsed_cigar_line->{end_on_alignment}   = -1 + $end_on_alignment;
+    
+    use Hash::Util qw( lock_hash );
+    lock_hash(%$current_parsed_cigar_line);
+    
+    $start_on_alignment += $length;
+  }
+  return $parsed_cigar_lines;
+}
+
+sub parse_cigar_string_generic {
+
+  my $cigar_string = shift;
+  
+  my @x = $cigar_string =~ /(\d+)(\D)/g;
+  # $VAR1 = [
+  #   '14',
+  #   '=',
+  #   '669',
+  #   'D',
+  #   '35',
+  #   '=',
+  #   '181',
+  #   'D',
+  #   '1',
+  #   '='
+  # ];
+  
+  use List::MoreUtils qw( natatime );
+  my @parsed_cigar_line;
+  
+  my $iterator = natatime 2, @x;
+  while (my @pair = $iterator->()) {
+  
+    my $length = $pair[0];
+    my $type   = $pair[1];
+    
+    push @parsed_cigar_line, {
+      length => $length,
+      type   => $type,
+    };
+  }
+  return \@parsed_cigar_line;
 }
