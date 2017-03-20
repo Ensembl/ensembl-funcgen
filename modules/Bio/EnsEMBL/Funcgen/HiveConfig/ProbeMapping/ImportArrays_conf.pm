@@ -125,7 +125,7 @@ sub pipeline_analyses {
         {
             -logic_name  => 'store_array_objects',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -analysis_capacity => 1,
+            -analysis_capacity => 8,
             -parameters => {
                 cmd       => '
                   import_store_array_objects.pl \
