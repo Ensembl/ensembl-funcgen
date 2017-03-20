@@ -44,13 +44,19 @@ sub run {
     my $progressbar_id = $logger->init_progress($unmapped_sequences_count, 100);
     $logger->info("Writing unmapped sequences to $unmapped_sequences_file\n");
 
+    my $skipped_sequences = 0;
+    
     my $num_sequence_written=0;
+    PROBE_SEQUENCE:
     while (my $data = $sth->fetchrow_hashref) {
     
       lock_keys(%$data);
       
       if (!$data->{sequence}) {
-        die;
+        use Data::Dumper;
+        warn("This probe had no sequence!\n" . Dumper($data));
+        $skipped_sequences++;
+        next PROBE_SEQUENCE;
       }
 
       my $seq_obj = Bio::Seq->new(
@@ -65,8 +71,8 @@ sub run {
     }
     $logger->info("Done writing $num_sequence_written sequences.");
     
-    if ($num_sequence_written != $unmapped_sequences_count) {
-      my $msg = "$unmapped_sequences_count sequences had to be written, but only wrote $num_sequence_written sequences!";
+    if ($num_sequence_written + $skipped_sequences != $unmapped_sequences_count) {
+      my $msg = "$unmapped_sequences_count sequences had to be written, but only wrote $num_sequence_written sequences and skipped $skipped_sequences sequences!";
       $logger->error($msg);
       die($msg)
     }

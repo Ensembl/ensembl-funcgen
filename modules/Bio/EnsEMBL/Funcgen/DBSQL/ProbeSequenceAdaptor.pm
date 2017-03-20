@@ -137,8 +137,8 @@ sub store {
     # column.
     #
     if ($error_msg=~/DBD::mysql::st execute failed: Duplicate entry/) {
-      $self->fetch_by_sequence($probe_sequence->sequence);
-      $probe_seq_id = $probe_sequence->dbID;
+      my $probe_sequence_from_db = $self->fetch_by_sequence($probe_sequence->sequence);
+      $probe_seq_id = $probe_sequence_from_db->dbID;
     } else {
       use Carp;
       confess($@);
