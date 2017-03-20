@@ -444,6 +444,13 @@ sub store {
     $probe_sequence_adaptor->store($probe_sequence);
     my $probe_seq_id = $probe_sequence->dbID;
     
+    if (! defined $probe_seq_id) {
+      confess(
+        "No probe sequence id for probe::\n"
+        . Dumper($probe)
+      );
+    }
+    
     # ------------------------------------------------------------------------------------------
 
     # Get all the arrays this probe is on and check they're all in the database
