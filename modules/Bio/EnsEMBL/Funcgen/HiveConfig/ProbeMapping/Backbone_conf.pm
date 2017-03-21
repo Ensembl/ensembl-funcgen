@@ -20,11 +20,23 @@ sub pipeline_analyses {
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
                '1->A' => 'start_import',
-               'A->1' => 'backbone_fire_export'
+               'A->1' => 'backbone_fire_import_healthchecks'
             },
         },
         {
             -logic_name  => 'start_import',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+        },
+        
+        {   -logic_name  => 'backbone_fire_import_healthchecks',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into   => {
+               '1->A' => 'start_import_healthchecks',
+               'A->1' => 'backbone_fire_export'
+            },
+        },
+        {
+            -logic_name  => 'start_import_healthchecks',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
         
