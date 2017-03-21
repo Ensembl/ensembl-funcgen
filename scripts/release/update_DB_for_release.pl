@@ -154,6 +154,14 @@ if(! $main::_no_log){
   print "Writing log to:\t".$main::_log_file."\n";
 }
 
+if(!defined $species) {
+  ($species = $dbname) =~ s/(.*)_funcgen.*/$1/;
+}
+
+if(!defined $schema_build) {
+  ($schema_build = $dbname) =~ s/.*_funcgen_(.*)/$1/;
+}
+
 my $efg_db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
  (-dbname  => $dbname,
   -host    => $host,
