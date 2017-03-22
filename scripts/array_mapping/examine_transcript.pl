@@ -481,7 +481,46 @@ sub examine_probefeature {
   } else{
     $log_name       = $transcript_sid."\t(".$probe_name.")\t${probe_id}";
   }
-  
+
+#   The ultimate guide to sense interrogation
+#   =========================================
+# 
+#   This is how sense interrogation is meant to play out:
+# 
+#             Does the array have sense interrogation?
+# 
+#                               |
+#                               |
+#                 ----------------------------
+#                 |                          |
+#                 |                          |
+# 
+#                 No                         Yes
+# 
+#                 |                          |
+#                 |                          |
+# 
+#           Is the probe feature        Is the probe feature 
+#           on the same strand          on the same strand  
+#           as the transcript?          as the transcript?
+# 
+#                 |                           |
+#                 |                           |
+#           --------------            ---------------
+#           |            |            |             |
+#           |            |            |             |
+#
+#           Yes          No           Yes           No
+#
+#           |            |            |             |
+#           |            |            |             |
+#         Accept        Reject       Reject        Accept   
+#         the match     the match    the match     the match
+#
+#   Note that for probes from a sense interrogation array probe features 
+#   are accepted only, if the sequence matches on the reverse strand of 
+#   the transcript.
+
   if ($has_sense_interrogation) {
     if($transcript->seq_region_strand == $strand) {
       if ($debug) {
