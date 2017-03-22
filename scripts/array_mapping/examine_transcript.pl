@@ -496,34 +496,6 @@ sub examine_probefeature {
     return;
   }
 
-#   if($array_configuration->{sense_interrogation}) {
-#   
-#   # In case of a sense_interrogation protocol, the probes match on the opposite strand than the transcript.
-#   
-#     my $probe_feature_strand_ok = undef;
-#   
-#     if($transcript->seq_region_strand == 1) {
-#     
-#       $probe_feature_strand_ok = $strand == -1
-#     
-#     }
-#   
-#     if($transcript->seq_region_strand == $strand) {
-#       if ($debug) {
-#         $logger->info('Unmapped sense '.$log_name."\n");
-#       }
-#       return;
-#     }
-#     
-#   } elsif ($transcript->seq_region_strand != $strand) {
-#     if ($debug) {
-#       $logger->info('Unmapped anti-sense '.$log_name."\n");
-#     }
-#     return;
-#   }
-
-
-
   my $mm_link_txt = '';
   my $has_mismatches = 0;
   if ($mismatch_count) {
