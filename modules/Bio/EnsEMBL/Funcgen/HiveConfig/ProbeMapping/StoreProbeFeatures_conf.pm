@@ -11,11 +11,11 @@ sub pipeline_analyses {
     
     return [
       {
-          -logic_name  => 'start_store_probe_features',
+          -logic_name  => 'start_store_probe_feature_chunk',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
           -flow_into => {
               'MAIN->A' => 'parse_exonerate',
-              'A->MAIN' => 'done_store_probe_features',
+              'A->MAIN' => 'done_store_probe_feature_chunk',
           },
       },
       {   -logic_name  => 'parse_exonerate',
@@ -100,7 +100,7 @@ sub pipeline_analyses {
           },
       },
       {
-          -logic_name  => 'done_store_probe_features',
+          -logic_name  => 'done_store_probe_feature_chunk',
           -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       },
     ];

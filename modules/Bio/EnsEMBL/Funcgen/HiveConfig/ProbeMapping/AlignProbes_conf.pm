@@ -14,10 +14,30 @@ sub pipeline_analyses {
           -logic_name  => 'start_align_probes',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
           -flow_into => {
-              MAIN => 'job_factory_probe_align',
+              MAIN => 'truncate_probe_feature_tables',
           },
       },
-        {   -logic_name  => 'job_factory_probe_align',
+        {
+            -logic_name  => 'truncate_probe_feature_tables',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+            -parameters => {
+                sql     => [
+                  "truncate probe_feature;",
+                  "truncate probe_transcript;",
+                  "truncate probe_set_transcript;",
+                  "truncate probe_feature_transcript;",
+                  "truncate unmapped_object;",
+                  "truncate unmapped_reason;",
+                ],
+                db_conn => 'funcgen:#species#',
+            },
+            -flow_into => {
+               'MAIN->A' => 'split_into_probe_chunks',
+               'A->MAIN' => 'done_processing_probe_chunks',
+            },
+        },
+
+        {   -logic_name  => 'split_into_probe_chunks',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::FastaFactory',
             -parameters => {
               inputfile        => '#unmapped_sequences_file#',
@@ -28,9 +48,9 @@ sub pipeline_analyses {
               hash_directories => 1,
             },
             -flow_into => {
-                2 => [ 
-                  { 'multiply_probe_align_jobs' => INPUT_PLUS },
-                ],
+                2 => [ { 'multiply_probe_align_jobs' => INPUT_PLUS }, ],
+#                 '2->A' => [ { 'multiply_probe_align_jobs' => INPUT_PLUS }, ],
+#                 'A->2' => [ { 'done_processing_probe_chunks' => undef      }, ]
             },
         },
       {
@@ -89,7 +109,7 @@ sub pipeline_analyses {
                 '
             },
             -flow_into => {
-                MAIN => 'start_store_probe_features',
+                MAIN => 'start_store_probe_feature_chunk',
                 '-1' => 'probe_align_genomic_himem',
             },
         },
@@ -109,7 +129,7 @@ sub pipeline_analyses {
                 '
             },
             -flow_into => {
-                MAIN => 'start_store_probe_features',
+                MAIN => 'start_store_probe_feature_chunk',
             },
         },
         {   -logic_name  => 'probe_align_transcript',
@@ -129,7 +149,7 @@ sub pipeline_analyses {
                 '
             },
             -flow_into => {
-                MAIN => 'start_store_probe_features',
+                MAIN => 'start_store_probe_feature_chunk',
                 '-1' => 'probe_align_transcript_himem',
             },
         },
@@ -149,13 +169,31 @@ sub pipeline_analyses {
                 '
             },
             -flow_into => {
-                MAIN => 'start_store_probe_features',
+                MAIN => 'start_store_probe_feature_chunk',
             },
         },
       {
-          -logic_name  => 'start_store_probe_features',
+          -logic_name  => 'start_store_probe_feature_chunk',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       },
+      {
+          -logic_name  => 'done_processing_probe_chunks',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+          -flow_into => {
+              MAIN => 'delete_redundant_probe_features',
+          },
+      },
+      {   -logic_name        => 'delete_redundant_probe_features',
+          -module            => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -parameters => {
+              cmd => '
+                delete_redundant_probe_features.pl \
+                  --registry #reg_conf# \
+                  --species #species#
+              ',
+          },
+      },
+
     ];
 }
 
