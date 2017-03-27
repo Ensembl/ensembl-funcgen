@@ -37,8 +37,6 @@ Bio::EnsEMBL::Registry->load_all($registry);
 
 my $funcgen_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
 
-my $sth_store_probe_feature_transcript_mapping = $funcgen_adaptor->dbc->prepare("insert into probe_feature_transcript(probe_feature_id, stable_id) values (?, ?);");
-
 my $probe_feature_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'probefeature');
 my $analysis_adaptor      = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'analysis');
 my $probe_adaptor         = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'probe');
