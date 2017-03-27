@@ -15,6 +15,20 @@ sub pipeline_analyses {
           -logic_name  => 'start_align_healthchecks',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
           -flow_into => {
+              MAIN => 'check_duplicate_probe_features'
+          },
+      },
+      {   -logic_name        => 'check_duplicate_probe_features',
+          -module            => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -parameters => {
+              cmd => '
+                delete_redundant_probe_features.pl \
+                  --registry #reg_conf# \
+                  --species #species# \
+                  --only_test 1
+              ',
+          },
+          -flow_into => {
               MAIN => 'check_gapped_probe_features_from_transcript_matches'
           },
       },
