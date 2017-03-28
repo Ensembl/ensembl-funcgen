@@ -26,4 +26,4 @@ update array set is_linked_array         = 1 where class in ("AFFY_ST", "AGILENT
 update array set has_sense_interrogation = 1 where class in ("AFFY_ST");
 
 --  Patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_i.sql');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_i.sql|');

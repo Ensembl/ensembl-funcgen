@@ -31,4 +31,4 @@ where
   object_xref.ensembl_object_type="ProbeSet";
 
 --  Patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_h.sql');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_h.sql|');

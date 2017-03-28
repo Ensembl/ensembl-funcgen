@@ -32,8 +32,5 @@ CREATE TABLE `probe_seq` (
   UNIQUE KEY  (`sequence_upper_sha1`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
-ALTER TABLE probe ADD COLUMN probe_seq_id int(10) DEFAULT NULL;
-alter table probe add index `probe_seq_idx` (`probe_seq_id`); 
-
 --  Patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_b.sql|seq_region_name_255');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_b.sql|');

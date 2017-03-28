@@ -13,22 +13,12 @@
 -- limitations under the License.
 
 /**
-@header patch_88_89_f.sql - Remove probe features from object_xref and xref table
-@desc   Remove probe features from xref table, they are now in probe_feature_transcript
+@header patch_88_89_j.sql - 
+@desc   
 */
 
-delete 
-  xref
-from 
-  xref, object_xref
-where 
-  object_xref.xref_id=xref.xref_id
-  and object_xref.ensembl_object_type="ProbeFeature";
-
-delete from 
-  object_xref
-where 
-  object_xref.ensembl_object_type="ProbeFeature";
+ALTER TABLE probe ADD COLUMN probe_seq_id int(10) DEFAULT NULL;
+alter table probe add index `probe_seq_idx` (`probe_seq_id`); 
 
 --  Patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_f.sql|');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_j.sql|');
