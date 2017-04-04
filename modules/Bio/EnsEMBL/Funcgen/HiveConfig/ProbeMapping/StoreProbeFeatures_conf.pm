@@ -71,7 +71,7 @@ sub pipeline_analyses {
       {   -logic_name        => 'store_unmapped_objects',
           -module            => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -priority          => 10,
-          -analysis_capacity => 8,
+          -analysis_capacity => 70,
           -parameters => {
               cmd => '
                 store_unmapped_objects.pl \
@@ -86,7 +86,7 @@ sub pipeline_analyses {
       {   -logic_name        => 'store_probe_feature_objects',
           -module            => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -priority          => 10,
-          -analysis_capacity => 8,
+          -analysis_capacity => 70,
           -parameters => {
               cmd => '
                 store_probe_feature_objects.pl \
