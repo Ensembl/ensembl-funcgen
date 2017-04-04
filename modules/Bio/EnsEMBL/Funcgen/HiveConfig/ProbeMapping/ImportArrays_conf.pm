@@ -65,6 +65,34 @@ sub pipeline_analyses {
                 db_conn => 'funcgen:#species#',
             },
             -flow_into => {
+               MAIN => 'switch_to_innodb',
+            },
+        },
+        {
+            -logic_name  => 'switch_to_innodb',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+            -parameters => {
+                sql     => [
+                  "ALTER TABLE array           ENGINE=InnoDB;",
+                  "ALTER TABLE array_chip      ENGINE=InnoDB;",
+                  "ALTER TABLE probe           ENGINE=InnoDB;",
+                  "ALTER TABLE probe_feature   ENGINE=InnoDB;",
+                  "ALTER TABLE probe_seq       ENGINE=InnoDB;",
+                  "ALTER TABLE probe_set       ENGINE=InnoDB;",
+                  "ALTER TABLE unmapped_object ENGINE=InnoDB;",
+                  "ALTER TABLE unmapped_reason ENGINE=InnoDB;",
+                  # Not converting:
+                  #
+                  # probe_transcript
+                  # probe_set_transcript
+                  # probe_feature_transcript
+                  #
+                  # because they are populated by load statements. These are 
+                  # unlikely to improve by using innodb.
+                ],
+                db_conn => 'funcgen:#species#',
+            },
+            -flow_into => {
                MAIN => 'create_probe_mapping_analyses',
             },
         },
