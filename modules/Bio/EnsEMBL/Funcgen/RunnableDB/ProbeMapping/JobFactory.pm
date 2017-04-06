@@ -35,24 +35,10 @@ sub run {
 	qq(select name from array where class="$subdirectory")
       );
 
-#       # Dereference the individual array refs so we get an array of array 
-#       # names
-#       #
-#       my @array_of_array_names = map { @$_ } @$arrayref_of_arrayref_with_one_element_which_is_the_name;
-# 
-#       if (! @array_of_array_names) {
-# 	die("Can't find an array with class $subdirectory");
-#       }
-
-#       my $all_array_names = join " ", @array_of_array_names;
-
       push @$input_id, {
 	array_class    => $subdirectory,
 	probe_file     => File::Spec->catfile($full_path, 'arrays.'.$subdirectory.'.fasta'),
 	species        => $species,
-	
-	# Used for rollback
-# 	all_array_names => $all_array_names,
       };
     }
     foreach my $current_input_id (@$input_id) {
