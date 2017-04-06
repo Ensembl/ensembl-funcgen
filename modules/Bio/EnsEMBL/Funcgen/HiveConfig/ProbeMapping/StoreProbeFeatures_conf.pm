@@ -54,7 +54,7 @@ sub pipeline_analyses {
       },
       {   -logic_name  => 'project_transcript_hits_to_genome',
           -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-          -analysis_capacity => 20,
+          -analysis_capacity => 60,
           -parameters => {
               cmd => '
                 project_transcript_hits_to_genome.pl \
