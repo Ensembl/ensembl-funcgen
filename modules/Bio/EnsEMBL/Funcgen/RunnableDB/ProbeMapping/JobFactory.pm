@@ -56,8 +56,14 @@ sub run {
       };
     }
     foreach my $current_input_id (@$input_id) {
-      $self->dataflow_output_id( $current_input_id, 1 );
+      $self->dataflow_output_id( $current_input_id, 2 );
     }
+    
+    # *sigh*
+    use Bio::EnsEMBL::Hive::Utils ('stringify', 'destringify');
+    my $input_id = destringify($self->input_job->input_id);
+    
+    $self->dataflow_output_id( $input_id, 1 );
 }
 
 1;
