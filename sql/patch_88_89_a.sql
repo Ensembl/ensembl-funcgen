@@ -14,7 +14,7 @@
 
 /**
 @header patch_88_89_a.sql - schema version
-@desc   Update schema_version in meta table to 88
+@desc   Update schema_version in meta table to 89
 */
 
 UPDATE meta SET meta_value='89' WHERE meta_key='schema_version';
