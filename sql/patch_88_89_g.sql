@@ -31,4 +31,4 @@ where
   object_xref.ensembl_object_type="Probe";
 
 --  Patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_g.sql|');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_g.sql|Removed probe mappings from the xref tables');

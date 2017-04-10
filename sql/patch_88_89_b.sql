@@ -33,4 +33,4 @@ CREATE TABLE `probe_seq` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 --  Patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_b.sql|');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_b.sql|Created probe_seq table');

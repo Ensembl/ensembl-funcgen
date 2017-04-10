@@ -13,8 +13,8 @@
 -- limitations under the License.
 
 /**
-@header patch_88_89_i.sql - 
-@desc   
+@header patch_88_89_i.sql - New columns for array table
+@desc   Adds columns to array table to store data that was previously held in a module of the probemapping pipeline
 */
 
 alter table array add column is_probeset_array       tinyint(1) NOT NULL DEFAULT 0;
@@ -26,4 +26,4 @@ update array set is_linked_array         = 1 where class in ("AFFY_ST", "AGILENT
 update array set has_sense_interrogation = 1 where class in ("AFFY_ST");
 
 --  Patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_i.sql|');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_i.sql|New columns for array table');

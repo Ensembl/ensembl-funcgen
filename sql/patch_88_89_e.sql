@@ -40,4 +40,4 @@ insert into `probe_set_transcript` (`probe_set_id`, `stable_id`, `description`) 
 );
 
 --  Patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_e.sql|');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_e.sql|created probeset_transcript table');
