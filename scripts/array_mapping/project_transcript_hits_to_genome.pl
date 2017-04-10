@@ -151,24 +151,28 @@ my $map_transcript_to_genome = sub {
 
       );
     }
-  
-    my $probe_feature_passes = check_projection_for_perfect_matches(
-      $probe_seq_id,
-      $genomic_start,
-      $genomic_end,
-      $projected_hit->{t_strand},
-      $projected_hit->{t_id},
-    );
-    
-    if (!$probe_feature_passes) {
-      die(
-        "Probe feature didn't pass the projection test!\n"
-        . "Before:\n"
-        . Dumper($probe_feature_hash)
-        . "After:\n"
-        . Dumper($projected_hit)
-      );
-    }
+#   Commented the check out, because
+# 
+#   - this is already a bottleneck for the pipeline
+#   - It is slowing the analysis down even further.
+# 
+#     my $probe_feature_passes = check_projection_for_perfect_matches(
+#       $probe_seq_id,
+#       $genomic_start,
+#       $genomic_end,
+#       $projected_hit->{t_strand},
+#       $projected_hit->{t_id},
+#     );
+#     
+#     if (!$probe_feature_passes) {
+#       die(
+#         "Probe feature didn't pass the projection test!\n"
+#         . "Before:\n"
+#         . Dumper($probe_feature_hash)
+#         . "After:\n"
+#         . Dumper($projected_hit)
+#       );
+#     }
   }
   my $gene_hit_key = "${gene_stable_id}:${probe_seq_id}:${genomic_start}:${genomic_end}:${cigar_line}";
 
