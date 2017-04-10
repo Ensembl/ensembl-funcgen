@@ -65,6 +65,16 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#DBI sql_types import
 
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
+sub new {
+  my ($class, @args) = @_;
+  my $self = $class->SUPER::new(@args);
+  
+  $self->{_array_cache}     = {};
+  $self->{_probe_set_cache} = {};
+  
+  return $self;
+}
+
 =head2 fetch_by_array_probe_probeset_name
 
   Arg [1]    : string - name of array
@@ -343,19 +353,29 @@ sub _objs_from_sth {
   my ($self, $sth) = @_;
 
   my (@result, $current_dbid, $arraychip_id, $probe_id, $probe_set_id, $name, $class, $probelength, $desc, $probe_seq_id);
-  my ($array, %array_cache, %probe_set_cache);
-
+  my $array;
+  
+  my $array_cache     = $self->{_array_cache};
+  my $probe_set_cache = $self->{_probe_set_cache};
+  
   $sth->bind_columns(\$probe_id, \$probe_set_id, \$name, \$probelength, \$arraychip_id, \$class, \$desc, \$probe_seq_id);
 
   my $probe;
   while ( $sth->fetch() ) {
 
-    $array = $array_cache{$arraychip_id} || $self->db->get_ArrayAdaptor()->fetch_by_array_chip_dbID($arraychip_id);
-
-    my ($probeset);
+    if (! exists $array_cache->{$arraychip_id}) {
+      $array_cache->{$arraychip_id} = $self->db->get_ArrayAdaptor()->fetch_by_array_chip_dbID($arraychip_id);
+    }
+    $array = $array_cache->{$arraychip_id};
+    
+    my $probe_set;
 
     if($probe_set_id) {
-      $probeset = $probe_set_cache{$probe_set_id} || $self->db->get_ProbeSetAdaptor()->fetch_by_dbID($probe_set_id);
+    
+      if (! exists $probe_set_cache->{$probe_set_id}) {
+        $probe_set_cache->{$probe_set_id} = $self->db->get_ProbeSetAdaptor()->fetch_by_dbID($probe_set_id);
+      }
+      $probe_set = $probe_set_cache->{$probe_set_id};
     }
 
     if (!$current_dbid || $current_dbid != $probe_id) {
@@ -365,7 +385,7 @@ sub _objs_from_sth {
         -name          => $name,
         -array_chip_id => $arraychip_id,
         -array         => $array,
-        -probe_set     => $probeset,
+        -probe_set     => $probe_set,
         -length        => $probelength,
         -class         => $class,
         -description   => $desc,
@@ -471,7 +491,7 @@ sub store {
 
     foreach my $ac_id (keys %array_hashes) {
 
-      my $ps_id = (defined $probe->probeset()) ? $probe->probeset()->dbID() : undef;
+      my $ps_id = (defined $probe->probe_set()) ? $probe->probe_set()->dbID() : undef;
 
       foreach my $name (@{$probe->get_all_probenames($array_hashes{$ac_id}->name)}) {
 
