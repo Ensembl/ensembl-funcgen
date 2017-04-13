@@ -31,6 +31,7 @@ use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils  qw(dump_data);
+use Data::Dumper;
 use feature qw(say);
 
 
@@ -53,69 +54,69 @@ sub new {
 
   #Set default feature_type and feature_set config
   $self->{static_config}{feature_types} = {(
-                                            'VISTA Target'   => {
-                                                                 -name        => 'VISTA Target',
-                                                                 -class       => 'Search Region',
-                                                                 -description => 'VISTA target region',
-                                                                },
-                                            'VISTA Enhancer' => {
-                                                                 -name         => 'VISTA Enhancer',
-                                                                 -class        => 'Enhancer',
-                                                                 -description  => 'Enhancer identified by positive VISTA assay',
-                                                                 -so_name      => 'enhancer',
-                                                                 -so_accession => 'SO:0000165',
-                                                                },
-                                            'VISTA Target - Negative' => {
-                                                                          -name        => 'VISTA Target - Negative',
-                                                                          -class => 'Search Region',
-                                                                          -description => 'Enhancer negative region identified by VISTA assay',
-                                                                         },
-                                           )};
+      'VISTA Target'   => {
+      -name        => 'VISTA Target',
+      -class       => 'Search Region',
+      -description => 'VISTA target region',
+      },
+      'VISTA Enhancer' => {
+      -name         => 'VISTA Enhancer',
+      -class        => 'Enhancer',
+      -description  => 'Enhancer identified by positive VISTA assay',
+      -so_name      => 'enhancer',
+      -so_accession => 'SO:0000165',
+      },
+      'VISTA Target - Negative' => {
+      -name        => 'VISTA Target - Negative',
+      -class => 'Search Region',
+      -description => 'Enhancer negative region identified by VISTA assay',
+      },
+      )};
 
   $self->{static_config}{analyses} = {
-                                      VISTA =>  {
-                                                 -logic_name => 'VISTA',
-                                                 -description   => 'VISTA Enhancer Assay (http://enhancer.lbl.gov/)',
-                                                 -display_label => 'VISTA',
-                                                 -displayable   => 1,
-                                                },
-                                     };
+    VISTA =>  {
+      -logic_name => 'VISTA',
+      -description   => 'VISTA Enhancer Assay (http://enhancer.lbl.gov/)',
+      -display_label => 'VISTA',
+      -displayable   => 1,
+    },
+  };
 
-  #This is used as the entry point to store/validate
-  #So all of the above needs to be referenced in here
+#This is used as the entry point to store/validate
+#So all of the above needs to be referenced in here
   $self->{static_config}{feature_sets} = {
-                                          'VISTA enhancer set' =>
-                                          {
-                                           #Stored in this order
+    'VISTA enhancer set' =>
+    {
+#Stored in this order
 
-                                           #Entries here are flexible
-                                           #Can be omited if defined in feature_set
-                                           #top level analyses/feature_types definition required if no DB defaults available
-                                           #These can be a ref to the whole or subset of the top level analyses/feature_types hash
-                                           #A key with an empty hash or undef(with or without a matching key in the top level analyses/feature_types hash
+#Entries here are flexible
+#Can be omited if defined in feature_set
+#top level analyses/feature_types definition required if no DB defaults available
+#These can be a ref to the whole or subset of the top level analyses/feature_types hash
+#A key with an empty hash or undef(with or without a matching key in the top level analyses/feature_types hash
 
-                                           #analyses      => $self->{static_config}{analyses},
-                                           feature_types => $self->{static_config}{feature_types},
+#analyses      => $self->{static_config}{analyses},
+    feature_types => $self->{static_config}{feature_types},
 
-                                           #feature_type and analysis values must be string key to top level hash
-                                           #This wont work for feature_types as they are not unique by name!!!!!!
-                                           #This is why we have top level hash where we can define a unique compound key name
+#feature_type and analysis values must be string key to top level hash
+#This wont work for feature_types as they are not unique by name!!!!!!
+#This is why we have top level hash where we can define a unique compound key name
 
-                                           feature_set   =>
-                                           {
-                                            -feature_type      => 'VISTA Target', #feature_types config key name not object
-                                            -display_label     => 'VISTA Enhancers',
-                                            -description       => 'Experimentally validated enhancers',
-                                            -analysis          => 'VISTA', #analyses config key name not object
-                                           },
-                                          }
-                                         };
+    feature_set   =>
+    {
+    -feature_type      => 'VISTA Target', #feature_types config key name not object
+    -display_label     => 'VISTA Enhancers',
+    -description       => 'Experimentally validated enhancers',
+    -analysis          => 'VISTA', #analyses config key name not object
+    },
+    }
+    };
 
-  #$self->validate_and_store_feature_types;
-  $self->validate_and_store_config([keys %{$self->{static_config}{feature_sets}}]);
-  $self->set_feature_sets;
+#$self->validate_and_store_feature_types;
+    $self->validate_and_store_config([keys %{$self->{static_config}{feature_sets}}]);
+    $self->set_feature_sets;
 
-  return $self;
+    return $self;
 }
 
 
@@ -125,19 +126,36 @@ sub new {
 # - arrayref of features
 # - arrayref of factors
 
+=head2 get_slices
 
+Description: Get slice for each chromosome
+Arg1: Bio::EnsEMBL::Funcgen::DBAdaptor object
+Returntype: hashref:
+- seq_region_name => Bio::EnsEMBL::Slice object
+
+=cut
+
+sub get_slices {
+  my ($slice_a) = @_;
+  my $slices = $slice_a->fetch_all('toplevel',undef,0,1);
+  my %hash = ();
+  foreach my $slice (@{$slices}) {
+    $hash{$slice->seq_region_name} = $slice;
+  }
+  return \%hash;
+}
 
 sub parse_and_load{
-  my ($self, $files, $old_assembly, $new_assembly) = @_;
+  my ($self, $files) = @_;
 
   if (scalar(@$files) != 1) {
     throw('You must provide a unique file path to load VISTA features from:\t'.join(' ', @$files));;
   }
-  say "Projecting to $new_assembly" if(defined $new_assembly);
   my $file = $files->[0];
   $self->log_header("Parsing and loading LBNL VISTA enhancer data from:\t$file");
 
   my $extfeat_adaptor = $self->db->get_ExternalFeatureAdaptor;
+  say $extfeat_adaptor->dbc->dbname;
   my $fset_config      = $self->{static_config}{feature_sets}{'VISTA enhancer set'};
   my $feature_positive = $fset_config->{'feature_types'}{'VISTA Enhancer'};
   my $feature_negative = $fset_config->{'feature_types'}{'VISTA Target - Negative'};
@@ -148,6 +166,7 @@ sub parse_and_load{
                      homo_sapiens => 'hs',
                      mus_musculus => 'mm',
                     );
+  my $chroms = get_slices($self->slice_adaptor);
 
   my $species = Bio::EnsEMBL::Registry->get_alias($self->db->species);
 
@@ -164,7 +183,7 @@ sub parse_and_load{
   }
 
   $species = $id_prefixes{$species};
-
+  my $chroms = get_slices($self->slice_adaptor);
   ### Read file
   open (FILE, "<$file") || die "Can't open $file";
   my $cnt = 0;
@@ -191,50 +210,10 @@ sub parse_and_load{
     # parse co-ordinates & id
     my ($chr, $start, $end) = $coords =~ /chr([^:]+):(\d+)-(\d+)/o;
     my ($element_number) = $element =~ /\s*element\s*(\d+)/o;
-    
     my $display_label = $species.$element_number;
-    # seq_region ID and co-ordinates
-    my $slice_a = $self->slice_adaptor;
-    my $slice   = $slice_a->fetch_by_region( 'chromosome', $chr, $start, $end );
-    # This should work for Mouse, but not 
-    # my $slice   = $slice_a->fetch_by_region( 'chromosome', $chr, $start, $end, 1, $old_assembly );
-
-    if($new_assembly ){
-        my $tmp   = $slice->project('chromosome', $new_assembly);
-        # say $slice->name; 
-        # say $slice->coord_system->name;
-
-        my $ps    = shift(@{$tmp});
-        if(! defined $ps) {
-          warn "Could not project: $display_label";
-          $skipped++;
-          next;
-        }
-        my $slice_new = $ps->to_Slice;
-        # say "**** $old_assembly  ****";
-        # say $chr;
-        # say $start;
-        # say $end;
-        $start = $slice_new->start;
-        $end   = $slice_new->end;
-
-        # say "**** $new_assembly  ****";
-        # say $chr;
-        # say $start;
-        # say $end;
-        # say ' ' ;
-        # die;
-    }
-    # if ($old_assembly) {
-    #   $chr_slice = $self->slice_adaptor->fetch_by_region('chromosome', $chr, undef, undef, undef, $old_assembly);
-    # } else {
-    #   $chr_slice = $self->slice_adaptor->fetch_by_region('chromosome', $chr);
-    # }
-
-    # if (!$chr_slice) {
-    #   warn "Can't get slice for chromosme $chr\n";
-    #   next;
-    # }
+    my $slice = $chroms->{$chr};
+    die "$chr" if (not defined $slice);
+   
 
     my $seq_region_id = $slice->get_seq_region_id;
     throw("Can't get seq_region_id for chromosome $chr") if (!$seq_region_id);
