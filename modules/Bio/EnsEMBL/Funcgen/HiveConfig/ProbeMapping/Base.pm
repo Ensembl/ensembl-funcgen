@@ -27,7 +27,7 @@ sub default_options {
 
       tempdir          => '/nfs/nobackup/ensembl/mnuhn/array_mapping/temp',
       probe_directory  => '/nfs/production/panda/ensembl/funcgen/array_mapping/',
-      reg_conf         => '/homes/mnuhn/work_dir_probemapping/lib/ensembl-funcgen/registry.pm',
+      pipeline_name    => 'probemapping',
     };
 }
 
