@@ -17,8 +17,7 @@
 @desc   A column to distinguish between probe sets with the same name but on different array chips
 */
 
-ALTER TABLE probe ADD COLUMN probe_seq_id int(10) DEFAULT NULL;
-alter table probe add index `probe_seq_idx` (`probe_seq_id`); 
+alter table probe_set add column array_chip_id int(10) default null;
 
 --  Patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_j.sql|Added array_chip_id column to probe_set table');
