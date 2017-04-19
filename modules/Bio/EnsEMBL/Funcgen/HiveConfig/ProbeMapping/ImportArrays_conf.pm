@@ -118,8 +118,11 @@ sub pipeline_analyses {
           },
           -flow_into => {
 #             MAIN => 'parse_probe_fasta_file',
-            'MAIN->A' => 'parse_probe_fasta_file',
-            'A->MAIN' => 'import_arrays_done',
+#             'MAIN->A' => 'parse_probe_fasta_file',
+#             'A->MAIN' => 'import_arrays_done',
+
+            '2->A' => 'parse_probe_fasta_file',
+            'A->1' => 'import_arrays_done',
           },
         },
         {
@@ -169,22 +172,75 @@ sub pipeline_analyses {
             -logic_name  => 'import_arrays_done',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into => {
-                MAIN => 'set_probe_set_sizes'
+                MAIN => 'run_sql_to_fix_probe_set_issues',
             },
         },
-        {
-            -logic_name  => 'set_probe_set_sizes',
-            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
-            -analysis_capacity => 1,
-            -parameters => {
-              db_conn       => 'funcgen:#species#',
-              sql           => '
-                update probe_set join (
-                  select probe_set_id, count(*) as counted_size from probe group by probe_set_id
-                ) as count_them using (probe_set_id) set probe_set.size = counted_size;
-              ',
-            },
-        },
+
+  {
+      -logic_name  => 'run_sql_to_fix_probe_set_issues',
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+      -analysis_capacity => 1,
+      -parameters => {
+        db_conn       => 'funcgen:#species#',
+        sql           => [
+          'drop table if exists probe_set_fixed;',
+          '
+          create table probe_set_fixed (
+            probe_set_id     int(10) unsigned NOT NULL AUTO_INCREMENT,
+            probe_set_id_old int(10),
+            name             varchar(100) NOT NULL,
+            array_chip_id    int(10),
+            size             smallint(6) unsigned NOT NULL,
+            family           varchar(20) DEFAULT NULL,
+            PRIMARY KEY (probe_set_id),
+            KEY name (name)
+          );
+          ',
+          '   
+          insert into probe_set_fixed (probe_set_id_old, name, array_chip_id, size) 
+          select 
+            probe_set.probe_set_id as probe_set_id_old, 
+            probe_set.name, 
+            probe.array_chip_id, 
+            count(distinct probe.probe_id) as size
+          from 
+            probe join probe_set using (probe_set_id) 
+            group by 
+            probe_set.probe_set_id, 
+            probe_set.name, 
+            probe.array_chip_id
+          ;
+          ',
+          # Without the index, the next update can be very slow on human
+          'create index temp_probe_index on probe (probe_set_id,array_chip_id);',
+          '
+          update 
+            probe, probe_set_fixed 
+          set 
+            probe.probe_set_id = probe_set_fixed.probe_set_id
+          where
+            probe.probe_set_id=probe_set_fixed.probe_set_id_old
+            and probe.array_chip_id=probe_set_fixed.array_chip_id
+          ;
+          ',
+          'truncate probe_set;',
+          '
+          insert into probe_set (probe_set_id, name, array_chip_id, size) 
+          select 
+          probe_set_id, name, array_chip_id, size
+          from 
+          probe_set_fixed
+          ;
+          ',
+          'drop index temp_probe_index on probe;',
+          'drop table probe_set_fixed;'
+        ],
+      },
+  },
+
+
+
+
     ];
 }
 

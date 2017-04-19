@@ -128,7 +128,7 @@ sub cache_arrays_per_object {
       from
         probe
         join probe_set  using(probe_set_id)
-        join array_chip using(array_chip_id)
+        join array_chip on(array_chip.array_chip_id=probe.array_chip_id)
         join array      using(array_id)
       where
         array.name=?
