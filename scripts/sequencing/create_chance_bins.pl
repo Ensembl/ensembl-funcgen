@@ -80,4 +80,10 @@ while (my $current_line = <$IN>) {
   # Print last line
   print $OUT "$seq_region_name\t$bin_start\t$seq_region_length\n";
 }
+
+$OUT->close;
+
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_system_cmd );
+run_system_cmd("bedSort $outputfile $outputfile", undef, 1);
+
 $logger->finish_log;

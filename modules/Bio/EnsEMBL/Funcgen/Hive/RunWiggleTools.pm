@@ -18,6 +18,13 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_backtick_cmd );
 
 use base ('Bio::EnsEMBL::Funcgen::Hive::BaseDB');
 
+sub ResultSet {
+    my $self = shift;
+    $self->{'_ResultSet'} = shift if @_;
+    return $self->{'_ResultSet'};
+}
+
+
 sub fetch_input {
   my $self = shift;
   $self->SUPER::fetch_input;
@@ -25,14 +32,50 @@ sub fetch_input {
   if($self->get_param_method('set_type', 'silent')) {
   
     my $db            = $self->param_required('out_db');
-    my $type          = $self->param_required('type');
-    my $result_set_id = $self->param_required('result_set_id');
-    my $result_set_adaptor = $db->get_ResultSetAdaptor;
+    my $type          = $self->param('type');
+    my $result_set_id = $self->param('result_set_id');
     
+    my $result_set_adaptor = $db->get_ResultSetAdaptor;
     # HACK
     $result_set_adaptor->{file_type} = 'BAM';
-    my $result_set = $result_set_adaptor->fetch_by_dbID($result_set_id);
-  
+# Oh the tediousness of the parameters!
+# 
+# We need a result set.
+# 
+# Ideally we have a result set id:
+    
+    if (defined $result_set_id) {
+      my $result_set = $result_set_adaptor->fetch_by_dbID($result_set_id);
+      $self->ResultSet($result_set);
+    }
+
+# No? Then do we have at least a dbID in this weird parameter 
+# passing mess?
+
+    if (! defined $result_set_id && defined $self->param('dbID')) {
+
+# If is is a data set dbID, then we can fetch the result set id from that.
+
+      if ($self->param('set_type') eq 'DataSet') {
+      
+        my $dbID = $self->param('dbID');
+        my $dataset_adaptor = $db->get_DataSetAdaptor;
+        my $dataset = $dataset_adaptor->fetch_by_dbID($dbID);
+        
+        my $rsets = $dataset->get_supporting_sets('result');
+        if(scalar @$rsets != 1) {
+            throw("Expected 1 ResultSet, found:\n".$self->helper->dump(\@$rsets));
+        }
+        $self->ResultSet($rsets->[0]);
+
+#         use Data::Dumper;
+#         print Dumper($rsets->[0]);
+#         die;
+      
+      }
+    
+    }
+  my $result_set = $self->ResultSet;
 #     my $result_set = $self->fetch_Set_input('ResultSet');
     $self->helper->debug(1, "RunWiggleTools::fetch_input got ResultSet:\t".$result_set->name);
 

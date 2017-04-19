@@ -3,6 +3,40 @@ package Bio::EnsEMBL::Funcgen::Hive::CreateJobBatchUsingNewGroupingMechanism;
 use base Bio::EnsEMBL::Hive::Process;
 use strict;
 
+sub _fetch_names_of_unprocessed_experiments {
+
+  my $self = shift;
+  my $funcgen_dbc = shift;
+  
+  my $helper =
+    Bio::EnsEMBL::Utils::SqlHelper->new( -DB_CONNECTION => $funcgen_dbc );
+    
+  my $sql = '
+  select 
+    experiment.name as experiment_name
+  from 
+    experiment 
+    join feature_type using (feature_type_id) 
+    join input_subset using (experiment_id) 
+    join input_subset_tracking using (input_subset_id) 
+  where 
+    experiment.is_control!=1
+  and local_url not like "/lustre%"
+  and experiment.experiment_id not in (select distinct experiment_id from feature_set where experiment_id is not null)
+  order by
+    control_id
+  ;';
+
+  my $arr_ref = $helper->execute(
+    -SQL => $sql,
+    -CALLBACK => sub {
+      my $row = shift;
+      return $row->[0];
+    },
+  );
+  return $arr_ref;
+}
+
 =head2
 
 Builds something like this:
@@ -19,16 +53,27 @@ Builds something like this:
 sub run {
   my $self = shift; 
   
-  my $out_db_url      = $self->param('out_db_url');
+  # An array reference to experiment names.
   my $experiment_name = $self->param('experiment_name');
   my $species         = $self->param('species');
+  
+  if (ref $experiment_name ne 'ARRAY') {
+
+    $experiment_name = $self->_fetch_names_of_unprocessed_experiments(
+      Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen')->dbc
+    );
+
+  }
+#   print Dumper(ref $experiment_name ne 'ARRAY');
+#   print Dumper($experiment_name);
+#   die;
+
+  use Bio::EnsEMBL::Utils::Logger;
+  my $logger = Bio::EnsEMBL::Utils::Logger->new();
+  $logger->init_log;
 
   use Bio::EnsEMBL::Registry;
   use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
-  Bio::EnsEMBL::Registry->load_registry_from_url(
-    "${out_db_url}?group=funcgen&species=$species", 
-    1
-  );
   
   my $experiment_adaptor   = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'Experiment');
   my $input_subset_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'InputSubSet');
@@ -49,6 +94,19 @@ sub run {
 
   my %control_name_to_signal_name = build_control_name_to_signal_name_hash($experiment_adaptor, $experiment_name);
   
+  use Data::Dumper;
+  
+#   $logger->warning("\n-----------------------------------------------------------------\n");
+#   $logger->warning(Dumper(\%control_name_to_signal_name));
+#   $logger->warning("\n-----------------------------------------------------------------\n");
+  
+  if (values %control_name_to_signal_name == 0) {
+    $logger->warning("No signal experiments found for\n" . Dumper($experiment_name));
+  }
+  
+  my $number_of_experiment_groups_seeded = 0;
+  my $max_number_of_experiment_groups = 5;
+  
   # Iterator over all control experiment names, for every signal experiment, 
   # create an ArrayRef of input_subset_ids that belong to this experiment.
   #
@@ -56,7 +114,7 @@ sub run {
   #
   # This is the format that DefineResultSets expects.
   # 
-  foreach my $current_control (keys %control_name_to_signal_name) {
+  BATCH: foreach my $current_control (keys %control_name_to_signal_name) {
 
     my $signal = $control_name_to_signal_name{$current_control};
     my $batch_job_definition = {};
@@ -66,10 +124,22 @@ sub run {
     }
     $batch_job_definition->{'controls'} = $fetch_input_subset_ids_by_experiment_name->($current_control);
     
+#     print Dumper($batch_job_definition);
+#     die;
+    
     $self->dataflow_output_id({
       input_subset_ids => $batch_job_definition
     }, 2);
+    
+    $number_of_experiment_groups_seeded++;
+    
+    if ($number_of_experiment_groups_seeded == $max_number_of_experiment_groups) {
+      last BATCH;
+    }
   }
+  
+  $logger->finish_log;
+  
   return;
 }
 

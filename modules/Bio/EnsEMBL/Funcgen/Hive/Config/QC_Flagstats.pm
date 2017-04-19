@@ -31,7 +31,7 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
-use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
+use base ('Bio::EnsEMBL::Funcgen::Hive::Config::Base');
 
 sub pipeline_analyses {
     my ($self) = @_;

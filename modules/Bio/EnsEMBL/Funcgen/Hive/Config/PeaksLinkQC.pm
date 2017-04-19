@@ -31,60 +31,19 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
-use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
+use base ('Bio::EnsEMBL::Funcgen::Hive::Config::Base');
 
 sub pipeline_analyses {
     my ($self) = @_;
     return [
+      
       {
-	-logic_name    => 'CallDefaultPeaks',
-	-flow_into => {
-	  MAIN => {
-	    PeaksQc => INPUT_PLUS({
-		'source' => 'CallDefaultPeaks',
-		'peak_caller' => 'SWEmbl',
-	      } 
-	    ) 
-	  },
-	},
+        -logic_name    => 'done_peak_calling',
+        -flow_into => {
+          MAIN => 'start_qc_proportion_of_reads_in_peaks'
+        },
       },
-      {
-	-logic_name    => 'CallBroadPeaks',
-	-flow_into => {
-	  MAIN => {
-	    PeaksQc => INPUT_PLUS({
-		'source' => 'CallBroadPeaks',
-		'peak_caller' => 'CCAT',
-	      } 
-	    ) 
-	  },
-	},
-      },
-      {
-	-logic_name    => 'CallTightPeaks',
-	-flow_into => {
-	  MAIN => {
-	    PeaksQc => INPUT_PLUS({
-		'source' => 'CallTightPeaks',
-		'peak_caller' => 'SWEmbl',
-	      } 
-	    ) 
-	  },
-	},
-      },
-      {
-	-logic_name    => 'CallIDRPeaks',
-	-flow_into => {
-	  MAIN => {
-	    PeaksQc => INPUT_PLUS({
-		'source' => 'CallIDRPeaks',
-		'peak_caller' => 'SWEmbl',
-	      } 
-	    ) 
-	  },
-	},
-      },
-      {   -logic_name => 'PeaksQc',
+      {   -logic_name => 'start_qc_proportion_of_reads_in_peaks',
 	  -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       },
    ];

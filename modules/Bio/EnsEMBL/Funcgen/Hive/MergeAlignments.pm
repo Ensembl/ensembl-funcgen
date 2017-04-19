@@ -60,7 +60,7 @@ sub fetch_input {
     $self->bam_files([ map {($bam_file = $_) =~ s/\.fastq_([0-9]+)$/.$1.bam/o; $bam_file} @{$self->fastq_files} ]);
     
   } elsif(! $self->bam_files) {
-    $self->throw_no_retry('No bam_files or fastq_files have been defined');    
+    $self->throw_no_retry('No bam_files or fastq_files have been defined');
   }
   $self->get_param_method('run_controls',  'required');
   return;
@@ -84,11 +84,20 @@ sub run {
   
   $self->helper->debug(1, "Merging bams to:\t".$bam_file_with_unmapped_reads_and_duplicates); 
 
-  merge_bams({
-    input_bams => $self->bam_files, 
-    output_bam => $bam_file_with_unmapped_reads_and_duplicates,
-    debug => $self->debug,
-  });
+  # HACK: Only merge the files, if the merged file doesn't already exists.
+  #
+  # This can happen, because experiments can share a control. If one of these
+  # experiments was run, then the bam file for the control has already been
+  # generated.
+  #
+  if (! -e $bam_file_with_unmapped_reads_and_duplicates) {
+    merge_bams({
+      input_bams => $self->bam_files, 
+      output_bam => $bam_file_with_unmapped_reads_and_duplicates,
+      debug => $self->debug,
+    });
+  }
+  
 
 #   my $cmd=qq(java picard.cmdline.PicardCommandLine ValidateSamFile INPUT=$bam_file_with_unmapped_reads_and_duplicates);
 #   $self->hive_run_system_cmd($cmd);

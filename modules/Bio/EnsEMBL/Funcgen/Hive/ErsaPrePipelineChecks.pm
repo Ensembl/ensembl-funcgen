@@ -42,14 +42,14 @@ sub run {
     my $local_urls = $sth->fetchall_hashref('local_url');
     my @input_subset_files = keys %$local_urls;
     
-    foreach my $current_file (@input_subset_files) {
-      if (! -e $current_file) {
-	push @error_msg, 
-	  "The file $current_file is specified in the input_subset ("
-	  . $local_urls->{$current_file}->{input_subset_id}
-	  . ") table, but it doesn't exist!"
-      }
-    }
+#     foreach my $current_file (@input_subset_files) {
+#       if (! -e $current_file) {
+# 	push @error_msg, 
+# 	  "The file $current_file is specified in the input_subset ("
+# 	  . $local_urls->{$current_file}->{input_subset_id}
+# 	  . ") table, but it doesn't exist!"
+#       }
+#     }
     
     # Check for orphan result_set_inputs
     

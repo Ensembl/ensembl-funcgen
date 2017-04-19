@@ -31,18 +31,18 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
-use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
+use base ('Bio::EnsEMBL::Funcgen::Hive::Config::Base');
 
 sub pipeline_analyses {
     my ($self) = @_;
     return [
       {
-	-logic_name => 'MergeControlAlignments',
+	-logic_name => 'done_align_controls',
 	-flow_into => {
 	  MAIN => {
 	    BamFileQc => INPUT_PLUS({
 		'is_control' => 1,
-		'source' => 'MergeControlAlignments',
+		'source' => 'done_align_controls',
 		'has_duplicates' => 'yes',
 		'has_unmapped_reads' => 'yes',
 		'bam_file_for_qc' => '#bam_file_with_unmapped_reads_and_duplicates#',

@@ -683,6 +683,32 @@ sub compare_to {
   return $self->SUPER::compare_to($obj, $shallow, $scl_methods, $obj_methods);
 }
 
+sub get_Experiment {
+  my $self = shift;
+  my $experiment_id = $self->experiment_id;
+  my $experiment = $self->adaptor->db->get_ExperimentAdaptor->fetch_by_dbID($experiment_id);
+  return $experiment;
+}
+
+sub get_ControlResultSet {
+  my $self = shift;
+  
+  my $experiment = $self->get_Experiment;
+  my $control_experiment = $experiment->get_control;
+  
+  my $control_result_set = $self->adaptor->_fetch_all_by_ResultSetExperiment($control_experiment);
+  
+  if (ref $control_result_set ne 'ARRAY') {
+    die('Type error!');
+  }
+  if (scalar @$control_result_set == 0) {
+    return undef;
+  }
+  if (scalar @$control_result_set > 1) {
+    die('More than one control!');
+  }
+  return $control_result_set->[0];
+}
 
 =head2 experiment
 

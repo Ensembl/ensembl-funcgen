@@ -37,63 +37,98 @@ sub pipeline_analyses {
     @{$self->SUPER::pipeline_analyses}, #To pick up BaseSequenceAnalysis-DefineMergedOutputSet
 
     {
-	-logic_name => 'PrePipelineChecks',
+	-logic_name => 'pre_pipeline_checks',
 	-input_ids  => [ {} ],
 	-module     => 'Bio::EnsEMBL::Funcgen::Hive::ErsaPrePipelineChecks',
     },
-    {   -logic_name => 'JobPool',
-	-module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-	-wait_for    => 'JobPool',
-	-flow_into => {
-	  MAIN => 'TokenLimitedJobFactory',
-	},
-    },
-    {   -logic_name => 'TokenLimitedJobFactory',
-	-module     => 'Bio::EnsEMBL::Funcgen::Hive::TokenLimitedJobFactory',
-	-flow_into => {
-	  '2->A' => 'Dummy',
-	  'A->1' => 'TokenLimitedJobFactory',
-	},
-    },
+#     {
+#       -logic_name => 'fetch_unprocessed_experiments',
+#       -parameters => {
+#         inputquery => '
+# SET SESSION group_concat_max_len = 1000000; 
+# select 
+#   group_concat(experiment.name) as experiment_name
+# from 
+#   experiment 
+#   join feature_type using (feature_type_id) 
+#   join input_subset using (experiment_id) 
+#   join input_subset_tracking using (input_subset_id) 
+# where 
+#   experiment.is_control!=1
+# and local_url not like "/lustre%"
+# and experiment.experiment_id not in (select distinct experiment_id from feature_set where experiment_id is not null)
+# order by
+#   control_id
+# ;
+#         ',
+#         db_conn => 'funcgen:#species#',
+#       },
+#       -input_ids  => [ {} ],
+#       -wait_for => 'pre_pipeline_checks',
+#       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
+#       -flow_into => {
+#         2 => 'create_job_batches',
+#       },
+# 
+#     },
+#     {   -logic_name => 'JobPool',
+# 	-module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+# 	-wait_for    => 'JobPool',
+# 	-flow_into => {
+# 	  MAIN => 'TokenLimitedJobFactory',
+# 	},
+#     },
+#     {   -logic_name => 'TokenLimitedJobFactory',
+# 	-module     => 'Bio::EnsEMBL::Funcgen::Hive::TokenLimitedJobFactory',
+# 	-flow_into => {
+# 	  '2->A' => 'Dummy',
+# 	  'A->1' => 'TokenLimitedJobFactory',
+# 	},
+#     },
+#     {
+#       -logic_name => 'Dummy',
+#       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+# 	-flow_into => {
+# 	  MAIN => 'create_job_batches',
+# 	},
+#     },
     {
-      -logic_name => 'Dummy',
-      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-	-flow_into => {
-	  MAIN => WHEN(
-	    '#identify_controls# == 1'  => { 'IdentifyAlignInputSubsets' => INPUT_PLUS() },
-	    ELSE { 'CreateJobBatchUsingNewGroupingMechanism' => INPUT_PLUS() },
-	  ),
-	},
-    },
-    {
-      -logic_name => 'CreateJobBatchUsingNewGroupingMechanism',
+      -logic_name => 'create_job_batches',
+      -input_ids  => [ {} ],
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::CreateJobBatchUsingNewGroupingMechanism',
-      -parameters => {
-      },
-      -wait_for => 'PrePipelineChecks',
-      -flow_into => {
-	'2->A' => 'DefineResultSets',
+      -wait_for   => 'pre_pipeline_checks',
+      -flow_into  => {
+	'2->A' => 'start_align_controls',
 	'A->2' => 'DeleteFilesFromJobFan',
       },
     },
-    {
-      -logic_name => 'IdentifyAlignInputSubsets',
-      -module     => 'Bio::EnsEMBL::Funcgen::Hive::IdentifySetInputs',
-      -parameters => {
-      set_type                     => 'InputSubset',
-	feature_set_analysis_type    => 'peak',
-	default_feature_set_analyses => $self->o('default_peak_analyses'),
-	dataflow_param_names => ['no_idr'], 
-      },
-      -wait_for => 'PrePipelineChecks',
-      -flow_into => {
-	'2->A' => 'DefineResultSets',
-	'A->4' => 'DeleteFilesFromJobFan',
-      },
-    },
+#     {
+#       -logic_name => 'IdentifyAlignInputSubsets',
+#       -module     => 'Bio::EnsEMBL::Funcgen::Hive::IdentifySetInputs',
+#       -parameters => {
+#       set_type                     => 'InputSubset',
+# 	feature_set_analysis_type    => 'peak',
+# 	default_feature_set_analyses => $self->o('default_peak_analyses'),
+# 	dataflow_param_names => ['no_idr'], 
+#       },
+#       -wait_for => 'pre_pipeline_checks',
+#       -flow_into => {
+# 	'2->A' => 'DefineResultSets',
+# 	'A->4' => 'DeleteFilesFromJobFan',
+#       },
+#     },
     {
       -logic_name => 'DeleteFilesFromJobFan',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::ErsaCleanup',
+    },
+    {
+      -logic_name => 'start_align_controls',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -flow_into => {
+#         'MAIN->A' => 'DefineResultSets',
+#         'A->MAIN' => 'done_align_controls',
+        MAIN => 'DefineResultSets',
+      },
     },
     {
      -logic_name => 'DefineResultSets',
@@ -116,12 +151,19 @@ sub pipeline_analyses {
 	# HACK the "and result_set.name like concat(experiment.name, "%")" bit is necessary, because there can be more than on experiment with the same feature type and epigenome, so to meet deadline using the fact that the names match up by convention. But this has to be set properly.
 	#
 	sql => qq(
-	  update result_set, epigenome, experiment 
-	  set result_set.experiment_id = experiment.experiment_id
-	  where epigenome.epigenome_id=experiment.epigenome_id and epigenome.epigenome_id=result_set.epigenome_id and experiment.feature_type_id=result_set.feature_type_id and result_set.name like concat(experiment.name, "%")
-	  and result_set_id = #dbID#
+          update 
+            result_set, epigenome, experiment 
+          set 
+            result_set.experiment_id = experiment.experiment_id
+          where 
+            epigenome.epigenome_id=experiment.epigenome_id 
+            and epigenome.epigenome_id=result_set.epigenome_id 
+            and experiment.feature_type_id=result_set.feature_type_id 
+            and result_set.name like concat(experiment.name, "%")
+            and result_set_id = #dbID#
 	  ),
-	  db_conn => '#out_db_url#'
+# 	  db_conn => '#out_db_url#'
+	  db_conn       => 'funcgen:#species#',
 	},
 #       -meadow     => 'LOCAL',
       -analysis_capacity => 1,
@@ -155,6 +197,37 @@ sub pipeline_analyses {
 	},
       -rc_name => '10gb_2cpu'
      },
+    {
+      -logic_name => 'AlignChunksFromControls',
+      -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunAligner',
+      -rc_name => 'normal_10gb'
+     },
+    {
+      -logic_name => 'MergeControlAlignments',
+     -module     => 'Bio::EnsEMBL::Funcgen::Hive::MergeAlignments',
+     -parameters => {
+        run_controls => 1,
+     },
+     -flow_into => {
+          MAIN => 'done_align_controls',
+       },
+     -rc_name => 'normal_monitored_2GB',
+    },
+    {
+      -logic_name => 'done_align_controls',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+     -flow_into => {
+          MAIN => {
+            'RemoveDuplicateControlAlignments' => undef,
+            ':////accu?file_to_delete=[]' => { 
+              'file_to_delete' => '#bam_file_with_unmapped_reads_and_duplicates#'
+            },
+#           # Create bigwigs for controls
+#           'write_bigwig' => undef,
+          },
+       },
+    },
+
      {
       -logic_name => 'SplitFastqsFromReplicatedExperiments',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::PreprocessFastqs',
@@ -163,11 +236,6 @@ sub pipeline_analyses {
 	'A->3' => 'MergeReplicateAlignments' ,
 	},
       -rc_name => '10gb_2cpu'
-     },
-    {
-      -logic_name => 'AlignChunksFromControls',
-      -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunAligner',
-      -rc_name => 'normal_10gb'
      },
     {
     -logic_name => 'AlignChunksFromMergedFastqs',
@@ -179,24 +247,6 @@ sub pipeline_analyses {
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunAligner',
       -rc_name => 'normal_10gb'
      },
-    {
-      -logic_name => 'MergeControlAlignments',
-     -module     => 'Bio::EnsEMBL::Funcgen::Hive::MergeAlignments',
-     -parameters => {
-	run_controls => 1,
-     },
-     -flow_into => {
-	  MAIN => {
-	    'RemoveDuplicateControlAlignments' => undef,
-	    ':////accu?file_to_delete=[]' => { 
-	      'file_to_delete' => '#bam_file_with_unmapped_reads_and_duplicates#'
-	    },
-# 	    # Create bigwigs for controls
-#  	    'WriteBigWig' => undef,
-	  },
-       },
-     -rc_name => 'normal_monitored_2GB',
-    },
     {
      -logic_name => 'RemoveDuplicateControlAlignments',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::RemoveDuplicateAlignments',
@@ -213,7 +263,7 @@ sub pipeline_analyses {
      -flow_into => {
          MAIN => {
           'JobFactorySignalProcessing' => undef,
-          'WriteBigWig' => INPUT_PLUS({
+          'write_bigwig' => INPUT_PLUS({
             type          => 'control',
             result_set_id => '#dbID#'
           })
@@ -272,7 +322,7 @@ sub pipeline_analyses {
 	  MAIN => [
 	    'JobFactoryDefineMergedDataSet',
 # 	    # Create bigwigs for replicates
-# 	    WHEN('1' => { 'WriteBigWig' => INPUT_PLUS({ type => 'replicate' })})
+# 	    WHEN('1' => { 'write_bigwig' => INPUT_PLUS({ type => 'replicate' })})
 	  ]
        },
 #      -rc_name => '64GB_3cpu',
@@ -295,7 +345,7 @@ sub pipeline_analyses {
 	},
 # 	# Create bigwigs for technical replicates
 # 	MAIN => WHEN(
-# 	  '1'  => { 'WriteBigWig' => INPUT_PLUS({ type => 'technical replicate' }) },
+# 	  '1'  => { 'write_bigwig' => INPUT_PLUS({ type => 'technical replicate' }) },
 # 	),
      },
      -rc_name => 'normal_monitored_2GB',
@@ -310,22 +360,22 @@ sub pipeline_analyses {
 	  MAIN => [
             'JobFactoryPermissivePeakCalling',
             # Create bigwigs for replicates
-#             WHEN('1' => { 'WriteBigWig' => INPUT_PLUS({ type => 'replicate' })}),
+#             WHEN('1' => { 'write_bigwig' => INPUT_PLUS({ type => 'replicate' })}),
 	  ],
        },
 #      -rc_name => '64GB_3cpu',
       -rc_name => 'normal_4GB_2cpu',
     },
     {
-     -logic_name => 'WriteBigWig',
+     -logic_name => 'write_bigwig',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunWiggleTools',
      -rc_name    => 'normal_30GB_2cpu',
      -flow_into => {
-	MEMLIMIT => 'WriteBigWig64GB',
+	MEMLIMIT => 'write_bigwig_64GB',
       }
     },
     {
-     -logic_name => 'WriteBigWig64GB',
+     -logic_name => 'write_bigwig_64GB',
      -module     => 'Bio::EnsEMBL::Funcgen::Hive::RunWiggleTools',
      -rc_name    => '64GB_3cpu',
     },

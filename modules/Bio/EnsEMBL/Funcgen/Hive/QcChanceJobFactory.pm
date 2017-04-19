@@ -8,6 +8,11 @@ use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 sub run {
   my $self = shift;
   
+  my $db = $self->param_required('out_db');
+  
+  my $result_set_adaptor = $db->get_ResultSetAdaptor;
+  $result_set_adaptor->{file_type} = 'BAM';
+  
   my $result_set;  
   my $set_type = $self->param_required('set_type');
   if ($set_type eq 'ResultSet') {
@@ -29,15 +34,12 @@ sub create_input_id {
   my $self       = shift;
   my $result_set = shift;
   
-  my $result_set_id = $result_set->dbID;
-
-  print "\n\nGetting prefix for signal\n\n";
-  my $align_prefix   = $self->get_alignment_path_prefix_by_ResultSet($result_set, undef, 1);#validate aligned flag 
-  print "\n\nGetting prefix for control\n\n";
-  my $control_prefix = $self->get_alignment_path_prefix_by_ResultSet($result_set, 1, 1);#and control flag 
-   
-  my $signal_bam_file  = $align_prefix   . '.bam';
-  my $control_bam_file = $control_prefix . '.bam';
+  my $control_result_set = $result_set->get_ControlResultSet;
+  
+  my $db_output_dir = $self->db_output_dir;
+  
+  my $signal_bam_file  = $db_output_dir . '/' . $result_set->dbfile_path;
+  my $control_bam_file = $db_output_dir . '/' . $control_result_set->dbfile_path;
   
   if (! -e $signal_bam_file) {
     die("$signal_bam_file doesn't exist!");
@@ -54,6 +56,7 @@ sub create_input_id {
   
   my $chance_bin_file = 'chance_bin_file_for_'.$epigenome_production_name.'_'.$epigenome_gender.'.bed';
 
+  my $result_set_id = $result_set->dbID;
   my $temp_dir = "$work_dir/$epigenome_production_name/$result_set_id";
   
   use File::Basename;

@@ -154,18 +154,25 @@ sub get_column_headers {
 sub get_big_sql_statement {
 
   return <<SQL
-    select 
-      experiment.name as accession, 
+select 
+      CASE 
+          WHEN experiment.is_control=1 THEN experiment.name
+          ELSE input_subset.name
+      END,
       epigenome.name, 
       feature_type.name, 
       input_subset.biological_replicate, 
       input_subset.technical_replicate,
-      epigenome.gender,
+      CASE 
+          WHEN epigenome.gender is null THEN "unknown"
+          ELSE epigenome.gender
+      END,
       md5sum,
       local_url,
       analysis.logic_name,
-      group_concat(xref.dbprimary_acc),
       experimental_group.name,
+      concat(linkage_annotation, '-', group_concat(xref.dbprimary_acc)),
+      '-',
       '-',
       control.name,
       input_subset_tracking.download_url,

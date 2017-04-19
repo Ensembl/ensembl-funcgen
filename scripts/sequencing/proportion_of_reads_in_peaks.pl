@@ -95,6 +95,7 @@ my $bed_file;
 my $peak_caller;
 my $user;
 my $pass;
+my $port;
 my $host;
 my $dbname;
 my $feature_set_id;
@@ -112,6 +113,7 @@ my %config_hash = (
   'dry_run'         => \$dry_run,
   'user'            => \$user,
   'pass'            => \$pass,
+  'port'            => \$port,
   'host'            => \$host,
   'dbname'          => \$dbname,
 );
@@ -128,6 +130,7 @@ my $result = GetOptions(
   'dry_run',
   'user=s',
   'pass=s',
+  'port=s',
   'host=s',
   'dbname=s',
 );
@@ -164,6 +167,7 @@ my @tracking_db_connection_details = (
     -user     => $user,
     -pass     => $pass,
     -host     => $host,
+    -port     => $port,
     -dbname   => $dbname,
 );
 my $logic_name = 'Proportion of reads in peaks';

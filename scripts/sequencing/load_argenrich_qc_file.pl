@@ -77,6 +77,7 @@ my $dry_run;
 my $user;
 my $pass;
 my $host;
+my $port;
 my $dbname;
 my $signal_result_set_id;
 my $work_dir;
@@ -88,6 +89,7 @@ my %config_hash = (
   'dry_run'         => \$dry_run,
   'user'            => \$user,
   'pass'            => \$pass,
+  'port'            => \$port,
   'host'            => \$host,
   'dbname'          => \$dbname,
   'work_dir'        => \$work_dir,
@@ -101,6 +103,7 @@ my $result = GetOptions(
   'dry_run',
   'user=s',
   'pass=s',
+  'port=s',
   'host=s',
   'dbname=s',
   'work_dir=s',
@@ -116,6 +119,7 @@ my @tracking_db_connection_details = (
   -user     => $user,
   -pass     => $pass,
   -host     => $host,
+  -port     => $port,
   -dbname   => $dbname,
 );
 my $dbc = Bio::EnsEMBL::DBSQL::DBConnection->new(@tracking_db_connection_details);

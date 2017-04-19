@@ -31,22 +31,16 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
-use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
+use base ('Bio::EnsEMBL::Funcgen::Hive::Config::Base');
 
 sub pipeline_analyses {
     my ($self) = @_;
     return [
-      {   -logic_name => 'PeaksQc',
-	  -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-	  -flow_into => {
-	    MAIN => 'qc_proportion_of_reads_in_peaks_start'
-	  },
-      },
-      {   -logic_name => 'qc_proportion_of_reads_in_peaks_start',
+      {   -logic_name => 'start_qc_proportion_of_reads_in_peaks',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
           -flow_into => { 
             'MAIN->A' => 'QcProportionOfReadsInPeaksJobFactory',
-            'A->MAIN' => 'qc_proportion_of_reads_in_peaks_done',
+            'A->MAIN' => 'done_qc_proportion_of_reads_in_peaks',
           },
       },
       {   -logic_name => 'QcProportionOfReadsInPeaksJobFactory',
@@ -64,14 +58,15 @@ sub pipeline_analyses {
 	      . qq( --peak_caller #peak_caller#          )
 	      . qq( --feature_set_id #feature_set_id#    )
 	      . qq( --user   #tracking_db_user#   )
-	      . qq( --pass   #tracking_db_pass#   )
+              . qq( --pass   #tracking_db_pass#   )
+              . qq( --port   #tracking_db_port#   )
 	      . qq( --host   #tracking_db_host#   )
 	      . qq( --dbname #tracking_db_name#   )
 	      . qq( --bam_file #bam_file#         )
 	  },
 	  -rc_name => 'normal_2GB',
       },
-      {   -logic_name => 'qc_proportion_of_reads_in_peaks_done',
+      {   -logic_name => 'done_qc_proportion_of_reads_in_peaks',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       },
     ];

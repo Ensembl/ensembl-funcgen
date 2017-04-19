@@ -59,6 +59,7 @@ my $dry_run;
 my $user;
 my $pass;
 my $host;
+my $port;
 my $dbname;
 my $work_dir;
 my $bam_file;
@@ -69,6 +70,7 @@ my %config_hash = (
   'dry_run'         => \$dry_run,
   'user'            => \$user,
   'pass'            => \$pass,
+  'port'            => \$port,
   'host'            => \$host,
   'dbname'          => \$dbname,
   'work_dir'        => \$work_dir,
@@ -82,6 +84,7 @@ my $result = GetOptions(
   'dry_run',
   'user=s',
   'pass=s',
+  'port=s',
   'host=s',
   'dbname=s',
   'work_dir=s',
@@ -101,9 +104,11 @@ if (! $result_set_id) {
 my @tracking_db_connection_details = (
     -user     => $user,
     -pass     => $pass,
+    -port     => $port,
     -host     => $host,
     -dbname   => $dbname,
 );
+
 my $logic_name = 'phantom peak quality tools';
 my @phantom_peak_analysis_details = (
         -logic_name      => $logic_name,

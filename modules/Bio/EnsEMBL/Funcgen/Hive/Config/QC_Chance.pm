@@ -32,13 +32,13 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
-use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
+use base ('Bio::EnsEMBL::Funcgen::Hive::Config::Base');
 
 sub pipeline_analyses {
     my ($self) = @_;
     return [
 	{
-	    -logic_name => 'PreprocessAlignments',
+	    -logic_name => 'index_bam_files',
 	    -module     => 'Bio::EnsEMBL::Funcgen::Hive::CollectionWriter',
 	    -flow_into => {
 		2  => 'qc_chance_start',
@@ -122,6 +122,7 @@ sub pipeline_analyses {
 		  . qq( inputsz=#expr( #read_count#->{"control"}           )expr# )
 		  . qq(      ip=#tempdir#/#expr( #file#->{"signal"}        )expr# )
 		  . qq(   input=#tempdir#/#expr( #file#->{"control"}       )expr# )
+		  . qq(    bins=#tempdir#/#chance_bin_file#                       )
 		  
 		  # This ends up in #tempdir#, because of the parameter 
 		  # "outdir=#tempdir#" set further above.
@@ -138,7 +139,8 @@ sub pipeline_analyses {
 		  . qq( --argenrich_file        #tempdir#/#argenrich_outfile#     )
 		  . qq( --signal_result_set_id  #signal_result_set_id#            )
 		  . qq( --user   #tracking_db_user#   )
-		  . qq( --pass   #tracking_db_pass#   )
+                  . qq( --pass   #tracking_db_pass#   )
+                  . qq( --port   #tracking_db_port#   )
 		  . qq( --host   #tracking_db_host#   )
 		  . qq( --dbname #tracking_db_name#   )
 		  . qq( --work_dir #tempdir#  )

@@ -93,14 +93,15 @@ sub pipeline_analyses {
 	    and supporting_set.type="result" 
 	  and data_set.data_set_id = #dbID#
 	  ),
-	  db_conn => '#out_db_url#',
+# 	  db_conn => '#out_db_url#',
+	  db_conn       => 'funcgen:#species#',
 	},
       -flow_into => {
-	1 => 'PreprocessAlignments',
+	1 => 'index_bam_files',
       },
     },
     {
-      -logic_name => 'PreprocessAlignments',
+      -logic_name => 'index_bam_files',
       # This is basically making sure the input file is sorted wrt genomic locations
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::CollectionWriter',
       -parameters => {
