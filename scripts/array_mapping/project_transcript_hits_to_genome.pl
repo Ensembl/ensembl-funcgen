@@ -32,19 +32,27 @@ perl scripts/array_mapping/project_transcript_hits_to_genome.pl \
 my $probe_features;
 my $registry;
 my $species;
+my $output_file;
 
 GetOptions (
    'probe_features=s' => \$probe_features,
    'registry=s'       => \$registry,
    'species=s'        => \$species,
+   'output_file=s'    => \$output_file,
 );
 
 if (! -e $probe_features) {
   die("Can't find probe file ${probe_features}!");
 }
+if (! $output_file) {
+  die("output_file is a mandatory parameter!");
+}
+
+open my $output_fh, '>', $output_file || die("Couldn't open file ${output_file}!");
 
 use Bio::EnsEMBL::Registry;
 Bio::EnsEMBL::Registry->load_all($registry);
+
 
 my $probe_feature_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'probefeature');
 my $analysis_adaptor      = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'analysis');
@@ -178,7 +186,7 @@ my $map_transcript_to_genome = sub {
 
   if (! exists $gene_hits{$gene_hit_key}) {
     $gene_hits{$gene_hit_key} = undef;
-    print Dumper($projected_hit);
+    $output_fh->print(Dumper($projected_hit));
   }
 };
 
@@ -237,6 +245,8 @@ $parser->parse({
   data_dumper_file => $probe_features,
   call_back        => $map_transcript_to_genome,
 });
+
+$output_fh->close;
 
 =head2 project_hit_to_genomic_coordinates
 

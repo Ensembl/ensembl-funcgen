@@ -61,7 +61,7 @@ sub pipeline_analyses {
                   --probe_features #chunk_name#_#type#.probe_features.txt \
                   --registry #reg_conf# \
                   --species #species# \
-                  > #chunk_name#_#type#.probe_features_projected_from_transcript_coords.txt
+                  --output_file #chunk_name#_#type#.probe_features_projected_from_transcript_coords.txt
               '
           },
           -flow_into => {
