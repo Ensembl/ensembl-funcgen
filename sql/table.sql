@@ -470,6 +470,16 @@ CREATE TABLE `probe_feature` (
   KEY `seq_region_probe_probe_feature_idx` (`seq_region_id`,`seq_region_start`,`seq_region_end`,`probe_id`,`probe_feature_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+DROP TABLE IF EXISTS `probe_feature_transcript`;
+CREATE TABLE `probe_feature_transcript` (
+  `probe_feature_transcript_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `probe_feature_id` int(10) unsigned DEFAULT NULL,
+  `stable_id` varchar(128) DEFAULT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`probe_feature_transcript_id`),
+  KEY `probe_feature_transcript_id_idx` (`probe_feature_transcript_id`),
+  KEY `probe_feature_id_idx` (`probe_feature_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
 @table  feature_type
@@ -953,13 +963,16 @@ CREATE TABLE `array` (
   `description` varchar(255) DEFAULT NULL,
   `type` varchar(20) DEFAULT NULL,
   `class` varchar(20) DEFAULT NULL,
+  `is_probeset_array` tinyint(1) NOT NULL DEFAULT '0',
+  `is_linked_array` tinyint(1) NOT NULL DEFAULT '0',
+  `has_sense_interrogation` tinyint(1) NOT NULL DEFAULT '0',
   PRIMARY KEY (`array_id`),
   UNIQUE KEY `vendor_name_idx` (`vendor`,`name`),
   UNIQUE KEY `class_name_idx` (`class`,`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
--- Could clean up/rename format, type and class
 
+-- Could clean up/rename format, type and class
 
 /**
 @table  array_chip
@@ -1002,6 +1015,7 @@ CREATE TABLE `probe_set` (
   `name` varchar(100) NOT NULL,
   `size` smallint(6) unsigned NOT NULL,
   `family` varchar(20) DEFAULT NULL,
+  `array_chip_id` int(10) DEFAULT NULL,
   PRIMARY KEY (`probe_set_id`),
   KEY `name` (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -1009,6 +1023,15 @@ CREATE TABLE `probe_set` (
 -- Clashing names may(unlikely) exist between array vendors, this is currently allowed
 -- and handled with the API via the probe associations
 
+DROP TABLE IF EXISTS `probe_set_transcript`;
+CREATE TABLE `probe_set_transcript` (
+  `probe_set_transcript_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `probe_set_id` int(10) unsigned NOT NULL,
+  `stable_id` varchar(128) NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`probe_set_transcript_id`),
+  KEY `probe_set_transcript_id_idx` (`probe_set_transcript_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
 @table  probe
@@ -1036,10 +1059,32 @@ CREATE TABLE `probe` (
   `array_chip_id` int(10) unsigned NOT NULL,
   `class` varchar(20) DEFAULT NULL,
   `description` varchar(255) DEFAULT NULL,
+  `probe_seq_id` int(10) DEFAULT NULL,
   PRIMARY KEY (`probe_id`,`name`,`array_chip_id`),
   KEY `probe_set_idx` (`probe_set_id`),
   KEY `array_chip_idx` (`array_chip_id`),
-  KEY `name_idx` (`name`)
+  KEY `name_idx` (`name`),
+  KEY `probe_seq_idx` (`probe_seq_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+DROP TABLE IF EXISTS `probe_seq`;
+CREATE TABLE `probe_seq` (
+  `probe_seq_id` int(10) NOT NULL AUTO_INCREMENT,
+  `sequence` text NOT NULL,
+  `sequence_upper` text NOT NULL,
+  `sequence_upper_sha1` char(40) NOT NULL,
+  PRIMARY KEY (`probe_seq_id`),
+  UNIQUE KEY `sequence_upper_sha1` (`sequence_upper_sha1`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+DROP TABLE IF EXISTS `probe_transcript`;
+CREATE TABLE `probe_transcript` (
+  `probe_transcript_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `probe_id` int(10) unsigned NOT NULL,
+  `stable_id` varchar(128) NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  PRIMARY KEY (`probe_transcript_id`),
+  KEY `probe_transcript_id` (`probe_transcript_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
@@ -1326,12 +1371,21 @@ CREATE TABLE `meta` (
 
 -- Add necessary meta values
 INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '88');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '89');
 
 -- Update and remove these for each release to avoid erroneous patching
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_87_88_a.sql|schema_version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_87_88_b.sql|seq_region_name_255');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_87_88_c.sql|sample_regulatory_feature_id field for regulatory build');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_b.sql|Created probe_seq table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_c.sql|created probe_feature_transcript table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_d.sql|created probe_transcript table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_e.sql|created probeset_transcript table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_f.sql|Removed probe features from object_xref and xref table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_g.sql|Removed probe mappings from the xref tables');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_h.sql|Removed probe set mappings from the xref tables');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_i.sql|New columns for array table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_j.sql|Added array_chip_id column to probe_set table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_88_89_k.sql|Added probe_seq_id column to probe table');
+
 
 /**
 @table meta_coord
@@ -1753,6 +1807,7 @@ CREATE TABLE `seq_region` (
 -- Name is only required to enable us to add new seq_regions to the correct seq_region_id
 -- It will never be used to retrieve a slice as we do that via the core DB
 -- Usage: Pull back seq_region_id based schema_build and core_seq_region_id
+
 
 
 
