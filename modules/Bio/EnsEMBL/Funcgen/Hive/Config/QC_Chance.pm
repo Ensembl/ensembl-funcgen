@@ -89,8 +89,7 @@ sub pipeline_analyses {
         {   -logic_name => 'CpToTemp',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters => { 
-		  #cmd => qq!cp #sourcedir#/#file# #tempdir#!,
-		  cmd => qq!ln -s #sourcedir#/#file# #tempdir#!,
+                  cmd => qq!rm -f #tempdir#/#file# ; ln -s #sourcedir#/#file# #tempdir#!,
             },
             -flow_into => { MAIN => 'IndexBam' },
         },
