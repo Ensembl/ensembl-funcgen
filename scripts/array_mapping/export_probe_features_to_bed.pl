@@ -50,11 +50,15 @@ my $sql = '
       probe_set.name,
       array.name,
       array.vendor,
-      array.class
+      array.class,
+      is_probeset_array,
+      is_linked_array,
+      has_sense_interrogation
     from
-      probe_feature join probe using(probe_id)
+      probe_feature 
+      join probe using(probe_id)
       left join probe_set using(probe_set_id)
-      join array_chip using(array_chip_id)
+      join array_chip on(array_chip.array_chip_id=probe.array_chip_id)
       join array using(array_id)
       join seq_region using(seq_region_id)
   ';

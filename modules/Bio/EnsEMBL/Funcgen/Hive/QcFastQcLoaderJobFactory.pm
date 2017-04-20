@@ -13,29 +13,33 @@ use strict;
 
 use base qw( Bio::EnsEMBL::Funcgen::Hive::BaseDB );
 
+use Bio::EnsEMBL::Hive::Utils;
+Bio::EnsEMBL::Hive::Utils->import(qw/stringify destringify/);
+
 sub run {
   my $self = shift;
   
   my $tempdir = $self->param_required('tempdir');
   
-#   my $zip_file = `find $tempdir -maxdepth 2 -mindepth 2 -type f -name "*.zip"`;
-#   chomp($zip_file);
-#   die("Can't find zip file $zip_file!") unless(-e $zip_file);
-#   
-#   system("unzip $zip_file");
+  my $fastqc_summary_files = `find $tempdir -maxdepth 2 -mindepth 2 -type f -name summary.txt`;
+  chomp($fastqc_summary_files);
   
-  my $fastqc_summary_file = `find $tempdir -maxdepth 2 -mindepth 2 -type f -name summary.txt`;
-  chomp($fastqc_summary_file);
-  die("Can't find file $fastqc_summary_file!") unless(-e $fastqc_summary_file);
+  if ($fastqc_summary_files eq '') {
+    die("Couldn't find summary file in ${tempdir}!");
+  }
   
-  use Bio::EnsEMBL::Hive::Utils;
-  Bio::EnsEMBL::Hive::Utils->import(qw/stringify destringify/);
+  my @fastqc_summary_file = split "\n", $fastqc_summary_files;
   
   my $input_id = destringify($self->input_id);
   
-  $input_id->{fastqc_summary_file} = $fastqc_summary_file;
+  foreach my $current_fastqc_summary_file (@fastqc_summary_file) {
   
-  $self->dataflow_output_id($input_id, 2);
+    if (! -e $current_fastqc_summary_file) {
+      die("Can't find file ${current_fastqc_summary_file}!");
+    }
+    $input_id->{fastqc_summary_file} = $current_fastqc_summary_file;
+    $self->dataflow_output_id($input_id, 2);
+  }
   return;
 }
 

@@ -59,7 +59,6 @@ use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor; #DBI sql_types import
 
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor);
 
-
 =head2 fetch_all_by_feature_class
 
   Arg [1]    : String - feature class i.e. 'result' or 'dna_methylation'.
@@ -202,7 +201,12 @@ sub _get_Experiment_join_clause{
   return $constraint;
 }
 
-#todo deprecate above method in favour of fetch_all_by_Experiment
+sub _fetch_all_by_ResultSetExperiment {
+  my $self       = shift;
+  my $experiment = shift;
+  
+  return $self->generic_fetch('rs.experiment_id = ' . $experiment->dbID);
+}
 
 =head2 fetch_all_by_Experiment
 

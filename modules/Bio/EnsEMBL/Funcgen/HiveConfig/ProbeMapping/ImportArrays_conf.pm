@@ -3,102 +3,244 @@ package Bio::EnsEMBL::Funcgen::HiveConfig::ProbeMapping::ImportArrays_conf;
 use strict;
 use warnings;
 
-use base ('Bio::EnsEMBL::Funcgen::HiveConfig::Probe2Transcript_conf');
+use base ('Bio::EnsEMBL::Funcgen::HiveConfig::ProbeMapping::Base');
+
+=head1
+
+  export HIVE_URL='mysql://ensadmin:ensembl@ens-genomics2:3306/mmn1_tracking_homo_sapiens_funcgen_87_38_hive'
+  ftp_pipeline_parameters="-pipeline_url $HIVE_URL"
+  
+  init_pipeline.pl Bio::EnsEMBL::Funcgen::HiveConfig::ProbeMapping::ImportArraysNew_conf $ftp_pipeline_parameters -hive_force_init 1
+
+=cut
 
 sub pipeline_analyses {
     my $self = shift;
     
     return [
-        {   -logic_name  => 'PrePipelineChecks',
+        {
+            -logic_name  => 'start_import',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into => {
+                MAIN => 'pre_pipeline_checks',
+            },
+        },
+        {   -logic_name  => 'pre_pipeline_checks',
             -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::PrePipelineChecks',
-            -input_ids => [ {} ],
             -flow_into => {
-                MAIN => 'MkTmpDir',
+                MAIN => 'make_temp_dir',
             },
         },
         {
-	    -logic_name  => 'MkTmpDir',
+            -logic_name  => 'make_temp_dir',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters => {
-                cmd       => 'mkdir -p #tempdir#',
+                cmd       => 'mkdir -p #tempdir#/#species#',
             },
             -flow_into => {
-                MAIN => 'CreateDB',
+                MAIN => 'rollback_array',
             },
-        },
-        {   -logic_name  => 'CreateDB',
-            -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::CreateDB',
-            -flow_into => {
-                MAIN => 'JobFactoryImportArrays',
-            },
-        },
-        {   -logic_name  => 'JobFactoryImportArrays',
-            -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::JobFactory',
-            -parameters => {
-                probe_directories => $self->o('probe_directories'),
-            },
-	    -flow_into => {
-		MAIN => 'RollbackArray',
-	    },
         },
         {
-	    -logic_name  => 'RollbackArray',
-            -meadow_type => 'LOCAL',
-            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -analysis_capacity => 1,
+            -logic_name  => 'rollback_array',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
             -parameters => {
-                cmd => 'rollback_array.pl'
-		  . ' --species '     . $self->o('species')		  
-		  . ' -dbhost '       . $self->o('tracking_host')
-		  . ' -dbname '       . $self->o('tracking_dbname')
-		  . ' -dbuser '       . $self->o('tracking_user')
-		  . ' -dbport '       . $self->o('tracking_port')
-		  
-		  . ( $self->o('tracking_pass') ? ' -dbpass ' . $self->o('tracking_pass') : '' )
-		  
-		  . ' -arrays #all_array_names# -force',
+                sql     => [
+                  "truncate array;",
+                  "truncate array_chip;",
+                  "truncate probe;",
+                  "truncate probe_feature;",
+                  "truncate probe_seq;",
+                  "truncate probe_set;",
+                  "truncate probe_transcript;",
+                  "truncate probe_set_transcript;",
+                  "truncate probe_feature_transcript;",
+                  "truncate unmapped_object;",
+                  "truncate unmapped_reason;",
+                  "delete analysis_description from analysis_description, analysis where analysis.analysis_id=analysis_description.analysis_id and logic_name like '%Probe%Align';",
+                  "delete from analysis where logic_name like '%Probe%Align';",
+                  "delete analysis_description from analysis_description, analysis where analysis.analysis_id=analysis_description.analysis_id and logic_name = 'probe2transcript';",
+                  "delete from analysis where logic_name = 'probe2transcript';",
+                ],
+                db_conn => 'funcgen:#species#',
             },
             -flow_into => {
-               '1->A' => 'ImportArrays',
-               'A->1' => 'hc_import_arrays',
+               MAIN => 'switch_to_innodb',
             },
         },
-        {   -logic_name  => 'hc_import_arrays',
-            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlHealthcheck',
-            -parameters  => {
-              query         => 'select distinct array.name from array join array_chip using (array_id) left join probe using (array_chip_id) where probe.probe_id is null and array.class="#array_format#"',
-              expected_size => '=0',
-              db_conn       => $self->_create_db_url_from_dba_hash($self->o('tracking_dba_hash')),
-              description   => 'Check that the arrays imported from #array_format# have probes in the database.';
+        {
+            -logic_name  => 'switch_to_innodb',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+            -parameters => {
+                sql     => [
+                  "ALTER TABLE array           ENGINE=InnoDB;",
+                  "ALTER TABLE array_chip      ENGINE=InnoDB;",
+                  "ALTER TABLE probe           ENGINE=InnoDB;",
+                  "ALTER TABLE probe_feature   ENGINE=InnoDB;",
+                  "ALTER TABLE probe_seq       ENGINE=InnoDB;",
+                  "ALTER TABLE probe_set       ENGINE=InnoDB;",
+                  "ALTER TABLE unmapped_object ENGINE=InnoDB;",
+                  "ALTER TABLE unmapped_reason ENGINE=InnoDB;",
+                  # Not converting:
+                  #
+                  # probe_transcript
+                  # probe_set_transcript
+                  # probe_feature_transcript
+                  #
+                  # because they are populated by load statements. These are 
+                  # unlikely to improve by using innodb.
+                ],
+                db_conn => 'funcgen:#species#',
             },
-        },
-        {   -logic_name  => 'ImportArrays',
-            -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::ImportArrays',
             -flow_into => {
-               # MEMLIMIT
-               -1 => [ 'ImportArrays8Gb' ],
+               MAIN => 'create_probe_mapping_analyses',
             },
         },
-        {   -logic_name  => 'ImportArrays8Gb',
-            -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::ImportArrays',
-            -rc_name    => '8Gb_job',
+        {
+            -logic_name  => 'create_probe_mapping_analyses',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters => {
+                cmd       => 
+                    'create_probe_mapping_analyses.pl'
+                  . ' --registry #reg_conf#'
+                  . ' --species  #species#'
+            },
             -flow_into => {
-	       # MEMLIMIT
-               -1 => [ 'ImportArrays16Gb' ],
+                MAIN => 'job_factory_import_arrays',
             },
         },
-        {   -logic_name  => 'ImportArrays16Gb',
-            -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::ImportArrays',
-            -rc_name    => '16Gb_job',
+
+        {
+          -logic_name  => 'job_factory_import_arrays',
+          -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::JobFactory',
+          -parameters => {
+              probe_directories => '#probe_directory#/#species#',
+          },
+          -flow_into => {
+#             MAIN => 'parse_probe_fasta_file',
+#             'MAIN->A' => 'parse_probe_fasta_file',
+#             'A->MAIN' => 'import_arrays_done',
+
+            '2->A' => 'parse_probe_fasta_file',
+            'A->1' => 'import_arrays_done',
+          },
+        },
+        {
+            -logic_name  => 'parse_probe_fasta_file',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters => {
+                cmd       => '
+                  import_parse_probe_fasta_file.pl \
+                    --array_name      #array_class# \
+                    --probe_file      #probe_file# \
+                    --parsed_output   #tempdir#/#species#/#array_class#_parsed_probes.pl
+                ',
+            },
             -flow_into => {
-	       # MEMLIMIT
-               -1 => [ 'ImportArrays64Gb' ],
+                MAIN => 'create_array_objects',
             },
         },
-        {   -logic_name  => 'ImportArrays64Gb',
-            -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::ImportArrays',
-            -rc_name    => '64Gb_job',
+        {
+            -logic_name  => 'create_array_objects',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters => {
+                cmd       => '
+                  import_create_array_objects.pl \
+                    --array_name        #array_class# \
+                    --parsed_probe_data #tempdir#/#species#/#array_class#_parsed_probes.pl \
+                    --output_file       #tempdir#/#species#/#array_class#_array_objects.pl
+                  ',
+            },
+            -flow_into => {
+                MAIN => 'store_array_objects',
+            },
         },
+        {
+            -logic_name  => 'store_array_objects',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -analysis_capacity => 70,
+            -parameters => {
+                cmd       => '
+                  import_store_array_objects.pl \
+                    --registry           #reg_conf# \
+                    --species            #species# \
+                    --array_objects_file #tempdir#/#species#/#array_class#_array_objects.pl
+                ',
+            },
+        },
+        {
+            -logic_name  => 'import_arrays_done',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into => {
+                MAIN => 'run_sql_to_fix_probe_set_issues',
+            },
+        },
+
+  {
+      -logic_name  => 'run_sql_to_fix_probe_set_issues',
+      -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+      -analysis_capacity => 1,
+      -parameters => {
+        db_conn       => 'funcgen:#species#',
+        sql           => [
+          'drop table if exists probe_set_fixed;',
+          '
+          create table probe_set_fixed (
+            probe_set_id     int(10) unsigned NOT NULL AUTO_INCREMENT,
+            probe_set_id_old int(10),
+            name             varchar(100) NOT NULL,
+            array_chip_id    int(10),
+            size             smallint(6) unsigned NOT NULL,
+            family           varchar(20) DEFAULT NULL,
+            PRIMARY KEY (probe_set_id),
+            KEY name (name)
+          );
+          ',
+          '   
+          insert into probe_set_fixed (probe_set_id_old, name, array_chip_id, size) 
+          select 
+            probe_set.probe_set_id as probe_set_id_old, 
+            probe_set.name, 
+            probe.array_chip_id, 
+            count(distinct probe.probe_id) as size
+          from 
+            probe join probe_set using (probe_set_id) 
+            group by 
+            probe_set.probe_set_id, 
+            probe_set.name, 
+            probe.array_chip_id
+          ;
+          ',
+          # Without the index, the next update can be very slow on human
+          'create index temp_probe_index on probe (probe_set_id,array_chip_id);',
+          '
+          update 
+            probe, probe_set_fixed 
+          set 
+            probe.probe_set_id = probe_set_fixed.probe_set_id
+          where
+            probe.probe_set_id=probe_set_fixed.probe_set_id_old
+            and probe.array_chip_id=probe_set_fixed.array_chip_id
+          ;
+          ',
+          'truncate probe_set;',
+          '
+          insert into probe_set (probe_set_id, name, array_chip_id, size) 
+          select 
+          probe_set_id, name, array_chip_id, size
+          from 
+          probe_set_fixed
+          ;
+          ',
+          'drop index temp_probe_index on probe;',
+          'drop table probe_set_fixed;'
+        ],
+      },
+  },
+
+
+
+
     ];
 }
 

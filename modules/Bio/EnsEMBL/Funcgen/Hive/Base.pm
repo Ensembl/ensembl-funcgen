@@ -52,8 +52,7 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( get_study_name_from_Set
 use Bio::EnsEMBL::Funcgen::Hive::Utils     qw( inject_DataflowRuleAdaptor_methods );
 use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools qw( get_files_by_formats );
 use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref check_ref );  
-use Scalar::Util                           qw( blessed );                                            
-                                               
+use Scalar::Util                           qw( blessed );
 
 use base qw(Bio::EnsEMBL::Hive::Process);
 
@@ -61,16 +60,6 @@ my %debug_modes = (no_tidy   => 1,
                    no_tidy_1 => 1,
                    no_tidy_2 => 2,
                    no_tidy_3 => 3);
-
-
-
-
-
-#global values for the Helper... maybe pass as parameters...
-#$main::_debug_level = 0; Now set below
-# $main::_tee         = 0;
-# $main::_no_log      = 1;
-
 
 #Used in set_param_arrays for scalars_to_objects
 #Could our this to make it dynamically mutable, i.e. redefine it from a sub class
@@ -305,6 +294,11 @@ sub regulation_directory {
 =cut
 sub version_directory {
   return '086'
+}
+
+sub db_output_dir {
+  my $self = shift;
+  return $self->data_root_dir . '/output/' . $self->out_db->dbc->dbname;
 }
 
 =head1 default_directory_by_table_and_file_type
@@ -593,10 +587,10 @@ sub validate_dir_param {
   my $default;
  
   if($optional_or_default){
-    $req_or_silent = 'silent';   
+    $req_or_silent = 'silent';
   
     if($optional_or_default ne 1){
-      $default = $optional_or_default;  
+      $default = $optional_or_default;
     }  
   }
   

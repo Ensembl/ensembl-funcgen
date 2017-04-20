@@ -125,7 +125,7 @@ sub pipeline_analyses {
 	  where epigenome.epigenome_id=experiment.epigenome_id and epigenome.epigenome_id=result_set.epigenome_id and experiment.feature_type_id=result_set.feature_type_id
 	  and result_set_id = #dbID#
 	  ),
-	  db_conn => '#out_db_url#',
+	  db_conn => 'funcgen:#species#',
 	},
 #       -meadow     => 'LOCAL',
       -flow_into => {

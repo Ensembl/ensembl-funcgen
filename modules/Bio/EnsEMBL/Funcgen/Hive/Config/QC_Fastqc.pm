@@ -32,19 +32,13 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
-use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
+use base ('Bio::EnsEMBL::Funcgen::Hive::Config::Base');
 
 sub pipeline_analyses {
     my ($self) = @_;
     return [
 	{
-	  -logic_name => 'IdentifyAlignInputSubsets',
-	  -flow_into => {
-	    2 => 'fastqc_start',
-	  },
-	},
-	{
-	  -logic_name => 'CreateJobBatchUsingNewGroupingMechanism',
+	  -logic_name => 'create_job_batches',
 	  -flow_into => {
 	    2 => 'fastqc_start',
 	  },
@@ -95,6 +89,11 @@ sub pipeline_analyses {
 		  cmd => qq(fastqc --extract -o #tempdir# #local_url#),
             },
             -rc_name => 'normal_2GB',
+            # For some reason this analysis is very attractive to workers. 
+            # So to prevent them from focusing on this at the beginning of the
+            # pipeline, I'm limiting this.
+            #
+            -analysis_capacity => 5,
         },
         {   -logic_name => 'QcFastQcLoaderJobFactory',
             -module     => 'Bio::EnsEMBL::Funcgen::Hive::QcFastQcLoaderJobFactory',

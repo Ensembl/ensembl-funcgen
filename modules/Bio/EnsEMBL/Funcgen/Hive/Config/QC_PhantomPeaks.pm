@@ -31,7 +31,7 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
-use base ('Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf');
+use base ('Bio::EnsEMBL::Funcgen::Hive::Config::Base');
 
 sub pipeline_analyses {
     my ($self) = @_;
@@ -75,9 +75,13 @@ sub pipeline_analyses {
 		  . qq(    -out=#phantom_peak_out_file#    )
 		  . qq(    -odir=#tempdir#                 )
 		  . qq(    -tmpdir=#tempdir#               )
+
+                  # Avoid the "Error: ignoring SIGPIPE signal error"
+                  # from the EBI cluster
+                  . qq(    &&                              )
 		  # In case the job gets terminated for memlimit, this 
 		  # ensures that the worker also dies. (or so we hope)
-		  . qq(    | sleep 30 )
+                  . qq(    sleep 30                        )
             },
 	    -rc_name    => 'normal_4GB_2cpu',
             -flow_into  => { 
@@ -102,9 +106,13 @@ sub pipeline_analyses {
                   . qq(    -out=#phantom_peak_out_file#    )
                   . qq(    -odir=#tempdir#                 )
                   . qq(    -tmpdir=#tempdir#               )
+
+                  # Avoid the "Error: ignoring SIGPIPE signal error"
+                  # from the EBI cluster
+                  . qq(    &&                              )
 		  # In case the job gets terminated for memlimit, this 
 		  # ensures that the worker also dies. (or so we hope)
-		  . qq(    | sleep 30 )
+		  . qq(    sleep 30                        )
             },
 	    -rc_name    => 'normal_30GB_2cpu',
             -flow_into  => { 
@@ -119,7 +127,8 @@ sub pipeline_analyses {
 		  . qq(    --result_set_id #result_set_id#       )
 		  . qq(    --result_file #phantom_peak_out_file# )
 		  . qq(    --user   #tracking_db_user#   )
-		  . qq(    --pass   #tracking_db_pass#   )
+                  . qq(    --pass   #tracking_db_pass#   )
+                  . qq(    --port   #tracking_db_port#   )
 		  . qq(    --host   #tracking_db_host#   )
 		  . qq(    --dbname #tracking_db_name#   )
 		  . qq(    --work_dir #tempdir#          )

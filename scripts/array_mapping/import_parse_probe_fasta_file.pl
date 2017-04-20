@@ -43,6 +43,13 @@ my $parser_parameters = {
   probe_file  => $probe_file,
   call_back   => sub {
     my $probe_data = shift;
+    
+    assert_probe_data_ok($probe_data);
+    
+    if ($probe_data->{-sequence} eq '') {
+      warn "Skipping probe, because it has no sequence:\n" . Dumper($probe_data);
+      return;
+    }
     $outfile->print(Dumper($probe_data));
   }
 };
@@ -51,3 +58,10 @@ $probemapping_parser->validate_configuration($parser_parameters);
 $probemapping_parser->run($parser_parameters);
 
 $outfile->close;
+
+sub assert_probe_data_ok {
+  my $probe_data = shift;
+  if (! defined $probe_data->{-sequence}) {
+    die;
+  }
+}

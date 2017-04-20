@@ -97,12 +97,12 @@ my $fetch_probe_set_from_db = sub {
     $probe_set = $probe_set_name_to_object{$probe_set->name};
   } else {
   
-    my $probe_set_from_db = $probe_set_adaptor->fetch_by_array_probeset_name($array_name, $probe_set->name);
+    my $probe_set_from_db = $probe_set_adaptor->fetch_by_array_probe_set_name($array_name, $probe_set->name);
     
     if (defined $probe_set_from_db) {
       $probe_set = $probe_set_from_db;
     } else {
-      $probe_set->size(1);
+      $probe_set->size(0);
       $probe_set_adaptor->store($probe_set);
     }
     $probe_set_name_to_object{$probe_set->name} = $probe_set;
@@ -130,9 +130,17 @@ my $process_array_objects = sub {
   my $array_chip_from_db = $fetch_array_chip_from_db->($array, $array_chip);
   $probe->array_chip($array_chip_from_db);
   
-  if ($probe->probeset) {
-    my $probeset_from_db = $fetch_probe_set_from_db->($array->name, $probe->probeset);
-    $probe->probeset($probeset_from_db);
+  if ($probe->probe_set) {
+    my $probe_set_from_db = $fetch_probe_set_from_db->($array->name, $probe->probe_set);
+    
+#   Not setting probe size here. This is done in a dedicated analysis in the 
+#   pipeline. Doing it here can be error prone, because jobs can fail and be 
+#   rerun, which will end up it wrong probe sizes.
+# 
+#     $probe_set_from_db->size($probe_set_from_db->size + 1);
+#     $probe_set_adaptor->update($probe_set_from_db);
+
+    $probe->probe_set($probe_set_from_db);
   }
   
   $probe_adaptor->store($probe);

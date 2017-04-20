@@ -40,6 +40,7 @@ Bio::EnsEMBL::Registry->load_all($registry);
 
 my $analysis_adaptor        = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'analysis');
 my $unmapped_object_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'unmappedobject');
+my $probe_adaptor           = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'probe');
 
 use Bio::EnsEMBL::Analysis;
 my $analysis = Bio::EnsEMBL::Analysis->new(-logic_name => $analysis_logic_name);
@@ -48,27 +49,28 @@ my $process_data = sub {
 
   my $count_probe_match_counts = shift;
   
-  PROBE_ID:
-  foreach my $current_probe_id (keys %$count_probe_match_counts) {
-  
-    next PROBE_ID if ($current_probe_id eq 'foo');
-  
-    my $match_count = $count_probe_match_counts->{$current_probe_id};
-
-    if ($match_count>$max_allowed_hits_per_probe) {
+  foreach my $current_probe_seq_id (keys %$count_probe_match_counts) {
     
-      use Bio::EnsEMBL::UnmappedObject;
-      my $unmapped_object = Bio::EnsEMBL::UnmappedObject->new (
-        -type                => 'array_mapping',
-        -analysis            => $analysis,
-        -ensembl_id          => $current_probe_id,
-        -ensembl_object_type => 'Probe',
-        -external_db_id      => undef,
-        -identifier          => $target_type,
-        -summary             => 'Promiscuous probe',
-        -full_desc           => "Probe exceeded maximum allowed number of mappings. ($match_count matches)"
-      );
-      $unmapped_object_adaptor->store($unmapped_object);
+    my $probe_with_this_sequence = $probe_adaptor->fetch_all_by_probe_sequence_id($current_probe_seq_id);
+    
+    foreach my $current_probe (@$probe_with_this_sequence) {
+      my $match_count = $count_probe_match_counts->{$current_probe_seq_id};
+
+      if ($match_count>$max_allowed_hits_per_probe) {
+      
+        use Bio::EnsEMBL::UnmappedObject;
+        my $unmapped_object = Bio::EnsEMBL::UnmappedObject->new (
+          -type                => 'array_mapping',
+          -analysis            => $analysis,
+          -ensembl_id          => $current_probe->dbID,
+          -ensembl_object_type => 'Probe',
+          -external_db_id      => undef,
+          -identifier          => $target_type,
+          -summary             => 'Promiscuous probe',
+          -full_desc           => "Probe exceeded maximum allowed number of mappings. ($match_count matches)"
+        );
+        $unmapped_object_adaptor->store($unmapped_object);
+      }
     }
   }
 };

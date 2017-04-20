@@ -32,19 +32,27 @@ perl scripts/array_mapping/project_transcript_hits_to_genome.pl \
 my $probe_features;
 my $registry;
 my $species;
+my $output_file;
 
 GetOptions (
    'probe_features=s' => \$probe_features,
    'registry=s'       => \$registry,
    'species=s'        => \$species,
+   'output_file=s'    => \$output_file,
 );
 
 if (! -e $probe_features) {
   die("Can't find probe file ${probe_features}!");
 }
+if (! $output_file) {
+  die("output_file is a mandatory parameter!");
+}
+
+open my $output_fh, '>', $output_file || die("Couldn't open file ${output_file}!");
 
 use Bio::EnsEMBL::Registry;
 Bio::EnsEMBL::Registry->load_all($registry);
+
 
 my $probe_feature_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'probefeature');
 my $analysis_adaptor      = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'analysis');
@@ -53,13 +61,17 @@ my $transcript_adaptor    = Bio::EnsEMBL::Registry->get_adaptor($species, 'core'
 my $slice_adaptor         = Bio::EnsEMBL::Registry->get_adaptor($species, 'core',    'slice');
 
 $Data::Dumper::Sortkeys = 1;
-$Data::Dumper::Maxdepth = 3;
+# $Data::Dumper::Maxdepth = 3;
 
 my %gene_hits;
 
 my $map_transcript_to_genome = sub {
 
   my $probe_feature_hash = shift;
+  
+#   if ($probe_feature_hash->{'q_strand'} != $probe_feature_hash->{'t_strand'}) {  
+#     return;
+#   }
   
   my $transcript_stable_id = $probe_feature_hash->{t_id};
   
@@ -69,35 +81,157 @@ my $map_transcript_to_genome = sub {
     $probe_feature_hash->{q_start} = 1;
   }
   
+  my $length_before_projecting = $probe_feature_hash->{t_end} - $probe_feature_hash->{t_start};
+  
   my $transcript_mapper = Bio::EnsEMBL::TranscriptMapper->new($transcript);
   my @genomic_blocks = $transcript_mapper->cdna2genomic(
-    $probe_feature_hash->{q_start},
-    $probe_feature_hash->{q_end},
+    $probe_feature_hash->{t_start},
+    $probe_feature_hash->{t_end},
   );
-
   my $projected_hit = project_hit_to_genomic_coordinates({
     hit            => $probe_feature_hash,
     genomic_blocks => \@genomic_blocks,
     transcript     => $transcript,
   });
+  
+  my $length_after_projecting = $projected_hit->{t_end} - $projected_hit->{t_start};
+  
+  my $length_changed_during_projection = $length_before_projecting != $length_after_projecting;
+  my $cigar_line_shows_insertion = $projected_hit->{cigar_line} =~ /D/;
+  
+  if ($length_changed_during_projection && !$cigar_line_shows_insertion) {
+    die(
+      "Cigar line was not adjusted correctly!"
+      . Dumper($projected_hit)
+    );
+  }
+
+  if ($probe_feature_hash->{'q_strand'} != $probe_feature_hash->{'t_strand'}) {
+    $projected_hit->{t_strand} = -1 * $projected_hit->{t_strand}
+  }
 
   # Test, if we have already seen this alignment
   my $gene = $gene_adaptor->fetch_by_transcript_stable_id($transcript_stable_id);
-  #The only way of doing this is to test the genomic_start/end and the genomic cigarline with the gene_stable_id and the probe_id
+  #The only way of doing this is to test the genomic_start/end and the genomic cigarline with the gene_stable_id and the probe_seq_id
   my $gene_stable_id = $gene->stable_id;
   
   my $genomic_start = $projected_hit->{t_start};
   my $genomic_end   = $projected_hit->{t_end};
   my $cigar_line    = $projected_hit->{cigar_line};
-  my $probe_id      = $projected_hit->{probe_id};
+  my $probe_seq_id  = $projected_hit->{probe_seq_id};
+  
+  if (!$cigar_line_shows_insertion) {
+  
+    my $transcript = $transcript_adaptor->fetch_by_stable_id($transcript_stable_id);
+    
+    my $transcript_matched_seq = $transcript->seq;
+    
+    my $matched_sequence = $transcript_matched_seq->subseq(
+      $probe_feature_hash->{t_start},
+      $probe_feature_hash->{t_end}
+    );
 
-  my $gene_hit_key = "${gene_stable_id}:${probe_id}:${genomic_start}:${genomic_end}:${cigar_line}";
+    if ($probe_feature_hash->{t_strand} == -1) {
+      use Bio::PrimarySeq;
+      $matched_sequence = Bio::PrimarySeq->new( -seq => $matched_sequence )->revcom->seq;
+    }
+    
+    my $probe_sequence_adaptor = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Funcgen', 'ProbeSequence' );
+    my $probe_sequence_obj = $probe_sequence_adaptor->fetch_by_dbID($probe_seq_id);
+    my $probe_sequence = uc($probe_sequence_obj->sequence);
+
+    my $match_ok = $matched_sequence eq $probe_sequence;
+
+    if (!$match_ok) {
+    
+      $Data::Dumper::Sortkeys = 1;
+      $Data::Dumper::Maxdepth = 3;
+      
+      die(
+        "The probe sequence is not identical to the sequence on the transcript:\n\n"
+        . ">" . $transcript->stable_id  . "\n"
+        . $transcript->seq->seq . "\n"
+        . "\n"
+        . "Transcript sequence matched: $matched_sequence\n"
+        . "Probe sequence:              $probe_sequence\n\n"
+        . Dumper($probe_feature_hash)
+        . Dumper($probe_sequence)
+
+      );
+    }
+#   Commented the check out, because
+# 
+#   - this is already a bottleneck for the pipeline
+#   - It is slowing the analysis down even further.
+# 
+#     my $probe_feature_passes = check_projection_for_perfect_matches(
+#       $probe_seq_id,
+#       $genomic_start,
+#       $genomic_end,
+#       $projected_hit->{t_strand},
+#       $projected_hit->{t_id},
+#     );
+#     
+#     if (!$probe_feature_passes) {
+#       die(
+#         "Probe feature didn't pass the projection test!\n"
+#         . "Before:\n"
+#         . Dumper($probe_feature_hash)
+#         . "After:\n"
+#         . Dumper($projected_hit)
+#       );
+#     }
+  }
+  my $gene_hit_key = "${gene_stable_id}:${probe_seq_id}:${genomic_start}:${genomic_end}:${cigar_line}";
 
   if (! exists $gene_hits{$gene_hit_key}) {
     $gene_hits{$gene_hit_key} = undef;
-    print Dumper($projected_hit);
+    $output_fh->print(Dumper($projected_hit));
   }
 };
+
+sub check_projection_for_perfect_matches {
+
+  my $probe_seq_id             = shift;
+  my $probe_feature_start  = shift;
+  my $probe_feature_end    = shift;
+  my $probe_feature_strand = shift;
+  my $transcript_stable_id = shift;
+
+  my $transcript = $transcript_adaptor->fetch_by_stable_id($transcript_stable_id);
+  
+  if (! defined $transcript) {
+    die(
+      "Can't find transcript for $transcript_stable_id"
+      . Dumper($transcript_adaptor)
+    );
+  }
+  
+  my $slice = $transcript->slice;
+
+  my $matched_sequence = $slice->subseq(
+    $probe_feature_start,
+    $probe_feature_end,
+    $probe_feature_strand,
+  );
+  
+  my $probe_sequence_adaptor = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Funcgen', 'ProbeSequence' );
+  my $probe_sequence_obj = $probe_sequence_adaptor->fetch_by_dbID($probe_seq_id);
+  my $probe_sequence = uc($probe_sequence_obj->sequence);
+  
+  my $match_ok = $matched_sequence eq $probe_sequence;
+  
+  my $planned_probe_feature_passed;
+  
+  if ($match_ok) {
+    $planned_probe_feature_passed = 1;
+  }
+  if (! $match_ok) {
+    $planned_probe_feature_passed = undef;
+    warn "Not ok: " . $matched_sequence . " != " . $probe_sequence . " " . $probe_feature_strand . "\n";
+  }
+  return $planned_probe_feature_passed;
+}
 
 use Bio::EnsEMBL::Funcgen::Parsers::DataDumper;
 my $parser = Bio::EnsEMBL::Funcgen::Parsers::DataDumper->new;
@@ -112,6 +246,8 @@ $parser->parse({
   call_back        => $map_transcript_to_genome,
 });
 
+$output_fh->close;
+
 =head2 project_hit_to_genomic_coordinates
 
 A hit looks like this:
@@ -120,7 +256,7 @@ $VAR1 = {
           'cigar_line' => '60=',
           'mismatch_count' => '0',
           'perc_id' => '100.00',
-          'probe_id' => '542',
+          'probe_seq_id' => '542',
           'q_end' => 60,
           'q_length' => 60,
           'q_start' => 0,
@@ -166,7 +302,9 @@ sub project_hit_to_genomic_coordinates {
 
     $projected_hit{t_start}      = $genomic_blocks->[0]->start;
     $projected_hit{t_end}        = $genomic_blocks->[0]->end;
-    $projected_hit{strand}       = $transcript->strand;
+#     $projected_hit{strand}       = $transcript->strand;
+    $projected_hit{t_strand}       = $genomic_blocks->[0]->strand;
+    
     $projected_hit{cigar_line} = join ' foo ', @stranded_cigar_line;
     
     return \%projected_hit;
@@ -197,10 +335,16 @@ sub project_hit_to_genomic_coordinates {
   my @gaps;
   my $genomic_start;
   my $genomic_end;
+  my $genomic_strand;
+  
   GENOMIC_BLOCK: foreach my $block (@$genomic_blocks) {
 
     if(! $genomic_start) {
       if($block->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
+      
+        # All coordinate blocks will be on the same strand.
+        $genomic_strand = $block->strand;
+      
         # Set genomic_start
         if($gap_lengths{5}){
           # We have seen a gap
@@ -382,16 +526,18 @@ sub project_hit_to_genomic_coordinates {
 
   $projected_hit{t_start}    = $genomic_start;
   $projected_hit{t_end}      = $genomic_end;
-  $projected_hit{strand}     = $transcript->strand;
+#   $projected_hit{strand}     = $transcript->strand;
+  $projected_hit{t_strand}     = $genomic_strand;
+  
   $projected_hit{cigar_line} = $cigar_line;
   
   return \%projected_hit;
 
 #   # Test if we have already seen this alignment
 #   my $gene = $gene_adaptor->fetch_by_transcript_stable_id($seq_id);
-#   # The only way of doing this is to test the genomic_start/end and the genomic cigarline with the gene_stable_id and the probe_id
+#   # The only way of doing this is to test the genomic_start/end and the genomic cigarline with the gene_stable_id and the probe_seq_id
 #   $gene_sid = $gene->stable_id;
-#   $gene_hit_key = "${gene_sid}:${probe_id}:${genomic_start}:${genomic_end}:${cigar_line}";
+#   $gene_hit_key = "${gene_sid}:${probe_seq_id}:${genomic_start}:${genomic_end}:${cigar_line}";
 # 
 #   if(exists $gene_hits{$gene_hit_key}) {
 #     $load_feature = 0;

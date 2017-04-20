@@ -2,6 +2,7 @@ package Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::DumpUnmappedSeqs;
 
 use strict;
 use base ('Bio::EnsEMBL::Hive::Process');
+use Hash::Util qw( lock_keys );
 
 sub run {
     my $self = shift;
@@ -29,7 +30,7 @@ sub run {
       die("There are no unmapped probes in the database.");
     }
 
-    my $sth = $dbc_tracking->prepare('select probe_seq_id, probe_dna from probe_seq');
+    my $sth = $dbc_tracking->prepare('select probe_seq_id, sequence from probe_seq');
     $sth->execute;
 
     use Bio::Seq;
@@ -43,12 +44,24 @@ sub run {
     my $progressbar_id = $logger->init_progress($unmapped_sequences_count, 100);
     $logger->info("Writing unmapped sequences to $unmapped_sequences_file\n");
 
+    my $skipped_sequences = 0;
+    
     my $num_sequence_written=0;
+    PROBE_SEQUENCE:
     while (my $data = $sth->fetchrow_hashref) {
+    
+      lock_keys(%$data);
+      
+      if (!$data->{sequence}) {
+        use Data::Dumper;
+        warn("This probe had no sequence!\n" . Dumper($data));
+        $skipped_sequences++;
+        next PROBE_SEQUENCE;
+      }
 
       my $seq_obj = Bio::Seq->new(
 	-id       => $data->{probe_seq_id},
-	-seq      => $data->{probe_dna},
+	-seq      => $data->{sequence},
 	-alphabet => 'dna',
       );
       $out->write_seq($seq_obj);
@@ -58,8 +71,8 @@ sub run {
     }
     $logger->info("Done writing $num_sequence_written sequences.");
     
-    if ($num_sequence_written != $unmapped_sequences_count) {
-      my $msg = "$unmapped_sequences_count sequences had to be written, but only wrote $num_sequence_written sequences!";
+    if ($num_sequence_written + $skipped_sequences != $unmapped_sequences_count) {
+      my $msg = "$unmapped_sequences_count sequences had to be written, but only wrote $num_sequence_written sequences and skipped $skipped_sequences sequences!";
       $logger->error($msg);
       die($msg)
     }

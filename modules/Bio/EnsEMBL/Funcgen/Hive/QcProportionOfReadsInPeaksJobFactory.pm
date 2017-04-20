@@ -26,21 +26,24 @@ sub run {
   );
   my $file_prefix    = $result_set->name.'.'.$analysis->logic_name;
   
-  my $peak_caller = $self->param('peak_caller');
-  
+#   my $peak_caller = $self->param('peak_caller');
+  my $peak_caller;
   my $file_extension;
   
-  if ($peak_caller eq 'CCAT') {
+  if ($analysis->logic_name eq 'ccat_histone') {
     $file_extension = 'significant.region';
-  }
-  if ($peak_caller eq 'SWEmbl') {
+    $peak_caller    = 'CCAT'
+  } else {
     $file_extension = '.txt';
+    $peak_caller    = 'SWembl'
 # HACK Put better name generation into RunPeaks, then dataflow the name here.
 #     $file_prefix = 'peaks';
 #     $file_extension = 'swembl';
   }
   
-  die unless ($file_extension);
+  if (! $file_extension) {
+    die;
+  }
   
   my $peaks_file = join '/', (
     $dirname,
@@ -55,7 +58,8 @@ sub run {
     $feature_set, 
     $analysis, 
     $result_set,
-    $peaks_file
+    $peaks_file,
+    $peak_caller
   );
   
   use Data::Dumper;
@@ -75,6 +79,7 @@ sub create_input_id {
   my $analysis    = shift;
   my $result_set  = shift;
   my $peaks_file  = shift;
+  my $peak_caller = shift;
 
   my $feature_set_id = $feature_set->dbID;
   
@@ -85,7 +90,6 @@ sub create_input_id {
   
   my $temp_dir = "$work_dir/$epigenome_production_name/$feature_set_id";
   my $out_db = $self->param('out_db');
-  my $peak_caller = $self->param('peak_caller');
 
   # Undef means: not the control
   my $file_prefix  = $self->get_alignment_path_prefix_by_ResultSet($result_set, undef); 

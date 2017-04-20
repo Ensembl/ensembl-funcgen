@@ -11,11 +11,11 @@ sub pipeline_analyses {
     
     return [
       {
-          -logic_name  => 'start_store_probe_features',
+          -logic_name  => 'start_store_probe_feature_chunk',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
           -flow_into => {
               'MAIN->A' => 'parse_exonerate',
-              'A->MAIN' => 'done_store_probe_features',
+              'A->MAIN' => 'done_store_probe_feature_chunk',
           },
       },
       {   -logic_name  => 'parse_exonerate',
@@ -54,14 +54,14 @@ sub pipeline_analyses {
       },
       {   -logic_name  => 'project_transcript_hits_to_genome',
           -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-          -analysis_capacity => 20,
+          -analysis_capacity => 60,
           -parameters => {
               cmd => '
                 project_transcript_hits_to_genome.pl \
                   --probe_features #chunk_name#_#type#.probe_features.txt \
                   --registry #reg_conf# \
                   --species #species# \
-                  > #chunk_name#_#type#.probe_features_projected_from_transcript_coords.txt
+                  --output_file #chunk_name#_#type#.probe_features_projected_from_transcript_coords.txt
               '
           },
           -flow_into => {
@@ -71,7 +71,7 @@ sub pipeline_analyses {
       {   -logic_name        => 'store_unmapped_objects',
           -module            => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -priority          => 10,
-          -analysis_capacity => 8,
+          -analysis_capacity => 70,
           -parameters => {
               cmd => '
                 store_unmapped_objects.pl \
@@ -86,7 +86,7 @@ sub pipeline_analyses {
       {   -logic_name        => 'store_probe_feature_objects',
           -module            => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -priority          => 10,
-          -analysis_capacity => 8,
+          -analysis_capacity => 70,
           -parameters => {
               cmd => '
                 store_probe_feature_objects.pl \
@@ -100,7 +100,7 @@ sub pipeline_analyses {
           },
       },
       {
-          -logic_name  => 'done_store_probe_features',
+          -logic_name  => 'done_store_probe_feature_chunk',
           -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       },
     ];

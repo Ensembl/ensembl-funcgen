@@ -427,6 +427,12 @@ sub get_available_adaptors{
                'CrisprSitesFile'         => 'Bio::EnsEMBL::Funcgen::DBSQL::CrisprSitesFileAdaptor',
                'DNAMethylationFile'      => 'Bio::EnsEMBL::Funcgen::DBSQL::DNAMethylationFileAdaptor',
                'SegmentationFile'        => 'Bio::EnsEMBL::Funcgen::DBSQL::SegmentationFileAdaptor',
+
+               'ProbeTranscriptMapping'        => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeTranscriptMappingAdaptor',
+               'ProbeSetTranscriptMapping'     => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeSetTranscriptMappingAdaptor',
+               'ProbeFeatureTranscriptMapping' => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeFeatureTranscriptMappingAdaptor',
+               
+               'ProbeSequence' => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeSequenceAdaptor',
               );
 
   return (\%pairs);

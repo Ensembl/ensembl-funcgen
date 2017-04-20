@@ -37,35 +37,24 @@ Bio::EnsEMBL::Registry->load_all($registry);
 
 my $funcgen_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
 
-my $sth_store_probe_feature_transcript_mapping = $funcgen_adaptor->dbc->prepare("insert into probe_feature_transcript(probe_feature_id, stable_id) values (?, ?);");
-
 my $probe_feature_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'probefeature');
 my $analysis_adaptor      = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'analysis');
+my $probe_adaptor         = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'probe');
 my $slice_adaptor         = Bio::EnsEMBL::Registry->get_adaptor($species, 'core',    'slice');
 my $transcript_adaptor    = Bio::EnsEMBL::Registry->get_adaptor($species, 'core',    'transcript');
 
 use Bio::EnsEMBL::Analysis;
 my $analysis = Bio::EnsEMBL::Analysis->new(-logic_name => $analysis_logic_name);
 
-use Bio::EnsEMBL::Funcgen::Array;
-# So sad that we need this
-my $fake_array = Bio::EnsEMBL::Funcgen::Array->new(
-  -name   => 'fake',
-  -vendor => 'fake'
-);
-
-use Bio::EnsEMBL::Funcgen::Probe;
-my $probe = Bio::EnsEMBL::Funcgen::Probe->new(
-  -name  => 'fake probe',
-  -array => $fake_array
-);
-
 $Data::Dumper::Sortkeys = 1;
-$Data::Dumper::Maxdepth = 3;
+# $Data::Dumper::Maxdepth = 3;
 
 my $process_data = sub {
 
   my $raw_probe_feature = shift;
+  
+  use Hash::Util qw( lock_keys );
+  lock_keys( %$raw_probe_feature );
   
   my $slice;
   if ($target_type eq 'transcript') {
@@ -74,7 +63,7 @@ my $process_data = sub {
     my $transcript_stable_id = $raw_probe_feature->{t_id};
     my $transcript = $transcript_adaptor->fetch_by_stable_id($transcript_stable_id);
     
-    if (!defined $transcript) {
+    if (! defined $transcript) {
       die("Can't find transcript for $transcript_stable_id");
     }
     
@@ -84,29 +73,23 @@ my $process_data = sub {
     $slice = $slice_adaptor->fetch_by_name($raw_probe_feature->{t_id});
   }
   
-  $probe->dbID($raw_probe_feature->{probe_id});
+  my $probe_with_this_sequence = $probe_adaptor->fetch_all_by_probe_sequence_id($raw_probe_feature->{probe_seq_id});
   
-  use Bio::EnsEMBL::Funcgen::ProbeFeature;
-  my $probe_feature = Bio::EnsEMBL::Funcgen::ProbeFeature->new(
-    -PROBE         => $probe,
-    -MISMATCHCOUNT => $raw_probe_feature->{total_mismatches},
-    -START         => $raw_probe_feature->{t_start},
-    -END           => $raw_probe_feature->{t_end},
-    -STRAND        => $raw_probe_feature->{t_strand},
-    -ANALYSIS      => $analysis,
-    -CIGAR_STRING  => $raw_probe_feature->{cigar_line},
-    -slice         => $slice,
-  );
-
-  $probe_feature_adaptor->store($probe_feature);
-  
-  if ($target_type eq 'transcript') {
-    my $transcript_stable_id = $raw_probe_feature->{t_id};
-    my $probe_feature_id     = $probe_feature->dbID;
+  foreach my $current_probe (@$probe_with_this_sequence) {
     
-    $sth_store_probe_feature_transcript_mapping->bind_param(1, $probe_feature_id);
-    $sth_store_probe_feature_transcript_mapping->bind_param(2, $transcript_stable_id);
-    $sth_store_probe_feature_transcript_mapping->execute;
+    use Bio::EnsEMBL::Funcgen::ProbeFeature;
+    my $probe_feature = Bio::EnsEMBL::Funcgen::ProbeFeature->new(
+      -PROBE         => $current_probe,
+      -MISMATCHCOUNT => $raw_probe_feature->{total_mismatches},
+      -START         => $raw_probe_feature->{t_start},
+      -END           => $raw_probe_feature->{t_end},
+      -STRAND        => $raw_probe_feature->{t_strand},
+      -ANALYSIS      => $analysis,
+      -CIGAR_STRING  => $raw_probe_feature->{cigar_line},
+      -slice         => $slice,
+    );
+
+    $probe_feature_adaptor->store($probe_feature);
   }
 };
 

@@ -114,35 +114,35 @@ my $expected_probes = $probe_adaptor->fetch_all_by_Array($array);
 is_deeply( $array->get_all_Probes(),
     $expected_probes, 'Test get_all_Probes() subroutine' );
 
-# --------------------------
-# Test get_all_Probe_dbIDs()
-# --------------------------
-$array = $array_adaptor->fetch_by_name_vendor( 'HG-U133A', 'AFFY' );
-
-my @expected_probe_dbIDs = (
-    '655066',  '655071',  '655076',  '655080',  '655085',  '655090',
-    '655095',  '655100',  '655104',  '655109',  '655114',  '1967802',
-    '2481435', '5724311', '5724315', '5724318', '5724322', '5724325',
-    '5724328', '5724332', '5724335', '5724338', '5724341', '5724345'
-);
-
-is( @{ $array->get_all_Probe_dbIDs() },
-    @expected_probe_dbIDs, 'Test get_all_Probe_dbIDs() subroutine' );
-
-throws_ok {
-    my $array = Bio::EnsEMBL::Funcgen::Array->new(
-        -NAME        => 'Test',
-        -FORMAT      => 'Tiled',
-        -SIZE        => '1',
-        -VENDOR      => 'VENDOR',
-        -TYPE        => 'OLIGO',
-        -DESCRIPTION => 'TESTING',
-        -CLASS       => 'VENDOR_FORMAT',    #e.g. AFFY_UTR, ILLUMINA_WG
-    );
-    $array->get_all_Probe_dbIDs();
-}
-qr/Must have set an adaptor to get_all_Probe_dbIDs/,
-    'Test get_all_Probe_dbIDs(), adaptor is provided';
+## --------------------------
+## Test get_all_Probe_dbIDs()
+## --------------------------
+#$array = $array_adaptor->fetch_by_name_vendor( 'HG-U133A', 'AFFY' );
+#
+#my @expected_probe_dbIDs = (
+#    '655066',  '655071',  '655076',  '655080',  '655085',  '655090',
+#    '655095',  '655100',  '655104',  '655109',  '655114',  '1967802',
+#    '2481435', '5724311', '5724315', '5724318', '5724322', '5724325',
+#    '5724328', '5724332', '5724335', '5724338', '5724341', '5724345'
+#);
+#
+#is( @{ $array->get_all_Probe_dbIDs() },
+#    @expected_probe_dbIDs, 'Test get_all_Probe_dbIDs() subroutine' );
+#
+#throws_ok {
+#    my $array = Bio::EnsEMBL::Funcgen::Array->new(
+#        -NAME        => 'Test',
+#        -FORMAT      => 'Tiled',
+#        -SIZE        => '1',
+#        -VENDOR      => 'VENDOR',
+#        -TYPE        => 'OLIGO',
+#        -DESCRIPTION => 'TESTING',
+#        -CLASS       => 'VENDOR_FORMAT',    #e.g. AFFY_UTR, ILLUMINA_WG
+#    );
+#    $array->get_all_Probe_dbIDs();
+#}
+#qr/Must have set an adaptor to get_all_Probe_dbIDs/,
+#    'Test get_all_Probe_dbIDs(), adaptor is provided';
 
 # ------------------------
 # Test get_all_ProbeSets()

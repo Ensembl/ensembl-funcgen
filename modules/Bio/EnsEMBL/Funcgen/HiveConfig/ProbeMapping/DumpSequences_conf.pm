@@ -35,7 +35,17 @@ sub pipeline_analyses {
       {   -logic_name => 'dump_toplevel',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters => {
-              'cmd' => 'sequence_dump.pl -dbuser #username# -dbname #dbname# -dbhost #host# -dbport #port# -toplevel -onefile -filename #toplevel_sequences_file# -mask_repeat Dust -mask_repeat RepeatMask',
+              'cmd' => 'sequence_dump.pl '
+              . ' -dbuser #username# '
+              . ' -dbname #dbname# '
+              . ' -dbhost #host# '
+              . ' -dbport #port# '
+              . ' -toplevel '
+              . ' -onefile '
+              . ' -filename #toplevel_sequences_file# '
+              . ' -mask_repeat Dust '
+              . ' -mask_repeat RepeatMask'
+              . ' #expr( #password# ? " -dbpass " . #password# : "" )expr# ',
           },
           -rc_name   => '4Gb_job',
           -flow_into => {
@@ -46,13 +56,30 @@ sub pipeline_analyses {
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -rc_name   => '16Gb_job',
           -parameters => {
-              'cmd' => 'sequence_dump.pl -dbuser #username# -dbname #dbname# -dbhost #host# -dbport #port# -toplevel -onefile -filename #toplevel_sequences_file# -mask_repeat Dust -mask_repeat RepeatMask',
+              'cmd' => 'sequence_dump.pl '
+              . ' -dbuser #username# '
+              . ' -dbname #dbname# '
+              . ' -dbhost #host# '
+              . ' -dbport #port# '
+              . ' -toplevel '
+              . ' -onefile '
+              . ' -filename #toplevel_sequences_file# '
+              . ' -mask_repeat Dust '
+              . ' -mask_repeat RepeatMask' 
+              . ' #expr( #password# ? " -dbpass " . #password# : "" )expr# ',
           },
       },
       {   -logic_name => 'dump_genes',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters => {
-              'cmd' => 'dump_genes.pl -dbuser #username# -dbname #dbname# -dbhost #host# -dbport #port# -file #gene_sequences_file# -cdna -stable_id',
+              'cmd' => 'dump_genes.pl '
+                . ' -dbuser #username# '
+                . ' -dbname #dbname# '
+                . ' -dbhost #host# '
+                . ' -dbport #port# '
+                . ' #expr( #password# ? " -dbpass " . #password# : "" )expr# '
+                . ' -file #gene_sequences_file# '
+                . ' -cdna -stable_id',
           },
           -rc_name   => '4Gb_job',
           -flow_into => {
@@ -63,7 +90,14 @@ sub pipeline_analyses {
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -rc_name   => '16Gb_job',
           -parameters => {
-              'cmd' => 'dump_genes.pl -dbuser #username# -dbname #dbname# -dbhost #host# -dbport #port# -file #gene_sequences_file# -cdna -stable_id',
+              'cmd' => 'dump_genes.pl '
+                . ' -dbuser #username# '
+                . ' -dbname #dbname# '
+                . ' -dbhost #host# '
+                . ' -dbport #port# '
+                . ' #expr( #password# ? " -dbpass " . #password# : "" )expr# '
+                . ' -file #gene_sequences_file# '
+                . ' -cdna -stable_id',
           },
       },
       {

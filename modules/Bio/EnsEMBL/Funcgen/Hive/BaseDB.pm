@@ -28,10 +28,10 @@ sub fetch_input {
   
   #Set the base output_dir for analyses which output to the DB
   
-  $self->validate_dir_param
-   ('db_output_dir',
-    1,  #create/writeable? #should this be undef, and force the runnables to validate_dir_param output_dir?
-    $self->data_root_dir.'/output/'.$self->out_db->dbc->dbname); #default
+#   $self->validate_dir_param
+#    ('db_output_dir',
+#     1,  #create/writeable? #should this be undef, and force the runnables to validate_dir_param output_dir?
+#     $self->data_root_dir.'/output/'.$self->out_db->dbc->dbname); #default
   
   
   $self->process_params(['slices', 'skip_slices'], 1, 1);#optional/as array flags

@@ -175,33 +175,38 @@ sub run {
   $self->helper->debug(1, "Running chunk command:\n$cmd");
   
   my @split_stdout = run_backtick_cmd($cmd);
-  (my $final_file = $split_stdout[-1]) =~ s/creating file \`(.*)\'/$1/;
   
-  if(! defined $final_file) {
-    $self->throw_no_retry('Failed to parse (s/.*\`([0-9]+)\\\'/$1/) final file '.
-      ' from last split output line: '.$split_stdout[-1]);  
-  }
+  # The output looks like this:
+  #
+  # creating file ‘/nfs/nobackup/ensembl...K562_WCE_ChIP-Seq_control_TF_no44_ENCODE88_WCE_ENCODE88_bwa_samse.fastq0000’
+  #
+#   (my $final_file = $split_stdout[-1]) =~ s/creating file .(.*)./$1/;
+  
+#   if(! defined $final_file) {
+#     $self->throw_no_retry('Failed to parse (s/.*\`([0-9]+)\\\'/$1/) final file '.
+#       ' from last split output line: '.$split_stdout[-1]);  
+#   }
   
   # Get files to data flow to individual alignment jobs
   my @fastq_files = run_backtick_cmd('ls '.$current_working_directory."/${set_prefix}.fastq_*");
   @fastq_files    = sort {$a cmp $b} @fastq_files;
   
-  # Now do some sanity checking to make sure we have all the files
-  if($fastq_files[-1] ne $final_file) {
-    $self->throw_no_retry("split output specified last chunk file was numbered \'$final_file\',".
-      " but found:\n".$fastq_files[-1]);  
-  } else {
-    $final_file =~ s/.*_([0-9]+)$/$1/;
-    $final_file =~ s/^[0]+//;
-    $final_file ||= 0;  #Handle the 0000 case
-  
-    $self->debug(1, "Matching final_file index $final_file vs new_fastq max index ".$#fastq_files);
-    
-    if($final_file != $#fastq_files){
-      $self->throw_no_retry('split output specified '.($final_file+1).
-        ' file(s) were created but only found '.scalar(@fastq_files).":\n".join("\n", @fastq_files));  
-    }
-  }
+#   # Now do some sanity checking to make sure we have all the files
+#   if($fastq_files[-1] ne $final_file) {
+#     $self->throw_no_retry("split output specified last chunk file was numbered \'$final_file\',".
+#       " but found:\n".$fastq_files[-1]);  
+#   } else {
+#     $final_file =~ s/.*_([0-9]+)$/$1/;
+#     $final_file =~ s/^[0]+//;
+#     $final_file ||= 0;  #Handle the 0000 case
+#   
+#     $self->debug(1, "Matching final_file index $final_file vs new_fastq max index ".$#fastq_files);
+#     
+#     if($final_file != $#fastq_files){
+#       $self->throw_no_retry('split output specified '.($final_file+1).
+#         ' file(s) were created but only found '.scalar(@fastq_files).":\n".join("\n", @fastq_files));  
+#     }
+#   }
   
   $self->set_param_method('fastq_files', \@fastq_files);
   my %batch_params = %{$self->batch_params};

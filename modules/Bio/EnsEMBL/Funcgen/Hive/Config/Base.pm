@@ -42,62 +42,132 @@ use base qw(Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf);
 sub default_options {
   my $self = shift;
   
-#   my $dnadb_pass = $self->o('dnadb_pass');
-#   # This is code for no password on the command line.
-#   #
-#   if (($dnadb_pass eq "''") || ($dnadb_pass eq "\"\"")) {
-#     $dnadb_pass = undef;
-#   }
-  
   return {
       %{$self->SUPER::default_options},
-      dnadb_pass        => $self->o('ENV', 'DNADB_PASS'),
-      pass              => $self->o('ENV', 'DB_PASS'),
-      use_tracking_db   => 1,
       work_root_dir     => $self->o('data_root_dir').'/output/'.$self->o('pipeline_name'),
       hive_output_dir   => $self->o('data_root_dir').'/output/'.$self->o('pipeline_name').'/hive_debug',
-      port              => 3306,
-      dnadb_port        => 3306,
-       pipeline_name     => 'ersa',
-      
-    dnadb   => {
-	-dnadb_host   => $self->o('dnadb_host'),
-	-dnadb_pass   => undef,
-	-dnadb_port   => $self->o('dnadb_port'),
-	-dnadb_user   => $self->o('dnadb_user'),
-	-dnadb_name   => $self->o('dnadb_name'),
-    },
-    out_db  => {
-	-host   => $self->o('host'),
-	-port   => $self->o('port'),
-	-user   => $self->o('user'),
-	-pass   => $self->o('pass'),
-	-dbname => $self->o('dbname'),
-	-driver => 'mysql',
-    },
-
+      pipeline_name     => 'ersa4ever',
    };
+}
+
+sub beekeeper_extra_cmdline_options {
+    my ($self) = @_;
+    return '-reg_conf ' . $self->o('reg_conf') . ' -keep_alive -can_respecialize 1 -sleep 0.1';
 }
 
 sub pipeline_wide_parameters {
   my ($self) = @_;
   
+  my $species  = $self->o('species');
+  my $reg_conf = $self->o('reg_conf');
+  
+  my $second_pass = $species!~/^#:subst/ && $reg_conf!~ /^#:subst/;
+  
+  my $details_from_registry = {};
+  
+  if ($second_pass) {
+    my $reg_conf = $self->o('reg_conf');
+    my $species  = $self->o('species');
+    $details_from_registry = fetch_details_from_registry($species, $reg_conf);
+  }
+  
   return {
     %{$self->SUPER::pipeline_wide_parameters},
 
-    dnadb            => $self->o('dnadb'),
-    out_db           => $self->o('out_db'),
+    dnadb            => $details_from_registry->{dnadb},
+    out_db           => $details_from_registry->{outdb},
     pipeline_name    => $self->o('pipeline_name'),
-    out_db_url       => $self->dbconn_2_url('out_db'),
-    species          => $self->o('species'),
-    assembly         => $self->o('assembly'),
+#     out_db_url       => $self->dbconn_2_url('out_db'),
+    species          => $details_from_registry->{species},
+    assembly         => $details_from_registry->{assembly},
     data_root_dir    => $self->o('data_root_dir'),
     work_root_dir    => $self->o('work_root_dir'),
     hive_output_dir  => $self->o('hive_output_dir'),
-    use_tracking_db  => $self->o('use_tracking_db'),
+    use_tracking_db  => 1,
+
+#     dnadb            => $self->o('dnadb'),
+#     out_db           => $self->o('out_db'),
+#     pipeline_name    => $self->o('pipeline_name'),
+#     out_db_url       => $self->dbconn_2_url('out_db'),
+#     species          => $self->o('species'),
+#     assembly         => $self->o('assembly'),
+#     data_root_dir    => $self->o('data_root_dir'),
+#     work_root_dir    => $self->o('work_root_dir'),
+#     hive_output_dir  => $self->o('hive_output_dir'),
+#     use_tracking_db  => $self->o('use_tracking_db'),
 
 #     default_gender => 'male',
   };
+}
+
+sub fetch_details_from_registry {
+
+  my $species  = shift;
+  my $registry = shift;
+  
+  use Bio::EnsEMBL::Registry;
+  Bio::EnsEMBL::Registry->load_all($registry);
+
+  my $funcgen_db_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
+  my $core_db_adaptor    = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'core');
+  
+  my $coordsystem_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'core', 'coordsystem');
+
+  my $default_chromosome_coordsystem = $coordsystem_adaptor->fetch_by_name('chromosome');
+  my $default_assembly = $default_chromosome_coordsystem->version;
+  
+  my $dnadb_host = $core_db_adaptor->dbc->host;
+  my $dnadb_pass = $core_db_adaptor->dbc->pass;
+  my $dnadb_port = $core_db_adaptor->dbc->port;
+  my $dnadb_user = $core_db_adaptor->dbc->user;
+  my $dnadb_name = $core_db_adaptor->dbc->dbname;
+  
+  my $host   = $funcgen_db_adaptor->dbc->host;
+  my $pass   = $funcgen_db_adaptor->dbc->pass;
+  my $port   = $funcgen_db_adaptor->dbc->port;
+  my $user   = $funcgen_db_adaptor->dbc->user;
+  my $dbname = $funcgen_db_adaptor->dbc->dbname;
+
+  my $dnadb = {
+    "-dnadb_host" => "${dnadb_host}",
+    "-dnadb_name" => "$dnadb_name",
+    "-dnadb_pass" => "$dnadb_pass",
+    "-dnadb_port" => $dnadb_port,
+    "-dnadb_user" => "$dnadb_user"
+  };
+  my $outdb = {
+    "-dbname" => "$dbname",
+    "-driver" => "mysql",
+    "-host" => "$host",
+    "-pass" => "$pass",
+    "-port" => $port,
+    "-user" => "$user"
+  };
+
+  use Hash::Util qw( lock_hash );
+  my $registry_details = {
+
+    dnadb_host   => $dnadb_host,
+    dnadb_pass   => $dnadb_pass,
+    dnadb_port   => $dnadb_port,
+    dnadb_user   => $dnadb_user,
+    dnadb_name   => $dnadb_name,
+    
+    species => $core_db_adaptor->species,
+    
+    dnadb => $dnadb,
+    outdb => $outdb,
+
+    host   => $host,
+    pass   => $pass,
+    port   => $port,
+    user   => $user,
+    name   => $dbname,
+
+    assembly => $default_assembly
+  };
+  
+  return $registry_details;
 }
 
 sub resource_classes {

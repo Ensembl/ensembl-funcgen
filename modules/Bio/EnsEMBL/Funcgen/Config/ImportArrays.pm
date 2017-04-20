@@ -1,5 +1,5 @@
 # Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-# Copyright [2016-2017] EMBL-European Bioinformatics Institute
+# Copyright [2016] EMBL-European Bioinformatics Institute
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,27 +25,12 @@ Bio::EnsEMBL::Analysis::Config::ImportArrays
 
 =head1 DESCRIPTION
 
-This contains the configuration for importing arrays from flat files.
-It is entirely dependant on the arrays.env environment which can be used
-to set up and run the pipeline in an easy and interactive way. This contains
-all possible configurations which will then be set dynamically by the RunnableDB
-for each instance using the input_id as a key into a separate ImportArrays.conf
-file, listed here as ARRAY_FORMAT_FILE.
-
-
-The layout of the configuration is a set of hashes,
-each one keyed by logic name. There is also a DEFAULT hash,
-which is used as the default for all logic names (this
-was the configuration pattern stolen from Exonerate2Genes,
-although in this case it's very unlikely you will need to have
-different configs by logic name).
+  This contains the configuration for importing arrays from flat files.
 
 =head1 CONTACT
 
 =cut
 
-
-#package Bio::EnsEMBL::Analysis::Config::ImportArrays;
 package Bio::EnsEMBL::Funcgen::Config::ImportArrays;
 
 use warnings ;
@@ -60,17 +45,6 @@ use vars qw( %Config );
   (
    ARRAY_CONFIG => {
     DEFAULT => {
-#      DNADB => {
-#       -dbname          => $ENV{'DNADB_NAME'},
-#       -host            => $ENV{'DNADB_HOST'},
-#       -port            => $ENV{'DNADB_PORT'},
-#       -user            => $ENV{'DNADB_USER'},
-#       -pass            => $ENV{'DNADB_PASS'},
-#       -species         => $ENV{'SPECIES'},
-#       -multispecies_db => $ENV{'DNADB_MULTISPECIES_DB'},
-#       -species_id      => $ENV{'DNADB_SPECIES_ID'}
-#      },
-#      OUTPUT_DIR           => $ENV{'WORK_DIR'},
 
      # Regular expression for parsing file headers
      #
@@ -95,11 +69,15 @@ use vars qw( %Config );
       ARRAY_PARAMS => {
 
       Default =>  {
-        #-name    => 'Porcine',
         -vendor  => 'AFFY',
         -format  => 'EXPRESSION',
         -type    => 'OLIGO',
         -class   => 'AFFY_UTR',
+        
+        -is_probeset_array       => 1,
+        -is_linked_array         => 0,
+        -has_sense_interrogation => 0,
+
       },
 
       platypus_exon => {
@@ -108,6 +86,9 @@ use vars qw( %Config );
         -format  => 'EXPRESSION',
         -type    => 'OLIGO',
         -class   => 'AFFY_UTR',
+        -is_probeset_array       => 1,
+        -is_linked_array         => 0,
+        -has_sense_interrogation => 0,
       },
      },
 
@@ -171,7 +152,6 @@ use vars qw( %Config );
         'Rice',
         'Poplar',
         'Vitis_Vinifera',
-        'maize',
       ],
 
     },
@@ -183,33 +163,38 @@ use vars qw( %Config );
      #Can't use ProbeID=([0-9]+) as control probes only have there ProbeID in the concat'd full name string
      #Hence the match will fail.
 
-
      IFIELDORDER => {
-                     -name       => 1,
-                     -array_chip => 0,
-                     -array      => 0,
-                     -probe_set   => 2,
-                    },
+        -name       => 1,
+        -array_chip => 0,
+        -array      => 0,
+        -probe_set   => 2,
+      },
 
-     ARRAY_PARAMS =>
-     {
-       'Default' => {
-#                      -name => 'RaEx-1_0-st-v1',
-                     -vendor => 'AFFY',
-                     #-setsize => undef,
-                     -format  => 'EXPRESSION',
-                     -type    => 'OLIGO',
-                     -class   => 'AFFY_ST',
-                    },
+     ARRAY_PARAMS => {
+        'Default' => {
+          -vendor => 'AFFY',
+          -format  => 'EXPRESSION',
+          -type    => 'OLIGO',
+          -class   => 'AFFY_ST',
+          
+          -is_probeset_array       => 1,
+          -is_linked_array         => 1,
+          -has_sense_interrogation => 1,
 
-       'HTA-2_0' => {
-                     -name => 'HTA-2_0',
-                     -vendor => 'AFFY',
-                     -format  => 'EXPRESSION',
-                     -type    => 'OLIGO',
-                     -description => 'Human Transcriptome Array 2.0',
-                     -class   => 'AFFY_ST',
-                    },
+        },
+
+      'HTA-2_0' => {
+        -name => 'HTA-2_0',
+        -vendor => 'AFFY',
+        -format  => 'EXPRESSION',
+        -type    => 'OLIGO',
+        -description => 'Human Transcriptome Array 2.0',
+        -class   => 'AFFY_ST',
+
+          -is_probeset_array       => 1,
+          -is_linked_array         => 1,
+          -has_sense_interrogation => 1,
+      },
      },
 
      INPUT_FORMAT => 'FASTA',
@@ -227,35 +212,42 @@ use vars qw( %Config );
      ],
     },
 
-    IMPORT_ILLUMINA_WG_ARRAYS =>
-    {
+    IMPORT_ILLUMINA_WG_ARRAYS => {
+    
      IIDREGEXP => '^>(\S+):(\S+).*$',
 
      IFIELDORDER => {
-                     -name       => 1,
-                     -array_chip => 0,
-                     -array      => 0,
-                     #-probe_set   => 2,#This could be annotation
-                    },
+        -name       => 1,
+        -array_chip => 0,
+        -array      => 0,
+      },
 
-     ARRAY_PARAMS =>
-     {
+     ARRAY_PARAMS => {
 
       'Default' => {
-#                          -name => 'MouseWG_6_V1',
-                         -vendor => 'ILLUMINA',
-                         #-setsize => undef,
-                         -format  => 'EXPRESSION',
-                         -type    => 'OLIGO',
-                         -class   => 'ILLUMINA_WG',
-                        },
+        -vendor => 'ILLUMINA',
+        -format  => 'EXPRESSION',
+        -type    => 'OLIGO',
+        -class   => 'ILLUMINA_WG',
+
+        -is_probeset_array      => 0,
+        -is_linked_array        => 0,
+        -has_sense_interrogation  => 0,
+
+      },
+      
       'RatRef-12' => {
-                         -name => 'RatRef-12_V1',
-                         -vendor => 'ILLUMINA',
-                         -format  => 'EXPRESSION',
-                         -type    => 'OLIGO',
-                         -class   => 'ILLUMINA_WG',
-                        },
+        -name => 'RatRef-12_V1',
+        -vendor => 'ILLUMINA',
+        -format  => 'EXPRESSION',
+        -type    => 'OLIGO',
+        -class   => 'ILLUMINA_WG',
+
+        -is_probeset_array      => 0,
+        -is_linked_array        => 0,
+        -has_sense_interrogation  => 0,
+
+      },
      },
 
      INPUT_FORMAT => 'FASTA',
@@ -275,110 +267,106 @@ use vars qw( %Config );
     },
 
     IMPORT_ILLUMINA_INFINIUM_ARRAYS => {
+    
      IIDREGEXP => '^>(\S+):(\S+).*$',
+     
      IFIELDORDER => {
-      -name       => 1,
-      -array_chip => 0,
-      -array      => 0,
-    },
+        -name       => 1,
+        -array_chip => 0,
+        -array      => 0,
+      },
+    
     ARRAY_PARAMS => {
       'Default' => {
-        #-name    => 'HumanMethylation27',
         -vendor  => 'ILLUMINA',
         -format  => 'METHYLATION',
         -type    => 'OLIGO',
         -class   => 'ILLUMINA_INFINIUM',
+
+        -is_probeset_array      => 0,
+        -is_linked_array        => 0,
+        -has_sense_interrogation  => 0,
+
       },
     },
     INPUT_FORMAT => 'FASTA',
 
      ARRAYS_WITH_DEFAULT_PARAMS => [
-	    'HumanMethylation27',
-	    'HumanMethylation450',
+      'HumanMethylation27',
+      'HumanMethylation450',
     ],
   },
 
     #CODELINK
 
-    IMPORT_CODELINK_ARRAYS =>
-    {
+    IMPORT_CODELINK_ARRAYS => {
+    
      IIDREGEXP => '^>(\S+):(\S+).*$',
 
      IFIELDORDER => {
-                     -name       => 1,
-                     -array_chip => 0,
-                     -array      => 0,
-
-                     #-probe_set   => 2,#This could be annotation
-                    },
+        -name       => 1,
+        -array_chip => 0,
+        -array      => 0,
+      },
 
      ARRAY_PARAMS => {
+      'Default' => {
+        -vendor => 'CODELINK',
+        -format  => 'EXPRESSION',
+        -type    => 'OLIGO',
+        -class   => 'CODELINK',
 
-                      'Default' => {
-#                                     -name => 'CODELINK',
-                                    -vendor => 'CODELINK',
-                                    #-setsize => undef,
-                                    -format  => 'EXPRESSION',
-                                    -type    => 'OLIGO',
-                             	     -class   => 'CODELINK',
-                                   },
+        -is_probeset_array      => 0,
+        -is_linked_array        => 1,
+        -has_sense_interrogation  => 0,
+      },
      },
 
      INPUT_FORMAT => 'FASTA',
 
      ARRAYS_WITH_DEFAULT_PARAMS => [
-	    'CODELINK',
+        'CODELINK',
      ],
     },
 
     #AGILENT
 
-    IMPORT_AGILENT_ARRAYS =>
-    {
+    IMPORT_AGILENT_ARRAYS => {
 
      IIDREGEXP => '^>(\S+?):(\S+)\s*(.*)$',
      #IIDREGEXP => '^>(\S+):(.+)', #EG HACK
 
      IFIELDORDER => {
-                     -name       => 1,
-                     -array_chip => 0,
-                     -array      => 0,
-                     -description => 2,
-                     #-probe_set   => 2,#This could be annotation
-                    },
+        -name       => 1,
+        -array_chip => 0,
+        -array      => 0,
+        -description => 2,
+      },
 
-     ARRAY_PARAMS =>
-     {
+     ARRAY_PARAMS => {
       'Default' => {
-#                    -name => 'G2518A',
-                   -vendor => 'AGILENT',
-                   #-setsize => undef,
-                   -format  => 'EXPRESSION',
-                   -type    => 'OLIGO',
+        -vendor => 'AGILENT',
+        -format  => 'EXPRESSION',
+        -type    => 'OLIGO',
+        -class   => 'AGILENT',
+        
+        -is_probeset_array      => 0,
+        -is_linked_array        => 1,
+        -has_sense_interrogation  => 0,
 
-                   -class   => 'AGILENT',
-                  },
+      },
 
-      #Rabbit only
-
-      #This naming was erronoes and non-species specific
-      #'SurePrint_G2519F_4x44k' => {
-      #                             -name => 'SurePrint_G2519F_4x44k',
-      #                             -vendor => 'AGILENT',
-      #                            #-setsize => undef,
-      #                            -format  => 'EXPRESSION',
-      #                            -type    => 'OLIGO',
-      #
-      #                            -class   => 'AGILENT',
-      #                            },
-
-      'SurePrint_GPL16709_4x44k' =>
-      {
+      'SurePrint_GPL16709_4x44k' => {
        -name => 'SurePrint_GPL16709_4x44k',
        -vendor => 'AGILENT',
        -format  => 'EXPRESSION',
        -type    => 'OLIGO',
        -class   => 'AGILENT',
+
+        -is_probeset_array      => 0,
+        -is_linked_array        => 1,
+        -has_sense_interrogation  => 0,
+
        skip_config => {skip_reps =>1, skip_non_unique_names=>1},
       },
 
@@ -386,65 +374,69 @@ use vars qw( %Config );
       {
        -name => 'SurePrint_GPL7083_4x44k',
        -vendor => 'AGILENT',
-       #-setsize => undef,
        -format  => 'EXPRESSION',
        -type    => 'OLIGO',
-       #-description => '',
        -class   => 'AGILENT',
+
+        -is_probeset_array      => 0,
+        -is_linked_array        => 1,
+        -has_sense_interrogation  => 0,
+
        skip_config => {skip_reps =>1, skip_non_unique_names=>1},
       },
 
       'CGH_44b' => {
-                    -name => 'CGH_44b',
-                    -vendor => 'AGILENT',
-                    #-setsize => undef,
-                    -format  => 'CGH',
-                    -type    => 'OLIGO',
-                    -class   => 'AGILENT',
-                   },
+        -name => 'CGH_44b',
+        -vendor => 'AGILENT',
+        -format  => 'CGH',
+        -type    => 'OLIGO',
+        -class   => 'AGILENT',
+
+        -is_probeset_array      => 0,
+        -is_linked_array        => 1,
+        -has_sense_interrogation  => 0,
+
+      },
      },
 
      INPUT_FORMAT => 'FASTA',
 
      ARRAYS_WITH_DEFAULT_PARAMS => [
-	    'G2518A',
-	    'G2519F',
-	    'A-MEXP-2203',
-	    'G2519F-015059',
-	    'G2519F-021169',
-	    'G2519F-015241',
-	    'G4138A-012106',
-	    'WholeGenome_4x44k_v1',
-	    'WholeGenome_4x44k_v2',
-      'SurePrint_G3_GE_8x60k',
-	    'SurePrint_G3_GE_8x60k_v2',
-	    'WholeGenome_4x44k_v3',
-	    '012795',
-	    '015061',
-	    '020186',
-	    'GPL13394',
-	    'GPL14144',
-	    'GPL8304',
-	    'GPL14143',
-	    'GPL8303',
-	    'GPL14142',
-	    
-	    'GPL13914',
-	    'GPL19516',
-	    
-	    'GPL14146',
-	    'GPL14145',
-	    'GPL14372',
-	    'AgilentTiling',
-	    'WholeGenome',
-	    'OligoArray_012795',
-      'AGILENT_059389_Custom_Chicken_GE_8X60k',
+        'G2518A',
+        'G2519F',
+        'A-MEXP-2203',
+        'G2519F-015059',
+        'G2519F-021169',
+        'G2519F-015241',
+        'G4138A-012106',
+        'WholeGenome_4x44k_v1',
+        'WholeGenome_4x44k_v2',
+        'SurePrint_G3_GE_8x60k',
+        'SurePrint_G3_GE_8x60k_v2',
+        'WholeGenome_4x44k_v3',
+        '012795',
+        '015061',
+        '020186',
+        'GPL13394',
+        'GPL14144',
+        'GPL8304',
+        'GPL14143',
+        'GPL8303',
+        'GPL14142',
+        'GPL13914',
+        'GPL19516',
+        'GPL14146',
+        'GPL14145',
+        'GPL14372',
+        'AgilentTiling',
+        'WholeGenome',
+        'OligoArray_012795',
+        'AGILENT_059389_Custom_Chicken_GE_8X60k',
       ],
     },
 
-    IMPORT_WUSTL_ARRAYS =>
-    {
-       IIDREGEXP => '^>(\S+):(\S+)',#Need to add desc field here
+    IMPORT_WUSTL_ARRAYS => {
+       IIDREGEXP => '^>(\S+):(\S+)',
 
        IFIELDORDER => {
          -name       => 1,
@@ -453,15 +445,16 @@ use vars qw( %Config );
        },
 
        ARRAY_PARAMS => {
-
          'Default' => {
-#            -name => 'WUSTL-C_elegans',
            -vendor => 'WUSTL',
-           #-setsize => undef,
            -format  => 'EXPRESSION',
            -type    => 'OLIGO',
-
            -class   => 'WUSTL',
+
+            -is_probeset_array      => 0,
+            -is_linked_array        => 1,
+            -has_sense_interrogation  => 0,
+
          },
        },
 
@@ -472,9 +465,8 @@ use vars qw( %Config );
        ],
     },
 
-    IMPORT_SLRI_ARRAYS =>
-     {
-       IIDREGEXP => '^>(\S+):(\S+)',#Need to add desc field here
+    IMPORT_SLRI_ARRAYS => {
+       IIDREGEXP => '^>(\S+):(\S+)',
 
        IFIELDORDER => {
          -name       => 1,
@@ -483,15 +475,16 @@ use vars qw( %Config );
        },
 
        ARRAY_PARAMS => {
-
          'Default' => {
-#            -name => 'GPL3518',
            -vendor => 'SLRI',
-           #-setsize => undef,
            -format  => 'EXPRESSION',
            -type    => 'OLIGO',
-
            -class   => 'SLRI',
+
+            -is_probeset_array      => 0,
+            -is_linked_array        => 1,
+            -has_sense_interrogation  => 0,
+
          },
        },
 
@@ -513,12 +506,17 @@ use vars qw( %Config );
        },
 
        ARRAY_PARAMS => {
-
          'Default' => {
            -vendor => 'UCSF',
            -format  => 'EXPRESSION',
            -type    => 'OLIGO',
            -class   => 'UCSF',
+
+            -is_probeset_array      => 0,
+            -is_linked_array        => 1,
+            -has_sense_interrogation  => 0,
+
+
          },
        },
 
@@ -540,14 +538,16 @@ use vars qw( %Config );
        },
 
        ARRAY_PARAMS => {
-
          'Default' => {
            -vendor => 'NIMBLEGEN',
-#          -array_chip => 0,
-#          -array      => 0,
            -format  => 'EXPRESSION',
            -type    => 'OLIGO',
            -class   => 'NIMBLEGEN_MODENCODE',
+
+            -is_probeset_array      => 0,
+            -is_linked_array        => 1,
+            -has_sense_interrogation  => 0,
+
          },
        },
 
@@ -566,28 +566,28 @@ use vars qw( %Config );
     #ftp://ftp.phalanxbiotech.com/pub/probe_sequences/hoa
     #Mouse
     #ftp://ftp.phalanxbiotech.com/pub/probe_sequences/moa
-    IMPORT_PHALANX_ARRAYS =>
-    {
+    IMPORT_PHALANX_ARRAYS => {
      IIDREGEXP => '^>(\S+):(\S+).*$',
 
      IFIELDORDER => {
-                     -name       => 1,
-                     -array_chip => 0,
-                     -array      => 0,
-                     #-probe_set   => 2,#This could be annotation
-                    },
+        -name       => 1,
+        -array_chip => 0,
+        -array      => 0,
+      },
 
      ARRAY_PARAMS => {
-                      'Default' => {
-#                                      -name => 'OneArray',
-                                     -vendor => 'PHALANX',
-                                     #-setsize => undef,
-                                     -format  => 'EXPRESSION',
-                                     -type    => 'OLIGO',
+        'Default' => {
+          -vendor => 'PHALANX',
+          -format  => 'EXPRESSION',
+          -type    => 'OLIGO',
+          -class   => 'PHALANX',
 
-                                     -class   => 'PHALANX',
-                                    },
-                     },
+          -is_probeset_array      => 0,
+          -is_linked_array        => 1,
+          -has_sense_interrogation  => 0,
+
+        },
+     },
 
      INPUT_FORMAT => 'FASTA',
 
@@ -599,30 +599,30 @@ use vars qw( %Config );
 
     #LEIDEN
 
-    IMPORT_LEIDEN_ARRAYS =>
-    {
+    IMPORT_LEIDEN_ARRAYS => {
+    
      IIDREGEXP => '^>(\S+):(\S+)\s*(.*)$',
 
-     IFIELDORDER => {
-                     -name        => 1,
-                     -array_chip  => 0,
-                     -array       => 0,
-                     -description => 2,
-                     #-probe_set   => 2,#This could be annotation
-                    },
+    IFIELDORDER => {
+      -name        => 1,
+      -array_chip  => 0,
+      -array       => 0,
+      -description => 2,
+    },
 
-     ARRAY_PARAMS => {
-                      #Danio
-                      'Default' => {
-#                                     -name => 'LEIDEN2',
-                                    -vendor => 'LEIDEN',
-                                    #-setsize => undef,
-                                    -format  => 'EXPRESSION',
-                                    -type    => 'OLIGO',
+    ARRAY_PARAMS => {
+      'Default' => {
+        -vendor => 'LEIDEN',
+        -format  => 'EXPRESSION',
+        -type    => 'OLIGO',
+        -class   => 'LEIDEN',
 
-                                    -class   => 'LEIDEN',
-                                   },
-                     },
+        -is_probeset_array      => 0,
+        -is_linked_array        => 1,
+        -has_sense_interrogation  => 0,
+
+      },
+    },
 
      INPUT_FORMAT => 'FASTA',
 
@@ -634,29 +634,30 @@ use vars qw( %Config );
 
     #STEMPLE
 
-    IMPORT_STEMPLE_LAB_SANGER_ARRAYS =>
-    {
-     IIDREGEXP => '^>(\S+):(\S+)\s*(.*)$', #Need to add desc field here
+    IMPORT_STEMPLE_LAB_SANGER_ARRAYS => {
+    
+      IIDREGEXP => '^>(\S+):(\S+)\s*(.*)$',
 
-     IFIELDORDER => {
-                     -name       => 1,
-                     -array_chip => 0,
-                     -array      => 0,
-                     -description   => 2,
-                    },
+      IFIELDORDER => {
+        -name       => 1,
+        -array_chip => 0,
+        -array      => 0,
+        -description   => 2,
+      },
 
-     ARRAY_PARAMS => {
-                      #Danio
-                      'Default' => {
-#                                        -name => 'MattArray1',
-                                       -vendor => 'STEMPLE_LAB_SANGER',
-                                       #-setsize => undef,
-                                       -format  => 'EXPRESSION',
-                                       -type    => 'OLIGO',
+      ARRAY_PARAMS => {
+        'Default' => {
+          -vendor => 'STEMPLE_LAB_SANGER',
+          -format  => 'EXPRESSION',
+          -type    => 'OLIGO',
+          -class   => 'STEMPLE_LAB_SANGER',
+          
+          -is_probeset_array      => 0,
+          -is_linked_array        => 1,
+          -has_sense_interrogation  => 0,
 
-                                       -class   => 'STEMPLE_LAB_SANGER',
-                                      },
-                     },
+        },
+      },
 
      INPUT_FORMAT => 'FASTA',
 
@@ -666,27 +667,24 @@ use vars qw( %Config );
      ],
     },
 
-    IMPORT_CATMA_ARRAYS =>
-    {
-     IIDREGEXP => '^>(\S+):(\S+)', #Need to add desc field here
+    IMPORT_CATMA_ARRAYS => {
+    
+     IIDREGEXP => '^>(\S+):(\S+)',
 
-     IFIELDORDER => {
-                     -name       => 1,
-                     -array_chip => 0,
-                     -array      => 0,
-                    },
+      IFIELDORDER => {
+        -name       => 1,
+        -array_chip => 0,
+        -array      => 0,
+      },
 
-     ARRAY_PARAMS => {
-                      'Default' => {
-#                                   -name => 'CATMA',
-                                  -vendor => 'CATMA',
-                                  #-setsize => undef,
-                                  -format  => 'EXPRESSION',
-                                  -type    => 'OLIGO',
-
-                                  -class   => 'CATMA',
-                                 },
-                     },
+      ARRAY_PARAMS => {
+        'Default' => {
+          -vendor => 'CATMA',
+          -format  => 'EXPRESSION',
+          -type    => 'OLIGO',
+          -class   => 'CATMA',
+        },
+      },
      INPUT_FORMAT => 'FASTA',
 
      ARRAYS_WITH_DEFAULT_PARAMS => [
@@ -694,26 +692,23 @@ use vars qw( %Config );
      ],
    },
 
-   IMPORT_NSF_ARRAYS =>
-   {
-     IIDREGEXP => '^>(\S+):(\S+)', #Need to add desc field here
+   IMPORT_NSF_ARRAYS => {
+     IIDREGEXP => '^>(\S+):(\S+)',
 
      IFIELDORDER => {
-                     -name       => 1,
-                     -array_chip => 0,
-                     -array      => 0,
-                    },
+        -name       => 1,
+        -array_chip => 0,
+        -array      => 0,
+      },
 
      ARRAY_PARAMS => {
-                      'Default' => {
-#                                     -name => 'BGIYale',
-                                    -vendor => 'NSF',
-                                    #-setsize => undef,
-                                    -format  => 'EXPRESSION',
-                                    -type    => 'OLIGO',
-                                    -class   => 'NSF',
-                                   },
-                     },
+        'Default' => {
+          -vendor  => 'NSF',
+          -format  => 'EXPRESSION',
+          -type    => 'OLIGO',
+          -class   => 'NSF',
+        },
+      },
      INPUT_FORMAT => 'FASTA',
      ARRAYS_WITH_DEFAULT_PARAMS => [
       'BGIYale',
@@ -721,9 +716,8 @@ use vars qw( %Config );
       'NSF45K',
      ],
     },
-
    }
-  );
+);
 
 sub import {
   my ($callpack) = caller(0);   # Name of the calling package

@@ -34,16 +34,15 @@ Bio::EnsEMBL::Funcgen::Probe - A module to represent a nucleotide probe.
 
 =head1 SYNOPSIS
 
-use Bio::EnsEMBL::Funcgen::Probe;
+  use Bio::EnsEMBL::Funcgen::Probe;
 
-my $probe = Bio::EnsEMBL::Funcgen::Probe->new
- (
-  -PROBE_SET     => $probe_set,
-	-NAME          => 'Probe-1',
-  -ARRAY         => $array,
-  -ARRAY_CHIP_ID => $ac_dbid,
-	-CLASS         => "EXPERIMENTAL",
- );
+  my $probe = Bio::EnsEMBL::Funcgen::Probe->new(
+    -PROBE_SET     => $probe_set,
+    -NAME          => 'Probe-1',
+    -ARRAY         => $array,
+    -ARRAY_CHIP_ID => $ac_dbid,
+    -CLASS         => "EXPERIMENTAL",
+  );
 
 =head1 DESCRIPTION
 
@@ -67,6 +66,7 @@ use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Argument qw( rearrange ) ;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use Bio::EnsEMBL::Utils::Exception qw( deprecate );
 
 use base qw( Bio::EnsEMBL::Funcgen::Storable );
 
@@ -100,15 +100,14 @@ use base qw( Bio::EnsEMBL::Funcgen::Storable );
 
 
   Example    : my $probe = Bio::EnsEMBL::Probe->new(
-                   -NAME          => 'Probe-1',
-				   -PROBE_SET     => $probe_set,
-                   -ARRAY         => $array,
-                   -ARRAY_CHIP_ID => $array_chip_id,
-				   -LENGTH        => 25,
-                   -CLASS         => 'EXPERIMENTAL',
-                   -DESCRIPTION   => 'Some useful description',
-
-               );
+      -NAME          => 'Probe-1',
+      -PROBE_SET     => $probe_set,
+      -ARRAY         => $array,
+      -ARRAY_CHIP_ID => $array_chip_id,
+      -LENGTH        => 25,
+      -CLASS         => 'EXPERIMENTAL',
+      -DESCRIPTION   => 'Some useful description',
+    );
   Description: Creates a new Bio::EnsEMBL::Probe object.
   Returntype : Bio::EnsEMBL::Probe
   Exceptions : Throws if not supplied with probe name(s) and array(s)
@@ -128,10 +127,11 @@ sub new {
       $names,          $name,
       $array_chip_ids, $array_chip_id,
       $arrays,         $array,
-      $probeset,       $aclass,
+      $probe_set,       $aclass,
       $length,         $desc,
       $sequence,
-      $array_chip
+      $array_chip,
+      $probe_seq_id
      ) = rearrange([
       'NAMES',          'NAME',
       'ARRAY_CHIP_IDS', 'ARRAY_CHIP_ID',
@@ -139,7 +139,8 @@ sub new {
       'PROBE_SET',      'CLASS',
       'LENGTH',         'DESCRIPTION',
       'SEQUENCE',
-      'array_chip'
+      'array_chip',
+      'probe_seq_id'
       ], @_);
 
 
@@ -147,17 +148,9 @@ sub new {
   @$array_chip_ids = ($array_chip_id) if (ref($array_chip_ids) ne "ARRAY");
   @$arrays = ($array) if (ref($arrays) ne "ARRAY");
 
-  #We need to record duplicates for each probe_set i.e. each array.
-  #the relationship is really array_chip to name, as everything else stays the same
-  #can't have same probe_set_id as this wouldn't maintain relationship
-  #need unique ps id's or array_chip_id in probe table?
-  #Then we can miss probeset id's out totally if required
-  #or should we just duplicate everything with unique db IDs
-
-
   if (defined $$names[0]) {
 
-    if(scalar(@$names) != scalar(@$array_chip_ids)){
+    if(scalar(@$names) != scalar(@$array_chip_ids)) {
       throw("You have not specified valid name:array_chip_id pairs\nYou need a probe name for each Array");
     }
 
@@ -182,13 +175,21 @@ sub new {
     throw('You need to provide a probe name (or names) to create an Probe');
   }
 
-  $self->probeset($probeset) if defined $probeset;
+  $self->probe_set($probe_set) if defined $probe_set;
   $self->class($aclass)      if defined $aclass;
   $self->length($length)     if defined $length;
   $self->description($desc)  if defined $desc;
   $self->array_chip($array_chip)  if defined $array_chip;
   
-  $self->sequence($sequence)  if defined $sequence;
+  $self->_probe_seq_id($probe_seq_id)  if defined $probe_seq_id;
+  
+  if (defined $sequence) {
+    use Bio::EnsEMBL::Funcgen::ProbeSequence;
+    my $probe_sequence = Bio::EnsEMBL::Funcgen::ProbeSequence->new(
+      -sequence => $sequence
+    );
+    $self->set_ProbeSequence($probe_sequence);
+  }
 
   return $self;
 }
@@ -196,7 +197,41 @@ sub new {
 sub sequence {
     my $self = shift;
     $self->{'sequence'} = shift if @_;
+    
+    if (! defined $self->{'sequence'}) {
+      $self->{'sequence'} = $self->get_ProbeSequence->sequence;
+    }
+    
     return $self->{'sequence'};
+}
+
+sub _probe_seq_id {
+    my $self = shift;
+    $self->{'probe_seq_id'} = shift if @_;
+    return $self->{'probe_seq_id'};
+}
+
+sub _fetch_ProbeSequence {
+    my $self = shift;
+    return $self->adaptor()->db()->get_ProbeSequenceAdaptor()->fetch_by_dbID($self->_probe_seq_id);
+}
+
+sub get_ProbeSequence {
+    my $self = shift;
+    
+    if (
+         (! defined $self->{'probe_sequence'})
+      && (defined $self->_probe_seq_id)
+    ) {
+        $self->{'probe_sequence'} = $self->_fetch_ProbeSequence;
+    }
+    return $self->{'probe_sequence'};
+}
+
+sub set_ProbeSequence {
+    my $self = shift;
+    my $probe_sequence = shift;
+    $self->{'probe_sequence'} = $probe_sequence;
 }
 
 sub array_chip {
@@ -209,10 +244,6 @@ sub array_chip {
     
     return $self->{'_array_chip'};
 }
-
-#only takes single values for array and array_chip
-#as we're shortcuting the constructor and simply blessing the hash
-#therefore attr keys should not be lc and not prefix with '-'
 
 =head2 new_fast
 
@@ -246,7 +277,7 @@ sub new_fast {
   Caller     : General,
                Probe->new(),
                ProbeAdaptor->_obj_from_sth(),
-			   AffyProbeAdaptor->_obj_from_sth()
+               AffyProbeAdaptor->_obj_from_sth()
   Status     : Medium Risk - Change to take ArrayChip object.
 
 =cut
@@ -285,13 +316,13 @@ sub add_array_chip_probename {
 =cut
 
 sub get_all_ProbeFeatures {
-	my $self = shift;
-	if ( $self->adaptor() && $self->dbID() ) {
-		return $self->adaptor()->db()->get_ProbeFeatureAdaptor()->fetch_all_by_Probe($self);
-	} else {
-		warning('Need database connection to retrieve Features');
-		return [];
-	}
+  my $self = shift;
+  if ( $self->adaptor() && $self->dbID() ) {
+    return $self->adaptor()->db()->get_ProbeFeatureAdaptor()->fetch_all_by_Probe($self);
+  } else {
+    warning('Need database connection to retrieve Features');
+    return [];
+  }
 }
 
 =head2 get_all_Arrays
@@ -300,7 +331,7 @@ sub get_all_ProbeFeatures {
   Example    : my $arrays = $probe->get_all_Arrays();
   Description: Returns all arrays that this probe is part of. Only works if the
                probe was retrieved from the database or created using
-			   add_Array_probename (rather than add_arrayname_probename).
+               add_Array_probename (rather than add_arrayname_probename).
   Returntype : Listref of Bio::EnsEMBL::Funcgen::Array objects
   Exceptions : None
   Caller     : General
@@ -309,10 +340,8 @@ sub get_all_ProbeFeatures {
 =cut
 
 sub get_all_Arrays {
-    my $self = shift;
-
-	#Arrays are currently preloaded using a cache in _objs_from_sth
-	return [ values %{$self->{'arrays'}} ];
+  my $self = shift;
+  return [ values %{$self->{'arrays'}} ];
 }
 
 =head2 get_names_Arrays
@@ -328,15 +357,9 @@ sub get_all_Arrays {
 =cut
 
 sub get_names_Arrays {
-    my $self = shift;
-
-	#Arrays are currently preloaded using a cache in _objs_from_sth
-	return $self->{'arrays'};
+  my $self = shift;
+  return $self->{'arrays'};
 }
-
-
-
-
 
 =head2 get_all_probenames
 
@@ -358,19 +381,20 @@ sub get_names_Arrays {
 =cut
 
 sub get_all_probenames {
-  my ($self, @array_names) = @_;
 
-	my @names;
-	@array_names = keys %{$self->{'probenames'}} if ! @array_names;
+  my $self        = shift;
+  my @array_names = @_;
 
-	foreach my $array(@array_names){
-	  push @names, @{$self->{'probenames'}->{$array}};
-	}
-
-  return \@names;
+  if (! @array_names) {
+    @array_names = keys %{$self->{'probenames'}};
+  }
+  
+  my @probe_names;
+  foreach my $current_array_name (@array_names) {
+    push @probe_names, @{$self->{'probenames'}->{$current_array_name}};
+  }
+  return \@probe_names;
 }
-
-
 
 =head2 get_probename
 
@@ -384,12 +408,6 @@ sub get_all_probenames {
   Status     : Medium Risk
 
 =cut
-
-
-#we can have dulplicate probes on same array for Nimblegen
-#what defines and unique probe?
-#If we have a duplicate on the same array or even on the same array_chip, then we can still return the same name
-#Needs more work
 
 sub get_probename {
   my ($self, $arrayname) = @_;
@@ -440,7 +458,7 @@ sub get_probename {
                probe name.
   Returntype : Arrayref of strings
   Exceptions : None
-  Caller     : General
+  Caller     : Used by web for the names like here: http://www.ensembl.org/Homo_sapiens/Transcript/Oligos?db=core;g=ENSG00000139618;r=13:32315474-32400266;t=ENST00000470094
   Status     : Stable
 
 =cut
@@ -448,58 +466,60 @@ sub get_probename {
 sub get_all_complete_names {
   my $self = shift;
 
-  my ($probeset, @result);
-  my $pset = $self->probeset;
-
-  if ($pset) {
-    $probeset = $pset->name;
-  }
-
-  if(defined $probeset){
-    $probeset = ':'.$probeset.':';
+  my $probeset;
+  
+  if (defined $self->probeset && $self->probeset->name) {
+    $probeset = ':' . $self->probeset->name . ':';
   } else {
     $probeset = ':';
   }
 
-  while ( my (undef, $array) = each %{$self->{'arrays'}} ) {
-    foreach my $name ( @{$self->{'probenames'}{$array->name()}} ) {
-      push @result, $array->name . $probeset . $name;
+  my $arrays = $self->get_all_Arrays;
+  my @all_complete_names;
+  foreach my $current_array (@$arrays) {
+  
+    my $probe_names = $self->get_all_probenames($current_array->name());
+    
+    foreach my $current_probe_name ( @$probe_names ) {
+    
+      my $complete_name = $current_array->name . $probeset . $current_probe_name;
+      push @all_complete_names, $complete_name;
     }
   }
-  return \@result;
+  return \@all_complete_names;
 }
+# 
+# =head2 get_complete_name
+# 
+#   Arg [1]    : string - array name
+#   Example    : my $compname = $probe->get_complete_name('Array-1');
+#   Description: For a given array, retrieve the complete name for this probe.
+#   Returntype : string
+#   Exceptions : Throws if the array name not specified or not known for this probe
+#   Caller     : General
+#   Status     : Medium Risk
+# 
+# =cut
+# 
+# sub get_complete_name {
+#   my $self = shift;
+#   my $arrayname = shift;
+# 
+#   throw('Must provide and array name argument to retreive the complete name') if ! defined $arrayname;
+# 
+#   my $probename = $self->get_probename($arrayname);
+# 
+#   if (!defined $probename) {
+#     throw('Unknown array name');
+#   }
+# 
+#   my $probeset = $self->probeset()->name();
+#   $probeset .= ':' if $probeset;
+# 
+#   return "$arrayname:$probeset$probename";
+# }
 
-=head2 get_complete_name
-
-  Arg [1]    : string - array name
-  Example    : my $compname = $probe->get_complete_name('Array-1');
-  Description: For a given array, retrieve the complete name for this probe.
-  Returntype : string
-  Exceptions : Throws if the array name not specified or not known for this probe
-  Caller     : General
-  Status     : Medium Risk
-
-=cut
-
-sub get_complete_name {
-  my $self = shift;
-  my $arrayname = shift;
-
-  throw('Must provide and array name argument to retreive the complete name') if ! defined $arrayname;
-
-  my $probename = $self->get_probename($arrayname);
-
-  if (!defined $probename) {
-    throw('Unknown array name');
-  }
-
-  my $probeset = $self->probeset()->name();
-  $probeset .= ':' if $probeset;
-
-  return "$arrayname:$probeset$probename";
-}
-
-=head2 probeset
+=head2 probe_set
 
   Arg [1]    : (optional) Bio::EnsEMBL::Funcgen::ProbeSet
   Example    : my $probe_set = $probe->probeset();
@@ -511,11 +531,16 @@ sub get_complete_name {
 
 =cut
 
-sub probeset {
+sub probe_set {
     my $self = shift;
 
     $self->{'probe_set'} = shift if @_;
     return $self->{'probe_set'};
+}
+
+sub probeset {
+    my $self = shift;
+    return $self->probe_set(@_);
 }
 
 =head2 class
@@ -551,14 +576,13 @@ sub class {
 =cut
 
 sub length {
-    my $self = shift;
-    $self->{'length'} = shift if @_;
-    
-    if (! defined $self->{'length'}) {
-      $self->{'length'} = length($self->sequence);
-    }
-    
-    return $self->{'length'};
+  my $self = shift;
+  $self->{'length'} = shift if @_;
+
+  if (! defined $self->{'length'}) {
+    $self->{'length'} = length($self->sequence);
+  }
+  return $self->{'length'};
 }
 
 =head2 description
@@ -581,28 +605,73 @@ sub description {
 }
 
 
-=head2 feature_count
+# =head2 feature_count
+# 
+#   Arg[0]     : recount flag
+#   Example    : my $num_features = $probe->feature_count();
+#   Description: Counts the number of ProbeFeatures associated with this Probe
+#   Returntype : int
+#   Exceptions : None
+#   Caller     : General
+#   Status     : Medium Risk
+# 
+# =cut
+# 
+# 
+# sub feature_count{
+#   my ($self, $recount) = @_;
+# 
+#   if($recount ||
+#     (! $self->{feature_count})){
+#     $self->{feature_count} = $self->adaptor->db->get_ProbeFeatureAdaptor->count_probe_features_by_probe_id($self->dbID);
+#   }
+# 
+#   return $self->{feature_count};
+# }
 
-  Arg[0]     : recount flag
-  Example    : my $num_features = $probe->feature_count();
-  Description: Counts the number of ProbeFeatures associated with this Probe
-  Returntype : int
-  Exceptions : None
-  Caller     : General
-  Status     : Medium Risk
+=head2 get_all_Transcript_DBEntries
+
+  Arg[0]     : optional - Bio::EnsEMBL::Transcript to filter DBEntries on.
+  Example    : my @transc_dbentries = @{ $set_feature->get_all_Transcript_DBEntries };
+  Description: Retrieves ensembl Transcript DBEntries (xrefs) for this Storable.
+               This does _not_ include the corresponding translations
+               DBEntries (see get_all_DBLinks).
+
+               This method will attempt to lazy-load DBEntries from a
+               database if an adaptor is available and no DBEntries are present
+               on the Storable (i.e. they have not already been added or
+               loaded).
+  Returntype : Listref of Bio::EnsEMBL::DBEntry objects
+  Exceptions : none
+  Caller     : general
+  Status     : at risk
 
 =cut
 
+sub get_all_Transcript_DBEntries {
+  my $self = shift;
+  deprecate(
+    "get_all_Transcript_DBEntries has been deprecated and will be removed in Ensembl release 92."
+        . " Please use fetch_all_ProbeTranscriptMappings instead."
+  );
+  return $self->fetch_all_ProbeTranscriptMappings;
+}
 
-sub feature_count{
-  my ($self, $recount) = @_;
+=head2 fetch_all_ProbeTranscriptMappings
 
-  if($recount ||
-    (! $self->{feature_count})){
-    $self->{feature_count} = $self->adaptor->db->get_ProbeFeatureAdaptor->count_probe_features_by_probe_id($self->dbID);
-  }
+  Arg[0]     : none
+  Example    : $probe->fetch_all_mapped_Transcripts;
+  Description: Returns all mappings of this probe to transcripts.
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::ProbeTranscriptMapping objects
+  Exceptions : none
+  Caller     : general
+  Status     : at risk
 
-  return $self->{feature_count};
+=cut
+
+sub fetch_all_ProbeTranscriptMappings {
+  my $self = shift;
+  return $self->adaptor->db->get_ProbeTranscriptMappingAdaptor->fetch_all_by_probe_id($self->dbID);
 }
 
 1;

@@ -53,7 +53,7 @@ sub run {
   
   use Bio::EnsEMBL::IO::Parser::Fasta;
   my $fasta_parser = Bio::EnsEMBL::IO::Parser::Fasta->open($probe_file);
-
+  
   while ($fasta_parser->next) {
 
     my $header   = $fasta_parser->getHeader;

@@ -98,7 +98,7 @@ sub fetch_by_dbID {
   }
   
   my $epigenome = $self->SUPER::fetch_by_dbID($dbID);
-  $self->{_cache}->{$dbID} = $epigenome;
+  $self->{_cache}->{$epigenome->dbID} = $epigenome;
   
   return $self->{_cache}->{$dbID};
 }
