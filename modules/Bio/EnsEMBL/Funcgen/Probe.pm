@@ -147,6 +147,9 @@ sub new {
   @$names = ($name) if(ref($names) ne "ARRAY");
   @$array_chip_ids = ($array_chip_id) if (ref($array_chip_ids) ne "ARRAY");
   @$arrays = ($array) if (ref($arrays) ne "ARRAY");
+  
+  $self->_array_chip_id($array_chip_id);
+  $self->name($name);
 
   if (defined $$names[0]) {
 
@@ -158,10 +161,6 @@ sub new {
       if(scalar(@$names) != scalar(@$arrays)){
 	throw("You have not specified valid name:Array pairs\nYou need a probe name for each Array\n");
       }
-    }
-    else{
-      warn("You have not specified and Array objects, this will result in multiple/redundant queries based on the array_chip_id\nYou should pass Array objects to speed up this process");
-	  #Is this true? We should cache this in the ArrayChip and make sure we're caching it in the caller.
     }
 
     # Probe(s) have been specified
@@ -211,6 +210,12 @@ sub _probe_seq_id {
     return $self->{'probe_seq_id'};
 }
 
+sub name {
+    my $self = shift;
+    $self->{'name'} = shift if @_;
+    return $self->{'name'};
+}
+
 sub _fetch_ProbeSequence {
     my $self = shift;
     return $self->adaptor()->db()->get_ProbeSequenceAdaptor()->fetch_by_dbID($self->_probe_seq_id);
@@ -234,12 +239,24 @@ sub set_ProbeSequence {
     $self->{'probe_sequence'} = $probe_sequence;
 }
 
+sub _array_chip_id {
+    my $self = shift;
+    $self->{'_array_chip_id'} = shift if @_;
+    return $self->{'_array_chip_id'};
+}
+
 sub array_chip {
     my $self       = shift;
     my $array_chip = shift;
     
     if (defined $array_chip) {
       $self->{'_array_chip'} = $array_chip;
+    }
+    if (! defined $self->{'_array_chip'}) {
+      $self->{'_array_chip'} = $self->adaptor->db->get_ArrayChipAdaptor->fetch_by_dbID($self->_array_chip_id);
+    }
+    if (! defined $self->{'_array_chip'}) {
+      die("Probe was not linked to an array chip!");
     }
     
     return $self->{'_array_chip'};

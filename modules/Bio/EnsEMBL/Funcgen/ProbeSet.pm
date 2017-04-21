@@ -170,6 +170,15 @@ sub get_all_Arrays {
   return $self->{arrays};
 }
 
+sub get_Array {
+  my $self = shift;
+  my $arrays = $self->get_all_Arrays;
+  
+  if (scalar @$arrays != 1) {
+    die("The probe set links to more than one array!");
+  }
+  return $arrays->[0];
+}
 
 =head2 get_all_Probes
 
