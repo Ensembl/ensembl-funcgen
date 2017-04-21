@@ -183,7 +183,7 @@ sub parse_and_load{
   }
 
   $species = $id_prefixes{$species};
-  my $chroms = get_slices($self->slice_adaptor);
+  
   ### Read file
   open (FILE, "<$file") || die "Can't open $file";
   my $cnt = 0;
