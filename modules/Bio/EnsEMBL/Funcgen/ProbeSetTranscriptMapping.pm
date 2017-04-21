@@ -44,7 +44,7 @@ sub new {
 
   my @field = qw(
     dbID
-    probeset_id
+    probe_set_id
     stable_id
     description
     adaptor
@@ -52,7 +52,7 @@ sub new {
   
   my (
     $dbID,
-    $probeset_id,
+    $probe_set_id,
     $stable_id,
     $description,
     $adaptor
@@ -62,7 +62,7 @@ sub new {
   $self->dbID            ($dbID);
   $self->stable_id       ($stable_id);
   $self->description     ($description);
-  $self->probeset_id        ($probeset_id);
+  $self->probe_set_id        ($probe_set_id);
   $self->adaptor         ($adaptor);
 
   return $self;
@@ -72,7 +72,7 @@ sub dbID           { return shift->_generic_get_or_set('dbID',            @_) }
 sub adaptor        { return shift->_generic_get_or_set('adaptor',         @_) }
 sub stable_id      { return shift->_generic_get_or_set('stable_id',       @_) }
 sub description    { return shift->_generic_get_or_set('description',     @_) }
-sub probeset_id    { return shift->_generic_get_or_set('probeset_id',     @_) }
+sub probe_set_id   { return shift->_generic_get_or_set('probe_set_id',    @_) }
 
 sub display_id {
   my $self = shift;
@@ -94,7 +94,7 @@ sub linkage_annotation {
 
 sub fetch_ProbeSet {
   my $self = shift;
-  my $probeset = $self->adaptor->get_ProbeSetAdaptor->fetch_by_dbID($self->probeset_id);
+  my $probeset = $self->adaptor->get_ProbeSetAdaptor->fetch_by_dbID($self->probe_set_id);
   return $probeset;
 }
 
