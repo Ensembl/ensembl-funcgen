@@ -302,6 +302,7 @@ sub summary_as_hash {
       strand           => $self->strand,
       summit           => $self->summit,
       score            => $self->score,
+      id               => $self->dbID,
     };
 }
 1;

@@ -42,7 +42,6 @@ use strict;
 use Devel::Peek;
 
 use Bio::EnsEMBL::Funcgen::Utils::Helper;
-# use Bio::EnsEMBL::Utils::Exception         qw( throw );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( get_study_name_from_Set
                                                get_set_prefix_from_Set
                                                scalars_to_objects 
@@ -128,17 +127,11 @@ sub fetch_input {   # nothing to fetch... just the DB parameters...
  
   $self->validate_dir_param('bin_dir',    undef, 1); #optional
 
-  #Optional with defaults
-  $self->validate_dir_param
-   ('hive_output_dir',    
-    1, #create/writeable
-    $self->data_root_dir.'/output/'.$self->param_required('pipeline_name').'/hive_debug'
-   ); 
-    
   $self->validate_dir_param
    ('work_root_dir', 
-    undef, #Let's not create this until we need it
-    $self->data_root_dir.'/output/'.$self->param_required('pipeline_name')
+    1,
+#     $self->data_root_dir.'/output/'.$self->param_required('pipeline_name')
+    undef
    );
 
   #output and work dir need setting based on dbname
@@ -258,17 +251,9 @@ sub alignment_dir {
       [
 	$self->alignment_root_dir,
  	get_study_name_from_Set($rset, $control)
-#	$rset->epigenome->production_name
       ],
       $create
     );
-
-#     $self->set_dir_param_method(
-#       'alignment_dir', 
-#       [$self->alignment_root_dir, 
-#       get_study_name_from_Set($rset, $control)],
-#       $create
-#     );
   }
   
   return $self->param('alignment_dir');
@@ -280,9 +265,13 @@ use File::Spec;
 
   The directory in which the regulation files go. This is shared with the 
   other teams, so best to put it in its own directory.
+  
+  Deactivated for now, use own directory after the development break when
+  we move from result_set to alignment.
 
 =cut
 sub regulation_directory {
+  return undef;
   return 'funcgen';
 }
 
@@ -293,12 +282,18 @@ sub regulation_directory {
 
 =cut
 sub version_directory {
-  return '086'
+  my $self = shift;
+  return $self->param('ensembl_release_version');
 }
 
 sub db_output_dir {
   my $self = shift;
-  return $self->data_root_dir . '/output/' . $self->out_db->dbc->dbname;
+  return File::Spec->catfile(
+    $self->data_root_dir,
+    $self->species,
+    $self->assembly,
+    &regulation_directory,
+  );
 }
 
 =head1 default_directory_by_table_and_file_type
@@ -315,7 +310,7 @@ sub default_directory_by_table_and_file_type {
   my $file_type = shift;
   
   return File::Spec->catfile(
-    $self->db_output_dir, &regulation_directory, $table, &version_directory, 'ersa_signal', $file_type
+    $self->db_output_dir, $table, $self->version_directory, 'ersa_signal', $file_type
   );
 }
 
@@ -329,8 +324,9 @@ sub bigwig_output_dir {  return shift->default_directory_by_table_and_file_type(
 
 =cut
 sub quality_check_output_dir {
+  my $self      = shift;
   return File::Spec->catfile(
-    shift->db_output_dir, &regulation_directory, 'quality_checks', &version_directory
+    $self->db_output_dir, 'quality_checks', $self->version_directory
   )
 }
 
@@ -776,48 +772,6 @@ sub _param_and_method {
   return $self->$param_method(@param_args);
 } 
   
-# sub init_branching_by_analysis{  
-#   my $self = shift;
-#    
-#   use Carp;
-#   confess('init_branching_by_analysis is deprecated.');
-# 
-#   #my $branch_config = $self->get_param_method('branch_config', 'silent');  
-#   #Not a passed param anymore, as we get it from the dataflow rules
-#  
-#  
-#   if(! defined $self->{branch_config}){
-#     my $dfr_adaptor = $self->db->get_DataflowRuleAdaptor;  
-#     inject_DataflowRuleAdaptor_methods($dfr_adaptor);   
-#     
-#     my $job = $self->input_job;
-#     
-#     $self->{branch_config} = $dfr_adaptor->get_dataflow_config_by_analysis_id($job->analysis_id);
-# 
-#     my %bn_config;
-#     my $branch_config = $self->{branch_config};
-#     
-#     foreach my $config(values(%$branch_config)){
-#       my $branch = $config->{branch};
-#       my $funnel = $config->{funnel};
-#       
-#       
-#       if(exists $branch_config->{$branch}){
-#         $self->throw('Cannot init_branching_by_analysis as logic_name'.
-#           " clashes with branch number:\t".$branch);  
-#       }
-#       
-#       $bn_config{$branch} = $config;
-#     }
-#     
-#     $self->{branch_config} = {%$branch_config, %bn_config}; 
-#     $self->helper->debug(1, "Branch config is:\n", $self->{branch_config});
-#     
-#   }
-# 
-#   return $self->{branch_config};
-# }
-
 sub _get_branch_number{
   my $self          = shift;
   my $branch_codes  = shift;
@@ -929,10 +883,6 @@ sub branch_job_group{
   
   return;
 }
-
-
-
-
 
 =head2 dataflow_job_groups
 
@@ -1052,24 +1002,6 @@ sub sam_ref_fai {
   $self->param('sam_ref_fai', $samtools_fasta_index);
   
   return $samtools_fasta_index;
-  
-#   my $gender      = shift; 
-#   
-#   my $file_gender = $self->convert_gender_to_file_gender($gender);
-#   
-#   if(! defined $self->param_silent('sam_ref_fai')) {
-#     
-#     warn ("File gender is $file_gender");
-# 
-#     my $file_name = $self->species.'_'.$file_gender.'_'.$self->assembly.'_unmasked.fasta.fai';
-#     my $sam_ref_fai = validate_path([$self->data_root_dir,
-#                                      'sam_header',
-#                                     $self->species,
-#                                     $file_name]);
-#     $self->param('sam_ref_fai', $sam_ref_fai);
-#   }
-#   
-#   return $self->param('sam_ref_fai');
 }
 
 sub get_alignment_path_prefix_by_ResultSet {
@@ -1222,65 +1154,6 @@ sub get_alignment_files_by_ResultSet_formats {
 
 }
 
-# sub archive_root{
-#   return shift->param_silent('archive_root');  
-# }
-
-# sub archive_files {
-#   my $self       = shift;
-#   my $files      = shift;
-#   my $mandatory  = shift;
-#   
-#   if(ref($files)){
-#     assert_ref($files, 'ARRAY', 'archive files');  
-#   }
-#   else{
-#     $files = [$files];  
-#   }
-#   
-#   if(my $archive_root = $self->archive_root){
-#     
-#     my $data_root = $self->data_root_dir;
-# 
-#     foreach my $file(@$files){
-#     
-#       if($file !~ /^$data_root/o){
-#         $self->throw_no_retry('The file path to archive must be a full length path rooted in the data root directory:'.
-#           "\nFile path:\t$file\nData root:\t$data_root\n");  
-#       }
-#         
-#       (my $archive_file = $file) =~ s/$data_root/$archive_root/;
-#     
-#       #sanity check these are not the same 
-#       if($archive_file eq $file){
-#         $self->throw_no_retry("Source and archive filepath are the same:\n$file");  
-#       }
-#     
-#       #Now we need to create the target directory if it doesn't exist
-#       (my $target_root = $archive_file) =~ s/(.*\/)[^\/]+$/$1/;
-#       
-#       if((! -f $file) && (-f $archive_file)){
-#         #File appears to have already been archived. This is probably a rerunning job
-#         return;
-#       }
-#       
-#     
-#       if(! -d $target_root){
-#         #Maybe this is an intermitent error?
-#         $self->run_system_cmd_no_retry("mkdir -p $target_root");      
-#       } 
-#       
-#         
-#       $self->run_system_cmd_no_retry("mv $file $archive_file");    
-#     }
-#   }
-#   elsif($mandatory && ! $self->param_silent('allow_no_archiving')){
-#     $self->throw_no_retry('The mandatory flag has been set but not archive_root is defined');  
-#   }
-#   
-#   return;
-# }
-
 =head2 is_idr_FeatureType
 
   Everything is an idr feature type unless it is a broad peak feature type.
@@ -1315,22 +1188,6 @@ sub is_idr_ResultSet {
 
   return $is_idr_rset;  
 }
-
-# sub run_system_cmd_no_retry{
-#   my $self = shift; 
-#   my $cmd  = shift;
-#   
-#    $self->helper->debug(1, "run_system_cmd_no_retry\t$cmd"); 
-#   
-#   if(run_system_cmd($cmd, 1) != 0){
-#     $self->throw_no_retry("Failed to run_system_cmd:\t$cmd");  
-#   }  
-#   
-#   return;
-# }
-  
-
-
 
 #Move this to EFGUtils
 

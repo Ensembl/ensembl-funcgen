@@ -94,9 +94,18 @@ while (my $current_annotated_feature_id = <$in>) {
   };
   if ($@) {
     use Carp;
+    use Data::Dumper;
+    
+    $Data::Dumper::Sortkeys = 1;
+    $Data::Dumper::Maxdepth = 3;
+    
     confess(
       "Unable to serialise feature! dbid:"
       . $annotated_feature->dbID
+      . "\n"
+      . Dumper($annotated_feature)
+      . "\n"
+      . Dumper($annotated_feature->summary_as_hash)
     );
   }
   # This prevents memory leaks.

@@ -7,6 +7,8 @@ use File::Spec;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Hive::DBSQL::DBConnection;
 use Getopt::Long;
+use Data::Dumper;
+
 use Bio::EnsEMBL::Funcgen::Utils::ExportUtils qw(
   assert_source_files_exist
   assert_destination_file_names_uniqe
@@ -15,35 +17,24 @@ use Bio::EnsEMBL::Funcgen::Utils::ExportUtils qw(
 =head1 Examples
 
 export_data_files.pl  \
-  --destination_root_path /lustre/scratch109/ensembl/funcgen/mn1/ftp_data_file/homo_sapiens/Alignments  \
+  --destination_root_path /hps/nobackup/production/ensembl/mnuhn/otar/ftp/homo_sapiens/Alignments  \
   --file_type bam  \
-  --assembly GrCh38 \
-  --species_assembly_data_file_base_path /nfs/ensnfs-webdev/staging/homo_sapiens/GRCh38  \
-  --species_assembly_data_file_base_path /lustre/scratch109/ensembl/funcgen/mn1/ersa/mn1_homo_sapiens_funcgen_86_38/output/mn1_homo_sapiens_funcgen_86_38/funcgen  \
-  --species_assembly_data_file_base_path /lustre/scratch109/ensembl/funcgen/mn1/ersa/mn1_dev3_homo_sapiens_funcgen_85_38/output/mn1_dev3_homo_sapiens_funcgen_85_38/funcgen  \
-  --registry /nfs/users/nfs_m/mn1/work_dir_ftp/lib/ensembl-funcgen/registry.pm  \
-  --die_if_source_files_missing 1 \
-  --species homo_sapiens 2>&1 \
-  | less
+  --assembly GRCh38 \
+  --dbfile_registry_path /hps/nobackup/production/ensembl/mnuhn/otar/dbfiles/funcgen/homo_sapiens/GRCh38 \
+  --registry /homes/mnuhn/work_dir_ersa/lib/ensembl-funcgen/registry.pm  \
+  --die_if_source_files_missing 0 \
+  --data_freeze_date 20170425 \
+  --species homo_sapiens
 
-export_data_files.pl  \
-  --destination_root_path /lustre/scratch109/ensembl/funcgen/mn1/ftp_data_file/alignments  \
-  --file_type bigwig  \
-  --assembly GrCh38 \
-  --species_assembly_data_file_base_path /nfs/ensnfs-webdev/staging/homo_sapiens/GRCh38  \
-  --species_assembly_data_file_base_path /lustre/scratch109/ensembl/funcgen/mn1/ersa/mn1_homo_sapiens_funcgen_86_38/output/mn1_homo_sapiens_funcgen_86_38/funcgen  \
-  --species_assembly_data_file_base_path /lustre/scratch109/ensembl/funcgen/mn1/ersa/mn1_dev3_homo_sapiens_funcgen_85_38/output/mn1_dev3_homo_sapiens_funcgen_85_38/funcgen  \
-  --registry /nfs/users/nfs_m/mn1/work_dir_ftp/lib/ensembl-funcgen/registry.pm  \
-  --die_if_source_files_missing 1 \
-  --species homo_sapiens 2>&1 \
-  | less
+export_data_files.pl  \                  --destination_root_path #ftp_base_dir#/#species#/Alignments  \                  --file_type bam  \                  --assembly #assembly# \                  --dbfile_registry_path /hps/nobackup/production/ensembl/mnuhn/otar/dbfiles/funcgen/#species#/#assembly# \                  --registry #reg_conf#  \                  --die_if_source_files_missing 0 \                  --data_freeze_date #data_freeze_date# \                  --species #species#                
+
+export_data_files.pl  \                  --destination_root_path #ftp_base_dir#/#species#/Alignments  \                  --file_type bigwig  \                  --assembly #assembly# \                  --dbfile_registry_path /hps/nobackup/production/ensembl/mnuhn/otar/dbfiles/funcgen/#species#/#assembly# \                  --registry #reg_conf#  \                  --die_if_source_files_missing 0 \                  --data_freeze_date #data_freeze_date# \                  --species #species#                
 
 =cut
 
 my $registry;
 my $species;
-# my $output_file;
-my @species_assembly_data_file_base_path;
+my @dbfile_registry_path;
 my $destination_root_path;
 my $file_type;
 my $die_if_source_files_missing = 1;
@@ -54,16 +45,22 @@ use Date::Format;
 my $data_freeze_date = time2str('%Y%m%d', time);
 
 GetOptions (
-   'registry=s'           => \$registry,
-   'species=s'            => \$species,
-#    'output_file=s'        => \$output_file,
-   'file_type=s'          => \$file_type,
-   'assembly=s'           => \$assembly,
-   'data_freeze_date=s'   => \$data_freeze_date,
-   'species_assembly_data_file_base_path=s' => \@species_assembly_data_file_base_path,
-   'die_if_source_files_missing=s'          => \$die_if_source_files_missing,
-   'destination_root_path=s'                => \$destination_root_path,
+   'registry=s'                    => \$registry,
+   'species=s'                     => \$species,
+   'file_type=s'                   => \$file_type,
+   'assembly=s'                    => \$assembly,
+   'data_freeze_date=s'            => \$data_freeze_date,
+   'dbfile_registry_path=s'        => \@dbfile_registry_path,
+   'die_if_source_files_missing=s' => \$die_if_source_files_missing,
+   'destination_root_path=s'       => \$destination_root_path,
 );
+
+my $make_copies = 1;
+
+my $creation_command = 'ln -s';
+if ($make_copies) {
+  $creation_command = 'cp';
+}
 
 use Bio::EnsEMBL::Utils::Logger;
 my $logger = Bio::EnsEMBL::Utils::Logger->new();
@@ -71,16 +68,16 @@ my $logger = Bio::EnsEMBL::Utils::Logger->new();
 if (! defined $assembly) {
   die("assembly (used in the file name only) has not been set!");
 }
-if (@species_assembly_data_file_base_path==0) {
-  die("species_assembly_data_file_base_path has not been set!");
+if (@dbfile_registry_path==0) {
+  die("dbfile_registry_path has not been set!");
 }
-# foreach my $current_path (@species_assembly_data_file_base_path) {
+# foreach my $current_path (@dbfile_registry_path) {
 #   if (! -d $current_path) {
 #     $logger->error("$current_path is not an existing directory!");
 #   }
 # }
-# if (! -d $species_assembly_data_file_base_path[0]) {
-#   die($species_assembly_data_file_base_path[0] . " is not an existing directory!");
+# if (! -d $dbfile_registry_path[0]) {
+#   die($dbfile_registry_path[0] . " is not an existing directory!");
 # }
 if (! defined $file_type) {
   die("file_type has not been set!");
@@ -178,8 +175,13 @@ while (my $hash_ref = $sth->fetchrow_hashref) {
   my $this_files_species_assembly_data_file_base_path;
   my $found_file_in_path = undef;
   POSSIBLE_ROOT_BASE_PATH:
-  foreach my $current_species_assembly_data_file_base_path (@species_assembly_data_file_base_path) {
-    my $source_file_candidate = $current_species_assembly_data_file_base_path . '/' . $hash_ref->{signal_alignment}->{file};
+  foreach my $current_species_assembly_data_file_base_path (@dbfile_registry_path) {
+    my $source_file_candidate = 
+      $current_species_assembly_data_file_base_path 
+#       . '/' . $species
+#       . '/' . $assembly
+      . '/' . $hash_ref->{signal_alignment}->{file};
+      
     if (-e $source_file_candidate) {
       $this_files_species_assembly_data_file_base_path = $current_species_assembly_data_file_base_path;
       $found_file_in_path = 1;
@@ -250,7 +252,7 @@ foreach my $current_source_file (keys %source_file_to_destination_file_map) {
     push @cmd, qq(mkdir -p $destination_directory);
     $created_directories{$destination_directory} = 1;
   }
-  push @cmd, qq(ln -s $current_source_file $destination_file);
+  push @cmd, qq($creation_command $current_source_file $destination_file);
 }
 
 $logger->info("Running ".scalar @cmd." commands for creating the ftp site\n");

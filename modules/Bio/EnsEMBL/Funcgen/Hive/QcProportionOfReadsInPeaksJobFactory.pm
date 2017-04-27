@@ -83,7 +83,6 @@ sub create_input_id {
 
   my $feature_set_id = $feature_set->dbID;
   
-#   my $work_dir = $self->param_required('work_root_dir');
   my $work_dir = $self->proportion_of_reads_in_peaks_output_dir;
   
   my $epigenome_production_name = $feature_set->epigenome->production_name;

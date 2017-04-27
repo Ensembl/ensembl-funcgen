@@ -33,7 +33,6 @@ sub create_input_id {
 
   my $out_db = $self->param('out_db');
   
-  #my $work_dir = $self->param_required('work_root_dir');
   my $work_dir = $self->flagstats_output_dir;
   
   my $epigenome_production_name = $result_set->epigenome->production_name;

@@ -44,9 +44,7 @@ sub default_options {
   
   return {
       %{$self->SUPER::default_options},
-      work_root_dir     => $self->o('data_root_dir').'/output/'.$self->o('pipeline_name'),
-      hive_output_dir   => $self->o('data_root_dir').'/output/'.$self->o('pipeline_name').'/hive_debug',
-      pipeline_name     => 'ersa4ever',
+      pipeline_name => 'ersa4ever',
    };
 }
 
@@ -77,26 +75,12 @@ sub pipeline_wide_parameters {
     dnadb            => $details_from_registry->{dnadb},
     out_db           => $details_from_registry->{outdb},
     pipeline_name    => $self->o('pipeline_name'),
-#     out_db_url       => $self->dbconn_2_url('out_db'),
+
     species          => $details_from_registry->{species},
     assembly         => $details_from_registry->{assembly},
     data_root_dir    => $self->o('data_root_dir'),
-    work_root_dir    => $self->o('work_root_dir'),
-    hive_output_dir  => $self->o('hive_output_dir'),
+    work_root_dir    => $self->o('tempdir') . '/chip_seq_analysis',
     use_tracking_db  => 1,
-
-#     dnadb            => $self->o('dnadb'),
-#     out_db           => $self->o('out_db'),
-#     pipeline_name    => $self->o('pipeline_name'),
-#     out_db_url       => $self->dbconn_2_url('out_db'),
-#     species          => $self->o('species'),
-#     assembly         => $self->o('assembly'),
-#     data_root_dir    => $self->o('data_root_dir'),
-#     work_root_dir    => $self->o('work_root_dir'),
-#     hive_output_dir  => $self->o('hive_output_dir'),
-#     use_tracking_db  => $self->o('use_tracking_db'),
-
-#     default_gender => 'male',
   };
 }
 

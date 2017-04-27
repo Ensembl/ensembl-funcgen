@@ -37,86 +37,27 @@ sub pipeline_analyses {
     @{$self->SUPER::pipeline_analyses}, #To pick up BaseSequenceAnalysis-DefineMergedOutputSet
 
     {
-	-logic_name => 'pre_pipeline_checks',
-	-input_ids  => [ {} ],
-	-module     => 'Bio::EnsEMBL::Funcgen::Hive::ErsaPrePipelineChecks',
+      -logic_name => 'start_chip_seq_analysis',
+      -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      -flow_into  => {
+        MAIN => 'pre_pipeline_checks',
+       }
     },
-#     {
-#       -logic_name => 'fetch_unprocessed_experiments',
-#       -parameters => {
-#         inputquery => '
-# SET SESSION group_concat_max_len = 1000000; 
-# select 
-#   group_concat(experiment.name) as experiment_name
-# from 
-#   experiment 
-#   join feature_type using (feature_type_id) 
-#   join input_subset using (experiment_id) 
-#   join input_subset_tracking using (input_subset_id) 
-# where 
-#   experiment.is_control!=1
-# and local_url not like "/lustre%"
-# and experiment.experiment_id not in (select distinct experiment_id from feature_set where experiment_id is not null)
-# order by
-#   control_id
-# ;
-#         ',
-#         db_conn => 'funcgen:#species#',
-#       },
-#       -input_ids  => [ {} ],
-#       -wait_for => 'pre_pipeline_checks',
-#       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
-#       -flow_into => {
-#         2 => 'create_job_batches',
-#       },
-# 
-#     },
-#     {   -logic_name => 'JobPool',
-# 	-module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-# 	-wait_for    => 'JobPool',
-# 	-flow_into => {
-# 	  MAIN => 'TokenLimitedJobFactory',
-# 	},
-#     },
-#     {   -logic_name => 'TokenLimitedJobFactory',
-# 	-module     => 'Bio::EnsEMBL::Funcgen::Hive::TokenLimitedJobFactory',
-# 	-flow_into => {
-# 	  '2->A' => 'Dummy',
-# 	  'A->1' => 'TokenLimitedJobFactory',
-# 	},
-#     },
-#     {
-#       -logic_name => 'Dummy',
-#       -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-# 	-flow_into => {
-# 	  MAIN => 'create_job_batches',
-# 	},
-#     },
+    {
+      -logic_name => 'pre_pipeline_checks',
+      -module     => 'Bio::EnsEMBL::Funcgen::Hive::ErsaPrePipelineChecks',
+      -flow_into  => {
+        MAIN => 'create_job_batches',
+       }
+    },
     {
       -logic_name => 'create_job_batches',
-      -input_ids  => [ {} ],
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::CreateJobBatchUsingNewGroupingMechanism',
-      -wait_for   => 'pre_pipeline_checks',
       -flow_into  => {
 	'2->A' => 'start_align_controls',
 	'A->2' => 'DeleteFilesFromJobFan',
       },
     },
-#     {
-#       -logic_name => 'IdentifyAlignInputSubsets',
-#       -module     => 'Bio::EnsEMBL::Funcgen::Hive::IdentifySetInputs',
-#       -parameters => {
-#       set_type                     => 'InputSubset',
-# 	feature_set_analysis_type    => 'peak',
-# 	default_feature_set_analyses => $self->o('default_peak_analyses'),
-# 	dataflow_param_names => ['no_idr'], 
-#       },
-#       -wait_for => 'pre_pipeline_checks',
-#       -flow_into => {
-# 	'2->A' => 'DefineResultSets',
-# 	'A->4' => 'DeleteFilesFromJobFan',
-#       },
-#     },
     {
       -logic_name => 'DeleteFilesFromJobFan',
       -module     => 'Bio::EnsEMBL::Funcgen::Hive::ErsaCleanup',

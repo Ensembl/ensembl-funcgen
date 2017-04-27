@@ -64,7 +64,8 @@ sub run {
         push @error_msg, "There are $num_orphans orphan entries in the result_set_input table. They must be removed or new result_sets might have arbitrary links to input_subsets. Suggestion: delete from result_set_input where result_set_id not in (select result_set_id from result_set);"; 
     }
 
-    my @exported_variables = qw( PERL5LIB JAVA_HOME R_LIBS CLASSPATH );
+#     my @exported_variables = qw( PERL5LIB JAVA_HOME R_LIBS CLASSPATH );
+    my @exported_variables = qw( PERL5LIB R_LIBS );
     my $cmd;
     
     ENVIRONMENT_VARIABLE:

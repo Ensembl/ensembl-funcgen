@@ -23,13 +23,13 @@ sub pipeline_analyses {
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
                '1->A' => 'create_manifest_file',
-               'A->1' => 'backbone_pipeline_finished'
+               'A->1' => 'backbone_ftp_pipeline_finished'
             },
         },
         {   -logic_name  => 'create_manifest_file',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
-        {   -logic_name => 'backbone_pipeline_finished',
+        {   -logic_name => 'backbone_ftp_pipeline_finished',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         }
     ]

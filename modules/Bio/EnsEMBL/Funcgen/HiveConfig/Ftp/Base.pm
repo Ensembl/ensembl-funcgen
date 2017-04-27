@@ -26,7 +26,7 @@ sub pipeline_wide_parameters {
       ftp_base_dir     => $self->o('ftp_base_dir'),
       reg_conf         => $self->o('reg_conf'),
       data_freeze_date => $self->o('data_freeze_date'),
-      temp_dir         => '#ftp_base_dir#/../tempdir/#species#',
+      tempdir          => $self->o('tempdir') . '/ftp_export',
     };
 }
 

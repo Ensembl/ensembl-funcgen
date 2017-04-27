@@ -26,7 +26,6 @@ sub create_input_id {
 
   my $self = shift;
   my $input_subset_id = shift;
-  #my $work_dir = $self->param_required('work_root_dir');
   my $work_dir = $self->fastqc_output_dir;
   
   
