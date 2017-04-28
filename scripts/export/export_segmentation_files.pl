@@ -19,9 +19,9 @@ export_segmentation_files.pl \
   --species homo_sapiens       \
   --assembly GrCh38            \
   --data_freeze_date 20161007  \
-  --species_assembly_data_file_base_path /nfs/ensnfs-webdev/staging/homo_sapiens/GRCh38  \
-  --species_assembly_data_file_base_path /lustre/scratch109/ensembl/funcgen/mn1/ersa/mn1_homo_sapiens_funcgen_86_38/output/mn1_homo_sapiens_funcgen_86_38/funcgen  \
-  --species_assembly_data_file_base_path /lustre/scratch109/ensembl/funcgen/mn1/ersa/mn1_dev3_homo_sapiens_funcgen_85_38/output/mn1_dev3_homo_sapiens_funcgen_85_38/funcgen  \
+  --dbfile_registry_path /nfs/ensnfs-webdev/staging/homo_sapiens/GRCh38  \
+  --dbfile_registry_path /lustre/scratch109/ensembl/funcgen/mn1/ersa/mn1_homo_sapiens_funcgen_86_38/output/mn1_homo_sapiens_funcgen_86_38/funcgen  \
+  --dbfile_registry_path /lustre/scratch109/ensembl/funcgen/mn1/ersa/mn1_dev3_homo_sapiens_funcgen_85_38/output/mn1_dev3_homo_sapiens_funcgen_85_38/funcgen  \
   --destination_root_path /lustre/scratch109/ensembl/funcgen/mn1/ftpsite10/homo_sapiens/Segmentation
 
 =cut
@@ -31,7 +31,7 @@ my $species;
 my $assembly;
 my $data_freeze_date;
 my $destination_root_path;
-my @species_assembly_data_file_base_path;
+my @dbfile_registry_path;
 my $die_if_source_files_missing = 1;
 
 GetOptions (
@@ -41,7 +41,7 @@ GetOptions (
    'data_freeze_date=s'      => \$data_freeze_date,
    'destination_root_path=s' => \$destination_root_path,
    'die_if_source_files_missing=s'          => \$die_if_source_files_missing,
-   'species_assembly_data_file_base_path=s' => \@species_assembly_data_file_base_path,
+   'dbfile_registry_path=s' => \@dbfile_registry_path,
 );
 
 Bio::EnsEMBL::Registry->load_all($registry);
@@ -68,16 +68,16 @@ foreach my $current_segmentation_file (@$all_segmentation_files) {
   
   # Find the right base path among the ones provided, if none can be found, leave empty.
   #
-  my $this_files_species_assembly_data_file_base_path;
+  my $this_files_dbfile_registry_path;
   POSSIBLE_ROOT_BASE_PATH:
-  foreach my $current_species_assembly_data_file_base_path (@species_assembly_data_file_base_path) {
-    my $source_file_candidate = $current_species_assembly_data_file_base_path . '/' . $current_segmentation_file->file;
+  foreach my $current_dbfile_registry_path (@dbfile_registry_path) {
+    my $source_file_candidate = $current_dbfile_registry_path . '/' . $current_segmentation_file->file;
     if (-e $source_file_candidate) {
-      $this_files_species_assembly_data_file_base_path = $current_species_assembly_data_file_base_path;
+      $this_files_dbfile_registry_path = $current_dbfile_registry_path;
       last POSSIBLE_ROOT_BASE_PATH;
     }
   }
-  my $source_file = $this_files_species_assembly_data_file_base_path . '/' . $current_segmentation_file->file;
+  my $source_file = $this_files_dbfile_registry_path . '/' . $current_segmentation_file->file;
   
   my $destination_file_name = join '.', (
     $species,
