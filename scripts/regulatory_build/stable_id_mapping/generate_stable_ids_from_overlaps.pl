@@ -37,6 +37,8 @@ my $max_seen_stable_id_number;
   $max_seen_stable_id_number
 );
 
+print "Writing stable id assignments to $outfile\n";
+
 open my $out_fh, ">" . $outfile;
 foreach my $regulatory_feature_id (keys %$stable_id_hash) {
 
