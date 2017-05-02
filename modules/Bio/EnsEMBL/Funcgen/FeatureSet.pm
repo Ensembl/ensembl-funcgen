@@ -166,7 +166,7 @@ sub new {
 
 
 sub _valid_feature_classes{
-  return qw( annotated regulatory external segmentation mirna_target);
+  return qw( annotated regulatory external mirna_target);
 }
 
 
