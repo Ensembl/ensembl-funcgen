@@ -274,11 +274,19 @@ sub efo_db_entry {
   Returntype : String
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Deprecated
 
 =cut
 
-sub ontology_accession{  return $_[0]->{ontology_accession}; }
+sub ontology_accession{
+  deprecate(
+      "Bio::EnsEMBL::Funcgen::Epigenome::ontology_accession() has been
+      deprecated and will be removed in Ensembl release 93."
+          . " Please use Bio::EnsEMBL::Funcgen::Epigenome::efo_accession()
+          instead."
+  );
+  return $_[0]->{ontology_accession};
+}
 
 
 =head2 tissue
@@ -288,11 +296,17 @@ sub ontology_accession{  return $_[0]->{ontology_accession}; }
   Returntype : String
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Deprecated
 
 =cut
 
-sub tissue{   return $_[0]->{tissue}; }
+sub tissue{
+  deprecate(
+      "Bio::EnsEMBL::Funcgen::Epigenome::tissue() has been deprecated and
+      will be removed in Ensembl release 93."
+  );
+  return $_[0]->{tissue};
+}
 
 =head2 reset_relational_attributes
 
