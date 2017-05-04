@@ -226,9 +226,13 @@ sub efo_id {
 =cut
 
 sub efo_accession {
-
   my $self = shift;
-  return $self->efo_db_entry->primary_id
+  my $efo_db_entry = $self->efo_db_entry;
+  
+  if (! defined $efo_db_entry) {
+    return undef;
+  }
+  return $efo_db_entry->primary_id
 }
 
 =head2 efo_db_entry
