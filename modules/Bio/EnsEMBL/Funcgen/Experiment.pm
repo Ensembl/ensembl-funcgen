@@ -141,27 +141,6 @@ sub new {
 }
 
 
-
-=head2 cell_type
-
-  Example    : my $ctype_name = $exp->cell_type->name;
-  Description: Getter for the CellType.
-  Returntype : Bio::EnsEMBL::Funcgen::CellType
-  Exceptions : None
-  Caller     : General
-  Status     : Deprecated
-
-=cut
-
-sub cell_type {
-    deprecate(
-        "Bio::EnsEMBL::Funcgen::Experiment::cell_type has been deprecated and will be removed in Ensembl release 89."
-            . " Please use Bio::EnsEMBL::Funcgen::Experiment::epigenome instead"
-    );
-    return shift->{epigenome};
-}
-
-
 =head2 epigenome
 
   Example    : my $epigenome_name = $exp->epigenome->name;
@@ -269,95 +248,6 @@ sub is_control{
 
 sub get_control{
   return shift->{control};
-}
-
-=head2 description
-
-  Example     : my $exp_desc = $exp->description
-  Description : Getter for the experiment description
-  Returntype  : String
-  Exceptions  : None
-  Caller      : General
-  Status      : Deprecated
-
-=cut
-
-sub description{
-deprecate(
-    "Bio::EnsEMBL::Funcgen::Experiment::description has been deprecated."
-        . " It will be removed in Ensembl release 89." );
-return shift->{description};
-}
-
-
-=head2 primary_design_type
-
-  Example     : my $pdt = $exp->primary_design_type;
-  Description : Getter for the primary design type
-  Returntype  : String - MGED term
-  Exceptions  : None
-  Caller      : General
-  Status      : Deprecated
-
-=cut
-
-sub primary_design_type{
-  deprecate(
-    "Bio::EnsEMBL::Funcgen::Experiment::primary_design_type has been deprecated."
-        . " It will be removed in Ensembl release 89." );
-  return;
-#  return shift->{primary_design_type};
-}
-
-
-=head2 mage_xml
-
-  Arg [1]     : string(optional) - MAGE XML
-  Example     : my $xml = $exp->mage_xml();
-  Description : Getter/Setter for the mage_xml attribute
-  Returntype  : String
-  Exceptions  : None
-  Caller      : General
-  Status      : Deprecated
-
-=cut
-
-sub mage_xml{
-  deprecate(
-    "Bio::EnsEMBL::Funcgen::Experiment::mage_xml has been deprecated."
-        . " It will be removed in Ensembl release 89." );
-#  my $self          = shift;
-#  $self->{mage_xml} = shift if @_;
-#
-#  if(! exists $self->{mage_xml} && $self->mage_xml_id()){
-#    $self->{mage_xml} = $self->adaptor->fetch_mage_xml_by_Experiment($self);
-#  }
-#
-#  return (exists $self->{'mage_xml'}) ? $self->{'mage_xml'} : undef;
-  return;
-}
-
-
-=head2 mage_xml_id
-
-  Arg [1]     : int (optional) - mage_xml_id
-  Example     : $exp->group_db_id('1');
-  Description : Getter/Setter for the mage_xml attribute
-  Returntype  : String
-  Exceptions  : None
-  Caller      : General
-  Status      : Deprecated
-
-=cut
-
-sub mage_xml_id{
-  deprecate(
-    "Bio::EnsEMBL::Funcgen::Experiment::mage_xml_id has been deprecated."
-        . " It will be removed in Ensembl release 89." );
-#  my $self             = shift;
-#  $self->{mage_xml_id} = shift if @_;
-#  return $self->{mage_xml_id};
-  return;
 }
 
 

@@ -170,24 +170,6 @@ sub new {
 sub name { return shift->{name}; }
 
 
-=head2 cell_type
-
-  Example    : my $ctype_name = $set->cell_type->name;
-  Description: Getter for the CellType for this Set.
-  Returntype : Bio::EnsEMBL::Funcgen::CellType
-  Exceptions : None
-  Caller     : General
-  Status     : Deprecated
-
-=cut
-
-sub cell_type {
-    deprecate(
-        "Bio::EnsEMBL::Funcgen::Set::cell_type has been deprecated and will be removed in Ensembl release 89."
-            . " Please use Bio::EnsEMBL::Funcgen::Set::epigenome instead" );
-    return shift->{epigenome};
-}
-
 =head2 epigenome
 
   Example    : my $epigenome = $set->epigenome->name;

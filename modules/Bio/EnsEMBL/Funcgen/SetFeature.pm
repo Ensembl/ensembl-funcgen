@@ -206,26 +206,6 @@ sub set {
   return shift->{set};
 }
 
-=head2 cell_type
-
-  Example    : my $cell_name = $set_feature->cell_type->name;
-  Description: Getter for the CellType attribute for the Set of this Feature.
-  May not always be for some Set types e.g. ExternalFeatures.
-  Returntype : Bio::EnsEMBL::Funcgen::CellType
-  Exceptions : None
-  Caller     : General
-  Status     : Deprecated
-
-=cut
-
-sub cell_type{
-  deprecate(
-      "Bio::EnsEMBL::Funcgen::SetFeature::cell_type has been deprecated and will be removed in Ensembl release 89."
-          . " Please use Bio::EnsEMBL::Funcgen::SetFeature::epigenome instead"
-  );
-
-  return shift->set->epigenome;
-}
 
 =head2 epigenome
 

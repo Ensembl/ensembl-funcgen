@@ -762,19 +762,6 @@ sub has_evidence {
   return shift->activity;
 }
 
-sub cell_type_count { 
-  my $self = shift;
-  deprecate(
-        "Bio::EnsEMBL::Funcgen::RegulatoryFeature::cell_type_count has been deprecated and will be removed in Ensembl release 89."
-            . " Please use Bio::EnsEMBL::Funcgen::RegulatoryFeature::epigenome_count instead"
-  );
-  return $self->epigenome_count;
-}
-
-sub is_unique_to_FeatureSets { deprecate('"is_unique_to_FeatureSets" is deprecated. '); return; }
-sub get_other_RegulatoryFeatures { deprecate('"get_other_RegulatoryFeatures" is deprecated. '); return; }
-sub get_focus_attributes    { deprecate('"get_focus_attributes" is deprecated.');  return; }
-sub get_nonfocus_attributes { deprecate('"get_nonfocus_attributes" is deprecated.');  return; }
 
 sub activity {
   throw(

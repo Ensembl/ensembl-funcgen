@@ -195,25 +195,6 @@ sub description {  return $_[0]->{description}; }
 sub display_label {  return $_[0]->{display_label}; }
 
 
-=head2 efo_id
-
-  Example    : my $efo_id = $epigenome->efo_id;
-  Description: Getter of the Experimental Factor Ontology ID
-  Returntype : String
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub efo_id {
-    deprecate(
-        "Bio::EnsEMBL::Funcgen::Epigenome::efo_id() has been deprecated and will be removed in Ensembl release 89."
-            . " Please use Bio::EnsEMBL::Funcgen::Epigenome::ontology_accession() instead."
-    );
-    return $_[0]->{ontology_accession};
-}
-
 =head2 efo_db_entry
 
   Example    : $epigenome->efo_accession

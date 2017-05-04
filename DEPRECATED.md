@@ -23,7 +23,7 @@ A year after deprecation (4 Ensembl releases), the method is removed from the AP
  - Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor::fetch_all_by_Slice_Epigenomes_Activity()
  - Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor::fetch_all_by_Slice_Activity()
 
-### To be removed in Ensembl Release 89 ###
+### Removed in Ensembl Release 89 ###
  - Bio::EnsEMBL::Funcgen::**ResultSet**::*replicate()*
  - Bio::Ensembl::Funcgen::DBSQL::**CellTypeAdaptor**
  - Bio::Ensembl::Funcgen::**CellType**

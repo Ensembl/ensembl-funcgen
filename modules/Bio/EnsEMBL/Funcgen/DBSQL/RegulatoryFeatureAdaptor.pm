@@ -777,26 +777,6 @@ sub _fetch_all_by_Slice_Epigenomes_Activity_RegulatoryBuild {
 #   return 'ra.regulatory_feature_id = rf.regulatory_feature_id';
 # }
 
-=head2 fetch_all_by_stable_ID
-
-  Arg [1]    : string - stable ID e.g. ENSR00000000002
-  Example    : my @epigenome_regfs = @{$regf_adaptor->fetch_all_by_stable_ID('ENSR00000000001');
-  Description: Retrieves a list of RegulatoryFeatures with associated stable ID. One for each Epigenome or
-               'core' RegulatoryFeature set which contains the specified stable ID.
-  Returntype : Listref of Bio::EnsEMBL::RegulatoryFeature objects
-  Exceptions : None
-  Caller     : General
-  Status     : Deprecated
-
-=cut
-sub fetch_all_by_stable_ID {
-  my $self = shift;
-  
-  use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
-  deprecate("fetch_all_by_stable_ID has been deprecated and will be removed in Ensembl release 89. Use fetch_by_stable_id instead!");
-  
-  return [ $self->fetch_by_stable_id(@_) ];
-}
 
 =head2 fetch_all_by_attribute_feature
 

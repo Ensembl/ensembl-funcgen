@@ -80,31 +80,6 @@ sub fetch_all_by_FeatureType {
   return $results;
 }
 
-=head2 fetch_all_by_CellType
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::CellType
-  Arg [2]    : String  (optional) - status e.g. 'DISPLAYABLE'
-  Example    : my @sets = @{$set_adaptor->fetch_all_by_CellType($ctype)};
-  Description: Retrieves Set objects from the database based on CellType
-  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::Set objects
-  Exceptions : None
-  Caller     : General
-  Status     : Deprecated
-
-=cut
-
-sub fetch_all_by_CellType {
-  deprecate(
-    "Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor::fetch_all_by_CellType has been deprecated and will be removed in Ensembl release 89."
-      . " Please use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor::fetch_all_by_Epigenome instead"
-  );
-  my ($self, $ctype, $status) = @_;
-  my $params = {constraints => {epigenomes => [$ctype]}};
-  $params->{constraints}{states} = [$status] if defined $status;
-  my $results = $self->generic_fetch($self->compose_constraint_query($params));
-  $self->reset_true_tables; #As we may have added status
-  return $results;
-}
 
 =head2 fetch_all_by_Epigenome
 

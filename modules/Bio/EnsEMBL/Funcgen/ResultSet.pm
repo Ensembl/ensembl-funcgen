@@ -235,24 +235,6 @@ sub reset_relational_attributes{
   return;
 }
 
-
-=head2 replicate
-
-  Description: Accessor for replicate attribute
-  Returntype : Int
-  Exceptions : None
-  Caller     : Genereal
-  Status     : Deprecated
-
-=cut
-
-sub replicate{
-deprecate(
-          'Bio::EnsEMBL::Funcgen::ResultSet::replicate() has been deprecated '
-        . 'and will be removed in Ensembl release 89.' );
-  return 0;
-}
-
 sub add_support{
   my($self, $support) = @_;
 

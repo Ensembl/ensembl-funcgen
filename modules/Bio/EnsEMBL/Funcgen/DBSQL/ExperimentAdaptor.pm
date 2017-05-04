@@ -109,29 +109,6 @@ sub fetch_all_by_FeatureType {
 
 
 
-=head2 fetch_all_by_CellType
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::CellType object
-  Example    : my @exps = @{$exp_adaptor->fetch_all_by_CellType($ctype)};
-  Description: Retrieves Experiment objects from the database based on CellType
-  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::Experiment objects
-  Exceptions : None
-  Caller     : General
-  Status     : Deprecated
-
-=cut
-
-sub fetch_all_by_CellType {
-  deprecate(
-        "Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor::fetch_all_by_CellType has been deprecated and will be removed in Ensembl release 89."
-            . " Please use Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor::fetch_all_by_Epigenome instead"
-  );
-  my $self   = shift;
-  my $epigenome  = shift;
-  my $params = {constraints => {epigenomes => [$epigenome]}};
-  return $self->generic_fetch($self->compose_constraint_query($params));
-}
-
 =head2 fetch_all_by_Epigenome
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::Epigenome object

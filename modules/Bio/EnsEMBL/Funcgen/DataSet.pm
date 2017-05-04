@@ -322,28 +322,6 @@ sub name { return $_[0]->{name}; }
 #The following attributes are generated dynamically from the
 #consituent Result/FeatureSets
 
-=head2 cell_type
-
-  Example    : my $dset_ctype_name = $dset->cell_type->name();
-  Description: Getter for the cell_type for this DataSet.
-  Returntype : Bio::EnsEMBL::Funcgen::CellType
-  Exceptions : None
-  Caller     : General
-  Status     : Deprecated
-
-=cut
-
-sub cell_type {
-    deprecate(
-        "Bio::EnsEMBL::Funcgen::DataSet::cell_type has been deprecated and will be removed in Ensembl release 89."
-            . " Please use Bio::EnsEMBL::Funcgen::DataSet::epigenome instead"
-    );
-    return $_[0]->{epigenome};
-}
-
-
-
-
 =head2 epigenome
 
   Example    : my $dset_ctype_name = $dset->epigenome->name();
