@@ -264,7 +264,7 @@ sub efo_db_entry {
     warn("No efo id defined for " . $self->name . "!\n");
     return undef;
   }
-  if (ref $efo_db_entry eq 'ARRAY' && scalar @$efo_db_entry = 0) {
+  if (ref $efo_db_entry eq 'ARRAY' && scalar @$efo_db_entry == 0) {
     warn("No efo id defined for " . $self->name . "!\n");
     return undef;
   }
