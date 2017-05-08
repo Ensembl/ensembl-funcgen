@@ -261,5 +261,10 @@ sub size {
   return $self->{'size'};
 }
 
+sub fetch_all_ProbeSetTranscriptMappings {
+  my $self = shift;
+  return $self->adaptor->db->get_ProbeSetTranscriptMappingAdaptor->fetch_all_by_probe_set_id($self->dbID);
+}
+
 1;
 
