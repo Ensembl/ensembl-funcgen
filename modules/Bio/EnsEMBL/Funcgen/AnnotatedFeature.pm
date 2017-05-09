@@ -302,7 +302,8 @@ sub summary_as_hash {
       strand           => $self->strand,
       summit           => $self->summit,
       score            => $self->score,
-      id               => $self->dbID,
+# Removed as it displays in REST. Maybe used in dump of AnnotatedFeatures. Should be replaced with $self->name then.
+#      id               => $self->dbID,
     };
 }
 1;

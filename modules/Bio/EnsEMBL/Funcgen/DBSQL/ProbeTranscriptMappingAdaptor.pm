@@ -36,6 +36,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ProbeTranscriptMappingAdaptor;
 use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
 use DBI qw(:sql_types);
 
 use vars '@ISA';
@@ -66,6 +67,22 @@ sub fetch_all_by_transcript_stable_id {
   my $mapping = $self->generic_fetch($constraint);
   
   return $mapping;
+}
+
+=head2 fetch_all_by_Probe
+
+  Args [1]    : Bio::EnsEMBL::Funcgen::Probe 
+  Example     : my $transcript_mappings = $ptma->fetch_all_by_Probe($probe);
+  Description : Returns 
+  Returntype  : Listref of Bio::EnsEMBL::DBEntry objects
+  Exceptions  : Throws if Argument is not of type Bio::EnsEMBL::Funcgen::Probe 
+
+=cut
+
+sub fetch_all_by_Probe {
+  my ($self, $probe) = @_; 
+  assert_ref($probe, 'Bio::EnsEMBL::Funcgen::Probe', 'probe');
+  return $self->fetch_all_by_probe_id($probe->dbID);
 }
 
 sub fetch_all_by_probe_id {
