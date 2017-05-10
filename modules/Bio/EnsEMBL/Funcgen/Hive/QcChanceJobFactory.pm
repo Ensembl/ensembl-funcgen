@@ -54,6 +54,13 @@ sub create_input_id {
   my $epigenome_production_name = $result_set->epigenome->production_name;
   my $epigenome_gender          = $result_set->epigenome->gender;
   
+  # epigenome_gender is used as a substitution parameter in another ehive 
+  # parameter. If it is undefined, it will lead to an error.
+  #
+  if (! defined $epigenome_gender) {
+    $epigenome_gender = '';
+  }
+  
   my $chance_bin_file = 'chance_bin_file_for_'.$epigenome_production_name.'_'.$epigenome_gender.'.bed';
 
   my $result_set_id = $result_set->dbID;
