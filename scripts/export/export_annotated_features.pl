@@ -106,6 +106,8 @@ while (my $current_annotated_feature_id = <$in>) {
       . Dumper($annotated_feature)
       . "\n"
       . Dumper($annotated_feature->summary_as_hash)
+      . "\n"
+      . "The error was:" . $@
     );
   }
   # This prevents memory leaks.
