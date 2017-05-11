@@ -75,6 +75,7 @@ sub pipeline_wide_parameters {
     dnadb            => $details_from_registry->{dnadb},
     out_db           => $details_from_registry->{outdb},
     pipeline_name    => $self->o('pipeline_name'),
+    ensembl_release_version => $self->o('ensembl_release_version'),
 
     species          => $details_from_registry->{species},
     assembly         => $details_from_registry->{assembly},
