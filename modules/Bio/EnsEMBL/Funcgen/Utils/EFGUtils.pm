@@ -1219,8 +1219,12 @@ sub scalars_to_objects{
 
     my $obj = $adaptor->$fetch_method($str);
 
-    if(! defined $obj){
-      throw("Could not fetch object using ${class_name}Adaptor->${fetch_method}('$str')");
+    if(! defined $obj) {
+		use Data::Dumper;
+      throw(
+		"Could not fetch object using ${class_name}Adaptor->${fetch_method}('$str')"
+		. Dumper($adaptor)
+      );
     }
 
     push @objs, $obj;
