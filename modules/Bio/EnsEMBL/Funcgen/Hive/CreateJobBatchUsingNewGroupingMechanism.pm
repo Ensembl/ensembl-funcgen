@@ -105,7 +105,7 @@ sub run {
   }
   
   my $number_of_experiment_groups_seeded = 0;
-  my $max_number_of_experiment_groups = 5;
+#   my $max_number_of_experiment_groups = 5;
   
   # Iterator over all control experiment names, for every signal experiment, 
   # create an ArrayRef of input_subset_ids that belong to this experiment.
@@ -133,9 +133,9 @@ sub run {
     
     $number_of_experiment_groups_seeded++;
     
-    if ($number_of_experiment_groups_seeded == $max_number_of_experiment_groups) {
-      last BATCH;
-    }
+#     if ($number_of_experiment_groups_seeded == $max_number_of_experiment_groups) {
+#       last BATCH;
+#     }
   }
   
   $logger->finish_log;
