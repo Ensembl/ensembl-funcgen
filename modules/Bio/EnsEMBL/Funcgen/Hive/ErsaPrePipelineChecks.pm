@@ -33,6 +33,17 @@ sub run {
 	. ") Useful sql: $find_non_unique_replicate_specifications";
     }
     
+    my $find_signal_control_epigenome_mismatches = 'select * from experiment s join experiment c on (s.control_id=c.experiment_id) and s.epigenome_id != c.epigenome_id';
+    
+    my $sth = $dbc->prepare($find_signal_control_epigenome_mismatches);
+    $sth->execute;
+    my $signal_control_epigenome_mismatches = $sth->fetchall_arrayref;
+    if (@$signal_control_epigenome_mismatches) {
+		push @error_msg, "Signal control mismatches!";
+    }
+    
+
+    
     # Check that all sequence files exist
     
     my $input_subset_files_sql = 'select input_subset_id, local_url from input_subset_tracking';
