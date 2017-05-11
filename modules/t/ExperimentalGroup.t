@@ -144,7 +144,6 @@ my $exp = Bio::EnsEMBL::Funcgen::Experiment->new
   -PRIMARY_DESIGN_TYPE => 'test design',
   -ARCHIVE_ID	         => 'GSEXXX',
   -DISPLAY_URL         => 'http://',
-  -DESCRIPTION         => 'test description',
   -EPIGENOME           => $db->get_EpigenomeAdaptor->fetch_by_name('CD4'),
   -FEATURE_TYPE        => $db->get_FeatureTypeAdaptor->fetch_by_name('CTCF'),
   -IS_CONTROL          => 0,     
@@ -159,7 +158,6 @@ is($exp->experimental_group, $group, 'Experiment::experimental_group');
 # is($exp->primary_design_type, 'test design', 'Experiment::primary_design_type');
 is($exp->archive_id, 'GSEXXX', 'Experiment::archive_id');
 # is($exp->display_url, 'http://', 'Experiment::display_url');
-is($exp->description, 'test description', 'Experiment::description');
 
 $ea->store($exp);
 

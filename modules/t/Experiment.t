@@ -48,7 +48,6 @@ my $group = Bio::EnsEMBL::Funcgen::ExperimentalGroup->new(
     -location    => 'location',
     -contact     => 'contact',
     -url         => 'http://www.ebi.ac.uk/',
-    -description => 'Just a test group',
     -is_project  => 0
 );
 
@@ -60,9 +59,8 @@ my $exp = Bio::EnsEMBL::Funcgen::Experiment->new(
     -ARCHIVE_ID          => 'GSEXXX',
     -DISPLAY_URL         => 'http://',
     -IS_CONTROL          => 1,
-    -DESCRIPTION         => 'test description',
     -EPIGENOME           => $db->get_EpigenomeAdaptor->fetch_by_name('CD4'),
-    -FEATURE_TYPE => $db->get_FeatureTypeAdaptor->fetch_by_name('CTCF'),
+    -FEATURE_TYPE        => $db->get_FeatureTypeAdaptor->fetch_by_name('CTCF'),
 );
 
 isa_ok(
@@ -80,8 +78,7 @@ throws_ok {
         -PRIMARY_DESIGN_TYPE => 'test design',
         -ARCHIVE_ID          => 'GSEXXX',
         -DISPLAY_URL         => 'http://',
-        -DESCRIPTION         => 'test description',
-        -CELL_TYPE    => $db->get_CellTypeAdaptor->fetch_by_name('CD4'),
+        -EPIGENOME    => $db->get_EpigenomeAdaptor->fetch_by_name('CD4'),
         -FEATURE_TYPE => $db->get_FeatureTypeAdaptor->fetch_by_name('CTCF'),
     );
 }
@@ -111,7 +108,6 @@ is_deeply( $exp->experimental_group(),
 is_deeply( $exp->get_ExperimentalGroup(),
     $group, 'Test get_ExperimentalGroup() getter' );
 
-is( $exp->description, 'test description', 'Test description() getter' );
 
 # is( $exp->primary_design_type, 'test design',
 #     'Test primary_design_type() getter' );
@@ -171,21 +167,20 @@ my $expected_source_info = [[
 # ----------------------------------
 # Test reset_relational_attributes()
 # ----------------------------------
-my $new_cell_type = $db->get_EpigenomeAdaptor->fetch_by_name('U2OS');
+my $epigenome = $db->get_EpigenomeAdaptor->fetch_by_name('U2OS');
 
 my $new_exp_group = Bio::EnsEMBL::Funcgen::ExperimentalGroup->new(
     -name        => 'new_ebi_test',
     -location    => 'location',
     -contact     => 'contact',
     -url         => 'http://www.ebi.ac.uk/',
-    -description => 'Just another test group',
     -is_project  => 0
 );
 
 my $new_feature_type = $db->get_FeatureTypeAdaptor->fetch_by_name('DNase1');
 
 my $params = {
-    -EPIGENOME          => $new_cell_type,
+    -EPIGENOME          => $epigenome,
     -EXPERIMENTAL_GROUP => $new_exp_group,
     -FEATURE_TYPE       => $new_feature_type
 };
@@ -196,11 +191,11 @@ my $existing_dbID    = $new_exp->dbID();
 $new_exp->reset_relational_attributes( $params, 1 );
 
 is_deeply(
-    [   $new_exp->cell_type,    $new_exp->experimental_group,
+    [   $new_exp->epigenome,    $new_exp->experimental_group,
         $new_exp->feature_type, $new_exp->adaptor(),
         $new_exp->dbID,
     ],
-    [   $new_cell_type,    $new_exp_group, $new_feature_type,
+    [   $epigenome,    $new_exp_group, $new_feature_type,
         $existing_adaptor, $existing_dbID
     ],
     'Test reset_relational_attributes()'
