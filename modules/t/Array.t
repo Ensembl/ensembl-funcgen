@@ -144,6 +144,8 @@ is_deeply( $array->get_all_Probes(),
 #qr/Must have set an adaptor to get_all_Probe_dbIDs/,
 #    'Test get_all_Probe_dbIDs(), adaptor is provided';
 
+$array = $array_adaptor->fetch_by_name_vendor( 'HG-U133A', 'AFFY' );
+
 # ------------------------
 # Test get_all_ProbeSets()
 # ------------------------
