@@ -68,30 +68,6 @@
 183	178911	FeatureType	3805417	FeatureType(BATF::JUN)  > PFM(BATF::JUN/Q16520) > Gene(BATF) : MA0462.1 BATF::JUN	70
 184	178892	FeatureType	3805417	FeatureType(BATF::JUN)  > PFM(BATF::JUN/AAA59197) > Gene(Cjun) : MA0462.1 BATF::JUN	70
 185	179014	FeatureType	3805418	FeatureType(ELF1)  > PFM(ELF1/P32519) > Gene(ELF1) : MA0473.1 ELF1	70
-13287	33463384	ProbeFeature	3811740	exon/3' flank boundary	27
-3908252	35868047	ProbeFeature	3852126	exon/3' flank boundary	27
-3917498	35868047	ProbeFeature	3852206	3' flank	27
-3920244	35868047	ProbeFeature	3852218	exon	27
-4244007	35490812	ProbeFeature	3852126	exon/3' flank boundary	27
-4254131	35490812	ProbeFeature	3852206	3' flank	27
-4255514	35490812	ProbeFeature	3852218	exon	27
-4368453	33898832	ProbeFeature	3852126	exon	27
-4368454	33113359	ProbeFeature	3852126	exon/3' flank boundary	27
-4377353	33113359	ProbeFeature	3852206	3' flank	27
-4378757	33898832	ProbeFeature	3852218	exon	27
-4378758	33113359	ProbeFeature	3852218	exon	27
-17253319	130791	Probe	3852206	Matches 3' flank. Matches 2 other transcripts	27
-17291029	130791	Probe	3852126	Matches exon/3' flank boundary. Matches 2 other transcripts	27
-17330534	130791	Probe	3852218	Matches exon. Matches 2 other transcripts	27
-18033906	55599	Probe	3852206	Matches 3' flank. Matches 2 other transcripts	27
-18097884	138152	Probe	3852126	Matches exon/3' flank boundary. Matches 2 other transcripts	27
-18102294	88332	Probe	3852126	Matches exon. Matches 1 other transcript	27
-18123332	55599	Probe	3852126	Matches exon/3' flank boundary. Matches 2 other transcripts	27
-18231093	210756	Probe	3811740	Matches exon/3' flank boundary. Maps uniquely to this transcript	27
-18289369	138152	Probe	3852218	Matches exon. Matches 2 other transcripts	27
-18303451	55599	Probe	3852218	Matches exon. Matches 2 other transcripts	27
-18332294	88332	Probe	3852218	Matches exon. Matches 1 other transcript	27
-18503650	138152	Probe	3852206	Matches 3' flank. Matches 2 other transcripts	27
 18552145	27911	MirnaTargetFeature	3981067	TarBase Micro RNA target	67
 18552146	27912	MirnaTargetFeature	3981067	TarBase Micro RNA target	67
 18552147	27913	MirnaTargetFeature	3981067	TarBase Micro RNA target	67

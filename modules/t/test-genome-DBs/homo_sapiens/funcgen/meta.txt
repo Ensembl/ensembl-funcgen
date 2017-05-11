@@ -1,4 +1,4 @@
-534	\N	schema_version	88
+534	\N	schema_version	89
 156	1	species.production_name	homo_sapiens
 223	\N	schema_type	funcgen
 589	\N	patch	patch_78_79_a.sql|schema_version
@@ -58,3 +58,14 @@
 648	\N	patch	patch_87_88_a.sql|schema_version
 649	\N	patch	patch_87_88_b.sql|seq_region_name_255
 650	\N	patch	patch_87_88_c.sql|sample_regulatory_feature_id field for regulatory build
+651	\N	patch	patch_88_89_a.sql|schema_version
+652	\N	patch	patch_88_89_b.sql|Created probe_seq table
+653	\N	patch	patch_88_89_c.sql|created probe_feature_transcript table
+654	\N	patch	patch_88_89_d.sql|created probe_transcript table
+655	\N	patch	patch_88_89_e.sql|created probeset_transcript table
+656	\N	patch	patch_88_89_f.sql|Removed probe features from object_xref and xref table
+657	\N	patch	patch_88_89_g.sql|Removed probe mappings from the xref tables
+658	\N	patch	patch_88_89_h.sql|Removed probe set mappings from the xref tables
+659	\N	patch	patch_88_89_i.sql|New columns for array table
+660	\N	patch	patch_88_89_j.sql|Added array_chip_id column to probe_set table
+661	\N	patch	patch_88_89_k.sql|Added probe_seq_id column to probe table

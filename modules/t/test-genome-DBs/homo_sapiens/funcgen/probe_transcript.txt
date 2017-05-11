@@ -1,0 +1,12 @@
+1	55599	ENST00000533776	Matches 3' flank. Matches 2 other transcripts
+2	55599	ENST00000380152	Matches exon/3' flank boundary. Matches 2 other transcripts
+3	55599	ENST00000544455	Matches exon. Matches 2 other transcripts
+4	88332	ENST00000380152	Matches exon. Matches 1 other transcript
+5	88332	ENST00000544455	Matches exon. Matches 1 other transcript
+6	130791	ENST00000533776	Matches 3' flank. Matches 2 other transcripts
+7	130791	ENST00000380152	Matches exon/3' flank boundary. Matches 2 other transcripts
+8	130791	ENST00000544455	Matches exon. Matches 2 other transcripts
+9	138152	ENST00000380152	Matches exon/3' flank boundary. Matches 2 other transcripts
+10	138152	ENST00000544455	Matches exon. Matches 2 other transcripts
+11	138152	ENST00000533776	Matches 3' flank. Matches 2 other transcripts
+12	210756	ENST00000400497	Matches exon/3' flank boundary. Maps uniquely to this transcript
