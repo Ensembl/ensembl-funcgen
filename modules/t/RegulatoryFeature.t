@@ -23,7 +23,6 @@ use Bio::EnsEMBL::Test::MultiTestDB;
 use Bio::EnsEMBL::Test::TestUtils;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Slice;
-use Data::Printer;
 
 # ---------------
 # Module compiles
