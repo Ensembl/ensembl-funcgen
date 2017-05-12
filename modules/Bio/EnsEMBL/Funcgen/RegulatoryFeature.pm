@@ -716,6 +716,8 @@ sub bound_end { return $_[0]->end + $_[0]->bound_end_length; }
 =cut
 sub is_projected {
   my $self = shift;
+  deprecate("Bio::EnsEMBL::Funcgen::RegulatoryFeature::is_projected() has " .
+  "been deprecated and will be removed in Ensembl release 93");
 
   if(@_){
 	#added v67

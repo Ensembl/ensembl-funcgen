@@ -13,6 +13,7 @@ A year after deprecation (4 Ensembl releases), the method is removed from the AP
  - Bio::EnsEMBL::Funcgen::Epigenome::ontology_accession()
  - Bio::EnsEMBL::Funcgen::Epigenome::tissue()
  - Bio::EnsEMBL::Funcgen::Probe::get_complete_name()
+ - Bio::EnsEMBL::Funcgen::RegulatoryFeature::is_projected()
 
 ### To be removed in Ensembl Release 91 ###
 
