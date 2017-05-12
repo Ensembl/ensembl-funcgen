@@ -147,7 +147,7 @@ sub new {
   @$names = ($name) if(ref($names) ne "ARRAY");
   @$array_chip_ids = ($array_chip_id) if (ref($array_chip_ids) ne "ARRAY");
   @$arrays = ($array) if (ref($arrays) ne "ARRAY");
-  
+
   $self->_array_chip_id($array_chip_id);
   $self->name($name);
 
@@ -179,9 +179,9 @@ sub new {
   $self->length($length)     if defined $length;
   $self->description($desc)  if defined $desc;
   $self->array_chip($array_chip)  if defined $array_chip;
-  
+
   $self->_probe_seq_id($probe_seq_id)  if defined $probe_seq_id;
-  
+
   if (defined $sequence) {
     use Bio::EnsEMBL::Funcgen::ProbeSequence;
     my $probe_sequence = Bio::EnsEMBL::Funcgen::ProbeSequence->new(
@@ -196,11 +196,11 @@ sub new {
 sub sequence {
     my $self = shift;
     $self->{'sequence'} = shift if @_;
-    
+
     if (! defined $self->{'sequence'}) {
       $self->{'sequence'} = $self->get_ProbeSequence->sequence;
     }
-    
+
     return $self->{'sequence'};
 }
 
@@ -223,7 +223,7 @@ sub _fetch_ProbeSequence {
 
 sub get_ProbeSequence {
     my $self = shift;
-    
+
     if (
          (! defined $self->{'probe_sequence'})
       && (defined $self->_probe_seq_id)
@@ -248,7 +248,7 @@ sub _array_chip_id {
 sub array_chip {
     my $self       = shift;
     my $array_chip = shift;
-    
+
     if (defined $array_chip) {
       $self->{'_array_chip'} = $array_chip;
     }
@@ -258,7 +258,7 @@ sub array_chip {
     if (! defined $self->{'_array_chip'}) {
       die("Probe was not linked to an array chip!");
     }
-    
+
     return $self->{'_array_chip'};
 }
 
@@ -305,7 +305,7 @@ sub add_array_chip_probename {
   my ($probename, $array) = @_;
   $self->{arrays}     ||= {};
   $self->{probenames} ||= {};
-    
+
   if(! (ref($array) && $array->isa('Bio::EnsEMBL::Funcgen::Array'))){
     throw('You must pass a valid Bio::EnsEMBL::Funcgen::Array. ')
   }
@@ -314,7 +314,7 @@ sub add_array_chip_probename {
 #   $self->{arrays}->{$ac_dbid}           = $array;
   $self->{probenames}->{$array->name} ||= [];
   push @{$self->{probenames}->{$array->name}}, $probename;
-  
+
   return;
 }
 
@@ -385,10 +385,10 @@ sub get_names_Arrays {
   Description: Retrieves all names for this probe. Only makes sense for probes
                which share identical sequence for a given probeset and array.
                This can either be:
-               1 A non-probeset array where probes with different names but identical 
-                 sequence have beem merged, this is only possible if the probes in question 
+               1 A non-probeset array where probes with different names but identical
+                 sequence have beem merged, this is only possible if the probes in question
                  share the same Array but are on seaprate ArrayChips.
-               2 If they are part of a probeset (i.e. Affy probes), in which case 
+               2 If they are part of a probeset (i.e. Affy probes), in which case
                  get_all_complete_names() would be more appropriate.
   Returntype : Arrayref of strings
   Exceptions : None
@@ -405,7 +405,7 @@ sub get_all_probenames {
   if (! @array_names) {
     @array_names = keys %{$self->{'probenames'}};
   }
-  
+
   my @probe_names;
   foreach my $current_array_name (@array_names) {
     push @probe_names, @{$self->{'probenames'}->{$current_array_name}};
@@ -455,7 +455,7 @@ sub get_probename {
 
 
 	  #warn("Found replicate probes with different names for array ${arrayname}${p_info}.Returning comma separated string list:\t".join(',', @names)."\n");
-	  return join(',', @names);	  
+	  return join(',', @names);
 	}
 	else{
 	  ($probename) = @{$self->{'probenames'}->{$arrayname}};
@@ -484,7 +484,7 @@ sub get_all_complete_names {
   my $self = shift;
 
   my $probeset;
-  
+
   if (defined $self->probeset && $self->probeset->name) {
     $probeset = ':' . $self->probeset->name . ':';
   } else {
@@ -494,47 +494,52 @@ sub get_all_complete_names {
   my $arrays = $self->get_all_Arrays;
   my @all_complete_names;
   foreach my $current_array (@$arrays) {
-  
+
     my $probe_names = $self->get_all_probenames($current_array->name());
-    
+
     foreach my $current_probe_name ( @$probe_names ) {
-    
+
       my $complete_name = $current_array->name . $probeset . $current_probe_name;
       push @all_complete_names, $complete_name;
     }
   }
   return \@all_complete_names;
 }
-# 
-# =head2 get_complete_name
-# 
-#   Arg [1]    : string - array name
-#   Example    : my $compname = $probe->get_complete_name('Array-1');
-#   Description: For a given array, retrieve the complete name for this probe.
-#   Returntype : string
-#   Exceptions : Throws if the array name not specified or not known for this probe
-#   Caller     : General
-#   Status     : Medium Risk
-# 
-# =cut
-# 
-# sub get_complete_name {
-#   my $self = shift;
-#   my $arrayname = shift;
-# 
-#   throw('Must provide and array name argument to retreive the complete name') if ! defined $arrayname;
-# 
-#   my $probename = $self->get_probename($arrayname);
-# 
-#   if (!defined $probename) {
-#     throw('Unknown array name');
-#   }
-# 
-#   my $probeset = $self->probeset()->name();
-#   $probeset .= ':' if $probeset;
-# 
-#   return "$arrayname:$probeset$probename";
-# }
+
+=head2 get_complete_name
+
+   Arg [1]    : string - array name
+   Example    : my $compname = $probe->get_complete_name('Array-1');
+   Description: For a given array, retrieve the complete name for this probe.
+   Returntype : string
+   Exceptions : Throws if the array name not specified or not known for this probe
+   Caller     : General
+   Status     : Deprecated
+
+=cut
+
+sub get_complete_name {
+   my $self = shift;
+   my $arrayname = shift;
+
+    deprecate(
+        "get_complete_name has been deprecated and will be removed in Ensembl
+        release 93."
+    );
+
+   throw('Must provide and array name argument to retreive the complete name') if ! defined $arrayname;
+
+   my $probename = $self->get_probename($arrayname);
+
+   if (!defined $probename) {
+     throw('Unknown array name');
+   }
+
+   my $probeset = $self->probeset()->name();
+   $probeset .= ':' if $probeset;
+
+   return "$arrayname:$probeset$probename";
+}
 
 =head2 probe_set
 
@@ -623,7 +628,7 @@ sub description {
 
 
 # =head2 feature_count
-# 
+#
 #   Arg[0]     : recount flag
 #   Example    : my $num_features = $probe->feature_count();
 #   Description: Counts the number of ProbeFeatures associated with this Probe
@@ -631,18 +636,18 @@ sub description {
 #   Exceptions : None
 #   Caller     : General
 #   Status     : Medium Risk
-# 
+#
 # =cut
-# 
-# 
+#
+#
 # sub feature_count{
 #   my ($self, $recount) = @_;
-# 
+#
 #   if($recount ||
 #     (! $self->{feature_count})){
 #     $self->{feature_count} = $self->adaptor->db->get_ProbeFeatureAdaptor->count_probe_features_by_probe_id($self->dbID);
 #   }
-# 
+#
 #   return $self->{feature_count};
 # }
 
