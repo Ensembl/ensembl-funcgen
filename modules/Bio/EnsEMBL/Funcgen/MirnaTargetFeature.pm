@@ -140,6 +140,73 @@ sub interdb_stable_id {
   return $_[0]->{'interdb_stable_id'};
 }
 
+=head2 get_all_DBEntries
+
+  Arg[1]     : string - External DB name e.g. ensembl_core_Gene
+  Arg[2]     : string - External DB type
+  Example    : my @dbentries = @{ $set_feature->get_all_DBEntries };
+  Description: Retrieves DBEntries (xrefs) for this SetFeature.
+               This does _not_ include the corresponding translations
+               DBEntries (see get_all_DBLinks).
+
+               This method will attempt to lazy-load DBEntries from a
+               database if an adaptor is available and no DBEntries are present
+               on the SetFeature (i.e. they have not already been added or
+               loaded).
+  Returntype : Listref of Bio::EnsEMBL::DBEntry objects
+  Exceptions : none
+  Caller     : general, get_all_DBLinks
+  Status     : Stable - at risk move to storable
+
+=cut
+
+
+#We could add 3rd arg here which would be xref(info_)type e.g. Gene/Transcript etc.
+#Move info_type to ox.linkage_type to sit along side linkage_annotated
+
+
+sub get_all_DBEntries {
+  my $self = shift;
+  my $ex_db_exp = shift;
+  my $ex_db_type = shift;
+
+  my $cache_name = "dbentries";
+
+  if(defined($ex_db_exp)){
+    $cache_name .= $ex_db_exp;
+  }
+  if(defined($ex_db_type)){
+    $cache_name .= $ex_db_type;
+  }
+
+  #Need to add tests for valid objects for xrefs
+
+  # if not cached, retrieve all of the xrefs for this gene
+
+  #This is not using the caching optimally
+  #It seems for naive(ex_db_exp,ex_db_type) queries we create a naive cache
+  #This means that further more specific queries will make another query and not use the cache
+
+
+  if( (! defined $self->{$cache_name}) && $self->adaptor() ){
+
+	my @tables = $self->adaptor->_tables;
+	@tables = split/_/, $tables[0]->[0];#split annotated_feature
+	my $object_type = join('', (map ucfirst($_), @tables));#change to AnnotatedFeature
+
+    $self->{$cache_name} =
+      $self->adaptor->db->get_DBEntryAdaptor->_fetch_by_object_type($self->dbID(), $object_type, $ex_db_exp, $ex_db_type);
+  }
+  elsif( ! defined $self->{$cache_name} ){
+	throw('You must have set and adaptor to be able to get_all_DBEntries');
+  }
+
+
+  $self->{$cache_name} ||= [];
+
+  return $self->{$cache_name};
+}
+
 =head2 display_label
 
   Example    : my $label = $feature->display_label();
