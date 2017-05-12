@@ -756,31 +756,6 @@ sub summary_as_hash {
   };
 }
 
-# Deprecated methods
-
-sub has_evidence {
-    deprecate('"has_evidence" is now deprecated. Please use "activity"
-        which reports the state of the Regulatory Feature');
-  return shift->activity;
-}
-
-
-sub activity {
-  throw(
-    "activity is no longer supported for regulatory features. You can use "
-    . "get_epigenomes_by_activity('ACTIVE') to find feature sets in which "
-    . "this regulatory feature are active."
-  );
-}
-
-sub epigenome {
-  throw(
-    "epigenome is no longer supported for regulatory features. You can use "
-    . "get_epigenomes_by_activity('ACTIVE') to find feature sets in which "
-    . "this regulatory feature are active."
-  );
-}
-
 1;
 
 
