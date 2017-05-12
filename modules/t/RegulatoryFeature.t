@@ -16,7 +16,7 @@
 use strict;
 use warnings;
 
-use Test::More qw(no_plan);    #no_plan required for skip usage
+use Test::More;
 use Test::Exception;
 
 use Bio::EnsEMBL::Test::MultiTestDB;
