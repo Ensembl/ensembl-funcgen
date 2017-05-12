@@ -497,7 +497,7 @@ sub has_activity_in {
   my $epigenome = shift;
   
   foreach my $current_regulatory_activity (@{$self->regulatory_activity}) {
-    if ($current_regulatory_activity->epigenome_id == $epigenome->dbID) {
+    if ($current_regulatory_activity->_epigenome_id() == $epigenome->dbID) {
       return 1;
     }
   }
