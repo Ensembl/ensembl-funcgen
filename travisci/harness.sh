@@ -6,7 +6,7 @@ echo "Running test suite"
 echo "Using $PERL5LIB"
 
 #skip these tests
-SKIP_TESTS="--skip MultiTestDB.t,FeatureSet.t,CoordSystem.t,Array_ArrayChip.t,Storable.t,RegulatoryFeature.t,InputSet_Set_BaseAdaptor.t,Channel.t,BaseFeatureAdaptor.t,BindingMatrix_MotifFeature.t,Annotated_SetFeatureAdaptor.t,DNAMethylationFeature.t"
+SKIP_TESTS="--skip MultiTestDB.t,FeatureSet.t,CoordSystem.t,Array_ArrayChip.t,Storable.t,InputSet_Set_BaseAdaptor.t,Channel.t,BaseFeatureAdaptor.t,BindingMatrix_MotifFeature.t,Annotated_SetFeatureAdaptor.t,DNAMethylationFeature.t"
 
 # SetFeature.t,Set.t,SegmentationFeature.t,ResultFeature.t,ProbeSet.t,ProbeFeature.t,MirnaTargetFeature.t,InputSubset.t,ExternalFeature.t,Experiment.t,ExperimentalGroup.t,DNAMethylationFeature.t,DataSet.t,CellType.t,Array.t,ArrayChip.t,AnnotatedFeature.t,Probe.t,feature_class_Set.t,FeatureSet.t,FeatureType.t,ResultSet.t,
 
