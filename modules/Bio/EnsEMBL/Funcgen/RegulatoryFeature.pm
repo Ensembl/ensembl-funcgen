@@ -278,7 +278,7 @@ sub _assert_epigenome_ok {
   my $self = shift;
   my $epigenome = shift;
   if (! defined $epigenome) {
-    throw();
+    throw("Epigenome parameter was undefined!");
   }
   if (ref $epigenome ne 'Bio::EnsEMBL::Funcgen::Epigenome') {
     throw("epigenome parameter must have type Bio::EnsEMBL::Funcgen::Epigenome!");
