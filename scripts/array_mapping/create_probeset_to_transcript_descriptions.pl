@@ -109,6 +109,7 @@ sub create_probeset_transcript_description {
     
     my $this_arrays_probeset_sizes = $probeset_sizes{$current_array}->{probeset_sizes};
     
+    PROBE_SET: 
     foreach my $current_probeset_name (@probeset_names) {
     
       my @final_probeset_assignments;
@@ -142,7 +143,8 @@ sub create_probeset_transcript_description {
           $match_summary->{full_description} = "Insufficient number of hits, only $num_probes_mapped probes out of $current_probeset_size in the ProbeSet matched the transcript.";
         
           $rejected_probesets_file_fh->print( Dumper($match_summary) );
-        }
+          next PROBE_SET;
+	}
       }
       if (scalar @final_probeset_assignments > $max_transcripts) {
       
