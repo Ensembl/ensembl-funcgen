@@ -101,12 +101,26 @@ is( $fetched_regulatory_feature->stable_id(), 54736, 'Test stable_id()' );
 # -----------------------------
 # Test get_RegulatoryEvidence()
 # -----------------------------
-#TODO
+my $epigenome = $epigenome_adaptor->fetch_by_name('HeLa-S3');
+
+
+# ---------------------------
+# Test _assert_epigenome_ok()
+# ---------------------------
+throws_ok { $fetched_regulatory_feature->_assert_epigenome_ok() }
+qr/Epigenome parameter was undefined/,
+  'Test _assert_epigenome_ok() exception throw';
+
+my $invalid_epigenome = $feature_type;
+throws_ok {
+    $fetched_regulatory_feature->_assert_epigenome_ok($invalid_epigenome);
+}
+qr/epigenome parameter must have type Bio::EnsEMBL::Funcgen::Epigenome/,
+  'Test _assert_epigenome_ok() exception throw again';
 
 # ----------------------------------------
 # Test regulatory_activity_for_epigenome()
 # ----------------------------------------
-my $epigenome = $epigenome_adaptor->fetch_by_name('HeLa-S3');
 
 # ideally this should work, but there is a minor difference between the two objects
 # my $expected_regulatory_activity
@@ -121,6 +135,17 @@ is(
       ->dbID(),
     167, 'Test regulatory_activity_for_epigenome()'
 );
+
+throws_ok { $fetched_regulatory_feature->regulatory_activity_for_epigenome() }
+qr/Epigenome parameter was undefined/,
+  'Test regulatory_activity_for_epigenome() exception throw';
+
+throws_ok {
+    $fetched_regulatory_feature->regulatory_activity_for_epigenome(
+        $invalid_epigenome);
+}
+qr/Wrong parameter, expected an epigenome/,
+  'Test regulatory_activity_for_epigenome() exception throw again';
 
 # -------------------------------
 # Test get_underlying_structure()
@@ -161,8 +186,9 @@ for ( my $i = 2 ; $i <= $last_index - 2 ; $i++ ) {
 }
 
 # with the epigenome parameter
-$underlying_structure = $fetched_regulatory_feature->get_underlying_structure();
-$last_index           = scalar @{$underlying_structure} - 1;
+$underlying_structure =
+  $fetched_regulatory_feature->get_underlying_structure($epigenome);
+$last_index = scalar @{$underlying_structure} - 1;
 
 is(
     $underlying_structure->[0],
@@ -301,16 +327,16 @@ is( $fetched_regulatory_feature->bound_end(), 32892606, 'Test bound_end()' );
 # Test summary_as_hash()
 # ----------------------
 my $expected_summary = {
-    bound_end => 32892606,
-    bound_start => 32888409,
-    description => "Predicted promoter",
-    end => 32891408,
-    feature_type => "Promoter",
-    ID => 54736,
+    bound_end       => 32892606,
+    bound_start     => 32888409,
+    description     => "Predicted promoter",
+    end             => 32891408,
+    feature_type    => "Promoter",
+    ID              => 54736,
     seq_region_name => 13,
-    source => "Regulatory_Build",
-    start => 32888607,
-    strand => 0
+    source          => "Regulatory_Build",
+    start           => 32888607,
+    strand          => 0
 };
 
 is_deeply( $fetched_regulatory_feature->summary_as_hash(),
