@@ -245,7 +245,7 @@ sub regulatory_evidence {
 
 =head2 get_RegulatoryEvidence
 
-  Arg [1]    : String (optional) - Class of feature e.g. 'annotated' 
+  Arg [1]    : String - Class of feature e.g. 'annotated'
                or 'motif'
   Arg [2]    : Bio::EnsEMBL::Funcgen::Epigenome - The epigenome for which 
                the evidence for it regulatory activity is requested.
@@ -262,6 +262,10 @@ sub get_RegulatoryEvidence {
   my $self = shift;
   my $feature_class = shift;
   my $epigenome   = shift;
+
+  if(! defined $feature_class){
+    throw("Feature class string ('annotated' or 'motif') not defined!");
+  }
   
   $self->_assert_epigenome_ok($epigenome);
   my $regulatory_activity = $self->regulatory_activity_for_epigenome($epigenome);
@@ -303,7 +307,7 @@ sub _assert_epigenome_ok {
 sub regulatory_activity_for_epigenome {
   my $self = shift;
   my $epigenome = shift;
-  
+
   if (! defined $epigenome) {
     throw("Epigenome parameter was undefined!");
   }
