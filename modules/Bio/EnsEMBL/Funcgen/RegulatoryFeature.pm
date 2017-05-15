@@ -226,7 +226,7 @@ sub stable_id { return shift->{stable_id}; }
   Returntype : ARRAYREF
   Exceptions : Throws if feature class not valid
   Caller     : General
-  Status     : At Risk
+  Status     : Deprecated
 
 =cut
 
