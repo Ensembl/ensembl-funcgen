@@ -157,11 +157,11 @@ sub fetch_all_by_probeset_name {
 	#Restrict to default coord_systems
 	#Can we remove the need for this by restricting the sr cache to default entries?
 	my @cs_ids = @{$self->_get_coord_system_ids($coord_systems)};
-    $self->_tables([['probe_set', 'ps'], ['seq_region', 'sr']]);
-
+    $self->_tables([['probe_set', 'ps'], ['seq_region', 'sr'], [ 'probe',   'p' ]]);
+    
 	#Need to protect against SQL injection here due to text params
 	my $cs_ids = join(', ', @cs_ids);
-	my $constraint = " ps.name=? AND ps.probe_set_id=p.probe_set_id AND pf.seq_region_id=sr.seq_region_id and sr.coord_system_id IN ($cs_ids)";
+	my $constraint = " ps.name=? AND ps.probe_set_id=p.probe_set_id AND pf.seq_region_id=sr.seq_region_id and sr.coord_system_id IN ($cs_ids) and pf.probe_id = p.probe_id";
 	$final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;
 
 	$self->bind_param_generic_fetch($probeset,  SQL_VARCHAR);
