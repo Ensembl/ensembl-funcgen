@@ -113,6 +113,10 @@ $new_regulatory_build->set_Analysis($analysis);
 
 is( $new_regulatory_build->analysis_id(), 16, 'Test set_Analysis()' );
 
+throws_ok {$new_regulatory_build->set_Analysis();}
+    qr /Analysis was not defined/,
+    'Test set_Analysis() exception throw';
+
 # ---------------------
 # Test fetch_Analysis()
 # ---------------------
