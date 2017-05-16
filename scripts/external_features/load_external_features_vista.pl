@@ -27,18 +27,17 @@ limitations under the License.
 
 =cut
 
-# Load data from a file of regulatory regions into a database
+# Load VISTA enhancers to a funcgen database
 
-#To do
-#remove get_all_regulatory_features from Gene.pm
-#do we need some different feature tables for these high volume features?
-#how would we trace this feature_type association...in feature_set, feature_type column?
-#would be feature_type for most, maybe rna_feature and/or motif_feature
-#store influence and evidence in a functional xref table?
-#set analysis and ftype adaptor internally?
-#implement version in xref to denote version of stable id and hence implicitly release of core DB
-#Or implement release in external_db?
-#can we use linkage annotation in object_xref?
+# Example usage:
+# load_external_features_vista.pl \
+#       -registry   <registry.pm file> \
+#       -type      Vista \
+#       -species   mus_musculus \
+#       -clobber \
+#       -tee \
+#       -logfile  <log file> \
+#       <VISTA enhancers file>
 
 use strict;
 use warnings;
