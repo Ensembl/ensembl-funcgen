@@ -570,6 +570,7 @@ sub store_dbfile_path {
   my $file_type = shift;
   
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ResultSet', $rset);
+  $self->_assert_dbfilepaths_table_consistent;
 
   my $path = $rset->dbfile_path;
   if (! defined $path) {
@@ -594,6 +595,9 @@ sub store_dbfile_path {
 
   if($db_path &&
 	 ($db_path ne $path)) {  # UPDATE
+    
+    confess("This should never happen!");
+     
     # Really should have rolled this back prior to this point
     my $sql = 'UPDATE dbfile_registry set path=? where table_name="result_set" and table_id=? and file_type=? and md5sum=?';
     my $sth = $self->prepare($sql);
@@ -632,7 +636,53 @@ sub store_dbfile_path {
       }
     }
   }
+  $self->_assert_dbfilepaths_table_consistent;
   return;
+}
+
+sub _assert_dbfilepaths_table_consistent {
+    my $self = shift;
+    
+    $self->_assert_dbfilepaths_unique;
+    $self->_assert_naming_convention_ok('BAM');
+    $self->_assert_naming_convention_ok('BIGWIG');
+}
+
+sub _assert_naming_convention_ok {
+    my $self = shift;
+    my $file_format = shift;
+
+    my $sql = 'select epigenome.production_name, path, result_set.name from epigenome join result_set using (epigenome_id) join dbfile_registry on (result_set_id=table_id and table_name="result_set") where file_type="'.$file_format.'" and (path not like concat("%", epigenome.production_name, "%") or result_set.name not like concat(epigenome.production_name, "%"))';
+
+    my $sth = $self->prepare($sql);
+    $sth->execute;
+    my $problem_hash_ref = $sth->fetchall_hashref('path');
+
+    my @problems = keys %$problem_hash_ref;
+
+    if (@problems>0) {
+        my $error_message = "There are " . scalar @problems . " problems!\n" . Dumper($problem_hash_ref);
+        use Carp;
+        confess($error_message);
+    }
+}
+
+sub _assert_dbfilepaths_unique {
+    my $self = shift;
+
+    my $sql = "select path, count(*) c, group_concat(table_id) result_set_ids from dbfile_registry group by path having c > 1";
+    my $sth = $self->prepare($sql);
+    $sth->execute;
+    my $non_unique_paths_hash_ref = $sth->fetchall_hashref('path');
+
+    my @non_unique_path = keys %$non_unique_paths_hash_ref;
+
+    if (@non_unique_path>0) {
+        use Data::Dumper;
+        my $error_message = "There are " . scalar @non_unique_path . " non unique paths in the dbfile_registry:\n" . Dumper($non_unique_paths_hash_ref);
+        use Carp;
+        confess($error_message);
+    }
 }
 
 =head2 dbfile_data_root
