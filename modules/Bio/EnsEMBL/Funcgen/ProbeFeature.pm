@@ -159,18 +159,14 @@ sub new_fast {
 =cut
 
 sub probeset {
-    my $self = shift;
-	
-    $self->{'probeset'} = shift if @_;
-	
-    if (! $self->{'probeset'}) {
-	  $self->{'probeset'} = $self->probe()->probeset();
-    }
+  my $self = shift;
 
-	#We could bypass this entirely and call directly using proveset_id?
+  $self->{'probeset'} = shift if @_;
 
-	
-    return $self->{'probeset'};
+  if (! $self->{'probeset'}) {
+    $self->{'probeset'} = $self->probe->probe_set;
+  }
+  return $self->{'probeset'};
 }
 
 
@@ -186,7 +182,10 @@ sub probe_set_id {
   my $self = shift;
   
   if (! defined $self->{'_probe_set_id'}) {
-    $self->{'_probe_set_id'} = $self->probeset->dbID;
+    my $probe_set = $self->probeset;
+    if (defined $probe_set) {
+      $self->{'_probe_set_id'} = $probe_set->dbID;
+    }
   }
   return $self->{'_probe_set_id'};
 }
