@@ -134,9 +134,6 @@ sub run {
   
   my $output = $self->output_prefix.'.bw';
 
-  # bigWigToWig can't cope with colons, so replacing with underscores
-#   $output =~ s/:/_/g;
-
   $self->throw_no_retry("bigWigToWig can't cope with colons, these should not be in the experiment names! ($output)")
     if ($output =~ /:/);
 
