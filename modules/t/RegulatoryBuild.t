@@ -108,40 +108,42 @@ ok(
 # -------------------
 # Test set_Analysis()
 # -------------------
+my $fetched_regulatory_build =
+  $regulatory_build_adaptor->fetch_by_name('Regulatory features');
+
 my $analysis = $analysis_adaptor->fetch_by_logic_name('Regulatory_Build');
-$new_regulatory_build->set_Analysis($analysis);
+$fetched_regulatory_build->set_Analysis($analysis);
 
-is( $new_regulatory_build->analysis_id(), 16, 'Test set_Analysis()' );
+is( $fetched_regulatory_build->analysis_id(), 16, 'Test set_Analysis()' );
 
-throws_ok {$new_regulatory_build->set_Analysis();}
-    qr /Analysis was not defined/,
-    'Test set_Analysis() exception throw';
+throws_ok { $fetched_regulatory_build->set_Analysis(); }
+qr /Analysis was not defined/,
+  'Test set_Analysis() exception throw';
 
 # ---------------------
 # Test fetch_Analysis()
 # ---------------------
-is_deeply( $new_regulatory_build->fetch_Analysis(),
+is_deeply( $fetched_regulatory_build->fetch_Analysis(),
     $analysis, 'Test fetch_Analysis()' );
 
 # ----------------------
 # Test set_FeatureType()
 # ----------------------
 my $feature_type = $feature_type_adaptor->fetch_by_name('RegulatoryFeature');
-$new_regulatory_build->set_FeatureType($feature_type);
+$fetched_regulatory_build->set_FeatureType($feature_type);
 
-is( $new_regulatory_build->feature_type_id(), 19, 'Test set_FeatureType()' );
+is( $fetched_regulatory_build->feature_type_id(), 19,
+    'Test set_FeatureType()' );
 
 # ------------------------
 # Test fetch_FeatureType()
 # ------------------------
-is_deeply( $new_regulatory_build->fetch_FeatureType(),
+is_deeply( $fetched_regulatory_build->fetch_FeatureType(),
     $feature_type, 'Test fetch_FeatureType()' );
 
 # -------------------------
 # Test get_all_Epigenomes()
 # -------------------------
-my $fetched_regulatory_build =
-  $regulatory_build_adaptor->fetch_by_name('Regulatory features');
 
 my $used_epigenomes = $fetched_regulatory_build->get_all_Epigenomes();
 
