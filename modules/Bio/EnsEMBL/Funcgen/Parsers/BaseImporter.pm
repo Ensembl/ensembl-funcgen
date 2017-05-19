@@ -373,8 +373,9 @@ sub new{
   }
 
   if ($ctype_name) {
-    my $ctype = $self->db->get_CellTypeAdaptor->fetch_by_name($ctype_name);
-    throw("The CellType $ctype_name does not exist in the database") if(!$ctype);
+    my $ctype = $self->db->get_EpigenomeAdaptor->fetch_by_name($ctype_name);
+    throw("The Epigenome $ctype_name does not exist in the database") if
+        (!$ctype);
     $self->cell_type($ctype);
   }
 

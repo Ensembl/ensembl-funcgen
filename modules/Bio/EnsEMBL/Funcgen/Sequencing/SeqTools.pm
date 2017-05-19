@@ -2003,7 +2003,7 @@ sub modify_files_txt_for_regulation {
   Arg 2  : Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
   Arg 3  : HASH - Constraints
   Arg 4  : [Optional] ARRAY of Bio::EnsEMBL::Funcgen::Experiment
-  Arg 5  : [Optional] ARRAY of Bio::EnsEMBL::Funcgen::CellType
+  Arg 5  : [Optional] ARRAY of Bio::EnsEMBL::Funcgen::Epigenome
   Arg 6  : [Optional] ARRAY of Bio::EnsEMBL::Funcgen::FeatureType
 
   Returntype  : None
@@ -2025,7 +2025,7 @@ sub modify_files_txt_for_regulation {
 #   my $exp_a = $db->get_ExperimentAdaptor;
 #   my $eg_a  = $db->get_ExperimentalGroupAdaptor;
 # 
-#   my $ct_a = $db->get_CellTypeAdaptor;
+#   my $ct_a = $db->get_EpigenomeAdaptor;
 #   my $ft_a = $db->get_FeatureTypeAdaptor;
 # 
 #   my $anal_adaptor = $db->get_AnalysisAdaptor;
@@ -2107,7 +2107,7 @@ sub modify_files_txt_for_regulation {
 #       throw "'$type' not implemted.";
 #     }
 # 
-#     # CellType
+#     # Epigenome
 #     my $ct  = $ct_a ->fetch_by_name($ct_name);
 #     if(!$ct){
 #       $ct =_store_cell_feature_type ($db, $ct_name, $cell_type_data);
@@ -2245,7 +2245,8 @@ sub download_all_files_txt {
   Argument 1  : Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor
   Argument 2  : String - Name used as key in $data HASH
   Argument 3  : HASHREF - containing Cell or FeatureType objects
-  Returntype  : Bio::EnsEMBL::Funcgen::CellType or Bio::EnsEMBL::Funcgen::FeatureType
+  Returntype  : Bio::EnsEMBL::Funcgen::Epigenome or
+                Bio::EnsEMBL::Funcgen::FeatureType
   Exceptions  : Missing arguments
   Description : PRIVATE - stores Cell or FeatureType
 
@@ -2261,8 +2262,8 @@ sub _store_cell_feature_type {
   }
 
   my $object  = $data->{$name};
-  my $adaptor =  (check_ref($object, 'Bio::EsnEMBL::Funcgen::CellType')) ?
-    $db->get_CellTypeAdaptor : $db->get_FeatureTypeAdaptor;
+  my $adaptor =  (check_ref($object, 'Bio::EsnEMBL::Funcgen::Epigenome')) ?
+    $db->get_EpigenomeAdaptor : $db->get_FeatureTypeAdaptor;
 
   ($object) = @{$adaptor->store($data->{$name})};
   say 'Added '.ref($object).":\t$name";

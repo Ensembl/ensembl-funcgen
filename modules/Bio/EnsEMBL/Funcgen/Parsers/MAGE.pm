@@ -622,7 +622,7 @@ sub write_validate_experiment_config{
   #then update ec records as appropriate and then create rsets
 
   my (%bio_reps, %tech_reps);
-  my $ct_adaptor = $self->db->get_CellTypeAdaptor();
+  my $ct_adaptor = $self->db->get_EpigenomeAdaptor();
   my $ft_adaptor = $self->db->get_FeatureTypeAdaptor();
  
 #select rs.*, ec.*, c.* from result_set rs, chip_channel cc, channel c, experimental_chip ec where rs.result_set_id=cc.result_set_id and cc.table_name='experimental_chip' and cc.table_id=ec.experimental_chip_id and cc.table_id=c.experimental_chip_id order by name;

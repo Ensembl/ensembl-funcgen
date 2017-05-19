@@ -386,7 +386,6 @@ sub get_available_adaptors{
                'Array'                  => 'Bio::EnsEMBL::Funcgen::DBSQL::ArrayAdaptor',
                'ArrayChip'              => 'Bio::EnsEMBL::Funcgen::DBSQL::ArrayChipAdaptor',
                'BindingMatrix'          => 'Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixAdaptor',
-               'CellType'               => 'Bio::EnsEMBL::Funcgen::DBSQL::CellTypeAdaptor',
                'Epigenome'              => 'Bio::EnsEMBL::Funcgen::DBSQL::EpigenomeAdaptor',
                'CoordSystem'            => 'Bio::EnsEMBL::Funcgen::DBSQL::CoordSystemAdaptor',
                'DataSet'                => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
