@@ -31,7 +31,6 @@ sub pipeline_analyses {
                 MAIN => 'backbone_fire_import',
             },
         },
-        
         {   -logic_name  => 'backbone_fire_import',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
@@ -43,7 +42,6 @@ sub pipeline_analyses {
             -logic_name  => 'start_import',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
-        
         {   -logic_name  => 'backbone_fire_import_healthchecks',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
@@ -55,7 +53,6 @@ sub pipeline_analyses {
             -logic_name  => 'start_import_healthchecks',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
-        
         {   -logic_name  => 'backbone_fire_export',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
@@ -78,7 +75,6 @@ sub pipeline_analyses {
             -logic_name  => 'start_align_probes',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
-        
         {   -logic_name  => 'backbone_fire_align_healthchecks',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
@@ -90,12 +86,11 @@ sub pipeline_analyses {
             -logic_name  => 'start_align_healthchecks',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
-        
         {   -logic_name  => 'backbone_fire_probe2transcript',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
                '1->A' => 'start_probe2transcript',
-               'A->1' => 'backbone_fire_switch_table_engines'
+               'A->1' => 'backbone_fire_probe_to_transcript_healthchecks'
             },
         },
         {
@@ -103,6 +98,17 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
 
+        {   -logic_name  => 'backbone_fire_probe_to_transcript_healthchecks',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into   => {
+               '1->A' => 'start_probe_to_transcript_healthchecks',
+               'A->1' => 'backbone_fire_switch_table_engines'
+            },
+        },
+        {
+            -logic_name  => 'start_probe_to_transcript_healthchecks',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+        },
         {   -logic_name  => 'backbone_fire_switch_table_engines',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
