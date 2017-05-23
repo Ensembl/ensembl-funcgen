@@ -22,22 +22,6 @@ sub pipeline_analyses {
             -logic_name  => 'start_import',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into => {
-                MAIN => 'pre_pipeline_checks',
-            },
-        },
-        {   -logic_name  => 'pre_pipeline_checks',
-            -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::PrePipelineChecks',
-            -flow_into => {
-                MAIN => 'make_temp_dir',
-            },
-        },
-        {
-            -logic_name  => 'make_temp_dir',
-            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -parameters => {
-                cmd       => 'mkdir -p #tempdir#/#species#',
-            },
-            -flow_into => {
                 MAIN => 'truncate_array_tables',
             },
         },
