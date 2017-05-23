@@ -32,11 +32,23 @@ sub pipeline_analyses {
                 db_conn => 'funcgen:#species#',
             },
             -flow_into => {
+               MAIN => 'switch_probe_feature_table_to_innodb',
+            },
+        },
+        {
+            -logic_name  => 'switch_probe_feature_table_to_innodb',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+            -parameters => {
+                sql     => [
+                  "ALTER TABLE probe_feature ENGINE=InnoDB;",
+                ],
+                db_conn => 'funcgen:#species#',
+            },
+            -flow_into => {
                'MAIN->A' => 'split_into_probe_chunks',
                'A->MAIN' => 'done_processing_probe_chunks',
             },
         },
-
         {   -logic_name  => 'split_into_probe_chunks',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::FastaFactory',
             -parameters => {

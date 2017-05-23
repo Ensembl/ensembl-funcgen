@@ -54,6 +54,30 @@ sub pipeline_analyses {
                 "truncate probe_transcript;",
                 "truncate probe_set_transcript;",
                 "truncate probe_feature_transcript;",
+                "truncate unmapped_object;",
+                "truncate unmapped_reason;",
+              ],
+              db_conn => 'funcgen:#species#',
+          },
+          -flow_into => {
+              MAIN => 'switch_p2t_tables_to_innodb',
+          },
+      },
+      {
+          -logic_name  => 'switch_p2t_tables_to_innodb',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+          -parameters => {
+              sql     => [
+                "ALTER TABLE unmapped_object ENGINE=InnoDB;",
+                "ALTER TABLE unmapped_reason ENGINE=InnoDB;",
+                # Not converting:
+                #
+                # probe_transcript
+                # probe_set_transcript
+                # probe_feature_transcript
+                #
+                # because they are populated by load statements. These are 
+                # unlikely to improve by using innodb.
               ],
               db_conn => 'funcgen:#species#',
           },

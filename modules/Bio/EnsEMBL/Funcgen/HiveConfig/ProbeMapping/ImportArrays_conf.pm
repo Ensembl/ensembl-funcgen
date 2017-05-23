@@ -49,11 +49,11 @@ sub pipeline_analyses {
                 db_conn => 'funcgen:#species#',
             },
             -flow_into => {
-               MAIN => 'switch_to_innodb',
+               MAIN => 'switch_array_tables_to_innodb',
             },
         },
         {
-            -logic_name  => 'switch_to_innodb',
+            -logic_name  => 'switch_array_tables_to_innodb',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
             -parameters => {
                 sql     => [
