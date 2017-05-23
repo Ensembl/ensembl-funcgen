@@ -71,7 +71,30 @@ sub pipeline_analyses {
                 . ' --logic_name ProbeAlign_genomic '
                 . ' --max_check ' . $max_probe_features_to_check
           },
-        },
+          -flow_into => {
+              MAIN => 'hc_no_probe_features_from_promiscuous_probes',
+          },
+      },
+      {
+          -logic_name  => 'hc_no_probe_features_from_promiscuous_probes',
+          -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlHealthcheck',
+          -parameters => {
+            db_conn       => 'funcgen:#species#',
+            description   => 'Assert that there are no probe features from probes that were classified as promiscuous',
+            query         => "
+              select
+                distinct probe_feature.probe_feature_id
+              from
+                unmapped_object
+                join unmapped_reason on (
+                  unmapped_object.unmapped_reason_id=unmapped_reason.unmapped_reason_id and summary_description = 'Promiscuous probe'
+                )
+                join probe_feature on (probe_id = ensembl_id and ensembl_object_type = 'Probe')
+              limit 1
+            ",
+            expected_size => '0'
+          },
+      },
     ];
 }
 
