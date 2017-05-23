@@ -1,6 +1,7 @@
 #!/usr/bin/env perl
 
 use strict;
+use locale; # Needed to ensure consistent ordering between Perl and UNIX sort
 use Data::Dumper;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
