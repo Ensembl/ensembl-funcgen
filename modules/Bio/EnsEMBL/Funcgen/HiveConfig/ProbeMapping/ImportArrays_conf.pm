@@ -38,11 +38,11 @@ sub pipeline_analyses {
                 cmd       => 'mkdir -p #tempdir#/#species#',
             },
             -flow_into => {
-                MAIN => 'rollback_array',
+                MAIN => 'truncate_array_tables',
             },
         },
         {
-            -logic_name  => 'rollback_array',
+            -logic_name  => 'truncate_array_tables',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
             -parameters => {
                 sql     => [
