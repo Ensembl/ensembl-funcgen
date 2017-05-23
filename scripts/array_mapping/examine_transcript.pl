@@ -726,6 +726,7 @@ sub record_gapped_probefeature {
       @{$transcript_feature_info->{$array_name}->{probe}->{$probe_id}}, 
       $probe_match_annotation;
   }
+  add_xref($transcript_sid, $feature_id, $probe_match_annotation);
   # The real return value is in $transcript_feature_info and data is written in cache_and_load_unmapped_objects
   return;
 }
