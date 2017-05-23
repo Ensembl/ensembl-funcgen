@@ -115,13 +115,15 @@ sub new {
 	
   my $self = $class->SUPER::new(@_);
 	
-  my ($probe, $mismatchcount, $pid, $cig_line)
-    = rearrange(['PROBE', 'MISMATCHCOUNT', 'PROBE_ID', 'CIGAR_STRING'], @_);
+  my ($probe, $mismatchcount, $pid, $cig_line, $hit_id, $source)
+    = rearrange(['PROBE', 'MISMATCHCOUNT', 'PROBE_ID', 'CIGAR_STRING', 'HIT_ID', 'SOURCE'], @_);
     
   $self->{'probe_id'} = $pid if $pid;
   $self->probe($probe) if $probe;
   $self->mismatchcount($mismatchcount)  if defined $mismatchcount;#do not remove until probe mapping pipeline fixed
-  $self->cigar_string($cig_line)          if defined $cig_line;
+  $self->cigar_string($cig_line)        if defined $cig_line;
+  $self->hit_id($hit_id)                if defined $hit_id;
+  $self->source($source)                if defined $source;
 
   return $self;
 }
@@ -212,6 +214,38 @@ sub mismatchcount {
     my $self = shift;
     $self->{'mismatchcount'} = shift if @_;
     return $self->{'mismatchcount'};
+}
+
+=head2 hit_id
+
+  Arg [1]    : String - identifier of the sequence on which the match from which the probe feature was created was found
+  Example    : my $hit_id = $feature->hit_id;
+  Description: Getter and setter for the hit id of this feature.
+  Returntype : int
+  Exceptions : None
+  Caller     : General
+
+=cut
+sub hit_id {
+    my $self = shift;
+    $self->{'hit_id'} = shift if @_;
+    return $self->{'hit_id'};
+}
+
+=head2 source
+
+  Arg [1]    : Enum[String] - Either 'genomic' or 'transcript'
+  Example    : my $source = $feature->source;
+  Description: Returns 'genomic', if the match for this probe feature was on genomic sequence, 'transcript', if it was found on a transcript.
+  Returntype : Enum[String] - Either 'genomic' or 'transcript'
+  Exceptions : None
+  Caller     : General
+
+=cut
+sub source {
+    my $self = shift;
+    $self->{'source'} = shift if @_;
+    return $self->{'source'};
 }
 
 =head2 cigar_string

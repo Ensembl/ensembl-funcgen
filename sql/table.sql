@@ -448,6 +448,8 @@ CREATE TABLE `external_feature_file` (
                               <li>D Deletion</li>
                               <li>S Soft clipping, used for overhanging cdna alignments where genomic seq is unknown</li>
                             </ul>
+@column hit_id              Id of the sequence on which the hit was initially made. Typically this will be the stable id of the transcript or the name of the sequence region.
+@column source              The source of the sequence on which the probe was found. If set, this can be 'genomic' or 'transcript'
 
 @see analysis
 @see probe
@@ -465,10 +467,12 @@ CREATE TABLE `probe_feature` (
   `analysis_id` smallint(5) unsigned NOT NULL,
   `mismatches` tinyint(4) NOT NULL,
   `cigar_line` varchar(50) DEFAULT NULL,
+  `hit_id` varchar(255) DEFAULT NULL,
+  `source` enum('genomic','transcript') DEFAULT NULL,
   PRIMARY KEY (`probe_feature_id`),
   KEY `probe_idx` (`probe_id`),
   KEY `seq_region_probe_probe_feature_idx` (`seq_region_id`,`seq_region_start`,`seq_region_end`,`probe_id`,`probe_feature_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
 
 DROP TABLE IF EXISTS `probe_feature_transcript`;
 CREATE TABLE `probe_feature_transcript` (

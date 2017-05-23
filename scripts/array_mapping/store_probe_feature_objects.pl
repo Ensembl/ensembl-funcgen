@@ -57,6 +57,9 @@ my $process_data = sub {
   lock_keys( %$raw_probe_feature );
   
   my $slice;
+  my $hit_id;
+  my $probe_feature_source;
+  
   if ($target_type eq 'transcript') {
     # The next statement has to go
     return if ($raw_probe_feature eq " Only one genomic block!");
@@ -66,17 +69,20 @@ my $process_data = sub {
     if (! defined $transcript) {
       die("Can't find transcript for $transcript_stable_id");
     }
-    
-    $slice = $transcript->slice;
+    $slice  = $transcript->slice;
+    $hit_id = $transcript->stable_id;
+    $probe_feature_source = 'transcript';
     
   } else {
     $slice = $slice_adaptor->fetch_by_name($raw_probe_feature->{t_id});
+    $hit_id = $slice->seq_region_name;
+    $probe_feature_source = 'genomic';
   }
   
   my $probe_with_this_sequence = $probe_adaptor->fetch_all_by_probe_sequence_id($raw_probe_feature->{probe_seq_id});
   
   foreach my $current_probe (@$probe_with_this_sequence) {
-    
+  
     use Bio::EnsEMBL::Funcgen::ProbeFeature;
     my $probe_feature = Bio::EnsEMBL::Funcgen::ProbeFeature->new(
       -PROBE         => $current_probe,
@@ -87,6 +93,8 @@ my $process_data = sub {
       -ANALYSIS      => $analysis,
       -CIGAR_STRING  => $raw_probe_feature->{cigar_line},
       -slice         => $slice,
+      -hit_id        => $hit_id,
+      -source        => $probe_feature_source,
     );
 
     $probe_feature_adaptor->store($probe_feature);

@@ -306,7 +306,8 @@ sub _columns {
     pf.seq_region_start    pf.seq_region_end
     pf.seq_region_strand   pf.probe_id
     pf.analysis_id         pf.mismatches
-    pf.cigar_line
+    pf.cigar_line          pf.hit_id
+    pf.source
   );
 }
 
@@ -371,14 +372,16 @@ sub _objs_from_sth {
 	    $seq_region_strand, $mismatches,
 		$probe_id,    	    $analysis_id,
 		$probe_name,	    $cigar_line,
-		$probeset_id
+		$probeset_id,       $hit_id,
+		$source
 	);
 	$sth->bind_columns(
           \$probe_feature_id,  \$efg_seq_region_id,
           \$seq_region_start,  \$seq_region_end,
           \$seq_region_strand, \$probe_id,
           \$analysis_id,       \$mismatches,
-          \$cigar_line
+          \$cigar_line,        \$hit_id,
+          \$source
 	);
 
 	my ($asm_cs, $cmp_cs, $asm_cs_name, $asm_cs_vers ,$cmp_cs_name, $cmp_cs_vers);
@@ -517,8 +520,10 @@ sub _objs_from_sth {
 			'adaptor'       => $self,
 			'dbID'          => $probe_feature_id,
 			'mismatchcount' => $mismatches,
-			'cigar_string'    => $cigar_line,
+			'cigar_string'  => $cigar_line,
 			'probe_id'      => $probe_id,
+			'hit_id'        => $hit_id,
+			'source'        => $source,
 # 			#Do these need to be private?
 # 			'_probe_set_id' => $probeset_id,#Used for linking feature glyphs
 # 			'_probe_name'   => $probe_name,#?? There can be >1. Is this for array design purposes?
@@ -559,8 +564,8 @@ sub store{
 			seq_region_id,  seq_region_start,
 			seq_region_end, seq_region_strand,
           	probe_id,  analysis_id,
-			mismatches, cigar_line
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+			mismatches, cigar_line, hit_id, source
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	");
 
 	my $db = $self->db();
@@ -589,14 +594,16 @@ sub store{
 		my $seq_region_id;
 		($of, $seq_region_id) = $self->_pre_store($of);
 
-		$sth->bind_param(1, $seq_region_id,        SQL_INTEGER);
-		$sth->bind_param(2, $of->start(),          SQL_INTEGER);
-		$sth->bind_param(3, $of->end(),            SQL_INTEGER);
-		$sth->bind_param(4, $of->strand(),         SQL_TINYINT);
-		$sth->bind_param(5, $of->probe_id(),       SQL_INTEGER);
-		$sth->bind_param(6, $of->analysis->dbID(), SQL_INTEGER);
-		$sth->bind_param(7, $of->mismatchcount(),  SQL_TINYINT);
-		$sth->bind_param(8, $of->cigar_string(),   SQL_VARCHAR);
+		$sth->bind_param( 1, $seq_region_id,        SQL_INTEGER);
+		$sth->bind_param( 2, $of->start(),          SQL_INTEGER);
+		$sth->bind_param( 3, $of->end(),            SQL_INTEGER);
+		$sth->bind_param( 4, $of->strand(),         SQL_TINYINT);
+		$sth->bind_param( 5, $of->probe_id(),       SQL_INTEGER);
+		$sth->bind_param( 6, $of->analysis->dbID(), SQL_INTEGER);
+		$sth->bind_param( 7, $of->mismatchcount(),  SQL_TINYINT);
+		$sth->bind_param( 8, $of->cigar_string(),   SQL_VARCHAR);
+		$sth->bind_param( 9, $of->hit_id(),         SQL_VARCHAR);
+		$sth->bind_param(10, $of->source(),         SQL_VARCHAR);
 
 		$sth->execute();
 		$of->dbID( $self->last_insert_id );
