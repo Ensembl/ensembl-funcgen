@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Funcgen::HiveConfig::ProbeMapping::DumpSequences_conf;
+package Bio::EnsEMBL::Funcgen::HiveConfig::ProbeMapping::ExportSequences_conf;
 
 use strict;
 use warnings;
@@ -15,7 +15,7 @@ sub pipeline_analyses {
           -flow_into => {
               MAIN => [
                 'connection_details_as_parameters',
-                'dump_unmapped_sequences'
+                'export_unmapped_sequences'
               ]
           },
       },
@@ -27,12 +27,12 @@ sub pipeline_analyses {
           },
           -flow_into => {
               MAIN => [
-                'dump_toplevel',
-                'dump_genes',
+                'export_toplevel',
+                'export_transcript_sequences',
               ],
           },
       },
-      {   -logic_name => 'dump_toplevel',
+      {   -logic_name => 'export_toplevel',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters => {
               'cmd' => 'sequence_dump.pl '
@@ -49,10 +49,10 @@ sub pipeline_analyses {
           },
           -rc_name   => '4Gb_job',
           -flow_into => {
-              MEMLIMIT => 'dump_toplevel_himem',
+              MEMLIMIT => 'export_toplevel_himem',
           },
       },
-      {   -logic_name => 'dump_toplevel_himem',
+      {   -logic_name => 'export_toplevel_himem',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -rc_name   => '16Gb_job',
           -parameters => {
@@ -69,7 +69,7 @@ sub pipeline_analyses {
               . ' #expr( #password# ? " -dbpass " . #password# : "" )expr# ',
           },
       },
-      {   -logic_name => 'dump_genes',
+      {   -logic_name => 'export_transcript_sequences',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters => {
               'cmd' => 'dump_genes.pl '
@@ -83,10 +83,10 @@ sub pipeline_analyses {
           },
           -rc_name   => '4Gb_job',
           -flow_into => {
-              MEMLIMIT => 'dump_genes_himem',
+              MEMLIMIT => 'export_transcript_sequences_himem',
           },
       },
-      {   -logic_name => 'dump_genes_himem',
+      {   -logic_name => 'export_transcript_sequences_himem',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -rc_name   => '16Gb_job',
           -parameters => {
@@ -101,7 +101,7 @@ sub pipeline_analyses {
           },
       },
       {
-        -logic_name  => 'dump_unmapped_sequences',
+        -logic_name  => 'export_unmapped_sequences',
         -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::DumpUnmappedSeqs',
       },
     ];
