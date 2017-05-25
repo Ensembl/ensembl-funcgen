@@ -640,9 +640,8 @@ sub record_gapped_probefeature {
 
   my $transcript_sid = $transcript->stable_id();
 
-#   $logger->info(" run sql " );
-
-  my $sql = "select count(stable_id) as num_transcripts from probe_feature_transcript where probe_feature_id=? and stable_id=?";
+  my $sql = 'select count(hit_id) as num_transcripts from probe_feature where probe_feature_id=? and hit_id=? and source="transcript"';
+  
   my $sql_helper = $xref_db->dbc->sql_helper;
   my $num_transcripts = $sql_helper->execute_single_result(
     -SQL    => $sql,
