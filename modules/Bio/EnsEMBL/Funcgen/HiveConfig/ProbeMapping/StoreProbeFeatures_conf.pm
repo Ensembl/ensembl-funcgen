@@ -6,6 +6,8 @@ use warnings;
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;           # Allow this particular config to use conditional dataflow and INPUT_PLUS
 use base ('Bio::EnsEMBL::Funcgen::HiveConfig::ProbeMapping::Base');
 
+my $max_allowed_hits_per_probe = 100;
+
 sub pipeline_analyses {
     my $self = shift;
     
@@ -41,8 +43,7 @@ sub pipeline_analyses {
                   --parsed_data #chunk_name#_#type#.exonerate_parsed.txt \
                   --promiscuous_hits #chunk_name#_#type#.promiscuous_hits.txt \
                   --accepted_hits #chunk_name#_#type#.probe_features.txt \
-                  --max_allowed_hits_per_probe 100
-              '
+                  --max_allowed_hits_per_probe ' . $max_allowed_hits_per_probe
           },
           -flow_into => {
               MAIN => WHEN(
