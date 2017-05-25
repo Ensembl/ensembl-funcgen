@@ -41,7 +41,6 @@ my $sql = '
     seq_region_start, 
     seq_region_end, 
     probe_id, 
-    analysis_id, 
     mismatches, 
     cigar_line
   from
@@ -51,7 +50,6 @@ my $sql = '
     seq_region_start, 
     seq_region_end, 
     probe_id, 
-    analysis_id, 
     mismatches, 
     cigar_line
   having 
