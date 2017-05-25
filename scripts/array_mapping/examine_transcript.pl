@@ -527,12 +527,27 @@ sub examine_probefeature {
       if ($debug) {
         $logger->info('Unmapped sense '.$log_name."\n");
       }
+      cache_and_load_unmapped_objects({
+        identifier  => $transcript_sid,
+        object_type => 'ProbeFeature',
+        object_id   => $feature_id,
+        summary     => 'Unmapped sense',
+        description => 'Unmapped sense '.$log_name,
+      });
       return;
     }
   } elsif ($transcript->seq_region_strand != $strand) {
     if ($debug) {
       $logger->info('Unmapped anti-sense '.$log_name."\n");
     }
+    cache_and_load_unmapped_objects({
+      identifier  => $transcript_sid,
+      object_type => 'ProbeFeature',
+      object_id   => $feature_id,
+      summary     => 'Unmapped anti-sense',
+      description => 'Unmapped anti-sense '.$log_name,
+    });
+
     return;
   }
 
