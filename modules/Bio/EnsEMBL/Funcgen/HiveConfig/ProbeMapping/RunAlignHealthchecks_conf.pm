@@ -5,6 +5,8 @@ use warnings;
 
 use base ('Bio::EnsEMBL::Funcgen::HiveConfig::ProbeMapping::Base');
 
+my $max_allowed_hits_per_probe = 100;
+
 sub pipeline_analyses {
     my $self = shift;
     
@@ -72,11 +74,11 @@ sub pipeline_analyses {
                 . ' --max_check ' . $max_probe_features_to_check
           },
           -flow_into => {
-              MAIN => 'hc_no_probe_features_from_promiscuous_probes',
+              MAIN => 'hc_no_probe_features_from_known_promiscuous_probes',
           },
       },
       {
-          -logic_name  => 'hc_no_probe_features_from_promiscuous_probes',
+          -logic_name  => 'hc_no_probe_features_from_known_promiscuous_probes',
           -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlHealthcheck',
           -parameters => {
             db_conn       => 'funcgen:#species#',
@@ -92,6 +94,19 @@ sub pipeline_analyses {
                 join probe_feature on (probe_id = ensembl_id and ensembl_object_type = 'Probe')
               limit 1
             ",
+            expected_size => '0'
+          },
+          -flow_into => {
+              MAIN => 'hc_no_probe_features_from_promiscuous_probes',
+          },
+      },
+      {
+          -logic_name  => 'hc_no_probe_features_from_promiscuous_probes',
+          -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlHealthcheck',
+          -parameters => {
+            db_conn       => 'funcgen:#species#',
+            description   => 'Assert that there are no probe features from probes that were classified as promiscuous',
+            query         => "select probe_id, count(probe_feature_id) c from probe_feature group by probe_id having c > $max_allowed_hits_per_probe order by c desc",
             expected_size => '0'
           },
       },
