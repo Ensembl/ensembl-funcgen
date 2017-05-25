@@ -33,6 +33,13 @@ $logger->init_log;
 Bio::EnsEMBL::Registry->load_all($registry);
 my $funcgen_db_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
 
+# Regarding inclusion of hit_id: 
+#
+# We can't remove probe features that were generated from different sequences
+# , even if all else is the same. The reason is that probe2transcript queries 
+# whether there were any matches of a particular probe feature to a specific 
+# transcript. And this is ultimately used to assign probes to transcripts.
+#
 my $sql = '
   select
     group_concat(cast(probe_feature_id as char)) ids, 
@@ -42,7 +49,8 @@ my $sql = '
     seq_region_end, 
     probe_id, 
     mismatches, 
-    cigar_line
+    cigar_line,
+    hit_id
   from
     probe_feature
   group by 
@@ -51,7 +59,8 @@ my $sql = '
     seq_region_end, 
     probe_id, 
     mismatches, 
-    cigar_line
+    cigar_line,
+    hit_id
   having 
     num_occurrences > 1 
   order by 
@@ -100,6 +109,7 @@ my $progressbar_id = $logger->init_progress(scalar @probe_feature_ids_to_delete)
 $logger->info("Deleting redundant probe features\n");
 
 my $number_of_features_deleted = 0;
+
 foreach my $id_of_probe_features_to_remove (@probe_feature_ids_to_delete) {
 
   $delete_by_probe_feature_id->bind_param(1, $id_of_probe_features_to_remove, SQL_INTEGER);
