@@ -204,8 +204,36 @@ sub pipeline_analyses {
                   --species #species#
               ',
           },
+          -flow_into => {
+              MAIN => 'delete_probe_features_from_promiscuous_probes',
+          },
       },
+      {
+          -logic_name  => 'delete_probe_features_from_promiscuous_probes',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+          -parameters => {
+              sql     => [
+                'drop table if exists temp_promiscuous_probes_with_features;',
 
+                "
+                create table temp_promiscuous_probes_with_features as 
+                  select
+                    distinct unmapped_object.ensembl_id as probe_id
+                  from
+                    unmapped_object
+                    join unmapped_reason on (
+                      unmapped_object.unmapped_reason_id=unmapped_reason.unmapped_reason_id and summary_description = 'Promiscuous probe'
+                    )
+                    join probe_feature on (probe_id = ensembl_id and ensembl_object_type = 'Probe');
+                ",
+                
+                'delete from probe_feature using probe_feature join temp_promiscuous_probes_with_features using(probe_id);',
+
+                'drop table if exists temp_promiscuous_probes_with_features;',
+              ],
+              db_conn => 'funcgen:#species#',
+          },
+      },
     ];
 }
 
