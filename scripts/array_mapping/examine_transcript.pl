@@ -18,7 +18,6 @@ examine_transcript.pl \
   --transcript_utr_file ./transcript_utr.pl \
   --transcript_info_file /nfs/nobackup/ensembl/mnuhn/probe2transcript/transcript_info.pl
 
-
 =cut
 
 my $registry;
@@ -53,10 +52,6 @@ $logger->init_log;
 
 Bio::EnsEMBL::Registry->load_all($registry);
 
-# use Bio::EnsEMBL::Funcgen::Config::ArrayFormatConfig;
-# my $array_format_config = Bio::EnsEMBL::Funcgen::Config::ArrayFormatConfig->new->array_format_config;
-# my $array_format_config = Bio::EnsEMBL::Funcgen::Config::ArrayFormatConfig->new;
-
 use Bio::EnsEMBL::Funcgen::Parsers::DataDumper;
 my $transcript_utr = Bio::EnsEMBL::Funcgen::Parsers::DataDumper->new->load_first_item_from_data_dump_file($transcript_utr_file);
 my $flanks         = Bio::EnsEMBL::Funcgen::Parsers::DataDumper->new->load_first_item_from_data_dump_file($flanks_file);
@@ -84,6 +79,12 @@ sub add_xref {
   my $probe_feature_id     = shift;
   my $linkage_annotation   = shift;
 
+  
+  if (ref $linkage_annotation eq 'HASH') {
+    use Carp;
+    confess($linkage_annotation);
+  }
+  
   $probe_feature_transcript_assignment_fh->print(
     join "\t",
       $probe_feature_id,
@@ -124,7 +125,6 @@ associate_probes_to_transcripts({
   transcript_probe_features_overlaps_fh    => $transcript_probe_features_overlaps_fh,
   xref_db                 => $funcgen_db_adaptor,
   flanks                  => $flanks,
-#   array_format_config     => $array_format_config,
   transcript_info_file_fh => $transcript_info_fh,
 });
 
@@ -156,75 +156,29 @@ sub associate_probes_to_transcripts {
   my $all_core_transcripts    = $param->{all_core_transcripts};
   my $transcript_probe_features_overlaps_fh = $param->{transcript_probe_features_overlaps_fh};
   my $xref_db                 = $param->{xref_db};
-#   my $array_format_config     = $param->{array_format_config};
   my $flanks                  = $param->{flanks};
   my $max_mismatches          = $param->{max_mismatches};
   my $transcript_info_file_fh = $param->{transcript_info_file_fh};
   
+  my %all_core_transcripts_hashed_by_stable_id;
+  foreach my $current_core_transcript (@$all_core_transcripts) {
   
-  my $range_registry = Bio::EnsEMBL::Mapper::RangeRegistry->new();
-
-  my $unmapped_counts;
-  my $unmapped_objects;
-  my $xrefs;
+    my $stable_id = $current_core_transcript->stable_id;
   
-  # Number of processed transcripts
-  my $index = 0;
-  # Last percentage point to be processed for progress display
-  my $last_pc = -1;
-  # Last line to be read from the overlap file
-  my $last_line = undef;
-
-  print_progress(0, scalar @{$all_core_transcripts}, -1);
+    die if (! defined $stable_id);
+    die if (exists $all_core_transcripts_hashed_by_stable_id{$stable_id});
   
-  my @all_core_transcripts_sorted_by_stable_id = sort {$a->stable_id cmp $b->stable_id} @$all_core_transcripts;
-  
-  foreach my $current_transcript (@all_core_transcripts_sorted_by_stable_id) {
-    $last_pc = print_progress($index++, scalar @{$all_core_transcripts}, $last_pc);
-
-    (
-      $last_line, 
-      my $transcript_feature_info
-    ) = examine_transcript({
-#       array_format_config     => $array_format_config,
-      transcript              => $current_transcript,
-      max_mismatches          => $max_mismatches,
-      pf_transc_overlap_fh    => $transcript_probe_features_overlaps_fh,
-      last_line               => $last_line, 
-      unmapped_counts         => $unmapped_counts, 
-      unmapped_objects        => $unmapped_objects, 
-      xrefs                   => $xrefs, 
-      xref_db                 => $xref_db,
-      flanks                  => $flanks,
-      range_registry          => $range_registry,
-    });
-
-    $transcript_info_file_fh->print(
-      Dumper({
-        transcript_stable_id => $current_transcript->stable_id,
-        probe_hits_by_array  => $transcript_feature_info,
-      })
-    );
+    $all_core_transcripts_hashed_by_stable_id{$current_core_transcript->stable_id} = $current_core_transcript;
   }
-}
 
-=head2 print_progress
-
-  Description: Prints a little blurb on stdout each % of the way through
-  Arg1: Number of transcripts processd
-  Arg2: Total number of transcripts
-  Arg3: last percentage threshold to be printed out
-
-=cut
-
-sub print_progress {
-  my ($index, $total, $last_pc) = @_;
-  my $pc = int ((100 * $index) / $total);
-
-  if ($pc > $last_pc) {
-    $logger->info("$pc\n");
-  }
-  return $pc;
+  examine_transcript({
+    all_core_transcripts_hashed_by_stable_id => \%all_core_transcripts_hashed_by_stable_id,
+    transcript_info_file_fh => $transcript_info_file_fh,
+    max_mismatches          => $max_mismatches,
+    pf_transc_overlap_fh    => $transcript_probe_features_overlaps_fh,
+    xref_db                 => $xref_db,
+    flanks                  => $flanks,
+  });
 }
 
 =head2
@@ -251,165 +205,157 @@ sub examine_transcript {
   my $param = shift;
   lock_hash(%$param);
 
-#   my $array_format_config     = $param->{array_format_config};
-  my $transcript              = $param->{transcript};
+  my $all_core_transcripts_hashed_by_stable_id = $param->{all_core_transcripts_hashed_by_stable_id};
+  my $transcript_info_file_fh                  = $param->{transcript_info_file_fh};
+  
   my $max_mismatches          = $param->{max_mismatches};
   my $pf_transc_overlap_fh    = $param->{pf_transc_overlap_fh};
-  my $last_line               = $param->{last_line};
-  my $unmapped_counts         = $param->{unmapped_counts};
-  my $unmapped_objects        = $param->{unmapped_objects};
-  my $xrefs                   = $param->{xrefs};
   my $xref_db                 = $param->{xref_db};
-  my $range_registry          = $param->{range_registry};
   my $flanks                  = $param->{flanks};
+
+  my $range_registry = Bio::EnsEMBL::Mapper::RangeRegistry->new();
+  my $current_stable_id;
+  
+  my $unmapped_counts;
+  my $unmapped_objects;
+  my $xrefs;
 
   my $transcript_feature_info = {};
   
-  $range_registry->flush();
-  
-#   $logger->info(" get_all_Exons " );
-  my @exons     = @{$transcript->get_all_Exons};
-#   $logger->info(" done.");
-
-  foreach my $exon (@exons) {
-    $range_registry->check_and_register('exonic', $exon->seq_region_start, $exon->seq_region_end);
-  }
-  my $first_exon = $exons[0];
-  my $last_exon  = $exons[$#exons];
-
-  my %exonutrs;
-  my $transcript_sid = $transcript->stable_id;
-  if ($debug) {
-    $logger->info("TRANSCRIPT $transcript_sid\n");
-  }
-  my $transcript_slice = $transcript->feature_Slice();
-  my $slice            = $transcript_slice->expand($flanks->{$transcript_sid}{5}, $flanks->{$transcript_sid}{3});
-  # Find flanking regions
-  if ($transcript->strand == 1) {
-    if ($flanks->{$transcript_sid}{3}) {
-      $exonutrs{3} = [$last_exon->seq_region_start, $slice->end];
-    }
-    if ($flanks->{$transcript_sid}{5}) {
-      $exonutrs{5} = [$slice->start, $first_exon->seq_region_end];
-    }
-  } else {
-    if ($flanks->{$transcript_sid}{3}) {
-      $exonutrs{3} = [$slice->start(), $last_exon->seq_region_end];
-    }
-    if ($flanks->{$transcript_sid}{5}) {
-      $exonutrs{5} = [$first_exon->seq_region_start, $slice->end];
-    }
-  }
-
-  # Mark flanking regions
-  foreach my $end(3, 5) {
-    if ($flanks->{$transcript_sid}{$end}) {
-      $range_registry->check_and_register("${end}_exonutr", @{$exonutrs{$end}});
-    }
-  }
-
-  # Process last line read if defined
-  # Note that in previous iteration of this function the reader found a line with a different
-  # transcript stable ID, it passes this line over to future iterations.
-  my $line = $last_line;
-  my $overran = 0;
-  my $count = 0;
-  if (defined $line) {
-    chomp $line;
-    my ($tx_chr, $tx_start, $tx_end, $transcript_sid_2, $chr, $start, $end, $strand, $cigar, $mismatches, $feature_id, $probe_id, $probe_name, $probeset_id, $probeset_name, $array_name, $array_vendor, $array_class,
-      $is_probeset_array,
-      $is_linked_array,
-      $has_sense_interrogation
-    ) = split "\t", $line;
-    if ($debug) {
-      $logger->info("LINE (2nd pass)| $line\n");
-    }
-    if ($transcript_sid_2 gt $transcript_sid) {
-      $overran = 1;
-    }
-    if ($transcript_sid_2 eq $transcript_sid) {
-      examine_probefeature({
-        transcript              => $transcript,
-        feature_id              => $feature_id,
-        probe_id                => $probe_id,
-        probe_name              => $probe_name,
-        probeset_id             => $probeset_id,
-        probeset_name           => $probeset_name,
-        start                   => $start,
-        end                     => $end,
-        strand                  => $strand,
-        cigar                   => $cigar,
-        mismatches              => $mismatches,
-        transcript_feature_info => $transcript_feature_info,
-        unmapped_counts         => $unmapped_counts,
-        unmapped_objects        => $unmapped_objects,
-        xrefs                   => $xrefs,
-        xref_db                 => $xref_db,
-        range_registry          => $range_registry,
-        array_name              => $array_name, 
-        array_vendor            => $array_vendor,
-        array_class             => $array_class,
-
-        is_probeset_array       => $is_probeset_array,
-        is_linked_array         => $is_linked_array,
-        has_sense_interrogation => $has_sense_interrogation,
-
-        flanks                  => $flanks,
-#         array_format_config     => $array_format_config,
-      });
-      $count++;
-    }
-  }
-
   # Process all following lines until you hit another transcript stable id
-  OVERLAP_LINE: while (!$overran && defined ($line = <$pf_transc_overlap_fh>)) {
+  OVERLAP_LINE: while (defined (my $line = <$pf_transc_overlap_fh>)) {
+
     chomp $line;
+    
     if ($debug) {
       $logger->info("LINE:$line\n");
     }
-    my ($tx_chr, $tx_start, $tx_end, $transcript_sid_2, $chr, $start, $end, $strand, $cigar, $mismatches, $feature_id, $probe_id, $probe_name, $probeset_id, $probeset_name, $array_name, $array_vendor, $array_class,
+    
+    my (
+      $tx_chr, 
+      $tx_start, 
+      $tx_end, 
+      $transcript_sid_2, 
+      $chr, 
+      $start, 
+      $end, 
+      $strand, 
+      $cigar, 
+      $mismatches, 
+      $feature_id, 
+      $probe_id, 
+      $probe_name, 
+      $probeset_id, 
+      $probeset_name, 
+      $array_name, 
+      $array_vendor, 
+      $array_class,
       $is_probeset_array,
       $is_linked_array,
       $has_sense_interrogation
     ) = split "\t", $line;
     #     1       11869    14409     ENST00000456328    1     11869   11893   1       25=     0           22771302     10249677     578754    1631966        8044649 HuGene-1_0-st-v1        AFFY
-    if ($transcript_sid_2 gt $transcript_sid) {
-      last OVERLAP_LINE;
-    }
-    if ($transcript_sid_2 eq $transcript_sid) {
-      examine_probefeature({
-        transcript              => $transcript,
-        feature_id              => $feature_id,
-        probe_id                => $probe_id,
-        probe_name              => $probe_name,
-        probeset_id             => $probeset_id,
-        probeset_name           => $probeset_name,
-        start                   => $start,
-        end                     => $end,
-        strand                  => $strand,
-        cigar                   => $cigar,
-        mismatches              => $mismatches,
-        transcript_feature_info => $transcript_feature_info,
-        unmapped_counts         => $unmapped_counts,
-        unmapped_objects        => $unmapped_objects,
-        xrefs                   => $xrefs,
-        xref_db                 => $xref_db,
-        range_registry          => $range_registry,
-        array_name              => $array_name, 
-        array_vendor            => $array_vendor,
-        array_class             => $array_class,
+    
+    die($transcript_sid_2) unless(exists $all_core_transcripts_hashed_by_stable_id->{$transcript_sid_2});
+    my $transcript = $all_core_transcripts_hashed_by_stable_id->{$transcript_sid_2};
+    
+    # Check, if the current line is the start of overlaps from the next 
+    # transcript.
+    #
+    if ($current_stable_id ne $transcript_sid_2) {
 
-        is_probeset_array       => $is_probeset_array,
-        is_linked_array         => $is_linked_array,
-        has_sense_interrogation => $has_sense_interrogation,
+      # $current_stable_id will be undefined in the first iteration. Only
+      # print results in the following iterations.
+      #
+      if (defined $current_stable_id) {
+        $transcript_info_file_fh->print(
+          Dumper({
+            transcript_stable_id => $current_stable_id,
+            probe_hits_by_array  => $transcript_feature_info,
+          })
+        );
+        $transcript_feature_info = {};
+      }
+    
+      $current_stable_id = $transcript_sid_2;
+    
+      my @exons = @{$transcript->get_all_Exons};
+      $range_registry->flush();
+      
+      foreach my $exon (@exons) {
+        $range_registry->check_and_register('exonic', $exon->seq_region_start, $exon->seq_region_end);
+      }
+      my $first_exon = $exons[0];
+      my $last_exon  = $exons[$#exons];
 
-        flanks                  => $flanks,
-#         array_format_config     => $array_format_config,
-      });
-      $count++;
+      my %exonutrs;
+      my $transcript_sid = $transcript->stable_id;
+
+      $logger->debug("TRANSCRIPT $transcript_sid\n");
+
+      my $transcript_slice = $transcript->feature_Slice();
+      my $slice            = $transcript_slice->expand($flanks->{$transcript_sid}{5}, $flanks->{$transcript_sid}{3});
+      # Find flanking regions
+      if ($transcript->strand == 1) {
+        if ($flanks->{$transcript_sid}{3}) {
+          $exonutrs{3} = [$last_exon->seq_region_start, $slice->end];
+        }
+        if ($flanks->{$transcript_sid}{5}) {
+          $exonutrs{5} = [$slice->start, $first_exon->seq_region_end];
+        }
+      } else {
+        if ($flanks->{$transcript_sid}{3}) {
+          $exonutrs{3} = [$slice->start(), $last_exon->seq_region_end];
+        }
+        if ($flanks->{$transcript_sid}{5}) {
+          $exonutrs{5} = [$first_exon->seq_region_start, $slice->end];
+        }
+      }
+
+      # Mark flanking regions
+      foreach my $end(3, 5) {
+        if ($flanks->{$transcript_sid}{$end}) {
+          $range_registry->check_and_register("${end}_exonutr", @{$exonutrs{$end}});
+        }
+      }
     }
+
+    examine_probefeature({
+      transcript              => $transcript,
+      feature_id              => $feature_id,
+      probe_id                => $probe_id,
+      probe_name              => $probe_name,
+      probeset_id             => $probeset_id,
+      probeset_name           => $probeset_name,
+      start                   => $start,
+      end                     => $end,
+      strand                  => $strand,
+      cigar                   => $cigar,
+      mismatches              => $mismatches,
+      transcript_feature_info => $transcript_feature_info,
+      unmapped_counts         => $unmapped_counts,
+      unmapped_objects        => $unmapped_objects,
+      xrefs                   => $xrefs,
+      xref_db                 => $xref_db,
+      range_registry          => $range_registry,
+      array_name              => $array_name, 
+      array_vendor            => $array_vendor,
+      array_class             => $array_class,
+
+      is_probeset_array       => $is_probeset_array,
+      has_sense_interrogation => $has_sense_interrogation,
+
+      flanks                  => $flanks,
+    });
   }
-  return $line, $transcript_feature_info;
+  $transcript_info_file_fh->print(
+    Dumper({
+      transcript_stable_id => $current_stable_id,
+      probe_hits_by_array  => $transcript_feature_info,
+    })
+  );
+
+  return;
 }
 
 =head2
@@ -464,19 +410,12 @@ sub examine_probefeature {
   my $flanks                  = $param->{flanks};
 
   my $is_probeset_array       = $param->{is_probeset_array};
-  my $is_linked_array         = $param->{is_linked_array};
   my $has_sense_interrogation = $param->{has_sense_interrogation};
-
-#   my $array_format_config     = $param->{array_format_config};
 
   my $transcript_sid = $transcript->stable_id();
   my $transcript_version     = $transcript->version;
   my $log_name;
 
-#   my $array_configuration = $array_format_config->{$array_class};
-#   lock_hash(%$array_configuration);
-#   my $array_configuration = $array_format_config->for_array_class($array_class);
-  
   if ($is_probeset_array) {
     $log_name       = $transcript_sid."\t(${probeset_name})\t${probe_id}";
   } else{
@@ -574,7 +513,7 @@ sub examine_probefeature {
       array_name              => $array_name,
 
       is_probeset_array       => $is_probeset_array,
-      is_linked_array         => $is_linked_array,
+#       is_linked_array         => $is_linked_array,
       has_sense_interrogation => $has_sense_interrogation,
 
     });
@@ -600,7 +539,6 @@ sub examine_probefeature {
       array_name              => $array_name,
 
       is_probeset_array       => $is_probeset_array,
-      is_linked_array         => $is_linked_array,
       has_sense_interrogation => $has_sense_interrogation,
 
       flanks                  => $flanks,
@@ -651,7 +589,7 @@ sub record_gapped_probefeature {
   my $array_name              = $param->{array_name};
 
   my $is_probeset_array       = $param->{is_probeset_array};
-  my $is_linked_array         = $param->{is_linked_array};
+#   my $is_linked_array         = $param->{is_linked_array};
   my $has_sense_interrogation = $param->{has_sense_interrogation};
 
   my $transcript_sid = $transcript->stable_id();
@@ -742,7 +680,7 @@ sub record_gapped_probefeature {
       @{$transcript_feature_info->{$array_name}->{probe}->{$probe_id}}, 
       $probe_match_annotation;
   }
-  add_xref($transcript_sid, $feature_id, $probe_match_annotation);
+  add_xref($transcript_sid, $feature_id, $probe_match_annotation->{annotation});
   # The real return value is in $transcript_feature_info and data is written in cache_and_load_unmapped_objects
   return;
 }
@@ -804,7 +742,6 @@ sub record_aligned_probefeature {
   my $array_name              = $param->{array_name};
 
   my $is_probeset_array       = $param->{is_probeset_array};
-  my $is_linked_array         = $param->{is_linked_array};
   my $has_sense_interrogation = $param->{has_sense_interrogation};
 
   my $five_mismatch  = 0;
