@@ -6,6 +6,8 @@ use warnings;
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;           # Allow this particular config to use conditional dataflow and INPUT_PLUS
 use base ('Bio::EnsEMBL::Funcgen::HiveConfig::ProbeMapping::Base');
 
+my $max_allowed_hits_per_probe = 100;
+
 sub pipeline_analyses {
     my $self = shift;
     
@@ -205,11 +207,11 @@ sub pipeline_analyses {
               ',
           },
           -flow_into => {
-              MAIN => 'delete_probe_features_from_promiscuous_probes',
+              MAIN => 'delete_probe_features_from_known_promiscuous_probes',
           },
       },
       {
-          -logic_name  => 'delete_probe_features_from_promiscuous_probes',
+          -logic_name  => 'delete_probe_features_from_known_promiscuous_probes',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
           -parameters => {
               sql     => [
@@ -232,6 +234,30 @@ sub pipeline_analyses {
                 'drop table if exists temp_promiscuous_probes_with_features;',
               ],
               db_conn => 'funcgen:#species#',
+          },
+          -flow_into => {
+              MAIN => 'delete_probe_features_from_promiscuous_probes',
+          },
+      },
+      # This will typically pick up on probes that have scored less than the 
+      # $max_allowed_hits_per_probe probe features for genomic hits and less
+      # than $max_allowed_hits_per_probe for transcript hits. But when both
+      # numbers are combined, they exceed $max_allowed_hits_per_probe and
+      # the probe is classified as promiscuous after all.
+      # 
+      # This analysis will find probes of this kind, remove their probe 
+      # features and create an unmapped object summarising the number of
+      # probe features from transcript and genomic matches.
+      #
+      {   -logic_name        => 'delete_probe_features_from_promiscuous_probes',
+          -module            => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -parameters => {
+              cmd => '
+                delete_promiscuous_probe_features.pl \
+                  --species  #species# \
+                  --registry #reg_conf# \
+                  --analysis_logic_name ProbeAlign_genomic \
+                  --max_allowed_hits_per_probe ' . $max_allowed_hits_per_probe,
           },
       },
     ];
