@@ -207,6 +207,19 @@ sub pipeline_analyses {
               ',
           },
           -flow_into => {
+              MAIN => 'delete_probe_features_on_transcripts_from_methylation_arrays',
+          },
+      },
+      {
+          -logic_name  => 'delete_probe_features_on_transcripts_from_methylation_arrays',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+          -parameters => {
+              sql     => [
+                'delete from probe_feature using probe_feature join probe using (probe_id) join array_chip using (array_chip_id) join array using (array_id) where array.format="METHYLATION"',
+              ],
+              db_conn => 'funcgen:#species#',
+          },
+          -flow_into => {
               MAIN => 'delete_probe_features_from_known_promiscuous_probes',
           },
       },
