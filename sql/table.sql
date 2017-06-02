@@ -1088,8 +1088,9 @@ CREATE TABLE `probe_transcript` (
   `stable_id` varchar(128) NOT NULL,
   `description` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`probe_transcript_id`),
-  KEY `probe_transcript_id` (`probe_transcript_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+  KEY `probe_transcript_id` (`probe_transcript_id`),
+  KEY `probe_transcript_stable_id_idx` (`stable_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1
 
 /**
 @header Experiment tables
