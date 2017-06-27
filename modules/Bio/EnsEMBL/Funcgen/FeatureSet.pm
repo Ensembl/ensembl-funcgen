@@ -355,24 +355,6 @@ sub is_focus_set{
 }
 
 
-=head2 is_attribute_set
-
-  Args       :
-  Example    :
-  Description:
-  Returntype :
-  Exceptions :
-  Caller     :
-  Status     : Deprecated
-
-=cut
-
-sub is_attribute_set{
-   deprecate(
-    "Bio::EnsEMBL::Funcgen::FeatureSet::is_attribute_set has been deprecated and will be removed in Ensembl release 89.");
-}
-
-
 =head2 compare_to
 
   Args[1]    : Bio::EnsEMBL::Funcgen::Storable (mandatory)

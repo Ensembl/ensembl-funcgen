@@ -400,23 +400,6 @@ sub fetch_focus_set_config_by_FeatureSet{
 }
 
 
-=head2 fetch_attribute_set_config_by_FeatureSet
-
-  Args       : Bio::EnsEMBL::Funcgen::FeatureSet
-  Example    : $self->{'attribute_set'} = $self->adaptor->fetch_attribute_set_config_by_FeatureSet($self);
-  Description: Caches and returns attribute set config for a given FeatureSet
-  Returntype : Boolean
-  Exceptions : Warns if meta entry not present
-  Caller     : Bio::EnsEMBL::Funcgen::FeatureSet::is_attribute_set
-  Status     : At Risk
-
-=cut
-
-sub fetch_attribute_set_config_by_FeatureSet{
-   deprecate(
-    "Bio::EnsEMBL::Funcgen::FeatureSet::fetch_attribute_set_config_by_FeatureSet has been deprecated and will be removed in Ensembl release 89.");
-}
-
 
 sub fetch_feature_set_filter_counts{
   my $self = shift;
