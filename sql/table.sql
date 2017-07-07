@@ -472,7 +472,7 @@ CREATE TABLE `probe_feature` (
   PRIMARY KEY (`probe_feature_id`),
   KEY `probe_idx` (`probe_id`),
   KEY `seq_region_probe_probe_feature_idx` (`seq_region_id`,`seq_region_start`,`seq_region_end`,`probe_id`,`probe_feature_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 DROP TABLE IF EXISTS `probe_feature_transcript`;
 CREATE TABLE `probe_feature_transcript` (
@@ -1036,7 +1036,7 @@ CREATE TABLE `probe_set_transcript` (
   PRIMARY KEY (`probe_set_transcript_id`),
   KEY `probe_set_transcript_id_idx` (`probe_set_transcript_id`),
   KEY `probe_set_transcript_stable_id_idx` (`stable_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
 @table  probe
@@ -1091,7 +1091,7 @@ CREATE TABLE `probe_transcript` (
   PRIMARY KEY (`probe_transcript_id`),
   KEY `probe_transcript_id` (`probe_transcript_id`),
   KEY `probe_transcript_stable_id_idx` (`stable_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
 @header Experiment tables
