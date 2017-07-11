@@ -1,4 +1,4 @@
-534	\N	schema_version	89
+534	\N	schema_version	90
 156	1	species.production_name	homo_sapiens
 223	\N	schema_type	funcgen
 589	\N	patch	patch_78_79_a.sql|schema_version
@@ -69,3 +69,7 @@
 659	\N	patch	patch_88_89_i.sql|New columns for array table
 660	\N	patch	patch_88_89_j.sql|Added array_chip_id column to probe_set table
 661	\N	patch	patch_88_89_k.sql|Added probe_seq_id column to probe table
+662	\N	patch	patch_89_90_a.sql|schema_version
+663	\N	patch	patch_89_90_b.sql|probe feature columns
+664	\N	patch	patch_89_90_c.sql|Adds stable id index for probe_transcript table
+665	\N	patch	patch_89_90_d.sql|Adds stable id index for probe_set_transcript table
