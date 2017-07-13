@@ -126,8 +126,8 @@ is( $anno_feature->summit, 1900, 'summit () method works' );
 is( $anno_feature->display_label,
     "DNase1_K562", 'display_label () method works');
 
-is( $anno_feature->is_focus_feature(), 1,
-    'Test is_focus_feature subroutine' );
+#is( $anno_feature->is_focus_feature(), 1,
+#    'Test is_focus_feature subroutine' );
 
 my $summary          = $anno_feature->summary_as_hash();
 
