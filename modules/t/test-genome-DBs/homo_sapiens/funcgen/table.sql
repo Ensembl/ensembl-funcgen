@@ -58,13 +58,14 @@ CREATE TABLE `array` (
 ) ENGINE=MyISAM AUTO_INCREMENT=65 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `array_chip` (
-  `array_chip_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `design_id` varchar(100) DEFAULT NULL,
-  `array_id` int(10) unsigned NOT NULL,
-  `name` varchar(100) DEFAULT NULL,
-  PRIMARY KEY (`array_chip_id`),
-  UNIQUE KEY `array_design_idx` (`array_id`,`design_id`)
+    `array_chip_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+    `design_id` varchar(100) DEFAULT NULL,
+    `array_id` int(10) unsigned NOT NULL,
+    `name` varchar(100) DEFAULT NULL,
+    PRIMARY KEY (`array_chip_id`),
+    UNIQUE KEY `array_design_idx` (`array_id`,`design_id`)
 ) ENGINE=MyISAM AUTO_INCREMENT=105 DEFAULT CHARSET=latin1;
+
 
 CREATE TABLE `associated_feature_type` (
   `table_id` int(10) unsigned NOT NULL,
@@ -401,13 +402,13 @@ CREATE TABLE `probe` (
   `probe_set_id` int(10) unsigned DEFAULT NULL,
   `name` varchar(100) NOT NULL,
   `length` smallint(6) unsigned NOT NULL,
-  `array_chip_id` int(10) unsigned NOT NULL,
+  `array_id` int(10) unsigned NOT NULL,
   `class` varchar(20) DEFAULT NULL,
   `description` varchar(255) DEFAULT NULL,
   `probe_seq_id` int(10) DEFAULT NULL,
-  PRIMARY KEY (`probe_id`,`name`,`array_chip_id`),
+  PRIMARY KEY (`probe_id`,`name`,`array_id`),
   KEY `probe_set_idx` (`probe_set_id`),
-  KEY `array_chip_idx` (`array_chip_id`),
+  KEY `array_idx` (`array_id`),
   KEY `name_idx` (`name`),
   KEY `probe_seq_idx` (`probe_seq_id`)
 ) ENGINE=MyISAM AUTO_INCREMENT=20929404 DEFAULT CHARSET=latin1;
@@ -453,7 +454,7 @@ CREATE TABLE `probe_set` (
   `name` varchar(100) NOT NULL,
   `size` smallint(6) unsigned NOT NULL,
   `family` varchar(20) DEFAULT NULL,
-  `array_chip_id` int(10) DEFAULT NULL,
+  `array_id` int(10) DEFAULT NULL,
   PRIMARY KEY (`probe_set_id`),
   KEY `name` (`name`)
 ) ENGINE=MyISAM AUTO_INCREMENT=2324862 DEFAULT CHARSET=latin1;

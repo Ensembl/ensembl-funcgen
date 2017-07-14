@@ -302,11 +302,16 @@ sub fetch_all_by_transcript_stable_id {
 
 sub _columns {
   return qw(
-    pf.probe_feature_id    pf.seq_region_id
-    pf.seq_region_start    pf.seq_region_end
-    pf.seq_region_strand   pf.probe_id
-    pf.analysis_id         pf.mismatches
-    pf.cigar_line          pf.hit_id
+    pf.probe_feature_id
+    pf.seq_region_id   
+    pf.seq_region_start
+    pf.seq_region_end  
+    pf.seq_region_strand
+    pf.probe_id        
+    pf.analysis_id     
+    pf.mismatches      
+    pf.cigar_line      
+    pf.hit_id          
     pf.source
   );
 }

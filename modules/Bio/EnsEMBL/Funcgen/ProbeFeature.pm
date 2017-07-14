@@ -59,9 +59,9 @@ package Bio::EnsEMBL::Funcgen::ProbeFeature;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Argument          qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception         qw( throw );
-use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( median );
+use Bio::EnsEMBL::Utils::Argument   qw( rearrange );
+use Bio::EnsEMBL::Utils::Exception  qw( throw deprecate);
+use feature qw(say);
 
 use base qw( Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable );
 
@@ -329,19 +329,23 @@ sub summary_as_hash {
  
   my %arrays = ();
   my $names_Arrays = $probe->get_names_Arrays; 
+ 
   foreach my $name (keys %$names_Arrays) {
     if (defined $names_Arrays->{$name}) {
       $arrays{$names_Arrays->{$name}->name} = $probe->get_probename($names_Arrays->{$name}->name);
     }
   }
+  my $ps_name = 'Not part of a Probe Set';
+  $ps_name = $probe->probe_set->name if(defined $probe->probe_set);
 
   return {
     start                   => $self->seq_region_start,
     end                     => $self->seq_region_end,
     strand                  => $self->strand,
     seq_region_name         => $self->seq_region_name,
-    feature_type            => 'array_probe',
-
+    feature_type            => 'ProbeFeature',
+    probe_set               => $ps_name,
+#probe_set               => $self->name,
     probe_length            => $probe->length,
     array_probe_names       => \%arrays
    };

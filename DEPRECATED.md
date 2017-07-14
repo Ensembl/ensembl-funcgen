@@ -8,12 +8,25 @@ When a method is deprecated, a deprecation warning is thrown whenever the method
 The warning also contains instructions on replacing the deprecated method and when it will be removed.
 A year after deprecation (4 Ensembl releases), the method is removed from the API.
 
+### To be removed in Ensembl Release 94 ###
+ - Bio::EnsEMBL::Funcgen::Probe::add_array_chip_probename
+ - Bio::EnsEMBL::Funcgen::Probe::get_all_Arrays
+ - Bio::EnsEMBL::Funcgen::Probe::get_names_Arrays
+ - Bio::EnsEMBL::Funcgen::Probe::get_all_probenames
+ - Bio::EnsEMBL::Funcgen::Probe::get_probename
+ - Bio::EnsEMBL::Funcgen::Probe::get_all_complete_names
+
+
 ### To be removed in Ensembl Release 93 ###
 
  - Bio::EnsEMBL::Funcgen::Epigenome::ontology_accession()
  - Bio::EnsEMBL::Funcgen::Epigenome::tissue()
  - Bio::EnsEMBL::Funcgen::Probe::get_complete_name()
  - Bio::EnsEMBL::Funcgen::RegulatoryFeature::is_projected()
+
+### To be removed in Ensembl Release 92 ###
+ - Bio::EnsEMBL::Funcgen::Probe::get_all_Transcript_DBEntries
+
 
 ### To be removed in Ensembl Release 91 ###
 

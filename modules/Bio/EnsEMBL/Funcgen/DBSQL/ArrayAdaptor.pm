@@ -60,40 +60,11 @@ use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( warning throw );
 use Bio::EnsEMBL::Funcgen::Array;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#sql_types bareword import
+use feature qw(say);
 
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 
-=head2 fetch_by_array_chip_dbID
-
-  Arg [1]    : Int - dbID of an ArrayChip
-  Example    : my $array = $array_adaptor->fetch_by_array_chip_dbID($ac_dbid);
-  Description: Retrieves Array object based on one of it's constituent ArrayChip dbIDs
-  Returntype : Bio::EnsEMBL::Funcgen::Array
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-#Changed to use simple query extension
-#Removed 1 query
-#3.7 % or 1.04 times faster
-
-sub fetch_by_array_chip_dbID {
-  my ($self, $ac_dbid) = @_;
-
-  throw('Must provide an ArrayChip dbID') if ! $ac_dbid;
-
-  #Extend query tables
-  $self->_tables([['array_chip', 'ac']]);
-
-  #Extend query and group
-  my $array = $self->generic_fetch('ac.array_chip_id='.$ac_dbid.' and ac.array_id=a.array_id GROUP by a.array_id')->[0];
-  $self->reset_true_tables;
-
-  return $array;
-}
 
 
 =head2 fetch_by_name_vendor
@@ -225,37 +196,6 @@ sub fetch_all_by_type {
 }
 
 
-=head2 fetch_all_by_Experiment
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::Experiment
-  Example    : my @arrays = @{$array_adaptor->fetch_all_by_Experiment($exp)};
-  Description: Fetch all arrays associated with a given Experiment
-  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::Array objects
-  Exceptions : none
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-#Changed to use simple query extension
-#Removed 2 queries
-#96.4% or 26.7 times faster!!!
-
-sub fetch_all_by_Experiment{
-  my ($self, $exp) = @_;
-
- $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Experiment', $exp);
-
-  #Extend query tables
-  $self->_tables([['array_chip', 'ac'], ['experimental_chip', 'ec']]);
-
-  #Extend query and group
-  my $arrays = $self->generic_fetch($exp->dbID.'=ec.experiment_id and ec.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id GROUP by a.array_id');
-
-  $self->reset_true_tables;
-
-  return $arrays;
-}
 
 
 =head2 fetch_all_by_ProbeSet
@@ -283,10 +223,10 @@ sub fetch_all_by_ProbeSet {
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ProbeSet', $pset);
 
   #Extend query tables
-  $self->_tables([['array_chip', 'ac'], ['probe', 'p']]);
+  $self->_tables([['probe', 'p']]);
 
   #Extend query and group
-  my $arrays =  $self->generic_fetch('p.probe_set_id='.$pset->dbID.' and p.array_chip_id=ac.array_chip_id and ac.array_id=a.array_id GROUP BY a.array_id');
+  my $arrays =  $self->generic_fetch('p.probe_set_id='.$pset->dbID.' and p.array_id=a.array_id GROUP BY a.array_id');
   # ORDER BY NULL');#Surpresses default order by group columns. Actually slower? Result set too small?
 
   $self->reset_true_tables;
@@ -327,7 +267,13 @@ sub _true_tables {
 
 sub _columns {
   return qw( 
-    a.array_id a.name a.format a.vendor a.description a.type a.class  
+    a.array_id 
+    a.name 
+    a.format 
+    a.vendor 
+    a.description 
+    a.type 
+    a.class  
     a.is_probeset_array
     a.is_linked_array
     a.has_sense_interrogation
@@ -475,7 +421,8 @@ sub fetch_probe_count_by_Array{
 
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Array', $array);
 
-  my ($count) = @{$self->dbc->db_handle->selectrow_arrayref('select count(distinct probe_id) from array_chip ac, probe p where ac.array_id='.$array->dbID.' and ac.array_chip_id=p.array_chip_id')};
+  my ($count) = @{$self->dbc->db_handle->selectrow_arrayref('
+      SELECT COUNT(DISTINCT probe_id) FROM  probe p WHERE p.array_id='.$array->dbID)};
 
   return $count;
 }
@@ -503,7 +450,7 @@ sub fetch_Probe_dbIDs_by_Array{
     FROM
       probe p
     WHERE
-      array_chip_id in( %s ) /, join( ',', @{$array->get_array_chip_ids} ) );
+      array_id in( %s ) /, join( ',', @{$array->get_array_chip_ids} ) );
 
 	my $sth = $self->prepare( $sql );
   $sth->execute || die ($sth->errstr);
@@ -512,51 +459,45 @@ sub fetch_Probe_dbIDs_by_Array{
   return \@dbids;
 }
 
-# =head2 fetch_Probe_name2dbID_by_Array
-# 
-# Arg [1]    : Bio::EnsEMBL::Funcgen::Array
-# Example    : my %name2dbid = %{$array_adaptor->fetch_Probe_name2dbID_by_Array($array)}
-# Description: Fetches a hashref of Probe dbIDs keyed by probe name
-#              for all Probes of a given Array
-# Returntype : Hashref for Probe dbIDs keyed by probe name
-# Exceptions : None
-# Caller     : General
-# Status     : at risk
-# 
-# =cut
-# 
-# sub fetch_Probe_name2dbID_by_Array{
-#   my ($self, $array) = @_;
-#   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Array', $array);
-# 
-#   my $sql = sprintf(qq/
-# SELECT p.name, p.probe_id
-# FROM   probe p
-# WHERE  array_chip_id in( %s ) /, join( ',', @{$array->get_array_chip_ids} ) );
-# 
-#   my $sth = $self->prepare( $sql );
-#   $sth->execute || die ($sth->errstr);
-#   my %mapping;
-#   map{$mapping{$_->[0]}=$_->[1]} @{$sth->fetchall_arrayref};
-#   return \%mapping;
-# }
-# 
-# 
-# 
-# sub check_status_by_class{
-#   my ($self, $status, $class) = @_;
-# 
-#   foreach my $array(@{$self->fetch_all_by_class($class)}){
-# 
-# 	foreach my $ac(@{$array->get_ArrayChips}){
-# 
-# 	  if(! $ac->has_status($status)){
-# 		throw('Found '.$class.' ArrayChip '.$ac->name." without $status status");
-# 	  }
-# 	}
-#   }
-# 
-#   return;
-# }
+#######################################################################################
+#                   Boulevard of broken dreams: Depracted methods 
+#######################################################################################
+
+##########
+# e94
+# #######
+
+=head2 fetch_by_array_chip_dbID
+
+  Arg [1]    : Int - dbID of an ArrayChip
+  Example    : my $array = $array_adaptor->fetch_by_array_chip_dbID($ac_dbid);
+  Description: Retrieves Array object based on one of it's constituent ArrayChip dbIDs
+  Returntype : Bio::EnsEMBL::Funcgen::Array
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+#Changed to use simple query extension
+#Removed 1 query
+#3.7 % or 1.04 times faster
+
+sub fetch_by_array_chip_dbID {
+  my ($self, $ac_dbid) = @_;
+  deprecate('Will be removed in e94. A probe is unique and only linked to 1 Array. Use $array_adaptor->fetch_by_dbID instead($array_id)');
+
+  throw('Must provide an ArrayChip dbID') if ! $ac_dbid;
+  return $self->fetch_by_dbID($ac_dbid);
+  #Extend query tables
+  $self->_tables([['array_chip', 'ac']]);
+
+  #Extend query and group
+  my $array = $self->generic_fetch('ac.array_chip_id='.$ac_dbid.' and ac.array_id=a.array_id GROUP by a.array_id')->[0];
+  $self->reset_true_tables;
+
+  return $array;
+}
+
 
 1;

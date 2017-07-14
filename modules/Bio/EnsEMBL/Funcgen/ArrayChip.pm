@@ -63,7 +63,7 @@ package Bio::EnsEMBL::Funcgen::ArrayChip;
 use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate);
 
 use base qw(Bio::EnsEMBL::Funcgen::Storable);
 
@@ -94,6 +94,8 @@ sub new {
   my $caller = shift;
   my $class  = ref($caller) || $caller;
   my $self   = $class->SUPER::new(@_);
+
+  deprecate('Will be removed in e94. A probe is unique and only linked to 1 Array. Therefore linking table array_chip will be removed');
 
   my ($array_id, $name,  $design_id, $array)
     = rearrange( ['ARRAY_ID', 'NAME', 'DESIGN_ID', 'ARRAY'], @_ );
@@ -140,6 +142,7 @@ sub new {
 sub array_id {
     my $self     = shift;
     my $array_id = shift;
+  deprecate('Will be removed in e94. A probe is unique and only linked to 1 Array. Therefore linking table array_chip will be removed');
     
     if (defined $array_id) {
       $self->{'array_id'} = $array_id;
@@ -158,7 +161,10 @@ sub array_id {
 
 =cut
 
-sub name { return shift->{name}; }
+sub name { 
+  deprecate('Will be removed in e94. A probe is unique and only linked to 1 Array. Therefore linking table array_chip will be removed');
+  return shift->{name}; 
+}
 
 =head2 design_id
 
@@ -171,7 +177,10 @@ sub name { return shift->{name}; }
 
 =cut
 
-sub design_id {  return shift->{design_id}; }
+sub design_id {  
+  deprecate('Will be removed in e94. A probe is unique and only linked to 1 Array. Therefore linking table array_chip will be removed');
+  return shift->{design_id}; 
+}
 
 
 =head2 get_Array
@@ -187,6 +196,7 @@ sub design_id {  return shift->{design_id}; }
 
 sub get_Array {
   my $self = shift;
+  deprecate('Will be removed in e94. A probe is unique and only linked to 1 Array. Therefore linking table array_chip will be removed');
 
   if(! defined $self->{'array'}){
     $self->{'array'} = $self->adaptor->db->get_ArrayAdaptor()->fetch_by_dbID($self->array_id());

@@ -67,6 +67,10 @@ use warnings;
 use Bio::EnsEMBL::Utils::Argument qw( rearrange ) ;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Utils::Exception qw( deprecate );
+use Bio::EnsEMBL::Funcgen::ProbeSequence;
+
+use feature qw(say);
+use Data::Dumper;
 
 use base qw( Bio::EnsEMBL::Funcgen::Storable );
 
@@ -75,16 +79,8 @@ use base qw( Bio::EnsEMBL::Funcgen::Storable );
 
   Arg [-NAME]          : string - probe name
         Used when the probe is on one array.
-  Arg [-NAMES]         : Listref of strings - probe names
-        Used when the probe is on multiple arrays.
   Arg [-ARRAY]          : Bio::EnsEMBL::Funcgen::Array
         Used when the probe is on one array.
-  Arg [-ARRAYS]         : Listref of Bio::EnsEMBL::Funcgen::Array
-        Used when the probe is on multiple arrays.
-  Arg [-ARRAY_CHIP_ID]  : int - array_chip db ID
-        Used when the probe is on one array.
-  Arg [-ARRAY_CHIP_IDS]  : Listref of ints - array_chip dbIDs
-        Used when the probe is on multiple array chips
   Arg [-NAMES]          : Listref of ints - array_chip db IDs
         Used when the probe is on multiple arrays.
   Arg [-PROBE_SET]      : Bio::EnsEMBL::ProbeSet
@@ -110,7 +106,7 @@ use base qw( Bio::EnsEMBL::Funcgen::Storable );
     );
   Description: Creates a new Bio::EnsEMBL::Probe object.
   Returntype : Bio::EnsEMBL::Probe
-  Exceptions : Throws if not supplied with probe name(s) and array(s)
+  Exceptions : Throws if not supplied with probe name and array
   Caller     : General
   Status     : Medium Risk
 
@@ -122,68 +118,55 @@ sub new {
   my $class = ref($caller) || $caller;
 
   my $self = $class->SUPER::new(@_);
+  
 
   my (
-      $names,          $name,
-      $array_chip_ids, $array_chip_id,
-      $arrays,         $array,
-      $probe_set,       $aclass,
-      $length,         $desc,
+      $name,
+      $array,
+      $probe_set,       
+      $aclass,
+      $length,         
+      $desc,
       $sequence,
-      $array_chip,
       $probe_seq_id
      ) = rearrange([
-      'NAMES',          'NAME',
-      'ARRAY_CHIP_IDS', 'ARRAY_CHIP_ID',
-      'ARRAYS',         'ARRAY',
-      'PROBE_SET',      'CLASS',
-      'LENGTH',         'DESCRIPTION',
+      'NAME',
+      'ARRAY',
+      'PROBE_SET',      
+      'CLASS',
+      'LENGTH',         
+      'DESCRIPTION',
       'SEQUENCE',
-      'array_chip',
-      'probe_seq_id'
+      'PROBE_SEQ_ID'
       ], @_);
 
-
-  @$names = ($name) if(ref($names) ne "ARRAY");
-  @$array_chip_ids = ($array_chip_id) if (ref($array_chip_ids) ne "ARRAY");
-  @$arrays = ($array) if (ref($arrays) ne "ARRAY");
-
-  $self->_array_chip_id($array_chip_id);
-  $self->name($name);
-
-  if (defined $$names[0]) {
-
-    if(scalar(@$names) != scalar(@$array_chip_ids)) {
-      throw("You have not specified valid name:array_chip_id pairs\nYou need a probe name for each Array");
-    }
-
-    if(defined $$arrays[0]){
-      if(scalar(@$names) != scalar(@$arrays)){
-	throw("You have not specified valid name:Array pairs\nYou need a probe name for each Array\n");
-      }
-    }
-
-    # Probe(s) have been specified
-    # Different names reflect different array
-
-    for my $i(0..$#{$names}){
-#       $self->add_array_chip_probename($$array_chip_ids[$i], $$names[$i], $$arrays[$i]);
-      $self->add_array_chip_probename($$names[$i], $$arrays[$i]);
-    }
-  } else {
-    throw('You need to provide a probe name (or names) to create an Probe');
+  if(!defined $array) {
+    throw("Bio::EnsEMBL::Funcgen::Array required");
+  }
+  if(defined($array) && (!ref($array) || !$array->isa('Bio::EnsEMBL::Funcgen::Array'))) {
+    throw("Not a Bio::EnsEMBL::Funcgen::Array object");
   }
 
-  $self->probe_set($probe_set) if defined $probe_set;
-  $self->class($aclass)      if defined $aclass;
-  $self->length($length)     if defined $length;
-  $self->description($desc)  if defined $desc;
-  $self->array_chip($array_chip)  if defined $array_chip;
+  $self->{array} = $array;
 
-  $self->_probe_seq_id($probe_seq_id)  if defined $probe_seq_id;
+  $self->name($name);
+
+  $self->probe_set($probe_set)  if defined $probe_set;
+  $self->class($aclass)         if defined $aclass;
+  $self->length($length)        if defined $length;
+  $self->description($desc)     if defined $desc;
+
+  if(defined $probe_seq_id and defined $sequence){
+    throw("Either define -SEQUENCE or PROBE_SEQ_ID, not both");
+  }
+
+  if(!defined $probe_seq_id and !defined $sequence){
+    throw("Define either -SEQUENCE or PROBE_SEQ_ID");
+  }
+
+  $self->_probe_seq_id($probe_seq_id) if defined $probe_seq_id;
 
   if (defined $sequence) {
-    use Bio::EnsEMBL::Funcgen::ProbeSequence;
     my $probe_sequence = Bio::EnsEMBL::Funcgen::ProbeSequence->new(
       -sequence => $sequence
     );
@@ -193,33 +176,73 @@ sub new {
   return $self;
 }
 
+=head2 sequence
+
+  Arg [1]    : Optional - String sequence
+  Example    : $probe->sequence
+  Description: Getter/Setter for probe sequence
+  Returntype : String - sequence
+  Caller     : General
+  Status     : Stable
+
+=cut
+
 sub sequence {
     my $self = shift;
-    $self->{'sequence'} = shift if @_;
+    $self->{sequence} = shift if @_;
 
-    if (! defined $self->{'sequence'}) {
-      $self->{'sequence'} = $self->get_ProbeSequence->sequence;
+    if (! defined $self->{sequence}) {
+      $self->{sequence} = $self->get_ProbeSequence->sequence;
     }
 
-    return $self->{'sequence'};
+    return $self->{sequence};
 }
+
+=head2 
+
+  Arg [1]    : Optional - String _probe_seq_id
+  Example    : $self->_probe_seq_id
+  Description: Getter/Setter for probe_seq_id
+  Returntype : String - probe_seq_id
+  Caller     : Private
+  Status     : Stable
+
+=cut
 
 sub _probe_seq_id {
     my $self = shift;
-    $self->{'probe_seq_id'} = shift if @_;
-    return $self->{'probe_seq_id'};
+    $self->{probe_seq_id} = shift if @_;
+    return $self->{probe_seq_id};
 }
+
+=head2 name
+
+  Arg [1]    : Optional - String - name of probe
+  Example    : $probe->name
+  Description: Getter/Setter for name
+  Returntype : String - Name of the probe
+  Caller     : General
+  Status     : Stable
+
+=cut
 
 sub name {
     my $self = shift;
-    $self->{'name'} = shift if @_;
-    return $self->{'name'};
+    $self->{name} = shift if @_;
+    return $self->{name};
 }
 
-sub _fetch_ProbeSequence {
-    my $self = shift;
-    return $self->adaptor()->db()->get_ProbeSequenceAdaptor()->fetch_by_dbID($self->_probe_seq_id);
-}
+
+=head2 
+
+  Arg [1]    : None
+  Example    : $probe->get_ProbeSequence
+  Description: Getter for Probe->ProbeSequence
+  Returntype : String - sequence
+  Caller     : General
+  Status     : Stable
+
+=cut
 
 sub get_ProbeSequence {
     my $self = shift;
@@ -233,34 +256,40 @@ sub get_ProbeSequence {
     return $self->{'probe_sequence'};
 }
 
-sub set_ProbeSequence {
+=head2 _fetch_ProbeSequence
+
+  Arg [1]    : None
+  Example    : $self->_fetch_ProbeSequence
+  Description: Fetches ProbeSequence linked to this Probe
+  Returntype : String - probe sequence
+  Caller     : Private
+  Status     : Stable
+
+=cut
+
+sub _fetch_ProbeSequence {
     my $self = shift;
-    my $probe_sequence = shift;
+    return $self->adaptor()->db()->get_ProbeSequenceAdaptor()->fetch_by_dbID($self->_probe_seq_id);
+}
+
+=head2 set_ProbeSequence
+
+  Arg [1]    : String sequence
+  Example    : $probe->set_ProbeSequence('AGTC')
+  Description: Sets sequence for this Probe
+  Returntype : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub set_ProbeSequence {
+    my ($self, $probe_sequence) = @_;
+    throw 'No sequence provided' if(! defined $probe_sequence);
     $self->{'probe_sequence'} = $probe_sequence;
 }
 
-sub _array_chip_id {
-    my $self = shift;
-    $self->{'_array_chip_id'} = shift if @_;
-    return $self->{'_array_chip_id'};
-}
 
-sub array_chip {
-    my $self       = shift;
-    my $array_chip = shift;
-
-    if (defined $array_chip) {
-      $self->{'_array_chip'} = $array_chip;
-    }
-    if (! defined $self->{'_array_chip'}) {
-      $self->{'_array_chip'} = $self->adaptor->db->get_ArrayChipAdaptor->fetch_by_dbID($self->_array_chip_id);
-    }
-    if (! defined $self->{'_array_chip'}) {
-      die("Probe was not linked to an array chip!");
-    }
-
-    return $self->{'_array_chip'};
-}
 
 =head2 new_fast
 
@@ -278,44 +307,6 @@ sub array_chip {
 
 sub new_fast {
   bless ($_[1], $_[0]);
-}
-
-
-
-=head2 add_array_chip_probename
-
-  Arg [1]    : string - probe name
-  Arg [2]    : Bio::EnsEMBL::Funcgen::Array
-  Example    : $probe->add_array_chip_probename($probename, $array);
-  Description: Adds a probe name / array pair to a probe, allowing incremental
-               generation of a probe.
-  Returntype : None
-  Exceptions : None
-  Caller     : General,
-               Probe->new(),
-               ProbeAdaptor->_obj_from_sth(),
-               AffyProbeAdaptor->_obj_from_sth()
-  Status     : Medium Risk - Change to take ArrayChip object.
-
-=cut
-
-sub add_array_chip_probename {
-  my $self = shift;
-#   my ($ac_dbid, $probename, $array) = @_;
-  my ($probename, $array) = @_;
-  $self->{arrays}     ||= {};
-  $self->{probenames} ||= {};
-
-  if(! (ref($array) && $array->isa('Bio::EnsEMBL::Funcgen::Array'))){
-    throw('You must pass a valid Bio::EnsEMBL::Funcgen::Array. ')
-  }
-
-  $self->{arrays}->{$array->name}           = $array;
-#   $self->{arrays}->{$ac_dbid}           = $array;
-  $self->{probenames}->{$array->name} ||= [];
-  push @{$self->{probenames}->{$array->name}}, $probename;
-
-  return;
 }
 
 
@@ -342,6 +333,122 @@ sub get_all_ProbeFeatures {
   }
 }
 
+=head2 Array
+
+  Args       : None
+  Example    : my $array = $probe->Array();
+  Description: Returns the array that this probe is part of. Only works if the
+               probe was retrieved from the database or created using
+               add_Array_probename (rather than add_arrayname_probename).
+  Returntype : Bio::EnsEMBL::Funcgen::Array 
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub Array {
+  my $self = shift;
+
+ return $self->{array};
+}
+
+####### Boulevard of Broken Dreams (Deprecated methods)
+
+=head2 _array_chip_id
+
+  Arg [1]    : Optional
+  Example    : $probe->
+  Description: 
+  Returntype : 
+  Caller     : General
+  Status     : Deprecate
+
+=cut
+
+sub _array_chip_id {
+    my $self = shift;
+    deprecate('Probes are linked to one Array only. array_chip is not needed anymore');
+    $self->{'_array_chip_id'} = shift if @_;
+    return $self->{'_array_chip_id'};
+}
+
+=head2 array_chip
+
+  Arg [1]    : Optional - ArrayChip dbID
+  Example    : $probe->
+  Description: Getter/Setter for ArrayChip dbID for this Probe
+  Returntype : String - ArrayChip dbID
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub array_chip {
+    my ($self, $array_chip) = @_;
+
+    if (defined $array_chip) {
+      $self->{_array_chip} = $array_chip;
+    }
+    if (! defined $self->{_array_chip}) {
+      $self->{_array_chip} = $self->adaptor->db->get_ArrayChipAdaptor->fetch_by_dbID($self->_array_chip_id);
+    }
+    if (! defined $self->{_array_chip}) {
+      die("Probe was not linked to an array chip!");
+    }
+
+    return $self->{_array_chip};
+}
+
+=head2 add_array_chip_probename
+
+  Arg [1]    : string - probe name
+  Arg [2]    : Bio::EnsEMBL::Funcgen::Array
+  Example    : $probe->add_array_chip_probename($probename, $array);
+  Description: Adds a probe name / array pair to a probe, allowing incremental
+               generation of a probe.
+  Returntype : None
+  Exceptions : None
+  Caller     : General,
+               Probe->new(),
+               ProbeAdaptor->_obj_from_sth(),
+               AffyProbeAdaptor->_obj_from_sth()
+  Status     : Deprecated
+
+=cut
+
+sub add_array_chip_probename {
+  deprecate('Will be removed in e94. Probes are linked to one Array only. array_chip is not needed anymore');
+  my $self = shift;
+  my ($probename, $array) = @_;
+  $self->{arrays}     ||= {};
+  $self->{probenames} ||= {};
+
+  if(! (ref($array) && $array->isa('Bio::EnsEMBL::Funcgen::Array'))){
+    throw('You must pass a valid Bio::EnsEMBL::Funcgen::Array. ')
+  }
+  
+  $self->{arrays}->{$array->name}           = $array;
+#   $self->{arrays}->{$ac_dbid}           = $array;
+  $self->{probenames}->{$array->name} ||= [];
+  push @{$self->{probenames}->{$array->name}}, $probename;
+#say Dumper($self);
+  return;
+#  $self->{arrays}     ||= {};
+#  $self->{probenames} ||= {};
+#
+#  if(! (ref($array) && $array->isa('Bio::EnsEMBL::Funcgen::Array'))){
+#    throw('You must pass a valid Bio::EnsEMBL::Funcgen::Array. ')
+#  }
+#
+#  $self->{arrays}->{$array->name}           = $array;
+#  $self->{probenames}->{$array->name} ||= [];
+#  push @{$self->{probenames}->{$array->name}}, $probename;
+#
+#  return;
+}
+
+
 =head2 get_all_Arrays
 
   Args       : None
@@ -352,14 +459,17 @@ sub get_all_ProbeFeatures {
   Returntype : Listref of Bio::EnsEMBL::Funcgen::Array objects
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : Depracted
 
 =cut
 
 sub get_all_Arrays {
   my $self = shift;
-  return [ values %{$self->{'arrays'}} ];
+  deprecate('Will be removed in e94. Probes are now only part of 1 array, use $probe->array');
+  return [$self->{array}];
+  
 }
+
 
 =head2 get_names_Arrays
 
@@ -369,13 +479,14 @@ sub get_all_Arrays {
   Returntype : hashref of probe name Bio::EnsEMBL::Funcgen::Array pairs
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : Deprecated
 
 =cut
 
 sub get_names_Arrays {
   my $self = shift;
-  return $self->{'arrays'};
+  deprecate('Will be removed in e94. Probes are now only part of 1 array, use $probe->Array->name instead ');
+  return {$self->{array}->name,$self->{array}};
 }
 
 =head2 get_all_probenames
@@ -393,13 +504,14 @@ sub get_names_Arrays {
   Returntype : Arrayref of strings
   Exceptions : None
   Caller     : General
-  Status     : Stable
+  Status     : Deprecated
 
 =cut
 
 sub get_all_probenames {
-
   my $self        = shift;
+  deprecate('Will be removed in e94. Probes are unique within an array');
+  return([$self->name]);
   my @array_names = @_;
 
   if (! @array_names) {
@@ -422,46 +534,14 @@ sub get_all_probenames {
   Exceptions : Throws if the array name is required but not specified
                Warns if probe has more than one name for the given array.
   Caller     : General
-  Status     : Medium Risk
+  Status     : Deprecate
 
 =cut
 
 sub get_probename {
   my ($self, $arrayname) = @_;
-	my $probename;
-
-  if (! $arrayname){
-    #Sanity check that there is only one non-AFFY array
-    my @ac_ids = keys %{$self->{'arrays'}};
-
-    if((scalar @ac_ids == 1) && ($self->get_all_Arrays()->[0]->vendor() ne "AFFY")){
-      $arrayname = $self->get_all_Arrays()->[0]->name();
-    }
-    else{
-      throw('Cannot retrieve name for Probe('.$self->dbID.") without arrayname if more than 1 array chip(@ac_ids) and not NIMBELGEN(".$self->get_all_Arrays()->[0]->vendor().")\n");
-    }
-  }
-
-	return if ! exists ${$self->{'probenames'}}{$arrayname};
-
-	my @names = @{$self->{'probenames'}->{$arrayname}};
-
-	if(scalar(@names) > 1){
-    my $p_info = '';
-
-    if($self->probeset){
-      $p_info = " probeset ".$self->probeset->name;
-    }
-
-
-	  #warn("Found replicate probes with different names for array ${arrayname}${p_info}.Returning comma separated string list:\t".join(',', @names)."\n");
-	  return join(',', @names);
-	}
-	else{
-	  ($probename) = @{$self->{'probenames'}->{$arrayname}};
-	}
-
-  return $probename;
+  deprecate('Will be removed in e94. Probes are unique within an array, use $probe->name instead');
+  return $self->{name};
 }
 
 
@@ -476,11 +556,41 @@ sub get_probename {
   Returntype : Arrayref of strings
   Exceptions : None
   Caller     : Used by web for the names like here: http://www.ensembl.org/Homo_sapiens/Transcript/Oligos?db=core;g=ENSG00000139618;r=13:32315474-32400266;t=ENST00000470094
-  Status     : Stable
+  Status     : Deprecated
 
 =cut
 
 sub get_all_complete_names {
+  my $self = shift;
+
+  deprecate('Will be removed in e94. Probes are unique now in an Array and ProbeSet. Use $probe->get_full_name instead');
+  my $probeset;
+
+  if (defined $self->probeset && $self->probeset->name) {
+    $probeset = ':' . $self->probeset->name . ':';
+  } else {
+    $probeset = ':';
+  }
+
+  my $complete_name = $self->Array->name . $probeset . $self->name;
+  return [$complete_name];
+}
+
+=head2 get_full_name
+
+  Args       : None
+  Example    : my $full_name = $probe->get_full_name;
+  Description: Retrieves the full name for this probe. The complete name
+               is a concatenation of the array name, the probeset name and the
+               probe name.
+  Returntype : string
+  Exceptions : None
+  Caller     : Used by web for the names like here: http://www.ensembl.org/Homo_sapiens/Transcript/Oligos?db=core;g=ENSG00000139618;r=13:32315474-32400266;t=ENST00000470094
+  Status     : Stable
+
+=cut
+
+sub get_full_name {
   my $self = shift;
 
   my $probeset;
@@ -491,19 +601,8 @@ sub get_all_complete_names {
     $probeset = ':';
   }
 
-  my $arrays = $self->get_all_Arrays;
-  my @all_complete_names;
-  foreach my $current_array (@$arrays) {
-
-    my $probe_names = $self->get_all_probenames($current_array->name());
-
-    foreach my $current_probe_name ( @$probe_names ) {
-
-      my $complete_name = $current_array->name . $probeset . $current_probe_name;
-      push @all_complete_names, $complete_name;
-    }
-  }
-  return \@all_complete_names;
+  my $full_name = $self->Array->name . $probeset . $self->name;
+  return $full_name;
 }
 
 =head2 get_complete_name

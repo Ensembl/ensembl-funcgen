@@ -28,6 +28,7 @@ use Bio::EnsEMBL::Test::TestUtils qw( test_getter_setter debug );
 
 use Bio::EnsEMBL::Test::MultiTestDB;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
+use feature qw(say);
 
 # ---------------
 # Module compiles
@@ -104,20 +105,19 @@ is( $probe_feature->probe_id(), 138152, 'Test probe_id()' );
 # --------------------
 # Test summary_as_hash
 # --------------------
-my $expected_summary = { array_probe_names => {
-                                            'HumanHT-12_V3' => "ILMN_1677794",
-                                            'HumanHT-12_V4' => "ILMN_1677794",
-                                            'HumanRef-8_V3' => "ILMN_1677794",
-                                            'HumanWG_6_V1'  => "0005670053",
-                                            'HumanWG_6_V2'  => "ILMN_1677794",
-                                            'HumanWG_6_V3'  => "ILMN_1677794"
-                         },
-                         end             => 50,
-                         feature_type    => "array_probe",
-                         probe_length    => 50,
-                         seq_region_name => 1,
-                         start           => 10,
-                         strand          => 1 };
+my $expected_summary = { 
+  'probe_length' => 50,
+  'probe_set' => 'Not part of a Probe Set',
+  'feature_type' => 'ProbeFeature',
+  'end' => 50,
+  'seq_region_name' => '1',
+  'strand' => 1,
+  'start' => 10,
+  'array_probe_names' => {
+    'HumanWG_6_V2' => 'ILMN_1677794'
+  }
+
+};
 
 is_deeply( $probe_feature->summary_as_hash,
            $expected_summary, 'Test summary_as_hash()' );

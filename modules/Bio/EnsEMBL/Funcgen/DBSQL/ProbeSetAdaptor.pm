@@ -78,11 +78,12 @@ use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Utils::Exception qw( deprecate );
 use Bio::EnsEMBL::Funcgen::ProbeSet;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#DBI sql_types import
+use feature qw(say);
 
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 sub fetch_by_array_probeset_name{
-  my $self = shift;
+  my ($self) = @_;
   deprecate(
     "fetch_by_array_probeset_name has been deprecated and will be removed in Ensembl release 92."
         . " Please use fetch_by_array_probe_set_name instead."
@@ -109,10 +110,9 @@ sub fetch_by_array_probe_set_name {
   if(! ($array_name && $probe_set_name)){
     throw('Must provide array_name and probe_set_name arguments');
   }
-
   #Extend query tables
-  $self->_tables([['probe', 'p'], ['array_chip', 'ac'], ['array', 'a']]);
-  my $constraint = 'ps.name= ? AND ps.probe_set_id=p.probe_set_id AND p.array_chip_id=ac.array_chip_id AND ac.array_id=a.array_id AND a.name= ? GROUP by ps.probe_set_id';
+  $self->_tables([['probe', 'p'], ['array', 'a']]);
+  my $constraint = 'ps.name= ? AND ps.probe_set_id=p.probe_set_id AND p.array_id=a.array_id  AND a.name= ? GROUP by ps.probe_set_id';
 
   #bind params as we have unsafe string args
   $self->bind_param_generic_fetch($probe_set_name, SQL_VARCHAR);
@@ -236,11 +236,15 @@ sub fetch_all_by_Array {
   }
 
   #get all array_chip_ids, for array and do a subselect statement with generic fetch
-  my $constraint = (  " ps.probe_set_id in"
-    ." ( SELECT distinct(p.probe_set_id)"
-    ."   from probe p where"
-    ."   p.array_chip_id IN (".join(",", @{$array->get_array_chip_ids()}).")"
-    ." )" );
+  my $array_id = $array->dbID;
+  my $constraint = 
+    ("
+      ps.probe_set_id in
+    ( SELECT DISTINCT(p.probe_set_id)
+       FROM probe p WHERE
+       p.array_id =  $array_id
+    );
+    ");
 
   return $self->generic_fetch($constraint);
 }
@@ -327,7 +331,7 @@ sub _update_one {
   my $self = shift;
   my $probe_set = shift;
 
-  my $sth = $self->prepare('update probe_set set name=?, size=?, family=? where probe_set_id=?');
+  my $sth = $self->prepare('UPDATE probe_set SET name=?, size=?, family=? WHERE probe_set_id=?');
 
   $sth->bind_param(1, $probe_set->name,   SQL_VARCHAR);
   $sth->bind_param(2, $probe_set->size,   SQL_INTEGER);

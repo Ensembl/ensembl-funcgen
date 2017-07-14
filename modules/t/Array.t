@@ -170,7 +170,7 @@ is_deeply( $array->get_design_ids(),
 # ------------------
 # Test probe_count()
 # ------------------
-is( $array->probe_count(), 24, 'Test probe_count() subroutine' );
+is( $array->probe_count(), 1, 'Test probe_count() subroutine' );
 
 # ---------------------------------
 # Test get_ArrayChip_by_design_id()

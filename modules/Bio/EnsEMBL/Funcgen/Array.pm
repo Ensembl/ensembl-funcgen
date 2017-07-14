@@ -103,7 +103,13 @@ sub new {
     $is_linked_array,
     $has_sense_interrogation,
   )
-    = rearrange( ['NAME', 'FORMAT', 'VENDOR', 'TYPE', 'DESCRIPTION', 'CLASS',
+    = rearrange( [
+        'NAME', 
+        'FORMAT', 
+        'VENDOR', 
+        'TYPE', 
+        'DESCRIPTION', 
+        'CLASS',
         'IS_PROBESET_ARRAY',
         'IS_LINKED_ARRAY',
         'HAS_SENSE_INTERROGATION'
@@ -213,30 +219,6 @@ sub get_all_Probes {
   }
 }
 
-# =head2 get_all_Probe_dbIDs
-# 
-#   Args       : None
-#   Example    : my @dbids = @{$array->get_all_Probe_dbIDs};
-#   Description: Returns an array ref of all the Probe database IDs for this array
-#   Returntype : arrayref of ints
-#   Exceptions : None
-#   Caller     : General
-#   Status     : At Risk
-# 
-# =cut
-# 
-# sub get_all_Probe_dbIDs {
-#   my $self = shift;
-# 
-#   if(!  $self->{probe_dbids}) {
-#     if(! $self->adaptor) {
-#       throw('Must have set an adaptor to get_all_Probe_dbIDs');
-#     }
-# 
-#     $self->{probe_dbids} = $self->adaptor->fetch_Probe_dbIDs_by_Array($self);
-#   }
-#   return  $self->{probe_dbids};
-# }
 
 
 =head2 get_all_ProbeSets
@@ -264,50 +246,6 @@ sub get_all_ProbeSets {
   }
 }
 
-=head2 get_array_chip_ids
-
-  Example    : my @ac_ids = @{$array->get_array_chip_ids()};
-  Description: Returns all array_chip_ids for this array.
-  Returntype : Listref of array_chip ids
-  Exceptions : Throws if none retrieved
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub get_array_chip_ids {
-  my $self = shift;
-
-  my @ac_ids;
-
-  $self->get_ArrayChips();
-
-  foreach my $achip(values %{$self->{'array_chips'}}){
-    push @ac_ids, $achip->dbID();
-  }
-
-  if(! @ac_ids){
-    throw("No array_chip_ids available"); # should this be warn?
-  }
-  
-  return \@ac_ids;
-}
-
-=head2 get_design_ids
-
-  Example    : my @design_ids = @{$array->get_design_ids()};
-  Description: Returns a the design_ids for each array_chip contained within this array
-  Returntype : list
-  Exceptions : None
-  Caller     : General
-  Status     : Medium Risk
-
-=cut
-
-sub get_design_ids {
-  my $self = shift;
-  return [ keys %{$self->{'array_chips'}} ];
-}
 
 =head2 name
 
@@ -442,6 +380,45 @@ sub probe_count {
   return $self->{'probe_count'};
 }
 
+##########################################################################################
+#                            Graveyeard: Deprecated methods
+##########################################################################################
+
+
+#####################################
+# To be buried in e94. Rest in Peace
+#####################################
+
+=head2 get_array_chip_ids
+
+  Example    : my @ac_ids = @{$array->get_array_chip_ids()};
+  Description: Returns all array_chip_ids for this array.
+  Returntype : Listref of array_chip ids
+  Exceptions : Throws if none retrieved
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub get_array_chip_ids {
+  my $self = shift;
+  deprecate('Will be removed in e94. Probes are unique within an array and the linking table will be removed');
+
+  my @ac_ids;
+
+  $self->get_ArrayChips();
+
+  foreach my $achip(values %{$self->{'array_chips'}}){
+    push @ac_ids, $achip->dbID();
+  }
+
+  if(! @ac_ids){
+    throw("No array_chip_ids available"); # should this be warn?
+  }
+  
+  return \@ac_ids;
+}
+
 =head2 get_ArrayChips
 
   Example    : my @achips = @{$array->get_ArrayChips()};
@@ -456,10 +433,10 @@ sub probe_count {
 sub get_ArrayChips {
   my $self = shift;
 
+  deprecate('Will be removed in e94. A probe is unique and only linked to 1 Array. Therefore linking table array_chip will be removed');
   if ( ! exists $self->{'array_chips'}) {
 
     if( $self->dbID() && $self->adaptor() ) {
-      $self->{'array_chips'} = {};
 
       foreach my $achip(@{$self->adaptor->db->get_ArrayChipAdaptor->fetch_all_by_array_id($self->dbID())}) {
         $self->{'array_chips'}{$achip->design_id} = $achip;
@@ -485,6 +462,7 @@ sub get_ArrayChips {
 
 sub get_ArrayChip_by_design_id {
   my ($self, $design_id) = @_;
+  deprecate('Will be removed in e94. A probe is unique and only linked to 1 Array. Therefore linking table array_chip will be removed');
   throw("Must supply a valid array chip design_id") if (! defined $design_id);
 
   my $achip;
@@ -509,6 +487,7 @@ sub get_ArrayChip_by_design_id {
 
 sub add_ArrayChip {
   my ($self, $array_chip) = @_;
+  deprecate('Will be removed in e94. A probe is unique and only linked to 1 Array. Therefore linking table array_chip will be removed');
 
   if ($self->adaptor) {
     $self->adaptor->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ArrayChip', $array_chip, 'array_chip');
@@ -522,6 +501,52 @@ sub add_ArrayChip {
   }
   return;
 }
+
+
+=head2 get_design_ids
+
+  Example    : my @design_ids = @{$array->get_design_ids()};
+  Description: Returns a the design_ids for each array_chip contained within this array
+  Returntype : list
+  Exceptions : None
+  Caller     : General
+  Status     : Medium Risk
+
+=cut
+
+sub get_design_ids {
+  deprecate('Will be removed in e94. A probe is unique and only linked to 1 Array. Therefore linking table array_chip will be removed');
+  my $self = shift;
+  return [ keys %{$self->{'array_chips'}} ];
+}
+# Removed:
+# https://github.com/Ensembl/ensembl-funcgen/commit/d9307d053e61bf207a3a14ad01cd992082840dbd
+#
+# =head2 get_all_Probe_dbIDs
+# 
+#   Args       : None
+#   Example    : my @dbids = @{$array->get_all_Probe_dbIDs};
+#   Description: Returns an array ref of all the Probe database IDs for this array
+#   Returntype : arrayref of ints
+#   Exceptions : None
+#   Caller     : General
+#   Status     : At Risk
+# 
+# =cut
+# 
+# sub get_all_Probe_dbIDs {
+#   my $self = shift;
+# 
+#   if(!  $self->{probe_dbids}) {
+#     if(! $self->adaptor) {
+#       throw('Must have set an adaptor to get_all_Probe_dbIDs');
+#     }
+# 
+#     $self->{probe_dbids} = $self->adaptor->fetch_Probe_dbIDs_by_Array($self);
+#   }
+#   return  $self->{probe_dbids};
+# }
+
 
 1;
 

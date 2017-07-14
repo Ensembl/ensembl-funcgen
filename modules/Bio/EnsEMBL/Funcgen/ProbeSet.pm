@@ -98,6 +98,7 @@ use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange ) ;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use feature qw(say);
 
 use base qw( Bio::EnsEMBL::Funcgen::Storable );
 
@@ -162,12 +163,12 @@ sub new {
 sub get_all_Arrays {
   my $self = shift;
 
-  if (defined $self->{'arrays'}) {
-    return $self->{'arrays'};
+  if (defined $self->{array}) {
+    return $self->{array};
   } else {
-    $self->{arrays} = $self->adaptor->db->get_ArrayAdaptor->fetch_all_by_ProbeSet($self);
+    $self->{array} = $self->adaptor->db->get_ArrayAdaptor->fetch_all_by_ProbeSet($self);
   }
-  return $self->{arrays};
+  return $self->{array};
 }
 
 sub get_Array {
