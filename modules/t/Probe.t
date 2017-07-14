@@ -170,8 +170,8 @@ is_deeply( $new_probe->get_all_Arrays, $expected_arrays,
 # -----------------------
 # Test get_names_Arrays()
 # -----------------------
-my $expected_name_array_pairs = $new_probe->{arrays};
-say Dumper($new_probe);
+my $expected_name_array_pairs = {$new_probe->{array}->name,$new_probe->{array}};
+#say Dumper($new_probe->get_names_Arrays);
 is_deeply( $new_probe->get_names_Arrays,
     $expected_name_array_pairs, 'Test get_names_Arrays()' );
 #
@@ -209,7 +209,7 @@ qr/Must provide and array name argument to retreive the complete name/,
     'Test get_complete_name() no argument exception';
 
 throws_ok { $new_probe->get_complete_name('Invalid_array_name') }
-qr/Unknown array name/,
+qr/Probe linked to /,
     'Test get_complete_name() unknown array name exception';
 
 #TODO: More tests needed, not just for exceptions

@@ -232,6 +232,27 @@ sub name {
     return $self->{name};
 }
 
+=head2 array
+
+  Arg [1]    : Optional - Bio::EnsEMBL::Funcgen::Array
+  Example    : $probe->array->name
+  Description: Getter/Setter for Array
+  Returntype : Bio::EnsEMBL::Funcgen::Array
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub array {
+    my ($self,$array) = @_;
+
+  if(defined($array) && (!ref($array) || !$array->isa('Bio::EnsEMBL::Funcgen::Array'))) {
+    throw("Not a Bio::EnsEMBL::Funcgen::Array object");
+  }
+    $self->{array} = $array if (defined $array);
+    return $self->{array};
+}
+
 
 =head2 
 
@@ -432,7 +453,6 @@ sub add_array_chip_probename {
 #   $self->{arrays}->{$ac_dbid}           = $array;
   $self->{probenames}->{$array->name} ||= [];
   push @{$self->{probenames}->{$array->name}}, $probename;
-#say Dumper($self);
   return;
 #  $self->{arrays}     ||= {};
 #  $self->{probenames} ||= {};
@@ -541,7 +561,7 @@ sub get_all_probenames {
 sub get_probename {
   my ($self, $arrayname) = @_;
   deprecate('Will be removed in e94. Probes are unique within an array, use $probe->name instead');
-  return $self->{name};
+  return $self->name;
 }
 
 
@@ -627,16 +647,15 @@ sub get_complete_name {
     );
 
    throw('Must provide and array name argument to retreive the complete name') if ! defined $arrayname;
-
-   my $probename = $self->get_probename($arrayname);
-
-   if (!defined $probename) {
-     throw('Unknown array name');
+   if($arrayname ne $self->array->name){
+    throw "Probe linked to " .$self->array->name. ", not to $arrayname. "
    }
+   my $probename = $self->name;
 
-   my $probeset = $self->probeset()->name();
-   $probeset .= ':' if $probeset;
-
+   my $probeset = '';
+   if($self->probeset()){
+     $probeset = $self->probeset->name.':';
+   }
    return "$arrayname:$probeset$probename";
 }
 
