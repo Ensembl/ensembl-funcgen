@@ -57,7 +57,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ArrayAdaptor;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Exception qw( warning throw );
+use Bio::EnsEMBL::Utils::Exception qw( warning throw deprecate);
 use Bio::EnsEMBL::Funcgen::Array;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#sql_types bareword import
 use feature qw(say);
@@ -101,6 +101,19 @@ sub fetch_by_name_vendor {
     return $arrays[0];
 }
 
+=head2 fetch_by_name
+
+  Arg [1]    : String - Name of an array
+  Example    : my $array = $array_adaptor->fetch_by_name('HTA-2_0')
+  Description: Retrieves Array object from the database based on name.
+  Returntype : Bio::EnsEMBL::Funcgen::Array
+  Exceptions : Throws if name passed
+               Throws if array name is not unique
+  Caller     : General
+  Status     : Stable
+
+=cut
+
 sub fetch_by_name {
 
   my ($self, $name) = @_;
@@ -117,14 +130,10 @@ sub fetch_by_name {
 
 =head2 fetch_by_name_class
 
-  Arg [1]    : String - Name of an array
+  Arg [1]    : String - Name of an array, e.g. HuEx-1_0-st-v2 
   Arg [2]    : String - Class of array e.g. AFFY_UTR
-  Example    : #You can list the possible array name and class values as follows
-               map print $_->class.' '.$_->name, @{$array_adaptor->fetch_all};
-
-               #Use some of the above values with this method
-               my $array = $array_adaptor->fetch_by_name_class('HuGene_1_0_st_v1', 'AFFY_ST');
-  Description: Retrieves Array object from the database based on name and class.
+               my $arrays = $array_adaptor->fetch_by_name_class('HuGene_1_0_st_v2', 'AFFY_ST');
+  Description: Retrieves Array objects from the database based on name and class.
   Returntype : Bio::EnsEMBL::Funcgen::Array
   Exceptions : Throws is name and class not passed
   Caller     : General
@@ -144,16 +153,12 @@ sub fetch_by_name_class {
 =head2 fetch_all_by_class
 
   Arg [1]    : String - Class e.g. ILLUMINA_WG
-  Example    : #You can list the possible array class values as follows
-               map print $_->class, @{$array_adaptor->fetch_all};
-
-               #Use some one the above values with this method
-               my $array = $array_adaptor->fetch_all_by_class('AFFY_ST');
-  Description: Retrieves Array object from the database based class.
+  Example    : my @arrays = @{$array_adaptor->fetch_all_by_class('AFFY_ST')};
+  Description: Retrieves Array objects from the database based class.
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::Array objects
-  Exceptions : Throws if nor class passed
+  Exceptions : Throws if no class passed
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -173,7 +178,7 @@ sub fetch_all_by_class {
   Returntype : Listref of Bio::EnsEMBL::Funcgen::Array objects
   Exceptions : Throws if no type is provided
   Caller     : General
-  Status     : at risk - needs deprecating and changing to fetch_all_by_types
+  Status     : Stable
 
 =cut
 
@@ -197,18 +202,17 @@ sub fetch_all_by_type {
 
 
 
-
-=head2 fetch_all_by_ProbeSet
+=head2 fetch_by_ProbeSet
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::ProbeSet
-  Example    : my @arrays = @{$aa->fetch_all_by_ProbeSet($probeset)};
+  Example    : my @arrays = @{$array_adaptor->fetch_all_by_ProbeSet($probeset)};
   Description: Fetch all arrays containing a given ProbeSet
                This is a convenience method to hide the 2 adaptors required
                for this call.
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::Array objects
-  Exceptions : none
+  Exceptions : Throws if no Bio::EnsEMBL::Funcgen::ProbeSet is passed
   Caller     : General
-  Status     : at risk
+  Status     : Stable
 
 =cut
 
@@ -217,7 +221,7 @@ sub fetch_all_by_type {
 #Removed 1 query and hash loop
 #This is only 1.04 times faster or ~ 4%
 
-sub fetch_all_by_ProbeSet {
+sub fetch_by_ProbeSet {
   my ($self, $pset) = @_;
 
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ProbeSet', $pset);
@@ -226,12 +230,11 @@ sub fetch_all_by_ProbeSet {
   $self->_tables([['probe', 'p']]);
 
   #Extend query and group
-  my $arrays =  $self->generic_fetch('p.probe_set_id='.$pset->dbID.' and p.array_id=a.array_id GROUP BY a.array_id');
-  # ORDER BY NULL');#Surpresses default order by group columns. Actually slower? Result set too small?
+  my $array =  $self->generic_fetch('p.probe_set_id='.$pset->dbID.' and p.array_id=a.array_id GROUP BY a.array_id');
 
   $self->reset_true_tables;
 
-  return $arrays;
+  return $array;
 }
 
 
@@ -243,7 +246,7 @@ sub fetch_all_by_ProbeSet {
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -290,7 +293,7 @@ sub _columns {
   Returntype : Listref of Bio::EnsEMBL::Funcgen::Array objects
   Exceptions : None
   Caller     : Internal
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -302,26 +305,33 @@ sub _objs_from_sth {
   my $is_linked_array;
   my $has_sense_interrogation;
 
-  $sth->bind_columns(\$array_id, \$name, \$format, \$vendor, \$description, \$type, \$class,
-    \$is_probeset_array,
-    \$is_linked_array,
-    \$has_sense_interrogation
+  $sth->bind_columns(
+      \$array_id, 
+      \$name, 
+      \$format, 
+      \$vendor, 
+      \$description, 
+      \$type, 
+      \$class,
+      \$is_probeset_array,
+      \$is_linked_array,
+      \$has_sense_interrogation
   );
 
   while ( $sth->fetch() ) {
 
     my $array = Bio::EnsEMBL::Funcgen::Array->new(
-      -dbID        => $array_id,
-      -adaptor     => $self,
-      -name        => $name,
-      -format      => $format,
-      -vendor      => $vendor,
-      -description => $description,
-      -type        => $type,
-      -class       => $class,
-      -is_probeset_array       => $is_probeset_array,
-      -is_linked_array         => $is_linked_array,
-      -has_sense_interrogation => $has_sense_interrogation,
+      -dbID                     => $array_id,
+      -name                     => $name,
+      -format                   => $format,
+      -vendor                   => $vendor,
+      -description              => $description,
+      -type                     => $type,
+      -class                    => $class,
+      -is_probeset_array        => $is_probeset_array,
+      -is_linked_array          => $is_linked_array,
+      -has_sense_interrogation  => $has_sense_interrogation,
+      -adaptor                  => $self,
     );
     push @result, $array;
   }
@@ -331,14 +341,14 @@ sub _objs_from_sth {
 =head2 store
 
   Args       : List of Bio::EnsEMBL::Funcgen::Array objects
-  Example    : $oaa->store($array1, $array2, $array3);
+  Example    : $array_adaptor->store($array1, $array2, $array3);
   Description: Stores given Array objects in the database. This
                method checks for arrays previously stored and updates
                and new array_chips accordingly.
   Returntype : Listref of stored Array objects
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -460,7 +470,7 @@ sub fetch_Probe_dbIDs_by_Array{
 }
 
 #######################################################################################
-#                   Boulevard of broken dreams: Depracted methods 
+#                             Nirvana: Depracted methods 
 #######################################################################################
 
 ##########
@@ -475,7 +485,7 @@ sub fetch_Probe_dbIDs_by_Array{
   Returntype : Bio::EnsEMBL::Funcgen::Array
   Exceptions : None
   Caller     : General
-  Status     : Stable
+  Status     : Deprecated (Remove: e94)
 
 =cut
 
@@ -485,7 +495,7 @@ sub fetch_Probe_dbIDs_by_Array{
 
 sub fetch_by_array_chip_dbID {
   my ($self, $ac_dbid) = @_;
-  deprecate('Will be removed in e94. A probe is unique and only linked to 1 Array. Use $array_adaptor->fetch_by_dbID instead($array_id)');
+  deprecate('Remove: e94. A probe is unique and only linked to 1 Array. Use $array_adaptor->fetch_by_dbID instead($array_id)');
 
   throw('Must provide an ArrayChip dbID') if ! $ac_dbid;
   return $self->fetch_by_dbID($ac_dbid);
@@ -499,5 +509,38 @@ sub fetch_by_array_chip_dbID {
   return $array;
 }
 
+=head2 fetch_all_by_ProbeSet
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::ProbeSet
+  Example    : my @arrays = @{$array_adaptor->fetch_all_by_ProbeSet($probeset)};
+  Description: Fetch all arrays containing a given ProbeSet
+               This is a convenience method to hide the 2 adaptors required
+               for this call.
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::Array objects
+  Exceptions : Throws if no Bio::EnsEMBL::Funcgen::ProbeSet is passed
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+
+sub fetch_all_by_ProbeSet {
+  my ($self, $pset) = @_;
+  deprecate('Remove: e94. A ProbeSet is now only linked to 1 array. Use $aa->fetch_by_ProbeSet instead');
+  return $self->fetch_by_ProbeSet($pset);
+
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ProbeSet', $pset);
+
+  #Extend query tables
+  $self->_tables([['probe', 'p']]);
+
+  #Extend query and group
+  my $arrays =  $self->generic_fetch('p.probe_set_id='.$pset->dbID.' and p.array_id=a.array_id GROUP BY a.array_id');
+  # ORDER BY NULL');#Surpresses default order by group columns. Actually slower? Result set too small?
+
+  $self->reset_true_tables;
+
+  return $arrays;
+}
 
 1;

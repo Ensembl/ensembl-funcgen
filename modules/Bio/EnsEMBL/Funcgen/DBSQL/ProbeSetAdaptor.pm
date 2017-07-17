@@ -63,10 +63,6 @@ ProbeSet objects.
 
   Bio::EnsEMBL::Funcgen::Probe
   Bio::EnsEMBL::Funcgen::ProbeSet
-  ensembl-funcgen/scripts/examples/microarray_annotation_example.pl
-
-  Or for details on how to run the array mapping pipeline see:
-  ensembl-funcgen/docs/array_mapping.txt
 
 =cut
 
@@ -82,14 +78,6 @@ use feature qw(say);
 
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
-sub fetch_by_array_probeset_name{
-  my ($self) = @_;
-  deprecate(
-    "fetch_by_array_probeset_name has been deprecated and will be removed in Ensembl release 92."
-        . " Please use fetch_by_array_probe_set_name instead."
-  );
-  return $self->fetch_by_array_probe_set_name(@_);
-}
 
 =head2 fetch_by_array_probe_set_name
 
@@ -101,9 +89,10 @@ sub fetch_by_array_probeset_name{
   Returntype : Bio::EnsEMBL::ProbeSet
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
+
 sub fetch_by_array_probe_set_name {
   my ($self, $array_name, $probe_set_name) = @_;
 
@@ -124,15 +113,6 @@ sub fetch_by_array_probe_set_name {
   return $pset;
 }
 
-sub fetch_all_by_external_name {
-  my $self = shift;
-  my $transcript_stable_id = shift;
-  deprecate(
-    "fetch_all_by_external_name has been deprecated and will be removed in Ensembl release 92."
-        . " Please use fetch_all_by_transcript_stable_id instead."
-  );
-  return $self->fetch_all_by_transcript_stable_id($transcript_stable_id);
-}
 
 =head2 fetch_all_by_transcript_stable_id
 
@@ -142,6 +122,7 @@ sub fetch_all_by_external_name {
                probe2transcript step in the probemapping pipeline.
   Returntype : Arrayref
   Caller     : General
+  Status     : Stable
 
 =cut
 
@@ -174,10 +155,10 @@ sub fetch_all_by_transcript_stable_id {
                These should ideally be validated using the attached array
                information or alternatively use fetch_by_array_probe_set_name
                Returns a probe with the given name.
-  Returntype : Arrayref
+  Returntype : ARRAYREF Bio::EnsEMBL::Funcgen::ProbeSet objects
   Exceptions : Throws if name not passed
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -198,7 +179,7 @@ sub fetch_all_by_name {
   Returntype : Bio::EnsEMBL::ProbeSet
   Exceptions : Throws if argument is not a Bio::EnsEMBL::ProbeFeature object
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -223,7 +204,7 @@ sub fetch_by_ProbeFeature {
   Returntype : Listref of Bio::EnsEMBL::ProbeSet objects.
   Exceptions : throws if arg is not valid or stored
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -257,7 +238,7 @@ sub fetch_all_by_Array {
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -274,7 +255,7 @@ sub _true_tables {
   Returntype : List of strings
   Exceptions : None
   Caller     : Internal
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -292,7 +273,7 @@ sub _columns {
   Returntype : Listref of Bio::EnsEMBL::ProbeSet objects
   Exceptions : None
   Caller     : Internal
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -351,7 +332,7 @@ sub _update_one {
   Returntype : None
   Exceptions : Throws if arguments are not Probe objects
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -389,4 +370,38 @@ sub store {
   return \@probe_sets;
 }
 
+###############################################################################
+#                   Moksha (Deprecated methods)
+###############################################################################
+
+sub fetch_by_array_probeset_name{
+  my ($self) = @_;
+  deprecate(
+    "fetch_by_array_probeset_name has been deprecated and will be removed in Ensembl release 92."
+        . " Please use fetch_by_array_probe_set_name instead."
+  );
+  return $self->fetch_by_array_probe_set_name(@_);
+}
+
+=head2  fetch_all_by_external_name
+
+  Arg [1]    : string - name of array
+  Example    : my $probe_set = $psa->fetch_all_by_external_name($);
+  Description: Returns a probe_set given the external_name name
+  Returntype : Bio::EnsEMBL::ProbeSet
+  Exceptions : None
+  Caller     : General
+  Status     : Deprecated (Remove: e92)
+
+=cut
+
+sub fetch_all_by_external_name {
+  my $self = shift;
+  my $transcript_stable_id = shift;
+  deprecate(
+    "fetch_all_by_external_name has been deprecated and will be removed in Ensembl release 92."
+        . " Please use fetch_all_by_transcript_stable_id instead."
+  );
+  return $self->fetch_all_by_transcript_stable_id($transcript_stable_id);
+}
 1;

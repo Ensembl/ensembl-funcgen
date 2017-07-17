@@ -65,10 +65,6 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#DBI sql_types import
 use feature qw(say);
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
-use DBI;
-
-# to standard output
-# DBI->trace(1);
 
 sub new {
   my ($class, @args) = @_;
@@ -128,24 +124,6 @@ sub fetch_by_array_probe_probeset_name {
 }
 
 
-=head2 fetch_all_by_external_name
-
-  Arg [1]    : Ensembl stable Transcript ID
-  Example    : $probeAdaptor->fetch_all_by_external_name
-  Description: 
-               
-  Returntype : 
-  Caller     : General
-  Status     : Deprecated
-
-=cut
-
-sub fetch_all_by_external_name {
-  my $self = shift;
-  my $transcript_stable_id = shift;
-  deprecate( "fetch_all_by_external_namehas been deprecated and will be removed in Ensembl release 92.");
-  return $self->fetch_all_by_transcript_stable_id($transcript_stable_id);
-}
 
 =head2 fetch_all_by_sequence
 
@@ -301,28 +279,6 @@ sub fetch_all_by_Array {
   return $self->generic_fetch('p.array_id = '.$array->dbID);
 }
 
-=head2 fetch_all_by_ArrayChip
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::ArrayChip
-  Example    : my @probes = @{$opa->fetch_all_by_ArrayChip($array_chip)};
-  Description: Fetch all probes on a particular ArrayChip.
-  Returntype : Listref of Bio::EnsEMBL::Probe objects.
-  Exceptions : throw is arg is not valid or stored
-  Caller     : General
-  Status     : Deprecated
-
-=cut
-
-sub fetch_all_by_ArrayChip {
-  my ($self, $array_chip) = @_;
-  deprecate('Will be removed in e94. Probes are now only part of 1 array, use $pa->fetch_all_by_Array');
-
-  if(! (ref($array_chip) && $array_chip->isa('Bio::EnsEMBL::Funcgen::ArrayChip') && $array_chip->dbID())){
-    throw('Need to pass a valid stored Bio::EnsEMBL::Funcgen::ArrayChip');
-  }
-
-  return $self->generic_fetch("p.array_chip_id =".$array_chip->dbID());
-}
 
 
 =head2 fetch_by_ProbeFeature
@@ -489,13 +445,11 @@ sub store {
       warning('Probe [' . $probe->dbID() . '] is already stored in the database');
       next PROBE;
     }
-# ToDo: Storing a new Probe I don't have an adaptor. I assume a lot of this is coming from the Pipeline?
+
     my $probe_sequence = '';
     if(! defined $probe->{'probe_sequence'}){
       if(defined $probe->_probe_seq_id){
-        say ref($probe_sequence_adaptor);
         $probe_sequence = $probe_sequence_adaptor->fetch_by_dbID($probe->_probe_seq_id);
-        say "Done";
       }
       else{
         throw('No probe sequence or ID. This should not be possible');
@@ -532,6 +486,60 @@ sub store {
   }
   
   return \@probes;
+}
+
+###############################################################################
+#                     The Nothing (Deprecated methods)
+###############################################################################
+
+###########
+# e92
+###########
+
+=head2 fetch_all_by_external_name
+
+  Arg [1]    : Ensembl stable Transcript ID
+  Example    : $probeAdaptor->fetch_all_by_external_name
+  Description: 
+               
+  Returntype : 
+  Caller     : General
+  Status     : Deprecated (Remove: e92)
+
+=cut
+
+sub fetch_all_by_external_name {
+  my $self = shift;
+  my $transcript_stable_id = shift;
+  deprecate( "fetch_all_by_external_namehas been deprecated and will be removed in Ensembl release 92.");
+  return $self->fetch_all_by_transcript_stable_id($transcript_stable_id);
+}
+
+###########
+# e94
+###########
+
+=head2 fetch_all_by_ArrayChip
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::ArrayChip
+  Example    : my @probes = @{$opa->fetch_all_by_ArrayChip($array_chip)};
+  Description: Fetch all probes on a particular ArrayChip.
+  Returntype : Listref of Bio::EnsEMBL::Probe objects.
+  Exceptions : throw is arg is not valid or stored
+  Caller     : General
+  Status     : Deprecated
+
+=cut
+
+sub fetch_all_by_ArrayChip {
+  my ($self, $array_chip) = @_;
+  deprecate('Will be removed in e94. Probes are now only part of 1 array, use $pa->fetch_all_by_Array');
+
+  if(! (ref($array_chip) && $array_chip->isa('Bio::EnsEMBL::Funcgen::ArrayChip') && $array_chip->dbID())){
+    throw('Need to pass a valid stored Bio::EnsEMBL::Funcgen::ArrayChip');
+  }
+
+  return $self->generic_fetch("p.array_chip_id =".$array_chip->dbID());
 }
 
 1;

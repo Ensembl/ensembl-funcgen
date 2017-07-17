@@ -9,12 +9,47 @@ The warning also contains instructions on replacing the deprecated method and wh
 A year after deprecation (4 Ensembl releases), the method is removed from the API.
 
 ### To be removed in Ensembl Release 94 ###
+ Bio::EnsEMBL::Funcgen::Array
+ - Bio::EnsEMBL::Funcgen::Array::get_array_chip_ids
+ - Bio::EnsEMBL::Funcgen::Array::get_ArrayChips
+ - Bio::EnsEMBL::Funcgen::Array::get_ArrayChip_by_design_id
+ - Bio::EnsEMBL::Funcgen::Array::add_ArrayChip
+ - Bio::EnsEMBL::Funcgen::Array::get_design_ids
+
+Bio::EnsEMBL::Funcgen::Probe
+ - Bio::EnsEMBL::Funcgen::Probe::_array_chip_id 
+ - Bio::EnsEMBL::Funcgen::Probe::array_chip
  - Bio::EnsEMBL::Funcgen::Probe::add_array_chip_probename
  - Bio::EnsEMBL::Funcgen::Probe::get_all_Arrays
  - Bio::EnsEMBL::Funcgen::Probe::get_names_Arrays
  - Bio::EnsEMBL::Funcgen::Probe::get_all_probenames
  - Bio::EnsEMBL::Funcgen::Probe::get_probename
  - Bio::EnsEMBL::Funcgen::Probe::get_all_complete_names
+ - Bio::EnsEMBL::Funcgen::Probe::get_complete_name
+
+Bio::EnsEMBL::Funcgen::Probe
+ - Bio::EnsEMBL::Funcgen::Probe::get_all_Arrays
+
+Bio::EnsEMBL::Funcgen::ArrayChip
+ - Bio::EnsEMBL::Funcgen::ArrayChip - whole module
+ - Bio::EnsEMBL::Funcgen::ArrayChip::new
+ - Bio::EnsEMBL::Funcgen::ArrayChip::array_id
+ - Bio::EnsEMBL::Funcgen::ArrayChip::name
+ - Bio::EnsEMBL::Funcgen::ArrayChip::design_id
+ - Bio::EnsEMBL::Funcgen::ArrayChip::get_Array
+
+Bio::Ensembl::Funcgen::DBSQL:ArrayAdaptor
+ - Bio::Ensembl::Funcgen::DBSQL::ArrayAdaptor::fetch_by_array_chip_dbID
+ - Bio::Ensembl::Funcgen::DBSQL::ArrayAdaptor::fetch_all_by_ProbeSet
+
+Bio::Ensembl::Funcgen::DBSQL:ProbeAdaptor
+ - Bio::Ensembl::Funcgen::DBSQL::ProbeAdaptor::fetch_all_by_ArrayChip
+
+Bio::Ensembl::Funcgen::ProbeFeature
+ - Bio::Ensembl::Funcgen::ProbeFeature::probeset
+ - Bio::Ensembl::Funcgen::ProbeFeature::probeset_id
+
+
 
 
 ### To be removed in Ensembl Release 93 ###
@@ -27,6 +62,9 @@ A year after deprecation (4 Ensembl releases), the method is removed from the AP
 ### To be removed in Ensembl Release 92 ###
  - Bio::EnsEMBL::Funcgen::Probe::get_all_Transcript_DBEntries
 
+Bio::Ensembl::Funcgen::DBSQL:ProbeSetAdaptor (added e90 to this file)
+ - Bio::Ensembl::Funcgen::DBSQL::ProbeSetAdaptor::fetch_by_array_probeset_name
+ - Bio::Ensembl::Funcgen::DBSQL::ProbeSetAdaptor::fetch_all_by_external_name
 
 ### To be removed in Ensembl Release 91 ###
 

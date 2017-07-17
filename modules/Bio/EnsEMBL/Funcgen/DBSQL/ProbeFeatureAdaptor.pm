@@ -71,12 +71,12 @@ my $final_clause = $true_final_clause;
 =head2 fetch_all_by_Probe
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::Probe
-  Example    : my $features = $ofa->fetch_all_by_Probe($probe);
+  Example    : my $features = $pfa->fetch_all_by_Probe($probe);
   Description: Fetchs all features that a given probe creates.
   Returntype : Listref of Bio::EnsEMBL::PasteFeature objects
   Exceptions : Throws if argument is not a stored Probe object
   Caller     : Probe->get_all_ProbeFeatures()
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -96,13 +96,13 @@ sub fetch_all_by_Probe {
 
 =head2 fetch_all_by_probe_id
 
-  Arg [1]    : int - Probe dbID
-  Example    : my @features = @{$ofa->fetch_all_by_Probe_id($pid)};
+  Arg [1]    : Probe dbID
+  Example    : my @features = @{$pfa->fetch_all_by_Probe_id($pid)};
   Description: Fetchs all features that a given probe creates.
   Returntype : Listref of Bio::EnsEMBL::PasteFeature objects
   Exceptions : Throws if argument not defined
   Caller     : Probe->get_all_ProbeFeatures()
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -140,34 +140,34 @@ sub fetch_all_by_probe_id {
   Returntype : Listref of Bio::EnsEMBL::ProbeFeature objects
   Exceptions : Throws if no probeset argument
   Caller     : General
-  Status     : At Risk - add vendor/class to this?
+  Status     : Stable
 
 =cut
 
 
 sub fetch_all_by_probeset_name {
-	my ($self, $probeset, $coord_systems) = @_;
+  my ($self, $probeset, $coord_systems) = @_;
 
-	if (! $probeset) {
-	  throw('fetch_all_by_probeset requires a probeset name argument');
-	}
+  if (! $probeset) {
+    throw('fetch_all_by_probeset requires a probeset name argument');
+  }
 
-	#Restrict to default coord_systems
-	#Can we remove the need for this by restricting the sr cache to default entries?
-	my @cs_ids = @{$self->_get_coord_system_ids($coord_systems)};
-    $self->_tables([['probe_set', 'ps'], ['seq_region', 'sr'], [ 'probe',   'p' ]]);
-    
-	#Need to protect against SQL injection here due to text params
-	my $cs_ids = join(', ', @cs_ids);
-	my $constraint = " ps.name=? AND ps.probe_set_id=p.probe_set_id AND pf.seq_region_id=sr.seq_region_id and sr.coord_system_id IN ($cs_ids) and pf.probe_id = p.probe_id";
-	$final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;
+#Restrict to default coord_systems
+#Can we remove the need for this by restricting the sr cache to default entries?
+  my @cs_ids = @{$self->_get_coord_system_ids($coord_systems)};
+  $self->_tables([['probe_set', 'ps'], ['seq_region', 'sr'], [ 'probe',   'p' ]]);
 
-	$self->bind_param_generic_fetch($probeset,  SQL_VARCHAR);
-	my $features = $self->generic_fetch($constraint);
-    $self->reset_true_tables;
-	$final_clause = $true_final_clause;
+#Need to protect against SQL injection here due to text params
+  my $cs_ids = join(', ', @cs_ids);
+  my $constraint = " ps.name=? AND ps.probe_set_id=p.probe_set_id AND pf.seq_region_id=sr.seq_region_id and sr.coord_system_id IN ($cs_ids) and pf.probe_id = p.probe_id";
+  $final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;
 
-	return $features;
+  $self->bind_param_generic_fetch($probeset,  SQL_VARCHAR);
+  my $features = $self->generic_fetch($constraint);
+  $self->reset_true_tables;
+  $final_clause = $true_final_clause;
+
+  return $features;
 }
 
 
@@ -180,28 +180,28 @@ sub fetch_all_by_probeset_name {
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::ProbeFeature objects
   Exceptions : Throws if no probeset argument
   Caller     : General
-  Status     : At Risk - add vendor/class to this?
+  Status     : Stable
 
 =cut
 
 sub fetch_all_by_ProbeSet {
-	my ($self, $pset, $coord_systems) = @_;
-	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ProbeSet', $pset);
-	#Restrict to default coord_systems
-	#Can we remove the need for this by restricting the sr cache to default entries?
+  my ($self, $pset, $coord_systems) = @_;
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ProbeSet', $pset);
+#Restrict to default coord_systems
+#Can we remove the need for this by restricting the sr cache to default entries?
 
-	my @cs_ids = @{$self->_get_coord_system_ids($coord_systems)};
-    $self->_tables([['seq_region', 'sr']]);
+  my @cs_ids = @{$self->_get_coord_system_ids($coord_systems)};
+  $self->_tables([['seq_region', 'sr']]);
 
-	my $cs_ids = join(', ', @cs_ids);
-	my $constraint = ' p.probe_set_id='.$pset->dbID." AND pf.seq_region_id=sr.seq_region_id and sr.coord_system_id IN ($cs_ids)";
-	$final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;
+  my $cs_ids = join(', ', @cs_ids);
+  my $constraint = ' p.probe_set_id='.$pset->dbID." AND pf.seq_region_id=sr.seq_region_id and sr.coord_system_id IN ($cs_ids)";
+  $final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;
 
-	my $features = $self->generic_fetch($constraint);
-    $self->reset_true_tables;
-	$final_clause = $true_final_clause;
+  my $features = $self->generic_fetch($constraint);
+  $self->reset_true_tables;
+  $final_clause = $true_final_clause;
 
-	return $features;
+  return $features;
 }
 
 =head2 fetch_all_by_Slice_array_vendor
@@ -216,30 +216,30 @@ sub fetch_all_by_ProbeSet {
   Returntype : Listref of Bio::EnsEMBL::Funcgen::ProbeFeature objects
   Exceptions : Throws if no array name is provided
   Caller     : Used by web
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
 sub fetch_all_by_Slice_array_vendor {
-	my ($self, $slice, $array, $vendor) = @_;
+  my ($self, $slice, $array, $vendor) = @_;
 
-	if(! ($array && $vendor)){
-	  throw('You must provide and array name and a vendor name');
-	}
+  if(! ($array && $vendor)){
+    throw('You must provide and array name and a vendor name');
+  }
 
-    $self->_tables([['array', 'a'], ['array_chip', 'ac'], [ 'probe',   'p' ]]);
+  $self->_tables([['array', 'a'], ['array_chip', 'ac'], [ 'probe',   'p' ]]);
 
-	#Need to protect against SQL injection here due to text params
-	my $constraint = ' a.name=? and a.vendor=? and a.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id and pf.probe_id = p.probe_id';
-	$final_clause  = ' GROUP by pf.probe_feature_id '.$final_clause;
-	$self->bind_param_generic_fetch($array,  SQL_VARCHAR);
-	$self->bind_param_generic_fetch($vendor, SQL_VARCHAR);
+#Need to protect against SQL injection here due to text params
+  my $constraint = ' a.name=? and a.vendor=? and a.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id and pf.probe_id = p.probe_id';
+  $final_clause  = ' GROUP by pf.probe_feature_id '.$final_clause;
+  $self->bind_param_generic_fetch($array,  SQL_VARCHAR);
+  $self->bind_param_generic_fetch($vendor, SQL_VARCHAR);
 
-	my $features  = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
-    $self->reset_true_tables;
-	$final_clause = $true_final_clause;
+  my $features  = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
+  $self->reset_true_tables;
+  $final_clause = $true_final_clause;
 
-	return $features;
+  return $features;
 }
 
 =head2 _true_tables
@@ -250,7 +250,7 @@ sub fetch_all_by_Slice_array_vendor {
   Returntype : List of listrefs of strings
   Exceptions : None
   Caller     : Internal
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -296,7 +296,7 @@ sub fetch_all_by_transcript_stable_id {
   Returntype : List of strings
   Exceptions : None
   Caller     : Internal
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -327,7 +327,7 @@ sub _columns {
   Returntype : String
   Exceptions : None
   Caller     : generic_fetch
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -347,7 +347,7 @@ sub _final_clause {
   Returntype : Listref of Bio::EnsEMBL::ProbeFeature objects
   Exceptions : None
   Caller     : Internal
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -553,7 +553,7 @@ sub _objs_from_sth {
   Exceptions : Throws if a list of ProbeFeature objects is not provided or if
                an analysis is not attached to any of the objects
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 

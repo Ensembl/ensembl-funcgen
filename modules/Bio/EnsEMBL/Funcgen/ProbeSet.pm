@@ -87,9 +87,6 @@ probes.
   Bio::EnsEMBL::Funcgen::ProbeSetAdaptor
   ensembl-funcgen/scripts/examples/microarray_annotation_example.pl
 
-  Or for details on how to run the array mapping pipeline see:
-  ensembl-funcgen/docs/array_mapping.txt
-
 =cut
 
 package Bio::EnsEMBL::Funcgen::ProbeSet;
@@ -97,7 +94,7 @@ package Bio::EnsEMBL::Funcgen::ProbeSet;
 use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange ) ;
-use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate);
 use feature qw(say);
 
 use base qw( Bio::EnsEMBL::Funcgen::Storable );
@@ -146,40 +143,27 @@ sub new {
   return $self;
 }
 
-=head2 get_all_Arrays
+=head2 get_Array
 
   Args       : None
-  Example    : my $arrays = $probeset->get_all_Arrays();
-  Description: Returns all arrays that this probeset is part of. Only works if the
-               probeset was retrieved from the database or created using
-               add_Array_probename.
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::Array objects
+  Example    : my $arrays = $probeset->get_Array();
+  Description: Return the Array that this probeset is part of.
+  Returntype : Bio::EnsEMBL::Funcgen::Array 
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : Deprecated
 
 =cut
 
-sub get_all_Arrays {
-  my $self = shift;
-
-  if (defined $self->{array}) {
-    return $self->{array};
-  } else {
-    $self->{array} = $self->adaptor->db->get_ArrayAdaptor->fetch_all_by_ProbeSet($self);
-  }
-  return $self->{array};
-}
-
 sub get_Array {
   my $self = shift;
-  my $arrays = $self->get_all_Arrays;
+
+  $self->{array} = $self->adaptor->db->get_ArrayAdaptor->fetch_all_by_ProbeSet($self);
+  return $self->{array};
   
-  if (scalar @$arrays != 1) {
-    die("The probe set links to more than one array!");
-  }
-  return $arrays->[0];
 }
+
+
 
 =head2 get_all_Probes
 
@@ -265,6 +249,43 @@ sub size {
 sub fetch_all_ProbeSetTranscriptMappings {
   my $self = shift;
   return $self->adaptor->db->get_ProbeSetTranscriptMappingAdaptor->fetch_all_by_probe_set_id($self->dbID);
+}
+
+###############################################################################
+#                         Limbo (Deprecated Methods)
+###############################################################################
+
+
+
+###########
+# e94
+###########
+
+=head2 get_all_Arrays
+
+  Args       : None
+  Example    : my $arrays = $probeset->get_all_Arrays();
+  Description: Returns all arrays that this probeset is part of. Only works if the
+               probeset was retrieved from the database or created using
+               add_Array_probename.
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::Array objects
+  Exceptions : None
+  Caller     : General
+  Status     : Deprecated
+
+=cut
+
+sub get_all_Arrays {
+  my $self = shift;
+  deprecate('Remove: e94. A ProbeSet is only part of 1 array. Use $ps->get_Array() instead');
+  return [$self->get_Array()];
+
+  if (defined $self->{array}) {
+    return $self->{array};
+  } else {
+    $self->{array} = $self->adaptor->db->get_ArrayAdaptor->fetch_all_by_ProbeSet($self);
+  }
+  return $self->{arrays};
 }
 
 1;

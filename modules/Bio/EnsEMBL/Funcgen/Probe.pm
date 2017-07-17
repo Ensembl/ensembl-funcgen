@@ -374,291 +374,6 @@ sub Array {
  return $self->{array};
 }
 
-####### Boulevard of Broken Dreams (Deprecated methods)
-
-=head2 _array_chip_id
-
-  Arg [1]    : Optional
-  Example    : $probe->
-  Description: 
-  Returntype : 
-  Caller     : General
-  Status     : Deprecate
-
-=cut
-
-sub _array_chip_id {
-    my $self = shift;
-    deprecate('Probes are linked to one Array only. array_chip is not needed anymore');
-    $self->{'_array_chip_id'} = shift if @_;
-    return $self->{'_array_chip_id'};
-}
-
-=head2 array_chip
-
-  Arg [1]    : Optional - ArrayChip dbID
-  Example    : $probe->
-  Description: Getter/Setter for ArrayChip dbID for this Probe
-  Returntype : String - ArrayChip dbID
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-sub array_chip {
-    my ($self, $array_chip) = @_;
-
-    if (defined $array_chip) {
-      $self->{_array_chip} = $array_chip;
-    }
-    if (! defined $self->{_array_chip}) {
-      $self->{_array_chip} = $self->adaptor->db->get_ArrayChipAdaptor->fetch_by_dbID($self->_array_chip_id);
-    }
-    if (! defined $self->{_array_chip}) {
-      die("Probe was not linked to an array chip!");
-    }
-
-    return $self->{_array_chip};
-}
-
-=head2 add_array_chip_probename
-
-  Arg [1]    : string - probe name
-  Arg [2]    : Bio::EnsEMBL::Funcgen::Array
-  Example    : $probe->add_array_chip_probename($probename, $array);
-  Description: Adds a probe name / array pair to a probe, allowing incremental
-               generation of a probe.
-  Returntype : None
-  Exceptions : None
-  Caller     : General,
-               Probe->new(),
-               ProbeAdaptor->_obj_from_sth(),
-               AffyProbeAdaptor->_obj_from_sth()
-  Status     : Deprecated
-
-=cut
-
-sub add_array_chip_probename {
-  deprecate('Will be removed in e94. Probes are linked to one Array only. array_chip is not needed anymore');
-  my $self = shift;
-  my ($probename, $array) = @_;
-  $self->{arrays}     ||= {};
-  $self->{probenames} ||= {};
-
-  if(! (ref($array) && $array->isa('Bio::EnsEMBL::Funcgen::Array'))){
-    throw('You must pass a valid Bio::EnsEMBL::Funcgen::Array. ')
-  }
-  
-  $self->{arrays}->{$array->name}           = $array;
-#   $self->{arrays}->{$ac_dbid}           = $array;
-  $self->{probenames}->{$array->name} ||= [];
-  push @{$self->{probenames}->{$array->name}}, $probename;
-  return;
-#  $self->{arrays}     ||= {};
-#  $self->{probenames} ||= {};
-#
-#  if(! (ref($array) && $array->isa('Bio::EnsEMBL::Funcgen::Array'))){
-#    throw('You must pass a valid Bio::EnsEMBL::Funcgen::Array. ')
-#  }
-#
-#  $self->{arrays}->{$array->name}           = $array;
-#  $self->{probenames}->{$array->name} ||= [];
-#  push @{$self->{probenames}->{$array->name}}, $probename;
-#
-#  return;
-}
-
-
-=head2 get_all_Arrays
-
-  Args       : None
-  Example    : my $arrays = $probe->get_all_Arrays();
-  Description: Returns all arrays that this probe is part of. Only works if the
-               probe was retrieved from the database or created using
-               add_Array_probename (rather than add_arrayname_probename).
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::Array objects
-  Exceptions : None
-  Caller     : General
-  Status     : Depracted
-
-=cut
-
-sub get_all_Arrays {
-  my $self = shift;
-  deprecate('Will be removed in e94. Probes are now only part of 1 array, use $probe->array');
-  return [$self->{array}];
-  
-}
-
-
-=head2 get_names_Arrays
-
-  Args       : None
-  Example    : my %name_array_pairs = %{$probe->get_names_Arrays};
-  Description: Returns Array name hash
-  Returntype : hashref of probe name Bio::EnsEMBL::Funcgen::Array pairs
-  Exceptions : None
-  Caller     : General
-  Status     : Deprecated
-
-=cut
-
-sub get_names_Arrays {
-  my $self = shift;
-  deprecate('Will be removed in e94. Probes are now only part of 1 array, use $probe->Array->name instead ');
-  return {$self->{array}->name,$self->{array}};
-}
-
-=head2 get_all_probenames
-
-  Arg [1]    : Optional - list of array names, defaults to all available
-  Example    : my @probenames = @{$probe->get_all_probenames()};
-  Description: Retrieves all names for this probe. Only makes sense for probes
-               which share identical sequence for a given probeset and array.
-               This can either be:
-               1 A non-probeset array where probes with different names but identical
-                 sequence have beem merged, this is only possible if the probes in question
-                 share the same Array but are on seaprate ArrayChips.
-               2 If they are part of a probeset (i.e. Affy probes), in which case
-                 get_all_complete_names() would be more appropriate.
-  Returntype : Arrayref of strings
-  Exceptions : None
-  Caller     : General
-  Status     : Deprecated
-
-=cut
-
-sub get_all_probenames {
-  my $self        = shift;
-  deprecate('Will be removed in e94. Probes are unique within an array');
-  return([$self->name]);
-  my @array_names = @_;
-
-  if (! @array_names) {
-    @array_names = keys %{$self->{'probenames'}};
-  }
-
-  my @probe_names;
-  foreach my $current_array_name (@array_names) {
-    push @probe_names, @{$self->{'probenames'}->{$current_array_name}};
-  }
-  return \@probe_names;
-}
-
-=head2 get_probename
-
-  Arg [1]    : string - array name
-  Example    : my $probename = $probe->get_probename('Array-1');
-  Description: For a given array, retrieve the name for this probe.
-  Returntype : string
-  Exceptions : Throws if the array name is required but not specified
-               Warns if probe has more than one name for the given array.
-  Caller     : General
-  Status     : Deprecate
-
-=cut
-
-sub get_probename {
-  my ($self, $arrayname) = @_;
-  deprecate('Will be removed in e94. Probes are unique within an array, use $probe->name instead');
-  return $self->name;
-}
-
-
-
-=head2 get_all_complete_names
-
-  Args       : None
-  Example    : my @compnames = @{$probe->get_all_complete_names()};
-  Description: Retrieves all complete names for this probe. The complete name
-               is a concatenation of the array name, the probeset name and the
-               probe name.
-  Returntype : Arrayref of strings
-  Exceptions : None
-  Caller     : Used by web for the names like here: http://www.ensembl.org/Homo_sapiens/Transcript/Oligos?db=core;g=ENSG00000139618;r=13:32315474-32400266;t=ENST00000470094
-  Status     : Deprecated
-
-=cut
-
-sub get_all_complete_names {
-  my $self = shift;
-
-  deprecate('Will be removed in e94. Probes are unique now in an Array and ProbeSet. Use $probe->get_full_name instead');
-  my $probeset;
-
-  if (defined $self->probeset && $self->probeset->name) {
-    $probeset = ':' . $self->probeset->name . ':';
-  } else {
-    $probeset = ':';
-  }
-
-  my $complete_name = $self->Array->name . $probeset . $self->name;
-  return [$complete_name];
-}
-
-=head2 get_full_name
-
-  Args       : None
-  Example    : my $full_name = $probe->get_full_name;
-  Description: Retrieves the full name for this probe. The complete name
-               is a concatenation of the array name, the probeset name and the
-               probe name.
-  Returntype : string
-  Exceptions : None
-  Caller     : Used by web for the names like here: http://www.ensembl.org/Homo_sapiens/Transcript/Oligos?db=core;g=ENSG00000139618;r=13:32315474-32400266;t=ENST00000470094
-  Status     : Stable
-
-=cut
-
-sub get_full_name {
-  my $self = shift;
-
-  my $probeset;
-
-  if (defined $self->probeset && $self->probeset->name) {
-    $probeset = ':' . $self->probeset->name . ':';
-  } else {
-    $probeset = ':';
-  }
-
-  my $full_name = $self->Array->name . $probeset . $self->name;
-  return $full_name;
-}
-
-=head2 get_complete_name
-
-   Arg [1]    : string - array name
-   Example    : my $compname = $probe->get_complete_name('Array-1');
-   Description: For a given array, retrieve the complete name for this probe.
-   Returntype : string
-   Exceptions : Throws if the array name not specified or not known for this probe
-   Caller     : General
-   Status     : Deprecated
-
-=cut
-
-sub get_complete_name {
-   my $self = shift;
-   my $arrayname = shift;
-
-    deprecate(
-        "get_complete_name has been deprecated and will be removed in Ensembl
-        release 93."
-    );
-
-   throw('Must provide and array name argument to retreive the complete name') if ! defined $arrayname;
-   if($arrayname ne $self->array->name){
-    throw "Probe linked to " .$self->array->name. ", not to $arrayname. "
-   }
-   my $probename = $self->name;
-
-   my $probeset = '';
-   if($self->probeset()){
-     $probeset = $self->probeset->name.':';
-   }
-   return "$arrayname:$probeset$probename";
-}
-
 =head2 probe_set
 
   Arg [1]    : (optional) Bio::EnsEMBL::Funcgen::ProbeSet
@@ -744,6 +459,349 @@ sub description {
   return $self->{'description'};
 }
 
+=head2 fetch_all_ProbeTranscriptMappings
+
+  Arg[0]     : none
+  Example    : $probe->fetch_all_mapped_Transcripts;
+  Description: Returns all mappings of this probe to transcripts.
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::ProbeTranscriptMapping objects
+  Exceptions : none
+  Caller     : general
+  Status     : at risk
+
+=cut
+
+sub fetch_all_ProbeTranscriptMappings {
+  my $self = shift;
+  return $self->adaptor->db->get_ProbeTranscriptMappingAdaptor->fetch_all_by_probe_id($self->dbID);
+}
+
+=head2 get_full_name
+
+  Args       : None
+  Example    : my $full_name = $probe->get_full_name;
+  Description: Retrieves the full name for this probe. The complete name
+               is a concatenation of the array name, the probeset name and the
+               probe name.
+  Returntype : string
+  Exceptions : None
+  Caller     : Used by web for the names like here: http://www.ensembl.org/Homo_sapiens/Transcript/Oligos?db=core;g=ENSG00000139618;r=13:32315474-32400266;t=ENST00000470094
+  Status     : Stable
+
+=cut
+
+sub get_full_name {
+  my $self = shift;
+
+  my $probeset;
+
+  if (defined $self->probeset && $self->probeset->name) {
+    $probeset = ':' . $self->probeset->name . ':';
+  } else {
+    $probeset = ':';
+  }
+
+  my $full_name = $self->Array->name . $probeset . $self->name;
+  return $full_name;
+}
+
+###############################################################################
+#               Boulevard of Broken Dreams (Deprecated methods)
+###############################################################################
+
+######
+# e92
+######
+=head2 get_all_Transcript_DBEntries
+
+  Arg[0]     : optional - Bio::EnsEMBL::Transcript to filter DBEntries on.
+  Example    : my @transc_dbentries = @{ $set_feature->get_all_Transcript_DBEntries };
+  Description: Retrieves ensembl Transcript DBEntries (xrefs) for this Storable.
+               This does _not_ include the corresponding translations
+               DBEntries (see get_all_DBLinks).
+
+               This method will attempt to lazy-load DBEntries from a
+               database if an adaptor is available and no DBEntries are present
+               on the Storable (i.e. they have not already been added or
+               loaded).
+  Returntype : Listref of Bio::EnsEMBL::DBEntry objects
+  Exceptions : none
+  Caller     : general
+  Status     : Deprecated (Remove: e92) 
+
+=cut
+
+sub get_all_Transcript_DBEntries {
+  my $self = shift;
+  deprecate(
+    "get_all_Transcript_DBEntries has been deprecated and will be removed in Ensembl release 92."
+        . " Please use fetch_all_ProbeTranscriptMappings instead."
+  );
+  return $self->fetch_all_ProbeTranscriptMappings;
+}
+
+######
+# e93
+######
+
+=head2 get_complete_name
+
+   Arg [1]    : string - array name
+   Example    : my $compname = $probe->get_complete_name('Array-1');
+   Description: For a given array, retrieve the complete name for this probe.
+   Returntype : string
+   Exceptions : Throws if the array name not specified or not known for this probe
+   Caller     : General
+   Status     : Deprecated (Remove: e93) 
+
+=cut
+
+sub get_complete_name {
+   my $self = shift;
+   my $arrayname = shift;
+
+    deprecate(
+        "get_complete_name has been deprecated and will be removed in Ensembl
+        release 93."
+    );
+
+   throw('Must provide and array name argument to retreive the complete name') if ! defined $arrayname;
+   if($arrayname ne $self->array->name){
+    throw "Probe linked to " .$self->array->name. ", not to $arrayname. "
+   }
+   my $probename = $self->name;
+
+   my $probeset = '';
+   if($self->probeset()){
+     $probeset = $self->probeset->name.':';
+   }
+   return "$arrayname:$probeset$probename";
+}
+
+######
+# e94
+######
+
+=head2 _array_chip_id
+
+  Arg [1]    : Optional
+  Example    : $probe->
+  Description: 
+  Returntype : 
+  Caller     : General
+  Status     : Deprecate (Remove: e94)
+
+=cut
+
+sub _array_chip_id {
+    my $self = shift;
+    deprecate('Remove: e94. Probes are linked to one Array only. array_chip is not needed anymore');
+    $self->{'_array_chip_id'} = shift if @_;
+    return $self->{'_array_chip_id'};
+}
+
+=head2 array_chip
+
+  Arg [1]    : Optional - ArrayChip dbID
+  Example    : $probe->
+  Description: Getter/Setter for ArrayChip dbID for this Probe
+  Returntype : String - ArrayChip dbID
+  Caller     : General
+  Status     : Deprecate (Remove: e94) 
+
+=cut
+
+sub array_chip {
+    my ($self, $array_chip) = @_;
+    deprecate('Remove e94: Probes are linked to one Array only. array_chip is not needed anymore');
+
+    if (defined $array_chip) {
+      $self->{_array_chip} = $array_chip;
+    }
+    if (! defined $self->{_array_chip}) {
+      $self->{_array_chip} = $self->adaptor->db->get_ArrayChipAdaptor->fetch_by_dbID($self->_array_chip_id);
+    }
+    if (! defined $self->{_array_chip}) {
+      die("Probe was not linked to an array chip!");
+    }
+
+    return $self->{_array_chip};
+}
+
+=head2 add_array_chip_probename
+
+  Arg [1]    : string - probe name
+  Arg [2]    : Bio::EnsEMBL::Funcgen::Array
+  Example    : $probe->add_array_chip_probename($probename, $array);
+  Description: Adds a probe name / array pair to a probe, allowing incremental
+               generation of a probe.
+  Returntype : None
+  Exceptions : None
+  Caller     : General,
+               Probe->new(),
+               ProbeAdaptor->_obj_from_sth(),
+               AffyProbeAdaptor->_obj_from_sth()
+  Status     : Deprecated (Remove: e94) 
+
+=cut
+
+sub add_array_chip_probename {
+  deprecate('Remove: e94. Probes are linked to one Array only. array_chip is not needed anymore');
+  my $self = shift;
+  my ($probename, $array) = @_;
+  $self->{arrays}     ||= {};
+  $self->{probenames} ||= {};
+
+  if(! (ref($array) && $array->isa('Bio::EnsEMBL::Funcgen::Array'))){
+    throw('You must pass a valid Bio::EnsEMBL::Funcgen::Array. ')
+  }
+  
+  $self->{arrays}->{$array->name}           = $array;
+#   $self->{arrays}->{$ac_dbid}           = $array;
+  $self->{probenames}->{$array->name} ||= [];
+  push @{$self->{probenames}->{$array->name}}, $probename;
+  return;
+#  $self->{arrays}     ||= {};
+#  $self->{probenames} ||= {};
+#
+#  if(! (ref($array) && $array->isa('Bio::EnsEMBL::Funcgen::Array'))){
+#    throw('You must pass a valid Bio::EnsEMBL::Funcgen::Array. ')
+#  }
+#
+#  $self->{arrays}->{$array->name}           = $array;
+#  $self->{probenames}->{$array->name} ||= [];
+#  push @{$self->{probenames}->{$array->name}}, $probename;
+#
+#  return;
+}
+
+
+=head2 get_all_Arrays
+
+  Args       : None
+  Example    : my $arrays = $probe->get_all_Arrays();
+  Description: Returns all arrays that this probe is part of. Only works if the
+               probe was retrieved from the database or created using
+               add_Array_probename (rather than add_arrayname_probename).
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::Array objects
+  Exceptions : None
+  Caller     : General
+  Status     : Depracted (Remove: e94) 
+
+=cut
+
+sub get_all_Arrays {
+  my $self = shift;
+  deprecate('Remove: e94. Probes are now only part of 1 array, use $probe->array');
+  return [$self->{array}];
+  
+}
+
+
+=head2 get_names_Arrays
+
+  Args       : None
+  Example    : my %name_array_pairs = %{$probe->get_names_Arrays};
+  Description: Returns Array name hash
+  Returntype : hashref of probe name Bio::EnsEMBL::Funcgen::Array pairs
+  Exceptions : None
+  Caller     : General
+  Status     : Deprecated (Remove: e94) 
+
+=cut
+
+sub get_names_Arrays {
+  my $self = shift;
+  deprecate('Will be removed in e94. Probes are now only part of 1 array, use $probe->Array->name instead ');
+  return {$self->{array}->name,$self->{array}};
+}
+
+=head2 get_all_probenames
+
+  Arg [1]    : Optional - list of array names, defaults to all available
+  Example    : my @probenames = @{$probe->get_all_probenames()};
+  Description: Retrieves all names for this probe. Only makes sense for probes
+               which share identical sequence for a given probeset and array.
+               This can either be:
+               1 A non-probeset array where probes with different names but identical
+                 sequence have beem merged, this is only possible if the probes in question
+                 share the same Array but are on seaprate ArrayChips.
+               2 If they are part of a probeset (i.e. Affy probes), in which case
+                 get_all_complete_names() would be more appropriate.
+  Returntype : Arrayref of strings
+  Exceptions : None
+  Caller     : General
+  Status     : Deprecated (Remove: e94) 
+
+=cut
+
+sub get_all_probenames {
+  my $self        = shift;
+  deprecate('Remove: e94. Probes are unique within an array');
+  return([$self->name]);
+  my @array_names = @_;
+
+  if (! @array_names) {
+    @array_names = keys %{$self->{'probenames'}};
+  }
+
+  my @probe_names;
+  foreach my $current_array_name (@array_names) {
+    push @probe_names, @{$self->{'probenames'}->{$current_array_name}};
+  }
+  return \@probe_names;
+}
+
+=head2 get_probename
+
+  Arg [1]    : string - array name
+  Example    : my $probename = $probe->get_probename('Array-1');
+  Description: For a given array, retrieve the name for this probe.
+  Returntype : string
+  Exceptions : Throws if the array name is required but not specified
+               Warns if probe has more than one name for the given array.
+  Caller     : General
+  Status     : Deprecate (Remove: e94) 
+
+=cut
+
+sub get_probename {
+  my ($self, $arrayname) = @_;
+  deprecate('Remove: e94. Probes are unique within an array, use $probe->name instead');
+  return $self->name;
+}
+
+
+
+=head2 get_all_complete_names
+
+  Args       : None
+  Example    : my @compnames = @{$probe->get_all_complete_names()};
+  Description: Retrieves all complete names for this probe. The complete name
+               is a concatenation of the array name, the probeset name and the
+               probe name.
+  Returntype : Arrayref of strings
+  Exceptions : None
+  Caller     : Used by web for the names like here: http://www.ensembl.org/Homo_sapiens/Transcript/Oligos?db=core;g=ENSG00000139618;r=13:32315474-32400266;t=ENST00000470094
+  Status     : Deprecated (Remove: e94) 
+
+=cut
+
+sub get_all_complete_names {
+  my $self = shift;
+
+  deprecate('Remove: e94. Probes are unique now in an Array and ProbeSet. Use $probe->get_full_name instead');
+  my $probeset;
+
+  if (defined $self->probeset && $self->probeset->name) {
+    $probeset = ':' . $self->probeset->name . ':';
+  } else {
+    $probeset = ':';
+  }
+
+  my $complete_name = $self->Array->name . $probeset . $self->name;
+  return [$complete_name];
+}
 
 # =head2 feature_count
 #
@@ -769,49 +827,6 @@ sub description {
 #   return $self->{feature_count};
 # }
 
-=head2 get_all_Transcript_DBEntries
 
-  Arg[0]     : optional - Bio::EnsEMBL::Transcript to filter DBEntries on.
-  Example    : my @transc_dbentries = @{ $set_feature->get_all_Transcript_DBEntries };
-  Description: Retrieves ensembl Transcript DBEntries (xrefs) for this Storable.
-               This does _not_ include the corresponding translations
-               DBEntries (see get_all_DBLinks).
-
-               This method will attempt to lazy-load DBEntries from a
-               database if an adaptor is available and no DBEntries are present
-               on the Storable (i.e. they have not already been added or
-               loaded).
-  Returntype : Listref of Bio::EnsEMBL::DBEntry objects
-  Exceptions : none
-  Caller     : general
-  Status     : at risk
-
-=cut
-
-sub get_all_Transcript_DBEntries {
-  my $self = shift;
-  deprecate(
-    "get_all_Transcript_DBEntries has been deprecated and will be removed in Ensembl release 92."
-        . " Please use fetch_all_ProbeTranscriptMappings instead."
-  );
-  return $self->fetch_all_ProbeTranscriptMappings;
-}
-
-=head2 fetch_all_ProbeTranscriptMappings
-
-  Arg[0]     : none
-  Example    : $probe->fetch_all_mapped_Transcripts;
-  Description: Returns all mappings of this probe to transcripts.
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::ProbeTranscriptMapping objects
-  Exceptions : none
-  Caller     : general
-  Status     : at risk
-
-=cut
-
-sub fetch_all_ProbeTranscriptMappings {
-  my $self = shift;
-  return $self->adaptor->db->get_ProbeTranscriptMappingAdaptor->fetch_all_by_probe_id($self->dbID);
-}
 
 1;

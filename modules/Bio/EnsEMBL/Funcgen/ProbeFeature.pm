@@ -37,15 +37,15 @@ genomic mapping.
 use Bio::EnsEMBL::Funcgen::ProbeFeature;
 
 my $feature = Bio::EnsEMBL::Funcgen::ProbeFeature->new
- (
-	-PROBE         => $probe,
-	-MISMATCHCOUNT => 0,
-	-SLICE         => $chr_1_slice,
-	-START         => 1000000,
-	-END           => 1000024,
-	-STRAND        => -1,
-  -ANALYSIS      => $analysis,
-  -CIGAR_STRING  => '1U2M426D2M1m21M',
+(
+ -PROBE         => $probe,
+ -MISMATCHCOUNT => 0,
+ -SLICE         => $chr_1_slice,
+ -START         => 1000000,
+ -END           => 1000024,
+ -STRAND        => -1,
+ -ANALYSIS      => $analysis,
+ -CIGAR_STRING  => '1U2M426D2M1m21M',
  );
 
 =head1 DESCRIPTION
@@ -137,7 +137,7 @@ sub new {
   Returntype : Bio::EnsEMBL::Funcgen::ProbeFeature
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -145,46 +145,24 @@ sub new_fast {
   bless ($_[1], $_[0]);
 }
 
-=head2 probeset
 
-  Arg [1]    : (optional) string - probeset
-  Example    : my $probeset = $feature->probeset();
-  Description: Getter and setter for the probeset for this feature. Shortcut
-               for $feature->probe->probeset(), which should be used instead.
-			   Probeset is not persisted if set with this method.
+=head2 probe_set_id
+
+  Arg [1]    : (optional) string - probe_set_id
+  Example    : my $probe_set = $pf->probe_set_i();
+  Description: Getter and setter for the probeset for this ProbeFeature.
   Returntype : string
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
-             : Use $feature->probe->probeset() because this may be removed
+  Status     : Stable
 
 =cut
-
-sub probeset {
-  my $self = shift;
-
-  $self->{'probeset'} = shift if @_;
-
-  if (! $self->{'probeset'}) {
-    $self->{'probeset'} = $self->probe->probe_set;
-  }
-  return $self->{'probeset'};
-}
-
-
-#Only ever needs to be set in _objs_from_sth
-#This is to allow linkage of probe_feature glyphs without retrieving the probeset.
-# DEPRECATED Use probe_set_id
-sub probeset_id {
-  my $self = shift;
-  return $self->probe_set_id;
-}
 
 sub probe_set_id {
   my $self = shift;
   
   if (! defined $self->{'_probe_set_id'}) {
-    my $probe_set = $self->probeset;
+    my $probe_set = $self->probe_set;
     if (defined $probe_set) {
       $self->{'_probe_set_id'} = $probe_set->dbID;
     }
@@ -192,10 +170,26 @@ sub probe_set_id {
   return $self->{'_probe_set_id'};
 }
 
-# probe_set is more logical.
+=head2 probe_set
+
+  Arg [1]    : (optional) string - probe_set
+  Example    : my $probeset = $pf->probe_set();
+  Description: Getter and setter for the probeset for this ProbeFeature.
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
 sub probe_set {
   my $self = shift;
-  return $self->probeset;
+  $self->{'probe_set'} = shift if @_;
+
+  if (! $self->{'probe_set'}) {
+    $self->{'probe_set'} = $self->probe->probe_set;
+  }
+  return $self->{'probe_set'};
 }
 
 =head2 mismatchcount
@@ -206,7 +200,7 @@ sub probe_set {
   Returntype : int
   Exceptions : None
   Caller     : General
-  Status     : High Risk
+  Status     : Stable
 
 =cut
 
@@ -224,6 +218,7 @@ sub mismatchcount {
   Returntype : int
   Exceptions : None
   Caller     : General
+  Status     : Stable
 
 =cut
 sub hit_id {
@@ -240,6 +235,7 @@ sub hit_id {
   Returntype : Enum[String] - Either 'genomic' or 'transcript'
   Exceptions : None
   Caller     : General
+  Status     : Stable
 
 =cut
 sub source {
@@ -256,7 +252,7 @@ sub source {
   Returntype : str
   Exceptions : None
   Caller     : General
-  Status     : High Risk
+  Status     : Stable
 
 =cut
 
@@ -277,7 +273,7 @@ sub cigar_string {
   Returntype : Bio::EnsEMBL::Funcgen::Probe
   Exceptions : None
   Caller     : General
-  Status     : at risk
+  Status     : Stable
 
 =cut
 
@@ -305,7 +301,7 @@ sub probe {
   Returntype : int
   Exceptions : None
   Caller     : General
-  Status     : at risk
+  Status     : Stable
 
 =cut
 
@@ -316,10 +312,10 @@ sub probe_id {
 
 =head2 summary_as_hash
 
-  Example       : $probe_feature_summary = $probe_feature->summary_as_hash;
-  Description   : Retrieves a textual summary of this ProbeFeature.
-  Returns       : Hashref of descriptive strings
-  Status        : Intended for internal use (REST)
+  Example    : $probe_feature_summary = $probe_feature->summary_as_hash;
+  Description: Retrieves a textual summary of this ProbeFeature.
+  Returns    : Hashref of descriptive strings
+  Status     : Stable
 
 =cut
 
@@ -335,6 +331,7 @@ sub summary_as_hash {
       $arrays{$names_Arrays->{$name}->name} = $probe->get_probename($names_Arrays->{$name}->name);
     }
   }
+
   my $ps_name = 'Not part of a Probe Set';
   $ps_name = $probe->probe_set->name if(defined $probe->probe_set);
 
@@ -345,10 +342,67 @@ sub summary_as_hash {
     seq_region_name         => $self->seq_region_name,
     feature_type            => 'ProbeFeature',
     probe_set               => $ps_name,
-#probe_set               => $self->name,
     probe_length            => $probe->length,
     array_probe_names       => \%arrays
    };
+}
+
+###############################################################################
+#                       Eden (Deprecated Methods)
+###############################################################################
+
+##########
+# e94
+##########
+
+#Only ever needs to be set in _objs_from_sth
+#This is to allow linkage of probe_feature glyphs without retrieving the probeset.
+# DEPRECATED Use probe_set_id
+
+=head2 probeset
+
+  Arg [1]    : (optional) string - probeset_id
+  Example    : my $probeset = $feature->probeset_id();
+  Description: Getter and setter for the probeset_id for this feature. Shortcut
+               for $feature->probe->probeset_id(), which should be used instead.
+			   Probeset is not persisted if set with this method.
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : Deprecated (Remove: e94)
+
+=cut
+
+sub probeset_id {
+  my $self = shift;
+  deprecate('Remove: e94. Use $pf->probe_set_id instead');
+  return $self->probe_set_id;
+}
+
+=head2 probeset
+
+  Arg [1]    : (optional) string - probeset
+  Example    : my $probeset = $feature->probeset();
+  Description: Getter and setter for the probeset for this feature. Shortcut
+               for $feature->probe->probeset(), which should be used instead.
+			   Probeset is not persisted if set with this method.
+  Returntype : string
+  Exceptions : None
+  Caller     : General
+  Status     : Deprecated (Remove: e94)
+
+=cut
+
+sub probeset {
+  my $self = shift;
+  deprecate('Remove: e94. Use $pf->probe_set instead');
+
+  $self->{'probe_set'} = shift if @_;
+
+  if (! $self->{'probe_set'}) {
+    $self->{'probe_set'} = $self->probe->probe_set;
+  }
+  return $self->{'probe_set'};
 }
 
 1;

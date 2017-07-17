@@ -396,7 +396,7 @@ sub probe_count {
   Returntype : Listref of array_chip ids
   Exceptions : Throws if none retrieved
   Caller     : General
-  Status     : At Risk
+  Status     : Deprecated (Remove e94)
 
 =cut
 
@@ -426,7 +426,7 @@ sub get_array_chip_ids {
   Returntype : Arrays of ArrayChip objects
   Exceptions : Throws exception if none found for array_id
   Caller     : General
-  Status     : High Risk - migrate to ArrayChip.pm
+  Status     : Deprecated (Remove e94)
 
 =cut
 
@@ -456,7 +456,7 @@ sub get_ArrayChips {
   Returntype : Hashref
   Exceptions : Throws exception if no design_id defined, warns if not part of array
   Caller     : General
-  Status     : At risk
+  Status     : Deprecated (Remove e94)
 
 =cut
 
@@ -472,7 +472,6 @@ sub get_ArrayChip_by_design_id {
   return $achip;
 }
 
-
 =head2 add_ArrayChip
 
   Arg [1]    : mandatory - Bio::EnsEMBL::Funcgen::ArrayChip
@@ -481,7 +480,7 @@ sub get_ArrayChip_by_design_id {
   Returntype : None
   Exceptions : Throws if arg not a Bio::EnsEMBL::Funcgen::ArrayChip, or Array not stored
   Caller     : General
-  Status     : Ar risk
+  Status     : Deprecated (Remove: e94)
 
 =cut
 
@@ -510,7 +509,7 @@ sub add_ArrayChip {
   Returntype : list
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : Deprecated (Remove: 94)
 
 =cut
 

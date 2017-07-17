@@ -38,9 +38,9 @@ a chip/slide within an array,  of which the physical manifestation is an Experim
  use Bio::EnsEMBL::Funcgen::ArrayChip;
 
  my $ec = Bio::EnsEMBL::Funcgen::ArrayChip->new(
-                    							 -ARRAY_ID  => $array->dbID(),
-					                    		 -NAME      => $desc,
-                                                 -DESIGN_ID => $design_id,
+     -ARRAY_ID  => $array->dbID(),
+     -NAME      => $desc,
+     -DESIGN_ID => $design_id,
 							                   );
 
 #add more methods here?
@@ -77,10 +77,10 @@ use base qw(Bio::EnsEMBL::Funcgen::Storable);
 
 
   Example    : my $array_chip = Bio::EnsEMBL::Funcgen::ArrayChip->new
-                 (
-							    -ARRAY_ID  => $array->dbID(),
-							    -NAME      => $desc,
-                  -DESIGN_ID => $design_id,
+  (
+   -ARRAY_ID  => $array->dbID(),
+   -NAME      => $desc,
+   -DESIGN_ID => $design_id,
 							   );	
   Description: Creates a new Bio::EnsEMBL::Funcgen::ArrayChip object.
   Returntype : Bio::EnsEMBL::Funcgen::ArrayChip
@@ -95,7 +95,7 @@ sub new {
   my $class  = ref($caller) || $caller;
   my $self   = $class->SUPER::new(@_);
 
-  deprecate('Will be removed in e94. A probe is unique and only linked to 1 Array. Therefore linking table array_chip will be removed');
+  deprecate('Remove: e94. A probe is unique and only linked to 1 Array. Therefore linking table array_chip will be removed');
 
   my ($array_id, $name,  $design_id, $array)
     = rearrange( ['ARRAY_ID', 'NAME', 'DESIGN_ID', 'ARRAY'], @_ );
@@ -135,14 +135,14 @@ sub new {
   Returntype : Int
   Exceptions : None
   Caller     : General
-  Status     : Stable
+  Status     : Deprecated (Remove: e94)
 
 =cut
 
 sub array_id {
     my $self     = shift;
     my $array_id = shift;
-  deprecate('Will be removed in e94. A probe is unique and only linked to 1 Array. Therefore linking table array_chip will be removed');
+  deprecate('Remove: e94. A probe is unique and only linked to 1 Array. Therefore linking table array_chip will be removed');
     
     if (defined $array_id) {
       $self->{'array_id'} = $array_id;
@@ -157,12 +157,12 @@ sub array_id {
   Returntype : String
   Exceptions : None
   Caller     : General
-  Status     : Stable
+  Status     : Deprecated (Remove: e94)
 
 =cut
 
 sub name { 
-  deprecate('Will be removed in e94. A probe is unique and only linked to 1 Array. Therefore linking table array_chip will be removed');
+  deprecate('Remove: e94. A probe is unique and only linked to 1 Array. Therefore linking table array_chip will be removed');
   return shift->{name}; 
 }
 
@@ -173,12 +173,12 @@ sub name {
   Returntype : String
   Exceptions : None
   Caller     : General
-  Status     : Stable
+  Status     : Deprecated (Remove: e94)
 
 =cut
 
 sub design_id {  
-  deprecate('Will be removed in e94. A probe is unique and only linked to 1 Array. Therefore linking table array_chip will be removed');
+  deprecate('Remove: e94. A probe is unique and only linked to 1 Array. Therefore linking table array_chip will be removed');
   return shift->{design_id}; 
 }
 
@@ -190,13 +190,13 @@ sub design_id {
   Returntype : Bio::EnsEMBL::Funcgen::Array
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Deprecated (Remove: e94)
 
 =cut
 
 sub get_Array {
   my $self = shift;
-  deprecate('Will be removed in e94. A probe is unique and only linked to 1 Array. Therefore linking table array_chip will be removed');
+  deprecate('Remove: e94. A probe is unique and only linked to 1 Array. Therefore linking table array_chip will be removed');
 
   if(! defined $self->{'array'}){
     $self->{'array'} = $self->adaptor->db->get_ArrayAdaptor()->fetch_by_dbID($self->array_id());
