@@ -248,7 +248,11 @@ sub regulatory_evidence {
   Arg [1]    : String - Class of feature e.g. 'annotated'
                or 'motif'
   Arg [2]    : Bio::EnsEMBL::Funcgen::Epigenome - The epigenome for which 
-               the evidence for it regulatory activity is requested.
+               the evidence for its regulatory activity is requested.
+               
+               If no epigenome is provided, it will return a summary that
+               can be used for the regulatory build track on the Ensembl
+               website.
   Example    : 
   Description: Getter for the regulatory_evidence for this feature.
   Returntype : ARRAYREF
@@ -267,6 +271,11 @@ sub get_RegulatoryEvidence {
     throw("Feature class string ('annotated' or 'motif') not defined!");
   }
   
+  if (! defined $epigenome) {
+	# Hack, so we get a summary for the regulatory build track until the
+	# current data issues have been fixed.
+	$epigenome = $self->adaptor->db->get_EpigenomeAdaptor->fetch_by_name('Lung');
+  }
   $self->_assert_epigenome_ok($epigenome);
   my $regulatory_activity = $self->regulatory_activity_for_epigenome($epigenome);
   
