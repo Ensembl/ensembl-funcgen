@@ -26,6 +26,12 @@ A year after deprecation (4 Ensembl releases), the method is removed from the AP
  - Bio::EnsEMBL::Funcgen::DBSQL::**RegulatoryFeatureAdaptor**::*fetch_all_by_Slice_Activity()*
  - Bio::EnsEMBL::Funcgen::DBSQL::**FeatureSetAdaptor**::*fetch_attribute_set_config_by_FeatureSet()*
  - Bio::EnsEMBL::Funcgen::**FeatureSet**::*is_attribute_set()*
+ - Bio::EnsEMBL::Funcgen::Parsers::**InputSet**
+ - Bio::EnsEMBL::Funcgen::Parsers::**Bed**
+ - Bio::EnsEMBL::Funcgen::Parsers::**GFF**
+ - Bio::EnsEMBL::Funcgen::Parsers::**InputSet**
+ - Bio::EnsEMBL::Funcgen::Parsers::**MAGE**
+ - Bio::EnsEMBL::Funcgen::Parsers::**Nimblegen** 
 
 ### Removed in Ensembl Release 89 ###
  - Bio::EnsEMBL::Funcgen::**ResultSet**::*replicate()*
