@@ -62,9 +62,9 @@ sub generate_stable_id_assignments {
   # Go through overlaps in order of increasing overlap length. This means that you should always
   # overwrite an overlap with a later one.
   # 
-  # The overlap length is in column 12, so the index is 11.
+  # The overlap length is in column 13, so the index is 12.
   sub cmp_overlaps {
-    return $a->[11] <=> $b->[11];
+    return $a->[12] <=> $b->[12];
   }
   
   my %old_pref = ();
