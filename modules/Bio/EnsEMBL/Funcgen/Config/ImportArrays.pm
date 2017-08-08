@@ -432,6 +432,11 @@ use vars qw( %Config );
         'WholeGenome',
         'OligoArray_012795',
         'AGILENT_059389_Custom_Chicken_GE_8X60k',
+	'Arraystar',
+	'WholeGenome_4x44k',
+	'CHO2agl44v1',
+	'037725_HamArrayV',
+	'Agilent_8x15K',
       ],
     },
 
@@ -560,6 +565,38 @@ use vars qw( %Config );
        ],
      },
 
+    #NIMBLEGEN
+
+    IMPORT_NIMBLEGEN_ARRAYS =>
+     {
+       IIDREGEXP => '^>(\S+):(\S+)',
+
+       IFIELDORDER => {
+          -name       => 1,
+          -array_chip => 0,
+          -array      => 0,
+       },
+
+       ARRAY_PARAMS => {
+         'Default' => {
+           -vendor => 'NIMBLEGEN',
+           -format  => 'EXPRESSION',
+           -type    => 'OLIGO',
+           -class   => 'NIMBLEGEN_MODENCODE',
+
+            -is_probeset_array      => 0,
+            -is_linked_array        => 1,
+            -has_sense_interrogation  => 0,
+
+         },
+       },
+
+       INPUT_FORMAT => 'FASTA',
+
+       ARRAYS_WITH_DEFAULT_PARAMS => [
+        'NimbleGen_13K',
+       ],
+     },
 
     #PHALANX
     #Human
