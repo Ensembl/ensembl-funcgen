@@ -64,7 +64,7 @@ sub pipeline_analyses {
 	      . qq( --dbname #tracking_db_name#   )
 	      . qq( --bam_file #bam_file#         )
 	  },
-	  -rc_name => 'normal_2GB',
+	  -rc_name => '10gb_1cpu',
       },
       {   -logic_name => 'done_qc_proportion_of_reads_in_peaks',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
