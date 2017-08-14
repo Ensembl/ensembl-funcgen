@@ -68,10 +68,6 @@ use base qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor );
 use vars qw( @EXPORT ); #require Exporter is done in BaseAdaptor
 @EXPORT = (@{$DBI::EXPORT_TAGS{'sql_types'}});
 
-use base qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor );
-
-
-
 #required for subclass adaptor store and _obj_from_sth methods
 
 =head2 fetch_all_by_FeatureType_FeatureSets

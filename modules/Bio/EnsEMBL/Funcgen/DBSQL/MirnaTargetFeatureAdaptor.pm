@@ -136,47 +136,46 @@ sub _objs_from_sth {
   # schema_build of the feature we're retrieving.
 
 
-	my ($sa, @features, $seq_region_id, %fset_hash, %slice_hash, %sr_name_hash, %sr_cs_hash, %ftype_hash);
-	$sa = $dest_slice->adaptor->db->get_SliceAdaptor() if($dest_slice);#don't really need this if we're using DNADBSliceAdaptor?
-	$sa ||= $self->db->get_SliceAdaptor();
+    my ($sa, @features, %fset_hash, %slice_hash, %sr_name_hash, %sr_cs_hash, %ftype_hash);
+    $sa = $dest_slice->adaptor->db->get_SliceAdaptor() if($dest_slice);#don't really need this if we're using DNADBSliceAdaptor?
+    $sa ||= $self->db->dnadb->get_SliceAdaptor;
 
-	my $fset_adaptor = $self->db->get_FeatureSetAdaptor();
-	my $ftype_adaptor = $self->db->get_FeatureTypeAdaptor();
-	my (
-	    $external_feature_id,
-      $efg_seq_region_id,
-	    $seq_region_start,
+    my $fset_adaptor  = $self->db->get_FeatureSetAdaptor();
+    my $ftype_adaptor = $self->db->get_FeatureTypeAdaptor();
+    my (
+      $external_feature_id,
+      $seq_region_id,
+      $seq_region_start,
       $seq_region_end,
-	    $seq_region_strand,
+      $seq_region_strand,
       $fset_id,
-		  $display_label,
+      $display_label,
       $ftype_id,
-		  $interdb_stable_id,
+      $interdb_stable_id,
       $accession,
       $evidence,
       $method,
       $supporting_information,
-	   );
+    );
 
-	$sth->bind_columns(
-					   \$external_feature_id,
-             \$efg_seq_region_id,
-					   \$seq_region_start,
-             \$seq_region_end,
-					   \$seq_region_strand,
-             \$display_label,
-					   \$ftype_id,
-             \$fset_id,
-					   \$interdb_stable_id,
-             \$accession,
-             \$evidence,
-             \$method,
-             \$supporting_information,
-					  );
+    $sth->bind_columns(
+        \$external_feature_id,
+        \$seq_region_id,
+        \$seq_region_start,
+        \$seq_region_end,
+        \$seq_region_strand,
+        \$display_label,
+        \$ftype_id,
+        \$fset_id,
+        \$interdb_stable_id,
+        \$accession,
+        \$evidence,
+        \$method,
+        \$supporting_information,
+      );
 
-
-	#abstract to BaseFeatureAdaptor?
-	my ($asm_cs, $cmp_cs, $asm_cs_name, $asm_cs_vers, $cmp_cs_name, $cmp_cs_vers);
+    #abstract to BaseFeatureAdaptor?
+    my ($asm_cs, $cmp_cs, $asm_cs_name, $asm_cs_vers, $cmp_cs_name, $cmp_cs_vers);
 
 	if ($mapper) {
 		$asm_cs      = $mapper->assembled_CoordSystem();
@@ -199,20 +198,6 @@ sub _objs_from_sth {
 
 
   FEATURE: while ( $sth->fetch() ) {
-	  # Need to build a slice adaptor cache here?
-	  # Would only ever want to do this if we enable mapping between assemblies??
-	  # Or if we supported the mapping between cs systems for a given schema_build,
-	  # which would have to be handled by the core api
-
-	  #get core seq_region_id
-	  $seq_region_id = $self->get_core_seq_region_id($efg_seq_region_id);
-
-	  if(! $seq_region_id){
-  		warn "Cannot get slice for eFG seq_region_id $efg_seq_region_id\n".
-  		  "The region you are using is not present in the current dna DB";
-  		next;
-	  }
-
 
 	  #Get the FeatureSet/Type objects
 	  $fset_hash{$fset_id}   = $fset_adaptor->fetch_by_dbID($fset_id) if(! exists $fset_hash{$fset_id});

@@ -245,24 +245,18 @@ sub _default_where_clause {
 sub _objs_from_sth {
   my ($self, $sth, $mapper, $dest_slice) = @_;
   
-  throw('Using a mapper is not supported!') if (defined $mapper);
-
-  #For EFG this has to use a dest_slice from core/dnaDB whether specified or not.
-  #So if it not defined then we need to generate one derived from the species_name and schema_build of the feature we're retrieving.
-  # This code is ugly because caching is used to improve speed
-
-  my $sa = ($dest_slice) ? $dest_slice->adaptor->db->get_SliceAdaptor() : $self->db->get_SliceAdaptor();
+  my $sa = ($dest_slice) ? $dest_slice->adaptor->db->get_SliceAdaptor() : $self->db->dnadb->get_SliceAdaptor;
 
   my $feature_type_adaptor     = $self->db->get_FeatureTypeAdaptor();
   my $analysis_adaptor         = $self->db->get_AnalysisAdaptor();  
   my $regulatory_build_adaptor = $self->db->get_RegulatoryBuildAdaptor();
   
-  my (@feature_from_sth, $seq_region_id);
+  my @feature_from_sth;
   my (%fset_hash, %slice_hash, %sr_name_hash, %sr_cs_hash, %ftype_hash);
 
   my (
     $sth_fetched_dbID,
-    $sth_fetched_efg_seq_region_id,
+    $seq_region_id,
     $sth_fetched_seq_region_start,
     $sth_fetched_seq_region_end,
     $sth_fetched_seq_region_strand,
@@ -278,7 +272,7 @@ sub _objs_from_sth {
 
   $sth->bind_columns (
     \$sth_fetched_dbID,
-    \$sth_fetched_efg_seq_region_id,
+    \$seq_region_id,
     \$sth_fetched_seq_region_start,
     \$sth_fetched_seq_region_end,
     \$sth_fetched_seq_region_strand,
@@ -309,13 +303,13 @@ sub _objs_from_sth {
     unless ($dest_slice_start == 1 && $dest_slice_strand == 1) {
 
       if ($dest_slice_strand == 1) {
-	$sth_fetched_seq_region_start       = $sth_fetched_seq_region_start - $dest_slice_start + 1;
-	$sth_fetched_seq_region_end         = $sth_fetched_seq_region_end   - $dest_slice_start + 1;
+        $sth_fetched_seq_region_start    = $sth_fetched_seq_region_start - $dest_slice_start + 1;
+        $sth_fetched_seq_region_end      = $sth_fetched_seq_region_end   - $dest_slice_start + 1;
       } else {
-	my $tmp_seq_region_start = $sth_fetched_seq_region_start;
-	$sth_fetched_seq_region_start        = $dest_slice_end - $sth_fetched_seq_region_end       + 1;
-	$sth_fetched_seq_region_end          = $dest_slice_end - $tmp_seq_region_start + 1;
-	$sth_fetched_seq_region_strand      *= -1;
+        my $tmp_seq_region_start = $sth_fetched_seq_region_start;
+        $sth_fetched_seq_region_start    = $dest_slice_end - $sth_fetched_seq_region_end       + 1;
+        $sth_fetched_seq_region_end      = $dest_slice_end - $tmp_seq_region_start + 1;
+        $sth_fetched_seq_region_strand   *= -1;
       }
     }
   };
@@ -347,18 +341,21 @@ sub _objs_from_sth {
   
   ROW: while ( $sth->fetch() ) {
   
-    $seq_region_id = $self->get_core_seq_region_id($sth_fetched_efg_seq_region_id);
-
-    if (! $seq_region_id) {
-      warn "Cannot get slice for eFG seq_region_id $sth_fetched_efg_seq_region_id\n".
-	"The region you are using is not present in the current dna DB";
-      next;
-    }
-
-    $ftype_hash{$sth_fetched_feature_type_id}     = $feature_type_adaptor     ->fetch_by_dbID($sth_fetched_feature_type_id) if ! exists $ftype_hash{$sth_fetched_feature_type_id};
+    $ftype_hash{$sth_fetched_feature_type_id} = $feature_type_adaptor->fetch_by_dbID($sth_fetched_feature_type_id) 
+      if ! exists $ftype_hash{$sth_fetched_feature_type_id};
 
     # Get the slice object
     my ($slice, $seq_region_name) = $fetch_slice_with_cache->($seq_region_id);
+    
+    if ($mapper) {
+    
+      # If we are here, that means that there is a feature on a seq region 
+      # that is not toplevel.
+      #
+      # This is a data issue and should never happen.
+      #s
+      throw("There are features in the database that haven't been mapped to toplevel!");
+    }
     
     # If a destination slice was provided convert the coords
     if ($dest_slice) {
@@ -366,12 +363,12 @@ sub _objs_from_sth {
       $project_slice_coordinates_to_destination_slice->();
 
       my $current_feature_not_on_destination_slice = 
-	$sth_fetched_seq_region_end < 1 
-	|| $sth_fetched_seq_region_start > $dest_slice_length
-	|| ( $dest_slice_sr_name ne $seq_region_name );
+        $sth_fetched_seq_region_end < 1 
+        || $sth_fetched_seq_region_start > $dest_slice_length
+        || ( $dest_slice_sr_name ne $seq_region_name );
 
       next ROW
-	if ($current_feature_not_on_destination_slice);
+      if ($current_feature_not_on_destination_slice);
 
       $slice = $dest_slice;
     }
@@ -684,7 +681,9 @@ sub _fetch_all_by_Slice_Epigenomes_Activity_RegulatoryBuild {
   }
   
   #explicit super call, just in case we ever re-implement in here
-  my $all_regulatory_features = $self->SUPER::fetch_all_by_Slice($slice);
+#   my $all_regulatory_features = $self->SUPER::fetch_all_by_Slice($slice);
+  my $all_regulatory_features = $self->SUPER::fetch_all_by_Slice_constraint($slice);
+  
   
   if (defined $selected_regulatory_build) {
     #

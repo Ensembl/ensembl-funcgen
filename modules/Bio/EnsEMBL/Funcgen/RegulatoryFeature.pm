@@ -72,7 +72,7 @@ use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
-use base qw( Bio::EnsEMBL::Funcgen::SetFeature );
+use base qw( Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable );
 
 =head2 new
 
@@ -185,6 +185,17 @@ sub display_label {
   }
 
   return $self->{display_label};
+}
+
+sub feature_type {
+  my $self = shift;
+  my $value = shift;
+
+  if(defined $value) {
+    $self->{'feature_type'}  = $value;
+  }
+
+  return $self->{feature_type};
 }
 
 =head2 display_id

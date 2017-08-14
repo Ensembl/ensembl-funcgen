@@ -120,11 +120,11 @@ sub _objs_from_sth {
 	my $sa           = $self->db->dnadb->get_SliceAdaptor;
 	my $fset_adaptor = $self->db->get_FeatureSetAdaptor;
 
-	my ($seq_region_id, @features, %fset_hash,
+	my (@features, %fset_hash,
       %slice_hash, %sr_name_hash, %sr_cs_hash);
 
 	my (
-	    $annotated_feature_id,  $efg_seq_region_id,
+	    $annotated_feature_id,  $seq_region_id,
 	    $seq_region_start,      $seq_region_end,
 	    $seq_region_strand,     $fset_id,
       $display_label,         $score,
@@ -132,7 +132,7 @@ sub _objs_from_sth {
      );
 
 	$sth->bind_columns(
-                     \$annotated_feature_id,  \$efg_seq_region_id,
+                     \$annotated_feature_id,  \$seq_region_id,
                      \$seq_region_start,      \$seq_region_end,
                      \$seq_region_strand,     \$fset_id,
                      \$display_label,         \$score,
@@ -164,18 +164,6 @@ sub _objs_from_sth {
 
 
  FEATURE: while ( $sth->fetch ) {
-    #get core seq_region_id
-	  #This was failing if we are using a 'comparable' CoordSystem as we don't have a cache
-	  #for the new DB. Fixed with the tmp seq_region_cache
-	  $seq_region_id = $self->get_core_seq_region_id($efg_seq_region_id);
-
-	  if (! $seq_region_id) {
-      warn "Cannot get slice for eFG seq_region_id $efg_seq_region_id\n".
-        "The region you are using is not present in the current seq_region_cache.\n".
-          "Maybe you need to redefine the dnadb or update_DB_for_release?";
-      next;
-	  }
-
 	  #Get the FeatureSet object
 	  $fset_hash{$fset_id} = $fset_adaptor->fetch_by_dbID($fset_id) if(! exists $fset_hash{$fset_id});
 

@@ -355,8 +355,7 @@ sub _objs_from_sth {
 
 
 	# This code is ugly because caching is used to improve speed
-	my ($seq_region_id);
-	my $sa = $self->db->get_SliceAdaptor();
+	my $sa = $self->db->dnadb->get_SliceAdaptor;
 	$sa = $dest_slice->adaptor->db->get_SliceAdaptor() if($dest_slice);#don't really need this if we're using DNADBSliceAdaptor?
 
 	#Some of this in now probably overkill as we'll always be using the DNADB as the slice DB
@@ -367,7 +366,7 @@ sub _objs_from_sth {
 	my (%analysis_hash, %slice_hash, %sr_name_hash, %sr_cs_hash);
 
 	my (
-	    $probe_feature_id,  $efg_seq_region_id,
+	    $probe_feature_id,  $seq_region_id,
 	    $seq_region_start,  $seq_region_end,
 	    $seq_region_strand, $mismatches,
 		$probe_id,    	    $analysis_id,
@@ -376,7 +375,7 @@ sub _objs_from_sth {
 		$source
 	);
 	$sth->bind_columns(
-          \$probe_feature_id,  \$efg_seq_region_id,
+          \$probe_feature_id,  \$seq_region_id,
           \$seq_region_start,  \$seq_region_end,
           \$seq_region_strand, \$probe_id,
           \$analysis_id,       \$mismatches,
@@ -421,23 +420,6 @@ sub _objs_from_sth {
 		#Group instead?
 		next if($last_pfid && ($last_pfid == $probe_feature_id));
 		$last_pfid = $probe_feature_id;
-
-		#get core seq_region_id
-		$seq_region_id = $self->get_core_seq_region_id($efg_seq_region_id);
-
-		if(! $seq_region_id){
-		  #warn "Cannot get slice for eFG seq_region_id $efg_seq_region_id for probe_feature $probe_feature_id\n".
-		  #"The region you are using is not present in the current dna DB";
-		  #This can happen as non slice fetches only restrict on cs_id
-		  #Hence for the non-versioned cs's there may be seq_regions which have
-		  #disappeared in the current assembly and hence won't be in the sr cache.
-		  #We could get around this by adding an sr_id IN(all the sr_ids from this DB)
-		  #but this will most likely just slow things down for data which is not present on
-		  #just one assembly
-		  #So preferable to clear old data!
-		  next;
-		}
-
 
 		# Get the analysis object
 		my $analysis = $analysis_hash{$analysis_id} ||= $aa->fetch_by_dbID($analysis_id);
