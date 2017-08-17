@@ -32,8 +32,10 @@ insert into temp_meta_coord_with_translated_ids
 select 
   meta_coord.table_name,
   coord_system.core_coord_system_id,
-  meta_coord.max_length
+  min(meta_coord.max_length)
 from meta_coord join coord_system using (coord_system_id)
+group by 
+  meta_coord.table_name, coord_system.core_coord_system_id
 order by 
   meta_coord.table_name
 ;
