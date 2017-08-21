@@ -80,7 +80,7 @@ sub new {
 
   Arg[1]     : Optional String: Root path of dbfile data directory
   Example    : $rset_adaptor->dbfile_data_root('/data/root/dir/);
-  Description: This allows the root path to be defined. If an adaptor uses 
+  Description: This allows the root path to be defined. If an adaptor uses
                files, it will use this to find its data.
   Returntype : String
   Exceptions : None
@@ -96,7 +96,7 @@ sub dbfile_data_root {
     $root =~ s/\/$//o;  # strip off trailing /, as this is present in dbfile_registry.path
     $self->{dbfile_data_root} = $root;
   }
- 
+
   return $self->{dbfile_data_root} || '';  # Avoids concat warning
 }
 
@@ -117,11 +117,11 @@ sub dbfile_data_root {
 sub is_stored_and_valid {
   my ($self, $class, $obj, $name) = @_;
   assert_ref($obj, $class, $name);
-  
+
   if (! $obj->can('is_stored')) {
     return defined $obj->dbID
   }
-  
+
   throw("$obj is not stored") if ! $obj->is_stored($self);
   return;
 }
@@ -179,64 +179,55 @@ sub get_available_adaptors{
     my $self = shift;
 
     my %pairs = (
-        'Alignment'              => 'Bio::EnsEMBL::Funcgen::DBSQL::AlignmentAdaptor',
-        
-        'Peak'                   => 'Bio::EnsEMBL::Funcgen::DBSQL::PeakAdaptor',
-        'PeakCalling'            => 'Bio::EnsEMBL::Funcgen::DBSQL::PeakCallingAdaptor',
-        'DataFile'               => 'Bio::EnsEMBL::Funcgen::DBSQL::DataFileAdaptor',
-
-        'Chance'                 => 'Bio::EnsEMBL::Funcgen::DBSQL::ChanceAdaptor',
-        'FastQC'                 => 'Bio::EnsEMBL::Funcgen::DBSQL::FastQCAdaptor',
-        'PhantomPeak'            => 'Bio::EnsEMBL::Funcgen::DBSQL::PhantomPeakAdaptor',
-        'Frip'                   => 'Bio::EnsEMBL::Funcgen::DBSQL::FripAdaptor',
-        
-        'BindingMatrix'          => 'Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixAdaptor',
-        'Epigenome'              => 'Bio::EnsEMBL::Funcgen::DBSQL::EpigenomeAdaptor',
-        'DBEntry'                => 'Bio::EnsEMBL::Funcgen::DBSQL::DBEntryAdaptor',
-        'ExampleFeature'         => 'Bio::EnsEMBL::Funcgen::DBSQL::ExampleFeatureAdaptor',
-        'Experiment'             => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor',
-        'ExperimentalGroup'      => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalGroupAdaptor',
-        'ExternalFeature'        => 'Bio::EnsEMBL::Funcgen::DBSQL::ExternalFeatureAdaptor',
-        'FeatureSet'             => 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureSetAdaptor',
-        'FeatureType'            => 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor',
-        'MirnaTargetFeature'     => 'Bio::EnsEMBL::Funcgen::DBSQL::MirnaTargetFeatureAdaptor',
-        'MotifFeature'           => 'Bio::EnsEMBL::Funcgen::DBSQL::MotifFeatureAdaptor',
-        
-        'Idr'                     => 'Bio::EnsEMBL::Funcgen::DBSQL::IdrAdaptor',
-        'ExecutionPlan'           => 'Bio::EnsEMBL::Funcgen::DBSQL::ExecutionPlanAdaptor',
-
-        'Array'                         => 'Bio::EnsEMBL::Funcgen::DBSQL::ArrayAdaptor',
-        'ArrayChip'                     => 'Bio::EnsEMBL::Funcgen::DBSQL::ArrayChipAdaptor',
-        'Probe'                         => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeAdaptor',
-        'ProbeFeature'                  => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeFeatureAdaptor',
-        'ProbeSet'                      => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeSetAdaptor',
-        'ProbeTranscriptMapping'        => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeTranscriptMappingAdaptor',
-        'ProbeSetTranscriptMapping'     => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeSetTranscriptMappingAdaptor',
-        'ProbeFeatureTranscriptMapping' => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeFeatureTranscriptMappingAdaptor',
-        'ProbeSequence'                 => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeSequenceAdaptor',
-
-        'RegulatoryBuild'        => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildAdaptor',
-        'RegulatoryFeature'      => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor',
-        'RegulatoryActivity'     => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryActivityAdaptor',
-        'RegulatoryEvidenceLink' => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryEvidenceLinkAdaptor',
-        
-        'ReadFileExperimentalConfiguration' => 'Bio::EnsEMBL::Funcgen::DBSQL::ReadFileExperimentalConfigurationAdaptor',
+        'Alignment'                         => 'Bio::EnsEMBL::Funcgen::DBSQL::AlignmentAdaptor',
+        'Analysis'                          => 'Bio::EnsEMBL::DBSQL::AnalysisAdaptor',
+        'Array'                             => 'Bio::EnsEMBL::Funcgen::DBSQL::ArrayAdaptor',
+        'ArrayChip'                         => 'Bio::EnsEMBL::Funcgen::DBSQL::ArrayChipAdaptor',
+        'BindingMatrix'                     => 'Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixAdaptor',
+        'BindingMatrixFrequencies'          => 'Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixFrequenciesAdaptor',
+        'Chance'                            => 'Bio::EnsEMBL::Funcgen::DBSQL::ChanceAdaptor',
+        'CrisprSitesFile'                   => 'Bio::EnsEMBL::Funcgen::DBSQL::CrisprSitesFileAdaptor',
+        'DataFile'                          => 'Bio::EnsEMBL::Funcgen::DBSQL::DataFileAdaptor',
+        'DBEntry'                           => 'Bio::EnsEMBL::Funcgen::DBSQL::DBEntryAdaptor',
+        'DNAMethylationFile'                => 'Bio::EnsEMBL::Funcgen::DBSQL::DNAMethylationFileAdaptor',
+        'Epigenome'                         => 'Bio::EnsEMBL::Funcgen::DBSQL::EpigenomeAdaptor',
+        'ExampleFeature'                    => 'Bio::EnsEMBL::Funcgen::DBSQL::ExampleFeatureAdaptor',
+        'ExecutionPlan'                     => 'Bio::EnsEMBL::Funcgen::DBSQL::ExecutionPlanAdaptor',
+        'Experiment'                        => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor',
+        'ExperimentalGroup'                 => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalGroupAdaptor',
+        'ExternalFeature'                   => 'Bio::EnsEMBL::Funcgen::DBSQL::ExternalFeatureAdaptor',
+        'FastQC'                            => 'Bio::EnsEMBL::Funcgen::DBSQL::FastQCAdaptor',
+        'FeatureSet'                        => 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureSetAdaptor',
+        'FeatureType'                       => 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor',
+        'Frip'                              => 'Bio::EnsEMBL::Funcgen::DBSQL::FripAdaptor',
+        'Idr'                               => 'Bio::EnsEMBL::Funcgen::DBSQL::IdrAdaptor',
+        'MetaContainer'                     => 'Bio::EnsEMBL::DBSQL::MetaContainer',
+        'MetaCoordContainer'                => 'Bio::EnsEMBL::DBSQL::MetaCoordContainer',
+        'MirnaTargetFeature'                => 'Bio::EnsEMBL::Funcgen::DBSQL::MirnaTargetFeatureAdaptor',
+        'MotifFeature'                      => 'Bio::EnsEMBL::Funcgen::DBSQL::MotifFeatureAdaptor',
+        'Peak'                              => 'Bio::EnsEMBL::Funcgen::DBSQL::PeakAdaptor',
+        'PeakCalling'                       => 'Bio::EnsEMBL::Funcgen::DBSQL::PeakCallingAdaptor',
+        'PhantomPeak'                       => 'Bio::EnsEMBL::Funcgen::DBSQL::PhantomPeakAdaptor',
+        'Probe'                             => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeAdaptor',
+        'ProbeFeature'                      => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeFeatureAdaptor',
+        'ProbeFeatureTranscriptMapping'     => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeFeatureTranscriptMappingAdaptor',
+        'ProbeSequence'                     => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeSequenceAdaptor',
+        'ProbeSet'                          => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeSetAdaptor',
+        'ProbeSetTranscriptMapping'         => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeSetTranscriptMappingAdaptor',
+        'ProbeTranscriptMapping'            => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeTranscriptMappingAdaptor',
         'ReadFile'                          => 'Bio::EnsEMBL::Funcgen::DBSQL::ReadFileAdaptor',
-
-        'SegmentationFeature'    => 'Bio::EnsEMBL::Funcgen::DBSQL::SegmentationFeatureAdaptor',
-
-        'MetaCoordContainer'      => 'Bio::EnsEMBL::DBSQL::MetaCoordContainer',
-        'UnmappedObject'          => 'Bio::EnsEMBL::DBSQL::UnmappedObjectAdaptor',
-        'Analysis'                => 'Bio::EnsEMBL::DBSQL::AnalysisAdaptor',
-        'MetaContainer'           => 'Bio::EnsEMBL::DBSQL::MetaContainer',
-
-        'CrisprSitesFile'         => 'Bio::EnsEMBL::Funcgen::DBSQL::CrisprSitesFileAdaptor',
-        'DNAMethylationFile'      => 'Bio::EnsEMBL::Funcgen::DBSQL::DNAMethylationFileAdaptor',
-        'SegmentationFile'        => 'Bio::EnsEMBL::Funcgen::DBSQL::SegmentationFileAdaptor',
+        'ReadFileExperimentalConfiguration' => 'Bio::EnsEMBL::Funcgen::DBSQL::ReadFileExperimentalConfigurationAdaptor',
+        'RegulatoryActivity'                => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryActivityAdaptor',
+        'RegulatoryBuild'                   => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildAdaptor',
+        'RegulatoryEvidenceLink'            => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryEvidenceLinkAdaptor',
+        'RegulatoryFeature'                 => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor',
+        'SegmentationFeature'               => 'Bio::EnsEMBL::Funcgen::DBSQL::SegmentationFeatureAdaptor',
+        'SegmentationFile'                  => 'Bio::EnsEMBL::Funcgen::DBSQL::SegmentationFileAdaptor',
+        'TranscriptionFactor'               => 'Bio::EnsEMBL::Funcgen::DBSQL::TranscriptionFactorAdaptor',
+        'TranscriptionFactorComplex'        => 'Bio::EnsEMBL::Funcgen::DBSQL::TranscriptionFactorComplexAdaptor',
+        'UnmappedObject'                    => 'Bio::EnsEMBL::DBSQL::UnmappedObjectAdaptor',
     );
-
     return (\%pairs);
 }
 
 1;
-
