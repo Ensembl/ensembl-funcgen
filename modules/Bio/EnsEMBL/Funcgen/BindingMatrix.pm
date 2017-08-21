@@ -82,8 +82,7 @@ use base qw( Bio::EnsEMBL::Funcgen::Storable );
 
   Arg [-name]       : Scalar - Name of matrix
   Arg [-analysis]   : Bio::EnsEMBL::Analysis - analysis describing how the matrix was obtained
-  Arg [-frequencies]: String or Arrayref (Mandatory) - A string or a 2d array of frequencies
-                      representing the ACGT bases (in that order) across the sequence.
+  Arg [-source]     : String (Mandatory) - A string describing the source of the matrix, i.e. SELEX
   Arg [-threshold]  : Scalar (optional) - Numeric minimum relative affinity for binding sites of this matrix
   Arg [-description]: Scalar (optional) - Descriptiom of matrix
   Example    : my $matrix = Bio::EnsEMBL::Funcgen::BindingMatrix->new(
@@ -99,37 +98,36 @@ use base qw( Bio::EnsEMBL::Funcgen::Storable );
 
 =cut
 
-
-# What we want to do is allow a 2d matrix array to be passed or the frequencies string
-# Each would populate the other dynamically, no need to calc weights until they are required
-# as this will slow down construction i.e. track display. 
-
 sub new {
   my $caller    = shift;
   my $obj_class = ref($caller) || $caller;
   my $self      = $obj_class->SUPER::new(@_);
   
-  my ( $name, $analysis, $freqs, $desc, $ftype, $thresh ) = rearrange
-   (['NAME', 'ANALYSIS', 'FREQUENCIES', 'DESCRIPTION', 'FEATURE_TYPE', 'THRESHOLD'], @_);
+  my ( $name, $analysis, $source, $desc, $ftype, $thresh ) = rearrange
+   (['NAME', 'ANALYSIS', 'SOURCE', 'DESCRIPTION', 'FEATURE_TYPE', 'THRESHOLD'], @_);
   
   throw('Must supply a -name parameter')        if ! defined $name;
-  throw('Must supply a -frequencies parameter') if ! defined $freqs;
+  throw('Must supply a -source parameter') if ! defined $source;
   assert_ref($analysis, 'Bio::EnsEMBL::Analysis', 'Analysis');
+  # print '*****************';
+  # print $name;
+  # print '*****************';
   assert_ref($ftype, 'Bio::EnsEMBL::Funcgen::FeatureType', 'FeatureType');
 
   $self->{name}         = $name;
   $self->{analysis}     = $analysis;
+  $self->{source}       = $source;
   $self->{feature_type} = $ftype;
 
-  if(check_ref($freqs, 'ARRAY')){
-    $self->{freq_matrix} = $freqs;
-    map { check_ref($_, 'ARRAY'); } @$freqs; # 2d array check
-    $self->_validate_matrix;  # Also sets length
-  }
-  else{  # Assume string
-    # defer validation to speed up track display
-    $self->{tmp_frequencies}  = $freqs;    
-  }
+  # if(check_ref($freqs, 'ARRAY')){
+  #   $self->{freq_matrix} = $freqs;
+  #   map { check_ref($_, 'ARRAY'); } @$freqs; # 2d array check
+  #   $self->_validate_matrix;  # Also sets length
+  # }
+  # else{  # Assume string
+  #   # defer validation to speed up track display
+  #   $self->{tmp_frequencies}  = $freqs;    
+  # }
 
   $self->{description} = $desc if defined $desc;
   $self->{threshold}   = $thresh if defined $thresh;
@@ -215,12 +213,10 @@ sub threshold {
 sub analysis { return shift->{analysis}; }
 
 
-=head2 frequencies
+=head2 source
 
-  Arg[1]     : Boolean - Reverse complement flag
-  Example    : print '>'.$matrix->name."\n".$matrix->frequencies;
-  Description: Getter for the frequencies attribute. Returns 4 lines 
-               of ACGT base frequencies for each position in the matrix.
+  Example    : print '>'.$matrix->name."\n".$matrix->source;
+  Description: Getter/Setter for source attribute
   Returntype : Scalar - string
   Exceptions : None
   Caller     : General
@@ -228,17 +224,10 @@ sub analysis { return shift->{analysis}; }
 
 =cut
 
-sub frequencies {
-  my $self      = shift;
-  my $revcomp   = shift;
-  my $attr_name = $revcomp ? 'rc_frequencies' : 'frequencies';
-
-  if(! defined $self->{$attr_name}){
-    $self->_build_matrix if defined $self->{tmp_frequencies};
-    $self->{$attr_name} = join("\n", map { join(' ', @{$_} )} @{$self->matrix($revcomp)});
-  }
- 
-  return $self->{$attr_name}; 
+sub source {
+  my $self = shift;
+  $self->{source} = shift if @_;
+  return $self->{source};
 }
 
 
@@ -275,7 +264,7 @@ sub _validate_matrix{
 }
 
 
-
+#TODO should this be here?
 sub frequency_matrix{ return shift->matrix(undef, shift); }
 
 sub weight_matrix{ return shift->matrix(1, shift); }

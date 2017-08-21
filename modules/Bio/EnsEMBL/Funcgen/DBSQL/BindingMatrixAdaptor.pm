@@ -183,8 +183,8 @@ sub _true_tables {
 =cut
 
 sub _columns {
-  return qw( bm.binding_matrix_id bm.name bm.analysis_id bm.frequencies
-             bm.description bm.feature_type_id bm.threshold);
+  return qw( bm.binding_matrix_id bm.name bm.analysis_id 
+             bm.description bm.feature_type_id bm.threshold bm.source);
 }
 
 
@@ -204,8 +204,8 @@ sub _columns {
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
 
-	my (@result, $matrix_id, $name, $analysis_id, $freq, $desc, $ftype_id, $thresh);
-	$sth->bind_columns(\$matrix_id, \$name, \$analysis_id, \$freq, \$desc, \$ftype_id, \$thresh);
+	my (@result, $matrix_id, $name, $analysis_id, $desc, $ftype_id, $thresh, $source);
+	$sth->bind_columns(\$matrix_id, \$name, \$analysis_id, \$desc, \$ftype_id, \$thresh, \$source);
 
 	my $ftype_adaptor = $self->db->get_FeatureTypeAdaptor;
 	my %ftype_cache;
@@ -228,10 +228,10 @@ sub _objs_from_sth {
 		 -dbID         => $matrix_id,
 		 -NAME         => $name,
 		 -ANALYSIS     => $analysis_cache{$analysis_id},
-		 -FREQUENCIES  => $freq,
-		 -DESCRIPTION  => $desc,
-		 -FEATURE_TYPE => $ftype_cache{$ftype_id},
-		 -THRESHOLD    => $thresh,
+     -DESCRIPTION  => $desc,
+     -FEATURE_TYPE => $ftype_cache{$ftype_id},
+     -THRESHOLD    => $thresh,
+		 -SOURCE       => $source,
 		 -ADAPTOR      => $self,
 		);
 
@@ -263,7 +263,7 @@ sub store {
 
   my $sth = $self->prepare("
 			INSERT INTO binding_matrix
-			(name, analysis_id, frequencies, description, feature_type_id, threshold)
+			(name, analysis_id, description, feature_type_id, threshold, source)
 			VALUES (?, ?, ?, ?, ?, ?)");
 
   my $s_matrix;
@@ -281,10 +281,10 @@ sub store {
 
 		$sth->bind_param(1, $matrix->name(),               SQL_VARCHAR);
 		$sth->bind_param(2, $matrix->analysis()->dbID(),   SQL_INTEGER);
-		$sth->bind_param(3, $matrix->frequencies(),        SQL_LONGVARCHAR);
-		$sth->bind_param(4, $matrix->description(),        SQL_VARCHAR);
-		$sth->bind_param(5, $matrix->feature_type->dbID(), SQL_INTEGER);
-		$sth->bind_param(6, $matrix->threshold(),          SQL_DOUBLE);
+    $sth->bind_param(3, $matrix->description(),        SQL_VARCHAR);
+    $sth->bind_param(4, $matrix->feature_type->dbID(), SQL_INTEGER);
+    $sth->bind_param(5, $matrix->threshold(),          SQL_DOUBLE);
+		$sth->bind_param(6, $matrix->source(),             SQL_VARCHAR);
 
 		$sth->execute();
 		$matrix->dbID($self->last_insert_id);
