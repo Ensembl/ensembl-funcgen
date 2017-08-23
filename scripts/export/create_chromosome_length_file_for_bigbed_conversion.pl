@@ -23,7 +23,7 @@ GetOptions (
 
 Bio::EnsEMBL::Registry->load_all($registry);
 
-my $slice_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'Slice');
+my $slice_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'core', 'Slice');
 my $all_slices = $slice_adaptor->fetch_all('toplevel');
 
 foreach my $current_slice (@$all_slices) {
