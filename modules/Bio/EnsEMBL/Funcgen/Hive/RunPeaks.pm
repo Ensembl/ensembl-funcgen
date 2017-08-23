@@ -249,7 +249,7 @@ sub write_output {
     return;
   }
   
-  $self->helper->rollback_FeatureSet($fset);
+#   $self->helper->rollback_FeatureSet($fset);
 
   my $af_adaptor = $fset->adaptor->db->get_AnnotatedFeatureAdaptor;    
   my $params     = {
