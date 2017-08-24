@@ -110,13 +110,14 @@ sub new {
     @_
     );
 
-
   # Mandatory attr checks
   throw('You must provide a name parameter') if ! defined $name;
   throw('You must provide a is_control parameter') if ! defined $is_control;
 
   assert_ref( $group,     'Bio::EnsEMBL::Funcgen::ExperimentalGroup' );
-  assert_ref( $epigenome, 'Bio::EnsEMBL::Funcgen::Epigenome' );
+  if (defined $epigenome) {
+    assert_ref( $epigenome, 'Bio::EnsEMBL::Funcgen::Epigenome' );
+  }
   assert_ref( $ftype,     'Bio::EnsEMBL::Funcgen::FeatureType' );
   assert_ref( $control,   'Bio::EnsEMBL::Funcgen::Experiment') if defined $control;
 
@@ -126,16 +127,10 @@ sub new {
   $self->{group}               = $group;
   $self->{control}             = $control if defined $control;
   $self->{is_control}          = $is_control;
-#  $self->{primary_design_type} = $p_dtype    if defined $p_dtype; #MGED term for primary design type
   $self->{description}         = $desc       if defined $desc;
   $self->{epigenome}           = $epigenome;
   $self->{feature_type}        = $ftype;
   $self->{archive_id}          = $archive_id;
-#  $self->{display_url}         = $url;
-
-  #Maintain setter funcs here as these are populated after initialisation
-#  $self->mage_xml_id($xml_id) if defined $xml_id;
-#  $self->mage_xml($xml)       if defined $xml;
 
   return $self;
 }
