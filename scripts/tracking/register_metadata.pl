@@ -27,7 +27,6 @@ use Bio::EnsEMBL::OntologyXref;
 use Bio::EnsEMBL::DBEntry;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Funcgen::DBSQL::TrackingAdaptor;
 use Bio::EnsEMBL::DBSQL::DBEntryAdaptor;
 use Getopt::Long;
 use File::Basename;
@@ -249,36 +248,25 @@ sub fetch_adaptors {
     my ($cfg) = @_;
     my %adaptors;
 
-    # Tracking DB hidden from user, hence no get_TrackingAdaptor method.
-    # TrackingAdaptor->new() does not YET accept DBAdaptor object
-    my $tracking_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::TrackingAdaptor->new(
+    my $dba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
         -user    => $cfg->{efg_db}->{user},
         -pass    => $cfg->{efg_db}->{pass},
         -host    => $cfg->{efg_db}->{host},
         -port    => $cfg->{efg_db}->{port},
         -dbname  => $cfg->{efg_db}->{dbname},
         -species => $cfg->{general}->{species},
-
-        #do we really need these??
-        -dnadb_user => $cfg->{dna_db}->{user},
-        -dnadb_pass => $cfg->{dna_db}->{pass},
-        -dnadb_host => $cfg->{dna_db}->{host},
-        -dnadb_port => $cfg->{dna_db}->{port},
-        -dnadb_name => $cfg->{dna_db}->{dbname},
-
     );
-
-    my $dba = $tracking_adaptor->db();
 
     $adaptors{epigenome}    = $dba->get_EpigenomeAdaptor();
     $adaptors{feature_type} = $dba->get_FeatureTypeAdaptor();
     $adaptors{analysis}     = $dba->get_AnalysisAdaptor();
     $adaptors{exp_group}    = $dba->get_ExperimentalGroupAdaptor();
     $adaptors{experiment}   = $dba->get_ExperimentAdaptor();
-    $adaptors{input_subset} = $dba->get_InputSubsetAdaptor();
+    $adaptors{read_file_experimental_configuration}    = $dba->get_ReadFileExperimentalConfigurationAdaptor();
+    $adaptors{read_file}    = $dba->get_ReadFileAdaptor();
+    
 
     $adaptors{db}       = $dba;
-    $adaptors{tracking} = $tracking_adaptor;
     $adaptors{db_entry} = Bio::EnsEMBL::DBSQL::DBEntryAdaptor->new($dba);
 
     return \%adaptors;
@@ -386,7 +374,7 @@ sub register {
     }
 
     # avoid passing too many parameters to subroutines
-    store_input_subset( $logger, $entry, $adaptors, $cfg, $analysis,
+    store_read_file( $logger, $entry, $adaptors, $cfg, $analysis,
         $epigenome, $experiment, $feature_type );
 
     $logger->info( "Successful Registration\n", 1, 1 );
@@ -489,7 +477,7 @@ sub store_experiment {
         $control_experiment
             = $adaptors->{experiment}->fetch_by_dbID($control_db_id);
     }
-
+    
     my $experiment = Bio::EnsEMBL::Funcgen::Experiment->new(
         -NAME               => $experiment_name,
         -EPIGENOME          => $epigenome,
@@ -508,17 +496,17 @@ sub store_experiment {
     return $experiment;
 }
 
-sub store_input_subset {
+sub store_read_file {
     my ( $logger, $entry, $adaptors, $cfg, $analysis, $epigenome, $experiment,
         $feature_type )
         = @_;
 
-    my $iss = $adaptors->{input_subset}
+    my $read_file = $adaptors->{read_file}
         ->fetch_by_name( $entry->{accession}, $experiment );
 
-    if ($iss) {
+    if ($read_file) {
         $logger->warning(
-            'Input subset entry for accession '
+            'A read file entry for accession '
                 . $entry->{accession}
                 . ' with experiment name '
                 . $experiment->{name}
@@ -526,34 +514,29 @@ sub store_input_subset {
             0, 1
         );
     }
-
-    $iss = Bio::EnsEMBL::Funcgen::InputSubset->new(
-        -name                 => $entry->{accession},
-        -analysis             => $analysis,
-        -epigenome            => $epigenome,
-        -experiment           => $experiment,
-        -feature_type         => $feature_type,
-        -is_control           => $entry->{is_control},
-        -biological_replicate => $entry->{br},
-        -technical_replicate  => $entry->{tr},
+    
+    use Bio::EnsEMBL::Funcgen::ReadFile;
+    use Bio::EnsEMBL::Funcgen::ReadFileExperimentalConfiguration;
+    
+    my $read_file_experimental_configuration = Bio::EnsEMBL::Funcgen::ReadFileExperimentalConfiguration->new(
+    
+      -read_file => Bio::EnsEMBL::Funcgen::ReadFile->new(
+          -name          => $entry->{accession},
+          -analysis      => $analysis,
+          -is_paired_end => undef,
+          -paired_with   => undef,
+          -file_size     => undef,
+          -read_length   => undef,
+          -md5sum        => $entry->{md5},
+          -file          => $entry->{local_url},
+          -notes         => $entry->{info},
+      ),
+      -experiment            => $experiment,
+      -biological_replicate  => $entry->{br},
+      -technical_replicate   => $entry->{tr}
     );
 
-    $adaptors->{input_subset}->store($iss);
-
-    # do this in schema
-    if ( !$entry->{download_url} ) {
-        $entry->{download_url} = 'Not Available';
-    }
-
-    my $tracking_info->{info} = {
-
-        availability_date => $cfg->{date},
-        download_url      => $entry->{download_url},
-        local_url => $entry->{local_url},
-        md5sum    => $entry->{md5},
-        notes     => $entry->{info},
-    };
-    $adaptors->{tracking}->store_tracking_info( $iss, $tracking_info );
+    $adaptors->{read_file_experimental_configuration}->store($read_file_experimental_configuration);
 
     return 1;
 }
