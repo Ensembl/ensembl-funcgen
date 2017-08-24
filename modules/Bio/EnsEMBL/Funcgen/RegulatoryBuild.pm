@@ -68,6 +68,8 @@ use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
+use base 'Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality';
+
 =head2 new
   Arg [-db] :
   Arg [-dbID] :
@@ -358,17 +360,6 @@ sub fetch_sample_RegulatoryFeature {
 }
 
 sub sample_regulatory_feature_id { return shift->_generic_get_or_set('sample_regulatory_feature_id', @_) }
-
-sub _generic_get_or_set {
-  my $self  = shift;
-  my $name  = shift;
-  my $value = shift;
-
-  if(defined $value) {
-    $self->{$name}  = $value;
-  }
-  return $self->{$name};
-}
 
 1;
 
