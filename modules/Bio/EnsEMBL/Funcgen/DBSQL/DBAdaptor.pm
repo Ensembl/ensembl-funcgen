@@ -117,6 +117,11 @@ sub dbfile_data_root {
 sub is_stored_and_valid {
   my ($self, $class, $obj, $name) = @_;
   assert_ref($obj, $class, $name);
+  
+  if (! $obj->can('is_stored')) {
+    return defined $obj->dbID
+  }
+  
   throw("$obj is not stored") if ! $obj->is_stored($self);
   return;
 }
