@@ -229,68 +229,65 @@ sub _columns {
 =cut
 
 sub _objs_from_sth {
-	my ($self, $sth) = @_;
+  my ($self, $sth) = @_;
 
-    my (@result,       $exp_id,     $name,
-        $group_id,     $control_id, $is_control,
-        $epigenome_id, $ft_id,      $archive_id,
-    );
+  my (
+    @result,       $exp_id,     $name,
+    $group_id,     $control_id, $is_control,
+    $epigenome_id, $ft_id,      $archive_id,
+  );
 
-
-	my $eg_adaptor   = $self->db->get_ExperimentalGroupAdaptor;
+  my $eg_adaptor   = $self->db->get_ExperimentalGroupAdaptor;
   my $epi_adaptor  = $self->db->get_EpigenomeAdaptor;
   my $ft_adaptor   = $self->db->get_FeatureTypeAdaptor;
   my $exp_adaptor  = $self->db->get_ExperimentAdaptor;
 
-    $sth->bind_columns( \$exp_id, \$name, \$group_id, \$control_id,
-        \$is_control, \$ft_id, \$epigenome_id, \$archive_id, );
-
+  $sth->bind_columns( 
+    \$exp_id, \$name, \$group_id, \$control_id,
+    \$is_control, \$ft_id, \$epigenome_id, \$archive_id
+  );
 
   my (%ftypes, %epigenomes, $control);
 
-	while ( $sth->fetch() ) {
+  while ( $sth->fetch() ) {
 
-	  my $group = $eg_adaptor->fetch_by_dbID($group_id);#cache these in ExperimentalGroupAdaptor
+    my $group = $eg_adaptor->fetch_by_dbID($group_id);#cache these in ExperimentalGroupAdaptor
+    my $current_epigenome = undef;
 
-    if(! exists $epigenomes{$epigenome_id}){
+    if(defined $epigenome_id && ! exists $epigenomes{$epigenome_id}) {
       $epigenomes{$epigenome_id} = $epi_adaptor->fetch_by_dbID($epigenome_id);
-    
       if(! defined $epigenomes{$epigenome_id}){
         throw("Could not fetch linked Epigenome (dbID: $epigenome_id) for Experiment:\t$name");
       }
+      $current_epigenome = $epigenomes{$epigenome_id};
     }
-      
-    if(! exists $ftypes{$ft_id}){
+
+    if(! exists $ftypes{$ft_id}) {
       $ftypes{$ft_id} = $ft_adaptor->fetch_by_dbID($ft_id);
-    
-      if(! defined $ftypes{$ft_id}){
+      if(! defined $ftypes{$ft_id}) {
         throw("Could not fetch linked FeatureType (dbID: $ft_id) for Experiment:\t$name");
       }
     }
 
     if($control_id) {
       $control = $exp_adaptor->fetch_by_dbID($control_id);
-    
       if(! $control) {
         throw("Could not fetch linked control Experiment (dbID: $control_id) for Experiment:\t$name");
       }
     }
 
-
-	  push @result, Bio::EnsEMBL::Funcgen::Experiment->new
-     (
+    push @result, Bio::EnsEMBL::Funcgen::Experiment->new(
       -DBID                => $exp_id,
       -ADAPTOR             => $self,
       -NAME                => $name,
       -FEATURE_TYPE        => $ftypes{$ft_id},
-      -EPIGENOME           => $epigenomes{$epigenome_id},
+      -EPIGENOME           => $current_epigenome,
       -ARCHIVE_ID          => $archive_id,
       -EXPERIMENTAL_GROUP  => $group,
       -CONTROL             => $control,
       -IS_CONTROL          => $is_control,
-     );
-	}
-	
+    );
+  }
   return \@result;
 }
 
