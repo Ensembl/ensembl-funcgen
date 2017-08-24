@@ -14,19 +14,14 @@
 -- limitations under the License.
 
 /**
-@header patch_??_??_?.sql - Modify schema to accomodate new motif pipeline
-@desc   
+@header patch_motif_d.sql - Create transcription_factor_complex table
+@desc Groups transcription factors into complexes
 */
 
-CREATE TABLE `binding_matrix_frequencies` (
-  `binding_matrix_frequencies_id` int(11) NOT NULL AUTO_INCREMENT,
-  `binding_matrix_id` int(11) NOT NULL,
-  `position` int(11) NOT NULL,
-  `nucleotide` varchar(2) NOT NULL,
-  `frequency` int(10) unsigned NOT NULL,
-  PRIMARY KEY (`binding_matrix_frequencies_id`)
+DROP TABLE IF EXISTS `transcription_factor_complex`;
+CREATE TABLE `transcription_factor_complex` (
+	`transcription_factor_complex_id` int(11) NOT NULL AUTO_INCREMENT,
+	`transcription_factor_id` int(11) NOT NULL,
+	PRIMARY KEY (`transcription_factor_complex_id`),
+	KEY `transcription_factor_id_idx` (`transcription_factor_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-ALTER TABLE `binding_matrix` DROP COLUMN `frequencies`;
-
-ALTER TABLE `binding_matrix` ADD COLUMN `source` VARCHAR(20) NOT NULL;
