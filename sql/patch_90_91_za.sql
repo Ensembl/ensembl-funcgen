@@ -43,7 +43,7 @@ from
   join data_set using (feature_set_id) 
   join supporting_set using (data_set_id) 
 where 
-  feature_set.type="annotated"
+  feature_set.type="annotated";
 
 -- patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_za.sql|');
