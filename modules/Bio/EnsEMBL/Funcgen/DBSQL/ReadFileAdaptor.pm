@@ -140,16 +140,17 @@ sub store {
       is_paired_end,
       paired_with,
       file_size,
-      read_length,
-      md5sum,
-      file,
-      notes
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
+      read_length
+    ) VALUES (?, ?, ?, ?, ?, ?)"
   );
   
   my $read_file_experimental_configuration_adaptor = $self->db->get_ReadFileExperimentalConfigurationAdaptor;
   
   foreach my $current_object (@object) {
+  
+    if (! defined $current_object) {
+      throw("Got undefined object!");
+    }
   
     $sth_store_object->bind_param( 1, $current_object->name,                    SQL_VARCHAR);
     $sth_store_object->bind_param( 2, $current_object->get_Analysis->dbID,      SQL_INTEGER);
@@ -157,9 +158,6 @@ sub store {
     $sth_store_object->bind_param( 4, $current_object->paired_with,             SQL_INTEGER);
     $sth_store_object->bind_param( 5, $current_object->file_size,               SQL_INTEGER);
     $sth_store_object->bind_param( 6, $current_object->read_length,             SQL_INTEGER);
-    $sth_store_object->bind_param( 7, $current_object->md5sum,                  SQL_VARCHAR);
-    $sth_store_object->bind_param( 8, $current_object->file,                    SQL_VARCHAR);
-    $sth_store_object->bind_param( 9, $current_object->notes,                   SQL_VARCHAR);
     
     $sth_store_object->execute;
     $current_object->dbID( $self->last_insert_id );

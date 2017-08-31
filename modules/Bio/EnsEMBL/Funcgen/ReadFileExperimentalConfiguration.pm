@@ -37,28 +37,44 @@ use warnings;
 
 use base 'Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality';
 
-sub _simple_accessor_fields {
-  return qw(
-    technical_replicate
-    biological_replicate
-  );
+sub _constructor_parameters {
+  return {
+    technical_replicate  => 'technical_replicate',
+    biological_replicate => 'biological_replicate',
+
+    read_file  => 'set_ReadFile',
+    experiment => 'set_Experiment',
+  }
 }
 
-sub _setter_fields {
-  return qw(
-    read_file
-    experiment
-  );
+sub _simple_accessors {
+  return [
+    { method_name => 'biological_replicate', hash_key => '_biological_replicate', },
+    { method_name => 'technical_replicate',  hash_key => '_technical_replicate',  },
+  ]
 }
 
-sub biological_replicate { return shift->_generic_get_or_set('biological_replicate', @_) }
-sub technical_replicate  { return shift->_generic_get_or_set('technical_replicate',  @_) }
+sub _get_methods {
+  return [
+    { method_name => 'get_Experiment',      hash_key    => 'experiment',    },
+    { method_name => 'get_ReadFile',        hash_key    => 'read_file',     },
+  ]
+}
 
-sub set_Experiment       { return shift->_generic_set('Experiment',  'Bio::EnsEMBL::Funcgen::Experiment', @_) }
-sub get_Experiment       { return shift->_generic_get('Experiment',  @_) }
-
-sub set_ReadFile { return shift->_generic_set('ReadFile',  'Bio::EnsEMBL::Funcgen::ReadFile', @_) }
-sub get_ReadFile { return shift->_generic_get('ReadFile',  @_) }
+sub _set_methods {
+  return [
+    {
+      method_name   => 'set_Experiment',
+      expected_type => 'Bio::EnsEMBL::Funcgen::Experiment',
+      hash_key      => 'experiment',
+    },
+    {
+      method_name   => 'set_ReadFile',
+      expected_type => 'Bio::EnsEMBL::Funcgen::ReadFile',
+      hash_key      => 'read_file'
+    },
+  ]
+}
 
 1;
 

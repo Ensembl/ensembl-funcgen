@@ -426,9 +426,9 @@ sub _logic_name_to_constraint {
 #but we could remove this and add this via _tables and the constraint methods
 #as it's not strictly a part of the data model for set features
 
-sub _default_where_clause {
-  return $_[0]->_main_table->[1].'.feature_set_id = fs.feature_set_id';
-}
+# sub _default_where_clause {
+#   return $_[0]->_main_table->[1].'.feature_set_id = fs.feature_set_id';
+# }
 
 
 =head2 _final_clause

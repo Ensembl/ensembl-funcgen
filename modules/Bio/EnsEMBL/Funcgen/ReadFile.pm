@@ -37,47 +37,85 @@ use warnings;
 
 use base 'Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality';
 
-sub _simple_accessor_fields {
-  return qw(
-    name
-    is_paired_end
-    paired_with
-    file_size
-    read_length
-    md5sum
-    file
-    notes
-  );
+sub _constructor_parameters {
+  return {
+    name          => 'name',
+    is_paired_end => 'is_paired_end',
+    paired_with   => 'paired_with',
+    file_size     => 'file_size',
+    read_length   => 'read_length',
+    md5sum        => 'md5sum',
+    file          => 'file',
+    notes         => 'notes',
+
+    analysis                             => 'set_Analysis',
+    read_file_experimental_configuration => 'set_ReadFileExperimentalConfiguration',
+  };
 }
 
-sub _setter_fields {
-  return qw(
-    analysis
-  );
+sub _simple_accessors {
+  return [
+    {
+      method_name => 'name',
+      hash_key    => '_name',
+    },
+    {
+      method_name => 'is_paired_end',
+      hash_key    => '_is_paired_end',
+    },
+    {
+      method_name => 'paired_with',
+      hash_key    => '_paired_with',
+    },
+    {
+      method_name => 'file_size',
+      hash_key    => '_file_size',
+    },
+    {
+      method_name => 'read_length',
+      hash_key    => '_read_length',
+    },
+    {
+      method_name => 'md5sum',
+      hash_key    => '_md5sum',
+    },
+    {
+      method_name => 'file',
+      hash_key    => '_file',
+    },
+    {
+      method_name => 'notes',
+      hash_key    => '_notes',
+    },
+  ]
 }
 
-sub name          { return shift->_generic_get_or_set('name',           @_) }
-sub is_paired_end { return shift->_generic_get_or_set('is_paired_end',  @_) }
-sub paired_with   { return shift->_generic_get_or_set('paired_with',    @_) }
-sub file_size     { return shift->_generic_get_or_set('file_size',      @_) }
-sub read_length   { return shift->_generic_get_or_set('read_length',    @_) }
-sub md5sum   { return shift->_generic_get_or_set('md5sum',    @_) }
-sub file   { return shift->_generic_get_or_set('file',    @_) }
-sub notes   { return shift->_generic_get_or_set('notes',    @_) }
-
-sub get_ReadFileExperimentalConfiguration { 
-  return shift->_generic_get('ReadFileExperimentalConfiguration',  @_) 
-}
-sub set_ReadFileExperimentalConfiguration { 
-  return shift->_generic_set(
-    'ReadFileExperimentalConfiguration', 
-    'Bio::EnsEMBL::Funcgen::ReadFileExperimentalConfiguration', @_
-  )
+sub _get_methods {
+  return [
+    {
+      method_name => 'get_Analysis',
+      hash_key    => 'analysis',
+    },
+    {
+      method_name => 'get_ReadFileExperimentalConfiguration',
+      hash_key    => 'read_file_experimental_configuration',
+    },
+  ]
 }
 
-sub set_Analysis { 
-  return shift->_generic_set('Analysis',  'Bio::EnsEMBL::Analysis', @_) 
+sub _set_methods {
+  return [
+    {
+      method_name   => 'set_Analysis',
+      expected_type => 'Bio::EnsEMBL::Analysis',
+      hash_key      => 'analysis',
+    },
+    {
+      method_name   => 'set_ReadFileExperimentalConfiguration',
+      expected_type => 'Bio::EnsEMBL::Funcgen::ReadFileExperimentalConfiguration',
+      hash_key      => 'read_file_experimental_configuration',
+    },
+  ]
 }
-sub get_Analysis { return shift->_generic_get('Analysis',  @_) }
 
 1;

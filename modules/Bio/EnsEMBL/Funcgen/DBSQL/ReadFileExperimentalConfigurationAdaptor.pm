@@ -60,6 +60,21 @@ sub _default_where_clause {
   return '';
 }
 
+sub fetch_all_by_read_file_id {
+  my $self = shift;
+  my $read_file_id = shift;
+
+  my $constraint = "rfec.read_file_id = ?";
+  $self->bind_param_generic_fetch($read_file_id, SQL_INTEGER);
+  
+  my $object_list = $self->generic_fetch($constraint);
+  
+  if (!$object_list || @$object_list==0) {
+    return;
+  }
+  return $object_list;
+}
+
 sub fetch_all_by_experiment_id {
   my $self = shift;
   my $experiment_id = shift;

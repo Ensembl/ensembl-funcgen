@@ -38,76 +38,216 @@ use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 
-=head2 new
-  Example      : 
-  Description : Constructor method
-  Returntype  : Bio::EnsEMBL::Funcgen::ReadFileExperimentalConfiguration
-  Exceptions  : None 
-  Caller      : General
-  Status      : Stable
-
-=cut
-
 sub new {
   my $caller = shift;
   my $class  = ref($caller) || $caller;
   my $self   = bless {}, $class;
-  
-  my @parameters = @_;
-  
-  my @simple_accessor_fields = $self->_simple_accessor_fields;
-  my @setter_fields          = $self->_setter_fields;
-  
-  push @simple_accessor_fields, 'db';
-  push @simple_accessor_fields, 'dbID';
-  
-  $self->init_fields(\@parameters, \@simple_accessor_fields);
-  $self->init_fields(\@parameters, \@setter_fields, 'set_');
-
+#   die "Test!\n";
+  $self->init(@_);
   return $self;
 }
 
-sub dbID                 { return shift->_generic_get_or_set('dbID', @_) }
-sub db                   { return shift->_generic_get_or_set('db',   @_) }
+sub init {
+  my $self = shift;
+  $self->_build_class_methods(@_);
+}
 
-sub init_fields {
+sub _build_class_methods {
+
+  my $self = shift;
+  my @parameters = @_;
+  
+  my $constructor_key_to_set_method = $self->_constructor_parameters;
+  
+  if (ref $constructor_key_to_set_method ne 'HASH') {
+    throw("_constructor_parameters in " . (ref $self) . " must return a hash reference!");
+  }
+  
+  $constructor_key_to_set_method->{db}   = 'db';
+  $constructor_key_to_set_method->{dbID} = 'dbID';
+  
+  my $package = ref $self;
+  my $is_constructed_flag = '__is_constructed';
+  
+  if (! defined $self->can($is_constructed_flag)) {
+  
+    $self->_build_simple_accessors;
+    $self->_build_fetch_methods;
+    $self->_build_get_methods;
+    $self->_build_set_methods;
+    
+    no strict;
+    *{$package . '::' . $is_constructed_flag} = sub { return 1 };
+    use strict;
+  }
+  $self->_init_fields(\@parameters, $constructor_key_to_set_method);
+}
+
+sub _constructor_parameters { return {} }
+sub _simple_accessors       { return [] }
+sub _fetch_methods          { return [] }
+sub _get_methods            { return [] }
+sub _set_methods            { return [] }
+
+sub dbID { return shift->_generic_get_or_set('dbID', @_) }
+sub db   { return shift->_generic_get_or_set('db',   @_) }
+
+sub _init_fields {
 
   my $self          = shift;
   my $parameter     = shift;
-  my $init_fields   = shift;
-  my $method_prefix = shift;
+  my $constructor_key_to_set_method = shift;
   
-  if (! defined $method_prefix) {
-    $method_prefix = '';
-  }
-  
-  my @value = rearrange([ @$init_fields ], @$parameter);
+  my @accepted_constructor_parameters = keys %$constructor_key_to_set_method;
+
+  my @value = rearrange([ @accepted_constructor_parameters ], @$parameter);
   
   for (my $index = 0; $index<@value; $index++) {
   
-    my $setter_method;
+    my $constructor_parameter_name = $accepted_constructor_parameters[$index];
+    my $value_to_set               = $value[$index];
     
-    if ($method_prefix) {
-      my $field_name = $init_fields->[$index];
-      
-      # Remove underscores and replace them by camel case convention to 
-      # get the object names.
-      #
-      $field_name =~ s/_(.)/uc($1)/ge;
-      $field_name =~ s/(^.)/uc($1)/ge;
-      $setter_method = $method_prefix . $field_name;
-    } else {
-      $setter_method = $init_fields->[$index];
-    }
+    my $setter_method = $constructor_key_to_set_method->{$constructor_parameter_name};
     
-    if (! $self->can($setter_method)) {
-      throw("Unknown method " . $setter_method . "!");
-    }
-    my $value_to_set  = $value[$index];
     if (defined $value_to_set) {
+      
+      if (! $self->can($setter_method)) {
+        throw("The setter method \"" . $setter_method . "\" to store the parameter \"" . $constructor_parameter_name . "\" in the constructor of " . (ref $self) . " has not been implemented!");
+      }
       $self->$setter_method($value_to_set);
     }
   }
+  return;
+}
+
+sub _build_simple_accessors {
+  my $self = shift;
+  my $fetch_method_specification = $self->_simple_accessors;
+  
+  foreach my $current_fetch_method_specification (@$fetch_method_specification) {
+    $self->_build_simple_accessor($current_fetch_method_specification)
+  }
+  return;
+}
+
+sub _build_simple_accessor {
+  my $self  = shift;
+  my $specs = shift;
+  
+  my $method_name = $specs->{method_name};
+  my $hash_key    = $specs->{hash_key};
+
+  my $package = ref $self;
+  my $full_method_name = $package . "::" . $method_name;
+  
+  no strict;
+  
+  *{$full_method_name} = sub { return shift->_generic_get_or_set($hash_key, @_) };
+  use strict;
+
+  return;
+}
+
+sub _build_get_methods {
+  my $self = shift;
+  my $get_method_specification = $self->_get_methods;
+  
+  foreach my $current_get_method_specification (@$get_method_specification) {
+    $self->_build_get_method($current_get_method_specification)
+  }
+  return;
+}
+
+sub _build_get_method {
+  my $self  = shift;
+  my $specs = shift;
+  
+  my $method_name = $specs->{method_name};
+  my $hash_key    = $specs->{hash_key};
+
+  my $package = ref $self;
+  
+  no strict;
+  *{$package . "::" . $method_name} = sub { return shift->_generic_get($hash_key,  @_) };
+  use strict;
+
+  return;
+}
+
+sub _build_set_methods {
+  my $self = shift;
+  my $set_method_specification = $self->_set_methods;
+  
+  foreach my $current_set_method_specification (@$set_method_specification) {
+    $self->_build_set_method($current_set_method_specification)
+  }
+  return;
+}
+
+sub _build_set_method {
+  my $self  = shift;
+  my $specs = shift;
+  
+  my $method_name   = $specs->{method_name};
+  my $hash_key      = $specs->{hash_key};
+  my $expected_type = $specs->{expected_type};
+
+  my $package = ref $self;
+  
+  no strict;
+  *{$package . "::" . $method_name} = sub { 
+    return shift->_generic_set(
+      $method_name, $hash_key, $expected_type, @_
+    )
+  };
+
+  use strict;
+
+  return;
+}
+
+sub _build_fetch_methods {
+  my $self = shift;
+  my $fetch_method_specification = $self->_fetch_methods;  
+  foreach my $current_fetch_method_specification (@$fetch_method_specification) {
+    $self->_build_fetch_method($current_fetch_method_specification)
+  }
+  return;
+}
+sub _build_fetch_method {
+
+  my $self  = shift;
+  my $specs = shift;
+  
+  
+  my $method_name             = $specs->{method_name};
+  my $hash_key                = $specs->{hash_key};
+  my $get_adaptor_method_name = $specs->{get_adaptor_method_name};
+  my $dbID_method             = $specs->{dbID_method};
+
+  my $package = ref $self;  
+
+  no strict;
+  
+  *{$package . "::" . $method_name} = 
+  sub {
+      my $self = shift;
+
+      if ($self->{$hash_key}) {
+        return $self->{$hash_key};
+      }
+      my $object_id = $self->$dbID_method;
+      if (! defined $object_id) {
+        die;
+      }
+      my $object_adaptor = $self->db->db->$get_adaptor_method_name;
+      my $object = $object_adaptor->fetch_by_dbID($object_id);
+      $self->{$hash_key} = $object;
+      return $object;
+  };
+
+  use strict;
+  return;
 }
 
 sub _generic_get_or_set {
@@ -123,6 +263,7 @@ sub _generic_get_or_set {
 
 sub _generic_set {
   my $self  = shift;
+  my $method_name = shift;
   my $name  = shift;
   my $type  = shift;
   my $obj   = shift;
@@ -130,7 +271,11 @@ sub _generic_set {
   if (! defined $obj) {
     throw("$name was not defined!");
   }
-  assert_ref($obj, $type);
+
+  if (! $obj->isa($type)) {
+    throw("Expected $type, but got " . (ref $obj) . " when calling " . $method_name);
+  }
+  
   $self->{$name} = $obj;
   return $obj;
 }

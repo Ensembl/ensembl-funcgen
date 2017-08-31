@@ -65,239 +65,70 @@ package Bio::EnsEMBL::Funcgen::RegulatoryBuild;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
+use Bio::EnsEMBL::Utils::Exception qw( throw );
 
 use base 'Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality';
 
-=head2 new
-  Arg [-db] :
-  Arg [-dbID] :
-  Arg [-name] :
-        name of regulatory build
-  Arg [-version] :
-        version of regulatory build
-  Arg [-initial_release_date]   :
-        date of the initial release
-  Arg [-last_annotation_update] :
-        date of the last update
-  Arg [-feature_type_id] :
-        the feature type id
-  Arg [-analysis_id] :
-        the analysis id
-  Arg [-is_current] :
-        is current release
-
-  Example      : my $regulatory_build = Bio::EnsEMBL::Funcgen::RegulatoryBuild->new(
-                            -name,                  => 'The Ensembl Regulatory Build', 
-                            -version                => '14',
-                            -initial_release_date   => '2016-6',
-                            -last_annotation_update => '2016-6',
-                            -feature_type_id        => 19,
-                            -analysis_id            => 16,
-                            -is_current             => 1
-                          );
-  Description : Constructor method for Regulatory Build class
-  Returntype  : Bio::EnsEMBL::Funcgen::RegulatoryBuild
-  Exceptions  : None 
-  Caller      : General
-  Status      : Stable
-
-=cut
-
-sub new {
-  my $caller = shift;
-  my $class = ref($caller) || $caller;
-  my $self = bless {}, $class;
-
-  my @field = qw(
-    db
-    dbID
-    name
-    version
-    initial_release_date
-    last_annotation_update
-    feature_type_id
-    feature_type
-    analysis_id
-    analysis
-    is_current
-    sample_regulatory_feature_id
-  );
-  
-  my (
-    $db,
-    $dbID,
-    $name,
-    $version,
-    $initial_release_date,
-    $last_annotation_update,
-    $feature_type_id,
-    $feature_type,
-    $analysis_id,
-    $analysis,
-    $is_current,
-    $sample_regulatory_feature_id,
-  )
-    = rearrange([ @field ], @_);
-
-  #
-  # Analysis and FeatureType can be passed in either as objects or by their 
-  # dbIDs. The RegulatoryFeatureAdaptor uses database ids only, the objects
-  # are lazy loaded as needed.
-  #
-  # The regulatory build script uses proper objects to create the regulatory
-  # build object.
-  #
-  if (defined $analysis) {
-    $self->set_Analysis($analysis);
-  }
-  if (defined $feature_type) {
-    $self->set_FeatureType($feature_type);
-  }
-  
-  $self->feature_type_id($feature_type_id);
-  $self->analysis_id($analysis_id);
-
-  $self->db($db);
-  $self->dbID($dbID);
-  $self->name($name);
-  $self->version($version);
-  $self->initial_release_date($initial_release_date);
-  $self->last_annotation_update($last_annotation_update);
-  $self->is_current($is_current);
-  $self->sample_regulatory_feature_id($sample_regulatory_feature_id);
-  
-
-  return $self;
+sub _constructor_parameters {
+  return {
+    'name'                         => 'name',
+    'version'                      => 'version',
+    'initial_release_date'         => 'initial_release_date',
+    'last_annotation_update'       => 'last_annotation_update',
+    'feature_type_id'              => 'feature_type_id',
+    'analysis_id'                  => 'analysis_id',
+    'is_current'                   => 'is_current',
+    'sample_regulatory_feature_id' => 'sample_regulatory_feature_id',
+    
+    'analysis'                     => 'set_Analysis',
+    'feature_type'                 => 'set_FeatureType',
+  };
 }
 
-sub dbID                   { return shift->_generic_get_or_set('dbID',                   @_) }
-sub db                     { return shift->_generic_get_or_set('db',                     @_) }
-
-=head2 name
-
-  Example    : my $name = $regulatory_build->name;
-  Description: Getter of name attribute for Regulatory Build objects
-  Returntype : String
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-sub name                   { return shift->_generic_get_or_set('name',                   @_) }
-
-=head2 version
-
-  Example    : my $name = $regulatory_build->version;
-  Description: Getter of version attribute for Regulatory Build objects
-  Returntype : String
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-sub version                { return shift->_generic_get_or_set('version',                @_) }
-
-=head2 initial_release_date
-
-  Example    : my $name = $regulatory_build->initial_release_date;
-  Description: Getter of initial release date attribute for Regulatory Build objects
-  Returntype : String
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-sub initial_release_date   { return shift->_generic_get_or_set('initial_release_date',   @_) }
-
-=head2 last_annotation_update
-
-  Example    : my $name = $regulatory_build->last_annotation_update;
-  Description: Getter of last update attribute for Regulatory Build objects
-  Returntype : String
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-sub last_annotation_update { return shift->_generic_get_or_set('last_annotation_update', @_) }
-sub feature_type_id        { return shift->_generic_get_or_set('feature_type_id',        @_) }
-sub analysis_id            { return shift->_generic_get_or_set('analysis_id',            @_) }
-
-sub set_Analysis {
-  my $self     = shift;
-  my $analysis = shift;
-  
-  $self->{analysis} = $analysis;
-
-  if (! defined $analysis) {
-    throw('Analysis was not defined!');
-  }
-  
-  $self->analysis_id($analysis->dbID);
+sub _simple_accessors {
+  return [
+    { method_name => 'name',                         hash_key => '_name',                         },
+    { method_name => 'version',                      hash_key => '_version',                      },
+    { method_name => 'initial_release_date',         hash_key => '_initial_release_date',         },
+    { method_name => 'last_annotation_update',       hash_key => '_last_annotation_update',       },
+    { method_name => 'feature_type_id',              hash_key => '_feature_type_id',              },
+    { method_name => 'analysis_id',                  hash_key => '_analysis_id',                  },
+    { method_name => 'is_current',                   hash_key => '_is_current',                   },
+    { method_name => 'sample_regulatory_feature_id', hash_key => '_sample_regulatory_feature_id', },
+  ]
 }
 
-sub fetch_Analysis {
-  my $self = shift;
-  
-  if ($self->{analysis}) {
-    return $self->{analysis};
-  }
-  my $analysis_id = $self->analysis_id;
-  if ($analysis_id) {
-    my $analysis_adaptor = $self->db->get_AnalysisAdaptor;
-    my $analysis = $analysis_adaptor->fetch_by_dbID($analysis_id);
-    $self->{analysis} = $analysis;
-    return $analysis;
-  }
-  die;
+sub _set_methods {
+  return [
+    {
+      method_name   => 'set_Analysis',
+      expected_type => 'Bio::EnsEMBL::Analysis',
+      hash_key      => 'analysis',
+    },
+    {
+      method_name   => 'set_FeatureType',
+      expected_type => 'Bio::EnsEMBL::Funcgen::FeatureType',
+      hash_key      => 'feature_type',
+    },
+  ]
 }
 
-sub set_FeatureType {
-  my $self         = shift;
-  my $feature_type = shift;
-  
-  if (! defined $feature_type) {
-    throw('Feature type was not defined!');
-  }
-  $self->{feature_type} = $feature_type;
-  $self->feature_type_id($feature_type->dbID);
+sub _fetch_methods {
+  return [
+    {
+      method_name             => 'fetch_FeatureType',
+      hash_key                => '_feature_type',
+      get_adaptor_method_name => 'get_FeatureTypeAdaptor',
+      dbID_method             => 'feature_type_id',
+    },
+    {
+      method_name             => 'fetch_Analysis',
+      hash_key                => '_analysis',
+      get_adaptor_method_name => 'get_AnalysisAdaptor',
+      dbID_method             => 'analysis_id',
+    },
+  ]
 }
-
-sub fetch_FeatureType {
-  my $self = shift;
-  
-  if ($self->{feature_type}) {
-    return $self->{feature_type};
-  }
-  my $feature_type_id = $self->feature_type_id;
-  if ($feature_type_id) {
-    my $feature_type_adaptor = $self->db->get_FeatureTypeAdaptor;
-    my $feature_type = $feature_type_adaptor->fetch_by_dbID($feature_type_id);
-    $self->{feature_type} = $feature_type;
-    return $feature_type;
-  }
-  die;
-}
-
-=head2 is_current
-
-  Example    : if ($regulatory_build->is_current) { 
-                 print "The current regulatory build was released on: " . $regulatory_build->initial_release_date . "\n";
-               };
-  Description: Indicates whether this regulatory build is the current one.
-  Returntype : Boolean
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
-
-=cut
-sub is_current             { return shift->_generic_get_or_set('is_current',             @_) }
 
 =head2 get_all_Epigenomes
 
@@ -313,9 +144,9 @@ sub is_current             { return shift->_generic_get_or_set('is_current',    
 sub get_all_Epigenomes {
   my $self = shift;
   
-  my $epigenome_ids = $self->_get_all_epigenome_ids;
+  my $epigenome_ids     = $self->_get_all_epigenome_ids;
   my $epigenome_adaptor = $self->db->get_EpigenomeAdaptor;
-  my $epigenomes = $epigenome_adaptor->fetch_all_by_dbID_list($epigenome_ids);
+  my $epigenomes        = $epigenome_adaptor->fetch_all_by_dbID_list($epigenome_ids);
   return $epigenomes
 }
 
@@ -359,8 +190,89 @@ sub fetch_sample_RegulatoryFeature {
   return $sample_regulatory_feature
 }
 
-sub sample_regulatory_feature_id { return shift->_generic_get_or_set('sample_regulatory_feature_id', @_) }
-
 1;
 
+__END__ 
+
+=head2 new
+  Arg [-db] :
+  Arg [-dbID] :
+  Arg [-name] :
+        name of regulatory build
+  Arg [-version] :
+        version of regulatory build
+  Arg [-initial_release_date]   :
+        date of the initial release
+  Arg [-last_annotation_update] :
+        date of the last update
+  Arg [-feature_type_id] :
+        the feature type id
+  Arg [-analysis_id] :
+        the analysis id
+  Arg [-is_current] :
+        is current release
+
+  Example      : my $regulatory_build = Bio::EnsEMBL::Funcgen::RegulatoryBuild->new(
+                            -name,                  => 'The Ensembl Regulatory Build', 
+                            -version                => '14',
+                            -initial_release_date   => '2016-6',
+                            -last_annotation_update => '2016-6',
+                            -feature_type_id        => 19,
+                            -analysis_id            => 16,
+                            -is_current             => 1
+                          );
+  Description : Constructor method for Regulatory Build class
+  Returntype  : Bio::EnsEMBL::Funcgen::RegulatoryBuild
+  Exceptions  : None 
+  Caller      : General
+  Status      : Stable
+
+=head2 name
+
+  Example    : my $name = $regulatory_build->name;
+  Description: Getter of name attribute for Regulatory Build objects
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=head2 version
+
+  Example    : my $name = $regulatory_build->version;
+  Description: Getter of version attribute for Regulatory Build objects
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=head2 initial_release_date
+
+  Example    : my $name = $regulatory_build->initial_release_date;
+  Description: Getter of initial release date attribute for Regulatory Build objects
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=head2 last_annotation_update
+
+  Example    : my $name = $regulatory_build->last_annotation_update;
+  Description: Getter of last update attribute for Regulatory Build objects
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=head2 is_current
+
+  Example    : if ($regulatory_build->is_current) { 
+                 print "The current regulatory build was released on: " . $regulatory_build->initial_release_date . "\n";
+               };
+  Description: Indicates whether this regulatory build is the current one.
+  Returntype : Boolean
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
 

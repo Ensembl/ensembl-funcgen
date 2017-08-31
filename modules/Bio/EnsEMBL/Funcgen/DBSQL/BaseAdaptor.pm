@@ -413,162 +413,145 @@ sub fetch_all {
 }
 
 
-=head2 fetch_all_displayable
-
-  Example    : my @displayable_dset = @{$dsa->fetch_all_displayable()};
-  Description: Gets all displayable DataSets
-  Returntype : ARRAYREF
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk - can we just reimplement fetch_all with optional status arg
-
-=cut
-
-sub fetch_all_displayable{
-  my $self = shift;
-  return $self->fetch_all({states => ['DISPLAYABLE']});
-}
-
-
-=head2 status_to_constraint
-
-  Arg [1]    : string - status e.g. 'DISPLAYABLE'
-  Arg [2]    : string - Constraint
-  Example    : $sql = $self->status_to_constraint($self, $constraint, $status);
-  Description: Appends the appropriate status constraint dependant on the BaseAdaptor sub class.
-  Returntype : string - constraint
-  Exceptions : None
-  Caller     : Bio::EnsEMBL::Funcgen::DBSQL::"BaseAdaptors"
-  Status     : At risk - to be deprecated
-
-=cut
-
-#TODO remove this in favour of compose_constraint
-
-sub status_to_constraint{
-  my ($self, $status) = @_;
-
-  #This is now supported in compose_constraint_query
-  #Which avoid some of the problems below
-
-  my $constraint;
-
-  #This will throw if status not valid, but still may be absent
-  my $status_id = $self->_get_status_name_id($status);
-
-
-  return if (! $status_id);
-
-  my @tables = $self->_tables;
-  my ($table_name, $syn) = @{$tables[0]};
-
-  my @status_ids;
-
-  my $sql = "SELECT table_id from status where table_name='$table_name' and status_name_id='$status_id'";
-  @status_ids = map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
-
-  #This is causing problems as we might get none, which will invalidate the sql
-  #Hence we return nothing
-
-  $constraint = " $syn.${table_name}_id IN (".join(',', @status_ids).")" if @status_ids;
-  return $constraint;
-}
+# =head2 status_to_constraint
+# 
+#   Arg [1]    : string - status e.g. 'DISPLAYABLE'
+#   Arg [2]    : string - Constraint
+#   Example    : $sql = $self->status_to_constraint($self, $constraint, $status);
+#   Description: Appends the appropriate status constraint dependant on the BaseAdaptor sub class.
+#   Returntype : string - constraint
+#   Exceptions : None
+#   Caller     : Bio::EnsEMBL::Funcgen::DBSQL::"BaseAdaptors"
+#   Status     : At risk - to be deprecated
+# 
+# =cut
+# 
+# #TODO remove this in favour of compose_constraint
+# 
+# sub status_to_constraint{
+#   my ($self, $status) = @_;
+# 
+#   #This is now supported in compose_constraint_query
+#   #Which avoid some of the problems below
+# 
+#   my $constraint;
+# 
+#   #This will throw if status not valid, but still may be absent
+#   my $status_id = $self->_get_status_name_id($status);
+# 
+# 
+#   return if (! $status_id);
+# 
+#   my @tables = $self->_tables;
+#   my ($table_name, $syn) = @{$tables[0]};
+# 
+#   my @status_ids;
+# 
+#   my $sql = "SELECT table_id from status where table_name='$table_name' and status_name_id='$status_id'";
+#   @status_ids = map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
+# 
+#   #This is causing problems as we might get none, which will invalidate the sql
+#   #Hence we return nothing
+# 
+#   $constraint = " $syn.${table_name}_id IN (".join(',', @status_ids).")" if @status_ids;
+#   return $constraint;
+# }
 
 
-=head2 _test_funcgen_table
-
-  Arg [1]    : Bio::EnsEMBL::"OBJECT"
-  Example    : $status_a->_is_funcgen_object($experimental_chip)};
-  Description: Tests if the object is a valid funcgen object with an identifiable table_name
-  Returntype : string - table_name
-  Exceptions : Throws if argument if a Bio::EnsEMBL::Funcgen::"OBJECT" not supplied
-               Throws if not table name identified
-  Caller     : general
-  Status     : At risk
-
-=cut
-
-sub _test_funcgen_table{
-  my ($self, $obj) = @_;
-
-  #Can we change this to is_stored_and_valid for a Storable?
-  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Storable', $obj);
-  #Does this test for ad
-
-  my @tables = $obj->adaptor->_tables;
-  my ($table) = @{$tables[0]};
-
-  return $table || $self->throw("Cannot identify table name from $obj adaptor");
-}
-
-
-=head2 fetch_all_states
-
-  Arg [1]    : Bio::EnsEMBL::"OBJECT"
-  Arg [2...] : listref of states
-  Example    : my @ec_states = @{$status_a->fetch_all_states($experimental_chip)};
-  Description: Retrieves all states associated with the given "OBJECT"
-  Returntype : ARRAYREF
-  Exceptions : None
-  Caller     : general
-  Status     : At risk
-
-=cut
-
-sub fetch_all_states{
-  my ($self, $obj) = @_;
-
-  my $table = $self->_test_funcgen_table($obj);
-  my $sql = "SELECT name FROM status_name sn, status s WHERE s.table_name='$table' ".
-    "AND s.table_id='".$obj->dbID()."' and s.status_name_id=sn.status_name_id";
-  
-#   print "\n\n---------------------------------------\n\n";
-#   print "Sql to fetch the states:\n";
-#   print "\n\n$sql\n\n";
-#   print "\n\n---------------------------------------\n\n";
-  
-  my @states = map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
-
-  return \@states;
-}
+# =head2 _test_funcgen_table
+# 
+#   Arg [1]    : Bio::EnsEMBL::"OBJECT"
+#   Example    : $status_a->_is_funcgen_object($experimental_chip)};
+#   Description: Tests if the object is a valid funcgen object with an identifiable table_name
+#   Returntype : string - table_name
+#   Exceptions : Throws if argument if a Bio::EnsEMBL::Funcgen::"OBJECT" not supplied
+#                Throws if not table name identified
+#   Caller     : general
+#   Status     : At risk
+# 
+# =cut
+# 
+# sub _test_funcgen_table{
+#   my ($self, $obj) = @_;
+# 
+#   #Can we change this to is_stored_and_valid for a Storable?
+#   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Storable', $obj);
+#   #Does this test for ad
+# 
+#   my @tables = $obj->adaptor->_tables;
+#   my ($table) = @{$tables[0]};
+# 
+#   return $table || $self->throw("Cannot identify table name from $obj adaptor");
+# }
 
 
-=head2 has_stored_status
+# =head2 fetch_all_states
+# 
+#   Arg [1]    : Bio::EnsEMBL::"OBJECT"
+#   Arg [2...] : listref of states
+#   Example    : my @ec_states = @{$status_a->fetch_all_states($experimental_chip)};
+#   Description: Retrieves all states associated with the given "OBJECT"
+#   Returntype : ARRAYREF
+#   Exceptions : None
+#   Caller     : general
+#   Status     : At risk
+# 
+# =cut
+# 
+# sub fetch_all_states{
+#   my ($self, $obj) = @_;
+# 
+#   my $table = $self->_test_funcgen_table($obj);
+#   my $sql = "SELECT name FROM status_name sn, status s WHERE s.table_name='$table' ".
+#     "AND s.table_id='".$obj->dbID()."' and s.status_name_id=sn.status_name_id";
+#   
+# #   print "\n\n---------------------------------------\n\n";
+# #   print "Sql to fetch the states:\n";
+# #   print "\n\n$sql\n\n";
+# #   print "\n\n---------------------------------------\n\n";
+#   
+#   my @states = map $_ = "@$_", @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
+# 
+#   return \@states;
+# }
 
-  Arg [1]    : string - status e.g. IMPORTED, DISPLAYABLE
-  Arg [2]    : Bio::EnsEMBL::Storable
-  Example    : if($status_a->has_stored_status('IMPORTED', $array){ ... skip import ... };
-  Description: Tests wether a given object has a given state
-  Returntype : BOOLEAN
-  Exceptions : None
-  Caller     : Bio::EnsEMBL::Funcgen::BaseAdaptor
-  Status     : At risk
 
-=cut
-
-#Only used for set_status, merge with set_status?
- 
-sub has_stored_status{
-  my ($self, $state, $obj) = @_;
-
-  my (@row);
-  my $status_id = $self->_get_status_name_id($state);
-
-  if ($status_id){
-
-    my $table = $self->_test_funcgen_table($obj);
-
-    if($status_id){
-      my $sql = "SELECT status_name_id FROM status WHERE table_name=\"$table\"".
-        " AND table_id=\"".$obj->dbID()."\" AND status_name_id=\"$status_id\"";
-
-      #could just return the call directly?
-      @row = $self->db->dbc->db_handle->selectrow_array($sql);
-    }
-  }
-
-  return (@row) ? 1 : 0;
-}
+# =head2 has_stored_status
+# 
+#   Arg [1]    : string - status e.g. IMPORTED, DISPLAYABLE
+#   Arg [2]    : Bio::EnsEMBL::Storable
+#   Example    : if($status_a->has_stored_status('IMPORTED', $array){ ... skip import ... };
+#   Description: Tests wether a given object has a given state
+#   Returntype : BOOLEAN
+#   Exceptions : None
+#   Caller     : Bio::EnsEMBL::Funcgen::BaseAdaptor
+#   Status     : At risk
+# 
+# =cut
+# 
+# #Only used for set_status, merge with set_status?
+#  
+# sub has_stored_status{
+#   my ($self, $state, $obj) = @_;
+# 
+#   my (@row);
+#   my $status_id = $self->_get_status_name_id($state);
+# 
+#   if ($status_id){
+# 
+#     my $table = $self->_test_funcgen_table($obj);
+# 
+#     if($status_id){
+#       my $sql = "SELECT status_name_id FROM status WHERE table_name=\"$table\"".
+#         " AND table_id=\"".$obj->dbID()."\" AND status_name_id=\"$status_id\"";
+# 
+#       #could just return the call directly?
+#       @row = $self->db->dbc->db_handle->selectrow_array($sql);
+#     }
+#   }
+# 
+#   return (@row) ? 1 : 0;
+# }
 
 
 # =head2 store_status
@@ -613,112 +596,112 @@ sub has_stored_status{
 # }
 
 
-=head2 revoke_status
+# =head2 revoke_status
+# 
+#   Arg [1]    : String - status name e.g. 'IMPORTED'
+#   Arg [2]    : Bio::EnsEMBL::Funcgen::Storable
+#   Arg [3]    : Boolean - Validate status name flag. Will throw if not valid.
+#   Example    : $rset_adaptor->revoke_status('DAS DISPLAYABLE', $result_set);
+#   Description: Revokes the given state of Storable in status table.
+#   Returntype : Boolean - Success or Failure
+#   Exceptions : Warns if storable does not have state
+#                Throws is status name is not defined
+#                Throws if status record delete fails
+#   Caller     : General
+#   Status     : Stable
+# 
+# =cut
+# 
+# #Where is the return value use(d|ful)
+# 
+# sub revoke_status{
+#   my $self            = shift;
+#   my $state           = shift or throw('Must provide a status name');
+#   my $storable        = shift;
+#   my $validate_status = shift;
+#   my $table_name      = $self->_test_funcgen_table($storable);
+#   my $status_id       = $self->_get_status_name_id($state, $validate_status);
+#   my $revoked         = 0;
+# 
+#   if ($status_id){
+# 
+#     if(! $self->has_stored_status($state, $storable)){
+#   	  warn $storable.' '.$storable->dbID()." does not have status $state to revoke\n";
+#     }
+#     else{
+#       #do sanity checks on table to ensure that IMPORTED does not get revoke before data deleted?
+#       #how would we test this easily?
+#       my $sql = "delete from status where table_name='${table_name}'".
+#     	 " and status_name_id=${status_id} and table_id=".$storable->dbID();
+#       if(! eval { $self->db->dbc->do($sql); 1}){ 
+#         throw("Failed to delete $state status from DB for $storable (dbID=".
+#           $storable->dbID.")\n$@");
+#       }
+#       
+#       my @tmp_states;
+#   
+#       for my $stored_state(@{$storable->{states}}){
+#     
+#     	  if($stored_state ne $state){
+#       	  push @tmp_states, $stored_state;
+#       	}
+#       }
+#       
+#       $storable->{states} = \@tmp_states;
+#       $revoked = 1;
+#     }
+#   }
+#   #else{ Don't throw as the state of the object is as expected, but
+#   #this may be a mis-spelled status, and the real status may persist
+#   #So handle in the caller
+# 
+#   return $revoked;
+# }
 
-  Arg [1]    : String - status name e.g. 'IMPORTED'
-  Arg [2]    : Bio::EnsEMBL::Funcgen::Storable
-  Arg [3]    : Boolean - Validate status name flag. Will throw if not valid.
-  Example    : $rset_adaptor->revoke_status('DAS DISPLAYABLE', $result_set);
-  Description: Revokes the given state of Storable in status table.
-  Returntype : Boolean - Success or Failure
-  Exceptions : Warns if storable does not have state
-               Throws is status name is not defined
-               Throws if status record delete fails
-  Caller     : General
-  Status     : Stable
 
-=cut
-
-#Where is the return value use(d|ful)
-
-sub revoke_status{
-  my $self            = shift;
-  my $state           = shift or throw('Must provide a status name');
-  my $storable        = shift;
-  my $validate_status = shift;
-  my $table_name      = $self->_test_funcgen_table($storable);
-  my $status_id       = $self->_get_status_name_id($state, $validate_status);
-  my $revoked         = 0;
-
-  if ($status_id){
-
-    if(! $self->has_stored_status($state, $storable)){
-  	  warn $storable.' '.$storable->dbID()." does not have status $state to revoke\n";
-    }
-    else{
-      #do sanity checks on table to ensure that IMPORTED does not get revoke before data deleted?
-      #how would we test this easily?
-      my $sql = "delete from status where table_name='${table_name}'".
-    	 " and status_name_id=${status_id} and table_id=".$storable->dbID();
-      if(! eval { $self->db->dbc->do($sql); 1}){ 
-        throw("Failed to delete $state status from DB for $storable (dbID=".
-          $storable->dbID.")\n$@");
-      }
-      
-      my @tmp_states;
-  
-      for my $stored_state(@{$storable->{states}}){
-    
-    	  if($stored_state ne $state){
-      	  push @tmp_states, $stored_state;
-      	}
-      }
-      
-      $storable->{states} = \@tmp_states;
-      $revoked = 1;
-    }
-  }
-  #else{ Don't throw as the state of the object is as expected, but
-  #this may be a mis-spelled status, and the real status may persist
-  #So handle in the caller
-
-  return $revoked;
-}
-
-
-=head2 revoke_states
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::Storable
-  Arg [2]    : Arrayref (optional) - States to revoke
-  Arg [3]    : Boolean (optional) - Validate status exists
-  Example    : $rset_adaptor->revoke_status($result_set);
-  Description: Deletes all or specified status records from the Storable.
-  Returntype : Bio::EnsEMBL::Funcgen::Storable
-  Exceptions : None
-  Caller     : General + Helper rollback methods
-  Status     : At Risk
-
-=cut
-
-sub revoke_states{
-  my $self     = shift;
-  my $storable = shift;
-  my $states   = shift || [];
-  my $validate = shift;
-  assert_ref($states, 'ARRAY', 'optional states');
-
-  if(! @$states){
-    my $table_name = $self->_test_funcgen_table($storable);
-    undef $storable->{states};
-    my $sql = "delete from status where table_name='${table_name}'".
-      " and table_id=".$storable->dbID();
-   
-    if(! eval {$self->db->dbc->do($sql); 1}){
-     throw('Failed to revoke states('.join(' ', @{$storable->get_all_states}).
-      ") for $storable (dbID=".$storable->dbID."\n$@");  
-    }
-  }
-  else{
-    
-    foreach my $state(@$states){
-     $self->revoke_status($state, $storable, $validate);
-     #Cannot return revoked boolean here. Bu this only return false if
-     #it didn't already have the status
-    }
-  }
-  
-  return $storable;
-}
+# =head2 revoke_states
+# 
+#   Arg [1]    : Bio::EnsEMBL::Funcgen::Storable
+#   Arg [2]    : Arrayref (optional) - States to revoke
+#   Arg [3]    : Boolean (optional) - Validate status exists
+#   Example    : $rset_adaptor->revoke_status($result_set);
+#   Description: Deletes all or specified status records from the Storable.
+#   Returntype : Bio::EnsEMBL::Funcgen::Storable
+#   Exceptions : None
+#   Caller     : General + Helper rollback methods
+#   Status     : At Risk
+# 
+# =cut
+# 
+# sub revoke_states{
+#   my $self     = shift;
+#   my $storable = shift;
+#   my $states   = shift || [];
+#   my $validate = shift;
+#   assert_ref($states, 'ARRAY', 'optional states');
+# 
+#   if(! @$states){
+#     my $table_name = $self->_test_funcgen_table($storable);
+#     undef $storable->{states};
+#     my $sql = "delete from status where table_name='${table_name}'".
+#       " and table_id=".$storable->dbID();
+#    
+#     if(! eval {$self->db->dbc->do($sql); 1}){
+#      throw('Failed to revoke states('.join(' ', @{$storable->get_all_states}).
+#       ") for $storable (dbID=".$storable->dbID."\n$@");  
+#     }
+#   }
+#   else{
+#     
+#     foreach my $state(@$states){
+#      $self->revoke_status($state, $storable, $validate);
+#      #Cannot return revoked boolean here. Bu this only return false if
+#      #it didn't already have the status
+#     }
+#   }
+#   
+#   return $storable;
+# }
 
 
 # =head2 set_imported_states_by_Set
@@ -852,314 +835,314 @@ sub revoke_states{
 #   return $status_id;
 # }
 
-
-=head2 fetch_all_by_external_name
-
-  Arg [1]    : String $external_name
-               An external identifier of the feature to be obtained
-  Arg [2]    : (optional) String $external_db_name
-               The name of the external database from which the
-               identifier originates.
-  Example    : my @features =
-                  @{ $adaptor->fetch_all_by_external_name( 'NP_065811.1') };
-  Description: Retrieves all features which are associated with
-               an external identifier such as an Ensembl Gene or Transcript
-               stable ID etc.  Usually there will only be a single
-               feature returned in the list reference, but not
-               always.  Features are returned in their native
-               coordinate system, i.e. the coordinate system in which
-               they are stored in the database.  If they are required
-               in another coordinate system the Feature::transfer or
-               Feature::transform method can be used to convert them.
-               If no features with the external identifier are found,
-               a reference to an empty list is returned.
-  Returntype : arrayref of Bio::EnsEMBL::Funcgen::Storable objects
-               Maybe any Feature, FeatureType, Probe or ProbeSet
-  Exceptions : Warns if method not available for given object adaptor
-  Caller     : general
-  Status     : at risk
-
-=cut
-
-sub fetch_all_by_external_name {
-  my ( $self, $external_name, $external_db_name ) = @_;
-
-  my $entryAdaptor = $self->db->get_DBEntryAdaptor;
-  my (@ids, $type, $type_name);
-  
-  if(ref($self) =~ /.+::(.+)Adaptor$/o){
-    $type = $1;
-  }
-  else{
-    throw("Failed to identify data class name from adaptor namespace:\t".ref($self));
-  }
-
-  return $self->fetch_all_by_dbID_list(
-    [ $entryAdaptor->_type_by_external_id( $external_name, $type, undef, $external_db_name) ]);
-}
-
-
-=head2 fetch_all_by_external_names
-
-  Arg [1]    : ARRAYREF of strings. External identifiers of the features to be obtained
-  Arg [2]    : (optional) String $external_db_name
-               The name of the external database from which the
-               identifier originates.
-  Example    : my @features =
-                  @{ $adaptor->fetch_all_by_external_names(['ENST00003548913', ...])};
-  Description: Retrieves all features which are associated with
-               the external identifiers such as a Ensembl gene or transcript
-               stable IDs, etc.  Features are returned in their native
-               coordinate system, i.e. the coordinate system in which
-               they are stored in the database.  If they are required
-               in another coordinate system the Feature::transfer or
-               Feature::transform method can be used to convert them.
-               If no features with the external identifier are found,
-               a reference to an empty list is returned.
-  Returntype : arrayref of Bio::EnsEMBL::Funcgen::Storable objects
-               Maybe any Feature, FeatureType, Probe or ProbeSet
-  Exceptions : Warns if xref method not available for given object adaptor
-  Caller     : general
-  Status     : at risk
-
-=cut
-
-sub fetch_all_by_external_names{
-  my ( $self, $external_names, $external_db_name ) = @_;
-
-  my $entryAdaptor = $self->db->get_DBEntryAdaptor();
-  my ($type, $type_name);
-  ($type = ref($self)) =~ s/.*:://;
-  $type =~ s/Adaptor$//;
-  ($type_name = $type) =~ s/Feature$/_feature/;
-  my $xref_method = 'list_'.lc($type_name).'_ids_by_extids';
-
-
-  if(! $entryAdaptor->can($xref_method)){
-	warn "Does not yet accomodate $type external names";
-	return [];
-  }
-
-  #Would be better if _list_ method returned and arrayref
-  my @ids = $entryAdaptor->$xref_method($external_names, $external_db_name);
-
-  return $self->fetch_all_by_dbID_list(\@ids);
-}
-
-
-=head2 fetch_all_by_linked_Transcript
-
-  Arg [1]    : Bio::EnsEMBL::Transcript
-  Example    : my @psets =
-                  @{ $probe_set_adaptor->fetch_all_by_linked_Transcript($tx_obj);
-  Description: Retrieves all features which are associated with
-               the given Ensembl Transcript.
-  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::Storable objects
-               Maybe any Feature, FeatureType, Probe or ProbeSet
-  Exceptions : Throws if arguments not valid
-  Caller     : general
-  Status     : at risk
-
-=cut
-
-sub fetch_all_by_linked_Transcript{
-  my $self = shift;
-  my $tx   = shift;
-  assert_ref($tx, 'Bio::EnsEMBL::Transcript');
-
-  if(! $tx->dbID ){
-	   throw('You must provide a stored Bio::EnsEMBL:Transcript object');
-  }
-
-  return $self->fetch_all_by_external_name($tx->stable_id, $self->db->species.'_core_Transcript')
-}
-
-=head2 fetch_all_by_linked_transcript_Gene
-
-  Arg [1]    : Bio::EnsEMBL::Gene
-  Example    : my @psets =
-                  @{ $probe_set_adaptor->fetch_all_by_linked_transcript_Gene($gene_obj);
-  Description: Retrieves all features which are indirectly associated with
-               the given Ensembl Gene, through it's Transcripts.
-  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::Storable objects
-               Maybe any Feature, FeatureType, Probe or ProbeSet
-  Exceptions : Throws if arguments not valid
-  Caller     : general
-  Status     : at risk
-
-=cut
-
-sub fetch_all_by_linked_transcript_Gene{
-  my $self = shift;
-  my $gene = shift;
-  assert_ref($gene, 'Bio::EnsEMBL::Gene'); 
- 
-  if(! $gene->dbID ){
-     throw('You must provide a stored Bio::EnsEMBL::Gene object');
-  }
-  
-  #No need to pass params here as we know the gene ID is an int from the db 
-  my $tx_sids = $gene->adaptor->db->dbc->sql_helper->execute_simple('select t.stable_id from transcript t where t.gene_id='.$gene->dbID);
-  return $self->fetch_all_by_external_names($tx_sids, $self->db->species.'_core_Transcript');
-}
-
-
-
-=head2 store_associated_feature_types
-
-  Arg [1]     : Bio::EnsEMBL::Funcgen::Storable
-  Example     : $ext_feat_adaptor->store_associated_feature_type($ext_feat);
-  Description : Store FeatureTypes assoicated with a given Storable
-  Returntype  : None
-  Exceptions  : Throws if FeatureTypes are not valid or stored
-  Caller      : Adaptors
-  Status      : At risk
-
-=cut
-
-#This currently does not validation
-#of existing types
-#we may want to rollback the associated ftypes from a specific analysis
-#is rollback function safe here
-#do we want to split this into update/add and store methods?
-
-
-sub store_associated_feature_types {
-  my ($self, $storable, $rollback) = @_;
-
-  #Direct access to avoid lazy loading with an unstored SetFeature
-  my $assoc_ftypes = $storable->{'associated_feature_types'};
-
-  #Could be undef or empty
-  return if ! defined $assoc_ftypes || scalar(@$assoc_ftypes) == 0;
-
-  my $table_name = $storable->adaptor->_main_table->[0];
-  my $dbid = $storable->dbID;
-  my $sql;
-
-  if($rollback){
-    $sql = 'DELETE from associated_feature_type where '.
-      "table_name='$table_name' and table_id=$dbid";
-    $self->db->dbc->db_handle->do($sql);
-  }
-
-  $sql = 'INSERT into associated_feature_type(table_id, table_name, feature_type_id) values (?,?,?)';
-
-  foreach my $ftype(@$assoc_ftypes){
-
-	#We have already tested the class but not whether it is stored
-	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $ftype);
-
-	my $sth = $self->prepare($sql);
-	$sth->bind_param(1, $dbid,        SQL_INTEGER);
-	$sth->bind_param(2, $table_name,  SQL_VARCHAR);
-	$sth->bind_param(3, $ftype->dbID, SQL_INTEGER);
-	$sth->execute();
-  }
-
-  return;
-}
-
-
-=head2 fetch_all_by_associated_FeatureType
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureType
-  Example    : my $assoc_ftypes = $ft_adaptor->fetch_all_by_associated_FeatureType($ftype);
-  Description: Fetches all objects which have associated FeatureType.
-               Note this is not the main FeatureType for this object.
-               Likely only relevant for FeatureTypeAdaptor and ExternalFeatureAdaptor.
-  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::Storable objects
-  Exceptions : Throws if FeatureType not valid or stored
-  Caller     : General
-  Status     : At risk
-
-=cut
-
-#todo add _constrain_associated_FeatureType method
-
-sub fetch_all_by_associated_FeatureType{
-  my ($self, $ftype) = @_;
-
-  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $ftype);
-  my ($table_name, $table_syn) = @{$self->_main_table};
-
-  $self->_tables([['associated_feature_type', 'aft']]);
-  my $constraint = "aft.feature_type_id=? AND aft.table_name='${table_name}' ".
-    "AND aft.table_id=${table_syn}.${table_name}_id";
-
-  $self->bind_param_generic_fetch($ftype->dbID,  SQL_INTEGER);
-  my $objs = $self->generic_fetch($constraint);
-  $self->reset_true_tables;
-
-  return $objs;
-}
-
-
-=head2 _list_dbIDs
-
-  Example    : my @table_ids = @{$adaptor->_list_dbIDs()};
-  Description: Wrapper for parent method, dynamically passes correct table name to query.
-               Gets an array of internal IDs for all objects in the main table of this class.
-  Returntype : List of Ints
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-sub _list_dbIDs{
-  my $self = shift;
-  return $self->SUPER::_list_dbIDs($self->_table_name);
-}
-
-
-=head2 build_feature_class_name
-
-  Arg[1]     : String - feature_class e.g. annotated, dna_methylation, regulatory etc.
-  Example    : my $fclass_name = $adaptor->build_feature_class_name;
-  Description: Builds the full feature class name for a given feature class.
-  Returntype : String
-  Exceptions : None
-  Caller     : FeatureSet::get_FeatureAdaptor and Set::feature_class_name
-  Status     : Stable
-
-=cut
-
-sub build_feature_class_name{
-  my ($self, $fclass) = @_;
-
-  if(! defined $fclass){
-    throw('You must pass a feature class argument to build the feature class name');
-  }
-
-  my @words = split('_', $fclass);
-
-  foreach my $word(@words){
-    $word = ucfirst($word);
-    $word = 'DNA' if $word eq 'Dna';
-  }
-
-  return join('', (@words, 'Feature') );
-}
-
-
-
-sub stable_id_prefix{
-  my $self = shift;
-
-  if (! defined $self->{'stable_id_prefix'}) {
-    ($self->{'stable_id_prefix'}) = @{$self->db->dnadb->get_MetaContainer->list_value_by_key
-                                        (
-                                         'species.stable_id_prefix'
-                                        )};
-
-    #Only add R if it is defined
-    $self->{'stable_id_prefix'} .= 'R' if $self->{'stable_id_prefix'};
-  }
-
-  return $self->{'stable_id_prefix'}
-}
-
+# 
+# =head2 fetch_all_by_external_name
+# 
+#   Arg [1]    : String $external_name
+#                An external identifier of the feature to be obtained
+#   Arg [2]    : (optional) String $external_db_name
+#                The name of the external database from which the
+#                identifier originates.
+#   Example    : my @features =
+#                   @{ $adaptor->fetch_all_by_external_name( 'NP_065811.1') };
+#   Description: Retrieves all features which are associated with
+#                an external identifier such as an Ensembl Gene or Transcript
+#                stable ID etc.  Usually there will only be a single
+#                feature returned in the list reference, but not
+#                always.  Features are returned in their native
+#                coordinate system, i.e. the coordinate system in which
+#                they are stored in the database.  If they are required
+#                in another coordinate system the Feature::transfer or
+#                Feature::transform method can be used to convert them.
+#                If no features with the external identifier are found,
+#                a reference to an empty list is returned.
+#   Returntype : arrayref of Bio::EnsEMBL::Funcgen::Storable objects
+#                Maybe any Feature, FeatureType, Probe or ProbeSet
+#   Exceptions : Warns if method not available for given object adaptor
+#   Caller     : general
+#   Status     : at risk
+# 
+# =cut
+# 
+# sub fetch_all_by_external_name {
+#   my ( $self, $external_name, $external_db_name ) = @_;
+# 
+#   my $entryAdaptor = $self->db->get_DBEntryAdaptor;
+#   my (@ids, $type, $type_name);
+#   
+#   if(ref($self) =~ /.+::(.+)Adaptor$/o){
+#     $type = $1;
+#   }
+#   else{
+#     throw("Failed to identify data class name from adaptor namespace:\t".ref($self));
+#   }
+# 
+#   return $self->fetch_all_by_dbID_list(
+#     [ $entryAdaptor->_type_by_external_id( $external_name, $type, undef, $external_db_name) ]);
+# }
+# 
+# 
+# =head2 fetch_all_by_external_names
+# 
+#   Arg [1]    : ARRAYREF of strings. External identifiers of the features to be obtained
+#   Arg [2]    : (optional) String $external_db_name
+#                The name of the external database from which the
+#                identifier originates.
+#   Example    : my @features =
+#                   @{ $adaptor->fetch_all_by_external_names(['ENST00003548913', ...])};
+#   Description: Retrieves all features which are associated with
+#                the external identifiers such as a Ensembl gene or transcript
+#                stable IDs, etc.  Features are returned in their native
+#                coordinate system, i.e. the coordinate system in which
+#                they are stored in the database.  If they are required
+#                in another coordinate system the Feature::transfer or
+#                Feature::transform method can be used to convert them.
+#                If no features with the external identifier are found,
+#                a reference to an empty list is returned.
+#   Returntype : arrayref of Bio::EnsEMBL::Funcgen::Storable objects
+#                Maybe any Feature, FeatureType, Probe or ProbeSet
+#   Exceptions : Warns if xref method not available for given object adaptor
+#   Caller     : general
+#   Status     : at risk
+# 
+# =cut
+# 
+# sub fetch_all_by_external_names{
+#   my ( $self, $external_names, $external_db_name ) = @_;
+# 
+#   my $entryAdaptor = $self->db->get_DBEntryAdaptor();
+#   my ($type, $type_name);
+#   ($type = ref($self)) =~ s/.*:://;
+#   $type =~ s/Adaptor$//;
+#   ($type_name = $type) =~ s/Feature$/_feature/;
+#   my $xref_method = 'list_'.lc($type_name).'_ids_by_extids';
+# 
+# 
+#   if(! $entryAdaptor->can($xref_method)){
+# 	warn "Does not yet accomodate $type external names";
+# 	return [];
+#   }
+# 
+#   #Would be better if _list_ method returned and arrayref
+#   my @ids = $entryAdaptor->$xref_method($external_names, $external_db_name);
+# 
+#   return $self->fetch_all_by_dbID_list(\@ids);
+# }
+# 
+
+# =head2 fetch_all_by_linked_Transcript
+# 
+#   Arg [1]    : Bio::EnsEMBL::Transcript
+#   Example    : my @psets =
+#                   @{ $probe_set_adaptor->fetch_all_by_linked_Transcript($tx_obj);
+#   Description: Retrieves all features which are associated with
+#                the given Ensembl Transcript.
+#   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::Storable objects
+#                Maybe any Feature, FeatureType, Probe or ProbeSet
+#   Exceptions : Throws if arguments not valid
+#   Caller     : general
+#   Status     : at risk
+# 
+# =cut
+# 
+# sub fetch_all_by_linked_Transcript{
+#   my $self = shift;
+#   my $tx   = shift;
+#   assert_ref($tx, 'Bio::EnsEMBL::Transcript');
+# 
+#   if(! $tx->dbID ){
+# 	   throw('You must provide a stored Bio::EnsEMBL:Transcript object');
+#   }
+# 
+#   return $self->fetch_all_by_external_name($tx->stable_id, $self->db->species.'_core_Transcript')
+# }
+# 
+# =head2 fetch_all_by_linked_transcript_Gene
+# 
+#   Arg [1]    : Bio::EnsEMBL::Gene
+#   Example    : my @psets =
+#                   @{ $probe_set_adaptor->fetch_all_by_linked_transcript_Gene($gene_obj);
+#   Description: Retrieves all features which are indirectly associated with
+#                the given Ensembl Gene, through it's Transcripts.
+#   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::Storable objects
+#                Maybe any Feature, FeatureType, Probe or ProbeSet
+#   Exceptions : Throws if arguments not valid
+#   Caller     : general
+#   Status     : at risk
+# 
+# =cut
+# 
+# sub fetch_all_by_linked_transcript_Gene{
+#   my $self = shift;
+#   my $gene = shift;
+#   assert_ref($gene, 'Bio::EnsEMBL::Gene'); 
+#  
+#   if(! $gene->dbID ){
+#      throw('You must provide a stored Bio::EnsEMBL::Gene object');
+#   }
+#   
+#   #No need to pass params here as we know the gene ID is an int from the db 
+#   my $tx_sids = $gene->adaptor->db->dbc->sql_helper->execute_simple('select t.stable_id from transcript t where t.gene_id='.$gene->dbID);
+#   return $self->fetch_all_by_external_names($tx_sids, $self->db->species.'_core_Transcript');
+# }
+
+
+
+# =head2 store_associated_feature_types
+# 
+#   Arg [1]     : Bio::EnsEMBL::Funcgen::Storable
+#   Example     : $ext_feat_adaptor->store_associated_feature_type($ext_feat);
+#   Description : Store FeatureTypes assoicated with a given Storable
+#   Returntype  : None
+#   Exceptions  : Throws if FeatureTypes are not valid or stored
+#   Caller      : Adaptors
+#   Status      : At risk
+# 
+# =cut
+# 
+# #This currently does not validation
+# #of existing types
+# #we may want to rollback the associated ftypes from a specific analysis
+# #is rollback function safe here
+# #do we want to split this into update/add and store methods?
+# 
+# 
+# sub store_associated_feature_types {
+#   my ($self, $storable, $rollback) = @_;
+# 
+#   #Direct access to avoid lazy loading with an unstored SetFeature
+#   my $assoc_ftypes = $storable->{'associated_feature_types'};
+# 
+#   #Could be undef or empty
+#   return if ! defined $assoc_ftypes || scalar(@$assoc_ftypes) == 0;
+# 
+#   my $table_name = $storable->adaptor->_main_table->[0];
+#   my $dbid = $storable->dbID;
+#   my $sql;
+# 
+#   if($rollback){
+#     $sql = 'DELETE from associated_feature_type where '.
+#       "table_name='$table_name' and table_id=$dbid";
+#     $self->db->dbc->db_handle->do($sql);
+#   }
+# 
+#   $sql = 'INSERT into associated_feature_type(table_id, table_name, feature_type_id) values (?,?,?)';
+# 
+#   foreach my $ftype(@$assoc_ftypes){
+# 
+# 	#We have already tested the class but not whether it is stored
+# 	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $ftype);
+# 
+# 	my $sth = $self->prepare($sql);
+# 	$sth->bind_param(1, $dbid,        SQL_INTEGER);
+# 	$sth->bind_param(2, $table_name,  SQL_VARCHAR);
+# 	$sth->bind_param(3, $ftype->dbID, SQL_INTEGER);
+# 	$sth->execute();
+#   }
+# 
+#   return;
+# }
+
+# 
+# =head2 fetch_all_by_associated_FeatureType
+# 
+#   Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureType
+#   Example    : my $assoc_ftypes = $ft_adaptor->fetch_all_by_associated_FeatureType($ftype);
+#   Description: Fetches all objects which have associated FeatureType.
+#                Note this is not the main FeatureType for this object.
+#                Likely only relevant for FeatureTypeAdaptor and ExternalFeatureAdaptor.
+#   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::Storable objects
+#   Exceptions : Throws if FeatureType not valid or stored
+#   Caller     : General
+#   Status     : At risk
+# 
+# =cut
+# 
+# #todo add _constrain_associated_FeatureType method
+# 
+# sub fetch_all_by_associated_FeatureType{
+#   my ($self, $ftype) = @_;
+# 
+#   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $ftype);
+#   my ($table_name, $table_syn) = @{$self->_main_table};
+# 
+#   $self->_tables([['associated_feature_type', 'aft']]);
+#   my $constraint = "aft.feature_type_id=? AND aft.table_name='${table_name}' ".
+#     "AND aft.table_id=${table_syn}.${table_name}_id";
+# 
+#   $self->bind_param_generic_fetch($ftype->dbID,  SQL_INTEGER);
+#   my $objs = $self->generic_fetch($constraint);
+#   $self->reset_true_tables;
+# 
+#   return $objs;
+# }
+# 
+
+# =head2 _list_dbIDs
+# 
+#   Example    : my @table_ids = @{$adaptor->_list_dbIDs()};
+#   Description: Wrapper for parent method, dynamically passes correct table name to query.
+#                Gets an array of internal IDs for all objects in the main table of this class.
+#   Returntype : List of Ints
+#   Exceptions : None
+#   Caller     : General
+#   Status     : Stable
+# 
+# =cut
+# 
+# sub _list_dbIDs{
+#   my $self = shift;
+#   return $self->SUPER::_list_dbIDs($self->_table_name);
+# }
+# 
+# 
+# =head2 build_feature_class_name
+# 
+#   Arg[1]     : String - feature_class e.g. annotated, dna_methylation, regulatory etc.
+#   Example    : my $fclass_name = $adaptor->build_feature_class_name;
+#   Description: Builds the full feature class name for a given feature class.
+#   Returntype : String
+#   Exceptions : None
+#   Caller     : FeatureSet::get_FeatureAdaptor and Set::feature_class_name
+#   Status     : Stable
+# 
+# =cut
+# 
+# sub build_feature_class_name{
+#   my ($self, $fclass) = @_;
+# 
+#   if(! defined $fclass){
+#     throw('You must pass a feature class argument to build the feature class name');
+#   }
+# 
+#   my @words = split('_', $fclass);
+# 
+#   foreach my $word(@words){
+#     $word = ucfirst($word);
+#     $word = 'DNA' if $word eq 'Dna';
+#   }
+# 
+#   return join('', (@words, 'Feature') );
+# }
+
+
+# 
+# sub stable_id_prefix{
+#   my $self = shift;
+# 
+#   if (! defined $self->{'stable_id_prefix'}) {
+#     ($self->{'stable_id_prefix'}) = @{$self->db->dnadb->get_MetaContainer->list_value_by_key
+#                                         (
+#                                          'species.stable_id_prefix'
+#                                         )};
+# 
+#     #Only add R if it is defined
+#     $self->{'stable_id_prefix'} .= 'R' if $self->{'stable_id_prefix'};
+#   }
+# 
+#   return $self->{'stable_id_prefix'}
+# }
+# 
 
 
 ### GENERIC CONSTRAINT METHODS ###

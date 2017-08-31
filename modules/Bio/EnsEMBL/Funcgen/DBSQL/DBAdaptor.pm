@@ -179,7 +179,12 @@ sub get_available_adaptors{
     my $self = shift;
 
     my %pairs = (
+        'Alignment'              => 'Bio::EnsEMBL::Funcgen::DBSQL::AlignmentAdaptor',
         'AnnotatedFeature'       => 'Bio::EnsEMBL::Funcgen::DBSQL::AnnotatedFeatureAdaptor',
+        
+        'Peak'                   => 'Bio::EnsEMBL::Funcgen::DBSQL::PeakAdaptor',
+        'PeakCalling'            => 'Bio::EnsEMBL::Funcgen::DBSQL::PeakCallingAdaptor',
+        
         'BindingMatrix'          => 'Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixAdaptor',
         'Epigenome'              => 'Bio::EnsEMBL::Funcgen::DBSQL::EpigenomeAdaptor',
         'DataSet'                => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
