@@ -23,5 +23,7 @@ alter table peak change column annotated_feature_id peak_id   int(10) unsigned N
 alter table peak change column feature_set_id peak_calling_id int(10) unsigned NOT NULL;
 alter table peak drop   column display_label;
 
+update meta_coord set table_name = "peak" where table_name = "annotated_feature";
+
 -- patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_y.sql|');
