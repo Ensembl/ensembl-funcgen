@@ -321,40 +321,6 @@ sub get_all_Features{
   return $self->get_FeatureAdaptor->fetch_all_by_FeatureSets([$self]);
 }
 
-
-=head2 is_focus_set
-
-  Args       : None
-  Example    : if($fset->is_focus_set){ ... }
-  Description: Returns true if FeatureSet is a focus set used to define
-               the core region of a RegulatoryFeature
-  Returntype : Boolean
-  Exceptions : Throws if meta entry not present
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-#'focus' and 'core' have historically been interchageable
-
-
-sub is_focus_set{
-  my $self = shift;
-
-  if (! defined $self->{focus_set}) {
-
-    if (! defined $self->epigenome) {
-      warn "FeatureSet without an associated Epigenome cannot be a focus set:\t".$self->name;
-      $self->{focus_set} = 0;
-    } else {
-      $self->{focus_set} = $self->adaptor->fetch_focus_set_config_by_FeatureSet($self);
-    }
-  }
-
-  return $self->{focus_set};
-}
-
-
 =head2 compare_to
 
   Args[1]    : Bio::EnsEMBL::Funcgen::Storable (mandatory)
