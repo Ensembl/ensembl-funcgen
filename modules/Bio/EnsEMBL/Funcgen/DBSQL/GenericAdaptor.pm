@@ -39,7 +39,7 @@ use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 
 use base (
-  'Bio::EnsEMBL::DBSQL::BaseAdaptor',
+  'Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor',
   'Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality',
 );
 
@@ -55,7 +55,7 @@ sub new {
 
 sub init {
   my $self = shift;
-  $self->SUPER::init($@);
+  $self->SUPER::init(@_);
   
   $self->_table_info_loader;
   
