@@ -76,24 +76,63 @@ sub _fetch_methods {
   ]
 }
 
-sub fetch_Epigenome {
+sub _fetch_experiment_id {
     my $self = shift;
     my $db = $self->db;
-    my $epigenome_id = $db->sql_helper->execute_single_result(
+    my $experiment_id = $db->sql_helper->execute_single_result(
       -SQL    => '
         select 
-            distinct experiment.epigenome_id
+            distinct read_file_experimental_configuration.experiment_id
         from 
             peak_calling
             join alignment_read_file using (alignment_id)
             join read_file_experimental_configuration using (read_file_id)
             join experiment using (experiment_id)
         where
-            peak_calling.peak_calling_id = ?
+            experiment.is_control = False
+            and peak_calling.peak_calling_id = ?
       ',
       -PARAMS => [ $self->dbID ],
     );
-    return $db->db->get_EpigenomeAdaptor->fetch_by_dbID($epigenome_id);
+    return $experiment_id;
+}
+
+sub fetch_Epigenome {
+    my $self = shift;
+    my $db = $self->db;
+    my $experiment_id = $self->_fetch_experiment_id;
+    my $epigenome_id  = $db->sql_helper->execute_single_result(
+      -SQL    => '
+        select 
+            distinct experiment.epigenome_id
+        from 
+            experiment
+        where
+            experiment_id = ?
+      ',
+      -PARAMS => [ $experiment_id ],
+    );
+    my $epigenome = $db->db->get_EpigenomeAdaptor->fetch_by_dbID($epigenome_id);
+    return $epigenome;
+}
+
+sub fetch_source_label {
+    my $self = shift;
+    my $db = $self->db;
+    my $experiment_id = $self->_fetch_experiment_id;
+    my $source_label  = $db->sql_helper->execute_single_result(
+      -SQL    => '
+        select 
+          experimental_group.name 
+        from 
+          experiment
+          left join experimental_group using (experimental_group_id) 
+        where
+            experiment_id = ?
+      ',
+      -PARAMS => [ $experiment_id ],
+    );
+    return $source_label;
 }
 
 1;
