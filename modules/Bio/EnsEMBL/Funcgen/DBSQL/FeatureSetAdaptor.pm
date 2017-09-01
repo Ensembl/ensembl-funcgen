@@ -1,7 +1,3 @@
-#
-# Ensembl module for Bio::EnsEMBL::Funcgen::DBSQL::FeatureSetAdaptor
-#
-
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
@@ -37,13 +33,7 @@ storing Funcgen feature sets.
 
 my $fs_adaptor = $db->get_FeatureSetAdaptor();
 
-
-my @displayable_fsets = @{$fs_adaptor->fetch_all_displayable()};
-
 =head1 DESCRIPTION
-
-The FeatureSetAdaptor is a database adaptor for storing and retrieving
-Funcgen feature set.
 
 =cut
 
@@ -56,88 +46,6 @@ use Bio::EnsEMBL::Funcgen::FeatureSet;
 use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor; #DBI sql_types import
 
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor);
-
-# =head2 fetch_all_by_feature_class
-# 
-#   Arg [1]    : String - feature class i.e. 'annotated', 'regulatory', 'segmentation', 'mirna' or 'external'
-#   Arg [2]    : String (optional) - status e.g. 'DISPLAYABLE'
-#   Arg [2]    : Bio::EnsEMBL::Funcgen::Epigenome (optional) or a HASH parameters
-#                containing contraint config e.g.
-# 
-#                    $feature_set_adaptor->fetch_all_by_feature_class
-#                                            ('annotated',
-#                                              {'constraints' =>
-#                                                {
-#                                                epigenomes     => [$epigenome], #Bio::EnsEMBL::Funcgen::Epigenome
-#                                                projects       => ['ENCODE'],
-#                                                evidence_types => ['Hists & Pols'],
-#                                                feature_types  => [$ftype], #Bio::EnsEMBL::Funcgen::FeatureType
-#                                                }
-#                                              });
-# 
-#   Example    : my @fsets = @{$fs_adaptopr->fetch_all_by_feature_class('annotated')};
-#   Description: Retrieves FeatureSet objects from the database based on feature_set type.
-#   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::FeatureSet objects
-#   Exceptions : Throws if type not defined
-#   Caller     : General
-#   Status     : At Risk - Move status to params hash
-# 
-# =cut
-# 
-# sub fetch_all_by_feature_class {
-#   my ($self, $type, $status, $params) = @_;
-# 
-#   throw('Must provide a feature_set type') if(! defined $type);
-#   my $sql = "fs.type = '".$type."'";
-# 
-#   if (defined $params) {        #Some redundancy over $epigenome arg and $params epigenome
-# 
-#     if ( ref($params) eq 'Bio::EnsEMBL::Funcgen::Epigenome') {
-#       $params = {constraints => {epigenomes => [$params]}};
-#     } elsif (ref($params) ne 'HASH') {
-#       throw('Argument must be a Bio::EnsEMBL::Funcgen::Epigenome or a params HASH');
-#     }
-#   }
-# 
-# 
-#   if ($status) {
-#     $params->{constraints}{states} = [ $status ];
-#   }
-# 
-#   #Deal with params constraints
-#   my $constraint = $self->compose_constraint_query($params);
-#   $sql .=  " AND $constraint " if $constraint;
-# 
-# 
-#   #Get result and reset true tables
-#   my $result = (defined $sql) ? $self->generic_fetch($sql) : [];
-#   $self->reset_true_tables;
-# 
-#   return $result;
-# }
-
-# 
-# =head2 fetch_all_displayable_by_type
-# 
-#   Arg [1]    : String - Type of feature set i.e. 'annotated', 'regulatory' or 'supporting'
-#   Arg [2]    : Bio::EnsEMBL::Funcgen::Epigenome (optional) or parameters HASH
-#   Example    : my @fsets = $fs_adaptopr->fetch_all_by_type('annotated');
-#   Description: Wrapper method for fetch_all_by_type
-#   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::FeatureSet objects
-#   Exceptions : None
-#   Caller     : General
-#   Status     : At Risk
-# 
-# =cut
-# 
-# sub fetch_all_displayable_by_type {
-#     my ($self, $type, $epigenome_or_params) = @_;
-# 
-# 	#Move status to config hash
-# 	$self->fetch_all_by_feature_class($type, 'DISPLAYABLE', $epigenome_or_params);
-# 
-# }
-# 
 
 =head2 fetch_by_name
 
@@ -167,7 +75,6 @@ sub fetch_by_name {
   return (defined $sql) ? $self->generic_fetch($sql)->[0] : [];
 
 }
-
 
 =head2 _true_tables
 
@@ -264,8 +171,6 @@ sub _objs_from_sth {
 	return \@fsets;
 }
 
-
-
 =head2 store
 
   Args       : List of Bio::EnsEMBL::Funcgen::FeatureSet objects
@@ -326,234 +231,6 @@ sub store {
 	}
 	return \@fsets;
 }
-
-#focus is old terminology
-#tend to use 'core' now
-#although here we use focus to determine a set which is actually used in the build
-#where as core is at the feature type level
-#i.e. you can have a feature set with a core feature type
-#which is not in the build and is therefore not a focus set.
-
-# =head2 fetch_focus_set_config_by_FeatureSet
-# 
-#   Args       : Bio::EnsEMBL::Funcgen::FeatureSet
-#   Example    : $self->{'focus_set'} = $self->adaptor->fetch_focus_set_config_by_FeatureSet($self);
-#   Description: Caches and returns focus set config for a given FeatureSet
-#   Returntype : Boolean
-#   Exceptions : Warns if meta entry not present
-#   Caller     : Bio::EnsEMBL::Funcgen::FeatureSet::is_focus_set
-#   Status     : At Risk
-# 
-# =cut
-# 
-# sub fetch_focus_set_config_by_FeatureSet{
-#   my ($self, $fset) = @_;
-# 
-#   $self->{focus_set_config} ||= {};
-# 
-#   if (! defined $self->{focus_set_config}->{$fset->dbID}) {
-# 
-#     #Is is an attribute set?
-#     if ($self->fetch_attribute_set_config_by_FeatureSet($fset)) {
-# 
-#       #Need to define these as RegBuild config
-#       if ($fset->feature_type->is_core_evidence) {
-#         $self->{focus_set_config}->{$fset->dbID} = 1;
-#       }
-#     }
-#   }
-# 
-#   return $self->{focus_set_config}->{$fset->dbID};
-# }
-
-
-
-# sub fetch_feature_set_filter_counts{
-#   my $self = shift;
-# 
-#    my $sql = 'SELECT count(*), eg.name, eg.description, eg.is_project, ft.class, epi.name, epi.description '.
-#     'FROM experimental_group eg, experiment e, feature_set fs, feature_type ft, epigenome epi '.
-#         'WHERE fs.experiment_id=e.experiment_id '.
-#           'AND e.experimental_group_id=eg.experimental_group_id '.
-#           'AND fs.feature_type_id=ft.feature_type_id AND fs.epigenome_id=epi.epigenome_id '.
-#             'AND fs.type="annotated" '.
-#                 'GROUP BY eg.name, eg.is_project, ft.class, epi.name';
-# 
-#   #warn $sql;
-#   #Need to write HC around this as we sometimes get less than expect.
-# 
-# 
-#   my @rows = @{$self->db->dbc->db_handle->selectall_arrayref($sql)};
-#   my $ft_a = $self->db->get_FeatureTypeAdaptor;
-#   my $ftype_info = $ft_a->get_regulatory_evidence_info;
-# 
-#   my %filter_info =
-#     (
-#      #Project=> {},
-#      #'Cell/Tissue' => {},
-#      All =>
-#      {
-#       All =>{ count       => 0,
-#               description => 'All experiments',
-#             }
-#      }
-# 
-#     );
-# 
-#   foreach my $row(@rows){
-# 
-#     my ($count, $project, $proj_desc, $is_proj, $ft_class, $epigenome_name, $epigenome_desc) = @$row;
-# 
-#     #All counts
-#     $filter_info{All}{All}{count} += $count;
-# 
-#     #Project counts
-#     if($is_proj){
-# 
-#       if(! exists $filter_info{Project}{$project}){
-#         $filter_info{Project}{$project} =
-#           { count       => 0,
-#             description => $proj_desc,
-#           };
-#       }
-# 
-#       $filter_info{Project}{$project}{count} += $count;
-#     }
-# 
-#     #Cell/Tissue counts
-#     if(! exists $filter_info{'Cell/Tissue'}{$epigenome_name}){
-#       $filter_info{'Cell/Tissue'}{$epigenome_name} =
-#         { count       => 0,
-#           description => $epigenome_desc,
-#         };
-#     }
-#     $filter_info{'Cell/Tissue'}{$epigenome_name}{count} += $count;
-# 
-#     #Evidence class counts
-#     #Do we want to split this into ft.class
-#     #i.e. split 'DNase1 & TFBS'
-#     my $evidence_type  = $ft_a->get_regulatory_evidence_type($ft_class);
-#     my $ft_class_label =  $ftype_info->{$evidence_type}{label};
-# 
-#     if(! exists $filter_info{'Evidence type'}{$ft_class_label}){
-#       $filter_info{'Evidence type'}{$ft_class_label} =
-#         { count       => 0,
-#           description => $ftype_info->{$evidence_type}{long_name},
-#         };
-#     }
-#     $filter_info{'Evidence type'}{$ft_class_label}{count} += $count;
-#   }
-# 
-#   return \%filter_info;
-# 
-#   #Do we need to add an 'in_build' filter /data field?
-# 
-# }
-
-
-
-
-#Need to bind param these as they come from URL parameters and are not tested
-
-#Could move a lot of these to the BaseAdaptor if we have a valid_constraints config available
-#and we use generic main_table approach for building constraint
-
-#and reuse between adaptors if we use the _tables method to get the table syn
-#This may mean contraints can be specified for classes which do not contain
-#the relevant fields.
-#Allow this flexiblity or validate fields/constraint?
-#Or implicit by location of contraint config, i.e. put it in the relevant
-#parent adaptors
-
-
-#All these _constrain methods must return a valid constraint string, and a hashref of any other constraint config
-
-# sub _constrain_projects{
-#   return $_[0]->_constrain_experimental_groups($_[1]);
-# }
-
-
-# sub _constrain_experimental_groups{
-#   my ($self, $egs, $projects_only) = @_;
-# 
-#   #enable query extension
-#   my $constraint_conf = {tables => [['experiment', 'e']]};
-# 
-# 
-#   if ( (ref($egs) ne 'ARRAY') ||
-#        scalar(@$egs) == 0 ) {
-#     throw('Must pass an arrayref of project names');
-#   }
-#   my @eg_ids;
-# 
-#   foreach my $eg (@$egs) {
-#     $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ExperimentalGroup', $eg);
-# 
-#     if ( $projects_only && (! $eg->is_project) ) {
-#       throw("You have passed an ExperimentalGroup which is not a project:\t".$eg->name);
-#     }
-# 
-#     push @eg_ids, $eg->dbID;
-#   }
-# 
-#   #Don't need to bind param this as we validate above
-#   my $constraint = ' fs.experiment_id=e.experiment_id AND '.
-#     'e.experimental_group_id IN ('.join(', ', @eg_ids).')';
-# 
-#   return ($constraint, $constraint_conf);
-# }
-
-
-
-
-# sub _constrain_evidence_types {
-#   my ($self, $etypes) = @_;
-# 
-# 	my $constraint_conf = {tables => [['feature_type', 'ft']]};
-# 
-#   my %in_values =
-# 		(
-# 		 'DNase1 & TFBS' => ['Open Chromatin',
-#                          'Transcription Factor',
-#                          'Transcription Factor Complex'],
-# 
-# 		 'Hists & Pols'  => ['Histone',
-#                          'Polymerase'],
-# 		);
-# 
-#   my @ft_classes;
-# 
-#   if ( (ref($etypes) ne 'ARRAY') ||
-#        scalar(@$etypes) == 0 ) {
-# 		throw('Must pass an arrayref of evidence types');
-#   }
-# 
-#   foreach my $etype (@$etypes) {
-# 
-# 		if (! exists $in_values{$etype}) {
-# 		  throw("You have passed an invalid evidence type filter argument($etype)\n".
-#             "Please use one of the following:\t".join(' ,', keys(%in_values)));
-# 		}
-# 		push @ft_classes, @{$in_values{$etype}};
-#   }
-# 
-#   #Don't need to bind param this as we validate above
-#   my $constraint = ' fs.feature_type_id=ft.feature_type_id AND ft.class IN ("'.
-# 		join('", "', @ft_classes).'")';
-# 
-#   return ($constraint, $constraint_conf);
-# }
-
-
-# sub fetch_all_by_type { # deprecated in v74, but still used by web
-#   my $self = shift;
-#   my $type = shift;
-#   my $status = shift;
-# 
-#   deprecate('Please use fetch_all_by_feature_class');
-# 
-#   return $self->fetch_all_by_feature_class($type, $status);
-# }
 
 1;
 
