@@ -45,7 +45,7 @@ use base (
 
 sub init {
   my $self = shift;
-  $self->SUPER::init($@);
+  $self->SUPER::init(@_);
   $self->slice_cache({});
 }
 
