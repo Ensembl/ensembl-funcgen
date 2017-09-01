@@ -76,4 +76,24 @@ sub _fetch_methods {
   ]
 }
 
+sub fetch_Epigenome {
+    my $self = shift;
+    my $db = $self->db;
+    my $epigenome_id = $db->sql_helper->execute_single_result(
+      -SQL    => '
+        select 
+            distinct experiment.epigenome_id
+        from 
+            peak_calling
+            join alignment_read_file using (alignment_id)
+            join read_file_experimental_configuration using (read_file_id)
+            join experiment using (experiment_id)
+        where
+            peak_calling.peak_calling_id = ?
+      ',
+      -PARAMS => [ $self->dbID ],
+    );
+    return $db->db->get_EpigenomeAdaptor->fetch_by_dbID($epigenome_id);
+}
+
 1;
