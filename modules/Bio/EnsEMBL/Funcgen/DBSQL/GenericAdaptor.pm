@@ -305,7 +305,7 @@ sub store {
         # creating the test database.
         #
         if (defined $object->dbID) {
-            push $columns_being_stored, $self->primary_key->[0]
+            push @$columns_being_stored, $self->primary_key->[0]
         }
         
         # warn "COLUMN_KEY='$column_key'\n";
