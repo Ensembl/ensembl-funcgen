@@ -284,6 +284,10 @@ sub _tables {
   return @{$_[0]->{_tables}};
 }
 
+sub _true_tables {
+  my $self = shift;
+  return ($self->_tables);
+}
 
 =head2 reset_true_tables
 
