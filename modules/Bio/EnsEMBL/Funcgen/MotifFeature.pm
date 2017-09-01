@@ -210,44 +210,45 @@ sub display_label {
 
 sub associated_annotated_features{
   my $self = shift;
-  my $afs  = shift;
-  #Lazy load as we don't want to have to do a join on all features when most will not have any
- 
-  if (defined $afs) {
-
-    if (ref($afs) eq 'ARRAY') {
-
-      foreach my $af (@$afs) {
-	
-        if ( ! $af->isa('Bio::EnsEMBL::Funcgen::AnnotatedFeature') ) {
-          throw('You must pass and ARRAYREF of stored Bio::EnsEMBL::Funcgen::AnnotatedFeature objects');
-        }
-        #test is stored in adaptor
-      }
-
-      if (defined $self->{associated_annotated_features}) {
-        warn('You are overwriting associated_annotated_features for the MotifFeature');
-        #we could simply add the new ones and make them NR.
-      }
-
-      $self->{associated_annotated_features} = $afs;
-    } 
-    else {
-      throw('You must pass and ARRAYREF of stored Bio::EnsEMBL::Funcgen::AnnotatedFeature objects');
-    }
-  }
-
-
-  if (! defined $self->{associated_annotated_features}) {
-
-    if (defined $self->adaptor) {
-      $self->{associated_annotated_features} = 
-        $self->adaptor->db->get_AnnotatedFeatureAdaptor->fetch_all_by_associated_MotifFeature($self);
-    }
-  }
-  
-  #This has the potential to return undef, or an arrayref which may be empty.
-  return $self->{associated_annotated_features};
+  return [];
+#   my $afs  = shift;
+#   #Lazy load as we don't want to have to do a join on all features when most will not have any
+#  
+#   if (defined $afs) {
+# 
+#     if (ref($afs) eq 'ARRAY') {
+# 
+#       foreach my $af (@$afs) {
+# 	
+#         if ( ! $af->isa('Bio::EnsEMBL::Funcgen::AnnotatedFeature') ) {
+#           throw('You must pass and ARRAYREF of stored Bio::EnsEMBL::Funcgen::AnnotatedFeature objects');
+#         }
+#         #test is stored in adaptor
+#       }
+# 
+#       if (defined $self->{associated_annotated_features}) {
+#         warn('You are overwriting associated_annotated_features for the MotifFeature');
+#         #we could simply add the new ones and make them NR.
+#       }
+# 
+#       $self->{associated_annotated_features} = $afs;
+#     } 
+#     else {
+#       throw('You must pass and ARRAYREF of stored Bio::EnsEMBL::Funcgen::AnnotatedFeature objects');
+#     }
+#   }
+# 
+# 
+#   if (! defined $self->{associated_annotated_features}) {
+# 
+#     if (defined $self->adaptor) {
+#       $self->{associated_annotated_features} = 
+#         $self->adaptor->db->get_AnnotatedFeatureAdaptor->fetch_all_by_associated_MotifFeature($self);
+#     }
+#   }
+#   
+#   #This has the potential to return undef, or an arrayref which may be empty.
+#   return $self->{associated_annotated_features};
 }
 
 
