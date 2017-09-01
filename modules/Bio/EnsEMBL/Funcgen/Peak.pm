@@ -98,6 +98,9 @@ sub _simple_accessors {
     { method_name => 'seq_region_strand',  hash_key => '_seq_region_strand', },
     { method_name => 'strand',             hash_key => 'strand',             },
     { method_name => 'slice',              hash_key => 'slice',              },
+    
+    # An alias to make some of the legacy methods work
+    { method_name => 'adaptor',            hash_key => 'db'   ,              },
   ]
 }
 
@@ -209,25 +212,16 @@ sub get_underlying_structure{
 =head2 get_associated_MotifFeatures
 
   Example    : my @assoc_mfs = @{ $af->get_associated_MotifFeatures };
-  Description: Returns and array associated MotifFeature i.e. MotifFeatures
-               representing a relevanting PWM/BindingMatrix
-  Returntype : ARRAYREF
+  Description: There are none in the database, so this always returns undef.
+  Returntype : undef
   Exceptions : None
   Caller     : General
-  Status     : At Risk - This is TFBS specific and could move to TranscriptionFactorFeature
+  Status     : stable
 
 =cut
 
 sub get_associated_MotifFeatures{
-  my $self = shift;
-
-  if(! defined $self->{assoc_motif_features}){
-    my $mf_adaptor = $self->adaptor->db->get_MotifFeatureAdaptor;
-		#These need reslicing!
-		$self->{assoc_motif_features} = $mf_adaptor->fetch_all_by_Peak($self, $self->slice);
-  }
-
-  return $self->{assoc_motif_features};
+  return;
 }
 
 sub SO_term {

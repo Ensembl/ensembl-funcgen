@@ -71,37 +71,37 @@ my $true_final_clause = ' ORDER by mf.seq_region_id, mf.seq_region_start, mf.seq
 my $final_clause = $true_final_clause;
 
 
-=head2 fetch_all_by_AnnotatedFeature
-
-  Arg [1]    : Bio::EnsEMBL::AnnotatedFeature
-  Arg [2]    : optional - Bio::EnsEMBL::Slice
-  Example    : my $features = $ofa->fetch_all_by_AnnotatedFeature($af);
-  Description: Retrieves a list of all MotifFeatures linked to the given
-               AnnotatedFeature
-  Returntype : Listref of Bio::EnsEMBL::Funcgen::MotifFeature objects
-  Exceptions : Throws if AnnotatedFeature not stored and valid
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub fetch_all_by_AnnotatedFeature {
-  my ($self, $feature, $slice) = @_;
-
-  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::AnnotatedFeature', $feature);
-
-  #Extend query tables
-  $self->_tables([['associated_motif_feature', 'amf']]);
-  my $constraint = 'mf.motif_feature_id = amf.motif_feature_id AND amf.annotated_feature_id=?';
-  #No need for group here as we are restricting to one af
-
-  $self->bind_param_generic_fetch($feature->dbID, SQL_INTEGER);
-
-  my $mfs = $self->generic_fetch($constraint, undef, $slice);
-  $self->reset_true_tables;
-
-  return $mfs;
-}
+# =head2 fetch_all_by_AnnotatedFeature
+# 
+#   Arg [1]    : Bio::EnsEMBL::AnnotatedFeature
+#   Arg [2]    : optional - Bio::EnsEMBL::Slice
+#   Example    : my $features = $ofa->fetch_all_by_AnnotatedFeature($af);
+#   Description: Retrieves a list of all MotifFeatures linked to the given
+#                AnnotatedFeature
+#   Returntype : Listref of Bio::EnsEMBL::Funcgen::MotifFeature objects
+#   Exceptions : Throws if AnnotatedFeature not stored and valid
+#   Caller     : General
+#   Status     : At Risk
+# 
+# =cut
+# 
+# sub fetch_all_by_AnnotatedFeature {
+#   my ($self, $feature, $slice) = @_;
+# 
+#   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::AnnotatedFeature', $feature);
+# 
+#   #Extend query tables
+#   $self->_tables([['associated_motif_feature', 'amf']]);
+#   my $constraint = 'mf.motif_feature_id = amf.motif_feature_id AND amf.annotated_feature_id=?';
+#   #No need for group here as we are restricting to one af
+# 
+#   $self->bind_param_generic_fetch($feature->dbID, SQL_INTEGER);
+# 
+#   my $mfs = $self->generic_fetch($constraint, undef, $slice);
+#   $self->reset_true_tables;
+# 
+#   return $mfs;
+# }
 
 
 =head2 fetch_all_by_Slice_Epigenome
