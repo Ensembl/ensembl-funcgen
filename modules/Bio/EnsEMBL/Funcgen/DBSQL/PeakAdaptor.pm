@@ -54,4 +54,18 @@ sub _columns {
   );
 }
 
+sub fetch_all_by_Slice_PeakCalling {
+
+  my $self         = shift;
+  my $slice        = shift;
+  my $peak_calling = shift;
+  
+  my $peak_calling_id = $peak_calling->dbID;
+  my $features = $self->fetch_all_by_Slice_constraint(
+    $slice, 
+    "peak_calling_id = " . $peak_calling_id
+  );
+  return $features;
+}
+
 1;
