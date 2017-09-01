@@ -204,7 +204,7 @@ sub get_underlying_structure{
 =cut
 
 sub get_associated_MotifFeatures{
-  return;
+  return [];
 }
 
 sub SO_term {
