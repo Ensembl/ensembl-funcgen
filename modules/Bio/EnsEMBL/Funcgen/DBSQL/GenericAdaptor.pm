@@ -154,8 +154,17 @@ sub _table_info_loader {
     my $self = shift;
 
     my $table_name  = $self->table_name;
-    my $dbc         = $self->db->dbc();
-    my $dbh         = $dbc->db_handle();
+    my $db          = $self->db;
+    
+    if (! defined $db) {
+      die("db is undefined!");
+    }
+    if (! $db->isa('Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor')) {
+      die("Type error, got a " . (ref $db) );
+    }
+    
+    my $dbc         = $db->dbc;
+    my $dbh         = $dbc->db_handle;
 
     my %column_set  = ();
     my $autoinc_id  = '';
