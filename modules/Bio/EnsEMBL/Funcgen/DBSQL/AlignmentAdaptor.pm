@@ -60,7 +60,7 @@ sub _load_dependencies {
       -PARAMS       => [ $alignment->dbID ],
       -USE_HASHREFS => 1,
       -CALLBACK     => sub {
-          my $row = shift @_;
+          my $row = shift;
           my $read_file_id = $row->{read_file_id};
           push @linked_read_file_ids, $read_file_id;
           return;
