@@ -189,7 +189,7 @@ sub display_id {
 =cut
 
 sub get_underlying_structure{
-  return ();
+  return [];
 }
 
 =head2 get_associated_MotifFeatures
