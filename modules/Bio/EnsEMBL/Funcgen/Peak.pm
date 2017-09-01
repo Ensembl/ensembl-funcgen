@@ -188,25 +188,8 @@ sub display_id {
 
 =cut
 
-#This should really be precomputed and stored in the DB to avoid the MF attr fetch
-#Need to be aware of projecting here, as these will expire if we project after this method is called
-
 sub get_underlying_structure{
-  my $self = shift;
-
-  if(! defined $self->{underlying_structure}){
-    my @loci = ($self->start);
-	
-    foreach my $mf(@{$self->get_associated_MotifFeatures}){
-      push @loci, ($mf->start, $mf->end);
-    }
-
-    push @loci, $self->end;
-	
-    $self->{underlying_structure} = \@loci;
-  }
-
-  return $self->{underlying_structure};
+  return;
 }
 
 =head2 get_associated_MotifFeatures
