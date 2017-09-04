@@ -184,6 +184,7 @@ sub get_available_adaptors{
         
         'Peak'                   => 'Bio::EnsEMBL::Funcgen::DBSQL::PeakAdaptor',
         'PeakCalling'            => 'Bio::EnsEMBL::Funcgen::DBSQL::PeakCallingAdaptor',
+        'DataFile'               => 'Bio::EnsEMBL::Funcgen::DBSQL::DataFileAdaptor',
         
         'BindingMatrix'          => 'Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixAdaptor',
         'Epigenome'              => 'Bio::EnsEMBL::Funcgen::DBSQL::EpigenomeAdaptor',
