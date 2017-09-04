@@ -21,6 +21,9 @@ rename table dbfile_registry to data_file;
 
 ALTER TABLE data_file ADD data_file_id INT NOT NULL AUTO_INCREMENT unique first;
 
+ALTER TABLE data_file DROP PRIMARY KEY;
+ALTER TABLE data_file add PRIMARY KEY (data_file_id);
+
 alter table alignment add column bam_file_id    int DEFAULT null;
 alter table alignment add column bigwig_file_id int DEFAULT null;
 
