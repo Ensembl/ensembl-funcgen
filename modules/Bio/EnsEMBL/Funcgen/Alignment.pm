@@ -39,9 +39,11 @@ use base 'Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality';
 
 sub _constructor_parameters {
   return {
-    name          => 'name',
-    analysis_id   => 'analysis_id',
-    read_file_ids => 'read_file_ids',
+    name           => 'name',
+    analysis_id    => 'analysis_id',
+    bam_file_id    => 'bam_file_id',
+    bigwig_file_id => 'bigwig_file_id',
+    read_file_ids  => 'read_file_ids',
   };
 }
 
@@ -49,6 +51,8 @@ sub _simple_accessors {
   return [
     { method_name => 'name',              hash_key    => '_name',           },
     { method_name => 'analysis_id',       hash_key    => '_analysis_id',    },
+    { method_name => 'bam_file_id',       hash_key    => '_bam_file_id',    },
+    { method_name => 'bigwig_file_id',    hash_key    => '_bigwig_file_id', },
     { method_name => 'read_file_ids',     hash_key    => '_read_file_ids',  },
   ]
 }
@@ -72,6 +76,35 @@ sub _set_methods {
       hash_key      => '_analysis',
     },
   ]
+}
+
+sub _fetch_DataFile {
+
+  my $self         = shift;
+  my $data_file_id = shift;
+  
+  my $data_file_adaptor = $self->db->db->get_DataFileAdaptor;
+  if (! defined $data_file_adaptor) {
+    throw("Couldn't get a DataFileAdaptor!");
+  }
+  my $data_file = $data_file_adaptor->fetch_by_dbID($data_file_id);
+  return $data_file;
+}
+
+sub fetch_BamFile {
+
+  my $self        = shift;
+  my $bam_file_id = $self->bam_file_id;
+  
+  return $self->_fetch_DataFile($bam_file_id);
+}
+
+sub fetch_BigWigFile {
+
+  my $self           = shift;
+  my $bigwig_file_id = $self->bigwig_file_id;
+  
+  return $self->_fetch_DataFile($bigwig_file_id);
 }
 
 sub fetch_all_ReadFiles {
