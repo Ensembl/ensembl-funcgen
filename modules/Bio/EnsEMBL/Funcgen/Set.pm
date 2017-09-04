@@ -268,53 +268,5 @@ sub experiment{
   return $self->{experiment};
 }
 
-
-=head2 source_label
-
-  Example    : my $source_label = $fset->source_label;
-  Description: Retrieves the source label this FeatureSet, used in zmenus
-  Returntype : String
-  Exceptions : None
-  Caller     : Webcode zmenus
-  Status     : At Risk
-
-=cut
-
-#re-implement for InputSubset? As we may want to just list the SRR ID?
-
-#These are used to link through to the experiment view based on feature_set name
-#select input_set_id, count(distinct archive_id) as cnt , group_concat(archive_id) from input_subset where archive_id is not NULL group by input_set_id having cnt >1;
-
-#Is this ever used by webcode?
-#It seems like source_info is also used for zmenus
-#So this would never return the appended project name if it is in a project but also has
-#and archive ID
-
-
-#This could do with using a project display label
-#This could abbreviate RoadmapEpigenomics to Roadmap?
-#This could also act as is_project field?
-#No, as this would no give full support to projec tnames was experimental_group name is currently subgroup name
-
-sub source_label{
-  my $self = shift;
-
-  if((! defined $self->{source_label}) &&
-     $self->experiment_id){
-
-    $self->{source_label} =
-      $self->adaptor->db->get_ExperimentAdaptor->fetch_source_label_by_experiment_id($self->experiment_id);
-  }
-
-  return $self->{source_label};
-}
-
-
-
-#sub source_info
-#This is now in Experiment, but could a fetch_source_info_by_experiment_id method
-#to avoid creating the Experiment object.
-
-
 1;
 
