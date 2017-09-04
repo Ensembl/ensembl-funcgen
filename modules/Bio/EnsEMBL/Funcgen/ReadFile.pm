@@ -55,38 +55,14 @@ sub _constructor_parameters {
 
 sub _simple_accessors {
   return [
-    {
-      method_name => 'name',
-      hash_key    => '_name',
-    },
-    {
-      method_name => 'is_paired_end',
-      hash_key    => '_is_paired_end',
-    },
-    {
-      method_name => 'paired_with',
-      hash_key    => '_paired_with',
-    },
-    {
-      method_name => 'file_size',
-      hash_key    => '_file_size',
-    },
-    {
-      method_name => 'read_length',
-      hash_key    => '_read_length',
-    },
-    {
-      method_name => 'md5sum',
-      hash_key    => '_md5sum',
-    },
-    {
-      method_name => 'file',
-      hash_key    => '_file',
-    },
-    {
-      method_name => 'notes',
-      hash_key    => '_notes',
-    },
+    { method_name => 'name',          hash_key => '_name',          },
+    { method_name => 'is_paired_end', hash_key => '_is_paired_end', },
+    { method_name => 'paired_with',   hash_key => '_paired_with',   },
+    { method_name => 'file_size',     hash_key => '_file_size',     },
+    { method_name => 'read_length',   hash_key => '_read_length',   },
+    { method_name => 'md5sum',        hash_key => '_md5sum',        },
+    { method_name => 'file',          hash_key => '_file',          },
+    { method_name => 'notes',         hash_key => '_notes',         },
   ]
 }
 
