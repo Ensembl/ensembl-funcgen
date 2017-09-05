@@ -42,14 +42,18 @@ sub _constructor_parameters {
     feature_type_id => 'feature_type_id',
     analysis_id     => 'analysis_id',
     alignment_id    => 'alignment_id',
+    name            => 'name',
+    display_label   => 'display_label',
   };
 }
 
 sub _simple_accessors {
   return [
-    { method_name => 'feature_type_id', hash_key    => '_feature_type_id', },
-    { method_name => 'analysis_id',     hash_key    => '_analysis_id',     },
-    { method_name => 'alignment_id',    hash_key    => '_alignment_id',    },
+    { method_name => 'feature_type_id', hash_key => '_feature_type_id', },
+    { method_name => 'analysis_id',     hash_key => '_analysis_id',     },
+    { method_name => 'alignment_id',    hash_key => '_alignment_id',    },
+    { method_name => 'name',            hash_key => 'name',             },
+    { method_name => 'display_label',   hash_key => 'display_label',    },
   ]
 }
 
