@@ -135,6 +135,37 @@ sub new {
   return $self;
 }
 
+sub count_biological_replicates {
+
+    my $self = shift;
+
+    my $read_file_experimental_configuration_adaptor = $self
+        ->adaptor
+        ->db
+        ->get_ReadFileExperimentalConfigurationAdaptor;
+    
+    my $count_biological_replicates 
+        = $read_file_experimental_configuration_adaptor
+            ->count_biological_replicates_from_Experiment($self);
+    
+    return $count_biological_replicates;
+}
+
+sub count_technical_replicates {
+
+    my $self = shift;
+
+    my $read_file_experimental_configuration_adaptor = $self
+        ->adaptor
+        ->db
+        ->get_ReadFileExperimentalConfigurationAdaptor;
+    
+    my $count_technical_replicates 
+        = $read_file_experimental_configuration_adaptor
+            ->count_technical_replicates_from_Experiment($self);
+    
+    return $count_technical_replicates;
+}
 
 =head2 epigenome
 
@@ -272,205 +303,6 @@ sub get_InputSubsets{
   return [values %{$self->{'input_subsets'}}];
 }
 
-
-# =head2 get_ExperimentalChips
-# 
-#   Example     : my $exp_chips = @{$exp->get_ExperimentalChips()}
-#   Description : Retrieves all ExperiemntalChips
-#   Returntype  : Listref of ExperimentalChips
-#   Exceptions  : None
-#   Caller      : General
-#   Status      : At risk
-# 
-# =cut
-# 
-# sub get_ExperimentalChips{
-#   my $self = shift;
-# 
-#   if(! exists $self->{experimental_chips}){
-#     $self->{experimental_chips} = {};
-# 
-#     foreach my $echip(@{$self->adaptor->db->get_ExperimentalChipAdaptor->
-#                           fetch_all_by_experiment_dbID($self->dbID())}){
-#       $self->{experimental_chips}->{$echip->unique_id()} = $echip;
-#     }
-#   }
-# 
-#   return [values %{$self->{experimental_chips}}];
-# }
-
-=head2 add_ExperimentalChip
-
-  Example     : $exp_chip = $exp->add_ExperimentalChip($exp_chip)
-  Description : Adds and stores an ExperiemntalChip for this Experiment
-  Returntype  : Bio::EnsEMBL::Funcgen::ExperimentalChip
-  Exceptions  : Throws is not passed a valid stored Bio::EnsENBML::Funcgen::ExperimentalChip
-  Caller      : General
-  Status      : At risk
-
-=cut
-
-# sub add_ExperimentalChip{
-#   my $self  = shift;
-#   my $echip = shift;
-# 
-# 
-#  throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::ExperimentalChip object")
-#     if(! $echip->isa("Bio::EnsEMBL::Funcgen::ExperimentalChip") || ! $echip->dbID());
-# 
-#   if(! exists $self->{'experimental_chips'}){
-#     $self->get_ExperimentalChips();
-#     $self->{'experimental_chips'}->{$echip->unique_id()} = $echip;
-#     #do this here without checking to avoid probelm of retrieving first stored chip
-#   }elsif(exists  $self->{'experimental_chips'}->{$echip->unique_id()}){
-#     warn("You cannot add the same ExperimentalChip(".$echip->unique_id().")to an Experiment more than once, check your code");
-#   }else{
-#     $self->{'experimental_chips'}->{$echip->unique_id()} = $echip;
-#   }
-# 
-#   return;
-# }
-
-=head2 get_ExperimentalChip_by_unique_id
-
-  Example     : $exp_chip = $exp->add_ExperimentalChip($exp_chip)
-  Description : Adds and stores an ExperiemntalChip for this Experiment
-  Returntype  : Bio::EnsEMBL::Funcgen::ExperimentalChip
-  Exceptions  : Throws if no uid supplied
-  Caller      : General
-  Status      : At risk
-
-=cut
-
-# sub get_ExperimentalChip_by_unique_id{
-#   my $self = shift;
-#   my $uid  = shift;
-# 
-#   my ($echip);
-# 
-#   throw("Must supply a ExperimentalChip unque_id") if(! defined $uid);
-# 
-#   $self->{'experimental_chips'} || $self->get_ExperimentalChips();
-# 
-#   if(exists $self->{'experimental_chips'}->{$uid}){
-#     $echip = $self->{'experimental_chips'}->{$uid};
-#   }
-#   #should we warn here if not exists?
-# 
-#   return $echip;
-# }
-
-
-=head2 get_ExperimentalChip_unique_ids
-
-  Example     : foreach my $uid(@{$self->experiment->get_ExperimentalChip_unique_ids()}){ ... }
-  Description : retrieves all ExperimentalChip unique_ids
-  Returntype  : ListRef
-  Exceptions  : None
-  Caller      : General
-  Status      : At risk
-
-=cut
-
-# sub get_ExperimentalChip_unique_ids{
-#   my $self = shift;
-# 
-#   $self->{'experimental_chips'} || $self->get_ExperimentalChips();
-# 
-#   return [keys %{ $self->{'experimental_chips'}}];
-# }
-
-
-
-
-=head2 reset_relational_attributes
-
-  Arg[1] : Hashref containing the following mandatory parameters:
-            -experimental_group => Bio::EnsEMBL::ExperimentalGroup
-
-  Description: Resets all the relational attributes of a given Experiment
-               Useful when creating a cloned object for migration beween DBs
-  Returntype : None
-  Exceptions : Throws if any of the parameters are not defined or invalid.
-  Caller     : Migration code
-  Status     : At risk
-
-=cut
-
-sub reset_relational_attributes{
-  my ($self, $params_hash, $no_db_reset) = @_;
-
-  my (
-    $epigenome,
-    $experimental_group,
-    $feature_type,
-    ) = rearrange([
-    'EPIGENOME',
-    'EXPERIMENTAL_GROUP',
-    'FEATURE_TYPE'
-    ], %$params_hash);
-
-  #is_stored (in corresponding db) checks will be done in store method
-
-  assert_ref($feature_type, 'Bio::EnsEMBL::Funcgen::FeatureType');
-  assert_ref($epigenome,    'Bio::EnsEMBL::Funcgen::Epigenome');
-
-  if(! (defined $experimental_group &&
-        ref($experimental_group) eq 'Bio::EnsEMBL::Funcgen::ExperimentalGroup') ){
-    my $msg = 'You must pass a valid Bio::EnsEMBL::Funcgen::ExperimentalGroup ';
-    $msg .= 'not ' . ref($experimental_group);
-    throw($msg);
-  }
-
-  $self->{epigenome}    = $epigenome;
-  $self->{group}        = $experimental_group;
-  $self->{feature_type} = $feature_type;
-
-  #Undef the dbID and adaptor by default
-  if(! $no_db_reset){
-    $self->{adaptor} = undef;
-    $self->{dbID}    = undef;
-  }
-
-  return;
-}
-
-
-=head2 compare_to
-
-Args[1]    : Bio::EnsEMBL::Funcgen::Storable (mandatory)
-Args[2]    : Boolean - Optional 'shallow' - no object methods compared
-Args[3]    : Arrayref - Optional list of Experiment method names each
-             returning a Scalar or an Array or Arrayref of Scalars.
-             Defaults to: name date primary_design_type description mage_xml_id
-Args[4]    : Arrayref - Optional list of Experiment method names each
-             returning a Storable or an Array or Arrayref of Storables.
-             Defaults to: experimental_group
-Example    : my %shallow_diffs = %{$rset->compare_to($other_rset, 1)};
-Description: Compare this Experiment to another based on the defined scalar
-             and storable methods.
-Returntype : Hashref of key attribute/method name keys and values which differ.
-             Keys will always be the method which has been compared.
-             Values can either be a error string, a hashref of diffs from a
-             nested object, or an arrayref of error strings or hashrefs where
-             a particular method returns more than one object.
-Exceptions : None
-Caller     : Import/migration pipeline
-Status     : At Risk
-
-=cut
-
-sub compare_to {
-  my ($self, $obj, $shallow, $scl_methods, $obj_methods) = @_;
-
-  $scl_methods ||= [qw(name)];
-  $obj_methods ||= [qw(experimental_group)];
-
-  return $self->SUPER::compare_to($obj, $shallow, $scl_methods,
-                                  $obj_methods);
-}
-
-
 =head2 archive_id
 
   Example     : my $archive_id = $exp->archive;
@@ -483,28 +315,6 @@ sub compare_to {
 =cut
 
 sub archive_id { return shift->{archive_id};  }
-
-
-=head2 display_url
-
-  Example     : my $url = $exp->display_url;
-  Description : Getter for the display url
-  Returntype  : String
-  Exceptions  : None
-  Caller      : General
-  Status      : At risk
-
-=cut
-
-sub display_url{
-  deprecate(
-    "Bio::EnsEMBL::Funcgen::Experiment::display_url has been deprecated."
-        . " It will be removed in Ensembl release 89." );
-  #return shift->{display_url};
-    return;
-}
-
-
 
 =head2 source_info
 
