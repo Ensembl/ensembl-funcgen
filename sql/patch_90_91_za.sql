@@ -21,6 +21,8 @@ DROP TABLE IF EXISTS `peak_calling`;
 
 CREATE TABLE `peak_calling` (
   `peak_calling_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(300) NOT NULL,
+  `display_label` varchar(300) NOT NULL,
   `feature_type_id` int(10) unsigned NOT NULL,
   `analysis_id`     smallint(5) unsigned NOT NULL,
   `alignment_id`    int(10) unsigned NOT NULL,
@@ -30,11 +32,15 @@ CREATE TABLE `peak_calling` (
 
 insert into peak_calling (
   peak_calling_id,
+  name,
+  display_label,
   feature_type_id,
   analysis_id,
   alignment_id
 ) select 
   feature_set_id, 
+  feature_set.name,
+  feature_set.display_label,
   feature_type_id, 
   analysis_id, 
   supporting_set_id 
