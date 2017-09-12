@@ -65,6 +65,23 @@ sub init {
   );
   $self->sql_helper($sql_helper);
   
+  my $class = ref $self;
+  
+  if (! $self->can('object_class') ) {
+  
+    throw("The method object_class has not been implemented in ". $class ."! "
+        . "The method object_class has to return the type of api object that the adaptor creates."
+     );
+  }
+  
+#   foreach my $current_column (keys %{ $self->column_set }) {
+#     print "current_column = $current_column\n";
+#     if (! $self->can($current_column)) {
+#         warning($class . " does not have an accessor for " . $current_column . "!");
+#     }
+#   }
+  #my $sorted_keys = [ sort grep { ($_ ne $autoinc_id) and defined($object->can($_)) } keys %{ $self->column_set } ];
+  
   # Otherwise the object can't be instantiated later.
   #
   eval "require " . $self->object_class;
@@ -111,7 +128,7 @@ sub table_name {
     my @tables = $self->_tables;
     
     if (@tables > 1) {
-        use Bio::EnsEMBL::Utils::Exception qw( throw );
+        
         use Data::Dumper;
         throw("Only one table supported!" . Dumper(\@tables));
     }
@@ -190,6 +207,50 @@ sub _table_info_loader {
     $self->autoinc_id(   $autoinc_id );
 }
 
+sub count_all {
+    my ($self, $constraint, $key_list) = @_;
+
+    my $table_name      = $self->table_name();
+    my $count_col_name  = 'COUNT(*)';
+
+    my $sql = "SELECT ".($key_list ? join(', ', @$key_list, '') : '')."COUNT(*) FROM $table_name";
+
+    if($constraint) {
+            # in case $constraint contains any kind of JOIN (regular, LEFT, RIGHT, etc) do not put WHERE in front:
+        $sql .= (($constraint=~/\bJOIN\b/i) ? ' ' : ' WHERE ') . $constraint;
+    }
+
+    if($key_list) {
+        $sql .= " GROUP BY ".join(', ', @$key_list);
+    }
+    #warn "SQL: $sql\n";
+
+    my $sth = $self->prepare($sql);
+    $sth->execute;
+
+    my $result_struct;  # will be autovivified to the correct data structure
+
+    while(my $hashref = $sth->fetchrow_hashref) {
+
+        my $pptr = \$result_struct;
+        if($key_list) {
+            foreach my $syll (@$key_list) {
+                $pptr = \$$pptr->{$hashref->{$syll}};   # using pointer-to-pointer to enforce same-level vivification
+            }
+        }
+        $$pptr = $hashref->{$count_col_name};
+    }
+
+    unless(defined($result_struct)) {
+        if($key_list and scalar(@$key_list)) {
+            $result_struct = {};
+        } else {
+            $result_struct = 0;
+        }
+    }
+    return $result_struct;
+}
+
 sub fetch_all {
     my $self       = shift;
     my $constraint = shift;
@@ -205,7 +266,7 @@ sub fetch_all {
         $sql .= (($constraint=~/\bJOIN\b/i or $constraint=~/^LIMIT|ORDER|GROUP/) ? ' ' : ' WHERE ') . $constraint;
     }
 
-    warn "SQL: $sql\n";
+    #warn "SQL: $sql\n";
 
     my $sth = $self->prepare($sql);
     $sth->execute(@$parameters);
@@ -252,7 +313,9 @@ sub keys_to_columns {
     my ($self, $object) = @_;
 
     my $autoinc_id  = $self->autoinc_id();
-    my $sorted_keys = [ sort grep { ($_ ne $autoinc_id) and defined($object->$_()) } keys %{ $self->column_set } ];
+    #my $sorted_keys = [ sort grep { ($_ ne $autoinc_id) and defined($object->$_()) } keys %{ $self->column_set } ];
+    
+    my $sorted_keys = [ sort grep { ($_ ne $autoinc_id) and defined($object->can($_)) } keys %{ $self->column_set } ];
 
     return ( $sorted_keys, join(', ', @$sorted_keys) );
 }
@@ -345,7 +408,16 @@ sub store {
           $return_code = $this_sth->execute( @$values_being_stored );
         };
         if ($@ || ! $return_code) {
-           throw("Error executing sql:\n$sql\n\nCould not store fields\n\t{$column_key}\nwith data:\n\t(".join(',', @$values_being_stored).')');
+           throw(
+            "Error executing sql:\n\n"
+            . "\t$sql\n\n"
+            . "Could not store this data set:\n\n"
+            . "\t(" . join(',', @$values_being_stored) . ")\n\n"
+            . "into these columns:\n\n"
+            . "\t{$column_key}\n\n"
+            . "The error message is:\n\n"
+            . "\t$@\n"
+           );
         }
         
         # For the same reason we have to be explicitly numeric here
