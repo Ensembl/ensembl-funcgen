@@ -48,7 +48,7 @@ sub _tables {
   return (
     ['external_feature_file', 'eff'],
     ['analysis',              'a'  ],
-    ['dbfile_registry',       'dr' ],
+    ['data_file',             'da' ],
   );
 }
 
@@ -58,15 +58,15 @@ sub _columns {
   return qw(
     eff.external_feature_file_id
     eff.name
-    dr.path
-    dr.file_type
+    da.path
+    da.file_type
     a.analysis_id
   );
 }
 
 sub _default_where_clause {
   return 'eff.analysis_id = a.analysis_id'
-    . ' and dr.table_name="external_feature_file" and dr.table_id=external_feature_file_id'
+    . ' and da.table_name="external_feature_file" and da.table_id=external_feature_file_id'
     . ' and a.logic_name = "Crispr"'
     ;
 }
@@ -161,8 +161,8 @@ sub store {
 
   $sth_store_crispr_sites_file->{PrintError} = 0;
 
-  my $sth_store_dbfile_registry = $self->prepare("
-    INSERT ignore INTO dbfile_registry (
+  my $sth_store_data_file = $self->prepare("
+    INSERT ignore INTO data_file (
       table_id,
       table_name,
       path,
@@ -184,10 +184,10 @@ sub store {
     $sth_store_crispr_sites_file->execute;
     $current_crispr_sites_file->dbID( $self->last_insert_id );
 
-    $sth_store_dbfile_registry->bind_param( 1, $current_crispr_sites_file->dbID, SQL_INTEGER);
-    $sth_store_dbfile_registry->bind_param( 2, $current_crispr_sites_file->file, SQL_VARCHAR);
+    $sth_store_data_file->bind_param( 1, $current_crispr_sites_file->dbID, SQL_INTEGER);
+    $sth_store_data_file->bind_param( 2, $current_crispr_sites_file->file, SQL_VARCHAR);
     
-    $sth_store_dbfile_registry->execute;
+    $sth_store_data_file->execute;
   }
   return @crispr_sites_file;
 }
