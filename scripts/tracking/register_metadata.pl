@@ -157,7 +157,9 @@ sub get_data_from_csv {
         }
 
         my ($accession,             $epigenome_name,     $feature_type_name,
-            $br,                    $tr,                 $gender,
+            $br,                    $tr,
+            $paired_end_tag,        $multiple,
+            $gender,
             $md5,                   $local_url,          $analysis_name,
             $exp_group_name,        $ontology_xref_accs, $xref_accs,
             $epigenome_description, $controlled_by,      $download_url,
@@ -170,6 +172,8 @@ sub get_data_from_csv {
         $entry->{feature_type_name}     = $feature_type_name;
         $entry->{br}                    = $br;
         $entry->{tr}                    = $tr;
+        $entry->{paired_end_tag}        = $paired_end_tag;
+        $entry->{multiple}              = $multiple;
         $entry->{md5}                   = $md5;
         $entry->{gender}                = $gender;
         $entry->{local_url}             = $local_url;
@@ -347,7 +351,11 @@ sub register {
     }
 
     my $feature_type = fetch_feature_type( $entry, $adaptors, $analysis );
-
+    
+    if (! defined $feature_type) {
+      die("Couldn't fetch feature type with name " . $entry->{feature_type_name} . "!");
+    }
+    
     my $exp_group
         = $adaptors->{exp_group}->fetch_by_name( $entry->{exp_group_name} );
 
@@ -515,25 +523,32 @@ sub store_read_file {
         );
     }
     
+    my $paired_end_tag = $entry->{paired_end_tag};
+    if ($paired_end_tag eq '-') {
+      $paired_end_tag = undef;
+    }
+    
     use Bio::EnsEMBL::Funcgen::ReadFile;
     use Bio::EnsEMBL::Funcgen::ReadFileExperimentalConfiguration;
     
     my $read_file_experimental_configuration = Bio::EnsEMBL::Funcgen::ReadFileExperimentalConfiguration->new(
     
       -read_file => Bio::EnsEMBL::Funcgen::ReadFile->new(
-          -name          => $entry->{accession},
-          -analysis      => $analysis,
-          -is_paired_end => undef,
-          -paired_with   => undef,
-          -file_size     => undef,
-          -read_length   => undef,
-          -md5sum        => $entry->{md5},
-          -file          => $entry->{local_url},
-          -notes         => $entry->{info},
+          -name           => $entry->{accession},
+          -analysis       => $analysis,
+          -is_paired_end  => undef,
+          -paired_with    => undef,
+          -file_size      => undef,
+          -read_length    => undef,
+          -md5sum         => $entry->{md5},
+          -file           => $entry->{local_url},
+          -notes          => $entry->{info},
       ),
       -experiment            => $experiment,
       -biological_replicate  => $entry->{br},
-      -technical_replicate   => $entry->{tr}
+      -technical_replicate   => $entry->{tr},
+      -paired_end_tag        => $paired_end_tag,
+      -multiple              => $entry->{multiple},
     );
 
     $adaptors->{read_file_experimental_configuration}->store($read_file_experimental_configuration);
