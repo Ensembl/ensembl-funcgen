@@ -43,7 +43,7 @@ sub _tables {
   return (
     ['segmentation_file',     'sf' ],
     ['analysis',              'a'  ],
-    ['dbfile_registry',       'dr' ],
+    ['data_file',             'da' ],
   );
 }
 
@@ -56,14 +56,14 @@ sub _columns {
     sf.epigenome_id
     sf.regulatory_build_id
     a.analysis_id
-    dr.path
-    dr.file_type
+    da.path
+    da.file_type
   );
 }
 
 sub _default_where_clause {
   return 'sf.analysis_id = a.analysis_id'
-    . ' and dr.table_name="segmentation_file" and dr.table_id=segmentation_file_id'
+    . ' and da.table_name="segmentation_file" and da.table_id=segmentation_file_id'
     ;
 }
 
@@ -160,8 +160,8 @@ sub store {
   );
   $sth_store_segmentation_file->{PrintError} = 0;
 
-  my $sth_store_dbfile_registry = $self->prepare("
-    INSERT ignore INTO dbfile_registry (
+  my $sth_store_data_file = $self->prepare("
+    INSERT ignore INTO data_file (
       table_id,
       table_name,
       path,
@@ -185,10 +185,10 @@ sub store {
     $sth_store_segmentation_file->execute;
     $current_segmentation_file->dbID( $self->last_insert_id );
 
-    $sth_store_dbfile_registry->bind_param( 1, $current_segmentation_file->dbID, SQL_INTEGER);
-    $sth_store_dbfile_registry->bind_param( 2, $current_segmentation_file->file, SQL_VARCHAR);
+    $sth_store_data_file->bind_param( 1, $current_segmentation_file->dbID, SQL_INTEGER);
+    $sth_store_data_file->bind_param( 2, $current_segmentation_file->file, SQL_VARCHAR);
     
-    $sth_store_dbfile_registry->execute;
+    $sth_store_data_file->execute;
   }
   return @segmentation_file;
 }
