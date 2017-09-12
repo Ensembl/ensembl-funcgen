@@ -180,7 +180,6 @@ sub get_available_adaptors{
 
     my %pairs = (
         'Alignment'              => 'Bio::EnsEMBL::Funcgen::DBSQL::AlignmentAdaptor',
-        'AnnotatedFeature'       => 'Bio::EnsEMBL::Funcgen::DBSQL::AnnotatedFeatureAdaptor',
         
         'Peak'                   => 'Bio::EnsEMBL::Funcgen::DBSQL::PeakAdaptor',
         'PeakCalling'            => 'Bio::EnsEMBL::Funcgen::DBSQL::PeakCallingAdaptor',
@@ -188,7 +187,6 @@ sub get_available_adaptors{
         
         'BindingMatrix'          => 'Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixAdaptor',
         'Epigenome'              => 'Bio::EnsEMBL::Funcgen::DBSQL::EpigenomeAdaptor',
-        'DataSet'                => 'Bio::EnsEMBL::Funcgen::DBSQL::DataSetAdaptor',
         'DBEntry'                => 'Bio::EnsEMBL::Funcgen::DBSQL::DBEntryAdaptor',
         'Experiment'             => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentAdaptor',
         'ExperimentalGroup'      => 'Bio::EnsEMBL::Funcgen::DBSQL::ExperimentalGroupAdaptor',
@@ -216,7 +214,6 @@ sub get_available_adaptors{
         'ReadFileExperimentalConfiguration' => 'Bio::EnsEMBL::Funcgen::DBSQL::ReadFileExperimentalConfigurationAdaptor',
         'ReadFile'                          => 'Bio::EnsEMBL::Funcgen::DBSQL::ReadFileAdaptor',
 
-        'ResultSet'              => 'Bio::EnsEMBL::Funcgen::DBSQL::ResultSetAdaptor',
         'SegmentationFeature'    => 'Bio::EnsEMBL::Funcgen::DBSQL::SegmentationFeatureAdaptor',
 
         'MetaCoordContainer'      => 'Bio::EnsEMBL::DBSQL::MetaCoordContainer',
