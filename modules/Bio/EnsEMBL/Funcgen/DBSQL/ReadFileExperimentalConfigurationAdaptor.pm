@@ -25,18 +25,18 @@ limitations under the License.
 
 =head1 NAME
 
-Bio::EnsEMBL::DBSQL::Funcgen::RegulatoryBuildAdaptor
+Bio::EnsEMBL::Funcgen::DBSQL::ReadFileExperimentalConfigurationAdaptor
 
 =cut
 
 package Bio::EnsEMBL::Funcgen::DBSQL::ReadFileExperimentalConfigurationAdaptor;
 
 use strict;
-use warnings;
-use Bio::EnsEMBL::Utils::Exception qw( throw warning );
-use DBI qw(:sql_types);
+use base 'Bio::EnsEMBL::Funcgen::DBSQL::GenericAdaptor';
 
-use base 'Bio::EnsEMBL::DBSQL::BaseAdaptor';
+sub object_class {
+  return 'Bio::EnsEMBL::Funcgen::ReadFileExperimentalConfiguration';
+}
 
 sub _tables {
   return (
@@ -44,50 +44,26 @@ sub _tables {
   );
 }
 
-sub _columns {
-  my $self = shift;
-  
-  return qw(
-      rfec.read_file_experimental_configuration_id
-      rfec.read_file_id
-      rfec.experiment_id
-      rfec.technical_replicate
-      rfec.biological_replicate
-  );
-}
-
-sub _default_where_clause {
-  return '';
-}
-
 sub fetch_all_by_read_file_id {
+
   my $self = shift;
   my $read_file_id = shift;
-
-  my $constraint = "rfec.read_file_id = ?";
-  $self->bind_param_generic_fetch($read_file_id, SQL_INTEGER);
   
-  my $object_list = $self->generic_fetch($constraint);
-  
-  if (!$object_list || @$object_list==0) {
-    return;
-  }
-  return $object_list;
+  my $reads = $self->fetch_all(
+    "read_file_id = " . $read_file_id
+  );
+  return $reads;
 }
 
 sub fetch_all_by_experiment_id {
-  my $self = shift;
-  my $experiment_id = shift;
 
-  my $constraint = "rfec.experiment_id = ?";
-  $self->bind_param_generic_fetch($experiment_id, SQL_INTEGER);
+  my $self          = shift;
+  my $experiment_id = shift;
   
-  my $object_list = $self->generic_fetch($constraint);
-  
-  if (!$object_list || @$object_list==0) {
-    return;
-  }
-  return $object_list;
+  my $read_file_experimental_configuration_list = $self->fetch_all(
+    "experiment_id = " . $experiment_id
+  );
+  return $read_file_experimental_configuration_list;
 }
 
 sub fetch_all_by_Experiment {
@@ -97,97 +73,82 @@ sub fetch_all_by_Experiment {
   return $self->fetch_all_by_experiment_id($experiment_id);
 }
 
-sub _objs_from_sth {
-  my ($self, $sth) = @_;
-
-  my(
-    $sth_fetched_dbID,
-    $sth_fetched_read_file_id,
-    $sth_fetched_technical_replicate,
-    $sth_fetched_biological_replicate,
-    $sth_fetched_experiment_id,
+sub fetch_all_technical_replicates_by_Experiment_and_biological_replicate_number {
+  my $self = shift;
+  my $experiment                  = shift;
+  my $biological_replicate_number = shift;
+  
+  my $experiment_id = $experiment->dbID;
+  
+  my $read_file_experimental_configuration_list = $self->fetch_all(
+    "experiment_id = $experiment_id"
+    . " and biological_replicate = $biological_replicate_number"
   );
   
-  $sth->bind_columns (
-    \$sth_fetched_dbID,
-    \$sth_fetched_read_file_id,
-    \$sth_fetched_experiment_id,
-    \$sth_fetched_technical_replicate,
-    \$sth_fetched_biological_replicate,
-  );
-  
-  use Bio::EnsEMBL::Funcgen::ReadFileExperimentalConfiguration;
-  
-  my $experiment_adaptor = $self->db->get_ExperimentAdaptor();
-  my $read_file_adaptor  = $self->db->get_ReadFileAdaptor();
-  
-  my @return_object_list;
-  
-  ROW: while ( $sth->fetch() ) {
-  
-    my $experiment = $experiment_adaptor->fetch_by_dbID($sth_fetched_experiment_id);
-    my $read_file  = $read_file_adaptor->fetch_by_dbID($sth_fetched_read_file_id);
-
-    my $current_object = Bio::EnsEMBL::Funcgen::ReadFileExperimentalConfiguration->new(
-      -db                   => $self->db,
-      -dbID                 => $sth_fetched_dbID,
-      -read_file            => $read_file,
-      -technical_replicate  => $sth_fetched_technical_replicate,
-      -biological_replicate => $sth_fetched_biological_replicate,
-      -experiment           => $experiment,
-    );
-    push @return_object_list, $current_object;
-  }
-  return \@return_object_list;
+  return $read_file_experimental_configuration_list;
 }
 
-sub store {
-  my ($self, @object) = @_;
-  
-  my $sth_store_object = $self->prepare("
-    INSERT INTO read_file_experimental_configuration (
-      read_file_id,
-      experiment_id,
-      biological_replicate,
-      technical_replicate
-    ) VALUES (?, ?, ?, ?)"
-  );
-  
-  my $read_file_adaptor = $self->db->get_ReadFileAdaptor;
-  
-  foreach my $current_object (@object) {
+=head2 fetch_all_biological_replicate_numbers_from_Experiment
 
-    my $read_file    = $current_object->get_ReadFile;
-    my $read_file_id = $read_file->dbID;
+  Convenience method
+
+=cut
+sub fetch_all_biological_replicate_numbers_from_Experiment {
+
+  my $self       = shift;
+  my $experiment = shift;
+  
+  my $experiment_id = $experiment->dbID;
+
+  my @biological_replicate_numbers;
+
+  $self->sql_helper->execute_no_return(
+    -SQL          => '
+      select 
+        distinct biological_replicate 
+      from 
+        read_file_experimental_configuration 
+      where 
+        experiment_id = ? 
+      order by 
+        biological_replicate
+    ',
+    -PARAMS       => [ $experiment_id ],
+    -USE_HASHREFS => 1,
+    -CALLBACK     => sub {
+        my $row = shift;
+        my $biological_replicate = $row->{biological_replicate};
+        push @biological_replicate_numbers, $biological_replicate;
+        return;
+      },
+  );
+  return \@biological_replicate_numbers;
+}
+
+sub count_biological_replicates_from_Experiment {
+
+    my $self = shift;
+    my $experiment = shift;
     
-    if (! defined $read_file_id) {
+    my $biological_replicate_to_counts = $self->count_all(
+        "experiment_id = " . $experiment->dbID,
+        [ 'biological_replicate' ]
+    );
+    my @biological_replicates = keys %$biological_replicate_to_counts;
+    return scalar @biological_replicates;
+}
+
+sub count_technical_replicates_from_Experiment {
+
+    my $self = shift;
+    my $experiment = shift;
     
-      # If is has no id, then it hasn't been stored yet.
-      #
-      $read_file_adaptor->store($read_file);
-      
-      # Now it should have an id.
-      $read_file_id = $read_file->dbID;
-    }
-    
-    my $experiment = $current_object->get_Experiment;
-    my $experiment_id = undef;
-    
-    if (! defined $experiment) {
-      throw("Experiment must be set!")
-    }
-    
-    $experiment_id = $experiment->dbID;
-    
-    $sth_store_object->bind_param( 1, $read_file_id,                         SQL_INTEGER);
-    $sth_store_object->bind_param( 2, $experiment_id,                        SQL_INTEGER);
-    $sth_store_object->bind_param( 3, $current_object->biological_replicate, SQL_INTEGER);
-    $sth_store_object->bind_param( 4, $current_object->technical_replicate,  SQL_INTEGER);
-    
-    $sth_store_object->execute;
-    $current_object->dbID( $self->last_insert_id );
-  }
-  return;
+    my $technical_replicate_to_counts = $self->count_all(
+        "experiment_id = " . $experiment->dbID,
+        [ 'technical_replicate' ]
+    );
+    my @technical_replicates = keys %$technical_replicate_to_counts;
+    return scalar @technical_replicates;
 }
 
 1;
