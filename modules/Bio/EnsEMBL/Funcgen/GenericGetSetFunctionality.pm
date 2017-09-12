@@ -42,7 +42,6 @@ sub new {
   my $caller = shift;
   my $class  = ref($caller) || $caller;
   my $self   = bless {}, $class;
-#   die "Test!\n";
   $self->init(@_);
   return $self;
 }
@@ -77,7 +76,9 @@ sub _build_class_methods {
     $self->_build_set_methods;
     
     no strict;
+    
     *{$package . '::' . $is_constructed_flag} = sub { return 1 };
+    
     use strict;
   }
   $self->_init_fields(\@parameters, $constructor_key_to_set_method);
@@ -112,7 +113,11 @@ sub _init_fields {
     if (defined $value_to_set) {
       
       if (! $self->can($setter_method)) {
-        throw("The setter method \"" . $setter_method . "\" to store the parameter \"" . $constructor_parameter_name . "\" in the constructor of " . (ref $self) . " has not been implemented!");
+        throw(
+            "The setter method \"" . $setter_method . "\""
+            . " to store the parameter \"" . $constructor_parameter_name . "\""
+            . " in the constructor of " . (ref $self) 
+            . " has not been implemented!");
       }
       $self->$setter_method($value_to_set);
     }
@@ -143,6 +148,7 @@ sub _build_simple_accessor {
   no strict;
   
   *{$full_method_name} = sub { return shift->_generic_get_or_set($hash_key, @_) };
+  
   use strict;
 
   return;
@@ -168,7 +174,9 @@ sub _build_get_method {
   my $package = ref $self;
   
   no strict;
+  
   *{$package . "::" . $method_name} = sub { return shift->_generic_get($hash_key,  @_) };
+  
   use strict;
 
   return;
@@ -195,6 +203,7 @@ sub _build_set_method {
   my $package = ref $self;
   
   no strict;
+  
   *{$package . "::" . $method_name} = sub { 
     return shift->_generic_set(
       $method_name, $hash_key, $expected_type, @_
@@ -214,6 +223,7 @@ sub _build_fetch_methods {
   }
   return;
 }
+
 sub _build_fetch_method {
 
   my $self  = shift;
