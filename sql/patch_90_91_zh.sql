@@ -17,7 +17,8 @@
 @desc   
 */
 
-drop table probe_feature_transcript;
+alter table read_file_experimental_configuration add column paired_end_tag int DEFAULT null;
+alter table read_file_experimental_configuration add column multiple       int DEFAULT 1;
 
 -- patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_zh.sql|');
