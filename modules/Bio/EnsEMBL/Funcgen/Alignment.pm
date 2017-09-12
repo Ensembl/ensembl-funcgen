@@ -91,7 +91,19 @@ sub _fetch_DataFile {
   return $data_file;
 }
 
-sub fetch_BamFile {
+sub has_bam_DataFile {
+
+  my $self = shift;
+  return defined $self->bam_file_id;
+}
+
+sub has_bigwig_DataFile {
+
+  my $self = shift;
+  return defined $self->bigwig_file_id;
+}
+
+sub fetch_bam_DataFile {
 
   my $self        = shift;
   my $bam_file_id = $self->bam_file_id;
@@ -99,12 +111,22 @@ sub fetch_BamFile {
   return $self->_fetch_DataFile($bam_file_id);
 }
 
-sub fetch_BigWigFile {
+sub fetch_bigwig_DataFile {
 
   my $self           = shift;
   my $bigwig_file_id = $self->bigwig_file_id;
   
   return $self->_fetch_DataFile($bigwig_file_id);
+}
+
+sub fetch_BamFile {
+  my $self = shift;
+  return $self->fetch_bam_DataFile;
+}
+
+sub fetch_BigWigFile {
+  my $self           = shift;
+  return $self->fetch_bigwig_DataFile;
 }
 
 sub fetch_all_ReadFiles {
