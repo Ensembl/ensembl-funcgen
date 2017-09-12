@@ -41,9 +41,10 @@ sub _constructor_parameters {
   return {
     technical_replicate  => 'technical_replicate',
     biological_replicate => 'biological_replicate',
-
-    read_file  => 'set_ReadFile',
-    experiment => 'set_Experiment',
+    paired_end_tag       => 'paired_end_tag',
+    multiple             => 'multiple',
+    read_file_id         => 'read_file_id',
+    experiment_id        => 'experiment_id',
   }
 }
 
@@ -51,30 +52,27 @@ sub _simple_accessors {
   return [
     { method_name => 'biological_replicate', hash_key => '_biological_replicate', },
     { method_name => 'technical_replicate',  hash_key => '_technical_replicate',  },
+    { method_name => 'paired_end_tag',       hash_key => '_paired_end_tag',       },
+    { method_name => 'multiple',             hash_key => '_multiple',             },
+    { method_name => 'read_file_id',         hash_key => '_read_file_id',         },
+    { method_name => 'experiment_id',        hash_key => '_experiment_id',        },
   ]
 }
 
-sub _get_methods {
-  return [
-    { method_name => 'get_Experiment',      hash_key    => 'experiment',    },
-    { method_name => 'get_ReadFile',        hash_key    => 'read_file',     },
-  ]
-}
+sub fetch_ReadFile {
 
-sub _set_methods {
-  return [
-    {
-      method_name   => 'set_Experiment',
-      expected_type => 'Bio::EnsEMBL::Funcgen::Experiment',
-      hash_key      => 'experiment',
-    },
-    {
-      method_name   => 'set_ReadFile',
-      expected_type => 'Bio::EnsEMBL::Funcgen::ReadFile',
-      hash_key      => 'read_file'
-    },
-  ]
+  my $self = shift;
+  
+  my $read_file_id = $self->read_file_id;
+  my $read_file    = $self->db->db->get_ReadFileAdaptor
+    ->fetch_by_dbID($read_file_id);
+
+  return $read_file;
 }
 
 1;
+
+
+
+
 
