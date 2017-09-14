@@ -41,10 +41,52 @@ use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_get_or_set 
 );
 
+# Attributes
+#
 sub column_set  { return shift->_generic_get_or_set('column_set',  @_); }
 sub primary_key { return shift->_generic_get_or_set('primary_key', @_); }
 sub autoinc_id  { return shift->_generic_get_or_set('autoinc_id',  @_); }
 sub sql_helper  { return shift->_generic_get_or_set('sql_helper',  @_); }
+
+# Hooks
+#
+sub _columns {
+  return [] 
+}
+sub _add_dependencies {
+}
+sub _load_dependencies  { 
+  return; 
+}
+sub _store_dependencies {}
+sub insertion_method {
+    return 'insert'
+}
+sub input_column_mapping {
+    return {};
+}
+
+sub fetch_by_dbID {
+    my $self = shift;
+    my $dbID = shift;
+    
+    my $primary_key = $self->primary_key;
+    
+    if (@$primary_key!=1) {
+      die;
+    }
+    
+    my $all = $self->fetch_all($primary_key->[0] . ' = ? ', [ $dbID ]);
+    return $all->[0];
+}
+
+sub fetch_by_name {
+    my $self = shift;
+    my $name = shift;
+    
+    my $all = $self->fetch_all('name = ?', [ $name ]);
+    return $all->[0];
+}
 
 requires 'object_class';
 
@@ -65,31 +107,6 @@ sub init_generic_adaptor {
   #
   eval "require " . $self->object_class;
 };
-
-sub _columns {
-  return []
-}
-
-sub _add_dependencies {}
-
-sub default_input_column_mapping {
-    return {
-        # 'original_column1' => "original_column1*10 AS c1_times_ten",
-        # 'original_column2' => "original_column2+1 AS c2_plus_one",
-        # ...
-    };
-}
-
-sub _load_dependencies  { return; }
-sub _store_dependencies {}
-
-sub insertion_method {
-    return 'insert'
-}
-
-sub input_column_mapping {
-    return {};
-}
 
 sub table_name {
     my $self   = shift;
@@ -255,28 +272,6 @@ sub fetch_all {
     return $result_list_ref;
 }
 
-sub fetch_by_name {
-    my $self = shift;
-    my $name = shift;
-    
-    my $all = $self->fetch_all('name = ?', [ $name ]);
-    return $all->[0];
-}
-
-sub fetch_by_dbID {
-    my $self = shift;
-    my $dbID = shift;
-    
-    my $primary_key = $self->primary_key;
-    
-    if (@$primary_key!=1) {
-      die;
-    }
-    
-    my $all = $self->fetch_all($primary_key->[0] . ' = ? ', [ $dbID ]);
-    return $all->[0];
-}
-
 sub keys_to_columns {
     my ($self, $object) = @_;
 
@@ -383,6 +378,7 @@ sub store {
             . "\t(" . join(',', @$values_being_stored) . ")\n\n"
             . "into these columns:\n\n"
             . "\t{$column_key}\n\n"
+            . "for " . (ref $self) . "\n\n"
             . "The error message is:\n\n"
             . "\t$@\n"
            );
