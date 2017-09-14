@@ -55,6 +55,7 @@ sub _constructor_parameters {
     md5sum         => 'md5sum',
     file           => 'file',
     notes          => 'notes',
+    analysis_id                          => '_analysis_id',
     analysis                             => 'set_Analysis',
     read_file_experimental_configuration => 'set_ReadFileExperimentalConfiguration',
   };
@@ -70,19 +71,7 @@ sub read_length   { return shift->_generic_get_or_set('read_length',   @_); }
 sub md5sum        { return shift->_generic_get_or_set('md5sum',        @_); }
 sub file          { return shift->_generic_get_or_set('file',          @_); }
 sub notes         { return shift->_generic_get_or_set('notes',         @_); }
-
-sub _get_methods {
-  return [
-    {
-      method_name => 'get_Analysis',
-      hash_key    => 'analysis',
-    },
-    {
-      method_name => 'get_ReadFileExperimentalConfiguration',
-      hash_key    => 'read_file_experimental_configuration',
-    },
-  ]
-}
+sub _analysis_id  { return shift->_generic_get_or_set('_analysis_id',  @_); }
 
 sub get_Analysis {
   return shift->_generic_get('analysis');
