@@ -37,6 +37,8 @@ use warnings;
 
 use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_get_or_set
+  _generic_get
+  _generic_set
 );
 
 use Role::Tiny::With;
@@ -48,7 +50,8 @@ sub _constructor_parameters {
     biological_replicate => 'biological_replicate',
     paired_end_tag       => 'paired_end_tag',
     multiple             => 'multiple',
-    read_file_id         => 'read_file_id',
+    read_file_id         => '_read_file_id',
+    read_file            => 'set_ReadFile',
     experiment_id        => 'experiment_id',
   }
 }
@@ -59,18 +62,17 @@ sub biological_replicate { return shift->_generic_get_or_set('biological_replica
 sub technical_replicate  { return shift->_generic_get_or_set('technical_replicate',  @_); }
 sub paired_end_tag       { return shift->_generic_get_or_set('paired_end_tag',       @_); }
 sub multiple             { return shift->_generic_get_or_set('multiple',             @_); }
-sub read_file_id         { return shift->_generic_get_or_set('read_file_id',         @_); }
 sub experiment_id        { return shift->_generic_get_or_set('experiment_id',        @_); }
+sub _read_file_id        { return shift->_generic_get_or_set('_read_file_id',        @_); }
 
-sub fetch_ReadFile {
+sub get_ReadFile {
+  return shift->_generic_get('read_file');
+}
 
+sub set_ReadFile {
   my $self = shift;
-  
-  my $read_file_id = $self->read_file_id;
-  my $read_file    = $self->db->db->get_ReadFileAdaptor
-    ->fetch_by_dbID($read_file_id);
-
-  return $read_file;
+  my $obj  = shift;
+  return $self->_generic_set('read_file', 'Bio::EnsEMBL::Funcgen::ReadFile', $obj);
 }
 
 1;

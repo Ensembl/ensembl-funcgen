@@ -44,6 +44,47 @@ sub _tables {
   );
 }
 
+sub _load_dependencies {
+    my $self = shift;
+    
+    my $read_file_id = $self->_read_file_id;
+    
+    my $read_file_adaptor = $self->db->get_ReadFileAdaptor;
+    my $read_file = $read_file_adaptor->fetch_by_dbID($read_file_id);
+    
+    $self->set_ReadFile($read_file);
+    return;
+}
+
+sub _store_dependencies {
+
+  my $self = shift;
+  my $read_file_experimental_configuration = shift;
+  
+  my $read_file = $read_file_experimental_configuration->get_ReadFile;
+  my $read_file_id = $read_file->dbID;
+  my $read_file_experimental_configuration_id = $read_file_experimental_configuration->dbID;
+  
+  if (! defined $read_file_id) {
+    my $read_file_adaptor = $self->db->get_ReadFileAdaptor;
+    $read_file_adaptor->store($read_file);
+    $read_file_id = $read_file->dbID;
+  }
+
+  $self->sql_helper->execute_update(
+    -SQL      => '
+      update 
+        read_file_experimental_configuration 
+      set 
+        read_file_id = ? 
+      where 
+          read_file_experimental_configuration_id = ?
+    ',
+    -PARAMS => [ $read_file_id, $read_file_experimental_configuration_id ],
+  );
+  return;
+}
+
 sub fetch_all_by_read_file_id {
 
   my $self = shift;
