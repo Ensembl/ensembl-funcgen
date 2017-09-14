@@ -14,16 +14,16 @@
 -- limitations under the License.
 
 /**
-@header patch_motif_e.sql - Create binding_matrix_transcription_factor_complex table
-@desc linking table between a binding_matrix and a transcription_factor_complex
+@header patch_motif_e.sql - Create transcription_factor_complex_composition table
+@desc Groups transcription factors into complexes
 */
 
-DROP TABLE IF EXISTS `binding_matrix_transcription_factor_complex`;
-CREATE TABLE `binding_matrix_transcription_factor_complex` (
-	`binding_matrix_transcription_factor_complex_id` int(11) NOT NULL AUTO_INCREMENT,
-	`binding_matrix_id` int(11) NOT NULL,
+DROP TABLE IF EXISTS `transcription_factor_complex_composition`;
+CREATE TABLE `transcription_factor_complex_composition` (
+	`transcription_factor_complex_composition_id` int(11) NOT NULL AUTO_INCREMENT,
 	`transcription_factor_complex_id` int(11) NOT NULL,
-	PRIMARY KEY (`binding_matrix_transcription_factor_complex_id`),
-	KEY `binding_matrix_id_idx` (`binding_matrix_id`),
-	KEY `transcription_factor_complex_id_idx` (`transcription_factor_complex_id`)
+	`transcription_factor_id` int(11) NOT NULL,
+	PRIMARY KEY (`transcription_factor_complex_composition_id`),
+	KEY `transcription_factor_complex_id_idx` (`transcription_factor_complex_id`),
+	KEY `transcription_factor_id_idx` (`transcription_factor_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
