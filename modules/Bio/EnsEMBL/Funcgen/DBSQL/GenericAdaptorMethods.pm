@@ -46,10 +46,9 @@ sub primary_key { return shift->_generic_get_or_set('primary_key', @_); }
 sub autoinc_id  { return shift->_generic_get_or_set('autoinc_id',  @_); }
 sub sql_helper  { return shift->_generic_get_or_set('sql_helper',  @_); }
 
-requires 'init';
 requires 'object_class';
 
-before init => sub {
+sub init_generic_adaptor {
   my $self = shift;
   
   $self->_table_info_loader;

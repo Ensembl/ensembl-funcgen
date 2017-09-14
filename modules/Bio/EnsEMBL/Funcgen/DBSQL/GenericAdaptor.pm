@@ -45,11 +45,9 @@ with 'Bio::EnsEMBL::Funcgen::DBSQL::GenericAdaptorMethods';
 sub new {
   my ($class, @args) = @_;
   my $self = $class->SUPER::new(@args);
-  $self->init(@args);
+  $self->init_generic_adaptor(@args);
   return $self;
 }
-
-sub init {}
 
 sub object_class {
   my $self = shift;
