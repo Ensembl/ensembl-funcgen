@@ -544,7 +544,7 @@ sub store_read_file {
           -file           => $entry->{local_url},
           -notes          => $entry->{info},
       ),
-      -experiment            => $experiment,
+      -experiment_id         => $experiment->dbID,
       -biological_replicate  => $entry->{br},
       -technical_replicate   => $entry->{tr},
       -paired_end_tag        => $paired_end_tag,
