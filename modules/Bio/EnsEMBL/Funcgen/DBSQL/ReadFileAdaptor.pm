@@ -25,18 +25,17 @@ limitations under the License.
 
 =head1 NAME
 
-Bio::EnsEMBL::DBSQL::Funcgen::RegulatoryBuildAdaptor
-
 =cut
 
 package Bio::EnsEMBL::Funcgen::DBSQL::ReadFileAdaptor;
 
 use strict;
-use warnings;
-use Bio::EnsEMBL::Utils::Exception qw( throw warning );
-use DBI qw(:sql_types);
+use Bio::EnsEMBL::Utils::Exception qw( throw );
+use base 'Bio::EnsEMBL::Funcgen::DBSQL::GenericAdaptor';
 
-use base 'Bio::EnsEMBL::DBSQL::BaseAdaptor';
+sub object_class {
+  return 'Bio::EnsEMBL::Funcgen::ReadFile';
+}
 
 sub _tables {
   return (
@@ -44,126 +43,44 @@ sub _tables {
   );
 }
 
-sub _columns {
-  my $self = shift;
-  
-  return qw(
-      rf.read_file_id
-      rf.name
-      rf.analysis_id
-      rf.is_paired_end
-      rf.paired_with
-      rf.file_size
-      rf.read_length
-  );
-}
-
-sub _default_where_clause {
-  return '';
-}
-
-sub fetch_by_name {
-  my $self = shift;
-  my $name = shift;
-
-  my $constraint = "rf.name = ?";
-  $self->bind_param_generic_fetch($name, SQL_VARCHAR);
-  
-  my $object_list = $self->generic_fetch($constraint);
-  
-  if (!$object_list || @$object_list == 0) {
-    return;
-  }
-  if (@$object_list != 1) {
-    throw("Found ". @$object_list ." read files with the same name!");
-  }
-  return $object_list->[0];
-}
-
-sub _objs_from_sth {
-  my ($self, $sth) = @_;
-
-  my(
-    $sth_fetched_dbID,
-    $sth_fetched_name,
-    $sth_fetched_is_paired_end,
-    $sth_fetched_paired_with,
-    $sth_fetched_file_size,
-    $sth_fetched_read_length,
-    $sth_fetched_analysis_id,
-  );
-  
-  $sth->bind_columns (
-    \$sth_fetched_dbID,
-    \$sth_fetched_name,
-    \$sth_fetched_analysis_id,
-    \$sth_fetched_is_paired_end,
-    \$sth_fetched_paired_with,
-    \$sth_fetched_file_size,
-    \$sth_fetched_read_length,
-  );
-  
-  use Bio::EnsEMBL::Funcgen::ReadFile;
-  
-  my $analysis_adaptor                             = $self->db->get_AnalysisAdaptor;
-  my $read_file_experimental_configuration_adaptor = $self->db->get_ReadFileExperimentalConfigurationAdaptor;
-  
-  my @return_object_list;
-  
-  ROW: while ( $sth->fetch() ) {
-  
-    my $analysis = $analysis_adaptor->fetch_by_dbID($sth_fetched_analysis_id);
-
-    my $current_object = Bio::EnsEMBL::Funcgen::ReadFile->new(
-      -db                                   => $self->db,
-      -dbID                                 => $sth_fetched_dbID,
-      -name                                 => $sth_fetched_name,
-      -is_paired_end                        => $sth_fetched_is_paired_end,
-      -paired_with                          => $sth_fetched_paired_with,
-      -file_size                            => $sth_fetched_file_size,
-      -read_length                          => $sth_fetched_read_length,
-      -analysis                             => $analysis,
-
-    );
-    push @return_object_list, $current_object;
-  }
-  return \@return_object_list;
-}
-
-sub store {
-  my ($self, @object) = @_;
-  
-  my $sth_store_object = $self->prepare("
-    INSERT INTO read_file (
-      name,
-      analysis_id,
-      is_paired_end,
-      paired_with,
-      file_size,
-      read_length
-    ) VALUES (?, ?, ?, ?, ?, ?)"
-  );
-  
-  my $read_file_experimental_configuration_adaptor = $self->db->get_ReadFileExperimentalConfigurationAdaptor;
-  
-  foreach my $current_object (@object) {
-  
-    if (! defined $current_object) {
-      throw("Got undefined object!");
-    }
-  
-    $sth_store_object->bind_param( 1, $current_object->name,                    SQL_VARCHAR);
-    $sth_store_object->bind_param( 2, $current_object->get_Analysis->dbID,      SQL_INTEGER);
-    $sth_store_object->bind_param( 3, $current_object->is_paired_end,           SQL_INTEGER);
-    $sth_store_object->bind_param( 4, $current_object->paired_with,             SQL_INTEGER);
-    $sth_store_object->bind_param( 5, $current_object->file_size,               SQL_INTEGER);
-    $sth_store_object->bind_param( 6, $current_object->read_length,             SQL_INTEGER);
+sub _load_dependencies {
+    my $self = shift;
+    my $read_file = shift;
     
-    $sth_store_object->execute;
-    $current_object->dbID( $self->last_insert_id );
+    my $analysis_id = $read_file->_analysis_id;
+    
+    my $analysis_adaptor = $self->db->get_AnalysisAdaptor;
+    my $analysis = $analysis_adaptor->fetch_by_dbID($analysis_id);
+    
+    $read_file->set_Analysis($analysis);
+    return;
+}
+
+sub _store_dependencies {
+  my $self = shift;
+  my $read_file = shift;
+  
+  my $analysis = $read_file->get_Analysis;
+  my $analysis_id = $analysis->dbID;
+  
+  if (! defined $analysis_id) {
+    throw("Analysis must exist in the database already!");
   }
+
+  my $read_file_id = $read_file->dbID;
+  
+  $self->sql_helper->execute_update(
+    -SQL      => '
+      update 
+        read_file
+      set 
+        analysis_id = ? 
+      where 
+        read_file_id = ?
+    ',
+    -PARAMS => [ $analysis_id, $read_file_id ],
+  );
   return;
 }
-
 
 1;
