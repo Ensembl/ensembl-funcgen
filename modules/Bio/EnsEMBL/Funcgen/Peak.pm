@@ -67,27 +67,6 @@ use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_fetch
 );
 
-=head2 score
-
-  Example    : my $score = $feature->score;
-  Description: Getter for the score attribute for this feature. 
-  Returntype : String (float)
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
-
-=head2 summit
-
-  Arg [1]    : (optional) int - summit postition
-  Example    : my $peak_summit = $feature->summit;
-  Description: Getter for the summit attribute for this feature. 
-  Returntype : int
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
 sub dbID              { return shift->_generic_get_or_set('dbID',              @_);}
 sub db                { return shift->_generic_get_or_set('db',                @_);}
 sub adaptor           { return shift->_generic_get_or_set('db',                @_);}
@@ -112,6 +91,27 @@ sub set_PeakCalling {
   my $obj  = shift;
   return shift->_generic_set('peak_calling', 'Bio::EnsEMBL::Funcgen::PeakCalling', $obj);
 }
+
+=head2 score
+
+  Example    : my $score = $feature->score;
+  Description: Getter for the score attribute for this feature. 
+  Returntype : String (float)
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=head2 summit
+
+  Arg [1]    : (optional) int - summit postition
+  Example    : my $peak_summit = $feature->summit;
+  Description: Getter for the summit attribute for this feature. 
+  Returntype : int
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
 
 =head2 display_label
 
