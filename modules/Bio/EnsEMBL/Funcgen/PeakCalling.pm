@@ -35,10 +35,20 @@ package Bio::EnsEMBL::Funcgen::PeakCalling;
 use strict;
 use warnings;
 
-use base 'Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality';
+use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
+  _generic_get_or_set
+  _generic_set
+  _generic_get
+  _generic_fetch
+);
+
+use Role::Tiny::With;
+with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 
 sub _constructor_parameters {
   return {
+    dbID            => 'dbID',
+    db              => 'db',
     feature_type_id => 'feature_type_id',
     analysis_id     => 'analysis_id',
     alignment_id    => 'alignment_id',
@@ -47,37 +57,22 @@ sub _constructor_parameters {
   };
 }
 
-sub _simple_accessors {
-  return [
-    { method_name => 'feature_type_id', hash_key => '_feature_type_id', },
-    { method_name => 'analysis_id',     hash_key => '_analysis_id',     },
-    { method_name => 'alignment_id',    hash_key => '_alignment_id',    },
-    { method_name => 'name',            hash_key => 'name',             },
-    { method_name => 'display_label',   hash_key => 'display_label',    },
-  ]
-}
+sub dbID            { return shift->_generic_get_or_set('dbID',            @_); }
+sub db              { return shift->_generic_get_or_set('db',              @_); }
+sub name            { return shift->_generic_get_or_set('name',            @_); }
+sub feature_type_id { return shift->_generic_get_or_set('feature_type_id', @_); }
+sub analysis_id     { return shift->_generic_get_or_set('analysis_id',     @_); }
+sub alignment_id    { return shift->_generic_get_or_set('alignment_id',    @_); }
+sub display_label   { return shift->_generic_get_or_set('display_label',   @_); }
 
-sub _fetch_methods {
-  return [
-    {
-      method_name             => 'fetch_FeatureType',
-      hash_key                => '_feature_type',
-      get_adaptor_method_name => 'get_FeatureTypeAdaptor',
-      dbID_method             => 'feature_type_id',
-    },
-    {
-      method_name             => 'fetch_Analysis',
-      hash_key                => '_analysis',
-      get_adaptor_method_name => 'get_AnalysisAdaptor',
-      dbID_method             => 'analysis_id',
-    },
-    {
-      method_name             => 'fetch_Alignment',
-      hash_key                => '_alignment',
-      get_adaptor_method_name => 'get_AlignmentAdaptor',
-      dbID_method             => 'alignment_id',
-    },
-  ]
+sub fetch_FeatureType { 
+  return shift->_generic_fetch('feature_type', 'get_FeatureTypeAdaptor', 'feature_type_id');
+}
+sub fetch_Analysis {
+  return shift->_generic_fetch('analysis', 'get_AnalysisAdaptor', 'analysis_id');
+}
+sub fetch_Alignment {
+  return shift->_generic_fetch('alignment', 'get_AlignmentAdaptor', 'alignment_id');
 }
 
 sub _fetch_experiment_id {

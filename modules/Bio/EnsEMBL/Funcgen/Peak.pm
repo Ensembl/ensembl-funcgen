@@ -1,7 +1,3 @@
-#
-# Ensembl module for Bio::EnsEMBL::Funcgen::Peak
-#
-
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
@@ -42,12 +38,33 @@ package Bio::EnsEMBL::Funcgen::Peak;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
+
+use Role::Tiny::With;
+with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
+
+sub _constructor_parameters {
+  return {
+    dbID              => 'dbID',
+    db                => 'db',
+    peak_calling_id   => 'peak_calling_id',
+    summit            => 'summit',
+    score             => 'score',
+    slice             => 'slice',
+    seq_region_id     => 'seq_region_id',
+    seq_region_start  => 'seq_region_start',
+    seq_region_end    => 'seq_region_end',
+    seq_region_strand => 'seq_region_strand',
+    peak_calling      => 'set_PeakCalling',
+  };
+}
+
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 
-use base (
-  'Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality',
-  'Bio::EnsEMBL::Funcgen::SetFeature', 
+use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
+  _generic_get_or_set
+  _generic_set
+  _generic_get
+  _generic_fetch
 );
 
 =head2 score
@@ -71,58 +88,29 @@ use base (
 
 =cut
 
-sub _constructor_parameters {
-  return {
-    peak_calling_id   => 'peak_calling_id',
-    summit            => 'summit',
-    score             => 'score',
-    slice             => 'slice',
-    seq_region_id     => 'seq_region_id',
-    seq_region_start  => 'seq_region_start',
-    seq_region_end    => 'seq_region_end',
-    seq_region_strand => 'seq_region_strand',
-    peak_calling      => 'set_PeakCalling',
-  };
+sub dbID              { return shift->_generic_get_or_set('dbID',              @_);}
+sub db                { return shift->_generic_get_or_set('db',                @_);}
+sub adaptor           { return shift->_generic_get_or_set('db',                @_);}
+sub peak_calling_id   { return shift->_generic_get_or_set('peak_calling_id',   @_);}
+sub summit            { return shift->_generic_get_or_set('summit',            @_);}
+sub score             { return shift->_generic_get_or_set('score',             @_);}
+sub start             { return shift->_generic_get_or_set('start',             @_);}
+sub end               { return shift->_generic_get_or_set('end',               @_);}
+sub seq_region_id     { return shift->_generic_get_or_set('seq_region_id',     @_);}
+sub seq_region_start  { return shift->_generic_get_or_set('seq_region_start',  @_);}
+sub seq_region_end    { return shift->_generic_get_or_set('seq_region_end',    @_);}
+sub seq_region_strand { return shift->_generic_get_or_set('seq_region_strand', @_);}
+sub strand            { return shift->_generic_get_or_set('strand',            @_);}
+sub slice             { return shift->_generic_get_or_set('slice',             @_);}
+
+sub fetch_PeakCalling {
+  return shift->_generic_fetch('peak_calling', 'get_PeakCallingAdaptor', 'peak_calling_id');
 }
 
-sub _simple_accessors {
-  return [
-    { method_name => 'peak_calling_id',    hash_key => '_peak_calling_id',   },
-    { method_name => 'summit',             hash_key => 'summit',             },
-    { method_name => 'score',              hash_key => 'score',              },
-    { method_name => 'start',              hash_key => 'start',              },
-    { method_name => 'end',                hash_key => 'end',                },
-    { method_name => 'seq_region_id',      hash_key => '_seq_region_id',     },
-    { method_name => 'seq_region_start',   hash_key => '_seq_region_start',  },
-    { method_name => 'seq_region_end',     hash_key => '_seq_region_end',    },
-    { method_name => 'seq_region_strand',  hash_key => '_seq_region_strand', },
-    { method_name => 'strand',             hash_key => 'strand',             },
-    { method_name => 'slice',              hash_key => 'slice',              },
-    
-    # An alias to make some of the legacy methods work
-    { method_name => 'adaptor',            hash_key => 'db'   ,              },
-  ]
-}
-
-sub _set_methods {
-  return [
-    {
-      method_name   => 'set_PeakCalling',
-      expected_type => 'Bio::EnsEMBL::Funcgen::PeakCalling',
-      hash_key      => 'peak_calling',
-    },
-  ]
-}
-
-sub _fetch_methods {
-  return [
-    {
-      method_name             => 'fetch_PeakCalling',
-      hash_key                => '_peak_calling',
-      get_adaptor_method_name => 'get_PeakCallingAdaptor',
-      dbID_method             => 'peak_calling_id',
-    },
-  ]
+sub set_PeakCalling {
+  my $self = shift;
+  my $obj  = shift;
+  return shift->_generic_set('peak_calling', 'Bio::EnsEMBL::Funcgen::PeakCalling', $obj);
 }
 
 =head2 display_label

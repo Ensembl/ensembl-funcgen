@@ -35,10 +35,13 @@ package Bio::EnsEMBL::Funcgen::Alignment;
 use strict;
 use warnings;
 
-use base 'Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality';
+use Role::Tiny::With;
+with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 
 sub _constructor_parameters {
   return {
+    dbID           => 'dbID',
+    db             => 'db',
     name           => 'name',
     analysis_id    => 'analysis_id',
     bam_file_id    => 'bam_file_id',
@@ -47,35 +50,29 @@ sub _constructor_parameters {
   };
 }
 
-sub _simple_accessors {
-  return [
-    { method_name => 'name',              hash_key    => '_name',           },
-    { method_name => 'analysis_id',       hash_key    => '_analysis_id',    },
-    { method_name => 'bam_file_id',       hash_key    => '_bam_file_id',    },
-    { method_name => 'bigwig_file_id',    hash_key    => '_bigwig_file_id', },
-    { method_name => 'read_file_ids',     hash_key    => '_read_file_ids',  },
-  ]
+use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
+  _generic_get_or_set
+  _generic_set
+  _generic_get
+  _generic_fetch
+);
+
+sub dbID            { return shift->_generic_get_or_set('dbID',           @_); }
+sub db              { return shift->_generic_get_or_set('db',             @_); }
+sub name            { return shift->_generic_get_or_set('name',           @_); }
+sub analysis_id     { return shift->_generic_get_or_set('analysis_id',    @_); }
+sub bam_file_id     { return shift->_generic_get_or_set('bam_file_id',    @_); }
+sub bigwig_file_id  { return shift->_generic_get_or_set('bigwig_file_id', @_); }
+sub read_file_ids   { return shift->_generic_get_or_set('read_file_ids',  @_); }
+
+sub fetch_Analysis {
+  return shift->_generic_fetch('analysis', 'get_AnalysisAdaptor', 'analysis_id');
 }
 
-sub _fetch_methods {
-  return [
-    {
-      method_name             => 'fetch_Analysis',
-      hash_key                => '_analysis',
-      get_adaptor_method_name => 'get_AnalysisAdaptor',
-      dbID_method             => 'analysis_id',
-    },
-  ]
-}
-
-sub _set_methods {
-  return [
-    {
-      method_name   => 'set_Analysis',
-      expected_type => 'Bio::EnsEMBL::Analysis',
-      hash_key      => '_analysis',
-    },
-  ]
+sub set_Analysis {
+  my $self = shift;
+  my $obj  = shift;
+  return shift->_generic_set('analysis', 'Bio::EnsEMBL::Analysis', $obj);
 }
 
 sub _fetch_DataFile {

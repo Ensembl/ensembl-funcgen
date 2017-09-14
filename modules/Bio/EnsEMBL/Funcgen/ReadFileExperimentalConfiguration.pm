@@ -35,7 +35,12 @@ package Bio::EnsEMBL::Funcgen::ReadFileExperimentalConfiguration;
 use strict;
 use warnings;
 
-use base 'Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality';
+use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
+  _generic_get_or_set
+);
+
+use Role::Tiny::With;
+with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 
 sub _constructor_parameters {
   return {
@@ -48,16 +53,14 @@ sub _constructor_parameters {
   }
 }
 
-sub _simple_accessors {
-  return [
-    { method_name => 'biological_replicate', hash_key => '_biological_replicate', },
-    { method_name => 'technical_replicate',  hash_key => '_technical_replicate',  },
-    { method_name => 'paired_end_tag',       hash_key => '_paired_end_tag',       },
-    { method_name => 'multiple',             hash_key => '_multiple',             },
-    { method_name => 'read_file_id',         hash_key => '_read_file_id',         },
-    { method_name => 'experiment_id',        hash_key => '_experiment_id',        },
-  ]
-}
+sub dbID                 { return shift->_generic_get_or_set('dbID',                 @_); }
+sub db                   { return shift->_generic_get_or_set('db',                   @_); }
+sub biological_replicate { return shift->_generic_get_or_set('biological_replicate', @_); }
+sub technical_replicate  { return shift->_generic_get_or_set('technical_replicate',  @_); }
+sub paired_end_tag       { return shift->_generic_get_or_set('paired_end_tag',       @_); }
+sub multiple             { return shift->_generic_get_or_set('multiple',             @_); }
+sub read_file_id         { return shift->_generic_get_or_set('read_file_id',         @_); }
+sub experiment_id        { return shift->_generic_get_or_set('experiment_id',        @_); }
 
 sub fetch_ReadFile {
 

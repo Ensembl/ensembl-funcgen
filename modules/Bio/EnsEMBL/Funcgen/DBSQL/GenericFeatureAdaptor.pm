@@ -36,16 +36,36 @@ package Bio::EnsEMBL::Funcgen::DBSQL::GenericFeatureAdaptor;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use Bio::EnsEMBL::Utils::Exception qw( throw );
+use base 'Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor';
 
-use base (
-  'Bio::EnsEMBL::Funcgen::DBSQL::GenericAdaptor',
-  'Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor',
+use Role::Tiny::With;
+with 'Bio::EnsEMBL::Funcgen::DBSQL::GenericAdaptorMethods';
+
+sub new {
+  my ($class, @args) = @_;
+  my $self = $class->SUPER::new(@args);
+  $self->init(@args);
+  return $self;
+}
+
+sub object_class {
+  my $self = shift;
+  throw('object_class has to be overwritten by the subclass in ('. ref $self .')!');
+}
+
+use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
+  _generic_get_or_set
 );
+
+sub slice_cache {
+  my $self  = shift;
+  my $value = shift;
+  return $self->_generic_get_or_set('slice_cache', $value);
+}
 
 sub init {
   my $self = shift;
-  $self->SUPER::init(@_);
   $self->slice_cache({});
 }
 
@@ -54,65 +74,43 @@ sub _objs_from_sth {
     
     my @features;
     FEATURE: while ( my $row = $sth->fetchrow_hashref ) {
-
-        my $object = $self->objectify($row);
-        
-        (
-          my $feature_slice, 
-          my $feature_start, 
-          my $feature_end, 
-          my $feature_strand
-        ) = $self->_create_feature_slice($object, $dest_slice, $mapper);
-        
-        $object->slice  ($feature_slice);
-        $object->strand ($feature_strand);
-        $object->start  ($feature_start);
-        $object->end    ($feature_end);
-        
-        push @features, $object;
+        my $feature = $self->objectify($row);
+        $self->_load_dependencies($feature, $dest_slice, $mapper);
+        push @features, $feature;
     }
     return \@features;
 }
 
-sub _simple_accessors {
-  my $self = shift;
-  my $super_accessors = $self->SUPER::_simple_accessors;
-  
-  my $accessors = [
-    @$super_accessors,
-    { method_name => 'slice_cache', hash_key => '_slice_cache',  },
-  ];
-  return $accessors;
+sub _load_dependencies {
+    my $self       = shift;
+    
+    my $feature    = shift;
+    my $dest_slice = shift;
+    my $mapper     = shift;
+    
+    (
+      my $feature_slice, 
+      my $feature_start, 
+      my $feature_end, 
+      my $feature_strand
+    ) = $self->_create_feature_slice($feature, $dest_slice, $mapper);
+    
+    $feature->slice  ($feature_slice);
+    $feature->strand ($feature_strand);
+    $feature->start  ($feature_start);
+    $feature->end    ($feature_end);
+
+    return $feature;
 }
 
 sub _create_feature_slice {
   my ($self, $feature, $dest_slice, $mapper) = @_;
   
   my $seq_region_id    = $feature->seq_region_id;
-  my $strand           = $feature->strand;
+  my $strand           = $feature->seq_region_strand;
   my $seq_region_start = $feature->seq_region_start;
   my $seq_region_end   = $feature->seq_region_end;
   
-  my $slice_adaptor    = $self->db->dnadb->get_SliceAdaptor;
-
-  my (
-    $dest_slice_start,   $dest_slice_end, 
-    $dest_slice_strand,
-  );
-
-  if ($dest_slice) {
-    $dest_slice_start   = $dest_slice->start;
-    $dest_slice_end     = $dest_slice->end;
-    $dest_slice_strand  = $dest_slice->strand;
-  }
-
-  my $slice = $self->slice_cache->{$seq_region_id};
-
-  if (! $slice) {
-    $slice = $slice_adaptor->fetch_by_seq_region_id($seq_region_id);
-    $self->slice_cache->{$seq_region_id} = $slice;
-  }
-
   if ($mapper) {
     throw("This is a data issue. There should be no features on non-toplevel seq regions.");
   }
@@ -120,6 +118,10 @@ sub _create_feature_slice {
   # If a destination slice was provided convert the coords
   # If the destination slice starts at 1 and is forward strand, nothing needs doing
   if ($dest_slice) {
+  
+    my $dest_slice_start   = $dest_slice->start;
+    my $dest_slice_end     = $dest_slice->end;
+    my $dest_slice_strand  = $dest_slice->strand;
 
     unless ($dest_slice_start == 1 && $dest_slice_strand == 1) {
       if ($dest_slice_strand == 1) {
@@ -132,8 +134,17 @@ sub _create_feature_slice {
         $strand      *= -1;
       }
     }
+    return $dest_slice, $seq_region_start, $seq_region_end, $strand;
   }
-  return $dest_slice, $seq_region_start, $seq_region_end, $strand;
+
+  my $slice_adaptor    = $self->db->dnadb->get_SliceAdaptor;
+  my $slice = $self->slice_cache->{$seq_region_id};
+
+  if (! $slice) {
+    $slice = $slice_adaptor->fetch_by_seq_region_id($seq_region_id);
+    $self->slice_cache->{$seq_region_id} = $slice;
+  }
+  return $slice, $seq_region_start, $seq_region_end, $strand;
 }
 
 1;

@@ -34,7 +34,12 @@ package Bio::EnsEMBL::Funcgen::DataFile;
 
 use strict;
 
-use base 'Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality';
+use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
+  _generic_get_or_set
+);
+
+use Role::Tiny::With;
+with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 
 sub _constructor_parameters {
   return {
@@ -47,15 +52,13 @@ sub _constructor_parameters {
   };
 }
 
-sub _simple_accessors {
-  return [
-    { method_name => 'data_file_id', hash_key => 'data_file_id' },
-    { method_name => 'table_id',     hash_key => 'table_id'     },
-    { method_name => 'table_name',   hash_key => 'table_name'   },
-    { method_name => 'path',         hash_key => 'path'         },
-    { method_name => 'file_type',    hash_key => 'file_type'    },
-    { method_name => 'md5sum',       hash_key => 'md5sum'       },
-  ]
-}
+sub dbID         { return shift->_generic_get_or_set('dbID',         @_); }
+sub db           { return shift->_generic_get_or_set('db',           @_); }
+sub data_file_id { return shift->_generic_get_or_set('data_file_id', @_); }
+sub table_id     { return shift->_generic_get_or_set('table_id',     @_); }
+sub table_name   { return shift->_generic_get_or_set('table_name',   @_); }
+sub path         { return shift->_generic_get_or_set('path',         @_); }
+sub file_type    { return shift->_generic_get_or_set('file_type',    @_); }
+sub md5sum       { return shift->_generic_get_or_set('md5sum',       @_); }
 
 1;

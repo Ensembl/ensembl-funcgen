@@ -67,7 +67,8 @@ use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 
-use base 'Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality';
+use Role::Tiny::With;
+with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 
 sub _constructor_parameters {
   return {
@@ -85,49 +86,42 @@ sub _constructor_parameters {
   };
 }
 
-sub _simple_accessors {
-  return [
-    { method_name => 'name',                         hash_key => '_name',                         },
-    { method_name => 'version',                      hash_key => '_version',                      },
-    { method_name => 'initial_release_date',         hash_key => '_initial_release_date',         },
-    { method_name => 'last_annotation_update',       hash_key => '_last_annotation_update',       },
-    { method_name => 'feature_type_id',              hash_key => '_feature_type_id',              },
-    { method_name => 'analysis_id',                  hash_key => '_analysis_id',                  },
-    { method_name => 'is_current',                   hash_key => '_is_current',                   },
-    { method_name => 'sample_regulatory_feature_id', hash_key => '_sample_regulatory_feature_id', },
-  ]
+use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
+  _generic_get_or_set
+  _generic_set
+  _generic_get
+  _generic_fetch
+);
+
+sub dbID                         { return shift->_generic_get_or_set('dbID',                      @_); }
+sub db                           { return shift->_generic_get_or_set('db',                        @_); }
+sub name                         { return shift->_generic_get_or_set('name',                      @_); }
+sub version                      { return shift->_generic_get_or_set('version',                   @_); }
+sub initial_release_date         { return shift->_generic_get_or_set('initial_release_date',      @_); }
+sub last_annotation_update       { return shift->_generic_get_or_set('last_annotation_update',    @_); }
+sub feature_type_id              { return shift->_generic_get_or_set('feature_type_id',           @_); }
+sub analysis_id                  { return shift->_generic_get_or_set('analysis_id',               @_); }
+sub is_current                   { return shift->_generic_get_or_set('is_current',                @_); }
+sub sample_regulatory_feature_id { return shift->_generic_get_or_set('sample_regulatory_feature_id',    @_); }
+
+sub fetch_FeatureType { 
+  return shift->_generic_fetch('feature_type', 'get_FeatureTypeAdaptor', 'feature_type_id');
 }
 
-sub _set_methods {
-  return [
-    {
-      method_name   => 'set_Analysis',
-      expected_type => 'Bio::EnsEMBL::Analysis',
-      hash_key      => 'analysis',
-    },
-    {
-      method_name   => 'set_FeatureType',
-      expected_type => 'Bio::EnsEMBL::Funcgen::FeatureType',
-      hash_key      => 'feature_type',
-    },
-  ]
+sub set_FeatureType {
+  my $self = shift;
+  my $obj  = shift;
+  return shift->_generic_set('feature_type', 'Bio::EnsEMBL::Funcgen::FeatureType', $obj);
 }
 
-sub _fetch_methods {
-  return [
-    {
-      method_name             => 'fetch_FeatureType',
-      hash_key                => '_feature_type',
-      get_adaptor_method_name => 'get_FeatureTypeAdaptor',
-      dbID_method             => 'feature_type_id',
-    },
-    {
-      method_name             => 'fetch_Analysis',
-      hash_key                => '_analysis',
-      get_adaptor_method_name => 'get_AnalysisAdaptor',
-      dbID_method             => 'analysis_id',
-    },
-  ]
+sub fetch_Analysis {
+  return shift->_generic_fetch('analysis', 'get_AnalysisAdaptor', 'analysis_id');
+}
+
+sub set_Analysis {
+  my $self = shift;
+  my $obj  = shift;
+  return shift->_generic_set('analysis', 'Bio::EnsEMBL::Analysis', $obj);
 }
 
 =head2 get_all_Epigenomes

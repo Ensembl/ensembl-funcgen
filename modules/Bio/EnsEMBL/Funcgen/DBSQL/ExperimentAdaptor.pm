@@ -57,7 +57,6 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;# For DBI :sql_types import;
 
 use base qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor );
 
-
 =head2 fetch_by_name
 
   Arg [1]    : string - name of an Experiment
