@@ -75,8 +75,6 @@ sub _initialise_fields {
   my @accepted_constructor_parameters = keys %$constructor_key_to_set_method;
   
   return if !@accepted_constructor_parameters;
-#   use Data::Dumper;
-#   print Dumper(\@accepted_constructor_parameters);
 
   my @value = rearrange([ @accepted_constructor_parameters ], @parameters);
   
