@@ -178,7 +178,7 @@ sub _objs_from_sth {
         #         $transcription_factor_id);
         # }
 
-        my $components;
+        my @components;
 
         my $transcription_factor_complex
             = Bio::EnsEMBL::Funcgen::TranscriptionFactorComplex->new(
@@ -217,6 +217,12 @@ sub store {
       (production_name, display_name)
       VALUES (?,?)" );
 
+    my $comp_sth = $self->prepare(
+        "INSERT INTO transcription_factor_complex_composition
+        (transcription_factor_complex_id,transcription_factor_id) 
+        VALUES(?,?)"
+    );
+
     my $stored_TranscriptionFactorComplex;
 
     foreach my $transcription_factor_complex (@args) {
@@ -224,25 +230,47 @@ sub store {
             'Bio::EnsEMBL::Funcgen::TranscriptionFactorComplex',
             'TranscriptionFactorComplex' );
 
-        # $self->db->is_stored_and_valid(
-        #     'Bio::EnsEMBL::Funcgen::TranscriptionFactor',
-        #     $transcription_factor_complex->transcription_factor()
-        # );
-
         if (!(     $transcription_factor_complex->dbID()
                 && $transcription_factor_complex->adaptor() == $self
             )
             )
         {
-        # my $transcription_factor=$transcription_factor_complex->transcription_factor();
+            $stored_TranscriptionFactorComplex
+                = $self->fetch_by_production_name(
+                $transcription_factor_complex->production_name );
 
-            $sth->bind_param( 1, $transcription_factor_complex->production_name,   SQL_VARCHAR );
-            $sth->bind_param( 2, $transcription_factor_complex->display_name, SQL_VARCHAR );
+            if ( !$stored_TranscriptionFactorComplex ) {
 
-            $sth->execute();
-            
-            $transcription_factor_complex->dbID( $self->last_insert_id );
-            $transcription_factor_complex->adaptor($self);
+                $sth->bind_param( 1,
+                    $transcription_factor_complex->production_name,
+                    SQL_VARCHAR );
+                $sth->bind_param( 2,
+                    $transcription_factor_complex->display_name,
+                    SQL_VARCHAR );
+
+                $sth->execute();
+
+                $transcription_factor_complex->dbID( $self->last_insert_id );
+                $transcription_factor_complex->adaptor($self);
+
+                for my $component (
+                    @{ $transcription_factor_complex->components() } )
+                {
+                    $comp_sth->bind_param( 1,
+                        $transcription_factor_complex->dbID, SQL_INTEGER );
+                    $comp_sth->bind_param( 2, $component->dbID, SQL_INTEGER );
+                    $comp_sth->execute();
+                }
+
+
+            }
+            else {
+                $transcription_factor_complex
+                    = $stored_TranscriptionFactorComplex;
+                warn( "Using previously stored TranscriptionFactorComplex:\t"
+                        . $transcription_factor_complex->production_name()
+                        . "\n" );
+            }
 
         }
     }
