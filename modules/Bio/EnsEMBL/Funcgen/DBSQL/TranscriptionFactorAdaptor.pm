@@ -152,6 +152,7 @@ sub _objs_from_sth {
             -NAME           => $name,
             -FEATURE_TYPE   => $feature_type,
             -GENE_STABLE_ID => $gene_stable_id,
+            -ADAPTOR        => $self,
             );
 
         push @result, $transcription_factor;

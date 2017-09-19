@@ -186,6 +186,7 @@ sub _objs_from_sth {
             -PRODUCTION_NAME => $production_name,
             -DISPLAY_NAME    => $display_name,
             -COMPONENTS      => $components,
+            -ADAPTOR         => $self,
             );
 
         push @result, $transcription_factor_complex;
