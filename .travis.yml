@@ -22,16 +22,21 @@ before_install:
     - wget https://github.com/bioperl/bioperl-live/archive/bioperl-release-1-2-3.zip
     - unzip bioperl-release-1-2-3.zip
 
-
 install:
     - cpanm -v --installdeps --with-recommends --notest --cpanfile ensembl/cpanfile .
     - cpanm -n Devel::Cover::Report::Coveralls
     - cpanm -n DBD::SQLite
     - cpanm -n Data::Dumper
     - cp travisci/MultiTestDB.conf modules/t/MultiTestDB.conf
-    - mysql -u root -h localhost -e 'GRANT ALL PRIVILEGES ON *.* TO "travis"@"%"'
 
 script: "./travisci/harness.sh"
+
+# Add build stage to trigger dependent builds, run sequentially after all test jobs
+# specified by the build matrix expansion have completed successfully
+jobs:
+  include:
+    - stage: trigger_dependent_builds
+      script: ./travisci/trigger-dependent-build.sh
 
 # Get the matrix to only build coveralls support when on 5.10
 matrix:
@@ -43,5 +48,7 @@ matrix:
 
 notifications:
   email:
-    # on_success: always
+    on_success: always
     on_failure: always
+  slack:
+    secure: RVe7KGN12ioTw7UHi/hjq+82BS4kDsgCtO9Fy8pZiZl1XjzrPmZCnuRmxwbSngIV54vkFNKGuXyiR71HkAm2EaDxeThqnTXXAhtTHSdhFB+XtIJ/ngTyWEpGwK0XSz1eOFAyrCdMFUQJIW6dl5kyfNnz6adLiMGoQYzKpbPsY5qPkO7r3UO9NDRLubO7xU88cPY4AGaqiynQLoR+MLXnolkKy771jY/vprEBVd30WR+JQaPvC6PPDtCAbyFjgXCqMseHkqszCN0AOjtBFumF4JW/xoPPp1zERfC1BM9lDdhgTtgBls7wxOSvvhwhs4QwBRHy6UfJb77XAAdt7/CuGVi51OwDzqJGHxBTxBMYdTy2JeBwUqsPopYfZ6upZ8T06Qin7JbDzMvI8qCI9UYWk76tVnqW7AybhI+P8PRH23KOhCJZJn1igJcR6D0QfFNWoyBNgoSg5kHZjNMcnI72SN6V9TsU90WPfS9vJc5c1JpCe7wjdgau3tIJbAj+d3G32Kt8KbWo0pS1LG6GFysXmu1b8Q7uuY4ch1Un9pu2f6A4W3WgILfXletWadjZ1LyQWFNY1hFJAgsGHQM0Qg/7kYZJ1RkoyS9M9Ix/nopow70BpWDHNtMRravauC3KeQ6DyPRf8h+HKhZqSfTPdzRZk7d97mNmRrz8w9TxIPE9Zdg=
