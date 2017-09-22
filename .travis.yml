@@ -31,6 +31,7 @@ install:
   - cpanm -n DBD::SQLite
   - cpanm -n Data::Dumper
   - cp travisci/MultiTestDB.conf modules/t/MultiTestDB.conf
+  - mysql -u root -h localhost -e 'GRANT ALL PRIVILEGES ON *.* TO "travis"@"%"'
 
 script: "./travisci/harness.sh"
 
