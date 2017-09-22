@@ -1,51 +1,41 @@
-language: "perl"
-
+language: perl
 perl:
-  - "5.14"
-  - "5.10"
-
+- '5.14'
+- '5.10'
 env:
+  matrix:
   - COVERALLS=true  DB=mysql
   - COVERALLS=false DB=mysql
-
+  global:
+    secure: MKVXcMdfX5skL3HMIIQrISF/1h8uu3x0rLremA5OmD2GnUt0V3szyWn2q1EDozghS60Jd8igkE1z2neSR6fVUanxsD4u031SZz2djIVtcdONQ4Ixdr1L4W+KncbmnrTtASeQSOKQJ8B4Fq+pCMF9Ty9NSjFZlUoIS5ntBJPLsjCNheyQpZH5byv+RTKWs2C6ck/+7IU5cLxR6hB1Ceu/OsUbJkt1L3qrdKhn3LL+Ro7mCFseoW2yT2SemEvac2UwM0DVFoy927W30DS8x1C0012LEJGJPtWgwQeW0a6dPFzpx078MJnJruVpmKc8IvmeWJ/mva/TIJ8JkunGN5c80ZVs4t/uPDygWvSNwKYYGZrSZ6UIoUsnx06XpkpfDYSjvU/tX9d8qeIwzIlQnimgQJ9S9lv/GdDMm4dkjMu3JRQVloyssk3OA4GpND6epzT2EzT0+KKNYsFd3rQexuFlJb2RqQFm7XH29hcUa9L88gmy3Gpxu1SxjItZ1bBVBuxtKS6vCP00hGgD5c04E3zal/hJBmaElrUBvUNgiRCkLpCMkcsloglvbAWqVc7ETfz2ypJKy50e6hkw1qld5im4tcSgic2J/VHndAV6TOpfD/AmUYcBQAX3DWbVlarvU6jBdw5TftNJldwHUlMu2yc2D3ZgFwWYmKCMPUYt7fgjX6Q=
 sudo: false
-
 addons:
   apt:
     packages:
     - unzip
-
 before_install:
-    - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-test.git
-    - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl.git
-    - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-variation.git
-    - wget https://github.com/bioperl/bioperl-live/archive/bioperl-release-1-2-3.zip
-    - unzip bioperl-release-1-2-3.zip
-
+- git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-test.git
+- git clone --branch master --depth 1 https://github.com/Ensembl/ensembl.git
+- git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-variation.git
+- wget https://github.com/bioperl/bioperl-live/archive/bioperl-release-1-2-3.zip
+- unzip bioperl-release-1-2-3.zip
 install:
-    - cpanm -v --installdeps --with-recommends --notest --cpanfile ensembl/cpanfile .
-    - cpanm -n Devel::Cover::Report::Coveralls
-    - cpanm -n DBD::SQLite
-    - cpanm -n Data::Dumper
-    - cp travisci/MultiTestDB.conf modules/t/MultiTestDB.conf
-
+- cpanm -v --installdeps --with-recommends --notest --cpanfile ensembl/cpanfile .
+- cpanm -n Devel::Cover::Report::Coveralls
+- cpanm -n DBD::SQLite
+- cpanm -n Data::Dumper
+- cp travisci/MultiTestDB.conf modules/t/MultiTestDB.conf
 script: "./travisci/harness.sh"
-
-# Add build stage to trigger dependent builds, run sequentially after all test jobs
-# specified by the build matrix expansion have completed successfully
 jobs:
   include:
-    - stage: trigger_dependent_builds
-      script: ./travisci/trigger-dependent-build.sh
-
-# Get the matrix to only build coveralls support when on 5.10
+  - stage: trigger_dependent_builds
+    script: "./travisci/trigger-dependent-build.sh"
 matrix:
   exclude:
-    - perl: "5.10"
-      env: COVERALLS=false DB=mysql
-    - perl: "5.14"
-      env: COVERALLS=true  DB=mysql
-
+  - perl: '5.10'
+    env: COVERALLS=false DB=mysql
+  - perl: '5.14'
+    env: COVERALLS=true  DB=mysql
 notifications:
   email:
     on_success: always
