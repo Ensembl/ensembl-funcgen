@@ -99,7 +99,22 @@ sub main {
         my $tf2_name   = $fields[1];
         my $gene_id1   = $fields[2];
         my $gene_id2   = $fields[3];
-        my $motif_name = $fields[8];    #representative motif
+        my $matrix_name = $fields[8];    #representative motif
+
+        # my $tfca=$db_adaptor->get_adaptor('TranscriptionFactorComplex');
+        # # my $fta=$db_adaptor->get_adaptor('FeatureType');
+        # # my $ft=$fta->fetch_by_name('CTCF');
+        # # p $ft;die;
+        # my $tfc = $tfca->fetch_by_production_name('ETV7_TBX21');
+        # my $tfc = $tfca->fetch_by_dbID(5);
+        # my $tfa=$db_adaptor->get_adaptor('TranscriptionFactor');
+        # my $tf=$tfa->fetch_by_name('ETV7');
+        # # p $tf;
+        # my $result = $tfca->fetch_all_by_TranscriptionFactor($tf);
+        # p $tfc; die;
+        # my $bma = $db_adaptor->get_adaptor('BindingMatrix');
+        # my $bm=$bma->fetch_by_name('ETV7_TBX21_AV_TTTCTG40NTAG_NSCGGAARNNNNNNTCAC');
+        # p $bm; die;
 
         # -------------------------
         # store to funcgen database
@@ -111,10 +126,10 @@ sub main {
             = store_transcription_factor( $tf2_name, $gene_id2, $db_adaptor,
             $logger );
 
-        store_transcription_factor_complex( $first_transcription_factor,
+        my $transcription_factor_complex = store_transcription_factor_complex( $first_transcription_factor,
             $second_transcription_factor, $db_adaptor, $logger );
 
-        # store_binding_matrix( $motif, $db_adaptor );
+        store_binding_matrix( $matrix_name, $source, $db_adaptor, $logger, $motif_dir );
         # die;
     }
 
@@ -171,11 +186,15 @@ sub store_transcription_factor_complex {
         = $db_adaptor->get_adaptor('TranscriptionFactorComplex');
 
     my $production_name = $first_transcription_factor->name;
-    my $display_name = $first_transcription_factor->name;
+    my $display_name    = $first_transcription_factor->name;
+
+    my @components;
+    push @components, $first_transcription_factor;
 
     if ($second_transcription_factor) {
         $production_name .= '_' . $second_transcription_factor->name;
         $display_name    .= '::' . $second_transcription_factor->name;
+        push @components, $second_transcription_factor;
     }
 
     my $transcription_factor_complex
@@ -188,41 +207,90 @@ sub store_transcription_factor_complex {
             = Bio::EnsEMBL::Funcgen::TranscriptionFactorComplex->new(
             -PRODUCTION_NAME => $production_name,
             -DISPLAY_NAME    => $display_name,
+            -COMPONENTS      => \@components,
             );
 
         $transcription_factor_complex_adaptor->store(
             $transcription_factor_complex);
 
-    }
-
-}
-
-
-
-sub store_transcription_factor_complex_composition {
-    my ( $transcription_factor_complex, $transcription_factor, $db_adaptor )
-        = @_;
-
-    my $transcription_factor_complex_composition_adaptor
-        = $db_adaptor->get_adaptor('TranscriptionFactorComplexComposition');
-
-    my $transcription_factor_complex_composition
-        = Bio::EnsEMBL::Funcgen::TranscriptionFactorComplexComposition->new(
-        -TRANSCRIPTION_FACTOR_COMPLEX => $transcription_factor_complex,
-        -TRANSCRIPTION_FACTOR         => $transcription_factor,
+        $logger->info(
+            'Transcription Factor Complex '
+                . $display_name
+                . ' stored' . "\n",
+            0, 1
         );
 
-    $transcription_factor_complex_composition_adaptor->store(
-        $transcription_factor_complex_composition);
+    }
+    else {
+        $logger->info(
+            'Transcription Factor Complex '
+                . $display_name
+                . ' found in DB. Skipping...' . "\n",
+            0, 1
+        );
+    }
+
+    return $transcription_factor_complex;
+}
+
+
+sub store_binding_matrix {
+    my ( $matrix_name, $source, $db_adaptor, $logger, $motif_dir ) = @_;
+
+    my $binding_matrix_adaptor = $db_adaptor->get_adaptor('BindingMatrix');
+    
+    my $binding_matrix
+        = $binding_matrix_adaptor->fetch_by_name($matrix_name);
+
+    if ( !$binding_matrix ) {
+        $binding_matrix = Bio::EnsEMBL::Funcgen::BindingMatrix->new(
+            -NAME      => $matrix_name,
+            -THRESHOLD => 0.1,
+            -SOURCE    => $source,
+        );
+
+        $binding_matrix_adaptor->store($binding_matrix);
+
+        # store_frequencies($binding_matrix, $logger, $motif_dir);
+
+        $logger->info( 'Binding Matrix ' . $matrix_name . ' stored' . "\n",
+            0, 1 );
+    }
+    else {
+        $logger->info(
+            'Binding Matrix '
+                . $matrix_name
+                . ' found in DB. Skipping...' . "\n",
+            0, 1
+        );
+    }
+}
+
+
+sub store_frequencies {
+    my ( $binding_matrix, $logger, $motif_dir ) = @_;
+
+    my $filepath = $motif_dir . '/' . $binding_matrix->name() . '.pfm';
+
+    open my $fh, '<', $filepath;
+
+    while ( readline $fh ) {
+        my @nucleotide_order = ( 'A', 'C', 'G', 'T' );
+
+        if (/[\d\s]+/) {
+            my @frs = split /\s+/;
+            $frequencies_matrix->{ $nucleotide_order[$line_cnt] } = \@frs;
+            $line_cnt++;
+        }
+    }
+
+    close $fh;
 
 }
 
-sub store_binding_matrix{
-
-}
 
 # sub create_matrix_object {
-#     my ( $logger, $motif_name, $tf_name, $source, $db_adaptor ) = @_;
+#     my ( $logger, $matrix_name, $tf_name, $source, $db_adaptor ) = @_;
 
 #     my $analysis_adaptor = $db_adaptor->get_adaptor('analysis');
 #     my $analysis         = $analysis_adaptor->fetch_by_logic_name('SELEX');
@@ -233,7 +301,7 @@ sub store_binding_matrix{
 #     if ( !$feature_type ) {
 #         $logger->warning(
 #             'Skipping '
-#                 . $motif_name
+#                 . $matrix_name
 #                 . '. Transcription Factor '
 #                 . $tf_name
 #                 . ' not found in database.',
@@ -243,7 +311,7 @@ sub store_binding_matrix{
 #     }
 
 #     my $binding_matrix = Bio::EnsEMBL::Funcgen::BindingMatrix->new(
-#         'name'         => $motif_name,
+#         'name'         => $matrix_name,
 #         'analysis'     => $analysis,
 #         'source'       => $source,
 #         'feature_type' => $feature_type,
@@ -286,17 +354,17 @@ sub store_binding_matrix{
 
 #     if ( $motif_file eq "." || $motif_file eq ".." ) { next; }
 
-#     my ( $motif_name, $tf_name );
+#     my ( $matrix_name, $tf_name );
 
 #     if ( $motif_file =~ /(.*)\.pfm/ ) {
-#         $motif_name = $1;
+#         $matrix_name = $1;
 
-#         if ( $motif_name =~ /(.*?)_/ ) {
+#         if ( $matrix_name =~ /(.*?)_/ ) {
 #             $tf_name = $1;
 #         }
 
 #         my $binding_matrix
-#             = create_matrix_object( $logger, $motif_name, $tf_name,
+#             = create_matrix_object( $logger, $matrix_name, $tf_name,
 #             $source, $db_adaptor );
 
 #         if ( !$binding_matrix ) {
