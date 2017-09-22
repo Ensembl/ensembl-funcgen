@@ -20,5 +20,9 @@
 
 ALTER TABLE `binding_matrix` DROP COLUMN `frequencies`;
 ALTER TABLE `binding_matrix` DROP COLUMN `description`;
-ALTER TABLE `binding_matrix` ADD COLUMN `display_label` VARCHAR(20) NOT NULL;
+ALTER TABLE `binding_matrix` DROP COLUMN `feature_type_id`;
+ALTER TABLE `binding_matrix` DROP COLUMN `analysis_id`;
 ALTER TABLE `binding_matrix` ADD COLUMN `source` VARCHAR(20) NOT NULL;
+ALTER TABLE `binding_matrix` MODIFY COLUMN `name` varchar(200) NOT NULL;
+ALTER TABLE `binding_matrix` DROP KEY `name_analysis_idx`;
+ALTER TABLE `binding_matrix` ADD UNIQUE KEY `name_idx` (`name`);
