@@ -59,9 +59,9 @@ sub new {
             'TranscriptionFactor' );
     }
 
-    $self->{production_name}   = $production_name;
-    $self->{display_name} = $display_name;
-    $self->{components}        = $components;
+    $self->{production_name} = $production_name;
+    $self->{display_name}    = $display_name;
+    $self->{components}      = $components;
 
     return $self;
 }

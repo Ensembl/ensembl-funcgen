@@ -38,6 +38,7 @@ use Bio::EnsEMBL::Utils::Scalar qw( assert_ref );
 
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;    #sql_types barewords import
 use Bio::EnsEMBL::Funcgen::FeatureType;
+use Bio::EnsEMBL::Funcgen::TranscriptionFactor;
 
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 

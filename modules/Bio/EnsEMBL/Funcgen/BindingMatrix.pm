@@ -99,55 +99,33 @@ use base qw( Bio::EnsEMBL::Funcgen::Storable );
 =cut
 
 sub new {
-  my $caller    = shift;
-  my $obj_class = ref($caller) || $caller;
-  my $self      = $obj_class->SUPER::new(@_);
-  
-  my ( $name, $analysis, $source, $desc, $ftype, $thresh ) = rearrange
-   (['NAME', 'ANALYSIS', 'SOURCE', 'DESCRIPTION', 'FEATURE_TYPE', 'THRESHOLD'], @_);
-  
-  throw('Must supply a -name parameter')        if ! defined $name;
-  throw('Must supply a -source parameter') if ! defined $source;
-  assert_ref($analysis, 'Bio::EnsEMBL::Analysis', 'Analysis');
-  # print '*****************';
-  # print $name;
-  # print '*****************';
-  assert_ref($ftype, 'Bio::EnsEMBL::Funcgen::FeatureType', 'FeatureType');
+    my $caller    = shift;
+    my $obj_class = ref($caller) || $caller;
+    my $self      = $obj_class->SUPER::new(@_);
 
-  $self->{name}         = $name;
-  $self->{analysis}     = $analysis;
-  $self->{source}       = $source;
-  $self->{feature_type} = $ftype;
+    my ( $name, $source, $threshold, $frequencies,
+        $associated_transcription_factors )
+        = rearrange(
+        [   'NAME',      'SOURCE',
+            'THRESHOLD', 'FREQUENCIES',
+            'ASSOCIATED_TRANSCRIPTION_FACTORS'
+        ],
+        @_
+        );
 
-  # if(check_ref($freqs, 'ARRAY')){
-  #   $self->{freq_matrix} = $freqs;
-  #   map { check_ref($_, 'ARRAY'); } @$freqs; # 2d array check
-  #   $self->_validate_matrix;  # Also sets length
-  # }
-  # else{  # Assume string
-  #   # defer validation to speed up track display
-  #   $self->{tmp_frequencies}  = $freqs;    
-  # }
+    throw('Must supply a -name parameter')   if !defined $name;
+    throw('Must supply a -source parameter') if !defined $source;
 
-  $self->{description} = $desc if defined $desc;
-  $self->{threshold}   = $thresh if defined $thresh;
-  return $self;
+    $self->{name}        = $name;
+    $self->{source}      = $source;
+    $self->{threshold}   = $threshold if defined $threshold;
+    $self->{frequencies} = $frequencies if defined $frequencies;
+    $self->{associated_transcription_factors}
+        = $associated_transcription_factors
+        if defined $associated_transcription_factors;
+
+    return $self;
 }
-
-
-=head2 feature_type
-
-  Example    : my $ft_name = $matrix->feature_type->name;
-  Description: Getter for the feature_type attribute for this matrix.
-  Returntype : Bio::EnsEMBL::Funcgen::FeatureType
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-sub feature_type { return shift->{feature_type}; }
-
 
 =head2 name
 
@@ -161,21 +139,6 @@ sub feature_type { return shift->{feature_type}; }
 =cut
 
 sub name { return shift->{name}; }
-
-
-=head2 description
-
-  Example    : my $desc = $matrix->description;
-  Description: Getter for the description attribute 
-  Returntype : String
-  Exceptions : None
-  Caller     : General
-  Status     : Low Risk
-
-=cut
-
-sub description { return shift->{description}; }
-
 
 =head2 threshold
 
@@ -199,20 +162,6 @@ sub threshold {
   return $self->{threshold};
 }
 
-
-=head2 analysis
-  Example    : $matrix->analysis()->logic_name();
-  Description: Getter for the feature_type attribute for this matrix.
-  Returntype : Bio::EnsEMBL::Analysis
-  Exceptions : None
-  Caller     : General
-  Status     : At risk
-
-=cut
-
-sub analysis { return shift->{analysis}; }
-
-
 =head2 source
 
   Example    : print '>'.$matrix->name."\n".$matrix->source;
@@ -231,195 +180,79 @@ sub source {
 }
 
 
-sub _build_matrix{
-  my $self = shift;
-  my @tmp  = split("\n", $self->{tmp_frequencies});
-  shift @tmp if $tmp[0] =~ /^>/;
-  @{$self->{freq_matrix}} = map { [ parse_matrix_line($_) ] } @tmp;
-  $self->_validate_matrix;
-  delete $self->{tmp_frequencies};
-  return;
-}
 
+sub frequencies {
+    my ($self) = @_;
 
-sub _validate_matrix{
-  my $self = shift;
-
-  if(scalar(@{$self->{freq_matrix}}) != 4){
-    throw('Matrix '.$self->name." has an invalid number of lines:\n\t".
-      join("\n\t", @{$self->{freq_matrix}}));
-  }
-
-  my $length = scalar @{$self->{freq_matrix}->[0]};
-  $self->{length} = $length;
-
-  for my $i(1..3){
-    if($length != scalar(@{$self->{freq_matrix}->[$i]})){
-      throw("Matrix has lines with differing sizes:\n\t".
-        join("\n\t", @{$self->{freq_matrix}}));
+    if ( $self->{frequencies} ) {
+      print "cache\n";
+        return $self->{frequencies};
     }
-  }
 
-  return;
+    # return $self->adaptor->db->get_adaptor('BindingMatrixFrequencies');
+
+    my $binding_matrix_frequencies_adaptor = $self->adaptor->db()
+        ->get_adaptor('BindingMatrixFrequencies');
+
+    $self->{frequencies}
+        = $binding_matrix_frequencies_adaptor->fetch_all_by_BindingMatrix(
+        $self);
+
+    return $self->{frequencies};
 }
 
+sub get_frequency_by_position_nucleotide {
+    my ( $self, $position, $nucleotide ) = @_;
 
-#TODO should this be here?
-sub frequency_matrix{ return shift->matrix(undef, shift); }
+    throw('Must supply a position parameter')   if !defined $position;
+    throw('Must supply a nucleotide parameter') if !defined $nucleotide;
 
-sub weight_matrix{ return shift->matrix(1, shift); }
+    my %valid_nucleotides = ( 'A' => 1, 'C' => 1, 'G' => 1, 'T' => 1 );
 
-=head2 matrix
-
-  Arg[1]     : Boolean - Returns weights, default is frequencies
-  Arg[2]     : Boolean - Returns reverse complement version of matrix.
-  Example    : 
-  Description: Getter for the frequency or weight matrix. 
-               Array of ACGT base rows in that e.g.
-                 [[a1, a2, a3, ...], # A values
-                  [c1, c2, c3, ...], # C values
-                  [g1, g2, g3, ...], # G values
-                  [t1, t2, t3, ...]] # T values
-  Returntype : Arrayref - 2d array
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-# Change this to also get weight matrix?
-
-sub matrix{
-  my $self      = shift;
-  my $weights   = shift;
-  my $revcomp   = shift;
-  my $attr_name = $weights ? 'weight_matrix' : 'freq_matrix';
-  
-  if(! defined $self->{$attr_name}){
-
-    if(! $weights){
-      if(defined $self->{tmp_frequencies}){
-        $self->_build_matrix;  
-      }
+    if ( !$valid_nucleotides{$nucleotide} ) {
+        throw('Supplied nucleotide not valid');
     }
-    elsif(! defined $self->{weights}){
-      $self->_process_frequency_matrix;
+
+    if ( !$self->{frequencies} ) {
+        $self->frequencies();
     }
-  }
 
-  if($revcomp){
-    $self->{$attr_name.'_rc'} = reverse_complement_matrix($self->{$attr_name});
-    $attr_name .= '_rc' ;
-  }
+    for my $bmf ( @{ $self->{frequencies} } ) {
+        if (   $bmf->position() == $position
+            && $bmf->nucleotide() eq $nucleotide )
+        {
+            return $bmf->frequency;
+        }
+    }
+}
 
-  return $self->{$attr_name};
+sub get_frequencies_as_string {
+    my ($self) = @_;
+
+    my $frequencies_string;
+
+    if ( !$self->{frequencies} ) {
+        $self->frequencies();
+    }
+
+    my @nucleotide_order = ( 'A', 'C', 'G', 'T' );
+
+    for my $nucleotide (@nucleotide_order) {
+        for ( my $position = 1; $position <= $self->length(); $position++ ) {
+            my $frequency
+                = $self->get_frequency_by_position_nucleotide( $position,
+                $nucleotide );
+            $frequencies_string .= $frequency . "\t";
+        }
+        $frequencies_string .= "\n";
+    }
+
+    return $frequencies_string;
 }
 
 
-=head2 frequencies_revcomp
-  Example    : $matrix->frequencies_revcomp();
-  Description: Getter for the reverse complement frequencies attribute.
-               The attribute represents the reverse complement of frequencies
-  Returntype : Scalar - string
-  Caller     : General
-  Status     : At Risk
-=cut
-# CThis was not revcomp, just rev!!!
-# Remove this in favour of passing a revcomp arg to frequencies
-#sub frequencies_revcomp { return shift->{frequencies_revcomp}; }
 
 
-=head2 relative_affinity
-
-  Arg [1]    : String - Binding site sequence (strand matched to the matrix alignment)
-  Arg [2]    : Boolean (optional) - Linear scale results (default is log scale)
-  Example    : $matrix->relative_affinity($sequence);
-  Description: Calculates the binding affinity of a given sequence relative to
-               the optimal site for the matrix. The site is taken as if it were 
-               in the proper orientation. Considers a purely random background e.g.
-                   p(A)=p(C)=p(G)=p(T)
-               Returns value between 0 and 1    
-  Returntype : Scalar - numeric or undef
-  Exceptions : Throws if the sequence length does not have the matrix length
-               or if the sequence has unclear bases (N is not accepted)
-  Caller     : General
-  Status     : At Risk
-
-=cut
-
-sub relative_affinity {
-  my $self    = shift;
-  my $seq     = shift;
-  my $linear  = shift;
-  throw('Must provide a sequence argument') if ! defined $seq;
-  ($seq = uc($seq)) =~ s/\s+//g; #be forgiving of case and spaces
-  
-  if($seq =~ /[^ACGT]/){
-    warn($self->name." sequence contains in-valid [^acgtACGT] characters:\t$seq");
-    return; # Not undef which can be true in list context
-  }
-  
-  if(length($seq) != $self->length){
-    throw('Specified sequence does not match matrix length('.
-      $self->length."):\n".length($seq)." $seq");
-  }
-  
-  my $rel_aff;
-  my $log_odds = 0;
-  my @bases         = split(//, $seq);
-  my $weight_matrix = $self->weights;
-
-  for my $i(0..$#bases){
-    $log_odds += $weight_matrix->{$bases[$i]}->[$i];  
-  }
-  
-  #This log scale may be quite unrealistic, but useful just for comparison.
-  if(! $linear){
-    $rel_aff = ($log_odds - $self->min_affinity) / 
-                 ($self->max_affinity - $self->min_affinity);
-  } else {
-    $rel_aff = (exp($log_odds) - exp($self->min_affinity)) / 
-                 (exp($self->max_affinity) - exp($self->min_affinity));
-  }
-
-  return $rel_aff;
-}
-
-
-=head2 is_position_informative
-
-  Arg [1]    : Scalar - 1 based integer position within the matrix
-  Arg [2]    : Scalar (optional) - Threshold [0-2] for information content [default is 1.5]
-  Example    : $matrix->is_position_informative($pos);
-  Description: Returns true if position information content is over threshold
-  Returntype : Boolean
-  Exceptions : Throws if position or threshold out of bounds
-  Caller     : General
-  Status     : At High Risk
-
-=cut
-
-sub is_position_informative {
-  my ($self, $position, $revcomp, $threshold) = @_;
-  throw('Must pass a position argument') if ! defined $position;
-
-  if($revcomp){ 
-    $position = $self->length - $position + 1; 
-  }
-
-  if(($position < 1) || ($position > $self->length)){
-    throw("Position($position) is out of bounds: 1 - ".$self->length);
-  }
-
-  if(! defined $threshold){
-    $threshold = 1.5;
-  }
-  elsif(($threshold < 0) || ($threshold > 2)){
-    throw("Threshold($threshold) must be within 0 - 2") 
-  }
-
-  return ($self->info_content->[$position-1] >= $threshold);
-}
 
 
 =head2 length
@@ -435,153 +268,12 @@ sub is_position_informative {
 
 sub length { 
   my $self = shift;
-  # Length is set by _validate_matrix if matrix is passed to constructor
-  # So if it is not defined need to _build_matrix from frequencies
-  $self->_build_matrix if ! defined $self->{length};
-  return $self->{length}; 
-}
 
+  if (! $self->{frequencies}){
+    $self->frequencies();
+  } 
 
-=head2 weights
-
-  Example    : 
-  Description: Private getter for the weights matrix based on frequencies
-  Returntype : HASHREF with the weights of this binding matrix 
-  Exceptions : None
-  Caller     : General + relative_affinity
-  Status     : At Risk
-
-=cut
-
-sub weights {
-  my $self    = shift;
-  $self->_process_frequency_matrix if ! defined $self->{weights};
-  return $self->{weights};  
-}
-
-
-=head2 _process_frequency_matrix
-
-  Arg[1]     : Scalar (optional) - Pseudo count/lapace estimator for base weight 
-                 computation. This allows computation for bases with frequencies 
-                 of 0. Default is 0.1.
-  Example    : $self->_process_frequency_matrix;
-  Description: Private function to calculate the matrix information content, 
-                 base weights and  min and max relative affinity.
-  ReturnType : Arrayref
-  Caller     : weights and information_content
-  Status     : At Risk
-
-=cut
-
-# We can allow distinct background per nucleotide, instead of 0.25 for all... pass as parameter?
-# This should probably be a meta entry, loaded by the adaptor, or defaults to 0.25 for all.
-# But if the matrix was obtained using in-vivo data, it shouldn't matter the organism nucleotide bias.
-# We're using 0.1 as pseudo-count... the matrix cannot have very few elements... (e.g. <30 not good)
-
-# Is 0.1 optimal here?
-# http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2647310/pdf/gkn1019.pdf
-
-sub _process_frequency_matrix{
-  my $self   = shift;
-  my $pseudo = shift;
-  $pseudo ||= 0.1;
-
-  my ($As, $Cs, $Gs, $Ts) = @{$self->matrix}; 
-  my ($tmp_min, $tmp_max, $total_info);
-  $self->{weights} = {A => [], C => [], G => [], T => []};  # This gets populated in _compute_base_weight
-  $self->{info_content} = [];
-  $self->{min_affinity} = 0; 
-  $self->{max_affinity} = 0;
-
-  for my $i(0..$#{$As}){ 
-    $total_info = $As->[$i] + $Cs->[$i] + $Gs->[$i] + $Ts->[$i] + (4 * $pseudo);
-    ($tmp_min, undef, undef, $tmp_max) = 
-      sort {$a <=> $b} ($self->_compute_base_weight('A', $As->[$i], $total_info, $pseudo),
-                        $self->_compute_base_weight('C', $Cs->[$i], $total_info, $pseudo),
-                        $self->_compute_base_weight('G', $Gs->[$i], $total_info, $pseudo),
-                        $self->_compute_base_weight('T', $Ts->[$i], $total_info, $pseudo));
-    $self->{min_affinity} += $tmp_min;
-    $self->{max_affinity} += $tmp_max; 
-
-    # Slight redundancy here with calculating $base_freq + $pseudo
-
-    my $fas = ($As->[$i] + $pseudo) / $total_info;
-    my $fcs = ($Cs->[$i] + $pseudo) / $total_info;
-    my $fgs = ($Gs->[$i] + $pseudo) / $total_info;
-    my $fts = ($Ts->[$i] + $pseudo) / $total_info;    
-    my $ic_i = 2 + ($fas * log($fas) / log(2)) + ($fcs * log($fcs) / log(2)) + 
-      ($fgs * log($fgs) / log(2)) + ($fts * log($fts)/log(2));
-    push @{$self->{info_content}}, $ic_i;
-  }
-
-  $self->{weight_matrix} = [$self->{weights}{A},
-                            $self->{weights}{C},
-                            $self->{weights}{G},
-                            $self->{weights}{T}];
-  return;
-}
-
-
-sub _compute_base_weight{
-  my ($self, $base, $base_freq, $total_info, $pseudo) = @_;
-  my $weight = log(( ($base_freq + $pseudo) / ($total_info + (4 * $pseudo) )) / 0.25); 
-  push @{$self->{weights}{$base}}, $weight; 
-  return $weight;
-}
-
-
-=head2 info_content
-
-  Example    : info_content($as,$cs,$gs,$ts,$pseudo);
-  Description: Private function to calculate the matrix information content per position
-  ReturnType : Arrayref
-  Caller     : self
-  Status     : At Risk
-
-=cut
-
-sub info_content {
-  my $self    = shift;
-  my $revcomp = shift;
-  $self->_process_frequency_matrix if ! defined $self->{info_content};
-  return $revcomp ? [ reverse(@{$self->{info_content}}) ] : $self->{info_content};
-}
-
-
-=head2 max_affinity
-
-  Example    : my $max = $matrix->maximim_affinity;
-  Description: Getter for maximum binding affinity attribute
-  Returntype : Scalar - numeric 
-  Exceptions : None
-  Caller     : relative_affinity
-  Status     : At Risk
-
-=cut
-
-sub max_affinity {  
-  my $self = shift;
-  $self->_process_frequency_matrix if ! defined $self->{max_affinity};
-  return $self->{max_affinity}; 
-}
-
-
-=head2 _min_affinity
-
-  Example    : my $min = $matrix->min_affinity;
-  Description: Getter of minimum binding affinity attribute
-  Returntype : Scalar - numeric
-  Exceptions : None
-  Caller     : relative_affinity
-  Status     : At Risk
-
-=cut
-
-sub min_affinity { 
-  my $self = shift;
-  $self->_process_frequency_matrix if ! defined $self->{min_affinity};
-  return $self->{min_affinity}; 
+  return scalar @{$self->{frequencies}} / 4;
 }
 
 1;

@@ -99,20 +99,23 @@ sub new {
     my $obj_class = ref($caller) || $caller;
     my $self      = $obj_class->SUPER::new(@_);
 
-    my ( $binding_matrix, $position, $nucleotide, $frequency )
+    my ( $position, $nucleotide, $frequency, $binding_matrix )
         = rearrange(
-        [ 'BINDING_MATRIX', 'POSITION', 'NUCLEOTIDE', 'FREQUENCY' ], @_ );
+        [ 'POSITION', 'NUCLEOTIDE', 'FREQUENCY', 'BINDING_MATRIX' ], @_ );
 
-    assert_ref( $binding_matrix, 'Bio::EnsEMBL::BindingMatrix',
-        'BindingMatrix' );
     throw('Must supply a -position parameter')   if !defined $position;
     throw('Must supply a -nucleotide parameter') if !defined $nucleotide;
     throw('Must supply a -frequency parameter')  if !defined $frequency;
 
-    $self->{binding_matrix} = $binding_matrix;
+    if ($binding_matrix) {
+        assert_ref( $binding_matrix, 'Bio::EnsEMBL::Funcgen::BindingMatrix',
+            'BindingMatrix' );
+    }
+
     $self->{position}       = $position;
     $self->{nucleotide}     = $nucleotide;
     $self->{frequency}      = $frequency;
+    $self->{binding_matrix} = $binding_matrix;
 
     return $self;
 }

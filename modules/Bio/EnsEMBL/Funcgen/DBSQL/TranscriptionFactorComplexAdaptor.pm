@@ -37,7 +37,9 @@ use Bio::EnsEMBL::Utils::Exception qw( warning throw );
 use Bio::EnsEMBL::Utils::Scalar qw( assert_ref );
 
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;    #sql_types barewords import
+use Bio::EnsEMBL::Funcgen::DBSQL::TranscriptionFactorAdaptor;
 use Bio::EnsEMBL::Funcgen::TranscriptionFactor;
+use Bio::EnsEMBL::Funcgen::TranscriptionFactorComplex;
 
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
@@ -53,22 +55,21 @@ use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 =cut
 
-sub fetch_all_by_TranscriptionFactor {
-    my ( $self, $transcription_factor ) = @_;
+# sub fetch_all_by_TranscriptionFactor {
+#     my ( $self, $transcription_factor ) = @_;
 
-    $self->db->is_stored_and_valid(
-        'Bio::EnsEMBL::Funcgen::TranscriptionFactor',
-        $transcription_factor );
+#     $self->db->is_stored_and_valid(
+#         'Bio::EnsEMBL::Funcgen::TranscriptionFactor',
+#         $transcription_factor );
 
-    my $constraint = " tfc.transcription_factor_id = ?";
+#     my $constraint = " tfc.transcription_factor_id = ?";
 
-    $self->bind_param_generic_fetch( $transcription_factor->dbID,
-        SQL_INTEGER );
+#     $self->bind_param_generic_fetch( $transcription_factor->dbID,
+#         SQL_INTEGER );
 
-    return $self->generic_fetch($constraint);
-}
+#     return $self->generic_fetch($constraint);
+# }
 
-use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 =head2 fetch_by_production_name
 
@@ -144,6 +145,48 @@ sub _columns {
     );
 }
 
+=head2 _fetch_components
+
+  Arg [1]    : Integer, transcription factor complex id
+  Example    : None
+  Description: Fetches a list of TranscriptionFactor objects (components)
+               that belong to the transcription factor complex
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::TranscriptionFactor objects
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub _fetch_components {
+    my ( $self, $transcription_factor_complex_id ) = @_;
+
+    my $sth = $self->prepare( "
+      SELECT transcription_factor_id FROM 
+      transcription_factor_complex_composition
+      WHERE transcription_factor_complex_id=?
+      " );
+
+    $sth->execute($transcription_factor_complex_id);
+
+    my @transcription_factor_ids;
+
+    while ( my @row = $sth->fetchrow_array ) {
+        push @transcription_factor_ids, $row[0];
+    }
+
+    my $transcription_factor_adaptor
+        = $self->db->get_adaptor('TranscriptionFactor');
+
+    my @components;
+
+    for my $id (@transcription_factor_ids) {
+        push @components, $transcription_factor_adaptor->fetch_by_dbID($id);
+    }
+
+    return \@components;
+}
+
 =head2 _objs_from_sth
 
   Arg [1]    : DBI statement handle object
@@ -166,19 +209,10 @@ sub _objs_from_sth {
     $sth->bind_columns( \$transcription_factor_complex_id,
         \$production_name, \$display_name );
 
-    # my $transcription_factor_adaptor
-    #     = $self->db->get_adaptor('transcription_factor');
-    # my %transcription_factor_cache;
-
     while ( $sth->fetch() ) {
 
-        # if ( !exists $transcription_factor_cache{$transcription_factor_id} ) {
-        #     $transcription_factor_cache{$transcription_factor_id}
-        #         = $transcription_factor_adaptor->fetch_by_dbID(
-        #         $transcription_factor_id);
-        # }
-
-        my @components;
+        my $components
+            = $self->_fetch_components($transcription_factor_complex_id);
 
         my $transcription_factor_complex
             = Bio::EnsEMBL::Funcgen::TranscriptionFactorComplex->new(
