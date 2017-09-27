@@ -87,24 +87,24 @@ sub main {
 
     open my $fh, '<', $motif_list;
 
-    while ( readline $fh ) {
+    while ( my $current_line = readline $fh ) {
 
-        chomp;
+        chomp $current_line;
+
+        my $is_header = $current_line =~ /^TF1/;
 
         #skip header
-        if (/^TF1/) {
+        if ($is_header) {
             next;
         }
 
-        my @fields = split /\t/;
+        my @fields = split /\t/, $current_line;
 
         my $tf1_name     = $fields[0];
         my $tf2_name     = $fields[1];
         my $gene_id1     = $fields[2];
         my $gene_id2     = $fields[3];
         my @matrix_names = split /,/, $fields[8];    #representative motifs
-
-        # if($tf1_name eq 'ARX'){die;}
 
         # -------------------------
         # store to funcgen database
@@ -279,20 +279,30 @@ sub read_matrix_file {
         return;
     }
 
+    my @nucleotide_order = ( 'A', 'C', 'G', 'T' );
+    
     open my $fh, '<', $filepath;
 
-    while ( readline $fh ) {
-        my @nucleotide_order = ( 'A', 'C', 'G', 'T' );
+    while ( my $current_line = readline $fh ) {
+        
+        chomp $current_line;
 
-        if (/[\d\s]+/) {
-            my @frs = split /\s+/;
+        my $is_valid_frequencies_line = $current_line =~ /[\d\s]+/;
+
+        if ($is_valid_frequencies_line) {
+            my @frs = split /\s+/, $current_line;
 
             my $col_cnt = 1;
 
             for my $fr (@frs) {
-                $frequencies_matrix[$col_cnt] //= {};
-                $frequencies_matrix[$col_cnt]
-                    ->{ $nucleotide_order[$line_cnt] } = $fr;
+                my $frequency = Bio::EnsEMBL::Funcgen::BindingMatrixFrequencies->new(
+                    -POSITION => $col_cnt,
+                    -NUCLEOTIDE => $nucleotide_order[$line_cnt],
+                    -FREQUENCY => $fr
+                    );
+
+                push @frequencies_matrix, $frequency;
+                
                 $col_cnt++;
             }
 
