@@ -24,6 +24,7 @@ CREATE TABLE `transcription_factor_complex_composition` (
 	`transcription_factor_complex_id` int(11) NOT NULL,
 	`transcription_factor_id` int(11) NOT NULL,
 	PRIMARY KEY (`transcription_factor_complex_composition_id`),
+	UNIQUE KEY `tfc_id_tf_id_idx` (`transcription_factor_complex_id`, `transcription_factor_id`),
 	KEY `transcription_factor_complex_id_idx` (`transcription_factor_complex_id`),
 	KEY `transcription_factor_id_idx` (`transcription_factor_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;

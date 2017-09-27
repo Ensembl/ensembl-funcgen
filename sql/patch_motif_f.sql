@@ -24,6 +24,7 @@ CREATE TABLE `binding_matrix_transcription_factor_complex` (
 	`binding_matrix_id` int(11) NOT NULL,
 	`transcription_factor_complex_id` int(11) NOT NULL,
 	PRIMARY KEY (`binding_matrix_transcription_factor_complex_id`),
+	UNIQUE KEY `binding_matrix_id_transcription_factor_complex_id_idx` (`binding_matrix_id`,`transcription_factor_complex_id`),
 	KEY `binding_matrix_id_idx` (`binding_matrix_id`),
 	KEY `transcription_factor_complex_id_idx` (`transcription_factor_complex_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;

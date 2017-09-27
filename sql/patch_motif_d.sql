@@ -23,5 +23,7 @@ CREATE TABLE `transcription_factor_complex` (
 	`transcription_factor_complex_id` int(11) NOT NULL AUTO_INCREMENT,
 	`production_name` varchar(120) NOT NULL,
 	`display_name` varchar(120) NOT NULL,
-	PRIMARY KEY (`transcription_factor_complex_id`)
+	PRIMARY KEY (`transcription_factor_complex_id`),
+	UNIQUE KEY `production_name_idx` (`production_name`),
+	UNIQUE KEY `display_name_idx` (`display_name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;

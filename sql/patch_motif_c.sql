@@ -25,5 +25,6 @@ CREATE TABLE `transcription_factor` (
 	`feature_type_id` int(10) unsigned,
 	`gene_stable_id` varchar(128),
 	PRIMARY KEY (`transcription_factor_id`),
+	UNIQUE KEY `name_idx` (`name`),
 	KEY `feature_type_id_idx` (`feature_type_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
