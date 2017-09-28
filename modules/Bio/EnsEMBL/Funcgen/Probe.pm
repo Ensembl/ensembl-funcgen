@@ -197,7 +197,9 @@ sub sequence {
     my $self = shift;
     $self->{'sequence'} = shift if @_;
 
-    if (! defined $self->{'sequence'}) {
+    if (! defined $self->{'sequence'}
+        && (defined $self->_probe_seq_id)
+    ) {
       $self->{'sequence'} = $self->get_ProbeSequence->sequence;
     }
 
