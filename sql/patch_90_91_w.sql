@@ -13,8 +13,8 @@
 -- limitations under the License.
 
 /**
-@header patch_90_91_w.sql - 
-@desc   
+@header patch_90_91_w.sql - Create read_file_experimental_configuration table and populate it
+@desc   Create read_file_experimental_configuration table and populate it
 */
 
 DROP TABLE IF EXISTS `read_file_experimental_configuration`;
@@ -45,4 +45,4 @@ insert into read_file_experimental_configuration (
 from input_subset;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_w.sql|');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_w.sql|Create read_file_experimental_configuration table and populate it');

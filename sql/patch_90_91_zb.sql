@@ -13,8 +13,8 @@
 -- limitations under the License.
 
 /**
-@header patch_90_91_zb.sql - 
-@desc   
+@header patch_90_91_zb.sql - Rename another table
+@desc   Rename another table
 */
 
 rename table feature_set_qc_prop_reads_in_peaks to peak_calling_qc_prop_reads_in_peaks;
@@ -23,4 +23,4 @@ alter table peak_calling_qc_prop_reads_in_peaks change column feature_set_qc_pro
 alter table peak_calling_qc_prop_reads_in_peaks change column feature_set_id peak_calling_id int(10) unsigned NOT NULL;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_zb.sql|');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_zb.sql|Rename another table');

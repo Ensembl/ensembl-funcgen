@@ -13,12 +13,12 @@
 -- limitations under the License.
 
 /**
-@header patch_90_91_f.sql - Translate sequence region ids of segmentation features
-@desc   Translate sequence region ids of segmentation features
+@header patch_90_91_f.sql - Replace segmentation features with updated ones
+@desc   Replace segmentation features with updated ones
 */
 
 drop table segmentation_feature;
 rename table temp_segmentation_feature_with_translated_ids to segmentation_feature;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_f.sql|Translate sequence region ids of segmentation features');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_f.sql|Replace segmentation features with updated ones');

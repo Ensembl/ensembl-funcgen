@@ -13,7 +13,7 @@
 -- limitations under the License.
 
 /**
-@header patch_90_91_v.sql - 
+@header patch_90_91_v.sql - Create read_file table and populate it
 @desc   
 */
 
@@ -80,4 +80,4 @@ from input_subset;
 -- from input_subset join input_subset_tracking using (input_subset_id);
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_v.sql|');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_v.sql|Create read_file table and populate it');

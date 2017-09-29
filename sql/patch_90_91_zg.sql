@@ -13,8 +13,8 @@
 -- limitations under the License.
 
 /**
-@header patch_90_91_zg.sql - 
-@desc   
+@header patch_90_91_zg.sql - rename table dbfile_registry to data_file and change the way alignments link to it
+@desc   rename table dbfile_registry to data_file and change the way alignments link to it
 */
 
 rename table dbfile_registry to data_file;
@@ -51,4 +51,4 @@ where
 -- select * from alignment join data_file on (data_file.table_name="alignment" and data_file.table_id=alignment.alignment_id) where bam_file_id != data_file_id and file_type="BAM"
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_zg.sql|');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_zg.sql|rename table dbfile_registry to data_file and change the way alignments link to it');

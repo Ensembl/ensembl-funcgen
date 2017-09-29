@@ -13,11 +13,11 @@
 -- limitations under the License.
 
 /**
-@header patch_90_91_zd.sql - Drop data_set table
-@desc   Drop data_set table
+@header patch_90_91_zi.sql - Create probe_id index on probe_transcript table
+@desc   Create probe_id index on probe_transcript table
 */
 
-drop table data_set;
+create index probe_transcript_idx on probe_transcript(probe_id);
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_zd.sql|Drop data_set table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_zi.sql|Create probe_id index on probe_transcript table');

@@ -13,8 +13,8 @@
 -- limitations under the License.
 
 /**
-@header patch_90_91_y.sql - 
-@desc   
+@header patch_90_91_y.sql - Rename annotated_feature to peak
+@desc   Rename annotated_feature to peak
 */
 
 rename table annotated_feature to peak;
@@ -26,4 +26,4 @@ alter table peak drop   column display_label;
 update meta_coord set table_name = "peak" where table_name = "annotated_feature";
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_y.sql|');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_y.sql|Rename annotated_feature to peak');

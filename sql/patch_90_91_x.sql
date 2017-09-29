@@ -13,8 +13,8 @@
 -- limitations under the License.
 
 /**
-@header patch_90_91_x.sql - 
-@desc   
+@header patch_90_91_x.sql - Rename result_set to alignment in various tables and columns
+@desc   Rename result_set to alignment in various tables and columns
 */
 
 rename table result_set_input to alignment_read_file;
@@ -50,4 +50,4 @@ alter table alignment_qc_phantom_peak change column result_set_qc_phantom_peak_i
 alter table alignment_qc_phantom_peak change column result_set_id alignment_id  int(10) unsigned NOT NULL;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_x.sql|');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_x.sql|Rename result_set to alignment in various tables and columns');

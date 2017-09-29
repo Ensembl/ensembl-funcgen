@@ -13,7 +13,7 @@
 -- limitations under the License.
 
 /**
-@header patch_90_91_u.sql - 
+@header patch_90_91_u.sql - Set default gender to unknown for epigenomes
 @desc   
 */
 
@@ -21,4 +21,4 @@ ALTER TABLE epigenome MODIFY COLUMN gender enum('male','female','hermaphrodite',
 update epigenome set gender='unknown' where gender is null;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_u.sql|');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_u.sql|Set default gender to unknown for epigenomes');

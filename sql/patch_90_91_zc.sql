@@ -13,8 +13,8 @@
 -- limitations under the License.
 
 /**
-@header patch_90_91_zc.sql - 
-@desc   
+@header patch_90_91_zc.sql - Remove peak_callings from the feature_set table
+@desc   Remove peak_callings from the feature_set table
 */
 
 delete from feature_set where type = "annotated";
@@ -23,4 +23,4 @@ alter table feature_set drop column epigenome_id;
 alter table feature_set drop column experiment_id;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_zc.sql|');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_zc.sql|Remove peak_callings from the feature_set table');

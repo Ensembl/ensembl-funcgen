@@ -13,8 +13,8 @@
 -- limitations under the License.
 
 /**
-@header patch_90_91_za.sql - 
-@desc   
+@header patch_90_91_za.sql - Move peak_callings from feature_set to peak_calling
+@desc   Move peak_callings from feature_set to peak_calling
 */
 
 DROP TABLE IF EXISTS `peak_calling`;
@@ -26,6 +26,8 @@ CREATE TABLE `peak_calling` (
   `feature_type_id` int(10) unsigned NOT NULL,
   `analysis_id`     smallint(5) unsigned NOT NULL,
   `alignment_id`    int(10) unsigned NOT NULL,
+  `epigenome_id` int(10) unsigned DEFAULT NULL,
+  `experiment_id` int(10) unsigned DEFAULT NULL,
   PRIMARY KEY (`peak_calling_id`),
   UNIQUE KEY `peak_calling_id_idx` (`peak_calling_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -36,14 +38,18 @@ insert into peak_calling (
   display_label,
   feature_type_id,
   analysis_id,
-  alignment_id
+  alignment_id,
+  epigenome_id,
+  experiment_id
 ) select 
   feature_set_id, 
   feature_set.name,
   feature_set.display_label,
   feature_type_id, 
   analysis_id, 
-  supporting_set_id 
+  supporting_set_id,
+  epigenome_id,
+  experiment_id
 from 
   feature_set 
   join data_set using (feature_set_id) 
@@ -52,4 +58,4 @@ where
   feature_set.type="annotated";
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_za.sql|');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_za.sql|Move peak_callings from feature_set to peak_calling');

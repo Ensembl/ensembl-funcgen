@@ -13,11 +13,11 @@
 -- limitations under the License.
 
 /**
-@header patch_90_91_ze.sql - 
-@desc   
+@header patch_90_91_ze.sql - Drop supporting_set table
+@desc   Drop supporting_set table
 */
 
 drop table supporting_set;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_ze.sql|');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_ze.sql|Drop supporting_set table');

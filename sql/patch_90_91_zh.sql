@@ -13,12 +13,12 @@
 -- limitations under the License.
 
 /**
-@header patch_90_91_zh.sql - 
-@desc   
+@header patch_90_91_zh.sql - Add new columns to read_file_experimental_configuration table
+@desc   Add new columns to read_file_experimental_configuration table
 */
 
 alter table read_file_experimental_configuration add column paired_end_tag int DEFAULT null;
 alter table read_file_experimental_configuration add column multiple       int DEFAULT 1;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_zh.sql|');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_zh.sql|Add new columns to read_file_experimental_configuration table');
