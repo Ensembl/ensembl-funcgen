@@ -112,10 +112,20 @@ use vars qw( @EXPORT_OK );
   validate_sam_header
   which_path
   write_checksum
+  create_production_name
  );
 
 
+sub create_production_name {
+    my $name = shift;
+    
+    my $max_length = 30;
+    
+    $name =~ s/[^a-zA-Z0-9,_]//g;
+    my $shortened = substr( $name, 0, $max_length );
 
+    return $shortened;
+}
 
 #Split out methods into FileUtils.pm?
 
