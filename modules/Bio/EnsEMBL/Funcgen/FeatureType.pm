@@ -115,6 +115,44 @@ sub new {
 }
 
 
+=head2 _creates_broad_peaks
+
+  Returns:
+    true, if the given feature_type creates_broad_peaks, 
+    false otherwise.
+
+=cut
+sub _creates_broad_peaks {
+
+  my $self = shift;
+  my $feature_type_name = $self->name;
+
+  my @broad_peak_feature_type_names = qw(
+    H3K36me3
+    H3K27me3
+    H2AK5ac 
+    H2BK12ac
+    H3K14ac 
+    H3K23me2
+    H3K4me1 
+    H3K79me1
+    H3K79me2
+    H3K9me1 
+    H3K9me3 
+    H4K20me1
+    H4K8ac
+  );
+  
+  my $is_broad_peak_feature_type 
+    = grep { 
+      $_ eq $feature_type_name 
+    } @broad_peak_feature_type_names;
+  
+  if ($is_broad_peak_feature_type) {
+    return 1;
+  }
+  return;
+}
 
 =head2 name
 

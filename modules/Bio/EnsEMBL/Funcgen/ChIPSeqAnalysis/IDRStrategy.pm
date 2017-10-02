@@ -1,0 +1,19 @@
+package Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRStrategy;
+
+use base qw( Exporter );
+
+use vars qw( @EXPORT_OK );
+
+@EXPORT = qw(
+  SKIP_IDR
+  RUN_IDR_ON_BIOLOGICAL_REPLICATES
+  RUN_IDR_ON_TECHNICAL_REPLICATES
+);
+
+use constant {
+  SKIP_IDR                         => 'SKIP_IDR',
+  RUN_IDR_ON_BIOLOGICAL_REPLICATES => 'RUN_IDR_ON_BIOLOGICAL_REPLICATES',
+  RUN_IDR_ON_TECHNICAL_REPLICATES  => 'RUN_IDR_ON_TECHNICAL_REPLICATES',
+};
+
+1;

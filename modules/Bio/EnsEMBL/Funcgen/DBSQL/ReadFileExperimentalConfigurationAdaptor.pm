@@ -46,13 +46,13 @@ sub _tables {
 
 sub _load_dependencies {
     my $self = shift;
-    
-    my $read_file_id = $self->_read_file_id;
+    my $read_file_experimental_configuration = shift;
+    my $read_file_id = $read_file_experimental_configuration->_read_file_id;
     
     my $read_file_adaptor = $self->db->get_ReadFileAdaptor;
     my $read_file = $read_file_adaptor->fetch_by_dbID($read_file_id);
     
-    $self->set_ReadFile($read_file);
+    $read_file_experimental_configuration->set_ReadFile($read_file);
     return;
 }
 
