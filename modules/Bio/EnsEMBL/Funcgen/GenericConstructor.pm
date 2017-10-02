@@ -68,6 +68,8 @@ sub _initialise_fields {
   
   my $constructor_key_to_set_method = $self->_constructor_parameters;
   
+  my $class = ref $self;
+  
   if (ref $constructor_key_to_set_method ne 'HASH') {
     throw("_constructor_parameters in " . (ref $self) . " must return a hash reference!");
   }
@@ -85,13 +87,25 @@ sub _initialise_fields {
     
     my $setter_method = $constructor_key_to_set_method->{$constructor_parameter_name};
     
+    if ($setter_method eq '') {
+        throw(
+            "\n\tError parsing the constructor parameters. This usually"
+            . " happens, \n\tif the parameter names in the constructor weren't"
+            . " prefixed \n\twith a dash:\n"
+            . "Wrong:\n"
+            . "\t$class->new( foo => bar )\n"
+            . "Correct:\n"
+            . "\t$class->new( -foo => bar )\n"
+        );
+    }
+    
     if (defined $value_to_set) {
       
       if (! $self->can($setter_method)) {
         throw(
             "The setter method \"" . $setter_method . "\""
             . " to store the parameter \"" . $constructor_parameter_name . "\""
-            . " in the constructor of " . (ref $self) 
+            . " in the constructor of " . (ref $self)
             . " has not been implemented!");
       }
       $self->$setter_method($value_to_set);
