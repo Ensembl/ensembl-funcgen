@@ -18,8 +18,6 @@ use Net::FTP;
 use feature qw(say);
 use DBI     qw(:sql_types);
 
-use Bio::EnsEMBL::Funcgen::DBSQL::TrackingAdaptor;
-use Bio::EnsEMBL::Funcgen::InputSubset;
 use Bio::EnsEMBL::Funcgen::Experiment;
 use Bio::EnsEMBL::Utils::SqlHelper;
 
