@@ -4,7 +4,7 @@ use Getopt::Long;
 
 =head1 
 
-    perl scripts/release/populate_meta_coord.pl --registry registry.regprod1tests.pl --species homo_sapiens
+    perl scripts/release/populate_meta_coord.pl --registry registry.pl --species homo_sapiens
 
 =cut 
 
@@ -37,7 +37,7 @@ my $funcgen_dba = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
 my $funcgen_dbc = $funcgen_dba->dbc;
 
 my @feature_table = qw(
-  annotated_feature
+  peak
   external_feature
   mirna_target_feature
   motif_feature
