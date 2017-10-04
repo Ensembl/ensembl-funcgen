@@ -111,7 +111,7 @@ sub fetch_FeatureType {
 sub set_FeatureType {
   my $self = shift;
   my $obj  = shift;
-  return shift->_generic_set('feature_type', 'Bio::EnsEMBL::Funcgen::FeatureType', $obj);
+  return $self->_generic_set('feature_type', 'Bio::EnsEMBL::Funcgen::FeatureType', $obj);
 }
 
 sub fetch_Analysis {
@@ -121,7 +121,7 @@ sub fetch_Analysis {
 sub set_Analysis {
   my $self = shift;
   my $obj  = shift;
-  return shift->_generic_set('analysis', 'Bio::EnsEMBL::Analysis', $obj);
+  return $self->_generic_set('analysis', 'Bio::EnsEMBL::Analysis', $obj);
 }
 
 =head2 get_all_Epigenomes
