@@ -15,12 +15,6 @@ sub _constructor_parameters {
   };
 }
 
-sub init {
-  my $self = shift;
-  my $name = $self->create_alignment_name;
-  $self->name($name);
-}
-
 use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_get_or_set
 );
@@ -29,9 +23,17 @@ sub directory_name_builder      { return shift->_generic_get_or_set('directory_n
 sub biological_replicate_number { return shift->_generic_get_or_set('biological_replicate_number', @_); }
 sub technical_replicate_number  { return shift->_generic_get_or_set('technical_replicate_number',  @_); }
 sub experiment                  { return shift->_generic_get_or_set('experiment',                  @_); }
-sub name                        { return shift->_generic_get_or_set('name',                        @_); }
+#sub name                        { return shift->_generic_get_or_set('name',                        @_); }
 
-sub create_alignment_name {
+sub unset_biological_replicate_number {
+  shift->{biological_replicate_number} = undef;
+}
+
+sub unset_technical_replicate_number {
+  shift->{technical_replicate_number} = undef;
+}
+
+sub name {
 
   my $self       = shift;
   

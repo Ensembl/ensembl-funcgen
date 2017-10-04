@@ -12,6 +12,11 @@ use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRPlanBuilderFactory;
 use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::PlanMetadataBuilder;
 use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignAllPlanBuilder;
 
+use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
+  _generic_get_or_set
+);
+
+
 sub construct_execution_plan {
 
   my $self  = shift;

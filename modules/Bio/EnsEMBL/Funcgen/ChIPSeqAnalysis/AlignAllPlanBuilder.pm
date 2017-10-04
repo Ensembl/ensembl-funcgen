@@ -13,6 +13,7 @@ sub construct {
   my $experiment             = $param->{experiment};
   my $directory_name_builder = $param->{directory_name_builder};
   my $assembly               = $param->{assembly};
+  my $alignment_namer        = $param->{alignment_namer};
   
   my $read_file_experimental_configuration_adaptor 
   = Bio::EnsEMBL::Registry->get_adaptor(
@@ -34,38 +35,34 @@ sub construct {
   }
   my $to_gender = $experiment->epigenome->gender;
   
-  use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignmentNamer;
-  my $alignment_namer = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignmentNamer->new(
-      -directory_name_builder      => $directory_name_builder,
-      -experiment                  => $experiment,
-      -biological_replicate_number => undef,
-      -technical_replicate_number  => undef,
+  use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignmentPlanFactory;
+  my $alignment_plan_factory = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignmentPlanFactory
+  ->new(
+    -names_of_reads_to_merge => \@names_of_reads_to_merge,
+    -description             => 'All reads from the ' . $self->experiment_type($experiment) . ' experiment',
+    -name                    => $alignment_namer->base_name_with_duplicates,
+    -to_gender               => $to_gender,
+    -to_assembly             => $assembly,
+    -analysis                => 'align',
+    -output_real             => $alignment_namer->bam_file_with_duplicates,
+    -output_stored           => $alignment_namer->bam_file_with_duplicates_stored,
+    -output_format           => 'bam',
   );
-  my $align_plan = {
-      remove_duplicates => {
-        align => {
-          read_files => \@names_of_reads_to_merge,
-          type => 'all reads from the experiment',
-          name        => $alignment_namer->base_name_with_duplicates,
-          bam_file    => {
-            real   => $alignment_namer->bam_file_with_duplicates,
-            stored => $alignment_namer->bam_file_with_duplicates_stored,
-          },
-          to_gender   => $to_gender,
-          to_assembly => $assembly,
-        },
-        name        => $alignment_namer->base_name_no_duplicates,
-        bam_file    => {
-          real   => $alignment_namer->bam_file_no_duplicates,
-          stored => $alignment_namer->bam_file_no_duplicates_stored,
-        },
-        bigwig_file => {
-          real   => $alignment_namer->bigwig_file_no_duplicates,
-          stored => $alignment_namer->bigwig_file_no_duplicates_stored,
-        },
-    }
-  };
+  my $align_plan = $alignment_plan_factory->product;
   return $align_plan;
+}
+
+sub experiment_type {
+  my $self = shift;
+  my $experiment = shift;
+
+  my $experiment_type;
+  if ($experiment->is_control) {
+    $experiment_type = 'control';
+  } else {
+    $experiment_type = 'signal';
+  }
+  return $experiment_type;
 }
 
 1;
