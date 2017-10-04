@@ -44,7 +44,7 @@ sub _tables {
     ['external_feature_file', 'eff'],
     ['analysis',              'a'  ],
     ['feature_type',          'ft' ],
-    ['dbfile_registry',       'dr' ],
+    ['data_file',             'dr' ],
   );
 }
 
