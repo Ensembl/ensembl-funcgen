@@ -203,16 +203,6 @@ sub fetch_bigwig_DataFile {
   return $self->_fetch_DataFile($bigwig_file_id);
 }
 
-sub fetch_BamFile {
-  my $self = shift;
-  return $self->fetch_bam_DataFile;
-}
-
-sub fetch_BigWigFile {
-  my $self           = shift;
-  return $self->fetch_bigwig_DataFile;
-}
-
 =head2 fetch_all_ReadFiles
 
   Example    : my $read_files = $alignment->fetch_all_ReadFiles;
