@@ -681,8 +681,8 @@ sub _fetch_all_by_Slice_Epigenomes_Activity_RegulatoryBuild {
   }
   
   #explicit super call, just in case we ever re-implement in here
-#   my $all_regulatory_features = $self->SUPER::fetch_all_by_Slice($slice);
-  my $all_regulatory_features = $self->SUPER::fetch_all_by_Slice_constraint($slice);
+  my $all_regulatory_features = $self->SUPER::fetch_all_by_Slice($slice);
+  #my $all_regulatory_features = $self->SUPER::fetch_all_by_Slice_constraint($slice);
   
   
   if (defined $selected_regulatory_build) {
