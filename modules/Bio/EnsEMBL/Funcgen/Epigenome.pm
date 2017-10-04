@@ -86,25 +86,14 @@ my %valid_genders = (male   => 1,
   Arg [4]    : String (optional) - gender e.g. male, female or hermaphrodite
   Arg [5]    : String (optional) - Experimental Factor Ontology ID e.g. efo:EFO_0002869
 
-  Example              : my $epigenome = Bio::EnsEMBL::Funcgen::Epigenome->new
-                                    (
-                                     -name          => "U2OS",
-                                     -display_label => "U20S",
-                                     -description   => "Human Bone Osteosarcoma Epithelial Cells",
-                                     -gender        => 'female',
-                                     -efo_id        => 'efo:EFO_0002869',
-                                    );
-
   Description: Constructor method for Epigenome class
   Returntype : Bio::EnsEMBL::Funcgen::Epigenome
-  Exceptions : Throws if name not defined or gender is invalid
+  Exceptions : Throws an error if the name has not been defined or gender is 
+               invalid.
   Caller     : General
   Status     : Stable
 
 =cut
-
-#-type/class => "TISSUE", enum? Mandatory.
-#remove display label?
 
 sub new {
   my $caller = shift;

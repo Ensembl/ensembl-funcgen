@@ -59,12 +59,35 @@ use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
 
 sub dbID            { return shift->_generic_get_or_set('dbID',           @_); }
 sub db              { return shift->_generic_get_or_set('db',             @_); }
+
+=head2 name
+
+  Example    : my $name = $alignment->name;
+  Description: Accessor for the name of the alignment.
+  Returntype : String
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub name            { return shift->_generic_get_or_set('name',           @_); }
 sub analysis_id     { return shift->_generic_get_or_set('analysis_id',    @_); }
 sub bam_file_id     { return shift->_generic_get_or_set('bam_file_id',    @_); }
 sub bigwig_file_id  { return shift->_generic_get_or_set('bigwig_file_id', @_); }
 sub read_file_ids   { return shift->_generic_get_or_set('read_file_ids',  @_); }
 
+=head2 fetch_Analysis
+
+  Example    : my $analysis = $alignment->fetch_Analysis;
+  Description: Fetches the analysis of the alignment. This is the analysis
+               representing the aligner that was used to align the 
+               reads.
+  Returntype : Bio::EnsEMBL::Analysis
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub fetch_Analysis {
   return shift->_generic_fetch('analysis', 'get_AnalysisAdaptor', 'analysis_id');
 }
@@ -88,18 +111,65 @@ sub _fetch_DataFile {
   return $data_file;
 }
 
+=head2 has_bam_DataFile
+
+  Example    : my $bam_DataFile = undef;
+               if ($alignment->has_bam_DataFile) {
+                 $bam_DataFile = $alignment->fetch_bam_DataFile;
+               } else {
+                 warn "No bam file available!";
+               }
+  Description: Indicates whether a bam file is available for this alignment.
+  Returntype : Boolean
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub has_bam_DataFile {
 
   my $self = shift;
   return defined $self->bam_file_id;
 }
 
+=head2 has_bigwig_DataFile
+
+  Example    : my $bigwig_DataFile = undef;
+               if ($alignment->has_bigwig_DataFile) {
+                 $bigwig_DataFile = $alignment->fetch_bigwig_DataFile;
+               } else {
+                 warn "No bigwig file available!";
+               }
+  Description: Indicates whether a bam file is available for this alignment.
+  Returntype : Boolean
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub has_bigwig_DataFile {
 
   my $self = shift;
   return defined $self->bigwig_file_id;
 }
 
+=head2 fetch_bam_DataFile
+
+  Example    : my $bam_DataFile = undef;
+               if ($alignment->has_bam_DataFile) {
+                 $bam_DataFile = $alignment->fetch_bam_DataFile;
+               } else {
+                 warn "No bam file available!";
+               }
+  Description: Fetches the data file object representing the bam file for 
+               this alignment.
+               reads.
+  Returntype : Bio::EnsEMBL::Funcgen::DataFile
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub fetch_bam_DataFile {
 
   my $self        = shift;
@@ -108,6 +178,23 @@ sub fetch_bam_DataFile {
   return $self->_fetch_DataFile($bam_file_id);
 }
 
+=head2 fetch_bigwig_DataFile
+
+  Example    : my $bigwig_DataFile = undef;
+               if ($alignment->has_bigwig_DataFile) {
+                 $bigwig_DataFile = $alignment->fetch_bigwig_DataFile;
+               } else {
+                 warn "No bigwig file available!";
+               }
+  Description: Fetches the data file object representing the signal file in 
+               bigwig format for this alignment.
+               reads.
+  Returntype : Bio::EnsEMBL::Funcgen::DataFile
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub fetch_bigwig_DataFile {
 
   my $self           = shift;
@@ -126,6 +213,20 @@ sub fetch_BigWigFile {
   return $self->fetch_bigwig_DataFile;
 }
 
+=head2 fetch_all_ReadFiles
+
+  Example    : my $read_files = $alignment->fetch_all_ReadFiles;
+               print @$read_files ." read files were used to generate this alignment.";
+               foreach my $current_readfile (@$read_files) {
+                 print "  - " . $current_readfile->name . "\n";
+               }
+  Description: Fetches all read file objects representing the read files that 
+               were used to generate this alignment.
+  Returntype : ArrayRef[Bio::EnsEMBL::Funcgen::ReadFile]
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub fetch_all_ReadFiles {
 
   my $self = shift;

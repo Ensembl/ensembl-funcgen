@@ -86,7 +86,7 @@ sub _generic_set {
     throw("$name was not defined!");
   }
 
-  if (! $obj->isa($type)) {
+  if (defined $type and ! $obj->isa($type)) {
     throw("Expected $type, but got " . (ref $obj) . "!");
   }
   

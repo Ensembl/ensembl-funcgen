@@ -59,18 +59,77 @@ sub _constructor_parameters {
 
 sub dbID            { return shift->_generic_get_or_set('dbID',            @_); }
 sub db              { return shift->_generic_get_or_set('db',              @_); }
+
+=head2 name
+
+  Example    : my $name = $peak_calling->name;
+  Description: Accessor for the name of the peak calling.
+  Returntype : String
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub name            { return shift->_generic_get_or_set('name',            @_); }
 sub feature_type_id { return shift->_generic_get_or_set('feature_type_id', @_); }
 sub analysis_id     { return shift->_generic_get_or_set('analysis_id',     @_); }
 sub alignment_id    { return shift->_generic_get_or_set('alignment_id',    @_); }
+
+=head2 display_label
+
+  Example    : my $display_label = $peak_calling->display_label;
+  Description: Accessor for the display_label of the peak calling. This is 
+               used as the name displayed in the web browser.
+  Returntype : String
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub display_label   { return shift->_generic_get_or_set('display_label',   @_); }
 
+=head2 fetch_FeatureType
+
+  Example    : my $feature_type = $peak_calling->fetch_FeatureType;
+  Description: Fetches the feature type of the peak calling. This is the 
+               type of feature the experiment was assaying for.
+  Returntype : Bio::EnsEMBL::Funcgen::FeatureType
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub fetch_FeatureType { 
   return shift->_generic_fetch('feature_type', 'get_FeatureTypeAdaptor', 'feature_type_id');
 }
+
+=head2 fetch_Analysis
+
+  Example    : my $analysis = $peak_calling->fetch_Analysis;
+  Description: Fetches the analysis of the peak calling. This is the analysis
+               representing the peak caller that was used to analyse the 
+               alignment.
+  Returntype : Bio::EnsEMBL::Analysis
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub fetch_Analysis {
   return shift->_generic_fetch('analysis', 'get_AnalysisAdaptor', 'analysis_id');
 }
+
+=head2 fetch_Alignment
+
+  Example    : my $alignment = $peak_calling->fetch_Alignment;
+  Description: Fetches the alignment on which the peak calling was done.
+               alignment.
+  Returntype : Bio::EnsEMBL::Funcgen::Alignment
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub fetch_Alignment {
   return shift->_generic_fetch('alignment', 'get_AlignmentAdaptor', 'alignment_id');
 }
@@ -96,6 +155,16 @@ sub _fetch_experiment_id {
     return $experiment_id;
 }
 
+=head2 fetch_Epigenome
+
+  Example    : my $epigenome = $peak_calling->fetch_Epigenome;
+  Description: Fetches the epigenome that was used in the assay.
+  Returntype : Bio::EnsEMBL::Funcgen::Epigenome
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub fetch_Epigenome {
     my $self = shift;
     my $db = $self->db;
@@ -115,6 +184,17 @@ sub fetch_Epigenome {
     return $epigenome;
 }
 
+=head2 fetch_source_label
+
+  Example    : my $source_label = $peak_calling->fetch_source_label;
+  Description: Fetches the name of the experimental group of the experiment 
+               that led to this peak calling.
+  Returntype : String
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub fetch_source_label {
     my $self = shift;
     my $db = $self->db;

@@ -57,8 +57,51 @@ sub db           { return shift->_generic_get_or_set('db',           @_); }
 sub data_file_id { return shift->_generic_get_or_set('data_file_id', @_); }
 sub table_id     { return shift->_generic_get_or_set('table_id',     @_); }
 sub table_name   { return shift->_generic_get_or_set('table_name',   @_); }
+
+=head2 path
+
+  Example    : my $file_name = $data_file->path;
+               print "The file is here:$file_name\n";
+  Description: Accessor for the path of the data file. This is the file name
+               relative to the database file path.
+  Returntype : String
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub path         { return shift->_generic_get_or_set('path',         @_); }
+
+=head2 file_type
+
+  Example    : my $file_type = $data_file->file_type;
+  Description: Accessor for the file type of the data file. It is one of 
+               these:
+                 - BAM,
+                 - BAMCOV,
+                 - BIGBED,
+                 - BIGWIG,
+                 - VCF,
+                 - CRAM or
+                 - DIR.
+  Returntype : Enum(String)
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub file_type    { return shift->_generic_get_or_set('file_type',    @_); }
+
+=head2 md5sum
+
+  Example    : my $md5sum = $data_file->md5sum;
+  Description: Accessor for the md5sum of the data file.
+  Returntype : String
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub md5sum       { return shift->_generic_get_or_set('md5sum',       @_); }
 
 1;

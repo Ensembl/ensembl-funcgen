@@ -135,6 +135,18 @@ sub new {
   return $self;
 }
 
+=head2 count_biological_replicates
+
+  Example    : my $number_of_biological_replicates 
+                 = $experiment->count_biological_replicates;
+  Description: Counts how many biological replicates are a part of this 
+               experiment.
+  Returntype : Int
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub count_biological_replicates {
 
     my $self = shift;
@@ -151,6 +163,18 @@ sub count_biological_replicates {
     return $count_biological_replicates;
 }
 
+=head2 count_technical_replicates
+
+  Example    : my $number_of_technical_replicates 
+                 = $experiment->count_technical_replicates;
+  Description: Counts how many technical replicates are a part of this 
+               experiment.
+  Returntype : Int
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub count_technical_replicates {
 
     my $self = shift;
@@ -276,32 +300,6 @@ sub get_control{
   return shift->{control};
 }
 
-
-=head2 get_InputSubsets
-
-  Example     : my @issets = @{$exp->getInputSubsets()}
-  Description : Retrieves all InputSubsets associated with this experiment.
-  Returntype  : Arrayref of Bio::EnsEMBL::Funcgen::InputSubsets
-  Exceptions  : None
-  Caller      : General
-  Status      : At risk
-
-=cut
-
-sub get_InputSubsets{
-  my $self = shift;
-
-  if(! exists $self->{'input_subsets'}){
-    $self->{'input_subsets'} = {};
-
-    foreach my $isset(@{$self->adaptor->db->get_InputSubsetAdaptor->
-                          fetch_all_by_Experiments([$self])}){
-      $self->{'input_subsets'}->{$isset->dbID} = $isset;
-    }
-  }
-
-  return [values %{$self->{'input_subsets'}}];
-}
 
 =head2 archive_id
 

@@ -71,47 +71,109 @@ sub dbID              { return shift->_generic_get_or_set('dbID',              @
 sub db                { return shift->_generic_get_or_set('db',                @_);}
 sub adaptor           { return shift->_generic_get_or_set('db',                @_);}
 sub peak_calling_id   { return shift->_generic_get_or_set('peak_calling_id',   @_);}
+
+=head2 summit
+
+  Example    : 
+  Description: Accessor for the summit attribute. This is the base at which 
+               the peak had the highest level of enrichment.
+  Returntype : Int
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub summit            { return shift->_generic_get_or_set('summit',            @_);}
+
+=head2 score
+
+  Example    : 
+  Description: Accessor for the score. This is the score assigned by the peak 
+               caller.
+  Returntype : Float
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub score             { return shift->_generic_get_or_set('score',             @_);}
+
+=head2 start
+
+  Example    : 
+  Description: Accessor for the start. This is the start of the peak on the 
+               slice.
+  Returntype : Int
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub start             { return shift->_generic_get_or_set('start',             @_);}
+
+=head2 end
+
+  Example    : 
+  Description: Accessor for the end. This is the end of the peak on the slice.
+  Returntype : Int
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub end               { return shift->_generic_get_or_set('end',               @_);}
 sub seq_region_id     { return shift->_generic_get_or_set('seq_region_id',     @_);}
 sub seq_region_start  { return shift->_generic_get_or_set('seq_region_start',  @_);}
 sub seq_region_end    { return shift->_generic_get_or_set('seq_region_end',    @_);}
 sub seq_region_strand { return shift->_generic_get_or_set('seq_region_strand', @_);}
 sub strand            { return shift->_generic_get_or_set('strand',            @_);}
+
+=head2 slice
+
+  Example    : 
+  Description: Accessor for the slice attribute.
+  Returntype : Bio::EnsEMBL::Slice
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub slice             { return shift->_generic_get_or_set('slice',             @_);}
+
+=head2 fetch_PeakCalling
+
+  Example    : 
+  Description: Fetches the peak calling object representing the peak 
+               calling that generated this peak.
+  Returntype : Bio::EnsEMBL::Funcgen::PeakCalling
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub fetch_PeakCalling {
   return shift->_generic_fetch('peak_calling', 'get_PeakCallingAdaptor', 'peak_calling_id');
 }
+
+=head2 set_PeakCalling
+
+  Args       : Object of type Bio::EnsEMBL::Funcgen::PeakCalling
+  Example    : 
+  Description: Setter for the peak calling object representing the peak 
+               calling that generated this peak.
+  Returntype : None
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 
 sub set_PeakCalling {
   my $self = shift;
   my $obj  = shift;
   return shift->_generic_set('peak_calling', 'Bio::EnsEMBL::Funcgen::PeakCalling', $obj);
 }
-
-=head2 score
-
-  Example    : my $score = $feature->score;
-  Description: Getter for the score attribute for this feature. 
-  Returntype : String (float)
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
-
-=head2 summit
-
-  Arg [1]    : (optional) int - summit postition
-  Example    : my $peak_summit = $feature->summit;
-  Description: Getter for the summit attribute for this feature. 
-  Returntype : int
-  Exceptions : None
-  Caller     : General
-  Status     : At Risk
-
-=cut
 
 =head2 display_label
 

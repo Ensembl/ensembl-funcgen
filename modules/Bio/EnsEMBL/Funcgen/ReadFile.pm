@@ -64,30 +64,120 @@ sub _constructor_parameters {
 
 sub dbID          { return shift->_generic_get_or_set('dbID',          @_); }
 sub db            { return shift->_generic_get_or_set('db',            @_); }
+
+=head2 name
+
+  Example    : my $name = $peak_calling->name;
+  Description: Accessor for the name of the read file.
+  Returntype : String
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub name          { return shift->_generic_get_or_set('name',          @_); }
 sub is_paired_end { return shift->_generic_get_or_set('is_paired_end', @_); }
 sub paired_with   { return shift->_generic_get_or_set('paired_with',   @_); }
+
+=head2 file_size
+
+  Example    : my $file_size = $peak_calling->file_size;
+  Description: Accessor for the file_size of the read file.
+  Returntype : Int
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub file_size     { return shift->_generic_get_or_set('file_size',     @_); }
+
+=head2 read_length
+
+  Example    : my $read_length = $read_file->read_length;
+  Description: Accessor for the read_length of the read file.
+  Returntype : Int
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub read_length   { return shift->_generic_get_or_set('read_length',   @_); }
+
+=head2 md5sum
+
+  Example    : my $md5sum = $read_file->md5sum;
+  Description: Accessor for the md5sum of the data file.
+  Returntype : String
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub md5sum        { return shift->_generic_get_or_set('md5sum',        @_); }
 sub file          { return shift->_generic_get_or_set('file',          @_); }
 sub notes         { return shift->_generic_get_or_set('notes',         @_); }
 sub _analysis_id  { return shift->_generic_get_or_set('_analysis_id',  @_); }
 
+=head2 get_Analysis
+
+  Example    : my $analysis = $read_file->get_Analysis;
+  Description: Getter for the analysis of the read file. This is not an in 
+               silico analysis, but the the protocol that was used to 
+               generate the reads.
+  Returntype : Bio::EnsEMBL::Analysis
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub get_Analysis {
   return shift->_generic_get('analysis');
 }
 
+=head2 get_Analysis
+
+  Example    : $read_file->set_Analysis($analysis);
+  Description: Setter for the analysis of the read file. The analysis should 
+               represent the protocol that was used to generate the reads.
+  Returntype : None
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub set_Analysis {
   my $self = shift;
   my $obj  = shift;
   return $self->_generic_set('analysis', 'Bio::EnsEMBL::Analysis', $obj);
 }
 
+=head2 get_ReadFileExperimentalConfiguration
+
+  Example    : my $read_file_experimental_configuration 
+                 = $read_file->get_ReadFileExperimentalConfiguration;
+  Description: Getter for the ReadFileExperimentalConfiguration object.
+  Returntype : Bio::EnsEMBL::Funcgen::ReadFileExperimentalConfiguration
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub get_ReadFileExperimentalConfiguration {
   return shift->_generic_get('read_file_experimental_configuration');
 }
 
+=head2 set_ReadFileExperimentalConfiguration
+
+  Example    : $read_file->get_ReadFileExperimentalConfiguration(
+                 $read_file_experimental_configuration
+               );
+  Description: Setter for the ReadFileExperimentalConfiguration object.
+  Returntype : None
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
 sub set_ReadFileExperimentalConfiguration {
   my $self = shift;
   my $obj  = shift;

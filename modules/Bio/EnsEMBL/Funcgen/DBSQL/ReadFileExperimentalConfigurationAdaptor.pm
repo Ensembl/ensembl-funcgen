@@ -131,7 +131,11 @@ sub fetch_all_technical_replicates_by_Experiment_and_biological_replicate_number
 
 =head2 fetch_all_biological_replicate_numbers_from_Experiment
 
-  Convenience method
+  Description: Convenience method
+  Returntype : ArrayRef[Int]
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
 
 =cut
 sub fetch_all_biological_replicate_numbers_from_Experiment {
