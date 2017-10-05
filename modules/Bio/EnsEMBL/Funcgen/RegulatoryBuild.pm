@@ -72,6 +72,8 @@ with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 
 sub _constructor_parameters {
   return {
+    'db'                           => 'db',
+    'dbID'                         => 'dbID',
     'name'                         => 'name',
     'version'                      => 'version',
     'initial_release_date'         => 'initial_release_date',
@@ -152,7 +154,11 @@ sub _get_all_epigenome_ids {
   my $regulatory_build_id = $self->dbID;
   
   my $sql = qq(select epigenome_id from regulatory_build_epigenome where regulatory_build_id = ) . $regulatory_build_id;
-  
+
+  if (! defined $db) {
+    throw('The database adaptor is undefined!');
+  }
+
   my $sth = $db->dbc->prepare( $sql );
   my $rv  = $sth->execute();
   my $res = $sth->fetchall_arrayref;
