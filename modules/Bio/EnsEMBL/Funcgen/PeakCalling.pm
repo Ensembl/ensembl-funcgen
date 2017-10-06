@@ -24,9 +24,49 @@ limitations under the License.
 
 =head1 NAME
 
+Bio::EnsEMBL::Funcgen::PeakCalling - Object that represents a peak calling
+
 =head1 SYNOPSIS
 
+  use strict;
+  use warnings;
+  use Bio::EnsEMBL::Registry;
+  use List::Util qw( min );
+  use Data::Dumper;
+
+  my $registry = 'Bio::EnsEMBL::Registry';
+
+  $registry->load_registry_from_db(
+      -host => 'ensembldb.ensembl.org',
+      -user => 'anonymous'
+  );
+
+  my $peak_calling_adaptor = Bio::EnsEMBL::Registry->get_adaptor('homo_sapiens', 'funcgen', 'PeakCalling');
+
+  my $all_peak_callings = $peak_calling_adaptor->fetch_all;
+
+  my $number_of_peak_callings_available = @$all_peak_callings;
+
+  print "There are $number_of_peak_callings_available peak callings available for querying:\n";
+
+  # Print the first ten
+  my $max_features_to_print = 10;
+
+  for my $i ( 1.. min($max_features_to_print, $number_of_peak_callings_available) ) {
+
+    my $current_peak_calling = $all_peak_callings->[$i];
+    print "  - " . $current_peak_calling->display_label . "\n";
+    
+  }
+
 =head1 DESCRIPTION
+
+This object represents a peak calling from a ChIP-seq or other high-throughput
+assay. It links to 
+
+  - the set of Peaks that were generated and 
+  - the alignment that the peak calling was done on and
+  - the peak caller that was used via the analysis.
 
 =cut
 
@@ -54,6 +94,7 @@ sub _constructor_parameters {
     alignment_id    => 'alignment_id',
     name            => 'name',
     display_label   => 'display_label',
+    experiment_id   => '_experiment_id',
   };
 }
 
@@ -74,6 +115,7 @@ sub name            { return shift->_generic_get_or_set('name',            @_); 
 sub feature_type_id { return shift->_generic_get_or_set('feature_type_id', @_); }
 sub analysis_id     { return shift->_generic_get_or_set('analysis_id',     @_); }
 sub alignment_id    { return shift->_generic_get_or_set('alignment_id',    @_); }
+sub _experiment_id  { return shift->_generic_get_or_set('_experiment_id',  @_); }
 
 =head2 display_label
 
@@ -134,27 +176,6 @@ sub fetch_Alignment {
   return shift->_generic_fetch('alignment', 'get_AlignmentAdaptor', 'alignment_id');
 }
 
-sub _fetch_experiment_id {
-    my $self = shift;
-    my $db = $self->db;
-    my $experiment_id = $db->sql_helper->execute_single_result(
-      -SQL    => '
-        select 
-            distinct read_file_experimental_configuration.experiment_id
-        from 
-            peak_calling
-            join alignment_read_file using (alignment_id)
-            join read_file_experimental_configuration using (read_file_id)
-            join experiment using (experiment_id)
-        where
-            experiment.is_control = False
-            and peak_calling.peak_calling_id = ?
-      ',
-      -PARAMS => [ $self->dbID ],
-    );
-    return $experiment_id;
-}
-
 =head2 fetch_Epigenome
 
   Example    : my $epigenome = $peak_calling->fetch_Epigenome;
@@ -168,7 +189,7 @@ sub _fetch_experiment_id {
 sub fetch_Epigenome {
     my $self = shift;
     my $db = $self->db;
-    my $experiment_id = $self->_fetch_experiment_id;
+    my $experiment_id = $self->_experiment_id;
     my $epigenome_id  = $db->sql_helper->execute_single_result(
       -SQL    => '
         select 
@@ -198,7 +219,7 @@ sub fetch_Epigenome {
 sub fetch_source_label {
     my $self = shift;
     my $db = $self->db;
-    my $experiment_id = $self->_fetch_experiment_id;
+    my $experiment_id = $self->_experiment_id;
     my $source_label  = $db->sql_helper->execute_single_result(
       -SQL    => '
         select 
