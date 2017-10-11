@@ -48,8 +48,6 @@ use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( get_study_name_from_Set
                                                validate_path
                                                run_system_cmd
                                                dump_data );
-use Bio::EnsEMBL::Funcgen::Hive::Utils     qw( inject_DataflowRuleAdaptor_methods );
-use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools qw( get_files_by_formats );
 use Bio::EnsEMBL::Utils::Scalar            qw( assert_ref check_ref );  
 use Scalar::Util                           qw( blessed );
 
