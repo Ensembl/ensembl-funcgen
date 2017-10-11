@@ -109,7 +109,6 @@ use vars qw( @EXPORT_OK );
   validate_checksum
   validate_package_path
   validate_path
-  validate_sam_header
   which_path
   write_checksum
   create_production_name
