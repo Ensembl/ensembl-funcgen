@@ -26,14 +26,13 @@ main();
 
 sub main {
 
-    my ( $motif_list, $motif_dir, $source, $overwrite );
+    my ( $motif_list, $motif_dir, $source );
     my $logger = Bio::EnsEMBL::Utils::Logger->new();
 
     GetOptions(
         'motif_list=s' => \$motif_list,
         'motif_dir=s'  => \$motif_dir,
         'source=s'     => \$source,
-        'overwrite=i'  => \$overwrite,
     );
 
     if ( !$motif_list ) {
