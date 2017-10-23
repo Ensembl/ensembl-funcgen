@@ -5,15 +5,6 @@ use warnings;
 
 use base ('Bio::EnsEMBL::Funcgen::HiveConfig::ProbeMapping::Base');
 
-=head1
-
-  export HIVE_URL='mysql://ensadmin:ensembl@ens-genomics2:3306/mmn1_tracking_homo_sapiens_funcgen_87_38_hive'
-  ftp_pipeline_parameters="-pipeline_url $HIVE_URL"
-  
-  init_pipeline.pl Bio::EnsEMBL::Funcgen::HiveConfig::ProbeMapping::ImportArraysNew_conf $ftp_pipeline_parameters -hive_force_init 1
-
-=cut
-
 sub pipeline_analyses {
     my $self = shift;
     
