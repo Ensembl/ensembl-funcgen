@@ -209,6 +209,10 @@ use vars qw( %Config );
       'MoGene-1_0-st-v1',
       'MoEx-1_0-st-v1',
       'MoGene-2_1-st-v1',
+      'CynGene-1_0-st-v1',
+      'CyRGene-1_0-st-v1',
+      'RheGene-1_0-st-v1',
+      'RheGene-1_1-st-v1',
      ],
     },
 
@@ -437,6 +441,10 @@ use vars qw( %Config );
 	'CHO2agl44v1',
 	'037725_HamArrayV',
 	'Agilent_8x15K',
+        'GPL10157',
+        'GPL10158',
+        'GPL17465',
+        'GPL19384',
       ],
     },
 
@@ -561,42 +569,49 @@ use vars qw( %Config );
        ARRAYS_WITH_DEFAULT_PARAMS => [
         'GPL9450',
         'Nimblegen_modencode',
-        'GPL8673'
+        'GPL8673',
+        'GPL13762_b',
+        'GPL21301_b'
        ],
      },
 
     #NIMBLEGEN
 
     IMPORT_NIMBLEGEN_ARRAYS =>
-     {
-       IIDREGEXP => '^>(\S+):(\S+)',
+    {
+
+       IIDREGEXP => '^>probe:(\S+?):(\w+)\-.*[TranscriptCluster|ProbeSet]ID=(\S+);',
 
        IFIELDORDER => {
           -name       => 1,
           -array_chip => 0,
           -array      => 0,
+          -probe_set   => 2,
        },
 
+
        ARRAY_PARAMS => {
-         'Default' => {
-           -vendor => 'NIMBLEGEN',
-           -format  => 'EXPRESSION',
-           -type    => 'OLIGO',
-           -class   => 'NIMBLEGEN_MODENCODE',
+          'Default' => {
+            -vendor => 'NIMBLEGEN',
+            -format => 'EXPRESSION',
+            -type    => 'OLIGO',
+            -class   => 'NIMBLEGEN',
 
-            -is_probeset_array      => 0,
-            -is_linked_array        => 1,
-            -has_sense_interrogation  => 0,
-
-         },
+            -is_probeset_array       => 1,
+            -is_linked_array         => 1,
+            -has_sense_interrogation => 0,
+          },
        },
 
        INPUT_FORMAT => 'FASTA',
 
        ARRAYS_WITH_DEFAULT_PARAMS => [
-        'NimbleGen_13K',
+         'NimbleGen_13K',
+         'GPL13762',
+         'GPL21301',
        ],
-     },
+    },
+
 
     #PHALANX
     #Human
