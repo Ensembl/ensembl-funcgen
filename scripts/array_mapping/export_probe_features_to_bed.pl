@@ -33,41 +33,54 @@ $logger->init_log;
 
 Bio::EnsEMBL::Registry->load_all($registry);
 my $funcgen_db_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
+my $core_db_adaptor    = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'core');
+
+my $slice_adaptor = $core_db_adaptor->get_SliceAdaptor;
+my $slices = $slice_adaptor->fetch_all('toplevel');
+
+my %seq_region_id_to_name_lookup;
+
+use Hash::Util qw( lock_keys );
+
+for my $slice (@$slices) {
+    $seq_region_id_to_name_lookup{$slice->get_seq_region_id} = $slice->seq_region_name;
+}
+
+lock_keys(%seq_region_id_to_name_lookup);
 
 my $sql = '
     select
-      seq_region.name, 
-      seq_region_start, 
-      seq_region_end, 
-      seq_region_strand, 
-      cigar_line, 
-      mismatches, 
-      probe_feature_id, 
-      probe_id, 
-      probe.
-      name, 
-      probe_set_id, 
-      probe_set.name,
-      array.name,
-      array.vendor,
-      array.class,
-      is_probeset_array,
-      is_linked_array,
-      has_sense_interrogation
+        seq_region_id, 
+        seq_region_start, 
+        seq_region_end, 
+        seq_region_strand, 
+        cigar_line, 
+        mismatches, 
+        probe_feature_id, 
+        probe_id, 
+        probe.
+        name, 
+        probe_set_id, 
+        probe_set.name,
+        array.name,
+        array.vendor,
+        array.class,
+        is_probeset_array,
+        is_linked_array,
+        has_sense_interrogation
     from
-      probe_feature 
-      join probe using(probe_id)
-      left join probe_set using(probe_set_id)
-      join array_chip on(array_chip.array_chip_id=probe.array_chip_id)
-      join array using(array_id)
-      join seq_region using(seq_region_id)
+        probe_feature 
+        join probe using(probe_id)
+        left join probe_set using(probe_set_id)
+        join array_chip on(array_chip.array_chip_id=probe.array_chip_id)
+        join array using(array_id)
   ';
 
 # Prevent memory issues from buffering
 $funcgen_db_adaptor->dbc->db_handle->{mysql_use_result} = 1;
 
 my $helper = $funcgen_db_adaptor->dbc->sql_helper;
-open my $fh, '>', $file;
+open my $fh, '>', $file || die("Can't open $file for writing!");
   
 $logger->info("Running $sql\n");
 
@@ -77,6 +90,8 @@ $helper->execute_no_return(
   -SQL      => $sql,
   -CALLBACK => sub {
     my $row  = shift;
+    
+    $row->[0] = $seq_region_id_to_name_lookup{$row->[0]};
     
     my $line = join "\t", @$row;
     
