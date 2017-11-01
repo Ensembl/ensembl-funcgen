@@ -570,8 +570,6 @@ use vars qw( %Config );
         'GPL9450',
         'Nimblegen_modencode',
         'GPL8673',
-        'GPL13762_b',
-        'GPL21301_b'
        ],
      },
 
