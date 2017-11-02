@@ -71,11 +71,11 @@ use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
 use parent qw(Bio::EnsEMBL::Funcgen::Storable);
 
-my %valid_genders = (male   => 1,
-                     female => 1,
+my %valid_genders = (male          => 1,
+                     female        => 1,
                      hermaphrodite => 1,
-                     mixed => 1,
-                     unknown => 1 
+                     mixed         => 1,
+                     unknown       => 1 
                     );
 
 =head2 new
@@ -177,21 +177,21 @@ sub description {  return $_[0]->{description}; }
   Returntype : String
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
 sub display_label {  return $_[0]->{display_label}; }
 
 
-=head2 efo_db_entry
+=head2 efo_accession
 
   Example    : $epigenome->efo_accession
   Description: Returns the accession in the Experimental Factor Ontology (EFO) for this epigenome.
   Returntype : String
-  Exceptions : 
-  Caller     : 
-  Status     : 
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
 
 =cut
 
@@ -210,9 +210,9 @@ sub efo_accession {
   Example    : $epigenome->efo_db_entry->primary_id
   Description: Returns the DBEntry of the external reference to the Experimental Factor Ontology (EFO).
   Returntype : Bio::EnsEMBL::Funcgen::DBEntry
-  Exceptions : 
-  Caller     : 
-  Status     : 
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
 
 =cut
 
@@ -235,11 +235,11 @@ sub efo_db_entry {
     return $efo_db_entry->[0];
   }
   if (! defined $efo_db_entry) {
-    warn("No efo id defined for " . $self->name . "!\n");
+# warn("No efo id defined for " . $self->name . "!\n");
     return undef;
   }
   if (ref $efo_db_entry eq 'ARRAY' && scalar @$efo_db_entry == 0) {
-    warn("No efo id defined for " . $self->name . "!\n");
+#    warn("No efo id defined for " . $self->name . "!\n");
     return undef;
   }
   throw("Unexpected return value for efo id!");
@@ -346,6 +346,26 @@ sub compare_to {
                                   $obj_methods);
 }
 
+=head2 summary_as_hash
+
+  Example       : $regulatory_feature_summary = $regulatory_feature->summary_as_hash;
+  Description   : Retrieves a textual summary of this RegulatoryFeature.
+  Returns       : Hashref of descriptive strings
+  Status        : Intended for internal use (REST)
+
+=cut
+
+sub summary_as_hash {
+  my $self   = shift;
+  
+  return {
+    name              => $self->name,
+    gender            => $self->gender,
+    description       => $self->description,
+    display_label     => $self->display_label,
+    efo_accession     => $self->efo_accession,
+  };
+}
 
 1;
 

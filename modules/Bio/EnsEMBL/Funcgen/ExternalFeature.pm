@@ -156,6 +156,29 @@ sub display_label {
   return $self->{'display_label'};
 }
 
+=head2 summary_as_hash
+
+  Example       : $summary = $external_feature->summary_as_hash;
+  Description   : Retrieves a textual summary of this ExternalFeature.
+  Returns       : Hashref of descriptive strings
+  Status        : Intended for internal use (REST)
+
+=cut
+
+sub summary_as_hash {
+  my $self   = shift;
+
+  return {
+    start             => $self->seq_region_start,
+    end               => $self->seq_region_end,
+    strand            => $self->strand,
+    seq_region_name   => $self->seq_region_name,
+    description       => $self->feature_type->description,
+    so_accession      => $self->feature_type->so_accession,
+    so_name           => $self->feature_type->so_name,
+    class             => $self->feature_type->class,
+  };
+}
 
 
 1;
