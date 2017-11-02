@@ -93,6 +93,10 @@ my $map_transcript_to_genome = sub {
     genomic_blocks => \@genomic_blocks,
     transcript     => $transcript,
   });
+  if (! defined $projected_hit) {
+    warn("Skipping hit that couldn't be projected:\n" . Dumper($probe_feature_hash));
+    return;
+  }
   
   my $length_after_projecting = $projected_hit->{t_end} - $projected_hit->{t_start};
   
@@ -299,11 +303,22 @@ sub project_hit_to_genomic_coordinates {
   
   if(@$genomic_blocks==1) {
     my %projected_hit = %$hit;
-
-    $projected_hit{t_start}      = $genomic_blocks->[0]->start;
-    $projected_hit{t_end}        = $genomic_blocks->[0]->end;
-#     $projected_hit{strand}       = $transcript->strand;
-    $projected_hit{t_strand}       = $genomic_blocks->[0]->strand;
+    
+    my $genomic_block = $genomic_blocks->[0];
+    
+    if ($genomic_block->isa('Bio::EnsEMBL::Mapper::Gap')) {
+        warn(
+            "This hit:\n"
+            . Dumper($hit) . "\n"
+            . "is projected into a gap:\n"
+            . Dumper($genomic_block) . "\n"
+        );
+        return undef;
+    }
+    
+    $projected_hit{t_start}  = $genomic_block->start;
+    $projected_hit{t_end}    = $genomic_block->end;
+    $projected_hit{t_strand} = $genomic_block->strand;
     
     $projected_hit{cigar_line} = join ' foo ', @stranded_cigar_line;
     
