@@ -36,7 +36,8 @@ my $funcgen_db_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcge
 my $core_db_adaptor    = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'core');
 
 my $slice_adaptor = $core_db_adaptor->get_SliceAdaptor;
-my $slices = $slice_adaptor->fetch_all('toplevel');
+# Include non-reference seq regions, important for mouse.
+my $slices = $slice_adaptor->fetch_all('toplevel', undef, 1);
 
 my %seq_region_id_to_name_lookup;
 
