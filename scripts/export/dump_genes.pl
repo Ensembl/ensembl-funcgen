@@ -234,7 +234,21 @@ foreach my $gene (@genes) {
   }
   my $gene_id = $gene->dbID();
 
+  TRANSCRIPT:
   foreach my $trans ( @{$gene->get_all_Transcripts}) {
+  
+    my $is_trans_spliced  = map { $_->value } @{ $trans->get_all_Attributes('trans_spliced') };
+    my $has_sequence_edit = map { $_->value } @{ $trans->get_all_Attributes('_rna_edit') };
+    
+    if ($is_trans_spliced) {
+        warn($trans->stable_id . " is trans spliced, so skipping it. ");
+        next TRANSCRIPT;
+    }
+    if ($has_sequence_edit) {
+        warn($trans->stable_id . " has a sequence edit, so skipping it. ");
+        next TRANSCRIPT;
+    }
+  
    my $identifier;
    my $tseq;
    
