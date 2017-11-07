@@ -89,14 +89,18 @@ CREATE TABLE `regulatory_feature` (
 
 /**
 @table  regulatory_evidence
-@desc   Denormalised table defining links between a regulatory_feature and it's constituent 'attribute' features.
+@desc   Links a regulatory feature and the epigenome (via regulatory 
+        activity) to the underlying structure of epigenetic marks that the 
+        regulatory feature has in this epigenome.
 @colour  #FFCC66
 
 @column regulatory_feature_id   Internal ID
+@column regulatory_activity_id  @link regulatory_activity
 @column attribute_feature_id    Table ID of attribute feature
 @column attribute_feature_table Table name of attribute feature
 
-@see annotated_feature
+@see peak
+@see regulatory_activity
 */
 
 DROP TABLE IF EXISTS `regulatory_evidence`;
@@ -108,7 +112,22 @@ CREATE TABLE `regulatory_evidence` (
   KEY `attribute_feature_idx` (`attribute_feature_id`,`attribute_feature_table`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+/**
+@table  regulatory_activity
+@desc   For every regulatory feature and epigenome that was a part of the 
+        regulatory build, this table links the regulatory feature to the 
+        predicted regulatory activity in this epigenome.
+@colour  #FFCC66
 
+@column regulatory_activity_id  Internal ID
+@column regulatory_feature_id   @link regulatory_feature
+@column activity                The predicted activity of the regulatory feature in the epigenome.
+@column epigenome_id            @link epigenome
+
+@see epigenome
+@see regulatory_feature
+
+*/
 
 DROP TABLE IF EXISTS `regulatory_activity`;
 CREATE TABLE `regulatory_activity` (
@@ -121,8 +140,25 @@ CREATE TABLE `regulatory_activity` (
   KEY `regulatory_feature_idx` (`regulatory_feature_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+/**
+@table  regulatory_build
+@desc   Metadata for the regulatory build
+@colour  #FFCC66
 
+@column regulatory_build_id            Internal ID
+@column name                           Name of the regulatory build
+@column version                        Version of the regulatory build
+sss@column initial_release_date
+@column last_annotation_update
+@column feature_type_id                @link feature_type
+@column analysis_id                    @link analysis
+@column is_current                     Set to true, if this entry refers to the current regulatory build
+@column sample_regulatory_feature_id   @link regulatory_feature
 
+@see feature_type
+@see regulatory_feature
+
+*/
 
 DROP TABLE IF EXISTS `regulatory_build`;
 CREATE TABLE `regulatory_build` (
@@ -138,8 +174,19 @@ CREATE TABLE `regulatory_build` (
   PRIMARY KEY (`regulatory_build_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+/**
+@table  regulatory_build_epigenome
+@desc   Table that links a regulatory build to the epigenomes that were used in it.
+@colour  #FFCC66
 
+@column regulatory_build_epigenome_id Internal ID
+@column regulatory_build_id           @link regulatory_build
+@column epigenome_id                  @link epigenome
 
+@see regulatory_build
+@see epigenome
+
+*/
 
 DROP TABLE IF EXISTS `regulatory_build_epigenome`;
 CREATE TABLE `regulatory_build_epigenome` (
@@ -186,6 +233,21 @@ CREATE TABLE `segmentation_feature` (
   KEY `feature_type_idx` (`feature_type_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
 
+/**
+@table  segmentation_file
+@desc   Table to store metadata about a segmentation file
+@colour  #FFCC66
+
+@column segmentation_file_id Internal ID
+@column regulatory_build_id  @link regulatory_build
+@column name                 A descriptive name of what is in the file.
+@column analysis_id          @link analysis
+@column epigenome_id         @link epigenome
+
+@see regulatory_build
+@see epigenome
+
+*/
 
 DROP TABLE IF EXISTS `segmentation_file`;
 CREATE TABLE `segmentation_file` (
@@ -201,12 +263,12 @@ CREATE TABLE `segmentation_file` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
-@table  annotated_feature
+@table  peak
 @desc   Represents a genomic feature as the result of an analysis i.e. a ChIP or DNase1 peak call.
 @colour  #FFCC66
 
-@column annotated_feature_id    Internal ID
-@column feature_set_id          @link feature_set ID
+@column peak_id    Internal ID
+@column peak_calling_id         @link peak_calling ID
 @column seq_region_id           @link seq_region ID
 @column seq_region_start        Start position of this feature
 @column seq_region_end          End position of this feature
@@ -215,26 +277,57 @@ CREATE TABLE `segmentation_file` (
 @column score                   Score derived from software
 @column summit                  Represents peak summit for those analyses which provide it (e.g. Swembl)
 
-@see feature_set
-@see seq_region
+@see peak_calling
 */
 
-DROP TABLE IF EXISTS `annotated_feature`;
-CREATE TABLE `annotated_feature` (
-  `annotated_feature_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+DROP TABLE IF EXISTS `peak`;
+CREATE TABLE `peak` (
+  `peak_id` int(10) unsigned NOT NULL,
   `seq_region_id` int(10) unsigned NOT NULL,
   `seq_region_start` int(10) unsigned NOT NULL,
   `seq_region_end` int(10) unsigned NOT NULL,
   `seq_region_strand` tinyint(1) NOT NULL,
-  `display_label` varchar(60) DEFAULT NULL,
   `score` double DEFAULT NULL,
-  `feature_set_id` int(10) unsigned NOT NULL,
+  `peak_calling_id` int(10) unsigned NOT NULL,
   `summit` int(10) unsigned DEFAULT NULL,
-  PRIMARY KEY (`annotated_feature_id`),
-  UNIQUE KEY `seq_region_feature_set_idx` (`seq_region_id`,`seq_region_start`,`feature_set_id`),
-  KEY `feature_set_idx` (`feature_set_id`)
+  PRIMARY KEY (`peak_id`),
+  UNIQUE KEY `seq_region_feature_set_idx` (`seq_region_id`,`seq_region_start`,`peak_calling_id`),
+  KEY `feature_set_idx` (`peak_calling_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=39;
 
+/**
+@table  peak
+@desc   Represents a peak calling analysis.
+@colour  #FFCC66
+
+@column peak_calling_id         Internal ID
+@column name                    Name of the peak calling
+@column display_label           Name for displaying on the website
+@column feature_type_id         @link feature_type ID
+@column analysis_id             @link analysis ID
+@column alignment_id            @link alignment ID
+@column epigenome_id            @link epigenome ID
+@column experiment_id           @link experiment ID
+
+@see feature_type
+@see analysis
+@see alignment
+@see epigenome
+@see experiment
+*/
+DROP TABLE IF EXISTS `peak_calling`;
+CREATE TABLE `peak_calling` (
+  `peak_calling_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `name` varchar(300) NOT NULL,
+  `display_label` varchar(300) NOT NULL,
+  `feature_type_id` int(10) unsigned NOT NULL,
+  `analysis_id` smallint(5) unsigned NOT NULL,
+  `alignment_id` int(10) unsigned NOT NULL,
+  `epigenome_id` int(10) unsigned DEFAULT NULL,
+  `experiment_id` int(10) unsigned DEFAULT NULL,
+  PRIMARY KEY (`peak_calling_id`),
+  UNIQUE KEY `peak_calling_id_idx` (`peak_calling_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
 @table  motif_feature
@@ -296,7 +389,6 @@ CREATE TABLE `motif_feature` (
 @see feature_type
 @see seq_region
 */
-
 
 DROP TABLE IF EXISTS `mirna_target_feature`;
 CREATE TABLE `mirna_target_feature` (
@@ -411,7 +503,20 @@ CREATE TABLE `external_feature` (
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=80;
 
+/**
+@table  external_feature_file
+@desc   Table to store metadata about a file with features
+@colour  #FFCC66
 
+@column external_feature_file_id  Internal ID
+@column name                      A name descriptive of the data in the file
+@column analysis_id               @link analysis
+@column epigenome_id              @link epigenome
+@column feature_type_id           @link feature_type
+
+@see dbfile_registry
+
+*/
 
 DROP TABLE IF EXISTS `external_feature_file`;
 CREATE TABLE `external_feature_file` (
@@ -541,59 +646,12 @@ CREATE TABLE `associated_feature_type` (
 
 
 /**
-
+ 
 @header  Set tables
 @desc    Sets are containers for distinct sets of raw and/or processed data.
 @colour  #66CCFF
 @legend  #66CCFF Set tables
 */
-
-/**
-@table  data_set
-@desc   Defines highest level data container for associating the result of an analysis and the input data to that analysis e.g. Seq alignments(Input/ResultSet) and peak calls (FeatureSet)
-@colour  #66CCFF
-
-@column data_set_id     Internal ID
-@column feature_set_id  Product @link feature_set table ID
-@column name            Name of data set
-
-@see feature_set
-*/
-
-DROP TABLE IF EXISTS `data_set`;
-CREATE TABLE `data_set` (
-  `data_set_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `feature_set_id` int(10) unsigned NOT NULL DEFAULT '0',
-  `name` varchar(200) DEFAULT NULL,
-  PRIMARY KEY (`data_set_id`,`feature_set_id`),
-  UNIQUE KEY `name_idx` (`name`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-
-
-
-/**
-@table  supporting_set
-@desc   Defines association between @link data_set and underlying/supporting data.
-@colour  #66CCFF
-
-@column data_set_id        Internal ID
-@column supporting_set_id  Table ID of supporting set
-@column type               Type of supporting set e.g. result, feature or input set.
-
-@see data_set
-*/
-
-
-DROP TABLE IF EXISTS `supporting_set`;
-CREATE TABLE `supporting_set` (
-  `data_set_id` int(10) unsigned NOT NULL,
-  `supporting_set_id` int(10) unsigned NOT NULL,
-  `type` enum('result','feature','input') NOT NULL DEFAULT 'result',
-  PRIMARY KEY (`data_set_id`,`supporting_set_id`,`type`),
-  KEY `type_idx` (`type`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
 
 /**
 @table  feature_set
@@ -602,17 +660,13 @@ CREATE TABLE `supporting_set` (
 
 @column feature_set_id  Internal ID
 @column analysis_id     @link analysis ID
-@column epigenome_id    @link epigenome ID
-@column experiment_id   @link experiment mnuhn: According to https://www.ebi.ac.uk/panda/jira/browse/ENSREGULATION-147 this is only used in the experiment_view. AFAIK we don't use the experiment_view, so this column can be deprecated.
 @column feature_type_id @link feature_type ID
 @column name            Name for this feature set
-@column type            Type of features contained e.g. annotated, external or regualtory
+@column type            Type of features contained e.g. external
 @column description     Text description
 @column display_label   Shorter more readable version of name
 
 @see analysis
-@see epigenome
-@see experiment
 @see feature_type
 */
 
@@ -621,99 +675,106 @@ CREATE TABLE `feature_set` (
   `feature_set_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `feature_type_id` int(10) unsigned NOT NULL,
   `analysis_id` smallint(5) unsigned NOT NULL,
-  `epigenome_id` int(10) unsigned DEFAULT NULL,
   `name` varchar(100) DEFAULT NULL,
   `type` enum('annotated','regulatory','external','segmentation','mirna_target') DEFAULT NULL,
   `description` varchar(80) DEFAULT NULL,
   `display_label` varchar(80) DEFAULT NULL,
-  `experiment_id` int(10) unsigned DEFAULT NULL,
   PRIMARY KEY (`feature_set_id`),
   UNIQUE KEY `name_idx` (`name`),
-  KEY `feature_type_idx` (`feature_type_id`),
-  KEY `experiment_idx` (`experiment_id`),
-  KEY `epigenome_idx` (`epigenome_id`)
+  KEY `feature_type_idx` (`feature_type_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
-@table  feature_set_qc_prop_reads_in_peaks
+@table  peak_calling_qc_prop_reads_in_peaks
 @desc
 @colour  #66CCFF
 
 @column feature_set_qc_prop_reads_in_peaks_id  Internal ID
 @column analysis_id                            @link analysis ID
-@column feature_set_id                         @link feature set ID
+@column feature_set_id                         @link peak_calling ID
 @column prop_reads_in_peaks                    Proportion of reads in peaks
 @column total_reads                            Total number of reads
 @column path
 @column bam_file
 
 @see analysis
-@see feature_set
+@see peak_calling
 */
 
-DROP TABLE IF EXISTS `feature_set_qc_prop_reads_in_peaks`;
-CREATE TABLE `feature_set_qc_prop_reads_in_peaks` (
-  `feature_set_qc_prop_reads_in_peaks_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+DROP TABLE IF EXISTS `peak_calling_qc_prop_reads_in_peaks`;
+CREATE TABLE `peak_calling_qc_prop_reads_in_peaks` (
+  `peak_calling_qc_prop_reads_in_peaks_id` int(10) unsigned NOT NULL,
   `analysis_id` smallint(5) unsigned DEFAULT NULL,
-  `feature_set_id` int(10) unsigned NOT NULL,
+  `peak_calling_id` int(10) unsigned NOT NULL,
   `prop_reads_in_peaks` double DEFAULT NULL,
   `total_reads` int(10) DEFAULT NULL,
   `path` varchar(512) NOT NULL,
   `bam_file` varchar(512) NOT NULL,
-  PRIMARY KEY (`feature_set_qc_prop_reads_in_peaks_id`)
+  PRIMARY KEY (`peak_calling_qc_prop_reads_in_peaks_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
-@table  result_set
+@table  alignment
 
-@desc   Think of this as an alignment or a summary of an alignment in form of a wiggleplot in bigWig format. The query used to generate the alignment is found by linking from this table over result_set_input to the input_subset table. The entry in input_subset represents the fastq file that was aligned. The reference to which it was aligned is based on the sequence of the species of the regulation database. It may be gender specific depending on the use case, so the query may have been aligned to the male or the female version of the genome depending on the details of the analysis.
-
-Note that although the schema has objects to represent alignments, we don't store the actual alignments in the database. We only store summaries of the alignments as wiggleplots. If a result_set represents a wiggleplot, the location of the file can be found by the entry in the dbfile_registry pointing to it.
+@desc   Alignment of reads from a ChIP-seq or similar experiment
 
 @colour  #66CCFF
 
-@column result_set_id     Internal ID
-@column analysis_id       @link analysis ID The aligner used to create this alignment.
-@column epigenome_id      @link epigenome ID The epigenome from which the query sequence was derived. This is just a shortcut. THe link is redundant. The same epigenome could be obtained by linking from the input_subset table to experiment to epigenome_id.
-@column experiment_id     @link experiment ID Another shortcut. This is the experiment that generated the query file for this alignment.
-@column feature_type_id   @link feature_type ID Probably another shortcut to the feature type of the experiment. This would indicate how the reads were enriched.
-@column name              Name of this result set, probably never used and could be dropped.
-@column feature_class     Defines the class of the feature, this is used by the api for building the name of an adaptor of unkown purpose.
+@column alignment_id     Internal ID
+@column analysis_id      @link analysis ID The aligner used to create this alignment.
+@column name             Name of the alignment.
+@column bam_file_id      This is the data_file_id in the @link data_file for the bam file of this alignment.
+@column bigwig_file_id   This is the data_file_id in the @link data_file for the bigwig file of this alignment.
 
 @see analysis
-@see epigenome
-@see experiment
-@see feature_type
-@see dbfile_registry
+@see data_file
 
 */
 
-DROP TABLE IF EXISTS `result_set`;
-CREATE TABLE `result_set` (
-  `result_set_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+DROP TABLE IF EXISTS `alignment`;
+CREATE TABLE `alignment` (
+  `alignment_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `analysis_id` smallint(5) unsigned NOT NULL,
   `name` varchar(100) DEFAULT NULL,
-  `epigenome_id` int(10) unsigned DEFAULT NULL,
-  `feature_type_id` int(10) unsigned DEFAULT NULL,
-  `feature_class` enum('result','dna_methylation','segmentation') DEFAULT NULL,
-  `experiment_id` int(10) unsigned DEFAULT NULL,
-  PRIMARY KEY (`result_set_id`),
+  `bam_file_id` int(11) DEFAULT NULL,
+  `bigwig_file_id` int(11) DEFAULT NULL,
+  PRIMARY KEY (`alignment_id`),
   UNIQUE KEY `name_idx` (`name`),
-  KEY `feature_type_idx` (`feature_type_id`),
-  KEY `analysis_idx` (`analysis_id`),
-  KEY `feature_class_idx` (`feature_class`),
-  KEY `experiment_idx` (`experiment_id`),
-  KEY `epigenome_idx` (`epigenome_id`)
+  KEY `analysis_idx` (`analysis_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
-@table  result_set_qc_chance
+@table  alignment_read_file
+
+@desc   Linking table to connect alignments to the reads that were aligned.
+
+@colour  #66CCFF
+
+@column alignment_read_file_id     Internal ID
+@column alignment_id     @link alignment ID
+@column read_file_id     @link read_file ID
+
+@see alignment
+@see data_file
+
+*/
+DROP TABLE IF EXISTS `alignment_read_file`;
+CREATE TABLE `alignment_read_file` (
+  `alignment_read_file_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `alignment_id` int(10) unsigned NOT NULL,
+  `read_file_id` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`alignment_read_file_id`,`alignment_id`),
+  UNIQUE KEY `rset_table_idname_idx` (`alignment_id`,`read_file_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+/**
+@table  alignment_qc_chance
 @desc
 @colour  #66CCFF
 
-@column result_set_qc_chance                                             Internal ID
-@column signal_result_set_id
-@column analysis_id                                                      @link analysis ID
+@column alignment_qc_chance        Internal ID
+@column signal_result_set_id       @link alignment ID
+@column analysis_id                @link analysis ID
 @column p
 @column q
 @column divergence
@@ -726,13 +787,14 @@ CREATE TABLE `result_set` (
 @column pcr_amplification_bias_in_Input_coverage_of_1_percent_of_genome
 @column path
 
+@see alignment
 @see analysis
 */
 
-DROP TABLE IF EXISTS `result_set_qc_chance`;
-CREATE TABLE `result_set_qc_chance` (
-  `result_set_qc_chance_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `signal_result_set_id` int(10) unsigned DEFAULT NULL,
+DROP TABLE IF EXISTS `alignment_qc_chance`;
+CREATE TABLE `alignment_qc_chance` (
+  `alignment_qc_chance` int(10) unsigned NOT NULL,
+  `signal_alignment_id` int(10) unsigned NOT NULL,
   `analysis_id` smallint(5) unsigned DEFAULT NULL,
   `p` double DEFAULT NULL,
   `q` double DEFAULT NULL,
@@ -745,49 +807,49 @@ CREATE TABLE `result_set_qc_chance` (
   `first_nonzero_bin_at` double DEFAULT NULL,
   `pcr_amplification_bias_in_Input_coverage_of_1_percent_of_genome` double DEFAULT NULL,
   `path` varchar(512) NOT NULL,
-  PRIMARY KEY (`result_set_qc_chance_id`)
+  PRIMARY KEY (`alignment_qc_chance`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
-@table  result_set_qc_flagstats
+@table  alignment_qc_flagstats
 @desc
 @colour  #66CCFF
 
-@column result_set_qc_id  Internal ID
-@column result_set_id     @link result set ID
-@column analysis_id       @link analysis ID
+@column alignment_qc_flagstats_id  Internal ID
+@column alignment_qc_id            @link alignment ID
+@column analysis_id                @link analysis ID
 @column category
 @column qc_passed_reads
 @column qc_failed_reads
 @column path
 @column bam_file
 
-@see result_set
+@see alignment
 @see analysis
 */
 
-DROP TABLE IF EXISTS `result_set_qc_flagstats`;
-CREATE TABLE `result_set_qc_flagstats` (
-  `result_set_qc_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `result_set_id` int(10) unsigned DEFAULT NULL,
+DROP TABLE IF EXISTS `alignment_qc_flagstats`;
+CREATE TABLE `alignment_qc_flagstats` (
+  `alignment_qc_flagstats_id` int(10) unsigned NOT NULL,
+  `alignment_id` int(10) unsigned NOT NULL,
   `analysis_id` smallint(5) unsigned DEFAULT NULL,
   `category` varchar(100) NOT NULL,
   `qc_passed_reads` int(10) unsigned DEFAULT NULL,
   `qc_failed_reads` int(10) unsigned DEFAULT NULL,
   `path` varchar(512) NOT NULL,
   `bam_file` varchar(512) NOT NULL,
-  PRIMARY KEY (`result_set_qc_id`),
-  UNIQUE KEY `name_exp_idx` (`result_set_qc_id`,`category`)
+  PRIMARY KEY (`alignment_qc_flagstats_id`),
+  UNIQUE KEY `name_exp_idx` (`alignment_qc_flagstats_id`,`category`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
-@table  result_set_qc_phantom_peak
+@table  alignment_qc_phantom_peak
 @desc
 @colour  #66CCFF
 
-@column result_set_qc_phantom_peak_id  Internal ID
-@column analysis_id                    @link analysis ID
-@column result_set_id                  @link result set ID
+@column alignment_qc_phantom_peak_id  Internal ID
+@column analysis_id        @link analysis ID
+@column alignment_id       @link alignment ID
 @column filename
 @column numReads
 @column estFragLen
@@ -806,14 +868,14 @@ CREATE TABLE `result_set_qc_flagstats` (
 @column path
 
 @see analysis
-@see result_set
+@see alignment
 */
 
-DROP TABLE IF EXISTS `result_set_qc_phantom_peak`;
-CREATE TABLE `result_set_qc_phantom_peak` (
-  `result_set_qc_phantom_peak_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+DROP TABLE IF EXISTS `alignment_qc_phantom_peak`;
+CREATE TABLE `alignment_qc_phantom_peak` (
+  `alignment_qc_phantom_peak_id` int(10) unsigned NOT NULL,
   `analysis_id` smallint(5) unsigned DEFAULT NULL,
-  `result_set_id` int(10) unsigned NOT NULL,
+  `alignment_id` int(10) unsigned NOT NULL,
   `filename` varchar(512) NOT NULL,
   `numReads` int(10) unsigned NOT NULL,
   `estFragLen` double DEFAULT NULL,
@@ -830,111 +892,102 @@ CREATE TABLE `result_set_qc_phantom_peak` (
   `RSC` double DEFAULT NULL,
   `QualityTag` int(10) DEFAULT NULL,
   `path` varchar(512) NOT NULL,
-  PRIMARY KEY (`result_set_qc_phantom_peak_id`),
+  PRIMARY KEY (`alignment_qc_phantom_peak_id`),
   KEY `filename_idx` (`filename`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
-
 /**
-@table  result_set_input
-
-@desc   Many to many table for linking between result_set (alignments) and input_subset (fastq files). Fastq files are supporting sets for alignments and this table is used to link them up. The fastq files that are joined to the result_set in this table are the ones that were used to create the alignment.
-
+@table  data_file
 @colour  #66CCFF
-
-@column result_set_input_id Internal ID
-@column result_set_id       @link result_set ID
-@column table_id            The dbID for the object supporting the result_set. Since these are always fastq files in the input_subset table, this column has input_subset ids only.
-@column table_name          This is always set to input_subset.
-
-@see result_set
-@see input_subset
-*/
-
-DROP TABLE IF EXISTS `result_set_input`;
-CREATE TABLE `result_set_input` (
-  `result_set_input_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `result_set_id` int(10) unsigned NOT NULL,
-  `table_id` int(10) unsigned NOT NULL,
-  `table_name` enum('input_subset') DEFAULT NULL,
-  PRIMARY KEY (`result_set_input_id`,`result_set_id`),
-  UNIQUE KEY `rset_table_idname_idx` (`result_set_id`,`table_id`,`table_name`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-/**
-@table  dbfile_registry
-@colour  #66CCFF
-
-@desc   This generic table contains a simple registry of paths to support
-        flat file (DBFile) access. This should be left joined from the
-        relevant adaptor e.g. ResultSetAdaptor.
+@desc   
 
 @column table_id   Primary key of linked dbfile entity e.g. @link result_set or @link analysis
 @column table_name Name of linked table
 @column path       Either a full filepath or a directory which the API will use to build the filepath
-
-@see result_set
-@see analysis
+@column file_type
+@column md5sum     
 */
 
 
-DROP TABLE IF EXISTS `dbfile_registry`;
-CREATE TABLE `dbfile_registry` (
+DROP TABLE IF EXISTS `data_file`;
+CREATE TABLE `data_file` (
+  `data_file_id` int(11) NOT NULL AUTO_INCREMENT,
   `table_id` int(10) unsigned NOT NULL,
   `table_name` varchar(32) NOT NULL,
   `path` varchar(255) NOT NULL,
   `file_type` enum('BAM','BAMCOV','BIGBED','BIGWIG','VCF','CRAM','DIR') NOT NULL DEFAULT 'BAM',
   `md5sum` varchar(45) DEFAULT NULL,
-  PRIMARY KEY (`table_id`,`table_name`,`file_type`),
-  UNIQUE KEY `table_id_name_path_idx` (`table_id`,`table_name`,`path`)
+  PRIMARY KEY (`data_file_id`),
+  UNIQUE KEY `table_id_name_path_idx` (`table_id`,`table_name`,`path`),
+  UNIQUE KEY `data_file_id` (`data_file_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
-
 /**
-@table  input_subset
-@desc   The name is not descriptive of its content, think of it as: "Fastq files from a sequencing run". The objects stored here are similar to ENA's run: http://www.ebi.ac.uk/ena/submit/preparing-xmls#run Every row in the table represents a fastq file. Fastq files link to the experiments from which they were created. Fastq files from one experiment are grouped into technical and biological replicates. If a sequencing run from one experiment generated multiple fastq files, then the technical and biological replicate numbers will be identical. Fastq files are linked to the method by which they were generated via the analysis_id column.
+@table  read_file
+@desc   
 @colour  #66CCFF
 
-@column input_subset_id  Internal ID
-@column analysis_id      @link analysis ID The analysis column links the sequencing run to the method that was used to generate it. The current analyses used are: ChIP-Seq, DNase-Seq and FAIRE. Fastq files from sequencing controls are registered as ChIP-Seq as well.
-@column epigenome_id     @link epigenome ID The epigenome that was sequenced to generate this fastq file. This is similar to ENA's sample: http://www.ebi.ac.uk/ena/submit/preparing-xmls#sample
-@column experiment_id    @link experiment ID
-@column feature_type_id  @link feature_type  ID: The type of assay used to generate the files from this sequencing run. Typical assays are: DNase1, CTCF, H3K4me3, PolII, H3K27me3, H3K36me3, H3K27ac, H3K4me1, NFKB, H4K20me1, H3K9ac, H3K4me2, H3K9me3 or FAIRE. Controls are linked to WCE. WCE stands for "Whole Cell Extract".
-@column name             This is the name of the fastq file. It is the base name only, so it is not useful for finding the file on the file system. Sometimes the extension is missing. If you want to find the fastq file you have to join to the input_subset_tracking table and use the column local_url.
-@column biological_replicate  Number of the biological replicate.
-@column technical_replicate   Number of the technical replicate. There can be more than one biological or technical replicate with the same number. In that case the sequencing run produced more than one fastq file.
-@column is_control            Indicates whether the files from this sequencing run are controls. This column is redundant, it should always coincide with the is_control column of the experiment it links to.
+@column read_file_id    Internal ID
+@column name            Name for the read file object
+@column analysis_id     @link analysis ID
+@column is_paired_end   Indicates whether it is paired end
+@column paired_with
+@column file_size       (not used)
+@column read_length     (not used)
+@column md5sum          (not used)
+@column file            Location of the read file on disk (not public)
+@column notes           (not used)
 
-@see analysis
-@see epigenome
-@see experiment
-@see feature_type
+@see read_file_experimental_configuration
 
 */
 
-DROP TABLE IF EXISTS `input_subset`;
-CREATE TABLE `input_subset` (
-  `input_subset_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `epigenome_id` int(10) unsigned DEFAULT NULL,
-  `experiment_id` int(10) unsigned NOT NULL,
-  `feature_type_id` int(10) unsigned NOT NULL,
+DROP TABLE IF EXISTS `read_file`;
+CREATE TABLE `read_file` (
+  `read_file_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(300) NOT NULL,
-  `biological_replicate` tinyint(3) unsigned NOT NULL DEFAULT '1',
-  `technical_replicate` tinyint(3) unsigned NOT NULL DEFAULT '1',
-  `is_control` tinyint(3) unsigned NOT NULL,
   `analysis_id` smallint(5) unsigned NOT NULL,
-  `read_length` int(10) DEFAULT NULL,
   `is_paired_end` tinyint(1) DEFAULT NULL,
   `paired_with` int(10) DEFAULT NULL,
   `file_size` bigint(20) DEFAULT NULL,
-  PRIMARY KEY (`input_subset_id`),
-  UNIQUE KEY `name_exp_idx` (`name`,`experiment_id`),
-  KEY `analysis_idx` (`analysis_id`),
+  `read_length` int(10) DEFAULT NULL,
+  `md5sum` varchar(45) DEFAULT NULL,
+  `file` text,
+  `notes` text,
+  PRIMARY KEY (`read_file_id`),
+  UNIQUE KEY `read_file_id_idx` (`read_file_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+/**
+@table  read_file_experimental_configuration
+@desc   
+@colour  #66CCFF
+
+@column read_file_experimental_configuration_id  Internal ID
+@column read_file_id                             @link read_file id of the read file that is being described.
+@column experiment_id                            @link experiment id of the experiment during which the read file was generated.
+@column biological_replicate                     @link the biological replicate number
+@column technical_replicate                      @link the technical replicate number
+@column paired_end_tag                           (not used yet)
+@column multiple                                 (not used yet)
+
+@see read_file
+@see experiment
+
+*/
+DROP TABLE IF EXISTS `read_file_experimental_configuration`;
+CREATE TABLE `read_file_experimental_configuration` (
+  `read_file_experimental_configuration_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `read_file_id` int(10) unsigned DEFAULT NULL,
+  `experiment_id` int(10) unsigned NOT NULL,
+  `biological_replicate` tinyint(3) unsigned NOT NULL DEFAULT '1',
+  `technical_replicate` tinyint(3) unsigned NOT NULL DEFAULT '1',
+  `paired_end_tag` int(11) DEFAULT NULL,
+  `multiple` int(11) DEFAULT '1',
+  PRIMARY KEY (`read_file_experimental_configuration_id`),
+  UNIQUE KEY `name_exp_idx` (`experiment_id`,`biological_replicate`,`technical_replicate`),
   KEY `experiment_idx` (`experiment_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=30;
-
-
--- epigenome_id is default NULL to support flat file imports which have not defined epigenome
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
 @header Array design tables
@@ -956,6 +1009,10 @@ CREATE TABLE `input_subset` (
 @column type        Array type e.g. OLIGO, PCR
 @column class       Array class e.g. AFFY_ST, ILLUMINA_INFINIUM
 
+@column is_probeset_array         Indicates whether the array is organised into probe sets.
+@column is_linked_array           
+@column has_sense_interrogation   Indicates whether the array has sense interrogation
+
 */
 
 DROP TABLE IF EXISTS `array`;
@@ -975,8 +1032,6 @@ CREATE TABLE `array` (
   UNIQUE KEY `class_name_idx` (`class`,`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
-
--- Could clean up/rename format, type and class
 
 /**
 @table  array_chip
@@ -1007,9 +1062,10 @@ CREATE TABLE `array_chip` (
 @colour  #FF6666
 
 @column probe_set_id Internal ID
-@column name         Name of the probe set
-@column size         Integer size of the probe set i.e. how many probe is contains
-@column family       Generic descriptor for probe_set e.g. ENCODE_REGIONS, RANDOM etc. Currently not used
+@column name          Name of the probe set
+@column size          Integer size of the probe set i.e. how many probe is contains
+@column family        Generic descriptor for probe_set e.g. ENCODE_REGIONS, RANDOM etc. Not used
+@column array_chip_id @link array_chip ID of the array chip to which this probe set belongs.
 
 */
 
@@ -1024,8 +1080,17 @@ CREATE TABLE `probe_set` (
   KEY `name` (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
--- Clashing names may(unlikely) exist between array vendors, this is currently allowed
--- and handled with the API via the probe associations
+/**
+@table  probe_set_transcript
+@desc   This table maps probe sets to transcripts.
+@colour  #FF6666
+
+@column probe_set_transcript_id Internal ID
+@column probe_set_id            Id of the @link probe_set
+@column stable_id               Stable id of the transcript to which it has been mapped
+@column description             Details about the mapping as text
+
+*/
 
 DROP TABLE IF EXISTS `probe_set_transcript`;
 CREATE TABLE `probe_set_transcript` (
@@ -1040,7 +1105,7 @@ CREATE TABLE `probe_set_transcript` (
 
 /**
 @table  probe
-@desc   Defines individual probe designs across one or more array_chips. Note: The probe sequence is not stored.
+@desc   Defines individual probe designs across one or more array_chips.
 @colour  #FF6666
 
 @column probe_id      Internal ID
@@ -1050,9 +1115,11 @@ CREATE TABLE `probe_set_transcript` (
 @column length        Integer bp length of the probe
 @column class         Class of the probe e.g. CONTROL, EXPERIMENTAL etc.
 @column description   Text description
+@column probe_seq_id  @link probe_seq ID
 
 @see array_chip
 @see probe_set
+@see probe_seq
 */
 
 DROP TABLE IF EXISTS `probe`;
@@ -1072,6 +1139,19 @@ CREATE TABLE `probe` (
   KEY `probe_seq_idx` (`probe_seq_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+/**
+@table  probe_seq
+@desc   Probe sequences
+@colour  #FF6666
+
+@column probe_seq_id          Internal ID
+@column sequence              Probe sequence
+@column sequence_upper        Probe sequence in uppcase letters. 
+@column sequence_upper_sha1   Sha1 hashsum of the uppcase of the probe sequence.
+
+@see probe
+*/
+
 DROP TABLE IF EXISTS `probe_seq`;
 CREATE TABLE `probe_seq` (
   `probe_seq_id` int(10) NOT NULL AUTO_INCREMENT,
@@ -1082,6 +1162,18 @@ CREATE TABLE `probe_seq` (
   UNIQUE KEY `sequence_upper_sha1` (`sequence_upper_sha1`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+/**
+@table  probe_transcript
+@desc   This table maps probes to transcripts.
+@colour  #FF6666
+
+@column probe_transcript_id Internal ID
+@column probe_id            Id of the @link probe_set
+@column stable_id           Stable id of the transcript to which it has been mapped
+@column description         Details about the mapping as text
+
+*/
+
 DROP TABLE IF EXISTS `probe_transcript`;
 CREATE TABLE `probe_transcript` (
   `probe_transcript_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -1090,7 +1182,8 @@ CREATE TABLE `probe_transcript` (
   `description` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`probe_transcript_id`),
   KEY `probe_transcript_id` (`probe_transcript_id`),
-  KEY `probe_transcript_stable_id_idx` (`stable_id`)
+  KEY `probe_transcript_stable_id_idx` (`stable_id`),
+  KEY `probe_transcript_idx` (`probe_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
@@ -1114,9 +1207,7 @@ CREATE TABLE `probe_transcript` (
 @column feature_type_id         @link feature_type table ID
 @column description             Text description
 @column name                    Name of experiment
-@column primary_design_type     e.g. binding_site_identification, preferably EFO term
 @column archive_id              ENA experiment identifier enabling access to specific raw data
-@column display_url             Http link to source file
 
 @see epigenome
 @see experimental_group
@@ -1140,11 +1231,6 @@ CREATE TABLE `experiment` (
   KEY `feature_type_idx` (`feature_type_id`),
   KEY `epigenome_idx` (`epigenome_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
--- Can probably remove now date (and primary_design_type?) as we don't support this level of meta data
--- also have associated_design_types/experimental_design table, containing MGED/EFO ontology types?
-
-
 
 /**
 @table  experimental_group
@@ -1191,11 +1277,11 @@ CREATE TABLE `experimental_group` (
 @colour  #808000
 
 @column epigenome_id         Internal ID
-@column name                 Microformat to drive the ChIP-seq pipeline, used internally only.
-@column display_label        Short display label, used in the ensembl browser/website
+@column name                 Name of the epigenome
+@column display_label        Name of epigenome for displaying on the website
 @column description          Text description, used in the z-menu that appears when hovering over the epigenome name
-@column production_name      Used to generate file or directory names
-@column gender               Gender i.e. 'male', 'female', 'hermaphrodite' or 'mixed'
+@column production_name      Production name of the epigenome
+@column gender               Gender i.e. 'male', 'female', 'hermaphrodite', 'unknown' or 'mixed'
 @column ontology_accession   External accession id
 @column ontology             The resource the ontology_accession refers to, currently either EFO or CL
 @column tissue               Tissue origin/type
@@ -1209,57 +1295,13 @@ CREATE TABLE `epigenome` (
   `display_label` varchar(30) NOT NULL,
   `description` varchar(80) DEFAULT NULL,
   `production_name` varchar(120) DEFAULT NULL,
-  `gender` enum('male','female','hermaphrodite','mixed','unknown') DEFAULT NULL,
+  `gender` enum('male','female','hermaphrodite','mixed','unknown') DEFAULT 'unknown',
   `ontology_accession` varchar(20) DEFAULT NULL,
   `ontology` enum('EFO','CL') DEFAULT NULL,
   `tissue` varchar(50) DEFAULT NULL,
   PRIMARY KEY (`epigenome_id`),
   UNIQUE KEY `name_idx` (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-
-/**
-@table  status
-@desc   Denormalised table associating funcgen records with a status.
-@colour  #808000
-
-@column table_id        Table ID of associated record
-@column status_name_id  @link status_name ID
-@column table_name      Table name of associated record
-
-
-@see status_name
-*/
-
-DROP TABLE IF EXISTS `status`;
-CREATE TABLE `status` (
-  `table_id` int(10) unsigned NOT NULL DEFAULT '0',
-  `table_name` varchar(32) NOT NULL DEFAULT '',
-  `status_name_id` int(10) unsigned NOT NULL,
-  PRIMARY KEY (`table_id`,`table_name`,`status_name_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
--- 32 is max length for mysql table name
-
-
-/**
-@table  status_name
-@desc   Simple table to predefine name of status.
-@colour  #808000
-
-@column status_name_id  Internal ID
-@column name            Name of status e.g. IMPORTED, DISPLAYBLE etc.
-
-*/
-
-DROP TABLE IF EXISTS `status_name`;
-CREATE TABLE `status_name` (
-  `status_name_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `name` varchar(60) DEFAULT NULL,
-  PRIMARY KEY (`status_name_id`),
-  UNIQUE KEY `status_name_idx` (`name`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
 
 
 /**
@@ -1377,14 +1419,44 @@ CREATE TABLE `meta` (
 
 -- Add necessary meta values
 INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '90');
 
 -- Update and remove these for each release to avoid erroneous patching
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_89_90_a.sql|schema_version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_89_90_b.sql|probe feature columns');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_89_90_c.sql|Adds stable id index for probe_transcript table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_89_90_d.sql|Adds stable id index for probe_set_transcript table');
-
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'schema_version', '91');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_a.sql|schema_version');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_b.sql|Remove sequence regions from previous releases');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_c.sql|Translate sequence region ids of regulatory features');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_d.sql|Replace regulatory features with updated ones');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_e.sql|Translate sequence region ids of segmentation features');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_f.sql|Replace segmentation features with updated ones');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_g.sql|Translate sequence region ids of probe features');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_h.sql|Replace probe features with updated ones');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_i.sql|Translate sequence region ids of annotated features');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_j.sql|Replace annotated features with updated ones');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_k.sql|Translate sequence region ids of external features');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_l.sql|Replace external features with updated ones');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_m.sql|Translate sequence region ids of mi rna target features');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_n.sql|Replace mi rna target features with updated ones');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_o.sql|Translate sequence region ids of motif features');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_p.sql|Replace motif features with updated ones');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_q.sql|Drop seq_region table');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_r.sql|Translate coord_system_ids in meta_coord table');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_s.sql|Replace meta coord table with the updated table');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_t.sql|Drop coord_system table');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_u.sql|Set default gender to unknown for epigenomes');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_v.sql|Create read_file table and populate it');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_w.sql|Create read_file_experimental_configuration table and populate it');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_x.sql|Rename result_set to alignment in various tables and columns');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_y.sql|Rename annotated_feature to peak');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_z.sql|Drop input_subset table');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_za.sql|Move peak_callings from feature_set to peak_calling');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_zb.sql|Rename another table');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_zc.sql|Remove peak_callings from the feature_set table');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_zd.sql|Drop data_set table');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_ze.sql|Drop supporting_set table');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_zf.sql|Drop status tables');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_zg.sql|rename table dbfile_registry to data_file and change the way alignments link to it');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_zh.sql|Add new columns to read_file_experimental_configuration table');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_zi.sql|Create probe_id index on probe_transcript table');
 
 /**
 @table meta_coord
@@ -1533,7 +1605,6 @@ CREATE TABLE `external_synonym` (
 @column secondary_db_name           Secondary database name.
 @column secondary_db_table          Secondary database table.
 @column description                 Description.
-
 
 @see xref
 @see unmapped_object
@@ -1727,86 +1798,4 @@ CREATE TABLE `unmapped_object` (
   KEY `id_idx` (`identifier`(50)),
   KEY `ext_db_identifier_idx` (`external_db_id`,`identifier`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-
-/**
-@table coord_system
-@desc Stores information about the available co-ordinate systems for the species identified through the species_id field.
-For each species, there must be one co-ordinate system that has the attribute "top_level" and one that has the attribute "sequence_level".
-NOTE: This has been extended from the core implementation to support multiple assemblies by referencing multiple core DBs.
-@colour  #000000
-
-@column coord_system_id      Internal identifier
-@column name                 Co-oridinate system name, e.g. 'chromosome', 'contig', 'scaffold' etc.
-@column version              Assembly
-@column rank                 Co-oridinate system rank
-@column attrib               Co-oridinate system attrib (e.g. "top_level", "sequence_level")
-@column schema_build         Indentifies the schema_build version for the source core DB
-@column core_coord_system_id Table ID of the coord_system in the source core DB
-@column species_id           Indentifies the species for multi-species databases
-@column is_current           This flags which coord_system entries are current with respect to mart(/website)
-
-@see seq_region
-@see meta_coord
-
-*/
-
-
-DROP TABLE IF EXISTS `coord_system`;
-CREATE TABLE `coord_system` (
-  `coord_system_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `name` varchar(40) NOT NULL,
-  `version` varchar(255) NOT NULL DEFAULT '',
-  `rank` int(11) NOT NULL,
-  `attrib` set('default_version','sequence_level') DEFAULT NULL,
-  `schema_build` varchar(10) NOT NULL DEFAULT '',
-  `core_coord_system_id` int(10) NOT NULL,
-  `species_id` int(10) NOT NULL DEFAULT '1',
-  `is_current` tinyint(1) DEFAULT '1',
-  PRIMARY KEY (`name`,`version`,`schema_build`,`species_id`),
-  KEY `name_version_idx` (`name`,`version`),
-  KEY `coord_species_idx` (`species_id`),
-  KEY `coord_system_id_idx` (`coord_system_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
--- Currently does not use attrib or rank
-
-
-/**
-@table seq_region
-@desc Stores information about sequence regions from various core DBs.
-@colour  #000000
-
-@column seq_region_id            Internal identifier.
-@column name                     Sequence region name.
-@column coord_system_id          Foreign key references to the @link coord_system table.
-@column core_seq_region_id       Table ID of the seq_region in the source core DB
-@column schema_build             Indentifies the schema_build version for the source core DB
-
-@see coord_system
-*/
-
-
-
-DROP TABLE IF EXISTS `seq_region`;
-CREATE TABLE `seq_region` (
-  `seq_region_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `name` varchar(255) NOT NULL,
-  `coord_system_id` int(10) unsigned NOT NULL,
-  `core_seq_region_id` int(10) unsigned NOT NULL,
-  `schema_build` varchar(10) NOT NULL DEFAULT '',
-  PRIMARY KEY (`name`,`schema_build`,`coord_system_id`),
-  KEY `coord_system_id` (`coord_system_id`),
-  KEY `seq_region_id_idx` (`seq_region_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
--- it maybe possible to have 2 seq_regions on different levels with the same name
--- hence schema_build denormalisation
-
--- Name is only required to enable us to add new seq_regions to the correct seq_region_id
--- It will never be used to retrieve a slice as we do that via the core DB
--- Usage: Pull back seq_region_id based schema_build and core_seq_region_id
-
-
-
 
