@@ -230,57 +230,6 @@ sub fetch_all_by_display_label {
   return $self->generic_fetch($constraint);
 }
 
-
-
-
-=head2 _get_coord_system_ids
-
-  Arg [1]    : optional - ARRAYREF of Bio::EnsEMBL::Funcgen::CoordSystem objects
-  Example    : my $cs_ids = $self->_get_coord_system_ids([$cs1, $cs2], ...);
-  Description: Returns the IDs of the CoordSystems specified or all default CoordSystems.
-  Returntype : ARRAYREF
-  Exceptions : Throws if CoordSystem object are not stored and valid
-  Caller     : BaseFeatureAdaptor.pm
-  Status     : At risk
-
-=cut
-
-#Can we remove the need for this by restricting the sr cache to default entries?
-
-sub _get_coord_system_ids{
-  my ($self, $coord_systems) = @_;
-
-  my @cs_ids;
-
-  if ($coord_systems) {
-
-    if (ref($coord_systems) eq 'ARRAY' &&
-        (scalar(@$coord_systems) >0)) {
-
-      foreach my $cs (@$coord_systems) {
-        $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::CoordSystem', $cs);
-        push @cs_ids, $cs->dbID;
-      }
-    } else {
-      throw('CoordSystems parameter must be an arrayref of one or more Bio::EnsEMBL::Funcgen::CoordSystems');
-    }
-  } else {
-
-    #Get current default cs's
-    foreach my $cs (@{$self->db->get_FGCoordSystemAdaptor->fetch_all($self->db->dnadb, 'DEFAULT')}) {
-      push @cs_ids, $cs->dbID;
-    }
-  }
-
-  #This should never happen
-  if (scalar(@cs_ids) == 0) {
-    throw('Could not find any default CoordSystems');
-  }
-
-  return \@cs_ids;
-}
-
-
 =head2 _count_features_by_field_id
 
   Arg [1]    : string     - table field to count

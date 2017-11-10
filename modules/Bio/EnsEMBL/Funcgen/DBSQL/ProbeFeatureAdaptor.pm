@@ -81,7 +81,7 @@ my $final_clause = $true_final_clause;
 =cut
 
 sub fetch_all_by_Probe {
-  my ($self, $probe, $coord_systems) = @_;
+  my ($self, $probe) = @_;
 
   if (! (ref($probe) && $probe->isa('Bio::EnsEMBL::Funcgen::Probe'))) {
     throw('fetch_all_by_Probe requires a Bio::EnsEMBL::Funcgen::Probe object');
@@ -91,7 +91,7 @@ sub fetch_all_by_Probe {
     throw('fetch_all_by_Probe requires a stored Bio::EnsEMBL::Funcgen::Probe object');
   }
 
-  return $self->fetch_all_by_probe_id($probe->dbID, $coord_systems);
+  return $self->fetch_all_by_probe_id($probe->dbID);
 }
 
 =head2 fetch_all_by_probe_id
@@ -107,24 +107,18 @@ sub fetch_all_by_Probe {
 =cut
 
 sub fetch_all_by_probe_id {
-  my ($self, $pid, $coord_systems) = @_;
+  my ($self, $pid) = @_;
 
   if ( ! defined $pid ) {
     throw('Need to specify a probe _id');
   }
 
-  my @cs_ids = @{$self->_get_coord_system_ids($coord_systems)};
-  $self->_tables([['seq_region', 'sr']]);
-
-  my $cs_ids = join(', ', @cs_ids);
-  my $constraint = " pf.probe_id=$pid AND pf.seq_region_id=sr.seq_region_id and sr.coord_system_id IN ($cs_ids)";
+  my $constraint = " pf.probe_id=$pid";
   $final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;
-
 
   my $features = $self->generic_fetch($constraint);
   $self->reset_true_tables;
   $final_clause = $true_final_clause;
-
 
   return $features;
 }
@@ -146,20 +140,20 @@ sub fetch_all_by_probe_id {
 
 
 sub fetch_all_by_probeset_name {
-	my ($self, $probeset, $coord_systems) = @_;
+	my ($self, $probeset) = @_;
 
 	if (! $probeset) {
 	  throw('fetch_all_by_probeset requires a probeset name argument');
 	}
 
-	#Restrict to default coord_systems
-	#Can we remove the need for this by restricting the sr cache to default entries?
-	my @cs_ids = @{$self->_get_coord_system_ids($coord_systems)};
-    $self->_tables([['probe_set', 'ps'], ['seq_region', 'sr'], [ 'probe',   'p' ]]);
+    $self->_tables([['probe_set', 'ps'], [ 'probe',   'p' ]]);
     
 	#Need to protect against SQL injection here due to text params
-	my $cs_ids = join(', ', @cs_ids);
-	my $constraint = " ps.name=? AND ps.probe_set_id=p.probe_set_id AND pf.seq_region_id=sr.seq_region_id and sr.coord_system_id IN ($cs_ids) and pf.probe_id = p.probe_id";
+	my $constraint = join " and ", (
+        "ps.name = ?",
+        "ps.probe_set_id = p.probe_set_id",
+        "pf.probe_id = p.probe_id",
+    );
 	$final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;
 
 	$self->bind_param_generic_fetch($probeset,  SQL_VARCHAR);
@@ -185,16 +179,12 @@ sub fetch_all_by_probeset_name {
 =cut
 
 sub fetch_all_by_ProbeSet {
-	my ($self, $pset, $coord_systems) = @_;
+	my ($self, $pset) = @_;
 	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ProbeSet', $pset);
-	#Restrict to default coord_systems
-	#Can we remove the need for this by restricting the sr cache to default entries?
 
-	my @cs_ids = @{$self->_get_coord_system_ids($coord_systems)};
-    $self->_tables([['seq_region', 'sr']]);
+    $self->_tables([[ 'probe',   'p' ]]);
 
-	my $cs_ids = join(', ', @cs_ids);
-	my $constraint = ' p.probe_set_id='.$pset->dbID." AND pf.seq_region_id=sr.seq_region_id and sr.coord_system_id IN ($cs_ids)";
+	my $constraint = ' pf.probe_id = p.probe_id and p.probe_set_id = ' . $pset->dbID;
 	$final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;
 
 	my $features = $self->generic_fetch($constraint);
