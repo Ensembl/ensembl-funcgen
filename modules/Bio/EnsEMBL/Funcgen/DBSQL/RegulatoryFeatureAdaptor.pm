@@ -348,7 +348,9 @@ sub _objs_from_sth {
     my ($slice, $seq_region_name) = $fetch_slice_with_cache->($seq_region_id);
     
     if ($mapper) {
-    
+      # HACK to prevent error messages on the website until we fix this properly.
+      return;
+      
       # If we are here, that means that there is a feature on a seq region 
       # that is not toplevel.
       #
