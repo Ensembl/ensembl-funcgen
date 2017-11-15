@@ -32,7 +32,7 @@ CREATE TABLE `read_file_experimental_configuration` (
   KEY `experiment_idx` (`experiment_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
-insert into read_file_experimental_configuration (
+insert ignore into read_file_experimental_configuration (
   read_file_id,
   experiment_id,
   biological_replicate,
