@@ -349,7 +349,7 @@ sub _objs_from_sth {
     
     if ($mapper) {
       # HACK to prevent error messages on the website until we fix this properly.
-      return;
+      return [];
       
       # If we are here, that means that there is a feature on a seq region 
       # that is not toplevel.
