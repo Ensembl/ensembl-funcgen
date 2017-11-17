@@ -1100,34 +1100,34 @@ sub fetch_all {
 # }
 # 
 # 
-# =head2 build_feature_class_name
-# 
-#   Arg[1]     : String - feature_class e.g. annotated, dna_methylation, regulatory etc.
-#   Example    : my $fclass_name = $adaptor->build_feature_class_name;
-#   Description: Builds the full feature class name for a given feature class.
-#   Returntype : String
-#   Exceptions : None
-#   Caller     : FeatureSet::get_FeatureAdaptor and Set::feature_class_name
-#   Status     : Stable
-# 
-# =cut
-# 
-# sub build_feature_class_name{
-#   my ($self, $fclass) = @_;
-# 
-#   if(! defined $fclass){
-#     throw('You must pass a feature class argument to build the feature class name');
-#   }
-# 
-#   my @words = split('_', $fclass);
-# 
-#   foreach my $word(@words){
-#     $word = ucfirst($word);
-#     $word = 'DNA' if $word eq 'Dna';
-#   }
-# 
-#   return join('', (@words, 'Feature') );
-# }
+=head2 build_feature_class_name
+
+  Arg[1]     : String - feature_class e.g. annotated, dna_methylation, regulatory etc.
+  Example    : my $fclass_name = $adaptor->build_feature_class_name;
+  Description: Builds the full feature class name for a given feature class.
+  Returntype : String
+  Exceptions : None
+  Caller     : FeatureSet::get_FeatureAdaptor and Set::feature_class_name, webcode fails without this
+  Status     : Stable
+
+=cut
+
+sub build_feature_class_name{
+  my ($self, $fclass) = @_;
+
+  if(! defined $fclass){
+    throw('You must pass a feature class argument to build the feature class name');
+  }
+
+  my @words = split('_', $fclass);
+
+  foreach my $word(@words){
+    $word = ucfirst($word);
+    $word = 'DNA' if $word eq 'Dna';
+  }
+
+  return join('', (@words, 'Feature') );
+}
 
 
 # 
