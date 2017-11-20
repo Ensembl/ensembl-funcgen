@@ -47,61 +47,6 @@ use Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor; #DBI sql_types import
 
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetAdaptor);
 
-=head2 fetch_all_by_feature_class
-  Arg [1]    : String - feature class i.e. 'annotated', 'regulatory', 'segmentation', 'mirna' or 'external'
-  Arg [2]    : String (optional) - status e.g. 'DISPLAYABLE'
-  Arg [2]    : Bio::EnsEMBL::Funcgen::Epigenome (optional) or a HASH parameters
-               containing contraint config e.g.
-                   $feature_set_adaptor->fetch_all_by_feature_class
-                                           ('annotated',
-                                             {'constraints' =>
-                                               {
-                                               epigenomes     => [$epigenome], #Bio::EnsEMBL::Funcgen::Epigenome
-                                               projects       => ['ENCODE'],
-                                               evidence_types => ['Hists & Pols'],
-                                               feature_types  => [$ftype], #Bio::EnsEMBL::Funcgen::FeatureType
-                                               }
-                                             });
-  Example    : my @fsets = @{$fs_adaptopr->fetch_all_by_feature_class('annotated')};
-  Description: Retrieves FeatureSet objects from the database based on feature_set type.
-  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::FeatureSet objects
-  Exceptions : Throws if type not defined
-  Caller     : General
-  Status     : At Risk - Move status to params hash
-=cut
-
-sub fetch_all_by_feature_class {
-  my ($self, $type, $status, $params) = @_;
-
-  throw('Must provide a feature_set type') if(! defined $type);
-  my $sql = "fs.type = '".$type."'";
-
-  if (defined $params) {        #Some redundancy over $epigenome arg and $params epigenome
-
-    if ( ref($params) eq 'Bio::EnsEMBL::Funcgen::Epigenome') {
-      $params = {constraints => {epigenomes => [$params]}};
-    } elsif (ref($params) ne 'HASH') {
-      throw('Argument must be a Bio::EnsEMBL::Funcgen::Epigenome or a params HASH');
-    }
-  }
-
-
-  if ($status) {
-    $params->{constraints}{states} = [ $status ];
-  }
-
-  #Deal with params constraints
-  my $constraint = $self->compose_constraint_query($params);
-  $sql .=  " AND $constraint " if $constraint;
-
-
-  #Get result and reset true tables
-  my $result = (defined $sql) ? $self->generic_fetch($sql) : [];
-  $self->reset_true_tables;
-
-  return $result;
-}
-
 =head2 fetch_by_name
 
   Arg [1]    : string - name of FeatureSet
@@ -168,8 +113,79 @@ sub _columns {
 			   fs.description fs.display_label);
 }
 
+=head2 fetch_all_by_feature_class
+  Arg [1]    : String - feature class i.e. 'annotated', 'regulatory', 'segmentation', 'mirna' or 'external'
+  Arg [2]    : String (optional) - status e.g. 'DISPLAYABLE'
+  Arg [2]    : Bio::EnsEMBL::Funcgen::Epigenome (optional) or a HASH parameters
+               containing contraint config e.g.
+                   $feature_set_adaptor->fetch_all_by_feature_class
+                                           ('annotated',
+                                             {'constraints' =>
+                                               {
+                                               epigenomes     => [$epigenome], #Bio::EnsEMBL::Funcgen::Epigenome
+                                               projects       => ['ENCODE'],
+                                               evidence_types => ['Hists & Pols'],
+                                               feature_types  => [$ftype], #Bio::EnsEMBL::Funcgen::FeatureType
+                                               }
+                                             });
+  Example    : my @fsets = @{$fs_adaptopr->fetch_all_by_feature_class('annotated')};
+  Description: Retrieves FeatureSet objects from the database based on feature_set type.
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::FeatureSet objects
+  Exceptions : Throws if type not defined
+  Caller     : General
+  Status     : At Risk - Move status to params hash
+=cut
+
+sub fetch_all_by_feature_class {
+  my ($self, $type, $status, $params) = @_;
+
+  throw('Must provide a feature_set type') if(! defined $type);
+  my $sql = "fs.type = '".$type."'";
+
+  if (defined $params) {        #Some redundancy over $epigenome arg and $params epigenome
+
+    if ( ref($params) eq 'Bio::EnsEMBL::Funcgen::Epigenome') {
+      $params = {constraints => {epigenomes => [$params]}};
+    } elsif (ref($params) ne 'HASH') {
+      throw('Argument must be a Bio::EnsEMBL::Funcgen::Epigenome or a params HASH');
+    }
+  }
 
 
+  if ($status) {
+    $params->{constraints}{states} = [ $status ];
+  }
+
+  #Deal with params constraints
+  my $constraint = $self->compose_constraint_query($params);
+  $sql .=  " AND $constraint " if $constraint;
+
+
+  #Get result and reset true tables
+  my $result = (defined $sql) ? $self->generic_fetch($sql) : [];
+  $self->reset_true_tables;
+
+  return $result;
+}
+
+=head2 fetch_all_displayable_by_type
+  Arg [1]    : String - Type of feature set i.e. 'annotated', 'regulatory' or 'supporting'
+  Arg [2]    : Bio::EnsEMBL::Funcgen::Epigenome (optional) or parameters HASH
+  Example    : my @fsets = $fs_adaptopr->fetch_all_by_type('annotated');
+  Description: Wrapper method for fetch_all_by_type
+  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::FeatureSet objects
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+=cut
+
+sub fetch_all_displayable_by_type {
+    my ($self, $type, $epigenome_or_params) = @_;
+
+    #Move status to config hash
+    $self->fetch_all_by_feature_class($type, 'DISPLAYABLE', $epigenome_or_params);
+
+}
 
 =head2 _objs_from_sth
 
