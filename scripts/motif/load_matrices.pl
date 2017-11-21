@@ -77,7 +77,7 @@ sub main {
         -user   => 'ensadmin',
         -pass   => 'ensembl',
         -port   => 4526,
-        -dbname => 'ilavidas_motif_homo_sapiens_funcgen_89_38'
+        -dbname => 'ilavidas_motif_2_homo_sapiens_funcgen_89_38'
     );
 
     # ---------------
@@ -241,7 +241,7 @@ sub store_binding_matrix {
 
         $binding_matrix = Bio::EnsEMBL::Funcgen::BindingMatrix->new(
             -NAME        => $matrix_name,
-            -THRESHOLD   => 0.1,
+            -THRESHOLD   => 4.4,
             -SOURCE      => $source,
             -FREQUENCIES => $frequencies,
             -ASSOCIATED_TRANSCRIPTION_FACTORS =>

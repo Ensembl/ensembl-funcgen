@@ -16,12 +16,14 @@ use Bio::EnsEMBL::Funcgen::MotifFeature;
 main();
 
 sub main {
+    my $job_index = $ENV{'LSB_JOBINDEX'};
+
     my $funcgen_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
         -host   => 'mysql-ens-reg-prod-1.ebi.ac.uk',
         -user   => 'ensadmin',
         -pass   => 'ensembl',
         -port   => 4526,
-        -dbname => 'ilavidas_motif_homo_sapiens_funcgen_89_38'
+        -dbname => 'ilavidas_motif_2_homo_sapiens_funcgen_89_38'
     );
 
     my $core_adaptor = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
@@ -32,8 +34,12 @@ sub main {
         -dbname  => 'homo_sapiens_core_90_38',
     );
 
-    my $moods_output_file
-        = '/hps/nobackup/production/ensembl/ilavidas/motif/moods_output/CEBPG_CREB3L1_AS_TGACTT40NGGT_NGCCACGCAAYN_m1_c3.out';
+    my $moods_output_dir = '/hps/nobackup/production/ensembl/ilavidas/motif/moods_output/';
+    opendir (my $dirh, $moods_output_dir);
+    my @files = grep {!/^\./} readdir $dirh;
+
+    my $moods_output_file = $files[$job_index-1];
+
 
     my ($binding_matrix_name) = fileparse($moods_output_file);
     $binding_matrix_name =~ s/\.out//g;
