@@ -406,31 +406,6 @@ sub _logic_name_to_constraint {
   return $constraint;
 }
 
-
-
-=head2 _default_where_clause
-
-  Args       : None
-  Example    : None
-  Description: PROTECTED implementation of superclass abstract method.
-               Returns an additional table joining constraint to use for
-               queries.
-  Returntype : List of strings
-  Exceptions : None
-  Caller     : Internal
-  Status     : At Risk
-
-=cut
-
-#This is to facilitate fetches based on feature_set fields
-#but we could remove this and add this via _tables and the constraint methods
-#as it's not strictly a part of the data model for set features
-
-# sub _default_where_clause {
-#   return $_[0]->_main_table->[1].'.feature_set_id = fs.feature_set_id';
-# }
-
-
 =head2 _final_clause
 
   Args       : None
