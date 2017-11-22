@@ -357,6 +357,7 @@ sub _objs_from_sth {
 
 	  # Remap the feature coordinates to another coord system if a mapper was provided
 	  if ($mapper) {
+	  return [];
       throw("Not yet implmented mapper, check equals are Funcgen calls too!");
 
       ($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand)
