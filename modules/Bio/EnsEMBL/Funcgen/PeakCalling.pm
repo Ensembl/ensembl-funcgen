@@ -205,6 +205,10 @@ sub fetch_Epigenome {
     return $epigenome;
 }
 
+sub fetch_Experiment {
+  return shift->_generic_fetch('experiment', 'get_ExperimentAdaptor', '_experiment_id');
+}
+
 =head2 fetch_source_label
 
   Example    : my $source_label = $peak_calling->fetch_source_label;
