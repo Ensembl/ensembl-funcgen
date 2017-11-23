@@ -94,15 +94,7 @@ sub _fetch_all_by_constraints {
         }
       }
     }
-    
     my $constraint = join ' and ', @constraints;
-    
-    print STDERR "\n";
-    use Data::Dumper;
-    print STDERR Dumper($constraint_hash);
-    print STDERR $constraint;
-    print STDERR "\n";
-    
     return $self->fetch_all($constraint);
 }
 
