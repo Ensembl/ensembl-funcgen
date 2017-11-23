@@ -248,13 +248,26 @@ sub fetch_all {
 
     if($constraint) { 
         # in case $constraint contains any kind of JOIN (regular, LEFT, RIGHT, etc) do not put WHERE in front:
-        $sql .= (($constraint=~/\bJOIN\b/i or $constraint=~/^LIMIT|ORDER|GROUP/) ? ' ' : ' WHERE ') . $constraint;
+        $sql .= (($constraint=~/\bJOIN\b/ or $constraint=~/^LIMIT|ORDER|GROUP/) ? ' ' : ' WHERE ') . $constraint;
     }
 
     #warn "SQL: $sql\n";
 
     my $sth = $self->prepare($sql);
-    $sth->execute(@$parameters);
+    eval {
+      $sth->execute(@$parameters);
+    };
+    if ($@) {
+      throw(
+      "Error executing sql:\n\n"
+      . "\t$sql\n\n"
+      . "With these parameters:\n\n"
+      . "\t(" . join(',', @$parameters) . ")\n\n"
+      . "The error message is:\n\n"
+      . "\t$@\n"
+      );
+    }
+
 
     my $result_list_ref = [];
     while (my $hashref = $sth->fetchrow_hashref) {
