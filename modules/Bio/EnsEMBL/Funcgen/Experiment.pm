@@ -314,7 +314,7 @@ sub get_control{
 
 sub archive_id { return shift->{archive_id};  }
 
-=head2 source_info
+=head2 _source_info
 
   Example    : my $source_info = $exp->source_info;
   Description: Getter for the experiment source info i.e. [[ $label, $url ]]
@@ -325,42 +325,19 @@ sub archive_id { return shift->{archive_id};  }
 
 =cut
 
-sub source_info{
+sub _source_info {
   my $self = shift;
 
   if(! defined $self->{source_info}){
-    #could have data_url as highest priority here
-    #but we need to ensure removal when adding archive ids
-    #so we link to the archive and not the old data url
-
     my $exp_group = $self->experimental_group;
-    my @source_info;
     my ($proj_name, $proj_link);
 
-    if($exp_group->is_project){
+    if($exp_group->is_project) {
       $proj_name = $exp_group->name;
       $proj_link = $exp_group->url;
+      $self->{source_info} = [[$proj_name, $proj_link]];
     }
-
-
-    if(defined $self->archive_id ){
-      #Need to handled comma separated values in here
-
-      foreach my $archive_id(split/,/, $self->archive_id){
-
-        push @source_info, [$archive_id, $self->display_url];
-        #source_link can be undef here as archive_id overrides display url
-        #undef links will automatically go to the SRA
-        #If multiple IDs exists, they will all use the same display_url
-      }
-    }
-    elsif(defined $proj_name){
-      push @source_info, [$proj_name, ($self->display_url || $proj_link)];
-    }
-
-    $self->{source_info} = \@source_info;
   }
-
   return $self->{source_info};
 }
 
