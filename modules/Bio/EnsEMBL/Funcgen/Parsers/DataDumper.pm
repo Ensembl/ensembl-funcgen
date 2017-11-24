@@ -47,7 +47,12 @@ sub parse {
   
   my $data_dumper_file = $param->{data_dumper_file};
   my $call_back        = $param->{call_back};
-
+  
+  if (! -e $data_dumper_file) {
+    use Bio::EnsEMBL::Utils::Exception qw( throw );
+    throw("The file $data_dumper_file does not exist!");
+  }
+  
   local $/ = ";\n";
   my $in;
   open $in, $data_dumper_file;
