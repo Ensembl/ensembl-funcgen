@@ -179,6 +179,7 @@ sub check_probe_feature {
   if ($must_build_summary) {
     $summary = 
         "Has passed: $has_passed\n"
+      . "probe_feature = " . Dumper($probe_feature)
       . "Cigar string:" . $probe_feature->cigar_string . "\n"
       . "Sequence in genome: " . (join '..', @matched_sequence_parts) . "\n"
       . "Probe sequence:     $probe_sequence\n";
