@@ -17,12 +17,13 @@
 use strict;
 use warnings;
 use Test::More;
-use Bio::EnsEMBL::Funcgen::AnnotatedFeature;
+use Bio::EnsEMBL::Funcgen::Peak;
 use Bio::EnsEMBL::Test::MultiTestDB;
+use Data::Printer;
 
 BEGIN {
     $| = 1;
-    use_ok('Bio::EnsEMBL::Funcgen::AnnotatedFeature');
+    use_ok('Bio::EnsEMBL::Funcgen::Peak');
 }
 
 #obtain Adaptors for dnabb and funcgen databases
@@ -34,10 +35,10 @@ our $verbose = 0;
 
 #obtain Adaptors
 my $fset_adaptor  = $db->get_adaptor('featureset');
-my $af_adaptor    = $db->get_adaptor('annotatedfeature');
+my $af_adaptor    = $db->get_adaptor('peak');
 my $ftype_adaptor = $db->get_FeatureTypeAdaptor;
 my $slice_adaptor = $db->get_adaptor("slice");
-
+p $db;
 #create a test slice object
 my $slice = $slice_adaptor->fetch_by_region( undef, 1 );
 
@@ -115,8 +116,8 @@ my $anno_feature = Bio::EnsEMBL::Funcgen::AnnotatedFeature->new(
 
 ok( defined $anno_feature, 'new object created' );
 
-ok( $anno_feature->isa('Bio::EnsEMBL::Funcgen::AnnotatedFeature'),
-    "the object belongs to the right class - AnnotatedFeature"
+ok( $anno_feature->isa('Bio::EnsEMBL::Funcgen::Peak'),
+    "the object belongs to the right class - Peak"
 );
 
 is( $anno_feature->score, 1.02, 'score () method works' );

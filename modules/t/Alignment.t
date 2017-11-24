@@ -22,7 +22,7 @@ use Test::More                     qw( no_plan );
 use Data::Dumper                   qw( Dumper );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Utils::Scalar    qw( check_ref );
-use Bio::EnsEMBL::Funcgen::ResultSet;
+use Bio::EnsEMBL::Funcgen::Alignment;
 use Bio::EnsEMBL::Test::MultiTestDB;
 use Bio::EnsEMBL::Test::TestUtils; # warns_like test_getter_setter
 
@@ -31,7 +31,7 @@ use Test::Exception;  # throws_ok # This only work when Error objects are used
 # ---------------
 # Module compiles
 # ---------------
-BEGIN { use_ok('Bio::EnsEMBL::Funcgen::ResultSet'); }
+BEGIN { use_ok('Bio::EnsEMBL::Funcgen::Alignment'); }
 
 # ------------------------------
 # Setup test database connection
@@ -59,7 +59,7 @@ my $epi_a   = $db->get_adaptor("epigenome");
 # ----------------
 my $analysis       = $aa->fetch_by_logic_name('SWEmbl_R0005_IDR');
 my $feature_type   = $fta->fetch_by_name('CTCF');
-my $new_result_set = Bio::EnsEMBL::Funcgen::ResultSet->new(
+my $new_result_set = Bio::EnsEMBL::Funcgen::Alignment->new(
     -analysis      => $analysis,
     -feature_class => 'result',
     -feature_type  => $feature_type,
@@ -71,12 +71,12 @@ my $new_result_set = Bio::EnsEMBL::Funcgen::ResultSet->new(
 
 isa_ok(
     $new_result_set,
-    'Bio::EnsEMBL::Funcgen::ResultSet',
-    'ResultSet constructor result type'
+    'Bio::EnsEMBL::Funcgen::Alignment',
+    'Alignment constructor result type'
 );
 
 throws_ok {
-    my $new_result_set = Bio::EnsEMBL::Funcgen::ResultSet->new(
+    my $new_result_set = Bio::EnsEMBL::Funcgen::Alignment->new(
         -analysis      => $analysis,
         -feature_class => 'result',
         -feature_type  => $feature_type,
@@ -91,7 +91,7 @@ qr/You need to pass a valid -table_name/,
 my $iss = $issa->fetch_by_name('SRR037563');
 
 throws_ok {
-    my $new_result_set = Bio::EnsEMBL::Funcgen::ResultSet->new(
+    my $new_result_set = Bio::EnsEMBL::Funcgen::Alignment->new(
         -analysis      => $analysis,
         -feature_class => 'result',
         -feature_type  => $feature_type,
@@ -114,19 +114,19 @@ my $exp      = $exp_a->fetch_by_name($exp_name);
 #   }
     
 #   #eval { @rsets = @{$rsa->fetch_all_by_Experiment($exp)} };
-#   #ok(! $@, "ResultSetAdaptor::fetch_all_by_Experiment\t$@");
+#   #ok(! $@, "AlignmentAdaptor::fetch_all_by_Experiment\t$@");
 #   # No point in evaling as we depend on @4rsets below
 #   # Let's just let it fail here for now, until we can be bothered to skip appropriately?
-#   #ok(@rsets = @{$rsa->fetch_all_by_Experiment($exp)}, 'ResultSetAdaptor::fetch_all_by_Experiment');
+#   #ok(@rsets = @{$rsa->fetch_all_by_Experiment($exp)}, 'AlignmentAdaptor::fetch_all_by_Experiment');
 #   #This is mostly null and void now as it is testing ResultFeature stuff which has been striped out
 
 #   my @rsets =  @{$rsa->fetch_all_by_Experiment($exp)};
 
 #   is(scalar(@rsets), 1,
-#    'ResultSetAdaptor::fetch_all_by_Experiment returns expected number of ResultSets');
+#    'AlignmentAdaptor::fetch_all_by_Experiment returns expected number of Alignments');
 
 #   my $rset_exp       = $rsets[0]->experiment;
-#   is($rset_exp->dbID, $exp->dbID, 'ResultSet::get_Experiment returns expected Experiment');
+#   is($rset_exp->dbID, $exp->dbID, 'Alignment::get_Experiment returns expected Experiment');
     
  
 #   #TODO
@@ -140,7 +140,7 @@ my $exp      = $exp_a->fetch_by_name($exp_name);
 #   @{ $rsa->fetch_all_by_feature_class('dna_methylation', 
 #                                       {status => 'DISPLAYABLE'}) };
 # if(! (defined $result_set && defined $result_set_2)){
-#   throw('Failed to fetch 2 ResultSets to test, please update ResultSet.t');  
+#   throw('Failed to fetch 2 Alignments to test, please update Alignment.t');  
 # }
 
 # # -----------------
@@ -150,7 +150,7 @@ my $exp      = $exp_a->fetch_by_name($exp_name);
 # my %diffs = %{$result_set->compare_to($result_set)};
 # my $diffs = '';
 # $diffs = "\n".Dumper(\%diffs) if %diffs;
-# ok(! %diffs, 'ResultSet::compare_to self defaults returns no diffs'.$diffs);
+# ok(! %diffs, 'Alignment::compare_to self defaults returns no diffs'.$diffs);
 
 # # redefine methods
 # %diffs = %{$result_set->compare_to($result_set, undef,
@@ -158,26 +158,26 @@ my $exp      = $exp_a->fetch_by_name($exp_name);
 #   [qw(feature_type cell_type analysis get_support)]  
 #   )};
 # $diffs = "\n".Dumper(\%diffs) if %diffs;
-# ok(! %diffs, 'ResultSet::compare_to self redefined methods returns no diffs'.$diffs);
+# ok(! %diffs, 'Alignment::compare_to self redefined methods returns no diffs'.$diffs);
 
 
 # # Unavailable redefined scalar method
 # # This is actually a Storable::compare_scalar_methods test!
 # throws_ok {$result_set->compare_to($result_set, undef, undef, [qw(unavailable_method)] )}
 #   qr/cannot call method/s,
-#   'Storable/ResultSet::compare_to catches unavailable method';
+#   'Storable/Alignment::compare_to catches unavailable method';
 
 # # Invalid redefined scalar method
 # # This is actually a Storable::compare_scalar_methods test!
 # throws_ok {$result_set->compare_to($result_set, undef, [qw(feature_type cell_type analysis get_support)] )}
 #   qr/does not return a SCALAR value or an ARRAY or ARRAYREF of SCALAR values:/s,
-#   'Storable/ResultSet::compare_to catches invalid redefined scalar methods';
+#   'Storable/Alignment::compare_to catches invalid redefined scalar methods';
 
 # # Invalid redefined object method
 # # This is actually a Storable::_compare_method_return_types test!
 # throws_ok {$result_set->compare_to($result_set, undef, undef, [qw(name table_name feature_class get_all_states)] )}
 #   qr/ method does not return Storable\(s\)/s, 
-#   'Storable/ResultSet::compare_to catches invalid redefined storable methods';
+#   'Storable/Alignment::compare_to catches invalid redefined storable methods';
 
 # # COMPLETED testing compare_to
 
@@ -186,7 +186,7 @@ my $exp      = $exp_a->fetch_by_name($exp_name);
 # # ----------------------------------
 # ## START testing reset_relational_attributes 
 
-# # clone ResultSet, so we can change some attrs
+# # clone Alignment, so we can change some attrs
 # my $clone_rset   = bless({%{$result_set}}, ref($result_set));
 # my $alt_ftype    = $result_set->feature_type->adaptor->fetch_by_name('H3K4me3');
 # my $alt_analysis = $result_set->analysis->adaptor->fetch_by_logic_name('AFFY_UTR_ProbeAlign');
@@ -212,25 +212,25 @@ my $exp      = $exp_a->fetch_by_name($exp_name);
 
 # #eq comparisons of obj in scalar context compares mem refs
 # ok( ($clone_rset->analysis eq $alt_analysis),
-#    'ResultSet::reset_relational_attributes reset analysis');
+#    'Alignment::reset_relational_attributes reset analysis');
 
 
 # #todo test support ID differ here
 
 # ok( ($clone_rset->feature_type eq $alt_ftype),
-#    'ResultSet::reset_relational_attributes reset feature_type');
+#    'Alignment::reset_relational_attributes reset feature_type');
 
 # ok( ($clone_rset->cell_type eq $alt_ctype),
-#    'ResultSet::reset_relational_attributes reset ctype');
+#    'Alignment::reset_relational_attributes reset ctype');
    
 # ok((defined $clone_rset->dbID && 
 #    defined $clone_rset->adaptor), 
-#    'ResultSet::reset_relational_attributes no_db_reset');
+#    'Alignment::reset_relational_attributes no_db_reset');
     
 # $clone_rset->reset_relational_attributes(\%relational_params);
 # ok(! (defined $clone_rset->dbID || 
 #       defined $clone_rset->adaptor), 
-#       'ResultSet::reset_relational_attributes with dbID/adaptor reset');
+#       'Alignment::reset_relational_attributes with dbID/adaptor reset');
 
 
 # eval { $clone_rset->reset_relational_attributes(
@@ -243,7 +243,7 @@ my $exp      = $exp_a->fetch_by_name($exp_name);
 
 # # We are not testing the error string here?
 
-# ok($@, 'ResultSet::reset_relational_attributes no -cell_type error');
+# ok($@, 'Alignment::reset_relational_attributes no -cell_type error');
 
 # eval { $clone_rset->reset_relational_attributes(
 #          {  
@@ -252,7 +252,7 @@ my $exp      = $exp_a->fetch_by_name($exp_name);
 #           -cell_type => $result_set->cell_type,
 #          })
 # };
-# ok($@, 'ResultSet::reset_relational_attributes no -feature_type error');
+# ok($@, 'Alignment::reset_relational_attributes no -feature_type error');
 
 # eval { $clone_rset->reset_relational_attributes(
 #          {  
@@ -261,7 +261,7 @@ my $exp      = $exp_a->fetch_by_name($exp_name);
 #           -feature_type => $result_set->feature_type,
 #          })
 # };
-# ok($@, 'ResultSet::reset_relational_attributes no -analysis error');
+# ok($@, 'Alignment::reset_relational_attributes no -analysis error');
 
 # eval { $clone_rset->reset_relational_attributes(
 #          {  
@@ -270,7 +270,7 @@ my $exp      = $exp_a->fetch_by_name($exp_name);
 #           -analysis => $result_set->analysis,
 #          })
 # };
-# ok($@, 'ResultSet::reset_relational_attributes no -support error');
+# ok($@, 'Alignment::reset_relational_attributes no -support error');
 
 
 
@@ -288,34 +288,34 @@ my $exp      = $exp_a->fetch_by_name($exp_name);
 # #let's assume if we have the same size, the we have been successful?
 # ok( ( (scalar(@new_support)) == 1 &&
 #       (scalar(@$orig_support))),
-#     'ResultSet::add_support returns expected size array');
+#     'Alignment::add_support returns expected size array');
     
 # ok( ( ($new_support[0] eq $orig_support->[0])),
-#     'ResultSet::add_support returns expected object');
+#     'Alignment::add_support returns expected object');
 
 # #Duplicate support test has to be done on result_set_2 
 # #to avoid borking the rest of the tests
 # eval { $clone_rset->add_support($orig_support) };
-# ok($@, 'ResultSet::add_support caught duplicate support addition');  
+# ok($@, 'Alignment::add_support caught duplicate support addition');  
 
 # # ------------------
 # # Test dbfile_path()
 # # ------------------
 # # START testing dbfile_path dbfile_data_root etc
 
-# is($rsa->dbfile_data_root, '', 'ResultSetAdaptor default dbfile_data_root is null string');
-# is($rsa->dbfile_data_root('/test/root'), '/test/root', 'ResultSetAdaptor::dbfile_data_root set');
+# is($rsa->dbfile_data_root, '', 'AlignmentAdaptor default dbfile_data_root is null string');
+# is($rsa->dbfile_data_root('/test/root'), '/test/root', 'AlignmentAdaptor::dbfile_data_root set');
 
 # # This no longer updates dynamically
 # is($result_set->dbfile_path, 
 #   '/dna_methylation_feature/AG04449_5mC_ENCODE_Uw/wgEncodeHaibMethylRrbsAg04449UwstamgrowprotSitesfiltered_10.bb',
-#   'ResultSet::dbfile_path');
+#   'Alignment::dbfile_path');
 
 # # So we have to fetch it again now we have set the dbfile_data_root
 # $result_set = $rsa->fetch_all_by_feature_class('dna_methylation', {status => 'DISPLAYABLE'})->[0];
 # is($result_set->dbfile_path, 
 #   '/test/root/dna_methylation_feature/AG04449_5mC_ENCODE_Uw/wgEncodeHaibMethylRrbsAg04449UwstamgrowprotSitesfiltered_10.bb',
-#   'ResultSet::dbfile_path');
+#   'Alignment::dbfile_path');
 # # hide table, store this result set and retest returned values
 
 # ----------------------
@@ -407,7 +407,7 @@ is($new_result_set->get_result_set_input_id(4), undef, 'Test get_result_set_inpu
 # ------------------
 # Test get_support()
 # ------------------
-my $brand_new_result_set = Bio::EnsEMBL::Funcgen::ResultSet->new(
+my $brand_new_result_set = Bio::EnsEMBL::Funcgen::Alignment->new(
         -analysis      => $analysis,
         -feature_class => 'result',
         -feature_type  => $feature_type,

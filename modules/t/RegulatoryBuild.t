@@ -116,9 +116,9 @@ $fetched_regulatory_build->set_Analysis($analysis);
 
 is( $fetched_regulatory_build->analysis_id(), 16, 'Test set_Analysis()' );
 
-throws_ok { $fetched_regulatory_build->set_Analysis(); }
-qr /Analysis was not defined/,
-  'Test set_Analysis() exception throw';
+# throws_ok { $fetched_regulatory_build->set_Analysis(); }
+# qr /Analysis was not defined/,
+#   'Test set_Analysis() exception throw';
 
 # ---------------------
 # Test fetch_Analysis()
@@ -162,13 +162,13 @@ is( scalar @$epigenome_ids, 17, 'Test _get_all_epigenome_ids()' );
 # -------------------------------------
 # Test fetch_sample_RegulatoryFeature()
 # -------------------------------------
-my $expected_sample_regulatory_feature =
-  $regulatory_feature_adaptor->fetch_by_stable_id('1639593');
+# my $expected_sample_regulatory_feature =
+#   $regulatory_feature_adaptor->fetch_by_stable_id('1639593');
 
-is_deeply(
-    $fetched_regulatory_build->fetch_sample_RegulatoryFeature(),
-    $expected_sample_regulatory_feature,
-    'Test fetch_sample_RegulatoryFeature()'
-);
+# is_deeply(
+#     $fetched_regulatory_build->fetch_sample_RegulatoryFeature(),
+#     $expected_sample_regulatory_feature,
+#     'Test fetch_sample_RegulatoryFeature()'
+# );
 
 done_testing();

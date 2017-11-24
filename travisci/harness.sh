@@ -6,9 +6,8 @@ echo "Running test suite"
 echo "Using $PERL5LIB"
 
 #skip these tests
-SKIP_TESTS="--skip MultiTestDB.t,FeatureSet.t,CoordSystem.t,Array_ArrayChip.t,Storable.t,InputSet_Set_BaseAdaptor.t,Channel.t,BaseFeatureAdaptor.t,BindingMatrix_MotifFeature.t,Annotated_SetFeatureAdaptor.t,DNAMethylationFeature.t"
+SKIP_TESTS="--skip Set.t,SetFeature.t,Alignment.t,RegulatoryFeature.t,Probe.t,MirnaTargetFeature.t,ProbeFeature.t,FeatureSet.t,ReadFile.t,feature_class_Set.t,ExternalFeature.t,Peak.t,MultiTestDB.t,FeatureSet.t,Array_ArrayChip.t,Storable.t,InputSet_Set_BaseAdaptor.t,BaseFeatureAdaptor.t,BindingMatrix_MotifFeature.t,Annotated_SetFeatureAdaptor.t,DNAMethylationFeature.t,DataSet.t"
 
-# SetFeature.t,Set.t,SegmentationFeature.t,ResultFeature.t,ProbeSet.t,ProbeFeature.t,MirnaTargetFeature.t,InputSubset.t,ExternalFeature.t,Experiment.t,ExperimentalGroup.t,DNAMethylationFeature.t,DataSet.t,CellType.t,Array.t,ArrayChip.t,AnnotatedFeature.t,Probe.t,feature_class_Set.t,FeatureSet.t,FeatureType.t,ResultSet.t,
 
 if [ "$COVERALLS" = 'true' ]; then
   PERL5OPT='-MDevel::Cover=+ignore,bioperl,+ignore,ensembl-test,+ignore,ensembl,+ignore,\.t$$,+ignore,Adaptor.pm$$,+ignore,EFGUtils.pm$$' perl $PWD/ensembl-test/scripts/runtests.pl -verbose $PWD/modules/t/ $SKIP_TESTS

@@ -127,22 +127,9 @@ is( $exp->archive_id, 'GSEXXX', 'Test archive_id() getter' );
 #     'test_getter_setter Experiment::mage_xml_id'
 # );
 
-# ---------------------
-# Test get_InputSubsets
-# ---------------------
-my $new_exp = $exp_adaptor->fetch_by_name('NHLF_H3K9ac_ENCODE_Broad');
 
-my $expected_is = {};    # expected input subsets
-foreach my $input_subset (
-    @{ $db->get_InputSubsetAdaptor->fetch_all_by_Experiments( [$new_exp] ) } )
-{
-    $expected_is->{ $input_subset->dbID } = $input_subset;
-}
 
-my @sorted_got = sort @{ $new_exp->get_InputSubsets };
-my @sorted_expected = sort @{ [ values %{$expected_is} ] };
 
-is( @sorted_got, @sorted_expected, 'Test get_InputSubsets()' );
 
 # ------------------------------------------------------------------
 # Test get_ExperimentalChips, add_ExperimentalChip,
@@ -164,49 +151,6 @@ my $expected_source_info = [[
 
 # is_deeply($new_exp->source_info(), $expected_source_info, 'Test source_info()');
 
-# ----------------------------------
-# Test reset_relational_attributes()
-# ----------------------------------
-my $epigenome = $db->get_EpigenomeAdaptor->fetch_by_name('U2OS');
 
-my $new_exp_group = Bio::EnsEMBL::Funcgen::ExperimentalGroup->new(
-    -name        => 'new_ebi_test',
-    -location    => 'location',
-    -contact     => 'contact',
-    -url         => 'http://www.ebi.ac.uk/',
-    -is_project  => 0
-);
-
-my $new_feature_type = $db->get_FeatureTypeAdaptor->fetch_by_name('DNase1');
-
-my $params = {
-    -EPIGENOME          => $epigenome,
-    -EXPERIMENTAL_GROUP => $new_exp_group,
-    -FEATURE_TYPE       => $new_feature_type
-};
-
-my $existing_adaptor = $new_exp->adaptor();
-my $existing_dbID    = $new_exp->dbID();
-
-$new_exp->reset_relational_attributes( $params, 1 );
-
-is_deeply(
-    [   $new_exp->epigenome,    $new_exp->experimental_group,
-        $new_exp->feature_type, $new_exp->adaptor(),
-        $new_exp->dbID,
-    ],
-    [   $epigenome,    $new_exp_group, $new_feature_type,
-        $existing_adaptor, $existing_dbID
-    ],
-    'Test reset_relational_attributes()'
-);
-
-$new_exp->reset_relational_attributes($params);
-
-is_deeply(
-    [ $new_exp->adaptor(), $new_exp->dbID, ],
-    [ undef,               undef ],
-    'Test reset_relational_attributes(), adaptor and dbID are undefined as expected'
-);
 
 done_testing();

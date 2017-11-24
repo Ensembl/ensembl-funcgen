@@ -32,7 +32,7 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 # ---------------
 # Module compiles
 # ---------------
-BEGIN { use_ok('Bio::EnsEMBL::Funcgen::InputSubset'); }
+BEGIN { use_ok('Bio::EnsEMBL::Funcgen::ReadFile'); }
 
 # ------------------------------
 # Setup test database connection
@@ -43,7 +43,7 @@ my $epia   = $db->get_adaptor("epigenome");
 my $ea    = $db->get_adaptor("experiment");
 my $fta   = $db->get_adaptor("featuretype");
 my $aa    = $db->get_adaptor("analysis");
-my $issa  = $db->get_adaptor("inputsubset");
+my $issa  = $db->get_adaptor("ReadFile");
 
 # ----------------
 # Test constructor
@@ -55,7 +55,7 @@ my $analysis     = $aa->fetch_by_logic_name('FANTOM_v5');
 my $is_control   = 1;
 
 my $input_subset =
-    Bio::EnsEMBL::Funcgen::InputSubset->new( -name => 'my_new_input_subset',
+    Bio::EnsEMBL::Funcgen::ReadFile->new( -name => 'my_new_input_subset',
                                              -feature_type => $feature_type,
                                              -epigenome   => $epigenome,
                                              -experiment   => $exp,
@@ -64,11 +64,11 @@ my $input_subset =
                                              -replicate    => 1 );
 
 isa_ok( $input_subset,
-        'Bio::EnsEMBL::Funcgen::InputSubset',
-        'InputSubset constructor return type' );
+        'Bio::EnsEMBL::Funcgen::ReadFile',
+        'ReadFile constructor return type' );
 
 throws_ok {
-    my $input_subset = Bio::EnsEMBL::Funcgen::InputSubset->new(
+    my $input_subset = Bio::EnsEMBL::Funcgen::ReadFile->new(
         -name         => 'my_new_input_subset',
         -feature_type => $feature_type,
         # -cell_type    => $cell_type,
@@ -80,7 +80,7 @@ qr/Mandatory parameter -epigenome is not defined/,
     "Test constructor epigenome exception";
 
 throws_ok {
-    my $input_subset = Bio::EnsEMBL::Funcgen::InputSubset->new(
+    my $input_subset = Bio::EnsEMBL::Funcgen::ReadFile->new(
         -name         => 'my_new_input_subset',
         -feature_type => $feature_type,
         -epigenome    => $epigenome,
@@ -92,7 +92,7 @@ qr/Mandatory parameter -experiment is not defined/,
     "Test constructor experiment exception";
 
 throws_ok {
-    my $input_subset = Bio::EnsEMBL::Funcgen::InputSubset->new(
+    my $input_subset = Bio::EnsEMBL::Funcgen::ReadFile->new(
         -name         => 'my_new_input_subset',
         -feature_type => $feature_type,
         -epigenome    => $epigenome,
@@ -107,8 +107,8 @@ qr/Must defined an -is_control parameter/,
 # ------------
 # Test getters
 # ------------
-# is( $input_subset->replicate(),  1, "Test InputSubset::replicate()" );
-is( $input_subset->is_control(), 1, "Test InputSubset::is_control()" );
+# is( $input_subset->replicate(),  1, "Test ReadFile::replicate()" );
+is( $input_subset->is_control(), 1, "Test ReadFile::is_control()" );
 
 # ----------------------------------
 # Test reset_relational_attributes()
@@ -167,6 +167,6 @@ is( $iss->{adaptor}, undef,
 #                             replicate    => "1 - 3" };
 
 # is_deeply( $input_subset->compare_to($new_iss),
-#     $expected_comparison, "Test InputSubset::compare_to()" );
+#     $expected_comparison, "Test ReadFile::compare_to()" );
 
 done_testing();
