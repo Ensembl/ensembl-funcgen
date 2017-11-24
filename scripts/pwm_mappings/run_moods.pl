@@ -76,8 +76,6 @@ use Getopt::Long;
 use Pod::Usage;
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils        qw( open_file );
 use Bio::EnsEMBL::Funcgen::Sequencing::MotifTools qw( run_moods );
-#use Bio::EnsEMBL::Funcgen::Utils::DBAdaptorHelper qw( get_DB_options_config
-#                                                      create_DBConnection_from_options );
 
 #In case we need to pass mapper specific params
 #Getopt::Long::Configure("pass_through"); #Allows unknown options to pass on to @ARGV
