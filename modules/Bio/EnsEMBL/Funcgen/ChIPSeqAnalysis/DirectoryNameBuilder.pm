@@ -90,11 +90,123 @@ sub default_directory_by_table_and_file_type_stored {
   );
 }
 
+use Bio::EnsEMBL::Funcgen::Utils::GoodUtils qw( create_production_name );
+
 sub peaks_output_dir         { return shift->default_directory_by_table_and_file_type        ('peak',      'peaks');  }
-sub bigwig_output_dir        { return shift->default_directory_by_table_and_file_type        ('alignment', 'bigwig'); }
-sub bigwig_output_dir_stored { return shift->default_directory_by_table_and_file_type_stored ('alignment', 'bigwig'); }
-sub bam_output_dir           { return shift->default_directory_by_table_and_file_type        ('alignment', 'bam');    }
-sub bam_output_dir_stored    { return shift->default_directory_by_table_and_file_type_stored ('alignment', 'bam');    }
+
+sub bigwig_output_dir { 
+  my $self = shift;
+  my $experiment = shift;
+  
+  my $group = $experiment->experimental_group;
+  my $group_production_name = create_production_name($group->name);
+  
+  my $epigenome_production_name = $experiment->epigenome->production_name;
+  
+  my $feature_type_name = $experiment->feature_type->name;
+  
+  return File::Spec->catfile(
+    $self->default_directory_by_table_and_file_type ('alignment', 'bigwig'),
+    $group_production_name,
+    $epigenome_production_name,
+    $feature_type_name
+  );
+}
+
+sub bed_output_dir { 
+  my $self = shift;
+  my $experiment = shift;
+  
+  my $group = $experiment->experimental_group;
+  my $group_production_name = create_production_name($group->name);
+  
+  my $epigenome_production_name = $experiment->epigenome->production_name;
+  
+  my $feature_type_name = $experiment->feature_type->name;
+  
+  return File::Spec->catfile(
+    $self->default_directory_by_table_and_file_type ('alignment', 'bed'),
+    $group_production_name,
+    $epigenome_production_name,
+    $feature_type_name
+  );
+}
+
+sub bigwig_output_dir_stored { 
+  my $self = shift;
+  my $experiment = shift;
+  
+  my $group = $experiment->experimental_group;
+  my $group_production_name = create_production_name($group->name);
+  
+  my $epigenome_production_name = $experiment->epigenome->production_name;
+  
+  my $feature_type_name = $experiment->feature_type->name;
+
+  return File::Spec->catfile(
+    $self->default_directory_by_table_and_file_type_stored ('alignment', 'bigwig'),
+    $group_production_name,
+    $epigenome_production_name,
+    $feature_type_name
+  );
+}
+
+sub bam_output_dir { 
+  my $self = shift;
+  my $experiment = shift;
+  
+  my $group = $experiment->experimental_group;
+  my $group_production_name = create_production_name($group->name);
+  
+  my $epigenome_production_name = $experiment->epigenome->production_name;
+  
+  my $feature_type_name = $experiment->feature_type->name;
+
+  return File::Spec->catfile(
+    $self->default_directory_by_table_and_file_type('alignment', 'bam'),
+    $group_production_name,
+    $epigenome_production_name,
+    $feature_type_name
+  );
+}
+
+sub bam_output_dir_stored    { 
+  my $self = shift;
+  my $experiment = shift;
+  
+  my $group = $experiment->experimental_group;
+  my $group_production_name = create_production_name($group->name);
+  
+  my $epigenome_production_name = $experiment->epigenome->production_name;
+  
+  my $feature_type_name = $experiment->feature_type->name;
+  
+  return File::Spec->catfile(
+    $self->default_directory_by_table_and_file_type_stored ('alignment', 'bam'),
+    $group_production_name,
+    $epigenome_production_name,
+    $feature_type_name
+  );
+}
+
+sub peak_calling_output_dir_by_Experiment {
+
+  my $self = shift;
+  my $experiment = shift;
+  
+  my $epigenome = $experiment->epigenome;
+  my $epigenome_production_name = $epigenome->production_name;
+  
+  my $feature_type = $experiment->feature_type;
+  my $feature_type_name = $feature_type->name;
+  
+  my $output_dir = File::Spec->catfile(
+    $self->peaks_output_dir,
+    $epigenome_production_name,
+    $feature_type_name,
+  );
+  return $output_dir;
+}
 
 =head1 quality_check_output_dir
 

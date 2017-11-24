@@ -46,7 +46,8 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Utils::Logger;
 
 my $flagstats_file;
-my $result_set_id;
+# my $result_set_id;
+my $alignment_name;
 my $dry_run;
 my $user;
 my $pass;
@@ -58,7 +59,8 @@ my $bam_file;
 
 my %config_hash = (
   'flagstats_file'  => \$flagstats_file,
-  'result_set_id'   => \$result_set_id,
+#   'result_set_id'   => \$result_set_id,
+  'alignment_name'  => \$alignment_name,
   'dry_run'         => \$dry_run,
   'user'            => \$user,
   'pass'            => \$pass,
@@ -73,7 +75,8 @@ my %config_hash = (
 my $result = GetOptions(
   \%config_hash,
   'flagstats_file=s',
-  'result_set_id=s',
+#   'result_set_id=s',
+  'alignment_name=s',
   'dry_run',
   'user=s',
   'pass=s',
@@ -85,7 +88,7 @@ my $result = GetOptions(
 );
 
 die unless(-e $flagstats_file);
-die unless($result_set_id);
+die unless($alignment_name);
 
 my @tracking_db_connection_details = (
     -user     => $user,
@@ -108,7 +111,9 @@ my $logger = Bio::EnsEMBL::Utils::Logger->new();
 $logger->init_log;
 
 my $dbc = Bio::EnsEMBL::DBSQL::DBConnection->new(@tracking_db_connection_details);
-my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+
+use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
+my $dba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
   -DBCONN => $dbc,  
 );
 my $analysis_adaptor = $dba->get_AnalysisAdaptor();
@@ -138,9 +143,13 @@ create_flagstats_table({
   sql_processor => $sql_processor
 });
 
+my $alignment_adaptor = $dba->get_AlignmentAdaptor();
+my $alignment = $alignment_adaptor->fetch_by_name($alignment_name);
+my $alignment_id = $alignment->dbID;
+
 create_insert_sql({
   analysis_id   => $analysis_id,
-  result_set_id => $result_set_id,
+  alignment_id  => $alignment_id,
   sql_processor => $sql_processor,
 });
 
@@ -154,6 +163,7 @@ sub create_insert_sql {
   
   my $analysis_id   = $param->{analysis_id};
   my $result_set_id = $param->{result_set_id};
+  my $alignment_id  = $param->{alignment_id};
   my $sql_processor = $param->{sql_processor};  
 
   open IN, $flagstats_file;
@@ -192,10 +202,10 @@ sub create_insert_sql {
 	chomp($category);
       }
       
-      my $sql = "INSERT INTO result_set_qc_flagstats "
-      . "(result_set_id, analysis_id, category, qc_passed_reads, qc_failed_reads, path, bam_file) "
+      my $sql = "INSERT INTO alignment_qc_flagstats "
+      . "(alignment_id, analysis_id, category, qc_passed_reads, qc_failed_reads, path, bam_file) "
       . "VALUES "
-      . "($result_set_id, $analysis_id, '$category', $qc_passed_reads, $qc_failed_reads, '$work_dir', '$bam_file');";
+      . "($alignment_id, $analysis_id, '$category', $qc_passed_reads, $qc_failed_reads, '$work_dir', '$bam_file');";
       $sql_processor->($sql);
     } else {
       $logger->debug("Can't parse: " . $current_line . "\n");
@@ -212,17 +222,17 @@ sub create_flagstats_table {
   my $sql_processor = $param->{sql_processor};
 
 my $sql = <<SQL
-CREATE TABLE if not exists `result_set_qc_flagstats` (
-  `result_set_qc_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `result_set_id`      int(10) unsigned,
+CREATE TABLE if not exists `alignment_qc_flagstats` (
+  `alignment_qc_flagstats_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `alignment_id`      int(10) unsigned,
   `analysis_id`        int(10) unsigned,
   `category` varchar(100) NOT NULL,
   `qc_passed_reads`    int(10) unsigned,
   `qc_failed_reads`    int(10) unsigned,
   `path` varchar(512) NOT NULL,
   `bam_file` varchar(512) NOT NULL,
-  PRIMARY KEY (`result_set_qc_id`),
-  UNIQUE KEY `name_exp_idx` (`result_set_qc_id`,`category`)
+  PRIMARY KEY (`alignment_qc_flagstats_id`),
+  UNIQUE KEY `name_exp_idx` (`alignment_id`,`category`)
 );
 SQL
 ;

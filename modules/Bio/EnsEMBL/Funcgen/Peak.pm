@@ -302,7 +302,6 @@ sub summary_as_hash {
       source           => $peak_calling->fetch_Analysis->logic_name,
       seq_region_name  => $slice->seq_region_name,
       start            => $slice->seq_region_start,
-      name            => $slice->seq_region_name,
       end              => $slice->seq_region_end,
       description      => $peak_calling->display_label,
       strand           => $self->strand,

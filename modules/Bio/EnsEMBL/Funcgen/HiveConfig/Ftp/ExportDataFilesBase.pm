@@ -29,7 +29,7 @@ sub create_dbfile_registry_path_parameter {
       my $dbfile_registry_path_list = $dbfile_registry_path;
       my @dbfile_registry_path_parameters;
       foreach my $current_dbfile_registry_path (@$dbfile_registry_path_list) {
-        push @dbfile_registry_path_parameters, "  --dbfile_registry_path $current_dbfile_registry_path/#species#/#assembly#";
+        push @dbfile_registry_path_parameters, "  --dbfile_registry_path $current_dbfile_registry_path";
       }
       $dbfile_registry_path_parameter = join "\\\n", @dbfile_registry_path_parameters;
     }

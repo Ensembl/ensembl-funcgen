@@ -45,6 +45,10 @@ sub _tables {
   return ['peak', 'p']
 }
 
+sub insertion_method {
+    return 'insert ignore'
+}
+
 sub _columns {
   return qw(
     p.peak_id               p.seq_region_id
@@ -68,4 +72,71 @@ sub fetch_all_by_Slice_PeakCalling {
   return $features;
 }
 
+sub _bulk_export_to_bed_by_PeakCalling {
+
+  my $self = shift;
+  my $peak_calling = shift;
+  my $bed_fh       = shift;
+  
+  my $species = $self->db->species;
+  
+  if ($species eq 'DEFAULT') {
+    die;
+  }
+  
+  my $slice_adaptor = Bio::EnsEMBL::Registry
+    ->get_adaptor(
+        $species, 
+        'core', 
+        'Slice'
+    );
+
+  my %seq_region_id_to_name_cache;
+
+  $self->sql_helper->execute_no_return(
+    -SQL          => 'select seq_region_id, seq_region_start, seq_region_end from peak where peak_calling_id = ?',
+    -PARAMS       => [ $peak_calling->dbID ],
+    -USE_HASHREFS => 0,
+    -CALLBACK     => sub {
+        my $row = shift;
+        
+        my $seq_region_id = $row->[0];
+        
+        my $seq_region_name;
+        if (exists $seq_region_id_to_name_cache{$seq_region_id}) {
+          $seq_region_name = $seq_region_id_to_name_cache{$seq_region_id};
+        } else {
+          my $current_slice = $slice_adaptor->fetch_by_seq_region_id($seq_region_id);
+          $seq_region_name = $current_slice->seq_region_name;
+          $seq_region_id_to_name_cache{$seq_region_id} = $seq_region_name;
+        }
+        
+        my $bed_line = join "\t", (
+          $seq_region_name,
+          $row->[1],
+          $row->[2],
+        );
+        
+        #use Data::Dumper;
+        $bed_fh->print($bed_line . "\n");
+        return;
+      },
+  );
+}
+
 1;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

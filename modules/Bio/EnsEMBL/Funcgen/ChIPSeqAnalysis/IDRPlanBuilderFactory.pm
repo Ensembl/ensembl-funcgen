@@ -2,11 +2,11 @@ package Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRPlanBuilderFactory;
 
 use strict;
 use Data::Dumper;
-
+use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Constants qw ( :all );
 use Role::Tiny::With;
 with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 
-sub make_idr_plan_builder {
+sub make {
 
   my $self       = shift;
   my $experiment = shift;
@@ -19,26 +19,17 @@ sub make_idr_plan_builder {
   
   my $idr_plan_builder;
   
-  if (
-    $idr_strategy eq Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRStrategy
-      ->SKIP_IDR
-  ) {
+  if ($idr_strategy eq SKIP_IDR) {
     $idr_plan_builder 
       = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRPlanBuilder::SkipIdr
         ->new($experiment);
   }
-  if (
-    $idr_strategy eq Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRStrategy
-      ->RUN_IDR_ON_BIOLOGICAL_REPLICATES
-  ) {
+  if ($idr_strategy eq RUN_IDR_ON_BIOLOGICAL_REPLICATES) {
     $idr_plan_builder 
       = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRPlanBuilder::RunIdrOnBiologicalReplicates
         ->new($experiment);
   }
-  if (
-    $idr_strategy eq Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRStrategy
-      ->RUN_IDR_ON_TECHNICAL_REPLICATES
-  ) {
+  if ($idr_strategy eq RUN_IDR_ON_TECHNICAL_REPLICATES) {
     $idr_plan_builder 
       = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRPlanBuilder::RunIdrOnTechnicalReplicates
         ->new($experiment);
@@ -57,33 +48,29 @@ sub select_idr_strategy {
   my $feature_type = $experiment->feature_type;
   
   if ($feature_type->_creates_broad_peaks) {
-    return Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRStrategy
-      ->SKIP_IDR
+    return SKIP_IDR
   }
 
   my $number_of_biological_replicates = $experiment->count_biological_replicates;
   my $number_of_technical_replicates  = $experiment->count_technical_replicates;
 
   if ($number_of_biological_replicates > 1) {
-    return Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRStrategy
-      ->RUN_IDR_ON_BIOLOGICAL_REPLICATES
+    return RUN_IDR_ON_BIOLOGICAL_REPLICATES
   }
   if (
        ($number_of_biological_replicates == 1)
     && ($number_of_technical_replicates   > 1)
   ) {
-      return Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRStrategy
-        ->RUN_IDR_ON_TECHNICAL_REPLICATES;
+      return RUN_IDR_ON_TECHNICAL_REPLICATES;
   }
   if (
        ($number_of_biological_replicates == 1)
     && ($number_of_technical_replicates  == 1)
   ) {
-      return Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRStrategy
-        ->SKIP_IDR;
+      return SKIP_IDR;
   }
   my $feature_type_name = $feature_type->name;
-  die "Unforseen case! Feature_type: $feature_type_name for experiment: " . $experiment->dbID;
+  die "Unforseen case! Feature_type: $feature_type_name for experiment: " . $experiment->name;
 }
 
 1;

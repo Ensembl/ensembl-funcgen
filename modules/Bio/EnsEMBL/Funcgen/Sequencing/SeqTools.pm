@@ -134,139 +134,38 @@ sub remove_duplicates_from_bam {
   return;
 }
 
-#These are split into _init and _run methods to allow initialisation before running the
-#peak caller proper. This fits well with the fetch_input/run jobs procedure of the hive.
-
-#Can't do this easily, as we don't know exactly what we want to pass through to the
-#PeakCaller. Isn't this already done with run_aligner?
-#Actually, we have acces to get_files_by_format here
-#so we could optionally defined the signal and control files here given the right input
-#Probably to separate out get_alignment_files_by_ResultSet_formats
-#If this is possible, then we can add FeatureSet support here and move all the Analysis
-#processing here from RunPeaks::fetch_input
-
-sub _init_peak_caller{
-  my($peak_pkg, $params, $analysis, $signal_alignment, $control_alignment,
-    $sam_ref_fai,$debug) = rearrange(
-     [qw(peak_module peak_module_params analysis signal_alignment control_alignment
-     sam_ref_fai debug)], @_);
+sub _init_peak_caller {
+  my($params, $analysis, $signal_alignment, $control_alignment,
+    $sam_ref_fai,$debug, $is_half_open) = rearrange(
+     [qw(peak_module_params analysis signal_alignment control_alignment
+     sam_ref_fai debug, is_half_open)], @_);
      
   my (@params_array, $peak_module);
 
-  if(defined $analysis){ #API mode
-
-    if($peak_pkg){
-      throw("Mututally exclusive paramters detected:\n\t-peak_module => $peak_pkg".
-        "\n\t-analysis => $analysis(".$analysis->logic_name.')');
-    }
-
-    assert_ref($params, 'HASH', 'PeakCaller parameters');
-    assert_ref($analysis, 'Bio::EnsEMBL::Analysis');
-
-#     if(! defined $align_prefix){
-#       throw('Must pass an -align_prefix in -analysis mode');
-#     }
-#     
-    my $module = $analysis->module;
-
-    $peak_module = validate_package_path($analysis->module);
-    my $formats = $peak_module->input_formats;
-    #my $filter_format = $self->param_silent('bam_filtered') ? undef : 'bam';
-    #It is currently unsafe to filter here (control clash), so expect filtered file
-
-    #The problem here is that we are returning a hash of files keys on the format
-    #This conversion may cause clashes for fan job which share the same controls
-    #(e.g. peak calling jobs if they require formats other than bam)
-    #Collections jobs will be pre-processed/converted individually before submitting
-    #the slice job.
-    #So here we really only need the first available format
-
-    #Restrict to bam (and bed explicitly for CCAT) for now
-    my $format = 'bam';
-
-    if($formats->[0] ne 'bam'){
-
-      if($analysis->program eq 'CCAT'){
-
-        warn 'Hardcoding CCAT format to bed until CollectionWriter can be made PeakCaller aware wrt to formats';
-        $format = 'bed';
-      }
-      else{
-        throw("It is currently unsafe to use any non-bam format at this point.\n".
-          "This is due to the possibility of filtering/format conversion clashes between parallel\n".
-          "jobs which share the same control files. Please implement PreprocessAlignments to\n".
-          "group jobs by controls and set/handle FILTERING_CONTROL status");
-      }
-    }
-
-    $formats = [$format];
-
-    #May need to specify checksum param separately
-    my $get_files_params = {debug              => $debug,
-                            ref_fai            => $sam_ref_fai,  #Just in case we need to convert
-                            skip_rmdups        => 1, #This will have been done in merge_bams
-                            checksum           => undef,
-                            #Specifying undef here turns on file based checksum generation/validation
-                           };
-
-#     my $align_file = get_files_by_formats($align_prefix,
-#                                          $formats,
-#                                          $get_files_params)->{$format};
-# 
-#     if(! defined $align_file){
-#       throw("Failed to identify file using get_files_by_formats:\n\t".$align_prefix.".${format}");
-#     }
-# 
-#     my $ctrl_file;
-# 
-#     if($control_prefix){
-#       $ctrl_file = get_files_by_formats($control_prefix,
-#                                        $formats,
-#                                        $get_files_params)->{$format};
-#     }
-
-    $params->{-debug}          = $debug;
-    $params->{-align_file}     = $signal_alignment;
-    $params->{-control_file}   = $control_alignment;
-    $params->{-parameters}     = $analysis->parameters;
-    $params->{-program_file} ||= $analysis->program_file;
-    #All the rest are passed in $params from RunPeaks
-    #e.g.
-    #-out_file_prefix
-    #-out_dir
-    #-convert_half_open
-    #-is_half_open
-
-
-    @params_array = %$params; #flatten hash
+  if(! defined $analysis) {
+    die;
   }
-  else{ #Script mode
-    if(! defined $peak_pkg){
-      throw('Must provide a -peak_module or -analysis parameter');
-    }
-    elsif($peak_pkg !~ /::/){
-      #Might this be a path?
-      warn "Full $peak_pkg namespace was not specified, defaulting to:\t".
-        "Bio::EnsEMBL::Funcgen::Sequencing::PeakCaller::$peak_pkg\n";
-      $peak_pkg = "Bio::EnsEMBL::Funcgen::Sequencing::PeakCaller::$peak_pkg";
-    }
 
-    assert_ref($params, 'ARRAY', 'PeakCaller params');
-    
-    @params_array = @$params;
-    
-    $peak_module = validate_package_path($peak_pkg);
-  }
+  assert_ref($params, 'HASH', 'PeakCaller parameters');
+  assert_ref($analysis, 'Bio::EnsEMBL::Analysis');
+
+  my $module = $analysis->module;
+  $peak_module = validate_package_path($analysis->module);
+
+  $params->{-debug}          = $debug;
+  $params->{-align_file}     = $signal_alignment;
+  $params->{-control_file}   = $control_alignment;
+  $params->{-parameters}     = $analysis->parameters;
+  $params->{-is_half_open}   = $is_half_open;
+  $params->{-program_file} ||= $analysis->program_file;
   
-#     use Data::Dumper;
-#     print Dumper(\@params_array);
-#     die;
-  
+  @params_array = %$params; #flatten hash
+
   return $peak_module->new(@params_array);
 }
 
 sub _run_peak_caller{
-  my($pcaller, $max_peaks, $file_types)  = rearrange([qw(peak_caller max_peaks file_types)], @_);
+  my($pcaller, $max_peaks)  = rearrange([qw(peak_caller max_peaks)], @_);
   assert_ref($pcaller, 'Bio::EnsEMBL::Funcgen::Sequencing::PeakCaller');
 
   #Do this first, so we fail early
@@ -276,30 +175,28 @@ sub _run_peak_caller{
 
   $pcaller->run; #eval in caller if required
 
-  if(defined $max_peaks){
-
-    foreach my $file_type(@$file_types){
-      $pcaller->filter_max_peaks($max_peaks, $file_type)
-    }
+  if(defined $max_peaks) {
+    $pcaller->filter_max_peaks($max_peaks);
   }
 
   return;
 }
 
 sub run_peak_caller{
-   my ($max_peaks, $file_types, $debug, $skip_qc) = rearrange([qw(max_peaks file_types debug skip_qc)], @_);
-   my $peak_caller           = _init_peak_caller(@_);
+  my (
+    $max_peaks, 
+    $debug, 
+  ) = rearrange(
+    [ qw(max_peaks debug) ], 
+    @_
+  );
+  my $peak_caller = _init_peak_caller(@_);
 
-   #Pass these explicitly, so we don't pass all the _init_peak_caller params too
-   _run_peak_caller(-peak_caller => $peak_caller,
-                    -max_peaks   => $max_peaks,
-                    -file_types  => $file_types,
-                    -skip_qc     => $skip_qc,
-                    -debug       => $debug);
-
-
-
-   #Now write/process/load as required
+  _run_peak_caller(
+  -peak_caller => $peak_caller,
+  -max_peaks   => $max_peaks,
+  -debug       => $debug
+  );
 }
 
 #Move peak caller post processing stuff in here too?

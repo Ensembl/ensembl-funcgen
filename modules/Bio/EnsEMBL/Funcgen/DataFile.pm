@@ -44,7 +44,8 @@ with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 
 sub _constructor_parameters {
   return {
-    data_file_id => 'data_file_id',
+    dbID         => 'dbID',
+    db           => 'db',
     table_id     => 'table_id',
     table_name   => 'table_name',
     path         => 'path',
@@ -55,7 +56,6 @@ sub _constructor_parameters {
 
 sub dbID         { return shift->_generic_get_or_set('dbID',         @_); }
 sub db           { return shift->_generic_get_or_set('db',           @_); }
-sub data_file_id { return shift->_generic_get_or_set('data_file_id', @_); }
 sub table_id     { return shift->_generic_get_or_set('table_id',     @_); }
 sub table_name   { return shift->_generic_get_or_set('table_name',   @_); }
 
@@ -72,6 +72,21 @@ sub table_name   { return shift->_generic_get_or_set('table_name',   @_); }
 
 =cut
 sub path         { return shift->_generic_get_or_set('path',         @_); }
+
+# Convenience method to get the path from the ftp site.
+sub relative_ftp_site_path { 
+
+    my $self = shift;
+    my $path = $self->path;
+    
+    my $species = $self->db->db->species;
+    
+    my $coordsystem_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'core', 'coordsystem');
+    my $default_chromosome_coordsystem = $coordsystem_adaptor->fetch_by_name('chromosome');
+    my $default_assembly = $default_chromosome_coordsystem->version;
+
+    return $species . '/' . $default_assembly . '/' . $path;
+}
 
 =head2 file_type
 

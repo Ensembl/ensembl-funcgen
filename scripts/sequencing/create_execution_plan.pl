@@ -38,6 +38,10 @@ use strict;
 use Data::Dumper;
 use Getopt::Long;
 use Bio::EnsEMBL::Utils::Logger;
+use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanUtils qw ( 
+  resolve_nonterminal_symbols
+  summarise
+);
 
 my $registry;
 my $species;
@@ -126,8 +130,17 @@ my $do_one_idr_type_each_sql =<<SQL
 SQL
 ;
 
+my $execution_plan_adaptor = Bio::EnsEMBL::Registry->get_adaptor('homo_sapiens', 'funcgen', 'ExecutionPlan');
+
+use YAML qw(Dump Bless);
+
+local $YAML::Indent = 8;
+local $YAML::UseAliases = 0;
+
+my @all_execution_plans;
+
 $sql_helper->execute_no_return(
-  -SQL          => $do_one_idr_type_each_sql,
+  -SQL          => $do_all_sql,
   -USE_HASHREFS => 1,
   -CALLBACK     => sub {
       my $row = shift;
@@ -145,9 +158,71 @@ $sql_helper->execute_no_return(
           }
         );
         
+      #print Dump($execution_plan);
+      
+#       my $execution_plan_obj = Bio::EnsEMBL::Funcgen::ExecutionPlan->new(
+#         -experiment_id  => $experiment_id,
+#         #-execution_plan => Dumper($execution_plan)
+#         -execution_plan => Dump($execution_plan)
+#       );
       print Dumper($execution_plan);
+      my $execution_plan_expanded = resolve_nonterminal_symbols($execution_plan);
+      print summarise($execution_plan_expanded);
+
+      push @all_execution_plans, $execution_plan;
+      
+      #$execution_plan_adaptor->store($execution_plan_obj);
       return;
     },
 );
 
+my @error_messages;
+my %alignment_name_to_experiment_name;
+foreach my $execution_plan (@all_execution_plans) {
+
+    my $alignments = $execution_plan->{alignment};
+    my @alignment_names = keys %$alignments;
+    
+    foreach my $alignment_name (@alignment_names) {
+    
+        my $experiment_name = $alignments->{$alignment_name}->{from_experiment};
+    
+        if (! exists $alignment_name_to_experiment_name{$alignment_name}) {
+            $alignment_name_to_experiment_name{$alignment_name} = $experiment_name;
+        }
+        if ($alignment_name_to_experiment_name{$alignment_name} ne $experiment_name) {
+            push 
+                @error_messages, 
+                "The alignment name $alignment_name created for the experiment " 
+                . $alignment_name_to_experiment_name{$alignment_name} 
+                . " is also already being used for the experiment $experiment_name";
+        }
+    }
+}
+
+print "The following errors were detected:\n";
+print join "\n", map { "  - " . $_ } @error_messages;
+
+# my @all_alignment_names = keys %alignment_name_to_experiment_name;
+# 
+# foreach my $alignment_name (@all_alignment_names) {
+# 
+#     if ($alignment_name_to_experiment_name{$alignment_name} == 1) {
+#         delete $alignment_name_to_experiment_name{$alignment_name};
+#     }
+# }
+# 
+# print Dumper(\%alignment_name_to_experiment_name);
+
 $logger->finish_log;
+
+
+
+
+
+
+
+
+
+
+

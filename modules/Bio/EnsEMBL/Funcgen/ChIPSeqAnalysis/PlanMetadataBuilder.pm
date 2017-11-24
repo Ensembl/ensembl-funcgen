@@ -6,11 +6,27 @@ use Data::Dumper;
 use Role::Tiny::With;
 with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 
-sub create_execution_plan_meta_data {
+use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
+  _generic_set
+  _generic_get
+);
 
+sub set_meta_data {
   my $self = shift;
-  my $species = shift;
-  my $experiment = shift;
+  my $obj  = shift;
+  return $self->_generic_set('meta_data ', undef, $obj);
+}
+
+sub get_meta_data  { 
+  return shift->_generic_get('meta_data ');
+}
+
+sub construct {
+
+  my $self  = shift;
+  my $param = shift;
+  my $species    = $param->{species};
+  my $experiment = $param->{experiment};
   
   my $feature_type = $experiment->feature_type;
   my $feature_type_name = $feature_type->name;
@@ -32,7 +48,8 @@ sub create_execution_plan_meta_data {
       $experiment
     ),
   };
-  return $meta_data;
+  $self->set_meta_data($meta_data);
+  return;
 }
 
 sub summarise_replicate_configurations {

@@ -6,45 +6,39 @@ use Data::Dumper;
 
 sub run {
 
-  my $self                = shift;
-  my $species             = $self->param_required('species');
-  my $execution_plan_list = $self->param_required('execution_plan_list');
-  my $data_root_dir       = $self->param_required('data_root_dir');
-  
-  my $bam_file = $execution_plan_list
-    ->[0]
-    ->{call_peaks}
-    ->{control_alignment}
-    ->{source}
-    ->{remove_duplicates}
-    ->{bam_file}
+  my $self           = shift;
+  my $species        = $self->param_required('species');
+  my $execution_plan = $self->param_required('execution_plan');
+  my $data_root_dir  = $self->param_required('data_root_dir');
+
+  use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanUtils qw (
+        lock_execution_plan
+        resolve_nonterminal_symbols
+  );
+  my $plan_expanded = resolve_nonterminal_symbols($execution_plan);
+  lock_execution_plan($plan_expanded);
+  lock_execution_plan($execution_plan);
+
+#   print Dumper($plan_expanded);
+#   die;
+
+  my $bam_file = $execution_plan
+    ->{input}
+    ->{output}
     ->{real};
 
-  my $bigwig_file = $execution_plan_list
-    ->[0]
-    ->{call_peaks}
-    ->{control_alignment}
-    ->{source}
-    ->{remove_duplicates}
-    ->{bigwig_file}
+  my $bigwig_file = $execution_plan
+    ->{output}
     ->{real};
   
-  my $epigenome_gender = $execution_plan_list
-    ->[0]
-    ->{call_peaks}
-    ->{control_alignment}
-    ->{source}
-    ->{remove_duplicates}
-    ->{align}
+  my $epigenome_gender = $execution_plan
+    ->{input}
+    ->{input}
     ->{to_gender};
   
-  my $assembly = $execution_plan_list
-    ->[0]
-    ->{call_peaks}
-    ->{control_alignment}
-    ->{source}
-    ->{remove_duplicates}
-    ->{align}
+  my $assembly = $execution_plan
+    ->{input}
+    ->{input}
     ->{to_assembly};
   
   my $bam_file_full_path    = "$data_root_dir/$bam_file";
@@ -98,7 +92,6 @@ sub run {
 
   use File::Path qw(make_path remove_tree);
   make_path($dirname);
-
   
   my $cmd_wiggletools = "wiggletools write - ". $wiggle_tools_cmd;
   my $cmd_wigToBigWig = 'wigToBigWig -fixedSummaries stdin ' . $chromosome_length_file . ' ' . $bigwig_file_full_path;

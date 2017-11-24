@@ -203,4 +203,12 @@ SQL
 
 }
 
+sub fetch_by_Experiment {
+    my $self       = shift;
+    my $experiment = shift;
+    
+    my $constraint = 'experiment_id  = ' . $experiment->dbID;
+    return $self->fetch_single_object($constraint);
+}
+
 1;

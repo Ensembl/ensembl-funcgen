@@ -54,7 +54,25 @@ sub run {
         directory_name_builder => $directory_name_builder
       }
     );
-  
+
+  use YAML qw( Dump );
+
+  local $YAML::Indent     = 8;
+  local $YAML::UseAliases = 0;
+
+  use Bio::EnsEMBL::Funcgen::ExecutionPlan;
+  my $execution_plan_obj = Bio::EnsEMBL::Funcgen::ExecutionPlan->new(
+    -experiment_id  => $experiment_id,
+    -execution_plan => Dump($execution_plan)
+  );
+
+  my $execution_plan_adaptor = Bio::EnsEMBL::Registry->get_adaptor(
+    $species, 
+    'funcgen', 
+    'ExecutionPlan'
+  );
+  $execution_plan_adaptor->store($execution_plan_obj);
+
   $self->dataflow_output_id( {
     'plan'    => $execution_plan,
     'species' => $species,

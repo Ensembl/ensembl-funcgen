@@ -28,37 +28,15 @@ limitations under the License.
 
 =head1 SYNOPSIS
 
-# Wiggletools needs a sorted bed file:
-sort -k1,1 /lustre/scratch110/ensembl/funcgen/il4/ersaCTTV/CTTV020_epigenomes_of_cell_lines_PILOT/reference_files/CCAT/homo_sapiens_.CCAT_chr_lengths.txt > homo_sapiens_.CCAT_chr_lengths.sorted.txt
-
-/software/ensembl/funcgen/argenrichformregions.pl homo_sapiens_.CCAT_chr_lengths.sorted.txt
-
-TEMPDIR=/lustre/scratch109/ensembl/funcgen/mn1/temp/argenrich
-mkdir -p $TEMPDIR
-
-cp /warehouse/ensembl10/funcgen/alignments/homo_sapiens/GRCh38/3526/UT7:hist:BR2_H3K4me3_3526_bwa_samse_1.bam \
-  /warehouse/ensembl10/funcgen/alignments/homo_sapiens/GRCh38/3526/UT7:hist:BR2_WCE_3526_bwa_samse_1.bam \
-  $TEMPDIR
-
-samtools index $TEMPDIR/UT7:hist:BR2_H3K4me3_3526_bwa_samse_1.bam
-samtools index $TEMPDIR/UT7:hist:BR2_WCE_3526_bwa_samse_1.bam
-
-# Number of reads in signal
-ipsz_parameter=$(samtools view -c $TEMPDIR/UT7:hist:BR2_H3K4me3_3526_bwa_samse_1.bam)
-
-# Number of reads in control
-inputsz_parameter=$(samtools view -c $TEMPDIR/UT7:hist:BR2_WCE_3526_bwa_samse_1.bam)
-
-/nfs/users/nfs_m/mn1/work_dir_faang/argenrich.R --args plot=TRUE outdir=$TEMPDIR \
-  ipsz=$ipsz_parameter inputsz=$inputsz_parameter \
-  ip=$TEMPDIR/UT7:hist:BR2_H3K4me3_3526_bwa_samse_1.bam \
-  input=$TEMPDIR/UT7:hist:BR2_WCE_3526_bwa_samse_1.bam \
-  outfile=argenrich.stdout.txt
-
-./scripts/sequencing/load_argenrich_qc_file.pl \
-  --argenrich_file /lustre/scratch109/ensembl/funcgen/mn1/ersa/debug/F36P:hist:BR2_H3K27me3_3526/argenrich_outfile.txt \
-  --control_result_set_id 1 \
-  --signal_result_set_id 2 --user ensadmin --pass xxx --host ens-genomics1 --dbname mn1_faang_tracking_homo_sapiens_funcgen_81_38
+load_argenrich_qc_file.pl \
+    --argenrich_file        /hps/nobackup/production/ensembl/mnuhn/chip_seq_analysis/temp_dir/qc_chance/GM18526_NFKB_ChIP-Seq_ENCODE86/argenrich_outfile.txt \
+    --user   ensadmin    \
+    --pass   ensembl    \
+    --port   4545    \
+    --host   mysql-ens-reg-prod-2.ebi.ac.uk    \
+    --dbname mnuhn_testdb2_homo_sapiens_funcgen_91_38    \
+    --work_dir /hps/nobackup/production/ensembl/mnuhn/chip_seq_analysis/temp_dir/qc_chance/GM18526_NFKB_ChIP-Seq_ENCODE86 \
+    --experiment_name GM18526_NFKB_ChIP-Seq_ENCODE86
 
 =head1 DESCRIPTION
 
@@ -72,20 +50,17 @@ use Bio::EnsEMBL::Utils::Logger;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
 my $argenrich_file;
-my $result_set_id;
 my $dry_run;
 my $user;
 my $pass;
 my $host;
 my $port;
 my $dbname;
-my $signal_result_set_id;
 my $work_dir;
+my $experiment_name;
 
 my %config_hash = (
-  "argenrich_file"        => \$argenrich_file,
-  "result_set_id"         => \$result_set_id,
-  'signal_result_set_id'  => \$signal_result_set_id,
+  'argenrich_file'  => \$argenrich_file,
   'dry_run'         => \$dry_run,
   'user'            => \$user,
   'pass'            => \$pass,
@@ -93,12 +68,11 @@ my %config_hash = (
   'host'            => \$host,
   'dbname'          => \$dbname,
   'work_dir'        => \$work_dir,
+  'experiment_name' => \$experiment_name,
 );
 
 my $result = GetOptions(
   \%config_hash,
-  'result_set_id=s',
-  'signal_result_set_id=s',
   'argenrich_file=s',
   'dry_run',
   'user=s',
@@ -107,10 +81,10 @@ my $result = GetOptions(
   'host=s',
   'dbname=s',
   'work_dir=s',
+  'experiment_name=s',
 );
 
 die unless(-e $argenrich_file);
-die unless($signal_result_set_id);
 
 my $logger = Bio::EnsEMBL::Utils::Logger->new();
 $logger->init_log;
@@ -123,6 +97,32 @@ my @tracking_db_connection_details = (
   -dbname   => $dbname,
 );
 my $dbc = Bio::EnsEMBL::DBSQL::DBConnection->new(@tracking_db_connection_details);
+
+use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
+my $dba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
+    -dbconn => $dbc,
+);
+
+my $experiment_adaptor = $dba->get_adaptor('Experiment');
+my $experiment = $experiment_adaptor->fetch_by_name($experiment_name);
+
+if (! defined $experiment) {
+    die;
+}
+
+my $peak_calling_adaptor = $dba->get_adaptor('PeakCalling');
+my $peak_calling = $peak_calling_adaptor->fetch_by_Experiment($experiment);
+
+if (! defined $peak_calling) {
+    die;
+}
+
+my $signal_alignment  = $peak_calling->fetch_signal_Alignment;
+my $control_alignment = $peak_calling->fetch_control_Alignment;
+
+my $signal_alignment_id  = $signal_alignment->dbID;
+my $control_alignment_id = $control_alignment->dbID;
+
 my $analysis_id;
 
 if ($dry_run) {
@@ -153,13 +153,14 @@ LINE: while (my $current_line = <IN>) {
 use Hash::Util qw( lock_hash );
 lock_hash(%key_value_pairs);
 
-my $sql = qq(insert into result_set_qc_chance (
-      signal_result_set_id, analysis_id, p, q, divergence, z_score, percent_genome_enriched, input_scaling_factor, differential_percentage_enrichment,
+my $sql = qq(insert into chance (
+      signal_alignment_id, control_alignment_id, analysis_id, p, q, divergence, z_score, percent_genome_enriched, input_scaling_factor, differential_percentage_enrichment,
       control_enrichment_stronger_than_chip_at_bin,
       first_nonzero_bin_at,
       pcr_amplification_bias_in_Input_coverage_of_1_percent_of_genome, path
     ) values (
-    $signal_result_set_id,
+    $signal_alignment_id,
+    $control_alignment_id,
     $analysis_id,
     $key_value_pairs{'p'}, 
     $key_value_pairs{'q'}, 
@@ -189,7 +190,6 @@ if ($dry_run) {
   };
 }
 
-#print Dumper(\%key_value_pairs);
 create_table({
   sql_processor => $sql_processor
 });
@@ -234,9 +234,10 @@ sub create_table {
   my $sql_processor = $param->{sql_processor};
 
 my $sql = <<SQL
- CREATE TABLE if not exists `result_set_qc_chance` (
-  `result_set_qc_chance_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `signal_result_set_id` int(10),
+ CREATE TABLE if not exists `chance` (
+  `chance_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `signal_alignment_id` int(10),
+  `control_alignment_id` int(10),
   `analysis_id`        int(10) unsigned,
 -- Not really that important
 -- See slide 38 on 
@@ -288,7 +289,7 @@ my $sql = <<SQL
 --
   `pcr_amplification_bias_in_Input_coverage_of_1_percent_of_genome`double default NULL,
   `path` varchar(512) NOT NULL,
-  PRIMARY KEY (`result_set_qc_chance_id`)
+  PRIMARY KEY (`chance_id`)
 );
 SQL
 ;

@@ -31,12 +31,12 @@ limitations under the License.
 
 CREATE TABLE `input_subset_fastqc` (
   `input_subset_qc_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `input_subset_id` int(10) unsigned NOT NULL,
+  `read_file_id` int(10) unsigned NOT NULL,
   `status` varchar(100) NOT NULL,
   `title` varchar(100) NOT NULL,
   `file_name` varchar(100) NOT NULL,
   PRIMARY KEY (`input_subset_qc_id`),
-  UNIQUE KEY `name_exp_idx` (`input_subset_id`,`title`)
+  UNIQUE KEY `name_exp_idx` (`read_file_id`,`title`)
 ) ENGINE=MyISAM
 
 INPUT_SUBSET_ID=3436
@@ -45,11 +45,11 @@ INPUT_SUBSET_ID=3436
 
 TEMP_DIR=/lustre/scratch109/ensembl/funcgen/mn1/qc/${INPUT_SUBSET_ID}
 mkdir -p $TEMP_DIR
-# GZIPPED_FASTQ_FILE=$(mysql -N -B $DB_MYSQL_ARGS -e "select local_url from input_subset_tracking where input_subset_id = ${INPUT_SUBSET_ID}")
+# GZIPPED_FASTQ_FILE=$(mysql -N -B $DB_MYSQL_ARGS -e "select local_url from input_subset_tracking where read_file_id = ${INPUT_SUBSET_ID}")
 
 
 DB_MYSQL_ARGS="-hens-genomics2 -P3306 -uensadmin -psecret mn1_faang_tracking_homo_sapiens_funcgen_81_38"
-GZIPPED_FASTQ_FILE=$(mysql -N -B $DB_MYSQL_ARGS -e "select local_url from input_subset_tracking where input_subset_id = ${INPUT_SUBSET_ID}")
+GZIPPED_FASTQ_FILE=$(mysql -N -B $DB_MYSQL_ARGS -e "select local_url from input_subset_tracking where read_file_id = ${INPUT_SUBSET_ID}")
 
 echo $GZIPPED_FASTQ_FILE
 
@@ -61,9 +61,9 @@ SUMMARY_FILE=$FASTQC_DIR/summary.txt
 
 echo $SUMMARY_FILE
 
-./scripts/sequencing/load_fastqc_summary_file.pl --input_subset_id $INPUT_SUBSET_ID --summary_file $SUMMARY_FILE | mysql $DB_MYSQL_ARGS
+./scripts/sequencing/load_fastqc_summary_file.pl --read_file_id $INPUT_SUBSET_ID --summary_file $SUMMARY_FILE | mysql $DB_MYSQL_ARGS
 
-./scripts/sequencing/load_fastqc_summary_file.pl --input_subset_id 3 --summary_file /lustre/scratch109/ensembl/funcgen/mn1/ersa/faang/alignments/homo_sapiens/GRCh38/3526/histone_control_fastqc/summary.txt | mysql $DB_MYSQL_ARGS
+./scripts/sequencing/load_fastqc_summary_file.pl --read_file_id 3 --summary_file /lustre/scratch109/ensembl/funcgen/mn1/ersa/faang/alignments/homo_sapiens/GRCh38/3526/histone_control_fastqc/summary.txt | mysql $DB_MYSQL_ARGS
 
 =head1 DESCRIPTION
 
@@ -74,24 +74,24 @@ use Data::Dumper;
 use Getopt::Long;
 
 my $summary_file;
-my $input_subset_id;
+my $read_file_id;
 my $work_dir;
 
 my %config_hash = (
   "summary_file"    => \$summary_file,
-  "input_subset_id" => \$input_subset_id,
+  "read_file_id" => \$read_file_id,
   "work_dir"        => \$work_dir,
 );
 
 my $result = GetOptions(
   \%config_hash,
-  'input_subset_id=s',
+  'read_file_id=s',
   'summary_file=s',
   'work_dir=s',
 );
 
 die unless(-e $summary_file);
-die unless($input_subset_id);
+die unless($read_file_id);
 
 print &create_table_sql;
 
@@ -102,7 +102,7 @@ while (my $current_line = <IN>) {
   #print " - $current_line\n";
   my @f = split "\t", $current_line;
   #print Dumper(\@f);
-  my $sql = "INSERT ignore INTO input_subset_fastqc (input_subset_id,status,title,file_name,path) VALUES (".$input_subset_id.", '".$f[0]."', '".$f[1]."', '".$f[2]."', '".$work_dir."')";
+  my $sql = "INSERT INTO read_file_fastqc (read_file_id,status,title,file_name,path) VALUES (".$read_file_id.", '".$f[0]."', '".$f[1]."', '".$f[2]."', '".$work_dir."')";
   
   print "$sql;\n";
 }
@@ -112,15 +112,15 @@ while (my $current_line = <IN>) {
 sub create_table_sql {
 
 my $sql = <<SQL
-CREATE TABLE if not exists `input_subset_fastqc` (
+CREATE TABLE if not exists `read_file_fastqc` (
   `input_subset_qc_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `input_subset_id` int(10) unsigned NOT NULL,
+  `read_file_id` int(10) unsigned NOT NULL,
   `status` varchar(100) NOT NULL,
   `title` varchar(100) NOT NULL,
   `file_name` varchar(100) NOT NULL,
   `path` varchar(512) NOT NULL,
   PRIMARY KEY (`input_subset_qc_id`),
-  UNIQUE KEY `name_exp_idx` (`input_subset_id`,`title`)
+  UNIQUE KEY `name_exp_idx` (`read_file_id`,`title`)
 ) ENGINE=MyISAM;
 
 SQL

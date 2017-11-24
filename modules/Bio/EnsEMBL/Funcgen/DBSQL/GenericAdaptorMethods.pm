@@ -141,12 +141,12 @@ sub objectify { # turn the hashref into an object
     my $hashref = shift;
 
     my $autoinc_id = $self->autoinc_id;
-
-    my $object = $self->object_class->new(
-      -db => $self,
-      map {
-        ( ($_ eq $autoinc_id) ? -dbID : '-' . $_ ) => $hashref->{$_}
-      } keys %$hashref
+    
+    my $object = $self->object_class->new( 
+      -db => $self, 
+      map { 
+        ( ($_ eq $autoinc_id) ? -dbID : '-' . $_ ) => $hashref->{$_} 
+      } keys %$hashref 
     );
     return $object;
 }
@@ -236,6 +236,16 @@ sub count_all {
     return $result_struct;
 }
 
+sub fetch_single_object {
+    my $self = shift;
+    my $result = $self->fetch_all(@_);
+    
+    if (@$result > 1) {
+        throw("Expected one result, but got " . scalar @$result);
+    }
+    return $result->[0];
+}
+
 sub fetch_all {
     my $self       = shift;
     my $constraint = shift;
@@ -250,10 +260,8 @@ sub fetch_all {
         # in case $constraint contains any kind of JOIN (regular, LEFT, RIGHT, etc) do not put WHERE in front:
         $sql .= (($constraint=~/\bJOIN\b/ or $constraint=~/^LIMIT|ORDER|GROUP/) ? ' ' : ' WHERE ') . $constraint;
     }
-
-    #warn "SQL: $sql\n";
-
     my $sth = $self->prepare($sql);
+
     eval {
       $sth->execute(@$parameters);
     };
@@ -267,7 +275,6 @@ sub fetch_all {
       . "\t$@\n"
       );
     }
-
 
     my $result_list_ref = [];
     while (my $hashref = $sth->fetchrow_hashref) {
@@ -320,6 +327,43 @@ sub mark_stored {
         $object->dbID($dbID);
     }
     $object->db($self);
+}
+
+sub update {
+  my $self = shift;
+  my $object = shift;
+
+  my (
+    $columns_being_stored, 
+    $column_key
+  ) 
+    = $self->keys_to_columns($object);
+
+  my @update_component;
+  foreach my $current_column (@$columns_being_stored) {
+    push 
+      @update_component, 
+      "$current_column = ?"
+    ;
+  }
+  my $update_assignment_part = join ', ', @update_component;
+
+  my $values_being_stored = [
+    @{$self->slicer( $object, $columns_being_stored )},
+    $object->dbID
+  ];
+  my $table_name = $self->table_name;
+  my $primary_key = $self->primary_key->[0];
+  
+  if (! defined $primary_key) {
+throw("Can't update, primary key is undefined!");
+  }
+  
+  my $sql = "update $table_name set $update_assignment_part where $primary_key = ?" ;
+
+  my $sth = $self->prepare( $sql );
+  $sth->execute(@$values_being_stored);
+  return;
 }
 
 sub store {
@@ -379,7 +423,6 @@ sub store {
         # but regards as true:
         #
         my $return_code;
-
         eval {
           $return_code = $this_sth->execute( @$values_being_stored );
         };

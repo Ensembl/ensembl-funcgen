@@ -6,16 +6,19 @@ use Data::Dumper;
 use Role::Tiny::With;
 with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRStrategy;
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::PeakCallingStrategy;
 use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRPlanBuilderFactory;
 use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::PlanMetadataBuilder;
 use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignAllPlanBuilder;
+use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::PeakCallingPlanBuilder;
+use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::SignalFilePlanBuilder;
+use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::PlanMetadataBuilder;
+use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::RemoveDuplicatesPlanBuilder;
+use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Constants qw ( :all );
+use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanUtils qw ( create_ref );
 
 use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_get_or_set
 );
-
 
 sub construct_execution_plan {
 
@@ -27,76 +30,209 @@ sub construct_execution_plan {
   my $directory_name_builder = $param->{directory_name_builder};
   my $assembly               = $param->{assembly};
 
-  my $idr_plan_builder_factory
-    = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRPlanBuilderFactory
-      ->new;
+  use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignmentNamer;
+  my $alignment_namer = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignmentNamer->new(
+      -directory_name_builder      => $directory_name_builder,
+      -experiment                  => $experiment,
+      -biological_replicate_number => undef,
+      -technical_replicate_number  => undef,
+  );
+  $param->{alignment_namer} = $alignment_namer;
+
+  my $control_alignment_namer = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignmentNamer->new(
+      -directory_name_builder      => $directory_name_builder,
+      -experiment                  => $experiment->get_control,
+      -biological_replicate_number => undef,
+      -technical_replicate_number  => undef,
+  );
+
+  use Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator;
+  my $bwa_index_locator = Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator->new;
   
-  my $idr_plan_builder = $idr_plan_builder_factory
-    ->make_idr_plan_builder($experiment);
-    
-  my $idr_plan = $idr_plan_builder
-    ->construct($param);
-  
-  my $peak_calling_strategy = $self->select_peak_calling_strategy($experiment);
-  
-  my $align_all_plan_builder 
-    = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignAllPlanBuilder
-      ->new;
-  
-  my $align_all_read_files_for_experiment_plan 
-    = $align_all_plan_builder
-      ->construct($param);
-  
-  my %control_param = %$param;
-  $control_param{experiment} = $param->{experiment}->get_control;
-  
-  my $align_all_read_files_for_control_plan 
-    = $align_all_plan_builder
-      ->construct(\%control_param);
+  my $samtools_fasta_index = $bwa_index_locator->locate({
+    species          => $species,
+    epigenome_gender => $experiment->epigenome->gender,
+    assembly         => $assembly,
+    file_type        => 'samtools_fasta_index',
+  });
+
+  my $chromosome_lengths_by_species_assembly = $bwa_index_locator->locate({
+    species          => $species,
+    epigenome_gender => $experiment->epigenome->gender,
+    assembly         => $assembly,
+    file_type        => 'chromosome_lengths_by_species_assembly',
+  });
+
+  #
+  # Create metadata
+  #
   
   my $plan_meta_data_builder 
     = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::PlanMetadataBuilder
       ->new;
-   
-  my $meta_data = $plan_meta_data_builder
-    ->create_execution_plan_meta_data(
-      $species, 
-      $experiment
-    );
+  
+  $plan_meta_data_builder->construct($param);
+  my $meta_data = $plan_meta_data_builder->get_meta_data;
+    
+  #
+  # Align all reads for peak calling
+  #
+  
+  my $align_all_plan_builder 
+    = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignAllPlanBuilder
+        ->new;
+  
+  $align_all_plan_builder->construct($param);
+      
+  my $align_all_read_files_for_experiment_plan 
+    = $align_all_plan_builder
+      ->get_Alignment;
+
+  my %control_param = %$param;
+  $control_param{experiment}      = $param->{experiment}->get_control;
+  $control_param{alignment_namer} = $control_alignment_namer;
+  
+  $align_all_plan_builder
+      ->construct(\%control_param);
+      
+  my $align_all_read_files_for_control_plan 
+    = $align_all_plan_builder
+      ->get_Alignment;
+  
+  #
+  # Remove duplicates
+  #
+
+  my $remove_duplicates_plan_builder
+    = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::RemoveDuplicatesPlanBuilder
+      ->new;
+  
+  $remove_duplicates_plan_builder->set_input         (create_ref($align_all_read_files_for_experiment_plan));
+  $remove_duplicates_plan_builder->set_name          ($alignment_namer->base_name_no_duplicates);
+  $remove_duplicates_plan_builder->set_output_real   ($alignment_namer->bam_file_no_duplicates);
+  $remove_duplicates_plan_builder->set_output_stored ($alignment_namer->bam_file_no_duplicates_stored);
+  $remove_duplicates_plan_builder->set_output_format ( BAM_FORMAT );
+  $remove_duplicates_plan_builder->set_experiment    ( $experiment->name );
+  
+  $remove_duplicates_plan_builder->construct;
+  
+  my $remove_duplicates_plan = $remove_duplicates_plan_builder->get_plan;
+  
+  $remove_duplicates_plan_builder->set_input         (create_ref($align_all_read_files_for_control_plan));
+  $remove_duplicates_plan_builder->set_name          ($control_alignment_namer->base_name_no_duplicates);
+  $remove_duplicates_plan_builder->set_output_real   ($control_alignment_namer->bam_file_no_duplicates);
+  $remove_duplicates_plan_builder->set_output_stored ($control_alignment_namer->bam_file_no_duplicates_stored);
+  $remove_duplicates_plan_builder->set_is_control    (1);
+  $remove_duplicates_plan_builder->set_output_format ( BAM_FORMAT );
+  $remove_duplicates_plan_builder->set_experiment    ( $experiment->get_control->name );
+
+  $remove_duplicates_plan_builder->construct;
+  
+  my $remove_duplicates_from_control_plan = $remove_duplicates_plan_builder->get_plan;
+  
+  #
+  # Bigwig files
+  #
+  
+  my $signal_file_plan_builder
+    = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::SignalFilePlanBuilder
+      ->new;
+  
+  $signal_file_plan_builder->set_alignment        (create_ref($remove_duplicates_plan));
+  $signal_file_plan_builder->set_alignment_namer  ($alignment_namer);
+  $signal_file_plan_builder->set_is_control (0);
+  
+  $signal_file_plan_builder->construct;
+  
+  my $signal_file_plan = $signal_file_plan_builder->get_signal_plan;
+  
+  $signal_file_plan_builder->set_alignment        (create_ref($remove_duplicates_from_control_plan));
+  $signal_file_plan_builder->set_alignment_namer  ($control_alignment_namer);
+  $signal_file_plan_builder->set_is_control (1);
+  
+  $signal_file_plan_builder->construct;
+  
+  my $control_file_plan = $signal_file_plan_builder->get_signal_plan;
+  
+  #
+  # IDR plan
+  #
+  
+  my $idr_plan_builder_factory
+    = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRPlanBuilderFactory
+      ->new;
+  
+  my $idr_plan_builder 
+    = $idr_plan_builder_factory
+      ->make($experiment);
+
+  $idr_plan_builder->construct($param);
+  
+  my $idr_plan           = $idr_plan_builder->get_idr_plan;
+  my $alignments_for_idr = $idr_plan_builder->get_Alignments;
+
+  #
+  # Peak calling plan
+  #
+
+  my $peak_calling_plan_builder 
+    = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::PeakCallingPlanBuilder
+      ->new;
+  
+  my $peaks_output_dir 
+    = $directory_name_builder
+      ->peak_calling_output_dir_by_Experiment(
+        $experiment
+      );
+  
+  $peak_calling_plan_builder->set_signal_alignment        ( create_ref($remove_duplicates_plan) );
+  $peak_calling_plan_builder->set_control_alignment       ( create_ref($remove_duplicates_from_control_plan) );
+  $peak_calling_plan_builder->set_idr                     ( create_ref($idr_plan) );
+  $peak_calling_plan_builder->set_peaks_output_dir        ( $peaks_output_dir );
+  $peak_calling_plan_builder->set_alignment_namer         ( $alignment_namer );
+  $peak_calling_plan_builder->set_control_alignment_namer ( $control_alignment_namer );
+  $peak_calling_plan_builder->set_experiment              ( $experiment );
+  $peak_calling_plan_builder->set_samtools_fasta_index    ( $samtools_fasta_index );
+  $peak_calling_plan_builder
+    ->set_chromosome_lengths_by_species_assembly
+      ( $chromosome_lengths_by_species_assembly );
+  
+  
+  $peak_calling_plan_builder->construct;
+  
+  my $peak_calling_plan    = $peak_calling_plan_builder->get_peakcalling_plan;
+  my $bam_file_to_bed_plan = $peak_calling_plan_builder->get_bam_to_bed_conversion_plan;
+  
+  # Assemble components into final execution plan
+  
+  my @all_alignment_plans = (
+    $align_all_read_files_for_experiment_plan,
+    $remove_duplicates_plan,
+    $align_all_read_files_for_control_plan,
+    $remove_duplicates_from_control_plan,
+    @$alignments_for_idr
+  );
+  
+  my $alignment_plan = {};
+  
+  foreach my $current_alignment_plan (@all_alignment_plans) {
+    $alignment_plan->{$current_alignment_plan->{name}} = $current_alignment_plan;
+  }
+  
+  my $bigwig_plan = {
+    $signal_file_plan ->{name} => $signal_file_plan,
+    $control_file_plan->{name} => $control_file_plan,
+  };
   
   my $execution_plan = {
     meta_data  => $meta_data,
-    call_peaks => {
-      alignment             => {
-        source => $align_all_read_files_for_experiment_plan,
-        name   => $align_all_read_files_for_experiment_plan
-          ->{remove_duplicates}
-          ->{name},
-      },
-      run_idr               => $idr_plan,
-      control_alignment     => {
-        source => $align_all_read_files_for_control_plan,
-        name   => $align_all_read_files_for_control_plan
-          ->{remove_duplicates}
-          ->{name},
-      },
-      peak_calling_strategy => $peak_calling_strategy,
-    }
+    signal     => $bigwig_plan,
+    call_peaks => $peak_calling_plan,
+    alignment  => $alignment_plan,
+    idr        => $idr_plan,
+    bam_to_bed => $bam_file_to_bed_plan
   };
   return $execution_plan;
-}
-
-sub select_peak_calling_strategy {
-
-  my $self = shift;
-  my $experiment = shift;
-  
-  my $feature_type      = $experiment->feature_type;
-
-  if ($feature_type->_creates_broad_peaks) {
-    return Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::PeakCallingStrategy->CALL_BROAD_PEAKS;
-  }
-  return Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::PeakCallingStrategy->CALL_NARROW_PEAKS
 }
 
 1;

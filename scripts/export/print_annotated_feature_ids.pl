@@ -37,7 +37,19 @@ my $helper = Bio::EnsEMBL::Utils::SqlHelper->new(
 );
 
 $helper->execute_no_return(
-  -SQL      => "select annotated_feature.annotated_feature_id from annotated_feature join feature_set using (feature_set_id) join epigenome using (epigenome_id) join feature_type using (feature_type_id) where epigenome.production_name=? and feature_type.name=?",
+  -SQL      => "
+    select 
+      peak.peak_id 
+    from 
+      peak 
+      join peak_calling using (peak_calling_id) 
+      join experiment using (experiment_id) 
+      join epigenome using (epigenome_id) 
+      join feature_type on (feature_type.feature_type_id = experiment.feature_type_id) 
+    where 
+      epigenome.production_name=? 
+      and feature_type.name=?
+   ",
   -PARAMS => [ $epigenome_production_name, $feature_type_name ],
   -CALLBACK => sub {
     my $row = shift;
