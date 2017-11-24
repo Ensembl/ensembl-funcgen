@@ -55,6 +55,7 @@ sub run {
     "bwa samse $bwa_index $suffix_array_index $fastq_file   > $samse_file",
     "samtools view -t $samtools_fasta_index -bh $samse_file > $unsorted_file",
     "samtools sort $unsorted_file -o $sorted_file",
+    "check_bam_file_has_EOF_marker.pl --bam_file $sorted_file"
   );
   
   my $run_options = {
@@ -74,6 +75,9 @@ sub run {
     }, 
     BRANCH_ACCUMULATOR
   );
+
+  # Give file system time to sync
+  sleep(20);
   return;
 }
 

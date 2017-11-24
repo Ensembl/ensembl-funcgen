@@ -13,16 +13,19 @@ sub run {
 
   my $self = shift;
   my $species      = $self->param_required('species');
-  my $plan         = $self->param_required('plan');
+  my $plan         = $self->param_required('execution_plan');
   my $tempdir      = $self->param_required('tempdir');
   my $in_test_mode = $self->param('in_test_mode');
   
-  my $num_records_per_split_fastq = $self->param('num_records_per_split_fastq');
+  my $num_records_per_split_fastq;
+  if ($self->param_is_defined('num_records_per_split_fastq')) {
+    $num_records_per_split_fastq = $self->param('num_records_per_split_fastq');
+  }
   
   my $max_records = undef;
   
   if (! defined $num_records_per_split_fastq) {
-    $num_records_per_split_fastq = 5_000_000;
+    $num_records_per_split_fastq = 1_000_000;
   }
   
   if ($in_test_mode) {
@@ -30,16 +33,17 @@ sub run {
     $num_records_per_split_fastq = 500;
   }
   
+  print Dumper($plan);
+  
   my $align_plan = $plan
-    ->{remove_duplicates}
-    ->{align}
+    ->{input}
   ;
   
   my $alignment_name = $align_plan->{name};
-  my $read_files     = $align_plan->{read_files};
+  my $read_files     = $align_plan->{input}->{read_files};
   my $to_gender      = $align_plan->{to_gender};
   my $to_assembly    = $align_plan->{to_assembly};
-  my $bam_file       = $align_plan->{bam_file};
+  my $bam_file       = $align_plan->{output}->{real};
   
   $self->say_with_header("Creating alignment $alignment_name");
   
@@ -52,7 +56,13 @@ sub run {
   
   my @read_file_names;
   foreach my $read_file_name (@$read_files) {
+  
     my $read_file = $read_file_adaptor->fetch_by_name($read_file_name);
+    
+    if (! -e $read_file->file) {
+      $self->throw("File " . $read_file->file . " does not exist!");
+    }
+    
     push @read_file_names, $read_file->file;
   }
   
@@ -118,6 +128,8 @@ sub run {
       . "Got: $@"
     );
   }
+  $fastq_record_processor->flush;
+  
   $self->dataflow_output_id( 
     {
       'species' => $species,
@@ -281,6 +293,25 @@ sub create_new_file_handle {
   
   open my $fh, '>', $self->absolute_chunk_file_name;
   return $fh
+}
+
+sub flush {
+  my $self   = shift;
+
+  my $fh = $self->current_file_handle;
+  
+  use Scalar::Util qw ( openhandle );
+  
+  if (defined $fh && openhandle($fh)) {
+    $self->chunk_created_callback->(
+      {
+        absolute_chunk_file_name => $self->absolute_chunk_file_name,
+        current_file_number      => $self->current_file_number,
+        current_temp_dir         => $self->current_temp_dir,
+      }
+    );
+    $fh->close;
+  }
 }
 
 sub process {

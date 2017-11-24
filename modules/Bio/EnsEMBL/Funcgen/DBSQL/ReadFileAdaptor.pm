@@ -43,6 +43,39 @@ sub _tables {
   );
 }
 
+sub fetch_all_by_Experiment {
+  my $self = shift;
+  my $experiment = shift;
+  
+  my $read_file_experimental_configuration_adaptor
+    = $self->db->get_ReadFileExperimentalConfigurationAdaptor;
+  
+  my $read_file_experimental_configuration_list
+    = $read_file_experimental_configuration_adaptor
+      ->fetch_all_by_Experiment($experiment);
+  
+  my @all_read_files_for_experiment;
+  
+  foreach my $read_file_experimental_configuration 
+    (@$read_file_experimental_configuration_list) {
+    
+      my $read_file 
+        = $self->fetch_by_ReadFileExperimentalConfiguration
+          ($read_file_experimental_configuration);
+      
+      push @all_read_files_for_experiment, $read_file;
+  }
+  
+  return \@all_read_files_for_experiment;
+}
+
+sub fetch_by_ReadFileExperimentalConfiguration {
+  my $self = shift;
+  my $read_file_experimental_configuration = shift;
+  my $read_file_id = $read_file_experimental_configuration->_read_file_id;
+  return $self->fetch_by_dbID($read_file_id);
+}
+
 sub _load_dependencies {
     my $self = shift;
     my $read_file = shift;

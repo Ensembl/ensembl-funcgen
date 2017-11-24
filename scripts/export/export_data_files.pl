@@ -55,7 +55,7 @@ GetOptions (
    'destination_root_path=s'       => \$destination_root_path,
 );
 
-my $make_copies = 1;
+my $make_copies = 0;
 
 my $creation_command = 'ln -s';
 if ($make_copies) {
@@ -99,44 +99,83 @@ my $fetchQCRelatedData = Bio::EnsEMBL::Funcgen::Ftp::FetchQCRelatedData->new(
 
 my $db_file_type;
 my $destination_file_extension;
+my $alignment_join_column;
 
 if ($file_type eq 'bam')    {
   $db_file_type = 'BAM';
   $destination_file_extension = 'bam';
+  $alignment_join_column = 'bam_file_id'
 }
 if ($file_type eq 'bigwig') {
   $db_file_type = 'BIGWIG';
   $destination_file_extension = 'bw';
+  $alignment_join_column = 'bigwig_file_id'
 }
 
+# my $sth = $db_connection->prepare(
+#   qq(
+# select 
+#   signal_file.path signal_file, 
+#   result_set.name signal_alignment_name,
+#   feature_type.name signal_feature_type,
+#   control_file.path control_file,
+#   control_alignment.name control_alignment_name,
+#   control_feature_type.name control_feature_type,
+#   analysis.logic_name analysis,
+#   epigenome.display_label as epigenome,
+#   epigenome.production_name as epigenome_production_name
+# from 
+#   result_set
+#   join epigenome using (epigenome_id)
+#   join feature_type using (feature_type_id)
+#   join dbfile_registry signal_file    on (signal_file.table_name='result_set'    and signal_file.table_id=result_set_id    and signal_file.file_type='$db_file_type')
+#   join analysis on (result_set.analysis_id=analysis.analysis_id)
+#   join experiment the_signal using (experiment_id)
+#   left join experiment control on (the_signal.control_id=control.experiment_id)
+#   join result_set control_alignment on (control.experiment_id=control_alignment.experiment_id)
+#   join feature_type control_feature_type on (control_alignment.feature_type_id=control_feature_type.feature_type_id)
+#   left join dbfile_registry control_file    on (control_file.table_name='result_set'    and control_file.table_id=control_alignment.result_set_id    and control_file.file_type='$db_file_type')
+# order by
+#   epigenome_production_name,
+#   signal_feature_type;
+#   )
+# );
+
 my $sth = $db_connection->prepare(
-  qq(
-select 
-  signal_file.path signal_file, 
-  result_set.name signal_alignment_name,
-  feature_type.name signal_feature_type,
-  control_file.path control_file,
-  control_alignment.name control_alignment_name,
-  control_feature_type.name control_feature_type,
-  analysis.logic_name analysis,
-  epigenome.display_label as epigenome,
-  epigenome.production_name as epigenome_production_name
-from 
-  result_set
-  join epigenome using (epigenome_id)
-  join feature_type using (feature_type_id)
-  join dbfile_registry signal_file    on (signal_file.table_name='result_set'    and signal_file.table_id=result_set_id    and signal_file.file_type='$db_file_type')
-  join analysis on (result_set.analysis_id=analysis.analysis_id)
-  join experiment the_signal using (experiment_id)
-  left join experiment control on (the_signal.control_id=control.experiment_id)
-  join result_set control_alignment on (control.experiment_id=control_alignment.experiment_id)
-  join feature_type control_feature_type on (control_alignment.feature_type_id=control_feature_type.feature_type_id)
-  left join dbfile_registry control_file    on (control_file.table_name='result_set'    and control_file.table_id=control_alignment.result_set_id    and control_file.file_type='$db_file_type')
-order by
-  epigenome_production_name,
-  signal_feature_type;
-  )
+  qq#
+    select 
+      signal_file.path signal_file, 
+      alignment.name signal_alignment_name,
+      feature_type.name signal_feature_type,
+      control_file.path control_file,
+      control_alignment.name control_alignment_name,
+      control_feature_type.name control_feature_type,
+      analysis.logic_name analysis,
+      epigenome.display_label as epigenome,
+      epigenome.production_name as epigenome_production_name
+    from 
+      alignment
+      join experiment the_signal using (experiment_id)
+      join epigenome using (epigenome_id)
+      join feature_type using (feature_type_id)
+      join data_file signal_file on (signal_file.data_file_id = alignment.$alignment_join_column)
+      join analysis on (alignment.analysis_id=analysis.analysis_id)
+      left join experiment control on (the_signal.control_id=control.experiment_id)
+      join alignment control_alignment on (
+        control.experiment_id = control_alignment.experiment_id 
+        and control_alignment.has_duplicates = false 
+        and control_alignment.is_complete    = true 
+        and control_alignment.is_control     = true
+      )
+      join feature_type control_feature_type on (control.feature_type_id=control_feature_type.feature_type_id)
+      left join data_file control_file    on (control_file.data_file_id = control_alignment.$alignment_join_column)
+    order by
+      epigenome_production_name,
+      signal_feature_type
+    ;
+  #
 );
+
 $sth->execute;
 
 # my $output_fh;
@@ -178,22 +217,31 @@ while (my $hash_ref = $sth->fetchrow_hashref) {
   foreach my $current_species_assembly_data_file_base_path (@dbfile_registry_path) {
     my $source_file_candidate = 
       $current_species_assembly_data_file_base_path 
-#       . '/' . $species
-#       . '/' . $assembly
+      . '/' . $species
+      . '/' . $assembly
       . '/' . $hash_ref->{signal_alignment}->{file};
       
     if (-e $source_file_candidate) {
-      $this_files_species_assembly_data_file_base_path = $current_species_assembly_data_file_base_path;
+      $this_files_species_assembly_data_file_base_path 
+        = $current_species_assembly_data_file_base_path
+          . '/' . $species
+          . '/' . $assembly
+        ;
       $found_file_in_path = 1;
       last POSSIBLE_ROOT_BASE_PATH;
+    } else {
+      die($source_file_candidate);
     }
   }
   if (!$found_file_in_path) {
     push @file_not_found, $hash_ref->{signal_alignment}->{file};
+    use Data::Dumper;
+    die(Dumper(@file_not_found));
   }
   my $source_file = $this_files_species_assembly_data_file_base_path . '/' . $hash_ref->{signal_alignment}->{file};
   
-  my $replicate_description_string = create_replicate_description_string($hash_ref->{signal_alignment}->{name});
+  #my $replicate_description_string = create_replicate_description_string($hash_ref->{signal_alignment}->{name});
+  my $replicate_description_string = $hash_ref->{signal_alignment}->{name};
   my $destination_directory = join '/', $sample_name, $assay_type;
   my $destination_file = join '.', (
     $species,
@@ -264,21 +312,23 @@ foreach my $current_cmd (@cmd) {
 
 $logger->info("All done.\n");
 
-sub create_replicate_description_string {
-
-  my $result_set_name = shift;
-  
-  my $result_set_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'ResultSet');
-  my $result_set = $result_set_adaptor->fetch_by_name($result_set_name);
-
-  my $support = $result_set->get_support;
-  my @signal_support = grep { $_->is_control == 0 } @$support;
-  
-  use Bio::EnsEMBL::Funcgen::Utils::ERSAShared qw( create_replicate_input_subset_string );
-  
-  my $replicate_input_subset_string = create_replicate_input_subset_string(@signal_support);
-  return $replicate_input_subset_string;
-}
+# sub create_replicate_description_string {
+# 
+#   my $alignment_name = shift;
+#   
+#   my $alignment_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'alignment');
+#   my $alignment = $alignment_adaptor->fetch_by_name($alignment_name);
+# 
+#   my $support = $alignment->get_support;
+#   my @signal_support = grep { $_->is_control == 0 } @$support;
+#   
+#   my $support = $alignment->fetch_all_ReadFiles;
+#   
+#   use Bio::EnsEMBL::Funcgen::Utils::ERSAShared qw( create_replicate_input_subset_string );
+#   
+#   my $replicate_input_subset_string = create_replicate_input_subset_string(@signal_support);
+#   return $replicate_input_subset_string;
+# }
 
 sub translate {
   my $hash_ref = shift;

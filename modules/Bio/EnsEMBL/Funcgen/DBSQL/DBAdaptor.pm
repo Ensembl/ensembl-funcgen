@@ -195,6 +195,9 @@ sub get_available_adaptors{
         'FeatureType'            => 'Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor',
         'MirnaTargetFeature'     => 'Bio::EnsEMBL::Funcgen::DBSQL::MirnaTargetFeatureAdaptor',
         'MotifFeature'           => 'Bio::EnsEMBL::Funcgen::DBSQL::MotifFeatureAdaptor',
+        
+        'Idr'                     => 'Bio::EnsEMBL::Funcgen::DBSQL::IdrAdaptor',
+        'ExecutionPlan'           => 'Bio::EnsEMBL::Funcgen::DBSQL::ExecutionPlanAdaptor',
 
         'Array'                         => 'Bio::EnsEMBL::Funcgen::DBSQL::ArrayAdaptor',
         'ArrayChip'                     => 'Bio::EnsEMBL::Funcgen::DBSQL::ArrayChipAdaptor',

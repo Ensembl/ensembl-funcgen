@@ -2,8 +2,26 @@ package Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignAllPlanBuilder;
 
 use strict;
 use Data::Dumper;
+use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Constants qw ( :all );
+
 use Role::Tiny::With;
 with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
+
+use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
+  _generic_set
+  _generic_get
+);
+
+sub set_Alignment {
+  my $self = shift;
+  my $obj  = shift;
+  
+  return $self->_generic_set('alignment', undef, $obj);
+}
+
+sub get_Alignment { 
+  return shift->_generic_get('alignment');
+}
 
 sub construct {
   my $self = shift;
@@ -33,7 +51,15 @@ sub construct {
     push @names_of_reads_to_merge, $read_file->name,
   
   }
-  my $to_gender = $experiment->epigenome->gender;
+  
+  use Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator;
+  my $bwa_index_locator = Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator->new;
+
+  my $to_gender = 
+    $bwa_index_locator
+        ->epigenome_gender_to_directory_species_gender(
+            $experiment->epigenome->gender
+        );
   
   use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignmentPlanFactory;
   my $alignment_plan_factory = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignmentPlanFactory
@@ -44,12 +70,18 @@ sub construct {
     -to_gender               => $to_gender,
     -to_assembly             => $assembly,
     -analysis                => 'align',
+    -from_experiment         => $experiment->name,
     -output_real             => $alignment_namer->bam_file_with_duplicates,
     -output_stored           => $alignment_namer->bam_file_with_duplicates_stored,
-    -output_format           => 'bam',
+    -output_format           => BAM_FORMAT,
+    -is_control              => $experiment->is_control,
+    -has_all_reads           => 1,
   );
   my $align_plan = $alignment_plan_factory->product;
-  return $align_plan;
+  
+  $self->set_Alignment($align_plan);
+  
+  return;
 }
 
 sub experiment_type {

@@ -34,10 +34,10 @@ $json->canonical(1);
 
 my $db_connection = $funcgen_db_adaptor->dbc;
 
-use Bio::EnsEMBL::Funcgen::Ftp::FetchQCRelatedData;
-my $fetchQCRelatedData = Bio::EnsEMBL::Funcgen::Ftp::FetchQCRelatedData->new(
-  -db_connection => $db_connection,
-);
+# use Bio::EnsEMBL::Funcgen::Ftp::FetchQCRelatedData;
+# my $fetchQCRelatedData = Bio::EnsEMBL::Funcgen::Ftp::FetchQCRelatedData->new(
+#   -db_connection => $db_connection,
+# );
 
 my $sth = $db_connection->prepare(
   qq(
@@ -45,25 +45,23 @@ my $sth = $db_connection->prepare(
       analysis_description.display_label as analysis,
       feature_type.name as feature_type,
       epigenome.display_label as epigenome,
-      feature_set_qc_prop_reads_in_peaks.prop_reads_in_peaks as proportion_of_reads_in_peaks,
-      feature_set_qc_prop_reads_in_peaks.total_reads as total_number_of_reads,
-      result_set.name alignment_name,
+      peak_calling_qc_prop_reads_in_peaks.prop_reads_in_peaks as proportion_of_reads_in_peaks,
+      peak_calling_qc_prop_reads_in_peaks.total_reads as total_number_of_reads,
+      alignment.name alignment_name,
       experiment.is_control,
       bam_file.path bam_file,
       bigwig_file.path bigwig_file
     from 
-      feature_set_qc_prop_reads_in_peaks 
-      join feature_set using (feature_set_id)
-      join analysis_description on (analysis_description.analysis_id=feature_set.analysis_id)
+      peak_calling_qc_prop_reads_in_peaks 
+      join peak_calling using (peak_calling_id)
+      join analysis_description on (analysis_description.analysis_id=peak_calling.analysis_id)
       join feature_type using (feature_type_id)
+      join experiment using (experiment_id)
       join epigenome using (epigenome_id)
-      join data_set using (feature_set_id)
-      join supporting_set using (data_set_id)
-      join result_set on (supporting_set.supporting_set_id=result_set.result_set_id and supporting_set.type="result")
-      join experiment on (result_set.experiment_id=experiment.experiment_id)
-      left join dbfile_registry bam_file    on (bam_file.table_name='result_set'    and bam_file.table_id=result_set.result_set_id    and bam_file.file_type='BAM')
-      left join dbfile_registry bigwig_file on (bigwig_file.table_name='result_set' and bigwig_file.table_id=result_set.result_set_id and bigwig_file.file_type='BIGWIG')
-    order by result_set.name
+      join alignment on (peak_calling.signal_alignment_id = alignment.alignment_id)
+      left join data_file bam_file    on (alignment.bam_file_id    = bam_file.data_file_id)
+      left join data_file bigwig_file on (alignment.bigwig_file_id = bigwig_file.data_file_id)
+    order by alignment.name
   )
 );
 
@@ -91,7 +89,7 @@ $output_fh->print("[\n");
 
 while (my $hash_ref = $sth->fetchrow_hashref) {
 
-  $hash_ref->{epigenome} = $fetchQCRelatedData->fetch_xrefs_for_epigenome($hash_ref->{epigenome});
+  #$hash_ref->{epigenome} = $fetchQCRelatedData->fetch_xrefs_for_epigenome($hash_ref->{epigenome});
 
   translate($hash_ref);
 
@@ -123,5 +121,5 @@ sub translate {
   delete $hash_ref->{path};
   delete $hash_ref->{analysis_id};
   delete $hash_ref->{feature_set_id};
-  delete $hash_ref->{feature_set_qc_prop_reads_in_peaks_id};
+  delete $hash_ref->{peak_calling_qc_prop_reads_in_peaks_id};
 }

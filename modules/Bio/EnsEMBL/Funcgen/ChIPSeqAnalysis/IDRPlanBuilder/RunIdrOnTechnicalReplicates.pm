@@ -1,6 +1,8 @@
 package Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRPlanBuilder::RunIdrOnTechnicalReplicates;
 
 use strict;
+use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Constants qw( :all );
+use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanUtils qw ( create_ref );
 use Data::Dumper;
 
 use Role::Tiny::With;
@@ -11,15 +13,25 @@ use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_get
 );
 
-sub set_Alignment {
+sub set_Alignments {
   my $self = shift;
   my $obj  = shift;
   
   return $self->_generic_set('alignment', undef, $obj);
 }
 
-sub get_Alignment { 
+sub get_Alignments { 
   return shift->_generic_get('alignment');
+}
+
+sub set_idr_plan {
+  my $self = shift;
+  my $obj  = shift;
+  return $self->_generic_set('idr_plan', undef, $obj);
+}
+
+sub get_idr_plan { 
+  return shift->_generic_get('idr_plan');
 }
 
 sub construct {
@@ -28,7 +40,6 @@ sub construct {
   
   my $species                = $param->{species};
   my $experiment             = $param->{experiment};
-  my $directory_name_builder = $param->{directory_name_builder};
   my $assembly               = $param->{assembly};
   my $alignment_namer        = $param->{alignment_namer};
 
@@ -44,6 +55,12 @@ sub construct {
       ->fetch_all_by_Experiment($experiment);
 
   my $alignment = [];
+
+  my $remove_duplicates_plan_builder
+    = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::RemoveDuplicatesPlanBuilder
+      ->new;
+  $remove_duplicates_plan_builder->set_output_format ( BAM_FORMAT );
+  $remove_duplicates_plan_builder->set_experiment    ( $experiment->name );
   
   my @align_replicates_plan;
   foreach my $read_file_experimental_configuration 
@@ -54,7 +71,14 @@ sub construct {
       = $read_file_experimental_configuration
         ->technical_replicate;
     
-    my $to_gender = $experiment->epigenome->gender;
+    use Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator;
+    my $bwa_index_locator = Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator->new;
+
+    my $to_gender = 
+        $bwa_index_locator
+            ->epigenome_gender_to_directory_species_gender(
+                $experiment->epigenome->gender
+            );
 
     $alignment_namer->unset_biological_replicate_number;
     $alignment_namer->technical_replicate_number($technical_replicate_number);
@@ -68,23 +92,25 @@ sub construct {
       -to_gender               => $to_gender,
       -to_assembly             => $assembly,
       -analysis                => 'align',
+      -from_experiment         => $experiment->name,
       -output_real             => $alignment_namer->bam_file_with_duplicates,
       -output_stored           => $alignment_namer->bam_file_with_duplicates_stored,
-      -output_format           => 'bam',
+      -output_format           => BAM_FORMAT,
+      -is_control              => $experiment->is_control,
+      -has_all_reads           => 0,
     );
     
     my $alignment_plan = $alignment_plan_factory->product;
+    
+    $remove_duplicates_plan_builder->set_input         (create_ref($alignment_plan));
+    $remove_duplicates_plan_builder->set_name          ($alignment_namer->base_name_no_duplicates,);
+    $remove_duplicates_plan_builder->set_output_real   ($alignment_namer->bam_file_no_duplicates);
+    $remove_duplicates_plan_builder->set_output_stored ($alignment_namer->bam_file_no_duplicates_stored);
+    
+    $remove_duplicates_plan_builder->construct;
+    
+    my $remove_duplicates_plan = $remove_duplicates_plan_builder->get_plan;
 
-    my $remove_duplicates_plan_factory
-      = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::RemoveDuplicatesPlanFactory
-        ->new(
-          -input         => create_ref($alignment_plan),
-          -name          => $alignment_namer->base_name_no_duplicates,
-          -output_real   => $alignment_namer->bam_file_no_duplicates,
-          -output_stored => $alignment_namer->bam_file_no_duplicates_stored,
-          -output_format => 'bam',
-        );
-    my $remove_duplicates_plan = $remove_duplicates_plan_factory->product;
     
     push @align_replicates_plan, create_ref($remove_duplicates_plan);
     
@@ -94,31 +120,15 @@ sub construct {
   
   my $idr_plan = {
     alignment_replicates => \@align_replicates_plan,
-    type => 'idr',
-    name => $experiment->name,
-    strategy => Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRStrategy
-      ->RUN_IDR_ON_TECHNICAL_REPLICATES
+    type                 => 'idr',
+    name                 => $experiment->name,
+    strategy             => RUN_IDR_ON_TECHNICAL_REPLICATES
   };
   
-  $self->set_Alignment($alignment);
+  $self->set_Alignments($alignment);
+  $self->set_idr_plan($idr_plan);
   
   return $idr_plan;
-}
-
-sub create_ref {
-  my $plan = shift;
-  
-  my $name = $plan->{name};
-  my $type = $plan->{type};
-  
-  if (! defined $name) {
-    die;
-  }
-  if (! defined $type) {
-    die;
-  }
-  my $ref = '#' . $type . ':' . $name . '#';
-  return $ref;
 }
 
 1;

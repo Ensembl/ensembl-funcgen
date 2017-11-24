@@ -54,7 +54,7 @@ use Bio::EnsEMBL::Utils::Logger;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
 my $result_file;
-my $result_set_id;
+#my $result_set_id;
 my $dry_run;
 my $user;
 my $pass;
@@ -63,10 +63,12 @@ my $port;
 my $dbname;
 my $work_dir;
 my $bam_file;
+my $alignment_name;
 
 my %config_hash = (
-  "result_file"   => \$result_file,
-  "result_set_id" => \$result_set_id,
+  "result_file"     => \$result_file,
+  "alignment_name"  => \$alignment_name,
+#  "result_set_id"   => \$result_set_id,
   'dry_run'         => \$dry_run,
   'user'            => \$user,
   'pass'            => \$pass,
@@ -79,7 +81,8 @@ my %config_hash = (
 
 my $result = GetOptions(
   \%config_hash,
-  'result_set_id=s',
+  #'result_set_id=s',
+  'alignment_name=s',
   'result_file=s',
   'dry_run',
   'user=s',
@@ -97,8 +100,8 @@ if (! $result_file) {
 if (! -e $result_file) {
   die("The result_file ($result_file) specified on the command line does not exist!");
 }
-if (! $result_set_id) {
-  die("The result_set_id parameter was not specified!");
+if (! $alignment_name) {
+  die("The alignment_name parameter was not specified!");
 }
 
 my @tracking_db_connection_details = (
@@ -107,7 +110,7 @@ my @tracking_db_connection_details = (
     -port     => $port,
     -host     => $host,
     -dbname   => $dbname,
-);
+ );
 
 my $logic_name = 'phantom peak quality tools';
 my @phantom_peak_analysis_details = (
@@ -123,11 +126,27 @@ my $logger = Bio::EnsEMBL::Utils::Logger->new();
 $logger->init_log;
 
 my $dbc = Bio::EnsEMBL::DBSQL::DBConnection->new(@tracking_db_connection_details);
-my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+
+use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
+my $dba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
   -DBCONN => $dbc,  
 );
 my $analysis_adaptor = $dba->get_AnalysisAdaptor();
 my $analysis = $analysis_adaptor->fetch_by_logic_name($logic_name);
+
+# my $alignment_adaptor = Bio::EnsEMBL::Registry
+# ->get_adaptor(
+#     $species, 
+#     'funcgen', 
+#     'Alignment'
+# );
+my $alignment_adaptor = $dba->get_AlignmentAdaptor();
+my $alignment = $alignment_adaptor->fetch_by_name($alignment_name);
+my $alignment_id = $alignment->dbID;
+
+#die(Dumper($analysis_adaptor->db->species));
+
+my $species = 'homo_sapiens';
 
 if (! $analysis && ! $dry_run) {
       $logger->info("No analysis with logic name $logic_name found. Creating one.");
@@ -214,9 +233,9 @@ while (my $current_line = <IN>) {
     die unless ($QualityTag == 2);
   }
   
-  my $sql = "INSERT ignore INTO result_set_qc_phantom_peak ("
+  my $sql = "INSERT INTO alignment_qc_phantom_peak ("
 #  . "result_set_qc_phantom_peak_id, "
-  . "result_set_id, "
+  . "alignment_id, "
   . "analysis_id, "
   . "filename, "
   . "numReads, "
@@ -237,7 +256,7 @@ while (my $current_line = <IN>) {
   . ")  VALUES ("
   . (
     join ', ', (
-        $result_set_id,
+        $alignment_id,
         $analysis_id,
         #quote($filename),
         quote($bam_file),

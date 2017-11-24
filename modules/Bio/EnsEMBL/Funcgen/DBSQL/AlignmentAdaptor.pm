@@ -37,6 +37,8 @@ package Bio::EnsEMBL::Funcgen::DBSQL::AlignmentAdaptor;
 use strict;
 use base 'Bio::EnsEMBL::Funcgen::DBSQL::GenericAdaptor';
 
+use Bio::EnsEMBL::Utils::Exception qw( throw );
+
 sub object_class {
     return 'Bio::EnsEMBL::Funcgen::Alignment';
 }
@@ -83,6 +85,22 @@ sub _store_dependencies {
       }
     );
     return;
+}
+
+sub fetch_complete_deduplicated_by_Experiment {
+    my $self       = shift;
+    my $experiment = shift;
+    
+    if (! defined $experiment) {
+      throw("Experiment was undefined");
+    }
+    
+    my $constraint = join ' and ', (
+        'is_complete    = 1',
+        'has_duplicates = 0',
+        'experiment_id  = ' . $experiment->dbID
+    );
+    return $self->fetch_single_object($constraint);
 }
 
 1;

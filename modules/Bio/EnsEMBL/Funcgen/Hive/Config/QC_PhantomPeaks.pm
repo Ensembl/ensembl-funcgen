@@ -53,7 +53,7 @@ sub pipeline_analyses {
             },
         },
         {   -logic_name => 'QcPhantomPeaksJobFactory',
-            -module     => 'Bio::EnsEMBL::Funcgen::Hive::QcPhantomPeaksJobFactory',
+            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::QcPhantomPeaksJobFactory',
             -flow_into => { 
 	      2 => 'QcRunPhantomPeaks4GB',
             },

@@ -34,15 +34,15 @@ $json->canonical(1);
 
 my $db_connection = $funcgen_db_adaptor->dbc;
 
-use Bio::EnsEMBL::Funcgen::Ftp::FetchQCRelatedData;
-my $fetchQCRelatedData = Bio::EnsEMBL::Funcgen::Ftp::FetchQCRelatedData->new(
-  -db_connection => $db_connection,
-);
+# use Bio::EnsEMBL::Funcgen::Ftp::FetchQCRelatedData;
+# my $fetchQCRelatedData = Bio::EnsEMBL::Funcgen::Ftp::FetchQCRelatedData->new(
+#   -db_connection => $db_connection,
+# );
 
 my $sth = $db_connection->prepare(
   qq(
     select 
-      result_set.name as alignment_name,
+      alignment.name as alignment_name,
       epigenome.display_label as epigenome,
       bam_file.path bam_file,
       bigwig_file.path bigwig_file,
@@ -51,12 +51,12 @@ my $sth = $db_connection->prepare(
       mapped.qc_passed_reads num_mapped, 
       mapped.qc_passed_reads/total.qc_passed_reads proportion_of_reads_mapped
     from 
-      result_set_qc_flagstats total join result_set_qc_flagstats mapped on (total.category="in total" and mapped.category="mapped" and total.result_set_id=mapped.result_set_id)
-      join result_set on (total.result_set_id=result_set.result_set_id) 
+      alignment_qc_flagstats total join alignment_qc_flagstats mapped on (total.category="in total" and mapped.category="mapped" and total.alignment_id=mapped.alignment_id)
+      join alignment on (total.alignment_id=alignment.alignment_id) 
+      join experiment on (alignment.experiment_id=experiment.experiment_id)
       join epigenome using (epigenome_id)
-      join experiment on (result_set.experiment_id=experiment.experiment_id)
-      left join dbfile_registry bam_file    on (bam_file.table_name='result_set'    and bam_file.table_id=result_set.result_set_id    and bam_file.file_type='BAM')
-      left join dbfile_registry bigwig_file on (bigwig_file.table_name='result_set' and bigwig_file.table_id=result_set.result_set_id and bigwig_file.file_type='BIGWIG')
+      left join data_file bam_file    on ( bam_file.data_file_id    = alignment.bam_file_id    )
+      left join data_file bigwig_file on ( bigwig_file.data_file_id = alignment.bigwig_file_id )
   )
 );
 
@@ -84,8 +84,8 @@ $output_fh->print("[\n");
 
 while (my $hash_ref = $sth->fetchrow_hashref) {
 
-  $hash_ref->{sequence_files} = $fetchQCRelatedData->fetch_input_subset_data_for_result_set($hash_ref->{alignment_name});
-  $hash_ref->{epigenome}      = $fetchQCRelatedData->fetch_xrefs_for_epigenome($hash_ref->{epigenome});
+#   $hash_ref->{sequence_files} = $fetchQCRelatedData->fetch_input_subset_data_for_result_set($hash_ref->{alignment_name});
+#   $hash_ref->{epigenome}      = $fetchQCRelatedData->fetch_xrefs_for_epigenome($hash_ref->{epigenome});
 
   translate($hash_ref);
 

@@ -117,13 +117,11 @@ sub run {
   top $max_peaks peaks from there. The output is sorted by columns 1 and 2,
   which is the sequence name and start position.
   
-  The file_type argument is ignored.
 
 =cut
 sub filter_max_peaks {
   my $self      = shift;
   my $max_peaks = shift;
-  my $file_type = shift; 
   
   #Extract header
   my $out_file = $self->out_file;
@@ -148,7 +146,8 @@ sub filter_max_peaks {
   my $filtered_peaks = run_backtick_cmd($cmd);
     
   if($max_peaks != $filtered_peaks){ 
-    throw("Expected $max_peaks in filtered bed file, but found $filtered_peaks:\n\t".$out_file);  
+    #throw("Expected $max_peaks in filtered bed file, but found $filtered_peaks:\n\t".$out_file);
+    warn("Expected $max_peaks in filtered bed file, but found $filtered_peaks:\n\t".$out_file);  
   } 
   
   #Create final headered filtered file    

@@ -20,11 +20,12 @@ sub run {
       feature_type.name as feature_type_name, 
       analysis.logic_name as analysis_logic_name 
     from 
-      annotated_feature 
-      join feature_set using (feature_set_id) 
+      peak 
+      join peak_calling using (peak_calling_id) 
+      join experiment using (experiment_id)
       join epigenome using (epigenome_id) 
-      join feature_type using (feature_type_id) 
-      join analysis on (analysis.analysis_id=feature_set.analysis_id);
+      join feature_type on (feature_type.feature_type_id = peak_calling.feature_type_id) 
+      join analysis on (analysis.analysis_id=peak_calling.analysis_id);
 SQL
 ;
 

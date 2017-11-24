@@ -45,7 +45,7 @@ my $bed_serializer = Bio::EnsEMBL::Utils::IO::BEDSerializer->new(
   $bed_fh
 );
 
-my $annotated_feature_adaptor = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Funcgen', 'AnnotatedFeature' );
+my $peak_adaptor = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Funcgen', 'Peak' );
 my $funcgen_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor( $species, 'Funcgen' );
 
 # Avoid error 99 mysql problem. Otherwise the serialisers will connect and 
@@ -66,7 +66,7 @@ open my $in, "<", $id_file;
 while (my $current_annotated_feature_id = <$in>) {
 
   chomp($current_annotated_feature_id);
-  my $annotated_feature = $annotated_feature_adaptor->fetch_by_dbID($current_annotated_feature_id);
+  my $annotated_feature = $peak_adaptor->fetch_by_dbID($current_annotated_feature_id);
   
   #
   # Check, if the peak extends beyond the seq region. If so, trim to the 
@@ -100,13 +100,11 @@ while (my $current_annotated_feature_id = <$in>) {
     $Data::Dumper::Maxdepth = 3;
     
     confess(
-      "Unable to serialise feature! dbid:"
-      . $annotated_feature->dbID
-      . "\n"
-      . Dumper($annotated_feature)
-      . "\n"
-      . Dumper($annotated_feature->summary_as_hash)
-      . "\n"
+      "Unable to serialise feature!"                    . "\n"
+      . "    - dbid: "    . $annotated_feature->dbID    . "\n"
+      . "    - SO_term: " . $annotated_feature->SO_term . "\n"
+      . Dumper($annotated_feature)                      . "\n"
+      . Dumper($annotated_feature->summary_as_hash)     . "\n"
       . "The error was:" . $@
     );
   }

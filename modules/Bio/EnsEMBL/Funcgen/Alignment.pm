@@ -47,6 +47,15 @@ sub _constructor_parameters {
     bam_file_id    => 'bam_file_id',
     bigwig_file_id => 'bigwig_file_id',
     read_file_ids  => 'read_file_ids',
+    experiment_id  => 'experiment_id',
+    has_duplicates => 'has_duplicates',
+    is_control     => 'is_control',
+    to_gender      => 'to_gender',
+    is_complete    => 'is_complete',
+    
+    source_alignment_id       => 'source_alignment_id',
+    deduplicated_alignment_id => 'deduplicated_alignment_id',
+    
   };
 }
 
@@ -70,11 +79,19 @@ sub db              { return shift->_generic_get_or_set('db',             @_); }
   Status     : Stable
 
 =cut
-sub name            { return shift->_generic_get_or_set('name',           @_); }
-sub analysis_id     { return shift->_generic_get_or_set('analysis_id',    @_); }
-sub bam_file_id     { return shift->_generic_get_or_set('bam_file_id',    @_); }
-sub bigwig_file_id  { return shift->_generic_get_or_set('bigwig_file_id', @_); }
-sub read_file_ids   { return shift->_generic_get_or_set('read_file_ids',  @_); }
+sub name           { return shift->_generic_get_or_set('name',                    @_); }
+sub analysis_id    { return shift->_generic_get_or_set('analysis_id',             @_); }
+sub bam_file_id    { return shift->_generic_get_or_set('bam_file_id',             @_); }
+sub bigwig_file_id { return shift->_generic_get_or_set('bigwig_file_id',          @_); }
+sub experiment_id  { return shift->_generic_get_or_set('experiment_id',           @_); }
+sub read_file_ids  { return shift->_generic_get_or_set('read_file_ids',           @_); }
+sub has_duplicates { return shift->_generic_get_or_set('has_duplicates',          @_); }
+sub is_control     { return shift->_generic_get_or_set('is_control',              @_); }
+sub to_gender      { return shift->_generic_get_or_set('to_gender',               @_); }
+sub is_complete    { return shift->_generic_get_or_set('is_complete',             @_); }
+
+sub source_alignment_id       { return shift->_generic_get_or_set('source_alignment_id',       @_); }
+sub deduplicated_alignment_id { return shift->_generic_get_or_set('deduplicated_alignment_id', @_); }
 
 =head2 fetch_Analysis
 
@@ -109,6 +126,18 @@ sub _fetch_DataFile {
   }
   my $data_file = $data_file_adaptor->fetch_by_dbID($data_file_id);
   return $data_file;
+}
+
+sub fetch_Experiment {
+
+  my $self         = shift;
+  
+  my $experiment_adaptor = $self->db->db->get_ExperimentAdaptor;
+  if (! defined $experiment_adaptor) {
+    throw("Couldn't get a ExperimentAdaptor!");
+  }
+  my $experiment = $experiment_adaptor->fetch_by_dbID($self->experiment_id);
+  return $experiment;
 }
 
 =head2 has_bam_DataFile

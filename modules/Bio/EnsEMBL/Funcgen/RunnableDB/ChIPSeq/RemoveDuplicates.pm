@@ -3,6 +3,9 @@ package Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::RemoveDuplicates;
 use strict;
 use base 'Bio::EnsEMBL::Hive::Process';
 use Data::Dumper;
+use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanUtils qw (
+    lock_execution_plan
+);
 
 sub run {
 
@@ -11,15 +14,16 @@ sub run {
   my $data_root_dir = $self->param_required('data_root_dir');
   my $plan          = $self->param_required('plan');
   
+  lock_execution_plan($plan);
+
   my $bam_file_no_duplicates = $plan
-    ->{remove_duplicates}
-    ->{bam_file}
+    ->{output}
     ->{real}
   ;
+
   my $bam_file_with_duplicates = $plan
-    ->{remove_duplicates}
-    ->{align}
-    ->{bam_file}
+    ->{input}
+    ->{output}
     ->{real}
   ;
   
@@ -34,8 +38,12 @@ sub run {
   if ($@) {
     $self->throw($@);
   }
-  
-  #sleep(30);
+
+  my $cmd=qq(java picard.cmdline.PicardCommandLine ValidateSamFile INPUT=$bam_file_no_duplicates);
+  $self->run_system_command($cmd);
+
+  # Give file system time to sync
+  sleep(20);
   return;
 }
 

@@ -91,10 +91,11 @@ sub _constructor_parameters {
     db              => 'db',
     feature_type_id => 'feature_type_id',
     analysis_id     => 'analysis_id',
-    alignment_id    => 'alignment_id',
     name            => 'name',
     display_label   => 'display_label',
-    experiment_id   => '_experiment_id',
+    experiment_id   => 'experiment_id',
+    signal_alignment_id  => 'signal_alignment_id',
+    control_alignment_id => 'control_alignment_id',
   };
 }
 
@@ -113,9 +114,11 @@ sub db              { return shift->_generic_get_or_set('db',              @_); 
 =cut
 sub name            { return shift->_generic_get_or_set('name',            @_); }
 sub feature_type_id { return shift->_generic_get_or_set('feature_type_id', @_); }
+sub experiment_id   { return shift->_generic_get_or_set('experiment_id',   @_); }
 sub analysis_id     { return shift->_generic_get_or_set('analysis_id',     @_); }
-sub alignment_id    { return shift->_generic_get_or_set('alignment_id',    @_); }
-sub _experiment_id  { return shift->_generic_get_or_set('_experiment_id',  @_); }
+#sub alignment_id    { return shift->_generic_get_or_set('alignment_id',    @_); }
+sub signal_alignment_id  { return shift->_generic_get_or_set('signal_alignment_id',    @_); }
+sub control_alignment_id { return shift->_generic_get_or_set('control_alignment_id',    @_); }
 
 =head2 display_label
 
@@ -145,6 +148,52 @@ sub fetch_FeatureType {
   return shift->_generic_fetch('feature_type', 'get_FeatureTypeAdaptor', 'feature_type_id');
 }
 
+sub _fetch_Alignment {
+
+  my $self         = shift;
+  my $alignment_id = shift;
+  
+  my $alignment_adaptor = $self->db->db->get_AlignmentAdaptor;
+  if (! defined $alignment_adaptor) {
+    throw("Couldn't get an AlignmentAdaptor!");
+  }
+  my $alignment = $alignment_adaptor->fetch_by_dbID($alignment_id);
+  return $alignment;
+}
+
+=head2 fetch_signal_Alignment
+
+  Example    : my $alignment = $peak_calling->fetch_signal_Alignment;
+  Description: Fetches the alignment on which the peak calling was done.
+  Returntype : Bio::EnsEMBL::Funcgen::Alignment
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
+sub fetch_signal_Alignment {
+  my $self = shift;
+  my $signal_alignment_id = $self->signal_alignment_id;
+  return $self->_fetch_Alignment($signal_alignment_id);
+}
+
+=head2 fetch_Alignment
+
+  Example    : my $alignment = $peak_calling->fetch_Alignment;
+  Description: Fetches the control used for peak calling. undefined, 
+               if no control was used.
+  Returntype : Bio::EnsEMBL::Funcgen::Alignment
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
+sub fetch_control_Alignment {
+  my $self = shift;
+  my $control_alignment_id = $self->control_alignment_id;
+  return $self->_fetch_Alignment($control_alignment_id);
+}
+
 =head2 fetch_Analysis
 
   Example    : my $analysis = $peak_calling->fetch_Analysis;
@@ -159,21 +208,6 @@ sub fetch_FeatureType {
 =cut
 sub fetch_Analysis {
   return shift->_generic_fetch('analysis', 'get_AnalysisAdaptor', 'analysis_id');
-}
-
-=head2 fetch_Alignment
-
-  Example    : my $alignment = $peak_calling->fetch_Alignment;
-  Description: Fetches the alignment on which the peak calling was done.
-               alignment.
-  Returntype : Bio::EnsEMBL::Funcgen::Alignment
-  Exceptions : None
-  Caller     : general
-  Status     : Stable
-
-=cut
-sub fetch_Alignment {
-  return shift->_generic_fetch('alignment', 'get_AlignmentAdaptor', 'alignment_id');
 }
 
 =head2 fetch_Epigenome

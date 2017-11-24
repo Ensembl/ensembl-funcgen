@@ -35,44 +35,39 @@ $json->canonical(1);
 
 my $db_connection = $funcgen_db_adaptor->dbc;
 
-use Bio::EnsEMBL::Funcgen::Ftp::FetchQCRelatedData;
-my $fetchQCRelatedData = Bio::EnsEMBL::Funcgen::Ftp::FetchQCRelatedData->new(
-  -db_connection => $db_connection,
-);
-
 my $sth = $db_connection->prepare(
   qq(
     select 
-      result_set.name alignment_name,
+      alignment.name alignment_name,
       bam_file.path bam_file,
       bigwig_file.path bigwig_file,
       epigenome.display_label as epigenome,
       experiment.is_control as is_control,
       feature_type.name as feature_type,
       feature_type.so_accession as feature_type_so_accession,
-      result_set_qc_phantom_peak.analysis_id,
-      result_set_qc_phantom_peak.numReads,
-      result_set_qc_phantom_peak.estFragLen,
-      result_set_qc_phantom_peak.estFragLen2,
-      result_set_qc_phantom_peak.estFragLen3,
-      result_set_qc_phantom_peak.corr_estFragLen,
-      result_set_qc_phantom_peak.corr_estFragLen2,
-      result_set_qc_phantom_peak.corr_estFragLen3,
-      result_set_qc_phantom_peak.phantomPeak,
-      result_set_qc_phantom_peak.corr_phantomPeak,
-      result_set_qc_phantom_peak.argmin_corr,
-      result_set_qc_phantom_peak.min_corr,
-      result_set_qc_phantom_peak.NSC,
-      result_set_qc_phantom_peak.RSC,
-      result_set_qc_phantom_peak.QualityTag
+      alignment_qc_phantom_peak.analysis_id,
+      alignment_qc_phantom_peak.numReads,
+      alignment_qc_phantom_peak.estFragLen,
+      alignment_qc_phantom_peak.estFragLen2,
+      alignment_qc_phantom_peak.estFragLen3,
+      alignment_qc_phantom_peak.corr_estFragLen,
+      alignment_qc_phantom_peak.corr_estFragLen2,
+      alignment_qc_phantom_peak.corr_estFragLen3,
+      alignment_qc_phantom_peak.phantomPeak,
+      alignment_qc_phantom_peak.corr_phantomPeak,
+      alignment_qc_phantom_peak.argmin_corr,
+      alignment_qc_phantom_peak.min_corr,
+      alignment_qc_phantom_peak.NSC,
+      alignment_qc_phantom_peak.RSC,
+      alignment_qc_phantom_peak.QualityTag
     from 
-      result_set_qc_phantom_peak
-      join result_set on (result_set_qc_phantom_peak.result_set_id=result_set.result_set_id)
-      join epigenome on (result_set.epigenome_id=epigenome.epigenome_id)
-      join experiment on (result_set.experiment_id=experiment.experiment_id)
-      join feature_type on (result_set.feature_type_id=feature_type.feature_type_id)
-      left join dbfile_registry bam_file    on (bam_file.table_name='result_set'    and bam_file.table_id=result_set.result_set_id    and bam_file.file_type='BAM')
-      left join dbfile_registry bigwig_file on (bigwig_file.table_name='result_set' and bigwig_file.table_id=result_set.result_set_id and bigwig_file.file_type='BIGWIG')
+      alignment_qc_phantom_peak
+      join alignment    on (alignment_qc_phantom_peak.alignment_id=alignment.alignment_id)
+      join experiment   on (alignment.experiment_id=experiment.experiment_id)
+      join epigenome    on (experiment.epigenome_id=epigenome.epigenome_id)
+      join feature_type on (experiment.feature_type_id=feature_type.feature_type_id)
+      left join data_file bam_file    on (bam_file.table_name='alignment'    and bam_file.table_id=alignment.alignment_id    and bam_file.file_type='BAM')
+      left join data_file bigwig_file on (bigwig_file.table_name='alignment' and bigwig_file.table_id=alignment.alignment_id and bigwig_file.file_type='BIGWIG')
   )
 );
 $sth->execute;
@@ -100,9 +95,6 @@ my $is_first = 1;
 $output_fh->print("[\n");
 
 while (my $hash_ref = $sth->fetchrow_hashref) {
-
-  $hash_ref->{sequence_files} = $fetchQCRelatedData->fetch_input_subset_data_for_result_set($hash_ref->{alignment_name});
-  $hash_ref->{epigenome}      = $fetchQCRelatedData->fetch_xrefs_for_epigenome($hash_ref->{epigenome});
 
   translate($hash_ref);
   

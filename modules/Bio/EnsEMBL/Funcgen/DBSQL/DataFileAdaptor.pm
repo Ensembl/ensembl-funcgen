@@ -45,4 +45,11 @@ sub _tables {
   return ['data_file', 'df']
 }
 
+sub fetch_by_path {
+  my $self = shift;
+  my $path = shift;
+  
+  return $self->fetch_single_object('path = ?', [ $path ]);
+}
+
 1;

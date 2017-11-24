@@ -23,7 +23,6 @@ sub directory_name_builder      { return shift->_generic_get_or_set('directory_n
 sub biological_replicate_number { return shift->_generic_get_or_set('biological_replicate_number', @_); }
 sub technical_replicate_number  { return shift->_generic_get_or_set('technical_replicate_number',  @_); }
 sub experiment                  { return shift->_generic_get_or_set('experiment',                  @_); }
-#sub name                        { return shift->_generic_get_or_set('name',                        @_); }
 
 sub unset_biological_replicate_number {
   shift->{biological_replicate_number} = undef;
@@ -49,6 +48,7 @@ sub name {
     $epigenome->production_name,
     $feature_type->name,
     $experimental_group->name,
+    $experiment->dbID
   );
   
   if ($biological_replicate_number) {
@@ -89,45 +89,85 @@ sub bigwig_file_name {
   return $self->base_name_no_duplicates . '.bw';
 }
 
+sub bed_file_name {
+  my $self = shift;
+  return $self->base_name_no_duplicates . '.bed';
+}
+
 sub bam_file_with_duplicates {
   my $self = shift;
   return File::Spec->catfile(
-    $self->directory_name_builder->bam_output_dir,
+    $self
+      ->directory_name_builder
+      ->bam_output_dir(
+        $self->experiment
+      ),
     $self->bam_file_name_with_duplicates
    );
 }
 sub bam_file_with_duplicates_stored {
   my $self = shift;
   return File::Spec->catfile(
-    $self->directory_name_builder->bam_output_dir_stored,
-    $self->bam_file_name_with_duplicates
+    $self
+      ->directory_name_builder
+      ->bam_output_dir_stored(
+        $self->experiment
+      ),
+      $self->bam_file_name_with_duplicates
    );
 }
 sub bam_file_no_duplicates {
   my $self = shift;
   return File::Spec->catfile(
-    $self->directory_name_builder->bam_output_dir,
+    $self
+      ->directory_name_builder
+      ->bam_output_dir(
+        $self->experiment
+      ),
     $self->bam_file_name_no_duplicates
    );
 }
 sub bam_file_no_duplicates_stored {
   my $self = shift;
   return File::Spec->catfile(
-    $self->directory_name_builder->bam_output_dir_stored,
+    $self
+      ->directory_name_builder
+      ->bam_output_dir_stored(
+        $self->experiment
+      ),
     $self->bam_file_name_no_duplicates
    );
 }
 sub bigwig_file_no_duplicates {
   my $self = shift;
   return File::Spec->catfile(
-    $self->directory_name_builder->bigwig_output_dir,
+    $self
+      ->directory_name_builder
+      ->bigwig_output_dir(
+        $self->experiment
+      ),
     $self->bigwig_file_name
+   );
+}
+sub bed_file_no_duplicates {
+  my $self = shift;
+  return File::Spec->catfile(
+    $self
+      ->directory_name_builder
+      ->bed_output_dir(
+        $self->experiment
+      ),
+    $self->bed_file_name
    );
 }
 sub bigwig_file_no_duplicates_stored {
   my $self = shift;
   return File::Spec->catfile(
-    $self->directory_name_builder->bigwig_output_dir_stored,
+    $self
+      ->directory_name_builder
+      ->bigwig_output_dir_stored(
+        $self->experiment
+      ),
     $self->bigwig_file_name
    );
 }
