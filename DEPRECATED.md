@@ -15,7 +15,7 @@ A year after deprecation (4 Ensembl releases), the method is removed from the AP
  - Bio::EnsEMBL::Funcgen::Probe::get_complete_name()
  - Bio::EnsEMBL::Funcgen::RegulatoryFeature::is_projected()
 
-### To be removed in Ensembl Release 91 ###
+### To be removed in Ensembl Release 92 ###
 
  - Bio::EnsEMBL::Funcgen::RegulatoryActivity::regulatory_evidence()
  - Bio::EnsEMBL::Funcgen::RegulatoryFeature::regulatory_evidence()
