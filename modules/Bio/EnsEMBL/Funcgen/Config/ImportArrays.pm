@@ -445,6 +445,7 @@ use vars qw( %Config );
         'GPL10158',
         'GPL17465',
         'GPL19384',
+        'GPL6848',
       ],
     },
 
