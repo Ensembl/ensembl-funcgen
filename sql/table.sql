@@ -55,7 +55,6 @@
 @column epigenome_count         Integer, number of epigenomes in which this feature is active
 @column regulatory_build_id     @link regulatory_build ID
 
-@see feature_set
 @see feature_type
 
 */
@@ -153,6 +152,7 @@ CREATE TABLE `regulatory_activity` (
 
 @see feature_type
 @see regulatory_feature
+@see analysis
 
 */
 
@@ -210,7 +210,6 @@ CREATE TABLE `regulatory_build_epigenome` (
 
 @see feature_set
 @see feature_type
-@see seq_region
 */
 
 DROP TABLE IF EXISTS `segmentation_feature`;
@@ -242,6 +241,7 @@ CREATE TABLE `segmentation_feature` (
 
 @see regulatory_build
 @see epigenome
+@see analysis
 
 */
 
@@ -383,7 +383,6 @@ CREATE TABLE `motif_feature` (
 
 @see feature_set
 @see feature_type
-@see seq_region
 */
 
 DROP TABLE IF EXISTS `mirna_target_feature`;
@@ -417,7 +416,6 @@ CREATE TABLE `mirna_target_feature` (
 @column annotated_feature_id    @link annotated_feature table ID
 @column motif_feature_id        @link motif_feature table ID
 
-@see associated_motif_feature
 */
 
 DROP TABLE IF EXISTS `associated_motif_feature`;
@@ -478,7 +476,6 @@ CREATE TABLE `binding_matrix` (
 
 @see feature_set
 @see feature_type
-@see seq_region
 */
 
 DROP TABLE IF EXISTS `external_feature`;
@@ -510,7 +507,7 @@ CREATE TABLE `external_feature` (
 @column epigenome_id              @link epigenome
 @column feature_type_id           @link feature_type
 
-@see dbfile_registry
+@see data_file
 
 */
 
@@ -554,7 +551,6 @@ CREATE TABLE `external_feature_file` (
 
 @see analysis
 @see probe
-@see seq_region
 */
 
 DROP TABLE IF EXISTS `probe_feature`;
@@ -764,7 +760,7 @@ CREATE TABLE `alignment` (
 @column read_file_id     @link read_file ID
 
 @see alignment
-@see data_file
+@see read_file
 
 */
 DROP TABLE IF EXISTS `alignment_read_file`;
@@ -916,6 +912,10 @@ CREATE TABLE `alignment_qc_phantom_peak` (
 @column path           Either a full filepath or a directory which the API will use to build the filepath
 @column file_type      Type of data file ('BAM','BAMCOV','BIGBED','BIGWIG','VCF','CRAM','DIR')
 @column md5sum         md5sum of data file
+
+@see external_feature_file
+@see segmentation_file
+@see alignment
 */
 
 
@@ -949,6 +949,7 @@ CREATE TABLE `data_file` (
 @column notes           (not used)
 
 @see read_file_experimental_configuration
+@see analysis
 
 */
 
@@ -1077,6 +1078,8 @@ CREATE TABLE `array_chip` (
 @column family        Generic descriptor for probe_set e.g. ENCODE_REGIONS, RANDOM etc. Not used
 @column array_chip_id @link array_chip ID of the array chip to which this probe set belongs.
 
+@see array_chip
+
 */
 
 DROP TABLE IF EXISTS `probe_set`;
@@ -1099,6 +1102,8 @@ CREATE TABLE `probe_set` (
 @column probe_set_id            Id of the @link probe_set
 @column stable_id               Stable id of the transcript to which it has been mapped
 @column description             Details about the mapping as text
+
+@see probe_set
 
 */
 
@@ -1181,6 +1186,8 @@ CREATE TABLE `probe_seq` (
 @column probe_id            Id of the @link probe_set
 @column stable_id           Stable id of the transcript to which it has been mapped
 @column description         Details about the mapping as text
+
+@see probe
 
 */
 
@@ -1474,8 +1481,6 @@ INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','pat
 @column table_name              Ensembl database table name.
 @column coord_system_id         Table ID for @link coord_system
 @column max_length              Longest sequence length.
-
-@see coord_system
 
 */
 
