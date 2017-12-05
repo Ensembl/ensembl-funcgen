@@ -46,20 +46,17 @@
 @column regulatory_feature_id   Internal ID
 @column feature_type_id         @link feature_type ID
 @column seq_region_id           @link seq_region ID
-@column seq_region_start        Start position of this feature
+@column seq_region_start        Start position of this featurefeature_set
 @column seq_region_end          End position of this feature
 @column seq_region_strand       Strand orientation of this feature
-@column display_label           Text display label
 @column stable_id               Integer stable ID without ENSR prefix *mnuhn: Not true, they do have this prefix*
-@column binary_string           *deprecated*
 @column bound_start_length      Distance between start of the feature and start of the bound region. Bound regions are used for promoters only. They define the flanking regions. It is an area that is predicted t
 @column bound_end_length        Distance between end of the bound region and end of this feature
-@column activity                Indicates the type of activity of this feature in this epigenome
 @column epigenome_count         Integer, number of epigenomes in which this feature is active
+@column regulatory_build_id     @link regulatory_build ID
 
 @see feature_set
 @see feature_type
-@see seq_region
 
 */
 
@@ -89,12 +86,11 @@ CREATE TABLE `regulatory_feature` (
 
 /**
 @table  regulatory_evidence
-@desc   Links a regulatory feature and the epigenome (via regulatory 
-        activity) to the underlying structure of epigenetic marks that the 
+@desc   Links a regulatory feature and the epigenome (via regulatory
+        activity) to the underlying structure of epigenetic marks that the
         regulatory feature has in this epigenome.
 @colour  #FFCC66
 
-@column regulatory_feature_id   Internal ID
 @column regulatory_activity_id  @link regulatory_activity
 @column attribute_feature_id    Table ID of attribute feature
 @column attribute_feature_table Table name of attribute feature
@@ -114,8 +110,8 @@ CREATE TABLE `regulatory_evidence` (
 
 /**
 @table  regulatory_activity
-@desc   For every regulatory feature and epigenome that was a part of the 
-        regulatory build, this table links the regulatory feature to the 
+@desc   For every regulatory feature and epigenome that was a part of the
+        regulatory build, this table links the regulatory feature to the
         predicted regulatory activity in this epigenome.
 @colour  #FFCC66
 
@@ -148,8 +144,8 @@ CREATE TABLE `regulatory_activity` (
 @column regulatory_build_id            Internal ID
 @column name                           Name of the regulatory build
 @column version                        Version of the regulatory build
-sss@column initial_release_date
-@column last_annotation_update
+@column initial_release_date           Date of initial release
+@column last_annotation_update         Date of last annotation update
 @column feature_type_id                @link feature_type
 @column analysis_id                    @link analysis
 @column is_current                     Set to true, if this entry refers to the current regulatory build
@@ -273,7 +269,6 @@ CREATE TABLE `segmentation_file` (
 @column seq_region_start        Start position of this feature
 @column seq_region_end          End position of this feature
 @column seq_region_strand       Strand orientation of this feature
-@column display_label           Text display label
 @column score                   Score derived from software
 @column summit                  Represents peak summit for those analyses which provide it (e.g. Swembl)
 
@@ -296,7 +291,7 @@ CREATE TABLE `peak` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000 AVG_ROW_LENGTH=39;
 
 /**
-@table  peak
+@table  peak_calling
 @desc   Represents a peak calling analysis.
 @colour  #FFCC66
 
@@ -315,6 +310,7 @@ CREATE TABLE `peak` (
 @see epigenome
 @see experiment
 */
+
 DROP TABLE IF EXISTS `peak_calling`;
 CREATE TABLE `peak_calling` (
   `peak_calling_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -579,6 +575,19 @@ CREATE TABLE `probe_feature` (
   KEY `seq_region_probe_probe_feature_idx` (`seq_region_id`,`seq_region_start`,`seq_region_end`,`probe_id`,`probe_feature_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+/**
+@table  probe_feature_transcript
+@desc   The table maps probe_features to transcripts.
+@colour  #FFCC66
+
+@column probe_feature_transcript_id    Internal ID
+@column probe_feature_id               @link probe_feature table ID
+@column stable_id                      Stable id of the transcript to which it has been mapped
+@column description                    Transcript description
+
+@see probe_feature
+*/
+
 DROP TABLE IF EXISTS `probe_feature_transcript`;
 CREATE TABLE `probe_feature_transcript` (
   `probe_feature_transcript_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -646,7 +655,7 @@ CREATE TABLE `associated_feature_type` (
 
 
 /**
- 
+
 @header  Set tables
 @desc    Sets are containers for distinct sets of raw and/or processed data.
 @colour  #66CCFF
@@ -689,9 +698,9 @@ CREATE TABLE `feature_set` (
 @desc
 @colour  #66CCFF
 
-@column feature_set_qc_prop_reads_in_peaks_id  Internal ID
+@column peak_calling_qc_prop_reads_in_peaks_id  Internal ID
 @column analysis_id                            @link analysis ID
-@column feature_set_id                         @link peak_calling ID
+@column peak_calling_id                         @link peak_calling ID
 @column prop_reads_in_peaks                    Proportion of reads in peaks
 @column total_reads                            Total number of reads
 @column path
@@ -816,7 +825,7 @@ CREATE TABLE `alignment_qc_chance` (
 @colour  #66CCFF
 
 @column alignment_qc_flagstats_id  Internal ID
-@column alignment_qc_id            @link alignment ID
+@column alignment_id               @link alignment ID
 @column analysis_id                @link analysis ID
 @column category
 @column qc_passed_reads
@@ -899,13 +908,14 @@ CREATE TABLE `alignment_qc_phantom_peak` (
 /**
 @table  data_file
 @colour  #66CCFF
-@desc   
+@desc
 
-@column table_id   Primary key of linked dbfile entity e.g. @link result_set or @link analysis
-@column table_name Name of linked table
-@column path       Either a full filepath or a directory which the API will use to build the filepath
-@column file_type
-@column md5sum     
+@column data_file_id   Internal ID
+@column table_id       Primary key of linked entity e.g. @link external_feature_file or @link segmentation_file or @link alignment
+@column table_name     Name of linked table (external_feature_file, segmentation_file, alignment)
+@column path           Either a full filepath or a directory which the API will use to build the filepath
+@column file_type      Type of data file ('BAM','BAMCOV','BIGBED','BIGWIG','VCF','CRAM','DIR')
+@column md5sum         md5sum of data file
 */
 
 
@@ -924,14 +934,14 @@ CREATE TABLE `data_file` (
 
 /**
 @table  read_file
-@desc   
+@desc
 @colour  #66CCFF
 
 @column read_file_id    Internal ID
 @column name            Name for the read file object
 @column analysis_id     @link analysis ID
 @column is_paired_end   Indicates whether it is paired end
-@column paired_with
+@column paired_with     (not used)
 @column file_size       (not used)
 @column read_length     (not used)
 @column md5sum          (not used)
@@ -960,7 +970,7 @@ CREATE TABLE `read_file` (
 
 /**
 @table  read_file_experimental_configuration
-@desc   
+@desc
 @colour  #66CCFF
 
 @column read_file_experimental_configuration_id  Internal ID
@@ -1010,7 +1020,7 @@ CREATE TABLE `read_file_experimental_configuration` (
 @column class       Array class e.g. AFFY_ST, ILLUMINA_INFINIUM
 
 @column is_probeset_array         Indicates whether the array is organised into probe sets.
-@column is_linked_array           
+@column is_linked_array
 @column has_sense_interrogation   Indicates whether the array has sense interrogation
 
 */
@@ -1146,7 +1156,7 @@ CREATE TABLE `probe` (
 
 @column probe_seq_id          Internal ID
 @column sequence              Probe sequence
-@column sequence_upper        Probe sequence in uppcase letters. 
+@column sequence_upper        Probe sequence in uppcase letters.
 @column sequence_upper_sha1   Sha1 hashsum of the uppcase of the probe sequence.
 
 @see probe
@@ -1200,19 +1210,17 @@ CREATE TABLE `probe_transcript` (
 @colour  #00FF00
 
 @column experiment_id           Internal ID
-@column epigenome_id            @link epigenome ID
+@column name                    Name of experiment
 @column experimental_group_id   @link experimental_group ID
 @column control_id              @link experiment ID
 @column is_control              Boolean, true means that this experiment is a control.
 @column feature_type_id         @link feature_type table ID
-@column description             Text description
-@column name                    Name of experiment
+@column epigenome_id            @link epigenome ID
 @column archive_id              ENA experiment identifier enabling access to specific raw data
 
 @see epigenome
 @see experimental_group
 @see feature_type
-@see mage_xml
 */
 
 DROP TABLE IF EXISTS `experiment`;
@@ -1798,4 +1806,3 @@ CREATE TABLE `unmapped_object` (
   KEY `id_idx` (`identifier`(50)),
   KEY `ext_db_identifier_idx` (`external_db_id`,`identifier`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
