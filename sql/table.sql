@@ -45,7 +45,7 @@
 
 @column regulatory_feature_id   Internal ID
 @column feature_type_id         @link feature_type ID
-@column seq_region_id           @link seq_region ID
+@column seq_region_id           seq_region ID
 @column seq_region_start        Start position of this featurefeature_set
 @column seq_region_end          End position of this feature
 @column seq_region_strand       Strand orientation of this feature
@@ -201,7 +201,7 @@ CREATE TABLE `regulatory_build_epigenome` (
 @column segmentation_feature_id Internal ID
 @column feature_set_id          @link feature_set ID
 @column feature_type_id         @link feature_type ID
-@column seq_region_id           @link seq_region ID
+@column seq_region_id           seq_region ID
 @column seq_region_start        Start position of this feature
 @column seq_region_end          End position of this feature
 @column seq_region_strand       Strand orientation of this feature
@@ -265,7 +265,7 @@ CREATE TABLE `segmentation_file` (
 
 @column peak_id    Internal ID
 @column peak_calling_id         @link peak_calling ID
-@column seq_region_id           @link seq_region ID
+@column seq_region_id           seq_region ID
 @column seq_region_start        Start position of this feature
 @column seq_region_end          End position of this feature
 @column seq_region_strand       Strand orientation of this feature
@@ -332,7 +332,7 @@ CREATE TABLE `peak_calling` (
 
 @column motif_feature_id    Primary key, internal ID
 @column binding_matrix_id   @link binding_matrix table
-@column seq_region_id       @link seq_region table
+@column seq_region_id       seq_region table
 @column seq_region_start    Start position of this feature
 @column seq_region_end      End position of this feature
 @column seq_region_strand   Strand orientation of this feature
@@ -370,7 +370,7 @@ CREATE TABLE `motif_feature` (
 @column mirna_target_feature_id Internal ID
 @column feature_set_id          @link feature_set ID
 @column feature_type_id         @link feature_type ID
-@column seq_region_id           @link seq_region ID
+@column seq_region_id           seq_region ID
 @column accession               Accession number given by data source
 @column display_label           Text display label
 @column evidence                Evidence level provided by data source
@@ -467,7 +467,7 @@ CREATE TABLE `binding_matrix` (
 @column external_feature_id  Internal ID
 @column feature_set_id       @link feature_set ID
 @column feature_type_id      @link feature_type ID
-@column seq_region_id        @link seq_region ID
+@column seq_region_id        seq_region ID
 @column seq_region_start     Start position of this feature
 @column seq_region_end       End position of this feature
 @column seq_region_strand    Strand orientation of this feature
@@ -532,7 +532,7 @@ CREATE TABLE `external_feature_file` (
 @column probe_feature_id    Internal ID
 @column analysis_id         @link analysis table ID
 @column probe_id            @link probe table ID
-@column seq_region_id       @link seq_region table ID
+@column seq_region_id       seq_region table ID
 @column seq_region_start    Start position of this feature
 @column seq_region_end      End position of this feature
 @column seq_region_strand   Strand orientation of this feature
