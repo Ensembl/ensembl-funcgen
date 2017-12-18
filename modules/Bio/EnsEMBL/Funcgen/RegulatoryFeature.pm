@@ -325,9 +325,7 @@ sub regulatory_activity_for_epigenome {
 =head2 fetch_overlapping_MotifFeatures
 
   Example    : my $overlapping_motif_features = $rf->fetch_overlapping_MotifFeatures
-  Description: Getter for the regulatory_activity_for_epigenome for this 
-               feature. Returns undef, if no activity was predicted for the
-               epigenome. 
+  Description: Returns all MotifFeatures that overlap with a RegulatoryFeature
   Returntype : Arrayref of Bio::EnsEMBL::Funcgen::MotifFeature objects
   Exceptions : none
   Caller     : General
