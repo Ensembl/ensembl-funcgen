@@ -322,6 +322,19 @@ sub regulatory_activity_for_epigenome {
   return $regulatory_activity[0];
 }
 
+=head2 fetch_overlapping_MotifFeatures
+
+  Example    : my $overlapping_motif_features = $rf->fetch_overlapping_MotifFeatures
+  Description: Getter for the regulatory_activity_for_epigenome for this 
+               feature. Returns undef, if no activity was predicted for the
+               epigenome. 
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::MotifFeature objects
+  Exceptions : none
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
 sub fetch_overlapping_MotifFeatures {
     my $self = shift;
 
