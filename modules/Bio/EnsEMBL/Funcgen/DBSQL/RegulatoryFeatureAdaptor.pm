@@ -637,6 +637,52 @@ sub _make_arrayref_if_not_arrayref {
   return $obj_as_arrayref;
 }
 
+=head2 _fetch_overlapping_motif_features
+
+  Arg [1]    : Integer, regulatory feature id
+  Example    : None
+  Description: Fetches a list of MotifFeature objects that overlap
+               with the RegulatoryFeature object
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::MotifFeature objects
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub _fetch_overlapping_MotifFeatures {
+    my ( $self, $regulatory_feature_id ) = @_;
+
+    if (! defined $regulatory_feature_id){
+      throw('Must provide a regulatory_activity_id parameter');
+    }
+
+    my $sth = $self->prepare( "
+      SELECT motif_feature_id FROM 
+      underlying_structure
+      WHERE regulatory_feature_id=?
+      " );
+
+    $sth->execute($regulatory_feature_id);
+
+    my @motif_feature_ids;
+
+    while ( my @row = $sth->fetchrow_array ) {
+        push @motif_feature_ids, $row[0];
+    }
+
+    my $motif_feature_adaptor
+        = $self->db->get_adaptor('MotifFeature');
+
+    my @motif_features;
+
+    for my $id (@motif_feature_ids) {
+        push @motif_features, $motif_feature_adaptor->fetch_by_dbID($id);
+    }
+
+    return \@motif_features;
+}
+
 =head2 fetch_all_by_Slice
 
   Arg [1]    : Bio::EnsEMBL::Slice

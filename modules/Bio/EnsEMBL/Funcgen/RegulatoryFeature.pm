@@ -322,6 +322,15 @@ sub regulatory_activity_for_epigenome {
   return $regulatory_activity[0];
 }
 
+sub fetch_overlapping_MotifFeatures {
+    my $self = shift;
+
+    my $motif_features
+        = $self->adaptor()->_fetch_overlapping_MotifFeatures( $self->dbID() );
+
+    return $motif_features;
+}
+
 sub _get_underlying_structure_motifs_by_epigenome {
   my $self = shift;
   my $epigenome = shift;
