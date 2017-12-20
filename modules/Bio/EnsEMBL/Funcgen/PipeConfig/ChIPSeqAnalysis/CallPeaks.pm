@@ -18,6 +18,14 @@ sub pipeline_analyses {
         {   -logic_name  => 'call_peaks',
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::CallPeaks',
             -flow_into   => {
+               2        => 'store_peaks',
+               MEMLIMIT => 'call_peaks_himem',
+            },
+        },
+        {   -logic_name  => 'call_peaks_himem',
+            -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::CallPeaks',
+            -rc_name     => '8Gb_job',
+            -flow_into   => {
                2 => 'store_peaks',
             },
         },
