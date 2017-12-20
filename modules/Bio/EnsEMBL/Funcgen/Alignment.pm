@@ -128,6 +128,26 @@ sub _fetch_DataFile {
   return $data_file;
 }
 
+sub _delete_bam_file_from_db {
+
+  my $self = shift;
+  
+  $self->_generic_get_or_set('bam_file_id', undef, 1);
+  $self->db->update($self);
+}
+
+sub fetch_source_Alignment {
+
+  my $self         = shift;
+  
+  my $alignment_adaptor = $self->db;
+  if (! defined $alignment_adaptor) {
+    throw("Couldn't get a AlignmentAdaptor!");
+  }
+  my $alignment = $alignment_adaptor->fetch_by_dbID($self->source_alignment_id);
+  return $alignment;
+}
+
 sub fetch_Experiment {
 
   my $self         = shift;
@@ -138,6 +158,18 @@ sub fetch_Experiment {
   }
   my $experiment = $experiment_adaptor->fetch_by_dbID($self->experiment_id);
   return $experiment;
+}
+
+sub fetch_PhantomPeak {
+  my $self = shift;
+
+  my $phantom_peak_adaptor = $self->db->db->get_PhantomPeakAdaptor;
+  if (! defined $phantom_peak_adaptor) {
+    throw("Couldn't get an PhantomPeakAdaptor!");
+  }
+  my $phantom_peak = $phantom_peak_adaptor
+    ->fetch_by_Alignment($self);
+  return $phantom_peak;
 }
 
 =head2 has_bam_DataFile
