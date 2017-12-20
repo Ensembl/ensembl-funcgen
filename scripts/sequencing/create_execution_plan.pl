@@ -26,7 +26,7 @@ limitations under the License.
 
 =head1 create_execution_plan.pl
 
-  create_execution_plan.pl -registry /homes/mnuhn/work_dir_ersa/lib/ensembl-funcgen/registry.pm -species homo_sapiens
+  create_execution_plan.pl -registry /homes/mnuhn/work_dir_ersa/lib/ensembl-funcgen/registry.pm -species homo_sapiens | less
 
 =head1 SYNOPSIS
 
