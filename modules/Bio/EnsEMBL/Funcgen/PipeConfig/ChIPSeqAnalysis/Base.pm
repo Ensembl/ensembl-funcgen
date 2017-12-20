@@ -78,11 +78,27 @@ sub generate_parallel_alignment_analyses {
         {   -logic_name  => $surround->('merge'),
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::MergeBamFiles',
             -flow_into   => {
+               MAIN     => $surround->('remove_duplicates'),
+               MEMLIMIT => $surround->('merge_himem'),
+            },
+        },
+        {   -logic_name  => $surround->('merge_himem'),
+            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::MergeBamFiles',
+            -rc_name    => '8Gb_job',
+            -flow_into   => {
                MAIN => $surround->('remove_duplicates'),
             },
         },
         {   -logic_name  => $surround->('remove_duplicates'),
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::RemoveDuplicates',
+            -flow_into   => {
+               MAIN     => $surround->('register_alignment'),
+               MEMLIMIT => $surround->('remove_duplicates_himem'),
+            },
+        },
+        {   -logic_name  => $surround->('remove_duplicates_himem'),
+            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::RemoveDuplicates',
+            -rc_name    => '8Gb_job',
             -flow_into   => {
                MAIN => $surround->('register_alignment'),
             },
