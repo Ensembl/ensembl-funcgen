@@ -60,6 +60,23 @@ sub fetch_all_by_Epigenome {
     return $self->fetch_all($constraint);
 }
 
+sub fetch_by_Experiment {
+    my $self       = shift;
+    my $experiment = shift;
+    
+    my $constraint = 'experiment_id  = ' . $experiment->dbID;
+    return $self->fetch_single_object($constraint);
+}
+
+sub count_peaks_by_PeakCalling {
+  my $self = shift;
+  my $peak_calling = shift;
+  return $self->db->get_PeakAdaptor->count_all('peak_calling_id = ' . $peak_calling->dbID);
+}
+
+# Ugly legacy stuff from here onwards, used by web, so we can't get rid of it 
+# easily. Don't use any of this in future code development.
+
 sub _fetch_all_by_constraints {
     my $self            = shift;
     my $constraint_hash = shift;
@@ -201,14 +218,6 @@ SQL
 
   #Do we need to add an 'in_build' filter /data field?
 
-}
-
-sub fetch_by_Experiment {
-    my $self       = shift;
-    my $experiment = shift;
-    
-    my $constraint = 'experiment_id  = ' . $experiment->dbID;
-    return $self->fetch_single_object($constraint);
 }
 
 1;
