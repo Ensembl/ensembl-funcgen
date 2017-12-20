@@ -112,13 +112,12 @@ sub db              { return shift->_generic_get_or_set('db',              @_); 
   Status     : Stable
 
 =cut
-sub name            { return shift->_generic_get_or_set('name',            @_); }
-sub feature_type_id { return shift->_generic_get_or_set('feature_type_id', @_); }
-sub experiment_id   { return shift->_generic_get_or_set('experiment_id',   @_); }
-sub analysis_id     { return shift->_generic_get_or_set('analysis_id',     @_); }
-#sub alignment_id    { return shift->_generic_get_or_set('alignment_id',    @_); }
-sub signal_alignment_id  { return shift->_generic_get_or_set('signal_alignment_id',    @_); }
-sub control_alignment_id { return shift->_generic_get_or_set('control_alignment_id',    @_); }
+sub name                 { return shift->_generic_get_or_set('name',                 @_); }
+sub feature_type_id      { return shift->_generic_get_or_set('feature_type_id',      @_); }
+sub experiment_id        { return shift->_generic_get_or_set('_experiment_id',       @_); }
+sub analysis_id          { return shift->_generic_get_or_set('analysis_id',          @_); }
+sub signal_alignment_id  { return shift->_generic_get_or_set('signal_alignment_id',  @_); }
+sub control_alignment_id { return shift->_generic_get_or_set('control_alignment_id', @_); }
 
 =head2 display_label
 
@@ -177,6 +176,36 @@ sub fetch_signal_Alignment {
   return $self->_fetch_Alignment($signal_alignment_id);
 }
 
+sub fetch_Idr {
+  my $self = shift;
+  
+  my $idr_adaptor = $self->db->db->get_IdrAdaptor;
+  if (! defined $idr_adaptor) {
+    throw("Couldn't get an IdrAdaptor!");
+  }
+  my $idr = $idr_adaptor->_fetch_by_experiment_id($self->experiment_id);
+  return $idr;
+}
+
+sub fetch_Chance {
+  my $self = shift;
+
+  my $signal_alignment  = $self->fetch_signal_Alignment;
+  my $control_alignment = $self->fetch_control_Alignment;
+
+  my $chance_adaptor = $self->db->db->get_ChanceAdaptor;
+  if (! defined $chance_adaptor) {
+    throw("Couldn't get an ChanceAdaptor!");
+  }
+  my $chance = $chance_adaptor
+    ->fetch_by_signal_control_Alignments(
+      $signal_alignment, 
+      $control_alignment
+    );
+  return $chance;
+}
+
+
 =head2 fetch_Alignment
 
   Example    : my $alignment = $peak_calling->fetch_Alignment;
@@ -222,25 +251,16 @@ sub fetch_Analysis {
 =cut
 sub fetch_Epigenome {
     my $self = shift;
-    my $db = $self->db;
-    my $experiment_id = $self->_experiment_id;
-    my $epigenome_id  = $db->sql_helper->execute_single_result(
-      -SQL    => '
-        select 
-            distinct experiment.epigenome_id
-        from 
-            experiment
-        where
-            experiment_id = ?
-      ',
-      -PARAMS => [ $experiment_id ],
-    );
-    my $epigenome = $db->db->get_EpigenomeAdaptor->fetch_by_dbID($epigenome_id);
-    return $epigenome;
+    return $self->fetch_Experiment->epigenome;
 }
 
 sub fetch_Experiment {
-  return shift->_generic_fetch('experiment', 'get_ExperimentAdaptor', '_experiment_id');
+  return shift->_generic_fetch('experiment', 'get_ExperimentAdaptor', 'experiment_id');
+}
+
+sub num_peaks {
+  my $self = shift;
+  return $self->db->count_peaks_by_PeakCalling($self);
 }
 
 =head2 fetch_source_label
@@ -257,7 +277,7 @@ sub fetch_Experiment {
 sub fetch_source_label {
     my $self = shift;
     my $db = $self->db;
-    my $experiment_id = $self->_experiment_id;
+    my $experiment_id = $self->experiment_id;
     my $source_label  = $db->sql_helper->execute_single_result(
       -SQL    => '
         select 
