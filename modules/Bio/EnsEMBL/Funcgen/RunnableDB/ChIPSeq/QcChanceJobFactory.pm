@@ -100,6 +100,9 @@ sub run {
         species                   => $species,
         argenrich_outfile         => 'argenrich_outfile.txt',
         
+        signal_alignment          => $alignment_name,
+        control_alignment         => $control_alignment->name,
+        
         tempdir => $overridden_tempdir,
 
         # Connection details for the db to which the results will be written
