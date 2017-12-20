@@ -57,7 +57,9 @@ my $host;
 my $port;
 my $dbname;
 my $work_dir;
-my $experiment_name;
+#my $experiment_name;
+my $signal_alignment_name;
+my $control_alignment_name;
 
 my %config_hash = (
   'argenrich_file'  => \$argenrich_file,
@@ -68,7 +70,8 @@ my %config_hash = (
   'host'            => \$host,
   'dbname'          => \$dbname,
   'work_dir'        => \$work_dir,
-  'experiment_name' => \$experiment_name,
+  'signal'          => \$signal_alignment_name,
+  'control'         => \$control_alignment_name,
 );
 
 my $result = GetOptions(
@@ -81,7 +84,8 @@ my $result = GetOptions(
   'host=s',
   'dbname=s',
   'work_dir=s',
-  'experiment_name=s',
+  'signal=s',
+  'control=s',
 );
 
 die unless(-e $argenrich_file);
@@ -103,22 +107,18 @@ my $dba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
     -dbconn => $dbc,
 );
 
-my $experiment_adaptor = $dba->get_adaptor('Experiment');
-my $experiment = $experiment_adaptor->fetch_by_name($experiment_name);
+my $alignment_adaptor = $dba->get_adaptor('Alignment');
 
-if (! defined $experiment) {
-    die;
+my $signal_alignment = $alignment_adaptor->fetch_by_name($signal_alignment_name);
+
+my $control_alignment = $alignment_adaptor->fetch_by_name($control_alignment_name);
+  
+if (! defined $signal_alignment) {
+    die("Can't fetch signal alignment!");
 }
-
-my $peak_calling_adaptor = $dba->get_adaptor('PeakCalling');
-my $peak_calling = $peak_calling_adaptor->fetch_by_Experiment($experiment);
-
-if (! defined $peak_calling) {
-    die;
+if (! defined $control_alignment) {
+    die("Can't fetch control alignment!");
 }
-
-my $signal_alignment  = $peak_calling->fetch_signal_Alignment;
-my $control_alignment = $peak_calling->fetch_control_Alignment;
 
 my $signal_alignment_id  = $signal_alignment->dbID;
 my $control_alignment_id = $control_alignment->dbID;
@@ -190,9 +190,6 @@ if ($dry_run) {
   };
 }
 
-create_table({
-  sql_processor => $sql_processor
-});
 $sql_processor->($sql);
 
 $logger->finish_log;
@@ -225,77 +222,3 @@ sub create_analysis_if_not_exists {
   my $analysis_id = $analysis->dbID;
   return $analysis_id;
 }
-
-=head2 create_table
-=cut
-sub create_table {
-
-  my $param = shift;
-  my $sql_processor = $param->{sql_processor};
-
-my $sql = <<SQL
- CREATE TABLE if not exists `chance` (
-  `chance_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `signal_alignment_id` int(10),
-  `control_alignment_id` int(10),
-  `analysis_id`        int(10) unsigned,
--- Not really that important
--- See slide 38 on 
--- http://www.ebi.ac.uk/seqdb/confluence/download/attachments/18483313/UCL_ChIPseq_Wilder.pptx?version=2&modificationDate=1442910347000&api=v2
--- dashed green line
---
-  `p` double default NULL,
--- Not really that important
-  `q` double default NULL,
---
--- This is the main statistic.
--- It is a scaled version of differential_percentage_enrichment. The reason 
--- is that the exact location is important and that is not reflected in 
--- differential_percentage_enrichment.
--- 
---
-  `divergence` double default NULL,
---
--- Distance from the mean, if the distribution was standardised to a normal distribution
---
-  `z_score` double default NULL,
---
--- Distance between dashed green line and 1
---
-  `percent_genome_enriched` double default NULL,
---
--- A suggestion on how to scale the control to equal the background noise 
--- in the signal
---
-  `input_scaling_factor` double default NULL,
---
--- It is the greates distance between the cumulative coverage lines of the 
--- control and the signal when plotted into a graph.
---
-  `differential_percentage_enrichment` double default NULL,
---
--- Usually the two curves would meet at one. If there is an enrichment in 
--- the control, then this reports the bin number where this happens.
--- A bit visible in diagram d, slide 40 http://www.ncbi.nlm.nih.gov/pmc/articles/PMC4053734/figure/F2/
---
-  `control_enrichment_stronger_than_chip_at_bin`double default NULL,
--- 
--- After sorting the bins from the signal, this is the rank of the first non zero bin.
---
-  `first_nonzero_bin_at`double default NULL,
---
--- Proportion of control reads in the highest 1 percent of the bins. The expected value would be 0.01, but only
--- greater deviations from that are reported.
---
-  `pcr_amplification_bias_in_Input_coverage_of_1_percent_of_genome`double default NULL,
-  `path` varchar(512) NOT NULL,
-  PRIMARY KEY (`chance_id`)
-);
-SQL
-;
-  $sql_processor->($sql);
-}
-
-
-
-
