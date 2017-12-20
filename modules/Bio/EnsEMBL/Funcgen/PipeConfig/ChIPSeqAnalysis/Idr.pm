@@ -43,10 +43,15 @@ sub pipeline_analyses {
         {   -logic_name  => 'run_swembl',
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::RunPermissiveSWEmbl',
             -flow_into   => {
-               2 => [
-                #'?accu_name=permissive_peak_file&accu_address=[]&accu_input_variable=permissive_peak_file',
-                '?accu_name=permissive_peak_calling&accu_address=[]&accu_input_variable=permissive_peak_calling',
-               ],
+               2 => '?accu_name=permissive_peak_calling&accu_address=[]&accu_input_variable=permissive_peak_calling',
+               MEMLIMIT => 'run_swembl_himem',
+            },
+        },
+        {   -logic_name  => 'run_swembl_himem',
+            -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::RunPermissiveSWEmbl',
+            -rc_name     => '8Gb_job',
+            -flow_into   => {
+               2 => '?accu_name=permissive_peak_calling&accu_address=[]&accu_input_variable=permissive_peak_calling',
             },
         },
         {   -logic_name  => 'seed_pairwise',
@@ -56,6 +61,13 @@ sub pipeline_analyses {
             },
         },
         {   -logic_name  => 'run_idr',
+            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::RunIDR',
+            -flow_into   => {
+               2        => '?accu_name=idr_result&accu_address=[]&accu_input_variable=idr_result',
+               MEMLIMIT => 'run_idr_himem'
+            }
+        },
+        {   -logic_name  => 'run_idr_himem',
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::RunIDR',
             -flow_into   => {
                2 => '?accu_name=idr_result&accu_address=[]&accu_input_variable=idr_result',
