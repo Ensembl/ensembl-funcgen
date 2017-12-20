@@ -37,6 +37,7 @@ use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use base qw( Exporter );
 use vars qw( @EXPORT_OK );
+use Data::Dumper;
 
 @EXPORT_OK = qw(
   _generic_get_or_set
@@ -55,12 +56,35 @@ sub _generic_fetch {
   if ($self->{$hash_key}) {
     return $self->{$hash_key};
   }
+  if (! $self->can($dbID_method)) {
+    throw(ref($self) . " is missing the method $dbID_method");
+  }
+  
   my $object_id = $self->$dbID_method;
     if (! defined $object_id) {
     die;
   }
-  my $object_adaptor = $self->db->db->$get_adaptor_method_name;
-  my $object = $object_adaptor->fetch_by_dbID($object_id);
+  my $object_adaptor = $self->db;
+  
+  if (! defined $object_adaptor) {
+      throw(
+        "Can't get db adaptor from\n" 
+        . Dumper($self) . "\n"
+        . "This can happen, if " . ref($self) . " does not have db and dbID as constructor parameters.\n"
+        . "The method should include them:\n"
+        . "\n"
+        . "\t" . "sub _constructor_parameters {\n"
+        . "\t" . "  return {\n"
+        . "\t" . "    dbID           => 'dbID',\n"
+        . "\t" . "    db             => 'db',\n"
+        . "\t" . "    ... # everything else here\n"
+        . "\t" . "  }\n"
+      );
+  }
+  
+  my $dba = $object_adaptor->db;
+  my $specific_adaptor = $dba->$get_adaptor_method_name;
+  my $object = $specific_adaptor->fetch_by_dbID($object_id);
   $self->{$hash_key} = $object;
   return $object;
 }
@@ -69,9 +93,13 @@ sub _generic_get_or_set {
   my $self  = shift;
   my $name  = shift;
   my $value = shift;
+  my $unset = shift;
 
   if(defined $value) {
     $self->{$name}  = $value;
+  }
+  if($unset) {
+    $self->{$name}  = undef;
   }
   return $self->{$name};
 }
@@ -83,7 +111,7 @@ sub _generic_set {
   my $obj   = shift;
   
   if (! defined $obj) {
-    throw("$name was not defined!");
+        throw("$name was not defined!");
   }
 
   if (defined $type and ! $obj->isa($type)) {
