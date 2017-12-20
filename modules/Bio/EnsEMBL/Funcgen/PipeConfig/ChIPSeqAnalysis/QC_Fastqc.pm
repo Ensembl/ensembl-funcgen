@@ -47,36 +47,16 @@ sub pipeline_analyses {
         {   -logic_name => 'QcFastQcJobFactory',
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::QcFastQcJobFactory',
             -flow_into => { 
-                2 => 'MkFastQcTempDir',
-            },
-        },
-        {   -logic_name => 'MkFastQcTempDir',
-            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -analysis_capacity => 1,
-            -parameters => { 
-                cmd => qq!mkdir -p #tempdir#!,
-            },
-            -flow_into => { 
-              MAIN => 'RunFastQC',
+                2 => 'RunFastQC',
             },
         },
         {   -logic_name => 'RunFastQC',
-            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -parameters => { 
-                cmd => qq(fastqc --extract -o #tempdir# #read_file#),
-            },
+            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::QcRunFastqc',
             #-rc_name => '2Gb_job',
             # For some reason this analysis is very attractive to workers. 
             # So to prevent them from focusing on this at the beginning of the
             # pipeline, I'm limiting this.
             #
-            -analysis_capacity => 5,
-            -flow_into => {
-                MAIN => 'QcFastQcLoaderJobFactory',
-            },
-        },
-        {   -logic_name => 'QcFastQcLoaderJobFactory',
-            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::QcFastQcLoaderJobFactory',
             -analysis_capacity => 5,
             -flow_into => {
                 2 => 'QcLoadFastQcResults',
@@ -87,16 +67,19 @@ sub pipeline_analyses {
             -analysis_capacity => 1,
             -parameters => {
                 use_bash_pipefail => 1,
-                cmd => qq(load_fastqc_summary_file.pl      )
-                . qq( --read_file_id #read_file_id#        )
-                . qq( --summary_file #fastqc_summary_file# )
-                . qq( --work_dir #tempdir#                 )
-                . qq( | mysql )
-                . qq( --host #tracking_db_host#  )
-                . qq( --port #tracking_db_port#  )
-                . qq( --user #tracking_db_user#  )
-                . qq( -p#tracking_db_pass#       )
-                . qq( #tracking_db_name#         ),
+                
+                cmd => qq(load_fastqc_summary_file.pl       --read_file_id #read_file_id#         --summary_file #fastqc_summary_file#  --work_dir #tempdir# --registry #reg_conf# --species #species#),
+                
+#                 cmd => qq(load_fastqc_summary_file.pl      )
+#                 . qq( --read_file_id #read_file_id#        )
+#                 . qq( --summary_file #fastqc_summary_file# )
+#                 . qq( --work_dir #tempdir#                 )
+#                 . qq( | mysql )
+#                 . qq( --host #tracking_db_host#  )
+#                 . qq( --port #tracking_db_port#  )
+#                 . qq( --user #tracking_db_user#  )
+#                 . qq( -p#tracking_db_pass#       )
+#                 . qq( #tracking_db_name#         ),
 
             },
         },
