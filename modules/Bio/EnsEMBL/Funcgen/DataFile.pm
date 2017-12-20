@@ -80,11 +80,19 @@ sub relative_ftp_site_path {
     
     my $species = $self->db->db->species;
     
-    my $coordsystem_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'core', 'coordsystem');
-    my $default_chromosome_coordsystem = $coordsystem_adaptor->fetch_by_name('chromosome');
-    my $default_assembly = $default_chromosome_coordsystem->version;
+    use Bio::EnsEMBL::Funcgen::Utils::GoodUtils qw( create_species_assembly_path );
+    my $species_assembly_path = create_species_assembly_path($species);
+    
+#     my $coordsystem_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'core', 'coordsystem');
+#     my $default_chromosome_coordsystem = $coordsystem_adaptor->fetch_by_name('chromosome');
+#     my $default_assembly = $default_chromosome_coordsystem->version;
 
-    return $species . '/' . $default_assembly . '/' . $path;
+    return $species_assembly_path . '/' . $path;
+}
+
+sub _delete_from_db {
+    my $self = shift;
+    $self->db->_delete($self);
 }
 
 =head2 file_type
