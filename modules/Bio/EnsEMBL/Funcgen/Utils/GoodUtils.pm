@@ -10,6 +10,7 @@ use vars qw( @EXPORT_OK );
 @EXPORT_OK = qw(
   run_cmd
   create_production_name
+  create_species_assembly_path
 );
 
 sub create_production_name {
@@ -21,6 +22,25 @@ sub create_production_name {
     my $shortened = substr( $name, 0, $max_length );
 
     return $shortened;
+}
+
+=head2 create_species_assembly_path
+
+  Bio::EnsEMBL::Registry->load_all($registry);
+  my $species_assembly_path = create_species_assembly_path($species);
+
+=cut
+sub create_species_assembly_path {
+
+  my $species = shift;
+  
+    my $coordsystem_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'core', 'coordsystem');
+    my $default_chromosome_coordsystem = $coordsystem_adaptor->fetch_by_name('chromosome');
+    my $default_assembly = $default_chromosome_coordsystem->version;
+
+    #die ("\n\n------------------> $species, $default_assembly\n\n");
+    
+    return $species . '/' . $default_assembly;
 }
 
 sub run_cmd {
