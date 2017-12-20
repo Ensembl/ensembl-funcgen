@@ -114,6 +114,11 @@ sub new {
   return $self;
 }
 
+sub creates_broad_peaks {
+  my $self = shift;
+  return $self->_creates_broad_peaks($self->name);
+  
+}
 
 =head2 _creates_broad_peaks
 
@@ -126,7 +131,7 @@ sub _creates_broad_peaks {
 
   my $self = shift;
   my $feature_type_name = $self->name;
-
+  
   my @broad_peak_feature_type_names = qw(
     H3K36me3
     H3K27me3
