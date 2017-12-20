@@ -356,13 +356,36 @@ sub update {
   my $primary_key = $self->primary_key->[0];
   
   if (! defined $primary_key) {
-throw("Can't update, primary key is undefined!");
+    throw("Can't update, primary key is undefined!");
   }
   
   my $sql = "update $table_name set $update_assignment_part where $primary_key = ?" ;
-
+  
+#   warn($sql);
+#   warn(Dumper($values_being_stored));
+  
   my $sth = $self->prepare( $sql );
   $sth->execute(@$values_being_stored);
+  return;
+}
+
+sub _delete {
+  my $self = shift;
+  my $object = shift;
+
+  my $table_name = $self->table_name;
+  my $primary_key = $self->primary_key->[0];
+  
+  if (! defined $primary_key) {
+    throw("Can't update, primary key is undefined!");
+  }
+  
+  my $sql = "delete from $table_name where $primary_key = ?" ;
+  
+#   warn($sql);
+#   warn($object->dbID);
+  my $sth = $self->prepare( $sql );
+  $sth->execute($object->dbID);
   return;
 }
 
