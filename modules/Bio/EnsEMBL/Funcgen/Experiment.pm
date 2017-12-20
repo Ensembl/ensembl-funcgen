@@ -191,6 +191,34 @@ sub count_technical_replicates {
     return $count_technical_replicates;
 }
 
+sub summarise_replicate_configurations {
+
+  my $self = shift;
+  
+  my $read_file_experimental_configuration_adaptor
+    = $self
+      ->adaptor
+      ->db
+      ->get_ReadFileExperimentalConfigurationAdaptor;
+
+  my $read_file_experimental_configuration_list 
+    = $read_file_experimental_configuration_adaptor
+      ->fetch_all_by_Experiment($self);
+  
+  my @summaries;
+  foreach my $experimental_configuration (@$read_file_experimental_configuration_list) {
+  
+    my $current_summary = "("
+    . $experimental_configuration->biological_replicate
+    . ","
+    . $experimental_configuration->technical_replicate
+    . ")";
+    
+    push @summaries, $current_summary
+  }
+  return join ", ", @summaries;
+}
+
 =head2 epigenome
 
   Example    : my $epigenome_name = $exp->epigenome->name;
