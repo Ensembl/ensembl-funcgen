@@ -103,4 +103,19 @@ sub fetch_complete_deduplicated_by_Experiment {
     return $self->fetch_single_object($constraint);
 }
 
+sub fetch_all_with_duplicates_by_Experiment {
+    my $self       = shift;
+    my $experiment = shift;
+    
+    if (! defined $experiment) {
+      throw("Experiment was undefined");
+    }
+    
+    my $constraint = join ' and ', (
+        'has_duplicates = 1',
+        'experiment_id  = ' . $experiment->dbID
+    );
+    return $self->fetch_all($constraint);
+}
+
 1;
