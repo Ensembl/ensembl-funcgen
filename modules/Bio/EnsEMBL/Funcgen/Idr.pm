@@ -54,6 +54,7 @@ use constant {
 
 use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_get_or_set
+  _generic_fetch
 );
 
 use Role::Tiny::With;
@@ -61,11 +62,12 @@ with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 
 sub _constructor_parameters {
   return {
+    dbID           => 'dbID',
+    db             => 'db',
     experiment_id => 'experiment_id',
     max_peaks     => 'max_peaks',
     type          => 'type',
     failed_idr_pairs => 'failed_idr_pairs',
-    
   };
 }
 
@@ -76,5 +78,8 @@ sub max_peaks     { return shift->_generic_get_or_set('max_peaks',     @_); }
 sub type          { return shift->_generic_get_or_set('type',          @_); }
 sub failed_idr_pairs { return shift->_generic_get_or_set('failed_idr_pairs', @_); }
 
+sub fetch_Experiment {
+  return shift->_generic_fetch('experiment', 'get_ExperimentAdaptor', 'experiment_id');
+}
 
 1;
