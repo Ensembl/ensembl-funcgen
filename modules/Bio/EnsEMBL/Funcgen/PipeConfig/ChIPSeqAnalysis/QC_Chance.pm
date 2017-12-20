@@ -99,6 +99,17 @@ sub pipeline_analyses {
             -parameters => { 
                 cmd => qq!samtools index #tempdir#/#file#!,
             },
+            -flow_into => { 
+              MAIN     => 'CountReads',
+              MEMLIMIT => 'IndexBam_himem',
+            },
+        },
+        {   -logic_name => 'IndexBam_himem',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters => { 
+                cmd => qq!samtools index #tempdir#/#file#!,
+            },
+            -rc_name   => '8Gb_job',
             -flow_into => { MAIN => 'CountReads' },
         },
         {   -logic_name => 'CountReads',
@@ -153,6 +164,8 @@ sub pipeline_analyses {
                 cmd => qq(load_argenrich_qc_file.pl   )
                 . qq( --argenrich_file        #tempdir#/#argenrich_outfile#     )
                 . qq( --experiment_name #experiment_name# )
+                . qq( --signal   #signal_alignment#       )
+                . qq( --control  #control_alignment#      )
                 . qq( --user     #tracking_db_user#       )
                 . qq( --pass     #tracking_db_pass#       )
                 . qq( --port     #tracking_db_port#       )
