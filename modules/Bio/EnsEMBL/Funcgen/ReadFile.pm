@@ -48,6 +48,7 @@ with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 sub _constructor_parameters {
   return {
     dbID           => 'dbID',
+    db              => 'db',
     name           => 'name',
     is_paired_end  => 'is_paired_end',
     paired_with    => 'paired_with',
@@ -117,6 +118,18 @@ sub md5sum        { return shift->_generic_get_or_set('md5sum',        @_); }
 sub file          { return shift->_generic_get_or_set('file',          @_); }
 sub notes         { return shift->_generic_get_or_set('notes',         @_); }
 sub _analysis_id  { return shift->_generic_get_or_set('_analysis_id',  @_); }
+
+sub fetch_FastQC {
+
+  my $self         = shift;
+  
+  my $fastqc_adaptor = $self->db->db->get_FastQCAdaptor;
+  if (! defined $fastqc_adaptor) {
+    throw("Couldn't get an FastQCAdaptor!");
+  }
+  my $fastqc = $fastqc_adaptor->fetch_by_ReadFile($self);
+  return $fastqc;
+}
 
 =head2 get_Analysis
 
