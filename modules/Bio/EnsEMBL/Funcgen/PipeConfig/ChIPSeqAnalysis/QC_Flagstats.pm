@@ -62,11 +62,24 @@ sub pipeline_analyses {
             cmd => qq!samtools flagstat #bam_file# > #flagstats_file#!,
           },
           -flow_into => { 
+            MAIN     => 'LoadFlagstatsToDB',
+            MEMLIMIT => 'QcRunFlagstats_himem',
+          },
+      },
+      {   -logic_name => 'QcRunFlagstats_himem',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -analysis_capacity => 50,
+          -rc_name    => '4Gb_job',
+          -parameters => { 
+            cmd => qq!samtools flagstat #bam_file# > #flagstats_file#!,
+          },
+          -flow_into => { 
             MAIN => 'LoadFlagstatsToDB',
           },
       },
       {   -logic_name => 'LoadFlagstatsToDB',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -analysis_capacity => 1,
           -parameters => {
           cmd => 
               qq(load_samtools_flagstats.pl )
