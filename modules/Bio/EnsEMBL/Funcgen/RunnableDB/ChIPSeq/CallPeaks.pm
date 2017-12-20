@@ -189,6 +189,8 @@ sub run {
     throw("The file $peaks_to_load_file was not created!");
   }
 
+  sleep(20);
+  
   $self->dataflow_output_id(
     {
       'species'            => $species,

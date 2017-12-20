@@ -103,6 +103,10 @@ sub run {
   if ($error_occurred) {
     $self->throw("The following command failed:\n$cmd");
   }
+  # If lsf kills the command, give it time to kill the worker as well so 
+  # eHive handles this properly.
+  #
+  sleep(20);
 }
 
 1;
