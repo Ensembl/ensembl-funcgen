@@ -36,6 +36,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::PeakAdaptor;
 
 use strict;
 use base 'Bio::EnsEMBL::Funcgen::DBSQL::GenericFeatureAdaptor';
+use Bio::EnsEMBL::Utils::Exception qw( throw );
 
 sub object_class {
     return 'Bio::EnsEMBL::Funcgen::Peak';
@@ -72,11 +73,40 @@ sub fetch_all_by_Slice_PeakCalling {
   return $features;
 }
 
+sub _parse_bed_line {
+
+  my $self     = shift;
+  my $bed_line = shift;
+  
+  (
+    my $seq_region_id,
+    my $seq_region_start,
+    my $seq_region_end,
+    my $peak_id,
+    my $score,
+    my $strand,
+  ) = split "\t", $bed_line;
+
+  my $hash = {
+    seq_region_name  => $seq_region_id,
+    seq_region_start => $seq_region_start,
+    seq_region_end   => $seq_region_end,
+    peak_id          => $peak_id,
+    score            => $score,
+    strand           => $strand,
+  };
+  return $hash;
+}
+
 sub _bulk_export_to_bed_by_PeakCalling {
 
   my $self = shift;
   my $peak_calling = shift;
   my $bed_fh       = shift;
+  
+  if (! defined $peak_calling) {
+    throw("Peak calling parameter was undefined!");
+  }
   
   my $species = $self->db->species;
   
@@ -94,7 +124,7 @@ sub _bulk_export_to_bed_by_PeakCalling {
   my %seq_region_id_to_name_cache;
 
   $self->sql_helper->execute_no_return(
-    -SQL          => 'select seq_region_id, seq_region_start, seq_region_end from peak where peak_calling_id = ?',
+    -SQL          => 'select seq_region_id, seq_region_start, seq_region_end, peak_id, score, 0 from peak where peak_calling_id = ?',
     -PARAMS       => [ $peak_calling->dbID ],
     -USE_HASHREFS => 0,
     -CALLBACK     => sub {
@@ -115,6 +145,9 @@ sub _bulk_export_to_bed_by_PeakCalling {
           $seq_region_name,
           $row->[1],
           $row->[2],
+          $row->[3],
+          $row->[4],
+          $row->[5],
         );
         
         #use Data::Dumper;
