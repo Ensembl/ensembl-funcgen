@@ -33,12 +33,11 @@ limitations under the License.
 perl scripts/sequencing/remove_intermediary_bam_files.pl \
   --experiment GM19193_WCE_ChIP-Seq_control_TF_no1_ENCODE86 \
   --registry /homes/mnuhn/work_dir_ersa/lib/ensembl-funcgen/registry.pm \
-  --dry_run 1 \
   --species homo_sapiens
 
 
 
-experiments=`r2 -N mnuhn_testdb2_homo_sapiens_funcgen_91_38 -e "select name from experiment limit 10"`
+experiments=`r2 -N mnuhn_testdb2_homo_sapiens_funcgen_91_38 -e "select name from experiment"`
 
 for experiment in $experiments
 do
@@ -46,7 +45,6 @@ do
   perl scripts/sequencing/remove_intermediary_bam_files.pl \
     --experiment $experiment \
     --registry /homes/mnuhn/work_dir_ersa/lib/ensembl-funcgen/registry.pm \
-    --dry_run 1 \
     --species homo_sapiens \
     --data_root_dir /hps/nobackup/production/ensembl/mnuhn/chip_seq_analysis/dbfiles
 done
@@ -54,7 +52,6 @@ done
 perl scripts/sequencing/remove_intermediary_bam_files.pl \
   --experiment IMR90_H3K27ac_ChIP-Seq_RoadmapEpigenomics85 \
   --registry /homes/mnuhn/work_dir_ersa/lib/ensembl-funcgen/registry.pm \
-  --dry_run 1 \
   --species homo_sapiens \
   --data_root_dir /hps/nobackup/production/ensembl/mnuhn/chip_seq_analysis/dbfiles
 
