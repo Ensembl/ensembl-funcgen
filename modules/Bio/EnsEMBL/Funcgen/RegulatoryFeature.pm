@@ -767,7 +767,7 @@ sub summary_as_hash {
   my $feature_type = $self->feature_type;
 
   return {
-    ID                => $self->stable_id,
+    id                => $self->stable_id,
     source            => $self->analysis->logic_name,,
     bound_start       => $self->bound_seq_region_start,
     bound_end         => $self->bound_seq_region_end,
