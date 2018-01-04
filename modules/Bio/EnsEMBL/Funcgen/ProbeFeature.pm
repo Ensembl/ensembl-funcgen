@@ -325,25 +325,20 @@ sub probe_id {
 
 sub summary_as_hash {
   my $self = shift;
-  my $probe = $self->probe;
- 
-  my %arrays = ();
-  my $names_Arrays = $probe->get_names_Arrays; 
-  foreach my $name (keys %$names_Arrays) {
-    if (defined $names_Arrays->{$name}) {
-      $arrays{$names_Arrays->{$name}->name} = $probe->get_probename($names_Arrays->{$name}->name);
-    }
-  }
+
+  my $probe     = $self->probe;
+  my $probe_set = defined $probe->probe_set ? $probe->probe_set->name : '';
 
   return {
-    start                   => $self->seq_region_start,
-    end                     => $self->seq_region_end,
-    strand                  => $self->strand,
-    seq_region_name         => $self->seq_region_name,
-    feature_type            => 'array_probe',
-
-    probe_length            => $probe->length,
-    array_probe_names       => \%arrays
+    seq_region_name   => $self->seq_region_name,
+    start             => $self->seq_region_start,
+    end               => $self->seq_region_end,
+    strand            => $self->strand,
+    feature_type      => 'probe_feature',
+    microarray        => $probe->array_chip->name,
+    probe_name        => $probe->name,
+    probe_set         => $probe_set,
+    probe_length      => $probe->length,
    };
 }
 
