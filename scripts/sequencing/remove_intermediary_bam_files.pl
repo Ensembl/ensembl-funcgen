@@ -55,6 +55,11 @@ perl scripts/sequencing/remove_intermediary_bam_files.pl \
   --species homo_sapiens \
   --data_root_dir /hps/nobackup/production/ensembl/mnuhn/chip_seq_analysis/dbfiles
 
+perl scripts/sequencing/remove_intermediary_bam_files.pl \
+  --registry /homes/mnuhn/work_dir_ersa/lib/ensembl-funcgen/registry.pm \
+  --species mus_musculus \
+  --data_root_dir /hps/nobackup/production/ensembl/mnuhn/chip_seq_analysis/dbfiles
+
 
 
 =cut
@@ -93,33 +98,55 @@ Bio::EnsEMBL::Registry->load_all($registry);
 my $experiment_adaptor = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Funcgen', 'Experiment' );
 my $alignment_adaptor  = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Funcgen', 'Alignment' );
 
-my $experiment = $experiment_adaptor->fetch_by_name($experiment_name);
-my $alignments_with_duplicates = $alignment_adaptor->fetch_all_with_duplicates_by_Experiment($experiment);
+my @experiment_list;
 
-$logger->info("Found " . scalar @$alignments_with_duplicates . " alignments with duplicates.\n");
+if (defined $experiment_name) {
+  my $experiment = $experiment_adaptor->fetch_by_name($experiment_name);
+  push @experiment_list, $experiment;
+} else {
+  @experiment_list = @{$experiment_adaptor->generic_fetch};
+  #die;
+}
 
-ALIGNMENT:
-foreach my $alignment_with_duplicates (@$alignments_with_duplicates) {
-
-  if (! $alignment_with_duplicates->has_bam_DataFile) {
-    $logger->info($alignment_with_duplicates->name . " has no bam file.\n");
-    next ALIGNMENT;
-  }
-  my $bam_file = $alignment_with_duplicates->fetch_bam_DataFile;
-  
-  my $full_file_name = join '/',
-    $data_root_dir,
-    $bam_file->relative_ftp_site_path
-  ;
-  if (! -e $full_file_name) {
-    $logger->error("Couldn't find alignment $full_file_name!\n");
-    $logger->finish_log;
-    die;
-  }
-  $logger->info("Deleting $full_file_name\n");
-  unlink($full_file_name);
-  $alignment_with_duplicates->_delete_bam_file_from_db;
-  $bam_file->_delete_from_db;
+# print Dumper(map { $_->name } @experiment_list);
+# die;
+foreach my $experiment (@experiment_list) {
+  remove_intermediary_bam_files_by_Experiment($experiment);
 }
 
 $logger->finish_log;
+
+sub remove_intermediary_bam_files_by_Experiment {
+
+  my $experiment = shift;
+
+  my $alignments_with_duplicates = $alignment_adaptor->fetch_all_with_duplicates_by_Experiment($experiment);
+
+  $logger->info("Found " . scalar @$alignments_with_duplicates . " alignments with duplicates.\n");
+
+  ALIGNMENT:
+  foreach my $alignment_with_duplicates (@$alignments_with_duplicates) {
+
+    if (! $alignment_with_duplicates->has_bam_DataFile) {
+      $logger->info($alignment_with_duplicates->name . " has no bam file.\n");
+      next ALIGNMENT;
+    }
+    my $bam_file = $alignment_with_duplicates->fetch_bam_DataFile;
+    
+    my $full_file_name = join '/',
+      $data_root_dir,
+      $bam_file->relative_ftp_site_path
+    ;
+    if (! -e $full_file_name) {
+      $logger->error("Couldn't find alignment $full_file_name!\n");
+      $logger->finish_log;
+      die;
+    }
+    $logger->info("Deleting $full_file_name\n");
+    unlink($full_file_name);
+    $alignment_with_duplicates->_delete_bam_file_from_db;
+    $bam_file->_delete_from_db;
+  }
+}
+
+
