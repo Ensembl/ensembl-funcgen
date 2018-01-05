@@ -20,6 +20,16 @@ sub pipeline_analyses {
               convert_controls => 0,
             },
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::ConvertBamToBed',
+            -flow_into   => {
+               MEMLIMIT => 'convert_signal_to_bed_himem',
+            },
+        },
+        {   -logic_name  => 'convert_signal_to_bed_himem',
+            -parameters  => {
+              convert_controls => 0,
+            },
+            -rc_name     => '8Gb_job',
+            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::ConvertBamToBed',
         },
         {   -logic_name  => 'done_convert_signal_to_bed',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',

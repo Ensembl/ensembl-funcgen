@@ -9,8 +9,12 @@ use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanUtils qw (
 );
 
 use constant {
-  BRANCH_IDR            => 2,
-  BRANCH_ALIGN_CONTROLS => 3,
+
+  # Used for idr
+  BRANCH_SIGNALS  => 2,
+  
+  # Used for aligning and fastqc
+  BRANCH_CONTROLS => 3,
 };
 
 sub run {
@@ -18,15 +22,10 @@ sub run {
   my $self = shift;
   my $species             = $self->param_required('species');
   my $execution_plan_list = $self->param_required('execution_plan_list');
-  my $in_test_mode        = $self->param('in_test_mode');
-  $in_test_mode = 1;
-  if ($in_test_mode) {
-    #$execution_plan_list = $self->reduce_execution_plan($execution_plan_list);
-  }
   
   $self->say_with_header("Got " . scalar @$execution_plan_list . " execution plans.", 1);
   
-  my %found_control_experiments;
+  my %found_control_alignments;
   my %plan_depending_on_control;
   
   foreach my $current_execution_plan (@$execution_plan_list) {
@@ -44,7 +43,7 @@ sub run {
           && ( $alignment_plan->{analysis} eq 'remove_duplicates'  )
       ;
       if ($want_this) {
-        $found_control_experiments{$alignment_name} = $alignment_plan;
+        $found_control_alignments{$alignment_name} = $alignment_plan;
         
         if (! exists $plan_depending_on_control{$alignment_name}) {
           $plan_depending_on_control{$alignment_name} = []
@@ -54,115 +53,30 @@ sub run {
     }
   }
 
-#   EXECUTION_PLAN:
-#   foreach my $current_execution_plan (@$execution_plan_list) {
-# 
-#     use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanUtils qw (
-#         lock_execution_plan
-#         resolve_nonterminal_symbols
-#     );
-# 
-#     my $current_execution_plan_expanded = resolve_nonterminal_symbols($current_execution_plan);
-#     lock_execution_plan($current_execution_plan_expanded);
-#     lock_execution_plan($current_execution_plan);
-# 
-#     my $control_experiment = $current_execution_plan_expanded
-#       ->{call_peaks}
-#       ->{input}
-#       ->{control}
-#       ->{name}
-#     ;
-#     
-#     $self->say_with_header($control_experiment);
-# 
-#     next EXECUTION_PLAN unless (defined $control_experiment);
-#     
-#     if (! exists $found_control_experiments{$control_experiment}) {
-#       $found_control_experiments{$control_experiment} = [];
-#       
-#       # Use first, all plans to align the control will be the same.
-#       #
-#       
-#       my $control_alignment_plan 
-#         = $current_execution_plan_expanded
-#           ->{call_peaks}
-#           ->{input}
-#           ->{control}
-#       
-#       # 
-#       if ($control_alignment_plan->{task} eq 'convert bam to bed') {
-#         $control_alignment_plan = $control_alignment_plan->{input}
-#       }
-#       
-#       $control_alignment_plan{$control_experiment}
-#         = $control_alignment_plan
-#       ;
-#     }
-#     push 
-#       @{$found_control_experiments{$control_experiment}},
-#       $current_execution_plan;
-#   }
-  my @all_control_experiments = keys %found_control_experiments;
+  my @all_control_alignments = keys %found_control_alignments;
   
-  #die (Dumper(\%found_control_experiments));
-  #die (Dumper(\%plan_depending_on_control));
-  
-  
-  foreach my $control_experiment (@all_control_experiments) {
+  foreach my $control_alignment (@all_control_alignments) {
   
     $self->dataflow_output_id(
       {
-        'execution_plan' => $found_control_experiments{$control_experiment},
+        'execution_plan' => $found_control_alignments{$control_alignment},
+        'experiment'     => $found_control_alignments{$control_alignment}->{from_experiment},
         'species'        => $species,
       }, 
-      BRANCH_ALIGN_CONTROLS
+      BRANCH_CONTROLS
     );
     
     my $execution_plans_waiting_for_that_control
-      = $plan_depending_on_control{$control_experiment};
+      = $plan_depending_on_control{$control_alignment};
     
     $self->dataflow_output_id(
       {
         'execution_plan_list' => $execution_plans_waiting_for_that_control,
         'species'             => $species,
       }, 
-      BRANCH_IDR
+      BRANCH_SIGNALS
     );
   }
-}
-
-sub reduce_execution_plan {
-
-  my $self = shift;
-  my $execution_plan_list = shift;
-  
-  my @keep_execution_plan;
-  my %seen_idr_type;
-  
-  foreach my $execution_plan (@$execution_plan_list) {
-    
-    use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanUtils qw (
-        lock_execution_plan
-        resolve_nonterminal_symbols
-    );
-
-    my $execution_plan_expanded = resolve_nonterminal_symbols($execution_plan);
-    lock_execution_plan($execution_plan_expanded);
-    
-    my $current_idr_type = $execution_plan_expanded
-      ->{call_peaks}
-      ->{run_idr}
-      ->{strategy}
-    ;
-    
-    if (! exists $seen_idr_type{$current_idr_type}) {
-    
-      push @keep_execution_plan, $execution_plan;
-      $seen_idr_type{$current_idr_type} = 1;
-    
-    }
-  }
-  return \@keep_execution_plan
 }
 
 1;

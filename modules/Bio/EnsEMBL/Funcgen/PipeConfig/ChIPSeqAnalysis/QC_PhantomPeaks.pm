@@ -45,20 +45,23 @@ sub pipeline_analyses {
         {   -logic_name => 'qc_phantom_peaks_start',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into => { 
-                'MAIN->A' => 'QcPhantomPeaksJobFactory',
+                'MAIN->A' => 'qc_phantom_peaks_job_factory',
                 'A->MAIN' => 'qc_phantom_peaks_done',
             },
         },
-        {   -logic_name => 'QcPhantomPeaksJobFactory',
+        {   -logic_name => 'qc_phantom_peaks_job_factory',
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::QcPhantomPeaksJobFactory',
             -flow_into => { 
-                2 => 'QcRunPhantomPeaks4GB',
+                2 => 'qc_run_phantom_peaks',
             },
         },
-        {   -logic_name  => 'QcRunPhantomPeaks4GB',
+        {   -logic_name  => 'qc_run_phantom_peaks',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
                   use_bash_pipefail => 1,
+                  return_codes_2_branches => {
+                    1 => 2
+                  },
                   cmd => 
                       # Rscript does not search the path, so we use "which" to 
                       # do that. Also using single quotes to avoid interpolation
@@ -81,14 +84,18 @@ sub pipeline_analyses {
             },
           -rc_name    => '4Gb_job_2cpus',
           -flow_into  => { 
-              MAIN     => 'QCLoadPhantomPeaksToDB',
-              MEMLIMIT => 'QcRunPhantomPeaks30GB',
+              MEMLIMIT => 'qc_run_phantom_peaks_himem',
+              MAIN     => 'qc_load_phantom_peaks',
+              2        => 'qc_load_failed_phantom_peaks',
           },
         },
-        {   -logic_name  => 'QcRunPhantomPeaks30GB',
+        {   -logic_name  => 'qc_run_phantom_peaks_himem',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
                   use_bash_pipefail => 1,
+                  return_codes_2_branches => {
+                    1 => 2
+                  },
                   cmd => 
                   # Rscript does not search the path, so we use "which" to 
                   # do that. Also using single quotes to avoid interpolation
@@ -111,23 +118,32 @@ sub pipeline_analyses {
             },
 	    -rc_name    => '32Gb_job_2cpus',
             -flow_into  => { 
-              MAIN => 'QCLoadPhantomPeaksToDB',
+              MAIN => 'qc_load_phantom_peaks',
+              2    => 'qc_load_failed_phantom_peaks',
             },
         },
-        {   -logic_name => 'QCLoadPhantomPeaksToDB',
+        {   -logic_name => 'qc_load_phantom_peaks',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters => {
                 cmd =>
-                    qq( load_phantom_peak_file.pl                )
-                  . qq(    --alignment_name #alignment_name#     )
-                  . qq(    --result_file #phantom_peak_out_file# )
-                  . qq(    --user   #tracking_db_user#           )
-                  . qq(    --pass   #tracking_db_pass#           )
-                  . qq(    --port   #tracking_db_port#           )
-                  . qq(    --host   #tracking_db_host#           )
-                  . qq(    --dbname #tracking_db_name#           )
-                  . qq(    --work_dir #tempdir#                  )
-                  . qq(    --bam_file #bam_file#                 )
+                    qq( load_phantom_peak_file.pl                   )
+                  . qq(    --alignment_name #alignment_name#        )
+                  . qq(    --result_file    #phantom_peak_out_file# )
+                  . qq(    --species        #species#               )
+                  . qq(    --registry       #reg_conf#              )
+                  . qq(    --failed         0                )
+            },
+        },
+        {   -logic_name => 'qc_load_failed_phantom_peaks',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters => {
+                cmd =>
+                    qq( load_phantom_peak_file.pl                   )
+                  . qq(    --alignment_name #alignment_name#        )
+                  . qq(    --result_file    #phantom_peak_out_file# )
+                  . qq(    --species        #species#               )
+                  . qq(    --registry       #reg_conf#              )
+                  . qq(    --failed         1                )
             },
         },
         {   -logic_name => 'qc_phantom_peaks_done',

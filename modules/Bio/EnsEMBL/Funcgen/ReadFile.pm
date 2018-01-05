@@ -201,5 +201,37 @@ sub set_ReadFileExperimentalConfiguration {
   );
 }
 
+=head2 summary_as_hash
+
+  Example       : $summary = $read_file->summary_as_hash;
+  Description   : Returns summary in a hash reference.
+  Returns       : Hashref of descriptive strings
+  Status        : Intended for internal use (REST)
+
+=cut
+
+sub summary_as_hash {
+  my $self   = shift;
+  
+  # Optional parameter to avoid infinite recursions when two objects 
+  # reference each other.
+  #
+  my $suppress_link = shift;
+  $suppress_link = '' if (! defined $suppress_link);
+  
+  my $summary = {
+    name => $self->name,
+  };
+  
+  if ($suppress_link ne 'fastqc') {
+    my $fastqc = $self->fetch_FastQC;
+    if (defined $fastqc) {
+      $summary->{'fastqc'} = $fastqc->summary_as_hash('read_file');
+    }
+  }
+  
+  return $summary;
+}
+
 
 1;

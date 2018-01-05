@@ -57,9 +57,10 @@ my $host;
 my $port;
 my $dbname;
 my $work_dir;
-#my $experiment_name;
 my $signal_alignment_name;
 my $control_alignment_name;
+my $failed;
+my $species;
 
 my %config_hash = (
   'argenrich_file'  => \$argenrich_file,
@@ -72,6 +73,8 @@ my %config_hash = (
   'work_dir'        => \$work_dir,
   'signal'          => \$signal_alignment_name,
   'control'         => \$control_alignment_name,
+  'failed'          => \$failed,
+  'species'         => \$species,
 );
 
 my $result = GetOptions(
@@ -86,9 +89,14 @@ my $result = GetOptions(
   'work_dir=s',
   'signal=s',
   'control=s',
+  'failed=s',
+  'species=s',
 );
 
-die unless(-e $argenrich_file);
+
+if (! -e $argenrich_file && !$failed) {
+  die;
+}
 
 my $logger = Bio::EnsEMBL::Utils::Logger->new();
 $logger->init_log;
@@ -109,8 +117,7 @@ my $dba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
 
 my $alignment_adaptor = $dba->get_adaptor('Alignment');
 
-my $signal_alignment = $alignment_adaptor->fetch_by_name($signal_alignment_name);
-
+my $signal_alignment  = $alignment_adaptor->fetch_by_name($signal_alignment_name);
 my $control_alignment = $alignment_adaptor->fetch_by_name($control_alignment_name);
   
 if (! defined $signal_alignment) {
@@ -123,21 +130,26 @@ if (! defined $control_alignment) {
 my $signal_alignment_id  = $signal_alignment->dbID;
 my $control_alignment_id = $control_alignment->dbID;
 
-my $analysis_id;
+my $analysis_id = create_analysis_if_not_exists($dbc);
 
-if ($dry_run) {
-  $analysis_id = 'Dryrun';
-} else {
-  $analysis_id = create_analysis_if_not_exists($dbc);
+if ($failed) {
+  my $chance = Bio::EnsEMBL::Funcgen::Chance->new(
+    -signal_alignment_id   => $signal_alignment_id,
+    -control_alignment_id  => $control_alignment_id,
+    -analysis_id           => $analysis_id,
+    -run_failed            => 1,
+    -error_message         => undef,
+  );
+
+  my $chance_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'chance');
+
+  eval {
+    $chance_adaptor->store($chance);
+  };
+  exit;
 }
 
 open IN, $argenrich_file;
-
-my %other_column_name_for = (
-   'Control enrichment stronger than ChIP at bin' => '',
-   'Zero-enriched IP, maximum difference at bin' => '',
-   'PCR amplification bias in Input, coverage of 1% of genome' => '',
-);
 
 my %key_value_pairs;
 LINE: while (my $current_line = <IN>) {
@@ -153,44 +165,90 @@ LINE: while (my $current_line = <IN>) {
 use Hash::Util qw( lock_hash );
 lock_hash(%key_value_pairs);
 
-my $sql = qq(insert into chance (
-      signal_alignment_id, control_alignment_id, analysis_id, p, q, divergence, z_score, percent_genome_enriched, input_scaling_factor, differential_percentage_enrichment,
-      control_enrichment_stronger_than_chip_at_bin,
-      first_nonzero_bin_at,
-      pcr_amplification_bias_in_Input_coverage_of_1_percent_of_genome, path
-    ) values (
-    $signal_alignment_id,
-    $control_alignment_id,
-    $analysis_id,
-    $key_value_pairs{'p'}, 
-    $key_value_pairs{'q'}, 
-    $key_value_pairs{'divergence'}, 
-    $key_value_pairs{'z_score'}, 
-    $key_value_pairs{'percent_genome_enriched'}, 
-    $key_value_pairs{'input_scaling_factor'}, 
-    $key_value_pairs{'differential_percentage_enrichment'},
-    $key_value_pairs{'Control enrichment stronger than ChIP at bin'},
-    $key_value_pairs{'Zero-enriched IP, maximum difference at bin'},
-    $key_value_pairs{'PCR amplification bias in Input, coverage of 1% of genome'},
-    '$work_dir'
-  )
+use Bio::EnsEMBL::Funcgen::Chance;
+
+my $chance = Bio::EnsEMBL::Funcgen::Chance->new(
+  -signal_alignment_id   => $signal_alignment_id,
+  -control_alignment_id  => $control_alignment_id,
+  -analysis_id           => $analysis_id,
+  -p                     => $key_value_pairs{'p'}, 
+  '-q'                   => $key_value_pairs{'q'}, 
+  -divergence            => $key_value_pairs{'divergence'}, 
+  -z_score               => $key_value_pairs{'z_score'}, 
+  -percent_genome_enriched => $key_value_pairs{'percent_genome_enriched'}, 
+  -input_scaling_factor    => $key_value_pairs{'input_scaling_factor'}, 
+  -differential_percentage_enrichment            => $key_value_pairs{'differential_percentage_enrichment'},
+  -control_enrichment_stronger_than_chip_at_bin  => $key_value_pairs{'Control enrichment stronger than ChIP at bin'},
+  -first_nonzero_bin_at                          => $key_value_pairs{'Zero-enriched IP, maximum difference at bin'},
+  -pcr_amplification_bias_in_Input_coverage_of_1_percent_of_genome => $key_value_pairs{'PCR amplification bias in Input, coverage of 1% of genome'},
+  -run_failed     => 0,
+  -error_message => undef,
 );
 
-my $sql_processor;
-if ($dry_run) {
-  $sql_processor = sub {
-    my $sql = shift;
-    $logger->info("Dry run: " . $sql . "\n");
-  };
-} else {
-  $sql_processor = sub {
-    my $sql = shift;
-    $logger->info("Running: " . $sql . "\n");
-     $dbc->do($sql);
-  };
+my $chance_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'chance');
+
+eval {
+  $chance_adaptor->store($chance);
+};
+
+if ($@) {
+  my $error_message = $@;
+  my $already_exists = $error_message =~ /signal_control_alignment_unique/;
+  
+  if (!$already_exists) {
+    die($error_message);
+  }
 }
 
-$sql_processor->($sql);
+# my $sql = qq(insert into chance (
+#       signal_alignment_id, control_alignment_id, analysis_id, p, q, divergence, z_score, percent_genome_enriched, input_scaling_factor, differential_percentage_enrichment,
+#       control_enrichment_stronger_than_chip_at_bin,
+#       first_nonzero_bin_at,
+#       pcr_amplification_bias_in_Input_coverage_of_1_percent_of_genome, path
+#     ) values (
+#     $signal_alignment_id,
+#     $control_alignment_id,
+#     $analysis_id,
+#     $key_value_pairs{'p'}, 
+#     $key_value_pairs{'q'}, 
+#     $key_value_pairs{'divergence'}, 
+#     $key_value_pairs{'z_score'}, 
+#     $key_value_pairs{'percent_genome_enriched'}, 
+#     $key_value_pairs{'input_scaling_factor'}, 
+#     $key_value_pairs{'differential_percentage_enrichment'},
+#     $key_value_pairs{'Control enrichment stronger than ChIP at bin'},
+#     $key_value_pairs{'Zero-enriched IP, maximum difference at bin'},
+#     $key_value_pairs{'PCR amplification bias in Input, coverage of 1% of genome'},
+#     '$work_dir'
+#   )
+# );
+# 
+# my $sql_processor;
+# if ($dry_run) {
+#   $sql_processor = sub {
+#     my $sql = shift;
+#     $logger->info("Dry run: " . $sql . "\n");
+#   };
+# } else {
+#   $sql_processor = sub {
+#     my $sql = shift;
+#     $logger->info("Running: " . $sql . "\n");
+#      $dbc->do($sql);
+#   };
+# }
+# 
+# eval {
+#   $sql_processor->($sql);
+# };
+# 
+# if ($@) {
+#   my $error_message = $@;
+#   my $already_exists = $error_message =~ /signal_control_alignment_unique/;
+#   
+#   if (!$already_exists) {
+#     die($error_message);
+#   }
+# }
 
 $logger->finish_log;
 exit;

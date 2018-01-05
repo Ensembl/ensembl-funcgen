@@ -43,8 +43,8 @@ $helper->execute_no_return(
     from 
       peak 
       join peak_calling using (peak_calling_id) 
-      join experiment using (experiment_id) 
       join epigenome using (epigenome_id) 
+      join experiment using (experiment_id) 
       join feature_type on (feature_type.feature_type_id = experiment.feature_type_id) 
     where 
       epigenome.production_name=? 

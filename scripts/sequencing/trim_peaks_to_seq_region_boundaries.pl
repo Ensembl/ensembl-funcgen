@@ -79,12 +79,14 @@ my $peak_calling_name;
 my $registry;
 my $dry_run;
 my $species;
+my $tempdir;
 
 my %config_hash = (
   'peak_calling'   => \$peak_calling_name,
   'registry'       => \$registry,
   'dry_run'        => \$dry_run,
   'species'        => \$species,
+  'tempdir'        => \$tempdir,
 );
 
 my $result = GetOptions(
@@ -93,6 +95,7 @@ my $result = GetOptions(
   'registry=s',
   'dry_run=s',
   'species=s',
+  'tempdir=s',
 );
 
 $Data::Dumper::Maxdepth = 1;
@@ -109,7 +112,7 @@ if (! defined $peak_calling) {
 my $peak_adaptor  = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Funcgen', 'Peak' );
 my $slice_adaptor = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Core', 'Slice' );
 
-my $peaks_file = "peaks.deleteme.${peak_calling_name}.bed";
+my $peaks_file = "$tempdir/peaks.${peak_calling_name}.bed";
 
 open my $peaks_fh, '>', $peaks_file;
 $peak_adaptor->_bulk_export_to_bed_by_PeakCalling($peak_calling, $peaks_fh);

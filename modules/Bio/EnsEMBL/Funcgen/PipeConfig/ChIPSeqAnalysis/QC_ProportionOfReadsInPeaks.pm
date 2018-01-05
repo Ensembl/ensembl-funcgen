@@ -76,11 +76,20 @@ sub pipeline_analyses {
       {   -logic_name => 'qc_compute_proportion_of_reads_in_peaks',
           -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::QcComputeProportionOfReadsInPeaks',
           -analysis_capacity => 50,
-          #-rc_name => '8Gb_job',
+          -flow_into => { 
+            2 => 'qc_store_proportion_of_reads_in_peaks',
+            MEMLIMIT => 'qc_compute_proportion_of_reads_in_peaks_himem',
+          },
+      },
+      {   -logic_name => 'qc_compute_proportion_of_reads_in_peaks_himem',
+          -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::QcComputeProportionOfReadsInPeaks',
+          -analysis_capacity => 50,
+          -rc_name => '8Gb_job',
           -flow_into => { 
             2 => 'qc_store_proportion_of_reads_in_peaks',
           },
       },
+      
       {   -logic_name => 'qc_store_proportion_of_reads_in_peaks',
           -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::QcStoreProportionOfReadsInPeaks',
           -analysis_capacity => 1,

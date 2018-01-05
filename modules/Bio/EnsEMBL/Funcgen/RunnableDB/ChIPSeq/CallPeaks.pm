@@ -185,11 +185,13 @@ sub run {
   $peak_out->close;
   
   if (! -e $peaks_to_load_file) {
-    use Bio::EnsEMBL::Utils::Exception qw( throw );
-    throw("The file $peaks_to_load_file was not created!");
+#     use Bio::EnsEMBL::Utils::Exception qw( throw );
+#     throw("The file $peaks_to_load_file was not created!");
+    $self->warning("The file $peaks_to_load_file was not created!");
+    sleep(20);
+    $self->throw("Can't continue without the peaks.");
   }
-
-  sleep(20);
+  
   
   $self->dataflow_output_id(
     {

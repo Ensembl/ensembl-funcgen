@@ -79,8 +79,13 @@ insert into phantom_peak (
     alignment_qc_phantom_peak
 ;
 
+ALTER TABLE phantom_peak ADD CONSTRAINT alignment_id_unique UNIQUE (alignment_id);
+
 alter table phantom_peak add column run_failed boolean default false;
 alter table phantom_peak add column error_message text;
+
+drop table if exists alignment_qc_phantom_peak;
+drop table if exists result_set_qc_phantom_peak;
 
 -- patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_91_92_j.sql|phantom peak table');

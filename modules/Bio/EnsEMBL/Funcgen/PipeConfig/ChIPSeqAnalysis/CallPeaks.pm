@@ -33,9 +33,22 @@ sub pipeline_analyses {
             -module            => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::StorePeaks',
             -analysis_capacity => 10,
         },
-
         {   -logic_name  => 'done_call_peaks',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into   => {
+               1 => 'fix_known_problems',
+            },
+        },
+        {   -logic_name => 'fix_known_problems',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters => {
+                cmd => qq( trim_peaks_to_seq_region_boundaries.pl )
+                . qq( --species      #species#      )
+                . qq( --registry     #reg_conf#     )
+                . qq( --peak_calling #expr( #execution_plan#->{call_peaks}->{name} )expr# )
+                . qq( --tempdir      #tempdir# )
+            },
+            -analysis_capacity => 1,
         },
     ];
 }

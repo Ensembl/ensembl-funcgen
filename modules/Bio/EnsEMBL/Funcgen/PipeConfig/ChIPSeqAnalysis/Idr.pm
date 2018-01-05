@@ -69,6 +69,7 @@ sub pipeline_analyses {
         },
         {   -logic_name  => 'run_idr_himem',
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::RunIDR',
+            -rc_name => '8Gb_job',
             -flow_into   => {
                2 => '?accu_name=idr_result&accu_address=[]&accu_input_variable=idr_result',
             }

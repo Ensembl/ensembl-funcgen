@@ -61,12 +61,12 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::CheckExecutionPlans',
             -flow_into   => {
                2 => [
-                'find_control_experiments',
-                'seed_all_experiment_names'
+                'seed_control_experiments',
+                'seed_signal_experiments'
                ],
             },
         },
-        {   -logic_name => 'seed_all_experiment_names',
+        {   -logic_name => 'seed_signal_experiments',
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::SeedAllExperimentNames',
             -flow_into   => {
                2 => 'start_fastqc',
@@ -75,11 +75,12 @@ sub pipeline_analyses {
         {   -logic_name => 'start_fastqc',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
-        {   -logic_name  => 'find_control_experiments',
+        {   -logic_name  => 'seed_control_experiments',
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::FindControlExperiments',
             -flow_into   => {
                'A->2' => 'backbone_fire_convert_to_bed',
                '3->A' => 'start_align_controls',
+               3      => 'start_fastqc'
             },
         },
         {
@@ -203,7 +204,7 @@ sub pipeline_analyses {
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
                '1->A' => 'start_frip',
-               'A->1' => 'backbone_pipeline_finished'
+               'A->1' => 'backbone_fire_cleanup'
             },
         },
         {
@@ -211,12 +212,21 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
 
+        {   -logic_name  => 'backbone_fire_cleanup',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into   => {
+               '1->A' => 'start_cleanup',
+               'A->1' => 'backbone_chipseq_finished'
+            },
+        },
+        {
+            -logic_name  => 'start_cleanup',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+        },
 
 
 
-
-
-        {   -logic_name => 'backbone_pipeline_finished',
+        {   -logic_name => 'backbone_chipseq_finished',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         }
     ]

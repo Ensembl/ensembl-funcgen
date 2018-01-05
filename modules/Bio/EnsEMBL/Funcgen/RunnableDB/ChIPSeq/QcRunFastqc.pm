@@ -34,7 +34,7 @@ sub run {
     $self->throw("The following command failed:\n" . $cmd)
   }
 
-  $cmd = qq(fastqc --extract -o $tempdir $read_file);
+  $cmd = qq(timeout 2h fastqc --extract -o $tempdir $read_file);
   
   $has_failed = $self->run_system_command($cmd, $run_options);
   if ($has_failed) {

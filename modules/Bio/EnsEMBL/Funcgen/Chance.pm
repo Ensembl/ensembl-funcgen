@@ -61,6 +61,8 @@ sub _constructor_parameters {
     first_nonzero_bin_at                                            => 'first_nonzero_bin_at',
     pcr_amplification_bias_in_Input_coverage_of_1_percent_of_genome => 'pcr_amplification_bias_in_Input_coverage_of_1_percent_of_genome',
     path                                                            => 'path',
+    run_failed          => 'run_failed',
+    error_message       => 'error_message',
   };
 }
 
@@ -82,5 +84,33 @@ sub control_enrichment_stronger_than_chip_at_bin                    { return shi
 sub first_nonzero_bin_at                                            { return shift->_generic_get_or_set('first_nonzero_bin_at',   @_); }
 sub pcr_amplification_bias_in_Input_coverage_of_1_percent_of_genome { return shift->_generic_get_or_set('pcr_amplification_bias_in_Input_coverage_of_1_percent_of_genome',   @_); }
 sub path                                                            { return shift->_generic_get_or_set('path',   @_); }
+
+sub run_failed          { return shift->_generic_get_or_set('run_failed',          @_); }
+sub error_message       { return shift->_generic_get_or_set('error_message',       @_); }
+
+=head2 summary_as_hash
+
+  Example       : $summary = $chance->summary_as_hash;
+  Description   : Returns summary in a hash reference.
+  Returns       : Hashref of descriptive strings
+  Status        : Intended for internal use (REST)
+
+=cut
+
+sub summary_as_hash {
+  my $self   = shift;
+  
+  return {
+    'p' => $self->p,
+    'q' => $self->q,
+    'divergence' => $self->divergence,
+    'z_score' => $self->z_score,
+    'percent_genome_enriched' => $self->percent_genome_enriched,
+    'input_scaling_factor' => $self->input_scaling_factor,
+    'differential_percentage_enrichment' => $self->differential_percentage_enrichment,
+    'control_enrichment_stronger_than_chip_at_bin' => $self->control_enrichment_stronger_than_chip_at_bin,
+  };
+}
+
 
 1;

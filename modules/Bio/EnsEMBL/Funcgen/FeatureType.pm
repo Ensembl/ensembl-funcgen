@@ -616,5 +616,24 @@ sub compare_to {
                                   $obj_methods);
 }
 
+=head2 summary_as_hash
+
+  Example       : $summary = $peak_calling->summary_as_hash;
+  Description   : Returns summary in a hash reference.
+  Returns       : Hashref of descriptive strings
+  Status        : Intended for internal use (REST)
+
+=cut
+
+sub summary_as_hash {
+  my $self   = shift;
+  
+  my $summary = {
+    name        => $self->name,
+    description => $self->description,
+  };
+  return $summary;
+}
+
 1;
 

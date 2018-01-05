@@ -768,7 +768,7 @@ sub summary_as_hash {
 
   return {
     ID                => $self->stable_id,
-    source            => $self->analysis->logic_name,,
+    source            => $self->analysis->logic_name,
     bound_start       => $self->bound_seq_region_start,
     bound_end         => $self->bound_seq_region_end,
     start             => $self->seq_region_start,

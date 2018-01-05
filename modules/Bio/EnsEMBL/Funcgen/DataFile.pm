@@ -83,11 +83,8 @@ sub relative_ftp_site_path {
     use Bio::EnsEMBL::Funcgen::Utils::GoodUtils qw( create_species_assembly_path );
     my $species_assembly_path = create_species_assembly_path($species);
     
-#     my $coordsystem_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'core', 'coordsystem');
-#     my $default_chromosome_coordsystem = $coordsystem_adaptor->fetch_by_name('chromosome');
-#     my $default_assembly = $default_chromosome_coordsystem->version;
-
-    return $species_assembly_path . '/' . $path;
+    #use File::Spec qw ( canonpath );
+    return File::Spec->canonpath( $species_assembly_path . '/' . $path );
 }
 
 sub _delete_from_db {
@@ -126,5 +123,24 @@ sub file_type    { return shift->_generic_get_or_set('file_type',    @_); }
 
 =cut
 sub md5sum       { return shift->_generic_get_or_set('md5sum',       @_); }
+
+=head2 summary_as_hash
+
+  Example       : $summary = $peak_calling->summary_as_hash;
+  Description   : Returns summary in a hash reference.
+  Returns       : Hashref of descriptive strings
+  Status        : Intended for internal use (REST)
+
+=cut
+
+sub summary_as_hash {
+  my $self   = shift;
+  
+  return {
+    file_type => $self->file_type,
+    path      => $self->path,
+    relative_ftp_site_path => $self->relative_ftp_site_path,
+  };
+}
 
 1;

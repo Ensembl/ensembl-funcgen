@@ -136,6 +136,16 @@ sub _delete_bam_file_from_db {
   $self->db->update($self);
 }
 
+sub fetch_all_deduplicated_replicate_Alignments {
+  my $self      = shift;
+  
+  my $alignment_adaptor = $self->db;
+  if (! defined $alignment_adaptor) {
+    throw("Couldn't get a AlignmentAdaptor!");
+  }
+  return $alignment_adaptor->fetch_all_deduplicated_replicates_by_Alignment($self);
+}
+
 sub fetch_source_Alignment {
 
   my $self         = shift;
@@ -146,6 +156,26 @@ sub fetch_source_Alignment {
   }
   my $alignment = $alignment_adaptor->fetch_by_dbID($self->source_alignment_id);
   return $alignment;
+}
+
+sub fetch_Chance_by_control_Alignment {
+  my $self = shift;
+  my $control_alignment = shift;
+  
+#   use Data::Dumper;
+#   print Dumper($control_alignment);
+#   print Dumper($self);
+
+  my $chance_adaptor = $self->db->db->get_ChanceAdaptor;
+  if (! defined $chance_adaptor) {
+    throw("Couldn't get an ChanceAdaptor!");
+  }
+  my $chance = $chance_adaptor
+    ->fetch_by_signal_control_Alignments(
+      $self, 
+      $control_alignment
+    );
+  return $chance;
 }
 
 sub fetch_Experiment {
@@ -296,6 +326,55 @@ sub fetch_all_ReadFiles {
     push @all_read_files, $current_read_file;
   }
   return \@all_read_files;
+}
+
+=head2 summary_as_hash
+
+  Example       : $summary = $peak_calling->summary_as_hash;
+  Description   : Returns summary in a hash reference.
+  Returns       : Hashref of descriptive strings
+  Status        : Intended for internal use (REST)
+
+=cut
+
+sub summary_as_hash {
+  my $self   = shift;
+  
+  # Optional parameter to avoid infinite recursions when two objects 
+  # reference each other.
+  #
+  my $suppress_link = shift;
+  $suppress_link = '' if (! defined $suppress_link);
+  
+  my $bam_file    = $self->fetch_bam_DataFile;
+  my $bigwig_file = $self->fetch_bigwig_DataFile;
+  
+  my $summary = {
+    name           => $self->name,
+    has_duplicates => $self->has_duplicates,
+    is_control     => $self->is_control,
+    to_gender      => $self->to_gender,
+    is_complete    => $self->is_complete,
+  };
+  
+  if ($bam_file) {
+    $summary->{'bam_file'} = $bam_file->summary_as_hash('alignment');
+  }
+  if ($bigwig_file) {
+    $summary->{'bigwig_file'} = $bigwig_file->summary_as_hash('alignment');
+  }
+  if ($suppress_link ne 'phantom_peak') {
+    my $phantom_peak = $self->fetch_PhantomPeak;
+    if (defined $phantom_peak) {
+      $summary->{'phantom_peak'} = $phantom_peak->summary_as_hash('alignment');
+    }
+  }
+  if ($suppress_link ne 'read_file') {
+    my $read_files = $self->fetch_all_ReadFiles;
+    $summary->{'read_files'} = [ map { $_->summary_as_hash } @$read_files ];
+  }
+  
+  return $summary;
 }
 
 1;

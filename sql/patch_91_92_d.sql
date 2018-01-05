@@ -17,7 +17,6 @@
 @desc   Create table for chance quality check
 */
 
-drop table alignment_qc_chance;
 drop table if exists alignment_qc_chance;
 
 CREATE TABLE if not exists `chance` (

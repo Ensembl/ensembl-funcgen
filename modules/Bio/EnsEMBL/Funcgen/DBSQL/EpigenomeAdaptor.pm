@@ -139,8 +139,6 @@ sub _columns {
      eg.display_label
      eg.description 
      eg.gender 
-     eg.ontology_accession 
-     eg.tissue 
      eg.production_name
   );
   #type/class = enum cell, cell line, tissue
@@ -165,11 +163,11 @@ sub _objs_from_sth {
 
     my (@result,             $eg_id,  $name,
         $dlabel,             $desc,   $gender,
-        $ontology_accession, $tissue, $production_name
+        $production_name
     );
 
     $sth->bind_columns( \$eg_id, \$name, \$dlabel, \$desc, \$gender,
-        \$ontology_accession, \$tissue, \$production_name );
+        \$production_name );
 
     while ( $sth->fetch() ) {
         my $epigenome = Bio::EnsEMBL::Funcgen::Epigenome->new(
@@ -178,8 +176,6 @@ sub _objs_from_sth {
             -DISPLAY_LABEL      => $dlabel,
             -DESCRIPTION        => $desc,
             -GENDER             => $gender,
-            -ONTOLOGY_ACCESSION => $ontology_accession,
-            -TISSUE             => $tissue,
             -ADAPTOR            => $self,
             -PRODUCTION_NAME    => $production_name,
         );
@@ -212,7 +208,7 @@ sub store {
 
   my $sth = $self->prepare("
 			INSERT INTO epigenome
-			(name, display_label, description, gender, ontology_accession, tissue, production_name)
+			(name, display_label, description, gender, production_name)
 			VALUES (?, ?, ?, ?, ?, ?, ?)");
 
 
@@ -233,9 +229,7 @@ sub store {
     $sth->bind_param( 2, $eg->display_label,      SQL_VARCHAR );
     $sth->bind_param( 3, $eg->description,        SQL_VARCHAR );
     $sth->bind_param( 4, $eg->gender,             SQL_VARCHAR );
-    $sth->bind_param( 5, $eg->ontology_accession, SQL_VARCHAR );
-    $sth->bind_param( 6, $eg->tissue,             SQL_VARCHAR );
-    $sth->bind_param( 7, $eg->production_name,    SQL_VARCHAR );
+    $sth->bind_param( 5, $eg->production_name,    SQL_VARCHAR );
 
 	  
 	  $sth->execute();

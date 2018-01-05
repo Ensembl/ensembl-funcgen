@@ -79,4 +79,44 @@ sub overrepresented_sequences    { return shift->_generic_get_or_set('overrepres
 sub adapter_content              { return shift->_generic_get_or_set('adapter_content',              @_); }
 sub kmer_content                 { return shift->_generic_get_or_set('kmer_content',                 @_); }
 
+=head2 summary_as_hash
+
+  Example       : $summary = $fastqc->summary_as_hash;
+  Description   : Returns summary in a hash reference.
+  Returns       : Hashref of descriptive strings
+  Status        : Intended for internal use (REST)
+
+=cut
+
+sub summary_as_hash {
+  my $self   = shift;
+  
+  # Optional parameter to avoid infinite recursions when two objects 
+  # reference each other.
+  #
+  my $suppress_link = shift;
+  
+  my $summary = {
+    basic_statistics                 => $self->basic_statistics,
+    per_base_sequence_quality        => $self->per_base_sequence_quality,
+    per_tile_sequence_quality        => $self->per_tile_sequence_quality,
+    per_sequence_quality_scores      => $self->per_sequence_quality_scores,
+    per_base_sequence_content        => $self->per_base_sequence_content,
+    per_sequence_gc_content          => $self->per_sequence_gc_content,
+    per_base_n_content               => $self->per_base_n_content,
+    sequence_length_distribution     => $self->sequence_length_distribution,
+    sequence_duplication_levels      => $self->sequence_duplication_levels,
+    overrepresented_sequences        => $self->overrepresented_sequences,
+    adapter_content                  => $self->adapter_content,
+    kmer_content                     => $self->kmer_content
+  };
+
+#   if ($suppress_link ne 'read_file') {
+#     my $fastqc = $self->fetch_FastQC;
+#     $summary->{'fastqc'} = $fastqc->summary_as_hash('read_file');
+#   }
+
+  return $summary;
+}
+
 1;

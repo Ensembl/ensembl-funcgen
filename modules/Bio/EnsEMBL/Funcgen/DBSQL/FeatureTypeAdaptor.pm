@@ -139,6 +139,7 @@ sub fetch_by_name{
   #Can get > 1 if name isredundant between classes
 
   if( (! wantarray) && (scalar @fts >1) ){
+    return $fts[0];
     throw("Found more than one FeatureType:$name\n".
           "Please specify a class and/or analysis argument to disambiguate");
   }

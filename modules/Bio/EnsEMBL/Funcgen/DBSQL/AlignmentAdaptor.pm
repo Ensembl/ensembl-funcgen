@@ -87,6 +87,22 @@ sub _store_dependencies {
     return;
 }
 
+sub fetch_all_deduplicated_replicates_by_Alignment {
+    my $self      = shift;
+    my $alignment = shift;
+    
+    if (! defined $alignment) {
+      throw("Alignment was undefined");
+    }
+    
+    my $constraint = join ' and ', (
+        'experiment_id  = ' . $alignment->experiment_id,
+        'is_complete    = False',
+        'has_duplicates = False'
+    );
+    return $self->fetch_all($constraint);
+}
+
 sub fetch_complete_deduplicated_by_Experiment {
     my $self       = shift;
     my $experiment = shift;

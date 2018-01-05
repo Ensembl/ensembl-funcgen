@@ -16,24 +16,81 @@ sub run {
     use Bio::EnsEMBL::Registry;
     my $funcgen_db_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
     
+    # Find read files that have been registered, but don't exist on the file 
+    # system.
+    #
+    my $read_file_adaptor = $funcgen_db_adaptor->get_ReadFileAdaptor;
+    
+    my $registered_file = [ map { $_->file } @{$read_file_adaptor->fetch_all} ];
+    
+    foreach my $current_file (@$registered_file) {
+      if (! -e $current_file) {
+        push @error_msg, "Can't find read file: $current_file" 
+      }
+    }
+    
     my $dbc = $funcgen_db_adaptor->dbc;
     
-    # Check that the values in the replicate column aren't duplicated.
+    # Find duplicate feature types
+    #
+    my $find_duplicate_feature_types = 'select name, max(feature_type_id), group_concat(feature_type_id), count(feature_type_id) c from feature_type where name != "WCE" group by name having c>1;';
     
-#     my $find_non_unique_replicate_specifications = 'select epigenome_id, experiment_id, biological_replicate, technical_replicate, count(*) c from input_subset where is_control=0 group by epigenome_id, experiment_id, biological_replicate, technical_replicate having c > 1 order by experiment_id';
-#     
-#     my $sth = $dbc->prepare($find_non_unique_replicate_specifications);
-#     $sth->execute;
-#     my $non_unique_replicate_specifications = $sth->fetchall_hashref('experiment_id');
-#     
-#     my @experiment_ids = sort { $a <=> $b } keys %$non_unique_replicate_specifications;
-#     if (@experiment_ids) {
-#       push @error_msg,
-# 	"The experiments with the following experiment ids have non unique replicate specifications: (" 
-# 	. (join ', ', @experiment_ids)
-# 	. ") Useful sql: $find_non_unique_replicate_specifications";
-#     }
-#     
+    my $sth = $dbc->prepare($find_duplicate_feature_types);
+    $sth->execute;
+    my $duplicate_feature_types = $sth->fetchall_hashref('name');
+    my @duplicate_feature_type_names = keys %$duplicate_feature_types;
+    
+    if (@duplicate_feature_type_names) {
+      push @error_msg, "The following feature types are referenced by experiments, but they are not unique: " . join ', ', @duplicate_feature_type_names;
+    }
+
+    # Find feature types without SO accessions
+    #
+    my $find_no_SO_feature_types = 'select feature_type.name from experiment join feature_type using (feature_type_id) where so_accession is null and feature_type.name!="WCE"';
+    
+    my $sth = $dbc->prepare($find_no_SO_feature_types);
+    $sth->execute;
+    my $feature_types_no_SO = $sth->fetchall_arrayref;
+    
+    if (@$feature_types_no_SO) {
+      push @error_msg, "The following feature types have no sequence ontology accession: " . join ', ', @$feature_types_no_SO;
+    }
+    
+    # Find duplicate configurations within the same experiment
+    #
+    my $find_duplicate_configurations = 'select group_concat(read_file_experimental_configuration_id) as invalid_configuration, count(read_file_experimental_configuration_id) c from read_file_experimental_configuration group by experiment_id, biological_replicate, technical_replicate, multiple, paired_end_tag having c>1;';
+    
+    my $sth = $dbc->prepare($find_duplicate_configurations);
+    $sth->execute;
+    my $invalid_configurations = $sth->fetchall_hashref('invalid_configuration');
+    
+    if (keys %$invalid_configurations) {
+      push @error_msg, "The following read file configuration ids are duplicates within the same experiment: " . join ', ', map { '('.$_.')' } keys %$invalid_configurations;
+    }
+    
+    # Feature types have SO accessions that are in the ontology database
+    #
+    my $find_feature_type_ids_needing_valid_SO = 'select distinct so_accession from experiment join feature_type using (feature_type_id) where so_accession is not null and feature_type.name!="WCE"';
+    
+    my $sth = $dbc->prepare($find_feature_type_ids_needing_valid_SO);
+    $sth->execute;
+    my $so_accessions = $sth->fetchall_arrayref;
+    
+    my $ontology_term_adaptor = Bio::EnsEMBL::Registry->get_adaptor( 'Multi', 'Ontology', 'OntologyTerm' );
+    
+    my @not_found;
+    foreach my $so_accession (@$so_accessions) {
+      $so_accession = $so_accession->[0];
+      my $ontology_term = $ontology_term_adaptor->fetch_by_accession($so_accession);
+      
+      if (! defined $ontology_term) {
+        push @not_found, $so_accession
+      }
+    }
+    if (@not_found) {
+      push @error_msg, "The following sequence ontology accession's can't be fetched from the ontology database: " . join ', ', @not_found;
+    }
+    
     my $find_signal_control_epigenome_mismatches = 'select * from experiment s join experiment c on (s.control_id=c.experiment_id) and s.epigenome_id != c.epigenome_id';
     
     my $sth = $dbc->prepare($find_signal_control_epigenome_mismatches);
@@ -43,28 +100,8 @@ sub run {
 		push @error_msg, "Signal control mismatches!";
     }
     
-
-    
-    # Check that all sequence files exist
-    
-#     my $input_subset_files_sql = 'select input_subset_id, local_url from input_subset_tracking';
-#     $sth = $dbc->prepare($input_subset_files_sql);
-#     $sth->execute;
-#     
-#     my $local_urls = $sth->fetchall_hashref('local_url');
-#     my @input_subset_files = keys %$local_urls;
-    
-#     foreach my $current_file (@input_subset_files) {
-#       if (! -e $current_file) {
-# 	push @error_msg, 
-# 	  "The file $current_file is specified in the input_subset ("
-# 	  . $local_urls->{$current_file}->{input_subset_id}
-# 	  . ") table, but it doesn't exist!"
-#       }
-#     }
-    
-    # Check for orphan result_set_inputs
-    
+    # Check for orphans
+    #
     my $count_orphans_sql = 'select count(*) as c from alignment_read_file left join read_file using (read_file_id) where read_file.read_file_id is null';
     $sth = $dbc->prepare($count_orphans_sql);
     $sth->execute;
@@ -73,7 +110,7 @@ sub run {
     my $num_orphans = $x->[0]->[0];
     
     if ($num_orphans) {
-        push @error_msg, "There are $num_orphans orphan entries in the result_set_input table. They must be removed or new result_sets might have arbitrary links to input_subsets. Suggestion: delete from result_set_input where result_set_id not in (select result_set_id from result_set);"; 
+        push @error_msg, "There are $num_orphans orphan entries in the alignment_read_file table."; 
     }
 
     my @exported_variables = qw( PERL5LIB R_LIBS );
