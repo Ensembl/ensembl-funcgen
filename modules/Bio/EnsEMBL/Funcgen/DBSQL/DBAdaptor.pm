@@ -188,6 +188,7 @@ sub get_available_adaptors{
         'Chance'                 => 'Bio::EnsEMBL::Funcgen::DBSQL::ChanceAdaptor',
         'FastQC'                 => 'Bio::EnsEMBL::Funcgen::DBSQL::FastQCAdaptor',
         'PhantomPeak'            => 'Bio::EnsEMBL::Funcgen::DBSQL::PhantomPeakAdaptor',
+        'Frip'                   => 'Bio::EnsEMBL::Funcgen::DBSQL::FripAdaptor',
         
         'BindingMatrix'          => 'Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixAdaptor',
         'Epigenome'              => 'Bio::EnsEMBL::Funcgen::DBSQL::EpigenomeAdaptor',

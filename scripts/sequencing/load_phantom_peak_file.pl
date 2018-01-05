@@ -28,89 +28,50 @@ limitations under the License.
 
 =head1 SYNOPSIS
 
-export R_LIBS=/software/ensembl/funcgen/R-modules
-
-/software/R-3.2.2/bin/Rscript /software/ensembl/funcgen/spp_package/run_spp.R \
-  -c=/lustre/scratch109/ensembl/funcgen/mn1/ersa/faang/testbams/K562:hist:BR1_H3K4me3_3526_bwa_samse_1.bam \
-  -savp -out=/lustre/scratch109/ensembl/funcgen/mn1/ersa/faang/testbams
-
-./scripts/sequencing/load_phantom_peak_file.pl  \
-    --result_set_id 20  \
-    --result_file /lustre/scratch109/ensembl/funcgen/mn1/ersa/faang/testbams/test \
-    --dry_run \
-    --user ensro --host ens-genomics2 --dbname mn1_faang_tracking_homo_sapiens_funcgen_81_38 \
-
 =head1 DESCRIPTION
-
-Downloads data for input sets registered in the data tracking database.
 
 =cut
 
 use strict;
 use Data::Dumper;
 use Getopt::Long;
-use Bio::EnsEMBL::DBSQL::DBConnection;
 use Bio::EnsEMBL::Utils::Logger;
-use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
 my $result_file;
-#my $result_set_id;
-my $dry_run;
-my $user;
-my $pass;
-my $host;
-my $port;
-my $dbname;
-my $work_dir;
-my $bam_file;
 my $alignment_name;
+my $registry;
+my $species;
+my $failed;
 
 my %config_hash = (
   "result_file"     => \$result_file,
   "alignment_name"  => \$alignment_name,
-#  "result_set_id"   => \$result_set_id,
-  'dry_run'         => \$dry_run,
-  'user'            => \$user,
-  'pass'            => \$pass,
-  'port'            => \$port,
-  'host'            => \$host,
-  'dbname'          => \$dbname,
-  'work_dir'        => \$work_dir,
-  'bam_file'        => \$bam_file,
+  "registry"        => \$registry,
+  "species"         => \$species,
+  "failed"          => \$failed,
 );
 
 my $result = GetOptions(
   \%config_hash,
-  #'result_set_id=s',
   'alignment_name=s',
   'result_file=s',
-  'dry_run',
-  'user=s',
-  'pass=s',
-  'port=s',
-  'host=s',
-  'dbname=s',
-  'work_dir=s',
-  'bam_file=s',
+  'registry=s',
+  'species=s',
+  'failed=s',
 );
+
+my $error_message = undef;
 
 if (! $result_file) {
   die("The result_file parameter was not specified!");
 }
 if (! -e $result_file) {
-  die("The result_file ($result_file) specified on the command line does not exist!");
+  $error_message = "The result_file ($result_file) specified on the command line does not exist!";
+  $failed = 1;
 }
 if (! $alignment_name) {
   die("The alignment_name parameter was not specified!");
 }
-
-my @tracking_db_connection_details = (
-    -user     => $user,
-    -pass     => $pass,
-    -port     => $port,
-    -host     => $host,
-    -dbname   => $dbname,
- );
 
 my $logic_name = 'phantom peak quality tools';
 my @phantom_peak_analysis_details = (
@@ -125,61 +86,46 @@ my @phantom_peak_analysis_details = (
 my $logger = Bio::EnsEMBL::Utils::Logger->new();
 $logger->init_log;
 
-my $dbc = Bio::EnsEMBL::DBSQL::DBConnection->new(@tracking_db_connection_details);
+use Bio::EnsEMBL::Registry;
+Bio::EnsEMBL::Registry->load_all($registry, 1, 1, 0, 1);
 
-use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
-my $dba = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new(
-  -DBCONN => $dbc,  
-);
-my $analysis_adaptor = $dba->get_AnalysisAdaptor();
+my $phantom_peak_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'PhantomPeak');
+
+my $analysis_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'analysis');
 my $analysis = $analysis_adaptor->fetch_by_logic_name($logic_name);
 
-# my $alignment_adaptor = Bio::EnsEMBL::Registry
-# ->get_adaptor(
-#     $species, 
-#     'funcgen', 
-#     'Alignment'
-# );
-my $alignment_adaptor = $dba->get_AlignmentAdaptor();
+my $alignment_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'alignment');
 my $alignment = $alignment_adaptor->fetch_by_name($alignment_name);
 my $alignment_id = $alignment->dbID;
 
-#die(Dumper($analysis_adaptor->db->species));
-
-my $species = 'homo_sapiens';
-
-if (! $analysis && ! $dry_run) {
+if (! $analysis ) {
       $logger->info("No analysis with logic name $logic_name found. Creating one.");
       $analysis = Bio::EnsEMBL::Analysis->new(@phantom_peak_analysis_details);
       $analysis_adaptor->store($analysis);
 }
 my $analysis_id = $analysis->dbID;
 
-my $sql_processor;
-if ($dry_run) {
-  $sql_processor = sub {
-    my $sql = shift;
-    $logger->info($sql . "\n");
-  };
-} else {
-  $sql_processor = sub {
-    my $sql = shift;
-    $logger->info($sql . "\n");
-    $dbc->do($sql);
-  };
+if ($failed) {
+
+  use Bio::EnsEMBL::Funcgen::PhantomPeak;
+  my $phantom_peak = Bio::EnsEMBL::Funcgen::PhantomPeak->new(
+      -alignment_id  => $alignment_id,
+      -run_failed    => 1,
+      -error_message => undef,
+      -analysis_id   => $analysis_id,
+  );
+  $phantom_peak_adaptor->store($phantom_peak);
+  exit;
 }
 
-create_table({
-  sql_processor => $sql_processor
-});
 
 open IN, $result_file;
 
 while (my $current_line = <IN>) {
   chomp $current_line;
-  #print " - $current_line\n";
+
   my @f = split "\t", $current_line;
-#   print Dumper(\@f);
+
   (
     my $filename,
     my $numReads,
@@ -201,10 +147,10 @@ while (my $current_line = <IN>) {
   ) = split ',', $estFragLenTriple;
   
   if ($estFragLen2 eq '') {
-    $estFragLen2 = 'null';
+    $estFragLen2 = undef;
   }
   if ($estFragLen3 eq '') {
-    $estFragLen3 = 'null';
+    $estFragLen3 = undef;
   }
   
   (
@@ -214,146 +160,54 @@ while (my $current_line = <IN>) {
   ) = split ',', $corr_estFragLenTriple;
   
   if ($corr_estFragLen2 eq '') {
-    $corr_estFragLen2 = 'null';
+    $corr_estFragLen2 = undef;
   }
   if ($corr_estFragLen3 eq '') {
-    $corr_estFragLen3 = 'null';
+    $corr_estFragLen3 = undef;
   }
 
-  sub quote {
-    my $string = shift;
-    return '"' . $string . '"'
-  }
-  
   # This can happen, if the data is very bad. In that case the quality tag 
   # will indicate that with
   #
   if ($RSC eq 'Inf') {
-    $RSC = 'null';
+    $RSC = undef;
     die unless ($QualityTag == 2);
   }
-  
-  my $sql = "INSERT INTO alignment_qc_phantom_peak ("
-#  . "result_set_qc_phantom_peak_id, "
-  . "alignment_id, "
-  . "analysis_id, "
-  . "filename, "
-  . "numReads, "
-  . "estFragLen, "
-  . "estFragLen2, "
-  . "estFragLen3, "
-  . "corr_estFragLen, "
-  . "corr_estFragLen2, "
-  . "corr_estFragLen3, "
-  . "phantomPeak, "
-  . "corr_phantomPeak, "
-  . "argmin_corr, "
-  . "min_corr, "
-  . "NSC, "
-  . "RSC, "
-  . "QualityTag, "
-  . "path "
-  . ")  VALUES ("
-  . (
-    join ', ', (
-        $alignment_id,
-        $analysis_id,
-        #quote($filename),
-        quote($bam_file),
-        $numReads,
 
-        $estFragLen,
-        $estFragLen2,
-        $estFragLen3,
+  use Bio::EnsEMBL::Funcgen::PhantomPeak;
+  my $phantom_peak = Bio::EnsEMBL::Funcgen::PhantomPeak->new(
+      -analysis_id         => $analysis_id,
+      -alignment_id        => $alignment_id,
+      -num_reads           => $numReads,
+      -est_frag_len        => $estFragLen,
+      -est_frag_len_2      => $estFragLen2,
+      -est_frag_len_3      => $estFragLen3,
+      -corr_est_frag_len   => $corr_estFragLen,
+      -corr_est_frag_len_2 => $corr_estFragLen2,
+      -corr_est_frag_len_3 => $corr_estFragLen3,
+      -phantom_peak        => $phantomPeak,
+      -corr_phantom_peak   => $corr_phantomPeak,
+      -argmin_corr         => $argmin_corr,
+      -min_corr            => $min_corr,
+      -nsc                 => $NSC,
+      -rsc                 => $RSC,
+      -quality_tag         => $QualityTag,
+      -run_failed          => 0,
+      -error_message       => undef,
 
-        $corr_estFragLen,
-        $corr_estFragLen2,
-        $corr_estFragLen3,
+  );
+  eval {
+    $phantom_peak_adaptor->store($phantom_peak);
+  };
+  if ($@) {
+    my $error_message = $@;
+    my $already_exists = $error_message =~ /alignment_id_unique/;
+    
+    if (!$already_exists) {
+      die($error_message);
+    }
+  }
 
-        $phantomPeak,
-        $corr_phantomPeak,
-        $argmin_corr,
-        $min_corr,
-        $NSC,
-        $RSC,
-        $QualityTag,
-        quote($work_dir)
-      )
-    )
-  . ");";
-   $sql_processor->("$sql");
+
 }
-
-=head2 create_table
-=cut
-sub create_table {
-
-  my $param = shift;
-  my $sql_processor = $param->{sql_processor};
-
-# Test for 
-# - the specificity of the size selection step
-# - enrichment. (Poor enrichment would lead to higher backgound leading to lower correlation.)
-  
-my $sql = <<SQL
-CREATE TABLE if not exists `result_set_qc_phantom_peak` (
-  `result_set_qc_phantom_peak_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `analysis_id`        int(10) unsigned,
-  `result_set_id` int(10) unsigned NOT NULL,
-  `filename` varchar(512) NOT NULL,
-  `numReads` int(10) unsigned NOT NULL,
-  `estFragLen`       double default NULL,
-  `estFragLen2`      double default NULL,
-  `estFragLen3`      double default NULL,
---
--- Seems to always be the same as the above three. Should be removed.
--- Check: Should be actual coorelations.
---
-  `corr_estFragLen`  double default NULL,
-  `corr_estFragLen2` double default NULL,
-  `corr_estFragLen3` double default NULL,
--- Is an estimate of the read length
-  `phantomPeak` int(10) unsigned NOT NULL,
-  `corr_phantomPeak` double default NULL,
---
--- Shiftlength that minimizes correlation, (not important for qc purposes)
--- See http://www.ncbi.nlm.nih.gov/pmc/articles/PMC3431496/figure/F5/
--- for correlation graphs.
---
-  `argmin_corr` int(10),
---
--- The value at argmin_corr
---
-  `min_corr` double default NULL,
---
--- Normalised strand cross correlation coefficient
---
--- Correlation found at the estimated fragment length (what should be in corr_estFragLen) divided by the minimum found correlation. (min_corr)
---
-  `NSC`      double default NULL,
---
--- Relative strand cross correlation coefficient
---
--- This is the main statistic.
---
--- Ratio between correlations found from the fragment length and the phantom peak. Both values are corrected by subtracting min_corr.
--- It shows how much greater the correlation from the fragment length is compared to background correlation.
---
-  `RSC`      double default NULL,
---
--- Quality values derived from the RSC
---
-  `QualityTag` int(10),
-  `path` varchar(512) NOT NULL,
-  PRIMARY KEY (`result_set_qc_phantom_peak_id`),
---  UNIQUE KEY `filename_idx` (`filename`)
-  KEY `filename_idx` (`filename`)
-);
-SQL
-;
-  $sql_processor->($sql);
-}
-
-
-
 

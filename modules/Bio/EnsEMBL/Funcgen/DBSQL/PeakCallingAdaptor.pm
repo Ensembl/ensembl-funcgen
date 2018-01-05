@@ -74,6 +74,19 @@ sub count_peaks_by_PeakCalling {
   return $self->db->get_PeakAdaptor->count_all('peak_calling_id = ' . $peak_calling->dbID);
 }
 
+sub fetch_all_by_Epigenome_FeatureType {
+  my $self = shift;
+  
+  my $epigenome    = shift;
+  my $feature_type = shift;
+  
+  my $constraint = join ' and ', (
+    'epigenome_id    = ' . $epigenome->dbID,
+    'feature_type_id = ' . $feature_type->dbID
+  );
+  return $self->fetch_all($constraint);
+}
+
 # Ugly legacy stuff from here onwards, used by web, so we can't get rid of it 
 # easily. Don't use any of this in future code development.
 

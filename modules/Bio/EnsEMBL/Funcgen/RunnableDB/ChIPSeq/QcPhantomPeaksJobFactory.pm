@@ -35,7 +35,6 @@ sub run {
   }
   
   my $temp_dir_for_this_run = "$tempdir/$epigenome_production_name/$alignment_name";
-  my $out_db = $alignment_adaptor->db;
   
   use File::Path qw( make_path );
   make_path($temp_dir_for_this_run);
@@ -47,18 +46,12 @@ sub run {
   
   my $input_id = {
       # Directory into which the bam files will be copied
-      tempdir            => $temp_dir_for_this_run,
-      alignment_name     => $alignment_name,
+      tempdir               => $temp_dir_for_this_run,
+      alignment_name        => $alignment_name,
+      phantom_peak_out_file => $signal_phantom_peaks_file,
+      bam_file              => $bam_file_full_path,
       
-      # Connection details for the db to which the results will be written
-      tracking_db_user   => $out_db->dbc->user,
-      tracking_db_pass   => $out_db->dbc->password,
-      tracking_db_host   => $out_db->dbc->host,
-      tracking_db_name   => $out_db->dbc->dbname,
-      tracking_db_port   => $out_db->dbc->port,
-
-      phantom_peak_out_file  => $signal_phantom_peaks_file,
-      bam_file => $bam_file_full_path,
+      species => $species,
   };
   
   $self->dataflow_output_id($input_id, 2);

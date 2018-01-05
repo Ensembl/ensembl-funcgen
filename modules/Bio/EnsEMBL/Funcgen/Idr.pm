@@ -82,4 +82,29 @@ sub fetch_Experiment {
   return shift->_generic_fetch('experiment', 'get_ExperimentAdaptor', 'experiment_id');
 }
 
+=head2 summary_as_hash
+
+  Example       : $summary = $idr->summary_as_hash;
+  Description   : Returns summary in a hash reference.
+  Returns       : Hashref of descriptive strings
+  Status        : Intended for internal use (REST)
+
+=cut
+
+sub summary_as_hash {
+  my $self   = shift;
+  
+  my $summary = {
+    type      => $self->type,
+  };
+  
+  if ($self->failed_idr_pairs) {
+    $summary->{failed_idr_pairs} = $self->failed_idr_pairs;
+  }
+  if ($self->max_peaks) {
+    $summary->{max_peaks} = $self->max_peaks;
+  }
+  return $summary;
+}
+
 1;

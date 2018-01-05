@@ -22,8 +22,8 @@ sub run {
     from 
       peak 
       join peak_calling using (peak_calling_id) 
-      join experiment using (experiment_id)
       join epigenome using (epigenome_id) 
+      join experiment using (experiment_id)
       join feature_type on (feature_type.feature_type_id = peak_calling.feature_type_id) 
       join analysis on (analysis.analysis_id=peak_calling.analysis_id);
 SQL

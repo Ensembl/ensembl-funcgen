@@ -95,6 +95,7 @@ sub _constructor_parameters {
     name            => 'name',
     display_label   => 'display_label',
     experiment_id   => 'experiment_id',
+    epigenome_id    => 'epigenome_id',
     signal_alignment_id  => 'signal_alignment_id',
     control_alignment_id => 'control_alignment_id',
   };
@@ -117,6 +118,7 @@ sub name                 { return shift->_generic_get_or_set('name',            
 sub feature_type_id      { return shift->_generic_get_or_set('feature_type_id',      @_); }
 sub experiment_id        { return shift->_generic_get_or_set('_experiment_id',       @_); }
 sub analysis_id          { return shift->_generic_get_or_set('analysis_id',          @_); }
+sub epigenome_id         { return shift->_generic_get_or_set('epigenome_id',          @_); }
 sub signal_alignment_id  { return shift->_generic_get_or_set('signal_alignment_id',  @_); }
 sub control_alignment_id { return shift->_generic_get_or_set('control_alignment_id', @_); }
 
@@ -188,6 +190,17 @@ sub fetch_Idr {
   return $idr;
 }
 
+sub fetch_Frip {
+  my $self = shift;
+  
+  my $frip_adaptor = $self->db->db->get_FripAdaptor;
+  if (! defined $frip_adaptor) {
+    throw("Couldn't get an IdrAdaptor!");
+  }
+  my $frip = $frip_adaptor->fetch_by_PeakCalling($self);
+  return $frip;
+}
+
 sub fetch_Chance {
   my $self = shift;
 
@@ -205,7 +218,6 @@ sub fetch_Chance {
     );
   return $chance;
 }
-
 
 =head2 fetch_Alignment
 
@@ -252,7 +264,7 @@ sub fetch_Analysis {
 =cut
 sub fetch_Epigenome {
     my $self = shift;
-    return $self->fetch_Experiment->epigenome;
+    return $self->_generic_fetch('epigenome', 'get_EpigenomeAdaptor', 'epigenome_id');
 }
 
 sub fetch_Experiment {
@@ -292,6 +304,43 @@ sub fetch_source_label {
       -PARAMS => [ $experiment_id ],
     );
     return $source_label;
+}
+
+=head2 summary_as_hash
+
+  Example       : $summary = $peak_calling->summary_as_hash;
+  Description   : Returns summary in a hash reference.
+  Returns       : Hashref of descriptive strings
+  Status        : Intended for internal use (REST)
+
+=cut
+
+sub summary_as_hash {
+  my $self   = shift;
+  
+  my $signal_alignment  = $self->fetch_signal_Alignment;
+  my $control_alignment = $self->fetch_control_Alignment;
+  my $epigenome         = $self->fetch_Epigenome;
+  my $feature_type      = $self->fetch_FeatureType;
+  my $analysis          = $self->fetch_Analysis;
+  my $idr               = $self->fetch_Idr;
+  
+  my $summary = {
+    name             => $self->name,
+    signal_alignment => $signal_alignment  ->summary_as_hash,
+    contol_alignment => $control_alignment ->summary_as_hash,
+    epigenome        => $epigenome         ->summary_as_hash,
+    feature_type     => $feature_type      ->summary_as_hash,
+    idr              => $idr               ->summary_as_hash,
+    num_peaks        => $self->num_peaks,
+    peak_caller      => $analysis->display_label
+  };
+  
+  my $chance = $self->fetch_Chance;
+  if ($chance) {
+    $summary->{chance} = $chance->summary_as_hash
+  }
+  return $summary;
 }
 
 1;

@@ -65,6 +65,7 @@ sub run {
       -signal_alignment_id  => $signal_alignment->dbID,
       -control_alignment_id => $control_alignment->dbID,
       -experiment_id        => $experiment->dbID,
+      -epigenome_id         => $experiment->epigenome->dbID,
     );
     $peak_calling_adaptor->store($peak_calling);
   }
@@ -103,6 +104,8 @@ sub run {
         . Dumper($peak)
       );
     }
+    # See, if this fixes the rare occasion of memory leaks.
+    undef($peak);
   };
 
   use Bio::EnsEMBL::Funcgen::Parsers::DataDumper;

@@ -138,6 +138,15 @@ sub run {
   if ($failed) {
     $insufficient_merged_peaks_error 
       = $stderr =~ /ValueError: Peak files must contain at least 20 peaks post-merge/;
+      
+    $self->say_with_header(
+      "The idr command:\n"
+      . $cmd . "\n"
+      . "has failed.\n"
+      . "Sleeping for 20 seconds to give lsf time to kill the worker, if "
+      . "this was due to memlimit."
+    );
+    sleep(20)
   }
 
   if ($failed && ! $insufficient_merged_peaks_error) {

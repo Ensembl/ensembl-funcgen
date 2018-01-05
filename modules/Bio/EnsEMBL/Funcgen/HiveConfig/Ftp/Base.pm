@@ -15,6 +15,7 @@ sub default_options {
     return {
         %{$self->SUPER::default_options},
         data_freeze_date => $data_freeze_date,
+        tempdir => '',
     }
 }
 
@@ -26,7 +27,8 @@ sub pipeline_wide_parameters {
       ftp_base_dir     => $self->o('ftp_base_dir'),
       reg_conf         => $self->o('reg_conf'),
       data_freeze_date => $self->o('data_freeze_date'),
-      tempdir          => $self->o('tempdir') . '/ftp_export',
+      tempdir          => $self->o('tempdir'),
+      tempdir_ftp      => $self->o('tempdir') . '/ftp_export',
     };
 }
 

@@ -31,6 +31,7 @@ sub pipeline_wide_parameters {
     ensembl_release_version => $self->o('ensembl_release_version'),
     reference_data_root_dir => $self->o('reference_data_root_dir'),
     in_test_mode            => $self->o('in_test_mode'),
+    reg_conf                => $self->o('reg_conf'),
   };
 }
 

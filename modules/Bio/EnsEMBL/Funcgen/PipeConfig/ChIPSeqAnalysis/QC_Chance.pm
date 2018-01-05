@@ -127,8 +127,9 @@ sub pipeline_analyses {
         },
         {   -logic_name => 'RunArgenrich',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -max_retry_count => 1,
             -parameters => {
-                cmd => qq(argenrich_with_labels_and_rerunnable.R --args plot=TRUE outdir=#tempdir# )
+                cmd => qq(timeout 12h argenrich_with_labels_and_rerunnable.R --args plot=TRUE outdir=#tempdir# )
                   . qq(    ipsz=#expr( #read_count#->{"signal"}            )expr# )
                   . qq( inputsz=#expr( #read_count#->{"control"}           )expr# )
                   . qq(      ip=#tempdir#/#expr( #file#->{"signal"}        )expr# )
@@ -138,27 +139,18 @@ sub pipeline_analyses {
                   # This ends up in #tempdir#, because of the parameter 
                   # "outdir=#tempdir#" set further above.
                   #
-                  . qq( outfile=#argenrich_outfile#)
+                  . qq( outfile=#argenrich_outfile#),
+                  return_codes_2_branches => {
+                    1 => 2
+                  },
             },
-            -flow_into => { 
-                MAIN       => { 
-                  'LoadChanceToDB' => INPUT_PLUS(
-                      { 
-                        'success' => 1
-                      }
-                    )
-                }, 
-                ANYFAILURE => { 
-                  'LoadChanceToDB' => INPUT_PLUS(
-                    { 
-                      'success' => 0 
-                    }
-                  )
-                }, 
+            -flow_into => {
+                MAIN => 'load_chance',
+                2    => 'load_chance_failed', 
             },
             -rc_name   => '16Gb_job',
         },
-        {   -logic_name => 'LoadChanceToDB',
+        {   -logic_name => 'load_chance',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters => {
                 cmd => qq(load_argenrich_qc_file.pl   )
@@ -172,7 +164,26 @@ sub pipeline_analyses {
                 . qq( --host     #tracking_db_host#       )
                 . qq( --dbname   #tracking_db_name#       )
                 . qq( --work_dir #tempdir#                )
-                . qq( --success  #success#                )
+                . qq( --species  #species#                )
+                . qq( --failed   0                 )
+            },
+        },
+        {   -logic_name => 'load_chance_failed',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters => {
+                cmd => qq(load_argenrich_qc_file.pl   )
+                . qq( --argenrich_file        #tempdir#/#argenrich_outfile#     )
+                . qq( --experiment_name #experiment_name# )
+                . qq( --signal   #signal_alignment#       )
+                . qq( --control  #control_alignment#      )
+                . qq( --user     #tracking_db_user#       )
+                . qq( --pass     #tracking_db_pass#       )
+                . qq( --port     #tracking_db_port#       )
+                . qq( --host     #tracking_db_host#       )
+                . qq( --dbname   #tracking_db_name#       )
+                . qq( --work_dir #tempdir#                )
+                . qq( --species  #species#                )
+                . qq( --failed   1                 )
             },
         },
         {   -logic_name => 'qc_chance_done',

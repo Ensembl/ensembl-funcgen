@@ -15,8 +15,8 @@ sub run {
         lock_execution_plan
         resolve_nonterminal_symbols
   );
-  my $plan_expanded = resolve_nonterminal_symbols($execution_plan);
-  lock_execution_plan($plan_expanded);
+  #my $plan_expanded = resolve_nonterminal_symbols($execution_plan);
+  #lock_execution_plan($plan_expanded);
   lock_execution_plan($execution_plan);
 
 #   print Dumper($plan_expanded);
@@ -100,13 +100,14 @@ sub run {
    
   $self->say_with_header($cmd);
   $error_occurred = $self->run_system_command($cmd);
-  if ($error_occurred) {
-    $self->throw("The following command failed:\n$cmd");
-  }
+  
   # If lsf kills the command, give it time to kill the worker as well so 
   # eHive handles this properly.
   #
   sleep(20);
+  if ($error_occurred) {
+    $self->throw("The following command failed:\n$cmd");
+  }
 }
 
 1;

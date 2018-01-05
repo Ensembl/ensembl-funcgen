@@ -61,28 +61,91 @@ sub _constructor_parameters {
     min_corr            => 'min_corr',
     nsc                 => 'nsc',
     rsc                 => 'rsc',
-    quality_tag         => 'quality_tag'
+    quality_tag         => 'quality_tag',
+    run_failed          => 'run_failed',
+    error_message       => 'error_message',
   };
 }
 
 sub dbID         { return shift->_generic_get_or_set('dbID',         @_); }
 sub db           { return shift->_generic_get_or_set('db',           @_); }
 
-sub analysis_id         { return shift->_generic_get_or_set(' analysis_id',         @_); }
-sub alignment_id        { return shift->_generic_get_or_set(' alignment_id',        @_); }
-sub num_reads           { return shift->_generic_get_or_set(' num_reads',           @_); }
-sub est_frag_len        { return shift->_generic_get_or_set(' est_frag_len',        @_); }
-sub est_frag_len_2      { return shift->_generic_get_or_set(' est_frag_len_2',      @_); }
-sub est_frag_len_3      { return shift->_generic_get_or_set(' est_frag_len_3',      @_); }
-sub corr_est_frag_len   { return shift->_generic_get_or_set(' corr_est_frag_len',   @_); }
-sub corr_est_frag_len_2 { return shift->_generic_get_or_set(' corr_est_frag_len_2', @_); }
-sub corr_est_frag_len_3 { return shift->_generic_get_or_set(' corr_est_frag_len_3', @_); }
-sub phantom_peak        { return shift->_generic_get_or_set(' phantom_peak',        @_); }
-sub corr_phantom_peak   { return shift->_generic_get_or_set(' corr_phantom_peak',   @_); }
-sub argmin_corr         { return shift->_generic_get_or_set(' argmin_corr',         @_); }
-sub min_corr            { return shift->_generic_get_or_set(' min_corr',            @_); }
-sub nsc                 { return shift->_generic_get_or_set(' nsc',                 @_); }
-sub rsc                 { return shift->_generic_get_or_set(' rsc',                 @_); }
-sub quality_tag         { return shift->_generic_get_or_set(' quality_tag',         @_); }
+sub analysis_id         { return shift->_generic_get_or_set('analysis_id',         @_); }
+sub alignment_id        { return shift->_generic_get_or_set('alignment_id',        @_); }
+sub num_reads           { return shift->_generic_get_or_set('num_reads',           @_); }
+sub est_frag_len        { return shift->_generic_get_or_set('est_frag_len',        @_); }
+sub est_frag_len_2      { return shift->_generic_get_or_set('est_frag_len_2',      @_); }
+sub est_frag_len_3      { return shift->_generic_get_or_set('est_frag_len_3',      @_); }
+sub corr_est_frag_len   { return shift->_generic_get_or_set('corr_est_frag_len',   @_); }
+sub corr_est_frag_len_2 { return shift->_generic_get_or_set('corr_est_frag_len_2', @_); }
+sub corr_est_frag_len_3 { return shift->_generic_get_or_set('corr_est_frag_len_3', @_); }
+sub phantom_peak        { return shift->_generic_get_or_set('phantom_peak',        @_); }
+sub corr_phantom_peak   { return shift->_generic_get_or_set('corr_phantom_peak',   @_); }
+sub argmin_corr         { return shift->_generic_get_or_set('argmin_corr',         @_); }
+sub min_corr            { return shift->_generic_get_or_set('min_corr',            @_); }
+sub nsc                 { return shift->_generic_get_or_set('nsc',                 @_); }
+sub rsc                 { return shift->_generic_get_or_set('rsc',                 @_); }
+sub quality_tag         { return shift->_generic_get_or_set('quality_tag',         @_); }
+
+sub run_failed          { return shift->_generic_get_or_set('run_failed',          @_); }
+sub error_message       { return shift->_generic_get_or_set('error_message',       @_); }
+
+sub fetch_Alignment {
+
+  my $self         = shift;
+  
+  my $alignment_adaptor = $self->db->db->get_AlignmentAdaptor;
+  if (! defined $alignment_adaptor) {
+    throw("Couldn't get an AlignmentAdaptor!");
+  }
+  my $alignment = $alignment_adaptor->fetch_by_dbID($self->alignment_id);
+  return $alignment;
+}
+
+sub fetch_Idr {
+  my $self = shift;
+  
+  my $idr_adaptor = $self->db->db->get_IdrAdaptor;
+  if (! defined $idr_adaptor) {
+    throw("Couldn't get an IdrAdaptor!");
+  }
+  my $idr = $idr_adaptor->_fetch_by_experiment_id($self->experiment_id);
+  return $idr;
+}
+
+=head2 summary_as_hash
+
+  Example       : $summary = $peak_calling->summary_as_hash;
+  Description   : Returns summary in a hash reference.
+  Returns       : Hashref of descriptive strings
+  Status        : Intended for internal use (REST)
+
+=cut
+
+sub summary_as_hash {
+  my $self   = shift;
+  
+  # Optional parameter to avoid infinite recursions when two objects 
+  # reference each other.
+  #
+  my $suppress_link = shift;
+
+  
+  my $summary = {
+    num_reads    => $self->num_reads,
+    quality_tag  => $self->quality_tag,
+    rsc          => $self->rsc,
+    nsc          => $self->nsc,
+    phantom_peak => $self->phantom_peak,
+    est_frag_len => $self->est_frag_len,
+  };
+  
+  if ($suppress_link ne 'alignment') {
+    my $alignment  = $self->fetch_Alignment;
+    $summary->{'alignment'} = $alignment->summary_as_hash('phantom_peak');
+  }
+  
+  return $summary;
+}
 
 1;
