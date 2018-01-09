@@ -46,10 +46,10 @@ sub run {
   
     my $read_file_name = $current_read_file->name;
   
-    my $this_runs_temp_dir = "$tempdir/fastqc/$read_file_name";
+    my $this_runs_temp_dir = "$tempdir/$read_file_name";
   
     my $input_id = {
-        tempdir        => $this_runs_temp_dir,
+        fastqc_tempdir => $this_runs_temp_dir,
         read_file_id   => $current_read_file->dbID,
         read_file_name => $read_file_name,
         read_file      => $current_read_file->file,

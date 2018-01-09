@@ -51,6 +51,9 @@ sub pipeline_analyses {
       },
       {   -logic_name => 'QcFlagstatsJobFactory',
           -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::QcFlagstatsJobFactory',
+          -parameters => {
+            tempdir => '#tempdir_chipseq#/#species#/flagstats',
+          },
           -flow_into => {
             2 => 'QcRunFlagstats',
           },
@@ -86,7 +89,7 @@ sub pipeline_analyses {
             . qq( --alignment_name #alignment_name# )
             . qq( --flagstats_file #flagstats_file# )
             . qq( --user #tracking_db_user# --pass #tracking_db_pass# --host #tracking_db_host# --port #tracking_db_port# --dbname #tracking_db_name# )
-            . qq( --work_dir #tempdir#  )
+            . qq( --work_dir #frip_tempdir# )
             . qq( --bam_file #bam_file# )
           },
       },

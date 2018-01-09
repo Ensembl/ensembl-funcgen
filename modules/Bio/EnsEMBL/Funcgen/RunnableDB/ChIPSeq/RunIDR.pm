@@ -47,7 +47,6 @@ sub run {
   my $self = shift;
   
   my $pair    = $self->param_required('pair');
-  my $tempdir = $self->param_required('tempdir');
   
   # --------------------------------------------------------------------------
   # Compute thresholds

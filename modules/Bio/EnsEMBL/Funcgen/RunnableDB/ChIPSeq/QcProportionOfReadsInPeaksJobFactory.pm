@@ -53,7 +53,7 @@ sub run {
   my $input_id = {
   
     peak_file          => $bed_file,
-    tempdir            => $this_runs_tempdir,
+    frip_tempdir       => $this_runs_tempdir,
     bam_file           => $signal_bam_file,
     peak_calling       => $peak_calling_name,
     species            => $species,

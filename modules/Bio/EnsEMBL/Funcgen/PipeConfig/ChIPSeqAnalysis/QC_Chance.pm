@@ -63,7 +63,7 @@ sub pipeline_analyses {
         {   -logic_name => 'MkTempDir',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters => {
-                cmd => qq!mkdir -p #tempdir#!,
+                cmd => qq!mkdir -p #chance_tempdir#!,
             },
             -flow_into => { 
               'MAIN->A' => [ 'JobFactoryArgenrich', 'CreateChanceBins'],
@@ -77,7 +77,7 @@ sub pipeline_analyses {
                 . qq(  --species                 #species#                     )
                 . qq(  --epigenome_gender        #epigenome_gender#            )
                 . qq(  --assembly                #assembly#                    )
-                . qq(  --outputfile              #tempdir#/#chance_bin_file#   )
+                . qq(  --outputfile              #chance_tempdir#/#chance_bin_file#   )
                 . qq(  --reference_data_root_dir #reference_data_root_dir#     )
             },
         },
@@ -90,14 +90,14 @@ sub pipeline_analyses {
         {   -logic_name => 'CpToTemp',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters => { 
-                  cmd => qq!rm -f #tempdir#/#file# ; ln -s #sourcedir#/#file# #tempdir#!,
+                  cmd => qq!rm -f #chance_tempdir#/#file# ; ln -s #sourcedir#/#file# #chance_tempdir#!,
             },
             -flow_into => { MAIN => 'IndexBam' },
         },
         {   -logic_name => 'IndexBam',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters => { 
-                cmd => qq!samtools index #tempdir#/#file#!,
+                cmd => qq!samtools index #chance_tempdir#/#file#!,
             },
             -flow_into => { 
               MAIN     => 'CountReads',
@@ -107,7 +107,7 @@ sub pipeline_analyses {
         {   -logic_name => 'IndexBam_himem',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters => { 
-                cmd => qq!samtools index #tempdir#/#file#!,
+                cmd => qq!samtools index #chance_tempdir#/#file#!,
             },
             -rc_name   => '8Gb_job',
             -flow_into => { MAIN => 'CountReads' },
@@ -115,7 +115,7 @@ sub pipeline_analyses {
         {   -logic_name => 'CountReads',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
             -parameters => { 
-                inputcmd        => "samtools view -c #tempdir#/#file#",
+                inputcmd        => "samtools view -c #chance_tempdir#/#file#",
                 column_names    => [ 'read_count' ],
             },
             -flow_into => {
@@ -129,15 +129,15 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -max_retry_count => 1,
             -parameters => {
-                cmd => qq(timeout 12h argenrich_with_labels_and_rerunnable.R --args plot=TRUE outdir=#tempdir# )
+                cmd => qq(timeout 12h argenrich_with_labels_and_rerunnable.R --args plot=TRUE outdir=#chance_tempdir# )
                   . qq(    ipsz=#expr( #read_count#->{"signal"}            )expr# )
                   . qq( inputsz=#expr( #read_count#->{"control"}           )expr# )
-                  . qq(      ip=#tempdir#/#expr( #file#->{"signal"}        )expr# )
-                  . qq(   input=#tempdir#/#expr( #file#->{"control"}       )expr# )
-                  . qq(    bins=#tempdir#/#chance_bin_file#                       )
+                  . qq(      ip=#chance_tempdir#/#expr( #file#->{"signal"}        )expr# )
+                  . qq(   input=#chance_tempdir#/#expr( #file#->{"control"}       )expr# )
+                  . qq(    bins=#chance_tempdir#/#chance_bin_file#                       )
 
-                  # This ends up in #tempdir#, because of the parameter 
-                  # "outdir=#tempdir#" set further above.
+                  # This ends up in #chance_tempdir#, because of the parameter 
+                  # "outdir=#chance_tempdir#" set further above.
                   #
                   . qq( outfile=#argenrich_outfile#),
                   return_codes_2_branches => {
@@ -154,7 +154,7 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters => {
                 cmd => qq(load_argenrich_qc_file.pl   )
-                . qq( --argenrich_file        #tempdir#/#argenrich_outfile#     )
+                . qq( --argenrich_file        #chance_tempdir#/#argenrich_outfile#     )
                 . qq( --experiment_name #experiment_name# )
                 . qq( --signal   #signal_alignment#       )
                 . qq( --control  #control_alignment#      )
@@ -163,7 +163,7 @@ sub pipeline_analyses {
                 . qq( --port     #tracking_db_port#       )
                 . qq( --host     #tracking_db_host#       )
                 . qq( --dbname   #tracking_db_name#       )
-                . qq( --work_dir #tempdir#                )
+                . qq( --work_dir #chance_tempdir#                )
                 . qq( --species  #species#                )
                 . qq( --failed   0                 )
             },
@@ -172,7 +172,7 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters => {
                 cmd => qq(load_argenrich_qc_file.pl   )
-                . qq( --argenrich_file        #tempdir#/#argenrich_outfile#     )
+                . qq( --argenrich_file        #chance_tempdir#/#argenrich_outfile#     )
                 . qq( --experiment_name #experiment_name# )
                 . qq( --signal   #signal_alignment#       )
                 . qq( --control  #control_alignment#      )
@@ -181,7 +181,7 @@ sub pipeline_analyses {
                 . qq( --port     #tracking_db_port#       )
                 . qq( --host     #tracking_db_host#       )
                 . qq( --dbname   #tracking_db_name#       )
-                . qq( --work_dir #tempdir#                )
+                . qq( --work_dir #chance_tempdir#                )
                 . qq( --species  #species#                )
                 . qq( --failed   1                 )
             },

@@ -17,6 +17,9 @@ sub pipeline_analyses {
         },
         {   -logic_name  => 'call_peaks',
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::CallPeaks',
+            -parameters => {
+              tempdir => '#tempdir_chipseq#/#species#/peak_calling'
+            },
             -flow_into   => {
                2        => 'store_peaks',
                MEMLIMIT => 'call_peaks_himem',
@@ -24,6 +27,9 @@ sub pipeline_analyses {
         },
         {   -logic_name  => 'call_peaks_himem',
             -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::CallPeaks',
+            -parameters => {
+              tempdir => '#tempdir_chipseq#/#species#/peak_calling'
+            },
             -rc_name     => '8Gb_job',
             -flow_into   => {
                2 => 'store_peaks',
@@ -41,14 +47,18 @@ sub pipeline_analyses {
         },
         {   -logic_name => 'fix_known_problems',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -analysis_capacity => 1,
             -parameters => {
+            
+                peak_calling => '#expr( #execution_plan#->{call_peaks}->{name} )expr#',
+                tempdir      => '#tempdir_chipseq#/#species#/peak_calling/#peak_calling#',
+                
                 cmd => qq( trim_peaks_to_seq_region_boundaries.pl )
                 . qq( --species      #species#      )
                 . qq( --registry     #reg_conf#     )
-                . qq( --peak_calling #expr( #execution_plan#->{call_peaks}->{name} )expr# )
-                . qq( --tempdir      #tempdir# )
+                . qq( --peak_calling #peak_calling# )
+                . qq( --tempdir      #tempdir#      )
             },
-            -analysis_capacity => 1,
         },
     ];
 }

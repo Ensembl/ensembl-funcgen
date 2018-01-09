@@ -9,7 +9,7 @@ sub run {
   my $self = shift;
 
   my $peak_file     = $self->param_required('peak_file');
-  my $temp_dir      = $self->param_required('tempdir');
+  my $temp_dir      = $self->param_required('frip_tempdir');
   my $peak_calling  = $self->param_required('peak_calling');
   my $bam_file      = $self->param_required('bam_file');
   my $species       = $self->param_required('species');
@@ -59,7 +59,7 @@ sub run {
   my $input_id = {
   
     peak_file          => $peak_file,
-    tempdir            => $temp_dir,
+    frip_tempdir       => $temp_dir,
     bam_file           => $bam_file,
     peak_calling       => $peak_calling,
     species            => $species,

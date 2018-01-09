@@ -208,7 +208,7 @@ sub run {
     
       my $err_string = join "\n", map { '  - ' . $_ } @error_msg;
     
-      die(
+      print(
 	"\n-------------------------------------------------------------------------------\n"
 	. "Prepipeline checks have failed with the following errors:\n\n"
 	. $err_string
