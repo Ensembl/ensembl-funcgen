@@ -34,7 +34,7 @@ sub run {
     die("Can't find bam file: $bam_file_full_path");
   }
   
-  my $temp_dir_for_this_run = "$tempdir/$epigenome_production_name/$alignment_name";
+  my $temp_dir_for_this_run = "$tempdir/frip/$epigenome_production_name/$alignment_name";
   my $out_db = $alignment_adaptor->db;
   
   use File::Path qw( make_path );
@@ -49,7 +49,7 @@ sub run {
       bam_file       => $bam_file_full_path,
       flagstats_file => $flagstats_file,
       # Directory into which the bam files will be copied
-      tempdir            => $temp_dir_for_this_run,
+      frip_tempdir       => $temp_dir_for_this_run,
       alignment_name     => $alignment_name,
       
       # Connection details for the db to which the results will be written

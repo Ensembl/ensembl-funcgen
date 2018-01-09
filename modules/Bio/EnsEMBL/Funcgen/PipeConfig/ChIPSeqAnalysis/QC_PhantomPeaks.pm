@@ -51,6 +51,9 @@ sub pipeline_analyses {
         },
         {   -logic_name => 'qc_phantom_peaks_job_factory',
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::QcPhantomPeaksJobFactory',
+            -parameters  => {
+              tempdir => '#tempdir_chipseq#/#species#/phantom_peaks',
+            },
             -flow_into => { 
                 2 => 'qc_run_phantom_peaks',
             },
@@ -73,8 +76,8 @@ sub pipeline_analyses {
                       . qq(    -c=#bam_file#                   )
                       . qq(    -savp                           )
                       . qq(    -out=#phantom_peak_out_file#    )
-                      . qq(    -odir=#tempdir#                 )
-                      . qq(    -tmpdir=#tempdir#               )
+                      . qq(    -odir=#phantom_peak_tempdir#    )
+                      . qq(    -tmpdir=#phantom_peak_tempdir#  )
                       # Avoid the "Error: ignoring SIGPIPE signal error"
                       # from the EBI cluster
                       . qq(    &&                              )
@@ -107,8 +110,8 @@ sub pipeline_analyses {
                   . qq(    -c=#bam_file#                   )
                   . qq(    -savp                           )
                   . qq(    -out=#phantom_peak_out_file#    )
-                  . qq(    -odir=#tempdir#                 )
-                  . qq(    -tmpdir=#tempdir#               )
+                  . qq(    -odir=#phantom_peak_tempdir#    )
+                  . qq(    -tmpdir=#phantom_peak_tempdir#  )
                   # Avoid the "Error: ignoring SIGPIPE signal error"
                   # from the EBI cluster
                   . qq(    &&                              )

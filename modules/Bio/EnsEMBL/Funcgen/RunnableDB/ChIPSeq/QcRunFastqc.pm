@@ -19,7 +19,7 @@ Bio::EnsEMBL::Hive::Utils->import(qw/stringify destringify/);
 sub run {
   my $self = shift;
   
-  my $tempdir   = $self->param_required('tempdir');
+  my $tempdir   = $self->param_required('fastqc_tempdir');
   my $read_file = $self->param_required('read_file');
   
   my $cmd;

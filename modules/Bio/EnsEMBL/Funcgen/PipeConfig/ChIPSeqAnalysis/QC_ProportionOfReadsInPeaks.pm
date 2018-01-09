@@ -39,7 +39,6 @@ sub pipeline_wide_parameters {
       %{$self->SUPER::pipeline_wide_parameters},
 
       reg_conf => $self->o('reg_conf'),
-      tempdir  => $self->o('tempdir') . '/proportion_of_reads_in_peaks',
     };
 }
 
@@ -69,6 +68,9 @@ sub pipeline_analyses {
       },
       {   -logic_name => 'qc_prepare_proportion_of_reads_in_peaks',
           -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::QcProportionOfReadsInPeaksJobFactory',
+          -parameters => {
+            tempdir => '#tempdir_chipseq#/#species#/frip',
+          },
           -flow_into => { 
             2 => 'qc_compute_proportion_of_reads_in_peaks',
           },

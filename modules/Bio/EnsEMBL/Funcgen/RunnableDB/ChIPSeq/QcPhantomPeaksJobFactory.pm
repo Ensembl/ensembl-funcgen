@@ -46,7 +46,7 @@ sub run {
   
   my $input_id = {
       # Directory into which the bam files will be copied
-      tempdir               => $temp_dir_for_this_run,
+      phantom_peak_tempdir  => $temp_dir_for_this_run,
       alignment_name        => $alignment_name,
       phantom_peak_out_file => $signal_phantom_peaks_file,
       bam_file              => $bam_file_full_path,

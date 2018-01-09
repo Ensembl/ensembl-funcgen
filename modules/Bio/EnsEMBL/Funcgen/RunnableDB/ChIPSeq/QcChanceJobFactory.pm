@@ -12,7 +12,7 @@ sub run {
     #my $experiment_name = $self->param_required('experiment');
     my $alignment_name  = $self->param_required('alignment');
     my $data_root_dir   = $self->param_required('data_root_dir');
-    my $tempdir         = $self->param_required('tempdir');
+    my $tempdir         = $self->param_required('tempdir_chipseq');
     
     my $alignment_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'Alignment');
 
@@ -76,7 +76,7 @@ sub run {
     
     my $experiment_name = $signal_experiment->name;
     
-    my $overridden_tempdir = "$tempdir/qc_chance/$experiment_name";
+    my $overridden_tempdir = "$tempdir/$species/qc_chance/$experiment_name";
 
     my $input_id = {
 
@@ -86,7 +86,7 @@ sub run {
         # signal_alignment_id is not used, it is included, so for jobs with shared controls ehive doesn't skip them.
         # The output is expected in the accumulator
         #
-        column_names => [ 'kind', 'file', 'sourcedir', 'tempdir', 'signal_alignment_id' ],
+        column_names => [ 'kind', 'file', 'sourcedir', 'chance_tempdir', 'signal_alignment_id' ],
         inputlist    => [
             [ 'signal',  $signal_bam_file_base_name,   $signal_bam_directory,  $overridden_tempdir, $signal_alignment->dbID ],
             [ 'control', $control_bam_file_base_name,  $control_bam_directory, $overridden_tempdir, $signal_alignment->dbID ],
@@ -103,7 +103,7 @@ sub run {
         signal_alignment          => $alignment_name,
         control_alignment         => $control_alignment->name,
         
-        tempdir => $overridden_tempdir,
+        chance_tempdir => $overridden_tempdir,
 
         # Connection details for the db to which the results will be written
         tracking_db_user   => $alignment_adaptor->dbc->user,

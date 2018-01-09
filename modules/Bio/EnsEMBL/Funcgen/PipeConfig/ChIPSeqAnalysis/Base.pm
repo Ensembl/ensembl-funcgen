@@ -27,6 +27,7 @@ sub pipeline_wide_parameters {
     %{$self->SUPER::pipeline_wide_parameters},
     pipeline_name           => $self->o('pipeline_name'),
     tempdir                 => $self->o('tempdir'),
+    tempdir_chipseq         => $self->o('tempdir') . '/chipseq',
     data_root_dir           => $self->o('data_root_dir'),
     ensembl_release_version => $self->o('ensembl_release_version'),
     reference_data_root_dir => $self->o('reference_data_root_dir'),
@@ -67,6 +68,9 @@ sub generate_parallel_alignment_analyses {
         },
         {   -logic_name  => $surround->('split'),
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::SplitFastq',
+            -parameters => {
+              tempdir => '#tempdir_chipseq#/#species#/alignments'
+            },
             -flow_into   => {
                '2->A' => $surround->('align'),
                'A->3' => $surround->('merge'),

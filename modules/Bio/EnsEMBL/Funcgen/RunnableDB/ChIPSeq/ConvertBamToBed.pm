@@ -10,7 +10,6 @@ sub run {
   
   my $species             = $self->param_required('species');
   my $data_root_dir       = $self->param_required('data_root_dir');
-  my $tempdir             = $self->param_required('tempdir');
   my $convert_controls    = $self->param_required('convert_controls');
 
   my $execution_plan_list;

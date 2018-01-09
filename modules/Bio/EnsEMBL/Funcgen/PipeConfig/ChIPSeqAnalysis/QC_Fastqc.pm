@@ -46,6 +46,9 @@ sub pipeline_analyses {
         },
         {   -logic_name => 'QcFastQcJobFactory',
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::QcFastQcJobFactory',
+            -parameters => {
+              tempdir => '#tempdir_chipseq#/#species#/fastqc',
+            },
             -flow_into => { 
                 2 => 'RunFastQC',
             },
@@ -68,12 +71,12 @@ sub pipeline_analyses {
             -parameters => {
                 use_bash_pipefail => 1,
                 
-                cmd => qq(load_fastqc_summary_file.pl       --read_file_id #read_file_id#         --summary_file #fastqc_summary_file#  --work_dir #tempdir# --registry #reg_conf# --species #species#),
+                cmd => qq(load_fastqc_summary_file.pl       --read_file_id #read_file_id#         --summary_file #fastqc_summary_file#  --work_dir #fastqc_tempdir# --registry #reg_conf# --species #species#),
                 
 #                 cmd => qq(load_fastqc_summary_file.pl      )
 #                 . qq( --read_file_id #read_file_id#        )
 #                 . qq( --summary_file #fastqc_summary_file# )
-#                 . qq( --work_dir #tempdir#                 )
+#                 . qq( --work_dir #fastqc_tempdir#                 )
 #                 . qq( | mysql )
 #                 . qq( --host #tracking_db_host#  )
 #                 . qq( --port #tracking_db_port#  )

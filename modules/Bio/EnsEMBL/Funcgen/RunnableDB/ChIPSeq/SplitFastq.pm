@@ -243,7 +243,7 @@ sub create_record_temp_dir {
   
   my $record_tempdir = join '/',
     $self->tempdir,
-    $self->species,
+    #$self->species,
     $self->alignment_name,
     'partial_alignments',
     $self->current_file_number,

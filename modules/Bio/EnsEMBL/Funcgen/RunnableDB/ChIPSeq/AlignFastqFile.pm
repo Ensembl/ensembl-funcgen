@@ -45,9 +45,9 @@ sub run {
   $self->say_with_header("samtools_fasta_index = $samtools_fasta_index");
   $self->say_with_header("bwa_index            = $bwa_index");
   
-  my $suffix_array_index = $tempdir . '/suffix_array_index.sai';
-  my $samse_file         = $tempdir . '/samse.sam';
-  my $unsorted_file      = $tempdir . '/unsorted.bam';
+  my $suffix_array_index = $tempdir . '/'. 'suffix_array_index.sai';
+  my $samse_file         = $tempdir . '/'. 'samse.sam';
+  my $unsorted_file      = $tempdir . '/'. 'unsorted.bam';
   my $sorted_file        = $bam_file;
   
   my @align_commands = (
