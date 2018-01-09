@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Funcgen::PipeConfig::ChIPSeqAnalysis::BBWriteControlBigWig;
+package Bio::EnsEMBL::Funcgen::PipeConfig::ChIPSeqAnalysis::WriteBigWig;
 
 use strict;
 use warnings;
@@ -8,36 +8,36 @@ use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 sub pipeline_analyses {
     my $self = shift;
     return [
-        {   -logic_name  => 'start_write_bigwig_controls',
+        {   -logic_name  => 'start_write_bigwig',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
-               MAIN => 'seed_bigwig_control_jobs',
+               MAIN => 'seed_bigwig_jobs',
             },
         },
-        {   -logic_name  => 'seed_bigwig_control_jobs',
-            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::SeedBigWigControlJobs',
+        {   -logic_name  => 'seed_bigwig_jobs',
+            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::SeedBigWigJobs',
             -flow_into   => {
-               2 => 'write_control_bigwig',
+               2 => 'write_bigwig',
             },
         },
-        {   -logic_name  => 'write_control_bigwig',
+        {   -logic_name  => 'write_bigwig',
             -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::WriteBigWig',
             -rc_name     => '32Gb_job_3cpus',
             # Allow MEMLIMIT issues to be handled by beekeeper
             -max_retry_count => 1,
             -flow_into   => {
-               MAIN     => 'register_control_signal',
-               MEMLIMIT => 'write_control_bigwig_himem',
+               MAIN     => 'register_signal',
+               MEMLIMIT => 'write_bigwig_himem',
             },
         },
-        {   -logic_name  => 'write_control_bigwig_himem',
+        {   -logic_name  => 'write_bigwig_himem',
             -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::WriteBigWig',
             -rc_name     => '64Gb_job_3cpus',
             -flow_into   => {
-               MAIN => 'register_control_signal',
+               MAIN => 'register_signal',
             },
         },
-        {   -logic_name  => 'register_control_signal',
+        {   -logic_name  => 'register_signal',
             -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::RegisterSignal',
         },
     ];
