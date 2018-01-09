@@ -22,6 +22,34 @@ sub pipeline_analyses {
                'MAIN->A' => 'fetch_experiments_to_process',
                'A->MAIN' => 'check_execution_plans',
             },
+            -flow_into => {
+               MAIN => 'truncate_chipseq_tables',
+            },
+        },
+        {
+            -logic_name  => 'truncate_chipseq_tables',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+            -parameters => {
+                sql     => [
+                  "truncate peak;",
+                  "truncate peak_calling;",
+                  "truncate alignment;",
+                  "truncate alignment_qc_flagstats;",
+                  "truncate alignment_read_file;",
+                  "truncate chance;",
+                  "delete from data_file where table_name = 'alignment';",
+                  "truncate execution_plan;",
+                  "truncate fastqc;",
+                  "truncate frip;",
+                  "truncate idr;",
+                  "truncate phantom_peak;",
+                ],
+                db_conn => 'funcgen:#species#',
+            },
+            -flow_into   => {
+               'MAIN->A' => 'fetch_experiments_to_process',
+               'A->MAIN' => 'check_execution_plans',
+            },
         },
         {   -logic_name  => 'fetch_experiments_to_process',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
@@ -204,7 +232,7 @@ sub pipeline_analyses {
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
                '1->A' => 'start_frip',
-               'A->1' => 'backbone_fire_cleanup'
+               'A->1' => 'backbone_chipseq_finished'
             },
         },
         {
@@ -212,17 +240,17 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
 
-        {   -logic_name  => 'backbone_fire_cleanup',
-            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-            -flow_into   => {
-               '1->A' => 'start_cleanup',
-               'A->1' => 'backbone_chipseq_finished'
-            },
-        },
-        {
-            -logic_name  => 'start_cleanup',
-            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-        },
+#         {   -logic_name  => 'backbone_fire_cleanup',
+#             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+#             -flow_into   => {
+#                '1->A' => 'start_cleanup',
+#                'A->1' => 'backbone_chipseq_finished'
+#             },
+#         },
+#         {
+#             -logic_name  => 'start_cleanup',
+#             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+#         },
 
 
 
