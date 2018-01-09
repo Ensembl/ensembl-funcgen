@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Funcgen::PipeConfig::ChIPSeqAnalysis::BBAlignSignals;
+package Bio::EnsEMBL::Funcgen::PipeConfig::ChIPSeqAnalysis::AlignSignals;
 
 use strict;
 use warnings;
