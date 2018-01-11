@@ -103,6 +103,35 @@ sub fetch_all_deduplicated_replicates_by_Alignment {
     return $self->fetch_all($constraint);
 }
 
+sub fetch_all_by_ReadFileExperimentalConfiguration {
+  my $self = shift;
+  my $read_file_experimental_configuration = shift;
+ 
+  my @all_alignments;
+  $self->sql_helper->execute_no_return(
+    -SQL          => '
+      select 
+        distinct alignment_id
+      from 
+        alignment_read_file 
+        join read_file_experimental_configuration using (read_file_id)
+      where 
+        read_file_experimental_configuration_id = ?
+    ',
+    -PARAMS       => [ $read_file_experimental_configuration->dbID ],
+    -USE_HASHREFS => 1,
+    -CALLBACK     => sub {
+        my $row = shift;
+        my $alignment_id = $row->{alignment_id};
+        my $alignment = $self->fetch_by_dbID($alignment_id);
+        
+        push @all_alignments, $alignment;
+        return;
+      },
+  );
+  return \@all_alignments;
+}
+
 sub fetch_complete_deduplicated_by_Experiment {
     my $self       = shift;
     my $experiment = shift;

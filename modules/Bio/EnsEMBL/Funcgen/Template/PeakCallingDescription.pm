@@ -7,8 +7,67 @@ use vars qw( @EXPORT_OK );
 
 our @EXPORT_OK = qw(
   PEAK_CALLING_TXT_TEMPLATE
+  apply
 );
 
+sub apply {
+
+  my $peak_calling = shift;
+
+  use Template;
+  my $tt = Template->new;
+  
+  my $output;
+  
+  my $description_template = PEAK_CALLING_TXT_TEMPLATE();
+  use Number::Format qw( :all );
+
+  $tt->process(
+    \$description_template, 
+    {
+      peak_calling  => $peak_calling,
+      
+      canonpath => sub {
+        my $path = shift;
+        return File::Spec->canonpath($path)
+      },
+      bool_to_yes_no => sub {
+        my $boolean = shift;
+        if ($boolean) {
+          return 'yes'
+        }
+        return 'no'
+      },
+      round_percent => sub {
+        my $number = shift;
+        return sprintf("%.2f", $number) . '%';
+      },
+      default_round => sub {
+        my $number = shift;
+        return sprintf("%.2f", $number);
+      },
+      scientific_notation => sub {
+        my $number = shift;
+        return sprintf("%.2e", $number);
+      },
+      format_number => sub {
+        my $number = shift;
+        return format_number($number);
+      },
+      fetch_deduplicated_partial_alignments => sub {
+        my $alignment = shift;
+        return fetch_deduplicated_partial_alignments($alignment);
+      },
+      summarise_read_file_experimental_configurations_in_alignment => sub {
+        my $alignment = shift;
+        return summarise_read_file_experimental_configurations_in_alignment($alignment);
+      },
+    },
+    \$output
+  )
+      || die $tt->error;
+  return $output;
+}
 
 sub PEAK_CALLING_TXT_TEMPLATE {
 
@@ -41,7 +100,6 @@ Fraction of reads in peaks
 - Total number of reads: [%- format_number(peak_calling.fetch_Frip.total_reads) %]
 [%- END %] 
 
-
 Idr
 ===
 
@@ -57,7 +115,6 @@ Signal alignment
   
   Description of merged alignment
   -------------------------------
-
   [%- FILTER indent('    ') %]
     [%- PROCESS summarise_alignment alignment = signal_alignment %]
       Phantom peak scores
@@ -73,27 +130,31 @@ Signal alignment
       [%- END %]
   [%- END %]
   
-  [%- replicate_alignments = signal_alignment.fetch_all_deduplicated_replicate_Alignments %]
-  [% IF replicate_alignments.length>0 %]
+  [%- replicate_alignments = fetch_deduplicated_partial_alignments(signal_alignment) %]
+  
+  [% IF replicate_alignments.size>0 -%]
   Description of replicate alignments
   -----------------------------------
-
   [%- FILTER indent('    ') %]
     [%- FOR replicate_alignment IN replicate_alignments %]
-      [% PROCESS summarise_alignment alignment = replicate_alignment -%]
-      
-      Phantom peak scores
-      -------------------
+
+      Reads from replicates aligned: [% summarise_read_file_experimental_configurations_in_alignment(replicate_alignment) %]
+      _____________________________
       [%- FILTER indent('    ') %]
-        [% PROCESS summarise_phantom_peak phantom_peak = replicate_alignment.fetch_PhantomPeak %]
-      [%- END %]
+          [% PROCESS summarise_alignment alignment = replicate_alignment -%]
+          
+  Phantom peak scores
+  -------------------
+  [%- FILTER indent('    ') %]
+  [% PROCESS summarise_phantom_peak phantom_peak = replicate_alignment.fetch_PhantomPeak %]
+  [%- END %]
 
-      Chance
-      ------
-      [%- FILTER indent('    ') %] 
-        [%- PROCESS summarise_chance chance = replicate_alignment.fetch_Chance_by_control_Alignment(peak_calling.fetch_control_Alignment) %]
-      [%- END %]
-
+  Chance
+  ------
+  [%- FILTER indent('    ') %] 
+  [%- PROCESS summarise_chance chance = replicate_alignment.fetch_Chance_by_control_Alignment(peak_calling.fetch_control_Alignment) %]
+  [%- END %]
+      [%- END -%]
     [%- END -%]
   [%- END %]
   [%- END %]
@@ -101,11 +162,9 @@ Signal alignment
 
 Control alignment
 =================
-
 [%- FILTER indent('    ') %]
   [%  PROCESS summarise_alignment alignment = peak_calling.fetch_control_Alignment -%]
 [%- END -%]
-
 [%- END -%]
 
 [% BLOCK summarise_feature_type %]
@@ -213,4 +272,74 @@ TEMPLATE
   return $description_template;
 }
 
+sub fetch_deduplicated_partial_alignments {
+  my $alignment = shift;
+  
+  my $read_file_experimental_configurations = [ 
+    sort by_read_file_experimental_configuration @{$alignment->fetch_all_ReadFileExperimentalConfigurations}
+  ];
+  my @alignments;
+  
+  RFEC:
+  foreach my $read_file_experimental_configuration (@$read_file_experimental_configurations) {
 
+    my $alignments = $alignment
+      ->db
+      ->fetch_all_by_ReadFileExperimentalConfiguration(
+        $read_file_experimental_configuration
+      );
+    
+    my $partial_alignments = 
+      [
+        grep {
+             ! $_->is_complete
+          && ! $_->has_duplicates
+        } @$alignments
+      ];
+    if (@$partial_alignments == 0) {
+      next RFEC;
+    }
+    if (@$partial_alignments != 1) {
+      die(
+        "Unexpected number of alignments returned!\n"
+        . Dumper($partial_alignments)
+      )
+    }
+    push @alignments, $partial_alignments->[0];
+  }
+  return \@alignments;
+}
+
+sub by_read_file_experimental_configuration {
+  return $a->biological_replicate <=> $b->biological_replicate
+      || $a->technical_replicate  <=> $b->technical_replicate;
+}
+
+sub summarise_read_file_experimental_configurations_in_alignment {
+  my $alignment = shift;
+  return summarise_read_file_experimental_configurations($alignment->fetch_all_ReadFileExperimentalConfigurations);
+}
+
+sub summarise_read_file_experimental_configurations {
+  my $read_file_experimental_configurations = shift;
+  
+    my $summary = join ' ',
+      map {
+        summarise_read_file_experimental_configuration($_)
+      } sort
+        by_read_file_experimental_configuration
+        @$read_file_experimental_configurations;
+  return $summary;
+}
+
+sub summarise_read_file_experimental_configuration {
+  my $read_file_experimental_configuration = shift;
+  
+  return 
+    '(BR' . $read_file_experimental_configuration->biological_replicate 
+    . ', ' 
+    . 'TR' . $read_file_experimental_configuration->technical_replicate
+    . ')'
+}
+
+1;
