@@ -86,6 +86,7 @@ sub _load_dependencies {
     my $analysis = $analysis_adaptor->fetch_by_dbID($analysis_id);
     
     $read_file->set_Analysis($analysis);
+
     return;
 }
 
