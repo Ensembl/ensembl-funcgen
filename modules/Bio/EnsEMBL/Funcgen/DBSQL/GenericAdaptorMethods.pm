@@ -142,12 +142,29 @@ sub objectify { # turn the hashref into an object
 
     my $autoinc_id = $self->autoinc_id;
     
-    my $object = $self->object_class->new( 
-      -db => $self, 
-      map { 
-        ( ($_ eq $autoinc_id) ? -dbID : '-' . $_ ) => $hashref->{$_} 
-      } keys %$hashref 
-    );
+    my $object;
+    eval {
+      $object = $self->object_class->new(
+        -db => $self, 
+        map { 
+          ( ($_ eq $autoinc_id) ? -dbID : '-' . $_ ) => $hashref->{$_} 
+        } keys %$hashref 
+      );
+    };
+    if ($@) {
+      my $error = $@;
+      if ($error =~ /Can't locate object method "new" via package/) {
+        my $error_message
+          = "Can't instantiate object of type " . $self->object_class . ".\n"
+          . "This can happen, if the object was misspelt or if the module"
+          . " can't be compiled.\n"
+          . "Try running\n\n"
+          . "   perl -cw <Filename of the module ".$self->object_class.">\n\n"
+          . "to find compilation problems."
+        ;
+        throw($error_message);
+      }
+    }
     return $object;
 }
 
@@ -159,10 +176,10 @@ sub _table_info_loader {
     my $db          = $self->db;
 
     if (! defined $db) {
-      die("db is undefined!");
+      throw("db is undefined!");
     }
     if (! $db->isa('Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor')) {
-      die("Type error, got a " . (ref $db) );
+      throw("Type error, got a " . (ref $db) );
     }
 
     my $dbc         = $db->dbc;
