@@ -47,6 +47,8 @@ with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 
 sub _constructor_parameters {
   return {
+    dbID           => 'dbID',
+    db              => 'db',
     technical_replicate  => 'technical_replicate',
     biological_replicate => 'biological_replicate',
     paired_end_tag       => 'paired_end_tag',
