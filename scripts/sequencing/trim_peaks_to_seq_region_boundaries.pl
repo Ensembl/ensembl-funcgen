@@ -114,7 +114,11 @@ my $slice_adaptor = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Core', 'Slic
 
 my $peaks_file = "$tempdir/peaks.${peak_calling_name}.bed";
 
-open my $peaks_fh, '>', $peaks_file;
+use File::Path qw(make_path remove_tree);
+make_path($tempdir);
+
+open my $peaks_fh, '>', $peaks_file or die("Can't open file $peaks_file!");
+
 $peak_adaptor->_bulk_export_to_bed_by_PeakCalling($peak_calling, $peaks_fh);
 $peaks_fh->close;
 
