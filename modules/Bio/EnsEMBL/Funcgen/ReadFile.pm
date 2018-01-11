@@ -59,7 +59,7 @@ sub _constructor_parameters {
     notes          => 'notes',
     analysis_id                          => '_analysis_id',
     analysis                             => 'set_Analysis',
-    read_file_experimental_configuration => 'set_ReadFileExperimentalConfiguration',
+    #read_file_experimental_configuration => 'set_ReadFileExperimentalConfiguration',
   };
 }
 
@@ -164,10 +164,10 @@ sub set_Analysis {
   return $self->_generic_set('analysis', 'Bio::EnsEMBL::Analysis', $obj);
 }
 
-=head2 get_ReadFileExperimentalConfiguration
+=head2 fetch_ReadFileExperimentalConfiguration
 
   Example    : my $read_file_experimental_configuration 
-                 = $read_file->get_ReadFileExperimentalConfiguration;
+                 = $read_file->fetch_ReadFileExperimentalConfiguration;
   Description: Getter for the ReadFileExperimentalConfiguration object.
   Returntype : Bio::EnsEMBL::Funcgen::ReadFileExperimentalConfiguration
   Exceptions : None
@@ -175,13 +175,24 @@ sub set_Analysis {
   Status     : Stable
 
 =cut
-sub get_ReadFileExperimentalConfiguration {
-  return shift->_generic_get('read_file_experimental_configuration');
+sub fetch_ReadFileExperimentalConfiguration {
+
+  my $self = shift;
+
+  my $read_file_experimental_configuration_adaptor
+    = $self->db->db->get_ReadFileExperimentalConfigurationAdaptor;
+
+  my $read_file_experimental_configurations 
+    = $read_file_experimental_configuration_adaptor
+      ->fetch_all_by_read_file_id(
+        $self->dbID
+      );
+  return $read_file_experimental_configurations->[0];
 }
 
 =head2 set_ReadFileExperimentalConfiguration
 
-  Example    : $read_file->get_ReadFileExperimentalConfiguration(
+  Example    : $read_file->fetch_ReadFileExperimentalConfiguration(
                  $read_file_experimental_configuration
                );
   Description: Setter for the ReadFileExperimentalConfiguration object.

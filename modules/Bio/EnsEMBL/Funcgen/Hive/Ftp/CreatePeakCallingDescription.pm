@@ -39,62 +39,17 @@ sub run {
   
   $self->say_with_header("Creating description $file_name", 1);
   
-  my $output;
-  
-  use Template;
-  my $tt = Template->new;
-
   use Bio::EnsEMBL::Funcgen::Template::PeakCallingDescription qw( 
-    PEAK_CALLING_TXT_TEMPLATE
+    apply
   );
 
-  my $description_template = PEAK_CALLING_TXT_TEMPLATE;
-  use Number::Format qw( :all );
-  
   open my $fh, ">", $file_name;
   for my $peak_calling (@$peak_callings) {
-$tt->process(
-  \$description_template, 
-  {
-    peak_calling  => $peak_calling,
-    
-    canonpath => sub {
-      my $path = shift;
-      return File::Spec->canonpath($path)
-    },
-    
-    bool_to_yes_no => sub {
-      my $boolean = shift;
-      if ($boolean) {
-        return 'yes'
-      }
-      return 'no'
-    },
-    
-    round_percent => sub {
-      my $number = shift;
-      return sprintf("%.2f", $number) . '%';
-    },
-    default_round => sub {
-      my $number = shift;
-      return sprintf("%.2f", $number);
-    },
-    scientific_notation => sub {
-      my $number = shift;
-      return sprintf("%.2e", $number);
-    },
-    format_number => sub {
-      my $number = shift;
-      return format_number($number);
-    }
-  },
-  \$output
-)
-    || die $tt->error;
+    $fh->print(apply($peak_calling));
   }
-  $fh->print($output);
   $fh->close;
   return
 }
+
 
 1;

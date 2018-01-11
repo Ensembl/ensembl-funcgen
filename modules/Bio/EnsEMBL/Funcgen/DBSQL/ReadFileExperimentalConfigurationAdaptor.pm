@@ -96,6 +96,17 @@ sub fetch_all_by_read_file_id {
   return $reads;
 }
 
+sub fetch_by_read_file_id {
+
+  my $self = shift;
+  my $read_file_id = shift;
+  
+  my $reads = $self->fetch_single_object(
+    "read_file_id = " . $read_file_id
+  );
+  return $reads;
+}
+
 sub fetch_all_by_experiment_id {
 
   my $self          = shift;

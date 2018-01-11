@@ -128,6 +128,23 @@ sub _fetch_DataFile {
   return $data_file;
 }
 
+sub fetch_all_ReadFileExperimentalConfigurations {
+
+  my $self = shift;
+  my @read_file_experimental_configurations;
+  
+  my $read_files  = $self->fetch_all_ReadFiles;
+  foreach my $read_file (@$read_files) {
+  
+    my $read_file_experimental_configuration 
+      = $read_file->fetch_ReadFileExperimentalConfiguration;
+    
+    push @read_file_experimental_configurations,
+      $read_file_experimental_configuration;
+  }
+  return \@read_file_experimental_configurations;
+}
+
 sub _delete_bam_file_from_db {
 
   my $self = shift;
@@ -137,7 +154,7 @@ sub _delete_bam_file_from_db {
 }
 
 sub fetch_all_deduplicated_replicate_Alignments {
-  my $self      = shift;
+  my $self = shift;
   
   my $alignment_adaptor = $self->db;
   if (! defined $alignment_adaptor) {
@@ -327,6 +344,26 @@ sub fetch_all_ReadFiles {
   }
   return \@all_read_files;
 }
+
+# sub fetch_all_ReadFileExperimentalConfigurations {
+# 
+#   my $self = shift;
+#   
+#   my $read_file_id = $self->read_file_ids;
+#   my $read_file_experimental_configuration_adaptor = $self->db->db->get_ReadFileExperimentalConfigurationAdaptor;
+#   
+#   if (! defined $read_file_adaptor) {
+#     throw("Couldn't get a ReadFileAdaptor!");
+#   }
+#   
+#   my @all_read_files;
+#   
+#   foreach my $current_read_file_id (@$read_file_id) {
+#     my $current_obj = $read_file_experimental_configuration_adaptor->fetch_by_read_file_id($current_read_file_id);
+#     push @all_objedcs, $current_obj;
+#   }
+#   return \@all_objedcs;
+# }
 
 =head2 summary_as_hash
 
