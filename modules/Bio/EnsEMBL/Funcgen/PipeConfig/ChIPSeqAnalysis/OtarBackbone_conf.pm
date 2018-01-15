@@ -54,7 +54,7 @@ sub pipeline_analyses {
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
                '1->A' => 'start_cleanup',
-               'A->1' => 'backbone_fire_ftp_export'
+               'A->1' => 'backbone_fire_segmentation'
             },
         },
         {
@@ -62,7 +62,17 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
 
-
+        {   -logic_name  => 'backbone_fire_segmentation',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into   => {
+               '1->A' => 'start_segmentation',
+               'A->1' => 'backbone_fire_ftp_export'
+            },
+        },
+        {
+            -logic_name  => 'start_segmentation',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+        },
 
         {   -logic_name  => 'backbone_fire_ftp_export',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
