@@ -197,7 +197,7 @@ sub display_label {  return $_[0]->{display_label}; }
 
 sub efo_accession {
   my $self = shift;
-  my $efo_db_entry = $self->efo_db_entry;
+  my $efo_db_entry = $self->_efo_db_entry;
   
   if (! defined $efo_db_entry) {
     return undef;
@@ -216,33 +216,77 @@ sub efo_accession {
 
 =cut
 
-sub efo_db_entry {
+sub _efo_db_entry {
 
   my $self = shift;
+  return $self->_db_entry('EFO');
+}
+
+=head2 epirr_accession
+
+  Example    : $epigenome->efo_accession
+  Description: Returns the EpiRR accession for this epigenome, if one 
+               exists. Returns undef otherwise.
+  Returntype : String or undef
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub epirr_accession {
+  my $self = shift;
+  my $epirr_db_entry = $self->_epirr_db_entry;
+  
+  if (! defined $epirr_db_entry) {
+    return undef;
+  }
+  return $epirr_db_entry->primary_id
+}
+
+=head2 _epirr_db_entry
+
+  Example    : $epigenome->epirr_db_entry->primary_id
+  Description: Returns the DBEntry of the external reference to EpiRR.
+  Returntype : Bio::EnsEMBL::Funcgen::DBEntry
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub _epirr_db_entry {
+
+  my $self = shift;
+  return $self->_db_entry('EpiRR');
+}
+
+sub _db_entry {
+
+  my $self = shift;
+  my $external_db_name = shift;
 
   my $dbentry_adaptor = $self->adaptor->db->get_DBEntryAdaptor;
 
-  my $efo_db_entry = $dbentry_adaptor->_fetch_by_object_type(
+  my $db_entry = $dbentry_adaptor->_fetch_by_object_type(
     $self->dbID,
     'epigenome',
-    'EFO'
+    $external_db_name
   );
   
   if (
-    (ref $efo_db_entry eq 'ARRAY')
-    && (@$efo_db_entry == 1)
+    (ref $db_entry eq 'ARRAY')
+    && (@$db_entry == 1)
   ) {
-    return $efo_db_entry->[0];
+    return $db_entry->[0];
   }
-  if (! defined $efo_db_entry) {
-# warn("No efo id defined for " . $self->name . "!\n");
+  if (! defined $db_entry) {
     return undef;
   }
-  if (ref $efo_db_entry eq 'ARRAY' && scalar @$efo_db_entry == 0) {
-#    warn("No efo id defined for " . $self->name . "!\n");
+  if (ref $db_entry eq 'ARRAY' && scalar @$db_entry == 0) {
     return undef;
   }
-  throw("Unexpected return value for efo id!");
+  throw("Unexpected return value for $external_db_name id!");
 }
 
 =head2 ontology_accession
