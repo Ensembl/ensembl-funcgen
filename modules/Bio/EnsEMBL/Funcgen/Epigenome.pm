@@ -224,7 +224,7 @@ sub _efo_db_entry {
 
 =head2 epirr_accession
 
-  Example    : $epigenome->efo_accession
+  Example    : $epigenome->epirr_accession
   Description: Returns the EpiRR accession for this epigenome, if one 
                exists. Returns undef otherwise.
   Returntype : String or undef
