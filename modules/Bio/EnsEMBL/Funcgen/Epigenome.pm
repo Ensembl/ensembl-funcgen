@@ -205,7 +205,7 @@ sub efo_accession {
   return $efo_db_entry->primary_id
 }
 
-=head2 efo_db_entry
+=head2 _efo_db_entry
 
   Example    : $epigenome->efo_db_entry->primary_id
   Description: Returns the DBEntry of the external reference to the Experimental Factor Ontology (EFO).
