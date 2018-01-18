@@ -159,7 +159,7 @@ sub create_empty_funcgen_db {
   my $mysql_dst    = "--host $o->{dst_host} --port $o->{dst_port} --user $o->{rw_usr} --password=$o->{rw_pass}";
   my $mysql_dst_db = "$o->{dst_dbname}";
 
-  say '*+' x 20 . (caller(0))[3] . '*+' x 20;
+  say '>' x 30 . '  '. (caller(0))[3] .'  ' .'<' x 30;
   say "COPY <$mysql_src_db> FROM <$o->{src_host}> TO <$mysql_dst_db> ON <$o->{dst_host}>";
 
   my $cmd = '';
@@ -189,7 +189,7 @@ sub create_empty_funcgen_db {
     $cmd = "mysqldump $mysql_src $mysql_src_db $table | sed -e 's/ AUTO_INCREMENT=[0-9]\*//'  | mysql $mysql_dst $mysql_dst_db";
     _execute($cmd);
   }
-  say '+' x 20 . ' done ' . '+' x 20;
+  say '!' x 30 . '  '. (caller(0))[3] .'  ' .'!' x 30;
 }
 
 =head2 _execute
@@ -236,6 +236,7 @@ sub _execute {
 
 sub get_features {
   my ($self) = @_;
+  say '>' x 30 . '  '. (caller(0))[3] .'  ' .'<' x 30;
 # ToDo: Check: Duplicated call, same done in get_db_adaptors
   my @all_example_features = @{ $self->{src_a}->{ExampleFeature}->fetch_all};
   if($self->{opts}->{features} eq 'all'){
@@ -267,10 +268,13 @@ sub get_features {
 sub store_features {
   my ($self) = @_;
 
-  say '* ' x 20 . (caller(0))[3] . ' *' x 20;
+  say '>' x 30 . '  '. (caller(0))[3] .'  ' .'<' x 30;
   foreach my $table (reverse sort keys %{$self->{features}}){
     say '*' x10 . " Table: $table " . '*' x 10;
     for my $feature ( @{$self->{features}->{$table}} ){
+      if($table eq 'RegulatoryFeature'){
+        $feature->regulatory_activity;
+      }
       say "\tID: ". $feature->dbID;
       $feature->{adaptor} = undef;
       $feature->{dbID} = undef;
@@ -278,9 +282,6 @@ sub store_features {
     }
   }
 
-#  my $rf = $self->{rf};
-#  $rf->{adaptor} = {};
-#  $self->{dst_a}->{rf}->store($rf);
 
 
 }
@@ -300,7 +301,7 @@ sub store_features {
 sub create_dest_dnadb {
   my ($self) = @_;
 
-  say '* ' x 20 . (caller(0))[3] . ' *' x 20;
+  say '>' x 30 . '  '. (caller(0))[3] .'  ' .'<' x 30;
   my $o       = $self->{opts};
   my $obj     = $self->{feature_slice_objects};
   my $species = $o->{species};
