@@ -1798,3 +1798,24 @@ CREATE TABLE `underlying_structure` (
   `motif_feature_id` int(11) NOT NULL,
   PRIMARY KEY (`underlying_structure_id`)
 )ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+/*
+@table  example_feature
+@desc   The table contains features used on the website and for the testDB
+@colour  #FFCC66
+
+@column ensembl_id                Foreign key references to the ensembl_object_type table e.g. @link probe_set
+@column ensembl_object_type       Ensembl object type e.g ProbeSet etc.
+*/
+
+DROP TABLE IF EXISTS `example_feature`;
+CREATE TABLE `example_feature` (
+    `example_feature_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `ensembl_object_type` enum('Epigenome','Experiment','RegulatoryFeature','ExternalFeature','FeatureType','MirnaTargetFeature','Probe','ProbeFeature') NOT NULL,
+  `ensembl_id` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`example_feature_id`),
+  UNIQUE KEY `ensembl_object_type_idx` (`ensembl_object_type`,`ensembl_id`)
+) ENGINE=MyISAM  DEFAULT CHARSET=latin1;
+
+INSERT INTO `example_feature` (ensembl_object_type, ensembl_id) VALUES ('RegulatoryFeature', '535880');
+INSERT INTO `example_feature` (ensembl_object_type, ensembl_id) VALUES ('RegulatoryFeature', '535848');
