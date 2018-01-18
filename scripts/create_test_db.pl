@@ -270,18 +270,18 @@ sub store_features {
 
   say '>' x 30 . '  '. (caller(0))[3] .'  ' .'<' x 30;
   foreach my $table (reverse sort keys %{$self->{features}}){
-#next if ($table eq 'RegulatoryFeature');
     say '*' x10 . " Table: $table " . '*' x 10;
     for my $feature ( @{$self->{features}->{$table}} ){
-      if($table eq 'RegulatoryFeature'){
-        $feature->regulatory_activity;
-      }
       say "\tID: ". $feature->dbID;
       $feature->{adaptor} = undef;
+      $feature->{dbID} = undef;
       $self->{dst_a}->{$table}->store($feature);
     }
   }
 
+#  my $rf = $self->{rf};
+#  $rf->{adaptor} = {};
+#  $self->{dst_a}->{rf}->store($rf);
 
 
 }
