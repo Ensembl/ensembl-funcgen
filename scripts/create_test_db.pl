@@ -236,6 +236,7 @@ sub _execute {
 
 sub get_features {
   my ($self) = @_;
+
   say '>' x 30 . '  '. (caller(0))[3] .'  ' .'<' x 30;
 # ToDo: Check: Duplicated call, same done in get_db_adaptors
   my @all_example_features = @{ $self->{src_a}->{ExampleFeature}->fetch_all};
@@ -282,7 +283,9 @@ sub store_features {
     }
   }
 
-
+#  my $rf = $self->{rf};
+#  $rf->{adaptor} = {};
+#  $self->{dst_a}->{rf}->store($rf);
 
 }
 
