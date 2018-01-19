@@ -114,6 +114,9 @@ sub fetch_FeatureType {
 sub set_FeatureType {
   my $self = shift;
   my $obj  = shift;
+  
+  $self->feature_type_id($obj->dbID);
+  
   return $self->_generic_set('feature_type', 'Bio::EnsEMBL::Funcgen::FeatureType', $obj);
 }
 
@@ -124,6 +127,9 @@ sub fetch_Analysis {
 sub set_Analysis {
   my $self = shift;
   my $obj  = shift;
+  
+  $self->analysis_id($obj->dbID);
+  
   return $self->_generic_set('analysis', 'Bio::EnsEMBL::Analysis', $obj);
 }
 
