@@ -62,7 +62,7 @@ my $ps_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::ProbeSetAdaptor->new($func_db);
 # ------------------------------
 # Test get_all_Arrays subroutine
 # ------------------------------
-$ps = $ps_adaptor->fetch_by_array_probeset_name( 'PrimeView', '11740416_at' );
+$ps = $ps_adaptor->fetch_by_array_probe_set_name( 'PrimeView', '11740416_at' );
 my $arrays = $ps->get_all_Arrays();
 
 foreach my $array ( @{$arrays} ) {
