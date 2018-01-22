@@ -213,6 +213,9 @@ use vars qw( %Config );
       'CyRGene-1_0-st-v1',
       'RheGene-1_0-st-v1',
       'RheGene-1_1-st-v1',
+      'GPL19230',
+      'ZebGene-1_1-st-v1',
+      'ZebGene-1_0-st-v1',
      ],
     },
 
@@ -446,6 +449,7 @@ use vars qw( %Config );
         'GPL17465',
         'GPL19384',
         'GPL6848',
+        'GPL18606',
       ],
     },
 
