@@ -1,7 +1,6 @@
 =head1 LICENSE
 
-Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2018] EMBL-European Bioinformatics Institute
+Copyright [1999-2016] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -51,7 +50,6 @@ sub _constructor_parameters {
     dbID           => 'dbID',
     name           => 'name',
     is_paired_end  => 'is_paired_end',
-    paired_with    => 'paired_with',
     file_size      => 'file_size',
     read_length    => 'read_length',
     md5sum         => 'md5sum',
@@ -78,7 +76,6 @@ sub db            { return shift->_generic_get_or_set('db',            @_); }
 =cut
 sub name          { return shift->_generic_get_or_set('name',          @_); }
 sub is_paired_end { return shift->_generic_get_or_set('is_paired_end', @_); }
-sub paired_with   { return shift->_generic_get_or_set('paired_with',   @_); }
 
 =head2 file_size
 
