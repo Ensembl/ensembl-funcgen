@@ -1,4 +1,4 @@
-534	\N	schema_version	91
+534	\N	schema_version	92
 156	1	species.production_name	homo_sapiens
 223	\N	schema_type	funcgen
 589	\N	patch	patch_78_79_a.sql|schema_version
@@ -108,3 +108,5 @@
 698	\N	patch	patch_90_91_zg.sql|rename table dbfile_registry to data_file and change the way alignments link to it
 699	\N	patch	patch_90_91_zh.sql|Add new columns to read_file_experimental_configuration table
 700	\N	patch	patch_90_91_zi.sql|Create probe_id index on probe_transcript table
+701	\N	patch	patch_91_92_a.sql|schema_version
+702	\N	patch	patch_91_92_b.sql|Drop column paired_with from table read_file
