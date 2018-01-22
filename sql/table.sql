@@ -1,5 +1,5 @@
 -- Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
--- Copyright [2016-2018] EMBL-European Bioinformatics Institute
+-- Copyright [2016-2017] EMBL-European Bioinformatics Institute
 --
 -- Licensed under the Apache License, Version 2.0 (the "License");
 -- you may not use this file except in compliance with the License.
@@ -941,7 +941,6 @@ CREATE TABLE `data_file` (
 @column name            Name for the read file object
 @column analysis_id     @link analysis ID
 @column is_paired_end   Indicates whether it is paired end
-@column paired_with     (not used)
 @column file_size       (not used)
 @column read_length     (not used)
 @column md5sum          (not used)
@@ -959,7 +958,6 @@ CREATE TABLE `read_file` (
   `name` varchar(300) NOT NULL,
   `analysis_id` smallint(5) unsigned NOT NULL,
   `is_paired_end` tinyint(1) DEFAULT NULL,
-  `paired_with` int(10) DEFAULT NULL,
   `file_size` bigint(20) DEFAULT NULL,
   `read_length` int(10) DEFAULT NULL,
   `md5sum` varchar(45) DEFAULT NULL,
@@ -1436,42 +1434,9 @@ CREATE TABLE `meta` (
 INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 
 -- Update and remove these for each release to avoid erroneous patching
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'schema_version', '91');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_a.sql|schema_version');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_b.sql|Remove sequence regions from previous releases');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_c.sql|Translate sequence region ids of regulatory features');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_d.sql|Replace regulatory features with updated ones');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_e.sql|Translate sequence region ids of segmentation features');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_f.sql|Replace segmentation features with updated ones');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_g.sql|Translate sequence region ids of probe features');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_h.sql|Replace probe features with updated ones');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_i.sql|Translate sequence region ids of annotated features');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_j.sql|Replace annotated features with updated ones');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_k.sql|Translate sequence region ids of external features');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_l.sql|Replace external features with updated ones');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_m.sql|Translate sequence region ids of mi rna target features');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_n.sql|Replace mi rna target features with updated ones');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_o.sql|Translate sequence region ids of motif features');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_p.sql|Replace motif features with updated ones');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_q.sql|Drop seq_region table');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_r.sql|Translate coord_system_ids in meta_coord table');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_s.sql|Replace meta coord table with the updated table');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_t.sql|Drop coord_system table');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_u.sql|Set default gender to unknown for epigenomes');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_v.sql|Create read_file table and populate it');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_w.sql|Create read_file_experimental_configuration table and populate it');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_x.sql|Rename result_set to alignment in various tables and columns');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_y.sql|Rename annotated_feature to peak');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_z.sql|Drop input_subset table');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_za.sql|Move peak_callings from feature_set to peak_calling');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_zb.sql|Rename another table');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_zc.sql|Remove peak_callings from the feature_set table');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_zd.sql|Drop data_set table');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_ze.sql|Drop supporting_set table');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_zf.sql|Drop status tables');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_zg.sql|rename table dbfile_registry to data_file and change the way alignments link to it');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_zh.sql|Add new columns to read_file_experimental_configuration table');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_zi.sql|Create probe_id index on probe_transcript table');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'schema_version', '92');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_91_92_a.sql|schema_version');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_91_92_b.sql|Drop column paired_with from table read_file');
 
 /**
 @table meta_coord
