@@ -34,6 +34,12 @@ my $process_probe_data = sub {
 
   my $probe_data = shift;
   
+  ### set description to null if not informed
+  my $probe_desc = $probe_data->{'-description'};
+  if (! defined $probe_desc || $probe_desc eq '') {
+	  $probe_data->{'-description'} = undef;
+  }
+  
   my $array_name      = $probe_data->{'-array'};
   my $array_chip_name = $probe_data->{'-array_chip'};
   
@@ -75,6 +81,7 @@ my $process_probe_data = sub {
   
   use Bio::EnsEMBL::Funcgen::Probe;
   my $probe = Bio::EnsEMBL::Funcgen::Probe->new(%$probe_data);
+  
 #   print(Dumper($probe));
   $output_fh->print(Dumper($probe));
 };
