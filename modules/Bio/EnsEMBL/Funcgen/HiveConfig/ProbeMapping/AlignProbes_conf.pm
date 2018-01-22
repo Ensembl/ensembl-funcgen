@@ -215,7 +215,7 @@ sub pipeline_analyses {
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
           -parameters => {
               sql     => [
-                'delete from probe_feature using probe_feature join probe using (probe_id) join array_chip using (array_chip_id) join array using (array_id) where array.format="METHYLATION"',
+                'delete from probe_feature using probe_feature join probe using (probe_id) join array_chip using (array_chip_id) join array using (array_id) where array.format="METHYLATION" and probe_feature.source="transcript"',
               ],
               db_conn => 'funcgen:#species#',
           },
