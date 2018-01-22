@@ -81,15 +81,6 @@ use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#DBI sql_types import
 
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
-sub fetch_by_array_probeset_name{
-  my $self = shift;
-  deprecate(
-    "fetch_by_array_probeset_name has been deprecated and will be removed in Ensembl release 92."
-        . " Please use fetch_by_array_probe_set_name instead."
-  );
-  return $self->fetch_by_array_probe_set_name(@_);
-}
-
 =head2 fetch_by_array_probe_set_name
 
   Arg [1]    : string - name of array
@@ -122,16 +113,6 @@ sub fetch_by_array_probe_set_name {
   $self->reset_true_tables;
 
   return $pset;
-}
-
-sub fetch_all_by_external_name {
-  my $self = shift;
-  my $transcript_stable_id = shift;
-  deprecate(
-    "fetch_all_by_external_name has been deprecated and will be removed in Ensembl release 92."
-        . " Please use fetch_all_by_transcript_stable_id instead."
-  );
-  return $self->fetch_all_by_transcript_stable_id($transcript_stable_id);
 }
 
 =head2 fetch_all_by_transcript_stable_id

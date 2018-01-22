@@ -303,12 +303,6 @@ sub get_RegulatoryEvidence {
   return $self->{'_regulatory_evidence'};
 }
 
-sub regulatory_evidence {
-  my $self = shift;
-    deprecate('"regulatory_evidence" is deprecated. Please use "get_RegulatoryEvidence".');
-  return $self->get_RegulatoryEvidence;
-}
-
 sub set_RegulatoryFeature {
   my $self = shift;
   my $regulatory_feature = shift;

@@ -226,34 +226,6 @@ sub display_id {  return shift->{stable_id}; }
 
 sub stable_id { return shift->{stable_id}; }
 
-=head2 regulatory_evidence
-
-  Arg [1]    : String (optional) - Class of feature e.g. 'annotated' 
-               or 'motif'
-  Arg [2]    : Bio::EnsEMBL::Funcgen::Epigenome - The epigenome for which 
-               the evidence for it regulatory activity is requested.
-  Example    : 
-  Description: Deprecated: Use get_RegulatoryEvidence instead.
-  Returntype : ARRAYREF
-  Exceptions : Throws if feature class not valid
-  Caller     : General
-  Status     : Deprecated
-
-=cut
-
-sub regulatory_evidence {
-  deprecate(
-    "Bio::EnsEMBL::Funcgen::RegulatoryFeature::regulatory_evidence() has been deprecated and will be removed in Ensembl release 91."
-        . " Please use Bio::EnsEMBL::Funcgen::RegulatoryFeature::get_RegulatoryEvidence() instead."
-);
-
-  my $self = shift;
-  my $feature_class = shift;
-  my $epigenome   = shift;
-  
-  return $self->get_RegulatoryEvidence($feature_class, $epigenome);
-}
-
 =head2 get_RegulatoryEvidence
 
   Arg [1]    : String - Class of feature e.g. 'annotated'

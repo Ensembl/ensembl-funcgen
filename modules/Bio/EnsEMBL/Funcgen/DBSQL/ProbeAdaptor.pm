@@ -121,16 +121,6 @@ sub fetch_by_array_probe_probeset_name {
 	return (defined $dbid) ? $self->fetch_by_dbID($dbid) : undef;
 }
 
-sub fetch_all_by_external_name {
-  my $self = shift;
-  my $transcript_stable_id = shift;
-  deprecate(
-    "display_id has been deprecated and will be removed in Ensembl release 92."
-        . " Please use stable_id instead."
-  );
-  return $self->fetch_all_by_transcript_stable_id($transcript_stable_id);
-}
-
 sub fetch_all_by_sequence {
   my $self = shift;
   my $sequence = shift;

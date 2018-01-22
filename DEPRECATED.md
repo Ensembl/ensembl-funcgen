@@ -15,10 +15,18 @@ A year after deprecation (4 Ensembl releases), the method is removed from the AP
  - Bio::EnsEMBL::Funcgen::Probe::get_complete_name()
  - Bio::EnsEMBL::Funcgen::RegulatoryFeature::is_projected()
 
-### To be removed in Ensembl Release 92 ###
+### Removed in Ensembl Release 92 ###
 
- - Bio::EnsEMBL::Funcgen::RegulatoryActivity::regulatory_evidence()
- - Bio::EnsEMBL::Funcgen::RegulatoryFeature::regulatory_evidence()
+ - Bio::EnsEMBL::Funcgen::**RegulatoryActivity**::*regulatory_evidence()*
+ - Bio::EnsEMBL::Funcgen::**RegulatoryFeature**::*regulatory_evidence()*
+ - Bio::EnsEMBL::Funcgen::DBSQL::**ProbeAdaptor**::*fetch_all_by_external_name()*
+ - Bio::EnsEMBL::Funcgen::DBSQL::**ProbeSetAdaptor**::*fetch_all_by_external_name()*
+ - Bio::EnsEMBL::Funcgen::DBSQL::**ProbeSetAdaptor**::*fetch_by_array_probeset_name()*
+ - Bio::EnsEMBL::Funcgen::**Probe**::*get_all_Transcript_DBEntries()*
+ - Bio::EnsEMBL::Funcgen::**ProbeSetTranscriptMapping**::*display_id()*
+ - Bio::EnsEMBL::Funcgen::**ProbeSetTranscriptMapping**::*linkage_annotation()*
+ - Bio::EnsEMBL::Funcgen::**ProbeTranscriptMapping**::*display_id()*
+ - Bio::EnsEMBL::Funcgen::**ProbeTranscriptMapping**::*linkage_annotation()*
 
 ### Removed in Ensembl Release 90 ###
  - Bio::EnsEMBL::Funcgen::DBSQL::**RegulatoryFeatureAdaptor**::*fetch_all_by_Slice_Epigenomes()*

@@ -600,41 +600,6 @@ sub norm_analysis{
 }
 
 
-
-=head2 cell_type
-
-  Example    : $imp->cell_type($ctype);
-  Description: Getter/Setter for Experiment CellType
-  Arg [1]    : optional - Bio::EnsEMBL::Funcgen::CellType
-  Returntype : Bio::EnsEMBL::Funcgen::CellType
-  Exceptions : Throws if arg is not valid or stored
-  Caller     : general
-  Status     : Deprecated
-
-=cut
-
-sub cell_type{
-  deprecate(
-        "Bio::EnsEMBL::Funcgen::Importer::cell_type has been deprecated and will be removed in Ensembl release 89."
-            . " Please use Bio::EnsEMBL::Funcgen::Importer::epigenome instead"
-  );  
-  my ($self) = shift;
-
-  if (@_) {
-    my $epigenome = shift;
-
-    #do we need this as we're checking in new?
-    if (! ($epigenome->isa('Bio::EnsEMBL::Funcgen::Epigenome') && $epigenome->dbID())) {
-      throw("Must pass a valid stored Bio::EnsEMBL::Funcgen::Epigenome");
-    }
-
-    $self->{'epigenome'} = $epigenome;
-  }
-
-  return $self->{'epigenome'};
-}
-
-
 =head2 epigenome
 
   Example    : $imp->epigenome($epigenome);
@@ -1176,45 +1141,6 @@ sub cache_slice{
 sub slice_cache{
   my $self = shift;
   return $self->{'slice_cache'} || {};
-}
-
-
-
-
-=head2 cache_probe_info
-
-  Arg [0]    : mandatory - probe name
-  Arg [1]    : mandatory - probe dbID
-  Arg [2]    : optioanl int - x coord of probe on array
-  Arg [3]    : optional int - y coord of probe on array
-  Example    : $self->cache_probe_info("Probe1", $probe->dbID());
-               Or for result files which do not have X & Y, we need to cache
-               X & Y from the design files: $self->cache_probe_info('Probe2', $probe->dbID(), $x, $y);
-  Description: Setter for probe cache values
-  Returntype : none
-  Exceptions : throws is cache conflict encountered
-  Caller     : self
-  Status     : At risk - merge with following?
-
-=cut
-
-sub cache_probe_info{
-  my ($self, $pname, $pid, $x, $y) = @_;
-
-  throw('Deprecated, too memory expensive, now resolving DB duplicates and using Tied File cache');
-  throw("Must provide a probe name and id") if (! defined $pname || ! defined $pid);
-
-
-  #do we need to loop through the file here?
-  #if we make sure we're testing for a previous dbID before storing probes then we don't need to do this
-  #we can catch the error when we get the probe id as we can check for >1 id for the same probe name
-  #if (defined $self->{'_probe_cache'}->{$pname} && ($self->{'_probe_cache'}->{$pname}->[0] != $pid)) {
-  #  throw("Found two differing dbIDs for $pname, need to sort out redundant probe entries");
-  #}
-
-  $self->{'_probe_cache'}->{$pname} = (defined $x && defined $y) ? [$pid, $x, $y] : [$pid];
-
-  return;
 }
 
 
@@ -2141,33 +2067,6 @@ sub tidy_duplicates{
 
   return;
 }
-
-
-
-### DEPRECATED METHODS NOT IN BASEIMPORTER ###
-#   These can go as soon as we have migrated all the code
-
-sub result_files {
-  throw('result_files method is deprecated, please use input_files instead');
-}
-
-
-sub location{
-  throw('location method is deprecated, please use a predefined \'group\' instead');  
-}
-
-
-sub contact{
-  throw('contact method is deprecated, please use a predefined \'group\' instead');   
-}
-
-
-sub group{
- my $self = shift;
- deprecate('Please use the \'experimental_group\' method instead');
- return $self->experimental_group(@_);
-}
-
 
 
 1;

@@ -629,58 +629,6 @@ sub description {
 }
 
 
-# =head2 feature_count
-#
-#   Arg[0]     : recount flag
-#   Example    : my $num_features = $probe->feature_count();
-#   Description: Counts the number of ProbeFeatures associated with this Probe
-#   Returntype : int
-#   Exceptions : None
-#   Caller     : General
-#   Status     : Medium Risk
-#
-# =cut
-#
-#
-# sub feature_count{
-#   my ($self, $recount) = @_;
-#
-#   if($recount ||
-#     (! $self->{feature_count})){
-#     $self->{feature_count} = $self->adaptor->db->get_ProbeFeatureAdaptor->count_probe_features_by_probe_id($self->dbID);
-#   }
-#
-#   return $self->{feature_count};
-# }
-
-=head2 get_all_Transcript_DBEntries
-
-  Arg[0]     : optional - Bio::EnsEMBL::Transcript to filter DBEntries on.
-  Example    : my @transc_dbentries = @{ $set_feature->get_all_Transcript_DBEntries };
-  Description: Retrieves ensembl Transcript DBEntries (xrefs) for this Storable.
-               This does _not_ include the corresponding translations
-               DBEntries (see get_all_DBLinks).
-
-               This method will attempt to lazy-load DBEntries from a
-               database if an adaptor is available and no DBEntries are present
-               on the Storable (i.e. they have not already been added or
-               loaded).
-  Returntype : Listref of Bio::EnsEMBL::DBEntry objects
-  Exceptions : none
-  Caller     : general
-  Status     : at risk
-
-=cut
-
-sub get_all_Transcript_DBEntries {
-  my $self = shift;
-  deprecate(
-    "get_all_Transcript_DBEntries has been deprecated and will be removed in Ensembl release 92."
-        . " Please use fetch_all_ProbeTranscriptMappings instead."
-  );
-  return $self->fetch_all_ProbeTranscriptMappings;
-}
-
 =head2 fetch_all_ProbeTranscriptMappings
 
   Arg[0]     : none

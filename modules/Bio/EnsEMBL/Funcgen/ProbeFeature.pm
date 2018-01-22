@@ -171,15 +171,6 @@ sub probeset {
   return $self->{'probeset'};
 }
 
-
-#Only ever needs to be set in _objs_from_sth
-#This is to allow linkage of probe_feature glyphs without retrieving the probeset.
-# DEPRECATED Use probe_set_id
-sub probeset_id {
-  my $self = shift;
-  return $self->probe_set_id;
-}
-
 sub probe_set_id {
   my $self = shift;
   

@@ -75,24 +75,6 @@ sub stable_id      { return shift->_generic_get_or_set('stable_id',       @_) }
 sub description    { return shift->_generic_get_or_set('description',     @_) }
 sub probe_id       { return shift->_generic_get_or_set('probe_id',        @_) }
 
-sub display_id {
-  my $self = shift;
-  deprecate(
-    "display_id has been deprecated and will be removed in Ensembl release 92."
-        . " Please use stable_id instead."
-  );
-  return $self->stable_id
-}
-
-sub linkage_annotation {
-  my $self = shift;
-  deprecate(
-    "linkage_annotation has been deprecated and will be removed in Ensembl release 92."
-        . " Please use description instead."
-  );
-  return $self->description;
-}
-
 sub fetch_Probe {
   my $self = shift;
   my $probe = $self->adaptor->get_ProbeAdaptor->fetch_by_dbID($self->probe_id);
