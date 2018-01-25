@@ -50,10 +50,10 @@ limitations under the License.
 
   foreach my $current_regulatory_activity (@$regulatory_activity_list) {
 
-    print "The activity in the epigenome "  
-      . $current_regulatory_activity->get_Epigenome->display_label 
-      . ' is: ' 
-      . $current_regulatory_activity->activity 
+    print "The activity in the epigenome "
+      . $current_regulatory_activity->get_Epigenome->display_label
+      . ' is: '
+      . $current_regulatory_activity->activity
       . "\n";
 
     my $regulatory_evidence_link_list = $regulatory_evidence_link_adaptor->fetch_all_by_RegulatoryActivity($current_regulatory_activity);
@@ -75,80 +75,28 @@ package Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryActivityAdaptor;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
-use Data::Dumper;
-use Bio::EnsEMBL::Funcgen::RegulatoryActivity;
-use DBI qw(:sql_types);
+use base 'Bio::EnsEMBL::Funcgen::DBSQL::GenericAdaptor';
 
-use base 'Bio::EnsEMBL::DBSQL::BaseAdaptor';
-
-sub _tables {
-  return (
-    [ 'regulatory_activity', 'ra' ],
-  );
+sub object_class {
+    return 'Bio::EnsEMBL::Funcgen::RegulatoryActivity';
 }
 
-sub _columns {
-  my $self = shift;
-
-  return qw(
-    ra.regulatory_activity_id
-    ra.regulatory_feature_id
-    ra.activity
-    ra.epigenome_id
-  );
+sub _tables {
+  return  [ 'regulatory_activity', 'ra' ] ;
 }
 
 sub fetch_all_by_regulatory_feature_id {
-  my $self                  = shift;
-  my $regulatory_feature_id = shift;
+  my ($self, $regulatory_feature_id) = @_;
 
-  my $constraint = "ra.regulatory_feature_id = ?";
-  $self->bind_param_generic_fetch($regulatory_feature_id, SQL_INTEGER);
-  
-  my $regulatory_activity = $self->generic_fetch($constraint);
-  return $regulatory_activity;
+  my $constraint = "regulatory_feature_id = $regulatory_feature_id";
+
+  return $self->fetch_all($constraint);
 }
 
 sub fetch_all_by_RegulatoryFeature {
-  my $self               = shift;
-  my $regulatory_feature = shift;
+  my ($self, $regulatory_feature) = @_;
 
   return $self->fetch_all_by_regulatory_feature_id($regulatory_feature->dbID);
-}
-
-sub _objs_from_sth {
-  my ($self, $sth) = @_;
-  
-  my (
-    $sth_activity_id,
-    $sth_regulatory_feature_id,
-    $sth_activity,
-    $sth_epigenome_id
-  );
-
-  $sth->bind_columns (
-    \$sth_activity_id,
-    \$sth_regulatory_feature_id,
-    \$sth_activity,
-    \$sth_epigenome_id
-  );
-  
-  my @objects_from_sth;
-  
-  while ( $sth->fetch() ) {
-
-    my $current_regulatory_activity = Bio::EnsEMBL::Funcgen::RegulatoryActivity->new;
-    
-    $current_regulatory_activity->db($self->db);
-    $current_regulatory_activity->dbID($sth_activity_id);
-    $current_regulatory_activity->activity($sth_activity);
-    $current_regulatory_activity->_epigenome_id($sth_epigenome_id);
-    $current_regulatory_activity->_regulatory_feature_id($sth_regulatory_feature_id);
-    
-    push @objects_from_sth, $current_regulatory_activity;
-  }
-  return \@objects_from_sth;
 }
 
 1;
