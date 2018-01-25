@@ -158,7 +158,7 @@ sub _generic_fetch_Iterator {
 
             # our cache is empty, and there are still items to fetch, so
             # fetch the next chunk of dbIDs and create objects from them
-	    #
+        #
             my @dbIDs;
 
             my $item_count = 0;
@@ -376,20 +376,20 @@ sub _objs_from_sth {
     }
 
     my $regulatory_feature = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new_fast({
-	'start'             => $sth_fetched_seq_region_start,
-	'end'               => $sth_fetched_seq_region_end,
-	'_bound_lengths'    => [$sth_fetched_bound_start_length, $sth_fetched_bound_end_length],
-	'strand'            => $sth_fetched_seq_region_strand,
-	'slice'             => $slice,
-	'_analysis_id'      => $sth_fetched_analysis_id,
-	'adaptor'           => $self,
-	'dbID'              => $sth_fetched_dbID,
-	'feature_type'      => $ftype_hash{$sth_fetched_feature_type_id},
-	'stable_id'         => $sth_fetched_stable_id,
-	'epigenome_count'   => $sth_fetched_epigenome_count,
-	'regulatory_build_id' => $sth_fetched_rb_dbid,
+    'start'             => $sth_fetched_seq_region_start,
+    'end'               => $sth_fetched_seq_region_end,
+    '_bound_lengths'    => [$sth_fetched_bound_start_length, $sth_fetched_bound_end_length],
+    'strand'            => $sth_fetched_seq_region_strand,
+    'slice'             => $slice,
+    '_analysis_id'      => $sth_fetched_analysis_id,
+    'adaptor'           => $self,
+    'dbID'              => $sth_fetched_dbID,
+    'feature_type'      => $ftype_hash{$sth_fetched_feature_type_id},
+    'stable_id'         => $sth_fetched_stable_id,
+    'epigenome_count'   => $sth_fetched_epigenome_count,
+    'regulatory_build_id' => $sth_fetched_rb_dbid,
 
-	});
+    });
     push @feature_from_sth, $regulatory_feature;
   }
   return \@feature_from_sth;
@@ -400,7 +400,7 @@ sub _objs_from_sth {
   Args       : Array of Bio::EnsEMBL::Funcgen::RegulatoryFeature objects
   Example    : $regulatory_feature_adaptor->store(@regulatory_features);
   Description: Stores given RegulatoryFeature objects in the database. Sets
-		dbID and adaptor on the objects that it stores.
+        dbID and adaptor on the objects that it stores.
   Returntype : Listref of stored RegulatoryFeatures
   Exceptions : Throws, if a list of RegulatoryFeature objects is not provided or if
                the Analysis, Epigenome and FeatureType objects are not attached or stored.
@@ -547,13 +547,13 @@ sub store {
       #
       if (! $regulatory_feature_already_exists) {
 
-	# If the error message is about something else, then rethrow.
-	#
-	throw($error_message);
+    # If the error message is about something else, then rethrow.
+    #
+    throw($error_message);
       }
       my $existing_regulatory_feature = $self->_fetch_by_stable_id_regulatory_build_id(
-	$current_regulatory_feature->stable_id,
-	$current_regulatory_feature->regulatory_build_id
+    $current_regulatory_feature->stable_id,
+    $current_regulatory_feature->regulatory_build_id
       );
 
       # This can happen during the regulatory build, when there are features,
@@ -577,8 +577,8 @@ sub store {
     use Data::Dumper;
     if (! defined $current_regulatory_feature->dbID) {
       throw(
-	"Error storing the regulatory feature: "
-	. Dumper($current_regulatory_feature)
+    "Error storing the regulatory feature: "
+    . Dumper($current_regulatory_feature)
       );
     }
 
@@ -592,18 +592,18 @@ sub store {
       $sth_regulatory_activity->bind_param(3,  $current_regulatory_activity->activity);
 
       eval {
-	$sth_regulatory_activity->execute();
+    $sth_regulatory_activity->execute();
       };
       if ($@) {
-	use Carp;
-	$Data::Dumper::Maxdepth = 3;
-	confess(
-	  Dumper({
-	    error => $@,
-	    regulatory_activity => $current_regulatory_activity,
-	    regulatory_feature => $current_regulatory_feature,
-	  })
-	);
+    use Carp;
+    $Data::Dumper::Maxdepth = 3;
+    confess(
+      Dumper({
+        error => $@,
+        regulatory_activity => $current_regulatory_activity,
+        regulatory_feature => $current_regulatory_feature,
+      })
+    );
       }
 
 #       # Store the regulatory_evidence
@@ -756,7 +756,7 @@ sub _fetch_all_by_Slice_Epigenomes_Activity_RegulatoryBuild {
   if (defined $activity) {
     if (! $self->is_valid_activity($activity)) {
       die(
-	qq(\"$activity\"is not a valid activity. Valid activities are: ) . valid_activities_as_string
+    qq(\"$activity\"is not a valid activity. Valid activities are: ) . valid_activities_as_string
       );
     }
   }
@@ -771,8 +771,8 @@ sub _fetch_all_by_Slice_Epigenomes_Activity_RegulatoryBuild {
     my $filtered_regulatory_features;
     REGULATORY_FEATURE: foreach my $current_regulatory_feature (@$all_regulatory_features) {
       if ($current_regulatory_feature->get_regulatory_build->dbID == $selected_regulatory_build->dbID) {
-	push @$filtered_regulatory_features, $current_regulatory_feature;
-	next REGULATORY_FEATURE;
+    push @$filtered_regulatory_features, $current_regulatory_feature;
+    next REGULATORY_FEATURE;
       }
     }
     $all_regulatory_features = $filtered_regulatory_features;
@@ -783,8 +783,8 @@ sub _fetch_all_by_Slice_Epigenomes_Activity_RegulatoryBuild {
     my $filtered_regulatory_features;
     REGULATORY_FEATURE: foreach my $current_regulatory_feature (@$all_regulatory_features) {
       if ($current_regulatory_feature->get_regulatory_build->is_current) {
-	push @$filtered_regulatory_features, $current_regulatory_feature;
-	next REGULATORY_FEATURE;
+    push @$filtered_regulatory_features, $current_regulatory_feature;
+    next REGULATORY_FEATURE;
       }
     }
     $all_regulatory_features = $filtered_regulatory_features;
@@ -798,10 +798,10 @@ sub _fetch_all_by_Slice_Epigenomes_Activity_RegulatoryBuild {
 
     REGULATORY_FEATURE: foreach my $current_regulatory_feature (@$all_regulatory_features) {
       foreach my $current_epigenome (@$epigenomes) {
-	if ($current_regulatory_feature->has_activity_in($current_epigenome)) {
-	  push @$filtered_regulatory_features, $current_regulatory_feature;
-	  next REGULATORY_FEATURE;
-	}
+    if ($current_regulatory_feature->has_activity_in($current_epigenome)) {
+      push @$filtered_regulatory_features, $current_regulatory_feature;
+      next REGULATORY_FEATURE;
+    }
       }
     }
     $all_regulatory_features = $filtered_regulatory_features;
@@ -813,8 +813,8 @@ sub _fetch_all_by_Slice_Epigenomes_Activity_RegulatoryBuild {
 
     REGULATORY_FEATURE: foreach my $current_regulatory_feature (@$all_regulatory_features) {
       if ($current_regulatory_feature->has_epigenomes_with_activity($activity)) {
-	push @$filtered_regulatory_features, $current_regulatory_feature;
-	next REGULATORY_FEATURE;
+    push @$filtered_regulatory_features, $current_regulatory_feature;
+    next REGULATORY_FEATURE;
       }
     }
     $all_regulatory_features = $filtered_regulatory_features;
