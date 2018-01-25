@@ -37,8 +37,8 @@ package Bio::EnsEMBL::Funcgen::DBSQL::GenericAdaptorMethods;
 use strict;
 use Role::Tiny;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
-use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw( 
-  _generic_get_or_set 
+use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
+  _generic_get_or_set
 );
 
 # Attributes
@@ -51,12 +51,12 @@ sub sql_helper  { return shift->_generic_get_or_set('sql_helper',  @_); }
 # Hooks
 #
 sub _columns {
-  return [] 
+  return []
 }
 sub _add_dependencies {
 }
-sub _load_dependencies  { 
-  return; 
+sub _load_dependencies  {
+  return;
 }
 sub _store_dependencies {}
 sub insertion_method {
@@ -69,13 +69,13 @@ sub input_column_mapping {
 sub fetch_by_dbID {
     my $self = shift;
     my $dbID = shift;
-    
+
     my $primary_key = $self->primary_key;
-    
+
     if (@$primary_key!=1) {
       die;
     }
-    
+
     my $all = $self->fetch_all($primary_key->[0] . ' = ? ', [ $dbID ]);
     return $all->[0];
 }
@@ -83,7 +83,7 @@ sub fetch_by_dbID {
 sub fetch_by_name {
     my $self = shift;
     my $name = shift;
-    
+
     my $all = $self->fetch_all('name = ?', [ $name ]);
     return $all->[0];
 }
@@ -92,17 +92,17 @@ requires 'object_class';
 
 sub init_generic_adaptor {
   my $self = shift;
-  
+
   $self->_table_info_loader;
-  
+
   use Bio::EnsEMBL::Utils::SqlHelper;
   my $sql_helper = Bio::EnsEMBL::Utils::SqlHelper->new(
     -DB_CONNECTION => $self->dbc
   );
   $self->sql_helper($sql_helper);
-  
+
   my $class = ref $self;
-  
+
   # Otherwise the object can't be instantiated later.
   #
   eval "require " . $self->object_class;
@@ -111,18 +111,18 @@ sub init_generic_adaptor {
 sub table_name {
     my $self   = shift;
     my @tables = $self->_tables;
-    
+
     if (@tables > 1) {
-        
+
         use Data::Dumper;
         throw("Only one table supported!" . Dumper(\@tables));
     }
-    
+
     my $table_synonym_pair = $tables[0];
-    
+
     my $table   = $table_synonym_pair->[0];
     my $synonym = $table_synonym_pair->[1];
-    
+
     return $table;
 }
 
@@ -142,11 +142,11 @@ sub objectify { # turn the hashref into an object
 
     my $autoinc_id = $self->autoinc_id;
 
-    my $object = $self->object_class->new( 
-      -db => $self, 
-      map { 
-        ( ($_ eq $autoinc_id) ? -dbID : '-' . $_ ) => $hashref->{$_} 
-      } keys %$hashref 
+    my $object = $self->object_class->new(
+      -db => $self,
+      map {
+        ( ($_ eq $autoinc_id) ? -dbID : '-' . $_ ) => $hashref->{$_}
+      } keys %$hashref
     );
     return $object;
 }
@@ -157,14 +157,14 @@ sub _table_info_loader {
 
     my $table_name  = $self->table_name;
     my $db          = $self->db;
-    
+
     if (! defined $db) {
       die("db is undefined!");
     }
     if (! $db->isa('Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor')) {
       die("Type error, got a " . (ref $db) );
     }
-    
+
     my $dbc         = $db->dbc;
     my $dbh         = $dbc->db_handle;
 
@@ -181,12 +181,12 @@ sub _table_info_loader {
         #warn "ColumnInfo [$table_name/$column_name] = $column_type\n";
         $column_set{$column_name}  = $column_type;
 
-        if ($column_name eq $table_name.'_id') { 
+        if ($column_name eq $table_name.'_id') {
             $autoinc_id = $column_name;
         }
     }
     $sth->finish;
-    
+
     $self->column_set(  \%column_set );
     $self->primary_key( \@primary_key );
     $self->autoinc_id(   $autoinc_id );
@@ -243,10 +243,10 @@ sub fetch_all {
 
     my $table_name              = $self->table_name();
     my $input_column_mapping    = $self->input_column_mapping;
-    
+
     my $sql = 'SELECT ' . join(', ', map { $input_column_mapping->{$_} // "$table_name.$_" } keys %{$self->column_set}) . " FROM $table_name";
 
-    if($constraint) { 
+    if($constraint) {
         # in case $constraint contains any kind of JOIN (regular, LEFT, RIGHT, etc) do not put WHERE in front:
         $sql .= (($constraint=~/\bJOIN\b/ or $constraint=~/^LIMIT|ORDER|GROUP/) ? ' ' : ' WHERE ') . $constraint;
     }
@@ -290,7 +290,7 @@ sub keys_to_columns {
 
     my $autoinc_id  = $self->autoinc_id();
     #my $sorted_keys = [ sort grep { ($_ ne $autoinc_id) and defined($object->$_()) } keys %{ $self->column_set } ];
-    
+
     my $sorted_keys = [ sort grep { ($_ ne $autoinc_id) and defined($object->can($_)) } keys %{ $self->column_set } ];
 
     return ( $sorted_keys, join(', ', @$sorted_keys) );
@@ -301,15 +301,15 @@ sub slicer {    # take a slice of the object
 
     my $autoinc_id      = $self->autoinc_id();
 
-    return [ 
-      map { 
+    return [
+      map {
         ($_ eq $autoinc_id)
             ? $object->dbID
-            : eval { 
-                my $value = $object->$_; 
-                $value 
+            : eval {
+                my $value = $object->$_;
+                $value
             }
-      } @$fields 
+      } @$fields
     ];
 }
 
@@ -330,13 +330,13 @@ sub store {
     my $objects = (ref($object_or_list) eq 'ARRAY')
         ? $object_or_list
         : [ $object_or_list ];
-        
+
     return ([], 0) unless(scalar(@$objects));
 
     my $table_name              = $self->table_name;
     my $autoinc_id              = $self->autoinc_id;
     my $all_storable_columns    = [ grep { $_ ne $autoinc_id } keys %{ $self->column_set } ];
-    
+
     # INSERT, INSERT_IGNORE or REPLACE
     my $insertion_method        = $self->insertion_method;
 
@@ -345,17 +345,17 @@ sub store {
 
     my $stored_this_time        = 0;
     my $sql;
-    
+
     foreach my $object (@$objects) {
         my ($columns_being_stored, $column_key) = $self->keys_to_columns($object);
-        
-        # If the dbID is defined, store this too. This is useful when 
+
+        # If the dbID is defined, store this too. This is useful when
         # creating the test database.
         #
         if (defined $object->dbID) {
             push @$columns_being_stored, $self->primary_key->[0]
         }
-        
+
         # warn "COLUMN_KEY='$column_key'\n";
 
         # only prepare (once!) if we get here:
@@ -374,12 +374,12 @@ sub store {
         }
         my $values_being_stored = $self->slicer( $object, $columns_being_stored );
 
-        # using $return_code in boolean context allows to skip the 
-        # value '0E0' ('no rows affected') that Perl treats as zero 
+        # using $return_code in boolean context allows to skip the
+        # value '0E0' ('no rows affected') that Perl treats as zero
         # but regards as true:
         #
         my $return_code;
-        
+
         eval {
           $return_code = $this_sth->execute( @$values_being_stored );
         };
@@ -396,7 +396,7 @@ sub store {
             . "\t$@\n"
            );
         }
-        
+
         # For the same reason we have to be explicitly numeric here
         #
         if($return_code > 0) {
