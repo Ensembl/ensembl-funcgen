@@ -1434,9 +1434,49 @@ CREATE TABLE `meta` (
 INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 
 -- Update and remove these for each release to avoid erroneous patching
+<<<<<<< HEAD
 INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'schema_version', '92');
 INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_91_92_a.sql|schema_version');
 INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_91_92_b.sql|Drop column paired_with from table read_file');
+=======
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'schema_version', '91');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_a.sql|schema_version');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_b.sql|Remove sequence regions from previous releases');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_c.sql|Translate sequence region ids of regulatory features');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_d.sql|Replace regulatory features with updated ones');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_e.sql|Translate sequence region ids of segmentation features');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_f.sql|Replace segmentation features with updated ones');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_g.sql|Translate sequence region ids of probe features');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_h.sql|Replace probe features with updated ones');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_i.sql|Translate sequence region ids of annotated features');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_j.sql|Replace annotated features with updated ones');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_k.sql|Translate sequence region ids of external features');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_l.sql|Replace external features with updated ones');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_m.sql|Translate sequence region ids of mi rna target features');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_n.sql|Replace mi rna target features with updated ones');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_o.sql|Translate sequence region ids of motif features');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_p.sql|Replace motif features with updated ones');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_q.sql|Drop seq_region table');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_r.sql|Translate coord_system_ids in meta_coord table');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_s.sql|Replace meta coord table with the updated table');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_t.sql|Drop coord_system table');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_u.sql|Set default gender to unknown for epigenomes');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_v.sql|Create read_file table and populate it');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_w.sql|Create read_file_experimental_configuration table and populate it');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_x.sql|Rename result_set to alignment in various tables and columns');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_y.sql|Rename annotated_feature to peak');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_z.sql|Drop input_subset table');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_za.sql|Move peak_callings from feature_set to peak_calling');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_zb.sql|Rename another table');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_zc.sql|Remove peak_callings from the feature_set table');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_zd.sql|Drop data_set table');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_ze.sql|Drop supporting_set table');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_zf.sql|Drop status tables');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_zg.sql|rename table dbfile_registry to data_file and change the way alignments link to it');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_zh.sql|Add new columns to read_file_experimental_configuration table');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_90_91_zi.sql|Create probe_id index on probe_transcript table');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_91_92_c.sql|Create underlying_structure table');
+>>>>>>> add schema patch for underlying_structure table
 
 /**
 @table meta_coord
@@ -1776,3 +1816,24 @@ CREATE TABLE `unmapped_object` (
   KEY `id_idx` (`identifier`(50)),
   KEY `ext_db_identifier_idx` (`external_db_id`,`identifier`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+/**
+@table underlying_structure
+@desc Associates regulatory features to motif features
+@colour  #000000
+
+@column underlying_structure_id    Internal identifier.
+@column regulatory_feature_id      Foreign key references to the @link regulatory_feature table.
+@column motif_feature_id           Foreign key references to the @link motif_feature table.
+
+@see regulatory_feature
+@see underlying_structure
+*/
+
+DROP TABLE IF EXISTS `underlying_structure`;
+CREATE TABLE `underlying_structure` (
+  `underlying_structure_id` int(11) NOT NULL AUTO_INCREMENT,
+  `regulatory_feature_id` int(11) NOT NULL,
+  `motif_feature_id` int(11) NOT NULL,
+  PRIMARY KEY (`underlying_structure_id`)
+)ENGINE=MyISAM DEFAULT CHARSET=latin1;
