@@ -994,7 +994,7 @@ CREATE TABLE `read_file_experimental_configuration` (
   `paired_end_tag` int(11) DEFAULT NULL,
   `multiple` int(11) DEFAULT '1',
   PRIMARY KEY (`read_file_experimental_configuration_id`),
-  UNIQUE KEY `name_exp_idx` (`experiment_id`,`biological_replicate`,`technical_replicate`),
+  UNIQUE KEY `name_exp_idx` (`experiment_id`,`biological_replicate`,`technical_replicate`, `paired_end_tag`, `multiple`),
   KEY `experiment_idx` (`experiment_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -1434,10 +1434,9 @@ CREATE TABLE `meta` (
 INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 
 -- Update and remove these for each release to avoid erroneous patching
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'schema_version', '92');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_91_92_a.sql|schema_version');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_91_92_b.sql|Drop column paired_with from table read_file');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (NULL, 'patch','patch_91_92_c.sql|Create underlying_structure table');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'schema_version', '93');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_92_93_a.sql|schema_version');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_92_93_b.sql|Modify index name_exp_idx from table read_file_experimental_configuration');
 
 /**
 @table meta_coord
