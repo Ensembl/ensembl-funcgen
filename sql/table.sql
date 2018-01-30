@@ -1799,7 +1799,8 @@ CREATE TABLE `underlying_structure` (
   PRIMARY KEY (`underlying_structure_id`)
 )ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
-/*
+
+/**
 @table  example_feature
 @desc   The table contains features used on the website and for the testDB
 @colour  #FFCC66
