@@ -456,6 +456,10 @@ use vars qw( %Config );
         'GPL17465',
         'GPL19384',
         'GPL6848',
+
+        ## Plant arrays
+        '021623', # Barley
+
       ],
     },
 
