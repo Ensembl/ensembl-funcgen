@@ -148,12 +148,20 @@ use vars qw( %Config );
         'E_coli_Antisense',
         'S_aureus',
 
-         ## Plant arrays
+        ## Plant arrays
         'ATH1-121501',
         'Barley1',
+        'Cotton',
+        'Medicago',
         'Poplar',
         'Rice',
+        'Sorghum',
+        'Soybean',
+        'Tomato',
         'Vitis_Vinifera',
+        'maize',
+        'wheat',
+
       ],
 
     },
