@@ -119,6 +119,52 @@ sub file          { return shift->_generic_get_or_set('file',          @_); }
 sub notes         { return shift->_generic_get_or_set('notes',         @_); }
 sub _analysis_id  { return shift->_generic_get_or_set('_analysis_id',  @_); }
 
+sub paired_end_tag {
+  my $self = shift;
+  if (! $self->is_paired_end) {
+    throw("Not a paired end read file!");
+  }
+  my $read_file_experimental_configuration = $self->fetch_ReadFileExperimentalConfiguration;
+  my $paired_end_tag = $read_file_experimental_configuration->paired_end_tag;
+  return $paired_end_tag;
+}
+
+sub fetch_mate_ReadFile {
+  my $self = shift;
+  
+  if (! $self->is_paired_end) {
+    throw("Not a paired end read file!");
+  }
+  
+  my $paired_end_tag      =     $self->paired_end_tag;
+  my $mate_paired_end_tag = 3 - $paired_end_tag;
+  
+  my $read_file_experimental_configuration = $self->fetch_ReadFileExperimentalConfiguration;
+
+  my $pairs_read_file_experimental_configuration 
+    = Bio::EnsEMBL::Funcgen::ReadFileExperimentalConfiguration->new(
+      -technical_replicate  => $read_file_experimental_configuration->technical_replicate,
+      -biological_replicate => $read_file_experimental_configuration->biological_replicate,
+      -paired_end_tag       => $mate_paired_end_tag,
+      -multiple             => $read_file_experimental_configuration->multiple,
+      -experiment_id        => $read_file_experimental_configuration->experiment_id,
+    );
+  
+  my $read_file_adaptor 
+    = $self->db->db->get_ReadFileAdaptor;
+  
+  my $read_file_mate
+    = $read_file_adaptor
+      ->fetch_by_ReadFileExperimentalConfiguration(
+        $pairs_read_file_experimental_configuration
+      );
+  
+  if (! defined $read_file_mate) {
+    throw("Couldn't find pair!");
+  }
+  return $read_file_mate;
+}
+
 sub fetch_FastQC {
 
   my $self         = shift;

@@ -6,6 +6,7 @@ use Data::Dumper;
 use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanUtils qw (
     lock_execution_plan
 );
+use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Constants qw ( :all );
 
 sub run {
 
@@ -22,13 +23,16 @@ sub run {
     ->{input}
   ;
   
-  my $alignment_name  = $align_plan->{name};
-  my $read_names      = $align_plan->{input}->{read_files};
-  my $to_gender       = $align_plan->{to_gender};
-  my $bam_file        = $align_plan->{output}->{stored};
-  my $is_control      = $align_plan->{is_control};
-  my $experiment_name = $align_plan->{from_experiment};
-  my $is_complete     = $align_plan->{is_complete};
+  my $alignment_name   = $align_plan->{name};
+  my $read_files       = $align_plan->{input}->{read_files};
+  my $to_gender        = $align_plan->{to_gender};
+  my $bam_file         = $align_plan->{output}->{stored};
+  my $is_control       = $align_plan->{is_control};
+  my $experiment_name  = $align_plan->{from_experiment};
+  my $ensembl_analysis = $align_plan->{ensembl_analysis};
+  
+  my $remove_duplicates_ensembl_analysis = $align_plan->{analysis};
+  #my $is_complete     = $align_plan->{is_complete};
   
   my $experiment_adaptor = Bio::EnsEMBL::Registry
   ->get_adaptor(
@@ -36,6 +40,27 @@ sub run {
       'funcgen', 
       'Experiment'
   );
+  
+  # For single end reads, the name is in the "name", for paired end it is in
+  # "1" and "2":
+  #
+  my $read_names = [ 
+    map { 
+      $_->{type} eq SINGLE_END 
+      ? 
+        (
+          $_->{name} 
+        )
+      : 
+        ( 
+          $_->{1}, 
+          $_->{2}
+        )
+    } @$read_files 
+  ];
+#   
+#   #my $read_names = 
+#   die(Dumper($read_names));
   
   my $experiment = $experiment_adaptor->fetch_by_name($experiment_name);
   
@@ -49,9 +74,9 @@ sub run {
       experiment          => $experiment,
       has_duplicates      => 1,
       is_control          => $is_control,
-      logic_name          => 'bwa_samse',
+      logic_name          => $ensembl_analysis,
       to_gender           => $to_gender,
-      is_complete         => $is_complete,
+      is_complete         => 0,
     }
   );
 
@@ -71,9 +96,9 @@ sub run {
       experiment          => $experiment,
       has_duplicates      => 0,
       is_control          => $is_control,
-      logic_name          => 'remove_duplicates',
+      logic_name          => $remove_duplicates_ensembl_analysis,
       to_gender           => $to_gender,
-      is_complete         => $is_complete,
+      is_complete         => 1,
     }
   );
   
@@ -122,6 +147,11 @@ sub register_alignment {
   my @read_file_ids;
   foreach my $read_name (@$read_names) {
     my $read_file = $read_file_adaptor->fetch_by_name($read_name);
+    
+    if (! defined $read_file) {
+      $self->throw("Can't fetch read file with name " . Dumper($read_name));
+    }
+    
     push @read_file_ids, $read_file->dbID;
   }
   
