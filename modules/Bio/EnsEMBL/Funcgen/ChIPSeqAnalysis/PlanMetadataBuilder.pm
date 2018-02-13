@@ -70,12 +70,23 @@ sub summarise_replicate_configurations {
       ->fetch_all_by_Experiment($experiment);
   
   my @summaries;
+  EXPERIMENTAL_CONFIGURATION:
   foreach my $experimental_configuration (@$read_file_experimental_configuration_list) {
+    
+    # Report paired end pairs only once
+    if ($experimental_configuration->paired_end_tag == 2) {
+      next EXPERIMENTAL_CONFIGURATION;
+    }
+    
+    # If there are multiples, only report the first.
+    if ($experimental_configuration->multiple != 1) {
+      next EXPERIMENTAL_CONFIGURATION;
+    }
   
     my $current_summary = "("
-    . $experimental_configuration->biological_replicate
+    . "BR" . $experimental_configuration->biological_replicate
     . ","
-    . $experimental_configuration->technical_replicate
+    . "TR" . $experimental_configuration->technical_replicate
     . ")";
     
     push @summaries, $current_summary
