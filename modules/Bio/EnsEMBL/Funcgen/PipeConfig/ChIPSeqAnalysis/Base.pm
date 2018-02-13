@@ -7,7 +7,7 @@ use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 
 sub beekeeper_extra_cmdline_options {
   my $self = shift;
-  return '-reg_conf ' . $self->o('reg_conf') . ' -keep_alive -can_respecialize 1 -sleep 0.1';
+  return '-reg_conf ' . $self->o('reg_conf') . ' -keep_alive -can_respecialize 1 -sleep 0.5';
 }
 
 sub default_options {
