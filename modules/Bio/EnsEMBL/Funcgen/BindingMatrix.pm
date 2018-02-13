@@ -185,21 +185,24 @@ sub frequencies {
     my ($self) = @_;
 
     if ( $self->{frequencies} ) {
-      print "cache\n";
         return $self->{frequencies};
     }
 
-    # return $self->adaptor->db->get_adaptor('BindingMatrixFrequencies');
+    my $binding_matrix_frequencies_adaptor
+        = $self->adaptor->db()->get_adaptor('BindingMatrixFrequencies');
 
-    my $binding_matrix_frequencies_adaptor = $self->adaptor->db()
-        ->get_adaptor('BindingMatrixFrequencies');
-
-    $self->{frequencies}
+    my $binding_matrix_frequencies
         = $binding_matrix_frequencies_adaptor->fetch_all_by_BindingMatrix(
         $self);
 
+    for my $bmf ( @{$binding_matrix_frequencies} ) {
+        $self->{frequencies}->{ $bmf->position() }->{ $bmf->nucleotide() }
+            = $bmf->frequency();
+    }
+
     return $self->{frequencies};
 }
+
 
 sub get_frequency_by_position_nucleotide {
     my ( $self, $position, $nucleotide ) = @_;
@@ -217,14 +220,9 @@ sub get_frequency_by_position_nucleotide {
         $self->frequencies();
     }
 
-    for my $bmf ( @{ $self->{frequencies} } ) {
-        if (   $bmf->position() == $position
-            && $bmf->nucleotide() eq $nucleotide )
-        {
-            return $bmf->frequency;
-        }
-    }
+    return $self->{frequencies}->{$position}->{$nucleotide};
 }
+
 
 sub get_frequencies_as_string {
     my ($self) = @_;
@@ -251,10 +249,6 @@ sub get_frequencies_as_string {
 }
 
 
-
-
-
-
 =head2 length
 
   Example    : my $length = $bm->length;
@@ -273,7 +267,7 @@ sub length {
     $self->frequencies();
   } 
 
-  return scalar @{$self->{frequencies}} / 4;
+  return scalar keys %{$self->{frequencies}};
 }
 
 1;
