@@ -94,45 +94,56 @@ use List::Util qw(sum);
 ########################################################
 
 # A bunch of arbitrary cutoffs
+
+use constant MIN_CTCF_CORRELATION =>  0.25;
+
 # All of these cutoff are applied to enrichment ratios (i.e. 1 == neutral)
-our $weak_cutoff = 2;
-our $strong_cutoff = 5;
-our $very_strong_cutoff = 10;
-# The functional labels are the labels of the build built from segmentation data
-our @functional_labels = ('tss', 'proximal', 'distal', 'ctcf');
+
+# use constant WEAK_CUTOFF          => 0.5;
+# use constant VERY_STRONG_CUTOFF   => 5;
+
+use constant WEAK_CUTOFF          => 2;
+use constant VERY_STRONG_CUTOFF   => 10;
+use constant DEAD_CUTOFF          => 1;
+
+# The functional labels are the labels of the build built from segmentation 
+# data.
+
+use constant FUNCTIONAL_LABELS => ('tss', 'proximal', 'distal', 'ctcf');
+
 # The empirical labels are the labels of the build built from ChIP-seq peaks
-our @empirical_labels = ('tfbs', 'dnase');
+
+use constant EMPIRICAL_LABELS => ('tfbs', 'dnase');
+
 # The labels used in the build:
-our @labels = (@functional_labels, @empirical_labels);
+
+use constant LABELS => (FUNCTIONAL_LABELS, EMPIRICAL_LABELS);
+
 # Typical histone marks used to detect repression. Note that the strings are normalised
 # via the clean_name function below
-our @repressed_marks = ('H3K27ME3','H3K9ME3');
-our @open_chromatin_assays = ('DNASE', 'DNASE1');
+
+use constant REPRESSED_MARKS       => ('H3K27ME3','H3K9ME3');
+use constant OPEN_CHROMATIN_ASSAYS => ('DNASE', 'DNASE1');
+
 # These labels are used in annotating and coloring both the build and the segmentations, some are not
 # present in both, only in one.
 our %COLORS = (
-  tss => "255,0,0",
-  tfbs => "209,157,0",
-  dnase => "255,252,4",
-  proximal => "255,105,105",
-  distal => "250,202,0",
-  ctcf => "10,190,254",
-  dead => "225,225,225",
-  weak => "141,255,68",
-  gene => "0,176,80",
-  poised => "192,0,190",
+  tss       => "255,0,0",
+  tfbs      => "209,157,0",
+  dnase     => "255,252,4",
+  proximal  => "255,105,105",
+  distal    => "250,202,0",
+  ctcf      => "10,190,254",
+  dead      => "225,225,225",
+  weak      => "141,255,68",
+  gene      => "0,176,80",
+  poised    => "192,0,190",
   repressed => "127,127,127",
-  na => "255,255,255"
+  na        => "255,255,255"
 );
 
-# # These states describe the features at the cell-type level
-# our %feature_states = (
-#   active => 0,
-#   poised => 1,
-#   repressed => 2,
-#   inactive => 3,
-#   na => 4
-# );
+use Hash::Util qw( lock_hash );
+lock_hash( %COLORS );
 
 our $start_time = time;
 
@@ -167,7 +178,7 @@ sub main {
   set_cutoffs($options);
   print_cutoffs($options);
   # Compute MultiCell features
-  print_log("Computing MultiCell features\n");
+  print_log("Computing Regulatory features\n");
   compute_regulatory_features($options);
   # Determine which features are active in which cell type
   print_log("Determine which features are active in which epigenome\n");
@@ -208,27 +219,28 @@ sub get_options {
   if (defined $options->{host}) {
     $options->{db_adaptor} = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
     (
-	-user   => $options->{user},
-	-dbname => $options->{db},
-	-host   => $options->{host},
-	-pass   => $options->{pass},
-	-port   => $options->{port},
-	-dnadb_user   => $options->{dnadb_user},
-	-dnadb_dbname => $options->{dnadb_name},
-	-dnadb_host   => $options->{dnadb_host},
-	-dnadb_pass   => $options->{dnadb_pass},
-	-dnadb_port   => $options->{dnadb_port}
+      -user   => $options->{user},
+      -dbname => $options->{db},
+      -host   => $options->{host},
+      -pass   => $options->{pass},
+      -port   => $options->{port},
+      -species => $options->{species},
+      -dnadb_user   => $options->{dnadb_user},
+      -dnadb_dbname => $options->{dnadb_name},
+      -dnadb_host   => $options->{dnadb_host},
+      -dnadb_pass   => $options->{dnadb_pass},
+      -dnadb_port   => $options->{dnadb_port}
     );
     $options->{dnadb_adaptor} = Bio::EnsEMBL::DBSQL::DBAdaptor->new
     (
-	-user   => $options->{dnadb_user},
-	-dbname => $options->{dnadb_name},
-	-host   => $options->{dnadb_host},
-	-pass   => $options->{dnadb_pass},
-	-port   => $options->{dnadb_port}
+      -user   => $options->{dnadb_user},
+      -dbname => $options->{dnadb_name},
+      -host   => $options->{dnadb_host},
+      -pass   => $options->{dnadb_pass},
+      -port   => $options->{dnadb_port},
+      -species => $options->{species},
     );
   }
-
   return $options;
 }
 
@@ -262,7 +274,8 @@ sub read_command_line {
     "dnadb_name=s",
     "dnadb_user=s",
     "dnadb_pass=s",
-    "mask=s"
+    "mask=s",
+    "species=s",
   );
 
   $options{output_dir} = $options{out};
@@ -270,6 +283,9 @@ sub read_command_line {
 
   if (! exists $options{dump}) {
     die('"dump" is a mandatory parameter and has not been set.');
+  }
+  if (! exists $options{species}) {
+    die('"species" is a mandatory parameter and has not been set.');
   }
   if (! -e $options{dump}) {
     die("The file " . $options{dump} . " does not exist!");
@@ -289,17 +305,27 @@ sub read_command_line {
 sub check_options {
   my $options = shift;
 
-  die('Output directory not defined') unless defined $options->{out};
-  die('Assembly name not defined') unless defined $options->{assembly};
+  die('Output directory not defined')    unless defined $options->{out};
+  die('Assembly name not defined')       unless defined $options->{assembly};
   die('Chromosome lengths not provided') unless defined $options->{chrom_lengths};
+  
+  my $dna_db_not_defined = 
+         ! defined $options->{dnadb_name}
+      || ! defined $options->{dnadb_user}
+      || ! defined $options->{dnadb_host}
+      || ! defined $options->{dnadb_port}
+  ;
+  if ($dna_db_not_defined) {
+    confess("The dna db has not been defined!")
+  }
 
   if (! defined $options->{host}) {
-    die('Ensembl dumps not described') unless defined $options->{dump};
-    die('TSS file not provided') unless defined $options->{tss};
-    die('Exon file not provided') unless defined $options->{exons};
+    die('Ensembl dumps not described')         unless defined $options->{dump};
+    die('TSS file not provided')               unless defined $options->{tss};
+    die('Exon file not provided')              unless defined $options->{exons};
     die('Chromosome length file not provided') unless defined $options->{exons};
   } else {
-    die('Database not defined') unless defined $options->{db};
+    die('Database not defined')     unless defined $options->{db};
     die('User account not defined') unless defined $options->{user};
     if (!defined $options->{dnadb_name}) {
       $options->{dnadb_name} = $options->{db};
@@ -397,13 +423,38 @@ sub convert_to_bigWig {
 =cut
 
 sub run {
-  my ($cmd) = @_;
-  print_log("Running $cmd\n");
-  my $exit_code = system($cmd);
-  if ($exit_code != 0) {
-    use Carp;
-    confess("Failure when running command\n$cmd\n")
+  my $cmd = shift;
+  
+  # Copied over from eHive, good at capturing running commands with pipes 
+  # and capturing issues.
+  #
+  use Bio::EnsEMBL::Hive::Utils ( 'stringify', 'join_command_args' );
+  require Capture::Tiny;
+
+  my ($join_needed, $flat_cmd) = join_command_args($cmd);
+  # Let's use the array if possible, it saves us from running a shell
+  my @cmd_to_run = ('bash' => ('-o' => 'pipefail', '-c' => $flat_cmd));
+
+  print_log("Command given:  " . stringify($cmd)         . "\n");
+  print_log("Command to run: " . stringify(\@cmd_to_run) . "\n");
+
+  my $return_value;
+
+  # Capture:Tiny has weird behavior if 'require'd instead of 'use'd
+  # see, for example,http://www.perlmonks.org/?node_id=870439 
+  my $stderr = Capture::Tiny::tee_stderr(sub {
+      $return_value = system(@cmd_to_run);
+  });
+
+  if ($return_value) {
+    confess(
+      "Error running command " 
+      . Dumper(@cmd_to_run) 
+      . " the error was:\n\n" 
+      . $stderr . "\n\n"
+    );
   }
+  return;
 }
 
 =head2 print_log
@@ -473,7 +524,7 @@ sub deserialise_hash {
   my ($filename) = shift;
   my %data = ();
   my $fh;
-  open $fh, "<", $filename;
+  open $fh, "<", $filename or confess("Can't open file for reading ${filename}");
   my $line;
   while ($line = <$fh>) {
     chomp $line;
@@ -504,8 +555,8 @@ sub trim_bed_to_chrom_lengths {
   }
   my $lengths = $options->{length_hash};
   my ($fh, $out, $line);
-  open $fh, "<", $file;
-  open $out, ">", "$file.tmp";
+  open $fh,  "<",  $file      or confess("Can't open file for reading ${file}");
+  open $out, ">", "$file.tmp" or confess("Can't open file for writing ${file}.tmp");
   while ($line = <$fh>) {
     chomp $line;
     my @items = split /\t/, $line;
@@ -542,7 +593,7 @@ sub read_chrom_lengths {
   my ($options) = @_;
   my ($fh, $line);
 
-  open $fh, "<", $options->{chrom_lengths};
+  open $fh, "<", $options->{chrom_lengths} or confess("Can't open file for reading " . $options->{chrom_lengths});
   my %lengths = ();
 
   while ($line = <$fh>) {
@@ -595,6 +646,8 @@ sub get_metadata {
       fetch_metadata($options);
     }
 
+    mkpath "$options->{working_dir}/build/";
+    
     if (!defined $options->{tss}) {
       create_tss($options);
     }
@@ -616,9 +669,12 @@ sub get_metadata {
     $hash{exons} = $options->{exons};
     $hash{mask} = $options->{mask};
     $hash{genome_length} = $options->{genome_length};
-    store \%hash, $location;
+    store_data_in_file({
+      file => $location, 
+      data => \%hash,
+    });
   } else {
-    my $prev_options = retrieve($location);
+    my $prev_options = load_data_from_file($location);
     $options->{cell_type_tfs} = $prev_options->{cell_type_tfs};
     $options->{cell_type_open} = $prev_options->{cell_type_open};
     $options->{peak_calls} = $prev_options->{peak_calls};
@@ -629,6 +685,39 @@ sub get_metadata {
     $options->{mask} = $prev_options->{mask};
     $options->{genome_length} = $prev_options->{genome_length};
   }
+  return;
+}
+
+sub store_data_in_file {
+
+  my $param = shift;
+
+  my $file = $param->{file};
+  my $data = $param->{data};
+  
+  use Data::Dumper;
+  $Data::Dumper::Purity = 1;
+  my $serialised = Dumper($data);
+  
+  open my $fh, '>', $file or confess("Can't open file for writing $file");
+  $fh->print($serialised);
+  $fh->close;
+  return;
+}
+
+sub load_data_from_file {
+
+  my $file = shift;
+  
+  open my $fh, '<', $file or confess("Can't open file for reading $file");
+  local $/;
+  
+  my $serialised = <$fh>;
+  $fh->close;
+  no strict;
+  my $data = eval $serialised;
+  use strict;
+  return;
 }
 
 =head2 read_dump
@@ -644,8 +733,8 @@ sub get_metadata {
 sub read_dump {
   my ($options) = @_;
   print_log("Reading $options->{dump}\n");
-# die;
-  open my $fh, "<", $options->{dump};
+
+  open my $fh, "<", $options->{dump} or confess("Can't open file for reading " . $options->{dump});
   while (my $line = <$fh>) {
     chomp $line;
     my @elems = split /\t/, $line;
@@ -661,9 +750,7 @@ sub read_dump {
       push @{$options->{segmentations}}, $segmentation;
     }
   }
-#   use Data::Dumper;
-#   print Dumper($options->{segmentations});
-#   die;
+  return;
 }
 
 =head2 fetch_metadata
@@ -678,33 +765,52 @@ sub read_dump {
 sub fetch_metadata {
   my ($options) = @_;
   print_log("Fetching metadata from funcgen DB\n");
-  my @slices = sort {$a->seq_region_name cmp $b->seq_region_name} @{$options->{dnadb_adaptor}->get_SliceAdaptor->fetch_all('toplevel', undef, undef, 0)};
-  foreach my $featureSet (@{$options->{db_adaptor}->get_adaptor("FeatureSet")->fetch_all_by_feature_class("annotated")}) {
-    my $tf = $featureSet->feature_type->name;
-    if ($tf =~ /^H[2-4][ABKZ]/) {
-      # It's a histone, ignore
-      next;
-    }
-    my $cell = $featureSet->epigenome->production_name;
+  
+  my $slice_adaptor = $options->{dnadb_adaptor}->get_SliceAdaptor;
 
-    my $cell_display_label = $featureSet->epigenome->display_label;
+  my $all_toplevel_slices = fetch_all_toplevel_slices($options);
+  my @slices = @$all_toplevel_slices;
+  
+    my $peak_calling_adaptor = $options->{db_adaptor}->get_adaptor("PeakCalling");
+    my $all_peak_callings = $peak_calling_adaptor->fetch_all;
+    
+    PEAK_CALLING:
+    foreach my $peak_calling (@$all_peak_callings) {
+  
+      my $feature_type = $peak_calling->fetch_FeatureType;
+      
+      my $tf    = $feature_type->name;
+      my $class = $feature_type->class;
+      
+      if ($class eq 'Histone') {
+        # It's a histone, ignore
+        next PEAK_CALLING;
+      }
+    
+      my $epigenome = $peak_calling->fetch_Epigenome;
+      my $cell_display_label = $epigenome->display_label;
 
-    my $epigenome_is_excluded =
-         ($cell_display_label eq "CD38- naïve B cell (CB)")
-      || ($cell_display_label eq "CD38- naive B cell (VB)")
-      || ($cell_display_label eq "CD4+ ab T cell (CB)")
-      || ($cell_display_label eq "CD8+ ab T cell (VB)")
-      || ($cell_display_label eq "EM CD8+ ab T cell (VB)")
-      || ($cell_display_label eq "Naïve B cell (To)")
-    ;
-    if ($epigenome_is_excluded) {
-      print_log("Skipping $cell_display_label, because it has been excluded from the regulatory build.\n");
-      next;
-    }
+      my $epigenome_is_excluded =
+           ($cell_display_label eq "CD38- naïve B cell (CB)")
+        || ($cell_display_label eq "CD38- naive B cell (VB)")
+        || ($cell_display_label eq "CD4+ ab T cell (CB)")
+        || ($cell_display_label eq "CD8+ ab T cell (VB)")
+        || ($cell_display_label eq "EM CD8+ ab T cell (VB)")
+        || ($cell_display_label eq "Naïve B cell (To)")
+      ;
+      if ($epigenome_is_excluded) {
+        print_log("Skipping $cell_display_label, because it has been excluded from the regulatory build.\n");
+        next PEAK_CALLING;
+      }
 
-    record_peak_file($options, $tf, $cell, dump_peaks($options, $featureSet, $tf, $cell, \@slices));
-    # close $fh;
+      record_peak_file(
+        $options, 
+        $tf, 
+        $epigenome->production_name, 
+        dump_peaks($options, $peak_calling, $tf, $epigenome->production_name, \@slices)
+      );
   }
+  return;
 }
 
 =head2 dump_peaks
@@ -720,19 +826,35 @@ sub fetch_metadata {
 =cut
 
 sub dump_peaks {
-  my ($options, $featureSet, $tf, $cell, $slices) = @_;
+  my ($options, $peak_calling, $tf, $cell, $slices) = @_;
   my $dir = "$options->{working_dir}/peaks/$tf/$cell/";
   mkpath $dir;
 
   my $fh = File::Temp->new(DIR => $dir, SUFFIX => '.bed');
   my $filename = $fh->filename;
+  
+  my $peak_adaptor = $options->{db_adaptor}->get_adaptor('Peak');
+  
   foreach my $slice (@$slices) {
-    foreach my $feature (sort {$a->start <=> $b->start} @{$featureSet->get_Features_by_Slice($slice)}) {
-      print $fh join("\t", ($slice->seq_region_name, $feature->start - 1, $feature->end))."\n";
+  
+    my $peaks = $peak_adaptor->fetch_all_by_Slice_PeakCalling($slice, $peak_calling);
+    my @peaks_sorted = sort {$a->start <=> $b->start} @{$peaks};
+    
+    print_log("INFO: Found " . scalar @peaks_sorted . " peaks on " . $slice->seq_region_name . "\n");
+  
+    foreach my $peak (@peaks_sorted) {
+      $fh->print(join("\t", ($slice->seq_region_name, $peak->start - 1, $peak->end))."\n");
     }
   }
-
-  return $fh->filename;
+  
+  $fh->close;
+  
+  my $file_name = $fh->filename;
+  
+  if (-z $file_name) {
+    print_log("WARNING: $file_name is empty!\n");
+  }
+  return $file_name;
 }
 
 =head2 record_peak_file
@@ -750,9 +872,11 @@ sub dump_peaks {
 sub record_peak_file {
   my ($options, $tf, $cell, $file) = @_;
   my $ctf = clean_name($tf);
-  my $ccell = clean_name($cell);
+  #my $ccell = clean_name($cell);
+  # We are already passing in the production name
+  my $ccell = $cell;
 
-  if (grep($_ eq $ctf, @open_chromatin_assays)) {
+  if (grep($_ eq $ctf, OPEN_CHROMATIN_ASSAYS)) {
     if (!defined $options->{cell_type_open}->{$ccell}) {
       $options->{cell_type_open}->{$ccell} = [];
     }
@@ -772,53 +896,6 @@ sub record_peak_file {
     push @{$options->{peak_calls}->{$ctf}->{$ccell}}, $file;
   }
 }
-
-#
-# Removed, because for human this returns three entries for the Y chromosome.
-#
-# Two of these are short. When these are used later for trimming bed files, 
-# feaatures are lost.
-#
-
-# =head2 create_chrom_lengths
-# 
-#   Descriptions: store chromosome lengths from DB into flat file for BigFile compression
-#   Arg1: options hash ref
-#   Returntype: undef
-#   Side effects: Stores location of newly created file in options
-# 
-# =cut
-# 
-# sub create_chrom_lengths {
-#   my ($options) = @_;
-#   $options->{chrom_lengths} = "$options->{working_dir}/chrom_lengths.txt";
-#   open my $fh, ">", $options->{chrom_lengths};
-#   fetch_chrom_lengths($options, $fh);
-#   close $fh
-# }
-
-# =head2 fetch_chrom_lengths
-# 
-#   Description: stores chromosome lengths from DB into filehandle
-#   Arg1: options hash ref
-#   Arg2: file handle
-#   Returntype: undef
-#   Side effects: Writes into file handle
-# 
-# =cut
-# 
-# sub fetch_chrom_lengths {
-#   my ($options, $fh) = @_;
-#   print_log("Fetching chromosome lengths from core DB\n");
-#   my $slice_adaptor = $options->{dnadb_adaptor}->get_SliceAdaptor();
-#   my @slices = @{ $slice_adaptor->fetch_all('toplevel', undef, undef, 0) };
-# 
-#   foreach my $slice (@slices) {
-#     print $fh join("\t", ($slice->seq_region_name(), $slice->end() - $slice->start())) . "\n";
-#     $options->{genome_length} += $slice->length();
-#   }
-#    print_log("$options->{assembly} length: $options->{genome_length} \n");
-# }
 
 =head2 compute_genome_length
 
@@ -901,14 +978,17 @@ sub compute_genome_length_from_chromosome_length_file {
 sub create_tss {
   my ($options) = @_;
   
-  my $transcription_start_sites_file = "$options->{working_dir}/tss.bed";
+  my $transcription_start_sites_file = "$options->{working_dir}/tss_from_core_db.bed";
   $options->{tss} = $transcription_start_sites_file;
-  open my $fh, ">", $transcription_start_sites_file;
+  open my $fh, ">", $transcription_start_sites_file or confess("Can't open file for writing " . $transcription_start_sites_file);
   fetch_tss($options, $fh);
   close $fh;
-  if (! -e $transcription_start_sites_file) {
+  
+  my $transcription_start_sites_file_exists = -e $transcription_start_sites_file && -s $transcription_start_sites_file;
+  
+  if (! $transcription_start_sites_file_exists) {
     use Carp;
-    confess("The transcription start sites file ($transcription_start_sites_file) was not created!");
+    confess("The transcription start sites file ($transcription_start_sites_file) was not created (or is empty)!");
   }
 }
 
@@ -927,18 +1007,66 @@ sub fetch_tss {
   print_log("Fetching TSSs from core DB\n");
   my $slice_adaptor = $options->{dnadb_adaptor}->get_SliceAdaptor();
   my @tss_coords = ();
-  foreach my $slice (@{$slice_adaptor->fetch_all('toplevel', undef, undef, 0) }) {
+  
+  my $tss_id = 0;
+  
+  my $all_toplevel_slices = fetch_all_toplevel_slices($options);
+  
+  foreach my $slice (@$all_toplevel_slices) {
     foreach my $gene (@{$slice->get_all_Genes()}) {
       foreach my $transcript (@{$gene->get_all_Transcripts()}) {
-	if ($transcript->strand() > 0) {
-	  push @tss_coords, [$slice->seq_region_name(), $transcript->start() - 1, $transcript->start()];
+      
+        $tss_id += 1;
+      
+        if ($transcript->strand() > 0) {
+          push @tss_coords, [
+              $slice->seq_region_name(), 
+              $transcript->start() - 1, 
+              $transcript->start(), 
+              "tss_${tss_id}", 
+              1000,
+              '.',
+              $transcript->start() - 1, 
+              $transcript->start(),
+              $COLORS{tss},
+          ];
         } else {
-	  push @tss_coords, [$slice->seq_region_name(), $transcript->end() - 1, $transcript->end()];
-	}
+          push @tss_coords, [
+              $slice->seq_region_name(), 
+              $transcript->end() - 1, 
+              $transcript->end(),
+              "tss_${tss_id}", 
+              1000, 
+              '.',
+              $transcript->end() - 1, 
+              $transcript->end(),
+              $COLORS{tss},
+          ];
+        }
       }
     }
   }
   write_into_bedfile(\@tss_coords, $fh);
+}
+
+sub fetch_all_toplevel_slices {
+
+  my $options = shift;
+  
+  if (exists $options->{all_toplevel_slices}) {
+    return $options->{all_toplevel_slices};
+  }
+  my $slice_adaptor = $options->{dnadb_adaptor}->get_SliceAdaptor();
+  my $all_toplevel_slices_unsorted = $slice_adaptor->fetch_all('toplevel', undef, undef, 0);
+  
+  my $all_toplevel_slices_sorted = [
+    sort {
+        $a->seq_region_name cmp $b->seq_region_name
+    } @$all_toplevel_slices_unsorted
+  ];
+  
+  $options->{all_toplevel_slices} = $all_toplevel_slices_sorted;
+  return $all_toplevel_slices_sorted;
 }
 
 =head2 create_exons
@@ -953,7 +1081,7 @@ sub fetch_tss {
 sub create_exons {
   my ($options) = @_;
   $options->{exons} = "$options->{working_dir}/exons.bed";
-  open my $fh, ">", $options->{exons};
+  open my $fh, ">", $options->{exons} or confess("Can't open file for writing " . $options->{exons});
   fetch_exons($options, $fh);
   close $fh
 }
@@ -972,13 +1100,15 @@ sub fetch_exons {
   my ($options, $fh) = @_;
   my @exon_coords = ();
   print_log("Fetching exons from core DB\n");
-  my $slice_adaptor = $options->{dnadb_adaptor}->get_SliceAdaptor();
-  foreach my $slice (@{$slice_adaptor->fetch_all('toplevel', undef, undef, 0) }) {
+  
+  my $all_toplevel_slices = fetch_all_toplevel_slices($options);
+  
+  foreach my $slice (@$all_toplevel_slices) {
     foreach my $gene (@{$slice->get_all_Genes()}) {
       foreach my $transcript (@{$gene->get_all_Transcripts()}) {
         foreach my $exon (@{$transcript->get_all_Exons()}) {
-	  push @exon_coords, [$slice->seq_region_name(), $exon->start() - 1, $exon->end()];
-	}
+          push @exon_coords, [$slice->seq_region_name(), $exon->start() - 1, $exon->end()];
+        }
       }
     }
   }
@@ -997,7 +1127,7 @@ sub fetch_exons {
 sub create_mask {
   my ($options) = @_;
   $options->{mask} = "$options->{working_dir}/mask.bed";
-  open my $fh, ">", $options->{mask};
+  open my $fh, ">", $options->{mask} or confess("Can't open file for writing " . $options->{mask});
   fetch_mask($options, $fh);
   close $fh
 }
@@ -1037,7 +1167,7 @@ sub fetch_mask {
 
 sub write_into_bedfile {
   my ($regions, $fh) = @_;
-  my @sorted_regions = sort {comp_coords($a, $b)} @$regions;
+  my @sorted_regions = sort by_coordinate @$regions;
 
   foreach my $region (@sorted_regions) {
     if ($region->[1] < $region->[2]) {
@@ -1046,18 +1176,15 @@ sub write_into_bedfile {
   }
 }
 
-=head2 comp_coords
+=head2 by_coordinate
 
   Description: Simple comparator function for sorting regions
     Works on list refs, containing [chromosoms, start, end, ...]
-  Arg1: $a: first element of comparison
-  Arg2: $b: second element of comparison
   Returntype: -1 if $a before $b, 0 if overlap, 1 if $a after $b
 
 =cut
 
-sub comp_coords {
-  my ($a, $b) = @_;
+sub by_coordinate {
   if ($a->[0] ne $b->[0]) {
     return $a->[0] cmp $b->[0];
   } elsif ($a->[1] != $b->[1]) {
@@ -1102,7 +1229,7 @@ sub compute_tf_probs {
   
   if (@$tf_probs == 0) {
     use Carp;
-    confess('No transcription factor probabilities found!');
+    confess('No transcription factor probabilities found!' . Dumper($options));
   }
   
   compute_global_tf_prob($options, $tf_probs);
@@ -1163,14 +1290,17 @@ sub compute_celltype_tf_sites_2 {
   if (defined $open_exps) {
     my $output1 = "$options->{working_dir}/celltype_dnase/$celltype.bed"; 
 #     run("wiggletools write_bg $output1 unit sum " . join(" ", @{$open_exps}));
+    remove_file_if_exists($output1);
     run_unless_file_exists("wiggletools write_bg $output1 unit sum " . join(" ", @{$open_exps}), $output1);
     $options->{celltype_dnase}->{$celltype} = $output1;
     trim_bed_to_chrom_lengths($options, $output1);
 #     run("wiggletools write_bg $output2 gt 1 sum ".join(" ", @{$tf_exps}). " $output1 ");
+    remove_file_if_exists($output2);
     run_unless_file_exists("wiggletools write_bg $output2 gt 1 sum ".join(" ", @{$tf_exps}). " $output1 ", $output2);
     
   } else {
 #     run("wiggletools write_bg $output2 unit sum ".join(" ", @{$tf_exps}));
+    remove_file_if_exists($output2);
     run_unless_file_exists("wiggletools write_bg $output2 unit sum ".join(" ", @{$tf_exps}), $output2);
   }
   trim_bed_to_chrom_lengths($options, $output2);
@@ -1220,6 +1350,14 @@ sub compute_antibody_specific_probs {
   return \@tf_probs;
 }
 
+sub remove_file_if_exists {
+  my $file_name = shift;
+  if (-e $file_name) {
+    unlink($file_name);
+  }
+  return;
+}
+
 =head2 compute_antibody_specific_prob
 
   Description: Computing TF binding summaries for a given TF
@@ -1244,6 +1382,7 @@ sub compute_antibody_specific_prob {
   my @exps = @{antibody_regions($options, $tf)};
   my $exp_count = scalar(@exps);
   if ($exp_count > 0) {
+    remove_file_if_exists($output);
     run("wiggletools write_bg $output scale " . (1 / $exp_count) . " sum " . join(" ", @exps));
     convert_to_bigWig($options, $output);
     $output =~ s/.wig/.bw/;
@@ -1303,15 +1442,16 @@ sub compute_global_tf_prob {
   mkdir "$options->{trackhub_dir}/overview/";
   my $output = "$options->{trackhub_dir}/overview/all_tfbs.wig";
 
-  # Probability of seeing at least one transcription factor
-  #
-#   run("wiggletools write_bg $output offset 1 scale -1 mult map offset 1 map scale -1 " . join(" ", @$probs)) ;
-
   if (@$probs == 0) {
     use Carp;
     confess("Probabilities are empty!");
   }
-
+  remove_file_if_exists($output);
+  
+  # Probability of seeing at least one transcription factor
+  #
+  # P_tf = 1 - PRODUCT( for each transcription factor t : 1 - P_t )
+  #
   run_unless_file_exists("wiggletools write_bg $output offset 1 scale -1 mult map offset 1 map scale -1 " . join(" ", @$probs), $output) ;
 
   convert_to_bigWig($options, $output);
@@ -1434,7 +1574,7 @@ sub extract_ChromHMM_state_summaries {
   } else {
     @bedfiles = glob "$segmentation->{location}/*.bed";
   }
-  $segmentation->{states} = extract_ChromHMM_states($options, $segmentation, \@bedfiles);
+  $segmentation->{states}    = extract_ChromHMM_states($options, $segmentation, \@bedfiles);
   $segmentation->{celltypes} = extract_ChromHMM_cells($options, $segmentation, \@bedfiles);
 
   foreach my $cell (keys %{$segmentation->{celltypes}}) {
@@ -1494,13 +1634,25 @@ sub extract_ChromHMM_cells {
   my ($options, $segmentation, $files) = @_;
   print_log("Extracting cell names\n");
   my $output = "$options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/cells.txt";
+  
+  my $expected_chromhmm_file_ending = '_25_segments.bed';
+  
+  my $epigenome_adaptor = $options->{db_adaptor}->get_adaptor("Epigenome");
+  
   if (must_compute($options,$output)) {
-    open my $fh, ">", $output;
+    open my $fh, ">", $output or confess("Can't open file for writing $output");
     foreach my $file (@$files) {
       my $cell = basename $file;
-      $cell =~ s/.bed$//;
-      $cell = clean_name($cell);
-      print $fh "$cell\t$file\n";
+      $cell =~ s/$expected_chromhmm_file_ending$//;
+      
+      my $epigenome = $epigenome_adaptor->fetch_by_production_name($cell);
+      
+      if (! defined $epigenome) {
+        confess("Can't find epigenome with production name $cell for $file !");
+      }
+      my $production_name = $epigenome->production_name;
+      
+      $fh->print("$production_name\t$file\n");
     }
     close $fh;
   }
@@ -1553,6 +1705,8 @@ sub extract_ChromHMM_state_summary {
   }
 
   my $summary = "$options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.wig";
+  
+  remove_file_if_exists($summary);
   run("wiggletools write_bg $summary sum " . join(" ", @summaries));
   convert_to_bigWig($options, $summary);
 }
@@ -1622,7 +1776,7 @@ sub label_segmentation_states {
 
 sub dump_assignments {
   my ($options, $file) = @_;
-  open my $fh, ">", $file;
+  open my $fh, ">", $file or confess("Can't open file for writing $file");
   foreach my $segmentation (@{$options->{segmentations}}) {
     my $assignments = $options->{assignments}->{$segmentation->{name}};
     foreach my $state (@{$segmentation->{states}}) {
@@ -1643,7 +1797,7 @@ sub dump_assignments {
 
 sub load_assignments {
   my ($file) = @_;
-  open my $fh, "<", $file;
+  open my $fh, "<", $file or confess("Can't open file for reading $file");
   my $assignments = {};
   while (my $line = <$fh>) {
     chomp $line;
@@ -1716,7 +1870,7 @@ sub select_segmentation_states {
       - gene => enrichment score (> 0)
   Arg3: state name
   Side effects: It fills out:
-    * $options->{assignments}->{$segmentation->{name}}->{state} with one of the different labels (See our @labels)
+    * $options->{assignments}->{$segmentation->{name}}->{state} with one of the different labels (See our LABELS)
 
 =cut
 
@@ -1725,27 +1879,43 @@ sub label_segmentation_state {
   my $overlaps = $segmentation->{overlaps};
   my $assignments = $options->{assignments}->{$segmentation->{name}};
 
-  if ($overlaps->{ctcf}->{$state} > .25) {
+  if ($overlaps->{ctcf}->{$state} > MIN_CTCF_CORRELATION) {
     $assignments->{$state} = 'ctcf';
-  } elsif ($overlaps->{repressed}->{$state} > $segmentation->{repressed_cutoff}) {
-    if ($overlaps->{tfbs}->{$state} < $weak_cutoff) {
+    return;
+  }
+  if ($overlaps->{repressed}->{$state} > $segmentation->{repressed_cutoff}) {
+    if ($overlaps->{tfbs}->{$state} < WEAK_CUTOFF) {
       $assignments->{$state} = 'repressed';
     } else {
       $assignments->{$state} = 'poised';
     }
-  } elsif ($overlaps->{tfbs}->{$state} < 1 && $overlaps->{gene}->{$state} < 1) {
-    $assignments->{$state} = 'dead';
-  } elsif ($overlaps->{tfbs}->{$state} < $weak_cutoff && $overlaps->{gene}->{$state} < $weak_cutoff) {
-    $assignments->{$state} = 'weak';
-  } elsif ($overlaps->{tss}->{$state} > $very_strong_cutoff) {
-    $assignments->{$state} = 'tss';
-  } elsif ($overlaps->{gene}->{$state} > $overlaps->{tfbs}->{$state}) {
-    $assignments->{$state} = 'gene';
-  } elsif ($overlaps->{tss}->{$state} > $weak_cutoff) {
-    $assignments->{$state} = 'proximal';
-  } else {
-    $assignments->{$state} = 'distal';
+    return;
   }
+  if (
+         $overlaps->{tfbs}->{$state} < DEAD_CUTOFF 
+      && $overlaps->{gene}->{$state} < DEAD_CUTOFF) {
+    $assignments->{$state} = 'dead';
+    return;
+  } 
+  if (
+         $overlaps->{tfbs}->{$state} < WEAK_CUTOFF 
+      && $overlaps->{gene}->{$state} < WEAK_CUTOFF) {
+    $assignments->{$state} = 'weak';
+    return;
+  }
+  if ($overlaps->{tss}->{$state} > VERY_STRONG_CUTOFF) {
+    $assignments->{$state} = 'tss';
+    return;
+  } 
+  if ($overlaps->{gene}->{$state} > $overlaps->{tfbs}->{$state}) {
+    $assignments->{$state} = 'gene';
+    return;
+  } 
+  if ($overlaps->{tss}->{$state} > WEAK_CUTOFF) {
+    $assignments->{$state} = 'proximal';
+    return;
+  }
+  return $assignments->{$state} = 'distal';
 }
 
 =head2 label_segmentation_states
@@ -1789,11 +1959,12 @@ sub compute_overlaps {
   } elsif ($segmentation->{type} eq 'GMTK') {
     compute_GMTK_repressed_scores($options, $segmentation);
   } else {
-    print STDERR "Could not recognize segmentation type $segmentation->{type}\n";
-    exit 1;
+    confess("Could not recognize segmentation type $segmentation->{type}");
   }
 
-  open my $out, ">", "$options->{working_dir}/overlaps/$segmentation->{name}/summary.txt";
+  open my $out, ">", "$options->{working_dir}/overlaps/$segmentation->{name}/summary.txt" 
+    or confess("Can't open file for writing " . "$options->{working_dir}/overlaps/$segmentation->{name}/summary.txt");
+
   print $out "Segmentation\tstate\tctcf\ttss\tgene\ttfbs\trepressed\n";
   foreach my $state (@{$segmentation->{states}}) {
     print $out "$segmentation->{name}\t$state";
@@ -1847,7 +2018,11 @@ sub compute_overlap_scores {
     foreach $state (@{$segmentation->{states}}) {
       compute_overlap_score($options, $segmentation, $test, $state);
     }
-    store $segmentation->{overlaps}->{$test}, $output;
+    #store $segmentation->{overlaps}->{$test}, $output;
+    store_data_in_file({
+      file => $output, 
+      data => $segmentation->{overlaps}->{$test},
+    });
   }
 }
 
@@ -1881,7 +2056,12 @@ sub compute_overlap_score {
   my ($options, $segmentation, $test, $state) = @_;
 
   my $reference;
-  my $file = "$options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw";
+  my $num_epigenomes_in_state_file 
+      = "$options->{trackhub_dir}/segmentation_summaries/$segmentation->{name}/$state.bw";
+
+  if (! -e $num_epigenomes_in_state_file) {
+    confess("File $num_epigenomes_in_state_file doesn't exist!");
+  }
 
   if ($test eq 'ctcf') {
     $reference = "$options->{trackhub_dir}/tfbs/CTCF.bw";
@@ -1895,14 +2075,23 @@ sub compute_overlap_score {
     die "Unknown test\n";
   }
 
-  if ($test eq 'ctcf') {
-    print_log("Running wiggletools pearson $reference $file\n");
-    $segmentation->{overlaps}->{$test}->{$state} = `wiggletools pearson $reference $file`;
-  } else {
-    my $genome_length = $options->{genome_length};
-    $segmentation->{overlaps}->{$test}->{$state} = compute_enrichment_between_files($reference, $file, $genome_length);
+  if (! -e $reference) {
+    confess("File $reference doesn't exist!");
   }
 
+  if ($test eq 'ctcf') {
+    print_log("Running wiggletools pearson $reference $num_epigenomes_in_state_file\n");
+    $segmentation->{overlaps}->{$test}->{$state} 
+        = `wiggletools pearson $reference $num_epigenomes_in_state_file`;
+  } else {
+    my $genome_length = $options->{genome_length};
+    $segmentation->{overlaps}->{$test}->{$state} 
+        = compute_enrichment_between_files(
+            $reference, 
+            $num_epigenomes_in_state_file, 
+            $genome_length
+        );
+  }
   chomp $segmentation->{overlaps}->{$test}->{$state};
 }
 
@@ -1917,21 +2106,37 @@ sub compute_overlap_score {
 
 sub compute_enrichment_between_files {
   my ($reference, $file, $genome_length) = @_;
+  
+  # $file may be "gt 1 <actual file> depending on the caller, so can't test 
+  # for existence here.
+  #
+  #   if (! -e $file) {
+  #     confess("File $file doesn't exist!");
+  #   }
 
   if ($genome_length == 0) {
     use Carp;
     confess("genome_length parameter is zero! ($genome_length)");
   }
   
+  if (! -e $reference) {
+    confess("Reference file $reference doesn't exist!");
+  }
+  
   my $auc = `wiggletools AUC mult $reference unit $file`;
   my $breadth = `wiggletools AUC unit $file`;
   my $ref_auc = `wiggletools AUC $reference`;
-
+  
   if ($breadth == 0) {
     return 0;
-  } else {
-    return ($auc / $breadth) / ($ref_auc / $genome_length );
   }
+  if ($genome_length == 0) {
+    confess("genome_length is zero!");
+  }
+  if ($ref_auc == 0) {
+    confess("ref_auc is zero!");
+  }
+  return ($auc / $breadth) / ($ref_auc / $genome_length );
 }
 
 =head2 compute_ChromHMM_repressed_scores
@@ -1967,14 +2172,17 @@ sub compute_ChromHMM_repressed_scores {
   }
   my $file = pop @files;
   my ($fh, $line);
-  open $fh, "<", $file;
+  open $fh, "<", $file or confess("Can't open file for reading " . $file);
   $line = <$fh>;
   chomp $line;
   my @items = split /\t/, $line;
-  my @columns = ();
+  my @columns_with_repressed_marks = ();
   for (my $index = 1; $index < scalar @items; $index++) {
-    if (grep($_ eq clean_name($items[$index]), @repressed_marks)) {
-      push @columns, $index;
+  
+    my $index_is_for_repressed_mark = grep($_ eq clean_name($items[$index]), REPRESSED_MARKS);
+  
+    if ($index_is_for_repressed_mark) {
+      push @columns_with_repressed_marks, $index;
     }
   }
 
@@ -1984,18 +2192,34 @@ sub compute_ChromHMM_repressed_scores {
     chomp $line;
     my @items = split /\t/, $line;
     my $sum = 0;
-    foreach my $column (@columns) {
+    foreach my $column (@columns_with_repressed_marks) {
        $sum += $items[$column];
     }
-    $segmentation->{overlaps}->{repressed}->{"E$items[0]"} = $sum;
+    my $state = "E$items[0]";
+    $segmentation->{overlaps}->{repressed}->{$state} = $sum;
     print_log("Emission\t$segmentation->{name}\trepressed\t$items[0]\t$sum\n");
     if ($sum > $max) {
       $max = $sum;
     }
   }
   close $fh;
-
+  
   $segmentation->{repressed_cutoff} = $max / 3;
+  #$segmentation->{repressed_cutoff} = 1.98;
+  
+  my $repressed_cutoffs_file = "$options->{working_dir}/repressed_cutoffs";
+  my $segmentation_file      = "$options->{working_dir}/segmentation_debug_file";
+  
+  store_data_in_file({
+    file => $repressed_cutoffs_file, 
+    data => $segmentation->{repressed_cutoff},
+  });
+  store_data_in_file({
+    file => $segmentation_file, 
+    data => $segmentation,
+  });
+
+  return;
 }
 
 =head2 compute_GMTK_repressed_scores
@@ -2032,7 +2256,7 @@ sub compute_GMTK_repressed_scores {
   }
   my $file = pop @files;
   my ($fh, $line);
-  open $fh, "<", $file;
+  open $fh, "<", $file or confess("Can't open file for reading " . $file);
   $line = <$fh>;
   chomp $line;
   my @columns = split /\t/, $line;
@@ -2042,7 +2266,7 @@ sub compute_GMTK_repressed_scores {
   while ($line = <$fh>) {
     chomp $line;
     my @items = split /\t/, $line;
-    if (!grep($_ eq clean_name($items[0]), @repressed_marks)) {
+    if (!grep($_ eq clean_name($items[0]), REPRESSED_MARKS)) {
       next;
     }
     for (my $index = 0; $index < scalar(@columns); $index++) {
@@ -2093,7 +2317,7 @@ sub compute_Segway_repressed_scores {
   }
   my $file = pop @files;
   my ($fh, $line);
-  open $fh, "<", $file;
+  open $fh, "<", $file or confess("Can't open file for reading " . $file);
   $line = <$fh>;
 
   my $max = 0;
@@ -2101,7 +2325,7 @@ sub compute_Segway_repressed_scores {
   while ($line = <$fh>) {
     chomp $line;
     my @items = split /\t/, $line;
-    if (!grep($_ eq clean_name($items[1]), @repressed_marks)) {
+    if (!grep($_ eq clean_name($items[1]), REPRESSED_MARKS)) {
       next;
     }
     if (!defined $segmentation->{overlaps}->{repressed}->{$items[0]}) {
@@ -2338,7 +2562,7 @@ sub make_ChromHMM_state_bedfile {
 
 sub set_cutoffs {
   my $options = shift;
-  my $cutoffs_file = "$options->{working_dir}/cutoffs";
+  my $cutoffs_file  = "$options->{working_dir}/cutoffs";
   my $selected_file = "$options->{working_dir}/selected";
 
   if (must_compute($options,$cutoffs_file) || must_compute($options,$selected_file)) {
@@ -2347,15 +2571,27 @@ sub set_cutoffs {
     foreach my $segmentation (@{$options->{segmentations}}) {
       select_segmentation_cutoffs($options, $segmentation);
     }
-    store $options->{cutoffs}, $cutoffs_file;
-    store $options->{selected_states}, $selected_file;
+#     store $options->{cutoffs}, $cutoffs_file;
+#     store $options->{selected_states}, $selected_file;
+    
+    store_data_in_file({
+      file => $cutoffs_file, 
+      data => $options->{cutoffs},
+    });
+    store_data_in_file({
+      file => $selected_file,
+      data => $options->{selected_states},
+    });
+
   } else {
-    $options->{cutoffs} = retrieve $cutoffs_file;
-    $options->{selected_states} = retrieve $selected_file;
+#     $options->{cutoffs} = retrieve $cutoffs_file;
+#     $options->{selected_states} = retrieve $selected_file;
+    $options->{cutoffs}         = load_data_from_file($cutoffs_file);
+    $options->{selected_states} = load_data_from_file($selected_file);
   }
 }
 
-=head print_cutoffs
+=head2 print_cutoffs
 
   Desription: print cutoffs into logs
   Returntype: undef
@@ -2415,7 +2651,7 @@ sub select_segmentation_cutoffs {
   $options->{selected_states}->{$segmentation->{name}} = {};
   $options->{cutoffs}->{$segmentation->{name}} = {};
 
-  foreach my $label (@functional_labels) {
+  foreach my $label (FUNCTIONAL_LABELS) {
     $options->{selected_states}->{$segmentation->{name}}->{$label} = select_relevant_states($options, $segmentation, $label);
     $options->{cutoffs}->{$segmentation->{name}}->{$label} = select_segmentation_cutoff($options, $segmentation, $label);
   }
@@ -2430,7 +2666,7 @@ sub select_segmentation_cutoffs {
     . $segmentation->{type} (ChromHMM or Segway)
     . $segmentation->{states} List of strings
     . $segmentation->{celltypes} List of strings
-  Arg3: label, string contained in @labels
+  Arg3: label, string contained in LABELS
   Returntype: hashref:
     - state => weight scalar
 
@@ -2462,7 +2698,7 @@ sub select_relevant_states {
     . $segmentation->{type} (ChromHMM or Segway)
     . $segmentation->{states} List of strings
     . $segmentation->{celltypes} List of strings
-  Arg3: label, string contained in @labels
+  Arg3: label, string contained in LABELS
   Arg4: state, string
   Returntype: weight scalar
 
@@ -2476,11 +2712,16 @@ sub test_relevance {
   my $genome_length = $options->{genome_length};
   
   for (my $i = 1; $i < scalar(keys %{$segmentation->{celltypes}}); $i++) {
+  
     my $enrichment = compute_enrichment_between_files($reference, "gt $i $file", $genome_length);
+    
     print_log("Enrichment\t$state\t$i:\t$enrichment\n");
+    
     if ($enrichment == 0) {
       return 0;
-    } elsif (compute_enrichment_between_files($reference, "gt $i $file", $genome_length) > $weak_cutoff) {
+    }
+    
+    if ($enrichment > WEAK_CUTOFF) {
       return $i;
     }
   }
@@ -2497,7 +2738,7 @@ sub test_relevance {
     . $segmentation->{type} (ChromHMM or Segway)
     . $segmentation->{states} List of strings
     . $segmentation->{celltypes} List of strings
-  Arg3: label, string contained in @labels
+  Arg3: label, string contained in LABELS
   Returntype: cutoff scalar
 
 =cut
@@ -2646,13 +2887,18 @@ sub compute_regulatory_features {
   # Compute TF binding
   my $tfbs_signal = "$options->{trackhub_dir}/overview/all_tfbs.bw";
   my $tfbs_tmp = "$options->{working_dir}/build/tfbs.tmp.bed";
-  my $awk_tfbs = make_awk_command("tfbs");
+  my $awk_tfbs = make_awk_cmd_bedgraph_to_bed9("tfbs");
   run("wiggletools write_bg - unit $tfbs_signal | $awk_tfbs > $tfbs_tmp");
 
   #Compute open dnase
   my $dnase_tmp = "$options->{working_dir}/build/dnase.tmp.bed";
   my @dnase_files = glob "$options->{working_dir}/celltype_dnase/*.bed";
-  my $awk_dnase = make_awk_command("dnase");
+  
+  if (! @dnase_files) {
+    confess("Can't find dnase bed files in $options->{working_dir}/celltype_dnase/ !");
+  }
+  
+  my $awk_dnase = make_awk_cmd_bedgraph_to_bed9("dnase");
   run("wiggletools write_bg - unit sum ".join(" ", @dnase_files)." | $awk_dnase > $dnase_tmp");
 
   #############################################
@@ -2714,7 +2960,8 @@ sub compute_regulatory_features {
   my $tss = undef;
   my $demoted = undef;
   if (defined $tss_tmp2) {
-    $tss = "$options->{working_dir}/build/tss.bed";
+    #$tss = "$options->{working_dir}/build/tss.bed";
+    $tss = "$options->{working_dir}/build/tss_segmentation_features.bed";
     run("bedtools intersect -u -wa -a $tss_tmp2 -b $options->{tss} $final_filter | sort -k1,1 -k2,2n > $tss");
 
     # All features that do not go into a demoted file
@@ -2728,7 +2975,7 @@ sub compute_regulatory_features {
   my $proximal = undef;
   if (defined $proximal_tmp2 or defined $demoted) {
     $proximal = "$options->{working_dir}/build/proximal.bed";
-    my $awk_proximal = make_awk_command("proximal", 0);
+    my $awk_proximal = make_awk_cmd_bedgraph_to_bed9("proximal", 0);
     my $files = join(" ", grep defined, ($proximal_tmp2, $demoted));
     run("wiggletools write_bg - unit sum $files | $awk_proximal $remove_tss $final_filter > $proximal");
   }
@@ -2766,7 +3013,7 @@ sub compute_regulatory_features {
   convert_to_bigBed($options, $bed_output);
 }
 
-=header2 expand_boundaries
+=head2 expand_boundaries
 
   Description: expands the boundaries of a bed file
     to encompass any overlapping regions contained in an array of bed files
@@ -2795,7 +3042,7 @@ sub expand_boundaries {
   }
 }
 
-=header2
+=head2
 
   Description: computes regions based on regions where a weighted
     sum of segmentation states are above the required threshold
@@ -2824,13 +3071,13 @@ sub compute_initial_regions {
   if (length $wiggletools_params == 0) {
     return undef;
   } else {
-    my $awk_cmd = make_awk_command($label);
+    my $awk_cmd = make_awk_cmd_bedgraph_to_bed9($label);
     run("$wiggletools_cmd $wiggletools_params | $awk_cmd > $output");
     return $output;
   }
 }
 
-=header2
+=head2
 
   Description: Creates a wiggletools command which computes the weighted sum of segmentation
     states which share a given label
@@ -2864,7 +3111,7 @@ sub weighted_summary_definition {
   }
 }
 
-=header2 make_awk_command
+=head2 make_awk_cmd_bedgraph_to_bed9
 
   Description: Creates an awk command that takes in a BedGraph and converts into a Bed9
   Arg1: label assigned to the regions of the bedgraph
@@ -2873,7 +3120,7 @@ sub weighted_summary_definition {
 
 =cut
 
-sub make_awk_command {
+sub make_awk_cmd_bedgraph_to_bed9 {
   my ($label, $expand) = @_;
   my $expansion = "if (\$2 > 0) \$2 -= 1; \$3 += 1;";
   if (defined $expand && $expand == 0) {
@@ -2883,7 +3130,7 @@ sub make_awk_command {
   return "awk \'BEGIN {OFS=\"\\t\"} {$expansion \$4=\"${label}_\"NR; \$5=1000; \$6=\".\"; \$7=\$2; \$8=\$3; \$9=\"$COLORS{$label}\"; print }\'";
 }
 
-=header2 compute_states
+=head2 compute_states
 
   Description: Computing cell-type specific state
     Given the Regulatory Build, you want to know which
@@ -2913,7 +3160,7 @@ sub compute_states {
   }
 }
 
-=header2 compute_segmentation_states
+=head2 compute_segmentation_states
 
   Description: Computing cell-type specific state
     Given the Regulatory Build, you want to know which
@@ -2947,7 +3194,7 @@ sub compute_segmentation_states {
   }
 }
 
-=header2 compute_celltype_states
+=head2 compute_celltype_states
 
   Description: Computing cell-type specific state
     Given the Regulatory Build, you want to know which
@@ -2979,7 +3226,7 @@ sub compute_celltype_state {
   }
 }
 
-=header2 compute_ChromHMM_celltype_states
+=head2 compute_ChromHMM_celltype_states
 
   Description: Computing cell-type specific state
     Given the Regulatory Build, you want to know which
@@ -3003,12 +3250,12 @@ sub compute_ChromHMM_celltype_state {
   my ($options, $segmentation, $celltype) = @_;
   my $output = "$options->{trackhub_dir}/projected_segmentations/$celltype.bed";
 
-  foreach my $prelabel ((@functional_labels, 'repressed', 'poised')) {
+  foreach my $prelabel ((FUNCTIONAL_LABELS, 'repressed', 'poised')) {
     precompute_ChromHMM_label_state($options, $segmentation, $celltype, $prelabel);
   }
 
   my @bedfiles = ();
-  foreach my $label (@labels) {
+  foreach my $label (LABELS) {
     push @bedfiles, compute_ChromHMM_label_state($options, $segmentation, $celltype, $label);
   }
 
@@ -3016,7 +3263,7 @@ sub compute_ChromHMM_celltype_state {
   convert_to_bigBed($options, $output);
 }
 
-=header2 precompute_ChromHMM_label_states
+=head2 precompute_ChromHMM_label_states
 
   Description: Computing cell-type specific state
     Given the Regulatory Build, you want to know where evidence
@@ -3054,7 +3301,7 @@ sub precompute_ChromHMM_label_state {
   }
 }
 
-=header2 compute_ChromHMM_celltype_states
+=head2 compute_ChromHMM_celltype_states
 
   Description: Computing cell-type specific state
     Given the Regulatory Build, you want to know which
@@ -3077,61 +3324,79 @@ sub precompute_ChromHMM_label_state {
 =cut
 
 sub compute_ChromHMM_label_state {
-  my ($options, $segmentation, $celltype, $label) = @_;
-  my $output = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$label.final.bed";
+  my ($options, $segmentation, $epigenome_production_name, $label) = @_;
+  my $output = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$epigenome_production_name/$label.final.bed";
   my $reference = "$options->{working_dir}/build/$label.bed";
-
-  ## Hack to resolve issue https://www.ebi.ac.uk/panda/jira/browse/ENSREGULATION-417
-  (my $epigenome_name = $celltype) =~ s/_25_SEGMENTS//;
-  my $clean_epigenome_name = clean_name($epigenome_name);
+  
+  if ($label eq 'tss') {
+    $reference = $options->{tss};
+  }
+  
+  my $reference_exists = -e $reference && -s $reference;
+  
+  # Ok to skip?
+  if (! $reference_exists && $label eq 'proximal') {
+    return;
+  }
+  if (! $reference_exists && $label eq 'distal') {
+    return;
+  }
+  if (! $reference_exists && $label eq 'ctcf') {
+    return;
+  }
+  
+  # This one is bad.
+  if (! $reference_exists) {
+    confess("Expected summary file for the label $label here: ${reference}, but it doesn't exist (or is empty)!");
+  }
 
   my $temp;
   if ($label eq 'tfbs') {
-    #$temp = "$options->{working_dir}/celltype_tf/$celltype.bed";
-    $temp = "$options->{working_dir}/celltype_tf/$clean_epigenome_name.bed";
+    $temp = "$options->{working_dir}/celltype_tf/$epigenome_production_name.bed";
   } elsif ($label eq 'dnase') {
-    #$temp = "$options->{working_dir}/celltype_dnase/$celltype.bed";
-    $temp = "$options->{working_dir}/celltype_dnase/$clean_epigenome_name.bed";
+    $temp = "$options->{working_dir}/celltype_dnase/$epigenome_production_name.bed";
   } else {
-    $temp = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$label.bed";
+    $temp = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$epigenome_production_name/$label.bed";
   }
+  
+  my $both_files_exist = $reference_exists && defined $temp && -e $temp && -s $temp;
 
-  if (-e $reference && -s $reference && defined $temp && -e $temp && -s $temp) {
-    my $repressed = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/repressed.bed";
-    my $poised = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/poised.bed";
-
-    # POISED => POISED
-    my $temp2 = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$label.poised.bed";
-    my $poised_color = $COLORS{poised};
-    run("bedtools intersect -wa -u -a $reference -b $poised | awk \'{\$9=\"$poised_color\"; print}\' > $temp2");
-
-    # !POISED && ACTIVE && REPRESSED => POISED
-    my $temp3 = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$label.active_repressed.bed";
-    run("bedtools intersect -wa -v -a $reference -b $poised | bedtools intersect -wa -u -a stdin -b $temp | bedtools intersect -wa -u -a stdin -b $repressed | awk \'{\$9=\"$poised_color\"; print}\' > $temp3");
-
-    # !POISED && !ACTIVE && REPRESSED => REPRESSED
-    my $temp4 = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$label.repressed.bed";
-    my $repressed_color = $COLORS{repressed};
-    run("bedtools intersect -wa -v -a $reference -b $poised | bedtools intersect -wa -v -a stdin -b $temp | bedtools intersect -wa -u -a stdin -b $repressed | awk \'{\$9=\"$repressed_color\"; print}\' > $temp4");
-
-    # !POISED && ACTIVE && !REPRESSED => ACTIVE
-    my $temp5 = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$label.active.bed";
-    run("bedtools intersect -wa -v -a $reference -b $poised | bedtools intersect -wa -u -a stdin -b $temp | bedtools intersect -wa -v -a stdin -b $repressed > $temp5");
-
-    # !POISED && !ACTIVE && !REPRESSED => DEAD
-    my $temp6 = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$celltype/$label.inactive.bed";
-    my $dead_color = $COLORS{dead};
-    run("bedtools intersect -wa -v -a $reference -b $poised | bedtools intersect -wa -v -a stdin -b $temp | bedtools intersect -wa -v -a stdin -b $repressed | awk \'{\$9=\"$dead_color\"; print}\' > $temp6");
-
-    # Merge all this into one bed file
-    run("sort -m $temp2 $temp3 $temp4 $temp5 $temp6 -k1,1 -k2,2n > $output");
-    return $output;
-  } else {
+  if (! $both_files_exist) {
     # Could not find evidence for or against, do not report any regions
     my $na_color = $COLORS{na};
     run("cat $reference | awk \'{\$9=\"$na_color\"; print}\' > $output");
     return $output;
   }
+
+  my $repressed = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$epigenome_production_name/repressed.bed";
+  my $poised    = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$epigenome_production_name/poised.bed";
+
+  # POISED => POISED
+  my $temp2 = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$epigenome_production_name/$label.poised.bed";
+  my $poised_color = $COLORS{poised};
+  run("bedtools intersect -wa -u -a $reference -b $poised | awk \'{\$9=\"$poised_color\"; print}\' > $temp2");
+
+  # !POISED && ACTIVE && REPRESSED => POISED
+  my $temp3 = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$epigenome_production_name/$label.active_repressed.bed";
+  run("bedtools intersect -wa -v -a $reference -b $poised | bedtools intersect -wa -u -a stdin -b $temp | bedtools intersect -wa -u -a stdin -b $repressed | awk \'{\$9=\"$poised_color\"; print}\' > $temp3");
+
+  # !POISED && !ACTIVE && REPRESSED => REPRESSED
+  my $temp4 = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$epigenome_production_name/$label.repressed.bed";
+  my $repressed_color = $COLORS{repressed};
+  run("bedtools intersect -wa -v -a $reference -b $poised | bedtools intersect -wa -v -a stdin -b $temp | bedtools intersect -wa -u -a stdin -b $repressed | awk \'{\$9=\"$repressed_color\"; print}\' > $temp4");
+
+  # !POISED && ACTIVE && !REPRESSED => ACTIVE
+  my $temp5 = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$epigenome_production_name/$label.active.bed";
+  run("bedtools intersect -wa -v -a $reference -b $poised | bedtools intersect -wa -u -a stdin -b $temp | bedtools intersect -wa -v -a stdin -b $repressed > $temp5");
+
+  # !POISED && !ACTIVE && !REPRESSED => DEAD
+  my $temp6 = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$epigenome_production_name/$label.inactive.bed";
+  my $dead_color = $COLORS{dead};
+  run("bedtools intersect -wa -v -a $reference -b $poised | bedtools intersect -wa -v -a stdin -b $temp | bedtools intersect -wa -v -a stdin -b $repressed | awk \'{\$9=\"$dead_color\"; print}\' > $temp6");
+
+  # Merge all this into one bed file
+  run("sort -m $temp2 $temp3 $temp4 $temp5 $temp6 -k1,1 -k2,2n > $output");
+  return $output;
 }
 
 =head2
@@ -3184,12 +3449,20 @@ sub make_track_hub_headers {
   my $options = shift;
   my $fh;
 
-  open($fh, ">", "$options->{output_dir}/genomes.txt");
+  open(
+    $fh, 
+    ">", 
+    "$options->{output_dir}/genomes.txt" 
+  ) or confess("Can't open file for writing " . "$options->{output_dir}/genomes.txt");
   print $fh "genome $options->{assembly}\n";
   print $fh "trackDb trackDb_$options->{assembly}.txt\n";
   close($fh);
 
-  open($fh, ">", "$options->{output_dir}/hub.txt");
+  open(
+    $fh, 
+    ">", 
+    "$options->{output_dir}/hub.txt"
+  ) or confess("Can't open file for writing " . "$options->{output_dir}/hub.txt");
   print $fh "hub EnsemblRegulatoryBuild\n";
   print $fh "shortLabel Beta Regulatory Build\n";
   print $fh "longLabel Evidence summaries and provisional results for the new Ensembl Regulatory Build\n";
