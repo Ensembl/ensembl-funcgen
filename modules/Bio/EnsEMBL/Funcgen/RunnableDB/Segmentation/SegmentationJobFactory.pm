@@ -57,6 +57,20 @@ sub run {
   my $funcgen_dbc = $funcgen_adaptor->dbc;
   
   my $segmentation_parameter_file = $tempdir . '/segmentation_parameter_file.txt';
+  
+  my $core_dbc_password    = $core_dbc->password;
+  my $funcgen_dbc_password = $funcgen_dbc->password;
+  
+  # If there is no password, set it to "". These parameters areare used on 
+  # the command line.
+  #
+  
+  if (! defined $core_dbc_password) {
+    $core_dbc_password = '""';
+  }
+  if (! defined $funcgen_dbc_password) {
+    $funcgen_dbc_password = '""';
+  }
 
   my $input_id = {
     chromosome_length_file         => $chromosome_length_file,
@@ -72,13 +86,13 @@ sub run {
     core_host     => $core_dbc->host,
     core_port     => $core_dbc->port,
     core_username => $core_dbc->username,
-    core_password => $core_dbc->password,
+    core_password => $core_dbc_password,
     core_dbname   => $core_dbc->dbname,
 
     funcgen_host     => $funcgen_dbc->host,
     funcgen_port     => $funcgen_dbc->port,
     funcgen_username => $funcgen_dbc->username,
-    funcgen_password => $funcgen_dbc->password,
+    funcgen_password => $funcgen_dbc_password,
     funcgen_dbname   => $funcgen_dbc->dbname,
 
   };
