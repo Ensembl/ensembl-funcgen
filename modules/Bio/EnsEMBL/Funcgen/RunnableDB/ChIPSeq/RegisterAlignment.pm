@@ -31,7 +31,7 @@ sub run {
   my $experiment_name  = $align_plan->{from_experiment};
   my $ensembl_analysis = $align_plan->{ensembl_analysis};
   
-  my $remove_duplicates_ensembl_analysis = $align_plan->{analysis};
+  my $remove_duplicates_ensembl_analysis = $plan->{analysis};
   #my $is_complete     = $align_plan->{is_complete};
   
   my $experiment_adaptor = Bio::EnsEMBL::Registry
@@ -192,7 +192,7 @@ sub register_alignment {
     );
 
   if (! defined $alignment_analysis) {
-    die;
+    die("No analysis $logic_name in the database!");
   }
 
   my $alignment = $alignment_adaptor->fetch_by_name($alignment_name);
