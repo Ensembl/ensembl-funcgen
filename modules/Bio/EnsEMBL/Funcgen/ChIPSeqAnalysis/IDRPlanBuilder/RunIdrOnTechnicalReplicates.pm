@@ -91,13 +91,13 @@ sub construct {
       -name                    => $alignment_namer->base_name_with_duplicates,
       -to_gender               => $to_gender,
       -to_assembly             => $assembly,
-      -analysis                => 'align',
+      -analysis                => ALIGNMENT_ANALYSIS,
       -from_experiment         => $experiment->name,
       -output_real             => $alignment_namer->bam_file_with_duplicates,
       -output_stored           => $alignment_namer->bam_file_with_duplicates_stored,
       -output_format           => BAM_FORMAT,
       -is_control              => $experiment->is_control,
-      -has_all_reads           => 0,
+      -has_all_reads           => FALSE,
     );
     
     my $alignment_plan = $alignment_plan_factory->product;
@@ -110,7 +110,6 @@ sub construct {
     $remove_duplicates_plan_builder->construct;
     
     my $remove_duplicates_plan = $remove_duplicates_plan_builder->get_plan;
-
     
     push @align_replicates_plan, create_ref($remove_duplicates_plan);
     
@@ -120,7 +119,7 @@ sub construct {
   
   my $idr_plan = {
     alignment_replicates => \@align_replicates_plan,
-    type                 => 'idr',
+    type                 => IDR_ANALYSIS,
     name                 => $experiment->name,
     strategy             => RUN_IDR_ON_TECHNICAL_REPLICATES
   };

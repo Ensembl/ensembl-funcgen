@@ -108,9 +108,9 @@ sub _construct_bam_to_bed_conversion_plan {
       
       my $signal_alignment_as_bed = {
         input      => $signal_alignment_for_peak_calling,
-        type       => 'alignment',
+        type       => ALIGNMENT_ANALYSIS,
         name       => $alignment_namer->base_name_no_duplicates,
-        task       => 'convert bam to bed',
+        task       => CONVERT_BAM_TO_BED_ANALYSIS,
         is_control => 0,
         output     => {
           real => $alignment_namer->bed_file_no_duplicates,
@@ -119,9 +119,9 @@ sub _construct_bam_to_bed_conversion_plan {
       };
       my $control_alignment_as_bed = {
         input      => $control_alignment_for_peak_calling,
-        type       => 'alignment',
+        type       => ALIGNMENT_ANALYSIS,
         name       => $control_alignment_namer->base_name_no_duplicates,
-        task       => 'convert bam to bed',
+        task       => CONVERT_BAM_TO_BED_ANALYSIS,
         is_control => 1,
         output     => {
           real => $control_alignment_namer->bed_file_no_duplicates,
@@ -160,10 +160,10 @@ sub _construct_peak_calling_plan {
   my $analysis_logic_name;
   
   if ($peak_calling_strategy eq CALL_BROAD_PEAKS) {
-    $analysis_logic_name = 'ccat_histone';
+    $analysis_logic_name = ENSEMBL_BROAD_PEAK_CALLING_ANALYSIS;
   }
   if ($peak_calling_strategy eq CALL_NARROW_PEAKS) {
-    $analysis_logic_name = 'SWEmbl_default';
+    $analysis_logic_name = ENSEMBL_NARROW_PEAK_CALLING_ANALYSIS;
   }
   
   my $feature_type = $experiment->feature_type;
@@ -195,8 +195,8 @@ sub _construct_peak_calling_plan {
       },
       run_idr               => $self->_get_idr,
       peak_calling_strategy => $peak_calling_strategy,
-      type                  => 'peak',
-      task                  => 'call_peaks',
+      type                  => PEAK_CALLING_TYPE,
+      task                  => CALL_PEAKS_ANALYSIS,
       feature_type          => $feature_type_name,
       epigenome             => $epigenome_name,
       analysis              => $analysis_logic_name,

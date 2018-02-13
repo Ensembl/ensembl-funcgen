@@ -6,6 +6,7 @@ use Carp;
 
 use base qw( Exporter );
 use vars qw( @EXPORT_OK );
+use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Constants qw ( :all );
 
 @EXPORT_OK = qw(
   create_ref
@@ -47,7 +48,7 @@ sub create_ref {
   # For each experiment, there is only one of these, so there is no
   # need to name them to keep them separate.
   #
-  if ($type eq 'idr' || $type eq 'call_peaks') {
+  if ($type eq IDR_ANALYSIS || $type eq CALL_PEAKS_ANALYSIS) {
     $ref = '%' . $type . ':' . 'NA' . '%';
   }
   return $ref;
@@ -151,7 +152,7 @@ sub _resolve_nonterminal_symbols_scalar {
   if ($is_nonterminal) {
   
     my $product;
-    if ($type eq 'idr' || $type eq 'call_peaks') {
+    if ($type eq IDR_ANALYSIS || $type eq CALL_PEAKS_ANALYSIS) {
         $product = $execution_plan->{$type};
     } else {
         $product = $execution_plan->{$type}->{$name};
