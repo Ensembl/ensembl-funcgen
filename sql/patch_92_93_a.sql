@@ -1,6 +1,5 @@
 -- Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 -- Copyright [2016-2018] EMBL-European Bioinformatics Institute
---
 -- Licensed under the Apache License, Version 2.0 (the "License");
 -- you may not use this file except in compliance with the License.
 -- You may obtain a copy of the License at
@@ -14,11 +13,11 @@
 -- limitations under the License.
 
 /**
-@header patch_91_92_b.sql - Drop column paired_with from table read_file
-@desc   Drop column paired_with from table read_file
+@header patch_91_92_a.sql - schema version
+@desc   Update schema_version in meta table to 92
 */
 
-ALTER TABLE read_file DROP COLUMN paired_with;
+UPDATE meta SET meta_value='93' WHERE meta_key='schema_version';
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_91_92_b.sql|Drop column paired_with from table read_file');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_a.sql|schema_version');

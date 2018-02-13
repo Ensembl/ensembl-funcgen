@@ -31,4 +31,4 @@ alter table idr change column type type enum('on biological replicates','on tech
 alter table idr change column max_peaks max_peaks int(11) unsigned default NULL;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_91_92_g.sql|New table idr');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_g.sql|New table idr');

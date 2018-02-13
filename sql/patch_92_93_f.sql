@@ -26,4 +26,4 @@ alter table alignment add column to_gender enum('male','female','hermaphrodite',
 alter table alignment add column is_complete boolean default null;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_91_92_f.sql|Updates to alignment table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_f.sql|Updates to alignment table');

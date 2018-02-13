@@ -13,14 +13,13 @@
 -- limitations under the License.
 
 /**
-@header patch_91_92_m.sql - Remove constraints
-@desc   Remove constraints to allow failed runs to be registered.
+@header patch_91_92_l.sql - epigenome columns
+@desc   epigenome columns
 */
 
-alter table chance modify path varchar(512);
-
-alter table phantom_peak modify num_reads    int(12) unsigned default null;
-alter table phantom_peak modify phantom_peak int(17) unsigned default null;
+alter table epigenome drop column ontology_accession;
+alter table epigenome drop column ontology;
+alter table epigenome drop column tissue;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_91_92_m.sql|Remove constraints');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_l.sql|epigenome columns');

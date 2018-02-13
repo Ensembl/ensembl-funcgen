@@ -13,13 +13,17 @@
 -- limitations under the License.
 
 /**
-@header patch_91_92_l.sql - epigenome columns
-@desc   epigenome columns
+@header patch_91_92_h.sql - execution_plan table
+@desc   execution_plan table
 */
 
-alter table epigenome drop column ontology_accession;
-alter table epigenome drop column ontology;
-alter table epigenome drop column tissue;
+DROP TABLE IF EXISTS execution_plan;
+CREATE TABLE execution_plan (
+  execution_plan_id int(18) unsigned NOT NULL AUTO_INCREMENT,
+  experiment_id int(16) unsigned NOT NULL,
+  execution_plan text,
+  PRIMARY KEY (execution_plan_id)
+);
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_91_92_l.sql|epigenome columns');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_h.sql|execution_plan table');
