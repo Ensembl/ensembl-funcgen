@@ -2,6 +2,7 @@ package Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignmentNamer;
 
 use strict;
 use File::Spec;
+use Bio::EnsEMBL::Utils::Exception qw( throw );
 
 use Role::Tiny::With;
 with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
@@ -35,8 +36,12 @@ sub unset_technical_replicate_number {
 sub name {
 
   my $self       = shift;
+  my $experiment = $self->experiment;
   
-  my $experiment                  = $self->experiment;
+  if (! defined $experiment) {
+    throw("No experiment passed!");
+  }
+  
   my $biological_replicate_number = $self->biological_replicate_number;
   my $technical_replicate_number  = $self->technical_replicate_number;
   
