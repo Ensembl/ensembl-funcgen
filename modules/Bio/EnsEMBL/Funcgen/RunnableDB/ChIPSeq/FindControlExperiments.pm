@@ -34,22 +34,31 @@ sub run {
     lock_execution_plan($current_execution_plan_expanded);
     
     my $alignment_plans = $current_execution_plan_expanded->{alignment};
+    
+    ALIGNMENT_PLAN:
     foreach my $alignment_name (keys %$alignment_plans) {
     
       my $alignment_plan = $alignment_plans->{$alignment_name};
       
+#       if (! exists $alignment_plan->{is_control}) {
+#         die(Dumper($alignment_plan));
+#       }
+      
       my $want_this
-        =    ( $alignment_plan->{is_control}                       )
+        =    
+             ( $alignment_plan->{name}     ne 'No control'         )
+          && ( $alignment_plan->{is_control}                       )
           && ( $alignment_plan->{analysis} eq 'remove_duplicates'  )
       ;
-      if ($want_this) {
-        $found_control_alignments{$alignment_name} = $alignment_plan;
-        
-        if (! exists $plan_depending_on_control{$alignment_name}) {
-          $plan_depending_on_control{$alignment_name} = []
-        }
-        push $plan_depending_on_control{$alignment_name}, $current_execution_plan;
+      if (! $want_this) {
+        next ALIGNMENT_PLAN;
       }
+      $found_control_alignments{$alignment_name} = $alignment_plan;
+      
+      if (! exists $plan_depending_on_control{$alignment_name}) {
+        $plan_depending_on_control{$alignment_name} = []
+      }
+      push $plan_depending_on_control{$alignment_name}, $current_execution_plan;
     }
   }
 
