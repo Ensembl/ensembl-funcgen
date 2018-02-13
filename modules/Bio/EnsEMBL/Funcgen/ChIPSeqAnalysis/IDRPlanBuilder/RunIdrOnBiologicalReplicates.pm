@@ -13,6 +13,10 @@ use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_get
 );
 
+use Role::Tiny::With;
+with 'Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::summarise_ReadFile';
+with 'Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::select_EnsemblAlignmentAnalysis';
+
 sub set_Alignments {
   my $self = shift;
   my $obj  = shift;
@@ -74,12 +78,36 @@ sub construct {
     );
     
     my @merge_technical_replicates;
+    
+    my $has_single_end_reads_only = 1;
+    my $has_paired_end_reads_only = 1;
+    
+    READ_FILE_EXPERIMENTAL_CONFIGURATION:
     foreach my $read_file_experimental_configuration 
       (@$read_file_experimental_configurations) {
       
       my $read_file = $read_file_experimental_configuration->get_ReadFile;
-      push @merge_technical_replicates, $read_file->name;
+      
+      if ($read_file->is_paired_end) {
+        $has_single_end_reads_only = undef;
+      }
+      if (! $read_file->is_paired_end) {
+        $has_paired_end_reads_only = undef;
+      }
+
+      if ($read_file->is_paired_end && $read_file->paired_end_tag != 1) {
+        next READ_FILE_EXPERIMENTAL_CONFIGURATION;
+      }
+
+      push @merge_technical_replicates, summarise_ReadFile($read_file);
+      next READ_FILE_EXPERIMENTAL_CONFIGURATION;
     }
+
+    my $ensembl_alignment_analysis = select_EnsemblAlignmentAnalysis({
+      experiment => $experiment,
+      has_single_end_reads_only => $has_single_end_reads_only,
+      has_paired_end_reads_only => $has_paired_end_reads_only,
+    });
 
     use Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator;
     my $bwa_index_locator = Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator->new;
@@ -101,13 +129,13 @@ sub construct {
       -name                    => $alignment_namer->base_name_with_duplicates,
       -to_gender               => $to_gender,
       -to_assembly             => $assembly,
-      -analysis                => 'align',
+      -ensembl_analysis        => $ensembl_alignment_analysis,
       -from_experiment         => $experiment->name,
       -output_real             => $alignment_namer->bam_file_with_duplicates,
       -output_stored           => $alignment_namer->bam_file_with_duplicates_stored,
       -output_format           => BAM_FORMAT,
       -is_control              => $experiment->is_control,
-      -has_all_reads           => 0,
+      -has_all_reads           => FALSE,
     );
 
     my $alignment_plan = $alignment_plan_factory->product;
@@ -129,7 +157,7 @@ sub construct {
   
   my $idr_plan = {
     alignment_replicates => \@align_technical_replicates_plan,
-    type                 => 'idr',
+    type                 => IDR_ANALYSIS,
     name                 => $experiment->name,
     strategy             => RUN_IDR_ON_BIOLOGICAL_REPLICATES
   };

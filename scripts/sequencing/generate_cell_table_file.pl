@@ -10,13 +10,11 @@ use Bio::EnsEMBL::Utils::Logger;
 my $registry;
 my $species;
 my $cell_table_file;
-my $epigenome_name;
 
 my %config_hash = (
   'registry'        => \$registry,
   'species'         => \$species,
   'cell_table_file' => \$cell_table_file,
-  'epigenome'       => \$epigenome_name,
 );
 
 my $result = GetOptions(
@@ -24,7 +22,6 @@ my $result = GetOptions(
   'registry=s',
   'species=s',
   'cell_table_file=s',
-  'epigenome=s',
 );
 
 Bio::EnsEMBL::Registry->load_all($registry);
@@ -69,13 +66,13 @@ my $sql = <<SQL
       "H3K4me2", 
       "H3K4me3", 
       "H3K9ac", 
+      "H3K9me3",
       "H3K27ac", 
       "H3K27me3", 
       "H3K36me3", 
-      "H4K20me1", 
+      "DNase1",
       "CTCF"
     )
-    and epigenome.name = "$epigenome_name"
   order by 
     epigenome, feature_type
 SQL

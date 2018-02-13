@@ -34,6 +34,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::ReadFileExperimentalConfigurationAdaptor;
 
 use strict;
 use base 'Bio::EnsEMBL::Funcgen::DBSQL::GenericAdaptor';
+use Bio::EnsEMBL::Utils::Exception qw( throw );
 
 sub object_class {
   return 'Bio::EnsEMBL::Funcgen::ReadFileExperimentalConfiguration';
@@ -48,6 +49,11 @@ sub _tables {
 sub _load_dependencies {
     my $self = shift;
     my $read_file_experimental_configuration = shift;
+    
+    if (! defined $read_file_experimental_configuration) {
+      throw("read_file_experimental_configuration object was not defined!");
+    }
+    
     my $read_file_id = $read_file_experimental_configuration->_read_file_id;
     
     my $read_file_adaptor = $self->db->get_ReadFileAdaptor;
@@ -122,6 +128,11 @@ sub fetch_all_by_experiment_id {
 sub fetch_all_by_Experiment {
   my $self = shift;
   my $experiment = shift;
+  
+  if (! defined $experiment) {
+    throw("No experiment passed!");
+  }
+  
   my $experiment_id = $experiment->dbID;
   return $self->fetch_all_by_experiment_id($experiment_id);
 }
@@ -180,6 +191,27 @@ sub fetch_all_biological_replicate_numbers_from_Experiment {
       },
   );
   return \@biological_replicate_numbers;
+}
+
+sub fetch_by_ReadFileExperimentalConfiguration {
+  my $self = shift;
+  my $read_file_experimental_configuration = shift;
+
+  my $read_file_id = $read_file_experimental_configuration->_read_file_id;
+  
+  if ($read_file_id) {
+    return $self->fetch_by_dbID($read_file_id);
+  }
+
+  my $constraint = join ' and ', (
+    'technical_replicate  = ' . $read_file_experimental_configuration->technical_replicate,
+    'biological_replicate = ' . $read_file_experimental_configuration->biological_replicate,
+    'paired_end_tag       = ' . $read_file_experimental_configuration->paired_end_tag,
+    'multiple             = ' . $read_file_experimental_configuration->multiple,
+    'experiment_id        = ' . $read_file_experimental_configuration->experiment_id,
+  );
+  
+  return $self->fetch_single_object($constraint);
 }
 
 sub count_biological_replicates_from_Experiment {

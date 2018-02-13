@@ -207,7 +207,7 @@ sub update {
       last_annotation_update = ?,
       feature_type_id = ?,
       analysis_id = ?,
-      is_current = ?
+      is_current = ?,
       sample_regulatory_feature_id = ?
     where regulatory_build_id = ?
   ");

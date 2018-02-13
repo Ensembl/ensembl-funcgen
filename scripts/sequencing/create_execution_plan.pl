@@ -27,6 +27,8 @@ limitations under the License.
 =head1 create_execution_plan.pl
 
   create_execution_plan.pl -registry /homes/mnuhn/work_dir_ersa/lib/ensembl-funcgen/registry.pm -species homo_sapiens | less
+  create_execution_plan.pl -registry /homes/mnuhn/work_dir_ersa/lib/ensembl-funcgen/registry_new_mouse_encode_data.pm -species mus_musculus | less
+  
 
 =head1 SYNOPSIS
 
@@ -69,27 +71,20 @@ my $root_dir = '';
 use Bio::EnsEMBL::Registry;
 Bio::EnsEMBL::Registry->load_all($registry);
 
-my $funcgen_db_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
-my $core_db_adaptor    = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'core');
+use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanFactory;
 
-my $experiment_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'Experiment');
-my $coordsystem_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'core', 'coordsystem');
+my $execution_plan_factory
+  = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanFactory->new(
+    -root_dir                => $root_dir,
+    -species                 => $species,
+    -ensembl_release_version => $ensembl_release_version,
+  );
 
-my $default_chromosome_coordsystem = $coordsystem_adaptor->fetch_by_name('chromosome');
-my $default_assembly = $default_chromosome_coordsystem->version;
-
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::DirectoryNameBuilder;
-my $directory_name_builder 
-  = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::DirectoryNameBuilder
-    ->new(
-      -root_dir                => $root_dir,
-      -species                 => $species,
-      -assembly                => $default_assembly,
-      -ensembl_release_version => $ensembl_release_version,
-    );
-
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Director;
-my $chip_seq_analysis_director = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Director->new;
+my $experiment_adaptor = Bio::EnsEMBL::Registry->get_adaptor(
+  $species,
+  'funcgen',
+  'Experiment'
+);
 
 use Bio::EnsEMBL::Utils::SqlHelper;
 my $sql_helper = Bio::EnsEMBL::Utils::SqlHelper->new(
@@ -112,30 +107,39 @@ my $do_all_sql =<<SQL
         "Polymerase"
       )
       and experimental_group.name != "BLUEPRINT"
+      and experiment.name not in ("MEL_cell_line_____DNase1_DNase-Seq_ENCODE92")
 SQL
 ;
 
-my $do_one_idr_type_each_sql =<<SQL
-    select 
-      experiment_id 
-    from 
-      experiment 
-      join feature_type using (feature_type_id) 
-    where 
-      experiment.name in (
-        'iPS_20b_H3K27me3_ChIP-Seq_Roadmap85',
-        'H1_neuronal_progenitor_H3K27ac_ChIP-Seq_Roadmap85',
-        'Psoas_Muscle_H3K4me3_ChIP-Seq_Roadmap85'
-      )
-SQL
-;
+#       and experiment.name in (
+#         "hindbrain_postnatal_0_DNase1_DNase-Seq_ENCODE92",
+#         "hindbrain_embryonic_11_5_DNase1_DNase-Seq_ENCODE92",
+#         "hindbrain_embryonic_14_5_DNase1_DNase-Seq_ENCODE92",
+#         "MEL_cell_line_____DNase1_DNase-Seq_ENCODE92",
+#         "midbrain_postnatal_0_DNase1_DNase-Seq_ENCODE92",
+#         "liver_embryonic_14_5_DNase1_DNase-Seq_ENCODE92",
+#         "neural_tube_embryonic_11_5_DNase1_DNase-Seq_ENCODE92",
+#         "stomach_postnatal_0_DNase1_DNase-Seq_ENCODE92",
+#         "limb_embryonic_11_5_DNase1_DNase-Seq_ENCODE92",
+#         "embryonic_facial_prominence_embryonic_14_5_DNase1_DNase-Seq_ENCODE92",
+#         "embryonic_facial_prominence_embryonic_11_5_DNase1_DNase-Seq_ENCODE92",
+#         "limb_embryonic_14_5_DNase1_DNase-Seq_ENCODE92",
+#         "lung_embryonic_14_5_DNase1_DNase-Seq_ENCODE92",
+#         "midbrain_embryonic_14_5_DNase1_DNase-Seq_ENCODE92",
+#         "lung_postnatal_0_DNase1_DNase-Seq_ENCODE92",
+#         "kidney_postnatal_0_DNase1_DNase-Seq_ENCODE92",
+#         "forebrain_postnatal_0_DNase1_DNase-Seq_ENCODE92",
+#         "forebrain_embryonic_14_5_DNase1_DNase-Seq_ENCODE92",
+#         "heart_postnatal_0_DNase1_DNase-Seq_ENCODE92",
+#         "liver_postnatal_0_DNase1_DNase-Seq_ENCODE92"
+#       )
 
-my $execution_plan_adaptor = Bio::EnsEMBL::Registry->get_adaptor('homo_sapiens', 'funcgen', 'ExecutionPlan');
+# use YAML qw(Dump Bless);
+# 
+# local $YAML::Indent = 8;
+# local $YAML::UseAliases = 0;
 
-use YAML qw(Dump Bless);
-
-local $YAML::Indent = 8;
-local $YAML::UseAliases = 0;
+$Data::Dumper::Sortkeys = 1;
 
 my @all_execution_plans;
 
@@ -149,22 +153,10 @@ $sql_helper->execute_no_return(
       my $experiment = $experiment_adaptor->fetch_by_dbID($experiment_id);
       
       my $execution_plan 
-        = $chip_seq_analysis_director->construct_execution_plan(
-          {
-            species                => $species, 
-            assembly               => $default_assembly, 
-            experiment             => $experiment,
-            directory_name_builder => $directory_name_builder
-          }
+        = $execution_plan_factory->create_execution_plan_for_experiment(
+          $experiment
         );
-        
-      #print Dump($execution_plan);
-      
-#       my $execution_plan_obj = Bio::EnsEMBL::Funcgen::ExecutionPlan->new(
-#         -experiment_id  => $experiment_id,
-#         #-execution_plan => Dumper($execution_plan)
-#         -execution_plan => Dump($execution_plan)
-#       );
+
       print Dumper($execution_plan);
       my $execution_plan_expanded = resolve_nonterminal_symbols($execution_plan);
       print summarise($execution_plan_expanded);
@@ -175,6 +167,11 @@ $sql_helper->execute_no_return(
       return;
     },
 );
+
+
+
+exit;
+
 
 my @error_messages;
 my %alignment_name_to_experiment_name;

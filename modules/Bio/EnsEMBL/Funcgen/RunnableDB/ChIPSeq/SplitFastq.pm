@@ -3,6 +3,8 @@ package Bio::EnsEMBL::Funcgen::RunnableDB::ChIPSeq::SplitFastq;
 use strict;
 use base 'Bio::EnsEMBL::Hive::Process';
 use Data::Dumper;
+use Bio::EnsEMBL::Funcgen::Utils::Fastq::Processor;
+use Bio::EnsEMBL::Funcgen::Utils::Fastq::Parser;
 
 use constant {
   BRANCH_ALIGN => 2,
@@ -15,22 +17,14 @@ sub run {
   my $species      = $self->param_required('species');
   my $plan         = $self->param_required('execution_plan');
   my $tempdir      = $self->param_required('tempdir');
-  my $in_test_mode = $self->param('in_test_mode');
   
   my $num_records_per_split_fastq;
   if ($self->param_is_defined('num_records_per_split_fastq')) {
     $num_records_per_split_fastq = $self->param('num_records_per_split_fastq');
   }
   
-  my $max_records = undef;
-  
   if (! defined $num_records_per_split_fastq) {
     $num_records_per_split_fastq = 1_000_000;
-  }
-  
-  if ($in_test_mode) {
-    $max_records = 2_000;
-    $num_records_per_split_fastq = 500;
   }
   
   print Dumper($plan);
@@ -39,12 +33,13 @@ sub run {
     ->{input}
   ;
   
-  my $alignment_name = $align_plan->{name};
-  my $read_files     = $align_plan->{input}->{read_files};
-  my $to_gender      = $align_plan->{to_gender};
-  my $to_assembly    = $align_plan->{to_assembly};
-  my $bam_file       = $align_plan->{output}->{real};
-  
+  my $alignment_name   = $align_plan->{name};
+  my $read_files       = $align_plan->{input}->{read_files};
+  my $to_gender        = $align_plan->{to_gender};
+  my $to_assembly      = $align_plan->{to_assembly};
+  my $bam_file         = $align_plan->{output}->{real};
+  my $ensembl_analysis = $align_plan->{ensembl_analysis};
+
   $self->say_with_header("Creating alignment $alignment_name");
   
   my $read_file_adaptor
@@ -54,86 +49,91 @@ sub run {
     'ReadFile'
   );
   
-  my @read_file_names;
-  foreach my $read_file_name (@$read_files) {
+  my @chunks_to_be_merged;
   
-    my $read_file = $read_file_adaptor->fetch_by_name($read_file_name);
-    
-    if (! -e $read_file->file) {
-      $self->throw("File " . $read_file->file . " does not exist!");
+  foreach my $read_file (@$read_files) {
+
+    my $read_file_names;
+
+    if ($read_file->{type} eq 'paired_end') {
+      $read_file_names = [
+        $read_file->{1},
+        $read_file->{2},
+      ];
+
+      my $read_file_objects = [ map { $read_file_adaptor->fetch_by_name($_) } @$read_file_names ];
+      
+      if ($read_file_objects->[0]->file_size != $read_file_objects->[1]->file_size) {
+        die("The read files have different lengths!");
+      }
     }
     
-    push @read_file_names, $read_file->file;
-  }
-  
-  my $file_list = join ' ', @read_file_names;
-  my $cmd = "zcat $file_list |";
-  
-  $self->say_with_header("Reading fastq files by running:");
-  $self->say_with_header($cmd);
-  
-  my @chunks;
+    if ($read_file->{type} eq 'single_end') {
+      $read_file_names = [
+        $read_file->{name},
+      ];
+    }
+    
+    my $directory_name = join '_', @$read_file_names;
+    
+    my $alignment_read_file_name = $alignment_name . '/' . $directory_name;
+    
+    my $dataflow_fastq_chunk = sub {
 
-  my $dataflow_fastq_chunk = sub {
+        my $param = shift;
+        
+        my $absolute_chunk_file_name = $param->{absolute_chunk_file_name};
+        my $current_file_number      = $param->{current_file_number};
+        my $current_temp_dir         = $param->{current_temp_dir};
+        
+        $self->say_with_header("Created fastq chunk $absolute_chunk_file_name");
+        
+        my $chunk_bam_file = $current_temp_dir . '/' . $alignment_name . '_' . $directory_name . '_' . $current_file_number . '.bam';
+        
+        push @chunks_to_be_merged, $chunk_bam_file;
+        
+        my $dataflow_output_id
+          = {
+            'fastq_file'       => $absolute_chunk_file_name,
+            'tempdir'          => $current_temp_dir,
+            'bam_file'         => $chunk_bam_file,
+            'species'          => $species,
+            'to_gender'        => $to_gender,
+            'to_assembly'      => $to_assembly,
+            'ensembl_analysis' => $ensembl_analysis,
+          };
+          $self->dataflow_output_id(
+            $dataflow_output_id, 
+            BRANCH_ALIGN
+          );
+#         print Dumper(
+#           [
+#             $dataflow_output_id,
+#             $chunk_bam_file
+#           ]
+#         );
+    };
 
-    my $param = shift;
-    
-    my $absolute_chunk_file_name = $param->{absolute_chunk_file_name};
-    my $current_file_number      = $param->{current_file_number};
-    my $current_temp_dir         = $param->{current_temp_dir};
-    
-    $self->say_with_header("Created fastq chunk $absolute_chunk_file_name");
-    
-    my $chunk_bam_file = $current_temp_dir . '/' . $alignment_name . '_' . $current_file_number . '.bam';
-    
-    push @chunks, $chunk_bam_file;
-    
-    $self->dataflow_output_id( 
-      {
-        'fastq_file'  => $absolute_chunk_file_name,
-        'species'     => $species,
-        'tempdir'     => $current_temp_dir,
-        'to_gender'   => $to_gender,
-        'to_assembly' => $to_assembly,
-        'bam_file'    => $chunk_bam_file,
-      }, 
-      BRANCH_ALIGN
+    my $fastq_record_processor = Bio::EnsEMBL::Funcgen::Utils::Fastq::Processor->new(
+      -tempdir                     => $tempdir,
+      -species                     => $species,
+      -alignment_name              => $alignment_read_file_name,
+      -num_records_per_split_fastq => $num_records_per_split_fastq,
+      -chunk_created_callback      => $dataflow_fastq_chunk,
     );
-  };
 
-  my $fastq_record_processor = FastqRecordProcessor->new(
-    -tempdir                     => $tempdir,
-    -species                     => $species,
-    -alignment_name              => $alignment_name,
-    -num_records_per_split_fastq => $num_records_per_split_fastq,
-    -chunk_created_callback      => $dataflow_fastq_chunk 
-  );
-  
-  my $process_fastq_record = sub {
-    my $record = shift;
-    $fastq_record_processor->process($record);
-  };
-
-  eval {
-    $self->parse_fastq_from_cmd({
-      max_records    => $max_records,
-      cmd            => $cmd,
-      process_record => $process_fastq_record,
+    split_read_file({
+      read_file_names        => $read_file_names,
+      dataflow_fastq_chunk   => $dataflow_fastq_chunk,
+      fastq_record_processor => $fastq_record_processor,
+      read_file_adaptor      => $read_file_adaptor,
     });
-  };
-  if ($@) {
-    die(
-      "Error processing\n" 
-      . Dumper(\@read_file_names) . "\n"
-      . "Got: $@"
-    );
   }
-  $fastq_record_processor->flush;
   
-  $self->dataflow_output_id( 
+  $self->dataflow_output_id(
     {
       'species' => $species,
-      'chunks'  => \@chunks,
+      'chunks'  => \@chunks_to_be_merged,
       'plan'    => $plan,
     }, 
     BRANCH_MERGE
@@ -141,223 +141,64 @@ sub run {
   return;
 }
 
-sub parse_fastq_from_cmd {
+sub split_read_file {
 
-  my $self  = shift;
   my $param = shift;
-
-  my $cmd = $param->{cmd};
   
-  open my $fh, $cmd;
-  $param->{fh} = $fh;
+  my $read_file_names        = $param->{read_file_names};
+  my $dataflow_fastq_chunk   = $param->{dataflow_fastq_chunk};
+  my $fastq_record_processor = $param->{fastq_record_processor};
+  my $read_file_adaptor = $param->{read_file_adaptor};
   
-  $self->parse_fastq($param);
+  my $parser = Bio::EnsEMBL::Funcgen::Utils::Fastq::Parser->new;
   
-  $fh->close;
-  return;
-}
-
-sub parse_fastq {
-
-  my $self  = shift;
-  my $param = shift;
-
-  my $fh             = $param->{fh};
-  my $process_record = $param->{process_record};
-  my $max_records    = $param->{max_records};
-
-  my $num_lines = 0;
+  my @read_file_objects = map { $read_file_adaptor->fetch_by_name($_) } @$read_file_names;
+  my @fastq_files       = map { $_->file } @read_file_objects;
   
-  FASTQ_RECORD:
-  while (defined (my $current_line = <$fh>)) {
+  use List::Util qw( uniq );
+  my $same_number_of_reads_in_every_file 
+    = 1 == uniq map { $_->file_size } @read_file_objects;
   
-    if ($current_line !~ /^\@/) {
-    
-      # Some of Encode's fastq files in .tgz format have a bit of garbage at 
-      # the start of the file.
-      #
-      warn "Invalid fastq record: $current_line";
-      next FASTQ_RECORD;
-    }
-    
-    my @current_fastq_record;
-    chomp $current_line;
-    push @current_fastq_record, $current_line;
-    
-    foreach my $line_of_record (2, 3, 4) {
-      my $line = <$fh>;
-      chomp $line;
-      push @current_fastq_record, $line;
-    }
-    
-    $process_record->(\@current_fastq_record);
-    
-    $num_lines++;
-    if (
-      defined $max_records 
-      && $num_lines == $max_records
+  if (! $same_number_of_reads_in_every_file) {
+    confess(
+      "These fastq files are paired, but don't have the same number of reads!\n"
+      . Dumper(\@fastq_files)
+      . "\n"
+      . ( join ' vs ', map { $_->file_size } @read_file_objects )
+    );
+  }
+  
+#   my $max   = 500;
+#   my $count =   0;
+
+  my @cmds          = map { "zcat $_ |"                                     } @fastq_files;
+  my @file_handles  = map { open my $fh, $_ or die("Can't execute $_"); $fh } @cmds;
+
+  use List::Util qw( none any );
+
+  my $all_records_read = undef;
+
+  $fastq_record_processor->tags([ 1 .. @fastq_files ]);
+  $fastq_record_processor->init;
+
+  while (
+      (! $all_records_read)
+#       && 
+#       ($count<$max)
     ) {
-      last FASTQ_RECORD;
-    }
-  }
-  return;
-}
-
-1;
-
-package FastqRecordProcessor;
-
-use strict;
-use Data::Dumper;
-
-use Role::Tiny::With;
-with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
-
-sub _constructor_parameters {
-  return {
-    tempdir                     => 'tempdir',
-    species                     => 'species',
-    alignment_name              => 'alignment_name',
-    num_records_per_split_fastq => 'num_records_per_split_fastq',
-    chunk_created_callback      => 'chunk_created_callback',
-  };
-}
-
-use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
-  _generic_get_or_set
-);
-
-sub tempdir                     { return shift->_generic_get_or_set('tempdir',                     @_); }
-sub species                     { return shift->_generic_get_or_set('species',                     @_); }
-sub alignment_name              { return shift->_generic_get_or_set('alignment_name',              @_); }
-sub num_records_in_current_file { return shift->_generic_get_or_set('num_records_in_current_file', @_); }
-sub num_records_per_split_fastq { return shift->_generic_get_or_set('num_records_per_split_fastq', @_); }
-sub current_file_number         { return shift->_generic_get_or_set('current_file_number',         @_); }
-sub current_temp_dir            { return shift->_generic_get_or_set('current_temp_dir',            @_); }
-sub current_file_name           { return shift->_generic_get_or_set('current_file_name',           @_); }
-sub current_file_handle         { return shift->_generic_get_or_set('current_file_handle',         @_); }
-sub chunk_created_callback      { return shift->_generic_get_or_set('chunk_created_callback',      @_); }
-
-sub create_record_temp_dir {
-  my $self = shift;
-  
-  my $record_tempdir = join '/',
-    $self->tempdir,
-    #$self->species,
-    $self->alignment_name,
-    'partial_alignments',
-    $self->current_file_number,
-  ;
-
-  return $record_tempdir;
-}
-
-sub create_chunk_file_basename {
-  my $self = shift;
-  my $file_basename = 'chunk_' . $self->current_file_number . '.fastq';
-  return $file_basename;
-}
-
-sub init {
-  my $self = shift;
-  $self->num_records_in_current_file(0);
-  $self->current_file_number(0);
-  $self->update_chunk_dependent_variables;
-  return;
-}
-
-sub update_chunk_dependent_variables {
-  my $self = shift;
-  
-  $self->current_temp_dir(
-    $self->create_record_temp_dir
-  );
-  $self->current_file_name(
-    $self->create_chunk_file_basename
-  );
-  return;
-}
-
-sub absolute_chunk_file_name {
-  my $self = shift;
-  return $self->current_temp_dir . '/' . $self->current_file_name
-}
-
-sub create_new_file_handle {
-  my $self = shift;
-  
-  my $record_tempdir = $self->current_temp_dir;
-
-  use File::Path qw(make_path);
-  make_path($record_tempdir);
-  
-  open my $fh, '>', $self->absolute_chunk_file_name;
-  return $fh
-}
-
-sub flush {
-  my $self   = shift;
-
-  my $fh = $self->current_file_handle;
-  
-  use Scalar::Util qw ( openhandle );
-  
-  if (defined $fh && openhandle($fh)) {
-    $self->chunk_created_callback->(
-      {
-        absolute_chunk_file_name => $self->absolute_chunk_file_name,
-        current_file_number      => $self->current_file_number,
-        current_temp_dir         => $self->current_temp_dir,
-      }
-    );
-    $fh->close;
-  }
-}
-
-sub process {
-  my $self   = shift;
-  my $record = shift;
-  
-  my $fh = $self->current_file_handle;
-  
-  use Scalar::Util qw ( openhandle );
-  
-  if (! defined $fh || ! openhandle($fh)) {
-    $fh = $self->create_new_file_handle;
-    $self->current_file_handle($fh);
-  }
-  
-  foreach my $line (@$record) {
-    $fh->print($line);
-    $fh->print("\n");
-  }
-  
-  $self->num_records_in_current_file(
-    1 + $self->num_records_in_current_file
-  );
-  
-  my $is_time_for_next_chunk 
-    = $self->num_records_in_current_file 
-      >= $self->num_records_per_split_fastq;
-  
-  if ($is_time_for_next_chunk) {
-  
-    $self->current_file_handle->close;
-  
-    $self->chunk_created_callback->(
-      {
-        absolute_chunk_file_name => $self->absolute_chunk_file_name,
-        current_file_number      => $self->current_file_number,
-        current_temp_dir         => $self->current_temp_dir,
-      }
-    );
-
-    $self->current_file_number(1 + $self->current_file_number);
-    $self->num_records_in_current_file(0);
     
-    $self->update_chunk_dependent_variables;
+    my @fastq_records = map  { $parser->parse_next_record($_) } @file_handles;
+    $all_records_read = none { defined $_ } @fastq_records;
+    #$all_records_read = any { ! defined $_ } @fastq_records;
+    
+    $fastq_record_processor->process(@fastq_records);
+#     $count++;
   }
+  map { $_->close || die "Can't close file!" } @file_handles;
+  #map { $_->close } @file_handles;
+  $fastq_record_processor->flush;
   return;
 }
+
 
 1;

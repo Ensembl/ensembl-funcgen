@@ -82,6 +82,15 @@ sub fetch_by_name{
   return $self->generic_fetch('eg.name = ?')->[0];
 }
 
+sub fetch_by_production_name {
+  my ($self, $name) = @_;
+  throw("Must specify an Epigenome name") if ! defined $name;
+  $self->bind_param_generic_fetch($name, SQL_VARCHAR);
+
+  # production_name is unique so we should only have one
+  return $self->generic_fetch('eg.production_name = ?')->[0];
+}
+
 sub fetch_by_display_label {
   my ($self, $name) = @_;
   throw("Must specify the display label of an Epigenome") if ! defined $name;

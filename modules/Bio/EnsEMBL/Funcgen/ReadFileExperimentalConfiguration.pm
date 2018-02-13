@@ -40,6 +40,7 @@ use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_get_or_set
   _generic_get
   _generic_set
+  _generic_fetch
 );
 
 use Role::Tiny::With;
@@ -54,7 +55,7 @@ sub _constructor_parameters {
     paired_end_tag       => 'paired_end_tag',
     multiple             => 'multiple',
     read_file_id         => '_read_file_id',
-    read_file            => 'set_ReadFile',
+    #read_file            => 'set_ReadFile',
     experiment_id        => 'experiment_id',
   }
 }
@@ -109,7 +110,8 @@ sub _read_file_id        { return shift->_generic_get_or_set('_read_file_id',   
 
 =cut
 sub get_ReadFile {
-  return shift->_generic_get('read_file');
+  #return shift->_generic_get('read_file');
+  return shift->_generic_fetch('read_file', 'get_ReadFileAdaptor', 'read_file_id');
 }
 
 =head2 set_ReadFile
@@ -126,6 +128,7 @@ sub get_ReadFile {
 sub set_ReadFile {
   my $self = shift;
   my $obj  = shift;
+  $self->_read_file_id($obj->dbID);
   return $self->_generic_set('read_file', 'Bio::EnsEMBL::Funcgen::ReadFile', $obj);
 }
 
