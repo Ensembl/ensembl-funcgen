@@ -167,6 +167,11 @@ sub objectify { # turn the hashref into an object
         ;
         throw($error_message);
       }
+      #throw($error);
+      throw(
+        "An unknown error occurred:\n\n"
+        . "\t$error"
+      );
     }
     return $object;
 }
@@ -266,10 +271,9 @@ sub fetch_single_object {
     return $result->[0];
 }
 
-sub fetch_all {
+sub _generate_sql {
     my $self       = shift;
     my $constraint = shift;
-    my $parameters = shift;
 
     my $table_name              = $self->table_name();
     my $input_column_mapping    = $self->input_column_mapping;
@@ -280,6 +284,18 @@ sub fetch_all {
         # in case $constraint contains any kind of JOIN (regular, LEFT, RIGHT, etc) do not put WHERE in front:
         $sql .= (($constraint=~/\bJOIN\b/ or $constraint=~/^LIMIT|ORDER|GROUP/) ? ' ' : ' WHERE ') . $constraint;
     }
+    return $sql;
+}
+
+sub fetch_all {
+    my $self       = shift;
+    my $constraint = shift;
+    my $parameters = shift;
+
+    my $table_name              = $self->table_name();
+    my $input_column_mapping    = $self->input_column_mapping;
+    
+    my $sql = $self->_generate_sql($constraint);
     my $sth = $self->prepare($sql);
 
     eval {

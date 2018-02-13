@@ -34,16 +34,16 @@ sub construct_execution_plan {
   my $alignment_namer = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignmentNamer->new(
       -directory_name_builder      => $directory_name_builder,
       -experiment                  => $experiment,
-      -biological_replicate_number => undef,
-      -technical_replicate_number  => undef,
+#       -biological_replicate_number => undef,
+#       -technical_replicate_number  => undef,
   );
   $param->{alignment_namer} = $alignment_namer;
 
   my $control_alignment_namer = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignmentNamer->new(
       -directory_name_builder      => $directory_name_builder,
       -experiment                  => $experiment->get_control,
-      -biological_replicate_number => undef,
-      -technical_replicate_number  => undef,
+#       -biological_replicate_number => undef,
+#       -technical_replicate_number  => undef,
   );
 
   use Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator;
@@ -89,15 +89,29 @@ sub construct_execution_plan {
       ->get_Alignment;
 
   my %control_param = %$param;
-  $control_param{experiment}      = $param->{experiment}->get_control;
-  $control_param{alignment_namer} = $control_alignment_namer;
   
-  $align_all_plan_builder
-      ->construct(\%control_param);
-      
-  my $align_all_read_files_for_control_plan 
-    = $align_all_plan_builder
-      ->get_Alignment;
+  my $control_experiment = $param->{experiment}->get_control;
+  
+  my $align_all_read_files_for_control_plan;
+  
+  if (defined $control_experiment) {
+  
+    $control_param{experiment}      = $param->{experiment}->get_control;
+    $control_param{alignment_namer} = $control_alignment_namer;
+    
+    $align_all_plan_builder
+        ->construct(\%control_param);
+        
+    $align_all_read_files_for_control_plan
+      = $align_all_plan_builder
+        ->get_Alignment;
+  } else {
+    $align_all_read_files_for_control_plan = {
+        name => 'No control',
+        type => 'alignment',
+        description => 'No control alignment for this experiment.',
+    };
+  }
   
   #
   # Remove duplicates
@@ -118,17 +132,27 @@ sub construct_execution_plan {
   
   my $remove_duplicates_plan = $remove_duplicates_plan_builder->get_plan;
   
-  $remove_duplicates_plan_builder->set_input         (create_ref($align_all_read_files_for_control_plan));
-  $remove_duplicates_plan_builder->set_name          ($control_alignment_namer->base_name_no_duplicates);
-  $remove_duplicates_plan_builder->set_output_real   ($control_alignment_namer->bam_file_no_duplicates);
-  $remove_duplicates_plan_builder->set_output_stored ($control_alignment_namer->bam_file_no_duplicates_stored);
-  $remove_duplicates_plan_builder->set_is_control    (1);
-  $remove_duplicates_plan_builder->set_output_format ( BAM_FORMAT );
-  $remove_duplicates_plan_builder->set_experiment    ( $experiment->get_control->name );
-
-  $remove_duplicates_plan_builder->construct;
+  my $remove_duplicates_from_control_plan;
+  if (defined $control_experiment) {
   
-  my $remove_duplicates_from_control_plan = $remove_duplicates_plan_builder->get_plan;
+    $remove_duplicates_plan_builder->set_input         (create_ref($align_all_read_files_for_control_plan));
+    $remove_duplicates_plan_builder->set_name          ($control_alignment_namer->base_name_no_duplicates);
+    $remove_duplicates_plan_builder->set_output_real   ($control_alignment_namer->bam_file_no_duplicates);
+    $remove_duplicates_plan_builder->set_output_stored ($control_alignment_namer->bam_file_no_duplicates_stored);
+    $remove_duplicates_plan_builder->set_is_control    ( TRUE );
+    $remove_duplicates_plan_builder->set_output_format ( BAM_FORMAT );
+    $remove_duplicates_plan_builder->set_experiment    ( $experiment->get_control->name );
+
+    $remove_duplicates_plan_builder->construct;
+    
+    $remove_duplicates_from_control_plan = $remove_duplicates_plan_builder->get_plan;
+  } else {
+    $remove_duplicates_from_control_plan = {
+        name => 'No control',
+        type => REMOVE_DUPLICATES_ANALYSIS,
+        description => 'No control alignment for this experiment.',
+    };
+  }
   
   #
   # Bigwig files
@@ -146,13 +170,22 @@ sub construct_execution_plan {
   
   my $signal_file_plan = $signal_file_plan_builder->get_signal_plan;
   
-  $signal_file_plan_builder->set_alignment        (create_ref($remove_duplicates_from_control_plan));
-  $signal_file_plan_builder->set_alignment_namer  ($control_alignment_namer);
-  $signal_file_plan_builder->set_is_control (1);
-  
-  $signal_file_plan_builder->construct;
-  
-  my $control_file_plan = $signal_file_plan_builder->get_signal_plan;
+  my $control_file_plan;
+  if (defined $control_experiment) {
+    $signal_file_plan_builder->set_alignment        (create_ref($remove_duplicates_from_control_plan));
+    $signal_file_plan_builder->set_alignment_namer  ($control_alignment_namer);
+    $signal_file_plan_builder->set_is_control (1);
+    
+    $signal_file_plan_builder->construct;
+    
+    $control_file_plan = $signal_file_plan_builder->get_signal_plan;
+  } else {
+    $control_file_plan = {
+        name => 'No control',
+        type => SIGNAL_EXPERIMENT,
+        description => 'No control alignment for this experiment.',
+    };
+  }
   
   #
   # IDR plan

@@ -72,8 +72,28 @@ sub fetch_all_by_Experiment {
 sub fetch_by_ReadFileExperimentalConfiguration {
   my $self = shift;
   my $read_file_experimental_configuration = shift;
-  my $read_file_id = $read_file_experimental_configuration->_read_file_id;
-  return $self->fetch_by_dbID($read_file_id);
+  
+  if (! defined $read_file_experimental_configuration) {
+    throw("Read file experimental configuration parameter was undefined!");
+  }
+  
+  my $read_file_experimental_configuration_adaptor
+    = $self->db->get_ReadFileExperimentalConfigurationAdaptor;
+
+  my $read_file_experimental_configuration_from_db 
+    = $read_file_experimental_configuration_adaptor
+      ->fetch_by_ReadFileExperimentalConfiguration(
+        $read_file_experimental_configuration
+      );
+  
+  if (! defined $read_file_experimental_configuration_from_db) {
+    throw(
+      "Couldn't find read file experimental configuration in database:\n\n"
+      . Dumper($read_file_experimental_configuration)
+    );
+  }
+  
+  return $read_file_experimental_configuration_from_db->get_ReadFile;
 }
 
 sub _load_dependencies {
