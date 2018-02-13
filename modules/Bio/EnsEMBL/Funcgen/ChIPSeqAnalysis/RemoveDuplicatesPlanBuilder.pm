@@ -9,6 +9,8 @@ use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_get
 );
 
+use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Constants qw ( :all );
+
 # Input
 
 sub set_input         { return shift->_generic_set('input',         undef, @_); }
@@ -44,8 +46,8 @@ sub construct {
   my $remove_duplicates_plan = {
     input           => $self->_get_input,
     name            => $self->_get_name,
-    type            => 'alignment',
-    analysis        => 'remove_duplicates',
+    type            => ALIGNMENT_TYPE,
+    analysis        => REMOVE_DUPLICATES_ANALYSIS,
     is_control      => $is_control,
     from_experiment => $self->_get_experiment,
     output => {

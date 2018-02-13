@@ -2,6 +2,7 @@ package Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::SignalFilePlanBuilder;
 
 use strict;
 use Data::Dumper;
+use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Constants qw ( :all );
 use Role::Tiny::With;
 with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 
@@ -44,14 +45,14 @@ sub construct {
   
    my $bigwig = {
     input    => $self->_get_alignment,
-    type     => 'signal',
+    type     => SIGNAL_EXPERIMENT,
     name     => $alignment_namer->base_name_no_duplicates,
-    analysis => 'create_bigwig',
+    analysis => CONVERT_BAM_TO_BIGWIG_ANALYSIS,
     is_control  => $is_control,
     output   => {
       real   => $alignment_namer->bigwig_file_no_duplicates,
       stored => $alignment_namer->bigwig_file_no_duplicates_stored,
-      format   => 'bigwig'
+      format => BIGWIG_FORMAT
     }
   };
   $self->_set_signal_plan($bigwig);
