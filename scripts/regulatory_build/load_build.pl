@@ -54,10 +54,11 @@ use Getopt::Long;
 use File::Basename;
 use Data::Dumper qw (Dumper);
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Funcgen::Utils::Helper;
+#use Bio::EnsEMBL::Funcgen::Utils::Helper;
 use Bio::EnsEMBL::Analysis;
 use File::Temp qw/ tempfile tempdir /;
 use Hash::Util qw( lock_hash );
+use Carp;
 
 ${File::Temp::KEEP_ALL} = 1;
 
@@ -115,7 +116,10 @@ sub main {
   print_log("Getting options\n");
   my $options = get_options();
   print_log("Connecting to database\n");
-  my $funcgen_db_adaptor = connect_db($options);
+  (
+    my $funcgen_db_adaptor,
+    my $core_db_adaptor
+  )  = connect_db($options);
 
   use Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildAdaptor;
   my $regulatory_build_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildAdaptor->new($funcgen_db_adaptor);
@@ -140,7 +144,7 @@ sub main {
   print_log("Getting stable ids\n");
   my $stable_id = get_stable_id($options, $funcgen_db_adaptor);
   print_log("Getting slices\n");
-  my $slice = get_slices($funcgen_db_adaptor);
+  my $slice = get_slices($core_db_adaptor);
   print_log("Getting feature types\n");
   my $feature_type = get_feature_types($funcgen_db_adaptor);
   print_log("Counting active features\n");
@@ -164,8 +168,6 @@ sub main {
   print_log("Creating regulatory_feature table\n");
   compute_regulatory_features($options, $ctypes, $feature_type, $stable_id, $count_hash, $slice, $funcgen_db_adaptor, $new_regulatory_build);
 
-  print_log("Creating regulatory_annotation table\n");
-  compute_regulatory_annotations($options);
   print_log("Updating meta table\n");
 
   if (defined $current_regulatory_build) {
@@ -210,6 +212,11 @@ sub get_options {
     "host|h=s",
     "user|u=s",
     "dbname|d=s",
+    "dnadb_host=s",
+    "dnadb_port=s",
+    "dnadb_name=s",
+    "dnadb_user=s",
+    "dnadb_pass=s",
     "small_update",
   ) or pod2usage( -exitval => 1);
   defined $options{base_dir} || die ("You must define the base directory!\t--base_dir XXXX\n");
@@ -229,6 +236,16 @@ sub get_options {
 
 sub connect_db {
   my ($options) = @_;
+  
+    my $dnadb_adaptor = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+    -user   => $options->{dnadb_user},
+    -dbname => $options->{dnadb_name},
+    -host   => $options->{dnadb_host},
+    -pass   => $options->{dnadb_pass},
+    -port   => $options->{dnadb_port},
+    -species => 'mus_musculus',
+    );
+  
   my $db = Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor->new
     (
      -host   => $options->{host},
@@ -236,11 +253,7 @@ sub connect_db {
      -dbname => $options->{dbname},
      -pass   => $options->{pass},
      -port   => $options->{port},
-     -dnadb_host => $options->{dnadb_host},
-     -dnadb_port => $options->{dnadb_port},
-     -dnadb_user => $options->{dnadb_user},
-     -dnadb_pass => $options->{dnadb_pass},
-     -dnadb_name => $options->{dnadb_name},
+     -species => 'mus_musculus',
     );
 
   #Test connections
@@ -250,7 +263,7 @@ sub connect_db {
     die("Could not get a valid species from $options->{dbname}, please check the meta species.production_name");
   }
 
-  return $db;
+  return $db, $dnadb_adaptor;
 }
 
 =head2 get_analysis
@@ -305,6 +318,9 @@ sub get_analysis {
 =cut
 
 sub clean_name {
+
+  confess("clean_name should not be used!");
+
   my $string = shift;
   $string =~ s/[\-\(\)]//g;
 #   $string =~ s/_.*//g;
@@ -328,7 +344,10 @@ sub get_cell_type_names {
   my $epigenome_adaptor = $db->get_EpigenomeAdaptor();
   my %cell_type_from_clean = ();
   for my $epigenome (@{$epigenome_adaptor->fetch_all()}) {
-    $cell_type_from_clean{clean_name($epigenome->production_name)} = $epigenome;
+    #$cell_type_from_clean{clean_name($epigenome->production_name)} = $epigenome;
+    
+    $cell_type_from_clean{$epigenome->production_name} = $epigenome;
+    
     defined $epigenome || die("Unrecognized cell type name $epigenome\n");
   }
 
@@ -338,7 +357,14 @@ sub get_cell_type_names {
   foreach my $file (glob "$base_dir/projected_segmentations/*.bb") {
     my $cell_type_name = basename $file;
 #     $cell_type_name =~ s/\.bb//;
-     $cell_type_name =~ s/_\d+_SEGMENTS\.bb//;
+     #$cell_type_name =~ s/_\d+_SEGMENTS\.bb//;
+     
+     $cell_type_name =~ s/\.bb//;
+     
+     if ($cell_type_name =~ /_\d+_SEGMENTS/) {
+        confess("cell_type_name $cell_type_name still has _SEGMENTS in it!");
+     }
+     
     if (!exists $cell_type_from_clean{$cell_type_name}) {
 
       my @known_cell_types = sort keys %cell_type_from_clean;
@@ -367,7 +393,6 @@ sub get_cell_type_names {
 sub run {
   my ($cmd) = @_;
   print_log($cmd . "\n");
-  use Carp;
   system($cmd) && confess("Failed when running command:\n$cmd\n");
 }
 
@@ -581,28 +606,28 @@ sub get_feature_types {
   my ($db) = @_;
   my $fta = $db->get_adaptor("FeatureType");
   my %long_name= (
-    'ctcf'=>'CTCF Binding Site',
-    'distal'=>'Enhancer',
-    'proximal'=>'Promoter Flanking Region',
-    'tss'=>'Promoter',
-    'tfbs'=>'TF binding site',
-    'dnase'=>'Open chromatin'
+    'ctcf'     => 'CTCF Binding Site',
+    'distal'   => 'Enhancer',
+    'proximal' => 'Promoter Flanking Region',
+    'tss'      => 'Promoter',
+    'tfbs'     => 'TF binding site',
+    'dnase'    => 'Open chromatin'
   );
   my %so_accession = (
-    'ctcf'=>'SO:0001974',
-    'distal'=>'SO:0000165',
-    'proximal'=>'SO:0001952',
-    'tss'=>'SO:0000167',
-    'tfbs'=>'SO:0000235',
-    'dnase'=>'SO:0001747'
+    'ctcf'     => 'SO:0001974',
+    'distal'   => 'SO:0000165',
+    'proximal' => 'SO:0001952',
+    'tss'      => 'SO:0000167',
+    'tfbs'     => 'SO:0000235',
+    'dnase'    => 'SO:0001747'
   );
   my %so_name = (
-    'ctcf'=>'CTCF_binding_site',
-    'distal'=>'enhancer',
-    'proximal'=>'promoter_flanking_region',
-    'tss'=>'promoter',
-    'tfbs'=>'TF_binding_site',
-    'dnase'=>'open_chromatin_region'
+    'ctcf'     => 'CTCF_binding_site',
+    'distal'   => 'enhancer',
+    'proximal' => 'promoter_flanking_region',
+    'tss'      => 'promoter',
+    'tfbs'     => 'TF_binding_site',
+    'dnase'    => 'open_chromatin_region'
   );
 
   my $feature_type = {};
@@ -611,12 +636,12 @@ sub get_feature_types {
 
     if (! defined $feature_type->{$label}) {
       my $ft = Bio::EnsEMBL::Funcgen::FeatureType->new(
-	-name => $long_name{$label},
-	-class => 'Regulatory Feature',
-	-description => $label_description{$label},
-	-analysis => undef,
-	-so_name => $so_name{$label},
-	-so_accession => $so_accession{$label}
+        -name         => $long_name{$label},
+        -class        => 'Regulatory Feature',
+        -description  => $label_description{$label},
+        -analysis     => undef,
+        -so_name      => $so_name{$label},
+        -so_accession => $so_accession{$label}
       );
       $fta->store($ft);
       $feature_type->{$label} = $ft;
@@ -756,9 +781,10 @@ sub load_celltype_activity {
 
   print_log("\tProcessing data from cell type " . $cell_type->display_label . " (". $cell_type->name .")" . "\n");
 
-  my $cell_type_name = clean_name($cell_type->production_name);
+  #my $cell_type_name = clean_name($cell_type->production_name);
+  my $cell_type_name = $cell_type->production_name;
 #   my $bigbed = "$base_dir/projected_segmentations/$cell_type_name.bb";
-  my $bigbed = "$base_dir/projected_segmentations/${cell_type_name}_25_SEGMENTS.bb";
+  my $bigbed = "$base_dir/projected_segmentations/${cell_type_name}.bb";
   my ($tmp, $tmp_name) = tempfile();
   run("bigBedToBed $bigbed $tmp_name");
 
@@ -791,132 +817,19 @@ sub process_celltype_file {
 
     $regulatory_activity->_epigenome_id($cell_type->dbID);
     
-    exists $regulatory_feature->{$name} || die("Could not find Regulatory Feature for $name\n");
+    my $has_no_regulatory_feature   = ! exists $regulatory_feature->{$name};
+    my $is_transcription_start_site = $name =~ /tss_\d+/;
+    
+    if ($has_no_regulatory_feature && $is_transcription_start_site) {
+        warn("No regulatory feature for transcription start site!");
+        return;
+    }
+    if ($has_no_regulatory_feature && !$is_transcription_start_site) {
+        confess("Could not find Regulatory Feature for $name\n");
+    }
     $regulatory_feature->{$name}->add_regulatory_activity($regulatory_activity);
+    return;
   }
-}
-
-=head2 compute_regulatory_annotations
-
-  Description: Assign motifs and annotations to regulatory features
-  Arg1: options hash ref
-  Returntype: undef
-  Side effects: writes into regulatory_evidences table
-
-=cut
-
-sub compute_regulatory_annotations {
-  my $options = shift;
-
-  my ($tmp_fh, $cell_type_regulatory_features) = tempfile();
-  my ($tmp_fh2, $annotations) = tempfile();
-  my ($tmp_fh3, $motifs) = tempfile();
-  my ($tmp_fh4, $out) = tempfile();
-  close $tmp_fh;
-  close $tmp_fh2;
-  close $tmp_fh3;
-  close $tmp_fh4;
-
-  # Extract regulatory, annotated, and motif features into flat tab-delimited files.
-  # The common format of these files is:
-  # chrom	start	end	ID
-  
-  # "convert" in the "order by" clause makes MySql sort lexicographically. 
-  # This is necessary, or bedtools will complain later.
-  #
-  
-  run(
-    qq(
-	mysql --quick -NB -h $options->{host} -u $options->{user} -p$options->{pass} -P $options->{port} -D $options->{dbname} -e '
-	  select
-	    rf.seq_region_id,
-	    rf.seq_region_start - rf.bound_start_length as start,
-	    rf.seq_region_end + rf.bound_end_length as end,
-	    regulatory_activity_id,
-	    epigenome_id
-	  from
-	    regulatory_feature rf
-	    join regulatory_activity using (regulatory_feature_id)
-	  order by
-	    convert(rf.seq_region_id, char),
-	    start;
-	' \\
- 	> $cell_type_regulatory_features
-    )
-  );
-
-  run(
-    qq(
-	mysql --quick -NB -h $options->{host} -u $options->{user} -p$options->{pass} -P $options->{port} -D $options->{dbname} -e '
-	  select
-	    af.seq_region_id,
-	    af.seq_region_start,
-	    af.seq_region_end,
-	    af.annotated_feature_id,
-	    fs.epigenome_id
-	  FROM
-	    annotated_feature af
-	    LEFT JOIN feature_set fs USING(feature_set_id)
-	  ORDER BY
-	    convert(af.seq_region_id,    char),
-	    af.seq_region_start;
-	' \\
-	> $annotations
-    )
-  );
-
-  # run(
-  #   qq(
-	# mysql --quick -NB -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -e '
-	#   select
-	#     mf.seq_region_id, mf.seq_region_start, mf.seq_region_end, mf.motif_feature_id, fs.epigenome_id
-	#   from
-	#     motif_feature mf
-	#     JOIN associated_motif_feature amf USING(motif_feature_id)
-	#     JOIN annotated_feature af USING(annotated_feature_id)
-	#     JOIN feature_set fs USING(feature_set_id)
-	#   GROUP BY
-	#     motif_feature_id,
-	#     epigenome_id
-	#   ORDER BY
-	#     seq_region_id,
-	#     seq_region_start;
-	#  ' > $motifs
-  #   )
-  # );
-
-  run(
-    qq(
-    mysql --quick -NB -h $options->{host} -u $options->{user} -p$options->{pass} -P $options->{port} -D $options->{dbname} -e '
-      select
-        mf.seq_region_id, mf.seq_region_start, mf.seq_region_end, mf.motif_feature_id, "PHONY" 
-      from
-        motif_feature mf
-      ORDER BY
-        convert(seq_region_id,    char),
-        seq_region_start;
-  ' > $motifs
-    )
-  );
-
-  # Overlap regulatory features with (annotated|motif) features. Store ID pairs into one flat file
-  run("bedtools intersect -sorted -wa -wb -a $cell_type_regulatory_features -b $annotations | awk 'BEGIN {OFS = \"\\t\"} \$5==\$10 {print \$4,\$9,\"annotated\"} ' > $out");
-  run("bedtools intersect -sorted -wa -wb -a $cell_type_regulatory_features -b $motifs      | awk 'BEGIN {OFS = \"\\t\"} {print \$4,\$9,\"motif\"} ' > $out");
-
-  # Load into database
-  run("mysql -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -P $options->{port} -e 'TRUNCATE TABLE regulatory_evidence;'");
-  run("mysql -h $options->{host} -u $options->{user} -p$options->{pass} -D $options->{dbname} -P $options->{port} -e 'LOAD DATA LOCAL INFILE \"$out\" INTO TABLE regulatory_evidence;'");
-
-#   print "cell_type_regulatory_features = $cell_type_regulatory_features\n";
-#   print "annotations = $annotations\n";
-#   print "motifs = $motifs\n";
-#   print "out = $out\n";
-
-    # Unlink should be unnecessary, if the temporary files should go, unset KEEP_ALL at the beginning of the script.
-#   unlink $cell_type_regulatory_features;
-#   unlink $annotations;
-#   unlink $motifs;
-#   unlink $out;
 }
 
 =head2 create_regulatory_build_object
@@ -954,8 +867,9 @@ sub create_regulatory_build_object {
       use Bio::EnsEMBL::Funcgen::FeatureType;
       
       my $regulatory_build_adaptor = Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildAdaptor->new($funcgen_db_adaptor);
-      my $analysis_adaptor         = Bio::EnsEMBL::Analysis->new($funcgen_db_adaptor);
-      my $feature_type_adaptor     = Bio::EnsEMBL::Funcgen::FeatureType->new($funcgen_db_adaptor);
+      my $analysis_adaptor         = Bio::EnsEMBL::DBSQL::AnalysisAdaptor->new($funcgen_db_adaptor);
+      
+      my $feature_type_adaptor     = Bio::EnsEMBL::Funcgen::DBSQL::FeatureTypeAdaptor->new($funcgen_db_adaptor);
 
       my $regulatory_build_logic_name        = 'Regulatory_Build';
       my $regulatory_build_feature_type_name = 'RegulatoryFeature';
@@ -972,7 +886,7 @@ sub create_regulatory_build_object {
         die();
       }
 
-      my $new_regulatory_build = Bio::EnsEMBL::Funcgen::RegulatoryBuild->new(
+      $new_regulatory_build = Bio::EnsEMBL::Funcgen::RegulatoryBuild->new(
               -name            => 'The Ensembl Regulatory Build',
               -feature_type    => $regulatory_build_feature_type,
               -analysis        => $regulatory_build_analysis,
@@ -985,7 +899,11 @@ sub create_regulatory_build_object {
       $current_build_version = '0.0';
       $current_build_initial_release_date = '';
   }
-
+  
+  if (! defined $new_regulatory_build) {
+    die;
+  }
+  
   my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime();
   # Seriously localtime, you're useless
   $year += 1900;
