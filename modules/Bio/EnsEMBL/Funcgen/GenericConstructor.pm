@@ -35,7 +35,9 @@ package Bio::EnsEMBL::Funcgen::GenericConstructor;
 use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Data::Dumper;
 #use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
+use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 
 use Role::Tiny;
 
@@ -80,6 +82,8 @@ sub _initialise_fields {
 
   my @value = rearrange_pp([ @accepted_constructor_parameters ], @parameters);
   
+  my %all_parameters = @parameters;
+  
   for (my $index = 0; $index<@value; $index++) {
   
     my $constructor_parameter_name = $accepted_constructor_parameters[$index];
@@ -99,6 +103,9 @@ sub _initialise_fields {
         );
     }
     
+    # Tick the parameters that have been used off the list
+    delete $all_parameters{'-' . $constructor_parameter_name};
+
     if (defined $value_to_set) {
       
       if (! $self->can($setter_method)) {
@@ -110,6 +117,23 @@ sub _initialise_fields {
       }
       $self->$setter_method($value_to_set);
     }
+  }
+  
+  my @unused_parameters = keys %all_parameters;
+  if (@unused_parameters) {
+    
+    my %as_hash = @parameters;
+    $Data::Dumper::Maxdepth = 2;
+    throw(
+       "The following parameters were passed as parameters to the constructor of\n\n"
+       . "\t$class\n\n"
+     . "but they are not used:\n\n" 
+     . Dumper(\%all_parameters) . "\n\n"
+     . "The complete set of parameters passed to the constructor was:\n\n"
+     . Dumper( \%as_hash ) . "\n\n"
+     . "The constructor accepts the following parameters:\n\n"
+     . Dumper( [ sort @accepted_constructor_parameters ] )
+    );
   }
   return;
 }
