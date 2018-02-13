@@ -30,6 +30,32 @@ our @EXPORT_OK = qw(
   BAM_FORMAT
   BIGWIG_FORMAT
   BED_FORMAT
+  
+  SINGLE_END
+  PAIRED_END
+  
+  ALIGNMENT_TYPE
+  PEAK_CALLING_TYPE
+  
+  ALIGNMENT_ANALYSIS
+  REMOVE_DUPLICATES_ANALYSIS
+  IDR_ANALYSIS
+  CALL_PEAKS_ANALYSIS
+  CONVERT_BAM_TO_BED_ANALYSIS
+  CONVERT_BAM_TO_BIGWIG_ANALYSIS
+  
+  SIGNAL_EXPERIMENT
+  CONTROL_EXPERIMENT
+  
+  TRUE
+  FALSE
+  
+  ENSEMBL_SINGLE_END_ALIGNMENT_ANALYSIS
+  ENSEMBL_PAIRED_END_ALIGNMENT_ANALYSIS
+  ENSEMBL_HODGEPODGE_ALIGNMENT_ANALYSIS
+  
+  ENSEMBL_BROAD_PEAK_CALLING_ANALYSIS
+  ENSEMBL_NARROW_PEAK_CALLING_ANALYSIS
 );
 
 our %EXPORT_TAGS = (all => \@EXPORT_OK);
@@ -46,6 +72,36 @@ use constant {
   BAM_FORMAT    => 'bam',
   BIGWIG_FORMAT => 'bigwig',
   BED_FORMAT    => 'bed',
+  
+  SINGLE_END => 'single_end',
+  PAIRED_END => 'paired_end',
+  
+  ENSEMBL_SINGLE_END_ALIGNMENT_ANALYSIS => 'bwa samse',
+  ENSEMBL_PAIRED_END_ALIGNMENT_ANALYSIS => 'bwa sampe',
+  ENSEMBL_HODGEPODGE_ALIGNMENT_ANALYSIS => 'bwa hodgepodge',
+  
+  ENSEMBL_BROAD_PEAK_CALLING_ANALYSIS  => 'ccat_histone',
+  ENSEMBL_NARROW_PEAK_CALLING_ANALYSIS => 'SWEmbl_default',
+  
+  # Result type
+  #
+  ALIGNMENT_TYPE    => 'alignment',
+  PEAK_CALLING_TYPE => 'peak',
+  
+  # Anlaysis type
+  #
+  ALIGNMENT_ANALYSIS             => 'alignment',
+  REMOVE_DUPLICATES_ANALYSIS     => 'remove_duplicates',
+  IDR_ANALYSIS                   => 'idr',
+  CALL_PEAKS_ANALYSIS            => 'call_peaks',
+  CONVERT_BAM_TO_BED_ANALYSIS    => 'convert bam to bed',
+  CONVERT_BAM_TO_BIGWIG_ANALYSIS => 'create_bigwig',
+  
+  SIGNAL_EXPERIMENT  => 'signal',
+  CONTROL_EXPERIMENT => 'control',
+  
+  TRUE  => 'true',
+  FALSE => 'false',
 };
 
 1;
