@@ -23,6 +23,10 @@ sub get_Alignment {
   return shift->_generic_get('alignment');
 }
 
+use Role::Tiny::With;
+with 'Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::summarise_ReadFile';
+with 'Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::select_EnsemblAlignmentAnalysis';
+
 sub construct {
   my $self = shift;
   my $param = shift;
@@ -44,13 +48,35 @@ sub construct {
     = $read_file_experimental_configuration_adaptor
       ->fetch_all_by_Experiment($experiment);
   
+  my $has_single_end_reads_only = 1;
+  my $has_paired_end_reads_only = 1;
+  
   my @names_of_reads_to_merge;
+  READ_FILE_EXPERIMENTAL_CONFIGURATION:
   foreach my $read_file_experimental_configuration (@$read_file_experimental_configurations) {
   
     my $read_file = $read_file_experimental_configuration->get_ReadFile;
-    push @names_of_reads_to_merge, $read_file->name,
-  
+    
+    if ($read_file->is_paired_end) {
+      $has_single_end_reads_only = undef;
+    }
+    if (! $read_file->is_paired_end) {
+      $has_paired_end_reads_only = undef;
+    }
+    
+    if ($read_file->is_paired_end && $read_file->paired_end_tag != 1) {
+      next READ_FILE_EXPERIMENTAL_CONFIGURATION;
+    }
+    
+    push @names_of_reads_to_merge, summarise_ReadFile($read_file);
+    next READ_FILE_EXPERIMENTAL_CONFIGURATION;
   }
+  
+  my $ensembl_alignment_analysis = select_EnsemblAlignmentAnalysis({
+    experiment => $experiment,
+    has_single_end_reads_only => $has_single_end_reads_only,
+    has_paired_end_reads_only => $has_paired_end_reads_only,
+  });
   
   use Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator;
   my $bwa_index_locator = Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator->new;
@@ -69,13 +95,13 @@ sub construct {
     -name                    => $alignment_namer->base_name_with_duplicates,
     -to_gender               => $to_gender,
     -to_assembly             => $assembly,
-    -analysis                => 'align',
+    -ensembl_analysis        => $ensembl_alignment_analysis,
     -from_experiment         => $experiment->name,
     -output_real             => $alignment_namer->bam_file_with_duplicates,
     -output_stored           => $alignment_namer->bam_file_with_duplicates_stored,
     -output_format           => BAM_FORMAT,
     -is_control              => $experiment->is_control,
-    -has_all_reads           => 1,
+    -has_all_reads           => TRUE,
   );
   my $align_plan = $alignment_plan_factory->product;
   
@@ -90,9 +116,9 @@ sub experiment_type {
 
   my $experiment_type;
   if ($experiment->is_control) {
-    $experiment_type = 'control';
+    $experiment_type = CONTROL_EXPERIMENT;
   } else {
-    $experiment_type = 'signal';
+    $experiment_type = SIGNAL_EXPERIMENT;
   }
   return $experiment_type;
 }
