@@ -28,4 +28,4 @@ alter table peak_calling add    column control_alignment_id int(23) unsigned def
 
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_91_92_b.sql|Peak_calling table changes');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_e.sql|Peak_calling table changes');

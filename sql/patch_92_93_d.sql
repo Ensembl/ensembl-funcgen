@@ -83,4 +83,4 @@ alter table chance add column run_failed boolean default false;
 alter table chance add column error_message text;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_91_92_d.sql|Create table for chance quality check');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_d.sql|Create table for chance quality check');

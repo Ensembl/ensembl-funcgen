@@ -88,4 +88,4 @@ drop table if exists alignment_qc_phantom_peak;
 drop table if exists result_set_qc_phantom_peak;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_91_92_j.sql|phantom peak table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_j.sql|phantom peak table');

@@ -13,15 +13,11 @@
 -- limitations under the License.
 
 /**
-@header patch_91_92_b.sql - Update quality check tables
-@desc   Update quality check tables
+@header patch_91_92_a.sql - schema version
+@desc   Update schema_version in meta table to 92
 */
 
-alter table peak_calling_qc_prop_reads_in_peaks modify peak_calling_qc_prop_reads_in_peaks_id int(38) unsigned NOT NULL AUTO_INCREMENT;
-
-alter table alignment_qc_phantom_peak modify alignment_qc_phantom_peak_id int(30) unsigned NOT NULL AUTO_INCREMENT;
-alter table alignment_qc_flagstats    modify alignment_qc_flagstats_id int(28) unsigned NOT NULL AUTO_INCREMENT;
-
+UPDATE meta SET meta_value='93' WHERE meta_key='schema_version';
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_91_92_b.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_a.sql|schema_version');

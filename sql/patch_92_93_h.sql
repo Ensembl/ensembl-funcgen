@@ -26,4 +26,4 @@ CREATE TABLE execution_plan (
 );
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_91_92_h.sql|execution_plan table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_h.sql|execution_plan table');

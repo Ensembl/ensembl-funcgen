@@ -13,14 +13,11 @@
 -- limitations under the License.
 
 /**
-@header patch_91_92_m.sql - Remove constraints
-@desc   Remove constraints to allow failed runs to be registered.
+@header patch_91_92_c.sql - Make peak_id an autoincrement
+@desc   Make peak_id an autoincrement
 */
 
-alter table chance modify path varchar(512);
-
-alter table phantom_peak modify num_reads    int(12) unsigned default null;
-alter table phantom_peak modify phantom_peak int(17) unsigned default null;
+alter table peak modify peak_id int(10) unsigned NOT NULL AUTO_INCREMENT;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_91_92_m.sql|Remove constraints');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_c.sql|Make peak_id an autoincrement');
