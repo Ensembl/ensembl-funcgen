@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanUtils;
+package Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanUtils;
 
 use warnings;
 use strict;
@@ -6,7 +6,7 @@ use Carp;
 
 use base qw( Exporter );
 use vars qw( @EXPORT_OK );
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Constants qw ( :all );
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
 
 @EXPORT_OK = qw(
   create_ref

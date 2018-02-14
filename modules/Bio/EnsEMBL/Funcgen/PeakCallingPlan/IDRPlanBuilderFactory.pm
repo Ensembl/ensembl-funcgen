@@ -1,8 +1,8 @@
-package Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRPlanBuilderFactory;
+package Bio::EnsEMBL::Funcgen::PeakCallingPlan::IDRPlanBuilderFactory;
 
 use strict;
 use Data::Dumper;
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Constants qw ( :all );
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
 use Role::Tiny::With;
 with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 
@@ -13,25 +13,25 @@ sub make {
   
   my $idr_strategy = $self->select_idr_strategy($experiment);
   
-  use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRPlanBuilder::SkipIdr;
-  use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRPlanBuilder::RunIdrOnBiologicalReplicates;
-  use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRPlanBuilder::RunIdrOnTechnicalReplicates;
+  use Bio::EnsEMBL::Funcgen::PeakCallingPlan::IDRPlanBuilder::SkipIdr;
+  use Bio::EnsEMBL::Funcgen::PeakCallingPlan::IDRPlanBuilder::RunIdrOnBiologicalReplicates;
+  use Bio::EnsEMBL::Funcgen::PeakCallingPlan::IDRPlanBuilder::RunIdrOnTechnicalReplicates;
   
   my $idr_plan_builder;
   
   if ($idr_strategy eq SKIP_IDR) {
     $idr_plan_builder 
-      = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRPlanBuilder::SkipIdr
+      = Bio::EnsEMBL::Funcgen::PeakCallingPlan::IDRPlanBuilder::SkipIdr
         ->new($experiment);
   }
   if ($idr_strategy eq RUN_IDR_ON_BIOLOGICAL_REPLICATES) {
     $idr_plan_builder 
-      = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRPlanBuilder::RunIdrOnBiologicalReplicates
+      = Bio::EnsEMBL::Funcgen::PeakCallingPlan::IDRPlanBuilder::RunIdrOnBiologicalReplicates
         ->new($experiment);
   }
   if ($idr_strategy eq RUN_IDR_ON_TECHNICAL_REPLICATES) {
     $idr_plan_builder 
-      = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRPlanBuilder::RunIdrOnTechnicalReplicates
+      = Bio::EnsEMBL::Funcgen::PeakCallingPlan::IDRPlanBuilder::RunIdrOnTechnicalReplicates
         ->new($experiment);
   }
   if (! defined $idr_strategy) {

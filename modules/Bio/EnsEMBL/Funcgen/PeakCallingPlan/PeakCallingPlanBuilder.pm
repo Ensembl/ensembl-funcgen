@@ -1,9 +1,9 @@
-package Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::PeakCallingPlanBuilder;
+package Bio::EnsEMBL::Funcgen::PeakCallingPlan::PeakCallingPlanBuilder;
 
 use strict;
 use Data::Dumper;
 use Role::Tiny::With;
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Constants qw( :all );
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw( :all );
 with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 
 use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(

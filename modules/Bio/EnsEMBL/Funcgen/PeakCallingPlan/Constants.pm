@@ -1,10 +1,10 @@
-package Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Constants;
+package Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants;
 
-=head1 Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Constants
+=head1 Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants
 
 Here is where all the constants are declared. To use them, add:
 
-  use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Constants qw ( :all );
+  use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
   
 to your module, then use:
   

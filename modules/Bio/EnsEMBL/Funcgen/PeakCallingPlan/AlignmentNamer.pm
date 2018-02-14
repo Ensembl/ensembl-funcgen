@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignmentNamer;
+package Bio::EnsEMBL::Funcgen::PeakCallingPlan::AlignmentNamer;
 
 use strict;
 use File::Spec;

@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Director;
+package Bio::EnsEMBL::Funcgen::PeakCallingPlan::Director;
 
 use strict;
 use Data::Dumper;
@@ -6,15 +6,15 @@ use Data::Dumper;
 use Role::Tiny::With;
 with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRPlanBuilderFactory;
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::PlanMetadataBuilder;
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignAllPlanBuilder;
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::PeakCallingPlanBuilder;
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::SignalFilePlanBuilder;
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::PlanMetadataBuilder;
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::RemoveDuplicatesPlanBuilder;
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Constants qw ( :all );
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanUtils qw ( create_ref );
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::IDRPlanBuilderFactory;
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::PlanMetadataBuilder;
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::AlignAllPlanBuilder;
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::PeakCallingPlanBuilder;
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::SignalFilePlanBuilder;
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::PlanMetadataBuilder;
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::RemoveDuplicatesPlanBuilder;
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanUtils qw ( create_ref );
 
 use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_get_or_set
@@ -30,8 +30,8 @@ sub construct_execution_plan {
   my $directory_name_builder = $param->{directory_name_builder};
   my $assembly               = $param->{assembly};
 
-  use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignmentNamer;
-  my $alignment_namer = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignmentNamer->new(
+  use Bio::EnsEMBL::Funcgen::PeakCallingPlan::AlignmentNamer;
+  my $alignment_namer = Bio::EnsEMBL::Funcgen::PeakCallingPlan::AlignmentNamer->new(
       -directory_name_builder      => $directory_name_builder,
       -experiment                  => $experiment,
 #       -biological_replicate_number => undef,
@@ -39,7 +39,7 @@ sub construct_execution_plan {
   );
   $param->{alignment_namer} = $alignment_namer;
 
-  my $control_alignment_namer = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignmentNamer->new(
+  my $control_alignment_namer = Bio::EnsEMBL::Funcgen::PeakCallingPlan::AlignmentNamer->new(
       -directory_name_builder      => $directory_name_builder,
       -experiment                  => $experiment->get_control,
 #       -biological_replicate_number => undef,
@@ -68,7 +68,7 @@ sub construct_execution_plan {
   #
   
   my $plan_meta_data_builder 
-    = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::PlanMetadataBuilder
+    = Bio::EnsEMBL::Funcgen::PeakCallingPlan::PlanMetadataBuilder
       ->new;
   
   $plan_meta_data_builder->construct($param);
@@ -79,7 +79,7 @@ sub construct_execution_plan {
   #
   
   my $align_all_plan_builder 
-    = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignAllPlanBuilder
+    = Bio::EnsEMBL::Funcgen::PeakCallingPlan::AlignAllPlanBuilder
         ->new;
   
   $align_all_plan_builder->construct($param);
@@ -118,7 +118,7 @@ sub construct_execution_plan {
   #
 
   my $remove_duplicates_plan_builder
-    = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::RemoveDuplicatesPlanBuilder
+    = Bio::EnsEMBL::Funcgen::PeakCallingPlan::RemoveDuplicatesPlanBuilder
       ->new;
   
   $remove_duplicates_plan_builder->set_input         (create_ref($align_all_read_files_for_experiment_plan));
@@ -159,7 +159,7 @@ sub construct_execution_plan {
   #
   
   my $signal_file_plan_builder
-    = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::SignalFilePlanBuilder
+    = Bio::EnsEMBL::Funcgen::PeakCallingPlan::SignalFilePlanBuilder
       ->new;
   
   $signal_file_plan_builder->set_alignment        (create_ref($remove_duplicates_plan));
@@ -192,7 +192,7 @@ sub construct_execution_plan {
   #
   
   my $idr_plan_builder_factory
-    = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRPlanBuilderFactory
+    = Bio::EnsEMBL::Funcgen::PeakCallingPlan::IDRPlanBuilderFactory
       ->new;
   
   my $idr_plan_builder 
@@ -209,7 +209,7 @@ sub construct_execution_plan {
   #
 
   my $peak_calling_plan_builder 
-    = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::PeakCallingPlanBuilder
+    = Bio::EnsEMBL::Funcgen::PeakCallingPlan::PeakCallingPlanBuilder
       ->new;
   
   my $peaks_output_dir 

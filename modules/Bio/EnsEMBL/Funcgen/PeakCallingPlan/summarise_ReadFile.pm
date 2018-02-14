@@ -1,8 +1,8 @@
-package Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::summarise_ReadFile;
+package Bio::EnsEMBL::Funcgen::PeakCallingPlan::summarise_ReadFile;
 
 use strict;
 use Data::Dumper;
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Constants qw ( :all );
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
 
 use Role::Tiny;
 
