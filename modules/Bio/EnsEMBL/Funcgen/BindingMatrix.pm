@@ -181,27 +181,27 @@ sub source {
 
 
 
-sub frequencies {
+sub _frequencies {
     my ($self) = @_;
 
-    if ( $self->{frequencies} ) {
-        return $self->{frequencies};
-    }
+    if ( !$self->{frequencies} ) {
 
-    my $binding_matrix_frequencies_adaptor
-        = $self->adaptor->db()->get_adaptor('BindingMatrixFrequencies');
+        my $binding_matrix_frequencies_adaptor
+            = $self->adaptor->db()->get_adaptor('BindingMatrixFrequencies');
 
-    my $binding_matrix_frequencies
-        = $binding_matrix_frequencies_adaptor->fetch_all_by_BindingMatrix(
-        $self);
+        my $binding_matrix_frequencies
+            = $binding_matrix_frequencies_adaptor->fetch_all_by_BindingMatrix(
+            $self);
 
-    for my $bmf ( @{$binding_matrix_frequencies} ) {
-        $self->{frequencies}->{ $bmf->position() }->{ $bmf->nucleotide() }
-            = $bmf->frequency();
+        for my $bmf ( @{$binding_matrix_frequencies} ) {
+            $self->{frequencies}->{ $bmf->position() }->{ $bmf->nucleotide() }
+                = $bmf->frequency();
+        }
     }
 
     return $self->{frequencies};
 }
+
 
 
 sub get_frequency_by_position_nucleotide {
@@ -216,11 +216,7 @@ sub get_frequency_by_position_nucleotide {
         throw('Supplied nucleotide not valid');
     }
 
-    if ( !$self->{frequencies} ) {
-        $self->frequencies();
-    }
-
-    return $self->{frequencies}->{$position}->{$nucleotide};
+    return $self->_frequencies()->{$position}->{$nucleotide};
 }
 
 
@@ -228,10 +224,6 @@ sub get_frequencies_as_string {
     my ($self) = @_;
 
     my $frequencies_string;
-
-    if ( !$self->{frequencies} ) {
-        $self->frequencies();
-    }
 
     my @nucleotide_order = ( 'A', 'C', 'G', 'T' );
 
@@ -260,14 +252,37 @@ sub get_frequencies_as_string {
 
 =cut
 
-sub length { 
-  my $self = shift;
+sub length {
+    my $self = shift;
 
-  if (! $self->{frequencies}){
-    $self->frequencies();
-  } 
+    if ( !$self->{length} ) {
+        $self->{length} = scalar keys %{ $self->_frequencies() };
+    }
 
-  return scalar keys %{$self->{frequencies}};
+    return $self->{length};
 }
+
+
+=head2 summary_as_hash
+
+  Example       : $binding_matrix_summary = $binding_matrix->summary_as_hash;
+  Description   : Retrieves a textual summary of this BindingMatrix.
+  Returns       : Hashref of descriptive strings
+  Status        : Intended for internal use (REST)
+
+=cut
+
+sub summary_as_hash {
+    my $self = shift;
+
+    return {
+        name        => $self->name(),
+        source      => $self->source(),
+        threshold   => $self->threshold(),
+        length      => $self->length(),
+        frequencies => $self->_frequencies(),
+    };
+}
+
 
 1;

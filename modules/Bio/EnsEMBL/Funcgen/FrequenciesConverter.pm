@@ -69,7 +69,7 @@ sub get_probabilities {
     my $default_pseudocount = 0.1;
     $pseudocount //= $default_pseudocount;
     my $probabilities = {};
-    my $frequencies   = $binding_matrix->frequencies();
+    my $frequencies   = $binding_matrix->_frequencies();
 
     for (
         my $position = 1;
@@ -154,31 +154,6 @@ sub get_bits {
 
     return $bits;
 }
-
-# sub _get_frequencies_hashref {
-#     my ( $self, $binding_matrix ) = @_;
-
-#     assert_ref( $binding_matrix, 'Bio::EnsEMBL::Funcgen::BindingMatrix',
-#         'BindingMatrix' );
-
-#     my $frequencies = {};
-
-#     for (
-#         my $position = 1;
-#         $position <= $binding_matrix->length();
-#         $position++
-#         )
-#     {
-#         $frequencies->{$position} //= {};
-#         for my $nucleotide ( @{ $self->_nucleotides() } ) {
-#             $frequencies->{$position}->{$nucleotide}
-#                 = $binding_matrix->get_frequency_by_position_nucleotide(
-#                 $position, $nucleotide );
-#         }
-#     }
-
-#     return $frequencies;
-# }
 
 sub _get_position_sum {
     my ( $self, $position_frequencies ) = @_;
