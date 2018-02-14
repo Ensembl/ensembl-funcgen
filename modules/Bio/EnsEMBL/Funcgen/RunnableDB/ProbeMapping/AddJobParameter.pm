@@ -1,12 +1,12 @@
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::Hive::AddJobParameter
+Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::AddJobParameter
 
 =head1 DESCRIPTION
 
 =cut
 
-package Bio::EnsEMBL::Funcgen::Hive::AddJobParameter;
+package Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::AddJobParameter;
 
 use base ('Bio::EnsEMBL::Hive::Process');
 use Data::Dumper;

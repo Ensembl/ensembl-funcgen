@@ -69,7 +69,7 @@ sub pipeline_analyses {
         },
       {
           -logic_name  => 'multiply_probe_align_jobs',
-          -module     => 'Bio::EnsEMBL::Funcgen::Hive::AddJobParameter',
+          -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::AddJobParameter',
           -parameters => {
             add => {
               species => '#species#',
@@ -84,7 +84,7 @@ sub pipeline_analyses {
       },
       {
           -logic_name  => 'start_align_probes_genomic',
-          -module     => 'Bio::EnsEMBL::Funcgen::Hive::AddJobParameter',
+          -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::AddJobParameter',
           -parameters => {
             add => {
               type    => 'genomic',
@@ -96,7 +96,7 @@ sub pipeline_analyses {
       },
       {
           -logic_name  => 'start_align_probes_transcript',
-          -module     => 'Bio::EnsEMBL::Funcgen::Hive::AddJobParameter',
+          -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::AddJobParameter',
           -parameters => {
             add => {
               type    => 'transcript',
