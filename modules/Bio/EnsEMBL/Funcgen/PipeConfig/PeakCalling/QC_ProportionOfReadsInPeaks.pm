@@ -69,7 +69,7 @@ sub pipeline_analyses {
       {   -logic_name => 'qc_prepare_proportion_of_reads_in_peaks',
           -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::QcProportionOfReadsInPeaksJobFactory',
           -parameters => {
-            tempdir => '#tempdir_chipseq#/#species#/frip',
+            tempdir => '#tempdir_peak_calling#/#species#/frip',
           },
           -flow_into => { 
             2 => 'qc_compute_proportion_of_reads_in_peaks',

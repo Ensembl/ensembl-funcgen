@@ -43,7 +43,7 @@ sub pipeline_analyses {
         {   -logic_name  => 'run_swembl',
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::RunPermissiveSWEmbl',
             -parameters => {
-              tempdir => '#tempdir_chipseq#/#species#/idr',
+              tempdir => '#tempdir_peak_calling#/#species#/idr',
             },
             -flow_into   => {
                2 => '?accu_name=permissive_peak_calling&accu_address=[]&accu_input_variable=permissive_peak_calling',
@@ -53,7 +53,7 @@ sub pipeline_analyses {
         {   -logic_name  => 'run_swembl_himem',
             -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::RunPermissiveSWEmbl',
             -parameters => {
-              tempdir => '#tempdir_chipseq#/#species#/idr',
+              tempdir => '#tempdir_peak_calling#/#species#/idr',
             },
             -rc_name     => '8Gb_job',
             -flow_into   => {

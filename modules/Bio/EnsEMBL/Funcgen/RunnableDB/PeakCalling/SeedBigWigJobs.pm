@@ -13,7 +13,7 @@ sub run {
   my $self = shift;
   my $species      = $self->param_required('species');
   my $plan         = $self->param_required('execution_plan');
-  my $tempdir      = $self->param_required('tempdir_chipseq');
+  my $tempdir      = $self->param_required('tempdir_peak_calling');
   my $in_test_mode = $self->param('in_test_mode');
   
   use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanUtils qw (

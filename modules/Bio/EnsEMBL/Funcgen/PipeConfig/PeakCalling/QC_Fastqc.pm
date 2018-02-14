@@ -47,7 +47,7 @@ sub pipeline_analyses {
         {   -logic_name => 'QcFastQcJobFactory',
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::QcFastQcJobFactory',
             -parameters => {
-              tempdir => '#tempdir_chipseq#/#species#/fastqc',
+              tempdir => '#tempdir_peak_calling#/#species#/fastqc',
             },
             -flow_into => { 
                 2 => 'RunFastQC',

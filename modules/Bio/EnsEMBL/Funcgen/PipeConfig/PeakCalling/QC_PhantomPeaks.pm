@@ -52,7 +52,7 @@ sub pipeline_analyses {
         {   -logic_name => 'qc_phantom_peaks_job_factory',
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::QcPhantomPeaksJobFactory',
             -parameters  => {
-              tempdir => '#tempdir_chipseq#/#species#/phantom_peaks',
+              tempdir => '#tempdir_peak_calling#/#species#/phantom_peaks',
             },
             -flow_into => { 
                 2 => 'qc_run_phantom_peaks',

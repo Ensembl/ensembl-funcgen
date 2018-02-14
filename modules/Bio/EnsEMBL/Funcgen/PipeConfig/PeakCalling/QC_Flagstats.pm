@@ -52,7 +52,7 @@ sub pipeline_analyses {
       {   -logic_name => 'QcFlagstatsJobFactory',
           -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::QcFlagstatsJobFactory',
           -parameters => {
-            tempdir => '#tempdir_chipseq#/#species#/flagstats',
+            tempdir => '#tempdir_peak_calling#/#species#/flagstats',
           },
           -flow_into => {
             2 => 'QcRunFlagstats',

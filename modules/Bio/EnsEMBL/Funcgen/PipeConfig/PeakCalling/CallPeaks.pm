@@ -18,7 +18,7 @@ sub pipeline_analyses {
         {   -logic_name  => 'call_peaks',
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::CallPeaks',
             -parameters => {
-              tempdir => '#tempdir_chipseq#/#species#/peak_calling'
+              tempdir => '#tempdir_peak_calling#/#species#/peak_calling'
             },
             -flow_into   => {
                2        => 'store_peaks',
@@ -28,7 +28,7 @@ sub pipeline_analyses {
         {   -logic_name  => 'call_peaks_himem',
             -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::CallPeaks',
             -parameters => {
-              tempdir => '#tempdir_chipseq#/#species#/peak_calling'
+              tempdir => '#tempdir_peak_calling#/#species#/peak_calling'
             },
             -rc_name     => '8Gb_job',
             -flow_into   => {
@@ -51,7 +51,7 @@ sub pipeline_analyses {
             -parameters => {
             
                 peak_calling => '#expr( #execution_plan#->{call_peaks}->{name} )expr#',
-                tempdir      => '#tempdir_chipseq#/#species#/peak_calling/#peak_calling#',
+                tempdir      => '#tempdir_peak_calling#/#species#/peak_calling/#peak_calling#',
                 
                 cmd => qq( trim_peaks_to_seq_region_boundaries.pl )
                 . qq( --species      #species#      )
