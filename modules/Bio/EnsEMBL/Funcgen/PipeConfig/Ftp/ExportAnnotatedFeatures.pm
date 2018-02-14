@@ -1,8 +1,8 @@
-package Bio::EnsEMBL::Funcgen::HiveConfig::Ftp::ExportAnnotatedFeatures;
+package Bio::EnsEMBL::Funcgen::PipeConfig::Ftp::ExportAnnotatedFeatures;
 
 use strict;
 use warnings;
-use base 'Bio::EnsEMBL::Funcgen::HiveConfig::Ftp::Base';
+use base 'Bio::EnsEMBL::Funcgen::PipeConfig::Ftp::Base';
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 use Hash::Util qw( lock_hash );
 

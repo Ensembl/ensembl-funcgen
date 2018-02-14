@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Funcgen::HiveConfig::Ftp::Base;
+package Bio::EnsEMBL::Funcgen::PipeConfig::Ftp::Base;
 
 use strict;
 use warnings;

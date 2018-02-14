@@ -1,8 +1,8 @@
-package Bio::EnsEMBL::Funcgen::HiveConfig::Ftp::Backbone;
+package Bio::EnsEMBL::Funcgen::PipeConfig::Ftp::Backbone;
 
 use strict;
 use warnings;
-use base 'Bio::EnsEMBL::Funcgen::HiveConfig::Ftp::Base';
+use base 'Bio::EnsEMBL::Funcgen::PipeConfig::Ftp::Base';
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 
 sub pipeline_analyses {

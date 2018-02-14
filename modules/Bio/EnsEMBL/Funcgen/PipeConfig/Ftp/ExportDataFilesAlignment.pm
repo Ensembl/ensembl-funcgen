@@ -1,9 +1,9 @@
-package Bio::EnsEMBL::Funcgen::HiveConfig::Ftp::ExportDataFilesAlignment;
+package Bio::EnsEMBL::Funcgen::PipeConfig::Ftp::ExportDataFilesAlignment;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Funcgen::HiveConfig::Ftp::ExportDataFilesBase;
-use base 'Bio::EnsEMBL::Funcgen::HiveConfig::Ftp::ExportDataFilesBase';
+use Bio::EnsEMBL::Funcgen::PipeConfig::Ftp::ExportDataFilesBase;
+use base 'Bio::EnsEMBL::Funcgen::PipeConfig::Ftp::ExportDataFilesBase';
 
 sub pipeline_analyses {
     my $self = shift;
