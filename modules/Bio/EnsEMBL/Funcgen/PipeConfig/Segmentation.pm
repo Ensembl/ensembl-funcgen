@@ -31,7 +31,7 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
-use base ('Bio::EnsEMBL::Funcgen::PipeConfig::ChIPSeqAnalysis::Base');
+use base ('Bio::EnsEMBL::Funcgen::PipeConfig::PeakCalling::Base');
 
 sub pipeline_wide_parameters {
   my $self = shift;
