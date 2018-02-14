@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Funcgen::PipeConfig::PeakCalling::ErsaPrePipelineChecks;
+package Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::PrePipelineChecks;
 
 use strict;
 use base ('Bio::EnsEMBL::Hive::Process');
