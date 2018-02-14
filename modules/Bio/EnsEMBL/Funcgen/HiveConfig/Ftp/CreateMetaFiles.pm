@@ -19,7 +19,7 @@ sub pipeline_analyses {
             },
         },
         {   -logic_name  => 'create_readme_files',
-            -module      => 'Bio::EnsEMBL::Funcgen::Hive::Ftp::WriteReadmeFile',
+            -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::Ftp::WriteReadmeFile',
             -parameters  => {
                 destination => '#ftp_base_dir#/#species#/README',
             },

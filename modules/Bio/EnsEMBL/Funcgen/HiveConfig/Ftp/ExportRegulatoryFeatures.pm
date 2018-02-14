@@ -26,7 +26,7 @@ sub pipeline_analyses {
             },
         },
         {   -logic_name  => 'job_factory_regulatory',
-            -module      => 'Bio::EnsEMBL::Funcgen::Hive::Ftp::JobFactoryQualityChecks',
+            -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::Ftp::JobFactoryQualityChecks',
             -flow_into   => {
                MAIN => { 
                   'dbconn_for_species'         => INPUT_PLUS(),
@@ -35,7 +35,7 @@ sub pipeline_analyses {
              }
         },
         {   -logic_name  => 'dbconn_for_species',
-            -module      => 'Bio::EnsEMBL::Funcgen::Hive::Ftp::DbconnForSpecies',
+            -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::Ftp::DbconnForSpecies',
             -parameters  => {
                 group => 'funcgen',
             },

@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Funcgen::Hive::Ftp::JobFactoryAnnotatedFeaturesUsingIdLists;
+package Bio::EnsEMBL::Funcgen::RunnableDB::Ftp::JobFactoryAnnotatedFeaturesUsingIdLists;
 
 use strict;
 use Data::Dumper;

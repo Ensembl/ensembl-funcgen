@@ -31,13 +31,13 @@ sub pipeline_analyses {
             }
         },
         {   -logic_name  => 'create_peak_calling_description_jobs',
-            -module      => 'Bio::EnsEMBL::Funcgen::Hive::Ftp::CreatePeakCallingDescriptionJobs',
+            -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::Ftp::CreatePeakCallingDescriptionJobs',
             -flow_into   => {
                2 => 'create_peak_calling_description',
             },
         },
         {   -logic_name  => 'create_peak_calling_description',
-            -module      => 'Bio::EnsEMBL::Funcgen::Hive::Ftp::CreatePeakCallingDescription',
+            -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::Ftp::CreatePeakCallingDescription',
             -parameters  => {
                 file_name => 
                   $ftp_layout_configuration->{peak_calling_description_file_dir}

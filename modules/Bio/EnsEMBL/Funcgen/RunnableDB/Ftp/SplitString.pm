@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Funcgen::Hive::Ftp::SplitString;
+package Bio::EnsEMBL::Funcgen::RunnableDB::Ftp::SplitString;
 
 use strict;
 use Data::Dumper;

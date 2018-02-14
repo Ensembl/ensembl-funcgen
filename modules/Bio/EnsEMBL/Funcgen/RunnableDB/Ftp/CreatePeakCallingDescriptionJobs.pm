@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Funcgen::Hive::Ftp::CreatePeakCallingDescriptionJobs;
+package Bio::EnsEMBL::Funcgen::RunnableDB::Ftp::CreatePeakCallingDescriptionJobs;
 
 use strict;
 use Data::Dumper;

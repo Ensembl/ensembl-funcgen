@@ -18,7 +18,7 @@ sub pipeline_analyses {
             },
         },
         {   -logic_name  => 'fetch_parameters_from_db',
-            -module      => 'Bio::EnsEMBL::Funcgen::Hive::Ftp::FetchParametersFromDb',
+            -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::Ftp::FetchParametersFromDb',
             -flow_into   => {
                MAIN => [
                   'export_data_files_segmentation'

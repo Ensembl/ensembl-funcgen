@@ -23,7 +23,7 @@ sub pipeline_analyses {
             },
         },
         {   -logic_name  => 'job_factory_motif_features',
-            -module      => 'Bio::EnsEMBL::Funcgen::Hive::Ftp::JobFactoryQualityChecks',
+            -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::Ftp::JobFactoryQualityChecks',
             -flow_into   => {
                MAIN => 'export_motif_features'
             },

@@ -47,7 +47,7 @@ sub pipeline_analyses {
             },
         },
         {   -logic_name  => 'for_each_epigenome_and_feature_type_having_peaks',
-            -module      => 'Bio::EnsEMBL::Funcgen::Hive::Ftp::JobFactoryAnnotatedFeaturesUsingIdLists',
+            -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::Ftp::JobFactoryAnnotatedFeaturesUsingIdLists',
             -flow_into   => {
                '2->A' => 'make_temp_dir',
                'A->2' => 'rm_peaks_temp_dir',

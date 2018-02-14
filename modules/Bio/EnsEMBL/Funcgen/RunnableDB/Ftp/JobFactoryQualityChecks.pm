@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Funcgen::Hive::Ftp::JobFactoryQualityChecks;
+package Bio::EnsEMBL::Funcgen::RunnableDB::Ftp::JobFactoryQualityChecks;
 
 use strict;
 use Data::Dumper;

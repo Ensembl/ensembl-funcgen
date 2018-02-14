@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Funcgen::Hive::Ftp::WriteReadmeFile;
+package Bio::EnsEMBL::Funcgen::RunnableDB::Ftp::WriteReadmeFile;
 
 use strict;
 use Data::Dumper;

@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Funcgen::Hive::Ftp::FetchParametersFromDb;
+package Bio::EnsEMBL::Funcgen::RunnableDB::Ftp::FetchParametersFromDb;
 
 use strict;
 use Data::Dumper;

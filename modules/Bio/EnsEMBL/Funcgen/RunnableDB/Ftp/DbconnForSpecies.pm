@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Funcgen::Hive::Ftp::DbconnForSpecies;
+package Bio::EnsEMBL::Funcgen::RunnableDB::Ftp::DbconnForSpecies;
 
 use strict;
 use Data::Dumper;

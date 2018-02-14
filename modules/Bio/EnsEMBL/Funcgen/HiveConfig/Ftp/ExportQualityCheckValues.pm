@@ -31,7 +31,7 @@ sub pipeline_analyses {
             },
         },
         {   -logic_name  => 'job_factory_quality_checks',
-            -module      => 'Bio::EnsEMBL::Funcgen::Hive::Ftp::JobFactoryQualityChecks',
+            -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::Ftp::JobFactoryQualityChecks',
             -flow_into   => {
                MAIN => [
                 'export_qc_chance',
