@@ -1,9 +1,9 @@
-package Bio::EnsEMBL::Funcgen::HiveConfig::ProbeMapping::RunAlignHealthchecks_conf;
+package Bio::EnsEMBL::Funcgen::PipeConfig::ProbeMapping::RunAlignHealthchecks_conf;
 
 use strict;
 use warnings;
 
-use base ('Bio::EnsEMBL::Funcgen::HiveConfig::ProbeMapping::Base');
+use base ('Bio::EnsEMBL::Funcgen::PipeConfig::ProbeMapping::Base');
 
 my $max_allowed_hits_per_probe = 100;
 

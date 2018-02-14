@@ -1,9 +1,9 @@
-package Bio::EnsEMBL::Funcgen::HiveConfig::ProbeMapping::RunImportHealthchecks_conf;
+package Bio::EnsEMBL::Funcgen::PipeConfig::ProbeMapping::RunImportHealthchecks_conf;
 
 use strict;
 use warnings;
 
-use base ('Bio::EnsEMBL::Funcgen::HiveConfig::ProbeMapping::Base');
+use base ('Bio::EnsEMBL::Funcgen::PipeConfig::ProbeMapping::Base');
 
 sub pipeline_analyses {
     my $self = shift;

@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Funcgen::HiveConfig::ProbeMapping::Base;
+package Bio::EnsEMBL::Funcgen::PipeConfig::ProbeMapping::Base;
 
 use strict;
 use warnings;

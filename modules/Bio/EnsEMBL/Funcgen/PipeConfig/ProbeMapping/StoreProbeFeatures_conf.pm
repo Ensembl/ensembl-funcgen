@@ -1,10 +1,10 @@
-package Bio::EnsEMBL::Funcgen::HiveConfig::ProbeMapping::StoreProbeFeatures_conf;
+package Bio::EnsEMBL::Funcgen::PipeConfig::ProbeMapping::StoreProbeFeatures_conf;
 
 use strict;
 use warnings;
 
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;           # Allow this particular config to use conditional dataflow and INPUT_PLUS
-use base ('Bio::EnsEMBL::Funcgen::HiveConfig::ProbeMapping::Base');
+use base ('Bio::EnsEMBL::Funcgen::PipeConfig::ProbeMapping::Base');
 
 my $max_allowed_hits_per_probe = 100;
 

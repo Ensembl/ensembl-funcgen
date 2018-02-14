@@ -1,8 +1,8 @@
-package Bio::EnsEMBL::Funcgen::HiveConfig::ProbeMapping::Backbone_conf;
+package Bio::EnsEMBL::Funcgen::PipeConfig::ProbeMapping::Backbone_conf;
 
 use strict;
 use warnings;
-use base ('Bio::EnsEMBL::Funcgen::HiveConfig::ProbeMapping::Base');
+use base ('Bio::EnsEMBL::Funcgen::PipeConfig::ProbeMapping::Base');
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 
 sub pipeline_analyses {
