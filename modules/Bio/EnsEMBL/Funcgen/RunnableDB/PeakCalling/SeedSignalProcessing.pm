@@ -3,7 +3,7 @@ package Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedSignalProcessing;
 use strict;
 use base 'Bio::EnsEMBL::Hive::Process';
 use Data::Dumper;
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRStrategy;
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::IDRStrategy;
 
 use constant {
   BRANCH_IDR         => 2,

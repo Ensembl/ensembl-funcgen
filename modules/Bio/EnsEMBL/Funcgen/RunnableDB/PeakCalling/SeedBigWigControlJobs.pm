@@ -16,7 +16,7 @@ sub run {
   my $tempdir      = $self->param_required('tempdir_peak_calling');
   my $in_test_mode = $self->param('in_test_mode');
   
-  use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanUtils qw (
+  use Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanUtils qw (
         lock_execution_plan
         resolve_nonterminal_symbols
   );

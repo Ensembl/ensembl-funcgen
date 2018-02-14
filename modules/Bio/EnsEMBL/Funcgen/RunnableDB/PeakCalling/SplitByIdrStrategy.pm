@@ -3,7 +3,7 @@ package Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SplitByIdrStrategy;
 use strict;
 use base 'Bio::EnsEMBL::Hive::Process';
 use Data::Dumper;
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRStrategy;
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::IDRStrategy;
 
 use constant {
   BRANCH_SKIP_IDR                         => 2,
@@ -13,13 +13,13 @@ use constant {
 
 my $branch_map = {
 
-  Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRStrategy
+  Bio::EnsEMBL::Funcgen::PeakCallingPlan::IDRStrategy
     ->SKIP_IDR => BRANCH_SKIP_IDR,
 
-  Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRStrategy
+  Bio::EnsEMBL::Funcgen::PeakCallingPlan::IDRStrategy
     ->RUN_IDR_ON_TECHNICAL_REPLICATES => BRANCH_RUN_IDR_ON_TECHNICAL_REPLICATES,
 
-  Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRStrategy
+  Bio::EnsEMBL::Funcgen::PeakCallingPlan::IDRStrategy
     ->RUN_IDR_ON_BIOLOGICAL_REPLICATES => BRANCH_RUN_IDR_ON_BIOLOGICAL_REPLICATES,
 
 };

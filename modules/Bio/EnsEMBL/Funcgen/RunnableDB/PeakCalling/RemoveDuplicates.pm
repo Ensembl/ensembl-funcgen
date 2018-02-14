@@ -3,7 +3,7 @@ package Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::RemoveDuplicates;
 use strict;
 use base 'Bio::EnsEMBL::Hive::Process';
 use Data::Dumper;
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanUtils qw (
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanUtils qw (
     lock_execution_plan
 );
 

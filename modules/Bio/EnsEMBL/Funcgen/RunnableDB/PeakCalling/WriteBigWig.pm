@@ -11,7 +11,7 @@ sub run {
   my $execution_plan = $self->param_required('execution_plan');
   my $data_root_dir  = $self->param_required('data_root_dir');
 
-  use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanUtils qw (
+  use Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanUtils qw (
         lock_execution_plan
         resolve_nonterminal_symbols
   );

@@ -11,7 +11,7 @@ sub run {
   my $species            = $self->param_required('species');
   my $peaks_to_load_file = $self->param_required('peaks_to_load_file');
   
-  use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanUtils qw (
+  use Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanUtils qw (
         lock_execution_plan
         resolve_nonterminal_symbols
   );

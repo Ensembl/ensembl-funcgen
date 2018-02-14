@@ -75,7 +75,7 @@ sub run {
   use List::Util qw( max );
   my $idr_num_peak_threshold = max ( @pairwise_idr_values );
   
-  use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Constants qw (
+  use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw (
     RUN_IDR_ON_BIOLOGICAL_REPLICATES 
     RUN_IDR_ON_TECHNICAL_REPLICATES  
   );

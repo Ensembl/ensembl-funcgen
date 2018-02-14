@@ -17,7 +17,7 @@ sub run {
   #my $permissive_peak_file = $self->param_required('bed_file_to_peak_number');
   my $permissive_peak_calling = $self->param_required('permissive_peak_calling');
 
-  use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanUtils qw (
+  use Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanUtils qw (
         lock_execution_plan
         resolve_nonterminal_symbols
   );

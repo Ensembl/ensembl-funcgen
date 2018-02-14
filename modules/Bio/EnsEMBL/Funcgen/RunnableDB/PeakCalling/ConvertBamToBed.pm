@@ -20,7 +20,7 @@ sub run {
     $execution_plan_list = [ $self->param_required('execution_plan') ];
   }
 
-  use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanUtils qw (
+  use Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanUtils qw (
         lock_execution_plan
         resolve_nonterminal_symbols
         summarise

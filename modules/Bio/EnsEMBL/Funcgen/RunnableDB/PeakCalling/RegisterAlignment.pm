@@ -3,10 +3,10 @@ package Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::RegisterAlignment;
 use strict;
 use base 'Bio::EnsEMBL::Hive::Process';
 use Data::Dumper;
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanUtils qw (
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanUtils qw (
     lock_execution_plan
 );
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Constants qw ( :all );
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
 
 sub run {
 

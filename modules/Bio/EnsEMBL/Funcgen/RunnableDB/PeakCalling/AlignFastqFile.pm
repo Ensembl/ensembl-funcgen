@@ -4,7 +4,7 @@ use strict;
 use base 'Bio::EnsEMBL::Hive::Process';
 use Data::Dumper;
 
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Constants qw( :all );
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw( :all );
 
 use constant {
   BRANCH_ACCUMULATOR => 2,

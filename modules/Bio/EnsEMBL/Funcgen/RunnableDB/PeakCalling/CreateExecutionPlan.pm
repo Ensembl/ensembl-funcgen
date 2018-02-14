@@ -31,9 +31,9 @@ sub run {
   my $default_assembly = $default_chromosome_coordsystem
     ->version;
 
-  use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::DirectoryNameBuilder;
+  use Bio::EnsEMBL::Funcgen::PeakCallingPlan::DirectoryNameBuilder;
   my $directory_name_builder 
-    = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::DirectoryNameBuilder
+    = Bio::EnsEMBL::Funcgen::PeakCallingPlan::DirectoryNameBuilder
       ->new(
         -root_dir                => '',
         -species                 => $species,
@@ -41,9 +41,9 @@ sub run {
         -ensembl_release_version => $ensembl_release_version,
       );
 
-  use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Director;
+  use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Director;
   my $chip_seq_analysis_director 
-    = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Director->new;
+    = Bio::EnsEMBL::Funcgen::PeakCallingPlan::Director->new;
   
   my $execution_plan 
     = $chip_seq_analysis_director->construct_execution_plan(

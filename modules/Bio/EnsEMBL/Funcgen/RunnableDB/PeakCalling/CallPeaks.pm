@@ -3,7 +3,7 @@ package Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::CallPeaks;
 use strict;
 use base 'Bio::EnsEMBL::Hive::Process';
 use Data::Dumper;
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Constants qw ( :all );
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
 
 use constant {
   BRANCH_STORE_PEAKS => 2,
@@ -18,7 +18,7 @@ sub run {
   my $data_root_dir = $self->param_required('data_root_dir');
   my $tempdir       = $self->param_required('tempdir');
 
-  use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanUtils qw (
+  use Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanUtils qw (
         lock_execution_plan
         resolve_nonterminal_symbols
         summarise
@@ -131,7 +131,7 @@ sub run {
   
   my $idr_strategy = $plan->{idr}->{strategy};
   
-  use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Constants qw( SKIP_IDR );
+  use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw( SKIP_IDR );
   
   if ($idr_strategy eq SKIP_IDR) {
     @max_peaks = ();

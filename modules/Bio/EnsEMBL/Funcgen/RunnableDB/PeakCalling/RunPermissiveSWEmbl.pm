@@ -16,7 +16,7 @@ sub run {
   my $tempdir       = $self->param_required('tempdir');
   my $plan          = $self->param_required('execution_plan');
   
-  use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanUtils qw (
+  use Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanUtils qw (
         lock_execution_plan
         resolve_nonterminal_symbols
   );

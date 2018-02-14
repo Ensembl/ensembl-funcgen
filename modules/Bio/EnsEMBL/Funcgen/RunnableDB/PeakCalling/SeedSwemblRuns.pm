@@ -3,7 +3,7 @@ package Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedSwemblRuns;
 use strict;
 use base 'Bio::EnsEMBL::Hive::Process';
 use Data::Dumper;
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Constants qw ( :all );
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
 
 use constant {
   BRANCH_OUTPUT => 2,
@@ -15,7 +15,7 @@ sub run {
   my $species        = $self->param_required('species');
   my $execution_plan = $self->param_required('execution_plan');
 
-  use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanUtils qw (
+  use Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanUtils qw (
         lock_execution_plan
         resolve_nonterminal_symbols
   );
