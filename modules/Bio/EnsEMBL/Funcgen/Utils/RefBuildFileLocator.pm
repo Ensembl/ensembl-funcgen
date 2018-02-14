@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator;
+package Bio::EnsEMBL::Funcgen::Utils::RefBuildFileLocator;
 
 use warnings;
 use strict;

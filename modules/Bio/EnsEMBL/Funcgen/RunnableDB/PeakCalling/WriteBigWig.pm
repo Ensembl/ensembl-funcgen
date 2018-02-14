@@ -44,8 +44,8 @@ sub run {
   my $bam_file_full_path    = "$data_root_dir/$bam_file";
   my $bigwig_file_full_path = "$data_root_dir/$bigwig_file";
 
-  use Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator;
-  my $bwa_index_locator = Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator->new;
+  use Bio::EnsEMBL::Funcgen::Utils::RefBuildFileLocator;
+  my $bwa_index_locator = Bio::EnsEMBL::Funcgen::Utils::RefBuildFileLocator->new;
   
   my $chromosome_lengths_relative = $bwa_index_locator->locate({
     species          => $species,

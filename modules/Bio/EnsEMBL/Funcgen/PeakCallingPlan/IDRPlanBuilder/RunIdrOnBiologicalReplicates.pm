@@ -109,8 +109,8 @@ sub construct {
       has_paired_end_reads_only => $has_paired_end_reads_only,
     });
 
-    use Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator;
-    my $bwa_index_locator = Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator->new;
+    use Bio::EnsEMBL::Funcgen::Utils::RefBuildFileLocator;
+    my $bwa_index_locator = Bio::EnsEMBL::Funcgen::Utils::RefBuildFileLocator->new;
 
     my $to_gender = 
         $bwa_index_locator

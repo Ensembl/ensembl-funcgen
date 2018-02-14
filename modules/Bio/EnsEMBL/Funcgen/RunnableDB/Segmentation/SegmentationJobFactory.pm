@@ -13,7 +13,7 @@ use strict;
 
 use base 'Bio::EnsEMBL::Hive::Process';
 
-use Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator;
+use Bio::EnsEMBL::Funcgen::Utils::RefBuildFileLocator;
 use Bio::EnsEMBL::Funcgen::Utils::GoodUtils qw( create_species_assembly_path );
 
 sub run {
@@ -40,7 +40,7 @@ sub run {
     $reference_data_root_dir
     . '/'
     . 
-      Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator
+      Bio::EnsEMBL::Funcgen::Utils::RefBuildFileLocator
         ->new
         ->locate({
           species   => $species,

@@ -30,8 +30,8 @@ sub run {
 #     );
 #   }
   
-  use Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator;
-  my $bwa_index_locator = Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator->new;
+  use Bio::EnsEMBL::Funcgen::Utils::RefBuildFileLocator;
+  my $bwa_index_locator = Bio::EnsEMBL::Funcgen::Utils::RefBuildFileLocator->new;
   
   my $reference_file_root = $self->param('reference_data_root_dir');
 

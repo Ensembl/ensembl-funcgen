@@ -46,8 +46,8 @@ sub construct_execution_plan {
 #       -technical_replicate_number  => undef,
   );
 
-  use Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator;
-  my $bwa_index_locator = Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator->new;
+  use Bio::EnsEMBL::Funcgen::Utils::RefBuildFileLocator;
+  my $bwa_index_locator = Bio::EnsEMBL::Funcgen::Utils::RefBuildFileLocator->new;
   
   my $samtools_fasta_index = $bwa_index_locator->locate({
     species          => $species,
