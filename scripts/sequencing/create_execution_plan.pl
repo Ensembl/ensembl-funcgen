@@ -40,7 +40,7 @@ use strict;
 use Data::Dumper;
 use Getopt::Long;
 use Bio::EnsEMBL::Utils::Logger;
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanUtils qw ( 
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanUtils qw ( 
   resolve_nonterminal_symbols
   summarise
 );
@@ -71,10 +71,10 @@ my $root_dir = '';
 use Bio::EnsEMBL::Registry;
 Bio::EnsEMBL::Registry->load_all($registry);
 
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanFactory;
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanFactory;
 
 my $execution_plan_factory
-  = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanFactory->new(
+  = Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanFactory->new(
     -root_dir                => $root_dir,
     -species                 => $species,
     -ensembl_release_version => $ensembl_release_version,

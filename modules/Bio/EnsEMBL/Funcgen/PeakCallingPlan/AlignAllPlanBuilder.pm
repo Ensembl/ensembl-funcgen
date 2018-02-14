@@ -1,8 +1,8 @@
-package Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignAllPlanBuilder;
+package Bio::EnsEMBL::Funcgen::PeakCallingPlan::AlignAllPlanBuilder;
 
 use strict;
 use Data::Dumper;
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Constants qw ( :all );
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
 
 use Role::Tiny::With;
 with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
@@ -24,8 +24,8 @@ sub get_Alignment {
 }
 
 use Role::Tiny::With;
-with 'Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::summarise_ReadFile';
-with 'Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::select_EnsemblAlignmentAnalysis';
+with 'Bio::EnsEMBL::Funcgen::PeakCallingPlan::summarise_ReadFile';
+with 'Bio::EnsEMBL::Funcgen::PeakCallingPlan::select_EnsemblAlignmentAnalysis';
 
 sub construct {
   my $self = shift;
@@ -87,8 +87,8 @@ sub construct {
             $experiment->epigenome->gender
         );
   
-  use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignmentPlanFactory;
-  my $alignment_plan_factory = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignmentPlanFactory
+  use Bio::EnsEMBL::Funcgen::PeakCallingPlan::AlignmentPlanFactory;
+  my $alignment_plan_factory = Bio::EnsEMBL::Funcgen::PeakCallingPlan::AlignmentPlanFactory
   ->new(
     -names_of_reads_to_merge => \@names_of_reads_to_merge,
     -description             => 'All reads from the ' . $self->experiment_type($experiment) . ' experiment',

@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::DirectoryNameBuilder;
+package Bio::EnsEMBL::Funcgen::PeakCallingPlan::DirectoryNameBuilder;
 
 use strict;
 use Data::Dumper;

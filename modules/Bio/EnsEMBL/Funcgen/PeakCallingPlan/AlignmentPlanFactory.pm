@@ -1,7 +1,7 @@
-package Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignmentPlanFactory;
+package Bio::EnsEMBL::Funcgen::PeakCallingPlan::AlignmentPlanFactory;
 
 use strict;
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Constants qw ( :all );
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
 
 use Role::Tiny::With;
 with 'Bio::EnsEMBL::Funcgen::GenericConstructor';

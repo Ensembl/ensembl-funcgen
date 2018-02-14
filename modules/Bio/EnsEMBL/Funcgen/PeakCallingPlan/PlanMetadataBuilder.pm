@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::PlanMetadataBuilder;
+package Bio::EnsEMBL::Funcgen::PeakCallingPlan::PlanMetadataBuilder;
 
 use strict;
 use Data::Dumper;

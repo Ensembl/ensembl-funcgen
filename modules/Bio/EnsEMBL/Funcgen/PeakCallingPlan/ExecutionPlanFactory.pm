@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanFactory;
+package Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanFactory;
 
 use strict;
 use Data::Dumper;
@@ -41,9 +41,9 @@ sub init {
   my $default_chromosome_coordsystem = $coordsystem_adaptor->fetch_by_name('chromosome');
   my $default_assembly = $default_chromosome_coordsystem->version;
 
-  use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::DirectoryNameBuilder;
+  use Bio::EnsEMBL::Funcgen::PeakCallingPlan::DirectoryNameBuilder;
   my $directory_name_builder 
-    = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::DirectoryNameBuilder
+    = Bio::EnsEMBL::Funcgen::PeakCallingPlan::DirectoryNameBuilder
       ->new(
         -root_dir                => $self->root_dir,
         -species                 => $self->species,
@@ -51,8 +51,8 @@ sub init {
         -ensembl_release_version => $self->ensembl_release_version,
       );
 
-  use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Director;
-  my $chip_seq_analysis_director = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Director->new;
+  use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Director;
+  my $chip_seq_analysis_director = Bio::EnsEMBL::Funcgen::PeakCallingPlan::Director->new;
   
   $self->chip_seq_analysis_director($chip_seq_analysis_director);
   $self->default_assembly($default_assembly);

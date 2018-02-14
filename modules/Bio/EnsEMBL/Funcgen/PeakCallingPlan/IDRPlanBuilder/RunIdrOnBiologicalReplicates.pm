@@ -1,8 +1,8 @@
-package Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::IDRPlanBuilder::RunIdrOnBiologicalReplicates;
+package Bio::EnsEMBL::Funcgen::PeakCallingPlan::IDRPlanBuilder::RunIdrOnBiologicalReplicates;
 
 use strict;
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::ExecutionPlanUtils qw ( create_ref );
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Constants qw( :all );
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanUtils qw ( create_ref );
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw( :all );
 use Data::Dumper;
 
 use Role::Tiny::With;
@@ -14,8 +14,8 @@ use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
 );
 
 use Role::Tiny::With;
-with 'Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::summarise_ReadFile';
-with 'Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::select_EnsemblAlignmentAnalysis';
+with 'Bio::EnsEMBL::Funcgen::PeakCallingPlan::summarise_ReadFile';
+with 'Bio::EnsEMBL::Funcgen::PeakCallingPlan::select_EnsemblAlignmentAnalysis';
 
 sub set_Alignments {
   my $self = shift;
@@ -62,7 +62,7 @@ sub construct {
   my $alignment = [];
 
   my $remove_duplicates_plan_builder
-    = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::RemoveDuplicatesPlanBuilder
+    = Bio::EnsEMBL::Funcgen::PeakCallingPlan::RemoveDuplicatesPlanBuilder
       ->new;
 
   $remove_duplicates_plan_builder->set_output_format ( BAM_FORMAT );
@@ -121,8 +121,8 @@ sub construct {
     $alignment_namer->biological_replicate_number($biological_replicate_number);
     $alignment_namer->technical_replicate_number(undef);
     
-    use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignmentPlanFactory;
-    my $alignment_plan_factory = Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::AlignmentPlanFactory
+    use Bio::EnsEMBL::Funcgen::PeakCallingPlan::AlignmentPlanFactory;
+    my $alignment_plan_factory = Bio::EnsEMBL::Funcgen::PeakCallingPlan::AlignmentPlanFactory
     ->new(
       -names_of_reads_to_merge => \@merge_technical_replicates,
       -description             => "Biological replicate $biological_replicate_number",

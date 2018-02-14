@@ -1,8 +1,8 @@
-package Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::select_EnsemblAlignmentAnalysis;
+package Bio::EnsEMBL::Funcgen::PeakCallingPlan::select_EnsemblAlignmentAnalysis;
 
 use strict;
 use Data::Dumper;
-use Bio::EnsEMBL::Funcgen::ChIPSeqAnalysis::Constants qw ( :all );
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
 use Carp;
 use Role::Tiny;
 
