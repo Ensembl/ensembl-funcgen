@@ -17,17 +17,17 @@ sub pipeline_analyses {
         },
         {
           -logic_name => 'pre_pipeline_checks',
-          -module     => 'Bio::EnsEMBL::Funcgen::PipeConfig::PeakCalling::ErsaPrePipelineChecks',
+          -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::PrePipelineChecks',
             -flow_into   => {
                'MAIN->A' => 'fetch_experiments_to_process',
                'A->MAIN' => 'check_execution_plans',
             },
             -flow_into => {
-               MAIN => 'truncate_chipseq_tables',
+               MAIN => 'truncate_peak_calling_tables',
             },
         },
         {
-            -logic_name  => 'truncate_chipseq_tables',
+            -logic_name  => 'truncate_peak_calling_tables',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
             -parameters => {
                 sql     => [

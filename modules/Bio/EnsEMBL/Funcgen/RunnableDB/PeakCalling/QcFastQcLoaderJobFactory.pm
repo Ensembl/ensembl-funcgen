@@ -19,7 +19,7 @@ Bio::EnsEMBL::Hive::Utils->import(qw/stringify destringify/);
 sub run {
   my $self = shift;
   
-  my $tempdir = $self->param_required('tempdir_chipseq');
+  my $tempdir = $self->param_required('tempdir_peak_calling');
   
   my $fastqc_summary_files = `find $tempdir -maxdepth 2 -mindepth 2 -type f -name summary.txt`;
   chomp($fastqc_summary_files);

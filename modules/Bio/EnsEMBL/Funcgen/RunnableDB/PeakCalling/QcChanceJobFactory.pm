@@ -12,7 +12,7 @@ sub run {
     #my $experiment_name = $self->param_required('experiment');
     my $alignment_name  = $self->param_required('alignment');
     my $data_root_dir   = $self->param_required('data_root_dir');
-    my $tempdir         = $self->param_required('tempdir_chipseq');
+    my $tempdir         = $self->param_required('tempdir_peak_calling');
     
     my $alignment_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'Alignment');
 
