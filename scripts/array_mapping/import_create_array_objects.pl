@@ -24,8 +24,8 @@ GetOptions (
    'output_file=s'       => \$output_file,
 );
 
-use Bio::EnsEMBL::Funcgen::Config::ArrayInstance;
-my $probemapping_config = Bio::EnsEMBL::Funcgen::Config::ArrayInstance->new();
+use Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::Config::ArrayInstance;
+my $probemapping_config = Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::Config::ArrayInstance->new();
 $probemapping_config->read_and_check_config($array_name);
 
 open my $output_fh, '>', $output_file;

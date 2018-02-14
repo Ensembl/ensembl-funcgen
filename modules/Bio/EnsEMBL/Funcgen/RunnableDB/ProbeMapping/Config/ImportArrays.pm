@@ -31,7 +31,7 @@ Bio::EnsEMBL::Analysis::Config::ImportArrays
 
 =cut
 
-package Bio::EnsEMBL::Funcgen::Config::ImportArrays;
+package Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::Config::ImportArrays;
 
 use warnings ;
 use strict;

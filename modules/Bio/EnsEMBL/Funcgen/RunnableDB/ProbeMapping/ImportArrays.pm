@@ -66,7 +66,7 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Funcgen::Utils::Helper;
 
-use Bio::EnsEMBL::Funcgen::Config::ImportArrays;
+use Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::Config::ImportArrays;
 
 use base ('Bio::EnsEMBL::Hive::Process');
 

@@ -28,8 +28,8 @@ if (! -e $probe_file) {
   die("Can't find probe file ${probe_file}!");
 }
 
-use Bio::EnsEMBL::Funcgen::Config::ArrayInstance;
-my $probemapping_config = Bio::EnsEMBL::Funcgen::Config::ArrayInstance->new();
+use Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::Config::ArrayInstance;
+my $probemapping_config = Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::Config::ArrayInstance->new();
 $probemapping_config->read_and_check_config($array_name);
 
 use Bio::EnsEMBL::Funcgen::Parsers::ArrayFasta;

@@ -1,9 +1,9 @@
-package Bio::EnsEMBL::Funcgen::Config::ArrayInstance;
+package Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::Config::ArrayInstance;
 
 use strict;
 use Data::Dumper;
 use List::Util qw(any);
-use Bio::EnsEMBL::Funcgen::Config::ImportArrays;
+use Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::Config::ImportArrays;
 use Bio::EnsEMBL::Analysis::Tools::Utilities qw(parse_config);
 
 sub new {
