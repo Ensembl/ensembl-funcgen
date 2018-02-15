@@ -58,7 +58,9 @@ sub _constructor_parameters {
     sequence_duplication_levels      => 'sequence_duplication_levels',
     overrepresented_sequences        => 'overrepresented_sequences',
     adapter_content                  => 'adapter_content',
-    kmer_content                     => 'kmer_content'
+    kmer_content                     => 'kmer_content',
+    run_failed                       => 'run_failed',
+    error_message                    => 'error_message',
   };
 }
 
@@ -78,6 +80,8 @@ sub sequence_duplication_levels  { return shift->_generic_get_or_set('sequence_d
 sub overrepresented_sequences    { return shift->_generic_get_or_set('overrepresented_sequences',    @_); }
 sub adapter_content              { return shift->_generic_get_or_set('adapter_content',              @_); }
 sub kmer_content                 { return shift->_generic_get_or_set('kmer_content',                 @_); }
+sub run_failed                   { return shift->_generic_get_or_set('run_failed',                   @_); }
+sub error_message                { return shift->_generic_get_or_set('error_message',                @_); }
 
 =head2 summary_as_hash
 
