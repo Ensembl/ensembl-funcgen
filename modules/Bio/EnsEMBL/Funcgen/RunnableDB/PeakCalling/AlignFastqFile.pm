@@ -111,6 +111,11 @@ sub run {
       $self->throw("The following command failed:\n" . $cmd)
     }
   }
+  
+  if (! -e $bam_file) {
+    $self->throw("The bam file $bam_file should have been created, but it doesn't exist!");
+  }
+  
 #   $self->dataflow_output_id(
 #     {
 #       'chunk' => $bam_file,
