@@ -36,26 +36,6 @@ CREATE TABLE `read_file` (
   
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
--- insert into read_file (
---   read_file_id,
---   name,
---   analysis_id,
---   is_paired_end,
---   paired_with,
---   file_size,
---   read_length
--- ) select 
---       input_subset_id,
---       name,
---       analysis_id,
---       is_paired_end,
---       paired_with,
---       file_size,
---       read_length
--- from input_subset;
-
--- When patching a tracking database, use this command instead of the above:
--- 
 insert into read_file (
   read_file_id,
   name,
@@ -63,10 +43,7 @@ insert into read_file (
   is_paired_end,
   paired_with,
   file_size,
-  read_length,
-  md5sum,
-  file,
-  notes
+  read_length
 ) select 
       input_subset_id,
       name,
@@ -74,11 +51,34 @@ insert into read_file (
       is_paired_end,
       paired_with,
       file_size,
-      read_length,
-      md5sum,
-      local_url,
-      notes
-from input_subset join input_subset_tracking using (input_subset_id);
+      read_length
+from input_subset;
+
+-- When patching a tracking database, use this command instead of the above:
+-- 
+-- insert into read_file (
+--   read_file_experimental_configuration_id,
+--   name,
+--   analysis_id,
+--   is_paired_end,
+--   paired_with,
+--   file_size,
+--   read_length,
+--   md5sum,
+--   file,
+--   notes
+-- ) select 
+--       input_subset_id,
+--       name,
+--       analysis_id,
+--       is_paired_end,
+--       paired_with,
+--       file_size,
+--       read_length,
+--       md5sum,
+--       local_url,
+--       notes
+-- from input_subset join input_subset_tracking using (input_subset_id);
 
 -- patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_90_91_v.sql|Create read_file table and populate it');
