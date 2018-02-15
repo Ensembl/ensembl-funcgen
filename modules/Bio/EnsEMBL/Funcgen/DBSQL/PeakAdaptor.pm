@@ -43,7 +43,7 @@ sub object_class {
 }
 
 sub _tables {
-  return ['peak', 'peak']
+  return ['peak', 'p']
 }
 
 sub insertion_method {

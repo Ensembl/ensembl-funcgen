@@ -108,7 +108,7 @@ sub init_generic_adaptor {
   eval "require " . $self->object_class;
 };
 
-sub table_name {
+sub _table_alias_pair {
     my $self   = shift;
     my @tables = $self->_tables;
 
@@ -118,12 +118,30 @@ sub table_name {
         throw("Only one table supported!" . Dumper(\@tables));
     }
 
-    my $table_synonym_pair = $tables[0];
+    my $table_alias_pair = $tables[0];
 
-    my $table   = $table_synonym_pair->[0];
-    my $synonym = $table_synonym_pair->[1];
+    my $table = $table_alias_pair->[0];
+    my $alias = $table_alias_pair->[1];
 
-    return $table;
+    return ($table, $alias);
+}
+
+sub table_name {
+    my $self   = shift;
+    (
+      my $table_name,
+      my $alias
+    ) = $self->_table_alias_pair;
+    return $table_name;
+}
+
+sub table_alias {
+    my $self   = shift;
+    (
+      my $table_name,
+      my $alias
+    ) = $self->_table_alias_pair;
+    return $alias;
 }
 
 sub prepare {
@@ -272,10 +290,12 @@ sub _generate_sql {
     my $self       = shift;
     my $constraint = shift;
 
-    my $table_name              = $self->table_name();
+    my $table_name  = $self->table_name;
+    my $table_alias = $self->table_alias;
+    
     my $input_column_mapping    = $self->input_column_mapping;
 
-    my $sql = 'SELECT ' . join(', ', map { $input_column_mapping->{$_} // "$table_name.$_" } keys %{$self->column_set}) . " FROM $table_name";
+    my $sql = 'SELECT ' . join(', ', map { $input_column_mapping->{$_} // "$table_alias.$_" } keys %{$self->column_set}) . " FROM $table_name $table_alias";
 
     if($constraint) {
         # in case $constraint contains any kind of JOIN (regular, LEFT, RIGHT, etc) do not put WHERE in front:
