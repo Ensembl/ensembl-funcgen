@@ -92,10 +92,10 @@ my $funcgen_db_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcge
 
 my $db_connection = $funcgen_db_adaptor->dbc;
 
-use Bio::EnsEMBL::Funcgen::Ftp::FetchQCRelatedData;
-my $fetchQCRelatedData = Bio::EnsEMBL::Funcgen::Ftp::FetchQCRelatedData->new(
-  -db_connection => $db_connection,
-);
+# use Bio::EnsEMBL::Funcgen::Ftp::FetchQCRelatedData;
+# my $fetchQCRelatedData = Bio::EnsEMBL::Funcgen::Ftp::FetchQCRelatedData->new(
+#   -db_connection => $db_connection,
+# );
 
 my $db_file_type;
 my $destination_file_extension;

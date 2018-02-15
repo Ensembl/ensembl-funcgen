@@ -30,7 +30,7 @@ Bio::EnsEMBL::Registry->load_all($registry);
 use Bio::EnsEMBL::Utils::Logger;
 my $logger = Bio::EnsEMBL::Utils::Logger->new();
 
-use Bio::EnsEMBL::Funcgen::Ftp::Utils qw( create_file_handle );
+use Bio::EnsEMBL::Funcgen::Utils::FtpUtils qw( create_file_handle );
 
 my $ontology_term_adaptor = Bio::EnsEMBL::Registry->get_adaptor( 'Multi', 'Ontology', 'OntologyTerm' );
 
