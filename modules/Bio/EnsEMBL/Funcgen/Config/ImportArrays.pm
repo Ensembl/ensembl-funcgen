@@ -223,8 +223,19 @@ use vars qw( %Config );
       'CyRGene-1_0-st-v1',
       'RheGene-1_0-st-v1',
       'RheGene-1_1-st-v1',
+
+      ## Plant arrays
+      'AraGene-1_1-st-v1',
+      'MedGene-1_0-st-v1',
+      'RCnGene-1_1-st-v1',
+      'RJpGene-1_1-st-v1',
+      'SoyGene-1_1-st-v1',
+      'TomGene-1_1-st-v1',
+
      ],
     },
+
+
 
     IMPORT_ILLUMINA_WG_ARRAYS => {
     
