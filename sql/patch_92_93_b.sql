@@ -14,12 +14,12 @@
 -- limitations under the License.
 
 /**
-@header patch_91_92_b.sql - Drop column paired_with from table read_file
-@desc   Drop column paired_with from table read_file
+@header patch_92_93_b.sql - obsolete
+@desc   obsolete
 */
 
-ALTER TABLE read_file DROP COLUMN paired_with;
+
 
 -- patch identifier
 
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_91_92_b.sql|Drop column paired_with from table read_file');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_b.sql|obsolete');
