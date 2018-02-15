@@ -420,12 +420,8 @@ use vars qw( %Config );
 
      ARRAYS_WITH_DEFAULT_PARAMS => [
         'G2518A',
-        'G2519F',
+        'G2519F', # This is a generic name!
         'A-MEXP-2203',
-        'G2519F-015059',
-        'G2519F-021169',
-        'G2519F-015241',
-        'G4138A-012106',
         'WholeGenome_4x44k_v1',
         'WholeGenome_4x44k_v2',
         'SurePrint_G3_GE_8x60k',
@@ -461,9 +457,27 @@ use vars qw( %Config );
         'GPL6848',
         'GPL18606',
         ## Plant arrays
-        '021623', # Barley
+        'G2519F-015059', # Arabidopsis
+        'G2519F-015241', # Rice
+        'G2519F-016047', # Corn
+        'G2519F-016772', # Soybean
+        'G2519F-021113', # Tobacco
+        'G2519F-021169', # Arabidopsis
+        'G2519F-021623', # Barley
+        'G2519F-022270', # Tomato
+        'G2519F-022297', # Wheat
+        'G2519F-022520', # Brassica
+        'G2519F-022523', # Cotton
+        'G2519F-022524', # Medicago
+        'G4136A-011839', # Arabidopsis
+        'G4136B-013324', # Arabidopsis
+        'G4138A-012106', # Rice
+        'G2519F-015058', # Rice
+        'G4142A-012600', # Arabidopsis
       ],
     },
+
+
 
     IMPORT_WUSTL_ARRAYS => {
        IIDREGEXP => '^>(\S+):(\S+)',
