@@ -33,30 +33,8 @@ In EFG this represents the binding affinities of a Transcription Factor to DNA.
 
 =head1 SYNOPSIS
 
-use Bio::EnsEMBL::Funcgen::BindingMatrix;
-
-# A C G T frequency matrix
-my $freqs = "1126 6975 6741 2506 7171 0 11 13 812 867 899 1332
-4583 0 99 1117 0 12 0 0 5637 1681 875 4568
-801 181 268 3282 0 0 7160 7158 38 2765 4655 391
-661 15 63 266 0 7159 0 0 684 1858 742 880";
-
-my $matrix = Bio::EnsEMBL::Funcgen::BindingMatrix->new(-name         => 'MA0095.2',
-                                                       -description  => "MEF2C Jaspar Matrix",
-                                                       -frequencies  => $freqs
-                                                       -analysis     => $jaspar_analysis,
-                                                       -feature_type => $MEF2C_ftype ;
-
-print $matrix->relative_affinity("TGGCCACCA")."\n";
-
-print $matrix->threshold."\n";
-
 =head1 DESCRIPTION
 
-This class represents information about a BindingMatrix, containing the name 
-(e.g. the Jaspar ID, or an internal name), and description. A BindingMatrix 
-is always associated to an Analysis (indicating the origin of the matrix e.g. 
-Jaspar) and a FeatureType (the binding factor).   
 
 =head1 SEE ALSO
 
