@@ -72,17 +72,7 @@ sub pipeline_analyses {
                       "Polymerase"
                     )
                     and experimental_group.name != "BLUEPRINT"
-                    and experiment_id in (
-                      148,
-                      873,
-                      862,
-                      795,
-                      546,
-                      97,
-                      24
-                    )
                 ',
-                # 518 is the one with mixed paired and single end.
             },
             -flow_into => {
                2 => { 'create_execution_plan' => INPUT_PLUS },
