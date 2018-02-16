@@ -35,6 +35,7 @@ In EFG this represents the binding affinities of a Transcription Factor to DNA.
 
 =head1 DESCRIPTION
 
+This class represents information about a BindingMatrix
 
 =head1 SEE ALSO
 
@@ -48,7 +49,7 @@ package Bio::EnsEMBL::Funcgen::BindingMatrix;
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref check_ref );
+use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref check_ref assert_integer);
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Funcgen::Sequencing::MotifTools qw( parse_matrix_line 
@@ -212,6 +213,16 @@ sub get_element_by_position_nucleotide {
     throw('Must supply a nucleotide parameter') if !defined $nucleotide;
 
     my %valid_nucleotides = ( 'A' => 1, 'C' => 1, 'G' => 1, 'T' => 1 );
+
+    if (!(      assert_integer( $position, 'position' )
+            and 1 <= $position
+            and $position <= $self->length
+        )
+        )
+    {
+        throw( 'The -position parameter has to be an integer between 1 and '
+                . $self->length() );
+    }
 
     if ( !$valid_nucleotides{$nucleotide} ) {
         throw('Supplied nucleotide not valid');
