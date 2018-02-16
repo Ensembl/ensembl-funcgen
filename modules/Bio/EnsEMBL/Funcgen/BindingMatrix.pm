@@ -53,6 +53,7 @@ use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 use Bio::EnsEMBL::Funcgen::Sequencing::MotifTools qw( parse_matrix_line 
                                                       reverse_complement_matrix );
+use Bio::EnsEMBL::Funcgen::BindingMatrix::Constants qw ( :all );
   
 use base qw( Bio::EnsEMBL::Funcgen::Storable );
 
@@ -81,12 +82,12 @@ sub new {
     my $obj_class = ref($caller) || $caller;
     my $self      = $obj_class->SUPER::new(@_);
 
-    my ( $name, $source, $threshold, $frequencies,
-        $associated_transcription_factors )
+    my ( $name, $source, $threshold, $elements, $unit,
+        $associated_transcription_factor_complex )
         = rearrange(
         [   'NAME',      'SOURCE',
-            'THRESHOLD', 'FREQUENCIES',
-            'ASSOCIATED_TRANSCRIPTION_FACTORS'
+            'THRESHOLD', 'ELEMENTS', 'UNIT',
+            'ASSOCIATED_TRANSCRIPTION_FACTOR_COMPLEX'
         ],
         @_
         );
@@ -94,13 +95,15 @@ sub new {
     throw('Must supply a -name parameter')   if !defined $name;
     throw('Must supply a -source parameter') if !defined $source;
 
-    $self->{name}        = $name;
-    $self->{source}      = $source;
-    $self->{threshold}   = $threshold if defined $threshold;
-    $self->{frequencies} = $frequencies if defined $frequencies;
-    $self->{associated_transcription_factors}
-        = $associated_transcription_factors
-        if defined $associated_transcription_factors;
+    $self->{name}      = $name;
+    $self->{source}    = $source;
+    $self->{threshold} = $threshold if defined $threshold;
+    $self->{elements}  = $elements if defined $elements;
+    $self->{unit}      = $unit if defined $unit;
+  
+    $self->{associated_transcription_factor_complex}
+        = $associated_transcription_factor_complex
+        if defined $associated_transcription_factor_complex;
 
     return $self;
 }
@@ -117,6 +120,24 @@ sub new {
 =cut
 
 sub name { return shift->{name}; }
+
+=head2 unit
+
+  Example    : my $unit = $matrix->unit();
+  Description: Getter/Setter for the unit attribute
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub unit {
+    my $self = shift;
+    $self->_elements();
+    $self->{unit} = shift if @_;
+    return $self->{unit};
+}
 
 =head2 threshold
 
@@ -159,10 +180,10 @@ sub source {
 
 
 
-sub _frequencies {
+sub _elements {
     my ($self) = @_;
 
-    if ( !$self->{frequencies} ) {
+    if ( !$self->{elements} ) {
 
         my $binding_matrix_frequencies_adaptor
             = $self->adaptor->db()->get_adaptor('BindingMatrixFrequencies');
@@ -172,17 +193,19 @@ sub _frequencies {
             $self);
 
         for my $bmf ( @{$binding_matrix_frequencies} ) {
-            $self->{frequencies}->{ $bmf->position() }->{ $bmf->nucleotide() }
+            $self->{elements}->{ $bmf->position() }->{ $bmf->nucleotide() }
                 = $bmf->frequency();
         }
+
+        $self->unit(FREQUENCIES);
     }
 
-    return $self->{frequencies};
+    return $self->{elements};
 }
 
 
 
-sub get_frequency_by_position_nucleotide {
+sub get_element_by_position_nucleotide {
     my ( $self, $position, $nucleotide ) = @_;
 
     throw('Must supply a position parameter')   if !defined $position;
@@ -194,28 +217,27 @@ sub get_frequency_by_position_nucleotide {
         throw('Supplied nucleotide not valid');
     }
 
-    return $self->_frequencies()->{$position}->{$nucleotide};
+    return $self->_elements()->{$position}->{$nucleotide};
 }
 
-
-sub get_frequencies_as_string {
+sub get_elements_as_string {
     my ($self) = @_;
 
-    my $frequencies_string;
+    my $elements_string;
 
     my @nucleotide_order = ( 'A', 'C', 'G', 'T' );
 
     for my $nucleotide (@nucleotide_order) {
         for ( my $position = 1; $position <= $self->length(); $position++ ) {
-            my $frequency
-                = $self->get_frequency_by_position_nucleotide( $position,
+            my $element
+                = $self->get_element_by_position_nucleotide( $position,
                 $nucleotide );
-            $frequencies_string .= $frequency . "\t";
+            $elements_string .= $element . "\t";
         }
-        $frequencies_string .= "\n";
+        $elements_string .= "\n";
     }
 
-    return $frequencies_string;
+    return $elements_string;
 }
 
 
@@ -234,7 +256,7 @@ sub length {
     my $self = shift;
 
     if ( !$self->{length} ) {
-        $self->{length} = scalar keys %{ $self->_frequencies() };
+        $self->{length} = scalar keys %{ $self->_elements() };
     }
 
     return $self->{length};
@@ -254,11 +276,12 @@ sub summary_as_hash {
     my $self = shift;
 
     return {
-        name        => $self->name(),
-        source      => $self->source(),
-        threshold   => $self->threshold(),
-        length      => $self->length(),
-        frequencies => $self->_frequencies(),
+        name      => $self->name(),
+        source    => $self->source(),
+        threshold => $self->threshold(),
+        length    => $self->length(),
+        elements  => $self->_elements(),
+        unit      => $self->unit()
     };
 }
 
