@@ -151,16 +151,16 @@ use vars qw( %Config );
         ## Plant arrays
         'ATH1-121501',
         'Barley1',
-        'Cotton',
-        'Medicago',
-        'Poplar',
-        'Rice',
+        'Cotton',		## I think GPL8672
+        'Medicago',		## I think GPL4652
+        'Poplar',		## I think GPL4359
+        'Rice',			## I think GPL2025
         'Sorghum',
         'Soybean',
-        'Tomato',
-        'Vitis_Vinifera',
-        'maize',
-        'wheat',
+        'Tomato',		## 
+        'Vitis_Vinifera',	## I think GPL1320
+        'maize',		## I think GPL4032
+        'wheat',		## I think GPL3802
 
       ],
 
@@ -226,7 +226,7 @@ use vars qw( %Config );
 
       ## Plant arrays
       'AraGene-1_1-st-v1',
-      'MedGene-1_0-st-v1',
+      'MedGene-1_0-st-v1',	## I think GPL18240
       'RCnGene-1_1-st-v1',
       'RJpGene-1_1-st-v1',
       'SoyGene-1_1-st-v1',
@@ -775,12 +775,16 @@ use vars qw( %Config );
           -class   => 'CATMA',
         },
       },
+
      INPUT_FORMAT => 'FASTA',
 
      ARRAYS_WITH_DEFAULT_PARAMS => [
       'CATMA',
+      'CATMA_v5',
      ],
    },
+
+
 
    IMPORT_NSF_ARRAYS => {
      IIDREGEXP => '^>(\S+):(\S+)',
