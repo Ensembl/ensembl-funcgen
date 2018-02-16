@@ -182,7 +182,8 @@ sub check_probe_feature {
       . "probe_feature = " . Dumper($probe_feature)
       . "Cigar string:" . $probe_feature->cigar_string . "\n"
       . "Sequence in genome: " . (join '..', @matched_sequence_parts) . "\n"
-      . "Probe sequence:     $probe_sequence\n";
+      . "Probe sequence:     $probe_sequence\n"
+      . "Probe hit_id:". $probe_feature->hit_id. " \n";
   }
   
   if ($summarise_test) {
