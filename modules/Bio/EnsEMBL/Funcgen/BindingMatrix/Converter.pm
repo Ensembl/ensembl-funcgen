@@ -1,4 +1,4 @@
-# Ensembl module for Bio::EnsEMBL::Funcgen::FrequenciesConverter
+# Ensembl module for Bio::EnsEMBL::Funcgen::BindingMatrix::Converter
 
 =head1 LICENSE
 
@@ -28,7 +28,7 @@ limitations under the License.
 
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::FrequenciesConverter
+Bio::EnsEMBL::Funcgen::BindingMatrix::Converter
 
 =head1 SYNOPSIS
 
@@ -42,7 +42,7 @@ Bio::EnsEMBL::Funcgen::MotifFeature
 
 =cut
 
-package Bio::EnsEMBL::Funcgen::FrequenciesConverter;
+package Bio::EnsEMBL::Funcgen::BindingMatrix::Converter;
 
 use strict;
 use warnings;
@@ -51,6 +51,8 @@ use feature qw(say);
 
 use Bio::EnsEMBL::Utils::Scalar qw( assert_ref check_ref );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Funcgen::BindingMatrix;
+use Bio::EnsEMBL::Funcgen::BindingMatrix::Constants qw ( :all );
 
 sub new {
     my $caller    = shift;
@@ -60,16 +62,24 @@ sub new {
     return bless $self, $obj_class;
 }
 
-sub get_probabilities {
+
+sub from_frequencies_to_probabilities {
     my ( $self, $binding_matrix, $pseudocount ) = @_;
 
     assert_ref( $binding_matrix, 'Bio::EnsEMBL::Funcgen::BindingMatrix',
         'BindingMatrix' );
 
+    if ( $binding_matrix->unit ne FREQUENCIES ) {
+        throw(    'Please supply a binding matrix with '
+                . FREQUENCIES
+                . ' units instead of '
+                . $binding_matrix->unit() );
+    }
+
     my $default_pseudocount = 0.1;
     $pseudocount //= $default_pseudocount;
+
     my $probabilities = {};
-    my $frequencies   = $binding_matrix->_frequencies();
 
     for (
         my $position = 1;
@@ -78,64 +88,94 @@ sub get_probabilities {
         )
     {
         $probabilities->{$position} //= {};
-        my $position_sum
-            = $self->_get_position_sum( $frequencies->{$position} );
+        my $frequency_sum_by_position
+            = $self->_get_frequency_sum_by_position( $binding_matrix,
+            $position );
 
         for my $nucleotide ( @{ $self->_nucleotides() } ) {
+
+            my $frequency
+                = $binding_matrix->get_element_by_position_nucleotide(
+                $position, $nucleotide );
+
             $probabilities->{$position}->{$nucleotide}
-                = ( $frequencies->{$position}->{$nucleotide} + $pseudocount )
-                / ( $position_sum + 4 * $pseudocount );
+                = ( $frequency + $pseudocount )
+                / ( $frequency_sum_by_position + 4 * $pseudocount );
         }
     }
-    return $probabilities;
+
+    my $probabilities_binding_matrix
+        = $self->_convert_BindingMatrix( $binding_matrix, $probabilities,
+        PROBABILITIES );
+
+    return $probabilities_binding_matrix;
 }
 
-sub get_weights {
-    my ( $self, $binding_matrix, $expected_frequency_AT,
-        $expected_frequency_CG )
-        = @_;
+# sub from_probabilities_to_weights {
+#     my ( $self, $binding_matrix, $expected_frequency_AT,
+#         $expected_frequency_CG )
+#         = @_;
 
-    my $default_expected_frequency = 0.25;
-    $expected_frequency_AT //= $default_expected_frequency;
-    $expected_frequency_CG //= $default_expected_frequency;
+#         assert_ref( $binding_matrix, 'Bio::EnsEMBL::Funcgen::BindingMatrix',
+#         'BindingMatrix' );
 
-    if ( 2 * $expected_frequency_AT + 2 * $expected_frequency_CG != 1 ) {
-        throw('Invalid expected frequencies');
-    }
-    my $weights       = {};
-    my $probabilities = $self->get_probabilities($binding_matrix);
+#     if ( $binding_matrix->unit ne PROBABILITIES ) {
+#         throw(    'Please supply a binding matrix with '
+#                 . PROBABILITIES
+#                 . ' units instead of '
+#                 . $binding_matrix->unit() );
+#     }
 
-    for (
-        my $position = 1;
-        $position <= $binding_matrix->length();
-        $position++
-        )
-    {
-        $weights->{$position} //= {};
+#     my $default_expected_frequency = 0.25;
+#     $expected_frequency_AT //= $default_expected_frequency;
+#     $expected_frequency_CG //= $default_expected_frequency;
 
-        for my $nucleotide ( @{ $self->_nucleotides() } ) {
+#     if ( 2 * $expected_frequency_AT + 2 * $expected_frequency_CG != 1 ) {
+#         throw('Invalid expected frequencies');
+#     }
+#     my $weights       = {};
+#     my $probabilities = $self->to_probabilities($binding_matrix);
 
-            my $expected_frequency;
-            if ( $nucleotide =~ /^[AT]$/ ) {
-                $expected_frequency = $expected_frequency_AT;
-            }
-            elsif ( $nucleotide =~ /^[CG]$/ ) {
-                $expected_frequency = $expected_frequency_CG;
-            }
+#     for (
+#         my $position = 1;
+#         $position <= $binding_matrix->length();
+#         $position++
+#         )
+#     {
+#         $weights->{$position} //= {};
 
-            $weights->{$position}->{$nucleotide}
-                = $self->_log2( $probabilities->{$position}->{$nucleotide}
-                    / $expected_frequency );
-        }
-    }
-    return $weights;
-}
+#         for my $nucleotide ( @{ $self->_nucleotides() } ) {
 
-sub get_bits {
+#             my $expected_frequency;
+#             if ( $nucleotide =~ /^[AT]$/ ) {
+#                 $expected_frequency = $expected_frequency_AT;
+#             }
+#             elsif ( $nucleotide =~ /^[CG]$/ ) {
+#                 $expected_frequency = $expected_frequency_CG;
+#             }
+
+#             $weights->{$position}->{$nucleotide}
+#                 = $self->_log2( $probabilities->{$position}->{$nucleotide}
+#                     / $expected_frequency );
+#         }
+#     }
+#     return $weights;
+# }
+
+sub from_probabilities_to_bits {
     my ( $self, $binding_matrix ) = @_;
 
-    my $bits          = {};
-    my $probabilities = $self->get_probabilities($binding_matrix);
+    assert_ref( $binding_matrix, 'Bio::EnsEMBL::Funcgen::BindingMatrix',
+        'BindingMatrix' );
+
+    if ( $binding_matrix->unit ne PROBABILITIES ) {
+        throw(    'Please supply a binding matrix with '
+                . PROBABILITIES
+                . ' units instead of '
+                . $binding_matrix->unit() );
+    }
+
+    my $bits = {};
 
     for (
         my $position = 1;
@@ -144,30 +184,54 @@ sub get_bits {
         )
     {
         $bits->{$position} //= {};
-        my $h = $self->_get_h( $probabilities, $position );
+        my $h = $self->_get_h( $binding_matrix, $position );
         my $IC = 2 - $h;
+
         for my $nucleotide ( @{ $self->_nucleotides() } ) {
-            $bits->{$position}->{$nucleotide}
-                = $probabilities->{$position}->{$nucleotide} * $IC;
+            my $probability
+                = $binding_matrix->get_element_by_position_nucleotide(
+                $position, $nucleotide );
+
+            $bits->{$position}->{$nucleotide} = $probability * $IC;
         }
     }
 
-    return $bits;
+    my $bits_binding_matrix
+        = $self->_convert_BindingMatrix( $binding_matrix, $bits, BITS );
+
+    return $bits_binding_matrix;
 }
 
-sub _get_position_sum {
-    my ( $self, $position_frequencies ) = @_;
+sub from_frequencies_to_bits {
+    my ( $self, $binding_matrix, $pseudocount ) = @_;
 
-    throw('Must supply a position_frequencies parameter')
-        if !defined $position_frequencies;
+    my $probabilities_binding_matrix
+        = $self->from_frequencies_to_probabilities($binding_matrix, $pseudocount);
 
-    my $position_sum;
+    my $bits_binding_matrix
+        = $self->from_probabilities_to_bits($probabilities_binding_matrix);
+
+    return $bits_binding_matrix;
+}
+
+sub _get_frequency_sum_by_position {
+    my ( $self, $binding_matrix, $position ) = @_;
+
+    assert_ref( $binding_matrix, 'Bio::EnsEMBL::Funcgen::BindingMatrix',
+        'BindingMatrix' );
+
+    throw('Must supply a position parameter') if !defined $position;
+
+    my $frequency_sum;
 
     for my $nucleotide ( @{ $self->_nucleotides() } ) {
-        $position_sum += $position_frequencies->{$nucleotide};
+        my $frequency
+            = $binding_matrix->get_element_by_position_nucleotide( $position,
+            $nucleotide );
+        $frequency_sum += $frequency;
     }
 
-    return $position_sum;
+    return $frequency_sum;
 }
 
 sub _log2 {
@@ -178,38 +242,50 @@ sub _log2 {
 }
 
 sub _get_h {
-    my ( $self, $probabilities, $position ) = @_;
-    throw('Must supply a probabilities hashref') if !defined $probabilities;
-    throw('Must specify a position')             if !defined $position;
+    my ( $self, $binding_matrix, $position ) = @_;
+
+    assert_ref( $binding_matrix, 'Bio::EnsEMBL::Funcgen::BindingMatrix',
+        'BindingMatrix' );
+
+    throw('Must specify a position') if !defined $position;
 
     my $h = 0;
 
     for my $nucleotide ( @{ $self->_nucleotides() } ) {
-        $h -= $probabilities->{$position}->{$nucleotide}
-            * $self->_log2( $probabilities->{$position}->{$nucleotide} );
+        
+        my $probability
+            = $binding_matrix->get_element_by_position_nucleotide( $position,
+            $nucleotide );
+
+        $h -= $probability * $self->_log2($probability);
     }
 
     return $h;
 }
 
+
 sub _nucleotides { return [ 'A', 'C', 'G', 'T' ]; }
 
-# sub _to_string {
-#     my ( $self, $hashref ) = @_;
-#     my $string;
+sub _convert_BindingMatrix {
+    my ( $self, $binding_matrix, $elements, $unit ) = @_;
 
-#     my $length = scalar keys %{$hashref};
+    assert_ref( $binding_matrix, 'Bio::EnsEMBL::Funcgen::BindingMatrix',
+        'BindingMatrix' );
+    throw('Must supply an -elements parameter') if !defined $elements;
+    throw('Must supply a -unit parameter')      if !defined $unit;
 
-#     for my $nucleotide ( @{ $self->_nucleotides() } ) {
-#         for ( my $position = 1; $position <= $length; $position++ ) {
+    return Bio::EnsEMBL::Funcgen::BindingMatrix->new(
+        -NAME      => $binding_matrix->name(),
+        -SOURCE    => $binding_matrix->source(),
+        -THRESHOLD => $binding_matrix->threshold(),
+        -ELEMENTS  => $elements,
+        -UNIT      => $unit
 
-#             # say $hashref->{$position}->{$nucleotide};
-#             $string .= $hashref->{$position}->{$nucleotide} . "\t";
-#         }
-#         $string .= "\n";
-#     }
+            # -ASSOCIATED_TRANSCRIPTION_FACTOR_COMPLEX =>
+            #     $binding_matrix->associated_transcription_factor_complex()
+    );
+}
 
-#     return $string;
-# }
 
 1;
+
