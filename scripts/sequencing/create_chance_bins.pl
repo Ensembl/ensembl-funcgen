@@ -20,7 +20,7 @@ perl test_create_interval_list.pl \
 =cut
 use strict;
 use Data::Dumper;
-use Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator;
+use Bio::EnsEMBL::Funcgen::Utils::RefBuildFileLocator;
 use Getopt::Long;
 use Bio::EnsEMBL::Utils::Logger;
 
@@ -46,7 +46,7 @@ my $reference_data_root_dir = $options{'reference_data_root_dir'};
 my $logger = Bio::EnsEMBL::Utils::Logger->new();
 $logger->init_log;
 
-my $bwa_index_locator = Bio::EnsEMBL::Funcgen::Hive::RefBuildFileLocator->new;
+my $bwa_index_locator = Bio::EnsEMBL::Funcgen::Utils::RefBuildFileLocator->new;
 
 my $chromosome_lengths_relative = $bwa_index_locator->locate({
   species          => $species,
