@@ -74,9 +74,9 @@ use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 =head2 fetch_by_production_name
 
   Arg [1]    : string, production name of the transcription factor complex
-  Example    : my $production_name = tfc_adaptor->fetch_by_production_name($name);
+  Example    : my $tfc = tfc_adaptor->fetch_by_production_name($name);
   Description: Fetches TranscriptionFactorComplex object given it's production name
-  Returntype : String
+  Returntype : Bio::EnsEMBL::TranscriptionFactorComplex
   Exceptions : Throws if name is not specified
   Caller     : General
   Status     : At risk
