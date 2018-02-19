@@ -6,10 +6,6 @@ use Data::Dumper;
 
 use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw( :all );
 
-use constant {
-  BRANCH_ACCUMULATOR => 2,
-};
-
 sub run {
 
   my $self = shift;
@@ -130,13 +126,6 @@ sub run {
   if (! -e $bam_file) {
     $self->throw("The bam file $bam_file should have been created, but it doesn't exist!");
   }
-  
-#   $self->dataflow_output_id(
-#     {
-#       'chunk' => $bam_file,
-#     }, 
-#     BRANCH_ACCUMULATOR
-#   );
 
   # Give file system time to sync
   sleep(20);
