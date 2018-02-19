@@ -63,7 +63,7 @@ sub db_output_dir {
   Returns the names of directories in which the files should be stored by 
   default. This is:
   
-  <root directory> / <the directory forregulation specific files> / <the name of the table that represents it in the database> / < the release version > / ersa_signal / <the file type>
+  <root directory> / <the directory forregulation specific files> / <the name of the table that represents it in the database> / < the release version > / signal_files / <the file type>
 
 =cut
 sub default_directory_by_table_and_file_type {
@@ -85,7 +85,7 @@ sub default_directory_by_table_and_file_type_stored {
     $self->regulation_directory,
     $table, 
     $self->version_directory, 
-    'ersa_signal', 
+    'signal_files', 
     $file_type
   );
 }

@@ -5,7 +5,7 @@
 
   Checks that a bam file has a valid end of file marker.
   
-  This script it required by the ERSA pipeline.
+  This script it required by the peak calling pipeline.
   
   Based on advice pasted in some internet forum:
   
