@@ -112,8 +112,8 @@ sub run {
   my $run_options = {
     use_bash_pipefail => 1
   };
-  
-  print Dumper($align_commands);
+
+  $self->say_with_header($align_commands);
   
   foreach my $cmd (@$align_commands) {
   
