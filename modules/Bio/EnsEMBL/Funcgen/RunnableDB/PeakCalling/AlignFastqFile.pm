@@ -59,6 +59,21 @@ sub run {
   my $align_commands;
   my $number_of_fastq_files = @$fastq_file;
   
+  if ($ensembl_analysis eq ENSEMBL_HODGEPODGE_ALIGNMENT_ANALYSIS) {
+  
+    # This means it could be either single- or paired end. The decision is 
+    # made here on a case by case basis. It really shouldn't be happening at 
+    # all.
+    #
+    my $number_of_read_files = @$fastq_file;
+    
+    if ($number_of_read_files == 1) {
+      $ensembl_analysis = ENSEMBL_SINGLE_END_ALIGNMENT_ANALYSIS
+    }
+    if ($number_of_read_files == 2) {
+      $ensembl_analysis = ENSEMBL_PAIRED_END_ALIGNMENT_ANALYSIS
+    }
+  }
   if ($ensembl_analysis eq ENSEMBL_SINGLE_END_ALIGNMENT_ANALYSIS) {
   
     my $expected_number_of_fastq_files = 1;
