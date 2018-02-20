@@ -100,8 +100,13 @@ sub new {
     $self->{source}    = $source;
     $self->{threshold} = $threshold if defined $threshold;
     $self->{elements}  = $elements if defined $elements;
-    $self->{unit}      = $unit if defined $unit;
-  
+
+    if (defined $unit){
+        if (grep $_==$unit, @{VALID_UNITS}){
+            $self->{unit} = $unit;
+        }
+    }
+
     $self->{associated_transcription_factor_complex}
         = $associated_transcription_factor_complex
         if defined $associated_transcription_factor_complex;
@@ -134,9 +139,14 @@ sub name { return shift->{name}; }
 =cut
 
 sub unit {
-    my $self = shift;
+    my ($self, $unit) = @_;
     $self->_elements();
-    $self->{unit} = shift if @_;
+
+    if ($unit){
+        if (grep $_==$unit, @{VALID_UNITS}){
+            $self->{unit} = $unit;
+        }
+    }
     return $self->{unit};
 }
 

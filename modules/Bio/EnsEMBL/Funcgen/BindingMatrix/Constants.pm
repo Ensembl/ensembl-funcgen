@@ -60,6 +60,7 @@ our @EXPORT_OK = qw(
     PROBABILITIES
     WEIGHTS
     BITS
+    VALID_UNITS
 );
 
 our %EXPORT_TAGS = ( all => \@EXPORT_OK );
@@ -68,7 +69,8 @@ use constant {
     FREQUENCIES   => 'Frequencies',
     PROBABILITIES => 'Probabilities',
     WEIGHTS       => 'Weights',
-    BITS          => 'Bits'
+    BITS          => 'Bits',
+    VALID_UNITS   => [FREQUENCIES, PROBABILITIES, WEIGHTS, BITS]
 };
 
 1;
