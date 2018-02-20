@@ -21,6 +21,10 @@ sub run {
     );
   my $alignment = $alignment_adaptor->fetch_by_name($alignment_name);
   
+  if (! defined $alignment) {
+    $self->throw("Can't fetch alignment with name ${alignment_name}!");
+  }
+  
   my $epigenome_production_name 
     = $alignment
       ->fetch_Experiment
