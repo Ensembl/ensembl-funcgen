@@ -19,28 +19,31 @@
 
 drop table if exists phantom_peak;
 
-create table phantom_peak (
-  phantom_peak_id int(17) unsigned not null auto_increment,
-  analysis_id  smallint(5) unsigned default null,
-  alignment_id int(15) unsigned not null,
-  num_reads    int(12) unsigned not null,
-  est_frag_len        double default null,
-  est_frag_len_2      double default null,
-  est_frag_len_3      double default null,
-  corr_est_frag_len   double default null,
-  corr_est_frag_len_2 double default null,
-  corr_est_frag_len_3 double default null,
-  phantom_peak        int(17) unsigned not null,
-  corr_phantom_peak   double  default null,
-  argmin_corr      int(14) default null,
-  min_corr         double  default null,
-  nsc              double  default null,
-  rsc              double  default null,
-  quality_tag      int(14) default null,
-  primary key (phantom_peak_id)
+CREATE TABLE phantom_peak (
+  phantom_peak_id int(17) unsigned NOT NULL AUTO_INCREMENT,
+  analysis_id smallint(5) unsigned DEFAULT NULL,
+  alignment_id int(15) unsigned NOT NULL,
+  num_reads int(12) unsigned NOT NULL,
+  est_frag_len double DEFAULT NULL,
+  est_frag_len_2 double DEFAULT NULL,
+  est_frag_len_3 double DEFAULT NULL,
+  corr_est_frag_len double DEFAULT NULL,
+  corr_est_frag_len_2 double DEFAULT NULL,
+  corr_est_frag_len_3 double DEFAULT NULL,
+  phantom_peak int(17) unsigned NOT NULL,
+  corr_phantom_peak double DEFAULT NULL,
+  argmin_corr int(14) DEFAULT NULL,
+  min_corr double DEFAULT NULL,
+  nsc double DEFAULT NULL,
+  rsc double DEFAULT NULL,
+  quality_tag int(14) DEFAULT NULL,
+  run_failed tinyint(1) DEFAULT '0',
+  error_message text,
+  PRIMARY KEY (phantom_peak_id),
+  UNIQUE KEY alignment_id_unique (alignment_id)
 );
 
-insert into phantom_peak (
+insert ignore into phantom_peak (
   analysis_id,
   alignment_id,
   num_reads,
@@ -78,14 +81,6 @@ insert into phantom_peak (
   from 
     alignment_qc_phantom_peak
 ;
-
-ALTER TABLE phantom_peak ADD CONSTRAINT alignment_id_unique UNIQUE (alignment_id);
-
-alter table phantom_peak add column run_failed boolean default false;
-alter table phantom_peak add column error_message text;
-
-drop table if exists alignment_qc_phantom_peak;
-drop table if exists result_set_qc_phantom_peak;
 
 -- patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_j.sql|phantom peak table');
