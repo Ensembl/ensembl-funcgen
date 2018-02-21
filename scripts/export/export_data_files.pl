@@ -207,6 +207,8 @@ while (my $hash_ref = $sth->fetchrow_hashref) {
   my $assay_type              = $hash_ref->{signal_alignment}->{feature_type};
   my $analysis_protocol_name  = $hash_ref->{analysis};
   
+  $analysis_protocol_name =~ s/ /_/g;
+  
   $logger->info("Fetching data for " . $hash_ref->{signal_alignment}->{file} . "\n");
   
   # Find the right base path among the ones provided, if none can be found, leave empty.
@@ -300,6 +302,7 @@ foreach my $current_source_file (keys %source_file_to_destination_file_map) {
     push @cmd, qq(mkdir -p $destination_directory);
     $created_directories{$destination_directory} = 1;
   }
+  push @cmd, qq(rm -f $destination_file);
   push @cmd, qq($creation_command $current_source_file $destination_file);
 }
 

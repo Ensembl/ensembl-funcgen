@@ -3,6 +3,7 @@ package Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::PrePipelineChecks;
 use strict;
 use base ('Bio::EnsEMBL::Hive::Process');
 use Data::Dumper;
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
 
 sub run {
     my $self = shift;
@@ -16,6 +17,45 @@ sub run {
     use Bio::EnsEMBL::Registry;
     my $funcgen_db_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
     
+    my $analysis_adaptor = $funcgen_db_adaptor->get_AnalysisAdaptor;
+    
+    my @required_logic_name = (
+      ENSEMBL_SINGLE_END_ALIGNMENT_ANALYSIS,
+      ENSEMBL_PAIRED_END_ALIGNMENT_ANALYSIS,
+      ENSEMBL_HODGEPODGE_ALIGNMENT_ANALYSIS,
+      ENSEMBL_REMOVE_DUPLICATES_ANALYSIS,
+      ENSEMBL_BROAD_PEAK_CALLING_ANALYSIS,
+      ENSEMBL_NARROW_PEAK_CALLING_ANALYSIS,
+    );
+    my @missing_analyses;
+    foreach my $logic_name (@required_logic_name) {
+    
+      my $required_analysis = $analysis_adaptor->fetch_by_logic_name($logic_name);
+      
+      if (! defined $required_analysis) {
+        push @missing_analyses, $logic_name;
+      }
+    }
+    if (@missing_analyses) {
+      push @error_msg, "The following analyses are required by the pipeline, but missing in the database: " . join ', ', @missing_analyses;
+    }
+    
+    my @logic_names_used_in_filenames = @required_logic_name;
+    my @analyses_with_problem_names;
+    
+    foreach my $logic_name (@logic_names_used_in_filenames) {
+    
+      my $has_spaces = $logic_name =~ / /;
+      
+      if ($has_spaces) {
+        push @analyses_with_problem_names, "The analysis with logic_name '$logic_name' has spaces in it.";
+      }
+    }
+    if (@analyses_with_problem_names) {
+      push @error_msg, "The following analyses have logic names that will lead to issues, because they are used in file names on the ftp site:\n" 
+        . join "\n", map { "    - " . $_ } @analyses_with_problem_names;
+    }
+
     # Find read files that have been registered, but don't exist on the file 
     # system.
     #
@@ -88,7 +128,7 @@ sub run {
       }
     }
     if (@not_found) {
-      push @error_msg, "The following sequence ontology accession's can't be fetched from the ontology database: " . join ', ', @not_found;
+      push @error_msg, "The following sequence ontology accessions can't be fetched from the ontology database: " . join ', ', @not_found;
     }
     
     my $find_signal_control_epigenome_mismatches = 'select * from experiment s join experiment c on (s.control_id=c.experiment_id) and s.epigenome_id != c.epigenome_id';
@@ -207,7 +247,7 @@ sub run {
     if (@error_msg) {
     
       my $err_string = join "\n", map { '  - ' . $_ } @error_msg;
-    return;
+    #return;
       $self->throw(
 	"\n-------------------------------------------------------------------------------\n"
 	. "Prepipeline checks have failed with the following errors:\n\n"
