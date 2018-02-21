@@ -70,7 +70,7 @@ use constant {
     PROBABILITIES => 'Probabilities',
     WEIGHTS       => 'Weights',
     BITS          => 'Bits',
-    VALID_UNITS   => [FREQUENCIES, PROBABILITIES, WEIGHTS, BITS]
+    VALID_UNITS   => ['Frequencies', 'Probabilities', 'Weights', 'Bits']
 };
 
 1;

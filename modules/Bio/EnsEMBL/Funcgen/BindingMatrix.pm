@@ -101,10 +101,8 @@ sub new {
     $self->{threshold} = $threshold if defined $threshold;
     $self->{elements}  = $elements if defined $elements;
 
-    if (defined $unit){
-        if (grep $_==$unit, @{VALID_UNITS}){
+    if (defined $unit && $self->_unit_is_valid($unit)){
             $self->{unit} = $unit;
-        }
     }
 
     $self->{associated_transcription_factor_complex}
@@ -139,16 +137,17 @@ sub name { return shift->{name}; }
 =cut
 
 sub unit {
-    my ($self, $unit) = @_;
+    my ( $self, $unit ) = @_;
+
     $self->_elements();
 
-    if ($unit){
-        if (grep $_==$unit, @{VALID_UNITS}){
-            $self->{unit} = $unit;
-        }
+    if ($unit && $self->_unit_is_valid($unit)) {
+        $self->{unit} = $unit;
     }
+
     return $self->{unit};
 }
+
 
 =head2 threshold
 
@@ -189,7 +188,20 @@ sub source {
   return $self->{source};
 }
 
+sub _unit_is_valid {
+    my ( $self, $unit ) = @_;
 
+    my $valid_units = VALID_UNITS;
+
+    if ( grep $_ eq $unit, @{$valid_units} ) {
+        return 1;
+    }
+    else {
+        throw(    $unit
+                . ' is not a valid BindingMatrix unit. List of valid units : '
+                . join( ",", @{$valid_units} ) );
+    }
+}
 
 sub _elements {
     my ($self) = @_;
