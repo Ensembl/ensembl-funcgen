@@ -71,87 +71,26 @@ my $funcgen_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen')
 my $logger = Bio::EnsEMBL::Utils::Logger->new();
 $logger->init_log;
 
-my $slice_adaptor = $core_adaptor->get_SliceAdaptor;
+use Bio::EnsEMBL::Funcgen::Utils::RegulatoryBuildStatUtils qw ( 
+  range_register_regulatory_features 
+  REGULATORY_FEATURE_TYPES
+);
 
-my $regulatory_build_adaptor   = $funcgen_adaptor->get_RegulatoryBuildAdaptor;
-my $regulatory_feature_adaptor = $funcgen_adaptor->get_RegulatoryFeatureAdaptor;
-
-my $karyotype_slice = $slice_adaptor->fetch_all_karyotype;
-
-my $regulatory_build = $regulatory_build_adaptor->fetch_current_regulatory_build;
-
-my $iterator = $regulatory_feature_adaptor->fetch_Iterator_by_RegulatoryBuild($regulatory_build);
-
-my $max = 10;
-my $i = 0;
-
-my $feature_type = '';
-
-use constant {
-
-  CTCF            => 'CTCF Binding Site',
-  ENHANCER        => 'Enhancer',
-  PROMOTER_FLANK  => 'Promoter Flanking Region',
-  PROMOTER        => 'Promoter',
-  TF              => 'TF binding site',
-  OPEN_CHROMATIN  => 'Open chromatin',
-
-};
-
-use constant 
-  REGULATORY_FEATURE_TYPES => (
-    CTCF,
-    ENHANCER,
-    PROMOTER_FLANK,
-    PROMOTER,
-    TF,
-    OPEN_CHROMATIN
-  ),
-;
-
-my %by_feature_type;
-my %total_overlap_size_by_feature_type;
-
-foreach my $feature_type (REGULATORY_FEATURE_TYPES) {
-  $by_feature_type{$feature_type} = Bio::EnsEMBL::Mapper::RangeRegistry->new();
-  $total_overlap_size_by_feature_type{$feature_type} = 0;
-}
-
-lock_keys(%by_feature_type);
-
-# print Dumper(\%by_feature_type);
-
-#my $max = 1000;
-
-while ($iterator->has_next 
- # && $i<$max
-  ) {
-
-  my $current_regulatory_feature = $iterator->next;
-  
-  my $feature_type = $current_regulatory_feature->feature_type->name;
-  
-  $by_feature_type{$feature_type}->check_and_register(
-      $current_regulatory_feature->slice->seq_region_name,
-      $current_regulatory_feature->start,
-      $current_regulatory_feature->end,
-      $current_regulatory_feature->start,
-      $current_regulatory_feature->end,
-  );
-  
-  $range_registry->check_and_register(
-      $current_regulatory_feature->slice->seq_region_name,
-      $current_regulatory_feature->start,
-      $current_regulatory_feature->end,
-      $current_regulatory_feature->start,
-      $current_regulatory_feature->end,
-  );
-  $i++;
-  
-}
+(
+  my $range_registry,
+  my $by_feature_type,
+)
+  = range_register_regulatory_features({
+    species => $species
+  });
 
 my $genome_size = 0;
 my $total_overlap_size = 0;
+
+my %total_overlap_size_by_feature_type;
+
+my $slice_adaptor = $core_adaptor->get_SliceAdaptor;
+my $karyotype_slice = $slice_adaptor->fetch_all_karyotype;
 
 foreach my $current_karyotype_slice (@$karyotype_slice) {
 
@@ -164,9 +103,8 @@ foreach my $current_karyotype_slice (@$karyotype_slice) {
   $total_overlap_size += $overlap_size;
   
   foreach my $feature_type (REGULATORY_FEATURE_TYPES) {
-    $total_overlap_size_by_feature_type{$feature_type} += $by_feature_type{$feature_type}->overlap_size($seq_region_name, 0, 1 + $length);
+    $total_overlap_size_by_feature_type{$feature_type} += $by_feature_type->{$feature_type}->overlap_size($seq_region_name, 0, 1 + $length);
   }
-  
 }
 
 my %statistics;
@@ -189,8 +127,6 @@ foreach my $feature_type (REGULATORY_FEATURE_TYPES) {
   
   $statistics{$feature_type} = \%feature_type_statistics;
 }
-
-#print Dumper(\%statistics);
 
 print "Species:,$species\n";
 print "Genome size:,$statistics{genome_size}\n";
