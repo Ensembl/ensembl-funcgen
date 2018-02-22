@@ -58,12 +58,25 @@ use constant
 @EXPORT_OK = qw(
   range_register_regulatory_features
   REGULATORY_FEATURE_TYPES
+  CTCF
+  ENHANCER
+  PROMOTER_FLANK
+  PROMOTER
+  TF
+  OPEN_CHROMATIN
 );
 
 sub range_register_regulatory_features {
 
   my $param = shift;
   my $species = $param->{species};
+  my $max     = $param->{max};
+  
+  my $stop_after_maximum_reached = undef;
+  
+  if (defined $max) {
+    $stop_after_maximum_reached = 1;
+  }
   
   use Bio::EnsEMBL::Mapper::RangeRegistry;
   my $range_registry = Bio::EnsEMBL::Mapper::RangeRegistry->new();
@@ -88,12 +101,10 @@ sub range_register_regulatory_features {
   use Hash::Util qw( lock_keys );
   lock_keys(%by_feature_type);
 
-  my $max = 1000;
   my $i = 0;
   
-  while ($iterator->has_next 
-#    && $i<$max
-    ) {
+  REGULATORY_FEATURE:
+  while ($iterator->has_next) {
 
     my $current_regulatory_feature = $iterator->next;
     
@@ -115,6 +126,9 @@ sub range_register_regulatory_features {
         $current_regulatory_feature->end,
     );
     $i++;
+    if ($stop_after_maximum_reached && $i == $max) {
+      last REGULATORY_FEATURE
+    }
   }
   return ( $range_registry, \%by_feature_type );
 }

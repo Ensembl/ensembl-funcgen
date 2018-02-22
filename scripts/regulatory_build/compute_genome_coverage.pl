@@ -81,7 +81,8 @@ use Bio::EnsEMBL::Funcgen::Utils::RegulatoryBuildStatUtils qw (
   my $by_feature_type,
 )
   = range_register_regulatory_features({
-    species => $species
+    species => $species,
+#     max     => 1000,
   });
 
 my $genome_size = 0;
