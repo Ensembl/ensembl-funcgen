@@ -51,6 +51,8 @@ use feature qw(say);
 
 use Bio::EnsEMBL::Utils::Scalar qw( assert_ref check_ref );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
+
 use Bio::EnsEMBL::Funcgen::BindingMatrix;
 use Bio::EnsEMBL::Funcgen::BindingMatrix::Constants qw ( :all );
 
@@ -111,56 +113,70 @@ sub from_frequencies_to_probabilities {
     return $probabilities_binding_matrix;
 }
 
-# sub from_probabilities_to_weights {
-#     my ( $self, $binding_matrix, $expected_frequency_AT,
-#         $expected_frequency_CG )
-#         = @_;
+sub from_probabilities_to_weights {
+    my $self = shift;
+    my $binding_matrix;
+    my %expected_frequency;
 
-#         assert_ref( $binding_matrix, 'Bio::EnsEMBL::Funcgen::BindingMatrix',
-#         'BindingMatrix' );
+    (
+        $binding_matrix,          $expected_frequency{'A'},
+        $expected_frequency{'C'}, $expected_frequency{'G'},
+        $expected_frequency{'T'}
+      )
+      = rearrange(
+        [
+            'BINDING_MATRIX',       'EXPECTED_FREQUENCY_A',
+            'EXPECTED_FREQUENCY_C', 'EXPECTED_FREQUENCY_G',
+            'EXPECTED_FREQUENCY_T'
+        ],
+        @_
+      );
 
-#     if ( $binding_matrix->unit ne PROBABILITIES ) {
-#         throw(    'Please supply a binding matrix with '
-#                 . PROBABILITIES
-#                 . ' units instead of '
-#                 . $binding_matrix->unit() );
-#     }
+    assert_ref( $binding_matrix, 'Bio::EnsEMBL::Funcgen::BindingMatrix',
+        'BindingMatrix' );
 
-#     my $default_expected_frequency = 0.25;
-#     $expected_frequency_AT //= $default_expected_frequency;
-#     $expected_frequency_CG //= $default_expected_frequency;
+    if ( $binding_matrix->unit ne PROBABILITIES ) {
+        throw(  'Please supply a binding matrix with '
+              . PROBABILITIES
+              . ' units instead of '
+              . $binding_matrix->unit() );
+    }
 
-#     if ( 2 * $expected_frequency_AT + 2 * $expected_frequency_CG != 1 ) {
-#         throw('Invalid expected frequencies');
-#     }
-#     my $weights       = {};
-#     my $probabilities = $self->to_probabilities($binding_matrix);
+    my $default_expected_frequency = 0.25;
 
-#     for (
-#         my $position = 1;
-#         $position <= $binding_matrix->length();
-#         $position++
-#         )
-#     {
-#         $weights->{$position} //= {};
+    for my $nucleotide ( keys %expected_frequency ) {
+        $expected_frequency{$nucleotide} //= $default_expected_frequency;
+    }
 
-#         for my $nucleotide ( @{ $self->_nucleotides() } ) {
+    $self->_check_expected_frequencies_are_valid(\%expected_frequency);
 
-#             my $expected_frequency;
-#             if ( $nucleotide =~ /^[AT]$/ ) {
-#                 $expected_frequency = $expected_frequency_AT;
-#             }
-#             elsif ( $nucleotide =~ /^[CG]$/ ) {
-#                 $expected_frequency = $expected_frequency_CG;
-#             }
+    my $weights = {};
 
-#             $weights->{$position}->{$nucleotide}
-#                 = $self->_log2( $probabilities->{$position}->{$nucleotide}
-#                     / $expected_frequency );
-#         }
-#     }
-#     return $weights;
-# }
+    for (
+        my $position = 1 ;
+        $position <= $binding_matrix->length() ;
+        $position++
+      )
+    {
+        $weights->{$position} //= {};
+
+        for my $nucleotide ( @{ $self->_nucleotides() } ) {
+            my $probability =
+              $binding_matrix->get_element_by_position_nucleotide( $position,
+                $nucleotide );
+
+            $weights->{$position}->{$nucleotide} =
+              $self->_log2( $probability / $expected_frequency{$nucleotide} );
+        }
+    }
+
+    my $weights_binding_matrix =
+      $self->_convert_BindingMatrix( $binding_matrix, $weights, WEIGHTS );
+
+
+    return $weights_binding_matrix;
+}
+
 
 sub from_probabilities_to_bits {
     my ( $self, $binding_matrix ) = @_;
@@ -285,6 +301,26 @@ sub _convert_BindingMatrix {
     );
 }
 
+sub _check_expected_frequencies_are_valid {
+    my ( $self, $expected_frequency ) = @_;
+
+    if ( $expected_frequency->{A} +
+        $expected_frequency->{C} +
+        $expected_frequency->{G} +
+        $expected_frequency->{T} != 1 )
+    {
+        throw(
+            'Invalid expected frequencies passed. The sum is not equal to 1.');
+    }
+
+    for my $ef ( values $expected_frequency ) {
+        if ( $ef == 0 ) {
+            throw(
+               'Invalid expected frequencies passed. No zero (0) values allowed'
+            );
+        }
+    }
+}
 
 1;
 
