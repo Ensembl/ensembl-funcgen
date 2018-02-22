@@ -104,6 +104,43 @@ sub fetch_by_production_name {
     return $result->[0];
 }
 
+=head2 fetch_all_by_BindingMatrix
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::BindingMatrix
+  Example    : my $transcription_factor_complexes =
+             :     tfc_adaptor->fetch_by_BindingMatrix($binding_matrix);
+  Description: Fetches all TranscriptionFactorComplex objects associated with
+             : a given BindingMatrix
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::TranscriptionFactorComplex objects
+  Exceptions : Throws if BindingMatrix is not specified
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub fetch_all_by_BindingMatrix {
+    my ( $self, $binding_matrix ) = @_;
+
+    assert_ref( $binding_matrix, 'Bio::EnsEMBL::Funcgen::BindingMatrix',
+        'BindingMatrix' );
+
+    my $sth = $self->prepare(
+        "SELECT transcription_factor_complex_id FROM
+         binding_matrix_transcription_factor_complex WHERE binding_matrix_id=?"
+    );
+
+    $sth->execute( $binding_matrix->dbID );
+
+    my @transcription_factor_complexes;
+
+    while ( my @row = $sth->fetchrow_array ) {
+        my $tfc = $self->fetch_by_dbID($row[0]);
+        push @transcription_factor_complexes, $tfc;
+    }
+
+    return \@transcription_factor_complexes;
+}
+
 =head2 _true_tables
 
   Args       : None

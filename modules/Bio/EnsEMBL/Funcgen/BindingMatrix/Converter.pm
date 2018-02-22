@@ -279,10 +279,9 @@ sub _convert_BindingMatrix {
         -SOURCE    => $binding_matrix->source(),
         -THRESHOLD => $binding_matrix->threshold(),
         -ELEMENTS  => $elements,
-        -UNIT      => $unit
-
-            # -ASSOCIATED_TRANSCRIPTION_FACTOR_COMPLEX =>
-            #     $binding_matrix->associated_transcription_factor_complex()
+        -UNIT      => $unit,
+        -ASSOCIATED_TRANSCRIPTION_FACTOR_COMPLEXES =>
+          $binding_matrix->get_all_associated_TranscriptionFactorComplexes()
     );
 }
 

@@ -84,11 +84,11 @@ sub new {
     my $self      = $obj_class->SUPER::new(@_);
 
     my ( $name, $source, $threshold, $elements, $unit,
-        $associated_transcription_factor_complex )
+        $associated_transcription_factor_complexes )
         = rearrange(
         [   'NAME',      'SOURCE',
             'THRESHOLD', 'ELEMENTS', 'UNIT',
-            'ASSOCIATED_TRANSCRIPTION_FACTOR_COMPLEX'
+            'ASSOCIATED_TRANSCRIPTION_FACTOR_COMPLEXES'
         ],
         @_
         );
@@ -105,9 +105,16 @@ sub new {
             $self->{unit} = $unit;
     }
 
-    $self->{associated_transcription_factor_complex}
-        = $associated_transcription_factor_complex
-        if defined $associated_transcription_factor_complex;
+    if ( defined $associated_transcription_factor_complexes ) {
+        for my $complex ( @{$associated_transcription_factor_complexes} ) {
+            assert_ref( $complex,
+                'Bio::EnsEMBL::Funcgen::TranscriptionFactorComplex',
+                'TranscriptionFactorComplex' );
+        }
+
+        $self->{associated_transcription_factor_complexes} =
+          $associated_transcription_factor_complexes;
+    }
 
     return $self;
 }
@@ -295,6 +302,31 @@ sub length {
     return $self->{length};
 }
 
+=head2 get_all_associated_TranscriptionFactorComplexes
+
+  Example    : my $associated_tfcs =
+             : $binding_matrix->get_all_associated_TranscriptionFactorComplexes;
+  Description: Returns all TranscriptionFactorComplexes that are associated with
+             : this BindingMatrix
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::TranscriptionFactorComplex objects
+  Exceptions : None
+
+=cut
+
+sub get_all_associated_TranscriptionFactorComplexes {
+    my ($self) = @_;
+
+    if ( !$self->{associated_transcription_factor_complexes} ) {
+        my $transcription_factor_complex_adaptor =
+          $self->adaptor->db->get_adaptor('TranscriptionFactorComplex');
+
+        $self->{associated_transcription_factor_complexes} =
+          $transcription_factor_complex_adaptor->fetch_all_by_BindingMatrix(
+            $self);
+    }
+
+    return $self->{associated_transcription_factor_complexes};
+}
 
 =head2 summary_as_hash
 
@@ -308,13 +340,23 @@ sub length {
 sub summary_as_hash {
     my $self = shift;
 
+    my @associated_tfc_names;
+
+    for my $complex (
+        @{ $self->get_all_associated_TranscriptionFactorComplexes() } )
+    {
+        push @associated_tfc_names, $complex->display_name();
+    }
+
     return {
-        name      => $self->name(),
-        source    => $self->source(),
-        threshold => $self->threshold(),
-        length    => $self->length(),
-        elements  => $self->_elements(),
-        unit      => $self->unit()
+        name                                      => $self->name(),
+        source                                    => $self->source(),
+        threshold                                 => $self->threshold(),
+        length                                    => $self->length(),
+        elements                                  => $self->_elements(),
+        unit                                      => $self->unit(),
+        associated_transcription_factor_complexes => \@associated_tfc_names
+
     };
 }
 
