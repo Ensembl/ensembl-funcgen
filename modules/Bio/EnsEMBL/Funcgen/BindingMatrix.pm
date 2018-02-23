@@ -28,7 +28,7 @@ limitations under the License.
 
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::BindingMatrix - A module to represent a BindingMatrix. 
+Bio::EnsEMBL::Funcgen::BindingMatrix - A module to represent a BindingMatrix.
 In EFG this represents the binding affinities of a Transcription Factor to DNA.
 
 =head1 SYNOPSIS
@@ -52,10 +52,10 @@ use warnings;
 use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref check_ref assert_integer);
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
-use Bio::EnsEMBL::Funcgen::Sequencing::MotifTools qw( parse_matrix_line 
+use Bio::EnsEMBL::Funcgen::Sequencing::MotifTools qw( parse_matrix_line
                                                       reverse_complement_matrix );
 use Bio::EnsEMBL::Funcgen::BindingMatrix::Constants qw ( :all );
-  
+
 use base qw( Bio::EnsEMBL::Funcgen::Storable );
 
 =head2 new
@@ -155,22 +155,17 @@ sub unit {
     return $self->{unit};
 }
 
-
 =head2 threshold
 
   Arg [1]    : Scalar (optional) - Numeric threshold
   Example    : if($score >= $matrix->threshold) { # Do something here }
-  Description: Getter/setter for threshold attribute 
+  Description: Getter/setter for threshold attribute
   Returntype : Scalar - numeric
   Exceptions : None
   Caller     : General
   Status     : At Risk
 
 =cut
-
-# Do we ever really want to set this after construction? 
-# thresholds are updated via direct sql, so unlikely unless
-# someone if loading these via another path
 
 sub threshold {
   my $self = shift;

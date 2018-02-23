@@ -30,7 +30,7 @@ limitations under the License.
 
 =head1 NAME
 
-Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixConstants 
+Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixConstants
 
 =head1 SYNOPSIS
 
@@ -54,6 +54,7 @@ package Bio::EnsEMBL::Funcgen::BindingMatrix::Constants;
 use base qw( Exporter );
 use vars qw( @EXPORT_OK );
 use strict;
+use warnings;
 
 our @EXPORT_OK = qw(
     FREQUENCIES

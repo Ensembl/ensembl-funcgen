@@ -72,10 +72,10 @@ sub from_frequencies_to_probabilities {
         'BindingMatrix' );
 
     if ( $binding_matrix->unit ne FREQUENCIES ) {
-        throw(    'Please supply a binding matrix with '
-                . FREQUENCIES
-                . ' units instead of '
-                . $binding_matrix->unit() );
+        throw(  'Please supply a binding matrix with '
+              . FREQUENCIES
+              . ' units instead of '
+              . $binding_matrix->unit() );
     }
 
     my $default_pseudocount = 0.1;
@@ -84,30 +84,29 @@ sub from_frequencies_to_probabilities {
     my $probabilities = {};
 
     for (
-        my $position = 1;
-        $position <= $binding_matrix->length();
+        my $position = 1 ;
+        $position <= $binding_matrix->length() ;
         $position++
-        )
+      )
     {
         $probabilities->{$position} //= {};
-        my $frequency_sum_by_position
-            = $self->_get_frequency_sum_by_position( $binding_matrix,
-            $position );
+        my $frequency_sum_by_position =
+          $self->_get_frequency_sum_by_position( $binding_matrix, $position );
 
         for my $nucleotide ( @{ $self->_nucleotides() } ) {
 
-            my $frequency
-                = $binding_matrix->get_element_by_position_nucleotide(
-                $position, $nucleotide );
+            my $frequency =
+              $binding_matrix->get_element_by_position_nucleotide( $position,
+                $nucleotide );
 
-            $probabilities->{$position}->{$nucleotide}
-                = ( $frequency + $pseudocount )
-                / ( $frequency_sum_by_position + 4 * $pseudocount );
+            $probabilities->{$position}->{$nucleotide} =
+              ( $frequency + $pseudocount ) /
+              ( $frequency_sum_by_position + 4 * $pseudocount );
         }
     }
 
-    my $probabilities_binding_matrix
-        = $self->_convert_BindingMatrix( $binding_matrix, $probabilities,
+    my $probabilities_binding_matrix =
+      $self->_convert_BindingMatrix( $binding_matrix, $probabilities,
         PROBABILITIES );
 
     return $probabilities_binding_matrix;

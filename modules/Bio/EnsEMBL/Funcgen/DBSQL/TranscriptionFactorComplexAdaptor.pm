@@ -199,7 +199,7 @@ sub _fetch_components {
     my ( $self, $transcription_factor_complex_id ) = @_;
 
     my $sth = $self->prepare( "
-      SELECT transcription_factor_id FROM 
+      SELECT transcription_factor_id FROM
       transcription_factor_complex_composition
       WHERE transcription_factor_complex_id=?
       " );
@@ -291,7 +291,7 @@ sub store {
 
     my $comp_sth = $self->prepare(
         "INSERT INTO transcription_factor_complex_composition
-        (transcription_factor_complex_id,transcription_factor_id) 
+        (transcription_factor_complex_id,transcription_factor_id)
         VALUES(?,?)"
     );
 
