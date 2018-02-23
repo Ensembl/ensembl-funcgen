@@ -34,6 +34,11 @@ Bio::EnsEMBL::Funcgen::BindingMatrix::Converter
 
 =head1 DESCRIPTION
 
+Bio::EnsEMBL::Funcgen::BindingMatrix objects which are fetched from funcgen
+databases contain frequency values.
+Bio::EnsEMBL::Funcgen::BindingMatrix::Converter includes methods that convert
+frequency values to other units such as probabilities, bits and weights
+
 =head1 SEE ALSO
 
 Bio::EnsEMBL::Funcgen::BindingMatrix
@@ -56,6 +61,18 @@ use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Funcgen::BindingMatrix;
 use Bio::EnsEMBL::Funcgen::BindingMatrix::Constants qw ( :all );
 
+=head2 new
+
+    Example    : my $converter =
+                    Bio::EnsEMBL::Funcgen::BindingMatrix::Converter->new();
+    Description: Creates a new BindingMatrix::Converter object
+    Returntype : Bio::EnsEMBL::Funcgen::BindingMatrix::Converter
+    Exceptions : None
+    Caller     : general
+    Status     : Stable
+
+=cut
+
 sub new {
     my $caller    = shift;
     my $obj_class = ref($caller) || $caller;
@@ -64,6 +81,24 @@ sub new {
     return bless $self, $obj_class;
 }
 
+=head2 from_frequencies_to_probabilities
+
+    Arg [1]    : Bio::EnsEMBL::Funcgen::BindingMatrix, the frequencies matrix
+                 which will be converted
+    Arg [2]    : (optional) integer, the pseudocount value used in the calculation
+                 of the probabilities
+    Example    : my $probabilities_matrix =
+                    $converter->from_frequencies_to_probabilities($freq_matrix);
+    Description: Converts a frequencies matrix to a probabilities matrix
+    Returntype : Bio::EnsEMBL::Funcgen::TranscriptionFactorComplex
+    Exceptions : Thrown if the matrix passed is not a
+                 Bio::EnsEMBL::Funcgen::BindingMatrix object.
+                 Thrown if the matrix passed does not contain frequency units.
+                 Thrown if the pseudocount passed is equal to 0.
+    Caller     : general
+    Status     : Stable
+
+=cut
 
 sub from_frequencies_to_probabilities {
     my ( $self, $binding_matrix, $pseudocount ) = @_;
@@ -116,6 +151,37 @@ sub from_frequencies_to_probabilities {
 
     return $probabilities_binding_matrix;
 }
+
+=head2 from_probabilities_to_weights
+
+    Arg [-BINDING_MATRIX]:
+                 Bio::EnsEMBL::Funcgen::BindingMatrix, the probabilities matrix
+                 which will be converted
+    Arg [-EXPECTED_FREQUENCY_A]:
+                 (optional) integer, the expected frequency for nucleotide A which
+                 is used in the calculation of weights
+    Arg [-EXPECTED_FREQUENCY_C]:
+                 (optional) integer, the expected frequency for nucleotide C which
+                 is used in the calculation of weights
+    Arg [-EXPECTED_FREQUENCY_G]:
+                 (optional) integer, the expected frequency for nucleotide G which
+                 is used in the calculation of weights
+    Arg [-EXPECTED_FREQUENCY_T]:
+                 (optional) integer, the expected frequency for nucleotide T which
+                 is used in the calculation of weights
+    Example    : my $weight_matrix =
+                      $converter->from_probabilities_to_weights($prob_matrix);
+    Description: Converts a probabilities matrix to a weights matrix
+    Returntype : Bio::EnsEMBL::Funcgen::TranscriptionFactorComplex
+    Exceptions : Thrown if the matrix passed is not a
+                 Bio::EnsEMBL::Funcgen::BindingMatrix object.
+                 Thrown if the matrix passed does not contain probability units.
+                 Thrown if the sum of expected frequencies is not equal to 1.
+                 Thrown if an expected frequency passed is equal to 0.
+    Caller     : general
+    Status     : Stable
+
+=cut
 
 sub from_probabilities_to_weights {
     my $self = shift;
@@ -181,6 +247,21 @@ sub from_probabilities_to_weights {
     return $weights_binding_matrix;
 }
 
+=head2 from_probabilities_to_bits
+
+    Arg [1]:     Bio::EnsEMBL::Funcgen::BindingMatrix, the probabilities matrix
+                 which will be converted
+    Example    : my $bits_matrix =
+                      $converter->from_probabilities_to_bits($prob_matrix);
+    Description: Converts a probabilities matrix to a bits matrix
+    Returntype : Bio::EnsEMBL::Funcgen::TranscriptionFactorComplex
+    Exceptions : Thrown if the matrix passed is not a
+                 Bio::EnsEMBL::Funcgen::BindingMatrix object.
+                 Thrown if the matrix passed does not contain probability units.
+    Caller     : general
+    Status     : Stable
+
+=cut
 
 sub from_probabilities_to_bits {
     my ( $self, $binding_matrix ) = @_;
@@ -222,6 +303,25 @@ sub from_probabilities_to_bits {
     return $bits_binding_matrix;
 }
 
+=head2 from_frequencies_to_bits
+
+    Arg [1]    : Bio::EnsEMBL::Funcgen::BindingMatrix, the frequencies matrix
+                 which will be converted
+    Arg [2]    : (optional) integer, the pseudocount value used in the calculation
+                 of the probabilities
+    Example    : my $bits_matrix =
+                    $converter->from_frequencies_to_bits($freq_matrix);
+    Description: Converts a frequencies matrix to a bits matrix
+    Returntype : Bio::EnsEMBL::Funcgen::TranscriptionFactorComplex
+    Exceptions : Thrown if the matrix passed is not a
+                 Bio::EnsEMBL::Funcgen::BindingMatrix object.
+                 Thrown if the matrix passed does not contain frequency units.
+                 Thrown if the pseudocount passed is equal to 0.
+    Caller     : general
+    Status     : Stable
+
+=cut
+
 sub from_frequencies_to_bits {
     my ( $self, $binding_matrix, $pseudocount ) = @_;
 
@@ -233,6 +333,41 @@ sub from_frequencies_to_bits {
 
     return $bits_binding_matrix;
 }
+
+=head2 from_frequencies_to_weights
+
+    Arg [-BINDING_MATRIX]:
+                 Bio::EnsEMBL::Funcgen::BindingMatrix, the probabilities matrix
+                 which will be converted
+    Arg [-PSEUDOCOUNT]:
+                 (optional) integer, the pseudocount value used in the calculation
+                 of the probabilities
+    Arg [-EXPECTED_FREQUENCY_A]:
+                 (optional) integer, the expected frequency for nucleotide A which
+                 is used in the calculation of weights
+    Arg [-EXPECTED_FREQUENCY_C]:
+                 (optional) integer, the expected frequency for nucleotide C which
+                 is used in the calculation of weights
+    Arg [-EXPECTED_FREQUENCY_G]:
+                 (optional) integer, the expected frequency for nucleotide G which
+                 is used in the calculation of weights
+    Arg [-EXPECTED_FREQUENCY_T]:
+                 (optional) integer, the expected frequency for nucleotide T which
+                 is used in the calculation of weights
+    Example    : my $weights_matrix =
+                      $converter->from_frequencies_to_weights($freq_matrix);
+    Description: Converts a frequencies matrix to a weights matrix
+    Returntype : Bio::EnsEMBL::Funcgen::TranscriptionFactorComplex
+    Exceptions : Thrown if the matrix passed is not a
+                 Bio::EnsEMBL::Funcgen::BindingMatrix object.
+                 Thrown if the matrix passed does not contain frequency units.
+                 Thrown if the sum of expected frequencies is not equal to 1.
+                 Thrown if an expected frequency passed is equal to 0.
+                 Thrown if the pseudocount passed is equal to 0.
+    Caller     : general
+    Status     : Stable
+
+=cut
 
 sub from_frequencies_to_weights {
     my $self = shift;

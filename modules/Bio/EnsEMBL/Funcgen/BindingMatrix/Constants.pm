@@ -32,20 +32,16 @@ limitations under the License.
 
 Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixConstants
 
-=head1 SYNOPSIS
-
-my $matrix_adaptor = $db->get_BindingMatrixAdaptor();
-my @matrices = @{$matrix_adaptor->fetch_all_by_name("MA0122.1")};
-
 =head1 DESCRIPTION
 
-The BindingMatrixConstants is a module for declare the unit constants of the
+The BindingMatrixConstants is a module for declaring the unit constants of the
 BindingMatrix class
 
 
 =head1 SEE ALSO
 
 Bio::EnsEMBL::Funcgen::BindingMatrix
+Bio::EnsEMBL::Funcgen::BindingMatrix::Converter
 
 =cut
 

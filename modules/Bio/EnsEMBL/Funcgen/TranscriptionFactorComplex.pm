@@ -41,6 +41,20 @@ use base qw( Bio::EnsEMBL::Funcgen::Storable );
 
 =head2 new
 
+  Arg [-PRODUCTION_NAME]:
+       String - the name which is used internally
+  Arg [-DISPLAY_NAME]:
+       String - the name which is used on the EnsEMBL browser
+  Arg [-COMPONENTS]:
+       Arrayref of Bio::EnsEMBL::Funcgen::TranscriptionFactor objects
+       All Transcription Factors which are members of this complex
+  Example    : $tfc = Bio::EnsEMBL::Funcgen::TrancriptionFactorComplex->new(...);
+  Description: Creates a new transcription_factor_complex object
+  Returntype : Bio::EnsEMBL::Funcgen::TranscriptionFactorComplex
+  Exceptions : Thrown if the components contain
+               non Bio::EnsEMBL::Funcgen::TranscriptionFactor objects
+  Caller     : general
+  Status     : Stable
 
 =cut
 
