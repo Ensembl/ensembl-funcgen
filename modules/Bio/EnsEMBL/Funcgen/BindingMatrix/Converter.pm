@@ -312,7 +312,7 @@ sub _check_expected_frequencies_are_valid {
             'Invalid expected frequencies passed. The sum is not equal to 1.');
     }
 
-    for my $ef ( values $expected_frequency ) {
+    for my $ef ( values %{$expected_frequency} ) {
         if ( $ef == 0 ) {
             throw(
                'Invalid expected frequencies passed. No zero (0) values allowed'
