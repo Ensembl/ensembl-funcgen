@@ -234,6 +234,40 @@ sub from_frequencies_to_bits {
     return $bits_binding_matrix;
 }
 
+sub from_frequencies_to_weights {
+    my $self = shift;
+    my $binding_matrix;
+    my %expected_frequency;
+    my $pseudocount;
+
+    (
+        $binding_matrix,          $pseudocount,
+        $expected_frequency{'A'}, $expected_frequency{'C'},
+        $expected_frequency{'G'}, $expected_frequency{'T'}
+      )
+      = rearrange(
+        [
+            'BINDING_MATRIX',       'PSEUDOCOUNT',
+            'EXPECTED_FREQUENCY_A', 'EXPECTED_FREQUENCY_C',
+            'EXPECTED_FREQUENCY_G', 'EXPECTED_FREQUENCY_T'
+        ],
+        @_
+      );
+
+    my $probabilities_binding_matrix =
+      $self->from_frequencies_to_probabilities( $binding_matrix, $pseudocount );
+
+    my $weights_binding_matrix = $self->from_probabilities_to_weights(
+        -BINDING_MATRIX       => $probabilities_binding_matrix,
+        -EXPECTED_FREQUENCY_A => $expected_frequency{A},
+        -EXPECTED_FREQUENCY_G => $expected_frequency{G},
+        -EXPECTED_FREQUENCY_C => $expected_frequency{C},
+        -EXPECTED_FREQUENCY_T => $expected_frequency{T}
+    );
+
+    return $weights_binding_matrix;
+}
+
 sub _get_frequency_sum_by_position {
     my ( $self, $binding_matrix, $position ) = @_;
 
