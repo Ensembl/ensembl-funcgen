@@ -79,7 +79,12 @@ sub from_frequencies_to_probabilities {
     }
 
     my $default_pseudocount = 0.1;
-    $pseudocount //= $default_pseudocount;
+    if (defined $pseudocount){
+        throw ('Pseudocount can not be 0.') if $pseudocount == 0;
+    }
+    else{
+        $pseudocount = $default_pseudocount;
+    }
 
     my $probabilities = {};
 
