@@ -39,7 +39,7 @@ my $unannotated_utrs = Bio::EnsEMBL::Funcgen::Parsers::DataDumper->new->load_fir
 lock_hash(%$unannotated_utrs);
 
 # Not currently used, just transferred this from probe2transcript.
-my $utr_multiplier;
+my $utr_multiplier = 1;
 
 # Also not currently used, just transferred this from probe2transcript.
 my $utr_extends = {
