@@ -159,8 +159,10 @@ sub main {
   print_log("Entering New Regulatory Build pipeline\n");
   # Read command line
   my $options = get_options();
+
   # Read dump file with file locations and metadata
   get_metadata($options);
+
   # Compute summaries of TF binding peaks
   print_log("Computing summaries of TF binding peaks\n");
   compute_tf_probs($options);
@@ -674,6 +676,7 @@ sub get_metadata {
       data => \%hash,
     });
   } else {
+  
     my $prev_options = load_data_from_file($location);
     $options->{cell_type_tfs} = $prev_options->{cell_type_tfs};
     $options->{cell_type_open} = $prev_options->{cell_type_open};
@@ -717,7 +720,8 @@ sub load_data_from_file {
   no strict;
   my $data = eval $serialised;
   use strict;
-  return;
+  
+  return $data;
 }
 
 =head2 read_dump
