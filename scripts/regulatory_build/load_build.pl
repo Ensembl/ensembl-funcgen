@@ -806,7 +806,7 @@ sub load_celltype_activity {
 =cut
 
 sub process_celltype_file {
-  my ($fh, $cell_type, $regulatory_feature) = @_;
+  my ($fh, $cell_type, $regulatory_features) = @_;
   while (my $line = <$fh>) {
     chomp $line;
     my ($chrom, $start, $end, $name, $score, $strand, $thickStart, $thickEnd, $rgb) = split "\t", $line;
@@ -815,9 +815,11 @@ sub process_celltype_file {
     my $regulatory_activity = Bio::EnsEMBL::Funcgen::RegulatoryActivity->new;
     $regulatory_activity->activity($rgb_state{$rgb});
 
-    $regulatory_activity->_epigenome_id($cell_type->dbID);
+    $regulatory_activity->epigenome_id($cell_type->dbID);
     
-    my $has_no_regulatory_feature   = ! exists $regulatory_feature->{$name};
+    #$regulatory_activity->db($regulatory_feature->db);
+    
+    my $has_no_regulatory_feature   = ! exists $regulatory_features->{$name};
     my $is_transcription_start_site = $name =~ /tss_\d+/;
     
     if ($has_no_regulatory_feature && $is_transcription_start_site) {
@@ -827,7 +829,14 @@ sub process_celltype_file {
     if ($has_no_regulatory_feature && !$is_transcription_start_site) {
         confess("Could not find Regulatory Feature for $name\n");
     }
-    $regulatory_feature->{$name}->add_regulatory_activity($regulatory_activity);
+    
+    my $regulatory_feature = $regulatory_features->{$name};
+    
+    # Necessary for getting the dbID when storing
+    #
+    $regulatory_activity->set_RegulatoryFeature($regulatory_feature);
+
+    $regulatory_feature->add_regulatory_activity($regulatory_activity);
     return;
   }
 }

@@ -483,8 +483,11 @@ sub store {
     my $seq_region_id;
       ($current_regulatory_feature, $seq_region_id) = $self->_pre_store($current_regulatory_feature);
     $current_regulatory_feature->adaptor($self);
-    warn $current_regulatory_feature->dbID;
+    
     if(defined $current_regulatory_feature->dbID){
+    
+      warn $current_regulatory_feature->dbID;
+    
       $sth_store_regulatory_feature_dbID->bind_param( 1, $seq_region_id,                                   SQL_INTEGER);
       $sth_store_regulatory_feature_dbID->bind_param( 2, $current_regulatory_feature->start,               SQL_INTEGER);
       $sth_store_regulatory_feature_dbID->bind_param( 3, $current_regulatory_feature->end,                 SQL_INTEGER);

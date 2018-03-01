@@ -64,6 +64,7 @@ use strict;
 use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_get_or_set
   _generic_fetch
+  _generic_set
 );
 
 use Role::Tiny::With;
@@ -80,10 +81,28 @@ sub _constructor_parameters {
 }
 
 sub dbID                  { return shift->_generic_get_or_set('dbID', @_); }
-sub db                    { return shift->_generic_get_or_set('db', @_); }
 sub regulatory_feature_id { return shift->_generic_get_or_set('regulatory_feature_id', @_); }
 sub activity              { return shift->_generic_get_or_set('activity', @_); }
 sub epigenome_id          { return shift->_generic_get_or_set('epigenome_id', @_); }
+
+sub db { 
+  
+  my $self = shift;
+  
+  my $db = $self->_generic_get_or_set('db', @_);
+  
+  if (defined $db) {
+    return $db;
+  }
+  
+  $db = $self->get_RegulatoryFeature->adaptor;
+  
+  if (defined $db) {
+    return $db;
+  }
+
+  die("Don't have a db adaptor!");
+}
 
 sub get_Epigenome {
   return shift->_generic_fetch('epigenome', 'get_EpigenomeAdaptor', 'epigenome_id');
@@ -111,7 +130,7 @@ sub set_RegulatoryFeature {
   my ($self, $obj) = @_;
   my $self = shift;
   my $obj  = shift;
-  $self->_generic_set('regulatoryfeature', 'Bio::EnsEMBL::RegulatoryFeature', $obj);
+  $self->_generic_set('regulatoryfeature', 'Bio::EnsEMBL::Funcgen::RegulatoryFeature', $obj);
   use Scalar::Util qw( weaken );
   # Avoid circular reference and the memory leak that comes with it
   weaken($self->{regulatory_feature});
