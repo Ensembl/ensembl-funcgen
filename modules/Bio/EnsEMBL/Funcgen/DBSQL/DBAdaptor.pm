@@ -215,10 +215,11 @@ sub get_available_adaptors{
         'ProbeFeatureTranscriptMapping' => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeFeatureTranscriptMappingAdaptor',
         'ProbeSequence'                 => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeSequenceAdaptor',
 
-        'RegulatoryBuild'        => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildAdaptor',
-        'RegulatoryFeature'      => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor',
-        'RegulatoryActivity'     => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryActivityAdaptor',
-        'RegulatoryEvidenceLink' => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryEvidenceLinkAdaptor',
+        'RegulatoryBuild'           => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildAdaptor',
+        'RegulatoryFeature'         => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor',
+        'RegulatoryActivity'        => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryActivityAdaptor',
+        'RegulatoryEvidenceLink'    => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryEvidenceLinkAdaptor',
+        'RegulatoryBuildStatistics' => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildStatisticsAdaptor',
         
         'ReadFileExperimentalConfiguration' => 'Bio::EnsEMBL::Funcgen::DBSQL::ReadFileExperimentalConfigurationAdaptor',
         'ReadFile'                          => 'Bio::EnsEMBL::Funcgen::DBSQL::ReadFileAdaptor',
