@@ -112,18 +112,26 @@ sub range_register_regulatory_features {
     
     $by_feature_type{$feature_type}->check_and_register(
         $current_regulatory_feature->slice->seq_region_name,
-        $current_regulatory_feature->start,
-        $current_regulatory_feature->end,
-        $current_regulatory_feature->start,
-        $current_regulatory_feature->end,
+#         $current_regulatory_feature->start,
+        $current_regulatory_feature->bound_seq_region_start,
+#         $current_regulatory_feature->end,
+        $current_regulatory_feature->bound_seq_region_end,
+#         $current_regulatory_feature->start,
+        $current_regulatory_feature->bound_seq_region_start,
+#         $current_regulatory_feature->end,
+        $current_regulatory_feature->bound_seq_region_end,
     );
     
     $range_registry->check_and_register(
         $current_regulatory_feature->slice->seq_region_name,
-        $current_regulatory_feature->start,
-        $current_regulatory_feature->end,
-        $current_regulatory_feature->start,
-        $current_regulatory_feature->end,
+#         $current_regulatory_feature->start,
+        $current_regulatory_feature->bound_seq_region_start,
+#         $current_regulatory_feature->end,
+        $current_regulatory_feature->bound_seq_region_end,
+#         $current_regulatory_feature->start,
+        $current_regulatory_feature->bound_seq_region_start,
+#         $current_regulatory_feature->end,
+        $current_regulatory_feature->bound_seq_region_end,
     );
     $i++;
     if ($stop_after_maximum_reached && $i == $max) {
