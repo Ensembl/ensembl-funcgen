@@ -83,13 +83,16 @@ sub run {
   
   my $out_dir            = $tempdir . '/' . $output_dir;
   
+  use File::Path qw( make_path );
+  make_path( $out_dir );
+
   my $peaks_to_load_file = $out_dir . "/${name}.peaks_to_load.pl";
   my $peaks_file         = $out_dir . "/${name}.output.txt";
   my $out_file_prefix    = $name;
 
   my $peak_caller_binary = $peak_analysis->program;
   
-  open my $peak_out, '>' . $peaks_to_load_file;
+  open my $peak_out, '>' . $peaks_to_load_file || die("Couldn't open file $peaks_to_load_file for writing!");
   
   my $sensitive_caller_params = {
     -chr_file => $reference_data_root_dir . '/' . $chromosome_lengths_by_species_assembly,
