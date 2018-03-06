@@ -50,11 +50,19 @@ sub fetch_by_signal_control_Alignments {
   my $signal  = shift;
   my $control = shift;
   
+  my $control_id;
+  
+  if ($control) {
+    $control->dbID;
+  } else {
+    $control_id = undef;
+  }
+  
   return $self->fetch_single_object(
     'signal_alignment_id = ? and control_alignment_id = ?', 
     [ 
       $signal->dbID,
-      $control->dbID,
+      $control_id,
     ]
   );
 }

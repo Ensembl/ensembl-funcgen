@@ -46,6 +46,7 @@ our @EXPORT_OK = qw(
   
   SIGNAL_EXPERIMENT
   CONTROL_EXPERIMENT
+  NO_CONTROL_FLAG
   
   TRUE
   FALSE
@@ -57,6 +58,8 @@ our @EXPORT_OK = qw(
   
   ENSEMBL_BROAD_PEAK_CALLING_ANALYSIS
   ENSEMBL_NARROW_PEAK_CALLING_ANALYSIS
+  
+  NA
 );
 
 our %EXPORT_TAGS = (all => \@EXPORT_OK);
@@ -102,8 +105,12 @@ use constant {
   SIGNAL_EXPERIMENT  => 'signal',
   CONTROL_EXPERIMENT => 'control',
   
+  NO_CONTROL_FLAG => 'no control',
+  
   TRUE  => 'true',
   FALSE => 'false',
+  
+  NA => 'NA',
 };
 
 1;

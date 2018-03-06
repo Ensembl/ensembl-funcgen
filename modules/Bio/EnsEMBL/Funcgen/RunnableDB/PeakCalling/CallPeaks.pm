@@ -37,13 +37,21 @@ sub run {
       ->{output}
       ->{real}
   ;
-  my $control_bam_file 
-    = $call_peaks_plan
-      ->{input}
-      ->{control}
-      ->{output}
-      ->{real}
-  ;
+  
+  my $control_bam_file;
+  
+  if ($plan_expanded->{meta_data}->{experiment_has_control} eq FALSE) {
+    $control_bam_file = undef;
+  } else {
+    $control_bam_file 
+      = $call_peaks_plan
+        ->{input}
+        ->{control}
+        ->{output}
+        ->{real}
+    ;
+  }
+  
   my $chromosome_lengths_by_species_assembly
     = $call_peaks_plan
       ->{chromosome_lengths_by_species_assembly};
@@ -88,8 +96,13 @@ sub run {
     -FDR_THRESHOLD => 1,
   };
 
-  use File::Path qw( make_path );
-  make_path( $out_dir );
+  my $control_alignment;
+  
+  if ($control_bam_file) {
+    $control_alignment = $data_root_dir . '/' . $control_bam_file;
+  } else {
+    $control_alignment = undef;
+  }
 
   # Set to one for ccat
   my $is_half_open = 0;
@@ -97,7 +110,7 @@ sub run {
   my @init_peak_caller_args = (
     -analysis           => $peak_analysis,
     -signal_alignment   => $data_root_dir . '/' . $signal_bam_file,
-    -control_alignment  => $data_root_dir . '/' . $control_bam_file,
+    -control_alignment  => $control_alignment,
     -sam_ref_fai        => $reference_data_root_dir . '/' . $samtools_fasta_index,
     -debug              => $self->debug,
     -is_half_open       => $is_half_open,

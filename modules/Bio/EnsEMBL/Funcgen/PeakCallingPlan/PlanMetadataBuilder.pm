@@ -6,6 +6,8 @@ use Data::Dumper;
 use Role::Tiny::With;
 with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
+
 use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_set
   _generic_get
@@ -34,15 +36,48 @@ sub construct {
   my $feature_type_creates_broad_peaks_legible;
   
   if ($feature_type->_creates_broad_peaks) {
-    $feature_type_creates_broad_peaks_legible = 'yes'
+    $feature_type_creates_broad_peaks_legible = TRUE
   } else {
-    $feature_type_creates_broad_peaks_legible = 'no'
+    $feature_type_creates_broad_peaks_legible = FALSE
+  }
+  
+  my $experiment_has_control;
+  if ($experiment->get_control) {
+    $experiment_has_control = TRUE;
+  } else {
+    $experiment_has_control = FALSE;
+  }
+  
+  my $experiment_is_control;
+  if ($experiment->is_control) {
+    $experiment_is_control = TRUE;
+  } else {
+    $experiment_is_control = FALSE;
+  }
+  
+  my $control_experiment_name;
+  if (
+         ($experiment_is_control  eq TRUE) 
+      || ($experiment_has_control eq FALSE)
+     ) {
+    $control_experiment_name = NA;
+  } else {
+    my $control_experiment = $experiment->get_control;
+    
+    if (! defined $control_experiment) {
+      die("Can't get control for experiment " . $experiment->name);
+    }
+    
+    $control_experiment_name = $control_experiment->name;
   }
   
   my $meta_data = {
     experiment                       => $experiment->name,
     feature_type                     => $feature_type_name,
     feature_type_creates_broad_peaks => $feature_type_creates_broad_peaks_legible,
+    experiment_has_control           => $experiment_has_control,
+    experiment_is_control            => $experiment_is_control,
+    control_experiment               => $control_experiment_name,
     replicate_configurations         => $self->summarise_replicate_configurations(
       $species, 
       $experiment

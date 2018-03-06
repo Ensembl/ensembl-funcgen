@@ -5,6 +5,8 @@ use strict;
 
 use base 'Bio::EnsEMBL::Hive::Process';
 
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
+
 sub run {
   my $self = shift;
 
@@ -13,6 +15,11 @@ sub run {
   my $data_root_dir   = $self->param_required('data_root_dir');
   my $tempdir         = $self->param_required('tempdir');
 
+  if ($alignment_name eq NO_CONTROL_FLAG) {
+    $self->say_with_header("Skipping this alignment, because it is a hack to indicate a fake experiment. (Should be done properly one day.)", 1);
+    return;
+  }
+
   my $alignment_adaptor = Bio::EnsEMBL::Registry
     ->get_adaptor(
         $species, 
@@ -20,6 +27,10 @@ sub run {
         'Alignment'
     );
   my $alignment = $alignment_adaptor->fetch_by_name($alignment_name);
+  
+  if ($alignment eq NO_CONTROL_FLAG) {
+    return;
+  }
   
   my $epigenome_production_name 
     = $alignment

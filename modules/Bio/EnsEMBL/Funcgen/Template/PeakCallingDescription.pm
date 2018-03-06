@@ -20,8 +20,10 @@ sub apply {
   my $output;
   
   my $description_template = PEAK_CALLING_TXT_TEMPLATE();
-  use Number::Format qw( :all );
-
+#   use Number::Format qw( :all );
+  use Number::Format qw( format_number );
+  
+  
   $tt->process(
     \$description_template, 
     {
@@ -52,6 +54,13 @@ sub apply {
       },
       format_number => sub {
         my $number = shift;
+        if (! defined $number) {
+          return '-'
+        }
+        if ($number eq '') {
+          return '-'
+        }
+        #return 'foo';
         return format_number($number);
       },
       fetch_deduplicated_partial_alignments => sub {
@@ -74,6 +83,7 @@ sub PEAK_CALLING_TXT_TEMPLATE {
   my $description_template = <<TEMPLATE
 
 Peak calling on [% peak_calling.display_label %]
+
 [%- FILTER indent('    ') %] 
 
 Summary
@@ -106,6 +116,28 @@ Idr
 [%- FILTER indent('    ') %] 
   [%- PROCESS summarise_idr idr = peak_calling.fetch_Idr %]
 [%- END %] 
+
+[% BLOCK summarise_idr %]
+- Experimental configuration: [% idr.fetch_Experiment.summarise_replicate_configurations %]
+- Type of IDR: [% idr.type             %]
+- Max peaks threshold: [% format_number(idr.max_peaks)        %]
+- Failures:            [% idr.failed_idr_pairs %]
+[%- END -%]
+
+[%- BLOCK summarise_epigenome -%]
+[% epigenome.gender.ucfirst %] [% epigenome.display_label %]: [% epigenome.description %].
+[%- IF epigenome.efo_accession -%]
+  [% epigenome.efo_accession %]
+[%- ELSE -%]
+  No efo accession available.
+[%- END %]
+[%- END -%]
+
+[% BLOCK summarise_feature_type %]
+[%- feature_type.name %] ([% feature_type.description %])
+[%- END -%]
+
+[%- END -%]
 
 Signal alignment
 ================
@@ -163,21 +195,12 @@ Signal alignment
 Control alignment
 =================
 [%- FILTER indent('    ') %]
-  [%  PROCESS summarise_alignment alignment = peak_calling.fetch_control_Alignment -%]
-[%- END -%]
-[%- END -%]
-
-[% BLOCK summarise_feature_type %]
-[%- feature_type.name %] ([% feature_type.description %])
-[%- END -%]
-
-[%- BLOCK summarise_epigenome -%]
-[% epigenome.gender.ucfirst %] [% epigenome.display_label %]: [% epigenome.description %].
-[%- IF epigenome.efo_accession -%]
-  [% epigenome.efo_accession %]
-[%- ELSE -%]
-  No efo accession available.
-[%- END %]
+  [%  control_alignment = peak_calling.fetch_control_Alignment -%]
+  [% IF control_alignment %]
+    [%  PROCESS summarise_alignment alignment = control_alignment -%]
+  [% ELSE %]
+    No control alignment
+  [% END %]
 [%- END -%]
 
 [% BLOCK summarise_phantom_peak %]
@@ -194,13 +217,6 @@ Control alignment
 - PCR amplification bias in Input coverage of 1% of genome: [% chance.pcr_amplification_bias_in_Input_coverage_of_1_percent_of_genome %]
 - Differential percentage enrichment: [% default_round(chance.differential_percentage_enrichment) %]
 - Divergence: [% scientific_notation(chance.divergence) %]
-[%- END -%]
-
-[% BLOCK summarise_idr %]
-- Experimental configuration: [% idr.fetch_Experiment.summarise_replicate_configurations %]
-- Type of IDR: [% idr.type             %]
-- Max peaks threshold: [% format_number(idr.max_peaks)        %]
-- Failures:            [% idr.failed_idr_pairs %]
 [%- END -%]
 
 [%- BLOCK summarise_alignment %]

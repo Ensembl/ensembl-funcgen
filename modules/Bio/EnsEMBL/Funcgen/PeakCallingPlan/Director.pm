@@ -34,16 +34,12 @@ sub construct_execution_plan {
   my $alignment_namer = Bio::EnsEMBL::Funcgen::PeakCallingPlan::AlignmentNamer->new(
       -directory_name_builder      => $directory_name_builder,
       -experiment                  => $experiment,
-#       -biological_replicate_number => undef,
-#       -technical_replicate_number  => undef,
   );
   $param->{alignment_namer} = $alignment_namer;
 
   my $control_alignment_namer = Bio::EnsEMBL::Funcgen::PeakCallingPlan::AlignmentNamer->new(
       -directory_name_builder      => $directory_name_builder,
       -experiment                  => $experiment->get_control,
-#       -biological_replicate_number => undef,
-#       -technical_replicate_number  => undef,
   );
 
   use Bio::EnsEMBL::Funcgen::Utils::RefBuildFileLocator;
@@ -107,8 +103,8 @@ sub construct_execution_plan {
         ->get_Alignment;
   } else {
     $align_all_read_files_for_control_plan = {
-        name => 'No control',
-        type => 'alignment',
+        name        => NO_CONTROL_FLAG,
+        type        => ALIGNMENT_TYPE,
         description => 'No control alignment for this experiment.',
     };
   }
@@ -148,8 +144,8 @@ sub construct_execution_plan {
     $remove_duplicates_from_control_plan = $remove_duplicates_plan_builder->get_plan;
   } else {
     $remove_duplicates_from_control_plan = {
-        name => 'No control',
-        type => REMOVE_DUPLICATES_ANALYSIS,
+        name        => NO_CONTROL_FLAG,
+        type        => REMOVE_DUPLICATES_ANALYSIS,
         description => 'No control alignment for this experiment.',
     };
   }
@@ -181,8 +177,8 @@ sub construct_execution_plan {
     $control_file_plan = $signal_file_plan_builder->get_signal_plan;
   } else {
     $control_file_plan = {
-        name => 'No control',
-        type => SIGNAL_EXPERIMENT,
+        name        => NO_CONTROL_FLAG,
+        type        => SIGNAL_EXPERIMENT,
         description => 'No control alignment for this experiment.',
     };
   }

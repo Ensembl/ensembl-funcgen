@@ -4,6 +4,8 @@ use strict;
 use base 'Bio::EnsEMBL::Hive::Process';
 use Data::Dumper;
 
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
+
 use constant {
   BRANCH_ALIGN => 2,
 };
@@ -26,6 +28,8 @@ sub run {
   
   my $alignment_plans = $plan->{alignment};
   
+  print Dumper($plan);
+  
   my @alignment_names = keys %$alignment_plans;
   
   my @want_alignment;
@@ -34,9 +38,13 @@ sub run {
   foreach my $alignment_name (@alignment_names) {
     my $alignment_plan = $alignment_plans->{$alignment_name};
     
+    if ($alignment_plan->{name} eq NO_CONTROL_FLAG) {
+      next ALIGNMENT_PLAN;
+    }
+    
     my $want_this_alignment = 
       $alignment_plan->{is_control} == 0
-      && $alignment_plan->{analysis} eq 'remove_duplicates';
+      && $alignment_plan->{analysis} eq REMOVE_DUPLICATES_ANALYSIS;
    
    next ALIGNMENT_PLAN if (! $want_this_alignment);
    

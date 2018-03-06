@@ -319,21 +319,28 @@ sub summary_as_hash {
   my $self   = shift;
   
   my $signal_alignment  = $self->fetch_signal_Alignment;
-  my $control_alignment = $self->fetch_control_Alignment;
   my $epigenome         = $self->fetch_Epigenome;
   my $feature_type      = $self->fetch_FeatureType;
   my $analysis          = $self->fetch_Analysis;
   my $idr               = $self->fetch_Idr;
   
+  my $control_summary;
+  my $control_alignment = $self->fetch_control_Alignment;
+  if (defined $control_alignment) {
+    $control_summary = $control_alignment ->summary_as_hash;
+  } else {
+    $control_summary = undef;
+  }
+  
   my $summary = {
-    name             => $self->name,
-    signal_alignment => $signal_alignment  ->summary_as_hash,
-    contol_alignment => $control_alignment ->summary_as_hash,
-    epigenome        => $epigenome         ->summary_as_hash,
-    feature_type     => $feature_type      ->summary_as_hash,
-    idr              => $idr               ->summary_as_hash,
-    num_peaks        => $self->num_peaks,
-    peak_caller      => $analysis->display_label
+    name              => $self->name,
+    signal_alignment  => $signal_alignment  ->summary_as_hash,
+    control_alignment => $control_summary,
+    epigenome         => $epigenome         ->summary_as_hash,
+    feature_type      => $feature_type      ->summary_as_hash,
+    idr               => $idr               ->summary_as_hash,
+    num_peaks         => $self->num_peaks,
+    peak_caller       => $analysis->display_label
   };
   
   my $chance = $self->fetch_Chance;

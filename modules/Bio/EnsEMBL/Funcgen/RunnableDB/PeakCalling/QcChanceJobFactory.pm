@@ -3,6 +3,8 @@ package Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::QcChanceJobFactory;
 use warnings;
 use strict;
 
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
+
 use base 'Bio::EnsEMBL::Hive::Process';
 
 sub run {
@@ -16,6 +18,11 @@ sub run {
     
     my $alignment_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'Alignment');
 
+    if ($alignment_name eq NO_CONTROL_FLAG) {
+      $self->say_with_header("Skipping this alignment, because it is a hack to indicate a fake experiment. (Should be done properly one day.)", 1);
+      return;
+    }
+    
     my $signal_alignment  = $alignment_adaptor->fetch_by_name($alignment_name);
     
 #    if ($signal_alignment->has_duplicates) {
@@ -25,11 +32,17 @@ sub run {
     my $signal_experiment = $signal_alignment->fetch_Experiment;
     
     if ($signal_experiment->is_control) {
-        warn("Chance is not run on controls, no jobs will be generated.");
+        $self->warning("Chance is not run on controls, no jobs will be generated.");
         return;
     }
     
     my $control_experiment = $signal_experiment->get_control;
+    
+    if (! defined $control_experiment) {
+      $self->say_with_header("This experiment has no control, so chance will be skipped.", 1);
+      return;
+    }
+    
     my $control_alignment = $alignment_adaptor->fetch_complete_deduplicated_by_Experiment($control_experiment);
     
     if (! defined $control_alignment) {

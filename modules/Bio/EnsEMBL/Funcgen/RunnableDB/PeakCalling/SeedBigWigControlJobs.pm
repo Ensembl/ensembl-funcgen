@@ -4,17 +4,17 @@ use strict;
 use base 'Bio::EnsEMBL::Hive::Process';
 use Data::Dumper;
 
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
+
 use constant {
   BRANCH_TO_BIGWIG => 2,
 };
 
 sub run {
 
-  my $self = shift;
-  my $species      = $self->param_required('species');
-  my $plan         = $self->param_required('execution_plan');
-  my $tempdir      = $self->param_required('tempdir_peak_calling');
-  my $in_test_mode = $self->param('in_test_mode');
+  my $self    = shift;
+  my $species = $self->param_required('species');
+  my $plan    = $self->param_required('execution_plan');
   
   use Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanUtils qw (
         lock_execution_plan
@@ -34,9 +34,13 @@ sub run {
   foreach my $name (@signal_names) {
     my $signal_plan = $signal_plans->{$name};
     
+    if ($signal_plan->{name} eq NO_CONTROL_FLAG) {
+      next SIGNAL_PLAN;
+    }
+
     my $want_this = 
       $signal_plan->{is_control} == 1
-      && $signal_plan->{analysis} eq 'create_bigwig';
+      && $signal_plan->{analysis} eq CONVERT_BAM_TO_BIGWIG_ANALYSIS;
    
    next SIGNAL_PLAN if (! $want_this);
    

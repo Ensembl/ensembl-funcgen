@@ -3,6 +3,7 @@ package Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::StorePeaks;
 use strict;
 use base 'Bio::EnsEMBL::Hive::Process';
 use Data::Dumper;
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
 
 sub run {
 
@@ -31,13 +32,19 @@ sub run {
     ->{signal}
     ->{name}
   ;
-  my $control_alignment_name = $plan_expanded
+  my $control_alignment_name;
+
+  if ($plan_expanded->{meta_data}->{experiment_has_control} eq FALSE) {
+    $control_alignment_name = undef;
+  } else {
+    $control_alignment_name = $plan_expanded
     ->{call_peaks}
     ->{input}
     ->{control}
     ->{name}
   ;
-  
+  }
+
   my $slice_adaptor        = Bio::EnsEMBL::Registry->get_adaptor($species, 'core',    'Slice');
   my $peak_adaptor         = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'Peak');
   my $peak_calling_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'PeakCalling');
@@ -49,8 +56,15 @@ sub run {
   my $analysis          = $analysis_adaptor     ->fetch_by_logic_name($logic_name);
   my $feature_type      = $feature_type_adaptor ->fetch_by_name($feature_type_name);
   my $signal_alignment  = $alignment_adaptor    ->fetch_by_name($signal_alignment_name);
-  my $control_alignment = $alignment_adaptor    ->fetch_by_name($control_alignment_name);
   my $experiment        = $experiment_adaptor   ->fetch_by_name($experiment_name);
+  
+  my $control_alignment_id;
+  if ($control_alignment_name) {
+    my $control_alignment = $alignment_adaptor    ->fetch_by_name($control_alignment_name);
+    $control_alignment_id = $control_alignment->dbID,
+  } else {
+    $control_alignment_id = undef;
+  }
 
   my $peak_calling = $peak_calling_adaptor->fetch_by_name($name);
   
@@ -63,7 +77,7 @@ sub run {
       -feature_type_id      => $feature_type->dbID,
       -analysis_id          => $analysis->dbID,
       -signal_alignment_id  => $signal_alignment->dbID,
-      -control_alignment_id => $control_alignment->dbID,
+      -control_alignment_id => $control_alignment_id,
       -experiment_id        => $experiment->dbID,
       -epigenome_id         => $experiment->epigenome->dbID,
     );

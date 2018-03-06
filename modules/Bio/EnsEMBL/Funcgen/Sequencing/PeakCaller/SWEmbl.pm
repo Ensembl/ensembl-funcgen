@@ -86,10 +86,11 @@ sub run {
     
   if ($self->control_file) {
     $cmd .= " -r ".$self->control_file;
-  } else {
-    use Carp;
-    confess("No control file specified!");
   }
+#   else {
+#     use Carp;
+#     confess("No control file specified!");
+#   }
   
 #   warn "Running:\t$cmd\n" if $self->debug;
   warn "Running:\t$cmd\n";

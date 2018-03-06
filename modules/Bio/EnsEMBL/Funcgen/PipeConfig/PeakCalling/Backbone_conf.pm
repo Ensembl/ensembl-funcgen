@@ -108,7 +108,8 @@ sub pipeline_analyses {
             -flow_into   => {
                'A->2' => 'backbone_fire_convert_to_bed',
                '3->A' => 'start_align_controls',
-               3      => 'start_fastqc'
+               3      => 'start_fastqc',
+               4      => 'seed_jobs_from_list',
             },
         },
         {

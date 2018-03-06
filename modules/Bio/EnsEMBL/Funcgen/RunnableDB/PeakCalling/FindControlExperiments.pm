@@ -8,13 +8,14 @@ use Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanUtils qw (
     resolve_nonterminal_symbols
 );
 
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
+
 use constant {
 
-  # Used for idr
-  BRANCH_SIGNALS  => 2,
-  
-  # Used for aligning and fastqc
-  BRANCH_CONTROLS => 3,
+  BRANCH_SIGNALS                  => 2,
+  BRANCH_CONTROLS                 => 3,
+  BRANCH_SIGNALS_WITHOUT_CONTROLS => 4,
+
 };
 
 sub run {
@@ -27,8 +28,23 @@ sub run {
   
   my %found_control_alignments;
   my %plan_depending_on_control;
+  my @signal_experiments_without_controls;
   
+  EXECUTION_PLAN:
   foreach my $current_execution_plan (@$execution_plan_list) {
+
+    my $meta_data = $current_execution_plan->{meta_data};
+    
+    if (
+         ( $meta_data->{experiment_is_control}  ne TRUE  )
+      && ( $meta_data->{experiment_has_control} eq FALSE )
+    ) {
+      push 
+        @signal_experiments_without_controls, 
+        $current_execution_plan;
+
+      next EXECUTION_PLAN;
+    }
 
     my $current_execution_plan_expanded = resolve_nonterminal_symbols($current_execution_plan);
     lock_execution_plan($current_execution_plan_expanded);
@@ -40,15 +56,11 @@ sub run {
     
       my $alignment_plan = $alignment_plans->{$alignment_name};
       
-#       if (! exists $alignment_plan->{is_control}) {
-#         die(Dumper($alignment_plan));
-#       }
-      
       my $want_this
         =    
-             ( $alignment_plan->{name}     ne 'No control'         )
-          && ( $alignment_plan->{is_control}                       )
-          && ( $alignment_plan->{analysis} eq 'remove_duplicates'  )
+             ( $alignment_plan->{name}     ne NO_CONTROL_FLAG             )
+          && ( $alignment_plan->{is_control}                              )
+          && ( $alignment_plan->{analysis} eq REMOVE_DUPLICATES_ANALYSIS  )
       ;
       if (! $want_this) {
         next ALIGNMENT_PLAN;
@@ -61,6 +73,14 @@ sub run {
       push $plan_depending_on_control{$alignment_name}, $current_execution_plan;
     }
   }
+
+  $self->dataflow_output_id(
+    {
+      'execution_plan_list' => \@signal_experiments_without_controls,
+      'species'             => $species,
+    }, 
+    BRANCH_SIGNALS_WITHOUT_CONTROLS
+  );
 
   my @all_control_alignments = keys %found_control_alignments;
   
