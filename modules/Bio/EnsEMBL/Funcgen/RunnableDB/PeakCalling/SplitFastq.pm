@@ -6,6 +6,8 @@ use Data::Dumper;
 use Bio::EnsEMBL::Funcgen::Utils::Fastq::Processor;
 use Bio::EnsEMBL::Funcgen::Utils::Fastq::Parser;
 
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
+
 use constant {
   BRANCH_ALIGN => 2,
   BRANCH_MERGE => 3,
@@ -55,7 +57,7 @@ sub run {
 
     my $read_file_names;
 
-    if ($read_file->{type} eq 'paired_end') {
+    if ($read_file->{type} eq PAIRED_END) {
       $read_file_names = [
         $read_file->{1},
         $read_file->{2},
@@ -68,7 +70,7 @@ sub run {
       }
     }
     
-    if ($read_file->{type} eq 'single_end') {
+    if ($read_file->{type} eq SINGLE_END) {
       $read_file_names = [
         $read_file->{name},
       ];
@@ -106,12 +108,6 @@ sub run {
             $dataflow_output_id, 
             BRANCH_ALIGN
           );
-#         print Dumper(
-#           [
-#             $dataflow_output_id,
-#             $chunk_bam_file
-#           ]
-#         );
     };
 
     my $fastq_record_processor = Bio::EnsEMBL::Funcgen::Utils::Fastq::Processor->new(
@@ -148,7 +144,7 @@ sub split_read_file {
   my $read_file_names        = $param->{read_file_names};
   my $dataflow_fastq_chunk   = $param->{dataflow_fastq_chunk};
   my $fastq_record_processor = $param->{fastq_record_processor};
-  my $read_file_adaptor = $param->{read_file_adaptor};
+  my $read_file_adaptor      = $param->{read_file_adaptor};
   
   my $parser = Bio::EnsEMBL::Funcgen::Utils::Fastq::Parser->new;
   
