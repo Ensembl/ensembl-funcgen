@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/dt-1.10.16/datatables.min.css"/>
+
+<script src="http://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/Chart.bundle.js"></script>
+<script src="http://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/utils.js"></script>
+
+<script type="text/javascript" language="javascript" src="https://code.jquery.com/jquery-1.12.4.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/v/dt/dt-1.10.16/datatables.min.js"></script>
+<script type="text/javascript" class="init">
+
+$(document).ready(function() {
+    $('#example').DataTable();
+} );
+
+</script>
+
+</head>
+<body>
+
+<h1>Peak calling</h1>
+
+<h2>Proportion of genome in peaks by feature type and epigenome</h2>
+
+    <div id="container" style="width: 80%;">
+        <canvas id="canvas"></canvas>
+    </div>
+    <script>
+        var color = Chart.helpers.color;
+        
+        var selected_colors = [
+            'rgb(255, 99, 132)',
+            'rgb(255, 159, 64)',
+            'rgb(255, 205, 86)',
+            'rgb(75, 192, 192)',
+            'rgb(54, 162, 235)',
+            'rgb(153, 102, 255)',
+            'rgb(201, 203, 207)',
+            'rgb(0,0,139)',
+            'rgb(75,0,130)',
+            'rgb(0,128,128)',
+            'rgb(128,0,128)',
+        ];
+
+        var barChartData = {
+            labels: [
+                [% FOR epigenome IN epigenomes %]
+                    '[% epigenome.display_label %]',
+                [%- END %]
+            ],
+            datasets: [
+                [%- FOR current_feature_type IN feature_types -%]
+                    {
+                        label: '[% current_feature_type.name %]',
+                        backgroundColor: color(selected_colors[ [% loop.count %] ]).alpha(0.5).rgbString(),
+                        borderWidth: 1,
+                        data: [
+                            [% FOR current_epigenome IN epigenomes %]
+                                [% peak_callings = peak_calling_adaptor.fetch_all_by_Epigenome_FeatureType(current_epigenome, current_feature_type) %]
+                                [% IF peak_callings.size > 0 %]
+                                    [% FOR peak_calling IN peak_callings  -%]
+                                        '[% round_percent(length_to_percent(peak_calling.fetch_PeakCallingStatistic.total_length)) %]',
+                                    [%- END %]
+                                [% ELSE %]
+                                    '0',
+                                [% END %]
+                            [% END %]
+                        ]
+                    },
+                [% END %]
+            ]
+        };
+
+        window.onload = function() {
+            var ctx = document.getElementById('canvas').getContext('2d');
+            window.myBar = new Chart(ctx, {
+                type: 'bar',
+                data: barChartData,
+                options: {
+                    responsive: true,
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Total peak lengths by epigenome'
+                    }
+                }
+            });
+
+        };
+    </script>
+
+<h2>Peak calling statistics</h2>
+
+<table id="example" class="display" cellspacing="0" width="100%">
+<thead>
+    <tr>
+        <th>Epigenome</th>
+        <th>Feature type</th>
+        <th>Proportion of genome in peaks</th>
+        <th>Number of peaks</th>
+        <th>Average length</th>
+    </tr>
+</thead>
+<tbody>
+
+[% FOR peak_calling_statistic IN peak_calling_statistics %]
+<tr>
+    <td>[% peak_calling_statistic.fetch_PeakCalling.fetch_Epigenome.display_label %]</td>
+    <td>[% peak_calling_statistic.fetch_PeakCalling.fetch_FeatureType.name        %]</td>
+    <td>[% round_percent(length_to_percent(peak_calling_statistic.total_length))  %]</td>
+    <td>[% peak_calling_statistic.num_peaks           %]</td>
+    <td>[% peak_calling_statistic.average_length      %]</td>
+</tr>
+[% END %]
+
+</tbody>
+</table>
+
+</body>
+</html>
