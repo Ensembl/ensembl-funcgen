@@ -32,7 +32,7 @@ sub run {
   my $ensembl_analysis = $align_plan->{ensembl_analysis};
   
   my $remove_duplicates_ensembl_analysis = $plan->{analysis};
-  #my $is_complete     = $align_plan->{is_complete};
+  my $is_complete     = $align_plan->{is_complete};
   
   my $experiment_adaptor = Bio::EnsEMBL::Registry
   ->get_adaptor(
@@ -98,7 +98,7 @@ sub run {
       is_control          => $is_control,
       logic_name          => $remove_duplicates_ensembl_analysis,
       to_gender           => $to_gender,
-      is_complete         => 1,
+      is_complete         => $is_complete,
     }
   );
   
