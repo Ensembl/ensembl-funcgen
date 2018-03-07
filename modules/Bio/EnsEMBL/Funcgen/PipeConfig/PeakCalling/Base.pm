@@ -29,6 +29,7 @@ sub pipeline_wide_parameters {
     tempdir                 => $self->o('tempdir'),
     tempdir_peak_calling    => $self->o('tempdir') . '/peak_calling',
     data_root_dir           => $self->o('data_root_dir'),
+    reports_dir             => $self->o('reports_dir'),
     ensembl_release_version => $self->o('ensembl_release_version'),
     reference_data_root_dir => $self->o('reference_data_root_dir'),
     in_test_mode            => $self->o('in_test_mode'),

@@ -7,7 +7,7 @@ use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 
 sub beekeeper_extra_cmdline_options {
   my $self = shift;
-  return '-reg_conf ' . $self->o('reg_conf') . ' -keep_alive -can_respecialize 1 -sleep 0.1';
+  return '-reg_conf ' . $self->o('reg_conf') . ' -keep_alive -can_respecialize 1 -sleep 0.2';
 }
 
 sub default_options {
@@ -42,7 +42,7 @@ sub pipeline_analyses {
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
                '1->A' => 'start_chip_seq_analysis',
-               'A->1' => 'backbone_fire_cleanup'
+               'A->1' => 'backbone_fire_peak_calling_hc'
             },
         },
         {
@@ -50,6 +50,17 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
 
+        {   -logic_name  => 'backbone_fire_peak_calling_hc',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into   => {
+               '1->A' => 'start_peak_calling_hc',
+               'A->1' => 'backbone_fire_cleanup'
+            },
+        },
+        {
+            -logic_name  => 'start_peak_calling_hc',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+        },
         {   -logic_name  => 'backbone_fire_cleanup',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
