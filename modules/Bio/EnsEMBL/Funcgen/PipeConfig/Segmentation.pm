@@ -115,7 +115,6 @@ sub pipeline_analyses {
             cmd => qq(java -Xmx14500M )
               . qq( -jar #ChromHMM# )
               . qq( BinarizeBam                       )
-              #. qq( -p 20                             )
               . qq( #chromosome_length_file#          )
               . qq( #data_root_dir_species_assembly#  )
               . qq( #tempdir_segmentation#/#species#/celltable.txt )
@@ -253,27 +252,27 @@ sub pipeline_analyses {
               db_conn => 'funcgen:#species#',
           },
           -flow_into => {
-            MAIN => 'create_regulatory_evidence',
+            MAIN => 'segmentation_done',
           },
       },
-      {   -logic_name => 'create_regulatory_evidence',
-          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-          -parameters => {
-            cmd => 
-                qq( create_regulatory_evidence.pl )
-                . qq( --dbname   #funcgen_dbname# )
-                . qq( --user     #funcgen_username#    )
-                . qq( --host     #funcgen_host#        )
-                . qq( --pass     #funcgen_password#    )
-                . qq( --port     #funcgen_port#        )
-                . qq( --dnadb_name #core_dbname#   )
-                . qq( --dnadb_host #core_host#     )
-                . qq( --dnadb_user #core_username# )
-                . qq( --dnadb_pass #core_password# )
-                . qq( --dnadb_port #core_port#     )
-                . qq( --tempdir #tempdir_regulatory_build#/#species#/#assembly# )
-          },
-      },
+#       {   -logic_name => 'create_regulatory_evidence',
+#           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+#           -parameters => {
+#             cmd => 
+#                 qq( create_regulatory_evidence.pl )
+#                 . qq( --dbname   #funcgen_dbname# )
+#                 . qq( --user     #funcgen_username#    )
+#                 . qq( --host     #funcgen_host#        )
+#                 . qq( --pass     #funcgen_password#    )
+#                 . qq( --port     #funcgen_port#        )
+#                 . qq( --dnadb_name #core_dbname#   )
+#                 . qq( --dnadb_host #core_host#     )
+#                 . qq( --dnadb_user #core_username# )
+#                 . qq( --dnadb_pass #core_password# )
+#                 . qq( --dnadb_port #core_port#     )
+#                 . qq( --tempdir #tempdir_regulatory_build#/#species#/#assembly# )
+#           },
+#       },
       {   -logic_name => 'segmentation_done',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       },
