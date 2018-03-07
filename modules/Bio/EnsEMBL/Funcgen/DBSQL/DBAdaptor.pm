@@ -207,6 +207,8 @@ sub get_available_adaptors{
 
         'Array'                         => 'Bio::EnsEMBL::Funcgen::DBSQL::ArrayAdaptor',
         'ArrayChip'                     => 'Bio::EnsEMBL::Funcgen::DBSQL::ArrayChipAdaptor',
+        
+        'PeakCallingStatistic'          => 'Bio::EnsEMBL::Funcgen::DBSQL::PeakCallingStatisticAdaptor',
         'Probe'                         => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeAdaptor',
         'ProbeFeature'                  => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeFeatureAdaptor',
         'ProbeSet'                      => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeSetAdaptor',
