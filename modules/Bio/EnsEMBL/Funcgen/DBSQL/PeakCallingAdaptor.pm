@@ -68,6 +68,12 @@ sub fetch_by_Experiment {
     return $self->fetch_single_object($constraint);
 }
 
+sub fetch_by_PeakCallingStatistic {
+    my $self                   = shift;
+    my $peak_calling_statistic = shift;
+    return $self->fetch_by_dbID($peak_calling_statistic->peak_calling_id);
+}
+
 sub count_peaks_by_PeakCalling {
   my $self = shift;
   my $peak_calling = shift;

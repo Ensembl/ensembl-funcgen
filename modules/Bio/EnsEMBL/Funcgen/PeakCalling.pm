@@ -190,6 +190,17 @@ sub fetch_Idr {
   return $idr;
 }
 
+sub fetch_PeakCallingStatistic {
+  my $self = shift;
+  
+  my $peak_calling_statistic_adaptor = $self->db->db->get_PeakCallingStatisticAdaptor;
+  if (! defined $peak_calling_statistic_adaptor) {
+    throw("Couldn't get an PeakCallingStatisticAdaptor!");
+  }
+  my $peak_calling_statistic = $peak_calling_statistic_adaptor->fetch_by_peak_calling($self);
+  return $peak_calling_statistic;
+}
+
 sub fetch_Frip {
   my $self = shift;
   
