@@ -485,7 +485,7 @@ sub store {
         if (! defined $this_sth) {
 
             $sql = "$insertion_method INTO $table_name (".join(', ', @$columns_being_stored).') VALUES ('.join(',', (('?') x scalar(@$columns_being_stored))).')';
-            #warn "STORE: $sql\n";
+            
             $this_sth = $self->prepare( $sql );
             if (! defined $this_sth) {
                 throw("Could not prepare statement: $sql");
@@ -493,6 +493,9 @@ sub store {
             $hashed_sth{$column_key} = $this_sth;
         }
         my $values_being_stored = $self->slicer( $object, $columns_being_stored );
+
+#         warn "STORE: $sql\n";
+#         warn "STORE: ". join(',', @$values_being_stored) ."\n";
 
         # using $return_code in boolean context allows to skip the
         # value '0E0' ('no rows affected') that Perl treats as zero
