@@ -56,11 +56,14 @@ sub pipeline_analyses {
             },
         },
         {
-            -logic_name  => 'hc_only_bigwig_files_for_complete_alignments',
+            -logic_name  => 'hc_only_bigwig_files_for_complete and deduplicated alignments',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlHealthcheck',
             -parameters => {
               db_conn       => 'funcgen:#species#',
               description   => 'Bigwig files should only exist for complete alignments.',
+              query         => "select * from alignment where bigwig_file_id is null and is_complete = true and has_duplicates = false",
+              expected_size => '0'
+            },
           -flow_into => {
               MAIN => 'hc_peak_calls_for_all_signal_experiments_available',
           },
