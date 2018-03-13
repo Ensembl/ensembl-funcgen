@@ -61,15 +61,16 @@ sub run {
   my @failed_idr_pars;
   IDR_PAIR:
   foreach my $current_idr_result (@$idr_result) {
-    if (! $current_idr_result->{insufficient_merged_peaks}) {
+    if (! $current_idr_result->{idr_failed}) {
       next IDR_PAIR
     };
     my $peak_calling_pair = $current_idr_result->{peak_calling_pair};
+    my $error_message     = $current_idr_result->{error_message};
     
     my $first_alignment_name  = $peak_calling_pair->[0]->{alignment_name};
     my $second_alignment_name = $peak_calling_pair->[1]->{alignment_name};
     
-    push @failed_idr_pars, "($first_alignment_name, $second_alignment_name)";
+    push @failed_idr_pars, "($first_alignment_name, $second_alignment_name, $error_message)";
   }
   
   use List::Util qw( max );
@@ -98,7 +99,7 @@ sub run {
   my $failed_idr_pair_string = undef;
   
   if (@failed_idr_pars) {
-    $failed_idr_pair_string = join ', ', @failed_idr_pars;
+    $failed_idr_pair_string = join "\n", @failed_idr_pars;
   }
   
   my $idr = Bio::EnsEMBL::Funcgen::Idr->new(

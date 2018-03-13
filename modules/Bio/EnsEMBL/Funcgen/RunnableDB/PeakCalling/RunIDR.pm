@@ -43,6 +43,10 @@ use Bio::EnsEMBL::Utils::Exception              qw( throw );
 use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools qw( run_IDR );
 use Data::Dumper;
 
+use constant {
+  BRANCH_STORE_IDR => 2,
+};
+
 sub run {
   my $self = shift;
   
@@ -64,7 +68,22 @@ sub run {
     $self->say_with_header("Found " . $num_peaks . " peaks in bed file ${swembl_file}.", 1);
     
     if ($num_peaks == 0) {
-      $self->throw("Found bed file with 0 peaks. This will cause IDR to fail, please remove or fix:\n\t$swembl_file");
+      
+      my $error_message = "Found bed file with 0 peaks. This will cause IDR to fail. The file is: $swembl_file";
+      
+      $self->warning($error_message, 1);
+      $self->dataflow_output_id(
+        {
+          idr_result => {
+            idr_num_peak_threshold    => undef,
+            peak_calling_pair         => $pair,
+            error_message             => $error_message,
+            idr_failed                => 1,
+          }
+        },
+        BRANCH_STORE_IDR
+      );
+      return;
     }
     $peaks_per_swembl_output_file{$swembl_file} = $num_peaks;
   }
@@ -91,8 +110,6 @@ sub run {
   my @bed_files;
   foreach my $permissive_peak_call_result (@$pair) {
   
-    #die(Dumper($permissive_peak_call_result));
-  
     my $swembl_file = $permissive_peak_call_result->{peak_file};
   
     my $bed_file = $swembl_file . '.bed';
@@ -110,7 +127,6 @@ sub run {
     );
     push @bed_files, $clean_bed_file;
   }
-  
 
   # --------------------------------------------------------------------------
   # Run idr analysis
@@ -121,7 +137,6 @@ sub run {
   $self->say_with_header("cmd = $cmd", 1);
   
   use Bio::EnsEMBL::Funcgen::Utils::GoodUtils qw( run_cmd );
-  #my $output = run_cmd($cmd);
   
   use Capture::Tiny ':all';
   (
@@ -138,7 +153,7 @@ sub run {
     $insufficient_merged_peaks_error 
       = $stderr =~ /ValueError: Peak files must contain at least 20 peaks post-merge/;
       
-    $self->say_with_header(
+    $self->warning(
       "The idr command:\n"
       . $cmd . "\n"
       . "has failed.\n"
@@ -160,15 +175,21 @@ sub run {
   }
 
   if ($insufficient_merged_peaks_error) {
+  
+    my $error_message = "There were insufficient merged peaks to complete the idr computation.";
+    
+    $self->warning($error_message, 1);
+    
     $self->dataflow_output_id(
       {
         idr_result => {
           idr_num_peak_threshold    => undef,
-          insufficient_merged_peaks => $insufficient_merged_peaks_error,
           peak_calling_pair         => $pair,
+          idr_failed                => 1,
+          error_message             => $error_message,
         }
       },
-      2
+      BRANCH_STORE_IDR
     );
     return;
   }
@@ -182,9 +203,10 @@ sub run {
         idr_num_peak_threshold    => $num_peaks,
         insufficient_merged_peaks => undef,
         peak_calling_pair         => $pair,
+        idr_failed                => 0,
       }
     }, 
-    2
+    BRANCH_STORE_IDR
   );
   return;
 }
@@ -220,7 +242,6 @@ sub write_bed_file_without_swembl_issues {
     use Scalar::Util qw( looks_like_number );
     next LINE if (! looks_like_number($summit));
     
-    #my $summit_ok = ($summit > $start_pos) && ($summit < $end_pos);
     my $summit_ok = $summit > 0;
     next LINE if (! $summit_ok);
     
