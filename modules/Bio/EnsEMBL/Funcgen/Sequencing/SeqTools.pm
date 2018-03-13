@@ -138,7 +138,7 @@ sub _init_peak_caller {
   my($params, $analysis, $signal_alignment, $control_alignment,
     $sam_ref_fai,$debug, $is_half_open) = rearrange(
      [qw(peak_module_params analysis signal_alignment control_alignment
-     sam_ref_fai debug, is_half_open)], @_);
+     sam_ref_fai debug is_half_open)], @_);
      
   my (@params_array, $peak_module);
 
