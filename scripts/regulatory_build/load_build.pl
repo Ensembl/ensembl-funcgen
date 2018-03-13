@@ -62,19 +62,6 @@ use Carp;
 
 ${File::Temp::KEEP_ALL} = 1;
 
-# our %rgb_state = (
-#   '225,225,225' => 0, # dead
-#   "192,0,190" => 2, # poised
-#   "127,127,127" => 3, # repressed
-#   "255,255,255" => 4, # NA
-#
-#   "255,0,0" => 1, # TSS
-#   "209,157,0" => 1, # TFBS
-#   "255,252,4" => 1, # DNase
-#   "255,105,105" => 1, # Proximal
-#   "250,202,0" => 1, # Distal
-#   "10,190,254" => 1, # CTCF
-# );
 my %rgb_state = (
   '225,225,225' => 'INACTIVE',
 
@@ -126,7 +113,7 @@ sub main {
   my $current_regulatory_build = $regulatory_build_adaptor->fetch_current_regulatory_build;
 
   if (! defined $current_regulatory_build) {
-#     die("Couldn't find regulatory build in the database!");
+    print("Couldn't find regulatory build in the database!");
   }
   if (defined $current_regulatory_build) {
     print "Found regulatory build: "
@@ -136,9 +123,6 @@ sub main {
     . $current_regulatory_build->initial_release_date
     . " in the database.\n";
   }
-
-#   print_log("Getting analysis\n");
-#   my $analysis = get_analysis($funcgen_db_adaptor);
   print_log("Getting cell types\n");
   my $ctypes = get_cell_type_names($options->{base_dir}, $funcgen_db_adaptor);
   print_log("Getting stable ids\n");
@@ -307,28 +291,6 @@ sub get_analysis {
   }
 }
 
-=head2 clean_name
-
-  Description: Removing unwanted characters
-    Quick string normalisation function tor remove weird
-    characters froms file names and remove variants
-  Arg1: String
-  Returntype: String
-
-=cut
-
-sub clean_name {
-
-  confess("clean_name should not be used!");
-
-  my $string = shift;
-  $string =~ s/[\-\(\)]//g;
-#   $string =~ s/_.*//g;
-  $string = uc($string);
-  $string =~ s/:/x/g;
-  return $string;
-}
-
 =head2 get_cell_type_names
 
   Description: Get list of cell types used in the regulatory build.
@@ -351,13 +313,9 @@ sub get_cell_type_names {
     defined $epigenome || die("Unrecognized cell type name $epigenome\n");
   }
 
-#   my $debug_max = 1;
-
   my @cell_types = ();
   foreach my $file (glob "$base_dir/projected_segmentations/*.bb") {
     my $cell_type_name = basename $file;
-#     $cell_type_name =~ s/\.bb//;
-     #$cell_type_name =~ s/_\d+_SEGMENTS\.bb//;
      
      $cell_type_name =~ s/\.bb//;
      
@@ -416,22 +374,22 @@ sub get_stable_id {
       return $a->seq_region_start <=> $b->seq_region_start;
     }
   }
-  my $feature_set = $db->get_adaptor('FeatureSet')->fetch_by_name('RegulatoryFeatures:MultiCell_v'.$options->{old_version});
+#   my $feature_set = $db->get_adaptor('FeatureSet')->fetch_by_name('RegulatoryFeatures:MultiCell_v'.$options->{old_version});
   my ($overlaps, $max_id);
   my ($fh, $new) = tempfile();
   close $fh;
   run("bigBedToBed $options->{base_dir}/overview/RegBuild.bb $new");
 
-  if (defined $feature_set) {
-    foreach my $feature (sort cmp_features @{$feature_set->get_all_Features()}) {
-      print $ofh join("\t", ($feature->seq_region_name, $feature->bound_start, $feature->bound_end, $feature->feature_type->name, substr($feature->stable_id, 4))) . "\n";
-    }
-    close $ofh;
-
-    ($overlaps, $max_id) = get_overlaps_between_files($old, $new);
-  } else {
+#   if (defined $feature_set) {
+#     foreach my $feature (sort cmp_features @{$feature_set->get_all_Features()}) {
+#       print $ofh join("\t", ($feature->seq_region_name, $feature->bound_start, $feature->bound_end, $feature->feature_type->name, substr($feature->stable_id, 4))) . "\n";
+#     }
+#     close $ofh;
+# 
+#     ($overlaps, $max_id) = get_overlaps_between_files($old, $new);
+#   } else {
     ($overlaps, $max_id) = ([], 0);
-  }
+#   }
 
 # Go through overlaps in order of increasing overlap length. This means that you should always
 # overwrite an overlap with a later one.
@@ -903,7 +861,7 @@ sub create_regulatory_build_object {
           );
 
 #       print Dumper($regulatory_build);
-      $regulatory_build_adaptor->store($new_regulatory_build);
+#       $regulatory_build_adaptor->store($new_regulatory_build);
 
       $current_build_version = '0.0';
       $current_build_initial_release_date = '';
