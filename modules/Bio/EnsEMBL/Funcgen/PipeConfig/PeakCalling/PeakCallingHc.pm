@@ -61,7 +61,17 @@ sub pipeline_analyses {
             -parameters => {
               db_conn       => 'funcgen:#species#',
               description   => 'Bigwig files should only exist for complete alignments.',
-              query         => "select alignment_id from alignment where bigwig_file_id is null and is_complete = true",
+          -flow_into => {
+              MAIN => 'hc_peak_calls_for_all_signal_experiments_available',
+          },
+        },
+        {
+            -logic_name  => 'hc_peak_calls_for_all_signal_experiments_available',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlHealthcheck',
+            -parameters => {
+              db_conn       => 'funcgen:#species#',
+              description   => 'Bigwig files should only exist for complete alignments.',
+              query         => "select experiment.experiment_id from experiment left join peak_calling using (experiment_id) where peak_calling.experiment_id is null and experiment.is_control = 0",
               expected_size => '0'
             },
           -flow_into => {
