@@ -48,8 +48,11 @@ sub run {
     $self->throw("End of file marker check failed:\n" . $cmd)
   }
   
-  my $cmd=qq(java picard.cmdline.PicardCommandLine ValidateSamFile INPUT=$full_path_to_merged_bam);
-  $self->run_system_command($cmd);
+  my $cmd = qq(java picard.cmdline.PicardCommandLine ValidateSamFile INPUT=$full_path_to_merged_bam);
+  $has_failed = $self->run_system_command($cmd);
+  if ($has_failed) {
+    $self->throw("End of file marker check failed:\n" . $cmd)
+  }
 
   # Give file system time to sync
   sleep(20);
