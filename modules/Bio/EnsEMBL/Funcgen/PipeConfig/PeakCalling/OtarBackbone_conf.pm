@@ -77,7 +77,7 @@ sub pipeline_analyses {
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
                '1->A' => 'start_segmentation',
-               'A->1' => 'backbone_fire_ftp_export'
+               'A->1' => 'backbone_fire_regulatory_build_hc'
             },
         },
         {
@@ -85,6 +85,29 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
 
+        {   -logic_name  => 'backbone_fire_regulatory_build_hc',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into   => {
+               '1->A' => 'start_regulatory_build_hc',
+               'A->1' => 'backbone_fire_regulatory_build_stable_id_mapping'
+            },
+        },
+        {
+            -logic_name  => 'start_regulatory_build_hc',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+        },
+        
+        {   -logic_name  => 'backbone_fire_regulatory_build_stable_id_mapping',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into   => {
+               '1->A' => 'start_regulatory_build_stable_id_mapping',
+               'A->1' => 'backbone_fire_ftp_export'
+            },
+        },
+        {
+            -logic_name  => 'start_regulatory_build_stable_id_mapping',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+        },
         {   -logic_name  => 'backbone_fire_ftp_export',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
