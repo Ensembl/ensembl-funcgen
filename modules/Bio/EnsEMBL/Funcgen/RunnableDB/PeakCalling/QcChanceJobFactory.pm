@@ -25,9 +25,9 @@ sub run {
     
     my $signal_alignment  = $alignment_adaptor->fetch_by_name($alignment_name);
     
-#    if ($signal_alignment->has_duplicates) {
-#       die;
-#    }
+   if (! defined $signal_alignment) {
+      $self->throw("Can't find signal alignment with name: $alignment_name");
+   }
     
     my $signal_experiment = $signal_alignment->fetch_Experiment;
     
