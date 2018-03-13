@@ -5,6 +5,8 @@ use base ('Bio::EnsEMBL::Hive::Process');
 use Data::Dumper;
 use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
 
+my $previous_version_species_suffix = '_previous_version';
+
 sub run {
     my $self = shift;
 
@@ -16,6 +18,15 @@ sub run {
     
     use Bio::EnsEMBL::Registry;
     my $funcgen_db_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
+    
+    eval {
+      my $previous_version_funcgen_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor( 
+        $species . $previous_version_species_suffix, 'funcgen' 
+      );
+    };
+    if ($@) {
+      push @error_msg, "Can't get previous version database for $species!";
+    }
     
     my $analysis_adaptor = $funcgen_db_adaptor->get_AnalysisAdaptor;
     
@@ -247,7 +258,7 @@ sub run {
     if (@error_msg) {
     
       my $err_string = join "\n", map { '  - ' . $_ } @error_msg;
-    #return;
+    return;
       $self->throw(
 	"\n-------------------------------------------------------------------------------\n"
 	. "Prepipeline checks have failed with the following errors:\n\n"
