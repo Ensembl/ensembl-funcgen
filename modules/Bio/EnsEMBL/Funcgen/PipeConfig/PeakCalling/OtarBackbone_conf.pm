@@ -35,10 +35,22 @@ sub pipeline_analyses {
         {   -logic_name  => 'start',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
-               MAIN => 'backbone_fire_chip_seq_analysis',
+               MAIN => 'backbone_fire_populate_read_file_stats',
             },
         },
-        {   -logic_name  => 'backbone_fire_chip_seq_analysis',
+        {   -logic_name  => 'backbone_fire_populate_read_file_stats',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into   => {
+               '1->A' => 'start_populate_read_file_stats',
+               'A->1' => 'backbone_fire_peak_calling'
+            },
+        },
+        {
+            -logic_name => 'start_populate_read_file_stats',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+        },
+
+        {   -logic_name  => 'backbone_fire_peak_calling',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
                '1->A' => 'start_chip_seq_analysis',

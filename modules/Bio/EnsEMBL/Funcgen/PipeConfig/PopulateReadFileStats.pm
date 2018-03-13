@@ -33,15 +33,26 @@ sub pipeline_analyses {
     my $self = shift;
 
     return [
-      {   -logic_name  => 'start',
+      {   -logic_name  => 'start_populate_read_file_stats',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+          -flow_into => {
+              MAIN => 'find_read_file_entries',
+          },
+      },
+      {   -logic_name  => 'find_read_file_entries',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
           -parameters => {
               db_conn    => 'funcgen:#species#',
               inputquery => '
                 select 
-                  read_file_id
+                  read_file_id 
                 from 
-                  read_file
+                  read_file 
+                where 
+                  file_size = 0 
+                  or read_length = 0 
+                  or file_size is null 
+                  or read_length is null
               ',
           },
           -flow_into => {
