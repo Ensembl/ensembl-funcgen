@@ -32,7 +32,9 @@ sub run {
   my $ensembl_analysis = $align_plan->{ensembl_analysis};
   
   my $remove_duplicates_ensembl_analysis = $plan->{analysis};
-  my $is_complete     = $align_plan->{is_complete};
+  
+  use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
+  my $is_complete     = $align_plan->{is_complete} eq TRUE;
   
   my $experiment_adaptor = Bio::EnsEMBL::Registry
   ->get_adaptor(
@@ -76,10 +78,9 @@ sub run {
       is_control          => $is_control,
       logic_name          => $ensembl_analysis,
       to_gender           => $to_gender,
-      is_complete         => 0,
+      is_complete         => $is_complete,
     }
   );
-
   my $remove_duplicates_plan = $plan;
   
   my $alignment_name = $remove_duplicates_plan->{name};
