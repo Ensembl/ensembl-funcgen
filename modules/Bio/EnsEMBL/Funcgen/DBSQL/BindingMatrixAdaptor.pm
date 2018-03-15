@@ -221,11 +221,11 @@ sub store {
                 $matrix->dbID( $self->last_insert_id );
                 $matrix->adaptor($self);
 
-                if ($matrix->{frequencies}){
+                if ($matrix->{elements}){
                   $self->_store_frequencies($matrix);
                 }
 
-                if ($matrix->{associated_transcription_factors}){
+                if ($matrix->{associated_transcription_factor_complexes}){
                   $self->_store_binding_matrix_transcription_factor_complex($matrix);
                 }
 
@@ -245,10 +245,14 @@ sub store {
 sub _store_frequencies {
     my ( $self, $binding_matrix ) = @_;
 
+    if($binding_matrix->unit ne FREQUENCIES){
+        throw("Can not store a matrix with units other than FREQUENCIES");
+    }
+
     my $binding_matrix_frequencies_adaptor
         = $self->db->get_adaptor('BindingMatrixFrequencies');
 
-    for my $frequency ( @{ $binding_matrix->{frequencies} } ) {
+    for my $frequency ( @{ $binding_matrix->{elements} } ) {
         $frequency->{binding_matrix} = $binding_matrix;
         $binding_matrix_frequencies_adaptor->store($frequency);
     }
@@ -270,7 +274,9 @@ sub _store_binding_matrix_transcription_factor_complex {
         (binding_matrix_id, transcription_factor_complex_id) VALUES(?, ?)"
     );
 
-    for my $complex ( @{ $matrix->{associated_transcription_factors} } ) {
+    for
+      my $complex ( @{ $matrix->{associated_transcription_factor_complexes} } )
+    {
 
         assert_ref( $complex,
             'Bio::EnsEMBL::Funcgen::TranscriptionFactorComplex',
