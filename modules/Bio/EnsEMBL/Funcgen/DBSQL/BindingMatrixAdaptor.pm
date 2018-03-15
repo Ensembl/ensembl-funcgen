@@ -59,6 +59,7 @@ use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
 
 
 use Bio::EnsEMBL::Funcgen::BindingMatrix;
+use Bio::EnsEMBL::Funcgen::BindingMatrix::Constants qw ( :all );
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#sql_types barewords import
 
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
@@ -68,7 +69,7 @@ use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
   Arg [1]    : string - name of Matrix
   Example    : my $matrix = $matrix_adaptor->fetch_by_name('MA0122.1');
-  Description: Fetches matrix objects given a name 
+  Description: Fetches matrix objects given a name
   Returntype : Bio::EnsEMBL::Funcgen::BindingMatrix object
   Exceptions : Throws if no name if defined
   Caller     : General
@@ -82,7 +83,7 @@ sub fetch_by_name {
 
     my $constraint = ' bm.name = ? ';
     $self->bind_param_generic_fetch( $name, SQL_VARCHAR );
-    
+
     my $result = $self->generic_fetch($constraint);
 
     if ( scalar @$result > 1 ) {
@@ -128,7 +129,7 @@ sub _true_tables {
 sub _columns {
   my $self = shift;
 
-    return qw( 
+    return qw(
       bm.binding_matrix_id
       bm.name
       bm.threshold
@@ -294,6 +295,7 @@ sub _store_binding_matrix_transcription_factor_complex {
         }
     }
 }
+
 
 
 
