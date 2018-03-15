@@ -104,6 +104,7 @@ sub new {
     if (defined $unit && $self->_unit_is_valid($unit)){
             $self->{unit} = $unit;
     }
+    else {$self->{unit} = FREQUENCIES;}
 
     if ( defined $associated_transcription_factor_complexes ) {
         for my $complex ( @{$associated_transcription_factor_complexes} ) {
