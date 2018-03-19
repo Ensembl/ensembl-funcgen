@@ -88,7 +88,14 @@ sub pipeline_analyses {
         {   -logic_name  => 'check_execution_plans',
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::CheckExecutionPlans',
             -flow_into   => {
-               2 => [
+               '2->A' => 'multiplex_execution_plan_jobs',
+               'A->2' => 'start_peak_calling',
+            },
+        },
+        {   -logic_name  => 'multiplex_execution_plan_jobs',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into   => {
+               MAIN => [
                 'seed_control_experiments',
                 'seed_signal_experiments'
                ],
@@ -179,7 +186,7 @@ sub pipeline_analyses {
             -flow_into   => {
                MAIN => [
                  'start_write_bigwig',
-                 'backbone_fire_convert_signal_to_bed',
+#                  'backbone_fire_convert_signal_to_bed',
                ]
             },
         },
@@ -187,7 +194,14 @@ sub pipeline_analyses {
             -logic_name  => 'start_write_bigwig',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
-
+        {
+            -logic_name  => 'start_peak_calling',
+            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedJobsFromList',
+            -flow_into   => {
+               2 => 'backbone_fire_convert_signal_to_bed',
+            },
+        },
+        
         {   -logic_name  => 'backbone_fire_convert_signal_to_bed',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
