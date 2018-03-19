@@ -27,9 +27,9 @@ time mysql $(r2-w details mysql) mnuhn_testdb5_mus_musculus_funcgen_91_38 -e "
 "
 
 peak_calling_statistics.pl \
-    --species          mus_musculus \
+    --species          mouse_with_regbuild \
     --registry         /homes/mnuhn/work_dir_ersa/lib/ensembl-funcgen/registry.pm \
-    --output_directory /hps/nobackup/production/ensembl/mnuhn/regulatory_build_pipeline_run2/reports/mus_musculus
+    --output_directory ./reports/
 
 =cut
 
@@ -80,7 +80,7 @@ use File::Path qw( make_path );
 make_path( $output_directory );
 
 use Template;
-my $tt = Template->new( ABSOLUTE => 1);
+my $tt = Template->new( ABSOLUTE => 1, RELATIVE => 1);
 
 my $output;
 
@@ -148,11 +148,14 @@ my $graph_display_epigenomes = [
 
 my $output_file = "$output_directory/peak_calling_report.html";
 
+my $dbc = $mouse_funcgen_dba->dbc;
+
 $tt->process(
     $description_template, 
     {
         peak_calling_statistics => $peak_calling_statistics_sorted,
         peak_calling_adaptor    => $peak_calling_adaptor,
+        dbc => $dbc,
         
         length_to_percent => sub {
             my $length = shift;
@@ -163,7 +166,9 @@ $tt->process(
             my $number = shift;
             return sprintf("%.2f", $number);
         },
-
+        time => sub {
+          return "" . localtime
+        },
         feature_types => $graph_display_feature_types,
         epigenomes    => $graph_display_epigenomes,
     },
