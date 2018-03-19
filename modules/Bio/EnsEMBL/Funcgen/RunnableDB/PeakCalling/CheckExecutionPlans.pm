@@ -9,7 +9,8 @@ use Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanUtils qw (
 );
 
 use constant {
-  OUTPUT_BRANCH => 2,
+  BRANCH_WRITE_AS_ONE_LIST         => 2,
+#   BRANCH_WRITE_EACH_EXECUTION_PLAN => 3,
 };
 
 sub run {
@@ -35,7 +36,7 @@ sub run {
             'species'             => $species,
             'execution_plan_list' => $execution_plan_list,
         }, 
-        OUTPUT_BRANCH
+        BRANCH_WRITE_AS_ONE_LIST
     );
 }
 
