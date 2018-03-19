@@ -56,4 +56,12 @@ sub _fetch_by_experiment_id {
   return $feature->[0];
 }
 
+sub _fetch_by_Experiment {
+
+  my $self       = shift;
+  my $experiment = shift;
+  
+  return $self->_fetch_by_experiment_id($experiment->dbID);
+}
+
 1;
