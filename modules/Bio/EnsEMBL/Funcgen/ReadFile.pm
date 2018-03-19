@@ -47,18 +47,18 @@ with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 
 sub _constructor_parameters {
   return {
-    dbID           => 'dbID',
+    dbID            => 'dbID',
     db              => 'db',
-    name           => 'name',
-    is_paired_end  => 'is_paired_end',
-    file_size      => 'file_size',
-    read_length    => 'read_length',
-    md5sum         => 'md5sum',
-    file           => 'file',
-    notes          => 'notes',
-    analysis_id                          => '_analysis_id',
-    analysis                             => 'set_Analysis',
-    #read_file_experimental_configuration => 'set_ReadFileExperimentalConfiguration',
+    name            => 'name',
+    is_paired_end   => 'is_paired_end',
+    file_size       => 'file_size',
+    number_of_reads => 'number_of_reads',
+    read_length     => 'read_length',
+    md5sum          => 'md5sum',
+    file            => 'file',
+    notes           => 'notes',
+    analysis_id     => '_analysis_id',
+    analysis        => 'set_Analysis',
   };
 }
 
@@ -112,10 +112,11 @@ sub read_length   { return shift->_generic_get_or_set('read_length',   @_); }
   Status     : Stable
 
 =cut
-sub md5sum        { return shift->_generic_get_or_set('md5sum',        @_); }
-sub file          { return shift->_generic_get_or_set('file',          @_); }
-sub notes         { return shift->_generic_get_or_set('notes',         @_); }
-sub _analysis_id  { return shift->_generic_get_or_set('_analysis_id',  @_); }
+sub md5sum          { return shift->_generic_get_or_set('md5sum',          @_); }
+sub file            { return shift->_generic_get_or_set('file',            @_); }
+sub number_of_reads { return shift->_generic_get_or_set('number_of_reads', @_); }
+sub notes           { return shift->_generic_get_or_set('notes',           @_); }
+sub _analysis_id    { return shift->_generic_get_or_set('_analysis_id',    @_); }
 
 sub paired_end_tag {
   my $self = shift;
