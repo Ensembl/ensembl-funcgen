@@ -66,4 +66,102 @@ sub fetch_average_length_promoter_flanking_region {
   return $self->fetch_by_statistic('average_length_promoter_flanking_region');
 }
 
+
+
+sub fetch_sum_length_promoter {
+  my $self = shift;
+  return $self->fetch_by_statistic('sum_length_promoter');
+}
+
+sub fetch_sum_length_enhancer {
+  my $self = shift;
+  return $self->fetch_by_statistic('sum_length_enhancer');
+}
+
+sub fetch_sum_length_promoter_flanking_region {
+  my $self = shift;
+  return $self->fetch_by_statistic('sum_length_promoter_flanking_region');
+}
+
+sub fetch_sum_length_transcription_factor_binding_site {
+  my $self = shift;
+  return $self->fetch_by_statistic('sum_length_transcription_factor_binding_site');
+}
+
+sub fetch_sum_length_open_chromatin {
+  my $self = shift;
+  return $self->fetch_by_statistic('sum_length_open_chromatin');
+}
+
+sub fetch_sum_length_ctcf_binding_site {
+  my $self = shift;
+  return $self->fetch_by_statistic('sum_length_ctcf_binding_site');
+}
+
+
+
+sub fetch_number_promoter {
+  my $self = shift;
+  return $self->fetch_by_statistic('number_promoter');
+}
+
+sub fetch_number_enhancer {
+  my $self = shift;
+  return $self->fetch_by_statistic('number_enhancer');
+}
+
+sub fetch_number_promoter_flanking_region {
+  my $self = shift;
+  return $self->fetch_by_statistic('number_promoter_flanking_region');
+}
+
+sub fetch_number_transcription_factor_binding_site {
+  my $self = shift;
+  return $self->fetch_by_statistic('number_transcription_factor_binding_site');
+}
+
+sub fetch_number_open_chromatin {
+  my $self = shift;
+  return $self->fetch_by_statistic('number_open_chromatin');
+}
+
+sub fetch_number_ctcf_binding_site {
+  my $self = shift;
+  return $self->fetch_by_statistic('number_ctcf_binding_site');
+}
+
+
+
+
+sub fetch_average_length_promoter {
+  my $self = shift;
+  return $self->fetch_by_statistic('average_length_promoter');
+}
+
+sub fetch_average_length_enhancer {
+  my $self = shift;
+  return $self->fetch_by_statistic('average_length_enhancer');
+}
+
+sub fetch_average_length_promoter_flanking_region {
+  my $self = shift;
+  return $self->fetch_by_statistic('average_length_promoter_flanking_region');
+}
+
+sub fetch_average_length_transcription_factor_binding_site {
+  my $self = shift;
+  return $self->fetch_by_statistic('average_length_transcription_factor_binding_site');
+}
+
+sub fetch_average_length_open_chromatin {
+  my $self = shift;
+  return $self->fetch_by_statistic('average_length_open_chromatin');
+}
+
+sub fetch_average_length_ctcf_binding_site {
+  my $self = shift;
+  return $self->fetch_by_statistic('average_length_ctcf_binding_site');
+}
+
+
 1;
