@@ -216,7 +216,7 @@ sub construct_execution_plan {
   
   $peak_calling_plan_builder->set_signal_alignment        ( create_ref($remove_duplicates_plan) );
   $peak_calling_plan_builder->set_control_alignment       ( create_ref($remove_duplicates_from_control_plan) );
-  $peak_calling_plan_builder->set_idr                     ( create_ref($idr_plan) );
+  $peak_calling_plan_builder->set_idr                     ( $idr_plan );
   $peak_calling_plan_builder->set_peaks_output_dir        ( $peaks_output_dir );
   $peak_calling_plan_builder->set_alignment_namer         ( $alignment_namer );
   $peak_calling_plan_builder->set_control_alignment_namer ( $control_alignment_namer );

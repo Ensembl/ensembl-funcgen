@@ -159,11 +159,22 @@ sub _construct_peak_calling_plan {
   
   my $analysis_logic_name;
   
+  my $idr = $self->_get_idr;
+  
+  my $idr_strategy = $idr->{strategy};
+  
   if ($peak_calling_strategy eq CALL_BROAD_PEAKS) {
     $analysis_logic_name = ENSEMBL_BROAD_PEAK_CALLING_ANALYSIS;
   }
-  if ($peak_calling_strategy eq CALL_NARROW_PEAKS) {
-    $analysis_logic_name = ENSEMBL_NARROW_PEAK_CALLING_ANALYSIS;
+  if (
+    ($peak_calling_strategy eq CALL_NARROW_PEAKS) && ($idr_strategy eq SKIP_IDR)
+  ) {
+    $analysis_logic_name = ENSEMBL_NARROW_PEAK_CALLING_ANALYSIS_DEFAULT;
+  }
+  if (
+    ($peak_calling_strategy eq CALL_NARROW_PEAKS) && ($idr_strategy ne SKIP_IDR)
+  ) {
+    $analysis_logic_name = ENSEMBL_NARROW_PEAK_CALLING_ANALYSIS_PERMISSIVE;
   }
   
   my $feature_type = $experiment->feature_type;
