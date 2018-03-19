@@ -52,11 +52,11 @@ sub pipeline_analyses {
                 . qq( --output_directory #reports_dir#/#species# )
             },
             -flow_into => {
-              MAIN     => 'hc_only_bigwig_files_for_complete_alignments',
+              MAIN     => 'hc_only_bigwig_files_for_complete_and_deduplicated_alignments',
             },
         },
         {
-            -logic_name  => 'hc_only_bigwig_files_for_complete and deduplicated alignments',
+            -logic_name  => 'hc_only_bigwig_files_for_complete_and_deduplicated_alignments',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlHealthcheck',
             -parameters => {
               db_conn       => 'funcgen:#species#',
