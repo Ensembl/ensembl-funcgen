@@ -48,10 +48,21 @@ sub run {
     $self->throw("End of file marker check failed:\n" . $cmd)
   }
   
-  my $cmd = qq(java picard.cmdline.PicardCommandLine ValidateSamFile INPUT=$full_path_to_merged_bam);
+#   my $cmd = qq(java picard.cmdline.PicardCommandLine ValidateSamFile INPUT=$full_path_to_merged_bam IGNORE_WARNINGS=true);
+#   $has_failed = $self->run_system_command($cmd);
+#   if ($has_failed) {
+#     $self->throw("End of file marker check failed:\n" . $cmd)
+#   }
+
+  my $cmd = qq(samtools index $full_path_to_merged_bam);
   $has_failed = $self->run_system_command($cmd);
   if ($has_failed) {
-    $self->throw("End of file marker check failed:\n" . $cmd)
+    $self->throw("Can't index $full_path_to_merged_bam")
+  }
+  
+  my $expected_index_file = "${full_path_to_merged_bam}.bai";
+  if (! -e $expected_index_file) {
+    $self->throw("Can't find index file ${expected_index_file}!")
   }
 
   # Give file system time to sync
