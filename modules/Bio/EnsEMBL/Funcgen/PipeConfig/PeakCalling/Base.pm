@@ -69,6 +69,7 @@ sub generate_parallel_alignment_analyses {
         },
         {   -logic_name  => $surround->('split'),
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SplitFastq',
+            -analysis_capacity => 30,
             -parameters => {
               tempdir => '#tempdir_peak_calling#/#species#/alignments'
             },
