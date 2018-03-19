@@ -112,7 +112,7 @@ sub pipeline_analyses {
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -rc_name    => 'binarization',
           -parameters => { 
-            cmd => qq(java -Xmx14500M )
+            cmd => qq(java -Xmx14500m )
               . qq( -jar #ChromHMM# )
               . qq( BinarizeBam                       )
               . qq( #chromosome_length_file#          )
@@ -139,7 +139,7 @@ sub pipeline_analyses {
           -parameters => {
             cmd => 
                 qq( export DISPLAY= ;             )
-                . qq( java -Xmx30000M             )
+                . qq( java -Xmx30000m             )
                 . qq( -jar #ChromHMM#             )
                 . qq( LearnModel                  )
                 . qq( -r 300 -p 12                )
