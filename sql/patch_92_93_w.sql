@@ -1,6 +1,5 @@
 -- Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 -- Copyright [2016-2018] EMBL-European Bioinformatics Institute
---
 -- Licensed under the Apache License, Version 2.0 (the "License");
 -- you may not use this file except in compliance with the License.
 -- You may obtain a copy of the License at
@@ -14,13 +13,11 @@
 -- limitations under the License.
 
 /**
-@header patch_92_93_b.sql - obsolete
+@header patch_92_93_w.sql - obsolete
 @desc   obsolete
 */
 
-alter table peak_calling add column run_failed boolean default false;
-alter table peak_calling add column error_message text;
+alter table idr change column failed_idr_pairs failed_idr_pairs text DEFAULT NULL;
 
 -- patch identifier
-
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_b.sql|obsolete');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_w.sql|obsolete');
