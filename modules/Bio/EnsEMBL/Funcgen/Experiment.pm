@@ -191,8 +191,7 @@ sub count_technical_replicates {
     return $count_technical_replicates;
 }
 
-sub summarise_replicate_configurations {
-
+sub _read_file_experimental_configuration_list {
   my $self = shift;
   
   my $read_file_experimental_configuration_adaptor
@@ -204,19 +203,157 @@ sub summarise_replicate_configurations {
   my $read_file_experimental_configuration_list 
     = $read_file_experimental_configuration_adaptor
       ->fetch_all_by_Experiment($self);
+
+  return $read_file_experimental_configuration_list;
+}
+
+sub summarise_replicate_configurations {
+
+  my $self = shift;
+  
+#   my $read_file_experimental_configuration_adaptor
+#     = $self
+#       ->adaptor
+#       ->db
+#       ->get_ReadFileExperimentalConfigurationAdaptor;
+# 
+  my $read_file_experimental_configuration_list 
+    = $self->_read_file_experimental_configuration_list;
+#     = $read_file_experimental_configuration_adaptor
+#       ->fetch_all_by_Experiment($self);
+  
+  my $read_file_experimental_configuration_list_sorted = [ 
+    sort 
+      { 
+        $a->biological_replicate   <=> $b->biological_replicate
+        || $a->technical_replicate <=> $b->technical_replicate
+        || $a->multiple            <=> $b->multiple
+      } 
+      @$read_file_experimental_configuration_list 
+  ];
   
   my @summaries;
-  foreach my $experimental_configuration (@$read_file_experimental_configuration_list) {
+  foreach my $experimental_configuration (@$read_file_experimental_configuration_list_sorted) {
   
     my $current_summary = "("
-    . $experimental_configuration->biological_replicate
+    . "BR " . $experimental_configuration->biological_replicate
     . ","
-    . $experimental_configuration->technical_replicate
+    . "TR " . $experimental_configuration->technical_replicate
+    . ","
+    . "no " . $experimental_configuration->multiple
     . ")";
     
     push @summaries, $current_summary
   }
   return join ", ", @summaries;
+}
+
+sub _fetch_all_Read_Files {
+  my $self = shift;
+
+  my $read_file_adaptor
+    = $self
+      ->adaptor
+      ->db
+      ->get_ReadFileAdaptor;
+
+  my $read_files = $read_file_adaptor->fetch_all_by_Experiment($self);
+  return $read_files;
+}
+
+sub sum_number_of_reads {
+
+  my $self = shift;
+
+  my $read_files = $self->_fetch_all_Read_Files;
+  my $sum = 0;
+  map { $sum += $_->number_of_reads } @$read_files;
+  return $sum;
+}
+
+sub sum_read_file_sizes {
+
+  my $self = shift;
+
+  my $read_files = $self->_fetch_all_Read_Files;
+  my $sum = 0;
+  map { $sum += $_->file_size } @$read_files;
+  return $sum;
+}
+
+sub summarise_read_types {
+
+  my $self = shift;
+  
+  my @types;
+  if ($self->has_single_end_reads) {
+    push @types, 'single end';
+  }
+  if ($self->has_paired_end_reads) {
+    push @types, 'paired end';
+  }
+  return join ', ', @types;
+}
+
+sub has_paired_end_reads {
+  my $self = shift;
+  my $read_file_experimental_configuration_list
+    = $self->_read_file_experimental_configuration_list;
+  
+  my $has_paired_end_reads = undef;
+  
+  map {
+    if (defined $_->paired_end_tag) {
+      $has_paired_end_reads = 1;
+    }
+  } @$read_file_experimental_configuration_list;
+  return $has_paired_end_reads;
+}
+
+sub has_single_end_reads {
+  my $self = shift;
+  my $read_file_experimental_configuration_list
+    = $self->_read_file_experimental_configuration_list;
+  
+  my $has_single_end_reads = undef;
+  
+  map {
+    if (! defined $_->paired_end_tag) {
+      $has_single_end_reads = 1;
+    }
+  } @$read_file_experimental_configuration_list;
+  return $has_single_end_reads;
+}
+
+sub signal_to_control_read_file_ratio {
+
+  my $self = shift;
+  
+  if ($self->is_control) {
+    return undef;
+  }
+  my $control_experiment = $self->get_control;
+  
+  if (! defined $control_experiment) {
+    return undef;
+  }
+  my $number_of_reads_in_signal  = $self->sum_read_file_sizes;
+  my $number_of_reads_in_control = $control_experiment->sum_read_file_sizes;
+
+  my $ratio = $number_of_reads_in_signal / $number_of_reads_in_control;
+  return $ratio;
+}
+
+sub _fetch_Idr {
+  my $self         = shift;
+  my $idr_adaptor  = $self->adaptor->db->get_IdrAdaptor;
+  
+  my $idr = $idr_adaptor->_fetch_by_Experiment($self);
+  
+#   use Data::Dumper;
+#   print Dumper($idr);
+  
+  return $idr;
 }
 
 =head2 epigenome
