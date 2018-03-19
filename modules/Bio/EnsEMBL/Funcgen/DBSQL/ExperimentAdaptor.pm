@@ -290,6 +290,38 @@ sub _objs_from_sth {
   return \@result;
 }
 
+sub _fetch_all_experiments_with_read_files {
+  my $self   = shift;
+  my $sql = 'select distinct experiment.* from experiment join read_file_experimental_configuration using (experiment_id);';
+  my $sth = $self->prepare($sql);
+  $sth->execute;
+  my $all_experiments_with_read_files = $self->_objs_from_sth($sth);
+  return @$all_experiments_with_read_files;
+}
+
+sub _fetch_all_signal_experiments {
+  my $self   = shift;
+  
+  my @all_experiments_with_read_files = $self->_fetch_all_experiments_with_read_files;
+  
+  my @signal_experiments = grep {
+    ! $_->is_control
+  } @all_experiments_with_read_files;
+  
+  return @signal_experiments;
+}
+
+sub _fetch_all_control_experiments {
+  my $self   = shift;
+  
+  my @all_experiments_with_read_files = $self->_fetch_all_experiments_with_read_files;
+  
+  my @control_experiments = grep {
+    $_->is_control
+  } @all_experiments_with_read_files;
+  
+  return @control_experiments;
+}
 
 =head2 store
 
