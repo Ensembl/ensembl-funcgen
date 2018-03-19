@@ -226,7 +226,9 @@ sub get_available_adaptors{
         'ReadFileExperimentalConfiguration' => 'Bio::EnsEMBL::Funcgen::DBSQL::ReadFileExperimentalConfigurationAdaptor',
         'ReadFile'                          => 'Bio::EnsEMBL::Funcgen::DBSQL::ReadFileAdaptor',
 
-        'SegmentationFeature'    => 'Bio::EnsEMBL::Funcgen::DBSQL::SegmentationFeatureAdaptor',
+        'SegmentationFeature'         => 'Bio::EnsEMBL::Funcgen::DBSQL::SegmentationFeatureAdaptor',
+        'SegmentationStateEmission'   => 'Bio::EnsEMBL::Funcgen::DBSQL::SegmentationStateEmissionAdaptor',
+        'SegmentationStateAssignment' => 'Bio::EnsEMBL::Funcgen::DBSQL::SegmentationStateAssignmentAdaptor',
 
         'MetaCoordContainer'      => 'Bio::EnsEMBL::DBSQL::MetaCoordContainer',
         'UnmappedObject'          => 'Bio::EnsEMBL::DBSQL::UnmappedObjectAdaptor',
