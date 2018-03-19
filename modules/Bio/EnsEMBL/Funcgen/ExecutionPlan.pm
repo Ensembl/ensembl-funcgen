@@ -45,12 +45,14 @@ sub _constructor_parameters {
   return {
     experiment_id  => 'experiment_id',
     execution_plan => 'execution_plan',
+    time           => 'time',
   };
 }
 
 sub dbID           { return shift->_generic_get_or_set('dbID',           @_); }
 sub db             { return shift->_generic_get_or_set('db',             @_); }
 sub experiment_id  { return shift->_generic_get_or_set('experiment_id',  @_); }
+sub time           { return shift->_generic_get_or_set('time',           @_); }
 sub execution_plan { return shift->_generic_get_or_set('execution_plan', @_); }
 
 1;

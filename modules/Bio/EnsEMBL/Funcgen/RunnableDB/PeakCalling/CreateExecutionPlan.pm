@@ -63,7 +63,8 @@ sub run {
   use Bio::EnsEMBL::Funcgen::ExecutionPlan;
   my $execution_plan_obj = Bio::EnsEMBL::Funcgen::ExecutionPlan->new(
     -experiment_id  => $experiment_id,
-    -execution_plan => Dump($execution_plan)
+    -execution_plan => Dump($execution_plan),
+    -time           => time
   );
 
   my $execution_plan_adaptor = Bio::EnsEMBL::Registry->get_adaptor(
