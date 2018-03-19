@@ -2,25 +2,23 @@
 <html>
 <head>
 
-<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/dt-1.10.16/datatables.min.css"/>
+<link rel="stylesheet" type="text/css" href="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/datatables.css"/>
 
-<script src="http://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/Chart.bundle.js"></script>
-<script src="http://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/utils.js"></script>
+<script src="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/Chart.bundle.js"></script>
+<script src="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/utils.js"></script>
 
-<script type="text/javascript" language="javascript" src="https://code.jquery.com/jquery-1.12.4.js"></script>
-<script type="text/javascript" src="https://cdn.datatables.net/v/dt/dt-1.10.16/datatables.min.js"></script>
-<script type="text/javascript" class="init">
+<script type="text/javascript" language="javascript" src="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/jquery-1.12.4.js"></script>
 
-$(document).ready(function() {
-    $('#example').DataTable();
-} );
-
-</script>
+<script type="text/javascript" src="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/datatables.js"></script>
 
 </head>
 <body>
 
 <h1>Peak calling</h1>
+
+<p>
+    This report is based on the database <em>[% dbc.dbname %]</em> on <em>[% dbc.host   %]:[% dbc.port   %]</em> on <em>[% time %]</em>.
+</p>
 
 <h2>Proportion of genome in peaks by feature type and epigenome</h2>
 
@@ -95,7 +93,15 @@ $(document).ready(function() {
 
 <h2>Peak calling statistics</h2>
 
-<table id="example" class="display" cellspacing="0" width="100%">
+<script type="text/javascript" class="init">
+
+$(document).ready(function() {
+    $('#peak_calling_1').DataTable();
+} );
+
+</script>
+
+<table id="peak_calling_1" class="display" cellspacing="0" width="100%">
 <thead>
     <tr>
         <th>Epigenome</th>
@@ -111,9 +117,9 @@ $(document).ready(function() {
 <tr>
     <td>[% peak_calling_statistic.fetch_PeakCalling.fetch_Epigenome.display_label %]</td>
     <td>[% peak_calling_statistic.fetch_PeakCalling.fetch_FeatureType.name        %]</td>
-    <td>[% round_percent(length_to_percent(peak_calling_statistic.total_length))  %]</td>
-    <td>[% peak_calling_statistic.num_peaks           %]</td>
-    <td>[% peak_calling_statistic.average_length      %]</td>
+    <td align="right">[% round_percent(length_to_percent(peak_calling_statistic.total_length))  %]</td>
+    <td align="right">[% peak_calling_statistic.num_peaks           %]</td>
+    <td align="right">[% peak_calling_statistic.average_length      %]</td>
 </tr>
 [% END %]
 

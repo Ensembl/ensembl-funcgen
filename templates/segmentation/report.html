@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<link rel="stylesheet" type="text/css" href="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/datatables.css"/>
+
+<script src="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/Chart.bundle.js"></script>
+<script src="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/utils.js"></script>
+
+<script type="text/javascript" language="javascript" src="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/jquery-1.12.4.js"></script>
+
+<script type="text/javascript" src="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/datatables.js"></script>
+
+</head>
+<body>
+
+<h1>Segmentation</h1>
+
+<h2>Source</h2>
+
+<p>
+    This report is based on the database <em>[% dbc.dbname %]</em> on <em>[% dbc.host   %]:[% dbc.port   %]</em> on <em>[% time %]</em>.
+</p>
+
+<h2>Segmentation state emissions and assignments</h2>
+
+<script type="text/javascript" class="init">
+
+$(document).ready(function() {
+    $('#example').DataTable(
+        {
+            "iDisplayLength": 25,
+        }
+    );
+} );
+
+</script>
+
+<table id="example" class="display" cellspacing="0" width="80%">
+<thead>
+    <tr>
+        <th>state   </th>
+        <th>assignment </th>
+        <th>CTCF    </th>
+        <th>DNase1  </th>
+        <th>H3K27ac </th>
+        <th>H3K27me3</th>
+        <th>H3K36me3</th>
+        <th>H3K4me1 </th>
+        <th>H3K4me2 </th>
+        <th>H3K4me3 </th>
+        <th>H3K9ac  </th>
+        <th>H3K9me3 </th>
+    </tr>
+</thead>
+<tbody>
+
+[% FOR segmentation_state_emission IN segmentation_state_emissions %]
+<tr>
+    <td>[% segmentation_state_emission.state    %]</td>
+    <td>[% segmentation_state_emission.fetch_segmentation_state_assignment.assignment    %]</td>
+    <td>[% round_num( segmentation_state_emission.CTCF     ) %]</td>
+    <td>[% round_num( segmentation_state_emission.DNase1   ) %]</td>
+    <td>[% round_num( segmentation_state_emission.H3K27ac  ) %]</td>
+    <td>[% round_num( segmentation_state_emission.H3K27me3 ) %]</td>
+    <td>[% round_num( segmentation_state_emission.H3K36me3 ) %]</td>
+    <td>[% round_num( segmentation_state_emission.H3K4me1  ) %]</td>
+    <td>[% round_num( segmentation_state_emission.H3K4me2  ) %]</td>
+    <td>[% round_num( segmentation_state_emission.H3K4me3  ) %]</td>
+    <td>[% round_num( segmentation_state_emission.H3K9ac   ) %]</td>
+    <td>[% round_num( segmentation_state_emission.H3K9me3  ) %]</td>
+</tr>
+[% END %]
+
+</tbody>
+</table>
+
+</body>
+</html>

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<link rel="stylesheet" type="text/css" href="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/datatables.css"/>
+
+<script src="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/Chart.bundle.js"></script>
+<script src="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/utils.js"></script>
+
+<script type="text/javascript" language="javascript" src="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/jquery-1.12.4.js"></script>
+
+<script type="text/javascript" src="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/datatables.js"></script>
+
+</head>
+<body>
+
+<h1>Read files</h1>
+
+<h2>Source</h2>
+
+<p>
+    This report is based on the database <em>[% dbc.dbname %]</em> on <em>[% dbc.host   %]:[% dbc.port   %]</em> on <em>[% time %]</em>.
+</p>
+
+<script type="text/javascript" class="init">
+
+$(document).ready(function() {
+    $('#read_file_1').DataTable(
+        {
+            "iDisplayLength": 10,
+        }
+    );
+} );
+
+$(document).ready(function() {
+    $('#read_file_3').DataTable(
+        {
+            "iDisplayLength": 10,
+        }
+    );
+} );
+
+$(document).ready(function() {
+    $('#read_file_4').DataTable(
+        {
+            "iDisplayLength": 10,
+        }
+    );
+} );
+
+</script>
+
+<h2>Types of sequencing protocols</h2>
+
+<table id="read_file_1" class="display" cellspacing="0" width="100%">
+<thead>
+    <tr>
+        <th>Protocol</th>
+        <th>Number of experiments</th>
+    </tr>
+</thead>
+<tbody>
+
+[% FOR read_file_analysis_experiment_count IN read_file_analysis_experiment_counts.values %]
+<tr>
+    <td>[% read_file_analysis_experiment_count.logic_name %]</td>
+    <td align="right">[% read_file_analysis_experiment_count.count_experiments %]</td>
+</tr>
+[% END %]
+
+</tbody>
+</table>
+
+<h2>Statistics</h2>
+
+<p>
+  The high throughput experiments have a total of
+</p>
+
+<ul>
+  <li>[% format_number( total_number_of_reads ) %] reads and occupy</li>
+  <li>[% format_number( bytes_to_gb ( total_file_size ) ) %] GB of disk space.</li>
+</ul>
+
+<!--
+<table id="read_file_2" class="display" cellspacing="0" width="100%">
+<thead>
+    <tr>
+        <th>Experiment name</th>
+        <th>IDR max peaks</th>
+        <th>IDR type</th>
+        <th>Failed IDR pairs</th>
+        <th>Alignment method</th>
+        <th>Feature type name</th>
+        <th>Number of reads</th>
+        <th>Average read length</th>
+        <th>Stddeviation of read length</th>
+        <th>Maximum read length</th>
+        <th>Minumum read length</th>
+        <th>Span (max - min)</th>
+    </tr>
+</thead>
+<tbody>
+
+[%# FOR read_file_statistic IN read_file_statistics.values %]
+<tr>
+    <td>[% read_file_statistic.experiment_name      %]</td>
+    <td align="right">[% format_number( read_file_statistic.idr_max_peaks )       %]</td>
+    <td>[% read_file_statistic.idr_type             %]</td>
+    <td>[% read_file_statistic.idr_failed_idr_pairs %]</td>
+    <td align="right">[% read_file_statistic.alignment_methods    %]</td>
+    <td align="right">[% read_file_statistic.feature_type_name    %]</td>
+    <td align="right">[% format_number( read_file_statistic.num_reads      ) %]</td>
+    <td align="right">[% round_num( read_file_statistic.avg_read_length    ) %]</td>
+    <td align="right">[% round_num( read_file_statistic.stddev_read_length ) %]</td>
+    <td align="right">[% read_file_statistic.max_read_length    %]</td>
+    <td align="right">[% read_file_statistic.min_read_length    %]</td>
+    <td align="right">[% read_file_statistic.span               %]</td>
+</tr>
+[%# END %]
+
+</tbody>
+</table>
+
+-->
+
+<h3>Signal Experiments</h3>
+
+<table id="read_file_3" class="display" cellspacing="0" width="100%">
+<thead>
+    <tr>
+        <th>Experiment</th>
+        <th>Feature type</th>
+        <th>Read type</th>
+        <th>Replicate configurations</th>
+        <th>Number of reads</th>
+        <th>Sum of read file sizes in GB</th>
+        <th>Ratio of read counts: signal/control</th>
+        <th>IDR type</th>
+        <th>Max peaks</th>
+        <th>Failed IDR pairs</th>
+    </tr>
+</thead>
+<tbody>
+
+[% FOR experiment IN signal_experiments %]
+
+[% idr = fetch_idr(experiment) %]
+
+<tr>
+    <td>[% experiment.name %]</td>
+    <td align="right">[% experiment.feature_type.name       %]</td>
+    <td>[% experiment.summarise_read_types %]</td>
+    <td>[% experiment.summarise_replicate_configurations %]</td>
+    <td align="right">[% format_number( experiment.sum_number_of_reads )   %]</td>
+    <td align="right">[% format_number( bytes_to_gb ( experiment.sum_read_file_sizes ) )   %]</td>
+    <td align="right">[% round_num( experiment.signal_to_control_read_file_ratio ) %]</td>
+    <td>[% idr.type %]</td>
+    <td align="right">[% format_number( idr.max_peaks ) %]</td>
+    <td>[% idr.failed_idr_pairs %]</td>
+</tr>
+[% END %]
+
+</tbody>
+</table>
+
+<h3>Control Experiments</h3>
+
+<table id="read_file_4" class="display" cellspacing="0" width="100%">
+<thead>
+    <tr>
+        <th>Experiment</th>
+        <th>Feature type</th>
+        <th>Read type</th>
+        <th>Replicate configurations</th>
+        <th>Number of reads</th>
+        <th>Sum of read file sizes in GB</th>
+    </tr>
+</thead>
+<tbody>
+
+[% FOR experiment IN control_experiments %]
+<tr>
+    <td>[% experiment.name %]</td>
+    <td>[% experiment.feature_type.name       %]</td>
+    <td>[% experiment.summarise_read_types %]</td>
+    <td>[% experiment.summarise_replicate_configurations %]</td>
+    <td align="right">[% format_number( experiment.sum_number_of_reads )   %]</td>
+    <td align="right">[% format_number( bytes_to_gb ( experiment.sum_read_file_sizes ) )   %]</td>
+</tr>
+[% END %]
+
+</tbody>
+</table>
+
+</body>
+</html>
