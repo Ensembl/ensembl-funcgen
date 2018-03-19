@@ -40,6 +40,8 @@ if (! -e $fastq_file) {
   die("Fastq file for read file with id ${read_file_id}: $fastq_file");
 }
 
+my $file_size = -s $fastq_file;
+
 use Bio::EnsEMBL::Funcgen::Utils::Fastq::Parser;
 my $parser = Bio::EnsEMBL::Funcgen::Utils::Fastq::Parser->new;
 
@@ -72,7 +74,8 @@ while (
   
 }
 
-$read_file->file_size($number_of_reads);
+$read_file->number_of_reads($number_of_reads);
+$read_file->file_size($file_size);
 $read_file->read_length($average_length);
 
 $read_file_adaptor->update($read_file);
@@ -82,6 +85,7 @@ print <<REPORT
 File: $fastq_file
 
 number of reads = $number_of_reads
+file size       = $file_size
 average length  = $average_length
 
 REPORT
