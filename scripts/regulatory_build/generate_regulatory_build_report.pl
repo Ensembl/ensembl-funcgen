@@ -28,7 +28,7 @@ time mysql $(r2-w details mysql) mnuhn_testdb5_mus_musculus_funcgen_91_38 -e "
 
 perl scripts/regulatory_build/generate_regulatory_build_report.pl \
     --species          mus_musculus \
-    --registry         /homes/mnuhn/work_dir_ersa/lib/ensembl-funcgen/registry.pm \
+    --registry         /homes/mnuhn/work_dir_dev_break/lib/ensembl-funcgen/registry.with_previous_version.pm \
     --output_directory ./reports/
 
 =cut
