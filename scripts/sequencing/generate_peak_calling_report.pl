@@ -26,7 +26,7 @@ time mysql $(r2-w details mysql) mnuhn_testdb5_mus_musculus_funcgen_91_38 -e "
     ;
 "
 
-peak_calling_statistics.pl \
+generate_peak_calling_report.pl \
     --species          mouse_with_regbuild \
     --registry         /homes/mnuhn/work_dir_ersa/lib/ensembl-funcgen/registry.pm \
     --output_directory ./reports/
