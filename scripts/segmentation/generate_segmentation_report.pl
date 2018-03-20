@@ -26,7 +26,7 @@ time mysql $(r2-w details mysql) mnuhn_testdb5_mus_musculus_funcgen_91_38 -e "
     ;
 "
 
-perl scripts/segmentation/segmentation_statistics.pl \
+perl scripts/segmentation/generate_segmentation_report.pl \
     --species          mus_musculus \
     --registry         /homes/mnuhn/work_dir_ersa/lib/ensembl-funcgen/registry.pm \
     --output_directory ./segmentation_report
