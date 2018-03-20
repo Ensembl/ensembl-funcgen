@@ -207,6 +207,37 @@ sub pipeline_analyses {
                 . qq( --base_dir #tempdir_regulatory_build#/#species#/#assembly# )
           },
           -flow_into => {
+            MAIN => 'load_state_emissions_and_assignments',
+          },
+      },
+      {   -logic_name => 'load_state_emissions_and_assignments',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -parameters => {
+            cmd => 
+                qq(
+                  load_state_emissions_and_assignments.pl \
+                      --species          #species# \
+                      --registry         #registry# \
+                      --emissions_file   #tempdir_segmentation#/#species#/learn_model/emissions_25.txt \
+                      --assignments_file #tempdir_regulatory_build#/#species#/tmp/assignments.txt
+                )
+          },
+          -flow_into => {
+            MAIN => 'generate_segmentation_report',
+          },
+      },
+      {   -logic_name => 'generate_segmentation_report',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -parameters => {
+            cmd => 
+                qq(
+                  generate_segmentation_report.pl \
+                    --species          #species# \
+                    --registry         #registry# \
+                    --output_directory #reports_dir#/#species#
+                )
+          },
+          -flow_into => {
             MAIN => 'create_regulatory_build_statistics',
           },
       },
@@ -252,9 +283,25 @@ sub pipeline_analyses {
               db_conn => 'funcgen:#species#',
           },
           -flow_into => {
+            MAIN => 'generate_regulatory_build_report',
+          },
+      },
+      {   -logic_name => 'generate_regulatory_build_report',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -parameters => {
+            cmd => 
+                qq(
+                  generate_regulatory_build_report.pl  \
+                      --species          #species# \
+                      --registry         #registry# \
+                      --output_directory #reports_dir#/#species#
+                )
+          },
+          -flow_into => {
             MAIN => 'segmentation_done',
           },
       },
+
 #       {   -logic_name => 'create_regulatory_evidence',
 #           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
 #           -parameters => {
