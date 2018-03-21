@@ -463,17 +463,16 @@ sub store{
 }
 
 
-=head2 store_associated_AnnotatedFeature
+=head2 store_associated_Peak
 
   Args[1]    : Bio::EnsEMBL::Funcgen::MotifFeature
-  Args[2]    : Bio::EnsEMBL::Funcgen::AnnotatedFeature
+  Args[2]    : Bio::EnsEMBL::Funcgen::Peak
   Example    : $esa->store_AnnotatedFeature_association($mf, $af);
-  Description: Store link between AnnotatedFeatures representing TF peaks
-               and MotifFeatures
+  Description: Store link between TF peaks and MotifFeatures
   Returntype : Bio::EnsEMBL::Funcgen::MotifFeature
   Exceptions : Throws if args are not valid, warns if association already exists
   Caller     : General
-  Status     : At Risk - likely to change to TranscriptFactorFeature
+  Status     : Stable
 
 =cut
 
@@ -498,48 +497,51 @@ sub store{
 #need to test for MF using feature Slice and BindingMatrix
 
 
-sub store_associated_AnnotatedFeature{
-  my ($self, $mf, $af) = @_;
+sub store_associated_Peak {
+    my ( $self, $mf, $peak ) = @_;
 
-  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::MotifFeature', $mf);
-  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::AnnotatedFeature', $af);
+    $self->db->is_stored_and_valid( 'Bio::EnsEMBL::Funcgen::Peak', $peak );
 
+    my $existing_motif_feature
+        = $self->fetch_by_BindingMatrix_Slice_start_strand(
+        $mf->binding_matrix(), $mf->slice(), $mf->start(), $mf->strand() );
+    $mf = $existing_motif_feature;
 
-  #Check for existing association
+    #Check for existing association
+    foreach my $existing_peak ( @{ $mf->associated_Peaks } ) {
 
-  foreach my $existing_af(@{$mf->associated_annotated_features}){
+        if ( $existing_peak->dbID == $peak->dbID ) {
+            warn "You are trying to store a pre-existing Peak association";
+            return;
+        }
+    }
 
-	if( $existing_af->dbID == $af->dbID ){
-	  warn "You are trying to store a pre-exiting AnnotatedFeature association";
-	  return;
-	}
-  }
+    # Validate MotifFeature is entirely contained within the Peak
+    if (
+        !(
+               ( $peak->seq_region_start <= $mf->seq_region_start )
+            && ( $mf->seq_region_end <= $peak->seq_region_end )
+        )
+      )
+    {
+        throw('MotifFeature is not entirely contained within associated Peak');
+    }
 
+    my $sth = $self->prepare(
+"INSERT INTO motif_feature_peak (motif_feature_id, peak_id) VALUES (?, ?)"
+    );
 
-  #Validate MotifFeature is entirely contained within the AnnotatedFeature
+    $sth->bind_param( 1, $mf->dbID,   SQL_INTEGER );
+    $sth->bind_param( 2, $peak->dbID, SQL_INTEGER );
+    $sth->execute();
 
-  #if(! (( $mf->seq_region_start <= $af->seq_region_end)  &&
-  #( $mf->seq_region_end   >= $af->seq_region_start))){
-  #
-  #	throw('MotifFeature is not entirely contained within associated AnnotatedFeature');
-  #  }
+    # push @{ $mf->{associated_Peaks} }, $peak;
 
-
-  my $sth = $self->prepare("
-		INSERT INTO associated_motif_feature (
-			annotated_feature_id, motif_feature_id
-		) VALUES (?, ?)
-	");
-
-  $sth->bind_param(1, $af->dbID, SQL_INTEGER);
-  $sth->bind_param(2, $mf->dbID, SQL_INTEGER);
-  $sth->execute();
-
-
-  push @{$mf->{associated_annotated_features}}, $af;
-
-  return $mf;
+    return $mf;
 }
+
+
+
 
 
 
