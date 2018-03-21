@@ -441,7 +441,7 @@ sub _get_h {
     my $h = 0;
 
     for my $nucleotide ( @{ $self->_nucleotides() } ) {
-        
+
         my $probability
             = $binding_matrix->get_element_by_position_nucleotide( $position,
             $nucleotide );
@@ -497,4 +497,3 @@ sub _check_expected_frequencies_are_valid {
 }
 
 1;
-

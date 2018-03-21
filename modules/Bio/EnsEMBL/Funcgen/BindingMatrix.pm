@@ -178,7 +178,7 @@ sub threshold {
 
 =head2 source
 
-  Example    : print '>'.$matrix->name."\n".$matrix->source;
+  Example    : my $source = $matrix->source;
   Description: Getter/Setter for source attribute
   Returntype : Scalar - string
   Exceptions : None
