@@ -54,10 +54,15 @@ use vars qw( %Config );
      ARRAY_PARAMS => {},
      ARRAYS_WITH_DEFAULT_PARAMS => [],
     },
+
+
+
+    # AFFY UTR
+
     IMPORT_AFFY_UTR_ARRAYS => {
 
        IIDREGEXP => '^>probe:(\S+?):(\S+?):(\S+;).*$',
-#      IIDREGEXP => '^>probe:(\S+?):(\S+?):(\S+:\S+;).*$',
+       #IIDREGEXP => '^>probe:(\S+?):(\S+?):(\S+:\S+;).*$',
 
       IFIELDORDER => {
         -name       => 2,
@@ -151,20 +156,22 @@ use vars qw( %Config );
         ## Plant arrays
         'ATH1-121501',
         'Barley1',
-        'Cotton',
-        'Medicago',
-        'Poplar',
-        'Rice',
+        'Cotton',		## I think GPL8672
+        'Medicago',		## I think GPL4652
+        'Poplar',		## I think GPL4359
+        'Rice',			## I think GPL2025
         'Sorghum',
         'Soybean',
-        'Tomato',
-        'Vitis_Vinifera',
-        'maize',
-        'wheat',
+        'Tomato',		## 
+        'Vitis_Vinifera',	## I think GPL1320
+        'maize',		## I think GPL4032
+        'wheat',		## I think GPL3802
 
       ],
 
     },
+
+
 
     IMPORT_AFFY_ST_ARRAYS => {
 
@@ -229,7 +236,7 @@ use vars qw( %Config );
 
       ## Plant arrays
       'AraGene-1_1-st-v1',
-      'MedGene-1_0-st-v1',
+      'MedGene-1_0-st-v1',	## I think GPL18240
       'RCnGene-1_1-st-v1',
       'RJpGene-1_1-st-v1',
       'SoyGene-1_1-st-v1',
@@ -294,6 +301,8 @@ use vars qw( %Config );
      ],
     },
 
+
+
     IMPORT_ILLUMINA_INFINIUM_ARRAYS => {
     
      IIDREGEXP => '^>(\S+):(\S+).*$',
@@ -325,7 +334,9 @@ use vars qw( %Config );
     ],
   },
 
-    #CODELINK
+
+
+    # CODELINK
 
     IMPORT_CODELINK_ARRAYS => {
     
@@ -357,7 +368,9 @@ use vars qw( %Config );
      ],
     },
 
-    #AGILENT
+
+
+    # AGILENT
 
     IMPORT_AGILENT_ARRAYS => {
 
@@ -468,6 +481,7 @@ use vars qw( %Config );
         'GPL6848',
         'GPL18606',
         ## Plant arrays
+        'G2519F-015058', # Rice
         'G2519F-015059', # Arabidopsis
         'G2519F-015241', # Rice
         'G2519F-016047', # Corn
@@ -483,8 +497,8 @@ use vars qw( %Config );
         'G4136A-011839', # Arabidopsis
         'G4136B-013324', # Arabidopsis
         'G4138A-012106', # Rice
-        'G2519F-015058', # Rice
         'G4142A-012600', # Arabidopsis
+
       ],
     },
 
@@ -520,6 +534,8 @@ use vars qw( %Config );
        ],
     },
 
+
+
     IMPORT_SLRI_ARRAYS => {
        IIDREGEXP => '^>(\S+):(\S+)',
 
@@ -549,6 +565,8 @@ use vars qw( %Config );
         'GPL3518',
        ],
      },
+
+
 
     IMPORT_UCSF_ARRAYS =>
      {
@@ -581,6 +599,8 @@ use vars qw( %Config );
         'GPL9450',
        ],
      },
+
+
 
     IMPORT_NIMBLEGEN_MODENCODE_ARRAYS =>
      {
@@ -615,7 +635,9 @@ use vars qw( %Config );
        ],
      },
 
-    #NIMBLEGEN
+
+
+    # NIMBLEGEN
 
     IMPORT_NIMBLEGEN_ARRAYS =>
     {
@@ -653,11 +675,15 @@ use vars qw( %Config );
     },
 
 
-    #PHALANX
-    #Human
-    #ftp://ftp.phalanxbiotech.com/pub/probe_sequences/hoa
-    #Mouse
-    #ftp://ftp.phalanxbiotech.com/pub/probe_sequences/moa
+
+    # PHALANX
+
+    # Human
+    # ftp://ftp.phalanxbiotech.com/pub/probe_sequences/hoa
+
+    # Mouse
+    # ftp://ftp.phalanxbiotech.com/pub/probe_sequences/moa
+
     IMPORT_PHALANX_ARRAYS => {
      IIDREGEXP => '^>(\S+):(\S+).*$',
 
@@ -689,7 +715,9 @@ use vars qw( %Config );
 
     },
 
-    #LEIDEN
+
+
+    # LEIDEN
 
     IMPORT_LEIDEN_ARRAYS => {
     
@@ -724,7 +752,9 @@ use vars qw( %Config );
      ],
     },
 
-    #STEMPLE
+
+
+    # STEMPLE
 
     IMPORT_STEMPLE_LAB_SANGER_ARRAYS => {
     
@@ -759,6 +789,8 @@ use vars qw( %Config );
      ],
     },
 
+
+
     IMPORT_CATMA_ARRAYS => {
     
      IIDREGEXP => '^>(\S+):(\S+)',
@@ -777,12 +809,16 @@ use vars qw( %Config );
           -class   => 'CATMA',
         },
       },
+
      INPUT_FORMAT => 'FASTA',
 
      ARRAYS_WITH_DEFAULT_PARAMS => [
       'CATMA',
+      'CATMA_v5',
      ],
    },
+
+
 
    IMPORT_NSF_ARRAYS => {
      IIDREGEXP => '^>(\S+):(\S+)',
@@ -801,7 +837,9 @@ use vars qw( %Config );
           -class   => 'NSF',
         },
       },
+
      INPUT_FORMAT => 'FASTA',
+
      ARRAYS_WITH_DEFAULT_PARAMS => [
       'BGIYale',
       'NSF20K',
@@ -810,6 +848,8 @@ use vars qw( %Config );
     },
    }
 );
+
+
 
 sub import {
   my ($callpack) = caller(0);   # Name of the calling package
