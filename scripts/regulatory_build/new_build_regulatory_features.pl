@@ -109,15 +109,34 @@ use constant DEAD_CUTOFF          => 1;
 # The functional labels are the labels of the build built from segmentation 
 # data.
 
-use constant FUNCTIONAL_LABELS => ('tss', 'proximal', 'distal', 'ctcf');
+use constant TSS_LABEL      => 'tss';
+use constant PROXIMAL_LABEL => 'proximal';
+use constant DISTAL_LABEL   => 'distal';
+use constant CTCF_LABEL     => 'ctcf';
+
+use constant TFBS_LABEL      => 'tfbs';
+use constant DNASE_LABEL     => 'dnase';
+
+use constant FUNCTIONAL_LABELS => (
+  TSS_LABEL, 
+  PROXIMAL_LABEL, 
+  DISTAL_LABEL, 
+  CTCF_LABEL
+);
 
 # The empirical labels are the labels of the build built from ChIP-seq peaks
 
-use constant EMPIRICAL_LABELS => ('tfbs', 'dnase');
+use constant EMPIRICAL_LABELS => (
+  TFBS_LABEL,
+  DNASE_LABEL
+);
 
 # The labels used in the build:
 
 use constant LABELS => (FUNCTIONAL_LABELS, EMPIRICAL_LABELS);
+
+use constant REPRESSED_LABEL => 'repressed';
+use constant POISED_LABEL    => 'poised';
 
 # Typical histone marks used to detect repression. Note that the strings are normalised
 # via the clean_name function below
@@ -391,7 +410,12 @@ sub convert_to_bigBed {
   my ($options, $file) = @_;
   my $new = $file;
   $new =~ s/\.bed$/.bb/;
-  run("bedToBigBed $file $options->{chrom_lengths} $new") ;
+  eval {
+    run("bedToBigBed $file $options->{chrom_lengths} $new") ;
+  };
+  if ($@) {
+    warn("Error caught, but ignoring: $@");
+  }
   unlink $file;
 }
 
@@ -451,7 +475,7 @@ sub run {
   if ($return_value) {
     confess(
       "Error running command " 
-      . Dumper(@cmd_to_run) 
+      . Dumper(\@cmd_to_run) 
       . " the error was:\n\n" 
       . $stderr . "\n\n"
     );
@@ -982,7 +1006,7 @@ sub compute_genome_length_from_chromosome_length_file {
 sub create_tss {
   my ($options) = @_;
   
-  my $transcription_start_sites_file = "$options->{working_dir}/tss_from_core_db.bed";
+  my $transcription_start_sites_file = "$options->{working_dir}/" . TSS_LABEL . ".bed";
   $options->{tss} = $transcription_start_sites_file;
   open my $fh, ">", $transcription_start_sites_file or confess("Can't open file for writing " . $transcription_start_sites_file);
   fetch_tss($options, $fh);
@@ -1029,7 +1053,7 @@ sub fetch_tss {
               $transcript->start(), 
               "tss_${tss_id}", 
               1000,
-              '.',
+              '+',
               $transcript->start() - 1, 
               $transcript->start(),
               $COLORS{tss},
@@ -1041,7 +1065,7 @@ sub fetch_tss {
               $transcript->end(),
               "tss_${tss_id}", 
               1000, 
-              '.',
+              '-',
               $transcript->end() - 1, 
               $transcript->end(),
               $COLORS{tss},
@@ -2883,15 +2907,15 @@ sub compute_regulatory_features {
   ## Precompute everything independently
   #############################################
 
-  my $tss_tmp = compute_initial_regions($options, "tss");
-  my $proximal_tmp = compute_initial_regions($options, "proximal");
-  my $distal_tmp = compute_initial_regions($options, "distal");
-  my $ctcf_tmp = compute_initial_regions($options, "ctcf");
+  my $tss_tmp      = compute_initial_regions($options, TSS_LABEL      );
+  my $proximal_tmp = compute_initial_regions($options, PROXIMAL_LABEL );
+  my $distal_tmp   = compute_initial_regions($options, DISTAL_LABEL   );
+  my $ctcf_tmp     = compute_initial_regions($options, CTCF_LABEL     );
 
   # Compute TF binding
   my $tfbs_signal = "$options->{trackhub_dir}/overview/all_tfbs.bw";
   my $tfbs_tmp = "$options->{working_dir}/build/tfbs.tmp.bed";
-  my $awk_tfbs = make_awk_cmd_bedgraph_to_bed9("tfbs");
+  my $awk_tfbs = make_awk_cmd_bedgraph_to_bed9( TFBS_LABEL );
   run("wiggletools write_bg - unit $tfbs_signal | $awk_tfbs > $tfbs_tmp");
 
   #Compute open dnase
@@ -2902,7 +2926,7 @@ sub compute_regulatory_features {
     confess("Can't find dnase bed files in $options->{working_dir}/celltype_dnase/ !");
   }
   
-  my $awk_dnase = make_awk_cmd_bedgraph_to_bed9("dnase");
+  my $awk_dnase = make_awk_cmd_bedgraph_to_bed9( DNASE_LABEL );
   run("wiggletools write_bg - unit sum ".join(" ", @dnase_files)." | $awk_dnase > $dnase_tmp");
 
   #############################################
@@ -2965,7 +2989,7 @@ sub compute_regulatory_features {
   my $demoted = undef;
   if (defined $tss_tmp2) {
     #$tss = "$options->{working_dir}/build/tss.bed";
-    $tss = "$options->{working_dir}/build/tss_segmentation_features.bed";
+    $tss = "$options->{working_dir}/build/" . TSS_LABEL . ".bed";
     run("bedtools intersect -u -wa -a $tss_tmp2 -b $options->{tss} $final_filter | sort -k1,1 -k2,2n > $tss");
 
     # All features that do not go into a demoted file
@@ -2978,8 +3002,8 @@ sub compute_regulatory_features {
   # Unaligned proximal sites are retained
   my $proximal = undef;
   if (defined $proximal_tmp2 or defined $demoted) {
-    $proximal = "$options->{working_dir}/build/proximal.bed";
-    my $awk_proximal = make_awk_cmd_bedgraph_to_bed9("proximal", 0);
+    $proximal = "$options->{working_dir}/build/" . PROXIMAL_LABEL . ".bed";
+    my $awk_proximal = make_awk_cmd_bedgraph_to_bed9( PROXIMAL_LABEL, 0);
     my $files = join(" ", grep defined, ($proximal_tmp2, $demoted));
     run("wiggletools write_bg - unit sum $files | $awk_proximal $remove_tss $final_filter > $proximal");
   }
@@ -2987,16 +3011,16 @@ sub compute_regulatory_features {
   # Unaligned distal sites are retained
   my $distal = undef;
   if (defined $distal_tmp2) {
-    $distal = "$options->{working_dir}/build/distal.bed";
+    $distal = "$options->{working_dir}/build/" . DISTAL_LABEL . ".bed";
     run("cat $distal_tmp2 $remove_tss $remove_proximal $final_filter > $distal");
   }
 
   # Unaligned TFBS sites are retained
-  my $tfbs = "$options->{working_dir}/build/tfbs.bed";
+  my $tfbs = "$options->{working_dir}/build/". TFBS_LABEL .".bed";
   run("cat $tfbs_tmp2 $remove_tss $remove_proximal $remove_distal $final_filter > $tfbs");
 
   # Unaligned DNAse sites are retained
-  my $dnase = "$options->{working_dir}/build/dnase.bed";
+  my $dnase = "$options->{working_dir}/build/" . DNASE_LABEL . ".bed";
   run("bedtools intersect -wa -v -a $dnase_tmp -b $tfbs_tmp2 $remove_tss $remove_proximal $remove_distal $final_filter > $dnase");
 
   #############################################
@@ -3005,7 +3029,7 @@ sub compute_regulatory_features {
 
   my $ctcf = undef;
   if (defined $ctcf_tmp) {
-    $ctcf = "$options->{working_dir}/build/ctcf.bed";
+    $ctcf = "$options->{working_dir}/build/" . CTCF_LABEL . ".bed";
     run("cat $ctcf_tmp $final_filter > $ctcf");
   }
 
@@ -3254,12 +3278,12 @@ sub compute_ChromHMM_celltype_state {
   my ($options, $segmentation, $celltype) = @_;
   my $output = "$options->{trackhub_dir}/projected_segmentations/$celltype.bed";
 
-  foreach my $prelabel ((FUNCTIONAL_LABELS, 'repressed', 'poised')) {
+  foreach my $prelabel ( FUNCTIONAL_LABELS, REPRESSED_LABEL, POISED_LABEL ) {
     precompute_ChromHMM_label_state($options, $segmentation, $celltype, $prelabel);
   }
 
   my @bedfiles = ();
-  foreach my $label (LABELS) {
+  foreach my $label ( LABELS ) {
     push @bedfiles, compute_ChromHMM_label_state($options, $segmentation, $celltype, $label);
   }
 
@@ -3300,7 +3324,7 @@ sub precompute_ChromHMM_label_state {
 
   if (scalar @files > 0) {
     run("sort -m " . join(" ", @files). " -k1,1 -k2,2n > $output");
-  } elsif ($label eq "repressed" || $label eq "poised") {
+  } elsif ($label eq REPRESSED_LABEL || $label eq POISED_LABEL) {
     run("echo > $output");
   }
 }
@@ -3332,20 +3356,20 @@ sub compute_ChromHMM_label_state {
   my $output = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$epigenome_production_name/$label.final.bed";
   my $reference = "$options->{working_dir}/build/$label.bed";
   
-  if ($label eq 'tss') {
+  if ($label eq TSS_LABEL) {
     $reference = $options->{tss};
   }
   
   my $reference_exists = -e $reference && -s $reference;
   
   # Ok to skip?
-  if (! $reference_exists && $label eq 'proximal') {
+  if (! $reference_exists && $label eq PROXIMAL_LABEL) {
     return;
   }
-  if (! $reference_exists && $label eq 'distal') {
+  if (! $reference_exists && $label eq DISTAL_LABEL) {
     return;
   }
-  if (! $reference_exists && $label eq 'ctcf') {
+  if (! $reference_exists && $label eq CTCF_LABEL) {
     return;
   }
   
@@ -3355,9 +3379,9 @@ sub compute_ChromHMM_label_state {
   }
 
   my $temp;
-  if ($label eq 'tfbs') {
+  if ($label eq TFBS_LABEL) {
     $temp = "$options->{working_dir}/celltype_tf/$epigenome_production_name.bed";
-  } elsif ($label eq 'dnase') {
+  } elsif ($label eq DNASE_LABEL) {
     $temp = "$options->{working_dir}/celltype_dnase/$epigenome_production_name.bed";
   } else {
     $temp = "$options->{working_dir}/projected_segmentations/$segmentation->{name}/$epigenome_production_name/$label.bed";

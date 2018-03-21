@@ -636,8 +636,21 @@ sub compute_regulatory_features {
   foreach my $current_cell_type (@$cell_type) {
     load_celltype_activity($options->{base_dir}, $current_cell_type, $regulatory_features);
   }
-
+#   die;
+#   open my $out, '>', "/nfs/nobackup/ensembl/mnuhn/mnuhn/regulatory_features_to_be_loaded.pl";
+#   
+#   use Data::Dumper;
+#   
+#   foreach my $name (keys %$regulatory_features) {
+#   
+#     $out->print( Dumper($regulatory_features->{$name}) );
+#   
+#   }
+#   
+#   $out->close;
+  
   $regulatory_feature_adaptor->store(values %$regulatory_features);
+  
 }
 
 =head2 load_regulatory_build
@@ -743,6 +756,12 @@ sub load_celltype_activity {
   my $cell_type_name = $cell_type->production_name;
 #   my $bigbed = "$base_dir/projected_segmentations/$cell_type_name.bb";
   my $bigbed = "$base_dir/projected_segmentations/${cell_type_name}.bb";
+  
+  if (! -e $bigbed) {
+    use Carp;
+    confess("Can't find file ${bigbed}!");
+  }
+  
   my ($tmp, $tmp_name) = tempfile();
   run("bigBedToBed $bigbed $tmp_name");
 
@@ -781,6 +800,7 @@ sub process_celltype_file {
     my $is_transcription_start_site = $name =~ /tss_\d+/;
     
     if ($has_no_regulatory_feature && $is_transcription_start_site) {
+#         confess("No regulatory feature for transcription start site! ($name, $cell_type)");
         warn("No regulatory feature for transcription start site!");
         return;
     }
@@ -795,8 +815,8 @@ sub process_celltype_file {
     $regulatory_activity->set_RegulatoryFeature($regulatory_feature);
 
     $regulatory_feature->add_regulatory_activity($regulatory_activity);
-    return;
   }
+  return;
 }
 
 =head2 create_regulatory_build_object
