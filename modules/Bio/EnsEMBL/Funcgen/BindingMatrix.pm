@@ -72,7 +72,7 @@ use base qw( Bio::EnsEMBL::Funcgen::Storable );
                                                                 );
   Description: Constructor method for BindingMatrix class
   Returntype : Bio::EnsEMBL::Funcgen::BindingMatrix
-  Exceptions : Throws if name or/and type not defined
+  Exceptions : Throws if name or/and type or/and stable_id not defined
   Caller     : General
   Status     : Medium risk
 
@@ -84,20 +84,22 @@ sub new {
     my $self      = $obj_class->SUPER::new(@_);
 
     my ( $name, $source, $threshold, $elements, $unit,
-        $associated_transcription_factor_complexes )
+        $associated_transcription_factor_complexes, $stable_id )
         = rearrange(
         [   'NAME',      'SOURCE',
             'THRESHOLD', 'ELEMENTS', 'UNIT',
-            'ASSOCIATED_TRANSCRIPTION_FACTOR_COMPLEXES'
+            'ASSOCIATED_TRANSCRIPTION_FACTOR_COMPLEXES', 'STABLE_ID'
         ],
         @_
         );
 
     throw('Must supply a -name parameter')   if !defined $name;
     throw('Must supply a -source parameter') if !defined $source;
+    throw('Must supply a -stable_id parameter') if !defined $stable_id;
 
     $self->{name}      = $name;
     $self->{source}    = $source;
+    $self->{stable_id} = $stable_id;
     $self->{threshold} = $threshold if defined $threshold;
     $self->{elements}  = $elements if defined $elements;
 
@@ -189,6 +191,23 @@ sub source {
   my $self = shift;
   $self->{source} = shift if @_;
   return $self->{source};
+}
+
+=head2 stable_id
+
+  Example    : my $stable_id = matrix->stable_id;
+  Description: Getter/Setter for source attribute
+  Returntype : Scalar - string
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub stable_id {
+  my $self = shift;
+  $self->{stable_id} = shift if @_;
+  return $self->{stable_id};
 }
 
 sub _unit_is_valid {
@@ -351,6 +370,7 @@ sub summary_as_hash {
         length                                    => $self->length(),
         elements                                  => $self->_elements(),
         unit                                      => $self->unit(),
+        stable_id                                 => $self->stable_id(),
         associated_transcription_factor_complexes => \@associated_tfc_names
 
     };

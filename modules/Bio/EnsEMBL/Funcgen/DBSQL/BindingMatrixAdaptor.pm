@@ -96,6 +96,37 @@ sub fetch_by_name {
     return $result->[0];
 }
 
+=head2 fetch_by_stable_id
+
+  Arg [1]    : string - stable ID of Matrix
+  Example    : my $matrix = $matrix_adaptor->fetch_by_stable_id('ENSPFM001');
+  Description: Fetches matrix objects given a stable_id
+  Returntype : Bio::EnsEMBL::Funcgen::BindingMatrix object
+  Exceptions : Throws if no stable_id if defined
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub fetch_by_stable_id {
+    my ( $self, $stable_id ) = @_;
+    throw('Must specify a BindingMatrix stable_id') if !defined $stable_id;
+
+    my $constraint = ' bm.stable_id = ? ';
+    $self->bind_param_generic_fetch( $stable_id, SQL_VARCHAR );
+
+    my $result = $self->generic_fetch($constraint);
+
+    if ( scalar @$result > 1 ) {
+        throw(    'Binding Matrix '
+                . $stable_id
+                . ' is not unique in the database.'
+                . ' Only one result has been returned' );
+    }
+
+    return $result->[0];
+}
+
 =head2 _true_tables
 
   Args       : None
@@ -134,6 +165,7 @@ sub _columns {
       bm.name
       bm.threshold
       bm.source
+      bm.stable_id
     );
 }
 
@@ -154,8 +186,8 @@ sub _columns {
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
 
-	my (@result, $matrix_id, $name, $thresh, $source);
-	$sth->bind_columns(\$matrix_id, \$name, \$thresh, \$source);
+	my (@result, $matrix_id, $name, $thresh, $source, $stable_id);
+	$sth->bind_columns(\$matrix_id, \$name, \$thresh, \$source, \$stable_id);
 
   while ( $sth->fetch() ) {
 
@@ -165,6 +197,7 @@ sub _objs_from_sth {
      -NAME         => $name,
      -THRESHOLD    => $thresh,
      -SOURCE       => $source,
+     -STABLE_ID    => $stable_id,
      -ADAPTOR      => $self,
     );
 
@@ -196,7 +229,7 @@ sub store {
 
     my $sth
         = $self->prepare(
-        "INSERT INTO binding_matrix (name, threshold, source) VALUES (?, ?, ?)"
+        "INSERT INTO binding_matrix (name, threshold, source, stable_id) VALUES (?, ?, ?, ?)"
         );
 
 
@@ -216,6 +249,7 @@ sub store {
                 $sth->bind_param( 1, $matrix->name(),      SQL_VARCHAR );
                 $sth->bind_param( 2, $matrix->threshold(), SQL_DOUBLE );
                 $sth->bind_param( 3, $matrix->source(),    SQL_VARCHAR );
+                $sth->bind_param( 4, $matrix->stable_id(), SQL_VARCHAR );
 
                 $sth->execute();
 

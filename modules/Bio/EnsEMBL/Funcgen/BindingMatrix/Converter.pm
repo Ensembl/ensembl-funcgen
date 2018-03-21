@@ -469,6 +469,7 @@ sub _convert_BindingMatrix {
         -THRESHOLD => $binding_matrix->threshold(),
         -ELEMENTS  => $elements,
         -UNIT      => $unit,
+        -STABLE_ID => $binding_matrix->stable_id(),
         -ASSOCIATED_TRANSCRIPTION_FACTOR_COMPLEXES =>
           $binding_matrix->get_all_associated_TranscriptionFactorComplexes()
     );
