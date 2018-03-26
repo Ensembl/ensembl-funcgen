@@ -336,8 +336,9 @@ CREATE TABLE `peak_calling` (
 @column seq_region_start    Start position of this feature
 @column seq_region_end      End position of this feature
 @column seq_region_strand   Strand orientation of this feature
+@column display_label       Text display label
 @column score               Score derived from alignment software (e.g.MOODS)
-@column stable_id           Stable ID
+@column interdb_stable_id   Unique key, provides linkability between DBs
 
 @see associated_motif_feature
 @see binding_matrix
@@ -352,35 +353,14 @@ CREATE TABLE `motif_feature` (
   `seq_region_start` int(10) unsigned NOT NULL,
   `seq_region_end` int(10) unsigned NOT NULL,
   `seq_region_strand` tinyint(1) NOT NULL,
+  `display_label` varchar(60) DEFAULT NULL,
   `score` double DEFAULT NULL,
-  `stable_id` varchar(18) DEFAULT NULL,
+  `interdb_stable_id` mediumint(8) unsigned DEFAULT NULL,
   PRIMARY KEY (`motif_feature_id`),
-  UNIQUE KEY `unique_idx` (`binding_matrix_id`, `seq_region_id`, `seq_region_start`, `seq_region_strand`),
+  UNIQUE KEY `interdb_stable_id_idx` (`interdb_stable_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
   KEY `binding_matrix_idx` (`binding_matrix_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-/**
-@table  motif_feature_peak
-@desc   Stores associations between motif_features and peaks
-@colour  #FFCC66
-
-@column motif_feature_peak_id    Primary key, internal ID
-@column motif_feature_id    @link motif_feature table
-@column peak_id   @link peak table
-
-@see motif_feature
-@see peak
-*/
-
-DROP TABLE IF EXISTS `motif_feature_peak`;
-CREATE TABLE `motif_feature_peak` (
-  `motif_feature_peak_id` int(11) NOT NULL AUTO_INCREMENT,
-  `motif_feature_id` int(11) NOT NULL,
-  `peak_id` int(11) NOT NULL,
-  PRIMARY KEY (`motif_feature_peak_id`),
-  UNIQUE KEY `motif_feature_peak_idx` (`motif_feature_id`,`peak_id`)
-)ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
 @table  mirna_target_feature
@@ -453,144 +433,31 @@ CREATE TABLE `associated_motif_feature` (
 @colour  #FFCC66
 
 @column binding_matrix_id  Internal table ID
-@column name               Name of binding matrix
+@column analysis_id        @link analysis table ID
+@column feature_type_id    @link feature_type table ID.
+@column name               Name of PWM
+@column frequencies        Matrix defining frequencing for each base at each position
+@column description        Text description
 @column threshold          Minimum score for Motif Features for this matrix
-@column source             Source of binding matrix
-@column stable_id          Stable ID of binding matrix, ie. ENSPFM001
-@see binding_matrix_frequencies
+
+@see analysis
+@see feature_type
 */
 
 DROP TABLE IF EXISTS `binding_matrix`;
 CREATE TABLE `binding_matrix` (
   `binding_matrix_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(45) NOT NULL,
+  `feature_type_id` int(10) unsigned NOT NULL,
+  `frequencies` varchar(1000) NOT NULL,
+  `description` varchar(255) DEFAULT NULL,
+  `analysis_id` smallint(5) unsigned NOT NULL,
   `threshold` double DEFAULT NULL,
-  `source` varchar(20) NOT NULL,
-  `stable_id` varchar(128) NOT NULL,
   PRIMARY KEY (`binding_matrix_id`),
-  UNIQUE KEY `name_idx` (`name`),
-  UNIQUE KEY `stable_id_idx` (`stable_id`)
+  UNIQUE KEY `name_analysis_idx` (`name`,`analysis_id`),
+  KEY `feature_type_idx` (`feature_type_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
-/**
-@table  binding_matrix_frequencies
-@desc   Stores the frequency values of a binding matrix
-@colour  #FFCC66
-
-@column binding_matrix_frequencies_id  Internal table ID
-@column binding_matrix_id              @link binding_matrix ID
-@column position                       Matrix sequence position
-@column nucleotide                     Nucleotide (A, C, G or T)
-@column frequency                      Frequency value
-@see binding_matrix
-*/
-
-DROP TABLE IF EXISTS `binding_matrix_frequencies`;
-CREATE TABLE `binding_matrix_frequencies` (
-  `binding_matrix_frequencies_id` int(11) NOT NULL AUTO_INCREMENT,
-  `binding_matrix_id` int(11) NOT NULL,
-  `position` int(11) unsigned NOT NULL,
-  `nucleotide` enum('A','C','G','T') NOT NULL,
-  `frequency` int(10) unsigned NOT NULL,
-  PRIMARY KEY (`binding_matrix_frequencies_id`),
-  KEY `binding_matrix_id_idx` (`binding_matrix_id`),
-  UNIQUE KEY `unique_constraint_idx` (`binding_matrix_id`,`position`,`nucleotide`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-/**
-@table  transcription_factor
-@desc   Stores transcription factors and links them with feature_type
-@colour  #FFCC66
-
-@column transcription_factor_id  Internal table ID
-@column name                     Name of Transcription Factor
-@column feature_type_id          @link feature_type ID
-@column gene_stable_id           Gene stable ID
-@see feature_type
-@see transcription_factor_complex
-@see transcription_factor_complex_composition
-*/
-
-DROP TABLE IF EXISTS `transcription_factor`;
-CREATE TABLE `transcription_factor` (
-	`transcription_factor_id` int(11) NOT NULL AUTO_INCREMENT,
-	`name` varchar(120) NOT NULL,
-	`feature_type_id` int(10) unsigned,
-	`gene_stable_id` varchar(128),
-	PRIMARY KEY (`transcription_factor_id`),
-	UNIQUE KEY `name_idx` (`name`),
-	KEY `feature_type_id_idx` (`feature_type_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-/**
-@table  transcription_factor_complex
-@desc   Stores transcription factor complexes
-@colour  #FFCC66
-
-@column transcription_factor_complex_id  Internal table ID
-@column production_name                  Name for internal use in pipelines
-@column display_name                     Name for external use (Genome Browser, API etc)
-@see transcription_factor
-@see transcription_factor_complex_composition
-*/
-
-DROP TABLE IF EXISTS `transcription_factor_complex`;
-CREATE TABLE `transcription_factor_complex` (
-	`transcription_factor_complex_id` int(11) NOT NULL AUTO_INCREMENT,
-	`production_name` varchar(120) NOT NULL,
-	`display_name` varchar(120) NOT NULL,
-	PRIMARY KEY (`transcription_factor_complex_id`),
-	UNIQUE KEY `production_name_idx` (`production_name`),
-	UNIQUE KEY `display_name_idx` (`display_name`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-/**
-@table  transcription_factor_complex_composition
-@desc   Groups transcription factors into complexes
-@colour  #FFCC66
-
-@column transcription_factor_complex_composition_id  Internal table ID
-@column transcription_factor_complex_id              @link transcription_factor_complex ID
-@column transcription_factor_id                      @link transcription_factor ID
-@see transcription_factor
-@see transcription_factor_complex
-*/
-
-DROP TABLE IF EXISTS `transcription_factor_complex_composition`;
-CREATE TABLE `transcription_factor_complex_composition` (
-	`transcription_factor_complex_composition_id` int(11) NOT NULL AUTO_INCREMENT,
-	`transcription_factor_complex_id` int(11) NOT NULL,
-	`transcription_factor_id` int(11) NOT NULL,
-	PRIMARY KEY (`transcription_factor_complex_composition_id`),
-	UNIQUE KEY `tfc_id_tf_id_idx` (`transcription_factor_complex_id`, `transcription_factor_id`),
-	KEY `transcription_factor_complex_id_idx` (`transcription_factor_complex_id`),
-	KEY `transcription_factor_id_idx` (`transcription_factor_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-/**
-@table  binding_matrix_transcription_factor_complex
-@desc   linking table between a binding_matrix and a transcription_factor_complex
-@colour  #FFCC66
-
-@column binding_matrix_transcription_factor_complex_id  Internal table ID
-@column binding_matrix_id                               @link binding_matrix ID
-@column transcription_factor_complex_id                 @link transcription_factor_complex ID
-@see binding_matrix
-@see transcription_factor_complex
-@see transcription_factor
-@see transcription_factor_complex_composition
-*/
-
-DROP TABLE IF EXISTS `binding_matrix_transcription_factor_complex`;
-CREATE TABLE `binding_matrix_transcription_factor_complex` (
-	`binding_matrix_transcription_factor_complex_id` int(11) NOT NULL AUTO_INCREMENT,
-	`binding_matrix_id` int(11) NOT NULL,
-	`transcription_factor_complex_id` int(11) NOT NULL,
-	PRIMARY KEY (`binding_matrix_transcription_factor_complex_id`),
-	UNIQUE KEY `binding_matrix_id_transcription_factor_complex_id_idx` (`binding_matrix_id`,`transcription_factor_complex_id`),
-	KEY `binding_matrix_id_idx` (`binding_matrix_id`),
-	KEY `transcription_factor_complex_id_idx` (`transcription_factor_complex_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
 @table  external_feature
@@ -1565,17 +1432,12 @@ CREATE TABLE `meta` (
 
 -- Add necessary meta values
 INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '93');
 
 -- Update and remove these for each release to avoid erroneous patching
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_n.sql|Modify binding_matrix_table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_o.sql|Create binding_matrix_frequencies table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_p.sql|Create transcription_factor table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_q.sql|Create transcription_factor_complex table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_r.sql|Create transcription_factor_complex_composition table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_s.sql|Create binding_matrix_transcription_factor_complex table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_t.sql|Modify motif_feature table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_u.sql|Create motif_feature_peak table');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'schema_version', '92');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_91_92_a.sql|schema_version');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_91_92_b.sql|Drop column paired_with from table read_file');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (NULL, 'patch','patch_91_92_c.sql|Create underlying_structure table');
 
 /**
 @table meta_coord

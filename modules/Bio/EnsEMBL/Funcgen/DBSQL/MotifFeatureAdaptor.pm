@@ -60,43 +60,10 @@ package Bio::EnsEMBL::Funcgen::DBSQL::MotifFeatureAdaptor;
 use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
-use Bio::EnsEMBL::Utils::Scalar qw( assert_ref );
 use Bio::EnsEMBL::Funcgen::MotifFeature;
-use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;    #DBI sql_types import
+use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;#DBI sql_types import
 
 use base qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor );
-
-sub fetch_by_BindingMatrix_Slice_start_strand {
-  my ($self, $binding_matrix, $slice, $start, $strand) =@_;
-
-  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::BindingMatrix', $binding_matrix);
-  assert_ref($slice, 'Bio::EnsEMBL::Slice');
-  # $slice->is_stored($self->db->dnadb);
-
-  if ($strand !=1 && $strand !=-1){
-    throw('Strand must be equal to 1 or -1');
-  }
-
-  if ($start !~ /^[+-]?\d+$/){
-    throw('Start must be a positive integer');
-  }
-
-  if ($start > $slice->end()){
-    throw('Start position is larger than the slice size');
-  }
-
-  my $constraint = " mf.binding_matrix_id = ?";
-  $constraint .= " AND mf.seq_region_id = ?";
-  $constraint .= " AND mf.seq_region_start = ?";
-  $constraint .= " AND mf.seq_region_strand = ?";
-
-  $self->bind_param_generic_fetch($binding_matrix->dbID(),    SQL_INTEGER);
-  $self->bind_param_generic_fetch($slice->get_seq_region_id(),    SQL_INTEGER);
-  $self->bind_param_generic_fetch($start,    SQL_INTEGER);
-  $self->bind_param_generic_fetch($strand,    SQL_INTEGER);
-
-  return $self->generic_fetch($constraint)->[0];
-}
 
 my $true_final_clause = ' ORDER by mf.seq_region_id, mf.seq_region_start, mf.seq_region_end';
 # ORDER by required by fetch_all_by_dbID_list when fetching as regulatory_attributes
@@ -105,7 +72,7 @@ my $final_clause = $true_final_clause;
 
 
 # =head2 fetch_all_by_AnnotatedFeature
-#
+# 
 #   Arg [1]    : Bio::EnsEMBL::AnnotatedFeature
 #   Arg [2]    : optional - Bio::EnsEMBL::Slice
 #   Example    : my $features = $ofa->fetch_all_by_AnnotatedFeature($af);
@@ -115,24 +82,24 @@ my $final_clause = $true_final_clause;
 #   Exceptions : Throws if AnnotatedFeature not stored and valid
 #   Caller     : General
 #   Status     : At Risk
-#
+# 
 # =cut
-#
+# 
 # sub fetch_all_by_AnnotatedFeature {
 #   my ($self, $feature, $slice) = @_;
-#
+# 
 #   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::AnnotatedFeature', $feature);
-#
+# 
 #   #Extend query tables
 #   $self->_tables([['associated_motif_feature', 'amf']]);
 #   my $constraint = 'mf.motif_feature_id = amf.motif_feature_id AND amf.annotated_feature_id=?';
 #   #No need for group here as we are restricting to one af
-#
+# 
 #   $self->bind_param_generic_fetch($feature->dbID, SQL_INTEGER);
-#
+# 
 #   my $mfs = $self->generic_fetch($constraint, undef, $slice);
 #   $self->reset_true_tables;
-#
+# 
 #   return $mfs;
 # }
 
@@ -148,7 +115,7 @@ my $final_clause = $true_final_clause;
   Returntype : Listref of Bio::EnsEMBL::MotifFeature objects
   Exceptions : Throws if Epigenome is not valid
   Caller     : General
-  Status     :
+  Status     : 
 
 =cut
 
@@ -307,7 +274,8 @@ sub _columns {
 			mf.motif_feature_id   mf.seq_region_id
 			mf.seq_region_start   mf.seq_region_end
 			mf.seq_region_strand  mf.binding_matrix_id
-			mf.score        			mf.stable_id
+			mf.display_label      mf.score
+			mf.interdb_stable_id
 		   );
 }
 
@@ -328,57 +296,130 @@ sub _columns {
 =cut
 
 sub _objs_from_sth {
-    my ( $self, $sth, $mapper ) = @_;
+	my ($self, $sth, $mapper, $dest_slice) = @_;
 
-    my ( $motif_feature_id, $seq_region_id,
-        $seq_region_start, $seq_region_end,
-        $seq_region_strand, $binding_matrix_id, $score, $stable_id );
+	my $sa = $self->db->dnadb->get_SliceAdaptor();
+	my $bm_adaptor = $self->db->get_BindingMatrixAdaptor();
+	my (@features, %bm_hash,
+      %slice_hash, %sr_name_hash, %sr_cs_hash);
 
-    $sth->bind_columns(
-        \$motif_feature_id, \$seq_region_id,     \$seq_region_start,
-        \$seq_region_end,   \$seq_region_strand, \$binding_matrix_id,
-        \$score,            \$stable_id
-    );
+	my ($motif_feature_id,  $seq_region_id,
+	    $seq_region_start,  $seq_region_end,
+	    $seq_region_strand, $bm_id,
+      $display_label,     $score,
+      $stable_id);
 
-    my ( %binding_matrix_cache, %slice_cache, @motif_features );
-    my $slice_adaptor          = $self->db->dnadb->get_adaptor('Slice');
-    my $binding_matrix_adaptor = $self->db->get_adaptor('BindingMatrix');
+	$sth->bind_columns(\$motif_feature_id,  \$seq_region_id,
+                     \$seq_region_start,  \$seq_region_end,
+                     \$seq_region_strand, \$bm_id,
+                     \$display_label,     \$score,
+                     \$stable_id);
+
+	my ($asm_cs, $cmp_cs, $asm_cs_name, $asm_cs_vers, $cmp_cs_name, $cmp_cs_vers);
+
+	if ($mapper) {
+		$asm_cs      = $mapper->assembled_CoordSystem();
+		$cmp_cs      = $mapper->component_CoordSystem();
+		$asm_cs_name = $asm_cs->name();
+		$asm_cs_vers = $asm_cs->version();
+		$cmp_cs_name = $cmp_cs->name();
+		$cmp_cs_vers = $cmp_cs->version();
+	}
+
+	my ($dest_slice_start, $dest_slice_end, $dest_slice_strand,
+      $dest_slice_length, $dest_slice_sr_name, $slice, $sr_name, $sr_cs);
+
+	if ($dest_slice) {
+		$dest_slice_start   = $dest_slice->start();
+		$dest_slice_end     = $dest_slice->end();
+		$dest_slice_strand  = $dest_slice->strand();
+		$dest_slice_length  = $dest_slice->length();
+		$dest_slice_sr_name = $dest_slice->seq_region_name();
+	}
+
+ FEATURE: while ( $sth->fetch() ) {
+	  #Get the BindingMatrix object
+	  $bm_hash{$bm_id} = $bm_adaptor->fetch_by_dbID($bm_id) if(! exists $bm_hash{$bm_id});
+
+
+	  # Get the slice object
+	  $slice = $slice_hash{'ID:'.$seq_region_id};
+
+	  if (! $slice) {
+      $slice                            = $sa->fetch_by_seq_region_id($seq_region_id);
+      $slice_hash{'ID:'.$seq_region_id} = $slice;
+      $sr_name_hash{$seq_region_id}     = $slice->seq_region_name();
+      $sr_cs_hash{$seq_region_id}       = $slice->coord_system();
+	  }
+
+	  $sr_name = $sr_name_hash{$seq_region_id};
+	  $sr_cs   = $sr_cs_hash{$seq_region_id};
 
 	  # Remap the feature coordinates to another coord system if a mapper was provided
 	  if ($mapper) {
-	         return [];
+	  return [];
+      throw("Not yet implmented mapper, check equals are Funcgen calls too!");
+
+      ($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand)
+        = $mapper->fastmap($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand, $sr_cs);
+
+      # Skip features that map to gaps or coord system boundaries
+      next FEATURE if ! defined $sr_name;
+
+      # Get a slice in the coord system we just mapped to
+      if ( $asm_cs == $sr_cs || ( $cmp_cs != $sr_cs && $asm_cs->equals($sr_cs) ) ) {
+        $slice = $slice_hash{"NAME:$sr_name:$cmp_cs_name:$cmp_cs_vers"}
+          ||= $sa->fetch_by_region($cmp_cs_name, $sr_name, undef, undef, undef, $cmp_cs_vers);
+      } else {
+        $slice = $slice_hash{"NAME:$sr_name:$asm_cs_name:$asm_cs_vers"}
+          ||= $sa->fetch_by_region($asm_cs_name, $sr_name, undef, undef, undef, $asm_cs_vers);
+      }
+	  }
+
+	  # If a destination slice was provided convert the coords
+	  # If the destination slice starts at 1 and is forward strand, nothing needs doing
+	  if ($dest_slice) {
+
+      unless ($dest_slice_start == 1 && $dest_slice_strand == 1) {
+        if ($dest_slice_strand == 1) {
+          $seq_region_start = $seq_region_start - $dest_slice_start + 1;
+          $seq_region_end   = $seq_region_end   - $dest_slice_start + 1;
+        } else {
+          my $tmp_seq_region_start = $seq_region_start;
+          $seq_region_start        = $dest_slice_end - $seq_region_end       + 1;
+          $seq_region_end          = $dest_slice_end - $tmp_seq_region_start + 1;
+          $seq_region_strand      *= -1;
+        }
       }
 
-    while($sth->fetch()){
+      # Throw away features off the end of the requested slice
+      if (! $self->force_reslice) {
+        #force_reslice set by RegulatoryFeature::regulatory_attributes
+        #so we don't lose attrs which are not on the dest_slice
 
-        #Get the BindingMatrix object, store it in cache
-        if ( !exists $binding_matrix_cache{$binding_matrix_id} ) {
-            $binding_matrix_cache{$binding_matrix_id}
-                = $binding_matrix_adaptor->fetch_by_dbID($binding_matrix_id);
-        }
+        next FEATURE if $seq_region_end < 1 || $seq_region_start > $dest_slice_length
+          || ( $dest_slice_sr_name ne $sr_name );
+      }
 
-        # Get the Slice object, store it in cache
-        if ( !exists $slice_cache{$seq_region_id} ) {
-            $slice_cache{$seq_region_id}
-                = $slice_adaptor->fetch_by_seq_region_id($seq_region_id);
-        }
+      $slice = $dest_slice;
+	  }
 
-        push @motif_features,
-            Bio::EnsEMBL::Funcgen::MotifFeature->new(
-            -START          => $seq_region_start,
-            -END            => $seq_region_end,
-            -STRAND         => $seq_region_strand,
-            -SLICE          => $slice_cache{$seq_region_id},
-            -SEQNAME        => $slice_cache{$seq_region_id}->seq_region_name(),
-            -ADAPTOR        => $self,
-            -dbID           => $motif_feature_id,
-            -SCORE          => $score,
-            -BINDING_MATRIX => $binding_matrix_cache{$binding_matrix_id},
-            -STABLE_ID      => $stable_id,
-            );
-    }
+    push @features, Bio::EnsEMBL::Funcgen::MotifFeature->new_fast
+		  ({
+        start             => $seq_region_start,
+        end               => $seq_region_end,
+        strand            => $seq_region_strand,
+        slice             => $slice,
+        adaptor           => $self,
+        dbID              => $motif_feature_id,
+        score             => $score,
+        display_label     => $display_label,
+        binding_matrix    => $bm_hash{$bm_id},
+        interdb_stable_id => $stable_id,
+		   });
+	}
 
-    return \@motif_features;
+	return \@features;
 }
 
 
@@ -398,57 +439,60 @@ sub _objs_from_sth {
 =cut
 
 sub store{
-	my ($self, @motif_features) = @_;
+	my ($self, @mfs) = @_;
 
-	if (scalar(@motif_features) == 0) {
+	if (scalar(@mfs) == 0) {
 		throw('Must call store with a list of MotifFeature objects');
 	}
 
 	my $sth = $self->prepare("
 		INSERT INTO motif_feature (
-			seq_region_id,     seq_region_start,
-			seq_region_end,    seq_region_strand,
-      binding_matrix_id, score,
-      stable_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+			seq_region_id,   seq_region_start,
+			seq_region_end,  seq_region_strand,
+            binding_matrix_id,  display_label, score, interdb_stable_id
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
 	");
 
 	my $db = $self->db();
 
-  FEATURE: foreach my $mf (@motif_features) {
+  FEATURE: foreach my $mf (@mfs) {
 
 	  if( ! (ref($mf) && $mf->isa('Bio::EnsEMBL::Funcgen::MotifFeature'))){
-		  throw('Feature must be an MotifFeature object');
+		throw('Feature must be an MotifFeature object');
 	  }
 
-    # check if motif_feature already exists in the db
-    my $existing_motif_feature
-        = $self->fetch_by_BindingMatrix_Slice_start_strand(
-        $mf->binding_matrix(), $mf->slice(), $mf->start(), $mf->strand() );
 
-    if($existing_motif_feature){
-      warning('MotifFeature [' . $existing_motif_feature->dbID() . '] is already stored in the database');
-      next FEATURE;
-    }
 
-    if ( $mf->is_stored($db) ) {
-  		warning('MotifFeature [' . $mf->dbID() . '] is already stored in the database');
-  		next FEATURE;
+	  #Check for preexiting MF should be done in caller
+	  #as there is currently no unique key to restrict duplicates
+
+
+	  if ( $mf->is_stored($db) ) {
+		warning('MotifFeature [' . $mf->dbID() . '] is already stored in the database');
+		next FEATURE;
 	  }
 
-	  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::BindingMatrix', $mf->binding_matrix());
+	  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::BindingMatrix', $mf->binding_matrix);
 
 
 	  my $seq_region_id;
 	  ($mf, $seq_region_id) = $self->_pre_store($mf);
+
+	  my $dlabel = $mf->display_label;
+
+	  if(! defined $dlabel){
+		$dlabel = $mf->binding_matrix->feature_type->name.':'
+		  .$mf->binding_matrix->name();
+	  }
 
 	  $sth->bind_param(1, $seq_region_id,              SQL_INTEGER);
 	  $sth->bind_param(2, $mf->start(),                SQL_INTEGER);
 	  $sth->bind_param(3, $mf->end(),                  SQL_INTEGER);
 	  $sth->bind_param(4, $mf->strand(),               SQL_TINYINT);
 	  $sth->bind_param(5, $mf->binding_matrix->dbID(), SQL_INTEGER);
-	  $sth->bind_param(6, $mf->score(),                SQL_DOUBLE);
-	  $sth->bind_param(7, $mf->stable_id(),            SQL_VARCHAR);
+	  $sth->bind_param(6, $dlabel,                     SQL_VARCHAR);
+	  $sth->bind_param(7, $mf->score(),                SQL_DOUBLE);
+	  $sth->bind_param(8, $mf->interdb_stable_id(),           SQL_INTEGER);
 
 	  $sth->execute();
 
@@ -459,20 +503,21 @@ sub store{
 	  #do this explicitly in the caller via store_associated_AnnotatedFeature
 	}
 
-  return \@motif_features;
+  return \@mfs;
 }
 
 
-=head2 store_associated_Peak
+=head2 store_associated_AnnotatedFeature
 
   Args[1]    : Bio::EnsEMBL::Funcgen::MotifFeature
-  Args[2]    : Bio::EnsEMBL::Funcgen::Peak
+  Args[2]    : Bio::EnsEMBL::Funcgen::AnnotatedFeature
   Example    : $esa->store_AnnotatedFeature_association($mf, $af);
-  Description: Store link between TF peaks and MotifFeatures
+  Description: Store link between AnnotatedFeatures representing TF peaks
+               and MotifFeatures
   Returntype : Bio::EnsEMBL::Funcgen::MotifFeature
   Exceptions : Throws if args are not valid, warns if association already exists
   Caller     : General
-  Status     : Stable
+  Status     : At Risk - likely to change to TranscriptFactorFeature
 
 =cut
 
@@ -497,60 +542,58 @@ sub store{
 #need to test for MF using feature Slice and BindingMatrix
 
 
-sub store_associated_Peak {
-    my ( $self, $mf, $peak ) = @_;
+sub store_associated_AnnotatedFeature{
+  my ($self, $mf, $af) = @_;
 
-    $self->db->is_stored_and_valid( 'Bio::EnsEMBL::Funcgen::Peak', $peak );
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::MotifFeature', $mf);
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::AnnotatedFeature', $af);
 
-    my $existing_motif_feature
-        = $self->fetch_by_BindingMatrix_Slice_start_strand(
-        $mf->binding_matrix(), $mf->slice(), $mf->start(), $mf->strand() );
-    $mf = $existing_motif_feature;
 
-    #Check for existing association
-    foreach my $existing_peak ( @{ $mf->associated_Peaks } ) {
+  #Check for existing association
 
-        if ( $existing_peak->dbID == $peak->dbID ) {
-            warn "You are trying to store a pre-existing Peak association";
-            return;
-        }
-    }
+  foreach my $existing_af(@{$mf->associated_annotated_features}){
 
-    # Validate MotifFeature is entirely contained within the Peak
-    if (
-        !(
-               ( $peak->seq_region_start <= $mf->seq_region_start )
-            && ( $mf->seq_region_end <= $peak->seq_region_end )
-        )
-      )
-    {
-        throw('MotifFeature is not entirely contained within associated Peak');
-    }
+	if( $existing_af->dbID == $af->dbID ){
+	  warn "You are trying to store a pre-exiting AnnotatedFeature association";
+	  return;
+	}
+  }
 
-    my $sth = $self->prepare(
-"INSERT INTO motif_feature_peak (motif_feature_id, peak_id) VALUES (?, ?)"
-    );
 
-    $sth->bind_param( 1, $mf->dbID,   SQL_INTEGER );
-    $sth->bind_param( 2, $peak->dbID, SQL_INTEGER );
-    $sth->execute();
+  #Validate MotifFeature is entirely contained within the AnnotatedFeature
 
-    # push @{ $mf->{associated_Peaks} }, $peak;
+  #if(! (( $mf->seq_region_start <= $af->seq_region_end)  &&
+  #( $mf->seq_region_end   >= $af->seq_region_start))){
+  #
+  #	throw('MotifFeature is not entirely contained within associated AnnotatedFeature');
+  #  }
 
-    return $mf;
+
+  my $sth = $self->prepare("
+		INSERT INTO associated_motif_feature (
+			annotated_feature_id, motif_feature_id
+		) VALUES (?, ?)
+	");
+
+  $sth->bind_param(1, $af->dbID, SQL_INTEGER);
+  $sth->bind_param(2, $mf->dbID, SQL_INTEGER);
+  $sth->execute();
+
+
+  push @{$mf->{associated_annotated_features}}, $af;
+
+  return $mf;
 }
 
 
 
 
+=head2 fetch_by_interdb_stable_id
 
-
-
-=head2 fetch_by_stable_id
-
-  Arg [1]    : Integer $stable_id - The stable_id of the motif feature to retrieve
-  Example    : my $mf = $mf_adaptor->fetch_by_stable_id($stable_id);
-  Description: Retrieves a motif feature via its stable id.
+  Arg [1]    : Integer $stable_id - The 'interdb stable id' of the motif feature to retrieve
+  Example    : my $rf = $rf_adaptor->fetch_by_interdb_stable_id(1);
+  Description: Retrieves a motif feature via its stable id. This is really an internal
+               method to facilitate inter DB linking.
   Returntype : Bio::EnsEMBL::Funcgen::MotifFeature
   Exceptions : none
   Caller     : general
@@ -558,12 +601,12 @@ sub store_associated_Peak {
 
 =cut
 
-sub fetch_by_stable_id {
+sub fetch_by_interdb_stable_id {
   my ($self, $stable_id) = @_;
 
   $self->bind_param_generic_fetch($stable_id, SQL_INTEGER);
 
-  return $self->generic_fetch('mf.stable_id=?')->[0];
+  return $self->generic_fetch('mf.interdb_stable_id=?')->[0];
 }
 
 

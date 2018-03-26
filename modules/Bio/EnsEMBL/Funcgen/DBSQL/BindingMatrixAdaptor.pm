@@ -59,73 +59,98 @@ use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
 
 
 use Bio::EnsEMBL::Funcgen::BindingMatrix;
-use Bio::EnsEMBL::Funcgen::BindingMatrix::Constants qw ( :all );
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#sql_types barewords import
 
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 
-=head2 fetch_by_name
+=head2 fetch_all_by_name
 
   Arg [1]    : string - name of Matrix
-  Example    : my $matrix = $matrix_adaptor->fetch_by_name('MA0122.1');
-  Description: Fetches matrix objects given a name
-  Returntype : Bio::EnsEMBL::Funcgen::BindingMatrix object
+  Arg [2]    : Bio::EnsEMBL::Analysis (optional) Analysis indicating Matrix origin
+  Example    : my @matrices = @{$matrix_adaptor->fetch_all_by_name('MA0122.1')};
+  Description: Fetches matrix objects given a name and an optional Analysis object.
+               If both are specified, only one unique BindingMatrix will be returned
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::BindingMatrix objects
   Exceptions : Throws if no name if defined
   Caller     : General
-  Status     : At risk
+  Status     : At risk - Change this to fetch_all_by_name_FeatureType
 
 =cut
 
-sub fetch_by_name {
-    my ( $self, $name ) = @_;
-    throw('Must specify a BindingMatrix name') if !defined $name;
+sub fetch_all_by_name{
+  my ($self, $name, $analysis) = @_;
+  throw('Must specify a BindingMatrix name') if ! defined $name;
 
-    my $constraint = ' bm.name = ? ';
-    $self->bind_param_generic_fetch( $name, SQL_VARCHAR );
+  my $constraint = ' bm.name = ? ';
+  $self->bind_param_generic_fetch($name,           SQL_VARCHAR);
 
-    my $result = $self->generic_fetch($constraint);
-
-    if ( scalar @$result > 1 ) {
-        throw(    'Binding Matrix '
-                . $name
-                . ' is not unique in the database.'
-                . ' Only one result has been returned' );
-    }
-
-    return $result->[0];
+  if($analysis){
+    assert_ref($analysis, 'Bio::EnsEMBL::Analysis');
+    $constraint .= ' AND bm.analysis_id = ?' if $analysis;
+    $self->bind_param_generic_fetch($analysis->dbID, SQL_INTEGER);
+  }
+  
+  return $self->generic_fetch($constraint);
 }
 
-=head2 fetch_by_stable_id
+=head2 fetch_all_by_name_FeatureType
 
-  Arg [1]    : string - stable ID of Matrix
-  Example    : my $matrix = $matrix_adaptor->fetch_by_stable_id('ENSPFM001');
-  Description: Fetches matrix objects given a stable_id
-  Returntype : Bio::EnsEMBL::Funcgen::BindingMatrix object
-  Exceptions : Throws if no stable_id if defined
+  Arg [1]    : string - name of Matrix
+  Arg [2]    : Bio::EnsEMBL::Funcgen::FeatureType
+  Arg [3]    : Bio::EnsEMBL::Analysis (optional) Analysis indicating Matrix origin
+  Description: Fetches matrix objects given a name and a FeatureType.
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::BindingMatrix objects
+  Exceptions : Throws if no name if defined or if FeatureType is not valid
   Caller     : General
   Status     : At risk
 
 =cut
 
-sub fetch_by_stable_id {
-    my ( $self, $stable_id ) = @_;
-    throw('Must specify a BindingMatrix stable_id') if !defined $stable_id;
+sub fetch_all_by_name_FeatureType{
+  my ($self, $name, $ftype, $analysis) = @_;
 
-    my $constraint = ' bm.stable_id = ? ';
-    $self->bind_param_generic_fetch( $stable_id, SQL_VARCHAR );
+  throw("Must specify a BindingMatrix name") if(! $name);
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $ftype);
 
-    my $result = $self->generic_fetch($constraint);
+  my $constraint = " bm.name = ? and bm.feature_type_id = ?";
+  $constraint .= " AND bm.analysis_id = ?" if $analysis;
 
-    if ( scalar @$result > 1 ) {
-        throw(    'Binding Matrix '
-                . $stable_id
-                . ' is not unique in the database.'
-                . ' Only one result has been returned' );
-    }
+  $self->bind_param_generic_fetch($name,           SQL_VARCHAR);
+  $self->bind_param_generic_fetch($ftype->dbID,    SQL_INTEGER);
+  $self->bind_param_generic_fetch($analysis->dbID, SQL_INTEGER) if $analysis;
 
-    return $result->[0];
+  return $self->generic_fetch($constraint);
 }
+
+
+=head2 fetch_all_by_FeatureType
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureType
+  Arg [2]    : Bio::EnsEMBL::Analysis (optional) Analysis indicating Matrix origin
+  Example    : my @matrices = @{$matrix_adaptor->fetch_all_by_FeatureType($ftype)};
+  Description: Fetches BindingMatrix objects given it's FeatureType
+  Returntype : Bio::EnsEMBL::Funcgen::BindingMatrix
+  Exceptions : Throws if FeatureType is not valid
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub fetch_all_by_FeatureType{
+  my ($self, $ftype, $analysis) = @_;
+
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $ftype);
+
+  my $constraint = " bm.feature_type_id = ?";
+  $constraint .= " AND bm.analysis_id = ?" if $analysis;
+
+  $self->bind_param_generic_fetch($ftype->dbID,    SQL_INTEGER);
+  $self->bind_param_generic_fetch($analysis->dbID, SQL_INTEGER) if $analysis;
+
+  return $self->generic_fetch($constraint);
+}
+
 
 =head2 _true_tables
 
@@ -140,7 +165,7 @@ sub fetch_by_stable_id {
 =cut
 
 sub _true_tables {
-    return ( [ 'binding_matrix', 'bm' ]);
+  return (['binding_matrix', 'bm']);
 }
 
 
@@ -158,15 +183,8 @@ sub _true_tables {
 =cut
 
 sub _columns {
-  my $self = shift;
-
-    return qw(
-      bm.binding_matrix_id
-      bm.name
-      bm.threshold
-      bm.source
-      bm.stable_id
-    );
+  return qw( bm.binding_matrix_id bm.name bm.analysis_id bm.frequencies
+             bm.description bm.feature_type_id bm.threshold);
 }
 
 
@@ -186,20 +204,36 @@ sub _columns {
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
 
-	my (@result, $matrix_id, $name, $thresh, $source, $stable_id);
-	$sth->bind_columns(\$matrix_id, \$name, \$thresh, \$source, \$stable_id);
+	my (@result, $matrix_id, $name, $analysis_id, $freq, $desc, $ftype_id, $thresh);
+	$sth->bind_columns(\$matrix_id, \$name, \$analysis_id, \$freq, \$desc, \$ftype_id, \$thresh);
 
-  while ( $sth->fetch() ) {
+	my $ftype_adaptor = $self->db->get_FeatureTypeAdaptor;
+	my %ftype_cache;
 
-    my $matrix = Bio::EnsEMBL::Funcgen::BindingMatrix->new
-    (
-     -dbID         => $matrix_id,
-     -NAME         => $name,
-     -THRESHOLD    => $thresh,
-     -SOURCE       => $source,
-     -STABLE_ID    => $stable_id,
-     -ADAPTOR      => $self,
-    );
+	my $analysis_adaptor = $self->db->get_AnalysisAdaptor;
+	my %analysis_cache;
+
+	while ( $sth->fetch() ) {
+
+	  if(! exists $ftype_cache{$ftype_id}){
+		$ftype_cache{$ftype_id} = $ftype_adaptor->fetch_by_dbID($ftype_id);
+	  }
+
+	  if(! exists $analysis_cache{$analysis_id}){
+		$analysis_cache{$analysis_id} = $analysis_adaptor->fetch_by_dbID($analysis_id);
+	  }
+
+	  my $matrix = Bio::EnsEMBL::Funcgen::BindingMatrix->new
+		(
+		 -dbID         => $matrix_id,
+		 -NAME         => $name,
+		 -ANALYSIS     => $analysis_cache{$analysis_id},
+		 -FREQUENCIES  => $freq,
+		 -DESCRIPTION  => $desc,
+		 -FEATURE_TYPE => $ftype_cache{$ftype_id},
+		 -THRESHOLD    => $thresh,
+		 -ADAPTOR      => $self,
+		);
 
 	  push @result, $matrix;
 
@@ -224,112 +258,50 @@ sub _objs_from_sth {
 =cut
 
 sub store {
-    my $self = shift;
-    my @args = @_;
+  my $self = shift;
+  my @args = @_;
 
-    my $sth
-        = $self->prepare(
-        "INSERT INTO binding_matrix (name, threshold, source, stable_id) VALUES (?, ?, ?, ?)"
-        );
+  my $sth = $self->prepare("
+			INSERT INTO binding_matrix
+			(name, analysis_id, frequencies, description, feature_type_id, threshold)
+			VALUES (?, ?, ?, ?, ?, ?)");
 
+  my $s_matrix;
 
-    my $stored_matrix;
+  foreach my $matrix (@args) {
+    assert_ref($matrix, 'Bio::EnsEMBL::Funcgen::BindingMatrix', 'BindingMatrix');
+    $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $matrix->feature_type);
 
-    foreach my $matrix (@args) {
-        assert_ref( $matrix, 'Bio::EnsEMBL::Funcgen::BindingMatrix',
-            'BindingMatrix' );
+    if (!( $matrix->dbID() && $matrix->adaptor() == $self )){
 
-        if ( !( $matrix->dbID() && $matrix->adaptor() == $self ) ) {
+      #Check for previously stored BindingMatrix
+      ($s_matrix) = @{$self->fetch_all_by_name_FeatureType($matrix->name(), $matrix->feature_type, $matrix->analysis())};
 
-            #Check for previously stored BindingMatrix
-            $stored_matrix = $self->fetch_by_name( $matrix->name() );
+      if(! $s_matrix){
 
-            if ( !$stored_matrix ) {
+		$sth->bind_param(1, $matrix->name(),               SQL_VARCHAR);
+		$sth->bind_param(2, $matrix->analysis()->dbID(),   SQL_INTEGER);
+		$sth->bind_param(3, $matrix->frequencies(),        SQL_LONGVARCHAR);
+		$sth->bind_param(4, $matrix->description(),        SQL_VARCHAR);
+		$sth->bind_param(5, $matrix->feature_type->dbID(), SQL_INTEGER);
+		$sth->bind_param(6, $matrix->threshold(),          SQL_DOUBLE);
 
-                $sth->bind_param( 1, $matrix->name(),      SQL_VARCHAR );
-                $sth->bind_param( 2, $matrix->threshold(), SQL_DOUBLE );
-                $sth->bind_param( 3, $matrix->source(),    SQL_VARCHAR );
-                $sth->bind_param( 4, $matrix->stable_id(), SQL_VARCHAR );
+		$sth->execute();
+		$matrix->dbID($self->last_insert_id);
+		$matrix->adaptor($self);
 
-                $sth->execute();
-
-                $matrix->dbID( $self->last_insert_id );
-                $matrix->adaptor($self);
-
-                if ($matrix->{elements}){
-                  $self->_store_frequencies($matrix);
-                }
-
-                if ($matrix->{associated_transcription_factor_complexes}){
-                  $self->_store_binding_matrix_transcription_factor_complex($matrix);
-                }
-
-            }
-            else {
-                $matrix = $stored_matrix;
-                warn(     "Using previously stored Matrix:\t"
-                        . $matrix->name()
-                        . "\n" );
-            }
-        }
+		$self->store_associated_feature_types($matrix);
+	  }
+      else{
+		$matrix = $s_matrix;
+		warn("Using previously stored Matrix:\t".$matrix->name()."\n");
+		#Could update associated FeatureTypes here
+      }
     }
+  }
 
-    return \@args;
+  return \@args;
 }
-
-sub _store_frequencies {
-    my ( $self, $binding_matrix ) = @_;
-
-    if($binding_matrix->unit ne FREQUENCIES){
-        throw("Can not store a matrix with units other than FREQUENCIES");
-    }
-
-    my $binding_matrix_frequencies_adaptor
-        = $self->db->get_adaptor('BindingMatrixFrequencies');
-
-    for my $frequency ( @{ $binding_matrix->{elements} } ) {
-        $frequency->{binding_matrix} = $binding_matrix;
-        $binding_matrix_frequencies_adaptor->store($frequency);
-    }
-}
-
-sub _store_binding_matrix_transcription_factor_complex {
-    my ( $self, $matrix ) = @_;
-
-    assert_ref( $matrix, 'Bio::EnsEMBL::Funcgen::BindingMatrix',
-        'BindingMatrix' );
-
-    my $select_sth = $self->prepare(
-        "SELECT * FROM binding_matrix_transcription_factor_complex
-         WHERE binding_matrix_id=? AND transcription_factor_complex_id=?"
-    );
-
-    my $store_sth = $self->prepare(
-        "INSERT INTO binding_matrix_transcription_factor_complex
-        (binding_matrix_id, transcription_factor_complex_id) VALUES(?, ?)"
-    );
-
-    for
-      my $complex ( @{ $matrix->{associated_transcription_factor_complexes} } )
-    {
-
-        assert_ref( $complex,
-            'Bio::EnsEMBL::Funcgen::TranscriptionFactorComplex',
-            'TranscriptionFactorComplex' );
-
-        $select_sth->execute( $matrix->dbID, $complex->dbID );
-
-        # check if the binding_matrix has already been associated with
-        # the transcription_factor_complex
-        if ( !$select_sth->fetchrow_array ) {
-            $store_sth->bind_param( 1, $matrix->dbID,  SQL_INTEGER );
-            $store_sth->bind_param( 2, $complex->dbID, SQL_INTEGER );
-
-            $store_sth->execute();
-        }
-    }
-}
-
 
 
 

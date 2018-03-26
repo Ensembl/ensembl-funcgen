@@ -37,7 +37,7 @@ my $feature = Bio::EnsEMBL::Funcgen::MotifFeature->new
   -DISPLAY_LABEL => $text,
   -SCORE         => $score,
   -FEATURE_TYPE  => $ftype,
-  -STABLE_ID     => 1,
+  -INTERDB_STABLE_ID    => 1,
  );
 
 =head1 DESCRIPTION
@@ -95,8 +95,9 @@ use base qw(Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable);
                                 									  -END            => 1_000_024,
 								                                	  -STRAND         => -1,
                                 									  -BINDING_MATRIX => $bm,
+								                                	  -DISPLAY_LABEL  => $text,
                                   									-SCORE          => $score,
-                                                    -STABLE_ID     => 1 );
+                                                    -INTERDB_STABLE_ID     => 1 );
 
   Description: Constructor for MotifFeature objects.
   Returntype : Bio::EnsEMBL::Funcgen::MotifFeature
@@ -111,10 +112,9 @@ sub new {
   my $class  = ref($caller) || $caller;
   my $self   = $class->SUPER::new(@_);
   
-  ($self->{score}, $self->{binding_matrix}, $self->{stable_id}) 
-    = rearrange(['SCORE', 'BINDING_MATRIX', 'STABLE_ID'], @_);
-
-  assert_ref($self->{binding_matrix}, 'Bio::EnsEMBL::Funcgen::BindingMatrix');
+  ($self->{score}, $self->{binding_matrix}, $self->{display_label}, $self->{interdb_stable_id}) 
+    = rearrange(['SCORE', 'BINDING_MATRIX', 'DISPLAY_LABEL', 'INTERDB_STABLE_ID'], @_);
+  assert_ref($self->binding_matrix, 'Bio::EnsEMBL::Funcgen::BindingMatrix');
 
   return $self;
 }
@@ -176,6 +176,26 @@ sub feature_type{ return shift->{binding_matrix}->feature_type; }
 =cut
 
 sub score { return shift->{score}; }
+
+
+=head2 display_label
+
+  Example    : my $label = $feature->display_label();
+  Description: Getter for the display label of this feature.
+  Returntype : str
+  Exceptions : None
+  Caller     : General
+  Status     : Medium Risk
+
+=cut
+
+sub display_label {
+  #If not set in new before store, a default is stored as:
+  #$mf->binding_matrix->feature_type->name.':'.$mf->binding_matrix->name();
+  return shift->{display_label};
+}
+
+
 
 =head2 associated_annotated_features
 
@@ -336,7 +356,7 @@ sub infer_variation_consequence{
 
 =cut
 
-sub stable_id { return shift->{stable_id}; }
+sub interdb_stable_id { return shift->{interdb_stable_id}; }
 
 sub SO_term {
   my $self = shift;
