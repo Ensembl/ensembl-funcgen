@@ -9,6 +9,7 @@ my $source_regulatory_features;
 my $target_regulatory_features;
 my $outfile;
 my $stable_id_prefix;
+my $mapping_report;
 
 GetOptions (
 'all_overlaps=s'                => \$all_overlaps,
@@ -16,6 +17,7 @@ GetOptions (
 'target_regulatory_features=s'  => \$target_regulatory_features,
 'outfile=s'                     => \$outfile,
 'stable_id_prefix=s'            => \$stable_id_prefix,
+'mapping_report=s'              => \$mapping_report,
 );
 
 ## Identify the maximum stable id seen in the "old" regulatory feature dataset
@@ -46,6 +48,13 @@ $target_regulatory_features_fh->close();
 print "Writing stable id assignments to $outfile\n";
 
 open my $out_fh, ">" . $outfile or die("Cant find file $outfile!");
+
+my @regulatory_feature_ids = keys %$stable_id_hash;
+
+my $total_number_regulatory_features = scalar @regulatory_feature_ids;
+
+print "The total number of regulatory features is: $total_number_regulatory_features\n";
+
 foreach my $regulatory_feature_id (keys %$stable_id_hash) {
   
   my $stable_id = $stable_id_hash->{$regulatory_feature_id};
@@ -58,6 +67,20 @@ $out_fh->close();
 
 print "$num_mapped_stable_ids stable ids were mapped.\n";
 print "$num_new_stable_ids stable ids were newly assigned.\n";
+
+open my $report_fh, '>', $mapping_report or die("Can't write to ${mapping_report}!");
+
+my $report = {
+    mapped_stable_ids => $num_mapped_stable_ids,
+    new_stable_ids    => $num_mapped_stable_ids,
+    total_number_regulatory_features => $total_number_regulatory_features,
+};
+
+$report_fh->print(
+    Dumper($report)
+);
+
+$report_fh->close;
 
 sub find_max_seen_stable_id {
   
