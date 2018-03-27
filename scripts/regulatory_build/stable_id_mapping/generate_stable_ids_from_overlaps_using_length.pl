@@ -1,3 +1,5 @@
+#!/usr/bin/env perl
+
 use strict;
 use Data::Dumper;
 use Getopt::Long;
@@ -17,17 +19,17 @@ GetOptions (
 );
 
 ## Identify the maximum stable id seen in the "old" regulatory feature dataset
-open my $source_regulatory_features_fh, '<', $source_regulatory_features;
+open my $source_regulatory_features_fh, '<', $source_regulatory_features or die("Cant find file $source_regulatory_features!");
 my $max_seen_stable_id_number = find_max_seen_stable_id( $source_regulatory_features_fh );
 $source_regulatory_features_fh->close();
 
 ## Retain overlaps between the same regulatory feature types and
 ## for each one of those only the one with the longest overlap
-open my $all_overlaps_fh, '<', $all_overlaps;
+open my $all_overlaps_fh, '<', $all_overlaps or die("Cant find file $all_overlaps!");
 my $stable_id_mappings_ref_hash = filter_overlaps( $all_overlaps_fh );
 $all_overlaps_fh->close();
 
-open my $target_regulatory_features_fh, "<", $target_regulatory_features;
+open my $target_regulatory_features_fh, "<", $target_regulatory_features or die("Cant find file $target_regulatory_features!");
 
 (
 my $stable_id_hash,
@@ -43,7 +45,7 @@ $max_seen_stable_id_number
 $target_regulatory_features_fh->close();
 print "Writing stable id assignments to $outfile\n";
 
-open my $out_fh, ">" . $outfile;
+open my $out_fh, ">" . $outfile or die("Cant find file $outfile!");
 foreach my $regulatory_feature_id (keys %$stable_id_hash) {
   
   my $stable_id = $stable_id_hash->{$regulatory_feature_id};
