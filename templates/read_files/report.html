@@ -147,16 +147,11 @@ $(document).ready(function() {
         <th>Number of reads</th>
         <th>Sum of read file sizes in GB</th>
         <th>Ratio of read counts: signal/control</th>
-        <th>IDR type</th>
-        <th>Max peaks</th>
-        <th>Failed IDR pairs</th>
     </tr>
 </thead>
 <tbody>
 
 [% FOR experiment IN signal_experiments %]
-
-[% idr = fetch_idr(experiment) %]
 
 <tr>
     <td>[% experiment.name %]</td>
@@ -166,9 +161,6 @@ $(document).ready(function() {
     <td align="right">[% format_number( experiment.sum_number_of_reads )   %]</td>
     <td align="right">[% format_number( bytes_to_gb ( experiment.sum_read_file_sizes ) )   %]</td>
     <td align="right">[% round_num( experiment.signal_to_control_read_file_ratio ) %]</td>
-    <td>[% idr.type %]</td>
-    <td align="right">[% format_number( idr.max_peaks ) %]</td>
-    <td>[% idr.failed_idr_pairs %]</td>
 </tr>
 [% END %]
 

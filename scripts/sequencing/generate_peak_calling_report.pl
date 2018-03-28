@@ -31,6 +31,13 @@ generate_peak_calling_report.pl \
     --registry         /homes/mnuhn/work_dir_ersa/lib/ensembl-funcgen/registry.pm \
     --output_directory ./reports/
 
+
+generate_peak_calling_report.pl \
+    --species          mus_musculus \
+    --registry         /homes/mnuhn/work_dir_ersa/lib/ensembl-funcgen/registry.pm \
+    --output_directory ./reports/
+
+
 =cut
 
 use strict;
@@ -91,9 +98,11 @@ my $mouse_ref_length = $genome_container->get_ref_length;
 
 my $graph_display_feature_types = [
     map {
-        $feature_type_adaptor->fetch_by_name($_)
+        $feature_type_adaptor->fetch_by_name($_) || die ("Can't fetch $_");
     }
     (
+        "CTCF",
+        "DNase1",
         "H3K4me1", 
         "H3K4me2", 
         "H3K4me3", 
@@ -102,64 +111,40 @@ my $graph_display_feature_types = [
         "H3K27ac", 
         "H3K27me3", 
         "H3K36me3", 
-        "DNase1",
-        "CTCF"
     )
 ];
 
-my $graph_display_epigenomes = [
-    map {
-        $epigenome_adaptor->fetch_by_production_name($_)
-    }
-    qw(
-        brain_e14_5d
-        CH12_LX
-        embryonic_facial_prominence_embryonic_10_5
-        ES_Bruce4_embryonic__
-        forebrain_embryonic_10_5
-        forebrain_postnatal_0
-        heart_a8w
-        heart_embryonic_10_5
-        heart_postnatal_0
-        hindbrain_embryonic_10_5
-        hindbrain_postnatal_0
-        intestine_embryonic_14_5
-        intestine_postnatal_0
-        kidney_a8w
-        kidney_embryonic_14_5
-        kidney_postnatal_0
-        limb_embryonic_10_5
-        liver_a8w
-        liver_embryonic_11_5
-        liver_postnatal_0
-        lung_embryonic_14_5
-        lung_postnatal_0
-        MEL
-        MEL_cell_line____
-        midbrain_embryonic_10_5
-        midbrain_postnatal_0
-        neural_tube_embryonic_11_5
-        spleen_a8w
-        stomach_embryonic_14_5
-        stomach_postnatal_0
-        thymus_a8w
-    ),
-];
+my $graph_display_epigenomes = $epigenome_adaptor->fetch_all;
+
+use Number::Format qw( format_number );
+
+my $de = new Number::Format(
+    -thousands_sep   => ',',
+    -decimal_point   => '.',
+);
 
 my $output_file = "$output_directory/peak_calling_report.html";
 
 my $dbc = $mouse_funcgen_dba->dbc;
 
+my $experiment_adaptor = $mouse_funcgen_dba->get_ExperimentAdaptor;
+my @signal_experiments  = $experiment_adaptor->_fetch_all_signal_experiments;
+my @control_experiments = $experiment_adaptor->_fetch_all_control_experiments;
+
 $tt->process(
     $description_template, 
     {
+
+        signal_experiments  => \@signal_experiments,
+        control_experiments => \@control_experiments,
+
         peak_calling_statistics => $peak_calling_statistics_sorted,
         peak_calling_adaptor    => $peak_calling_adaptor,
         dbc => $dbc,
         
         length_to_percent => sub {
             my $length = shift;
-            return $length / $mouse_ref_length;
+            return $length * 100 / $mouse_ref_length;
         },
         
         round_percent => sub {
@@ -171,6 +156,32 @@ $tt->process(
         },
         feature_types => $graph_display_feature_types,
         epigenomes    => $graph_display_epigenomes,
+
+        fetch_idr => sub  {
+          my $experiment = shift;
+          return $experiment->_fetch_Idr
+        },
+        bytes_to_gb => sub {
+          my $size_in_bytes = shift;
+          return ( 0 + $size_in_bytes ) / (1024 * 1024 * 1024)
+        },
+
+        round_num => sub {
+            my $number = shift;
+            return sprintf("%.2f", $number);
+        },
+      format_number => sub {
+        my $number = shift;
+        if (! defined $number) {
+          return '-'
+        }
+        if ($number eq '') {
+          return '-'
+        }
+        return $de->format_number($number);
+      },
+
+
     },
     "$output_directory/peak_calling_report.html"
 )

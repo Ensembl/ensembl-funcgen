@@ -14,7 +14,7 @@
 </head>
 <body>
 
-<h1>Peak calling</h1>
+<h1 id="peak_calling">Peak calling</h1>
 
 <p>
     This report is based 
@@ -31,10 +31,14 @@
   </li>
 </ul>
 
-<h2>Proportion of genome in peaks by feature type and epigenome</h2>
+<h2 id="prop_of_genome_in_peaks">Proportion of genome in peaks by feature type and epigenome in percent (0-100)</h2>
 
-    <div id="container" style="width: 80%;">
-        <canvas id="canvas"></canvas>
+[%- FOR current_feature_type IN feature_types -%]
+
+<h3>[% current_feature_type.name %]</h3>
+
+    <div id="container_[% current_feature_type.name %]" style="width: 60%;">
+        <canvas id="canvas_[% current_feature_type.name %]"></canvas>
     </div>
     <script>
         var color = Chart.helpers.color;
@@ -53,52 +57,60 @@
             'rgb(128,0,128)',
         ];
 
-        var barChartData = {
+        var barChartData_[% current_feature_type.name %] = {
             labels: [
                 [% FOR epigenome IN epigenomes %]
                     '[% epigenome.display_label %]',
                 [%- END %]
             ],
             datasets: [
-                [%- FOR current_feature_type IN feature_types -%]
-                    {
-                        label: '[% current_feature_type.name %]',
-                        backgroundColor: color(selected_colors[ [% loop.count %] ]).alpha(0.5).rgbString(),
-                        borderWidth: 1,
-                        data: [
-                            [% FOR current_epigenome IN epigenomes %]
-                                [% peak_callings = peak_calling_adaptor.fetch_all_by_Epigenome_FeatureType(current_epigenome, current_feature_type) %]
-                                [% IF peak_callings.size > 0 %]
-                                    [% FOR peak_calling IN peak_callings  -%]
-                                        '[% round_percent(length_to_percent(peak_calling.fetch_PeakCallingStatistic.total_length)) %]',
-                                    [%- END %]
-                                [% ELSE %]
-                                    '0',
-                                [% END %]
+                {
+                    label: '[% current_feature_type.name %]',
+                    backgroundColor: color(selected_colors[ [% loop.count %] ]).alpha(0.5).rgbString(),
+                    borderWidth: 1,
+                    data: [
+                        [% FOR current_epigenome IN epigenomes %]
+                            [% peak_callings = peak_calling_adaptor.fetch_all_by_Epigenome_FeatureType(current_epigenome, current_feature_type) %]
+                            [% IF peak_callings.size > 0 %]
+                                [% FOR peak_calling IN peak_callings  -%]
+                                    '[% round_percent(length_to_percent(peak_calling.fetch_PeakCallingStatistic.total_length)) %]',
+                                [%- END %]
+                            [% ELSE %]
+                                '0',
                             [% END %]
-                        ]
-                    },
-                [% END %]
+                        [% END %]
+                    ]
+                },
             ]
         };
+    </script>
+    
+[% END %]
 
+    <script>
         window.onload = function() {
-            var ctx = document.getElementById('canvas').getContext('2d');
-            window.myBar = new Chart(ctx, {
+        
+            [%- FOR current_feature_type IN feature_types -%]
+            
+            var ctx_[% current_feature_type.name %] = document.getElementById('canvas_[% current_feature_type.name %]').getContext('2d');
+            
+            window.myBar = new Chart(ctx_[% current_feature_type.name %], {
                 type: 'bar',
-                data: barChartData,
+                data: barChartData_[% current_feature_type.name %],
                 options: {
                     responsive: true,
                     legend: {
                         position: 'top',
+                        display: false,
                     },
                     title: {
-                        display: true,
-                        text: 'Total peak lengths by epigenome'
+                        display: false,
+                        text: 'Total peak lengths in [% current_feature_type.name %]'
                     }
                 }
             });
-
+            
+            [% END %]
         };
     </script>
 
@@ -108,6 +120,22 @@
 
 $(document).ready(function() {
     $('#peak_calling_1').DataTable();
+} );
+
+$(document).ready(function() {
+    $('#read_file_3').DataTable(
+        {
+            "iDisplayLength": 10,
+        }
+    );
+} );
+
+$(document).ready(function() {
+    $('#read_file_4').DataTable(
+        {
+            "iDisplayLength": 10,
+        }
+    );
 } );
 
 </script>
@@ -129,8 +157,79 @@ $(document).ready(function() {
     <td>[% peak_calling_statistic.fetch_PeakCalling.fetch_Epigenome.display_label %]</td>
     <td>[% peak_calling_statistic.fetch_PeakCalling.fetch_FeatureType.name        %]</td>
     <td align="right">[% round_percent(length_to_percent(peak_calling_statistic.total_length))  %]</td>
-    <td align="right">[% peak_calling_statistic.num_peaks           %]</td>
-    <td align="right">[% peak_calling_statistic.average_length      %]</td>
+    <td align="right">[% format_number ( peak_calling_statistic.num_peaks )          %]</td>
+    <td align="right">[% format_number ( round_num ( peak_calling_statistic.average_length ) )     %]</td>
+</tr>
+[% END %]
+
+</tbody>
+</table>
+
+<h2>IDR</h2>
+
+<h3>Signal Experiments</h3>
+
+<table id="read_file_3" class="display" cellspacing="0" width="100%">
+<thead>
+    <tr>
+        <th>Experiment</th>
+        <th>Feature type</th>
+        <th>Read type</th>
+        <th>Replicate configurations</th>
+        <th>Number of reads</th>
+        <th>Sum of read file sizes in GB</th>
+        <th>Ratio of read counts: signal/control</th>
+        <th>IDR type</th>
+        <th>Max peaks</th>
+        <th>Failed IDR pairs</th>
+    </tr>
+</thead>
+<tbody>
+
+[% FOR experiment IN signal_experiments %]
+
+[% idr = fetch_idr(experiment) %]
+
+<tr>
+    <td>[% experiment.name %]</td>
+    <td align="right">[% experiment.feature_type.name       %]</td>
+    <td>[% experiment.summarise_read_types %]</td>
+    <td>[% experiment.summarise_replicate_configurations %]</td>
+    <td align="right">[% format_number( experiment.sum_number_of_reads )   %]</td>
+    <td align="right">[% format_number( bytes_to_gb ( experiment.sum_read_file_sizes ) )   %]</td>
+    <td align="right">[% round_num( experiment.signal_to_control_read_file_ratio ) %]</td>
+    <td>[% idr.type %]</td>
+    <td align="right">[% format_number( idr.max_peaks ) %]</td>
+    <td>[% idr.failed_idr_pairs %]</td>
+</tr>
+[% END %]
+
+</tbody>
+</table>
+
+<h3>Control Experiments</h3>
+
+<table id="read_file_4" class="display" cellspacing="0" width="100%">
+<thead>
+    <tr>
+        <th>Experiment</th>
+        <th>Feature type</th>
+        <th>Read type</th>
+        <th>Replicate configurations</th>
+        <th>Number of reads</th>
+        <th>Sum of read file sizes in GB</th>
+    </tr>
+</thead>
+<tbody>
+
+[% FOR experiment IN control_experiments %]
+<tr>
+    <td>[% experiment.name %]</td>
+    <td>[% experiment.feature_type.name       %]</td>
+    <td>[% experiment.summarise_read_types %]</td>
+    <td>[% experiment.summarise_replicate_configurations %]</td>
+    <td align="right">[% format_number( experiment.sum_number_of_reads )   %]</td>
+    <td align="right">[% format_number( bytes_to_gb ( experiment.sum_read_file_sizes ) )   %]</td>
 </tr>
 [% END %]
 

@@ -35,10 +35,6 @@ perl scripts/sequencing/generate_read_file_report.pl \
 
 
 
-peak_calling_statistics.pl \
-    --species          mouse_with_regbuild \
-    --registry         /homes/mnuhn/work_dir_ersa/lib/ensembl-funcgen/registry.pm \
-    --output_directory ./reports/
 
 perl scripts/segmentation//load_state_emissions_and_assignments.pl \
     --species          mus_musculus \
@@ -46,16 +42,20 @@ perl scripts/segmentation//load_state_emissions_and_assignments.pl \
     --emissions_file   /hps/nobackup/production/ensembl/mnuhn/regbuild_small_test_set/segmentation/mus_musculus/learn_model/emissions_25.txt \
     --assignments_file /hps/nobackup/production/ensembl/mnuhn/regbuild_small_test_set/regulatory_build/mus_musculus/tmp/assignments.txt
 
-perl scripts/segmentation/segmentation_statistics.pl \
-    --species          mus_musculus \
-    --registry         /homes/mnuhn/work_dir_ersa/lib/ensembl-funcgen/registry.pm \
-    --output_directory ./reports/
-
 perl scripts/sequencing/generate_read_file_report.pl \
     --species          mus_musculus \
     --registry         /homes/mnuhn/work_dir_ersa/lib/ensembl-funcgen/registry.pm \
     --output_directory ./reports/
 
+generate_peak_calling_report.pl \
+    --species          mus_musculus \
+    --registry         /homes/mnuhn/work_dir_ersa/lib/ensembl-funcgen/registry.pm \
+    --output_directory ./reports/
+
+perl scripts/segmentation/generate_segmentation_report.pl \
+    --species          mus_musculus \
+    --registry         /homes/mnuhn/work_dir_ersa/lib/ensembl-funcgen/registry.pm \
+    --output_directory ./reports/
 
 
 =cut
@@ -141,43 +141,11 @@ my $sql_1 = qq(
 
 my $read_file_1_counts = $dbc->db_handle->selectall_hashref($sql_1, 'logic_name');
 
-# my $sql_2 = qq(
-#     select 
-#         experiment.name                            as experiment_name,
-#         idr.max_peaks                              as idr_max_peaks,
-#         idr.type                                   as idr_type,
-#         idr.failed_idr_pairs                       as idr_failed_idr_pairs,
-#         group_concat(distinct analysis.logic_name) as alignment_methods,
-#         feature_type.name                          as feature_type_name, 
-#         sum(read_file.file_size)                   as num_reads, 
-#         avg(read_file.read_length)                 as avg_read_length, 
-#         stddev(read_file.read_length)              as stddev_read_length, 
-#         max(read_file.read_length)                 as max_read_length, 
-#         min(read_file.read_length)                 as min_read_length, 
-#         max(read_file.read_length) - min(read_file.read_length) as span
-#     from 
-#         feature_type 
-#         join experiment using (feature_type_id) 
-#         join read_file_experimental_configuration using (experiment_id) 
-#         join read_file using (read_file_id) 
-#         left join idr using (experiment_id)
-#         left join alignment_read_file using (read_file_id)
-#         left join alignment on (alignment.alignment_id = alignment_read_file.alignment_id and alignment.has_duplicates=true)
-#         left join analysis on (alignment.analysis_id = analysis.analysis_id)
-#     group by 
-#         experiment.name, 
-#         feature_type.name
-# );
-
-# my $read_file_2_counts = $dbc->db_handle->selectall_hashref($sql_2, 'experiment_name');
-
-# die( Dumper($read_file_1_counts) );
 use Number::Format qw( format_number );
 
 my $de = new Number::Format(
     -thousands_sep   => ',',
     -decimal_point   => '.',
-    -int_curr_symbol => 'DEM'
 );
 
 $tt->process(
@@ -189,13 +157,13 @@ $tt->process(
         total_number_of_reads => $total_number_of_reads,
         total_file_size       => $total_file_size,
 
-        fetch_idr => sub  {
-          my $experiment = shift;
-          return $experiment->_fetch_Idr
-        },
         
         time => sub {
           return "" . localtime
+        },
+        fetch_idr => sub  {
+          my $experiment = shift;
+          return $experiment->_fetch_Idr
         },
         bytes_to_gb => sub {
           my $size_in_bytes = shift;
@@ -216,7 +184,6 @@ $tt->process(
         if ($number eq '') {
           return '-'
         }
-        #return 'foo';
         return $de->format_number($number);
       },
 
