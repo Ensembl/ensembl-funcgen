@@ -86,6 +86,13 @@ sub fetch_all_by_Epigenome_FeatureType {
   my $epigenome    = shift;
   my $feature_type = shift;
   
+  if (! defined $epigenome) {
+    throw("Not an epigenome!");
+  }
+  if (! defined $feature_type) {
+    throw("Not a feature type!");
+  }
+  
   my $constraint = join ' and ', (
     'epigenome_id    = ' . $epigenome->dbID,
     'feature_type_id = ' . $feature_type->dbID
