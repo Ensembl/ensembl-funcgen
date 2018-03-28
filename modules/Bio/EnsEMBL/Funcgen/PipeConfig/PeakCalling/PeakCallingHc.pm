@@ -46,7 +46,7 @@ sub pipeline_analyses {
         {   -logic_name => 'generate_peak_calling_report',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters => { 
-              cmd => qq( peak_calling_statistics.pl )
+              cmd => qq( generate_peak_calling_report.pl )
                 . qq( --species          #species#         )
                 . qq( --registry         #reg_conf#        )
                 . qq( --output_directory #reports_dir#/#species# )
