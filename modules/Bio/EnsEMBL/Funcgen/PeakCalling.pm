@@ -98,6 +98,8 @@ sub _constructor_parameters {
     epigenome_id    => 'epigenome_id',
     signal_alignment_id  => 'signal_alignment_id',
     control_alignment_id => 'control_alignment_id',
+    run_failed     => 'run_failed',
+    error_message  => 'error_message',
   };
 }
 
@@ -118,9 +120,12 @@ sub name                 { return shift->_generic_get_or_set('name',            
 sub feature_type_id      { return shift->_generic_get_or_set('feature_type_id',      @_); }
 sub experiment_id        { return shift->_generic_get_or_set('_experiment_id',       @_); }
 sub analysis_id          { return shift->_generic_get_or_set('analysis_id',          @_); }
-sub epigenome_id         { return shift->_generic_get_or_set('epigenome_id',          @_); }
+sub epigenome_id         { return shift->_generic_get_or_set('epigenome_id',         @_); }
 sub signal_alignment_id  { return shift->_generic_get_or_set('signal_alignment_id',  @_); }
 sub control_alignment_id { return shift->_generic_get_or_set('control_alignment_id', @_); }
+
+sub run_failed           { return shift->_generic_get_or_set('run_failed',    @_); }
+sub error_message        { return shift->_generic_get_or_set('error_message', @_); }
 
 =head2 display_label
 
