@@ -38,6 +38,15 @@ sub run {
         }, 
         BRANCH_WRITE_AS_ONE_LIST
     );
+#     foreach my $execution_plan (@$execution_plan_list) {
+#       $self->dataflow_output_id(
+#           {
+#               'species'        => $species,
+#               'execution_plan' => $execution_plan,
+#           }, 
+#           BRANCH_WRITE_EACH_EXECUTION_PLAN
+#       );
+#     }
 }
 
 sub check_alignments_with_same_name_link_to_same_experiment {
