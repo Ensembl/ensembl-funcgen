@@ -34,8 +34,24 @@ use warnings;
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 use base 'Bio::EnsEMBL::Funcgen::PipeConfig::PeakCalling::Base';
 
+sub pipeline_wide_parameters {
+  my $self = shift;
+  
+  return {
+    %{$self->SUPER::pipeline_wide_parameters},
+    pipeline_name            => $self->o('pipeline_name'),
+    tempdir                  => $self->o('tempdir'),
+    tempdir_regulatory_build => $self->o('tempdir') . '/regulatory_build',
+    data_root_dir            => $self->o('data_root_dir'),
+    reg_conf                 => $self->o('reg_conf'),
+  };
+}
+
 sub pipeline_analyses {
     my ($self) = @_;
+    
+    my $previous_version_species_suffix = '_previous_version';
+    
     return [
         {   -logic_name => 'start_regulatory_build_stable_id_mapping',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
@@ -44,42 +60,47 @@ sub pipeline_analyses {
             },
         },
         {   -logic_name => 'regulatory_build_stable_id_mapping_job_factory',
-            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::RegulatoryBuild::StableIdMappingJobFactory',
             -parameters => {
-                db_conn    => 'funcgen:#species#',
+                db_conn => 'funcgen:#species#',
+                tempdir => '#tempdir_regulatory_build#/#species#/stable_id_mapping',
             },
             -flow_into => {
-                MAIN => 'export_regulatory_features_to_bed',
+                '2->A' => [
+                    'export_regulatory_features_to_bed',
+                    'export_regulatory_features_to_bed_old',
+                  ],
+                'A->2' => [ 'compute_overlaps' ]
             },
         },
         {   -logic_name => 'export_regulatory_features_to_bed',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters => {
-              cmd => qq( 
+              cmd => q( 
                 export_regulatory_features_to_bed.pl \
-                  -url              '#db_url_funcgen#' \
+                  -registry         #reg_conf# \
                   -species          #species# \
                   -stable_id_prefix #stable_id_prefix# \
                   -outfile          #regulatory_features_bed_file#
               )
             },
             -flow_into => {
-                MAIN => 'export_regulatory_features_to_bed_old',
+                MAIN => 'sort_bed_new',
             },
         },
         {   -logic_name => 'export_regulatory_features_to_bed_old',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters => {
               cmd => qq( 
-                export_regulatory_features_to_bed.pl \
-                  -url              '#db_url_funcgen_old#' \
-                  -species          #species# \
-                  -stable_id_prefix #stable_id_prefix# \
+                export_regulatory_features_to_bed.pl \\
+                  -registry         #reg_conf# \\
+                  -species          #species#$previous_version_species_suffix \\
+                  -stable_id_prefix #stable_id_prefix# \\
                   -outfile          #regulatory_features_previous_version_bed_file#
               )
             },
             -flow_into => {
-                MAIN => 'sort_bed_new',
+                MAIN => 'sort_bed_old',
             },
         },
         {   -logic_name => 'sort_bed_new',
@@ -89,9 +110,6 @@ sub pipeline_analyses {
                 bedSort #regulatory_features_bed_file# #regulatory_features_bed_file#
               )
             },
-            -flow_into => {
-                MAIN => 'sort_bed_old',
-            },
         },
         {   -logic_name => 'sort_bed_old',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
@@ -99,9 +117,6 @@ sub pipeline_analyses {
               cmd => qq( 
                 bedSort #regulatory_features_previous_version_bed_file# #regulatory_features_previous_version_bed_file#
               )
-            },
-            -flow_into => {
-                MAIN => 'compute_overlaps',
             },
         },
         {   -logic_name => 'compute_overlaps',
@@ -118,26 +133,40 @@ sub pipeline_analyses {
         {   -logic_name => 'map_stable_ids',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters => {
-              cmd => qq( 
+              cmd => q( 
                 generate_stable_ids_from_overlaps_using_length.pl \
                     --all_overlaps               #overlaps_bed_file# \
                     --source_regulatory_features #regulatory_features_previous_version_bed_file# \
                     --target_regulatory_features #regulatory_features_bed_file# \
                     --stable_id_prefix           #stable_id_prefix# \
-                    --outfile                    #stable_id_mapping_file#
+                    --outfile                    #stable_id_mapping_file# \
+                    --mapping_report             #mapping_report#
               )
             },
+            -rc_name    => '32Gb_job',
             -flow_into => {
-                MAIN => 'remove_old_stable_ids_in_db',
+                MAIN => [
+                    'remove_old_stable_ids_in_db',
+                    'store_stable_id_mapping_statistics',
+                ],
+            },
+        },
+        {   -logic_name => 'store_stable_id_mapping_statistics',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters => {
+              cmd => q( 
+                store_stable_id_mapping_statistics.pl \
+                    --species             #species# \
+                    --registry            #reg_conf# \
+                    --mapping_report_file #mapping_report#
+              )
             },
         },
         {   -logic_name => 'remove_old_stable_ids_in_db',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters => {
               cmd => qq( 
-                set_stable_ids_to_null_in_db.pl \
-                    --url     '#db_url_funcgen#' \
-                    --species #species#
+                set_stable_ids_to_null_in_db.pl -registry #reg_conf# --species #species#
               )
             },
             -flow_into => {
@@ -148,10 +177,7 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters => {
               cmd => qq( 
-                update_stable_ids_in_db.pl \
-                    --url          '#db_url_funcgen#' \
-                    --species      #species# \
-                    --mapping_file #stable_id_mapping_file#
+                update_stable_ids_in_db.pl -registry #reg_conf# --species #species# --mapping_file #stable_id_mapping_file#
               )
             },
             -flow_into => {

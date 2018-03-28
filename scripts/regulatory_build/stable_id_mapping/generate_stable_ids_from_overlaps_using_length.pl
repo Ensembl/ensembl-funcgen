@@ -72,7 +72,7 @@ open my $report_fh, '>', $mapping_report or die("Can't write to ${mapping_report
 
 my $report = {
     mapped_stable_ids => $num_mapped_stable_ids,
-    new_stable_ids    => $num_mapped_stable_ids,
+    new_stable_ids    => $num_new_stable_ids,
     total_number_regulatory_features => $total_number_regulatory_features,
 };
 

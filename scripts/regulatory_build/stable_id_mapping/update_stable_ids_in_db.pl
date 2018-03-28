@@ -1,3 +1,5 @@
+#!/usr/bin/env perl
+
 use strict;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
@@ -9,6 +11,7 @@ my %options;
 GetOptions (
   \%options,
   "url=s",
+  "registry|r=s",
   "species=s",
   "mapping_file=s",
 );
@@ -16,8 +19,10 @@ GetOptions (
 my $url          = $options{url};
 my $species      = $options{species};
 my $mapping_file = $options{mapping_file};
+my $registry = $options{'registry'};
 
-Bio::EnsEMBL::Registry->load_registry_from_url($url, 1);
+# Bio::EnsEMBL::Registry->load_registry_from_url($url, 1);
+Bio::EnsEMBL::Registry->load_all($registry);
 
 my $db_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
 my $dbc = $db_adaptor->dbc;

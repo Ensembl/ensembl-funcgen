@@ -1,34 +1,55 @@
+#!/usr/bin/env perl
+
 use strict;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Data::Dumper;
 use Getopt::Long;
+use Bio::EnsEMBL::Registry;
+use Bio::EnsEMBL::Utils::Logger;
 
 my %options;
 
 GetOptions (
   \%options,
   "url=s",
+  "registry|r=s",
   "species=s",
   "chromosome=s",
   "stable_id_prefix=s",
   "outfile=s",
 );
 
-my $url              = $options{url};
 my $species          = $options{species};
-my $chromosome       = $options{chromosome};
 my $stable_id_prefix = $options{stable_id_prefix};
 my $outfile          = $options{outfile};
+my $registry = $options{'registry'};
 
-Bio::EnsEMBL::Registry->load_registry_from_url($url, 1);
+my $logger = Bio::EnsEMBL::Utils::Logger->new();
+$logger->init_log;
+
+$logger->info("species          = $species\n");
+$logger->info("stable_id_prefix = $stable_id_prefix\n");
+$logger->info("outfile          = $outfile\n");
+$logger->info("registry         = $registry\n");
+
+Bio::EnsEMBL::Registry->load_all($registry);
 
 my $regulatory_build_adaptor   = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'RegulatoryBuild');
 my $regulatory_feature_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'RegulatoryFeature');
 
 my $current_regulatory_build = $regulatory_build_adaptor->fetch_current_regulatory_build;
 
-open my $out_fh, '>' . $outfile;
+use File::Basename qw( dirname );
+
+my $output_directory = dirname($outfile);
+
+if (! -e $output_directory) {
+    use File::Path qw( mkpath );
+    mkpath( $output_directory );
+}
+
+open my $out_fh, '>' . $outfile or die("Can't open file ${outfile}!");
 
 my $regulatory_feature_iterator = $regulatory_feature_adaptor->fetch_Iterator;
 
@@ -54,3 +75,5 @@ sub remove_stable_id_prefix {
   $stable_id =~ s/^$stable_id_prefix//;
   return $stable_id;
 }
+
+$logger->finish_log;
