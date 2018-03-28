@@ -56,7 +56,8 @@ sub pipeline_analyses {
               ',
           },
           -flow_into => {
-              2 => { 'populate_read_file_stats' => INPUT_PLUS },
+              '2->A' => { 'populate_read_file_stats',  INPUT_PLUS },
+              'A->2' => { 'generate_read_file_report', INPUT_PLUS },
           },
       },
       {   -logic_name => 'populate_read_file_stats',
@@ -67,6 +68,15 @@ sub pipeline_analyses {
               . qq( --species         #species#        )
               . qq( --registry        #reg_conf#       )
               . qq( --read_file_id    #read_file_id#   )
+          },
+      },
+      {   -logic_name => 'generate_read_file_report',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -parameters => {
+            cmd => qq( generate_read_file_report.pl     )
+              . qq( --species             #species#     )
+              . qq( --registry            #reg_conf#    )
+              . qq( --output_directory    #reports_dir# )
           },
       },
     ]
