@@ -55,8 +55,7 @@ sub pipeline_analyses {
       {   -logic_name => 'start_segmentation',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
           -flow_into => { 
-            'MAIN->A' => 'truncate_regulatory_build_tables',
-            'A->MAIN' => 'segmentation_done'
+            MAIN => 'truncate_regulatory_build_tables',
           },
       },
       {
@@ -185,7 +184,11 @@ sub pipeline_analyses {
                 . qq( --chrom_lengths #chromosome_length_file# )
           },
           -flow_into => {
-            MAIN => 'load_build',
+            MAIN => [ 
+                'load_build', 
+                'register_segmentation_files',
+                'load_state_emissions_and_assignments',
+            ]
           },
       },
       {   -logic_name => 'load_build',
@@ -207,7 +210,10 @@ sub pipeline_analyses {
                 . qq( --base_dir #tempdir_regulatory_build#/#species#/#assembly# )
           },
           -flow_into => {
-            MAIN => 'load_state_emissions_and_assignments',
+            MAIN => [
+                'create_regulatory_build_statistics', 
+                'populate_regulatory_build_epigenome_table',
+            ]
           },
       },
       {   -logic_name => 'load_state_emissions_and_assignments',
@@ -217,7 +223,7 @@ sub pipeline_analyses {
                 qq(
                   load_state_emissions_and_assignments.pl \
                       --species          #species# \
-                      --registry         #registry# \
+                      --registry         #reg_conf# \
                       --emissions_file   #tempdir_segmentation#/#species#/learn_model/emissions_25.txt \
                       --assignments_file #tempdir_regulatory_build#/#species#/tmp/assignments.txt
                 )
@@ -233,13 +239,13 @@ sub pipeline_analyses {
                 qq(
                   generate_segmentation_report.pl \
                     --species          #species# \
-                    --registry         #registry# \
+                    --registry         #reg_conf# \
                     --output_directory #reports_dir#/#species#
                 )
           },
-          -flow_into => {
-            MAIN => 'create_regulatory_build_statistics',
-          },
+#           -flow_into => {
+#             MAIN => 'create_regulatory_build_statistics',
+#           },
       },
       {
           -logic_name  => 'create_regulatory_build_statistics',
@@ -286,6 +292,47 @@ sub pipeline_analyses {
             MAIN => 'generate_regulatory_build_report',
           },
       },
+      {
+          -logic_name  => 'populate_regulatory_build_epigenome_table',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+          -parameters => {
+              sql     => [
+                "truncate regulatory_build_epigenome;",
+                "insert into regulatory_build_epigenome (
+                    regulatory_build_id, 
+                    epigenome_id
+                 ) select 
+                      distinct regulatory_build_id, epigenome_id 
+                   from 
+                    regulatory_build 
+                    join regulatory_feature using (regulatory_build_id) 
+                    join regulatory_activity using (regulatory_feature_id);
+                ",
+              ],
+              db_conn => 'funcgen:#species#',
+          },
+#           -flow_into => {
+#             MAIN => 'generate_regulatory_build_report',
+#           },
+      },
+      {   -logic_name => 'register_segmentation_files',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -parameters => {
+            cmd => 
+                qq(
+                  register_segmentation_files.pl  \
+                      --species          #species# \
+                      --registry         #reg_conf# \
+                      --projected_segmentation_directory #tempdir_regulatory_build#/#species#/#assembly#/projected_segmentations \
+                      --db_file_directory                #data_root_dir#/#species#/#assembly#/funcgen/segmentation_file/#ensembl_release_version# \
+                      --db_file_species_assembly_dir     #data_root_dir#/#species#/#assembly#/funcgen/segmentation_file/#ensembl_release_version# \
+                      --db_file_relative_dir             /funcgen/segmentation_file/#ensembl_release_version#
+                )
+          },
+#           -flow_into => {
+#             MAIN => 'segmentation_done',
+#           },
+      },
       {   -logic_name => 'generate_regulatory_build_report',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters => {
@@ -293,36 +340,17 @@ sub pipeline_analyses {
                 qq(
                   generate_regulatory_build_report.pl  \
                       --species          #species# \
-                      --registry         #registry# \
+                      --registry         #reg_conf# \
                       --output_directory #reports_dir#/#species#
                 )
           },
-          -flow_into => {
-            MAIN => 'segmentation_done',
-          },
-      },
-
-#       {   -logic_name => 'create_regulatory_evidence',
-#           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-#           -parameters => {
-#             cmd => 
-#                 qq( create_regulatory_evidence.pl )
-#                 . qq( --dbname   #funcgen_dbname# )
-#                 . qq( --user     #funcgen_username#    )
-#                 . qq( --host     #funcgen_host#        )
-#                 . qq( --pass     #funcgen_password#    )
-#                 . qq( --port     #funcgen_port#        )
-#                 . qq( --dnadb_name #core_dbname#   )
-#                 . qq( --dnadb_host #core_host#     )
-#                 . qq( --dnadb_user #core_username# )
-#                 . qq( --dnadb_pass #core_password# )
-#                 . qq( --dnadb_port #core_port#     )
-#                 . qq( --tempdir #tempdir_regulatory_build#/#species#/#assembly# )
+#           -flow_into => {
+#             MAIN => 'segmentation_done',
 #           },
-#       },
-      {   -logic_name => 'segmentation_done',
-          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
       },
+#       {   -logic_name => 'segmentation_done',
+#           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+#       },
     ];
 }
 
