@@ -588,7 +588,7 @@ sub store {
     #
     REGULATORY_ACTIVITY:
     foreach my $current_regulatory_activity (@{$current_regulatory_feature->regulatory_activity}) {
-      my $eg_id = $current_regulatory_activity->get_Epigenome->dbID;
+      #my $eg_id = $current_regulatory_activity->get_Epigenome->dbID;
       $sth_regulatory_activity->bind_param(1,  $current_regulatory_feature->dbID,           SQL_INTEGER);
       $sth_regulatory_activity->bind_param(2,  $current_regulatory_activity->epigenome_id, SQL_INTEGER);
       $sth_regulatory_activity->bind_param(3,  $current_regulatory_activity->activity);
@@ -607,36 +607,6 @@ sub store {
       })
     );
       }
-
-#       # Store the regulatory_evidence
-#       #
-#       # Note that the regulatory build script bypasses the api for loading
-#       # regulatory attributes, so this probably never gets called.
-#       #
-#       # That is a good thing, because this code links the attributes to the
-#       # regulatory features. In the new schema (v85 and above) regulatory
-#       # attributes are linked to regulatory_feature_feature_sets.
-#       #
-#       my $regulatory_evidence = $current_regulatory_activity->get_RegulatoryEvidence;
-#
-#       foreach my $id (@{$regulatory_evidence->supporting_motif_feature_ids}) {
-#
-#         $sth_store_regulatory_evidence->bind_param(1, $current_regulatory_feature->dbID, SQL_INTEGER);
-#         $sth_store_regulatory_evidence->bind_param(2, $id,  SQL_INTEGER);
-#         $sth_store_regulatory_evidence->bind_param(3, 'motif', SQL_VARCHAR);
-#
-#         $sth_store_regulatory_evidence->execute();
-#
-#       }
-#       foreach my $id (@{$regulatory_evidence->supporting_annotated_feature_ids}) {
-#
-#         $sth_store_regulatory_evidence->bind_param(1, $current_regulatory_feature->dbID, SQL_INTEGER);
-#         $sth_store_regulatory_evidence->bind_param(2, $id,  SQL_INTEGER);
-#         $sth_store_regulatory_evidence->bind_param(3, 'annotated', SQL_VARCHAR);
-#
-#         $sth_store_regulatory_evidence->execute();
-#
-#       }
     }
   }
   return @regulatory_feature;
