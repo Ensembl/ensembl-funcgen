@@ -64,11 +64,11 @@ sub run {
   # If there is no password, set it to "". These parameters areare used on 
   # the command line.
   #
-  
-  if (! defined $core_dbc_password) {
+#   die "foo";
+  if (! defined $core_dbc_password || $core_dbc_password eq '') {
     $core_dbc_password = '""';
   }
-  if (! defined $funcgen_dbc_password) {
+  if (! defined $funcgen_dbc_password || $funcgen_dbc_password eq '') {
     $funcgen_dbc_password = '""';
   }
 
