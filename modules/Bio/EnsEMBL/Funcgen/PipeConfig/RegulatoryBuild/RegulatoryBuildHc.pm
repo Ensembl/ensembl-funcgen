@@ -40,7 +40,11 @@ sub pipeline_analyses {
         {   -logic_name => 'start_regulatory_build_hc',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into => { 
-              MAIN => 'hc_current_regulatory_build_exists',
+              MAIN => [
+                'hc_current_regulatory_build_exists',
+                'hc_regulatory_build_epigenomes_populated',
+                'hc_regulatory_activities_counts',
+              ]
             },
         },
         {
@@ -54,9 +58,9 @@ sub pipeline_analyses {
               ",
               expected_size => '1'
             },
-          -flow_into => {
-              MAIN => 'hc_regulatory_build_epigenomes_populated',
-          },
+#           -flow_into => {
+#               MAIN => 'hc_regulatory_build_epigenomes_populated',
+#           },
         },
         {
             -logic_name  => 'hc_regulatory_build_epigenomes_populated',
@@ -76,9 +80,9 @@ sub pipeline_analyses {
               ",
               expected_size => '0'
             },
-          -flow_into => {
-              MAIN => 'hc_regulatory_activities_counts',
-          },
+#           -flow_into => {
+#               MAIN => 'hc_regulatory_activities_counts',
+#           },
         },
         {
             -logic_name  => 'hc_regulatory_activities_counts',
@@ -112,13 +116,13 @@ sub pipeline_analyses {
               ",
               expected_size => '0'
             },
-          -flow_into => {
-              MAIN => 'regulatory_build_hc_done',
-          },
+#           -flow_into => {
+#               MAIN => 'regulatory_build_hc_done',
+#           },
         },
-        {   -logic_name => 'regulatory_build_hc_done',
-            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-        },
+#         {   -logic_name => 'regulatory_build_hc_done',
+#             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+#         },
     ];
 }
 
