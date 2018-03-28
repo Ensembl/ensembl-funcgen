@@ -13,8 +13,8 @@
 -- limitations under the License.
 
 /**
-@header patch_91_92_k.sql - friptable
-@desc   frip table
+@header patch_91_92_k.sql - Add table to store frip scores
+@desc   Add table to store frip scores
 */
 
 drop table if exists frip;
@@ -45,4 +45,4 @@ alter table frip add constraint peak_calling_id_unique unique (peak_calling_id);
 drop table if exists peak_calling_qc_prop_reads_in_peaks;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_k.sql|frip table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_k.sql|Add table to store frip scores');

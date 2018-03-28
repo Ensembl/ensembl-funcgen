@@ -17,7 +17,7 @@
 @desc   obsolete
 */
 
-alter table execution_plan add column time BIGINT default null after experiment_id;
+-- alter table execution_plan add column time BIGINT default null after experiment_id;
 
 -- patch identifier
 INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_v.sql|obsolete');

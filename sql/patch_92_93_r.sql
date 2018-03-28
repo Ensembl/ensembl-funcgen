@@ -13,20 +13,20 @@
 -- limitations under the License.
 
 /**
-@header patch_92_93_o.sql - Create peak_calling_statistic table
-@desc   Create peak_calling_statistic table
+@header patch_92_93_r.sql - Create regulatory_build_statistics table
+@desc   Create regulatory_build_statistics table
 */
 
-drop table if exists peak_calling_statistic;
+drop table if exists regulatory_build_statistics;
 
-CREATE TABLE peak_calling_statistic (
-  peak_calling_statistic_id int(28) unsigned  NOT NULL AUTO_INCREMENT,
-  peak_calling_id int(18)    NOT NULL DEFAULT '0',
-  total_length    int(15)    DEFAULT NULL,
-  num_peaks       bigint(14) DEFAULT NULL,
-  average_length  int(17)    DEFAULT NULL,
-  PRIMARY KEY (`peak_calling_statistic_id`)
+CREATE TABLE regulatory_build_statistics (
+  regulatory_build_statistics_id int(30) unsigned NOT NULL AUTO_INCREMENT,
+  regulatory_build_id int(22) unsigned DEFAULT NULL,
+  statistic           varchar(255) DEFAULT NULL,
+  value               double unsigned DEFAULT NULL,
+  PRIMARY KEY (regulatory_build_statistics_id),
+  UNIQUE KEY stats_uniq (statistic,regulatory_build_id)
 );
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_o.sql|Create peak_calling_statistic table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_r.sql|Create regulatory_build_statistics table');

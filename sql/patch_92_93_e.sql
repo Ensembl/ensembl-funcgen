@@ -18,14 +18,8 @@
 */
 
 alter table peak_calling add CONSTRAINT peak_calling_name_unique UNIQUE (name);
--- alter table peak_calling add    column experiment_id int(15) unsigned default null;
 alter table peak_calling change column alignment_id signal_alignment_id int(23) unsigned default NULL;
 alter table peak_calling add    column control_alignment_id int(23) unsigned default null;
-
--- alter table peak_calling drop   column epigenome_id;
--- alter table peak_calling add column epigenome_id int(10) default null;
--- update peak_calling, experiment set peak_calling.epigenome_id=experiment.epigenome_id where peak_calling.experiment_id=experiment.experiment_id;
-
 
 -- patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_e.sql|Peak_calling table changes');

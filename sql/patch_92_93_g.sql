@@ -26,7 +26,8 @@ CREATE TABLE idr (
   PRIMARY KEY (idr_id)
 );
 
-alter table idr add column failed_idr_pairs varchar(255) default null;
+-- alter table idr add column failed_idr_pairs varchar(255) default null;
+alter table idr add column failed_idr_pairs text default null;
 alter table idr change column type type enum('on biological replicates','on technical replicates', 'no_idr') NOT NULL;
 alter table idr change column max_peaks max_peaks int(11) unsigned default NULL;
 

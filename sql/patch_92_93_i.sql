@@ -13,8 +13,8 @@
 -- limitations under the License.
 
 /**
-@header patch_91_92_i.sql - fastqc table
-@desc   fastqc table
+@header patch_91_92_i.sql - Add table to store fastqc outcomes
+@desc   Add table to store fastqc outcomes
 */
 
 drop table if exists fastqc;
@@ -102,4 +102,4 @@ alter table fastqc add column error_message text;
 drop table if exists read_file_fastqc;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_i.sql|fastqc table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_i.sql|Add table to store fastqc outcomes');

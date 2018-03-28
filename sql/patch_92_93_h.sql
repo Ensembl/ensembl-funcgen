@@ -18,8 +18,10 @@
 */
 
 DROP TABLE IF EXISTS execution_plan;
+
 CREATE TABLE execution_plan (
   execution_plan_id int(18) unsigned NOT NULL AUTO_INCREMENT,
+  time BIGINT default null,
   experiment_id int(16) unsigned NOT NULL,
   execution_plan text,
   PRIMARY KEY (execution_plan_id)

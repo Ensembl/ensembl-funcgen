@@ -1,5 +1,5 @@
--- Copyright [1999-2016] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
---
+-- Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+-- Copyright [2016-2018] EMBL-European Bioinformatics Institute
 -- Licensed under the Apache License, Version 2.0 (the "License");
 -- you may not use this file except in compliance with the License.
 -- You may obtain a copy of the License at
@@ -13,13 +13,11 @@
 -- limitations under the License.
 
 /**
-@header patch_91_92_l.sql - Remove unused epigenome columns
-@desc   Remove unused epigenome columns
+@header patch_92_93_s.sql - drop segmentation_feature table
+@desc   drop segmentation_feature table
 */
 
-alter table epigenome drop column ontology_accession;
-alter table epigenome drop column ontology;
-alter table epigenome drop column tissue;
+drop table if exists segmentation_feature;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_l.sql|Remove unused epigenome columns');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_s.sql|drop segmentation_feature table');

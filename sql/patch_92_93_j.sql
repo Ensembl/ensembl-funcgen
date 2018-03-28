@@ -13,8 +13,8 @@
 -- limitations under the License.
 
 /**
-@header patch_91_92_j.sql - fastqc table
-@desc   fastqc table
+@header patch_91_92_j.sql - Add table to store phantom peak outcomes
+@desc   Add table to store phantom peak outcomes
 */
 
 drop table if exists phantom_peak;
