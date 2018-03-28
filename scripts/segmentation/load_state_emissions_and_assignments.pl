@@ -1,3 +1,5 @@
+#!/usr/bin/env perl
+
 use strict;
 use Bio::EnsEMBL::Registry;
 use v5.10;
@@ -38,11 +40,14 @@ create table segmentation_state_assignment (
     PRIMARY KEY (segmentation_state_assignment_id)
 );
 
+emissions_file=/gpfs/nobackup/ensembl/mnuhn/mnuhn/regulatory_build_pipeline_run3/temp_dir/segmentation/mus_musculus/learn_model/emissions_25.txt
+assignments_file=/gpfs/nobackup/ensembl/mnuhn/mnuhn/regulatory_build_pipeline_run3/temp_dir/regulatory_build/mus_musculus/tmp/assignments.txt
+
 perl scripts/segmentation//load_state_emissions_and_assignments.pl \
     --species          mus_musculus \
     --registry         /homes/mnuhn/work_dir_ersa/lib/ensembl-funcgen/registry.pm \
-    --emissions_file   /hps/nobackup/production/ensembl/mnuhn/regbuild_small_test_set/segmentation/mus_musculus/learn_model/emissions_25.txt \
-    --assignments_file /hps/nobackup/production/ensembl/mnuhn/regbuild_small_test_set/regulatory_build/mus_musculus/tmp/assignments.txt
+    --emissions_file   $emissions_file \
+    --assignments_file $assignments_file
 
 perl scripts/segmentation/segmentation_statistics.pl \
     --species          mus_musculus \
@@ -89,7 +94,7 @@ $dbc->do("truncate segmentation_state_emission;");
 my $segmentation_state_emission_adaptor   = $mouse_funcgen_dba->get_SegmentationStateEmissionAdaptor;
 my $segmentation_state_assignment_adaptor = $mouse_funcgen_dba->get_SegmentationStateAssignmentAdaptor;
 
-open my $fh, '<', $emissions_file || die("Can't open $emissions_file");
+open my $fh, '<', $emissions_file or die("Can't open $emissions_file");
 my $parsed_emission = parse_emission_matrix($fh);
 $fh->close;
 
