@@ -166,9 +166,10 @@ sub store {
       table_id,
       table_name,
       path,
-      file_type
+      file_type,
+      md5sum
     )
-    VALUES (?, 'segmentation_file', ?, 'BIGBED')"
+    VALUES (?, 'segmentation_file', ?, 'BIGBED', ?)"
   );
   
   my $db = $self->db();
@@ -186,8 +187,9 @@ sub store {
     $sth_store_segmentation_file->execute;
     $current_segmentation_file->dbID( $self->last_insert_id );
 
-    $sth_store_data_file->bind_param( 1, $current_segmentation_file->dbID, SQL_INTEGER);
-    $sth_store_data_file->bind_param( 2, $current_segmentation_file->file, SQL_VARCHAR);
+    $sth_store_data_file->bind_param( 1, $current_segmentation_file->dbID,   SQL_INTEGER);
+    $sth_store_data_file->bind_param( 2, $current_segmentation_file->file,   SQL_VARCHAR);
+    $sth_store_data_file->bind_param( 3, $current_segmentation_file->md5sum, SQL_VARCHAR);
     
     $sth_store_data_file->execute;
   }

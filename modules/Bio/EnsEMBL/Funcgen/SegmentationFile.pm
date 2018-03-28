@@ -53,6 +53,7 @@ sub new {
     regulatory_build
     file
     file_type
+    md5sum
   );
   
   my (
@@ -63,6 +64,7 @@ sub new {
     $regulatory_build,
     $file,
     $file_type,
+    $md5sum,
   )
     = rearrange([ @field ], @_);
 
@@ -73,6 +75,7 @@ sub new {
   $self->_regulatory_build ($regulatory_build);
   $self->file        ($file);
   $self->file_type   ($file_type);
+  $self->md5sum      ($md5sum);
 
   return $self;
 }
@@ -85,6 +88,7 @@ sub _regulatory_build { return shift->_generic_get_or_set('_regulatory_build',  
 sub file              { return shift->_generic_get_or_set('file',               @_) }
 sub file_type         { return shift->_generic_get_or_set('file_type',          @_) }
 sub adaptor           { return shift->_generic_get_or_set('adaptor',            @_) }
+sub md5sum            { return shift->_generic_get_or_set('md5sum',             @_) }
 
 sub get_Analysis {
   my $self = shift;
