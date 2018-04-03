@@ -43,6 +43,8 @@ with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 
 sub _constructor_parameters {
   return {
+    dbID           => 'dbID',
+    db             => 'db',
     experiment_id  => 'experiment_id',
     execution_plan => 'execution_plan',
     time           => 'time',
