@@ -101,7 +101,7 @@ foreach my $current_epigenome (@$all_epigenomes) {
   
 #   my $cmd = qq(cp $big_bed_file $destination);
   use File::Copy;
-  copy($big_bed_file, $destination) || die("Couldn't copy $big_bed_file to $destination!");
+  copy($big_bed_file, $destination) or die("Couldn't copy $big_bed_file to $destination!");
   
   $logger->info("Registering $registered_name\n");
   
