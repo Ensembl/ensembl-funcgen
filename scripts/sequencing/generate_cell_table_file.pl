@@ -77,6 +77,51 @@ my $sql = <<SQL
     epigenome, feature_type
 SQL
 ;
+# my $sql = <<SQL
+#   select
+#     epigenome.production_name as epigenome,
+#     feature_type.name as feature_type,
+#     signal_bam.path,
+#     control_bam.path
+#   from
+#     experiment
+#     join epigenome using (epigenome_id)
+#     join feature_type using (feature_type_id)
+#     join alignment signal_alignment on (
+#       experiment.experiment_id = signal_alignment.experiment_id 
+#       and signal_alignment.is_complete=1 
+#       and signal_alignment.has_duplicates=0
+#     )
+#     join data_file signal_bam on (signal_alignment.bam_file_id = signal_bam.data_file_id)
+#     join experiment control_experiment on (control_experiment.experiment_id = experiment.control_id)
+#     join alignment control_alignment on (
+#       control_experiment.experiment_id = control_alignment.experiment_id 
+#       and control_alignment.is_complete=1 
+#       and control_alignment.has_duplicates=0
+#     )
+#     join data_file control_bam on (control_alignment.bam_file_id = control_bam.data_file_id)
+#   where 
+#     feature_type.name in (
+#       "H3K4me1", 
+#       "H3K4me2", 
+#       "H3K4me3", 
+#       "H3K9ac", 
+#       "H3K9me3",
+#       "H3K27ac", 
+#       "H3K27me3", 
+#       "H3K36me3", 
+#       "DNase1",
+#       "CTCF"
+#     )
+#   and 
+#     epigenome.production_name in (
+#         "brain_e14_5d", 
+#         "CH12_LX"
+#      )
+#   order by 
+#     epigenome, feature_type
+# SQL
+# ;
 
 use File::Basename qw( dirname fileparse );
 use File::Path qw(make_path remove_tree);

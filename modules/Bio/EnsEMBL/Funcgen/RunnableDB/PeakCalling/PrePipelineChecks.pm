@@ -149,7 +149,7 @@ sub run {
     $sth->execute;
     my $signal_control_epigenome_mismatches = $sth->fetchall_arrayref;
     if (@$signal_control_epigenome_mismatches) {
-		push @error_msg, "Signal control mismatches!";
+        push @error_msg, "Signal control mismatches!";
     }
     
     # Check for orphans
@@ -176,8 +176,8 @@ sub run {
       chomp $set_command;
       
       if (! $set_command) {
-	push @error_msg, "$exported_variable has not been set!";
-	next ENVIRONMENT_VARIABLE;
+    push @error_msg, "$exported_variable has not been set!";
+    next ENVIRONMENT_VARIABLE;
       }
 
       #
@@ -193,7 +193,7 @@ sub run {
       my $declare_command = `$cmd`;
       
       if (! $declare_command) {
-	push @error_msg, "$exported_variable has not been exported!";
+    push @error_msg, "$exported_variable has not been exported!";
       }
     }
     
@@ -214,7 +214,7 @@ sub run {
     foreach my $current_program (@programs_expected_in_path) {
       system("which $current_program > /dev/null");
       if ($?) {
-	push @error_msg, "Can't find $current_program in path.";
+    push @error_msg, "Can't find $current_program in path.";
       }
     }
     
@@ -239,27 +239,27 @@ sub run {
       
       if ($version_string_found) {
       
-	my $version = $1;
-	
-	# If version string starts with 3.2, we are probably ok.
-	#
-	my $version_ok =
-	     $version =~ /^3\.2/
-	  || $version =~ /^3\.3/
-	  || $version =~ /^3\.4/
-	;
-	
-	if (!$version_ok) {
-	  push @error_msg, "Rscript on PATH has version $version, this may cause trouble.";
-	}	
+    my $version = $1;
+    
+    # If version string starts with 3.2, we are probably ok.
+    #
+    my $version_ok =
+         $version =~ /^3\.2/
+      || $version =~ /^3\.3/
+      || $version =~ /^3\.4/
+    ;
+    
+    if (!$version_ok) {
+      push @error_msg, "Rscript on PATH has version $version, this may cause trouble.";
+    }   
       } else {
-	push @error_msg, "Can't find version from Rscript in string: '$version_string'";
+    push @error_msg, "Can't find version from Rscript in string: '$version_string'";
       }
     }
     if (@error_msg) {
     
       my $err_string = join "\n", map { '  - ' . $_ } @error_msg;
-      
+
       my $complete_error_message 
         = 
         "\n-------------------------------------------------------------------------------\n"
@@ -268,9 +268,6 @@ sub run {
         . "\n\nPlease fix these first before continuing with the pipeline."
         . "\n-------------------------------------------------------------------------------\n";
         
-#       print $complete_error_message . "\n";
-#     return;
-
       $self->throw($complete_error_message);
     }
     $logger->info("Pre pipeline checks have completed successfully. You can now run the rest of the pipeline.\n");
