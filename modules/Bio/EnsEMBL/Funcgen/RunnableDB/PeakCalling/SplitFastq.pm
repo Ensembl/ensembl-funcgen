@@ -186,6 +186,7 @@ sub split_read_file {
   $fastq_record_processor->tags([ 1 .. @fastq_files ]);
   $fastq_record_processor->init;
 
+  PAIR_OF_READS:
   while (
       (! $all_records_read)
 #       && 
@@ -194,8 +195,30 @@ sub split_read_file {
     
     my @fastq_records = map  { $parser->parse_next_record($_) } @file_handles;
     $all_records_read = none { defined $_ } @fastq_records;
-    #$all_records_read = any { ! defined $_ } @fastq_records;
+
+    my $is_paired_end = scalar @file_handles;
+ 
+    my @read_names = map {
+        
+        my $read_name = $_->[0];
+        
+        # @SOLEXA2_0007:7:1:0:17#0/1
+        #
+        my $name_found = $_->[0] =~ /^(\@.+?)[ |\/]/;
+        
+        if ($name_found) {
+            $read_name = $1;
+        }
+        
+        $read_name;
     
+    } @fastq_records;
+
+    my $reads_match = uniq(@read_names) == 1;
+    
+    if (! $reads_match) {
+        next PAIR_OF_READS;
+    }
     $fastq_record_processor->process(@fastq_records);
 #     $count++;
   }
