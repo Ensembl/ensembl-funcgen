@@ -97,7 +97,7 @@ sub run {
         my $current_file_number      = $param->{current_file_number};
         my $current_temp_dir         = $param->{current_temp_dir};
         
-        $self->say_with_header("Created fastq chunk $absolute_chunk_file_name");
+        $self->say_with_header("Created fastq chunk " . Dumper($absolute_chunk_file_name));
         
         my $chunk_bam_file = $current_temp_dir . '/' . $alignment_name . '_' . $directory_name . '_' . $current_file_number . '.bam';
         
@@ -173,13 +173,10 @@ sub split_read_file {
     );
   }
   
-#   my $max   = 500;
-#   my $count =   0;
-
   my @cmds          = map { "zcat $_ |"                                     } @fastq_files;
   my @file_handles  = map { open my $fh, $_ or die("Can't execute $_"); $fh } @cmds;
 
-  use List::Util qw( none any );
+  use List::Util qw( none any uniq );
 
   my $all_records_read = undef;
 
@@ -220,13 +217,10 @@ sub split_read_file {
         next PAIR_OF_READS;
     }
     $fastq_record_processor->process(@fastq_records);
-#     $count++;
   }
-  map { $_->close || die "Can't close file!" } @file_handles;
-  #map { $_->close } @file_handles;
+  map { $_->close or die "Can't close file!" } @file_handles;
   $fastq_record_processor->flush;
   return;
 }
-
 
 1;
