@@ -12,19 +12,16 @@ sub pipeline_analyses {
         {   -logic_name  => 'start_chip_seq_analysis',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
-               MAIN      => 'pre_pipeline_checks',
+               'MAIN->A' => 'pre_pipeline_checks',
+               'A->MAIN' => 'truncate_peak_calling_tables',
             },
         },
         {
           -logic_name => 'pre_pipeline_checks',
           -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::PrePipelineChecks',
-            -flow_into   => {
-               'MAIN->A' => 'fetch_experiments_to_process',
-               'A->MAIN' => 'check_execution_plans',
-            },
-            -flow_into => {
-               MAIN => 'truncate_peak_calling_tables',
-            },
+#             -flow_into => {
+#                MAIN => 'truncate_peak_calling_tables',
+#             },
         },
         {
             -logic_name  => 'truncate_peak_calling_tables',
