@@ -65,8 +65,17 @@ sub run {
 
       my $read_file_objects = [ map { $read_file_adaptor->fetch_by_name($_) } @$read_file_names ];
       
-      if ($read_file_objects->[0]->file_size != $read_file_objects->[1]->file_size) {
-        die("The read files have different lengths!");
+      if ($read_file_objects->[0]->number_of_reads != $read_file_objects->[1]->number_of_reads) {
+
+        my $complete_error_message 
+            = 
+            "The read files " 
+            . '(' . $read_file_objects->[0]->name . ', ' . $read_file_objects->[1]->name . ')' 
+            . " have different lengths! "
+            . '(' . $read_file_objects->[0]->number_of_reads . ' vs ' . $read_file_objects->[1]->number_of_reads . ')' 
+            ;
+        $self->throw($complete_error_message);
+        
       }
     }
     
@@ -153,14 +162,14 @@ sub split_read_file {
   
   use List::Util qw( uniq );
   my $same_number_of_reads_in_every_file 
-    = 1 == uniq map { $_->file_size } @read_file_objects;
+    = 1 == uniq map { $_->number_of_reads } @read_file_objects;
   
   if (! $same_number_of_reads_in_every_file) {
     confess(
       "These fastq files are paired, but don't have the same number of reads!\n"
       . Dumper(\@fastq_files)
       . "\n"
-      . ( join ' vs ', map { $_->file_size } @read_file_objects )
+      . ( join ' vs ', map { $_->number_of_reads } @read_file_objects )
     );
   }
   
