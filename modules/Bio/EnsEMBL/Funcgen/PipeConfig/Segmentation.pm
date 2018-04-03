@@ -92,6 +92,17 @@ sub pipeline_analyses {
               . qq( --registry #reg_conf#        )
           },
           -flow_into => {
+            MAIN     => 'make_segmentation_dir',
+          },
+      },
+      {   -logic_name => 'make_segmentation_dir',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -parameters => {
+              cmd => 
+                  qq( rm    -rf #tempdir_segmentation#/#species# ; )
+                . qq( mkdir -p  #tempdir_segmentation#/#species#   ),
+          },
+          -flow_into => { 
             MAIN     => 'generate_cell_table_file',
           },
       },
@@ -99,9 +110,9 @@ sub pipeline_analyses {
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters => {
             cmd => qq( generate_cell_table_file.pl      )
-              . qq( --species         #species#         )
-              . qq( --registry        #reg_conf#        )
-              . qq( --cell_table_file #tempdir_segmentation#/#species#/celltable.txt )
+                 . qq(   --species         #species#    )
+                 . qq(   --registry        #reg_conf#   )
+                 . qq(   --cell_table_file #tempdir_segmentation#/#species#/celltable.txt )
           },
           -flow_into => {
             MAIN     => 'binarize',
@@ -111,13 +122,13 @@ sub pipeline_analyses {
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -rc_name    => 'binarization',
           -parameters => { 
-            cmd => qq(java -Xmx14500m )
-              . qq( -jar #ChromHMM# )
-              . qq( BinarizeBam                       )
-              . qq( #chromosome_length_file#          )
-              . qq( #data_root_dir_species_assembly#  )
-              . qq( #tempdir_segmentation#/#species#/celltable.txt )
-              . qq( #binarized_bam_dir#               ),
+            cmd => qq( java -Xmx14500m                     )
+                 . qq(   -jar #ChromHMM#                   )
+                 . qq(   BinarizeBam                       )
+                 . qq(   #chromosome_length_file#          )
+                 . qq(   #data_root_dir_species_assembly#  )
+                 . qq(   #tempdir_segmentation#/#species#/celltable.txt )
+                 . qq(   #binarized_bam_dir#               ),
           },
           -flow_into => {
             MAIN     => 'generate_segmentation_parameter_file',
@@ -155,7 +166,9 @@ sub pipeline_analyses {
       {   -logic_name => 'make_regbuild_dir',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters => {
-              cmd => qq(mkdir -p #tempdir_regulatory_build#/#species#/#assembly#),
+              cmd => 
+                  qq(rm    -rf #tempdir_regulatory_build#/#species#/#assembly# ; )
+                . qq(mkdir -p  #tempdir_regulatory_build#/#species#/#assembly#   ),
           },
           -flow_into => { 
             MAIN     => 'build_regulatory_features',
@@ -186,7 +199,6 @@ sub pipeline_analyses {
           -flow_into => {
             MAIN => [ 
                 'load_build', 
-                'register_segmentation_files',
                 'load_state_emissions_and_assignments',
             ]
           },
@@ -213,6 +225,7 @@ sub pipeline_analyses {
             MAIN => [
                 'create_regulatory_build_statistics', 
                 'populate_regulatory_build_epigenome_table',
+#                 'register_segmentation_files',
             ]
           },
       },
@@ -220,7 +233,7 @@ sub pipeline_analyses {
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters => {
             cmd => 
-                qq(
+                q(
                   load_state_emissions_and_assignments.pl \
                       --species          #species# \
                       --registry         #reg_conf# \
@@ -236,7 +249,7 @@ sub pipeline_analyses {
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters => {
             cmd => 
-                qq(
+                q(
                   generate_segmentation_report.pl \
                     --species          #species# \
                     --registry         #reg_conf# \
@@ -285,6 +298,110 @@ sub pipeline_analyses {
                     feature_type.name, 
                     regulatory_build_id
                 )",
+                "
+                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                    select 
+                    regulatory_build_id, 
+                    'number_regulatory_features', 
+                    count(regulatory_feature_id)
+                    from 
+                    regulatory_feature 
+                    group by regulatory_build_id
+                );
+                ",
+                "
+                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                    select regulatory_build_id, 'number_promoter', count(regulatory_feature_id) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Promoter" group by feature_type.name, regulatory_build_id
+                );
+                ",
+                "
+                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                    select regulatory_build_id, 'number_enhancer', count(regulatory_feature_id) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Enhancer" group by feature_type.name, regulatory_build_id
+                );
+                ",
+                "
+                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                    select regulatory_build_id, 'number_promoter_flanking_region', count(regulatory_feature_id) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Promoter Flanking Region" group by feature_type.name, regulatory_build_id
+                );
+                ",
+                "
+                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                    select regulatory_build_id, 'number_transcription_factor_binding_site', count(regulatory_feature_id) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "TF binding site" group by feature_type.name, regulatory_build_id
+                );
+                ",
+                "
+                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                    select regulatory_build_id, 'number_open_chromatin', count(regulatory_feature_id) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Open chromatin" group by feature_type.name, regulatory_build_id
+                );
+                ",
+                "
+                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                    select regulatory_build_id, 'number_ctcf_binding_site', count(regulatory_feature_id) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "CTCF Binding Site" group by feature_type.name, regulatory_build_id
+                );
+                ",
+
+                "
+                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                    select regulatory_build_id, 'average_length_promoter', AVG( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Promoter" group by feature_type.name, regulatory_build_id
+                );
+                ",
+                "
+                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                    select regulatory_build_id, 'average_length_enhancer', AVG( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Enhancer" group by feature_type.name, regulatory_build_id
+                );
+                ",
+                "
+                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                    select regulatory_build_id, 'average_length_promoter_flanking_region', AVG( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Promoter Flanking Region" group by feature_type.name, regulatory_build_id
+                );
+                ",
+                "
+                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                    select regulatory_build_id, 'average_length_transcription_factor_binding_site', AVG( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "TF binding site" group by feature_type.name, regulatory_build_id
+                );
+                ",
+                "
+                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                    select regulatory_build_id, 'average_length_open_chromatin', AVG( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Open chromatin" group by feature_type.name, regulatory_build_id
+                );
+                ",
+                "
+                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                    select regulatory_build_id, 'average_length_ctcf_binding_site', AVG( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "CTCF Binding Site" group by feature_type.name, regulatory_build_id
+                );
+                ",
+
+                "
+                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                    select regulatory_build_id, 'sum_length_promoter', SUM( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Promoter" group by feature_type.name, regulatory_build_id
+                );
+                ",
+                "
+                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                    select regulatory_build_id, 'sum_length_enhancer', SUM( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Enhancer" group by feature_type.name, regulatory_build_id
+                );
+                ",
+                "
+                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                    select regulatory_build_id, 'sum_length_promoter_flanking_region', SUM( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Promoter Flanking Region" group by feature_type.name, regulatory_build_id
+                );
+                ",
+                "
+                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                    select regulatory_build_id, 'sum_length_transcription_factor_binding_site', SUM( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "TF binding site" group by feature_type.name, regulatory_build_id
+                );
+                ",
+                "
+                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                    select regulatory_build_id, 'sum_length_open_chromatin', SUM( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Open chromatin" group by feature_type.name, regulatory_build_id
+                );
+                ",
+                "
+                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                    select regulatory_build_id, 'sum_length_ctcf_binding_site', SUM( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "CTCF Binding Site" group by feature_type.name, regulatory_build_id
+                );
+                "
+
               ],
               db_conn => 'funcgen:#species#',
           },
@@ -311,28 +428,27 @@ sub pipeline_analyses {
               ],
               db_conn => 'funcgen:#species#',
           },
-#           -flow_into => {
-#             MAIN => 'generate_regulatory_build_report',
-#           },
+          -flow_into => {
+            MAIN => 'register_segmentation_files',
+          },
       },
       {   -logic_name => 'register_segmentation_files',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters => {
             cmd => 
-                qq(
+                q(
                   register_segmentation_files.pl  \
                       --species          #species# \
                       --registry         #reg_conf# \
                       --projected_segmentation_directory #tempdir_regulatory_build#/#species#/#assembly#/projected_segmentations \
-                      --db_file_directory                #data_root_dir#/#species#/#assembly#/funcgen/segmentation_file/#ensembl_release_version# \
                       --db_file_species_assembly_dir     #data_root_dir#/#species#/#assembly#/funcgen/segmentation_file/#ensembl_release_version# \
                       --db_file_relative_dir             /funcgen/segmentation_file/#ensembl_release_version#
                 )
           },
 #           -flow_into => {
-#             MAIN => 'segmentation_done',
+#             MAIN => '',
 #           },
-      },
+#       },
       {   -logic_name => 'generate_regulatory_build_report',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters => {
