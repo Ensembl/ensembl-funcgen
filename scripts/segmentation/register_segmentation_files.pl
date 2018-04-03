@@ -64,6 +64,11 @@ my $analysis_adaptor          = $funcgen_dba->get_AnalysisAdaptor;
 my $current_regulatory_build = $regulatory_build_adaptor->fetch_current_regulatory_build;
 my $all_epigenomes = $current_regulatory_build->get_all_Epigenomes;
 
+if (!@$all_epigenomes) {
+    $logger->error("No epigenomes found in the regulatory build!\n");
+    die;
+}
+
 use File::Path qw( make_path );
 make_path($db_file_species_assembly_dir);
 
