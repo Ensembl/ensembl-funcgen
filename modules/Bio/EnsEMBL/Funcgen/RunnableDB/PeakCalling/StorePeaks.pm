@@ -8,9 +8,11 @@ use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
 sub run {
 
   my $self = shift;
-  my $plan               = $self->param_required('execution_plan');
-  my $species            = $self->param_required('species');
-  my $peaks_to_load_file = $self->param_required('peaks_to_load_file');
+  my $plan                   = $self->param_required('execution_plan');
+  my $species                = $self->param_required('species');
+  my $peaks_to_load_file     = $self->param_required('peaks_to_load_file');
+  my $peak_calling_succeeded = $self->param_required('peak_calling_succeeded');
+  my $error_message          = $self->param_required('error_message');
   
   use Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanUtils qw (
         lock_execution_plan
@@ -83,6 +85,16 @@ sub run {
     );
     $peak_calling_adaptor->store($peak_calling);
   }
+  
+  if (!$peak_calling_succeeded) {
+    
+    $peak_calling->run_failed(! $peak_calling_succeeded);
+    $peak_calling->error_message($error_message);
+    $peak_calling_adaptor->update($peak_calling);
+    return;
+    
+  }
+  
   my $store_peak = sub {
     my $peak_hash = shift;
     
@@ -129,6 +141,7 @@ sub run {
     data_dumper_file => $peaks_to_load_file,
     call_back        => $store_peak,
   });
+  return;
 }
 
 1;

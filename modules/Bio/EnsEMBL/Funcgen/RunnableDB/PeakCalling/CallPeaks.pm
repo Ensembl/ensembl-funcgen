@@ -181,39 +181,55 @@ sub run {
     );
   }
 
-  _run_peak_caller(
-      -peak_caller => $peak_runnable, 
-      -debug       => $self->debug,
-      @max_peaks
-  );
-  
-  my $params = {
-    -file_type      => $file_type,
-    -processor_ref  => $store_Peak,
-    -processor_args => [
-      undef,
-      undef,
-      undef
-    ]
+  my $peak_calling_succeeded = undef;
+  my $error_message;
+
+  my $TIMEOUT_IN_SECONDS = 5 * 3600;
+  eval {
+      local $SIG{ALRM} = sub { die "alarm\n" };
+      alarm($TIMEOUT_IN_SECONDS);
+
+      _run_peak_caller(
+          -peak_caller => $peak_runnable, 
+          -debug       => $self->debug,
+          @max_peaks
+      );
+      $peak_calling_succeeded = 1;
+      alarm(0);
+      
+      my $params = {
+        -file_type      => $file_type,
+        -processor_ref  => $store_Peak,
+        -processor_args => [
+          undef,
+          undef,
+          undef
+        ]
+      };
+      $peak_runnable->process_features($params);
+      $peak_out->close;
+      
+      if (! -e $peaks_to_load_file) {
+        $self->warning("The file $peaks_to_load_file was not created!");
+        sleep(20);
+        $self->throw("Can't continue without the peaks.");
+      }
   };
-  $peak_runnable->process_features($params);
-  
-  $peak_out->close;
-  
-  if (! -e $peaks_to_load_file) {
-#     use Bio::EnsEMBL::Utils::Exception qw( throw );
-#     throw("The file $peaks_to_load_file was not created!");
-    $self->warning("The file $peaks_to_load_file was not created!");
-    sleep(20);
-    $self->throw("Can't continue without the peaks.");
+  if ($@) {
+      # handle timeout condition.
+      
+      $peak_calling_succeeded = 0;
+      $error_message = "Peak calling job " . $self->input_job->dbID . " timed out after $TIMEOUT_IN_SECONDS seconds.";
+      $self->warning($error_message);
   }
-  
-  
+
   $self->dataflow_output_id(
     {
-      'species'            => $species,
-      'peaks_to_load_file' => $peaks_to_load_file,
-      'execution_plan'     => $plan,
+      'species'                => $species,
+      'peaks_to_load_file'     => $peaks_to_load_file,
+      'execution_plan'         => $plan,
+      'peak_calling_succeeded' => $peak_calling_succeeded,
+      'error_message'          => $error_message
     }, 
     BRANCH_STORE_PEAKS
   );
