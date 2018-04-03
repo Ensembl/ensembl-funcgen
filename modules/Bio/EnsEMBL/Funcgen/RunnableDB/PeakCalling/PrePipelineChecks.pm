@@ -259,14 +259,19 @@ sub run {
     if (@error_msg) {
     
       my $err_string = join "\n", map { '  - ' . $_ } @error_msg;
-    return;
-      $self->throw(
-	"\n-------------------------------------------------------------------------------\n"
-	. "Prepipeline checks have failed with the following errors:\n\n"
-	. $err_string
-	. "\n\nPlease fix these first before continuing with the pipeline."
-	. "\n-------------------------------------------------------------------------------\n"
-      );
+      
+      my $complete_error_message 
+        = 
+        "\n-------------------------------------------------------------------------------\n"
+        . "Prepipeline checks have failed with the following errors:\n\n"
+        . $err_string
+        . "\n\nPlease fix these first before continuing with the pipeline."
+        . "\n-------------------------------------------------------------------------------\n";
+        
+#       print $complete_error_message . "\n";
+#     return;
+
+      $self->throw($complete_error_message);
     }
     $logger->info("Pre pipeline checks have completed successfully. You can now run the rest of the pipeline.\n");
 }
