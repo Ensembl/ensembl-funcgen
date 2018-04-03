@@ -126,6 +126,12 @@ sub run {
   if (! -e $bam_file) {
     $self->throw("The bam file $bam_file should have been created, but it doesn't exist!");
   }
+  
+  my $bam_file_content = `samtools view $bam_file | head`;
+  
+  if ($bam_file_content eq "") {
+    $self->throw("The bam file $bam_file is empty!");
+  }
 
   # Give file system time to sync
   sleep(20);
