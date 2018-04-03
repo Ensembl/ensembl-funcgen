@@ -36,7 +36,8 @@ sub pipeline_analyses {
       {   -logic_name  => 'start_populate_read_file_stats',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
           -flow_into => {
-              MAIN => 'find_read_file_entries',
+              'MAIN->A' => 'find_read_file_entries',
+              'A->MAIN' => 'generate_read_file_report',
           },
       },
       {   -logic_name  => 'find_read_file_entries',
@@ -56,8 +57,7 @@ sub pipeline_analyses {
               ',
           },
           -flow_into => {
-              '2->A' => { 'populate_read_file_stats',  INPUT_PLUS },
-              'A->2' => { 'generate_read_file_report', INPUT_PLUS },
+              2 => { 'populate_read_file_stats',  INPUT_PLUS },
           },
       },
       {   -logic_name => 'populate_read_file_stats',
