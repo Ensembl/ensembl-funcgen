@@ -113,7 +113,7 @@ sub run {
     use_bash_pipefail => 1
   };
 
-  $self->say_with_header($align_commands);
+  $self->say_with_header(Dumper($align_commands));
   
   foreach my $cmd (@$align_commands) {
   
