@@ -47,6 +47,7 @@ sub _constructor_parameters {
     db       => 'db',
 
     state    => 'state',
+    segmentation => 'segmentation',
     CTCF     => 'CTCF',
     DNase1   => 'DNase1',
     H3K27ac  => 'H3K27ac',
@@ -63,7 +64,8 @@ sub _constructor_parameters {
 sub dbID     { return shift->_generic_get_or_set('dbID',     @_); }
 sub db       { return shift->_generic_get_or_set('db',       @_); }
 
-sub state    { return shift->_generic_get_or_set('state',    @_); }
+sub state        { return shift->_generic_get_or_set('state',    @_); }
+sub segmentation { return shift->_generic_get_or_set('segmentation',    @_); }
 sub CTCF     { return shift->_generic_get_or_set('CTCF',     @_); }
 sub DNase1   { return shift->_generic_get_or_set('DNase1',   @_); }
 sub H3K27ac  { return shift->_generic_get_or_set('H3K27ac',  @_); }
@@ -81,11 +83,12 @@ sub fetch_segmentation_state_assignment {
 
     my $segmentation_state_assignment_adaptor = $self->db->db->get_SegmentationStateAssignmentAdaptor;
     if (! defined $segmentation_state_assignment_adaptor) {
-    throw("Couldn't get an SegmentationStateAssignmentAdaptor!");
+        throw("Couldn't get an SegmentationStateAssignmentAdaptor!");
     }
     my $segmentation_state_assignment = $segmentation_state_assignment_adaptor
-    ->fetch_by_state(
-        $self->state
+    ->fetch_by_state_segmentation(
+        $self->state,
+        $self->segmentation,
     );
     return $segmentation_state_assignment;
 
