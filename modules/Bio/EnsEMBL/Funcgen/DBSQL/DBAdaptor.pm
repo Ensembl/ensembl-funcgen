@@ -221,7 +221,7 @@ sub get_available_adaptors{
         'RegulatoryFeature'         => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor',
         'RegulatoryActivity'        => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryActivityAdaptor',
         'RegulatoryEvidenceLink'    => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryEvidenceLinkAdaptor',
-        'RegulatoryBuildStatistics' => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildStatisticsAdaptor',
+        'RegulatoryBuildStatistic'  => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildStatisticAdaptor',
         
         'ReadFileExperimentalConfiguration' => 'Bio::EnsEMBL::Funcgen::DBSQL::ReadFileExperimentalConfigurationAdaptor',
         'ReadFile'                          => 'Bio::EnsEMBL::Funcgen::DBSQL::ReadFileAdaptor',

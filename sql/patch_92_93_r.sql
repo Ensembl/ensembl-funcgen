@@ -17,9 +17,9 @@
 @desc   Create regulatory_build_statistics table
 */
 
-drop table if exists regulatory_build_statistics;
+drop table if exists regulatory_build_statistic;
 
-CREATE TABLE regulatory_build_statistics (
+CREATE TABLE regulatory_build_statistic (
   regulatory_build_statistics_id int(30) unsigned NOT NULL AUTO_INCREMENT,
   regulatory_build_id int(22) unsigned DEFAULT NULL,
   statistic           varchar(255) DEFAULT NULL,
