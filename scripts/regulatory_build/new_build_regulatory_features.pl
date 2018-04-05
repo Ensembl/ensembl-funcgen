@@ -726,7 +726,10 @@ sub store_data_in_file {
   $Data::Dumper::Purity = 1;
   my $serialised = Dumper($data);
   
-  open my $fh, '>', $file or confess("Can't open file for writing $file");
+  # Using '>>' so the files are not overwritten when using multiple 
+  # segmentations.
+  #
+  open my $fh, '>>', $file or confess("Can't open file for writing $file");
   $fh->print($serialised);
   $fh->close;
   return;
