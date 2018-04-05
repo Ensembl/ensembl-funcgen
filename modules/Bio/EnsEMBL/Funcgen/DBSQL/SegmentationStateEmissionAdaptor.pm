@@ -45,4 +45,17 @@ sub _tables {
   return ['segmentation_state_emission', 'se']
 }
 
+sub fetch_by_state_segmentation {
+
+    my $self  = shift;
+    my $state = shift;
+    my $segmentation = shift;
+    
+    my $constraint = join ' and ', (
+        'state        = ' . '"' . $state . '"',
+        'segmentation = ' . '"' . $segmentation . '"',
+    );
+    return $self->fetch_single_object($constraint);
+}
+
 1;
