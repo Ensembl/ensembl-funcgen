@@ -14,7 +14,7 @@
 -- limitations under the License.
 
 /**
-@header patch_92_93_b.sql - Modify index name_exp_idx from table read_file_experimental_configuration
+@header patch_92_93_w.sql - Modify index name_exp_idx from table read_file_experimental_configuration
 @desc   Modify index name_exp_idx from table read_file_experimental_configuration
 */
 
@@ -22,4 +22,4 @@ ALTER table read_file_experimental_configuration DROP INDEX name_exp_idx;
 ALTER table read_file_experimental_configuration ADD UNIQUE INDEX name_exp_idx (experiment_id, biological_replicate, technical_replicate, paired_end_tag, multiple);
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_b.sql|Modify index name_exp_idx from table read_file_experimental_configuration');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_w.sql|Modify index name_exp_idx from table read_file_experimental_configuration');

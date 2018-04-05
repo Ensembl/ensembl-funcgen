@@ -1436,7 +1436,7 @@ INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 -- Update and remove these for each release to avoid erroneous patching
 INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'schema_version', '93');
 INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_92_93_a.sql|schema_version');
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_92_93_b.sql|Modify index name_exp_idx from table read_file_experimental_configuration');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (null, 'patch','patch_92_93_w.sql|Modify index name_exp_idx from table read_file_experimental_configuration');
 
 /**
 @table meta_coord
