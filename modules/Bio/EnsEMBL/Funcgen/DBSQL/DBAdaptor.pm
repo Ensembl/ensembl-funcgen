@@ -218,6 +218,7 @@ sub get_available_adaptors{
         'ProbeSequence'                 => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeSequenceAdaptor',
         
         'ProbeMapping'          => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeMappingAdaptor',
+        'ProbeMappingStatistic' => 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeMappingStatisticAdaptor',
 
         'RegulatoryBuild'           => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildAdaptor',
         'RegulatoryFeature'         => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor',
