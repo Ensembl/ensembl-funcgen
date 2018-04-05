@@ -21,17 +21,18 @@ drop table if exists segmentation_state_emission;
 
 CREATE TABLE segmentation_state_emission (
   segmentation_state_emission_id int(27) unsigned NOT NULL AUTO_INCREMENT,
-  state    int(7) NOT NULL,
-  CTCF     double NOT NULL,
-  DNase1   double NOT NULL,
-  H3K27ac  double NOT NULL,
-  H3K27me3 double NOT NULL,
-  H3K36me3 double NOT NULL,
-  H3K4me1  double NOT NULL,
-  H3K4me2  double NOT NULL,
-  H3K4me3  double NOT NULL,
-  H3K9ac   double NOT NULL,
-  H3K9me3  double NOT NULL,
+  segmentation varchar(255) NOT NULL,
+  state    int(7) DEFAULT NULL,
+  CTCF     double DEFAULT NULL,
+  DNase1   double DEFAULT NULL,
+  H3K27ac  double DEFAULT NULL,
+  H3K27me3 double DEFAULT NULL,
+  H3K36me3 double DEFAULT NULL,
+  H3K4me1  double DEFAULT NULL,
+  H3K4me2  double DEFAULT NULL,
+  H3K4me3  double DEFAULT NULL,
+  H3K9ac   double DEFAULT NULL,
+  H3K9me3  double DEFAULT NULL,
   PRIMARY KEY (segmentation_state_emission_id)
 );
 
