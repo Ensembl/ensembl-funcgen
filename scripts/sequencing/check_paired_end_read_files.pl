@@ -56,7 +56,7 @@ use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
 use Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanUtils qw (
     lock_execution_plan
 );
-
+use Carp;
 use Bio::EnsEMBL::Utils::Logger;
 
 my $registry;
@@ -112,7 +112,12 @@ print (Dumper($all_paired_end_read_files));
 
 my $read_file_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'readfile');
 
+READ_FILE:
 foreach my $all_paired_end_read_file (@$all_paired_end_read_files) {
+
+    if ($all_paired_end_read_file->{type} eq SINGLE_END) {
+        next READ_FILE;
+    }
 
     my $read_file_name_1 = $all_paired_end_read_file->{1};
     my $read_file_name_2 = $all_paired_end_read_file->{2};
@@ -212,10 +217,19 @@ sub check_number_of_reads_identical {
   
   if (! $same_number_of_reads_in_every_file) {
     confess(
-      "These fastq files are paired, but don't have the same number of reads!\n"
-      . Dumper(\@read_file_objects)
+      "These read files are paired, but don't have the same number of reads:\n"
       . "\n"
-      . ( join ' vs ', map { $_->number_of_reads } @read_file_objects )
+      . ( join 
+            "\n    and\n", 
+            map { 
+                "    read file name: "  . $_->name            . ", "
+                  . "number of reads: " . $_->number_of_reads . ", "
+                  . "file size: "       . $_->file_size       . ", "
+                  . "file: "            . $_->file
+            } @read_file_objects 
+        )
+      . "\n"
+      . "\n"
     );
   }
 }
