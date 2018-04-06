@@ -62,12 +62,14 @@ use Getopt::Long;
 my $species;
 my $registry;
 my $emissions_file;
+my $segmentation;
 my $assignments_file;
 
 GetOptions (
    'species=s'          => \$species,
    'registry=s'         => \$registry,
    'emissions_file=s'   => \$emissions_file,
+   'segmentation=s'     => \$segmentation,
    'assignments_file=s' => \$assignments_file,
 );
 
@@ -79,20 +81,21 @@ $logger->init_log;
 $logger->info("registry          = " . $registry         . "\n");
 $logger->info("species           = " . $species          . "\n");
 $logger->info("emissions_file    = " . $emissions_file   . "\n");
+$logger->info("segmentation      = " . $segmentation     . "\n");
 $logger->info("assignments_file  = " . $assignments_file . "\n");
 
 use Bio::EnsEMBL::Registry;
 Bio::EnsEMBL::Registry->load_all($registry);
 
-my $mouse_funcgen_dba = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
+my $funcgen_dba = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
 
-my $dbc = $mouse_funcgen_dba->dbc;
+my $dbc = $funcgen_dba->dbc;
 
-$dbc->do("truncate segmentation_state_assignment;");
-$dbc->do("truncate segmentation_state_emission;");
+# $dbc->do("truncate segmentation_state_assignment;");
+# $dbc->do("truncate segmentation_state_emission;");
 
-my $segmentation_state_emission_adaptor   = $mouse_funcgen_dba->get_SegmentationStateEmissionAdaptor;
-my $segmentation_state_assignment_adaptor = $mouse_funcgen_dba->get_SegmentationStateAssignmentAdaptor;
+my $segmentation_state_emission_adaptor   = $funcgen_dba->get_SegmentationStateEmissionAdaptor;
+my $segmentation_state_assignment_adaptor = $funcgen_dba->get_SegmentationStateAssignmentAdaptor;
 
 open my $fh, '<', $emissions_file or die("Can't open $emissions_file");
 my $parsed_emission = parse_emission_matrix($fh);
@@ -103,20 +106,25 @@ $fh->close;
 foreach my $current_emission (sort { $a->{state} <=> $b->{state} } @$parsed_emission) {
 
     my $segmentation_state_emisison = Bio::EnsEMBL::Funcgen::SegmentationStateEmission->new(
-        -state    => $current_emission->{'state'},
-        -CTCF     => $current_emission->{'CTCF'},
-        -DNase1   => $current_emission->{'DNase1'},
-        -H3K27ac  => $current_emission->{'H3K27ac'},
-        -H3K27me3 => $current_emission->{'H3K27me3'},
-        -H3K36me3 => $current_emission->{'H3K36me3'},
-        -H3K4me1  => $current_emission->{'H3K4me1'},
-        -H3K4me2  => $current_emission->{'H3K4me2'},
-        -H3K4me3  => $current_emission->{'H3K4me3'},
-        -H3K9ac   => $current_emission->{'H3K9ac'},
-        -H3K9me3  => $current_emission->{'H3K9me3'},
+        -state        => $current_emission->{'state'},
+        -segmentation => $segmentation,
+        -CTCF         => $current_emission->{'CTCF'},
+        -DNase1       => $current_emission->{'DNase1'},
+        -H3K27ac      => $current_emission->{'H3K27ac'},
+        -H3K27me3     => $current_emission->{'H3K27me3'},
+        -H3K36me3     => $current_emission->{'H3K36me3'},
+        -H3K4me1      => $current_emission->{'H3K4me1'},
+        -H3K4me2      => $current_emission->{'H3K4me2'},
+        -H3K4me3      => $current_emission->{'H3K4me3'},
+        -H3K9ac       => $current_emission->{'H3K9ac'},
+        -H3K9me3      => $current_emission->{'H3K9me3'},
     );
     $segmentation_state_emission_adaptor->store($segmentation_state_emisison);
 
+}
+
+if (! defined $assignments_file) {
+    exit(0);
 }
 
 open $fh, '<', $assignments_file || die("Can't open $assignments_file");
