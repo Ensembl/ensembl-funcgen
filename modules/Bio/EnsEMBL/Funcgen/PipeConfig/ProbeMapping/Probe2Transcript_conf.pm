@@ -54,8 +54,6 @@ sub pipeline_analyses {
                 "truncate probe_transcript;",
                 "truncate probe_set_transcript;",
                 "truncate probe_feature_transcript;",
-                "truncate unmapped_object;",
-                "truncate unmapped_reason;",
               ],
               db_conn => 'funcgen:#species#',
           },
