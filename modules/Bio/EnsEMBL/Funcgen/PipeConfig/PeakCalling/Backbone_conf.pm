@@ -85,8 +85,24 @@ sub pipeline_analyses {
         {   -logic_name  => 'check_execution_plans',
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::CheckExecutionPlans',
             -flow_into   => {
-               '2->A' => 'multiplex_execution_plan_jobs',
-               'A->2' => 'start_peak_calling',
+               2 => 'backbone_fire_start_check_paired_end_read_files'
+            },
+        },
+        {   -logic_name  => 'backbone_fire_start_check_paired_end_read_files',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into   => {
+               '1->A' => 'start_check_paired_end_read_files',
+               'A->1' => 'backbone_fire_start_alignments'
+            },
+        },
+        {   -logic_name => 'start_check_paired_end_read_files',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+        },
+        {   -logic_name  => 'backbone_fire_start_alignments',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into   => {
+               '1->A' => 'multiplex_execution_plan_jobs',
+               'A->1' => 'start_peak_calling',
             },
         },
         {   -logic_name  => 'multiplex_execution_plan_jobs',
