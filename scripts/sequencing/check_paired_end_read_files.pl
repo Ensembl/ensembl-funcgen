@@ -127,6 +127,22 @@ foreach my $all_paired_end_read_file (@$all_paired_end_read_files) {
     
     $logger->info($read_file_1->file . " " . $read_file_2->file . "\n" );
     check_number_of_reads_identical ($read_file_1, $read_file_2);
+}
+
+READ_FILE:
+foreach my $all_paired_end_read_file (@$all_paired_end_read_files) {
+
+    if ($all_paired_end_read_file->{type} eq SINGLE_END) {
+        next READ_FILE;
+    }
+
+    my $read_file_name_1 = $all_paired_end_read_file->{1};
+    my $read_file_name_2 = $all_paired_end_read_file->{2};
+    
+    my $read_file_1 = $read_file_adaptor->fetch_by_name($read_file_name_1);
+    my $read_file_2 = $read_file_adaptor->fetch_by_name($read_file_name_2);
+    
+    $logger->info($read_file_1->file . " " . $read_file_2->file . "\n" );
     my $error_message = check_read_names_match_up       ($read_file_1, $read_file_2);
     
     if (@$error_message) {
