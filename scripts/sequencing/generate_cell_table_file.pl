@@ -10,11 +10,13 @@ use Bio::EnsEMBL::Utils::Logger;
 my $registry;
 my $species;
 my $cell_table_file;
+my $cell_table;
 
 my %config_hash = (
   'registry'        => \$registry,
   'species'         => \$species,
   'cell_table_file' => \$cell_table_file,
+  'cell_table'      => \$cell_table,
 );
 
 my $result = GetOptions(
@@ -22,6 +24,7 @@ my $result = GetOptions(
   'registry=s',
   'species=s',
   'cell_table_file=s',
+  'cell_table=s',
 );
 
 Bio::EnsEMBL::Registry->load_all($registry);
@@ -39,44 +42,26 @@ my $sql_helper = Bio::EnsEMBL::Utils::SqlHelper->new(
 
 my $sql = <<SQL
   select
-    epigenome.production_name as epigenome,
-    feature_type.name as feature_type,
-    signal_bam.path,
-    control_bam.path
+    epigenome,
+    feature_type,
+    signal_bam_path,
+    control_bam_path
   from
-    experiment
-    join epigenome using (epigenome_id)
-    join feature_type using (feature_type_id)
-    join alignment signal_alignment on (
-      experiment.experiment_id = signal_alignment.experiment_id 
-      and signal_alignment.is_complete=1 
-      and signal_alignment.has_duplicates=0
-    )
-    join data_file signal_bam on (signal_alignment.bam_file_id = signal_bam.data_file_id)
-    join experiment control_experiment on (control_experiment.experiment_id = experiment.control_id)
-    join alignment control_alignment on (
-      control_experiment.experiment_id = control_alignment.experiment_id 
-      and control_alignment.is_complete=1 
-      and control_alignment.has_duplicates=0
-    )
-    join data_file control_bam on (control_alignment.bam_file_id = control_bam.data_file_id)
-  where 
-    feature_type.name in (
-      "H3K4me1", 
-      "H3K4me2", 
-      "H3K4me3", 
-      "H3K9ac", 
-      "H3K9me3",
-      "H3K27ac", 
-      "H3K27me3", 
-      "H3K36me3", 
-      "DNase1",
-      "CTCF"
-    )
+    $cell_table
   order by 
     epigenome, feature_type
 SQL
 ;
+
+# Essential for segmentation:
+# 
+# "H3K4me1", 
+# "H3K4me3", 
+# "H3K27ac", 
+# "H3K27me3", 
+# "H3K36me3", 
+
+
 # my $sql = <<SQL
 #   select
 #     epigenome.production_name as epigenome,
