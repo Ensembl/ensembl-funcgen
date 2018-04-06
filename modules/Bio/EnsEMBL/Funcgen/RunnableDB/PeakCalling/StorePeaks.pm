@@ -12,7 +12,7 @@ sub run {
   my $species                = $self->param_required('species');
   my $peaks_to_load_file     = $self->param_required('peaks_to_load_file');
   my $peak_calling_succeeded = $self->param_required('peak_calling_succeeded');
-  my $error_message          = $self->param_required('error_message');
+  my $error_message          = $self->param('error_message');
   
   use Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanUtils qw (
         lock_execution_plan
