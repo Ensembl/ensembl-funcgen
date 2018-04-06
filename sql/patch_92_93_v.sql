@@ -54,8 +54,9 @@ select array.array_id, 'min_probe_length', min(length(sequence)) from array join
 insert into probe_mapping_statistic (array_id, statistic, value) 
 select array.array_id, 'number_of_probes_mapped_to_transcripts', count(distinct probe_transcript.probe_id) from array join array_chip using (array_id) join probe using (array_chip_id) left join probe_transcript using (probe_id) group by array.array_id;
 
-insert into probe_mapping_statistic (array_id, statistic, value) 
-select array.array_id, 'number_of_probe_sets_mapped_to_transcripts', count(distinct probe_set_transcript.probe_set_id) from array join array_chip using (array_id) join probe_set using (array_chip_id) left join probe_set_transcript using (probe_set_id) group by array.array_id;
+-- Too slow!
+-- insert into probe_mapping_statistic (array_id, statistic, value) 
+-- select array.array_id, 'number_of_probe_sets_mapped_to_transcripts', count(distinct probe_set_transcript.probe_set_id) from array join array_chip using (array_id) join probe_set using (array_chip_id) left join probe_set_transcript using (probe_set_id) group by array.array_id;
 
 insert into probe_mapping_statistic (array_id, statistic, value) 
 select array.array_id, 'number_of_probe_sets', count(distinct probe_set.probe_set_id) from array join array_chip using (array_id) left join probe_set using (array_chip_id) group by array.name order by array.array_id;
