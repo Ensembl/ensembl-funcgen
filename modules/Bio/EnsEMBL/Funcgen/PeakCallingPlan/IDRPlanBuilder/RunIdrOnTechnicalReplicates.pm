@@ -7,6 +7,7 @@ use Data::Dumper;
 
 use Role::Tiny::With;
 with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
+with 'Bio::EnsEMBL::Funcgen::PeakCallingPlan::select_EnsemblAlignmentAnalysis';
 
 use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_set
@@ -61,7 +62,30 @@ sub construct {
       ->new;
   $remove_duplicates_plan_builder->set_output_format ( BAM_FORMAT );
   $remove_duplicates_plan_builder->set_experiment    ( $experiment->name );
+
+  my $has_single_end_reads_only = 1;
+  my $has_paired_end_reads_only = 1;
   
+  READ_FILE_EXPERIMENTAL_CONFIGURATION:
+  foreach my $read_file_experimental_configuration 
+    (@$read_file_experimental_configuration_list) {
+    
+    my $read_file = $read_file_experimental_configuration->get_ReadFile;
+    
+    if ($read_file->is_paired_end) {
+      $has_single_end_reads_only = undef;
+    }
+    if (! $read_file->is_paired_end) {
+      $has_paired_end_reads_only = undef;
+    }
+  }
+
+  my $ensembl_alignment_analysis = select_EnsemblAlignmentAnalysis({
+    experiment => $experiment,
+    has_single_end_reads_only => $has_single_end_reads_only,
+    has_paired_end_reads_only => $has_paired_end_reads_only,
+  });
+
   my @align_replicates_plan;
   foreach my $read_file_experimental_configuration 
     (@$read_file_experimental_configuration_list) {
@@ -91,7 +115,7 @@ sub construct {
       -name                    => $alignment_namer->base_name_with_duplicates,
       -to_gender               => $to_gender,
       -to_assembly             => $assembly,
-      -analysis                => ALIGNMENT_ANALYSIS,
+      -ensembl_analysis        => $ensembl_alignment_analysis,
       -from_experiment         => $experiment->name,
       -output_real             => $alignment_namer->bam_file_with_duplicates,
       -output_stored           => $alignment_namer->bam_file_with_duplicates_stored,
