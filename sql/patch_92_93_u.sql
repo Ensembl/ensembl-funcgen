@@ -21,6 +21,7 @@ drop table if exists probe_mapping;
 
 CREATE TABLE probe_mapping (
   probe_mapping_id    int(22) unsigned NOT NULL AUTO_INCREMENT,
+  assembly            varchar(255) DEFAULT NULL,
   gene_build_version  varchar(255) DEFAULT NULL,
   five_prime_utr      int(22) unsigned DEFAULT NULL,
   three_prime_utr     int(22) unsigned DEFAULT NULL,
