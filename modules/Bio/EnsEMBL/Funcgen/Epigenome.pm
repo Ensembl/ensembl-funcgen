@@ -290,47 +290,6 @@ sub _db_entry {
   throw("Unexpected return value for $external_db_name id!");
 }
 
-=head2 ontology_accession
-
-  Example    : my $ontology_accession = $epigenome->ontology_accession;
-  Description: Getter of the ontology accession
-  Returntype : String
-  Exceptions : None
-  Caller     : General
-  Status     : Deprecated
-
-=cut
-
-sub ontology_accession{
-  deprecate(
-      "Bio::EnsEMBL::Funcgen::Epigenome::ontology_accession() has been
-      deprecated and will be removed in Ensembl release 93."
-          . " Please use Bio::EnsEMBL::Funcgen::Epigenome::efo_accession()
-          instead."
-  );
-  return $_[0]->{ontology_accession};
-}
-
-
-=head2 tissue
-
-  Example    : my $tissue = $epigenome->tissue;
-  Description: Getter of the tissue attribute for a given epigenome
-  Returntype : String
-  Exceptions : None
-  Caller     : General
-  Status     : Deprecated
-
-=cut
-
-sub tissue{
-  deprecate(
-      "Bio::EnsEMBL::Funcgen::Epigenome::tissue() has been deprecated and
-      will be removed in Ensembl release 93."
-  );
-  return $_[0]->{tissue};
-}
-
 =head2 reset_relational_attributes
 
   Arg[1]     : Hashref containing linked objects - KEPT for compliance

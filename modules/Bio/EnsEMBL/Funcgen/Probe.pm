@@ -508,41 +508,6 @@ sub get_all_complete_names {
   return \@all_complete_names;
 }
 
-=head2 get_complete_name
-
-   Arg [1]    : string - array name
-   Example    : my $compname = $probe->get_complete_name('Array-1');
-   Description: For a given array, retrieve the complete name for this probe.
-   Returntype : string
-   Exceptions : Throws if the array name not specified or not known for this probe
-   Caller     : General
-   Status     : Deprecated
-
-=cut
-
-sub get_complete_name {
-   my $self = shift;
-   my $arrayname = shift;
-
-    deprecate(
-        "get_complete_name has been deprecated and will be removed in Ensembl
-        release 93."
-    );
-
-   throw('Must provide and array name argument to retreive the complete name') if ! defined $arrayname;
-
-   my $probename = $self->get_probename($arrayname);
-
-   if (!defined $probename) {
-     throw('Unknown array name');
-   }
-
-   my $probeset = $self->probeset()->name();
-   $probeset .= ':' if $probeset;
-
-   return "$arrayname:$probeset$probename";
-}
-
 =head2 probe_set
 
   Arg [1]    : (optional) Bio::EnsEMBL::Funcgen::ProbeSet

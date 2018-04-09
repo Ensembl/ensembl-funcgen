@@ -719,31 +719,6 @@ sub bound_start { return $_[0]->start - $_[0]->bound_start_length; }
 =cut
 sub bound_end { return $_[0]->end + $_[0]->bound_end_length; }
 
-=head2 is_projected
-
-  Arg [1]    : optional - boolean
-  Example    : if($regf->is_projected){ #do something different here }
-  Description: Getter/Setter for the projected attribute.
-  Returntype : Boolean
-  Exceptions : None
-  Caller     : General
-  Status     : At risk - remove setter functionality
-
-=cut
-sub is_projected {
-  my $self = shift;
-  deprecate("Bio::EnsEMBL::Funcgen::RegulatoryFeature::is_projected() has " .
-  "been deprecated and will be removed in Ensembl release 93");
-
-  if(@_){
-	#added v67
-    warn "RegulatoryFeature::is_projected setter functionality is being removed\n";
-    $self->{'projected'} = shift;
-  }
-
-  return $self->{'projected'};
-}
-
 =head2 summary_as_hash
 
   Example       : $regulatory_feature_summary = $regulatory_feature->summary_as_hash;
