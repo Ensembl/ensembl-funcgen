@@ -7,15 +7,13 @@ use Data::Dumper;
 
 use Role::Tiny::With;
 with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
+with 'Bio::EnsEMBL::Funcgen::PeakCallingPlan::summarise_ReadFile';
+with 'Bio::EnsEMBL::Funcgen::PeakCallingPlan::select_EnsemblAlignmentAnalysis';
 
 use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_set
   _generic_get
 );
-
-use Role::Tiny::With;
-with 'Bio::EnsEMBL::Funcgen::PeakCallingPlan::summarise_ReadFile';
-with 'Bio::EnsEMBL::Funcgen::PeakCallingPlan::select_EnsemblAlignmentAnalysis';
 
 sub set_Alignments {
   my $self = shift;
