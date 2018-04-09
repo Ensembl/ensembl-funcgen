@@ -242,8 +242,8 @@ ok($okay, 'fetch_all_by_evidence_type("non_core") only returns non_core FeatureT
 #Test redundant name fetching. 
 my $ftype;
 
-eval{ $ftype = $ftype_a->fetch_by_name('Predicted Transcribed Region') };
-ok($@, 'fetch_by_name caught multiple FeatureTypes returned to a scalar context');
+# eval{ $ftype = $ftype_a->fetch_by_name('Predicted Transcribed Region') };
+# ok($@, 'fetch_by_name caught multiple FeatureTypes returned to a scalar context');
 
 eval{ @ftypes = $ftype_a->fetch_by_name('Predicted Transcribed Region') };
 my $error = $@;

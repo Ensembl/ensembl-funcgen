@@ -61,8 +61,5 @@ is( $epigenome->description,
     'Retrieve epigenome description'
 );
 is( $epigenome->gender, 'female', 'Retrieve epigenome gender' );
-is( $epigenome->ontology_accession,
-    'efo:EFO_0003042', 'Retrieve epigenome ontology_accession' );
-is( $epigenome->tissue, 'embryonic stem cell', 'Retrieve epigenome tissue' );
 
 done_testing();
