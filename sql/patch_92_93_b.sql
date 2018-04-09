@@ -14,8 +14,8 @@
 -- limitations under the License.
 
 /**
-@header patch_92_93_b.sql - obsolete
-@desc   obsolete
+@header patch_92_93_b.sql - Allow failed peak callings
+@desc   Allow failed peak callings
 */
 
 alter table peak_calling add column run_failed boolean default false;
@@ -23,4 +23,4 @@ alter table peak_calling add column error_message text;
 
 -- patch identifier
 
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_b.sql|obsolete');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_b.sql|Allow failed peak callings');

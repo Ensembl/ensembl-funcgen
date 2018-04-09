@@ -40,6 +40,9 @@ insert into probe_mapping_statistic (array_id, statistic, value)
 select array.array_id, 'number_of_probe_features_from_transcripts', count(distinct probe_feature.probe_feature_id) from array join array_chip using (array_id) join probe using (array_chip_id) join probe_feature using (probe_id) join analysis using (analysis_id) where analysis.logic_name like "%transcript%" group by analysis.logic_name, array.array_id;
 
 insert into probe_mapping_statistic (array_id, statistic, value) 
+select array_chip.array_id, 'number_of_mapped_probes', count(probe.probe_id) from array_chip join probe using (array_chip_id) join probe_feature using (probe_id) group by array_chip.array_id;
+
+insert into probe_mapping_statistic (array_id, statistic, value) 
 select array_chip.array_id, 'number_of_unmapped_probes', count(probe.probe_id) from array_chip join probe using (array_chip_id) left join probe_feature using (probe_id) where probe_feature.probe_id is null group by array_chip.array_id;
 
 insert into probe_mapping_statistic (array_id, statistic, value) 
@@ -54,6 +57,93 @@ select array.array_id, 'min_probe_length', min(length(sequence)) from array join
 insert into probe_mapping_statistic (array_id, statistic, value) 
 select array.array_id, 'number_of_probes_mapped_to_transcripts', count(distinct probe_transcript.probe_id) from array join array_chip using (array_id) join probe using (array_chip_id) left join probe_transcript using (probe_id) group by array.array_id;
 
+-- insert into probe_mapping_statistic (array_id, statistic, value) 
+-- select 
+--   array_id, 'number_of_probes_mapped_to_transcripts_uniquely', count(probe_id) 
+-- from 
+--   array
+--   left join (
+--     select 
+--       array.array_id, 
+--       probe.probe_id, 
+--       count(probe_transcript.probe_id) c 
+--     from 
+--       array 
+--       join array_chip using (array_id) 
+--       join probe using (array_chip_id) 
+--       join probe_transcript using (probe_id) 
+--     group by 
+--       array.array_id, probe.probe_id 
+--     having c = 1
+--   ) a 
+-- group by 
+--   array_id;
+-- 
+-- insert into probe_mapping_statistic (array_id, statistic, value) 
+-- select 
+--   array_id, 'number_of_probes_mapped_to_multiple_transcripts', count(probe_id) 
+-- from 
+--   array
+--   left join (
+--     select 
+--       array.array_id, 
+--       probe.probe_id, 
+--       count(probe_transcript.probe_id) c 
+--     from 
+--       array 
+--       join array_chip using (array_id) 
+--       join probe using (array_chip_id) 
+--       join probe_transcript using (probe_id) 
+--     group by 
+--       array.array_id, probe.probe_id 
+--     having c > 1
+--   ) a 
+-- group by 
+--   array_id;
+-- 
+-- insert into probe_mapping_statistic (array_id, statistic, value) 
+-- select 
+--   array.array_id, 'number_of_probe_sets_mapped_to_transcripts_uniquely', count(probe_set_id) 
+-- from 
+--   array 
+--   left join (
+--     select 
+--       array.array_id, 
+--       probe_set.probe_set_id, 
+--       count(probe_set_transcript.probe_set_id) c 
+--     from 
+--       array 
+--       join array_chip using (array_id) 
+--       join probe_set using (array_chip_id) 
+--       left join probe_set_transcript using (probe_set_id) 
+--     group by 
+--       array.array_id, probe_set.probe_set_id 
+--     having c = 1
+--   ) a using (array_id)
+-- group by 
+--   array_id;
+-- 
+-- insert into probe_mapping_statistic (array_id, statistic, value) 
+-- select 
+--   array_id, 'number_of_probe_sets_mapped_to_multiple_transcripts', count(probe_set_id) 
+-- from 
+--   array 
+--   left join (
+--     select 
+--       array.array_id, 
+--       probe_set.probe_set_id, 
+--       count(probe_set_transcript.probe_set_id) c 
+--     from 
+--       array 
+--       join array_chip using (array_id) 
+--       join probe_set using (array_chip_id) 
+--       left join probe_set_transcript using (probe_set_id) 
+--     group by 
+--       array.array_id, probe_set.probe_set_id 
+--     having c > 1
+--   ) a using (array_id)
+-- group by 
+--   array_id;
 -- Too slow!
 -- insert into probe_mapping_statistic (array_id, statistic, value) 
 -- select array.array_id, 'number_of_probe_sets_mapped_to_transcripts', count(distinct probe_set_transcript.probe_set_id) from array join array_chip using (array_id) join probe_set using (array_chip_id) left join probe_set_transcript using (probe_set_id) group by array.array_id;

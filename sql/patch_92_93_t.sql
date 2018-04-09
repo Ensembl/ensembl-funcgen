@@ -13,11 +13,11 @@
 -- limitations under the License.
 
 /**
-@header patch_92_93_s.sql - drop alignment_qc_phantom_peak table
+@header patch_92_93_t.sql - drop alignment_qc_phantom_peak table
 @desc   drop alignment_qc_phantom_peak table
 */
 
 drop table if exists alignment_qc_phantom_peak;
 
 -- patch identifier
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_s.sql|drop alignment_qc_phantom_peak table');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_t.sql|drop alignment_qc_phantom_peak table');

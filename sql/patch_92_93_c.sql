@@ -13,11 +13,11 @@
 -- limitations under the License.
 
 /**
-@header patch_92_93_c.sql - obsolete
-@desc   obsolete
+@header patch_92_93_c.sql - Allow the number of reads to be stored
+@desc   Allow the number of reads to be stored
 */
 
 alter table read_file add column number_of_reads BIGINT default null after file_size;
 
 -- patch identifier
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_c.sql|obsolete');
+INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_c.sql|Allow the number of reads to be stored');

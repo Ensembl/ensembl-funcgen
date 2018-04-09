@@ -13,11 +13,12 @@
 -- limitations under the License.
 
 /**
-@header patch_92_93_u.sql - obsolete
-@desc   obsolete
+@header patch_92_93_n.sql - Fix ids, add missing autoincrement
+@desc   Fix ids, add missing autoincrement
 */
 
--- alter table execution_plan add column time BIGINT default null after experiment_id;
+alter table peak modify peak_id int(10) unsigned NOT NULL AUTO_INCREMENT;
+alter table alignment_qc_flagstats modify alignment_qc_flagstats_id int(28) unsigned NOT NULL AUTO_INCREMENT;
 
 -- patch identifier
-INSERT INTO `meta` (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_v.sql|obsolete');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_92_93_n.sql|Fix ids, add missing autoincrement');
