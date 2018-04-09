@@ -9,6 +9,14 @@ use Role::Tiny;
 sub summarise_ReadFile {
 
   my $read_file = shift;
+  
+  if (ref $read_file ne 'Bio::EnsEMBL::Funcgen::ReadFile') {
+    use Carp;
+    confess(
+      "Expected read file, but got:\n\n"
+      . Dumper($read_file)
+    );
+  }
 
   if ($read_file->is_paired_end) {
     my $read_file_mate = $read_file->fetch_mate_ReadFile;
