@@ -1,1362 +1,1362 @@
-6	wgEncodeUchicagoTfbsK562InputControlgata2RawDataRep1	61	\N	\N	\N	\N	\N	\N
-7	wgEncodeUchicagoTfbsK562InputControlnr4a1RawDataRep1	61	\N	\N	\N	\N	\N	\N
-8	wgEncodeUchicagoTfbsK562InputControlfosRawDataRep1	61	\N	\N	\N	\N	\N	\N
-9	wgEncodeUchicagoTfbsK562InputControlhdac8RawDataRep1	61	\N	\N	\N	\N	\N	\N
-10	wgEncodeUchicagoTfbsK562InputControljunbRawDataRep2	61	\N	\N	\N	\N	\N	\N
-11	wgEncodeUchicagoTfbsK562InputControlgata2RawDataRep2	61	\N	\N	\N	\N	\N	\N
-12	wgEncodeUchicagoTfbsK562InputControljunbRawDataRep1	61	\N	\N	\N	\N	\N	\N
-13	wgEncodeUchicagoTfbsK562InputControljundRawDataRep2	61	\N	\N	\N	\N	\N	\N
-14	wgEncodeUchicagoTfbsK562InputControlnr4a1RawDataRep2	61	\N	\N	\N	\N	\N	\N
-15	wgEncodeUchicagoTfbsK562InputControlfosRawDataRep2	61	\N	\N	\N	\N	\N	\N
-16	wgEncodeUchicagoTfbsK562InputControljundRawDataRep1	61	\N	\N	\N	\N	\N	\N
-17	wgEncodeUchicagoTfbsK562InputControlhdac8RawDataRep2	61	\N	\N	\N	\N	\N	\N
-18	wgEncodeUchicagoTfbsK562InputControlfosRawDataRep3	61	\N	\N	\N	\N	\N	\N
-19	wgEncodeUchicagoTfbsK562InputControljundRawDataRep3	61	\N	\N	\N	\N	\N	\N
-32	wgEncodeHaibTfbsK562Usf1V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-33	wgEncodeHaibTfbsK562Usf1V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-36	SRR018226	61	\N	\N	\N	\N	\N	\N
-37	SRR018477	61	\N	\N	\N	\N	\N	\N
-40	wgEncodeBroadHistoneHelas3H3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-41	wgEncodeBroadHistoneHelas3H3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-43	wgEncodeBroadChipSeqRawDataRep1NhlfControl	61	\N	\N	\N	\N	\N	\N
-44	wgEncodeBroadChipSeqRawDataRep2NhlfControl	61	\N	\N	\N	\N	\N	\N
-47	wgEncodeHaibTfbsK562Fosl1sc183V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-48	wgEncodeHaibTfbsK562Fosl1sc183V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-53	SRR067769	61	\N	\N	\N	\N	\N	\N
-54	SRR067948	61	\N	\N	\N	\N	\N	\N
-55	SRR067768	61	\N	\N	\N	\N	\N	\N
-58	SRR067941	61	\N	\N	\N	\N	\N	\N
-59	SRR067940	61	\N	\N	\N	\N	\N	\N
-75	SRR029346	61	\N	\N	\N	\N	\N	\N
-76	SRR018454	61	\N	\N	\N	\N	\N	\N
-77	SRR029341	61	\N	\N	\N	\N	\N	\N
-78	SRR067944	61	\N	\N	\N	\N	\N	\N
-79	SRR029340	61	\N	\N	\N	\N	\N	\N
-80	SRR029344	61	\N	\N	\N	\N	\N	\N
-81	SRR029342	61	\N	\N	\N	\N	\N	\N
-86	wgEncodeUtaChIPseqRawDataRep1Gm12878Pol2	61	\N	\N	\N	\N	\N	\N
-87	wgEncodeUtaChIPseqRawDataRep2Gm12878Pol2	61	\N	\N	\N	\N	\N	\N
-90	wgEncodeUchicagoTfbsK562Ehdac8Controlhdac8RawDataRep2	61	\N	\N	\N	\N	\N	\N
-91	wgEncodeUchicagoTfbsK562Ehdac8ControlRawDataRep1	61	\N	\N	\N	\N	\N	\N
-98	SRR037593	61	\N	\N	\N	\N	\N	\N
-99	SRR037594	61	\N	\N	\N	\N	\N	\N
-100	SRR037596	61	\N	\N	\N	\N	\N	\N
-101	SRR037595	61	\N	\N	\N	\N	\N	\N
-109	wgEncodeBroadHistoneGm12878CtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-110	wgEncodeBroadHistoneGm12878CtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-124	wgEncodeHaibTfbsK562Gata2sc267Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-125	wgEncodeHaibTfbsK562Gata2sc267Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-126	wgEncodeBroadHistoneNhdfadH3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-127	wgEncodeBroadHistoneNhdfadH3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-142	wgEncodeHaibTfbsGm12878Pbx3Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-143	wgEncodeHaibTfbsGm12878Pbx3Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-146	wgEncodeHaibTfbsH1hescRxlchV0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N
-147	wgEncodeHaibTfbsH1hescRxlchPcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-148	wgEncodeBroadHistoneHsmmH2azStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-149	wgEncodeBroadHistoneHsmmH2azStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-153	wgEncodeUtaChIPseqRawDataH1hescCtcf	61	\N	\N	\N	\N	\N	\N
-156	wgEncodeUwTfbsHepg2InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-162	wgEncodeHaibTfbsK562Bclaf101388Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-163	wgEncodeHaibTfbsK562Bclaf101388Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-193	wgEncodeUtaustinChIPseqRawDataHelas3Input	61	\N	\N	\N	\N	\N	\N
-194	wgEncodeHaibTfbsGm12878Usf1Pcr2xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-195	wgEncodeHaibTfbsGm12878Usf1Pcr2xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-198	wgEncodeUchicagoTfbsK562Enr4a1ControlRawDataRep1	61	\N	\N	\N	\N	\N	\N
-199	wgEncodeUchicagoTfbsK562Enr4a1Controlnr4a1RawDataRep2	61	\N	\N	\N	\N	\N	\N
-204	wgEncodeHaibTfbsK562GabpV0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-205	wgEncodeHaibTfbsK562GabpV0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-208	wgEncodeUtaChIPseqRawDataRep1Helas3CmycV2	61	\N	\N	\N	\N	\N	\N
-209	wgEncodeUtaChIPseqRawDataRep2Helas3CmycV2	61	\N	\N	\N	\N	\N	\N
-218	wgEncodeHaibTfbsK562Sin3ak20V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-219	wgEncodeHaibTfbsK562Sin3ak20V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-222	wgEncodeBroadHistoneHelas3H3k4me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-223	wgEncodeBroadHistoneHelas3H3k4me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-238	wgEncodeHaibTfbsGm12878Mef2aPcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-239	wgEncodeHaibTfbsGm12878Mef2aPcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-244	wgEncodeUchicagoTfbsK562EfosControlfosRawDataRep3	61	\N	\N	\N	\N	\N	\N
-245	wgEncodeUchicagoTfbsK562EfosControlfosRawDataRep2	61	\N	\N	\N	\N	\N	\N
-246	wgEncodeUchicagoTfbsK562EfosControlRawDataRep1	61	\N	\N	\N	\N	\N	\N
-249	wgEncodeBroadHistoneNhekH3k9me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-250	wgEncodeBroadHistoneNhekH3k9me1StdRawDataRep3	61	\N	\N	\N	\N	\N	\N
-251	wgEncodeBroadHistoneNhekH3k9me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-253	wgEncodeBroadHistoneHuvecPol2bStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-254	wgEncodeBroadHistoneHuvecPol2bStdRawDataRep3	61	\N	\N	\N	\N	\N	\N
-255	wgEncodeBroadHistoneHuvecPol2bStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-262	wgEncodeBroadHistoneHelas3H3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-263	wgEncodeBroadHistoneHelas3H3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-269	wgEncodeHaibTfbsK562Rad21V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N
-270	wgEncodeHaibTfbsK562Rad21V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N
-273	wgEncodeBroadHistoneNhaH3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-274	wgEncodeBroadHistoneNhaH3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-275	wgEncodeHaibTfbsK562Pol2V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-278	wgEncodeHaibTfbsK562Pol2V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-282	wgEncodeBroadHistoneHmecH3k9acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-283	wgEncodeBroadHistoneHmecH3k9acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-290	SRR067970	61	\N	\N	\N	\N	\N	\N
-291	SRR067977	61	\N	\N	\N	\N	\N	\N
-292	SRR067972	61	\N	\N	\N	\N	\N	\N
-293	SRR097975	61	\N	\N	\N	\N	\N	\N
-294	SRR179764	61	\N	\N	\N	\N	\N	\N
-295	SRR179765	61	\N	\N	\N	\N	\N	\N
-296	SRR097974	61	\N	\N	\N	\N	\N	\N
-297	SRR067971	61	\N	\N	\N	\N	\N	\N
-298	SRR067973	61	\N	\N	\N	\N	\N	\N
-299	SRR067974	61	\N	\N	\N	\N	\N	\N
-300	SRR067975	61	\N	\N	\N	\N	\N	\N
-301	SRR097976	61	\N	\N	\N	\N	\N	\N
-302	SRR067976	61	\N	\N	\N	\N	\N	\N
-311	wgEncodeBroadChipSeqRawDataRep1HsmmControl	61	\N	\N	\N	\N	\N	\N
-312	wgEncodeBroadChipSeqRawDataRep2HsmmControl	61	\N	\N	\N	\N	\N	\N
-313	wgEncodeBroadHistoneHmecH4k20me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-314	wgEncodeBroadHistoneHmecH4k20me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-323	wgEncodeBroadHistoneHuvecH3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-324	wgEncodeBroadHistoneHuvecH3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-329	wgEncodeUtaChIPseqRawDataRep1Hepg2CmycV2	61	\N	\N	\N	\N	\N	\N
-330	wgEncodeUtaChIPseqRawDataRep2Hepg2CmycV2	61	\N	\N	\N	\N	\N	\N
-331	wgEncodeUtaChIPseqRawDataRep3Hepg2CmycV2	61	\N	\N	\N	\N	\N	\N
-332	wgEncodeUtaChIPseqRawDataRep1K562Pol2	61	\N	\N	\N	\N	\N	\N
-333	wgEncodeUtaChIPseqRawDataRep2K562Pol2	61	\N	\N	\N	\N	\N	\N
-336	wgEncodeHaibTfbsHepg2Zbtb33V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-339	wgEncodeHaibTfbsHepg2Zbtb33V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-351	wgEncodeBroadHistoneHsmmtControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-352	wgEncodeBroadHistoneHsmmtControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-356	wgEncodeHaibTfbsGm12878Ebfsc137065RawDataRep1	61	\N	\N	\N	\N	\N	\N
-357	wgEncodeHaibTfbsGm12878Ebfsc137065RawDataRep2	61	\N	\N	\N	\N	\N	\N
-358	wgEncodeBroadHistoneHsmmtH2azStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-359	wgEncodeBroadHistoneHsmmtH2azStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-362	wgEncodeHaibTfbsH1hescRad21V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N
-363	wgEncodeHaibTfbsH1hescRad21V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N
-370	SRR018456	61	\N	\N	\N	\N	\N	\N
-371	SRR067947	61	\N	\N	\N	\N	\N	\N
-372	SRR029339	61	\N	\N	\N	\N	\N	\N
-373	SRR029619	61	\N	\N	\N	\N	\N	\N
-374	SRR029615	61	\N	\N	\N	\N	\N	\N
-375	SRR067766	61	\N	\N	\N	\N	\N	\N
-376	SRR067978	61	\N	\N	\N	\N	\N	\N
-392	wgEncodeUwTfbsGm12878InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-393	wgEncodeBroadHistoneNhekH3k4me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-394	wgEncodeBroadHistoneNhekH3k4me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-395	wgEncodeBroadHistoneNhekH3k4me2StdRawDataRep3	61	\N	\N	\N	\N	\N	\N
-406	wgEncodeHaibTfbsHepg2Hnf4gsc6558V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-407	wgEncodeHaibTfbsHepg2Hnf4gsc6558V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-410	SRR029618	61	\N	\N	\N	\N	\N	\N
-411	SRR029610	61	\N	\N	\N	\N	\N	\N
-412	SRR037602	61	\N	\N	\N	\N	\N	\N
-413	SRR037601	61	\N	\N	\N	\N	\N	\N
-416	wgEncodeBroadChipSeqRawDataRep1H1hescControl	61	\N	\N	\N	\N	\N	\N
-417	wgEncodeBroadChipSeqRawDataRep2H1hescControl	61	\N	\N	\N	\N	\N	\N
-423	wgEncodeHaibTfbsK562E2f6sc22823V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N
-424	wgEncodeHaibTfbsK562E2f6sc22823V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N
-425	wgEncodeUchicagoTfbsK562EjundControljundRawDataRep3	61	\N	\N	\N	\N	\N	\N
-426	wgEncodeUchicagoTfbsK562EjundControljundRawDataRep2	61	\N	\N	\N	\N	\N	\N
-427	wgEncodeUchicagoTfbsK562EjundControlRawDataRep1	61	\N	\N	\N	\N	\N	\N
-428	wgEncodeBroadHistoneNhdfadH3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-429	wgEncodeBroadHistoneNhdfadH3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-445	SRR037606	61	\N	\N	\N	\N	\N	\N
-446	SRR037608	61	\N	\N	\N	\N	\N	\N
-447	SRR037607	61	\N	\N	\N	\N	\N	\N
-448	SRR037610	61	\N	\N	\N	\N	\N	\N
-449	SRR037609	61	\N	\N	\N	\N	\N	\N
-450	SRR037611	61	\N	\N	\N	\N	\N	\N
-451	SRR037612	61	\N	\N	\N	\N	\N	\N
-452	wgEncodeHaibTfbsK562Egr1V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-453	wgEncodeHaibTfbsK562Egr1V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-456	wgEncodeHaibTfbsK562Bcl3Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-457	wgEncodeHaibTfbsK562Bcl3Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-458	wgEncodeHaibTfbsGm12878RxlchPcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-459	wgEncodeHaibTfbsGm12878RxlchV0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N
-460	wgEncodeHaibTfbsGm12878RxlchPcr2xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-461	wgEncodeHaibTfbsGm12878RxlchPcr1xRawDataRep4	61	\N	\N	\N	\N	\N	\N
-462	wgEncodeHaibTfbsGm12878RxlchPcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-463	wgEncodeHaibTfbsGm12878RxlchPcr1xRawDataRep3	61	\N	\N	\N	\N	\N	\N
-464	wgEncodeHaibTfbsGm12878RxlchV0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-465	wgEncodeHaibTfbsGm12878RxlchPcr1xRawDataRep5	61	\N	\N	\N	\N	\N	\N
-466	wgEncodeHaibTfbsGm12878RxlchPcr2xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-467	SRR067952	61	\N	\N	\N	\N	\N	\N
-468	SRR179743	61	\N	\N	\N	\N	\N	\N
-469	SRR179741	61	\N	\N	\N	\N	\N	\N
-470	SRR179742	61	\N	\N	\N	\N	\N	\N
-487	wgEncodeHaibTfbsH1hescJundV0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N
-488	wgEncodeHaibTfbsH1hescJundV0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N
-492	wgEncodeHaibTfbsK562RxlchV2RawDataRep1	61	\N	\N	\N	\N	\N	\N
-493	wgEncodeHaibTfbsK562RxlchPcr1xRawDataRep4	61	\N	\N	\N	\N	\N	\N
-494	wgEncodeHaibTfbsK562RxlchPcr1xRawDataRep3	61	\N	\N	\N	\N	\N	\N
-495	wgEncodeHaibTfbsK562RxlchV2RawDataRep2	61	\N	\N	\N	\N	\N	\N
-496	wgEncodeHaibTfbsK562RxlchV0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-497	wgEncodeHaibTfbsK562RxlchV0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-510	wgEncodeBroadHistoneGm12878H2azStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-511	wgEncodeBroadHistoneGm12878H2azStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-512	wgEncodeBroadHistoneK562H4k20me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-513	wgEncodeBroadHistoneK562H4k20me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-519	SRR067934	61	\N	\N	\N	\N	\N	\N
-520	SRR067933	61	\N	\N	\N	\N	\N	\N
-521	wgEncodeOpenChromDnaseA549RawDataRep1	62	\N	\N	\N	\N	\N	\N
-522	wgEncodeOpenChromDnaseA549RawDataRep2	62	\N	\N	\N	\N	\N	\N
-523	wgEncodeBroadHistoneHsmmtCtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-524	wgEncodeBroadHistoneHsmmtCtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-527	wgEncodeHaibTfbsH1hescGabpPcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-528	wgEncodeHaibTfbsH1hescGabpPcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-529	wgEncodeHaibTfbsHelas3NrsfPcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-530	wgEncodeHaibTfbsHelas3NrsfPcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-531	wgEncodeHaibTfbsGm12878Atf3Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-532	wgEncodeHaibTfbsGm12878Atf3Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-535	SRR018486	61	\N	\N	\N	\N	\N	\N
-536	SRR018485	61	\N	\N	\N	\N	\N	\N
-537	SRR026666	61	\N	\N	\N	\N	\N	\N
-538	SRR026667	61	\N	\N	\N	\N	\N	\N
-545	wgEncodeBroadHistoneNhekControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-546	wgEncodeBroadHistoneNhekControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-547	wgEncodeUtaChIPseqRawDataH1hescPol2	61	\N	\N	\N	\N	\N	\N
-550	wgEncodeBroadHistoneHsmmtH3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-551	wgEncodeBroadHistoneHsmmtH3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-559	wgEncodeUwTfbsHmecInputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-560	wgEncodeBroadHistoneNhekH3k9acStdRawDataRep3	61	\N	\N	\N	\N	\N	\N
-561	wgEncodeBroadHistoneNhekH3k9acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-562	wgEncodeBroadHistoneNhekH3k9acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-565	wgEncodeUwDnaseNhekRawDataRep1	62	\N	\N	\N	\N	\N	\N
-566	wgEncodeUwDnaseNhekRawDataRep2	62	\N	\N	\N	\N	\N	\N
-576	wgEncodeBroadHistoneNhekH3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-577	wgEncodeBroadHistoneNhekH3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-578	wgEncodeBroadHistoneNhekH3k27me3StdRawDataRep3	61	\N	\N	\N	\N	\N	\N
-584	wgEncodeUwDnaseHsmmRawDataRep2	62	\N	\N	\N	\N	\N	\N
-585	wgEncodeUwDnaseHsmmRawDataRep1	62	\N	\N	\N	\N	\N	\N
-591	SRR029509	62	\N	\N	\N	\N	\N	\N
-592	SRR029510	62	\N	\N	\N	\N	\N	\N
-593	SRR039497	62	\N	\N	\N	\N	\N	\N
-594	SRR039498	62	\N	\N	\N	\N	\N	\N
-595	SRR029508	62	\N	\N	\N	\N	\N	\N
-596	SRR039397	62	\N	\N	\N	\N	\N	\N
-597	SRR029507	62	\N	\N	\N	\N	\N	\N
-598	SRR039500	62	\N	\N	\N	\N	\N	\N
-599	SRR039396	62	\N	\N	\N	\N	\N	\N
-600	SRR039398	62	\N	\N	\N	\N	\N	\N
-601	SRR039499	62	\N	\N	\N	\N	\N	\N
-602	SRR019560	61	\N	\N	\N	\N	\N	\N
-612	wgEncodeUwDnaseMonocd14RawDataRep1	62	\N	\N	\N	\N	\N	\N
-623	wgEncodeHaibTfbsH1hescHdac2sc6296V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N
-624	wgEncodeHaibTfbsH1hescHdac2sc6296V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N
-625	SRR067939	61	\N	\N	\N	\N	\N	\N
-626	SRR067767	61	\N	\N	\N	\N	\N	\N
-674	wgEncodeBroadHistoneHelas3H3k79me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-675	wgEncodeBroadHistoneHelas3H3k79me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-678	wgEncodeUtaChIPseqRawDataRep1NhekCtcf	61	\N	\N	\N	\N	\N	\N
-679	wgEncodeUtaChIPseqRawDataRep2NhekCtcf	61	\N	\N	\N	\N	\N	\N
-680	wgEncodeBroadHistoneK562H3k4me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-681	wgEncodeBroadHistoneK562H3k4me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-691	wgEncodeHaibTfbsK562Thap1sc98174V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-692	wgEncodeHaibTfbsK562Thap1sc98174V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-698	wgEncodeBroadHistoneHuvecH3k4me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-699	wgEncodeBroadHistoneHuvecH3k4me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-702	wgEncodeBroadHistoneNhekCtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-703	wgEncodeBroadHistoneNhekCtcfStdRawDataRep3	61	\N	\N	\N	\N	\N	\N
-704	wgEncodeBroadHistoneNhekCtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-708	wgEncodeBroadHistoneNhaH3k4me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-709	wgEncodeBroadHistoneNhaH3k4me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-719	SRR018483	61	\N	\N	\N	\N	\N	\N
-720	SRR018484	61	\N	\N	\N	\N	\N	\N
-721	SRR018482	61	\N	\N	\N	\N	\N	\N
-722	SRR026668	61	\N	\N	\N	\N	\N	\N
-723	SRR026669	61	\N	\N	\N	\N	\N	\N
-730	wgEncodeBroadHistoneHelas3H3k9acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-731	wgEncodeBroadHistoneHelas3H3k9acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-732	wgEncodeUchicagoTfbsK562EjunbControlRawDataRep1	61	\N	\N	\N	\N	\N	\N
-733	wgEncodeUchicagoTfbsK562EjunbControljunbRawDataRep2	61	\N	\N	\N	\N	\N	\N
-734	wgEncodeBroadHistoneK562H2azStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-735	wgEncodeBroadHistoneK562H2azStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-740	wgEncodeHaibTfbsH1hescTcf12Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-741	wgEncodeHaibTfbsH1hescTcf12Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-745	wgEncodeBroadHistoneH1hescH3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-746	wgEncodeBroadHistoneH1hescH3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-761	wgEncodeHaibTfbsK562Elf1sc631V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N
-762	wgEncodeHaibTfbsK562Elf1sc631V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N
-765	SRR037568	61	\N	\N	\N	\N	\N	\N
-766	SRR037567	61	\N	\N	\N	\N	\N	\N
-767	SRR037569	61	\N	\N	\N	\N	\N	\N
-768	SRR037570	61	\N	\N	\N	\N	\N	\N
-769	wgEncodeBroadHistoneHsmmH3k79me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-770	wgEncodeBroadHistoneHsmmH3k79me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-784	wgEncodeOpenChromChipGm12878InputRawData	61	\N	\N	\N	\N	\N	\N
-787	wgEncodeBroadHistoneHelas3H3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-788	wgEncodeBroadHistoneHelas3H3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-798	wgEncodeBroadHistoneNhaControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-799	wgEncodeBroadHistoneNhaControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-809	wgEncodeHaibTfbsGm12878Pou2f2Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-810	wgEncodeHaibTfbsGm12878Pou2f2Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-811	wgEncodeHaibTfbsH1hescAtf3V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N
-812	wgEncodeHaibTfbsH1hescAtf3V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N
-828	wgEncodeHaibTfbsK562SrfV0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-829	wgEncodeHaibTfbsK562SrfV0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-836	wgEncodeHaibTfbsK562Pu1Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-837	wgEncodeHaibTfbsK562Pu1RawDataRep2	61	\N	\N	\N	\N	\N	\N
-857	SRR037587	61	\N	\N	\N	\N	\N	\N
-858	SRR037588	61	\N	\N	\N	\N	\N	\N
-859	SRR037590	61	\N	\N	\N	\N	\N	\N
-860	SRR037589	61	\N	\N	\N	\N	\N	\N
-861	wgEncodeBroadHistoneNhekPol2bStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-862	wgEncodeBroadHistoneNhekPol2bStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-874	wgEncodeBroadHistoneNhaH3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-875	wgEncodeBroadHistoneNhaH3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-883	SRR020520	61	\N	\N	\N	\N	\N	\N
-887	wgEncodeHaibTfbsH1hescSrfPcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-888	wgEncodeHaibTfbsH1hescSrfPcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-889	wgEncodeHaibTfbsGm12878Mef2csc13268V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-890	wgEncodeHaibTfbsGm12878Mef2csc13268V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-897	wgEncodeBroadHistoneK562H3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-898	wgEncodeBroadHistoneK562H3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-905	wgEncodeBroadHistoneOsteoblControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-906	wgEncodeBroadHistoneOsteoblControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-910	wgEncodeUtaChIPseqRawDataRep1K562CmycV2	61	\N	\N	\N	\N	\N	\N
-911	wgEncodeUtaChIPseqRawDataRep2K562CmycV2	61	\N	\N	\N	\N	\N	\N
-912	wgEncodeUtaChIPseqRawDataRep3K562CmycV2	61	\N	\N	\N	\N	\N	\N
-926	SRR037580	61	\N	\N	\N	\N	\N	\N
-927	SRR037579	61	\N	\N	\N	\N	\N	\N
-928	SRR037581	61	\N	\N	\N	\N	\N	\N
-929	SRR037582	61	\N	\N	\N	\N	\N	\N
-932	wgEncodeBroadHistoneOsteoblH3k4me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-933	wgEncodeBroadHistoneOsteoblH3k4me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-934	wgEncodeHaibTfbsH1hescRxraV0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N
-935	wgEncodeHaibTfbsH1hescRxraV0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N
-936	wgEncodeBroadHistoneK562ControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-964	wgEncodeHaibTfbsHepg2Tcf12Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-965	wgEncodeHaibTfbsHepg2Tcf12Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-968	wgEncodeUwDnaseNhdfadRawDataRep1	62	\N	\N	\N	\N	\N	\N
-969	wgEncodeUwDnaseNhdfadRawDataRep2	62	\N	\N	\N	\N	\N	\N
-972	wgEncodeHaibTfbsK562Mef2aV0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-973	wgEncodeHaibTfbsK562Mef2aV0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-980	wgEncodeBroadHistoneHuvecCtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-981	wgEncodeBroadHistoneHuvecCtcfStdRawDataRep3	61	\N	\N	\N	\N	\N	\N
-982	wgEncodeBroadHistoneHuvecCtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-996	SRR067957	61	\N	\N	\N	\N	\N	\N
-997	SRR067956	61	\N	\N	\N	\N	\N	\N
-1005	SRR018232	61	\N	\N	\N	\N	\N	\N
-1006	SRR019222	61	\N	\N	\N	\N	\N	\N
-1008	SRR037626	61	\N	\N	\N	\N	\N	\N
-1009	SRR037627	61	\N	\N	\N	\N	\N	\N
-1010	SRR037628	61	\N	\N	\N	\N	\N	\N
-1011	SRR037629	61	\N	\N	\N	\N	\N	\N
-1012	SRR037630	61	\N	\N	\N	\N	\N	\N
-1013	wgEncodeBroadHistoneOsteoblH3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1014	wgEncodeBroadHistoneOsteoblH3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1015	SRR067966	61	\N	\N	\N	\N	\N	\N
-1020	wgEncodeBroadHistoneHelas3Pol2bStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1021	wgEncodeBroadHistoneHelas3Pol2bStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1024	wgEncodeBroadHistoneK562H3k9me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1028	SRR067935	61	\N	\N	\N	\N	\N	\N
-1029	SRR067936	61	\N	\N	\N	\N	\N	\N
-1030	wgEncodeHaibTfbsHelas3GabpPcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1031	wgEncodeHaibTfbsHelas3GabpPcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1052	wgEncodeBroadHistoneNhekH4k20me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1053	wgEncodeBroadHistoneNhekH4k20me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1054	wgEncodeBroadHistoneNhekH4k20me1StdRawDataRep3	61	\N	\N	\N	\N	\N	\N
-1080	wgEncodeHaibTfbsHepg2GabpPcr2xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1081	wgEncodeHaibTfbsHepg2GabpPcr2xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1085	SRR067930	61	\N	\N	\N	\N	\N	\N
-1086	wgEncodeUwTfbsK562InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1093	wgEncodeHaibTfbsGm12878RxraPcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1094	wgEncodeHaibTfbsGm12878RxraPcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1096	wgEncodeHaibTfbsK562Ets1V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1097	wgEncodeHaibTfbsK562Ets1V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1103	wgEncodeBroadHistoneOsteoblH3k4me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1104	wgEncodeBroadHistoneOsteoblH3k4me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1113	wgEncodeBroadHistoneHmecControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1114	wgEncodeBroadHistoneHmecControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1120	wgEncodeBroadHistoneNhdfadH3k4me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1121	wgEncodeBroadHistoneNhdfadH3k4me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1124	wgEncodeBroadHistoneHuvecH3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1125	wgEncodeBroadHistoneHuvecH3k27acStdRawDataRep3	61	\N	\N	\N	\N	\N	\N
-1126	wgEncodeBroadHistoneHuvecH3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1130	SRR067967	61	\N	\N	\N	\N	\N	\N
-1131	SRR067968	61	\N	\N	\N	\N	\N	\N
-1151	wgEncodeHudsonalphaChipSeqRawDataRep1Gm12878Sin3ak20Pcr2x	61	\N	\N	\N	\N	\N	\N
-1152	wgEncodeHudsonalphaChipSeqRawDataRep2Gm12878Sin3ak20Pcr2x	61	\N	\N	\N	\N	\N	\N
-1155	wgEncodeBroadHistoneNhaH3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1156	wgEncodeBroadHistoneNhaH3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1158	wgEncodeHaibTfbsK562Taf7sc101167V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1159	wgEncodeHaibTfbsK562Taf7sc101167V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1160	wgEncodeHaibTfbsGm12878NrsfPcr2xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1161	wgEncodeHaibTfbsGm12878NrsfPcr2xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1162	wgEncodeBroadHistoneNhekH3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1163	wgEncodeBroadHistoneNhekH3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1164	wgEncodeBroadHistoneNhekH3k27acStdRawDataRep3	61	\N	\N	\N	\N	\N	\N
-1166	SRR179736	61	\N	\N	\N	\N	\N	\N
-1167	SRR179735	61	\N	\N	\N	\N	\N	\N
-1168	SRR179737	61	\N	\N	\N	\N	\N	\N
-1169	SRR067946	61	\N	\N	\N	\N	\N	\N
-1170	wgEncodeBroadHistoneHuvecH4k20me1StdRawDataRep3	61	\N	\N	\N	\N	\N	\N
-1171	wgEncodeBroadHistoneHuvecH4k20me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1172	wgEncodeBroadHistoneHuvecH4k20me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1173	wgEncodeHaibTfbsHepg2Sp1Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1174	wgEncodeHaibTfbsHepg2Sp1Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1188	wgEncodeHaibTfbsGm12878Ets1Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1189	wgEncodeHaibTfbsGm12878Ets1Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1212	wgEncodeYaleChIPseqRawDataRep1K562Gtf2b	61	\N	\N	\N	\N	\N	\N
-1213	wgEncodeYaleChIPseqRawDataRep2K562Gtf2b	61	\N	\N	\N	\N	\N	\N
-1218	wgEncodeBroadHistoneGm12878H3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1220	wgEncodeUtaChIPseqRawDataRep1K562CtcfV2	61	\N	\N	\N	\N	\N	\N
-1221	wgEncodeUtaChIPseqRawDataRep2K562CtcfV2	61	\N	\N	\N	\N	\N	\N
-1222	wgEncodeUtaChIPseqRawDataRep3K562CtcfV2	61	\N	\N	\N	\N	\N	\N
-1225	wgEncodeHaibTfbsGm12878Egr1V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1226	wgEncodeHaibTfbsGm12878Egr1V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1229	wgEncodeHaibTfbsGm12878Bcl3V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1230	wgEncodeHaibTfbsGm12878Bcl3V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1247	SRR067955	61	\N	\N	\N	\N	\N	\N
-1248	SRR067953	61	\N	\N	\N	\N	\N	\N
-1249	SRR067954	61	\N	\N	\N	\N	\N	\N
-1250	SRR029348	61	\N	\N	\N	\N	\N	\N
-1251	SRR179707	61	\N	\N	\N	\N	\N	\N
-1252	SRR029350	61	\N	\N	\N	\N	\N	\N
-1255	wgEncodeHaibTfbsH1hescNanogsc33759V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1256	wgEncodeHaibTfbsH1hescNanogsc33759V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1258	wgEncodeBroadHistoneNhekH3k4me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1259	wgEncodeBroadHistoneNhekH3k4me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1260	wgEncodeBroadHistoneNhekH3k4me1StdRawDataRep3	61	\N	\N	\N	\N	\N	\N
-1261	wgEncodeHaibTfbsHepg2Bhlhe40V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1262	wgEncodeHaibTfbsHepg2Bhlhe40V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1266	wgEncodeBroadHistoneHelas3H3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1267	wgEncodeBroadHistoneHelas3H3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1273	wgEncodeHaibTfbsK562Yy1V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1274	wgEncodeHaibTfbsK562Yy1V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1282	wgEncodeHaibTfbsHepg2Pol2Pcr2xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1283	wgEncodeHaibTfbsHepg2Pol2Pcr2xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1284	wgEncodeHaibTfbsK562Sp2sc643V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1285	wgEncodeHaibTfbsK562Sp2sc643V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1288	wgEncodeBroadHistoneNhdfadControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1289	wgEncodeBroadHistoneNhdfadControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1297	wgEncodeBroadHistoneNhekH3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1298	wgEncodeBroadHistoneNhekH3k36me3StdRawDataRep3	61	\N	\N	\N	\N	\N	\N
-1299	wgEncodeBroadHistoneNhekH3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1321	wgEncodeHaibTfbsGm12878Pu1Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1322	wgEncodeHaibTfbsGm12878Pu1Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1326	wgEncodeYaleChIPseqRawDataRep1Gm12878Max	61	\N	\N	\N	\N	\N	\N
-1327	wgEncodeYaleChIPseqRawDataRep2Gm12878Max	61	\N	\N	\N	\N	\N	\N
-1330	wgEncodeHaibTfbsK562Six5V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1333	wgEncodeHaibTfbsK562Six5V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1338	wgEncodeUtaChIPseqRawDataHuvecCmyc	61	\N	\N	\N	\N	\N	\N
-1339	wgEncodeBroadHistoneHepg2H2azStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1340	wgEncodeBroadHistoneHepg2H2azStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1346	wgEncodeHaibTfbsK562Hdac2sc6296V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1347	wgEncodeHaibTfbsK562Hdac2sc6296V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1370	wgEncodeBroadHistoneGm12878H3k79me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1371	wgEncodeBroadHistoneGm12878H3k79me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1383	SRR020518	61	\N	\N	\N	\N	\N	\N
-1391	wgEncodeYaleChIPseqRawDataRep1Gm12878NfkbIggrab	61	\N	\N	\N	\N	\N	\N
-1392	wgEncodeYaleChIPseqRawDataRep2Gm12878NfkbIggrab	61	\N	\N	\N	\N	\N	\N
-1393	wgEncodeYaleChIPseqRawDataRep3Gm12878NfkbIggrab	61	\N	\N	\N	\N	\N	\N
-1394	wgEncodeYaleChIPseqRawDataRep4Gm12878NfkbIggrab	61	\N	\N	\N	\N	\N	\N
-1400	wgEncodeUwTfbsHuvecInputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1401	wgEncodeUwHistoneHmecH3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1402	wgEncodeUwHistoneHmecH3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1405	wgEncodeYaleChIPseqRawDataRep2Gm12878Cmyc	61	\N	\N	\N	\N	\N	\N
-1406	wgEncodeYaleChIPseqRawDataRep1Gm12878Cmyc	61	\N	\N	\N	\N	\N	\N
-1415	wgEncodeHaibTfbsH1hescFosl1sc183V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1416	wgEncodeHaibTfbsH1hescFosl1sc183V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1427	SRR067960	61	\N	\N	\N	\N	\N	\N
-1428	SRR067962	61	\N	\N	\N	\N	\N	\N
-1429	SRR067964	61	\N	\N	\N	\N	\N	\N
-1430	SRR067963	61	\N	\N	\N	\N	\N	\N
-1431	SRR067961	61	\N	\N	\N	\N	\N	\N
-1432	SRR018453	61	\N	\N	\N	\N	\N	\N
-1433	SRR067965	61	\N	\N	\N	\N	\N	\N
-1434	wgEncodeBroadHistoneHsmmtH3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1435	wgEncodeBroadHistoneHsmmtH3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1439	wgEncodeUtaustinChIPseqRawDataHepg2Input	61	\N	\N	\N	\N	\N	\N
-1463	SRR037620	61	\N	\N	\N	\N	\N	\N
-1464	SRR037621	61	\N	\N	\N	\N	\N	\N
-1465	SRR037622	61	\N	\N	\N	\N	\N	\N
-1466	SRR037623	61	\N	\N	\N	\N	\N	\N
-1467	wgEncodeHaibTfbsH1hescEgr1V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1468	wgEncodeHaibTfbsH1hescEgr1V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1471	wgEncodeBroadHistoneHsmmtH3k79me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1472	wgEncodeBroadHistoneHsmmtH3k79me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1475	wgEncodeBroadHistoneK562H3k79me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1476	wgEncodeBroadHistoneK562H3k79me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1481	wgEncodeBroadChipSeqRawDataRep1Gm12878Control	61	\N	\N	\N	\N	\N	\N
-1482	wgEncodeBroadChipSeqRawDataRep2Gm12878Control	61	\N	\N	\N	\N	\N	\N
-1483	wgEncodeHaibTfbsK562Ctcflsc98982V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1484	wgEncodeHaibTfbsK562Ctcflsc98982V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1490	wgEncodeUwDnaseHuvecRawDataRep2	62	\N	\N	\N	\N	\N	\N
-1491	wgEncodeUwDnaseHuvecRawDataRep1	62	\N	\N	\N	\N	\N	\N
-1492	wgEncodeHaibTfbsK562Atf3V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1493	wgEncodeHaibTfbsK562Atf3V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1497	SRR037592	61	\N	\N	\N	\N	\N	\N
-1498	SRR037546	61	\N	\N	\N	\N	\N	\N
-1499	SRR037550	61	\N	\N	\N	\N	\N	\N
-1500	SRR037553	61	\N	\N	\N	\N	\N	\N
-1501	SRR037562	61	\N	\N	\N	\N	\N	\N
-1502	SRR067931	61	\N	\N	\N	\N	\N	\N
-1503	SRR067932	61	\N	\N	\N	\N	\N	\N
-1508	wgEncodeHaibTfbsH1hescSp1Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1509	wgEncodeHaibTfbsH1hescSp1Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1516	wgEncodeBroadHistoneNhdfadH3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1517	wgEncodeBroadHistoneNhdfadH3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1522	wgEncodeSydhHistoneK562bH3k27me3bUcdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1523	wgEncodeSydhHistoneK562bH3k27me3bUcdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1524	wgEncodeSydhHistoneK562bH3k4me3bUcdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1525	wgEncodeSydhHistoneK562bH3k4me3bUcdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1530	wgEncodeUtaChIPseqRawDataH1hescCmyc	61	\N	\N	\N	\N	\N	\N
-1545	wgEncodeBroadHistoneGm12878H3k9me3StdRawDataRep3	61	\N	\N	\N	\N	\N	\N
-1546	wgEncodeBroadHistoneGm12878H3k9me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1547	wgEncodeBroadHistoneGm12878H3k9me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1548	wgEncodeHaibTfbsH1hescTaf7sc101167V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1549	wgEncodeHaibTfbsH1hescTaf7sc101167V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1550	wgEncodeHaibTfbsHepg2Sin3ak20Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1551	wgEncodeHaibTfbsHepg2Sin3ak20Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1552	wgEncodeUwDnaseNhaRawDataRep2	62	\N	\N	\N	\N	\N	\N
-1553	wgEncodeUwDnaseNhaRawDataRep1	62	\N	\N	\N	\N	\N	\N
-1561	wgEncodeBroadHistoneOsteoblH2azStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1562	wgEncodeBroadHistoneOsteoblH2azStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1563	wgEncodeBroadHistoneNhdfadH3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1564	wgEncodeBroadHistoneNhdfadH3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1568	wgEncodeYaleChIPseqRawDataRep1K562InputV2	61	\N	\N	\N	\N	\N	\N
-1569	wgEncodeYaleChIPseqRawDataRep2K562InputV2	61	\N	\N	\N	\N	\N	\N
-1570	wgEncodeYaleChIPseqRawDataK562Input	61	\N	\N	\N	\N	\N	\N
-1571	wgEncodeYaleChIPseqRawDataRep1K562MusiggMusigg	61	\N	\N	\N	\N	\N	\N
-1572	wgEncodeYaleChIPseqRawDataRep2K562MusiggMusigg	61	\N	\N	\N	\N	\N	\N
-1574	wgEncodeBroadHistoneHsmmtH4k20me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1575	wgEncodeBroadHistoneHsmmtH4k20me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1580	wgEncodeHaibTfbsHepg2Yy1sc281V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1581	wgEncodeHaibTfbsHepg2Yy1sc281V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1590	SRR037599	61	\N	\N	\N	\N	\N	\N
-1591	SRR037600	61	\N	\N	\N	\N	\N	\N
-1592	SRR037558	61	\N	\N	\N	\N	\N	\N
-1593	SRR037554	61	\N	\N	\N	\N	\N	\N
-1604	wgEncodeHaibTfbsHepg2NrsfPcr2xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1605	wgEncodeHaibTfbsHepg2NrsfPcr2xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1606	wgEncodeHaibTfbsH1hescUsf1Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1607	wgEncodeHaibTfbsH1hescUsf1Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1612	SRR037604	61	\N	\N	\N	\N	\N	\N
-1613	SRR037603	61	\N	\N	\N	\N	\N	\N
-1614	SRR037605	61	\N	\N	\N	\N	\N	\N
-1618	wgEncodeBroadHistoneNhlfH3k4me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1619	wgEncodeBroadHistoneNhlfH3k4me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1622	SRR020516	61	\N	\N	\N	\N	\N	\N
-1624	wgEncodeHaibTfbsHepg2Foxa1sc6553V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1626	wgEncodeHaibTfbsHepg2Foxa1sc6553V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1632	wgEncodeHaibTfbsGm12878SrfV0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1634	wgEncodeHaibTfbsGm12878SrfV0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1635	wgEncodeHaibTfbsK562NrsfV0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1636	wgEncodeHaibTfbsK562NrsfV0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1644	wgEncodeSydhHistoneK562bH3k9acbUcdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1645	wgEncodeSydhHistoneK562bH3k9acbUcdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1653	wgEncodeUtaChIPseqRawDataRep1Hepg2Pol2	61	\N	\N	\N	\N	\N	\N
-1654	wgEncodeUtaChIPseqRawDataRep2Hepg2Pol2	61	\N	\N	\N	\N	\N	\N
-1655	wgEncodeUtaChIPseqRawDataRep3Hepg2Pol2	61	\N	\N	\N	\N	\N	\N
-1660	wgEncodeHaibTfbsH1hescSin3ak20Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1661	wgEncodeHaibTfbsH1hescSin3ak20Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1664	wgEncodeUtaChIPseqRawDataRep1Gm12878CtcfV2	61	\N	\N	\N	\N	\N	\N
-1665	wgEncodeUtaChIPseqRawDataRep2Gm12878CtcfV2	61	\N	\N	\N	\N	\N	\N
-1666	wgEncodeUtaChIPseqRawDataRep3Gm12878CtcfV2	61	\N	\N	\N	\N	\N	\N
-1670	wgEncodeHaibTfbsHepg2Atf3V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1671	wgEncodeHaibTfbsHepg2Atf3V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1674	wgEncodeBroadHistoneHsmmtH3k4me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1675	wgEncodeBroadHistoneHsmmtH3k4me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1676	wgEncodeYaleChIPseqRawDataRep1K562Jund	61	\N	\N	\N	\N	\N	\N
-1677	wgEncodeYaleChIPseqRawDataRep2K562Jund	61	\N	\N	\N	\N	\N	\N
-1678	wgEncodeHaibTfbsK562Zbtb7asc34508V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1679	wgEncodeHaibTfbsK562Zbtb7asc34508V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1685	wgEncodeHaibTfbsGm12878Elf1sc631V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1686	wgEncodeHaibTfbsGm12878Elf1sc631V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1695	wgEncodeUwDnaseHmecRawDataRep2	62	\N	\N	\N	\N	\N	\N
-1696	wgEncodeUwDnaseHmecRawDataRep1	62	\N	\N	\N	\N	\N	\N
-1701	SRR037564	61	\N	\N	\N	\N	\N	\N
-1702	SRR037565	61	\N	\N	\N	\N	\N	\N
-1703	SRR037566	61	\N	\N	\N	\N	\N	\N
-1706	wgEncodeHaibTfbsH1hescSix5Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1707	wgEncodeHaibTfbsH1hescSix5Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1708	wgEncodeUtaChIPseqRawDataRep1Helas3Pol2	61	\N	\N	\N	\N	\N	\N
-1709	wgEncodeUtaChIPseqRawDataRep2Helas3Pol2	61	\N	\N	\N	\N	\N	\N
-1716	wgEncodeHaibTfbsGm12878Pax5n19RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1717	wgEncodeHaibTfbsGm12878Pax5c20RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1720	wgEncodeHaibTfbsHepg2JundPcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1721	wgEncodeHaibTfbsHepg2JundPcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1724	wgEncodeHaibTfbsH1hescBcl11aPcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1725	wgEncodeHaibTfbsH1hescBcl11aV0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1727	wgEncodeBroadHistoneOsteoblH3k9me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1728	wgEncodeBroadHistoneOsteoblH3k9me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1729	wgEncodeBroadHistoneHepg2H3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1730	wgEncodeBroadHistoneHepg2H3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1736	SRR029625	61	\N	\N	\N	\N	\N	\N
-1737	SRR029629	61	\N	\N	\N	\N	\N	\N
-1738	SRR037559	61	\N	\N	\N	\N	\N	\N
-1739	SRR037557	61	\N	\N	\N	\N	\N	\N
-1748	wgEncodeHaibTfbsGm12878Zeb1sc25388V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1749	wgEncodeHaibTfbsGm12878Zeb1sc25388V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1752	wgEncodeYaleChIPseqRawDataRep1Gm12878Cjun	61	\N	\N	\N	\N	\N	\N
-1753	wgEncodeYaleChIPseqRawDataRep2Gm12878Cjun	61	\N	\N	\N	\N	\N	\N
-1754	wgEncodeBroadHistoneNhaH3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1755	wgEncodeBroadHistoneNhaH3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1758	wgEncodeSydhHistoneK562bH3k4me1UcdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1759	wgEncodeSydhHistoneK562bH3k4me1UcdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1773	wgEncodeHaibTfbsHepg2RxlchPcr2xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1774	wgEncodeHaibTfbsHepg2RxlchV0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1775	wgEncodeHaibTfbsHepg2RxlchV0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1776	wgEncodeHaibTfbsHepg2RxlchPcr1xRawDataRep3	61	\N	\N	\N	\N	\N	\N
-1777	wgEncodeHaibTfbsHepg2RxlchPcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1778	wgEncodeHaibTfbsHepg2RxlchPcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1779	wgEncodeHaibTfbsHepg2RxlchPcr1xRawDataRep4	61	\N	\N	\N	\N	\N	\N
-1780	wgEncodeHaibTfbsHepg2RxlchPcr2xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1781	SRR018480	61	\N	\N	\N	\N	\N	\N
-1782	SRR018481	61	\N	\N	\N	\N	\N	\N
-1783	SRR018478	61	\N	\N	\N	\N	\N	\N
-1784	SRR018479	61	\N	\N	\N	\N	\N	\N
-1785	SRR026664	61	\N	\N	\N	\N	\N	\N
-1786	SRR026665	61	\N	\N	\N	\N	\N	\N
-1789	wgEncodeHaibTfbsHepg2P300V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1790	wgEncodeHaibTfbsHepg2P300V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1794	wgEncodeHaibTfbsH1hescYy1sc281V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1795	wgEncodeHaibTfbsH1hescYy1sc281V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1800	wgEncodeHaibTfbsHepg2Hnf4asc8987V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1801	wgEncodeHaibTfbsHepg2Hnf4asc8987V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1804	wgEncodeHaibTfbsHepg2Foxa2sc6554V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1805	wgEncodeHaibTfbsHepg2Foxa2sc6554V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1815	wgEncodeHaibTfbsHelas3Taf1Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1816	wgEncodeHaibTfbsHelas3Taf1Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1819	wgEncodeHaibTfbsGm12878Bclaf101388V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1820	wgEncodeHaibTfbsGm12878Bclaf101388V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1824	wgEncodeHaibTfbsHelas3RxlchPcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1829	wgEncodeHaibTfbsHepg2Taf1Pcr2xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1830	wgEncodeHaibTfbsHepg2Taf1Pcr2xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1832	wgEncodeUwDnaseA549RawDataRep2	62	\N	\N	\N	\N	\N	\N
-1833	wgEncodeUwDnaseA549RawDataRep1	62	\N	\N	\N	\N	\N	\N
-1843	wgEncodeHaibTfbsHepg2Rad21V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1844	wgEncodeHaibTfbsHepg2Rad21V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1850	SRR179726	61	\N	\N	\N	\N	\N	\N
-1851	SRR179727	61	\N	\N	\N	\N	\N	\N
-1852	SRR179725	61	\N	\N	\N	\N	\N	\N
-1853	SRR179729	61	\N	\N	\N	\N	\N	\N
-1854	SRR179728	61	\N	\N	\N	\N	\N	\N
-1855	SRR179730	61	\N	\N	\N	\N	\N	\N
-1862	wgEncodeHaibTfbsGm12878GabpPcr2xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1863	wgEncodeHaibTfbsGm12878GabpPcr2xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1864	wgEncodeBroadChipSeqRawDataRep1Hepg2Control	61	\N	\N	\N	\N	\N	\N
-1865	wgEncodeBroadChipSeqRawDataRep2Hepg2Control	61	\N	\N	\N	\N	\N	\N
-1866	SRR037571	61	\N	\N	\N	\N	\N	\N
-1867	SRR037572	61	\N	\N	\N	\N	\N	\N
-1868	SRR037573	61	\N	\N	\N	\N	\N	\N
-1869	SRR037574	61	\N	\N	\N	\N	\N	\N
-1872	wgEncodeHaibTfbsK562MaxV0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1873	wgEncodeHaibTfbsK562MaxV0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1876	SRR037583	61	\N	\N	\N	\N	\N	\N
-1877	SRR037584	61	\N	\N	\N	\N	\N	\N
-1878	SRR037586	61	\N	\N	\N	\N	\N	\N
-1879	SRR037585	61	\N	\N	\N	\N	\N	\N
-1887	SRR029620	61	\N	\N	\N	\N	\N	\N
-1888	SRR018455	61	\N	\N	\N	\N	\N	\N
-1889	SRR029609	61	\N	\N	\N	\N	\N	\N
-1890	SRR067950	61	\N	\N	\N	\N	\N	\N
-1891	wgEncodeHaibTfbsHepg2SrfV0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-1892	wgEncodeHaibTfbsHepg2SrfV0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1907	wgEncodeBroadHistoneNhaCtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1908	wgEncodeBroadHistoneNhaCtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1909	wgEncodeBroadHistoneHuvecH3k9me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1910	wgEncodeBroadHistoneHuvecH3k9me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1911	wgEncodeBroadHistoneHuvecH3k9me1StdRawDataRep3	61	\N	\N	\N	\N	\N	\N
-1918	wgEncodeBroadHistoneHuvecH3k36me3StdRawDataRep3	61	\N	\N	\N	\N	\N	\N
-1919	wgEncodeBroadHistoneHuvecH3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1920	wgEncodeBroadHistoneHuvecH3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1926	wgEncodeOpenChromChipK562InputRawData	61	\N	\N	\N	\N	\N	\N
-1927	SRR067937	61	\N	\N	\N	\N	\N	\N
-1928	SRR067938	61	\N	\N	\N	\N	\N	\N
-1929	wgEncodeBroadHistoneNhdfadCtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1930	wgEncodeBroadHistoneNhdfadCtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1942	wgEncodeUtaChIPseqRawDataRep1HuvecCtcf	61	\N	\N	\N	\N	\N	\N
-1943	wgEncodeUtaChIPseqRawDataRep2HuvecCtcf	61	\N	\N	\N	\N	\N	\N
-1946	wgEncodeBroadHistoneHuvecControlStdRawDataRep3	61	\N	\N	\N	\N	\N	\N
-1947	wgEncodeBroadHistoneHuvecControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1948	wgEncodeBroadHistoneHuvecControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1949	wgEncodeUchicagoTfbsK562Egata2Controlgata2RawDataRep2	61	\N	\N	\N	\N	\N	\N
-1950	wgEncodeUchicagoTfbsK562Egata2ControlRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1952	wgEncodeBroadHistoneHsmmH3k9me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1953	wgEncodeBroadHistoneHsmmH3k9me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1954	wgEncodeBroadHistoneHuvecH3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1955	wgEncodeBroadHistoneHuvecH3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1956	wgEncodeBroadHistoneHuvecH3k4me3StdRawDataRep3	61	\N	\N	\N	\N	\N	\N
-1957	wgEncodeYaleChIPseqRawDataGm12878Input	61	\N	\N	\N	\N	\N	\N
-1958	wgEncodeYaleChIPseqRawDataRep1Gm12878InputIggrab	61	\N	\N	\N	\N	\N	\N
-1959	wgEncodeYaleChIPseqRawDataRep1Gm12878MusiggMusigg	61	\N	\N	\N	\N	\N	\N
-1960	wgEncodeYaleChIPseqRawDataRep2Gm12878InputIggrab	61	\N	\N	\N	\N	\N	\N
-1961	wgEncodeYaleChIPseqRawDataRep2Gm12878MusiggMusigg	61	\N	\N	\N	\N	\N	\N
-1969	wgEncodeUtaChIPseqRawDataRep1Gm12878Cmyc	61	\N	\N	\N	\N	\N	\N
-1970	wgEncodeUtaChIPseqRawDataRep2Gm12878Cmyc	61	\N	\N	\N	\N	\N	\N
-1973	wgEncodeBroadHistoneK562H3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-1974	wgEncodeBroadHistoneK562H3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-1977	wgEncodeYaleChIPseqRawDataRep2Gm12878Pol2V3	61	\N	\N	\N	\N	\N	\N
-1982	wgEncodeYaleChIPseqRawDataRep1Gm12878Pol2V3	61	\N	\N	\N	\N	\N	\N
-1984	wgEncodeYaleChIPseqRawDataRep3Gm12878Pol2V3	61	\N	\N	\N	\N	\N	\N
-1999	wgEncodeBroadHistoneHuvecH3k9acStdRawDataRep3	61	\N	\N	\N	\N	\N	\N
-2000	wgEncodeBroadHistoneHuvecH3k9acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2001	wgEncodeBroadHistoneHuvecH3k9acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2005	SRR179721	61	\N	\N	\N	\N	\N	\N
-2006	SRR179719	61	\N	\N	\N	\N	\N	\N
-2007	SRR179717	61	\N	\N	\N	\N	\N	\N
-2008	SRR179720	61	\N	\N	\N	\N	\N	\N
-2009	SRR179718	61	\N	\N	\N	\N	\N	\N
-2010	SRR179716	61	\N	\N	\N	\N	\N	\N
-2011	SRR019562	61	\N	\N	\N	\N	\N	\N
-2012	SRR067958	61	\N	\N	\N	\N	\N	\N
-2017	SRR019561	61	\N	\N	\N	\N	\N	\N
-2018	SRR029343	61	\N	\N	\N	\N	\N	\N
-2019	SRR067943	61	\N	\N	\N	\N	\N	\N
-2020	SRR029349	61	\N	\N	\N	\N	\N	\N
-2021	SRR029345	61	\N	\N	\N	\N	\N	\N
-2022	SRR029347	61	\N	\N	\N	\N	\N	\N
-2024	wgEncodeHaibTfbsK562Sp1Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2025	wgEncodeHaibTfbsK562Sp1Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2029	wgEncodeHaibTfbsHepg2Hdac2sc6296V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-2030	wgEncodeHaibTfbsHepg2Hdac2sc6296V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2037	wgEncodeBroadHistoneHsmmtH3k4me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2038	wgEncodeBroadHistoneHsmmtH3k4me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2044	wgEncodeBroadHistoneNhekH3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2045	wgEncodeBroadHistoneNhekH3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2046	wgEncodeBroadHistoneNhekH3k4me3StdRawDataRep3	61	\N	\N	\N	\N	\N	\N
-2052	wgEncodeUtaustinChIPseqRawDataHuvecInput	61	\N	\N	\N	\N	\N	\N
-2074	wgEncodeBroadHistoneHelas3ControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2075	wgEncodeBroadHistoneHelas3ControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2083	wgEncodeBroadHistoneNhdfadH3k9acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2084	wgEncodeBroadHistoneNhdfadH3k9acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2088	wgEncodeOpenChromDnaseGm12878RawDataRep1	62	\N	\N	\N	\N	\N	\N
-2089	wgEncodeOpenChromDnaseGm12878RawDataRep2	62	\N	\N	\N	\N	\N	\N
-2090	wgEncodeOpenChromDnaseGm12878RawDataRep4	62	\N	\N	\N	\N	\N	\N
-2091	wgEncodeOpenChromDnaseGm12878RawDataRep5	62	\N	\N	\N	\N	\N	\N
-2092	wgEncodeOpenChromDnaseGm12878RawDataRep3	62	\N	\N	\N	\N	\N	\N
-2104	wgEncodeHaibTfbsGm12878Yy1sc281Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2105	wgEncodeHaibTfbsGm12878Yy1sc281Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2114	wgEncodeUwHistoneHepg2H3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2115	wgEncodeUwHistoneHepg2H3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2123	wgEncodeYaleChIPseqRawDataHelas3Input	61	\N	\N	\N	\N	\N	\N
-2124	wgEncodeYaleChIPseqRawDataRep1Helas3Largefragment	61	\N	\N	\N	\N	\N	\N
-2125	wgEncodeYaleChIPseqRawDataRep1Helas3Mnase	61	\N	\N	\N	\N	\N	\N
-2126	wgEncodeYaleChIPseqRawDataRep1Helas3Mouseigg	61	\N	\N	\N	\N	\N	\N
-2127	wgEncodeYaleChIPseqRawDataRep1Helas3Nakeddna	61	\N	\N	\N	\N	\N	\N
-2128	wgEncodeYaleChIPseqRawDataRep1Helas3Rabigg	61	\N	\N	\N	\N	\N	\N
-2129	wgEncodeYaleChIPseqRawDataRep2Helas3Largefragment	61	\N	\N	\N	\N	\N	\N
-2130	wgEncodeYaleChIPseqRawDataRep2Helas3Mnase	61	\N	\N	\N	\N	\N	\N
-2131	wgEncodeYaleChIPseqRawDataRep2Helas3Mouseigg	61	\N	\N	\N	\N	\N	\N
-2132	wgEncodeYaleChIPseqRawDataRep2Helas3Nakeddna	61	\N	\N	\N	\N	\N	\N
-2133	wgEncodeYaleChIPseqRawDataRep3Helas3Nakeddna	61	\N	\N	\N	\N	\N	\N
-2134	wgEncodeBroadHistoneOsteoblH3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2135	wgEncodeBroadHistoneOsteoblH3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2140	wgEncodeHaibTfbsGm12878Six5Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2141	wgEncodeHaibTfbsGm12878Six5Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2142	SRR037631	61	\N	\N	\N	\N	\N	\N
-2143	SRR037632	61	\N	\N	\N	\N	\N	\N
-2144	SRR037633	61	\N	\N	\N	\N	\N	\N
-2147	wgEncodeHaibTfbsGm12878Taf1Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2148	wgEncodeHaibTfbsGm12878Taf1Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2149	wgEncodeHaibTfbsK562Taf1V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-2150	wgEncodeHaibTfbsK562Taf1V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2154	wgEncodeBroadHistoneK562Pol2bStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2155	wgEncodeBroadHistoneK562Pol2bStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2156	SRR029622	61	\N	\N	\N	\N	\N	\N
-2157	SRR029614	61	\N	\N	\N	\N	\N	\N
-2158	SRR037625	61	\N	\N	\N	\N	\N	\N
-2159	SRR037624	61	\N	\N	\N	\N	\N	\N
-2164	wgEncodeHaibTfbsH1hescP300V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N
-2165	wgEncodeHaibTfbsH1hescP300V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2169	wgEncodeHaibTfbsHepg2Elf1sc631V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-2170	wgEncodeHaibTfbsHepg2Elf1sc631V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2171	SRR037575	61	\N	\N	\N	\N	\N	\N
-2172	SRR037576	61	\N	\N	\N	\N	\N	\N
-2173	SRR037577	61	\N	\N	\N	\N	\N	\N
-2174	SRR037578	61	\N	\N	\N	\N	\N	\N
-2175	wgEncodeYaleChIPseqRawDataRep2Gm12878CfosV3	61	\N	\N	\N	\N	\N	\N
-2176	wgEncodeYaleChIPseqRawDataRep1Gm12878CfosV3	61	\N	\N	\N	\N	\N	\N
-2182	wgEncodeHaibTfbsGm12878Pol2Pcr2xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2183	wgEncodeHaibTfbsGm12878Pol2Pcr2xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2185	wgEncodeUwTfbsGm06990InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2186	SRR067969	61	\N	\N	\N	\N	\N	\N
-2187	SRR037614	61	\N	\N	\N	\N	\N	\N
-2188	SRR037613	61	\N	\N	\N	\N	\N	\N
-2189	SRR037615	61	\N	\N	\N	\N	\N	\N
-2190	SRR037616	61	\N	\N	\N	\N	\N	\N
-2211	SRR018231	61	\N	\N	\N	\N	\N	\N
-2212	wgEncodeBroadHistoneK562CtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2213	wgEncodeBroadHistoneK562CtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2216	SRR029617	61	\N	\N	\N	\N	\N	\N
-2217	SRR029612	61	\N	\N	\N	\N	\N	\N
-2218	SRR029624	61	\N	\N	\N	\N	\N	\N
-2219	SRR029628	61	\N	\N	\N	\N	\N	\N
-2220	SRR037618	61	\N	\N	\N	\N	\N	\N
-2221	SRR037617	61	\N	\N	\N	\N	\N	\N
-2222	SRR037619	61	\N	\N	\N	\N	\N	\N
-2229	wgEncodeBroadHistoneHepg2H3k79me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2230	wgEncodeBroadHistoneHepg2H3k79me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2240	wgEncodeHaibTfbsH1hescPou5f1sc9081V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N
-2241	wgEncodeHaibTfbsH1hescPou5f1sc9081V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2244	wgEncodeUtaChIPseqRawDataRep1HuvecPol2	61	\N	\N	\N	\N	\N	\N
-2245	wgEncodeUtaChIPseqRawDataRep2HuvecPol2	61	\N	\N	\N	\N	\N	\N
-2248	wgEncodeHaibTfbsH1hescCtcfsc5916V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N
-2249	wgEncodeHaibTfbsH1hescCtcfsc5916V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2250	wgEncodeBroadHistoneK562H3k4me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2251	wgEncodeBroadHistoneK562H3k4me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2252	wgEncodeHaibTfbsHepg2Usf1Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2253	wgEncodeHaibTfbsHepg2Usf1Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2257	wgEncodeBroadHistoneHsmmtH3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2258	wgEncodeBroadHistoneHsmmtH3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2266	wgEncodeUwDnaseHsmmtRawDataRep1	62	\N	\N	\N	\N	\N	\N
-2267	wgEncodeBroadHistoneHelas3CtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2268	wgEncodeBroadHistoneHelas3CtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2273	SRR029616	61	\N	\N	\N	\N	\N	\N
-2274	SRR029627	61	\N	\N	\N	\N	\N	\N
-2275	SRR029623	61	\N	\N	\N	\N	\N	\N
-2276	SRR029611	61	\N	\N	\N	\N	\N	\N
-2277	SRR037555	61	\N	\N	\N	\N	\N	\N
-2278	SRR037560	61	\N	\N	\N	\N	\N	\N
-2279	SRR020517	61	\N	\N	\N	\N	\N	\N
-2287	SRR020519	61	\N	\N	\N	\N	\N	\N
-2288	wgEncodeHaibTfbsK562Zbtb33Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2289	wgEncodeHaibTfbsK562Zbtb33Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2296	SRR029626	61	\N	\N	\N	\N	\N	\N
-2297	SRR029630	61	\N	\N	\N	\N	\N	\N
-2298	SRR029631	61	\N	\N	\N	\N	\N	\N
-2299	SRR029632	61	\N	\N	\N	\N	\N	\N
-2300	SRR037561	61	\N	\N	\N	\N	\N	\N
-2324	wgEncodeBroadHistoneHelas3H4k20me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2325	wgEncodeBroadHistoneHelas3H4k20me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2326	wgEncodeBroadHistoneHsmmtH3k9acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2327	wgEncodeBroadHistoneHsmmtH3k9acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2328	wgEncodeBroadHistoneOsteoblCtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2329	wgEncodeBroadHistoneOsteoblCtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2336	wgEncodeUwTfbsNhekInputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2342	SRR037597	61	\N	\N	\N	\N	\N	\N
-2343	SRR037547	61	\N	\N	\N	\N	\N	\N
-2344	SRR037548	61	\N	\N	\N	\N	\N	\N
-2345	SRR037552	61	\N	\N	\N	\N	\N	\N
-2346	SRR037549	61	\N	\N	\N	\N	\N	\N
-2347	SRR037551	61	\N	\N	\N	\N	\N	\N
-2348	SRR037556	61	\N	\N	\N	\N	\N	\N
-2349	SRR037598	61	\N	\N	\N	\N	\N	\N
-2352	SRR020515	61	\N	\N	\N	\N	\N	\N
-2362	wgEncodeHaibTfbsHelas3Pol2Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2363	wgEncodeHaibTfbsHelas3Pol2Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2364	SRR029621	61	\N	\N	\N	\N	\N	\N
-2365	SRR029613	61	\N	\N	\N	\N	\N	\N
-2366	SRR037563	61	\N	\N	\N	\N	\N	\N
-2367	SRR037635	61	\N	\N	\N	\N	\N	\N
-2368	SRR037636	61	\N	\N	\N	\N	\N	\N
-2369	SRR037634	61	\N	\N	\N	\N	\N	\N
-2370	SRR037637	61	\N	\N	\N	\N	\N	\N
-2371	SRR037638	61	\N	\N	\N	\N	\N	\N
-2372	SRR037639	61	\N	\N	\N	\N	\N	\N
-2373	SRR037652	61	\N	\N	\N	\N	\N	\N
-2374	SRR037640	61	\N	\N	\N	\N	\N	\N
-2375	SRR037641	61	\N	\N	\N	\N	\N	\N
-2376	SRR037642	61	\N	\N	\N	\N	\N	\N
-2379	SRR020508	61	\N	\N	\N	\N	\N	\N
-2389	wgEncodeBroadHistoneK562H3k9me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2390	wgEncodeBroadHistoneK562H3k9me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2391	wgEncodeHaibTfbsHepg2Ctcfsc5916V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2392	wgEncodeHaibTfbsHepg2Ctcfsc5916V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-2393	wgEncodeUwTfbsHelas3InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2394	wgEncodeBroadHistoneHuvecH3k4me1StdRawDataRep3	61	\N	\N	\N	\N	\N	\N
-2395	wgEncodeBroadHistoneHuvecH3k4me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2396	wgEncodeBroadHistoneHuvecH3k4me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2404	wgEncodeHaibTfbsGm12878Rad21V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2405	wgEncodeHaibTfbsGm12878Rad21V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-2409	wgEncodeBroadHistoneGm12878ControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2410	wgEncodeBroadHistoneGm12878H3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2411	wgEncodeBroadHistoneGm12878H3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2412	wgEncodeBroadHistoneGm12878H3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2414	wgEncodeBroadHistoneGm12878H3k4me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2415	wgEncodeBroadHistoneGm12878H3k9acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2416	wgEncodeBroadHistoneGm12878H4k20me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2417	wgEncodeBroadHistoneH1hescControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2418	wgEncodeBroadHistoneH1hescCtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2419	wgEncodeBroadHistoneH1hescH3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2420	wgEncodeBroadHistoneH1hescH3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2421	wgEncodeBroadHistoneH1hescH3k4me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2422	wgEncodeBroadHistoneH1hescH3k4me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2423	wgEncodeBroadHistoneH1hescH3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2424	wgEncodeBroadHistoneH1hescH3k9acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2425	wgEncodeBroadHistoneH1hescH4k20me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2426	wgEncodeBroadHistoneHepg2ControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2427	wgEncodeBroadHistoneHepg2CtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2428	wgEncodeBroadHistoneHepg2H3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2429	wgEncodeBroadHistoneHepg2H3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2430	wgEncodeBroadHistoneHepg2H3k4me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2431	wgEncodeBroadHistoneHepg2H3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2432	wgEncodeBroadHistoneHepg2H3k9acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2433	wgEncodeBroadHistoneHepg2H4k20me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2434	wgEncodeBroadHistoneHmecCtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2435	wgEncodeBroadHistoneHmecH3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2436	wgEncodeBroadHistoneHmecH3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2437	wgEncodeBroadHistoneHmecH3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2438	wgEncodeBroadHistoneHmecH3k4me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2439	wgEncodeBroadHistoneHmecH3k4me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2440	wgEncodeBroadHistoneHmecH3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2441	wgEncodeBroadHistoneHsmmControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2442	wgEncodeBroadHistoneHsmmCtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2443	wgEncodeBroadHistoneHsmmH3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2444	wgEncodeBroadHistoneHsmmH3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2445	wgEncodeBroadHistoneHsmmH3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2446	wgEncodeBroadHistoneHsmmH3k4me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2447	wgEncodeBroadHistoneHsmmH3k4me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2448	wgEncodeBroadHistoneHsmmH3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2449	wgEncodeBroadHistoneHsmmH3k9acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2450	wgEncodeBroadHistoneHsmmH4k20me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2451	wgEncodeBroadHistoneK562H3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2452	wgEncodeBroadHistoneK562H3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2453	wgEncodeBroadHistoneK562H3k9acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2454	wgEncodeBroadHistoneNhlfControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2455	wgEncodeBroadHistoneNhlfCtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2456	wgEncodeBroadHistoneNhlfH3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2457	wgEncodeBroadHistoneNhlfH3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2458	wgEncodeBroadHistoneNhlfH3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2459	wgEncodeBroadHistoneNhlfH3k4me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2460	wgEncodeBroadHistoneNhlfH3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2461	wgEncodeBroadHistoneNhlfH3k9acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2462	wgEncodeBroadHistoneNhlfH4k20me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2463	wgEncodeBroadHistoneGm12878ControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2464	wgEncodeBroadHistoneGm12878H3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2465	wgEncodeBroadHistoneGm12878H3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2466	wgEncodeBroadHistoneGm12878H3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2467	wgEncodeBroadHistoneGm12878H3k4me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2468	wgEncodeBroadHistoneGm12878H3k4me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2469	wgEncodeBroadHistoneGm12878H3k9acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2470	wgEncodeBroadHistoneGm12878H4k20me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2471	wgEncodeBroadHistoneH1hescControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2472	wgEncodeBroadHistoneH1hescCtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2473	wgEncodeBroadHistoneH1hescH3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2474	wgEncodeBroadHistoneH1hescH3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2475	wgEncodeBroadHistoneH1hescH3k4me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2476	wgEncodeBroadHistoneH1hescH3k4me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2477	wgEncodeBroadHistoneH1hescH3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2478	wgEncodeBroadHistoneH1hescH3k9acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2479	wgEncodeBroadHistoneH1hescH4k20me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2480	wgEncodeBroadHistoneHepg2ControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2481	wgEncodeBroadHistoneHepg2CtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2482	wgEncodeBroadHistoneHepg2H3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2483	wgEncodeBroadHistoneHepg2H3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2484	wgEncodeBroadHistoneHepg2H3k4me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2485	wgEncodeBroadHistoneHepg2H3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2486	wgEncodeBroadHistoneHepg2H3k9acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2487	wgEncodeBroadHistoneHepg2H4k20me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2488	wgEncodeBroadHistoneHmecCtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2489	wgEncodeBroadHistoneHmecH3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2490	wgEncodeBroadHistoneHmecH3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2491	wgEncodeBroadHistoneHmecH3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2492	wgEncodeBroadHistoneHmecH3k4me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2493	wgEncodeBroadHistoneHmecH3k4me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2494	wgEncodeBroadHistoneHmecH3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2495	wgEncodeBroadHistoneHsmmControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2496	wgEncodeBroadHistoneHsmmCtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2497	wgEncodeBroadHistoneHsmmH3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2498	wgEncodeBroadHistoneHsmmH3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2499	wgEncodeBroadHistoneHsmmH3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2500	wgEncodeBroadHistoneHsmmH3k4me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2501	wgEncodeBroadHistoneHsmmH3k4me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2502	wgEncodeBroadHistoneHsmmH3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2503	wgEncodeBroadHistoneHsmmH3k9acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2504	wgEncodeBroadHistoneHsmmH4k20me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2505	wgEncodeBroadHistoneK562H3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2506	wgEncodeBroadHistoneK562H3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2507	wgEncodeBroadHistoneK562H3k9acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2508	wgEncodeBroadHistoneNhlfControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2509	wgEncodeBroadHistoneNhlfCtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2510	wgEncodeBroadHistoneNhlfH3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2511	wgEncodeBroadHistoneNhlfH3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2512	wgEncodeBroadHistoneNhlfH3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2513	wgEncodeBroadHistoneNhlfH3k4me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2514	wgEncodeBroadHistoneNhlfH3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2515	wgEncodeBroadHistoneNhlfH3k9acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2516	wgEncodeBroadHistoneNhlfH4k20me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2524	wgEncodeOpenChromDnaseH1hescRawDataRep1	62	\N	\N	\N	\N	\N	\N
-2526	wgEncodeOpenChromDnaseHelas3RawDataRep1	62	\N	\N	\N	\N	\N	\N
-2527	wgEncodeOpenChromDnaseHepg2RawDataRep1	62	\N	\N	\N	\N	\N	\N
-2528	wgEncodeOpenChromDnaseHuvecRawDataRep1	62	\N	\N	\N	\N	\N	\N
-2529	wgEncodeOpenChromDnaseK562RawDataRep1	62	\N	\N	\N	\N	\N	\N
-2533	wgEncodeOpenChromDnaseNhekRawDataRep1	62	\N	\N	\N	\N	\N	\N
-2541	wgEncodeOpenChromDnaseH1hescRawDataRep2	62	\N	\N	\N	\N	\N	\N
-2543	wgEncodeOpenChromDnaseHelas3RawDataRep2	62	\N	\N	\N	\N	\N	\N
-2544	wgEncodeOpenChromDnaseHepg2RawDataRep2	62	\N	\N	\N	\N	\N	\N
-2545	wgEncodeOpenChromDnaseHuvecRawDataRep2	62	\N	\N	\N	\N	\N	\N
-2546	wgEncodeOpenChromDnaseK562RawDataRep2	62	\N	\N	\N	\N	\N	\N
-2550	wgEncodeOpenChromDnaseNhekRawDataRep2	62	\N	\N	\N	\N	\N	\N
-2552	wgEncodeOpenChromDnaseHelas3RawDataRep3	62	\N	\N	\N	\N	\N	\N
-2553	wgEncodeOpenChromDnaseHepg2RawDataRep3	62	\N	\N	\N	\N	\N	\N
-2554	wgEncodeHaibTfbsGm12878BatfRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2555	wgEncodeHaibTfbsGm12878Bcl11aRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2557	wgEncodeHaibTfbsGm12878Irf4sc6059RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2558	wgEncodeHaibTfbsGm12878P300RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2559	wgEncodeHaibTfbsGm12878Pu1Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2560	wgEncodeHaibTfbsGm12878Tcf12Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2561	wgEncodeHaibTfbsGm12878Zbtb33RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2569	wgEncodeHaibTfbsH1hescNrsfV0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2571	wgEncodeHaibTfbsH1hescPol2V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2572	wgEncodeHaibTfbsH1hescTaf1V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2573	wgEncodeHaibTfbsHepg2Fosl2V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2575	wgEncodeHaibTfbsHepg2RxraPcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2576	wgEncodeHaibTfbsK562Hey1RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2578	wgEncodeHaibTfbsGm12878BatfRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2579	wgEncodeHaibTfbsGm12878Bcl11aRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2581	wgEncodeHaibTfbsGm12878Irf4sc6059RawDataRep2	61	\N	\N	\N	\N	\N	\N
-2582	wgEncodeHaibTfbsGm12878P300RawDataRep2	61	\N	\N	\N	\N	\N	\N
-2583	wgEncodeHaibTfbsGm12878Sp1Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2584	wgEncodeHaibTfbsGm12878Tcf12Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2585	wgEncodeHaibTfbsGm12878Zbtb33RawDataRep2	61	\N	\N	\N	\N	\N	\N
-2594	wgEncodeHaibTfbsH1hescNrsfV0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N
-2596	wgEncodeHaibTfbsH1hescPol2V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N
-2597	wgEncodeHaibTfbsH1hescTaf1V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N
-2598	wgEncodeHaibTfbsHepg2Fosl2V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N
-2600	wgEncodeHaibTfbsHepg2RxraPcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2601	wgEncodeHaibTfbsK562Hey1RawDataRep2	61	\N	\N	\N	\N	\N	\N
-2617	wgEncodeUwHistoneGm06990H3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2618	wgEncodeUwHistoneGm06990H3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2627	wgEncodeUwTfbsGm12878CtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2628	wgEncodeUwHistoneGm12878H3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2629	wgEncodeUwHistoneGm12878H3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2630	wgEncodeUwHistoneGm12878H3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2632	wgEncodeUwTfbsHelas3CtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2633	wgEncodeUwHistoneHelas3H3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2634	wgEncodeUwHistoneHelas3H3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2635	wgEncodeUwHistoneHelas3H3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2636	wgEncodeUwTfbsHepg2CtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2637	wgEncodeUwHistoneHepg2H3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2638	wgEncodeUwHistoneHepg2H3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2641	wgEncodeUwTfbsHmecCtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2642	wgEncodeUwHistoneHmecH3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2647	wgEncodeUwTfbsHuvecCtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2648	wgEncodeUwHistoneHuvecH3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2649	wgEncodeUwHistoneHuvecH3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2650	wgEncodeUwHistoneHuvecH3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2651	wgEncodeUwTfbsK562CtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2652	wgEncodeUwHistoneK562H3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2653	wgEncodeUwHistoneK562H3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2654	wgEncodeUwHistoneK562H3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2655	wgEncodeUwTfbsNhekCtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2656	wgEncodeUwHistoneNhekH3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2657	wgEncodeUwHistoneNhekH3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2658	wgEncodeUwHistoneNhekH3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2676	wgEncodeUwHistoneGm06990H3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2677	wgEncodeUwHistoneGm06990H3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2685	wgEncodeUwTfbsGm12878CtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2686	wgEncodeUwHistoneGm12878H3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2687	wgEncodeUwHistoneGm12878H3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2688	wgEncodeUwHistoneGm12878H3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2690	wgEncodeUwTfbsHelas3CtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2691	wgEncodeUwHistoneHelas3H3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2692	wgEncodeUwHistoneHelas3H3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2693	wgEncodeUwHistoneHelas3H3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2694	wgEncodeUwTfbsHepg2CtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2695	wgEncodeUwHistoneHepg2H3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2696	wgEncodeUwHistoneHepg2H3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2702	wgEncodeUwTfbsHuvecCtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2703	wgEncodeUwHistoneHuvecH3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2704	wgEncodeUwHistoneHuvecH3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2705	wgEncodeUwHistoneHuvecH3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2706	wgEncodeUwTfbsK562CtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2707	wgEncodeUwHistoneK562H3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2708	wgEncodeUwHistoneK562H3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2709	wgEncodeUwTfbsNhekCtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2710	wgEncodeUwHistoneNhekH3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2711	wgEncodeUwHistoneNhekH3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2712	wgEncodeUwHistoneNhekH3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2731	wgEncodeUwDnaseGm12878RawDataRep1	62	\N	\N	\N	\N	\N	\N
-2732	wgEncodeUwDnaseH1hescRawDataRep1	62	\N	\N	\N	\N	\N	\N
-2738	wgEncodeUwDnaseHelas3RawDataRep1	62	\N	\N	\N	\N	\N	\N
-2739	wgEncodeUwDnaseHepg2RawDataRep1	62	\N	\N	\N	\N	\N	\N
-2746	wgEncodeUwDnaseK562RawDataRep1	62	\N	\N	\N	\N	\N	\N
-2750	wgEncodeUwDnaseNhlfRawDataRep1	62	\N	\N	\N	\N	\N	\N
-2765	wgEncodeUwDnaseGm12878RawDataRep2	62	\N	\N	\N	\N	\N	\N
-2771	wgEncodeUwDnaseHelas3RawDataRep2	62	\N	\N	\N	\N	\N	\N
-2772	wgEncodeUwDnaseHepg2RawDataRep2	62	\N	\N	\N	\N	\N	\N
-2779	wgEncodeUwDnaseK562RawDataRep2	62	\N	\N	\N	\N	\N	\N
-2783	wgEncodeUwDnaseNhlfRawDataRep2	62	\N	\N	\N	\N	\N	\N
-2788	wgEncodeSydhTfbsGm12878InputRawData	61	\N	\N	\N	\N	\N	\N
-2791	wgEncodeSydhTfbsHelas3InputRawData	61	\N	\N	\N	\N	\N	\N
-2793	wgEncodeSydhTfbsK562InputRawData	61	\N	\N	\N	\N	\N	\N
-2799	wgEncodeSydhTfbsGm12878InputTnfaIggrabRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2800	wgEncodeSydhTfbsGm12878JundRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2801	wgEncodeSydhTfbsGm12878IggmusRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2802	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2803	wgEncodeSydhTfbsGm12878Pol3RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2804	wgEncodeSydhTfbsGm12878Rad21IggrabRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2805	wgEncodeSydhTfbsGm12878Tr4RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2806	wgEncodeSydhTfbsGm12878Yy1RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2843	wgEncodeSydhTfbsHelas3Ap2alphaRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2844	wgEncodeSydhTfbsHelas3Ap2gammaRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2845	wgEncodeSydhTfbsHelas3Baf155IggmusRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2846	wgEncodeSydhTfbsHelas3Baf170IggmusRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2850	wgEncodeSydhTfbsHelas3Brg1IggmusRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2851	wgEncodeSydhTfbsHelas3CfosRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2852	wgEncodeSydhTfbsHelas3CjunRabiggRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2853	wgEncodeSydhTfbsHelas3CmycRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2854	wgEncodeSydhTfbsHelas3E2f1RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2855	wgEncodeSydhTfbsHelas3E2f4RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2856	wgEncodeSydhTfbsHelas3E2f6RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2857	wgEncodeSydhTfbsHelas3Ini1IggmusRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2858	wgEncodeSydhTfbsHelas3JundRabiggRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2859	wgEncodeSydhTfbsHelas3LargefragmentRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2860	wgEncodeSydhTfbsHelas3MaxRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2861	wgEncodeSydhTfbsHelas3MnaseRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2862	wgEncodeSydhTfbsHelas3MouseiggRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2863	wgEncodeSydhTfbsHelas3NakeddnaRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2864	wgEncodeSydhTfbsHelas3Nrf1IggmusRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2865	wgEncodeSydhTfbsHelas3Pol2RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2866	wgEncodeSydhTfbsHelas3RabiggRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2869	wgEncodeSydhTfbsHelas3Tr4RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2875	wgEncodeSydhTfbsHuvecCjunRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2877	wgEncodeSydhTfbsHuvecMaxRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2878	wgEncodeSydhTfbsHuvecPol2RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2883	wgEncodeSydhTfbsK562Brg1IggmusRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2884	wgEncodeSydhTfbsK562CfosRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2885	wgEncodeSydhTfbsK562CjunRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2886	wgEncodeSydhTfbsK562CmycRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2887	wgEncodeSydhTfbsK562Ini1IggmusRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2888	wgEncodeSydhTfbsK562InputV2RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2889	wgEncodeSydhTfbsK562MaxRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2890	wgEncodeSydhTfbsK562IggmusRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2892	wgEncodeSydhTfbsK562Nfe2RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2893	wgEncodeSydhTfbsK562Pol2RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2894	wgEncodeSydhTfbsK562Pol2IggmusRawDataRep1	61	\N	\N	\N	\N	\N	\N
-2895	wgEncodeSydhTfbsK562Pol3RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2896	wgEncodeSydhTfbsK562Rad21RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2899	wgEncodeSydhTfbsK562Xrcc4RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2900	wgEncodeSydhTfbsK562E2f4RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2901	wgEncodeSydhTfbsK562E2f6RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2902	wgEncodeSydhTfbsK562Gata1RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2903	wgEncodeSydhTfbsK562Gata2RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2904	wgEncodeSydhTfbsK562Setdb1RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2905	wgEncodeSydhTfbsK562Tr4RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2906	wgEncodeSydhTfbsK562Yy1RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2907	wgEncodeSydhTfbsK562Znf263RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2908	wgEncodeSydhTfbsK562Znf274RawDataRep1	61	\N	\N	\N	\N	\N	\N
-2918	wgEncodeSydhTfbsGm12878InputTnfaIggrabRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2919	wgEncodeSydhTfbsGm12878JundRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2920	wgEncodeSydhTfbsGm12878IggmusRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2921	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2922	wgEncodeSydhTfbsGm12878Pol3RawDataRep2	61	\N	\N	\N	\N	\N	\N
-2923	wgEncodeSydhTfbsGm12878Rad21IggrabRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2924	wgEncodeSydhTfbsGm12878Tr4RawDataRep2	61	\N	\N	\N	\N	\N	\N
-2925	wgEncodeSydhTfbsGm12878Yy1RawDataRep2	61	\N	\N	\N	\N	\N	\N
-2961	wgEncodeSydhTfbsHelas3Ap2alphaRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2962	wgEncodeSydhTfbsHelas3Ap2gammaRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2963	wgEncodeSydhTfbsHelas3Baf155IggmusRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2964	wgEncodeSydhTfbsHelas3Baf170IggmusRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2968	wgEncodeSydhTfbsHelas3Brg1IggmusRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2969	wgEncodeSydhTfbsHelas3CfosRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2970	wgEncodeSydhTfbsHelas3CjunRabiggRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2971	wgEncodeSydhTfbsHelas3CmycRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2972	wgEncodeSydhTfbsHelas3E2f1RawDataRep2	61	\N	\N	\N	\N	\N	\N
-2973	wgEncodeSydhTfbsHelas3E2f4RawDataRep2	61	\N	\N	\N	\N	\N	\N
-2974	wgEncodeSydhTfbsHelas3E2f6RawDataRep2	61	\N	\N	\N	\N	\N	\N
-2975	wgEncodeSydhTfbsHelas3Ini1IggmusRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2976	wgEncodeSydhTfbsHelas3JundRabiggRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2977	wgEncodeSydhTfbsHelas3LargefragmentRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2978	wgEncodeSydhTfbsHelas3MaxRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2979	wgEncodeSydhTfbsHelas3MnaseRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2980	wgEncodeSydhTfbsHelas3MouseiggRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2981	wgEncodeSydhTfbsHelas3NakeddnaRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2982	wgEncodeSydhTfbsHelas3Nrf1IggmusRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2983	wgEncodeSydhTfbsHelas3Pol2RawDataRep2	61	\N	\N	\N	\N	\N	\N
-2986	wgEncodeSydhTfbsHelas3Tr4RawDataRep2	61	\N	\N	\N	\N	\N	\N
-2992	wgEncodeSydhTfbsHuvecCjunRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2994	wgEncodeSydhTfbsHuvecMaxRawDataRep2	61	\N	\N	\N	\N	\N	\N
-2995	wgEncodeSydhTfbsHuvecPol2RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3000	wgEncodeSydhTfbsK562Brg1IggmusRawDataRep2	61	\N	\N	\N	\N	\N	\N
-3001	wgEncodeSydhTfbsK562CfosRawDataRep2	61	\N	\N	\N	\N	\N	\N
-3002	wgEncodeSydhTfbsK562CjunRawDataRep2	61	\N	\N	\N	\N	\N	\N
-3003	wgEncodeSydhTfbsK562CmycRawDataRep2	61	\N	\N	\N	\N	\N	\N
-3004	wgEncodeSydhTfbsK562Ini1IggmusRawDataRep2	61	\N	\N	\N	\N	\N	\N
-3005	wgEncodeSydhTfbsK562InputV2RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3006	wgEncodeSydhTfbsK562MaxRawDataRep2	61	\N	\N	\N	\N	\N	\N
-3007	wgEncodeSydhTfbsK562IggmusRawDataRep2	61	\N	\N	\N	\N	\N	\N
-3009	wgEncodeSydhTfbsK562Nfe2RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3010	wgEncodeSydhTfbsK562Pol2RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3011	wgEncodeSydhTfbsK562Pol2IggmusRawDataRep2	61	\N	\N	\N	\N	\N	\N
-3012	wgEncodeSydhTfbsK562Pol3RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3013	wgEncodeSydhTfbsK562Rad21RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3016	wgEncodeSydhTfbsK562Xrcc4RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3017	wgEncodeSydhTfbsK562E2f4RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3018	wgEncodeSydhTfbsK562E2f6RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3019	wgEncodeSydhTfbsK562Gata1RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3020	wgEncodeSydhTfbsK562Gata2RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3021	wgEncodeSydhTfbsK562Setdb1RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3022	wgEncodeSydhTfbsK562Tr4RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3023	wgEncodeSydhTfbsK562Yy1RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3024	wgEncodeSydhTfbsK562Znf263RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3025	wgEncodeSydhTfbsK562Znf274RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3032	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep3	61	\N	\N	\N	\N	\N	\N
-3051	wgEncodeSydhTfbsHelas3Baf155IggmusRawDataRep3	61	\N	\N	\N	\N	\N	\N
-3052	wgEncodeSydhTfbsHelas3Baf170IggmusRawDataRep3	61	\N	\N	\N	\N	\N	\N
-3053	wgEncodeSydhTfbsHelas3Brg1IggmusRawDataRep3	61	\N	\N	\N	\N	\N	\N
-3054	wgEncodeSydhTfbsHelas3Ini1IggmusRawDataRep3	61	\N	\N	\N	\N	\N	\N
-3055	wgEncodeSydhTfbsHelas3NakeddnaRawDataRep3	61	\N	\N	\N	\N	\N	\N
-3056	wgEncodeSydhTfbsHelas3Pol2RawDataRep3	61	\N	\N	\N	\N	\N	\N
-3061	wgEncodeSydhTfbsHuvecPol2RawDataRep3	61	\N	\N	\N	\N	\N	\N
-3065	wgEncodeSydhTfbsK562CfosRawDataRep3	61	\N	\N	\N	\N	\N	\N
-3069	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep4	61	\N	\N	\N	\N	\N	\N
-3078	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep5	61	\N	\N	\N	\N	\N	\N
-3082	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep6	61	\N	\N	\N	\N	\N	\N
-3084	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep7	61	\N	\N	\N	\N	\N	\N
-3085	wgEncodeBroadHistoneDnd41H3k04me1RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3086	wgEncodeBroadHistoneDnd41H3k04me1RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3087	wgEncodeBroadHistoneDnd41H3k04me2RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3088	wgEncodeBroadHistoneDnd41H3k04me2RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3089	wgEncodeBroadHistoneDnd41H3k04me3RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3090	wgEncodeBroadHistoneDnd41H3k04me3RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3091	wgEncodeBroadHistoneDnd41H3k09acRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3092	wgEncodeBroadHistoneDnd41H3k09acRawDataRep2	61	\N	\N	\N	\N	\N	\N
-3093	wgEncodeBroadHistoneDnd41H3k27acRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3094	wgEncodeBroadHistoneDnd41H3k27acRawDataRep2	61	\N	\N	\N	\N	\N	\N
-3095	wgEncodeBroadHistoneDnd41H3k27me3RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3096	wgEncodeBroadHistoneDnd41H3k27me3RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3097	wgEncodeBroadHistoneDnd41H3k36me3RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3098	wgEncodeBroadHistoneDnd41H3k36me3RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3099	wgEncodeBroadHistoneDnd41H4k20me1RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3100	wgEncodeBroadHistoneDnd41H4k20me1RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3101	wgEncodeBroadHistoneMonocd14ro1746H3k04me1RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3102	wgEncodeBroadHistoneMonocd14ro1746H3k04me1RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3103	wgEncodeBroadHistoneMonocd14ro1746H3k04me2RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3104	wgEncodeBroadHistoneMonocd14ro1746H3k04me2RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3105	wgEncodeBroadHistoneMonocd14ro1746H3k04me3RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3106	wgEncodeBroadHistoneMonocd14ro1746H3k04me3RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3107	wgEncodeBroadHistoneMonocd14ro1746H3k09acRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3108	wgEncodeBroadHistoneMonocd14ro1746H3k09acRawDataRep2	61	\N	\N	\N	\N	\N	\N
-3109	wgEncodeBroadHistoneMonocd14ro1746H3k27acRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3110	wgEncodeBroadHistoneMonocd14ro1746H3k27acRawDataRep2	61	\N	\N	\N	\N	\N	\N
-3111	wgEncodeBroadHistoneMonocd14ro1746H3k27me3RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3112	wgEncodeBroadHistoneMonocd14ro1746H3k27me3RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3113	wgEncodeBroadHistoneMonocd14ro1746H3k36me3RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3114	wgEncodeBroadHistoneMonocd14ro1746H3k36me3RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3115	wgEncodeBroadHistoneMonocd14ro1746H4k20me1RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3116	wgEncodeBroadHistoneMonocd14ro1746H4k20me1RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3117	wgEncodeUwHistoneMonocd14ro1746H3k04me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3118	wgEncodeUwHistoneMonocd14ro1746H3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3119	wgEncodeBroadHistoneA549H3k04me1Etoh02RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3120	wgEncodeBroadHistoneA549H3k04me1Etoh02RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3121	wgEncodeBroadHistoneA549H3k04me2Etoh02RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3122	wgEncodeBroadHistoneA549H3k04me2Etoh02RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3123	wgEncodeBroadHistoneA549H3k04me3Etoh02RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3124	wgEncodeBroadHistoneA549H3k04me3Etoh02RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3125	wgEncodeBroadHistoneA549H3k09acEtoh02RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3126	wgEncodeBroadHistoneA549H3k09acEtoh02RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3127	wgEncodeBroadHistoneA549H3k27acEtoh02RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3128	wgEncodeBroadHistoneA549H3k27acEtoh02RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3129	wgEncodeBroadHistoneA549H3k27me3Etoh02RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3130	wgEncodeBroadHistoneA549H3k27me3Etoh02RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3131	wgEncodeBroadHistoneA549H3k36me3Etoh02RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3132	wgEncodeBroadHistoneA549H3k36me3Etoh02RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3133	wgEncodeBroadHistoneA549H4k20me1Etoh02RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3134	wgEncodeBroadHistoneA549H4k20me1Etoh02RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3135	wgEncodeBroadHistoneA549CtcfEtoh02RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3136	wgEncodeBroadHistoneA549CtcfEtoh02RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3137	wgEncodeBroadHistoneHelas3H3k04me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3138	wgEncodeBroadHistoneHelas3H3k04me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-3139	wgEncodeBroadHistoneHepg2H3k04me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3140	wgEncodeBroadHistoneHepg2H3k04me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-3141	wgEncodeBroadHistoneHsmmtH3k27me3RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3142	wgEncodeBroadHistoneHsmmtH3k27me3RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3143	wgEncodeBroadHistoneMonocd14ro1746CtcfRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3144	wgEncodeBroadHistoneMonocd14ro1746CtcfRawDataRep2	61	\N	\N	\N	\N	\N	\N
-3145	wgEncodeBroadHistoneNhaH3k04me2RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3146	wgEncodeBroadHistoneNhaH3k04me2RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3147	wgEncodeBroadHistoneNhaH3k09acRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3148	wgEncodeBroadHistoneNhaH3k09acRawDataRep2	61	\N	\N	\N	\N	\N	\N
-3149	wgEncodeBroadHistoneNhaH4k20me1RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3150	wgEncodeBroadHistoneNhaH4k20me1RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3151	wgEncodeBroadHistoneNhdfadH3k04me1RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3152	wgEncodeBroadHistoneNhdfadH3k04me1RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3153	wgEncodeBroadHistoneNhdfadH4k20me1RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3154	wgEncodeBroadHistoneNhdfadH4k20me1RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3155	wgEncodeBroadHistoneNhdfadH4k20me1RawDataRep3	61	\N	\N	\N	\N	\N	\N
-3156	wgEncodeBroadHistoneOsteoH3k04me3RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3157	wgEncodeBroadHistoneOsteoH3k04me3RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3158	wgEncodeBroadHistoneOsteoH3k04me3RawDataRep3	61	\N	\N	\N	\N	\N	\N
-3159	wgEncodeBroadHistoneOsteoH3k27me3RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3160	wgEncodeBroadHistoneOsteoH3k27me3RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3161	wgEncodeBroadHistoneOsteoH4k20me1RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3162	wgEncodeBroadHistoneOsteoH4k20me1RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3163	wgEncodeOpenChromChipHelas3CtcfRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3164	wgEncodeOpenChromChipHelas3CtcfRawDataRep2	61	\N	\N	\N	\N	\N	\N
-3165	wgEncodeOpenChromChipHelas3InputRawData	61	\N	\N	\N	\N	\N	\N
-3166	wgEncodeOpenChromChipHepg2CtcfRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3167	wgEncodeOpenChromChipHepg2CtcfRawDataRep2	61	\N	\N	\N	\N	\N	\N
-3168	wgEncodeOpenChromChipHepg2InputRawData	61	\N	\N	\N	\N	\N	\N
-3170	wgEncodeSydhTfbsHelas3InputUcdRawData	61	\N	\N	\N	\N	\N	\N
-3171	wgEncodeSydhTfbsHelas3ifngInputRawData	61	\N	\N	\N	\N	\N	\N
-3178	wgEncodeSydhTfbsImr90InputIggrabRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3179	wgEncodeUwHistoneGm06990InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3180	wgEncodeUwHistoneHelas3InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3181	wgEncodeUwHistoneHepg2InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3182	wgEncodeUwHistoneMonocd14ro1746InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3183	wgEncodeUwTfbsMonocd14ro1746InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3186	wgEncodeUwHistoneA549InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3187	wgEncodeUwTfbsA549InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3188	wgEncodeSydhTfbsImr90CtcfbIggrabRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3189	wgEncodeSydhTfbsImr90CtcfbIggrabRawDataRep2	61	\N	\N	\N	\N	\N	\N
-3190	wgEncodeBroadHistoneDnd41ControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3191	wgEncodeBroadHistoneDnd41ControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N
-3192	wgEncodeBroadHistoneMonocd14ro1746ControlRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3193	wgEncodeBroadHistoneMonocd14ro1746ControlRawDataRep2	61	\N	\N	\N	\N	\N	\N
-3194	wgEncodeOpenChromChipHuvecInputRawData	61	\N	\N	\N	\N	\N	\N
-3195	wgEncodeSydhTfbsGm12878InputIggrabRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3197	wgEncodeSydhTfbsK562Ifna30InputRawData	61	\N	\N	\N	\N	\N	\N
-3198	wgEncodeSydhTfbsK562Ifna6hInputRawData	61	\N	\N	\N	\N	\N	\N
-3199	wgEncodeSydhTfbsK562Ifng30InputRawData	61	\N	\N	\N	\N	\N	\N
-3200	wgEncodeSydhTfbsK562Ifng6hInputRawData	61	\N	\N	\N	\N	\N	\N
-3201	wgEncodeSydhTfbsK562InputIggrabRawData	61	\N	\N	\N	\N	\N	\N
-3202	wgEncodeUwHistoneGm12878InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3203	wgEncodeUwHistoneHmecInputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3204	wgEncodeUwHistoneHuvecInputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3205	wgEncodeUwHistoneK562InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3206	wgEncodeUwHistoneNhekInputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3207	wgEncodeUwHistoneNhlfInputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3208	wgEncodeUwTfbsNhlfInputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3211	wgEncodeBroadHistoneA549ControlEtoh02RawDataRep1	61	\N	\N	\N	\N	\N	\N
-3212	wgEncodeBroadHistoneA549ControlEtoh02RawDataRep2	61	\N	\N	\N	\N	\N	\N
-3213	wgEncodeBroadHistoneDnd41CtcfRawDataRep1	61	\N	\N	\N	\N	\N	\N
-3214	wgEncodeBroadHistoneDnd41CtcfRawDataRep2	61	\N	\N	\N	\N	\N	\N
-3215	wgEncodeUwDnaseHsmmtRawDataRep2	62	\N	\N	\N	\N	\N	\N
-3216	wgEncodeUwDnaseMonocd14ro1746RawDataRep2	62	\N	\N	\N	\N	\N	\N
-3217	wgEncodeBroadHistoneGm12878H3k04me1StdRawDataRep1V2	61	\N	\N	\N	\N	\N	\N
-3218	wgEncodeBroadHistoneGm12878H3k04me3StdRawDataRep2V2	61	\N	\N	\N	\N	\N	\N
-3219	wgEncodeHaibMethylRrbsAg04449UwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3220	wgEncodeHaibMethylRrbsAg04450UwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3221	wgEncodeHaibMethylRrbsAg09309UwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3222	wgEncodeHaibMethylRrbsAg09319UwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3223	wgEncodeHaibMethylRrbsAg10803UwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3224	wgEncodeHaibMethylRrbsCmkUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3225	wgEncodeHaibMethylRrbsFibroblOpenchromgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3226	wgEncodeHaibMethylRrbsGm12878HudsonalphagrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3227	wgEncodeHaibMethylRrbsGm12891HudsonalphagrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3228	wgEncodeHaibMethylRrbsGm12892HudsonalphagrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3229	wgEncodeHaibMethylRrbsGm19239OpenchromgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3230	wgEncodeHaibMethylRrbsGm19240OpenchromgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3231	wgEncodeHaibMethylRrbsH1hescHudsonalphagrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3232	wgEncodeHaibMethylRrbsHaeUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3233	wgEncodeHaibMethylRrbsHcfUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3234	wgEncodeHaibMethylRrbsHcmUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3235	wgEncodeHaibMethylRrbsHcpeUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3236	wgEncodeHaibMethylRrbsHct116YalegrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3237	wgEncodeHaibMethylRrbsHeeUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3238	wgEncodeHaibMethylRrbsHek293UwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3239	wgEncodeHaibMethylRrbsHepg2HudsonalphagrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3240	wgEncodeHaibMethylRrbsHipeUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3241	wgEncodeHaibMethylRrbsHmecUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3242	wgEncodeHaibMethylRrbsHnpceUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3243	wgEncodeHaibMethylRrbsHpaeUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3244	wgEncodeHaibMethylRrbsHrceUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3245	wgEncodeHaibMethylRrbsHreUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3246	wgEncodeHaibMethylRrbsHrpeUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3247	wgEncodeHaibMethylRrbsHsmmSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3248	wgEncodeHaibMethylRrbsHsmmtOpenchromgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3249	wgEncodeHaibMethylRrbsImr90UwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3250	wgEncodeHaibMethylRrbsJurkatUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3251	wgEncodeHaibMethylRrbsK562HudsonalphagrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3252	wgEncodeHaibMethylRrbsMcf7UwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3253	wgEncodeHaibMethylRrbsMelanoSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3254	wgEncodeHaibMethylRrbsNb4UwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3255	wgEncodeHaibMethylRrbsNhaUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3256	wgEncodeHaibMethylRrbsNhbeUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3257	wgEncodeHaibMethylRrbsNhdfneoUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3258	wgEncodeHaibMethylRrbsNt2d1UwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3259	wgEncodeHaibMethylRrbsNt2d1YalegrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3260	wgEncodeHaibMethylRrbsOsteoblOpenchromgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3261	wgEncodeHaibMethylRrbsPanisletsSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3262	wgEncodeHaibMethylRrbsSaecUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3263	wgEncodeHaibMethylRrbsSkmcUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3264	wgEncodeHaibMethylRrbsSknshraUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N
-3265	H1ESC_5mC_Lister2009_PMID19829295.bb	66	\N	\N	\N	\N	\N	\N
-3266	IMR90_5mC_Lister2009_PMID19829295.bb	66	\N	\N	\N	\N	\N	\N
-3267	GM12878_5mC_ENCODE_HAIB.bb	66	\N	\N	\N	\N	\N	\N
+6	wgEncodeUchicagoTfbsK562InputControlgata2RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+7	wgEncodeUchicagoTfbsK562InputControlnr4a1RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+8	wgEncodeUchicagoTfbsK562InputControlfosRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+9	wgEncodeUchicagoTfbsK562InputControlhdac8RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+10	wgEncodeUchicagoTfbsK562InputControljunbRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+11	wgEncodeUchicagoTfbsK562InputControlgata2RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+12	wgEncodeUchicagoTfbsK562InputControljunbRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+13	wgEncodeUchicagoTfbsK562InputControljundRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+14	wgEncodeUchicagoTfbsK562InputControlnr4a1RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+15	wgEncodeUchicagoTfbsK562InputControlfosRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+16	wgEncodeUchicagoTfbsK562InputControljundRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+17	wgEncodeUchicagoTfbsK562InputControlhdac8RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+18	wgEncodeUchicagoTfbsK562InputControlfosRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+19	wgEncodeUchicagoTfbsK562InputControljundRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+32	wgEncodeHaibTfbsK562Usf1V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+33	wgEncodeHaibTfbsK562Usf1V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+36	SRR018226	61	\N	\N	\N	\N	\N	\N	\N
+37	SRR018477	61	\N	\N	\N	\N	\N	\N	\N
+40	wgEncodeBroadHistoneHelas3H3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+41	wgEncodeBroadHistoneHelas3H3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+43	wgEncodeBroadChipSeqRawDataRep1NhlfControl	61	\N	\N	\N	\N	\N	\N	\N
+44	wgEncodeBroadChipSeqRawDataRep2NhlfControl	61	\N	\N	\N	\N	\N	\N	\N
+47	wgEncodeHaibTfbsK562Fosl1sc183V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+48	wgEncodeHaibTfbsK562Fosl1sc183V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+53	SRR067769	61	\N	\N	\N	\N	\N	\N	\N
+54	SRR067948	61	\N	\N	\N	\N	\N	\N	\N
+55	SRR067768	61	\N	\N	\N	\N	\N	\N	\N
+58	SRR067941	61	\N	\N	\N	\N	\N	\N	\N
+59	SRR067940	61	\N	\N	\N	\N	\N	\N	\N
+75	SRR029346	61	\N	\N	\N	\N	\N	\N	\N
+76	SRR018454	61	\N	\N	\N	\N	\N	\N	\N
+77	SRR029341	61	\N	\N	\N	\N	\N	\N	\N
+78	SRR067944	61	\N	\N	\N	\N	\N	\N	\N
+79	SRR029340	61	\N	\N	\N	\N	\N	\N	\N
+80	SRR029344	61	\N	\N	\N	\N	\N	\N	\N
+81	SRR029342	61	\N	\N	\N	\N	\N	\N	\N
+86	wgEncodeUtaChIPseqRawDataRep1Gm12878Pol2	61	\N	\N	\N	\N	\N	\N	\N
+87	wgEncodeUtaChIPseqRawDataRep2Gm12878Pol2	61	\N	\N	\N	\N	\N	\N	\N
+90	wgEncodeUchicagoTfbsK562Ehdac8Controlhdac8RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+91	wgEncodeUchicagoTfbsK562Ehdac8ControlRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+98	SRR037593	61	\N	\N	\N	\N	\N	\N	\N
+99	SRR037594	61	\N	\N	\N	\N	\N	\N	\N
+100	SRR037596	61	\N	\N	\N	\N	\N	\N	\N
+101	SRR037595	61	\N	\N	\N	\N	\N	\N	\N
+109	wgEncodeBroadHistoneGm12878CtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+110	wgEncodeBroadHistoneGm12878CtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+124	wgEncodeHaibTfbsK562Gata2sc267Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+125	wgEncodeHaibTfbsK562Gata2sc267Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+126	wgEncodeBroadHistoneNhdfadH3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+127	wgEncodeBroadHistoneNhdfadH3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+142	wgEncodeHaibTfbsGm12878Pbx3Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+143	wgEncodeHaibTfbsGm12878Pbx3Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+146	wgEncodeHaibTfbsH1hescRxlchV0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+147	wgEncodeHaibTfbsH1hescRxlchPcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+148	wgEncodeBroadHistoneHsmmH2azStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+149	wgEncodeBroadHistoneHsmmH2azStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+153	wgEncodeUtaChIPseqRawDataH1hescCtcf	61	\N	\N	\N	\N	\N	\N	\N
+156	wgEncodeUwTfbsHepg2InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+162	wgEncodeHaibTfbsK562Bclaf101388Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+163	wgEncodeHaibTfbsK562Bclaf101388Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+193	wgEncodeUtaustinChIPseqRawDataHelas3Input	61	\N	\N	\N	\N	\N	\N	\N
+194	wgEncodeHaibTfbsGm12878Usf1Pcr2xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+195	wgEncodeHaibTfbsGm12878Usf1Pcr2xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+198	wgEncodeUchicagoTfbsK562Enr4a1ControlRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+199	wgEncodeUchicagoTfbsK562Enr4a1Controlnr4a1RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+204	wgEncodeHaibTfbsK562GabpV0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+205	wgEncodeHaibTfbsK562GabpV0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+208	wgEncodeUtaChIPseqRawDataRep1Helas3CmycV2	61	\N	\N	\N	\N	\N	\N	\N
+209	wgEncodeUtaChIPseqRawDataRep2Helas3CmycV2	61	\N	\N	\N	\N	\N	\N	\N
+218	wgEncodeHaibTfbsK562Sin3ak20V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+219	wgEncodeHaibTfbsK562Sin3ak20V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+222	wgEncodeBroadHistoneHelas3H3k4me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+223	wgEncodeBroadHistoneHelas3H3k4me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+238	wgEncodeHaibTfbsGm12878Mef2aPcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+239	wgEncodeHaibTfbsGm12878Mef2aPcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+244	wgEncodeUchicagoTfbsK562EfosControlfosRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+245	wgEncodeUchicagoTfbsK562EfosControlfosRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+246	wgEncodeUchicagoTfbsK562EfosControlRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+249	wgEncodeBroadHistoneNhekH3k9me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+250	wgEncodeBroadHistoneNhekH3k9me1StdRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+251	wgEncodeBroadHistoneNhekH3k9me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+253	wgEncodeBroadHistoneHuvecPol2bStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+254	wgEncodeBroadHistoneHuvecPol2bStdRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+255	wgEncodeBroadHistoneHuvecPol2bStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+262	wgEncodeBroadHistoneHelas3H3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+263	wgEncodeBroadHistoneHelas3H3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+269	wgEncodeHaibTfbsK562Rad21V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+270	wgEncodeHaibTfbsK562Rad21V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+273	wgEncodeBroadHistoneNhaH3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+274	wgEncodeBroadHistoneNhaH3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+275	wgEncodeHaibTfbsK562Pol2V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+278	wgEncodeHaibTfbsK562Pol2V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+282	wgEncodeBroadHistoneHmecH3k9acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+283	wgEncodeBroadHistoneHmecH3k9acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+290	SRR067970	61	\N	\N	\N	\N	\N	\N	\N
+291	SRR067977	61	\N	\N	\N	\N	\N	\N	\N
+292	SRR067972	61	\N	\N	\N	\N	\N	\N	\N
+293	SRR097975	61	\N	\N	\N	\N	\N	\N	\N
+294	SRR179764	61	\N	\N	\N	\N	\N	\N	\N
+295	SRR179765	61	\N	\N	\N	\N	\N	\N	\N
+296	SRR097974	61	\N	\N	\N	\N	\N	\N	\N
+297	SRR067971	61	\N	\N	\N	\N	\N	\N	\N
+298	SRR067973	61	\N	\N	\N	\N	\N	\N	\N
+299	SRR067974	61	\N	\N	\N	\N	\N	\N	\N
+300	SRR067975	61	\N	\N	\N	\N	\N	\N	\N
+301	SRR097976	61	\N	\N	\N	\N	\N	\N	\N
+302	SRR067976	61	\N	\N	\N	\N	\N	\N	\N
+311	wgEncodeBroadChipSeqRawDataRep1HsmmControl	61	\N	\N	\N	\N	\N	\N	\N
+312	wgEncodeBroadChipSeqRawDataRep2HsmmControl	61	\N	\N	\N	\N	\N	\N	\N
+313	wgEncodeBroadHistoneHmecH4k20me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+314	wgEncodeBroadHistoneHmecH4k20me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+323	wgEncodeBroadHistoneHuvecH3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+324	wgEncodeBroadHistoneHuvecH3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+329	wgEncodeUtaChIPseqRawDataRep1Hepg2CmycV2	61	\N	\N	\N	\N	\N	\N	\N
+330	wgEncodeUtaChIPseqRawDataRep2Hepg2CmycV2	61	\N	\N	\N	\N	\N	\N	\N
+331	wgEncodeUtaChIPseqRawDataRep3Hepg2CmycV2	61	\N	\N	\N	\N	\N	\N	\N
+332	wgEncodeUtaChIPseqRawDataRep1K562Pol2	61	\N	\N	\N	\N	\N	\N	\N
+333	wgEncodeUtaChIPseqRawDataRep2K562Pol2	61	\N	\N	\N	\N	\N	\N	\N
+336	wgEncodeHaibTfbsHepg2Zbtb33V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+339	wgEncodeHaibTfbsHepg2Zbtb33V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+351	wgEncodeBroadHistoneHsmmtControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+352	wgEncodeBroadHistoneHsmmtControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+356	wgEncodeHaibTfbsGm12878Ebfsc137065RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+357	wgEncodeHaibTfbsGm12878Ebfsc137065RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+358	wgEncodeBroadHistoneHsmmtH2azStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+359	wgEncodeBroadHistoneHsmmtH2azStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+362	wgEncodeHaibTfbsH1hescRad21V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+363	wgEncodeHaibTfbsH1hescRad21V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+370	SRR018456	61	\N	\N	\N	\N	\N	\N	\N
+371	SRR067947	61	\N	\N	\N	\N	\N	\N	\N
+372	SRR029339	61	\N	\N	\N	\N	\N	\N	\N
+373	SRR029619	61	\N	\N	\N	\N	\N	\N	\N
+374	SRR029615	61	\N	\N	\N	\N	\N	\N	\N
+375	SRR067766	61	\N	\N	\N	\N	\N	\N	\N
+376	SRR067978	61	\N	\N	\N	\N	\N	\N	\N
+392	wgEncodeUwTfbsGm12878InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+393	wgEncodeBroadHistoneNhekH3k4me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+394	wgEncodeBroadHistoneNhekH3k4me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+395	wgEncodeBroadHistoneNhekH3k4me2StdRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+406	wgEncodeHaibTfbsHepg2Hnf4gsc6558V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+407	wgEncodeHaibTfbsHepg2Hnf4gsc6558V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+410	SRR029618	61	\N	\N	\N	\N	\N	\N	\N
+411	SRR029610	61	\N	\N	\N	\N	\N	\N	\N
+412	SRR037602	61	\N	\N	\N	\N	\N	\N	\N
+413	SRR037601	61	\N	\N	\N	\N	\N	\N	\N
+416	wgEncodeBroadChipSeqRawDataRep1H1hescControl	61	\N	\N	\N	\N	\N	\N	\N
+417	wgEncodeBroadChipSeqRawDataRep2H1hescControl	61	\N	\N	\N	\N	\N	\N	\N
+423	wgEncodeHaibTfbsK562E2f6sc22823V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+424	wgEncodeHaibTfbsK562E2f6sc22823V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+425	wgEncodeUchicagoTfbsK562EjundControljundRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+426	wgEncodeUchicagoTfbsK562EjundControljundRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+427	wgEncodeUchicagoTfbsK562EjundControlRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+428	wgEncodeBroadHistoneNhdfadH3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+429	wgEncodeBroadHistoneNhdfadH3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+445	SRR037606	61	\N	\N	\N	\N	\N	\N	\N
+446	SRR037608	61	\N	\N	\N	\N	\N	\N	\N
+447	SRR037607	61	\N	\N	\N	\N	\N	\N	\N
+448	SRR037610	61	\N	\N	\N	\N	\N	\N	\N
+449	SRR037609	61	\N	\N	\N	\N	\N	\N	\N
+450	SRR037611	61	\N	\N	\N	\N	\N	\N	\N
+451	SRR037612	61	\N	\N	\N	\N	\N	\N	\N
+452	wgEncodeHaibTfbsK562Egr1V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+453	wgEncodeHaibTfbsK562Egr1V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+456	wgEncodeHaibTfbsK562Bcl3Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+457	wgEncodeHaibTfbsK562Bcl3Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+458	wgEncodeHaibTfbsGm12878RxlchPcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+459	wgEncodeHaibTfbsGm12878RxlchV0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+460	wgEncodeHaibTfbsGm12878RxlchPcr2xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+461	wgEncodeHaibTfbsGm12878RxlchPcr1xRawDataRep4	61	\N	\N	\N	\N	\N	\N	\N
+462	wgEncodeHaibTfbsGm12878RxlchPcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+463	wgEncodeHaibTfbsGm12878RxlchPcr1xRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+464	wgEncodeHaibTfbsGm12878RxlchV0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+465	wgEncodeHaibTfbsGm12878RxlchPcr1xRawDataRep5	61	\N	\N	\N	\N	\N	\N	\N
+466	wgEncodeHaibTfbsGm12878RxlchPcr2xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+467	SRR067952	61	\N	\N	\N	\N	\N	\N	\N
+468	SRR179743	61	\N	\N	\N	\N	\N	\N	\N
+469	SRR179741	61	\N	\N	\N	\N	\N	\N	\N
+470	SRR179742	61	\N	\N	\N	\N	\N	\N	\N
+487	wgEncodeHaibTfbsH1hescJundV0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+488	wgEncodeHaibTfbsH1hescJundV0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+492	wgEncodeHaibTfbsK562RxlchV2RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+493	wgEncodeHaibTfbsK562RxlchPcr1xRawDataRep4	61	\N	\N	\N	\N	\N	\N	\N
+494	wgEncodeHaibTfbsK562RxlchPcr1xRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+495	wgEncodeHaibTfbsK562RxlchV2RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+496	wgEncodeHaibTfbsK562RxlchV0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+497	wgEncodeHaibTfbsK562RxlchV0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+510	wgEncodeBroadHistoneGm12878H2azStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+511	wgEncodeBroadHistoneGm12878H2azStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+512	wgEncodeBroadHistoneK562H4k20me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+513	wgEncodeBroadHistoneK562H4k20me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+519	SRR067934	61	\N	\N	\N	\N	\N	\N	\N
+520	SRR067933	61	\N	\N	\N	\N	\N	\N	\N
+521	wgEncodeOpenChromDnaseA549RawDataRep1	62	\N	\N	\N	\N	\N	\N	\N
+522	wgEncodeOpenChromDnaseA549RawDataRep2	62	\N	\N	\N	\N	\N	\N	\N
+523	wgEncodeBroadHistoneHsmmtCtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+524	wgEncodeBroadHistoneHsmmtCtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+527	wgEncodeHaibTfbsH1hescGabpPcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+528	wgEncodeHaibTfbsH1hescGabpPcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+529	wgEncodeHaibTfbsHelas3NrsfPcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+530	wgEncodeHaibTfbsHelas3NrsfPcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+531	wgEncodeHaibTfbsGm12878Atf3Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+532	wgEncodeHaibTfbsGm12878Atf3Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+535	SRR018486	61	\N	\N	\N	\N	\N	\N	\N
+536	SRR018485	61	\N	\N	\N	\N	\N	\N	\N
+537	SRR026666	61	\N	\N	\N	\N	\N	\N	\N
+538	SRR026667	61	\N	\N	\N	\N	\N	\N	\N
+545	wgEncodeBroadHistoneNhekControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+546	wgEncodeBroadHistoneNhekControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+547	wgEncodeUtaChIPseqRawDataH1hescPol2	61	\N	\N	\N	\N	\N	\N	\N
+550	wgEncodeBroadHistoneHsmmtH3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+551	wgEncodeBroadHistoneHsmmtH3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+559	wgEncodeUwTfbsHmecInputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+560	wgEncodeBroadHistoneNhekH3k9acStdRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+561	wgEncodeBroadHistoneNhekH3k9acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+562	wgEncodeBroadHistoneNhekH3k9acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+565	wgEncodeUwDnaseNhekRawDataRep1	62	\N	\N	\N	\N	\N	\N	\N
+566	wgEncodeUwDnaseNhekRawDataRep2	62	\N	\N	\N	\N	\N	\N	\N
+576	wgEncodeBroadHistoneNhekH3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+577	wgEncodeBroadHistoneNhekH3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+578	wgEncodeBroadHistoneNhekH3k27me3StdRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+584	wgEncodeUwDnaseHsmmRawDataRep2	62	\N	\N	\N	\N	\N	\N	\N
+585	wgEncodeUwDnaseHsmmRawDataRep1	62	\N	\N	\N	\N	\N	\N	\N
+591	SRR029509	62	\N	\N	\N	\N	\N	\N	\N
+592	SRR029510	62	\N	\N	\N	\N	\N	\N	\N
+593	SRR039497	62	\N	\N	\N	\N	\N	\N	\N
+594	SRR039498	62	\N	\N	\N	\N	\N	\N	\N
+595	SRR029508	62	\N	\N	\N	\N	\N	\N	\N
+596	SRR039397	62	\N	\N	\N	\N	\N	\N	\N
+597	SRR029507	62	\N	\N	\N	\N	\N	\N	\N
+598	SRR039500	62	\N	\N	\N	\N	\N	\N	\N
+599	SRR039396	62	\N	\N	\N	\N	\N	\N	\N
+600	SRR039398	62	\N	\N	\N	\N	\N	\N	\N
+601	SRR039499	62	\N	\N	\N	\N	\N	\N	\N
+602	SRR019560	61	\N	\N	\N	\N	\N	\N	\N
+612	wgEncodeUwDnaseMonocd14RawDataRep1	62	\N	\N	\N	\N	\N	\N	\N
+623	wgEncodeHaibTfbsH1hescHdac2sc6296V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+624	wgEncodeHaibTfbsH1hescHdac2sc6296V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+625	SRR067939	61	\N	\N	\N	\N	\N	\N	\N
+626	SRR067767	61	\N	\N	\N	\N	\N	\N	\N
+674	wgEncodeBroadHistoneHelas3H3k79me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+675	wgEncodeBroadHistoneHelas3H3k79me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+678	wgEncodeUtaChIPseqRawDataRep1NhekCtcf	61	\N	\N	\N	\N	\N	\N	\N
+679	wgEncodeUtaChIPseqRawDataRep2NhekCtcf	61	\N	\N	\N	\N	\N	\N	\N
+680	wgEncodeBroadHistoneK562H3k4me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+681	wgEncodeBroadHistoneK562H3k4me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+691	wgEncodeHaibTfbsK562Thap1sc98174V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+692	wgEncodeHaibTfbsK562Thap1sc98174V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+698	wgEncodeBroadHistoneHuvecH3k4me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+699	wgEncodeBroadHistoneHuvecH3k4me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+702	wgEncodeBroadHistoneNhekCtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+703	wgEncodeBroadHistoneNhekCtcfStdRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+704	wgEncodeBroadHistoneNhekCtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+708	wgEncodeBroadHistoneNhaH3k4me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+709	wgEncodeBroadHistoneNhaH3k4me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+719	SRR018483	61	\N	\N	\N	\N	\N	\N	\N
+720	SRR018484	61	\N	\N	\N	\N	\N	\N	\N
+721	SRR018482	61	\N	\N	\N	\N	\N	\N	\N
+722	SRR026668	61	\N	\N	\N	\N	\N	\N	\N
+723	SRR026669	61	\N	\N	\N	\N	\N	\N	\N
+730	wgEncodeBroadHistoneHelas3H3k9acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+731	wgEncodeBroadHistoneHelas3H3k9acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+732	wgEncodeUchicagoTfbsK562EjunbControlRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+733	wgEncodeUchicagoTfbsK562EjunbControljunbRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+734	wgEncodeBroadHistoneK562H2azStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+735	wgEncodeBroadHistoneK562H2azStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+740	wgEncodeHaibTfbsH1hescTcf12Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+741	wgEncodeHaibTfbsH1hescTcf12Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+745	wgEncodeBroadHistoneH1hescH3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+746	wgEncodeBroadHistoneH1hescH3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+761	wgEncodeHaibTfbsK562Elf1sc631V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+762	wgEncodeHaibTfbsK562Elf1sc631V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+765	SRR037568	61	\N	\N	\N	\N	\N	\N	\N
+766	SRR037567	61	\N	\N	\N	\N	\N	\N	\N
+767	SRR037569	61	\N	\N	\N	\N	\N	\N	\N
+768	SRR037570	61	\N	\N	\N	\N	\N	\N	\N
+769	wgEncodeBroadHistoneHsmmH3k79me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+770	wgEncodeBroadHistoneHsmmH3k79me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+784	wgEncodeOpenChromChipGm12878InputRawData	61	\N	\N	\N	\N	\N	\N	\N
+787	wgEncodeBroadHistoneHelas3H3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+788	wgEncodeBroadHistoneHelas3H3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+798	wgEncodeBroadHistoneNhaControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+799	wgEncodeBroadHistoneNhaControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+809	wgEncodeHaibTfbsGm12878Pou2f2Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+810	wgEncodeHaibTfbsGm12878Pou2f2Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+811	wgEncodeHaibTfbsH1hescAtf3V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+812	wgEncodeHaibTfbsH1hescAtf3V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+828	wgEncodeHaibTfbsK562SrfV0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+829	wgEncodeHaibTfbsK562SrfV0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+836	wgEncodeHaibTfbsK562Pu1Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+837	wgEncodeHaibTfbsK562Pu1RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+857	SRR037587	61	\N	\N	\N	\N	\N	\N	\N
+858	SRR037588	61	\N	\N	\N	\N	\N	\N	\N
+859	SRR037590	61	\N	\N	\N	\N	\N	\N	\N
+860	SRR037589	61	\N	\N	\N	\N	\N	\N	\N
+861	wgEncodeBroadHistoneNhekPol2bStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+862	wgEncodeBroadHistoneNhekPol2bStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+874	wgEncodeBroadHistoneNhaH3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+875	wgEncodeBroadHistoneNhaH3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+883	SRR020520	61	\N	\N	\N	\N	\N	\N	\N
+887	wgEncodeHaibTfbsH1hescSrfPcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+888	wgEncodeHaibTfbsH1hescSrfPcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+889	wgEncodeHaibTfbsGm12878Mef2csc13268V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+890	wgEncodeHaibTfbsGm12878Mef2csc13268V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+897	wgEncodeBroadHistoneK562H3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+898	wgEncodeBroadHistoneK562H3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+905	wgEncodeBroadHistoneOsteoblControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+906	wgEncodeBroadHistoneOsteoblControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+910	wgEncodeUtaChIPseqRawDataRep1K562CmycV2	61	\N	\N	\N	\N	\N	\N	\N
+911	wgEncodeUtaChIPseqRawDataRep2K562CmycV2	61	\N	\N	\N	\N	\N	\N	\N
+912	wgEncodeUtaChIPseqRawDataRep3K562CmycV2	61	\N	\N	\N	\N	\N	\N	\N
+926	SRR037580	61	\N	\N	\N	\N	\N	\N	\N
+927	SRR037579	61	\N	\N	\N	\N	\N	\N	\N
+928	SRR037581	61	\N	\N	\N	\N	\N	\N	\N
+929	SRR037582	61	\N	\N	\N	\N	\N	\N	\N
+932	wgEncodeBroadHistoneOsteoblH3k4me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+933	wgEncodeBroadHistoneOsteoblH3k4me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+934	wgEncodeHaibTfbsH1hescRxraV0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+935	wgEncodeHaibTfbsH1hescRxraV0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+936	wgEncodeBroadHistoneK562ControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+964	wgEncodeHaibTfbsHepg2Tcf12Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+965	wgEncodeHaibTfbsHepg2Tcf12Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+968	wgEncodeUwDnaseNhdfadRawDataRep1	62	\N	\N	\N	\N	\N	\N	\N
+969	wgEncodeUwDnaseNhdfadRawDataRep2	62	\N	\N	\N	\N	\N	\N	\N
+972	wgEncodeHaibTfbsK562Mef2aV0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+973	wgEncodeHaibTfbsK562Mef2aV0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+980	wgEncodeBroadHistoneHuvecCtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+981	wgEncodeBroadHistoneHuvecCtcfStdRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+982	wgEncodeBroadHistoneHuvecCtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+996	SRR067957	61	\N	\N	\N	\N	\N	\N	\N
+997	SRR067956	61	\N	\N	\N	\N	\N	\N	\N
+1005	SRR018232	61	\N	\N	\N	\N	\N	\N	\N
+1006	SRR019222	61	\N	\N	\N	\N	\N	\N	\N
+1008	SRR037626	61	\N	\N	\N	\N	\N	\N	\N
+1009	SRR037627	61	\N	\N	\N	\N	\N	\N	\N
+1010	SRR037628	61	\N	\N	\N	\N	\N	\N	\N
+1011	SRR037629	61	\N	\N	\N	\N	\N	\N	\N
+1012	SRR037630	61	\N	\N	\N	\N	\N	\N	\N
+1013	wgEncodeBroadHistoneOsteoblH3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1014	wgEncodeBroadHistoneOsteoblH3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1015	SRR067966	61	\N	\N	\N	\N	\N	\N	\N
+1020	wgEncodeBroadHistoneHelas3Pol2bStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1021	wgEncodeBroadHistoneHelas3Pol2bStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1024	wgEncodeBroadHistoneK562H3k9me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1028	SRR067935	61	\N	\N	\N	\N	\N	\N	\N
+1029	SRR067936	61	\N	\N	\N	\N	\N	\N	\N
+1030	wgEncodeHaibTfbsHelas3GabpPcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1031	wgEncodeHaibTfbsHelas3GabpPcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1052	wgEncodeBroadHistoneNhekH4k20me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1053	wgEncodeBroadHistoneNhekH4k20me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1054	wgEncodeBroadHistoneNhekH4k20me1StdRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+1080	wgEncodeHaibTfbsHepg2GabpPcr2xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1081	wgEncodeHaibTfbsHepg2GabpPcr2xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1085	SRR067930	61	\N	\N	\N	\N	\N	\N	\N
+1086	wgEncodeUwTfbsK562InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1093	wgEncodeHaibTfbsGm12878RxraPcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1094	wgEncodeHaibTfbsGm12878RxraPcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1096	wgEncodeHaibTfbsK562Ets1V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1097	wgEncodeHaibTfbsK562Ets1V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1103	wgEncodeBroadHistoneOsteoblH3k4me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1104	wgEncodeBroadHistoneOsteoblH3k4me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1113	wgEncodeBroadHistoneHmecControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1114	wgEncodeBroadHistoneHmecControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1120	wgEncodeBroadHistoneNhdfadH3k4me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1121	wgEncodeBroadHistoneNhdfadH3k4me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1124	wgEncodeBroadHistoneHuvecH3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1125	wgEncodeBroadHistoneHuvecH3k27acStdRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+1126	wgEncodeBroadHistoneHuvecH3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1130	SRR067967	61	\N	\N	\N	\N	\N	\N	\N
+1131	SRR067968	61	\N	\N	\N	\N	\N	\N	\N
+1151	wgEncodeHudsonalphaChipSeqRawDataRep1Gm12878Sin3ak20Pcr2x	61	\N	\N	\N	\N	\N	\N	\N
+1152	wgEncodeHudsonalphaChipSeqRawDataRep2Gm12878Sin3ak20Pcr2x	61	\N	\N	\N	\N	\N	\N	\N
+1155	wgEncodeBroadHistoneNhaH3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1156	wgEncodeBroadHistoneNhaH3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1158	wgEncodeHaibTfbsK562Taf7sc101167V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1159	wgEncodeHaibTfbsK562Taf7sc101167V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1160	wgEncodeHaibTfbsGm12878NrsfPcr2xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1161	wgEncodeHaibTfbsGm12878NrsfPcr2xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1162	wgEncodeBroadHistoneNhekH3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1163	wgEncodeBroadHistoneNhekH3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1164	wgEncodeBroadHistoneNhekH3k27acStdRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+1166	SRR179736	61	\N	\N	\N	\N	\N	\N	\N
+1167	SRR179735	61	\N	\N	\N	\N	\N	\N	\N
+1168	SRR179737	61	\N	\N	\N	\N	\N	\N	\N
+1169	SRR067946	61	\N	\N	\N	\N	\N	\N	\N
+1170	wgEncodeBroadHistoneHuvecH4k20me1StdRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+1171	wgEncodeBroadHistoneHuvecH4k20me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1172	wgEncodeBroadHistoneHuvecH4k20me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1173	wgEncodeHaibTfbsHepg2Sp1Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1174	wgEncodeHaibTfbsHepg2Sp1Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1188	wgEncodeHaibTfbsGm12878Ets1Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1189	wgEncodeHaibTfbsGm12878Ets1Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1212	wgEncodeYaleChIPseqRawDataRep1K562Gtf2b	61	\N	\N	\N	\N	\N	\N	\N
+1213	wgEncodeYaleChIPseqRawDataRep2K562Gtf2b	61	\N	\N	\N	\N	\N	\N	\N
+1218	wgEncodeBroadHistoneGm12878H3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1220	wgEncodeUtaChIPseqRawDataRep1K562CtcfV2	61	\N	\N	\N	\N	\N	\N	\N
+1221	wgEncodeUtaChIPseqRawDataRep2K562CtcfV2	61	\N	\N	\N	\N	\N	\N	\N
+1222	wgEncodeUtaChIPseqRawDataRep3K562CtcfV2	61	\N	\N	\N	\N	\N	\N	\N
+1225	wgEncodeHaibTfbsGm12878Egr1V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1226	wgEncodeHaibTfbsGm12878Egr1V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1229	wgEncodeHaibTfbsGm12878Bcl3V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1230	wgEncodeHaibTfbsGm12878Bcl3V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1247	SRR067955	61	\N	\N	\N	\N	\N	\N	\N
+1248	SRR067953	61	\N	\N	\N	\N	\N	\N	\N
+1249	SRR067954	61	\N	\N	\N	\N	\N	\N	\N
+1250	SRR029348	61	\N	\N	\N	\N	\N	\N	\N
+1251	SRR179707	61	\N	\N	\N	\N	\N	\N	\N
+1252	SRR029350	61	\N	\N	\N	\N	\N	\N	\N
+1255	wgEncodeHaibTfbsH1hescNanogsc33759V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1256	wgEncodeHaibTfbsH1hescNanogsc33759V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1258	wgEncodeBroadHistoneNhekH3k4me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1259	wgEncodeBroadHistoneNhekH3k4me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1260	wgEncodeBroadHistoneNhekH3k4me1StdRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+1261	wgEncodeHaibTfbsHepg2Bhlhe40V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1262	wgEncodeHaibTfbsHepg2Bhlhe40V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1266	wgEncodeBroadHistoneHelas3H3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1267	wgEncodeBroadHistoneHelas3H3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1273	wgEncodeHaibTfbsK562Yy1V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1274	wgEncodeHaibTfbsK562Yy1V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1282	wgEncodeHaibTfbsHepg2Pol2Pcr2xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1283	wgEncodeHaibTfbsHepg2Pol2Pcr2xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1284	wgEncodeHaibTfbsK562Sp2sc643V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1285	wgEncodeHaibTfbsK562Sp2sc643V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1288	wgEncodeBroadHistoneNhdfadControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1289	wgEncodeBroadHistoneNhdfadControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1297	wgEncodeBroadHistoneNhekH3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1298	wgEncodeBroadHistoneNhekH3k36me3StdRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+1299	wgEncodeBroadHistoneNhekH3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1321	wgEncodeHaibTfbsGm12878Pu1Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1322	wgEncodeHaibTfbsGm12878Pu1Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1326	wgEncodeYaleChIPseqRawDataRep1Gm12878Max	61	\N	\N	\N	\N	\N	\N	\N
+1327	wgEncodeYaleChIPseqRawDataRep2Gm12878Max	61	\N	\N	\N	\N	\N	\N	\N
+1330	wgEncodeHaibTfbsK562Six5V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1333	wgEncodeHaibTfbsK562Six5V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1338	wgEncodeUtaChIPseqRawDataHuvecCmyc	61	\N	\N	\N	\N	\N	\N	\N
+1339	wgEncodeBroadHistoneHepg2H2azStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1340	wgEncodeBroadHistoneHepg2H2azStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1346	wgEncodeHaibTfbsK562Hdac2sc6296V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1347	wgEncodeHaibTfbsK562Hdac2sc6296V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1370	wgEncodeBroadHistoneGm12878H3k79me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1371	wgEncodeBroadHistoneGm12878H3k79me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1383	SRR020518	61	\N	\N	\N	\N	\N	\N	\N
+1391	wgEncodeYaleChIPseqRawDataRep1Gm12878NfkbIggrab	61	\N	\N	\N	\N	\N	\N	\N
+1392	wgEncodeYaleChIPseqRawDataRep2Gm12878NfkbIggrab	61	\N	\N	\N	\N	\N	\N	\N
+1393	wgEncodeYaleChIPseqRawDataRep3Gm12878NfkbIggrab	61	\N	\N	\N	\N	\N	\N	\N
+1394	wgEncodeYaleChIPseqRawDataRep4Gm12878NfkbIggrab	61	\N	\N	\N	\N	\N	\N	\N
+1400	wgEncodeUwTfbsHuvecInputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1401	wgEncodeUwHistoneHmecH3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1402	wgEncodeUwHistoneHmecH3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1405	wgEncodeYaleChIPseqRawDataRep2Gm12878Cmyc	61	\N	\N	\N	\N	\N	\N	\N
+1406	wgEncodeYaleChIPseqRawDataRep1Gm12878Cmyc	61	\N	\N	\N	\N	\N	\N	\N
+1415	wgEncodeHaibTfbsH1hescFosl1sc183V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1416	wgEncodeHaibTfbsH1hescFosl1sc183V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1427	SRR067960	61	\N	\N	\N	\N	\N	\N	\N
+1428	SRR067962	61	\N	\N	\N	\N	\N	\N	\N
+1429	SRR067964	61	\N	\N	\N	\N	\N	\N	\N
+1430	SRR067963	61	\N	\N	\N	\N	\N	\N	\N
+1431	SRR067961	61	\N	\N	\N	\N	\N	\N	\N
+1432	SRR018453	61	\N	\N	\N	\N	\N	\N	\N
+1433	SRR067965	61	\N	\N	\N	\N	\N	\N	\N
+1434	wgEncodeBroadHistoneHsmmtH3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1435	wgEncodeBroadHistoneHsmmtH3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1439	wgEncodeUtaustinChIPseqRawDataHepg2Input	61	\N	\N	\N	\N	\N	\N	\N
+1463	SRR037620	61	\N	\N	\N	\N	\N	\N	\N
+1464	SRR037621	61	\N	\N	\N	\N	\N	\N	\N
+1465	SRR037622	61	\N	\N	\N	\N	\N	\N	\N
+1466	SRR037623	61	\N	\N	\N	\N	\N	\N	\N
+1467	wgEncodeHaibTfbsH1hescEgr1V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1468	wgEncodeHaibTfbsH1hescEgr1V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1471	wgEncodeBroadHistoneHsmmtH3k79me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1472	wgEncodeBroadHistoneHsmmtH3k79me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1475	wgEncodeBroadHistoneK562H3k79me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1476	wgEncodeBroadHistoneK562H3k79me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1481	wgEncodeBroadChipSeqRawDataRep1Gm12878Control	61	\N	\N	\N	\N	\N	\N	\N
+1482	wgEncodeBroadChipSeqRawDataRep2Gm12878Control	61	\N	\N	\N	\N	\N	\N	\N
+1483	wgEncodeHaibTfbsK562Ctcflsc98982V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1484	wgEncodeHaibTfbsK562Ctcflsc98982V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1490	wgEncodeUwDnaseHuvecRawDataRep2	62	\N	\N	\N	\N	\N	\N	\N
+1491	wgEncodeUwDnaseHuvecRawDataRep1	62	\N	\N	\N	\N	\N	\N	\N
+1492	wgEncodeHaibTfbsK562Atf3V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1493	wgEncodeHaibTfbsK562Atf3V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1497	SRR037592	61	\N	\N	\N	\N	\N	\N	\N
+1498	SRR037546	61	\N	\N	\N	\N	\N	\N	\N
+1499	SRR037550	61	\N	\N	\N	\N	\N	\N	\N
+1500	SRR037553	61	\N	\N	\N	\N	\N	\N	\N
+1501	SRR037562	61	\N	\N	\N	\N	\N	\N	\N
+1502	SRR067931	61	\N	\N	\N	\N	\N	\N	\N
+1503	SRR067932	61	\N	\N	\N	\N	\N	\N	\N
+1508	wgEncodeHaibTfbsH1hescSp1Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1509	wgEncodeHaibTfbsH1hescSp1Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1516	wgEncodeBroadHistoneNhdfadH3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1517	wgEncodeBroadHistoneNhdfadH3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1522	wgEncodeSydhHistoneK562bH3k27me3bUcdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1523	wgEncodeSydhHistoneK562bH3k27me3bUcdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1524	wgEncodeSydhHistoneK562bH3k4me3bUcdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1525	wgEncodeSydhHistoneK562bH3k4me3bUcdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1530	wgEncodeUtaChIPseqRawDataH1hescCmyc	61	\N	\N	\N	\N	\N	\N	\N
+1545	wgEncodeBroadHistoneGm12878H3k9me3StdRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+1546	wgEncodeBroadHistoneGm12878H3k9me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1547	wgEncodeBroadHistoneGm12878H3k9me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1548	wgEncodeHaibTfbsH1hescTaf7sc101167V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1549	wgEncodeHaibTfbsH1hescTaf7sc101167V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1550	wgEncodeHaibTfbsHepg2Sin3ak20Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1551	wgEncodeHaibTfbsHepg2Sin3ak20Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1552	wgEncodeUwDnaseNhaRawDataRep2	62	\N	\N	\N	\N	\N	\N	\N
+1553	wgEncodeUwDnaseNhaRawDataRep1	62	\N	\N	\N	\N	\N	\N	\N
+1561	wgEncodeBroadHistoneOsteoblH2azStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1562	wgEncodeBroadHistoneOsteoblH2azStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1563	wgEncodeBroadHistoneNhdfadH3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1564	wgEncodeBroadHistoneNhdfadH3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1568	wgEncodeYaleChIPseqRawDataRep1K562InputV2	61	\N	\N	\N	\N	\N	\N	\N
+1569	wgEncodeYaleChIPseqRawDataRep2K562InputV2	61	\N	\N	\N	\N	\N	\N	\N
+1570	wgEncodeYaleChIPseqRawDataK562Input	61	\N	\N	\N	\N	\N	\N	\N
+1571	wgEncodeYaleChIPseqRawDataRep1K562MusiggMusigg	61	\N	\N	\N	\N	\N	\N	\N
+1572	wgEncodeYaleChIPseqRawDataRep2K562MusiggMusigg	61	\N	\N	\N	\N	\N	\N	\N
+1574	wgEncodeBroadHistoneHsmmtH4k20me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1575	wgEncodeBroadHistoneHsmmtH4k20me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1580	wgEncodeHaibTfbsHepg2Yy1sc281V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1581	wgEncodeHaibTfbsHepg2Yy1sc281V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1590	SRR037599	61	\N	\N	\N	\N	\N	\N	\N
+1591	SRR037600	61	\N	\N	\N	\N	\N	\N	\N
+1592	SRR037558	61	\N	\N	\N	\N	\N	\N	\N
+1593	SRR037554	61	\N	\N	\N	\N	\N	\N	\N
+1604	wgEncodeHaibTfbsHepg2NrsfPcr2xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1605	wgEncodeHaibTfbsHepg2NrsfPcr2xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1606	wgEncodeHaibTfbsH1hescUsf1Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1607	wgEncodeHaibTfbsH1hescUsf1Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1612	SRR037604	61	\N	\N	\N	\N	\N	\N	\N
+1613	SRR037603	61	\N	\N	\N	\N	\N	\N	\N
+1614	SRR037605	61	\N	\N	\N	\N	\N	\N	\N
+1618	wgEncodeBroadHistoneNhlfH3k4me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1619	wgEncodeBroadHistoneNhlfH3k4me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1622	SRR020516	61	\N	\N	\N	\N	\N	\N	\N
+1624	wgEncodeHaibTfbsHepg2Foxa1sc6553V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1626	wgEncodeHaibTfbsHepg2Foxa1sc6553V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1632	wgEncodeHaibTfbsGm12878SrfV0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1634	wgEncodeHaibTfbsGm12878SrfV0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1635	wgEncodeHaibTfbsK562NrsfV0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1636	wgEncodeHaibTfbsK562NrsfV0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1644	wgEncodeSydhHistoneK562bH3k9acbUcdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1645	wgEncodeSydhHistoneK562bH3k9acbUcdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1653	wgEncodeUtaChIPseqRawDataRep1Hepg2Pol2	61	\N	\N	\N	\N	\N	\N	\N
+1654	wgEncodeUtaChIPseqRawDataRep2Hepg2Pol2	61	\N	\N	\N	\N	\N	\N	\N
+1655	wgEncodeUtaChIPseqRawDataRep3Hepg2Pol2	61	\N	\N	\N	\N	\N	\N	\N
+1660	wgEncodeHaibTfbsH1hescSin3ak20Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1661	wgEncodeHaibTfbsH1hescSin3ak20Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1664	wgEncodeUtaChIPseqRawDataRep1Gm12878CtcfV2	61	\N	\N	\N	\N	\N	\N	\N
+1665	wgEncodeUtaChIPseqRawDataRep2Gm12878CtcfV2	61	\N	\N	\N	\N	\N	\N	\N
+1666	wgEncodeUtaChIPseqRawDataRep3Gm12878CtcfV2	61	\N	\N	\N	\N	\N	\N	\N
+1670	wgEncodeHaibTfbsHepg2Atf3V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1671	wgEncodeHaibTfbsHepg2Atf3V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1674	wgEncodeBroadHistoneHsmmtH3k4me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1675	wgEncodeBroadHistoneHsmmtH3k4me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1676	wgEncodeYaleChIPseqRawDataRep1K562Jund	61	\N	\N	\N	\N	\N	\N	\N
+1677	wgEncodeYaleChIPseqRawDataRep2K562Jund	61	\N	\N	\N	\N	\N	\N	\N
+1678	wgEncodeHaibTfbsK562Zbtb7asc34508V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1679	wgEncodeHaibTfbsK562Zbtb7asc34508V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1685	wgEncodeHaibTfbsGm12878Elf1sc631V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1686	wgEncodeHaibTfbsGm12878Elf1sc631V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1695	wgEncodeUwDnaseHmecRawDataRep2	62	\N	\N	\N	\N	\N	\N	\N
+1696	wgEncodeUwDnaseHmecRawDataRep1	62	\N	\N	\N	\N	\N	\N	\N
+1701	SRR037564	61	\N	\N	\N	\N	\N	\N	\N
+1702	SRR037565	61	\N	\N	\N	\N	\N	\N	\N
+1703	SRR037566	61	\N	\N	\N	\N	\N	\N	\N
+1706	wgEncodeHaibTfbsH1hescSix5Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1707	wgEncodeHaibTfbsH1hescSix5Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1708	wgEncodeUtaChIPseqRawDataRep1Helas3Pol2	61	\N	\N	\N	\N	\N	\N	\N
+1709	wgEncodeUtaChIPseqRawDataRep2Helas3Pol2	61	\N	\N	\N	\N	\N	\N	\N
+1716	wgEncodeHaibTfbsGm12878Pax5n19RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1717	wgEncodeHaibTfbsGm12878Pax5c20RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1720	wgEncodeHaibTfbsHepg2JundPcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1721	wgEncodeHaibTfbsHepg2JundPcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1724	wgEncodeHaibTfbsH1hescBcl11aPcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1725	wgEncodeHaibTfbsH1hescBcl11aV0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1727	wgEncodeBroadHistoneOsteoblH3k9me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1728	wgEncodeBroadHistoneOsteoblH3k9me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1729	wgEncodeBroadHistoneHepg2H3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1730	wgEncodeBroadHistoneHepg2H3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1736	SRR029625	61	\N	\N	\N	\N	\N	\N	\N
+1737	SRR029629	61	\N	\N	\N	\N	\N	\N	\N
+1738	SRR037559	61	\N	\N	\N	\N	\N	\N	\N
+1739	SRR037557	61	\N	\N	\N	\N	\N	\N	\N
+1748	wgEncodeHaibTfbsGm12878Zeb1sc25388V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1749	wgEncodeHaibTfbsGm12878Zeb1sc25388V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1752	wgEncodeYaleChIPseqRawDataRep1Gm12878Cjun	61	\N	\N	\N	\N	\N	\N	\N
+1753	wgEncodeYaleChIPseqRawDataRep2Gm12878Cjun	61	\N	\N	\N	\N	\N	\N	\N
+1754	wgEncodeBroadHistoneNhaH3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1755	wgEncodeBroadHistoneNhaH3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1758	wgEncodeSydhHistoneK562bH3k4me1UcdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1759	wgEncodeSydhHistoneK562bH3k4me1UcdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1773	wgEncodeHaibTfbsHepg2RxlchPcr2xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1774	wgEncodeHaibTfbsHepg2RxlchV0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1775	wgEncodeHaibTfbsHepg2RxlchV0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1776	wgEncodeHaibTfbsHepg2RxlchPcr1xRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+1777	wgEncodeHaibTfbsHepg2RxlchPcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1778	wgEncodeHaibTfbsHepg2RxlchPcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1779	wgEncodeHaibTfbsHepg2RxlchPcr1xRawDataRep4	61	\N	\N	\N	\N	\N	\N	\N
+1780	wgEncodeHaibTfbsHepg2RxlchPcr2xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1781	SRR018480	61	\N	\N	\N	\N	\N	\N	\N
+1782	SRR018481	61	\N	\N	\N	\N	\N	\N	\N
+1783	SRR018478	61	\N	\N	\N	\N	\N	\N	\N
+1784	SRR018479	61	\N	\N	\N	\N	\N	\N	\N
+1785	SRR026664	61	\N	\N	\N	\N	\N	\N	\N
+1786	SRR026665	61	\N	\N	\N	\N	\N	\N	\N
+1789	wgEncodeHaibTfbsHepg2P300V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1790	wgEncodeHaibTfbsHepg2P300V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1794	wgEncodeHaibTfbsH1hescYy1sc281V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1795	wgEncodeHaibTfbsH1hescYy1sc281V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1800	wgEncodeHaibTfbsHepg2Hnf4asc8987V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1801	wgEncodeHaibTfbsHepg2Hnf4asc8987V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1804	wgEncodeHaibTfbsHepg2Foxa2sc6554V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1805	wgEncodeHaibTfbsHepg2Foxa2sc6554V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1815	wgEncodeHaibTfbsHelas3Taf1Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1816	wgEncodeHaibTfbsHelas3Taf1Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1819	wgEncodeHaibTfbsGm12878Bclaf101388V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1820	wgEncodeHaibTfbsGm12878Bclaf101388V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1824	wgEncodeHaibTfbsHelas3RxlchPcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1829	wgEncodeHaibTfbsHepg2Taf1Pcr2xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1830	wgEncodeHaibTfbsHepg2Taf1Pcr2xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1832	wgEncodeUwDnaseA549RawDataRep2	62	\N	\N	\N	\N	\N	\N	\N
+1833	wgEncodeUwDnaseA549RawDataRep1	62	\N	\N	\N	\N	\N	\N	\N
+1843	wgEncodeHaibTfbsHepg2Rad21V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1844	wgEncodeHaibTfbsHepg2Rad21V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1850	SRR179726	61	\N	\N	\N	\N	\N	\N	\N
+1851	SRR179727	61	\N	\N	\N	\N	\N	\N	\N
+1852	SRR179725	61	\N	\N	\N	\N	\N	\N	\N
+1853	SRR179729	61	\N	\N	\N	\N	\N	\N	\N
+1854	SRR179728	61	\N	\N	\N	\N	\N	\N	\N
+1855	SRR179730	61	\N	\N	\N	\N	\N	\N	\N
+1862	wgEncodeHaibTfbsGm12878GabpPcr2xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1863	wgEncodeHaibTfbsGm12878GabpPcr2xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1864	wgEncodeBroadChipSeqRawDataRep1Hepg2Control	61	\N	\N	\N	\N	\N	\N	\N
+1865	wgEncodeBroadChipSeqRawDataRep2Hepg2Control	61	\N	\N	\N	\N	\N	\N	\N
+1866	SRR037571	61	\N	\N	\N	\N	\N	\N	\N
+1867	SRR037572	61	\N	\N	\N	\N	\N	\N	\N
+1868	SRR037573	61	\N	\N	\N	\N	\N	\N	\N
+1869	SRR037574	61	\N	\N	\N	\N	\N	\N	\N
+1872	wgEncodeHaibTfbsK562MaxV0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1873	wgEncodeHaibTfbsK562MaxV0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1876	SRR037583	61	\N	\N	\N	\N	\N	\N	\N
+1877	SRR037584	61	\N	\N	\N	\N	\N	\N	\N
+1878	SRR037586	61	\N	\N	\N	\N	\N	\N	\N
+1879	SRR037585	61	\N	\N	\N	\N	\N	\N	\N
+1887	SRR029620	61	\N	\N	\N	\N	\N	\N	\N
+1888	SRR018455	61	\N	\N	\N	\N	\N	\N	\N
+1889	SRR029609	61	\N	\N	\N	\N	\N	\N	\N
+1890	SRR067950	61	\N	\N	\N	\N	\N	\N	\N
+1891	wgEncodeHaibTfbsHepg2SrfV0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1892	wgEncodeHaibTfbsHepg2SrfV0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1907	wgEncodeBroadHistoneNhaCtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1908	wgEncodeBroadHistoneNhaCtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1909	wgEncodeBroadHistoneHuvecH3k9me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1910	wgEncodeBroadHistoneHuvecH3k9me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1911	wgEncodeBroadHistoneHuvecH3k9me1StdRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+1918	wgEncodeBroadHistoneHuvecH3k36me3StdRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+1919	wgEncodeBroadHistoneHuvecH3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1920	wgEncodeBroadHistoneHuvecH3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1926	wgEncodeOpenChromChipK562InputRawData	61	\N	\N	\N	\N	\N	\N	\N
+1927	SRR067937	61	\N	\N	\N	\N	\N	\N	\N
+1928	SRR067938	61	\N	\N	\N	\N	\N	\N	\N
+1929	wgEncodeBroadHistoneNhdfadCtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1930	wgEncodeBroadHistoneNhdfadCtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1942	wgEncodeUtaChIPseqRawDataRep1HuvecCtcf	61	\N	\N	\N	\N	\N	\N	\N
+1943	wgEncodeUtaChIPseqRawDataRep2HuvecCtcf	61	\N	\N	\N	\N	\N	\N	\N
+1946	wgEncodeBroadHistoneHuvecControlStdRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+1947	wgEncodeBroadHistoneHuvecControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1948	wgEncodeBroadHistoneHuvecControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1949	wgEncodeUchicagoTfbsK562Egata2Controlgata2RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1950	wgEncodeUchicagoTfbsK562Egata2ControlRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1952	wgEncodeBroadHistoneHsmmH3k9me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1953	wgEncodeBroadHistoneHsmmH3k9me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1954	wgEncodeBroadHistoneHuvecH3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1955	wgEncodeBroadHistoneHuvecH3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1956	wgEncodeBroadHistoneHuvecH3k4me3StdRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+1957	wgEncodeYaleChIPseqRawDataGm12878Input	61	\N	\N	\N	\N	\N	\N	\N
+1958	wgEncodeYaleChIPseqRawDataRep1Gm12878InputIggrab	61	\N	\N	\N	\N	\N	\N	\N
+1959	wgEncodeYaleChIPseqRawDataRep1Gm12878MusiggMusigg	61	\N	\N	\N	\N	\N	\N	\N
+1960	wgEncodeYaleChIPseqRawDataRep2Gm12878InputIggrab	61	\N	\N	\N	\N	\N	\N	\N
+1961	wgEncodeYaleChIPseqRawDataRep2Gm12878MusiggMusigg	61	\N	\N	\N	\N	\N	\N	\N
+1969	wgEncodeUtaChIPseqRawDataRep1Gm12878Cmyc	61	\N	\N	\N	\N	\N	\N	\N
+1970	wgEncodeUtaChIPseqRawDataRep2Gm12878Cmyc	61	\N	\N	\N	\N	\N	\N	\N
+1973	wgEncodeBroadHistoneK562H3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+1974	wgEncodeBroadHistoneK562H3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+1977	wgEncodeYaleChIPseqRawDataRep2Gm12878Pol2V3	61	\N	\N	\N	\N	\N	\N	\N
+1982	wgEncodeYaleChIPseqRawDataRep1Gm12878Pol2V3	61	\N	\N	\N	\N	\N	\N	\N
+1984	wgEncodeYaleChIPseqRawDataRep3Gm12878Pol2V3	61	\N	\N	\N	\N	\N	\N	\N
+1999	wgEncodeBroadHistoneHuvecH3k9acStdRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+2000	wgEncodeBroadHistoneHuvecH3k9acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2001	wgEncodeBroadHistoneHuvecH3k9acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2005	SRR179721	61	\N	\N	\N	\N	\N	\N	\N
+2006	SRR179719	61	\N	\N	\N	\N	\N	\N	\N
+2007	SRR179717	61	\N	\N	\N	\N	\N	\N	\N
+2008	SRR179720	61	\N	\N	\N	\N	\N	\N	\N
+2009	SRR179718	61	\N	\N	\N	\N	\N	\N	\N
+2010	SRR179716	61	\N	\N	\N	\N	\N	\N	\N
+2011	SRR019562	61	\N	\N	\N	\N	\N	\N	\N
+2012	SRR067958	61	\N	\N	\N	\N	\N	\N	\N
+2017	SRR019561	61	\N	\N	\N	\N	\N	\N	\N
+2018	SRR029343	61	\N	\N	\N	\N	\N	\N	\N
+2019	SRR067943	61	\N	\N	\N	\N	\N	\N	\N
+2020	SRR029349	61	\N	\N	\N	\N	\N	\N	\N
+2021	SRR029345	61	\N	\N	\N	\N	\N	\N	\N
+2022	SRR029347	61	\N	\N	\N	\N	\N	\N	\N
+2024	wgEncodeHaibTfbsK562Sp1Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2025	wgEncodeHaibTfbsK562Sp1Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2029	wgEncodeHaibTfbsHepg2Hdac2sc6296V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2030	wgEncodeHaibTfbsHepg2Hdac2sc6296V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2037	wgEncodeBroadHistoneHsmmtH3k4me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2038	wgEncodeBroadHistoneHsmmtH3k4me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2044	wgEncodeBroadHistoneNhekH3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2045	wgEncodeBroadHistoneNhekH3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2046	wgEncodeBroadHistoneNhekH3k4me3StdRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+2052	wgEncodeUtaustinChIPseqRawDataHuvecInput	61	\N	\N	\N	\N	\N	\N	\N
+2074	wgEncodeBroadHistoneHelas3ControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2075	wgEncodeBroadHistoneHelas3ControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2083	wgEncodeBroadHistoneNhdfadH3k9acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2084	wgEncodeBroadHistoneNhdfadH3k9acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2088	wgEncodeOpenChromDnaseGm12878RawDataRep1	62	\N	\N	\N	\N	\N	\N	\N
+2089	wgEncodeOpenChromDnaseGm12878RawDataRep2	62	\N	\N	\N	\N	\N	\N	\N
+2090	wgEncodeOpenChromDnaseGm12878RawDataRep4	62	\N	\N	\N	\N	\N	\N	\N
+2091	wgEncodeOpenChromDnaseGm12878RawDataRep5	62	\N	\N	\N	\N	\N	\N	\N
+2092	wgEncodeOpenChromDnaseGm12878RawDataRep3	62	\N	\N	\N	\N	\N	\N	\N
+2104	wgEncodeHaibTfbsGm12878Yy1sc281Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2105	wgEncodeHaibTfbsGm12878Yy1sc281Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2114	wgEncodeUwHistoneHepg2H3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2115	wgEncodeUwHistoneHepg2H3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2123	wgEncodeYaleChIPseqRawDataHelas3Input	61	\N	\N	\N	\N	\N	\N	\N
+2124	wgEncodeYaleChIPseqRawDataRep1Helas3Largefragment	61	\N	\N	\N	\N	\N	\N	\N
+2125	wgEncodeYaleChIPseqRawDataRep1Helas3Mnase	61	\N	\N	\N	\N	\N	\N	\N
+2126	wgEncodeYaleChIPseqRawDataRep1Helas3Mouseigg	61	\N	\N	\N	\N	\N	\N	\N
+2127	wgEncodeYaleChIPseqRawDataRep1Helas3Nakeddna	61	\N	\N	\N	\N	\N	\N	\N
+2128	wgEncodeYaleChIPseqRawDataRep1Helas3Rabigg	61	\N	\N	\N	\N	\N	\N	\N
+2129	wgEncodeYaleChIPseqRawDataRep2Helas3Largefragment	61	\N	\N	\N	\N	\N	\N	\N
+2130	wgEncodeYaleChIPseqRawDataRep2Helas3Mnase	61	\N	\N	\N	\N	\N	\N	\N
+2131	wgEncodeYaleChIPseqRawDataRep2Helas3Mouseigg	61	\N	\N	\N	\N	\N	\N	\N
+2132	wgEncodeYaleChIPseqRawDataRep2Helas3Nakeddna	61	\N	\N	\N	\N	\N	\N	\N
+2133	wgEncodeYaleChIPseqRawDataRep3Helas3Nakeddna	61	\N	\N	\N	\N	\N	\N	\N
+2134	wgEncodeBroadHistoneOsteoblH3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2135	wgEncodeBroadHistoneOsteoblH3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2140	wgEncodeHaibTfbsGm12878Six5Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2141	wgEncodeHaibTfbsGm12878Six5Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2142	SRR037631	61	\N	\N	\N	\N	\N	\N	\N
+2143	SRR037632	61	\N	\N	\N	\N	\N	\N	\N
+2144	SRR037633	61	\N	\N	\N	\N	\N	\N	\N
+2147	wgEncodeHaibTfbsGm12878Taf1Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2148	wgEncodeHaibTfbsGm12878Taf1Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2149	wgEncodeHaibTfbsK562Taf1V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2150	wgEncodeHaibTfbsK562Taf1V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2154	wgEncodeBroadHistoneK562Pol2bStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2155	wgEncodeBroadHistoneK562Pol2bStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2156	SRR029622	61	\N	\N	\N	\N	\N	\N	\N
+2157	SRR029614	61	\N	\N	\N	\N	\N	\N	\N
+2158	SRR037625	61	\N	\N	\N	\N	\N	\N	\N
+2159	SRR037624	61	\N	\N	\N	\N	\N	\N	\N
+2164	wgEncodeHaibTfbsH1hescP300V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2165	wgEncodeHaibTfbsH1hescP300V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2169	wgEncodeHaibTfbsHepg2Elf1sc631V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2170	wgEncodeHaibTfbsHepg2Elf1sc631V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2171	SRR037575	61	\N	\N	\N	\N	\N	\N	\N
+2172	SRR037576	61	\N	\N	\N	\N	\N	\N	\N
+2173	SRR037577	61	\N	\N	\N	\N	\N	\N	\N
+2174	SRR037578	61	\N	\N	\N	\N	\N	\N	\N
+2175	wgEncodeYaleChIPseqRawDataRep2Gm12878CfosV3	61	\N	\N	\N	\N	\N	\N	\N
+2176	wgEncodeYaleChIPseqRawDataRep1Gm12878CfosV3	61	\N	\N	\N	\N	\N	\N	\N
+2182	wgEncodeHaibTfbsGm12878Pol2Pcr2xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2183	wgEncodeHaibTfbsGm12878Pol2Pcr2xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2185	wgEncodeUwTfbsGm06990InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2186	SRR067969	61	\N	\N	\N	\N	\N	\N	\N
+2187	SRR037614	61	\N	\N	\N	\N	\N	\N	\N
+2188	SRR037613	61	\N	\N	\N	\N	\N	\N	\N
+2189	SRR037615	61	\N	\N	\N	\N	\N	\N	\N
+2190	SRR037616	61	\N	\N	\N	\N	\N	\N	\N
+2211	SRR018231	61	\N	\N	\N	\N	\N	\N	\N
+2212	wgEncodeBroadHistoneK562CtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2213	wgEncodeBroadHistoneK562CtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2216	SRR029617	61	\N	\N	\N	\N	\N	\N	\N
+2217	SRR029612	61	\N	\N	\N	\N	\N	\N	\N
+2218	SRR029624	61	\N	\N	\N	\N	\N	\N	\N
+2219	SRR029628	61	\N	\N	\N	\N	\N	\N	\N
+2220	SRR037618	61	\N	\N	\N	\N	\N	\N	\N
+2221	SRR037617	61	\N	\N	\N	\N	\N	\N	\N
+2222	SRR037619	61	\N	\N	\N	\N	\N	\N	\N
+2229	wgEncodeBroadHistoneHepg2H3k79me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2230	wgEncodeBroadHistoneHepg2H3k79me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2240	wgEncodeHaibTfbsH1hescPou5f1sc9081V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2241	wgEncodeHaibTfbsH1hescPou5f1sc9081V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2244	wgEncodeUtaChIPseqRawDataRep1HuvecPol2	61	\N	\N	\N	\N	\N	\N	\N
+2245	wgEncodeUtaChIPseqRawDataRep2HuvecPol2	61	\N	\N	\N	\N	\N	\N	\N
+2248	wgEncodeHaibTfbsH1hescCtcfsc5916V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2249	wgEncodeHaibTfbsH1hescCtcfsc5916V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2250	wgEncodeBroadHistoneK562H3k4me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2251	wgEncodeBroadHistoneK562H3k4me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2252	wgEncodeHaibTfbsHepg2Usf1Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2253	wgEncodeHaibTfbsHepg2Usf1Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2257	wgEncodeBroadHistoneHsmmtH3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2258	wgEncodeBroadHistoneHsmmtH3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2266	wgEncodeUwDnaseHsmmtRawDataRep1	62	\N	\N	\N	\N	\N	\N	\N
+2267	wgEncodeBroadHistoneHelas3CtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2268	wgEncodeBroadHistoneHelas3CtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2273	SRR029616	61	\N	\N	\N	\N	\N	\N	\N
+2274	SRR029627	61	\N	\N	\N	\N	\N	\N	\N
+2275	SRR029623	61	\N	\N	\N	\N	\N	\N	\N
+2276	SRR029611	61	\N	\N	\N	\N	\N	\N	\N
+2277	SRR037555	61	\N	\N	\N	\N	\N	\N	\N
+2278	SRR037560	61	\N	\N	\N	\N	\N	\N	\N
+2279	SRR020517	61	\N	\N	\N	\N	\N	\N	\N
+2287	SRR020519	61	\N	\N	\N	\N	\N	\N	\N
+2288	wgEncodeHaibTfbsK562Zbtb33Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2289	wgEncodeHaibTfbsK562Zbtb33Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2296	SRR029626	61	\N	\N	\N	\N	\N	\N	\N
+2297	SRR029630	61	\N	\N	\N	\N	\N	\N	\N
+2298	SRR029631	61	\N	\N	\N	\N	\N	\N	\N
+2299	SRR029632	61	\N	\N	\N	\N	\N	\N	\N
+2300	SRR037561	61	\N	\N	\N	\N	\N	\N	\N
+2324	wgEncodeBroadHistoneHelas3H4k20me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2325	wgEncodeBroadHistoneHelas3H4k20me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2326	wgEncodeBroadHistoneHsmmtH3k9acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2327	wgEncodeBroadHistoneHsmmtH3k9acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2328	wgEncodeBroadHistoneOsteoblCtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2329	wgEncodeBroadHistoneOsteoblCtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2336	wgEncodeUwTfbsNhekInputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2342	SRR037597	61	\N	\N	\N	\N	\N	\N	\N
+2343	SRR037547	61	\N	\N	\N	\N	\N	\N	\N
+2344	SRR037548	61	\N	\N	\N	\N	\N	\N	\N
+2345	SRR037552	61	\N	\N	\N	\N	\N	\N	\N
+2346	SRR037549	61	\N	\N	\N	\N	\N	\N	\N
+2347	SRR037551	61	\N	\N	\N	\N	\N	\N	\N
+2348	SRR037556	61	\N	\N	\N	\N	\N	\N	\N
+2349	SRR037598	61	\N	\N	\N	\N	\N	\N	\N
+2352	SRR020515	61	\N	\N	\N	\N	\N	\N	\N
+2362	wgEncodeHaibTfbsHelas3Pol2Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2363	wgEncodeHaibTfbsHelas3Pol2Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2364	SRR029621	61	\N	\N	\N	\N	\N	\N	\N
+2365	SRR029613	61	\N	\N	\N	\N	\N	\N	\N
+2366	SRR037563	61	\N	\N	\N	\N	\N	\N	\N
+2367	SRR037635	61	\N	\N	\N	\N	\N	\N	\N
+2368	SRR037636	61	\N	\N	\N	\N	\N	\N	\N
+2369	SRR037634	61	\N	\N	\N	\N	\N	\N	\N
+2370	SRR037637	61	\N	\N	\N	\N	\N	\N	\N
+2371	SRR037638	61	\N	\N	\N	\N	\N	\N	\N
+2372	SRR037639	61	\N	\N	\N	\N	\N	\N	\N
+2373	SRR037652	61	\N	\N	\N	\N	\N	\N	\N
+2374	SRR037640	61	\N	\N	\N	\N	\N	\N	\N
+2375	SRR037641	61	\N	\N	\N	\N	\N	\N	\N
+2376	SRR037642	61	\N	\N	\N	\N	\N	\N	\N
+2379	SRR020508	61	\N	\N	\N	\N	\N	\N	\N
+2389	wgEncodeBroadHistoneK562H3k9me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2390	wgEncodeBroadHistoneK562H3k9me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2391	wgEncodeHaibTfbsHepg2Ctcfsc5916V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2392	wgEncodeHaibTfbsHepg2Ctcfsc5916V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2393	wgEncodeUwTfbsHelas3InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2394	wgEncodeBroadHistoneHuvecH3k4me1StdRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+2395	wgEncodeBroadHistoneHuvecH3k4me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2396	wgEncodeBroadHistoneHuvecH3k4me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2404	wgEncodeHaibTfbsGm12878Rad21V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2405	wgEncodeHaibTfbsGm12878Rad21V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2409	wgEncodeBroadHistoneGm12878ControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2410	wgEncodeBroadHistoneGm12878H3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2411	wgEncodeBroadHistoneGm12878H3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2412	wgEncodeBroadHistoneGm12878H3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2414	wgEncodeBroadHistoneGm12878H3k4me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2415	wgEncodeBroadHistoneGm12878H3k9acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2416	wgEncodeBroadHistoneGm12878H4k20me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2417	wgEncodeBroadHistoneH1hescControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2418	wgEncodeBroadHistoneH1hescCtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2419	wgEncodeBroadHistoneH1hescH3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2420	wgEncodeBroadHistoneH1hescH3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2421	wgEncodeBroadHistoneH1hescH3k4me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2422	wgEncodeBroadHistoneH1hescH3k4me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2423	wgEncodeBroadHistoneH1hescH3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2424	wgEncodeBroadHistoneH1hescH3k9acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2425	wgEncodeBroadHistoneH1hescH4k20me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2426	wgEncodeBroadHistoneHepg2ControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2427	wgEncodeBroadHistoneHepg2CtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2428	wgEncodeBroadHistoneHepg2H3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2429	wgEncodeBroadHistoneHepg2H3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2430	wgEncodeBroadHistoneHepg2H3k4me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2431	wgEncodeBroadHistoneHepg2H3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2432	wgEncodeBroadHistoneHepg2H3k9acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2433	wgEncodeBroadHistoneHepg2H4k20me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2434	wgEncodeBroadHistoneHmecCtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2435	wgEncodeBroadHistoneHmecH3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2436	wgEncodeBroadHistoneHmecH3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2437	wgEncodeBroadHistoneHmecH3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2438	wgEncodeBroadHistoneHmecH3k4me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2439	wgEncodeBroadHistoneHmecH3k4me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2440	wgEncodeBroadHistoneHmecH3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2441	wgEncodeBroadHistoneHsmmControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2442	wgEncodeBroadHistoneHsmmCtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2443	wgEncodeBroadHistoneHsmmH3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2444	wgEncodeBroadHistoneHsmmH3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2445	wgEncodeBroadHistoneHsmmH3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2446	wgEncodeBroadHistoneHsmmH3k4me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2447	wgEncodeBroadHistoneHsmmH3k4me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2448	wgEncodeBroadHistoneHsmmH3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2449	wgEncodeBroadHistoneHsmmH3k9acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2450	wgEncodeBroadHistoneHsmmH4k20me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2451	wgEncodeBroadHistoneK562H3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2452	wgEncodeBroadHistoneK562H3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2453	wgEncodeBroadHistoneK562H3k9acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2454	wgEncodeBroadHistoneNhlfControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2455	wgEncodeBroadHistoneNhlfCtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2456	wgEncodeBroadHistoneNhlfH3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2457	wgEncodeBroadHistoneNhlfH3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2458	wgEncodeBroadHistoneNhlfH3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2459	wgEncodeBroadHistoneNhlfH3k4me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2460	wgEncodeBroadHistoneNhlfH3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2461	wgEncodeBroadHistoneNhlfH3k9acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2462	wgEncodeBroadHistoneNhlfH4k20me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2463	wgEncodeBroadHistoneGm12878ControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2464	wgEncodeBroadHistoneGm12878H3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2465	wgEncodeBroadHistoneGm12878H3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2466	wgEncodeBroadHistoneGm12878H3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2467	wgEncodeBroadHistoneGm12878H3k4me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2468	wgEncodeBroadHistoneGm12878H3k4me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2469	wgEncodeBroadHistoneGm12878H3k9acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2470	wgEncodeBroadHistoneGm12878H4k20me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2471	wgEncodeBroadHistoneH1hescControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2472	wgEncodeBroadHistoneH1hescCtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2473	wgEncodeBroadHistoneH1hescH3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2474	wgEncodeBroadHistoneH1hescH3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2475	wgEncodeBroadHistoneH1hescH3k4me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2476	wgEncodeBroadHistoneH1hescH3k4me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2477	wgEncodeBroadHistoneH1hescH3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2478	wgEncodeBroadHistoneH1hescH3k9acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2479	wgEncodeBroadHistoneH1hescH4k20me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2480	wgEncodeBroadHistoneHepg2ControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2481	wgEncodeBroadHistoneHepg2CtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2482	wgEncodeBroadHistoneHepg2H3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2483	wgEncodeBroadHistoneHepg2H3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2484	wgEncodeBroadHistoneHepg2H3k4me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2485	wgEncodeBroadHistoneHepg2H3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2486	wgEncodeBroadHistoneHepg2H3k9acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2487	wgEncodeBroadHistoneHepg2H4k20me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2488	wgEncodeBroadHistoneHmecCtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2489	wgEncodeBroadHistoneHmecH3k27acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2490	wgEncodeBroadHistoneHmecH3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2491	wgEncodeBroadHistoneHmecH3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2492	wgEncodeBroadHistoneHmecH3k4me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2493	wgEncodeBroadHistoneHmecH3k4me2StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2494	wgEncodeBroadHistoneHmecH3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2495	wgEncodeBroadHistoneHsmmControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2496	wgEncodeBroadHistoneHsmmCtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2497	wgEncodeBroadHistoneHsmmH3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2498	wgEncodeBroadHistoneHsmmH3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2499	wgEncodeBroadHistoneHsmmH3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2500	wgEncodeBroadHistoneHsmmH3k4me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2501	wgEncodeBroadHistoneHsmmH3k4me2StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2502	wgEncodeBroadHistoneHsmmH3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2503	wgEncodeBroadHistoneHsmmH3k9acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2504	wgEncodeBroadHistoneHsmmH4k20me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2505	wgEncodeBroadHistoneK562H3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2506	wgEncodeBroadHistoneK562H3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2507	wgEncodeBroadHistoneK562H3k9acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2508	wgEncodeBroadHistoneNhlfControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2509	wgEncodeBroadHistoneNhlfCtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2510	wgEncodeBroadHistoneNhlfH3k27acStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2511	wgEncodeBroadHistoneNhlfH3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2512	wgEncodeBroadHistoneNhlfH3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2513	wgEncodeBroadHistoneNhlfH3k4me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2514	wgEncodeBroadHistoneNhlfH3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2515	wgEncodeBroadHistoneNhlfH3k9acStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2516	wgEncodeBroadHistoneNhlfH4k20me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2524	wgEncodeOpenChromDnaseH1hescRawDataRep1	62	\N	\N	\N	\N	\N	\N	\N
+2526	wgEncodeOpenChromDnaseHelas3RawDataRep1	62	\N	\N	\N	\N	\N	\N	\N
+2527	wgEncodeOpenChromDnaseHepg2RawDataRep1	62	\N	\N	\N	\N	\N	\N	\N
+2528	wgEncodeOpenChromDnaseHuvecRawDataRep1	62	\N	\N	\N	\N	\N	\N	\N
+2529	wgEncodeOpenChromDnaseK562RawDataRep1	62	\N	\N	\N	\N	\N	\N	\N
+2533	wgEncodeOpenChromDnaseNhekRawDataRep1	62	\N	\N	\N	\N	\N	\N	\N
+2541	wgEncodeOpenChromDnaseH1hescRawDataRep2	62	\N	\N	\N	\N	\N	\N	\N
+2543	wgEncodeOpenChromDnaseHelas3RawDataRep2	62	\N	\N	\N	\N	\N	\N	\N
+2544	wgEncodeOpenChromDnaseHepg2RawDataRep2	62	\N	\N	\N	\N	\N	\N	\N
+2545	wgEncodeOpenChromDnaseHuvecRawDataRep2	62	\N	\N	\N	\N	\N	\N	\N
+2546	wgEncodeOpenChromDnaseK562RawDataRep2	62	\N	\N	\N	\N	\N	\N	\N
+2550	wgEncodeOpenChromDnaseNhekRawDataRep2	62	\N	\N	\N	\N	\N	\N	\N
+2552	wgEncodeOpenChromDnaseHelas3RawDataRep3	62	\N	\N	\N	\N	\N	\N	\N
+2553	wgEncodeOpenChromDnaseHepg2RawDataRep3	62	\N	\N	\N	\N	\N	\N	\N
+2554	wgEncodeHaibTfbsGm12878BatfRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2555	wgEncodeHaibTfbsGm12878Bcl11aRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2557	wgEncodeHaibTfbsGm12878Irf4sc6059RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2558	wgEncodeHaibTfbsGm12878P300RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2559	wgEncodeHaibTfbsGm12878Pu1Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2560	wgEncodeHaibTfbsGm12878Tcf12Pcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2561	wgEncodeHaibTfbsGm12878Zbtb33RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2569	wgEncodeHaibTfbsH1hescNrsfV0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2571	wgEncodeHaibTfbsH1hescPol2V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2572	wgEncodeHaibTfbsH1hescTaf1V0416102RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2573	wgEncodeHaibTfbsHepg2Fosl2V0416101RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2575	wgEncodeHaibTfbsHepg2RxraPcr1xRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2576	wgEncodeHaibTfbsK562Hey1RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2578	wgEncodeHaibTfbsGm12878BatfRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2579	wgEncodeHaibTfbsGm12878Bcl11aRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2581	wgEncodeHaibTfbsGm12878Irf4sc6059RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2582	wgEncodeHaibTfbsGm12878P300RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2583	wgEncodeHaibTfbsGm12878Sp1Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2584	wgEncodeHaibTfbsGm12878Tcf12Pcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2585	wgEncodeHaibTfbsGm12878Zbtb33RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2594	wgEncodeHaibTfbsH1hescNrsfV0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2596	wgEncodeHaibTfbsH1hescPol2V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2597	wgEncodeHaibTfbsH1hescTaf1V0416102RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2598	wgEncodeHaibTfbsHepg2Fosl2V0416101RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2600	wgEncodeHaibTfbsHepg2RxraPcr1xRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2601	wgEncodeHaibTfbsK562Hey1RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2617	wgEncodeUwHistoneGm06990H3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2618	wgEncodeUwHistoneGm06990H3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2627	wgEncodeUwTfbsGm12878CtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2628	wgEncodeUwHistoneGm12878H3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2629	wgEncodeUwHistoneGm12878H3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2630	wgEncodeUwHistoneGm12878H3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2632	wgEncodeUwTfbsHelas3CtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2633	wgEncodeUwHistoneHelas3H3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2634	wgEncodeUwHistoneHelas3H3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2635	wgEncodeUwHistoneHelas3H3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2636	wgEncodeUwTfbsHepg2CtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2637	wgEncodeUwHistoneHepg2H3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2638	wgEncodeUwHistoneHepg2H3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2641	wgEncodeUwTfbsHmecCtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2642	wgEncodeUwHistoneHmecH3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2647	wgEncodeUwTfbsHuvecCtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2648	wgEncodeUwHistoneHuvecH3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2649	wgEncodeUwHistoneHuvecH3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2650	wgEncodeUwHistoneHuvecH3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2651	wgEncodeUwTfbsK562CtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2652	wgEncodeUwHistoneK562H3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2653	wgEncodeUwHistoneK562H3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2654	wgEncodeUwHistoneK562H3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2655	wgEncodeUwTfbsNhekCtcfStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2656	wgEncodeUwHistoneNhekH3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2657	wgEncodeUwHistoneNhekH3k36me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2658	wgEncodeUwHistoneNhekH3k4me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2676	wgEncodeUwHistoneGm06990H3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2677	wgEncodeUwHistoneGm06990H3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2685	wgEncodeUwTfbsGm12878CtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2686	wgEncodeUwHistoneGm12878H3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2687	wgEncodeUwHistoneGm12878H3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2688	wgEncodeUwHistoneGm12878H3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2690	wgEncodeUwTfbsHelas3CtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2691	wgEncodeUwHistoneHelas3H3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2692	wgEncodeUwHistoneHelas3H3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2693	wgEncodeUwHistoneHelas3H3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2694	wgEncodeUwTfbsHepg2CtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2695	wgEncodeUwHistoneHepg2H3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2696	wgEncodeUwHistoneHepg2H3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2702	wgEncodeUwTfbsHuvecCtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2703	wgEncodeUwHistoneHuvecH3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2704	wgEncodeUwHistoneHuvecH3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2705	wgEncodeUwHistoneHuvecH3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2706	wgEncodeUwTfbsK562CtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2707	wgEncodeUwHistoneK562H3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2708	wgEncodeUwHistoneK562H3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2709	wgEncodeUwTfbsNhekCtcfStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2710	wgEncodeUwHistoneNhekH3k27me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2711	wgEncodeUwHistoneNhekH3k36me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2712	wgEncodeUwHistoneNhekH3k4me3StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2731	wgEncodeUwDnaseGm12878RawDataRep1	62	\N	\N	\N	\N	\N	\N	\N
+2732	wgEncodeUwDnaseH1hescRawDataRep1	62	\N	\N	\N	\N	\N	\N	\N
+2738	wgEncodeUwDnaseHelas3RawDataRep1	62	\N	\N	\N	\N	\N	\N	\N
+2739	wgEncodeUwDnaseHepg2RawDataRep1	62	\N	\N	\N	\N	\N	\N	\N
+2746	wgEncodeUwDnaseK562RawDataRep1	62	\N	\N	\N	\N	\N	\N	\N
+2750	wgEncodeUwDnaseNhlfRawDataRep1	62	\N	\N	\N	\N	\N	\N	\N
+2765	wgEncodeUwDnaseGm12878RawDataRep2	62	\N	\N	\N	\N	\N	\N	\N
+2771	wgEncodeUwDnaseHelas3RawDataRep2	62	\N	\N	\N	\N	\N	\N	\N
+2772	wgEncodeUwDnaseHepg2RawDataRep2	62	\N	\N	\N	\N	\N	\N	\N
+2779	wgEncodeUwDnaseK562RawDataRep2	62	\N	\N	\N	\N	\N	\N	\N
+2783	wgEncodeUwDnaseNhlfRawDataRep2	62	\N	\N	\N	\N	\N	\N	\N
+2788	wgEncodeSydhTfbsGm12878InputRawData	61	\N	\N	\N	\N	\N	\N	\N
+2791	wgEncodeSydhTfbsHelas3InputRawData	61	\N	\N	\N	\N	\N	\N	\N
+2793	wgEncodeSydhTfbsK562InputRawData	61	\N	\N	\N	\N	\N	\N	\N
+2799	wgEncodeSydhTfbsGm12878InputTnfaIggrabRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2800	wgEncodeSydhTfbsGm12878JundRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2801	wgEncodeSydhTfbsGm12878IggmusRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2802	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2803	wgEncodeSydhTfbsGm12878Pol3RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2804	wgEncodeSydhTfbsGm12878Rad21IggrabRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2805	wgEncodeSydhTfbsGm12878Tr4RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2806	wgEncodeSydhTfbsGm12878Yy1RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2843	wgEncodeSydhTfbsHelas3Ap2alphaRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2844	wgEncodeSydhTfbsHelas3Ap2gammaRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2845	wgEncodeSydhTfbsHelas3Baf155IggmusRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2846	wgEncodeSydhTfbsHelas3Baf170IggmusRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2850	wgEncodeSydhTfbsHelas3Brg1IggmusRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2851	wgEncodeSydhTfbsHelas3CfosRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2852	wgEncodeSydhTfbsHelas3CjunRabiggRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2853	wgEncodeSydhTfbsHelas3CmycRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2854	wgEncodeSydhTfbsHelas3E2f1RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2855	wgEncodeSydhTfbsHelas3E2f4RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2856	wgEncodeSydhTfbsHelas3E2f6RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2857	wgEncodeSydhTfbsHelas3Ini1IggmusRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2858	wgEncodeSydhTfbsHelas3JundRabiggRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2859	wgEncodeSydhTfbsHelas3LargefragmentRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2860	wgEncodeSydhTfbsHelas3MaxRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2861	wgEncodeSydhTfbsHelas3MnaseRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2862	wgEncodeSydhTfbsHelas3MouseiggRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2863	wgEncodeSydhTfbsHelas3NakeddnaRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2864	wgEncodeSydhTfbsHelas3Nrf1IggmusRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2865	wgEncodeSydhTfbsHelas3Pol2RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2866	wgEncodeSydhTfbsHelas3RabiggRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2869	wgEncodeSydhTfbsHelas3Tr4RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2875	wgEncodeSydhTfbsHuvecCjunRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2877	wgEncodeSydhTfbsHuvecMaxRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2878	wgEncodeSydhTfbsHuvecPol2RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2883	wgEncodeSydhTfbsK562Brg1IggmusRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2884	wgEncodeSydhTfbsK562CfosRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2885	wgEncodeSydhTfbsK562CjunRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2886	wgEncodeSydhTfbsK562CmycRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2887	wgEncodeSydhTfbsK562Ini1IggmusRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2888	wgEncodeSydhTfbsK562InputV2RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2889	wgEncodeSydhTfbsK562MaxRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2890	wgEncodeSydhTfbsK562IggmusRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2892	wgEncodeSydhTfbsK562Nfe2RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2893	wgEncodeSydhTfbsK562Pol2RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2894	wgEncodeSydhTfbsK562Pol2IggmusRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2895	wgEncodeSydhTfbsK562Pol3RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2896	wgEncodeSydhTfbsK562Rad21RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2899	wgEncodeSydhTfbsK562Xrcc4RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2900	wgEncodeSydhTfbsK562E2f4RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2901	wgEncodeSydhTfbsK562E2f6RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2902	wgEncodeSydhTfbsK562Gata1RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2903	wgEncodeSydhTfbsK562Gata2RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2904	wgEncodeSydhTfbsK562Setdb1RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2905	wgEncodeSydhTfbsK562Tr4RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2906	wgEncodeSydhTfbsK562Yy1RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2907	wgEncodeSydhTfbsK562Znf263RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2908	wgEncodeSydhTfbsK562Znf274RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+2918	wgEncodeSydhTfbsGm12878InputTnfaIggrabRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2919	wgEncodeSydhTfbsGm12878JundRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2920	wgEncodeSydhTfbsGm12878IggmusRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2921	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2922	wgEncodeSydhTfbsGm12878Pol3RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2923	wgEncodeSydhTfbsGm12878Rad21IggrabRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2924	wgEncodeSydhTfbsGm12878Tr4RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2925	wgEncodeSydhTfbsGm12878Yy1RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2961	wgEncodeSydhTfbsHelas3Ap2alphaRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2962	wgEncodeSydhTfbsHelas3Ap2gammaRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2963	wgEncodeSydhTfbsHelas3Baf155IggmusRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2964	wgEncodeSydhTfbsHelas3Baf170IggmusRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2968	wgEncodeSydhTfbsHelas3Brg1IggmusRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2969	wgEncodeSydhTfbsHelas3CfosRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2970	wgEncodeSydhTfbsHelas3CjunRabiggRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2971	wgEncodeSydhTfbsHelas3CmycRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2972	wgEncodeSydhTfbsHelas3E2f1RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2973	wgEncodeSydhTfbsHelas3E2f4RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2974	wgEncodeSydhTfbsHelas3E2f6RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2975	wgEncodeSydhTfbsHelas3Ini1IggmusRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2976	wgEncodeSydhTfbsHelas3JundRabiggRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2977	wgEncodeSydhTfbsHelas3LargefragmentRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2978	wgEncodeSydhTfbsHelas3MaxRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2979	wgEncodeSydhTfbsHelas3MnaseRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2980	wgEncodeSydhTfbsHelas3MouseiggRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2981	wgEncodeSydhTfbsHelas3NakeddnaRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2982	wgEncodeSydhTfbsHelas3Nrf1IggmusRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2983	wgEncodeSydhTfbsHelas3Pol2RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2986	wgEncodeSydhTfbsHelas3Tr4RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2992	wgEncodeSydhTfbsHuvecCjunRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2994	wgEncodeSydhTfbsHuvecMaxRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+2995	wgEncodeSydhTfbsHuvecPol2RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3000	wgEncodeSydhTfbsK562Brg1IggmusRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3001	wgEncodeSydhTfbsK562CfosRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3002	wgEncodeSydhTfbsK562CjunRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3003	wgEncodeSydhTfbsK562CmycRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3004	wgEncodeSydhTfbsK562Ini1IggmusRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3005	wgEncodeSydhTfbsK562InputV2RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3006	wgEncodeSydhTfbsK562MaxRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3007	wgEncodeSydhTfbsK562IggmusRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3009	wgEncodeSydhTfbsK562Nfe2RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3010	wgEncodeSydhTfbsK562Pol2RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3011	wgEncodeSydhTfbsK562Pol2IggmusRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3012	wgEncodeSydhTfbsK562Pol3RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3013	wgEncodeSydhTfbsK562Rad21RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3016	wgEncodeSydhTfbsK562Xrcc4RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3017	wgEncodeSydhTfbsK562E2f4RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3018	wgEncodeSydhTfbsK562E2f6RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3019	wgEncodeSydhTfbsK562Gata1RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3020	wgEncodeSydhTfbsK562Gata2RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3021	wgEncodeSydhTfbsK562Setdb1RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3022	wgEncodeSydhTfbsK562Tr4RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3023	wgEncodeSydhTfbsK562Yy1RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3024	wgEncodeSydhTfbsK562Znf263RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3025	wgEncodeSydhTfbsK562Znf274RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3032	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+3051	wgEncodeSydhTfbsHelas3Baf155IggmusRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+3052	wgEncodeSydhTfbsHelas3Baf170IggmusRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+3053	wgEncodeSydhTfbsHelas3Brg1IggmusRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+3054	wgEncodeSydhTfbsHelas3Ini1IggmusRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+3055	wgEncodeSydhTfbsHelas3NakeddnaRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+3056	wgEncodeSydhTfbsHelas3Pol2RawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+3061	wgEncodeSydhTfbsHuvecPol2RawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+3065	wgEncodeSydhTfbsK562CfosRawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+3069	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep4	61	\N	\N	\N	\N	\N	\N	\N
+3078	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep5	61	\N	\N	\N	\N	\N	\N	\N
+3082	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep6	61	\N	\N	\N	\N	\N	\N	\N
+3084	wgEncodeSydhTfbsGm12878Pol2IggmusRawDataRep7	61	\N	\N	\N	\N	\N	\N	\N
+3085	wgEncodeBroadHistoneDnd41H3k04me1RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3086	wgEncodeBroadHistoneDnd41H3k04me1RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3087	wgEncodeBroadHistoneDnd41H3k04me2RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3088	wgEncodeBroadHistoneDnd41H3k04me2RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3089	wgEncodeBroadHistoneDnd41H3k04me3RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3090	wgEncodeBroadHistoneDnd41H3k04me3RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3091	wgEncodeBroadHistoneDnd41H3k09acRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3092	wgEncodeBroadHistoneDnd41H3k09acRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3093	wgEncodeBroadHistoneDnd41H3k27acRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3094	wgEncodeBroadHistoneDnd41H3k27acRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3095	wgEncodeBroadHistoneDnd41H3k27me3RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3096	wgEncodeBroadHistoneDnd41H3k27me3RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3097	wgEncodeBroadHistoneDnd41H3k36me3RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3098	wgEncodeBroadHistoneDnd41H3k36me3RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3099	wgEncodeBroadHistoneDnd41H4k20me1RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3100	wgEncodeBroadHistoneDnd41H4k20me1RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3101	wgEncodeBroadHistoneMonocd14ro1746H3k04me1RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3102	wgEncodeBroadHistoneMonocd14ro1746H3k04me1RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3103	wgEncodeBroadHistoneMonocd14ro1746H3k04me2RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3104	wgEncodeBroadHistoneMonocd14ro1746H3k04me2RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3105	wgEncodeBroadHistoneMonocd14ro1746H3k04me3RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3106	wgEncodeBroadHistoneMonocd14ro1746H3k04me3RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3107	wgEncodeBroadHistoneMonocd14ro1746H3k09acRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3108	wgEncodeBroadHistoneMonocd14ro1746H3k09acRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3109	wgEncodeBroadHistoneMonocd14ro1746H3k27acRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3110	wgEncodeBroadHistoneMonocd14ro1746H3k27acRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3111	wgEncodeBroadHistoneMonocd14ro1746H3k27me3RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3112	wgEncodeBroadHistoneMonocd14ro1746H3k27me3RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3113	wgEncodeBroadHistoneMonocd14ro1746H3k36me3RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3114	wgEncodeBroadHistoneMonocd14ro1746H3k36me3RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3115	wgEncodeBroadHistoneMonocd14ro1746H4k20me1RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3116	wgEncodeBroadHistoneMonocd14ro1746H4k20me1RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3117	wgEncodeUwHistoneMonocd14ro1746H3k04me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3118	wgEncodeUwHistoneMonocd14ro1746H3k27me3StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3119	wgEncodeBroadHistoneA549H3k04me1Etoh02RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3120	wgEncodeBroadHistoneA549H3k04me1Etoh02RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3121	wgEncodeBroadHistoneA549H3k04me2Etoh02RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3122	wgEncodeBroadHistoneA549H3k04me2Etoh02RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3123	wgEncodeBroadHistoneA549H3k04me3Etoh02RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3124	wgEncodeBroadHistoneA549H3k04me3Etoh02RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3125	wgEncodeBroadHistoneA549H3k09acEtoh02RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3126	wgEncodeBroadHistoneA549H3k09acEtoh02RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3127	wgEncodeBroadHistoneA549H3k27acEtoh02RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3128	wgEncodeBroadHistoneA549H3k27acEtoh02RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3129	wgEncodeBroadHistoneA549H3k27me3Etoh02RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3130	wgEncodeBroadHistoneA549H3k27me3Etoh02RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3131	wgEncodeBroadHistoneA549H3k36me3Etoh02RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3132	wgEncodeBroadHistoneA549H3k36me3Etoh02RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3133	wgEncodeBroadHistoneA549H4k20me1Etoh02RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3134	wgEncodeBroadHistoneA549H4k20me1Etoh02RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3135	wgEncodeBroadHistoneA549CtcfEtoh02RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3136	wgEncodeBroadHistoneA549CtcfEtoh02RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3137	wgEncodeBroadHistoneHelas3H3k04me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3138	wgEncodeBroadHistoneHelas3H3k04me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3139	wgEncodeBroadHistoneHepg2H3k04me1StdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3140	wgEncodeBroadHistoneHepg2H3k04me1StdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3141	wgEncodeBroadHistoneHsmmtH3k27me3RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3142	wgEncodeBroadHistoneHsmmtH3k27me3RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3143	wgEncodeBroadHistoneMonocd14ro1746CtcfRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3144	wgEncodeBroadHistoneMonocd14ro1746CtcfRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3145	wgEncodeBroadHistoneNhaH3k04me2RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3146	wgEncodeBroadHistoneNhaH3k04me2RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3147	wgEncodeBroadHistoneNhaH3k09acRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3148	wgEncodeBroadHistoneNhaH3k09acRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3149	wgEncodeBroadHistoneNhaH4k20me1RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3150	wgEncodeBroadHistoneNhaH4k20me1RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3151	wgEncodeBroadHistoneNhdfadH3k04me1RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3152	wgEncodeBroadHistoneNhdfadH3k04me1RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3153	wgEncodeBroadHistoneNhdfadH4k20me1RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3154	wgEncodeBroadHistoneNhdfadH4k20me1RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3155	wgEncodeBroadHistoneNhdfadH4k20me1RawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+3156	wgEncodeBroadHistoneOsteoH3k04me3RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3157	wgEncodeBroadHistoneOsteoH3k04me3RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3158	wgEncodeBroadHistoneOsteoH3k04me3RawDataRep3	61	\N	\N	\N	\N	\N	\N	\N
+3159	wgEncodeBroadHistoneOsteoH3k27me3RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3160	wgEncodeBroadHistoneOsteoH3k27me3RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3161	wgEncodeBroadHistoneOsteoH4k20me1RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3162	wgEncodeBroadHistoneOsteoH4k20me1RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3163	wgEncodeOpenChromChipHelas3CtcfRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3164	wgEncodeOpenChromChipHelas3CtcfRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3165	wgEncodeOpenChromChipHelas3InputRawData	61	\N	\N	\N	\N	\N	\N	\N
+3166	wgEncodeOpenChromChipHepg2CtcfRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3167	wgEncodeOpenChromChipHepg2CtcfRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3168	wgEncodeOpenChromChipHepg2InputRawData	61	\N	\N	\N	\N	\N	\N	\N
+3170	wgEncodeSydhTfbsHelas3InputUcdRawData	61	\N	\N	\N	\N	\N	\N	\N
+3171	wgEncodeSydhTfbsHelas3ifngInputRawData	61	\N	\N	\N	\N	\N	\N	\N
+3178	wgEncodeSydhTfbsImr90InputIggrabRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3179	wgEncodeUwHistoneGm06990InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3180	wgEncodeUwHistoneHelas3InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3181	wgEncodeUwHistoneHepg2InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3182	wgEncodeUwHistoneMonocd14ro1746InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3183	wgEncodeUwTfbsMonocd14ro1746InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3186	wgEncodeUwHistoneA549InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3187	wgEncodeUwTfbsA549InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3188	wgEncodeSydhTfbsImr90CtcfbIggrabRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3189	wgEncodeSydhTfbsImr90CtcfbIggrabRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3190	wgEncodeBroadHistoneDnd41ControlStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3191	wgEncodeBroadHistoneDnd41ControlStdRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3192	wgEncodeBroadHistoneMonocd14ro1746ControlRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3193	wgEncodeBroadHistoneMonocd14ro1746ControlRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3194	wgEncodeOpenChromChipHuvecInputRawData	61	\N	\N	\N	\N	\N	\N	\N
+3195	wgEncodeSydhTfbsGm12878InputIggrabRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3197	wgEncodeSydhTfbsK562Ifna30InputRawData	61	\N	\N	\N	\N	\N	\N	\N
+3198	wgEncodeSydhTfbsK562Ifna6hInputRawData	61	\N	\N	\N	\N	\N	\N	\N
+3199	wgEncodeSydhTfbsK562Ifng30InputRawData	61	\N	\N	\N	\N	\N	\N	\N
+3200	wgEncodeSydhTfbsK562Ifng6hInputRawData	61	\N	\N	\N	\N	\N	\N	\N
+3201	wgEncodeSydhTfbsK562InputIggrabRawData	61	\N	\N	\N	\N	\N	\N	\N
+3202	wgEncodeUwHistoneGm12878InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3203	wgEncodeUwHistoneHmecInputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3204	wgEncodeUwHistoneHuvecInputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3205	wgEncodeUwHistoneK562InputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3206	wgEncodeUwHistoneNhekInputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3207	wgEncodeUwHistoneNhlfInputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3208	wgEncodeUwTfbsNhlfInputStdRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3211	wgEncodeBroadHistoneA549ControlEtoh02RawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3212	wgEncodeBroadHistoneA549ControlEtoh02RawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3213	wgEncodeBroadHistoneDnd41CtcfRawDataRep1	61	\N	\N	\N	\N	\N	\N	\N
+3214	wgEncodeBroadHistoneDnd41CtcfRawDataRep2	61	\N	\N	\N	\N	\N	\N	\N
+3215	wgEncodeUwDnaseHsmmtRawDataRep2	62	\N	\N	\N	\N	\N	\N	\N
+3216	wgEncodeUwDnaseMonocd14ro1746RawDataRep2	62	\N	\N	\N	\N	\N	\N	\N
+3217	wgEncodeBroadHistoneGm12878H3k04me1StdRawDataRep1V2	61	\N	\N	\N	\N	\N	\N	\N
+3218	wgEncodeBroadHistoneGm12878H3k04me3StdRawDataRep2V2	61	\N	\N	\N	\N	\N	\N	\N
+3219	wgEncodeHaibMethylRrbsAg04449UwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3220	wgEncodeHaibMethylRrbsAg04450UwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3221	wgEncodeHaibMethylRrbsAg09309UwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3222	wgEncodeHaibMethylRrbsAg09319UwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3223	wgEncodeHaibMethylRrbsAg10803UwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3224	wgEncodeHaibMethylRrbsCmkUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3225	wgEncodeHaibMethylRrbsFibroblOpenchromgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3226	wgEncodeHaibMethylRrbsGm12878HudsonalphagrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3227	wgEncodeHaibMethylRrbsGm12891HudsonalphagrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3228	wgEncodeHaibMethylRrbsGm12892HudsonalphagrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3229	wgEncodeHaibMethylRrbsGm19239OpenchromgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3230	wgEncodeHaibMethylRrbsGm19240OpenchromgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3231	wgEncodeHaibMethylRrbsH1hescHudsonalphagrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3232	wgEncodeHaibMethylRrbsHaeUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3233	wgEncodeHaibMethylRrbsHcfUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3234	wgEncodeHaibMethylRrbsHcmUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3235	wgEncodeHaibMethylRrbsHcpeUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3236	wgEncodeHaibMethylRrbsHct116YalegrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3237	wgEncodeHaibMethylRrbsHeeUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3238	wgEncodeHaibMethylRrbsHek293UwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3239	wgEncodeHaibMethylRrbsHepg2HudsonalphagrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3240	wgEncodeHaibMethylRrbsHipeUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3241	wgEncodeHaibMethylRrbsHmecUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3242	wgEncodeHaibMethylRrbsHnpceUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3243	wgEncodeHaibMethylRrbsHpaeUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3244	wgEncodeHaibMethylRrbsHrceUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3245	wgEncodeHaibMethylRrbsHreUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3246	wgEncodeHaibMethylRrbsHrpeUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3247	wgEncodeHaibMethylRrbsHsmmSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3248	wgEncodeHaibMethylRrbsHsmmtOpenchromgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3249	wgEncodeHaibMethylRrbsImr90UwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3250	wgEncodeHaibMethylRrbsJurkatUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3251	wgEncodeHaibMethylRrbsK562HudsonalphagrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3252	wgEncodeHaibMethylRrbsMcf7UwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3253	wgEncodeHaibMethylRrbsMelanoSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3254	wgEncodeHaibMethylRrbsNb4UwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3255	wgEncodeHaibMethylRrbsNhaUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3256	wgEncodeHaibMethylRrbsNhbeUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3257	wgEncodeHaibMethylRrbsNhdfneoUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3258	wgEncodeHaibMethylRrbsNt2d1UwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3259	wgEncodeHaibMethylRrbsNt2d1YalegrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3260	wgEncodeHaibMethylRrbsOsteoblOpenchromgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3261	wgEncodeHaibMethylRrbsPanisletsSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3262	wgEncodeHaibMethylRrbsSaecUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3263	wgEncodeHaibMethylRrbsSkmcUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3264	wgEncodeHaibMethylRrbsSknshraUwstamgrowprotSitesfiltered_10.bb	65	\N	\N	\N	\N	\N	\N	\N
+3265	H1ESC_5mC_Lister2009_PMID19829295.bb	66	\N	\N	\N	\N	\N	\N	\N
+3266	IMR90_5mC_Lister2009_PMID19829295.bb	66	\N	\N	\N	\N	\N	\N	\N
+3267	GM12878_5mC_ENCODE_HAIB.bb	66	\N	\N	\N	\N	\N	\N	\N

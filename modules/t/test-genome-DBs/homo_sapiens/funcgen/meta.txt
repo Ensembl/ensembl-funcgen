@@ -1,4 +1,4 @@
-534	\N	schema_version	92
+534	\N	schema_version	93
 156	1	species.production_name	homo_sapiens
 223	\N	schema_type	funcgen
 589	\N	patch	patch_78_79_a.sql|schema_version
@@ -110,3 +110,27 @@
 700	\N	patch	patch_90_91_zi.sql|Create probe_id index on probe_transcript table
 701	\N	patch	patch_91_92_a.sql|schema_version
 702	\N	patch	patch_91_92_b.sql|Drop column paired_with from table read_file
+703	\N	patch	patch_91_92_c.sql|Create underlying_structure table
+704	\N	patch	patch_92_93_a.sql|schema_version
+705	\N	patch	patch_92_93_b.sql|Allow failed peak callings
+706	\N	patch	patch_92_93_c.sql|Allow the number of reads to be stored
+707	\N	patch	patch_92_93_d.sql|Create table for chance quality check
+708	\N	patch	patch_92_93_e.sql|Peak_calling table changes
+709	\N	patch	patch_92_93_f.sql|Updates to alignment table
+710	\N	patch	patch_92_93_g.sql|New table idr
+711	\N	patch	patch_92_93_h.sql|execution_plan table
+712	\N	patch	patch_92_93_i.sql|Add table to store fastqc outcomes
+713	\N	patch	patch_92_93_j.sql|phantom peak table
+714	\N	patch	patch_92_93_k.sql|Add table to store frip scores
+715	\N	patch	patch_92_93_l.sql|Remove unused epigenome columns
+716	\N	patch	patch_92_93_m.sql|Remove constraints
+717	\N	patch	patch_92_93_n.sql|Fix ids, add missing autoincrement
+718	\N	patch	patch_92_93_o.sql|Create peak_calling_statistic table
+719	\N	patch	patch_92_93_p.sql|Create segmentation_state_assignment table
+720	\N	patch	patch_92_93_q.sql|Create segmentation_state_emission table
+721	\N	patch	patch_92_93_r.sql|Create regulatory_build_statistics table
+722	\N	patch	patch_92_93_s.sql|drop segmentation_feature table
+723	\N	patch	patch_92_93_t.sql|drop alignment_qc_phantom_peak table
+724	\N	patch	patch_92_93_u.sql|Create probemapping meta table
+725	\N	patch	patch_92_93_v.sql|Create probemapping statistic table
+726	\N	patch	patch_92_93_w.sql|Modify index name_exp_idx from table read_file_experimental_configuration
