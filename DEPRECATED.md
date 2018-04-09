@@ -8,6 +8,29 @@ When a method is deprecated, a deprecation warning is thrown whenever the method
 The warning also contains instructions on replacing the deprecated method and when it will be removed.
 A year after deprecation (4 Ensembl releases), the method is removed from the API.
 
+### To be removed in EnsEMBL Release 94 ###
+
+ - Bio::EnsEMBL::Funcgen::**BindingMatrix**::*feature_type()*
+ - Bio::EnsEMBL::Funcgen::**BindingMatrix**::*description()*
+ - Bio::EnsEMBL::Funcgen::**BindingMatrix**::*analysis()*
+ - Bio::EnsEMBL::Funcgen::**BindingMatrix**::*frequencies()*
+ - Bio::EnsEMBL::Funcgen::**BindingMatrix**::*_build_matrix()*
+ - Bio::EnsEMBL::Funcgen::**BindingMatrix**::*_validate_matrix()*
+ - Bio::EnsEMBL::Funcgen::**BindingMatrix**::*frequency_matrix()*
+ - Bio::EnsEMBL::Funcgen::**BindingMatrix**::*weight_matrix()*
+ - Bio::EnsEMBL::Funcgen::**BindingMatrix**::*matrix()*
+ - Bio::EnsEMBL::Funcgen::**BindingMatrix**::*weights()*
+ - Bio::EnsEMBL::Funcgen::**BindingMatrix**::*_process_frequency_matrix()*
+ - Bio::EnsEMBL::Funcgen::**BindingMatrix**::*_compute_base_weight()*
+ - Bio::EnsEMBL::Funcgen::**BindingMatrix**::*info_content()*
+ - Bio::EnsEMBL::Funcgen::**MotifFeature**::*feature_type()*
+ - Bio::EnsEMBL::Funcgen::**MotifFeature**::*display_label()*
+ - Bio::EnsEMBL::Funcgen::**MotifFeature**::*associated_annotated_features()*
+ - Bio::EnsEMBL::Funcgen::**MotifFeature**::*interdb_stable_id()*
+ - Bio::EnsEMBL::Funcgen::DBSQL::**BindingMatrixAdaptor**::*fetch_all_by_name()*
+ - Bio::EnsEMBL::Funcgen::DBSQL::**BindingMatrixAdaptor**::*fetch_all_by_name_FeatureType()*
+ - Bio::EnsEMBL::Funcgen::DBSQL::**BindingMatrixAdaptor**::*fetch_all_by_FeatureType()*
+
 ### Removed in Ensembl Release 93 ###
 
  - Bio::EnsEMBL::Funcgen::Epigenome::ontology_accession()

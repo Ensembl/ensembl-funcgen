@@ -72,10 +72,10 @@ use warnings;
 
 use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref check_ref );
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw );
-use Bio::EnsEMBL::Funcgen::Sequencing::MotifTools qw( parse_matrix_line 
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
+use Bio::EnsEMBL::Funcgen::Sequencing::MotifTools qw( parse_matrix_line
                                                       reverse_complement_matrix );
-  
+
 use base qw( Bio::EnsEMBL::Funcgen::Storable );
 
 =head2 new
@@ -144,11 +144,17 @@ sub new {
   Returntype : Bio::EnsEMBL::Funcgen::FeatureType
   Exceptions : None
   Caller     : General
-  Status     : Stable
+  Status     : Deprecated
 
 =cut
 
-sub feature_type { return shift->{feature_type}; }
+sub feature_type {
+    deprecate(
+        "Bio::EnsEMBL::Funcgen::BindingMatrix::feature_type() has been
+        deprecated and will be removed in Ensembl release 94."
+    );
+    return shift->{feature_type};
+}
 
 
 =head2 name
@@ -172,11 +178,17 @@ sub name { return shift->{name}; }
   Returntype : String
   Exceptions : None
   Caller     : General
-  Status     : Low Risk
+  Status     : Deprecated
 
 =cut
 
-sub description { return shift->{description}; }
+sub description {
+    deprecate(
+        "Bio::EnsEMBL::Funcgen::BindingMatrix::description() has been
+        deprecated and will be removed in Ensembl release 94."
+    );
+    return shift->{description};
+}
 
 
 =head2 threshold
@@ -208,11 +220,17 @@ sub threshold {
   Returntype : Bio::EnsEMBL::Analysis
   Exceptions : None
   Caller     : General
-  Status     : At risk
+  Status     : Deprecated
 
 =cut
 
-sub analysis { return shift->{analysis}; }
+sub analysis {
+    deprecate(
+        "Bio::EnsEMBL::Funcgen::BindingMatrix::analysis() has been
+        deprecated and will be removed in Ensembl release 94."
+    );
+    return shift->{analysis};
+}
 
 
 =head2 frequencies
@@ -224,11 +242,16 @@ sub analysis { return shift->{analysis}; }
   Returntype : Scalar - string
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Deprecated
 
 =cut
 
 sub frequencies {
+    deprecate(
+        "Bio::EnsEMBL::Funcgen::BindingMatrix::frequencies() has been
+        deprecated and will be removed in Ensembl release 94."
+    );
+
   my $self      = shift;
   my $revcomp   = shift;
   my $attr_name = $revcomp ? 'rc_frequencies' : 'frequencies';
@@ -243,6 +266,10 @@ sub frequencies {
 
 
 sub _build_matrix{
+    deprecate(
+        "Bio::EnsEMBL::Funcgen::BindingMatrix::_build_matrix() has been
+        deprecated and will be removed in Ensembl release 94."
+    );
   my $self = shift;
   my @tmp  = split("\n", $self->{tmp_frequencies});
   shift @tmp if $tmp[0] =~ /^>/;
@@ -254,6 +281,10 @@ sub _build_matrix{
 
 
 sub _validate_matrix{
+    deprecate(
+        "Bio::EnsEMBL::Funcgen::BindingMatrix::_validate_matrix() has been
+        deprecated and will be removed in Ensembl release 94."
+    );
   my $self = shift;
 
   if(scalar(@{$self->{freq_matrix}}) != 4){
@@ -276,9 +307,22 @@ sub _validate_matrix{
 
 
 
-sub frequency_matrix{ return shift->matrix(undef, shift); }
+sub frequency_matrix {
+    deprecate(
+        "Bio::EnsEMBL::Funcgen::BindingMatrix::frequency_matrix() has been
+        deprecated and will be removed in Ensembl release 94."
+    );
+    return shift->matrix( undef, shift );
+}
 
-sub weight_matrix{ return shift->matrix(1, shift); }
+sub weight_matrix {
+    deprecate(
+        "Bio::EnsEMBL::Funcgen::BindingMatrix::weight_matrix() has been
+        deprecated and will be removed in Ensembl release 94."
+    );
+    return shift->matrix( 1, shift );
+}
+
 
 =head2 matrix
 
@@ -294,13 +338,17 @@ sub weight_matrix{ return shift->matrix(1, shift); }
   Returntype : Arrayref - 2d array
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Deprecated
 
 =cut
 
 # Change this to also get weight matrix?
 
 sub matrix{
+    deprecate(
+        "Bio::EnsEMBL::Funcgen::BindingMatrix::matrix() has been
+        deprecated and will be removed in Ensembl release 94."
+    );
   my $self      = shift;
   my $weights   = shift;
   my $revcomp   = shift;
@@ -460,11 +508,15 @@ sub length {
   Returntype : HASHREF with the weights of this binding matrix 
   Exceptions : None
   Caller     : General + relative_affinity
-  Status     : At Risk
+  Status     : Deprecated
 
 =cut
 
 sub weights {
+    deprecate(
+        "Bio::EnsEMBL::Funcgen::BindingMatrix::weights() has been
+        deprecated and will be removed in Ensembl release 94."
+    );
   my $self    = shift;
   $self->_process_frequency_matrix if ! defined $self->{weights};
   return $self->{weights};  
@@ -494,6 +546,10 @@ sub weights {
 # http://www.ncbi.nlm.nih.gov/pmc/articles/PMC2647310/pdf/gkn1019.pdf
 
 sub _process_frequency_matrix{
+    deprecate(
+        "Bio::EnsEMBL::Funcgen::BindingMatrix::_process_frequency_matrix() has been
+        deprecated and will be removed in Ensembl release 94."
+    );
   my $self   = shift;
   my $pseudo = shift;
   $pseudo ||= 0.1;
@@ -535,6 +591,10 @@ sub _process_frequency_matrix{
 
 
 sub _compute_base_weight{
+    deprecate(
+        "Bio::EnsEMBL::Funcgen::BindingMatrix::_compute_base_weight() has been
+        deprecated and will be removed in Ensembl release 94."
+    );
   my ($self, $base, $base_freq, $total_info, $pseudo) = @_;
   my $weight = log(( ($base_freq + $pseudo) / ($total_info + (4 * $pseudo) )) / 0.25); 
   push @{$self->{weights}{$base}}, $weight; 
@@ -548,11 +608,15 @@ sub _compute_base_weight{
   Description: Private function to calculate the matrix information content per position
   ReturnType : Arrayref
   Caller     : self
-  Status     : At Risk
+  Status     : Deprecated
 
 =cut
 
 sub info_content {
+    deprecate(
+        "Bio::EnsEMBL::Funcgen::BindingMatrix::info_content() has been
+        deprecated and will be removed in Ensembl release 94."
+    );
   my $self    = shift;
   my $revcomp = shift;
   $self->_process_frequency_matrix if ! defined $self->{info_content};

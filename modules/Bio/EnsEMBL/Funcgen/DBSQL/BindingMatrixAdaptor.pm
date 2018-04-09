@@ -54,7 +54,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixAdaptor;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Exception qw( warning throw );
+use Bio::EnsEMBL::Utils::Exception qw( warning throw deprecate );
 use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
 
 
@@ -74,11 +74,17 @@ use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
   Returntype : Arrayref of Bio::EnsEMBL::Funcgen::BindingMatrix objects
   Exceptions : Throws if no name if defined
   Caller     : General
-  Status     : At risk - Change this to fetch_all_by_name_FeatureType
+  Status     : Deprecated
 
 =cut
 
 sub fetch_all_by_name{
+  deprecate(
+      "Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixAdaptor::fetch_all_by_name()
+      has been deprecated and will be removed in Ensembl release 94. " .
+      "Please use Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixAdaptor::fetch_by_name()
+      instead"
+  );
   my ($self, $name, $analysis) = @_;
   throw('Must specify a BindingMatrix name') if ! defined $name;
 
@@ -103,11 +109,15 @@ sub fetch_all_by_name{
   Returntype : Arrayref of Bio::EnsEMBL::Funcgen::BindingMatrix objects
   Exceptions : Throws if no name if defined or if FeatureType is not valid
   Caller     : General
-  Status     : At risk
+  Status     : Deprecated
 
 =cut
 
 sub fetch_all_by_name_FeatureType{
+    deprecate(
+        "Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixAdaptor::fetch_all_by_name_FeatureType()
+        has been deprecated and will be removed in Ensembl release 94."
+    );
   my ($self, $name, $ftype, $analysis) = @_;
 
   throw("Must specify a BindingMatrix name") if(! $name);
@@ -133,11 +143,15 @@ sub fetch_all_by_name_FeatureType{
   Returntype : Bio::EnsEMBL::Funcgen::BindingMatrix
   Exceptions : Throws if FeatureType is not valid
   Caller     : General
-  Status     : At risk
+  Status     : Deprecated
 
 =cut
 
 sub fetch_all_by_FeatureType{
+    deprecate(
+        "Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixAdaptor::fetch_all_by_FeatureType()
+        has been deprecated and will be removed in Ensembl release 94."
+    );
   my ($self, $ftype, $analysis) = @_;
 
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureType', $ftype);

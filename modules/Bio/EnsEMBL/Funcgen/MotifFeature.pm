@@ -69,7 +69,7 @@ use warnings;
 
 use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
 use base qw(Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable);
 
@@ -156,11 +156,16 @@ sub binding_matrix{ return shift->{binding_matrix}; }
   Returntype : Bio::EnsEMBL::Funcgen::FeatureType
   Exceptions : None
   Caller     : General
-  Status     : At risk
+  Status     : Deprecated
 
 =cut
 
-sub feature_type{ return shift->{binding_matrix}->feature_type; }
+sub feature_type{
+    deprecate(
+        "Bio::EnsEMBL::Funcgen::MotifFeature::feature_type() has been
+        deprecated and will be removed in Ensembl release 94."
+    );
+    return shift->{binding_matrix}->feature_type; }
 
 
 =head2 score
@@ -185,11 +190,15 @@ sub score { return shift->{score}; }
   Returntype : str
   Exceptions : None
   Caller     : General
-  Status     : Medium Risk
+  Status     : Deprecated
 
 =cut
 
 sub display_label {
+    deprecate(
+        "Bio::EnsEMBL::Funcgen::MotifFeature::display_label() has been
+        deprecated and will be removed in Ensembl release 94."
+    );
   #If not set in new before store, a default is stored as:
   #$mf->binding_matrix->feature_type->name.':'.$mf->binding_matrix->name();
   return shift->{display_label};
@@ -204,11 +213,16 @@ sub display_label {
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen:AnnotatedFeature objects
   Exceptions : None
   Caller     : General
-  Status     : At risk - may change to associated_transcript_factor_features
+  Status     : Deprecated
 
 =cut
 
 sub associated_annotated_features{
+    deprecate(
+        "Bio::EnsEMBL::Funcgen::MotifFeature::feature_type() has been
+        deprecated and will be removed in Ensembl release 94. Please use
+        Bio::EnsEMBL::Funcgen::MotifFeature::associated_Peaks instead."
+    );
   my $self = shift;
   return [];
 #   my $afs  = shift;
@@ -352,11 +366,18 @@ sub infer_variation_consequence{
   Returntype : int
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Deprecated
 
 =cut
 
-sub interdb_stable_id { return shift->{interdb_stable_id}; }
+sub interdb_stable_id {
+    deprecate(
+        "Bio::EnsEMBL::Funcgen::MotifFeature::interdb_stable_id() has been
+        deprecated and will be removed in Ensembl release 94."
+    );
+    return shift->{interdb_stable_id};
+}
+
 
 sub SO_term {
   my $self = shift;
