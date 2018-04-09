@@ -8,6 +8,7 @@ use Data::Dumper;
 use Role::Tiny::With;
 with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 with 'Bio::EnsEMBL::Funcgen::PeakCallingPlan::select_EnsemblAlignmentAnalysis';
+with 'Bio::EnsEMBL::Funcgen::PeakCallingPlan::summarise_ReadFile';
 
 use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_set
@@ -49,6 +50,13 @@ sub construct {
     $species, 
     'funcgen', 
     'ReadFileExperimentalConfiguration'
+  );
+
+  my $read_file_adaptor 
+  = Bio::EnsEMBL::Registry->get_adaptor(
+    $species, 
+    'funcgen', 
+    'ReadFile'
   );
 
   my $read_file_experimental_configuration_list = 
@@ -110,7 +118,13 @@ sub construct {
     use Bio::EnsEMBL::Funcgen::PeakCallingPlan::AlignmentPlanFactory;
     my $alignment_plan_factory = Bio::EnsEMBL::Funcgen::PeakCallingPlan::AlignmentPlanFactory
     ->new(
-      -names_of_reads_to_merge => [ $read_file->name, ],
+      -names_of_reads_to_merge => [ 
+        summarise_ReadFile( 
+          $read_file_adaptor->fetch_by_name(
+            $read_file->name
+          )
+        )
+      ],
       -description             => "Technical replicate $technical_replicate_number",
       -name                    => $alignment_namer->base_name_with_duplicates,
       -to_gender               => $to_gender,
