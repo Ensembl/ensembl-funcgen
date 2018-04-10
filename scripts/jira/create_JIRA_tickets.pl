@@ -255,6 +255,9 @@ sub validate_user_name {
         'mnuhn'    => 'mnuhn',
         'michael'  => 'mnuhn',
         'Michael'  => 'mnuhn',
+        'jcmarca'  => 'jcmarca',
+        'Jose'     => 'jcmarca',
+        'jose'     => 'jcmarca',
     );
 
     if ( exists $valid_user_names{$user} ) {
@@ -372,6 +375,7 @@ sub replace_placeholders {
     $line =~ s/<handover_date>/$parameters->{dates}->{handover}/g;
     $line =~ s/<codeBranching_date>/$parameters->{dates}->{codeBranching}/g;
     $line =~ s/<release_date>/$parameters->{dates}->{release}/g;
+    $line =~ s/<ftpDump_date>/$parameters->{dates}->{ftpDump_date}/g;
 
     return $line;
 }
