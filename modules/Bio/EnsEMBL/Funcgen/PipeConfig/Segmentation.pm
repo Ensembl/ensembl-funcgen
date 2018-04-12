@@ -154,11 +154,23 @@ sub pipeline_analyses {
                     from 
                         temp_segmentation_candidates 
                     where 
-                        feature_type in ("H3K4me1", "H3K4me3", "H3K27ac", "H3K27me3", "H3K36me3", "CTCF") 
+                        feature_type in ("CTCF") 
+                    group by 
+                        epigenome 
+                ~,
+                q~ drop table if exists temp_segmentation_epigenome_with_minimum_marks ~,
+                q~
+                    create table temp_segmentation_epigenome_with_minimum_marks
+                    select 
+                        epigenome
+                    from 
+                        temp_segmentation_candidates 
+                    where 
+                        feature_type in ("H3K4me1", "H3K4me3", "H3K27ac", "H3K27me3", "H3K36me3")
                     group by 
                         epigenome 
                     having 
-                        count(distinct feature_type) = 6
+                        count(distinct feature_type) = 5
                 ~,
                 q~ drop table if exists temp_segmentation_epigenome_without_ctcf ~,
                 q~
@@ -171,16 +183,29 @@ sub pipeline_analyses {
                     where 
                         temp_segmentation_epigenome_with_ctcf.epigenome is null
                 ~,
-                q~ drop table if exists segmentation_cell_table_ctcf ~,
+                q~ 
+                    drop table if exists segmentation_cell_table_ctcf 
+                ~,
                 q~
                     create table segmentation_cell_table_ctcf
-                    select * from temp_segmentation_epigenome_with_ctcf join temp_segmentation_candidates using (epigenome)
+                    select 
+                        temp_segmentation_candidates.*
+                    from 
+                        temp_segmentation_epigenome_with_ctcf 
+                        join temp_segmentation_candidates using (epigenome)
+                        join temp_segmentation_epigenome_with_minimum_marks using (epigenome)
                 ~,
-                q~ drop table if exists segmentation_cell_table_without_ctcf ~,
+                q~ 
+                    drop table if exists segmentation_cell_table_without_ctcf 
+                ~,
                 q~
                     create table segmentation_cell_table_without_ctcf
-                    select * from temp_segmentation_epigenome_without_ctcf join temp_segmentation_candidates using (epigenome)
-                    limit 6
+                    select 
+                        temp_segmentation_candidates.*
+                    from 
+                        temp_segmentation_epigenome_without_ctcf 
+                        join temp_segmentation_candidates using (epigenome)
+                        join temp_segmentation_epigenome_with_minimum_marks using (epigenome)
                 ~,
                 q~ drop table if exists temp_segmentation_candidates ~,
                 q~ drop table if exists temp_segmentation_epigenome_with_ctcf ~,
@@ -189,9 +214,79 @@ sub pipeline_analyses {
               db_conn => 'funcgen:#species#',
           },
           -flow_into => {
-            MAIN => 'make_segmentation_dir',
+            'MAIN->A' => [ 
+                'hc_epigenome_feature_type_combo_unique',
+                'hc_epigenome_feature_type_combo_unique2',
+            ]
+            'A->MAIN' => [ 'make_segmentation_dir' ],
           },
       },
+
+        {
+            -logic_name  => 'hc_epigenome_feature_type_combo_unique',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlHealthcheck',
+            -parameters => {
+                db_conn       => 'funcgen:#species#',
+                description   => '',
+                query         => "
+                select 
+                    epigenome, feature_type, count(*) c 
+                from 
+                    segmentation_cell_table_ctcf 
+                group by 
+                    epigenome, 
+                    feature_type 
+                having 
+                    c != 1
+                ",
+                expected_size => '0'
+            },
+            -flow_into => {
+                MAIN => 'hc_each_epigenome_has_ctcf_data',
+            },
+        },
+        {
+            -logic_name  => 'hc_each_epigenome_has_ctcf_data',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlHealthcheck',
+            -parameters => {
+                db_conn       => 'funcgen:#species#',
+                description   => '',
+                query         => '
+                select 
+                    count(epigenome)    count_epigenomes, 
+                    count(feature_type) count_feature_types 
+                from 
+                    segmentation_cell_table_ctcf 
+                where 
+                    feature_type = "CTCF" 
+                having 
+                    count_epigenomes != count_epigenomes
+                ',
+                expected_size => '0'
+            },
+        },
+        {
+            -logic_name  => 'hc_epigenome_feature_type_combo_unique2',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlHealthcheck',
+            -parameters => {
+                db_conn       => 'funcgen:#species#',
+                description   => '',
+                query         => "
+                select 
+                    epigenome, feature_type, count(*) c 
+                from 
+                    segmentation_cell_table_without_ctcf
+                group by 
+                    epigenome, 
+                    feature_type 
+                having 
+                    c != 1
+                ",
+                expected_size => '0'
+            },
+        },
+
+
       {   -logic_name => 'make_segmentation_dir',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters => {
@@ -280,7 +375,7 @@ sub pipeline_analyses {
                 . qq( java -Xmx30000m             )
                 . qq( -jar #ChromHMM#             )
                 . qq( LearnModel                  )
-                . qq( -r 50 -p 12                )
+                . qq( -r 300 -p 12                )
                 . qq( -l #chromosome_length_file# )
                 . qq( #binarized_bam_dir#/with_ctcf/         )
                 . qq( #learnmodel_output_dir#/with_ctcf/     )
@@ -297,7 +392,7 @@ sub pipeline_analyses {
                 . qq( java -Xmx30000m             )
                 . qq( -jar #ChromHMM#             )
                 . qq( LearnModel                  )
-                . qq( -r 50 -p 12                )
+                . qq( -r 300 -p 12                )
                 . qq( -l #chromosome_length_file# )
                 . qq( #binarized_bam_dir#/without_ctcf/         )
                 . qq( #learnmodel_output_dir#/without_ctcf/     )
