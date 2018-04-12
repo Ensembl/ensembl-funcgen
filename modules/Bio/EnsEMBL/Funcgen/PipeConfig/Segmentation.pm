@@ -217,7 +217,7 @@ sub pipeline_analyses {
             'MAIN->A' => [ 
                 'hc_epigenome_feature_type_combo_unique',
                 'hc_epigenome_feature_type_combo_unique2',
-            ]
+            ],
             'A->MAIN' => [ 'make_segmentation_dir' ],
           },
       },
