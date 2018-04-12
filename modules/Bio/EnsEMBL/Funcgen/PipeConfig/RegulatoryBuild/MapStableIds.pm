@@ -161,6 +161,21 @@ sub pipeline_analyses {
                     --mapping_report_file #mapping_report#
               )
             },
+            -flow_into => {
+                MAIN => 'generate_regulatory_build_report_with_stable_id_mapping',
+            },
+        },
+      {   -logic_name => 'generate_regulatory_build_report_with_stable_id_mapping',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -parameters => {
+            cmd => 
+                q(
+                  generate_regulatory_build_report.pl  \
+                      --species          #species# \
+                      --registry         #reg_conf# \
+                      --output_directory #reports_dir#/#species#
+                )
+          },
         },
         {   -logic_name => 'remove_old_stable_ids_in_db',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',

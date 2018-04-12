@@ -32,7 +32,7 @@ limitations under the License.
 
 =cut
 
-package Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildStatisticsAdaptor;
+package Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildStatisticAdaptor;
 
 use strict;
 use base 'Bio::EnsEMBL::Funcgen::DBSQL::GenericAdaptor';
@@ -42,7 +42,7 @@ sub object_class {
 }
 
 sub _tables {
-  return ['regulatory_build_statistics', 'rbs']
+  return ['regulatory_build_statistic', 'rbs']
 }
 
 sub fetch_by_statistic {
@@ -67,6 +67,28 @@ sub fetch_average_length_promoter_flanking_region {
 }
 
 
+
+
+
+
+sub fetch_stable_id_mapping_number_regulatory_features {
+  my $self = shift;
+  return $self->fetch_by_statistic('stable_id_mapping_number_regulatory_features');
+}
+sub fetch_stable_id_mapping_new_stable_ids {
+  my $self = shift;
+  return $self->fetch_by_statistic('stable_id_mapping_new_stable_ids');
+}
+sub fetch_stable_id_mapping_mapped_stable_ids {
+  my $self = shift;
+  return $self->fetch_by_statistic('stable_id_mapping_mapped_stable_ids');
+}
+
+
+sub fetch_number_regulatory_features {
+  my $self = shift;
+  return $self->fetch_by_statistic('number_regulatory_features');
+}
 
 sub fetch_sum_length_promoter {
   my $self = shift;

@@ -49,6 +49,15 @@ sub _tables {
   return ['peak_calling', 'pc']
 }
 
+sub fetch_all_failed {
+  my $self         = shift;
+  
+  my $features = $self->fetch_all(
+    "run_failed is true"
+  );
+  return $features;
+}
+
 sub fetch_all_by_Epigenome {
     my $self      = shift;
     my $epigenome = shift;

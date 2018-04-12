@@ -184,7 +184,7 @@ sub run {
   my $peak_calling_succeeded = undef;
   my $error_message;
 
-  my $TIMEOUT_IN_SECONDS = 5 * 3600;
+  my $TIMEOUT_IN_SECONDS = 10 * 3600;
   eval {
       local $SIG{ALRM} = sub { die "alarm\n" };
       alarm($TIMEOUT_IN_SECONDS);
@@ -219,7 +219,12 @@ sub run {
       # handle timeout condition.
       
       $peak_calling_succeeded = 0;
-      $error_message = "Peak calling job " . $self->input_job->dbID . " timed out after $TIMEOUT_IN_SECONDS seconds.";
+      
+      if ($@ =~ /alarm/) {
+        $error_message = "Peak calling job " . $self->input_job->dbID . " timed out after $TIMEOUT_IN_SECONDS seconds.";
+      } else {
+        die($@);
+      }
       $self->warning($error_message);
   }
 

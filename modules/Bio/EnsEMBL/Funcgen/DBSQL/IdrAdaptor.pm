@@ -45,6 +45,15 @@ sub _tables {
   return ['idr', 'i']
 }
 
+sub fetch_all_failed {
+  my $self         = shift;
+  
+  my $features = $self->fetch_all(
+    "failed_idr_pairs is not null and max_peaks is null"
+  );
+  return $features;
+}
+
 sub _fetch_by_experiment_id {
 
   my $self          = shift;

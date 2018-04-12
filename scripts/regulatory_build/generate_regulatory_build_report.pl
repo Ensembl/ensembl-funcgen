@@ -58,7 +58,7 @@ Bio::EnsEMBL::Registry->load_all($registry);
 
 my $mouse_funcgen_dba = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
 
-my $regulatory_build_statistics_adaptor = $mouse_funcgen_dba->get_RegulatoryBuildStatisticsAdaptor;
+my $regulatory_build_statistics_adaptor = $mouse_funcgen_dba->get_RegulatoryBuildStatisticAdaptor;
 
 my $file = __FILE__;
 use File::Basename qw( dirname basename );

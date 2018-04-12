@@ -384,9 +384,8 @@ sub pipeline_analyses {
           },
           -flow_into => {
             MAIN => [
-                'create_regulatory_build_statistics', 
+                'create_regulatory_build_statistic', 
                 'populate_regulatory_build_epigenome_table',
-#                 'register_segmentation_files',
             ]
           },
       },
@@ -434,27 +433,24 @@ sub pipeline_analyses {
                     --output_directory #reports_dir#/#species#
                 )
           },
-#           -flow_into => {
-#             MAIN => 'create_regulatory_build_statistics',
-#           },
       },
       {
-          -logic_name  => 'create_regulatory_build_statistics',
+          -logic_name  => 'create_regulatory_build_statistic',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
           -parameters => {
               sql     => [
-                "drop table if exists regulatory_build_statistics",
+                "drop table if exists regulatory_build_statistic",
 
-                "CREATE TABLE regulatory_build_statistics (
-                  regulatory_build_statistics_id INT(30) UNSIGNED NOT NULL AUTO_INCREMENT,
+                "CREATE TABLE regulatory_build_statistic (
+                  regulatory_build_statistic_id INT(30) UNSIGNED NOT NULL AUTO_INCREMENT,
                   regulatory_build_id INT(22) UNSIGNED NOT NULL,
                   statistic                VARCHAR(128) NOT NULL,
                   value                    BIGINT(11) UNSIGNED DEFAULT '0' NOT NULL,
-                  PRIMARY KEY (regulatory_build_statistics_id),
+                  PRIMARY KEY (regulatory_build_statistic_id),
                   UNIQUE KEY stats_uniq(statistic, regulatory_build_id)
                 )",
 
-                "insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                "insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                   select 
                     regulatory_build_id, 
                     'Number of regulatory features', 
@@ -464,7 +460,7 @@ sub pipeline_analyses {
                   group by regulatory_build_id
                 )",
 
-                "insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                "insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                   select 
                     regulatory_build_id,
                     feature_type.name, 
@@ -477,7 +473,7 @@ sub pipeline_analyses {
                     regulatory_build_id
                 )",
                 "
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select 
                     regulatory_build_id, 
                     'number_regulatory_features', 
@@ -488,94 +484,94 @@ sub pipeline_analyses {
                 );
                 ",
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'number_promoter', count(regulatory_feature_id) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Promoter" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'number_enhancer', count(regulatory_feature_id) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Enhancer" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'number_promoter_flanking_region', count(regulatory_feature_id) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Promoter Flanking Region" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'number_transcription_factor_binding_site', count(regulatory_feature_id) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "TF binding site" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'number_open_chromatin', count(regulatory_feature_id) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Open chromatin" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'number_ctcf_binding_site', count(regulatory_feature_id) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "CTCF Binding Site" group by feature_type.name, regulatory_build_id
                 );
                 ~,
 
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'average_length_promoter', AVG( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Promoter" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'average_length_enhancer', AVG( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Enhancer" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'average_length_promoter_flanking_region', AVG( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Promoter Flanking Region" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'average_length_transcription_factor_binding_site', AVG( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "TF binding site" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'average_length_open_chromatin', AVG( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Open chromatin" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'average_length_ctcf_binding_site', AVG( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "CTCF Binding Site" group by feature_type.name, regulatory_build_id
                 );
                 ~,
 
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'sum_length_promoter', SUM( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Promoter" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'sum_length_enhancer', SUM( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Enhancer" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'sum_length_promoter_flanking_region', SUM( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Promoter Flanking Region" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'sum_length_transcription_factor_binding_site', SUM( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "TF binding site" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'sum_length_open_chromatin', SUM( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Open chromatin" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'sum_length_ctcf_binding_site', SUM( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "CTCF Binding Site" group by feature_type.name, regulatory_build_id
                 );
                 ~
@@ -623,9 +619,6 @@ sub pipeline_analyses {
                       --db_file_relative_dir             /funcgen/segmentation_file/#ensembl_release_version#
                 )
           },
-#           -flow_into => {
-#             MAIN => '',
-#           },
       },
       {   -logic_name => 'generate_regulatory_build_report',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
@@ -638,13 +631,7 @@ sub pipeline_analyses {
                       --output_directory #reports_dir#/#species#
                 )
           },
-#           -flow_into => {
-#             MAIN => 'segmentation_done',
-#           },
       },
-#       {   -logic_name => 'segmentation_done',
-#           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-#       },
     ];
 }
 

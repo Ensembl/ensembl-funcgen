@@ -31,6 +31,95 @@
   </li>
 </ul>
 
+<h2 id="failed_idr">Failed IDR</h2>
+
+[% failed_idrs = idr_adaptor.fetch_all_failed %]
+
+<p>
+    The IDR failed in [% failed_idrs.size %] instances.
+</p>
+
+<script type="text/javascript" class="init">
+
+$(document).ready(function() {
+    $('#failed_idrs').DataTable(
+        {
+            "iDisplayLength": 5,
+        }
+    );
+
+} );
+
+</script>
+
+<table id="failed_idrs" class="display" cellspacing="0" width="100%">
+<thead>
+    <tr>
+        <th>Experiment</th>
+        <th>Epigenome</th>
+        <th>Type</th>
+        <th>Error message</th>
+    </tr>
+</thead>
+<tbody>
+
+[% FOR failed_idr IN failed_idrs %]
+<tr>
+    <td>[% failed_idr.fetch_Experiment.name %]</td>
+    <td>[% failed_idr.fetch_Experiment.epigenome.display_label %]</td>
+    <td>[% failed_idr.type       %]</td>
+    <td>[% failed_idr.failed_idr_pairs %]</td>
+</tr>
+[% END %]
+
+</tbody>
+</table>
+
+
+
+
+<h2 id="failed_peak_callings">Failed peak callings</h2>
+
+[% failed_peak_callings = peak_calling_adaptor.fetch_all_failed %]
+
+<p>
+    Peak calling failed in [% failed_peak_callings.size %] instances.
+</p>
+
+<script type="text/javascript" class="init">
+
+$(document).ready(function() {
+    $('#failed_peak_calls').DataTable();
+} );
+
+</script>
+
+<table id="failed_peak_calls" class="display" cellspacing="0" width="100%">
+<thead>
+    <tr>
+        <th>Name</th>
+        <th>Feature type</th>
+        <th>Broad peaks</th>
+        <th>Epigenome</th>
+        <th>Error message</th>
+    </tr>
+</thead>
+<tbody>
+
+[% FOR failed_peak_calling IN failed_peak_callings %]
+<tr>
+    <td>[% failed_peak_calling.name %]</td>
+    <td>[% failed_peak_calling.fetch_FeatureType.name       %]</td>
+    <td>[% boolean_to_yes_no( failed_peak_calling.fetch_FeatureType._creates_broad_peaks ) %]</td>
+    <td>[% failed_peak_calling.fetch_Epigenome.display_label %]</td>
+    <td>[% failed_peak_calling.error_message%]</td>
+</tr>
+[% END %]
+
+</tbody>
+</table>
+
+
 <h2 id="prop_of_genome_in_peaks">Proportion of genome in peaks by feature type and epigenome in percent (0-100)</h2>
 
 [%- FOR current_feature_type IN feature_types -%]
