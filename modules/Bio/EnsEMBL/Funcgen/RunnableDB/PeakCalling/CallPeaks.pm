@@ -186,7 +186,13 @@ sub run {
 
   my $TIMEOUT_IN_SECONDS = 10 * 3600;
   eval {
-      local $SIG{ALRM} = sub { die "alarm\n" };
+      local $SIG{ALRM} = sub { die "alarm" };
+      
+      local $SIG{INT} = sub { 
+        $self->warning("Got INT signal!");
+        sleep(30);
+      };
+      
       alarm($TIMEOUT_IN_SECONDS);
 
       _run_peak_caller(
