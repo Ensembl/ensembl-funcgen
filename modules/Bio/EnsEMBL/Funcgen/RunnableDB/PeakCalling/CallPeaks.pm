@@ -216,15 +216,14 @@ sub run {
       }
   };
   if ($@) {
-      # handle timeout condition.
-      
       $peak_calling_succeeded = 0;
       
-      if ($@ =~ /alarm/) {
-        $error_message = "Peak calling job " . $self->input_job->dbID . " timed out after $TIMEOUT_IN_SECONDS seconds.";
-      } else {
-        die($@);
+      my $killed_for_timeout = $@ =~ /alarm/;
+      
+      if (! $killed_for_timeout) {
+        $self->throw($@);
       }
+      $error_message = "Peak calling job " . $self->input_job->dbID . " timed out after $TIMEOUT_IN_SECONDS seconds.";
       $self->warning($error_message);
   }
 
