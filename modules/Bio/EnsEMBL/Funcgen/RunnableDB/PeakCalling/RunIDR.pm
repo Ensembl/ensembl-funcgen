@@ -60,10 +60,21 @@ sub run {
   
     my $swembl_file = $permissive_peak_call_result->{peak_file};
   
-    my $cmd = "grep -vE '(#|(^Region[[:space:]]+Start))' $swembl_file | wc -l | awk '{print \$1}'";
+#     my $cmd = "grep -vE '(#|(^Region[[:space:]]+Start))' $swembl_file | wc -l | awk '{print \$1}'";
+#     
+#     use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_backtick_cmd run_system_cmd );
+#     my $num_peaks = run_backtick_cmd($cmd);
+
+    my $cmd = "grep -vE '(#|(^Region[[:space:]]+Start))' $swembl_file | wc -l | awk '{print \$1}' > ${swembl_file}.peak_count";
+    
+    my $return_code = $self->run_system_command($cmd, {'use_bash_pipefail' => 1});
+    
+    if ($return_code) {
+        $self->throw("Failed to run:\n$cmd\n");
+    }
     
     use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_backtick_cmd run_system_cmd );
-    my $num_peaks = run_backtick_cmd($cmd);
+    my $num_peaks = run_backtick_cmd("cat ${swembl_file}.peak_count");
     
     $self->say_with_header("Found " . $num_peaks . " peaks in bed file ${swembl_file}.", 1);
     
