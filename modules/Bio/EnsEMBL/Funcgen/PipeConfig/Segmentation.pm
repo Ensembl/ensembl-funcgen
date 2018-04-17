@@ -227,7 +227,7 @@ sub pipeline_analyses {
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlHealthcheck',
             -parameters => {
                 db_conn       => 'funcgen:#species#',
-                description   => '',
+                description   => 'Check that any epigenome, feature type combination is unique',
                 query         => "
                 select 
                     epigenome, feature_type, count(*) c 
@@ -250,7 +250,7 @@ sub pipeline_analyses {
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlHealthcheck',
             -parameters => {
                 db_conn       => 'funcgen:#species#',
-                description   => '',
+                description   => 'Check that each epigenome has a ctcf assay',
                 query         => '
                 select 
                     count(epigenome)    count_epigenomes, 
@@ -270,7 +270,7 @@ sub pipeline_analyses {
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlHealthcheck',
             -parameters => {
                 db_conn       => 'funcgen:#species#',
-                description   => '',
+                description   => 'Check that any epigenome, feature type combination is unique',
                 query         => "
                 select 
                     epigenome, feature_type, count(*) c 
