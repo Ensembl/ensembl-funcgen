@@ -479,7 +479,7 @@ sub pipeline_analyses {
           },
           -flow_into => {
             MAIN => [
-                'create_regulatory_build_statistic', 
+                'compute_enhancer_coverage', 
                 'populate_regulatory_build_epigenome_table',
             ]
           },
@@ -527,6 +527,20 @@ sub pipeline_analyses {
                     --registry         #reg_conf# \
                     --output_directory #reports_dir#/#species#
                 )
+          },
+      },
+      {   -logic_name => 'compute_enhancer_coverage',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -parameters => {
+            cmd => 
+                q(
+                  compute_enhancer_coverage.pl 
+                    --species  #species# \
+                    --registry #reg_conf#
+                )
+          },
+          -flow_into => {
+            MAIN => 'create_regulatory_build_statistic',
           },
       },
       {
