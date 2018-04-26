@@ -16,7 +16,6 @@ sub default_options {
   return {
       %{$self->SUPER::default_options},
       pipeline_name => 'chip_seq_analysis',
-      in_test_mode  => 0,
    };
 }
 
@@ -32,7 +31,6 @@ sub pipeline_wide_parameters {
     reports_dir             => $self->o('reports_dir'),
     ensembl_release_version => $self->o('ensembl_release_version'),
     reference_data_root_dir => $self->o('reference_data_root_dir'),
-    in_test_mode            => $self->o('in_test_mode'),
     reg_conf                => $self->o('reg_conf'),
   };
 }
