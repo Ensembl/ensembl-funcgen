@@ -157,6 +157,8 @@ sub cache_arrays_per_object {
     ';
   }
 
+  $probe_db->dbc->db_handle->{mysql_use_result} = 1;
+  
   my $sth = $probe_db->dbc->prepare($sql);
   my ($object_id, $array, $probeset_size, $object_name);
   
