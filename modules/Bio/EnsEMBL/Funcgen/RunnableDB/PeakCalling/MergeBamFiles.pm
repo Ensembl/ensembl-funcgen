@@ -11,29 +11,15 @@ sub run {
   my $chunks        = $self->param_required('chunks');
   my $data_root_dir = $self->param_required('data_root_dir');
   my $species       = $self->param_required('species');
-  my $plan          = $self->param_required('plan');
-
-  use Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanUtils qw (
-      lock_execution_plan
-      summarise
-  );
-  lock_execution_plan($plan);
-  print summarise($plan);
+  my $merged_bam    = $self->param_required('merged_bam');
   
-  my $align_plan = $plan
-    ->{input}
-  ;
-  my $assembly       = $align_plan->{to_assembly};
-  my $bam_file_real  = $align_plan->{output}->{real};
-
   use File::Basename qw( dirname basename );
-  my $dirname = dirname($bam_file_real);
-  my $full_path = $data_root_dir . '/' . $dirname;
+  my $full_path = dirname($merged_bam);
 
   use File::Path qw(make_path remove_tree);
   make_path($full_path);
-  
-  my $full_path_to_merged_bam = $data_root_dir . '/' . $bam_file_real;
+
+  my $full_path_to_merged_bam = $merged_bam;
   
   use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools;# merge_bams 
   merge_bams({

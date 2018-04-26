@@ -19,6 +19,11 @@ sub run {
   my $species      = $self->param_required('species');
   my $plan         = $self->param_required('execution_plan');
   my $tempdir      = $self->param_required('tempdir');
+  my $read_file    = $self->param_required('read_file');
+  my $merged_bam   = $self->param_required('merged_bam');
+  
+  my $read_file    = $self->param_required('read_file');
+  
   
   my $num_records_per_split_fastq;
   if ($self->param_is_defined('num_records_per_split_fastq')) {
@@ -53,93 +58,91 @@ sub run {
   
   my @chunks_to_be_merged;
   
-  foreach my $read_file (@$read_files) {
+  my $read_file_names;
+  
+  if ($read_file->{type} eq PAIRED_END) {
+    $read_file_names = [
+      $read_file->{1},
+      $read_file->{2},
+    ];
 
-    my $read_file_names;
+    my $read_file_objects = [ map { $read_file_adaptor->fetch_by_name($_) } @$read_file_names ];
+    
+    if ($read_file_objects->[0]->number_of_reads != $read_file_objects->[1]->number_of_reads) {
 
-    if ($read_file->{type} eq PAIRED_END) {
-      $read_file_names = [
-        $read_file->{1},
-        $read_file->{2},
-      ];
-
-      my $read_file_objects = [ map { $read_file_adaptor->fetch_by_name($_) } @$read_file_names ];
+      my $complete_error_message 
+          = 
+          "The read files " 
+          . '(' . $read_file_objects->[0]->name . ', ' . $read_file_objects->[1]->name . ')' 
+          . " have different lengths! "
+          . '(' . $read_file_objects->[0]->number_of_reads . ' vs ' . $read_file_objects->[1]->number_of_reads . ')' 
+          ;
+      $self->throw($complete_error_message);
       
-      if ($read_file_objects->[0]->number_of_reads != $read_file_objects->[1]->number_of_reads) {
-
-        my $complete_error_message 
-            = 
-            "The read files " 
-            . '(' . $read_file_objects->[0]->name . ', ' . $read_file_objects->[1]->name . ')' 
-            . " have different lengths! "
-            . '(' . $read_file_objects->[0]->number_of_reads . ' vs ' . $read_file_objects->[1]->number_of_reads . ')' 
-            ;
-        $self->throw($complete_error_message);
-        
-      }
     }
-    
-    if ($read_file->{type} eq SINGLE_END) {
-      $read_file_names = [
-        $read_file->{name},
-      ];
-    }
-    
-    my $directory_name = join '_', @$read_file_names;
-    
-    my $alignment_read_file_name = $alignment_name . '/' . $directory_name;
-    
-    my $dataflow_fastq_chunk = sub {
-
-        my $param = shift;
-        
-        my $absolute_chunk_file_name = $param->{absolute_chunk_file_name};
-        my $current_file_number      = $param->{current_file_number};
-        my $current_temp_dir         = $param->{current_temp_dir};
-        
-        $self->say_with_header("Created fastq chunk " . Dumper($absolute_chunk_file_name));
-        
-        my $chunk_bam_file = $current_temp_dir . '/' . $alignment_name . '_' . $directory_name . '_' . $current_file_number . '.bam';
-        
-        push @chunks_to_be_merged, $chunk_bam_file;
-        
-        my $dataflow_output_id
-          = {
-            'fastq_file'       => $absolute_chunk_file_name,
-            'tempdir'          => $current_temp_dir,
-            'bam_file'         => $chunk_bam_file,
-            'species'          => $species,
-            'to_gender'        => $to_gender,
-            'to_assembly'      => $to_assembly,
-            'ensembl_analysis' => $ensembl_analysis,
-          };
-          $self->dataflow_output_id(
-            $dataflow_output_id, 
-            BRANCH_ALIGN
-          );
-    };
-
-    my $fastq_record_processor = Bio::EnsEMBL::Funcgen::Utils::Fastq::Processor->new(
-      -tempdir                     => $tempdir,
-      -species                     => $species,
-      -alignment_name              => $alignment_read_file_name,
-      -num_records_per_split_fastq => $num_records_per_split_fastq,
-      -chunk_created_callback      => $dataflow_fastq_chunk,
-    );
-
-    split_read_file({
-      read_file_names        => $read_file_names,
-      dataflow_fastq_chunk   => $dataflow_fastq_chunk,
-      fastq_record_processor => $fastq_record_processor,
-      read_file_adaptor      => $read_file_adaptor,
-    });
   }
+  
+  if ($read_file->{type} eq SINGLE_END) {
+    $read_file_names = [
+      $read_file->{name},
+    ];
+  }
+  
+  my $directory_name = join '_', @$read_file_names;
+  
+  my $alignment_read_file_name = $alignment_name . '/' . $directory_name;
+  
+  my $dataflow_fastq_chunk = sub {
+
+      my $param = shift;
+      
+      my $absolute_chunk_file_name = $param->{absolute_chunk_file_name};
+      my $current_file_number      = $param->{current_file_number};
+      my $current_temp_dir         = $param->{current_temp_dir};
+      
+      $self->say_with_header("Created fastq chunk " . Dumper($absolute_chunk_file_name));
+      
+      my $chunk_bam_file = $current_temp_dir . '/' . $alignment_name . '_' . $directory_name . '_' . $current_file_number . '.bam';
+      
+      push @chunks_to_be_merged, $chunk_bam_file;
+      
+      my $dataflow_output_id
+        = {
+          'fastq_file'       => $absolute_chunk_file_name,
+          'tempdir'          => $current_temp_dir,
+          'bam_file'         => $chunk_bam_file,
+          'species'          => $species,
+          'to_gender'        => $to_gender,
+          'to_assembly'      => $to_assembly,
+          'ensembl_analysis' => $ensembl_analysis,
+        };
+        $self->dataflow_output_id(
+          $dataflow_output_id, 
+          BRANCH_ALIGN
+        );
+  };
+
+  my $fastq_record_processor = Bio::EnsEMBL::Funcgen::Utils::Fastq::Processor->new(
+    -tempdir                     => $tempdir,
+    -species                     => $species,
+    -alignment_name              => $alignment_read_file_name,
+    -num_records_per_split_fastq => $num_records_per_split_fastq,
+    -chunk_created_callback      => $dataflow_fastq_chunk,
+  );
+
+  split_read_file({
+    read_file_names        => $read_file_names,
+    dataflow_fastq_chunk   => $dataflow_fastq_chunk,
+    fastq_record_processor => $fastq_record_processor,
+    read_file_adaptor      => $read_file_adaptor,
+  });
   
   $self->dataflow_output_id(
     {
-      'species' => $species,
-      'chunks'  => \@chunks_to_be_merged,
-      'plan'    => $plan,
+      'species'    => $species,
+      'chunks'     => \@chunks_to_be_merged,
+      'plan'       => $plan,
+      'merged_bam' => $merged_bam,
     }, 
     BRANCH_MERGE
   );
