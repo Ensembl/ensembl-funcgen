@@ -51,6 +51,7 @@ $(document).ready(function() {
 <thead>
     <tr>
         <th>state   </th>
+        <th>segmentation</th>
         <th>assignment </th>
         <th>CTCF    </th>
         <th>DNase1  </th>
@@ -69,6 +70,7 @@ $(document).ready(function() {
 [% FOR segmentation_state_emission IN segmentation_state_emissions %]
 <tr>
     <td>[% segmentation_state_emission.state    %]</td>
+    <td>[% segmentation_state_emission.segmentation %]</td>
     <td>[% segmentation_state_emission.fetch_segmentation_state_assignment.assignment    %]</td>
     <td>[% round_num( segmentation_state_emission.CTCF     ) %]</td>
     <td>[% round_num( segmentation_state_emission.DNase1   ) %]</td>
