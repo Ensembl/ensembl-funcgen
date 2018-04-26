@@ -534,7 +534,7 @@ sub pipeline_analyses {
           -parameters => {
             cmd => 
                 q(
-                  compute_enhancer_coverage.pl 
+                  compute_enhancer_coverage.pl \
                     --species  #species# \
                     --registry #reg_conf#
                 )
