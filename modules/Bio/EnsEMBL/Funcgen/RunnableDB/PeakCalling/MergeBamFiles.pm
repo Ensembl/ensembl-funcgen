@@ -33,12 +33,6 @@ sub run {
   if ($has_failed) {
     $self->throw("End of file marker check failed:\n" . $cmd)
   }
-  
-#   my $cmd = qq(java picard.cmdline.PicardCommandLine ValidateSamFile INPUT=$full_path_to_merged_bam IGNORE_WARNINGS=true);
-#   $has_failed = $self->run_system_command($cmd);
-#   if ($has_failed) {
-#     $self->throw("End of file marker check failed:\n" . $cmd)
-#   }
 
   my $cmd = qq(samtools index $full_path_to_merged_bam);
   $has_failed = $self->run_system_command($cmd);
