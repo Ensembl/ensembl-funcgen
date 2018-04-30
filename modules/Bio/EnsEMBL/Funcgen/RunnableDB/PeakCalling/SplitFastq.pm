@@ -130,7 +130,7 @@ sub run {
     -chunk_created_callback      => $dataflow_fastq_chunk,
   );
 
-  split_read_file({
+  $self->split_read_file({
     read_file_names        => $read_file_names,
     dataflow_fastq_chunk   => $dataflow_fastq_chunk,
     fastq_record_processor => $fastq_record_processor,
@@ -151,6 +151,7 @@ sub run {
 
 sub split_read_file {
 
+  my $self  = shift;
   my $param = shift;
   
   my $read_file_names        = $param->{read_file_names};
@@ -162,6 +163,9 @@ sub split_read_file {
   
   my @read_file_objects = map { $read_file_adaptor->fetch_by_name($_) } @$read_file_names;
   my @fastq_files       = map { $_->file } @read_file_objects;
+  
+  $self->say_with_header('Splitting:', 1);
+  $self->say_with_header(Dumper(\@fastq_files), 1);
   
   use List::Util qw( uniq );
   my $same_number_of_reads_in_every_file 
@@ -176,8 +180,8 @@ sub split_read_file {
     );
   }
   
-  my @cmds          = map { "zcat $_ |"                                     } @fastq_files;
-  my @file_handles  = map { open my $fh, $_ or die("Can't execute $_"); $fh } @cmds;
+  my @cmds          = map { "zcat $_ "                                     } @fastq_files;
+  my @file_handles  = map { open my $fh, '-|', $_ or die("Can't execute $_"); $fh } @cmds;
 
   use List::Util qw( none any uniq );
 
@@ -189,8 +193,6 @@ sub split_read_file {
   PAIR_OF_READS:
   while (
       (! $all_records_read)
-#       && 
-#       ($count<$max)
     ) {
     
     my @fastq_records = map  { $parser->parse_next_record($_) } @file_handles;
