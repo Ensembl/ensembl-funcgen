@@ -3,8 +3,9 @@ package Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SplitExperimentReads;
 use strict;
 use base 'Bio::EnsEMBL::Hive::Process';
 use Data::Dumper;
-use Bio::EnsEMBL::Funcgen::Utils::Fastq::Processor;
-use Bio::EnsEMBL::Funcgen::Utils::Fastq::Parser;
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanUtils qw (
+    lock_execution_plan
+);
 
 use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
 
@@ -23,23 +24,24 @@ sub run {
   
   print Dumper($plan);
   
-  my $align_plan = $plan
-    ->{input}
+  lock_execution_plan($plan);
+  
+  my $bam_file_no_duplicates = $plan
+    ->{output}
+    ->{real}
   ;
+  my $full_path_to_deduplicated_bam = $data_root_dir . '/' . $bam_file_no_duplicates;
+
+  my $align_plan = $plan->{input};
+
   my $bam_file       = $align_plan->{output}->{real};
   my $read_files     = $align_plan->{input}->{read_files};
   my $alignment_name = $align_plan->{name};
-
-  my $align_plan = $plan
-    ->{input}
-  ;
-  my $assembly       = $align_plan->{to_assembly};
   my $bam_file_real  = $align_plan->{output}->{real};
   
   my $full_path_to_merged_bam = $data_root_dir . '/' . $bam_file_real;
 
   my @chunks_to_be_merged;
-  
   my $number = 0;
   foreach my $read_file (@$read_files) {
   
@@ -61,9 +63,11 @@ sub run {
   
   $self->dataflow_output_id(
     {
-      'species'    => $species,
-      'chunks'     => \@chunks_to_be_merged,
-      'merged_bam' => $full_path_to_merged_bam,
+      'species'          => $species,
+      'chunks'           => \@chunks_to_be_merged,
+      'merged_bam'       => $full_path_to_merged_bam,
+      'execution_plan'   => $plan,
+      'deduplicated_bam' => $full_path_to_deduplicated_bam,
     }, 
     BRANCH_MERGE
   );

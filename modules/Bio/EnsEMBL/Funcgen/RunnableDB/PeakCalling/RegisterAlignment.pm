@@ -13,7 +13,7 @@ sub run {
   my $self = shift;
   
   my $species = $self->param_required('species');
-  my $plan    = $self->param_required('plan');
+  my $plan    = $self->param_required('execution_plan');
   
   lock_execution_plan($plan);
   
