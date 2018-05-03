@@ -99,6 +99,7 @@ sub pipeline_analyses {
           },
       },
       {   -logic_name  => 'calculate_arrays_per_object',
+          -rc_name     => '4Gb_job',
           -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters  => {
               cmd => 
@@ -149,6 +150,7 @@ sub pipeline_analyses {
           -rc_name     => '8Gb_job',
       },
       {   -logic_name  => 'create_bedtools_genome_file',
+          -rc_name     => '4Gb_job',
           -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters  => {
               cmd => 
@@ -159,6 +161,7 @@ sub pipeline_analyses {
           },
       },
       {   -logic_name  => 'export_probe_features_to_bed',
+          -rc_name     => '4Gb_job',
           -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters  => {
               cmd => 
@@ -195,6 +198,7 @@ sub pipeline_analyses {
           -rc_name     => 'parallel_sort',
       },
       {   -logic_name  => 'compute_transcript_probe_feature_overlaps',
+          -rc_name     => '4Gb_job',
           -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters  => {
               cmd => 
@@ -251,6 +255,7 @@ sub pipeline_analyses {
           -rc_name     => '4Gb_job',
       },
         {   -logic_name  => 'load_probe_feature_to_transcript_rejections',
+            -rc_name     => '4Gb_job',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
                 cmd => 
@@ -264,6 +269,7 @@ sub pipeline_analyses {
 
         {   -logic_name  => 'load_probe_feature_to_transcript_assignments',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -rc_name     => '4Gb_job',
             -parameters  => {
                 cmd => 
                     'load_probe_feature_to_transcript_assignments.pl'
@@ -275,6 +281,7 @@ sub pipeline_analyses {
         },
         {   -logic_name  => 'compute_probeset_transcript_assignments_per_array',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
+            -rc_name     => '4Gb_job',
             -parameters => {
                 db_conn    => 'funcgen:#species#',
                 inputquery => 'select "#species#" as species, array.name as array_name from array where format!="METHYLATION"',
@@ -285,6 +292,7 @@ sub pipeline_analyses {
         },
         {   -logic_name  => 'p2t_mk_arrays_tempdir',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -rc_name     => '4Gb_job',
             -parameters  => {
                 cmd => 'mkdir -p ' . $probe2transcript_array_specific_temp_dir
             },
@@ -296,6 +304,7 @@ sub pipeline_analyses {
             },
         },
         {   -logic_name  => 'compute_probeset_transcript_hits',
+            -rc_name     => '4Gb_job',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
                 cmd => 
@@ -340,6 +349,7 @@ sub pipeline_analyses {
         },
         {   -logic_name  => 'create_probeset_to_transcript_descriptions',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -rc_name     => '4Gb_job',
             -parameters  => {
                 cmd => 
                     'create_probeset_to_transcript_descriptions.pl '
@@ -358,6 +368,7 @@ sub pipeline_analyses {
         },
         {   -logic_name  => 'load_probeset_to_transcript_rejections',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -rc_name     => '4Gb_job',
             -parameters  => {
                 cmd => 
                     'load_probeset_to_transcript_rejections.pl '
@@ -368,6 +379,7 @@ sub pipeline_analyses {
             },
         },
         {   -logic_name  => 'load_probeset_to_transcript_assignments',
+            -rc_name     => '4Gb_job',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
                 cmd => 
@@ -379,6 +391,7 @@ sub pipeline_analyses {
             },
         },
         {   -logic_name  => 'compute_probe_transcript_hits',
+            -rc_name     => '4Gb_job',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
                 cmd => 
@@ -423,6 +436,7 @@ sub pipeline_analyses {
         },
         {   -logic_name  => 'create_probe_to_transcript_descriptions',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -rc_name     => '4Gb_job',
             -parameters  => {
                 cmd => 
                     'create_probe_to_transcript_descriptions.pl'
@@ -436,6 +450,7 @@ sub pipeline_analyses {
         },
         {   -logic_name  => 'load_probe_to_transcript_assignments',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -rc_name     => '4Gb_job',
             -parameters  => {
                 cmd => 
                     'load_probe_to_transcript_assignments.pl'
