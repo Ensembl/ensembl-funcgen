@@ -38,8 +38,8 @@ use Bio::EnsEMBL::Funcgen::Parsers::DataDumper;
 my $unannotated_utrs = Bio::EnsEMBL::Funcgen::Parsers::DataDumper->new->load_first_item_from_data_dump_file($unannotated_utrs_file);
 lock_hash(%$unannotated_utrs);
 
-# Not currently used, just transferred this from probe2transcript.
-my $utr_multiplier = 1;
+# Transcripts with UTRs already have the UTRs included in their start and ends, so should not be extended.
+my $utr_multiplier = 0;
 
 # Also not currently used, just transferred this from probe2transcript.
 my $utr_extends = {
