@@ -106,7 +106,7 @@ CREATE TABLE `chance` (
   `error_message` text,
   PRIMARY KEY (`chance_id`),
   UNIQUE KEY `signal_control_alignment_unique` (`signal_alignment_id`,`control_alignment_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 DROP TABLE IF EXISTS `execution_plan`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -117,7 +117,7 @@ CREATE TABLE `execution_plan` (
   `experiment_id` int(16) unsigned NOT NULL,
   `execution_plan` text,
   PRIMARY KEY (`execution_plan_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 DROP TABLE IF EXISTS `fastqc`;
 /*!40101 SET @saved_cs_client     = @@character_set_client */;
@@ -141,7 +141,7 @@ CREATE TABLE `fastqc` (
   `error_message` text,
   PRIMARY KEY (`fastqc_id`),
   UNIQUE KEY `read_file_id_unique` (`read_file_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 DROP TABLE IF EXISTS `frip`;
 CREATE TABLE `frip` (
@@ -151,7 +151,7 @@ CREATE TABLE `frip` (
   `total_reads` int(14) DEFAULT NULL,
   PRIMARY KEY (`frip_id`),
   UNIQUE KEY `peak_calling_id_unique` (`peak_calling_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 DROP TABLE IF EXISTS `idr`;
 CREATE TABLE `idr` (
@@ -161,7 +161,7 @@ CREATE TABLE `idr` (
   `type` enum('on biological replicates','on technical replicates','no_idr') NOT NULL,
   `failed_idr_pairs` text,
   PRIMARY KEY (`idr_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 DROP TABLE IF EXISTS `phantom_peak`;
 CREATE TABLE `phantom_peak` (
@@ -186,7 +186,7 @@ CREATE TABLE `phantom_peak` (
   `error_message` text,
   PRIMARY KEY (`phantom_peak_id`),
   UNIQUE KEY `alignment_id_unique` (`alignment_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
 @table  regulatory_evidence
@@ -283,7 +283,7 @@ CREATE TABLE `regulatory_build_statistic` (
   `value` double unsigned DEFAULT NULL,
   PRIMARY KEY (`regulatory_build_statistics_id`),
   UNIQUE KEY `stats_uniq` (`statistic`,`regulatory_build_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
 @table  regulatory_build_epigenome
@@ -344,7 +344,7 @@ CREATE TABLE `segmentation_state_assignment` (
   `segmentation` varchar(255) NOT NULL,
   `assignment` varchar(255) NOT NULL,
   PRIMARY KEY (`segmentation_state_assignment_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 DROP TABLE IF EXISTS `segmentation_state_emission`;
 CREATE TABLE `segmentation_state_emission` (
@@ -362,7 +362,7 @@ CREATE TABLE `segmentation_state_emission` (
   `H3K9ac`   double DEFAULT NULL,
   `H3K9me3`  double DEFAULT NULL,
   PRIMARY KEY (`segmentation_state_emission_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 
 /**
@@ -445,7 +445,7 @@ CREATE TABLE `peak_calling_statistic` (
   `num_peaks` bigint(14) DEFAULT NULL,
   `average_length` int(17) DEFAULT NULL,
   PRIMARY KEY (`peak_calling_statistic_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
 @table  motif_feature
@@ -713,7 +713,7 @@ CREATE TABLE `probe_mapping` (
   `release_version` varchar(255) DEFAULT NULL,
   `release_date` varchar(255) DEFAULT NULL,
   PRIMARY KEY (`probe_mapping_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 DROP TABLE IF EXISTS `probe_mapping_statistic`;
 CREATE TABLE `probe_mapping_statistic` (
@@ -722,7 +722,7 @@ CREATE TABLE `probe_mapping_statistic` (
   `statistic` varchar(255) NOT NULL,
   `value` double unsigned DEFAULT NULL,
   PRIMARY KEY (`probe_mapping_statistic_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
 @table  probe_feature_transcript
