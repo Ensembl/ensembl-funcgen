@@ -43,6 +43,11 @@ HIT: while (my $current_line = <$exonerate_fh>) {
   chomp;
 
   my @f = split ' ', $current_line;
+
+#if number of columns is not right then skip the line
+  if (scalar @f != 15){
+    next;
+  }
   
   my %hit;
   

@@ -111,9 +111,19 @@ my $fetch_probe_set_from_db = sub {
   return $probe_set;
 };
 
+
+my $lastProbe;
+
 my $process_array_objects = sub {
 
   my $probe = shift;
+
+  if (!defined $probe){
+    print Dumper ($lastProbe);
+    die "ERROR: Probe was not defined. Last imported Probe has been shown\n";
+  }
+
+  $lastProbe = $probe;
 
   my $arrays = $probe->get_all_Arrays;
   die if (@$arrays!=1);

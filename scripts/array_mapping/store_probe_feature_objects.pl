@@ -64,6 +64,17 @@ my $process_data = sub {
     # The next statement has to go
     return if ($raw_probe_feature eq " Only one genomic block!");
     my $transcript_stable_id = $raw_probe_feature->{t_id};
+
+  if (!defined $transcript_stable_id){
+    if (keys(%$raw_probe_feature)==0){
+      warn('$raw_probe_feature is empty:'."\n");
+      return;
+    }
+    die ("Can't find trancript stable Id "
+      . Dumper($raw_probe_feature)
+      );
+  }
+
     my $transcript = $transcript_adaptor->fetch_by_stable_id($transcript_stable_id);
     
     if (! defined $transcript) {

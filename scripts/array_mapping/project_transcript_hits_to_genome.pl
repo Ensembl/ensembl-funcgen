@@ -74,9 +74,26 @@ my $map_transcript_to_genome = sub {
 #   }
   
   my $transcript_stable_id = $probe_feature_hash->{t_id};
-  
+
+
+  if (!defined $transcript_stable_id){
+    if (keys(%$probe_feature_hash)==0){
+      warn('$probe_feature_hash is empty:'."\n");
+      return;
+    }
+    die ("Can't find trancript stable Id "
+      . Dumper($probe_feature_hash)
+      );
+  }
+
   my $transcript = $transcript_adaptor->fetch_by_stable_id($transcript_stable_id);
-  
+
+
+  if (!defined $transcript){
+    die ("Can't find trancript with stable Id: ".$transcript_stable_id."\n");
+  }
+
+
   if ($probe_feature_hash->{q_start} == 0) {
     $probe_feature_hash->{q_start} = 1;
   }
