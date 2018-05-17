@@ -52,6 +52,7 @@ sub _constructor_parameters {
     sample_probe_set_id => 'sample_probe_set_id',
     release_version     => 'release_version',
     release_date        => 'release_date',
+    assembly            => 'assembly',
   };
 }
 
@@ -64,5 +65,6 @@ sub sample_probe_id     { return shift->_generic_get_or_set('sample_probe_id',  
 sub sample_probe_set_id { return shift->_generic_get_or_set('sample_probe_set_id', @_); }
 sub release_version     { return shift->_generic_get_or_set('release_version',     @_); }
 sub release_date        { return shift->_generic_get_or_set('release_date',        @_); }
+sub assembly            { return shift->_generic_get_or_set('assembly',            @_); }
 
 1;

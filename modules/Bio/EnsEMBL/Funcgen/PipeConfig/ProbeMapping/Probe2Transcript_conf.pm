@@ -58,6 +58,19 @@ sub pipeline_analyses {
               db_conn => 'funcgen:#species#',
           },
           -flow_into => {
+              MAIN => 'Insert_probe_mapping_meta_data',
+          },
+      },
+      {
+          -logic_name  => 'Insert_probe_mapping_meta_data',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -parameters => {
+              cmd =>
+                'insert_metadata.pl'
+              . ' --registry #reg_conf#'
+              . ' --species  #species#'
+          },
+          -flow_into => {
               MAIN => 'switch_p2t_tables_to_innodb',
           },
       },
@@ -120,10 +133,22 @@ sub pipeline_analyses {
                 . ' --transcript_utr_file ' . $transcript_utr_file,
           },
           -flow_into => {
-              MAIN => 'write_extended_transcripts_into_file',
+              MAIN => 'update_probe_mapping_table',
           },
           -rc_name     => '8Gb_job',
       },
+      {   -logic_name  => 'update_probe_mapping_table',
+          -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -parameters  => {
+              cmd => 'update_utr_probe_mapping.pl'
+                . ' --registry #reg_conf#'
+                . ' --species  #species#'
+                . ' --unannotated_utrs ' . $transcript_utr_file,
+          },
+          -flow_into => {
+              MAIN => 'write_extended_transcripts_into_file',
+          },
+      },      
       {   -logic_name  => 'write_extended_transcripts_into_file',
           -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters  => {
