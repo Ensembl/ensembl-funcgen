@@ -241,7 +241,11 @@ use vars qw( %Config );
       'RJpGene-1_1-st-v1',
       'SoyGene-1_1-st-v1',
       'TomGene-1_1-st-v1',
-
+      'CHOGene-2_0-st-v1',
+      'FelGene-1_0-st-v1',
+      'CHOGene-2_1-st-v1',
+      'FelGene-1_1-st-v1',
+      
      ],
     },
 
@@ -498,6 +502,28 @@ use vars qw( %Config );
         'G4136B-013324', # Arabidopsis
         'G4138A-012106', # Rice
         'G4142A-012600', # Arabidopsis
+        'GPL14629',
+        'GPL14664',
+        'GPL15450',
+        'GPL15747',
+        'GPL15799',
+        'GPL17670',
+        'GPL17686',
+        'GPL20686',
+        'GPL20834',
+        'GPL20900',
+        'GPL21244',
+        'GPL21361',
+        'GPL21860',
+        'GPL22083',
+        'GPL23036',
+        'GPL7244',
+        'GPL7301',
+        'GPL7302',
+        'GPL7735',
+        'GPL7801',
+        'GPL9060',
+        'GPL9074',
 
       ],
     },
@@ -673,6 +699,51 @@ use vars qw( %Config );
          'GPL21301',
        ],
     },
+
+    # NIMBLEGEN_ZEBRAFISH
+
+    IMPORT_NIMBLEGEN_ZEBRAFISH_ARRAYS =>
+    {
+
+       IIDREGEXP => '^>probe:(\S+?):.*ProbeID=(\S+);.*[TranscriptCluster|ProbeSet]ID=(\S+);',
+
+       IFIELDORDER => {
+          -name       => 1,
+          -array_chip => 0,
+          -array      => 0,
+          -probe_set   => 2,
+       },
+
+
+       ARRAY_PARAMS => {
+          'Default' => {
+            -vendor => 'NIMBLEGEN',
+            -format => 'EXPRESSION',
+            -type    => 'OLIGO',
+            -class   => 'NIMBLEGEN',
+
+            -is_probeset_array       => 1,
+            -is_linked_array         => 1,
+            -has_sense_interrogation => 0,
+          },
+       },
+
+       INPUT_FORMAT => 'FASTA',
+
+       ARRAYS_WITH_DEFAULT_PARAMS => [
+         'GPL10076',
+         'GPL10392',
+         'GPL13318',
+         'GPL13784',
+         'GPL14375',
+         'GPL14607',
+         'GPL17210',
+         'GPL21560',
+         'GPL22527',
+         'GPL7338',
+       ],
+    },
+
 
 
 
