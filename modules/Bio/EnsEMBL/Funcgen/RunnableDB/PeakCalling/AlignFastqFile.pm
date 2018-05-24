@@ -18,6 +18,9 @@ sub run {
   my $ensembl_analysis = $self->param_required('ensembl_analysis');
   my $fastq_file       = $self->param_required('fastq_file');
   
+  use Bio::EnsEMBL::Registry;
+  Bio::EnsEMBL::Registry->set_disconnect_when_inactive;
+  
   use Bio::EnsEMBL::Funcgen::Utils::RefBuildFileLocator;
   my $bwa_index_locator = Bio::EnsEMBL::Funcgen::Utils::RefBuildFileLocator->new;
   

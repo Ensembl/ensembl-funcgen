@@ -12,6 +12,9 @@ sub run {
   my $full_path_to_deduplicated_bam = $self->param_required('deduplicated_bam');
   my $chunks                        = $self->param_required('chunks');
   
+  use Bio::EnsEMBL::Registry;
+  Bio::EnsEMBL::Registry->set_disconnect_when_inactive;
+  
   eval {
     use Bio::EnsEMBL::Funcgen::Sequencing::SeqTools;
     remove_duplicates_from_bam({

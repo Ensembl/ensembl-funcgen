@@ -13,6 +13,9 @@ sub run {
   my $species       = $self->param_required('species');
   my $merged_bam    = $self->param_required('merged_bam');
   
+  use Bio::EnsEMBL::Registry;
+  Bio::EnsEMBL::Registry->set_disconnect_when_inactive;
+  
   use File::Basename qw( dirname basename );
   my $full_path = dirname($merged_bam);
 
