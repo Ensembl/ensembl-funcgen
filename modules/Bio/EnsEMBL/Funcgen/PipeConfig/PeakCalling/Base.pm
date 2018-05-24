@@ -85,13 +85,16 @@ sub generate_parallel_alignment_analyses {
         },
         {   -logic_name  => $surround->('align'),
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::AlignFastqFile',
+            -priority   => 10,
             -rc_name    => '32Gb_job',
         },
         {   -logic_name  => $surround->('merge_chunks'),
             -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::MergeBamFiles',
+            -priority   => 20,
         },
         {   -logic_name  => $surround->('merge'),
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::MergeBamFiles',
+            -priority   => 30,
             -flow_into   => {
                MAIN     => $surround->('remove_duplicates'),
                MEMLIMIT => $surround->('merge_himem'),
@@ -99,6 +102,7 @@ sub generate_parallel_alignment_analyses {
         },
         {   -logic_name  => $surround->('merge_himem'),
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::MergeBamFiles',
+            -priority   => 30,
             -rc_name    => '8Gb_job',
             -flow_into   => {
                MAIN => $surround->('remove_duplicates'),
@@ -106,6 +110,7 @@ sub generate_parallel_alignment_analyses {
         },
         {   -logic_name  => $surround->('remove_duplicates'),
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::RemoveDuplicates',
+            -priority   => 40,
             -flow_into   => {
                MAIN     => $surround->('register_alignment'),
                MEMLIMIT => $surround->('remove_duplicates_himem'),
@@ -113,6 +118,7 @@ sub generate_parallel_alignment_analyses {
         },
         {   -logic_name  => $surround->('remove_duplicates_himem'),
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::RemoveDuplicates',
+            -priority   => 40,
             -rc_name    => '8Gb_job',
             -flow_into   => {
                MAIN => $surround->('register_alignment'),
@@ -123,6 +129,7 @@ sub generate_parallel_alignment_analyses {
         },
         {   -logic_name  => $surround->('done_align'),
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -priority   => 50,
             -flow_into  => $flow_into,
         },
     ]
