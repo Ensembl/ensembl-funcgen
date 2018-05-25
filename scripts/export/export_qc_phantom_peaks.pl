@@ -58,8 +58,8 @@ if ($output_file) {
   $output_fh = *STDOUT;
 }
 
-#my $all_phantom_peak_objects = $phantom_peak_adaptor->fetch_all;
-my $all_phantom_peak_objects = $phantom_peak_adaptor->fetch_all('LIMIT 5');
+my $all_phantom_peak_objects = $phantom_peak_adaptor->fetch_all;
+#my $all_phantom_peak_objects = $phantom_peak_adaptor->fetch_all('LIMIT 5');
 
 my $phantom_peak_summaries = [ map { $_->summary_as_hash } @$all_phantom_peak_objects ];
 
