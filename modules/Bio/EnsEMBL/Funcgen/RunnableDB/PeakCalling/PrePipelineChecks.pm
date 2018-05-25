@@ -152,18 +152,18 @@ sub run {
         push @error_msg, "Signal control mismatches!";
     }
     
-    # Check for orphans
-    #
-    my $count_orphans_sql = 'select count(*) as c from alignment_read_file left join read_file using (read_file_id) where read_file.read_file_id is null';
-    $sth = $dbc->prepare($count_orphans_sql);
-    $sth->execute;
-    
-    my $x = $sth->fetchall_arrayref;
-    my $num_orphans = $x->[0]->[0];
-    
-    if ($num_orphans) {
-        push @error_msg, "There are $num_orphans orphan entries in the alignment_read_file table."; 
-    }
+#     # Check for orphans
+#     #
+#     my $count_orphans_sql = 'select count(*) as c from alignment_read_file left join read_file using (read_file_id) where read_file.read_file_id is null';
+#     $sth = $dbc->prepare($count_orphans_sql);
+#     $sth->execute;
+#     
+#     my $x = $sth->fetchall_arrayref;
+#     my $num_orphans = $x->[0]->[0];
+#     
+#     if ($num_orphans) {
+#         push @error_msg, "There are $num_orphans orphan entries in the alignment_read_file table."; 
+#     }
 
     my @exported_variables = qw( PERL5LIB R_LIBS );
     my $cmd;
