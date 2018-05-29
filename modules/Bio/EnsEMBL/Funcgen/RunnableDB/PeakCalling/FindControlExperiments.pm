@@ -70,7 +70,7 @@ sub run {
       if (! exists $plan_depending_on_control{$alignment_name}) {
         $plan_depending_on_control{$alignment_name} = []
       }
-      push $plan_depending_on_control{$alignment_name}, $current_execution_plan;
+      push @{$plan_depending_on_control{$alignment_name}}, $current_execution_plan;
     }
   }
 
