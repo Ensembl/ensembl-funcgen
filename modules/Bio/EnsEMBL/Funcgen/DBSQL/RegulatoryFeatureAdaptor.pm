@@ -400,7 +400,7 @@ sub _objs_from_sth {
   Args       : Array of Bio::EnsEMBL::Funcgen::RegulatoryFeature objects
   Example    : $regulatory_feature_adaptor->store(@regulatory_features);
   Description: Stores given RegulatoryFeature objects in the database. Sets
-        dbID and adaptor on the objects that it stores.
+               dbID and adaptor on the objects that it stores.
   Returntype : Listref of stored RegulatoryFeatures
   Exceptions : Throws, if a list of RegulatoryFeature objects is not provided or if
                the Analysis, Epigenome and FeatureType objects are not attached or stored.
@@ -484,9 +484,8 @@ sub store {
       ($current_regulatory_feature, $seq_region_id) = $self->_pre_store($current_regulatory_feature);
     $current_regulatory_feature->adaptor($self);
     if(defined $current_regulatory_feature->dbID){
-    
       warn $current_regulatory_feature->dbID;
-      
+
       $sth_store_regulatory_feature_dbID->bind_param( 1, $seq_region_id,                                   SQL_INTEGER);
       $sth_store_regulatory_feature_dbID->bind_param( 2, $current_regulatory_feature->start,               SQL_INTEGER);
       $sth_store_regulatory_feature_dbID->bind_param( 3, $current_regulatory_feature->end,                 SQL_INTEGER);
@@ -706,6 +705,7 @@ sub _fetch_overlapping_MotifFeatures {
 
 sub fetch_all_by_Slice {
   my ($self, $slice) = @_;
+
   return $self->_fetch_all_by_Slice_Epigenomes_Activity_RegulatoryBuild(
     $slice, undef, undef, undef
   );
@@ -736,6 +736,7 @@ sub _fetch_all_by_Slice_Epigenomes_Activity_RegulatoryBuild {
   #explicit super call, just in case we ever re-implement in here
   my $all_regulatory_features = $self->SUPER::fetch_all_by_Slice($slice);
   #my $all_regulatory_features = $self->SUPER::fetch_all_by_Slice_constraint($slice);
+
   if (defined $selected_regulatory_build) {
     #
     # Discard regulatory features that are not part of the selected regulatory build.

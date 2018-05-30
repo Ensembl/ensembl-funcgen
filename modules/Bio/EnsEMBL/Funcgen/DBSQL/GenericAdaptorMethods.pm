@@ -496,7 +496,6 @@ sub store {
 
 #         warn "STORE: $sql\n";
 #         warn "STORE: ". join(',', @$values_being_stored) ."\n";
-
         # using $return_code in boolean context allows to skip the
         # value '0E0' ('no rows affected') that Perl treats as zero
         # but regards as true:
