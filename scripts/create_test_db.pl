@@ -56,9 +56,9 @@ local $Data::Dumper::Sortkeys = 1;
 local $Data::Dumper::Indent = 2;
 use Pod::Usage;
 use Getopt::Long;
+
 binmode STDOUT, ":utf8";
 use utf8;
- 
 use JSON::MaybeXS ();
 
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
@@ -75,7 +75,7 @@ sub main {
   $self->get_features();
   $self->create_dest_dnadb();
   $self->get_db_adaptors('dst');
-  $self->store_features();
+  $self->store_write_features();
 }
 
 
@@ -131,7 +131,7 @@ sub parse_options {
     dst_dna_host=s
     dst_dna_port=i
     dst_dna_dbname=s
-    
+
     out_json=s
     species=s
     clone_core=s
@@ -172,7 +172,7 @@ sub create_empty_funcgen_db {
   my $mysql_dst    = "--host $o->{dst_host} --port $o->{dst_port} --user $o->{rw_usr} --password=$o->{rw_pass}";
   my $mysql_dst_db = "$o->{dst_dbname}";
 
-  say '*' x 30 . '  '. (caller(0))[3] .'  ' .'*' x 30;
+  say '>' x 30 . '  '. (caller(0))[3] .'  ' .'<' x 30;
   say "COPY <$mysql_src_db> FROM <$o->{src_host}> TO <$mysql_dst_db> ON <$o->{dst_host}>";
 
   my $cmd = '';
@@ -194,6 +194,7 @@ sub create_empty_funcgen_db {
     meta
     meta_coord
     regulatory_build
+    example_feature
   };
 
   foreach my $table (@tables){
@@ -248,10 +249,9 @@ sub _execute {
 =cut
 
 sub get_features {
-
   my ($self) = @_;
-  say '*' x 30 . '  '. (caller(0))[3] .'  ' .'*' x 30;
-# ToDo: Check: Duplicated call, same in get_db_adaptors. Merge?
+  say '>' x 30 . '  '. (caller(0))[3] .'  ' .'<' x 30;
+# ToDo: Check: Duplicated call, same done in get_db_adaptors
   my @all_example_features = @{ $self->{src_a}->{ExampleFeature}->fetch_all};
   if($self->{opts}->{features} eq 'all'){
     foreach my $ef (@all_example_features) {
@@ -279,10 +279,13 @@ sub get_features {
 
 =cut
 
-sub store_features {
+sub store_write_features {
   my ($self) = @_;
 
+  say '>' x 30 . '  '. (caller(0))[3] .'  ' .'<' x 30;
   foreach my $table (reverse sort keys %{$self->{features}}){
+#next if ($table eq 'RegulatoryFeature');
+    say '*' x10 . " Table: $table " . '*' x 10;
     for my $feature ( @{$self->{features}->{$table}} ){
       if($table eq 'RegulatoryFeature'){
         $feature->regulatory_activity;
@@ -353,7 +356,7 @@ sub write_json_feature {
 sub create_dest_dnadb {
   my ($self) = @_;
 
-  say '*' x 30 . '  '. (caller(0))[3] .'  ' .'*' x 30;
+  say '>' x 30 . '  '. (caller(0))[3] .'  ' .'<' x 30;
   my $o       = $self->{opts};
   my $obj     = $self->{feature_slice_objects};
   my $species = $o->{species};
@@ -445,7 +448,7 @@ sub get_db_adaptors {
   my $adaptors  = $db_a->get_available_adaptors;
   $self->{$type.'_a'}->{ExampleFeature} = $db_a->get_ExampleFeatureAdaptor;
 
-  my @all_example_features = @{ $self->{src_a}->{ExampleFeature}->fetch_all};
+  my @all_example_features = @{ $self->{$type.'_a'}->{ExampleFeature}->fetch_all};
   my %unique = map { $_->ensembl_object_type => $adaptors->{$_->ensembl_object_type}  } @all_example_features;
 
   foreach my $table (sort keys %unique){

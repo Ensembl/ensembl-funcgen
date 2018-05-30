@@ -1866,5 +1866,6 @@ CREATE TABLE `example_feature` (
   UNIQUE KEY `ensembl_object_type_idx` (`ensembl_object_type`,`ensembl_id`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=latin1;
 
-INSERT INTO `example_feature` (ensembl_object_type, ensembl_id) VALUES ('RegulatoryFeature', '535880');
-INSERT INTO `example_feature` (ensembl_object_type, ensembl_id) VALUES ('RegulatoryFeature', '535848');
+INSERT INTO `example_feature` (ensembl_object_type, ensembl_id) VALUES ('RegulatoryFeature', '535845');
+INSERT INTO `example_feature` (ensembl_object_type, ensembl_id) VALUES ('RegulatoryFeature', '535851');
+INSERT INTO `example_feature` (ensembl_object_type, ensembl_id) VALUES ('RegulatoryFeature', '535850');
