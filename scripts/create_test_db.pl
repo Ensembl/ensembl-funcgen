@@ -56,6 +56,10 @@ local $Data::Dumper::Sortkeys = 1;
 local $Data::Dumper::Indent = 2;
 use Pod::Usage;
 use Getopt::Long;
+binmode STDOUT, ":utf8";
+use utf8;
+ 
+use JSON::MaybeXS ();
 
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 
@@ -65,6 +69,7 @@ main();
 sub main {
   my $self = bless({}, __PACKAGE__);
   $self->parse_options();
+  $self->remove_json_file();
   $self->get_db_adaptors('src');
   $self->create_empty_funcgen_db();
   $self->get_features();
@@ -74,7 +79,8 @@ sub main {
 }
 
 
-
+# mysql-ensembl-mirror
+# mysql-ens-reg-prod-1
 sub parse_options {
   my ($self) = @_;
 
@@ -85,20 +91,21 @@ sub parse_options {
 
   src_host       => 'mysql-ens-reg-prod-1.ebi.ac.uk',
   src_port       => 4526,
-  src_dbname     => 'tj1_homo_sapiens_funcgen_92_38',
+  src_dbname     => 'tj1_homo_sapiens_funcgen_93_38',
 
   src_dna_host   => 'mysql-ens-sta-1.ebi.ac.uk',
   src_dna_port   => 4519,
-  src_dna_dbname => 'homo_sapiens_core_92_38',
+  src_dna_dbname => 'homo_sapiens_core_93_38',
 
   dst_host       => 'mysql-ens-reg-prod-1.ebi.ac.uk',
   dst_port       => 4526,
-  dst_dbname     => 'tj1test_homo_sapiens_funcgen_92_38',
+  dst_dbname     => 'tj1test_homo_sapiens_funcgen_93_38',
 
   dst_dna_host   => 'mysql-ens-reg-prod-1.ebi.ac.uk',
   dst_dna_port   => 4526,
-  dst_dna_dbname => 'tj1test_homo_sapiens_core_92_38',
+  dst_dna_dbname => 'tj1test_homo_sapiens_core_93_38',
 
+  out_json => 'test.json',
   species => 'homo_sapiens',
   features => 'all',
   clone_core => '/homes/juettema/src/ensembl-test/scripts/clone_core_database.pl',
@@ -124,7 +131,8 @@ sub parse_options {
     dst_dna_host=s
     dst_dna_port=i
     dst_dna_dbname=s
-
+    
+    out_json=s
     species=s
     clone_core=s
     features=s
@@ -137,6 +145,11 @@ sub parse_options {
   return $self->{opts} = $opts;
 }
 
+sub remove_json_file {
+  my ($self) = @_;
+
+  unlink $self->{opts}->{out_json};
+}
 
 
 =head2 create_empty_funcgen_db
@@ -159,7 +172,7 @@ sub create_empty_funcgen_db {
   my $mysql_dst    = "--host $o->{dst_host} --port $o->{dst_port} --user $o->{rw_usr} --password=$o->{rw_pass}";
   my $mysql_dst_db = "$o->{dst_dbname}";
 
-  say '>' x 30 . '  '. (caller(0))[3] .'  ' .'<' x 30;
+  say '*' x 30 . '  '. (caller(0))[3] .'  ' .'*' x 30;
   say "COPY <$mysql_src_db> FROM <$o->{src_host}> TO <$mysql_dst_db> ON <$o->{dst_host}>";
 
   my $cmd = '';
@@ -181,7 +194,6 @@ sub create_empty_funcgen_db {
     meta
     meta_coord
     regulatory_build
-    example_feature
   };
 
   foreach my $table (@tables){
@@ -189,7 +201,7 @@ sub create_empty_funcgen_db {
     $cmd = "mysqldump $mysql_src $mysql_src_db $table | sed -e 's/ AUTO_INCREMENT=[0-9]\*//'  | mysql $mysql_dst $mysql_dst_db";
     _execute($cmd);
   }
-  say '!' x 30 . '  '. (caller(0))[3] .'  ' .'!' x 30;
+  say 'Done:' . (caller(0))[3];
 }
 
 =head2 _execute
@@ -227,18 +239,19 @@ sub _execute {
 =head2 get_features
 
   Arg [1]    : get_features
-  Description:
-  Exceptions :
-  Returntype :
-  Status     :
+  Description: Query the example_feature table and fetch all features
+               Checks if the feature has a slice
+  Exceptions : None
+  Returntype : None
+  Status     : Stable
 
 =cut
 
 sub get_features {
 
   my ($self) = @_;
-  say '>' x 30 . '  '. (caller(0))[3] .'  ' .'<' x 30;
-# ToDo: Check: Duplicated call, same done in get_db_adaptors
+  say '*' x 30 . '  '. (caller(0))[3] .'  ' .'*' x 30;
+# ToDo: Check: Duplicated call, same in get_db_adaptors. Merge?
   my @all_example_features = @{ $self->{src_a}->{ExampleFeature}->fetch_all};
   if($self->{opts}->{features} eq 'all'){
     foreach my $ef (@all_example_features) {
@@ -256,7 +269,7 @@ sub get_features {
 
 =head2 store_features
 
-  Arg [1]    :
+  Arg [1]    : None
   Description: Stores the example RegulatoryFeature in the target DB. It does
                so by removing the old adaptor and then calling store. Note that
                the method relies on that the basic tables have been copied before.
@@ -269,31 +282,70 @@ sub get_features {
 sub store_features {
   my ($self) = @_;
 
-  say '>' x 30 . '  '. (caller(0))[3] .'  ' .'<' x 30;
   foreach my $table (reverse sort keys %{$self->{features}}){
-#next if ($table eq 'RegulatoryFeature');
-    say '*' x10 . " Table: $table " . '*' x 10;
     for my $feature ( @{$self->{features}->{$table}} ){
       if($table eq 'RegulatoryFeature'){
         $feature->regulatory_activity;
       }
       say "\tID: ". $feature->dbID;
       $feature->{adaptor} = undef;
+      say ">>>>> Table: $table";
       $self->{dst_a}->{$table}->store($feature);
+      $self->write_json_feature($table,$feature);
     }
   }
+}
 
+=head2 write_json_feature
 
+  Arg [1]    : Table name, eg regulatory_feature
+  Arg [2]    : Feature, eg Bio::Ensembl::Funcgen::RegulatoryFeature
+  Description: Writes the Feature to a file in JSON format
+  Exceptions : None
+  Returntype : None
+  Status     : Stable
+
+=cut
+
+sub write_json_feature {
+  my ($self, $table, $feature) = @_;
+   
+  # These fields should be present for all features 
+  my $data = {
+    $table => {
+      id              => $feature->stable_id,
+      source          => $feature->analysis->logic_name,
+      bound_start     => $feature->bound_seq_region_start,
+      bound_end       => $feature->bound_seq_region_end,
+      start           => $feature->seq_region_start,
+      end             => $feature->seq_region_end,
+      strand          => $feature->strand,
+      seq_region_name => $feature->seq_region_name,
+      description     => $feature->feature_type->description,
+      feature_type    => $feature->feature_type->name,
+    }
+  };
+
+  if($table eq 'regulatory_feature'){
+    $data->{activity} = shift @{$feature->regulatory_activity}->activity;
+  }
+
+  open my $fh, ">>", $self->{opts}->{out_json};
+    my $json = JSON::MaybeXS->new(utf8 => 1, pretty => 1, sort_by => 1);
+    say $fh $json->encode($data);
+  close $fh;
 }
 
 
 #ToDo: May need specific transcripts for Tarbase
 =head2
 
-  Arg [1]    :
-  Description: https://www.ebi.ac.uk/seqdb/confluence/display/ENSCORE/Creating+a+test+database
+  Arg [1]    : None
+  Description: Creates the destination DNA DB, only containing the relevant ENSG/ENST.
+               More information:
+               https://www.ebi.ac.uk/seqdb/confluence/display/ENSCORE/Creating+a+test+database
   Exceptions :
-  Returntype :
+  Returntype : None
   Status     : Stable
 
 =cut
@@ -301,7 +353,7 @@ sub store_features {
 sub create_dest_dnadb {
   my ($self) = @_;
 
-  say '>' x 30 . '  '. (caller(0))[3] .'  ' .'<' x 30;
+  say '*' x 30 . '  '. (caller(0))[3] .'  ' .'*' x 30;
   my $o       = $self->{opts};
   my $obj     = $self->{feature_slice_objects};
   my $species = $o->{species};
@@ -357,11 +409,10 @@ sub create_dest_dnadb {
 
 =head2 get_db_adaptors
 
-  Arg [1]    :
+  Arg [1]    : Type, 'src' indicationg source DB, or 'dst' for destination/target
   Description: Creates the adaptors based on ExampleFeature table
-  Exceptions :
-  Returntype :
-  Caller     :
+  Exceptions : Wrong type passed
+  Returntype : None
   Status     : Stable
 
 =cut
@@ -394,7 +445,7 @@ sub get_db_adaptors {
   my $adaptors  = $db_a->get_available_adaptors;
   $self->{$type.'_a'}->{ExampleFeature} = $db_a->get_ExampleFeatureAdaptor;
 
-  my @all_example_features = @{ $self->{$type.'_a'}->{ExampleFeature}->fetch_all};
+  my @all_example_features = @{ $self->{src_a}->{ExampleFeature}->fetch_all};
   my %unique = map { $_->ensembl_object_type => $adaptors->{$_->ensembl_object_type}  } @all_example_features;
 
   foreach my $table (sort keys %unique){
