@@ -73,7 +73,7 @@ with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 
 sub _constructor_parameters {
   return {
-    'db'                           => 'db',
+    'adaptor'                      => 'adaptor',
     'dbID'                         => 'dbID',
     'name'                         => 'name',
     'version'                      => 'version',
@@ -97,7 +97,7 @@ use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
 );
 
 sub dbID                         { return shift->_generic_get_or_set('dbID',                      @_); }
-sub db                           { return shift->_generic_get_or_set('db',                        @_); }
+sub adaptor                      { return shift->_generic_get_or_set('adaptor',                   @_); }
 sub name                         { return shift->_generic_get_or_set('name',                      @_); }
 sub version                      { return shift->_generic_get_or_set('version',                   @_); }
 sub initial_release_date         { return shift->_generic_get_or_set('initial_release_date',      @_); }
@@ -148,25 +148,25 @@ sub get_all_Epigenomes {
   my $self = shift;
   
   my $epigenome_ids     = $self->_get_all_epigenome_ids;
-  my $epigenome_adaptor = $self->db->get_EpigenomeAdaptor;
+  my $epigenome_adaptor = $self->adaptor->db->get_EpigenomeAdaptor;
   my $epigenomes        = $epigenome_adaptor->fetch_all_by_dbID_list($epigenome_ids);
   return $epigenomes
 }
 
 sub _get_all_epigenome_ids {
   my $self = shift;
-  
-  my $db = $self->db;
-  
+
+  my $adaptor = $self->adaptor;
+
   my $regulatory_build_id = $self->dbID;
   
   my $sql = qq(select epigenome_id from regulatory_build_epigenome where regulatory_build_id = ) . $regulatory_build_id;
 
-  if (! defined $db) {
+  if (! defined $adaptor) {
     throw('The database adaptor is undefined!');
   }
 
-  my $sth = $db->dbc->prepare( $sql );
+  my $sth = $adaptor->dbc->prepare( $sql );
   my $rv  = $sth->execute();
   my $res = $sth->fetchall_arrayref;
   
@@ -191,8 +191,8 @@ sub fetch_sample_RegulatoryFeature {
   
   my $sample_regulatory_feature_id = $self->sample_regulatory_feature_id;
   return if (! defined $sample_regulatory_feature_id);
-  
-  my $regulatory_feature_adaptor = $self->db->get_RegulatoryFeatureAdaptor;
+
+  my $regulatory_feature_adaptor = $self->adaptor->db->get_RegulatoryFeatureAdaptor;
   my $sample_regulatory_feature = $regulatory_feature_adaptor->fetch_by_dbID($sample_regulatory_feature_id);
   return $sample_regulatory_feature
 }

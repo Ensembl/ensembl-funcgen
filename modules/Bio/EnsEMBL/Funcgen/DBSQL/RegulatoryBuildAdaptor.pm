@@ -133,7 +133,7 @@ sub _objs_from_sth {
   ROW: while ( $sth->fetch() ) {
 
     my $current_regulatory_build = Bio::EnsEMBL::Funcgen::RegulatoryBuild->new(
-      -db                           => $self,
+      -adaptor                      => $self,
       -dbID                         => $sth_fetched_dbID,
       -name                         => $sth_fetched_name,
       -version                      => $sth_fetched_version,
