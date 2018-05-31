@@ -85,30 +85,30 @@ sub parse_options {
   my ($self) = @_;
 
   my $opts = {
-  ro_usr         => 'ensro',
-  rw_usr         => 'ensadmin',
-  rw_pass        => 'ensembl',
+  ro_usr         => '',
+  rw_usr         => '',
+  rw_pass        => '',
 
-  src_host       => 'mysql-ens-reg-prod-1.ebi.ac.uk',
-  src_port       => 4526,
-  src_dbname     => 'tj1_homo_sapiens_funcgen_93_38',
+  src_host       => '',
+  src_port       => ,
+  src_dbname     => '',
 
-  src_dna_host   => 'mysql-ens-sta-1.ebi.ac.uk',
-  src_dna_port   => 4519,
-  src_dna_dbname => 'homo_sapiens_core_93_38',
+  src_dna_host   => '',
+  src_dna_port   => ,
+  src_dna_dbname => '',
 
-  dst_host       => 'mysql-ens-reg-prod-1.ebi.ac.uk',
-  dst_port       => 4526,
-  dst_dbname     => 'tj1test_homo_sapiens_funcgen_93_38',
+  dst_host       => '',
+  dst_port       => ,
+  dst_dbname     => '',
 
-  dst_dna_host   => 'mysql-ens-reg-prod-1.ebi.ac.uk',
-  dst_dna_port   => 4526,
-  dst_dna_dbname => 'tj1test_homo_sapiens_core_93_38',
+  dst_dna_host   => '',
+  dst_dna_port   => ,
+  dst_dna_dbname => '',
 
   out_json => 'test.json',
   species => 'homo_sapiens',
   features => 'all',
-  clone_core => '/homes/juettema/src/ensembl-test/scripts/clone_core_database.pl',
+  clone_core => '$HOME/src/ensembl-test/scripts/clone_core_database.pl',
   };
 
   GetOptions($opts, qw/
