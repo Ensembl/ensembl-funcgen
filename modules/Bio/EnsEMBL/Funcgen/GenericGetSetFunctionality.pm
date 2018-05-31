@@ -65,7 +65,7 @@ sub _generic_fetch {
     if (! defined $object_id) {
     die;
   }
-  my $object_adaptor = $self->db;
+  my $object_adaptor = $self->adaptor;
   
   if (! defined $object_adaptor) {
       throw(
