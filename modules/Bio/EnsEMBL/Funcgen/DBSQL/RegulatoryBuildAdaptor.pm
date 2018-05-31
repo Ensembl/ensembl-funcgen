@@ -188,7 +188,7 @@ sub store {
     
     $sth_store_regulatory_build->execute;
     $current_regulatory_build->dbID( $self->last_insert_id );
-    $current_regulatory_build->db( $self );
+    $current_regulatory_build->adaptor( $self );
   }
   return;
 }
