@@ -473,7 +473,7 @@ sub get_ArrayChips {
 
 =head2 get_ArrayChip_by_design_id
 
-  Arg [1]    : (mandatory) int - design_id
+  Arg [1]    : (mandatory) string - design_id
   Example    : my %ac = %{$array->get_ArrayChip_by_design_id('1234')};
   Description: Getter for array_chip hashes
   Returntype : Hashref
