@@ -172,12 +172,26 @@ is_deeply( $array->get_design_ids(),
 # ------------------
 is( $array->probe_count(), 24, 'Test probe_count() subroutine' );
 
+# ---------------------
+# Test get_ArrayChips()
+# ---------------------
+my $array_chip_adaptor  = $db->get_ArrayChipAdaptor;
+my $expected_array_chip = $array_chip_adaptor->fetch_by_name('HG-U133A');
+is_deeply( $array->get_ArrayChips(),
+    [$expected_array_chip], 'Test get_ArrayChips() subroutine' );
+
 # ---------------------------------
 # Test get_ArrayChip_by_design_id()
 # ---------------------------------
-my $expected_array_chip
-    = $db->get_ArrayChipAdaptor->fetch_by_array_design_ids( 34, 'HG-U133A' );
 is_deeply( $array->get_ArrayChip_by_design_id('HG-U133A'),
     $expected_array_chip, 'Test get_ArrayChip_by_design_id() subroutine' );
+
+# --------------------
+# Test add_ArrayChip()
+# --------------------
+my $extra_array_chip = $array_chip_adaptor->fetch_by_name('PrimeView');
+$array->add_ArrayChip($extra_array_chip);
+is_deeply( $array->get_ArrayChip_by_design_id( $extra_array_chip->design_id() ),
+    $extra_array_chip, 'Test add_ArrayChip() subroutine' );
 
 done_testing();
