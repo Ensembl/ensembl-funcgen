@@ -18,14 +18,17 @@ use warnings;
 use Test::More;
 use Test::Exception;
 use Bio::EnsEMBL::Test::TestUtils;
+use Bio::EnsEMBL::Test::MultiTestDB;
 
-# use Bio::EnsEMBL::Test::MultiTestDB;
+# Setup connection to test database
+my $multi = Bio::EnsEMBL::Test::MultiTestDB->new();
+my $funcgen_db = $multi->get_DBAdaptor('funcgen');
 
 # Module compiles
 BEGIN { use_ok('Bio::EnsEMBL::Funcgen::Epigenome'); }
 
 # Test constructor
-my $epigenome = Bio::EnsEMBL::Funcgen::Epigenome->new(
+my $new_epigenome = Bio::EnsEMBL::Funcgen::Epigenome->new(
     -name               => 'H1-ESC',
     -display_label      => 'H1-ESC',
     -description        => 'Human Embryonic Stem Cell',
@@ -34,7 +37,7 @@ my $epigenome = Bio::EnsEMBL::Funcgen::Epigenome->new(
     -tissue             => 'embryonic stem cell',
 );
 
-isa_ok( $epigenome, 'Bio::EnsEMBL::Funcgen::Epigenome', 'Epigenome' );
+isa_ok( $new_epigenome, 'Bio::EnsEMBL::Funcgen::Epigenome', 'Epigenome' );
 
 # Test name definition
 throws_ok { Bio::EnsEMBL::Funcgen::Epigenome->new }
@@ -54,12 +57,29 @@ throws_ok {
 qr/Gender .+ not valid, must be one of/, 'Check that the gender is valid';
 
 # Test getter subroutines
-is( $epigenome->name,          'H1-ESC', 'Retrieve epigenome name' );
-is( $epigenome->display_label, 'H1-ESC', 'Retrieve epigenome display name' );
+my $epigenome_adaptor = $funcgen_db->get_adaptor('Epigenome');
+my $epigenome = $epigenome_adaptor->fetch_by_name('NHDF-AD');
+
+is( $epigenome->name,          'NHDF-AD', 'Test name()' );
+is( $epigenome->production_name,          'NHDF_AD', 'Test production_ame()' );
+is( $epigenome->display_label, 'NHDF-Ad', 'Test display_label()' );
 is( $epigenome->description,
-    'Human Embryonic Stem Cell',
-    'Retrieve epigenome description'
+    'adult dermal fibroblasts',
+    'Test description()'
 );
-is( $epigenome->gender, 'female', 'Retrieve epigenome gender' );
+is( $epigenome->gender, 'female', 'Test gender()' );
+is($epigenome->efo_accession, undef, 'Test efo_accession()');
+is($epigenome->epirr_accession, undef, 'Test epirr_accession()');
+
+my $expected_summary = {
+    name          => 'NHDF-AD',
+    gender        => 'female',
+    description   => 'adult dermal fibroblasts',
+    display_label => 'NHDF-Ad',
+    efo_accession => undef
+};
+
+is_deeply( $epigenome->summary_as_hash, $expected_summary,
+    'Test summary_as_hash()' );
 
 done_testing();
