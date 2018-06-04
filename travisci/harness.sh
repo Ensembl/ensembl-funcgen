@@ -6,7 +6,8 @@ echo "Running test suite"
 echo "Using $PERL5LIB"
 
 #skip these tests
-SKIP_TESTS="--skip Set.t,SetFeature.t,Alignment.t,RegulatoryFeature.t,Probe.t,MirnaTargetFeature.t,ProbeFeature.t,FeatureSet.t,ReadFile.t,feature_class_Set.t,ExternalFeature.t,Peak.t,MultiTestDB.t,FeatureSet.t,Array_ArrayChip.t,Storable.t,InputSet_Set_BaseAdaptor.t,BaseFeatureAdaptor.t,BindingMatrix_MotifFeature.t,Annotated_SetFeatureAdaptor.t,DNAMethylationFeature.t,DataSet.t"
+SKIP_TESTS=""
+# SKIP_TESTS="--skip Set.t,SetFeature.t,Alignment.t,RegulatoryFeature.t,Probe.t,MirnaTargetFeature.t,ProbeFeature.t,FeatureSet.t,ReadFile.t,feature_class_Set.t,ExternalFeature.t,Peak.t,MultiTestDB.t,FeatureSet.t,Array_ArrayChip.t,Storable.t,InputSet_Set_BaseAdaptor.t,BaseFeatureAdaptor.t,BindingMatrix_MotifFeature.t,Annotated_SetFeatureAdaptor.t,DNAMethylationFeature.t,DataSet.t"
 
 
 if [ "$COVERALLS" = 'true' ]; then
