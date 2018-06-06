@@ -562,16 +562,9 @@ sub get_epigenomes_by_activity {
   }
   
   my @epigenome_dbID_list = grep {
-  
-    # Multicell does not have an epigenome id. In the map statement below 
-    #
-    #   $_->epigenome_id 
-    #
-    # will come up with undef and the undef is removed here.
-    
     $_ 
   } map { 
-    $_->_epigenome_id 
+    $_->epigenome_id 
   } grep { 
     $_->activity eq $activity 
   } @{$self->regulatory_activity};
