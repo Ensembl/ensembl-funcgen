@@ -1339,7 +1339,7 @@ DROP TABLE IF EXISTS `epigenome`;
 CREATE TABLE `epigenome` (
   `epigenome_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(120) NOT NULL,
-  `display_label` varchar(30) NOT NULL,
+  `display_label` varchar(120) NOT NULL,
   `description` varchar(80) DEFAULT NULL,
   `production_name` varchar(120) DEFAULT NULL,
   `gender` enum('male','female','hermaphrodite','mixed','unknown') DEFAULT 'unknown',
@@ -1463,29 +1463,8 @@ CREATE TABLE `meta` (
 -- Add necessary meta values
 -- Update and remove these for each release to avoid erroneous patching
 
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_92_93_a.sql|schema_version');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_92_93_b.sql|Allow failed peak callings');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_92_93_c.sql|Allow the number of reads to be stored');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_92_93_d.sql|Create table for chance quality check');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_92_93_e.sql|Peak_calling table changes');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_92_93_f.sql|Updates to alignment table');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_92_93_g.sql|New table idr');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_92_93_h.sql|execution_plan table');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_92_93_i.sql|Add table to store fastqc outcomes');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_92_93_j.sql|phantom peak table');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_92_93_k.sql|Add table to store frip scores');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_92_93_l.sql|Remove unused epigenome columns');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_92_93_m.sql|Remove constraints');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_92_93_n.sql|Fix ids, add missing autoincrement');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_92_93_o.sql|Create peak_calling_statistic table');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_92_93_p.sql|Create segmentation_state_assignment table');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_92_93_q.sql|Create segmentation_state_emission table');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_92_93_r.sql|Create regulatory_build_statistics table');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_92_93_s.sql|drop segmentation_feature table');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_92_93_t.sql|drop alignment_qc_phantom_peak table');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_92_93_u.sql|Create probemapping meta table');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_92_93_v.sql|Create probemapping statistic table');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_92_93_w.sql|Modify index name_exp_idx from table read_file_experimental_configuration');
+INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_93_94_a.sql|schema_version');
+INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_93_94_b.sql|Modify column display_label length from epigenome table');
 
 /**
 @table meta_coord
