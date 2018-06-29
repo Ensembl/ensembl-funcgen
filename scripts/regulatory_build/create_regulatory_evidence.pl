@@ -134,6 +134,9 @@ sub compute_regulatory_annotations {
 
   my $tempdir = $options->{tempdir};
   
+  use File::Path qw( mkpath );
+  mkpath ($tempdir);
+  
   my $regulatory_features        = $tempdir . '/' . 'regulatory_features.bed';
   my $peaks                      = $tempdir . '/' . 'peaks.bed';
   my $motifs                     = $tempdir . '/' . 'motifs.bed';
