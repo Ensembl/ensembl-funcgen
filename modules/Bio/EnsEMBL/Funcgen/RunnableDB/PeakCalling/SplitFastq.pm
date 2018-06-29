@@ -24,7 +24,9 @@ sub run {
   
   my $read_file    = $self->param_required('read_file');
   
-  
+  use Bio::EnsEMBL::Registry;
+  Bio::EnsEMBL::Registry->set_disconnect_when_inactive;
+
   my $num_records_per_split_fastq;
   if ($self->param_is_defined('num_records_per_split_fastq')) {
     $num_records_per_split_fastq = $self->param('num_records_per_split_fastq');
@@ -164,8 +166,10 @@ sub split_read_file {
   my @read_file_objects = map { $read_file_adaptor->fetch_by_name($_) } @$read_file_names;
   my @fastq_files       = map { $_->file } @read_file_objects;
   
-  $self->say_with_header('Splitting:', 1);
-  $self->say_with_header(Dumper(\@fastq_files), 1);
+#   @fastq_files       = ( '/hps/nobackup/production/ensembl/mnuhn/rb_mouse_run_4/debug/ENCFF010LWJ.fastq.gz' );
+#   
+#   $self->say_with_header('Splitting:', 1);
+#   $self->say_with_header(Dumper(\@fastq_files), 1);
   
   use List::Util qw( uniq );
   my $same_number_of_reads_in_every_file 
@@ -183,6 +187,13 @@ sub split_read_file {
   my @cmds          = map { "zcat $_ "                                     } @fastq_files;
   my @file_handles  = map { open my $fh, '-|', $_ or die("Can't execute $_"); $fh } @cmds;
 
+#   # setvbuf is not available by default on Perls 5.8.0 and later.
+#   use IO::Handle '_IOLBF', '_IOFBF';
+#   
+#   my $buffer;
+#   die("We have: $|");
+#   map { $_->setvbuf($buffer, _IOFBF, 128000); } @file_handles;
+  
   use List::Util qw( none any uniq );
 
   my $all_records_read = undef;
@@ -218,13 +229,20 @@ sub split_read_file {
 
     my $reads_match = uniq(@read_names) == 1;
     
+#     print Dumper(\@read_names);
+    
     if (! $reads_match) {
+#         die("Failed!");
         next PAIR_OF_READS;
     }
+#     print Dumper("Was ok!");
     $fastq_record_processor->process(@fastq_records);
   }
-  map { $_->close or die "Can't close file!" } @file_handles;
   $fastq_record_processor->flush;
+  
+  sleep(5);
+  
+  map { $_->close or die "Can't close filehandle to command!" } @file_handles;
   return;
 }
 
