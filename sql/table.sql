@@ -364,6 +364,23 @@ CREATE TABLE `segmentation_state_emission` (
   PRIMARY KEY (`segmentation_state_emission_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
+DROP TABLE IF EXISTS segmentation_cell_table_ctcf;
+
+CREATE TABLE segmentation_cell_table_ctcf (
+  epigenome        varchar(120) DEFAULT NULL,
+  feature_type     varchar(40)  NOT NULL,
+  signal_bam_path  varchar(255) NOT NULL,
+  control_bam_path varchar(255) NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+DROP TABLE IF EXISTS segmentation_cell_table_without_ctcf;
+
+CREATE TABLE segmentation_cell_table_without_ctcf (
+  epigenome        varchar(120) DEFAULT NULL,
+  feature_type     varchar(40)  NOT NULL,
+  signal_bam_path  varchar(255) NOT NULL,
+  control_bam_path varchar(255) NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
 @table  peak
