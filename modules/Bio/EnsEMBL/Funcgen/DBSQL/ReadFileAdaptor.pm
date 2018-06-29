@@ -79,22 +79,25 @@ sub fetch_by_ReadFileExperimentalConfiguration {
   }
   
   my $read_file_experimental_configuration_adaptor
-    = $self->db->get_ReadFileExperimentalConfigurationAdaptor;
+    = $self->db->get_ReadFileAdaptor;
 
-  my $read_file_experimental_configuration_from_db 
+  my $read_file
     = $read_file_experimental_configuration_adaptor
       ->fetch_by_ReadFileExperimentalConfiguration(
         $read_file_experimental_configuration
       );
   
-  if (! defined $read_file_experimental_configuration_from_db) {
+  if (! defined $read_file) {
+	use Data::Dumper;
     throw(
       "Couldn't find read file experimental configuration in database:\n\n"
       . Dumper($read_file_experimental_configuration)
+      . "\ngot:\n"
+      . Dumper($read_file)
     );
   }
   
-  return $read_file_experimental_configuration_from_db->get_ReadFile;
+  return $read_file->get_ReadFile;
 }
 
 sub _load_dependencies {
