@@ -165,6 +165,15 @@ foreach my $experimentally_verified_enhancer_feature_set (@experimentally_verifi
         $current_enhancer_feature->end
       );
       
+      $logger->info(
+        join 
+            "\t",
+            $seq_region_name, 
+            $current_enhancer_feature->start, 
+            $current_enhancer_feature->end,
+      );
+      $logger->info("\n");
+      
       my $overlaps_enhancer_from_regulatory_build = $overlap_size > 0;
       
       $total_enhancers_checked++;
