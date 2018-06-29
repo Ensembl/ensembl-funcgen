@@ -74,6 +74,8 @@ use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
 use base qw( Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable );
 
+use constant SO_ACC => 'SO:0005836';
+
 =head2 new
 
   Arg [-SLICE]             : Bio::EnsEMBL::Slice - The slice on which this feature is located.
