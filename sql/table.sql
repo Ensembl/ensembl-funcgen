@@ -344,7 +344,7 @@ CREATE TABLE `segmentation_state_assignment` (
   `segmentation` varchar(255) NOT NULL,
   `assignment` varchar(255) NOT NULL,
   PRIMARY KEY (`segmentation_state_assignment_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 DROP TABLE IF EXISTS `segmentation_state_emission`;
 CREATE TABLE `segmentation_state_emission` (
@@ -362,7 +362,7 @@ CREATE TABLE `segmentation_state_emission` (
   `H3K9ac`   double DEFAULT NULL,
   `H3K9me3`  double DEFAULT NULL,
   PRIMARY KEY (`segmentation_state_emission_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 DROP TABLE IF EXISTS segmentation_cell_table_ctcf;
 
