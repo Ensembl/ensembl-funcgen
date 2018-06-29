@@ -192,6 +192,13 @@ $(document).ready(function() {
                         position: 'top',
                         display: false,
                     },
+                    scales: {
+                        yAxes: [{
+                            ticks: {
+                                min: 0
+                            }
+                        }]
+                    },
                     title: {
                         display: false,
                         text: 'Total peak lengths in [% current_feature_type.name %]'
