@@ -74,6 +74,7 @@ sub _constructor_parameters {
   return {
     dbID                  => 'dbID',
     db                    => 'db',
+    adaptor               => 'adaptor',
     regulatory_feature_id => 'regulatory_feature_id',
     activity              => 'activity',
     epigenome_id          => 'epigenome_id',
@@ -85,23 +86,27 @@ sub regulatory_feature_id { return shift->_generic_get_or_set('regulatory_featur
 sub activity              { return shift->_generic_get_or_set('activity', @_); }
 sub epigenome_id          { return shift->_generic_get_or_set('epigenome_id', @_); }
 
-sub db { 
+sub db {
+  my $self = shift;
+  return $self->adaptor(@_);
+}
+
+sub adaptor { 
   
   my $self = shift;
-  
-  my $db = $self->_generic_get_or_set('db', @_);
-  
-  if (defined $db) {
-    return $db;
-  }
-  
-  $db = $self->get_RegulatoryFeature->adaptor;
-  
-  if (defined $db) {
-    return $db;
-  }
+  my $value = shift;
 
-  die("Don't have a db adaptor!");
+  my $adaptor = $self->_generic_get_or_set('adaptor', $value);
+  
+  if (defined $adaptor) {
+    return $adaptor;
+  }
+  
+  $adaptor = $self->get_RegulatoryFeature->adaptor;
+  
+  if (defined $adaptor) {
+    return $adaptor;
+  }
 }
 
 sub get_Epigenome {
