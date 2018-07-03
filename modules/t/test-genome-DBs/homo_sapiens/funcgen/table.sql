@@ -177,7 +177,7 @@ CREATE TABLE `data_file` (
 CREATE TABLE `epigenome` (
   `epigenome_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(120) NOT NULL,
-  `display_label` varchar(30) NOT NULL,
+  `display_label` varchar(120) DEFAULT NULL,
   `description` varchar(80) DEFAULT NULL,
   `production_name` varchar(120) DEFAULT NULL,
   `gender` enum('male','female','hermaphrodite','mixed','unknown') DEFAULT 'unknown',
@@ -361,7 +361,7 @@ CREATE TABLE `meta` (
   PRIMARY KEY (`meta_id`),
   UNIQUE KEY `species_key_value_idx` (`species_id`,`meta_key`,`meta_value`),
   KEY `species_value_idx` (`species_id`,`meta_value`)
-) ENGINE=MyISAM AUTO_INCREMENT=727 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=731 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `meta_coord` (
   `table_name` varchar(40) NOT NULL,
@@ -689,6 +689,20 @@ CREATE TABLE `regulatory_feature` (
   KEY `feature_type_idx` (`feature_type_id`),
   KEY `stable_id_idx` (`stable_id`)
 ) ENGINE=MyISAM AUTO_INCREMENT=11 DEFAULT CHARSET=latin1;
+
+CREATE TABLE `segmentation_cell_table_ctcf` (
+  `epigenome` varchar(120) DEFAULT NULL,
+  `feature_type` varchar(40) NOT NULL,
+  `signal_bam_path` varchar(255) NOT NULL,
+  `control_bam_path` varchar(255) NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+CREATE TABLE `segmentation_cell_table_without_ctcf` (
+  `epigenome` varchar(120) DEFAULT NULL,
+  `feature_type` varchar(40) NOT NULL,
+  `signal_bam_path` varchar(255) NOT NULL,
+  `control_bam_path` varchar(255) NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 CREATE TABLE `segmentation_file` (
   `segmentation_file_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
