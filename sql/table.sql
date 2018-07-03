@@ -1482,6 +1482,8 @@ CREATE TABLE `meta` (
 
 INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_93_94_a.sql|schema_version');
 INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_93_94_b.sql|Modify column display_label length from epigenome table');
+INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_c.sql|Adds table segmentation_cell_table_ctcf');
+INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_d.sql|Adds table segmentation_cell_table_without_ctcf');
 
 /**
 @table meta_coord

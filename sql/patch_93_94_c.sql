@@ -14,13 +14,13 @@
 -- limitations under the License.
 
 /**
-@header patch_93_94_m.sql - Adds table segmentation_cell_table_without_ctcf
-@desc   Adds table segmentation_cell_table_without_ctcf
+@header patch_93_94_c.sql - Adds table segmentation_cell_table_ctcf
+@desc   Adds table segmentation_cell_table_ctcf
 */
 
-DROP TABLE IF EXISTS segmentation_cell_table_without_ctcf;
+DROP TABLE IF EXISTS segmentation_cell_table_ctcf;
 
-CREATE TABLE segmentation_cell_table_without_ctcf (
+CREATE TABLE segmentation_cell_table_ctcf (
   epigenome        varchar(120) DEFAULT NULL,
   feature_type     varchar(40)  NOT NULL,
   signal_bam_path  varchar(255) NOT NULL,
@@ -28,4 +28,4 @@ CREATE TABLE segmentation_cell_table_without_ctcf (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_93_94_m.sql|Adds table segmentation_cell_table_without_ctcf');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_93_94_c.sql|Adds table segmentation_cell_table_ctcf');
