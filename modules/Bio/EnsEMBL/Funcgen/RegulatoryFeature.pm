@@ -321,9 +321,9 @@ sub regulatory_activity_for_epigenome {
   return $regulatory_activity[0];
 }
 
-=head2 fetch_overlapping_MotifFeatures
+=head2 fetch_all_MotifFeatures
 
-  Example    : my $overlapping_motif_features = $rf->fetch_overlapping_MotifFeatures
+  Example    : my $overlapping_motif_features = $rf->fetch_all_MotifFeatures
   Description: Returns all MotifFeatures that overlap with a RegulatoryFeature
   Returntype : Arrayref of Bio::EnsEMBL::Funcgen::MotifFeature objects
   Exceptions : none
@@ -332,11 +332,42 @@ sub regulatory_activity_for_epigenome {
 
 =cut
 
-sub fetch_overlapping_MotifFeatures {
+sub fetch_all_MotifFeatures {
     my $self = shift;
 
     my $motif_features
-        = $self->adaptor()->_fetch_overlapping_MotifFeatures( $self->dbID() );
+        = $self->adaptor()->_fetch_overlapping_MotifFeatures( $self );
+
+    return $motif_features;
+}
+
+=head2 fetch_all_MotifFeatures_by_Epigenome
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Epigenome - The epigenome for which 
+               the MotifFeatures are requested
+  Example    : my $overlapping_motif_features = 
+                $rf->fetch_all_MotifFeatures_by_Epigenome($epigenome)
+  Description: Returns all MotifFeatures that overlap with a RegulatoryFeature
+               in a particular Epigenome
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::MotifFeature objects
+  Exceptions : none
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_MotifFeatures_by_Epigenome {
+    my $self = shift;
+    my $epigenome = shift;
+    
+    if (! defined $epigenome) {
+      throw("Epigenome parameter was undefined!");
+    }
+    if (ref $epigenome ne 'Bio::EnsEMBL::Funcgen::Epigenome') {
+      throw("Wrong parameter, expected an epigenome, but got a " . ref $epigenome);
+    }
+
+    my $motif_features
+        = $self->adaptor()->_fetch_overlapping_MotifFeatures( $self, $epigenome );
 
     return $motif_features;
 }
