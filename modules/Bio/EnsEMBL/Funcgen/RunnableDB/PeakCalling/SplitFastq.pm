@@ -92,6 +92,22 @@ sub run {
   
   my $directory_name = join '_', @$read_file_names;
   
+  my $max_allowed_directory_name_length = 200;
+  
+  if (length $directory_name > $max_allowed_directory_name_length) {
+
+    use Digest::MD5 qw( md5_hex );
+    
+    my $md5sum = md5_hex($directory_name);
+    
+    my $short_directory_name = "md5_${md5sum}";
+    
+#     die( 
+#         "Directory name too long!\n$directory_name\n$short_directory_name" 
+#     );
+    $directory_name = $short_directory_name;
+  }
+  
   my $alignment_read_file_name = $alignment_name . '/' . $directory_name;
   
   my $dataflow_fastq_chunk = sub {
