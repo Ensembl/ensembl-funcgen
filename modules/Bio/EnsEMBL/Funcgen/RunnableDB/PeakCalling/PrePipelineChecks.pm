@@ -85,7 +85,7 @@ sub run {
     
     # Find duplicate feature types
     #
-    my $find_duplicate_feature_types = 'select name, max(feature_type_id), group_concat(feature_type_id), count(feature_type_id) c from feature_type where name != "WCE" group by name having c>1;';
+    my $find_duplicate_feature_types = 'select feature_type.name, max(feature_type_id), group_concat(feature_type_id), count(distinct feature_type_id) c from feature_type join experiment using (feature_type_id) where feature_type.name != "WCE" group by feature_type.name having c>1;';
     
     my $sth = $dbc->prepare($find_duplicate_feature_types);
     $sth->execute;
