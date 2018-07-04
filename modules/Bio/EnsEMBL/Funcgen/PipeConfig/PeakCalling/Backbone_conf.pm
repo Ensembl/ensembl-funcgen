@@ -107,7 +107,6 @@ sub pipeline_analyses {
                     "truncate alignment_qc_flagstats;",
                     "truncate alignment_read_file;",
                     "truncate chance;",
-                    "truncate execution_plan;",
                     "truncate fastqc;",
                     "truncate frip;",
                     "truncate idr;",
