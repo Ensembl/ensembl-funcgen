@@ -54,19 +54,18 @@ sub fetch_all_by_Experiment {
   my $read_file_experimental_configuration_list
     = $read_file_experimental_configuration_adaptor
       ->fetch_all_by_Experiment($experiment);
-  
+
   my @all_read_files_for_experiment;
   
   foreach my $read_file_experimental_configuration 
     (@$read_file_experimental_configuration_list) {
-    
+      
       my $read_file 
         = $self->fetch_by_ReadFileExperimentalConfiguration
           ($read_file_experimental_configuration);
       
       push @all_read_files_for_experiment, $read_file;
   }
-  
   return \@all_read_files_for_experiment;
 }
 
@@ -77,27 +76,7 @@ sub fetch_by_ReadFileExperimentalConfiguration {
   if (! defined $read_file_experimental_configuration) {
     throw("Read file experimental configuration parameter was undefined!");
   }
-  
-  my $read_file_experimental_configuration_adaptor
-    = $self->db->get_ReadFileAdaptor;
-
-  my $read_file
-    = $read_file_experimental_configuration_adaptor
-      ->fetch_by_ReadFileExperimentalConfiguration(
-        $read_file_experimental_configuration
-      );
-  
-  if (! defined $read_file) {
-	use Data::Dumper;
-    throw(
-      "Couldn't find read file experimental configuration in database:\n\n"
-      . Dumper($read_file_experimental_configuration)
-      . "\ngot:\n"
-      . Dumper($read_file)
-    );
-  }
-  
-  return $read_file->get_ReadFile;
+  return $read_file_experimental_configuration->get_ReadFile;
 }
 
 sub _load_dependencies {
