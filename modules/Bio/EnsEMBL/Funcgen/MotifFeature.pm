@@ -37,7 +37,7 @@ my $feature = Bio::EnsEMBL::Funcgen::MotifFeature->new
   -DISPLAY_LABEL => $text,
   -SCORE         => $score,
   -FEATURE_TYPE  => $ftype,
-  -INTERDB_STABLE_ID    => 1,
+  -STABLE_ID     => 1,
  );
 
 =head1 DESCRIPTION
@@ -69,14 +69,14 @@ use warnings;
 
 use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
+use Bio::EnsEMBL::Utils::Exception qw( throw );
 
 use base qw(Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable);
 
 
 =head2 new
 
- 
+
   Arg [-SCORE]          : (optional) int - Score given by the motif mapper.
   Arg [-SLICE]          : Bio::EnsEMBL::Slice - The slice on which this feature is.
   Arg [-BINDING_MATRIX] : Bio::EnsEMBL::Funcgen::BindingMatrix - Binding Matrix associated to this feature.
@@ -95,9 +95,8 @@ use base qw(Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable);
                                 									  -END            => 1_000_024,
 								                                	  -STRAND         => -1,
                                 									  -BINDING_MATRIX => $bm,
-								                                	  -DISPLAY_LABEL  => $text,
                                   									-SCORE          => $score,
-                                                    -INTERDB_STABLE_ID     => 1 );
+                                                    -STABLE_ID     => 1 );
 
   Description: Constructor for MotifFeature objects.
   Returntype : Bio::EnsEMBL::Funcgen::MotifFeature
@@ -111,10 +110,14 @@ sub new {
   my $caller = shift;
   my $class  = ref($caller) || $caller;
   my $self   = $class->SUPER::new(@_);
-  
-  ($self->{score}, $self->{binding_matrix}, $self->{display_label}, $self->{interdb_stable_id}) 
-    = rearrange(['SCORE', 'BINDING_MATRIX', 'DISPLAY_LABEL', 'INTERDB_STABLE_ID'], @_);
-  assert_ref($self->binding_matrix, 'Bio::EnsEMBL::Funcgen::BindingMatrix');
+
+  ($self->{score}, $self->{binding_matrix}, $self->{stable_id})
+    = rearrange(['SCORE', 'BINDING_MATRIX', 'STABLE_ID'], @_);
+
+  assert_ref($self->{binding_matrix}, 'Bio::EnsEMBL::Funcgen::BindingMatrix');
+
+  $self->{overlapping_Peak} = undef;
+  $self->{overlapping_RegulatoryFeature} = undef;
 
   return $self;
 }
@@ -124,7 +127,7 @@ sub new {
 
   Args       : Hashref with all internal attributes set
   Example    : none
-  Description: Quick and dirty version of new. Only works if the calling code 
+  Description: Quick and dirty version of new. Only works if the calling code
                is very disciplined.
   Returntype : Bio::EnsEMBL::Funcgen::MotifFeature
   Exceptions : None
@@ -149,25 +152,6 @@ sub new_fast { return bless ($_[1], $_[0]); }
 
 sub binding_matrix{ return shift->{binding_matrix}; }
 
-=head2 feature_type
-
-  Example    : my $TF_name = $motif_feature->feature_type->name;
-  Description: Convenience method for accessing feature type of binding matrix
-  Returntype : Bio::EnsEMBL::Funcgen::FeatureType
-  Exceptions : None
-  Caller     : General
-  Status     : Deprecated
-
-=cut
-
-sub feature_type{
-    deprecate(
-        "Bio::EnsEMBL::Funcgen::MotifFeature::feature_type() has been
-        deprecated and will be removed in Ensembl release 94."
-    );
-    return shift->{binding_matrix}->feature_type; }
-
-
 =head2 score
 
   Example    : my $score = $feature->score();
@@ -182,89 +166,26 @@ sub feature_type{
 
 sub score { return shift->{score}; }
 
+=head2 fetch_overlapping_Peak
 
-=head2 display_label
-
-  Example    : my $label = $feature->display_label();
-  Description: Getter for the display label of this feature.
-  Returntype : str
+  Example    : my $peak = $motif_feature->fetch_overlapping_Peak;
+  Description: Fetches the overlapping Peak for a particular MotifFeature
+  Returntype : Bio::EnsEMBL::Funcgen::Peak object
   Exceptions : None
-  Caller     : General
-  Status     : Deprecated
+  Caller     : Internal
+  Status     : At Risk
 
 =cut
 
-sub display_label {
-    deprecate(
-        "Bio::EnsEMBL::Funcgen::MotifFeature::display_label() has been
-        deprecated and will be removed in Ensembl release 94."
-    );
-  #If not set in new before store, a default is stored as:
-  #$mf->binding_matrix->feature_type->name.':'.$mf->binding_matrix->name();
-  return shift->{display_label};
+sub fetch_overlapping_Peak {
+    my $self = shift;
+    
+    if (! $self->{overlapping_Peak}) {
+      $self->{overlapping_Peak} = $self->adaptor()->_fetch_overlapping_Peak( $self );
+    }
+
+    return $self->{overlapping_Peak};
 }
-
-
-
-=head2 associated_annotated_features
-
-  Example    : my @associated_afs = @{$feature->associated_annotated_features()};
-  Description: Getter/Setter for associated AnntoatedFeatures.
-  Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen:AnnotatedFeature objects
-  Exceptions : None
-  Caller     : General
-  Status     : Deprecated
-
-=cut
-
-sub associated_annotated_features{
-    deprecate(
-        "Bio::EnsEMBL::Funcgen::MotifFeature::feature_type() has been
-        deprecated and will be removed in Ensembl release 94. Please use
-        Bio::EnsEMBL::Funcgen::MotifFeature::associated_Peaks instead."
-    );
-  my $self = shift;
-  return [];
-#   my $afs  = shift;
-#   #Lazy load as we don't want to have to do a join on all features when most will not have any
-#  
-#   if (defined $afs) {
-# 
-#     if (ref($afs) eq 'ARRAY') {
-# 
-#       foreach my $af (@$afs) {
-# 	
-#         if ( ! $af->isa('Bio::EnsEMBL::Funcgen::AnnotatedFeature') ) {
-#           throw('You must pass and ARRAYREF of stored Bio::EnsEMBL::Funcgen::AnnotatedFeature objects');
-#         }
-#         #test is stored in adaptor
-#       }
-# 
-#       if (defined $self->{associated_annotated_features}) {
-#         warn('You are overwriting associated_annotated_features for the MotifFeature');
-#         #we could simply add the new ones and make them NR.
-#       }
-# 
-#       $self->{associated_annotated_features} = $afs;
-#     } 
-#     else {
-#       throw('You must pass and ARRAYREF of stored Bio::EnsEMBL::Funcgen::AnnotatedFeature objects');
-#     }
-#   }
-# 
-# 
-#   if (! defined $self->{associated_annotated_features}) {
-# 
-#     if (defined $self->adaptor) {
-#       $self->{associated_annotated_features} = 
-#         $self->adaptor->db->get_AnnotatedFeatureAdaptor->fetch_all_by_associated_MotifFeature($self);
-#     }
-#   }
-#   
-#   #This has the potential to return undef, or an arrayref which may be empty.
-#   return $self->{associated_annotated_features};
-}
-
 
 =head2 is_position_informative
 
@@ -298,7 +219,7 @@ sub is_position_informative {
                }
 
   Description: Calculates the potential influence of a given variation in a motif feature.
-               Returns a value between -100% (lost) and +100% (gain) indicating the difference 
+               Returns a value between -100% (lost) and +100% (gain) indicating the difference
                in strength between the motif in the reference and after the variation.
 
   Returntype : Scalar (numeric) or undef
@@ -318,8 +239,8 @@ sub infer_variation_consequence{
   my $sr_start    = $self->seq_region_start;
   my $allele      = $vf->allele_string(undef, $self->seq_region_strand);
 
-  if($allele !~ /^[ACTG]\/[ACTG]$/){ 
-    throw("Unsupported variation allele:\t".$allele."\nCurrently only SNPs supported"); 
+  if($allele !~ /^[ACTG]\/[ACTG]$/){
+    throw("Unsupported variation allele:\t".$allele."\nCurrently only SNPs supported");
   }
 
   # From now on, assumes variation is a SNP
@@ -340,83 +261,54 @@ sub infer_variation_consequence{
   my $var_seq = substr($ref_seq, 0, $vf_idx).$allele.
     substr($ref_seq, $vf_idx + 1);  # + length($variant));
 
-  # relative affinity only works with strand matched seq 
-  # in 5'->3' orientation. We already have the strand seq 
+  # relative affinity only works with strand matched seq
+  # in 5'->3' orientation. We already have the strand seq
   # so just need to reverse if -1
 
   if($self->seq_region_strand == -1){
     $var_seq = reverse($var_seq);#tr/ACGT/TGCA/;
     $ref_seq = reverse($ref_seq);
-  }  
+  }
 
   my $bm     = $self->binding_matrix;
   my $var_ra = $bm->relative_affinity($var_seq, $linear);
   my $ref_ra = $bm->relative_affinity($ref_seq, $linear);
 
-  return (defined $var_ra && defined $ref_ra ) ? (100 * ($var_ra - $ref_ra)) : undef; 
+  return (defined $var_ra && defined $ref_ra ) ? (100 * ($var_ra - $ref_ra)) : undef;
 }
 
 
-=head2 interdb_stable_id
+=head2 stable_id
 
-  Arg [1]    : (optional) int - stable_id e.g 1
-  Example    : my $idb_sid = $feature->interdb_stable_id();
-  Description: Getter for the interdb_stable_id attribute for this feature.
-               This is simply to avoid using internal db IDs for inter DB linking
-  Returntype : int
+  Example    : my $istable_id = $feature->stable_id();
+  Description: Getter for the stable_id attribute for this feature.
+  Returntype : String
   Exceptions : None
   Caller     : General
-  Status     : Deprecated
+  Status     : At Risk
 
 =cut
 
-sub interdb_stable_id {
-    deprecate(
-        "Bio::EnsEMBL::Funcgen::MotifFeature::interdb_stable_id() has been
-        deprecated and will be removed in Ensembl release 94."
-    );
-    return shift->{interdb_stable_id};
-}
-
-
-sub SO_term {
-  my $self = shift;
-  return $self->feature_type->so_accession;
-}
+sub stable_id { return shift->{stable_id}; }
 
 =head2 summary_as_hash
-
   Example       : $motif_feature_summary = $motif_feature->summary_as_hash;
   Description   : Retrieves a textual summary of this MotifFeature.
   Returns       : Hashref of descriptive strings
   Status        : Intended for internal use (REST)
-
 =cut
 
 sub summary_as_hash {
   my $self = shift;
-  my ($acc, $ftype);
-  #split display_label as binding matrix may be lazy loaded and slow things down
-  
-  if ($self->display_label =~ /(.*[^:])(:)(.*)/o){ 
-    $ftype = $1;
-    $acc = $3;
-  }
-  else{
-    warn "Failed to parse feature type and binding matric from display_id:\t".$self->display_id;
-  }
 
-  #Add bm.threshold in here?
   return
-   {binding_matrix          => $acc,
-    motif_feature_type      => $ftype,
+   {binding_matrix          => $self->binding_matrix->name,
     start                   => $self->seq_region_start,
     end                     => $self->seq_region_end,
     strand                  => $self->strand,
     seq_region_name         => $self->seq_region_name,
+    stable_id               => $self->stable_id,
     score                   => $self->score            };
 }
 
-
 1;
-

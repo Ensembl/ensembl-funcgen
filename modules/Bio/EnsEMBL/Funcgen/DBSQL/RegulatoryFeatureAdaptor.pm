@@ -642,9 +642,10 @@ sub _make_arrayref_if_not_arrayref {
   return $obj_as_arrayref;
 }
 
-=head2 _fetch_overlapping_motif_features
+=head2 _fetch_overlapping_MotifFeatures
 
-  Arg [1]    : Integer, regulatory feature id
+  Arg [1]    : Bio::EnsEMBL::Funcgen::RegulatoryFeature
+  Arg [2]    : Bio::EnsEMBL::Funcgen::Epigenome - Optional
   Example    : None
   Description: Fetches a list of MotifFeature objects that overlap
                with the RegulatoryFeature object
@@ -656,19 +657,25 @@ sub _make_arrayref_if_not_arrayref {
 =cut
 
 sub _fetch_overlapping_MotifFeatures {
-    my ( $self, $regulatory_feature_id ) = @_;
+    my ( $self, $regulatory_feature, $epigenome ) = @_;
 
-    if (! defined $regulatory_feature_id){
-      throw('Must provide a regulatory_activity_id parameter');
+    if (! defined $regulatory_feature){
+      throw('Must provide a regulatory_feature parameter');
     }
 
     my $sth = $self->prepare( "
-      SELECT motif_feature_id FROM 
-      underlying_structure
+      SELECT DISTINCT motif_feature_id FROM 
+      motif_feature_regulatory_feature
       WHERE regulatory_feature_id=?
       " );
 
-    $sth->execute($regulatory_feature_id);
+    if ( !$epigenome ) {
+        $sth->execute( $regulatory_feature->dbID() );
+    }
+    else {
+        $sth .= " AND epigenome_id=?";
+        $sth->execute( $regulatory_feature->dbID(), $epigenome->dbID() );
+    }
 
     my @motif_feature_ids;
 

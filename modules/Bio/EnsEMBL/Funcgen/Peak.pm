@@ -254,19 +254,24 @@ sub get_underlying_structure{
   return [];
 }
 
-=head2 get_associated_MotifFeatures
+=head2 fetch_all_MotifFeatures
 
-  Example    : my @assoc_mfs = @{ $af->get_associated_MotifFeatures };
-  Description: There are none in the database, so this always returns undef.
-  Returntype : undef
-  Exceptions : None
+  Example    : my $overlapping_motif_features = $peak->fetch_all_MotifFeatures
+  Description: Returns all MotifFeatures that overlap with a Peak
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::MotifFeature objects
+  Exceptions : none
   Caller     : General
-  Status     : stable
+  Status     : At Risk
 
 =cut
 
-sub get_associated_MotifFeatures{
-  return [];
+sub fetch_all_MotifFeatures {
+    my $self = shift;
+
+    my $motif_features
+        = $self->adaptor()->_fetch_overlapping_MotifFeatures( $self );
+
+    return $motif_features;
 }
 
 sub seq_region_name {
