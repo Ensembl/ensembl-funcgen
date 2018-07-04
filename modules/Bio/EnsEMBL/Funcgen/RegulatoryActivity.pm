@@ -132,7 +132,6 @@ sub get_RegulatoryFeature {
 }
 
 sub set_RegulatoryFeature {
-  my ($self, $obj) = @_;
   my $self = shift;
   my $obj  = shift;
   $self->_generic_set('regulatoryfeature', 'Bio::EnsEMBL::Funcgen::RegulatoryFeature', $obj);
