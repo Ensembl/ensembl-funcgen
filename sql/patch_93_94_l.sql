@@ -27,7 +27,6 @@ ALTER TABLE `binding_matrix` ADD COLUMN `stable_id` VARCHAR(128) NOT NULL;
 ALTER TABLE `binding_matrix` MODIFY COLUMN `name` varchar(200) NOT NULL;
 ALTER TABLE `binding_matrix` DROP KEY `name_analysis_idx`;
 ALTER TABLE `binding_matrix` ADD UNIQUE KEY `name_idx` (`name`);
-ALTER TABLE `binding_matrix` ADD UNIQUE KEY `stable_id_idx` (`stable_id`);
 
 -- patch identifier
 INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_l.sql|Modify binding_matrix_table');

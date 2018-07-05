@@ -639,7 +639,6 @@ CREATE TABLE `binding_matrix` (
   `stable_id` varchar(128) NOT NULL,
   PRIMARY KEY (`binding_matrix_id`),
   UNIQUE KEY `name_idx` (`name`),
-  UNIQUE KEY `stable_id_idx` (`stable_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
