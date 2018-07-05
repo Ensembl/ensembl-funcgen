@@ -19,11 +19,11 @@
 */
 
 ALTER TABLE `motif_feature` DROP COLUMN `display_label`;
-ALTER TABLE `motif_feature` DROP COLUMN `interdb_stable_id`;
 ALTER TABLE `motif_feature` ADD COLUMN `stable_id` VARCHAR(18) DEFAULT NULL;
 ALTER TABLE `motif_feature` ADD UNIQUE KEY `unique_idx` (`binding_matrix_id`, `seq_region_id`, `seq_region_start`, `seq_region_strand`);
 ALTER TABLE `motif_feature` ADD UNIQUE KEY `stable_id_idx` (`stable_id`);
 ALTER TABLE `motif_feature` DROP INDEX `interdb_stable_id_idx`;
+ALTER TABLE `motif_feature` DROP COLUMN `interdb_stable_id`;
 
 -- patch identifier
 INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_i.sql|Modify motif_feature table');
