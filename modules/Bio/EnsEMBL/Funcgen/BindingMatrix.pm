@@ -436,6 +436,7 @@ sub sequence_similarity_score {
 =head2 relative_sequence_similarity_score
   
   Arg [1]       : String - sequence of interest
+  Arg [2]       : Boolean (optional) - Linear scale results (default is log scale)
   Example       : $relative_seq_sim_score = 
                     $binding_matrix->relative_sequence_similarity_score($seq);
   Description   : Calculates the similarity score of a given sequence relative to the
@@ -446,17 +447,29 @@ sub sequence_similarity_score {
 =cut
 
 sub relative_sequence_similarity_score {
-    my ( $self, $sequence ) = @_;
+    my ( $self, $sequence, $linear ) = @_;
 
     my ( $min_sequence_similarity_score, $max_sequence_similarity_score ) =
       $self->_min_max_sequence_similarity_score();
 
-    my $relative_sequence_similarity_score =
-      ( $self->sequence_similarity_score($sequence) -
-          $min_sequence_similarity_score ) /
-      ( $max_sequence_similarity_score - $min_sequence_similarity_score );
-   
-   return $relative_sequence_similarity_score;
+    my $relative_sequence_similarity_score;
+    if ($linear) {
+        $relative_sequence_similarity_score =
+          (
+            exp( $self->sequence_similarity_score($sequence) ) -
+              exp($min_sequence_similarity_score) ) /
+          (
+            exp($max_sequence_similarity_score) -
+              exp($min_sequence_similarity_score) );
+    }
+    else {
+        $relative_sequence_similarity_score =
+          ( $self->sequence_similarity_score($sequence) -
+              $min_sequence_similarity_score ) /
+          ( $max_sequence_similarity_score - $min_sequence_similarity_score );
+    }
+
+    return $relative_sequence_similarity_score;
 }
 
 =head2 is_position_informative
