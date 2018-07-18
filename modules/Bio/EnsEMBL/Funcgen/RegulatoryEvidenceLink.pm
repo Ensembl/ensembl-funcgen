@@ -153,14 +153,16 @@ sub get_Evidence {
 	$self->_attribute_feature_id
       );
   }
-  if($self->evidence_type eq 'annotated') {
-    return $self
-      ->db
-      ->get_AnnotatedFeatureAdaptor
-      ->fetch_by_dbID(
-	$self->_attribute_feature_id
-      );
-  }
+  # Annotated should never be used, but commenting out to be safe.
+  return;
+#   if($self->evidence_type eq 'annotated') {
+#     return $self
+#       ->db
+#       ->get_AnnotatedFeatureAdaptor
+#       ->fetch_by_dbID(
+# 	$self->_attribute_feature_id
+#       );
+#   }
   throw("Unknown evidence type: " . $self->evidence_type);
 }
 
@@ -207,16 +209,23 @@ sub get_Evidence_on_Slice {
 	# element. Dereferencing here, so this returns the object only.
       )->[0];
   }
-  if($self->evidence_type eq 'annotated') {
-    return $self
-      ->db
-      ->get_AnnotatedFeatureAdaptor
-      ->fetch_all_by_Slice_constraint(
-	$slice,
-	'annotated_feature_id=' . $self->_attribute_feature_id
-      )->[0];
-  }
-  throw("Unknown evidence type: " . $self->evidence_type);
+  
+  # Deactivated the rest of this as a post release fix for release/93.
+  #
+  # 1. AnnotatedFeature has been deprecated a long time ago. It should be Peak.
+  # 2, There are no peaks as evidence in human and the ones in mouse are wrong.
+  #
+  return;
+#   if($self->evidence_type eq 'annotated') {
+#     return $self
+#       ->db
+#       ->get_AnnotatedFeatureAdaptor
+#       ->fetch_all_by_Slice_constraint(
+# 	$slice,
+# 	'annotated_feature_id=' . $self->_attribute_feature_id
+#       )->[0];
+#   }
+#  throw("Unknown evidence type: " . $self->evidence_type);
 }
 
 1;

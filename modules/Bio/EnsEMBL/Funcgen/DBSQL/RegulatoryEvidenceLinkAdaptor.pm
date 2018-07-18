@@ -99,7 +99,10 @@ sub fetch_all_by_regulatory_activity_id {
   my $self                  = shift;
   my $regulatory_activity_id = shift;
 
-  my $constraint = "re.regulatory_activity_id = ?";
+  # Post release fix for release 93: Not returning "annotated", because there 
+  # are none in human and the ones in mouse are wrong.
+  #
+  my $constraint = "re.regulatory_activity_id = ? and attribute_feature_table != 'annotated'";
   $self->bind_param_generic_fetch($regulatory_activity_id, SQL_INTEGER);
   
   my $regulatory_evidence_link = $self->generic_fetch($constraint);

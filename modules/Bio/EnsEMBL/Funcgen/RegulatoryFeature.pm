@@ -257,7 +257,7 @@ sub get_RegulatoryEvidence {
   if (! defined $epigenome) {
 	# Hack, so we get a summary for the regulatory build track until the
 	# current data issues have been fixed.
-	$epigenome = $self->adaptor->db->get_EpigenomeAdaptor->fetch_by_dbID(1);
+	$epigenome = $self->adaptor->db->get_EpigenomeAdaptor->fetch_by_dbID(10);
   }
   $self->_assert_epigenome_ok($epigenome);
   my $regulatory_activity = $self->regulatory_activity_for_epigenome($epigenome);
