@@ -144,6 +144,9 @@ sub run {
   if ($peak_calling_strategy eq CALL_NARROW_PEAKS) {
     $file_type = 'txt';
   }
+  if ($peak_calling_strategy eq CALL_TIGHT_PEAKS) {
+    $file_type = 'txt';
+  }
   
   my $idr_strategy = $plan->{idr}->{strategy};
   
