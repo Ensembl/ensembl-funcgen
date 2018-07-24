@@ -166,7 +166,7 @@ sub are_stored_and_valid {
   my @return_vals;
 
   foreach my $obj (@$obj_list) {
-    $self->is_stored_and_valid($class, $obj);
+    #$self->is_stored_and_valid($class, $obj);
 
     if(! $method_name){
       assert_ref($obj, $class, 'object');
