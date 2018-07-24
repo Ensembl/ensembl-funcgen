@@ -200,6 +200,13 @@ sub split_read_file {
     );
   }
   
+  map { 
+    if (! -e $_) {
+        use Carp;
+        confess("File $_ doesn't exist!");
+    }
+  } @fastq_files;
+  
   my @cmds          = map { "zcat $_ "                                     } @fastq_files;
   my @file_handles  = map { open my $fh, '-|', $_ or die("Can't execute $_"); $fh } @cmds;
 
