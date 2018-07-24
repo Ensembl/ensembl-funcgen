@@ -416,7 +416,7 @@ sub pipeline_analyses {
       },
       {   -logic_name => 'load_build',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-          -rc_name    => '4Gb_job_2cpus',
+          -rc_name    => '32Gb_job_2cpus',
           -parameters => {
             cmd => 
                 qq( load_build.pl )
