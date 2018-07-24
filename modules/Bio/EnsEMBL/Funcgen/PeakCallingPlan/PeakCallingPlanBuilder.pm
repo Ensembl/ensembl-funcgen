@@ -111,23 +111,28 @@ sub _construct_bam_to_bed_conversion_plan {
         type       => ALIGNMENT_ANALYSIS,
         name       => $alignment_namer->base_name_no_duplicates,
         task       => CONVERT_BAM_TO_BED_ANALYSIS,
-        is_control => 0,
+        is_control => FALSE,
         output     => {
           real => $alignment_namer->bed_file_no_duplicates,
           format => BED_FORMAT
         },
       };
-      my $control_alignment_as_bed = {
-        input      => $control_alignment_for_peak_calling,
-        type       => ALIGNMENT_ANALYSIS,
-        name       => $control_alignment_namer->base_name_no_duplicates,
-        task       => CONVERT_BAM_TO_BED_ANALYSIS,
-        is_control => 1,
-        output     => {
-          real => $control_alignment_namer->bed_file_no_duplicates,
-          format => BED_FORMAT
-        },
-      };
+      
+      my $control_alignment_as_bed;
+      
+      if ($experiment->has_control_Experiment) {
+        $control_alignment_as_bed = {
+            input      => $control_alignment_for_peak_calling,
+            type       => ALIGNMENT_ANALYSIS,
+            name       => $control_alignment_namer->base_name_no_duplicates,
+            task       => CONVERT_BAM_TO_BED_ANALYSIS,
+            is_control => TRUE,
+            output     => {
+            real => $control_alignment_namer->bed_file_no_duplicates,
+            format => BED_FORMAT
+            },
+        };
+      }
       
     $bam_file_to_bed_conversion_plan = [
       $signal_alignment_as_bed,

@@ -42,6 +42,14 @@ sub has_all_reads           { return shift->_generic_get_or_set('has_all_reads',
 
 sub product {
   my $self = shift;
+
+  my $is_control;
+  
+  if ($self->is_control) {
+    $is_control = TRUE;
+  } else {
+    $is_control = FALSE;
+  }
   
   my $align_plan = {
     input => {
@@ -55,7 +63,7 @@ sub product {
     analysis    => ALIGNMENT_ANALYSIS,
     ensembl_analysis => $self->ensembl_analysis,
     from_experiment => $self->from_experiment,
-    is_control    => $self->is_control,
+    is_control    => $is_control,
     is_complete => $self->has_all_reads,
     output => {
       real   => $self->output_real,

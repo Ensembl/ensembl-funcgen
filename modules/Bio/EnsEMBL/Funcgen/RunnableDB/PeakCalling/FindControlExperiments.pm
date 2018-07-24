@@ -58,9 +58,9 @@ sub run {
       
       my $want_this
         =    
-             ( $alignment_plan->{name}     ne NO_CONTROL_FLAG             )
-          && ( $alignment_plan->{is_control}                              )
-          && ( $alignment_plan->{analysis} eq REMOVE_DUPLICATES_ANALYSIS  )
+             ( $alignment_plan->{name}       ne NO_CONTROL_FLAG             )
+          && ( $alignment_plan->{is_control} eq TRUE                        )
+          && ( $alignment_plan->{analysis}   eq REMOVE_DUPLICATES_ANALYSIS  )
       ;
       if (! $want_this) {
         next ALIGNMENT_PLAN;

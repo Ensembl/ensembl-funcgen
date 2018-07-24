@@ -42,8 +42,8 @@ sub run {
     }
     
     my $want_this_alignment = 
-      $alignment_plan->{is_control} == 0
-      && $alignment_plan->{analysis} eq REMOVE_DUPLICATES_ANALYSIS;
+         $alignment_plan->{is_control} eq FALSE
+      && $alignment_plan->{analysis}   eq REMOVE_DUPLICATES_ANALYSIS;
    
    next ALIGNMENT_PLAN if (! $want_this_alignment);
    

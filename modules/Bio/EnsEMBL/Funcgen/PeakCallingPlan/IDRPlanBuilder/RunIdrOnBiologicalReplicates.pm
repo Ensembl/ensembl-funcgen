@@ -119,6 +119,14 @@ sub construct {
     $alignment_namer->biological_replicate_number($biological_replicate_number);
     $alignment_namer->technical_replicate_number(undef);
     
+    my $is_control;
+    
+    if ($experiment->is_control) {
+        $is_control = TRUE;
+    } else {
+        $is_control = FALSE;
+    }
+    
     use Bio::EnsEMBL::Funcgen::PeakCallingPlan::AlignmentPlanFactory;
     my $alignment_plan_factory = Bio::EnsEMBL::Funcgen::PeakCallingPlan::AlignmentPlanFactory
     ->new(
@@ -132,7 +140,7 @@ sub construct {
       -output_real             => $alignment_namer->bam_file_with_duplicates,
       -output_stored           => $alignment_namer->bam_file_with_duplicates_stored,
       -output_format           => BAM_FORMAT,
-      -is_control              => $experiment->is_control,
+      -is_control              => $is_control,
       -has_all_reads           => FALSE,
     );
 
@@ -140,6 +148,7 @@ sub construct {
     
     $remove_duplicates_plan_builder->set_input         (create_ref($alignment_plan));
     $remove_duplicates_plan_builder->set_name          ($alignment_namer->base_name_no_duplicates,);
+    $remove_duplicates_plan_builder->set_is_control    ($is_control);
     $remove_duplicates_plan_builder->set_output_real   ($alignment_namer->bam_file_no_duplicates);
     $remove_duplicates_plan_builder->set_output_stored ($alignment_namer->bam_file_no_duplicates_stored);
     

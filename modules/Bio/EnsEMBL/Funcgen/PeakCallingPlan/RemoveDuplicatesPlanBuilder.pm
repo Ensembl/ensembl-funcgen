@@ -39,8 +39,12 @@ sub construct {
   my $self = shift;
   
   my $is_control = $self->_get_is_control;
-  if (! $is_control) {
-    $is_control = 0;
+  
+  my $is_valid = ($is_control eq TRUE) || ($is_control eq FALSE);
+  
+  if (! $is_valid) {
+    use Carp;
+    confess("Invalid value for is_control! $is_control!");
   }
 
   my $remove_duplicates_plan = {
