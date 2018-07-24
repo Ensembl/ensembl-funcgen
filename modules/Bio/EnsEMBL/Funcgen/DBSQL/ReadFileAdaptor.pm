@@ -69,6 +69,14 @@ sub fetch_all_by_Experiment {
   return \@all_read_files_for_experiment;
 }
 
+# Here, the read_file_experimental_configuration is used like a filter in 
+# the database.
+#
+# Find the read file in the database that is described by this.
+#
+# That is why the get_ReadFile can't be assumed to be populated and is
+# not used.
+#
 sub fetch_by_ReadFileExperimentalConfiguration {
   my $self = shift;
   my $read_file_experimental_configuration = shift;
@@ -76,7 +84,30 @@ sub fetch_by_ReadFileExperimentalConfiguration {
   if (! defined $read_file_experimental_configuration) {
     throw("Read file experimental configuration parameter was undefined!");
   }
-  return $read_file_experimental_configuration->get_ReadFile;
+  
+#   my $read_file = $read_file_experimental_configuration->get_ReadFile;
+#   if (defined $read_file) {
+#     return $read_file;
+#   }
+  
+  my $read_file_experimental_configuration_adaptor
+    = $self->db->get_ReadFileExperimentalConfigurationAdaptor;
+
+  my $read_file_experimental_configuration_from_db 
+    = $read_file_experimental_configuration_adaptor
+      ->fetch_by_ReadFileExperimentalConfiguration(
+        $read_file_experimental_configuration
+      );
+  
+  if (! defined $read_file_experimental_configuration_from_db) {
+    use Data::Dumper;
+    throw(
+      "Couldn't find read file experimental configuration in database:\n\n"
+      . Dumper($read_file_experimental_configuration)
+    );
+  }
+  
+  return $read_file_experimental_configuration_from_db->get_ReadFile;
 }
 
 sub _load_dependencies {
