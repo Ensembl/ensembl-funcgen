@@ -116,6 +116,19 @@ sub dbfile_data_root {
 
 sub is_stored_and_valid {
   my ($self, $class, $obj, $name) = @_;
+  
+  use Carp;
+  
+  if (! defined $class) {
+    confess("class is not defined!");
+  }
+  if (! defined $obj) {
+    confess("obj is not defined!");
+  }
+  if (! defined $name) {
+    confess("name is not defined!");
+  }
+  
   assert_ref($obj, $class, $name);
   
   if (! $obj->can('is_stored')) {
