@@ -479,6 +479,11 @@ sub get_control{
 }
 
 
+sub has_control_Experiment {
+  my $self = shift;
+  return defined $self->get_control;
+}
+
 =head2 archive_id
 
   Example     : my $archive_id = $exp->archive;
