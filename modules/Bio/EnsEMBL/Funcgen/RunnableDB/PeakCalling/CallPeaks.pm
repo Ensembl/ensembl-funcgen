@@ -3,6 +3,7 @@ package Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::CallPeaks;
 use strict;
 use base 'Bio::EnsEMBL::Hive::Process';
 use Data::Dumper;
+use Carp;
 use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
 
 use constant {
@@ -62,6 +63,10 @@ sub run {
   my $peak_calling_strategy = $call_peaks_plan->{peak_calling_strategy};
   my $logic_name            = $call_peaks_plan->{analysis};
   
+  if (! defined $logic_name) {
+    die("No analysis logic name was defined for peak calling!");
+  }
+  
   my $analysis_adaptor = Bio::EnsEMBL::Registry
     ->get_adaptor(
         $species, 
@@ -71,7 +76,7 @@ sub run {
   my $peak_analysis = $analysis_adaptor->fetch_by_logic_name($logic_name);
   
   if (! defined $peak_analysis) {
-    die;
+    die("Can't fetch peak analysis with logic name $logic_name!");
   }
   
   my $reference_data_root_dir = $self->param('reference_data_root_dir');
@@ -162,13 +167,13 @@ sub run {
     my $experiment_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'experiment');
     my $experiment = $experiment_adaptor->fetch_by_name($experiment_name);
     if (! defined $experiment) {
-      die;
+      confess("Can't fetch experiment with name $experiment_name!");
     }
     my $idr_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'idr');
     my $idr = $idr_adaptor->_fetch_by_experiment_id($experiment->dbID);
     
     if (! defined $idr) {
-      die;
+      confess("Couldn't find idr for experiment $experiment_name!");
     }
     @max_peaks = ( -max_peaks => $idr->max_peaks );
   }
