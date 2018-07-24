@@ -214,37 +214,10 @@ sub pipeline_analyses {
               db_conn => 'funcgen:#species#',
           },
           -flow_into => {
-            'MAIN->A' => [ 
-                'hc_epigenome_feature_type_combo_unique',
-                'hc_epigenome_feature_type_combo_unique2',
-            ],
-            'A->MAIN' => [ 'make_segmentation_dir' ],
+            'MAIN->A' => 'hc_each_epigenome_has_ctcf_data',
+            'A->MAIN' => 'make_segmentation_dir',
           },
       },
-
-        {
-            -logic_name  => 'hc_epigenome_feature_type_combo_unique',
-            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlHealthcheck',
-            -parameters => {
-                db_conn       => 'funcgen:#species#',
-                description   => 'Check that any epigenome, feature type combination is unique',
-                query         => "
-                select 
-                    epigenome, feature_type, count(*) c 
-                from 
-                    segmentation_cell_table_ctcf 
-                group by 
-                    epigenome, 
-                    feature_type 
-                having 
-                    c != 1
-                ",
-                expected_size => '0'
-            },
-            -flow_into => {
-                MAIN => 'hc_each_epigenome_has_ctcf_data',
-            },
-        },
         {
             -logic_name  => 'hc_each_epigenome_has_ctcf_data',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlHealthcheck',
@@ -265,28 +238,6 @@ sub pipeline_analyses {
                 expected_size => '0'
             },
         },
-        {
-            -logic_name  => 'hc_epigenome_feature_type_combo_unique2',
-            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlHealthcheck',
-            -parameters => {
-                db_conn       => 'funcgen:#species#',
-                description   => 'Check that any epigenome, feature type combination is unique',
-                query         => "
-                select 
-                    epigenome, feature_type, count(*) c 
-                from 
-                    segmentation_cell_table_without_ctcf
-                group by 
-                    epigenome, 
-                    feature_type 
-                having 
-                    c != 1
-                ",
-                expected_size => '0'
-            },
-        },
-
-
       {   -logic_name => 'make_segmentation_dir',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters => {
