@@ -319,9 +319,11 @@ sub pipeline_analyses {
       },
       {   -logic_name => 'learn_model_with_ctcf',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -max_retry_count => 0,
           -rc_name    => 'learn_model',
           -parameters => {
-            cmd => 
+            cmd     => 'run_ChromHMM_skip_nonsense_errors.pl --cmd "#run_cmd#"',
+            run_cmd => 
                 qq( export DISPLAY= ;             )
                 . qq( java -Xmx30000m             )
                 . qq( -jar #ChromHMM#             )
@@ -336,9 +338,11 @@ sub pipeline_analyses {
       },
       {   -logic_name => 'learn_model_without_ctcf',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -max_retry_count => 0,
           -rc_name    => 'learn_model',
           -parameters => {
-            cmd => 
+            cmd     => 'run_ChromHMM_skip_nonsense_errors.pl --cmd "#run_cmd#"',
+            run_cmd => 
                 qq( export DISPLAY= ;             )
                 . qq( java -Xmx30000m             )
                 . qq( -jar #ChromHMM#             )
