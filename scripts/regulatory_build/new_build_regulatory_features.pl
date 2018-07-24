@@ -410,11 +410,15 @@ sub convert_to_bigBed {
   my ($options, $file) = @_;
   my $new = $file;
   $new =~ s/\.bed$/.bb/;
+  
+  my $cmd = "bedToBigBed $file $options->{chrom_lengths} $new";
+  
   eval {
-    run("bedToBigBed $file $options->{chrom_lengths} $new") ;
+    run($cmd);
   };
   if ($@) {
-    warn("Error caught, but ignoring: $@");
+    #warn("Error caught, but ignoring: $@");
+    confess("Error when running:\n\n$cmd\n\n$@");
   }
   unlink $file;
 }
