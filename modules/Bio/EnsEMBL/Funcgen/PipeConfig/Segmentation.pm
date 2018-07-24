@@ -118,9 +118,9 @@ sub pipeline_analyses {
                         join epigenome using (epigenome_id)
                         join feature_type using (feature_type_id)
                         join alignment signal_alignment on (
-                        experiment.experiment_id = signal_alignment.experiment_id 
-                        and signal_alignment.is_complete=1 
-                        and signal_alignment.has_duplicates=0
+                            experiment.experiment_id = signal_alignment.experiment_id 
+                            and signal_alignment.is_complete=1 
+                            and signal_alignment.has_duplicates=0
                         )
                         join data_file signal_bam on (signal_alignment.bam_file_id = signal_bam.data_file_id)
                         join experiment control_experiment on (control_experiment.experiment_id = experiment.control_id)
