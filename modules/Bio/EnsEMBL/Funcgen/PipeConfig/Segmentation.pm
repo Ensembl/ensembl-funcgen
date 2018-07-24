@@ -678,7 +678,7 @@ sub pipeline_analyses {
                   register_segmentation_files.pl  \
                       --species          #species# \
                       --registry         #reg_conf# \
-                      --projected_segmentation_directory #tempdir_regulatory_build#/#species#/#assembly#/projected_segmentations \
+                      --segmentation_directory #tempdir_regulatory_build#/#species#/#assembly#/segmentations \
                       --db_file_species_assembly_dir     #data_root_dir#/#species#/#assembly#/funcgen/segmentation_file/#ensembl_release_version# \
                       --db_file_relative_dir             /funcgen/segmentation_file/#ensembl_release_version#
                 )
