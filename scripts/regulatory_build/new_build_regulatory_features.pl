@@ -3385,6 +3385,11 @@ sub compute_ChromHMM_label_state {
     confess("Expected summary file for the label $label here: ${reference}, but it doesn't exist (or is empty)!");
   }
 
+  # Interpretation: This seems to set $temp to a file that indicates what can 
+  # be considered as active in this epigenome.
+  #
+  # There are three files that can be used for this purpose.
+  #
   my $temp;
   if ($label eq TFBS_LABEL) {
     $temp = "$options->{working_dir}/celltype_tf/$epigenome_production_name.bed";
