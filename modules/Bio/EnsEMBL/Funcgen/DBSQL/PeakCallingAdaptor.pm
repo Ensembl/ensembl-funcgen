@@ -40,6 +40,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::PeakCallingAdaptor;
 
 use strict;
 use base 'Bio::EnsEMBL::Funcgen::DBSQL::GenericAdaptor';
+use Bio::EnsEMBL::Utils::Exception qw( throw );
 
 sub object_class {
     return 'Bio::EnsEMBL::Funcgen::PeakCalling';
