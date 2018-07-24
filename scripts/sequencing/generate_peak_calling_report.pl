@@ -95,7 +95,7 @@ my $output;
 my $peak_calling_statistics_sorted = [ sort { $a->total_length <=> $b->total_length } @$peak_calling_statistics ];
 
 my $genome_container = Bio::EnsEMBL::Registry->get_adaptor( $species, 'core', 'GenomeContainer' );
-my $mouse_ref_length = $genome_container->get_ref_length;
+my $genome_size_in_bp = $genome_container->get_ref_length;
 
 my $graph_display_feature_types = [
     map {
@@ -146,9 +146,11 @@ $tt->process(
         idr_adaptor             => $idr_adaptor,
         dbc => $dbc,
         
+        genome_size_in_bp => $genome_size_in_bp,
+        
         length_to_percent => sub {
             my $length = shift;
-            return $length * 100 / $mouse_ref_length;
+            return $length * 100 / $genome_size_in_bp;
         },
         
         round_percent => sub {
