@@ -37,10 +37,16 @@ sub construct_execution_plan {
   );
   $param->{alignment_namer} = $alignment_namer;
 
-  my $control_alignment_namer = Bio::EnsEMBL::Funcgen::PeakCallingPlan::AlignmentNamer->new(
-      -directory_name_builder      => $directory_name_builder,
-      -experiment                  => $experiment->get_control,
-  );
+  my $control_experiment = $param->{experiment}->get_control;
+  
+  my $control_alignment_namer;
+  
+  if (defined $control_experiment) {
+    $control_alignment_namer = Bio::EnsEMBL::Funcgen::PeakCallingPlan::AlignmentNamer->new(
+        -directory_name_builder      => $directory_name_builder,
+        -experiment                  => $experiment->get_control,
+    );
+  }
 
   use Bio::EnsEMBL::Funcgen::Utils::RefBuildFileLocator;
   my $bwa_index_locator = Bio::EnsEMBL::Funcgen::Utils::RefBuildFileLocator->new;
@@ -85,8 +91,6 @@ sub construct_execution_plan {
       ->get_Alignment;
 
   my %control_param = %$param;
-  
-  my $control_experiment = $param->{experiment}->get_control;
   
   my $align_all_read_files_for_control_plan;
   
@@ -220,7 +224,9 @@ sub construct_execution_plan {
   $peak_calling_plan_builder->set_idr                     ( $idr_plan );
   $peak_calling_plan_builder->set_peaks_output_dir        ( $peaks_output_dir );
   $peak_calling_plan_builder->set_alignment_namer         ( $alignment_namer );
-  $peak_calling_plan_builder->set_control_alignment_namer ( $control_alignment_namer );
+  if ($control_alignment_namer) {
+    $peak_calling_plan_builder->set_control_alignment_namer ( $control_alignment_namer );
+  }
   $peak_calling_plan_builder->set_experiment              ( $experiment );
   $peak_calling_plan_builder->set_samtools_fasta_index    ( $samtools_fasta_index );
   $peak_calling_plan_builder
