@@ -55,6 +55,24 @@ sub dbID           { return shift->_generic_get_or_set('dbID',           @_); }
 sub db             { return shift->_generic_get_or_set('db',             @_); }
 sub experiment_id  { return shift->_generic_get_or_set('experiment_id',  @_); }
 sub time           { return shift->_generic_get_or_set('time',           @_); }
-sub execution_plan { return shift->_generic_get_or_set('execution_plan', @_); }
+sub execution_plan { return shift->_generic_get_or_set('_execution_plan', @_); }
+sub execution_plan_deserialised { 
+
+  my $self = shift;
+  my $execution_plan_serialised = $self->execution_plan;
+  
+  no strict;
+  my $execution_plan = eval $execution_plan_serialised;
+  use strict;
+  
+  if (! defined $execution_plan) {
+    use Carp;
+    confess("Couldn't serialise this:\n$execution_plan_serialised");
+  }
+    
+  return $execution_plan;
+}
+
+
 
 1;
