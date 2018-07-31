@@ -108,9 +108,15 @@ sub fetch_by_dbID {
   }
   
   my $epigenome = $self->SUPER::fetch_by_dbID($dbID);
+  
+  if (! defined $epigenome) {
+    use Carp;
+    confess("Can't fetch epigenome with epigenome_id $dbID!");
+  }
+  
   $self->{_cache}->{$epigenome->dbID} = $epigenome;
   
-  return $self->{_cache}->{$dbID};
+  return $epigenome;
 }
 
 =head2 _true_tables
