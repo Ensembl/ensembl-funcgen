@@ -91,7 +91,17 @@ sub resolve_nonterminal_symbols {
   my $execution_plan = shift;
   
   use Storable qw(dclone);
-  my $execution_plan_clone = dclone($execution_plan);
+  my $execution_plan_clone;
+  
+  eval {
+    $execution_plan_clone = dclone($execution_plan);
+  };
+  if ($@) {
+    confess(
+      Dumper($execution_plan) . "\n"
+      . $@
+    );
+  }
 
   _resolve_nonterminal_symbols(
     $execution_plan_clone, 
