@@ -20,7 +20,7 @@ use strict;
 
 our @EXPORT_OK = qw(
 
-  CALL_BROAD_PEAKS  
+  CALL_BROAD_PEAKS
   CALL_NARROW_PEAKS
   CALL_TIGHT_PEAKS
   
@@ -76,11 +76,11 @@ our %EXPORT_TAGS = (all => \@EXPORT_OK);
 
 use constant {
 
-  SEGMENTATION_CLASS_NONE               => 'no segmentation',
-  SEGMENTATION_CLASS_CTCF               => 'segmentation_ctcf',
-  SEGMENTATION_CLASS_NO_CTCF            => 'segmentation_no_ctcf',
-  SEGMENTATION_CLASS_CTCF_NO_H3K27AC    => 'segmentation_ctcf_no_H3K27ac',
-  SEGMENTATION_CLASS_NO_CTCF_NO_H3K27AC => 'segmentation_no_ctcf_no_H3K27ac',
+  SEGMENTATION_CLASS_NONE               => 'none',
+  SEGMENTATION_CLASS_CTCF               => 'ctcf',
+  SEGMENTATION_CLASS_NO_CTCF            => 'no_ctcf',
+  SEGMENTATION_CLASS_CTCF_NO_H3K27AC    => 'ctcf_no_H3K27ac',
+  SEGMENTATION_CLASS_NO_CTCF_NO_H3K27AC => 'no_ctcf_no_H3K27ac',
 
   CALL_BROAD_PEAKS  => 'CALL_BROAD_PEAKS',
   CALL_NARROW_PEAKS => 'CALL_NARROW_PEAKS',
