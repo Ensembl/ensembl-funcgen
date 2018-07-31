@@ -73,6 +73,7 @@ sub _constructor_parameters {
 
 sub dbID          { return shift->_generic_get_or_set('dbID',          @_); }
 sub db            { return shift->_generic_get_or_set('db',            @_); }
+sub adaptor       { return shift->_generic_get_or_set('db',            @_); }
 sub experiment_id { return shift->_generic_get_or_set('experiment_id', @_); }
 sub max_peaks     { return shift->_generic_get_or_set('max_peaks',     @_); }
 sub type          { return shift->_generic_get_or_set('type',          @_); }
