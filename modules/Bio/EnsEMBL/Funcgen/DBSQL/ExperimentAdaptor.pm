@@ -290,9 +290,36 @@ sub _objs_from_sth {
   return \@result;
 }
 
+sub _fetch_all_by_Epigenome_ExperimentalGroup {
+
+  my $self = shift;
+  my $epigenome          = shift;
+  my $experimental_group = shift;
+  
+  my $epigenome_id = $epigenome->dbID;
+  my $experimental_group_name = $experimental_group->name;
+  
+  my $sql = "
+    select 
+        distinct experiment.* 
+    from 
+        experiment 
+        join experimental_group using (experimental_group_id) 
+        join epigenome using (epigenome_id)
+    where
+        experimental_group.name = '$experimental_group_name'
+        and epigenome_id = $epigenome_id
+    ;
+  ";
+  my $sth = $self->prepare($sql);
+  $sth->execute;
+  my $result = $self->_objs_from_sth($sth);
+  return $result;
+}
+
 sub _fetch_all_experiments_with_read_files {
   my $self   = shift;
-  my $sql = 'select distinct experiment.* from experiment join read_file_experimental_configuration using (experiment_id);';
+  my $sql = 'select distinct experiment.* from experiment join read_file_experimental_configuration using (experiment_id) join epigenome using (epigenome_id);';
   my $sth = $self->prepare($sql);
   $sth->execute;
   my $all_experiments_with_read_files = $self->_objs_from_sth($sth);
