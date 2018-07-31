@@ -61,10 +61,10 @@ sub name {
   my $experimental_group = $experiment->experimental_group;
 
   my @name_components = (
+    $experiment->dbID,
     $epigenome->production_name,
     $feature_type->name,
     $experimental_group->name,
-    $experiment->dbID
   );
   
   if ($biological_replicate_number) {
@@ -77,7 +77,8 @@ sub name {
   my $alignment_name = join '_', @name_components;
   
   use Bio::EnsEMBL::Funcgen::Utils::GoodUtils qw( create_production_name );
-  return create_production_name($alignment_name);
+  my $production_name = create_production_name($alignment_name);;
+  return $production_name;
 }
 
 sub base_name_with_duplicates {
