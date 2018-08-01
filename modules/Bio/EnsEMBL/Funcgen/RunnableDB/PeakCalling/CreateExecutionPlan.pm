@@ -88,8 +88,8 @@ sub run {
   #
   my $dump_directory = join '/', 
     $tempdir,
-    $species,
     'execution_plans',
+    $species,
     $experiment->get_Epigenome->production_name,
   ;
   my $file_basename = $experiment->name . '.pl';
