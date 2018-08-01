@@ -9,14 +9,27 @@ use Bio::EnsEMBL::Utils::Logger;
 
 my $registry;
 my $species;
-my $cell_table_file;
-my $cell_table;
+my $file;
+my $class;
+my $superclass;
+
+=head1
+
+generate_cell_table_file.pl \
+    --registry /homes/mnuhn/work_dir_regbuild_testrun/lib/ensembl-funcgen/registry.with_previous_version.human_regbuild_testdb4.pm \
+    --species homo_sapiens \
+    --class no_ctcf \
+    --superclass blueprint \
+    --file deleteme.txt
+
+=cut
 
 my %config_hash = (
-  'registry'        => \$registry,
-  'species'         => \$species,
-  'cell_table_file' => \$cell_table_file,
-  'cell_table'      => \$cell_table,
+  'registry'   => \$registry,
+  'species'    => \$species,
+  'cell_table_file'       => \$file,
+  'class'      => \$class,
+  'superclass' => \$superclass,
 );
 
 my $result = GetOptions(
@@ -24,7 +37,8 @@ my $result = GetOptions(
   'registry=s',
   'species=s',
   'cell_table_file=s',
-  'cell_table=s',
+  'class=s',
+  'superclass=s',
 );
 
 Bio::EnsEMBL::Registry->load_all($registry);
@@ -41,80 +55,26 @@ my $sql_helper = Bio::EnsEMBL::Utils::SqlHelper->new(
 );
 
 my $sql = <<SQL
-  select
+  select 
     epigenome,
     feature_type,
     signal_bam_path,
-    control_bam_path
-  from
-    $cell_table
-  order by 
-    epigenome, feature_type
+    control_bam_path 
+  from 
+    segmentation_cell_tables 
+  where 
+    superclass = "$superclass" 
+    and class  = "$class"
 SQL
 ;
-
-# Essential for segmentation:
-# 
-# "H3K4me1", 
-# "H3K4me3", 
-# "H3K27ac", 
-# "H3K27me3", 
-# "H3K36me3", 
-
-
-# my $sql = <<SQL
-#   select
-#     epigenome.production_name as epigenome,
-#     feature_type.name as feature_type,
-#     signal_bam.path,
-#     control_bam.path
-#   from
-#     experiment
-#     join epigenome using (epigenome_id)
-#     join feature_type using (feature_type_id)
-#     join alignment signal_alignment on (
-#       experiment.experiment_id = signal_alignment.experiment_id 
-#       and signal_alignment.is_complete=1 
-#       and signal_alignment.has_duplicates=0
-#     )
-#     join data_file signal_bam on (signal_alignment.bam_file_id = signal_bam.data_file_id)
-#     join experiment control_experiment on (control_experiment.experiment_id = experiment.control_id)
-#     join alignment control_alignment on (
-#       control_experiment.experiment_id = control_alignment.experiment_id 
-#       and control_alignment.is_complete=1 
-#       and control_alignment.has_duplicates=0
-#     )
-#     join data_file control_bam on (control_alignment.bam_file_id = control_bam.data_file_id)
-#   where 
-#     feature_type.name in (
-#       "H3K4me1", 
-#       "H3K4me2", 
-#       "H3K4me3", 
-#       "H3K9ac", 
-#       "H3K9me3",
-#       "H3K27ac", 
-#       "H3K27me3", 
-#       "H3K36me3", 
-#       "DNase1",
-#       "CTCF"
-#     )
-#   and 
-#     epigenome.production_name in (
-#         "brain_e14_5d", 
-#         "CH12_LX"
-#      )
-#   order by 
-#     epigenome, feature_type
-# SQL
-# ;
 
 use File::Basename qw( dirname fileparse );
 use File::Path qw(make_path remove_tree);
 
-my $output_dir = dirname($cell_table_file);
+my $output_dir = dirname($file);
 make_path($output_dir);
 
-open my $fh, '>', $cell_table_file or die("Can't open $cell_table_file");
+open my $fh, '>', $file or die("Can't open $class");
 
 $sql_helper->execute_no_return(
   -SQL          => $sql,
@@ -128,5 +88,5 @@ $sql_helper->execute_no_return(
 );
 
 $fh->close;
-$logger->info("Written to $cell_table_file\n");
+$logger->info("Written to $file\n");
 $logger->finish_log;

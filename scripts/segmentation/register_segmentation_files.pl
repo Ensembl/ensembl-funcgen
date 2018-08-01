@@ -34,11 +34,13 @@ my $output_directory;
 my $segmentation_directory;
 my $db_file_species_assembly_dir;
 my $db_file_relative_dir;
+my $segmentation_name;
 
 GetOptions (
    'species=s'                      => \$species,
    'registry=s'                     => \$registry,
    'segmentation_directory=s'       => \$segmentation_directory,
+   'segmentation_name=s'            => \$segmentation_name,
    'db_file_species_assembly_dir=s' => \$db_file_species_assembly_dir,
    'db_file_relative_dir=s'         => \$db_file_relative_dir,
 );
@@ -51,6 +53,7 @@ $logger->info("species                      = " . $species          . "\n");
 $logger->info("segmentation_directory       = " . $segmentation_directory . "\n");
 $logger->info("db_file_species_assembly_dir = " . $db_file_species_assembly_dir . "\n");
 $logger->info("db_file_relative_dir         = " . $db_file_relative_dir . "\n");
+$logger->info("segmentation_name            = " . $segmentation_name    . "\n");
 
 use Bio::EnsEMBL::Registry;
 Bio::EnsEMBL::Registry->load_all($registry);
@@ -69,29 +72,34 @@ if (!@$all_epigenomes) {
     die;
 }
 
+my $destination_dir = $db_file_species_assembly_dir . '/' . $segmentation_name;
+
 use File::Path qw( make_path );
-make_path($db_file_species_assembly_dir);
+make_path($destination_dir);
 
-opendir(my $dh, $segmentation_directory) || die "Can't opendir $segmentation_directory: $!";
-my @dir_contents_no_dots = grep { /^[^\.]/ } readdir($dh);
-closedir $dh;
+# opendir(my $dh, $segmentation_directory) || die "Can't opendir $segmentation_directory: $!";
+# my @dir_contents_no_dots = grep { /^[^\.]/ } readdir($dh);
+# closedir $dh;
 
-my $segmentation_analysis = $analysis_adaptor->fetch_by_dbID(1);
+my $segmentation_analysis = $analysis_adaptor->fetch_by_logic_name('Segmentation');
 
+REGULATORY_BUILD_EPIGENOME:
 foreach my $current_epigenome (@$all_epigenomes) {
 
   my $big_bed_file_basename = $current_epigenome->production_name . '.bb';
   
-  my $big_bed_file = find_in_search_path(
-    $segmentation_directory,
-    \@dir_contents_no_dots,
-    $big_bed_file_basename
-  );
+#   my $big_bed_file = find_in_search_path(
+#     $segmentation_directory,
+#     \@dir_contents_no_dots,
+#     $big_bed_file_basename
+#   );
+  my $big_bed_file = $big_bed_file_basename;
   
   my $full_path = $segmentation_directory . '/' . $big_bed_file;
   
   if (! -e $full_path) {
-    die("$big_bed_file doesn't exist!");
+    next REGULATORY_BUILD_EPIGENOME;
+    #die("$big_bed_file doesn't exist!");
   }
 
   $logger->info("Computing checksum\n");
@@ -104,7 +112,7 @@ foreach my $current_epigenome (@$all_epigenomes) {
   
   $logger->info("$md5sum\n");
 
-  my $destination = $db_file_species_assembly_dir . '/' . $big_bed_file_basename;
+  my $destination = $destination_dir . '/' . $big_bed_file_basename;
 
   $logger->info("Copying $full_path to $destination\n");
   
@@ -120,7 +128,7 @@ foreach my $current_epigenome (@$all_epigenomes) {
     -analysis         => $segmentation_analysis,
     -epigenome        => $current_epigenome,
     -regulatory_build => $current_regulatory_build,
-    -file             => '/' . $big_bed_file,
+    -file             => $db_file_relative_dir . '/' . $segmentation_name . '/' . $big_bed_file,
     -file_type        => 'BIGBED',
     -md5sum           => $md5sum,
   );
@@ -150,7 +158,7 @@ sub find_in_search_path {
         return $found_locations[0];
     }
     if (@found_locations == 0) {
-        confess("Couldn't find file $file");
+        confess("Couldn't find file $file in " . Dumper($search_path));
     }
     confess(
         "Found multiple instances of $file:\n" . Dumper($file)

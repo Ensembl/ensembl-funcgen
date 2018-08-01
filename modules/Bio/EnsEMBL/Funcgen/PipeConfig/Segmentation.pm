@@ -74,6 +74,7 @@ sub pipeline_analyses {
                 "delete from data_file where table_name = 'segmentation_file';",
                 "truncate segmentation_state_assignment;",
                 "truncate segmentation_state_emission;",
+                'truncate segmentation_cell_tables',
               ],
               db_conn => 'funcgen:#species#',
           },
@@ -87,300 +88,156 @@ sub pipeline_analyses {
             tempdir => '#tempdir_segmentation#/#species#/',
           },
           -flow_into => {
-            2 => 'populate_meta_coord',
+            2 => 'create_cell_tables',
           },
       },
-      {   -logic_name => 'populate_meta_coord',
-          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-          -parameters => {
-            cmd => qq( populate_meta_coord.pl    )
-              . qq( --species  #species#         )
-              . qq( --registry #reg_conf#        )
-          },
-          -flow_into => {
-            MAIN     => 'create_cell_tables',
-          },
-      },
-      {
-          -logic_name  => 'create_cell_tables',
-          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
-          -parameters => {
-              sql     => [
-                q~ drop table if exists temp_segmentation_candidates ~,
-                q~
-                    create table temp_segmentation_candidates as 
-                    select
-                        epigenome.production_name as epigenome,
-                        feature_type.name as feature_type,
-                        signal_bam.path as signal_bam_path,
-                        control_bam.path as control_bam_path
-                    from
-                        experiment
-                        join epigenome using (epigenome_id)
-                        join feature_type using (feature_type_id)
-                        join alignment signal_alignment on (
-                            experiment.experiment_id = signal_alignment.experiment_id 
-                            and signal_alignment.is_complete=1 
-                            and signal_alignment.has_duplicates=0
-                        )
-                        join data_file signal_bam on (signal_alignment.bam_file_id = signal_bam.data_file_id)
-                        join experiment control_experiment on (control_experiment.experiment_id = experiment.control_id)
-                        join alignment control_alignment on (
-                        control_experiment.experiment_id = control_alignment.experiment_id 
-                        and control_alignment.is_complete=1 
-                        and control_alignment.has_duplicates=0
-                        )
-                        join data_file control_bam on (control_alignment.bam_file_id = control_bam.data_file_id)
-                    where 
-                        feature_type.name in (
-                        "H3K4me1", 
-                        "H3K4me2", 
-                        "H3K4me3", 
-                        "H3K9ac", 
-                        "H3K9me3",
-                        "H3K27ac", 
-                        "H3K27me3", 
-                        "H3K36me3", 
-                        "DNase1",
-                        "CTCF"
-                        )
-                    order by 
-                        epigenome, feature_type
-                ~,
-                q~ drop table if exists temp_segmentation_epigenome_with_ctcf ~,
-                q~
-                    create table temp_segmentation_epigenome_with_ctcf
-                    select 
-                        epigenome
-                    from 
-                        temp_segmentation_candidates 
-                    where 
-                        feature_type in ("CTCF") 
-                    group by 
-                        epigenome 
-                ~,
-                q~ drop table if exists temp_segmentation_epigenome_with_minimum_marks ~,
-                q~
-                    create table temp_segmentation_epigenome_with_minimum_marks
-                    select 
-                        epigenome
-                    from 
-                        temp_segmentation_candidates 
-                    where 
-                        feature_type in ("H3K4me1", "H3K4me3", "H3K27ac", "H3K27me3", "H3K36me3")
-                    group by 
-                        epigenome 
-                    having 
-                        count(distinct feature_type) = 5
-                ~,
-                q~ drop table if exists temp_segmentation_epigenome_without_ctcf ~,
-                q~
-                    create table temp_segmentation_epigenome_without_ctcf
-                    select 
-                        distinct epigenome
-                    from 
-                        temp_segmentation_candidates
-                        left join temp_segmentation_epigenome_with_ctcf using (epigenome)
-                    where 
-                        temp_segmentation_epigenome_with_ctcf.epigenome is null
-                ~,
-                q~ 
-                    drop table if exists segmentation_cell_table_ctcf 
-                ~,
-                q~
-                    create table segmentation_cell_table_ctcf
-                    select 
-                        temp_segmentation_candidates.*
-                    from 
-                        temp_segmentation_epigenome_with_ctcf 
-                        join temp_segmentation_candidates using (epigenome)
-                        join temp_segmentation_epigenome_with_minimum_marks using (epigenome)
-                ~,
-                q~ 
-                    drop table if exists segmentation_cell_table_without_ctcf 
-                ~,
-                q~
-                    create table segmentation_cell_table_without_ctcf
-                    select 
-                        temp_segmentation_candidates.*
-                    from 
-                        temp_segmentation_epigenome_without_ctcf 
-                        join temp_segmentation_candidates using (epigenome)
-                        join temp_segmentation_epigenome_with_minimum_marks using (epigenome)
-                ~,
-                q~ drop table if exists temp_segmentation_candidates ~,
-                q~ drop table if exists temp_segmentation_epigenome_with_ctcf ~,
-                q~ drop table if exists temp_segmentation_epigenome_without_ctcf ~,
-              ],
-              db_conn => 'funcgen:#species#',
-          },
-          -flow_into => {
-            'MAIN->A' => 'hc_each_epigenome_has_ctcf_data',
-            'A->MAIN' => 'make_segmentation_dir',
-          },
-      },
-        {
-            -logic_name  => 'hc_each_epigenome_has_ctcf_data',
-            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlHealthcheck',
-            -parameters => {
-                db_conn       => 'funcgen:#species#',
-                description   => 'Check that each epigenome has a ctcf assay',
-                query         => '
-                select 
-                    count(epigenome)    count_epigenomes, 
-                    count(feature_type) count_feature_types 
-                from 
-                    segmentation_cell_table_ctcf 
-                where 
-                    feature_type = "CTCF" 
-                having 
-                    count_epigenomes != count_epigenomes
-                ',
-                expected_size => '0'
-            },
-        },
-      {   -logic_name => 'make_segmentation_dir',
+      {   -logic_name => 'create_cell_tables',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters => {
               cmd => 
-                  qq( rm    -rf #tempdir_segmentation#/#species# ; )
-                . qq( mkdir -p  #tempdir_segmentation#/#species#   ),
+                  q( 
+                    classify_epigenome_to_segmentation_run.pl \
+                        --registry #reg_conf# \
+                        --species #species# \
+                        --partition_by_experimental_group 1
+                  )
           },
           -flow_into => { 
-            'MAIN->A' => 'start_parallel_segmentation',
-            'A->MAIN' => 'start_regulatory_build',
+            MAIN => 'seed_segmentation_jobs',
           },
       },
-      {   -logic_name => 'start_parallel_segmentation',
-          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+      {
+          -logic_name  => 'seed_segmentation_jobs',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
+          -parameters => {
+              db_conn    => 'funcgen:#species#',
+              inputquery => '
+                select 
+                    distinct superclass, 
+                    class
+                from 
+                    segmentation_cell_tables
+              ',
+          },
+          -flow_into   => {
+            '2->A'     => { 
+                'make_segmentation_dir' => INPUT_PLUS({
+                    class                 => '#class#',
+                    superclass            => '#superclass#',
+                    segmentation_name     => '#superclass#_#class#',
+                    celltable_file        => 'celltable.#superclass#.#class#.txt',
+                    learn_model_directory => '#learnmodel_output_dir#/#superclass#/#class#/',
+                })
+            },
+            'A->MAIN'  => { 
+                'generate_segmentation_parameter_file'  => INPUT_PLUS({
+                    foo => 'bar',
+                })
+            },
+          },
+      },
+      {   -logic_name => 'make_segmentation_dir',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          #-module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+          -parameters => {
+              cmd => 
+                  q( rm    -rf #tempdir_segmentation#/#species#/#superclass#/#class# ; )
+                . q( mkdir -p  #tempdir_segmentation#/#species#/#superclass#/#class#   ),
+          },
           -flow_into => { 
-            MAIN     => [
-                'generate_cell_table_file_with_ctcf',
-                'generate_cell_table_file_without_ctcf',
+            MAIN => 'generate_cell_table_file',
+          },
+      },
+      {   -logic_name => 'generate_cell_table_file',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -parameters => {
+              cmd => 
+                  q( 
+                    generate_cell_table_file.pl        \
+                        --registry        #reg_conf#   \
+                        --species         #species#    \
+                        --superclass      #superclass# \
+                        --class           #class#      \
+                        --cell_table_file #tempdir_segmentation#/#species#/#superclass#/#class#/celltable.#superclass#.#class#.txt
+                  )
+          },
+          -flow_into => { 
+            MAIN => [ 
+                'binarize', 
+                #'record_segmentation_as_done' 
             ],
           },
       },
-      {   -logic_name => 'generate_cell_table_file_with_ctcf',
-          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-          -parameters => {
-            cmd => qq( generate_cell_table_file.pl      )
-                 . qq(   --species         #species#    )
-                 . qq(   --registry        #reg_conf#   )
-                 . qq(   --cell_table      segmentation_cell_table_ctcf )
-                 . qq(   --cell_table_file #tempdir_segmentation#/#species#/celltable.with_ctcf.txt )
-          },
-          -flow_into => {
-            MAIN     => 'binarize_with_ctcf',
-          },
-      },
-      {   -logic_name => 'generate_cell_table_file_without_ctcf',
-          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-          -parameters => {
-            cmd => qq( generate_cell_table_file.pl      )
-                 . qq(   --species         #species#    )
-                 . qq(   --registry        #reg_conf#   )
-                 . qq(   --cell_table      segmentation_cell_table_without_ctcf )
-                 . qq(   --cell_table_file #tempdir_segmentation#/#species#/celltable.without_ctcf.txt )
-          },
-          -flow_into => {
-            MAIN     => 'binarize_without_ctcf',
-          },
-      },
-      {   -logic_name => 'binarize_with_ctcf',
+      {   -logic_name => 'binarize',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -rc_name    => 'binarization',
           -parameters => { 
-            cmd => qq( java -Xmx14500m                     )
-                 . qq(   -jar #ChromHMM#                   )
-                 . qq(   BinarizeBam                       )
-                 . qq(   #chromosome_length_file#          )
-                 . qq(   #data_root_dir_species_assembly#  )
-                 . qq(   #tempdir_segmentation#/#species#/celltable.with_ctcf.txt )
-                 . qq(   #binarized_bam_dir#/with_ctcf/               ),
+            cmd => q( java -Xmx14500m                     )
+                 . q(   -jar #ChromHMM#                   )
+                 . q(   BinarizeBam                       )
+                 . q(   #chromosome_length_file#          )
+                 . q(   #data_root_dir_species_assembly#  )
+                 . q(   #tempdir_segmentation#/#species#/#superclass#/#class#/celltable.#superclass#.#class#.txt )
+                 . q(   #binarized_bam_dir#/#superclass#/#class#/ ),
           },
           -flow_into => {
-            MAIN     => 'learn_model_with_ctcf',
+            MAIN     => 'learn_model',
           },
       },
-      {   -logic_name => 'binarize_without_ctcf',
-          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-          -rc_name    => 'binarization',
-          -parameters => { 
-            cmd => qq( java -Xmx14500m                     )
-                 . qq(   -jar #ChromHMM#                   )
-                 . qq(   BinarizeBam                       )
-                 . qq(   #chromosome_length_file#          )
-                 . qq(   #data_root_dir_species_assembly#  )
-                 . qq(   #tempdir_segmentation#/#species#/celltable.without_ctcf.txt )
-                 . qq(   #binarized_bam_dir#/without_ctcf/               ),
-          },
-          -flow_into => {
-            MAIN     => 'learn_model_without_ctcf',
-          },
-      },
-      {   -logic_name => 'learn_model_with_ctcf',
+      {   -logic_name => 'learn_model',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -max_retry_count => 0,
           -rc_name    => 'learn_model',
           -parameters => {
             cmd     => 'run_ChromHMM_skip_nonsense_errors.pl --cmd "#run_cmd#"',
             run_cmd => 
-                qq( export DISPLAY= ;             )
-                . qq( java -Xmx30000m             )
-                . qq( -jar #ChromHMM#             )
-                . qq( LearnModel                  )
-                . qq( -r 300 -p 12                )
-                . qq( -l #chromosome_length_file# )
-                . qq( #binarized_bam_dir#/with_ctcf/         )
-                . qq( #learnmodel_output_dir#/with_ctcf/     )
-                . qq( 25                          )
-                . qq( #assembly#                  )
+                q( export DISPLAY= ;             )
+                . q( java -Xmx30000m             )
+                . q( -jar #ChromHMM#             )
+                . q( LearnModel                  )
+                . q( -r 10 -p 12                 )
+                . q( -l #chromosome_length_file# )
+                . q( #binarized_bam_dir#/#superclass#/#class#/         )
+                . q( #learn_model_directory#     )
+                . q( 25                          )
+                . q( #assembly#                  )
+          },
+          -flow_into => {
+            MAIN     => 'record_segmentation_as_done',
           },
       },
-      {   -logic_name => 'learn_model_without_ctcf',
-          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-          -max_retry_count => 0,
-          -rc_name    => 'learn_model',
-          -parameters => {
-            cmd     => 'run_ChromHMM_skip_nonsense_errors.pl --cmd "#run_cmd#"',
-            run_cmd => 
-                qq( export DISPLAY= ;             )
-                . qq( java -Xmx30000m             )
-                . qq( -jar #ChromHMM#             )
-                . qq( LearnModel                  )
-                . qq( -r 300 -p 12                )
-                . qq( -l #chromosome_length_file# )
-                . qq( #binarized_bam_dir#/without_ctcf/         )
-                . qq( #learnmodel_output_dir#/without_ctcf/     )
-                . qq( 25                          )
-                . qq( #assembly#                  )
-          },
-      },
-      
-      {   -logic_name => 'start_regulatory_build',
+      {   -logic_name => 'record_segmentation_as_done',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-          -flow_into => { 
-            MAIN => 'generate_segmentation_parameter_file',
+          -parameters => {
+            record => {
+                learn_model_directory => '#learn_model_directory#',
+                segmentation_name     => '#superclass#_#class#',
+                celltable_file        => 'celltable.#superclass#.#class#.txt',
+            }
+          },
+          -flow_into => {
+            MAIN => '?accu_name=segmentation_lists&accu_address={superclass}{class}&accu_input_variable=record'
           },
       },
-      
-      
       {   -logic_name => 'generate_segmentation_parameter_file',
-          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::Segmentation::GenerateSegmentationParameterFile',
           -parameters => {
-            cmd => q( echo -e "segmentation\t#species#_segmentation_with_ctcf\tChromHMM\t#learnmodel_output_dir#/with_ctcf/"        > #segmentation_parameter_file#  ; )
-                 . q( echo -e "segmentation\t#species#_segmentation_without_ctcf\tChromHMM\t#learnmodel_output_dir#/without_ctcf/" >> #segmentation_parameter_file#  ; )
+            file => '#segmentation_parameter_file#',
           },
-          -flow_into => { 
-            MAIN     => 'make_regbuild_dir',
+          -flow_into => {
+            MAIN     => { 
+                'make_regbuild_dir' => INPUT_PLUS({ 
+                    segmentation_lists => '#segmentation_lists#' 
+                 })
+            },
           },
       },
       {   -logic_name => 'make_regbuild_dir',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters => {
               cmd => 
-                  qq(rm    -rf #tempdir_regulatory_build#/#species#/#assembly# ; )
-                . qq(mkdir -p  #tempdir_regulatory_build#/#species#/#assembly#   ),
+                  q(rm    -rf #tempdir_regulatory_build#/#species#/#assembly# ; )
+                . q(mkdir -p  #tempdir_regulatory_build#/#species#/#assembly#   ),
           },
           -flow_into => { 
             MAIN     => 'build_regulatory_features',
@@ -391,27 +248,27 @@ sub pipeline_analyses {
           -rc_name    => '4Gb_job',
           -parameters => {
             cmd => 
-                qq( new_build_regulatory_features.pl             )
-                . qq( --species #species#                        )
-                . qq( --out #tempdir_regulatory_build#/#species# )
-                . qq( -dump #segmentation_parameter_file#     )
-                . qq( -a #assembly#                )
-                . qq( --db   #funcgen_dbname#      )
-                . qq( --user #funcgen_username#    )
-                . qq( --host #funcgen_host#        )
-                . qq( --pass #funcgen_password#    )
-                . qq( --port #funcgen_port#        )
-                . qq( --dnadb_name #core_dbname#   )
-                . qq( --dnadb_host #core_host#     )
-                . qq( --dnadb_user #core_username# )
-                . qq( --dnadb_pass #core_password# )
-                . qq( --dnadb_port #core_port#     )
-                . qq( --chrom_lengths #chromosome_length_file# )
+                q( new_build_regulatory_features.pl             )
+                . q( --species #species#                        )
+                . q( --out #tempdir_regulatory_build#/#species# )
+                . q( -dump #segmentation_parameter_file#     )
+                . q( -a #assembly#                )
+                . q( --db   #funcgen_dbname#      )
+                . q( --user #funcgen_username#    )
+                . q( --host #funcgen_host#        )
+                . q( --pass #funcgen_password#    )
+                . q( --port #funcgen_port#        )
+                . q( --dnadb_name #core_dbname#   )
+                . q( --dnadb_host #core_host#     )
+                . q( --dnadb_user #core_username# )
+                . q( --dnadb_pass #core_password# )
+                . q( --dnadb_port #core_port#     )
+                . q( --chrom_lengths #chromosome_length_file# )
           },
           -flow_into => {
             MAIN => [ 
                 'load_build', 
-                'load_state_emissions_and_assignments',
+                'seed_load_assignment_jobs',
             ]
           },
       },
@@ -420,57 +277,72 @@ sub pipeline_analyses {
           -rc_name    => '32Gb_job_2cpus',
           -parameters => {
             cmd => 
-                qq( load_build.pl )
-                . qq( --dbname   #funcgen_dbname# )
-                . qq( --user     #funcgen_username#    )
-                . qq( --host     #funcgen_host#        )
-                . qq( --pass     #funcgen_password#    )
-                . qq( --port     #funcgen_port#        )
-                . qq( --dnadb_name #core_dbname#   )
-                . qq( --dnadb_host #core_host#     )
-                . qq( --dnadb_user #core_username# )
-                . qq( --dnadb_pass #core_password# )
-                . qq( --dnadb_port #core_port#     )
-                . qq( --base_dir #tempdir_regulatory_build#/#species#/#assembly# )
+                q( load_build.pl )
+                . q( --dbname   #funcgen_dbname# )
+                . q( --user     #funcgen_username#    )
+                . q( --host     #funcgen_host#        )
+                . q( --pass     #funcgen_password#    )
+                . q( --port     #funcgen_port#        )
+                . q( --dnadb_name #core_dbname#   )
+                . q( --dnadb_host #core_host#     )
+                . q( --dnadb_user #core_username# )
+                . q( --dnadb_pass #core_password# )
+                . q( --dnadb_port #core_port#     )
+                . q( --base_dir #tempdir_regulatory_build#/#species#/#assembly# )
           },
           -flow_into => {
-            MAIN => [
-                'compute_enhancer_coverage', 
-                'populate_regulatory_build_epigenome_table',
-            ]
+            MAIN => 'populate_meta_coord'
           },
       },
-      {   -logic_name => 'load_state_emissions_and_assignments',
+      {   -logic_name => 'populate_meta_coord',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          #-module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+          -parameters => {
+            cmd => qq( populate_meta_coord.pl    )
+              . qq( --species  #species#         )
+              . qq( --registry #reg_conf#        )
+          },
+          -flow_into => {
+            MAIN => 'populate_regulatory_build_epigenome_table',
+          },
+      },
+      {
+          -logic_name  => 'seed_load_assignment_jobs',
+          -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::Segmentation::SeedLoadAssignmentJobs',
+          -parameters => {
+              db_conn    => 'funcgen:#species#',
+          },
+          -flow_into   => {
+            '2->A'     => 'load_state_emissions',
+            'A->MAIN'  => 'load_state_assignments',
+          },
+      },
+      {   -logic_name => 'load_state_emissions',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters => {
             cmd => 
                 q(
-                  load_state_emissions_and_assignments.pl \
+                  load_state_emissions.pl \
                       --species          #species# \
                       --registry         #reg_conf# \
-                      --emissions_file   #learnmodel_output_dir#/with_ctcf/emissions_25.txt \
-                      --segmentation     #species#_segmentation_with_ctcf \
+                      --emissions_file   #learn_model_directory#/emissions_25.txt \
+                      --segmentation     #segmentation_name#
+                )
+          },
+      },
+      {   -logic_name => 'load_state_assignments',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -parameters => {
+            cmd => 
+                q(
+                  load_state_assignments.pl \
+                      --species          #species# \
+                      --registry         #reg_conf# \
                       --assignments_file #tempdir_regulatory_build#/#species#/tmp/assignments.txt
                 )
           },
-          -flow_into => {
-            MAIN => 'load_state_emissions_without_ctcf',
-          },
-      },
-      {   -logic_name => 'load_state_emissions_without_ctcf',
-          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-          -parameters => {
-            cmd => 
-                q(
-                  load_state_emissions_and_assignments.pl \
-                      --species          #species# \
-                      --registry         #reg_conf# \
-                      --emissions_file   #learnmodel_output_dir#/without_ctcf/emissions_25.txt \
-                      --segmentation     #species#_segmentation_without_ctcf
-                )
-          },
-          -flow_into => {
-            MAIN => 'generate_segmentation_report',
+          -flow_into   => {
+            MAIN  => 'generate_segmentation_report',
           },
       },
       {   -logic_name => 'generate_segmentation_report',
@@ -505,7 +377,17 @@ sub pipeline_analyses {
               db_conn => 'funcgen:#species#',
           },
           -flow_into => {
-            MAIN => 'register_segmentation_files',
+            MAIN => 'seed_register_segmentation_files_jobs',
+          },
+      },
+      {
+          -logic_name  => 'seed_register_segmentation_files_jobs',
+          -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::Segmentation::SeedLoadAssignmentJobs',
+          -parameters => {
+              db_conn    => 'funcgen:#species#',
+          },
+          -flow_into   => {
+            2 => 'register_segmentation_files',
           },
       },
       {   -logic_name => 'register_segmentation_files',
@@ -516,21 +398,9 @@ sub pipeline_analyses {
                   register_segmentation_files.pl  \
                       --species          #species# \
                       --registry         #reg_conf# \
-                      --segmentation_directory #tempdir_regulatory_build#/#species#/#assembly#/segmentations \
+                      --segmentation_directory #tempdir_regulatory_build#/#species#/#assembly#/segmentations/#segmentation_name# \
                       --db_file_species_assembly_dir     #data_root_dir#/#species#/#assembly#/funcgen/segmentation_file/#ensembl_release_version# \
                       --db_file_relative_dir             /funcgen/segmentation_file/#ensembl_release_version#
-                )
-          },
-      },
-      {   -logic_name => 'generate_regulatory_build_report',
-          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-          -parameters => {
-            cmd => 
-                q(
-                  generate_regulatory_build_report.pl  \
-                      --species          #species# \
-                      --registry         #reg_conf# \
-                      --output_directory #reports_dir#/#species#
                 )
           },
       },
