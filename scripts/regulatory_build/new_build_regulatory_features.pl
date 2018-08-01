@@ -1568,7 +1568,7 @@ sub extract_segmentation_state_summaries_2 {
   if ($segmentation->{type} eq 'ChromHMM' || $segmentation->{type} eq 'Segway' || $segmentation->{type} eq 'GMTK') {
     extract_ChromHMM_state_summaries($options, $segmentation);
   } else {
-    die("Unknown segmentation format $segmentation->{type}\n");
+    die("Unknown segmentation format $segmentation->{type}\n" . Dumper($segmentation));
   }
 }
 
