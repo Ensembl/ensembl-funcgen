@@ -65,9 +65,9 @@ sub pipeline_analyses {
         {   -logic_name  => 'create_execution_plan',
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::CreateExecutionPlan',
             -analysis_capacity => 20,
-            -flow_into   => {
-               2 => '?accu_name=execution_plan_list&accu_address=[]&accu_input_variable=plan',
-            },
+#             -flow_into   => {
+#                2 => '?accu_name=execution_plan_list&accu_address=[]&accu_input_variable=plan',
+#             },
         },
         {   -logic_name  => 'check_execution_plans',
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::CheckExecutionPlans',
