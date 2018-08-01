@@ -31,7 +31,8 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
-use base ('Bio::EnsEMBL::Funcgen::PipeConfig::PeakCalling::Base');
+use base 'Bio::EnsEMBL::Funcgen::PipeConfig::PeakCalling::ResourceClasses';
+#use base ('Bio::EnsEMBL::Funcgen::PipeConfig::PeakCalling::Base');
 
 sub pipeline_wide_parameters {
   my $self = shift;
@@ -697,15 +698,6 @@ sub pipeline_analyses {
           },
       },
     ];
-}
-
-sub resource_classes {
-    my ($self) = @_;
-    return {
-         %{$self->SUPER::resource_classes},  # inherit 'default' from the parent class
-         'binarization' => {'LSF' => '-M16000 -R"select[mem>16000] rusage[mem=16000]" -n 5'                },
-         'learn_model'  => {'LSF' => '-M31000 -R"span[hosts=1] select[mem>31000] rusage[mem=31000]" -n 12' },
-    };
 }
 
 1;
