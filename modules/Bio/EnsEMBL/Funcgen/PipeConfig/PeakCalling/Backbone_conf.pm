@@ -72,7 +72,7 @@ sub pipeline_analyses {
         {   -logic_name  => 'check_execution_plans',
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::CheckExecutionPlans',
             -flow_into   => {
-               2 => 'backbone_fire_start_check_paired_end_read_files'
+               1 => 'backbone_fire_start_check_paired_end_read_files'
             },
         },
         {   -logic_name  => 'backbone_fire_start_check_paired_end_read_files',

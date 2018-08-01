@@ -41,13 +41,13 @@ sub run {
         $self->throw($error_message);
     }
 
-    $self->dataflow_output_id(
-        {
-            'species'             => $species,
-            'execution_plan_list' => $execution_plan_list,
-        }, 
-        BRANCH_WRITE_AS_ONE_LIST
-    );
+#     $self->dataflow_output_id(
+#         {
+#             'species'             => $species,
+#             'execution_plan_list' => $execution_plan_list,
+#         }, 
+#         BRANCH_WRITE_AS_ONE_LIST
+#     );
 #     foreach my $execution_plan (@$execution_plan_list) {
 #       $self->dataflow_output_id(
 #           {
