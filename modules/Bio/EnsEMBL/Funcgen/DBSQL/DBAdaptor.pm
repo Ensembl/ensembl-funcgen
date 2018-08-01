@@ -125,9 +125,6 @@ sub is_stored_and_valid {
   if (! defined $obj) {
     confess("obj is not defined!");
   }
-  if (! defined $name) {
-    confess("name is not defined!");
-  }
   
   assert_ref($obj, $class, $name);
   
