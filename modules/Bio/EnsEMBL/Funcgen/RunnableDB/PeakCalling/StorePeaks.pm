@@ -3,6 +3,7 @@ package Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::StorePeaks;
 use strict;
 use base 'Bio::EnsEMBL::Hive::Process';
 use Data::Dumper;
+use Carp;
 use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
 
 sub run {
@@ -62,7 +63,12 @@ sub run {
   
   my $control_alignment_id;
   if ($control_alignment_name) {
-    my $control_alignment = $alignment_adaptor    ->fetch_by_name($control_alignment_name);
+    my $control_alignment = $alignment_adaptor->fetch_by_name($control_alignment_name);
+    
+    if (! defined $control_alignment) {
+        confess("Couldn't fetch control alignment with name $control_alignment_name for experiment $experiment_name!");
+    }
+    
     $control_alignment_id = $control_alignment->dbID,
   } else {
     $control_alignment_id = undef;
