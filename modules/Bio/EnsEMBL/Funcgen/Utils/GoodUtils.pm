@@ -18,7 +18,7 @@ sub create_production_name {
     
     my $max_length = 70;
     
-    $name =~ s/[^a-zA-Z0-9,_]/_/g;
+    $name =~ s/[^a-zA-Z0-9_]/_/g;
     my $shortened = substr( $name, 0, $max_length );
 
     return $shortened;
