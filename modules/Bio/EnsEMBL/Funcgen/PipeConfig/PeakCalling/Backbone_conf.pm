@@ -19,6 +19,7 @@ sub pipeline_analyses {
         {
           -logic_name => 'pre_pipeline_checks',
           -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::PrePipelineChecks',
+          -max_retry_count => 0,
         },
         {
             -logic_name  => 'truncate_execution_plan_table',
