@@ -149,7 +149,7 @@ sub construct {
     my $alignment_plan = $alignment_plan_factory->product;
     
     $remove_duplicates_plan_builder->set_input         (create_ref($alignment_plan));
-    $remove_duplicates_plan_builder->set_name          ($alignment_namer->base_name_no_duplicates,);
+    $remove_duplicates_plan_builder->set_name          ($alignment_namer->base_name_no_duplicates);
     $remove_duplicates_plan_builder->set_is_control    ($is_control);
     $remove_duplicates_plan_builder->set_output_real   ($alignment_namer->bam_file_no_duplicates);
     $remove_duplicates_plan_builder->set_output_stored ($alignment_namer->bam_file_no_duplicates_stored);
