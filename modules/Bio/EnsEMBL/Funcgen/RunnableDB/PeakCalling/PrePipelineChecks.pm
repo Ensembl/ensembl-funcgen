@@ -73,12 +73,22 @@ sub run {
     #
     my $read_file_adaptor = $funcgen_db_adaptor->get_ReadFileAdaptor;
     
-    my $registered_file = [ map { $_->file } @{$read_file_adaptor->fetch_all} ];
+    my @all_read_files = @{$read_file_adaptor->fetch_all};
+    
+    my $registered_file = [ map { $_->file } @all_read_files ];
     
     foreach my $current_file (@$registered_file) {
       if (! -e $current_file) {
-        push @error_msg, "Can't find read file: $current_file" 
+         push @error_msg, "Can't find read file: $current_file" 
       }
+    }
+    
+    foreach my $read_file (@all_read_files) {
+        
+        my $is_ok = $read_file->name =~  /^[a-zA-Z0-9_\+\-\:\.]+$/;
+        if (! $is_ok) {
+            push @error_msg, "Read file name can't be used for creating directories or names: " . $read_file->name 
+        }
     }
     
     my $dbc = $funcgen_db_adaptor->dbc;
