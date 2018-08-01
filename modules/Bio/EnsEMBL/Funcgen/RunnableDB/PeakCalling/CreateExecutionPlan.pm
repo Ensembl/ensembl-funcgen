@@ -65,15 +65,18 @@ sub run {
 
   my $execution_plan_expanded = resolve_nonterminal_symbols($execution_plan);
   
-  use YAML qw( Dump );
+#   use YAML qw( Dump );
+# 
+#   local $YAML::Indent     = 8;
+#   local $YAML::UseAliases = 0;
 
-  local $YAML::Indent     = 8;
-  local $YAML::UseAliases = 0;
+  $Data::Dumper::Deepcopy = 1;
+  $Data::Dumper::Sortkeys = 1;
 
   use Bio::EnsEMBL::Funcgen::ExecutionPlan;
   my $execution_plan_obj = Bio::EnsEMBL::Funcgen::ExecutionPlan->new(
     -experiment_id  => $experiment_id,
-    -execution_plan => Dump($execution_plan_expanded),
+    -execution_plan => Dumper($execution_plan_expanded),
     -time           => time
   );
 
