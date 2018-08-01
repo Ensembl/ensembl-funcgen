@@ -4,6 +4,7 @@ use strict;
 use base 'Bio::EnsEMBL::Hive::Process';
 use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
 use Data::Dumper;
+use Carp;
 
 sub run {
 
@@ -58,15 +59,37 @@ sub run {
   }
 
   $self->say_with_header("Found " . @alignments_to_convert . " alignments to convert to bed format.", 1);
+#   print("Found " . @alignments_to_convert . " alignments to convert to bed format.");
+#   die;
+  my @bam_2_bed_conversion;
+  
+  foreach my $alignment_to_convert (@alignments_to_convert) {
+  
+    my $bam_file = $data_root_dir . '/' . $alignment_to_convert->{input}->{output}->{real};
+    my $bed_file = $data_root_dir . '/' . $alignment_to_convert->{output}->{real};
+    
+    print Dumper($alignment_to_convert);
+    
+    if (! -e $bam_file) {
+        confess("Expected bam file $bam_file, but it doesn't exist!");
+    }
+    
+    push @bam_2_bed_conversion, {
+        from => $bam_file,
+        to   => $bed_file,
+    }
+  }
+  
+  print Dumper(\@bam_2_bed_conversion);
   
   my $run_options = {
     use_bash_pipefail => 1
   };
 
-  foreach my $alignment_to_convert (@alignments_to_convert) {
+  foreach my $bam_to_bed_conversion (@bam_2_bed_conversion) {
   
-    my $bam_file = $data_root_dir . '/' . $alignment_to_convert->{input}->{output}->{real};
-    my $bed_file = $data_root_dir . '/' . $alignment_to_convert->{output}->{real};
+    my $bam_file = $bam_to_bed_conversion->{from};
+    my $bed_file = $bam_to_bed_conversion->{to};
     
     my $cmd = "bamToBed -i $bam_file > $bed_file";
     
@@ -83,6 +106,7 @@ sub run {
       $self->throw("The following command failed:\n" . $cmd)
     }
   }
+  
 }
 
 1;
