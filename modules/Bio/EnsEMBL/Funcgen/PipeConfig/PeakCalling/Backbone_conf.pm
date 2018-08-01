@@ -124,6 +124,7 @@ sub pipeline_analyses {
                     "delete from data_file where table_name = 'segmentation_file';",
                     "truncate segmentation_state_assignment;",
                     "truncate segmentation_state_emission;",
+                    "truncate segmentation_cell_tables;",
                 ],
                 db_conn => 'funcgen:#species#',
             },
