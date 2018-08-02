@@ -1,13 +1,8 @@
-[% MACRO stable_id_mapping_on_window_load_code BLOCK %]
-
-    ctx3 = document.getElementById("chart-area-stable_id_mapping").getContext("2d");
-    new Chart(ctx3, stable_id_mapping_regulatory_build_config);
-
-[% END %]
-
 [% MACRO stable_id_mapping BLOCK %]
 
 <h2>Stable ID Mapping</h2>
+
+<div id="venn" style="width:80%"></div>
 
 <p>
     Of the 
@@ -15,7 +10,7 @@
         format_number( 
             regulatory_build_statistics_adaptor.fetch_stable_id_mapping_number_regulatory_features.value 
         ) 
-      %] regulatory features used in stable id mapping
+      %] regulatory features in the new regulatory build 
 <ul>
     <li>
       [% 
@@ -30,7 +25,7 @@
             / regulatory_build_statistics_adaptor.fetch_stable_id_mapping_number_regulatory_features.value 
          ) 
       %]%)
-      could be mapped and 
+      received their stable id by mapping an existing one from the old regulatory build and 
     </li>
     <li>
       [% 
@@ -49,70 +44,123 @@
 </ul>
 </p>
 
-<div id="canvas-holder-2" style="width:50%">
-    <canvas id="chart-area-stable_id_mapping" />
-</div>
+<p>
+    Of the 
+      [% 
+        format_number( 
+            regulatory_build_statistics_adaptor_previous_version.fetch_number_regulatory_features.value 
+        ) 
+      %] regulatory features in the previous regulatory build 
+<ul>
+    <li>
+      [% 
+        format_number(
+            regulatory_build_statistics_adaptor.fetch_stable_id_mapping_mapped_stable_ids.value 
+         ) 
+      %] regulatory features 
+      ([% 
+        round_num( 
+            100 
+            * regulatory_build_statistics_adaptor.fetch_stable_id_mapping_mapped_stable_ids.value 
+            / regulatory_build_statistics_adaptor_previous_version.fetch_number_regulatory_features.value 
+         ) 
+      %]%)
+      were found in the new build and their stable ids were transferred.
+    </li>
+    <li>
+      [% 
+        format_number(
+            regulatory_build_statistics_adaptor_previous_version.fetch_number_regulatory_features.value 
+            - regulatory_build_statistics_adaptor.fetch_stable_id_mapping_new_stable_ids.value 
+         ) 
+      %] regulatory features
+      ([% 
+        round_num( 
+            100 
+            * (
+              regulatory_build_statistics_adaptor_previous_version.fetch_number_regulatory_features.value 
+              - regulatory_build_statistics_adaptor.fetch_stable_id_mapping_new_stable_ids.value 
+            )
+            / regulatory_build_statistics_adaptor_previous_version.fetch_number_regulatory_features.value 
+        ) 
+      %]%) were lost.
+    </li>
+</ul>
+</p>
+
+<script src="https://d3js.org/d3.v4.min.js"></script>
+
+<!-- From https://github.com/benfred/venn.js/ -->
+<script type="text/javascript" src="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/venn.js"></script>
+
+<style>
+.venntooltip {
+  position: absolute;
+  text-align: center;
+  width: 256px;
+  height: 16px;
+  background: #333;
+  color: #ddd;
+  padding: 2px;
+  border: 0px;
+  border-radius: 8px;
+  opacity: 0;
+}
+</style>
+
+
 <script>
 
-var stable_id_mapping_regulatory_build_config = {
-    type: 'pie',
-    data: {
-        datasets: [{
-            data: [
+var sets = [
+    {"sets": [0],    "label": "Previous Regulatory Build", "size": [% regulatory_build_statistics_adaptor_previous_version.fetch_number_regulatory_features.value %] },
+    {"sets": [1],    "label": "New Regulatory Build",      "size": [% regulatory_build_statistics_adaptor.fetch_number_regulatory_features.value %] },
+    {"sets": [0, 1], "label": "Mapped stable ids",         "size": [% regulatory_build_statistics_adaptor.fetch_stable_id_mapping_mapped_stable_ids.value %] },
+];
 
-                [% round_num( 100 * regulatory_build_statistics_adaptor.fetch_stable_id_mapping_new_stable_ids.value    / regulatory_build_statistics_adaptor.fetch_stable_id_mapping_number_regulatory_features.value ) %],
-                [% round_num( 100 * regulatory_build_statistics_adaptor.fetch_stable_id_mapping_mapped_stable_ids.value / regulatory_build_statistics_adaptor.fetch_stable_id_mapping_number_regulatory_features.value ) %],
+var chart = venn.VennDiagram();
 
-            ],
-            backgroundColor: [
-                window.chartColors.red,
-                window.chartColors.blue,
-            ],
+var div = d3.select("#venn")
+div.datum(sets).call(chart);
 
-        }],
-        labels: [
-            "New stable ids",
-            "Mapped stable ids",
-        ]
-    },
-    options: {
-        responsive: true,
-        legend: {
-            position: 'left'
-        },
-        title: {
-            display: 'true',
-            text: 'Stable id mapping for regulatory features in [% species %]'
-        },
-        tooltips: {
-            callbacks: {
-                title: function(item, data) {
-                    // Pick first xLabel for now
-                    var title = '';
+var tooltip = d3.select("body").append("div")
+    .attr("class", "venntooltip");
 
-                    if (item.length > 0) {
-                        if (item[0].yLabel) {
-                            title = item[0].yLabel;
-                        } else if (data.labels.length > 0 && item[0].index < data.labels.length) {
-                            title = data.labels[item[0].index];
-                        }
-                    }
+div.selectAll("path")
+    .style("stroke-opacity", 0)
+    .style("stroke", "#fff")
+    .style("stroke-width", 3)
 
-                    return title;
-                },
+div.selectAll("g")
+    .on("mouseover", function(d, i) {
+        // sort all the areas relative to the current item
+        venn.sortAreas(div, d);
 
-                label: function(item, data) {
-                    //var datasetLabel = data.datasets[item.datasetIndex].label || 'No label found';
-                    var datasetLabel = data.labels[item.index] || 'No label found';
-                    return datasetLabel + ': ' + data.datasets[item.datasetIndex].data[item.index] + '% of stable ids';
-                }
-            },
-            mode: 'index',
-            axis: 'y'
-        }
-    }
-};
+        // Display a tooltip with the current size
+        tooltip.transition().duration(400).style("opacity", .9);
+        tooltip.text(d.size + " regulatory features");
 
+        // highlight the current path
+        var selection = d3.select(this).transition("tooltip").duration(400);
+        selection.select("path")
+            .style("fill-opacity", d.sets.length == 1 ? .4 : .1)
+            .style("stroke-opacity", 1);
+    })
+
+    .on("mousemove", function() {
+        tooltip.style("left", (d3.event.pageX) + "px")
+               .style("top", (d3.event.pageY - 28) + "px");
+    })
+
+    .on("mouseout", function(d, i) {
+        tooltip.transition().duration(400).style("opacity", 0);
+        var selection = d3.select(this).transition("tooltip").duration(400);
+        selection.select("path")
+            .style("fill-opacity", d.sets.length == 1 ? .25 : .0)
+            .style("stroke-opacity", 0);
+    });
 </script>
 
 [% END %]
+
+
+
