@@ -285,7 +285,7 @@ sub fetch_single_object {
     my $self = shift;
     my $result = $self->fetch_all(@_);
     
-    if (@$result > 1) {
+    if (@$result != 1) {
         throw("Expected one result, but got " . scalar @$result);
     }
     return $result->[0];
