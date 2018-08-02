@@ -1,21 +1,12 @@
 [% WRAPPER default_statistics_page_wrapper.html title="Regulatory build" %]
 
+<h2>Summary statistics</h2>
+
 <p>
     The regulatory build has a total of 
     [% format_number( regulatory_build_statistics_adaptor.fetch_number_regulatory_features.value ) %] 
     regulatory features.
 </p>
-
-[% PROCESS validation_vista_enhancers.html %]
-[% validation_vista_enhancers %]
-
-[% PROCESS validation_fantom_enhancers.html %]
-[% validation_fantom_enhancers %]
-
-[% IF regulatory_build_statistics_adaptor.fetch_stable_id_mapping_number_regulatory_features.value %]
-  [% PROCESS stable_id_mapping.html %]
-  [% stable_id_mapping %]
-[% END %]
 
 [% PROCESS genome_coverage.html %]
 [% genome_coverage %]
@@ -23,22 +14,33 @@
 [% PROCESS numbers_by_feature_type.html %]
 [% numbers_by_feature_type %]
 
-<script>
-    window.onload = function() {
-      [% numbers_by_feature_type_on_window_load %]
-      [% genome_coverage_on_window_load         %]
-      
-      [% IF regulatory_build_statistics_adaptor.fetch_stable_id_mapping_number_regulatory_features.value %]
-        [% stable_id_mapping_on_window_load_code  %]
-      [% END %]
-      [% validation_vista_enhancers_on_window_load_code %]
-      [% validation_fantom_enhancers_on_window_load_code %]
-      [% numbers_by_feature_type_on_window_load         %]
-      [% genome_coverage_on_window_load                 %]
-    };
-</script>
-
 [% PROCESS summary.html %]
 [% summary %]
+
+[% IF regulatory_build_statistics_adaptor.fetch_stable_id_mapping_number_regulatory_features.value %]
+  [% PROCESS stable_id_mapping.html %]
+  [% stable_id_mapping %]
+[% END %]
+
+<h2>Validation with known Enhancers</h2>
+
+[% PROCESS validation_vista_enhancers.html %]
+[% validation_vista_enhancers %]
+
+[% PROCESS validation_fantom_enhancers.html %]
+[% validation_fantom_enhancers %]
+
+[% PROCESS compare_previous_version.html %]
+[% compare_previous_version %]
+
+<script>
+    window.onload = function() {
+      [% validation_vista_enhancers_on_window_load_code  %]
+      [% validation_fantom_enhancers_on_window_load_code %]
+      [% numbers_by_feature_type_on_window_load          %]
+      [% genome_coverage_on_window_load                  %]
+      [% compare_previous_version_on_window_load         %]
+    };
+</script>
 
 [% END %]

@@ -1,0 +1,226 @@
+[% MACRO compare_previous_version_on_window_load BLOCK %]
+
+  var ctx = document.getElementById('regulatory_build_2_compared').getContext('2d');
+  new Chart(ctx, {
+      type: 'bar',
+      data: barChartData_comparison_with_previous_version,
+      options: {
+          responsive: true,
+          legend: {
+              display: true,
+              position: 'bottom',
+          },
+          scales: {
+              yAxes: [{
+                  ticks: {
+                      min: 0
+                  }
+              }]
+          },
+          title: {
+              display: false,
+              text: 'Total numbers by feature type'
+          }
+      }
+  });
+
+  var ctx = document.getElementById('regulatory_build_2_compared_lengths').getContext('2d');
+  new Chart(ctx, {
+      type: 'bar',
+      data: barChartData_comparison_with_previous_version_lengths,
+      options: {
+          responsive: true,
+          legend: {
+              display: true,
+              position: 'bottom',
+          },
+          scales: {
+              yAxes: [{
+                  ticks: {
+                      min: 0
+                  }
+              }]
+          },
+          title: {
+              display: false,
+              text: 'Total numbers by feature type'
+          }
+      }
+  });
+
+  var ctx = document.getElementById('regulatory_build_2_compared_average_lengths').getContext('2d');
+  new Chart(ctx, {
+      type: 'bar',
+      data: barChartData_comparison_with_previous_version_average_lengths,
+      options: {
+          responsive: true,
+          legend: {
+              display: true,
+              position: 'bottom',
+          },
+          scales: {
+              yAxes: [{
+                  ticks: {
+                      min: 0
+                  }
+              }]
+          },
+          title: {
+              display: false,
+              text: 'Total numbers by feature type'
+          }
+      }
+  });
+
+
+[% END %]
+
+[% MACRO compare_previous_version BLOCK %]
+
+<h2>Comparisons to the previous Regulatory Build</h2>
+
+<h3>Total numbers</h3>
+
+<div style="width: 80%;">
+    <canvas id="regulatory_build_2_compared"></canvas>
+</div>
+
+<script>
+    var color = Chart.helpers.color;
+    
+    var barChartData_comparison_with_previous_version = {
+        labels: [
+            "CTCF Binding Site",
+            "Enhancer",
+            "Promoter Flanking Region",
+            "Promoter",
+            "TF binding site",
+            "Open chromatin",
+        ],
+        datasets: [
+          {
+            label: 'Previous Regulatory Build',
+            backgroundColor: window.chartColors.blue,
+            data: [
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_number_ctcf_binding_site.value %]',
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_number_enhancer.value %]',
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_number_promoter_flanking_region.value %]',
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_number_promoter.value %]',
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_number_transcription_factor_binding_site.value %]',
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_number_open_chromatin.value %]',
+            ]
+          },
+          {
+            label: 'New Regulatory Build',
+            backgroundColor: window.chartColors.red,
+            data: [
+                '[% regulatory_build_statistics_adaptor.fetch_number_ctcf_binding_site.value %]',
+                '[% regulatory_build_statistics_adaptor.fetch_number_enhancer.value %]',
+                '[% regulatory_build_statistics_adaptor.fetch_number_promoter_flanking_region.value %]',
+                '[% regulatory_build_statistics_adaptor.fetch_number_promoter.value %]',
+                '[% regulatory_build_statistics_adaptor.fetch_number_transcription_factor_binding_site.value %]',
+                '[% regulatory_build_statistics_adaptor.fetch_number_open_chromatin.value %]',
+            ]
+          },
+        ]
+    };
+
+</script>
+
+<h3>Total lengths in base pairs</h3>
+
+<div style="width: 80%;">
+    <canvas id="regulatory_build_2_compared_lengths"></canvas>
+</div>
+
+<script>
+    var color = Chart.helpers.color;
+    
+    var barChartData_comparison_with_previous_version_lengths = {
+        labels: [
+            "CTCF Binding Site",
+            "Enhancer",
+            "Promoter Flanking Region",
+            "Promoter",
+            "TF binding site",
+            "Open chromatin",
+        ],
+        datasets: [
+          {
+            label: 'Previous Regulatory Build',
+            backgroundColor: window.chartColors.blue,
+            data: [
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_sum_length_ctcf_binding_site.value %]',
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_sum_length_enhancer.value %]',
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_sum_length_promoter_flanking_region.value %]',
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_sum_length_promoter.value %]',
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_sum_length_transcription_factor_binding_site.value %]',
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_sum_length_open_chromatin.value %]',
+            ]
+          },
+          {
+            label: 'New Regulatory Build',
+            backgroundColor: window.chartColors.red,
+            data: [
+                '[% regulatory_build_statistics_adaptor.fetch_sum_length_ctcf_binding_site.value %]',
+                '[% regulatory_build_statistics_adaptor.fetch_sum_length_enhancer.value %]',
+                '[% regulatory_build_statistics_adaptor.fetch_sum_length_promoter_flanking_region.value %]',
+                '[% regulatory_build_statistics_adaptor.fetch_sum_length_promoter.value %]',
+                '[% regulatory_build_statistics_adaptor.fetch_sum_length_transcription_factor_binding_site.value %]',
+                '[% regulatory_build_statistics_adaptor.fetch_sum_length_open_chromatin.value %]',
+            ]
+          },
+        ]
+    };
+
+</script>
+
+<h3>Average lengths of regulatory features</h3>
+
+<div style="width: 80%;">
+    <canvas id="regulatory_build_2_compared_average_lengths"></canvas>
+</div>
+
+<script>
+    var color = Chart.helpers.color;
+    
+    var barChartData_comparison_with_previous_version_average_lengths = {
+        labels: [
+            "CTCF Binding Site",
+            "Enhancer",
+            "Promoter Flanking Region",
+            "Promoter",
+            "TF binding site",
+            "Open chromatin",
+        ],
+        datasets: [
+          {
+            label: 'Previous Regulatory Build',
+            backgroundColor: window.chartColors.blue,
+            data: [
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_average_length_ctcf_binding_site.value %]',
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_average_length_enhancer.value %]',
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_average_length_promoter_flanking_region.value %]',
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_average_length_promoter.value %]',
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_average_length_transcription_factor_binding_site.value %]',
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_average_length_open_chromatin.value %]',
+            ]
+          },
+          {
+            label: 'New Regulatory Build',
+            backgroundColor: window.chartColors.red,
+            data: [
+                '[% regulatory_build_statistics_adaptor.fetch_average_length_ctcf_binding_site.value %]',
+                '[% regulatory_build_statistics_adaptor.fetch_average_length_enhancer.value %]',
+                '[% regulatory_build_statistics_adaptor.fetch_average_length_promoter_flanking_region.value %]',
+                '[% regulatory_build_statistics_adaptor.fetch_average_length_promoter.value %]',
+                '[% regulatory_build_statistics_adaptor.fetch_average_length_transcription_factor_binding_site.value %]',
+                '[% regulatory_build_statistics_adaptor.fetch_average_length_open_chromatin.value %]',
+            ]
+          },
+        ]
+    };
+
+</script>
+
+[% END %]

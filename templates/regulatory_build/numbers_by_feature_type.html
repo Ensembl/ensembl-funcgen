@@ -1,7 +1,7 @@
 [% MACRO numbers_by_feature_type_on_window_load BLOCK %]
 
   var ctx = document.getElementById('regulatory_build_2').getContext('2d');
-  window.myBar = new Chart(ctx, {
+  new Chart(ctx, {
       type: 'bar',
       data: barChartData,
       options: {
@@ -17,7 +17,7 @@
               }]
           },
           title: {
-              display: true,
+              display: false,
               text: 'Total numbers by feature type'
           }
       }
@@ -27,9 +27,9 @@
 
 [% MACRO numbers_by_feature_type BLOCK %]
 
-<h2>Total numbers by feature type</h2>
+<h3>Total numbers by feature type</h3>
 
-<div id="container_2" style="width: 80%;">
+<div style="width: 80%;">
     <canvas id="regulatory_build_2"></canvas>
 </div>
 
