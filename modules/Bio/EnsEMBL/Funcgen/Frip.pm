@@ -46,6 +46,7 @@ sub _constructor_parameters {
   return {
     dbID            => 'dbID',
     db              => 'db',
+    adaptor         => 'db',
     frip            => 'frip',
     total_reads     => 'total_reads',
     peak_calling_id => 'peak_calling_id',
@@ -54,6 +55,7 @@ sub _constructor_parameters {
 
 sub dbID            { return shift->_generic_get_or_set('dbID',             @_); }
 sub db              { return shift->_generic_get_or_set('db',               @_); }
+sub adaptor         { return shift->_generic_get_or_set('db',               @_); }
 
 sub frip            { return shift->_generic_get_or_set('frip',             @_); }
 sub total_reads     { return shift->_generic_get_or_set('total_reads',      @_); }
