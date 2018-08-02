@@ -1,0 +1,100 @@
+[% MACRO validation_fantom_enhancers_on_window_load_code BLOCK %]
+
+    ctx = document.getElementById("chart-area-fantom-enhancers").getContext("2d");
+    new Chart(ctx, fantom_enhancer_validation_regulatory_build_config);
+
+[% END %]
+
+[% MACRO validation_fantom_enhancers BLOCK %]
+
+<h2>Validation FANTOM enhancers</h2>
+
+<p>
+    Of the 
+      [% 
+        format_number( 
+            regulatory_build_statistics_adaptor.fetch_total_enhancers_checked_fantom.value 
+        ) 
+      %] Fantom5 enhancers in [% species %]
+      [% 
+        format_number(
+            regulatory_build_statistics_adaptor.fetch_num_enhancers_overlapping_fantom.value 
+         ) 
+      %] Fantom5 enhancers
+      ([% 
+        round_num( 
+            100 
+            * regulatory_build_statistics_adaptor.fetch_num_enhancers_overlapping_fantom.value 
+            / regulatory_build_statistics_adaptor.fetch_total_enhancers_checked_fantom.value 
+         ) 
+      %]%)
+      could be found in the regulatory build.
+</p>
+
+<div style="width:50%">
+    <canvas id="chart-area-fantom-enhancers" />
+</div>
+
+<script>
+
+var fantom_enhancer_validation_regulatory_build_config = {
+    type: 'pie',
+    data: {
+        datasets: [{
+            data: [
+
+                [% round_num( 100 *      regulatory_build_statistics_adaptor.fetch_num_enhancers_overlapping_fantom.value / regulatory_build_statistics_adaptor.fetch_total_enhancers_checked_fantom.value ) %],
+                [% round_num( 100 * (1 - regulatory_build_statistics_adaptor.fetch_num_enhancers_overlapping_fantom.value / regulatory_build_statistics_adaptor.fetch_total_enhancers_checked_fantom.value) ) %],
+
+            ],
+            backgroundColor: [
+                window.chartColors.green,
+                window.chartColors.orange,
+            ],
+
+        }],
+        labels: [
+            "Fantom5 enhancers found in regulatory build",
+            "Fantom5 enhancers not found in regulatory build",
+        ]
+    },
+    options: {
+        responsive: true,
+        legend: {
+            position: 'left'
+        },
+        title: {
+            display: 'false',
+            text: ''
+        },
+        tooltips: {
+            callbacks: {
+                title: function(item, data) {
+                    // Pick first xLabel for now
+                    var title = '';
+
+                    if (item.length > 0) {
+                        if (item[0].yLabel) {
+                            title = item[0].yLabel;
+                        } else if (data.labels.length > 0 && item[0].index < data.labels.length) {
+                            title = data.labels[item[0].index];
+                        }
+                    }
+
+                    return title;
+                },
+
+                label: function(item, data) {
+                    var datasetLabel = data.labels[item.index] || 'No label found';
+                    return datasetLabel + ': ' + data.datasets[item.datasetIndex].data[item.index] + '% of Fantom5 enhancers';
+                }
+            },
+            mode: 'index',
+            axis: 'y'
+        }
+    }
+};
+
+</script>
+
+[% END %]

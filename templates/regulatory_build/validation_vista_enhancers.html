@@ -1,0 +1,100 @@
+[% MACRO validation_vista_enhancers_on_window_load_code BLOCK %]
+
+    ctx = document.getElementById("chart-area-vista-enhancers").getContext("2d");
+    new Chart(ctx, VISTA_enhancer_validation_regulatory_build_config);
+
+[% END %]
+
+[% MACRO validation_vista_enhancers BLOCK %]
+
+<h2>Validation VISTA enhancers</h2>
+
+<p>
+    Of the 
+      [% 
+        format_number( 
+            regulatory_build_statistics_adaptor.fetch_total_enhancers_checked_vista.value 
+        ) 
+      %] VISTA enhancers in [% species %]
+      [% 
+        format_number(
+            regulatory_build_statistics_adaptor.fetch_num_enhancers_overlapping_vista.value 
+         ) 
+      %] VISTA enhancers
+      ([% 
+        round_num( 
+            100 
+            * regulatory_build_statistics_adaptor.fetch_num_enhancers_overlapping_vista.value 
+            / regulatory_build_statistics_adaptor.fetch_total_enhancers_checked_vista.value 
+         ) 
+      %]%)
+      could be found in the regulatory build.
+</p>
+
+<div style="width:50%">
+    <canvas id="chart-area-vista-enhancers" />
+</div>
+
+<script>
+
+var VISTA_enhancer_validation_regulatory_build_config = {
+    type: 'pie',
+    data: {
+        datasets: [{
+            data: [
+
+                [% round_num( 100 *      regulatory_build_statistics_adaptor.fetch_num_enhancers_overlapping_vista.value / regulatory_build_statistics_adaptor.fetch_total_enhancers_checked_vista.value ) %],
+                [% round_num( 100 * (1 - regulatory_build_statistics_adaptor.fetch_num_enhancers_overlapping_vista.value / regulatory_build_statistics_adaptor.fetch_total_enhancers_checked_vista.value) ) %],
+
+            ],
+            backgroundColor: [
+                window.chartColors.green,
+                window.chartColors.orange,
+            ],
+
+        }],
+        labels: [
+            "VISTA enhancers found in regulatory build",
+            "VISTA enhancers not found in regulatory build",
+        ]
+    },
+    options: {
+        responsive: true,
+        legend: {
+            position: 'left'
+        },
+        title: {
+            display: 'false',
+            text: ''
+        },
+        tooltips: {
+            callbacks: {
+                title: function(item, data) {
+                    // Pick first xLabel for now
+                    var title = '';
+
+                    if (item.length > 0) {
+                        if (item[0].yLabel) {
+                            title = item[0].yLabel;
+                        } else if (data.labels.length > 0 && item[0].index < data.labels.length) {
+                            title = data.labels[item[0].index];
+                        }
+                    }
+
+                    return title;
+                },
+
+                label: function(item, data) {
+                    var datasetLabel = data.labels[item.index] || 'No label found';
+                    return datasetLabel + ': ' + data.datasets[item.datasetIndex].data[item.index] + '% of VISTA enhancers';
+                }
+            },
+            mode: 'index',
+            axis: 'y'
+        }
+    }
+};
+
+</script>
+
+[% END %]

@@ -6,6 +6,12 @@
     regulatory features.
 </p>
 
+[% PROCESS validation_vista_enhancers.html %]
+[% validation_vista_enhancers %]
+
+[% PROCESS validation_fantom_enhancers.html %]
+[% validation_fantom_enhancers %]
+
 [% IF regulatory_build_statistics_adaptor.fetch_stable_id_mapping_number_regulatory_features.value %]
   [% PROCESS stable_id_mapping.html %]
   [% stable_id_mapping %]
@@ -25,6 +31,10 @@
       [% IF regulatory_build_statistics_adaptor.fetch_stable_id_mapping_number_regulatory_features.value %]
         [% stable_id_mapping_on_window_load_code  %]
       [% END %]
+      [% validation_vista_enhancers_on_window_load_code %]
+      [% validation_fantom_enhancers_on_window_load_code %]
+      [% numbers_by_feature_type_on_window_load         %]
+      [% genome_coverage_on_window_load                 %]
     };
 </script>
 
