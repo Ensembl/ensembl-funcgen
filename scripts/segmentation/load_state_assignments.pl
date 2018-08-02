@@ -4,7 +4,6 @@ use strict;
 use Bio::EnsEMBL::Registry;
 use Data::Dumper;
 use Carp;
-use strict;
 use Getopt::Long;
 
 my $species;
@@ -32,7 +31,7 @@ Bio::EnsEMBL::Registry->load_all($registry);
 my $funcgen_dba = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
 my $segmentation_state_assignment_adaptor = $funcgen_dba->get_SegmentationStateAssignmentAdaptor;
 
-open $fh, '<', $assignments_file || die("Can't open $assignments_file");
+open my $fh, '<', $assignments_file || die("Can't open $assignments_file");
 
 my $parsed_assignment = parse_assignments(
     $fh,
