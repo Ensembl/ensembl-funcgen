@@ -134,7 +134,16 @@ sub fetch_sum_length_open_chromatin {
 
 sub fetch_sum_length_ctcf_binding_site {
   my $self = shift;
-  return $self->fetch_by_statistic('sum_length_ctcf_binding_site');
+  
+  my $result;
+  eval {
+    $result = $self->fetch_by_statistic('sum_length_ctcf_binding_site')
+  };
+  if ($@) {
+    warn("No entry found for sum_length_ctcf_binding_site! Returning 0.");
+    $result = 0;
+  }
+  return $result;
 }
 
 
@@ -166,7 +175,17 @@ sub fetch_number_open_chromatin {
 
 sub fetch_number_ctcf_binding_site {
   my $self = shift;
-  return $self->fetch_by_statistic('number_ctcf_binding_site');
+
+  my $result;
+  eval {
+    $result = $self->fetch_by_statistic('number_ctcf_binding_site')
+  };
+  if ($@) {
+    warn("No entry found for number_ctcf_binding_site! Returning 0.");
+    $result = 0;
+  }
+
+  return $result;
 }
 
 
@@ -199,7 +218,17 @@ sub fetch_average_length_open_chromatin {
 
 sub fetch_average_length_ctcf_binding_site {
   my $self = shift;
-  return $self->fetch_by_statistic('average_length_ctcf_binding_site');
+
+  my $result;
+  eval {
+    $result = $self->fetch_by_statistic('average_length_ctcf_binding_site')
+  };
+  if ($@) {
+    warn("No entry found for average_length_ctcf_binding_site! Returning 0.");
+    $result = 0;
+  }
+
+  return $result;
 }
 
 
