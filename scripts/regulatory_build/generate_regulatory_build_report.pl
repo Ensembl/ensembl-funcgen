@@ -56,13 +56,25 @@ $logger->info("output_directory  = " . $output_directory . "\n");
 use Bio::EnsEMBL::Registry;
 Bio::EnsEMBL::Registry->load_all($registry);
 
-my $mouse_funcgen_dba = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
+my $funcgen_dba = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
 
-my $regulatory_build_statistics_adaptor = $mouse_funcgen_dba->get_RegulatoryBuildStatisticAdaptor;
+my $previous_version_funcgen_dba = Bio::EnsEMBL::Registry->get_DBAdaptor($species . '_previous_version', 'funcgen');
+
+my $regulatory_build_statistics_adaptor 
+  = $funcgen_dba
+    ->get_RegulatoryBuildStatisticAdaptor;
+
+my $regulatory_build_statistics_adaptor_previous_version 
+  = $previous_version_funcgen_dba
+    ->get_RegulatoryBuildStatisticAdaptor;
+
+#die (Dumper($regulatory_build_statistics_adaptor_previous_version->fetch_number_regulatory_features->value));
 
 my $file = __FILE__;
 use File::Basename qw( dirname basename );
-my $description_template = dirname($file) . '/../../templates/regulatory_build/report.html';
+
+my $template_dir = dirname($file) . '/../../templates/regulatory_build';
+my $description_template = $template_dir . '/report.html';
 
 if (! -e $description_template) {
     die("Can't find $description_template");
@@ -79,7 +91,11 @@ use File::Path qw( make_path );
 make_path( $output_directory );
 
 use Template;
-my $tt = Template->new( ABSOLUTE => 1, RELATIVE => 1 );
+my $tt = Template->new(
+  ABSOLUTE     => 1,
+  RELATIVE     => 1,
+  INCLUDE_PATH => $template_dir,
+);
 
 my $output;
 
@@ -88,14 +104,18 @@ use Number::Format qw( format_number );
 my $de = new Number::Format(
     -thousands_sep   => ',',
     -decimal_point   => '.',
-    -int_curr_symbol => 'DEM'
 );
 
 $tt->process(
     $description_template, 
     {
-        regulatory_build_statistics_adaptor => $regulatory_build_statistics_adaptor,
-        dbc        => $mouse_funcgen_dba->dbc,
+        regulatory_build_statistics_adaptor 
+          => $regulatory_build_statistics_adaptor,
+        
+        regulatory_build_statistics_adaptor_previous_version 
+          => $regulatory_build_statistics_adaptor_previous_version,
+        
+        dbc        => $funcgen_dba->dbc,
         species    => $species,
         ref_length => $ref_length,
         
