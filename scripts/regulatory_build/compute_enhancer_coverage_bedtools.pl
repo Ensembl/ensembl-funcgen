@@ -85,11 +85,25 @@ make_path($tempdir);
 
 my $regulatory_features_file = $tempdir . "/regulatory_features.bed";
 
-# export_regulatory_features($regulatory_features_file);
-# sort_bed_file             ($regulatory_features_file);
+$logger->info("Exporting regulatory features to $regulatory_features_file ...");
 
+export_regulatory_features($regulatory_features_file);
+sort_bed_file             ($regulatory_features_file);
 
 my $regulatory_build_statistic_adaptor = $funcgen_adaptor->get_RegulatoryBuildStatisticAdaptor;
+
+$logger->info(" done.\n");
+
+$logger->info("Removing enhancer statistics ...");
+
+my $dbc = $funcgen_adaptor->dbc;
+
+$dbc->do('delete from regulatory_build_statistic where statistic like "total_enhancers_checked_vista"');
+$dbc->do('delete from regulatory_build_statistic where statistic like "num_enhancers_overlapping_vista"');
+$dbc->do('delete from regulatory_build_statistic where statistic like "total_enhancers_checked_fantom"');
+$dbc->do('delete from regulatory_build_statistic where statistic like "num_enhancers_overlapping_fantom"');
+
+$logger->info(" done.\n");
 
 use constant {
   FANTOM_FEATURE_SET_NAME => 'FANTOM',
@@ -130,6 +144,8 @@ use Bio::EnsEMBL::Funcgen::Utils::RegulatoryBuildStatUtils qw (
 foreach my $feature_set (@experimentally_verified_enhancer_feature_sets) {
     $logger->info("feature_set: " . $feature_set->name . "\n");
 }
+
+$logger->info("Checking enhancers\n");
 
 foreach my $experimentally_verified_enhancer_feature_set (@experimentally_verified_enhancer_feature_sets) {
 
@@ -266,7 +282,7 @@ foreach my $experimentally_verified_enhancer_feature_set (@experimentally_verifi
     }
 }
 
-
+$logger->info("Done checking enhancers.\n");
 
 $logger->finish_log;
 exit(0);
@@ -289,14 +305,6 @@ sub export_regulatory_features {
     while ($iterator->has_next) {
 
         my $current_regulatory_feature = $iterator->next;
-        
-        # This one is weird (ENSR00000160487)
-        if (
-            $current_regulatory_feature->stable_id eq 'ENSR00000160487'
-            #and $current_regulatory_feature->bound_seq_region_end == 15
-        ) {
-            next REGULATORY_FEATURE;
-        }
         
         my $bed_line = join "\t", (
             $current_regulatory_feature->slice->seq_region_name,
