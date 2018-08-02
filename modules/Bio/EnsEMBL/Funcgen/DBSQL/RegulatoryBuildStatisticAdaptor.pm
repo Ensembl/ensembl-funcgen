@@ -68,6 +68,23 @@ sub fetch_average_length_promoter_flanking_region {
 
 
 
+sub fetch_num_enhancers_overlapping_vista {
+  my $self = shift;
+  return $self->fetch_by_statistic('num_enhancers_overlapping_vista');
+}
+sub fetch_total_enhancers_checked_vista {
+  my $self = shift;
+  return $self->fetch_by_statistic('total_enhancers_checked_vista');
+}
+
+sub fetch_num_enhancers_overlapping_fantom {
+  my $self = shift;
+  return $self->fetch_by_statistic('num_enhancers_overlapping_fantom');
+}
+sub fetch_total_enhancers_checked_fantom {
+  my $self = shift;
+  return $self->fetch_by_statistic('total_enhancers_checked_fantom');
+}
 
 
 
