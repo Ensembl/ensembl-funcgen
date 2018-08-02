@@ -1,0 +1,121 @@
+[% MACRO genome_coverage_on_window_load BLOCK %]
+
+    ctx2 = document.getElementById("chart-area-genome-coverage-regulatory-build").getContext("2d");
+    window.myPie = new Chart(ctx2, genome_coverage_regulatory_build_config);
+
+[% END %]
+
+[% MACRO genome_coverage BLOCK %]
+
+<h2>Genome coverage</h2>
+
+[% 
+    total_covered_by_regulatory_features
+    = 
+        regulatory_build_statistics_adaptor.fetch_sum_length_ctcf_binding_site.value
+        + regulatory_build_statistics_adaptor.fetch_sum_length_enhancer.value
+        + regulatory_build_statistics_adaptor.fetch_sum_length_promoter_flanking_region.value
+        + regulatory_build_statistics_adaptor.fetch_sum_length_promoter.value
+        + regulatory_build_statistics_adaptor.fetch_sum_length_transcription_factor_binding_site.value
+        + regulatory_build_statistics_adaptor.fetch_sum_length_open_chromatin.value
+%]
+
+<p>
+   The regulatory features cover 
+    [% 
+        round_num(
+            (100 * total_covered_by_regulatory_features) / ref_length 
+        )
+    %]% of the genome.
+</p>
+
+<div id="canvas-holder" style="width:50%">
+    <canvas id="chart-area-genome-coverage-regulatory-build" />
+</div>
+
+<script>
+
+var genome_coverage_regulatory_build_config = {
+    type: 'pie',
+    data: {
+        datasets: [{
+            data: [
+
+                [% round_num( 100 * regulatory_build_statistics_adaptor.fetch_sum_length_ctcf_binding_site.value                 / ref_length ) %],
+                [% round_num( 100 * regulatory_build_statistics_adaptor.fetch_sum_length_enhancer.value                          / ref_length ) %],
+                [% round_num( 100 * regulatory_build_statistics_adaptor.fetch_sum_length_promoter_flanking_region.value          / ref_length ) %],
+                [% round_num( 100 * regulatory_build_statistics_adaptor.fetch_sum_length_promoter.value                          / ref_length ) %],
+                [% round_num( 100 * regulatory_build_statistics_adaptor.fetch_sum_length_transcription_factor_binding_site.value / ref_length ) %],
+                [% round_num( 100 * regulatory_build_statistics_adaptor.fetch_sum_length_open_chromatin.value                    / ref_length ) %],
+                [% 
+                    round_num(
+                        100 * (
+                            ref_length
+                            - total_covered_by_regulatory_features
+                        ) / ref_length 
+                    )
+                %]
+
+            ],
+            backgroundColor: [
+                window.chartColors.red,
+                window.chartColors.orange,
+                window.chartColors.yellow,
+                window.chartColors.green,
+                window.chartColors.blue,
+                window.chartColors.purple,
+                window.chartColors.gray,
+            ],
+
+        }],
+        labels: [
+            "CTCF Binding Site",
+            "Enhancer",
+            "Promoter Flanking Region",
+            "Promoter",
+            "TF binding site",
+            "Open chromatin",
+            "Not covered by regulatory build",
+        ]
+    },
+    options: {
+        responsive: true,
+        legend: {
+            position: 'left'
+        },
+        title: {
+            display: 'true',
+            text: 'Genome coverage of the Regulatory Build in [% species %]'
+        },
+        tooltips: {
+            callbacks: {
+                title: function(item, data) {
+                    // Pick first xLabel for now
+                    var title = '';
+
+                    if (item.length > 0) {
+                        if (item[0].yLabel) {
+                            title = item[0].yLabel;
+                        } else if (data.labels.length > 0 && item[0].index < data.labels.length) {
+                            title = data.labels[item[0].index];
+                        }
+                    }
+
+                    return title;
+                },
+
+                label: function(item, data) {
+                    //var datasetLabel = data.datasets[item.datasetIndex].label || 'No label found';
+                    var datasetLabel = data.labels[item.index] || 'No label found';
+                    return datasetLabel + ': ' + data.datasets[item.datasetIndex].data[item.index] + '% of genome';
+                }
+            },
+            mode: 'index',
+            axis: 'y'
+        }
+    }
+};
+
+</script>
+
+[% END %]

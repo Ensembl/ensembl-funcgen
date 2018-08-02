@@ -1,0 +1,76 @@
+[% MACRO numbers_by_feature_type_on_window_load BLOCK %]
+
+  var ctx = document.getElementById('regulatory_build_2').getContext('2d');
+  window.myBar = new Chart(ctx, {
+      type: 'bar',
+      data: barChartData,
+      options: {
+          responsive: true,
+          legend: {
+              display: false,
+          },
+          scales: {
+              yAxes: [{
+                  ticks: {
+                      min: 0
+                  }
+              }]
+          },
+          title: {
+              display: true,
+              text: 'Total numbers by feature type'
+          }
+      }
+  });
+
+[% END %]
+
+[% MACRO numbers_by_feature_type BLOCK %]
+
+<h2>Total numbers by feature type</h2>
+
+<div id="container_2" style="width: 80%;">
+    <canvas id="regulatory_build_2"></canvas>
+</div>
+
+<script>
+    var color = Chart.helpers.color;
+    
+    var barChartData = {
+        labels: [
+            "CTCF Binding Site",
+            "Enhancer",
+            "Promoter Flanking Region",
+            "Promoter",
+            "TF binding site",
+            "Open chromatin",
+        ],
+        datasets: [{
+            
+            backgroundColor: [
+                'rgb(255, 99, 132)',
+                'rgb(255, 159, 64)',
+                'rgb(255, 205, 86)',
+                'rgb(75, 192, 192)',
+                'rgb(54, 162, 235)',
+                'rgb(153, 102, 255)',
+                'rgb(201, 203, 207)',
+                'rgb(0,0,139)',
+                'rgb(75,0,130)',
+                'rgb(0,128,128)',
+                'rgb(128,0,128)',
+            ],
+            data: [
+                '[% regulatory_build_statistics_adaptor.fetch_number_ctcf_binding_site.value %]',
+                '[% regulatory_build_statistics_adaptor.fetch_number_enhancer.value %]',
+                '[% regulatory_build_statistics_adaptor.fetch_number_promoter_flanking_region.value %]',
+                '[% regulatory_build_statistics_adaptor.fetch_number_promoter.value %]',
+                '[% regulatory_build_statistics_adaptor.fetch_number_transcription_factor_binding_site.value %]',
+                '[% regulatory_build_statistics_adaptor.fetch_number_open_chromatin.value %]',
+            ]
+        }]
+    };
+
+</script>
+
+[% END %]

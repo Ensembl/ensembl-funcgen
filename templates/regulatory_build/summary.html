@@ -1,0 +1,61 @@
+[% MACRO summary BLOCK %]
+<h2>Summary</h2>
+
+<script type="text/javascript" class="init">
+
+$(document).ready(function() {
+    $('#regulatory_build_1').DataTable();
+} );
+
+</script>
+
+<table id="regulatory_build_1" class="display" cellspacing="0" width="100%">
+<thead>
+    <tr>
+        <th>Type</th>
+        <th>Total length in bp</th>
+        <th>Number of features</th>
+        <th>Average length</th>
+    </tr>
+</thead>
+
+<tbody>
+<tr>
+    <td>CTCF</td>
+    <td align="right">[% format_number( regulatory_build_statistics_adaptor.fetch_sum_length_ctcf_binding_site.value ) %]</td>
+    <td align="right">[% format_number( regulatory_build_statistics_adaptor.fetch_number_ctcf_binding_site.value ) %]</td>
+    <td align="right">[% format_number( regulatory_build_statistics_adaptor.fetch_average_length_ctcf_binding_site.value ) %]</td>
+</tr>
+<tr>
+    <td>Enhancer</td>
+    <td align="right">[% format_number( regulatory_build_statistics_adaptor.fetch_sum_length_enhancer.value )%]</td>
+    <td align="right">[% format_number( regulatory_build_statistics_adaptor.fetch_number_enhancer.value ) %]</td>
+    <td align="right">[% format_number( regulatory_build_statistics_adaptor.fetch_average_length_enhancer.value ) %]</td>
+</tr>
+<tr>
+    <td>Promoter Flanking</td>
+    <td align="right">[% format_number( regulatory_build_statistics_adaptor.fetch_sum_length_promoter_flanking_region.value )%]</td>
+    <td align="right">[% format_number( regulatory_build_statistics_adaptor.fetch_number_promoter_flanking_region.value ) %]</td>
+    <td align="right">[% format_number( regulatory_build_statistics_adaptor.fetch_average_length_promoter_flanking_region.value ) %]</td>
+</tr>
+<tr>
+    <td>Promoter</td>
+    <td align="right">[% format_number( regulatory_build_statistics_adaptor.fetch_sum_length_promoter.value )%]</td>
+    <td align="right">[% format_number( regulatory_build_statistics_adaptor.fetch_number_promoter.value ) %]</td>
+    <td align="right">[% format_number( regulatory_build_statistics_adaptor.fetch_average_length_promoter.value ) %]</td>
+</tr>
+<tr>
+    <td>Transcription Factor binding site</td>
+    <td align="right">[% format_number( regulatory_build_statistics_adaptor.fetch_sum_length_transcription_factor_binding_site.value )%]</td>
+    <td align="right">[% format_number( regulatory_build_statistics_adaptor.fetch_number_transcription_factor_binding_site.value ) %]</td>
+    <td align="right">[% format_number( regulatory_build_statistics_adaptor.fetch_average_length_transcription_factor_binding_site.value ) %]</td>
+</tr>
+<tr>
+    <td>Open Chromatin</td>
+    <td align="right">[% format_number( regulatory_build_statistics_adaptor.fetch_sum_length_open_chromatin.value )%]</td>
+    <td align="right">[% format_number( regulatory_build_statistics_adaptor.fetch_number_open_chromatin.value ) %]</td>
+    <td align="right">[% format_number( regulatory_build_statistics_adaptor.fetch_average_length_open_chromatin.value ) %]</td>
+</tr>
+</tbody>
+</table>
+[% END %]
