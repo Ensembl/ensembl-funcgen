@@ -196,7 +196,7 @@ sub pipeline_analyses {
                 . q( java -Xmx30000m             )
                 . q( -jar #ChromHMM#             )
                 . q( LearnModel                  )
-                . q( -r 10 -p 12                 )
+                . q( -r 300 -p 12                )
                 . q( -l #chromosome_length_file# )
                 . q( #binarized_bam_dir#/#superclass#/#class#/         )
                 . q( #learn_model_directory#     )
