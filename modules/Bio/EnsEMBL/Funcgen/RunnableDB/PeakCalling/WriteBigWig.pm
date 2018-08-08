@@ -15,11 +15,11 @@ sub run {
         lock_execution_plan
         resolve_nonterminal_symbols
   );
-  #my $plan_expanded = resolve_nonterminal_symbols($execution_plan);
+  my $plan_expanded = resolve_nonterminal_symbols($execution_plan);
   #lock_execution_plan($plan_expanded);
   lock_execution_plan($execution_plan);
 
-#   print Dumper($plan_expanded);
+   print Dumper($plan_expanded);
 #   die;
 
   my $bam_file = $execution_plan
