@@ -107,17 +107,6 @@ sub pipeline_analyses {
                   PRIMARY KEY (regulatory_build_statistic_id),
                   UNIQUE KEY stats_uniq(statistic, regulatory_build_id)
                 )",
-
-                "insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
-                  select 
-                    regulatory_build_id, 
-                    'Number of regulatory features', 
-                    count(regulatory_feature_id)
-                  from 
-                    regulatory_feature 
-                  group by regulatory_build_id
-                )",
-
                 "insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                   select 
                     regulatory_build_id,
