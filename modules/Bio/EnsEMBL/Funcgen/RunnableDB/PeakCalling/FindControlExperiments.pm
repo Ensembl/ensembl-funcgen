@@ -39,7 +39,7 @@ sub run {
   
   EXECUTION_PLAN:
   foreach my $current_execution_plan (@$execution_plan_list) {
-
+  
     my $meta_data = $current_execution_plan->{meta_data};
     
     if (
@@ -53,7 +53,15 @@ sub run {
       next EXECUTION_PLAN;
     }
 
-    my $current_execution_plan_expanded = resolve_nonterminal_symbols($current_execution_plan);
+    my $current_execution_plan_expanded;
+    
+    #eval {
+      $current_execution_plan_expanded = resolve_nonterminal_symbols($current_execution_plan);
+#     };
+#     if ($@) {
+#       warn("Couldn't use an execution plan!");
+#     }
+    
     lock_execution_plan($current_execution_plan_expanded);
     
     my $alignment_plans = $current_execution_plan_expanded->{alignment};
@@ -77,7 +85,7 @@ sub run {
       if (! exists $plan_depending_on_control{$alignment_name}) {
         $plan_depending_on_control{$alignment_name} = []
       }
-      push @{$plan_depending_on_control{$alignment_name}}, $current_execution_plan;
+      push $plan_depending_on_control{$alignment_name}, $current_execution_plan;
     }
   }
 
