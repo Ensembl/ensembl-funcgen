@@ -112,12 +112,12 @@
 <script>
 
 var sets = [
-    {"sets": [0],    "label": "Previous Regulatory Build", "size": [% regulatory_build_statistics_adaptor_previous_version.fetch_number_regulatory_features.value %] },
-    {"sets": [1],    "label": "New Regulatory Build",      "size": [% regulatory_build_statistics_adaptor.fetch_number_regulatory_features.value %] },
-    {"sets": [0, 1], "label": "Mapped stable ids",         "size": [% regulatory_build_statistics_adaptor.fetch_stable_id_mapping_mapped_stable_ids.value %] },
+    {"sets": [0],    "label": "Previous Regulatory Build ([% format_number(regulatory_build_statistics_adaptor_previous_version.fetch_number_regulatory_features.value ) %] features)", "size": [% regulatory_build_statistics_adaptor_previous_version.fetch_number_regulatory_features.value %] },
+    {"sets": [1],    "label": "New Regulatory Build ([%      format_number(regulatory_build_statistics_adaptor.fetch_number_regulatory_features.value                  ) %] features)", "size": [% regulatory_build_statistics_adaptor.fetch_number_regulatory_features.value %] },
+    {"sets": [0, 1], "label": "Mapped ([%                    format_number(regulatory_build_statistics_adaptor.fetch_stable_id_mapping_mapped_stable_ids.value         ) %] features)", "size": [% regulatory_build_statistics_adaptor.fetch_stable_id_mapping_mapped_stable_ids.value %] },
 ];
 
-var chart = venn.VennDiagram();
+var chart = venn.VennDiagram().width(1000).height(500);
 
 var div = d3.select("#venn")
 div.datum(sets).call(chart);
