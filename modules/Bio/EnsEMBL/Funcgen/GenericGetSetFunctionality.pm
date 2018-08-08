@@ -65,7 +65,15 @@ sub _generic_fetch {
     if (! defined $object_id) {
     die;
   }
-  my $object_adaptor = $self->adaptor;
+  my $object_adaptor;
+  
+  eval {
+    $object_adaptor = $self->adaptor;
+  };
+  if ($@) {
+    warn("Calling adaptor failed! Trying the older 'db' method");
+    $object_adaptor = $self->db;
+  }
   
   if (! defined $object_adaptor) {
       throw(
