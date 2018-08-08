@@ -170,6 +170,7 @@ sub pipeline_analyses {
       },
       {   -logic_name => 'binarize',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -max_retry_count => 0,
           -rc_name    => 'binarization',
           -parameters => { 
             cmd => q( java -Xmx14500m                     )
