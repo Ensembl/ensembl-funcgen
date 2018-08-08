@@ -40,7 +40,7 @@ sub pipeline_wide_parameters {
     %{$self->SUPER::pipeline_wide_parameters},
     pipeline_name            => $self->o('pipeline_name'),
     tempdir                  => $self->o('tempdir'),
-    tempdir_regulatory_build => $self->o('tempdir') . '/regulatory_build_statistics',
+    tempdir_regulatory_build_statistics => $self->o('tempdir') . '/regulatory_build_statistics',
     data_root_dir            => $self->o('data_root_dir'),
     reference_data_root_dir  => $self->o('reference_data_root_dir'),
     reg_conf                 => $self->o('reg_conf'),
@@ -84,7 +84,7 @@ sub pipeline_analyses {
                   compute_enhancer_coverage_bedtools.pl \
                     --species  #species# \
                     --registry #reg_conf# \
-                    --tempdir #tempdir_regulatory_build#
+                    --tempdir #tempdir_regulatory_build_statistics#/#species#
                 )
           },
 
