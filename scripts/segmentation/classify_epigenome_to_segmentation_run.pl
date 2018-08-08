@@ -306,19 +306,19 @@ sub classify_epigenome {
     
     # H3K27ac can be missing as long as H3K4me3 and H3K4me1 are available.
     
-    my $class;
-    
     if (! $has_minimum_required_feature_types_for_segmentation) {
-        $class = SEGMENTATION_CLASS_NONE;
-        return $class;
+        return SEGMENTATION_CLASS_NONE;
+    }
+    if (! $has_H3K4me3_and_H3K4me1) {
+        return SEGMENTATION_CLASS_NONE;
     }
 
-    if (  $has_H3K27ac &&   $has_CTCF) { $class = SEGMENTATION_CLASS_CTCF               }
-    if (  $has_H3K27ac && ! $has_CTCF) { $class = SEGMENTATION_CLASS_NO_CTCF            }
-    if (! $has_H3K27ac &&   $has_CTCF) { $class = SEGMENTATION_CLASS_CTCF_NO_H3K27AC    }
-    if (! $has_H3K27ac && ! $has_CTCF) { $class = SEGMENTATION_CLASS_NO_CTCF_NO_H3K27AC }
+    if (  $has_H3K27ac &&   $has_CTCF) { return SEGMENTATION_CLASS_CTCF               }
+    if (  $has_H3K27ac && ! $has_CTCF) { return SEGMENTATION_CLASS_NO_CTCF            }
+    if (! $has_H3K27ac &&   $has_CTCF) { return SEGMENTATION_CLASS_CTCF_NO_H3K27AC    }
+    if (! $has_H3K27ac && ! $has_CTCF) { return SEGMENTATION_CLASS_NO_CTCF_NO_H3K27AC }
     
-    return $class;
+    return SEGMENTATION_CLASS_NONE;
 }
 
 sub fetch_feature_types_for_epigenome {
@@ -333,8 +333,6 @@ sub fetch_feature_types_for_epigenome {
             $epigenome, 
             $experimental_group_name
         );
-        
-        #print "Found " . @$experiments . " experiments for " . $epigenome->name . "\n";
      } else {
         $experiments = $experiment_adaptor->fetch_all_by_Epigenome($epigenome);
      }
