@@ -578,8 +578,8 @@ sub summary_as_hash {
         unit                                      => $self->unit(),
         stable_id                                 => $self->stable_id(),
         associated_transcription_factor_complexes => \@associated_tfc_names,
-        max_element                               => $self->_max_element()
-
+        max_element                               => $self->_max_element(),
+        elements_string                           => $self->get_elements_as_string,
     };
 }
 
