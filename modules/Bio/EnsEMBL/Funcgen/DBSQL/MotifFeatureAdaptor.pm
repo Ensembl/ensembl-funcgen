@@ -210,6 +210,32 @@ sub fetch_all_by_Slice_BindingMatrix {
   return $mfs;
 }
 
+=head2 fetch_all_by_BindingMatrix
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::BindingMatrix
+  Example    : my $features = $mfa->fetch_all_by_BindingMatrix($bm);
+  Description: Retrieves a list of motif features specific for a given BindingMatrix.
+  Returntype : Listref of Bio::EnsEMBL::MotifFeature objects
+  Exceptions : Throws if BindinMatrix is not valid
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_BindingMatrix {
+  my ($self, $bm) = @_;
+
+  #could add logic_name here for motif mapper analysis, motif source analysis
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::BindingMatrix', $bm);
+
+  my $constraint = 'mf.binding_matrix_id = ?';
+
+  $self->bind_param_generic_fetch( $bm->dbID(), SQL_INTEGER);
+  my $mfs = $self->generic_fetch($constraint);
+
+  return $mfs;
+}
+
 
 =head2 fetch_all_by_Slice_FeatureSets
 
@@ -572,7 +598,7 @@ sub store_associated_Peak {
     my $sth = $self->prepare(
 "INSERT INTO motif_feature_peak (motif_feature_id, peak_id) VALUES (?, ?)"
     );
-
+    
     $sth->bind_param( 1, $mf->dbID,   SQL_INTEGER );
     $sth->bind_param( 2, $peak->dbID, SQL_INTEGER );
     $sth->execute();
