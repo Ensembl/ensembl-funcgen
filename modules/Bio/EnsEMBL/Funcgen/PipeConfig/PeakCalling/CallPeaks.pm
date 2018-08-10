@@ -20,6 +20,7 @@ sub pipeline_analyses {
             -parameters => {
               tempdir => '#tempdir_peak_calling#/#species#/peak_calling'
             },
+            -analysis_capacity => 100,
             -flow_into   => {
                2        => 'store_peaks',
                MEMLIMIT => 'call_peaks_himem',
@@ -30,6 +31,7 @@ sub pipeline_analyses {
             -parameters => {
               tempdir => '#tempdir_peak_calling#/#species#/peak_calling'
             },
+            -analysis_capacity => 50,
             -rc_name     => '8Gb_job',
             -flow_into   => {
                2 => 'store_peaks',

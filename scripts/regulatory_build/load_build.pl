@@ -113,7 +113,7 @@ sub main {
   my $current_regulatory_build = $regulatory_build_adaptor->fetch_current_regulatory_build;
 
   if (! defined $current_regulatory_build) {
-    print("Couldn't find regulatory build in the database!");
+    print_log("Couldn't find regulatory build in the database!\n");
   }
   if (defined $current_regulatory_build) {
     print "Found regulatory build: "
@@ -133,6 +133,9 @@ sub main {
   my $feature_type = get_feature_types($funcgen_db_adaptor);
   print_log("Counting active features\n");
   my $count_hash = compute_counts($options->{base_dir});
+  
+  print_log("count_hash = " . Dumper($count_hash) . "\n");
+  print_log("Found " . (scalar keys %$count_hash) . " features.\n");
 
   print_log("Creating regulatory build object\n");
 
@@ -515,7 +518,19 @@ sub get_slices {
 sub compute_counts {
   my ($base_dir) = @_;
   my $count_hash = {};
-  foreach my $file (glob "$base_dir/projected_segmentations/*.bb") {
+  
+  my $projected_segmentations_dir = "$base_dir/projected_segmentations";
+  
+  if (! -d $projected_segmentations_dir) {
+    confess("The directory $projected_segmentations_dir does not exist!");
+  }
+  my @projection_file = glob "$projected_segmentations_dir/*.bb";
+  
+  if (! @projection_file) {
+    confess("No projection files found in ${projected_segmentations_dir}!");
+  }
+  
+  foreach my $file (@projection_file) {
     count_active($file , $count_hash);
   }
   return $count_hash;
@@ -711,11 +726,11 @@ sub process_regulatory_build_file {
     my ($chrom, $start, $end, $name, $score, $strand, $thickStart, $thickEnd, $rgb) = split "\t", $line;
     my ($feature_type_str, $number) = split '_', $name;
 
-    exists $feature_type->{$feature_type_str} || die("Could not find feature type for $feature_type_str\n".join("\t", keys %{$feature_type})."\n");
-    exists $slice->{$chrom} || die("Could not find slice type for $chrom\n".join("\t", keys %{$slice})."\n");
-    exists $stable_id->{$name} || die("Could not find stable ID for feature # $name\n");
+    exists $feature_type->{$feature_type_str} || confess("Could not find feature type for $feature_type_str\n".join("\t", keys %{$feature_type})."\n");
+    exists $slice->{$chrom} || confess("Could not find slice type for $chrom\n".join("\t", keys %{$slice})."\n");
+    exists $stable_id->{$name} || confess("Could not find stable ID for feature # $name\n");
 
-    exists $count_hash->{$name} || die("Could not find count for feature # $name\n");
+    exists $count_hash->{$name} || confess("Could not find count for feature # $name\n");
 
     my $regulatory_feature = Bio::EnsEMBL::Funcgen::RegulatoryFeature->new_fast({
       slice               => $slice->{$chrom},

@@ -16,7 +16,6 @@ sub default_options {
   return {
       %{$self->SUPER::default_options},
       pipeline_name => 'chip_seq_analysis',
-      in_test_mode  => 0,
    };
 }
 
@@ -32,7 +31,6 @@ sub pipeline_wide_parameters {
     reports_dir             => $self->o('reports_dir'),
     ensembl_release_version => $self->o('ensembl_release_version'),
     reference_data_root_dir => $self->o('reference_data_root_dir'),
-    in_test_mode            => $self->o('in_test_mode'),
     reg_conf                => $self->o('reg_conf'),
   };
 }
@@ -63,11 +61,18 @@ sub generate_parallel_alignment_analyses {
         {   -logic_name  => $start,
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
-               'MAIN->A' => $surround->('split'),
+               'MAIN->A' => $surround->('split_experiment'),
                'A->MAIN' => $surround->('done_align'),
             },
         },
-        {   -logic_name  => $surround->('split'),
+        {   -logic_name  => $surround->('split_experiment'),
+            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SplitExperimentReads',
+            -flow_into   => {
+               '3->A' => $surround->('split_fastq_files'),
+               'A->2' => $surround->('merge'),
+            },
+        },
+        {   -logic_name  => $surround->('split_fastq_files'),
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SplitFastq',
             -analysis_capacity => 30,
             -parameters => {
@@ -75,15 +80,21 @@ sub generate_parallel_alignment_analyses {
             },
             -flow_into   => {
                '2->A' => $surround->('align'),
-               'A->3' => $surround->('merge'),
+               'A->3' => $surround->('merge_chunks'),
             },
         },
         {   -logic_name  => $surround->('align'),
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::AlignFastqFile',
+            -priority   => 10,
             -rc_name    => '32Gb_job',
+        },
+        {   -logic_name  => $surround->('merge_chunks'),
+            -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::MergeBamFiles',
+            -priority   => 20,
         },
         {   -logic_name  => $surround->('merge'),
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::MergeBamFiles',
+            -priority   => 30,
             -flow_into   => {
                MAIN     => $surround->('remove_duplicates'),
                MEMLIMIT => $surround->('merge_himem'),
@@ -91,6 +102,7 @@ sub generate_parallel_alignment_analyses {
         },
         {   -logic_name  => $surround->('merge_himem'),
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::MergeBamFiles',
+            -priority   => 30,
             -rc_name    => '8Gb_job',
             -flow_into   => {
                MAIN => $surround->('remove_duplicates'),
@@ -98,6 +110,7 @@ sub generate_parallel_alignment_analyses {
         },
         {   -logic_name  => $surround->('remove_duplicates'),
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::RemoveDuplicates',
+            -priority   => 40,
             -flow_into   => {
                MAIN     => $surround->('register_alignment'),
                MEMLIMIT => $surround->('remove_duplicates_himem'),
@@ -105,6 +118,7 @@ sub generate_parallel_alignment_analyses {
         },
         {   -logic_name  => $surround->('remove_duplicates_himem'),
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::RemoveDuplicates',
+            -priority   => 40,
             -rc_name    => '8Gb_job',
             -flow_into   => {
                MAIN => $surround->('register_alignment'),
@@ -115,6 +129,7 @@ sub generate_parallel_alignment_analyses {
         },
         {   -logic_name  => $surround->('done_align'),
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -priority   => 50,
             -flow_into  => $flow_into,
         },
     ]

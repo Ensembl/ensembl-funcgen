@@ -3,6 +3,7 @@ package Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::CallPeaks;
 use strict;
 use base 'Bio::EnsEMBL::Hive::Process';
 use Data::Dumper;
+use Carp;
 use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
 
 use constant {
@@ -62,6 +63,10 @@ sub run {
   my $peak_calling_strategy = $call_peaks_plan->{peak_calling_strategy};
   my $logic_name            = $call_peaks_plan->{analysis};
   
+  if (! defined $logic_name) {
+    die("No analysis logic name was defined for peak calling!");
+  }
+  
   my $analysis_adaptor = Bio::EnsEMBL::Registry
     ->get_adaptor(
         $species, 
@@ -71,7 +76,7 @@ sub run {
   my $peak_analysis = $analysis_adaptor->fetch_by_logic_name($logic_name);
   
   if (! defined $peak_analysis) {
-    die;
+    die("Can't fetch peak analysis with logic name $logic_name!");
   }
   
   my $reference_data_root_dir = $self->param('reference_data_root_dir');
@@ -144,6 +149,9 @@ sub run {
   if ($peak_calling_strategy eq CALL_NARROW_PEAKS) {
     $file_type = 'txt';
   }
+  if ($peak_calling_strategy eq CALL_TIGHT_PEAKS) {
+    $file_type = 'txt';
+  }
   
   my $idr_strategy = $plan->{idr}->{strategy};
   
@@ -159,13 +167,13 @@ sub run {
     my $experiment_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'experiment');
     my $experiment = $experiment_adaptor->fetch_by_name($experiment_name);
     if (! defined $experiment) {
-      die;
+      confess("Can't fetch experiment with name $experiment_name!");
     }
     my $idr_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'idr');
     my $idr = $idr_adaptor->_fetch_by_experiment_id($experiment->dbID);
     
     if (! defined $idr) {
-      die;
+      confess("Couldn't find idr for experiment $experiment_name!");
     }
     @max_peaks = ( -max_peaks => $idr->max_peaks );
   }
@@ -184,9 +192,15 @@ sub run {
   my $peak_calling_succeeded = undef;
   my $error_message;
 
-  my $TIMEOUT_IN_SECONDS = 5 * 3600;
+  my $TIMEOUT_IN_SECONDS = 10 * 3600;
   eval {
-      local $SIG{ALRM} = sub { die "alarm\n" };
+      local $SIG{ALRM} = sub { die "alarm" };
+      
+      local $SIG{INT} = sub { 
+        $self->warning("Got INT signal!");
+        sleep(30);
+      };
+      
       alarm($TIMEOUT_IN_SECONDS);
 
       _run_peak_caller(
@@ -216,9 +230,13 @@ sub run {
       }
   };
   if ($@) {
-      # handle timeout condition.
-      
       $peak_calling_succeeded = 0;
+      
+      my $killed_for_timeout = $@ =~ /alarm/;
+      
+      if (! $killed_for_timeout) {
+        $self->throw($@);
+      }
       $error_message = "Peak calling job " . $self->input_job->dbID . " timed out after $TIMEOUT_IN_SECONDS seconds.";
       $self->warning($error_message);
   }

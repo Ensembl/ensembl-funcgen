@@ -45,12 +45,12 @@ my $funcgen_dba = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
 
 my $dbc = $funcgen_dba->dbc;
 
-$dbc->do("delete from regulatory_build_statistics where statistic like '%mapping%';");
+$dbc->do("delete from regulatory_build_statistic where statistic like '%mapping%';");
 
 my $regulatory_build_adaptor = $funcgen_dba->get_RegulatoryBuildAdaptor;
 my $current_regulatory_build = $regulatory_build_adaptor->fetch_current_regulatory_build;
 
-my $regulatory_build_statistics_adaptor = $funcgen_dba->get_RegulatoryBuildStatisticsAdaptor;
+my $regulatory_build_statistics_adaptor = $funcgen_dba->get_RegulatoryBuildStatisticAdaptor;
 
 my $parsed_emission = load_data_from_file($mapping_report_file);
 

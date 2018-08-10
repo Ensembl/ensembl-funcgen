@@ -162,11 +162,16 @@ sub objectify { # turn the hashref into an object
     
     my $object;
     eval {
-      $object = $self->object_class->new(
+    
+      my %constructor_parameters = (
         -db => $self, 
-        map { 
+        map {
           ( ($_ eq $autoinc_id) ? -dbID : '-' . $_ ) => $hashref->{$_} 
         } keys %$hashref 
+      );
+      
+      $object = $self->object_class->new(
+        %constructor_parameters
       );
     };
     if ($@) {

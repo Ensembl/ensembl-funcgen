@@ -13,7 +13,7 @@ sub run {
   my $self = shift;
   
   my $species = $self->param_required('species');
-  my $plan    = $self->param_required('plan');
+  my $plan    = $self->param_required('execution_plan');
   
   lock_execution_plan($plan);
   
@@ -27,7 +27,6 @@ sub run {
   my $read_files       = $align_plan->{input}->{read_files};
   my $to_gender        = $align_plan->{to_gender};
   my $bam_file         = $align_plan->{output}->{stored};
-  my $is_control       = $align_plan->{is_control};
   my $experiment_name  = $align_plan->{from_experiment};
   my $ensembl_analysis = $align_plan->{ensembl_analysis};
   
@@ -35,6 +34,7 @@ sub run {
   
   use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
   my $is_complete     = $align_plan->{is_complete} eq TRUE;
+  my $is_control      = $align_plan->{is_control}  eq TRUE;
   
   my $experiment_adaptor = Bio::EnsEMBL::Registry
   ->get_adaptor(

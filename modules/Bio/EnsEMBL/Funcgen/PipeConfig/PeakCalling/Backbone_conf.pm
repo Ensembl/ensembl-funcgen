@@ -13,43 +13,19 @@ sub pipeline_analyses {
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
                'MAIN->A' => 'pre_pipeline_checks',
-               'A->MAIN' => 'truncate_peak_calling_tables',
+               'A->MAIN' => 'truncate_execution_plan_table',
             },
         },
         {
           -logic_name => 'pre_pipeline_checks',
           -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::PrePipelineChecks',
-#             -flow_into => {
-#                MAIN => 'truncate_peak_calling_tables',
-#             },
         },
         {
-            -logic_name  => 'truncate_peak_calling_tables',
+            -logic_name  => 'truncate_execution_plan_table',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
             -parameters => {
                 sql     => [
-                    "truncate peak;",
-                    "truncate peak_calling;",
-                    "truncate alignment;",
-                    "delete from data_file where table_name = 'alignment';",
-                    "truncate alignment_qc_flagstats;",
-                    "truncate alignment_read_file;",
-                    "truncate chance;",
                     "truncate execution_plan;",
-                    "truncate fastqc;",
-                    "truncate frip;",
-                    "truncate idr;",
-                    "truncate phantom_peak;",
-                    "truncate regulatory_build;",
-                    "truncate regulatory_feature;",
-                    "truncate regulatory_activity;",
-                    "truncate regulatory_build_epigenome;",
-                    "truncate regulatory_evidence;",
-                    "truncate regulatory_build_statistic;",
-                    "truncate segmentation_file;",
-                    "delete from data_file where table_name = 'segmentation_file';",
-                    "truncate segmentation_state_assignment;",
-                    "truncate segmentation_state_emission;",
                 ],
                 db_conn => 'funcgen:#species#',
             },
@@ -111,12 +87,45 @@ sub pipeline_analyses {
         {   -logic_name  => 'backbone_fire_start_alignments',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
-               '1->A' => 'multiplex_execution_plan_jobs',
+               '1->A' => 'truncate_alignment_tables',
                'A->1' => 'start_peak_calling',
             },
         },
-        {   -logic_name  => 'multiplex_execution_plan_jobs',
-            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+
+
+
+        {
+            -logic_name  => 'truncate_alignment_tables',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+            -parameters => {
+                sql     => [
+                    "truncate peak;",
+                    "truncate peak_calling;",
+                    "truncate peak_calling_statistic",
+                    "truncate alignment;",
+                    "delete from data_file where table_name = 'alignment';",
+                    "truncate alignment_qc_flagstats;",
+                    "truncate alignment_read_file;",
+                    "truncate chance;",
+                    "truncate fastqc;",
+                    "truncate frip;",
+                    "truncate idr;",
+                    "truncate phantom_peak;",
+                    "truncate regulatory_build;",
+                    "truncate regulatory_feature;",
+                    "truncate regulatory_activity;",
+                    "truncate regulatory_build_epigenome;",
+                    "truncate regulatory_evidence;",
+                    "truncate regulatory_build_statistic;",
+#                     "truncate segmentation_cell_table_ctcf",
+#                     "truncate segmentation_cell_table_without_ctcf",
+                    "truncate segmentation_file;",
+                    "delete from data_file where table_name = 'segmentation_file';",
+                    "truncate segmentation_state_assignment;",
+                    "truncate segmentation_state_emission;",
+                ],
+                db_conn => 'funcgen:#species#',
+            },
             -flow_into   => {
                MAIN => [
                 'seed_control_experiments',
@@ -124,6 +133,16 @@ sub pipeline_analyses {
                ],
             },
         },
+
+#         {   -logic_name  => 'multiplex_execution_plan_jobs',
+#             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+#             -flow_into   => {
+#                MAIN => [
+#                 'seed_control_experiments',
+#                 'seed_signal_experiments'
+#                ],
+#             },
+#         },
         {   -logic_name => 'seed_signal_experiments',
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedAllExperimentNames',
             -flow_into   => {
@@ -219,12 +238,55 @@ sub pipeline_analyses {
         },
         {
             -logic_name  => 'start_peak_calling',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into   => {
+               MAIN => 'truncate_peak_calling_tables',
+            },
+        },
+
+
+        {
+            -logic_name  => 'truncate_peak_calling_tables',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+            -parameters => {
+                sql     => [
+                    "truncate peak;",
+                    "truncate peak_calling;",
+                    "truncate peak_calling_statistic",
+                    "truncate alignment_qc_flagstats;",
+                    "truncate chance;",
+                    "truncate frip;",
+                    "truncate idr;",
+                    "truncate phantom_peak;",
+                    "truncate regulatory_build;",
+                    "truncate regulatory_feature;",
+                    "truncate regulatory_activity;",
+                    "truncate regulatory_build_epigenome;",
+                    "truncate regulatory_evidence;",
+                    "truncate regulatory_build_statistic;",
+#                     "truncate segmentation_cell_table_ctcf",
+#                     "truncate segmentation_cell_table_without_ctcf",
+                    "truncate segmentation_file;",
+                    "delete from data_file where table_name = 'segmentation_file';",
+                    "truncate segmentation_state_assignment;",
+                    "truncate segmentation_state_emission;",
+                ],
+                db_conn => 'funcgen:#species#',
+            },
+            -flow_into   => {
+               MAIN => 'seed_peak_calling_jobs_from_list',
+            },
+        },
+
+
+        {
+            -logic_name  => 'seed_peak_calling_jobs_from_list',
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedJobsFromList',
             -flow_into   => {
                2 => 'backbone_fire_convert_signal_to_bed',
             },
         },
-        
+
         {   -logic_name  => 'backbone_fire_convert_signal_to_bed',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {

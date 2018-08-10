@@ -40,6 +40,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::PeakCallingAdaptor;
 
 use strict;
 use base 'Bio::EnsEMBL::Funcgen::DBSQL::GenericAdaptor';
+use Bio::EnsEMBL::Utils::Exception qw( throw );
 
 sub object_class {
     return 'Bio::EnsEMBL::Funcgen::PeakCalling';
@@ -47,6 +48,15 @@ sub object_class {
 
 sub _tables {
   return ['peak_calling', 'pc']
+}
+
+sub fetch_all_failed {
+  my $self         = shift;
+  
+  my $features = $self->fetch_all(
+    "run_failed is true"
+  );
+  return $features;
 }
 
 sub fetch_all_by_Epigenome {

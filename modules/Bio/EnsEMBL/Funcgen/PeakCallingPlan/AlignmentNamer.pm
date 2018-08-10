@@ -16,6 +16,17 @@ sub _constructor_parameters {
   };
 }
 
+sub init {
+  
+  my $self = shift;
+  
+  use Carp;
+  if (! defined $self->experiment) {
+    confess("Experiment is a mandatory parameter!");
+  }
+  return;
+}
+
 use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_get_or_set
 );

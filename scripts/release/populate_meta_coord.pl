@@ -135,8 +135,13 @@ sub create_hash_of_coord_system_id_to_longest_feature_on_it {
   my %seen_coord_system_ids;
   my %coord_system_id_to_longest_feature_on_it;
 
+  SEG_REGION:
   foreach my $seq_region_id_with_features_on_it (@$seq_region_ids_with_features_on_it) {
-
+    
+    if (! exists $seq_region_id_to_coord_system_id_lookup->{$seq_region_id_with_features_on_it}) {
+      warn("Unknown seq region $seq_region_id_with_features_on_it in core database!");
+      next SEG_REGION;
+    }
     my $coord_system_id           = $seq_region_id_to_coord_system_id_lookup->{$seq_region_id_with_features_on_it};
     my $length_of_longest_feature = $length_of_longest_feature_for_each_seq_region->{$seq_region_id_with_features_on_it};
     

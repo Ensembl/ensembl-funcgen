@@ -39,8 +39,8 @@ sub run {
     }
 
     my $want_this = 
-      $signal_plan->{is_control} == 1
-      && $signal_plan->{analysis} eq CONVERT_BAM_TO_BIGWIG_ANALYSIS;
+         $signal_plan->{is_control} eq TRUE
+      && $signal_plan->{analysis}   eq CONVERT_BAM_TO_BIGWIG_ANALYSIS;
    
    next SIGNAL_PLAN if (! $want_this);
    

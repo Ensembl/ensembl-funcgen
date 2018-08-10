@@ -111,23 +111,28 @@ sub _construct_bam_to_bed_conversion_plan {
         type       => ALIGNMENT_ANALYSIS,
         name       => $alignment_namer->base_name_no_duplicates,
         task       => CONVERT_BAM_TO_BED_ANALYSIS,
-        is_control => 0,
+        is_control => FALSE,
         output     => {
           real => $alignment_namer->bed_file_no_duplicates,
           format => BED_FORMAT
         },
       };
-      my $control_alignment_as_bed = {
-        input      => $control_alignment_for_peak_calling,
-        type       => ALIGNMENT_ANALYSIS,
-        name       => $control_alignment_namer->base_name_no_duplicates,
-        task       => CONVERT_BAM_TO_BED_ANALYSIS,
-        is_control => 1,
-        output     => {
-          real => $control_alignment_namer->bed_file_no_duplicates,
-          format => BED_FORMAT
-        },
-      };
+      
+      my $control_alignment_as_bed;
+      
+      if ($experiment->has_control_Experiment) {
+        $control_alignment_as_bed = {
+            input      => $control_alignment_for_peak_calling,
+            type       => ALIGNMENT_ANALYSIS,
+            name       => $control_alignment_namer->base_name_no_duplicates,
+            task       => CONVERT_BAM_TO_BED_ANALYSIS,
+            is_control => TRUE,
+            output     => {
+            real => $control_alignment_namer->bed_file_no_duplicates,
+            format => BED_FORMAT
+            },
+        };
+      }
       
     $bam_file_to_bed_conversion_plan = [
       $signal_alignment_as_bed,
@@ -166,15 +171,38 @@ sub _construct_peak_calling_plan {
   if ($peak_calling_strategy eq CALL_BROAD_PEAKS) {
     $analysis_logic_name = ENSEMBL_BROAD_PEAK_CALLING_ANALYSIS;
   }
+  
+  # narrow peaks + no idr => peak calling for narrow peaks
   if (
     ($peak_calling_strategy eq CALL_NARROW_PEAKS) && ($idr_strategy eq SKIP_IDR)
   ) {
     $analysis_logic_name = ENSEMBL_NARROW_PEAK_CALLING_ANALYSIS_DEFAULT;
   }
+  
+  # narrow peaks + idr => permissive peak calling
   if (
     ($peak_calling_strategy eq CALL_NARROW_PEAKS) && ($idr_strategy ne SKIP_IDR)
   ) {
     $analysis_logic_name = ENSEMBL_NARROW_PEAK_CALLING_ANALYSIS_PERMISSIVE;
+  }
+  
+  # tight peaks + no idr => peak calling for tight peaks
+  if (
+    ($peak_calling_strategy eq CALL_TIGHT_PEAKS) && ($idr_strategy eq SKIP_IDR)
+  ) {
+    $analysis_logic_name = ENSEMBL_TIGHT_PEAK_CALLING_ANALYSIS_DEFAULT;
+  }
+  
+  # tight peaks + idr => permissive peak calling
+  if (
+    ($peak_calling_strategy eq CALL_TIGHT_PEAKS) && ($idr_strategy ne SKIP_IDR)
+  ) {
+    $analysis_logic_name = ENSEMBL_NARROW_PEAK_CALLING_ANALYSIS_PERMISSIVE;
+  }
+
+  
+  if (! defined $analysis_logic_name) {
+    confess("Couldn't assign a logic name for the peak calling strategy $peak_calling_strategy!");
   }
   
   my $feature_type = $experiment->feature_type;
@@ -232,6 +260,9 @@ sub select_peak_calling_strategy {
 
   if ($feature_type->_creates_broad_peaks) {
     return CALL_BROAD_PEAKS;
+  }
+  if ($feature_type->name eq 'DNase1') {
+    return CALL_TIGHT_PEAKS;
   }
   return CALL_NARROW_PEAKS
 }

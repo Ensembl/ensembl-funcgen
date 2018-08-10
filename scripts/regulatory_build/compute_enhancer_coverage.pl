@@ -44,7 +44,7 @@ use Bio::EnsEMBL::Slice;
 
 use Bio::EnsEMBL::Mapper::RangeRegistry;
 
-my $range_registry = Bio::EnsEMBL::Mapper::RangeRegistry->new();
+# my $range_registry = Bio::EnsEMBL::Mapper::RangeRegistry->new();
 
 use Bio::EnsEMBL::Utils::Logger;
 
@@ -61,7 +61,7 @@ lock_keys( %options );
 
 my $species  = $options{'species'};
 my $registry = $options{'registry'};
-my $tempdir  = $options{'tempdir'};
+# my $tempdir  = $options{'tempdir'};
 
 Bio::EnsEMBL::Registry->load_all($registry);
 
@@ -71,8 +71,21 @@ my $funcgen_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen')
 my $logger = Bio::EnsEMBL::Utils::Logger->new();
 $logger->init_log;
 
-my $feature_set_adaptor = $funcgen_adaptor->get_FeatureSetAdaptor;
+my $feature_set_adaptor      = $funcgen_adaptor->get_FeatureSetAdaptor;
 my $external_feature_adaptor = $funcgen_adaptor->get_ExternalFeatureAdaptor;
+my $regulatory_build_adaptor = $funcgen_adaptor->get_RegulatoryBuildAdaptor;
+
+my $regulatory_build = $regulatory_build_adaptor->fetch_current_regulatory_build;
+
+my $regulatory_build_statistic_adaptor = $funcgen_adaptor->get_RegulatoryBuildStatisticAdaptor;
+
+use constant {
+
+  FANTOM_FEATURE_SET_NAME => 'FANTOM',
+  VISTA_FEATURE_SET_NAME  => 'VISTA enhancer set',
+
+};
+
 
 my @experimentally_verified_enhancer_feature_set_names = (
   'FANTOM',
@@ -152,6 +165,15 @@ foreach my $experimentally_verified_enhancer_feature_set (@experimentally_verifi
         $current_enhancer_feature->end
       );
       
+      $logger->info(
+        join 
+            "\t",
+            $seq_region_name, 
+            $current_enhancer_feature->start, 
+            $current_enhancer_feature->end,
+      );
+      $logger->info("\n");
+      
       my $overlaps_enhancer_from_regulatory_build = $overlap_size > 0;
       
       $total_enhancers_checked++;
@@ -177,7 +199,35 @@ foreach my $experimentally_verified_enhancer_feature_set (@experimentally_verifi
 
 REPORT
   ;
+  
+  use Bio::EnsEMBL::Funcgen::RegulatoryBuildStatistic;
+  if ($current_feature_set eq VISTA_FEATURE_SET_NAME) {
+  
+    $regulatory_build_statistic_adaptor->store(
+        Bio::EnsEMBL::Funcgen::RegulatoryBuildStatistic->new(
+            -statistic           => "total_enhancers_checked_vista",
+            -value               => $total_enhancers_checked,
+            -regulatory_build_id => $regulatory_build->dbID,
+        )
+    );
+    $regulatory_build_statistic_adaptor->store(
+        Bio::EnsEMBL::Funcgen::RegulatoryBuildStatistic->new(
+            -statistic           => "num_enhancers_overlapping_vista",
+            -value               => $num_enhancers_overlapping,
+            -regulatory_build_id => $regulatory_build->dbID,
+        )
+    );
+    $regulatory_build_statistic_adaptor->store(
+        Bio::EnsEMBL::Funcgen::RegulatoryBuildStatistic->new(
+            -statistic           => "num_enhancers_not_overlapping_vista",
+            -value               => $num_enhancers_not_overlapping,
+            -regulatory_build_id => $regulatory_build->dbID,
+        )
+    );
+
+  }
 
 }
 
 $logger->finish_log;
+

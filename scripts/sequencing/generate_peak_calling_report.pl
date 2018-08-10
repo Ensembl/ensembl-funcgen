@@ -72,6 +72,7 @@ my $peak_calling_statistic_adaptor = $mouse_funcgen_dba->get_PeakCallingStatisti
 my $epigenome_adaptor    = $mouse_funcgen_dba->get_EpigenomeAdaptor;
 my $feature_type_adaptor = $mouse_funcgen_dba->get_FeatureTypeAdaptor;
 my $peak_calling_adaptor = $mouse_funcgen_dba->get_PeakCallingAdaptor;
+my $idr_adaptor          = $mouse_funcgen_dba->get_IdrAdaptor;
 
 my $peak_calling_statistics = $peak_calling_statistic_adaptor->fetch_all;
 
@@ -94,7 +95,7 @@ my $output;
 my $peak_calling_statistics_sorted = [ sort { $a->total_length <=> $b->total_length } @$peak_calling_statistics ];
 
 my $genome_container = Bio::EnsEMBL::Registry->get_adaptor( $species, 'core', 'GenomeContainer' );
-my $mouse_ref_length = $genome_container->get_ref_length;
+my $genome_size_in_bp = $genome_container->get_ref_length;
 
 my $graph_display_feature_types = [
     map {
@@ -131,6 +132,8 @@ my $experiment_adaptor = $mouse_funcgen_dba->get_ExperimentAdaptor;
 my @signal_experiments  = $experiment_adaptor->_fetch_all_signal_experiments;
 my @control_experiments = $experiment_adaptor->_fetch_all_control_experiments;
 
+$Template::Stash::PRIVATE = undef;
+
 $tt->process(
     $description_template, 
     {
@@ -140,16 +143,26 @@ $tt->process(
 
         peak_calling_statistics => $peak_calling_statistics_sorted,
         peak_calling_adaptor    => $peak_calling_adaptor,
+        idr_adaptor             => $idr_adaptor,
         dbc => $dbc,
+        
+        genome_size_in_bp => $genome_size_in_bp,
         
         length_to_percent => sub {
             my $length = shift;
-            return $length * 100 / $mouse_ref_length;
+            return $length * 100 / $genome_size_in_bp;
         },
         
         round_percent => sub {
             my $number = shift;
             return sprintf("%.2f", $number);
+        },
+        boolean_to_yes_no => sub {
+            my $boolean = shift;
+            if ($boolean) {
+                return 'yes'
+            }
+            return 'no'
         },
         time => sub {
           return "" . localtime

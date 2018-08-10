@@ -93,48 +93,6 @@ $(document).ready(function() {
   <li>[% format_number( bytes_to_gb ( total_file_size ) ) %] GB of disk space.</li>
 </ul>
 
-<!--
-<table id="read_file_2" class="display" cellspacing="0" width="100%">
-<thead>
-    <tr>
-        <th>Experiment name</th>
-        <th>IDR max peaks</th>
-        <th>IDR type</th>
-        <th>Failed IDR pairs</th>
-        <th>Alignment method</th>
-        <th>Feature type name</th>
-        <th>Number of reads</th>
-        <th>Average read length</th>
-        <th>Stddeviation of read length</th>
-        <th>Maximum read length</th>
-        <th>Minumum read length</th>
-        <th>Span (max - min)</th>
-    </tr>
-</thead>
-<tbody>
-
-[%# FOR read_file_statistic IN read_file_statistics.values %]
-<tr>
-    <td>[% read_file_statistic.experiment_name      %]</td>
-    <td align="right">[% format_number( read_file_statistic.idr_max_peaks )       %]</td>
-    <td>[% read_file_statistic.idr_type             %]</td>
-    <td>[% read_file_statistic.idr_failed_idr_pairs %]</td>
-    <td align="right">[% read_file_statistic.alignment_methods    %]</td>
-    <td align="right">[% read_file_statistic.feature_type_name    %]</td>
-    <td align="right">[% format_number( read_file_statistic.num_reads      ) %]</td>
-    <td align="right">[% round_num( read_file_statistic.avg_read_length    ) %]</td>
-    <td align="right">[% round_num( read_file_statistic.stddev_read_length ) %]</td>
-    <td align="right">[% read_file_statistic.max_read_length    %]</td>
-    <td align="right">[% read_file_statistic.min_read_length    %]</td>
-    <td align="right">[% read_file_statistic.span               %]</td>
-</tr>
-[%# END %]
-
-</tbody>
-</table>
-
--->
-
 <h3>Signal Experiments</h3>
 
 <table id="read_file_3" class="display" cellspacing="0" width="100%">

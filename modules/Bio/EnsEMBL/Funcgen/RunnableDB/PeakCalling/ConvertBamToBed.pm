@@ -2,6 +2,7 @@ package Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::ConvertBamToBed;
 
 use strict;
 use base 'Bio::EnsEMBL::Hive::Process';
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
 use Data::Dumper;
 
 sub run {
@@ -33,13 +34,15 @@ sub run {
     my $execution_plan_expanded = resolve_nonterminal_symbols($execution_plan);
     lock_execution_plan($execution_plan_expanded);
     
+    print summarise($execution_plan_expanded);
+    
     my $alignment_plans = $execution_plan_expanded->{bam_to_bed};
     
     foreach my $alignment_plan (@$alignment_plans) {
     
       my $want_to_convert_this_alignment
-        = ($alignment_plan->{is_control} &&  $convert_controls)
-      || (!$alignment_plan->{is_control} && !$convert_controls);
+        = (($alignment_plan->{is_control} eq TRUE ) &&  $convert_controls)
+      ||  (($alignment_plan->{is_control} eq FALSE) && !$convert_controls);
     
       if ($want_to_convert_this_alignment) {
         

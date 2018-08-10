@@ -33,14 +33,192 @@
   </li>
 </ul>
 
+<p>
+    The regulatory build has a total of [% format_number( regulatory_build_statistics_adaptor.fetch_number_regulatory_features.value ) %] regulatory features.
+</p>
+
+[% IF regulatory_build_statistics_adaptor.fetch_stable_id_mapping_number_regulatory_features.value %]
+
+<h2>Stable ID Mapping</h2>
+
+<p>
+    Of the 
+      [% 
+        format_number( 
+            regulatory_build_statistics_adaptor.fetch_stable_id_mapping_number_regulatory_features.value 
+        ) 
+      %] regulatory features used in stable id mapping
+<ul>
+    <li>
+      [% 
+        format_number(
+            regulatory_build_statistics_adaptor.fetch_stable_id_mapping_mapped_stable_ids.value 
+         ) 
+      %] regulatory features 
+      ([% 
+        round_num( 
+            100 
+            * regulatory_build_statistics_adaptor.fetch_stable_id_mapping_mapped_stable_ids.value 
+            / regulatory_build_statistics_adaptor.fetch_stable_id_mapping_number_regulatory_features.value 
+         ) 
+      %]%)
+      could be mapped and 
+    </li>
+    <li>
+      [% 
+        format_number(
+            regulatory_build_statistics_adaptor.fetch_stable_id_mapping_new_stable_ids.value 
+         ) 
+      %] regulatory features
+      ([% 
+        round_num( 
+            100 
+            * regulatory_build_statistics_adaptor.fetch_stable_id_mapping_new_stable_ids.value 
+            / regulatory_build_statistics_adaptor.fetch_stable_id_mapping_number_regulatory_features.value 
+        ) 
+      %]%) were assigned new stable ids.
+    </li>
+</ul>
+</p>
+
+<div id="canvas-holder-2" style="width:50%">
+    <canvas id="chart-area-stable_id_mapping" />
+</div>
+<script>
+
+var stable_id_mapping_regulatory_build_config = {
+    type: 'pie',
+    data: {
+        datasets: [{
+            data: [
+
+                [% round_num( 100 * regulatory_build_statistics_adaptor.fetch_stable_id_mapping_new_stable_ids.value    / regulatory_build_statistics_adaptor.fetch_stable_id_mapping_number_regulatory_features.value ) %],
+                [% round_num( 100 * regulatory_build_statistics_adaptor.fetch_stable_id_mapping_mapped_stable_ids.value / regulatory_build_statistics_adaptor.fetch_stable_id_mapping_number_regulatory_features.value ) %],
+
+            ],
+            backgroundColor: [
+                window.chartColors.red,
+                window.chartColors.blue,
+            ],
+
+        }],
+        labels: [
+            "New stable ids",
+            "Mapped stable ids",
+        ]
+    },
+    options: {
+        responsive: true,
+        legend: {
+            position: 'left'
+        },
+        title: {
+            display: 'true',
+            text: 'Stable id mapping for regulatory features in [% species %]'
+        },
+        tooltips: {
+            callbacks: {
+                title: function(item, data) {
+                    // Pick first xLabel for now
+                    var title = '';
+
+                    if (item.length > 0) {
+                        if (item[0].yLabel) {
+                            title = item[0].yLabel;
+                        } else if (data.labels.length > 0 && item[0].index < data.labels.length) {
+                            title = data.labels[item[0].index];
+                        }
+                    }
+
+                    return title;
+                },
+
+                label: function(item, data) {
+                    //var datasetLabel = data.datasets[item.datasetIndex].label || 'No label found';
+                    var datasetLabel = data.labels[item.index] || 'No label found';
+                    return datasetLabel + ': ' + data.datasets[item.datasetIndex].data[item.index] + '% of stable ids';
+                }
+            },
+            mode: 'index',
+            axis: 'y'
+        }
+    }
+};
+
+    var color = Chart.helpers.color;
+    
+    var barChartData = {
+        labels: [
+            "CTCF Binding Site",
+            "Enhancer",
+            "Promoter Flanking Region",
+            "Promoter",
+            "TF binding site",
+            "Open chromatin",
+        ],
+        datasets: [{
+            
+            backgroundColor: [
+                'rgb(255, 99, 132)',
+                'rgb(255, 159, 64)',
+                'rgb(255, 205, 86)',
+                'rgb(75, 192, 192)',
+                'rgb(54, 162, 235)',
+                'rgb(153, 102, 255)',
+                'rgb(201, 203, 207)',
+                'rgb(0,0,139)',
+                'rgb(75,0,130)',
+                'rgb(0,128,128)',
+                'rgb(128,0,128)',
+            ],
+            data: [
+                '[% regulatory_build_statistics_adaptor.fetch_number_ctcf_binding_site.value %]',
+                '[% regulatory_build_statistics_adaptor.fetch_number_enhancer.value %]',
+                '[% regulatory_build_statistics_adaptor.fetch_number_promoter_flanking_region.value %]',
+                '[% regulatory_build_statistics_adaptor.fetch_number_promoter.value %]',
+                '[% regulatory_build_statistics_adaptor.fetch_number_transcription_factor_binding_site.value %]',
+                '[% regulatory_build_statistics_adaptor.fetch_number_open_chromatin.value %]',
+            ]
+        }]
+    };
+
+//     window.onload = function() {
+// 
+//     };
+
+</script>
+
+[% END %]
+
 <h2>Genome coverage</h2>
+
+[% 
+    total_covered_by_regulatory_features
+    = 
+        regulatory_build_statistics_adaptor.fetch_sum_length_ctcf_binding_site.value
+        + regulatory_build_statistics_adaptor.fetch_sum_length_enhancer.value
+        + regulatory_build_statistics_adaptor.fetch_sum_length_promoter_flanking_region.value
+        + regulatory_build_statistics_adaptor.fetch_sum_length_promoter.value
+        + regulatory_build_statistics_adaptor.fetch_sum_length_transcription_factor_binding_site.value
+        + regulatory_build_statistics_adaptor.fetch_sum_length_open_chromatin.value
+%]
+
+<p>
+   The regulatory features cover 
+    [% 
+        round_num(
+            (100 * total_covered_by_regulatory_features) / ref_length 
+        )
+    %]% of the genome.
+</p>
 
 <div id="canvas-holder" style="width:50%">
     <canvas id="chart-area-genome-coverage-regulatory-build" />
 </div>
+
 <script>
 
-var config = {
+var genome_coverage_regulatory_build_config = {
     type: 'pie',
     data: {
         datasets: [{
@@ -56,12 +234,7 @@ var config = {
                     round_num(
                         100 * (
                             ref_length
-                            - regulatory_build_statistics_adaptor.fetch_sum_length_ctcf_binding_site.value
-                            - regulatory_build_statistics_adaptor.fetch_sum_length_enhancer.value
-                            - regulatory_build_statistics_adaptor.fetch_sum_length_promoter_flanking_region.value
-                            - regulatory_build_statistics_adaptor.fetch_sum_length_promoter.value
-                            - regulatory_build_statistics_adaptor.fetch_sum_length_transcription_factor_binding_site.value
-                            - regulatory_build_statistics_adaptor.fetch_sum_length_open_chromatin.value
+                            - total_covered_by_regulatory_features
                         ) / ref_length 
                     )
                 %]
@@ -164,6 +337,7 @@ var config = {
     };
 
     window.onload = function() {
+    
         var ctx = document.getElementById('regulatory_build_2').getContext('2d');
         window.myBar = new Chart(ctx, {
             type: 'bar',
@@ -173,6 +347,13 @@ var config = {
                 legend: {
                     display: false,
                 },
+                scales: {
+                    yAxes: [{
+                        ticks: {
+                            min: 0
+                        }
+                    }]
+                },
                 title: {
                     display: true,
                     text: 'Total numbers by feature type'
@@ -180,15 +361,11 @@ var config = {
             }
         });
         ctx2 = document.getElementById("chart-area-genome-coverage-regulatory-build").getContext("2d");
-        window.myPie = new Chart(ctx2, config);
+        window.myPie = new Chart(ctx2, genome_coverage_regulatory_build_config);
 
+        ctx3 = document.getElementById("chart-area-stable_id_mapping").getContext("2d");
+        window.myPie = new Chart(ctx3, stable_id_mapping_regulatory_build_config);
     };
-
-// window.onload = function() {
-//     var ctx = document.getElementById("chart-area-genome-coverage-regulatory-build").getContext("2d");
-//     window.myPie = new Chart(ctx, config);
-// };
-
 </script>
 
 <h2>Total numbers by feature type</h2>

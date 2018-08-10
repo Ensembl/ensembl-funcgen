@@ -16,7 +16,6 @@ sub run {
   my $species      = $self->param_required('species');
   my $plan         = $self->param_required('execution_plan');
   my $tempdir      = $self->param_required('tempdir_peak_calling');
-  my $in_test_mode = $self->param('in_test_mode');
   
   use Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanUtils qw (
         lock_execution_plan
@@ -43,8 +42,8 @@ sub run {
     }
     
     my $want_this_alignment = 
-      $alignment_plan->{is_control} == 0
-      && $alignment_plan->{analysis} eq REMOVE_DUPLICATES_ANALYSIS;
+         $alignment_plan->{is_control} eq FALSE
+      && $alignment_plan->{analysis}   eq REMOVE_DUPLICATES_ANALYSIS;
    
    next ALIGNMENT_PLAN if (! $want_this_alignment);
    

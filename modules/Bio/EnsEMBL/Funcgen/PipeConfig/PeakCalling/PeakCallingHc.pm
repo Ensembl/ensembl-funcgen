@@ -40,6 +40,35 @@ sub pipeline_analyses {
         {   -logic_name => 'start_peak_calling_hc',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into => { 
+              MAIN => 'compute_peak_calling_statistics',
+            },
+        },
+        {
+            -logic_name  => 'compute_peak_calling_statistics',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+            -parameters => {
+                sql     => [
+                    q~
+                        truncate peak_calling_statistic;
+                    ~,
+                    q~
+                        insert into peak_calling_statistic (peak_calling_id, total_length, num_peaks, average_length)
+                        select
+                            peak_calling_id,
+                            sum(peak.seq_region_end - peak.seq_region_start + 1) as total_length,
+                            count(peak.peak_id) as num_peaks,
+                            avg(peak.seq_region_end - peak.seq_region_start + 1) as average_length
+                        from
+                            peak_calling
+                            left join peak using (peak_calling_id)
+                        group by
+                            peak_calling_id
+                        ;
+                    ~
+                ],
+                db_conn => 'funcgen:#species#',
+            },
+            -flow_into => { 
               MAIN => 'generate_peak_calling_report',
             },
         },

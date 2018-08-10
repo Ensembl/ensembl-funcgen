@@ -39,8 +39,12 @@ sub construct {
   my $alignment_namer = $self->_get_alignment_namer;
   
   my $is_control = $self->_get_is_control;
-  if (! $is_control) {
-    $is_control = 0;
+  
+  my $is_valid = ($is_control eq TRUE) || ($is_control eq FALSE);
+  
+  if (! $is_valid) {
+    use Carp;
+    confess("Invalid value for is_control! $is_control!");
   }
   
    my $bigwig = {

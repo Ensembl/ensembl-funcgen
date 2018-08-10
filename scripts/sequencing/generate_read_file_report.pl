@@ -83,9 +83,9 @@ $logger->info("output_directory  = " . $output_directory . "\n");
 use Bio::EnsEMBL::Registry;
 Bio::EnsEMBL::Registry->load_all($registry);
 
-my $mouse_funcgen_dba = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
+my $funcgen_dba = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
 
-my $experiment_adaptor = $mouse_funcgen_dba->get_ExperimentAdaptor;
+my $experiment_adaptor = $funcgen_dba->get_ExperimentAdaptor;
 my @signal_experiments  = $experiment_adaptor->_fetch_all_signal_experiments;
 my @control_experiments = $experiment_adaptor->_fetch_all_control_experiments;
 
@@ -124,7 +124,7 @@ my $output;
 
 my $output_file = "$output_directory/read_file_report.html";
 
-my $dbc = $mouse_funcgen_dba->dbc;
+my $dbc = $funcgen_dba->dbc;
 
 my $sql_1 = qq(
     select 

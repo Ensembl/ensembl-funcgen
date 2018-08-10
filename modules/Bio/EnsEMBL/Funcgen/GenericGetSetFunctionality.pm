@@ -62,8 +62,9 @@ sub _generic_fetch {
   }
   
   my $object_id = $self->$dbID_method;
-    if (! defined $object_id) {
-    die;
+  if (! defined $object_id) {
+    use Carp;
+    confess("The method $dbID_method returned an undefined value!");
   }
   my $object_adaptor = $self->adaptor;
   

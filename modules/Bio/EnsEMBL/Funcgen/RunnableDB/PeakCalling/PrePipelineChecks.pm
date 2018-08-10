@@ -85,7 +85,7 @@ sub run {
     
     # Find duplicate feature types
     #
-    my $find_duplicate_feature_types = 'select name, max(feature_type_id), group_concat(feature_type_id), count(feature_type_id) c from feature_type where name != "WCE" group by name having c>1;';
+    my $find_duplicate_feature_types = 'select feature_type.name, max(feature_type_id), group_concat(feature_type_id), count(distinct feature_type_id) c from feature_type join experiment using (feature_type_id) where feature_type.name != "WCE" group by feature_type.name having c>1;';
     
     my $sth = $dbc->prepare($find_duplicate_feature_types);
     $sth->execute;
@@ -152,18 +152,18 @@ sub run {
         push @error_msg, "Signal control mismatches!";
     }
     
-    # Check for orphans
-    #
-    my $count_orphans_sql = 'select count(*) as c from alignment_read_file left join read_file using (read_file_id) where read_file.read_file_id is null';
-    $sth = $dbc->prepare($count_orphans_sql);
-    $sth->execute;
-    
-    my $x = $sth->fetchall_arrayref;
-    my $num_orphans = $x->[0]->[0];
-    
-    if ($num_orphans) {
-        push @error_msg, "There are $num_orphans orphan entries in the alignment_read_file table."; 
-    }
+#     # Check for orphans
+#     #
+#     my $count_orphans_sql = 'select count(*) as c from alignment_read_file left join read_file using (read_file_id) where read_file.read_file_id is null';
+#     $sth = $dbc->prepare($count_orphans_sql);
+#     $sth->execute;
+#     
+#     my $x = $sth->fetchall_arrayref;
+#     my $num_orphans = $x->[0]->[0];
+#     
+#     if ($num_orphans) {
+#         push @error_msg, "There are $num_orphans orphan entries in the alignment_read_file table."; 
+#     }
 
     my @exported_variables = qw( PERL5LIB R_LIBS );
     my $cmd;

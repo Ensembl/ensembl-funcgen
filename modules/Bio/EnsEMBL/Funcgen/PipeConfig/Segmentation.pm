@@ -118,9 +118,9 @@ sub pipeline_analyses {
                         join epigenome using (epigenome_id)
                         join feature_type using (feature_type_id)
                         join alignment signal_alignment on (
-                        experiment.experiment_id = signal_alignment.experiment_id 
-                        and signal_alignment.is_complete=1 
-                        and signal_alignment.has_duplicates=0
+                            experiment.experiment_id = signal_alignment.experiment_id 
+                            and signal_alignment.is_complete=1 
+                            and signal_alignment.has_duplicates=0
                         )
                         join data_file signal_bam on (signal_alignment.bam_file_id = signal_bam.data_file_id)
                         join experiment control_experiment on (control_experiment.experiment_id = experiment.control_id)
@@ -154,11 +154,23 @@ sub pipeline_analyses {
                     from 
                         temp_segmentation_candidates 
                     where 
-                        feature_type in ("H3K4me1", "H3K4me3", "H3K27ac", "H3K27me3", "H3K36me3", "CTCF") 
+                        feature_type in ("CTCF") 
+                    group by 
+                        epigenome 
+                ~,
+                q~ drop table if exists temp_segmentation_epigenome_with_minimum_marks ~,
+                q~
+                    create table temp_segmentation_epigenome_with_minimum_marks
+                    select 
+                        epigenome
+                    from 
+                        temp_segmentation_candidates 
+                    where 
+                        feature_type in ("H3K4me1", "H3K4me3", "H3K27ac", "H3K27me3", "H3K36me3")
                     group by 
                         epigenome 
                     having 
-                        count(distinct feature_type) = 6
+                        count(distinct feature_type) = 5
                 ~,
                 q~ drop table if exists temp_segmentation_epigenome_without_ctcf ~,
                 q~
@@ -171,16 +183,29 @@ sub pipeline_analyses {
                     where 
                         temp_segmentation_epigenome_with_ctcf.epigenome is null
                 ~,
-                q~ drop table if exists segmentation_cell_table_ctcf ~,
+                q~ 
+                    drop table if exists segmentation_cell_table_ctcf 
+                ~,
                 q~
                     create table segmentation_cell_table_ctcf
-                    select * from temp_segmentation_epigenome_with_ctcf join temp_segmentation_candidates using (epigenome)
+                    select 
+                        temp_segmentation_candidates.*
+                    from 
+                        temp_segmentation_epigenome_with_ctcf 
+                        join temp_segmentation_candidates using (epigenome)
+                        join temp_segmentation_epigenome_with_minimum_marks using (epigenome)
                 ~,
-                q~ drop table if exists segmentation_cell_table_without_ctcf ~,
+                q~ 
+                    drop table if exists segmentation_cell_table_without_ctcf 
+                ~,
                 q~
                     create table segmentation_cell_table_without_ctcf
-                    select * from temp_segmentation_epigenome_without_ctcf join temp_segmentation_candidates using (epigenome)
-                    limit 6
+                    select 
+                        temp_segmentation_candidates.*
+                    from 
+                        temp_segmentation_epigenome_without_ctcf 
+                        join temp_segmentation_candidates using (epigenome)
+                        join temp_segmentation_epigenome_with_minimum_marks using (epigenome)
                 ~,
                 q~ drop table if exists temp_segmentation_candidates ~,
                 q~ drop table if exists temp_segmentation_epigenome_with_ctcf ~,
@@ -189,9 +214,30 @@ sub pipeline_analyses {
               db_conn => 'funcgen:#species#',
           },
           -flow_into => {
-            MAIN => 'make_segmentation_dir',
+            'MAIN->A' => 'hc_each_epigenome_has_ctcf_data',
+            'A->MAIN' => 'make_segmentation_dir',
           },
       },
+        {
+            -logic_name  => 'hc_each_epigenome_has_ctcf_data',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlHealthcheck',
+            -parameters => {
+                db_conn       => 'funcgen:#species#',
+                description   => 'Check that each epigenome has a ctcf assay',
+                query         => '
+                select 
+                    count(epigenome)    count_epigenomes, 
+                    count(feature_type) count_feature_types 
+                from 
+                    segmentation_cell_table_ctcf 
+                where 
+                    feature_type = "CTCF" 
+                having 
+                    count_epigenomes != count_epigenomes
+                ',
+                expected_size => '0'
+            },
+        },
       {   -logic_name => 'make_segmentation_dir',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters => {
@@ -273,14 +319,16 @@ sub pipeline_analyses {
       },
       {   -logic_name => 'learn_model_with_ctcf',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -max_retry_count => 0,
           -rc_name    => 'learn_model',
           -parameters => {
-            cmd => 
+            cmd     => 'run_ChromHMM_skip_nonsense_errors.pl --cmd "#run_cmd#"',
+            run_cmd => 
                 qq( export DISPLAY= ;             )
                 . qq( java -Xmx30000m             )
                 . qq( -jar #ChromHMM#             )
                 . qq( LearnModel                  )
-                . qq( -r 50 -p 12                )
+                . qq( -r 300 -p 12                )
                 . qq( -l #chromosome_length_file# )
                 . qq( #binarized_bam_dir#/with_ctcf/         )
                 . qq( #learnmodel_output_dir#/with_ctcf/     )
@@ -290,14 +338,16 @@ sub pipeline_analyses {
       },
       {   -logic_name => 'learn_model_without_ctcf',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -max_retry_count => 0,
           -rc_name    => 'learn_model',
           -parameters => {
-            cmd => 
+            cmd     => 'run_ChromHMM_skip_nonsense_errors.pl --cmd "#run_cmd#"',
+            run_cmd => 
                 qq( export DISPLAY= ;             )
                 . qq( java -Xmx30000m             )
                 . qq( -jar #ChromHMM#             )
                 . qq( LearnModel                  )
-                . qq( -r 50 -p 12                )
+                . qq( -r 300 -p 12                )
                 . qq( -l #chromosome_length_file# )
                 . qq( #binarized_bam_dir#/without_ctcf/         )
                 . qq( #learnmodel_output_dir#/without_ctcf/     )
@@ -366,7 +416,7 @@ sub pipeline_analyses {
       },
       {   -logic_name => 'load_build',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-          -rc_name    => '4Gb_job_2cpus',
+          -rc_name    => '32Gb_job_2cpus',
           -parameters => {
             cmd => 
                 qq( load_build.pl )
@@ -384,9 +434,8 @@ sub pipeline_analyses {
           },
           -flow_into => {
             MAIN => [
-                'create_regulatory_build_statistics', 
+                'compute_enhancer_coverage', 
                 'populate_regulatory_build_epigenome_table',
-#                 'register_segmentation_files',
             ]
           },
       },
@@ -434,27 +483,38 @@ sub pipeline_analyses {
                     --output_directory #reports_dir#/#species#
                 )
           },
-#           -flow_into => {
-#             MAIN => 'create_regulatory_build_statistics',
-#           },
+      },
+      {   -logic_name => 'compute_enhancer_coverage',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -parameters => {
+            cmd => 
+                q(
+                  compute_enhancer_coverage.pl \
+                    --species  #species# \
+                    --registry #reg_conf#
+                )
+          },
+          -flow_into => {
+            MAIN => 'create_regulatory_build_statistic',
+          },
       },
       {
-          -logic_name  => 'create_regulatory_build_statistics',
+          -logic_name  => 'create_regulatory_build_statistic',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
           -parameters => {
               sql     => [
-                "drop table if exists regulatory_build_statistics",
+                "drop table if exists regulatory_build_statistic",
 
-                "CREATE TABLE regulatory_build_statistics (
-                  regulatory_build_statistics_id INT(30) UNSIGNED NOT NULL AUTO_INCREMENT,
+                "CREATE TABLE regulatory_build_statistic (
+                  regulatory_build_statistic_id INT(30) UNSIGNED NOT NULL AUTO_INCREMENT,
                   regulatory_build_id INT(22) UNSIGNED NOT NULL,
                   statistic                VARCHAR(128) NOT NULL,
                   value                    BIGINT(11) UNSIGNED DEFAULT '0' NOT NULL,
-                  PRIMARY KEY (regulatory_build_statistics_id),
+                  PRIMARY KEY (regulatory_build_statistic_id),
                   UNIQUE KEY stats_uniq(statistic, regulatory_build_id)
                 )",
 
-                "insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                "insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                   select 
                     regulatory_build_id, 
                     'Number of regulatory features', 
@@ -464,7 +524,7 @@ sub pipeline_analyses {
                   group by regulatory_build_id
                 )",
 
-                "insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                "insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                   select 
                     regulatory_build_id,
                     feature_type.name, 
@@ -477,7 +537,7 @@ sub pipeline_analyses {
                     regulatory_build_id
                 )",
                 "
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select 
                     regulatory_build_id, 
                     'number_regulatory_features', 
@@ -488,94 +548,94 @@ sub pipeline_analyses {
                 );
                 ",
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'number_promoter', count(regulatory_feature_id) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Promoter" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'number_enhancer', count(regulatory_feature_id) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Enhancer" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'number_promoter_flanking_region', count(regulatory_feature_id) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Promoter Flanking Region" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'number_transcription_factor_binding_site', count(regulatory_feature_id) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "TF binding site" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'number_open_chromatin', count(regulatory_feature_id) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Open chromatin" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'number_ctcf_binding_site', count(regulatory_feature_id) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "CTCF Binding Site" group by feature_type.name, regulatory_build_id
                 );
                 ~,
 
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'average_length_promoter', AVG( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Promoter" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'average_length_enhancer', AVG( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Enhancer" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'average_length_promoter_flanking_region', AVG( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Promoter Flanking Region" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'average_length_transcription_factor_binding_site', AVG( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "TF binding site" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'average_length_open_chromatin', AVG( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Open chromatin" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'average_length_ctcf_binding_site', AVG( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "CTCF Binding Site" group by feature_type.name, regulatory_build_id
                 );
                 ~,
 
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'sum_length_promoter', SUM( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Promoter" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'sum_length_enhancer', SUM( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Enhancer" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'sum_length_promoter_flanking_region', SUM( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Promoter Flanking Region" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'sum_length_transcription_factor_binding_site', SUM( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "TF binding site" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'sum_length_open_chromatin', SUM( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Open chromatin" group by feature_type.name, regulatory_build_id
                 );
                 ~,
                 qq~
-                insert into regulatory_build_statistics (regulatory_build_id, statistic, value) (
+                insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
                     select regulatory_build_id, 'sum_length_ctcf_binding_site', SUM( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "CTCF Binding Site" group by feature_type.name, regulatory_build_id
                 );
                 ~
@@ -618,14 +678,11 @@ sub pipeline_analyses {
                   register_segmentation_files.pl  \
                       --species          #species# \
                       --registry         #reg_conf# \
-                      --projected_segmentation_directory #tempdir_regulatory_build#/#species#/#assembly#/projected_segmentations \
+                      --segmentation_directory #tempdir_regulatory_build#/#species#/#assembly#/segmentations \
                       --db_file_species_assembly_dir     #data_root_dir#/#species#/#assembly#/funcgen/segmentation_file/#ensembl_release_version# \
                       --db_file_relative_dir             /funcgen/segmentation_file/#ensembl_release_version#
                 )
           },
-#           -flow_into => {
-#             MAIN => '',
-#           },
       },
       {   -logic_name => 'generate_regulatory_build_report',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
@@ -638,13 +695,7 @@ sub pipeline_analyses {
                       --output_directory #reports_dir#/#species#
                 )
           },
-#           -flow_into => {
-#             MAIN => 'segmentation_done',
-#           },
       },
-#       {   -logic_name => 'segmentation_done',
-#           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-#       },
     ];
 }
 

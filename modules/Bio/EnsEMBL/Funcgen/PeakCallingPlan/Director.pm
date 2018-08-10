@@ -119,6 +119,7 @@ sub construct_execution_plan {
   
   $remove_duplicates_plan_builder->set_input         (create_ref($align_all_read_files_for_experiment_plan));
   $remove_duplicates_plan_builder->set_name          ($alignment_namer->base_name_no_duplicates);
+  $remove_duplicates_plan_builder->set_is_control    ( FALSE );
   $remove_duplicates_plan_builder->set_output_real   ($alignment_namer->bam_file_no_duplicates);
   $remove_duplicates_plan_builder->set_output_stored ($alignment_namer->bam_file_no_duplicates_stored);
   $remove_duplicates_plan_builder->set_output_format ( BAM_FORMAT );
@@ -160,7 +161,7 @@ sub construct_execution_plan {
   
   $signal_file_plan_builder->set_alignment        (create_ref($remove_duplicates_plan));
   $signal_file_plan_builder->set_alignment_namer  ($alignment_namer);
-  $signal_file_plan_builder->set_is_control (0);
+  $signal_file_plan_builder->set_is_control ( FALSE );
   
   $signal_file_plan_builder->construct;
   
@@ -170,7 +171,7 @@ sub construct_execution_plan {
   if (defined $control_experiment) {
     $signal_file_plan_builder->set_alignment        (create_ref($remove_duplicates_from_control_plan));
     $signal_file_plan_builder->set_alignment_namer  ($control_alignment_namer);
-    $signal_file_plan_builder->set_is_control (1);
+    $signal_file_plan_builder->set_is_control ( TRUE );
     
     $signal_file_plan_builder->construct;
     

@@ -197,10 +197,10 @@ sub fetch_by_ReadFileExperimentalConfiguration {
   my $self = shift;
   my $read_file_experimental_configuration = shift;
 
-  my $read_file_id = $read_file_experimental_configuration->_read_file_id;
+  my $read_file_experimental_configuration_id = $read_file_experimental_configuration->dbID;
   
-  if ($read_file_id) {
-    return $self->fetch_by_dbID($read_file_id);
+  if ($read_file_experimental_configuration_id) {
+    return $self->fetch_by_dbID($read_file_experimental_configuration_id);
   }
 
   my $constraint = join ' and ', (

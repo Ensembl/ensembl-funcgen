@@ -22,6 +22,23 @@ sub pipeline_analyses {
       },
       {   -logic_name  => 'parse_exonerate',
           -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -rc_name     => '4Gb_job',
+          -parameters => {
+              cmd => '
+                import_parse_exonerate.pl \
+                  --exonerate_file #chunk_name#_#type#.exonerate.txt \
+                  --max_allowed_mismatches_per_hit 0 \
+                  > #chunk_name#_#type#.exonerate_parsed.txt
+              '
+          },
+          -flow_into => {
+              MAIN     => 'filter_features_from_promiscuous_probes',
+              MEMLIMIT => 'parse_exonerate_himem',
+          },
+      },
+      {   -logic_name  => 'parse_exonerate_himem',
+          -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -rc_name     => '64Gb_job',
           -parameters => {
               cmd => '
                 import_parse_exonerate.pl \

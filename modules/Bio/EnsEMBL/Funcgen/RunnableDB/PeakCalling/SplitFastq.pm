@@ -19,7 +19,14 @@ sub run {
   my $species      = $self->param_required('species');
   my $plan         = $self->param_required('execution_plan');
   my $tempdir      = $self->param_required('tempdir');
+  my $read_file    = $self->param_required('read_file');
+  my $merged_bam   = $self->param_required('merged_bam');
   
+  my $read_file    = $self->param_required('read_file');
+  
+  use Bio::EnsEMBL::Registry;
+  Bio::EnsEMBL::Registry->set_disconnect_when_inactive;
+
   my $num_records_per_split_fastq;
   if ($self->param_is_defined('num_records_per_split_fastq')) {
     $num_records_per_split_fastq = $self->param('num_records_per_split_fastq');
@@ -53,93 +60,107 @@ sub run {
   
   my @chunks_to_be_merged;
   
-  foreach my $read_file (@$read_files) {
+  my $read_file_names;
+  
+  if ($read_file->{type} eq PAIRED_END) {
+    $read_file_names = [
+      $read_file->{1},
+      $read_file->{2},
+    ];
 
-    my $read_file_names;
+    my $read_file_objects = [ map { $read_file_adaptor->fetch_by_name($_) } @$read_file_names ];
+    
+    if ($read_file_objects->[0]->number_of_reads != $read_file_objects->[1]->number_of_reads) {
 
-    if ($read_file->{type} eq PAIRED_END) {
-      $read_file_names = [
-        $read_file->{1},
-        $read_file->{2},
-      ];
-
-      my $read_file_objects = [ map { $read_file_adaptor->fetch_by_name($_) } @$read_file_names ];
+      my $complete_error_message 
+          = 
+          "The read files " 
+          . '(' . $read_file_objects->[0]->name . ', ' . $read_file_objects->[1]->name . ')' 
+          . " have different lengths! "
+          . '(' . $read_file_objects->[0]->number_of_reads . ' vs ' . $read_file_objects->[1]->number_of_reads . ')' 
+          ;
+      $self->throw($complete_error_message);
       
-      if ($read_file_objects->[0]->number_of_reads != $read_file_objects->[1]->number_of_reads) {
-
-        my $complete_error_message 
-            = 
-            "The read files " 
-            . '(' . $read_file_objects->[0]->name . ', ' . $read_file_objects->[1]->name . ')' 
-            . " have different lengths! "
-            . '(' . $read_file_objects->[0]->number_of_reads . ' vs ' . $read_file_objects->[1]->number_of_reads . ')' 
-            ;
-        $self->throw($complete_error_message);
-        
-      }
     }
-    
-    if ($read_file->{type} eq SINGLE_END) {
-      $read_file_names = [
-        $read_file->{name},
-      ];
-    }
-    
-    my $directory_name = join '_', @$read_file_names;
-    
-    my $alignment_read_file_name = $alignment_name . '/' . $directory_name;
-    
-    my $dataflow_fastq_chunk = sub {
-
-        my $param = shift;
-        
-        my $absolute_chunk_file_name = $param->{absolute_chunk_file_name};
-        my $current_file_number      = $param->{current_file_number};
-        my $current_temp_dir         = $param->{current_temp_dir};
-        
-        $self->say_with_header("Created fastq chunk " . Dumper($absolute_chunk_file_name));
-        
-        my $chunk_bam_file = $current_temp_dir . '/' . $alignment_name . '_' . $directory_name . '_' . $current_file_number . '.bam';
-        
-        push @chunks_to_be_merged, $chunk_bam_file;
-        
-        my $dataflow_output_id
-          = {
-            'fastq_file'       => $absolute_chunk_file_name,
-            'tempdir'          => $current_temp_dir,
-            'bam_file'         => $chunk_bam_file,
-            'species'          => $species,
-            'to_gender'        => $to_gender,
-            'to_assembly'      => $to_assembly,
-            'ensembl_analysis' => $ensembl_analysis,
-          };
-          $self->dataflow_output_id(
-            $dataflow_output_id, 
-            BRANCH_ALIGN
-          );
-    };
-
-    my $fastq_record_processor = Bio::EnsEMBL::Funcgen::Utils::Fastq::Processor->new(
-      -tempdir                     => $tempdir,
-      -species                     => $species,
-      -alignment_name              => $alignment_read_file_name,
-      -num_records_per_split_fastq => $num_records_per_split_fastq,
-      -chunk_created_callback      => $dataflow_fastq_chunk,
-    );
-
-    split_read_file({
-      read_file_names        => $read_file_names,
-      dataflow_fastq_chunk   => $dataflow_fastq_chunk,
-      fastq_record_processor => $fastq_record_processor,
-      read_file_adaptor      => $read_file_adaptor,
-    });
   }
+  
+  if ($read_file->{type} eq SINGLE_END) {
+    $read_file_names = [
+      $read_file->{name},
+    ];
+  }
+  
+  my $directory_name = join '_', @$read_file_names;
+  
+  my $max_allowed_directory_name_length = 200;
+  
+  if (length $directory_name > $max_allowed_directory_name_length) {
+
+    use Digest::MD5 qw( md5_hex );
+    
+    my $md5sum = md5_hex($directory_name);
+    
+    my $short_directory_name = "md5_${md5sum}";
+    
+#     die( 
+#         "Directory name too long!\n$directory_name\n$short_directory_name" 
+#     );
+    $directory_name = $short_directory_name;
+  }
+  
+  my $alignment_read_file_name = $alignment_name . '/' . $directory_name;
+  
+  my $dataflow_fastq_chunk = sub {
+
+      my $param = shift;
+      
+      my $absolute_chunk_file_name = $param->{absolute_chunk_file_name};
+      my $current_file_number      = $param->{current_file_number};
+      my $current_temp_dir         = $param->{current_temp_dir};
+      
+      $self->say_with_header("Created fastq chunk " . Dumper($absolute_chunk_file_name));
+      
+      my $chunk_bam_file = $current_temp_dir . '/' . $alignment_name . '_' . $directory_name . '_' . $current_file_number . '.bam';
+      
+      push @chunks_to_be_merged, $chunk_bam_file;
+      
+      my $dataflow_output_id
+        = {
+          'fastq_file'       => $absolute_chunk_file_name,
+          'tempdir'          => $current_temp_dir,
+          'bam_file'         => $chunk_bam_file,
+          'species'          => $species,
+          'to_gender'        => $to_gender,
+          'to_assembly'      => $to_assembly,
+          'ensembl_analysis' => $ensembl_analysis,
+        };
+        $self->dataflow_output_id(
+          $dataflow_output_id, 
+          BRANCH_ALIGN
+        );
+  };
+
+  my $fastq_record_processor = Bio::EnsEMBL::Funcgen::Utils::Fastq::Processor->new(
+    -tempdir                     => $tempdir,
+    -species                     => $species,
+    -alignment_name              => $alignment_read_file_name,
+    -num_records_per_split_fastq => $num_records_per_split_fastq,
+    -chunk_created_callback      => $dataflow_fastq_chunk,
+  );
+
+  $self->split_read_file({
+    read_file_names        => $read_file_names,
+    dataflow_fastq_chunk   => $dataflow_fastq_chunk,
+    fastq_record_processor => $fastq_record_processor,
+    read_file_adaptor      => $read_file_adaptor,
+  });
   
   $self->dataflow_output_id(
     {
-      'species' => $species,
-      'chunks'  => \@chunks_to_be_merged,
-      'plan'    => $plan,
+      'species'    => $species,
+      'chunks'     => \@chunks_to_be_merged,
+      'plan'       => $plan,
+      'merged_bam' => $merged_bam,
     }, 
     BRANCH_MERGE
   );
@@ -148,6 +169,7 @@ sub run {
 
 sub split_read_file {
 
+  my $self  = shift;
   my $param = shift;
   
   my $read_file_names        = $param->{read_file_names};
@@ -159,6 +181,11 @@ sub split_read_file {
   
   my @read_file_objects = map { $read_file_adaptor->fetch_by_name($_) } @$read_file_names;
   my @fastq_files       = map { $_->file } @read_file_objects;
+  
+#   @fastq_files       = ( '/hps/nobackup/production/ensembl/mnuhn/rb_mouse_run_4/debug/ENCFF010LWJ.fastq.gz' );
+#   
+#   $self->say_with_header('Splitting:', 1);
+#   $self->say_with_header(Dumper(\@fastq_files), 1);
   
   use List::Util qw( uniq );
   my $same_number_of_reads_in_every_file 
@@ -173,9 +200,23 @@ sub split_read_file {
     );
   }
   
-  my @cmds          = map { "zcat $_ |"                                     } @fastq_files;
-  my @file_handles  = map { open my $fh, $_ or die("Can't execute $_"); $fh } @cmds;
+  map { 
+    if (! -e $_) {
+        use Carp;
+        confess("File $_ doesn't exist!");
+    }
+  } @fastq_files;
+  
+  my @cmds          = map { "zcat $_ "                                     } @fastq_files;
+  my @file_handles  = map { open my $fh, '-|', $_ or die("Can't execute $_"); $fh } @cmds;
 
+#   # setvbuf is not available by default on Perls 5.8.0 and later.
+#   use IO::Handle '_IOLBF', '_IOFBF';
+#   
+#   my $buffer;
+#   die("We have: $|");
+#   map { $_->setvbuf($buffer, _IOFBF, 128000); } @file_handles;
+  
   use List::Util qw( none any uniq );
 
   my $all_records_read = undef;
@@ -186,8 +227,6 @@ sub split_read_file {
   PAIR_OF_READS:
   while (
       (! $all_records_read)
-#       && 
-#       ($count<$max)
     ) {
     
     my @fastq_records = map  { $parser->parse_next_record($_) } @file_handles;
@@ -213,13 +252,20 @@ sub split_read_file {
 
     my $reads_match = uniq(@read_names) == 1;
     
+#     print Dumper(\@read_names);
+    
     if (! $reads_match) {
+#         die("Failed!");
         next PAIR_OF_READS;
     }
+#     print Dumper("Was ok!");
     $fastq_record_processor->process(@fastq_records);
   }
-  map { $_->close or die "Can't close file!" } @file_handles;
   $fastq_record_processor->flush;
+  
+  sleep(5);
+  
+  map { $_->close or die "Can't close filehandle to command!" } @file_handles;
   return;
 }
 

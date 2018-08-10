@@ -369,6 +369,19 @@ sub _fetch_Idr {
 
 sub epigenome { return shift->{epigenome}; }
 
+=head2 epigenome
+
+  Example    : my $epigenome_name = $exp->get_Epigenome->name;
+  Description: Getter for the Epigenome
+  Returntype : Bio::EnsEMBL::Funcgen::Epigenome
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub get_Epigenome { return shift->{epigenome}; }
+
 
 =head2 feature_type
 
@@ -465,6 +478,11 @@ sub get_control{
   return shift->{control};
 }
 
+
+sub has_control_Experiment {
+  my $self = shift;
+  return defined $self->get_control;
+}
 
 =head2 archive_id
 

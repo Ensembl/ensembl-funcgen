@@ -110,8 +110,19 @@ sub _read_file_id        { return shift->_generic_get_or_set('_read_file_id',   
 
 =cut
 sub get_ReadFile {
-  #return shift->_generic_get('read_file');
-  return shift->_generic_fetch('read_file', 'get_ReadFileAdaptor', 'read_file_id');
+
+  my $self = shift;
+
+  if (defined $self->_read_file_id) {
+    my $read_file = $self->_generic_fetch('read_file', 'get_ReadFileAdaptor', '_read_file_id');
+    return $read_file;
+  }
+  my $db_adaptor = $self->db;
+  if (! defined $db_adaptor) {
+    use Carp;
+    confess("Need database adaptor to fetch the read file!");
+  }
+  return $db_adaptor->get_ReadFileAdaptor->fetch_by_ReadFileExperimentalConfiguration($self);
 }
 
 =head2 set_ReadFile
