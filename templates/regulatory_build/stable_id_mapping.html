@@ -71,7 +71,7 @@
       [% 
         format_number(
             regulatory_build_statistics_adaptor_previous_version.fetch_number_regulatory_features.value 
-            - regulatory_build_statistics_adaptor.fetch_stable_id_mapping_new_stable_ids.value 
+            - regulatory_build_statistics_adaptor.fetch_stable_id_mapping_mapped_stable_ids.value 
          ) 
       %] regulatory features
       ([% 
@@ -79,7 +79,7 @@
             100 
             * (
               regulatory_build_statistics_adaptor_previous_version.fetch_number_regulatory_features.value 
-              - regulatory_build_statistics_adaptor.fetch_stable_id_mapping_new_stable_ids.value 
+              - regulatory_build_statistics_adaptor.fetch_stable_id_mapping_mapped_stable_ids.value 
             )
             / regulatory_build_statistics_adaptor_previous_version.fetch_number_regulatory_features.value 
         ) 
