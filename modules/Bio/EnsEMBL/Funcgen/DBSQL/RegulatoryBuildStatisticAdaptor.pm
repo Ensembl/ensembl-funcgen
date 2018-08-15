@@ -61,10 +61,193 @@ sub fetch_by_statistic {
   );
 }
 
-sub fetch_average_length_promoter_flanking_region {
+
+
+
+sub fetch_promoter_q0 {
   my $self = shift;
-  return $self->fetch_by_statistic('average_length_promoter_flanking_region');
+  return $self->fetch_by_statistic('promoter_q0');
 }
+sub fetch_promoter_q1 {
+  my $self = shift;
+  return $self->fetch_by_statistic('promoter_q1');
+}
+sub fetch_promoter_q2 {
+  my $self = shift;
+  return $self->fetch_by_statistic('promoter_q2');
+}
+sub fetch_promoter_q3 {
+  my $self = shift;
+  return $self->fetch_by_statistic('promoter_q3');
+}
+sub fetch_promoter_q4 {
+  my $self = shift;
+  return $self->fetch_by_statistic('promoter_q4');
+}
+sub fetch_promoter_skewness {
+  my $self = shift;
+  return $self->fetch_by_statistic('promoter_skewness');
+}
+sub fetch_promoter_kurtosis {
+  my $self = shift;
+  return $self->fetch_by_statistic('promoter_kurtosis');
+}
+
+
+sub fetch_promoter_flanking_q0 {
+  my $self = shift;
+  return $self->fetch_by_statistic('promoter_flanking_q0');
+}
+sub fetch_promoter_flanking_q1 {
+  my $self = shift;
+  return $self->fetch_by_statistic('promoter_flanking_q1');
+}
+sub fetch_promoter_flanking_q2 {
+  my $self = shift;
+  return $self->fetch_by_statistic('promoter_flanking_q2');
+}
+sub fetch_promoter_flanking_q3 {
+  my $self = shift;
+  return $self->fetch_by_statistic('promoter_flanking_q3');
+}
+sub fetch_promoter_flanking_q4 {
+  my $self = shift;
+  return $self->fetch_by_statistic('promoter_flanking_q4');
+}
+sub fetch_promoter_flanking_skewness {
+  my $self = shift;
+  return $self->fetch_by_statistic('promoter_flanking_skewness');
+}
+sub fetch_promoter_flanking_kurtosis {
+  my $self = shift;
+  return $self->fetch_by_statistic('promoter_flanking_kurtosis');
+}
+
+
+
+sub fetch_enhancer_q0 {
+  my $self = shift;
+  return $self->fetch_by_statistic('enhancer_q0');
+}
+sub fetch_enhancer_q1 {
+  my $self = shift;
+  return $self->fetch_by_statistic('enhancer_q1');
+}
+sub fetch_enhancer_q2 {
+  my $self = shift;
+  return $self->fetch_by_statistic('enhancer_q2');
+}
+sub fetch_enhancer_q3 {
+  my $self = shift;
+  return $self->fetch_by_statistic('enhancer_q3');
+}
+sub fetch_enhancer_q4 {
+  my $self = shift;
+  return $self->fetch_by_statistic('enhancer_q4');
+}
+sub fetch_enhancer_skewness {
+  my $self = shift;
+  return $self->fetch_by_statistic('enhancer_skewness');
+}
+sub fetch_enhancer_kurtosis {
+  my $self = shift;
+  return $self->fetch_by_statistic('enhancer_kurtosis');
+}
+
+
+sub fetch_ctcf_q0 {
+  my $self = shift;
+  return $self->fetch_by_statistic('ctcf_q0');
+}
+sub fetch_ctcf_q1 {
+  my $self = shift;
+  return $self->fetch_by_statistic('ctcf_q1');
+}
+sub fetch_ctcf_q2 {
+  my $self = shift;
+  return $self->fetch_by_statistic('ctcf_q2');
+}
+sub fetch_ctcf_q3 {
+  my $self = shift;
+  return $self->fetch_by_statistic('ctcf_q3');
+}
+sub fetch_ctcf_q4 {
+  my $self = shift;
+  return $self->fetch_by_statistic('ctcf_q4');
+}
+sub fetch_ctcf_skewness {
+  my $self = shift;
+  return $self->fetch_by_statistic('ctcf_skewness');
+}
+sub fetch_ctcf_kurtosis {
+  my $self = shift;
+  return $self->fetch_by_statistic('ctcf_kurtosis');
+}
+
+
+
+sub fetch_tf_q0 {
+  my $self = shift;
+  return $self->fetch_by_statistic('tf_q0');
+}
+sub fetch_tf_q1 {
+  my $self = shift;
+  return $self->fetch_by_statistic('tf_q1');
+}
+sub fetch_tf_q2 {
+  my $self = shift;
+  return $self->fetch_by_statistic('tf_q2');
+}
+sub fetch_tf_q3 {
+  my $self = shift;
+  return $self->fetch_by_statistic('tf_q3');
+}
+sub fetch_tf_q4 {
+  my $self = shift;
+  return $self->fetch_by_statistic('tf_q4');
+}
+sub fetch_tf_skewness {
+  my $self = shift;
+  return $self->fetch_by_statistic('tf_skewness');
+}
+sub fetch_tf_kurtosis {
+  my $self = shift;
+  return $self->fetch_by_statistic('tf_kurtosis');
+}
+
+
+
+
+sub fetch_open_chromatin_q0 {
+  my $self = shift;
+  return $self->fetch_by_statistic('open_chromatin_q0');
+}
+sub fetch_open_chromatin_q1 {
+  my $self = shift;
+  return $self->fetch_by_statistic('open_chromatin_q1');
+}
+sub fetch_open_chromatin_q2 {
+  my $self = shift;
+  return $self->fetch_by_statistic('open_chromatin_q2');
+}
+sub fetch_open_chromatin_q3 {
+  my $self = shift;
+  return $self->fetch_by_statistic('open_chromatin_q3');
+}
+sub fetch_open_chromatin_q4 {
+  my $self = shift;
+  return $self->fetch_by_statistic('open_chromatin_q4');
+}
+sub fetch_open_chromatin_skewness {
+  my $self = shift;
+  return $self->fetch_by_statistic('open_chromatin_skewness');
+}
+sub fetch_open_chromatin_kurtosis {
+  my $self = shift;
+  return $self->fetch_by_statistic('open_chromatin_kurtosis');
+}
+
+
 
 
 

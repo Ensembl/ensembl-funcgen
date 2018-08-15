@@ -7,7 +7,7 @@
 
 [% MACRO validation_fantom_enhancers BLOCK %]
 
-<h3>Fantom5</h3>
+<h3><a name="fantom5">Fantom5</a></h3>
 
 <p>
     Of the 
@@ -15,7 +15,7 @@
         format_number( 
             regulatory_build_statistics_adaptor.fetch_total_enhancers_checked_fantom.value 
         ) 
-      %] Fantom5 enhancers in [% species %]
+      %] robust Fantom5 enhancers in [% species %]
       [% 
         format_number(
             regulatory_build_statistics_adaptor.fetch_num_enhancers_overlapping_fantom.value 
@@ -49,7 +49,7 @@ var fantom_enhancer_validation_regulatory_build_config = {
             ],
             backgroundColor: [
                 window.chartColors.green,
-                window.chartColors.orange,
+                window.chartColors.gray,
             ],
 
         }],

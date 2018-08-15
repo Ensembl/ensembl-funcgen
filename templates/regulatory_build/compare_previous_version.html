@@ -1,3 +1,5 @@
+[% PROCESS box_diagram.html %]
+
 [% MACRO compare_previous_version_on_window_load BLOCK %]
 
   var ctx = document.getElementById('regulatory_build_2_compared').getContext('2d');
@@ -72,12 +74,15 @@
       }
   });
 
+[% box_diagram_on_window_load %]
 
 [% END %]
 
 [% MACRO compare_previous_version BLOCK %]
 
 <h2>Comparisons to the previous Regulatory Build</h2>
+
+[% box_diagram %]
 
 <h3>Total numbers</h3>
 
