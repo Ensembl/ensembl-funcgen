@@ -94,9 +94,7 @@ if (! defined $execution_plan_obj) {
   die;
 }
 
-use YAML qw'Load';
-
-my $execution_plan = Load( $execution_plan_obj->execution_plan );
+my $execution_plan = $execution_plan_obj->execution_plan_deserialised;
 
 lock_execution_plan($execution_plan);
 
