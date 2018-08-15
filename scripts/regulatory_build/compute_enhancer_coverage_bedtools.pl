@@ -37,16 +37,10 @@ limitations under the License.
 
 use strict;
 use Getopt::Long;
-use Bio::EnsEMBL::Mapper::RangeRegistry;
 use Bio::EnsEMBL::Registry;
 use Data::Dumper;
 use Bio::EnsEMBL::DBSQL::SliceAdaptor;
 use Bio::EnsEMBL::Slice;
-
-use Bio::EnsEMBL::Mapper::RangeRegistry;
-
-# my $range_registry = Bio::EnsEMBL::Mapper::RangeRegistry->new();
-
 use Bio::EnsEMBL::Utils::Logger;
 
 my %options;
@@ -64,6 +58,8 @@ my $species  = $options{'species'};
 my $registry = $options{'registry'};
 my $tempdir  = $options{'tempdir'};
 
+my $skip_dumping_if_files_exist_already = 0;
+
 Bio::EnsEMBL::Registry->load_all($registry);
 
 my $core_adaptor    = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'core');
@@ -78,21 +74,29 @@ my $regulatory_build_adaptor   = $funcgen_adaptor->get_RegulatoryBuildAdaptor;
 my $regulatory_feature_adaptor = $funcgen_adaptor->get_RegulatoryFeatureAdaptor;
 my $regulatory_build           = $regulatory_build_adaptor->fetch_current_regulatory_build;
 
-my $iterator = $regulatory_feature_adaptor->fetch_Iterator_by_RegulatoryBuild($regulatory_build);
-
 use File::Path qw(make_path remove_tree);
 make_path($tempdir);
 
 my $regulatory_features_file = $tempdir . "/regulatory_features.bed";
 
-$logger->info("Exporting regulatory features to $regulatory_features_file ...");
+my $have_to_dump_regulatory_features = 
+  ! -e $regulatory_features_file || (!$skip_dumping_if_files_exist_already && -e $regulatory_features_file);
 
-export_regulatory_features($regulatory_features_file);
-sort_bed_file             ($regulatory_features_file);
+if ($have_to_dump_regulatory_features) {
+
+  $logger->info("Exporting regulatory features to $regulatory_features_file ...");
+  
+  export_regulatory_features($regulatory_features_file);
+  sort_bed_file             ($regulatory_features_file);
+  
+  $logger->info(" done.\n");
+}
+
+if (!$have_to_dump_regulatory_features) {
+  $logger->info("Skipping dumping of regulatory features.");
+}
 
 my $regulatory_build_statistic_adaptor = $funcgen_adaptor->get_RegulatoryBuildStatisticAdaptor;
-
-$logger->info(" done.\n");
 
 $logger->info("Removing enhancer statistics ...");
 
@@ -120,8 +124,6 @@ my %feature_set_to_file_name = (
   &FANTOM_FEATURE_SET_NAME => 'fantom.bed',
   &VISTA_FEATURE_SET_NAME  => 'vista_enhancers.bed',
 );
-
-#die(Dumper(\%feature_set_to_file_name));
 
 use Hash::Util qw( lock_keys );
 lock_keys(%feature_set_to_file_name);
@@ -196,6 +198,14 @@ foreach my $experimentally_verified_enhancer_feature_set (@experimentally_verifi
             if ($current_enhancer_feature->feature_type->class ne ENHANCER) {
                 next FEATURE;
             }
+            # When checking FANTOM, only use either permissive or robust otherwise there will be duplicate enhancers.
+            if (
+              $current_feature_set eq FANTOM_FEATURE_SET_NAME 
+              #&& $current_enhancer_feature->feature_type->name ne "FANTOM permissive enhancer"
+              && $current_enhancer_feature->feature_type->name ne "FANTOM robust enhancer"
+            ) {
+                next FEATURE;
+            }
             $number_on_slice++;
             $number_in_total++;
             
@@ -206,9 +216,6 @@ foreach my $experimentally_verified_enhancer_feature_set (@experimentally_verifi
                     $current_enhancer_feature->start, 
                     $current_enhancer_feature->end;
 
-#             $logger->info($bed_line);
-#             $logger->info("\n");
-            
             $features_fh->print($bed_line);
             $features_fh->print("\n");
         }
@@ -220,7 +227,15 @@ foreach my $experimentally_verified_enhancer_feature_set (@experimentally_verifi
     
     sort_bed_file($file_name);
     
-    my $count_overlaps_cmd = "bedtools intersect -a $regulatory_features_file -b $file_name | wc -l";
+    #my $count_overlaps_cmd = "bedtools intersect -a $regulatory_features_file -b $file_name | wc -l";
+    
+    # Some features may overlap more than one regulatory feature
+    #my $count_overlaps_cmd = "bedtools intersect -loj -a $file_name -b $regulatory_features_file | cut -f 6 | grep -v '\\\-1' | sort | uniq | wc -l";
+    
+    my $count_overlaps_cmd = "bedtools intersect -u -a $file_name -b $regulatory_features_file | sort | uniq | wc -l";
+    
+    
+    $logger->info("    Computing and counting overlaps using this command: $count_overlaps_cmd\n");
     
     my $num_overlaps = `$count_overlaps_cmd`;
     chomp($num_overlaps);
@@ -231,7 +246,7 @@ foreach my $experimentally_verified_enhancer_feature_set (@experimentally_verifi
         die("num_overlaps $num_overlaps doesn't look like a number!");
     }
     
-    $logger->info("    $current_feature_set features have $num_overlaps ($number_in_total total) with regulatory features.\n");
+    $logger->info("    $current_feature_set features have $num_overlaps overlaps ($number_in_total total) with regulatory features.\n");
     
     use Bio::EnsEMBL::Funcgen::RegulatoryBuildStatistic;
     if ($current_feature_set eq VISTA_FEATURE_SET_NAME) {
@@ -249,13 +264,6 @@ foreach my $experimentally_verified_enhancer_feature_set (@experimentally_verifi
                 -regulatory_build_id => $regulatory_build->dbID,
             )
         );
-#         $regulatory_build_statistic_adaptor->store(
-#             Bio::EnsEMBL::Funcgen::RegulatoryBuildStatistic->new(
-#                 -statistic           => "num_enhancers_not_overlapping_vista",
-#                 -value               => $num_enhancers_not_overlapping,
-#                 -regulatory_build_id => $regulatory_build->dbID,
-#             )
-#         );
     }
     if ($current_feature_set eq FANTOM_FEATURE_SET_NAME) {
         $regulatory_build_statistic_adaptor->store(
@@ -272,13 +280,6 @@ foreach my $experimentally_verified_enhancer_feature_set (@experimentally_verifi
                 -regulatory_build_id => $regulatory_build->dbID,
             )
         );
-#         $regulatory_build_statistic_adaptor->store(
-#             Bio::EnsEMBL::Funcgen::RegulatoryBuildStatistic->new(
-#                 -statistic           => "num_enhancers_not_overlapping_fantom",
-#                 -value               => $num_enhancers_not_overlapping,
-#                 -regulatory_build_id => $regulatory_build->dbID,
-#             )
-#         );
     }
 }
 
@@ -294,6 +295,8 @@ sub export_regulatory_features {
     my $max = 20;
     my $i = 0;
     my $stop_after_maximum_reached = 0;
+    
+    my $iterator = $regulatory_feature_adaptor->fetch_Iterator_by_RegulatoryBuild($regulatory_build);
 
     open 
         my $regulatory_features_fh, 
