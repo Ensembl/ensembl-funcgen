@@ -20,6 +20,8 @@ sub run {
   my $full_path = dirname($merged_bam);
 
   use File::Path qw(make_path remove_tree);
+  
+  $self->say_with_header("Creating directory $full_path", 1);
   make_path($full_path);
 
   my $full_path_to_merged_bam = $merged_bam;
