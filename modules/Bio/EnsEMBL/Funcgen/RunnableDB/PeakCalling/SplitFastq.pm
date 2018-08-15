@@ -263,9 +263,9 @@ sub split_read_file {
   }
   $fastq_record_processor->flush;
   
-  sleep(5);
+  sleep(15);
   
-  map { $_->close or die "Can't close filehandle to command!" } @file_handles;
+  map { $_->close or die "Can't close filehandle to command! Was splitting these files: " . Dumper(\@fastq_files) } @file_handles;
   return;
 }
 
