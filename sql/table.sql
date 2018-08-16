@@ -543,7 +543,9 @@ CREATE TABLE `motif_feature_regulatory_feature` (
   `epigenome_id` int(11),
   `has_matching_Peak` tinyint(3) unsigned DEFAULT '0',
   PRIMARY KEY (`motif_feature_regulatory_feature_id`),
-  UNIQUE KEY `mf_rf_ep_idx` (`motif_feature_id`,`regulatory_feature_id`, `epigenome_id`)
+  UNIQUE KEY `mf_rf_ep_idx` (`motif_feature_id`,`regulatory_feature_id`,`epigenome_id`),
+  KEY `motif_feature_idx` (`motif_feature_id`),
+  KEY `regulatory_feature_idx` (`regulatory_feature_id`)
 )ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 DROP TABLE IF EXISTS `underlying_structure`;
@@ -1646,6 +1648,7 @@ INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch
 INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_l.sql|Modify binding_matrix_table');
 INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_m.sql|Create binding_matrix_frequencies table');
 INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_n.sql|Modify indices in motif_feature_peak table');
+INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_o.sql|Add indices to motif_feature_regulatory_feature table');
 
 /**
 @table meta_coord
