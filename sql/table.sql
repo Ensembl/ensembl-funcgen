@@ -520,7 +520,8 @@ CREATE TABLE `motif_feature_peak` (
   `motif_feature_id` int(11) NOT NULL,
   `peak_id` int(11) NOT NULL,
   PRIMARY KEY (`motif_feature_peak_id`),
-  UNIQUE KEY `motif_feature_idx` (`motif_feature_id`)
+  KEY `motif_feature_idx` (`motif_feature_id`),
+  KEY `peak_idx` (`peak_id`)
 )ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
@@ -1644,6 +1645,7 @@ INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch
 INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_k.sql|Create motif_feature_regulatory_feature table');
 INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_l.sql|Modify binding_matrix_table');
 INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_m.sql|Create binding_matrix_frequencies table');
+INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_n.sql|Modify indices in motif_feature_peak table');
 
 /**
 @table meta_coord
