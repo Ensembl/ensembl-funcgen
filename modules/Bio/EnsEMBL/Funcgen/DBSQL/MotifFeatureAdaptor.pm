@@ -669,7 +669,7 @@ sub store_associated_RegulatoryFeature {
 
 =head2 fetch_by_stable_id
 
-  Arg [1]    : Integer $stable_id - The stable_id of the motif feature to retrieve
+  Arg [1]    : String $stable_id - The stable_id of the motif feature to retrieve
   Example    : my $mf = $mf_adaptor->fetch_by_stable_id($stable_id);
   Description: Retrieves a motif feature via its stable id.
   Returntype : Bio::EnsEMBL::Funcgen::MotifFeature
@@ -682,7 +682,7 @@ sub store_associated_RegulatoryFeature {
 sub fetch_by_stable_id {
   my ($self, $stable_id) = @_;
 
-  $self->bind_param_generic_fetch($stable_id, SQL_INTEGER);
+  $self->bind_param_generic_fetch($stable_id, SQL_VARCHAR);
 
   return $self->generic_fetch('mf.stable_id=?')->[0];
 }
