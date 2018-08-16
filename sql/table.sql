@@ -1650,6 +1650,7 @@ INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch
 INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_m.sql|Create binding_matrix_frequencies table');
 INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_n.sql|Modify indices in motif_feature_peak table');
 INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_o.sql|Add indices to motif_feature_regulatory_feature table');
+INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_p.sql|Modify column display_label length from epigenome table');
 
 /**
 @table meta_coord
