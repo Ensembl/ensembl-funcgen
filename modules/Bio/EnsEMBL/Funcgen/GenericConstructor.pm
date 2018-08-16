@@ -133,7 +133,7 @@ sub _initialise_fields {
      . "The complete set of parameters passed to the constructor was:\n\n"
      . Dumper( \%as_hash ) . "\n\n"
      . "The constructor accepts the following parameters:\n\n"
-     . Dumper( [ sort @accepted_constructor_parameters ] )
+     . Dumper( [ map { '-' . $_ } sort @accepted_constructor_parameters ] )
     );
   }
   return;
