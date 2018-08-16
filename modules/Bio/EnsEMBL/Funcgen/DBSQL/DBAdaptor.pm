@@ -235,7 +235,6 @@ sub get_available_adaptors{
         'RegulatoryBuildStatistic'          => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildStatisticAdaptor',
         'RegulatoryEvidenceLink'            => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryEvidenceLinkAdaptor',
         'RegulatoryFeature'                 => 'Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryFeatureAdaptor',
-        'SegmentationFeature'               => 'Bio::EnsEMBL::Funcgen::DBSQL::SegmentationFeatureAdaptor',
         'SegmentationFile'                  => 'Bio::EnsEMBL::Funcgen::DBSQL::SegmentationFileAdaptor',
         'SegmentationStateAssignment'       => 'Bio::EnsEMBL::Funcgen::DBSQL::SegmentationStateAssignmentAdaptor',
         'SegmentationStateEmission'         => 'Bio::EnsEMBL::Funcgen::DBSQL::SegmentationStateEmissionAdaptor',
