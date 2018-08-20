@@ -6,7 +6,7 @@ sub new {
     my ($class, $args) = @_;
 
 	my $self = {
-
+		epi_aceesion => $args->{epi_accession} || '',
 		accession  => $args->{accession} || '',
 		experiment_accession  => $args->{experiment_accession} || '',
 		epigenome  => $args->{epigenome} || '',
@@ -35,6 +35,11 @@ sub new {
 	};
 	return bless $self, $class;
 
+}
+
+sub set_epi_accession {
+	my ($self, $epi_accession) = @_;
+    $self->{epi_accession} = $epi_accession;	
 }
 
 sub set_accession {
@@ -169,7 +174,7 @@ sub get {
 
 sub csv_row {
 	my $self = shift;
-	my $csv_row = join ("\t", $self->{accession}, $self->{experiment_accession}, $self->{epigenome}, $self->{feature_type}, $self->{biological_replicate}, $self->{new_bio_replicate}, $self->{technical_replicate}, $self->{new_tech_replicate}, $self->{gender}, 
+	my $csv_row = join ("\t", $self->{epi_accession}, $self->{accession}, $self->{experiment_accession}, $self->{epigenome}, $self->{feature_type}, $self->{biological_replicate}, $self->{new_bio_replicate}, $self->{technical_replicate}, $self->{new_tech_replicate}, $self->{gender}, 
 	$self->{md5_checksum}, $self->{local_url}, $self->{analysis}, $self->{experimental_group}, $self->{assay_xrefs}, $self->{ontology_xrefs}, $self->{xrefs}, $self->{epigenome_description}, 
 	$self->{control_id}, $self->{paired}, $self->{paired_end_tag}, $self->{read_length}, $self->{multiple}, $self->{paired_with}, $self->{download_url}, $self->{info});
 	
