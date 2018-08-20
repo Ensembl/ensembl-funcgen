@@ -1,3 +1,19 @@
+#!/usr/bin/env perl
+
+# Copyright [1999-2018] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 use strict;
 use Bio::EnsEMBL::Funcgen::clsRegisterMetadata;
 use REST::Client;
@@ -7,6 +23,9 @@ use Getopt::Long qw(GetOptions);
 use feature qw(say);
 use Config::Tiny;
 use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Registry;
+use Bio::EnsEMBL::Gene;
+use Bio::EnsEMBL::DBEntry;
 
 ##################### MAIN FUNCTION ##############################
 
@@ -18,13 +37,20 @@ my @lstAssays;
 my $help;
 my $cfgFile;
 my @lstErrors;
+my $skipPath;
+my %skipRefEpi;
+my %featureNotFound;
+my %features_done;
+
+my %targetsNotFound;
 
 GetOptions(
 			'f=s' => \$pathFile, 
 			'p=s' => \$localFilePath, 
 			'a=s' => \@lstAssays,
 			'c=s' => \$cfgFile,
-			't=s' => \@lstTargets, 
+			't=s' => \@lstTargets,
+			's=s' => \$skipPath, 
 			'h=s' => \$help,);
 
 #check parameters			
@@ -42,6 +68,24 @@ if (not(-f $cfgFile)){
 	die "$cfgFile file can not be found\n";
 }
 
+if ($skipPath){
+	if (not(-f $skipPath)){
+		#file not found
+		die "$skipPath file can not be found\n";
+	}
+	#load skip list
+	open(my $sfh, '<:', $skipPath) or die "Could not open file $skipPath\n";
+	while (my $fullRow = <$sfh>) {
+		chomp $fullRow;
+		$skipRefEpi{$fullRow} = $fullRow;
+	}
+	close($sfh);
+
+}
+
+
+
+
 #read config file
 my $cfg = Config::Tiny->read($cfgFile);
 
@@ -53,6 +97,23 @@ my ($hAnalysis, $hFeatureType, $hGender) = get_compare_hashes($adaptors);
 my %hshAnalysis = %{$hAnalysis};
 my %hshFeatureType = %{$hFeatureType};
 my %hshGender = %{$hGender};
+
+#delete 'Features_not_found.txt' if exists
+if(-e 'Features_not_found.txt') 
+{
+   unlink 'Features_not_found.txt';
+}
+#delete 'Features_not_imported.txt' if exists
+if(-e 'Features_not_imported.txt') 
+{
+   unlink 'Features_not_imported.txt';
+}
+#delete 'new_Features_to_be_imported.txt' if exists
+if(-e 'new_Features_to_be_imported.txt') 
+{
+   unlink 'new_Features_to_be_imported.txt';
+}
+
 
 #compare parameter values with DB values (assays and targets) to check if they exists and to normalize them
 my @lstDbAssays;
@@ -91,8 +152,9 @@ if ((substr $localFilePath, -1) ne '/'){
 my @lstRegMeta;
 
 #Create a clsRegisterMetadata object with the column headers and add it to the array
-my $clsRegMetaHead = store_row('accession', 'experiment_accession', 'epigenome', 'feature_type', 'biological_replicate', 'new_biological_replicate', 'technical_replicate', 'new_technical_replicate', 'gender', 'md5_checksum', 'local_url', 'analysis', 'experimental_group', 'assay_xrefs', 'ontology_xrefs', 'xrefs', 'epigenome_description', 'control_id', 'paired', 'paired_end_tag', 'read_length', 'multiple', 'paired_with','download_url', 'info');
+my $clsRegMetaHead = store_row('epi_accession', 'accession', 'experiment_accession', 'epigenome', 'feature_type', 'biological_replicate', 'new_biological_replicate', 'technical_replicate', 'new_technical_replicate', 'gender', 'md5_checksum', 'local_url', 'analysis', 'experimental_group', 'assay_xrefs', 'ontology_xrefs', 'xrefs', 'epigenome_description', 'control_id', 'paired', 'paired_end_tag', 'read_length', 'multiple', 'paired_with','download_url', 'info');
 push @lstRegMeta, $clsRegMetaHead;
+
 
 #open file
 open(my $fh, '<:', $pathFile) or die "Could not open file $pathFile\n";
@@ -102,8 +164,12 @@ while (my $fullRow = <$fh>) {
 	chomp $fullRow;
   	my @row = (split "\t", $fullRow);
   	my $epiAccess = @row[0];
+  	if ($skipRefEpi{$epiAccess}){
+  		next;
+  	}
 	
 	#init varaiables
+	my $epi_accession= '-';
 	my $accession= '-';
 	my $expAccession= '-';
 	my $epigenome = '-';
@@ -116,7 +182,7 @@ while (my $fullRow = <$fh>) {
 	my $md5Check = '-';
 	my $localUrl = '-';
 	my $analysis = '-';
-	my $expGroup = 'ENCODE'; 
+	my $expGroup = '-'; 
 	my $assayXrefs ='-';
 	my $ontXrefs = '-';
 	my $xrefs = '-';
@@ -155,7 +221,13 @@ while (my $fullRow = <$fh>) {
 			}	
 			
 		}
+
+		$epi_accession = $rEData->{'accession'};
 		
+		#experimental group
+		$expGroup = $rEData->{'award'}->{'project'};
+
+
 	
 		#Experiments
 		my @experiments = @{$rEData->{'related_datasets'}};
@@ -175,6 +247,7 @@ while (my $fullRow = <$fh>) {
 
 		my @extraDone;
 		my @extraExperiments;
+
 		foreach my $exp (@experiments){
 			my $life_stage ='';
 			my $age = '';
@@ -188,6 +261,7 @@ while (my $fullRow = <$fh>) {
 				if ( not grep( /^$searchParameters$/, @extraDone) ){
 					
 					@extraExperiments = get_extra_experiments($extraEpigenome, $extraSpecie, $life_stage, $age);
+					
 					push @extraDone, $searchParameters;
 				}
 			} 
@@ -197,14 +271,32 @@ while (my $fullRow = <$fh>) {
 		
 		
 		#add extra Experiments
+
 		if (@extraExperiments){
 			push @experiments, @extraExperiments;
 		}
+
+		#only experiments with known targets or GO annotation like "DNA binding transcription factor activity"
+		#also exclude experiments which target is FLAG- *or eGFP-*
+		@experiments = only_known_and_filtered_tagets($adaptors, \@experiments, \%hshFeatureType, \%features_done);
+
+
+		#only experiments with known targets
+		#@experiments = only_known_tagets(\@experiments, \%hshFeatureType, \%featureNotFound);
+
+		#get extra controls not contained in the reference epigenome set
+		my @extraCtls = get_extra_controls(\@experiments);
+
+		if (@extraCtls){
+			push @experiments, @extraCtls;
+		}
+
 
 		#get control experiments info
 		my $infoControl = get_control_info(\@experiments);
 
 		my @lstControls;
+
 		#loop experiments
 		foreach my $exp (@experiments) {
 
@@ -219,7 +311,12 @@ while (my $fullRow = <$fh>) {
 			if (@lstDbTargets){
 				#Target parameter has been informed
 				if ($target){
-					if ( not ((grep( /^$target$/, @lstDbTargets) ) || (uc $target eq 'CONTROL') || (uc $target eq 'RABBIT-IGG-CONTROL')) ) {
+					if (not( (grep( /^$target$/, @lstDbTargets)) || (index(uc($target), 'CONTROL') != -1))) {
+
+=pod
+					if ( not ((grep( /^$target$/, @lstDbTargets) ) || (uc $target eq 'CONTROL') || (uc $target eq 'RABBIT-IGG-CONTROL') || (uc $target eq '
+MOUSE-IGG-CONTROL')) ) {
+=cut
 						#it is not a control or one of our targets
 						$swTarget =1;
 					} 
@@ -236,6 +333,7 @@ while (my $fullRow = <$fh>) {
 			
 			#filter experiments by assay
 			my $assay = $exp->{'assay_title'};
+
 			my $expReleased=0;
 			
 			#check status of the experiment
@@ -261,7 +359,11 @@ while (my $fullRow = <$fh>) {
 						}else{
 							$info .= "; Target: $target Not found in feature_type table";
 						}
-						
+=pod
+						if (!$targetsNotFound{$target}){
+							$targetsNotFound{$target} = $target;
+						}
+=cut						
 						#push @lstErrors, "experiment: ".$exp->{'accession'}."\ttarget: $target\terror: Not found in feature_type table";
 					}else{
 						$target = $DBtarget;
@@ -338,7 +440,7 @@ while (my $fullRow = <$fh>) {
 						}
 					}
 
-					$epilabel .= ' '.$abr;
+					#$epilabel .= ' '.$abr;
 
 				}
 
@@ -347,7 +449,7 @@ while (my $fullRow = <$fh>) {
 					$age = $rep->{'library'}->{'biosample'}->{'age'};
 					$epiDesc .= ' '.$age;
 					if ($abr ne 'P0' && $abr ne 'adult'){
-						$epilabel .= $age;
+						#$epilabel .= $age;
 					}
 					
 				}
@@ -357,14 +459,16 @@ while (my $fullRow = <$fh>) {
 					if ($age != 1){
 						$units .= 's';
 					}
-					$epiDesc .= ' '.$units;
+					#$epiDesc .= ' '.$units;
 
 				}
 
 
 
-				$epigenome = join (':', $termName, $lifeStage, $age, $units);
-				$epiDesc .=';'.$epilabel;
+				#$epigenome = join (':', $termName, $lifeStage, $age, $units);
+				$epigenome = $termName."_".$epi_accession;
+				#$epiDesc .=';'.$epilabel;
+				$epiDesc = $termName;
 				$assayXrefs = $exp->{'assay_term_id'};
 				
 				#Normalize gender
@@ -418,13 +522,19 @@ while (my $fullRow = <$fh>) {
 									}
 									$controlId.= (split '/', $controledBy)[-1];
 								}
-							}#else{
+							}else{
 								#no controled_by field
+								#check if there is a control at experiment level
+
+
+								$controlId = get_controls_from_experiment($exp->{'possible_controls'});
+
 								#push @lstErrors, "file: ".$accession."\tControlled_by: Missing\terror: Controlled_by field missing";
-								#}
+							}
 						}
 					
-						
+
+
 						#dowload url
 						if ($file->{'href'}){
 							$downUrl = 'https://www.encodeproject.org'.$file->{'href'};
@@ -433,13 +543,14 @@ while (my $fullRow = <$fh>) {
 						
 						if (uc $target eq 'WCE'){
 							#assign values to object Register Metadata
-							my $clsCtlRegMeta = store_row($accession, $expAccession, $epigenome, $featureType, $bioReplicate, $newBioReplicate, $techReplicate, $newTechReplicate, $gender, $md5Check, $localUrl, $analysis, $expGroup, $assayXrefs, $ontXrefs, $xrefs, $epiDesc, $controlId, $paired, $paired_end_tag, $read_length, $multiple, $paired_with, $downUrl, $info);
+							$controlId = '-';
+							my $clsCtlRegMeta = store_row($epi_accession, $accession, $expAccession, $epigenome, $featureType, $bioReplicate, $newBioReplicate, $techReplicate, $newTechReplicate, $gender, $md5Check, $localUrl, $analysis, $expGroup, $assayXrefs, $ontXrefs, $xrefs, $epiDesc, $controlId, $paired, $paired_end_tag, $read_length, $multiple, $paired_with, $downUrl, $info);
 							#Add the object to the list of control rows
 							push @lstControls, $clsCtlRegMeta;
 							
 						}else{
 							#assign values to object Register Metadata
-							my $clsRegMeta = store_row($accession, $expAccession, $epigenome, $featureType, $bioReplicate, $newBioReplicate, $techReplicate, $newTechReplicate, $gender, $md5Check, $localUrl, $analysis, $expGroup, $assayXrefs, $ontXrefs, $xrefs, $epiDesc, $controlId, $paired, $paired_end_tag, $read_length, $multiple, $paired_with, $downUrl, $info);
+							my $clsRegMeta = store_row($epi_accession, $accession, $expAccession, $epigenome, $featureType, $bioReplicate, $newBioReplicate, $techReplicate, $newTechReplicate, $gender, $md5Check, $localUrl, $analysis, $expGroup, $assayXrefs, $ontXrefs, $xrefs, $epiDesc, $controlId, $paired, $paired_end_tag, $read_length, $multiple, $paired_with, $downUrl, $info);
 							#Add the object to the list of rows
 							push @lstRegMeta, $clsRegMeta;
 							
@@ -468,26 +579,574 @@ if (@lstErrors){
 	}
 }else{
 	#final check and updates
-	@lstRegMeta = check_duplicates(\@lstRegMeta);
-	@lstRegMeta = remove_unused_controls(\@lstRegMeta);
+
+
+	@lstRegMeta = check_duplicated_entries(\@lstRegMeta);
 
 	@lstRegMeta = join_controls_controlling_same_experiment(\@lstRegMeta);
 
-	@lstRegMeta = check_replicate_gaps(\@lstRegMeta);
-	@lstRegMeta = check_duplicated_replicates(\@lstRegMeta);
-	@lstRegMeta = update_column_multiple(\@lstRegMeta);
-	@lstRegMeta = check_paired_and_single_end(\@lstRegMeta);
+	@lstRegMeta = update_paired_end_controlled_by_column(\@lstRegMeta);
+
+	@lstRegMeta = remove_paired_signal_and_controls_with_missing_parts(\@lstRegMeta);
+
+	@lstRegMeta = remove_unused_controls(\@lstRegMeta);
+
+	
+
+
+
+	###@lstRegMeta = check_replicate_gaps(\@lstRegMeta);
+
+	###@lstRegMeta = check_duplicated_replicates(\@lstRegMeta);
+
+	###@lstRegMeta = update_column_multiple(\@lstRegMeta);
+
+
+
+
+	@lstRegMeta = warns_paired_and_single_end_mixed(\@lstRegMeta);
+
 	@lstRegMeta = check_control_analysis($adaptors, \@lstRegMeta);
-	@lstRegMeta = check_paired_end_replicates($adaptors, \@lstRegMeta);
-	@lstRegMeta = change_multiple_and_tech_replicat_for_DNSA1($adaptors, \@lstRegMeta);
+
+
+
+
+	###@lstRegMeta = check_paired_end_replicates($adaptors, \@lstRegMeta);
+	###@lstRegMeta = change_multiple_and_tech_replicat_for_DNSA1($adaptors, \@lstRegMeta);
+
+
+
+	
+
+	@lstRegMeta = update_analysis_for_paired_controls(\@lstRegMeta);
+
+	
+
+	@lstRegMeta = remove_signal_files_without_control(\@lstRegMeta);
+
+	@lstRegMeta = check_gender(\@lstRegMeta);
+
+
+	@lstRegMeta = check_replicate_numbers_and_multiple_column(\@lstRegMeta);
+
 
 
 	foreach my $reg (@lstRegMeta) {
 		print $reg->csv_row."\n";
 	}
+
 }
 
 ##################### END MAIN FUNCTION ##############################
+
+sub check_gender {
+	my $lstObjs = shift;
+	my @lstRegMeta = @{$lstObjs};
+	my $current_epigenome;
+	my $current_gender;
+	my %hshGender;
+	foreach my $regMeta (@lstRegMeta){
+		if ($current_epigenome ne $regMeta->get('epi_accession')){
+			$current_epigenome = $regMeta->get('epi_accession');
+			$current_gender = $regMeta->get('gender');
+		}else{
+			if ($current_gender ne $regMeta->get('gender')){
+				if (!exists($hshGender{$current_epigenome})){
+					$hshGender{$current_epigenome} = 'mixed';
+				}
+			}
+		}
+	}
+
+	foreach my $regMeta (@lstRegMeta){
+		if (exists $hshGender{$regMeta->get('epi_accession')}){
+			$regMeta->set_gender($hshGender{$regMeta->get('epi_accession')});
+		}
+
+	}
+
+	return @lstRegMeta;
+}
+
+sub remove_paired_signal_and_controls_with_missing_parts {
+	my $lstObjs = shift;
+	my @lstRegMeta = @{$lstObjs};
+	my $index = 0;
+	my @to_remove;
+	foreach my $regMeta (@lstRegMeta){
+		if (uc $regMeta->get('paired') eq 'YES' && $index > 0){
+			my $paired_found = get_row_by_accession($regMeta->get('paired_with'), \@lstRegMeta);
+			if (!$paired_found){
+				push @to_remove, $index;
+			}
+		}
+		$index +=1;
+
+	}
+
+	my @sorted_to_remove = sort{$b <=> $a} @to_remove;
+	foreach my $del (@sorted_to_remove) {
+		splice @lstRegMeta, $del, 1;
+	}
+
+	return @lstRegMeta;
+}
+
+sub remove_signal_files_without_control {
+	my $lstObjs = shift;
+	my @lstRegMeta = @{$lstObjs};
+	my $index = 0;
+	my @to_remove;
+	foreach my $regMeta (@lstRegMeta){
+		if (uc $regMeta->get('feature_type') ne 'WCE' && $index > 0 && uc $regMeta->get('feature_type') ne 'DNASE1'){
+			my $fullCtl = $regMeta->get('control_id');
+			if ($fullCtl && $fullCtl ne '-'){
+				my @lstCtl = (split ",", $fullCtl);
+				foreach my $ctl (@lstCtl){
+					$ctl =~ s/^\s+|\s+$//g;
+					my $found = search_control($ctl, \@lstRegMeta);
+					if ($found == 0){
+						push @to_remove, $index;
+						#splice @lstRegMeta, $index, 1;
+					}
+				}				
+			}else{
+				push @to_remove, $index;
+				#splice @lstRegMeta, $index, 1;
+			}
+
+		}
+		$index += 1;
+	}
+
+	my @sorted_to_remove = sort{$b <=> $a} @to_remove;
+	foreach my $del (@sorted_to_remove) {
+		splice @lstRegMeta, $del, 1;
+	}
+
+	return @lstRegMeta;
+}
+
+sub search_control{
+	my $ctlAccession = shift;
+	my $lstObjs = shift;
+	my @lstRegMeta = @{$lstObjs};
+	my $found = 0;
+	foreach my $regMeta (@lstRegMeta){
+		if (uc $regMeta->get('feature_type') eq 'WCE'){
+			if (uc $regMeta->get('accession') eq uc $ctlAccession){
+				$found = 1;
+				last;
+			}
+		}
+	}
+	return $found;
+}
+
+sub get_controls_from_experiment {
+	my $possible_ctls = shift;
+	my $controlId='-';
+	foreach my $ctl (@{$possible_ctls}) {
+		$controlId='';
+		foreach my $file (@{$ctl->{'files'}}) {
+			my $ctl_file = (split '/', $file)[-1];
+			my $file_format = get_file_format($ctl_file);
+			if (uc $file_format ne 'FASTQ'){
+				next;
+			}
+			if ($controlId ne ''){
+				$controlId.=', ';
+			}
+			$controlId.= $ctl_file;
+		}
+	}
+
+	return $controlId;
+}
+
+sub get_file_format {
+	my $file_accession = shift;
+	my $f_format = '-';
+	my $url = 'https://www.encodeproject.org/files/'.$file_accession.'/?frame=embedded&format=json';
+	my $client = REST::Client->new();
+	my $headers = {Accept => 'application/json'};
+	$client->GET($url, $headers);
+	my $response = decode_json($client->responseContent());
+	if ($response){
+		if (uc $response->{'status'} eq 'RELEASED'){
+			$f_format = $response->{'file_format'};
+		}
+	}
+
+	return $f_format;
+}
+
+sub only_known_and_filtered_tagets{
+
+	my $adaptors = shift;
+	my $lstExp=shift;
+	my $features = shift;
+	my $done_features = shift;
+	
+	my %db_features = %{$features};
+	my @experiments = @{$lstExp};
+	my @filetred_exps;
+	
+	open(my $f_not_imported, '>>', 'Features_not_imported.txt') or die "Could not open file 'Features_not_imported.txt' $!";
+	open(my $f_to_be_imported, '>>', 'new_Features_to_be_imported.txt') or die "Could not open file 'new_Features_to_be_imported.txt' $!";
+
+	foreach my $exp (@experiments){
+
+		my $target = $exp->{'target'}->{'label'};
+
+		if (uc $exp->{'assay_title'} eq 'DNASE-SEQ'){
+			$target = 'DNase1';
+		}
+
+		if (!$target){
+			next;
+		}
+
+		if (index(uc($target), 'CONTROL') != -1) {
+			push @filetred_exps, $exp;
+			next;
+		}
+
+		if (exists ($done_features->{uc $target})){
+			if ($done_features->{uc $target} == 1){
+				push @filetred_exps, $exp;
+			}
+			next;
+		}
+
+		if (exists ($db_features{uc $target})){
+			$done_features->{uc $target} = 1;
+			push @filetred_exps, $exp;
+			next;
+		}
+
+		$done_features->{uc $target} = must_be_imported($target, $adaptors);
+
+		if ($done_features->{uc $target} == 1){
+			push @filetred_exps, $exp;
+			say $f_to_be_imported $target;
+		}else{
+			say $f_not_imported $target;
+		}
+
+	}
+
+	close $f_to_be_imported;
+	close $f_not_imported;
+	return @filetred_exps;
+
+}
+
+sub must_be_imported {
+	my $target = shift;
+	my $adaptors = shift;
+	my $add = 0;
+	
+	my $lstgene = $adaptors->{Gene}->fetch_all_by_external_name($target);
+
+	LBL_GENE: {
+		foreach my $gene (@{$lstgene}){
+			my $lstDbEntries = $gene->get_all_DBLinks('GO');
+			foreach my $dbentry (@{$lstDbEntries}){
+				if (index(uc $dbentry->description(), 'DNA BINDING TRANSCRIPTION FACTOR ACTIVITY') != -1) {
+	    			$add = 1;
+	    			last LBL_GENE;
+				} 
+			}
+	
+		}
+	}
+	
+	return $add;
+
+}
+
+sub check_replicate_numbers_and_multiple_column{
+	my $lstObjs = shift;
+	my @lstRegMeta = @{$lstObjs};
+	my @epigenomeDone;
+	my $firstRow=1;
+
+	foreach my $regMeta (@lstRegMeta){
+		if ($firstRow == 1){
+			$firstRow=0;
+			next;
+		}
+		my $epigenome = $regMeta->get('epigenome');
+		if (not grep( /^$epigenome$/, @epigenomeDone)){
+			push  (@epigenomeDone, $epigenome);
+			my @epiObjects = get_filtered_objects('epigenome', $epigenome, \@lstRegMeta);
+			my @featureDone;
+
+			foreach my $feature (@epiObjects){
+				my $feature_type = $feature->get('feature_type');
+				if (not grep( /^$feature_type$/, @featureDone)){
+					push (@featureDone, $feature_type);
+					my @featureEpigenome = get_filtered_objects('feature_type', $feature_type, \@epiObjects);
+					
+					#create the tree
+					my %replicate_tree = create_replicate_tree(\@featureEpigenome);
+
+					#print Dumper %replicate_tree;
+					#exit;
+					
+					#numerate column "multiple"
+					update_column_multiple_in_tree(\@featureEpigenome, \%replicate_tree);
+
+					#numerate replicates
+					numerate_replicates(\%replicate_tree);
+
+				}
+			}
+		}
+
+	}
+	return @lstRegMeta;
+}
+
+sub numerate_replicates{
+	my $experiment = shift;
+	my $bio_count =1;
+	foreach my $exp (keys %{$experiment}){
+		foreach my $bio (keys %{$experiment->{$exp}}){
+			my $tec_count = 1;
+			foreach my $tec (keys %{$experiment->{$exp}{$bio}}){
+				my @objs = @{$experiment->{$exp}{$bio}{$tec}};
+				foreach my $obj (@objs){
+					$obj->set_new_bio_replicate($bio_count);
+					$obj->set_new_tech_replicate($tec_count);
+				}
+				$tec_count +=1;
+			}
+			$bio_count +=1;
+		}
+	}
+
+	return;
+}
+
+sub update_column_multiple_in_tree{
+	my $objs = shift;
+	my $experiment = shift;
+	my @featureEpigenome = @{$objs};
+	my %obj_done;
+	
+	
+	foreach my $fe (@featureEpigenome){
+		if (lc $fe->get('acession') eq 'accession'){
+			next;
+		}
+		if (not(exists $obj_done{$fe->get('experiment_accession').'_'.$fe->get('biological_replicate').'_'.$fe->get('technical_replicate')})){
+			$obj_done{$fe->get('experiment_accession').'_'.$fe->get('biological_replicate').'_'.$fe->get('technical_replicate')}=1;
+
+			my @objs = @{$experiment->{$fe->get('experiment_accession')}{$fe->get('biological_replicate')}{$fe->get('technical_replicate')}};
+			my $counter=1;
+			my %paired_num;
+			my $paired_count = 1;
+			foreach my $obj (@objs){
+				if (uc $obj->get('paired') eq 'NO'){
+					$obj->set_multiple($counter);
+					$counter +=1;
+				}else{
+					if (uc $obj->get('paired') eq 'YES'){
+						if (not(exists $paired_num{$obj->get('accession')})){
+							$paired_num{$obj->get('paired_with')} = $paired_count;
+							$obj->set_multiple ($paired_count);
+							$paired_count += 1;
+						}else{
+							$obj->set_multiple ($paired_num{$obj->get('accession')});
+						}
+						
+					}
+				}
+			}
+		}
+	}
+	return;
+}
+
+
+sub create_replicate_tree{
+	my $objs = shift;
+	my @featureEpigenome = @{$objs};
+	my %experiment;
+	foreach my $fe (@featureEpigenome){
+		#if (not (exists $experiment{$fe->get('experiment_accession')}{$fe->get('biological_replicate')}{$fe->get('technical_replicate')})){
+		#	$experiment{$fe->get('experiment_accession')}{$fe->get('biological_replicate')}{$fe->get('technical_replicate')}=[];
+		
+		#}
+		push @{$experiment{$fe->get('experiment_accession')}{$fe->get('biological_replicate')}{$fe->get('technical_replicate')}}, $fe;
+
+	} 
+	return %experiment;
+}
+
+sub get_filtered_objects{
+    my $filterName = shift;
+    my $filterValue = shift;
+    my $lstObjs = shift;
+    my @lstRegMeta = @{$lstObjs};
+    my @filterObjs;
+    foreach my $obj (@lstRegMeta){
+        if ($filterValue eq $obj->get($filterName)) {
+            push @filterObjs, $obj;
+        }
+    }
+    return @filterObjs;
+}
+
+
+
+sub update_analysis_for_paired_controls{
+	my $lstObjs = shift;
+	my @lstRegMeta = @{$lstObjs};
+	foreach my $regMeta (@lstRegMeta){
+		if (uc $regMeta->get('paired') eq 'YES' && $regMeta->get('feature_type') eq 'WCE' && $regMeta->get('paired_end_tag') eq '2'){
+			my $paired1ctl = get_row_by_accession($regMeta->get('paired_with'), \@lstRegMeta);
+			$regMeta->set_analysis($paired1ctl->get('analysis'));
+		}
+	}
+	return @lstRegMeta;
+}
+
+
+sub update_paired_end_controlled_by_column{
+	my $lstObjs = shift;
+	my @lstRegMeta = @{$lstObjs};
+	foreach my $regMeta (@lstRegMeta){
+		if (uc $regMeta->get('paired') eq 'YES' && $regMeta->get('control_id') eq '-'){
+			my $fileFound = get_row_by_accession($regMeta->get('paired_with'), \@lstRegMeta);
+			if ($fileFound){
+				$regMeta->set_control_id($fileFound->{'control_id'});
+			}
+		}
+
+	}
+	return @lstRegMeta;
+}
+
+sub get_row_by_accession{
+	my $accession = shift;
+	my $lstObjs = shift;
+	my @lstRegMeta = @{$lstObjs};
+	my $fileFound;
+	foreach my $regMeta (@lstRegMeta){
+		if (uc $regMeta->get('accession') eq uc $accession){
+			$fileFound = $regMeta;
+			last;
+		}
+	}
+
+	return $fileFound;
+}
+
+sub get_extra_controls{
+	my $exps = shift;
+	my @experiments = @{$exps};
+	my %expDone;
+	my @ctlsDone;
+	my @extraCtls;
+
+	foreach my $exp (@experiments){
+		if (not (exists $expDone{$exp->{'accession'}})){
+			$expDone{$exp->{'accession'}}=$exp->{'accession'};
+			my $target = $exp->{'target'}->{'label'};
+			if (not (index(uc($target), 'CONTROL') != -1)) {
+
+				foreach my $ctl (@{$exp->{'possible_controls'}}){
+					my $ctlAccession = $ctl->{'accession'};
+					if ( ($ctlAccession) && (not grep( /^$ctlAccession$/, @ctlsDone)) ){
+						push @ctlsDone, $ctl->{'accession'};
+						if (not (ctl_alredy_included($ctlAccession, \@experiments))){
+
+							my $ctlExp = get_control($ctlAccession);
+							
+							push @extraCtls, $ctlExp;
+						}
+
+					}
+				}
+			}
+		}
+		
+	}
+
+	return @extraCtls;
+
+}
+
+sub ctl_alredy_included{
+	my $ctl = shift;
+	my $exps = shift;
+	my $found;
+	foreach my $exp (@{$exps}){
+		my $target = $exp->{'target'}->{'label'};
+		if (index(uc($target), 'CONTROL') != -1) {
+			if (uc ($ctl) eq uc ($exp->{'accession'}) ){
+				$found=1;
+				last;
+			}
+		}
+	}
+	return $found;
+}
+
+sub only_known_tagets{
+
+	my $lstExp=shift;
+	my $features = shift;
+	my $notFound = shift;
+	my @expsKnownTarget = @{$lstExp};
+	my %hshCompare = %{$features};
+	my @onlyFoundTargets;
+	
+	open(my $f_not_found, '>>', 'Features_not_found.txt') or die "Could not open file 'Features_not_found.txt' $!";
+
+
+	foreach my $extraExp (@expsKnownTarget){
+		my $extraTarget;
+		if ($extraExp->{'target'}->{'label'}){
+			$extraTarget = $extraExp->{'target'}->{'label'};
+		}
+		if (not (index(uc($extraTarget), 'CONTROL') != -1)) {
+=pod
+		if ( not (uc $extraTarget eq 'CONTROL' || uc $extraTarget eq 'RABBIT-IGG-CONTROL') || (uc $extraTarget eq '
+MOUSE-IGG-CONTROL')) {
+=cut
+			#it is not a control
+
+			if (uc $extraExp->{'assay_title'} eq 'DNASE-SEQ'){
+				$extraTarget = 'DNase1';
+			}
+			if ($hshCompare{uc $extraTarget}){
+				push @onlyFoundTargets, $extraExp;
+			}else{
+				#target not found in the DB
+				if ($extraTarget){
+					if (not exists($notFound->{$extraTarget})){
+						say $f_not_found $extraTarget;
+						$notFound->{$extraTarget}=$extraTarget;
+					}
+
+				}
+				
+
+			}
+		}else{
+			push @onlyFoundTargets, $extraExp;
+		}
+
+	}
+
+	close $f_not_found;
+	return @onlyFoundTargets;
+
+}
 
 sub change_multiple_and_tech_replicat_for_DNSA1{
 	my %adaptors = shift;
@@ -659,6 +1318,14 @@ sub get_histone_TF{
 							}
 							
 						}else{
+							#************ warning TF harcoded *************
+							#In this case, All new Feature types are TFs 
+							my $ctlTF = 'ChIP-Seq_control_TF';
+							if (not grep( /^$ctlTF$/, @hTF)){
+								push @hTF, $ctlTF;
+							}
+							#**********************************************
+
 							my $info = $regMeta->get('info');
 							if ($info ne '-'){
 								$info .= '; Feature Class not Histone or TF';
@@ -829,7 +1496,7 @@ sub get_ctl_experiment{
 }
 
 
-sub check_paired_and_single_end{
+sub warns_paired_and_single_end_mixed{
 	my $lstObjs = shift;
 	my @lstRegMeta = @{$lstObjs};
 	my @expDone;
@@ -870,29 +1537,39 @@ sub get_control{
 	my $client = REST::Client->new();
 	my $headers = {Accept => 'application/json'};
 	$client->GET($ctlUrl, $headers);
-	my $response = decode_json($client->responseContent());
+	my $response = eval{decode_json($client->responseContent());};
+
+	unless($response) {
+		print $ctlUrl."\n";
+    	print $@."\n";
+    	exit;
+	}
 	return $response;
 }
 
-sub check_duplicates{
+sub check_duplicated_entries{
 	my $lstObjs = shift;
 	my @lstRegMeta = @{$lstObjs};
 	my @storedAccessions;
 	
 	#load controls in a hash
-	my $index = 0;
-	while ($index <= $#lstRegMeta ) {
-		my $regMeta = $lstRegMeta[$index];
+	my @to_remove;
+	my $ind_obj = 0;
+	foreach my $regMeta (@lstRegMeta){
 		my $accession = $regMeta->get('accession');
 		if (not grep( /^$accession$/, @storedAccessions)){
 			push @storedAccessions, $accession;
-			$index ++;
 		}else{
-			#remove duplicate control
-			splice @lstRegMeta, $index, 1;
+			push @to_remove, $ind_obj;
 		}
-
+		$ind_obj += 1;
 	}
+
+	my @sorted_to_remove = sort{$b <=> $a} @to_remove;
+	foreach my $del (@sorted_to_remove) {
+		splice @lstRegMeta, $del, 1;
+	}
+
 
 	return @lstRegMeta;
 }
@@ -915,22 +1592,38 @@ sub remove_unused_controls{
 		}
 	}
 
-	my $index=0;
-	while ($index <= $#lstRegMeta ) {
-		my $regMeta = $lstRegMeta[$index];
+	#add to the ctls list the second control file of paired controls
+	foreach my $regMeta (@lstRegMeta){
+		my $accession = $regMeta->get('accession');
+		if (grep(/^$accession$/, @ctls)){
+			my $pairedCtl = $regMeta->get('paired_with');
+			if ($pairedCtl ne '-'){
+				if (not (grep(/^$pairedCtl$/, @ctls))){
+					push @ctls, $pairedCtl;
+				}
+			}
+		}
+	}
+
+	my @to_remove;
+	my $ind_count=0;
+	foreach my $regMeta (@lstRegMeta){
 		if (uc $regMeta->get('feature_type') eq 'WCE'){
 			my $accession = $regMeta->get('accession');
 			if (not (grep(/^$accession$/, @ctls))){
 				#the control is not used
-				splice @lstRegMeta, $index, 1;
-			}else{
-				$index++;
+				push @to_remove, $ind_count;
+				#splice @lstRegMeta, $index, 1;
 			}
-
-		}else{
-			$index++;
 		}
+		$ind_count += 1;
 	}
+
+	my @sorted_to_remove = sort{$b <=> $a} @to_remove;
+	foreach my $del (@sorted_to_remove) {
+		splice @lstRegMeta, $del, 1;
+	}
+
 
 	return @lstRegMeta;
 }
@@ -1081,7 +1774,7 @@ sub check_replicate_gaps{
 	
 	return @lstRegMeta;
 }
-
+=pod
 sub update_column_multiple{
 	my $lstObjs = shift;
 	my @lstRegMeta = @{$lstObjs};
@@ -1123,7 +1816,7 @@ sub update_column_multiple{
 	}
 	return @lstRegMeta;
 }
-
+=cut
 sub get_experiments_epigenome_feature{
 	my $epigenome = shift;
 	my $feature = shift;
@@ -1263,7 +1956,11 @@ sub get_control_info{
 	my $info;
 	my $numExp = 0;
 	foreach my $exp (@{$experiments}){
-		if ((uc $exp->{'target'}->{'label'} eq 'CONTROL') || (uc $exp->{'target'}->{'label'} eq 'RABBIT-IGG-CONTROL')){
+		if (index($exp->{'target'}->{'label'}, 'control') != -1) {
+=pod
+		if ((uc $exp->{'target'}->{'label'} eq 'CONTROL') || (uc $exp->{'target'}->{'label'} eq 'RABBIT-IGG-CONTROL') || (uc $exp->{'target'}->{'label'} eq '
+MOUSE-IGG-CONTROL')){
+=cut
 			$numExp ++;
 			$info .='Exp:'.$exp->{'accession'};
 			my @files = @{$exp->{'files'}};
@@ -1294,6 +1991,7 @@ sub get_reference_epigenome_data{
 
 
 sub store_row{
+	my $epi_accession = shift;
 	my $accession= shift;
 	my $expAccession= shift;
 	my $epigenome = shift;
@@ -1320,6 +2018,7 @@ sub store_row{
 	my $downUrl = shift; 
 	my $info = shift;
 	my $clsRegMeta = clsRegisterMetadata->new();
+	$clsRegMeta->set_epi_accession($epi_accession);
 	$clsRegMeta->set_accession($accession);
 	$clsRegMeta->set_experiment_accession($expAccession);
 	$clsRegMeta->set_epigenome($epigenome);
@@ -1378,9 +2077,20 @@ sub fetch_adaptors {
         -port    => $cfg->{efg_db}->{port},
         -dbname  => $cfg->{efg_db}->{dbname}
     );
+
+    my $dbCoreAdaptor = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+        -user    => $cfg->{dna_db}->{user},
+        -host    => $cfg->{dna_db}->{host},
+        -port    => $cfg->{dna_db}->{port},
+        -dbname  => $cfg->{dna_db}->{dbname}
+    );
+
 	
 	$adaptors{analysis} = $dbAdaptor->get_adaptor("Analysis");
 	$adaptors{FeatureType} = $dbAdaptor->get_adaptor("FeatureType");
+
+	$adaptors{Gene} = $dbCoreAdaptor->get_adaptor("Gene");
+
 	
 	
     #my $dba = $dbAdaptor->db();
