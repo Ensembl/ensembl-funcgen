@@ -53,44 +53,49 @@ my $experiment_adaptor         = $funcgen_dba->get_ExperimentAdaptor;
 my $experimental_group_adaptor = $funcgen_dba->get_ExperimentalGroupAdaptor;
 my $peak_calling_adaptor       = $funcgen_dba->get_PeakCallingAdaptor;
 my $feature_type_adaptor       = $funcgen_dba->get_FeatureTypeAdaptor;
+my $segmentation_adaptor       = $funcgen_dba->get_SegmentationAdaptor;
 
 my $all_epigenomes = $epigenome_adaptor->fetch_all;
 
-=head2
-
-drop table if exists segmentation_cell_tables;
-CREATE TABLE if not exists segmentation_cell_tables (
-  superclass       varchar(255) NOT NULL,
-  class            varchar(255) NOT NULL,
-  epigenome        varchar(255) NOT NULL,
-  feature_type     varchar(255) NOT NULL,
-  signal_bam_path  varchar(255) NOT NULL,
-  control_bam_path varchar(255) NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
-
-=cut
+$funcgen_dba->dbc->do(' truncate segmentation ');
+$funcgen_dba->dbc->do(' truncate segmentation_cell_tables ');
 
 my $superclass = 'default';
 
-my $segmentation_feature_types = [
-    "CTCF",
-    "DNase1",
-    "H3K4me1", 
-    "H3K4me2", 
-    "H3K4me3", 
-    "H3K9ac", 
-    "H3K9me3",
-    "H3K27ac", 
-    "H3K27me3", 
-    "H3K36me3", 
+my $mandatory_feature_types_for_segmentation = [
+    'H3K4me1',
+    'H3K4me3',
+    'H3K27me3',
+    'H3K36me3'
 ];
 
-my $segmentation_feature_type_objects 
-    = [ 
-        map { 
-            $feature_type_adaptor->fetch_by_name($_) 
-        } @$segmentation_feature_types 
-    ];
+my $optional_feature_types_for_segmentation = [
+    'CTCF',
+    'DNase1',
+    'H3K4me2', 
+    'H3K9ac', 
+    'H3K9me3',
+    'H3K27ac', 
+];
+
+my $segmentation_feature_types = [
+    @$optional_feature_types_for_segmentation,
+    @$mandatory_feature_types_for_segmentation,
+];
+
+my $segmentation_feature_type_objects = [];
+
+foreach my $segmentation_feature_type_name (@$segmentation_feature_types) {
+
+  my $segmentation_feature_type
+    = $feature_type_adaptor->fetch_by_name($segmentation_feature_type_name);
+  
+  if (! defined $segmentation_feature_type) {
+    die("Can't find feature type $segmentation_feature_type_name!");
+  }
+  
+  push @$segmentation_feature_type_objects, $segmentation_feature_type;
+}
 
 my $experimental_groups = $experimental_group_adaptor->fetch_all;
 
@@ -103,9 +108,6 @@ foreach my $experimental_group (@$experimental_groups) {
         $experimental_group
     );
 
-    use Data::Dumper;
-    print Dumper(\%class_to_epigenome_name);
-    
     $logger->info("\tCreating segmentation cell table\n");
 
     create_segmentation_cell_table(
@@ -132,17 +134,13 @@ sub generate_sql_callback {
         my $class                      = $param->{class};
         my $epigenome                  = $param->{epigenome};
         my $segmentation_feature_type  = $param->{segmentation_feature_type};
-        my $signal_bam_data_file       = $param->{signal_bam_data_file};
-        my $control_bam_data_file      = $param->{control_bam_data_file};
+        my $signal_alignment           = $param->{signal_alignment};
+        my $control_alignment          = $param->{control_alignment};
         my $experimental_group         = $param->{experimental_group};
 
-        my $epigenome_production_name      = $epigenome->production_name;
-        my $segmentation_feature_type_name = $segmentation_feature_type->name;
-        my $signal_bam_data_file_path      = $signal_bam_data_file->path;
-
-        my $control_bam_data_file_path;
-        if (defined $control_bam_data_file) {
-            $control_bam_data_file_path = $control_bam_data_file->path;
+        my $control_alignment_id;
+        if (defined $control_alignment) {
+            $control_alignment_id = $control_alignment->dbID;
         }
         
         my $superclass = 'default';
@@ -151,13 +149,27 @@ sub generate_sql_callback {
             $superclass = $experimental_group->production_name;
         }
         
+        my $segmentation_name = join '_', $superclass, $class;
+        
+        my $segmentation = $segmentation_adaptor->fetch_by_name($segmentation_name);
+        
+        if (! defined $segmentation) {
+          $segmentation = Bio::EnsEMBL::Funcgen::Segmentation->new(
+            -name       => $segmentation_name,
+            -class      => $class,
+            -superclass => $superclass,
+          );
+          $segmentation_adaptor->store($segmentation);
+        }
+
         my @values_to_insert = (
             $superclass,
             $class,
-            $epigenome_production_name,
-            $segmentation_feature_type_name,
-            $signal_bam_data_file_path,
-            $control_bam_data_file_path
+            $segmentation->dbID,
+            $epigenome->dbID,
+            $segmentation_feature_type->dbID,
+            $signal_alignment->dbID,
+            $control_alignment->dbID
         );
         
         my $sql_cmd = "insert into segmentation_cell_tables values ("
@@ -191,9 +203,6 @@ sub create_segmentation_cell_table {
         if ($current_class eq SEGMENTATION_CLASS_NONE) {
             next CLASS;
         }
-
-        #print "\t$current_class\n";
-        
         my $epigenomes_in_class = $class_to_epigenome_name->{$current_class};
         
         EPIGENOME:
@@ -228,14 +237,6 @@ sub create_segmentation_cell_table {
                     my $signal_alignment  = $peak_calling->fetch_signal_Alignment;
                     my $control_alignment = $peak_calling->fetch_control_Alignment;
                     
-                    my $control_bam_data_file;
-                    
-                    if (defined $control_alignment) {
-                        $control_bam_data_file = $control_alignment->fetch_bam_DataFile;
-                    }
-                    
-                    my $signal_bam_data_file  = $signal_alignment->fetch_bam_DataFile;
-                    
                     my $experiment = $peak_calling->fetch_Experiment;
                     my $experimental_group = $experiment->get_ExperimentalGroup;
                     
@@ -257,8 +258,8 @@ sub create_segmentation_cell_table {
                         class                      => $current_class,
                         epigenome                  => $epigenome,
                         segmentation_feature_type  => $segmentation_feature_type,
-                        signal_bam_data_file       => $signal_bam_data_file,
-                        control_bam_data_file      => $control_bam_data_file,
+                        signal_alignment           => $signal_alignment,
+                        control_alignment          => $control_alignment,
                         experimental_group         => $experimental_group,
                     });
                 }
@@ -306,6 +307,11 @@ sub classify_epigenome {
     
     # H3K27ac can be missing as long as H3K4me3 and H3K4me1 are available.
     
+    print $epigenome->production_name . "\n";
+    foreach my $feature_type (@$feature_types) {
+      print "\t" . $feature_type->name . "\n";
+    }
+    
     if (! $has_minimum_required_feature_types_for_segmentation) {
         return SEGMENTATION_CLASS_NONE;
     }
@@ -327,18 +333,17 @@ sub fetch_feature_types_for_epigenome {
     my $experimental_group_name = shift;
     
     my $experiments;
+    my $peak_callings;
     
     if ($experimental_group_name) {
-        $experiments = $experiment_adaptor->_fetch_all_by_Epigenome_ExperimentalGroup(
+        $peak_callings = $peak_calling_adaptor->_fetch_all_by_Epigenome_ExperimentalGroup(
             $epigenome, 
             $experimental_group_name
         );
      } else {
-        $experiments = $experiment_adaptor->fetch_all_by_Epigenome($epigenome);
+        $peak_callings = $peak_calling_adaptor->fetch_all_by_Epigenome($epigenome);
      }
-    
-    
-    my @feature_types = map { $_->feature_type } @$experiments;
+    my @feature_types = map { $_->fetch_FeatureType } @$peak_callings;
     return \@feature_types;
 }
 
@@ -376,12 +381,8 @@ sub has_minimum_required_feature_types_for_segmentation {
 
     my $feature_types = shift;
     
-    my @minimum_required_feature_types_for_segmentation = qw(
-        H3K4me1 H3K4me3 H3K27me3 H3K36me3
-    );
-    
     return has_required_feature_types({
-        required => \@minimum_required_feature_types_for_segmentation,
+        required => $mandatory_feature_types_for_segmentation,
         present  => $feature_types,
     });
 }

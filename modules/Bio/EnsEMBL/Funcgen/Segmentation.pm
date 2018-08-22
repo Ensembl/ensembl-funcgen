@@ -46,6 +46,8 @@ sub _constructor_parameters {
     dbID                => 'dbID',
     db                  => 'db',
     name                => 'name',
+    class               => 'class',
+    superclass          => 'superclass',
     regulatory_build_id => 'regulatory_build_id',
   };
 }
@@ -53,6 +55,8 @@ sub _constructor_parameters {
 sub dbID                { return shift->_generic_get_or_set('dbID',                @_); }
 sub db                  { return shift->_generic_get_or_set('db',                  @_); }
 sub name                { return shift->_generic_get_or_set('name',                @_); }
+sub class               { return shift->_generic_get_or_set('class',               @_); }
+sub superclass          { return shift->_generic_get_or_set('superclass',          @_); }
 sub regulatory_build_id { return shift->_generic_get_or_set('regulatory_build_id', @_); }
 
 1;

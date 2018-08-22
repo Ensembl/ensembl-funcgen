@@ -56,15 +56,21 @@ my $sql_helper = Bio::EnsEMBL::Utils::SqlHelper->new(
 
 my $sql = <<SQL
   select 
-    epigenome,
-    feature_type,
-    signal_bam_path,
-    control_bam_path 
+    epigenome.production_name,
+    feature_type.name,
+    the_signal_bam.path,
+    control_bam.path 
   from 
     segmentation_cell_tables 
+    join epigenome using (epigenome_id)
+    join feature_type using (feature_type_id)
+    join alignment the_signal  on (signal_alignment_id  = the_signal.alignment_id)
+    join data_file the_signal_bam on (the_signal_bam.data_file_id = the_signal.bam_file_id)
+    join alignment control on (control_alignment_id = control.alignment_id)
+    left join data_file control_bam on (control_bam.data_file_id = control.bam_file_id)
   where 
-    superclass = "$superclass" 
-    and class  = "$class"
+    segmentation_cell_tables.superclass = "$superclass" 
+    and segmentation_cell_tables.class  = "$class"
 SQL
 ;
 
