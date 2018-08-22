@@ -43,20 +43,18 @@ with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 
 sub _constructor_parameters {
   return {
-    dbID         => 'dbID',
-    db           => 'db',
-
+    dbID                => 'dbID',
+    db                  => 'db',
     statistic           => 'statistic',
     value               => 'value',
     regulatory_build_id => 'regulatory_build_id',
   };
 }
 
-sub dbID         { return shift->_generic_get_or_set('dbID',         @_); }
-sub db           { return shift->_generic_get_or_set('db',           @_); }
-
-sub statistic           { return shift->_generic_get_or_set('statistic',             @_); }
-sub value               { return shift->_generic_get_or_set('value',                 @_); }
-sub regulatory_build_id { return shift->_generic_get_or_set('regulatory_build_id',   @_); }
+sub dbID                { return shift->_generic_get_or_set('dbID',                @_); }
+sub db                  { return shift->_generic_get_or_set('db',                  @_); }
+sub statistic           { return shift->_generic_get_or_set('statistic',           @_); }
+sub value               { return shift->_generic_get_or_set('value',               @_); }
+sub regulatory_build_id { return shift->_generic_get_or_set('regulatory_build_id', @_); }
 
 1;
