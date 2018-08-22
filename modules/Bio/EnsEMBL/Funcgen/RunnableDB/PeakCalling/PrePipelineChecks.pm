@@ -159,7 +159,7 @@ sub run {
     $sth->execute;
     my $signal_control_epigenome_mismatches = $sth->fetchall_arrayref;
     if (@$signal_control_epigenome_mismatches) {
-        push @error_msg, "Signal control mismatches!";
+        push @error_msg, "Signal control mismatches! Try: $find_signal_control_epigenome_mismatches";
     }
     
 #     # Check for orphans
