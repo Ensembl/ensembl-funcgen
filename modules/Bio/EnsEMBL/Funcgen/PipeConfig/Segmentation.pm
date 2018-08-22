@@ -46,7 +46,8 @@ sub pipeline_wide_parameters {
     data_root_dir            => $self->o('data_root_dir'),
     reference_data_root_dir  => $self->o('reference_data_root_dir'),
     reg_conf                 => $self->o('reg_conf'),
-    ChromHMM                 => '/nfs/production/panda/ensembl/funcgen/ChromHMM/ChromHMM.jar',
+    #ChromHMM                 => '/nfs/production/panda/ensembl/funcgen/ChromHMM/ChromHMM.jar',
+    ChromHMM                 => '/nfs/production/panda/ensembl/funcgen/ChromHMM/1.17/ChromHMM/ChromHMM.jar',
   };
 }
 
