@@ -23,6 +23,7 @@ perl scripts/segmentation/register_segmentation_files.pl  \
     --db_file_species_assembly_dir     /gpfs/nobackup/ensembl/mnuhn/mnuhn/regulatory_build_pipeline_run3/dbfiles/mus_musculus/GRCm38/funcgen/segmentation_file/093 \
     --db_file_relative_dir             /funcgen/segmentation_file/093
 
+
 =cut
 
 use strict;
@@ -97,9 +98,9 @@ foreach my $current_epigenome (@$all_epigenomes) {
   
   my $full_path = $segmentation_directory . '/' . $big_bed_file;
   
+  # If a file from this epigenome exists, register it, otherwise skip.
   if (! -e $full_path) {
     next REGULATORY_BUILD_EPIGENOME;
-    #die("$big_bed_file doesn't exist!");
   }
 
   $logger->info("Computing checksum\n");
@@ -119,7 +120,9 @@ foreach my $current_epigenome (@$all_epigenomes) {
   use File::Copy;
   copy($full_path, $destination) or die("Couldn't copy $full_path to $destination!");
   
-  $logger->info("Registering $big_bed_file\n");
+  my $registered_file = $db_file_relative_dir . '/' . $segmentation_name . '/' . $big_bed_file;
+  
+  $logger->info("Registering $big_bed_file with path $registered_file\n");
   
   use Bio::EnsEMBL::Funcgen::SegmentationFile;
   
@@ -128,7 +131,8 @@ foreach my $current_epigenome (@$all_epigenomes) {
     -analysis         => $segmentation_analysis,
     -epigenome        => $current_epigenome,
     -regulatory_build => $current_regulatory_build,
-    -file             => $db_file_relative_dir . '/' . $segmentation_name . '/' . $big_bed_file,
+    -file             => $registered_file,
+    -segmentation     => $segmentation_name,
     -file_type        => 'BIGBED',
     -md5sum           => $md5sum,
   );
