@@ -54,6 +54,7 @@ sub new {
     file
     file_type
     md5sum
+    segmentation
   );
   
   my (
@@ -65,6 +66,7 @@ sub new {
     $file,
     $file_type,
     $md5sum,
+    $segmentation_id
   )
     = rearrange([ @field ], @_);
 
@@ -76,6 +78,7 @@ sub new {
   $self->file        ($file);
   $self->file_type   ($file_type);
   $self->md5sum      ($md5sum);
+  $self->segmentation_id ($segmentation_id);
 
   return $self;
 }
@@ -85,10 +88,12 @@ sub name              { return shift->_generic_get_or_set('name',               
 sub _analysis         { return shift->_generic_get_or_set('_analysis',          @_) }
 sub _epigenome        { return shift->_generic_get_or_set('_epigenome',         @_) }
 sub _regulatory_build { return shift->_generic_get_or_set('_regulatory_build',  @_) }
+sub _segmentation     { return shift->_generic_get_or_set('_segmentation',      @_) }
 sub file              { return shift->_generic_get_or_set('file',               @_) }
 sub file_type         { return shift->_generic_get_or_set('file_type',          @_) }
 sub adaptor           { return shift->_generic_get_or_set('adaptor',            @_) }
 sub md5sum            { return shift->_generic_get_or_set('md5sum',             @_) }
+sub segmentation_id   { return shift->_generic_get_or_set('segmentation_id',    @_) }
 
 sub get_Analysis {
   my $self = shift;
@@ -103,6 +108,11 @@ sub get_Epigenome {
 sub get_RegulatoryBuild {
   my $self = shift;
   return $self->_regulatory_build
+}
+
+sub get_Segmentation {
+  my $self = shift;
+  return $self->_segmentation
 }
 
 sub _generic_get_or_set {

@@ -56,6 +56,7 @@ sub _columns {
     sf.name
     sf.epigenome_id
     sf.regulatory_build_id
+    sf.segmentation_id
     a.analysis_id
     da.path
     da.file_type
@@ -94,6 +95,7 @@ sub _objs_from_sth {
     $sth_fetched_sf_name,
     $sth_fetched_sf_epigenome_id,
     $sth_fetched_sf_regulatory_build_id,
+    $sth_fetched_sf_segmentation_id,
     $sth_fetched_a_analysis_id,
     $sth_fetched_dr_path,
     $sth_fetched_dr_file_type,
@@ -104,6 +106,7 @@ sub _objs_from_sth {
     \$sth_fetched_sf_name,
     \$sth_fetched_sf_epigenome_id,
     \$sth_fetched_sf_regulatory_build_id,
+    \$sth_fetched_sf_segmentation_id,
     \$sth_fetched_a_analysis_id,
     \$sth_fetched_dr_path,
     \$sth_fetched_dr_file_type,
@@ -111,17 +114,19 @@ sub _objs_from_sth {
   
   use Bio::EnsEMBL::Funcgen::SegmentationFile;
   
-  my $analysis_adaptor         = $self->db->get_AnalysisAdaptor();
-  my $epigenome_adaptor        = $self->db->get_EpigenomeAdaptor();
-  my $regulatory_build_adaptor = $self->db->get_RegulatoryBuildAdaptor();
+  my $analysis_adaptor         = $self->db->get_AnalysisAdaptor;
+  my $epigenome_adaptor        = $self->db->get_EpigenomeAdaptor;
+  my $regulatory_build_adaptor = $self->db->get_RegulatoryBuildAdaptor;
+  my $segmentation_adaptor     = $self->db->get_SegmentationAdaptor;
   
   my @return_objects;
   ROW: while ( $sth->fetch() ) {
     my $segmentation_file = Bio::EnsEMBL::Funcgen::SegmentationFile->new(
-      -dbID          => $sth_fetched_dbID,
-      -name          => $sth_fetched_sf_name,
-      -file          => $sth_fetched_dr_path,
-      -file_type     => $sth_fetched_dr_file_type,
+      -dbID            => $sth_fetched_dbID,
+      -name            => $sth_fetched_sf_name,
+      -file            => $sth_fetched_dr_path,
+      -file_type       => $sth_fetched_dr_file_type,
+      -segmentation_id => $sth_fetched_sf_segmentation_id,
     );
     
     my $analysis = $analysis_adaptor->fetch_by_dbID($sth_fetched_a_analysis_id);
@@ -132,6 +137,9 @@ sub _objs_from_sth {
 
     my $regulatory_build = $regulatory_build_adaptor->fetch_by_dbID($sth_fetched_sf_regulatory_build_id);
     $segmentation_file->_regulatory_build($regulatory_build);
+
+    my $segmentation = $segmentation_adaptor->fetch_by_dbID($sth_fetched_sf_segmentation_id);
+    $segmentation_file->_segmentation($segmentation);
 
     push @return_objects, $segmentation_file
   }
@@ -155,9 +163,10 @@ sub store {
       name,
       analysis_id,
       epigenome_id,
-      regulatory_build_id
+      regulatory_build_id,
+      segmentation
     )
-    VALUES (?, ?, ?, ?)"
+    VALUES (?, ?, ?, ?, ?)"
   );
   $sth_store_segmentation_file->{PrintError} = 0;
 
@@ -182,6 +191,7 @@ sub store {
     $sth_store_segmentation_file->bind_param( 2, $current_segmentation_file->get_Analysis->dbID,        SQL_INTEGER);
     $sth_store_segmentation_file->bind_param( 3, $current_segmentation_file->get_Epigenome->dbID,       SQL_INTEGER);
     $sth_store_segmentation_file->bind_param( 4, $current_segmentation_file->get_RegulatoryBuild->dbID, SQL_INTEGER);
+    $sth_store_segmentation_file->bind_param( 5, $current_segmentation_file->segmentation,              SQL_VARCHAR);
     
     # Store and set dbID
     $sth_store_segmentation_file->execute;
