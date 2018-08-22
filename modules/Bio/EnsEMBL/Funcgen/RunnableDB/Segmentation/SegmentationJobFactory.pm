@@ -28,7 +28,6 @@ sub run {
   
   my $data_root_dir_species_assembly = $data_root_dir . '/' . $species_assembly_path;
   
-  #my $celltable_dir         = $tempdir . '/celltables/';
   my $binarized_bam_dir     = $tempdir . '/binarization/';
   my $learnmodel_output_dir = $tempdir . '/learn_model/';
   
@@ -64,7 +63,6 @@ sub run {
   # If there is no password, set it to "". These parameters areare used on 
   # the command line.
   #
-#   die "foo";
   if (! defined $core_dbc_password || $core_dbc_password eq '') {
     $core_dbc_password = '""';
   }
@@ -75,7 +73,6 @@ sub run {
   my $input_id = {
     chromosome_length_file         => $chromosome_length_file,
     data_root_dir_species_assembly => $data_root_dir_species_assembly,
-    #celltable_dir                  => $celltable_dir,
     binarized_bam_dir              => $binarized_bam_dir,
     learnmodel_output_dir          => $learnmodel_output_dir,
     assembly                       => $default_assembly,
