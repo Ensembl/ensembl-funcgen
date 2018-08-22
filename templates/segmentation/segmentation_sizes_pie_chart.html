@@ -1,0 +1,127 @@
+[% MACRO segmentation_sizes_pie_chart_on_window_load BLOCK %]
+
+    ctx2 = document.getElementById("chart-area-segmentations").getContext("2d");
+    window.myPie = new Chart(ctx2, segmentation_sizes);
+
+[% END %]
+
+[% MACRO segmentation_sizes_pie_chart BLOCK %]
+
+<h2><a name="Number_of_epigenomes_per_segmentation">Number of epigenomes per segmentation</a></h2>
+
+<div id="canvas-holder" style="width:50%">
+    <canvas id="chart-area-segmentations" />
+</div>
+
+[% segmentations = segmentation_adaptor.fetch_all %]
+<p>
+  [% segmentations.size %] segmentations were run:
+</p>
+
+<script type="text/javascript" class="init">
+
+$(document).ready(function() {
+    $('#epigenome_proportions').DataTable(
+        {
+            "iDisplayLength": 25,
+        }
+    );
+} );
+
+</script>
+
+<table id="epigenome_proportions" class="display" cellspacing="0" width="80%">
+
+<thead>
+    <tr>
+        <th>Segmentation</th>
+        <th>Number of epigenomes</th>
+    </tr>
+</thead>
+
+<tbody>
+[% FOR segmentation IN segmentations %]
+  <tr>
+    <td>[% segmentation.name %]</td>
+    <td align="right">[% segmentation_statistic_adaptor.fetch_num_epigenomes_by_Segmentation(segmentation).value %]</td>
+  </tr>
+[% END %]
+</tbody>
+
+</table>
+
+
+<!--
+<ul>
+  [% FOR segmentation IN segmentations %]
+  <li>
+    [% segmentation.name %]: [% segmentation_statistic_adaptor.fetch_num_epigenomes_by_Segmentation(segmentation).value %]
+  </li>
+[% END %]
+</ul>
+-->
+
+<script>
+
+var segmentation_sizes = {
+    type: 'pie',
+    data: {
+        datasets: [{
+            data: [
+                [% FOR segmentation IN segmentations %]
+                  [% segmentation_statistic_adaptor.fetch_num_epigenomes_by_Segmentation(segmentation).value %],
+                [% END %]
+            ],
+            backgroundColor: [
+                window.chartColors.red,
+                window.chartColors.orange,
+                window.chartColors.yellow,
+                window.chartColors.green,
+                window.chartColors.blue,
+                window.chartColors.purple,
+                window.chartColors.gray,
+            ],
+        }],
+        labels: [
+          [% FOR segmentation IN segmentations %]
+            "[% segmentation.name %]",
+          [% END %]
+        ]
+    },
+    options: {
+        responsive: true,
+        legend: {
+            position: 'left'
+        },
+        title: {
+            display: 'false',
+        },
+        tooltips: {
+            callbacks: {
+                title: function(item, data) {
+                    var title = '';
+
+                    if (item.length > 0) {
+                        if (item[0].yLabel) {
+                            title = item[0].yLabel;
+                        } else if (data.labels.length > 0 && item[0].index < data.labels.length) {
+                            title = data.labels[item[0].index];
+                        }
+                    }
+                    return title;
+                },
+
+                label: function(item, data) {
+                    var datasetLabel = data.labels[item.index] || 'No label found';
+                    return data.datasets[item.datasetIndex].data[item.index] + ' epigenomes';
+                }
+            },
+            mode: 'index',
+            axis: 'y'
+        }
+    }
+};
+
+</script>
+
+[% END %]

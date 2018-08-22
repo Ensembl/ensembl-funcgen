@@ -1,0 +1,118 @@
+[% MACRO box_plots_on_window_load BLOCK %]
+
+  var bp = document.getElementById('boxplot_1').getContext('2d');
+  new Chart(bp, {
+      type: 'boxplot',
+      data: boxplot_data,
+      options: {
+          responsive: true,
+          legend: {
+              display: true,
+              position: 'left',
+          },
+          scales: {
+            xAxes: [
+              {
+                // Specific to Bar Controller
+                categoryPercentage: 0.9,
+                barPercentage: 0.8
+              }
+            ],
+            yAxes: [
+              {
+                display: true,
+                type: 'arrayLogarithmic',
+              },
+            ]
+          },
+          title: {
+              display: false,
+          }
+      }
+  });
+
+[% END %]
+
+[% MACRO box_plots BLOCK %]
+
+<h2><a name="quantiles">Quantiles of lengths of segmentation features by state assignment</a></h2>
+
+<div style="width: 80%;">
+    <canvas id="boxplot_1"></canvas>
+</div>
+
+<p>
+  The bottom whisker is the length of the shortest segmentation feature of that type, the box begins at the end of the first quantile and ends at the end of the third quantile. The line in the box is the median. The top whisker is the maximum length of a segmentation feature of that type.
+</p>
+
+<script src="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/ChartBoxPlot/utils.js"></script>
+<script src="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/ChartBoxPlot/Chart.BoxPlot.js" type="text/javascript"></script>
+
+<script>
+    var color = Chart.helpers.color;
+
+    backgroundColor = [
+        window.chartColors.red,
+        window.chartColors.orange,
+        window.chartColors.yellow,
+        window.chartColors.green,
+        window.chartColors.blue,
+        window.chartColors.purple,
+        window.chartColors.gray,
+    ];
+
+    var boxplot_data = {
+        labels: [
+          [% FOR segmentation_assignment IN segmentation_assignments %]
+            "[% segmentation_assignment %]",
+          [% END %]
+        ],
+        
+       [% segmentations = segmentation_adaptor.fetch_all %]
+       
+        datasets: [
+          {
+              label: 'Overall',
+              borderWidth: 2,
+              backgroundColor: color(window.chartColors.black).alpha(0.5).rgbString(),
+              borderColor: window.chartColors.black,
+              data: [
+                  [% FOR segmentation_assignment IN segmentation_assignments %]
+                  {
+                    min:        [% segmentation_statistic_adaptor.fetch_q0_by_label(segmentation_assignment).value %],
+                    whiskerMin: [% segmentation_statistic_adaptor.fetch_q0_by_label(segmentation_assignment).value %],
+                    q1:         [% segmentation_statistic_adaptor.fetch_q1_by_label(segmentation_assignment).value %],
+                    median:     [% segmentation_statistic_adaptor.fetch_q2_by_label(segmentation_assignment).value %],
+                    q3:         [% segmentation_statistic_adaptor.fetch_q3_by_label(segmentation_assignment).value %],
+                    max:        [% segmentation_statistic_adaptor.fetch_q4_by_label(segmentation_assignment).value %],
+                    whiskerMax: [% segmentation_statistic_adaptor.fetch_q4_by_label(segmentation_assignment).value %],
+                  },
+                  [% END %]
+              ]
+          },
+          [% FOR segmentation IN segmentations %]
+          {
+              label: '[% segmentation.name %]',
+              backgroundColor: backgroundColor[ [% loop.count - 1 %] ],
+              data: [
+
+                  [% FOR segmentation_assignment IN segmentation_assignments %]
+                  {
+                    min:        [% segmentation_statistic_adaptor.fetch_q0_by_Segmentation_label(segmentation, segmentation_assignment).value %],
+                    whiskerMin: [% segmentation_statistic_adaptor.fetch_q0_by_Segmentation_label(segmentation, segmentation_assignment).value %],
+                    q1:         [% segmentation_statistic_adaptor.fetch_q1_by_Segmentation_label(segmentation, segmentation_assignment).value %],
+                    median:     [% segmentation_statistic_adaptor.fetch_q2_by_Segmentation_label(segmentation, segmentation_assignment).value %],
+                    q3:         [% segmentation_statistic_adaptor.fetch_q3_by_Segmentation_label(segmentation, segmentation_assignment).value %],
+                    max:        [% segmentation_statistic_adaptor.fetch_q4_by_Segmentation_label(segmentation, segmentation_assignment).value %],
+                    whiskerMax: [% segmentation_statistic_adaptor.fetch_q4_by_Segmentation_label(segmentation, segmentation_assignment).value %],
+                  },
+                  [% END %]
+              ]
+          },
+          [% END %]
+        ]
+    };
+
+</script>
+
+[% END %]

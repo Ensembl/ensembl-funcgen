@@ -1,0 +1,152 @@
+[% MACRO compare_segmentations_by_label_on_window_load BLOCK %]
+
+  var ctx = document.getElementById('average_length_by_segmentation_label').getContext('2d');
+  new Chart(ctx, {
+      type: 'bar',
+      data: barChartData_comparison_with_previous_version_average_lengths,
+      options: {
+          responsive: true,
+          legend: {
+              display: true,
+              position: 'left',
+          },
+          scales: {
+              yAxes: [{
+                  ticks: {
+                      min: 0
+                  }
+              }]
+          },
+          title: {
+              display: false,
+              text: 'Total numbers by feature type'
+          }
+      }
+  });
+
+[% END %]
+
+[% MACRO compare_segmentations_by_label BLOCK %]
+
+<h2><a name="Average_length_by_segmentation_label">Average length by segmentation label</a></h2>
+
+<div style="width: 80%;">
+    <canvas id="average_length_by_segmentation_label"></canvas>
+</div>
+
+<script>
+    var color = Chart.helpers.color;
+    
+    [% segmentations = segmentation_adaptor.fetch_all %]
+    
+    backgroundColor = [
+        window.chartColors.black,
+        window.chartColors.red,
+        window.chartColors.orange,
+        window.chartColors.yellow,
+        window.chartColors.green,
+        window.chartColors.blue,
+        window.chartColors.purple,
+        window.chartColors.gray,
+    ];
+    
+    var barChartData_comparison_with_previous_version_average_lengths = {
+        labels: [
+          [% FOR segmentation_assignment IN segmentation_assignments %]
+            "[% segmentation_assignment %]",
+          [% END %]
+        ],
+        datasets: [
+          {
+            label: 'Overall',
+            backgroundColor: backgroundColor[ 0 ],
+            data: [
+              [% FOR segmentation_assignment IN segmentation_assignments %]
+                '[% 
+                    segmentation_statistic_adaptor
+                      .fetch_average_length_by_label(
+                        segmentation_assignment
+                      ).value 
+                %]',
+              [% END %]
+            ]
+          },
+          [% FOR segmentation IN segmentations %]
+          {
+            label: '[% segmentation.name %]',
+            backgroundColor: backgroundColor[ [% loop.count %] ],
+            data: [
+              [% FOR segmentation_assignment IN segmentation_assignments %]
+                '[% 
+                    segmentation_statistic_adaptor
+                      .fetch_average_length_by_Segmentation_label(
+                        segmentation, 
+                        segmentation_assignment
+                      ).value 
+                %]',
+              [% END %]
+            ]
+          },
+          [% END %]
+        ]
+    };
+
+</script>
+
+<script type="text/javascript" class="init">
+
+$(document).ready(function() {
+    $('#overview').DataTable(
+        {
+            "iDisplayLength": 25,
+        }
+    );
+} );
+
+</script>
+
+[% segmentations = segmentation_adaptor.fetch_all %]
+
+<table id="overview" class="display" cellspacing="0" width="80%">
+
+<thead>
+    <tr>
+        <th>Segmentation</th>
+        [% FOR segmentation_assignment IN segmentation_assignments %]
+        <th>
+          [% segmentation_assignment %]
+        </th>
+        [% END %]
+    </tr>
+</thead>
+
+<tbody>
+  <tr>
+    <td>Overall</td>
+    
+  [% FOR segmentation_assignment IN segmentation_assignments %]
+  <td align="right">[% format_number( segmentation_statistic_adaptor.fetch_average_length_by_label(segmentation_assignment).value ) %]</td>
+  [% END %]
+  </tr>
+  [% FOR segmentation IN segmentations %]
+  <tr>
+    <td>[% segmentation.name %]</td>
+
+  [% FOR segmentation_assignment IN segmentation_assignments %]
+  <td align="right">
+    [% 
+      format_number( 
+        segmentation_statistic_adaptor.fetch_average_length_by_Segmentation_label(segmentation, segmentation_assignment).value 
+      ) 
+    %]
+  </td>
+  [% END %]
+
+
+  </tr>
+[% END %]
+</tbody>
+
+</table>
+
+[% END %]

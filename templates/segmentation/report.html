@@ -1,44 +1,28 @@
-<!DOCTYPE html>
-<html>
-<head>
+[% WRAPPER default_statistics_page_wrapper.html title="Segmentation" %]
 
-<link rel="stylesheet" type="text/css" href="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/datatables.css"/>
+[% PROCESS segmentation_sizes_pie_chart.html %]
+[% segmentation_sizes_pie_chart %]
 
-<script src="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/Chart.bundle.js"></script>
-<script src="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/utils.js"></script>
+[% PROCESS compare_segmentations_by_label.html %]
+[% compare_segmentations_by_label %]
 
-<script type="text/javascript" language="javascript" src="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/jquery-1.12.4.js"></script>
+[% PROCESS box_plots.html %]
+[% box_plots %]
 
-<script type="text/javascript" src="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/datatables.js"></script>
+<script>
+    window.onload = function() {
+      [% segmentation_sizes_pie_chart_on_window_load   %]
+      [% compare_segmentations_by_label_on_window_load %]
+      [% box_plots_on_window_load                      %]
+    };
+</script>
 
-</head>
-<body>
-
-<h1>Segmentation</h1>
-
-<h2>Source</h2>
-
-<p>
-    This report is based 
-</p>
-
-<ul>
-  <li>
-    on the database <em>[% dbc.dbname %]</em> 
-  </li>
-  <li>
-    on <em>[% dbc.host   %]:[% dbc.port   %]</em> 
-  <li>
-    on <em>[% time %]</em>.
-  </li>
-</ul>
-
-<h2>Segmentation state emissions and assignments</h2>
+<h2><a name="Segmentation_state_emissions_and_assignments">Segmentation state emissions and assignments</a></h2>
 
 <script type="text/javascript" class="init">
 
 $(document).ready(function() {
-    $('#example').DataTable(
+    $('#segmentation_emssions_and_assignments').DataTable(
         {
             "iDisplayLength": 25,
         }
@@ -47,12 +31,14 @@ $(document).ready(function() {
 
 </script>
 
-<table id="example" class="display" cellspacing="0" width="80%">
+<table id="segmentation_emssions_and_assignments" class="display" cellspacing="0" width="80%">
 <thead>
     <tr>
         <th>state   </th>
         <th>segmentation</th>
         <th>assignment </th>
+        <th>average length</th>
+        <th>num states</th>
         <th>CTCF    </th>
         <th>DNase1  </th>
         <th>H3K27ac </th>
@@ -68,10 +54,36 @@ $(document).ready(function() {
 <tbody>
 
 [% FOR segmentation_state_emission IN segmentation_state_emissions %]
+
+[% assignment   = segmentation_state_emission.fetch_segmentation_state_assignment.assignment   %]
+[% segmentation = segmentation_adaptor.fetch_by_name(segmentation_state_emission.segmentation) %]
+
 <tr>
     <td>[% segmentation_state_emission.state    %]</td>
-    <td>[% segmentation_state_emission.segmentation %]</td>
+    <td>[% segmentation.name %]</td>
     <td>[% segmentation_state_emission.fetch_segmentation_state_assignment.assignment    %]</td>
+    <td align="right">
+      [% 
+        format_number(
+          segmentation_statistic_adaptor
+            .fetch_average_length_by_Segmentation_label(
+              segmentation, 
+              assignment
+            ).value
+          )
+      %]
+    </td>
+    <td align="right">
+      [% 
+        format_number( 
+          segmentation_statistic_adaptor
+            .fetch_num_states_by_Segmentation_label(
+              segmentation, 
+              assignment
+            ).value
+          )
+      %]
+    </td>
     <td>[% round_num( segmentation_state_emission.CTCF     ) %]</td>
     <td>[% round_num( segmentation_state_emission.DNase1   ) %]</td>
     <td>[% round_num( segmentation_state_emission.H3K27ac  ) %]</td>
@@ -88,5 +100,4 @@ $(document).ready(function() {
 </tbody>
 </table>
 
-</body>
-</html>
+[% END %]
