@@ -44,7 +44,20 @@ sub pipeline_analyses {
                 'hc_current_regulatory_build_exists',
                 'hc_regulatory_build_epigenomes_populated',
                 'hc_regulatory_activities_counts',
+                'hc_segmentation_files_exist',
               ]
+            },
+        },
+        {   -logic_name => 'hc_segmentation_files_exist',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters => {
+              cmd => 
+                  q(
+                    check_segmentation_files_exist.pl \
+                      --species      #species#        \
+                      --registry     #reg_conf#       \
+                      --db_file_path #data_root_dir#
+                  )
             },
         },
         {
@@ -58,9 +71,6 @@ sub pipeline_analyses {
               ",
               expected_size => '1'
             },
-#           -flow_into => {
-#               MAIN => 'hc_regulatory_build_epigenomes_populated',
-#           },
         },
         {
             -logic_name  => 'hc_regulatory_build_epigenomes_populated',
@@ -80,9 +90,6 @@ sub pipeline_analyses {
               ",
               expected_size => '0'
             },
-#           -flow_into => {
-#               MAIN => 'hc_regulatory_activities_counts',
-#           },
         },
         {
             -logic_name  => 'hc_regulatory_activities_counts',
@@ -116,13 +123,7 @@ sub pipeline_analyses {
               ",
               expected_size => '0'
             },
-#           -flow_into => {
-#               MAIN => 'regulatory_build_hc_done',
-#           },
         },
-#         {   -logic_name => 'regulatory_build_hc_done',
-#             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-#         },
     ];
 }
 
