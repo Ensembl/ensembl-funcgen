@@ -62,6 +62,8 @@ $funcgen_dba->dbc->do(' truncate segmentation_cell_tables ');
 
 my $superclass = 'default';
 
+# H3K27ac can be missing as long as H3K4me3 and H3K4me1 are available.
+
 my $mandatory_feature_types_for_segmentation = [
     'H3K4me1',
     'H3K4me3',
@@ -75,7 +77,8 @@ my $optional_feature_types_for_segmentation = [
     'H3K4me2', 
     'H3K9ac', 
     'H3K9me3',
-    'H3K27ac', 
+    'H3K27ac',
+    'H4K20me1'
 ];
 
 my $segmentation_feature_types = [
