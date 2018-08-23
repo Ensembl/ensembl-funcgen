@@ -46,6 +46,11 @@ my @data_set = load_data($filename);
 #==================================
 @data_set = delete_signal_without_controls(\@data_set);
 
+#==================================
+#check paired integrity
+#==================================
+@data_set = remove_paired_signal_and_controls_with_missing_parts(\@data_set);
+
 #===============================
 #numerate replicates
 #===============================
@@ -63,6 +68,44 @@ foreach my $final_row (@data_set){
 #==============================
 #print "FIN\n";
 
+sub remove_paired_signal_and_controls_with_missing_parts {
+	my $lstObjs = shift;
+	my @lstRegMeta = @{$lstObjs};
+	my $index = 0;
+	my @to_remove;
+	foreach my $regMeta (@lstRegMeta){
+		if (uc $regMeta->get('paired') eq 'YES' && $index > 0){
+			my $paired_found = get_row_by_accession($regMeta->get('paired_with'), \@lstRegMeta);
+			if (!$paired_found){
+				push @to_remove, $index;
+			}
+		}
+		$index +=1;
+
+	}
+
+	my @sorted_to_remove = sort{$b <=> $a} @to_remove;
+	foreach my $del (@sorted_to_remove) {
+		splice @lstRegMeta, $del, 1;
+	}
+
+	return @lstRegMeta;
+}
+
+sub get_row_by_accession{
+	my $accession = shift;
+	my $lstObjs = shift;
+	my @lstRegMeta = @{$lstObjs};
+	my $fileFound;
+	foreach my $regMeta (@lstRegMeta){
+		if (uc $regMeta->get('accession') eq uc $accession){
+			$fileFound = $regMeta;
+			last;
+		}
+	}
+
+	return $fileFound;
+}
 
 sub delete_signal_without_controls{
 	my $data_set = shift;
