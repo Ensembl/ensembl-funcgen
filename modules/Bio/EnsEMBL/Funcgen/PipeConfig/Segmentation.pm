@@ -184,6 +184,21 @@ sub pipeline_analyses {
                  . q(   #binarized_bam_dir#/#superclass#/#class#/ ),
           },
           -flow_into => {
+            MAIN     => 'delete_non_chromosomal_files_from_binarization_dir',
+          },
+      },
+      {   -logic_name => 'delete_non_chromosomal_files_from_binarization_dir',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -parameters => { 
+            cmd => 
+                   q( 
+                    delete_non_chromosomal_files_from_binarization_dir.pl \
+                        --registry  #reg_conf#   \
+                        --species   #species#    \
+                        --directory #binarized_bam_dir#/#superclass#/#class#/tion/encode/no_ctcf/
+                  ),
+          },
+          -flow_into => {
             MAIN     => 'learn_model',
           },
       },
