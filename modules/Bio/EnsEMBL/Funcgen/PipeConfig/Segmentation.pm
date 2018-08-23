@@ -344,21 +344,6 @@ sub pipeline_analyses {
                       --assignments_file #tempdir_regulatory_build#/#species#/tmp/assignments.txt
                 )
           },
-          -flow_into   => {
-            MAIN  => 'generate_segmentation_report',
-          },
-      },
-      {   -logic_name => 'generate_segmentation_report',
-          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-          -parameters => {
-            cmd => 
-                q(
-                  generate_segmentation_report.pl \
-                    --species          #species# \
-                    --registry         #reg_conf# \
-                    --output_directory #reports_dir#/#species#
-                )
-          },
       },
       {
           -logic_name  => 'populate_regulatory_build_epigenome_table',

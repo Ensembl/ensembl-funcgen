@@ -105,11 +105,23 @@ sub pipeline_analyses {
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
                '1->A' => 'start_segmentation',
-               'A->1' => 'backbone_fire_regulatory_build_hc'
+               'A->1' => 'backbone_fire_segmentation_statistics'
             },
         },
         {
             -logic_name  => 'start_segmentation',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+        },
+
+        {   -logic_name  => 'backbone_fire_segmentation_statistics',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into   => {
+               '1->A' => 'start_segmentation_statistics',
+               'A->1' => 'backbone_fire_regulatory_build_hc'
+            },
+        },
+        {
+            -logic_name  => 'start_segmentation_statistics',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
 
