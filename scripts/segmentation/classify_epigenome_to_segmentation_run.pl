@@ -165,6 +165,24 @@ sub generate_sql_callback {
           $segmentation_adaptor->store($segmentation);
         }
 
+        if (! defined $segmentation) { 
+          confess("segmentation has not been defined!");
+        }
+        if (! defined $epigenome) {
+          confess(die "epigenome has not been defined!");
+        }
+        if (! defined $segmentation_feature_type) { 
+          confess(die "segmentation_feature_type has not been defined!");
+        }
+        if (! defined $signal_alignment) { 
+          confess(die "signal_alignment has not been defined!");
+        }
+
+        my $control_alignment_id;
+        if (defined $control_alignment) {
+          $control_alignment_id = $control_alignment->dbID;
+        }
+
         my @values_to_insert = (
             $superclass,
             $class,
@@ -172,7 +190,7 @@ sub generate_sql_callback {
             $epigenome->dbID,
             $segmentation_feature_type->dbID,
             $signal_alignment->dbID,
-            $control_alignment->dbID
+            $control_alignment_id
         );
         
         my $sql_cmd = "insert into segmentation_cell_tables values ("
