@@ -81,6 +81,7 @@ sub pipeline_analyses {
                       --registry #reg_conf#
                 )
           },
+          -rc_name => '32Gb_job',
           -flow_into   => {
             MAIN  => 'generate_segmentation_report',
           },
