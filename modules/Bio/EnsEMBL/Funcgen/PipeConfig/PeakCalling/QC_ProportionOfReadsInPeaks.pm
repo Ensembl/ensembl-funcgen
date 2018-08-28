@@ -49,7 +49,14 @@ sub pipeline_analyses {
           -logic_name  => 'start_frip',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
           -flow_into => { 
-            1 => 'seed_all_peak_callings_from_experiment',
+            1 => 'qc_frip_seed_all_execution_plans',
+          },
+      },
+      {
+          -logic_name  => 'qc_frip_seed_all_execution_plans',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+          -flow_into => {
+            2 => 'seed_all_peak_callings_from_experiment',
           },
       },
       {

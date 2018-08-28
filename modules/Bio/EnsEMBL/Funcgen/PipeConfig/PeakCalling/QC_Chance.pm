@@ -39,6 +39,18 @@ sub pipeline_analyses {
     my ($self) = @_;
     return [
         {   -logic_name => 'start_alignment_qc',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into => { 
+              1 => 'alignment_qc_seed_all_plans',
+            },
+        },
+        {   -logic_name => 'alignment_qc_seed_all_plans',
+            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedJobsFromList',
+            -flow_into => { 
+              2 => 'alignment_qc_seed_all_alignment',
+            },
+        },
+        {   -logic_name => 'alignment_qc_seed_all_alignment',
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedAllAlignments',
             -flow_into => { 
               2 => 'qc_chance_start',

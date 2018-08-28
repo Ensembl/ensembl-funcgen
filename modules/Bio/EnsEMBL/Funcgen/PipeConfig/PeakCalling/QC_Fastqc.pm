@@ -40,11 +40,17 @@ sub pipeline_analyses {
         {   -logic_name => 'start_fastqc',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into => { 
-              'MAIN->A' => 'QcFastQcJobFactory',
+              'MAIN->A' => 'seed_signal_experiments',
               'A->MAIN' => 'fastqc_done',
             },
         },
-        {   -logic_name => 'QcFastQcJobFactory',
+        {   -logic_name => 'seed_signal_experiments',
+            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedAllExperimentNames',
+            -flow_into   => {
+               2 => 'fastqc_job_factory',
+            },
+        },
+        {   -logic_name => 'fastqc_job_factory',
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::QcFastQcJobFactory',
             -parameters => {
               tempdir => '#tempdir_peak_calling#/#species#/fastqc',
