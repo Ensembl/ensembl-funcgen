@@ -65,7 +65,7 @@ sub pipeline_analyses {
         },
 
         {   -logic_name  => 'seed_jobs_from_list',
-            -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedJobsFromList',
+            -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedAllExecutionPlans',
             -flow_into   => {
                2 => 'start_align_signals',
             },

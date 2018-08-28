@@ -46,7 +46,7 @@ sub pipeline_analyses {
         },
         {
             -logic_name  => 'seed_peak_calling_jobs_from_list',
-            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedJobsFromList',
+            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedAllExecutionPlans',
             -flow_into   => {
                2 => 'backbone_fire_convert_signal_to_bed',
             },

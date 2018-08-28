@@ -44,7 +44,7 @@ sub pipeline_analyses {
             },
         },
         {   -logic_name => 'alignment_qc_seed_all_plans',
-            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedJobsFromList',
+            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedAllExecutionPlans',
             -flow_into => { 
               2 => 'alignment_qc_seed_all_alignment',
             },

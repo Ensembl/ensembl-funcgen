@@ -18,7 +18,7 @@ sub pipeline_analyses {
             },
         },
         {   -logic_name  => 'bw_seed_all_execution_plans',
-            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedJobsFromList',
+            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedAllExecutionPlans',
             -flow_into   => {
                2 => 'seed_bigwig_jobs_for_signals',
             },
@@ -47,7 +47,7 @@ sub pipeline_analyses {
             },
         },
         {   -logic_name  => 'seed_bigwig_jobs_for_control_experiments',
-            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedJobsFromList',
+            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedAllExecutionPlans',
             -flow_into   => {
                2 => 'start_write_bigwig_controls',
                #4 => 'seed_bigwig_jobs_from_list',

@@ -1,4 +1,4 @@
-package Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedJobsFromList;
+package Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedAllExecutionPlans;
 
 use strict;
 use base 'Bio::EnsEMBL::Hive::Process';
