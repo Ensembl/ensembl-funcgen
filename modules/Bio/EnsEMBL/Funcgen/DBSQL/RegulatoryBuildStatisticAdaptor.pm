@@ -49,20 +49,42 @@ sub fetch_by_statistic {
   my $self      = shift;
   my $statistic = shift;
   
+  my $result = $self->_generic_fetch_by_statistic($statistic);
+  
+  if (! defined $result) {
+    throw("Statistic $statistic does not exist!");
+  }
+  if (@$result > 1) {
+    throw("Statistic $statistic is not unique!");
+  }
+  return $result->[0];
+}
+
+sub _statistic_exists {
+  my $self      = shift;
+  my $statistic = shift;
+  
+  my $result = $self->_generic_fetch_by_statistic($statistic);
+  my $statistic_exists = @$result != 0;
+  return $statistic_exists
+}
+
+sub _generic_fetch_by_statistic {
+  my $self      = shift;
+  my $statistic = shift;
+  
   my $regulatory_build_adaptor = $self->db->get_RegulatoryBuildAdaptor;
   my $regulatory_build = $regulatory_build_adaptor->fetch_current_regulatory_build;
   
-  return $self->fetch_single_object(
-    'regulatory_build_id = ? and statistic = ?', 
-    [ 
-      $regulatory_build->dbID,
-      $statistic,
-    ]
-  );
+   return $self->fetch_all(
+      'regulatory_build_id = ? and statistic = ?', 
+      [ 
+        $regulatory_build->dbID,
+        $statistic,
+      ]
+    )
+  ;
 }
-
-
-
 
 sub fetch_promoter_q0 {
   my $self = shift;
@@ -92,7 +114,6 @@ sub fetch_promoter_kurtosis {
   my $self = shift;
   return $self->fetch_by_statistic('promoter_kurtosis');
 }
-
 
 sub fetch_promoter_flanking_q0 {
   my $self = shift;
@@ -154,7 +175,6 @@ sub fetch_enhancer_kurtosis {
   return $self->fetch_by_statistic('enhancer_kurtosis');
 }
 
-
 sub fetch_ctcf_q0 {
   my $self = shift;
   return $self->fetch_by_statistic('ctcf_q0');
@@ -183,8 +203,6 @@ sub fetch_ctcf_kurtosis {
   my $self = shift;
   return $self->fetch_by_statistic('ctcf_kurtosis');
 }
-
-
 
 sub fetch_tf_q0 {
   my $self = shift;
@@ -215,9 +233,6 @@ sub fetch_tf_kurtosis {
   return $self->fetch_by_statistic('tf_kurtosis');
 }
 
-
-
-
 sub fetch_open_chromatin_q0 {
   my $self = shift;
   return $self->fetch_by_statistic('open_chromatin_q0');
@@ -247,10 +262,6 @@ sub fetch_open_chromatin_kurtosis {
   return $self->fetch_by_statistic('open_chromatin_kurtosis');
 }
 
-
-
-
-
 sub fetch_num_enhancers_overlapping_vista {
   my $self = shift;
   return $self->fetch_by_statistic('num_enhancers_overlapping_vista');
@@ -269,8 +280,14 @@ sub fetch_total_enhancers_checked_fantom {
   return $self->fetch_by_statistic('total_enhancers_checked_fantom');
 }
 
-
-
+sub has_stable_id_mapping_statistics {
+  my $self = shift;
+  
+  my $stable_id_mapping_statistics_available
+    = $self->_statistic_exists('stable_id_mapping_number_regulatory_features');
+  
+  return $stable_id_mapping_statistics_available;
+}
 sub fetch_stable_id_mapping_number_regulatory_features {
   my $self = shift;
   return $self->fetch_by_statistic('stable_id_mapping_number_regulatory_features');
@@ -283,7 +300,6 @@ sub fetch_stable_id_mapping_mapped_stable_ids {
   my $self = shift;
   return $self->fetch_by_statistic('stable_id_mapping_mapped_stable_ids');
 }
-
 
 sub fetch_number_regulatory_features {
   my $self = shift;
@@ -317,19 +333,8 @@ sub fetch_sum_length_open_chromatin {
 
 sub fetch_sum_length_ctcf_binding_site {
   my $self = shift;
-  
-  my $result;
-  eval {
-    $result = $self->fetch_by_statistic('sum_length_ctcf_binding_site')
-  };
-  if ($@) {
-    warn("No entry found for sum_length_ctcf_binding_site! Returning 0.");
-    $result = 0;
-  }
-  return $result;
+  return $self->fetch_by_statistic('sum_length_ctcf_binding_site');
 }
-
-
 
 sub fetch_number_promoter {
   my $self = shift;
@@ -358,21 +363,8 @@ sub fetch_number_open_chromatin {
 
 sub fetch_number_ctcf_binding_site {
   my $self = shift;
-
-  my $result;
-  eval {
-    $result = $self->fetch_by_statistic('number_ctcf_binding_site')
-  };
-  if ($@) {
-    warn("No entry found for number_ctcf_binding_site! Returning 0.");
-    $result = 0;
-  }
-
-  return $result;
+  return $self->fetch_by_statistic('number_ctcf_binding_site');
 }
-
-
-
 
 sub fetch_average_length_promoter {
   my $self = shift;
@@ -401,18 +393,7 @@ sub fetch_average_length_open_chromatin {
 
 sub fetch_average_length_ctcf_binding_site {
   my $self = shift;
-
-  my $result;
-  eval {
-    $result = $self->fetch_by_statistic('average_length_ctcf_binding_site')
-  };
-  if ($@) {
-    warn("No entry found for average_length_ctcf_binding_site! Returning 0.");
-    $result = 0;
-  }
-
-  return $result;
+  return $self->fetch_by_statistic('average_length_ctcf_binding_site');
 }
-
 
 1;
