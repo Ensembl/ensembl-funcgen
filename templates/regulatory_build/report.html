@@ -17,7 +17,7 @@
 [% PROCESS summary.html %]
 [% summary %]
 
-[% IF regulatory_build_statistics_adaptor.fetch_stable_id_mapping_number_regulatory_features.value %]
+[% IF regulatory_build_statistics_adaptor.has_stable_id_mapping_statistics %]
   [% PROCESS stable_id_mapping.html %]
   [% stable_id_mapping %]
 [% END %]

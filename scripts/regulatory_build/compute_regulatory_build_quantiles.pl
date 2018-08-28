@@ -29,12 +29,12 @@ limitations under the License.
 
   A script to compute the number of bases covered by regulatory features both in total and by feature type
 
-  perl scripts/regulatory_build/compute_regulatory_build_statistics.pl --registry /homes/mnuhn/work_dir_regbuild_script/lib/ensembl-funcgen/registry.pm --species homo_sapiens --tempdir foobar
-  perl scripts/regulatory_build/compute_regulatory_build_statistics.pl --registry /homes/mnuhn/work_dir_regbuild_script/lib/ensembl-funcgen/registry.pm --species mus_musculus --tempdir foobar
+  perl scripts/regulatory_build/compute_regulatory_build_quantiles.pl --registry /homes/mnuhn/work_dir_regbuild_script/lib/ensembl-funcgen/registry.pm --species homo_sapiens --tempdir foobar
+  perl scripts/regulatory_build/compute_regulatory_build_quantiles.pl --registry /homes/mnuhn/work_dir_regbuild_script/lib/ensembl-funcgen/registry.pm --species mus_musculus --tempdir foobar
   
-  perl scripts/regulatory_build/compute_regulatory_build_statistics.pl --registry /homes/mnuhn/work_dir_regbuild_testrun/lib/ensembl-funcgen/registry.with_previous_version.human_regbuild_testdb6.pm --species homo_sapiens --tempdir foobar
+  perl scripts/regulatory_build/compute_regulatory_build_quantiles.pl --registry /homes/mnuhn/work_dir_regbuild_testrun/lib/ensembl-funcgen/registry.with_previous_version.human_regbuild_testdb6.pm --species homo_sapiens --tempdir foobar
 
-  perl scripts/regulatory_build/compute_regulatory_build_statistics.pl --registry /homes/mnuhn/work_dir_regbuild_testrun/lib/ensembl-funcgen/registry.with_previous_version.human_regbuild_testdb7.pm --species homo_sapiens --tempdir foobar
+  perl scripts/regulatory_build/compute_regulatory_build_quantiles.pl --registry /homes/mnuhn/work_dir_regbuild_testrun/lib/ensembl-funcgen/registry.with_previous_version.human_regbuild_testdb7.pm --species homo_sapiens --tempdir foobar
 
 =cut
 
@@ -57,7 +57,6 @@ lock_keys( %options );
 
 my $species  = $options{'species'};
 my $registry = $options{'registry'};
-# my $tempdir  = $options{'tempdir'};
 
 Bio::EnsEMBL::Registry->load_all($registry);
 my $funcgen_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
@@ -70,14 +69,23 @@ $logger->init_log;
 
 use Statistics::Descriptive;
 
+$logger->info("Computing promoter quantiles\n");
 &compute_promoter;
-&compute_promoter_flanking;
-&compute_enhancer;
-&compute_ctcf;
-&compute_tf;
-&compute_open_chromatin;
 
-#compute_averages($funcgen_adaptor);
+$logger->info("Computing promoter flanking quantiles\n");
+&compute_promoter_flanking;
+
+$logger->info("Computing enhancer quantiles\n");
+&compute_enhancer;
+
+$logger->info("Computing ctcf quantiles\n");
+&compute_ctcf;
+
+$logger->info("Computing transcription factor quantiles\n");
+&compute_tf;
+
+$logger->info("Computing open chromatin quantiles\n");
+&compute_open_chromatin;
 
 $logger->finish_log;
 exit(0);
@@ -187,53 +195,3 @@ sub run_sql_commands {
     $funcgen_adaptor->dbc->do($sql_command);
   }
 }
-
-sub compute_averages {
-
-  my $funcgen_adaptor = shift;
-
-  my $sql_commands = [
-    qq~
-    delete from regulatory_build_statistic where statistic in (
-      'average_length_promoter',
-      'average_length_enhancer',
-      'average_length_promoter_flanking_region',
-      'average_length_transcription_factor_binding_site',
-      'average_length_open_chromatin',
-      'average_length_ctcf_binding_site'
-    );
-    ~,
-    qq~
-    insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
-        select regulatory_build_id, 'average_length_promoter', AVG( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Promoter" group by feature_type.name, regulatory_build_id
-    );
-    ~,
-    qq~
-    insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
-        select regulatory_build_id, 'average_length_enhancer', AVG( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Enhancer" group by feature_type.name, regulatory_build_id
-    );
-    ~,
-    qq~
-    insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
-        select regulatory_build_id, 'average_length_promoter_flanking_region', AVG( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Promoter Flanking Region" group by feature_type.name, regulatory_build_id
-    );
-    ~,
-    qq~
-    insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
-        select regulatory_build_id, 'average_length_transcription_factor_binding_site', AVG( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "TF binding site" group by feature_type.name, regulatory_build_id
-    );
-    ~,
-    qq~
-    insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
-        select regulatory_build_id, 'average_length_open_chromatin', AVG( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "Open chromatin" group by feature_type.name, regulatory_build_id
-    );
-    ~,
-    qq~
-    insert into regulatory_build_statistic (regulatory_build_id, statistic, value) (
-        select regulatory_build_id, 'average_length_ctcf_binding_site', AVG( (seq_region_end + bound_end_length ) - (seq_region_start-bound_start_length)  + 1) from regulatory_feature join feature_type using (feature_type_id) where feature_type.name = "CTCF Binding Site" group by feature_type.name, regulatory_build_id
-    );
-    ~,
-  ];
-  run_sql_commands($sql_commands)
-}
-
