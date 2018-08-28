@@ -42,16 +42,16 @@ sub run {
   
     my $meta_data = $current_execution_plan->{meta_data};
     
-    if (
-         ( $meta_data->{experiment_is_control}  ne TRUE  )
-      && ( $meta_data->{experiment_has_control} eq FALSE )
-    ) {
-      push 
-        @signal_experiments_without_controls, 
-        $current_execution_plan;
-
-      next EXECUTION_PLAN;
-    }
+     if (
+          ( $meta_data->{experiment_is_control}  ne TRUE  )
+       && ( $meta_data->{experiment_has_control} eq FALSE )
+     ) {
+       push 
+         @signal_experiments_without_controls, 
+         $current_execution_plan;
+ 
+       next EXECUTION_PLAN;
+     }
 
     my $current_execution_plan_expanded;
     
@@ -89,13 +89,13 @@ sub run {
     }
   }
 
-  $self->dataflow_output_id(
-    {
-      'execution_plan_list' => \@signal_experiments_without_controls,
-      'species'             => $species,
-    }, 
-    BRANCH_SIGNALS_WITHOUT_CONTROLS
-  );
+   $self->dataflow_output_id(
+     {
+       'execution_plan_list' => \@signal_experiments_without_controls,
+       'species'             => $species,
+     }, 
+     BRANCH_SIGNALS_WITHOUT_CONTROLS
+   );
 
   my @all_control_alignments = keys %found_control_alignments;
   
@@ -112,7 +112,16 @@ sub run {
     
     my $execution_plans_waiting_for_that_control
       = $plan_depending_on_control{$control_alignment};
-    
+ 
+    for my $execution_plan (@$execution_plans_waiting_for_that_control) {
+    $self->dataflow_output_id(
+      {   
+        'execution_plan' => $execution_plan,
+        'species'             => $species,
+      },  
+      BRANCH_SIGNALS
+    );  
+    }
     $self->dataflow_output_id(
       {
         'execution_plan_list' => $execution_plans_waiting_for_that_control,
