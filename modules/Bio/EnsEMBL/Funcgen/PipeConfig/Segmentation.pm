@@ -195,7 +195,7 @@ sub pipeline_analyses {
                     delete_non_chromosomal_files_from_binarization_dir.pl \
                         --registry  #reg_conf#   \
                         --species   #species#    \
-                        --directory #binarized_bam_dir#/#superclass#/#class#/tion/encode/no_ctcf/
+                        --directory #binarized_bam_dir#/#superclass#/#class#
                   ),
           },
           -flow_into => {
