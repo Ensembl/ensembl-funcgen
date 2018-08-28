@@ -35,14 +35,26 @@ sub pipeline_analyses {
         {   -logic_name  => 'start',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
-               MAIN => 'backbone_fire_populate_read_file_stats',
+               MAIN => 'backbone_fire_pre_pipeline_checks',
             },
         },
+        {   -logic_name  => 'backbone_fire_pre_pipeline_checks',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into   => {
+               '1->A' => 'start_pre_pipeline_checks',
+               'A->1' => 'backbone_fire_populate_read_file_stats'
+            },
+        },
+        {
+            -logic_name => 'start_pre_pipeline_checks',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+        },
+
         {   -logic_name  => 'backbone_fire_populate_read_file_stats',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
                '1->A' => 'start_populate_read_file_stats',
-               'A->1' => 'backbone_fire_peak_calling'
+               'A->1' => 'backbone_fire_fastqc'
             },
         },
         {
@@ -50,15 +62,63 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
 
+        {   -logic_name  => 'backbone_fire_fastqc',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into   => {
+               '1->A' => 'start_fastqc',
+               'A->1' => 'backbone_fire_alignments'
+            },
+        },
+        {
+            -logic_name => 'start_fastqc',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+        },
+
+        {   -logic_name  => 'backbone_fire_alignments',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into   => {
+               '1->A' => 'start_alignments',
+               'A->1' => 'backbone_fire_write_bigwig'
+            },
+        },
+        {
+            -logic_name => 'start_alignments',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+        },
+
+        {   -logic_name  => 'backbone_fire_write_bigwig',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into   => {
+               '1->A' => 'start_write_bigwig',
+               'A->1' => 'backbone_fire_alignment_qc'
+            },
+        },
+        {
+            -logic_name => 'start_write_bigwig',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+        },
+
+        {   -logic_name  => 'backbone_fire_alignment_qc',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into   => {
+               '1->A' => 'start_alignment_qc',
+               'A->1' => 'backbone_fire_peak_calling'
+            },
+        },
+        {
+            -logic_name => 'start_alignment_qc',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+        },
+
         {   -logic_name  => 'backbone_fire_peak_calling',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
-               '1->A' => 'start_chip_seq_analysis',
+               '1->A' => 'start_peak_calling',
                'A->1' => 'backbone_fire_meta_coord_for_peaks'
             },
         },
         {
-            -logic_name => 'start_chip_seq_analysis',
+            -logic_name => 'start_peak_calling',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
 
@@ -82,11 +142,22 @@ sub pipeline_analyses {
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
                '1->A' => 'start_peak_calling_hc',
-               'A->1' => 'backbone_fire_cleanup'
+               'A->1' => 'backbone_fire_frip'
             },
         },
         {
             -logic_name  => 'start_peak_calling_hc',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+        },
+        {   -logic_name  => 'backbone_fire_frip',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into   => {
+               '1->A' => 'start_frip',
+               'A->1' => 'backbone_fire_cleanup'
+            },
+        },
+        {
+            -logic_name  => 'start_frip',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
         {   -logic_name  => 'backbone_fire_cleanup',
