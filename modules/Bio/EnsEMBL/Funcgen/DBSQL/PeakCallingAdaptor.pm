@@ -70,6 +70,27 @@ sub fetch_all_by_Epigenome {
     return $self->fetch_all($constraint);
 }
 
+sub _fetch_all_by_Epigenome_ExperimentalGroup {
+    my $self      = shift;
+    my $epigenome = shift;
+    my $experimental_group_wanted = shift;
+    
+    my $peak_callings = $self->fetch_all_by_Epigenome($epigenome);
+    
+    my @result;
+    foreach my $peak_calling (@$peak_callings) {
+    
+      my $experiment = $peak_calling->fetch_Experiment;
+      my $experimental_group = $experiment->experimental_group;
+      
+      if ($experimental_group->name eq $experimental_group_wanted->name) {
+        push @result, $peak_calling;
+      }
+    
+    }
+    return \@result;
+}
+
 sub fetch_by_Experiment {
     my $self       = shift;
     my $experiment = shift;
