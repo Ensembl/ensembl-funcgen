@@ -31,6 +31,22 @@ perl scripts/regulatory_build/generate_regulatory_build_report.pl \
     --registry         /homes/mnuhn/work_dir_dev_break/lib/ensembl-funcgen/registry.with_previous_version.pm \
     --output_directory ./reports/
 
+perl scripts/regulatory_build/generate_regulatory_build_report.pl \
+    --species          homo_sapiens \
+    --registry /homes/mnuhn/work_dir_regbuild_script/lib/ensembl-funcgen/registry.pm \
+    --output_directory ./reports/
+
+perl scripts/regulatory_build/generate_regulatory_build_report.pl \
+    --species          homo_sapiens \
+    --registry /homes/mnuhn/work_dir_regbuild_testrun/lib/ensembl-funcgen/registry.with_previous_version.human_regbuild_testdb6.pm \
+    --output_directory ./reports/
+
+
+
+
+
+
+
 =cut
 
 use strict;
@@ -68,8 +84,6 @@ my $regulatory_build_statistics_adaptor_previous_version
   = $previous_version_funcgen_dba
     ->get_RegulatoryBuildStatisticAdaptor;
 
-#die (Dumper($regulatory_build_statistics_adaptor_previous_version->fetch_number_regulatory_features->value));
-
 my $file = __FILE__;
 use File::Basename qw( dirname basename );
 
@@ -84,8 +98,6 @@ my $output_file = "$output_directory/regulatory_build_report.html";
 
 my $genome = Bio::EnsEMBL::Registry->get_adaptor( $species, "core", "GenomeContainer" );
 my $ref_length = $genome->get_ref_length;
-
-# die($ref_length);
 
 use File::Path qw( make_path );
 make_path( $output_directory );
