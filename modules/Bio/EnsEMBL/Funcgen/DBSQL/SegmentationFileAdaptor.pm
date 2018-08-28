@@ -164,7 +164,7 @@ sub store {
       analysis_id,
       epigenome_id,
       regulatory_build_id,
-      segmentation
+      segmentation_id
     )
     VALUES (?, ?, ?, ?, ?)"
   );
@@ -187,11 +187,17 @@ sub store {
 
     $current_segmentation_file->adaptor($self);
 
+    my $segmentation = $current_segmentation_file->get_Segmentation;
+    if (! defined $segmentation) {
+	use Carp;
+        confess("Segmentation has not been set!");
+    }
+
     $sth_store_segmentation_file->bind_param( 1, $current_segmentation_file->name,                      SQL_VARCHAR);
     $sth_store_segmentation_file->bind_param( 2, $current_segmentation_file->get_Analysis->dbID,        SQL_INTEGER);
     $sth_store_segmentation_file->bind_param( 3, $current_segmentation_file->get_Epigenome->dbID,       SQL_INTEGER);
     $sth_store_segmentation_file->bind_param( 4, $current_segmentation_file->get_RegulatoryBuild->dbID, SQL_INTEGER);
-    $sth_store_segmentation_file->bind_param( 5, $current_segmentation_file->segmentation,              SQL_VARCHAR);
+    $sth_store_segmentation_file->bind_param( 5, $current_segmentation_file->get_Segmentation->dbID,    SQL_INTEGER);
     
     # Store and set dbID
     $sth_store_segmentation_file->execute;
