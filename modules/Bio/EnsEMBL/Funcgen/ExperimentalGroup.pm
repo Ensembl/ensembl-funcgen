@@ -59,8 +59,6 @@ use base qw(Bio::EnsEMBL::Funcgen::Storable);
 =head2 new
 
   Arg [-name]: string - name of ExperimentalGroup
-  Arg [-location]: (optional) string - location of ExperimentalGroup
-  Arg [-contact]: (optional) string - contact of ExperimentalGroup
   Arg [-url]: (optional) string - url containing information for the ExperimentalGroup
   Arg [-description]: (optional) string - descriptiom of ExperimentalGroup
   Arg [-project]: (optional) boolean - True if this is part of a large project (eg. ENCODE)
@@ -85,13 +83,12 @@ sub new {
   my $obj_class = ref($caller) || $caller;
   my $self      = $obj_class->SUPER::new(@_);
 
-  my ($name, $location, $contact, $url, $desc, $is_project) = rearrange(
-    ['NAME', 'LOCATION', 'CONTACT', 'URL', 'DESCRIPTION', 'IS_PROJECT'], @_);
+  my ($name, $production_name, $url, $desc, $is_project) = rearrange(
+    ['NAME', 'PRODUCTION_NAME', 'DESCRIPTION', 'IS_PROJECT'], @_);
 
   throw('Must supply a name parameter') if ! defined $name;
   $self->name($name);
-  $self->location($location) if $location;
-  $self->contact($contact) if $contact;
+  $self->production_name($production_name) if $production_name;
   $self->url($url) if $url;
   $self->description($desc) if $desc;
   $self->is_project($is_project) if $is_project;
@@ -137,11 +134,11 @@ sub description {
     return $self->{'description'};
 }
 
-=head2 location
+=head2 production_name
 
-  Arg [1]    : (optional) string - location
-  Example    : my $location = $group->location();
-  Description: Getter and setter of location attribute for ExperimentalGroup objects.
+  Arg [1]    : (optional) string - production_name
+  Example    : my $production_name = $group->production_name();
+  Description: Getter and setter of production_name attribute for ExperimentalGroup objects.
   Returntype : string
   Exceptions : None
   Caller     : General
@@ -149,10 +146,10 @@ sub description {
 
 =cut
 
-sub location {
+sub production_name {
     my $self = shift;
-    $self->{'location'} = shift if @_;
-    return $self->{'location'};
+    $self->{'production_name'} = shift if @_;
+    return $self->{'production_name'};
 }
 
 
@@ -246,7 +243,7 @@ Args[1]    : Bio::EnsEMBL::Funcgen::Storable (mandatory)
 Args[2]    : Boolean - Optional 'shallow' - no object methods compared
 Args[3]    : Arrayref - Optional list of InputSubset method names each
              returning a Scalar or an Array or Arrayref of Scalars.
-             Defaults to: name location contact description url is_project
+             Defaults to: name production_name description url is_project
 Example    : my %shallow_diffs = %{$rset->compare_to($other_rset, 1)};
 Description: Compare this ExperimentalGroup to another based on the defined scalar
              and storable methods.
@@ -264,7 +261,7 @@ Status     : At Risk
 sub compare_to {
   my ($self, $obj, $shallow, $scl_methods, $obj_methods) = @_;
 
-  $scl_methods ||= [qw(name location contact description url is_project)];
+  $scl_methods ||= [qw(name prodcution_name description url is_project)];
 
   return $self->SUPER::compare_to($obj, $shallow, $scl_methods, $obj_methods);
 }

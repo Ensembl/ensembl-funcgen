@@ -119,8 +119,8 @@ sub _true_tables {
 =cut
 
 sub _columns {
-  return qw( eg.experimental_group_id eg.name eg.location
-             eg.contact eg.url eg.description eg.is_project );
+  return qw( eg.experimental_group_id eg.name eg.production_name
+             eg.url eg.description eg.is_project );
 }
 
 =head2 _objs_from_sth
@@ -140,16 +140,15 @@ sub _columns {
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
 
-	my (@result, $eg_id, $name, $location, $contact, $url, $desc, $is_project);
+	my (@result, $eg_id, $name, $production_name,  $url, $desc, $is_project);
 
-	$sth->bind_columns(\$eg_id, \$name, \$location, \$contact, \$url, \$desc, \$is_project);
+	$sth->bind_columns(\$eg_id, \$name, \$production_name, \$url, \$desc, \$is_project);
 
 	while ( $sth->fetch() ) {
 	  my $group = Bio::EnsEMBL::Funcgen::ExperimentalGroup->new(
 								    -dbID        => $eg_id,
 								    -NAME        => $name,
-								    -LOCATION    => $location,
-								    -CONTACT     => $contact,
+								    -PRODUCTION_NAME    => $production_name,
 								    -URL         => $url,
 								    -DESCRIPTION => $desc,
 								    -IS_PROJECT  => $is_project,
@@ -183,7 +182,7 @@ sub store {
 
   my $sth = $self->prepare("
 			INSERT INTO experimental_group
-			(name, location, contact, url, description, is_project)
+			(name, production_name, url, description, is_project)
 			VALUES (?, ?, ?, ?, ?, ?)");
 
 
@@ -201,8 +200,7 @@ sub store {
 
       if(! $s_eg){
 	$sth->bind_param(1, $group->name(),           SQL_VARCHAR);
-	$sth->bind_param(2, $group->location(),       SQL_VARCHAR);
-	$sth->bind_param(3, $group->contact(),        SQL_VARCHAR);
+	$sth->bind_param(2, $group->production_name(),       SQL_VARCHAR);
 	$sth->bind_param(4, $group->url(),            SQL_VARCHAR);
 	$sth->bind_param(5, $group->description(),    SQL_VARCHAR);
 	$sth->bind_param(6, $group->is_project(),     SQL_BOOLEAN);
