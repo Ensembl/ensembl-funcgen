@@ -114,4 +114,18 @@ my $fastqc = Bio::EnsEMBL::Funcgen::FastQC->new(
 );
 
 my $fastqc_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'fastqc');
+
+my $existing_entry = $fastqc_adaptor->fetch_by_read_file_id($read_file_id);
+
+if (defined $existing_entry) {
+  warn("There already is an entry for this read file.");
+  warn("Deleting existing enty");
+  $fastqc_adaptor->_delete($existing_entry);
+}
+
 $fastqc_adaptor->store($fastqc);
+
+
+
+
+
