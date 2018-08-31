@@ -96,7 +96,7 @@ sub fetch_deduplicated_partial_alignments {
   foreach my $read_file_experimental_configuration (@$read_file_experimental_configurations) {
 
     my $alignments = $alignment
-      ->db
+      ->adaptor
       ->fetch_all_by_ReadFileExperimentalConfiguration(
         $read_file_experimental_configuration
       );

@@ -120,7 +120,26 @@ sub _initialise_fields {
     }
   }
   
-  my @unused_parameters = keys %all_parameters;
+  # Don't complain about these until all API objects use the new 'adaptor' 
+  # name.
+  #
+  my @unchecked_parameters = (
+    '-adaptor',
+    '-db'
+  );
+  
+  my @unused_parameters;
+  PARAMETER:
+  foreach my $current_parameter (keys %all_parameters) {
+  
+    my $is_unchecked_parameter = grep { $current_parameter ne $_ } @unchecked_parameters;
+  
+    if ($is_unchecked_parameter) {
+      next PARAMETER;
+    }
+    push @unused_parameters, $current_parameter;
+  }
+  
   if (@unused_parameters) {
     
     my %as_hash = @parameters;

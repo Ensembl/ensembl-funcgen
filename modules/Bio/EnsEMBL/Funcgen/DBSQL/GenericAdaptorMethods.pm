@@ -164,7 +164,12 @@ sub objectify { # turn the hashref into an object
     eval {
     
       my %constructor_parameters = (
-        -db => $self, 
+      
+        # Providing both 'db' and 'adaptor' until all API objects have been
+        # switched to the latter.
+        #
+        -db      => $self, 
+        -adaptor => $self, 
         map {
           ( ($_ eq $autoinc_id) ? -dbID : '-' . $_ ) => $hashref->{$_} 
         } keys %$hashref 

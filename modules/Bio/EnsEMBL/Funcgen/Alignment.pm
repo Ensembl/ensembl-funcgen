@@ -38,11 +38,12 @@ use warnings;
 
 use Role::Tiny::With;
 with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
+use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 
 sub _constructor_parameters {
   return {
     dbID           => 'dbID',
-    db             => 'db',
+    adaptor        => 'adaptor',
     name           => 'name',
     analysis_id    => 'analysis_id',
     bam_file_id    => 'bam_file_id',
@@ -68,7 +69,7 @@ use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
 );
 
 sub dbID            { return shift->_generic_get_or_set('dbID',           @_); }
-sub db              { return shift->_generic_get_or_set('db',             @_); }
+sub adaptor         { return shift->_generic_get_or_set('adaptor',        @_); }
 
 =head2 name
 
@@ -121,7 +122,7 @@ sub _fetch_DataFile {
   my $self         = shift;
   my $data_file_id = shift;
   
-  my $data_file_adaptor = $self->db->db->get_DataFileAdaptor;
+  my $data_file_adaptor = $self->adaptor->db->get_DataFileAdaptor;
   if (! defined $data_file_adaptor) {
     throw("Couldn't get a DataFileAdaptor!");
   }
@@ -151,13 +152,13 @@ sub _delete_bam_file_from_db {
   my $self = shift;
   
   $self->_generic_get_or_set('bam_file_id', undef, 1);
-  $self->db->update($self);
+  $self->adaptor->update($self);
 }
 
 sub fetch_all_deduplicated_replicate_Alignments {
   my $self = shift;
   
-  my $alignment_adaptor = $self->db;
+  my $alignment_adaptor = $self->adaptor;
   if (! defined $alignment_adaptor) {
     throw("Couldn't get a AlignmentAdaptor!");
   }
@@ -168,7 +169,7 @@ sub fetch_source_Alignment {
 
   my $self         = shift;
   
-  my $alignment_adaptor = $self->db;
+  my $alignment_adaptor = $self->adaptor;
   if (! defined $alignment_adaptor) {
     throw("Couldn't get a AlignmentAdaptor!");
   }
@@ -180,11 +181,7 @@ sub fetch_Chance_by_control_Alignment {
   my $self = shift;
   my $control_alignment = shift;
   
-#   use Data::Dumper;
-#   print Dumper($control_alignment);
-#   print Dumper($self);
-
-  my $chance_adaptor = $self->db->db->get_ChanceAdaptor;
+  my $chance_adaptor = $self->adaptor->db->get_ChanceAdaptor;
   if (! defined $chance_adaptor) {
     throw("Couldn't get an ChanceAdaptor!");
   }
@@ -200,7 +197,7 @@ sub fetch_Experiment {
 
   my $self         = shift;
   
-  my $experiment_adaptor = $self->db->db->get_ExperimentAdaptor;
+  my $experiment_adaptor = $self->adaptor->db->get_ExperimentAdaptor;
   if (! defined $experiment_adaptor) {
     throw("Couldn't get a ExperimentAdaptor!");
   }
@@ -211,7 +208,7 @@ sub fetch_Experiment {
 sub fetch_PhantomPeak {
   my $self = shift;
 
-  my $phantom_peak_adaptor = $self->db->db->get_PhantomPeakAdaptor;
+  my $phantom_peak_adaptor = $self->adaptor->db->get_PhantomPeakAdaptor;
   if (! defined $phantom_peak_adaptor) {
     throw("Couldn't get an PhantomPeakAdaptor!");
   }
@@ -331,7 +328,7 @@ sub fetch_all_ReadFiles {
   my $self = shift;
   
   my $read_file_id = $self->read_file_ids;
-  my $read_file_adaptor = $self->db->db->get_ReadFileAdaptor;
+  my $read_file_adaptor = $self->adaptor->db->get_ReadFileAdaptor;
   
   if (! defined $read_file_adaptor) {
     throw("Couldn't get a ReadFileAdaptor!");
@@ -345,26 +342,6 @@ sub fetch_all_ReadFiles {
   }
   return \@all_read_files;
 }
-
-# sub fetch_all_ReadFileExperimentalConfigurations {
-# 
-#   my $self = shift;
-#   
-#   my $read_file_id = $self->read_file_ids;
-#   my $read_file_experimental_configuration_adaptor = $self->db->db->get_ReadFileExperimentalConfigurationAdaptor;
-#   
-#   if (! defined $read_file_adaptor) {
-#     throw("Couldn't get a ReadFileAdaptor!");
-#   }
-#   
-#   my @all_read_files;
-#   
-#   foreach my $current_read_file_id (@$read_file_id) {
-#     my $current_obj = $read_file_experimental_configuration_adaptor->fetch_by_read_file_id($current_read_file_id);
-#     push @all_objedcs, $current_obj;
-#   }
-#   return \@all_objedcs;
-# }
 
 =head2 summary_as_hash
 
@@ -413,6 +390,12 @@ sub summary_as_hash {
   }
   
   return $summary;
+}
+
+sub db { 
+  my $self = shift;
+  deprecate("'db' has been deprecated. Please use 'adaptor' instead. 'db' will be removed in release 99.");
+  return $self->adaptor; 
 }
 
 1;

@@ -72,8 +72,14 @@ sub _generic_fetch {
     $object_adaptor = $self->adaptor;
   };
   if ($@) {
-    warn("Calling adaptor failed! Trying the older 'db' method");
+    my ($package, $filename, $line) = caller;
+    warn("Calling adaptor failed!");
+    warn("\tTrying the older 'db' method.");
     $object_adaptor = $self->db;
+    if ($object_adaptor) {
+      warn("\tThe db method succeeded.\n");
+      warn("\tPlease switch to using 'adaptor' instead of 'db' in $package ($filename).\n");
+    }
   }
   
   if (! defined $object_adaptor) {
