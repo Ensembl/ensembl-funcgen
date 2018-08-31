@@ -60,8 +60,31 @@ sub pipeline_analyses {
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
                 cmd => 'export_regulatory_features.pl --epigenome_name "#epigenome_name#" --output_file '
-                  . $ftp_layout_configuration->{regulatory_activities_gff_file_dir} . '/' . $ftp_layout_configuration->{regulatory_activities_gff_file_base_name} 
+                  . $ftp_layout_configuration->{regulatory_activities_gff_file_dir} . '/' . $ftp_layout_configuration->{regulatory_activities_gff_file_base_name} . '.unsorted'
                   . ' --registry #reg_conf# --species #species#',
+            },
+            -flow_into   => {
+               MAIN => 'sort_regulatory_activities'
+            },
+        },
+        {   -logic_name  => 'sort_regulatory_activities',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters  => {
+                cmd => 'sort -n -k1,4 '
+                  .       $ftp_layout_configuration->{regulatory_activities_gff_file_dir} . '/' . $ftp_layout_configuration->{regulatory_activities_gff_file_base_name} . '.unsorted'
+                  . ' > ' . $ftp_layout_configuration->{regulatory_activities_gff_file_dir} . '/' . $ftp_layout_configuration->{regulatory_activities_gff_file_base_name}
+
+            },
+            -flow_into   => {
+               MAIN => 'rm_unsorted_regulatory_activities'
+            },
+        },
+        {   -logic_name  => 'rm_unsorted_regulatory_activities',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters  => {
+                cmd => 'rm '
+                  . $ftp_layout_configuration->{regulatory_activities_gff_file_dir} . '/' . $ftp_layout_configuration->{regulatory_activities_gff_file_base_name} . '.unsorted'
+
             },
             -flow_into   => {
                MAIN => 'gzip_regulatory_activities'
@@ -74,12 +97,35 @@ sub pipeline_analyses {
             },
         },
         {   -logic_name  => 'export_regulatory_features',
-	    -analysis_capacity => 20,
+            -analysis_capacity => 20,
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
                 cmd => 'export_regulatory_features.pl --only_summary --output_file '
-                  . $ftp_layout_configuration->{regulatory_features_gff_file_dir} . '/' . $ftp_layout_configuration->{regulatory_features_gff_file_base_name} 
+                  . $ftp_layout_configuration->{regulatory_features_gff_file_dir} . '/' . $ftp_layout_configuration->{regulatory_features_gff_file_base_name} . '.unsorted'
                   . ' --registry #reg_conf# --species #species#',
+            },
+            -flow_into   => {
+               MAIN => 'sort_regulatory_features'
+            },
+        },
+        {   -logic_name  => 'sort_regulatory_features',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters  => {
+                cmd => 'sort -n -k1,4 '
+                  .       $ftp_layout_configuration->{regulatory_features_gff_file_dir} . '/' . $ftp_layout_configuration->{regulatory_features_gff_file_base_name} . '.unsorted'
+                  . ' > ' . $ftp_layout_configuration->{regulatory_features_gff_file_dir} . '/' . $ftp_layout_configuration->{regulatory_features_gff_file_base_name},
+
+            },
+            -flow_into   => {
+               MAIN => 'rm_unsorted_regulatory_features'
+            },
+        },
+        {   -logic_name  => 'rm_unsorted_regulatory_features',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters  => {
+                cmd => 'rm '
+                  .       $ftp_layout_configuration->{regulatory_features_gff_file_dir} . '/' . $ftp_layout_configuration->{regulatory_features_gff_file_base_name} . '.unsorted'
+
             },
             -flow_into   => {
                MAIN => 'gzip_regulatory_features'
