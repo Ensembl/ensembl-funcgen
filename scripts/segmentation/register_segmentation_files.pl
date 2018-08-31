@@ -65,6 +65,14 @@ my $regulatory_build_adaptor  = $funcgen_dba->get_RegulatoryBuildAdaptor;
 my $segmentation_file_adaptor = $funcgen_dba->get_SegmentationFileAdaptor;
 my $analysis_adaptor          = $funcgen_dba->get_AnalysisAdaptor;
 
+my $segmentation_adaptor = $funcgen_dba->get_SegmentationAdaptor;
+
+my $segmentation = $segmentation_adaptor->fetch_by_name($segmentation_name);
+
+if (! defined $segmentation) {
+	die("Can't find segmentation $segmentation!");
+}
+
 my $current_regulatory_build = $regulatory_build_adaptor->fetch_current_regulatory_build;
 my $all_epigenomes = $current_regulatory_build->get_all_Epigenomes;
 
@@ -78,10 +86,6 @@ my $destination_dir = $db_file_species_assembly_dir . '/' . $segmentation_name;
 use File::Path qw( make_path );
 make_path($destination_dir);
 
-# opendir(my $dh, $segmentation_directory) || die "Can't opendir $segmentation_directory: $!";
-# my @dir_contents_no_dots = grep { /^[^\.]/ } readdir($dh);
-# closedir $dh;
-
 my $segmentation_analysis = $analysis_adaptor->fetch_by_logic_name('Segmentation');
 
 REGULATORY_BUILD_EPIGENOME:
@@ -89,11 +93,6 @@ foreach my $current_epigenome (@$all_epigenomes) {
 
   my $big_bed_file_basename = $current_epigenome->production_name . '.bb';
   
-#   my $big_bed_file = find_in_search_path(
-#     $segmentation_directory,
-#     \@dir_contents_no_dots,
-#     $big_bed_file_basename
-#   );
   my $big_bed_file = $big_bed_file_basename;
   
   my $full_path = $segmentation_directory . '/' . $big_bed_file;
@@ -127,15 +126,16 @@ foreach my $current_epigenome (@$all_epigenomes) {
   use Bio::EnsEMBL::Funcgen::SegmentationFile;
   
   my $segmentation_file = Bio::EnsEMBL::Funcgen::SegmentationFile->new(
-    -name             => 'Segmentation of ' . $current_epigenome->name,
+    -name             => 'Segmentation of ' . $current_epigenome->name . ' in ' . $segmentation->name,
     -analysis         => $segmentation_analysis,
     -epigenome        => $current_epigenome,
     -regulatory_build => $current_regulatory_build,
     -file             => $registered_file,
-    -segmentation     => $segmentation_name,
+    -segmentation     => $segmentation,
     -file_type        => 'BIGBED',
     -md5sum           => $md5sum,
   );
+  $segmentation_file->_segmentation($segmentation);
   $segmentation_file_adaptor->store($segmentation_file);
 }
 

@@ -52,7 +52,20 @@ sub pipeline_analyses {
       {   -logic_name => 'start_segmentation_statistics',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
           -flow_into => { 
-            MAIN => 'load_segmentation_files_to_db',
+            MAIN => 'truncate_segmentation_statistic',
+          },
+      },
+      {
+          -logic_name  => 'truncate_segmentation_statistic',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+          -parameters => {
+              sql     => [
+                'truncate segmentation_statistic'
+              ],
+              db_conn => 'funcgen:#species#',
+          },
+          -flow_into   => {
+              MAIN => 'load_segmentation_files_to_db',
           },
       },
       {   -logic_name => 'load_segmentation_files_to_db',
@@ -68,11 +81,26 @@ sub pipeline_analyses {
                 )
           },
           -flow_into   => {
+            MAIN  => 'compute_basic_segmentation_statistics',
+          },
+      },
+      {   -logic_name => 'compute_basic_segmentation_statistics',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -parameters => {
+            cmd => 
+                q(
+                    compute_basic_segmentation_statistics.pl \
+                      --species  #species#             \
+                      --registry #reg_conf#
+                )
+          },
+          -flow_into   => {
             MAIN  => 'compute_segmentation_statistics',
           },
       },
       {   -logic_name => 'compute_segmentation_statistics',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -rc_name    => '32Gb_job',
           -parameters => {
             cmd => 
                 q(
@@ -81,7 +109,6 @@ sub pipeline_analyses {
                       --registry #reg_conf#
                 )
           },
-          -rc_name => '32Gb_job',
           -flow_into   => {
             MAIN  => 'generate_segmentation_report',
           },

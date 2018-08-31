@@ -102,6 +102,7 @@ foreach my $segmentation_feature_type_name (@$segmentation_feature_types) {
 
 my $experimental_groups = $experimental_group_adaptor->fetch_all;
 
+my $total_number_of_peak_callings_included = 0;
 foreach my $experimental_group (@$experimental_groups) {
 
     $logger->info("Classifying all epigenomes from " . $experimental_group->name . "\n");
@@ -113,14 +114,21 @@ foreach my $experimental_group (@$experimental_groups) {
 
     $logger->info("\tCreating segmentation cell table\n");
 
-    create_segmentation_cell_table(
+    my $number_of_peak_callings_included = create_segmentation_cell_table(
         \%class_to_epigenome_name,
         generate_sql_callback({ 
             dry_run => $dry_run 
         }),
         $experimental_group
     );
+    $total_number_of_peak_callings_included += $number_of_peak_callings_included;
 }
+
+if ($total_number_of_peak_callings_included == 0) {
+  die("No peak callings were included for segmentation!");
+}
+
+$logger->info("The number of peak callings included in the segmentation are: $total_number_of_peak_callings_included");
 
 $logger->finish_log;
 
@@ -165,16 +173,16 @@ sub generate_sql_callback {
           $segmentation_adaptor->store($segmentation);
         }
 
-        if (! defined $segmentation) { 
+        if (! defined $segmentation->dbID) { 
           confess("segmentation has not been defined!");
         }
-        if (! defined $epigenome) {
+        if (! defined $epigenome->dbID) {
           confess(die "epigenome has not been defined!");
         }
-        if (! defined $segmentation_feature_type) { 
+        if (! defined $segmentation_feature_type->dbID) { 
           confess(die "segmentation_feature_type has not been defined!");
         }
-        if (! defined $signal_alignment) { 
+        if (! defined $signal_alignment->dbID) { 
           confess(die "signal_alignment has not been defined!");
         }
 
@@ -217,7 +225,9 @@ sub create_segmentation_cell_table {
     my $class_to_epigenome_name        = shift;
     my $build_row_callback             = shift;
     my $restrict_to_experimental_group = shift;
-
+    
+    my $number_of_peak_callings_included = 0;
+    
     CLASS:
     foreach my $current_class (sort keys %$class_to_epigenome_name) {
         
@@ -283,10 +293,13 @@ sub create_segmentation_cell_table {
                         control_alignment          => $control_alignment,
                         experimental_group         => $experimental_group,
                     });
+                    
+                    $number_of_peak_callings_included++;
                 }
             }
         }
     }
+    return $number_of_peak_callings_included;
 }
 
 sub classify_epigenomes {

@@ -45,17 +45,4 @@ sub _tables {
   return ['segmentation', 'ss']
 }
 
-sub fetch_by_name {
-
-  my $self         = shift;
-  my $name         = shift;
-  
-  return $self->fetch_single_object(
-    'name = ?', 
-    [
-      $name,
-    ]
-  );
-}
-
 1;

@@ -165,6 +165,45 @@ sub _fetch_something_by_Segmentation_label {
   my $segmentation = shift;
   my $label        = shift;
   
+  my $statistic = $self->_generic_fetch_something_by_Segmentation_label(
+    $the_thing,
+    $segmentation,
+    $label,
+  );
+
+  if (! defined $statistic) {
+    $statistic = Bio::EnsEMBL::Funcgen::SegmentationStatistic->new(
+      -statistic => $the_thing,
+      -value     => 'not defined',
+    );
+  }
+  if (@$statistic > 1) {
+    confess("Got more than one statistic for $the_thing, $segmentation, $label!");
+  }
+  return $statistic->[0];
+}
+
+sub _statistic_exists {
+  my $self = shift;
+  my $the_thing    = shift;
+  my $segmentation = shift;
+  my $label        = shift;
+  
+  my $statistic = $self->_generic_fetch_something_by_Segmentation_label(
+    $the_thing,
+    $segmentation,
+    $label,
+  );
+  my $statistic_exists = @$statistic > 0;
+  return $statistic;
+}
+
+sub _generic_fetch_something_by_Segmentation_label {
+  my $self = shift;
+  my $the_thing    = shift;
+  my $segmentation = shift;
+  my $label        = shift;
+  
   if (! defined $segmentation) {
     confess("Segmentation parameter is missing!");
   }
@@ -174,7 +213,7 @@ sub _fetch_something_by_Segmentation_label {
 
   my $statistic_name = $the_thing;
   
-  my $statistic = $self->fetch_single_object(
+  my $statistic = $self->fetch_all(
     'segmentation_id = ? and label = ? and statistic = ?',
     [ 
       $segmentation->dbID,
@@ -182,14 +221,6 @@ sub _fetch_something_by_Segmentation_label {
       $statistic_name,
     ]
   );
-
-  if (! defined $statistic) {
-    $statistic = Bio::EnsEMBL::Funcgen::SegmentationStatistic->new(
-      -statistic => $statistic_name,
-      -value     => 'not defined',
-    );
-  }
-  
   return $statistic;
 }
 

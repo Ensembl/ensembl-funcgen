@@ -66,19 +66,19 @@ sub new {
     $file,
     $file_type,
     $md5sum,
-    $segmentation_id
+    $segmentation
   )
     = rearrange([ @field ], @_);
 
-  $self->dbID        ($dbID);
-  $self->name        ($name);
-  $self->_analysis   ($analysis);
-  $self->_epigenome  ($epigenome);
+  $self->dbID              ($dbID);
+  $self->name              ($name);
+  $self->_analysis         ($analysis);
+  $self->_epigenome        ($epigenome);
   $self->_regulatory_build ($regulatory_build);
-  $self->file        ($file);
-  $self->file_type   ($file_type);
-  $self->md5sum      ($md5sum);
-  $self->segmentation_id ($segmentation_id);
+  $self->file              ($file);
+  $self->file_type         ($file_type);
+  $self->md5sum            ($md5sum);
+  $self->_segmentation     ($segmentation);
 
   return $self;
 }

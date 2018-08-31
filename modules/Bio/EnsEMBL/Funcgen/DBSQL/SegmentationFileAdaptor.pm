@@ -65,8 +65,9 @@ sub _columns {
 
 sub _default_where_clause {
   return 'sf.analysis_id = a.analysis_id'
-    . ' and da.table_name="segmentation_file" and da.table_id=segmentation_file_id'
-    ;
+     . ' and da.table_name="segmentation_file"'
+     . ' and da.table_id=segmentation_file_id'
+   ;
 }
 
 sub fetch_by_name {
@@ -121,26 +122,22 @@ sub _objs_from_sth {
   
   my @return_objects;
   ROW: while ( $sth->fetch() ) {
+  
+    my $segmentation     = $segmentation_adaptor     ->fetch_by_dbID($sth_fetched_sf_segmentation_id);
+    my $analysis         = $analysis_adaptor         ->fetch_by_dbID($sth_fetched_a_analysis_id);
+    my $epigenome        = $epigenome_adaptor        ->fetch_by_dbID($sth_fetched_sf_epigenome_id);
+    my $regulatory_build = $regulatory_build_adaptor ->fetch_by_dbID($sth_fetched_sf_regulatory_build_id);
+  
     my $segmentation_file = Bio::EnsEMBL::Funcgen::SegmentationFile->new(
-      -dbID            => $sth_fetched_dbID,
-      -name            => $sth_fetched_sf_name,
-      -file            => $sth_fetched_dr_path,
-      -file_type       => $sth_fetched_dr_file_type,
-      -segmentation_id => $sth_fetched_sf_segmentation_id,
+      -dbID             => $sth_fetched_dbID,
+      -name             => $sth_fetched_sf_name,
+      -file             => $sth_fetched_dr_path,
+      -file_type        => $sth_fetched_dr_file_type,
+      -segmentation     => $segmentation,
+      -analysis         => $analysis,
+      -epigenome        => $epigenome,
+      -regulatory_build => $regulatory_build
     );
-    
-    my $analysis = $analysis_adaptor->fetch_by_dbID($sth_fetched_a_analysis_id);
-    $segmentation_file->_analysis($analysis);
-
-    my $epigenome = $epigenome_adaptor->fetch_by_dbID($sth_fetched_sf_epigenome_id);
-    $segmentation_file->_epigenome($epigenome);
-
-    my $regulatory_build = $regulatory_build_adaptor->fetch_by_dbID($sth_fetched_sf_regulatory_build_id);
-    $segmentation_file->_regulatory_build($regulatory_build);
-
-    my $segmentation = $segmentation_adaptor->fetch_by_dbID($sth_fetched_sf_segmentation_id);
-    $segmentation_file->_segmentation($segmentation);
-
     push @return_objects, $segmentation_file
   }
   return \@return_objects;
@@ -150,7 +147,7 @@ sub store {
   my ($self, @segmentation_file) = @_;
 
   if (scalar(@segmentation_file) == 0) {
-    throw('Must call store with a list of crispr sites file objects');
+    throw('Must call store with a list of SegmentationFile objects');
   }
   foreach my $current_segmentation_file (@segmentation_file) {
     if( ! ref $current_segmentation_file || ! $current_segmentation_file->isa('Bio::EnsEMBL::Funcgen::SegmentationFile') ) {
@@ -186,12 +183,6 @@ sub store {
   foreach my $current_segmentation_file (@segmentation_file) {
 
     $current_segmentation_file->adaptor($self);
-
-    my $segmentation = $current_segmentation_file->get_Segmentation;
-    if (! defined $segmentation) {
-	use Carp;
-        confess("Segmentation has not been set!");
-    }
 
     $sth_store_segmentation_file->bind_param( 1, $current_segmentation_file->name,                      SQL_VARCHAR);
     $sth_store_segmentation_file->bind_param( 2, $current_segmentation_file->get_Analysis->dbID,        SQL_INTEGER);
