@@ -106,6 +106,7 @@ sub pipeline_analyses {
               query         => "select experiment.experiment_id from experiment left join peak_calling using (experiment_id) where peak_calling.experiment_id is null and experiment.is_control = 0",
               expected_size => '0'
             },
+            -failed_job_tolerance => 100,
           -flow_into => {
               MAIN => 'peak_calling_hc_done',
           },
