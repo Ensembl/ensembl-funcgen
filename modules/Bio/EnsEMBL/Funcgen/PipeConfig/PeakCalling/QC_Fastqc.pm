@@ -40,12 +40,18 @@ sub pipeline_analyses {
         {   -logic_name => 'start_fastqc',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into => { 
-              'MAIN->A' => 'seed_signal_experiments',
-              'A->MAIN' => 'fastqc_done',
+              'MAIN->A' => [ 'seed_signal_experiments', 'seed_control_experiments' ],
+              'A->MAIN' => [ 'fastqc_done' ],
             },
         },
         {   -logic_name => 'seed_signal_experiments',
-            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedAllExperimentNames',
+            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedAllSignalExperimentNames',
+            -flow_into   => {
+               2 => 'fastqc_job_factory',
+            },
+        },
+        {   -logic_name => 'seed_control_experiments',
+            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedAllControlsExperimentNames',
             -flow_into   => {
                2 => 'fastqc_job_factory',
             },
