@@ -89,13 +89,15 @@ sub run {
     }
   }
 
-   $self->dataflow_output_id(
-     {
-       'execution_plan_list' => \@signal_experiments_without_controls,
-       'species'             => $species,
-     }, 
-     BRANCH_SIGNALS_WITHOUT_CONTROLS
-   );
+  foreach my $execution_plan (@signal_experiments_without_controls) {
+    $self->dataflow_output_id(
+      {
+        'execution_plan' => $execution_plan,
+        'species'        => $species,
+      }, 
+      BRANCH_SIGNALS_WITHOUT_CONTROLS
+    );
+  }
 
   my @all_control_alignments = keys %found_control_alignments;
   
@@ -122,13 +124,13 @@ sub run {
       BRANCH_SIGNALS
     );  
     }
-    $self->dataflow_output_id(
-      {
-        'execution_plan_list' => $execution_plans_waiting_for_that_control,
-        'species'             => $species,
-      }, 
-      BRANCH_SIGNALS
-    );
+#     $self->dataflow_output_id(
+#       {
+#         'execution_plan_list' => $execution_plans_waiting_for_that_control,
+#         'species'             => $species,
+#       }, 
+#       BRANCH_SIGNALS
+#     );
   }
 }
 

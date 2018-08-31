@@ -56,19 +56,12 @@ sub pipeline_analyses {
             -flow_into   => {
                'A->2' => 'start_align_signals',
                '3->A' => 'start_align_controls',
-               4      => 'seed_jobs_from_list',
+               4      => 'start_align_signals',
             },
         },
         {
             -logic_name  => 'start_align_controls',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-        },
-
-        {   -logic_name  => 'seed_jobs_from_list',
-            -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedAllExecutionPlans',
-            -flow_into   => {
-               2 => 'start_align_signals',
-            },
         },
         {
             -logic_name  => 'start_align_signals',
