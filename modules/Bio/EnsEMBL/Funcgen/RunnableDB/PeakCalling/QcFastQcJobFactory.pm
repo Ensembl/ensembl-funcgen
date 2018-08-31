@@ -37,7 +37,6 @@ sub run {
     $self->throw("Couldn't find experiment $experiment_name!");
   }
   
-  #my $all_read_files = $read_file_adaptor->fetch_all;
   my $all_read_files = $read_file_adaptor->fetch_all_by_Experiment($experiment);
 
   my $funcgen_dbc = $read_file_adaptor->db->dbc;
