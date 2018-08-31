@@ -102,8 +102,10 @@ while (my $current_annotated_feature_id = <$in>) {
     confess(
       "Unable to serialise feature!"                    . "\n"
       . "    - dbid: "    . $annotated_feature->dbID    . "\n"
-      . "    - SO_term: " . $annotated_feature->SO_term . "\n"
+      . "    - SO_term: " . $annotated_feature->feature_so_acc . "\n"
+      . "The peak is:\n"
       . Dumper($annotated_feature)                      . "\n"
+      . "The summary as a has is:\n"
       . Dumper($annotated_feature->summary_as_hash)     . "\n"
       . "The error was:" . $@
     );

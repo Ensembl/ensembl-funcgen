@@ -74,7 +74,10 @@ use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
 use base qw( Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable );
 
-use constant SO_ACC => 'SO:0005836';
+sub feature_so_acc {
+  my $self = shift;
+  return $self->get_FeatureType->so_accession;
+}
 
 =head2 new
 
@@ -187,6 +190,11 @@ sub display_label {
   }
 
   return $self->{display_label};
+}
+
+sub get_FeatureType {
+  my $self = shift;
+  return $self->{feature_type};
 }
 
 sub feature_type {

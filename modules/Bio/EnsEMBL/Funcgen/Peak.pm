@@ -280,7 +280,7 @@ sub seq_region_name {
   return $slice->seq_region_name;
 }
 
-sub SO_term {
+sub feature_so_acc {
   my $self = shift;
   return $self->fetch_PeakCalling->fetch_FeatureType->so_accession;
 }

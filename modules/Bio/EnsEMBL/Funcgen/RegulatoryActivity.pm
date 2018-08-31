@@ -225,7 +225,7 @@ sub get_RegulatoryEvidence_by_type {
   return \@evidence_by_type;
 }
 
-=head2 SO_term
+=head2 feature_so_acc
 
   Example       : print $regulatory_activity->SO_term;
   Description   : Returns the sequence ontology term for this type of
@@ -235,10 +235,10 @@ sub get_RegulatoryEvidence_by_type {
 
 =cut
 
-sub SO_term {
-  my ($self) = @_;
+sub feature_so_acc {
+  my $self = shift;
 
-  return $self->get_RegulatoryFeature->feature_type->so_accession;
+  return $self->get_RegulatoryFeature->get_FeatureType->so_accession;
 }
 
 sub summary_as_hash {
