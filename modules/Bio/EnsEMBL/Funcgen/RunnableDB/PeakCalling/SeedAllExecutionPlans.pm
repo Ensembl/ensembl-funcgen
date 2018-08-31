@@ -10,8 +10,8 @@ use constant {
 
 sub run {
 
-  my $self                = shift;
-  my $species             = $self->param_required('species');
+  my $self    = shift;
+  my $species = $self->param_required('species');
 
   my $execution_plan_adaptor = Bio::EnsEMBL::Registry
       ->get_adaptor(
