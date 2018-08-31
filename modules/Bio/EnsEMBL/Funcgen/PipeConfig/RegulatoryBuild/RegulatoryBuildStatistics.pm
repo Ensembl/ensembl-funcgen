@@ -61,7 +61,7 @@ sub pipeline_analyses {
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
           -parameters => {
               sql     => [
-                "truncate regulatory_build_statistic;",
+                'truncate regulatory_build_statistic;',
               ],
               db_conn => 'funcgen:#species#',
           },
@@ -84,7 +84,7 @@ sub pipeline_analyses {
                   compute_enhancer_coverage_bedtools.pl \
                     --species  #species# \
                     --registry #reg_conf# \
-                    --tempdir #tempdir_regulatory_build_statistics#/#species#
+                    --tempdir  #tempdir_regulatory_build_statistics#/#species#
                 )
           },
 
