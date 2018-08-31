@@ -89,7 +89,7 @@ sub generate_parallel_alignment_analyses {
         {   -logic_name  => $surround->('align'),
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::AlignFastqFile',
             -priority   => 10,
-            -rc_name    => '32Gb_job',
+            -rc_name    => '32Gb_job_2h',
         },
         {   -logic_name  => $surround->('merge_chunks'),
             -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::MergeBamFiles',
