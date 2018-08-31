@@ -61,6 +61,19 @@ sub run {
   my $signal_alignment  = $alignment_adaptor    ->fetch_by_name($signal_alignment_name);
   my $experiment        = $experiment_adaptor   ->fetch_by_name($experiment_name);
   
+  if (! defined $analysis) {
+    die("Can't find analysis with name $logic_name!");
+  }
+  if (! defined $feature_type) {
+    die("Can't find feature type with name $feature_type_name!");
+  }
+  if (! defined $signal_alignment) {
+    die("Can't find alignment with name $signal_alignment_name!");
+  }
+  if (! defined $experiment) {
+    die("Can't find experiment with name $experiment_name!");
+  }
+  
   my $control_alignment_id;
   if ($control_alignment_name) {
     my $control_alignment = $alignment_adaptor->fetch_by_name($control_alignment_name);
