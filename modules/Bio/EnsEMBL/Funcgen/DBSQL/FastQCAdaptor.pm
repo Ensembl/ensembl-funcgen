@@ -48,11 +48,17 @@ sub _tables {
 sub fetch_by_ReadFile {
   my $self      = shift;
   my $read_file = shift;
+  return $self->fetch_by_read_file_id($read_file->dbID);
+}
+
+sub fetch_by_read_file_id {
+  my $self         = shift;
+  my $read_file_id = shift;
   
   return $self->fetch_single_object(
     'read_file_id = ?', 
     [ 
-      $read_file->dbID,
+      $read_file_id,
     ]
   );
 }
