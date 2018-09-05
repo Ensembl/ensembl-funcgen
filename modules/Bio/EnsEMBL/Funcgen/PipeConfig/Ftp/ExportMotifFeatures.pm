@@ -35,6 +35,7 @@ sub pipeline_analyses {
                 . $ftp_layout_configuration->{motif_features_dir} . '/' . $ftp_layout_configuration->{motif_features_file_base_name} 
                 . ' --registry #reg_conf# --species #species#',
             },
+            -failed_job_tolerance => 100,
             -flow_into   => {
                MAIN => 'gzip_motif_features'
             },
