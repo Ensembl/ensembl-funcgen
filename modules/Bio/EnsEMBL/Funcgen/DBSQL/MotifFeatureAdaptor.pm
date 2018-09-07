@@ -278,19 +278,19 @@ sub fetch_all_by_Slice_FeatureSets {
   return $mfs;
 }
 
-=head2 _fetch_overlapping_Peak
+=head2 _fetch_all_overlapping_Peaks
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::MotifFeature
   Example    : None
-  Description: Fetches the overlapping Peak for a particular MotifFeature
-  Returntype : Bio::EnsEMBL::Funcgen::Peak object
+  Description: Fetches all overlapping Peaks for a particular MotifFeature
+  Returntype : Arrayref Bio::EnsEMBL::Funcgen::Peak objects
   Exceptions : None
   Caller     : Internal
   Status     : At Risk
 
 =cut
 
-sub _fetch_overlapping_Peak {
+sub _fetch_all_overlapping_Peaks {
     my ( $self, $motif_feature ) = @_;
 
     if (! defined $motif_feature){
@@ -304,24 +304,64 @@ sub _fetch_overlapping_Peak {
 
     $sth->execute( $motif_feature->dbID() );
 
-    my @peak_ids;
+    my @peaks;
+
+    my $peak_adaptor = $self->db->get_adaptor('Peak');
 
     while ( my @row = $sth->fetchrow_array ) {
-        push @peak_ids, $row[0];
+        push @peaks, $peak_adaptor->fetch_by_dbID($row[0]);
     }
 
-    my $peak_adaptor
-        = $self->db->get_adaptor('Peak');
+    return \@peaks;
+}
+
+=head2 _fetch_overlapping_Peak_by_Epigenome
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::MotifFeature
+  Example    : None
+  Description: Fetches the overlapping Peak for a particular 
+             : MotifFeature and Epigenome
+  Returntype : Bio::EnsEMBL::Funcgen::Peak object
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub _fetch_overlapping_Peak_by_Epigenome {
+    my ( $self, $motif_feature, $epigenome ) = @_;
+
+    if (! defined $motif_feature){
+      throw('Must provide a MotifFeature parameter');
+    }
+
+    if (! defined $epigenome){
+      throw('Must provide an Epigenome parameter');
+    }
+
+    my $sth = $self->prepare( "
+      SELECT peak_id FROM motif_feature_peak
+      JOIN peak USING (peak_id)
+      JOIN peak_calling USING (peak_calling_id)
+      WHERE motif_feature_id=? AND epigenome_id=?
+      " );
+
+    $sth->execute( $motif_feature->dbID(), $epigenome->dbID() );
 
     my @peaks;
 
-    for my $id (@peak_ids) {
-        push @peaks, $peak_adaptor->fetch_by_dbID($id);
+    my $peak_adaptor = $self->db->get_adaptor('Peak');
+
+    while ( my @row = $sth->fetchrow_array ) {
+        push @peaks, $peak_adaptor->fetch_by_dbID($row[0]);
+    }
+
+    if(scalar @peaks > 1){
+      throw('More than one Peaks found. There should be only one!');
     }
 
     return $peaks[0];
 }
-
 
 =head2 _final_clause
 

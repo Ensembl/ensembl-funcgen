@@ -116,7 +116,7 @@ sub new {
 
   assert_ref($self->{binding_matrix}, 'Bio::EnsEMBL::Funcgen::BindingMatrix');
 
-  $self->{overlapping_Peak} = undef;
+  $self->{overlapping_Peaks} = undef;
   $self->{overlapping_RegulatoryFeature} = undef;
 
   return $self;
@@ -166,25 +166,48 @@ sub binding_matrix{ return shift->{binding_matrix}; }
 
 sub score { return shift->{score}; }
 
-=head2 fetch_overlapping_Peak
+=head2 fetch_all_overlapping_Peaks
 
-  Example    : my $peak = $motif_feature->fetch_overlapping_Peak;
-  Description: Fetches the overlapping Peak for a particular MotifFeature
-  Returntype : Bio::EnsEMBL::Funcgen::Peak object
+  Example    : my $peaks = $motif_feature->fetch_all_overlapping_Peaks;
+  Description: Fetches all overlapping Peaks
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::Peak objects
   Exceptions : None
   Caller     : Internal
   Status     : At Risk
 
 =cut
 
-sub fetch_overlapping_Peak {
+sub fetch_all_overlapping_Peaks {
     my $self = shift;
-    
-    if (! $self->{overlapping_Peak}) {
-      $self->{overlapping_Peak} = $self->adaptor()->_fetch_overlapping_Peak( $self );
+
+    if ( !$self->{overlapping_Peaks} ) {
+        $self->{overlapping_Peaks} =
+          $self->adaptor()->_fetch_all_overlapping_Peaks($self);
     }
 
-    return $self->{overlapping_Peak};
+    return $self->{overlapping_Peaks};
+}
+
+
+=head2 fetch_overlapping_Peak_by_Epigenome
+  
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Epigenome object
+  Example    : my $peak = 
+             :    $motif_feature->fetch_overlapping_Peak_by_Epigenome($epigenome);
+  Description: Fetches the overlapping Peak for a particular Epigenome
+  Returntype : Bio::EnsEMBL::Funcgen::Peak
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub fetch_overlapping_Peak_by_Epigenome {
+    my ($self, $epigenome) = @_;
+    
+    my $peak = $self->adaptor->_fetch_overlapping_Peak_by_Epigenome($self, $epigenome);
+    
+    return $peak;
 }
 
 =head2 is_position_informative
