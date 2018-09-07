@@ -72,7 +72,7 @@ use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw );
 
 use base qw(Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable);
-
+use constant SO_ACC => 'SO:0000235';
 
 =head2 new
 
