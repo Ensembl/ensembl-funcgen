@@ -360,6 +360,33 @@ sub get_all_associated_TranscriptionFactorComplexes {
     return $self->{associated_transcription_factor_complexes};
 }
 
+=head2 get_TranscriptionFactorComplex_names
+
+  Example    : my $tfc_names =
+             : $binding_matrix->get_TranscriptionFactorComplex_names;
+  Description: Returns names of all TranscriptionFactorComplexes that are
+             : associated with this BindingMatrix
+  Returntype : Arrayref of strings
+  Exceptions : None
+
+=cut
+
+sub get_TranscriptionFactorComplex_names {
+
+    my ($self) = @_;
+    my @names;
+
+    my $transcription_factor_complexes =
+      $self->get_all_associated_TranscriptionFactorComplexes;
+    for my $transcription_factor_complex ( @{$transcription_factor_complexes} )
+    {
+        push @names, $transcription_factor_complex->display_name();
+    }
+
+    return \@names;
+}
+
+
 sub _min_max_sequence_similarity_score {
     my ($self) = @_;
     if (! $self->{min_sequence_similarity_score}){
