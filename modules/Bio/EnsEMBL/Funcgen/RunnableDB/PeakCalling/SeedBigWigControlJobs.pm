@@ -24,6 +24,8 @@ sub run {
   lock_execution_plan($plan_expanded);
   lock_execution_plan($plan);
   
+  print Dumper($plan_expanded);
+  
   my $signal_plans = $plan->{signal};
   
   my @signal_names = keys %$signal_plans;
