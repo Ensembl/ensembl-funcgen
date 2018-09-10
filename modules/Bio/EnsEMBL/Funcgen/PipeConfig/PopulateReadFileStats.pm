@@ -62,7 +62,7 @@ sub pipeline_analyses {
       },
       {   -logic_name => 'populate_read_file_stats',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-          -analysis_capacity => 50,
+          #-analysis_capacity => 50,
           -parameters => {
             cmd => qq( compute_read_file_statistics.pl )
               . qq( --species         #species#        )
