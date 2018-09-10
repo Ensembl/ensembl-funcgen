@@ -148,7 +148,8 @@ sub _bulk_export_to_bed_by_PeakCalling {
 
   my $self = shift;
   my $peak_calling = shift;
-  my $bed_fh       = shift;
+  #my $bed_fh       = shift;
+  my @bed_fh       = @_;
   
   if (! defined $peak_calling) {
     throw("Peak calling parameter was undefined!");
@@ -196,26 +197,10 @@ sub _bulk_export_to_bed_by_PeakCalling {
           $row->[5],
         );
         
-        #use Data::Dumper;
-        $bed_fh->print($bed_line . "\n");
+        map { $_->print($bed_line . "\n"); } @bed_fh;
         return;
       },
   );
 }
 
 1;
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
