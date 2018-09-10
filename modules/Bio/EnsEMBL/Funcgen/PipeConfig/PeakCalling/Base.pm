@@ -82,14 +82,22 @@ sub generate_parallel_alignment_analyses {
               tempdir => '#tempdir_peak_calling#/#species#/alignments'
             },
             -flow_into   => {
-               '2->A' => $surround->('align'),
+               '2->A' => $surround->('align_quick'),
                'A->3' => $surround->('merge_chunks'),
             },
         },
-        {   -logic_name  => $surround->('align'),
+        {   -logic_name  => $surround->('align_quick'),
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::AlignFastqFile',
             -priority   => 10,
             -rc_name    => '32Gb_job_2h',
+            -flow_into  => {
+              RUNLIMIT => $surround->('align_slow'),
+            }
+        },
+        {   -logic_name  => $surround->('align_slow'),
+            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::AlignFastqFile',
+            -priority   => 10,
+            -rc_name    => '32Gb_job_8h',
         },
         {   -logic_name  => $surround->('merge_chunks'),
             -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::MergeBamFiles',
