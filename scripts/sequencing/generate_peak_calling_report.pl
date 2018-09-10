@@ -33,16 +33,13 @@ generate_peak_calling_report.pl \
 
 
 generate_peak_calling_report.pl \
-    --species          mus_musculus \
-    --registry         /homes/mnuhn/work_dir_ersa/lib/ensembl-funcgen/registry.pm \
-    --output_directory ./reports/
-
+    --species          homo_sapiens \
+    --registry         /homes/mnuhn/work_dir_regbuild_testrun/lib/ensembl-funcgen/registry.with_previous_version.human_regbuild_testdb7.pm \
+    --output_directory /homes/mnuhn/public_html/regulatory_build_stats/rb_human_merged_old_and_new/homo_sapiens/
 
 =cut
 
 use strict;
-
-
 use Getopt::Long;
 
 my $species;
@@ -74,8 +71,6 @@ my $feature_type_adaptor = $mouse_funcgen_dba->get_FeatureTypeAdaptor;
 my $peak_calling_adaptor = $mouse_funcgen_dba->get_PeakCallingAdaptor;
 my $idr_adaptor          = $mouse_funcgen_dba->get_IdrAdaptor;
 
-my $peak_calling_statistics = $peak_calling_statistic_adaptor->fetch_all;
-
 my $file = __FILE__;
 use File::Basename qw( dirname basename );
 my $description_template = dirname($file) . '/../../templates/peak_calling/report.html';
@@ -91,8 +86,6 @@ use Template;
 my $tt = Template->new( ABSOLUTE => 1, RELATIVE => 1);
 
 my $output;
-
-my $peak_calling_statistics_sorted = [ sort { $a->total_length <=> $b->total_length } @$peak_calling_statistics ];
 
 my $genome_container = Bio::EnsEMBL::Registry->get_adaptor( $species, 'core', 'GenomeContainer' );
 my $genome_size_in_bp = $genome_container->get_ref_length;
@@ -141,7 +134,8 @@ $tt->process(
         signal_experiments  => \@signal_experiments,
         control_experiments => \@control_experiments,
 
-        peak_calling_statistics => $peak_calling_statistics_sorted,
+ #       peak_calling_statistics => $peak_calling_statistics_sorted,
+        peak_calling_statistic_adaptor => $peak_calling_statistic_adaptor,
         peak_calling_adaptor    => $peak_calling_adaptor,
         idr_adaptor             => $idr_adaptor,
         dbc => $dbc,
