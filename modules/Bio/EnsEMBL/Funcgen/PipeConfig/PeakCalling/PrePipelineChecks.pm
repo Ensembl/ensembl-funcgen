@@ -57,8 +57,10 @@ sub pipeline_analyses {
                       "Transcription Factor",
                       "Polymerase"
                     )
-                    and experiment.name like "%Karpas%"
                 ',
+#                  and (experiment.name like "K562%")
+#                    and (experiment.name like "Lung%" or experiment.name like "HepG2%")
+
             },
             -flow_into => {
                2 => { 'create_execution_plan' => INPUT_PLUS },
