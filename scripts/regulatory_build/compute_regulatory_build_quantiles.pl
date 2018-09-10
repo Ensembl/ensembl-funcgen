@@ -36,6 +36,10 @@ limitations under the License.
 
   perl scripts/regulatory_build/compute_regulatory_build_quantiles.pl --registry /homes/mnuhn/work_dir_regbuild_testrun/lib/ensembl-funcgen/registry.with_previous_version.human_regbuild_testdb7.pm --species homo_sapiens --tempdir foobar
 
+  perl scripts/regulatory_build/compute_regulatory_build_quantiles.pl --registry /homes/mnuhn/work_dir_regbuild_testrun/lib/ensembl-funcgen/registry.with_previous_version.human_regbuild_testdb7.pm --species homo_sapiens --tempdir foobar
+  
+  perl scripts/regulatory_build/compute_regulatory_build_quantiles.pl --registry /homes/mnuhn/work_dir_regbuild_testrun/lib/ensembl-funcgen/registry.with_previous_version.mouse.pm --species mus_musculus_previous_version --tempdir foobar
+
 =cut
 
 use strict;
