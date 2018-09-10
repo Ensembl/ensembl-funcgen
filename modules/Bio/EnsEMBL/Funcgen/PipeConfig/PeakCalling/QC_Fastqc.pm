@@ -40,18 +40,18 @@ sub pipeline_analyses {
         {   -logic_name => 'start_fastqc',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into => { 
-              'MAIN->A' => [ 'seed_signal_experiments', 'seed_control_experiments' ],
+              'MAIN->A' => [ 'fastqc_seed_signal_experiments', 'fastqc_seed_control_experiments' ],
               'A->MAIN' => [ 'fastqc_done' ],
             },
         },
-        {   -logic_name => 'seed_signal_experiments',
+        {   -logic_name => 'fastqc_seed_signal_experiments',
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedAllSignalExperimentNames',
             -flow_into   => {
                2 => 'fastqc_job_factory',
             },
         },
-        {   -logic_name => 'seed_control_experiments',
-            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedAllControlsExperimentNames',
+        {   -logic_name => 'fastqc_seed_control_experiments',
+            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedAllControlExperimentNames',
             -flow_into   => {
                2 => 'fastqc_job_factory',
             },
@@ -82,20 +82,13 @@ sub pipeline_analyses {
             -analysis_capacity => 1,
             -parameters => {
                 use_bash_pipefail => 1,
-                
-                cmd => qq(load_fastqc_summary_file.pl       --read_file_id #read_file_id#         --summary_file #fastqc_summary_file#  --work_dir #fastqc_tempdir# --registry #reg_conf# --species #species#),
-                
-#                 cmd => qq(load_fastqc_summary_file.pl      )
-#                 . qq( --read_file_id #read_file_id#        )
-#                 . qq( --summary_file #fastqc_summary_file# )
-#                 . qq( --work_dir #fastqc_tempdir#                 )
-#                 . qq( | mysql )
-#                 . qq( --host #tracking_db_host#  )
-#                 . qq( --port #tracking_db_port#  )
-#                 . qq( --user #tracking_db_user#  )
-#                 . qq( -p#tracking_db_pass#       )
-#                 . qq( #tracking_db_name#         ),
-
+                cmd => 
+                    q( load_fastqc_summary_file.pl             )
+                  . q(   --registry      #reg_conf#            )
+                  . q(   --species       #species#             )
+                  . q(   --read_file_id  #read_file_id#        )
+                  . q(   --summary_file  #fastqc_summary_file# )
+                  . q(   --work_dir      #fastqc_tempdir#      )
             },
         },
         {   -logic_name => 'fastqc_done',
