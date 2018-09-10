@@ -111,6 +111,34 @@ $tt->process(
             my $number = shift;
             return sprintf("%.2f", $number);
         },
+        emission_to_rgb => sub {
+            my $number = shift;
+            if ($number < 0.1) {
+                return '#FFFFFF';
+            }
+            if ($number < 0.2) {
+                return '#DDDDFF';
+            }
+            if ($number < 0.3) {
+                return '#BBBBFF';
+            }
+            if ($number < 0.4) {
+                return '#AAAAFF';
+            }
+            if ($number < 0.5) {
+                return '#9999FF';
+            }
+            if ($number < 0.6) {
+                return '#8888FF';
+            }
+            if ($number < 0.7) {
+                return '#7777FF';
+            }
+            if ($number < 0.8) {
+                return '#6666FF';
+            }
+            return '#5555FF';
+        },
         format_number => sub {
           my $number = shift;
           if (! defined $number) {
