@@ -52,7 +52,7 @@ sub pipeline_analyses {
       },
       {   -logic_name => 'check_paired_end_read_files',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-          -analysis_capacity => 50,
+          #-analysis_capacity => 50,
           -parameters => {
             cmd => qq( check_paired_end_read_files.pl         )
               . qq( --species           #species#             )
