@@ -48,15 +48,15 @@ sub pipeline_analyses {
         {   -logic_name  => 'job_factory_regulatory_activities',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
             -parameters  => { 
-	      db_conn    => '#url#',
-	      inputquery => 'select epigenome.name as epigenome_name, epigenome.production_name as epigenome_production_name, analysis.logic_name as analysis_logic_name from regulatory_build join regulatory_build_epigenome using (regulatory_build_id) join epigenome using (epigenome_id) join analysis using (analysis_id) where regulatory_build.is_current=1',
+                db_conn    => '#url#',
+                inputquery => 'select epigenome.name as epigenome_name, epigenome.production_name as epigenome_production_name, analysis.logic_name as analysis_logic_name from regulatory_build join regulatory_build_epigenome using (regulatory_build_id) join epigenome using (epigenome_id) join analysis using (analysis_id) where regulatory_build.is_current=1',
             },
             -flow_into   => {
                2 => { 'export_regulatory_activities', INPUT_PLUS() },
             },
         },
         {   -logic_name  => 'export_regulatory_activities',
-	    -analysis_capacity => 20,
+            -analysis_capacity => 20,
             -rc_name    => '4Gb_job',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
