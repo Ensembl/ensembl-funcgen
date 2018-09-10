@@ -57,6 +57,7 @@ sub pipeline_analyses {
         },
         {   -logic_name  => 'export_regulatory_activities',
 	    -analysis_capacity => 20,
+            -rc_name    => '4Gb_job',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
                 cmd => 'export_regulatory_features.pl --epigenome_name "#epigenome_name#" --output_file '
