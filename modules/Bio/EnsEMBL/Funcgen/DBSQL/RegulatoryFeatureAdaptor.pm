@@ -695,6 +695,46 @@ sub _fetch_overlapping_MotifFeatures {
     return \@motif_features;
 }
 
+=head2 _fetch_overlapping_MotifFeatures_with_matching_Peak
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::RegulatoryFeature
+  Example    : None
+  Description: Fetches a list of MotifFeature objects that overlap
+               with the RegulatoryFeature object and have a matching Peak
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::MotifFeature objects
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub _fetch_overlapping_MotifFeatures_with_matching_Peak {
+    my ( $self, $regulatory_feature ) = @_;
+
+    if (! defined $regulatory_feature){
+      throw('Must provide a regulatory_feature parameter');
+    }
+
+    my $sth = $self->prepare( "
+      SELECT DISTINCT motif_feature_id FROM 
+      motif_feature_regulatory_feature
+      WHERE regulatory_feature_id=?
+      AND has_matching_Peak=1
+      " );
+
+    $sth->execute( $regulatory_feature->dbID() );
+
+    my $motif_feature_adaptor
+        = $self->db->get_adaptor('MotifFeature');
+    my @motif_features;
+
+    while ( my @row = $sth->fetchrow_array ) {
+        push @motif_features, $motif_feature_adaptor->fetch_by_dbID($row[0]);
+    }
+
+    return \@motif_features;
+}
+
 =head2 fetch_all_by_Slice
 
   Arg [1]    : Bio::EnsEMBL::Slice

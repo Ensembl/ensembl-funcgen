@@ -372,6 +372,28 @@ sub fetch_all_MotifFeatures_by_Epigenome {
     return $motif_features;
 }
 
+=head2 fetch_all_MotifFeatures_with_matching_Peak
+  Example    : my $overlapping_motif_features = 
+                $rf->fetch_all_MotifFeatures_with_matching_Peak;
+  Description: Returns all MotifFeatures that overlap with a RegulatoryFeature
+               and have a matching Peak
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::MotifFeature objects
+  Exceptions : none
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_MotifFeatures_with_matching_Peak {
+    my $self = shift;
+
+    my $motif_features
+        = $self->adaptor()->_fetch_overlapping_MotifFeatures_with_matching_Peak( $self );
+
+    return $motif_features;
+}
+
+
 sub _get_underlying_structure_motifs_by_epigenome {
   my $self = shift;
   my $epigenome = shift;
