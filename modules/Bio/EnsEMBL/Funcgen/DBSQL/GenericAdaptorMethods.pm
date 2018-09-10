@@ -288,10 +288,20 @@ sub count_all {
 
 sub fetch_single_object {
     my $self = shift;
-    my $result = $self->fetch_all(@_);
+    my $constraint = shift;
+    my $parameters = shift;
+
+    my $result = $self->fetch_all($constraint, $parameters, @_);
     
-    if (@$result != 1) {
-        throw("Expected one result, but got " . scalar @$result);
+    if (@$result == 0) {
+      return;
+    }
+    if (@$result > 1) {
+      throw(
+        "Expected one result, but got " . scalar @$result . " "
+        . "for the constraint:\n\n\t" . $constraint . "\n\n"
+        . "and parameters:\n\n\t" . Dumper($parameters) . "\n"
+      );
     }
     return $result->[0];
 }
@@ -306,7 +316,7 @@ sub _generate_sql {
     my $input_column_mapping    = $self->input_column_mapping;
 
     my $sql = 'SELECT ' . join(', ', map { $input_column_mapping->{$_} // "$table_alias.$_" } keys %{$self->column_set}) . " FROM $table_name $table_alias";
-
+    
     if($constraint) {
         # in case $constraint contains any kind of JOIN (regular, LEFT, RIGHT, etc) do not put WHERE in front:
         $sql .= (($constraint=~/\bJOIN\b/ or $constraint=~/^LIMIT|ORDER|GROUP/) ? ' ' : ' WHERE ') . $constraint;
@@ -352,6 +362,7 @@ sub fetch_all {
     foreach my $current_object (@$result_list_ref) {
       $self->_load_dependencies($current_object);
     }
+    
     return $result_list_ref;
 }
 
@@ -506,6 +517,7 @@ sub store {
 
 #         warn "STORE: $sql\n";
 #         warn "STORE: ". join(',', @$values_being_stored) ."\n";
+
         # using $return_code in boolean context allows to skip the
         # value '0E0' ('no rows affected') that Perl treats as zero
         # but regards as true:
