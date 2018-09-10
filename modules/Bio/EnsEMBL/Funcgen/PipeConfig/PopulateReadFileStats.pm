@@ -73,10 +73,11 @@ sub pipeline_analyses {
       {   -logic_name => 'generate_read_file_report',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters => {
-            cmd => qq( generate_read_file_report.pl     )
-              . qq( --species             #species#     )
-              . qq( --registry            #reg_conf#    )
-              . qq( --output_directory    #reports_dir# )
+            cmd => 
+                qq( generate_read_file_report.pl                 )
+              . qq(   --species          #species#               )
+              . qq(   --registry         #reg_conf#              )
+              . qq(   --output_directory #reports_dir#/#species# )
           },
       },
     ]
