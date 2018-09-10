@@ -49,7 +49,15 @@ sub fetch_by_path {
   my $self = shift;
   my $path = shift;
   
-  return $self->fetch_single_object('path = ?', [ $path ]);
+  my $path = $self->fetch_all('path = ?', [ $path ]);
+  
+  if (@$path == 0) {
+    return;
+  }
+  if (@$path > 1) {
+    throw("Found more than one data file with path $path!");
+  }
+  return $path->[0];
 }
 
 1;
