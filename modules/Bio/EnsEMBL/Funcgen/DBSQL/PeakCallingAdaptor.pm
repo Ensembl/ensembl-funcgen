@@ -91,6 +91,14 @@ sub _fetch_all_by_Epigenome_ExperimentalGroup {
     return \@result;
 }
 
+sub fetch_all_by_FeatureType {
+    my $self       = shift;
+    my $feature_type = shift;
+    
+    my $constraint = 'feature_type_id  = ' . $feature_type->dbID;
+    return $self->fetch_all($constraint);
+}
+
 sub fetch_by_Experiment {
     my $self       = shift;
     my $experiment = shift;

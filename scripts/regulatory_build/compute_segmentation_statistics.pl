@@ -27,9 +27,17 @@ limitations under the License.
 
 =head1 NAME
 
-  compute_segmentation_statistics.pl \
+  bsub -q production-rh7 -M8000  -R"select[mem>8000]  rusage[mem=8000]" compute_segmentation_statistics.pl \
     --registry /homes/mnuhn/work_dir_regbuild_testrun/lib/ensembl-funcgen/registry.with_previous_version.human_regbuild_testdb7.pm \
     --species homo_sapiens
+  
+  bsub -q production-rh7 -M8000  -R"select[mem>8000]  rusage[mem=8000]" compute_basic_segmentation_statistics.pl \
+    --registry /homes/mnuhn/work_dir_regbuild_testrun/lib/ensembl-funcgen/registry.with_previous_version.human_regbuild_testdb7.pm \
+    --species homo_sapiens
+
+  compute_segmentation_statistics.pl \
+    --registry /homes/mnuhn/work_dir_regbuild_testrun/lib/ensembl-funcgen/registry.with_previous_version.mouse.pm \
+    --species mus_musculus
 
 rm -rf /hps/nobackup2/production/ensembl/mnuhn/segmentation_files_while_maintenance_is_ongoing/segmentation_statistics ; compute_segmentation_statistics.pl     --registry /homes/mnuhn/work_dir_regbuild_testrun/lib/ensembl-funcgen/registry.with_previous_version.human_regbuild_testdb7.pm     --species homo_sapiens     --db_file_path /hps/nobackup2/production/ensembl/mnuhn/segmentation_files_while_maintenance_is_ongoing/dbfiles     --tempdir /hps/nobackup2/production/ensembl/mnuhn/segmentation_files_while_maintenance_is_ongoing/segmentation_statistics
 
@@ -77,6 +85,97 @@ my @segmentation_assignments = qw(
   tss
   weak
 );
+
+my $sql = qq(
+    select 
+        state,
+        count(distinct segmentation_feature_id) as num_segmentation_features,
+        avg(length)                             as average_length,
+        min(length)                             as min_length,
+        max(length)                             as max_length
+    from 
+        segmentation 
+        join segmentation_feature using (segmentation_id)
+    where
+        assignment          = ?
+        and segmentation_id = ?
+    group by
+        state
+);
+my $sth 
+    = $funcgen_adaptor
+        ->dbc
+        ->prepare($sql);
+
+$logger->info("Computing state specific statistics" . "\n");
+
+foreach my $current_segmentation (@$all_segmentations) {
+
+    $logger->info(
+        "Computing state specific statistics for " 
+        . $current_segmentation->name
+        . "\n"
+    );
+
+    foreach my $assignment (@segmentation_assignments) {
+    
+        $logger->info("     state " . $assignment . "\n");
+
+        $sth->execute(
+            $assignment,
+            $current_segmentation->dbID
+        );
+        my $x = $sth->fetchall_hashref('state');
+        my @states_with_same_label = keys %$x;
+        
+        foreach my $state (@states_with_same_label) {
+        
+            my $state_statistics = $x->{$state};
+        
+            my $segmentation_name         = $state_statistics->{segmentation_name};
+            my $num_segmentation_features = $state_statistics->{num_segmentation_features};
+            my $average_lengths           = $state_statistics->{average_length};
+            my $min_length                = $state_statistics->{min_length};
+            my $max_length                = $state_statistics->{max_length};
+            
+            my @segmentation_statistics = (
+                Bio::EnsEMBL::Funcgen::SegmentationStatistic->new(
+                    -segmentation_id => $current_segmentation->dbID,
+                    -state           => $state,
+                    -statistic       => 'average_length',
+                    -value           => $average_lengths,
+                    -label           => $assignment,
+                ),
+                Bio::EnsEMBL::Funcgen::SegmentationStatistic->new(
+                    -segmentation_id => $current_segmentation->dbID,
+                    -state           => $state,
+                    -statistic       => 'num_segmentation_features',
+                    -value           => $num_segmentation_features,
+                    -label           => $assignment,
+                ),
+                Bio::EnsEMBL::Funcgen::SegmentationStatistic->new(
+                    -segmentation_id => $current_segmentation->dbID,
+                    -state           => $state,
+                    -statistic       => 'min_length',
+                    -value           => $min_length,
+                    -label           => $assignment,
+                ),
+                Bio::EnsEMBL::Funcgen::SegmentationStatistic->new(
+                    -segmentation_id => $current_segmentation->dbID,
+                    -state           => $state,
+                    -statistic       => 'max_length',
+                    -value           => $max_length,
+                    -label           => $assignment,
+                ),
+            );
+            $segmentation_statistic_adaptor->_delete_possibly_existing_statistics(\@segmentation_statistics);
+            $segmentation_statistic_adaptor->store(\@segmentation_statistics);
+        }
+    }
+}
+
+$logger->info("Done computing state specific statistics." . "\n");
+$logger->info("Computing overall statistics");
 
 foreach my $assignment (@segmentation_assignments) {
     $logger->info("Computing overall statistics for $assignment");

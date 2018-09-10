@@ -38,7 +38,9 @@ $(document).ready(function() {
         <th>segmentation</th>
         <th>assignment </th>
         <th>average length</th>
-        <th>num states</th>
+        <th>min length</th>
+        <th>max length</th>
+        <th>num segmentation features</th>
         <th>CTCF    </th>
         <th>DNase1  </th>
         <th>H3K27ac </th>
@@ -66,9 +68,9 @@ $(document).ready(function() {
       [% 
         format_number(
           segmentation_statistic_adaptor
-            .fetch_average_length_by_Segmentation_label(
-              segmentation, 
-              assignment
+            .fetch_average_length_by_Segmentation_state(
+              segmentation,
+              segmentation_state_emission.state
             ).value
           )
       %]
@@ -77,23 +79,45 @@ $(document).ready(function() {
       [% 
         format_number( 
           segmentation_statistic_adaptor
-            .fetch_num_states_by_Segmentation_label(
+            .fetch_min_length_by_Segmentation_state(
               segmentation, 
-              assignment
+              segmentation_state_emission.state
             ).value
           )
       %]
     </td>
-    <td>[% round_num( segmentation_state_emission.CTCF     ) %]</td>
-    <td>[% round_num( segmentation_state_emission.DNase1   ) %]</td>
-    <td>[% round_num( segmentation_state_emission.H3K27ac  ) %]</td>
-    <td>[% round_num( segmentation_state_emission.H3K27me3 ) %]</td>
-    <td>[% round_num( segmentation_state_emission.H3K36me3 ) %]</td>
-    <td>[% round_num( segmentation_state_emission.H3K4me1  ) %]</td>
-    <td>[% round_num( segmentation_state_emission.H3K4me2  ) %]</td>
-    <td>[% round_num( segmentation_state_emission.H3K4me3  ) %]</td>
-    <td>[% round_num( segmentation_state_emission.H3K9ac   ) %]</td>
-    <td>[% round_num( segmentation_state_emission.H3K9me3  ) %]</td>
+    <td align="right">
+      [% 
+        format_number( 
+          segmentation_statistic_adaptor
+            .fetch_max_length_features_by_Segmentation_state(
+              segmentation, 
+              segmentation_state_emission.state
+            ).value
+          )
+      %]
+    </td>
+    <td align="right">
+      [% 
+        format_number( 
+          segmentation_statistic_adaptor
+            .fetch_num_segmentation_features_by_Segmentation_state(
+              segmentation, 
+              segmentation_state_emission.state
+            ).value
+          )
+      %]
+    </td>
+    <td bgcolor="[% emission_to_rgb( segmentation_state_emission.CTCF )     %]">[% round_num( segmentation_state_emission.CTCF     ) %]</td>
+    <td bgcolor="[% emission_to_rgb( segmentation_state_emission.DNase1 )   %]">[% round_num( segmentation_state_emission.DNase1   ) %]</td>
+    <td bgcolor="[% emission_to_rgb( segmentation_state_emission.H3K27ac )  %]">[% round_num( segmentation_state_emission.H3K27ac  ) %]</td>
+    <td bgcolor="[% emission_to_rgb( segmentation_state_emission.H3K27me3 ) %]">[% round_num( segmentation_state_emission.H3K27me3 ) %]</td>
+    <td bgcolor="[% emission_to_rgb( segmentation_state_emission.H3K36me3 ) %]">[% round_num( segmentation_state_emission.H3K36me3 ) %]</td>
+    <td bgcolor="[% emission_to_rgb( segmentation_state_emission.H3K4me1 )  %]">[% round_num( segmentation_state_emission.H3K4me1  ) %]</td>
+    <td bgcolor="[% emission_to_rgb( segmentation_state_emission.H3K4me2 )  %]">[% round_num( segmentation_state_emission.H3K4me2  ) %]</td>
+    <td bgcolor="[% emission_to_rgb( segmentation_state_emission.H3K4me3 )  %]">[% round_num( segmentation_state_emission.H3K4me3  ) %]</td>
+    <td bgcolor="[% emission_to_rgb( segmentation_state_emission.H3K9ac )   %]">[% round_num( segmentation_state_emission.H3K9ac   ) %]</td>
+    <td bgcolor="[% emission_to_rgb( segmentation_state_emission.H3K9me3 )  %]">[% round_num( segmentation_state_emission.H3K9me3  ) %]</td>
 </tr>
 [% END %]
 

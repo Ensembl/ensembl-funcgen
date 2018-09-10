@@ -35,39 +35,62 @@ limitations under the License.
 package Bio::EnsEMBL::Funcgen::DBSQL::PeakCallingStatisticAdaptor;
 
 use strict;
+use Carp;
 use base 'Bio::EnsEMBL::Funcgen::DBSQL::GenericAdaptor';
 
 sub object_class {
-    return 'Bio::EnsEMBL::Funcgen::PeakCallingStatistic';
+  return 'Bio::EnsEMBL::Funcgen::PeakCallingStatistic';
 }
 
 sub _tables {
   return ['peak_calling_statistic', 'pcs']
 }
 
-sub fetch_by_peak_calling_id {
-  my $self         = shift;
-  my $peak_calling_id = shift;
-  
-  my $peak_calling = $self->fetch_single_object(
-    'peak_calling_id = ?',
-    [ 
-      $peak_calling_id,
-    ]
-  );
-  
-  if (! defined $peak_calling) {
-    use Carp;
-    confess("Can't find peak calling object with id $peak_calling_id!");
-  }
-  
-  return $peak_calling
-}
-
-sub fetch_by_peak_calling {
+sub fetch_by_PeakCalling_total_length {
   my $self         = shift;
   my $peak_calling = shift;
-  return $self->fetch_by_peak_calling_id($peak_calling->dbID);
+  return $self->_fetch_by_PeakCalling_statistic($peak_calling, 'total_length');
+}
+
+sub fetch_by_PeakCalling_num_peaks {
+  my $self         = shift;
+  my $peak_calling = shift;
+  return $self->_fetch_by_PeakCalling_statistic($peak_calling, 'num_peaks');
+}
+
+sub fetch_by_PeakCalling_average_length {
+  my $self         = shift;
+  my $peak_calling = shift;
+  return $self->_fetch_by_PeakCalling_statistic($peak_calling, 'average_length');
+}
+
+sub fetch_coverage_percent_by_FeatureType {
+  my $self         = shift;
+  my $feature_type = shift;
+  
+  return $self->fetch_single_object(
+    'peak_calling_id is null and statistic = "coverage_percent" and feature_type_id = ? and epigenome_id is null', 
+    [ 
+      $feature_type->dbID,
+    ]
+  );
+
+}
+
+sub _fetch_by_PeakCalling_statistic {
+
+  my $self = shift;
+  
+  my $peak_calling = shift;
+  my $statistic    = shift;
+  
+  return $self->fetch_single_object(
+    'peak_calling_id = ? and statistic = ?', 
+    [ 
+      $peak_calling->dbID,
+      $statistic,
+    ]
+  );
 }
 
 1;

@@ -51,6 +51,7 @@ sub _constructor_parameters {
     segmentation_id => 'segmentation_id',
     epigenome_id    => 'epigenome_id',
     label           => 'label',
+    state           => 'state',
   };
 }
 
@@ -61,7 +62,7 @@ sub value           { return shift->_generic_get_or_set('value',           @_); 
 sub segmentation_id { return shift->_generic_get_or_set('segmentation_id', @_); }
 sub epigenome_id    { return shift->_generic_get_or_set('epigenome_id',    @_); }
 sub label           { return shift->_generic_get_or_set('label',           @_); }
-
+sub state           { return shift->_generic_get_or_set('state',           @_); }
 sub segmentation_id { return shift->_generic_get_or_set('segmentation_id', @_); }
 
 sub set_Segmentation {

@@ -21,10 +21,11 @@ drop table if exists segmentation_statistic;
 CREATE TABLE segmentation_statistic (
   segmentation_statistic_id int(30) unsigned NOT NULL AUTO_INCREMENT,
   segmentation_id           int(18) unsigned default null,
+  state                     int(8)  unsigned default null,
   epigenome_id              int(22) unsigned default NULL,
   label                     varchar(255) default NULL,
   statistic                 varchar(255) NOT NULL,
-  value                     bigint(11) unsigned DEFAULT null,
+  value                     float(11) unsigned DEFAULT null,
   PRIMARY KEY (segmentation_statistic_id),
   UNIQUE KEY stats_uniq (statistic,segmentation_id,epigenome_id,label)
 );
