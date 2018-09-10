@@ -88,13 +88,15 @@ my $segmentation_feature_types = [
 
 my $segmentation_feature_type_objects = [];
 
+SEGMENTATION_FEATURE_TYPE:
 foreach my $segmentation_feature_type_name (@$segmentation_feature_types) {
 
   my $segmentation_feature_type
     = $feature_type_adaptor->fetch_by_name($segmentation_feature_type_name);
   
   if (! defined $segmentation_feature_type) {
-    die("Can't find feature type $segmentation_feature_type_name!");
+    warn("Can't find feature type $segmentation_feature_type_name!");
+    next SEGMENTATION_FEATURE_TYPE;
   }
   
   push @$segmentation_feature_type_objects, $segmentation_feature_type;
