@@ -3,6 +3,7 @@ package Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SeedAllControlExperiment
 use strict;
 use base 'Bio::EnsEMBL::Hive::Process';
 use Data::Dumper;
+use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
 
 use constant {
   BRANCH_OUTPUT => 2,
@@ -30,7 +31,12 @@ sub run {
 
   my @control_experiment_names = keys %unique_control_experiments_hash;
 
+  CONTROL_EXPERIMENT_NAME:
   foreach my $control_experiment_name (@control_experiment_names) {
+  
+    if ($control_experiment_name eq NA) {
+      next CONTROL_EXPERIMENT_NAME;
+    }
   
     $self->dataflow_output_id( 
       {
