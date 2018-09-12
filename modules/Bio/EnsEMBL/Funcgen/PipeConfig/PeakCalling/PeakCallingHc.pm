@@ -40,6 +40,20 @@ sub pipeline_analyses {
         {   -logic_name => 'start_peak_calling_hc',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into => { 
+              MAIN => 'truncate_peak_calling_statistics',
+            },
+        },
+        {   -logic_name => 'truncate_peak_calling_statistics',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+            -parameters => {
+                db_conn => 'funcgen:#species#',
+                sql     => [
+                    q~
+                        truncate peak_calling_statistic;
+                    ~,
+                ]
+            },
+            -flow_into => { 
               MAIN => 'compute_peak_calling_statistics',
             },
         },
@@ -49,14 +63,42 @@ sub pipeline_analyses {
             -parameters => {
                 sql     => [
                     q~
-                        truncate peak_calling_statistic;
-                    ~,
-                    q~
-                        insert into peak_calling_statistic (peak_calling_id, total_length, num_peaks, average_length)
+                        insert into peak_calling_statistic (peak_calling_id, epigenome_id, feature_type_id, statistic, value)
                         select
                             peak_calling_id,
-                            sum(peak.seq_region_end - peak.seq_region_start + 1) as total_length,
-                            count(peak.peak_id) as num_peaks,
+                            null,
+                            feature_type_id,
+                            'total_length',
+                            sum(peak.seq_region_end - peak.seq_region_start + 1) as total_length
+                        from
+                            peak_calling
+                            left join peak using (peak_calling_id)
+                        group by
+                            peak_calling_id
+                        ;
+                    ~,
+                    q~
+                        insert into peak_calling_statistic (peak_calling_id, epigenome_id, feature_type_id, statistic, value)
+                        select
+                            peak_calling_id,
+                            null,
+                            feature_type_id,
+                            'num_peaks',
+                            count(peak.peak_id) as num_peaks
+                        from
+                            peak_calling
+                            left join peak using (peak_calling_id)
+                        group by
+                            peak_calling_id
+                        ;
+                    ~,
+                    q~
+                        insert into peak_calling_statistic (peak_calling_id, epigenome_id, feature_type_id, statistic, value)
+                        select
+                            peak_calling_id,
+                            null,
+                            feature_type_id,
+                            'average_length',
                             avg(peak.seq_region_end - peak.seq_region_start + 1) as average_length
                         from
                             peak_calling
@@ -64,12 +106,47 @@ sub pipeline_analyses {
                         group by
                             peak_calling_id
                         ;
-                    ~
+                    ~,
                 ],
                 db_conn => 'funcgen:#species#',
             },
             -flow_into => { 
-              MAIN => 'generate_peak_calling_report',
+              MAIN => 'peak_calling_statistics_job_factory',
+            },
+        },
+        {   -logic_name => 'peak_calling_statistics_job_factory',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
+            -parameters => { 
+                inputlist => [
+                    qw(
+                        CTCF
+                        DNase1
+                        H3K27ac
+                        H3K27me3
+                        H3K36me3
+                        H3K4me1
+                        H3K4me2
+                        H3K4me3
+                        H3K9ac
+                        H3K9me3
+                    )
+                ],
+            },
+            -flow_into => {
+              '2->A'    => { 'compute_overall_peak_calling_statistics' => INPUT_PLUS },
+              'A->MAIN' => 'generate_peak_calling_report',
+            },
+        },
+        {   -logic_name => 'compute_overall_peak_calling_statistics',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -rc_name    => '4Gb_job',
+            -parameters => { 
+              cmd => 
+                  qq( compute_peak_calling_statistics.pl                           )
+                . qq(   --species      #species#                                   )
+                . qq(   --registry     #reg_conf#                                  )
+                . qq(   --feature_type #_0#                                        )
+                . qq(   --tempdir      #tempdir_peak_calling#/#species#/peak_stats )
             },
         },
         {   -logic_name => 'generate_peak_calling_report',

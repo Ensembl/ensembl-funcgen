@@ -43,23 +43,23 @@ with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 
 sub _constructor_parameters {
   return {
-    dbID         => 'dbID',
-    db           => 'db',
-
+    dbID            => 'dbID',
+    db              => 'db',
     peak_calling_id => 'peak_calling_id',
-    total_length    => 'total_length',
-    num_peaks       => 'num_peaks',
-    average_length  => 'average_length',
+    epigenome_id    => 'epigenome_id',
+    feature_type_id => 'feature_type_id',
+    statistic       => 'statistic',
+    value           => 'value',
   };
 }
 
-sub dbID         { return shift->_generic_get_or_set('dbID',         @_); }
-sub db           { return shift->_generic_get_or_set('db',           @_); }
-
+sub dbID            { return shift->_generic_get_or_set('dbID',            @_); }
+sub db              { return shift->_generic_get_or_set('db',              @_); }
 sub peak_calling_id { return shift->_generic_get_or_set('peak_calling_id', @_); }
-sub total_length    { return shift->_generic_get_or_set('total_length',    @_); }
-sub num_peaks       { return shift->_generic_get_or_set('num_peaks',       @_); }
-sub average_length  { return shift->_generic_get_or_set('average_length',  @_); }
+sub statistic       { return shift->_generic_get_or_set('statistic',       @_); }
+sub value           { return shift->_generic_get_or_set('value',           @_); }
+sub epigenome_id    { return shift->_generic_get_or_set('epigenome_id',    @_); }
+sub feature_type_id { return shift->_generic_get_or_set('feature_type_id', @_); }
 
 sub fetch_PeakCalling {
   my $self = shift;
