@@ -317,7 +317,6 @@ sub pipeline_analyses {
       },
       {   -logic_name => 'populate_meta_coord',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-          #-module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
           -parameters => {
             cmd => qq( populate_meta_coord.pl    )
               . qq( --species  #species#         )
