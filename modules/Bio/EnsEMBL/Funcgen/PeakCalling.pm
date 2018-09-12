@@ -105,6 +105,7 @@ sub _constructor_parameters {
 
 sub dbID            { return shift->_generic_get_or_set('dbID',            @_); }
 sub db              { return shift->_generic_get_or_set('db',              @_); }
+sub adaptor         { return shift->_generic_get_or_set('db',              @_); }
 
 =head2 name
 
