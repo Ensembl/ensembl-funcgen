@@ -56,6 +56,7 @@ sub _constructor_parameters {
 
 sub dbID         { return shift->_generic_get_or_set('dbID',         @_); }
 sub db           { return shift->_generic_get_or_set('db',           @_); }
+sub adaptor      { return shift->_generic_get_or_set('db',           @_); }
 sub table_id     { return shift->_generic_get_or_set('table_id',     @_); }
 sub table_name   { return shift->_generic_get_or_set('table_name',   @_); }
 
