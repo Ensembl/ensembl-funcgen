@@ -19,13 +19,14 @@ sub run {
   #
   my $permissive_peak_calling = $self->param_required('permissive_peak_calling');
   
-  print Dumper($permissive_peak_calling);
-  
-#   use Hash::Util qw( lock_keys );
-#   lock_keys( %$permissive_peak_calling );
-#   
-#   my $permissive_peak_file = $permissive_peak_calling->{'peak_file'};
-#   my $alignment_name       = $permissive_peak_calling->{'alignment_name'};
+  if (@$permissive_peak_calling < 2) {
+    $self->throw(
+        "Got " 
+        . @$permissive_peak_calling 
+        . " peak callings. A minimum of 2 are needed for IDR.\n"
+        . Dumper($permissive_peak_calling)
+    );
+  }
 
   $self->dataflow_output_id(
     {
