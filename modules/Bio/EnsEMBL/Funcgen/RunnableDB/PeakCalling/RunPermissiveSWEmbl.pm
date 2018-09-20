@@ -44,12 +44,6 @@ sub run {
   if ($error_occurred) {
     $self->throw("There was an error running:\n$cmd");
   }
-#   $self->dataflow_output_id( 
-#     {
-#       'permissive_peak_file' => $job_output,
-#     }, 
-#     BRANCH_OUTPUT
-#   );
   $self->dataflow_output_id( 
     {
       'permissive_peak_calling' => {
