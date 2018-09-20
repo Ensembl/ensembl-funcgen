@@ -100,6 +100,9 @@ my $result = GetOptions(
 
 $Data::Dumper::Maxdepth = 1;
 
+my $logger = Bio::EnsEMBL::Utils::Logger->new();
+$logger->init_log;
+
 Bio::EnsEMBL::Registry->load_all($registry);
 my $peak_calling_adaptor = Bio::EnsEMBL::Registry->get_adaptor( $species, 'Funcgen', 'PeakCalling' );
 
@@ -168,8 +171,6 @@ sub fix_peak_boundaries {
   
   my $peak = $peak_adaptor->fetch_by_dbID($peak_id);
   
-  print Dumper($peak);
-  
   if ($peak->seq_region_start < $slice->start ) {
     $peak->seq_region_start($slice->start);
   }
@@ -177,9 +178,21 @@ sub fix_peak_boundaries {
     $peak->seq_region_end($slice->end);
   }
   
-  print Dumper($peak);
   if (! $dry_run) {
     print "Updating peak\n";
-    $peak_adaptor->update($peak);
+    eval {
+        $peak_adaptor->update($peak);
+    };
+    if ($@) {
+        my $is_duplicate_entry = $@ =~ /DBD::mysql::st execute failed: Duplicate entry/;
+        if (! $is_duplicate_entry) {
+            confess($@);
+        }
+        $logger->info("Peak already exists with the trimmed values, so deleting this one.");
+        $peak_adaptor->_delete($peak);
+    }
   }
 }
+
+$logger->finish_log;
+exit(0);
