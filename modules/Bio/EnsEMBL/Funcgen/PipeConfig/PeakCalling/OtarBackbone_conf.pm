@@ -78,7 +78,7 @@ sub pipeline_analyses {
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
                '1->A' => 'start_alignments',
-               'A->1' => 'backbone_fire_write_bigwig'
+               'A->1' => 'backbone_fire_alignment_hc'
             },
         },
         {
@@ -86,6 +86,17 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
 
+        {   -logic_name  => 'backbone_fire_alignment_hc',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into   => {
+               '1->A' => 'start_alignment_hc',
+               'A->1' => 'backbone_fire_write_bigwig'
+            },
+        },
+        {
+            -logic_name => 'start_alignment_hc',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+        },
         {   -logic_name  => 'backbone_fire_write_bigwig',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
