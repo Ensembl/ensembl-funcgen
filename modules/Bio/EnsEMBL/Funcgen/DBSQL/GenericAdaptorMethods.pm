@@ -439,7 +439,18 @@ sub update {
 #   warn(Dumper($values_being_stored));
   
   my $sth = $self->prepare( $sql );
-  $sth->execute(@$values_being_stored);
+  eval {
+    $sth->execute(@$values_being_stored);
+  };
+  if ($@) {
+    throw(
+        "An error occurred runing this sql:\n"
+        . $sql . "\n"
+        . "\n"
+        . "The error was:\n"
+        . $@
+    );
+  }
   return;
 }
 
