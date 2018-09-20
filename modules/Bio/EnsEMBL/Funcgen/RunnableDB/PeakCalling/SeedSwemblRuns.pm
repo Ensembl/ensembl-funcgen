@@ -30,7 +30,7 @@ sub run {
   }
 
   my $alignment_replicates = $idr_plan->{alignment_replicates};
-
+  
   foreach my $alignment_replicate (@$alignment_replicates) {
     $self->dataflow_output_id( 
       {
