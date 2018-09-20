@@ -87,6 +87,13 @@ sub construct {
             $experiment->epigenome->gender
         );
   
+    my $is_control;
+    if ($experiment->is_control) {
+        $is_control = TRUE;
+    } else {
+        $is_control = FALSE;
+    }
+  
   use Bio::EnsEMBL::Funcgen::PeakCallingPlan::AlignmentPlanFactory;
   my $alignment_plan_factory = Bio::EnsEMBL::Funcgen::PeakCallingPlan::AlignmentPlanFactory
   ->new(
@@ -100,7 +107,7 @@ sub construct {
     -output_real             => $alignment_namer->bam_file_with_duplicates,
     -output_stored           => $alignment_namer->bam_file_with_duplicates_stored,
     -output_format           => BAM_FORMAT,
-    -is_control              => $experiment->is_control,
+    -is_control              => $is_control,
     -has_all_reads           => TRUE,
   );
   my $align_plan = $alignment_plan_factory->product;
