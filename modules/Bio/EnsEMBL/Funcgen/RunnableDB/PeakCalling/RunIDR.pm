@@ -60,14 +60,12 @@ sub run {
   
     my $swembl_file = $permissive_peak_call_result->{peak_file};
   
-#     my $cmd = "grep -vE '(#|(^Region[[:space:]]+Start))' $swembl_file | wc -l | awk '{print \$1}'";
-#     
-#     use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( run_backtick_cmd run_system_cmd );
-#     my $num_peaks = run_backtick_cmd($cmd);
-
     my $cmd = "grep -vE '(#|(^Region[[:space:]]+Start))' $swembl_file | wc -l | awk '{print \$1}' > ${swembl_file}.peak_count";
     
-    my $return_code = $self->run_system_command($cmd, {'use_bash_pipefail' => 1});
+    # Setting pipefail to zero, because grep returns 1, if it can't find 
+    # anything, even when it has run successfully.
+    #
+    my $return_code = $self->run_system_command($cmd, {'use_bash_pipefail' => 0});
     
     if ($return_code) {
         $self->throw("Failed to run:\n$cmd\n");
