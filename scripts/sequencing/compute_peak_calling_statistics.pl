@@ -130,6 +130,21 @@ Bio::EnsEMBL::Registry->load_all($registry);
 my $funcgen_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
 
 my $peak_calling_statistic_adaptor = $funcgen_adaptor->get_PeakCallingStatisticAdaptor;
+# 
+# print Dumper($peak_calling_statistic_adaptor->column_set);
+# print Dumper($peak_calling_statistic_adaptor->primary_key);
+# print Dumper($peak_calling_statistic_adaptor->autoinc_id);
+# 
+# my $test = Bio::EnsEMBL::Funcgen::PeakCallingStatistic->new(
+#         -feature_type_id => 1,
+#         -statistic       => 'foo',
+#         -value           => 2,
+#     );
+# 
+# print Dumper($peak_calling_statistic_adaptor->keys_to_columns($test));
+# $peak_calling_statistic_adaptor->store($test);
+# 
+# exit;
 
 my $genome = Bio::EnsEMBL::Registry->get_adaptor( $species, "core", "GenomeContainer" );
 my $genome_length_in_bp = $genome->get_ref_length;
