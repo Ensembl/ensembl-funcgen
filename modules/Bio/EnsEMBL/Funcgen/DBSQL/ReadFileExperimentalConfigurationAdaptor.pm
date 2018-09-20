@@ -152,6 +152,21 @@ sub fetch_all_technical_replicates_by_Experiment_and_biological_replicate_number
   return $read_file_experimental_configuration_list;
 }
 
+sub fetch_all_by_Experiment_and_technical_replicate_number {
+  my $self = shift;
+  my $experiment                  = shift;
+  my $technical_replicate_number  = shift;
+  
+  my $experiment_id = $experiment->dbID;
+  
+  my $read_file_experimental_configuration_list = $self->fetch_all(
+    "experiment_id = $experiment_id"
+    . " and technical_replicate  = $technical_replicate_number"
+  );
+  
+  return $read_file_experimental_configuration_list;
+}
+
 =head2 fetch_all_biological_replicate_numbers_from_Experiment
 
   Description: Convenience method
@@ -191,6 +206,38 @@ sub fetch_all_biological_replicate_numbers_from_Experiment {
       },
   );
   return \@biological_replicate_numbers;
+}
+
+sub fetch_all_technical_replicate_numbers_from_Experiment {
+
+  my $self       = shift;
+  my $experiment = shift;
+  
+  my $experiment_id = $experiment->dbID;
+
+  my @technical_replicate_numbers;
+
+  $self->sql_helper->execute_no_return(
+    -SQL          => '
+      select 
+        distinct technical_replicate 
+      from 
+        read_file_experimental_configuration 
+      where 
+        experiment_id = ? 
+      order by 
+        technical_replicate
+    ',
+    -PARAMS       => [ $experiment_id ],
+    -USE_HASHREFS => 1,
+    -CALLBACK     => sub {
+        my $row = shift;
+        my $technical_replicate = $row->{technical_replicate};
+        push @technical_replicate_numbers, $technical_replicate;
+        return;
+      },
+  );
+  return \@technical_replicate_numbers;
 }
 
 sub fetch_by_ReadFileExperimentalConfiguration {
