@@ -33,11 +33,6 @@ limitations under the License.
     --db_file_path /hps/nobackup/production/sds-flicek-bp/blueprint_fastq_files/mnuhn_regbuild_pipeline/rb_human_merged_old_and_new/dbfiles/ \
     --tempdir foobar
 
-    
-    
-    
-rm -rf /hps/nobackup2/production/ensembl/mnuhn/segmentation_files_while_maintenance_is_ongoing/segmentation_statistics ; load_segmentation_files_to_db.pl     --registry /homes/mnuhn/work_dir_regbuild_testrun/lib/ensembl-funcgen/registry.with_previous_version.human_regbuild_testdb7.pm     --species homo_sapiens     --db_file_path /hps/nobackup2/production/ensembl/mnuhn/segmentation_files_while_maintenance_is_ongoing/dbfiles     --tempdir /hps/nobackup2/production/ensembl/mnuhn/segmentation_files_while_maintenance_is_ongoing/segmentation_statistics
-
 =cut
 
 use strict;
@@ -45,7 +40,6 @@ use Getopt::Long;
 use Bio::EnsEMBL::Registry;
 use Data::Dumper;
 use Bio::EnsEMBL::Utils::Logger;
-use Bio::EnsEMBL::Funcgen::SegmentationStatistic;
 
 my %options;
 GetOptions (
@@ -66,9 +60,6 @@ my $db_file_path = $options{'db_file_path'};
 
 Bio::EnsEMBL::Registry->load_all($registry);
 my $funcgen_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
-
-
-$funcgen_adaptor->dbc->do(q( truncate segmentation_statistic ));
 
 $funcgen_adaptor->dbc->do(q( drop table if exists segmentation_feature; ));
 
@@ -123,8 +114,6 @@ my $segmentation_files = $segmentation_file_adaptor->fetch_all;
 
 my $logger = Bio::EnsEMBL::Utils::Logger->new();
 $logger->init_log;
-
-my $segmentation_statistic_adaptor = $funcgen_adaptor->get_SegmentationStatisticAdaptor;
 
 my $file_counter = 0;
 
@@ -227,140 +216,5 @@ foreach my $segmentation_file (@$segmentation_files) {
 }
 
 $logger->info("Done loading all files\n");
-
-$logger->info("Creating indexes\n");
-
-$funcgen_adaptor->dbc->do(
-  q~
-    create index foo on segmentation_feature(segmentation_id);
-  ~
-);
-$funcgen_adaptor->dbc->do(
-  q~
-    create index foo2 on segmentation_feature(segmentation_id, assignment);
-  ~
-);
-
-$logger->info("Computing statistics\n");
-
-$funcgen_adaptor->dbc->do(
-  q~
-  insert into segmentation_statistic 
-    (
-      segmentation_id, 
-      statistic, 
-      value
-    )
-    select 
-      segmentation.segmentation_id, 
-      'num_epigenomes', 
-      count(distinct epigenome) 
-    from 
-      segmentation 
-      join segmentation_cell_tables using (segmentation_id) 
-    group by 
-      segmentation.segmentation_id
-  ~
-);
-
-$funcgen_adaptor->dbc->do(
-  q~
-  insert into segmentation_statistic 
-    (
-      segmentation_id,
-      label,
-      statistic, 
-      value
-    )
-    select 
-      segmentation.segmentation_id, 
-      assignment,
-      'average_length',
-      avg(length)
-    from 
-      segmentation 
-      join segmentation_feature using (segmentation_id) 
-    group by 
-      segmentation_id, 
-      assignment
-  ;
-  ~
-);
-
-$funcgen_adaptor->dbc->do(
-  q~
-  insert into segmentation_statistic 
-    (
-      segmentation_id,
-      label,
-      statistic, 
-      value
-    )
-    select 
-      segmentation.segmentation_id, 
-      assignment,
-      'num_states',
-      count(distinct state)
-    from 
-      segmentation 
-      join segmentation_feature using (segmentation_id) 
-    group by 
-      segmentation_id, 
-      assignment
-  ;
-  ~
-);
-
-$funcgen_adaptor->dbc->do(
-  q~
-  insert into segmentation_statistic 
-    (
-      segmentation_id,
-      label,
-      statistic, 
-      value
-    )
-    select 
-      null,
-      assignment,
-      'num_states',
-      count(distinct state)
-    from 
-      segmentation 
-      join segmentation_feature using (segmentation_id) 
-    group by 
-      assignment
-  ;
-  ~
-);
-
-$funcgen_adaptor->dbc->do(
-  q~
-  insert into segmentation_statistic 
-    (
-      segmentation_id,
-      label,
-      statistic, 
-      value
-    )
-    select 
-      null,
-      assignment, 
-      'average_length',
-      avg(length)
-    from 
-      segmentation
-      join segmentation_feature using (segmentation_id) 
-    group by 
-      assignment
-  ;
-  ~
-);
-
 $logger->finish_log;
 exit(0);
-
-
-
-
-
