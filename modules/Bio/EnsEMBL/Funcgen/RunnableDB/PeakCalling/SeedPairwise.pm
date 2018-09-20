@@ -14,7 +14,6 @@ sub run {
   
   my $plan                    = $self->param_required('execution_plan');
   my $species                 = $self->param_required('species');
-  #my $permissive_peak_file = $self->param_required('bed_file_to_peak_number');
   my $permissive_peak_calling = $self->param_required('permissive_peak_calling');
 
   use Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanUtils qw (
@@ -25,7 +24,9 @@ sub run {
   lock_execution_plan($plan_expanded);
   
   my $pairs = $self->all_unique_pairs_no_self_pairing($permissive_peak_calling);
-
+  
+  $self->say_with_header("Got " . @$pairs . " pairs.", 1);
+  
   foreach my $current_pair (@$pairs) {
   
     my $first_alignment  = $current_pair->[0]->{alignment_name};
