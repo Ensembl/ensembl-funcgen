@@ -67,17 +67,17 @@ sub name {
     $experimental_group->name,
   );
   
-  if ($biological_replicate_number) {
-    push @name_components, 'BR' . $biological_replicate_number;
-  }
-  if ($technical_replicate_number) {
-    push @name_components, 'TR' . $technical_replicate_number;
-  }
-  
   my $alignment_name = join '_', @name_components;
   
   use Bio::EnsEMBL::Funcgen::Utils::GoodUtils qw( create_production_name );
-  my $production_name = create_production_name($alignment_name);;
+  my $production_name = create_production_name($alignment_name);
+
+  if ($biological_replicate_number) {
+    $production_name .= '_BR' . $biological_replicate_number
+  }
+  if ($technical_replicate_number) {
+    $production_name .= '_TR' . $technical_replicate_number
+  }
   return $production_name;
 }
 
