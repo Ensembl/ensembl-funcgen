@@ -115,7 +115,7 @@ CREATE TABLE `execution_plan` (
   `execution_plan_id` int(18) unsigned NOT NULL AUTO_INCREMENT,
   `time` bigint(20) DEFAULT NULL,
   `experiment_id` int(16) unsigned NOT NULL,
-  `execution_plan` text,
+  `execution_plan` longtext NOT NULL,
   PRIMARY KEY (`execution_plan_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -275,12 +275,11 @@ CREATE TABLE `regulatory_build` (
   PRIMARY KEY (`regulatory_build_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
-DROP TABLE IF EXISTS `regulatory_build_statistic`;
 CREATE TABLE `regulatory_build_statistic` (
   `regulatory_build_statistic_id` int(30) unsigned NOT NULL AUTO_INCREMENT,
   `regulatory_build_id` int(22) unsigned DEFAULT NULL,
   `statistic` varchar(255) DEFAULT NULL,
-  `value` double unsigned DEFAULT NULL,
+  `value` bigint(11) unsigned DEFAULT NULL,
   PRIMARY KEY (`regulatory_build_statistic_id`),
   UNIQUE KEY `stats_uniq` (`statistic`,`regulatory_build_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -338,48 +337,70 @@ CREATE TABLE `segmentation_file` (
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 DROP TABLE IF EXISTS `segmentation_state_assignment`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `segmentation_state_assignment` (
   `segmentation_state_assignment_id` int(35) unsigned NOT NULL AUTO_INCREMENT,
   `state` int(8) NOT NULL,
   `segmentation` varchar(255) NOT NULL,
   `assignment` varchar(255) NOT NULL,
-  PRIMARY KEY (`segmentation_state_assignment_id`)
+  PRIMARY KEY (`segmentation_state_assignment_id`),
+  UNIQUE KEY `state` (`state`,`segmentation`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+DROP TABLE IF EXISTS `segmentation`;
+CREATE TABLE `segmentation` (
+  `segmentation_id` int(18) unsigned NOT NULL AUTO_INCREMENT,
+  `regulatory_build_id` int(22) DEFAULT NULL,
+  `name` varchar(255) NOT NULL,
+  `superclass` varchar(255) NOT NULL,
+  `class` varchar(255) NOT NULL,
+  PRIMARY KEY (`segmentation_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+DROP TABLE IF EXISTS `segmentation_cell_tables`;
+CREATE TABLE `segmentation_cell_tables` (
+  `superclass` varchar(255) NOT NULL,
+  `class` varchar(255) NOT NULL,
+  `segmentation_id` int(18) unsigned NOT NULL,
+  `epigenome_id` int(16) unsigned NOT NULL,
+  `feature_type_id` int(18) unsigned NOT NULL,
+  `signal_alignment_id` int(23) unsigned NOT NULL,
+  `control_alignment_id` int(23) unsigned NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+DROP TABLE IF EXISTS `segmentation_statistic`;
+CREATE TABLE `segmentation_statistic` (
+  `segmentation_statistic_id` int(30) unsigned NOT NULL AUTO_INCREMENT,
+  `segmentation_id` int(18) unsigned DEFAULT NULL,
+  `state` int(8) unsigned DEFAULT NULL,
+  `epigenome_id` int(22) unsigned DEFAULT NULL,
+  `label` varchar(255) DEFAULT NULL,
+  `statistic` varchar(255) NOT NULL,
+  `value` float unsigned DEFAULT NULL,
+  PRIMARY KEY (`segmentation_statistic_id`),
+  UNIQUE KEY `stats_uniq` (`statistic`,`segmentation_id`,`epigenome_id`,`label`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 DROP TABLE IF EXISTS `segmentation_state_emission`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `segmentation_state_emission` (
   `segmentation_state_emission_id` int(27) unsigned NOT NULL AUTO_INCREMENT,
   `segmentation` varchar(255) NOT NULL,
   `state` int(7) DEFAULT NULL,
-  `CTCF`     double DEFAULT NULL,
-  `DNase1`   double DEFAULT NULL,
-  `H3K27ac`  double DEFAULT NULL,
+  `CTCF` double DEFAULT NULL,
+  `DNase1` double DEFAULT NULL,
+  `H3K27ac` double DEFAULT NULL,
   `H3K27me3` double DEFAULT NULL,
   `H3K36me3` double DEFAULT NULL,
-  `H3K4me1`  double DEFAULT NULL,
-  `H3K4me2`  double DEFAULT NULL,
-  `H3K4me3`  double DEFAULT NULL,
-  `H3K9ac`   double DEFAULT NULL,
-  `H3K9me3`  double DEFAULT NULL,
-  PRIMARY KEY (`segmentation_state_emission_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-DROP TABLE IF EXISTS segmentation_cell_table_ctcf;
-
-CREATE TABLE segmentation_cell_table_ctcf (
-  epigenome        varchar(120) DEFAULT NULL,
-  feature_type     varchar(40)  NOT NULL,
-  signal_bam_path  varchar(255) NOT NULL,
-  control_bam_path varchar(255) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
-
-DROP TABLE IF EXISTS segmentation_cell_table_without_ctcf;
-
-CREATE TABLE segmentation_cell_table_without_ctcf (
-  epigenome        varchar(120) DEFAULT NULL,
-  feature_type     varchar(40)  NOT NULL,
-  signal_bam_path  varchar(255) NOT NULL,
-  control_bam_path varchar(255) NOT NULL
+  `H3K4me1` double DEFAULT NULL,
+  `H3K4me2` double DEFAULT NULL,
+  `H3K4me3` double DEFAULT NULL,
+  `H3K9ac` double DEFAULT NULL,
+  `H3K9me3` double DEFAULT NULL,
+  PRIMARY KEY (`segmentation_state_emission_id`),
+  UNIQUE KEY `state` (`state`,`segmentation`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
@@ -458,10 +479,11 @@ CREATE TABLE `peak_calling` (
 DROP TABLE IF EXISTS `peak_calling_statistic`;
 CREATE TABLE `peak_calling_statistic` (
   `peak_calling_statistic_id` int(28) unsigned NOT NULL AUTO_INCREMENT,
-  `peak_calling_id` int(18) NOT NULL DEFAULT '0',
-  `total_length` int(15) DEFAULT NULL,
-  `num_peaks` bigint(14) DEFAULT NULL,
-  `average_length` int(17) DEFAULT NULL,
+  `peak_calling_id` int(18) unsigned DEFAULT NULL,
+  `epigenome_id` int(15) unsigned DEFAULT NULL,
+  `feature_type_id` int(18) unsigned DEFAULT NULL,
+  `statistic` varchar(255) NOT NULL,
+  `value` float unsigned DEFAULT NULL,
   PRIMARY KEY (`peak_calling_statistic_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
@@ -1036,7 +1058,7 @@ DROP TABLE IF EXISTS `alignment`;
 CREATE TABLE `alignment` (
   `alignment_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `analysis_id` smallint(5) unsigned NOT NULL,
-  `name` varchar(100) DEFAULT NULL,
+  `name` varchar(255) NOT NULL,
   `bam_file_id` int(11) DEFAULT NULL,
   `bigwig_file_id` int(11) DEFAULT NULL,
   `experiment_id` int(15) unsigned DEFAULT NULL,
@@ -1471,14 +1493,13 @@ DROP TABLE IF EXISTS `experimental_group`;
 CREATE TABLE `experimental_group` (
   `experimental_group_id` smallint(6) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(40) NOT NULL,
-  `location` varchar(120) DEFAULT NULL,
-  `contact` varchar(40) DEFAULT NULL,
+  `production_name` varchar(255) NOT NULL,
   `description` varchar(255) DEFAULT NULL,
   `url` varchar(255) DEFAULT NULL,
   `is_project` tinyint(1) DEFAULT '0',
   PRIMARY KEY (`experimental_group_id`),
   UNIQUE KEY `name_idx` (`name`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=5 DEFAULT CHARSET=latin1;
 
 
 /**
@@ -1635,22 +1656,17 @@ CREATE TABLE `meta` (
 -- Add necessary meta values
 -- Update and remove these for each release to avoid erroneous patching
 
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_93_94_a.sql|schema_version');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL,'patch','patch_93_94_b.sql|Modify column display_label length from epigenome table');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_c.sql|Adds table segmentation_cell_table_ctcf');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_d.sql|Adds table segmentation_cell_table_without_ctcf');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_e.sql|Create transcription_factor table');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_f.sql|Create transcription_factor_complex table');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_g.sql|Create transcription_factor_complex_composition table');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_h.sql|Create binding_matrix_transcription_factor_complex table');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_i.sql|Modify motif_feature table');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_j.sql|Create motif_feature_peak table');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_k.sql|Create motif_feature_regulatory_feature table');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_l.sql|Modify binding_matrix_table');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_m.sql|Create binding_matrix_frequencies table');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_n.sql|Modify indices in motif_feature_peak table');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_o.sql|Add indices to motif_feature_regulatory_feature table');
-INSERT INTO `meta` (`species_id`, `meta_key`, `meta_value`) VALUES (NULL, 'patch', 'patch_93_94_p.sql|Modify column display_label length from epigenome table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (null, 'patch', 'patch_94_95_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (null, 'patch', 'patch_94_95_b.sql|update to segmentation state tables');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (null, 'patch', 'patch_94_95_c.sql|Update to alignment table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (null, 'patch', 'patch_94_95_d.sql|Update to execution_plan table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (null, 'patch', 'patch_94_95_e.sql|Update to regulatory_build_statistic table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (null, 'patch', 'patch_94_95_f.sql|Update to experimental_group table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (null, 'patch', 'patch_94_95_g.sql|segmentation table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (null, 'patch', 'patch_94_95_h.sql|segmentation_cell_tables');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (null, 'patch', 'patch_94_95_i.sql|segmentation_statistic table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (null, 'patch', 'patch_94_95_j.sql|segmentation_file table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (null, 'patch', 'patch_94_95_k.sql|peak calling statistic table');
 
 /**
 @table meta_coord
