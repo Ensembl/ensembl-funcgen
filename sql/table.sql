@@ -1438,7 +1438,7 @@ CREATE TABLE `probe_transcript` (
 DROP TABLE IF EXISTS `experiment`;
 CREATE TABLE `experiment` (
   `experiment_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `name` varchar(100) DEFAULT NULL,
+  `name` varchar(255) DEFAULT NULL,
   `experimental_group_id` smallint(6) unsigned DEFAULT NULL,
   `control_id` int(10) unsigned DEFAULT NULL,
   `is_control` tinyint(3) unsigned DEFAULT '0',
