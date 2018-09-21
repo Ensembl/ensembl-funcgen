@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-# Copyright [1999-2016] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
+# Copyright [1999-2018] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -33,6 +33,7 @@ use File::Basename;
 use List::MoreUtils qw(uniq);
 use Bio::EnsEMBL::Funcgen::ReadFile;
 use Bio::EnsEMBL::Funcgen::ReadFileExperimentalConfiguration;
+use Bio::EnsEMBL::Funcgen::FeatureType;
 use DBI;
 
 # use DateTime;
@@ -108,7 +109,7 @@ sub main {
     # -------------------
     # empty data 
     # -------------------
-    empty_data($cfg);
+    #empty_data($cfg);
     
 
 
@@ -149,23 +150,29 @@ sub main {
     verify_basic_objects_in_db( $control_data, $signal_data, $adaptors,
         $logger );
 
-	#Thirth test
+ 	#Thirth test
 	#exit;
 
     # ------------
     # registration
     # ------------
 	
+    my %epi_Ihec;
+    
 	
 	#register control files 
-	my $control_experiments_ids = register_ctl($logger, $control_data, $adaptors, $cfg);
+	my $control_experiments_ids = register_ctl($logger, $control_data, $adaptors, $cfg, \%epi_Ihec);
 
 	#fourth control
 	#exit;
 	#register signal files
     for my $entry ( values %{$signal_data} ) {
-        register_signal ( $logger, $entry, $adaptors, $cfg, $control_experiments_ids );
+        register_signal ( $logger, $entry, $adaptors, $cfg, $control_experiments_ids, \%epi_Ihec);
     }
+
+
+
+
 	print "FIN\n";
     return 1;
 }
@@ -203,17 +210,20 @@ sub get_data_from_csv {
     while ( readline $csv_fh ) {
         chomp;
 
-        if (/^accession/i) {
+        if (/^epi_accession/i) {
             next;    # ignore input file header
         }
 
-        my ($accession,             $exp_accession,			$epigenome_name,    	$feature_type_name,
-            $br,                    $new_br,				$tr,					$new_tr,
-			$gender,	            $md5,                   $local_url,         	$analysis_name,
-            $exp_group_name,        $assay_xrefs,			$ontology_xref_accs, 	$xref_accs,
-			$epigenome_description,	$controlled_by, 		$paired,				$paired_end_tag,
-			$read_length,			$multiple,				$paired_with,           $download_url,
-            $info
+
+
+
+        my ($epi_accession,         $accession,             $exp_accession,			$epigenome_name,    	
+            $feature_type_name,     $br,                    $new_br,				$tr,					
+            $new_tr,     			$gender,	            $md5,                   $local_url,         	
+            $analysis_name,         $exp_group_name,        $assay_xrefs,			$ontology_xref_accs, 	
+            $xref_accs, 			$epigenome_description,	$controlled_by, 		$paired,				
+            $paired_end_tag,		$read_length,			$multiple,				$paired_with,           
+            $download_url,          $info
         ) = split /\t/;
 
 		
@@ -246,7 +256,9 @@ sub get_data_from_csv {
         $entry->{info}                  = $info;
 		
 
-
+        if (uc $entry->{exp_group_name} eq 'ROADMAP'){
+            $entry->{exp_group_name} = 'Roadmap Epigenomics';
+        }
         
 
 
@@ -351,6 +363,14 @@ sub fetch_adaptors {
         -species => $cfg->{general}->{species},
     );
 
+
+    my $dbCoreAdaptor = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+        -user    => $cfg->{dna_db}->{user},
+        -host    => $cfg->{dna_db}->{host},
+        -port    => $cfg->{dna_db}->{port},
+        -dbname  => $cfg->{dna_db}->{dbname}
+    );
+
 	$adaptors{epigenome}    = $dba->get_adaptor('Epigenome');
 	$adaptors{feature_type}    = $dba->get_adaptor('FeatureType');
 	$adaptors{analysis}    = $dba->get_adaptor('Analysis');
@@ -361,6 +381,9 @@ sub fetch_adaptors {
 		
     $adaptors{db}       = $dba;
     $adaptors{db_entry} = Bio::EnsEMBL::DBSQL::DBEntryAdaptor->new($dba);
+
+    $adaptors{Gene} = $dbCoreAdaptor->get_adaptor("Gene");
+
     return \%adaptors;
 }
 
@@ -374,6 +397,8 @@ sub verify_basic_objects_in_db {
 
         my @lstAnalysis = split (',', $entry->{analysis_name});
 
+        my $analysis;
+
         foreach my $analysis_name (@lstAnalysis){
             $analysis_name =~ s/\s//g; #remove blank spaces
             
@@ -382,37 +407,28 @@ sub verify_basic_objects_in_db {
                 $to_register{Analysis} //= [];
                 push @{ $to_register{Analysis} }, $entry->{analysis_name};
                 $abort = 1;
+
             }else{
-                 #$entry->{analysis_name} = $analysis->logic_name;
+                my $feature_type = fetch_feature_type($entry, $adaptors, $analysis);
+                if (!defined $feature_type){
+                    $to_register{Feature_Type} //= [];
+                    push @{ $to_register{Feature_Type} }, $entry->{feature_type_name};
+                    #$abort = 1;
+                }
             }
         }
 
 
-
-
-
-
-
-        my $feature_types = $adaptors->{feature_type}->fetch_all_by_name( $entry->{feature_type_name} );
 			
         my $exp_group = $adaptors->{exp_group}->fetch_by_name( $entry->{exp_group_name} );
-			
-     
-
-
-        if ( !defined $feature_types->[0] ) {
-            $to_register{Feature_Type} //= [];
-            push @{ $to_register{Feature_Type} }, $entry->{feature_type_name};
-            $abort = 1;
-        }else{
-        	$entry->{feature_type_name} = $feature_types->[0]->name;
-        }
 
         if ( !defined $exp_group ) {
             $to_register{Experimental_Group} //= [];
             push @{ $to_register{Experimental_Group} },
                 $entry->{exp_group_name};
             $abort = 1;
+
+            
         }else{
         	$entry->{exp_group_name} = $exp_group->name;
         }
@@ -436,11 +452,27 @@ sub verify_basic_objects_in_db {
         $logger->error( 'Aborting registration' . "\n", 0, 1 );
     }
 
+
     return 1;
 }
 
+sub get_epigenome_unique_name{
+    my $epigenome_name = shift;
+    my $adaptors = shift;
+
+    my $epi_counter = 1; 
+    my $epi_name;
+    do{
+        $epi_name = "new_".$epigenome_name.'_'.$epi_counter;
+        $epi_counter++;
+
+    }while($adaptors->{epigenome}->fetch_by_name( $epi_name ));   
+
+    return $epi_name;
+}
+
 sub register_ctl {
-	my ( $logger, $ctl_data, $adaptors, $cfg ) = @_;
+	my ( $logger, $ctl_data, $adaptors, $cfg, $epi_name_ihec) = @_;
 	
 	my $registered_file = {};
 	my $control_experiments_ids = {};
@@ -449,22 +481,53 @@ sub register_ctl {
     my $file_exp = {};
 	my %control_data = %{$ctl_data};
     my $experiment;
-    
+    #my %epi_name_ihec = %{$epi_ihec};
+   
     foreach my $ctl (keys %control_data){
         
         my $entry = $control_data{$ctl};
 
         my @lstAnalysis = split (',', $entry->{analysis_name});
 
-
+        my $epi_new_name;
 
         foreach my $analysis_name (@lstAnalysis){
 
             $analysis_name =~ s/\s//g; #remove blank spaces
             my $analysis = $adaptors->{analysis}->fetch_by_logic_name( $analysis_name );
-            my $epigenome = $adaptors->{epigenome}->fetch_by_name( $entry->{epigenome_name} );
-            if ( !$epigenome ) {
+
+            #my $epigenome = $adaptors->{epigenome}->fetch_by_name( $entry->{epigenome_name} );
+            my $epigenome;
+            my $old_epigenome_name = $entry->{epigenome_name}; 
+            $old_epigenome_name =~ s/\:/_/g;
+            $old_epigenome_name =~ s/\+//g;
+            $old_epigenome_name =~ s/\(//g;
+            $old_epigenome_name =~ s/\)//g;
+            $old_epigenome_name =~ s/\-/_/g;
+            $old_epigenome_name =~ s/\./_/g;
+            $old_epigenome_name =~ s/\//_/g;
+            $old_epigenome_name =~ s/ /_/g;
+
+            my $ihec_epiname = $entry->{xref_accs}."_".$old_epigenome_name;
+
+            if (!(exists ($epi_name_ihec->{$ihec_epiname})) && !($epi_new_name)){
+               
+                $epi_new_name = get_epigenome_unique_name($entry->{epigenome_name}, $adaptors );
+               
+                $entry->{epigenome_name}=$epi_new_name;
+
                 $epigenome = store_epigenome( $entry, $adaptors );
+
+                $epi_name_ihec->{$ihec_epiname} = $epi_new_name;
+
+
+            }else{
+                if ($epi_new_name){
+                    $epigenome = $adaptors->{epigenome}->fetch_by_name( $epi_new_name );
+                }else{
+                    $epigenome = $adaptors->{epigenome}->fetch_by_name( $epi_name_ihec->{$ihec_epiname} );
+                }
+                
             }
 
             my $subFix='';
@@ -503,25 +566,49 @@ sub register_ctl {
 
     }
 
+    $logger->info( "Ctl Successful Registration\n", 1, 1 );
 
     return $file_exp;
 
 }
 
 sub register_signal {
-    my ( $logger, $entry, $adaptors, $cfg, $control_experiments_ids ) = @_;
+    my ( $logger, $entry, $adaptors, $cfg, $control_experiments_ids, $epi_name_ihec) = @_;
+    #my %epi_name_ihec = %{$epi_ihec};
 
     $logger->info( 'Registering ' . $entry->{accession} . "\n", 0, 1 );
 
     #my $analysis = $entry->{analysis_name};
 	my $analysis = $adaptors->{analysis}->fetch_by_logic_name( $entry->{analysis_name} );
 
-    my $epigenome
-        = $adaptors->{epigenome}->fetch_by_name( $entry->{epigenome_name} );
+    #my $epigenome = $adaptors->{epigenome}->fetch_by_name( $entry->{epigenome_name} );
+    my $epigenome;
+    my $old_epigenome_name = $entry->{epigenome_name}; 
+    $old_epigenome_name =~ s/\:/_/g;
+    $old_epigenome_name =~ s/\+//g;
+    $old_epigenome_name =~ s/\(//g;
+    $old_epigenome_name =~ s/\)//g;
+    $old_epigenome_name =~ s/\-/_/g;
+    $old_epigenome_name =~ s/\./_/g;
+    $old_epigenome_name =~ s/\//_/g;
+    $old_epigenome_name =~ s/ /_/g;
 
-    if ( !$epigenome ) {
+    my $ihec_epiname = $entry->{xref_accs}."_".$old_epigenome_name;
+
+    
+
+    if (!(exists ($epi_name_ihec->{$ihec_epiname}))){
+        my $epi_new_name = get_epigenome_unique_name($entry->{epigenome_name}, $adaptors );
+        $entry->{epigenome_name}=$epi_new_name;
         $epigenome = store_epigenome( $entry, $adaptors );
+        $epi_name_ihec->{$ihec_epiname} = $entry->{epigenome_name};
+    }else{
+
+        $epigenome = $adaptors->{epigenome}->fetch_by_name( $epi_name_ihec->{$ihec_epiname} );
     }
+
+
+
 
 
     #if ( $entry->{ontology_xref_accs} ) {
@@ -537,7 +624,9 @@ sub register_signal {
     my $feature_type = fetch_feature_type( $entry, $adaptors, $analysis );
     
     if (! defined $feature_type) {
-      die("Couldn't fetch feature type with name " . $entry->{feature_type_name} . "!");
+        
+
+        die("Couldn't fetch feature type with name " . $entry->{feature_type_name} . "!");
     }
 
 	
@@ -554,6 +643,7 @@ sub register_signal {
     # don't use control_db_ids, fetch directly from db for every signal file
     my $subFix;
     if ( !$experiment ) {
+
 		my $controlled = undef;
 		if ($entry->{controlled_by}){
 			if ($entry->{controlled_by} ne '-'){
@@ -577,7 +667,7 @@ sub register_signal {
 
 				my $controlled_id = $control_experiments_ids->{$controlledSub};
 
-
+                #print "Controlled_id: ".$controlled_id."\n";
 				$controlled = $adaptors->{experiment}->fetch_by_dbID($controlled_id);
 			}
 		}
@@ -602,16 +692,18 @@ sub store_epigenome {
     my $production_name
         = create_epigenome_production_name( $entry->{epigenome_name} );
 
+
+
     my @epicomp = split (';', $entry->{epigenome_description});;
     my $epidesc = @epicomp[0];
-    my $epilabel = @epicomp [1];
+    #my $epilabel = @epicomp [1];
+    my $epilabel = $epidesc;
     $epidesc =~ s/^\s+//;
     $epidesc =~ s/\s+$//;
     $epilabel =~ s/^\s+//;
     $epilabel =~ s/\s+$//;
 
-
-    my $epigenome = Bio::EnsEMBL::Funcgen::Epigenome->new(
+     my $epigenome = Bio::EnsEMBL::Funcgen::Epigenome->new(
         -name            => $entry->{epigenome_name},
         -display_label   => $epilabel,
         -description     => $epidesc,
@@ -633,12 +725,71 @@ sub fetch_feature_type {
 
     if ( $entry->{is_control} ) {
         $feature_type = $adaptors->{feature_type}->fetch_by_name( $ft_name, 'DNA', $analysis );
+        #print "Analysis control: ".$analysis."\n";
+        #print "Feature control: ".$ft_name."\n";
     }
     else {
         $feature_type = $adaptors->{feature_type}->fetch_by_name($ft_name);
+            #print "Feature: ".$ft_name."\n";
+    }
+
+    if (!$feature_type){
+        #my $is_TF =  check_TF($adaptors, $ft_name);
+
+        #if ($is_TF == 1){
+            my $class = 'Transcription Factor';
+            my $description = $ft_name. ' TF binding';
+            my $so_accession = 'SO:0000235';
+            my $so_name = 'TF_binding_site';
+            $feature_type = create_feature_type($adaptors, $ft_name, $class, $description, $so_accession, $so_name);
+        #}
+        
     }
 
     return $feature_type;
+}
+
+sub check_TF {
+    my $adaptors = shift;
+    my $ft_name = shift;
+
+    my $is_TF = 0;
+    
+    my $lstgene = $adaptors->{Gene}->fetch_all_by_external_name($ft_name);
+
+    LBL_GENE: {
+        foreach my $gene (@{$lstgene}){
+            my $lstDbEntries = $gene->get_all_DBLinks('GO');
+            foreach my $dbentry (@{$lstDbEntries}){
+                if (index(uc $dbentry->description(), 'DNA BINDING TRANSCRIPTION FACTOR ACTIVITY') != -1) {
+                    $is_TF = 1;
+                    last LBL_GENE;
+                } 
+            }
+    
+        }
+    }
+
+    return $is_TF;
+}
+
+sub create_feature_type {
+    my ($adaptors, $ft_name, $class, $description, $so_accession, $so_name) = @_;
+
+    my $feature = Bio::EnsEMBL::Funcgen::FeatureType->new(
+        -name               => $ft_name,
+        -class              => $class,
+        -description        => $description,
+        -so_name            => $so_name,
+        -so_accession       => $so_accession
+        );
+
+    $adaptors->{feature_type}->store($feature);
+
+    $feature= $adaptors->{feature_type}->fetch_by_name($ft_name);
+
+
+    return $feature;
 }
 
 sub create_control_experiment_name {
@@ -739,7 +890,6 @@ sub store_read_file_only {
         -name           => $entry->{accession},
         -analysis       => $analysis,
         -is_paired_end  => $is_paired,
-        -paired_with    => undef,
         -file_size      => undef,
         -read_length    => $entry->{read_length},
         -md5sum         => $entry->{md5},
@@ -762,21 +912,19 @@ sub store_read_file_experimental_configuration {
 	 
      
 	 my $read_file_experimental_configuration = Bio::EnsEMBL::Funcgen::ReadFileExperimentalConfiguration->new(
-     -read_file => $read_file,
+     -read_file_id => $read_file->dbID,
      -experiment_id         => $experiment->dbID,
      -biological_replicate  => $entry->{br},
      -technical_replicate   => $entry->{tr},
      -paired_end_tag        => $paired_end_tag,
      -multiple              => $entry->{multiple},
    );
-  
+    
    
    
    $adaptors->{read_file_experimental_configuration}->store($read_file_experimental_configuration);
-   
-   
 
-
+ 
    return 1;
 }
 
@@ -814,21 +962,21 @@ sub store_read_file {
     use Bio::EnsEMBL::Funcgen::ReadFile;
     use Bio::EnsEMBL::Funcgen::ReadFileExperimentalConfiguration;
     
-
+    $read_file = Bio::EnsEMBL::Funcgen::ReadFile->new(
+            -name           => $entry->{accession},
+            -analysis       => $analysis,
+            -is_paired_end  => $is_paired,
+            -file_size      => undef,
+            -read_length    => $entry->{read_length},
+            -md5sum         => $entry->{md5},
+            -file           => $entry->{local_url},
+            -notes          => undef,
+      );
+    $adaptors->{read_file}->store($read_file);
 
     my $read_file_experimental_configuration = Bio::EnsEMBL::Funcgen::ReadFileExperimentalConfiguration->new(
     
-      -read_file => Bio::EnsEMBL::Funcgen::ReadFile->new(
-      		-name           => $entry->{accession},
-      	  	-analysis       => $analysis,
-      	  	-is_paired_end  => $is_paired,
-      	  	-paired_with    => undef,
-      	  	-file_size      => undef,
-      	  	-read_length    => $entry->{read_length},
-      	  	-md5sum         => $entry->{md5},
-      	  	-file           => $entry->{local_url},
-      	  	-notes          => undef,
-      ),
+      -read_file_id => $read_file->dbID,
       -experiment_id         => $experiment->dbID,
       -biological_replicate  => $entry->{br},
       -technical_replicate   => $entry->{tr},
@@ -886,6 +1034,7 @@ sub store_db_xref {
 
     for my $xref_acc (@xref_accessions) {
         my ( $dbname, $primary_id ) = split /-/, $xref_acc;
+        $dbname = "EpiRR";
 
         my $xref = Bio::EnsEMBL::DBEntry->new(
             -primary_id => $primary_id,
