@@ -1,7 +1,7 @@
 CREATE TABLE `alignment` (
   `alignment_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `analysis_id` smallint(5) unsigned NOT NULL,
-  `name` varchar(100) DEFAULT NULL,
+  `name` varchar(255) NOT NULL,
   `bam_file_id` int(11) DEFAULT NULL,
   `bigwig_file_id` int(11) DEFAULT NULL,
   `experiment_id` int(15) unsigned DEFAULT NULL,
@@ -129,16 +129,34 @@ CREATE TABLE `associated_xref` (
 
 CREATE TABLE `binding_matrix` (
   `binding_matrix_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `name` varchar(45) NOT NULL,
-  `feature_type_id` int(10) unsigned NOT NULL,
-  `frequencies` varchar(1000) NOT NULL,
-  `description` varchar(255) DEFAULT NULL,
-  `analysis_id` smallint(5) unsigned NOT NULL,
+  `name` varchar(200) NOT NULL,
   `threshold` double DEFAULT NULL,
+  `source` varchar(20) NOT NULL,
+  `stable_id` varchar(128) NOT NULL,
   PRIMARY KEY (`binding_matrix_id`),
-  UNIQUE KEY `name_analysis_idx` (`name`,`analysis_id`),
-  KEY `feature_type_idx` (`feature_type_id`)
+  UNIQUE KEY `name_idx` (`name`)
 ) ENGINE=MyISAM AUTO_INCREMENT=223 DEFAULT CHARSET=latin1;
+
+CREATE TABLE `binding_matrix_frequencies` (
+  `binding_matrix_frequencies_id` int(11) NOT NULL AUTO_INCREMENT,
+  `binding_matrix_id` int(11) NOT NULL,
+  `position` int(11) unsigned NOT NULL,
+  `nucleotide` enum('A','C','G','T') NOT NULL,
+  `frequency` int(10) unsigned NOT NULL,
+  PRIMARY KEY (`binding_matrix_frequencies_id`),
+  UNIQUE KEY `unique_constraint_idx` (`binding_matrix_id`,`position`,`nucleotide`),
+  KEY `binding_matrix_id_idx` (`binding_matrix_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+CREATE TABLE `binding_matrix_transcription_factor_complex` (
+  `binding_matrix_transcription_factor_complex_id` int(11) NOT NULL AUTO_INCREMENT,
+  `binding_matrix_id` int(11) NOT NULL,
+  `transcription_factor_complex_id` int(11) NOT NULL,
+  PRIMARY KEY (`binding_matrix_transcription_factor_complex_id`),
+  UNIQUE KEY `binding_matrix_id_transcription_factor_complex_id_idx` (`binding_matrix_id`,`transcription_factor_complex_id`),
+  KEY `binding_matrix_id_idx` (`binding_matrix_id`),
+  KEY `transcription_factor_complex_id_idx` (`transcription_factor_complex_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 CREATE TABLE `chance` (
   `chance_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -177,7 +195,7 @@ CREATE TABLE `data_file` (
 CREATE TABLE `epigenome` (
   `epigenome_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(120) NOT NULL,
-  `display_label` varchar(120) DEFAULT NULL,
+  `display_label` varchar(120) NOT NULL,
   `description` varchar(80) DEFAULT NULL,
   `production_name` varchar(120) DEFAULT NULL,
   `gender` enum('male','female','hermaphrodite','mixed','unknown') DEFAULT 'unknown',
@@ -189,13 +207,13 @@ CREATE TABLE `execution_plan` (
   `execution_plan_id` int(18) unsigned NOT NULL AUTO_INCREMENT,
   `time` bigint(20) DEFAULT NULL,
   `experiment_id` int(16) unsigned NOT NULL,
-  `execution_plan` text,
+  `execution_plan` longtext NOT NULL,
   PRIMARY KEY (`execution_plan_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 CREATE TABLE `experiment` (
   `experiment_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `name` varchar(100) DEFAULT NULL,
+  `name` varchar(255) DEFAULT NULL,
   `experimental_group_id` smallint(6) unsigned DEFAULT NULL,
   `control_id` int(10) unsigned DEFAULT NULL,
   `is_control` tinyint(3) unsigned DEFAULT '0',
@@ -212,8 +230,7 @@ CREATE TABLE `experiment` (
 CREATE TABLE `experimental_group` (
   `experimental_group_id` smallint(6) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(40) NOT NULL,
-  `location` varchar(120) DEFAULT NULL,
-  `contact` varchar(40) DEFAULT NULL,
+  `production_name` varchar(255) NOT NULL,
   `description` varchar(255) DEFAULT NULL,
   `url` varchar(255) DEFAULT NULL,
   `is_project` tinyint(1) DEFAULT '0',
@@ -361,7 +378,7 @@ CREATE TABLE `meta` (
   PRIMARY KEY (`meta_id`),
   UNIQUE KEY `species_key_value_idx` (`species_id`,`meta_key`,`meta_value`),
   KEY `species_value_idx` (`species_id`,`meta_value`)
-) ENGINE=MyISAM AUTO_INCREMENT=731 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=756 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `meta_coord` (
   `table_name` varchar(40) NOT NULL,
@@ -398,14 +415,35 @@ CREATE TABLE `motif_feature` (
   `seq_region_start` int(10) unsigned NOT NULL,
   `seq_region_end` int(10) unsigned NOT NULL,
   `seq_region_strand` tinyint(1) NOT NULL,
-  `display_label` varchar(60) DEFAULT NULL,
   `score` double DEFAULT NULL,
-  `interdb_stable_id` mediumint(8) unsigned DEFAULT NULL,
+  `stable_id` varchar(18) DEFAULT NULL,
   PRIMARY KEY (`motif_feature_id`),
-  UNIQUE KEY `interdb_stable_id_idx` (`interdb_stable_id`),
+  UNIQUE KEY `unique_idx` (`binding_matrix_id`,`seq_region_id`,`seq_region_start`,`seq_region_strand`),
+  UNIQUE KEY `stable_id_idx` (`stable_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
   KEY `binding_matrix_idx` (`binding_matrix_id`)
 ) ENGINE=MyISAM AUTO_INCREMENT=568225 DEFAULT CHARSET=latin1;
+
+CREATE TABLE `motif_feature_peak` (
+  `motif_feature_peak_id` int(11) NOT NULL AUTO_INCREMENT,
+  `motif_feature_id` int(11) NOT NULL,
+  `peak_id` int(11) NOT NULL,
+  PRIMARY KEY (`motif_feature_peak_id`),
+  KEY `motif_feature_idx` (`motif_feature_id`),
+  KEY `peak_idx` (`peak_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+CREATE TABLE `motif_feature_regulatory_feature` (
+  `motif_feature_regulatory_feature_id` int(11) NOT NULL AUTO_INCREMENT,
+  `motif_feature_id` int(11) NOT NULL,
+  `regulatory_feature_id` int(11) NOT NULL,
+  `epigenome_id` int(11) DEFAULT NULL,
+  `has_matching_Peak` tinyint(3) unsigned DEFAULT '0',
+  PRIMARY KEY (`motif_feature_regulatory_feature_id`),
+  UNIQUE KEY `mf_rf_ep_idx` (`motif_feature_id`,`regulatory_feature_id`,`epigenome_id`),
+  KEY `motif_feature_idx` (`motif_feature_id`),
+  KEY `regulatory_feature_idx` (`regulatory_feature_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 CREATE TABLE `object_xref` (
   `object_xref_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -462,10 +500,11 @@ CREATE TABLE `peak_calling` (
 
 CREATE TABLE `peak_calling_statistic` (
   `peak_calling_statistic_id` int(28) unsigned NOT NULL AUTO_INCREMENT,
-  `peak_calling_id` int(18) NOT NULL DEFAULT '0',
-  `total_length` int(15) DEFAULT NULL,
-  `num_peaks` bigint(14) DEFAULT NULL,
-  `average_length` int(17) DEFAULT NULL,
+  `peak_calling_id` int(18) unsigned DEFAULT NULL,
+  `epigenome_id` int(15) unsigned DEFAULT NULL,
+  `feature_type_id` int(18) unsigned DEFAULT NULL,
+  `statistic` varchar(255) NOT NULL,
+  `value` float unsigned DEFAULT NULL,
   PRIMARY KEY (`peak_calling_statistic_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
@@ -656,11 +695,11 @@ CREATE TABLE `regulatory_build_epigenome` (
 ) ENGINE=MyISAM AUTO_INCREMENT=18 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `regulatory_build_statistic` (
-  `regulatory_build_statistics_id` int(30) unsigned NOT NULL AUTO_INCREMENT,
+  `regulatory_build_statistic_id` int(30) unsigned NOT NULL AUTO_INCREMENT,
   `regulatory_build_id` int(22) unsigned DEFAULT NULL,
   `statistic` varchar(255) DEFAULT NULL,
-  `value` double unsigned DEFAULT NULL,
-  PRIMARY KEY (`regulatory_build_statistics_id`),
+  `value` bigint(11) unsigned DEFAULT NULL,
+  PRIMARY KEY (`regulatory_build_statistic_id`),
   UNIQUE KEY `stats_uniq` (`statistic`,`regulatory_build_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
@@ -690,19 +729,24 @@ CREATE TABLE `regulatory_feature` (
   KEY `stable_id_idx` (`stable_id`)
 ) ENGINE=MyISAM AUTO_INCREMENT=11 DEFAULT CHARSET=latin1;
 
-CREATE TABLE `segmentation_cell_table_ctcf` (
-  `epigenome` varchar(120) DEFAULT NULL,
-  `feature_type` varchar(40) NOT NULL,
-  `signal_bam_path` varchar(255) NOT NULL,
-  `control_bam_path` varchar(255) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+CREATE TABLE `segmentation` (
+  `segmentation_id` int(18) unsigned NOT NULL AUTO_INCREMENT,
+  `regulatory_build_id` int(22) DEFAULT NULL,
+  `name` varchar(255) NOT NULL,
+  `superclass` varchar(255) NOT NULL,
+  `class` varchar(255) NOT NULL,
+  PRIMARY KEY (`segmentation_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
-CREATE TABLE `segmentation_cell_table_without_ctcf` (
-  `epigenome` varchar(120) DEFAULT NULL,
-  `feature_type` varchar(40) NOT NULL,
-  `signal_bam_path` varchar(255) NOT NULL,
-  `control_bam_path` varchar(255) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+CREATE TABLE `segmentation_cell_tables` (
+  `superclass` varchar(255) NOT NULL,
+  `class` varchar(255) NOT NULL,
+  `segmentation_id` int(18) unsigned NOT NULL,
+  `epigenome_id` int(16) unsigned NOT NULL,
+  `feature_type_id` int(18) unsigned NOT NULL,
+  `signal_alignment_id` int(23) unsigned NOT NULL,
+  `control_alignment_id` int(23) unsigned NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 CREATE TABLE `segmentation_file` (
   `segmentation_file_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -710,6 +754,7 @@ CREATE TABLE `segmentation_file` (
   `name` varchar(100) DEFAULT NULL,
   `analysis_id` smallint(5) unsigned NOT NULL,
   `epigenome_id` int(10) unsigned DEFAULT NULL,
+  `segmentation_id` int(18) unsigned DEFAULT NULL,
   PRIMARY KEY (`segmentation_file_id`),
   UNIQUE KEY `name_idx` (`name`),
   KEY `epigenome_idx` (`epigenome_id`),
@@ -721,7 +766,8 @@ CREATE TABLE `segmentation_state_assignment` (
   `state` int(8) NOT NULL,
   `segmentation` varchar(255) NOT NULL,
   `assignment` varchar(255) NOT NULL,
-  PRIMARY KEY (`segmentation_state_assignment_id`)
+  PRIMARY KEY (`segmentation_state_assignment_id`),
+  UNIQUE KEY `state` (`state`,`segmentation`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 
 CREATE TABLE `segmentation_state_emission` (
@@ -738,8 +784,50 @@ CREATE TABLE `segmentation_state_emission` (
   `H3K4me3` double DEFAULT NULL,
   `H3K9ac` double DEFAULT NULL,
   `H3K9me3` double DEFAULT NULL,
-  PRIMARY KEY (`segmentation_state_emission_id`)
+  PRIMARY KEY (`segmentation_state_emission_id`),
+  UNIQUE KEY `state` (`state`,`segmentation`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+CREATE TABLE `segmentation_statistic` (
+  `segmentation_statistic_id` int(30) unsigned NOT NULL AUTO_INCREMENT,
+  `segmentation_id` int(18) unsigned DEFAULT NULL,
+  `state` int(8) unsigned DEFAULT NULL,
+  `epigenome_id` int(22) unsigned DEFAULT NULL,
+  `label` varchar(255) DEFAULT NULL,
+  `statistic` varchar(255) NOT NULL,
+  `value` float unsigned DEFAULT NULL,
+  PRIMARY KEY (`segmentation_statistic_id`),
+  UNIQUE KEY `stats_uniq` (`statistic`,`segmentation_id`,`epigenome_id`,`label`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+
+CREATE TABLE `transcription_factor` (
+  `transcription_factor_id` int(11) NOT NULL AUTO_INCREMENT,
+  `name` varchar(120) NOT NULL,
+  `feature_type_id` int(10) unsigned DEFAULT NULL,
+  `gene_stable_id` varchar(128) DEFAULT NULL,
+  PRIMARY KEY (`transcription_factor_id`),
+  UNIQUE KEY `name_idx` (`name`),
+  KEY `feature_type_id_idx` (`feature_type_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+CREATE TABLE `transcription_factor_complex` (
+  `transcription_factor_complex_id` int(11) NOT NULL AUTO_INCREMENT,
+  `production_name` varchar(120) NOT NULL,
+  `display_name` varchar(120) NOT NULL,
+  PRIMARY KEY (`transcription_factor_complex_id`),
+  UNIQUE KEY `production_name_idx` (`production_name`),
+  UNIQUE KEY `display_name_idx` (`display_name`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+
+CREATE TABLE `transcription_factor_complex_composition` (
+  `transcription_factor_complex_composition_id` int(11) NOT NULL AUTO_INCREMENT,
+  `transcription_factor_complex_id` int(11) NOT NULL,
+  `transcription_factor_id` int(11) NOT NULL,
+  PRIMARY KEY (`transcription_factor_complex_composition_id`),
+  UNIQUE KEY `tfc_id_tf_id_idx` (`transcription_factor_complex_id`,`transcription_factor_id`),
+  KEY `transcription_factor_complex_id_idx` (`transcription_factor_complex_id`),
+  KEY `transcription_factor_id_idx` (`transcription_factor_id`)
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 CREATE TABLE `underlying_structure` (
   `underlying_structure_id` int(11) NOT NULL AUTO_INCREMENT,
