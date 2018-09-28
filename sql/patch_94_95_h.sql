@@ -26,7 +26,7 @@ CREATE TABLE if not exists segmentation_cell_tables (
   feature_type_id      int(18) unsigned NOT NULL,
   signal_alignment_id  int(23) unsigned NOT NULL,
   control_alignment_id int(23) unsigned NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 -- patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_94_95_h.sql|segmentation_cell_tables');
