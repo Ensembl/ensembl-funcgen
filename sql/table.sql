@@ -1537,7 +1537,8 @@ CREATE TABLE `epigenome` (
   `production_name` varchar(120) DEFAULT NULL,
   `gender` enum('male','female','hermaphrodite','mixed','unknown') DEFAULT 'unknown',
   PRIMARY KEY (`epigenome_id`),
-  UNIQUE KEY `name_idx` (`name`)
+  UNIQUE KEY `name_idx` (`name`),
+  UNIQUE KEY `display_label_idx` (`display_label`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
