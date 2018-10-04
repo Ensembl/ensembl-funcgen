@@ -697,11 +697,13 @@ sub store_epigenome {
     my @epicomp = split (';', $entry->{epigenome_description});;
     my $epidesc = @epicomp[0];
     #my $epilabel = @epicomp [1];
-    my $epilabel = $epidesc;
+    #my $epilabel = $epidesc;
     $epidesc =~ s/^\s+//;
     $epidesc =~ s/\s+$//;
-    $epilabel =~ s/^\s+//;
-    $epilabel =~ s/\s+$//;
+    #$epilabel =~ s/^\s+//;
+    #$epilabel =~ s/\s+$//;
+
+    my $epilabel = $entry->{epigenome_name};
 
      my $epigenome = Bio::EnsEMBL::Funcgen::Epigenome->new(
         -name            => $entry->{epigenome_name},
