@@ -1655,6 +1655,8 @@ CREATE TABLE `meta` (
 
 
 -- Add necessary meta values
+INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
+
 -- Update and remove these for each release to avoid erroneous patching
 
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (null, 'patch', 'patch_94_95_a.sql|schema_version');
@@ -1668,6 +1670,10 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (null, 'patch', 'patc
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (null, 'patch', 'patch_94_95_i.sql|segmentation_statistic table');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (null, 'patch', 'patch_94_95_j.sql|segmentation_file table');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (null, 'patch', 'patch_94_95_k.sql|peak calling statistic table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_94_95_l.sql|Modify length for column name from epigenome table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_94_95_m.sql|drop obsolete tables');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_94_95_n.sql|add unique constrain on display_label column for epigenome table');
+
 
 /**
 @table meta_coord
