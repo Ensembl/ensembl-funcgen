@@ -120,6 +120,11 @@ sub run {
     use Hash::Util qw( lock_hash );
     lock_hash(%$peak_hash);
     
+    if (! exists  $peak_hash->{-seq_region}) {
+     warn("seq_region wasn't defined for this peak. Skipping.");
+     return;
+    }
+    
     my $slice = $slice_adaptor->fetch_by_region(
       'toplevel', 
       $peak_hash->{-seq_region}
