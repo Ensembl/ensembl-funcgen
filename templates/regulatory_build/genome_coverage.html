@@ -22,11 +22,17 @@
 
 <p>
    The regulatory features cover 
+   [% round_num( regulatory_build_statistics_adaptor.fetch_regulatory_build_overlap_percent.value ) %]%
+   of the genome. If overlaps were not taken into account, this would be:
     [% 
         round_num(
             (100 * total_covered_by_regulatory_features) / ref_length 
         )
     %]% of the genome.
+</p>
+
+<p>
+  Warning: This pie chart does not take overlaps into account. If the genome coverage when taking overlaps into account is significantly different from the one that doesn't, then this pie chart will overstate the percentage of the genome covered in regulatory features. When there are significant amounts of overlap, it is better to use the &quot;<a href="#percent_of_genome_covered_by_feature_type">Percent of genome covered by feature type</a>&quot; chart below.
 </p>
 
 <div id="canvas-holder" style="width:50%">

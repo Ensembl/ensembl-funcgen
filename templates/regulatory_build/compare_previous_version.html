@@ -50,6 +50,32 @@
       }
   });
 
+  var ctx = document.getElementById('regulatory_build_2_compared_lengths_percent_coverage').getContext('2d');
+  new Chart(ctx, {
+      type: 'bar',
+      data: barChartData_comparison_with_previous_version_lengths_percent_coverage,
+      options: {
+          responsive: true,
+          legend: {
+              display: true,
+              position: 'bottom',
+          },
+          scales: {
+              yAxes: [{
+                  ticks: {
+                      min: 0
+                  }
+              }]
+          },
+          title: {
+              display: false,
+              text: 'Total numbers by feature type'
+          }
+      }
+  });
+
+
+
   var ctx = document.getElementById('regulatory_build_2_compared_average_lengths').getContext('2d');
   new Chart(ctx, {
       type: 'bar',
@@ -80,7 +106,7 @@
 
 [% MACRO compare_previous_version BLOCK %]
 
-<h2>Comparisons to the previous Regulatory Build</h2>
+<h2><a name="comparisons_to_the_previous_regulatory_build">Comparisons to the previous Regulatory Build</a></h2>
 
 [% box_diagram %]
 
@@ -132,7 +158,61 @@
 
 </script>
 
-<h3>Total lengths in base pairs</h3>
+<h3><a name="percent_of_genome_covered_by_feature_type">Percent of genome covered by feature type</a></h3>
+
+<div style="width: 80%;">
+    <canvas id="regulatory_build_2_compared_lengths_percent_coverage"></canvas>
+</div>
+
+<script>
+    var color = Chart.helpers.color;
+    
+    var barChartData_comparison_with_previous_version_lengths_percent_coverage = {
+        labels: [
+            "Regulatory Build",
+            "CTCF Binding Site",
+            "Enhancer",
+            "Promoter Flanking Region",
+            "Promoter",
+            "TF binding site",
+            "Open chromatin",
+        ],
+        datasets: [
+          {
+            label: 'Previous Regulatory Build',
+            backgroundColor: window.chartColors.blue,
+            data: [
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_regulatory_build_overlap_percent.value  %]',
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_ctcf_overlap_percent.value              %]',
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_enhancer_overlap_percent.value          %]',
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_promoter_flanking_overlap_percent.value %]',
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_promoter_overlap_percent.value          %]',
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_tf_binding_overlap_percent.value        %]',
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_open_chromatin_overlap_percent.value    %]',
+            ]
+          },
+          {
+            label: 'New Regulatory Build',
+            backgroundColor: window.chartColors.red,
+            data: [
+                '[% regulatory_build_statistics_adaptor.fetch_regulatory_build_overlap_percent.value  %]',
+                '[% regulatory_build_statistics_adaptor.fetch_ctcf_overlap_percent.value              %]',
+                '[% regulatory_build_statistics_adaptor.fetch_enhancer_overlap_percent.value          %]',
+                '[% regulatory_build_statistics_adaptor.fetch_promoter_flanking_overlap_percent.value %]',
+                '[% regulatory_build_statistics_adaptor.fetch_promoter_overlap_percent.value          %]',
+                '[% regulatory_build_statistics_adaptor.fetch_tf_binding_overlap_percent.value        %]',
+                '[% regulatory_build_statistics_adaptor.fetch_open_chromatin_overlap_percent.value    %]',
+            ]
+          },
+        ]
+    };
+</script>
+
+<p>
+    All the numbers in this chart take overlaps into account. That means, if regulatory features overlap, the bases will be counted only once.
+</p>
+
+<h3><a name="total_lengths_in_base_pairs">Total lengths in base pairs</a></h3>
 
 <div style="width: 80%;">
     <canvas id="regulatory_build_2_compared_lengths"></canvas>
@@ -152,7 +232,7 @@
         ],
         datasets: [
           {
-            label: 'Previous Regulatory Build',
+            label: 'previous sum feature lengths',
             backgroundColor: window.chartColors.blue,
             data: [
                 '[% regulatory_build_statistics_adaptor_previous_version.fetch_sum_length_ctcf_binding_site.value %]',
@@ -164,7 +244,19 @@
             ]
           },
           {
-            label: 'New Regulatory Build',
+            label: 'previous genome covered',
+            backgroundColor: window.chartColors.purple,
+            data: [
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_ctcf_overlap_bp.value              %]',
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_enhancer_overlap_bp.value          %]',
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_promoter_flanking_overlap_bp.value %]',
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_promoter_overlap_bp.value          %]',
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_tf_binding_overlap_bp.value        %]',
+                '[% regulatory_build_statistics_adaptor_previous_version.fetch_open_chromatin_overlap_bp.value    %]',
+            ]
+          },
+          {
+            label: 'new sum feature lengths',
             backgroundColor: window.chartColors.red,
             data: [
                 '[% regulatory_build_statistics_adaptor.fetch_sum_length_ctcf_binding_site.value %]',
@@ -175,12 +267,24 @@
                 '[% regulatory_build_statistics_adaptor.fetch_sum_length_open_chromatin.value %]',
             ]
           },
+          {
+            label: 'new genome covered',
+            backgroundColor: window.chartColors.orange,
+            data: [
+                '[% regulatory_build_statistics_adaptor.fetch_ctcf_overlap_bp.value              %]',
+                '[% regulatory_build_statistics_adaptor.fetch_enhancer_overlap_bp.value          %]',
+                '[% regulatory_build_statistics_adaptor.fetch_promoter_flanking_overlap_bp.value %]',
+                '[% regulatory_build_statistics_adaptor.fetch_promoter_overlap_bp.value          %]',
+                '[% regulatory_build_statistics_adaptor.fetch_tf_binding_overlap_bp.value        %]',
+                '[% regulatory_build_statistics_adaptor.fetch_open_chromatin_overlap_bp.value    %]',
+            ]
+          },
         ]
     };
 
 </script>
 
-<h3>Average lengths of regulatory features</h3>
+<h3><a name="average_lengths_of_regulatory_features">Average lengths of regulatory features</h3>
 
 <div style="width: 80%;">
     <canvas id="regulatory_build_2_compared_average_lengths"></canvas>

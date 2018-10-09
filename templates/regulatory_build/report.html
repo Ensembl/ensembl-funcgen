@@ -5,8 +5,14 @@
 <p>
     The regulatory build has a total of 
     [% format_number( regulatory_build_statistics_adaptor.fetch_number_regulatory_features.value ) %] 
-    regulatory features.
+    regulatory features from 
+    [% regulatory_build_statistics_adaptor.fetch_num_epigenomes_in_regulatory_build.value %] 
+    epigenomes (previously
+    [% regulatory_build_statistics_adaptor_previous_version.fetch_num_epigenomes_in_regulatory_build.value %]).
 </p>
+
+[% PROCESS compare_previous_version_total_numbers.html %]
+[% compare_previous_version_total_numbers %]
 
 [% PROCESS genome_coverage.html %]
 [% genome_coverage %]
@@ -35,11 +41,12 @@
 
 <script>
     window.onload = function() {
-      [% validation_vista_enhancers_on_window_load_code  %]
-      [% validation_fantom_enhancers_on_window_load_code %]
-      [% numbers_by_feature_type_on_window_load          %]
-      [% genome_coverage_on_window_load                  %]
-      [% compare_previous_version_on_window_load         %]
+      [% compare_previous_version_total_numbers_on_window_load %]
+      [% validation_vista_enhancers_on_window_load_code        %]
+      [% validation_fantom_enhancers_on_window_load_code       %]
+      [% numbers_by_feature_type_on_window_load                %]
+      [% genome_coverage_on_window_load                        %]
+      [% compare_previous_version_on_window_load               %]
     };
 </script>
 

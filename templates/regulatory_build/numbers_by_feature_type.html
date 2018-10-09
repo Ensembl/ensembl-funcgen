@@ -7,7 +7,8 @@
       options: {
           responsive: true,
           legend: {
-              display: false,
+              display: true,
+              position: 'left'
           },
           scales: {
               yAxes: [{
@@ -36,39 +37,89 @@
 <script>
     var color = Chart.helpers.color;
     
+//     var barChartData = {
+//         labels: [
+//             "CTCF Binding Site",
+//             "Enhancer",
+//             "Promoter Flanking Region",
+//             "Promoter",
+//             "TF binding site",
+//             "Open chromatin",
+//         ],
+//         datasets: [{
+//             
+//             backgroundColor: [
+//                 'rgb(255, 99, 132)',
+//                 'rgb(255, 159, 64)',
+//                 'rgb(255, 205, 86)',
+//                 'rgb(75, 192, 192)',
+//                 'rgb(54, 162, 235)',
+//                 'rgb(153, 102, 255)',
+//                 'rgb(201, 203, 207)',
+//                 'rgb(0,0,139)',
+//                 'rgb(75,0,130)',
+//                 'rgb(0,128,128)',
+//                 'rgb(128,0,128)',
+//             ],
+//             data: [
+//                 '[% regulatory_build_statistics_adaptor.fetch_number_ctcf_binding_site.value %]',
+//                 '[% regulatory_build_statistics_adaptor.fetch_number_enhancer.value %]',
+//                 '[% regulatory_build_statistics_adaptor.fetch_number_promoter_flanking_region.value %]',
+//                 '[% regulatory_build_statistics_adaptor.fetch_number_promoter.value %]',
+//                 '[% regulatory_build_statistics_adaptor.fetch_number_transcription_factor_binding_site.value %]',
+//                 '[% regulatory_build_statistics_adaptor.fetch_number_open_chromatin.value %]',
+//             ]
+//         }]
+//     };
+
     var barChartData = {
-        labels: [
-            "CTCF Binding Site",
-            "Enhancer",
-            "Promoter Flanking Region",
-            "Promoter",
-            "TF binding site",
-            "Open chromatin",
-        ],
-        datasets: [{
-            
-            backgroundColor: [
-                'rgb(255, 99, 132)',
-                'rgb(255, 159, 64)',
-                'rgb(255, 205, 86)',
-                'rgb(75, 192, 192)',
-                'rgb(54, 162, 235)',
-                'rgb(153, 102, 255)',
-                'rgb(201, 203, 207)',
-                'rgb(0,0,139)',
-                'rgb(75,0,130)',
-                'rgb(0,128,128)',
-                'rgb(128,0,128)',
-            ],
-            data: [
-                '[% regulatory_build_statistics_adaptor.fetch_number_ctcf_binding_site.value %]',
-                '[% regulatory_build_statistics_adaptor.fetch_number_enhancer.value %]',
-                '[% regulatory_build_statistics_adaptor.fetch_number_promoter_flanking_region.value %]',
-                '[% regulatory_build_statistics_adaptor.fetch_number_promoter.value %]',
-                '[% regulatory_build_statistics_adaptor.fetch_number_transcription_factor_binding_site.value %]',
-                '[% regulatory_build_statistics_adaptor.fetch_number_open_chromatin.value %]',
-            ]
-        }]
+//         labels: [
+//             "Number of features by type",
+//         ],
+        datasets: [
+            {
+                label: "CTCF Binding Site",
+                backgroundColor: 'rgb(255, 99, 132)',
+                data: [
+                    '[% regulatory_build_statistics_adaptor.fetch_number_ctcf_binding_site.value %]',
+                ]
+            },
+            {
+                label: "Enhancer",
+                backgroundColor: 'rgb(255, 159, 64)',
+                data: [
+                    '[% regulatory_build_statistics_adaptor.fetch_number_enhancer.value %]',
+                ]
+            },
+            {
+                label: "Promoter Flanking Region",
+                backgroundColor: 'rgb(255, 205, 86)',
+                data: [
+                    '[% regulatory_build_statistics_adaptor.fetch_number_promoter_flanking_region.value %]',
+                ]
+            },
+            {
+                label: "Promoter",
+                backgroundColor: 'rgb(75, 192, 192)',
+                data: [
+                    '[% regulatory_build_statistics_adaptor.fetch_number_promoter.value %]',
+                ]
+            },
+            {
+                label: "TF binding site",
+                backgroundColor: 'rgb(54, 162, 235)',
+                data: [
+                    '[% regulatory_build_statistics_adaptor.fetch_number_transcription_factor_binding_site.value %]',
+                ]
+            },
+            {
+                label: "Open chromatin",
+                backgroundColor: 'rgb(153, 102, 255)',
+                data: [
+                    '[% regulatory_build_statistics_adaptor.fetch_number_open_chromatin.value %]',
+                ]
+            },
+        ]
     };
 
 </script>
