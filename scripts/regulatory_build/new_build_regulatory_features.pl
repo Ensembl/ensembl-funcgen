@@ -2804,6 +2804,10 @@ sub select_segmentation_cutoff {
     return 0;
   }
 
+  if ($celltype_count < 2) {
+    return $celltype_count * $max_weight + 1;
+  }
+
   my $files_string = join(" ", @files);
 
   my $last_fscore = 0;
@@ -2978,7 +2982,7 @@ sub compute_regulatory_features {
     # https://www.ebi.ac.uk/panda/jira/browse/ENSREGULATION-906
     # for the reason.
     #
-    #$remove_tss = " | bedtools intersect -wa -v -a stdin -b $tss_tmp2";
+    $remove_tss = " | bedtools intersect -wa -v -a stdin -b $tss_tmp2";
   }
 
   #############################################
@@ -3008,7 +3012,11 @@ sub compute_regulatory_features {
     $demoted = "$options->{working_dir}/build/demoted_tss.bed";
     run("bedtools intersect -v -wa -a $tss_tmp2 -b $options->{tss} $final_filter | sort -k1,1 -k2,2n > $demoted");
 
-    $remove_tss = " | bedtools intersect -wa -v -a stdin -b $tss";
+    # Removed. See:
+    # https://www.ebi.ac.uk/panda/jira/browse/ENSREGULATION-906
+    # for the reason.
+    #
+    #$remove_tss = " | bedtools intersect -wa -v -a stdin -b $tss";
   }
 
   # Unaligned proximal sites are retained
