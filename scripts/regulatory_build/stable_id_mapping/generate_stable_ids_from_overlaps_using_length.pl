@@ -153,7 +153,10 @@ sub retain_same_feature_type_overlaps {
     my ($source_chr, $source_start, $source_end, $source_regulatory_feature_type, $source_regulatory_feature_stable_id, $source_regulatory_feature_db_id, $target_chr, $target_start, $target_end, $target_regulatory_feature_type, $target_regulatory_feature_stable_id, $target_regulatory_feature_db_id, $overlap_length)  = split "\t", $current_bed_file_line;
     
     # Feature types must be identical for transferring the stable id.
-    if ($source_regulatory_feature_type eq $target_regulatory_feature_type) {
+    
+    my $overlap_is_compatible = $source_regulatory_feature_type eq $target_regulatory_feature_type;
+    
+    if ($overlap_is_compatible) {
       #print "Compatible $current_bed_file_line\n";
       my @bed_file_line = ( $source_chr, $source_start, $source_end, $source_regulatory_feature_type, $source_regulatory_feature_stable_id, $source_regulatory_feature_db_id, $target_chr, $target_start, $target_end, $target_regulatory_feature_type, $target_regulatory_feature_stable_id, $target_regulatory_feature_db_id, $overlap_length );   
       push @same_feature_type_overlaps, \@bed_file_line;
