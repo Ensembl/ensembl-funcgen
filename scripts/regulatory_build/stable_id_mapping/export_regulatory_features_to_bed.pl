@@ -38,8 +38,6 @@ Bio::EnsEMBL::Registry->load_all($registry);
 my $regulatory_build_adaptor   = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'RegulatoryBuild');
 my $regulatory_feature_adaptor = Bio::EnsEMBL::Registry->get_adaptor($species, 'funcgen', 'RegulatoryFeature');
 
-my $current_regulatory_build = $regulatory_build_adaptor->fetch_current_regulatory_build;
-
 use File::Basename qw( dirname );
 
 my $output_directory = dirname($outfile);
