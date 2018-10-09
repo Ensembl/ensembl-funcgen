@@ -71,7 +71,11 @@ sub run {
     )->url;
   
   my $stable_id_prefix;
-  if ($species eq 'homo_sapiens' ) {
+
+  # Using a regular expression allows this to work for things like
+  # "homo_sapiens_previous_version" or "homo_sapiens_rerun"
+  #
+  if ($species =~ /homo_sapiens.*/ ) {
     $stable_id_prefix = 'ENSR';
   }
   if ($species eq 'mus_musculus' ) {
