@@ -36,6 +36,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::RegulatoryBuildStatisticAdaptor;
 
 use strict;
 use base 'Bio::EnsEMBL::Funcgen::DBSQL::GenericAdaptor';
+use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 
 sub object_class {
     return 'Bio::EnsEMBL::Funcgen::RegulatoryBuildStatistic';
@@ -51,8 +52,11 @@ sub fetch_by_statistic {
   
   my $result = $self->_generic_fetch_by_statistic($statistic);
   
-  if (! defined $result) {
+  if (! defined $result->[0]) {
     throw("Statistic $statistic does not exist!");
+  }
+  if (! defined $result->[0]->value) {
+    throw("Statistic is not defined!");
   }
   if (@$result > 1) {
     throw("Statistic $statistic is not unique!");
@@ -84,6 +88,80 @@ sub _generic_fetch_by_statistic {
       ]
     )
   ;
+}
+
+sub fetch_num_epigenomes_in_regulatory_build {
+
+  my $self = shift;
+
+  my $regulatory_build_adaptor = $self->db->get_RegulatoryBuildAdaptor;
+  my $regulatory_build = $regulatory_build_adaptor->fetch_current_regulatory_build;
+  my $epigenomes_in_regulatory_build = $regulatory_build->get_all_Epigenomes;
+  
+  my $num_epigenomes_in_regulatory_build = scalar @$epigenomes_in_regulatory_build;
+  
+  use Bio::EnsEMBL::Funcgen::RegulatoryBuildStatistic;
+  return Bio::EnsEMBL::Funcgen::RegulatoryBuildStatistic->new(
+    -value => $num_epigenomes_in_regulatory_build,
+  );
+}
+
+sub fetch_regulatory_build_overlap_percent {
+  my $self = shift;
+  return $self->fetch_by_statistic('regulatory_build_overlap_percent');
+}
+sub fetch_ctcf_overlap_percent {
+  my $self = shift;
+  return $self->fetch_by_statistic('ctcf_overlap_percent');
+}
+sub fetch_enhancer_overlap_percent {
+  my $self = shift;
+  return $self->fetch_by_statistic('enhancer_overlap_percent');
+}
+sub fetch_tf_binding_overlap_percent {
+  my $self = shift;
+  return $self->fetch_by_statistic('tf_binding_overlap_percent');
+}
+sub fetch_promoter_overlap_percent {
+  my $self = shift;
+  return $self->fetch_by_statistic('promoter_overlap_percent');
+}
+sub fetch_promoter_flanking_overlap_percent {
+  my $self = shift;
+  return $self->fetch_by_statistic('promoter_flanking_overlap_percent');
+}
+sub fetch_open_chromatin_overlap_percent {
+  my $self = shift;
+  return $self->fetch_by_statistic('open_chromatin_overlap_percent');
+}
+
+sub fetch_regulatory_build_overlap_bp {
+  my $self = shift;
+  return $self->fetch_by_statistic('regulatory_build_overlap_bp');
+}
+sub fetch_ctcf_overlap_bp {
+  my $self = shift;
+  return $self->fetch_by_statistic('ctcf_overlap_bp');
+}
+sub fetch_enhancer_overlap_bp {
+  my $self = shift;
+  return $self->fetch_by_statistic('enhancer_overlap_bp');
+}
+sub fetch_tf_binding_overlap_bp {
+  my $self = shift;
+  return $self->fetch_by_statistic('tf_binding_overlap_bp');
+}
+sub fetch_promoter_overlap_bp {
+  my $self = shift;
+  return $self->fetch_by_statistic('promoter_overlap_bp');
+}
+sub fetch_promoter_flanking_overlap_bp {
+  my $self = shift;
+  return $self->fetch_by_statistic('promoter_flanking_overlap_bp');
+}
+sub fetch_open_chromatin_overlap_bp {
+  my $self = shift;
+  return $self->fetch_by_statistic('open_chromatin_overlap_bp');
 }
 
 sub fetch_promoter_q0 {
