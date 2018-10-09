@@ -108,6 +108,15 @@ sub run {
   if ($error_occurred) {
     $self->throw("The following command failed:\n$cmd");
   }
+  if (! -e $bigwig_file_full_path) {
+    $self->throw(
+      "The following command failed:\n\n"
+      . "$cmd\n\n"
+      . "The following file should have been created:\n\n"
+      . "$bigwig_file_full_path\n\n"
+      . "but it doesn't exist."
+    );
+  }
 }
 
 1;
