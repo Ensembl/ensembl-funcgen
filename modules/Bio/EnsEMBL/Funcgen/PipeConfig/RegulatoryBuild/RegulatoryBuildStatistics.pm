@@ -66,7 +66,37 @@ sub pipeline_analyses {
               db_conn => 'funcgen:#species#',
           },
           -flow_into   => {
-              MAIN => 'compute_enhancer_coverage',
+              MAIN => 'compute_genome_coverage',
+          },
+      },
+      {   -logic_name => 'compute_genome_coverage',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -parameters => {
+            cmd => 
+                q(
+                  compute_genome_coverage.pl \
+                    --species  #species# \
+                    --registry #reg_conf# \
+                    --genome_coverage_report #tempdir_regulatory_build_statistics#/#species#/genome_coverage_report.pl
+                )
+          },
+          -flow_into => {
+            MAIN => 'store_genome_coverage',
+          },
+      },
+      {   -logic_name => 'store_genome_coverage',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -parameters => {
+            cmd => 
+                q(
+                    store_genome_coverage_report.pl \
+                        --species  #species# \
+                        --registry #reg_conf# \
+                        --genome_coverage_report #tempdir_regulatory_build_statistics#/#species#/genome_coverage_report.pl
+                )
+          },
+          -flow_into => {
+            MAIN => 'compute_enhancer_coverage',
           },
       },
       {   -logic_name => 'compute_enhancer_coverage',
