@@ -266,7 +266,7 @@ sub pipeline_analyses {
       },
       {   -logic_name => 'build_regulatory_features',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-          -rc_name    => '4Gb_job',
+          -rc_name    => '32Gb_job',
           -parameters => {
             cmd => 
                 q( new_build_regulatory_features.pl             )
@@ -295,7 +295,7 @@ sub pipeline_analyses {
       },
       {   -logic_name => 'load_build',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-          -rc_name    => '32Gb_job_2cpus',
+          -rc_name    => '64Gb_job',
           -parameters => {
             cmd => 
                 q( load_build.pl )
