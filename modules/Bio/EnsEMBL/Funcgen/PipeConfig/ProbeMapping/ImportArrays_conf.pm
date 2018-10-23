@@ -147,6 +147,20 @@ sub pipeline_analyses {
             -logic_name  => 'import_arrays_done',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into => {
+                MAIN => 'delete_duplicate_probes_by_probeset',
+            },
+        },
+        {
+            -logic_name  => 'delete_duplicate_probes_by_probeset',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters => {
+                cmd       => '
+                  remove_duplicate_probes_by_probeset.pl \
+                    --registry           #reg_conf# \
+                    --species            #species# 
+                ',
+            },
+            -flow_into => {
                 MAIN => 'run_sql_to_fix_probe_set_issues',
             },
         },
