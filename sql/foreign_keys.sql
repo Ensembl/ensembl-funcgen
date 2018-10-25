@@ -53,6 +53,7 @@ ALTER TABLE regulatory_activity ADD FOREIGN KEY (epigenome_id) REFERENCES epigen
 -- regulatory_build
 ALTER TABLE regulatory_build ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type(feature_type_id);
 ALTER TABLE regulatory_build ADD FOREIGN KEY (analysis_id) REFERENCES analysis (analysis_id);
+ALTER TABLE regulatory_build ADD FOREIGN KEY (sample_regulatory_feature_id) REFERENCES regulatory_feature(regulatory_feature_id);
 
 -- regulatory_build_epigenome
 ALTER TABLE regulatory_build_epigenome ADD FOREIGN KEY (regulatory_build_id) REFERENCES regulatory_build(regulatory_build_id);
@@ -106,12 +107,41 @@ ALTER TABLE array_chip ADD FOREIGN KEY (array_id) REFERENCES array(array_id);
 -- probe
 ALTER TABLE probe ADD FOREIGN KEY (array_chip_id) REFERENCES array_chip(array_chip_id);
 ALTER TABLE probe ADD FOREIGN KEY (probe_set_id)  REFERENCES probe_set(probe_set_id);
+ALTER TABLE probe ADD FOREIGN KEY (probe_seq_id)  REFERENCES probe_seq(probe_seq_id);
+
+-- probe_feature_transcript
+ALTER TABLE probe_feature_transcript ADD FOREIGN KEY (probe_feature_id) REFERENCES probe_feature(probe_feature_id);
+
+-- probe_set
+ALTER TABLE probe_set ADD FOREIGN KEY (array_chip_id) REFERENCES array_chip(array_chip_id);
+
+-- probe_set_transcript
+ALTER TABLE probe_set_transcript ADD FOREIGN KEY (probe_set_id) REFERENCES probe_set(probe_set_id);
 
 -- experiment
 ALTER TABLE experiment ADD FOREIGN KEY (experimental_group_id)  REFERENCES experimental_group(experimental_group_id);
 ALTER TABLE experiment ADD FOREIGN KEY (control_id) REFERENCES experiment(experiment_id);
 ALTER TABLE experiment ADD FOREIGN KEY (epigenome_id)    REFERENCES epigenome(epigenome_id);
 ALTER TABLE experiment ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type(feature_type_id);
+
+-- alignment
+ALTER TABLE alignment ADD FOREIGN KEY (analysis_id) REFERENCES analysis(analysis_id);
+ALTER TABLE alignment ADD FOREIGN KEY (bam_file_id) REFERENCES data_file(data_file_id);
+ALTER TABLE alignment ADD FOREIGN KEY (bigwig_file_id) REFERENCES data_file(data_file_id);
+
+-- alignment_read_file
+ALTER TABLE alignment_read_file ADD FOREIGN KEY (alignment_id) REFERENCES alignment(alignment_id);
+ALTER TABLE alignment_read_file ADD FOREIGN KEY (read_file_id) REFERENCES read_file(read_file_id);
+
+-- peak
+ALTER TABLE peak ADD FOREIGN KEY (peak_calling_id) REFERENCES peak_calling(peak_calling_id);
+
+-- read_file
+ALTER TABLE read_file ADD FOREIGN KEY (analysis_id) REFERENCES analysis(analysis_id);
+
+-- read_file_experimental_configuration
+ALTER TABLE read_file_experimental_configuration ADD FOREIGN KEY (read_file_id) REFERENCES read_file(read_file_id);
+ALTER TABLE read_file_experimental_configuration ADD FOREIGN KEY (experiment_id) REFERENCES experiment(experiment_id);
 
 -- analysis_description
 ALTER TABLE analysis_description ADD FOREIGN KEY (analysis_id) REFERENCES analysis(analysis_id);
