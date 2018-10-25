@@ -39,7 +39,6 @@
 
 
 -- regulatory_feature
-ALTER TABLE regulatory_feature ADD FOREIGN KEY (seq_region_id)    REFERENCES seq_region(seq_region_id);
 ALTER TABLE regulatory_feature ADD FOREIGN KEY (feature_type_id)  REFERENCES feature_type(feature_type_id);
 ALTER TABLE regulatory_feature ADD FOREIGN KEY (regulatory_build_id)   REFERENCES regulatory_build(regulatory_build_id);
 
@@ -62,7 +61,6 @@ ALTER TABLE regulatory_build_epigenome ADD FOREIGN KEY (epigenome_id) REFERENCES
 -- segmentation_feature
 ALTER TABLE segmentation_feature ADD FOREIGN KEY (feature_set_id)   REFERENCES feature_set(feature_set_id);
 ALTER TABLE segmentation_feature ADD FOREIGN KEY (feature_type_id)  REFERENCES feature_type(feature_type_id);
-ALTER TABLE segmentation_feature ADD FOREIGN KEY (seq_region_id)    REFERENCES seq_region(seq_region_id);
 
 -- segmentation_file
 ALTER TABLE segmentation_file ADD FOREIGN KEY (regulatory_build_id) REFERENCES regulatory_build(regulatory_build_id);
@@ -71,16 +69,13 @@ ALTER TABLE segmentation_file ADD FOREIGN KEY (epigenome_id) REFERENCES epigenom
 
 -- annotated_feature
 ALTER TABLE annotated_feature ADD FOREIGN KEY (feature_set_id)  REFERENCES feature_set(feature_set_id);
-ALTER TABLE annotated_feature ADD FOREIGN KEY (seq_region_id)   REFERENCES seq_region(seq_region_id);
 
 -- motif_feature
-ALTER TABLE motif_feature ADD FOREIGN KEY (seq_region_id)     REFERENCES seq_region(seq_region_id);
 ALTER TABLE motif_feature ADD FOREIGN KEY (binding_matrix_id) REFERENCES binding_matrix(binding_matrix_id);
 
 -- mirna_target_feature
 ALTER TABLE mirna_target_feature  ADD FOREIGN KEY (feature_set_id) REFERENCES feature_set (feature_set_id);
 ALTER TABLE mirna_target_feature  ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type (feature_type_id);
-ALTER TABLE mirna_target_feature  ADD FOREIGN KEY (seq_region_id)   REFERENCES seq_region(seq_region_id);
 
 -- associated_motif_feature
 ALTER TABLE associated_motif_feature ADD FOREIGN KEY (annotated_feature_id) REFERENCES annotated_feature(annotated_feature_id);
@@ -93,7 +88,6 @@ ALTER TABLE binding_matrix ADD FOREIGN KEY (analysis_id)      REFERENCES analysi
 -- external_feature
 ALTER TABLE external_feature ADD FOREIGN KEY (feature_set_id)   REFERENCES feature_set(feature_set_id);
 ALTER TABLE external_feature ADD FOREIGN KEY (feature_type_id)  REFERENCES feature_type(feature_type_id);
-ALTER TABLE external_feature ADD FOREIGN KEY (seq_region_id)    REFERENCES seq_region(seq_region_id);
 
 -- external_feature_file
 ALTER TABLE external_feature_file ADD FOREIGN KEY (analysis_id) REFERENCES analysis(analysis_id);
@@ -105,7 +99,6 @@ ALTER TABLE external_feature_file ADD FOREIGN KEY (result_set_id) REFERENCES res
 -- probe_feature
 ALTER TABLE probe_feature ADD FOREIGN KEY (probe_id)      REFERENCES probe(probe_id);
 ALTER TABLE probe_feature ADD FOREIGN KEY (analysis_id)   REFERENCES analysis(analysis_id);
-ALTER TABLE probe_feature ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
 
 -- feature_type
 ALTER TABLE feature_type ADD FOREIGN KEY (analysis_id) REFERENCES analysis(analysis_id);
@@ -215,9 +208,6 @@ ALTER TABLE unmapped_object ADD FOREIGN KEY (analysis_id) REFERENCES analysis(an
 ALTER TABLE unmapped_object ADD FOREIGN KEY (external_db_id) REFERENCES external_db(external_db_id);
 ALTER TABLE unmapped_object ADD FOREIGN KEY (unmapped_reason_id) REFERENCES unmapped_reason(unmapped_reason_id);
 	-- TODO polymorphic association pending
-
--- seq_region
-ALTER TABLE seq_region ADD FOREIGN KEY (coord_system_id) REFERENCES coord_system(coord_system_id);
 
 
 -- TRACKING TABLES
