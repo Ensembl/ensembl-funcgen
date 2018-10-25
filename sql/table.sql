@@ -316,6 +316,7 @@ CREATE TABLE `regulatory_build_epigenome` (
 @column name                 A descriptive name of what is in the file.
 @column analysis_id          @link analysis
 @column epigenome_id         @link epigenome
+@column segmentation_id      @link segmentation
 
 @see regulatory_build
 @see epigenome
@@ -330,6 +331,7 @@ CREATE TABLE `segmentation_file` (
   `name` varchar(100) DEFAULT NULL,
   `analysis_id` smallint(5) unsigned NOT NULL,
   `epigenome_id` int(10) unsigned DEFAULT NULL,
+  `segmentation_id` int(18) unsigned DEFAULT NULL,
   PRIMARY KEY (`segmentation_file_id`),
   UNIQUE KEY `name_idx` (`name`),
   KEY `epigenome_idx` (`epigenome_id`),
