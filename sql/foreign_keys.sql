@@ -58,17 +58,10 @@ ALTER TABLE regulatory_build ADD FOREIGN KEY (analysis_id) REFERENCES analysis (
 ALTER TABLE regulatory_build_epigenome ADD FOREIGN KEY (regulatory_build_id) REFERENCES regulatory_build(regulatory_build_id);
 ALTER TABLE regulatory_build_epigenome ADD FOREIGN KEY (epigenome_id) REFERENCES epigenome(epigenome_id);
 
--- segmentation_feature
-ALTER TABLE segmentation_feature ADD FOREIGN KEY (feature_set_id)   REFERENCES feature_set(feature_set_id);
-ALTER TABLE segmentation_feature ADD FOREIGN KEY (feature_type_id)  REFERENCES feature_type(feature_type_id);
-
 -- segmentation_file
 ALTER TABLE segmentation_file ADD FOREIGN KEY (regulatory_build_id) REFERENCES regulatory_build(regulatory_build_id);
 ALTER TABLE segmentation_file ADD FOREIGN KEY (analysis_id) REFERENCES analysis(analysis_id);
 ALTER TABLE segmentation_file ADD FOREIGN KEY (epigenome_id) REFERENCES epigenome(epigenome_id);
-
--- annotated_feature
-ALTER TABLE annotated_feature ADD FOREIGN KEY (feature_set_id)  REFERENCES feature_set(feature_set_id);
 
 -- motif_feature
 ALTER TABLE motif_feature ADD FOREIGN KEY (binding_matrix_id) REFERENCES binding_matrix(binding_matrix_id);
@@ -78,12 +71,7 @@ ALTER TABLE mirna_target_feature  ADD FOREIGN KEY (feature_set_id) REFERENCES fe
 ALTER TABLE mirna_target_feature  ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type (feature_type_id);
 
 -- associated_motif_feature
-ALTER TABLE associated_motif_feature ADD FOREIGN KEY (annotated_feature_id) REFERENCES annotated_feature(annotated_feature_id);
 ALTER TABLE associated_motif_feature ADD FOREIGN KEY (motif_feature_id) REFERENCES motif_feature(motif_feature_id);
-
--- binding_matrix
-ALTER TABLE binding_matrix ADD FOREIGN KEY (feature_type_id)  REFERENCES feature_type(feature_type_id);
-ALTER TABLE binding_matrix ADD FOREIGN KEY (analysis_id)      REFERENCES analysis(analysis_id);
 
 -- external_feature
 ALTER TABLE external_feature ADD FOREIGN KEY (feature_set_id)   REFERENCES feature_set(feature_set_id);
@@ -93,8 +81,6 @@ ALTER TABLE external_feature ADD FOREIGN KEY (feature_type_id)  REFERENCES featu
 ALTER TABLE external_feature_file ADD FOREIGN KEY (analysis_id) REFERENCES analysis(analysis_id);
 ALTER TABLE external_feature_file ADD FOREIGN KEY (epigenome_id) REFERENCES epigenome(epigenome_id);
 ALTER TABLE external_feature_file ADD FOREIGN KEY (feature_type_id)  REFERENCES feature_type(feature_type_id);
-ALTER TABLE external_feature_file ADD FOREIGN KEY (experiment_id) REFERENCES experiment(experiment_id);
-ALTER TABLE external_feature_file ADD FOREIGN KEY (result_set_id) REFERENCES result_set(result_set_id);
 
 -- probe_feature
 ALTER TABLE probe_feature ADD FOREIGN KEY (probe_id)      REFERENCES probe(probe_id);
@@ -107,53 +93,12 @@ ALTER TABLE feature_type ADD FOREIGN KEY (analysis_id) REFERENCES analysis(analy
 ALTER TABLE associated_feature_type ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type(feature_type_id);
 	-- TODO polymorphic association pending
 
--- data_set
-ALTER TABLE data_set ADD FOREIGN KEY (feature_set_id) REFERENCES feature_set(feature_set_id);
-
--- supporting_set
-ALTER TABLE supporting_set ADD FOREIGN KEY (data_set_id) REFERENCES data_set(data_set_id);
-	-- TODO polymorphic association pending
-
 -- feature_set
 ALTER TABLE feature_set ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type(feature_type_id);
-ALTER TABLE feature_set ADD FOREIGN KEY (epigenome_id)    REFERENCES epigenome(epigenome_id);
 ALTER TABLE feature_set ADD FOREIGN KEY (analysis_id)     REFERENCES analysis(analysis_id);
-ALTER TABLE feature_set ADD FOREIGN KEY (experiment_id) REFERENCES experiment(experiment_id);
-
--- feature_set_qc_prop_reads_in_peaks
-ALTER TABLE feature_set_qc_prop_reads_in_peaks ADD FOREIGN KEY (analysis_id)     REFERENCES analysis(analysis_id);
-ALTER TABLE feature_set_qc_prop_reads_in_peaks ADD FOREIGN KEY (feature_set_id) REFERENCES feature_set(feature_set_id);
-
--- result_set
-ALTER TABLE result_set  ADD FOREIGN KEY (experiment_id) REFERENCES experiment (experiment_id);
-ALTER TABLE result_set ADD FOREIGN KEY (epigenome_id)    REFERENCES epigenome(epigenome_id);
-ALTER TABLE result_set ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type(feature_type_id);
-ALTER TABLE result_set ADD FOREIGN KEY (analysis_id)     REFERENCES analysis(analysis_id);
-
--- result_set_qc_chance
-ALTER TABLE result_set_qc_chance ADD FOREIGN KEY (signal_result_set_id) REFERENCES result_set(result_set_id);
-ALTER TABLE result_set_qc_chance ADD FOREIGN KEY (analysis_id)     REFERENCES analysis(analysis_id);
-
--- result_set_qc_flagstats
-ALTER TABLE result_set_qc_flagstats ADD FOREIGN KEY (result_set_id) REFERENCES result_set(result_set_id);
-ALTER TABLE result_set_qc_flagstats ADD FOREIGN KEY (analysis_id)     REFERENCES analysis(analysis_id);
-
--- result_set_qc_phantom_peak
-ALTER TABLE result_set_qc_phantom_peak ADD FOREIGN KEY (analysis_id)     REFERENCES analysis(analysis_id);
-ALTER TABLE result_set_qc_phantom_peak ADD FOREIGN KEY (result_set_id) REFERENCES result_set(result_set_id);
-
--- result_set_input
-ALTER TABLE result_set_input ADD FOREIGN KEY (result_set_id) REFERENCES result_set(result_set_id);
-ALTER TABLE result_set_input ADD FOREIGN KEY (table_id) REFERENCES input_subset(input_subset_id);
 
 -- dbfile_registry
 	-- TODO polymorphic association pending
-
--- input_subset
-ALTER TABLE input_subset ADD FOREIGN KEY (epigenome_id)    REFERENCES epigenome(epigenome_id);
-ALTER TABLE input_subset ADD FOREIGN KEY (experiment_id)   REFERENCES experiment(experiment_id);
-ALTER TABLE input_subset ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type(feature_type_id);
-ALTER TABLE input_subset ADD FOREIGN KEY (analysis_id) REFERENCES analysis(analysis_id);
 
 -- array_chip
 ALTER TABLE array_chip ADD FOREIGN KEY (array_id) REFERENCES array(array_id);
@@ -168,15 +113,8 @@ ALTER TABLE experiment ADD FOREIGN KEY (control_id) REFERENCES experiment(experi
 ALTER TABLE experiment ADD FOREIGN KEY (epigenome_id)    REFERENCES epigenome(epigenome_id);
 ALTER TABLE experiment ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type(feature_type_id);
 
--- status
-ALTER TABLE status ADD FOREIGN KEY (status_name_id) REFERENCES status_name(status_name_id);
-	-- TODO polymorphic association pending
-
 -- analysis_description
 ALTER TABLE analysis_description ADD FOREIGN KEY (analysis_id) REFERENCES analysis(analysis_id);
-
--- meta_coord
-ALTER TABLE meta_coord ADD FOREIGN KEY (coord_system_id) REFERENCES coord_system(coord_system_id);
 
 -- associated_xref
 ALTER TABLE associated_xref ADD FOREIGN KEY (object_xref_id) REFERENCES object_xref(object_xref_id);
