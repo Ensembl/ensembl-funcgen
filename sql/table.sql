@@ -521,9 +521,7 @@ CREATE TABLE `motif_feature` (
   `stable_id` VARCHAR(18) DEFAULT NULL,
   PRIMARY KEY (`motif_feature_id`),
   UNIQUE KEY `stable_id_idx` (`stable_id`),
-  UNIQUE KEY `unique_idx` (
-    `binding_matrix_id`, `seq_region_id`, `seq_region_start`,
-     `seq_region_strand`),
+  UNIQUE KEY `unique_idx` (`binding_matrix_id`, `seq_region_id`, `seq_region_start`, `seq_region_strand`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
   KEY `binding_matrix_idx` (`binding_matrix_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
