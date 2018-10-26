@@ -2378,10 +2378,10 @@ sub compute_Segway_repressed_scores {
   while ($line = <$fh>) {
     chomp $line;
     my @items = split /\t/, $line;
+    my $mark = clean_name($items[1]);
     if ($mark eq "CTCF") {
       $segmentation->{has_ctcf} = 1;
     } 
-    my $mark = clean_name($items[1]);
     if (!grep($_ eq $mark, REPRESSED_MARKS)) {
       next;
     }
