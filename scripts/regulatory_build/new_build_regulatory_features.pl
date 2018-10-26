@@ -1914,7 +1914,7 @@ sub label_segmentation_state {
   my $overlaps = $segmentation->{overlaps};
   my $assignments = $options->{assignments}->{$segmentation->{name}};
 
-  if ($overlaps->{ctcf}->{$state} > MIN_CTCF_CORRELATION) {
+  if ($segmentation->{has_ctcf} && $overlaps->{ctcf}->{$state} > MIN_CTCF_CORRELATION) {
     $assignments->{$state} = 'ctcf';
     return;
   }
@@ -2194,7 +2194,10 @@ sub compute_enrichment_between_files {
   Arg2: segmentation hashref
     - name => string
   Side effects: It fills out:
-    * segmentation->{overlaps}->{repressed}: hashref
+    * segmentation->{overlaps}->{repressed}: segmentation state => repressed_mark => scalar
+    * segmentation->{repressed_cutoffs}: repressed mark => scalar
+    * segmentation->{has_ctcf}: scalar
+
 
 =cut
 
@@ -2220,6 +2223,7 @@ sub compute_ChromHMM_repressed_scores {
       push @columns_with_repressed_marks, $index;
     }
   }
+  $segmentation->{has_ctcf} = grep($_ eq "CTCF", @headers);
 
   my $max = 0;
 
@@ -2277,8 +2281,9 @@ sub compute_ChromHMM_repressed_scores {
   Arg2: segmentation hashref
     - name => string
   Side effects: It fills out:
-    * segmentation->{overlaps}->{repressed}: hashref
-      - state name => scalar
+    * segmentation->{overlaps}->{repressed}: segmentation state => repressed_mark => scalar
+    * segmentation->{repressed_cutoffs}: repressed mark => scalar
+    * segmentation->{has_ctcf}: scalar
 
 =cut
 
@@ -2301,7 +2306,11 @@ sub compute_GMTK_repressed_scores {
   while ($line = <$fh>) {
     chomp $line;
     my @items = split /\t/, $line;
-    if (!grep($_ eq clean_name($items[0]), REPRESSED_MARKS)) {
+    my $mark = clean_name($items[0]);
+    if ($mark eq "CTCF") {
+      $segmentation->{has_ctcf} = 1;
+    } 
+    if (!grep($_ eq $mark, REPRESSED_MARKS)) {
       next;
     }
     for (my $index = 0; $index < scalar(@columns); $index++) {
@@ -2339,7 +2348,9 @@ sub compute_GMTK_repressed_scores {
   Arg2: segmentation hashref
     - name => string
   Side effects: It fills out:
-    * segmentation->{overlaps}->{repressed}: hashref
+    * segmentation->{overlaps}->{repressed}: segmentation state => repressed_mark => scalar
+    * segmentation->{repressed_cutoffs}: repressed mark => scalar
+    * segmentation->{has_ctcf}: scalar
 
 =cut
 
@@ -2360,7 +2371,11 @@ sub compute_Segway_repressed_scores {
   while ($line = <$fh>) {
     chomp $line;
     my @items = split /\t/, $line;
-    if (!grep($_ eq clean_name($items[1]), REPRESSED_MARKS)) {
+    if ($mark eq "CTCF") {
+      $segmentation->{has_ctcf} = 1;
+    } 
+    my $mark = clean_name($items[1]);
+    if (!grep($_ eq $mark, REPRESSED_MARKS)) {
       next;
     }
     if (!defined $segmentation->{overlaps}->{repressed}->{$items[0]}) {
