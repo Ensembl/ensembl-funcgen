@@ -1916,7 +1916,7 @@ sub label_segmentation_state {
   my %repressed_cutoffs = %{$segmentation->{repressed_cutoffs}};
   my @repressed_marks = keys %repressed_cutoffs;
 
-  if ($overlaps->{ctcf}->{$state} > MIN_CTCF_CORRELATION) {
+  if ($segmentation->{has_ctcf} && $overlaps->{ctcf}->{$state} > MIN_CTCF_CORRELATION) {
     $assignments->{$state} = 'ctcf';
     return;
   }
@@ -2199,6 +2199,7 @@ sub compute_enrichment_between_files {
   Side effects: It fills out:
     * segmentation->{overlaps}->{repressed}: segmentation state => repressed_mark => scalar
     * segmentation->{repressed_cutoffs}: repressed mark => scalar
+    * segmentation->{has_ctcf}: scalar
 
 =cut
 
@@ -2224,6 +2225,7 @@ sub compute_ChromHMM_repressed_scores {
       push @columns_with_repressed_marks, $index;
     }
   }
+  $segmentation->{has_ctcf} = grep($_ eq "CTCF", @headers);
 
   my %max = ();
 
@@ -2285,6 +2287,7 @@ sub compute_ChromHMM_repressed_scores {
   Side effects: It fills out:
     * segmentation->{overlaps}->{repressed}: segmentation state => repressed_mark => scalar
     * segmentation->{repressed_cutoffs}: repressed mark => scalar
+    * segmentation->{has_ctcf}: scalar
 
 =cut
 
@@ -2308,6 +2311,9 @@ sub compute_GMTK_repressed_scores {
     chomp $line;
     my @items = split /\t/, $line;
     my $mark = clean_name($items[0]);
+    if ($mark eq "CTCF") {
+      $segmentation->{has_ctcf} = 1;
+    } 
     if (!grep($_ eq $mark, REPRESSED_MARKS)) {
       next;
     }
@@ -2351,6 +2357,7 @@ sub compute_GMTK_repressed_scores {
   Side effects: It fills out:
     * segmentation->{overlaps}->{repressed}: segmentation state => repressed_mark => scalar
     * segmentation->{repressed_cutoffs}: repressed mark => scalar
+    * segmentation->{has_ctcf}: scalar
 
 =cut
 
@@ -2371,6 +2378,9 @@ sub compute_Segway_repressed_scores {
   while ($line = <$fh>) {
     chomp $line;
     my @items = split /\t/, $line;
+    if ($mark eq "CTCF") {
+      $segmentation->{has_ctcf} = 1;
+    } 
     my $mark = clean_name($items[1]);
     if (!grep($_ eq $mark, REPRESSED_MARKS)) {
       next;
