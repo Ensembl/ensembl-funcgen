@@ -2232,18 +2232,19 @@ sub compute_ChromHMM_repressed_scores {
     chomp $line;
     my @items = split /\t/, $line;
     my $sum = 0;
+    my $state = "E$items[0]";
+    
     foreach my $column (@columns_with_repressed_marks) {
     
       my $mark  = $headers[$column];
       my $value = $items[$column];
-      my $state = "E$items[0]";
       
       $segmentation->{overlaps}->{repressed}->{$state}->{$mark} = $value;
       if ($value > $max{$mark}) {
         $max{$mark} = $value;
       }
-      print_log("Emission\t$segmentation->{name}\trepressed\t$items[0]\t".%{$segmentation->{overlaps}->{repressed}->{$state}}."\n");
     }
+    print_log("Emission\t$segmentation->{name}\trepressed\t$items[0]\t".%{$segmentation->{overlaps}->{repressed}->{$state}}."\n");
   }
   close $fh;
   
