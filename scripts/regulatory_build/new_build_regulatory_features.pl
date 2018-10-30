@@ -2228,7 +2228,7 @@ sub compute_ChromHMM_repressed_scores {
   $segmentation->{has_ctcf} = grep($_ eq "CTCF", @headers);
 
   my %max = ();
-  
+  my $current_line_number = 1;
   while ($line = <$fh>) {
     chomp $line;
     my @items = split /\t/, $line;
@@ -2237,7 +2237,7 @@ sub compute_ChromHMM_repressed_scores {
       my $mark = $headers[$column];
       my $value = $items[$column];
       
-      my $state = "E$items[$column]";
+      my $state = "E$current_line_number";
       
       $segmentation->{overlaps}->{repressed}->{$state}->{$mark} = $value;
       if ($value > $max{$mark}) {
@@ -2245,6 +2245,7 @@ sub compute_ChromHMM_repressed_scores {
       }
       print_log("Emission\t$segmentation->{name}\trepressed\t$items[0]\t".%{$segmentation->{overlaps}->{repressed}->{$state}}."\n");
     }
+    $current_line_number++
   }
   close $fh;
   
