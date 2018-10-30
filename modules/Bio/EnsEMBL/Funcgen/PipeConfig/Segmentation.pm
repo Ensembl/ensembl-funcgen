@@ -34,6 +34,11 @@ use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 use base 'Bio::EnsEMBL::Funcgen::PipeConfig::PeakCalling::ResourceClasses';
 #use base ('Bio::EnsEMBL::Funcgen::PipeConfig::PeakCalling::Base');
 
+sub beekeeper_extra_cmdline_options {
+    my ($self) = @_;
+    return '-reg_conf ' . $self->o('reg_conf') . ' -keep_alive -can_respecialize 1';
+}
+
 sub pipeline_wide_parameters {
   my $self = shift;
   
@@ -44,6 +49,11 @@ sub pipeline_wide_parameters {
     tempdir_segmentation     => $self->o('tempdir') . '/segmentation',
     tempdir_regulatory_build => $self->o('tempdir') . '/regulatory_build',
     data_root_dir            => $self->o('data_root_dir'),
+
+    regulatory_build_name        => $self->o('regulatory_build_name'),
+    regulatory_build_description => $self->o('regulatory_build_description'),
+    ensembl_release_version      => $self->o('ensembl_release_version'),
+
     reference_data_root_dir  => $self->o('reference_data_root_dir'),
     reg_conf                 => $self->o('reg_conf'),
     #ChromHMM                 => '/nfs/production/panda/ensembl/funcgen/ChromHMM/ChromHMM.jar',
@@ -126,7 +136,7 @@ sub pipeline_analyses {
           },
           -flow_into   => {
             '2->A'     => { 
-                'make_segmentation_dir' => INPUT_PLUS({
+                'record_segmentation_as_done' => INPUT_PLUS({
                     class                 => '#class#',
                     superclass            => '#superclass#',
                     segmentation_name     => '#superclass#_#class#',
@@ -141,12 +151,29 @@ sub pipeline_analyses {
             },
           },
       },
+      {   -logic_name => 'record_segmentation_as_done',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+          -parameters => {
+            record => {
+                learn_model_directory => '#learn_model_directory#',
+                segmentation_name     => '#superclass#_#class#',
+                celltable_file        => 'celltable.#superclass#.#class#.txt',
+            }
+          },
+          -flow_into => {
+            MAIN => [
+                '?accu_name=segmentation_lists&accu_address={superclass}{class}&accu_input_variable=record',
+                'make_segmentation_dir'
+            ]
+          },
+      },
       {   -logic_name => 'make_segmentation_dir',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -analysis_capacity => 0,
           #-module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
           -parameters => {
               cmd => 
-                  q( rm    -rf #tempdir_segmentation#/#species#/#superclass#/#class# ; )
+                  q( asdfasd rm    -rf #tempdir_segmentation#/#species#/#superclass#/#class# ; )
                 . q( mkdir -p  #tempdir_segmentation#/#species#/#superclass#/#class#   ),
           },
           -flow_into => { 
@@ -223,22 +250,9 @@ sub pipeline_analyses {
                 . q( 25                          )
                 . q( #assembly#                  )
           },
-          -flow_into => {
-            MAIN     => 'record_segmentation_as_done',
-          },
-      },
-      {   -logic_name => 'record_segmentation_as_done',
-          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-          -parameters => {
-            record => {
-                learn_model_directory => '#learn_model_directory#',
-                segmentation_name     => '#superclass#_#class#',
-                celltable_file        => 'celltable.#superclass#.#class#.txt',
-            }
-          },
-          -flow_into => {
-            MAIN => '?accu_name=segmentation_lists&accu_address={superclass}{class}&accu_input_variable=record'
-          },
+#           -flow_into => {
+#             MAIN     => 'record_segmentation_as_done',
+#           },
       },
       {   -logic_name => 'generate_segmentation_parameter_file',
           -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::Segmentation::GenerateSegmentationParameterFile',
@@ -312,9 +326,28 @@ sub pipeline_analyses {
                 . q( --base_dir #tempdir_regulatory_build#/#species#/#assembly# )
           },
           -flow_into => {
+            MAIN => 'set_regulatory_build_metadata'
+          },
+      },
+      
+      {   -logic_name => 'set_regulatory_build_metadata',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -parameters => {
+            cmd => 
+                q(
+                    set_regulatory_build_metadata.pl \
+                      --species          #species# \
+                      --registry         #reg_conf# \
+                      --name            "#regulatory_build_name#" \
+                      --description     "#regulatory_build_description#" \
+                      --release_version #ensembl_release_version#
+                )
+          },
+          -flow_into => {
             MAIN => 'populate_meta_coord'
           },
       },
+      
       {   -logic_name => 'populate_meta_coord',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
           -parameters => {
