@@ -1896,7 +1896,7 @@ sub select_segmentation_states {
       - segmentation name => empty hash ref
   Arg2: segmentation: hashref:
     - name => string
-    - repressed_cutoff => numerical scalar
+    - repressed_cutoffs => hashref string (mark => scalar 
     - overlaps: hash ref:
       - ctcf => correlation (-1 <= x <= 1)
       - repressed => score
@@ -1913,12 +1913,14 @@ sub label_segmentation_state {
   my ($options, $segmentation, $state) = @_;
   my $overlaps = $segmentation->{overlaps};
   my $assignments = $options->{assignments}->{$segmentation->{name}};
+  my %repressed_cutoffs = %{$segmentation->{repressed_cutoffs}};
+  my @repressed_marks = keys %repressed_cutoffs;
 
   if ($segmentation->{has_ctcf} && $overlaps->{ctcf}->{$state} > MIN_CTCF_CORRELATION) {
     $assignments->{$state} = 'ctcf';
     return;
   }
-  if ($overlaps->{repressed}->{$state} > $segmentation->{repressed_cutoff}) {
+  if (grep($overlaps->{repressed}->{$state}->{$_} > $repressed_cutoffs{$_}, @repressed_marks)) {
     if ($overlaps->{tfbs}->{$state} < WEAK_CUTOFF) {
       $assignments->{$state} = 'repressed';
     } else {
@@ -2003,10 +2005,11 @@ sub compute_overlaps {
   print $out "Segmentation\tstate\tctcf\ttss\tgene\ttfbs\trepressed\n";
   foreach my $state (@{$segmentation->{states}}) {
     print $out "$segmentation->{name}\t$state";
-    foreach my $test ('ctcf', 'tss', 'gene', 'tfbs','repressed') {
+    foreach my $test ('ctcf', 'tss', 'gene', 'tfbs') {
       chomp $segmentation->{overlaps}->{$test}->{$state};
       print $out "\t$segmentation->{overlaps}->{$test}->{$state}";
     }
+    print $out "\t".%{$segmentation->{overlaps}->{repressed}->{$state}};
     print $out "\n";
   }
   close $out;
@@ -2198,7 +2201,6 @@ sub compute_enrichment_between_files {
     * segmentation->{repressed_cutoffs}: repressed mark => scalar
     * segmentation->{has_ctcf}: scalar
 
-
 =cut
 
 sub compute_ChromHMM_repressed_scores {
@@ -2213,11 +2215,11 @@ sub compute_ChromHMM_repressed_scores {
   open $fh, "<", $file or confess("Can't open file for reading " . $file);
   $line = <$fh>;
   chomp $line;
-  my @items = split /\t/, $line;
+  my @headers = map clean_name($_), split /\t/, $line;
   my @columns_with_repressed_marks = ();
-  for (my $index = 1; $index < scalar @items; $index++) {
+  for (my $index = 1; $index < scalar @headers; $index++) {
   
-    my $index_is_for_repressed_mark = grep($_ eq clean_name($items[$index]), REPRESSED_MARKS);
+    my $index_is_for_repressed_mark = grep { $_ eq $headers[$index] } REPRESSED_MARKS;
   
     if ($index_is_for_repressed_mark) {
       push @columns_with_repressed_marks, $index;
@@ -2225,33 +2227,37 @@ sub compute_ChromHMM_repressed_scores {
   }
   $segmentation->{has_ctcf} = grep($_ eq "CTCF", @headers);
 
-  my $max = 0;
-
+  my %max = ();
+  
   while ($line = <$fh>) {
     chomp $line;
     my @items = split /\t/, $line;
     my $sum = 0;
     foreach my $column (@columns_with_repressed_marks) {
-       $sum += $items[$column];
-    }
-    my $state = "E$items[0]";
-    $segmentation->{overlaps}->{repressed}->{$state} = $sum;
-    print_log("Emission\t$segmentation->{name}\trepressed\t$items[0]\t$sum\n");
-    if ($sum > $max) {
-      $max = $sum;
+      my $mark = $headers[$column];
+      my $value = $items[$column];
+      
+      my $state = "E$items[$column]";
+      
+      $segmentation->{overlaps}->{repressed}->{$state}->{$mark} = $value;
+      if ($value > $max{$mark}) {
+        $max{$mark} = $value;
+      }
+      print_log("Emission\t$segmentation->{name}\trepressed\t$items[0]\t".%{$segmentation->{overlaps}->{repressed}->{$state}}."\n");
     }
   }
   close $fh;
   
-  $segmentation->{repressed_cutoff} = $max / 3;
-  #$segmentation->{repressed_cutoff} = 1.98;
+  foreach my $mark (keys %max) {
+    $segmentation->{repressed_cutoffs}->{$mark} = $max{$mark} / 3;
+  }
   
   my $repressed_cutoffs_file = "$options->{working_dir}/repressed_cutoffs";
   my $segmentation_file      = "$options->{working_dir}/segmentation_debug_file";
   
   store_data_in_file({
     file => $repressed_cutoffs_file, 
-    data => $segmentation->{repressed_cutoff},
+    data => $segmentation->{repressed_cutoffs},
   });
   store_data_in_file({
     file => $segmentation_file, 
@@ -2301,7 +2307,7 @@ sub compute_GMTK_repressed_scores {
   chomp $line;
   my @columns = split /\t/, $line;
 
-  my $max = 0;
+  my %max = ();
 
   while ($line = <$fh>) {
     chomp $line;
@@ -2314,18 +2320,21 @@ sub compute_GMTK_repressed_scores {
       next;
     }
     for (my $index = 0; $index < scalar(@columns); $index++) {
-      $segmentation->{overlaps}->{repressed}->{$columns[$index]} += $items[$index + 1];
-      if ($segmentation->{overlaps}->{repressed}->{$columns[$index]} > $max) {
-        $max = $segmentation->{overlaps}->{repressed}->{$columns[$index]};
+      my $value = $items[$index];
+      $segmentation->{overlaps}->{repressed}->{$columns[$index]}->{$mark} += $value;
+      if ($value > $max{$mark}) {
+        $max{$mark} = $value; 
       }
     }
   }
   close $fh;
 
   foreach my $state (@{$segmentation->{states}}) {
-    print_log("Emission\t$segmentation->{name}\trepressed\t$state\t$segmentation->{overlaps}->{repressed}->{$state}\n");
+    print_log("Emission\t$segmentation->{name}\trepressed\t$state\t".%{$segmentation->{overlaps}->{repressed}->{$state}}."\n");
   }
-  $segmentation->{repressed_cutoff} = $max / 3;
+  foreach my $mark (keys %max) {
+    $segmentation->{repressed_cutoffs}->{$mark} = $max{$mark} / 3;
+  }
 }
 
 =head2 compute_Segway_repressed_scores
@@ -2366,33 +2375,35 @@ sub compute_Segway_repressed_scores {
   open $fh, "<", $file or confess("Can't open file for reading " . $file);
   $line = <$fh>;
 
-  my $max = 0;
+  my %max = ();
 
   while ($line = <$fh>) {
     chomp $line;
     my @items = split /\t/, $line;
+    my $mark = clean_name($items[1]);
     if ($mark eq "CTCF") {
       $segmentation->{has_ctcf} = 1;
     } 
-    my $mark = clean_name($items[1]);
     if (!grep($_ eq $mark, REPRESSED_MARKS)) {
       next;
     }
-    if (!defined $segmentation->{overlaps}->{repressed}->{$items[0]}) {
-      $segmentation->{overlaps}->{repressed}->{$items[0]} = 0;
+    if (!defined $segmentation->{overlaps}->{repressed}->{$items[0]}->{$mark}) {
+      $segmentation->{overlaps}->{repressed}->{$items[0]}->{$mark} = 0;
     }
-    $segmentation->{overlaps}->{repressed}->{$items[0]} += $items[2];
-    if ($segmentation->{overlaps}->{repressed}->{$items[0]} > $max) {
-      $max = $segmentation->{overlaps}->{repressed}->{$items[0]};
+    $segmentation->{overlaps}->{repressed}->{$items[0]}->{$mark} += $items[2];
+    if ($segmentation->{overlaps}->{repressed}->{$items[0]}->{$mark} > $max{$mark}) {
+      $max{$mark} = $segmentation->{overlaps}->{repressed}->{$items[0]}->{$mark};
     }
   }
   close $fh;
 
   foreach my $state (@{$segmentation->{states}}) {
-    print_log("Emission\t$segmentation->{name}\trepressed\t$state\t$segmentation->{overlaps}->{repressed}->{$state}\n");
+    print_log("Emission\t$segmentation->{name}\trepressed\t$state\t".%{$segmentation->{overlaps}->{repressed}->{$state}}."\n");
   }
 
-  $segmentation->{repressed_cutoff} = $max / 3;
+  foreach my $mark (keys %max) {
+    $segmentation->{repressed_cutoffs}->{$mark} = $max{$mark} / 3;
+  }
 }
 
 =head2 make_segmentation_bedfiles
