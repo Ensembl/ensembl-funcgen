@@ -165,6 +165,7 @@ use vars qw( %Config );
         'Tomato',		## 
         'Vitis_Vinifera',	## I think GPL1320
         'maize',		## I think GPL4032
+        'GPL16720',             ## custom maize array
         'wheat',		## I think GPL3802
 
       ],
