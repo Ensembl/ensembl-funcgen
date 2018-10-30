@@ -76,6 +76,8 @@ sub _constructor_parameters {
     'adaptor'                      => 'adaptor',
     'dbID'                         => 'dbID',
     'name'                         => 'name',
+    'release_version'              => 'release_version',
+    'description'                  => 'description',
     'version'                      => 'version',
     'initial_release_date'         => 'initial_release_date',
     'last_annotation_update'       => 'last_annotation_update',
@@ -99,6 +101,8 @@ use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
 sub dbID                         { return shift->_generic_get_or_set('dbID',                      @_); }
 sub adaptor                      { return shift->_generic_get_or_set('adaptor',                   @_); }
 sub name                         { return shift->_generic_get_or_set('name',                      @_); }
+sub release_version              { return shift->_generic_get_or_set('release_version',           @_); }
+sub description                  { return shift->_generic_get_or_set('description',               @_); }
 sub version                      { return shift->_generic_get_or_set('version',                   @_); }
 sub initial_release_date         { return shift->_generic_get_or_set('initial_release_date',      @_); }
 sub last_annotation_update       { return shift->_generic_get_or_set('last_annotation_update',    @_); }

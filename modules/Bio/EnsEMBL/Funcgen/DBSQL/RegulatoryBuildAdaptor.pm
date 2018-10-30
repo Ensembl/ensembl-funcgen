@@ -52,6 +52,8 @@ sub _columns {
   return qw(
     rb.regulatory_build_id
     rb.name
+    rb.release_version
+    rb.description
     rb.version
     rb.initial_release_date
     rb.last_annotation_update
@@ -105,6 +107,8 @@ sub _objs_from_sth {
   my (
     $sth_fetched_dbID,
     $sth_fetched_name,
+    $sth_fetched_release_version,
+    $sth_fetched_description,
     $sth_fetched_version,
     $sth_fetched_initial_release_date,
     $sth_fetched_last_annotation_update,
@@ -117,6 +121,8 @@ sub _objs_from_sth {
   $sth->bind_columns (
     \$sth_fetched_dbID,
     \$sth_fetched_name,
+    \$sth_fetched_release_version,
+    \$sth_fetched_description,
     \$sth_fetched_version,
     \$sth_fetched_initial_release_date,
     \$sth_fetched_last_annotation_update,
@@ -136,6 +142,8 @@ sub _objs_from_sth {
       -adaptor                      => $self,
       -dbID                         => $sth_fetched_dbID,
       -name                         => $sth_fetched_name,
+      -release_version              => $sth_fetched_release_version,
+      -description                  => $sth_fetched_description,
       -version                      => $sth_fetched_version,
       -initial_release_date         => $sth_fetched_initial_release_date,
       -last_annotation_update       => $sth_fetched_last_annotation_update,
@@ -162,6 +170,8 @@ sub store {
   my $sth_store_regulatory_build = $self->prepare("
     INSERT INTO regulatory_build (
       name,
+      release_version,
+      description,
       version,
       initial_release_date,
       last_annotation_update,
@@ -169,7 +179,7 @@ sub store {
       analysis_id,
       is_current,
       sample_regulatory_feature_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
   );
   
   foreach my $current_regulatory_build (@regulatory_build) {
@@ -178,13 +188,15 @@ sub store {
       $self->_unset_all_current;
     }
     $sth_store_regulatory_build->bind_param( 1, $current_regulatory_build->name,                         SQL_VARCHAR);
-    $sth_store_regulatory_build->bind_param( 2, $current_regulatory_build->version,                      SQL_VARCHAR);
-    $sth_store_regulatory_build->bind_param( 3, $current_regulatory_build->initial_release_date,         SQL_VARCHAR);
-    $sth_store_regulatory_build->bind_param( 4, $current_regulatory_build->last_annotation_update,       SQL_VARCHAR);
-    $sth_store_regulatory_build->bind_param( 5, $current_regulatory_build->feature_type_id,              SQL_INTEGER);
-    $sth_store_regulatory_build->bind_param( 6, $current_regulatory_build->analysis_id,                  SQL_INTEGER);
-    $sth_store_regulatory_build->bind_param( 7, $current_regulatory_build->is_current,                   SQL_TINYINT);
-    $sth_store_regulatory_build->bind_param( 8, $current_regulatory_build->sample_regulatory_feature_id, SQL_TINYINT);
+    $sth_store_regulatory_build->bind_param( 2, $current_regulatory_build->release_version,              SQL_VARCHAR);
+    $sth_store_regulatory_build->bind_param( 3, $current_regulatory_build->description,                  SQL_VARCHAR);
+    $sth_store_regulatory_build->bind_param( 4, $current_regulatory_build->version,                      SQL_VARCHAR);
+    $sth_store_regulatory_build->bind_param( 5, $current_regulatory_build->initial_release_date,         SQL_VARCHAR);
+    $sth_store_regulatory_build->bind_param( 6, $current_regulatory_build->last_annotation_update,       SQL_VARCHAR);
+    $sth_store_regulatory_build->bind_param( 7, $current_regulatory_build->feature_type_id,              SQL_INTEGER);
+    $sth_store_regulatory_build->bind_param( 8, $current_regulatory_build->analysis_id,                  SQL_INTEGER);
+    $sth_store_regulatory_build->bind_param( 9, $current_regulatory_build->is_current,                   SQL_TINYINT);
+    $sth_store_regulatory_build->bind_param( 10, $current_regulatory_build->sample_regulatory_feature_id, SQL_TINYINT);
     
     $sth_store_regulatory_build->execute;
     $current_regulatory_build->dbID( $self->last_insert_id );
@@ -202,15 +214,17 @@ sub update {
   
   my $sth = $self->prepare("
     update regulatory_build set 
-      name = ?,
-      version = ?,
-      initial_release_date = ?,
-      last_annotation_update = ?,
-      feature_type_id = ?,
-      analysis_id = ?,
-      is_current = ?,
+      name                         = ?,
+      release_version              = ?,
+      description                  = ?,
+      version                      = ?,
+      initial_release_date         = ?,
+      last_annotation_update       = ?,
+      feature_type_id              = ?,
+      analysis_id                  = ?,
+      is_current                   = ?,
       sample_regulatory_feature_id = ?
-    where regulatory_build_id = ?
+    where regulatory_build_id      = ?
   ");
   
   if ($regulatory_build->is_current) {
@@ -218,14 +232,16 @@ sub update {
   }
   
   $sth->bind_param(1, $regulatory_build->name);
-  $sth->bind_param(2, $regulatory_build->version);
-  $sth->bind_param(3, $regulatory_build->initial_release_date);
-  $sth->bind_param(4, $regulatory_build->last_annotation_update);
-  $sth->bind_param(5, $regulatory_build->feature_type_id);
-  $sth->bind_param(6, $regulatory_build->analysis_id);
-  $sth->bind_param(7, $regulatory_build->is_current);
-  $sth->bind_param(8, $regulatory_build->sample_regulatory_feature_id);
-  $sth->bind_param(9, $regulatory_build->dbID);
+  $sth->bind_param(2, $regulatory_build->release_version);
+  $sth->bind_param(3, $regulatory_build->description);
+  $sth->bind_param(4, $regulatory_build->version);
+  $sth->bind_param(5, $regulatory_build->initial_release_date);
+  $sth->bind_param(6, $regulatory_build->last_annotation_update);
+  $sth->bind_param(7, $regulatory_build->feature_type_id);
+  $sth->bind_param(8, $regulatory_build->analysis_id);
+  $sth->bind_param(9, $regulatory_build->is_current);
+  $sth->bind_param(10, $regulatory_build->sample_regulatory_feature_id);
+  $sth->bind_param(11, $regulatory_build->dbID);
   
   $sth->execute;
   
