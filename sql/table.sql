@@ -2045,6 +2045,7 @@ CREATE TABLE `underlying_structure` (
 @column ensembl_object_type       Ensembl object type e.g ProbeSet etc.
 */
 
+/*
 DROP TABLE IF EXISTS `example_feature`;
 CREATE TABLE `example_feature` (
     `example_feature_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -2053,4 +2054,5 @@ CREATE TABLE `example_feature` (
   PRIMARY KEY (`example_feature_id`),
   UNIQUE KEY `ensembl_object_type_idx` (`ensembl_object_type`,`ensembl_id`)
 ) ENGINE=MyISAM  DEFAULT CHARSET=latin1;
+*/
 
