@@ -69,7 +69,7 @@ foreach my $update_data (@experiment_rows){
 	$sql = "update experiment 
 		set experiment.name = ?
 		where experiment_id = ?";
-	#print "is control: $update_data->{is_control}\n";
+	
 	$sth = $connection->prepare($sql);
 	$sth->bind_param( 1, $update_data->{new_name});
 	$sth->bind_param( 2, $update_data->{id});
@@ -77,6 +77,12 @@ foreach my $update_data (@experiment_rows){
 	$sth->execute();
 
 }
+
+# -----------------------------------
+# END
+# -----------------------------------
+
+print "FIN\n";
 
 sub get_experiment_new_name {
 
@@ -90,18 +96,13 @@ sub get_experiment_new_name {
 
 	my $new_name;
 
-	#print "get_experiment_new_name ...\n";
-
 	my $analysis_name = get_analysis_name($feature_type_id, $connection);
-	#print "Is control: $is_control\n";
+
 	if ($is_control == 1){
 		$new_name = create_control_experiment_name($feature_type_id, $epigenome_id, $experimental_group_id, $analysis_name, $release, $connection, $experiment_rows);
-		#print "New name ctl: $new_name\n";
 	}
 	if ($is_control == 0){
-		#print "1.1 ...\n";
 		$new_name = create_signal_experiment_name($feature_type_id, $epigenome_id, $experimental_group_id, $analysis_name, $release, $connection);
-		#print "New name signal: $new_name\n";
 	}
 
 	return $new_name;
@@ -112,12 +113,9 @@ sub get_analysis_name {
 	my $feature_id = shift;
 	my $connection = shift;
 
-	#print "get_analysis_name ...\n";
-
 	my $sql = "select analysis.logic_name
 		   		from feature_type join analysis using (analysis_id)
 		   		where feature_type_id = ?";
-
 
 	my $sth = $connection->prepare($sql);
 	$sth->bind_param( 1, $feature_id);     
@@ -203,15 +201,12 @@ sub check_experiment_name{
 	}
 
 	if ($exists == 0){
-		print "Searching in the array ...\n";
 		foreach my $exp_row (@{$experiment_rows}){
-			print "Name: $exp_row->{new_name}\n";
 			if (uc ($experiment_name) eq uc($exp_row->{new_name})){
 				$exists = 1;
 				last;
 			}
 		}
-		print "END Searching in the array ...\n";
 	}
 
 	return $exists;
@@ -239,10 +234,8 @@ sub create_control_experiment_name {
 
         $experiment_name =~ s/\s//g;
         $number++;
-        #print "number: $number\n";
 
         $experiment_exists = check_experiment_name($experiment_name, $connection, $experiment_rows);
-        #print "exists: $experiment_exists\n";
 
     } while ( $experiment_exists == 1 );
 

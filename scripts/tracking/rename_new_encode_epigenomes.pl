@@ -96,7 +96,7 @@ sub main {
     get_new_names($connection, \@new_epigenomes);
 
     # -------------------------------------------
-    # Update names in DB
+    # Update epigenome names in DB
     # --------------------------------------------
     $logger->info( 'Updating new Epigenome names ... ' .  "\n", 0, 1 );
 
