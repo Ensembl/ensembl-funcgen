@@ -202,8 +202,51 @@ sub _objs_from_sth {
     return \@result;
 }
 
+sub _fetch_all_epigenome_ids_having_PeakCalling_by_feature_type_class {
 
+  my $self  = shift;
+  my $class = shift;
+  
+  my $dbc = $self->db->dbc;
+  
+  use Bio::EnsEMBL::Utils::SqlHelper;
+  my $helper = Bio::EnsEMBL::Utils::SqlHelper->new( 
+    -DB_CONNECTION => $dbc
+  );
+  my $epigenome_ids_having_PeakCalling
+   = $helper->execute_simple(
+    -SQL => '
+      select 
+        distinct epigenome_id 
+      from 
+        peak_calling 
+        join feature_type using (feature_type_id)
+        join epigenome using (epigenome_id)
+      where class = ?
+     ',
+     -PARAMS => [ $class ] 
+  );
+  return $epigenome_ids_having_PeakCalling
+}
 
+sub fetch_all_having_PeakCalling_by_class {
+
+  my $self  = shift;
+  my $class = shift;
+  
+  my $feature_type_ids 
+    = $self->_fetch_all_epigenome_ids_having_PeakCalling_by_feature_type_class($class);
+
+  my $feature_types_having_PeakCalling = [
+    map {
+      $self->fetch_by_dbID($_);
+    } 
+      @$feature_type_ids
+  ];
+  
+  return $feature_types_having_PeakCalling;
+
+}
 
 =head2 store
 

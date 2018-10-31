@@ -119,7 +119,7 @@ foreach my $evidence_type(keys %regulatory_evidence_info){
 #Remove support for analysis
 #Possibly remove in favour of fetch_all_by_name, due to potential name redundancy between classes.
 
-sub fetch_by_name{
+  sub fetch_by_name{
   my ($self, $name, $class, $analysis) = @_;
 
   throw("Must specify a FeatureType name") if ! defined $name;
@@ -354,7 +354,49 @@ sub _objs_from_sth {
 	return \@result;
 }
 
+sub _fetch_all_feature_type_ids_having_PeakCalling_by_class {
 
+  my $self  = shift;
+  my $class = shift;
+  
+  my $dbc = $self->db->dbc;
+  
+  use Bio::EnsEMBL::Utils::SqlHelper;
+  my $helper = Bio::EnsEMBL::Utils::SqlHelper->new( 
+    -DB_CONNECTION => $dbc
+  );
+  my $feature_type_ids_having_PeakCalling
+   = $helper->execute_simple(
+    -SQL => '
+      select 
+        distinct feature_type_id 
+      from 
+        peak_calling 
+        join feature_type using (feature_type_id)
+      where class = ?
+     ',
+     -PARAMS => [ $class ] 
+  );
+  return $feature_type_ids_having_PeakCalling
+}
+
+sub fetch_all_having_PeakCalling_by_class {
+
+  my $self  = shift;
+  my $class = shift;
+  
+  my $feature_type_ids 
+    = $self->_fetch_all_feature_type_ids_having_PeakCalling_by_class($class);
+
+  my $feature_types_having_PeakCalling = [
+    map {
+      $self->fetch_by_dbID($_);
+    } 
+      @$feature_type_ids
+  ];
+  
+  return $feature_types_having_PeakCalling;
+}
 
 =head2 store
 
