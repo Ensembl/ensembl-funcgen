@@ -25,7 +25,7 @@ limitations under the License.
   Questions may also be sent to the Ensembl help desk at
   <http://www.ensembl.org/Help/Contact>.
   
-  api_calls_for_creating_regulatrion_matrix.pl
+  api_calls_for_creating_regulation_matrix.pl
 
 =cut
 
