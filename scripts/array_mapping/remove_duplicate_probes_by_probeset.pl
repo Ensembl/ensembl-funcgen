@@ -64,14 +64,24 @@ if ($array_count > 0){
 	#---------------------------------------------
 	print "Searching for duplicate probes by probeset in the arrays found ...\n";
 
-	$sql ="select probe.name, probe.probe_set_id, probe.probe_seq_id
+	$sql = "select probe.name, probe.probe_set_id, probe.probe_seq_id
 		from probe
 		where array_chip_id in(" . join (',', map { '?' } @array_chip_id) . ")";
-	$sql +=	" group by probe.name, probe.probe_set_id,  probe.probe_seq_id
+
+	$sql .=	" group by probe.name, probe.probe_set_id,  probe.probe_seq_id
 		having count(distinct probe.probe_id)>1";
 
+	print "Query: ".$sql."\n";
+
 	$sth = $connection->prepare($sql);
-	$sth->execute(@array_chip_id);
+	my $count = 1;
+	foreach my $array (@array_chip_id){
+		$sth->bind_param( $count, $array);
+		$count ++;
+	}
+
+	$sth->execute();
+
 	my @duplicate_probes;
 	while (@row = $sth->fetchrow_array) {
 		my %duplicate_probe_data;
@@ -115,17 +125,17 @@ if ($array_count > 0){
 		#---------------------------------------------
 		print "Deleting probes ...\n";
 
-		my $deletd_counter = 0;
+		my $deleted_counter = 0;
 		foreach my $to_delete (@probes_to_delete){
 			$sql = "delete from probe where probe_id = ?";
 			$sth = $connection->prepare($sql);
 			$sth->bind_param( 1, $to_delete );
 			$sth->execute();
 
-			$deletd_counter +=1;
+			$deleted_counter ++;
 		}
 
-		print "Number of deleted probes: " . $deletd_counter . "\n";
+		print "Number of deleted probes: " . $deleted_counter . "\n";
 
 	}
 
