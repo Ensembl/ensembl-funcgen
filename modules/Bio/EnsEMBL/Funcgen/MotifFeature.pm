@@ -210,6 +210,33 @@ sub fetch_overlapping_Peak_by_Epigenome {
     return $peak;
 }
 
+=head2 get_all_Epigenomes_with_experimental_evidence
+  
+  Example    : my $epigenomes = 
+             :    $motif_feature->get_all_Epigenomes_with_experimental_evidence;
+  Description: Returns a list of Epigenomes where the motif feature has been 
+               experimentally verified
+  Returntype : arrayref of Bio::EnsEMBL::Funcgen::Epigenome objects
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub get_all_Epigenomes_with_experimental_evidence {
+  my $self = shift;
+  my $peaks = $self->fetch_all_overlapping_Peaks;
+  my %epigenome_dbIDs;
+  for my $peak (@{$peaks}){
+    $epigenome_dbIDs{$peak->fetch_PeakCalling->epigenome_id} = 1;
+  }
+  
+  my $epigenome_adaptor = $self->adaptor->db->get_adaptor('Epigenome');
+  my @dbID_list = keys %epigenome_dbIDs;
+  my $epigenomes = $epigenome_adaptor->fetch_all_by_dbID_list(\@dbID_list);
+  return $epigenomes;
+}
+
 =head2 is_position_informative
 
   Arg [1]    : Scalar - 1-based integer position within the motif wrt +ve seq_region_strand.
