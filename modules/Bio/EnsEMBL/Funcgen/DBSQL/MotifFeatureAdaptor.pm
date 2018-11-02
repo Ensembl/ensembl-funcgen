@@ -63,6 +63,7 @@ use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 use Bio::EnsEMBL::Utils::Scalar qw( assert_ref );
 use Bio::EnsEMBL::Funcgen::MotifFeature;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;    #DBI sql_types import
+use Bio::EnsEMBL::Utils::SqlHelper;
 
 use base qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor );
 
@@ -780,5 +781,72 @@ sub fetch_by_stable_id {
 
   return $self->generic_fetch('mf.stable_id=?')->[0];
 }
+
+sub _bulk_export_to_bed {
+
+    my $self   = shift;
+    my $bed_fh = shift;
+
+    my $species = $self->db->species;
+
+    if ( $species eq 'DEFAULT' ) {
+        die;
+    }
+
+    my $slice_adaptor =
+      Bio::EnsEMBL::Registry->get_adaptor( $species, 'core', 'Slice' );
+
+    my %seq_region_id_to_name_cache;
+    
+    my $sql_helper =
+      Bio::EnsEMBL::Utils::SqlHelper->new( -DB_CONNECTION => $self->db->dbc );
+
+    $sql_helper->execute_no_return(
+        -SQL =>
+'select motif_feature_id, seq_region_id, seq_region_start, seq_region_end, seq_region_strand, score, binding_matrix_id, stable_id from motif_feature',
+        -USE_HASHREFS => 0,
+        -PARAMS       => [ ],
+        -CALLBACK     => sub {
+            my $row = shift;
+
+            my $seq_region_id = $row->[1];
+
+            my $seq_region_name;
+            if ( exists $seq_region_id_to_name_cache{$seq_region_id} ) {
+                $seq_region_name = $seq_region_id_to_name_cache{$seq_region_id};
+            }
+            else {
+                my $current_slice =
+                  $slice_adaptor->fetch_by_seq_region_id($seq_region_id);
+                $seq_region_name = $current_slice->seq_region_name;
+                $seq_region_id_to_name_cache{$seq_region_id} = $seq_region_name;
+            }
+
+            my $strand = $row->[4];
+            if ($strand == 1){
+              $strand = '+';
+            }
+            elsif ($strand == -1){
+              $strand = '-';
+            }
+
+            my $bed_line = join "\t",
+              (
+                $seq_region_name, $row->[2], $row->[3], $row->[0], $row->[5],
+                $strand, $row->[6]
+              );
+            
+            if ($row->[7]){
+              $bed_line .= "\t" . $row->[7];
+            }
+            
+            $bed_line .= "\n";
+
+            $bed_fh->print($bed_line);
+            return;
+        },
+    );
+}
+
 
 1;
