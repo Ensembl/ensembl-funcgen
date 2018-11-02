@@ -59,6 +59,19 @@ sub _columns {
   );
 }
 
+=head2 fetch_all_by_Slice_PeakCalling
+
+  Arg [1]    : Bio::EnsEMBL::Slice
+  Arg [2]    : Bio::EnsEMBL::Funcgen::PeakCalling
+  Example    : None
+  Description: Fetches a list of Peak objects by PeakCalling on a given Slice
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::Peak objects
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
 sub fetch_all_by_Slice_PeakCalling {
 
   my $self         = shift;
