@@ -37,6 +37,7 @@ package Bio::EnsEMBL::Funcgen::DBSQL::PeakAdaptor;
 use strict;
 use base 'Bio::EnsEMBL::Funcgen::DBSQL::GenericFeatureAdaptor';
 use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Scalar qw( assert_ref );
 
 sub object_class {
     return 'Bio::EnsEMBL::Funcgen::Peak';
@@ -57,6 +58,30 @@ sub _columns {
     p.seq_region_strand     p.peak_calling_id
     p.score                 p.summit
   );
+}
+
+=head2 fetch_all_by_PeakCalling
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::PeakCalling
+  Example    : None
+  Description: Fetches a list of Peak objects by PeakCalling
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::Peak objects
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub fetch_all_by_PeakCalling {
+
+    my $self         = shift;
+    my $peak_calling = shift;
+
+    assert_ref($peak_calling, 'Bio::EnsEMBL::Funcgen::PeakCalling');
+
+    my $constraint = 'peak_calling_id = ' . $peak_calling->dbID;
+
+    return $self->fetch_all($constraint);
 }
 
 =head2 fetch_all_by_Slice_PeakCalling
