@@ -35,6 +35,8 @@ limitations under the License.
 package Bio::EnsEMBL::Funcgen::DBSQL::DataFileAdaptor;
 
 use strict;
+use warnings;
+use Bio::EnsEMBL::Utils::Exception qw( throw  );
 use base 'Bio::EnsEMBL::Funcgen::DBSQL::GenericAdaptor';
 
 sub object_class {
@@ -49,14 +51,16 @@ sub fetch_by_path {
   my $self = shift;
   my $path = shift;
   
-  my $path = $self->fetch_all('path = ?', [ $path ]);
+  my $data_file_objects = $self->fetch_all('path = ?', [ $path ]);
   
-  if (@$path == 0) {
+  if (@$data_file_objects == 0) {
     return;
   }
-  if (@$path > 1) {
+  if (@$data_file_objects > 1) {
     throw("Found more than one data file with path $path!");
   }
+  return $data_file_objects->[0];
+}
 
 sub _fetch_all_by_table_name {
     my ($self, $table_name) = @_;
