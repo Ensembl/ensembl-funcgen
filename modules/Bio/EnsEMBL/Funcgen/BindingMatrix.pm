@@ -500,6 +500,7 @@ sub relative_sequence_similarity_score {
 }
 
 =head2 is_position_informative
+
   Arg [1]    : Integer - position within the matrix
   Arg [2]    : (Optional) Float - Threshold [0-2] for information content [default is 1.5]
   Example    : $binding_matrix->is_position_informative($position);
@@ -508,6 +509,7 @@ sub relative_sequence_similarity_score {
   Exceptions : Throws if position or threshold is out of bounds
   Caller     : General
   Status     : At Risk
+
 =cut
 
 sub is_position_informative {
@@ -557,7 +559,6 @@ sub _max_element {
 
     my $max_element;
 
-    # use Data::Printer; p $self->_elements;
     my @nucleotide_order = ( 'A', 'C', 'G', 'T' );
 
     for my $nucleotide (@nucleotide_order) {
