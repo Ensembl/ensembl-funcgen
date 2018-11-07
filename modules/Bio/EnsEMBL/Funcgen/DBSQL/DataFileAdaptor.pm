@@ -57,7 +57,29 @@ sub fetch_by_path {
   if (@$path > 1) {
     throw("Found more than one data file with path $path!");
   }
-  return $path->[0];
+
+sub _fetch_all_by_table_name {
+    my ($self, $table_name) = @_;
+
+    my %valid_table_names = (
+        'motif_feature'         => 1,
+        'alignment'             => 1,
+        'segmentation_file'     => 1,
+        'external_feature_file' => 1
+    );
+
+    if (!exists $valid_table_names{$table_name}) {
+        throw('Please provide one of the following valid table_name parameters: '
+            . join(',', keys %valid_table_names));
+    }
+    my $rows = $self->fetch_all('table_name = ?', [ $table_name ]);
+
+    if (scalar @{$rows} > 0){
+        return $rows;
+    }
+    else {
+        return [];
+    }
 }
 
 1;
