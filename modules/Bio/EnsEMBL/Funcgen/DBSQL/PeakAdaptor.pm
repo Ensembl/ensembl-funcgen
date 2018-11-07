@@ -66,7 +66,7 @@ sub _columns {
   Example    : None
   Description: Fetches a list of Peak objects by PeakCalling
   Returntype : Arrayref of Bio::EnsEMBL::Funcgen::Peak objects
-  Exceptions : None
+  Exceptions : Throws if PeakCalling parameter is not specified
   Caller     : Internal
   Status     : At Risk
 
