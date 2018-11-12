@@ -39,7 +39,6 @@
 
 
 -- regulatory_feature
-ALTER TABLE regulatory_feature ADD FOREIGN KEY (seq_region_id)    REFERENCES seq_region(seq_region_id);
 ALTER TABLE regulatory_feature ADD FOREIGN KEY (feature_type_id)  REFERENCES feature_type(feature_type_id);
 ALTER TABLE regulatory_feature ADD FOREIGN KEY (regulatory_build_id)   REFERENCES regulatory_build(regulatory_build_id);
 
@@ -54,58 +53,39 @@ ALTER TABLE regulatory_activity ADD FOREIGN KEY (epigenome_id) REFERENCES epigen
 -- regulatory_build
 ALTER TABLE regulatory_build ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type(feature_type_id);
 ALTER TABLE regulatory_build ADD FOREIGN KEY (analysis_id) REFERENCES analysis (analysis_id);
+ALTER TABLE regulatory_build ADD FOREIGN KEY (sample_regulatory_feature_id) REFERENCES regulatory_feature(regulatory_feature_id);
 
 -- regulatory_build_epigenome
 ALTER TABLE regulatory_build_epigenome ADD FOREIGN KEY (regulatory_build_id) REFERENCES regulatory_build(regulatory_build_id);
 ALTER TABLE regulatory_build_epigenome ADD FOREIGN KEY (epigenome_id) REFERENCES epigenome(epigenome_id);
-
--- segmentation_feature
-ALTER TABLE segmentation_feature ADD FOREIGN KEY (feature_set_id)   REFERENCES feature_set(feature_set_id);
-ALTER TABLE segmentation_feature ADD FOREIGN KEY (feature_type_id)  REFERENCES feature_type(feature_type_id);
-ALTER TABLE segmentation_feature ADD FOREIGN KEY (seq_region_id)    REFERENCES seq_region(seq_region_id);
 
 -- segmentation_file
 ALTER TABLE segmentation_file ADD FOREIGN KEY (regulatory_build_id) REFERENCES regulatory_build(regulatory_build_id);
 ALTER TABLE segmentation_file ADD FOREIGN KEY (analysis_id) REFERENCES analysis(analysis_id);
 ALTER TABLE segmentation_file ADD FOREIGN KEY (epigenome_id) REFERENCES epigenome(epigenome_id);
 
--- annotated_feature
-ALTER TABLE annotated_feature ADD FOREIGN KEY (feature_set_id)  REFERENCES feature_set(feature_set_id);
-ALTER TABLE annotated_feature ADD FOREIGN KEY (seq_region_id)   REFERENCES seq_region(seq_region_id);
-
 -- motif_feature
-ALTER TABLE motif_feature ADD FOREIGN KEY (seq_region_id)     REFERENCES seq_region(seq_region_id);
 ALTER TABLE motif_feature ADD FOREIGN KEY (binding_matrix_id) REFERENCES binding_matrix(binding_matrix_id);
 
 -- mirna_target_feature
 ALTER TABLE mirna_target_feature  ADD FOREIGN KEY (feature_set_id) REFERENCES feature_set (feature_set_id);
 ALTER TABLE mirna_target_feature  ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type (feature_type_id);
-ALTER TABLE mirna_target_feature  ADD FOREIGN KEY (seq_region_id)   REFERENCES seq_region(seq_region_id);
 
 -- associated_motif_feature
-ALTER TABLE associated_motif_feature ADD FOREIGN KEY (annotated_feature_id) REFERENCES annotated_feature(annotated_feature_id);
 ALTER TABLE associated_motif_feature ADD FOREIGN KEY (motif_feature_id) REFERENCES motif_feature(motif_feature_id);
-
--- binding_matrix
-ALTER TABLE binding_matrix ADD FOREIGN KEY (feature_type_id)  REFERENCES feature_type(feature_type_id);
-ALTER TABLE binding_matrix ADD FOREIGN KEY (analysis_id)      REFERENCES analysis(analysis_id);
 
 -- external_feature
 ALTER TABLE external_feature ADD FOREIGN KEY (feature_set_id)   REFERENCES feature_set(feature_set_id);
 ALTER TABLE external_feature ADD FOREIGN KEY (feature_type_id)  REFERENCES feature_type(feature_type_id);
-ALTER TABLE external_feature ADD FOREIGN KEY (seq_region_id)    REFERENCES seq_region(seq_region_id);
 
 -- external_feature_file
 ALTER TABLE external_feature_file ADD FOREIGN KEY (analysis_id) REFERENCES analysis(analysis_id);
 ALTER TABLE external_feature_file ADD FOREIGN KEY (epigenome_id) REFERENCES epigenome(epigenome_id);
 ALTER TABLE external_feature_file ADD FOREIGN KEY (feature_type_id)  REFERENCES feature_type(feature_type_id);
-ALTER TABLE external_feature_file ADD FOREIGN KEY (experiment_id) REFERENCES experiment(experiment_id);
-ALTER TABLE external_feature_file ADD FOREIGN KEY (result_set_id) REFERENCES result_set(result_set_id);
 
 -- probe_feature
 ALTER TABLE probe_feature ADD FOREIGN KEY (probe_id)      REFERENCES probe(probe_id);
 ALTER TABLE probe_feature ADD FOREIGN KEY (analysis_id)   REFERENCES analysis(analysis_id);
-ALTER TABLE probe_feature ADD FOREIGN KEY (seq_region_id) REFERENCES seq_region(seq_region_id);
 
 -- feature_type
 ALTER TABLE feature_type ADD FOREIGN KEY (analysis_id) REFERENCES analysis(analysis_id);
@@ -114,53 +94,12 @@ ALTER TABLE feature_type ADD FOREIGN KEY (analysis_id) REFERENCES analysis(analy
 ALTER TABLE associated_feature_type ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type(feature_type_id);
 	-- TODO polymorphic association pending
 
--- data_set
-ALTER TABLE data_set ADD FOREIGN KEY (feature_set_id) REFERENCES feature_set(feature_set_id);
-
--- supporting_set
-ALTER TABLE supporting_set ADD FOREIGN KEY (data_set_id) REFERENCES data_set(data_set_id);
-	-- TODO polymorphic association pending
-
 -- feature_set
 ALTER TABLE feature_set ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type(feature_type_id);
-ALTER TABLE feature_set ADD FOREIGN KEY (epigenome_id)    REFERENCES epigenome(epigenome_id);
 ALTER TABLE feature_set ADD FOREIGN KEY (analysis_id)     REFERENCES analysis(analysis_id);
-ALTER TABLE feature_set ADD FOREIGN KEY (experiment_id) REFERENCES experiment(experiment_id);
-
--- feature_set_qc_prop_reads_in_peaks
-ALTER TABLE feature_set_qc_prop_reads_in_peaks ADD FOREIGN KEY (analysis_id)     REFERENCES analysis(analysis_id);
-ALTER TABLE feature_set_qc_prop_reads_in_peaks ADD FOREIGN KEY (feature_set_id) REFERENCES feature_set(feature_set_id);
-
--- result_set
-ALTER TABLE result_set  ADD FOREIGN KEY (experiment_id) REFERENCES experiment (experiment_id);
-ALTER TABLE result_set ADD FOREIGN KEY (epigenome_id)    REFERENCES epigenome(epigenome_id);
-ALTER TABLE result_set ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type(feature_type_id);
-ALTER TABLE result_set ADD FOREIGN KEY (analysis_id)     REFERENCES analysis(analysis_id);
-
--- result_set_qc_chance
-ALTER TABLE result_set_qc_chance ADD FOREIGN KEY (signal_result_set_id) REFERENCES result_set(result_set_id);
-ALTER TABLE result_set_qc_chance ADD FOREIGN KEY (analysis_id)     REFERENCES analysis(analysis_id);
-
--- result_set_qc_flagstats
-ALTER TABLE result_set_qc_flagstats ADD FOREIGN KEY (result_set_id) REFERENCES result_set(result_set_id);
-ALTER TABLE result_set_qc_flagstats ADD FOREIGN KEY (analysis_id)     REFERENCES analysis(analysis_id);
-
--- result_set_qc_phantom_peak
-ALTER TABLE result_set_qc_phantom_peak ADD FOREIGN KEY (analysis_id)     REFERENCES analysis(analysis_id);
-ALTER TABLE result_set_qc_phantom_peak ADD FOREIGN KEY (result_set_id) REFERENCES result_set(result_set_id);
-
--- result_set_input
-ALTER TABLE result_set_input ADD FOREIGN KEY (result_set_id) REFERENCES result_set(result_set_id);
-ALTER TABLE result_set_input ADD FOREIGN KEY (table_id) REFERENCES input_subset(input_subset_id);
 
 -- dbfile_registry
 	-- TODO polymorphic association pending
-
--- input_subset
-ALTER TABLE input_subset ADD FOREIGN KEY (epigenome_id)    REFERENCES epigenome(epigenome_id);
-ALTER TABLE input_subset ADD FOREIGN KEY (experiment_id)   REFERENCES experiment(experiment_id);
-ALTER TABLE input_subset ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type(feature_type_id);
-ALTER TABLE input_subset ADD FOREIGN KEY (analysis_id) REFERENCES analysis(analysis_id);
 
 -- array_chip
 ALTER TABLE array_chip ADD FOREIGN KEY (array_id) REFERENCES array(array_id);
@@ -168,6 +107,16 @@ ALTER TABLE array_chip ADD FOREIGN KEY (array_id) REFERENCES array(array_id);
 -- probe
 ALTER TABLE probe ADD FOREIGN KEY (array_chip_id) REFERENCES array_chip(array_chip_id);
 ALTER TABLE probe ADD FOREIGN KEY (probe_set_id)  REFERENCES probe_set(probe_set_id);
+ALTER TABLE probe ADD FOREIGN KEY (probe_seq_id)  REFERENCES probe_seq(probe_seq_id);
+
+-- probe_feature_transcript
+ALTER TABLE probe_feature_transcript ADD FOREIGN KEY (probe_feature_id) REFERENCES probe_feature(probe_feature_id);
+
+-- probe_set
+ALTER TABLE probe_set ADD FOREIGN KEY (array_chip_id) REFERENCES array_chip(array_chip_id);
+
+-- probe_set_transcript
+ALTER TABLE probe_set_transcript ADD FOREIGN KEY (probe_set_id) REFERENCES probe_set(probe_set_id);
 
 -- experiment
 ALTER TABLE experiment ADD FOREIGN KEY (experimental_group_id)  REFERENCES experimental_group(experimental_group_id);
@@ -175,15 +124,27 @@ ALTER TABLE experiment ADD FOREIGN KEY (control_id) REFERENCES experiment(experi
 ALTER TABLE experiment ADD FOREIGN KEY (epigenome_id)    REFERENCES epigenome(epigenome_id);
 ALTER TABLE experiment ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type(feature_type_id);
 
--- status
-ALTER TABLE status ADD FOREIGN KEY (status_name_id) REFERENCES status_name(status_name_id);
-	-- TODO polymorphic association pending
+-- alignment
+ALTER TABLE alignment ADD FOREIGN KEY (analysis_id) REFERENCES analysis(analysis_id);
+ALTER TABLE alignment ADD FOREIGN KEY (bam_file_id) REFERENCES data_file(data_file_id);
+ALTER TABLE alignment ADD FOREIGN KEY (bigwig_file_id) REFERENCES data_file(data_file_id);
+
+-- alignment_read_file
+ALTER TABLE alignment_read_file ADD FOREIGN KEY (alignment_id) REFERENCES alignment(alignment_id);
+ALTER TABLE alignment_read_file ADD FOREIGN KEY (read_file_id) REFERENCES read_file(read_file_id);
+
+-- peak
+ALTER TABLE peak ADD FOREIGN KEY (peak_calling_id) REFERENCES peak_calling(peak_calling_id);
+
+-- read_file
+ALTER TABLE read_file ADD FOREIGN KEY (analysis_id) REFERENCES analysis(analysis_id);
+
+-- read_file_experimental_configuration
+ALTER TABLE read_file_experimental_configuration ADD FOREIGN KEY (read_file_id) REFERENCES read_file(read_file_id);
+ALTER TABLE read_file_experimental_configuration ADD FOREIGN KEY (experiment_id) REFERENCES experiment(experiment_id);
 
 -- analysis_description
 ALTER TABLE analysis_description ADD FOREIGN KEY (analysis_id) REFERENCES analysis(analysis_id);
-
--- meta_coord
-ALTER TABLE meta_coord ADD FOREIGN KEY (coord_system_id) REFERENCES coord_system(coord_system_id);
 
 -- associated_xref
 ALTER TABLE associated_xref ADD FOREIGN KEY (object_xref_id) REFERENCES object_xref(object_xref_id);
@@ -215,9 +176,6 @@ ALTER TABLE unmapped_object ADD FOREIGN KEY (analysis_id) REFERENCES analysis(an
 ALTER TABLE unmapped_object ADD FOREIGN KEY (external_db_id) REFERENCES external_db(external_db_id);
 ALTER TABLE unmapped_object ADD FOREIGN KEY (unmapped_reason_id) REFERENCES unmapped_reason(unmapped_reason_id);
 	-- TODO polymorphic association pending
-
--- seq_region
-ALTER TABLE seq_region ADD FOREIGN KEY (coord_system_id) REFERENCES coord_system(coord_system_id);
 
 
 -- TRACKING TABLES
