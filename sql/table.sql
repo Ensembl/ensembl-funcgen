@@ -275,11 +275,12 @@ CREATE TABLE `regulatory_build` (
   PRIMARY KEY (`regulatory_build_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
+DROP TABLE IF EXISTS `regulatory_build_statistic`;
 CREATE TABLE `regulatory_build_statistic` (
   `regulatory_build_statistic_id` int(30) unsigned NOT NULL AUTO_INCREMENT,
   `regulatory_build_id` int(22) unsigned DEFAULT NULL,
   `statistic` varchar(255) DEFAULT NULL,
-  `value` bigint(11) unsigned DEFAULT NULL,
+  `value` float unsigned DEFAULT NULL,
   PRIMARY KEY (`regulatory_build_statistic_id`),
   UNIQUE KEY `stats_uniq` (`statistic`,`regulatory_build_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -1375,6 +1376,7 @@ CREATE TABLE `probe` (
   `description` varchar(255) DEFAULT NULL,
   `probe_seq_id` int(10) DEFAULT NULL,
   PRIMARY KEY (`probe_id`,`name`,`array_chip_id`),
+  UNIQUE KEY `probe_idx` (`probe_id`),
   KEY `probe_set_idx` (`probe_set_id`),
   KEY `array_chip_idx` (`array_chip_id`),
   KEY `name_idx` (`name`),
@@ -1658,21 +1660,10 @@ CREATE TABLE `meta` (
 INSERT INTO meta (meta_key, meta_value) VALUES ('schema_type', 'funcgen');
 
 -- Update and remove these for each release to avoid erroneous patching
-
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (null, 'patch', 'patch_94_95_a.sql|schema_version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (null, 'patch', 'patch_94_95_b.sql|update to segmentation state tables');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (null, 'patch', 'patch_94_95_c.sql|Update to alignment table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (null, 'patch', 'patch_94_95_d.sql|Update to execution_plan table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (null, 'patch', 'patch_94_95_e.sql|Update to regulatory_build_statistic table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (null, 'patch', 'patch_94_95_f.sql|Update to experimental_group table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (null, 'patch', 'patch_94_95_g.sql|segmentation table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (null, 'patch', 'patch_94_95_h.sql|segmentation_cell_tables');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (null, 'patch', 'patch_94_95_i.sql|segmentation_statistic table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (null, 'patch', 'patch_94_95_j.sql|segmentation_file table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (null, 'patch', 'patch_94_95_k.sql|peak calling statistic table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_94_95_l.sql|Modify length for column name from epigenome table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_94_95_m.sql|drop obsolete tables');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_94_95_n.sql|add unique constrain on display_label column for epigenome table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '96');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_b.sql|changed data type for regulatory build statistics');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_c.sql|make unique probe_id column from probe table');
 
 
 /**
