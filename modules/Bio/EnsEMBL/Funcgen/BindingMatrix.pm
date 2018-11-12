@@ -554,25 +554,23 @@ sub is_position_informative {
 
 }
 
-sub _max_element {
+sub _max_position_sum {
     my ($self) = @_;
 
-    my $max_element;
-
+    my @position_sums;
     my @nucleotide_order = ( 'A', 'C', 'G', 'T' );
 
-    for my $nucleotide (@nucleotide_order) {
-        for ( my $position = 1 ; $position <= $self->length() ; $position++ ) {
+    for ( my $position = 1 ; $position <= $self->length() ; $position++ ) {
+        for my $nucleotide (@nucleotide_order) {
             my $element =
               $self->get_element_by_position_nucleotide( $position,
                 $nucleotide );
-            if ( $element >= $max_element ) {
-                $max_element = $element;
-            }
+            $position_sums[$position]+= $element;
         }
     }
-
-    return $max_element;
+    shift @position_sums; # avoid warning by removing undef value for index 0
+    
+    return max @position_sums;
 }
 
 
@@ -605,8 +603,7 @@ sub summary_as_hash {
         elements                                  => $self->_elements(),
         unit                                      => $self->unit(),
         stable_id                                 => $self->stable_id(),
-        associated_transcription_factor_complexes => \@associated_tfc_names,
-        max_element                               => $self->_max_element(),
+        max_position_sum                          => $self->_max_position_sum(),
         elements_string                           => $self->get_elements_as_string,
     };
 }
