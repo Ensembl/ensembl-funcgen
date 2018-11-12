@@ -587,14 +587,6 @@ sub _max_position_sum {
 sub summary_as_hash {
     my $self = shift;
 
-    my @associated_tfc_names;
-
-    for my $complex (
-        @{ $self->get_all_associated_TranscriptionFactorComplexes() } )
-    {
-        push @associated_tfc_names, $complex->display_name();
-    }
-
     return {
         name                                      => $self->name(),
         source                                    => $self->source(),
@@ -603,6 +595,7 @@ sub summary_as_hash {
         elements                                  => $self->_elements(),
         unit                                      => $self->unit(),
         stable_id                                 => $self->stable_id(),
+        associated_transcription_factor_complexes => $self->get_TranscriptionFactorComplex_names(),
         max_position_sum                          => $self->_max_position_sum(),
         elements_string                           => $self->get_elements_as_string,
     };
