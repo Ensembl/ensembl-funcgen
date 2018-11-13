@@ -18,7 +18,9 @@ sub main {
   my $self = bless({}, __PACKAGE__);
 
   $self->init_REST();
-  $self->{tsv} = '/homes/juettema/moose/ReferenceEpigenome_Report_2018_10_18.tsv';
+  $self->{tsv} = 
+  '/homes/juettema/src/ensembl-funcgen/scripts/registration/ReferenceEpigenome_Report_2018_10_18.tsv';
+  $self->set_assay_type();
   $self->parse_encode_tsv();
   die;
 }
@@ -64,7 +66,8 @@ sub parse_encode_tsv {
     # say $epigenome->print_all_attributes;
     my $epigenome_json = $self->fetch_epigenome_json($epigenome);
 
-    my $files = $self->create_file_objects($epigenome_json);
+    $self->iterate_datasets($epigenome_json);
+    # my $files = $self->create_file_objects($epigenome_json);
 
     die;
   }
@@ -99,24 +102,39 @@ sub fetch_epigenome_json {
   my $acc = $epigenome->{accession};
   my $url = "reference-epigenomes/$acc/?format=json";
   my $r = from_json($self->{client}->GET($url)->responseContent());
-  # say $url; die;
-  say Dumper($r->{related_datasets});die;
+  return($r);
  }
 
-sub create_experiments {
+sub iterate_datasets {
   my ($self, $epigenome_json) = @_;
 
 
-  my @datasets = @{$epigenome_json->{related_dataset}};
-  foreach my $rd (@datasets) {
-    next unless $rd->{assay_term_name} eq 'ChIP-seq';
-    my $experiment = new Experiment(
-      accession       => $rd->{accession},
-      assay_term_name => $rd->{assay_term_name},
-      status          => $rd->{status},
-    );
+  my @datasets = @{$epigenome_json->{related_datasets}};
+  foreach my $ds (@datasets) {
+    next unless (defined $self->{assays}->{$ds->{assay_term_name}});
+    my $exp_endpoint = $ds->{'@id'};
+
+    $self->create_experiment($exp_endpoint);
+    # my @files = @{$ds->{files}};
+    # foreach my $f (@files){
+    #   next unless ($f->{file_type} eq 'fastq');
+    # }
+    # my $experiment = new Experiment(
+    #   accession       => $rd->{accession},
+    #   assay_term_name => $rd->{assay_term_name},
+    #   status          => $rd->{status},
+    # );
 
   }
+}
+
+sub create_experiment {
+  my ($self, $exp_endpoint) = @_;
+
+  my $url = $exp_endpoint . '?format=json';
+  my $r = from_json($self->{client}->GET($url)->responseContent());
+say $r->{target}->{label};
+say $r->{target}->{name};
 }
 
 # sub create_file_objects {
