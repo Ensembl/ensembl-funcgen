@@ -349,16 +349,32 @@ sub stable_id { return shift->{stable_id}; }
 =cut
 
 sub summary_as_hash {
-  my $self = shift;
+    my $self = shift;
 
-  return
-   {binding_matrix          => $self->binding_matrix->name,
-    start                   => $self->seq_region_start,
-    end                     => $self->seq_region_end,
-    strand                  => $self->strand,
-    seq_region_name         => $self->seq_region_name,
-    stable_id               => $self->stable_id,
-    score                   => $self->score            };
+    my $summary = {
+        binding_matrix               => $self->binding_matrix->name,
+        start                        => $self->seq_region_start,
+        end                          => $self->seq_region_end,
+        strand                       => $self->strand,
+        seq_region_name              => $self->seq_region_name,
+        stable_id                    => $self->stable_id,
+        score                        => $self->score,
+        transcription_factor_complex => join( ',',
+            @{ $self->binding_matrix->get_TranscriptionFactorComplex_names } ),
+    };
+
+    my $epigenomes = $self->get_all_Epigenomes_with_experimental_evidence;
+
+    if (scalar @{$epigenomes} > 0) {
+        my @epigenome_names_list;
+        for my $epigenome ( @{$epigenomes} ) {
+            push @epigenome_names_list, $epigenome->display_label();
+        }
+        $summary->{epigenomes_with_experimental_evidence} = join ',',
+          @epigenome_names_list;
+    }
+
+    return $summary;
 }
 
 1;
