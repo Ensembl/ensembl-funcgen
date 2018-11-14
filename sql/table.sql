@@ -1664,6 +1664,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_versio
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_a.sql|schema_version');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_b.sql|changed data type for regulatory build statistics');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_c.sql|make unique probe_id column from probe table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_d.sql|add ReadFile to the enum of the ensembl_object_type');
 
 
 /**
@@ -1951,7 +1952,7 @@ DROP TABLE IF EXISTS `object_xref`;
 CREATE TABLE `object_xref` (
   `object_xref_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `ensembl_id` int(10) unsigned NOT NULL,
-  `ensembl_object_type` enum('Epigenome','Experiment','RegulatoryFeature','ExternalFeature','AnnotatedFeature','FeatureType','MirnaTargetFeature','ProbeSet','Probe','ProbeFeature') NOT NULL,
+  `ensembl_object_type` enum('Epigenome','Experiment','RegulatoryFeature','ExternalFeature','AnnotatedFeature','FeatureType','MirnaTargetFeature','ProbeSet','Probe','ProbeFeature','ReadFile') NOT NULL,
   `xref_id` int(10) unsigned NOT NULL,
   `linkage_annotation` varchar(255) DEFAULT NULL,
   `analysis_id` smallint(5) unsigned NOT NULL,
