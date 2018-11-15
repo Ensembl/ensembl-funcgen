@@ -268,7 +268,7 @@ sub store {
   my $sth = $self->prepare("
 			INSERT INTO epigenome
 			(name, display_label, description, gender, production_name)
-			VALUES (?, ?, ?, ?, ?, ?, ?)");
+			VALUES (?, ?, ?, ?, ?)");
 
 
 
