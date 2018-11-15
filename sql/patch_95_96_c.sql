@@ -17,7 +17,7 @@
 @desc   make unique probe_id column from probe table
 */
 
-alter table probe ADD CONSTRAINT probe_idx UNIQUE (probe_id);;
+alter table probe ADD CONSTRAINT probe_idx UNIQUE (probe_id);
 
 -- patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_c.sql|make unique probe_id column from probe table');
