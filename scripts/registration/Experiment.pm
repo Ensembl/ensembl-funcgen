@@ -4,48 +4,39 @@ use warnings;
 use Moose;
 use Moose::Util::TypeConstraints;
 
-extends 'Epigenome';
+my $meta = __PACKAGE__->meta;
 
+has 'accession' => (
+  is  => 'ro',
+  isa => 'Str',
+  required => 1,
+);
 
 has 'assay_term_id' => (
-  is => 'ro',
+  is  => 'ro',
   isa => 'Str',
   required => 1,
 );
 
-has 'assay_title' => (
-  is => 'ro',
+has 'assay_term_name' => (
+  is  => 'ro',
   isa => 'Str',
   required => 1,
 );
 
-has 'biosample_term_id' => (
-  is => 'ro',
+has 'feature_type' => (
+  is  => 'ro',
   isa => 'Str',
-  required => 1,
+  );
+
+has 'Experiment' => (
+  is  => 'rw',
+  isa => 'ArrayRef[Experiment]'
 );
 
-has 'biosample_term_name' => (
-  is => 'ro',
-  isa => 'Str',
-  required => 1,
-);
-
-has 'biosample_summary' => (
-  is => 'ro',
-  isa => 'Str',
-  required => 1,
-);
-
-has 'biosample_type' => (
-  is => 'ro',
-  isa => 'Str',
-  required => 1,
-);
-
-has 'description' => (
-  is => 'ro',
-  isa => 'Str',
+has 'File' => (
+  is => 'rw',
+  isa => 'ArrayRef[File]'
 );
 
 1;

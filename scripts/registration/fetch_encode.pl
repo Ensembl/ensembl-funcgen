@@ -17,7 +17,7 @@ main();
 sub main {
   my $self = bless({}, __PACKAGE__);
 
-  $self->init_REST();
+  $self->init_REST_client();
   $self->{tsv} = 
   '/homes/juettema/src/ensembl-funcgen/scripts/registration/ReferenceEpigenome_Report_2018_10_18.tsv';
   $self->set_assay_type();
@@ -25,8 +25,9 @@ sub main {
   die;
 }
 
-sub init_REST {
+sub init_REST_client {
   my ($self) = @_;
+
   my $client = REST::Client->new({
     host => 'https://www.encodeproject.org',
     });
@@ -64,9 +65,8 @@ sub parse_encode_tsv {
     next if(!defined $epigenome);
     say $epigenome->ihec;
     # say $epigenome->print_all_attributes;
-    my $epigenome_json = $self->fetch_epigenome_json($epigenome);
 
-    $self->iterate_datasets($epigenome_json);
+    $self->iterate_datasets($epigenome);
     # my $files = $self->create_file_objects($epigenome_json);
 
     die;
@@ -94,38 +94,31 @@ sub epigenome_from_tsv {
     );
   return($epigenome);
 }
+sub epigenome_from_json {
 
+}
 # 
 sub fetch_epigenome_json {
-  my ($self, $epigenome) = @_;
+  my ($self, $acc) = @_;
 
-  my $acc = $epigenome->{accession};
   my $url = "reference-epigenomes/$acc/?format=json";
   my $r = from_json($self->{client}->GET($url)->responseContent());
   return($r);
  }
 
 sub iterate_datasets {
-  my ($self, $epigenome_json) = @_;
+  my ($self, $epigenome) = @_;
+  say ref($epigenome);
+  my $epigenome_json = $self->fetch_epigenome_json($epigenome->{accession});
 
-
+  my @experiments;
   my @datasets = @{$epigenome_json->{related_datasets}};
   foreach my $ds (@datasets) {
     next unless (defined $self->{assays}->{$ds->{assay_term_name}});
-    my $exp_endpoint = $ds->{'@id'};
-
-    $self->create_experiment($exp_endpoint);
-    # my @files = @{$ds->{files}};
-    # foreach my $f (@files){
-    #   next unless ($f->{file_type} eq 'fastq');
-    # }
-    # my $experiment = new Experiment(
-    #   accession       => $rd->{accession},
-    #   assay_term_name => $rd->{assay_term_name},
-    #   status          => $rd->{status},
-    # );
-
+    my $exp = $self->create_experiment($ds->{'@id'});
+    $epigenome->experiment_push($exp);
   }
+  say Dumper($epigenome); die;
 }
 
 sub create_experiment {
@@ -133,29 +126,38 @@ sub create_experiment {
 
   my $url = $exp_endpoint . '?format=json';
   my $r = from_json($self->{client}->GET($url)->responseContent());
-say $r->{target}->{label};
-say $r->{target}->{name};
+
+  my $experiment = new Experiment (
+    accession       => $r->{accession},
+    assay_term_id   => $r->{assay_term_id},
+    assay_term_name => $r->{assay_term_name},
+    feature_type    => $r->{target}->{label},
+    File            => $self->create_file_objects($r->{files}), 
+    );
+  return($experiment);
+  # say Dumper($experiment);die;
 }
 
-# sub create_file_objects {
-#   my ($self, $epigenome_json) = @_;
+sub create_file_objects {
+  my ($self, $files_json) = @_;
 
-#   my @files = @{$epigenome_json->{files}};
-
-#   my @objects;
-#   foreach my $f (@files) {
-#     next unless($f->{file_type} eq 'fastq');
-#     my $file = new File(
-#       accession   => $f->{accession},
-#       file_type   => $f->{file_type},
-#       md5sum      => $f->{md5sum},
-#       read_length => $f->{},
-#       read_count  => $f->{},
-#       run_type    => $f->{},
-#       aliases     => $f->{},
-#       );
-#   }
-# }
+  my @objects;
+  foreach my $f (@{$files_json}) {
+    next unless($f->{file_type} eq 'fastq');
+    my $file = new File(
+      accession   => $f->{accession},
+      file_type   => $f->{file_type},
+      md5sum      => $f->{md5sum},
+      read_length => $f->{read_length},
+      read_count  => $f->{read_count},
+      run_type    => $f->{run_type},
+      aliases     => $f->{aliases},
+      );
+    push(@objects, $file);
+    # say Dumper($file); die;
+  }
+  return(\@objects)
+}
 
 # sub add_experiment {
 #   my ($self, $epigenome) = @_;

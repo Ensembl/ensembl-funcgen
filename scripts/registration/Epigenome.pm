@@ -13,7 +13,6 @@ has 'accession' => (
 );
 
 
-
 has 'biosample_term' => (
   is => 'ro',
   isa => 'Str',
@@ -95,9 +94,20 @@ has 'biosample_synonyms' => (
 # );
 
 has 'Experiment' => (
-  is => 'rw',
-  isa => 'ArrayRef[Experiment]'
+  is      => 'rw',
+  isa     => 'ArrayRef[Experiment]',
+  traits  => [ 'Array' ],
+  handles => {
+    experiment_push     => 'push',
+    experiment_shift    => 'shift',
+    experiment_elements => 'elements',
+    experiment_count    => 'count',
+    experiment_is_empty => 'is_empty',
+    },
+  required => 0,
 );
+
+
 # https://www.encodeproject.org/reference-epigenomes/ENCSR649KUM/?format=json
 #
 
