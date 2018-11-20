@@ -120,7 +120,10 @@ sub main {
     remove_read_file($connection);
 
     #remove object_xref
-    remove_object_xref($connection);
+    remove_object_xref_epigenome($connection);
+
+    #remove object_xref
+    remove_object_xref_read_file($connection);
 
     #remove xref
     remove_xref($connection);
@@ -146,13 +149,28 @@ sub remove_xref{
 
 }
 
-sub remove_object_xref{
+sub remove_object_xref_epigenome{
 
     my $connection = shift;
 
     my $sql = "Delete object_xref from object_xref
             LEFT JOIN epigenome ON epigenome.epigenome_id = object_xref.ensembl_id
             where ensembl_object_type = 'epigenome' and epigenome.epigenome_id is null ";
+
+    my $sth = $connection->prepare($sql);
+    $sth->execute();
+
+    return;
+
+}
+
+sub remove_object_xref_read_file{
+
+    my $connection = shift;
+
+    my $sql = "Delete object_xref from object_xref
+            LEFT JOIN read_file ON read_file.read_file_id = object_xref.ensembl_id
+            where ensembl_object_type = 'ReadFile' and read_file.read_file_id is null ";
 
     my $sth = $connection->prepare($sql);
     $sth->execute();

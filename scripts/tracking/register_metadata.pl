@@ -556,8 +556,9 @@ sub register_ctl {
 
 
             store_db_xref( $entry, $adaptors, $epigenome );
-            my $reg_file = store_read_file_only( $entry, $analysis, $adaptors );
+            my $reg_file = store_read_file_only( $logger, $entry, $analysis, $adaptors );
             store_read_file_experimental_configuration ($reg_file, $entry, $adaptors, $experiment);
+            store_db_xref_read_file($entry, $adaptors, $reg_file);
             my $accession = $entry->{accession}.$subFix;
             $file_exp->{$accession}=$external_exp->{$ex_accession};
 
@@ -676,9 +677,9 @@ sub register_signal {
     }
 
 
-    # avoid passing too many parameters to subroutines
-    store_read_file( $logger, $entry, $adaptors, $analysis, $experiment );
-	
+    my $reg_file = store_read_file_only( $logger, $entry, $analysis, $adaptors );
+    store_read_file_experimental_configuration ($reg_file, $entry, $adaptors, $experiment);
+    store_db_xref_read_file($entry, $adaptors, $reg_file);
 	
 
     $logger->info( "Successful Registration\n", 1, 1 );
@@ -876,7 +877,18 @@ sub store_experiment {
 
 
 sub store_read_file_only {
-	my ( $entry, $analysis, $adaptors )= @_;
+	my ( $logger, $entry, $analysis, $adaptors )= @_;
+
+    my $read_file = $adaptors->{read_file}->fetch_by_name( $entry->{accession} );
+
+    if ($read_file) {
+        $logger->warning(
+            'A read file entry for accession '
+                . $entry->{accession}
+                . ' already exists in DB! ',
+            0, 1
+        );
+    }
 	
 	if (!$entry->{info}){
 		$entry->{info} = undef;
@@ -930,66 +942,7 @@ sub store_read_file_experimental_configuration {
    return 1;
 }
 
-sub store_read_file {
-    my ( $logger, $entry, $adaptors, $analysis, $experiment ) = @_;
 
-
-
-    my $read_file = $adaptors->{read_file}
-        ->fetch_by_name( $entry->{accession}, $experiment );
-
-    if ($read_file) {
-        $logger->warning(
-            'A read file entry for accession '
-                . $entry->{accession}
-                . ' with experiment name '
-                . $experiment->{name}
-                . ' already exists in DB! ',
-            0, 1
-        );
-    }
-	
-	my $is_paired=undef;
-	if ($entry->{paired}){
-		$is_paired=1;
-	}
-
-    
-    my $paired_end_tag = undef;
-    if ($entry->{paired_end_tag} && $entry->{paired_end_tag} ne '-' ) {
-      	$paired_end_tag = $entry->{paired_end_tag};
-    }
-
-    
-    use Bio::EnsEMBL::Funcgen::ReadFile;
-    use Bio::EnsEMBL::Funcgen::ReadFileExperimentalConfiguration;
-    
-    $read_file = Bio::EnsEMBL::Funcgen::ReadFile->new(
-            -name           => $entry->{accession},
-            -analysis       => $analysis,
-            -is_paired_end  => $is_paired,
-            -file_size      => undef,
-            -read_length    => $entry->{read_length},
-            -md5sum         => $entry->{md5},
-            -file           => $entry->{local_url},
-            -notes          => undef,
-      );
-    $adaptors->{read_file}->store($read_file);
-
-    my $read_file_experimental_configuration = Bio::EnsEMBL::Funcgen::ReadFileExperimentalConfiguration->new(
-    
-      -read_file_id => $read_file->dbID,
-      -experiment_id         => $experiment->dbID,
-      -biological_replicate  => $entry->{br},
-      -technical_replicate   => $entry->{tr},
-      -paired_end_tag        => $paired_end_tag,
-      -multiple              => $entry->{multiple},
-    );
-
-    $adaptors->{read_file_experimental_configuration}->store($read_file_experimental_configuration);
-
-    return 1;
-}
 
 =pod
 sub store_ontology_xref {
@@ -1057,6 +1010,29 @@ sub store_db_xref {
         
 
     }
+
+    return 1;
+}
+
+sub store_db_xref_read_file {
+    my ( $entry, $adaptors, $read_file_obj ) = @_;
+
+    my $xref_accessions = $entry->{accession};
+    my $dbname = "ENCODE";
+
+    my $xref = Bio::EnsEMBL::DBEntry->new(
+        -primary_id => $entry->{accession},
+        -dbname     => $dbname,
+        -display_id => undef, # if not set to undef, an empty string will be stored in the display_label column
+        -info_text  => undef # if not set to undef, an empty string will be stored in the info_text column
+    );
+
+    #my $ignore_release = 1;
+    my $ignore_release = 0;
+
+    my $read_file_id = $read_file_obj->dbID();
+
+    $adaptors->{db_entry}->store( $xref, $read_file_id, 'ReadFile', $ignore_release );
 
     return 1;
 }

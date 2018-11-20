@@ -121,8 +121,11 @@ sub main {
     #remove read_file
     remove_read_file($connection);
 
-    #remove object_xref
-    remove_object_xref($connection);
+    #remove object_xref Epigenome
+    remove_object_xref_epigenome($connection);
+
+    #remove object_xref ReadFile
+    remove_object_xref_read_file($connection);
 
     #remove xref
     remove_xref($connection);
@@ -148,6 +151,7 @@ sub transfer_old_names{
     $sth->bind_param( 4, $old_epigenome->{'production_name'} );
     $sth->bind_param( 5, $new_epigenome );
     $sth->execute();
+
     return;
 }
 
@@ -165,13 +169,13 @@ sub remove_xref{
 
 }
 
-sub remove_object_xref{
+sub remove_object_xref_epigenome{
 
     my $connection = shift;
 
     my $sql = "Delete object_xref from object_xref
             LEFT JOIN epigenome ON epigenome.epigenome_id = object_xref.ensembl_id
-            where ensembl_object_type = 'epigenome' and epigenome.epigenome_id is null ";
+            where ensembl_object_type = 'Epigenome' and epigenome.epigenome_id is null ";
 
     my $sth = $connection->prepare($sql);
     $sth->execute();
@@ -179,6 +183,23 @@ sub remove_object_xref{
     return;
 
 }
+
+sub remove_object_xref_read_file{
+
+    my $connection = shift;
+
+    my $sql = "Delete object_xref from object_xref
+            LEFT JOIN read_file ON read_file.read_file_id = object_xref.ensembl_id
+            where ensembl_object_type = 'ReadFile' and read_file.read_file_id is null ";
+
+    my $sth = $connection->prepare($sql);
+    $sth->execute();
+
+    return;
+
+}
+
+
 
 sub remove_read_file{
     my $connection = shift;
