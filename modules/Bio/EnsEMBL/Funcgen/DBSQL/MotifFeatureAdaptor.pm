@@ -411,10 +411,6 @@ sub _fetch_overlapping_Peak_by_Epigenome {
         push @peaks, $peak_adaptor->fetch_by_dbID($row[0]);
     }
 
-    if(scalar @peaks > 1){
-      throw('More than one Peaks found. There should be only one!');
-    }
-
     return $peaks[0];
 }
 
