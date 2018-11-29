@@ -62,19 +62,24 @@ use base qw( Bio::EnsEMBL::Funcgen::Storable );
 
 =head2 new
 
-  Arg [-name]       : Scalar - Name of matrix
-  Arg [-analysis]   : Bio::EnsEMBL::Analysis - analysis describing how the matrix was obtained
-  Arg [-source]     : String (Mandatory) - A string describing the source of the matrix, i.e. SELEX
-  Arg [-threshold]  : Scalar (optional) - Numeric minimum relative affinity for binding sites of this matrix
-  Arg [-description]: Scalar (optional) - Descriptiom of matrix
-  Example    : my $matrix = Bio::EnsEMBL::Funcgen::BindingMatrix->new(
-                                                               -name  => "MA0122.1",
-                                                               -analysis => $analysis,
-                                                               -description => "Jaspar Matrix",
-                                                                );
+  Arg [-name]       : Scalar (Mandatory) - Name of matrix
+  Arg [-source]     : String (Mandatory) - Source of the matrix, i.e. SELEX
+  Arg [-stable_id]  : String (optional) - Stable Identifier
+  Arg [-threshold]  : Scalar (optional) - Numeric minimum relative affinity
+                      for binding sites of this matrix
+  Arg [-elements]   : Hashref (optional) - Frequency values of the matrix
+  Arg [-unit]       : Constant values from
+                      Bio::EnsEMBL::Funcgen::BindingMatrix::Constants
+  Arg [-associated_transcription_factor_complexes]
+                    : Arrayref of associated
+                      Bio::EnsEMBL::Funcgen::TranscriptionFactorComplex objects
+
+  Example : my $matrix = Bio::EnsEMBL::Funcgen::BindingMatrix->new(
+                            -name  => "MA0122.1",
+                            -source =>'SELEX');
   Description: Constructor method for BindingMatrix class
   Returntype : Bio::EnsEMBL::Funcgen::BindingMatrix
-  Exceptions : Throws if name or/and type or/and stable_id not defined
+  Exceptions : Throws if name or/and source not defined
   Caller     : General
   Status     : Medium risk
 
@@ -186,7 +191,7 @@ sub threshold {
   Returntype : Scalar - string
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -204,7 +209,7 @@ sub source {
   Returntype : Scalar - string
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : Stable
 
 =cut
 
@@ -256,12 +261,14 @@ sub _elements {
   
   Arg [1]    : Integer - Position in the matrix
   Arg [2]    : String - Nucleotide of interest (A, C, G or T)
-  Example    : my $element = $binding_matrix->get_element_by_position_nucleotide(3,'A');
+  Example    : my $element =
+                 $binding_matrix->get_element_by_position_nucleotide(3,'A');
   Description: Get element value for a particular position and nucleotide
   Returntype : Scalar - numeric value
   Exceptions : Throws if position parameter is not specified
                Throws if nucleotide parameter is not specified
-               Throws if positions is out of bounds
+               Throws if position is not an integer
+               Throws if position is out of bounds
                Throws if nucleotide is invalid
   Caller     : General
   Status     : At Risk
@@ -293,6 +300,17 @@ sub get_element_by_position_nucleotide {
     return $self->_elements()->{$position}->{$nucleotide};
 }
 
+=head2 get_elements_as_string
+
+  Example    : my $elements = $binding_matrix->get_element_as_string;
+  Description: Get string with all element values of a binding matrix
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : At Risk
+
+=cut
+
 sub get_elements_as_string {
     my ($self) = @_;
 
@@ -315,7 +333,7 @@ sub get_elements_as_string {
 
 =head2 length
 
-  Example    : my $length = $bm->length;
+  Example    : my $length = $binding_matrix->length;
   Description: Returns the length of the the matrix
   Returntype : Scalar - numeric (int)
   Exceptions : None
@@ -411,7 +429,8 @@ sub _min_max_sequence_similarity_score {
   
   Arg [1]       : String - sequence of interest
   Example       : $seq_sim_score = $binding_matrix->sequence_similarity_score($seq);
-  Description   : Calculates the similarity score of a given sequence
+  Description   : Calculates the similarity score of the binding matrix to a
+                  given sequence
   Returns       : Float
   Exceptions    : Throws if sequence parameter is not specified
                   Throws if sequence contains invalid characters
