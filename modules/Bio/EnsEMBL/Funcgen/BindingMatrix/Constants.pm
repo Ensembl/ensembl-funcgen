@@ -58,16 +58,14 @@ our @EXPORT_OK = qw(
     WEIGHTS
     BITS
     VALID_UNITS
+    VALID_NUCLEOTIDES
 );
 
 our %EXPORT_TAGS = ( all => \@EXPORT_OK );
 
 use constant {
-    FREQUENCIES   => 'Frequencies',
-    PROBABILITIES => 'Probabilities',
-    WEIGHTS       => 'Weights',
-    BITS          => 'Bits',
-    VALID_UNITS   => ['Frequencies', 'Probabilities', 'Weights', 'Bits']
+    VALID_UNITS       => [ 'Frequencies', 'Probabilities', 'Weights', 'Bits' ],
+    VALID_NUCLEOTIDES => [ 'A', 'C', 'G', 'T' ]
 };
 
 1;
