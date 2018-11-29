@@ -13,12 +13,12 @@
 -- limitations under the License.
 
 /**
-@header patch_95_96_e.sql - 
-@desc   
+@header patch_95_96_e.sql - Add description and release_version columns to regulatory_build table
+@desc 	Add description and release_version columns to regulatory_build table
 */
 
 alter table regulatory_build add column description     text default null after name;
 alter table regulatory_build add column release_version int  default null after name;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_e.sql|');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_e.sql|Add description and release_version columns to regulatory_build table');

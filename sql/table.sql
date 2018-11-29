@@ -266,7 +266,7 @@ CREATE TABLE `regulatory_build` (
   `regulatory_build_id` int(4) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(45) NOT NULL,
   `release_version` int(11) DEFAULT NULL,
-  `description` text,
+  `description` text DEFAULT NULL,
   `version` varchar(50) DEFAULT NULL,
   `initial_release_date` varchar(50) DEFAULT NULL,
   `last_annotation_update` varchar(50) DEFAULT NULL,
@@ -1667,6 +1667,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patc
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_b.sql|changed data type for regulatory build statistics');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_c.sql|make unique probe_id column from probe table');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_d.sql|add ReadFile to the enum of the ensembl_object_type');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_e.sql|Add description and release_version columns to regulatory_build table');
 
 
 /**
