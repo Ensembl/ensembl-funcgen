@@ -84,13 +84,6 @@ sub fetch_by_name {
 
     my $result = $self->generic_fetch($constraint);
 
-    if ( scalar @$result > 1 ) {
-        throw(    'Binding Matrix '
-                . $name
-                . ' is not unique in the database.'
-                . ' Only one result has been returned' );
-    }
-
     return $result->[0];
 }
 
