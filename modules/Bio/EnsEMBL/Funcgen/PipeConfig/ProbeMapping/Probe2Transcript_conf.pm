@@ -492,7 +492,10 @@ sub resource_classes {
     my ($self) = @_;
     return {
         %{$self->SUPER::resource_classes},
-        'parallel_sort'     => { 'LSF' => '-q production-rh7 -n 16 -M32000 -R"select[mem>32000] rusage[mem=32000]"' },
+        'parallel_sort'   => { 
+            'LSF'         => [ '-q production-rh7 -n 16 -M32000 -R"select[mem>32000] rusage[mem=32000]"' ],
+            'DockerSwarm' => [ $self->_swarm_resource(16, 32) ],
+        },
     };
 }
 
