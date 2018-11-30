@@ -55,21 +55,31 @@ use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
 =cut
 
-# sub fetch_all_by_TranscriptionFactor {
-#     my ( $self, $transcription_factor ) = @_;
+sub fetch_all_by_TranscriptionFactor {
+    my ( $self, $transcription_factor ) = @_;
 
-#     $self->db->is_stored_and_valid(
-#         'Bio::EnsEMBL::Funcgen::TranscriptionFactor',
-#         $transcription_factor );
+    $self->db->is_stored_and_valid(
+        'Bio::EnsEMBL::Funcgen::TranscriptionFactor',
+        $transcription_factor );
 
-#     my $constraint = " tfc.transcription_factor_id = ?";
+    my $sth = $self->prepare(
+        "SELECT transcription_factor_complex_id
+         FROM transcription_factor_complex
+            JOIN transcription_factor_complex_composition
+                USING (transcription_factor_complex_id)
+         WHERE transcription_factor_id=?"
+    );
 
-#     $self->bind_param_generic_fetch( $transcription_factor->dbID,
-#         SQL_INTEGER );
+    $sth->execute( $transcription_factor->dbID );
 
-#     return $self->generic_fetch($constraint);
-# }
+    my @dbIDs;
+    while ( my @row = $sth->fetchrow_array ) {
+        push @dbIDs, $row[0];
+    }
+    my @transcription_factor_complexes = $self->fetch_all_by_dbID_list(\@dbIDs);
 
+    return \@transcription_factor_complexes;
+}
 
 =head2 fetch_by_production_name
 
