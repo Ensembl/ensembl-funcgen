@@ -280,7 +280,8 @@ sub get_element_by_position_nucleotide {
     throw('Must supply a position parameter')   if !defined $position;
     throw('Must supply a nucleotide parameter') if !defined $nucleotide;
 
-    my %valid_nucleotides = ( 'A' => 1, 'C' => 1, 'G' => 1, 'T' => 1 );
+    $nucleotide = uc($nucleotide);
+    my $valid_nucleotides = VALID_NUCLEOTIDES;
 
     if (!(      assert_integer( $position, 'position' )
             and 1 <= $position
@@ -292,8 +293,11 @@ sub get_element_by_position_nucleotide {
                 . $self->length() );
     }
 
-    if ( !$valid_nucleotides{$nucleotide} ) {
-        throw('Supplied nucleotide not valid');
+    if (!grep $_ eq $nucleotide, @{$valid_nucleotides}) {
+        my $exception_message = 'Supplied nucleotide ' . $nucleotide
+            . ' is not valid. Please use one of these: ';
+        $exception_message .= join(",", @{$valid_nucleotides});
+        throw($exception_message);
     }
 
     return $self->_elements()->{$position}->{$nucleotide};
@@ -315,9 +319,9 @@ sub get_elements_as_string {
 
     my $elements_string;
 
-    my @nucleotide_order = ( 'A', 'C', 'G', 'T' );
+    my $nucleotides = VALID_NUCLEOTIDES;
 
-    for my $nucleotide (@nucleotide_order) {
+    for my $nucleotide (@{$nucleotides}) {
         for ( my $position = 1; $position <= $self->length(); $position++ ) {
             my $element
                 = $self->get_element_by_position_nucleotide( $position,
@@ -653,10 +657,11 @@ sub _max_position_sum {
     my ($self) = @_;
 
     my @position_sums;
-    my @nucleotide_order = ( 'A', 'C', 'G', 'T' );
 
-    for ( my $position = 1 ; $position <= $self->length() ; $position++ ) {
-        for my $nucleotide (@nucleotide_order) {
+    my $nucleotides = VALID_NUCLEOTIDES;
+
+    for my $nucleotide (@${nucleotides}) {
+        for ( my $position = 1 ; $position <= $self->length() ; $position++ ) {
             my $element =
               $self->get_element_by_position_nucleotide( $position,
                 $nucleotide );
