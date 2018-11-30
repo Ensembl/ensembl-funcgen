@@ -102,11 +102,10 @@ sub new {
 
     throw('Must supply a -name parameter')   if !defined $name;
     throw('Must supply a -source parameter') if !defined $source;
-    throw('Must supply a -stable_id parameter') if !defined $stable_id;
 
     $self->{name}      = $name;
     $self->{source}    = $source;
-    $self->{stable_id} = $stable_id;
+    $self->{stable_id} = $stable_id if defined $stable_id;
     $self->{threshold} = $threshold if defined $threshold;
     $self->{elements}  = $elements if defined $elements;
 
