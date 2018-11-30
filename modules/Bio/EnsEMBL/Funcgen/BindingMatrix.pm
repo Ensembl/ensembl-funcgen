@@ -404,6 +404,83 @@ sub get_TranscriptionFactorComplex_names {
     return \@names;
 }
 
+=head2 get_all_TranscriptionFactors
+
+  Example     : my $transcription_factors =
+              : $binding_matrix->get_all_TranscriptionFactors;
+  Description : Returns all TranscriptionFactors that are associated with this
+              : BindingMatrix
+  Returntype  : Arrayref of Bio::EnsEMBL::Funcgen::TranscriptionFactor objects
+  Exceptions  : None
+
+=cut
+
+sub get_all_TranscriptionFactors {
+    my ($self) = @_;
+    my %all_unique_transcription_factors;
+
+    my $transcription_factor_complexes =
+        $self->get_all_associated_TranscriptionFactorComplexes;
+
+    for my $transcription_factor_complex (@{$transcription_factor_complexes}) {
+        my $current_transcription_factors =
+            $transcription_factor_complex->components;
+
+        for my $current_transcription_factor
+        (@{$current_transcription_factors}) {
+            if (!$all_unique_transcription_factors{$current_transcription_factor
+                ->dbID}) {
+                $all_unique_transcription_factors{$current_transcription_factor
+                    ->dbID} = $current_transcription_factor;
+            }
+        }
+    }
+
+    my @transcription_factors = values %all_unique_transcription_factors;
+    return \@transcription_factors;
+}
+
+=head2 get_all_PeakCallings
+
+  Example    : my $peak_callings = $binding_matrix->get_all_PeakCallings;
+  Description: Returns all PeakCallings that are associated with
+             : this BindingMatrix
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::PeakCalling objects
+  Exceptions : None
+
+=cut
+
+sub get_all_PeakCallings {
+    my ($self) = @_;
+
+    my $peak_calling_adaptor = $self->adaptor->db->get_adaptor('PeakCalling');
+
+    my $transcription_factors = $self->get_all_TranscriptionFactors;
+
+    my @all_peak_callings = ();
+    my %unique_feature_types;
+
+    for my $transcription_factor (@{$transcription_factors}) {
+        my $feature_type = $transcription_factor->get_FeatureType;
+
+        if (!$feature_type) {
+            next;
+        }
+
+        if (!$unique_feature_types{$feature_type->dbID}) {
+            my $current_peak_callings =
+                $peak_calling_adaptor->fetch_all_by_FeatureType($feature_type);
+
+            for my $current_peak_calling (@{$current_peak_callings}) {
+                push @all_peak_callings, $current_peak_calling;
+            }
+
+            $unique_feature_types{$feature_type->dbID} = 1;
+        }
+    }
+
+    return \@all_peak_callings;
+}
 
 sub _min_max_sequence_similarity_score {
     my ($self) = @_;
