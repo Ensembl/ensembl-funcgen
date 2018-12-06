@@ -393,7 +393,6 @@ sub get_all_associated_TranscriptionFactorComplexes {
 =cut
 
 sub get_TranscriptionFactorComplex_names {
-
     my ($self) = @_;
     my @names;
 
@@ -487,12 +486,12 @@ sub get_all_PeakCallings {
 
 sub _min_max_sequence_similarity_score {
     my ($self) = @_;
+
     if (! $self->{min_sequence_similarity_score}){
         my $converter = Bio::EnsEMBL::Funcgen::BindingMatrix::Converter->new();
         my $weights_binding_matrix =
           $converter->from_frequencies_to_weights( $self );
 
-        
         my @elements_by_position;
 
         for (my $position = 1; $position<= $weights_binding_matrix->length(); $position++){
@@ -544,7 +543,6 @@ sub sequence_similarity_score {
 
     my $converter = Bio::EnsEMBL::Funcgen::BindingMatrix::Converter->new();
     my $weights_binding_matrix = $converter->from_frequencies_to_weights($self);
-
 
     my @bases = split //, $sequence;
     my $position = 1;
@@ -673,8 +671,6 @@ sub _max_position_sum {
     return max @position_sums;
 }
 
-
-
 =head2 summary_as_hash
 
   Example       : $binding_matrix_summary = $binding_matrix->summary_as_hash;
@@ -700,6 +696,5 @@ sub summary_as_hash {
         elements_string                           => $self->get_elements_as_string,
     };
 }
-
 
 1;

@@ -211,13 +211,11 @@ sub store {
             )
             )
         {
-
             #Check for previously stored TranscriptionFactors
             $stored_TranscriptionFactor
                 = $self->fetch_by_name( $transcription_factor->name );
 
             if ( !$stored_TranscriptionFactor ) {
-
                 $sth->bind_param( 1, $transcription_factor->name(),
                     SQL_VARCHAR );
                 $sth->bind_param(
@@ -231,14 +229,12 @@ sub store {
                 $sth->execute();
                 $transcription_factor->dbID( $self->last_insert_id );
                 $transcription_factor->adaptor($self);
-
             }
             else {
                 $transcription_factor = $stored_TranscriptionFactor;
                 warn(     "Using previously stored TranscriptionFactor:\t"
                         . $transcription_factor->name()
                         . "\n" );
-
             }
         }
     }

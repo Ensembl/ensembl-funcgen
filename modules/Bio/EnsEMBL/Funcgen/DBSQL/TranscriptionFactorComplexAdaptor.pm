@@ -162,7 +162,6 @@ sub _true_tables {
     );
 }
 
-
 =head2 _columns
 
   Args       : None
@@ -248,7 +247,6 @@ sub _objs_from_sth {
         \$production_name, \$display_name );
 
     while ( $sth->fetch() ) {
-
         my $components
             = $self->_fetch_components($transcription_factor_complex_id);
 
@@ -262,7 +260,6 @@ sub _objs_from_sth {
             );
 
         push @result, $transcription_factor_complex;
-
     }
 
     return \@result;
@@ -334,8 +331,6 @@ sub store {
                     $comp_sth->bind_param( 2, $component->dbID, SQL_INTEGER );
                     $comp_sth->execute();
                 }
-
-
             }
             else {
                 $transcription_factor_complex
@@ -344,12 +339,10 @@ sub store {
                         . $transcription_factor_complex->production_name()
                         . "\n" );
             }
-
         }
     }
 
     return \@args;
 }
-
 
 1;

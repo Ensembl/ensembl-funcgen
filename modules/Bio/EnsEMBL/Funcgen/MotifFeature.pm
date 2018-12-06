@@ -76,7 +76,6 @@ use constant SO_ACC => 'SO:0000235';
 
 =head2 new
 
-
   Arg [-SCORE]          : (optional) int - Score given by the motif mapper.
   Arg [-SLICE]          : Bio::EnsEMBL::Slice - The slice on which this feature is.
   Arg [-BINDING_MATRIX] : Bio::EnsEMBL::Funcgen::BindingMatrix - Binding Matrix associated to this feature.
@@ -216,9 +215,9 @@ sub get_all_overlapping_Peaks {
 
 
 =head2 fetch_overlapping_Peak_by_Epigenome
-  
+
   Arg [1]    : Bio::EnsEMBL::Funcgen::Epigenome object
-  Example    : my $peak = 
+  Example    : my $peak =
              :    $motif_feature->fetch_overlapping_Peak_by_Epigenome($epigenome);
   Description: Fetches the overlapping Peak for a particular Epigenome
   Returntype : Bio::EnsEMBL::Funcgen::Peak
@@ -292,10 +291,10 @@ sub is_experimentally_verified_in_Epigenome {
 }
 
 =head2 get_all_Epigenomes_with_experimental_evidence
-  
-  Example    : my $epigenomes = 
+
+  Example    : my $epigenomes =
              :    $motif_feature->get_all_Epigenomes_with_experimental_evidence;
-  Description: Returns a list of Epigenomes where the motif feature has been 
+  Description: Returns a list of Epigenomes where the motif feature has been
                experimentally verified
   Returntype : arrayref of Bio::EnsEMBL::Funcgen::Epigenome objects
   Exceptions : None
@@ -311,7 +310,7 @@ sub get_all_Epigenomes_with_experimental_evidence {
   for my $peak (@{$peaks}){
     $epigenome_dbIDs{$peak->fetch_PeakCalling->epigenome_id} = 1;
   }
-  
+
   my $epigenome_adaptor = $self->adaptor->db->get_adaptor('Epigenome');
   my @dbID_list = keys %epigenome_dbIDs;
   my $epigenomes = $epigenome_adaptor->fetch_all_by_dbID_list(\@dbID_list);
