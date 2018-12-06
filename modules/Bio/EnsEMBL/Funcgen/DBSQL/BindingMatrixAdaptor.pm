@@ -108,13 +108,6 @@ sub fetch_by_stable_id {
 
     my $result = $self->generic_fetch($constraint);
 
-    if ( scalar @$result > 1 ) {
-        throw(    'Binding Matrix '
-                . $stable_id
-                . ' is not unique in the database.'
-                . ' Only one result has been returned' );
-    }
-
     return $result->[0];
 }
 

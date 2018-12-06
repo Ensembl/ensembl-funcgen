@@ -105,13 +105,6 @@ sub fetch_by_production_name {
 
     my $result = $self->generic_fetch($constraint);
 
-    if ( scalar @$result > 1 ) {
-        throw(    'Transcription Factor Complex'
-                . $production_name
-                . ' is not unique in the database.'
-                . ' Only one result has been returned' );
-    }
-
     return $result->[0];
 }
 
