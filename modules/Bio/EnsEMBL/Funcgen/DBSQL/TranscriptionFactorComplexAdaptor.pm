@@ -135,14 +135,13 @@ sub fetch_all_by_BindingMatrix {
 
     $sth->execute( $binding_matrix->dbID );
 
-    my @transcription_factor_complexes;
-
+    my @dbIDs;
     while ( my @row = $sth->fetchrow_array ) {
-        my $tfc = $self->fetch_by_dbID($row[0]);
-        push @transcription_factor_complexes, $tfc;
+        push @dbIDs, $row[0];
     }
+    my $transcription_factor_complexes = $self->fetch_all_by_dbID_list(\@dbIDs);
 
-    return \@transcription_factor_complexes;
+    return $transcription_factor_complexes;
 }
 
 =head2 _true_tables
