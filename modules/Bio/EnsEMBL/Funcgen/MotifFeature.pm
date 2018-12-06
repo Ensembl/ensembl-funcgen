@@ -263,16 +263,32 @@ sub get_all_overlapping_Peaks_by_Epigenome {
     return $peaks;
 }
 
+=head2 is_experimentally_verified_in_Epigenome
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Epigenome object
+  Example    : my $is_verified =
+             :    $motif_feature->is_experimentally_verified_in_Epigenome($epigenome);
+  Description: Returns true if the motif feature is experimentally verified
+             : (i.e. has an overlapping Peak) in the given epigenome.
+  Returntype : Boolean
+  Exceptions : None
+  Caller     : Internal
   Status     : At Risk
 
 =cut
 
-sub fetch_overlapping_Peak_by_Epigenome {
+sub is_experimentally_verified_in_Epigenome {
     my ($self, $epigenome) = @_;
-    
-    my $peak = $self->adaptor->_fetch_overlapping_Peak_by_Epigenome($self, $epigenome);
-    
-    return $peak;
+
+    my $is_experimentally_verified = 0;
+
+    my $peaks = $self->get_all_overlapping_Peaks_by_Epigenome($epigenome);
+
+    if (scalar @{$peaks} > 0){
+        $is_experimentally_verified = 1;
+    }
+
+    return $is_experimentally_verified;
 }
 
 =head2 get_all_Epigenomes_with_experimental_evidence
