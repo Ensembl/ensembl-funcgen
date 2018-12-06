@@ -34,10 +34,10 @@ my $feature = Bio::EnsEMBL::Funcgen::MotifFeature->new
 	-START         => 1_000_000,
 	-END           => 1_000_024,
 	-STRAND        => -1,
-  -DISPLAY_LABEL => $text,
-  -SCORE         => $score,
-  -FEATURE_TYPE  => $ftype,
-  -STABLE_ID     => 1,
+    -DISPLAY_LABEL => $text,
+    -SCORE         => $score,
+    -FEATURE_TYPE  => $ftype,
+    -STABLE_ID     => 1,
  );
 
 =head1 DESCRIPTION
@@ -330,7 +330,7 @@ sub infer_variation_consequence{
 
 =head2 stable_id
 
-  Example    : my $istable_id = $feature->stable_id();
+  Example    : my $stable_id = $feature->stable_id();
   Description: Getter for the stable_id attribute for this feature.
   Returntype : String
   Exceptions : None

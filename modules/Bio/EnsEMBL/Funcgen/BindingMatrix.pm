@@ -29,7 +29,7 @@ limitations under the License.
 =head1 NAME
 
 Bio::EnsEMBL::Funcgen::BindingMatrix - A module to represent a BindingMatrix. 
-In EFG this represents the binding affinities of a Transcription Factor to DNA.
+This represents the binding affinities of a Transcription Factor Complex to DNA.
 
 =head1 SYNOPSIS
 
@@ -41,6 +41,8 @@ This class represents information about a BindingMatrix
 
 Bio::EnsEMBL::Funcgen::DBSQL::BindingMatrixAdaptor
 Bio::EnsEMBL::Funcgen::MotifFeature
+Bio::EnsEMBL::Funcgen::TranscriptionFactor
+Bio::EnsEMBL::Funcgen::TranscriptionFactorComplex
 
 =cut
 
@@ -80,6 +82,8 @@ use base qw( Bio::EnsEMBL::Funcgen::Storable );
   Description: Constructor method for BindingMatrix class
   Returntype : Bio::EnsEMBL::Funcgen::BindingMatrix
   Exceptions : Throws if name or/and source not defined
+               Throws if associated_transcription_factor_complexes does not
+               contain Bio::EnsEMBL::Funcgen::TranscriptionFactorComplex objects
   Caller     : General
   Status     : Medium risk
 

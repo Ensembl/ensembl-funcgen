@@ -47,7 +47,8 @@ use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::TranscriptionFactor
   Example    : my @tfc = @{$tfc_adaptor->fetch_all_by_TranscriptionFactor($tf)};
-  Description: Fetches TrancriptionFactorComplex objects given their TranscriptionFactor
+  Description: Fetches all TrancriptionFactorComplex objects that contain the
+               given TranscriptionFactor
   Returntype : Arrayref of Bio::EnsEMBL::Funcgen::TrancriptionFactorComplex objects
   Exceptions : Throws if TranscriptionFactor is not valid
   Caller     : General

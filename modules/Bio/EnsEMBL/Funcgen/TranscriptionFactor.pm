@@ -41,6 +41,21 @@ use base qw( Bio::EnsEMBL::Funcgen::Storable );
 
 =head2 new
 
+  Arg [-name]           : Scalar (Mandatory) - Name of transcription factor
+  Arg [-feature_type]   : Bio::EnsEMBL::Funcgen::FeatureType (optional) -
+                          corresponding feature type
+  Arg [-gene_stable_id] : String (optional) - Numeric minimum relative affinity
+                          for binding sites of this matrix
+
+  Example     : my $matrix = Bio::EnsEMBL::Funcgen::TranscriptionFactor->new(
+                             -name  => "CTCF");
+  Description : Constructor method for TranscriptionFactor class
+  Returntype  : Bio::EnsEMBL::Funcgen::TranscriptionFactor
+  Exceptions  : Throws if name not defined
+                Throws if feature_type is not a
+                Bio::EnsEMBL::Funcgen::FeatureType object
+  Caller      : General
+  Status      : Medium risk
 
 =cut
 

@@ -41,19 +41,19 @@ use base qw( Bio::EnsEMBL::Funcgen::Storable );
 
 =head2 new
 
-  Arg [-PRODUCTION_NAME]:
-       String - the name which is used internally
-  Arg [-DISPLAY_NAME]:
-       String - the name which is used on the EnsEMBL browser
-  Arg [-COMPONENTS]:
-       Arrayref of Bio::EnsEMBL::Funcgen::TranscriptionFactor objects
-       All Transcription Factors which are members of this complex
+  Arg [-PRODUCTION_NAME] : String - the name which is used internally
+  Arg [-DISPLAY_NAME]    : String - the name used on the EnsEMBL browser
+  Arg [-COMPONENTS]      : Arrayref of
+                           Bio::EnsEMBL::Funcgen::TranscriptionFactor objects
+                           All Transcription Factors which are members of
+                           this complex
+
   Example    : $tfc = Bio::EnsEMBL::Funcgen::TrancriptionFactorComplex->new(...);
   Description: Creates a new transcription_factor_complex object
   Returntype : Bio::EnsEMBL::Funcgen::TranscriptionFactorComplex
-  Exceptions : Thrown if the components contain
-               non Bio::EnsEMBL::Funcgen::TranscriptionFactor objects
-  Caller     : general
+  Exceptions : Throws if the components parameter contains invalid
+               Bio::EnsEMBL::Funcgen::TranscriptionFactor objects
+  Caller     : General
   Status     : Stable
 
 =cut
@@ -109,7 +109,7 @@ sub display_name { return shift->{display_name}; }
 
 =head2 components
 
-  Example    : my $components = $transcription_factor_complex->components();
+  Example    : my $transcription_factors = $transcription_factor_complex->components();
   Description: Getter for the components of the complex
   Returntype : Arrayref of Bio::EnsEMBL::Funcgen::TranscriptionFactor objects
   Exceptions : None

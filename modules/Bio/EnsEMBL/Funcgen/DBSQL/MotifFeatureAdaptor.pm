@@ -373,10 +373,11 @@ sub _fetch_all_overlapping_Peaks {
 =head2 _fetch_overlapping_Peak_by_Epigenome
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::MotifFeature
+  Arg [2]    : Bio::EnsEMBL::Funcgen::Epigenome
   Example    : None
-  Description: Fetches the overlapping Peak for a particular 
+  Description: Fetches the overlapping Peaks for a particular
              : MotifFeature and Epigenome
-  Returntype : Bio::EnsEMBL::Funcgen::Peak object
+  Returntype : arrayref of Bio::EnsEMBL::Funcgen::Peak objects
   Exceptions : None
   Caller     : Internal
   Status     : At Risk
