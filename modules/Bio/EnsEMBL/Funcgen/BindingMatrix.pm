@@ -55,8 +55,6 @@ use List::Util qw(min max);
 use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref check_ref assert_integer);
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
-use Bio::EnsEMBL::Funcgen::Sequencing::MotifTools qw( parse_matrix_line
-                                                      reverse_complement_matrix );
 use Bio::EnsEMBL::Funcgen::BindingMatrix::Constants qw ( :all );
 require Bio::EnsEMBL::Funcgen::BindingMatrix::Converter;
 
