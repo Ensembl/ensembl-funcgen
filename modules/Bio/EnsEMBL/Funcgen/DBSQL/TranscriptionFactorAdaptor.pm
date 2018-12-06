@@ -140,11 +140,13 @@ sub _objs_from_sth {
     while ( $sth->fetch() ) {
 
         my $feature_type;
-
-        if ( $feature_type_id && !exists $feature_type_cache{$feature_type_id} ) {
-            $feature_type_cache{$feature_type_id}
-                = $feature_type_adaptor->fetch_by_dbID($feature_type_id);
-                $feature_type = $feature_type_cache{$feature_type_id};
+# TODO test if bugfix works as expected
+        if ($feature_type_id) {
+            if (!exists $feature_type_cache{$feature_type_id}) {
+                $feature_type_cache{$feature_type_id}
+                    = $feature_type_adaptor->fetch_by_dbID($feature_type_id);
+            }
+            $feature_type = $feature_type_cache{$feature_type_id};
         }
 
         my $transcription_factor
