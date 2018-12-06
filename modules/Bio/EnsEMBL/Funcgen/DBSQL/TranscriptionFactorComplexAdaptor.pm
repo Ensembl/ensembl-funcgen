@@ -158,9 +158,7 @@ sub fetch_all_by_BindingMatrix {
 
 sub _true_tables {
     return (
-        [   'transcription_factor_complex',             'tfc',
-            # 'transcription_factor_complex_composition', 'tfcc'
-        ]
+        [ 'transcription_factor_complex', 'tfc', ]
     );
 }
 

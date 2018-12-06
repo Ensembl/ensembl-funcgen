@@ -104,40 +104,6 @@ my $true_final_clause = ' ORDER by mf.seq_region_id, mf.seq_region_start, mf.seq
 # was '' to avoid use of undef warning from BaseAdaptor
 my $final_clause = $true_final_clause;
 
-
-# =head2 fetch_all_by_AnnotatedFeature
-#
-#   Arg [1]    : Bio::EnsEMBL::AnnotatedFeature
-#   Arg [2]    : optional - Bio::EnsEMBL::Slice
-#   Example    : my $features = $ofa->fetch_all_by_AnnotatedFeature($af);
-#   Description: Retrieves a list of all MotifFeatures linked to the given
-#                AnnotatedFeature
-#   Returntype : Listref of Bio::EnsEMBL::Funcgen::MotifFeature objects
-#   Exceptions : Throws if AnnotatedFeature not stored and valid
-#   Caller     : General
-#   Status     : At Risk
-#
-# =cut
-#
-# sub fetch_all_by_AnnotatedFeature {
-#   my ($self, $feature, $slice) = @_;
-#
-#   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::AnnotatedFeature', $feature);
-#
-#   #Extend query tables
-#   $self->_tables([['associated_motif_feature', 'amf']]);
-#   my $constraint = 'mf.motif_feature_id = amf.motif_feature_id AND amf.annotated_feature_id=?';
-#   #No need for group here as we are restricting to one af
-#
-#   $self->bind_param_generic_fetch($feature->dbID, SQL_INTEGER);
-#
-#   my $mfs = $self->generic_fetch($constraint, undef, $slice);
-#   $self->reset_true_tables;
-#
-#   return $mfs;
-# }
-
-
 =head2 fetch_all_by_Slice_Epigenome
 
   Arg [1]    : Bio::EnsEMBL::Slice
@@ -640,27 +606,6 @@ sub store{
   Status     : Stable
 
 =cut
-
-#Will always load AFs first, as we need them to generate BMs and MFs
-#Hence we may not have all the associated AFs when we store the MF for the first time
-#So we need to be able to update these, and will most likely be 1 AF at a time
-
-#Where will these be stored?
-#reciprocal methods here and in AF/TFF?
-#Just in MF for now untill we write TFF
-
-#When loading MFs, need a wayway to identify if
-#it has already been loaded for a previous set
-#possiblity of parallel processes loading same MF at same time.
-#load scripts should handle multiple fsets, and only ever be run in series
-#wrt to fset, can chunk slice wise
-
-#Should only ever rollback associations relevant to fsets in question
-#this may leave orphaned MFs which may then cause duplicates
-
-#Duplicate may also be cause if some fsets are run in series, so we definitely
-#need to test for MF using feature Slice and BindingMatrix
-
 
 sub store_associated_Peak {
     my ( $self, $mf, $peak ) = @_;

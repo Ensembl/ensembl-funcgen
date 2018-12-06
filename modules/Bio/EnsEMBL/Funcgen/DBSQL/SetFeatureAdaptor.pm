@@ -243,9 +243,6 @@ sub fetch_all_by_Slice_FeatureType {
   return $feats;
 }
 
-#todo fetch_all_by_Slice_CellType
-
-
 =head2 fetch_all_by_FeatureSets
 
   Arg [1]    : Arrayref of Bio::EnsEMBL::Funcgen::FeatureSet objects
