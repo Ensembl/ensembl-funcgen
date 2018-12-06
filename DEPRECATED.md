@@ -8,10 +8,24 @@ When a method is deprecated, a deprecation warning is thrown whenever the method
 The warning also contains instructions on replacing the deprecated method and when it will be removed.
 A year after deprecation (4 Ensembl releases), the method is removed from the API.
 
+### To be removed in EnsEMBL Release 100 ###
+
+ - Bio::EnsEMBL::Funcgen::**MotifFeature**::*fetch_overlapping_Peak_by_Epigenome()*
+ - Bio::EnsEMBL::Funcgen::**MotifFeature**::*fetch_all_overlapping_Peaks()*
+ - Bio::EnsEMBL::Funcgen::DBSQL::**MotifFeatureAdaptor**::*fetch_all_by_Slice_Epigenome()*
+ - Bio::EnsEMBL::Funcgen::**Peak**::*fetch_PeakCalling()*
+ - Bio::EnsEMBL::Funcgen::**Peak**::*get_underlying_structure()*
+ - Bio::EnsEMBL::Funcgen::**Peak**::*fetch_all_MotifFeatures()*
+ - Bio::EnsEMBL::Funcgen::**RegulatoryFeature**::*fetch_all_MotifFeatures()*
+ - Bio::EnsEMBL::Funcgen::**RegulatoryFeature**::*fetch_all_MotifFeatures_with_matching_Peak()*
 
 ### To be removed in EnsEMBL Release 99 ###
 
  - Bio::EnsEMBL::Funcgen::**Alignment**::*db*
+
+### To be removed in EnsEMBL Release 97 ###
+
+ - Bio::EnsEMBL::Funcgen::**RegulatoryFeature**::*fetch_all_MotifFeatures_by_Epigenome()*
 
 ### To be removed in EnsEMBL Release 94 ###
 

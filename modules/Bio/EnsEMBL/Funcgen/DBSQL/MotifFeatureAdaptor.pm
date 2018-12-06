@@ -149,13 +149,16 @@ my $final_clause = $true_final_clause;
   Returntype : Listref of Bio::EnsEMBL::MotifFeature objects
   Exceptions : Throws if Epigenome is not valid
   Caller     : General
-  Status     :
+  Status     : Deprecated
 
 =cut
 
 sub fetch_all_by_Slice_Epigenome {
 
   my ($self, $slice, $epigenome, $type) = @_;
+
+  my $deprecation_message = 'Will be removed in release 100.';
+  deprecate($deprecation_message);
 
   #could add logic_name here for motif mapper analysis, motif source analysis
   $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Epigenome', $epigenome);
@@ -303,12 +306,15 @@ sub _generic_fetch_Iterator {
   Returntype : Listref of Bio::EnsEMBL::MotifFeature objects
   Exceptions : Throws if FeatureSet is not valid
   Caller     : General
-  Status     : At Risk - implement/change type to Analysis
+  Status     : Deprecated
 
 =cut
 
 sub fetch_all_by_Slice_FeatureSets {
   my ($self, $slice, $fsets, $type) = @_;
+
+  my $deprecation_message = 'Will be removed in release 100.';
+  deprecate($deprecation_message);
 
   #could add logic_name here for motif mapper analysis, motif source analysis
   #$self->db->are_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $fsets);
@@ -370,7 +376,7 @@ sub _fetch_all_overlapping_Peaks {
     return \@peaks;
 }
 
-=head2 _fetch_overlapping_Peak_by_Epigenome
+=head2 _fetch_all_overlapping_Peaks_by_Epigenome
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::MotifFeature
   Arg [2]    : Bio::EnsEMBL::Funcgen::Epigenome
@@ -384,7 +390,7 @@ sub _fetch_all_overlapping_Peaks {
 
 =cut
 
-sub _fetch_overlapping_Peak_by_Epigenome {
+sub _fetch_all_overlapping_Peaks_by_Epigenome {
     my ( $self, $motif_feature, $epigenome ) = @_;
 
     if (! defined $motif_feature){
@@ -412,7 +418,7 @@ sub _fetch_overlapping_Peak_by_Epigenome {
         push @peaks, $peak_adaptor->fetch_by_dbID($row[0]);
     }
 
-    return $peaks[0];
+    return \@peaks;
 }
 
 =head2 _final_clause

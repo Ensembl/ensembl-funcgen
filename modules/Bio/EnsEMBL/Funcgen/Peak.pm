@@ -58,7 +58,7 @@ sub _constructor_parameters {
   };
 }
 
-use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
 use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_get_or_set
@@ -156,12 +156,31 @@ sub slice {
   Returntype : Bio::EnsEMBL::Funcgen::PeakCalling
   Exceptions : None
   Caller     : general
-  Status     : Stable
+  Status     : Deprecated
 
 =cut
 
 sub fetch_PeakCalling {
+  my $deprecation_message = 'It will be removed in release 100. Please use '
+      . 'Bio::EnsEMBL::Funcgen::Peak::get_PeakCalling instead.';
+  deprecate($deprecation_message);
   return shift->_generic_fetch('peak_calling', 'get_PeakCallingAdaptor', 'peak_calling_id');
+}
+
+=head2 get_PeakCalling
+
+  Example    :
+  Description: Gets the peak calling object representing the peak
+               calling that generated this peak.
+  Returntype : Bio::EnsEMBL::Funcgen::PeakCalling
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_PeakCalling {
+    return shift->_generic_fetch('peak_calling', 'get_PeakCallingAdaptor', 'peak_calling_id');
 }
 
 =head2 set_PeakCalling
@@ -246,11 +265,13 @@ sub display_id {
   Returntype : ARRAYREF
   Exceptions : None
   Caller     : General
-  Status     : At Risk - This is TFBS specific and could move to TranscriptionFactorFeature
+  Status     : Deprecated
 
 =cut
 
 sub get_underlying_structure{
+  my $deprecation_message = 'It will be removed in release 100';
+  deprecate($deprecation_message);
   return [];
 }
 
@@ -261,11 +282,30 @@ sub get_underlying_structure{
   Returntype : Arrayref of Bio::EnsEMBL::Funcgen::MotifFeature objects
   Exceptions : none
   Caller     : General
-  Status     : At Risk
+  Status     : Deprecated
 
 =cut
 
 sub fetch_all_MotifFeatures {
+    my $self = shift;
+    my $deprecation_message = 'It will be removed in release 100. Please use '
+        . 'Bio::EnsEMBL::Funcgen::Peak::get_all_MotifFeatures instead.';
+    deprecate($deprecation_message);
+    return $self->get_all_MotifFeatures();
+}
+
+=head2 get_all_MotifFeatures
+
+  Example    : my $overlapping_motif_features = $peak->get_all_MotifFeatures
+  Description: Returns all MotifFeatures that overlap with a Peak
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::MotifFeature objects
+  Exceptions : none
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub get_all_MotifFeatures {
     my $self = shift;
 
     my $motif_features

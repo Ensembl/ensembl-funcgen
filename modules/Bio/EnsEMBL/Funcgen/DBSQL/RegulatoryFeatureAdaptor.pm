@@ -642,7 +642,7 @@ sub _make_arrayref_if_not_arrayref {
   return $obj_as_arrayref;
 }
 
-=head2 _fetch_overlapping_MotifFeatures
+=head2 _fetch_all_overlapping_MotifFeatures
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::RegulatoryFeature
   Arg [2]    : Bio::EnsEMBL::Funcgen::Epigenome - Optional
@@ -656,7 +656,7 @@ sub _make_arrayref_if_not_arrayref {
 
 =cut
 
-sub _fetch_overlapping_MotifFeatures {
+sub _fetch_all_overlapping_MotifFeatures {
     my ( $self, $regulatory_feature, $epigenome ) = @_;
 
     if (! defined $regulatory_feature){
@@ -695,7 +695,7 @@ sub _fetch_overlapping_MotifFeatures {
     return \@motif_features;
 }
 
-=head2 _fetch_overlapping_MotifFeatures_with_matching_Peak
+=head2 _fetch_all_overlapping_MotifFeatures_with_matching_Peak
 
   Arg [1]    : Bio::EnsEMBL::Funcgen::RegulatoryFeature
   Example    : None
@@ -708,7 +708,7 @@ sub _fetch_overlapping_MotifFeatures {
 
 =cut
 
-sub _fetch_overlapping_MotifFeatures_with_matching_Peak {
+sub _fetch_all_overlapping_MotifFeatures_with_matching_Peak {
     my ( $self, $regulatory_feature ) = @_;
 
     if (! defined $regulatory_feature){
