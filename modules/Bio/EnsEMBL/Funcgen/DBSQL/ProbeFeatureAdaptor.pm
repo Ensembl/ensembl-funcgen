@@ -220,10 +220,12 @@ sub fetch_all_by_Slice_array_vendor {
     $self->_tables([['array', 'a'], ['array_chip', 'ac'], [ 'probe',   'p' ]]);
 
 	#Need to protect against SQL injection here due to text params
-	my $constraint = ' a.name=? and a.vendor=? and a.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id and pf.probe_id = p.probe_id';
+
+	#my $constraint = ' a.name=? and a.vendor=? and a.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id and pf.probe_id = p.probe_id';
+	my $constraint = ' a.name= \'' . $array . '\' and a.vendor= \'' . $vendor . '\' and a.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id and pf.probe_id = p.probe_id';
 	$final_clause  = ' GROUP by pf.probe_feature_id '.$final_clause;
-	$self->bind_param_generic_fetch($array,  SQL_VARCHAR);
-	$self->bind_param_generic_fetch($vendor, SQL_VARCHAR);
+	#$self->bind_param_generic_fetch($array,  SQL_VARCHAR);
+	#$self->bind_param_generic_fetch($vendor, SQL_VARCHAR);
 
 	my $features  = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
     $self->reset_true_tables;
