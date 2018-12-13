@@ -394,7 +394,20 @@ sub get_Epigenome { return shift->{epigenome}; }
 
 =cut
 
-sub feature_type { return shift->{feature_type}; }
+sub feature_type { return shift->get_FeatureType; }
+
+=head2 get_FeatureType
+
+  Example    : my $ftype_name = $exp->get_FeatureType->name;
+  Description: Getter for the FeatureType.
+  Returntype : Bio::EnsEMBL::Funcgen::FeatureType
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub get_FeatureType { return shift->{feature_type}; }
 
 
 
