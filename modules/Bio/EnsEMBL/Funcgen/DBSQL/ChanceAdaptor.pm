@@ -53,7 +53,7 @@ sub fetch_by_signal_control_Alignments {
   my $control_id;
   
   if ($control) {
-    $control->dbID;
+    $control_id = $control->dbID;
   } else {
     $control_id = undef;
   }
