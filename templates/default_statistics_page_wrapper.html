@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>[% title %]</title>
+<link rel="stylesheet" type="text/css" href="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/datatables.css"/>
+
+<script src="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/Chart.bundle.js"></script>
+<script src="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/utils.js"></script>
+
+<script type="text/javascript" language="javascript" src="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/jquery-1.12.4.js"></script>
+
+<script type="text/javascript" src="https://www.ebi.ac.uk/~mnuhn/regulatory_build_stats/js/datatables.js"></script>
+
+</head>
+
+<body>
+
+<h1>[% title %]</h1>
+
+<p>
+    This report is based 
+</p>
+
+<ul>
+  <li>
+    on the database <em>[% dbc.dbname %]</em> 
+  </li>
+  <li>
+    on <em>[% dbc.host   %]:[% dbc.port   %]</em> 
+  <li>
+    on <em>[% time %]</em>.
+  </li>
+</ul>
+
+[% content %]
+
+</body>
+
+</html>

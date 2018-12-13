@@ -1,0 +1,316 @@
+[% WRAPPER "default_statistics_page_wrapper.html" %]
+
+  <style>
+    canvas{
+      -moz-user-select: none;
+      -webkit-user-select: none;
+      -ms-user-select: none;
+    }
+    .chart-container {
+      width: 70%;
+      margin-left: 40px;
+      margin-right: 40px;
+      margin-bottom: 40px;
+    }
+    .container {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+  </style>
+
+  <h2>Distribution of Phantom peaks NSC values</h2>
+
+  <h3>All NSC values</h3>
+  
+  <div class="container-all"></div>
+  
+  <h3>Narrow peaks only</h3>
+  
+  <div class="container-narrow"></div>
+  
+  <h3>Broad peaks only</h3>
+  
+  <div class="container-broad"></div>
+  
+  <h2>Distribution of Phantom peak quality tags</h2>
+  
+  [% FOR dataset IN datasets %]
+  
+  <h2>[% dataset.title %]</h2>
+  
+    <div style="width:30%; float:left;">
+        <canvas id="chart-area-pie-chart-[% dataset.all.html_id %]" />
+    </div>
+    <div style="width:30%; float:left;">
+        <canvas id="chart-area-pie-chart-[% dataset.narrow.html_id %]" />
+    </div>
+    <div style="width:30%; float:left;">
+        <canvas id="chart-area-pie-chart-[% dataset.broad.html_id %]" />
+    </div>
+    <div style="clear: left;">
+    </div>
+
+  [% END %]
+
+  <script>
+    function createConfig(container_class, datasets) {
+      var config = {
+        type: 'line',
+        data: {
+          labels: [
+            [% FOR label IN labels %]'[% label %]',[% END %]
+          ],
+          datasets: datasets
+        },
+        options: {
+          legend: {
+              position: 'bottom'
+          },
+          responsive: true,
+          title: {
+            display: false,
+            text: '[% title %]'
+          },
+          scales: {
+            xAxes: [{
+              ticks: {
+                min: 0,
+                stepSize: 0.1
+              },
+              scaleLabel: {
+                labelString: 'NSC',
+                display: true,
+              },
+              gridLines: {
+                display: true
+              }
+            }],
+            yAxes: [{
+              scaleLabel: {
+                labelString: 'Number of peak callings in bin',
+                display: true,
+              },
+              gridLines: {
+                display: true
+              },
+              ticks: {
+                min: 0,
+                max: [% distribution_y_axis_max %],
+                stepSize: 50
+              }
+            }]
+          }
+        }
+      };
+      var container = document.querySelector(container_class);
+      var div       = document.createElement('div');
+      
+      div.classList.add('chart-container');
+
+      var canvas = document.createElement('canvas');
+      div.appendChild(canvas);
+      container.appendChild(div);
+
+      var ctx = canvas.getContext('2d');
+
+      new Chart(ctx, config);
+      return
+    }
+
+  </script>
+
+
+
+
+  <script>
+  function createPieChart(data_ref, title) {
+  
+    var pie_chart_config = {
+        type: 'pie',
+        data: {
+            datasets: 
+            [
+
+              {
+                // [% dataset.title %]
+                data: data_ref,
+                backgroundColor: [
+                    window.chartColors.black,
+                    window.chartColors.red,
+                    window.chartColors.orange,
+                    window.chartColors.gray,
+                    window.chartColors.blue,
+                    window.chartColors.green,
+                ],
+                label: title,
+
+              },
+
+            ],
+            labels: [
+                "run failed",
+                "-2",
+                "-1",
+                "0",
+                "1",
+                "2",
+            ]
+        },
+        options: {
+            responsive: true,
+            legend: {
+                position: 'left'
+            },
+            title: {
+                display: true,
+                text: title
+            },
+            tooltips: {
+                callbacks: {
+                    title: function(item, data) {
+                        // Pick first xLabel for now
+                        var title = '';
+
+                        if (item.length > 0) {
+                            if (item[0].yLabel) {
+                                title = item[0].yLabel;
+                            } else if (data.labels.length > 0 && item[0].index < data.labels.length) {
+                                title = data.labels[item[0].index];
+                            }
+                        }
+
+                        return title;
+                    },
+
+                    label: function(item, data) {
+                        var datasetLabel = data.labels[item.index] || 'No label found';
+                        return datasetLabel + ': ' + data.datasets[item.datasetIndex].data[item.index] + '';
+                    }
+                },
+                mode: 'index',
+                axis: 'y'
+            }
+        }
+    };
+    return pie_chart_config;
+  }
+  </script>
+
+
+  <script>
+
+    window.onload = function() {
+    
+      var datasets;
+      
+      datasets = [
+        [% FOR dataset_hash IN datasets %]
+        [% dataset = dataset_hash.all %]
+        {
+          label: '[% dataset.title %]',
+          backgroundColor: [% dataset.colour %],
+          borderColor:     [% dataset.colour %],
+          data: [
+            [% FOR count IN dataset.counts %]'[% count %]',[% END %]
+          ],
+          fill: false,
+        }, 
+        [% END %]
+      ];
+
+      createConfig('.container-all',    datasets);
+
+      datasets = [
+        [% FOR dataset_hash IN datasets %]
+        [% dataset = dataset_hash.narrow %]
+        {
+          label: '[% dataset.title %]',
+          backgroundColor: [% dataset.colour %],
+          borderColor:     [% dataset.colour %],
+          data: [
+            [% FOR count IN dataset.counts %]'[% count %]',[% END %]
+          ],
+          fill: false,
+        }, 
+        [% END %]
+      ];
+
+      createConfig('.container-narrow', datasets);
+
+      datasets = [
+        [% FOR dataset_hash IN datasets %]
+        [% dataset = dataset_hash.broad %]
+        {
+          label: '[% dataset.title %]',
+          backgroundColor: [% dataset.colour %],
+          borderColor:     [% dataset.colour %],
+          data: [
+            [% FOR count IN dataset.counts %]'[% count %]',[% END %]
+          ],
+          fill: false,
+        }, 
+        [% END %]
+      ];
+
+      createConfig('.container-broad', datasets);
+      
+      var data;
+      
+      [% FOR dataset IN datasets %]
+
+      data = [
+        [% dataset.all.quality_tag_values.0 %],
+        [% dataset.all.quality_tag_values.1 %],
+        [% dataset.all.quality_tag_values.2 %],
+        [% dataset.all.quality_tag_values.3 %],
+        [% dataset.all.quality_tag_values.4 %],
+        [% dataset.all.quality_tag_values.5 %],
+      ];
+      
+      ctx = document.getElementById("chart-area-pie-chart-[% dataset.all.html_id %]").getContext("2d");
+      new Chart(ctx, createPieChart(data, '[% dataset.all.title %]'));
+          
+      data = [
+        [% dataset.narrow.quality_tag_values.0 %],
+        [% dataset.narrow.quality_tag_values.1 %],
+        [% dataset.narrow.quality_tag_values.2 %],
+        [% dataset.narrow.quality_tag_values.3 %],
+        [% dataset.narrow.quality_tag_values.4 %],
+        [% dataset.narrow.quality_tag_values.5 %],
+      ];
+
+      ctx = document.getElementById("chart-area-pie-chart-[% dataset.narrow.html_id %]").getContext("2d");
+      new Chart(ctx, createPieChart(data, '[% dataset.narrow.title %]'));
+          
+      data = [
+        [% dataset.broad.quality_tag_values.0 %],
+        [% dataset.broad.quality_tag_values.1 %],
+        [% dataset.broad.quality_tag_values.2 %],
+        [% dataset.broad.quality_tag_values.3 %],
+        [% dataset.broad.quality_tag_values.4 %],
+        [% dataset.broad.quality_tag_values.5 %],
+      ];
+
+      ctx = document.getElementById("chart-area-pie-chart-[% dataset.broad.html_id %]").getContext("2d");
+      new Chart(ctx, createPieChart(data, '[% dataset.broad.title %]'));
+          
+      [% END %]
+
+    };
+  </script>
+
+[% END %]
+
+
+
+
+
+
+
+
+
+
+
+
