@@ -255,11 +255,26 @@ sub create_segmentation_cell_table {
             SEGMENTATION_FEATURE_TYPE:
             foreach my $segmentation_feature_type (@$segmentation_feature_type_objects) {
             
-                my $peak_callings = $peak_calling_adaptor
-                    ->fetch_all_by_Epigenome_FeatureType(
-                        $epigenome, 
-                        $segmentation_feature_type
-                    );
+#                 my $peak_callings = $peak_calling_adaptor
+#                     ->fetch_all_by_Epigenome_FeatureType(
+#                         $epigenome, 
+#                         $segmentation_feature_type
+#                     );
+
+                my $peak_callings = [
+                  grep { 
+                      $_->used_for_regulatory_build 
+                  } 
+                    @{
+                      $peak_calling_adaptor
+                      ->fetch_all_by_Epigenome_FeatureType(
+                          $epigenome, 
+                          $segmentation_feature_type
+                      )
+                    }
+                ];
+
+
                 if (@$peak_callings == 0) {
                     #print "No peak calling for ".$epigenome -> name.", ".$segmentation_feature_type->name."\n";
                     next SEGMENTATION_FEATURE_TYPE;
