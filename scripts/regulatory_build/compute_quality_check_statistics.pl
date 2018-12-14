@@ -481,8 +481,6 @@ sub process_phantom_peak_qc_values_from_peak_callings {
   my $phantom_peak_callback            = shift;
   my $phantom_peak_run_failed_callback = shift;
 
-  my @nscs;
-
   PEAK_CALLING:
   foreach my $peak_calling (@$peak_callings) {
 
@@ -497,5 +495,5 @@ sub process_phantom_peak_qc_values_from_peak_callings {
     }
     $phantom_peak_callback->($phantom_peak);
   }
-  return \@nscs;
+  return;
 }
