@@ -39,6 +39,17 @@ sub beekeeper_extra_cmdline_options {
     return '-reg_conf ' . $self->o('reg_conf') . ' -keep_alive -can_respecialize 1';
 }
 
+sub default_options {
+    my ($self) = @_;
+    return {
+        %{ $self->SUPER::default_options() },
+        
+        regulatory_build_name        => 'The Ensembl regulatory build',
+        regulatory_build_description => 'The Ensembl regulatory build',
+
+    };
+}
+
 sub pipeline_wide_parameters {
   my $self = shift;
   
