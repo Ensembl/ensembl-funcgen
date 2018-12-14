@@ -180,7 +180,7 @@ sub pipeline_analyses {
       },
       {   -logic_name => 'make_segmentation_dir',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-          -analysis_capacity => 0,
+          #-analysis_capacity => ,
           #-module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
           -parameters => {
               cmd => 
