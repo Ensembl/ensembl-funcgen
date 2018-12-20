@@ -812,6 +812,12 @@ sub fetch_metadata {
     PEAK_CALLING:
     foreach my $peak_calling (@$all_peak_callings) {
   
+      if (! $peak_calling->used_for_regulatory_build) {
+        
+        print_log("Skipping ". $peak_calling->name .", because it is not planned to be used in the regulatory build.\n");
+        next PEAK_CALLING;
+      }
+  
       my $feature_type = $peak_calling->fetch_FeatureType;
       
       my $tf    = $feature_type->name;
