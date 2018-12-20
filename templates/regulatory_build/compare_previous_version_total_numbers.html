@@ -1,0 +1,159 @@
+[% MACRO compare_previous_version_total_numbers_on_window_load BLOCK %]
+
+  var ctx = document.getElementById('chart-area-compare-previous_version_total_numbers').getContext('2d');
+  new Chart(ctx, {
+      type: 'bar',
+      data: barChartData_comparison_with_previous_version_total_numbers,
+      options: {
+          responsive: true,
+          legend: {
+              display: true,
+              position: 'bottom',
+          },
+          scales: {
+              yAxes: [{
+                  ticks: {
+                      min: 0
+                  }
+              }]
+          },
+          title: {
+              display: true,
+              text: 'Number of regulatory features'
+          }
+      }
+  });
+
+  var ctx = document.getElementById('chart-area-compare-number-of-epigenomes').getContext('2d');
+  new Chart(ctx, {
+      type: 'bar',
+      data: barChartData_comparison_number_of_epigenomes,
+      options: {
+          responsive: true,
+          legend: {
+              display: true,
+              position: 'bottom',
+          },
+          scales: {
+              yAxes: [{
+                  ticks: {
+                      min: 0
+                  }
+              }]
+          },
+          title: {
+              display: true,
+              text: 'Number of epigenomes'
+          }
+      }
+  });
+
+[% END %]
+
+[% MACRO compare_previous_version_total_numbers BLOCK %]
+
+<h3>Overview</h3>
+
+<script type="text/javascript" class="init">
+
+$(document).ready(function() {
+    $('#overview').DataTable();
+} );
+
+</script>
+
+<table id="overview" class="display" cellspacing="0" width="100%">
+<thead>
+    <tr>
+        <th>Type</th>
+        <th>Previous</th>
+        <th>New</th>
+    </tr>
+</thead>
+
+<tbody>
+<tr>
+    <td>Number of epigenomes</td>
+    <td align="right">[% regulatory_build_statistics_adaptor_previous_version.fetch_num_epigenomes_in_regulatory_build.value %]</td>
+    <td align="right">[% regulatory_build_statistics_adaptor.fetch_num_epigenomes_in_regulatory_build.value %]</td>
+</tr>
+<tr>
+    <td>Number of regulatory features</td>
+    <td align="right">[% format_number( regulatory_build_statistics_adaptor_previous_version.fetch_number_regulatory_features.value ) %]</td>
+    <td align="right">[% format_number( regulatory_build_statistics_adaptor.fetch_number_regulatory_features.value ) %]</td>
+</tr>
+<tr>
+    <td>Genome covered</td>
+    <td align="right">[% format_number( regulatory_build_statistics_adaptor_previous_version.fetch_regulatory_build_overlap_percent.value ) %]%</td>
+    <td align="right">[% format_number( regulatory_build_statistics_adaptor.fetch_regulatory_build_overlap_percent.value ) %]%</td>
+</tr>
+</tbody>
+</table>
+
+<div id="canvas-holder" style="width:50%;float:left">
+    <canvas id="chart-area-compare-number-of-epigenomes" />
+    <b>Number of epigenomes</b>
+</div>
+
+<div id="canvas-holder" style="width:50%;float:left">
+    <canvas id="chart-area-compare-previous_version_total_numbers" />
+    <b>Number of regulatory features</b>
+</div>
+
+
+<script>
+    var color = Chart.helpers.color;
+    
+    var barChartData_comparison_number_of_epigenomes = {
+        datasets: [
+          {
+            label: 'Previous',
+            //label: 'Release 87',
+            backgroundColor: window.chartColors.blue,
+            data: [
+                [% regulatory_build_statistics_adaptor_previous_version.fetch_num_epigenomes_in_regulatory_build.value %],
+            ]
+          },
+          {
+            label: 'New',
+            //label: 'Release 95',
+            backgroundColor: window.chartColors.red,
+            data: [
+                [% regulatory_build_statistics_adaptor.fetch_num_epigenomes_in_regulatory_build.value %],
+            ]
+          },
+        ]
+    };
+
+</script>
+
+
+
+
+<script>
+    var color = Chart.helpers.color;
+    
+    var barChartData_comparison_with_previous_version_total_numbers = {
+        datasets: [
+          {
+            label: 'Previous',
+            //label: 'Release 87',
+            backgroundColor: window.chartColors.blue,
+            data: [
+                [% regulatory_build_statistics_adaptor_previous_version.fetch_number_regulatory_features.value %],
+            ]
+          },
+          {
+            label: 'New',
+            //label: 'Release 95',
+            backgroundColor: window.chartColors.red,
+            data: [
+                [% regulatory_build_statistics_adaptor.fetch_number_regulatory_features.value %],
+            ]
+          },
+        ]
+    };
+
+</script>
+
+[% END %]
