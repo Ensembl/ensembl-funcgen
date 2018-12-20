@@ -130,7 +130,40 @@ if ($total_number_of_peak_callings_included == 0) {
   die("No peak callings were included for segmentation!");
 }
 
-$logger->info("The number of peak callings included in the segmentation are: $total_number_of_peak_callings_included");
+#$logger->info("The number of peak callings included in the segmentation are: $total_number_of_peak_callings_included");
+
+$funcgen_dba->dbc->do('
+
+  delete from segmentation where segmentation_id in (
+    select 
+      segmentation_cell_tables.segmentation_id 
+    from 
+      segmentation_cell_tables 
+    group by 
+      segmentation_id 
+    having 
+      count(distinct segmentation_cell_tables.epigenome_id) <= 3
+  )
+
+');
+
+$funcgen_dba->dbc->do('
+
+  delete from segmentation_cell_tables where segmentation_id in (
+    select id from (
+      select 
+        distinct segmentation_id as id 
+      from 
+        segmentation_cell_tables 
+        left join segmentation using (segmentation_id) 
+      where 
+        segmentation.segmentation_id is null
+    ) as a 
+  )
+
+');
+
+
 
 $logger->finish_log;
 
