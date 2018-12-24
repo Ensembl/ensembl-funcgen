@@ -50,6 +50,7 @@ sub _constructor_parameters {
   return {
     dbID           => 'dbID',
     db              => 'db',
+
     technical_replicate  => 'technical_replicate',
     biological_replicate => 'biological_replicate',
     paired_end_tag       => 'paired_end_tag',
@@ -62,6 +63,7 @@ sub _constructor_parameters {
 
 sub dbID                 { return shift->_generic_get_or_set('dbID',                 @_); }
 sub db                   { return shift->_generic_get_or_set('db',                   @_); }
+sub adaptor              { return shift->_generic_get_or_set('db',                   @_); }
 
 =head2 biological_replicate
 
@@ -97,6 +99,20 @@ sub multiple             { return shift->_generic_get_or_set('multiple',        
 sub experiment_id        { return shift->_generic_get_or_set('experiment_id',        @_); }
 sub _read_file_id        { return shift->_generic_get_or_set('read_file_id',         @_); }
 sub read_file_id         { return shift->_generic_get_or_set('read_file_id',         @_); }
+
+sub get_Experiment {
+
+  my $self = shift;
+
+  if (! defined $self->experiment_id) {
+    use Carp;
+    confess("Experiment id has not been set!");
+  }
+
+  my $experiment = $self->_generic_fetch('experiment', 'get_ExperimentAdaptor', 'experiment_id');
+  return $experiment;
+}
+
 
 =head2 get_ReadFile
 
