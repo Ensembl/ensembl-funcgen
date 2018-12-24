@@ -30,7 +30,7 @@ limitations under the License.
   compute_quality_check_statistics.pl \
     --registry /homes/mnuhn/work_dir_regbuild_testrun/lib/ensembl-funcgen/registry.with_previous_version.human_regbuild_testdb16.pm \
     --species homo_sapiens \
-    --output_directory /homes/mnuhn/public_html/regulatory_build_stats/qc_plots
+    --output_directory /homes/mnuhn/public_html/regulatory_build_stats/rb_grch38_testdb16/homo_sapiens/
 
 =cut
 
@@ -276,14 +276,14 @@ my $file = __FILE__;
 use File::Basename qw( dirname basename );
 
 my $template_dir = dirname($file) . '/../../templates/';
-my $description_template = $template_dir . '/quality_checks/report.html';
+my $description_template = $template_dir . '/quality_checks/report_phantom_peak_bar_chart.html';
 
 if (! -e $description_template) {
     die("Can't find $description_template");
 }
 
 #my $output_file = "$output_directory/nsc_values_by_consortium.html";
-my $output_file = "$output_directory/report_narrow.html";
+my $output_file = "$output_directory/report_phantom_peaks.html";
 #my $output_file = "$output_directory/report_narrow_vs_broad_vs_consortium.html";
 
 use File::Path qw( make_path );
