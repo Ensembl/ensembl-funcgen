@@ -20,6 +20,37 @@
     }
   </style>
 
+  <h2>Distribution of Phantom peak quality tags</h2>
+  
+  <div style="width:70%; clear:both;">
+      <canvas id="chart-area-pie-chart" />
+  </div>
+  
+  <h3>Legend</h3>
+  
+  <ul>
+    <li>Black: run failed</li>
+    <li>Red: quality tag is -2</li>
+    <li>Orange: quality tag is -1</li>
+    <li>Yellow: quality tag is 0</li>
+    <li>Green: quality tag is 1</li>
+    <li>Dark green: quality tag is 2</li>
+  </ul>
+
+  <p>
+    Within each category the bars refer to 
+  </p>
+  
+  <ol>
+    [% FOR dataset IN datasets %]
+    <li>[% dataset.title %]</li>
+    [% END %]
+  </ol>
+  
+  <p>
+    respectively.
+  </p>
+
   <h2>Distribution of Phantom peaks NSC values</h2>
 
   <h3>All NSC values</h3>
@@ -34,13 +65,6 @@
   
   <div class="container-broad"></div>
   
-  <h2>Distribution of Phantom peak quality tags</h2>
-  
-
-  <div style="width:70%; float:left;">
-      <canvas id="chart-area-pie-chart" />
-  </div>
-
   <script>
     function createConfig(container_class, datasets) {
       var config = {
@@ -116,9 +140,9 @@
   
     var barChartData = {
       labels: [
-        'All',
-        'Narrow',
-        'Broad',
+        'Narrow and Broad peak callings combined',
+        'Narrow peak callings',
+        'Broad peak callings',
       ],
       datasets: [
         [% FOR dataset IN datasets %]
@@ -174,7 +198,7 @@
         },
         {
           label: '2 in [% dataset.title %]',
-          backgroundColor: window.chartColors.blue,
+          backgroundColor: window.chartColors.darkgreen,
           stack: '[% dataset.title %]',
           data: [
             [% dataset.all.quality_tag_values.5    %],
