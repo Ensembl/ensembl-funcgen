@@ -68,9 +68,12 @@ sub pipeline_wide_parameters {
     reference_data_root_dir  => $self->o('reference_data_root_dir'),
     reg_conf                 => $self->o('reg_conf'),
     #ChromHMM                 => '/nfs/production/panda/ensembl/funcgen/ChromHMM/ChromHMM.jar',
-    ChromHMM                 => '/nfs/production/panda/ensembl/funcgen/ChromHMM/1.17/ChromHMM/ChromHMM.jar',
-    # java -cp /nfs/production/panda/ensembl/funcgen/ChromHMM/batik-1.10/lib/batik-all-1.10.jar:/nfs/production/panda/ensembl/funcgen/ChromHMM/batik-1.10/lib/batik-all-1.10.jar:/nfs/production/panda/ensembl/funcgen/ChromHMM/htsjdk/build/libs/:/nfs/production/panda/ensembl/funcgen/ChromHMM/jheatchart-0.6/dist/jheatchart-0.52/jheatchart-0.52.jar:/nfs/production/panda/ensembl/funcgen/ChromHMM/ChromHMM/ edu.mit.compbio.ChromHMM.ChromHMM
+    ChromHMM                 => '/nfs/production/panda/ensembl/funcgen/ChromHMM/1.17/ChromHMM/ChromHMM.modified.jar',
     
+    
+#     /nfs/production/panda/ensembl/funcgen/ChromHMM/1.17/ChromHMM 
+#     
+#     java -jar /nfs/production/panda/ensembl/funcgen/ChromHMM/1.17/ChromHMM/ChromHMM.modified.jar
     #export DISPLAY= ;              java -Xmx30000m              -cp /nfs/production/panda/ensembl/funcgen/ChromHMM/batik-1.10/lib/batik-all-1.10.jar:/nfs/production/panda/ensembl/funcgen/ChromHMM/batik-1.10/lib/batik-all-1.10.jar:/nfs/production/panda/ensembl/funcgen/ChromHMM/htsjdk/build/libs/:/nfs/production/panda/ensembl/funcgen/ChromHMM/jheatchart-0.6/dist/jheatchart-0.52/jheatchart-0.52.jar:/nfs/production/panda/ensembl/funcgen/ChromHMM/ChromHMM/ edu.mit.compbio.ChromHMM.ChromHMM              LearnModel                   -r 300 -p 12                 -l #chromosome_length_file#  #binarized_bam_dir#/#superclass#/#class#/          #learn_model_directory#      25                           #assembly#                  
   };
 }
