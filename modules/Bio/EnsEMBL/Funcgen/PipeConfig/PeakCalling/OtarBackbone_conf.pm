@@ -66,13 +66,33 @@ sub pipeline_analyses {
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
                '1->A' => 'start_fastqc',
-               'A->1' => 'backbone_fire_alignments'
+               'A->1' => 'backbone_fire_fastqc_report'
             },
         },
         {
             -logic_name => 'start_fastqc',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
+
+
+
+        {   -logic_name  => 'backbone_fire_fastqc_report',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into   => {
+               '1->A' => 'start_fastqc_report',
+               'A->1' => 'backbone_fire_alignments'
+            },
+        },
+        {
+            -logic_name => 'start_fastqc_report',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+        },
+
+
+
+
+
+
 
         {   -logic_name  => 'backbone_fire_alignments',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
@@ -175,14 +195,24 @@ sub pipeline_analyses {
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
                '1->A' => 'start_cleanup',
-               'A->1' => 'backbone_fire_segmentation'
+               'A->1' => 'backbone_fire_quality_check_reports'
             },
         },
         {
             -logic_name  => 'start_cleanup',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
-
+        {   -logic_name  => 'backbone_fire_quality_check_reports',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into   => {
+               '1->A' => 'start_quality_check_reports',
+               'A->1' => 'backbone_fire_segmentation'
+            },
+        },
+        {
+            -logic_name  => 'start_quality_check_reports',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+        },
         {   -logic_name  => 'backbone_fire_segmentation',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
