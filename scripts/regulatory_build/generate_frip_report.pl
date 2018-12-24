@@ -3,7 +3,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2018] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -27,11 +27,10 @@ limitations under the License.
 
 =head1 NAME
 
-  generate_phantom_peak_report.pl \
+  compute_frip_statistics.pl \
     --registry /homes/mnuhn/work_dir_regbuild_testrun/lib/ensembl-funcgen/registry.with_previous_version.human_regbuild_testdb16.pm \
     --species homo_sapiens \
     --output_directory /homes/mnuhn/public_html/regulatory_build_stats/rb_grch38_testdb16/homo_sapiens/
-
 
 =cut
 
@@ -72,14 +71,13 @@ my @datasets;
 push 
   @datasets, 
   {
-    title => 'All consortia combined',
+    title => 'All',
     all => create_phantom_peak_dataset(
 
           $all_peak_callings,
           
           {
-            title   => 'Narrow and Broad data combined',
-            html_id => 'overall-all', 
+            title   => 'All',
             colour  => 'window.chartColors.gray',
           },
 
@@ -91,7 +89,6 @@ push
           
           {
             title   => 'All narrow peaks',
-            html_id => 'overall-narrow', 
             colour  => 'window.chartColors.gray',
           },
 
@@ -103,7 +100,6 @@ push
           
           {
             title   => 'All broad peaks',
-            html_id => 'overall-broad', 
             colour  => 'window.chartColors.gray',
           },
 
@@ -122,7 +118,6 @@ push
         
         {
           title   => 'Blueprint',
-          html_id => 'blueprint-all',
           colour  => 'window.chartColors.red',
         },
 
@@ -134,7 +129,6 @@ push
         
         {
           title   => 'Blueprint narrow peaks',
-          html_id => 'blueprint-narrow',
           colour  => 'window.chartColors.red',
         },
 
@@ -151,7 +145,6 @@ push
         
         {
           title   => 'Blueprint broad peaks',
-          html_id => 'blueprint-broad',
           colour  => 'window.chartColors.red',
         },
 
@@ -175,7 +168,6 @@ push
         
         {
           title   => 'ENCODE',
-          html_id => 'encode-all',
           colour  => 'window.chartColors.blue',
         },
 
@@ -187,7 +179,6 @@ push
         
         {
           title   => 'ENCODE narrow peaks',
-          html_id => 'encode-narrow',
           colour  => 'window.chartColors.blue',
         },
 
@@ -204,7 +195,6 @@ push
         
         {
           title   => 'ENCODE broad peaks',
-          html_id => 'encode-broad',
           colour  => 'window.chartColors.blue',
         },
 
@@ -228,7 +218,6 @@ push
         
         {
           title   => 'Roadmap Epigenomics',
-          html_id => 'roadmap_epigenomics',
           colour  => 'window.chartColors.green',
         },
 
@@ -240,7 +229,6 @@ push
         
         {
           title   => 'Roadmap Epigenomics narrow peaks',
-          html_id => 'roadmap_epigenomics-narrow',
           colour  => 'window.chartColors.green',
         },
 
@@ -257,7 +245,6 @@ push
         
         {
           title   => 'Roadmap Epigenomics broad peaks',
-          html_id => 'roadmap_epigenomics-broad',
           colour  => 'window.chartColors.green',
         },
 
@@ -277,13 +264,13 @@ my $file = __FILE__;
 use File::Basename qw( dirname basename );
 
 my $template_dir = dirname($file) . '/../../templates/';
-my $description_template = $template_dir . '/quality_checks/report_phantom_peak_bar_chart.html';
+my $description_template = $template_dir . '/quality_checks/report_frip.html';
 
 if (! -e $description_template) {
     die("Can't find $description_template");
 }
 
-my $output_file = "$output_directory/report_phantom_peaks.html";
+my $output_file = "$output_directory/frip.html";
 
 use File::Path qw( make_path );
 make_path( $output_directory );
@@ -300,10 +287,10 @@ my $funcgen_dba = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
 $tt->process(
     $description_template, 
     {
-        title    => 'Phantom peak quality checks',
+        title    => 'Fraction of reads in peaks',
         labels   => $bins,
         
-        distribution_y_axis_max => 350,
+        distribution_y_axis_max => 250,
         
         datasets => \@datasets,
 
@@ -333,8 +320,7 @@ sub create_phantom_peak_dataset {
   
   my $final_dataset = {
       %$initial_dataset,
-      counts             => count_nsc_values_in_bins($filtered_peak_callings, $bins),
-      quality_tag_values => fetch_quality_tag_values($filtered_peak_callings),
+      counts             => count_frip_values_in_bins($filtered_peak_callings, $bins),
   };
   
   return $final_dataset;
@@ -342,8 +328,8 @@ sub create_phantom_peak_dataset {
 
 sub generate_bins {
 
-  my $min = 1;
-  my $max = 2;
+  my $min = 0;
+  my $max = 1;
   my $num_bins = 50;
 
   my @bins
@@ -354,12 +340,12 @@ sub generate_bins {
   return \@bins
 }
 
-sub count_nsc_values_in_bins {
+sub count_frip_values_in_bins {
 
   my $peak_callings = shift;
   my $bins          = shift;
 
-  my $values = fetch_nsc_values($peak_callings);
+  my $values = fetch_frip_values($peak_callings);
   my $counts = compute_bin_counts($bins, $values);
   
   return $counts;
@@ -383,116 +369,43 @@ sub compute_bin_counts {
   return \@counts;
 }
 
-sub fetch_nsc_values {
+sub fetch_frip_values {
 
   my $peak_callings = shift;
   
-  my @nsc_values;
-  process_phantom_peak_qc_values_from_peak_callings(
+  my @frip_values;
+  process_frip_qc_values_from_peak_callings(
   
     $peak_callings,
     
     sub {
-      my $phantom_peak = shift;
-      my $nsc = $phantom_peak->nsc;
+      my $frip = shift;
+      my $frip_value = $frip->frip;
       
-      push @nsc_values, $nsc;
+      push @frip_values, $frip_value;
     },
     
     sub {}
   );
-  return \@nsc_values;
+  return \@frip_values;
 }
 
-sub fetch_phantom_peak_success_rate_stats {
+sub process_frip_qc_values_from_peak_callings {
 
-  my $peak_callings = shift;
-  
-  my $run_successful = 0;
-  my $run_failed     = 0;
-  
-  process_phantom_peak_qc_values_from_peak_callings(
-  
-    $peak_callings,
-    
-    sub { $run_successful++ },
-    sub { $run_failed++     }
-  );
-  
-  my $phantom_peak_success_rate_stats = {
-  
-    run_successful => $run_successful,
-    run_failed     => $run_failed,
-  
-  };
-  
-  return $phantom_peak_success_rate_stats;
-}
-
-sub fetch_quality_tag_values {
-
-  my $peak_callings = shift;
-  
-  my %quality_tags = (
-    -2 => 0,
-    -1 => 0,
-     0 => 0,
-     1 => 0,
-     2 => 0,
-     'run_failed' => 0,
-  );
-  
-  process_phantom_peak_qc_values_from_peak_callings(
-  
-    $peak_callings,
-    
-    sub {
-      my $phantom_peak = shift;
-      my $quality_tag = $phantom_peak->quality_tag;
-      
-      if (! exists $quality_tags{$quality_tag}) {
-        $quality_tags{$quality_tag} = 1;
-      } else {
-        $quality_tags{$quality_tag}++;
-      }
-    },
-    
-    sub {
-      $quality_tags{'run_failed'}++;
-    }
-  );
-  
-  my $quality_tag_list = [
-    $quality_tags{'run_failed'},
-    $quality_tags{-2},
-    $quality_tags{-1},
-    $quality_tags{0},
-    $quality_tags{1},
-    $quality_tags{2},
-  ];
-  
-  return $quality_tag_list;
-}
-
-sub process_phantom_peak_qc_values_from_peak_callings {
-
-  my $peak_callings                    = shift;
-  my $phantom_peak_callback            = shift;
-  my $phantom_peak_run_failed_callback = shift;
+  my $peak_callings            = shift;
+  my $frip_callback            = shift;
+  my $frip_run_failed_callback = shift;
 
   PEAK_CALLING:
   foreach my $peak_calling (@$peak_callings) {
 
-    my $signal_alignment = $peak_calling->fetch_signal_Alignment;
-    my $phantom_peak     = $signal_alignment->fetch_PhantomPeak;
+    my $frip = $peak_calling->fetch_Frip;
     
-    my $phantom_peak_run_failed = $phantom_peak->run_failed;
-    
-    if ($phantom_peak_run_failed) {
-      $phantom_peak_run_failed_callback->($phantom_peak);
+    if ($frip) {
+      $frip_callback->($frip);
       next PEAK_CALLING;
     }
-    $phantom_peak_callback->($phantom_peak);
+    $frip_run_failed_callback->($frip);
   }
   return;
 }

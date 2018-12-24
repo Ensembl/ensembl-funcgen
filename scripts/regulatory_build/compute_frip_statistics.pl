@@ -27,7 +27,7 @@ limitations under the License.
 
 =head1 NAME
 
-  compute_frip_statistics.pl \
+  generate_frip_report.pl \
     --registry /homes/mnuhn/work_dir_regbuild_testrun/lib/ensembl-funcgen/registry.with_previous_version.human_regbuild_testdb16.pm \
     --species homo_sapiens \
     --output_directory /homes/mnuhn/public_html/regulatory_build_stats/rb_grch38_testdb16/homo_sapiens/
@@ -78,7 +78,6 @@ push
           
           {
             title   => 'All',
-            html_id => 'overall-all', 
             colour  => 'window.chartColors.gray',
           },
 
@@ -90,7 +89,6 @@ push
           
           {
             title   => 'All narrow peaks',
-            html_id => 'overall-narrow', 
             colour  => 'window.chartColors.gray',
           },
 
@@ -102,7 +100,6 @@ push
           
           {
             title   => 'All broad peaks',
-            html_id => 'overall-broad', 
             colour  => 'window.chartColors.gray',
           },
 
@@ -121,7 +118,6 @@ push
         
         {
           title   => 'Blueprint',
-          html_id => 'blueprint-all',
           colour  => 'window.chartColors.red',
         },
 
@@ -133,7 +129,6 @@ push
         
         {
           title   => 'Blueprint narrow peaks',
-          html_id => 'blueprint-narrow',
           colour  => 'window.chartColors.red',
         },
 
@@ -150,7 +145,6 @@ push
         
         {
           title   => 'Blueprint broad peaks',
-          html_id => 'blueprint-broad',
           colour  => 'window.chartColors.red',
         },
 
@@ -174,7 +168,6 @@ push
         
         {
           title   => 'ENCODE',
-          html_id => 'encode-all',
           colour  => 'window.chartColors.blue',
         },
 
@@ -186,7 +179,6 @@ push
         
         {
           title   => 'ENCODE narrow peaks',
-          html_id => 'encode-narrow',
           colour  => 'window.chartColors.blue',
         },
 
@@ -203,7 +195,6 @@ push
         
         {
           title   => 'ENCODE broad peaks',
-          html_id => 'encode-broad',
           colour  => 'window.chartColors.blue',
         },
 
@@ -227,7 +218,6 @@ push
         
         {
           title   => 'Roadmap Epigenomics',
-          html_id => 'roadmap_epigenomics',
           colour  => 'window.chartColors.green',
         },
 
@@ -239,7 +229,6 @@ push
         
         {
           title   => 'Roadmap Epigenomics narrow peaks',
-          html_id => 'roadmap_epigenomics-narrow',
           colour  => 'window.chartColors.green',
         },
 
@@ -256,7 +245,6 @@ push
         
         {
           title   => 'Roadmap Epigenomics broad peaks',
-          html_id => 'roadmap_epigenomics-broad',
           colour  => 'window.chartColors.green',
         },
 

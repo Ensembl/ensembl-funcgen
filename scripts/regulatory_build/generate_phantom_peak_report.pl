@@ -3,7 +3,7 @@
 =head1 LICENSE
 
 Copyright [1999-2015] Wellcome Trust Sanger Institute and the EMBL-European Bioinformatics Institute
-Copyright [2016-2019] EMBL-European Bioinformatics Institute
+Copyright [2016-2018] EMBL-European Bioinformatics Institute
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -27,7 +27,7 @@ limitations under the License.
 
 =head1 NAME
 
-  generate_phantom_peak_report.pl \
+  compute_phantom_peak_statistics.pl \
     --registry /homes/mnuhn/work_dir_regbuild_testrun/lib/ensembl-funcgen/registry.with_previous_version.human_regbuild_testdb16.pm \
     --species homo_sapiens \
     --output_directory /homes/mnuhn/public_html/regulatory_build_stats/rb_grch38_testdb16/homo_sapiens/

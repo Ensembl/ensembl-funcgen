@@ -27,7 +27,7 @@ limitations under the License.
 
 =head1 NAME
 
-  generate_fastqc_report.pl \
+  compute_fastqc_statistics.pl \
     --registry /homes/mnuhn/work_dir_regbuild_testrun/lib/ensembl-funcgen/registry.with_previous_version.human_regbuild_testdb16.pm \
     --species homo_sapiens \
     --output_directory /homes/mnuhn/public_html/regulatory_build_stats/rb_grch38_testdb16/homo_sapiens/
