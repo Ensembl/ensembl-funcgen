@@ -71,13 +71,13 @@ my @datasets;
 push 
   @datasets, 
   {
-    title => 'All',
+    title => 'All consortia combined',
     all => create_phantom_peak_dataset(
 
           $all_peak_callings,
           
           {
-            title   => 'All',
+            title   => 'Narrow and Broad data combined',
             html_id => 'overall-all', 
             colour  => 'window.chartColors.gray',
           },
