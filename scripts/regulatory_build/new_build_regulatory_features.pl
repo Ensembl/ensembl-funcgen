@@ -2213,7 +2213,7 @@ sub compute_ChromHMM_repressed_scores {
   my ($options, $segmentation) = @_;
   my @files = glob "$segmentation->{location}/emissions*.txt";
   if (scalar @files != 1) {
-    print STDERR "! Problem finding file $segmentation->{location}/*.txt";
+    print STDERR "! Problem finding emissions file $segmentation->{location}/*.txt";
     exit 1;
   }
   my $file = pop @files;
