@@ -52,9 +52,9 @@ sub pipeline_analyses {
                   cmd => 
                       q(
                         generate_phantom_peak_report.pl \
-                            --registry #registry# \
+                            --registry #reg_conf# \
                             --species #species# \
-                            --output_directory #reports_dir#/#species#
+                            --output_file #reports_dir#/#species#/phantom_peaks.html
                       )
             },
           -rc_name    => '1Gb_job',
@@ -65,9 +65,9 @@ sub pipeline_analyses {
                   cmd => 
                       q(
                         generate_frip_report.pl \
-                            --registry #registry# \
+                            --registry #reg_conf# \
                             --species #species# \
-                            --output_directory #reports_dir#/#species#
+                            --output_file #reports_dir#/#species#/frip.html
                       )
             },
           -rc_name    => '1Gb_job',
