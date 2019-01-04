@@ -1,0 +1,171 @@
+[% WRAPPER "default_statistics_page_wrapper.html" %]
+
+  <style>
+    canvas{
+      -moz-user-select: none;
+      -webkit-user-select: none;
+      -ms-user-select: none;
+    }
+  </style>
+
+  <h2>Summary</h2>
+  
+  <div style="width: 90%">
+    <canvas id="canvas"></canvas>
+  </div>
+
+  <h2>Legend</h2>
+  
+  <ul>
+    <li>Green: passed</li>
+    <li>Yellow: warning</li>
+    <li>Red: failed</li>
+  </ul>
+
+  <p>
+    Within each FastQC category the bars refer to 
+  </p>
+  
+  <ol>
+    [% FOR dataset IN datasets %]
+    <li>[% dataset.title %]</li>
+    [% END %]
+  </ol>
+  
+  <p>
+    respectively.
+  </p>
+  
+  <p>
+    For details on the individual categories see <a href="/~mnuhn/fastqc_help_pages/">the fastqc documentation</a>.
+  </p>
+
+  <script>
+    var barChartData = {
+      labels: [
+        'Basic statistics',
+        'Per base sequence quality', 
+        'Per tile sequence quality', 
+        'Per sequence quality scores',
+        'Per base sequence content',
+        'Per sequence gc content',
+        'Per base n content',
+        'Sequence length distribution',
+        'Sequence duplication levels',
+        'Overrepresented sequences',
+        'Adapter content',
+        'Kmer content',
+      ],
+      datasets: [
+        [% FOR dataset IN datasets %]
+        {
+          label: 'Failed in [% dataset.title %]',
+          backgroundColor: window.chartColors.red,
+          stack: '[% dataset.title %]',
+          data: [
+            [% dataset.all.fastqc_outcome.basic_statistics.FAIL             %],
+            [% dataset.all.fastqc_outcome.per_base_sequence_quality.FAIL    %],
+            [% dataset.all.fastqc_outcome.per_tile_sequence_quality.FAIL    %],
+            [% dataset.all.fastqc_outcome.per_sequence_quality_scores.FAIL  %],
+            [% dataset.all.fastqc_outcome.per_base_sequence_content.FAIL    %],
+            [% dataset.all.fastqc_outcome.per_sequence_gc_content.FAIL      %],
+            [% dataset.all.fastqc_outcome.per_base_n_content.FAIL           %],
+            [% dataset.all.fastqc_outcome.sequence_length_distribution.FAIL %],
+            [% dataset.all.fastqc_outcome.sequence_duplication_levels.FAIL  %],
+            [% dataset.all.fastqc_outcome.overrepresented_sequences.FAIL    %],
+            [% dataset.all.fastqc_outcome.adapter_content.FAIL              %],
+            [% dataset.all.fastqc_outcome.kmer_content.FAIL                 %],
+          ]
+        }, 
+        {
+          label: 'Warn in [% dataset.title %]',
+          backgroundColor: window.chartColors.yellow,
+          stack: '[% dataset.title %]',
+          data: [
+            [% dataset.all.fastqc_outcome.basic_statistics.WARN             %],
+            [% dataset.all.fastqc_outcome.per_base_sequence_quality.WARN    %],
+            [% dataset.all.fastqc_outcome.per_tile_sequence_quality.WARN    %],
+            [% dataset.all.fastqc_outcome.per_sequence_quality_scores.WARN  %],
+            [% dataset.all.fastqc_outcome.per_base_sequence_content.WARN    %],
+            [% dataset.all.fastqc_outcome.per_sequence_gc_content.WARN      %],
+            [% dataset.all.fastqc_outcome.per_base_n_content.WARN           %],
+            [% dataset.all.fastqc_outcome.sequence_length_distribution.WARN %],
+            [% dataset.all.fastqc_outcome.sequence_duplication_levels.WARN  %],
+            [% dataset.all.fastqc_outcome.overrepresented_sequences.WARN    %],
+            [% dataset.all.fastqc_outcome.adapter_content.WARN              %],
+            [% dataset.all.fastqc_outcome.kmer_content.WARN                 %],
+          ]
+        }, 
+        {
+          label: 'Pass in [% dataset.title %]',
+          backgroundColor: window.chartColors.green,
+          stack: '[% dataset.title %]',
+          data: [
+            [% dataset.all.fastqc_outcome.basic_statistics.PASS             %],
+            [% dataset.all.fastqc_outcome.per_base_sequence_quality.PASS    %],
+            [% dataset.all.fastqc_outcome.per_tile_sequence_quality.PASS    %],
+            [% dataset.all.fastqc_outcome.per_sequence_quality_scores.PASS  %],
+            [% dataset.all.fastqc_outcome.per_base_sequence_content.PASS    %],
+            [% dataset.all.fastqc_outcome.per_sequence_gc_content.PASS      %],
+            [% dataset.all.fastqc_outcome.per_base_n_content.PASS           %],
+            [% dataset.all.fastqc_outcome.sequence_length_distribution.PASS %],
+            [% dataset.all.fastqc_outcome.sequence_duplication_levels.PASS  %],
+            [% dataset.all.fastqc_outcome.overrepresented_sequences.PASS    %],
+            [% dataset.all.fastqc_outcome.adapter_content.PASS              %],
+            [% dataset.all.fastqc_outcome.kmer_content.PASS                 %],
+          ]
+        },
+        [% END %]
+      ]
+    };
+    window.onload = function() {
+      var ctx = document.getElementById('canvas').getContext('2d');
+      window.myBar = new Chart(ctx, {
+        type: 'bar',
+        data: barChartData,
+        options: {
+          legend: {
+            display: false,
+            position: 'bottom',
+            labels: {
+            }
+          },
+          title: {
+            display: false,
+            text: 'FastQC'
+          },
+          tooltips: {
+            mode: 'index',
+            intersect: false
+          },
+          responsive: true,
+          scales: {
+            xAxes: [{
+              stacked: true,
+
+              scaleLabel: {
+                labelString: 'FastQC categories',
+                display: true,
+              },
+            }],
+            yAxes: [{
+              stacked: true,
+              
+              scaleLabel: {
+                labelString: 'Number of read files',
+                display: true,
+              },
+
+            }]
+          }
+        }
+      });
+    };
+
+  </script>
+
+[% END %]
+
+
+
+
