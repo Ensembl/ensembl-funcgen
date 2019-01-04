@@ -27,10 +27,10 @@ limitations under the License.
 
 =head1 NAME
 
-  compute_frip_statistics.pl \
+  generate_frip_report.pl \
     --registry /homes/mnuhn/work_dir_regbuild_testrun/lib/ensembl-funcgen/registry.with_previous_version.human_regbuild_testdb16.pm \
     --species homo_sapiens \
-    --output_directory /homes/mnuhn/public_html/regulatory_build_stats/rb_grch38_testdb16/homo_sapiens/
+    --output_file ./test/frip.html
 
 =cut
 
@@ -45,7 +45,7 @@ GetOptions (
     \%options,
     "species|s=s",
     "registry|r=s",
-    "output_directory|o=s",
+    "output_file|o=s",
  );
 
 use Hash::Util qw( lock_keys );
@@ -53,7 +53,9 @@ lock_keys( %options );
 
 my $species          = $options{'species'};
 my $registry         = $options{'registry'};
-my $output_directory = $options{'output_directory'};
+my $output_file      = $options{'output_file'};
+
+my $output_directory = dirname($output_file);
 
 Bio::EnsEMBL::Registry->load_all($registry);
 my $funcgen_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor($species, 'funcgen');
@@ -264,13 +266,11 @@ my $file = __FILE__;
 use File::Basename qw( dirname basename );
 
 my $template_dir = dirname($file) . '/../../templates/';
-my $description_template = $template_dir . '/quality_checks/report_frip.html';
+my $description_template = $template_dir . '/quality_checks/frip.html';
 
 if (! -e $description_template) {
     die("Can't find $description_template");
 }
-
-my $output_file = "$output_directory/frip.html";
 
 use File::Path qw( make_path );
 make_path( $output_directory );
