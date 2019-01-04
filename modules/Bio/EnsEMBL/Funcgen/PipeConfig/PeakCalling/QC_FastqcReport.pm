@@ -49,9 +49,9 @@ sub pipeline_analyses {
                   cmd => 
                       q(
                         generate_fastqc_report.pl \
-                            --registry #registry# \
+                            --registry #reg_conf# \
                             --species #species# \
-                            --output_directory #reports_dir#/#species#
+                            --output_file #reports_dir#/#species#/fastqc.html
                       )
             },
           -rc_name    => '1Gb_job',
