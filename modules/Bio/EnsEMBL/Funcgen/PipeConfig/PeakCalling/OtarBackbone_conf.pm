@@ -145,29 +145,12 @@ sub pipeline_analyses {
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
                '1->A' => 'start_peak_calling',
-               'A->1' => 'backbone_fire_meta_coord_for_peaks'
+               'A->1' => 'backbone_fire_peak_calling_hc'
             },
         },
         {
             -logic_name => 'start_peak_calling',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-        },
-
-        {   -logic_name  => 'backbone_fire_meta_coord_for_peaks',
-            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-            -flow_into   => {
-               '1->A' => 'meta_coord_for_peaks',
-               'A->1' => 'backbone_fire_peak_calling_hc'
-            },
-        },
-        {
-            -logic_name => 'meta_coord_for_peaks',
-            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -parameters => {
-                cmd => qq( populate_meta_coord.pl    )
-                . qq( --species  #species#         )
-                . qq( --registry #reg_conf#        )
-            },
         },
         {   -logic_name  => 'backbone_fire_peak_calling_hc',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
