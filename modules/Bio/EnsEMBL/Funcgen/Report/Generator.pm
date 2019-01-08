@@ -17,19 +17,29 @@ sub _constructor_parameters {
     species       => 'species',
     registry      => 'registry',
     output_file   => 'output_file',
+    output_fh     => 'output_fh',
+    logger        => 'logger',
   };
 }
 
-sub species        { return shift->_generic_get_or_set('species',       @_); }
-sub registry       { return shift->_generic_get_or_set('registry',      @_); }
-sub output_file    { return shift->_generic_get_or_set('output_file',   @_); }
-sub logger         { return shift->_generic_get_or_set('logger',        @_); }
+sub species        { return shift->_generic_get_or_set('species',        @_); }
+sub registry       { return shift->_generic_get_or_set('registry',       @_); }
+sub output_file    { return shift->_generic_get_or_set('output_file',    @_); }
+sub output_fh      { return shift->_generic_get_or_set('output_fh',      @_); }
+
+sub logger         { return shift->_generic_get_or_set('logger',         @_); }
+sub logger_created { return shift->_generic_get_or_set('logger_created', @_); }
 
 sub init {
 
   my $self = shift;
-  my $logger = Bio::EnsEMBL::Utils::Logger->new;
-  $self->logger($logger);
+  
+  if (! defined $self->logger) {
+    my $logger = Bio::EnsEMBL::Utils::Logger->new;
+    $self->logger($logger);
+    $self->logger_created(1);
+  }
+  
   return;
 }
 
@@ -60,26 +70,36 @@ sub generate_report {
   $logger->info("Registry: " . $self->registry . "\n");
   
   $self->_assert_template_exists;
-  $self->_create_output_directory;
   $self->_load_registry;
 
   my $tt   = $self->_init_template_toolkit;
   my $data = $self->_data_for_template;
   
+  
+  my $output_fh   = $self->output_fh;
   my $output_file = $self->output_file;
   
-  $logger->info("Writing report to $output_file\n");
+  if ($output_file) {
+    $logger->info("Writing report to $output_file\n");
+    $self->_create_output_directory;
+    
+    open $output_fh, '>', $output_file;
+  }
   
   $tt->process(
       $self->template,
       $data,
-      $self->output_file
+      $output_fh
   )
       || die $tt->error;
 
-  $logger->info("Done.\n");
-  $logger->finish_log;
+  $output_fh->close;
   
+  $logger->info("Done.\n");
+  
+  if ($self->logger_created) {
+    $logger->finish_log;
+  }
   return;
 }
 

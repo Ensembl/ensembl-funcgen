@@ -1,39 +1,36 @@
-package Bio::EnsEMBL::Funcgen::Template::PeakCallingDescription;
+package Bio::EnsEMBL::Funcgen::Report::PeakCalling;
 
 use strict;
+use base 'Bio::EnsEMBL::Funcgen::Report::Generator';
 
-use base qw( Exporter );
-use vars qw( @EXPORT_OK );
+sub _constructor_parameters {
+  my $self = shift;
+  return {
+    %{$self->SUPER::_constructor_parameters},
+    peak_calling => 'peak_calling',
+  };
+}
 
-our @EXPORT_OK = qw(
-  PEAK_CALLING_TXT_TEMPLATE
-  apply
-);
+sub peak_calling { return shift->_generic_get_or_set('peak_calling',     @_); }
 
-sub apply {
+sub template {
+  my $self = shift;
+  my $template = $self->template_dir . '/description.txt';
+  return $template;
+}
 
-  my $peak_calling = shift;
+sub template_dir {
+  my $self = shift;
+  my $template_dir = $self->template_base_dir . '/peak_calling_description';
+  return $template_dir;
+}
 
-  use Template;
-  my $tt = Template->new(
-    ABSOLUTE     => 1,
-    RELATIVE     => 1,
-  );
-  
-  my $output;
-  
-  my $file = __FILE__;
-  use File::Basename qw( dirname basename );
+sub _dynamic_content {
 
-  my $template_dir = dirname($file) . '/../../../../../templates/peak_calling_description';
-  my $description_template = $template_dir . '/description.txt';
-  
-  use Number::Format qw( format_number );
-  
-  $tt->process(
-    $description_template, 
-    {
-      peak_calling  => $peak_calling,
+  my $self = shift;
+
+  return {
+      peak_calling  => $self->peak_calling,
       
       canonpath => sub {
         my $path = shift;
@@ -77,11 +74,7 @@ sub apply {
         my $alignment = shift;
         return summarise_read_file_experimental_configurations_in_alignment($alignment);
       },
-    },
-    \$output
-  )
-      || die $tt->error;
-  return $output;
+    };
 }
 
 sub fetch_deduplicated_partial_alignments {
