@@ -30,51 +30,55 @@ sub _dynamic_content {
   my $self = shift;
 
   return {
-      peak_calling  => $self->peak_calling,
-      
-      canonpath => sub {
-        my $path = shift;
-        return File::Spec->canonpath($path)
-      },
-      bool_to_yes_no => sub {
-        my $boolean = shift;
-        if ($boolean) {
-          return 'yes'
-        }
-        return 'no'
-      },
-      round_percent => sub {
-        my $number = shift;
-        return sprintf("%.2f", $number) . '%';
-      },
-      default_round => sub {
-        my $number = shift;
-        return sprintf("%.2f", $number);
-      },
-      scientific_notation => sub {
-        my $number = shift;
-        return sprintf("%.2e", $number);
-      },
-      format_number => sub {
-        my $number = shift;
-        if (! defined $number) {
-          return '-'
-        }
-        if ($number eq '') {
-          return '-'
-        }
-        #return 'foo';
-        return format_number($number);
-      },
-      fetch_deduplicated_partial_alignments => sub {
-        my $alignment = shift;
-        return fetch_deduplicated_partial_alignments($alignment);
-      },
-      summarise_read_file_experimental_configurations_in_alignment => sub {
-        my $alignment = shift;
-        return summarise_read_file_experimental_configurations_in_alignment($alignment);
-      },
-    };
+    peak_calling  => $self->peak_calling,
+  };
+}
+
+sub _in_template_functions {
+  my $self = shift;
+  return {
+  
+    %{$self->SUPER::_in_template_functions},
+    
+    canonpath => sub {
+      my $path = shift;
+      return File::Spec->canonpath($path)
+    },
+    
+    bool_to_yes_no => sub {
+      my $boolean = shift;
+      if ($boolean) {
+        return 'yes'
+      }
+      return 'no'
+    },
+    
+    round_percent => sub {
+      my $number = shift;
+      return sprintf("%.2f", $number) . '%';
+    },
+    
+    default_round => sub {
+      my $number = shift;
+      return sprintf("%.2f", $number);
+    },
+    
+    scientific_notation => sub {
+      my $number = shift;
+      return sprintf("%.2e", $number);
+    },
+    
+    fetch_deduplicated_partial_alignments => sub {
+      my $alignment = shift;
+      return fetch_deduplicated_partial_alignments($alignment);
+    },
+    
+    summarise_read_file_experimental_configurations_in_alignment => sub {
+      my $alignment = shift;
+      return summarise_read_file_experimental_configurations_in_alignment($alignment);
+    },
+    
+  }
 }
 
 sub fetch_deduplicated_partial_alignments {

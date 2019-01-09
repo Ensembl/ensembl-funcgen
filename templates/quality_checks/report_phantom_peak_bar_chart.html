@@ -29,12 +29,12 @@
   <h3>Legend</h3>
   
   <ul>
-    <li>Black: run failed</li>
-    <li>Red: quality tag is -2</li>
-    <li>Orange: quality tag is -1</li>
-    <li>Yellow: quality tag is 0</li>
-    <li>Green: quality tag is 1</li>
     <li>Dark green: quality tag is 2</li>
+    <li>Green: quality tag is 1</li>
+    <li>Yellow: quality tag is 0</li>
+    <li>Orange: quality tag is -1</li>
+    <li>Red: quality tag is -2</li>
+    <li>Black: run failed</li>
   </ul>
 
   <p>
@@ -136,7 +136,7 @@
 
 
   <script>
-  function createPieChart() {
+  function qualityTagBarChartData() {
   
     var barChartData = {
       labels: [
@@ -271,7 +271,7 @@
 
       createConfig('.container-broad', datasets);
       
-      var bar_data = createPieChart();
+      var bar_data = qualityTagBarChartData();
       
       ctx = document.getElementById("chart-area-pie-chart").getContext("2d");
       
@@ -317,7 +317,7 @@
             });
 
       
-      new Chart(ctx, createPieChart(data, '[% dataset.all.title %]'));
+      new Chart(ctx, qualityTagBarChartData(data, '[% dataset.all.title %]'));
 
     };
   </script>

@@ -10,9 +10,6 @@ sub template {
 }
 
 sub _static_content {
-
-  my $self = shift;
-  
   return {
     title    => 'FastQC',
   };
@@ -230,7 +227,5 @@ sub compute_datasets {
   ;
   return \@datasets;
 }
-
-
 
 1;

@@ -26,7 +26,6 @@ sub species        { return shift->_generic_get_or_set('species',        @_); }
 sub registry       { return shift->_generic_get_or_set('registry',       @_); }
 sub output_file    { return shift->_generic_get_or_set('output_file',    @_); }
 sub output_fh      { return shift->_generic_get_or_set('output_fh',      @_); }
-
 sub logger         { return shift->_generic_get_or_set('logger',         @_); }
 sub logger_created { return shift->_generic_get_or_set('logger_created', @_); }
 
@@ -39,7 +38,6 @@ sub init {
     $self->logger($logger);
     $self->logger_created(1);
   }
-  
   return;
 }
 
@@ -74,7 +72,6 @@ sub generate_report {
 
   my $tt   = $self->_init_template_toolkit;
   my $data = $self->_data_for_template;
-  
   
   my $output_fh   = $self->output_fh;
   my $output_file = $self->output_file;

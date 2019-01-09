@@ -1,0 +1,222 @@
+[% WRAPPER "default_statistics_page_wrapper.html" %]
+
+  <style>
+    canvas{
+      -moz-user-select: none;
+      -webkit-user-select: none;
+      -ms-user-select: none;
+    }
+    .chart-container {
+      width: 70%;
+      margin-left: 40px;
+      margin-right: 40px;
+      margin-bottom: 40px;
+    }
+    .container {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+  </style>
+
+  <h2>Divergence</h2>
+
+  <div class="container-all"></div>
+  
+  <h2>Percent enrichment</h2>
+
+  <div class="container-percent-enrichment"></div>
+  
+  <h2>Differential percent enrichment</h2>
+
+  <div class="container-differential-percent-enrichment"></div>
+  
+  <script>
+    function createConfig(container_class, datasets, graph_settings) {
+      var config = {
+        type: 'line',
+        data: {
+          labels: graph_settings.labels,
+          datasets: datasets
+        },
+        options: {
+          legend: {
+              position: 'bottom'
+          },
+          responsive: true,
+          title: {
+            display: false,
+            text: graph_settings.title,
+          },
+          scales: {
+            xAxes: [{
+              ticks: {
+                min: 0,
+                stepSize: 0.1
+              },
+              scaleLabel: {
+                labelString: 'whatever the unit for divergence is',
+                display: false,
+              },
+              gridLines: {
+                display: true
+              }
+            }],
+            yAxes: [{
+              scaleLabel: {
+                labelString: graph_settings.y_axis_label,
+                display: true,
+              },
+              gridLines: {
+                display: true
+              },
+              ticks: {
+                min: 0,
+                max: graph_settings.y_axis_max,
+                stepSize: 50
+              }
+            }]
+          }
+        }
+      };
+      var container = document.querySelector(container_class);
+      var div       = document.createElement('div');
+      
+      div.classList.add('chart-container');
+
+      var canvas = document.createElement('canvas');
+      div.appendChild(canvas);
+      container.appendChild(div);
+
+      var ctx = canvas.getContext('2d');
+
+      new Chart(ctx, config);
+      return
+    }
+
+  </script>
+
+  <script>
+
+    window.onload = function() {
+    
+      var datasets;
+      
+      datasets = [
+        [% FOR dataset_hash IN datasets %]
+        [% dataset = dataset_hash.all %]
+        {
+          label: '[% dataset.title %]',
+          backgroundColor: [% dataset.colour %],
+          borderColor:     [% dataset.colour %],
+          data: [
+            [% FOR count IN dataset.counts %]'[% count %]',[% END %]
+          ],
+          fill: false,
+        }, 
+        [% END %]
+      ];
+      
+      var graph_settings = {
+        labels:       [ [% FOR label IN datasets_graph.labels %]'[% label %]',[% END %] ],
+        title:        '[% datasets_graph.title %]',
+        y_axis_label: '[% datasets_graph.y_axis_label %]',
+        y_axis_max:   [% datasets_graph.y_axis_max %],
+      };
+
+      createConfig('.container-all',    datasets, graph_settings);
+
+      datasets = [
+        [% FOR dataset_hash IN percent_genome_enriched_datasets %]
+        [% dataset = dataset_hash.all %]
+        {
+          label: '[% dataset.title %]',
+          backgroundColor: [% dataset.colour %],
+          borderColor:     [% dataset.colour %],
+          data: [
+            [% FOR count IN dataset.counts %]'[% count %]',[% END %]
+          ],
+          fill: false,
+        }, 
+        [% dataset = dataset_hash.narrow %]
+        {
+          label: '[% dataset.title %]',
+          backgroundColor: [% dataset.colour %],
+          borderColor:     [% dataset.colour %],
+          data: [
+            [% FOR count IN dataset.counts %]'[% count %]',[% END %]
+          ],
+          fill: false,
+        }, 
+        [% dataset = dataset_hash.broad %]
+        {
+          label: '[% dataset.title %]',
+          backgroundColor: [% dataset.colour %],
+          borderColor:     [% dataset.colour %],
+          data: [
+            [% FOR count IN dataset.counts %]'[% count %]',[% END %]
+          ],
+          fill: false,
+        }, 
+        [% END %]
+      ];
+      
+      graph_settings = {
+        labels:       [ [% FOR label IN percent_genome_enriched_graph.labels %]'[% label %]',[% END %] ],
+        title:        '[% percent_genome_enriched_graph.title %]',
+        y_axis_label: '[% percent_genome_enriched_graph.y_axis_label %]',
+        y_axis_max:   [% percent_genome_enriched_graph.y_axis_max %],
+      };
+
+      createConfig('.container-percent-enrichment',    datasets, graph_settings);
+      
+      datasets = [
+        [% FOR dataset_hash IN differential_percentage_enrichment_datasets %]
+        [% dataset = dataset_hash.all %]
+        {
+          label: '[% dataset.title %]',
+          backgroundColor: [% dataset.colour %],
+          borderColor:     [% dataset.colour %],
+          data: [
+            [% FOR count IN dataset.counts %]'[% count %]',[% END %]
+          ],
+          fill: false,
+        }, 
+        [% dataset = dataset_hash.narrow %]
+        {
+          label: '[% dataset.title %]',
+          backgroundColor: [% dataset.colour %],
+          borderColor:     [% dataset.colour %],
+          data: [
+            [% FOR count IN dataset.counts %]'[% count %]',[% END %]
+          ],
+          fill: false,
+        }, 
+        [% dataset = dataset_hash.broad %]
+        {
+          label: '[% dataset.title %]',
+          backgroundColor: [% dataset.colour %],
+          borderColor:     [% dataset.colour %],
+          data: [
+            [% FOR count IN dataset.counts %]'[% count %]',[% END %]
+          ],
+          fill: false,
+        }, 
+        [% END %]
+      ];
+      
+      var graph_settings = {
+        labels:       [ [% FOR label IN differential_percentage_enrichment_graph.labels %]'[% label %]',[% END %] ],
+        title:        '[% differential_percentage_enrichment_graph.title %]',
+        y_axis_label: '[% differential_percentage_enrichment_graph.y_axis_label %]',
+        y_axis_max:   [% differential_percentage_enrichment_graph.y_axis_max %],
+      };
+
+      createConfig('.container-differential-percent-enrichment',    datasets, graph_settings);
+
+
+    };
+  </script>
+
+[% END %]

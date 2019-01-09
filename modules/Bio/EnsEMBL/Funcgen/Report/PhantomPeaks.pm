@@ -3,6 +3,9 @@ package Bio::EnsEMBL::Funcgen::Report::PhantomPeaks;
 use strict;
 use base 'Bio::EnsEMBL::Funcgen::Report::Generator';
 
+use Role::Tiny::With;
+with 'Bio::EnsEMBL::Funcgen::Report::binnedValueReport';
+
 sub template {
   my $self = shift;
   my $template = $self->template_dir . '/quality_checks/report_phantom_peak_bar_chart.html';
@@ -10,11 +13,8 @@ sub template {
 }
 
 sub _static_content {
-
-  my $self = shift;
-  
   return {
-    title    => 'Phantom peak quality checks',
+    title => 'Phantom peak quality checks',
     distribution_y_axis_max => 350,
   };
 }
@@ -29,20 +29,29 @@ sub _dynamic_content {
   my $peak_calling_adaptor = $funcgen_adaptor->get_PeakCallingAdaptor;
   my $all_peak_callings    = $peak_calling_adaptor->fetch_all;
 
-  my $phantom_peak_datasets = $self->create_phantom_peak_datasets($all_peak_callings);
+  my $phantom_peak_datasets = $self->_compute_datasets_with_bin_counts($all_peak_callings);
   
-  my $bins = $self->_generate_bins;
+  my $bins = $self->bins;
   
   return {
     labels   => $bins,
     datasets => $phantom_peak_datasets,
     dbc      => $funcgen_adaptor->dbc,
     species  => $species,
-
   };
 }
 
-sub create_phantom_peak_datasets {
+sub bins {
+  my $self = shift;
+  my $bins = $self->_generate_bins({
+      min      =>  1,
+      max      =>  2,
+      num_bins => 50,
+  });
+  return $bins
+}
+
+sub _compute_datasets_with_bin_counts {
 
   my $self = shift;
   
@@ -54,42 +63,42 @@ sub create_phantom_peak_datasets {
     @datasets, 
     {
       title => 'All consortia combined',
-      all => $self->create_phantom_peak_dataset(
+      all => $self->_compute_dataset_with_bin_counts({
 
-            $all_peak_callings,
+            object_list => $all_peak_callings,
             
-            {
+            static_values => {
               title   => 'Narrow and Broad data combined',
               html_id => 'overall-all', 
               colour  => 'window.chartColors.gray',
             },
 
-            sub { return 1; }
-        ),
-      narrow => $self->create_phantom_peak_dataset(
+            object_filter => sub { return 1; }
+        }),
+      narrow => $self->_compute_dataset_with_bin_counts({
 
-            $all_peak_callings,
+            object_list => $all_peak_callings,
             
-            {
+            static_values => {
               title   => 'All narrow peaks',
               html_id => 'overall-narrow', 
               colour  => 'window.chartColors.gray',
             },
 
-            sub { return (! shift->fetch_Experiment->get_FeatureType->creates_broad_peaks) }
-        ),
-      broad => $self->create_phantom_peak_dataset(
+            object_filter => sub { return (! shift->fetch_Experiment->get_FeatureType->creates_broad_peaks) }
+        }),
+      broad => $self->_compute_dataset_with_bin_counts({
 
-            $all_peak_callings,
+            object_list => $all_peak_callings,
             
-            {
+            static_values => {
               title   => 'All broad peaks',
               html_id => 'overall-broad', 
               colour  => 'window.chartColors.gray',
             },
 
-            sub { return shift->fetch_Experiment->get_FeatureType->creates_broad_peaks }
-        ),
+            object_filter => sub { return shift->fetch_Experiment->get_FeatureType->creates_broad_peaks }
+        }),
     }
   ;
 
@@ -97,52 +106,52 @@ sub create_phantom_peak_datasets {
     @datasets, 
     {
       title => 'Blueprint',
-      all => $self->create_phantom_peak_dataset(
+      all => $self->_compute_dataset_with_bin_counts({
 
-          $all_peak_callings,
+          object_list => $all_peak_callings,
           
-          {
+          static_values => {
             title   => 'Blueprint',
             html_id => 'blueprint-all',
             colour  => 'window.chartColors.red',
           },
 
-        sub { shift->fetch_Experiment->get_ExperimentalGroup->name eq 'BLUEPRINT' }
-      ),
-      narrow => $self->create_phantom_peak_dataset(
+        object_filter => sub { shift->fetch_Experiment->get_ExperimentalGroup->name eq 'BLUEPRINT' }
+      }),
+      narrow => $self->_compute_dataset_with_bin_counts({
 
-          $all_peak_callings,
+          object_list => $all_peak_callings,
           
-          {
+          static_values => {
             title   => 'Blueprint narrow peaks',
             html_id => 'blueprint-narrow',
             colour  => 'window.chartColors.red',
           },
 
-        sub { 
+        object_filter => sub { 
           my $peak_calling = shift;
 
                   $peak_calling->fetch_Experiment->get_ExperimentalGroup->name eq 'BLUEPRINT' 
             && (! $peak_calling->fetch_Experiment->get_FeatureType->creates_broad_peaks)
         }
-      ),
-      broad => $self->create_phantom_peak_dataset(
+      }),
+      broad => $self->_compute_dataset_with_bin_counts({
 
-          $all_peak_callings,
+          object_list => $all_peak_callings,
           
-          {
+          static_values => {
             title   => 'Blueprint broad peaks',
             html_id => 'blueprint-broad',
             colour  => 'window.chartColors.red',
           },
 
-        sub { 
+        object_filter => sub { 
           my $peak_calling = shift;
 
               $peak_calling->fetch_Experiment->get_ExperimentalGroup->name eq 'BLUEPRINT' 
             && $peak_calling->fetch_Experiment->get_FeatureType->creates_broad_peaks
         }
-      ),
+      }),
     }
   ;
 
@@ -150,52 +159,52 @@ sub create_phantom_peak_datasets {
     @datasets, 
     {
       title => 'ENCODE',
-      all => $self->create_phantom_peak_dataset(
+      all => $self->_compute_dataset_with_bin_counts({
 
-          $all_peak_callings,
+          object_list => $all_peak_callings,
           
-          {
+          static_values => {
             title   => 'ENCODE',
             html_id => 'encode-all',
             colour  => 'window.chartColors.blue',
           },
 
-          sub { shift->fetch_Experiment->get_ExperimentalGroup->name eq 'ENCODE' }
-      ),
-      narrow => $self->create_phantom_peak_dataset(
+          object_filter => sub { shift->fetch_Experiment->get_ExperimentalGroup->name eq 'ENCODE' }
+      }),
+      narrow => $self->_compute_dataset_with_bin_counts({
 
-          $all_peak_callings,
+          object_list => $all_peak_callings,
           
-          {
+          static_values => {
             title   => 'ENCODE narrow peaks',
             html_id => 'encode-narrow',
             colour  => 'window.chartColors.blue',
           },
 
-          sub { 
+          object_filter => sub { 
             my $peak_calling = shift;
             
                   $peak_calling->fetch_Experiment->get_ExperimentalGroup->name eq 'ENCODE' 
             && (! $peak_calling->fetch_Experiment->get_FeatureType->creates_broad_peaks)
           }
-      ),
-      broad => $self->create_phantom_peak_dataset(
+      }),
+      broad => $self->_compute_dataset_with_bin_counts({
 
-          $all_peak_callings,
+          object_list => $all_peak_callings,
           
-          {
+          static_values => {
             title   => 'ENCODE broad peaks',
             html_id => 'encode-broad',
             colour  => 'window.chartColors.blue',
           },
 
-          sub { 
+          object_filter => sub { 
             my $peak_calling = shift;
             
               $peak_calling->fetch_Experiment->get_ExperimentalGroup->name eq 'ENCODE' 
             && $peak_calling->fetch_Experiment->get_FeatureType->creates_broad_peaks
           }
-      ),
+      }),
     }
   ;
 
@@ -203,175 +212,92 @@ sub create_phantom_peak_datasets {
     @datasets, 
     {
       title => 'Roadmap Epigenomics',
-      all => $self->create_phantom_peak_dataset(
+      all => $self->_compute_dataset_with_bin_counts({
 
-          $all_peak_callings,
+          object_list => $all_peak_callings,
           
-          {
+          static_values => {
             title   => 'Roadmap Epigenomics',
             html_id => 'roadmap_epigenomics',
             colour  => 'window.chartColors.green',
           },
 
-          sub { shift->fetch_Experiment->get_ExperimentalGroup->name eq 'Roadmap Epigenomics' }
-      ),
-      narrow => $self->create_phantom_peak_dataset(
+          object_filter => sub { shift->fetch_Experiment->get_ExperimentalGroup->name eq 'Roadmap Epigenomics' }
+      }),
+      narrow => $self->_compute_dataset_with_bin_counts({
 
-          $all_peak_callings,
+          object_list => $all_peak_callings,
           
-          {
+          static_values => {
             title   => 'Roadmap Epigenomics narrow peaks',
             html_id => 'roadmap_epigenomics-narrow',
             colour  => 'window.chartColors.green',
           },
 
-          sub { 
+          object_filter => sub { 
             my $peak_calling = shift;
             
                   $peak_calling->fetch_Experiment->get_ExperimentalGroup->name eq 'Roadmap Epigenomics' 
             && (! $peak_calling->fetch_Experiment->get_FeatureType->creates_broad_peaks)
           }
-      ),
-      broad => $self->create_phantom_peak_dataset(
+      }),
+      broad => $self->_compute_dataset_with_bin_counts({
 
-          $all_peak_callings,
+          object_list => $all_peak_callings,
           
-          {
+          static_values => {
             title   => 'Roadmap Epigenomics broad peaks',
             html_id => 'roadmap_epigenomics-broad',
             colour  => 'window.chartColors.green',
           },
 
-          sub { 
+          object_filter => sub { 
             my $peak_calling = shift;
             
               $peak_calling->fetch_Experiment->get_ExperimentalGroup->name eq 'Roadmap Epigenomics' 
             && $peak_calling->fetch_Experiment->get_FeatureType->creates_broad_peaks
           }
-      ),
+      }),
     }
   ;
   return \@datasets;
 }
 
-sub create_phantom_peak_dataset {
+sub _compute_values_from_object_list {
 
-  my $self = shift;
-
-  my $peak_callings                = shift;
-  my $initial_dataset              = shift;
-  my $peak_calling_filter_callback = shift;
-
-  my $filtered_peak_callings = [ grep { $peak_calling_filter_callback->($_) } @$peak_callings ];
-  
-  my $bins = $self->_generate_bins;
-  
-  my $final_dataset = {
-      %$initial_dataset,
-      counts             => $self->count_nsc_values_in_bins($filtered_peak_callings, $bins),
-      quality_tag_values => $self->fetch_quality_tag_values($filtered_peak_callings),
-  };
-  
-  return $final_dataset;
-}
-
-sub _generate_bins {
-
-  my $self = shift;
-
-  my $min = 1;
-  my $max = 2;
-  my $num_bins = 50;
-
-  my @bins
-    =
-      map { $_ / $num_bins * ($max - $min) + $min }
-      0..$num_bins
-    ;
-  return \@bins
-}
-
-sub count_nsc_values_in_bins {
-
-  my $self = shift;
-
+  my $self          = shift;
   my $peak_callings = shift;
-  my $bins          = shift;
 
-  my $values = $self->fetch_nsc_values($peak_callings);
-  my $counts = $self->compute_bin_counts($bins, $values);
-  
-  return $counts;
-}
+  my $quality_tag_values
+    = $self->fetch_quality_tag_values($peak_callings);
 
-sub compute_bin_counts {
-
-  my $self = shift;
-
-  my $bins   = shift;
-  my $values = shift;
-
-  use Statistics::Descriptive;
-  my $stat = Statistics::Descriptive::Full->new();
-
-  $stat->add_data( @$values );
-  my $f = $stat->frequency_distribution_ref( $bins );
-
-  my @counts;
-  for (sort {$a <=> $b} keys %$f) {
-    push @counts, $f->{$_};
-  }
-  return \@counts;
-}
-
-sub fetch_nsc_values {
-
-  my $self = shift;
-  
-  my $peak_callings = shift;
-  
   my @nsc_values;
-  $self->process_phantom_peak_qc_values_from_peak_callings(
-  
-    $peak_callings,
-    
-    sub {
-      my $phantom_peak = shift;
-      my $nsc = $phantom_peak->nsc;
-      
-      push @nsc_values, $nsc;
-    },
-    
-    sub {}
-  );
-  return \@nsc_values;
-}
 
-sub fetch_phantom_peak_success_rate_stats {
+  PEAK_CALLING:
+  foreach my $peak_calling (@$peak_callings) {
 
-  my $self = shift;
-
-  my $peak_callings = shift;
-  
-  my $run_successful = 0;
-  my $run_failed     = 0;
-  
-  $self->process_phantom_peak_qc_values_from_peak_callings(
-  
-    $peak_callings,
+    my $signal_alignment = $peak_calling->fetch_signal_Alignment;
+    my $phantom_peak     = $signal_alignment->fetch_PhantomPeak;
     
-    sub { $run_successful++ },
-    sub { $run_failed++     }
-  );
-  
-  my $phantom_peak_success_rate_stats = {
-  
-    run_successful => $run_successful,
-    run_failed     => $run_failed,
-  
+    my $phantom_peak_run_failed = $phantom_peak->run_failed;
+    
+    if ($phantom_peak_run_failed) {
+      next PEAK_CALLING;
+    }
+    
+    my $nsc = $phantom_peak->nsc;
+    push @nsc_values, $nsc;
+  }
+
+  my $bins = $self->bins;
+
+  my $bin_counts
+    = $self->_count_values_per_bin($bins, \@nsc_values);
+
+  return {
+    counts => $bin_counts,
+    quality_tag_values => $quality_tag_values,
   };
-  
-  return $phantom_peak_success_rate_stats;
 }
 
 sub fetch_quality_tag_values {
