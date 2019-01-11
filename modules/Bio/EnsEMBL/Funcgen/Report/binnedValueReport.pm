@@ -94,11 +94,6 @@ sub _compute_dataset_with_bin_counts {
   my $self  = shift;
   my $param = shift;
   
-#   my $object_list     = shift;
-#   my $static_values   = shift;
-#   my $filter_callback = shift;
-#   my $compute_values_sub_name = shift;
-  
   my $object_list             = $param->{object_list};
   my $static_values           = $param->{static_values};
   my $filter_callback         = $param->{object_filter};
@@ -126,9 +121,6 @@ sub _compute_dataset_with_bin_counts {
     warn("No objects left after applying filter!");
   }
   
-#   my $dynamic_values
-#     = $self->_compute_values_from_object_list($filtered_object_list);
-    
   my $dynamic_values
     = $self->$compute_values_sub_name($filtered_object_list);
 
