@@ -45,6 +45,7 @@ sub _dynamic_content {
       title        => 'Divergence',
       y_axis_label => 'Number of peak callings',
       y_axis_max   => 600,
+      x_axis_label => '',
     },
     
     percent_genome_enriched_datasets => $percent_genome_enriched_datasets,
@@ -54,6 +55,7 @@ sub _dynamic_content {
       title        => 'Percent genome enriched',
       y_axis_label => 'Number of peak callings',
       y_axis_max   => 120,
+      x_axis_label => 'Percent enrichment',
     },
 
     differential_percentage_enrichment_datasets
@@ -64,6 +66,7 @@ sub _dynamic_content {
       title        => 'Differential percentage enrichment',
       y_axis_label => 'Number of peak callings',
       y_axis_max   => 250,
+      x_axis_label => 'Differential percentage enrichment',
     },
 
     dbc      => $funcgen_adaptor->dbc,

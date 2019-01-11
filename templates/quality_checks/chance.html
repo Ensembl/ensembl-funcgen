@@ -56,8 +56,8 @@
                 stepSize: 0.1
               },
               scaleLabel: {
-                labelString: 'whatever the unit for divergence is',
-                display: false,
+                labelString: graph_settings.x_axis_label,
+                display: true,
               },
               gridLines: {
                 display: true
@@ -123,6 +123,7 @@
         title:        '[% datasets_graph.title %]',
         y_axis_label: '[% datasets_graph.y_axis_label %]',
         y_axis_max:   [% datasets_graph.y_axis_max %],
+        x_axis_label: '[% datasets_graph.x_axis_label %]'
       };
 
       createConfig('.container-all',    datasets, graph_settings);
@@ -167,6 +168,7 @@
         title:        '[% percent_genome_enriched_graph.title %]',
         y_axis_label: '[% percent_genome_enriched_graph.y_axis_label %]',
         y_axis_max:   [% percent_genome_enriched_graph.y_axis_max %],
+        x_axis_label: '[% percent_genome_enriched_graph.x_axis_label %]'
       };
 
       createConfig('.container-percent-enrichment',    datasets, graph_settings);
@@ -211,6 +213,7 @@
         title:        '[% differential_percentage_enrichment_graph.title %]',
         y_axis_label: '[% differential_percentage_enrichment_graph.y_axis_label %]',
         y_axis_max:   [% differential_percentage_enrichment_graph.y_axis_max %],
+        x_axis_label: '[% differential_percentage_enrichment_graph.x_axis_label %]'
       };
 
       createConfig('.container-differential-percent-enrichment',    datasets, graph_settings);
