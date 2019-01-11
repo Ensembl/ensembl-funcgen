@@ -42,6 +42,7 @@ sub pipeline_analyses {
               '1->A' => [
                 'generate_phantom_peak_report',
                 'generate_frip_report',
+                'generate_chance_report',
               ],
               'A->1' => 'quality_check_reports_done',
             },
@@ -65,6 +66,19 @@ sub pipeline_analyses {
                   cmd => 
                       q(
                         generate_frip_report.pl \
+                            --registry #reg_conf# \
+                            --species #species# \
+                            --output_file #reports_dir#/#species#/frip.html
+                      )
+            },
+          -rc_name    => '1Gb_job',
+        },
+        {   -logic_name  => 'generate_chance_report',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters  => {
+                  cmd => 
+                      q(
+                        generate_chance_report.pl \
                             --registry #reg_conf# \
                             --species #species# \
                             --output_file #reports_dir#/#species#/frip.html
