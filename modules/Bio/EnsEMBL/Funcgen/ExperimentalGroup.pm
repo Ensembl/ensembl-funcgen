@@ -84,7 +84,7 @@ sub new {
   my $self      = $obj_class->SUPER::new(@_);
 
   my ($name, $production_name, $url, $desc, $is_project) = rearrange(
-    ['NAME', 'PRODUCTION_NAME', 'DESCRIPTION', 'IS_PROJECT'], @_);
+    ['NAME', 'PRODUCTION_NAME', 'URL', 'DESCRIPTION', 'IS_PROJECT'], @_);
 
   throw('Must supply a name parameter') if ! defined $name;
   $self->name($name);
