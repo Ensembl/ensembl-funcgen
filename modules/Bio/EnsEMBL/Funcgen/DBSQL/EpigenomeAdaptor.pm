@@ -55,7 +55,11 @@ use Bio::EnsEMBL::Utils::Exception qw( warning throw );
 use Bio::EnsEMBL::Funcgen::Epigenome;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#sql_types barewords import
 
+use Bio::EnsEMBL::Hive::Utils 'stringify';
+use Bio::EnsEMBL::Hive::Utils 'destringify';
+
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
+use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 
 #todo revert this to core BaseAdaptor and change _true_tables to _tables
 # as we don't use query composition or other funcgen BaseAdaptor methods?
@@ -93,11 +97,17 @@ sub fetch_by_production_name {
 
 sub fetch_by_display_label {
   my ($self, $name) = @_;
-  throw("Must specify the display label of an Epigenome") if ! defined $name;
+  deprecate("'fetch_by_display_label' has been deprecated. Please use 'fetch_by_short_name' instead. 'fetch_by_display_label' will be removed in release 101.");
+  return fetch_by_short_name($self, $name);
+}
+
+sub fetch_by_short_name {
+  my ($self, $name) = @_;
+  throw("Must specify the short name of an Epigenome") if ! defined $name;
   $self->bind_param_generic_fetch($name, SQL_VARCHAR);
 
-  #name is unique so we should only have one
-  return $self->generic_fetch('eg.display_label = ?')->[0];
+  #short_name is unique so we should only have one
+  return $self->generic_fetch('eg.short_name = ?')->[0];
 }
 
 sub fetch_by_dbID {
@@ -152,10 +162,11 @@ sub _columns {
   return qw( 
      eg.epigenome_id 
      eg.name 
-     eg.display_label
+     eg.short_name
      eg.description 
      eg.gender 
      eg.production_name
+     eg.search_terms
   );
   #type/class = enum cell, cell line, tissue
 }
@@ -178,22 +189,29 @@ sub _objs_from_sth {
     my ( $self, $sth ) = @_;
 
     my (@result,             $eg_id,  $name,
-        $dlabel,             $desc,   $gender,
-        $production_name
+        $short_name,             $desc,   $gender,
+        $production_name, $search_terms
     );
 
-    $sth->bind_columns( \$eg_id, \$name, \$dlabel, \$desc, \$gender,
-        \$production_name );
+    $sth->bind_columns( \$eg_id, \$name, \$short_name, \$desc, \$gender,
+        \$production_name, \$search_terms);
 
     while ( $sth->fetch() ) {
+
+        my $search_terms_ref;
+        if (defined $search_terms){
+          $search_terms_ref = destringify($search_terms);
+        }
+
         my $epigenome = Bio::EnsEMBL::Funcgen::Epigenome->new(
             -dbID               => $eg_id,
             -NAME               => $name,
-            -DISPLAY_LABEL      => $dlabel,
+            -SHORT_NAME         => $short_name,
             -DESCRIPTION        => $desc,
             -GENDER             => $gender,
             -ADAPTOR            => $self,
             -PRODUCTION_NAME    => $production_name,
+            -SEARCH_TERMS       => $search_terms_ref,
         );
 
         push @result, $epigenome;
@@ -256,7 +274,7 @@ sub fetch_all_having_PeakCalling_by_class {
   Returntype : None
   Exceptions : None
   Caller     : General
-  Status     : At Risk
+  Status     : At Risks
 
 =cut
 
@@ -267,8 +285,8 @@ sub store {
 
   my $sth = $self->prepare("
 			INSERT INTO epigenome
-			(name, display_label, description, gender, production_name)
-			VALUES (?, ?, ?, ?, ?)");
+			(name, short_name, description, gender, production_name, search_terms)
+			VALUES (?, ?, ?, ?, ?, ?)");
 
 
 
@@ -283,12 +301,17 @@ sub store {
 		  next;
 	  }
 
+    my $search_terms;
+    if (defined $eg->search_terms){
+      $search_terms = stringify($eg->search_terms);
+    }
 
     $sth->bind_param( 1, $eg->name,               SQL_VARCHAR );
-    $sth->bind_param( 2, $eg->display_label,      SQL_VARCHAR );
+    $sth->bind_param( 2, $eg->short_name,         SQL_VARCHAR );
     $sth->bind_param( 3, $eg->description,        SQL_VARCHAR );
     $sth->bind_param( 4, $eg->gender,             SQL_VARCHAR );
     $sth->bind_param( 5, $eg->production_name,    SQL_VARCHAR );
+    $sth->bind_param( 6, $search_terms);
 
 	  
 	  $sth->execute();

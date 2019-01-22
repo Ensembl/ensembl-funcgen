@@ -43,11 +43,10 @@ my $epigenome = $epigenome_adaptor->fetch_by_name($epigenome_name);
 #Create from new
 my $epigenome = Bio::EnsEMBL::Funcgen::Epigenome->new
   (
-   -name          => 'H1-ESC',
-   -display_label => 'H1-ESC',
-   -description   => 'Human Embryonic Stem Cell',
-   -efo_id        => 'efo:EFO_0003042',
-   -tissue        => 'embryonic stem cell',
+   -name            => 'H1-ESC',
+   -short_name      => 'H1-ESC',
+   -description     => 'Human Embryonic Stem Cell',
+   -production_name => 'H1-ESC',
   );
 
 print $epigenome->name.' is a '.$epigenome->description."\n";
@@ -71,6 +70,7 @@ use Bio::EnsEMBL::Utils::Argument  qw( rearrange ) ;
 use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
 use parent qw(Bio::EnsEMBL::Funcgen::Storable);
+use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 
 my %valid_genders = (male          => 1,
                      female        => 1,
@@ -82,10 +82,11 @@ my %valid_genders = (male          => 1,
 =head2 new
 
   Arg [1]    : String - name of Epigenome
-  Arg [2]    : String (optional) - display label of Epigenome. Defaults to name
-  Arg [3]    : String (optional) - description of Epigenome
-  Arg [4]    : String (optional) - gender e.g. male, female or hermaphrodite
-  Arg [5]    : String (optional) - Experimental Factor Ontology ID e.g. efo:EFO_0002869
+  Arg [2]    : String   (optional) - short name of Epigenome. Defaults to name
+  Arg [3]    : String   (optional) - description of Epigenome
+  Arg [4]    : String   (optional) - gender e.g. male, female or hermaphrodite
+  Arg [5]    : String   (optional) - production name
+  Arg [6]    : Arrayref (optional) - list of search terms
 
   Description: Constructor method for Epigenome class
   Returntype : Bio::EnsEMBL::Funcgen::Epigenome
@@ -101,8 +102,8 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($name, $dlabel, $desc, $gender, $ontology_accession, $tissue, $production_name) = rearrange
-    (['NAME', 'DISPLAY_LABEL', 'DESCRIPTION','GENDER', 'ONTOLOGY_ACCESSION', 'TISSUE', 'PRODUCTION_NAME'], @_);
+  my ($name, $short_name, $desc, $gender, $production_name, $search_terms) = rearrange
+    (['NAME', 'SHORT_NAME', 'DESCRIPTION','GENDER', 'PRODUCTION_NAME', 'SEARCH_TERMS'], @_);
 
   throw("Must supply an Epigenome name") if ! defined $name;
 
@@ -116,14 +117,11 @@ sub new {
   }
 
   #Set explicitly to enable faster getter only methods
-$self->{name}               = $name;
-$self->{display_label}      = $dlabel || $name;
-$self->{description}        = $desc if defined $desc;
-$self->{ontology_accession} = $ontology_accession if defined $ontology_accession;
-$self->{tissue}             = $tissue if defined $tissue;
-$self->{production_name}    = $production_name;
-
-  
+  $self->{name}               = $name;
+  $self->{short_name}         = $short_name || $name;
+  $self->{description}        = $desc if defined $desc;
+  $self->{production_name}    = $production_name if defined $production_name;
+  $self->{search_terms}       = $search_terms if defined $search_terms;
 
   return $self;
 }
@@ -182,7 +180,36 @@ sub description {  return $_[0]->{description}; }
 
 =cut
 
-sub display_label {  return $_[0]->{display_label}; }
+sub display_label {  
+  deprecate("'display_label' has been deprecated. Please use 'short_name' instead. 'display_label' will be removed in release 101.");
+  return short_name(@_); 
+
+}
+
+=head2 short_name
+
+  Example    : my $short_name = $epigenome->short_name();
+  Description: Getter of short_name attribute for Epigenome objects.
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+sub short_name {  return $_[0]->{short_name}; }
+
+=head2 search_terms
+
+  Example    : $epigenome->search_terms
+  Description: Returns a reference to the list of search terms entries for this epigenome
+  Returntype : Arrayref or undef
+  Exceptions : None
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub search_terms {  return $_[0]->{search_terms}; }
 
 
 =head2 efo_accession
@@ -221,6 +248,45 @@ sub _efo_db_entry {
 
   my $self = shift;
   return $self->_db_entry('EFO');
+}
+
+=head2 encode_accession
+
+  Example    : $epigenome->encode_accession
+  Description: Returns the ENCODE accession for this epigenome, if one 
+               exists. Returns undef otherwise.
+  Returntype : String or undef
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub encode_accession {
+  my $self = shift;
+  my $encode_db_entry = $self->_encode_db_entry;
+  
+  if (! defined $encode_db_entry) {
+    return undef;
+  }
+  return $encode_db_entry->primary_id
+}
+
+=head2 _encode_db_entry
+
+  Example    : $epigenome->encode_db_entry->primary_id
+  Description: Returns the DBEntry of the external reference to ENCODE.
+  Returntype : Bio::EnsEMBL::Funcgen::DBEntry
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub _encode_db_entry {
+
+  my $self = shift;
+  return $self->_db_entry('ENCODE');
 }
 
 =head2 epirr_accession
@@ -344,7 +410,7 @@ sub reset_relational_attributes{
 sub compare_to {
   my ($self, $obj, $shallow, $scl_methods, $obj_methods) = @_;
 
-  $scl_methods ||= [qw(name display_label description gender efo_id tissue)];
+  $scl_methods ||= [qw(name short_name description gender)];
 
   return $self->SUPER::compare_to($obj, $shallow, $scl_methods,
                                   $obj_methods);
@@ -366,8 +432,8 @@ sub summary_as_hash {
     name              => $self->name,
     gender            => $self->gender,
     description       => $self->description,
-    display_label     => $self->display_label,
-    efo_accession     => $self->efo_accession,
+    short_name        => $self->short_name,
+    search_terms      => $self->search_terms,
   };
 }
 
