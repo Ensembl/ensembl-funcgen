@@ -196,6 +196,7 @@ sub _objs_from_sth {
 
     $sth->bind_columns( \$eg_id, \$name, \$short_name, \$desc, \$gender,
         \$production_name, \$search_terms, \$full_name);
+    );
 
     while ( $sth->fetch() ) {
 
@@ -290,8 +291,6 @@ sub store {
 			(name, short_name, description, gender, production_name, search_terms, full_name)
 			VALUES (?, ?, ?, ?, ?, ?, ?)");
 
-
-
   foreach my $eg (@args) {
 	  if ( ! $eg->isa('Bio::EnsEMBL::Funcgen::Epigenome') ) {
 		  warning('Can only store Epigenome objects, skipping $eg');
@@ -315,7 +314,6 @@ sub store {
     $sth->bind_param( 5, $eg->production_name,    SQL_VARCHAR );
     $sth->bind_param( 6, $search_terms);
     $sth->bind_param( 7, $eg->full_name);
-
 	  
 	  $sth->execute();
 	  $eg->dbID($self->last_insert_id);
