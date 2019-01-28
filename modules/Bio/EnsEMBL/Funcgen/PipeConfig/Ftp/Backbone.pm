@@ -22,15 +22,13 @@ sub pipeline_analyses {
         {   -logic_name  => 'backbone_fire_createmetafiles',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
-               '1->A' => 'create_manifest_file',
+               '1->A' => 'start_create_meta_files',
                'A->1' => 'backbone_fire_ftp_site_checker'
             },
         },
-        {   -logic_name  => 'create_manifest_file',
+        {   -logic_name  => 'start_create_meta_files',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
-        
-        
         {   -logic_name  => 'backbone_fire_ftp_site_checker',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
@@ -41,8 +39,6 @@ sub pipeline_analyses {
         {   -logic_name  => 'start_ftp_site_checker',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
-        
-        
         {   -logic_name => 'backbone_ftp_pipeline_finished',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         }

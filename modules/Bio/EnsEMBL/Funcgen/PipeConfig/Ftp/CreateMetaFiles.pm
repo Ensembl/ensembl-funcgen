@@ -9,11 +9,8 @@ sub pipeline_analyses {
     my $self = shift;
 
     return [
-        {   -logic_name  => 'create_manifest_file',
-            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -parameters  => {
-                cmd => qq(create_manifest_file.bash #ftp_base_dir#/#species# > #ftp_base_dir#/#species#/manifest.tsv),
-            },
+        {   -logic_name  => 'start_create_meta_files',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
                MAIN => 'create_readme_files'
             },
@@ -24,13 +21,26 @@ sub pipeline_analyses {
                 destination => '#ftp_base_dir#/#species#/README',
             },
             -flow_into   => {
-               MAIN => 'create_checksums'
+               MAIN => 'find_directories_for_checksumming'
+            },
+        },
+        {   -logic_name  => 'find_directories_for_checksumming',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::JobFactory',
+            -parameters  => {
+                inputcmd     => 'find #ftp_base_dir#/#species# -type d',
+                column_names => [ 'directory' ],
+            },
+            -flow_into   => {
+               2 => 'create_checksums'
             },
         },
         {   -logic_name  => 'create_checksums',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'find #ftp_base_dir#/#species# -type d | xargs -L 1 -Ipp echo "cd pp; md5sum * > CHECKSUMS" | bash',
+                cmd => q(cd #directory#; find -maxdepth 1 -type f | grep -v CHECKSUMS | xargs --no-run-if-empty md5sum > CHECKSUMS),
+                use_bash_errexit => 1,
+                # Can't use this, because of grep in the pipe
+                #use_bash_pipefail => 1,
             },
             -flow_into   => {
                MAIN => 'remove_empty_checksum_files'
@@ -42,7 +52,9 @@ sub pipeline_analyses {
                 # -f necessary, because there may be no empty checksum files and this
                 # prevents rm from giving a non zero exit code.
                 #
-                cmd => 'find #ftp_base_dir#/#species# -size 0b -name CHECKSUMS | xargs rm -f',
+                cmd => 'find #directory# -size 0b -name CHECKSUMS | xargs rm -f',
+                use_bash_errexit => 1,
+                use_bash_pipefail => 1,
             },
         },
     ]
