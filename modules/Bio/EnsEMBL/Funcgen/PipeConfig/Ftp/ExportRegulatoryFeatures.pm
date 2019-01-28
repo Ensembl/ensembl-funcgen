@@ -99,6 +99,7 @@ sub pipeline_analyses {
         },
         {   -logic_name  => 'export_regulatory_features',
             -analysis_capacity => 20,
+            -rc_name    => '4Gb_job',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
                 cmd => 'export_regulatory_features.pl --only_summary --output_file '
