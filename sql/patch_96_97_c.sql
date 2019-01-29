@@ -13,11 +13,11 @@
 -- limitations under the License.
 
 /**
-@header patch_95_96_h.sql - 
-@desc 	
+@header patch_95_96_c.sql - Added flag
+@desc 	Added flag to indicate whether this shall be used in the current regulatory build
 */
 
 alter table peak_calling add column used_for_regulatory_build tinyint(1) DEFAULT 1;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_f.sql|');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_c.sql|Added flag');
