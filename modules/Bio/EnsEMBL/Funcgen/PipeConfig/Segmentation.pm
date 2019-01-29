@@ -117,7 +117,22 @@ sub pipeline_analyses {
             tempdir => '#tempdir_segmentation#/#species#/',
           },
           -flow_into => {
-            2 => 'create_cell_tables',
+            2 => 'select_peak_callings_to_use_in_regulatory_build',
+          },
+      },
+      {   -logic_name => 'select_peak_callings_to_use_in_regulatory_build',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -parameters => {
+              cmd => 
+                  q( 
+                    select_peak_callings_to_use_in_regulatory_build.pl \
+                        --registry #reg_conf# \
+                        --species #species# \
+                        --dry_run 0
+                  )
+          },
+          -flow_into => { 
+            MAIN => 'create_cell_tables',
           },
       },
       {   -logic_name => 'create_cell_tables',
