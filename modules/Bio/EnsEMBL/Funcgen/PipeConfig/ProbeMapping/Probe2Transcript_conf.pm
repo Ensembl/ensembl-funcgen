@@ -277,7 +277,7 @@ sub pipeline_analyses {
                 'load_probe_feature_to_transcript_rejections',
               ]
           },
-          -rc_name     => '4Gb_job',
+          -rc_name     => '16Gb_job',
       },
         {   -logic_name  => 'load_probe_feature_to_transcript_rejections',
             -rc_name     => '4Gb_job',
