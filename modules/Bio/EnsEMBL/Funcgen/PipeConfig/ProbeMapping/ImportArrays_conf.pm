@@ -131,6 +131,27 @@ sub pipeline_analyses {
             },
             -flow_into => {
                 MAIN => 'store_array_objects',
+                
+                # There really shouldn't be any memory issues. There is a 
+                # memory leak in the script somewhere.
+                #
+                MEMLIMIT => 'create_array_objects_himem',
+            },
+        },
+        {
+            -logic_name => 'create_array_objects_himem',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -rc_name    => '64Gb_job',
+            -parameters => {
+                cmd     => '
+                  import_create_array_objects.pl \
+                    --array_name        #array_class# \
+                    --parsed_probe_data #tempdir#/#species#/#array_class#_parsed_probes.pl \
+                    --output_file       #tempdir#/#species#/#array_class#_array_objects.pl
+                  ',
+            },
+            -flow_into => {
+                MAIN => 'store_array_objects',
             },
         },
         {
