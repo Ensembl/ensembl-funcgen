@@ -76,7 +76,11 @@ my $expected_summary = {
     gender        => 'female',
     description   => 'adult dermal fibroblasts',
     display_label => 'NHDF-Ad',
-    efo_accession => undef
+    short_name    => 'NHDF-Ad',
+    search_terms  => undef,
+    efo_accession => undef,
+    epirr_accession => undef,
+    encode_accession => undef,
 };
 
 is_deeply( $epigenome->summary_as_hash, $expected_summary,
