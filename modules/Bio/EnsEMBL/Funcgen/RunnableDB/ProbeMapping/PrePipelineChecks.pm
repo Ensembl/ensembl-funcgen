@@ -69,7 +69,7 @@ sub run {
     
     system("which sequence_dump.pl > /dev/null");    
     if ($?) {
-      $error_msg .= "Can't find db_cmd.pl command in path. db_cmd.pl is a script from ensembl-analysis. Please make sure it is in the PATH.\n";
+      $error_msg .= "Can't find sequence_dump.pl command in path. db_cmd.pl is a script from ensembl-analysis. Please make sure it is in the PATH.\n";
     }
     
     system("which exonerate > /dev/null");    

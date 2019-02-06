@@ -235,6 +235,8 @@ use vars qw( %Config );
       'GPL19230',
       'ZebGene-1_1-st-v1',
       'ZebGene-1_0-st-v1',
+      'EquGene-1_0-st-v1',
+      'EquGene-1_1-st-v1',
 
       ## Plant arrays
       'AraGene-1_1-st-v1',
@@ -486,6 +488,24 @@ use vars qw( %Config );
         'GPL19384',
         'GPL6848',
         'GPL18606',
+        'GPL23389',
+        'GPL10248',
+        'GPL15189',
+        'GPL17689',
+        'GPL15204',
+        'GPL23307',
+        'GPL20908',
+        'GPL20928',
+        'GPL15217',
+        'GPL15190',
+        'GPL13795',
+        'GPL13723',
+        'GPL13522',
+        'GPL16032',
+        'GPL19564',
+        'GPL16776',
+        'GPL18520',
+        'GPL19666',
         ## Plant arrays
         'G2519F-015058', # Rice
         'G2519F-015059', # Arabidopsis
@@ -699,6 +719,8 @@ use vars qw( %Config );
          'NimbleGen_13K',
          'GPL13762',
          'GPL21301',
+         'GPL14994',
+         'GPL14562',
        ],
     },
 
