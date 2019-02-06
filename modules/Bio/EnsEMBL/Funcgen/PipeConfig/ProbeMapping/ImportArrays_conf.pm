@@ -10,15 +10,17 @@ sub pipeline_analyses {
     
     return [
         {
-            -logic_name  => 'start_import',
+            -logic_name => 'start_import',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-            -flow_into => {
+            -rc_name    => '4Gb_job',
+            -flow_into  => {
                 MAIN => 'truncate_array_tables',
             },
         },
         {
-            -logic_name  => 'truncate_array_tables',
+            -logic_name => 'truncate_array_tables',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+            -rc_name    => '4Gb_job',
             -parameters => {
                 sql     => [
                   "truncate array;",
@@ -44,8 +46,9 @@ sub pipeline_analyses {
             },
         },
         {
-            -logic_name  => 'switch_array_tables_to_innodb',
+            -logic_name => 'switch_array_tables_to_innodb',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+            -rc_name    => '4Gb_job',
             -parameters => {
                 sql     => [
                   "ALTER TABLE array           ENGINE=InnoDB;",
@@ -72,10 +75,11 @@ sub pipeline_analyses {
             },
         },
         {
-            -logic_name  => 'create_probe_mapping_analyses',
+            -logic_name => 'create_probe_mapping_analyses',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -rc_name    => '4Gb_job',
             -parameters => {
-                cmd       => 
+                cmd     => 
                     'create_probe_mapping_analyses.pl'
                   . ' --registry #reg_conf#'
                   . ' --species  #species#'
@@ -88,23 +92,21 @@ sub pipeline_analyses {
         {
           -logic_name  => 'job_factory_import_arrays',
           -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::JobFactory',
+          -rc_name     => '4Gb_job',
           -parameters => {
               probe_directories => '#probe_directory#/#species#',
           },
           -flow_into => {
-#             MAIN => 'parse_probe_fasta_file',
-#             'MAIN->A' => 'parse_probe_fasta_file',
-#             'A->MAIN' => 'import_arrays_done',
-
             '2->A' => 'parse_probe_fasta_file',
             'A->1' => 'import_arrays_done',
           },
         },
         {
-            -logic_name  => 'parse_probe_fasta_file',
+            -logic_name => 'parse_probe_fasta_file',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -rc_name    => '4Gb_job',
             -parameters => {
-                cmd       => '
+                cmd     => '
                   import_parse_probe_fasta_file.pl \
                     --array_name      #array_class# \
                     --probe_file      #probe_file# \
@@ -116,10 +118,32 @@ sub pipeline_analyses {
             },
         },
         {
-            -logic_name  => 'create_array_objects',
+            -logic_name => 'create_array_objects',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -rc_name    => '4Gb_job',
             -parameters => {
-                cmd       => '
+                cmd     => '
+                  import_create_array_objects.pl \
+                    --array_name        #array_class# \
+                    --parsed_probe_data #tempdir#/#species#/#array_class#_parsed_probes.pl \
+                    --output_file       #tempdir#/#species#/#array_class#_array_objects.pl
+                  ',
+            },
+            -flow_into => {
+                MAIN => 'store_array_objects',
+                
+                # There really shouldn't be any memory issues. There is a 
+                # memory leak in the script somewhere.
+                #
+                MEMLIMIT => 'create_array_objects_himem',
+            },
+        },
+        {
+            -logic_name => 'create_array_objects_himem',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -rc_name    => '64Gb_job',
+            -parameters => {
+                cmd     => '
                   import_create_array_objects.pl \
                     --array_name        #array_class# \
                     --parsed_probe_data #tempdir#/#species#/#array_class#_parsed_probes.pl \
@@ -131,11 +155,12 @@ sub pipeline_analyses {
             },
         },
         {
-            -logic_name  => 'store_array_objects',
+            -logic_name => 'store_array_objects',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -analysis_capacity => 70,
+            -rc_name    => '4Gb_job',
             -parameters => {
-                cmd       => '
+                cmd     => '
                   import_store_array_objects.pl \
                     --registry           #reg_conf# \
                     --species            #species# \
@@ -144,17 +169,19 @@ sub pipeline_analyses {
             },
         },
         {
-            -logic_name  => 'import_arrays_done',
+            -logic_name => 'import_arrays_done',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
-            -flow_into => {
+            -rc_name    => '4Gb_job',
+            -flow_into  => {
                 MAIN => 'delete_duplicate_probes_by_probeset',
             },
         },
         {
-            -logic_name  => 'delete_duplicate_probes_by_probeset',
+            -logic_name => 'delete_duplicate_probes_by_probeset',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -rc_name    => '4Gb_job',
             -parameters => {
-                cmd       => '
+                cmd     => '
                   remove_duplicate_probes_by_probeset.pl \
                     --registry           #reg_conf# \
                     --species            #species# 
@@ -168,6 +195,7 @@ sub pipeline_analyses {
   {
       -logic_name  => 'run_sql_to_fix_probe_set_issues',
       -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlCmd',
+      -rc_name     => '4Gb_job',
       -analysis_capacity => 1,
       -parameters => {
         db_conn       => 'funcgen:#species#',

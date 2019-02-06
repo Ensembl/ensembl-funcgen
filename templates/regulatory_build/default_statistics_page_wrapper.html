@@ -33,8 +33,14 @@
   </li>
 </ul>
 
+[% regulatory_build = regulatory_build_adaptor.fetch_current_regulatory_build %]
+
 <p>
-    The name of the regulatory build is: [% regulatory_build_adaptor.name %] the description is: [% regulatory_build_statistics_adaptor.description %]
+    Name: [% regulatory_build.name %]
+</p>
+
+<p>
+    Description: [% regulatory_build.description %]
 </p>
 
 [% content %]

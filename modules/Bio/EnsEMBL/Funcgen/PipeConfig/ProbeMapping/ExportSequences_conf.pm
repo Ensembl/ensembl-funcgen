@@ -34,6 +34,7 @@ sub pipeline_analyses {
       },
       {   -logic_name => 'export_toplevel',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -rc_name   => '16Gb_job',
           -parameters => {
               'cmd' => 'sequence_dump.pl '
               . ' -dbuser #username# '

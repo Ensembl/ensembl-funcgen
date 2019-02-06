@@ -27,10 +27,11 @@ limitations under the License.
 
 =head1 NAME
 
-  compute_quality_check_statistics.pl \
+  generate_phantom_peak_report.pl \
     --registry /homes/mnuhn/work_dir_regbuild_testrun/lib/ensembl-funcgen/registry.with_previous_version.human_regbuild_testdb16.pm \
     --species homo_sapiens \
-    --output_directory /homes/mnuhn/public_html/regulatory_build_stats/qc_plots
+    --output_directory /homes/mnuhn/public_html/regulatory_build_stats/rb_grch38_testdb16/homo_sapiens/
+
 
 =cut
 
@@ -71,13 +72,13 @@ my @datasets;
 push 
   @datasets, 
   {
-    title => 'All',
+    title => 'All consortia combined',
     all => create_phantom_peak_dataset(
 
           $all_peak_callings,
           
           {
-            title   => 'All',
+            title   => 'Narrow and Broad data combined',
             html_id => 'overall-all', 
             colour  => 'window.chartColors.gray',
           },
@@ -276,15 +277,13 @@ my $file = __FILE__;
 use File::Basename qw( dirname basename );
 
 my $template_dir = dirname($file) . '/../../templates/';
-my $description_template = $template_dir . '/quality_checks/report.html';
+my $description_template = $template_dir . '/quality_checks/report_phantom_peak_bar_chart.html';
 
 if (! -e $description_template) {
     die("Can't find $description_template");
 }
 
-#my $output_file = "$output_directory/nsc_values_by_consortium.html";
-my $output_file = "$output_directory/report_narrow.html";
-#my $output_file = "$output_directory/report_narrow_vs_broad_vs_consortium.html";
+my $output_file = "$output_directory/report_phantom_peaks.html";
 
 use File::Path qw( make_path );
 make_path( $output_directory );
@@ -481,8 +480,6 @@ sub process_phantom_peak_qc_values_from_peak_callings {
   my $phantom_peak_callback            = shift;
   my $phantom_peak_run_failed_callback = shift;
 
-  my @nscs;
-
   PEAK_CALLING:
   foreach my $peak_calling (@$peak_callings) {
 
@@ -497,5 +494,5 @@ sub process_phantom_peak_qc_values_from_peak_callings {
     }
     $phantom_peak_callback->($phantom_peak);
   }
-  return \@nscs;
+  return;
 }

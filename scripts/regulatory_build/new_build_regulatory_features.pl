@@ -812,6 +812,12 @@ sub fetch_metadata {
     PEAK_CALLING:
     foreach my $peak_calling (@$all_peak_callings) {
   
+      if (! $peak_calling->used_for_regulatory_build) {
+        
+        print_log("Skipping ". $peak_calling->name .", because it is not planned to be used in the regulatory build.\n");
+        next PEAK_CALLING;
+      }
+  
       my $feature_type = $peak_calling->fetch_FeatureType;
       
       my $tf    = $feature_type->name;
@@ -2207,7 +2213,7 @@ sub compute_ChromHMM_repressed_scores {
   my ($options, $segmentation) = @_;
   my @files = glob "$segmentation->{location}/emissions*.txt";
   if (scalar @files != 1) {
-    print STDERR "! Problem finding file $segmentation->{location}/*.txt";
+    print STDERR "! Problem finding emissions file $segmentation->{location}/*.txt";
     exit 1;
   }
   my $file = pop @files;

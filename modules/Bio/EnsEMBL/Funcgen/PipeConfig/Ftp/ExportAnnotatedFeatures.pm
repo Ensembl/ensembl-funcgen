@@ -83,7 +83,7 @@ sub pipeline_analyses {
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -analysis_capacity => 10,
             -batch_size        => 1,
-            -rc_name           => '4Gb_job',
+            -rc_name           => '32Gb_job',
             -parameters  => {
               cmd => '
                 export_annotated_features.pl \

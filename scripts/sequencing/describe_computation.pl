@@ -96,13 +96,15 @@ do
 done 2>/dev/null | less
 
 
+describe_computation.pl \
+    --registry /homes/mnuhn/work_dir_regbuild_testrun/lib/ensembl-funcgen/registry.with_previous_version.human_regbuild_testdb16.pm \
+    --species homo_sapiens \
+    --peak_calling IMR90_H3K36me3_ccat_histone_Roadmap_Epigenomics
 =cut
 
 use strict;
 use Data::Dumper;
 use Getopt::Long;
-use Bio::EnsEMBL::DBSQL::DBConnection;
-use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Utils::Logger;
 
 my $registry;
@@ -140,13 +142,15 @@ if (! defined $peak_calling) {
   die;
 }
 
-use Bio::EnsEMBL::Funcgen::Template::PeakCallingDescription qw( 
-  PEAK_CALLING_TXT_TEMPLATE
-  apply
+use Bio::EnsEMBL::Funcgen::Report::PeakCalling;
+my $peak_calling_report = Bio::EnsEMBL::Funcgen::Report::PeakCalling->new(
+  -species      => $species,
+  -registry     => $registry,
+  -output_fh    => \*STDOUT,
+  -logger       => $logger,
+  -peak_calling => $peak_calling,
 );
 
-print apply($peak_calling);
+$peak_calling_report->generate_report;
 
 $logger->finish_log;
-
-

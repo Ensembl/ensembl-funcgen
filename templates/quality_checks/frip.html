@@ -1,0 +1,164 @@
+[% WRAPPER "default_statistics_page_wrapper.html" %]
+
+  <style>
+    canvas{
+      -moz-user-select: none;
+      -webkit-user-select: none;
+      -ms-user-select: none;
+    }
+    .chart-container {
+      width: 70%;
+      margin-left: 40px;
+      margin-right: 40px;
+      margin-bottom: 40px;
+    }
+    .container {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+  </style>
+
+  <h2>Distribution of fraction of reads in peaks (frip) values</h2>
+
+  <h3>All frip values</h3>
+  
+  <div class="container-all"></div>
+  
+  <h3>Narrow peaks only</h3>
+  
+  <div class="container-narrow"></div>
+  
+  <h3>Broad peaks only</h3>
+  
+  <div class="container-broad"></div>
+  
+  <script>
+    function createConfig(container_class, datasets) {
+      var config = {
+        type: 'line',
+        data: {
+          labels: [
+            [% FOR label IN labels %]'[% label %]',[% END %]
+          ],
+          datasets: datasets
+        },
+        options: {
+          legend: {
+              position: 'bottom'
+          },
+          responsive: true,
+          title: {
+            display: false,
+            text: '[% title %]'
+          },
+          scales: {
+            xAxes: [{
+              ticks: {
+                min: 0,
+                stepSize: 0.1
+              },
+              scaleLabel: {
+                labelString: 'Frip',
+                display: true,
+              },
+              gridLines: {
+                display: true
+              }
+            }],
+            yAxes: [{
+              scaleLabel: {
+                labelString: 'Number of peak callings in bin',
+                display: true,
+              },
+              gridLines: {
+                display: true
+              },
+              ticks: {
+                min: 0,
+                max: [% distribution_y_axis_max %],
+                stepSize: 50
+              }
+            }]
+          }
+        }
+      };
+      var container = document.querySelector(container_class);
+      var div       = document.createElement('div');
+      
+      div.classList.add('chart-container');
+
+      var canvas = document.createElement('canvas');
+      div.appendChild(canvas);
+      container.appendChild(div);
+
+      var ctx = canvas.getContext('2d');
+
+      new Chart(ctx, config);
+      return
+    }
+
+  </script>
+
+  <script>
+
+    window.onload = function() {
+    
+      var datasets;
+      
+      datasets = [
+        [% FOR dataset_hash IN datasets %]
+        [% dataset = dataset_hash.all %]
+        {
+          label: '[% dataset.title %]',
+          backgroundColor: [% dataset.colour %],
+          borderColor:     [% dataset.colour %],
+          data: [
+            [% FOR count IN dataset.counts %]'[% count %]',[% END %]
+          ],
+          fill: false,
+        }, 
+        [% END %]
+      ];
+
+      createConfig('.container-all',    datasets);
+
+      datasets = [
+        [% FOR dataset_hash IN datasets %]
+        [% dataset = dataset_hash.narrow %]
+        {
+          label: '[% dataset.title %]',
+          backgroundColor: [% dataset.colour %],
+          borderColor:     [% dataset.colour %],
+          data: [
+            [% FOR count IN dataset.counts %]'[% count %]',[% END %]
+          ],
+          fill: false,
+        }, 
+        [% END %]
+      ];
+
+      createConfig('.container-narrow', datasets);
+
+      datasets = [
+        [% FOR dataset_hash IN datasets %]
+        [% dataset = dataset_hash.broad %]
+        {
+          label: '[% dataset.title %]',
+          backgroundColor: [% dataset.colour %],
+          borderColor:     [% dataset.colour %],
+          data: [
+            [% FOR count IN dataset.counts %]'[% count %]',[% END %]
+          ],
+          fill: false,
+        }, 
+        [% END %]
+      ];
+
+      createConfig('.container-broad', datasets);
+
+    };
+  </script>
+
+[% END %]

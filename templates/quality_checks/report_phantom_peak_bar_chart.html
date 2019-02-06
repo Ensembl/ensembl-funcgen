@@ -1,0 +1,337 @@
+[% WRAPPER "default_statistics_page_wrapper.html" %]
+
+  <style>
+    canvas{
+      -moz-user-select: none;
+      -webkit-user-select: none;
+      -ms-user-select: none;
+    }
+    .chart-container {
+      width: 70%;
+      margin-left: 40px;
+      margin-right: 40px;
+      margin-bottom: 40px;
+    }
+    .container {
+      display: flex;
+      flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+  </style>
+
+  <h2>Distribution of Phantom peak quality tags</h2>
+  
+  <div style="width:70%; clear:both;">
+      <canvas id="chart-area-pie-chart" />
+  </div>
+  
+  <h3>Legend</h3>
+  
+  <ul>
+    <li>Dark green: quality tag is 2</li>
+    <li>Green: quality tag is 1</li>
+    <li>Yellow: quality tag is 0</li>
+    <li>Orange: quality tag is -1</li>
+    <li>Red: quality tag is -2</li>
+    <li>Black: run failed</li>
+  </ul>
+
+  <p>
+    Within each category the bars refer to 
+  </p>
+  
+  <ol>
+    [% FOR dataset IN datasets %]
+    <li>[% dataset.title %]</li>
+    [% END %]
+  </ol>
+  
+  <p>
+    respectively.
+  </p>
+
+  <h2>Distribution of Phantom peaks NSC values</h2>
+
+  <h3>All NSC values</h3>
+  
+  <div class="container-all"></div>
+  
+  <h3>Narrow peaks only</h3>
+  
+  <div class="container-narrow"></div>
+  
+  <h3>Broad peaks only</h3>
+  
+  <div class="container-broad"></div>
+  
+  <script>
+    function createConfig(container_class, datasets) {
+      var config = {
+        type: 'line',
+        data: {
+          labels: [
+            [% FOR label IN labels %]'[% label %]',[% END %]
+          ],
+          datasets: datasets
+        },
+        options: {
+          legend: {
+              position: 'bottom'
+          },
+          responsive: true,
+          title: {
+            display: false,
+            text: '[% title %]'
+          },
+          scales: {
+            xAxes: [{
+              ticks: {
+                min: 0,
+                stepSize: 0.1
+              },
+              scaleLabel: {
+                labelString: 'NSC',
+                display: true,
+              },
+              gridLines: {
+                display: true
+              }
+            }],
+            yAxes: [{
+              scaleLabel: {
+                labelString: 'Number of peak callings in bin',
+                display: true,
+              },
+              gridLines: {
+                display: true
+              },
+              ticks: {
+                min: 0,
+                max: [% distribution_y_axis_max %],
+                stepSize: 50
+              }
+            }]
+          }
+        }
+      };
+      var container = document.querySelector(container_class);
+      var div       = document.createElement('div');
+      
+      div.classList.add('chart-container');
+
+      var canvas = document.createElement('canvas');
+      div.appendChild(canvas);
+      container.appendChild(div);
+
+      var ctx = canvas.getContext('2d');
+
+      new Chart(ctx, config);
+      return
+    }
+
+  </script>
+
+
+
+
+  <script>
+  function qualityTagBarChartData() {
+  
+    var barChartData = {
+      labels: [
+        'Narrow and Broad peak callings combined',
+        'Narrow peak callings',
+        'Broad peak callings',
+      ],
+      datasets: [
+        [% FOR dataset IN datasets %]
+        {
+          label: 'run_failed in [% dataset.title %]',
+          backgroundColor: window.chartColors.black,
+          stack: '[% dataset.title %]',
+          data: [
+            [% dataset.all.quality_tag_values.0    %],
+            [% dataset.narrow.quality_tag_values.0 %],
+            [% dataset.broad.quality_tag_values.0  %],
+          ]
+        },
+        {
+          label: '-2 in [% dataset.title %]',
+          backgroundColor: window.chartColors.red,
+          stack: '[% dataset.title %]',
+          data: [
+            [% dataset.all.quality_tag_values.1    %],
+            [% dataset.narrow.quality_tag_values.1 %],
+            [% dataset.broad.quality_tag_values.1  %],
+          ]
+        },
+        {
+          label: '-1 in [% dataset.title %]',
+          backgroundColor: window.chartColors.orange,
+          stack: '[% dataset.title %]',
+          data: [
+            [% dataset.all.quality_tag_values.2    %],
+            [% dataset.narrow.quality_tag_values.2 %],
+            [% dataset.broad.quality_tag_values.2  %],
+          ]
+        },
+        {
+          label: '0 in [% dataset.title %]',
+          backgroundColor: window.chartColors.yellow,
+          stack: '[% dataset.title %]',
+          data: [
+            [% dataset.all.quality_tag_values.3    %],
+            [% dataset.narrow.quality_tag_values.3 %],
+            [% dataset.broad.quality_tag_values.3  %],
+          ]
+        },
+        {
+          label: '1 in [% dataset.title %]',
+          backgroundColor: window.chartColors.green,
+          stack: '[% dataset.title %]',
+          data: [
+            [% dataset.all.quality_tag_values.4    %],
+            [% dataset.narrow.quality_tag_values.4 %],
+            [% dataset.broad.quality_tag_values.4  %],
+          ]
+        },
+        {
+          label: '2 in [% dataset.title %]',
+          backgroundColor: window.chartColors.darkgreen,
+          stack: '[% dataset.title %]',
+          data: [
+            [% dataset.all.quality_tag_values.5    %],
+            [% dataset.narrow.quality_tag_values.5 %],
+            [% dataset.broad.quality_tag_values.5  %],
+          ]
+        },
+        [% END %]
+      ]
+    };
+    return barChartData;
+  }
+  </script>
+
+
+  <script>
+
+    window.onload = function() {
+    
+      var datasets;
+      
+      datasets = [
+        [% FOR dataset_hash IN datasets %]
+        [% dataset = dataset_hash.all %]
+        {
+          label: '[% dataset.title %]',
+          backgroundColor: [% dataset.colour %],
+          borderColor:     [% dataset.colour %],
+          data: [
+            [% FOR count IN dataset.counts %]'[% count %]',[% END %]
+          ],
+          fill: false,
+        }, 
+        [% END %]
+      ];
+
+      createConfig('.container-all',    datasets);
+
+      datasets = [
+        [% FOR dataset_hash IN datasets %]
+        [% dataset = dataset_hash.narrow %]
+        {
+          label: '[% dataset.title %]',
+          backgroundColor: [% dataset.colour %],
+          borderColor:     [% dataset.colour %],
+          data: [
+            [% FOR count IN dataset.counts %]'[% count %]',[% END %]
+          ],
+          fill: false,
+        }, 
+        [% END %]
+      ];
+
+      createConfig('.container-narrow', datasets);
+
+      datasets = [
+        [% FOR dataset_hash IN datasets %]
+        [% dataset = dataset_hash.broad %]
+        {
+          label: '[% dataset.title %]',
+          backgroundColor: [% dataset.colour %],
+          borderColor:     [% dataset.colour %],
+          data: [
+            [% FOR count IN dataset.counts %]'[% count %]',[% END %]
+          ],
+          fill: false,
+        }, 
+        [% END %]
+      ];
+
+      createConfig('.container-broad', datasets);
+      
+      var bar_data = qualityTagBarChartData();
+      
+      ctx = document.getElementById("chart-area-pie-chart").getContext("2d");
+      
+      window.myBar = new Chart(ctx, {
+              type: 'bar',
+              data: bar_data,
+              options: {
+                legend: {
+                  display: false,
+                  position: 'bottom',
+                  labels: {
+                  }
+                },
+                title: {
+                  display: false,
+                  text: 'FastQC'
+                },
+                tooltips: {
+                  mode: 'index',
+                  intersect: false
+                },
+                responsive: true,
+                scales: {
+                  xAxes: [{
+                    stacked: true,
+
+                    scaleLabel: {
+                      labelString: '',
+                      display: false,
+                    },
+                  }],
+                  yAxes: [{
+                    stacked: true,
+                    
+                    scaleLabel: {
+                      labelString: 'Number of peak callings with this quality tag',
+                      display: true,
+                    },
+
+                  }]
+                }
+              }
+            });
+
+      
+      new Chart(ctx, qualityTagBarChartData(data, '[% dataset.all.title %]'));
+
+    };
+  </script>
+
+[% END %]
+
+
+
+
+
+
+
+
+
+
+
+

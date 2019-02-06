@@ -1,87 +1,84 @@
-package Bio::EnsEMBL::Funcgen::Template::PeakCallingDescription;
+package Bio::EnsEMBL::Funcgen::Report::PeakCalling;
 
 use strict;
+use base 'Bio::EnsEMBL::Funcgen::Report::Generator';
 
-use base qw( Exporter );
-use vars qw( @EXPORT_OK );
+sub _constructor_parameters {
+  my $self = shift;
+  return {
+    %{$self->SUPER::_constructor_parameters},
+    peak_calling => 'peak_calling',
+  };
+}
 
-our @EXPORT_OK = qw(
-  PEAK_CALLING_TXT_TEMPLATE
-  apply
-);
+sub peak_calling { return shift->_generic_get_or_set('peak_calling',     @_); }
 
-sub apply {
+sub template {
+  my $self = shift;
+  my $template = $self->template_dir . '/description.txt';
+  return $template;
+}
 
-  my $peak_calling = shift;
+sub template_dir {
+  my $self = shift;
+  my $template_dir = $self->template_base_dir . '/peak_calling_description';
+  return $template_dir;
+}
 
-  use Template;
-  my $tt = Template->new(
-    ABSOLUTE     => 1,
-    RELATIVE     => 1,
-  );
+sub _dynamic_content {
+
+  my $self = shift;
+
+  return {
+    peak_calling  => $self->peak_calling,
+  };
+}
+
+sub _in_template_functions {
+  my $self = shift;
+  return {
   
-  my $output;
-  
-  my $file = __FILE__;
-  use File::Basename qw( dirname basename );
-
-  my $template_dir = dirname($file) . '/../../../../../templates/peak_calling_description';
-  my $description_template = $template_dir . '/description.txt';
-  
-  use Number::Format qw( format_number );
-  
-  $tt->process(
-    $description_template, 
-    {
-      peak_calling  => $peak_calling,
-      
-      canonpath => sub {
-        my $path = shift;
-        return File::Spec->canonpath($path)
-      },
-      bool_to_yes_no => sub {
-        my $boolean = shift;
-        if ($boolean) {
-          return 'yes'
-        }
-        return 'no'
-      },
-      round_percent => sub {
-        my $number = shift;
-        return sprintf("%.2f", $number) . '%';
-      },
-      default_round => sub {
-        my $number = shift;
-        return sprintf("%.2f", $number);
-      },
-      scientific_notation => sub {
-        my $number = shift;
-        return sprintf("%.2e", $number);
-      },
-      format_number => sub {
-        my $number = shift;
-        if (! defined $number) {
-          return '-'
-        }
-        if ($number eq '') {
-          return '-'
-        }
-        #return 'foo';
-        return format_number($number);
-      },
-      fetch_deduplicated_partial_alignments => sub {
-        my $alignment = shift;
-        return fetch_deduplicated_partial_alignments($alignment);
-      },
-      summarise_read_file_experimental_configurations_in_alignment => sub {
-        my $alignment = shift;
-        return summarise_read_file_experimental_configurations_in_alignment($alignment);
-      },
+    %{$self->SUPER::_in_template_functions},
+    
+    canonpath => sub {
+      my $path = shift;
+      return File::Spec->canonpath($path)
     },
-    \$output
-  )
-      || die $tt->error;
-  return $output;
+    
+    bool_to_yes_no => sub {
+      my $boolean = shift;
+      if ($boolean) {
+        return 'yes'
+      }
+      return 'no'
+    },
+    
+    round_percent => sub {
+      my $number = shift;
+      return sprintf("%.2f", $number) . '%';
+    },
+    
+    default_round => sub {
+      my $number = shift;
+      return sprintf("%.2f", $number);
+    },
+    
+    scientific_notation => sub {
+      my $number = shift;
+      return sprintf("%.2e", $number);
+    },
+    
+    fetch_deduplicated_partial_alignments => sub {
+      my $alignment = shift;
+      return fetch_deduplicated_partial_alignments($alignment);
+    },
+    
+    summarise_read_file_experimental_configurations_in_alignment => sub {
+      my $alignment = shift;
+      return summarise_read_file_experimental_configurations_in_alignment($alignment);
+    },
+    
+  }
 }
 
 sub fetch_deduplicated_partial_alignments {
