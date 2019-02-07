@@ -35,8 +35,6 @@ my $probe_set_name                = '214727_at';
 my $regular_array_name = 'WholeGenome_4x44k_v1';
 my $regular_probe_name = 'A_24_P917810';
 
-my $probe_adaptor = Bio::EnsEMBL::Registry->get_adaptor('homo_sapiens', 'Funcgen', 'Probe');
-
 isa_ok( $probe_adaptor, 'Bio::EnsEMBL::Funcgen::DBSQL::ProbeAdaptor', 'Got a ProbeAdaptor');
 
 my $probe_from_probe_set_fetched_the_old_way 
