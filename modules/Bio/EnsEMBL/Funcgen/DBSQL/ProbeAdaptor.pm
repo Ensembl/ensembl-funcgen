@@ -80,45 +80,181 @@ sub new {
   Arg [1]    : string - name of array
   Arg [2]    : string - name of probe
   Arg [3]    : (optional) string - name of probeset
-  Example    : my $probe = $opa->fetch_by_array_probeset_probe('Array-1', 'Probe-1', 'ProbeSet-1');
+  Example    : 
+                my $probe_set_array_name          = 'HG-U133A';
+                my $probe_name_on_probe_set_array = '552:605;';
+                my $probe_set_name                = '214727_at';
+
+                my $probe
+                  = $probe_adaptor->fetch_by_array_probe_probeset_name(
+                  
+                    $probe_set_array_name, 
+                    $probe_name_on_probe_set_array, 
+                    $probe_set_name
+                  );
+
   Description: Returns a probe given a combination of array name, probeset and
-               probe name. This will uniquely define an Affy probe. Only one
-			   probe is ever returned.
+               probe name. This will uniquely define an Affy probe. Only one 
+               probe is ever returned.
   Returntype : Bio::EnsEMBL::Funcgen::Probe
   Exceptions : throws if array or probe name not defined
   Caller     : General
   Status     : At Risk - rename to fetch_by_probe_array_probeset_name?
 
 =cut
-
-#This does not currently capture on plate replicate probes with different names
-#Only returns the record corresponding to the given name and not the other replicate name
-
 sub fetch_by_array_probe_probeset_name {
-	my ($self, $array_name, $probe_name, $probeset_name) = @_;
 
-	if(! (defined $array_name && defined $probe_name)){
-	  throw('You must provide at least and array and probe name');
-	}
+  my $self          = shift;
+  my $array_name    = shift;
+  my $probe_name    = shift;
+  my $probeset_name = shift;
 
-	my $tables = 'probe p, array_chip ac, array a';
-	$tables .= ', probe_set ps' if defined $probeset_name;
+  if ($probeset_name) {
+    return 
+      $self->fetch_by_array_probe_set_probe_name(
+        $array_name, 
+        $probeset_name, 
+        $probe_name
+      );
+  }
+  return 
+    $self->fetch_by_array_probe_name(
+      $array_name, 
+      $probe_name
+    );
+}
 
-	my $sql = "SELECT distinct(p.probe_id) FROM $tables WHERE a.name=? and a.array_id=ac.array_id and ac.array_chip_id=p.array_chip_id and p.name=?";
-	$sql .= ' AND p.probe_set_id=ps.probe_set_id and ps.name=?' if defined $probeset_name;
-	my $sth = $self->db->dbc->prepare($sql);
-	$sth->bind_param(1, $array_name,    SQL_VARCHAR);
-	$sth->bind_param(2, $probe_name,    SQL_VARCHAR);
-	$sth->bind_param(3, $probeset_name, SQL_VARCHAR) if defined $probeset_name;
-	$sth->execute;
+=head2 fetch_by_array_probe_name
 
-	#This should only return one result
-	#The only possible way this would not return one result
-	#is if an identically named array(:probeset):probe which had a different sequence
-	#As Import array would separate these based on the sequence hash
-	my ($dbid) = $sth->fetchrow_array;
+  Arg [1]    : string - name of array
+  Arg [2]    : string - name of probe
 
-	return (defined $dbid) ? $self->fetch_by_dbID($dbid) : undef;
+  Example    : 
+                my $array_name = 'OneArray';
+                my $probe_name = 'PH_hs_0000014';
+
+                my $probe = $probe_adaptor->fetch_by_array_probe_name(
+                  $array_name,
+                  $probe_name
+                );
+
+  Description: Returns a probe given a combination of array and probe 
+               name. Use this to fetch probes from arrays that are not
+               organized as probe sets.
+               
+  Returntype : Bio::EnsEMBL::Funcgen::Probe
+  Caller     : General
+
+=cut
+sub fetch_by_array_probe_name {
+
+  my $self       = shift;
+  my $array_name = shift;
+  my $probe_name = shift;
+  
+  my $sql = "
+    select 
+      distinct(probe.probe_id) 
+    from 
+      probe 
+      join array_chip using (array_chip_id)
+      join array      using (array_id)
+    where
+      array.name         = ?
+      and probe.name     = ?
+  ";
+  
+  my $dbc = $self->db->dbc;
+  my $sth = $dbc->prepare($sql);
+  
+  $sth->bind_param(1, $array_name,    SQL_VARCHAR);
+  $sth->bind_param(2, $probe_name,    SQL_VARCHAR);
+
+  $sth->execute;
+  
+  my @probe_ids = $sth->fetchrow_array;
+  my $number_of_probes_found = @probe_ids;
+  my ($probe_id) = @probe_ids;
+  
+  if ($number_of_probes_found == 0) {
+    return;
+  }
+  if ($number_of_probes_found > 1) {
+    warn "Found $number_of_probes_found probes with name $probe_name on array ${array_name}. Returning the first one found.";
+  }
+  my $probe = $self->fetch_by_dbID($probe_id);
+  return $probe;
+}
+
+=head2 fetch_by_array_probe_set_probe_name
+
+  Arg [1]    : string - name of array
+  Arg [2]    : string - name of probe set
+  Arg [3]    : string - name of probe
+
+  Example    : 
+                my $probe_set_array_name          = 'HuGene-2_0-st-v1';
+                my $probe_name_on_probe_set_array = '2398055-16657436';
+                my $probe_set_name                = '16657436';
+
+                my $probe
+                  = $probe_adaptor->fetch_by_array_probe_set_probe_name(
+
+                      $probe_set_array_name, 
+                      $probe_set_name,
+                      $probe_name_on_probe_set_array, 
+                  );
+
+  Description: Returns a probe given a combination of array and probe 
+               name. Use this to fetch probes from arrays that are organized 
+               as probe sets.
+
+  Returntype : Bio::EnsEMBL::Funcgen::Probe
+  Caller     : General
+
+=cut
+sub fetch_by_array_probe_set_probe_name {
+
+  my $self           = shift;
+  my $array_name     = shift;
+  my $probe_set_name = shift;
+  my $probe_name     = shift;
+
+  my $sql = "
+    select 
+      distinct(probe.probe_id) 
+    from 
+      probe 
+      join array_chip using (array_chip_id)
+      join array      using (array_id)
+      join probe_set  using (probe_set_id)
+    where
+      array.name         = ?
+      and probe.name     = ?
+      and probe_set.name = ?
+  ";
+  
+  my $dbc = $self->db->dbc;
+  my $sth = $dbc->prepare($sql);
+  
+  $sth->bind_param(1, $array_name,     SQL_VARCHAR);
+  $sth->bind_param(2, $probe_name,     SQL_VARCHAR);
+  $sth->bind_param(3, $probe_set_name, SQL_VARCHAR);
+
+  $sth->execute;
+  
+  my @probe_ids = $sth->fetchrow_array;
+  my $number_of_probes_found = @probe_ids;
+  my ($probe_id) = @probe_ids;
+  
+  if ($number_of_probes_found == 0) {
+    return;
+  }
+  if ($number_of_probes_found > 1) {
+    warn "Found $number_of_probes_found probes with name $probe_name on array ${array_name}. Returning the first one found.";
+  }
+  my $probe = $self->fetch_by_dbID($probe_id);
+  return $probe;
 }
 
 sub fetch_all_by_sequence {
