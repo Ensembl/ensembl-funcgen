@@ -266,9 +266,9 @@ sub fetch_overlapping_Peak_by_Epigenome {
 
 sub get_overlapping_Peak_by_Epigenome {
     my ($self, $epigenome) = @_;
-    
+
     my $peak = $self->adaptor->_fetch_overlapping_Peak_by_Epigenome($self, $epigenome);
-    
+
     return $peak;
 }
 
@@ -388,7 +388,7 @@ sub infer_variation_consequence{
 
 =head2 stable_id
 
-  Example    : my $istable_id = $feature->stable_id();
+  Example    : my $stable_id = $feature->stable_id();
   Description: Getter for the stable_id attribute for this feature.
   Returntype : String
   Exceptions : None

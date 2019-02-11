@@ -79,9 +79,9 @@ sub new {
 
 sub name { return shift->{name}; }
 
-=head2 feature_type
+=head2 get_FeatureType
 
-  Example    : my $feature_type = $transcription_factor->feature_type();
+  Example    : my $feature_type = $transcription_factor->get_FeatureType();
   Description: Getter for the FeatureType
   Returntype : Bio::EnsEMBL::Funcgen::FeatureType
   Exceptions : None

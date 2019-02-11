@@ -62,9 +62,9 @@ use base qw( Bio::EnsEMBL::Funcgen::Storable );
 
 =head2 new
 
-  Arg [-name]       : Scalar - Name of matrix
-  Arg [-analysis]   : Bio::EnsEMBL::Analysis - analysis describing how the matrix was obtained
-  Arg [-source]     : String (Mandatory) - A string describing the source of the matrix, i.e. SELEX
+  Arg [-name]       : Scalar (mandatory) - Name of matrix
+  Arg [-source]     : String (mandatory) - A string describing the source of
+                      the matrix, i.e. SELEX
   Arg [-threshold]  : Scalar (optional) - Numeric minimum relative affinity for binding sites of this matrix
   Arg [-description]: Scalar (optional) - Descriptiom of matrix
   Example    : my $matrix = Bio::EnsEMBL::Funcgen::BindingMatrix->new(
@@ -296,7 +296,7 @@ sub get_element_by_position_nucleotide {
 sub get_elements_as_string {
     my ($self) = @_;
 
-    my $elements_string;
+    my $elements_string = '';
 
     my @nucleotide_order = ( 'A', 'C', 'G', 'T' );
 
@@ -468,7 +468,7 @@ sub sequence_similarity_score {
                     $binding_matrix->relative_sequence_similarity_score($seq);
   Description   : Calculates the similarity score of a given sequence relative to the
                   optimal site for the matrix.
-  Returns       : Integer, between 0 and 1
+  Returns       : Float, between 0 and 1
   Status        : At risk
 
 =cut
@@ -551,7 +551,6 @@ sub is_position_informative {
     }
     
     return $is_position_informative;
-
 }
 
 sub _max_position_sum {
