@@ -8,6 +8,12 @@ When a method is deprecated, a deprecation warning is thrown whenever the method
 The warning also contains instructions on replacing the deprecated method and when it will be removed.
 A year after deprecation (4 Ensembl releases), the method is removed from the API.
 
+### To be removed in EnsEMBL Release 101 ###
+
+ - Bio::EnsEMBL::Funcgen::**BindingMatrixFrequencies**::*binding_matrix*
+ - Bio::EnsEMBL::Funcgen::**MotifFeature**::*binding_matrix*
+ - Bio::EnsEMBL::Funcgen::**MotifFeature**::*fetch_all_overlapping_Peaks*
+ - Bio::EnsEMBL::Funcgen::**MotifFeature**::*fetch_overlapping_Peak_by_Epigenome*
 
 ### To be removed in EnsEMBL Release 99 ###
 

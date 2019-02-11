@@ -69,7 +69,7 @@ use warnings;
 
 use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
 use base qw(Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable);
 use constant SO_ACC => 'SO:0000235';
@@ -146,11 +146,30 @@ sub new_fast { return bless ($_[1], $_[0]); }
   Returntype : Bio::EnsEMBL::Funcgen::BindingMatrix
   Exceptions : None
   Caller     : General
-  Status     : At risk
+  Status     : Deprecated
 
 =cut
 
-sub binding_matrix{ return shift->{binding_matrix}; }
+sub binding_matrix {
+    my $self = shift;
+    deprecate('binding_matrix has been deprecated and will be removed in ' .
+        'release 101. Please use get_BindingMatrix instead.'
+    );
+    return $self->get_BindingMatrix;
+}
+
+=head2 get_BindingMatrix
+
+  Example    : my $binding_matrix = $bmf->get_BindingMatrix();
+  Description: Getter for the BindingMatrix object
+  Returntype : Bio::EnsEMBL::Funcgen::BindingMatrix
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub get_BindingMatrix { return shift->{binding_matrix}; }
 
 =head2 score
 
@@ -173,21 +192,41 @@ sub score { return shift->{score}; }
   Returntype : Arrayref of Bio::EnsEMBL::Funcgen::Peak objects
   Exceptions : None
   Caller     : Internal
-  Status     : At Risk
+  Status     : Deprecated
 
 =cut
 
 sub fetch_all_overlapping_Peaks {
     my $self = shift;
 
+    deprecate('fetch_all_overlapping_Peaks has been deprecated and will be ' .
+        'removed in release 101. Please use fetch_all_overlapping_Peaks instead'
+    );
+
+    return $self->get_all_overlapping_Peaks;
+}
+
+=head2 get_all_overlapping_Peaks
+
+  Example    : my $peaks = $motif_feature->get_all_overlapping_Peaks;
+  Description: Fetches all overlapping Peaks
+  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::Peak objects
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub get_all_overlapping_Peaks {
+    my $self = shift;
+
     if ( !$self->{overlapping_Peaks} ) {
         $self->{overlapping_Peaks} =
-          $self->adaptor()->_fetch_all_overlapping_Peaks($self);
+            $self->adaptor()->_fetch_all_overlapping_Peaks($self);
     }
 
     return $self->{overlapping_Peaks};
 }
-
 
 =head2 fetch_overlapping_Peak_by_Epigenome
   
@@ -198,11 +237,34 @@ sub fetch_all_overlapping_Peaks {
   Returntype : Bio::EnsEMBL::Funcgen::Peak
   Exceptions : None
   Caller     : Internal
-  Status     : At Risk
+  Status     : Deprecated
 
 =cut
 
 sub fetch_overlapping_Peak_by_Epigenome {
+    my ($self, $epigenome) = @_;
+
+    deprecate('fetch_overlapping_Peak_by_Epigenome has been deprecated and '
+        . 'will be removed in release 101. Please use '
+        . 'get_overlapping_Peak_by_Epigenome instead');
+
+    return $self->get_overlapping_Peak_by_Epigenome($epigenome);
+}
+
+=head2 get_overlapping_Peak_by_Epigenome
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::Epigenome object
+  Example    : my $peak =
+             :    $motif_feature->get_overlapping_Peak_by_Epigenome($epigenome);
+  Description: Gets the overlapping Peak for a particular Epigenome
+  Returntype : Bio::EnsEMBL::Funcgen::Peak
+  Exceptions : None
+  Caller     : Internal
+  Status     : At Risk
+
+=cut
+
+sub get_overlapping_Peak_by_Epigenome {
     my ($self, $epigenome) = @_;
     
     my $peak = $self->adaptor->_fetch_overlapping_Peak_by_Epigenome($self, $epigenome);
@@ -225,7 +287,7 @@ sub fetch_overlapping_Peak_by_Epigenome {
 
 sub get_all_Epigenomes_with_experimental_evidence {
   my $self = shift;
-  my $peaks = $self->fetch_all_overlapping_Peaks;
+  my $peaks = $self->get_all_overlapping_Peaks;
   my %epigenome_dbIDs;
   for my $peak (@{$peaks}){
     $epigenome_dbIDs{$peak->fetch_PeakCalling->epigenome_id} = 1;
@@ -253,9 +315,7 @@ sub is_position_informative {
   my $self     = shift;
   my $position = shift;
 
-  # Not just $self->strand here as that is always wrt feature slice strand
-  my $revcomp = ($self->seq_region_strand == -1) ? 1 : 0;
-  return $self->binding_matrix->is_position_informative($position, $revcomp);
+    return $self->get_BindingMatrix->is_position_informative($position);
 }
 
 
@@ -320,9 +380,7 @@ sub infer_variation_consequence{
     $ref_seq = reverse($ref_seq);
   }
 
-  my $bm     = $self->binding_matrix;
-  my $var_ra = $bm->relative_affinity($var_seq, $linear);
-  my $ref_ra = $bm->relative_affinity($ref_seq, $linear);
+  my $bm     = $self->get_BindingMatrix;
 
   return (defined $var_ra && defined $ref_ra ) ? (100 * ($var_ra - $ref_ra)) : undef;
 }
@@ -352,7 +410,7 @@ sub summary_as_hash {
   my $self = shift;
 
   return
-   {binding_matrix          => $self->binding_matrix->name,
+   {binding_matrix          => $self->get_BindingMatrix->name,
     start                   => $self->seq_region_start,
     end                     => $self->seq_region_end,
     strand                  => $self->strand,
