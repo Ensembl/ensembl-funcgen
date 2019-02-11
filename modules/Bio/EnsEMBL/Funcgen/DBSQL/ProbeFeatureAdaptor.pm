@@ -59,7 +59,6 @@ use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 use Bio::EnsEMBL::Funcgen::ProbeFeature;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor;#DBI sql_types import
-#use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;
 
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor);
 
@@ -140,30 +139,226 @@ sub fetch_all_by_probe_id {
 
 
 sub fetch_all_by_probeset_name {
-	my ($self, $probeset) = @_;
 
-	if (! $probeset) {
-	  throw('fetch_all_by_probeset requires a probeset name argument');
-	}
+  my $self           = shift;
+  my $probe_set_name = shift;
 
-    $self->_tables([['probe_set', 'ps'], [ 'probe',   'p' ]]);
-    
-	#Need to protect against SQL injection here due to text params
-	my $constraint = join " and ", (
-        "ps.name = ?",
-        "ps.probe_set_id = p.probe_set_id",
-        "pf.probe_id = p.probe_id",
-    );
-	$final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;
+  if (! $probe_set_name) {
+    throw('fetch_all_by_probeset requires a probe set name argument');
+  }
+  $self->_tables(
+    [
+      [ 'probe_set', 'ps' ],
+      [ 'probe',     'p'  ]
+    ]
+  );
+  
+  my $constraint = join ' and ', (
+    'ps.name         = ?',
+    'ps.probe_set_id = p.probe_set_id',
+    'pf.probe_id     = p.probe_id',
+  );
+  $final_clause = ' GROUP by pf.probe_feature_id ' . $final_clause;
 
-	$self->bind_param_generic_fetch($probeset,  SQL_VARCHAR);
-	my $features = $self->generic_fetch($constraint);
-    $self->reset_true_tables;
-	$final_clause = $true_final_clause;
+  $self->bind_param_generic_fetch(
+    $probe_set_name, 
+    SQL_VARCHAR
+  );
+  
+  my $features = $self->generic_fetch($constraint);
+  
+  $self->reset_true_tables;
+  $final_clause = $true_final_clause;
 
-	return $features;
+  return $features;
 }
 
+# Replacement for
+# https://github.com/Ensembl/ensembl-webcode/blob/release/95/modules/EnsEMBL/Web/Factory/Feature.pm#L154
+
+sub fetch_all_by_array_name_probe_name {
+
+  my $self       = shift;
+  my $array_name = shift;
+  my $probe_name = shift;
+
+  if (! $array_name) {
+    throw('fetch_all_by_array_name_probe_name requires a probe set name argument');
+  }
+  if (! $probe_name) {
+    throw('fetch_all_by_array_name_probe_name requires a probe name argument');
+  }
+  $self->_tables(
+    [
+      [ 'array',      'a'  ],
+      [ 'array_chip', 'ac' ],
+      [ 'probe',      'p'  ]
+    ]
+  );
+  
+  my $constraint = join ' and ', (
+    'a.name           = ?',
+    'p.name           = ?',
+    'a.array_id       = ac.array_id ',
+    'ac.array_chip_id = p.array_chip_id ',
+    'p.probe_id       = pf.probe_id',
+  );
+  $final_clause = ' GROUP by pf.probe_feature_id ' . $final_clause;
+
+  $self->bind_param_generic_fetch(
+    $array_name, 
+    SQL_VARCHAR
+  );
+  $self->bind_param_generic_fetch(
+    $probe_name, 
+    SQL_VARCHAR
+  );
+  
+  my $features = $self->generic_fetch($constraint);
+  
+  $self->reset_true_tables;
+  $final_clause = $true_final_clause;
+
+  return $features;
+}
+
+sub fetch_all_by_array_chip_name_probe_name {
+
+  my $self            = shift;
+  my $array_chip_name = shift;
+  my $probe_name      = shift;
+
+  if (! $array_chip_name) {
+    throw('fetch_all_by_array_chip_name_probe_name requires an array chip name argument');
+  }
+  if (! $probe_name) {
+    throw('fetch_all_by_array_chip_name_probe_name requires a probe name argument');
+  }
+  $self->_tables(
+    [
+      [ 'array_chip', 'ac' ],
+      [ 'probe',      'p'  ]
+    ]
+  );
+  
+  my $constraint = join ' and ', (
+    'ac.name          = ?',
+    'p.name           = ?',
+    'ac.array_chip_id = p.array_chip_id ',
+    'p.probe_id       = pf.probe_id',
+  );
+  $final_clause = ' GROUP by pf.probe_feature_id ' . $final_clause;
+
+  $self->bind_param_generic_fetch(
+    $array_chip_name, 
+    SQL_VARCHAR
+  );
+  $self->bind_param_generic_fetch(
+    $probe_name, 
+    SQL_VARCHAR
+  );
+  
+  my $features = $self->generic_fetch($constraint);
+  
+  $self->reset_true_tables;
+  $final_clause = $true_final_clause;
+
+  return $features;
+}
+
+sub fetch_all_by_array_name_probeset_name {
+
+  my $self            = shift;
+  my $array_name      = shift;
+  my $probe_set_name  = shift;
+
+  if (! $array_name) {
+    throw('fetch_all_by_probeset requires a probe set name argument');
+  }
+  if (! $probe_set_name) {
+    throw('fetch_all_by_probeset requires a probe set name argument');
+  }
+  $self->_tables(
+    [
+      [ 'array',      'a'  ],
+      [ 'array_chip', 'ac' ],
+      [ 'probe_set',  'ps' ],
+      [ 'probe',      'p'  ]
+    ]
+  );
+  
+  my $constraint = join ' and ', (
+    'a.name           = ?',
+    'ps.name          = ?',
+    'a.array_id       = ac.array_id ',
+    'ac.array_chip_id = ps.array_chip_id ',
+    'ps.probe_set_id  = p.probe_set_id',
+    'pf.probe_id      = p.probe_id',
+  );
+  $final_clause = ' GROUP by pf.probe_feature_id ' . $final_clause;
+
+  $self->bind_param_generic_fetch(
+    $array_name, 
+    SQL_VARCHAR
+  );
+  $self->bind_param_generic_fetch(
+    $probe_set_name, 
+    SQL_VARCHAR
+  );
+  
+  my $features = $self->generic_fetch($constraint);
+  
+  $self->reset_true_tables;
+  $final_clause = $true_final_clause;
+
+  return $features;
+}
+
+sub fetch_all_by_array_chip_name_probeset_name {
+
+  my $self            = shift;
+  my $array_chip_name = shift;
+  my $probe_set_name  = shift;
+
+  if (! $array_chip_name) {
+    throw('fetch_all_by_array_chip_name_probeset_name requires an array chip name argument');
+  }
+  if (! $probe_set_name) {
+    throw('fetch_all_by_array_chip_name_probeset_name requires a probe set name argument');
+  }
+  $self->_tables(
+    [
+      [ 'array_chip', 'ac' ],
+      [ 'probe_set',  'ps' ],
+      [ 'probe',      'p'  ]
+    ]
+  );
+  
+  my $constraint = join ' and ', (
+    'ac.name          = ?',
+    'ps.name          = ?',
+    'ac.array_chip_id = ps.array_chip_id ',
+    'ps.probe_set_id  = p.probe_set_id',
+    'pf.probe_id      = p.probe_id',
+  );
+  $final_clause = ' GROUP by pf.probe_feature_id ' . $final_clause;
+
+  $self->bind_param_generic_fetch(
+    $array_chip_name, 
+    SQL_VARCHAR
+  );
+  $self->bind_param_generic_fetch(
+    $probe_set_name, 
+    SQL_VARCHAR
+  );
+  
+  my $features = $self->generic_fetch($constraint);
+  
+  $self->reset_true_tables;
+  $final_clause = $true_final_clause;
+
+  return $features;
+}
 
 =head2 fetch_all_by_ProbeSet
 
@@ -174,24 +369,31 @@ sub fetch_all_by_probeset_name {
   Returntype : ARRAYREF of Bio::EnsEMBL::Funcgen::ProbeFeature objects
   Exceptions : Throws if no probeset argument
   Caller     : General
-  Status     : At Risk - add vendor/class to this?
 
 =cut
 
 sub fetch_all_by_ProbeSet {
-	my ($self, $pset) = @_;
-	$self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ProbeSet', $pset);
 
-    $self->_tables([[ 'probe',   'p' ]]);
+  my $self      = shift;
+  my $probe_set = shift;
+  
+  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::ProbeSet', $probe_set);
 
-	my $constraint = ' pf.probe_id = p.probe_id and p.probe_set_id = ' . $pset->dbID;
-	$final_clause = ' GROUP by pf.probe_feature_id '.$final_clause;
+  $self->_tables([[ 'probe', 'p' ]]);
 
-	my $features = $self->generic_fetch($constraint);
-    $self->reset_true_tables;
-	$final_clause = $true_final_clause;
+  my $constraint = ' pf.probe_id = p.probe_id and p.probe_set_id = ? ';
+  $final_clause = ' GROUP by pf.probe_feature_id ' . $final_clause;
 
-	return $features;
+  $self->bind_param_generic_fetch(
+    $probe_set->dbID, 
+    SQL_INTEGER
+  );
+  my $features = $self->generic_fetch($constraint);
+  
+  $self->reset_true_tables;
+  $final_clause = $true_final_clause;
+  
+  return $features;
 }
 
 =head2 fetch_all_by_Slice_array_vendor
