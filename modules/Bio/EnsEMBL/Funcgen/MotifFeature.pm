@@ -387,6 +387,8 @@ sub infer_variation_consequence{
   }
 
   my $bm     = $self->get_BindingMatrix;
+  my $var_ra = $bm->relative_sequence_similarity_score($var_seq, $linear);
+  my $ref_ra = $bm->relative_sequence_similarity_score($ref_seq, $linear);
 
   return (defined $var_ra && defined $ref_ra ) ? (100 * ($var_ra - $ref_ra)) : undef;
 }
