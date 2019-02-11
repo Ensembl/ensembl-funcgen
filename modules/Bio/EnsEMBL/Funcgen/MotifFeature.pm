@@ -107,19 +107,25 @@ use constant SO_ACC => 'SO:0000235';
 =cut
 
 sub new {
-  my $caller = shift;
-  my $class  = ref($caller) || $caller;
-  my $self   = $class->SUPER::new(@_);
+    my $caller = shift;
+    my $class  = ref($caller) || $caller;
+    my $self   = $class->SUPER::new(@_);
 
-  ($self->{score}, $self->{binding_matrix}, $self->{stable_id})
-    = rearrange(['SCORE', 'BINDING_MATRIX', 'STABLE_ID'], @_);
+    my ($score, $binding_matrix, $stable_id) =
+        rearrange([ 'SCORE', 'BINDING_MATRIX', 'STABLE_ID' ], @_);
 
-  assert_ref($self->{binding_matrix}, 'Bio::EnsEMBL::Funcgen::BindingMatrix');
+    throw('Must supply a -score parameter') if !defined $score;
+    throw('Must supply a -binding_matrix parameter') if !defined $binding_matrix;
 
-  $self->{overlapping_Peaks} = undef;
-  $self->{overlapping_RegulatoryFeature} = undef;
+    assert_ref($binding_matrix, 'Bio::EnsEMBL::Funcgen::BindingMatrix');
 
-  return $self;
+    $self->{score}                         = $score;
+    $self->{binding_matrix}                = $binding_matrix;
+    $self->{stable_id}                     = $stable_id if $stable_id;
+    $self->{overlapping_Peaks}             = undef;
+    $self->{overlapping_RegulatoryFeature} = undef;
+
+    return $self;
 }
 
 
