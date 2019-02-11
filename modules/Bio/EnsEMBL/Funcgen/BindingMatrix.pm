@@ -127,7 +127,7 @@ sub new {
 =head2 name
 
   Example    : my $name = $matrix->name();
-  Description: Getter for the name attribute
+  Description: Getter/Setter for the name attribute
   Returntype : String
   Exceptions : None
   Caller     : General
@@ -135,7 +135,11 @@ sub new {
 
 =cut
 
-sub name { return shift->{name}; }
+sub name {
+    my $self = shift;
+    $self->{name} = shift if @_;
+    return $self->{name};
+}
 
 =head2 unit
 
