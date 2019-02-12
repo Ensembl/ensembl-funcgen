@@ -193,6 +193,9 @@ sub run {
   my $error_message;
 
   my $TIMEOUT_IN_SECONDS = 10 * 3600;
+  
+  my $childPid;
+  
   eval {
       local $SIG{ALRM} = sub { die "alarm" };
       
@@ -202,12 +205,17 @@ sub run {
       };
       
       alarm($TIMEOUT_IN_SECONDS);
+      
+      if ($childPid = fork()) {
+        wait();
+      } else {
+        _run_peak_caller(
+            -peak_caller => $peak_runnable, 
+            -debug       => $self->debug,
+            @max_peaks
+        );
+      }
 
-      _run_peak_caller(
-          -peak_caller => $peak_runnable, 
-          -debug       => $self->debug,
-          @max_peaks
-      );
       $peak_calling_succeeded = 1;
       alarm(0);
       
@@ -234,10 +242,17 @@ sub run {
       
       my $killed_for_timeout = $@ =~ /alarm/;
       
-      if (! $killed_for_timeout) {
-        $self->throw($@);
+      if ($killed_for_timeout) {
+        kill 9, $childPid;
+        wait;
+        $error_message = "Peak calling job " . $self->input_job->dbID . " timed out after $TIMEOUT_IN_SECONDS seconds.";
       }
-      $error_message = "Peak calling job " . $self->input_job->dbID . " timed out after $TIMEOUT_IN_SECONDS seconds.";
+      
+      if (! $killed_for_timeout) {
+        #$self->throw($@);
+        $error_message = "Peak calling job " . $self->input_job->dbID . " failed with error message: $@";
+      }
+      print "\n\n------------------------------------------->$error_message";
       $self->warning($error_message);
   }
 

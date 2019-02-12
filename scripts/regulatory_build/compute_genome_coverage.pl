@@ -29,8 +29,9 @@ limitations under the License.
 
   A script to compute the number of bases covered by regulatory features both in total and by feature type
 
-  perl scripts/regulatory_build/compute_genome_coverage.pl --registry /homes/mnuhn/work_dir_regbuild_script/lib/ensembl-funcgen/registry.pm --species homo_sapiens --tempdir foobar
-  perl scripts/regulatory_build/compute_genome_coverage.pl --registry /homes/mnuhn/work_dir_regbuild_script/lib/ensembl-funcgen/registry.pm --species mus_musculus --tempdir foobar
+  perl scripts/regulatory_build/compute_genome_coverage.pl --species homo_sapiens --registry /homes/mnuhn/work_dir_regbuild_testrun/lib/ensembl-funcgen/registry.with_previous_version.human_regbuild_testdb12.pm --genome_coverage_report genome_coverage_report_2.pl
+  
+  perl scripts/regulatory_build/compute_genome_coverage.pl --registry /homes/mnuhn/work_dir_regbuild_script/lib/ensembl-funcgen/registry.pm --species mus_musculus --genome_coverage_report foobar
 
 =cut
 
@@ -53,7 +54,7 @@ GetOptions (
     \%options,
     "species|s=s",
     "registry|r=s",
-    "tempdir|t=s",
+    "genome_coverage_report|t=s",
  );
 
 use Hash::Util qw( lock_keys );
@@ -61,7 +62,15 @@ lock_keys( %options );
 
 my $species  = $options{'species'};
 my $registry = $options{'registry'};
-my $tempdir  = $options{'tempdir'};
+my $genome_coverage_report  = $options{'genome_coverage_report'};
+
+use File::Basename qw( dirname basename );
+my $full_path = dirname($genome_coverage_report);
+
+use File::Path qw(make_path remove_tree);
+
+print("Creating directory $full_path");
+make_path($full_path);
 
 Bio::EnsEMBL::Registry->load_all($registry);
 
@@ -140,5 +149,31 @@ foreach my $feature_type (REGULATORY_FEATURE_TYPES) {
   print "$feature_type,$statistics{$feature_type}{total_overlap_size},$statistics{$feature_type}{percent_overlap}\n";
 
 }
+
+my $report = {
+    regulatory_build => {
+        total_overlap_size => $statistics{total_overlap_size},
+        percent_overlap    => $statistics{percent_overlap}
+    }
+};
+
+foreach my $feature_type (REGULATORY_FEATURE_TYPES) {
+    $report->{$feature_type} = {
+        total_overlap_size => $statistics{$feature_type}{total_overlap_size},
+        percent_overlap    => $statistics{$feature_type}{percent_overlap}
+    };
+};
+
+print (Dumper($report));
+
+open my $report_fh, '>', $genome_coverage_report or die("Can't write to ${genome_coverage_report}!");
+
+$report_fh->print(
+    Dumper($report)
+);
+
+$report_fh->close;
+
+
 
 $logger->finish_log;

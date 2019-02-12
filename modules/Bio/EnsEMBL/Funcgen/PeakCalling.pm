@@ -100,6 +100,8 @@ sub _constructor_parameters {
     control_alignment_id => 'control_alignment_id',
     run_failed     => 'run_failed',
     error_message  => 'error_message',
+    used_for_regulatory_build => 'used_for_regulatory_build',
+    
   };
 }
 
@@ -127,6 +129,9 @@ sub control_alignment_id { return shift->_generic_get_or_set('control_alignment_
 
 sub run_failed           { return shift->_generic_get_or_set('run_failed',    @_); }
 sub error_message        { return shift->_generic_get_or_set('error_message', @_); }
+
+sub used_for_regulatory_build { return shift->_generic_get_or_set('used_for_regulatory_build', @_); }
+
 
 =head2 display_label
 

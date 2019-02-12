@@ -130,7 +130,40 @@ if ($total_number_of_peak_callings_included == 0) {
   die("No peak callings were included for segmentation!");
 }
 
-$logger->info("The number of peak callings included in the segmentation are: $total_number_of_peak_callings_included");
+#$logger->info("The number of peak callings included in the segmentation are: $total_number_of_peak_callings_included");
+
+$funcgen_dba->dbc->do('
+
+  delete from segmentation where segmentation_id in (
+    select 
+      segmentation_cell_tables.segmentation_id 
+    from 
+      segmentation_cell_tables 
+    group by 
+      segmentation_id 
+    having 
+      count(distinct segmentation_cell_tables.epigenome_id) <= 3
+  )
+
+');
+
+$funcgen_dba->dbc->do('
+
+  delete from segmentation_cell_tables where segmentation_id in (
+    select id from (
+      select 
+        distinct segmentation_id as id 
+      from 
+        segmentation_cell_tables 
+        left join segmentation using (segmentation_id) 
+      where 
+        segmentation.segmentation_id is null
+    ) as a 
+  )
+
+');
+
+
 
 $logger->finish_log;
 
@@ -255,11 +288,26 @@ sub create_segmentation_cell_table {
             SEGMENTATION_FEATURE_TYPE:
             foreach my $segmentation_feature_type (@$segmentation_feature_type_objects) {
             
-                my $peak_callings = $peak_calling_adaptor
-                    ->fetch_all_by_Epigenome_FeatureType(
-                        $epigenome, 
-                        $segmentation_feature_type
-                    );
+#                 my $peak_callings = $peak_calling_adaptor
+#                     ->fetch_all_by_Epigenome_FeatureType(
+#                         $epigenome, 
+#                         $segmentation_feature_type
+#                     );
+
+                my $peak_callings = [
+                  grep { 
+                      $_->used_for_regulatory_build 
+                  } 
+                    @{
+                      $peak_calling_adaptor
+                      ->fetch_all_by_Epigenome_FeatureType(
+                          $epigenome, 
+                          $segmentation_feature_type
+                      )
+                    }
+                ];
+
+
                 if (@$peak_callings == 0) {
                     #print "No peak calling for ".$epigenome -> name.", ".$segmentation_feature_type->name."\n";
                     next SEGMENTATION_FEATURE_TYPE;

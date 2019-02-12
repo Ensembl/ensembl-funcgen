@@ -141,7 +141,7 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -max_retry_count => 1,
             -parameters => {
-                cmd => qq(timeout 12h argenrich_with_labels_and_rerunnable.R --args plot=TRUE outdir=#chance_tempdir# )
+                cmd => qq(timeout --kill-after=0 12h argenrich_with_labels_and_rerunnable.R --args plot=TRUE outdir=#chance_tempdir# )
                   . qq(    ipsz=#expr( #read_count#->{"signal"}            )expr# )
                   . qq( inputsz=#expr( #read_count#->{"control"}           )expr# )
                   . qq(      ip=#chance_tempdir#/#expr( #file#->{"signal"}        )expr# )
@@ -153,7 +153,10 @@ sub pipeline_analyses {
                   #
                   . qq( outfile=#argenrich_outfile#),
                   return_codes_2_branches => {
-                    1 => 2
+                    1   => 2,
+                    
+                    # "Unable to iterate to region within BAM."
+                    124 => 2
                   },
             },
             -flow_into => {

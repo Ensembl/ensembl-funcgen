@@ -47,8 +47,10 @@ if ($error_indicated) {
 
 if ($error_indicated && $error_is_non_issue) {
     $logger->info("Ok: The error message indicates that this is not an issue.\n");
-} else {
-    $logger->info("Not ok: The error message indicates that this might be an issue.\n");
+}
+
+if ($error_indicated && !$error_is_non_issue) {
+  $logger->info("Not ok: The error message indicates that this might be an issue.\n");
 }
 
 my $ChromHMM_exited_ok = 

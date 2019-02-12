@@ -119,9 +119,9 @@ sub pipeline_analyses {
             cmd => 
                 q(
                   generate_segmentation_report.pl \
-                    --species          #species# \
-                    --registry         #reg_conf# \
-                    --output_directory #reports_dir#/#species#
+                    --species     #species# \
+                    --registry    #reg_conf# \
+                    --output_file #reports_dir#/#species#/segmentation.html
                 )
           },
       },

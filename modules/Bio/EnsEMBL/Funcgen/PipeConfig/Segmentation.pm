@@ -39,6 +39,17 @@ sub beekeeper_extra_cmdline_options {
     return '-reg_conf ' . $self->o('reg_conf') . ' -keep_alive -can_respecialize 1';
 }
 
+sub default_options {
+    my ($self) = @_;
+    return {
+        %{ $self->SUPER::default_options() },
+        
+        regulatory_build_name        => 'The Ensembl regulatory build',
+        regulatory_build_description => 'The Ensembl regulatory build',
+
+    };
+}
+
 sub pipeline_wide_parameters {
   my $self = shift;
   
@@ -57,9 +68,12 @@ sub pipeline_wide_parameters {
     reference_data_root_dir  => $self->o('reference_data_root_dir'),
     reg_conf                 => $self->o('reg_conf'),
     #ChromHMM                 => '/nfs/production/panda/ensembl/funcgen/ChromHMM/ChromHMM.jar',
-    ChromHMM                 => '/nfs/production/panda/ensembl/funcgen/ChromHMM/1.17/ChromHMM/ChromHMM.jar',
-    # java -cp /nfs/production/panda/ensembl/funcgen/ChromHMM/batik-1.10/lib/batik-all-1.10.jar:/nfs/production/panda/ensembl/funcgen/ChromHMM/batik-1.10/lib/batik-all-1.10.jar:/nfs/production/panda/ensembl/funcgen/ChromHMM/htsjdk/build/libs/:/nfs/production/panda/ensembl/funcgen/ChromHMM/jheatchart-0.6/dist/jheatchart-0.52/jheatchart-0.52.jar:/nfs/production/panda/ensembl/funcgen/ChromHMM/ChromHMM/ edu.mit.compbio.ChromHMM.ChromHMM
+    ChromHMM                 => '/nfs/production/panda/ensembl/funcgen/ChromHMM/1.17/ChromHMM/ChromHMM.modified.jar',
     
+    
+#     /nfs/production/panda/ensembl/funcgen/ChromHMM/1.17/ChromHMM 
+#     
+#     java -jar /nfs/production/panda/ensembl/funcgen/ChromHMM/1.17/ChromHMM/ChromHMM.modified.jar
     #export DISPLAY= ;              java -Xmx30000m              -cp /nfs/production/panda/ensembl/funcgen/ChromHMM/batik-1.10/lib/batik-all-1.10.jar:/nfs/production/panda/ensembl/funcgen/ChromHMM/batik-1.10/lib/batik-all-1.10.jar:/nfs/production/panda/ensembl/funcgen/ChromHMM/htsjdk/build/libs/:/nfs/production/panda/ensembl/funcgen/ChromHMM/jheatchart-0.6/dist/jheatchart-0.52/jheatchart-0.52.jar:/nfs/production/panda/ensembl/funcgen/ChromHMM/ChromHMM/ edu.mit.compbio.ChromHMM.ChromHMM              LearnModel                   -r 300 -p 12                 -l #chromosome_length_file#  #binarized_bam_dir#/#superclass#/#class#/          #learn_model_directory#      25                           #assembly#                  
   };
 }
@@ -103,7 +117,22 @@ sub pipeline_analyses {
             tempdir => '#tempdir_segmentation#/#species#/',
           },
           -flow_into => {
-            2 => 'create_cell_tables',
+            2 => 'select_peak_callings_to_use_in_regulatory_build',
+          },
+      },
+      {   -logic_name => 'select_peak_callings_to_use_in_regulatory_build',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -parameters => {
+              cmd => 
+                  q( 
+                    select_peak_callings_to_use_in_regulatory_build.pl \
+                        --registry #reg_conf# \
+                        --species #species# \
+                        --dry_run 0
+                  )
+          },
+          -flow_into => { 
+            MAIN => 'create_cell_tables',
           },
       },
       {   -logic_name => 'create_cell_tables',
@@ -169,7 +198,7 @@ sub pipeline_analyses {
       },
       {   -logic_name => 'make_segmentation_dir',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-          -analysis_capacity => 0,
+          #-analysis_capacity => ,
           #-module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
           -parameters => {
               cmd => 

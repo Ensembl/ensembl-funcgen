@@ -277,7 +277,7 @@ sub pipeline_analyses {
                 'load_probe_feature_to_transcript_rejections',
               ]
           },
-          -rc_name     => '4Gb_job',
+          -rc_name     => '16Gb_job',
       },
         {   -logic_name  => 'load_probe_feature_to_transcript_rejections',
             -rc_name     => '4Gb_job',
@@ -486,14 +486,6 @@ sub pipeline_analyses {
             },
         },
     ]
-}
-
-sub resource_classes {
-    my ($self) = @_;
-    return {
-        %{$self->SUPER::resource_classes},
-        'parallel_sort'     => { 'LSF' => '-q production-rh7 -n 16 -M32000 -R"select[mem>32000] rusage[mem=32000]"' },
-    };
 }
 
 1;

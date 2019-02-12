@@ -32,7 +32,7 @@ sub pipeline_analyses {
               tempdir => '#tempdir_peak_calling#/#species#/peak_calling'
             },
             -analysis_capacity => 50,
-            -rc_name     => '8Gb_job',
+            -rc_name     => '32Gb_job',
             -flow_into   => {
                2 => 'store_peaks',
             },
