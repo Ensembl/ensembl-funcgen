@@ -13,11 +13,11 @@
 -- limitations under the License.
 
 /**
-@header patch_95_96_b.sql - Changed to text
+@header patch_96_97_b.sql - Changed to text
 @desc 	Changed to text
 */
 
 alter table regulatory_build change column name name text;
 
 -- patch identifier
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_b.sql|Changed to text');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_b.sql|Changed to text');
