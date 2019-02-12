@@ -667,7 +667,8 @@ CREATE TABLE `binding_matrix` (
   `source` varchar(20) NOT NULL,
   `stable_id` varchar(128) NOT NULL,
   PRIMARY KEY (`binding_matrix_id`),
-  UNIQUE KEY `name_idx` (`name`)
+  UNIQUE KEY `name_idx` (`name`),
+  UNIQUE KEY `stable_id_idx` (`stable_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 /**
