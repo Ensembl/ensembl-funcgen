@@ -262,9 +262,10 @@ CREATE TABLE `regulatory_activity` (
 */
 
 DROP TABLE IF EXISTS `regulatory_build`;
+
 CREATE TABLE `regulatory_build` (
   `regulatory_build_id` int(4) unsigned NOT NULL AUTO_INCREMENT,
-  `name` varchar(45) NOT NULL,
+  `name` text,
   `release_version` int(11) DEFAULT NULL,
   `description` text DEFAULT NULL,
   `version` varchar(50) DEFAULT NULL,
@@ -476,6 +477,7 @@ CREATE TABLE `peak_calling` (
   `run_failed` tinyint(1) DEFAULT '0',
   `error_message` text,
   `control_alignment_id` int(23) unsigned DEFAULT NULL,
+  `used_for_regulatory_build` tinyint(1) DEFAULT '1',
   PRIMARY KEY (`peak_calling_id`),
   UNIQUE KEY `peak_calling_id_idx` (`peak_calling_id`),
   UNIQUE KEY `peak_calling_name_unique` (`name`)
@@ -1663,14 +1665,10 @@ CREATE TABLE `meta` (
 INSERT INTO meta (meta_key, meta_value, species_id) VALUES ('schema_type', 'funcgen', NULL);
 
 -- Update and remove these for each release to avoid erroneous patching
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '96');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_a.sql|schema_version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_b.sql|changed data type for regulatory build statistics');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_c.sql|make unique probe_id column from probe table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_d.sql|add ReadFile to the enum of the ensembl_object_type');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_e.sql|Add description and release_version columns to regulatory_build table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_f.sql|Modify binding_matrix_table');
-
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '97');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_b.sql|Changed to text');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_c.sql|Added flag');
 
 /**
 @table meta_coord
