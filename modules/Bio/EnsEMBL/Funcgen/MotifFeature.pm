@@ -307,7 +307,7 @@ sub get_all_Epigenomes_with_experimental_evidence {
 
 =head2 is_position_informative
 
-  Arg [1]    : Scalar - 1-based integer position within the motif wrt +ve seq_region_strand.
+  Arg [1]    : Scalar - 1-based integer position within the motif
   Example    : $mf->is_position_informative($pos);
   Description: Indicates if a given position within the motif is highly informative
   Returntype : Boolean
@@ -318,8 +318,8 @@ sub get_all_Epigenomes_with_experimental_evidence {
 =cut
 
 sub is_position_informative {
-  my $self     = shift;
-  my $position = shift;
+    my $self     = shift;
+    my $position = shift;
 
     return $self->get_BindingMatrix->is_position_informative($position);
 }
