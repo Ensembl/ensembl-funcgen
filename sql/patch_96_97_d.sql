@@ -29,6 +29,8 @@ UPDATE mirna_target_feature mtf
   JOIN object_xref ox ON ox.ensembl_id = mtf.mirna_target_feature_id AND
        ensembl_object_type = 'MirnaTargetFeature' JOIN xref USING (xref_id)
   SET gene_stable_id = dbprimary_acc;
+DELETE object_xref, xref FROM object_xref JOIN xref USING (xref_id) WHERE ensembl_object_type='MirnaTargetFeature';
+ALTER TABLE `mirna_target_feature` ADD UNIQUE KEY `unique_idx` (`accession`,`gene_stable_id`,`seq_region_start`,`seq_region_end`);
 
 -- patch identifier
 
