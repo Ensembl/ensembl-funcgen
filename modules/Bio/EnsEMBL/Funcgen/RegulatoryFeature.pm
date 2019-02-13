@@ -74,10 +74,6 @@ use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
 use base qw( Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable );
 
-sub feature_so_acc {
-  my $self = shift;
-  return $self->get_FeatureType->so_accession;
-}
 
 =head2 new
 
@@ -812,6 +808,39 @@ sub bound_start { return $_[0]->start - $_[0]->bound_start_length; }
 
 =cut
 sub bound_end { return $_[0]->end + $_[0]->bound_end_length; }
+
+
+=head2 feature_so_acc
+
+  Example       : print $feature->feature_so_acc;
+  Description   : Returns the sequence ontology accession for this type of
+                  regulatory feature.
+  Returntype    : String
+  Status        : At risk
+
+=cut
+
+sub feature_so_acc {
+  my $self = shift;
+  return $self->get_FeatureType->so_accession;
+}
+
+
+=head2 feature_so_term
+
+  Example       : print $feature->feature_so_term;
+  Description   : Returns the sequence ontology term for this type of
+                  regulatory feature.
+  Returntype    : String
+  Status        : At risk
+
+=cut
+
+sub feature_so_term {
+  my $self = shift;
+  return $self->get_FeatureType->so_term;
+}
+
 
 =head2 summary_as_hash
 
