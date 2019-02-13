@@ -110,20 +110,24 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($feature_type, $analysis, $gene_stable_id, $accession, $evidence,  $method, $supporting_information ) = 
-    rearrange (['FEATURE_TYPE','ANALYSIS', 'GENE_STABLE_ID','ACCESSION', 'EVIDENCE', 'METHOD', 'SUPPORTING_INFORMATION'], @_);
+    my ($feature_type, $analysis, $gene_stable_id, $accession, $evidence,
+        $method, $supporting_information, $display_label) =
+        rearrange([ 'FEATURE_TYPE', 'ANALYSIS', 'GENE_STABLE_ID', 'ACCESSION',
+                    'EVIDENCE', 'METHOD', 'SUPPORTING_INFORMATION',
+                    'DISPLAY_LABEL' ], @_);
 
   for my $var ($feature_type, $analysis, $gene_stable_id, $accession, $evidence,  $method, $supporting_information) {
-    throw "Mandatory parameter missing" unless defined($var) and length $var;
+    throw 'Must supply a mandatory parameter' unless defined($var) and length $var;
   }
 
   $self->{feature_type}           = $feature_type,
   $self->{analysis}               = $analysis,
-  $self->{gene}                   = $gene_stable_id,
+  $self->{gene_stable_id}         = $gene_stable_id,
   $self->{accession}              = $accession;
   $self->{evidence}               = $evidence;
   $self->{method}                 = $method;
   $self->{supporting_information} = $supporting_information;
+  $self->{display_label}          = $display_label;
 
   return $self;
 }
