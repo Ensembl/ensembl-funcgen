@@ -36,6 +36,7 @@ use Data::Printer;
 
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Utils::Exception qw(throw);
+use Bio::EnsEMBL::Utils::SqlHelper;
 
 use Bio::EnsEMBL::Funcgen::MirnaTargetFeature;
 use Bio::EnsEMBL::DBEntry;
@@ -51,14 +52,21 @@ sub main {
                'input=s',
                'aliases=s',
                'release=s',
-               'assembly=s'
+               'assembly=s',
+               'truncate',
     );
 
     my $miRBase_to_display_label = read_alias_file($options{'alias'});
 
     my $adaptors = get_adaptors(\%options);
 
-    my $cache = {};
+    if ($options{'truncate'}) {
+        my $helper = Bio::EnsEMBL::Utils::SqlHelper->new(
+            -DB_CONNECTION => $adaptors->{MirnaTargetFeature}->db->dbc
+        );
+
+        my $truncate = $helper->execute_simple(-SQL => 'TRUNCATE mirna_target_feature');
+    }
     $cache->{'feature_type'} =
         $adaptors->{'FeatureType'}->fetch_by_name('TarBase miRNA target');
     $cache->{'analysis'} =
