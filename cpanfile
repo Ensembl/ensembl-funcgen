@@ -1,2 +1,3 @@
 requires 'Role::Tiny';
-requires 'Test::Class';
+
+test_requires 'Test::Class';
