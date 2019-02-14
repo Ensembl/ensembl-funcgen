@@ -56,7 +56,7 @@ sub main {
                'truncate',
     );
 
-    my $miRBase_to_display_label = read_alias_file($options{'alias'});
+    my $miRBase_to_display_label = read_alias_file($options{'aliases'});
 
     my $adaptors = get_adaptors(\%options);
 
@@ -67,6 +67,9 @@ sub main {
 
         my $truncate = $helper->execute_simple(-SQL => 'TRUNCATE mirna_target_feature');
     }
+
+    my $cache = {};
+
     $cache->{'feature_type'} =
         $adaptors->{'FeatureType'}->fetch_by_name('TarBase miRNA target');
     $cache->{'analysis'} =
@@ -74,9 +77,10 @@ sub main {
 
     open my $input_file, '<', $options{'input'};
 
-    my $line_cnt = 0;
+    my $line_cnt          = 0;
     my @features_to_store = ();
-    my $batch_size = 10_000;
+    my $batch_size        = 10_000;
+
     while (readline $input_file) {
         my $line = $_;
         chomp $line;
@@ -86,11 +90,11 @@ sub main {
             parse_input_line($line, $line_cnt, \%options, $adaptors,
                              $miRBase_to_display_label, $cache);
 
-        if($mirna_target_feature){
+        if ($mirna_target_feature) {
             push @features_to_store, $mirna_target_feature;
         }
 
-        if (scalar @features_to_store == $batch_size){
+        if (scalar @features_to_store == $batch_size) {
             $adaptors->{'MirnaTargetFeature'}->store(@features_to_store);
             @features_to_store = ();
         }
@@ -121,7 +125,7 @@ sub get_adaptors {
         $adaptors->{$ad} = $funcgen_db->get_adaptor($ad);
     }
 
-    $adaptors->{'gene'} = $core_db->get_adaptor('Gene');
+    $adaptors->{'Gene'} = $core_db->get_adaptor('Gene');
 
     return $adaptors;
 }
@@ -184,13 +188,13 @@ sub create_mirna_target_feature {
     my ($adaptors, $fields, $cache, $miRBase_to_display_label) = @_;
 
     my $gene_stable_id = $fields->[1];
-    if (!exists $cache->{'gene'}->{$gene_stable_id}) {
-        $cache->{'gene'}->{$gene_stable_id} =
-            $adaptors->{'gene'}->fetch_by_stable_id($gene_stable_id);
+    if (!exists $cache->{'Gene'}->{$gene_stable_id}) {
+        $cache->{'Gene'}->{$gene_stable_id} =
+            $adaptors->{'Gene'}->fetch_by_stable_id($gene_stable_id);
     }
-    my $gene = $cache->{'gene'}->{$gene_stable_id};
+    my $gene = $cache->{'Gene'}->{$gene_stable_id};
 
-    if (!$gene){
+    if (!$gene) {
         warn('Gene ' . $gene_stable_id . ' not found!');
         return;
     }
