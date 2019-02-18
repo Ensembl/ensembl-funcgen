@@ -21,7 +21,7 @@
 */
 
 ALTER TABLE mirna_target_feature DROP COLUMN interdb_stable_id;
-ALTER TABLE mirna_target_feature ADD COLUMN analysis_id int(10) unsigned;
+ALTER TABLE mirna_target_feature ADD COLUMN analysis_id smallint(10) unsigned;
 UPDATE mirna_target_feature SET analysis_id =  (SELECT analysis_id FROM feature_set WHERE name = 'TarBase miRNA');
 ALTER TABLE mirna_target_feature DROP COLUMN feature_set_id;
 ALTER TABLE mirna_target_feature ADD COLUMN gene_stable_id VARCHAR(128);
