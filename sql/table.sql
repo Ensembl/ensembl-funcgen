@@ -588,18 +588,18 @@ CREATE TABLE `underlying_structure` (
 @colour  #FFCC66
 
 @column mirna_target_feature_id Internal ID
-@column feature_set_id          @link feature_set ID
 @column feature_type_id         @link feature_type ID
 @column seq_region_id           seq_region ID
 @column accession               Accession number given by data source
 @column display_label           Text display label
 @column evidence                Evidence level provided by data source
-@column interdb_stable_id       Unique key, provides linkability between DBs
 @column method                  Method used to identify miRNA target
 @column seq_region_start        Start position of this feature
 @column seq_region_end          End position of this feature
 @column seq_region_strand       Strand orientation of this feature
 @column supporting_information  Additional information which does not fit another category
+@column analysis_id             @link analysis ID
+@gene_stable_id                 link to gene stable ID
 
 @see feature_set
 @see feature_type
@@ -608,23 +608,23 @@ CREATE TABLE `underlying_structure` (
 DROP TABLE IF EXISTS `mirna_target_feature`;
 CREATE TABLE `mirna_target_feature` (
   `mirna_target_feature_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `feature_set_id` int(10) unsigned NOT NULL,
   `feature_type_id` int(10) unsigned DEFAULT NULL,
   `accession` varchar(60) DEFAULT NULL,
   `display_label` varchar(60) DEFAULT NULL,
   `evidence` varchar(60) DEFAULT NULL,
-  `interdb_stable_id` int(10) unsigned DEFAULT NULL,
   `method` varchar(60) DEFAULT NULL,
   `seq_region_id` int(10) unsigned NOT NULL,
   `seq_region_start` int(10) unsigned NOT NULL,
   `seq_region_end` int(10) unsigned NOT NULL,
   `seq_region_strand` tinyint(1) NOT NULL,
   `supporting_information` varchar(100) DEFAULT NULL,
+  `analysis_id` int(10) unsigned,
+  `gene_stable_id` varchar(128),
   PRIMARY KEY (`mirna_target_feature_id`),
-  UNIQUE KEY `interdb_stable_id_idx` (`interdb_stable_id`),
+  UNIQUE KEY `unique_idx` (`accession`,`gene_stable_id`,`seq_region_start`,`seq_region_end`),
   KEY `feature_type_idx` (`feature_type_id`),
-  KEY `feature_set_idx` (`feature_set_id`),
-  KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`)
+  KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
+  KEY `analysis_idx` (`analysis_id`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
 
 
@@ -1662,14 +1662,11 @@ CREATE TABLE `meta` (
 INSERT INTO meta (meta_key, meta_value, species_id) VALUES ('schema_type', 'funcgen', NULL);
 
 -- Update and remove these for each release to avoid erroneous patching
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '96');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_a.sql|schema_version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_b.sql|changed data type for regulatory build statistics');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_c.sql|make unique probe_id column from probe table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_d.sql|add ReadFile to the enum of the ensembl_object_type');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_e.sql|Add description and release_version columns to regulatory_build table');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_95_96_f.sql|Modify binding_matrix_table');
-
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '97');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_b.sql|Changed to text');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_c.sql|Added flag');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_d.sql|Update mirna_target_feature');
 
 /**
 @table meta_coord
