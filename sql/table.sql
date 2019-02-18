@@ -574,14 +574,6 @@ CREATE TABLE `motif_feature_regulatory_feature` (
   KEY `regulatory_feature_idx` (`regulatory_feature_id`)
 )ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
-DROP TABLE IF EXISTS `underlying_structure`;
-CREATE TABLE `underlying_structure` (
-  `underlying_structure_id` int(11) NOT NULL AUTO_INCREMENT,
-  `regulatory_feature_id` int(11) NOT NULL,
-  `motif_feature_id` int(11) NOT NULL,
-  PRIMARY KEY (`underlying_structure_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=498952 DEFAULT CHARSET=latin1;
-
 /**
 @table  mirna_target_feature
 @desc   The table contains imports from externally curated resources e.g. cisRED, miRanda, VISTA, redFLY etc.
