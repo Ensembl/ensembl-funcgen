@@ -88,9 +88,9 @@ DROP TABLE IF EXISTS `chance`;
 /*!40101 SET character_set_client = utf8 */;
 CREATE TABLE `chance` (
   `chance_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `signal_alignment_id` int(10) DEFAULT NULL,
-  `control_alignment_id` int(10) DEFAULT NULL,
-  `analysis_id` int(10) unsigned DEFAULT NULL,
+  `signal_alignment_id` int(10) UNSIGNED DEFAULT NULL,
+  `control_alignment_id` int(10) UNSIGNED DEFAULT NULL,
+  `analysis_id` SMALLINT(10) unsigned DEFAULT NULL,
   `p` double DEFAULT NULL,
   `q` double DEFAULT NULL,
   `divergence` double DEFAULT NULL,
@@ -357,7 +357,7 @@ CREATE TABLE `segmentation_state_assignment` (
 DROP TABLE IF EXISTS `segmentation`;
 CREATE TABLE `segmentation` (
   `segmentation_id` int(18) unsigned NOT NULL AUTO_INCREMENT,
-  `regulatory_build_id` int(22) DEFAULT NULL,
+  `regulatory_build_id` int(22) UNSIGNED DEFAULT NULL,
   `name` varchar(255) NOT NULL,
   `superclass` varchar(255) NOT NULL,
   `class` varchar(255) NOT NULL,
@@ -545,8 +545,8 @@ CREATE TABLE `motif_feature` (
 DROP TABLE IF EXISTS `motif_feature_peak`;
 CREATE TABLE `motif_feature_peak` (
   `motif_feature_peak_id` int(11) NOT NULL AUTO_INCREMENT,
-  `motif_feature_id` int(11) NOT NULL,
-  `peak_id` int(11) NOT NULL,
+  `motif_feature_id` int(11) unsigned NOT NULL,
+  `peak_id` int(11) UNSIGNED NOT NULL,
   PRIMARY KEY (`motif_feature_peak_id`),
   KEY `motif_feature_idx` (`motif_feature_id`),
   KEY `peak_idx` (`peak_id`)
@@ -566,9 +566,9 @@ CREATE TABLE `motif_feature_peak` (
 DROP TABLE IF EXISTS `motif_feature_regulatory_feature`;
 CREATE TABLE `motif_feature_regulatory_feature` (
   `motif_feature_regulatory_feature_id` int(11) NOT NULL AUTO_INCREMENT,
-  `motif_feature_id` int(11) NOT NULL,
-  `regulatory_feature_id` int(11) NOT NULL,
-  `epigenome_id` int(11),
+  `motif_feature_id` int(11) UNSIGNED NOT NULL,
+  `regulatory_feature_id` int(11) UNSIGNED NOT NULL,
+  `epigenome_id` int(11) UNSIGNED,
   `has_matching_Peak` tinyint(3) unsigned DEFAULT '0',
   PRIMARY KEY (`motif_feature_regulatory_feature_id`),
   UNIQUE KEY `mf_rf_ep_idx` (`motif_feature_id`,`regulatory_feature_id`,`epigenome_id`),
@@ -688,7 +688,7 @@ CREATE TABLE `binding_matrix` (
 DROP TABLE IF EXISTS `binding_matrix_frequencies`;
 CREATE TABLE `binding_matrix_frequencies` (
   `binding_matrix_frequencies_id` int(11) NOT NULL AUTO_INCREMENT,
-  `binding_matrix_id` int(11) NOT NULL,
+  `binding_matrix_id` int(11) UNSIGNED NOT NULL,
   `position` int(11) unsigned NOT NULL,
   `nucleotide` enum('A','C','G','T') NOT NULL,
   `frequency` int(10) unsigned NOT NULL,
@@ -780,7 +780,7 @@ CREATE TABLE `transcription_factor_complex_composition` (
 DROP TABLE IF EXISTS `binding_matrix_transcription_factor_complex`;
 CREATE TABLE `binding_matrix_transcription_factor_complex` (
 	`binding_matrix_transcription_factor_complex_id` int(11) NOT NULL AUTO_INCREMENT,
-	`binding_matrix_id` int(11) NOT NULL,
+	`binding_matrix_id` int(11) UNSIGNED NOT NULL,
 	`transcription_factor_complex_id` int(11) NOT NULL,
 	PRIMARY KEY (`binding_matrix_transcription_factor_complex_id`),
 	UNIQUE KEY `binding_matrix_id_transcription_factor_complex_id_idx` (`binding_matrix_id`,`transcription_factor_complex_id`),
@@ -1321,7 +1321,7 @@ CREATE TABLE `probe_set` (
   `name` varchar(100) NOT NULL,
   `size` smallint(6) unsigned NOT NULL,
   `family` varchar(20) DEFAULT NULL,
-  `array_chip_id` int(10) DEFAULT NULL,
+  `array_chip_id` int(10) UNSIGNED DEFAULT NULL,
   PRIMARY KEY (`probe_set_id`),
   KEY `name` (`name`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
@@ -1669,6 +1669,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_versio
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_a.sql|schema_version');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_b.sql|Changed to text');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_c.sql|Added flag');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_d.sql|Fix foreign key data type inconsistencies');
 
 /**
 @table meta_coord
@@ -2025,8 +2026,8 @@ CREATE TABLE `unmapped_object` (
 DROP TABLE IF EXISTS `underlying_structure`;
 CREATE TABLE `underlying_structure` (
   `underlying_structure_id` int(11) NOT NULL AUTO_INCREMENT,
-  `regulatory_feature_id` int(11) NOT NULL,
-  `motif_feature_id` int(11) NOT NULL,
+  `regulatory_feature_id` int(11) UNSIGNED NOT NULL,
+  `motif_feature_id` int(11) UNSIGNED NOT NULL,
   PRIMARY KEY (`underlying_structure_id`)
 )ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
