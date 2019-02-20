@@ -102,8 +102,8 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($name, $short_name, $desc, $gender, $production_name, $search_terms) = rearrange
-    (['NAME', 'SHORT_NAME', 'DESCRIPTION','GENDER', 'PRODUCTION_NAME', 'SEARCH_TERMS'], @_);
+  my ($name, $short_name, $desc, $gender, $production_name, $search_terms, $full_name) = rearrange
+    (['NAME', 'SHORT_NAME', 'DESCRIPTION','GENDER', 'PRODUCTION_NAME', 'SEARCH_TERMS', 'FULL_NAME'], @_);
 
   throw("Must supply an Epigenome name") if ! defined $name;
 
@@ -122,6 +122,7 @@ sub new {
   $self->{description}        = $desc if defined $desc;
   $self->{production_name}    = $production_name if defined $production_name;
   $self->{search_terms}       = $search_terms if defined $search_terms;
+  $self->{full_name}          = $full_name if defined $full_name;
 
   return $self;
 }
@@ -211,6 +212,18 @@ sub short_name {  return $_[0]->{short_name}; }
 
 sub search_terms {  return $_[0]->{search_terms}; }
 
+=head2 full_name
+
+  Example    : my $desc = $epigenome->full_name();
+  Description: Getter of full_name attribute for Epigenome objects
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub full_name {  return $_[0]->{full_name}; }
 
 =head2 efo_accession
 
@@ -438,6 +451,7 @@ sub summary_as_hash {
     efo_accession     => $self->efo_accession,
     epirr_accession   => $self->epirr_accession,
     encode_accession  => $self->encode_accession,
+    full_name         => $self->full_name,
   };
 }
 

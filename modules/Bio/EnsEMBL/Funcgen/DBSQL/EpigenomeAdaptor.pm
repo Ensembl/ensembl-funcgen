@@ -167,6 +167,7 @@ sub _columns {
      eg.gender 
      eg.production_name
      eg.search_terms
+     eg.full_name
   );
   #type/class = enum cell, cell line, tissue
 }
@@ -190,11 +191,11 @@ sub _objs_from_sth {
 
     my (@result,             $eg_id,  $name,
         $short_name,             $desc,   $gender,
-        $production_name, $search_terms
+        $production_name, $search_terms, $full_name,
     );
 
     $sth->bind_columns( \$eg_id, \$name, \$short_name, \$desc, \$gender,
-        \$production_name, \$search_terms);
+        \$production_name, \$search_terms, \$full_name);
 
     while ( $sth->fetch() ) {
 
@@ -212,6 +213,7 @@ sub _objs_from_sth {
             -ADAPTOR            => $self,
             -PRODUCTION_NAME    => $production_name,
             -SEARCH_TERMS       => $search_terms_ref,
+            -FULL_NAME          => $full_name,
         );
 
         push @result, $epigenome;
@@ -285,8 +287,8 @@ sub store {
 
   my $sth = $self->prepare("
 			INSERT INTO epigenome
-			(name, short_name, description, gender, production_name, search_terms)
-			VALUES (?, ?, ?, ?, ?, ?)");
+			(name, short_name, description, gender, production_name, search_terms, full_name)
+			VALUES (?, ?, ?, ?, ?, ?, ?)");
 
 
 
@@ -312,6 +314,7 @@ sub store {
     $sth->bind_param( 4, $eg->gender,             SQL_VARCHAR );
     $sth->bind_param( 5, $eg->production_name,    SQL_VARCHAR );
     $sth->bind_param( 6, $search_terms);
+    $sth->bind_param( 7, $eg->full_name);
 
 	  
 	  $sth->execute();
