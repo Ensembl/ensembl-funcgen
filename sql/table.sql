@@ -610,7 +610,7 @@ CREATE TABLE `mirna_target_feature` (
   `seq_region_end` int(10) unsigned NOT NULL,
   `seq_region_strand` tinyint(1) NOT NULL,
   `supporting_information` varchar(100) DEFAULT NULL,
-  `analysis_id` int(10) unsigned,
+  `analysis_id` smallint(10) unsigned,
   `gene_stable_id` varchar(128),
   PRIMARY KEY (`mirna_target_feature_id`),
   UNIQUE KEY `unique_idx` (`accession`,`gene_stable_id`,`seq_region_start`,`seq_region_end`),
