@@ -102,7 +102,6 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-
   my ($name, $short_name, $desc, $gender, $production_name, $search_terms, $full_name) = rearrange
     (['NAME', 'SHORT_NAME', 'DESCRIPTION','GENDER', 'PRODUCTION_NAME', 'SEARCH_TERMS', 'FULL_NAME'], @_);
 
@@ -213,6 +212,18 @@ sub short_name {  return $_[0]->{short_name}; }
 
 sub search_terms {  return $_[0]->{search_terms}; }
 
+=head2 full_name
+
+  Example    : my $desc = $epigenome->full_name();
+  Description: Getter of full_name attribute for Epigenome objects
+  Returntype : String
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub full_name {  return $_[0]->{full_name}; }
 
 =head2 full_name
 

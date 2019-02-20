@@ -196,7 +196,6 @@ sub _objs_from_sth {
 
     $sth->bind_columns( \$eg_id, \$name, \$short_name, \$desc, \$gender,
         \$production_name, \$search_terms, \$full_name);
-    );
 
     while ( $sth->fetch() ) {
 
