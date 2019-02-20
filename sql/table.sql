@@ -1658,7 +1658,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_versio
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_a.sql|schema_version');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_b.sql|Changed to text');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_c.sql|Added flag');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_d.sql|Update mirna_target_feature');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_e.sql|Update mirna_target_feature');
 
 /**
 @table meta_coord

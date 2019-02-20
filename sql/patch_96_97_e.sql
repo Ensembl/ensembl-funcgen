@@ -14,7 +14,7 @@
 -- limitations under the License.
 
 /**
-@header patch_96_97_d - Update mirna_target_feature
+@header patch_96_97_e - Update mirna_target_feature
 @desc   Removed link to FeatureSet, the only use was the link to Analysis,
         which has been added. Removed interdb_stable_id as never used
         Added Gene stable ID to simply link to gene
@@ -34,4 +34,4 @@ ALTER TABLE `mirna_target_feature` ADD UNIQUE KEY `unique_idx` (`accession`,`gen
 
 -- patch identifier
 
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_d.sql|Update mirna_target_feature');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_e.sql|Update mirna_target_feature');
