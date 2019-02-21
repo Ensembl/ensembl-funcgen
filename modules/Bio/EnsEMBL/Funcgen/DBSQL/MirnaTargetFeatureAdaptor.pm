@@ -55,7 +55,8 @@ use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::MirnaTargetFeature;
 use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor; #DBI sql_types import
 
-use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
+# use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
+use base qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor );
 
 
 
@@ -72,8 +73,7 @@ use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
 =cut
 
 sub _true_tables {
-  return ([ 'mirna_target_feature', 'mitaf' ],
-          [ 'feature_set',  'fs' ]);
+  return ([ 'mirna_target_feature', 'mitaf' ]);
 }
 #feature_set is required for fetching on analysis, external_db (cell_type or feature_type).
 #and should be removed in favour of query composition
@@ -104,8 +104,8 @@ sub _columns {
 			mitaf.seq_region_strand
       mitaf.display_label
 			mitaf.feature_type_id
-      mitaf.feature_set_id
-			mitaf.interdb_stable_id
+      mitaf.analysis_id
+      mitaf.gene_stable_id
       mitaf.accession
       mitaf.evidence
       mitaf.method
@@ -129,18 +129,19 @@ sub _columns {
 =cut
 
 sub _objs_from_sth {
-	my ($self, $sth, $mapper, $dest_slice) = @_;
+	my ($self, $sth, $mapper) = @_;
 
+  # Remap the feature coordinates to another coord system if a mapper was provided
+  return [] if ($mapper); 
 	# For EFG this has to use a dest_slice from core/dnaDB whether specified or not.
 	# So if it not defined then we need to generate one derived from the species_name and
   # schema_build of the feature we're retrieving.
 
 
-    my ($sa, @features, %fset_hash, %slice_hash, %sr_name_hash, %sr_cs_hash, %ftype_hash);
-    $sa = $dest_slice->adaptor->db->get_SliceAdaptor() if($dest_slice);#don't really need this if we're using DNADBSliceAdaptor?
-    $sa ||= $self->db->dnadb->get_SliceAdaptor;
+  my (@features, %anal_hash, %slice_hash, %sr_name_hash, %ftype_hash);
+  my $slice_adaptor ||= $self->db->dnadb->get_SliceAdaptor;
 
-    my $fset_adaptor  = $self->db->get_FeatureSetAdaptor();
+    my $anal_adaptor  = $self->db->get_AnalysisAdaptor();
     my $ftype_adaptor = $self->db->get_FeatureTypeAdaptor();
     my (
       $external_feature_id,
@@ -148,10 +149,10 @@ sub _objs_from_sth {
       $seq_region_start,
       $seq_region_end,
       $seq_region_strand,
-      $fset_id,
+      $anal_id,
+      $gene_stable_id,
       $display_label,
       $ftype_id,
-      $interdb_stable_id,
       $accession,
       $evidence,
       $method,
@@ -166,117 +167,38 @@ sub _objs_from_sth {
         \$seq_region_strand,
         \$display_label,
         \$ftype_id,
-        \$fset_id,
-        \$interdb_stable_id,
+        \$anal_id,
+        \$gene_stable_id,
         \$accession,
         \$evidence,
         \$method,
         \$supporting_information,
       );
 
-    #abstract to BaseFeatureAdaptor?
-    my ($asm_cs, $cmp_cs, $asm_cs_name, $asm_cs_vers, $cmp_cs_name, $cmp_cs_vers);
-
-	if ($mapper) {
-		$asm_cs      = $mapper->assembled_CoordSystem();
-		$cmp_cs      = $mapper->component_CoordSystem();
-		$asm_cs_name = $asm_cs->name();
-		$asm_cs_vers = $asm_cs->version();
-		$cmp_cs_name = $cmp_cs->name();
-		$cmp_cs_vers = $cmp_cs->version();
-	}
-
-	my ($dest_slice_start, $dest_slice_end, $dest_slice_strand, $dest_slice_length, $dest_slice_sr_name);
-
-	if ($dest_slice) {
-		$dest_slice_start   = $dest_slice->start();
-		$dest_slice_end     = $dest_slice->end();
-		$dest_slice_strand  = $dest_slice->strand();
-		$dest_slice_length  = $dest_slice->length();
-		$dest_slice_sr_name = $dest_slice->seq_region_name();
-	}
-
-
   FEATURE: while ( $sth->fetch() ) {
 
 	  #Get the FeatureSet/Type objects
-	  $fset_hash{$fset_id}   = $fset_adaptor->fetch_by_dbID($fset_id) if(! exists $fset_hash{$fset_id});
+	  $anal_hash{$anal_id}   = $anal_adaptor->fetch_by_dbID($anal_id)   if(! exists $anal_hash{$anal_id});
 	  $ftype_hash{$ftype_id} = $ftype_adaptor->fetch_by_dbID($ftype_id) if(! exists $ftype_hash{$ftype_id});
-
+    $slice_hash{$seq_region_id} = $slice_adaptor->fetch_by_seq_region_id($seq_region_id);
 	  # Get the slice object
-	  my $slice = $slice_hash{'ID:'.$seq_region_id};
-
-	  if (! $slice) {
-  		$slice                            = $sa->fetch_by_seq_region_id($seq_region_id);
-  		$slice_hash{'ID:'.$seq_region_id} = $slice;
-  		$sr_name_hash{$seq_region_id}     = $slice->seq_region_name();
-  		$sr_cs_hash{$seq_region_id}       = $slice->coord_system();
-	  }
-
-	  my $sr_name = $sr_name_hash{$seq_region_id};
-	  my $sr_cs   = $sr_cs_hash{$seq_region_id};
-
-	  #abstract to BaseFeatureAdaptor?
-	  # Remap the feature coordinates to another coord system if a mapper was provided
-	  if ($mapper) {
-
-		throw("Not yet implmented mapper, check equals are Funcgen calls too!");
-
-	      ($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand)
-			= $mapper->fastmap($sr_name, $seq_region_start, $seq_region_end, $seq_region_strand, $sr_cs);
-
-	      # Skip features that map to gaps or coord system boundaries
-	      next FEATURE if !defined $sr_name;
-
-	      # Get a slice in the coord system we just mapped to
-	      if ( $asm_cs == $sr_cs || ( $cmp_cs != $sr_cs && $asm_cs->equals($sr_cs) ) ) {
-		$slice = $slice_hash{"NAME:$sr_name:$cmp_cs_name:$cmp_cs_vers"}
-		  ||= $sa->fetch_by_region($cmp_cs_name, $sr_name, undef, undef, undef, $cmp_cs_vers);
-	      } else {
-		$slice = $slice_hash{"NAME:$sr_name:$asm_cs_name:$asm_cs_vers"}
-		  ||= $sa->fetch_by_region($asm_cs_name, $sr_name, undef, undef, undef, $asm_cs_vers);
-	      }
-	    }
-
-	    # If a destination slice was provided convert the coords
-	    # If the destination slice starts at 1 and is forward strand, nothing needs doing
-	    if ($dest_slice) {
-	      unless ($dest_slice_start == 1 && $dest_slice_strand == 1) {
-		if ($dest_slice_strand == 1) {
-		  $seq_region_start = $seq_region_start - $dest_slice_start + 1;
-		  $seq_region_end   = $seq_region_end   - $dest_slice_start + 1;
-		} else {
-		  my $tmp_seq_region_start = $seq_region_start;
-		  $seq_region_start        = $dest_slice_end - $seq_region_end       + 1;
-		  $seq_region_end          = $dest_slice_end - $tmp_seq_region_start + 1;
-		  $seq_region_strand      *= -1;
-		}
-	      }
-
-	      # Throw away features off the end of the requested slice
-	      next FEATURE if $seq_region_end < 1 || $seq_region_start > $dest_slice_length
-		|| ( $dest_slice_sr_name ne $sr_name );
-
-	      $slice = $dest_slice;
-	    }
 
 	  push @features, Bio::EnsEMBL::Funcgen::MirnaTargetFeature->new_fast
 		({
 		  'start'               => $seq_region_start,
 		  'end'                 => $seq_region_end,
 		  'strand'              => $seq_region_strand,
-		  'slice'               => $slice,
-		  'analysis'            => $fset_hash{$fset_id}->analysis(),
+		  'slice'               => $slice_hash{seq_region_id},
+		  'analysis'            => $anal_hash{$anal_id},
+      'gene_stable_id'      => $gene_stable_id,
 		  'adaptor'             => $self,
 		  'dbID'                => $external_feature_id,
 		  'display_label'       => $display_label,
-		  'set'                 => $fset_hash{$fset_id},
 		  'feature_type'        => $ftype_hash{$ftype_id},
-		  'interdb_stable_id'   => $interdb_stable_id,
-          'accession'           => $accession,
-          'evidence'            => $evidence,
-          'method'              => $method,
-          'supporting_information' => $supporting_information,
+      'accession'           => $accession,
+      'evidence'            => $evidence,
+      'method'              => $method,
+      'supporting_information' => $supporting_information,
 		 });
 	  }
 
@@ -313,12 +235,13 @@ sub store{
       seq_region_strand,
       display_label,
       feature_type_id,
-      feature_set_id,
+      analysis_id,
+      gene_stable_id,
       accession,
       evidence,
       method,
       supporting_information
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	");
 
 	my $db = $self->db();
@@ -335,8 +258,6 @@ sub store{
   		next FEATURE;
 	  }
 
-	  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::FeatureSet', $mrna_f->feature_set);
-
 	  my $seq_region_id;
 	  ($mrna_f, $seq_region_id) = $self->_pre_store($mrna_f);
 
@@ -346,41 +267,21 @@ sub store{
 	  $sth->bind_param(4,  $mrna_f->strand,                 SQL_TINYINT);
 	  $sth->bind_param(5,  $mrna_f->display_label,          SQL_VARCHAR);
 	  $sth->bind_param(6,  $mrna_f->feature_type->dbID,     SQL_INTEGER);
-	  $sth->bind_param(7,  $mrna_f->feature_set->dbID,      SQL_INTEGER);
-    $sth->bind_param(8,  $mrna_f->accession,              SQL_VARCHAR);
-    $sth->bind_param(9,  $mrna_f->evidence,               SQL_VARCHAR);
-    $sth->bind_param(10, $mrna_f->method,                 SQL_VARCHAR);
-    $sth->bind_param(11, $mrna_f->supporting_information, SQL_VARCHAR);
+    $sth->bind_param(7,  $mrna_f->analysis->dbID,         SQL_INTEGER);
+	  $sth->bind_param(8,  $mrna_f->gene_stable_id,         SQL_VARCHAR);
+    $sth->bind_param(9,  $mrna_f->accession,              SQL_VARCHAR);
+    $sth->bind_param(10, $mrna_f->evidence,               SQL_VARCHAR);
+    $sth->bind_param(11, $mrna_f->method,                 SQL_VARCHAR);
+    $sth->bind_param(12, $mrna_f->supporting_information, SQL_VARCHAR);
 
 	  $sth->execute();
 	  $mrna_f->dbID( $self->last_insert_id );
 	  $mrna_f->adaptor($self);
-	  $self->store_associated_feature_types($mrna_f) if (defined $mrna_f->{'associated_feature_types'});
 	}
 
   return \@mrna_fs;
 }
 
-=head2 fetch_by_interdb_stable_id
-
-  Arg [1]    : Integer $stable_id - The 'interdb stable id' of the MirnaTargetFeature to retrieve
-  Example    : my $rf = $rf_adaptor->fetch_by_interdb_stable_id(1);
-  Description: Retrieves a MirnaTargetFeature via its interdb_stable id. This is really an internal
-               method to facilitate inter DB linking.
-  Returntype : Bio::EnsEMBL::Funcgen::MirnaTargetFeature
-  Exceptions : none
-  Caller     : general
-  Status     : Stable
-
-=cut
-
-sub fetch_by_interdb_stable_id {
-  my ($self, $stable_id) = @_;
-
-  $self->bind_param_generic_fetch($stable_id, SQL_INTEGER);
-
-  return $self->generic_fetch('ef.interdb_stable_id=?')->[0];
-}
 
 sub fetch_all_by_accessions{
   my ($self, $accessions) = @_;
