@@ -67,6 +67,11 @@ sub new {
         = rearrange( [ 'PRODUCTION_NAME', 'DISPLAY_NAME', 'COMPONENTS' ],
         @_ );
 
+    throw('Must supply a -production_name parameter')
+        if !defined $production_name;
+    throw('Must supply a -display_name parameter') if !defined $display_name;
+    throw('Must supply a -components parameter') if !defined $components;
+
     for my $transcription_factor ( @{$components} ) {
         assert_ref( $transcription_factor,
             'Bio::EnsEMBL::Funcgen::TranscriptionFactor',

@@ -68,7 +68,7 @@ use warnings;
 
 use Bio::EnsEMBL::Utils::Scalar qw( assert_ref check_ref );
 use Bio::EnsEMBL::Utils::Argument qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate);
 use Bio::EnsEMBL::Funcgen::Sequencing::MotifTools qw( parse_matrix_line
     reverse_complement_matrix );
 
@@ -127,11 +127,30 @@ sub new {
   Returntype : Bio::EnsEMBL::Funcgen::BindingMatrix
   Exceptions : None
   Caller     : General
+  Status     : Deprecated
+
+=cut
+
+sub binding_matrix {
+    my $self = shift;
+    deprecate('binding_matrix has been deprecated and will be removed in ' .
+        'release 101. Please use get_BindingMatrix instead.'
+    );
+    return $self->get_BindingMatrix;
+}
+
+=head2 get_BindingMatrix
+
+  Example    : my $binding_matrix = $bmf->get_BindingMatrix();
+  Description: Getter for the BindingMatrix object
+  Returntype : Bio::EnsEMBL::Funcgen::BindingMatrix
+  Exceptions : None
+  Caller     : General
   Status     : Stable
 
 =cut
 
-sub binding_matrix { return shift->{binding_matrix}; }
+sub get_BindingMatrix { return shift->{binding_matrix}; }
 
 =head2 position
 

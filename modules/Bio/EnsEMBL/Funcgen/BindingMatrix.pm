@@ -133,7 +133,7 @@ sub new {
 =head2 name
 
   Example    : my $name = $matrix->name();
-  Description: Getter for the name attribute
+  Description: Getter/Setter for the name attribute
   Returntype : String
   Exceptions : None
   Caller     : General
@@ -141,7 +141,11 @@ sub new {
 
 =cut
 
-sub name { return shift->{name}; }
+sub name {
+    my $self = shift;
+    $self->{name} = shift if @_;
+    return $self->{name};
+}
 
 =head2 unit
 
@@ -317,7 +321,7 @@ sub get_element_by_position_nucleotide {
 sub get_elements_as_string {
     my ($self) = @_;
 
-    my $elements_string;
+    my $elements_string = '';
 
     my $nucleotides = VALID_NUCLEOTIDES;
 
@@ -565,7 +569,7 @@ sub sequence_similarity_score {
                     $binding_matrix->relative_sequence_similarity_score($seq);
   Description   : Calculates the similarity score of a given sequence relative to the
                   optimal site for the matrix.
-  Returns       : Integer, between 0 and 1
+  Returns       : Float, between 0 and 1
   Status        : At risk
 
 =cut
@@ -648,7 +652,6 @@ sub is_position_informative {
     }
     
     return $is_position_informative;
-
 }
 
 sub _max_position_sum {

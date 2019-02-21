@@ -69,7 +69,7 @@ use warnings;
 
 use Bio::EnsEMBL::Utils::Scalar    qw( assert_ref );
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
-use Bio::EnsEMBL::Utils::Exception qw( throw deprecate);
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
 use base qw(Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable);
 use constant SO_ACC => 'SO:0000235';
@@ -106,19 +106,25 @@ use constant SO_ACC => 'SO:0000235';
 =cut
 
 sub new {
-  my $caller = shift;
-  my $class  = ref($caller) || $caller;
-  my $self   = $class->SUPER::new(@_);
+    my $caller = shift;
+    my $class  = ref($caller) || $caller;
+    my $self   = $class->SUPER::new(@_);
 
-  ($self->{score}, $self->{binding_matrix}, $self->{stable_id})
-    = rearrange(['SCORE', 'BINDING_MATRIX', 'STABLE_ID'], @_);
+    my ($score, $binding_matrix, $stable_id) =
+        rearrange([ 'SCORE', 'BINDING_MATRIX', 'STABLE_ID' ], @_);
 
-  assert_ref($self->{binding_matrix}, 'Bio::EnsEMBL::Funcgen::BindingMatrix');
+    throw('Must supply a -score parameter') if !defined $score;
+    throw('Must supply a -binding_matrix parameter') if !defined $binding_matrix;
 
-  $self->{overlapping_Peaks} = undef;
-  $self->{overlapping_RegulatoryFeature} = undef;
+    assert_ref($binding_matrix, 'Bio::EnsEMBL::Funcgen::BindingMatrix');
 
-  return $self;
+    $self->{score}                         = $score;
+    $self->{binding_matrix}                = $binding_matrix;
+    $self->{stable_id}                     = $stable_id if $stable_id;
+    $self->{overlapping_Peaks}             = undef;
+    $self->{overlapping_RegulatoryFeature} = undef;
+
+    return $self;
 }
 
 
@@ -145,11 +151,30 @@ sub new_fast { return bless ($_[1], $_[0]); }
   Returntype : Bio::EnsEMBL::Funcgen::BindingMatrix
   Exceptions : None
   Caller     : General
-  Status     : At risk
+  Status     : Deprecated
 
 =cut
 
-sub binding_matrix{ return shift->{binding_matrix}; }
+sub binding_matrix {
+    my $self = shift;
+    deprecate('binding_matrix has been deprecated and will be removed in ' .
+        'release 101. Please use get_BindingMatrix instead.'
+    );
+    return $self->get_BindingMatrix;
+}
+
+=head2 get_BindingMatrix
+
+  Example    : my $binding_matrix = $bmf->get_BindingMatrix();
+  Description: Getter for the BindingMatrix object
+  Returntype : Bio::EnsEMBL::Funcgen::BindingMatrix
+  Exceptions : None
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub get_BindingMatrix { return shift->{binding_matrix}; }
 
 =head2 score
 
@@ -212,7 +237,6 @@ sub get_all_overlapping_Peaks {
 
     return $self->{overlapping_Peaks};
 }
-
 
 =head2 fetch_overlapping_Peak_by_Epigenome
 
@@ -319,7 +343,7 @@ sub get_all_Epigenomes_with_experimental_evidence {
 
 =head2 is_position_informative
 
-  Arg [1]    : Scalar - 1-based integer position within the motif wrt +ve seq_region_strand.
+  Arg [1]    : Scalar - 1-based integer position within the motif
   Example    : $mf->is_position_informative($pos);
   Description: Indicates if a given position within the motif is highly informative
   Returntype : Boolean
@@ -330,12 +354,10 @@ sub get_all_Epigenomes_with_experimental_evidence {
 =cut
 
 sub is_position_informative {
-  my $self     = shift;
-  my $position = shift;
+    my $self     = shift;
+    my $position = shift;
 
-  # Not just $self->strand here as that is always wrt feature slice strand
-  my $revcomp = ($self->seq_region_strand == -1) ? 1 : 0;
-  return $self->binding_matrix->is_position_informative($position, $revcomp);
+    return $self->get_BindingMatrix->is_position_informative($position);
 }
 
 
@@ -400,7 +422,7 @@ sub infer_variation_consequence{
     $ref_seq = reverse($ref_seq);
   }
 
-  my $bm     = $self->binding_matrix;
+  my $bm     = $self->get_BindingMatrix;
   my $var_ra = $bm->relative_sequence_similarity_score($var_seq, $linear);
   my $ref_ra = $bm->relative_sequence_similarity_score($ref_seq, $linear);
 
@@ -432,7 +454,7 @@ sub summary_as_hash {
     my $self = shift;
 
     my $summary = {
-        binding_matrix               => $self->binding_matrix->name,
+        binding_matrix               => $self->get_BindingMatrix->name,
         start                        => $self->seq_region_start,
         end                          => $self->seq_region_end,
         strand                       => $self->strand,
