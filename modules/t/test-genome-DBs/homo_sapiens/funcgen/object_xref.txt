@@ -68,8 +68,3 @@
 183	178911	FeatureType	3805417	FeatureType(BATF::JUN)  > PFM(BATF::JUN/Q16520) > Gene(BATF) : MA0462.1 BATF::JUN	70
 184	178892	FeatureType	3805417	FeatureType(BATF::JUN)  > PFM(BATF::JUN/AAA59197) > Gene(Cjun) : MA0462.1 BATF::JUN	70
 185	179014	FeatureType	3805418	FeatureType(ELF1)  > PFM(ELF1/P32519) > Gene(ELF1) : MA0473.1 ELF1	70
-18552145	27911	MirnaTargetFeature	3981067	TarBase Micro RNA target	67
-18552146	27912	MirnaTargetFeature	3981067	TarBase Micro RNA target	67
-18552147	27913	MirnaTargetFeature	3981067	TarBase Micro RNA target	67
-18552148	27914	MirnaTargetFeature	3981067	TarBase Micro RNA target	67
-18552149	27915	MirnaTargetFeature	3981067	TarBase Micro RNA target	67
