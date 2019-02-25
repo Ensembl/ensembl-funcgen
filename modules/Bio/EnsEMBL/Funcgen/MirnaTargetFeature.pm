@@ -133,7 +133,7 @@ sub new {
   return $self;
 }
 
-sub feature_type {
+sub get_FeatureType {
   return $_[0]->{'feature_type'};
 }
 

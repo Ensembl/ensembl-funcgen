@@ -266,7 +266,7 @@ sub store{
 	  $sth->bind_param(3,  $mrna_f->end,                    SQL_INTEGER);
 	  $sth->bind_param(4,  $mrna_f->strand,                 SQL_TINYINT);
 	  $sth->bind_param(5,  $mrna_f->display_label,          SQL_VARCHAR);
-	  $sth->bind_param(6,  $mrna_f->feature_type->dbID,     SQL_INTEGER);
+	  $sth->bind_param(6,  $mrna_f->get_FeatureType->dbID,     SQL_INTEGER);
     $sth->bind_param(7,  $mrna_f->analysis->dbID,         SQL_INTEGER);
 	  $sth->bind_param(8,  $mrna_f->gene_stable_id,         SQL_VARCHAR);
     $sth->bind_param(9,  $mrna_f->accession,              SQL_VARCHAR);
