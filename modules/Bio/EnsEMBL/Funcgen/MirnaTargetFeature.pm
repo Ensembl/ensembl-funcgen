@@ -120,9 +120,9 @@ sub new {
     throw 'Must supply a mandatory parameter' unless defined($var) and length $var;
   }
 
-  $self->{feature_type}           = $feature_type,
-  $self->{analysis}               = $analysis,
-  $self->{gene_stable_id}         = $gene_stable_id,
+  $self->{feature_type}           = $feature_type;
+  $self->{analysis}               = $analysis;
+  $self->{gene_stable_id}         = $gene_stable_id;
   $self->{accession}              = $accession;
   $self->{evidence}               = $evidence;
   $self->{method}                 = $method;
