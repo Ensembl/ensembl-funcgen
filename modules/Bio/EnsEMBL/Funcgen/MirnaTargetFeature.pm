@@ -116,9 +116,10 @@ sub new {
                     'EVIDENCE', 'METHOD', 'SUPPORTING_INFORMATION',
                     'DISPLAY_LABEL' ], @_);
 
-  for my $var ($feature_type, $analysis, $gene_stable_id, $accession, $evidence,  $method, $supporting_information) {
-    throw 'Must supply a mandatory parameter' unless defined($var) and length $var;
-  }
+    for my $var ($feature_type, $analysis, $gene_stable_id, $accession,
+                 $evidence, $method, $supporting_information, $display_label) {
+        throw 'Must supply a mandatory parameter' unless defined($var) and length $var;
+    }
 
   $self->{feature_type}           = $feature_type;
   $self->{analysis}               = $analysis;
