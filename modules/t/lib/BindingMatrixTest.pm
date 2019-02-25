@@ -43,7 +43,6 @@ sub parameters :Test(setup) {
     my %mandatory_constructor_parameters = (
         -name      => 'dummy_name',
         -source    => 'dummy_source',
-        -stable_id => 'ENSPFM0000',
     );
 
     $self->{mandatory_constructor_parameters} =
@@ -52,6 +51,7 @@ sub parameters :Test(setup) {
     my %optional_constructor_parameters = (
         -threshold => 10,
         -unit      => BITS,
+        -stable_id => 'ENSPFM0000',
     );
 
     my %constructor_parameters = (%mandatory_constructor_parameters,
@@ -290,7 +290,7 @@ sub get_element_by_position_nucleotide :Test(6) {
     throws_ok {
         $binding_matrix->get_element_by_position_nucleotide($pos, $inv_nuc);
     }
-        qr/Supplied nucleotide not valid/,
+        qr/Supplied nucleotide .* not valid/,
         "... and exception is thrown when nucleotide parameter is not valid";
 }
 

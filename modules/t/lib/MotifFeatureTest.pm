@@ -95,19 +95,30 @@ sub define_expected :Test(setup) {
         'score'                   => 6.85690955393,
         'stable_id'               => 'ENSM00205163537',
         'number_of_peaks'         => 7,
-        'peak'                    => $peak,
+        'peaks'                   => [ $peak ],
         'epigenomes'              => $epigenomes,
         'is_position_informative' => 1,
+        'is_verified'             => 1,
     };
 
+    my $tfc =
+
     my %summary = (
-        'binding_matrix'  => $binding_matrix->name(),
-        'start'           => 5197613,
-        'end'             => 5197629,
-        'strand'          => -1,
-        'seq_region_name' => 3,
-        'stable_id'       => $self->{expected}->{stable_id},
-        'score'           => $self->{expected}->{score}
+        'binding_matrix'                        => $binding_matrix->name(),
+        'start'                                 => 5197613,
+        'end'                                   => 5197629,
+        'strand'                                => -1,
+        'seq_region_name'                       => 3,
+        'stable_id'                             => $self->{expected}->{stable_id},
+        'score'                                 => $self->{expected}->{score},
+        'transcription_factor_complex'          => 'ETV2::CEBPD,ETV2::TEF,'
+                                                    . 'ERF::CEBPD,ELK1::TEF,'
+                                                    . 'FLI1::CEBPB,FLI1::CEBPD,'
+                                                    . 'ETV5::CEBPD',
+        'epigenomes_with_experimental_evidence' => 'HeLa-S3,GM12878,K562,'
+                                                    . 'HepG2,IMR 90,'
+                                                    . 'H1 hESC ENCSR820QMS,'
+                                                    . 'HCT116'
     );
 
     $self->{expected}->{summary} = \%summary;
@@ -174,18 +185,18 @@ sub fetch_all_overlapping_Peaks :Test(no_plan) {
        'fetch_all_overlapping_Peaks works');
 }
 
-sub get_overlapping_Peak_by_Epigenome :Test(1) {
+sub get_all_overlapping_Peaks_by_Epigenome :Test(1) {
     my $self        = shift;
     my $short_class = $self->short_class();
 
     my $epigenome = $self->{parameters}->{epigenome};
 
     my $peak = $self->{fetched}->{$short_class}->
-        get_overlapping_Peak_by_Epigenome($epigenome);
+        get_all_overlapping_Peaks_by_Epigenome($epigenome);
 
     is_deeply($peak,
-              $self->{expected}->{peak},
-              'get_overlapping_Peak_by_Epigenome() works'
+              $self->{expected}->{peaks},
+              'get_all_overlapping_Peaks_by_Epigenome() works'
     );
 }
 
@@ -199,9 +210,26 @@ sub fetch_overlapping_Peak_by_Epigenome :Test(1) {
         fetch_overlapping_Peak_by_Epigenome($epigenome);
 
     is_deeply($peak,
-              $self->{expected}->{peak},
+              $self->{expected}->{peaks}->[0],
               'fetch_overlapping_Peak_by_Epigenome() works'
     );
+}
+
+sub is_experimentally_verified_in_Epigenome :Test(1) {
+    my $self = shift;
+    my $short_class = $self->short_class();
+
+    my $epigenome = $self->{parameters}->{epigenome};
+
+    my $is_verified = $self->{fetched}->{$short_class}->
+        is_experimentally_verified_in_Epigenome($epigenome);
+
+    is ($is_verified,
+        $self->{expected}->{is_verified},
+        'is_experimentally_verified_in_Epigenome() works'
+    );
+
+    # TODO test false
 }
 
 sub get_all_Epigenomes_with_experimental_evidence :Test(1) {
