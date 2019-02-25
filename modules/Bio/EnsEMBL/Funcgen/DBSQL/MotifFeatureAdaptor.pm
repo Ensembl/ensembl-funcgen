@@ -558,7 +558,7 @@ sub store{
     # check if motif_feature already exists in the db
     my $existing_motif_feature
         = $self->fetch_by_BindingMatrix_Slice_start_strand(
-        $mf->binding_matrix(), $mf->slice(), $mf->start(), $mf->strand() );
+        $mf->get_BindingMatrix(), $mf->slice(), $mf->start(), $mf->strand() );
 
     if($existing_motif_feature){
       warning('MotifFeature [' . $existing_motif_feature->dbID() . '] is already stored in the database');
@@ -570,7 +570,7 @@ sub store{
   	# 	next FEATURE;
 	  # }
 
-	  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::BindingMatrix', $mf->binding_matrix());
+	  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::BindingMatrix', $mf->get_BindingMatrix());
 
 
 	  my $seq_region_id;
@@ -580,7 +580,7 @@ sub store{
 	  $sth->bind_param(2, $mf->start(),                SQL_INTEGER);
 	  $sth->bind_param(3, $mf->end(),                  SQL_INTEGER);
 	  $sth->bind_param(4, $mf->strand(),               SQL_TINYINT);
-	  $sth->bind_param(5, $mf->binding_matrix->dbID(), SQL_INTEGER);
+	  $sth->bind_param(5, $mf->get_BindingMatrix->dbID(), SQL_INTEGER);
 	  $sth->bind_param(6, $mf->score(),                SQL_DOUBLE);
 	  $sth->bind_param(7, $mf->stable_id(),            SQL_VARCHAR);
 
@@ -615,7 +615,7 @@ sub store_associated_Peak {
     # Replace provided motif feature with the one which is stored in the db
     my $existing_motif_feature
         = $self->fetch_by_BindingMatrix_Slice_start_strand(
-        $mf->binding_matrix(), $mf->slice(), $mf->start(), $mf->strand() );
+        $mf->get_BindingMatrix(), $mf->slice(), $mf->start(), $mf->strand() );
     
     $self->db->is_stored_and_valid( 'Bio::EnsEMBL::Funcgen::MotifFeature', $existing_motif_feature );
     $mf = $existing_motif_feature;
@@ -678,7 +678,7 @@ sub store_associated_RegulatoryFeature {
 	# Replace provided motif feature with the one which is stored in the db
 	my $existing_motif_feature= 
     $self->fetch_by_BindingMatrix_Slice_start_strand
-    ($mf->binding_matrix(), $mf->slice(), $mf->start(), $mf->strand() );
+    ($mf->get_BindingMatrix(), $mf->slice(), $mf->start(), $mf->strand() );
 
 	$self->db->is_stored_and_valid( 'Bio::EnsEMBL::Funcgen::MotifFeature', $existing_motif_feature );
 	$mf = $existing_motif_feature;

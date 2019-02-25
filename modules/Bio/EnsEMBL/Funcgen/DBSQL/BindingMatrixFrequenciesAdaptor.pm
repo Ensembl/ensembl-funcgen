@@ -216,7 +216,7 @@ sub store {
             'BindingMatrixFrequencies' );
         $self->db->is_stored_and_valid(
             'Bio::EnsEMBL::Funcgen::BindingMatrix',
-            $bm_frequencies->binding_matrix
+            $bm_frequencies->get_BindingMatrix
         );
 
         if (!( $bm_frequencies->dbID() && $bm_frequencies->adaptor() == $self )
@@ -225,7 +225,7 @@ sub store {
             #Check for previously stored BindingMatrixFrequencies
             $stored_bm_frequencies
                 = $self->fetch_by_BindingMatrix_position_nucleotide(
-                $bm_frequencies->binding_matrix(),
+                $bm_frequencies->get_BindingMatrix(),
                 $bm_frequencies->position(),
                 $bm_frequencies->nucleotide()
                 );
@@ -233,7 +233,7 @@ sub store {
             if ( !$stored_bm_frequencies ) {
 
                 $sth->bind_param( 1,
-                    $bm_frequencies->binding_matrix()->dbID(), SQL_INTEGER );
+                    $bm_frequencies->get_BindingMatrix()->dbID(), SQL_INTEGER );
                 $sth->bind_param( 2, $bm_frequencies->position(),
                     SQL_INTEGER );
                 $sth->bind_param( 3, $bm_frequencies->nucleotide(),
