@@ -135,7 +135,7 @@ sub constructor :Test(no_plan) {
     for my $parameter (keys %mandatory_parameters) {
         %incomplete_parameters = %mandatory_parameters;
         delete $incomplete_parameters{$parameter};
-        $error_message = "Must supply a $parameter parameter";
+        $error_message = "Must supply .* parameter";
         throws_ok {
             $full_class->new(%incomplete_parameters)
         }
