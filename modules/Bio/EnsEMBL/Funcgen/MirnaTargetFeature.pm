@@ -207,9 +207,9 @@ sub method {
   return $_[0]->{'method'};
 }
 
-=head2 gene
+=head2 gene_stable_id
 
-  Example    : my $gene_stable_idID = $mirna_target_feature->gene();
+  Example    : my $gene_stable_idID = $mirna_target_feature->gene_stable_id();
   Description: Getter for the linked Gene Ensembl StableID for this MirnaTargetFeature.
   Returntype : string
   Exceptions : None
