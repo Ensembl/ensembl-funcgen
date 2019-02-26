@@ -43,14 +43,16 @@ sub run {
       $self->check_read_files_exist,
       $self->check_read_file_names_ok,
       $self->check_unused_controls($dbc),
-      $self->check_feature_types_unique($dbc),
-      $self->check_feature_types_have_so_accessions($dbc),
+      #$self->check_feature_types_unique($dbc),
+      #$self->check_feature_types_have_so_accessions($dbc),
       $self->check_read_file_configurations_unique_per_experiment($dbc),
       $self->check_so_accessions_in_ontology_db($dbc),
-      $self->check_signal_control_mismatches($dbc),
-      $self->check_alignment_read_file_orphans($dbc),
+      #$self->check_signal_control_mismatches($dbc),
+      #$self->check_alignment_read_file_orphans($dbc),
+      #$self->check_duplicate_read_file_names($dbc),
       $self->check_environment_variables_exported,
       $self->check_programs_present_in_path,
+      #$self->check_unused_control_reads_files_although_they_do_control_something($dbc),
     );
 
     push @error_msg, grep { defined $_ } @error_messages;
@@ -69,7 +71,7 @@ sub run {
         
       $self->throw($complete_error_message);
     }
-    $self->say_with_header("Pre pipeline checks have completed successfully. You can now run the rest of the pipeline.\n");
+    $self->say_with_header("Pre pipeline checks have completed successfully. You can now run the rest of the pipeline.", 1);
 }
 
 sub check_programs_present_in_path {
@@ -132,6 +134,7 @@ sub check_programs_in_path {
     argenrichformregions.pl
     argenrich_with_labels_and_rerunnable.R
     idr
+    populate_meta_coord.pl
   );
 
   foreach my $current_program (@programs_expected_in_path) {
@@ -241,11 +244,7 @@ sub check_analyses {
   if (@analyses_with_problem_names) {
     push @error_msg, "The following analyses have logic names that will lead "
       . "to issues, because they are used in file names on the ftp site:\n" 
-      . join 
-          "\n", 
-          map 
-            { "    - " . $_ } 
-            @analyses_with_problem_names
+      . $self->bulletpointify(\@analyses_with_problem_names)
     ;
   }
   
@@ -292,17 +291,19 @@ sub check_unused_controls {
     where 
       control.is_control = 1 
       and sig.experiment_id is null
+   order by 
+      control.name
   };
   my $sth = $dbc->prepare($sql);
   $sth->execute;
-  my $duplicate_feature_types = $sth->fetchall_hashref('name');
+  my $x = $sth->fetchall_hashref('name');
   
-  my @problem_names = keys %$duplicate_feature_types;
+  my @unused_control_names = sort alphabetically keys %$x;
   
-  if (@problem_names) {
+  if (@unused_control_names) {
     $error_msg 
-      = "The following control experiments are never used:\n  - " 
-        . (join " \n  - ", @problem_names);
+      = "The following " . scalar @unused_control_names . " control experiments are never used:\n" 
+        . $self->bulletpointify(\@unused_control_names);
   }
   return $error_msg;
 }
@@ -357,82 +358,82 @@ sub check_read_file_names_ok {
   return;
 }
 
-sub check_feature_types_unique {
-  my $self = shift;
-  my $dbc  = shift;
-  
-  # Find duplicate feature types
-  #
-  my $find_duplicate_feature_types = '
-    select 
-        feature_type.name, 
-        max(feature_type_id), 
-        group_concat(feature_type_id), 
-        count(distinct feature_type_id) c 
-    from 
-        feature_type join experiment using (feature_type_id) 
-    where 
-        feature_type.name != "WCE" 
-    group by 
-        feature_type.name 
-    having c>1;
-  ';
-  
-  my $sth = $dbc->prepare($find_duplicate_feature_types);
-  $sth->execute;
-  my $duplicate_feature_types = $sth->fetchall_hashref('name');
-  my @duplicate_feature_type_names = keys %$duplicate_feature_types;
-  
-  my @error_msg;
-  if (@duplicate_feature_type_names) {
-    push 
-      @error_msg, 
-      "The following feature types are referenced by experiments, but they "
-      . "are not unique: " 
-      . join ', ', @duplicate_feature_type_names;
-  }
+# sub check_feature_types_unique {
+#   my $self = shift;
+#   my $dbc  = shift;
+#   
+#   # Find duplicate feature types
+#   #
+#   my $find_duplicate_feature_types = '
+#     select 
+#         feature_type.name, 
+#         max(feature_type_id), 
+#         group_concat(feature_type_id), 
+#         count(distinct feature_type_id) c 
+#     from 
+#         feature_type join experiment using (feature_type_id) 
+#     where 
+#         feature_type.name != "WCE" 
+#     group by 
+#         feature_type.name 
+#     having c>1;
+#   ';
+#   
+#   my $sth = $dbc->prepare($find_duplicate_feature_types);
+#   $sth->execute;
+#   my $duplicate_feature_types = $sth->fetchall_hashref('name');
+#   my @duplicate_feature_type_names = keys %$duplicate_feature_types;
+#   
+#   my @error_msg;
+#   if (@duplicate_feature_type_names) {
+#     push 
+#       @error_msg, 
+#       "The following feature types are referenced by experiments, but they "
+#       . "are not unique: " 
+#       . join ', ', @duplicate_feature_type_names;
+#   }
+# 
+#   if (@error_msg) {
+#     return join "\n", @error_msg;
+#   }
+#   return;
+# }
 
-  if (@error_msg) {
-    return join "\n", @error_msg;
-  }
-  return;
-}
-
-sub check_feature_types_have_so_accessions {
-  my $self = shift;
-  my $dbc  = shift;
-  
-  # Find feature types without SO accessions
-  #
-  my $find_no_SO_feature_types = '
-    select 
-      feature_type.name 
-    from 
-      experiment 
-      join feature_type using (feature_type_id) 
-    where 
-      so_accession is null 
-      and feature_type.name != "WCE"
-    '
-  ;
-  
-  my $sth = $dbc->prepare($find_no_SO_feature_types);
-  $sth->execute;
-  my $feature_types_no_SO = $sth->fetchall_arrayref;
-  
-  my @error_msg;
-  if (@$feature_types_no_SO) {
-    push 
-      @error_msg, 
-      "The following feature types have no sequence ontology accession: " 
-      . join ', ', @$feature_types_no_SO;
-  }
-
-  if (@error_msg) {
-    return join "\n", @error_msg;
-  }
-  return;
-}
+# sub check_feature_types_have_so_accessions {
+#   my $self = shift;
+#   my $dbc  = shift;
+#   
+#   # Find feature types without SO accessions
+#   #
+#   my $find_no_SO_feature_types = '
+#     select 
+#       feature_type.name 
+#     from 
+#       experiment 
+#       join feature_type using (feature_type_id) 
+#     where 
+#       so_accession is null 
+#       and feature_type.name != "WCE"
+#     '
+#   ;
+#   
+#   my $sth = $dbc->prepare($find_no_SO_feature_types);
+#   $sth->execute;
+#   my $feature_types_no_SO = $sth->fetchall_arrayref;
+#   
+#   my @error_msg;
+#   if (@$feature_types_no_SO) {
+#     push 
+#       @error_msg, 
+#       "The following feature types have no sequence ontology accession: " 
+#       . join ', ', @$feature_types_no_SO;
+#   }
+# 
+#   if (@error_msg) {
+#     return join "\n", @error_msg;
+#   }
+#   return;
+# }
 
 sub check_so_accessions_in_ontology_db {
   my $self = shift;
@@ -483,33 +484,33 @@ sub check_so_accessions_in_ontology_db {
   return;
 }
 
-sub check_signal_control_mismatches {
-  my $self = shift;
-  my $dbc  = shift;
-  
-  my @error_msg;
-  
-  my $find_signal_control_epigenome_mismatches = '
-    select 
-      * 
-    from 
-      experiment s 
-      join experiment c on (
-        s.control_id = c.experiment_id 
-        and s.epigenome_id != c.epigenome_id
-      )
-  ';
-  
-  my $sth = $dbc->prepare($find_signal_control_epigenome_mismatches);
-  $sth->execute;
-  my $signal_control_epigenome_mismatches = $sth->fetchall_arrayref;
-  if (@$signal_control_epigenome_mismatches) {
-    return 
-      "Signal control mismatches! Try:\n\n"
-      . $find_signal_control_epigenome_mismatches;
-  }
-  return;
-}
+# sub check_signal_control_mismatches {
+#   my $self = shift;
+#   my $dbc  = shift;
+#   
+#   my @error_msg;
+#   
+#   my $find_signal_control_epigenome_mismatches = '
+#     select 
+#       * 
+#     from 
+#       experiment s 
+#       join experiment c on (
+#         s.control_id = c.experiment_id 
+#         and s.epigenome_id != c.epigenome_id
+#       )
+#   ';
+#   
+#   my $sth = $dbc->prepare($find_signal_control_epigenome_mismatches);
+#   $sth->execute;
+#   my $signal_control_epigenome_mismatches = $sth->fetchall_arrayref;
+#   if (@$signal_control_epigenome_mismatches) {
+#     return 
+#       "Signal control mismatches! Try:\n\n"
+#       . $find_signal_control_epigenome_mismatches;
+#   }
+#   return;
+# }
 
 sub check_read_file_configurations_unique_per_experiment {
   my $self = shift;
@@ -551,30 +552,117 @@ sub check_read_file_configurations_unique_per_experiment {
   return;
 }
 
-sub check_alignment_read_file_orphans {
+# sub check_duplicate_read_file_names {
+#   my $self = shift;
+#   my $dbc  = shift;
+#   
+#   my $sql = '
+#     select 
+#       read_file.name as read_file_name,
+#       group_concat(experiment.name) experiment_names,
+#       count(read_file_id) count
+#     from 
+#       experiment 
+#           join read_file_experimental_configuration using (experiment_id)
+#           join read_file using (read_file_id)
+#     group by
+#       read_file_name
+#     having 
+#       count>1
+#     ;
+#   ';
+#   my $sth = $dbc->prepare($sql);
+#   $sth->execute;
+#   
+#   my $hash = $sth->fetchall_hashref('read_file_name');
+#   my @duplicate_read_file_names = sort alphabetically keys %$hash;
+#   
+#  
+#   if (@duplicate_read_file_names) {
+#       return 
+#         "There are ".scalar @duplicate_read_file_names." duplicate read file names in the alignment_read_file table:\n"
+#         . $self->bulletpointify(\@duplicate_read_file_names)
+#       ;
+#   }
+#   return;
+# }
+
+# sub check_alignment_read_file_orphans {
+#   my $self = shift;
+#   my $dbc  = shift;
+#   
+#   my $count_orphans_sql = '
+#     select 
+#       read_file.name
+#     from 
+#       read_file left join alignment_read_file using (read_file_id) 
+#     where 
+#       alignment_read_file.alignment_read_file_id is null
+#     order by
+#       read_file.name
+#   ';
+#   my $sth = $dbc->prepare($count_orphans_sql);
+#   $sth->execute;
+#   
+#   my $orphan_read_file_names_hash = $sth->fetchall_hashref('name');
+#   my @orphan_read_file_names = sort alphabetically keys %$orphan_read_file_names_hash;
+#   
+#   if (@orphan_read_file_names) {
+#       return 
+#         "There are ".scalar @orphan_read_file_names." orphan entries in the alignment_read_file table:\n"
+#         . $self->bulletpointify(\@orphan_read_file_names)
+#       ;
+#   }
+#   return;
+# }
+
+# sub check_unused_control_reads_files_although_they_do_control_something {
+#   my $self = shift;
+#   my $dbc  = shift;
+#   
+#   my $count_orphans_sql = '
+#     select 
+#       distinct control.name
+#     from 
+#       experiment control 
+#       join experiment sig on (
+#           sig.control_id = control.experiment_id 
+#       )
+#       join read_file_experimental_configuration on (read_file_experimental_configuration.experiment_id = control.experiment_id)
+#       join read_file using (read_file_id)
+#       left join alignment_read_file using (read_file_id)
+#     where 
+#       control.is_control = 1
+#       and alignment_read_file.alignment_read_file_id is null
+#     order by 
+#       control.name
+#   ';
+#   my $sth = $dbc->prepare($count_orphans_sql);
+#   $sth->execute;
+#   
+#   my $orphan_read_file_names_hash = $sth->fetchall_hashref('name');
+#   my @orphan_read_file_names = sort alphabetically keys %$orphan_read_file_names_hash;
+#   
+#   if (@orphan_read_file_names) {
+#       return 
+#         "There are " . scalar @orphan_read_file_names . " unused control reads files although they do control something:\n"
+#         . $self->bulletpointify(\@orphan_read_file_names)
+#       ;
+#   }
+#   return;
+# }
+
+sub alphabetically {
+  return uc($a) cmp uc($b)
+}
+
+sub bulletpointify {
   my $self = shift;
-  my $dbc  = shift;
+  my $list = shift;
   
-  # Check for orphans
-  #
-  my $count_orphans_sql = '
-    select 
-      count(*) as c 
-    from 
-      alignment_read_file left join read_file using (read_file_id) 
-    where 
-      read_file.read_file_id is null
-  ';
-  my $sth = $dbc->prepare($count_orphans_sql);
-  $sth->execute;
+  my $bulletpoint = '  - ';
   
-  my $x = $sth->fetchall_arrayref;
-  my $num_orphans = $x->[0]->[0];
-  
-  if ($num_orphans) {
-      return "There are $num_orphans orphan entries in the alignment_read_file table."; 
-  }
-  return;
+  return join "\n", map { $bulletpoint . $_ } @$list;
 }
 
 1;
