@@ -12,9 +12,23 @@ sub pipeline_analyses {
         {   -logic_name  => 'start_pre_pipeline_checks',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
-               'MAIN->A' => 'pre_pipeline_checks',
+               'MAIN->A' => [
+                'pre_pipeline_checks',
+                'registration_checks',
+               ],
                'A->MAIN' => 'truncate_execution_plan_table',
             },
+        },
+        {
+          -logic_name       => 'registration_checks',
+          -module           => 'Bio::EnsEMBL::DataCheck::Pipeline::RunDataChecks',
+          -max_retry_count  => 0,
+          -parameters => {
+            registry_file    => '#reg_conf#',
+            species          => '#species#',
+            group            => 'funcgen',
+            datacheck_groups => [ 'funcgen_registration' ],
+          },
         },
         {
           -logic_name => 'pre_pipeline_checks',
@@ -57,6 +71,7 @@ sub pipeline_analyses {
                       "Transcription Factor",
                       "Polymerase"
                     )
+                  and (experiment.name like "K562%")
                 ',
 #                  and (experiment.name like "K562%")
 #                    and (experiment.name like "Lung%" or experiment.name like "HepG2%")
