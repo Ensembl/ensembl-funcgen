@@ -361,6 +361,10 @@ sub process_phantom_peak_qc_values_from_peak_callings {
     my $signal_alignment = $peak_calling->fetch_signal_Alignment;
     my $phantom_peak     = $signal_alignment->fetch_PhantomPeak;
     
+    if (! defined $phantom_peak) {
+      die('No phantom peak result for ' . $signal_alignment->name . " found!");
+    }
+    
     my $phantom_peak_run_failed = $phantom_peak->run_failed;
     
     if ($phantom_peak_run_failed) {
