@@ -71,13 +71,17 @@ sub parameters :Test(setup) {
 sub define_expected :Test(setup) {
     my $self = shift;
 
+    my $feature_type_adaptor = $self->{funcgen_db}->get_adaptor('FeatureType');
+    my $feature_type = $feature_type_adaptor->fetch_by_dbID(179077);
+
     $self->{expected} = {
         'display_label'          => 'hsa-let-7a-5p',
         'accession'              => 'MIMAT0000062',
         'evidence'               => 'Experimental',
         'method'                 => 'HITS-CLIP',
         'gene_stable_id'         => 'ENSG00000002834',
-        'supporting_information' => 'BS1; spliced_no'
+        'supporting_information' => 'BS1; spliced_no',
+        'feature_type'           => $feature_type
     };
 }
 
@@ -93,6 +97,17 @@ sub fetch_from_test_db :Test(setup) {
 sub getters {
     return [ 'display_label', 'accession', 'evidence', 'method',
              'gene_stable_id', 'supporting_information' ];
+}
+
+sub get_FeatureType :Test(1) {
+    my $self = shift;
+
+    my $short_class = $self->short_class();
+
+    is_deeply($self->{fetched}->{$short_class}->get_FeatureType,
+              $self->{expected}->{feature_type},
+              'get_FeatureType works'
+    );
 }
 
 
