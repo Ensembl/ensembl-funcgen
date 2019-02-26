@@ -11,9 +11,13 @@ sub run {
   my $self = shift;
   my $plan                   = $self->param_required('execution_plan');
   my $species                = $self->param_required('species');
-  my $peaks_to_load_file     = $self->param_required('peaks_to_load_file');
   my $peak_calling_succeeded = $self->param_required('peak_calling_succeeded');
   my $error_message          = $self->param('error_message');
+  my $peaks_to_load_file     = $self->param('peaks_to_load_file');
+  
+  if ($peak_calling_succeeded && ! defined $peaks_to_load_file) {
+    confess("peaks_to_load_file parameter is mandatory, if the peak calling succeeded!");
+  }
   
   use Bio::EnsEMBL::Funcgen::PeakCallingPlan::ExecutionPlanUtils qw (
         lock_execution_plan
