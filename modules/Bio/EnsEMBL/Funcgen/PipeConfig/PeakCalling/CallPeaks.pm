@@ -21,9 +21,20 @@ sub pipeline_analyses {
               tempdir => '#tempdir_peak_calling#/#species#/peak_calling'
             },
             -analysis_capacity => 100,
+            -rc_name     => '4Gb_job_2h',
             -flow_into   => {
-               2        => 'store_peaks',
-               MEMLIMIT => 'call_peaks_himem',
+               2        => {
+                'store_peaks' => undef,
+               },
+               MEMLIMIT => {
+                'call_peaks_himem' => undef,
+               },
+               RUNLIMIT => {
+                'store_peaks' => INPUT_PLUS({
+                      peak_calling_succeeded => 0,
+                      error_message          => 'Job exceeded maximal run time',
+                  })
+                },
             },
         },
         {   -logic_name  => 'call_peaks_himem',
@@ -32,9 +43,17 @@ sub pipeline_analyses {
               tempdir => '#tempdir_peak_calling#/#species#/peak_calling'
             },
             -analysis_capacity => 50,
-            -rc_name     => '32Gb_job',
+            -rc_name     => '32Gb_job_2h',
             -flow_into   => {
-               2 => 'store_peaks',
+               2 => { 
+                  'store_peaks' => undef,
+               },
+               RUNLIMIT => {
+                'store_peaks' => INPUT_PLUS({
+                      peak_calling_succeeded => 0,
+                      error_message          => 'Job exceeded maximal run time',
+                  })
+                },
             },
         },
         {   -logic_name        => 'store_peaks',
