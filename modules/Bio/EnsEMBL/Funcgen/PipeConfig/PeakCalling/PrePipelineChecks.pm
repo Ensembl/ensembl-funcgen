@@ -54,7 +54,6 @@ sub pipeline_analyses {
             -parameters => {
                 db_conn    => 'funcgen:#species#',
                 
-                # Everything
                 inputquery => '
                   select 
                     experiment_id,
