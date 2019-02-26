@@ -40,24 +40,19 @@ sub pipeline_analyses {
         {   -logic_name => 'start_alignment_hc',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into => { 
-              MAIN => 'hc_signals_not_registered_as_controls',
+              MAIN     => 'alignment_checks', 
             },
         },
         {
-            -logic_name  => 'hc_signals_not_registered_as_controls',
-            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SqlHealthcheck',
-            -parameters => {
-              db_conn       => 'funcgen:#species#',
-              description   => 'By convention all controls should have WCE in their name.',
-              query         => 'select * FROM alignment where is_control = true and name not like "%WCE%"',
-              expected_size => '0'
-            },
-          -flow_into => {
-              MAIN => 'alignment_hc_done',
+          -logic_name       => 'alignment_checks',
+          -module           => 'Bio::EnsEMBL::DataCheck::Pipeline::RunDataChecks',
+          -max_retry_count  => 0,
+          -parameters => {
+            registry_file    => '#reg_conf#',
+            species          => '#species#',
+            group            => 'funcgen',
+            datacheck_groups => [ 'funcgen_alignments' ],
           },
-        },
-        {   -logic_name => 'alignment_hc_done',
-            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
     ];
 }
