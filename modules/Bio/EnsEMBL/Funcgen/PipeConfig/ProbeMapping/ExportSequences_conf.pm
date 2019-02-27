@@ -104,6 +104,7 @@ sub pipeline_analyses {
       {
         -logic_name  => 'export_unmapped_sequences',
         -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::DumpUnmappedSeqs',
+        -rc_name     => '16Gb_job',
       },
     ];
 }
