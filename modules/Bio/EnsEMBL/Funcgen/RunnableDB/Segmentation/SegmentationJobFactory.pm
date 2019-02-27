@@ -44,6 +44,10 @@ sub run {
         ->locate({
           species   => $species,
           file_type => 'chromosome_lengths_by_species_assembly',
+          
+          # Use male to make sure the Y chromosome is in the chomosome length
+          # file.
+          epigenome_gender => 'male',
           assembly  => $default_assembly
         });
   
