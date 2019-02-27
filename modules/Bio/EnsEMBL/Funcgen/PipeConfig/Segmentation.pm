@@ -198,11 +198,9 @@ sub pipeline_analyses {
       },
       {   -logic_name => 'make_segmentation_dir',
           -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-          #-analysis_capacity => ,
-          #-module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
           -parameters => {
               cmd => 
-                  q( asdfasd rm    -rf #tempdir_segmentation#/#species#/#superclass#/#class# ; )
+                  q( rm    -rf #tempdir_segmentation#/#species#/#superclass#/#class# ; )
                 . q( mkdir -p  #tempdir_segmentation#/#species#/#superclass#/#class#   ),
           },
           -flow_into => { 
@@ -225,7 +223,6 @@ sub pipeline_analyses {
           -flow_into => { 
             MAIN => [ 
                 'binarize', 
-                #'record_segmentation_as_done' 
             ],
           },
       },
