@@ -45,8 +45,20 @@ sub pipeline_analyses {
                 'hc_regulatory_build_epigenomes_populated',
                 'hc_regulatory_activities_counts',
                 'hc_segmentation_files_exist',
+                'regulatory_build_checks',
               ]
             },
+        },
+        {
+          -logic_name       => 'regulatory_build_checks',
+          -module           => 'Bio::EnsEMBL::DataCheck::Pipeline::RunDataChecks',
+          -max_retry_count  => 0,
+          -parameters => {
+            registry_file    => '#reg_conf#',
+            species          => '#species#',
+            group            => 'funcgen',
+            datacheck_groups => [ 'regulatory_build' ],
+          },
         },
         {   -logic_name => 'hc_segmentation_files_exist',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
