@@ -58,6 +58,7 @@ sub pipeline_analyses {
         },
         {   -logic_name        => 'store_peaks',
             -module            => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::StorePeaks',
+            -rc_name           => '16Gb_job',
             -analysis_capacity => 10,
         },
         {   -logic_name  => 'done_call_peaks',
