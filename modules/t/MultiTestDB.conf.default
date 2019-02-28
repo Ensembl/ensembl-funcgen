@@ -8,6 +8,7 @@
 
   # uncomment to use preloaded databases (useful when doing lots of
   # testing)
-  # 'preloaded' =>
-  #   { 'homo_sapiens' => { 'core' => 'mcvicker_new_schema' } }
+  #'preloaded' =>
+  #   { 'homo_sapiens' => { 'core' => 'jcmarca_human_test_core_db_97', 
+  #   'funcgen' => 'jcmarca_human_test_funcgen_db_97'} }
 }

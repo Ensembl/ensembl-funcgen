@@ -175,3 +175,4 @@
 765	\N	patch	patch_96_97_c.sql|Added flag
 766	\N	patch	patch_96_97_d.sql|Fix foreign key data type inconsistencies
 767	\N	patch	patch_96_97_e.sql|Update mirna_target_feature
+768	\N	patch	patch_96_97_f.sql|Add search_terms and full_name columns to epigenome table and rename display_label column to short_name
