@@ -1666,6 +1666,9 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patc
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_d.sql|Fix foreign key data type inconsistencies');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_e.sql|Update mirna_target_feature');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_f.sql|Add search_terms and full_name columns to epigenome table and rename display_label column to short_name');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_g.sql|Modify column in regulatory_activity');
+
+
 
 
 /**
