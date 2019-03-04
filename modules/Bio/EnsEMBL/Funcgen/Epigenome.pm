@@ -458,7 +458,6 @@ sub summary_as_hash {
     name              => $self->name,
     gender            => $self->gender,
     description       => $self->description,
-    display_label     => $self->display_label,
     short_name        => $self->short_name,
     search_terms      => $self->search_terms,
     efo_accession     => $self->efo_accession,
