@@ -58,13 +58,13 @@ qr/Gender .+ not valid, must be one of/, 'Check that the gender is valid';
 
 # Test getter subroutines
 my $epigenome_adaptor = $funcgen_db->get_adaptor('Epigenome');
-my $epigenome = $epigenome_adaptor->fetch_by_name('NHDF-AD');
+my $epigenome = $epigenome_adaptor->fetch_by_name('K562');
 
-is( $epigenome->name,          'NHDF-AD', 'Test name()' );
-is( $epigenome->production_name,          'NHDF_AD', 'Test production_ame()' );
-is( $epigenome->display_label, 'NHDF-Ad', 'Test display_label()' );
+is( $epigenome->name,          'K562', 'Test name()' );
+is( $epigenome->production_name,          'K562', 'Test production_ame()' );
+is( $epigenome->display_label, 'K562', 'Test display_label()' );
 is( $epigenome->description,
-    'adult dermal fibroblasts',
+    'Human myelogenous leukaemia cell line',
     'Test description()'
 );
 is( $epigenome->gender, 'female', 'Test gender()' );
@@ -72,15 +72,15 @@ is($epigenome->efo_accession, undef, 'Test efo_accession()');
 is($epigenome->epirr_accession, undef, 'Test epirr_accession()');
 
 my $expected_summary = {
-    name          => 'NHDF-AD',
+    name          => 'K562',
     gender        => 'female',
-    description   => 'adult dermal fibroblasts',
-    display_label => 'NHDF-Ad',
-    short_name    => 'NHDF-Ad',
+    description   => 'Human myelogenous leukaemia cell line',
+    short_name    => 'K562',
     search_terms  => undef,
     efo_accession => undef,
     epirr_accession => undef,
     encode_accession => undef,
+    full_name => undef,
 };
 
 is_deeply( $epigenome->summary_as_hash, $expected_summary,
