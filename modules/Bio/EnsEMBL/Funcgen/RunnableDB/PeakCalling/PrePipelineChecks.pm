@@ -135,6 +135,7 @@ sub check_programs_in_path {
     argenrich_with_labels_and_rerunnable.R
     idr
     populate_meta_coord.pl
+    export_regulatory_features_to_bed.pl
   );
 
   foreach my $current_program (@programs_expected_in_path) {
