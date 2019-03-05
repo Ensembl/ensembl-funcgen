@@ -111,6 +111,7 @@ sub pipeline_analyses {
             -parameters => { 
                 cmd => qq!samtools index #chance_tempdir#/#file#!,
             },
+            -analysis_capacity => 50,
             -flow_into => { 
               MAIN     => 'CountReads',
               MEMLIMIT => 'IndexBam_himem',
