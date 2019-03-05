@@ -160,7 +160,7 @@ sub pipeline_analyses {
                   generate_regulatory_build_report.pl  \
                       --species          #species# \
                       --registry         #reg_conf# \
-                      --output_directory #reports_dir#/#species#
+                      --output_file      #reports_dir#/#species#/regulatory_build.html
                 )
           },
       },
