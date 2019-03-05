@@ -17,10 +17,11 @@ sub pipeline_analyses {
         },
         {   -logic_name  => 'ftp_site_checks',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -rc_name     => '32Gb_job',
             -parameters  => {
                 cmd => qq(
                   ftp_site_checks.pl \
-                    --registry #registry# \
+                    --registry #reg_conf# \
                     --species #species# \
                     --ftp_dir #ftp_base_dir#/#species#
                 ),
