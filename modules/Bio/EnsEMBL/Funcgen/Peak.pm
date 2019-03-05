@@ -246,7 +246,7 @@ sub display_label {
 
 sub display_id {
     my $self = shift;
-    my $peak_calling = $self->fetch_PeakCalling;
+    my $peak_calling = $self->get_PeakCalling;
 
     if(! $self->{'display_id'}  && $self->adaptor){
       $self->{'display_id'} = join '_', 
@@ -322,7 +322,7 @@ sub seq_region_name {
 
 sub feature_so_acc {
   my $self = shift;
-  return $self->fetch_PeakCalling->fetch_FeatureType->so_accession;
+  return $self->get_PeakCalling->fetch_FeatureType->so_accession;
 }
 
 =head2 summary_as_hash
@@ -336,7 +336,7 @@ sub feature_so_acc {
 
 sub summary_as_hash {
   my $self = shift;
-  my $peak_calling = $self->fetch_PeakCalling;
+  my $peak_calling = $self->get_PeakCalling;
   my $slice = $self->slice;
   
   return
