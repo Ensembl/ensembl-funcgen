@@ -4,6 +4,7 @@ use strict;
 use Template;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Utils::Logger;
+use Carp;
 
 use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_get_or_set
@@ -32,6 +33,10 @@ sub logger_created { return shift->_generic_get_or_set('logger_created', @_); }
 sub init {
 
   my $self = shift;
+
+  if (! defined $self->output_file && ! defined $self->output_fh) {
+    confess("Either output_file or output_fh has to be set!");
+  }
   
   if (! defined $self->logger) {
     my $logger = Bio::EnsEMBL::Utils::Logger->new;
@@ -81,6 +86,10 @@ sub generate_report {
     $self->_create_output_directory;
     
     open $output_fh, '>', $output_file;
+  }
+  
+  if (! defined $output_fh) {
+    confess("Output file handle is not defined!");
   }
   
   $tt->process(
