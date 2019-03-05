@@ -20,7 +20,6 @@ sub pipeline_analyses {
       peaks_bed_file_base_name    => "#species#.#assembly#.#epigenome_production_name#.#feature_type_name#.#analysis_logic_name#.peaks.${data_freeze_date}.bed.gz",
       peaks_bigbed_file_base_name => "#species#.#assembly#.#epigenome_production_name#.#feature_type_name#.#analysis_logic_name#.peaks.${data_freeze_date}.bb",
     };
-
     lock_hash(%$ftp_layout_configuration);
 
     return [
@@ -59,24 +58,17 @@ sub pipeline_analyses {
               cmd => 'mkdir -p #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#',
             },
             -flow_into   => {
-               MAIN => 'print_annotated_feature_ids',
+               MAIN => 'write_peak_ids_to_file',
             },
         },
-        {   -logic_name  => 'print_annotated_feature_ids',
-            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
-            -rc_name           => '2Gb_job',
+        {   -logic_name  => 'write_peak_ids_to_file',
+            -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::Ftp::WritePeakIdsToFile',
+            -rc_name     => '2Gb_job',
             -parameters  => {
-              cmd => '
-                print_annotated_feature_ids.pl  \
-                  --registry #reg_conf#  \
-                  --species #species#  \
-                  --epigenome_production_name #epigenome_production_name#  \
-                  --feature_type_name #feature_type_name#  \
-                  > #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#_ids.txt
-              ',
+              output_file => '#tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#_ids.txt',
             },
             -flow_into   => {
-               MAIN => 'export_annotated_features',
+               2 => 'export_annotated_features',
             },
         },
         {   -logic_name  => 'export_annotated_features',

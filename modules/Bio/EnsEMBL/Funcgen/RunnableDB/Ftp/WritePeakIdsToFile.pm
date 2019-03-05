@@ -22,7 +22,11 @@ sub run {
   my $helper = Bio::EnsEMBL::Utils::SqlHelper->new(
     -DB_CONNECTION => $funcgen_adaptor->dbc
   );
-
+  
+  $self->say_with_header("output_file               = " . $output_file,               1);
+  $self->say_with_header("feature_type_name         = " . $feature_type_name,         1);
+  $self->say_with_header("epigenome_production_name = " . $epigenome_production_name, 1);
+  
   open my $fh, '>', $output_file;
   
   my $number_of_ids_written;
@@ -55,6 +59,10 @@ sub run {
     },
   );
   $fh->close;
+  
+  if ($number_of_ids_written == 0) {
+    die("No ids were written for this peak calling!");
+  }
   
   my $job = $self->get_job_hash_ref;
   my $new_data_flow = {
