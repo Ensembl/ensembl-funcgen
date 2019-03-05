@@ -370,6 +370,21 @@ sub pipeline_analyses {
                 )
           },
           -flow_into => {
+            MAIN => 'set_sample_regulatory_feature'
+          },
+      },
+      
+      {   -logic_name => 'set_sample_regulatory_feature',
+          -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+          -parameters => {
+            cmd => 
+                q(
+                    set_sample_regulatory_feature.pl \
+                      --species          #species#   \
+                      --registry         #reg_conf#  \
+                )
+          },
+          -flow_into => {
             MAIN => 'populate_meta_coord'
           },
       },
