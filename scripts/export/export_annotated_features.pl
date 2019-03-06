@@ -21,6 +21,10 @@ GetOptions (
    'ids=s'      => \$id_file,
 );
 
+if (! -e $id_file) {
+  die("The id file does not exist! $id_file");
+}
+
 Bio::EnsEMBL::Registry->load_all($registry);
 
 use Bio::EnsEMBL::Utils::Logger;
