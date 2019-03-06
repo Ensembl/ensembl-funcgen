@@ -19,7 +19,7 @@ sub pipeline_analyses {
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -rc_name     => '32Gb_job',
             -parameters  => {
-                cmd => qq(
+                cmd => q(
                   ftp_site_checks.pl \
                     --registry #reg_conf# \
                     --species #species# \
