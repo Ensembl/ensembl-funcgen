@@ -63,9 +63,10 @@ sub pipeline_analyses {
         },
         {   -logic_name  => 'write_peak_ids_to_file',
             -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::Ftp::WritePeakIdsToFile',
+            -analysis_capacity => 50,
             -rc_name     => '2Gb_job',
             -parameters  => {
-              output_file => '#tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#_ids.txt',
+              output_file => '#tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#_#analysis_logic_name#_ids.txt',
             },
             -flow_into   => {
                2 => 'export_annotated_features',
@@ -79,11 +80,11 @@ sub pipeline_analyses {
             -parameters  => {
               cmd => '
                 export_annotated_features.pl \
-                  --gff_file #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#.peaks.unsorted.gff  \
-                  --bed_file #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#.peaks.unsorted.bed  \
+                  --gff_file #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#_#analysis_logic_name#.peaks.unsorted.gff  \
+                  --bed_file #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#_#analysis_logic_name#.peaks.unsorted.bed  \
                   --registry #reg_conf#  \
                   --species #species#  \
-                  --ids #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#_ids.txt
+                  --ids #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#_#analysis_logic_name#_ids.txt
               ',
             },
             -flow_into   => {
@@ -96,7 +97,14 @@ sub pipeline_analyses {
         {   -logic_name  => 'sort_peaks_gff',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'sort -k1,1 -k4,4n -o #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#.peaks.gff #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#.peaks.unsorted.gff ; sleep 10',
+                cmd => '
+                  sort \
+                    -k1,1 \
+                    -k4,4n \
+                    -o #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#_#analysis_logic_name#.peaks.gff \
+                    #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#_#analysis_logic_name#.peaks.unsorted.gff \
+                    ; sleep 10
+                 ',
             },
             -flow_into   => {
                MAIN => 'gzip_peaks_gff',
@@ -106,7 +114,10 @@ sub pipeline_analyses {
         {   -logic_name  => 'gzip_peaks_gff',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'gzip #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#.peaks.gff',
+                cmd => '
+                  gzip -f \
+                    #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#_#analysis_logic_name#.peaks.gff
+                ',
             },
             -flow_into   => {
                MAIN => 'mk_peaks_gff_ftp_dir',
@@ -124,7 +135,10 @@ sub pipeline_analyses {
         {   -logic_name  => 'mv_peaks_gff_to_ftp_dir',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'mv #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#.peaks.gff.gz ' . $ftp_layout_configuration->{peaks_gff_file_dir} . '/' . $ftp_layout_configuration->{peaks_gff_file_base_name},
+                cmd => '
+                  mv \
+                    #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#_#analysis_logic_name#.peaks.gff.gz '
+                    . $ftp_layout_configuration->{peaks_gff_file_dir} . '/' . $ftp_layout_configuration->{peaks_gff_file_base_name},
             },
         },
 
@@ -133,8 +147,9 @@ sub pipeline_analyses {
             -parameters  => {
                 cmd => '
                   bedSort  \
-                    #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#.peaks.unsorted.bed  \
-                    #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#.peaks.bed ; sleep 10
+                    #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#_#analysis_logic_name#.peaks.unsorted.bed  \
+                    #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#_#analysis_logic_name#.peaks.bed \
+                    ; sleep 10
                 ',
             },
             -flow_into   => {
@@ -147,9 +162,9 @@ sub pipeline_analyses {
             -parameters  => {
                 cmd => '
                   bedToBigBed  \
-                    #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#.peaks.bed  \
+                    #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#_#analysis_logic_name#.peaks.bed  \
                     #tempdir_ftp#/#species#.ucsc.sizes  \
-                    #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#.peaks.bb
+                    #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#_#analysis_logic_name#.peaks.bb
                 ',
             },
             -flow_into   => {
@@ -160,7 +175,7 @@ sub pipeline_analyses {
         {   -logic_name  => 'gzip_peaks_bed',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'gzip #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#.peaks.bed',
+                cmd => 'gzip -f #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#_#analysis_logic_name#.peaks.bed',
             },
             -flow_into   => {
                MAIN => [
@@ -190,13 +205,19 @@ sub pipeline_analyses {
         {   -logic_name  => 'mv_peaks_bed_to_ftp',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'mv #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#.peaks.bed.gz ' . $ftp_layout_configuration->{peaks_bed_file_dir} . '/' . $ftp_layout_configuration->{peaks_bed_file_base_name},
+                cmd => '
+                  mv \
+                    #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#_#analysis_logic_name#.peaks.bed.gz ' 
+                    . $ftp_layout_configuration->{peaks_bed_file_dir} . '/' . $ftp_layout_configuration->{peaks_bed_file_base_name},
             },
         },
         {   -logic_name  => 'mv_annotated_feature_bigbed_to_ftp',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'mv #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#.peaks.bb ' . $ftp_layout_configuration->{peaks_bigbed_file_dir} . '/' . $ftp_layout_configuration->{peaks_bigbed_file_base_name},
+                cmd => '
+                  mv \
+                    #tempdir_ftp#/#epigenome_production_name#/#feature_type_name#/#epigenome_production_name#_#feature_type_name#_#analysis_logic_name#.peaks.bb ' 
+                    . $ftp_layout_configuration->{peaks_bigbed_file_dir} . '/' . $ftp_layout_configuration->{peaks_bigbed_file_base_name},
             },
         },
         {
