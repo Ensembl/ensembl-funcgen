@@ -16,6 +16,7 @@ sub run {
   my $epigenome_production_name = $self->param('epigenome_production_name');
   my $feature_type_name         = $self->param('feature_type_name');
   my $output_file               = $self->param('output_file');
+  my $analysis_logic_name       = $self->param('analysis_logic_name');
 
   my $funcgen_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor( $species, 'funcgen' );
 
@@ -26,6 +27,7 @@ sub run {
   $self->say_with_header("output_file               = " . $output_file,               1);
   $self->say_with_header("feature_type_name         = " . $feature_type_name,         1);
   $self->say_with_header("epigenome_production_name = " . $epigenome_production_name, 1);
+  $self->say_with_header("analysis_logic_name       = " . $analysis_logic_name,       1);
   
   open my $fh, '>', $output_file;
   
@@ -40,14 +42,17 @@ sub run {
         join peak_calling using (peak_calling_id) 
         join epigenome using (epigenome_id) 
         join experiment using (experiment_id) 
-        join feature_type on (feature_type.feature_type_id = experiment.feature_type_id) 
+        join feature_type on (feature_type.feature_type_id = experiment.feature_type_id)
+        join analysis on (analysis.analysis_id = peak_calling.analysis_id) 
       where 
         epigenome.production_name = ? 
         and feature_type.name     = ?
+        and logic_name            = ?
     ",
-    -PARAMS => [ 
+    -PARAMS => [
       $epigenome_production_name, 
-      $feature_type_name 
+      $feature_type_name,
+      $analysis_logic_name
      ],
     -CALLBACK => sub {
       my $row = shift;
