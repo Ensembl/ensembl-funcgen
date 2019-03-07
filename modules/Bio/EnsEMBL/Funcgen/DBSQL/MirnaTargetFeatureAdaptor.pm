@@ -59,6 +59,30 @@ use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor; #DBI sql_types import
 use base qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor );
 
 
+=head2 fetch_all_by_gene_stable_id
+
+    Arg [1]    : String $gene_stable_id - The stable id of the linked gene
+    Example    : my $mirna_target_features =
+    mtf_adaptor->fetch_all_by_gene_stable_id('ENSG00000000001');
+    Description: Retrieves a list of mirna target features that are linked to the
+                 given Gene.
+    Returntype : arrayref of Bio::EnsEMBL::Funcgen::MirnaTargetFeature objects
+    Exceptions : none
+    Caller     : general
+    Status     : Stable
+
+=cut
+
+sub fetch_all_by_gene_stable_id {
+    my $self      = shift;
+    my $gene_stable_id = shift;
+    throw('Must specify a gene_stable_id') if !defined $gene_stable_id;
+    my $constraint = "mitaf.gene_stable_id = ?";
+    $self->bind_param_generic_fetch($gene_stable_id, SQL_VARCHAR);
+
+    my $mirna_target_features = $self->generic_fetch($constraint);
+    return $mirna_target_features;
+}
 
 =head2 _true_tables
 
