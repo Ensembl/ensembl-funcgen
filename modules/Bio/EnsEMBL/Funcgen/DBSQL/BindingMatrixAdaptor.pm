@@ -111,6 +111,47 @@ sub fetch_by_stable_id {
     return $result->[0];
 }
 
+=head2 fetch_all_by_TranscriptionFactor
+
+  Arg [1]    : Bio::EnsEMBL::Funcgen::TranscriptionFactor object
+  Example    : my $matrices =
+                 $matrix_adaptor->fetch_all_by_TranscriptionFactor($tf)
+  Description: Fetches all Binding Matrices that are linked to the given
+                 Transcription Factor
+  Returntype : arrayref of Bio::EnsEMBL::Funcgen::BindingMatrix objects
+  Exceptions : Throws if no transcription_factor paramater is defined
+               Throws if parameter passed is not a
+                 Bio::EnsEMBL::Funcgen::TranscriptionFactor object
+  Caller     : General
+  Status     : Stable
+
+=cut
+
+sub fetch_all_by_TranscriptionFactor {
+    my ($self, $transcription_factor) = @_;
+
+    throw('Must pass a TranscriptionFactor parameter') if !defined $transcription_factor;
+    assert_ref($transcription_factor,
+               'Bio::EnsEMBL::Funcgen::TranscriptionFactor',
+               'TranscriptionFactor');
+
+    my $constraint = ' tf.transcription_factor_id = ? ';
+    $self->bind_param_generic_fetch( $transcription_factor->dbID(), SQL_INTEGER );
+
+    my $result = $self->generic_fetch($constraint);
+
+    return $result;
+}
+
+sub _left_join {
+    my $self = shift;
+
+    return (['binding_matrix_transcription_factor_complex', "bmtfc.binding_matrix_id = bm.binding_matrix_id"],
+            ['transcription_factor_complex_composition', "tfcc.transcription_factor_complex_id=bmtfc.transcription_factor_complex_id"],
+            ['transcription_factor', "tf.transcription_factor_id=tfcc.transcription_factor_id"]
+    );
+}
+
 =head2 _true_tables
 
   Args       : None
@@ -124,7 +165,11 @@ sub fetch_by_stable_id {
 =cut
 
 sub _true_tables {
-    return ( [ 'binding_matrix', 'bm' ]);
+    return([ 'binding_matrix', 'bm' ],
+           [ 'binding_matrix_transcription_factor_complex', 'bmtfc' ],
+           [ 'transcription_factor_complex_composition', 'tfcc'],
+           [ 'transcription_factor', 'tf'],
+    );
 }
 
 
