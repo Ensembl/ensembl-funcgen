@@ -94,7 +94,7 @@ sub pipeline_analyses {
         {   -logic_name  => 'gzip_regulatory_activities',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'gzip ' . $ftp_layout_configuration->{regulatory_activities_gff_file_dir} . '/' . $ftp_layout_configuration->{regulatory_activities_gff_file_base_name},
+                cmd => 'gzip -f ' . $ftp_layout_configuration->{regulatory_activities_gff_file_dir} . '/' . $ftp_layout_configuration->{regulatory_activities_gff_file_base_name},
             },
         },
         {   -logic_name  => 'export_regulatory_features',
@@ -136,7 +136,7 @@ sub pipeline_analyses {
         {   -logic_name  => 'gzip_regulatory_features',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'gzip ' . $ftp_layout_configuration->{regulatory_features_gff_file_dir} . '/' . $ftp_layout_configuration->{regulatory_features_gff_file_base_name},
+                cmd => 'gzip -f ' . $ftp_layout_configuration->{regulatory_features_gff_file_dir} . '/' . $ftp_layout_configuration->{regulatory_features_gff_file_base_name},
             },
         },
 

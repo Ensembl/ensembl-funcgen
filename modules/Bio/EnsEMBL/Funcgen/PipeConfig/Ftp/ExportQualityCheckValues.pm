@@ -55,7 +55,7 @@ sub pipeline_analyses {
         {   -logic_name  => 'gzip_qc_chance',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'gzip ' . $ftp_layout_configuration->{qc_chance_dir} . '/' . $ftp_layout_configuration->{qc_chance_file_base_name},
+                cmd => 'gzip -f ' . $ftp_layout_configuration->{qc_chance_dir} . '/' . $ftp_layout_configuration->{qc_chance_file_base_name},
             },
         },
         {   -logic_name  => 'export_qc_mapped_reads',
@@ -72,7 +72,7 @@ sub pipeline_analyses {
         {   -logic_name  => 'gzip_qc_mapped_reads',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'gzip ' . $ftp_layout_configuration->{qc_mapped_reads_dir} . '/' . $ftp_layout_configuration->{qc_mapped_reads_base_name},
+                cmd => 'gzip -f ' . $ftp_layout_configuration->{qc_mapped_reads_dir} . '/' . $ftp_layout_configuration->{qc_mapped_reads_base_name},
             },
         },
         {   -logic_name  => 'export_qc_phantom_peaks',
@@ -89,7 +89,7 @@ sub pipeline_analyses {
         {   -logic_name  => 'gzip_qc_phantom_peaks',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'gzip ' . $ftp_layout_configuration->{qc_phantom_peaks_dir} . '/' . $ftp_layout_configuration->{qc_phantom_peaks_file_base_name},
+                cmd => 'gzip -f ' . $ftp_layout_configuration->{qc_phantom_peaks_dir} . '/' . $ftp_layout_configuration->{qc_phantom_peaks_file_base_name},
             },
         },
         {   -logic_name  => 'export_qc_proportion_of_reads_in_peaks',
@@ -106,7 +106,7 @@ sub pipeline_analyses {
         {   -logic_name  => 'gzip_qc_proportion_of_reads_in_peaks',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters  => {
-                cmd => 'gzip ' . $ftp_layout_configuration->{qc_proportion_of_reads_in_peaks_dir} . '/' . $ftp_layout_configuration->{qc_proportion_of_reads_in_peaks_file_base_name},
+                cmd => 'gzip -f ' . $ftp_layout_configuration->{qc_proportion_of_reads_in_peaks_dir} . '/' . $ftp_layout_configuration->{qc_proportion_of_reads_in_peaks_file_base_name},
             },
         },
     ]
