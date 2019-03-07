@@ -65,7 +65,7 @@ sub pipeline_analyses {
                   . ' --registry #reg_conf# --species #species#',
             },
             -flow_into   => {
-               MAIN => 'sort_regulatory_activities'
+               MAIN => { 'sort_regulatory_activities', INPUT_PLUS() },
             },
         },
         {   -logic_name  => 'sort_regulatory_activities',
