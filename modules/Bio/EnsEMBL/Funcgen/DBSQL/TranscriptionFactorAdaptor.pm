@@ -75,7 +75,34 @@ sub fetch_by_name {
     return $result->[0];
 }
 
+=head2 fetch_by_FeatureType
 
+  Arg [1]    : Bio::EnsEMBL::Funcgen::FeatureType
+  Example    : my $tf = tf_adaptor->fetch_by_FeatureType($ft);
+  Description: Fetches TranscriptionFactor object
+  Returntype : Bio::EnsEMBL::Funcgen::TranscriptionFactor
+  Exceptions : Throws if no feature_type paramater is defined
+               Throws if parameter passed is not a
+                 Bio::EnsEMBL::Funcgen::FeatureType object
+  Caller     : General
+  Status     : At risk
+
+=cut
+
+sub fetch_by_FeatureType {
+    my ($self, $feature_type) = @_;
+
+    throw('Must pass a FeatureType parameter') if !defined $feature_type;
+    assert_ref($feature_type,
+               'Bio::EnsEMBL::Funcgen::FeatureType',
+               'FeatureType');
+
+    my $constraint = " tf.feature_type_id = ?";
+    $self->bind_param_generic_fetch($feature_type->dbID(), SQL_INTEGER);
+    my $result = $self->generic_fetch($constraint);
+
+    return $result->[0];
+}
 
 =head2 _true_tables
 
