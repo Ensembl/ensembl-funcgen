@@ -55,7 +55,6 @@ use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use Bio::EnsEMBL::Funcgen::MirnaTargetFeature;
 use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor; #DBI sql_types import
 
-# use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
 use base qw( Bio::EnsEMBL::Funcgen::DBSQL::BaseFeatureAdaptor );
 
 
@@ -99,12 +98,6 @@ sub fetch_all_by_gene_stable_id {
 sub _true_tables {
   return ([ 'mirna_target_feature', 'mitaf' ]);
 }
-#feature_set is required for fetching on analysis, external_db (cell_type or feature_type).
-#and should be removed in favour of query composition
-#could put some of these type constraint methods in SetFeatureAdaptor
-#but would have to have another feature_type method in here
-#as these are in the external_feature table rather than feature_set table
-
 
 =head2 _columns
 
@@ -136,7 +129,6 @@ sub _columns {
       mitaf.supporting_information
 	   );
 }
-
 
 =head2 _objs_from_sth
 

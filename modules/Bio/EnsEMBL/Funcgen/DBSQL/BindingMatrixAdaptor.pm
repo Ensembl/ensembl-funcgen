@@ -93,7 +93,7 @@ sub fetch_by_name {
   Example    : my $matrix = $matrix_adaptor->fetch_by_stable_id('ENSPFM001');
   Description: Fetches matrix objects given a stable_id
   Returntype : Bio::EnsEMBL::Funcgen::BindingMatrix object
-  Exceptions : Throws if no stable_id if defined
+  Exceptions : Throws if no stable_id is defined
   Caller     : General
   Status     : At risk
 
