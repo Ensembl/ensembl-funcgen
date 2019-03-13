@@ -123,7 +123,7 @@ sub generate_parallel_alignment_analyses {
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::RemoveDuplicates',
             -priority   => 40,
             -flow_into   => {
-               MAIN     => $surround->('register_alignment'),
+               MAIN     => $surround->('check_alignments_to_y_chromosome'),
                MEMLIMIT => $surround->('remove_duplicates_himem'),
             },
         },
@@ -131,6 +131,12 @@ sub generate_parallel_alignment_analyses {
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::RemoveDuplicates',
             -priority   => 40,
             -rc_name    => '8Gb_job',
+            -flow_into   => {
+               MAIN => $surround->('check_alignments_to_y_chromosome'),
+            },
+        },
+        {   -logic_name  => $surround->('check_alignments_to_y_chromosome'),
+            -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::CheckAlignmentsToYChromosome',
             -flow_into   => {
                MAIN => $surround->('register_alignment'),
             },
