@@ -88,8 +88,9 @@ sub run {
     (my $control_bam_file_base_name, my $control_bam_directory) = fileparse($control_bam_file);
     
     my $experiment_name = $signal_experiment->name;
+    my $experiment_id   = $signal_experiment->dbID;
     
-    my $overridden_tempdir = "$tempdir/$species/qc_chance/$experiment_name";
+    my $overridden_tempdir = "$tempdir/$species/qc_chance/$experiment_id";
 
     my $input_id = {
 
