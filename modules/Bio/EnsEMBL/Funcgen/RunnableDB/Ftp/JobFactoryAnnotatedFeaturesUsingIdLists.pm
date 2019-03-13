@@ -18,7 +18,8 @@ sub run {
     select 
       distinct epigenome.production_name as epigenome_production_name, 
       feature_type.name as feature_type_name, 
-      analysis.logic_name as analysis_logic_name 
+      analysis.logic_name as analysis_logic_name,
+      peak_calling.peak_calling_id
     from 
       peak 
       join peak_calling using (peak_calling_id) 
@@ -60,13 +61,18 @@ SQL
       my $epigenome_production_name = $row->[0];
       my $feature_type_name         = $row->[1];
       my $analysis_logic_name       = $row->[2];
+      my $peak_calling_id           = $row->[3];
+      
+      my $relative_temporary_directory = join '/', ( 'peaks', ( reverse split '', $peak_calling_id ), 'x' );
 
       $self->dataflow_output_id({
-        species                    => $species,
-        assembly                   => $assembly,
-        feature_type_name          => $feature_type_name,
-        epigenome_production_name  => $epigenome_production_name,
-        analysis_logic_name        => $analysis_logic_name,
+        species                      => $species,
+        assembly                     => $assembly,
+        feature_type_name            => $feature_type_name,
+        epigenome_production_name    => $epigenome_production_name,
+        analysis_logic_name          => $analysis_logic_name,
+        peak_calling_id              => $peak_calling_id,
+        relative_temporary_directory => $relative_temporary_directory,
       }, 2);
     }
   );
