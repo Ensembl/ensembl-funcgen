@@ -14,7 +14,19 @@ sub pipeline_analyses {
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
                'MAIN->A' => 'truncate_peak_calling_tables',
-               'A->MAIN' => 'meta_coord_for_peaks',
+               'A->MAIN' => 'presort_peak_table',
+            },
+        },
+        {
+            -logic_name => 'presort_peak_table',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -parameters => {
+                cmd => qq( populate_meta_coord.pl  )
+                . qq( --species  #species#         )
+                . qq( --registry #reg_conf#        )
+            },
+            -flow_into   => {
+               MAIN => 'meta_coord_for_peaks',
             },
         },
         {
