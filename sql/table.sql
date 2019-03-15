@@ -233,7 +233,7 @@ DROP TABLE IF EXISTS `regulatory_activity`;
 CREATE TABLE `regulatory_activity` (
   `regulatory_activity_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `regulatory_feature_id` int(10) unsigned DEFAULT NULL,
-  `activity` enum('INACTIVE','REPRESSED','POISED','ACTIVE','NA') DEFAULT NULL,
+  `activity` enum('INACTIVE','REPRESSED','POISED','ACTIVE','NA') NOT NULL,
   `epigenome_id` int(10) unsigned DEFAULT NULL,
   PRIMARY KEY (`regulatory_activity_id`),
   UNIQUE KEY `uniqueness_constraint_idx` (`epigenome_id`,`regulatory_feature_id`),
@@ -1663,6 +1663,7 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patc
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_c.sql|Added flag');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_d.sql|Fix foreign key data type inconsistencies');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_e.sql|Update mirna_target_feature');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_g.sql|Modify column in regulatory_activity');
 
 /**
 @table meta_coord
