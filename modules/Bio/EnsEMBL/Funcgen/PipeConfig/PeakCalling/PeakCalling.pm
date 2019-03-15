@@ -21,9 +21,9 @@ sub pipeline_analyses {
             -logic_name => 'presort_peak_table',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters => {
-                cmd => qq( populate_meta_coord.pl  )
-                . qq( --species  #species#         )
-                . qq( --registry #reg_conf#        )
+                cmd => qq( presort_peak_table.pl    )
+                     . qq(   --species  #species#   )
+                     . qq(   --registry #reg_conf#  )
             },
             -flow_into   => {
                MAIN => 'meta_coord_for_peaks',
@@ -33,9 +33,9 @@ sub pipeline_analyses {
             -logic_name => 'meta_coord_for_peaks',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -parameters => {
-                cmd => qq( populate_meta_coord.pl  )
-                . qq( --species  #species#         )
-                . qq( --registry #reg_conf#        )
+                cmd => qq( populate_meta_coord.pl    )
+                     . qq(   --species  #species#    )
+                     . qq(   --registry #reg_conf#   )
             },
         },
         {
