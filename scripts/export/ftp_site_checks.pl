@@ -11,25 +11,23 @@ use Data::Dumper;
 =head2
 
 ftp_site_checks.pl \
-  --registry /homes/mnuhn/work_dir_regbuild_testrun/lib/ensembl-funcgen/registry.with_previous_version.testdb12.pm \
-  --species mus_musculus
-
-ftp_site_checks.pl \
-  --registry /homes/mnuhn/work_dir_regbuild_testrun/lib/ensembl-funcgen/registry.ftp_grch37.pm \
+  --registry /homes/mnuhn/work_dir_regbuild_testrun/lib/ensembl-funcgen/registry.with_previous_version.human_regbuild_testdb22.pm \
   --species homo_sapiens \
-  --ftp_dir /nfs/production/panda/ensembl/funcgen/mnuhn/human_grch37_fixed_ftp_regulatory_features
+  --ftp_dir /hps/nobackup/production/sds-flicek-bp/blueprint_fastq_files/mnuhn_regbuild_pipeline/rb_grch38_testdb22/ftp \
+  --check check_activity_summaries_consistent
 
 =cut
-
 
 my $registry;
 my $species;
 my $ftp_dir;
+my $check;
 
 GetOptions (
    'registry=s' => \$registry,
    'species=s'  => \$species,
    'ftp_dir=s'  => \$ftp_dir,
+   'check=s'    => \$check,
 );
 
 Bio::EnsEMBL::Registry->load_all($registry);
@@ -37,30 +35,57 @@ Bio::EnsEMBL::Registry->load_all($registry);
 use Bio::EnsEMBL::Utils::Logger;
 my $logger = Bio::EnsEMBL::Utils::Logger->new();
 
+$logger->init_log;
+
+$logger->info('registry = ' . $registry . "\n");
+$logger->info('species  = ' . $species  . "\n");
+$logger->info('ftp_dir  = ' . $ftp_dir  . "\n");
+$logger->info('check    = ' . $check    . "\n");
+
 my $funcgen_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor( $species, 'funcgen');
 my $dbc = $funcgen_adaptor->dbc;
 
-check_regulatory_activity_directories_exist($dbc);
+if (! defined $check || $check eq 'check_regulatory_activity_directories_exist') {
 
-check_regulatory_activity_files_exist($dbc);
+  $logger->info("Running check_regulatory_activity_directories_exist\n");
+  check_regulatory_activity_directories_exist($dbc);
+}
 
-check_regulatory_feature_numbers({
-    dbc     => $dbc,
-    ftp_dir => $ftp_dir,
-    species => $species,
-});
+if (! defined $check || $check eq 'check_regulatory_activity_files_exist') {
 
-check_file_content_consistent({
-    ftp_dir => $ftp_dir,
-    species => $species,
-    funcgen_adaptor => $funcgen_adaptor,
-});
+  $logger->info("Running check_regulatory_activity_files_exist\n");
+  check_regulatory_activity_files_exist($dbc);
+}
 
-check_activity_summaries_consistent({
-    dbc     => $dbc,
-    ftp_dir => $ftp_dir,
-    species => $species,
-});
+if (! defined $check || $check eq 'check_regulatory_feature_numbers') {
+
+  $logger->info("Running check_regulatory_feature_numbers\n");
+  check_regulatory_feature_numbers({
+      dbc     => $dbc,
+      ftp_dir => $ftp_dir,
+      species => $species,
+  });
+}
+
+if (! defined $check || $check eq 'check_file_content_consistent') {
+
+  $logger->info("Running check_file_content_consistent\n");
+  check_file_content_consistent({
+      ftp_dir => $ftp_dir,
+      species => $species,
+      funcgen_adaptor => $funcgen_adaptor,
+  });
+}
+
+if (! defined $check || $check eq 'check_activity_summaries_consistent') {
+
+  $logger->info("Running check_activity_summaries_consistent\n");
+  check_activity_summaries_consistent({
+      dbc     => $dbc,
+      ftp_dir => $ftp_dir,
+      species => $species,
+  });
+}
 
 $logger->finish_log;
 
@@ -473,7 +498,7 @@ sub locate_regulatory_build_file {
     my $file = glob $ftp_dir . '/' . $species . '*.Regulatory_Build.regulatory_features.*.gff.gz';
 
     if (! -e $file) {
-        die;
+        die "Can't find regulatory features file in $ftp_dir";
     }
     return $file;
 }

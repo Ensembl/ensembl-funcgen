@@ -12,10 +12,16 @@ sub pipeline_analyses {
         {   -logic_name => 'start_ftp_site_checker',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into => { 
-              MAIN => 'ftp_site_checks',
+              MAIN => [
+                'ftp_check_regulatory_activity_directories_exist',
+                'ftp_check_regulatory_activity_files_exist',
+                'ftp_check_regulatory_feature_numbers',
+                'ftp_check_file_content_consistent',
+                'ftp_check_activity_summaries_consistent',
+              ]
             },
         },
-        {   -logic_name  => 'ftp_site_checks',
+        {   -logic_name  => 'ftp_check_regulatory_activity_directories_exist',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -rc_name     => '32Gb_job',
             -parameters  => {
@@ -23,7 +29,60 @@ sub pipeline_analyses {
                   ftp_site_checks.pl \
                     --registry #reg_conf# \
                     --species #species# \
-                    --ftp_dir #ftp_base_dir#/#species#
+                    --ftp_dir #ftp_base_dir#/#species# \
+                    --check check_regulatory_activity_directories_exist
+                ),
+            },
+        },
+        {   -logic_name  => 'ftp_check_regulatory_activity_files_exist',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -rc_name     => '32Gb_job',
+            -parameters  => {
+                cmd => q(
+                  ftp_site_checks.pl \
+                    --registry #reg_conf# \
+                    --species #species# \
+                    --ftp_dir #ftp_base_dir#/#species# \
+                    --check check_regulatory_activity_files_exist
+                ),
+            },
+        },
+        {   -logic_name  => 'ftp_check_regulatory_feature_numbers',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -rc_name     => '32Gb_job',
+            -parameters  => {
+                cmd => q(
+                  ftp_site_checks.pl \
+                    --registry #reg_conf# \
+                    --species #species# \
+                    --ftp_dir #ftp_base_dir#/#species# \
+                    --check check_regulatory_feature_numbers
+                ),
+            },
+        },
+        {   -logic_name  => 'ftp_check_file_content_consistent',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -rc_name     => '32Gb_job',
+            -parameters  => {
+                cmd => q(
+                  ftp_site_checks.pl \
+                    --registry #reg_conf# \
+                    --species #species# \
+                    --ftp_dir #ftp_base_dir#/#species# \
+                    --check check_file_content_consistent
+                ),
+            },
+        },
+        {   -logic_name  => 'ftp_check_activity_summaries_consistent',
+            -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
+            -rc_name     => '32Gb_job',
+            -parameters  => {
+                cmd => q(
+                  ftp_site_checks.pl \
+                    --registry #reg_conf# \
+                    --species #species# \
+                    --ftp_dir #ftp_base_dir#/#species# \
+                    --check check_activity_summaries_consistent
                 ),
             },
         },
