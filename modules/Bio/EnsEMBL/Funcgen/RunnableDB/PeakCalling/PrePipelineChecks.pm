@@ -51,7 +51,8 @@ sub run {
       #$self->check_alignment_read_file_orphans($dbc),
       #$self->check_duplicate_read_file_names($dbc),
       $self->check_environment_variables_exported,
-      $self->check_programs_present_in_path,
+      $self->check_R,
+      $self->check_programs_in_path,
       #$self->check_unused_control_reads_files_although_they_do_control_something($dbc),
     );
 
@@ -74,7 +75,7 @@ sub run {
     $self->say_with_header("Pre pipeline checks have completed successfully. You can now run the rest of the pipeline.", 1);
 }
 
-sub check_programs_present_in_path {
+sub check_R {
   my $self = shift;
 
   my @error_msg;
@@ -141,14 +142,15 @@ sub check_programs_in_path {
   foreach my $current_program (@programs_expected_in_path) {
     system("which $current_program > /dev/null");
     if ($?) {
-      push @error_msg, "Can't find $current_program in path.";
+      push @error_msg, "Can't find the script \"$current_program\" in the search path, but it is used in the regulatory build pipeline.";
     }
   }
-
+  
   my $error_msg;
   if (@error_msg) {
-    $error_msg = join "\n", $error_msg;
+    $error_msg = join "\n", @error_msg;
   }
+  
   return $error_msg;
 }
 
