@@ -33,7 +33,10 @@ GetOptions (
 Bio::EnsEMBL::Registry->load_all($registry);
 
 use Bio::EnsEMBL::Utils::Logger;
-my $logger = Bio::EnsEMBL::Utils::Logger->new();
+my $logger = Bio::EnsEMBL::Utils::Logger->new;
+
+# Doesn't work when passed in constructor
+$logger->{'loglevel'} = 4;
 
 $logger->init_log;
 
@@ -41,6 +44,8 @@ $logger->info('registry = ' . $registry . "\n");
 $logger->info('species  = ' . $species  . "\n");
 $logger->info('ftp_dir  = ' . $ftp_dir  . "\n");
 $logger->info('check    = ' . $check    . "\n");
+
+$logger->info('loglevel    = ' . $logger->{'loglevel'} . "\n");
 
 my $funcgen_adaptor = Bio::EnsEMBL::Registry->get_DBAdaptor( $species, 'funcgen');
 my $dbc = $funcgen_adaptor->dbc;
@@ -126,6 +131,8 @@ sub check_file_content_consistent {
     
     foreach my $regulatory_activity_file_name (@$regulatory_activity_file_names) {
     
+        $logger->debug("     Checking " . $regulatory_activity_file_name->{file_name} . "\n");
+    
         my $file_name = $regulatory_activity_file_name->{file_name};
         my $epigenome_production_name
             = $regulatory_activity_file_name->{epigenome_production_name};
@@ -176,16 +183,16 @@ sub check_file_content_consistent {
             my $activity_ok = $regulatory_feature_from_file->{activity} eq $regulatory_activity_from_db;
             
             if (! $seq_region_ok) {
-                die("Seq regions don't agree in $file_name! File: ".$regulatory_feature_from_file->{seq_region_name}." DB:" . $regulatory_feature_from_db->slice->name);
+                $logger->error("Seq regions don't agree in $file_name! File: ".$regulatory_feature_from_file->{seq_region_name}." DB:" . $regulatory_feature_from_db->slice->name);
             }
             if (! $activity_ok) {
-                die("Regulatory activities don't agree: File: $regulatory_activity_from_file DB: $regulatory_activity_from_db!");
+                $logger->error("Regulatory activities don't agree: File: $regulatory_activity_from_file DB: $regulatory_activity_from_db!");
             }
             if (! $feature_type_ok) {
-                die("Feature types don't agree in $file_name File: ".$regulatory_feature_from_file->{feature_type}." DB: ".$regulatory_feature_from_db->feature_type->name."!");
+                $logger->error("Feature types don't agree in $file_name File: ".$regulatory_feature_from_file->{feature_type}." DB: ".$regulatory_feature_from_db->feature_type->name."!");
             }
             if (! ($start_ok && $end_ok)) {
-                die("Coordinates don't agree in $file_name!");
+                $logger->error("Coordinates don't agree in $file_name!");
             }
         }
         
@@ -272,6 +279,8 @@ sub check_activity_summaries_consistent {
     
     foreach my $regulatory_activity_file_name (@$regulatory_activity_file_names) {
     
+        $logger->debug("     Checking " . $regulatory_activity_file_name->{file_name} . "\n");
+    
         my $file_name = $regulatory_activity_file_name->{file_name};
         my $epigenome_production_name
             = $regulatory_activity_file_name->{epigenome_production_name};
@@ -286,21 +295,29 @@ sub check_activity_summaries_consistent {
                 );
             $activities_from_file->{$activity} = $number_of_na_regulatory_features_from_file;
         }
-
+        
         my $activity_summary_from_db = fetch_activity_summary_from_db({
             dbc     => $dbc,
             epigenome_production_name => $epigenome_production_name,
         });
         
+        my $passes = 1;
+        
         foreach my $activity (@valid_activities) {
+        
+            $logger->debug("          file: " . $activities_from_file->{$activity} . " db: " . $activity_summary_from_db->{$activity} . "\n");
         
             my $counts_match = $activities_from_file->{$activity} == $activity_summary_from_db->{$activity};
             
             if ($counts_match) {
                 $logger->info("Ok - numbers identical in $epigenome_production_name for $activity ".$activities_from_file->{$activity}."\n");
             } else {
-                $logger->error("Not ok - numbers not identical in $epigenome_production_name for $activity\n");
+                $logger->warning("Not ok - numbers not identical in $epigenome_production_name for $activity\n");
+                $passes = 0;
             }
+        }
+        if (! $passes) {
+          $logger->error("Test has failed, see errors above.\n");
         }
     }
     return;
@@ -433,6 +450,11 @@ sub get_expected_regulatory_activity_file_names {
                 . '.Regulatory_Build.regulatory_activity.*.gff.gz'
         ;
         my @expected_files = glob $pattern;
+        
+        if (@expected_files > 1) {
+          $logger->error("Found more than one file in directory! " . Dumper(\@expected_files));
+        }
+        
         my $expected_file  = $expected_files[0];
         push 
             @regulatory_activity_file_names, 
@@ -496,7 +518,7 @@ sub locate_regulatory_build_file {
     # E.g.: /nfs/production/panda/ensembl/funcgen/mnuhn/human_grch37_fixed_ftp_regulatory_features/homo_sapiens.GRCh37.Regulatory_Build.regulatory_features.20180503.gff.gz
     #
     my $file = glob $ftp_dir . '/' . $species . '*.Regulatory_Build.regulatory_features.*.gff.gz';
-
+    
     if (! -e $file) {
         die "Can't find regulatory features file in $ftp_dir";
     }
