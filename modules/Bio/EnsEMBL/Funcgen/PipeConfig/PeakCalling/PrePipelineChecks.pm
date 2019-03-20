@@ -70,7 +70,6 @@ sub pipeline_analyses {
                       "Transcription Factor",
                       "Polymerase"
                     )
-                  and (experiment.name like "K562%")
                 ',
 #                  and (experiment.name like "K562%")
 #                    and (experiment.name like "Lung%" or experiment.name like "HepG2%")
