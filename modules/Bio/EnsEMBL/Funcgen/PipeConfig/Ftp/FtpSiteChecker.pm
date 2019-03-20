@@ -16,7 +16,7 @@ sub pipeline_analyses {
                 'ftp_check_regulatory_activity_directories_exist',
                 'ftp_check_regulatory_activity_files_exist',
                 'ftp_check_regulatory_feature_numbers',
-                'ftp_check_file_content_consistent',
+                'ftp_check_file_content_consistent_job_factory',
                 'ftp_check_activity_summaries_consistent',
               ]
             },
@@ -60,16 +60,25 @@ sub pipeline_analyses {
                 ),
             },
         },
+        {   -logic_name  => 'ftp_check_file_content_consistent_job_factory',
+            -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::Ftp::JobFactoryFtpRegulatoryActivityFiles',
+            -rc_name     => '32Gb_job',
+            -flow_into => { 
+                2 => 'ftp_check_file_content_consistent',
+              },
+        },
         {   -logic_name  => 'ftp_check_file_content_consistent',
             -module      => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -rc_name     => '32Gb_job',
+            -analysis_capacity => 50,
             -parameters  => {
                 cmd => q(
                   ftp_site_checks.pl \
                     --registry #reg_conf# \
                     --species #species# \
                     --ftp_dir #ftp_base_dir#/#species# \
-                    --check check_file_content_consistent
+                    --check check_file_content_consistent \
+                    --check_file #file_name#
                 ),
             },
         },

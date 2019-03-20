@@ -7,6 +7,14 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Hive::DBSQL::DBConnection;
 use Getopt::Long;
 use Data::Dumper;
+use Carp;
+
+use Bio::EnsEMBL::Funcgen::Utils::FtpUtils qw (
+  check_file_content_consistent 
+  get_all_regulatory_activity_file_infos_from_ftp
+  fetch_epigenome_production_names
+  get_expected_regulatory_activity_directory_names
+);
 
 =head2
 
@@ -22,12 +30,14 @@ my $registry;
 my $species;
 my $ftp_dir;
 my $check;
+my $check_file;
 
 GetOptions (
-   'registry=s' => \$registry,
-   'species=s'  => \$species,
-   'ftp_dir=s'  => \$ftp_dir,
-   'check=s'    => \$check,
+   'registry=s'   => \$registry,
+   'species=s'    => \$species,
+   'ftp_dir=s'    => \$ftp_dir,
+   'check=s'      => \$check,
+   'check_file=s' => \$check_file,
 );
 
 Bio::EnsEMBL::Registry->load_all($registry);
@@ -40,10 +50,11 @@ $logger->{'loglevel'} = 4;
 
 $logger->init_log;
 
-$logger->info('registry = ' . $registry . "\n");
-$logger->info('species  = ' . $species  . "\n");
-$logger->info('ftp_dir  = ' . $ftp_dir  . "\n");
-$logger->info('check    = ' . $check    . "\n");
+$logger->info('registry   = ' . $registry   . "\n");
+$logger->info('species    = ' . $species    . "\n");
+$logger->info('ftp_dir    = ' . $ftp_dir    . "\n");
+$logger->info('check      = ' . $check      . "\n");
+$logger->info('check_file = ' . $check_file . "\n");
 
 $logger->info('loglevel    = ' . $logger->{'loglevel'} . "\n");
 
@@ -74,11 +85,40 @@ if (! defined $check || $check eq 'check_regulatory_feature_numbers') {
 
 if (! defined $check || $check eq 'check_file_content_consistent') {
 
+  my $regulatory_activity_file_name_info = get_all_regulatory_activity_file_infos_from_ftp({
+      dbc     => $dbc,
+      ftp_dir => $ftp_dir,
+      species => $species,
+  });
+  
+  my $check_these = $regulatory_activity_file_name_info;
+  
+  if (defined $check_file) {
+    
+    my @found_files = grep {
+      $_->{file_name} eq $check_file
+    } @$regulatory_activity_file_name_info;
+    
+    if (@found_files == 0) {
+      confess("Can't find $check_file!");
+    }
+    
+    if (@found_files > 1) {
+      confess("Found more than one file matching $check_file!");
+    }
+    
+    $check_these = [ $found_files[0] ];
+  }
+  
+  #die(Dumper($regulatory_activity_file_name_info));
+  #die(Dumper($check_these));
+
   $logger->info("Running check_file_content_consistent\n");
   check_file_content_consistent({
       ftp_dir => $ftp_dir,
       species => $species,
       funcgen_adaptor => $funcgen_adaptor,
+      check_these => $check_these
   });
 }
 
@@ -95,112 +135,6 @@ if (! defined $check || $check eq 'check_activity_summaries_consistent') {
 $logger->finish_log;
 
 exit;
-
-sub create_epigenome_cache {
-
-    my $funcgen_adaptor = shift;
-    my $epigenome_adaptor = $funcgen_adaptor->get_EpigenomeAdaptor;
-    my $all_epigenomes = $epigenome_adaptor->fetch_all;
-    
-    my $epigenome_cache = { 
-        map  { $_->production_name => $_ } 
-        grep { $_->production_name } 
-        @$all_epigenomes 
-    };
-    return $epigenome_cache;
-}
-
-sub check_file_content_consistent {
-
-    my $param = shift;
-    
-    my $funcgen_adaptor = $param->{funcgen_adaptor};
-    my $ftp_dir = $param->{ftp_dir};
-    my $species = $param->{species};
-    
-    my $dbc = $funcgen_adaptor->dbc;
-    
-    my $epigenome_cache = create_epigenome_cache($funcgen_adaptor);
-    
-    my $regulatory_activity_file_names = get_expected_regulatory_activity_file_names({
-        dbc     => $dbc,
-        ftp_dir => $ftp_dir,
-    });
-    
-    my $regulatory_feature_adaptor = $funcgen_adaptor->get_RegulatoryFeatureAdaptor;
-    
-    foreach my $regulatory_activity_file_name (@$regulatory_activity_file_names) {
-    
-        $logger->debug("     Checking " . $regulatory_activity_file_name->{file_name} . "\n");
-    
-        my $file_name = $regulatory_activity_file_name->{file_name};
-        my $epigenome_production_name
-            = $regulatory_activity_file_name->{epigenome_production_name};
-        
-        my $epigenome = $epigenome_cache->{$epigenome_production_name};
-        
-        if (! defined $epigenome) {
-            die;
-        }
-        
-        open my $fh, "zcat $file_name |" or die($file_name);
-        
-        while (my $current_line = <$fh>) {
-            chomp($current_line);
-            
-            my @f = split "\t", $current_line;
-            
-            my $attributes = $f[8];
-            
-            # Attributes look like this:
-            #
-            # activity=NA;bound_end=102119230;bound_start=102118695;description=TF binding site na in Lung;epigenome=Lung;feature_type=TF binding site;regulatory_feature_stable_id=ENSR00000368862
-            #
-            my %attribute_hash = map { split /=/ } split ';', $attributes;
-            
-            if (! exists $attribute_hash{regulatory_feature_stable_id}) {
-                die("Couldn't find stable id in: $attributes");
-            }
-            my $stable_id = $attribute_hash{regulatory_feature_stable_id};
-            
-            my $regulatory_feature_from_file = {
-                seq_region_name => $f[0],
-                start           => $f[3],
-                end             => $f[4],
-                %attribute_hash
-            };
-            
-            my $regulatory_feature_from_db = $regulatory_feature_adaptor->fetch_by_stable_id($regulatory_feature_from_file->{regulatory_feature_stable_id});
-            
-            my $start_ok        = $regulatory_feature_from_file->{start}           == $regulatory_feature_from_db->{start};
-            my $end_ok          = $regulatory_feature_from_file->{end}             == $regulatory_feature_from_db->{end};
-            my $feature_type_ok = $regulatory_feature_from_file->{feature_type}    eq $regulatory_feature_from_db->feature_type->name;
-            my $seq_region_ok   = $regulatory_feature_from_file->{seq_region_name} eq $regulatory_feature_from_db->slice->seq_region_name;
-            
-            my $regulatory_activity_from_db   = $regulatory_feature_from_db->regulatory_activity_for_epigenome($epigenome)->activity;
-            my $regulatory_activity_from_file = $regulatory_feature_from_file->{activity};
-            
-            my $activity_ok = $regulatory_feature_from_file->{activity} eq $regulatory_activity_from_db;
-            
-            if (! $seq_region_ok) {
-                $logger->error("Seq regions don't agree in $file_name! File: ".$regulatory_feature_from_file->{seq_region_name}." DB:" . $regulatory_feature_from_db->slice->name);
-            }
-            if (! $activity_ok) {
-                $logger->error("Regulatory activities don't agree: File: $regulatory_activity_from_file DB: $regulatory_activity_from_db!");
-            }
-            if (! $feature_type_ok) {
-                $logger->error("Feature types don't agree in $file_name File: ".$regulatory_feature_from_file->{feature_type}." DB: ".$regulatory_feature_from_db->feature_type->name."!");
-            }
-            if (! ($start_ok && $end_ok)) {
-                $logger->error("Coordinates don't agree in $file_name!");
-            }
-        }
-        
-        close($fh);
-        $logger->info("Ok - File content for $file_name\n");
-    }
-    return;
-}
 
 sub fetch_activity_summary_from_db {
 
@@ -273,6 +207,7 @@ sub check_activity_summaries_consistent {
     my $regulatory_activity_file_names = get_expected_regulatory_activity_file_names({
         dbc     => $dbc,
         ftp_dir => $ftp_dir,
+        species => $species,
     });
     
     my @valid_activities = ('INACTIVE', 'REPRESSED', 'POISED', 'ACTIVE', 'NA');
@@ -372,6 +307,7 @@ sub check_regulatory_activity_files_exist {
     my $expected_regulatory_activity_file_names = get_expected_regulatory_activity_file_names({
         dbc     => $dbc,
         ftp_dir => $ftp_dir,
+        species => $species,
     });
     
     foreach my $expected_file (@$expected_regulatory_activity_file_names) {
@@ -468,48 +404,6 @@ sub get_expected_regulatory_activity_file_names {
     return \@regulatory_activity_file_names;
 }
 
-sub get_expected_regulatory_activity_directory_names {
-
-    my $param = shift;
-    
-    my $dbc     = $param->{dbc};
-    my $ftp_dir = $param->{ftp_dir};
-
-    my $epigenome_production_names = fetch_epigenome_production_names($dbc);
-
-    my $expected_regulatory_activity_directory_names = [
-        map
-            {
-                {
-                    dir_name 
-                        => build_regulatory_activity_directory_name({
-                            dbc                       => $dbc,
-                            ftp_dir                   => $ftp_dir,
-                            epigenome_production_name => $_,
-                        }),
-                    epigenome_production_name => $_
-                }
-            } @$epigenome_production_names
-    ];
-    return $expected_regulatory_activity_directory_names;
-}
-
-sub build_regulatory_activity_directory_name {
-
-    my $param = shift;
-    
-    my $dbc     = $param->{dbc};
-    my $ftp_dir = $param->{ftp_dir};
-    my $epigenome_production_name = $param->{epigenome_production_name};
-
-    my $regulatory_activity_directory_name
-        = $ftp_dir 
-            . '/RegulatoryFeatureActivity/' 
-            . $epigenome_production_name
-    ;
-    return $regulatory_activity_directory_name;
-}
-
 sub locate_regulatory_build_file {
 
     my $ftp_dir = shift;
@@ -523,20 +417,6 @@ sub locate_regulatory_build_file {
         die "Can't find regulatory features file in $ftp_dir";
     }
     return $file;
-}
-
-sub fetch_epigenome_production_names {
-
-    my $dbc = shift;
-
-    my $sql = 'select production_name from epigenome join regulatory_build_epigenome using (epigenome_id)';
-
-    my $sth = $dbc->prepare($sql);
-    $sth->execute;
-    my $result = $sth->fetchall_arrayref;
-    my $list_of_names = [ map { $_->[0] } @$result ];
-    
-    return $list_of_names;
 }
 
 sub fetch_number_of_regulatory_features_from_db {
