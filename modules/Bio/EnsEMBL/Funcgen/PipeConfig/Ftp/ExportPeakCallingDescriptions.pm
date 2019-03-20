@@ -38,6 +38,7 @@ sub pipeline_analyses {
         },
         {   -logic_name  => 'create_peak_calling_description',
             -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::Ftp::CreatePeakCallingDescription',
+            -analysis_capacity => 50,
             -parameters  => {
                 file_name => 
                   $ftp_layout_configuration->{peak_calling_description_file_dir}
