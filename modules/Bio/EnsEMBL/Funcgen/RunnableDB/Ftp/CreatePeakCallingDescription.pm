@@ -13,6 +13,7 @@ sub run {
   my $self = shift;
   my $species   = $self->param('species');
   my $file_name = $self->param('file_name');
+  my $registry  = $self->param('reg_conf');
   
   my $epigenome_id    = $self->param('epigenome_id');
   my $feature_type_id = $self->param('feature_type_id');
@@ -39,15 +40,16 @@ sub run {
   
   $self->say_with_header("Creating description $file_name", 1);
   
-  use Bio::EnsEMBL::Funcgen::Template::PeakCallingDescription qw( 
-    apply
+  use Bio::EnsEMBL::Funcgen::Report::PeakCalling;
+  my $report = Bio::EnsEMBL::Funcgen::Report::PeakCalling->new(
+    -species      => $species,
+    -registry     => $registry,
+    -output_file  => $file_name,
+    -peak_calling => $peak_callings->[0],
   );
 
-  open my $fh, ">", $file_name;
-  for my $peak_calling (@$peak_callings) {
-    $fh->print(apply($peak_calling));
-  }
-  $fh->close;
+  $report->generate_report;
+  
   return
 }
 
