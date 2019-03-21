@@ -1532,7 +1532,7 @@ CREATE TABLE `epigenome` (
   `epigenome_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(120) NOT NULL,
   `short_name` varchar(120) NOT NULL,
-  `description` varchar(80) DEFAULT NULL,
+  `description` MEDIUMTEXT DEFAULT NULL,
   `production_name` varchar(120) DEFAULT NULL,
   `gender` enum('male','female','hermaphrodite','mixed','unknown') DEFAULT 'unknown',
   `search_terms` MEDIUMTEXT DEFAULT NULL,
