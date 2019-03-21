@@ -14,7 +14,11 @@
 
 /**
 @header patch_96_97_f.sql - Add search_terms and full_name columns to epigenome table and rename display_label column to short_name
+<<<<<<< HEAD
 @desc 	Add search_terms and full_name columns to epigenome table, rename display_label column to short_name and change description to TEXT
+=======
+@desc 	Add search_terms and full_name columns to epigenome table and rename display_label column to short_name
+>>>>>>> 122d95d901ba665f2dc9e9d6ae180b54567a7ba2
 */
 
 ALTER TABLE epigenome ADD COLUMN search_terms MEDIUMTEXT DEFAULT NULL;
@@ -26,3 +30,4 @@ ALTER TABLE epigenome MODIFY description MEDIUMTEXT DEFAULT NULL;
 
 -- patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_f.sql|Add search_terms and full_name columns to epigenome table, rename display_label column to short_name and change description to TEXT');
+

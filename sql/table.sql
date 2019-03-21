@@ -1668,9 +1668,6 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patc
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_f.sql|Add search_terms and full_name columns to epigenome table, rename display_label column to short_name and change description to TEXT');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_96_97_g.sql|Modify column in regulatory_activity');
 
-
-
-
 /**
 @table meta_coord
 @desc Describes which co-ordinate systems the different feature tables use.
