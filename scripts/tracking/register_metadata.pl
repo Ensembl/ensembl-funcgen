@@ -35,6 +35,7 @@ use Bio::EnsEMBL::Funcgen::ReadFile;
 use Bio::EnsEMBL::Funcgen::ReadFileExperimentalConfiguration;
 use Bio::EnsEMBL::Funcgen::FeatureType;
 use DBI;
+use File::Basename;
 
 # use DateTime;
 
@@ -223,7 +224,7 @@ sub get_data_from_csv {
             $analysis_name,         $exp_group_name,        $assay_xrefs,			$ontology_xref_accs, 	
             $xref_accs, 			$epigenome_description,	$controlled_by, 		$paired,				
             $paired_end_tag,		$read_length,			$multiple,				$paired_with,           
-            $download_url,          $info
+            $download_url,          $info,                  $derived
         ) = split /\t/;
 
 		
@@ -232,6 +233,7 @@ sub get_data_from_csv {
 
 
         my $entry = {};
+        $entry->{epi_accession}         = $epi_accession;
         $entry->{accession}             = $accession;
         $entry->{ex_accession}          = $exp_accession;
         $entry->{epigenome_name}        = create_epigenome_production_name( $epigenome_name );
@@ -254,6 +256,7 @@ sub get_data_from_csv {
 		$entry->{multiple}         		= $multiple;
 		$entry->{download_url}          = $download_url;
         $entry->{info}                  = $info;
+        $entry->{derived}               = $derived;
 		
 
         if (uc $entry->{exp_group_name} eq 'ROADMAP'){
@@ -285,6 +288,21 @@ sub get_data_from_csv {
             $entry->{is_control} = 0;
             $signal_data{$accession} = $entry;
         }
+
+        $entry->{derived} =~ s/^\s+|\s+$//g; #remove espaces
+        $entry->{paired_end_tag} =~ s/^\s+|\s+$//g; #remove espaces
+
+        if ($entry->{derived} ne '-' && $entry->{derived} ne ''){
+            my($filename, $dirs, $suffix) = fileparse($entry->{local_url});
+            my $file_new_name = $entry->{derived};
+            if ( $entry->{paired_end_tag} ne '-' && $entry->{paired_end_tag} ne '' ){
+                $file_new_name .= '_'.$entry->{paired_end_tag};
+            }
+            $file_new_name .= '.fastq.gz';
+            $entry->{local_url} = $dirs.$file_new_name;
+        }
+
+
 
 		$entry = verify_entry_metadata( $entry, $logger );
 
@@ -556,6 +574,7 @@ sub register_ctl {
 
 
             store_db_xref( $entry, $adaptors, $epigenome );
+            store_db_xref_encode_epigenome($entry, $adaptors, $epigenome);
             my $reg_file = store_read_file_only( $logger, $entry, $analysis, $adaptors );
             store_read_file_experimental_configuration ($reg_file, $entry, $adaptors, $experiment);
             store_db_xref_read_file($entry, $adaptors, $reg_file);
@@ -708,7 +727,7 @@ sub store_epigenome {
 
      my $epigenome = Bio::EnsEMBL::Funcgen::Epigenome->new(
         -name            => $entry->{epigenome_name},
-        -display_label   => $epilabel,
+        -short_name      => $epilabel,
         -description     => $epidesc,
         -production_name => $production_name,
         -gender          => $entry->{gender}
@@ -900,8 +919,16 @@ sub store_read_file_only {
 	}
 
 
+    my $read_file_name = $entry->{accession};
+    if ($entry->{derived} ne '-' && $entry->{derived} ne ''){
+        $read_file_name = $entry->{derived};
+        if ($is_paired == 1){
+            $read_file_name .='_'.$entry->{paired_end_tag};
+        }
+    }
+
     my $read_file = Bio::EnsEMBL::Funcgen::ReadFile->new(
-        -name           => $entry->{accession},
+        -name           => $read_file_name,
         -analysis       => $analysis,
         -is_paired_end  => $is_paired,
         -file_size      => undef,
@@ -1017,7 +1044,6 @@ sub store_db_xref {
 sub store_db_xref_read_file {
     my ( $entry, $adaptors, $read_file_obj ) = @_;
 
-    my $xref_accessions = $entry->{accession};
     my $dbname = "ENCODE";
 
     my $xref = Bio::EnsEMBL::DBEntry->new(
@@ -1033,6 +1059,28 @@ sub store_db_xref_read_file {
     my $read_file_id = $read_file_obj->dbID();
 
     $adaptors->{db_entry}->store( $xref, $read_file_id, 'ReadFile', $ignore_release );
+
+    return 1;
+}
+
+sub store_db_xref_encode_epigenome {
+    my ( $entry, $adaptors, $epigenome_obj ) = @_;
+
+    my $dbname = "ENCODE";
+
+    my $xref = Bio::EnsEMBL::DBEntry->new(
+        -primary_id => $entry->{epi_accession},
+        -dbname     => $dbname,
+        -display_id => undef, # if not set to undef, an empty string will be stored in the display_label column
+        -info_text  => undef # if not set to undef, an empty string will be stored in the info_text column
+    );
+
+    #my $ignore_release = 1;
+    my $ignore_release = 0;
+
+    my $epigenome_id = $epigenome_obj->dbID();
+
+    $adaptors->{db_entry}->store( $xref, $epigenome_id, 'epigenome', $ignore_release );
 
     return 1;
 }

@@ -120,7 +120,7 @@ sub update_names{
 
 
         my $sql = 'UPDATE epigenome
-            SET epigenome.name = ? , epigenome.display_label =?, epigenome.description = ?, epigenome.production_name = ?
+            SET epigenome.name = ? , epigenome.short_name =?, epigenome.description = ?, epigenome.production_name = ?
             WHERE epigenome.epigenome_id = ? ';
 
         my $sth = $connection->prepare($sql);

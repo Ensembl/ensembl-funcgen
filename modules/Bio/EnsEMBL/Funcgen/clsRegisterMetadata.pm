@@ -31,7 +31,8 @@ sub new {
 		multiple  => $args->{multiple} || '',
 		paired_with  => $args->{paired_with} || '',
 		download_url  => $args->{download_url} || '',
-		info  => $args->{info} || ''
+		info  => $args->{info} || '',
+		derived_from  => $args->{derived_from} || ''
 	};
 	return bless $self, $class;
 
@@ -167,6 +168,11 @@ sub set_info {
     $self->{info} = $info;	
 }
 
+sub set_derived_from {
+	my ($self, $derived_from) = @_;
+    $self->{derived_from} = $derived_from;	
+}
+
 sub get {
 	my ($self, $field) = @_;
     return $self->{$field};
@@ -176,7 +182,7 @@ sub csv_row {
 	my $self = shift;
 	my $csv_row = join ("\t", $self->{epi_accession}, $self->{accession}, $self->{experiment_accession}, $self->{epigenome}, $self->{feature_type}, $self->{biological_replicate}, $self->{new_bio_replicate}, $self->{technical_replicate}, $self->{new_tech_replicate}, $self->{gender}, 
 	$self->{md5_checksum}, $self->{local_url}, $self->{analysis}, $self->{experimental_group}, $self->{assay_xrefs}, $self->{ontology_xrefs}, $self->{xrefs}, $self->{epigenome_description}, 
-	$self->{control_id}, $self->{paired}, $self->{paired_end_tag}, $self->{read_length}, $self->{multiple}, $self->{paired_with}, $self->{download_url}, $self->{info});
+	$self->{control_id}, $self->{paired}, $self->{paired_end_tag}, $self->{read_length}, $self->{multiple}, $self->{paired_with}, $self->{download_url}, $self->{info}, $self->{derived_from});
 	
 	return $csv_row;
 }	

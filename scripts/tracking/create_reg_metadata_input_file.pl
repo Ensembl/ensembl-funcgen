@@ -26,6 +26,8 @@ use Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Registry;
 use Bio::EnsEMBL::Gene;
 use Bio::EnsEMBL::DBEntry;
+use Try::Tiny;
+use Bio::EnsEMBL::Utils::Logger;
 
 ##################### MAIN FUNCTION ##############################
 
@@ -41,6 +43,9 @@ my $skipPath;
 my %skipRefEpi;
 my %featureNotFound;
 my %features_done;
+my $start;
+my $duration;
+my %ctls_not_found;
 
 my %targetsNotFound;
 
@@ -84,6 +89,9 @@ if ($skipPath){
 }
 
 
+#init loger
+my $logger = Bio::EnsEMBL::Utils::Logger->new();
+$logger->init_log();
 
 
 #read config file
@@ -152,7 +160,7 @@ if ((substr $localFilePath, -1) ne '/'){
 my @lstRegMeta;
 
 #Create a clsRegisterMetadata object with the column headers and add it to the array
-my $clsRegMetaHead = store_row('epi_accession', 'accession', 'experiment_accession', 'epigenome', 'feature_type', 'biological_replicate', 'new_biological_replicate', 'technical_replicate', 'new_technical_replicate', 'gender', 'md5_checksum', 'local_url', 'analysis', 'experimental_group', 'assay_xrefs', 'ontology_xrefs', 'xrefs', 'epigenome_description', 'control_id', 'paired', 'paired_end_tag', 'read_length', 'multiple', 'paired_with','download_url', 'info');
+my $clsRegMetaHead = store_row('epi_accession', 'accession', 'experiment_accession', 'epigenome', 'feature_type', 'biological_replicate', 'new_biological_replicate', 'technical_replicate', 'new_technical_replicate', 'gender', 'md5_checksum', 'local_url', 'analysis', 'experimental_group', 'assay_xrefs', 'ontology_xrefs', 'xrefs', 'epigenome_description', 'control_id', 'paired', 'paired_end_tag', 'read_length', 'multiple', 'paired_with','download_url', 'info', 'derived');
 push @lstRegMeta, $clsRegMetaHead;
 
 
@@ -198,7 +206,11 @@ while (my $fullRow = <$fh>) {
 	my $swTecRep = 1;
 	
 	#get epigenome data
+	$start = time;
 	my $rEData = get_reference_epigenome_data($epiAccess);
+	$duration = $start - time;
+	$logger->info( "get_reference_epigenome_data: $duration \n", 0, 1 );
+
 	if ($rEData){
 		#xref
 		foreach my $ref (@{$rEData->{'dbxrefs'}}){
@@ -232,9 +244,6 @@ while (my $fullRow = <$fh>) {
 		#Experiments
 		my @experiments = @{$rEData->{'related_datasets'}};
 
-
-		#add extra experiments (ctcf experiments)
-		my $extraEpigenome = $rEData->{'biosample_term_name'}[0];
 		my $extraSpecie = $rEData->{'organism'}[0]->{'scientific_name'};
 		my $specieName;
 		if (uc $extraSpecie eq 'MUS MUSCULUS'){
@@ -244,6 +253,12 @@ while (my $fullRow = <$fh>) {
 				$specieName = 'Human';
 			}
 		}
+
+=pod
+		#add extra experiments (ctcf experiments)
+		$start = time;
+		my $extraEpigenome = $rEData->{'biosample_term_name'}[0];
+
 
 		my @extraDone;
 		my @extraExperiments;
@@ -260,7 +275,7 @@ while (my $fullRow = <$fh>) {
 				my $searchParameters = $extraEpigenome.$life_stage.$age;
 				if ( not grep( /^$searchParameters$/, @extraDone) ){
 					
-					@extraExperiments = get_extra_experiments($extraEpigenome, $extraSpecie, $life_stage, $age);
+					@extraExperiments = get_extra_experiments($extraEpigenome, $extraSpecie, $life_stage, $age, $logger, \%ctls_not_found);
 					
 					push @extraDone, $searchParameters;
 				}
@@ -276,24 +291,37 @@ while (my $fullRow = <$fh>) {
 			push @experiments, @extraExperiments;
 		}
 
+		$duration = $start - time;
+		$logger->info( "add extra experiments: $duration \n", 0, 1 );
+=cut
+
 		#only experiments with known targets or GO annotation like "DNA binding transcription factor activity"
 		#also exclude experiments which target is FLAG- *or eGFP-*
+		$start = time;
 		@experiments = only_known_and_filtered_tagets($adaptors, \@experiments, \%hshFeatureType, \%features_done);
 
+		$duration = $start - time;
+		$logger->info( "only_known_and_filtered_tagets: $duration \n", 0, 1 );
 
 		#only experiments with known targets
 		#@experiments = only_known_tagets(\@experiments, \%hshFeatureType, \%featureNotFound);
 
 		#get extra controls not contained in the reference epigenome set
-		my @extraCtls = get_extra_controls(\@experiments);
+		$start = time;
+		my @extraCtls = get_extra_controls($logger, \@experiments, \%ctls_not_found);
 
 		if (@extraCtls){
 			push @experiments, @extraCtls;
 		}
 
+		$duration = $start - time;
+		$logger->info( "get_extra_controls: $duration \n", 0, 1 );
 
 		#get control experiments info
+		$start = time;
 		my $infoControl = get_control_info(\@experiments);
+		$duration = $start - time;
+		$logger->info( "get_control_info: $duration \n", 0, 1 );
 
 		my @lstControls;
 
@@ -411,8 +439,10 @@ MOUSE-IGG-CONTROL')) ) {
 				if ($specieName){
 					$epiDesc = $specieName;
 				}
-				if (uc $exp->{'biosample_term_name'} ne 'UNKNOWN'){
-					$termName = $exp->{'biosample_term_name'};
+				#if (uc $exp->{'biosample_term_name'} ne 'UNKNOWN'){
+				if (uc $exp->{'biosample_ontology'}->{'term_name'} ne 'UNKNOWN'){
+
+					$termName = $exp->{'biosample_ontology'}->{'term_name'};
 					if ($epiDesc ne '-'){
 						$epiDesc .= ' '.$termName;
 					}else{
@@ -483,6 +513,7 @@ MOUSE-IGG-CONTROL')) ) {
 					my $multiple = '-';
 					my $paired_with = '-';
 					my $fileStatus=0;
+					my $derived='-';
 					#check file status
 					if (uc $file->{'status'} eq 'RELEASED'){
 						$fileStatus=1;
@@ -492,6 +523,9 @@ MOUSE-IGG-CONTROL')) ) {
 						
 						#accession
 						$accession = $file->{'accession'};
+						if (uc $file->{'file_format'} eq 'SRA'){
+							$accession = $file->{'title'};
+						}
 						#md5 checksum
 						$md5Check = $file->{'md5sum'};
 						#replicates
@@ -526,14 +560,29 @@ MOUSE-IGG-CONTROL')) ) {
 								#no controled_by field
 								#check if there is a control at experiment level
 
-
+								$start = time;
 								$controlId = get_controls_from_experiment($exp->{'possible_controls'});
+								$duration = $start - time;
+								$logger->info( "get_controls_from_experiment: $duration \n", 0, 1 );
 
 								#push @lstErrors, "file: ".$accession."\tControlled_by: Missing\terror: Controlled_by field missing";
 							}
 						}
 					
+						if ($file->{'derived_from'}){
+							my $derived_string ='';
+							foreach my $dev_file (@{$file->{'derived_from'}}){
+								my $dev_file_accession = (split '/', $dev_file)[-1];
+								if ($derived_string ne '' ){
+									$derived_string .=', ';
+								}
+								$derived_string .=$dev_file_accession;
 
+							}
+
+							$derived = $derived_string;
+
+						}
 
 						#dowload url
 						if ($file->{'href'}){
@@ -541,24 +590,27 @@ MOUSE-IGG-CONTROL')) ) {
 							$localUrl = $localFilePath.(split '/', $downUrl)[-1];
 						}
 						
+						$start = time;
 						if (uc $target eq 'WCE'){
 							#assign values to object Register Metadata
 							$controlId = '-';
-							my $clsCtlRegMeta = store_row($epi_accession, $accession, $expAccession, $epigenome, $featureType, $bioReplicate, $newBioReplicate, $techReplicate, $newTechReplicate, $gender, $md5Check, $localUrl, $analysis, $expGroup, $assayXrefs, $ontXrefs, $xrefs, $epiDesc, $controlId, $paired, $paired_end_tag, $read_length, $multiple, $paired_with, $downUrl, $info);
+							my $clsCtlRegMeta = store_row($epi_accession, $accession, $expAccession, $epigenome, $featureType, $bioReplicate, $newBioReplicate, $techReplicate, $newTechReplicate, $gender, $md5Check, $localUrl, $analysis, $expGroup, $assayXrefs, $ontXrefs, $xrefs, $epiDesc, $controlId, $paired, $paired_end_tag, $read_length, $multiple, $paired_with, $downUrl, $info, $derived);
 							#Add the object to the list of control rows
 							push @lstControls, $clsCtlRegMeta;
 							
 						}else{
 							#assign values to object Register Metadata
-							my $clsRegMeta = store_row($epi_accession, $accession, $expAccession, $epigenome, $featureType, $bioReplicate, $newBioReplicate, $techReplicate, $newTechReplicate, $gender, $md5Check, $localUrl, $analysis, $expGroup, $assayXrefs, $ontXrefs, $xrefs, $epiDesc, $controlId, $paired, $paired_end_tag, $read_length, $multiple, $paired_with, $downUrl, $info);
+							my $clsRegMeta = store_row($epi_accession, $accession, $expAccession, $epigenome, $featureType, $bioReplicate, $newBioReplicate, $techReplicate, $newTechReplicate, $gender, $md5Check, $localUrl, $analysis, $expGroup, $assayXrefs, $ontXrefs, $xrefs, $epiDesc, $controlId, $paired, $paired_end_tag, $read_length, $multiple, $paired_with, $downUrl, $info, $derived);
 							#Add the object to the list of rows
 							push @lstRegMeta, $clsRegMeta;
 							
 						}
-						
+						$duration = $start - time;
+						$logger->info( "store_row: $duration \n", 0, 1 );
 					}
 				}
 					
+
 			}
 
 		}
@@ -580,16 +632,30 @@ if (@lstErrors){
 }else{
 	#final check and updates
 
-
+	$start = time;
 	@lstRegMeta = check_duplicated_entries(\@lstRegMeta);
+	$duration = $start - time;
+	$logger->info( "check_duplicated_entries: $duration \n", 0, 1 );
 
+	$start = time;
 	@lstRegMeta = join_controls_controlling_same_experiment(\@lstRegMeta);
+	$duration = $start - time;
+	$logger->info( "join_controls_controlling_same_experiment: $duration \n", 0, 1 );
 
+	$start = time;
 	@lstRegMeta = update_paired_end_controlled_by_column(\@lstRegMeta);
+	$duration = $start - time;
+	$logger->info( "update_paired_end_controlled_by_column: $duration \n", 0, 1 );
 
+	$start = time;
 	@lstRegMeta = remove_paired_signal_and_controls_with_missing_parts(\@lstRegMeta);
+	$duration = $start - time;
+	$logger->info( "remove_paired_signal_and_controls_with_missing_parts: $duration \n", 0, 1 );
 
+	$start = time;
 	@lstRegMeta = remove_unused_controls(\@lstRegMeta);
+	$duration = $start - time;
+	$logger->info( "remove_unused_controls: $duration \n", 0, 1 );
 
 	
 
@@ -603,11 +669,16 @@ if (@lstErrors){
 
 
 
-
+	$start = time;
 	@lstRegMeta = warns_paired_and_single_end_mixed(\@lstRegMeta);
+	$duration = $start - time;
+	$logger->info( "warns_paired_and_single_end_mixed: $duration \n", 0, 1 );
 
+
+	$start = time;
 	@lstRegMeta = check_control_analysis($adaptors, \@lstRegMeta);
-
+	$duration = $start - time;
+	$logger->info( "check_control_analysis: $duration \n", 0, 1 );
 
 
 
@@ -617,19 +688,27 @@ if (@lstErrors){
 
 
 	
-
+	$start = time;
 	@lstRegMeta = update_analysis_for_paired_controls(\@lstRegMeta);
+	$duration = $start - time;
+	$logger->info( "update_analysis_for_paired_controls: $duration \n", 0, 1 );
 
-	
 
+	$start = time;
 	@lstRegMeta = remove_signal_files_without_control(\@lstRegMeta);
+	$duration = $start - time;
+	$logger->info( "remove_signal_files_without_control: $duration \n", 0, 1 );
 
+	$start = time;
 	@lstRegMeta = check_gender(\@lstRegMeta);
+	$duration = $start - time;
+	$logger->info( "check_gender: $duration \n", 0, 1 );
 
 
+	$start = time;
 	@lstRegMeta = check_replicate_numbers_and_multiple_column(\@lstRegMeta);
-
-
+	$duration = $start - time;
+	$logger->info( "check_replicate_numbers_and_multiple_column: $duration \n", 0, 1 );
 
 	foreach my $reg (@lstRegMeta) {
 		print $reg->csv_row."\n";
@@ -702,14 +781,30 @@ sub remove_signal_files_without_control {
 			my $fullCtl = $regMeta->get('control_id');
 			if ($fullCtl && $fullCtl ne '-'){
 				my @lstCtl = (split ",", $fullCtl);
+				my @ctls_not_found;
+				my $ctls_found='';
 				foreach my $ctl (@lstCtl){
 					$ctl =~ s/^\s+|\s+$//g;
 					my $found = search_control($ctl, \@lstRegMeta);
 					if ($found == 0){
-						push @to_remove, $index;
+						push @ctls_not_found, $ctl;
+						
 						#splice @lstRegMeta, $index, 1;
+					}else{
+						if ($ctls_found ne ''){
+							$ctls_found.=', ';
+						}
+						$ctls_found.=$ctl;
+						
 					}
-				}				
+
+
+				}	
+				if (scalar @lstCtl == scalar @ctls_not_found){
+					push @to_remove, $index;
+				}else{
+					$regMeta->set_control_id($ctls_found);
+				}		
 			}else{
 				push @to_remove, $index;
 				#splice @lstRegMeta, $index, 1;
@@ -750,10 +845,14 @@ sub get_controls_from_experiment {
 		$controlId='';
 		foreach my $file (@{$ctl->{'files'}}) {
 			my $ctl_file = (split '/', $file)[-1];
-			my $file_format = get_file_format($ctl_file);
-			if (uc $file_format ne 'FASTQ'){
-				next;
-			}
+
+			#my $file_format = get_file_format($ctl_file);
+			#if (uc $file_format ne 'FASTQ'){
+			#	next;
+			#}
+
+
+			
 			if ($controlId ne ''){
 				$controlId.=', ';
 			}
@@ -1046,7 +1145,9 @@ sub get_row_by_accession{
 }
 
 sub get_extra_controls{
+	my $logger = shift;
 	my $exps = shift;
+	my $ctls_not_found = shift;
 	my @experiments = @{$exps};
 	my %expDone;
 	my @ctlsDone;
@@ -1064,7 +1165,7 @@ sub get_extra_controls{
 						push @ctlsDone, $ctl->{'accession'};
 						if (not (ctl_alredy_included($ctlAccession, \@experiments))){
 
-							my $ctlExp = get_control($ctlAccession);
+							my $ctlExp = get_control($ctlAccession, $logger, $ctls_not_found);
 							
 							push @extraCtls, $ctlExp;
 						}
@@ -1353,6 +1454,8 @@ sub get_extra_experiments {
 	my $specie = shift;
 	my $life_stage = shift;
 	my $age = shift;
+	my $logger = shift;
+	my $ctls_not_found = shift;
 	
 
 	#replace blank spaces
@@ -1389,7 +1492,7 @@ sub get_extra_experiments {
 			#get controls
 			foreach my $ctl (@{$results->{'possible_controls'}}){
 				if ( ($ctl->{'accession'}) && (not grep( /^$ctl$/, @ctlsDone)) ){
-					my $ctlExp = get_control($ctl->{'accession'});
+					my $ctlExp = get_control($ctl->{'accession'}, $logger, $ctls_not_found);
 					push @ctlsDone, $ctl->{'accession'};
 					push @extraExperiments, $ctlExp;
 				}
@@ -1533,17 +1636,27 @@ sub warns_paired_and_single_end_mixed{
 
 sub get_control{
 	my $ctlExpAccession = shift;
+	my $logger = shift;
+	my $ctls_not_found = shift;
+
+	if (exists $ctls_not_found->{$ctlExpAccession}){
+		$logger->info( "Control $ctlExpAccession not found\n", 0, 1 );
+		return;
+	}
+
 	my $ctlUrl = 'https://www.encodeproject.org/experiments/'.$ctlExpAccession.'/?frame=embedded&format=json';
 	my $client = REST::Client->new();
 	my $headers = {Accept => 'application/json'};
-	$client->GET($ctlUrl, $headers);
-	my $response = eval{decode_json($client->responseContent());};
-
-	unless($response) {
-		print $ctlUrl."\n";
-    	print $@."\n";
-    	exit;
-	}
+	my $response;
+	try{
+		$client->GET($ctlUrl, $headers);
+		$response = decode_json($client->responseContent());
+	} catch {
+		$ctls_not_found->{$ctlExpAccession}=1;
+		$logger->info( "Control $ctlExpAccession not found\n", 0, 1 );
+		return;
+	};
+	
 	return $response;
 }
 
@@ -1984,8 +2097,15 @@ sub get_reference_epigenome_data{
 	my $url = 'https://www.encodeproject.org/reference-epigenomes/'.$refEpiAccession.'/?frame=embedded&format=json';
 	my $headers = {Accept => 'application/json'};
 	my $rEClient = REST::Client->new();
-	$rEClient->GET($url, $headers);
-	my $rEResponse = decode_json($rEClient->responseContent());
+	my $rEResponse;
+	try{
+		$rEClient->GET($url, $headers);
+		$rEResponse = decode_json($rEClient->responseContent());
+	}catch{
+		print "Reference Epigenome $refEpiAccession not Found\n";
+		return;
+	};
+
 	return $rEResponse;
 }
 
@@ -2017,6 +2137,7 @@ sub store_row{
 	my $paired_with= shift;
 	my $downUrl = shift; 
 	my $info = shift;
+	my $derived = shift;
 	my $clsRegMeta = clsRegisterMetadata->new();
 	$clsRegMeta->set_epi_accession($epi_accession);
 	$clsRegMeta->set_accession($accession);
@@ -2044,6 +2165,7 @@ sub store_row{
 	$clsRegMeta->set_paired_with ($paired_with);
 	$clsRegMeta->set_download_url ($downUrl);
 	$clsRegMeta->set_info ($info);
+	$clsRegMeta->set_derived_from ($derived);
 	return $clsRegMeta;
 }
 

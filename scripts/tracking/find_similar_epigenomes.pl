@@ -106,24 +106,30 @@ sub get_relative_epigenomes{
 	my $epi = shift;
 	my $start_id = shift;
 
+
+
+
 	my $sql = "select epigenome.epigenome_id, epigenome.name 
 			   from epigenome 
-			   where epigenome_id > ".$start_id." 
-			   and (epigenome.name like '%".$epi."%' or epigenome.description like '%".$epi."%')";
+			   where epigenome_id > ? 
+			   and (epigenome.name like ? or epigenome.description like ?)";
 
 	my $sth = $connection->prepare($sql);
+  $sth->bind_param( 1, $start_id );
+  $sth->bind_param( 2, '%'.$epi.'%' );
+  $sth->bind_param( 3, '%'.$epi.'%' );
     
-    $sth->execute();
+  $sth->execute();
 
-    my @epi_no_ihec;
-    my @row;
-    while (@row = $sth->fetchrow_array) {
-    	my %new_epigenome;
-    	$new_epigenome{$row[0]} = $row[1];
-        push (@epi_no_ihec, \%new_epigenome);
-    }
+  my @epi_no_ihec;
+  my @row;
+  while (@row = $sth->fetchrow_array) {
+  	my %new_epigenome;
+  	$new_epigenome{$row[0]} = $row[1];
+      push (@epi_no_ihec, \%new_epigenome);
+  }
 
-    return @epi_no_ihec;
+  return @epi_no_ihec;
 }
 
 

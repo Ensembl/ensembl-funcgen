@@ -80,21 +80,21 @@ sub main {
     $logger->info( 'Found '. $num_duplicates . ' duplicated epigenomes using ihec'. "\n", 0, 1 );
 
     # ------------------------------------------
-    # remove old duplicate epigenomes
+    # remove old duplicate epigenomes using ihec
     # ------------------------------------------
     $logger->info( 'Removing old duplicate epigenomes' . "\n", 0, 1 );
 
     foreach my $ihec (@duplicated_ihecs) {
 
         #get old epigenome
-        my %old_epigenome = get_older_duplicate_epigenome($ihec, $connection);
+        my %old_epigenome = get_older_duplicate_epigenome($ihec, 'EpiRR', $connection);
 
         if (!%old_epigenome){
             next;
         }
 
         #get epigenome_id from the new epigenome 
-        my $new_epigenome = get_newer_duplicate_epigenome($ihec, $connection);
+        my $new_epigenome = get_newer_duplicate_epigenome($ihec, 'EpiRR', $connection);
 
         #remove old epigenome
         remove_epigenome($old_epigenome{'epigenome_id'}, $connection);
@@ -103,6 +103,42 @@ sub main {
         transfer_old_names(\%old_epigenome, $new_epigenome, $connection);
 
     }
+
+    # -----------------------------------------------
+    # get duplicate epigenomes using ENCODE accession
+    # --------------------------------------------------
+    $logger->info( 'Getting duplicate by Encode accession...'. "\n", 0, 1 );
+    my @duplicated_encode = get_duplicate_encode($connection);
+    my $num_duplicates_encode = scalar(@duplicated_encode);
+    $logger->info( 'Found '. $num_duplicates_encode . ' duplicated epigenomes using ENCODE accession'. "\n", 0, 1 );
+
+    # ----------------------------------------------------
+    # remove old duplicate epigenomes by ENCODE accession
+    # -----------------------------------------------------
+    $logger->info( 'Removing old duplicate epigenomes' . "\n", 0, 1 );
+
+    foreach my $encode_accession (@duplicated_encode) {
+
+        #get old epigenome
+        my %old_epigenome = get_older_duplicate_epigenome($encode_accession, 'ENCODE', $connection);
+
+        if (!%old_epigenome){
+            next;
+        }
+
+        #get epigenome_id from the new epigenome 
+        my $new_epigenome = get_newer_duplicate_epigenome($encode_accession, 'ENCODE', $connection);
+
+        #remove old epigenome
+        remove_epigenome($old_epigenome{'epigenome_id'}, $connection);
+
+        #transfer old names to the new epigenome
+        transfer_old_names(\%old_epigenome, $new_epigenome, $connection);
+
+    }
+
+
+
 
     # ------------------------------------------
     # remove in cascade
@@ -136,17 +172,41 @@ sub main {
 
 }
 
+sub get_duplicate_encode{
+    my $connection = shift;
+    
+    my $sql = "select dbprimary_acc
+                from epigenome
+                left join object_xref on (epigenome.epigenome_id = object_xref.ensembl_id and ensembl_object_type = 'epigenome')
+                left join xref using (xref_id)
+                join external_db using (external_db_id)
+                where db_name = 'ENCODE'
+                group by dbprimary_acc
+                having count(1)> 1";
+    my $sth = $connection->prepare($sql);
+    $sth->execute();
+
+    my @duplicated_encode;
+    my @row;
+    while (@row = $sth->fetchrow_array) {
+        push (@duplicated_encode, $row[0]);
+    }
+
+    return @duplicated_encode;
+
+}
+
 sub transfer_old_names{
     my $old_epigenome = shift;
     my $new_epigenome = shift;
     my $connection = shift;
     my $sql = 'UPDATE epigenome
-            SET epigenome.name = ? , epigenome.display_label =?, epigenome.description = ?, epigenome.production_name = ?
+            SET epigenome.name = ? , epigenome.short_name =?, epigenome.description = ?, epigenome.production_name = ?
             WHERE epigenome.epigenome_id = ? ';
 
     my $sth = $connection->prepare($sql);
     $sth->bind_param( 1, $old_epigenome->{'name'} );
-    $sth->bind_param( 2, $old_epigenome->{'display_label'} );
+    $sth->bind_param( 2, $old_epigenome->{'short_name'} );
     $sth->bind_param( 3, $old_epigenome->{'description'} );
     $sth->bind_param( 4, $old_epigenome->{'production_name'} );
     $sth->bind_param( 5, $new_epigenome );
@@ -273,35 +333,38 @@ sub remove_epigenome{
 }
 
 sub get_older_duplicate_epigenome{
-    my $ihec = shift;
+    my $dbprimary_acc = shift;
+    my $db_name = shift;
     my $connection = shift;
 
-    my $sql = "select epigenome_id, epigenome.name, epigenome.display_label, epigenome.description, epigenome.production_name
+    my $sql = "select epigenome_id, epigenome.name, epigenome.short_name, epigenome.description, epigenome.production_name
             from epigenome
             left join object_xref on (epigenome.epigenome_id = object_xref.ensembl_id and ensembl_object_type = 'epigenome')
             left join xref using (xref_id)
             join external_db using (external_db_id)
-            where dbprimary_acc = ? 
+            where dbprimary_acc = ? and external_db.db_name = ?
             order by epigenome_id ASC";
 
     my $sth = $connection->prepare($sql);
-    $sth->bind_param( 1, $ihec );
+    $sth->bind_param( 1, $dbprimary_acc );
+    $sth->bind_param( 2, $db_name );
     $sth->execute();
     my @row = $sth->fetchrow_array;
     my %epi_values;
-    if (!($row[1] =~ m/^new_/g)) {
+    #if (!($row[1] =~ m/^new_/g)) {
         print "Found!!! ".$row[1]."\n";
         $epi_values{'epigenome_id'}=$row[0];
         $epi_values{'name'}=$row[1];
-        $epi_values{'display_label'}=$row[2];
+        $epi_values{'short_name'}=$row[2];
         $epi_values{'description'}=$row[3];
         $epi_values{'production_name'}=$row[4];
-    }
+    #}
     return %epi_values;
 }
 
 sub get_newer_duplicate_epigenome{
-    my $ihec = shift;
+    my $dbprimary_acc = shift;
+    my $db_name = shift;
     my $connection = shift;
 
     my $sql = "select epigenome_id
@@ -309,11 +372,12 @@ sub get_newer_duplicate_epigenome{
             left join object_xref on (epigenome.epigenome_id = object_xref.ensembl_id and ensembl_object_type = 'epigenome')
             left join xref using (xref_id)
             join external_db using (external_db_id)
-            where dbprimary_acc = ? 
+            where dbprimary_acc = ? and external_db.db_name = ?
             order by epigenome_id DESC";
 
     my $sth = $connection->prepare($sql);
-    $sth->bind_param( 1, $ihec );
+    $sth->bind_param( 1, $dbprimary_acc );
+    $sth->bind_param( 2, $db_name );
     $sth->execute();
     my @row = $sth->fetchrow_array;
     return $row[0];
