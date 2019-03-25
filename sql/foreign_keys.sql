@@ -129,7 +129,7 @@ ALTER TABLE motif_feature_regulatory_feature ADD FOREIGN KEY (regulatory_feature
 ALTER TABLE motif_feature_regulatory_feature ADD FOREIGN KEY (epigenome_id) REFERENCES epigenome(epigenome_id);
 
 -- mirna_target_feature
-ALTER TABLE mirna_target_feature  ADD FOREIGN KEY (feature_set_id) REFERENCES feature_set (feature_set_id);
+ALTER TABLE mirna_target_feature  ADD FOREIGN KEY (analysis_id) REFERENCES analysis (analysis_id);
 ALTER TABLE mirna_target_feature  ADD FOREIGN KEY (feature_type_id) REFERENCES feature_type (feature_type_id);
 
 -- associated_motif_feature
