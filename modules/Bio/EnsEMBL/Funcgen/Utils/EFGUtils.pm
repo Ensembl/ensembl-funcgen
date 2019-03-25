@@ -113,6 +113,8 @@ use vars qw( @EXPORT_OK );
   which_path
   write_checksum
   create_production_name
+  stringify
+  destringify
  );
 
 
