@@ -371,30 +371,6 @@ sub get_all_MotifFeatures {
     return $motif_features;
 }
 
-=head2 fetch_all_MotifFeatures_by_Epigenome
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::Epigenome - The epigenome for which 
-               the MotifFeatures are requested
-  Example    : my $overlapping_motif_features = 
-                $rf->fetch_all_MotifFeatures_by_Epigenome($epigenome)
-  Description: Returns all MotifFeatures that overlap with a RegulatoryFeature
-               in a particular Epigenome
-  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::MotifFeature objects
-  Exceptions : none
-  Caller     : General
-  Status     : Deprecated
-
-=cut
-
-sub fetch_all_MotifFeatures_by_Epigenome {
-    my ($self, $epigenome) = @_;
-
-    my $deprecation_message = 'It will be removed in release 97.';
-    deprecate($deprecation_message);
-
-    return [];
-}
-
 =head2 fetch_all_MotifFeatures_with_matching_Peak
 
   Example    : my $overlapping_motif_features = 

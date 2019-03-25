@@ -30,11 +30,11 @@ A year after deprecation (4 Ensembl releases), the method is removed from the AP
 
  - Bio::EnsEMBL::Funcgen::**Alignment**::*db*
 
-### To be removed in EnsEMBL Release 97 ###
+### Removed in EnsEMBL Release 97 ###
 
  - Bio::EnsEMBL::Funcgen::**RegulatoryFeature**::*fetch_all_MotifFeatures_by_Epigenome()*
 
-### To be removed in EnsEMBL Release 94 ###
+### Removed in EnsEMBL Release 94 ###
 
  - Bio::EnsEMBL::Funcgen::**BindingMatrix**::*feature_type()*
  - Bio::EnsEMBL::Funcgen::**BindingMatrix**::*description()*
