@@ -55,8 +55,7 @@ use Bio::EnsEMBL::Utils::Exception qw( warning throw );
 use Bio::EnsEMBL::Funcgen::Epigenome;
 use Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor;#sql_types barewords import
 
-use Bio::EnsEMBL::Hive::Utils 'stringify';
-use Bio::EnsEMBL::Hive::Utils 'destringify';
+use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw(stringify destringify);
 
 use base qw(Bio::EnsEMBL::Funcgen::DBSQL::BaseAdaptor);
 use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );

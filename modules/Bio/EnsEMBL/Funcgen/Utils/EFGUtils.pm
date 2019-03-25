@@ -62,6 +62,7 @@ use File::Spec;
 use Time::Local;
 use FileHandle;
 use Carp qw( confess croak );
+use Scalar::Util qw(looks_like_number);
 
 use base qw( Exporter );
 use vars qw( @EXPORT_OK );
@@ -1761,6 +1762,50 @@ sub which_path{
   }
 
   return $path;
+}
+
+
+
+#Description: This function takes in a Perl data structure and stringifies it using specific configuration
+#that allows us to store/recreate this data structure according to our specific storage/communication requirements.
+
+sub stringify {
+    my $structure = pop @_;
+
+    local $Data::Dumper::Indent    = 0;         # we want everything on one line
+    local $Data::Dumper::Terse     = 1;         # and we want it without dummy variable names
+    local $Data::Dumper::Sortkeys  = 1;         # make stringification more deterministic
+    local $Data::Dumper::Quotekeys = 1;         # conserve some space
+    local $Data::Dumper::Useqq     = 1;         # escape the \n and \t correctly
+    local $Data::Dumper::Pair      = ' => ';    # make sure we always produce Perl-parsable structures, no matter what is set externally
+    local $Data::Dumper::Maxdepth  = 0;         # make sure nobody can mess up stringification by setting a lower Maxdepth
+    local $Data::Dumper::Deepcopy  = 1;         # avoid self-references in case the same structure is reused within params
+
+    return Dumper($structure);
+}
+
+
+
+#Description: This function takes in a string that may or may not contain a stingified Perl structure.
+#If it seems to contain a hash/array/quoted_string, the contents is evaluated, otherwise it is returned "as is".
+#This function is mainly used to read values from 'meta' table that may represent Perl structures, but generally don't have to.
+
+sub destringify {
+    my $value = pop @_;
+
+    if(defined $value) {
+        if($value=~/^'.*'$/s
+        or $value=~/^".*"$/s
+        or $value=~/^{.*}$/s
+        or $value=~/^\[.*\]$/s
+        or looks_like_number($value)    # Needed for pipeline_wide_parameters as each value is destringified independently and the JSON writer would otherwise force writing numbers as strings
+        or $value eq 'undef') {
+
+            $value = eval($value);
+        }
+    }
+
+    return $value;
 }
 
 
