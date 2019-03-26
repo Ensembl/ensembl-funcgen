@@ -43,7 +43,7 @@ my $sth = $db_connection->prepare(
   qq(
     select 
       alignment.name as alignment_name,
-      epigenome.display_label as epigenome,
+      epigenome.short_name as epigenome,
       bam_file.path bam_file,
       bigwig_file.path bigwig_file,
       total.qc_passed_reads num_total, 

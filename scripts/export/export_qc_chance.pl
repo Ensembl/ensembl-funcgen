@@ -44,7 +44,7 @@ my $sth = $db_connection->prepare(
       control_bigwig_file.path control_bigwig_file,
       control_alignment.name control_alignment_name,
       analysis_description.display_label analysis,
-      epigenome.display_label as epigenome,
+      epigenome.short_name as epigenome,
       chance.* 
     from 
       chance 

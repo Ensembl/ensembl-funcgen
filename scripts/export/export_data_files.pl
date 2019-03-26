@@ -151,7 +151,7 @@ my $sth = $db_connection->prepare(
       control_alignment.name control_alignment_name,
       control_feature_type.name control_feature_type,
       analysis.logic_name analysis,
-      epigenome.display_label as epigenome,
+      epigenome.short_name as epigenome,
       epigenome.production_name as epigenome_production_name
     from 
       alignment
