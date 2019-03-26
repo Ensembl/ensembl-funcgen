@@ -181,20 +181,15 @@ sub check_file_content_consistent {
     my $funcgen_adaptor = $param->{funcgen_adaptor};
     my $ftp_dir = $param->{ftp_dir};
     my $species = $param->{species};
+    my $check_these = $param->{check_these};
     
     my $dbc = $funcgen_adaptor->dbc;
     
     my $epigenome_cache = create_epigenome_cache($funcgen_adaptor);
     
-    my $regulatory_activity_file_names = get_all_regulatory_activity_file_infos_from_ftp({
-        dbc     => $dbc,
-        ftp_dir => $ftp_dir,
-        species => $species,
-    });
-    
     my $regulatory_feature_adaptor = $funcgen_adaptor->get_RegulatoryFeatureAdaptor;
     
-    foreach my $regulatory_activity_file_name (@$regulatory_activity_file_names) {
+    foreach my $regulatory_activity_file_name (@$check_these) {
     
         print("     Checking " . $regulatory_activity_file_name->{file_name} . "\n");
     
@@ -210,8 +205,17 @@ sub check_file_content_consistent {
         
         open my $fh, "zcat $file_name |" or die($file_name);
         
+        my $number_of_lines_checked      =    0;
+        my $max_number_of_lines_to_check = 1000;
+        
         while (my $current_line = <$fh>) {
             chomp($current_line);
+            
+            $number_of_lines_checked++;
+            
+            if ($number_of_lines_checked >= $max_number_of_lines_to_check) {
+              last;
+            }
             
             my @f = split "\t", $current_line;
             
