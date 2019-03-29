@@ -25,13 +25,12 @@ sub run_all_checks {
 
   my @execution_plan_list = @_;
 
-  my @error_messages = (
+  my @error_messages;
 
-      map { check_once_a_control_always_a_control      ($_) } @execution_plan_list,
-      map { check_read_files_are_used_only_once_in_idr ($_) } @execution_plan_list,
+  push @error_messages, map { check_once_a_control_always_a_control      ($_) } @execution_plan_list;
+  push @error_messages, map { check_read_files_are_used_only_once_in_idr ($_) } @execution_plan_list;
+  push @error_messages, check_alignments_with_same_name_link_to_same_experiment ( \@execution_plan_list );
 
-      check_alignments_with_same_name_link_to_same_experiment ( \@execution_plan_list )
-  );
   return @error_messages;
 }
 
