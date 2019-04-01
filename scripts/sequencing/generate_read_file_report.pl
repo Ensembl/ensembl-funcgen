@@ -129,7 +129,7 @@ my $dbc = $funcgen_dba->dbc;
 my $sql_1 = qq(
     select 
         logic_name,
-        count(experiment_id) as count_experiments
+        count(distinct experiment_id) as count_experiments
     from 
         experiment 
         join read_file_experimental_configuration using (experiment_id) 
