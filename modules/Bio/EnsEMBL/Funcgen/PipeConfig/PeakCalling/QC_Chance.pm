@@ -171,7 +171,6 @@ sub pipeline_analyses {
             -parameters => {
                 cmd => qq(load_argenrich_qc_file.pl   )
                 . qq( --argenrich_file        #chance_tempdir#/#argenrich_outfile#     )
-                . qq( --experiment_name #experiment_name# )
                 . qq( --signal   #signal_alignment#       )
                 . qq( --control  #control_alignment#      )
                 . qq( --user     #tracking_db_user#       )
@@ -189,7 +188,6 @@ sub pipeline_analyses {
             -parameters => {
                 cmd => qq(load_argenrich_qc_file.pl   )
                 . qq( --argenrich_file        #chance_tempdir#/#argenrich_outfile#     )
-                . qq( --experiment_name #experiment_name# )
                 . qq( --signal   #signal_alignment#       )
                 . qq( --control  #control_alignment#      )
                 . qq( --user     #tracking_db_user#       )
