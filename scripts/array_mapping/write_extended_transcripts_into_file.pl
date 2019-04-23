@@ -39,7 +39,7 @@ my $unannotated_utrs = Bio::EnsEMBL::Funcgen::Parsers::DataDumper->new->load_fir
 lock_hash(%$unannotated_utrs);
 
 # Transcripts with UTRs already have the UTRs included in their start and ends, so should not be extended.
-my $utr_multiplier = 0;
+my $utr_multiplier = 1;
 
 # Also not currently used, just transferred this from probe2transcript.
 my $utr_extends = {
@@ -258,15 +258,21 @@ sub compute_extension_length {
   my $utr_multiplier = $param->{utr_multiplier};
   my $utr_extends    = $param->{utr_extends};
   
-  if($utr_extends->{$end} || $utr_multiplier || $unannotated_utrs->{$end}) {
-    my $method = ($end == 5) ? 'five' : 'three';
-    $method .= '_prime_utr';
-    my $utr = $transcript->$method;
+  my $method = ($end == 5) ? 'five' : 'three';
+  $method .= '_prime_utr';
+  my $utr = $transcript->$method;
+  
+  #print("The utr is: " . Dumper($utr));
+
+  if($utr || $utr_extends->{$end} || $utr_multiplier || $unannotated_utrs->{$end}) {
+#     my $method = ($end == 5) ? 'five' : 'three';
+#     $method .= '_prime_utr';
+#     my $utr = $transcript->$method;
 
     if(defined $utr) {
       push @{$utr_counts->{$end}}, $utr->length;
       if(defined $utr_extends->{$end}) {
-        return $utr_extends->{$end};
+        return $utr->length;
       }
       else{
         return $utr->length * $utr_multiplier;

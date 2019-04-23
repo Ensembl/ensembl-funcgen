@@ -34,6 +34,8 @@ my $probe_feature_transcript_rejection_file;
 my $debug = undef;
 my $max_mismatches = 1;
 
+my $record_terminator = ";\n";
+
 GetOptions (
    'registry=s'                                  => \$registry,
    'species=s'                                   => \$species,
@@ -116,6 +118,7 @@ sub cache_and_load_unmapped_objects {
   };
   
   $probe_feature_transcript_rejection_fh->print(Dumper($unmapped_object_description));
+  $probe_feature_transcript_rejection_fh->print($record_terminator);
   return;
 }
 
@@ -274,6 +277,7 @@ sub examine_transcript {
             probe_hits_by_array  => $transcript_feature_info,
           })
         );
+        $transcript_info_file_fh->print($record_terminator);
         $transcript_feature_info = {};
       }
     
@@ -354,6 +358,7 @@ sub examine_transcript {
       probe_hits_by_array  => $transcript_feature_info,
     })
   );
+  $transcript_info_file_fh->print($record_terminator);
 
   return;
 }

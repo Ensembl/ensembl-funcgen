@@ -3,6 +3,8 @@ package Bio::EnsEMBL::Funcgen::Parsers::DataDumper;
 use strict;
 use Data::Dumper;
 
+my $record_terminator = ";\n";
+
 sub new {
   my ( $class, @args ) = @_;
   my $self = bless {}, $class;  
@@ -52,8 +54,7 @@ sub parse {
     use Bio::EnsEMBL::Utils::Exception qw( throw );
     throw("The file $data_dumper_file does not exist!");
   }
-  
-  local $/ = ";\n";
+  local $/ = $record_terminator;
   my $in;
   open $in, $data_dumper_file;
 

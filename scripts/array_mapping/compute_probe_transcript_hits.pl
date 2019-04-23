@@ -51,9 +51,10 @@ $parser->parse({
     );
   },
 });
-$logger->info("Done reading transcript info\n");
+$logger->info("Done reading transcript info.\n");
+$logger->info("Checked $num_transcripts_seen transcripts.\n");
 
-$logger->info("Writing probe transcript hits from array $array_name\n");
+$logger->info("Writing probe transcript hits from array $array_name to $probe_transcript_hits_file\n");
 
 my $probe_transcript_hits_for_current_array = $probe_transcript_hits{$array_name};
 
@@ -74,6 +75,7 @@ foreach my $current_probe_id (@probe_ids) {
   );
 }
 
+$logger->info("The probe to transcript hits are stored in $probe_transcript_hits_file.\n");
 $logger->info("Done.\n");
 
 $probe_transcript_hits_file_fh->close;

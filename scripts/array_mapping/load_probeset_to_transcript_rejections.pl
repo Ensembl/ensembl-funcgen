@@ -49,6 +49,11 @@ my $process_data = sub {
 
   my $probeset_rejection = shift;
   
+  if (! defined $probeset_rejection->{full_description}) {
+    warn("Full description is not set in " . Dumper($probeset_rejection));
+    return;
+  }
+  
   use Bio::EnsEMBL::UnmappedObject;
   my $unmapped_object = Bio::EnsEMBL::UnmappedObject->new (
     -type                => $probeset_rejection->{type},
