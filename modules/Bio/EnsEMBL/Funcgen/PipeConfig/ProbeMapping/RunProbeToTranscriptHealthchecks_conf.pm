@@ -164,7 +164,7 @@ sub pipeline_analyses {
                 # All probes in temp_probe_ids_with_transcript_matches should 
                 # be in one of the three tables:
                 #
-                # - temp_probe_ids_with_transcript_matches meaning it has been mapped 
+                # - temp_mapped_to_transcript meaning it has been mapped 
                 #
                 # or one of
                 #
