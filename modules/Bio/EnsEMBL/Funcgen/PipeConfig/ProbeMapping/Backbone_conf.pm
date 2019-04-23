@@ -137,11 +137,24 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
             -flow_into   => {
                '1->A' => 'start_populate_meta_coords',
-               'A->1' => 'backbone_pipeline_finished'
+               'A->1' => 'backbone_fire_probemapping_hc'
             },
         },
         {
             -logic_name  => 'start_populate_meta_coords',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+        },
+        
+        {
+            -logic_name  => 'backbone_fire_probemapping_hc',
+            -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
+            -flow_into   => {
+               '1->A' => 'start_probemapping_hc',
+               'A->1' => 'backbone_pipeline_finished'
+            },
+        },
+        {
+            -logic_name  => 'start_probemapping_hc',
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::Dummy',
         },
         
