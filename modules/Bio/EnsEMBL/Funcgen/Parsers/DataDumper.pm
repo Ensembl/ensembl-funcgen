@@ -69,7 +69,16 @@ sub parse {
     my $parsed = eval $current_record;
     use strict;
     
-    $call_back->($parsed);
+    eval {
+      $call_back->($parsed);
+    };
+    if ($@) {
+      use Carp;
+      confess(
+        "Error processing " . $current_record . "!\n"
+        . "The error message is: " . $@
+      );
+    }
   }
   $in->close;
 }
