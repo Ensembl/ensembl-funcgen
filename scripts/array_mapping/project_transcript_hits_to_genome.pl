@@ -4,6 +4,8 @@ use strict;
 use Data::Dumper;
 use Getopt::Long;
 
+my $record_terminator = ";\n";
+
 =head1 project_transcript_hits_to_genome.pl
 
 perl scripts/array_mapping/import_parse_exonerate.pl \
@@ -208,6 +210,7 @@ my $map_transcript_to_genome = sub {
   if (! exists $gene_hits{$gene_hit_key}) {
     $gene_hits{$gene_hit_key} = undef;
     $output_fh->print(Dumper($projected_hit));
+    $output_fh->print($record_terminator);
   }
 };
 
