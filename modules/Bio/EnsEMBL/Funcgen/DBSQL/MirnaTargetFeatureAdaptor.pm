@@ -204,7 +204,7 @@ sub _objs_from_sth {
 		  'start'               => $seq_region_start,
 		  'end'                 => $seq_region_end,
 		  'strand'              => $seq_region_strand,
-		  'slice'               => $slice_hash{seq_region_id},
+		  'slice'               => $slice_hash{$seq_region_id},
 		  'analysis'            => $anal_hash{$anal_id},
       'gene_stable_id'      => $gene_stable_id,
 		  'adaptor'             => $self,

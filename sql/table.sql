@@ -617,8 +617,7 @@ CREATE TABLE `mirna_target_feature` (
   PRIMARY KEY (`mirna_target_feature_id`),
   UNIQUE KEY `unique_idx` (`accession`,`gene_stable_id`,`seq_region_start`,`seq_region_end`),
   KEY `feature_type_idx` (`feature_type_id`),
-  KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
-  KEY `analysis_idx` (`analysis_id`)
+  KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`)
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
 
 
