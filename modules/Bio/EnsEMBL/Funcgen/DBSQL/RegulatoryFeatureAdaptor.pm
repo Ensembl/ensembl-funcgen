@@ -67,8 +67,11 @@ use DBI qw(:sql_types);
 
 # One day:
 # use base 'Bio::EnsEMBL::Feature';
-use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor;
-use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
+#use Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor;
+#use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetFeatureAdaptor);
+
+use Bio::EnsEMBL::Funcgen::DBSQL::SetRegulatoryFeatureAdaptor;
+use base qw(Bio::EnsEMBL::Funcgen::DBSQL::SetRegulatoryFeatureAdaptor);
 
 
 =head2 fetch_by_stable_id
