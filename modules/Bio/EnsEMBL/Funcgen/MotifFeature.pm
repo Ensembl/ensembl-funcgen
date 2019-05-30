@@ -454,7 +454,7 @@ sub summary_as_hash {
     my $self = shift;
 
     my $summary = {
-        binding_matrix               => $self->get_BindingMatrix->name,
+        binding_matrix_stable_id     => $self->get_BindingMatrix->stable_id,
         start                        => $self->seq_region_start,
         end                          => $self->seq_region_end,
         strand                       => $self->strand,
