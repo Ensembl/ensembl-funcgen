@@ -101,10 +101,8 @@ sub define_expected :Test(setup) {
         'is_verified'             => 1,
     };
 
-    my $tfc =
-
     my %summary = (
-        'binding_matrix'                        => $binding_matrix->name(),
+        'binding_matrix_stable_id'              => $binding_matrix->stable_id(),
         'start'                                 => 5197613,
         'end'                                   => 5197629,
         'strand'                                => -1,
