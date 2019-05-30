@@ -462,7 +462,7 @@ sub summary_as_hash {
         stable_id                    => $self->stable_id,
         score                        => $self->score,
         transcription_factor_complex => join( ',',
-            @{ $self->binding_matrix->get_TranscriptionFactorComplex_names } ),
+            @{ $self->get_BindingMatrix->get_TranscriptionFactorComplex_names } ),
     };
 
     my $epigenomes = $self->get_all_Epigenomes_with_experimental_evidence;
