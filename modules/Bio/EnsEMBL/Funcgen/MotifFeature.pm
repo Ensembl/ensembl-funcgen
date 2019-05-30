@@ -332,7 +332,7 @@ sub get_all_Epigenomes_with_experimental_evidence {
   my $peaks = $self->get_all_overlapping_Peaks;
   my %epigenome_dbIDs;
   for my $peak (@{$peaks}){
-    $epigenome_dbIDs{$peak->fetch_PeakCalling->epigenome_id} = 1;
+    $epigenome_dbIDs{$peak->get_PeakCalling->epigenome_id} = 1;
   }
 
   my $epigenome_adaptor = $self->adaptor->db->get_adaptor('Epigenome');
@@ -470,7 +470,7 @@ sub summary_as_hash {
     if (scalar @{$epigenomes} > 0) {
         my @epigenome_names_list;
         for my $epigenome ( @{$epigenomes} ) {
-            push @epigenome_names_list, $epigenome->display_label();
+            push @epigenome_names_list, $epigenome->short_name();
         }
         $summary->{epigenomes_with_experimental_evidence} = join ',',
           @epigenome_names_list;
