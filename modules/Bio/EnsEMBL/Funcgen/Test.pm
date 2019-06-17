@@ -42,7 +42,7 @@ use parent qw(Test::Class Class::Data::Inheritable);
 
 BEGIN {
     __PACKAGE__->mk_classdata('full_class');
-    __PACKAGE__->mk_classdata('short_class');
+    __PACKAGE__->mk_classdata('class');
 }
 
 INIT {Test::Class->runtests}
@@ -66,20 +66,20 @@ sub create_class_methods :Test(startup) {
     my $self = shift;
 
     my $full_class = 'Bio::EnsEMBL::Funcgen::Test';
-    my $short_class;
+    my $class;
 
     my $package_name = ref($self);
     if ($package_name ne __PACKAGE__) {
         $package_name =~ s/Test//;
-        $short_class = $package_name;
-        my $prefix   = 'Bio::EnsEMBL::Funcgen::';
-        if ($short_class =~ /adaptor/) {
+        $class     = $package_name;
+        my $prefix = 'Bio::EnsEMBL::Funcgen::';
+        if ($class =~ /Adaptor/) {
             $prefix .= 'DBSQL::'
         }
-        $full_class = $prefix . $short_class;
+        $full_class = $prefix . $class;
     }
     $self->full_class($full_class);
-    $self->short_class($short_class);
+    $self->class($class);
 }
 
 sub _creation :Test(1) {
@@ -95,6 +95,20 @@ sub parameters :Test(setup) {
     $self->{mandatory_constructor_parameters} = {};
 }
 
+sub fetch_from_test_db :Test(setup) {
+    my $self = shift;
+
+    my $dbIDs = $self->dbIDs_to_fetch;
+    my $class = $self->class();
+
+    if (scalar @{$dbIDs} > 0) {
+        $self->{fetched} =
+            $self->{funcgen_db}->get_adaptor($class)
+                 ->fetch_all_by_dbID_list($dbIDs);
+    }
+
+}
+
 sub test_getters_setters :Test(no_plan) {
     my $self = shift;
 
@@ -102,45 +116,50 @@ sub test_getters_setters :Test(no_plan) {
     my @getters         = @{$self->getters};
     $self->num_tests(scalar @getters_setters + scalar @getters);
 
-    my $short_class = $self->short_class();
+    my $class = $self->class();
 
     for my $getter_setter (@getters_setters) {
-        ok(test_getter_setter($self->{fetched}->{$short_class},
+        ok(test_getter_setter($self->{fetched}->[0],
                               $getter_setter,
                               'placeholder_string'),
-           'getter/setter for ' . $getter_setter);
+           $getter_setter . '() getter/setter works'
+        );
     }
 
     for my $getter (@getters) {
-        is_deeply($self->{fetched}->{$short_class}->$getter,
+        is_deeply($self->{fetched}->[0]->$getter,
                   $self->{expected}->{$getter},
-                  'getter for ' . $getter . ' works'
+                  $getter . '() getter works'
         );
+        1;
     }
 }
 
 sub constructor :Test(no_plan) {
     my $self = shift;
 
-    my $full_class = $self->full_class;
-    my %mandatory_parameters = %{$self->{mandatory_constructor_parameters}};
+    my $full_class           = $self->full_class;
 
-    $self->num_tests(scalar(keys(%mandatory_parameters)) + 1);
+    if ($self->{mandatory_constructor_parameters}){
+        my %mandatory_parameters = %{$self->{mandatory_constructor_parameters}};
 
-    my $new_object = $full_class->new(%{$self->{constructor_parameters}});
-    isa_ok($new_object, $self->full_class);
+        $self->num_tests(scalar(keys(%mandatory_parameters)) + 1);
 
-    my %incomplete_parameters;
-    my $error_message;
-    for my $parameter (keys %mandatory_parameters) {
-        %incomplete_parameters = %mandatory_parameters;
-        delete $incomplete_parameters{$parameter};
-        $error_message = "Must supply .* parameter";
-        throws_ok {
-            $full_class->new(%incomplete_parameters)
+        my $new_object = $full_class->new(%{$self->{constructor_parameters}});
+        isa_ok($new_object, $self->full_class);
+
+        my %missing_parameters;
+        my $error_message;
+        for my $parameter (keys %mandatory_parameters) {
+            %missing_parameters = %mandatory_parameters;
+            delete $missing_parameters{$parameter};
+            $error_message = "Must supply a .* parameter";
+            throws_ok {
+                $full_class->new(%missing_parameters)
+            }
+                qr/$error_message/,
+                "... and exception is thrown when $parameter parameter is missing";
         }
-            qr/$error_message/,
-            "... and exception is thrown when $parameter parameter is missing";
     }
 }
 
@@ -150,7 +169,7 @@ sub summary_as_hash :Test(no_plan) {
     if (exists $self->{expected}->{summary}) {
         $self->num_tests(1);
 
-        is_deeply($self->{fetched}->{$self->short_class}->summary_as_hash,
+        is_deeply($self->{fetched}->[0]->summary_as_hash,
                   $self->{expected}->{summary},
                   'summary_as_hash() works');
     }
@@ -164,5 +183,32 @@ sub getters_setters {return []};
 
 sub getters {return []};
 
+sub dbIDs_to_fetch {return [];}
+
+sub _quick_fetch {
+    my ($self, $class, $dbID, $dbtype) = @_;
+
+    my $default_dbtype = 'funcgen';
+    if(! $dbtype){
+        $dbtype = $default_dbtype;
+    }
+    $dbtype .= '_db';
+
+    my $adaptor = $self->{$dbtype}->get_adaptor($class);
+    return $adaptor->fetch_by_dbID($dbID);
+}
+
+sub _quick_fetch_all {
+    my ($self, $class, $dbIDs, $dbtype) = @_;
+
+    my $default_dbtype = 'funcgen';
+    if(! $dbtype){
+        $dbtype = $default_dbtype;
+    }
+    $dbtype .= '_db';
+
+    my $adaptor = $self->{$dbtype}->get_adaptor($class);
+    return $adaptor->fetch_all_by_dbID_list($dbIDs);
+}
 
 1;

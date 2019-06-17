@@ -85,14 +85,7 @@ sub define_expected :Test(setup) {
     };
 }
 
-sub fetch_from_test_db :Test(setup) {
-    my $self = shift;
-
-    my $short_class = $self->short_class();
-
-    $self->{fetched}->{$short_class} =
-        $self->{funcgen_db}->get_adaptor($short_class)->fetch_by_dbID(1);
-}
+sub dbIDs_to_fetch {return [1];}
 
 sub getters {
     return [ 'display_label', 'accession', 'evidence', 'method',
@@ -102,9 +95,7 @@ sub getters {
 sub get_FeatureType :Test(1) {
     my $self = shift;
 
-    my $short_class = $self->short_class();
-
-    is_deeply($self->{fetched}->{$short_class}->get_FeatureType,
+    is_deeply($self->{fetched}->[0]->get_FeatureType,
               $self->{expected}->{feature_type},
               'get_FeatureType works'
     );

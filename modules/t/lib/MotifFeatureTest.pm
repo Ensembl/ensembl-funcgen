@@ -122,14 +122,7 @@ sub define_expected :Test(setup) {
     $self->{expected}->{summary} = \%summary;
 }
 
-sub fetch_from_test_db :Test(setup) {
-    my $self = shift;
-
-    my $short_class = $self->short_class();
-
-    $self->{fetched}->{$short_class} =
-        $self->{funcgen_db}->get_adaptor($short_class)->fetch_by_dbID(4);
-}
+sub dbIDs_to_fetch {return [4];}
 
 sub getters {
     return [ 'binding_matrix', 'score', 'stable_id' ];
@@ -138,9 +131,7 @@ sub getters {
 sub get_BindingMatrix :Test(1) {
     my $self = shift;
 
-    my $short_class = $self->short_class();
-
-    is_deeply($self->{fetched}->{$short_class}->get_BindingMatrix,
+    is_deeply($self->{fetched}->[0]->get_BindingMatrix,
               $self->{expected}->{binding_matrix},
               'get_BindingMatrix works'
     );
@@ -149,9 +140,7 @@ sub get_BindingMatrix :Test(1) {
 sub get_all_overlapping_Peaks :Test(no_plan) {
     my $self = shift;
 
-    my $short_class = $self->short_class();
-
-    my @peaks = @{$self->{fetched}->{$short_class}->get_all_overlapping_Peaks};
+    my @peaks = @{$self->{fetched}->[0]->get_all_overlapping_Peaks};
 
     $self->num_tests(scalar(@peaks) + 1);
 
@@ -167,10 +156,7 @@ sub get_all_overlapping_Peaks :Test(no_plan) {
 sub fetch_all_overlapping_Peaks :Test(no_plan) {
     my $self = shift;
 
-    my $short_class = $self->short_class();
-
-    my @peaks =
-        @{$self->{fetched}->{$short_class}->fetch_all_overlapping_Peaks};
+    my @peaks = @{$self->{fetched}->[0]->fetch_all_overlapping_Peaks};
 
     $self->num_tests(scalar(@peaks) + 1);
 
@@ -185,11 +171,10 @@ sub fetch_all_overlapping_Peaks :Test(no_plan) {
 
 sub get_all_overlapping_Peaks_by_Epigenome :Test(1) {
     my $self        = shift;
-    my $short_class = $self->short_class();
 
     my $epigenome = $self->{parameters}->{epigenome};
 
-    my $peak = $self->{fetched}->{$short_class}->
+    my $peak = $self->{fetched}->[0]->
         get_all_overlapping_Peaks_by_Epigenome($epigenome);
 
     is_deeply($peak,
@@ -200,11 +185,10 @@ sub get_all_overlapping_Peaks_by_Epigenome :Test(1) {
 
 sub fetch_overlapping_Peak_by_Epigenome :Test(1) {
     my $self        = shift;
-    my $short_class = $self->short_class();
 
     my $epigenome = $self->{parameters}->{epigenome};
 
-    my $peak = $self->{fetched}->{$short_class}->
+    my $peak = $self->{fetched}->[0]->
         fetch_overlapping_Peak_by_Epigenome($epigenome);
 
     is_deeply($peak,
@@ -215,11 +199,10 @@ sub fetch_overlapping_Peak_by_Epigenome :Test(1) {
 
 sub is_experimentally_verified_in_Epigenome :Test(1) {
     my $self = shift;
-    my $short_class = $self->short_class();
 
     my $epigenome = $self->{parameters}->{epigenome};
 
-    my $is_verified = $self->{fetched}->{$short_class}->
+    my $is_verified = $self->{fetched}->[0]->
         is_experimentally_verified_in_Epigenome($epigenome);
 
     is ($is_verified,
@@ -232,8 +215,8 @@ sub is_experimentally_verified_in_Epigenome :Test(1) {
 
 sub get_all_Epigenomes_with_experimental_evidence :Test(1) {
     my $self        = shift;
-    my $short_class = $self->short_class;
-    my $epigenomes  = $self->{fetched}->{$short_class}
+
+    my $epigenomes  = $self->{fetched}->[0]
                            ->get_all_Epigenomes_with_experimental_evidence;
     is_deeply($epigenomes,
               $self->{expected}->{epigenomes},
@@ -243,9 +226,8 @@ sub get_all_Epigenomes_with_experimental_evidence :Test(1) {
 sub is_position_informative :Test(1){
     my $self = shift;
 
-    my $short_class = $self->short_class;
     my $pos         = $self->{parameters}->{position};
-    is($self->{fetched}->{$short_class}->is_position_informative($pos),
+    is($self->{fetched}->[0]->is_position_informative($pos),
        $self->{expected}->{is_position_informative},
        'is_position_informative() works'
     );

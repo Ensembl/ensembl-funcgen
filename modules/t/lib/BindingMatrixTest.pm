@@ -223,14 +223,7 @@ sub define_expected :Test(setup) {
     $self->{expected}->{summary} = \%summary;
 }
 
-sub fetch_from_test_db :Test(setup) {
-    my $self = shift;
-
-    my $short_class = $self->short_class();
-
-    $self->{fetched}->{$short_class} =
-        $self->{funcgen_db}->get_adaptor($short_class)->fetch_by_dbID(134);
-}
+sub dbIDs_to_fetch {return [134];}
 
 sub getters_setters {
     return [ 'name', 'threshold', 'source', 'stable_id' ];
@@ -251,7 +244,7 @@ sub constructor_extra :Test(1) {
 sub get_element_by_position_nucleotide :Test(6) {
     my $self = shift;
 
-    my $binding_matrix = $self->{fetched}->{$self->short_class};
+    my $binding_matrix = $self->{fetched}->[0];
     my $pos            = $self->{parameters}->{position};
     my $inv_pos        = $self->{parameters}->{out_of_bounds_position};
     my $float          = $self->{parameters}->{float};
@@ -297,7 +290,7 @@ sub get_element_by_position_nucleotide :Test(6) {
 sub get_elements_as_string :Test(1) {
     my $self = shift;
 
-    my $binding_matrix = $self->{fetched}->{$self->short_class};
+    my $binding_matrix = $self->{fetched}->[0];
 
     is($binding_matrix->get_elements_as_string,
        $self->{expected}->{elements_string},
@@ -308,7 +301,7 @@ sub get_elements_as_string :Test(1) {
 sub get_all_associated_TranscriptionFactorComplexes :Test(no_plan) {
     my $self = shift;
 
-    my $binding_matrix = $self->{fetched}->{$self->short_class};
+    my $binding_matrix = $self->{fetched}->[0];
 
     my $TFCs = $binding_matrix->get_all_associated_TranscriptionFactorComplexes;
 
@@ -326,7 +319,7 @@ sub get_all_associated_TranscriptionFactorComplexes :Test(no_plan) {
 sub get_TranscriptionFactorComplex_names :Test(1) {
     my $self = shift;
 
-    my $binding_matrix = $self->{fetched}->{$self->short_class};
+    my $binding_matrix = $self->{fetched}->[0];
 
     my $TFC_names = $binding_matrix->get_TranscriptionFactorComplex_names;
 
@@ -338,7 +331,7 @@ sub get_TranscriptionFactorComplex_names :Test(1) {
 sub sequence_similarity_score :Test(4) {
     my $self = shift;
 
-    my $binding_matrix = $self->{fetched}->{$self->short_class};
+    my $binding_matrix = $self->{fetched}->[0];
     my $sequence       = $self->{parameters}->{sequence};
     my $score          = $binding_matrix->sequence_similarity_score($sequence);
     $score             = sprintf("%.2f", $score);
@@ -371,7 +364,7 @@ sub sequence_similarity_score :Test(4) {
 sub relative_sequence_similarity_score :Test(1) {
     my $self = shift;
 
-    my $binding_matrix = $self->{fetched}->{$self->short_class};
+    my $binding_matrix = $self->{fetched}->[0];
     my $sequence       = $self->{parameters}->{sequence};
     my $score          =
         $binding_matrix->relative_sequence_similarity_score($sequence);
@@ -387,7 +380,7 @@ sub relative_sequence_similarity_score :Test(1) {
 sub is_position_informative :Test(4) {
     my $self = shift;
 
-    my $binding_matrix = $self->{fetched}->{$self->short_class};
+    my $binding_matrix = $self->{fetched}->[0];
     my $position       = $self->{parameters}->{position};
     my $threshold      = $self->{parameters}->{threshold};
 

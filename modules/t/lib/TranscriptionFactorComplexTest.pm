@@ -77,14 +77,7 @@ sub define_expected :Test(setup) {
     };
 }
 
-sub fetch_from_test_db :Test(setup) {
-    my $self = shift;
-
-    my $short_class = $self->short_class();
-
-    $self->{fetched}->{$short_class} =
-        $self->{funcgen_db}->get_adaptor($short_class)->fetch_by_dbID(257);
-}
+sub dbIDs_to_fetch {return [257];}
 
 sub getters {
     return [ 'production_name', 'display_name', 'components' ];

@@ -1,3 +1,4 @@
+179363	Promoter Flanking Region	Regulatory Feature	\N	Predicted promoter flanking region	SO:0001952	promoter_flanking_region	\N
 179077	TarBase miRNA target	RNA	\N	TarBase miRNA target predictions	\N	\N	\N
 180509	WCE	DNA	113	Whole Cell Extract	\N	\N	\N
 180537	ELK1	Transcription Factor	\N	ELK1 TF binding	SO:0000235	TF_binding_site	\N
