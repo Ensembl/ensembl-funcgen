@@ -1,4 +1,4 @@
-534	\N	schema_version	97
+534	\N	schema_version	98
 156	1	species.production_name	homo_sapiens
 223	\N	schema_type	funcgen
 589	\N	patch	patch_78_79_a.sql|schema_version
@@ -176,3 +176,6 @@
 766	\N	patch	patch_96_97_d.sql|Fix foreign key data type inconsistencies
 767	\N	patch	patch_96_97_e.sql|Update mirna_target_feature
 768	\N	patch	patch_96_97_f.sql|Add search_terms and full_name columns to epigenome table, rename display_label column to short_name and change description to TEXT
+769	\N	patch	patch_96_97_g.sql|Modify column in regulatory_activity
+770	\N	patch	patch_97_98_a.sql|schema_version
+771	\N	patch	patch_97_98_b.sql|Update unique constraint in mirna_target_feature table

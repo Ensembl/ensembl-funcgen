@@ -136,7 +136,7 @@ CREATE TABLE `binding_matrix` (
   PRIMARY KEY (`binding_matrix_id`),
   UNIQUE KEY `name_idx` (`name`),
   UNIQUE KEY `stable_id_idx` (`stable_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=223 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=577 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `binding_matrix_frequencies` (
   `binding_matrix_frequencies_id` int(11) NOT NULL AUTO_INCREMENT,
@@ -382,7 +382,7 @@ CREATE TABLE `meta` (
   PRIMARY KEY (`meta_id`),
   UNIQUE KEY `species_key_value_idx` (`species_id`,`meta_key`,`meta_value`),
   KEY `species_value_idx` (`species_id`,`meta_value`)
-) ENGINE=MyISAM AUTO_INCREMENT=769 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=772 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `meta_coord` (
   `table_name` varchar(40) NOT NULL,
@@ -406,7 +406,7 @@ CREATE TABLE `mirna_target_feature` (
   `analysis_id` smallint(10) unsigned DEFAULT NULL,
   `gene_stable_id` varchar(128) DEFAULT NULL,
   PRIMARY KEY (`mirna_target_feature_id`),
-  UNIQUE KEY `unique_idx` (`accession`,`gene_stable_id`,`seq_region_start`,`seq_region_end`),
+  UNIQUE KEY `unique_idx` (`accession`,`gene_stable_id`,`seq_region_start`,`seq_region_end`,`evidence`,`method`),
   KEY `feature_type_idx` (`feature_type_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`)
 ) ENGINE=MyISAM AUTO_INCREMENT=27916 DEFAULT CHARSET=latin1 MAX_ROWS=100000000;
@@ -425,7 +425,7 @@ CREATE TABLE `motif_feature` (
   UNIQUE KEY `stable_id_idx` (`stable_id`),
   KEY `seq_region_idx` (`seq_region_id`,`seq_region_start`),
   KEY `binding_matrix_idx` (`binding_matrix_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=568225 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=13512234 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `motif_feature_peak` (
   `motif_feature_peak_id` int(11) NOT NULL AUTO_INCREMENT,
@@ -446,7 +446,7 @@ CREATE TABLE `motif_feature_regulatory_feature` (
   UNIQUE KEY `mf_rf_ep_idx` (`motif_feature_id`,`regulatory_feature_id`,`epigenome_id`),
   KEY `motif_feature_idx` (`motif_feature_id`),
   KEY `regulatory_feature_idx` (`regulatory_feature_id`)
-) ENGINE=MyISAM DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=1768034 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `object_xref` (
   `object_xref_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -672,7 +672,7 @@ CREATE TABLE `read_file_experimental_configuration` (
 CREATE TABLE `regulatory_activity` (
   `regulatory_activity_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `regulatory_feature_id` int(10) unsigned DEFAULT NULL,
-  `activity` enum('INACTIVE','REPRESSED','POISED','ACTIVE','NA') DEFAULT NULL,
+  `activity` enum('INACTIVE','REPRESSED','POISED','ACTIVE','NA') NOT NULL,
   `epigenome_id` int(10) unsigned DEFAULT NULL,
   PRIMARY KEY (`regulatory_activity_id`),
   UNIQUE KEY `uniqueness_constraint_idx` (`epigenome_id`,`regulatory_feature_id`),
@@ -734,7 +734,7 @@ CREATE TABLE `regulatory_feature` (
   UNIQUE KEY `uniqueness_constraint_idx` (`feature_type_id`,`seq_region_id`,`seq_region_strand`,`seq_region_start`,`seq_region_end`,`stable_id`,`bound_start_length`,`bound_end_length`,`regulatory_build_id`),
   KEY `feature_type_idx` (`feature_type_id`),
   KEY `stable_id_idx` (`stable_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=11 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=64577 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `segmentation` (
   `segmentation_id` int(18) unsigned NOT NULL AUTO_INCREMENT,
