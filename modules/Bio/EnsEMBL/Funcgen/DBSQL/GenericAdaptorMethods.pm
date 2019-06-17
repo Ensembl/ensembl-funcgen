@@ -80,6 +80,14 @@ sub fetch_by_dbID {
     return $all->[0];
 }
 
+sub fetch_all_by_dbID_list {
+    my $self  = shift;
+    my $dbIDs = shift;
+
+    my @objects = map {$self->fetch_by_dbID($_)} @{$dbIDs};
+    return \@objects;
+}
+
 sub fetch_by_name {
     my $self = shift;
     my $name = shift;
