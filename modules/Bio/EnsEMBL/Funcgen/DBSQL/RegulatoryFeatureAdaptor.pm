@@ -694,13 +694,10 @@ sub _fetch_all_overlapping_MotifFeatures {
     my $motif_feature_adaptor
         = $self->db->get_adaptor('MotifFeature');
 
-    my @motif_features;
+    my $motif_features =
+        $motif_feature_adaptor->fetch_all_by_dbID_list(\@motif_feature_ids);
 
-    for my $id (@motif_feature_ids) {
-        push @motif_features, $motif_feature_adaptor->fetch_by_dbID($id);
-    }
-
-    return \@motif_features;
+    return $motif_features;
 }
 
 =head2 _fetch_all_overlapping_MotifFeatures_with_matching_Peak
