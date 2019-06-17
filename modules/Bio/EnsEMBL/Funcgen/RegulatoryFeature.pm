@@ -116,14 +116,13 @@ sub new {
   my $class = ref($caller) || $caller;
   my $self = $class->SUPER::new(@_);
 
-  my ($stable_id, $attr_cache, $projected, $activity, $epigenome_count, $analysis)
-    = rearrange(['STABLE_ID', 'PROJECTED', 'ACTIVITY', 'EPIGENOME_COUNT', 'ANALYSIS'], @_);
+  my ($stable_id, $attr_cache, $projected, $epigenome_count, $analysis)
+    = rearrange(['STABLE_ID', 'PROJECTED', 'EPIGENOME_COUNT', 'ANALYSIS'], @_);
 
   #None of these are mandatory at creation
   #under different use cases
   $self->{stable_id}        = $stable_id        if defined $stable_id;
   $self->{projected}        = $projected        if defined $projected;
-  $self->{activity}         = $activity         if defined $activity;
   $self->{epigenome_count}  = $epigenome_count  if defined $epigenome_count;
   $self->{analysis}         = $analysis         if defined $analysis;
   
@@ -590,7 +589,7 @@ sub has_activity_in {
   my $epigenome = shift;
   
   foreach my $current_regulatory_activity (@{$self->regulatory_activity}) {
-    if ($current_regulatory_activity->_epigenome_id() == $epigenome->dbID) {
+    if ($current_regulatory_activity->epigenome_id() == $epigenome->dbID) {
       return 1;
     }
   }
