@@ -237,7 +237,7 @@ sub add_regulatory_activity :Test(1) {
                                                         ->{additional_activity});
 
     is_deeply(
-        pop $self->{fetched}->[0]->regulatory_activity(),
+        pop @{$self->{fetched}->[0]->regulatory_activity()},
         $self->parameters->{additional_activity},
         'add_regulatory_activity() works'
     );
@@ -291,7 +291,7 @@ sub get_epigenomes_by_activity :Test(2) {
     my $invalid_activity = $self->{parameters}->{invalid_activity};
 
     throws_ok {
-        $self->{fetched}->[0]->get_epigenomes_by_activity($invalid_activity)
+        $self->{fetched}->[0]->get_epigenomes_by_activity($invalid_activity);
     }
         qr/Please pass a valid activity to this method/,
         "... and exception is thrown when the passed activity is invalid";
