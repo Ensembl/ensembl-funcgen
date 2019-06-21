@@ -6,11 +6,6 @@ use base 'Bio::EnsEMBL::Funcgen::PipeConfig::Ftp::Base';
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 use Hash::Util qw( lock_hash );
 
-# sub beekeeper_extra_cmdline_options {
-#     my ($self) = @_;
-#     return '-reg_conf ' . $self->o('reg_conf') . ' -meadow_type LOCAL';
-# }
-
 sub pipeline_analyses {
     my $self = shift;
     

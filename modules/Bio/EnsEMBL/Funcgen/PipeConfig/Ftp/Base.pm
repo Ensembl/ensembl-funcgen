@@ -3,7 +3,6 @@ package Bio::EnsEMBL::Funcgen::PipeConfig::Ftp::Base;
 use strict;
 use warnings;
 use base 'Bio::EnsEMBL::Funcgen::PipeConfig::PeakCalling::ResourceClasses';
-#use base 'Bio::EnsEMBL::Hive::PipeConfig::EnsemblGeneric_conf';
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 
 sub default_options {
