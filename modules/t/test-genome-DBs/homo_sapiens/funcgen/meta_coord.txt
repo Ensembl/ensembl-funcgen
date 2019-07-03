@@ -8,6 +8,7 @@ probe_feature	2	1552251
 probe_feature	3	2160
 regulatory_feature	2	67400
 regulatory_feature	3	95385
+regulatory_feature	4	3002
 result_feature_0	2	50
 result_feature_1296	2	249250650
 result_feature_130	2	249250650
