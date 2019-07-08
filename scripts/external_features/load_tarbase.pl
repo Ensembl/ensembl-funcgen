@@ -51,8 +51,6 @@ sub main {
                'species=s',
                'input=s',
                'aliases=s',
-               'release=s',
-               'assembly=s',
                'truncate',
     );
 
@@ -99,7 +97,7 @@ sub main {
             @features_to_store = ();
         }
     }
-    $adaptors->{'MirnaTargetFeature'}->store(@features_to_store);
+    $adaptors->{'MirnaTargetFeature'}->store(@features_to_store); #store last batch
 
     close $input_file;
 }
