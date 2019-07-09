@@ -80,3 +80,29 @@ sub find_species_that_need_probemapping_update {
   return $species_hash;
 }
 
+sub usage {
+  print <<EOF; exit(0);
+
+Usage: perl $0 <options>
+
+  --host    Database host to connect to
+
+  --port    Database port to connect to
+
+  --user    Database username
+
+  --pass    Password for user
+
+  --release EnsEMBL release version
+
+  --help    This message
+
+ Example: perl $0 --host=mysql-ens-sta-1 --port=4519 --user=ensro
+
+          or
+
+          perl $0 \$(st1 details script)
+
+EOF
+}
+
