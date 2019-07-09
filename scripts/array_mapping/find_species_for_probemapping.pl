@@ -12,6 +12,8 @@ use Data::Dumper;
 =cut
 
 use Bio::EnsEMBL::Utils::Logger;
+use Bio::EnsEMBL::ApiVersion;
+
 my $logger = Bio::EnsEMBL::Utils::Logger->new();
 $logger->init_log;
 
@@ -28,9 +30,20 @@ $cli_helper->load_registry_for_opts( $opts );
 my $species_on_staging = Bio::EnsEMBL::Registry->get_all_species;
 my $species_hash = find_species_that_need_probemapping_update();
 
-print Dumper($species_hash);
+if (scalar keys %{$species_hash}) {
+  print Dumper($species_hash);
+  $logger->info("Done.\n");
+}
+else {
+  my $api_version = Bio::EnsEMBL::ApiVersion->software_version();
 
-$logger->info("Done.\n");
+  my $msg = 'No species found. This is unusual. Please make sure that you are '
+      . 'using the latest \'release\' branch of the main ensembl repository. '
+      . 'This script is using API version '
+      . $api_version . "\n";
+  $logger->warning($msg);
+}
+
 $logger->finish_log;
 
 sub find_species_that_need_probemapping_update {
