@@ -1582,7 +1582,7 @@ The module column tells the pipeline which Perl module does the whole analysis, 
 DROP TABLE IF EXISTS `analysis`;
 CREATE TABLE `analysis` (
   `analysis_id` smallint(5) unsigned NOT NULL AUTO_INCREMENT,
-  `created` datetime NOT NULL DEFAULT '0000-00-00 00:00:00',
+  `created` datetime DEFAULT NULL,
   `logic_name` varchar(100) NOT NULL,
   `db` varchar(120) DEFAULT NULL,
   `db_version` varchar(40) DEFAULT NULL,
@@ -1658,9 +1658,9 @@ CREATE TABLE `meta` (
 INSERT INTO meta (meta_key, meta_value, species_id) VALUES ('schema_type', 'funcgen', NULL);
 
 -- Update and remove these for each release to avoid erroneous patching
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '98');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_97_98_a.sql|schema_version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_97_98_b.sql|Update unique constraint in mirna_target_feature table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '99');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_98_99_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_98_99_b.sql|update datetime default value');
 
 /**
 @table meta_coord
