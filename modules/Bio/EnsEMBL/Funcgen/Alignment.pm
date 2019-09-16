@@ -392,11 +392,5 @@ sub summary_as_hash {
   return $summary;
 }
 
-sub db { 
-  my $self = shift;
-  deprecate("'db' has been deprecated. Please use 'adaptor' instead. 'db' will be removed in release 99.");
-  return $self->adaptor; 
-}
-
 1;
 

@@ -26,7 +26,7 @@ A year after deprecation (4 Ensembl releases), the method is removed from the AP
  - Bio::EnsEMBL::Funcgen::**RegulatoryFeature**::*fetch_all_MotifFeatures()*
  - Bio::EnsEMBL::Funcgen::**RegulatoryFeature**::*fetch_all_MotifFeatures_with_matching_Peak()*
 
-### To be removed in EnsEMBL Release 99 ###
+### Removed in EnsEMBL Release 99 ###
 
  - Bio::EnsEMBL::Funcgen::**Alignment**::*db*
 
