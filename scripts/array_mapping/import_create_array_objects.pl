@@ -17,11 +17,13 @@ perl /nfs/users/nfs_m/mn1/various_scripts/probemapping/test_create_array_objects
 my $array_name;
 my $parsed_probe_data;
 my $output_file;
+my $array_default_params;
 
 GetOptions (
    'array_name=s'        => \$array_name,
    'parsed_probe_data=s' => \$parsed_probe_data,
    'output_file=s'       => \$output_file,
+   'default_params'      => \$array_default_params,
 );
 
 use Bio::EnsEMBL::Funcgen::RunnableDB::ProbeMapping::Config::ArrayInstance;
@@ -54,7 +56,7 @@ my $process_probe_data = sub {
     confess("Array name was not defined for probe: " . Dumper($probe_data));
   }
 
-  my $array_data = $probemapping_config->get_ARRAY_PARAMS_by_array_name($array_name);
+  my $array_data = $probemapping_config->get_ARRAY_PARAMS_by_array_name($array_name, $array_default_params);
   
 #   print Dumper($array_name);
 #   print Dumper($array_data);

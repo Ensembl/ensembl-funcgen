@@ -122,6 +122,7 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -rc_name    => '4Gb_job',
             -parameters => {
+                # Parameter '--default_params' can be added to import unkown arrays with the default values
                 cmd     => '
                   import_create_array_objects.pl \
                     --array_name        #array_class# \
@@ -143,6 +144,7 @@ sub pipeline_analyses {
             -module     => 'Bio::EnsEMBL::Hive::RunnableDB::SystemCmd',
             -rc_name    => '64Gb_job',
             -parameters => {
+                # Parameter '--default_params' can be added to import unkown arrays with the default values
                 cmd     => '
                   import_create_array_objects.pl \
                     --array_name        #array_class# \
