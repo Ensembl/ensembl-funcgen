@@ -408,7 +408,7 @@ sub mark_stored {
     if($self->autoinc_id()) {
         $object->dbID($dbID);
     }
-    $object->db($self);
+    $object->adaptor($self);
 }
 
 sub update {
