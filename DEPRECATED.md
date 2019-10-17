@@ -8,6 +8,29 @@ When a method is deprecated, a deprecation warning is thrown whenever the method
 The warning also contains instructions on replacing the deprecated method and when it will be removed.
 A year after deprecation (4 Ensembl releases), the method is removed from the API.
 
+### To be removed in EnsEMBL Release 103 ###
+ - Bio::EnsEMBL::Funcgen::**Chance**::*db()*
+ - Bio::EnsEMBL::Funcgen::**DataFile**::*db()*
+ - Bio::EnsEMBL::Funcgen::**ExampleFeature**::*db()*
+ - Bio::EnsEMBL::Funcgen::**ExecutionPlan**::*db()*
+ - Bio::EnsEMBL::Funcgen::**FastQC**::*db()*
+ - Bio::EnsEMBL::Funcgen::**Frip**::*db()*
+ - Bio::EnsEMBL::Funcgen::**Idr**::*db()*
+ - Bio::EnsEMBL::Funcgen::**Peak**::*db()*
+ - Bio::EnsEMBL::Funcgen::**PeakCalling**::*db()*
+ - Bio::EnsEMBL::Funcgen::**PeakCallingStatistic**::*db()*
+ - Bio::EnsEMBL::Funcgen::**PhantomPeak**::*db()*
+ - Bio::EnsEMBL::Funcgen::**ProbeMapping**::*db()*
+ - Bio::EnsEMBL::Funcgen::**ProbeMappingStatistic**::*db()*
+ - Bio::EnsEMBL::Funcgen::**ReadFile**::*db()*
+ - Bio::EnsEMBL::Funcgen::**ReadFileExperimentalConfiguration**::*db()*
+ - Bio::EnsEMBL::Funcgen::**RegulatoryActivity**::*db()*
+ - Bio::EnsEMBL::Funcgen::**RegulatoryBuildStatistic**::*db()*
+ - Bio::EnsEMBL::Funcgen::**Segmentation**::*db()*
+ - Bio::EnsEMBL::Funcgen::**SegmentationStateAssignment**::*db()*
+ - Bio::EnsEMBL::Funcgen::**SegmentationStateEmission**::*db()*
+ - Bio::EnsEMBL::Funcgen::**SegmentationStateStatistic**::*db()*
+
 ### To be removed in EnsEMBL Release 101 ###
 
  - Bio::EnsEMBL::Funcgen::**BindingMatrixFrequencies**::*binding_matrix*

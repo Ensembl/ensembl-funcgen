@@ -34,7 +34,7 @@ package Bio::EnsEMBL::Funcgen::ReadFile;
 
 use strict;
 use warnings;
-
+use Bio::EnsEMBL::Utils::Exception qw( deprecate );
 use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_get_or_set
   _generic_set
@@ -48,7 +48,7 @@ with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 sub _constructor_parameters {
   return {
     dbID            => 'dbID',
-    db              => 'db',
+    adaptor         => 'adaptor',
     name            => 'name',
     is_paired_end   => 'is_paired_end',
     file_size       => 'file_size',
@@ -63,7 +63,17 @@ sub _constructor_parameters {
 }
 
 sub dbID          { return shift->_generic_get_or_set('dbID',          @_); }
-sub db            { return shift->_generic_get_or_set('db',            @_); }
+sub adaptor {return shift->_generic_get_or_set('adaptor', @_);}
+sub db {
+  my $self = shift;
+  deprecate(
+      ref($self) . '::db has been deprecated and will be removed in '
+          . 'release 103.'
+          . "\n"
+          . 'Please use ' . ref($self) . '::adaptor instead.'
+  );
+  return $self->adaptor();
+}
 
 =head2 name
 

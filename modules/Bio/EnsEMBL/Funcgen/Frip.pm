@@ -33,7 +33,7 @@ limitations under the License.
 package Bio::EnsEMBL::Funcgen::Frip;
 
 use strict;
-
+use Bio::EnsEMBL::Utils::Exception qw( deprecate );
 use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_get_or_set
   _generic_fetch
@@ -45,7 +45,7 @@ with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 sub _constructor_parameters {
   return {
     dbID            => 'dbID',
-    db              => 'db',
+    adaptor         => 'adaptor',
     adaptor         => 'db',
     frip            => 'frip',
     total_reads     => 'total_reads',
@@ -54,8 +54,17 @@ sub _constructor_parameters {
 }
 
 sub dbID            { return shift->_generic_get_or_set('dbID',             @_); }
-sub db              { return shift->_generic_get_or_set('db',               @_); }
-sub adaptor         { return shift->_generic_get_or_set('db',               @_); }
+sub adaptor {return shift->_generic_get_or_set('adaptor', @_);}
+sub db {
+  my $self = shift;
+  deprecate(
+      ref($self) . '::db has been deprecated and will be removed in '
+          . 'release 103.'
+          . "\n"
+          . 'Please use ' . ref($self) . '::adaptor instead.'
+  );
+  return $self->adaptor();
+}
 
 sub frip            { return shift->_generic_get_or_set('frip',             @_); }
 sub total_reads     { return shift->_generic_get_or_set('total_reads',      @_); }

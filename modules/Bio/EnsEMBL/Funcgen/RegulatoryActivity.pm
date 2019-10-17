@@ -66,14 +66,14 @@ use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_fetch
   _generic_set
 );
-
+use Bio::EnsEMBL::Utils::Exception qw( deprecate );
 use Role::Tiny::With;
 with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 
 sub _constructor_parameters {
   return {
     dbID                  => 'dbID',
-    db                    => 'db',
+    adaptor               => 'adaptor',
     adaptor               => 'adaptor',
     regulatory_feature_id => 'regulatory_feature_id',
     activity              => 'activity',
@@ -88,7 +88,13 @@ sub epigenome_id          { return shift->_generic_get_or_set('epigenome_id', @_
 
 sub db {
   my $self = shift;
-  return $self->adaptor(@_);
+  deprecate(
+      ref($self) . '::db has been deprecated and will be removed in '
+          . 'release 103.'
+          . "\n"
+          . 'Please use ' . ref($self) . '::adaptor instead.'
+  );
+  return $self->adaptor();
 }
 
 sub adaptor { 

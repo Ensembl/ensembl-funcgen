@@ -33,7 +33,7 @@ limitations under the License.
 package Bio::EnsEMBL::Funcgen::ProbeMapping;
 
 use strict;
-
+use Bio::EnsEMBL::Utils::Exception qw( deprecate );
 use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_get_or_set
 );
@@ -44,7 +44,7 @@ with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 sub _constructor_parameters {
   return {
     dbID                => 'dbID',
-    db                  => 'db',
+    adaptor             => 'adaptor',
     gene_build_version  => 'gene_build_version',
     five_prime_utr      => 'five_prime_utr',
     three_prime_utr     => 'three_prime_utr',
@@ -57,7 +57,17 @@ sub _constructor_parameters {
 }
 
 sub dbID                { return shift->_generic_get_or_set('dbID',                @_); }
-sub db                  { return shift->_generic_get_or_set('db',                  @_); }
+sub adaptor {return shift->_generic_get_or_set('adaptor', @_);}
+sub db {
+  my $self = shift;
+  deprecate(
+      ref($self) . '::db has been deprecated and will be removed in '
+          . 'release 103.'
+          . "\n"
+          . 'Please use ' . ref($self) . '::adaptor instead.'
+  );
+  return $self->adaptor();
+}
 sub gene_build_version  { return shift->_generic_get_or_set('gene_build_version',  @_); }
 sub five_prime_utr      { return shift->_generic_get_or_set('five_prime_utr',      @_); }
 sub three_prime_utr     { return shift->_generic_get_or_set('three_prime_utr',     @_); }

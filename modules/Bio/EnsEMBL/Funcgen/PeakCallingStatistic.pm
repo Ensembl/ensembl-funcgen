@@ -33,7 +33,7 @@ limitations under the License.
 package Bio::EnsEMBL::Funcgen::PeakCallingStatistic;
 
 use strict;
-
+use Bio::EnsEMBL::Utils::Exception qw( deprecate );
 use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_get_or_set
 );
@@ -44,7 +44,7 @@ with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 sub _constructor_parameters {
   return {
     dbID            => 'dbID',
-    db              => 'db',
+    adaptor         => 'adaptor',
     peak_calling_id => 'peak_calling_id',
     epigenome_id    => 'epigenome_id',
     feature_type_id => 'feature_type_id',
@@ -54,7 +54,17 @@ sub _constructor_parameters {
 }
 
 sub dbID            { return shift->_generic_get_or_set('dbID',            @_); }
-sub db              { return shift->_generic_get_or_set('db',              @_); }
+sub adaptor {return shift->_generic_get_or_set('adaptor', @_);}
+sub db {
+  my $self = shift;
+  deprecate(
+      ref($self) . '::db has been deprecated and will be removed in '
+          . 'release 103.'
+          . "\n"
+          . 'Please use ' . ref($self) . '::adaptor instead.'
+  );
+  return $self->adaptor();
+}
 sub peak_calling_id { return shift->_generic_get_or_set('peak_calling_id', @_); }
 sub statistic       { return shift->_generic_get_or_set('statistic',       @_); }
 sub value           { return shift->_generic_get_or_set('value',           @_); }
