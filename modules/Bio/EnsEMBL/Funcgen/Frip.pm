@@ -46,7 +46,6 @@ sub _constructor_parameters {
   return {
     dbID            => 'dbID',
     adaptor         => 'adaptor',
-    adaptor         => 'db',
     frip            => 'frip',
     total_reads     => 'total_reads',
     peak_calling_id => 'peak_calling_id',
