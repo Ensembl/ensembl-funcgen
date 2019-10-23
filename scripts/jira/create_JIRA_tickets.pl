@@ -47,7 +47,7 @@ sub main {
     # ----------------------------
     # read command line parameters
     # ----------------------------
-    my ( $relco, $release, $password, $help, $tickets_tsv, $config );
+    my ( $relco, $release, $password, $dev, $help, $tickets_tsv, $config );
 
     GetOptions(
         'relco=s'    => \$relco,
@@ -59,6 +59,7 @@ sub main {
         'c=s'        => \$config,
         'help'       => \$help,
         'h'          => \$help,
+        'dev'        => \$dev
     );
 
     # ------------
@@ -86,6 +87,7 @@ sub main {
     $parameters->{relco}    = $relco;
     $parameters->{password} = $password;
     $parameters->{release}  = $release;
+    $parameters->{dev}      = $dev;
 
     # ------------------
     # parse tickets file
@@ -98,7 +100,7 @@ sub main {
     # --------------------------------
     my $existing_tickets_response
         = post_request( 'rest/api/latest/search',
-        { "jql" => "fixVersion = release-" . $parameters->{release} },
+        { "jql" => 'fixVersion = Ensembl\\u0020' . $parameters->{release} },
         $parameters, $logger );
     my $existing_tickets
         = decode_json( $existing_tickets_response->content() );
@@ -249,15 +251,12 @@ sub validate_user_name {
         'juettema' => 'juettema',
         'thomas'   => 'juettema',
         'Thomas'   => 'juettema',
-        'kostadim' => 'kostadim',
-        'myrto'    => 'kostadim',
-        'Myrto'    => 'kostadim',
-        'mnuhn'    => 'mnuhn',
-        'michael'  => 'mnuhn',
-        'Michael'  => 'mnuhn',
         'jcmarca'  => 'jcmarca',
         'Jose'     => 'jcmarca',
         'jose'     => 'jcmarca',
+        'ilsley'   => 'ilsley',
+        'garth'    => 'ilsley',
+        'Garth'    => 'ilsley',
     );
 
     if ( exists $valid_user_names{$user} ) {
@@ -307,7 +306,7 @@ sub parse_tickets_file {
 
         my ($project,          $issue_type,  $summary,
             $parent_summary,   $reporter,    $assignee,
-            $priority,         $fixVersions, $due_date,
+            $priority,         $label, $due_date,
             $component_string, $description
         ) = split /\t/, $line;
 
@@ -323,22 +322,20 @@ sub parse_tickets_file {
         }
 
         my %ticket = (
-            'project'     => { 'key'  => $project },
+            'project'     => { 'key' => $project },
             'issuetype'   => { 'name' => $issue_type },
             'summary'     => $summary,
             # the parent summary is replaced by the parent key
             # just before the ticket submission
-            'parent'      => $parent_summary,
+            'parent'      => { 'summary' => $parent_summary },
             'reporter'    => { 'name' => $reporter },
             'assignee'    => { 'name' => $assignee },
             'priority'    => { 'name' => $priority },
-            'fixVersions' => [
-                { 'name' => $fixVersions },
-                { 'name' => 'release-' . $parameters->{release} }
-            ],
+            'labels'      => [ $label ],
             'duedate'     => $due_date,
             'components'  => \@components,
             'description' => $description,
+            'fixVersions' => [ {'name' => 'Ensembl ' . $parameters->{release}} ]
         );
 
         # delete empty fields from ticket
@@ -371,11 +368,12 @@ sub replace_placeholders {
 
     $line =~ s/<RelCo>/$parameters->{relco}/g;
     $line =~ s/<version>/$parameters->{release}/g;
-    $line =~ s/<preHandover_date>/$parameters->{dates}->{preHandover}/g;
-    $line =~ s/<handover_date>/$parameters->{dates}->{handover}/g;
     $line =~ s/<codeBranching_date>/$parameters->{dates}->{codeBranching}/g;
+    $line =~ s/<codeBranchingRest_date>/$parameters->{dates}->{codeBranchingRest}/g;
+    $line =~ s/<handover_date>/$parameters->{dates}->{handover}/g;
+    $line =~ s/<probeFeatureHandover_date>/$parameters->{dates}->{probeFeatureHandover}/g;
+    $line =~ s/<ftpDump_date>/$parameters->{dates}->{ftpDumps}/g;
     $line =~ s/<release_date>/$parameters->{dates}->{release}/g;
-    $line =~ s/<ftpDump_date>/$parameters->{dates}->{ftpDump_date}/g;
 
     return $line;
 }
@@ -398,7 +396,7 @@ sub get_parent_key {
 
     # jql=summary ~ "Update declarations" AND fixVersion %3D release-88
     my $content
-        = {   "jql" => 'fixVersion = release-'
+        = {   "jql" => 'fixVersion = Ensembl '
             . $parameters->{release}
             . ' and summary ~ "'
             . $summary
@@ -488,6 +486,7 @@ sub create_ticket {
     my $endpoint = 'rest/api/latest/issue';
 
     my $content = { 'fields' => $ticket };
+    use Data::Printer; p $content;
     my $response = post_request( $endpoint, $content, $parameters, $logger );
 
     return decode_json( $response->content() )->{'key'};
@@ -510,6 +509,9 @@ sub post_request {
     my ( $endpoint, $content, $parameters, $logger ) = @_;
 
     my $host = 'https://www.ebi.ac.uk/panda/jira/';
+    if ($parameters->{dev}) {
+        $host = 'https://wwwdev.ebi.ac.uk/panda/jira/';
+    }
     my $url  = $host . $endpoint;
 
     my $json_content = encode_json($content);
