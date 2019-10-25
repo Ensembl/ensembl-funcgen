@@ -223,8 +223,9 @@ sub display_label {
     #need to go with one or other, or can we have both, split into diplay_name and display_label?
     
     if(! $self->{'display_label'}  && $self->adaptor){
-      $self->{'display_label'} = $self->fetch_FeatureType->name()." -";
-      $self->{'display_label'} .= " ".$self->fetch_Epigenome->display_label();
+      my $peak_calling = $self->get_PeakCalling();
+      $self->{'display_label'} = $peak_calling->fetch_FeatureType->name()." -";
+      $self->{'display_label'} .= " ".$peak_calling->fetch_Epigenome->short_name();
       $self->{'display_label'} .= " Enriched Site";
     }
 	
