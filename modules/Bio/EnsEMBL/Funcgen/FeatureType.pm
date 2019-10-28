@@ -51,7 +51,7 @@ package Bio::EnsEMBL::Funcgen::FeatureType;
 use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange ) ;
-use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
 use base qw(Bio::EnsEMBL::Funcgen::Storable);
 
@@ -63,7 +63,7 @@ use base qw(Bio::EnsEMBL::Funcgen::Storable);
   Arg [-description]  : String - descriptiom of FeatureType
   Arg [-analysis]     : optional Bio::EnsEMBL::Analysis used to generate FeatureType
   Arg [-so_accession] : optional String - Sequence ontology accession
-  Arg [-so_name]      : optional String - Sequence ontology name
+  Arg [-so_term]      : optional String - Sequence ontology term
 
   Example    : my $ft = Bio::EnsEMBL::Funcgen::FeatureType->new
                            (
@@ -71,7 +71,7 @@ use base qw(Bio::EnsEMBL::Funcgen::Storable);
                             -class => "HISTONE",
                             -description => "Generalised methylation of Histone 3 Lysine 9",
                             -analysis => $analysis,
-                            -so_name  => $so_name,
+                            -so_term  => $so_term,
                             -so_accession => $so_accession
                            );
   Description: Constructor method for FeatureType class
@@ -88,8 +88,8 @@ sub new {
   my $obj_class = ref($caller) || $caller;
   my $self = $obj_class->SUPER::new(@_);
 
-  my ($name, $desc, $class, $analysis, $so_acc, $so_name) =
-    rearrange(['NAME', 'DESCRIPTION', 'CLASS', 'ANALYSIS', 'SO_ACCESSION', 'SO_NAME'], @_);
+  my ($name, $desc, $class, $analysis, $so_acc, $so_term) =
+    rearrange(['NAME', 'DESCRIPTION', 'CLASS', 'ANALYSIS', 'SO_ACCESSION', 'SO_TERM'], @_);
 
   throw("Must supply a FeatureType name\n") if ! defined $name;
   throw("Must supply a FeatureType class\n") if ! defined $class;
@@ -98,7 +98,7 @@ sub new {
   $self->{name}         = $name;
   $self->{class}        = $class;
   $self->{description}  = $desc    if defined $desc;
-  $self->{so_name}      = $so_name if defined $so_name;
+  $self->{so_term}      = $so_term if defined $so_term;
   $self->{so_accession} = $so_acc  if defined $so_acc;
 
   if($analysis){
@@ -219,11 +219,30 @@ sub so_accession{  return $_[0]->{so_accession}; }
   Returntype : String
   Exceptions : None
   Caller     : General
+  Status     : Deprecated
+
+=cut
+
+sub so_name{
+  my $deprecation_message = 'Bio::EnsEMBL::Funcgen::FeatureType::so_name has '
+  . 'been deprecated and will be removed in release 104. Please use '
+      . 'Bio::EnsEMBL::Funcgen::FeatureType::so_term instead.';
+  deprecate($deprecation_message);
+  return $_[0]->{so_term};
+}
+
+=head2 so_term
+
+  Example    : my $so_term = $ft->so_term;
+  Description: Getter of sequence ontology term for FeatureType objects.
+  Returntype : String
+  Exceptions : None
+  Caller     : General
   Status     : At Risk
 
 =cut
 
-sub so_name{   return $_[0]->{so_name}; }
+sub so_term{   return $_[0]->{so_term}; }
 
 =head2 analysis
 
@@ -502,7 +521,7 @@ sub compare{
 
   my $same = 1;
 
-  foreach my $methodName ( 'name', 'class', 'so_accession','so_name','description'){
+  foreach my $methodName ( 'name', 'class', 'so_accession','so_term','description'){
 
     if( defined $self->$methodName() && ! $ftype->can($methodName )) {
       $same = 0;
@@ -588,7 +607,7 @@ sub reset_relational_attributes{
   Args[2]    : Boolean - Optional 'shallow' - no object methods compared
   Args[3]    : Arrayref - Optional list of FeatureType method names each
                returning a Scalar or an Array or Arrayref of Scalars.
-               Defaults to: name class description so_accession so_name
+               Defaults to: name class description so_accession so_term
   Args[4]    : Arrayref - Optional list of FeatureType method names each
                returning a Storable or an Array or Arrayref of Storables.
                Defaults to: analysis
@@ -609,7 +628,7 @@ sub reset_relational_attributes{
 sub compare_to {
   my ($self, $obj, $shallow, $scl_methods, $obj_methods) = @_;
 
-  $scl_methods ||= [qw(name class description so_accession so_name)];
+  $scl_methods ||= [qw(name class description so_accession so_term)];
   $obj_methods ||= [qw(analysis)];
 
   return $self->SUPER::compare_to($obj, $shallow, $scl_methods,
