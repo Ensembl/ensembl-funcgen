@@ -300,7 +300,7 @@ sub _true_tables {
 sub _columns {
   return qw( ft.feature_type_id ft.name        ft.class
              ft.analysis_id     ft.description ft.so_accession
-             ft.so_name
+             ft.so_term
            );
 }
 
@@ -321,10 +321,10 @@ sub _columns {
 sub _objs_from_sth {
 	my ($self, $sth) = @_;
 
-	my (@result, $ft_id, $name, $class, $anal_id, $desc, $so_acc, $so_name, %analysis_hash);
+	my (@result, $ft_id, $name, $class, $anal_id, $desc, $so_acc, $so_term, %analysis_hash);
 	my $anal_a = $self->db->get_AnalysisAdaptor;
 
-	$sth->bind_columns(\$ft_id, \$name, \$class, \$anal_id, \$desc, \$so_acc, \$so_name);
+	$sth->bind_columns(\$ft_id, \$name, \$class, \$anal_id, \$desc, \$so_acc, \$so_term);
 
 	$analysis_hash{0} = undef;
 
@@ -344,7 +344,7 @@ sub _objs_from_sth {
 		 -ANALYSIS     => $analysis_hash{$anal_id},
 		 -DESCRIPTION  => $desc,
 		 -SO_ACCESSION => $so_acc,
-		 -SO_NAME      => $so_name,
+		 -SO_TERM      => $so_term,
 		 -ADAPTOR      => $self
 		);
 
@@ -418,7 +418,7 @@ sub store {
 
   #Prepare once for all ftypes
   my $sth = $self->prepare('INSERT INTO feature_type'.
-                           '(name, class, analysis_id, description, so_accession, so_name)'.
+                           '(name, class, analysis_id, description, so_accession, so_term)'.
                            'VALUES (?, ?, ?, ?, ?, ?)');
 
   #Process each ftype
@@ -451,7 +451,7 @@ sub store {
         $sth->bind_param(3, $anal_id,           SQL_INTEGER);
         $sth->bind_param(4, $ft->description,   SQL_VARCHAR);
         $sth->bind_param(5, $ft->so_accession,  SQL_VARCHAR);
-        $sth->bind_param(6, $ft->so_name,       SQL_VARCHAR);
+        $sth->bind_param(6, $ft->so_term,       SQL_VARCHAR);
 
 
         $sth->execute();
@@ -464,7 +464,7 @@ sub store {
         #Check other fields match
         my @failed_methods;
 
-        for my $method (qw(description so_accession so_name)) {
+        for my $method (qw(description so_accession so_term)) {
           #Allow nulls/undefs to match empty strings
           my $ft_val   = $ft->$method   || '';
           my $s_ft_val = $s_ft->$method || '';

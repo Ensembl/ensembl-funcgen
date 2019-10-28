@@ -950,7 +950,7 @@ CREATE TABLE `probe_feature_transcript` (
 @column class             Class of feature_type
 @column description       Text description
 @column so_accession      Sequence ontology accession
-@column so_name           Sequence ontology name
+@column so_term           Sequence ontology term
 @column production_name   Name used in production
 
 @see analysis
@@ -964,7 +964,7 @@ CREATE TABLE `feature_type` (
   `analysis_id` smallint(5) unsigned DEFAULT NULL,
   `description` varchar(255) DEFAULT NULL,
   `so_accession` varchar(64) DEFAULT NULL,
-  `so_name` varchar(255) DEFAULT NULL,
+  `so_term` varchar(255) DEFAULT NULL,
   `production_name` VARCHAR(120) DEFAULT NULL,
   PRIMARY KEY (`feature_type_id`),
   UNIQUE KEY `name_class_analysis_idx` (`name`,`class`,`analysis_id`),
@@ -1660,6 +1660,7 @@ INSERT INTO meta (meta_key, meta_value, species_id) VALUES ('schema_type', 'func
 -- Update and remove these for each release to avoid erroneous patching
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '100');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_99_100_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_99_100_b.sql|rename so_name to so_term');
 
 /**
 @table meta_coord
