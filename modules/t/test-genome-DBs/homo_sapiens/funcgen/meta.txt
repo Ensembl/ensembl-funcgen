@@ -1,4 +1,4 @@
-534	\N	schema_version	99
+534	\N	schema_version	100
 156	1	species.production_name	homo_sapiens
 223	\N	schema_type	funcgen
 589	\N	patch	patch_78_79_a.sql|schema_version
@@ -181,3 +181,6 @@
 771	\N	patch	patch_97_98_b.sql|Update unique constraint in mirna_target_feature table
 772	\N	patch	patch_98_99_a.sql|schema_version
 773	\N	patch	patch_98_99_b.sql|update datetime default value
+774	\N	patch	patch_99_100_a.sql|schema_version
+775	\N	patch	patch_99_100_b.sql|rename so_name to so_term
+776	\N	patch	patch_99_100_c.sql|remove default values from text data type
