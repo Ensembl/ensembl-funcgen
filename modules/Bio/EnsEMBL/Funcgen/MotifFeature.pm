@@ -72,7 +72,12 @@ use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
 use base qw(Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable);
-use constant SEQUENCE_ONTOLOGY => {'acc' => 'SO:0000235', 'term'=>'TF_binding_site'};
+
+use constant SEQUENCE_ONTOLOGY => {
+  acc  => 'SO:0000235',
+  term => 'TF_binding_site',
+};
+
 
 =head2 new
 

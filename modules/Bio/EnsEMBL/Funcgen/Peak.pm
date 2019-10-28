@@ -223,8 +223,9 @@ sub display_label {
     #need to go with one or other, or can we have both, split into diplay_name and display_label?
     
     if(! $self->{'display_label'}  && $self->adaptor){
-      $self->{'display_label'} = $self->fetch_FeatureType->name()." -";
-      $self->{'display_label'} .= " ".$self->fetch_Epigenome->display_label();
+      my $peak_calling = $self->get_PeakCalling();
+      $self->{'display_label'} = $peak_calling->fetch_FeatureType->name()." -";
+      $self->{'display_label'} .= " ".$peak_calling->fetch_Epigenome->short_name();
       $self->{'display_label'} .= " Enriched Site";
     }
 	
@@ -323,6 +324,11 @@ sub seq_region_name {
 sub feature_so_acc {
   my $self = shift;
   return $self->get_PeakCalling->fetch_FeatureType->so_accession;
+}
+
+sub feature_so_term {
+  my $self = shift;
+  return $self->fetch_PeakCalling->fetch_FeatureType->so_term;
 }
 
 =head2 summary_as_hash
