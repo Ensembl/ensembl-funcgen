@@ -267,7 +267,7 @@ CREATE TABLE `regulatory_build` (
   `regulatory_build_id` int(4) unsigned NOT NULL AUTO_INCREMENT,
   `name` text,
   `release_version` int(11) DEFAULT NULL,
-  `description` text DEFAULT NULL,
+  `description` text,
   `version` varchar(50) DEFAULT NULL,
   `initial_release_date` varchar(50) DEFAULT NULL,
   `last_annotation_update` varchar(50) DEFAULT NULL,
@@ -1531,11 +1531,11 @@ CREATE TABLE `epigenome` (
   `epigenome_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(120) NOT NULL,
   `short_name` varchar(120) NOT NULL,
-  `description` MEDIUMTEXT DEFAULT NULL,
+  `description` MEDIUMTEXT,
   `production_name` varchar(120) DEFAULT NULL,
   `gender` enum('male','female','hermaphrodite','mixed','unknown') DEFAULT 'unknown',
-  `search_terms` MEDIUMTEXT DEFAULT NULL,
-  `full_name` MEDIUMTEXT DEFAULT NULL,
+  `search_terms` MEDIUMTEXT,
+  `full_name` MEDIUMTEXT,
   PRIMARY KEY (`epigenome_id`),
   UNIQUE KEY `name_idx` (`name`),
   UNIQUE KEY `short_name_idx` (`short_name`)
@@ -1661,6 +1661,7 @@ INSERT INTO meta (meta_key, meta_value, species_id) VALUES ('schema_type', 'func
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '100');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_99_100_a.sql|schema_version');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_99_100_b.sql|rename so_name to so_term');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_99_100_c.sql|remove default values from text data type');
 
 /**
 @table meta_coord
