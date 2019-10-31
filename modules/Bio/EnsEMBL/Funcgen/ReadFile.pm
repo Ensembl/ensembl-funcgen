@@ -34,7 +34,7 @@ package Bio::EnsEMBL::Funcgen::ReadFile;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Exception qw( deprecate );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_get_or_set
   _generic_set
