@@ -99,8 +99,8 @@ sub get_SegmentationStateAssignment {
         $self->state,
         $self->segmentation,
     );
-    return $segmentation_state_assignment;
 
+    return $segmentation_state_assignment;
 }
 
 sub fetch_segmentation_state_assignment {

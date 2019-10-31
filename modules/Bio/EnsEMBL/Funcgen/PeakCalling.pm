@@ -88,20 +88,19 @@ with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 
 sub _constructor_parameters {
   return {
-    dbID            => 'dbID',
-    adaptor        => 'adaptor',
-    feature_type_id => 'feature_type_id',
-    analysis_id     => 'analysis_id',
-    name            => 'name',
-    display_label   => 'display_label',
-    experiment_id   => 'experiment_id',
-    epigenome_id    => 'epigenome_id',
-    signal_alignment_id  => 'signal_alignment_id',
-    control_alignment_id => 'control_alignment_id',
-    run_failed     => 'run_failed',
-    error_message  => 'error_message',
-    used_for_regulatory_build => 'used_for_regulatory_build',
-    
+   dbID                      => 'dbID',
+   adaptor                   => 'adaptor',
+   feature_type_id           => 'feature_type_id',
+   analysis_id               => 'analysis_id',
+   name                      => 'name',
+   display_label             => 'display_label',
+   experiment_id             => 'experiment_id',
+   epigenome_id              => 'epigenome_id',
+   signal_alignment_id       => 'signal_alignment_id',
+   control_alignment_id      => 'control_alignment_id',
+   run_failed                => 'run_failed',
+   error_message             => 'error_message',
+   used_for_regulatory_build => 'used_for_regulatory_build',
   };
 }
 
@@ -212,6 +211,7 @@ sub _fetch_Alignment {
   Status     : Deprecated
 
 =cut
+
 sub fetch_signal_Alignment {
   my $self = shift;
   deprecate($self->_rename_msg);
@@ -337,6 +337,7 @@ sub fetch_Chance {
   Status     : Stable
 
 =cut
+
 sub fetch_control_Alignment {
   my $self = shift;
   deprecate($self->_rename_msg);
@@ -490,17 +491,17 @@ sub get_source_label {
   my $experiment_id = $self->experiment_id;
   my $source_label  = $adaptor->sql_helper->execute_single_result(
       -SQL    => '
-        select 
-          experimental_group.name 
-        from 
+        select
+          experimental_group.name
+        from
           experiment
-          left join experimental_group using (experimental_group_id) 
+          left join experimental_group using (experimental_group_id)
         where
             experiment_id = ?
       ',
       -PARAMS => [ $experiment_id ],
-    );
-    return $source_label;
+  );
+  return $source_label;
 }
 
 =head2 summary_as_hash

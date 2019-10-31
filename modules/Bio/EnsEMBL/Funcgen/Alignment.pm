@@ -238,7 +238,7 @@ sub fetch_Chance_by_control_Alignment {
 
 sub get_Experiment {
 
-  my $self         = shift;
+  my $self = shift;
   
   my $experiment_adaptor = $self->adaptor->db->get_ExperimentAdaptor;
   if (! defined $experiment_adaptor) {

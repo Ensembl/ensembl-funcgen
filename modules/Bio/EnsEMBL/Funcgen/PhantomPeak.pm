@@ -101,7 +101,7 @@ sub error_message       { return shift->_generic_get_or_set('error_message',    
 
 sub get_Alignment {
 
-  my $self         = shift;
+  my $self = shift;
   
   my $alignment_adaptor = $self->adaptor->db->get_AlignmentAdaptor;
   if (! defined $alignment_adaptor) {

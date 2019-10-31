@@ -77,8 +77,10 @@ sub probe_feature_id { return shift->_generic_get_or_set('probe_feature_id',  @_
 
 sub get_ProbeFeature {
   my $self = shift;
-  my $probe = $self->adaptor->get_ProbeFeatureAdaptor->fetch_by_dbID($self->probe_feature_id);
-  return $probe;
+  my $probe_feature =
+      $self->adaptor->get_ProbeFeatureAdaptor->fetch_by_dbID($self
+          ->probe_feature_id);
+  return $probe_feature;
 }
 
 sub fetch_ProbeFeature {
