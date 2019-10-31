@@ -71,7 +71,7 @@ sub value           { return shift->_generic_get_or_set('value',           @_); 
 sub epigenome_id    { return shift->_generic_get_or_set('epigenome_id',    @_); }
 sub feature_type_id { return shift->_generic_get_or_set('feature_type_id', @_); }
 
-sub fetch_PeakCalling {
+sub get_PeakCalling {
   my $self = shift;
   
   my $peak_calling_adaptor = $self->db->db->get_PeakCallingAdaptor;
@@ -80,6 +80,14 @@ sub fetch_PeakCalling {
   }
   my $peak_calling = $peak_calling_adaptor->fetch_by_PeakCallingStatistic($self);
   return $peak_calling;
+}
+
+sub fetch_PeakCalling {
+  my $self = shift;
+  my $msg = 'It will be removed in release 104.' . "\n" . 'Please use '
+      . ref($self) . '::get_PeakCalling instead.';
+  deprecate($msg);
+  return $self->get_PeakCalling;
 }
 
 1;

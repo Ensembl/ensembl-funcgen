@@ -133,12 +133,12 @@ sub paired_end_tag {
   if (! $self->is_paired_end) {
     throw("Not a paired end read file!");
   }
-  my $read_file_experimental_configuration = $self->fetch_ReadFileExperimentalConfiguration;
+  my $read_file_experimental_configuration = $self->get_ReadFileExperimentalConfiguration;
   my $paired_end_tag = $read_file_experimental_configuration->paired_end_tag;
   return $paired_end_tag;
 }
 
-sub fetch_mate_ReadFile {
+sub get_mate_ReadFile {
   my $self = shift;
   
   if (! $self->is_paired_end) {
@@ -148,7 +148,7 @@ sub fetch_mate_ReadFile {
   my $paired_end_tag      =     $self->paired_end_tag;
   my $mate_paired_end_tag = 3 - $paired_end_tag;
   
-  my $read_file_experimental_configuration = $self->fetch_ReadFileExperimentalConfiguration;
+  my $read_file_experimental_configuration = $self->get_ReadFileExperimentalConfiguration;
 
   my $pairs_read_file_experimental_configuration 
     = Bio::EnsEMBL::Funcgen::ReadFileExperimentalConfiguration->new(
@@ -174,7 +174,15 @@ sub fetch_mate_ReadFile {
   return $read_file_mate;
 }
 
-sub fetch_FastQC {
+sub fetch_mate_ReadFile {
+  my $self = shift;
+  my $msg = 'It will be removed in release 104.' . "\n" . 'Please use '
+      . ref($self) . '::get_mate_ReadFile instead.';
+  deprecate($msg);
+  return $self->get_mate_ReadFile;
+}
+
+sub get_FastQC {
 
   my $self         = shift;
   
@@ -184,6 +192,14 @@ sub fetch_FastQC {
   }
   my $fastqc = $fastqc_adaptor->fetch_by_ReadFile($self);
   return $fastqc;
+}
+
+sub fetch_FastQC {
+  my $self = shift;
+  my $msg = 'It will be removed in release 104.' . "\n" . 'Please use '
+      . ref($self) . '::get_FastQC instead.';
+  deprecate($msg);
+  return $self->get_FastQC;
 }
 
 =head2 get_Analysis
@@ -219,10 +235,10 @@ sub set_Analysis {
   return $self->_generic_set('analysis', 'Bio::EnsEMBL::Analysis', $obj);
 }
 
-=head2 fetch_ReadFileExperimentalConfiguration
+=head2 get_ReadFileExperimentalConfiguration
 
   Example    : my $read_file_experimental_configuration 
-                 = $read_file->fetch_ReadFileExperimentalConfiguration;
+                 = $read_file->get_ReadFileExperimentalConfiguration;
   Description: Getter for the ReadFileExperimentalConfiguration object.
   Returntype : Bio::EnsEMBL::Funcgen::ReadFileExperimentalConfiguration
   Exceptions : None
@@ -230,7 +246,8 @@ sub set_Analysis {
   Status     : Stable
 
 =cut
-sub fetch_ReadFileExperimentalConfiguration {
+
+sub get_ReadFileExperimentalConfiguration {
 
   my $self = shift;
 
@@ -243,6 +260,26 @@ sub fetch_ReadFileExperimentalConfiguration {
         $self->dbID
       );
   return $read_file_experimental_configurations->[0];
+}
+
+=head2 fetch_ReadFileExperimentalConfiguration
+
+  Example    : my $read_file_experimental_configuration
+                 = $read_file->fetch_ReadFileExperimentalConfiguration;
+  Description: Getter for the ReadFileExperimentalConfiguration object.
+  Returntype : Bio::EnsEMBL::Funcgen::ReadFileExperimentalConfiguration
+  Exceptions : None
+  Caller     : general
+  Status     : Deprecated
+
+=cut
+
+sub fetch_ReadFileExperimentalConfiguration {
+  my $self = shift;
+  my $msg = 'It will be removed in release 104.' . "\n" . 'Please use '
+      . ref($self) . '::get_ReadFileExperimentalConfiguration instead.';
+  deprecate($msg);
+  return $self->get_ReadFileExperimentalConfiguration;
 }
 
 =head2 set_ReadFileExperimentalConfiguration
@@ -290,7 +327,7 @@ sub summary_as_hash {
   };
   
   if ($suppress_link ne 'fastqc') {
-    my $fastqc = $self->fetch_FastQC;
+    my $fastqc = $self->get_FastQC;
     if (defined $fastqc) {
       $summary->{'fastqc'} = $fastqc->summary_as_hash('read_file');
     }

@@ -86,8 +86,7 @@ sub H3K4me3  { return shift->_generic_get_or_set('H3K4me3',  @_); }
 sub H3K9ac   { return shift->_generic_get_or_set('H3K9ac',   @_); }
 sub H3K9me3  { return shift->_generic_get_or_set('H3K9me3',  @_); }
 
-sub fetch_segmentation_state_assignment {
-
+sub get_SegmentationStateAssignment {
     my $self = shift;
 
     my $segmentation_state_assignment_adaptor = $self->db->db->get_SegmentationStateAssignmentAdaptor;
@@ -101,6 +100,14 @@ sub fetch_segmentation_state_assignment {
     );
     return $segmentation_state_assignment;
 
+}
+
+sub fetch_segmentation_state_assignment {
+    my $self = shift;
+    my $msg = 'It will be removed in release 104.' . "\n" . 'Please use '
+        . ref($self) . '::get_SegmentationStateAssignment instead.';
+    deprecate($msg);
+    return $self->get_SegmentationStateAssignment;
 }
 
 1;

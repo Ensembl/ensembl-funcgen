@@ -8,6 +8,46 @@ When a method is deprecated, a deprecation warning is thrown whenever the method
 The warning also contains instructions on replacing the deprecated method and when it will be removed.
 A year after deprecation (4 Ensembl releases), the method is removed from the API.
 
+### To be removed in EnsEMBL Release 104 ###
+ - Bio::EnsEMBL::Funcgen::**PeakCalling**::*fetch_Analysis()*
+ - Bio::EnsEMBL::Funcgen::**PeakCalling**::*fetch_Chance()*
+ - Bio::EnsEMBL::Funcgen::**PeakCalling**::*fetch_control_Alignment()*
+ - Bio::EnsEMBL::Funcgen::**PeakCalling**::*fetch_Epigenome()*
+ - Bio::EnsEMBL::Funcgen::**PeakCalling**::*fetch_Experiment()*
+ - Bio::EnsEMBL::Funcgen::**PeakCalling**::*fetch_FeatureType()*
+ - Bio::EnsEMBL::Funcgen::**PeakCalling**::*fetch_Frip()*
+ - Bio::EnsEMBL::Funcgen::**PeakCalling**::*fetch_Idr()*
+ - Bio::EnsEMBL::Funcgen::**PeakCalling**::*fetch_PeakCallingStatistic()*
+ - Bio::EnsEMBL::Funcgen::**PeakCalling**::*fetch_signal_Alignment()*
+ - Bio::EnsEMBL::Funcgen::**PeakCalling**::*fetch_source_label()*
+ - Bio::EnsEMBL::Funcgen::**Alignment**::*fetch_all_deduplicated_replicate_Alignments()*
+ - Bio::EnsEMBL::Funcgen::**Alignment**::*fetch_all_ReadFileExperimentalConfigurations()*
+ - Bio::EnsEMBL::Funcgen::**Alignment**::*fetch_all_ReadFiles()*
+ - Bio::EnsEMBL::Funcgen::**Alignment**::*fetch_Analysis()*
+ - Bio::EnsEMBL::Funcgen::**Alignment**::*fetch_bam_DataFile()*
+ - Bio::EnsEMBL::Funcgen::**Alignment**::*fetch_bigwig_DataFile()*
+ - Bio::EnsEMBL::Funcgen::**Alignment**::*fetch_Chance_by_control_Alignment()*
+ - Bio::EnsEMBL::Funcgen::**Alignment**::*fetch_Experiment()*
+ - Bio::EnsEMBL::Funcgen::**Alignment**::*fetch_PhantomPeak()*
+ - Bio::EnsEMBL::Funcgen::**Alignment**::*fetch_source_Alignment()*
+ - Bio::EnsEMBL::Funcgen::**RegulatoryBuild**:*fetch_Analysis()*
+ - Bio::EnsEMBL::Funcgen::**RegulatoryBuild**:*fetch_FeatureType()*
+ - Bio::EnsEMBL::Funcgen::**RegulatoryBuild**:*fetch_sample_RegulatoryFeature()*
+ - Bio::EnsEMBL::Funcgen::**SegmentationStateEmission**:*fetch_segmentation_state_assignment()*
+ - Bio::EnsEMBL::Funcgen::**Frip**:*fetch_PeakCalling()*
+ - Bio::EnsEMBL::Funcgen::**Idr**:*fetch_Experiment()*
+ - Bio::EnsEMBL::Funcgen::**ProbeTranscriptMapping**:*fetch_Probe()*
+ - Bio::EnsEMBL::Funcgen::**ProbeSetTranscriptMapping**:*fetch_ProbeSet()*
+ - Bio::EnsEMBL::Funcgen::**ProbeFeatureTranscriptMapping**:*fetch_ProbeFeature()*
+ - Bio::EnsEMBL::Funcgen::**PeakCallingStatistic**:*fetch_PeakCalling()*
+ - Bio::EnsEMBL::Funcgen::**PhantomPeak**:*fetch_Alignment()*
+ - Bio::EnsEMBL::Funcgen::**PhantomPeak**:*fetch_Idr()*
+ - Bio::EnsEMBL::Funcgen::**ReadFile**::*fetch_FastQC()*
+ - Bio::EnsEMBL::Funcgen::**ReadFile**::*fetch_mate_ReadFile()*
+ - Bio::EnsEMBL::Funcgen::**ReadFile**::*fetch_ReadFileExperimentalConfiguration()*
+ - Bio::EnsEMBL::Funcgen::**Probe**::*fetch_all_ProbeTranscriptMappings()*
+ - Bio::EnsEMBL::Funcgen::**ProbeSet**:*fetch_all_ProbeSetTranscriptMappings()*
+
 ### To be removed in EnsEMBL Release 103 ###
  - Bio::EnsEMBL::Funcgen::**Chance**::*db()*
  - Bio::EnsEMBL::Funcgen::**DataFile**::*db()*

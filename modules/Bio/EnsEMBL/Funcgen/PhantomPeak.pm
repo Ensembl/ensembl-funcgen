@@ -99,7 +99,7 @@ sub quality_tag         { return shift->_generic_get_or_set('quality_tag',      
 sub run_failed          { return shift->_generic_get_or_set('run_failed',          @_); }
 sub error_message       { return shift->_generic_get_or_set('error_message',       @_); }
 
-sub fetch_Alignment {
+sub get_Alignment {
 
   my $self         = shift;
   
@@ -111,15 +111,20 @@ sub fetch_Alignment {
   return $alignment;
 }
 
+sub fetch_Alignment {
+  my $self = shift;
+  my $msg = 'It will be removed in release 104.' . "\n" . 'Please use '
+      . ref($self) . '::get_Alignment instead.';
+  deprecate($msg);
+  return $self->get_Alignment;
+}
+
 sub fetch_Idr {
   my $self = shift;
-  
-  my $idr_adaptor = $self->db->db->get_IdrAdaptor;
-  if (! defined $idr_adaptor) {
-    throw("Couldn't get an IdrAdaptor!");
-  }
-  my $idr = $idr_adaptor->_fetch_by_experiment_id($self->experiment_id);
-  return $idr;
+  my $msg = 'It will be removed in release 104.' . "\n" . 'Please use '
+      . ref($self) . '::get_Idr instead.';
+  deprecate($msg);
+  return $self->get_Idr;
 }
 
 =head2 summary_as_hash
@@ -150,7 +155,7 @@ sub summary_as_hash {
   };
   
   if ($suppress_link ne 'alignment') {
-    my $alignment  = $self->fetch_Alignment;
+    my $alignment  = $self->get_Alignment;
     $summary->{'alignment'} = $alignment->summary_as_hash('phantom_peak');
   }
   
