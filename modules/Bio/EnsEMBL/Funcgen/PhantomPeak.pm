@@ -121,8 +121,7 @@ sub fetch_Alignment {
 
 sub fetch_Idr {
   my $self = shift;
-  my $msg = 'It will be removed in release 104.' . "\n" . 'Please use '
-      . ref($self) . '::get_Idr instead.';
+  my $msg = 'It will be removed in release 104.';
   deprecate($msg);
   return $self->get_Idr;
 }
