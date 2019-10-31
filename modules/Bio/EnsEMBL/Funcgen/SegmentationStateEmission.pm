@@ -89,7 +89,8 @@ sub H3K9me3  { return shift->_generic_get_or_set('H3K9me3',  @_); }
 sub get_SegmentationStateAssignment {
     my $self = shift;
 
-    my $segmentation_state_assignment_adaptor = $self->db->db->get_SegmentationStateAssignmentAdaptor;
+    my $segmentation_state_assignment_adaptor =
+        $self->adaptor->db->get_SegmentationStateAssignmentAdaptor;
     if (! defined $segmentation_state_assignment_adaptor) {
         throw("Couldn't get an SegmentationStateAssignmentAdaptor!");
     }

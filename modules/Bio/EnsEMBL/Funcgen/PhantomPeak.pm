@@ -103,7 +103,7 @@ sub get_Alignment {
 
   my $self         = shift;
   
-  my $alignment_adaptor = $self->db->db->get_AlignmentAdaptor;
+  my $alignment_adaptor = $self->adaptor->db->get_AlignmentAdaptor;
   if (! defined $alignment_adaptor) {
     throw("Couldn't get an AlignmentAdaptor!");
   }

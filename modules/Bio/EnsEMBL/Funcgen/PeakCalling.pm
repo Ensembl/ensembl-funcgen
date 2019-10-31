@@ -194,7 +194,7 @@ sub _fetch_Alignment {
   my $self         = shift;
   my $alignment_id = shift;
   
-  my $alignment_adaptor = $self->db->db->get_AlignmentAdaptor;
+  my $alignment_adaptor = $self->adaptor->db->get_AlignmentAdaptor;
   if (! defined $alignment_adaptor) {
     throw("Couldn't get an AlignmentAdaptor!");
   }
@@ -308,7 +308,7 @@ sub get_Chance {
   my $signal_alignment  = $self->get_signal_Alignment;
   my $control_alignment = $self->get_control_Alignment;
 
-  my $chance_adaptor = $self->db->db->get_ChanceAdaptor;
+  my $chance_adaptor = $self->adaptor->db->get_ChanceAdaptor;
   if (! defined $chance_adaptor) {
     throw("Couldn't get an ChanceAdaptor!");
   }
@@ -451,7 +451,7 @@ sub get_Experiment {
 
 sub num_peaks {
   my $self = shift;
-  return $self->db->count_peaks_by_PeakCalling($self);
+  return $self->adaptor->count_peaks_by_PeakCalling($self);
 }
 
 =head2 fetch_source_label

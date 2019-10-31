@@ -89,7 +89,7 @@ sub relative_ftp_site_path {
     my $self = shift;
     my $path = $self->path;
     
-    my $species = $self->db->db->species;
+    my $species = $self->adaptor->db->species;
     
     use Bio::EnsEMBL::Funcgen::Utils::GoodUtils qw( create_species_assembly_path );
     my $species_assembly_path = create_species_assembly_path($species);

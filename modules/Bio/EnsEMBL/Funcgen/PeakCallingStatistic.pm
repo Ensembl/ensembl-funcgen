@@ -74,7 +74,7 @@ sub feature_type_id { return shift->_generic_get_or_set('feature_type_id', @_); 
 sub get_PeakCalling {
   my $self = shift;
   
-  my $peak_calling_adaptor = $self->db->db->get_PeakCallingAdaptor;
+  my $peak_calling_adaptor = $self->adaptor->db->get_PeakCallingAdaptor;
   if (! defined $peak_calling_adaptor) {
     throw("Couldn't get an PeakCallingAdaptor!");
   }

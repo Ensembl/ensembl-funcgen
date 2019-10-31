@@ -160,7 +160,7 @@ sub get_mate_ReadFile {
     );
   
   my $read_file_adaptor 
-    = $self->db->db->get_ReadFileAdaptor;
+    = $self->adaptor->db->get_ReadFileAdaptor;
   
   my $read_file_mate
     = $read_file_adaptor
@@ -186,7 +186,7 @@ sub get_FastQC {
 
   my $self         = shift;
   
-  my $fastqc_adaptor = $self->db->db->get_FastQCAdaptor;
+  my $fastqc_adaptor = $self->adaptor->db->get_FastQCAdaptor;
   if (! defined $fastqc_adaptor) {
     throw("Couldn't get an FastQCAdaptor!");
   }
@@ -252,7 +252,7 @@ sub get_ReadFileExperimentalConfiguration {
   my $self = shift;
 
   my $read_file_experimental_configuration_adaptor
-    = $self->db->db->get_ReadFileExperimentalConfigurationAdaptor;
+    = $self->adaptor->db->get_ReadFileExperimentalConfigurationAdaptor;
 
   my $read_file_experimental_configurations 
     = $read_file_experimental_configuration_adaptor
