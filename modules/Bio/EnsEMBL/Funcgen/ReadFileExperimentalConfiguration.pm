@@ -67,7 +67,7 @@ sub db {
   my $self = shift;
   deprecate(
       ref($self) . '::db has been deprecated and will be removed in '
-          . 'release 103.'
+          . 'release 104.'
           . "\n"
           . 'Please use ' . ref($self) . '::adaptor instead.'
   );

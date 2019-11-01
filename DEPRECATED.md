@@ -47,8 +47,6 @@ A year after deprecation (4 Ensembl releases), the method is removed from the AP
  - Bio::EnsEMBL::Funcgen::**ReadFile**::*fetch_ReadFileExperimentalConfiguration()*
  - Bio::EnsEMBL::Funcgen::**Probe**::*fetch_all_ProbeTranscriptMappings()*
  - Bio::EnsEMBL::Funcgen::**ProbeSet**:*fetch_all_ProbeSetTranscriptMappings()*
-
-### To be removed in EnsEMBL Release 103 ###
  - Bio::EnsEMBL::Funcgen::**Chance**::*db()*
  - Bio::EnsEMBL::Funcgen::**DataFile**::*db()*
  - Bio::EnsEMBL::Funcgen::**ExampleFeature**::*db()*
