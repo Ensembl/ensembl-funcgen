@@ -33,7 +33,7 @@ limitations under the License.
 package Bio::EnsEMBL::Funcgen::SegmentationStatistic;
 
 use strict;
-
+use Bio::EnsEMBL::Utils::Exception qw( deprecate );
 use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_get_or_set
   _generic_set
@@ -45,7 +45,7 @@ with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 sub _constructor_parameters {
   return {
     dbID            => 'dbID',
-    db              => 'db',
+    adaptor         => 'adaptor',
     statistic       => 'statistic',
     value           => 'value',
     segmentation_id => 'segmentation_id',
@@ -56,14 +56,24 @@ sub _constructor_parameters {
 }
 
 sub dbID            { return shift->_generic_get_or_set('dbID',            @_); }
-sub db              { return shift->_generic_get_or_set('db',              @_); }
+sub adaptor {return shift->_generic_get_or_set('adaptor', @_);}
+sub db {
+  my $self = shift;
+  deprecate(
+      ref($self) . '::db has been deprecated and will be removed in '
+          . 'release 104.'
+          . "\n"
+          . 'Please use ' . ref($self) . '::adaptor instead.'
+  );
+
+  return $self->adaptor();
+}
 sub statistic       { return shift->_generic_get_or_set('statistic',       @_); }
 sub value           { return shift->_generic_get_or_set('value',           @_); }
 sub segmentation_id { return shift->_generic_get_or_set('segmentation_id', @_); }
 sub epigenome_id    { return shift->_generic_get_or_set('epigenome_id',    @_); }
 sub label           { return shift->_generic_get_or_set('label',           @_); }
 sub state           { return shift->_generic_get_or_set('state',           @_); }
-sub segmentation_id { return shift->_generic_get_or_set('segmentation_id', @_); }
 
 sub set_Segmentation {
   my $self = shift;

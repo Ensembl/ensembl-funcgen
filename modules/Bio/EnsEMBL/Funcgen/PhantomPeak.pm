@@ -33,7 +33,7 @@ limitations under the License.
 package Bio::EnsEMBL::Funcgen::PhantomPeak;
 
 use strict;
-
+use Bio::EnsEMBL::Utils::Exception qw( deprecate );
 use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_get_or_set
 );
@@ -43,9 +43,8 @@ with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 
 sub _constructor_parameters {
   return {
-    dbID         => 'dbID',
-    db           => 'db',
-
+    dbID                => 'dbID',
+    adaptor             => 'adaptor',
     analysis_id         => 'analysis_id',
     alignment_id        => 'alignment_id',
     num_reads           => 'num_reads',
@@ -68,7 +67,17 @@ sub _constructor_parameters {
 }
 
 sub dbID         { return shift->_generic_get_or_set('dbID',         @_); }
-sub db           { return shift->_generic_get_or_set('db',           @_); }
+sub adaptor {return shift->_generic_get_or_set('adaptor', @_);}
+sub db {
+  my $self = shift;
+  deprecate(
+      ref($self) . '::db has been deprecated and will be removed in '
+          . 'release 104.'
+          . "\n"
+          . 'Please use ' . ref($self) . '::adaptor instead.'
+  );
+  return $self->adaptor();
+}
 
 sub analysis_id         { return shift->_generic_get_or_set('analysis_id',         @_); }
 sub alignment_id        { return shift->_generic_get_or_set('alignment_id',        @_); }
@@ -90,11 +99,11 @@ sub quality_tag         { return shift->_generic_get_or_set('quality_tag',      
 sub run_failed          { return shift->_generic_get_or_set('run_failed',          @_); }
 sub error_message       { return shift->_generic_get_or_set('error_message',       @_); }
 
-sub fetch_Alignment {
+sub get_Alignment {
 
-  my $self         = shift;
+  my $self = shift;
   
-  my $alignment_adaptor = $self->db->db->get_AlignmentAdaptor;
+  my $alignment_adaptor = $self->adaptor->db->get_AlignmentAdaptor;
   if (! defined $alignment_adaptor) {
     throw("Couldn't get an AlignmentAdaptor!");
   }
@@ -102,15 +111,19 @@ sub fetch_Alignment {
   return $alignment;
 }
 
+sub fetch_Alignment {
+  my $self = shift;
+  my $msg = 'It will be removed in release 104.' . "\n" . 'Please use '
+      . ref($self) . '::get_Alignment instead.';
+  deprecate($msg);
+  return $self->get_Alignment;
+}
+
 sub fetch_Idr {
   my $self = shift;
-  
-  my $idr_adaptor = $self->db->db->get_IdrAdaptor;
-  if (! defined $idr_adaptor) {
-    throw("Couldn't get an IdrAdaptor!");
-  }
-  my $idr = $idr_adaptor->_fetch_by_experiment_id($self->experiment_id);
-  return $idr;
+  my $msg = 'It will be removed in release 104.';
+  deprecate($msg);
+  return $self->get_Idr;
 }
 
 =head2 summary_as_hash
@@ -141,7 +154,7 @@ sub summary_as_hash {
   };
   
   if ($suppress_link ne 'alignment') {
-    my $alignment  = $self->fetch_Alignment;
+    my $alignment  = $self->get_Alignment;
     $summary->{'alignment'} = $alignment->summary_as_hash('phantom_peak');
   }
   

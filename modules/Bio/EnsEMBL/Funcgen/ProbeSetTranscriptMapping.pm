@@ -75,10 +75,18 @@ sub stable_id      { return shift->_generic_get_or_set('stable_id',       @_) }
 sub description    { return shift->_generic_get_or_set('description',     @_) }
 sub probe_set_id   { return shift->_generic_get_or_set('probe_set_id',    @_) }
 
-sub fetch_ProbeSet {
+sub get_ProbeSet {
   my $self = shift;
   my $probeset = $self->adaptor->get_ProbeSetAdaptor->fetch_by_dbID($self->probe_set_id);
   return $probeset;
+}
+
+sub fetch_ProbeSet {
+  my $self = shift;
+  my $msg = 'It will be removed in release 104.' . "\n" . 'Please use '
+      . ref($self) . '::get_ProbeSet instead.';
+  deprecate($msg);
+  return $self->get_ProbeSet;
 }
 
 sub _generic_get_or_set {

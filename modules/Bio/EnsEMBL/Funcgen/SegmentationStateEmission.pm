@@ -33,7 +33,7 @@ limitations under the License.
 package Bio::EnsEMBL::Funcgen::SegmentationStateEmission;
 
 use strict;
-
+use Bio::EnsEMBL::Utils::Exception qw( deprecate );
 use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_get_or_set
 );
@@ -44,8 +44,7 @@ with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 sub _constructor_parameters {
   return {
     dbID     => 'dbID',
-    db       => 'db',
-
+    adaptor  => 'adaptor',
     state    => 'state',
     segmentation => 'segmentation',
     CTCF     => 'CTCF',
@@ -62,7 +61,17 @@ sub _constructor_parameters {
 }
 
 sub dbID     { return shift->_generic_get_or_set('dbID',     @_); }
-sub db       { return shift->_generic_get_or_set('db',       @_); }
+sub adaptor {return shift->_generic_get_or_set('adaptor', @_);}
+sub db {
+    my $self = shift;
+    deprecate(
+        ref($self) . '::db has been deprecated and will be removed in '
+            . 'release 104.'
+            . "\n"
+            . 'Please use ' . ref($self) . '::adaptor instead.'
+    );
+    return $self->adaptor();
+}
 
 sub state        { return shift->_generic_get_or_set('state',    @_); }
 sub segmentation { return shift->_generic_get_or_set('segmentation',    @_); }
@@ -77,11 +86,11 @@ sub H3K4me3  { return shift->_generic_get_or_set('H3K4me3',  @_); }
 sub H3K9ac   { return shift->_generic_get_or_set('H3K9ac',   @_); }
 sub H3K9me3  { return shift->_generic_get_or_set('H3K9me3',  @_); }
 
-sub fetch_segmentation_state_assignment {
-
+sub get_SegmentationStateAssignment {
     my $self = shift;
 
-    my $segmentation_state_assignment_adaptor = $self->db->db->get_SegmentationStateAssignmentAdaptor;
+    my $segmentation_state_assignment_adaptor =
+        $self->adaptor->db->get_SegmentationStateAssignmentAdaptor;
     if (! defined $segmentation_state_assignment_adaptor) {
         throw("Couldn't get an SegmentationStateAssignmentAdaptor!");
     }
@@ -90,8 +99,16 @@ sub fetch_segmentation_state_assignment {
         $self->state,
         $self->segmentation,
     );
-    return $segmentation_state_assignment;
 
+    return $segmentation_state_assignment;
+}
+
+sub fetch_segmentation_state_assignment {
+    my $self = shift;
+    my $msg = 'It will be removed in release 104.' . "\n" . 'Please use '
+        . ref($self) . '::get_SegmentationStateAssignment instead.';
+    deprecate($msg);
+    return $self->get_SegmentationStateAssignment;
 }
 
 1;

@@ -38,6 +38,7 @@ use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Exception qw( throw warning );
 use DBI qw(:sql_types);
+use Bio::EnsEMBL::Funcgen::ProbeFeatureTranscriptMapping;
 
 use vars '@ISA';
 @ISA    = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
