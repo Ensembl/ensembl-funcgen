@@ -64,4 +64,69 @@ sub parameters :Test(setup) {
     $self->{parameters} = \%parameters;
 }
 
+sub define_expected :Test(setup) {
+    my $self = shift;
+
+    my $description = 'Roadmap Epigenomics Mapping Consortium Epigenome'
+        . ' (Class 2) for Fetal Intestine Large using'
+        . ' donors/samples:H-24595; H-23769';
+    my $search_terms = [ "IHECRE00000987", "large intestine",
+                         "large intestine male embryo (composite)",
+                         "Roadmap Epigenomics Mapping Consortium Epigenome (Class 2) for Fetal Intestine Large using donors/samples:H-24595; H-23769",
+                         "ENCSR020SIU", "Roadmap", "intestine",
+                         "large intestine", "endoderm",
+                         "Entire large intestine", "intestinum crassum",
+                         "large intestine", "BiosampleType", "Item",
+                         "large intestine",
+                         "A subdivision of the digestive tract that connects the small intestine to the cloaca or anus. Lacks or has few villi[Kardong].",
+                         "Entire large intestine", "intestinum crassum" ];
+
+    $self->{expected} = {
+        'name'             => 'IHECRE00000987',
+        'production_name'  => 'large_intestine',
+        'gender'           => 'male',
+        'description'      => $description,
+        'display_label'    => 'large intestine',
+        'short_name'       => 'large intestine',
+        'search_terms'     => $search_terms,
+        'full_name'        => 'large intestine male embryo (composite)',
+        'efo_accession'    => 'EFO:0000000',
+        'encode_accession' => 'ENCSR020SIU',
+        'epirr_accession'  => 'IHECRE00000987.1'
+    };
+
+    my %summary = (
+        'name'             => $self->{expected}->{name},
+        'gender'           => $self->{expected}->{gender},
+        'description'      => $self->{expected}->{description},
+        'short_name'       => $self->{expected}->{short_name},
+        'search_terms'     => $search_terms,
+        'efo_accession'    => $self->{expected}->{efo_accession},
+        'epirr_accession'  => $self->{expected}->{epirr_accession},
+        'encode_accession' => $self->{expected}->{encode_accession},
+        'full_name'        => $self->{expected}->{full_name}
+    );
+
+    $self->{expected}->{summary} = \%summary;
+}
+
+sub dbIDs_to_fetch {return [ 151 ];}
+
+sub getters {
+    return [ 'name', 'production_name', 'gender', 'description',
+             'display_label', 'short_name', 'search_terms', 'full_name',
+             'efo_accession', 'encode_accession', 'epirr_accession'];
+}
+
+sub reset_relational_attributes :Test(2) {
+    my $self = shift;
+
+    my $epigenome = $self->{fetched}->[0];
+    $epigenome->reset_relational_attributes;
+
+    is($epigenome->dbID, undef,
+       'reset_relational_attributes() resets the dbID');
+    is($epigenome->adaptor, undef, '... and also resets the adaptor');
+}
+
 1;

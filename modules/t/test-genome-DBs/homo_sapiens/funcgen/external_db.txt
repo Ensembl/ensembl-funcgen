@@ -2,3 +2,6 @@
 68	homo_sapiens_core_Transcript	79_37	KNOWNXREF	1	5	EnsemblTranscript	MISC	\N	\N	\N
 69	homo_sapiens_core_Genome	79_37	KNOWNXREF	1	5	EnsemblGenome	MISC	\N	\N	\N
 70	homo_sapiens_core_Gene	79_38	KNOWNXREF	1	5	EnsemblGene	MISC	\N	\N	\N
+50831	EFO	\N	KNOWNXREF	1	0	Experimental Factor Ontology	MISC	\N	\N	The Experimental Factor Ontology provides a systematic description of many experimental variables available in EBI databases, and for external projects such as the NHGRI GWAS catalog. It combines parts of several biological ontologies, such as UBERON anatomy, ChEBI chemical compounds, and Cell Ontology.
+50832	EpiRR	\N	KNOWN	1	0	EpiRR	MISC	\N	\N	EpiRR is a registry of reference epigenomes.
+50857	ENCODE	\N	KNOWN	1	0	ENCODE	MISC	\N	\N	\N
