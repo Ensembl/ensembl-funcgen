@@ -35,6 +35,18 @@ use Test::Exception;
 
 use parent qw(Bio::EnsEMBL::Funcgen::Test);
 
+sub new {
+    my $class = shift;
+    my $self = $class->SUPER::new(@_);
+
+    my @peaks = @{$self->{fetched}->[0]->get_all_overlapping_Peaks};
+    my $n = scalar(@peaks) + 1;
+    $self->num_method_tests('get_all_overlapping_Peaks', $n);
+    $self->num_method_tests('fetch_all_overlapping_Peaks', $n);
+
+    return $self;
+}
+
 sub parameters :Test(setup) {
     my $self = shift;
 
@@ -142,8 +154,6 @@ sub get_all_overlapping_Peaks :Test(no_plan) {
 
     my @peaks = @{$self->{fetched}->[0]->get_all_overlapping_Peaks};
 
-    $self->num_tests(scalar(@peaks) + 1);
-
     for my $peak (@peaks) {
         isa_ok($peak, 'Bio::EnsEMBL::Funcgen::Peak');
     }
@@ -157,8 +167,6 @@ sub fetch_all_overlapping_Peaks :Test(no_plan) {
     my $self = shift;
 
     my @peaks = @{$self->{fetched}->[0]->fetch_all_overlapping_Peaks};
-
-    $self->num_tests(scalar(@peaks) + 1);
 
     for my $peak (@peaks) {
         isa_ok($peak, 'Bio::EnsEMBL::Funcgen::Peak');
@@ -233,7 +241,7 @@ sub is_position_informative :Test(1){
     );
 }
 
-sub infer_variation_consequence :Test(no_plan){
+sub infer_variation_consequence :Test(0){
     #TODO write tests
 }
 

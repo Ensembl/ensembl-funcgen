@@ -45,7 +45,36 @@ BEGIN {
     __PACKAGE__->mk_classdata('class');
 }
 
-INIT {Test::Class->runtests}
+sub new {
+    my $class = shift;
+    my $self = $class->SUPER::new(@_);
+
+    if (! exists $self->{multi}){
+        $self->db_connect();
+    }
+    $self->create_class_methods();
+    $self->fetch_from_test_db();
+    $self->parameters();
+    $self->define_expected();
+
+    my $i = scalar @{$self->getters_setters} + scalar @{$self->getters};
+    $self->num_method_tests('test_getters_setters', $i);
+
+    my $j = 1;
+    if ($self->{mandatory_constructor_parameters}){
+        my %mcps = %{$self->{mandatory_constructor_parameters}};
+        $j += scalar(keys(%mcps));
+    }
+    $self->num_method_tests('constructor', $j);
+
+    my $n = 0;
+    if (exists $self->{expected}->{summary}){
+        $n = 1;
+    }
+    $self->num_method_tests('summary_as_hash', $n);
+
+    return $self;
+}
 
 sub db_connect :Test(startup) {
     my $self = shift;
@@ -93,6 +122,11 @@ sub parameters :Test(setup) {
     my $self = shift;
 
     $self->{mandatory_constructor_parameters} = {};
+}
+
+sub define_expected :Test(setup){
+    my $self = shift;
+    $self->{expected} = {};
 }
 
 sub fetch_from_test_db :Test(setup) {

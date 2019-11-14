@@ -31,6 +31,7 @@ use strict;
 use warnings;
 
 use File::Basename;
+use Test::More;
 
 # Load Tests
 BEGIN {
@@ -38,14 +39,22 @@ BEGIN {
     # Do not drop test databases, use the same for all Tests
     $ENV{'RUNTESTS_HARNESS'} = 1;
 
-    # Load and run tests
+    # Load all tests in test dir
     my ($filename, $dir, $suffix) = fileparse(__FILE__);
     my $test_dir = $dir . '/lib';
     Test::Class::Load->import($test_dir);
 }
 
+# Plan number of Tests
+my $total_number_of_tests = 0;
+for my $test_class (Test::Class->_test_classes()){
+    my $test = $test_class->new();
+    $total_number_of_tests += $test->expected_tests();
+}
+plan tests => $total_number_of_tests;
+
 # Run Tests
-# Test::Class->runtests();
+Test::Class->runtests();
 
 # Clean up test databases and temp file(s)
 delete $ENV{'RUNTESTS_HARNESS'};

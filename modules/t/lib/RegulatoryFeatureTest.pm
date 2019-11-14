@@ -166,7 +166,7 @@ sub display_id :Test(1) {
     );
 }
 
-sub get_RegulatoryEvidence :Test(no_plan) {
+sub get_RegulatoryEvidence :Test(0) {
     #TODO write tests
 }
 
