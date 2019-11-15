@@ -38,12 +38,7 @@ use Test::Exception;
 use Bio::EnsEMBL::Test::MultiTestDB;
 use Bio::EnsEMBL::Test::TestUtils qw(test_getter_setter);
 
-use parent qw(Test::Class Class::Data::Inheritable);
-
-BEGIN {
-    __PACKAGE__->mk_classdata('full_class');
-    __PACKAGE__->mk_classdata('class');
-}
+use parent qw(Test::Class);
 
 sub new {
     my ($class, $multi) = @_;
@@ -78,7 +73,7 @@ sub new {
     return $self;
 }
 
-sub create_class_methods :Test(startup) {
+sub create_class_methods {
     my $self = shift;
 
     my $full_class = 'Bio::EnsEMBL::Funcgen::Test';
@@ -94,15 +89,15 @@ sub create_class_methods :Test(startup) {
         }
         $full_class = $prefix . $class;
     }
-    $self->full_class($full_class);
-    $self->class($class);
+    $self->{full_class} = $full_class;
+    $self->{class} = $class;
 }
 
 sub _creation :Test(1) {
     my $self = shift;
 
-    use_ok($self->full_class)
-        or $self->FAIL_ALL('Can not use ' . $self->full_class);
+    use_ok($self->{full_class})
+        or $self->FAIL_ALL('Can not use ' . $self->{full_class});
 }
 
 sub parameters :Test(setup) {
@@ -120,11 +115,10 @@ sub fetch_from_test_db :Test(setup) {
     my $self = shift;
 
     my $dbIDs = $self->dbIDs_to_fetch;
-    my $class = $self->class();
 
     if (scalar @{$dbIDs} > 0) {
         $self->{fetched} =
-            $self->{funcgen_db}->get_adaptor($class)
+            $self->{funcgen_db}->get_adaptor($self->{class})
                  ->fetch_all_by_dbID_list($dbIDs);
     }
 
@@ -159,7 +153,7 @@ sub test_getters_setters :Test(no_plan) {
 sub constructor :Test(no_plan) {
     my $self = shift;
 
-    my $full_class           = $self->full_class;
+    my $full_class = $self->{full_class};
 
     if ($self->{mandatory_constructor_parameters}){
         my %mandatory_parameters = %{$self->{mandatory_constructor_parameters}};
