@@ -70,6 +70,12 @@ sub parameters :Test(setup) {
 sub define_expected :Test(setup) {
     my $self = shift;
 
+    my $probes = $self->_quick_fetch_all('Probe', [1,2,3]);
+    my $probe_sets = $self->_quick_fetch_all('ProbeSet', [1]);
+    my $array_chip_ids = [68];
+    my $array_chips = $self->_quick_fetch_all('ArrayChip', $array_chip_ids);
+    my $design_ids = ['HumanWG_6_V2'];
+
     $self->{expected} = {
         'name'                    => 'HumanWG_6_V2',
         'format'                  => 'EXPRESSION',
@@ -79,7 +85,12 @@ sub define_expected :Test(setup) {
         'class'                   => 'ILLUMINA_WG',
         'is_probeset_array'       => 0,
         'is_linked_array'         => 0,
-        'has_sense_interrogation' => 1
+        'has_sense_interrogation' => 1,
+        'probes'                  => $probes,
+        'probe_sets'              => $probe_sets,
+        'array_chips'             => $array_chips,
+        'array_chip_ids'          => $array_chip_ids,
+        'design_ids'              => $design_ids,
     };
 }
 
@@ -88,6 +99,46 @@ sub dbIDs_to_fetch {return [ 28 ];}
 sub getters_setters {
     return ['is_probeset_array', 'is_linked_array', 'has_sense_interrogation',
     'name', 'type', 'format', 'class', 'vendor', 'description'];
+}
+
+sub get_all_Probes :Test(1) {
+    my $self = shift;
+
+    is_deeply($self->{fetched}->[0]->get_all_Probes,
+    $self->{expected}->{probes},
+    'get_all_Probes() works');
+}
+
+sub get_all_ProbeSets :Test(1) {
+    my $self = shift;
+
+    is_deeply($self->{fetched}->[0]->get_all_ProbeSets,
+              $self->{expected}->{probe_sets},
+              'get_all_ProbeSets() works');
+}
+
+sub get_array_chip_ids :Test(1) {
+    my $self = shift;
+
+    is_deeply($self->{fetched}->[0]->get_array_chip_ids,
+              $self->{expected}->{array_chip_ids},
+              'get_array_chip_ids() works');
+}
+
+sub get_ArrayChips :Test(1) {
+    my $self = shift;
+
+    is_deeply($self->{fetched}->[0]->get_ArrayChips,
+              $self->{expected}->{array_chips},
+              'get_ArrayChips() works');
+}
+
+sub get_design_ids :Test(1) {
+    my $self = shift;
+
+    is_deeply($self->{fetched}->[0]->get_design_ids,
+              $self->{expected}->{design_ids},
+              'get_design_ids() works');
 }
 
 1;
