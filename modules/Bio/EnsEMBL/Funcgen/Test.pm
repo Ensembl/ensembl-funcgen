@@ -35,7 +35,6 @@ use File::Basename;
 use Test::More;
 use Test::Exception;
 
-use Bio::EnsEMBL::Test::MultiTestDB;
 use Bio::EnsEMBL::Test::TestUtils qw(test_getter_setter);
 
 use parent qw(Test::Class);
@@ -44,7 +43,7 @@ sub new {
     my ($class, $multi) = @_;
     my $self = $class->SUPER::new();
 
-    if ($multi) {
+    if (defined $multi) {
         $self->{multi}      = $multi;
         $self->{funcgen_db} = $self->{multi}->get_DBAdaptor('funcgen');
         $self->{core_db}    = $self->{multi}->get_DBAdaptor('core');
@@ -80,6 +79,7 @@ sub create_class_methods {
     my $class;
 
     my $package_name = ref($self);
+
     if ($package_name ne __PACKAGE__) {
         $package_name =~ s/Test//;
         $class     = $package_name;
@@ -89,6 +89,7 @@ sub create_class_methods {
         }
         $full_class = $prefix . $class;
     }
+
     $self->{full_class} = $full_class;
     $self->{class} = $class;
 }
@@ -121,7 +122,6 @@ sub fetch_from_test_db :Test(setup) {
             $self->{funcgen_db}->get_adaptor($self->{class})
                  ->fetch_all_by_dbID_list($dbIDs);
     }
-
 }
 
 sub test_getters_setters :Test(no_plan) {
@@ -130,8 +130,6 @@ sub test_getters_setters :Test(no_plan) {
     my @getters_setters = @{$self->getters_setters};
     my @getters         = @{$self->getters};
     $self->num_tests(scalar @getters_setters + scalar @getters);
-
-    my $class = $self->class();
 
     for my $getter_setter (@getters_setters) {
         ok(test_getter_setter($self->{fetched}->[0],
@@ -146,7 +144,6 @@ sub test_getters_setters :Test(no_plan) {
                   $self->{expected}->{$getter},
                   $getter . '() getter works'
         );
-        1;
     }
 }
 
@@ -158,21 +155,17 @@ sub constructor :Test(no_plan) {
     if ($self->{mandatory_constructor_parameters}){
         my %mandatory_parameters = %{$self->{mandatory_constructor_parameters}};
 
-        $self->num_tests(scalar(keys(%mandatory_parameters)) + 1);
-
         my $new_object = $full_class->new(%{$self->{constructor_parameters}});
-        isa_ok($new_object, $self->full_class);
+        isa_ok($new_object, $full_class);
 
-        my %missing_parameters;
-        my $error_message;
+        my %incomplete_parameter_set;
         for my $parameter (keys %mandatory_parameters) {
-            %missing_parameters = %mandatory_parameters;
-            delete $missing_parameters{$parameter};
-            $error_message = "Must supply a .* parameter";
+            %incomplete_parameter_set = %mandatory_parameters;
+            delete $incomplete_parameter_set{$parameter};
             throws_ok {
-                $full_class->new(%missing_parameters)
+                $full_class->new(%incomplete_parameter_set)
             }
-                qr/$error_message/,
+                qr/.*/,
                 "... and exception is thrown when $parameter parameter is missing";
         }
     }
@@ -190,10 +183,6 @@ sub summary_as_hash :Test(no_plan) {
     }
 }
 
-sub db_disconnect :Test(shutdown) {
-    my $self = shift;
-}
-
 sub getters_setters {return []};
 
 sub getters {return []};
@@ -204,7 +193,7 @@ sub _quick_fetch {
     my ($self, $class, $dbID, $dbtype) = @_;
 
     my $default_dbtype = 'funcgen';
-    if(! $dbtype){
+    if(!defined $dbtype){
         $dbtype = $default_dbtype;
     }
     $dbtype .= '_db';
@@ -217,7 +206,7 @@ sub _quick_fetch_all {
     my ($self, $class, $dbIDs, $dbtype) = @_;
 
     my $default_dbtype = 'funcgen';
-    if(! $dbtype){
+    if(!defined $dbtype){
         $dbtype = $default_dbtype;
     }
     $dbtype .= '_db';

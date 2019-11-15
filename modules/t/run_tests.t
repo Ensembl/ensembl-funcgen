@@ -34,6 +34,8 @@ use File::Basename;
 use Test::More;
 use Test::Class::Load;
 
+use Bio::EnsEMBL::Test::MultiTestDB;
+
 # Load all Test Classes
 my ($filename, $dir, $suffix) = fileparse(__FILE__);
 my $test_dir                  = $dir . '/lib';
