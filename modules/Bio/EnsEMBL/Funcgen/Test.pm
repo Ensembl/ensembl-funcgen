@@ -46,11 +46,13 @@ BEGIN {
 }
 
 sub new {
-    my $class = shift;
-    my $self = $class->SUPER::new(@_);
+    my ($class, $multi) = @_;
+    my $self = $class->SUPER::new();
 
-    if (! exists $self->{multi}){
-        $self->db_connect();
+    if ($multi) {
+        $self->{multi}      = $multi;
+        $self->{funcgen_db} = $self->{multi}->get_DBAdaptor('funcgen');
+        $self->{core_db}    = $self->{multi}->get_DBAdaptor('core');
     }
     $self->create_class_methods();
     $self->fetch_from_test_db();
@@ -74,21 +76,6 @@ sub new {
     $self->num_method_tests('summary_as_hash', $n);
 
     return $self;
-}
-
-sub db_connect :Test(startup) {
-    my $self = shift;
-
-    my ($filename, $dir, $suffix) = fileparse(__FILE__);
-    my $multitestdb_conf_dir      = $dir . '../../../t';
-
-    my $multi =
-        Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens',
-                                             $multitestdb_conf_dir);
-
-    $self->{multi}      = $multi;
-    $self->{funcgen_db} = $multi->get_DBAdaptor('funcgen');
-    $self->{core_db}    = $multi->get_DBAdaptor('core');
 }
 
 sub create_class_methods :Test(startup) {
