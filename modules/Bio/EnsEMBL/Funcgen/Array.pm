@@ -306,6 +306,9 @@ sub get_array_chip_ids {
 
 sub get_design_ids {
   my $self = shift;
+  if(! defined $self->{'array_chips'}){
+    $self->get_ArrayChips;
+  }
   return [ keys %{$self->{'array_chips'}} ];
 }
 
