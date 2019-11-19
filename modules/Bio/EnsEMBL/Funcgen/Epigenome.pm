@@ -238,29 +238,12 @@ sub full_name {  return $_[0]->{full_name}; }
 
 sub efo_accession {
   my $self = shift;
-  my $efo_db_entry = $self->_efo_db_entry;
+  my $efo_db_entry = $self->_db_entry('EFO');
   
   if (! defined $efo_db_entry) {
     return undef;
   }
   return $efo_db_entry->primary_id
-}
-
-=head2 _efo_db_entry
-
-  Example    : $epigenome->efo_db_entry->primary_id
-  Description: Returns the DBEntry of the external reference to the Experimental Factor Ontology (EFO).
-  Returntype : Bio::EnsEMBL::Funcgen::DBEntry
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-sub _efo_db_entry {
-
-  my $self = shift;
-  return $self->_db_entry('EFO');
 }
 
 =head2 encode_accession
@@ -277,29 +260,12 @@ sub _efo_db_entry {
 
 sub encode_accession {
   my $self = shift;
-  my $encode_db_entry = $self->_encode_db_entry;
+  my $encode_db_entry = $self->_db_entry('ENCODE');
   
   if (! defined $encode_db_entry) {
     return undef;
   }
   return $encode_db_entry->primary_id
-}
-
-=head2 _encode_db_entry
-
-  Example    : $epigenome->encode_db_entry->primary_id
-  Description: Returns the DBEntry of the external reference to ENCODE.
-  Returntype : Bio::EnsEMBL::Funcgen::DBEntry
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-sub _encode_db_entry {
-
-  my $self = shift;
-  return $self->_db_entry('ENCODE');
 }
 
 =head2 epirr_accession
@@ -316,29 +282,12 @@ sub _encode_db_entry {
 
 sub epirr_accession {
   my $self = shift;
-  my $epirr_db_entry = $self->_epirr_db_entry;
+  my $epirr_db_entry = $self->_db_entry('EpiRR');
   
   if (! defined $epirr_db_entry) {
     return undef;
   }
   return $epirr_db_entry->primary_id
-}
-
-=head2 _epirr_db_entry
-
-  Example    : $epigenome->epirr_db_entry->primary_id
-  Description: Returns the DBEntry of the external reference to EpiRR.
-  Returntype : Bio::EnsEMBL::Funcgen::DBEntry
-  Exceptions : None
-  Caller     : General
-  Status     : Stable
-
-=cut
-
-sub _epirr_db_entry {
-
-  my $self = shift;
-  return $self->_db_entry('EpiRR');
 }
 
 sub _db_entry {
