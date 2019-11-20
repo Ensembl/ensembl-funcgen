@@ -52,6 +52,7 @@ sub pipeline_analyses {
             species          => '#species#',
             group            => 'funcgen',
             datacheck_groups => [ 'funcgen' ],
+            data_file_path => '#data_root_dir#',
           },
         },
     ];
