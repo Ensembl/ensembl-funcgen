@@ -372,7 +372,7 @@ CREATE TABLE `segmentation_cell_tables` (
   `epigenome_id` int(16) unsigned NOT NULL,
   `feature_type_id` int(18) unsigned NOT NULL,
   `signal_alignment_id` int(23) unsigned NOT NULL,
-  `control_alignment_id` int(23) unsigned NOT NULL
+  `control_alignment_id` int(23) unsigned NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 DROP TABLE IF EXISTS `segmentation_statistic`;
@@ -1824,7 +1824,7 @@ CREATE TABLE `external_db` (
   `dbprimary_acc_linkable` tinyint(1) NOT NULL DEFAULT '1',
   `priority` int(11) NOT NULL,
   `db_display_name` varchar(255) DEFAULT NULL,
-  `type` enum('ARRAY','ALT_TRANS','MISC','LIT','PRIMARY_DB_SYNONYM','ENSEMBL') DEFAULT NULL,
+  `type` enum('ARRAY','ALT_TRANS','ALT_GENE','MISC','LIT','PRIMARY_DB_SYNONYM','ENSEMBL') DEFAULT NULL,
   `secondary_db_name` varchar(255) DEFAULT NULL,
   `secondary_db_table` varchar(255) DEFAULT NULL,
   `description` text,
@@ -1951,7 +1951,7 @@ CREATE TABLE `object_xref` (
   `ensembl_object_type` enum('Epigenome','Experiment','RegulatoryFeature','ExternalFeature','AnnotatedFeature','FeatureType','MirnaTargetFeature','ProbeSet','Probe','ProbeFeature','ReadFile') NOT NULL,
   `xref_id` int(10) unsigned NOT NULL,
   `linkage_annotation` varchar(255) DEFAULT NULL,
-  `analysis_id` smallint(5) unsigned NOT NULL,
+  `analysis_id` smallint(5) unsigned NULL,
   PRIMARY KEY (`object_xref_id`),
   UNIQUE KEY `xref_idx` (`xref_id`,`ensembl_object_type`,`ensembl_id`,`analysis_id`),
   KEY `analysis_idx` (`analysis_id`),
@@ -2023,24 +2023,4 @@ CREATE TABLE `underlying_structure` (
   PRIMARY KEY (`underlying_structure_id`)
 )ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
-
-/**
-@table  example_feature
-@desc   The table contains features used on the website and for the testDB
-@colour  #FFCC66
-
-@column ensembl_id                Foreign key references to the ensembl_object_type table e.g. @link probe_set
-@column ensembl_object_type       Ensembl object type e.g ProbeSet etc.
-*/
-
-/*
-DROP TABLE IF EXISTS `example_feature`;
-CREATE TABLE `example_feature` (
-    `example_feature_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `ensembl_object_type` enum('Epigenome','Experiment','RegulatoryFeature','ExternalFeature','FeatureType','MirnaTargetFeature','Probe','ProbeFeature') NOT NULL,
-  `ensembl_id` int(10) unsigned NOT NULL,
-  PRIMARY KEY (`example_feature_id`),
-  UNIQUE KEY `ensembl_object_type_idx` (`ensembl_object_type`,`ensembl_id`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1;
-*/
 
