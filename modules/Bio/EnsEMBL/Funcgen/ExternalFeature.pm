@@ -156,6 +156,16 @@ sub display_label {
   return $self->{'display_label'};
 }
 
+sub feature_so_acc {
+  my $self = shift;
+  return $self->feature_type->so_accession;
+}
+
+sub feature_so_term {
+  my $self = shift;
+  return $self->feature_type->so_term;
+}
+
 =head2 summary_as_hash
 
   Example       : $summary = $external_feature->summary_as_hash;

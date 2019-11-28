@@ -227,8 +227,8 @@ sub get_RegulatoryEvidence_by_type {
 
 =head2 feature_so_acc
 
-  Example       : print $regulatory_activity->SO_term;
-  Description   : Returns the sequence ontology term for this type of
+  Example       : print $regulatory_activity->feature_so_acc;
+  Description   : Returns the sequence ontology accession for this type of
                   regulatory feature.
   Returntype    : String
   Status        : At risk
@@ -239,6 +239,20 @@ sub feature_so_acc {
   my $self = shift;
 
   return $self->get_RegulatoryFeature->get_FeatureType->so_accession;
+}
+
+=head2 feature_so_term
+  Example       : print $regulatory_activity->feature_so_term;
+  Description   : Returns the sequence ontology term for this type of
+                  regulatory feature.
+  Returntype    : String
+  Status        : At risk
+=cut
+
+sub feature_so_term {
+  my $self = shift;
+
+  return $self->get_RegulatoryFeature->get_FeatureType->so_term;
 }
 
 sub summary_as_hash {

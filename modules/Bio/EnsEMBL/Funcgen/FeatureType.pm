@@ -225,6 +225,8 @@ sub so_accession{  return $_[0]->{so_accession}; }
 
 sub so_name{   return $_[0]->{so_name}; }
 
+sub so_term { return $_[0]->{so_name};}
+
 =head2 analysis
 
   Example    : my $ft_anal = $ft->analysis;
