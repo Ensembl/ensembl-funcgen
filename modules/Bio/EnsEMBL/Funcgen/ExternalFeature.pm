@@ -156,6 +156,36 @@ sub display_label {
   return $self->{'display_label'};
 }
 
+=head2 feature_so_acc
+
+  Example       : print $external_feature->feature_so_acc;
+  Description   : Returns the sequence ontology accession for this type of
+                  external feature.
+  Returntype    : String
+  Status        : At risk
+
+=cut
+
+sub feature_so_acc {
+    my $self = shift;
+    return $self->feature_type->so_accession;
+}
+
+=head2 feature_so_term
+
+  Example       : print $external_feature->feature_so_term;
+  Description   : Returns the sequence ontology term for this type of
+                  external feature.
+  Returntype    : String
+  Status        : At risk
+
+=cut
+
+sub feature_so_term {
+    my $self = shift;
+    return $self->feature_type->so_term;
+}
+
 =head2 summary_as_hash
 
   Example       : $summary = $external_feature->summary_as_hash;
