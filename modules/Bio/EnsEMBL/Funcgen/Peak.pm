@@ -325,6 +325,11 @@ sub feature_so_acc {
   return $self->get_PeakCalling->fetch_FeatureType->so_accession;
 }
 
+sub feature_so_term {
+    my $self = shift;
+    return $self->fetch_PeakCalling->fetch_FeatureType->so_term;
+}
+
 =head2 summary_as_hash
 
   Example       : $segf_summary = $annotf->summary_as_hash;
