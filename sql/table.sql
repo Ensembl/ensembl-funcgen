@@ -267,7 +267,7 @@ CREATE TABLE `regulatory_build` (
   `regulatory_build_id` int(4) unsigned NOT NULL AUTO_INCREMENT,
   `name` text,
   `release_version` int(11) DEFAULT NULL,
-  `description` text DEFAULT NULL,
+  `description` text,
   `version` varchar(50) DEFAULT NULL,
   `initial_release_date` varchar(50) DEFAULT NULL,
   `last_annotation_update` varchar(50) DEFAULT NULL,
@@ -372,7 +372,7 @@ CREATE TABLE `segmentation_cell_tables` (
   `epigenome_id` int(16) unsigned NOT NULL,
   `feature_type_id` int(18) unsigned NOT NULL,
   `signal_alignment_id` int(23) unsigned NOT NULL,
-  `control_alignment_id` int(23) unsigned NOT NULL
+  `control_alignment_id` int(23) unsigned NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 DROP TABLE IF EXISTS `segmentation_statistic`;
@@ -950,7 +950,7 @@ CREATE TABLE `probe_feature_transcript` (
 @column class             Class of feature_type
 @column description       Text description
 @column so_accession      Sequence ontology accession
-@column so_name           Sequence ontology name
+@column so_term           Sequence ontology term
 @column production_name   Name used in production
 
 @see analysis
@@ -964,7 +964,7 @@ CREATE TABLE `feature_type` (
   `analysis_id` smallint(5) unsigned DEFAULT NULL,
   `description` varchar(255) DEFAULT NULL,
   `so_accession` varchar(64) DEFAULT NULL,
-  `so_name` varchar(255) DEFAULT NULL,
+  `so_term` varchar(255) DEFAULT NULL,
   `production_name` VARCHAR(120) DEFAULT NULL,
   PRIMARY KEY (`feature_type_id`),
   UNIQUE KEY `name_class_analysis_idx` (`name`,`class`,`analysis_id`),
@@ -1531,11 +1531,11 @@ CREATE TABLE `epigenome` (
   `epigenome_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `name` varchar(120) NOT NULL,
   `short_name` varchar(120) NOT NULL,
-  `description` MEDIUMTEXT DEFAULT NULL,
+  `description` MEDIUMTEXT,
   `production_name` varchar(120) DEFAULT NULL,
   `gender` enum('male','female','hermaphrodite','mixed','unknown') DEFAULT 'unknown',
-  `search_terms` MEDIUMTEXT DEFAULT NULL,
-  `full_name` MEDIUMTEXT DEFAULT NULL,
+  `search_terms` MEDIUMTEXT,
+  `full_name` MEDIUMTEXT,
   PRIMARY KEY (`epigenome_id`),
   UNIQUE KEY `name_idx` (`name`),
   UNIQUE KEY `short_name_idx` (`short_name`)
@@ -1658,9 +1658,10 @@ CREATE TABLE `meta` (
 INSERT INTO meta (meta_key, meta_value, species_id) VALUES ('schema_type', 'funcgen', NULL);
 
 -- Update and remove these for each release to avoid erroneous patching
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '99');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_98_99_a.sql|schema_version');
-INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_98_99_b.sql|update datetime default value');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_version', '100');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_99_100_a.sql|schema_version');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_99_100_b.sql|rename so_name to so_term');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_99_100_c.sql|remove default values from text data type');
 
 /**
 @table meta_coord
@@ -1823,7 +1824,7 @@ CREATE TABLE `external_db` (
   `dbprimary_acc_linkable` tinyint(1) NOT NULL DEFAULT '1',
   `priority` int(11) NOT NULL,
   `db_display_name` varchar(255) DEFAULT NULL,
-  `type` enum('ARRAY','ALT_TRANS','MISC','LIT','PRIMARY_DB_SYNONYM','ENSEMBL') DEFAULT NULL,
+  `type` enum('ARRAY','ALT_TRANS','ALT_GENE','MISC','LIT','PRIMARY_DB_SYNONYM','ENSEMBL') DEFAULT NULL,
   `secondary_db_name` varchar(255) DEFAULT NULL,
   `secondary_db_table` varchar(255) DEFAULT NULL,
   `description` text,
@@ -1950,7 +1951,7 @@ CREATE TABLE `object_xref` (
   `ensembl_object_type` enum('Epigenome','Experiment','RegulatoryFeature','ExternalFeature','AnnotatedFeature','FeatureType','MirnaTargetFeature','ProbeSet','Probe','ProbeFeature','ReadFile') NOT NULL,
   `xref_id` int(10) unsigned NOT NULL,
   `linkage_annotation` varchar(255) DEFAULT NULL,
-  `analysis_id` smallint(5) unsigned NOT NULL,
+  `analysis_id` smallint(5) unsigned NULL,
   PRIMARY KEY (`object_xref_id`),
   UNIQUE KEY `xref_idx` (`xref_id`,`ensembl_object_type`,`ensembl_id`,`analysis_id`),
   KEY `analysis_idx` (`analysis_id`),
@@ -2022,24 +2023,4 @@ CREATE TABLE `underlying_structure` (
   PRIMARY KEY (`underlying_structure_id`)
 )ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
-
-/**
-@table  example_feature
-@desc   The table contains features used on the website and for the testDB
-@colour  #FFCC66
-
-@column ensembl_id                Foreign key references to the ensembl_object_type table e.g. @link probe_set
-@column ensembl_object_type       Ensembl object type e.g ProbeSet etc.
-*/
-
-/*
-DROP TABLE IF EXISTS `example_feature`;
-CREATE TABLE `example_feature` (
-    `example_feature_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
-  `ensembl_object_type` enum('Epigenome','Experiment','RegulatoryFeature','ExternalFeature','FeatureType','MirnaTargetFeature','Probe','ProbeFeature') NOT NULL,
-  `ensembl_id` int(10) unsigned NOT NULL,
-  PRIMARY KEY (`example_feature_id`),
-  UNIQUE KEY `ensembl_object_type_idx` (`ensembl_object_type`,`ensembl_id`)
-) ENGINE=MyISAM  DEFAULT CHARSET=latin1;
-*/
 

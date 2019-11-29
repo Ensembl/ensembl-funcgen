@@ -34,7 +34,7 @@ limitations under the License.
 package Bio::EnsEMBL::Funcgen::DataFile;
 
 use strict;
-
+use Bio::EnsEMBL::Utils::Exception qw( deprecate );
 use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_get_or_set
 );
@@ -45,7 +45,7 @@ with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 sub _constructor_parameters {
   return {
     dbID         => 'dbID',
-    db           => 'db',
+    adaptor      => 'adaptor',
     table_id     => 'table_id',
     table_name   => 'table_name',
     path         => 'path',
@@ -55,7 +55,17 @@ sub _constructor_parameters {
 }
 
 sub dbID         { return shift->_generic_get_or_set('dbID',         @_); }
-sub db           { return shift->_generic_get_or_set('db',           @_); }
+sub adaptor {return shift->_generic_get_or_set('adaptor', @_);}
+sub db {
+    my $self = shift;
+    deprecate(
+        ref($self) . '::db has been deprecated and will be removed in '
+            . 'release 104.'
+            . "\n"
+            . 'Please use ' . ref($self) . '::adaptor instead.'
+    );
+    return $self->adaptor();
+}
 sub table_id     { return shift->_generic_get_or_set('table_id',     @_); }
 sub table_name   { return shift->_generic_get_or_set('table_name',   @_); }
 
@@ -79,7 +89,7 @@ sub relative_ftp_site_path {
     my $self = shift;
     my $path = $self->path;
     
-    my $species = $self->db->db->species;
+    my $species = $self->adaptor->db->species;
     
     use Bio::EnsEMBL::Funcgen::Utils::GoodUtils qw( create_species_assembly_path );
     my $species_assembly_path = create_species_assembly_path($species);

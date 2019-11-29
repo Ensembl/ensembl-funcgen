@@ -5,7 +5,7 @@ use base 'Bio::EnsEMBL::Hive::Process';
 use Data::Dumper;
 use Carp;
 use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
-
+use JSON::XS qw(decode_json);
 sub run {
 
   my $self = shift;
@@ -26,7 +26,6 @@ sub run {
   my $plan_expanded = resolve_nonterminal_symbols($plan);
   lock_execution_plan($plan_expanded);
   print Dumper($plan_expanded);
-  #die;
   
   my $experiment_name   = $plan_expanded->{idr}->{name};
   my $name              = $plan_expanded->{call_peaks}->{name};
@@ -117,58 +116,64 @@ sub run {
     return;
     
   }
-  
-  my $store_peak = sub {
-    my $peak_hash = shift;
-    
-    use Hash::Util qw( lock_hash );
-    lock_hash(%$peak_hash);
-    
-    if (! exists  $peak_hash->{-seq_region}) {
-     warn("seq_region wasn't defined for this peak. Skipping.");
-     return;
-    }
-    
-    my $slice = $slice_adaptor->fetch_by_region(
-      'toplevel', 
-      $peak_hash->{-seq_region}
-    );
-    if (! defined $slice) {
-      warn("Couldn't fetch slice: " . $peak_hash->{-seq_region});
-      return
-    }
-    use Bio::EnsEMBL::Funcgen::Peak;
-    my $peak = Bio::EnsEMBL::Funcgen::Peak->new(
-      -slice             => $slice,
-      -seq_region_start  => $peak_hash->{-start},
-      -seq_region_end    => $peak_hash->{-end},
-      -seq_region_strand => $peak_hash->{-strand},
-      -summit            => $peak_hash->{-summit},
-      -score             => $peak_hash->{-score},
-      -peak_calling      => $peak_calling,
-    );
-    
-    eval {
-      $peak_adaptor->store($peak);
-    };
-    if ($@) {
-      $self->throw(
-        $@ . "\n\n"
-        . Dumper($peak_hash)
-        . Dumper($peak)
-      );
-    }
-    # See, if this fixes the rare occasion of memory leaks.
-    undef($peak);
-  };
 
-  use Bio::EnsEMBL::Funcgen::Parsers::DataDumper;
-  my $parser = Bio::EnsEMBL::Funcgen::Parsers::DataDumper->new;
+  open my $peak_in, '<' . $peaks_to_load_file || die("Couldn't open file $peaks_to_load_file for reading!");
+  while (my $line = <$peak_in>){
+      chomp $line;
+      my %peak_to_store = %{ decode_json $line };
+      store_peaks_in_db($self, $slice_adaptor, $peak_adaptor, \%peak_to_store, $peak_calling);
+  }
+  $peak_in->close;
+
+  return;
+}
+
+sub store_peaks_in_db {
+  my $self = shift;
+  my $slice_adaptor = shift;
+  my $peak_adaptor = shift;
+  my $peak_hash = shift;
+  my $peak_calling = shift;
+    
+  use Hash::Util qw( lock_hash );
+  lock_hash(%$peak_hash);
   
-  $parser->parse({
-    data_dumper_file => $peaks_to_load_file,
-    call_back        => $store_peak,
-  });
+  if (! exists  $peak_hash->{-seq_region}) {
+    warn("seq_region wasn't defined for this peak. Skipping.");
+    return;
+  }
+  
+  my $slice = $slice_adaptor->fetch_by_region(
+    'toplevel', 
+    $peak_hash->{-seq_region}
+  );
+  if (! defined $slice) {
+    warn("Couldn't fetch slice: " . $peak_hash->{-seq_region});
+    return
+  }
+  use Bio::EnsEMBL::Funcgen::Peak;
+  my $peak = Bio::EnsEMBL::Funcgen::Peak->new(
+    -slice             => $slice,
+    -seq_region_start  => $peak_hash->{-start},
+    -seq_region_end    => $peak_hash->{-end},
+    -seq_region_strand => $peak_hash->{-strand},
+    -summit            => $peak_hash->{-summit},
+    -score             => $peak_hash->{-score},
+    -peak_calling      => $peak_calling,
+  );
+  
+  eval {
+    $peak_adaptor->store($peak);
+  };
+  if ($@) {
+    $self->throw(
+      $@ . "\n\n"
+      . Dumper($peak_hash)
+      . Dumper($peak)
+    );
+  }
+  # See, if this fixes the rare occasion of memory leaks.
+  undef($peak);
   return;
 }
 

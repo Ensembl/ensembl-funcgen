@@ -95,10 +95,10 @@ sub is_complete    { return shift->_generic_get_or_set('is_complete',           
 sub source_alignment_id       { return shift->_generic_get_or_set('source_alignment_id',       @_); }
 sub deduplicated_alignment_id { return shift->_generic_get_or_set('deduplicated_alignment_id', @_); }
 
-=head2 fetch_Analysis
+=head2 get_Analysis
 
-  Example    : my $analysis = $alignment->fetch_Analysis;
-  Description: Fetches the analysis of the alignment. This is the analysis
+  Example    : my $analysis = $alignment->get_Analysis;
+  Description: Gets the analysis of the alignment. This is the analysis
                representing the aligner that was used to align the 
                reads.
   Returntype : Bio::EnsEMBL::Analysis
@@ -107,8 +107,27 @@ sub deduplicated_alignment_id { return shift->_generic_get_or_set('deduplicated_
   Status     : Stable
 
 =cut
-sub fetch_Analysis {
+
+sub get_Analysis {
   return shift->_generic_fetch('analysis', 'get_AnalysisAdaptor', 'analysis_id');
+}
+
+=head2 fetch_Analysis
+
+  Example    : my $analysis = $alignment->fetch_Analysis;
+  Description: Fetches the analysis of the alignment. This is the analysis
+               representing the aligner that was used to align the
+               reads.
+  Returntype : Bio::EnsEMBL::Analysis
+  Exceptions : None
+  Caller     : general
+  Status     : Deprecated
+
+=cut
+sub fetch_Analysis {
+  my $self = shift;
+  deprecate($self->_rename_msg);
+  return $self->get_Analysis;
 }
 
 sub set_Analysis {
@@ -130,12 +149,12 @@ sub _fetch_DataFile {
   return $data_file;
 }
 
-sub fetch_all_ReadFileExperimentalConfigurations {
+sub get_all_ReadFileExperimentalConfigurations {
 
   my $self = shift;
   my @read_file_experimental_configurations;
   
-  my $read_files  = $self->fetch_all_ReadFiles;
+  my $read_files  = $self->get_all_ReadFiles;
   foreach my $read_file (@$read_files) {
   
     my $read_file_experimental_configuration 
@@ -147,6 +166,12 @@ sub fetch_all_ReadFileExperimentalConfigurations {
   return \@read_file_experimental_configurations;
 }
 
+sub fetch_all_ReadFileExperimentalConfigurations {
+  my $self = shift;
+  deprecate($self->_rename_msg);
+  return $self->get_all_ReadFileExperimentalConfigurations;
+}
+
 sub _delete_bam_file_from_db {
 
   my $self = shift;
@@ -155,7 +180,7 @@ sub _delete_bam_file_from_db {
   $self->adaptor->update($self);
 }
 
-sub fetch_all_deduplicated_replicate_Alignments {
+sub get_all_deduplicated_replicate_Alignments {
   my $self = shift;
   
   my $alignment_adaptor = $self->adaptor;
@@ -165,7 +190,13 @@ sub fetch_all_deduplicated_replicate_Alignments {
   return $alignment_adaptor->fetch_all_deduplicated_replicates_by_Alignment($self);
 }
 
-sub fetch_source_Alignment {
+sub fetch_all_deduplicated_replicate_Alignments {
+  my $self = shift;
+  deprecate($self->_rename_msg);
+  return $self->get_all_deduplicated_replicate_Alignments;
+}
+
+sub get_source_Alignment {
 
   my $self         = shift;
   
@@ -177,7 +208,13 @@ sub fetch_source_Alignment {
   return $alignment;
 }
 
-sub fetch_Chance_by_control_Alignment {
+sub fetch_source_Alignment {
+  my $self         = shift;
+  deprecate($self->_rename_msg);
+  return $self->get_source_Alignment;
+}
+
+sub get_Chance_by_control_Alignment {
   my $self = shift;
   my $control_alignment = shift;
   
@@ -193,9 +230,15 @@ sub fetch_Chance_by_control_Alignment {
   return $chance;
 }
 
-sub fetch_Experiment {
+sub fetch_Chance_by_control_Alignment {
+  my $self = shift;
+  deprecate($self->_rename_msg);
+  return $self->get_Chance_by_control_Alignment(@_);
+}
 
-  my $self         = shift;
+sub get_Experiment {
+
+  my $self = shift;
   
   my $experiment_adaptor = $self->adaptor->db->get_ExperimentAdaptor;
   if (! defined $experiment_adaptor) {
@@ -205,7 +248,13 @@ sub fetch_Experiment {
   return $experiment;
 }
 
-sub fetch_PhantomPeak {
+sub fetch_Experiment {
+  my $self = shift;
+  deprecate($self->_rename_msg);
+  return $self->get_Experiment;
+}
+
+sub get_PhantomPeak {
   my $self = shift;
 
   my $phantom_peak_adaptor = $self->adaptor->db->get_PhantomPeakAdaptor;
@@ -215,6 +264,12 @@ sub fetch_PhantomPeak {
   my $phantom_peak = $phantom_peak_adaptor
     ->fetch_by_Alignment($self);
   return $phantom_peak;
+}
+
+sub fetch_PhantomPeak {
+  my $self = shift;
+  deprecate($self->_rename_msg);
+  return $self->get_PhantomPeak;
 }
 
 =head2 has_bam_DataFile
@@ -259,15 +314,15 @@ sub has_bigwig_DataFile {
   return defined $self->bigwig_file_id;
 }
 
-=head2 fetch_bam_DataFile
+=head2 get_bam_DataFile
 
   Example    : my $bam_DataFile = undef;
                if ($alignment->has_bam_DataFile) {
-                 $bam_DataFile = $alignment->fetch_bam_DataFile;
+                 $bam_DataFile = $alignment->get_bam_DataFile;
                } else {
                  warn "No bam file available!";
                }
-  Description: Fetches the data file object representing the bam file for 
+  Description: Gets the data file object representing the bam file for
                this alignment.
                reads.
   Returntype : Bio::EnsEMBL::Funcgen::DataFile
@@ -276,12 +331,62 @@ sub has_bigwig_DataFile {
   Status     : Stable
 
 =cut
-sub fetch_bam_DataFile {
+
+sub get_bam_DataFile {
 
   my $self        = shift;
   my $bam_file_id = $self->bam_file_id;
   
   return $self->_fetch_DataFile($bam_file_id);
+}
+
+=head2 fetch_bam_DataFile
+
+  Example    : my $bam_DataFile = undef;
+               if ($alignment->has_bam_DataFile) {
+                 $bam_DataFile = $alignment->fetch_bam_DataFile;
+               } else {
+                 warn "No bam file available!";
+               }
+  Description: Fetches the data file object representing the bam file for
+               this alignment.
+               reads.
+  Returntype : Bio::EnsEMBL::Funcgen::DataFile
+  Exceptions : None
+  Caller     : general
+  Status     : Deprecated
+
+=cut
+sub fetch_bam_DataFile {
+  my $self        = shift;
+  deprecate($self->_rename_msg);
+  return $self->get_bam_DataFile;
+}
+
+=head2 get_bigwig_DataFile
+
+  Example    : my $bigwig_DataFile = undef;
+               if ($alignment->has_bigwig_DataFile) {
+                 $bigwig_DataFile = $alignment->get_bigwig_DataFile;
+               } else {
+                 warn "No bigwig file available!";
+               }
+  Description: Gets the data file object representing the signal file in
+               bigwig format for this alignment.
+               reads.
+  Returntype : Bio::EnsEMBL::Funcgen::DataFile
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_bigwig_DataFile {
+
+  my $self           = shift;
+  my $bigwig_file_id = $self->bigwig_file_id;
+  
+  return $self->_fetch_DataFile($bigwig_file_id);
 }
 
 =head2 fetch_bigwig_DataFile
@@ -292,38 +397,37 @@ sub fetch_bam_DataFile {
                } else {
                  warn "No bigwig file available!";
                }
-  Description: Fetches the data file object representing the signal file in 
+  Description: Fetches the data file object representing the signal file in
                bigwig format for this alignment.
                reads.
   Returntype : Bio::EnsEMBL::Funcgen::DataFile
   Exceptions : None
   Caller     : general
-  Status     : Stable
+  Status     : Deprecated
 
 =cut
 sub fetch_bigwig_DataFile {
-
   my $self           = shift;
-  my $bigwig_file_id = $self->bigwig_file_id;
-  
-  return $self->_fetch_DataFile($bigwig_file_id);
+  deprecate($self->_rename_msg);
+  return $self->get_bigwig_DataFile;
 }
 
-=head2 fetch_all_ReadFiles
+=head2 get_all_ReadFiles
 
-  Example    : my $read_files = $alignment->fetch_all_ReadFiles;
+  Example    : my $read_files = $alignment->get_all_ReadFiles;
                print @$read_files ." read files were used to generate this alignment.";
                foreach my $current_readfile (@$read_files) {
                  print "  - " . $current_readfile->name . "\n";
                }
-  Description: Fetches all read file objects representing the read files that 
+  Description: Gets all read file objects representing the read files that
                were used to generate this alignment.
   Returntype : ArrayRef[Bio::EnsEMBL::Funcgen::ReadFile]
   Caller     : general
   Status     : Stable
 
 =cut
-sub fetch_all_ReadFiles {
+
+sub get_all_ReadFiles {
 
   my $self = shift;
   
@@ -341,6 +445,27 @@ sub fetch_all_ReadFiles {
     push @all_read_files, $current_read_file;
   }
   return \@all_read_files;
+}
+
+=head2 fetch_all_ReadFiles
+
+  Example    : my $read_files = $alignment->fetch_all_ReadFiles;
+               print @$read_files ." read files were used to generate this alignment.";
+               foreach my $current_readfile (@$read_files) {
+                 print "  - " . $current_readfile->name . "\n";
+               }
+  Description: Fetches all read file objects representing the read files that
+               were used to generate this alignment.
+  Returntype : ArrayRef[Bio::EnsEMBL::Funcgen::ReadFile]
+  Caller     : general
+  Status     : Deprecated
+
+=cut
+sub fetch_all_ReadFiles {
+
+  my $self = shift;
+  deprecate($self->_rename_msg);
+  return $self->get_all_ReadFiles;
 }
 
 =head2 summary_as_hash
@@ -361,8 +486,8 @@ sub summary_as_hash {
   my $suppress_link = shift;
   $suppress_link = '' if (! defined $suppress_link);
   
-  my $bam_file    = $self->fetch_bam_DataFile;
-  my $bigwig_file = $self->fetch_bigwig_DataFile;
+  my $bam_file    = $self->get_bam_DataFile;
+  my $bigwig_file = $self->get_bigwig_DataFile;
   
   my $summary = {
     name           => $self->name,
@@ -379,17 +504,26 @@ sub summary_as_hash {
     $summary->{'bigwig_file'} = $bigwig_file->summary_as_hash('alignment');
   }
   if ($suppress_link ne 'phantom_peak') {
-    my $phantom_peak = $self->fetch_PhantomPeak;
+    my $phantom_peak = $self->get_PhantomPeak;
     if (defined $phantom_peak) {
       $summary->{'phantom_peak'} = $phantom_peak->summary_as_hash('alignment');
     }
   }
   if ($suppress_link ne 'read_file') {
-    my $read_files = $self->fetch_all_ReadFiles;
+    my $read_files = $self->get_all_ReadFiles;
     $summary->{'read_files'} = [ map { $_->summary_as_hash } @$read_files ];
   }
   
   return $summary;
+}
+
+sub _rename_msg {
+  my $self     = shift;
+  my @caller   = caller(1);
+  my $sub_name = $caller[3];
+  $sub_name =~ s/fetch/get/;
+  return 'It will be removed in release 104.' . "\n" .
+      'Please use ' . $sub_name . ' instead!';
 }
 
 1;

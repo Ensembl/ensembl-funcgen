@@ -75,7 +75,7 @@ package Bio::EnsEMBL::Funcgen::PeakCalling;
 
 use strict;
 use warnings;
-
+use Bio::EnsEMBL::Utils::Exception qw( deprecate );
 use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_get_or_set
   _generic_set
@@ -88,26 +88,34 @@ with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 
 sub _constructor_parameters {
   return {
-    dbID            => 'dbID',
-    db              => 'db',
-    feature_type_id => 'feature_type_id',
-    analysis_id     => 'analysis_id',
-    name            => 'name',
-    display_label   => 'display_label',
-    experiment_id   => 'experiment_id',
-    epigenome_id    => 'epigenome_id',
-    signal_alignment_id  => 'signal_alignment_id',
-    control_alignment_id => 'control_alignment_id',
-    run_failed     => 'run_failed',
-    error_message  => 'error_message',
-    used_for_regulatory_build => 'used_for_regulatory_build',
-    
+   dbID                      => 'dbID',
+   adaptor                   => 'adaptor',
+   feature_type_id           => 'feature_type_id',
+   analysis_id               => 'analysis_id',
+   name                      => 'name',
+   display_label             => 'display_label',
+   experiment_id             => 'experiment_id',
+   epigenome_id              => 'epigenome_id',
+   signal_alignment_id       => 'signal_alignment_id',
+   control_alignment_id      => 'control_alignment_id',
+   run_failed                => 'run_failed',
+   error_message             => 'error_message',
+   used_for_regulatory_build => 'used_for_regulatory_build',
   };
 }
 
 sub dbID            { return shift->_generic_get_or_set('dbID',            @_); }
-sub db              { return shift->_generic_get_or_set('db',              @_); }
-sub adaptor         { return shift->_generic_get_or_set('db',              @_); }
+sub adaptor {return shift->_generic_get_or_set('adaptor', @_);}
+sub db {
+  my $self = shift;
+  deprecate(
+      ref($self) . '::db has been deprecated and will be removed in '
+          . 'release 104.'
+          . "\n"
+          . 'Please use ' . ref($self) . '::adaptor instead.'
+  );
+  return $self->adaptor();
+}
 
 =head2 name
 
@@ -154,10 +162,29 @@ sub display_label   { return shift->_generic_get_or_set('display_label',   @_); 
   Returntype : Bio::EnsEMBL::Funcgen::FeatureType
   Exceptions : None
   Caller     : general
+  Status     : Deprecated
+
+=cut
+
+sub fetch_FeatureType {
+  my $self= shift;
+  deprecate($self->_rename_msg);
+  return $self->get_FeatureType;
+}
+
+=head2 get_FeatureType
+
+  Example    : my $feature_type = $peak_calling->get_FeatureType;
+  Description: Fetches the feature type of the peak calling. This is the
+               type of feature the experiment was assaying for.
+  Returntype : Bio::EnsEMBL::Funcgen::FeatureType
+  Exceptions : None
+  Caller     : general
   Status     : Stable
 
 =cut
-sub fetch_FeatureType { 
+
+sub get_FeatureType {
   return shift->_generic_fetch('feature_type', 'get_FeatureTypeAdaptor', 'feature_type_id');
 }
 
@@ -166,7 +193,7 @@ sub _fetch_Alignment {
   my $self         = shift;
   my $alignment_id = shift;
   
-  my $alignment_adaptor = $self->db->db->get_AlignmentAdaptor;
+  my $alignment_adaptor = $self->adaptor->db->get_AlignmentAdaptor;
   if (! defined $alignment_adaptor) {
     throw("Couldn't get an AlignmentAdaptor!");
   }
@@ -181,10 +208,28 @@ sub _fetch_Alignment {
   Returntype : Bio::EnsEMBL::Funcgen::Alignment
   Exceptions : None
   Caller     : general
+  Status     : Deprecated
+
+=cut
+
+sub fetch_signal_Alignment {
+  my $self = shift;
+  deprecate($self->_rename_msg);
+  return $self->get_signal_Alignment;
+}
+
+=head2 get_signal_Alignment
+
+  Example    : my $alignment = $peak_calling->get_signal_Alignment;
+  Description: Gets the alignment on which the peak calling was done.
+  Returntype : Bio::EnsEMBL::Funcgen::Alignment
+  Exceptions : None
+  Caller     : general
   Status     : Stable
 
 =cut
-sub fetch_signal_Alignment {
+
+sub get_signal_Alignment {
   my $self = shift;
   my $signal_alignment_id = $self->signal_alignment_id;
   return $self->_fetch_Alignment($signal_alignment_id);
@@ -192,8 +237,14 @@ sub fetch_signal_Alignment {
 
 sub fetch_Idr {
   my $self = shift;
-  
-  my $idr_adaptor = $self->db->db->get_IdrAdaptor;
+  deprecate($self->_rename_msg);
+  return $self->get_Idr;
+}
+
+sub get_Idr {
+  my $self = shift;
+
+  my $idr_adaptor = $self->adaptor->db->get_IdrAdaptor;
   if (! defined $idr_adaptor) {
     throw("Couldn't get an IdrAdaptor!");
   }
@@ -203,19 +254,47 @@ sub fetch_Idr {
 
 sub fetch_PeakCallingStatistic {
   my $self = shift;
-  
-  my $peak_calling_statistic_adaptor = $self->db->db->get_PeakCallingStatisticAdaptor;
+  deprecate('It will be removed in release 104.' . "\n" .
+    'Please use '
+    .'Bio::EnsEMBL::Funcgen::PeakCalling::get_PeakCallingStatistic_by_statistic'
+    . ' instead!');
+  return $self->get_PeakCallingStatistic_by_statistic(@_);
+}
+
+=head2 get_PeakCallingStatistic_by_statistic
+
+  Arg [1]    : String - statistic to get, available options:
+               total_length, average_length, num_peaks
+  Example    : my $statistic = $peak_calling->get_PeakCallingStatistic_by_statistic;
+  Description: Gets requested statistic for peak calling
+  Returntype : Bio::EnsEMBL::Funcgen::Alignment
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_PeakCallingStatistic_by_statistic {
+  my ($self, $statistic) = @_;
+
+  my $peak_calling_statistic_adaptor = $self->adaptor->db->get_PeakCallingStatisticAdaptor;
   if (! defined $peak_calling_statistic_adaptor) {
     throw("Couldn't get an PeakCallingStatisticAdaptor!");
   }
-  my $peak_calling_statistic = $peak_calling_statistic_adaptor->fetch_by_peak_calling($self);
+  my $peak_calling_statistic = $peak_calling_statistic_adaptor->_fetch_by_PeakCalling_statistic($self, $statistic);
   return $peak_calling_statistic;
 }
 
 sub fetch_Frip {
   my $self = shift;
-  
-  my $frip_adaptor = $self->db->db->get_FripAdaptor;
+  deprecate($self->_rename_msg);
+  return $self->get_Frip;
+}
+
+sub get_Frip {
+  my $self = shift;
+
+  my $frip_adaptor = $self->adaptor->db->get_FripAdaptor;
   if (! defined $frip_adaptor) {
     throw("Couldn't get an IdrAdaptor!");
   }
@@ -223,13 +302,13 @@ sub fetch_Frip {
   return $frip;
 }
 
-sub fetch_Chance {
+sub get_Chance {
   my $self = shift;
 
-  my $signal_alignment  = $self->fetch_signal_Alignment;
-  my $control_alignment = $self->fetch_control_Alignment;
+  my $signal_alignment  = $self->get_signal_Alignment;
+  my $control_alignment = $self->get_control_Alignment;
 
-  my $chance_adaptor = $self->db->db->get_ChanceAdaptor;
+  my $chance_adaptor = $self->adaptor->db->get_ChanceAdaptor;
   if (! defined $chance_adaptor) {
     throw("Couldn't get an ChanceAdaptor!");
   }
@@ -241,9 +320,15 @@ sub fetch_Chance {
   return $chance;
 }
 
-=head2 fetch_Alignment
+sub fetch_Chance {
+    my $self = shift;
+    deprecate($self->_rename_msg);
+    return $self->get_Chance;
+}
 
-  Example    : my $alignment = $peak_calling->fetch_Alignment;
+=head2 fetch_control_Alignment
+
+  Example    : my $alignment = $peak_calling->fetch_control_Alignment;
   Description: Fetches the control used for peak calling. undefined, 
                if no control was used.
   Returntype : Bio::EnsEMBL::Funcgen::Alignment
@@ -252,7 +337,26 @@ sub fetch_Chance {
   Status     : Stable
 
 =cut
+
 sub fetch_control_Alignment {
+  my $self = shift;
+  deprecate($self->_rename_msg);
+  return $self->get_control_Alignment;
+}
+
+=head2 get_control_Alignment
+
+  Example    : my $alignment = $peak_calling->get_control_Alignment;
+  Description: Gets the control used for peak calling. Undefined,
+               if no control was used.
+  Returntype : Bio::EnsEMBL::Funcgen::Alignment
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_control_Alignment {
   my $self = shift;
   my $control_alignment_id = $self->control_alignment_id;
   return $self->_fetch_Alignment($control_alignment_id);
@@ -267,11 +371,46 @@ sub fetch_control_Alignment {
   Returntype : Bio::EnsEMBL::Analysis
   Exceptions : None
   Caller     : general
+  Status     : Deprecated
+
+=cut
+
+sub fetch_Analysis {
+  my $self = shift;
+  deprecate($self->_rename_msg);
+  return $self->get_Analysis;
+}
+
+=head2 get_Analysis
+
+  Example    : my $analysis = $peak_calling->get_Analysis;
+  Description: Gets the analysis of the peak calling. This is the analysis
+               representing the peak caller that was used to analyse the
+               alignment.
+  Returntype : Bio::EnsEMBL::Analysis
+  Exceptions : None
+  Caller     : general
   Status     : Stable
 
 =cut
-sub fetch_Analysis {
+sub get_Analysis {
   return shift->_generic_fetch('analysis', 'get_AnalysisAdaptor', 'analysis_id');
+}
+
+=head2 get_Epigenome
+
+  Example    : my $epigenome = $peak_calling->get_Epigenome;
+  Description: Gets the epigenome that was used in the assay.
+  Returntype : Bio::EnsEMBL::Funcgen::Epigenome
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_Epigenome {
+    my $self = shift;
+    return $self->_generic_fetch('epigenome', 'get_EpigenomeAdaptor', 'epigenome_id');
 }
 
 =head2 fetch_Epigenome
@@ -281,21 +420,39 @@ sub fetch_Analysis {
   Returntype : Bio::EnsEMBL::Funcgen::Epigenome
   Exceptions : None
   Caller     : general
-  Status     : Stable
+  Status     : Deprecated
 
 =cut
 sub fetch_Epigenome {
     my $self = shift;
-    return $self->_generic_fetch('epigenome', 'get_EpigenomeAdaptor', 'epigenome_id');
+    deprecate($self->_rename_msg);
+    return $self->get_Epigenome;
 }
 
 sub fetch_Experiment {
+  my $self = shift;
+  deprecate($self->_rename_msg);
+  return $self->get_Experiment;
+}
+
+=head2 get_Experiment
+
+  Example    : my $experiment = $peak_calling->get_Experiment;
+  Description: Gets the experiment of the assay.
+  Returntype : Bio::EnsEMBL::Funcgen::Experiment
+  Exceptions : None
+  Caller     : general
+  Status     : Stable
+
+=cut
+
+sub get_Experiment {
   return shift->_generic_fetch('experiment', 'get_ExperimentAdaptor', 'experiment_id');
 }
 
 sub num_peaks {
   my $self = shift;
-  return $self->db->count_peaks_by_PeakCalling($self);
+  return $self->adaptor->count_peaks_by_PeakCalling($self);
 }
 
 =head2 fetch_source_label
@@ -306,26 +463,45 @@ sub num_peaks {
   Returntype : String
   Exceptions : None
   Caller     : general
+  Status     : Deprecated
+
+=cut
+
+sub fetch_source_label {
+    my $self = shift;
+    deprecate($self->_rename_msg);
+    return $self->get_source_label;
+}
+
+=head2 get_source_label
+
+  Example    : my $source_label = $peak_calling->get_source_label;
+  Description: Gets the name of the experimental group of the experiment
+               that led to this peak calling.
+  Returntype : String
+  Exceptions : None
+  Caller     : general
   Status     : Stable
 
 =cut
-sub fetch_source_label {
-    my $self = shift;
-    my $db = $self->db;
-    my $experiment_id = $self->experiment_id;
-    my $source_label  = $db->sql_helper->execute_single_result(
+
+sub get_source_label {
+  my $self = shift;
+  my $adaptor = $self->adaptor;
+  my $experiment_id = $self->experiment_id;
+  my $source_label  = $adaptor->sql_helper->execute_single_result(
       -SQL    => '
-        select 
-          experimental_group.name 
-        from 
+        select
+          experimental_group.name
+        from
           experiment
-          left join experimental_group using (experimental_group_id) 
+          left join experimental_group using (experimental_group_id)
         where
             experiment_id = ?
       ',
       -PARAMS => [ $experiment_id ],
-    );
-    return $source_label;
+  );
+  return $source_label;
 }
 
 =head2 summary_as_hash
@@ -340,14 +516,14 @@ sub fetch_source_label {
 sub summary_as_hash {
   my $self   = shift;
   
-  my $signal_alignment  = $self->fetch_signal_Alignment;
-  my $epigenome         = $self->fetch_Epigenome;
-  my $feature_type      = $self->fetch_FeatureType;
-  my $analysis          = $self->fetch_Analysis;
-  my $idr               = $self->fetch_Idr;
+  my $signal_alignment  = $self->get_signal_Alignment;
+  my $epigenome         = $self->get_Epigenome;
+  my $feature_type      = $self->get_FeatureType;
+  my $analysis          = $self->get_Analysis;
+  my $idr               = $self->get_Idr;
   
   my $control_summary;
-  my $control_alignment = $self->fetch_control_Alignment;
+  my $control_alignment = $self->get_control_Alignment;
   if (defined $control_alignment) {
     $control_summary = $control_alignment ->summary_as_hash;
   } else {
@@ -365,11 +541,20 @@ sub summary_as_hash {
     peak_caller       => $analysis->display_label
   };
   
-  my $chance = $self->fetch_Chance;
+  my $chance = $self->get_Chance;
   if ($chance) {
     $summary->{chance} = $chance->summary_as_hash
   }
   return $summary;
+}
+
+sub _rename_msg {
+  my $self     = shift;
+  my @caller   = caller(1);
+  my $sub_name = $caller[3];
+  $sub_name =~ s/fetch/get/;
+  return 'It will be removed in release 104.' . "\n" .
+      'Please use ' . $sub_name . ' instead!';
 }
 
 1;

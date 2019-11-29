@@ -5,6 +5,7 @@ use base 'Bio::EnsEMBL::Hive::Process';
 use Data::Dumper;
 use Carp;
 use Bio::EnsEMBL::Funcgen::PeakCallingPlan::Constants qw ( :all );
+use JSON::XS qw(encode_json);
 
 use constant {
   BRANCH_STORE_PEAKS => 2,
@@ -91,7 +92,7 @@ sub run {
   use File::Path qw( make_path );
   make_path( $out_dir );
 
-  my $peaks_to_load_file = $out_dir . "/${name}.peaks_to_load.pl";
+  my $peaks_to_load_file = $out_dir . "/${name}.peaks_to_load.json";
   my $peaks_file         = $out_dir . "/${name}.output.txt";
   my $out_file_prefix    = $name;
 
@@ -136,7 +137,7 @@ sub run {
   
   my $store_Peak = sub {
     my ( $self, undef, undef, $feature_hash ) = @_;
-    $peak_out->print(Dumper($feature_hash));
+    $peak_out->print(encode_json($feature_hash)."\n");
     return;
   };
 

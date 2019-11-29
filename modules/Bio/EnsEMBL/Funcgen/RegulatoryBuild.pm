@@ -66,7 +66,7 @@ package Bio::EnsEMBL::Funcgen::RegulatoryBuild;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Utils::Exception qw( throw );
+use Bio::EnsEMBL::Utils::Exception qw( throw deprecate );
 
 use Role::Tiny::With;
 with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
@@ -111,8 +111,16 @@ sub analysis_id                  { return shift->_generic_get_or_set('analysis_i
 sub is_current                   { return shift->_generic_get_or_set('is_current',                @_); }
 sub sample_regulatory_feature_id { return shift->_generic_get_or_set('sample_regulatory_feature_id',    @_); }
 
-sub fetch_FeatureType { 
+sub get_FeatureType {
   return shift->_generic_fetch('feature_type', 'get_FeatureTypeAdaptor', 'feature_type_id');
+}
+
+sub fetch_FeatureType {
+  my $self = shift;
+  my $msg = 'It will be removed in release 104.' . "\n" . 'Please use '
+      . 'Bio::EnsEMBL::Funcgen::RegulatoryBuild::get_FeatureType instead.';
+  deprecate($msg);
+  return $self->get_FeatureType;
 }
 
 sub set_FeatureType {
@@ -124,8 +132,16 @@ sub set_FeatureType {
   return $self->_generic_set('feature_type', 'Bio::EnsEMBL::Funcgen::FeatureType', $obj);
 }
 
-sub fetch_Analysis {
+sub get_Analysis {
   return shift->_generic_fetch('analysis', 'get_AnalysisAdaptor', 'analysis_id');
+}
+
+sub fetch_Analysis {
+  my $self = shift;
+  my $msg = 'It will be removed in release 104.' . "\n" . 'Please use '
+          . 'Bio::EnsEMBL::Funcgen::RegulatoryBuild::get_Analysis instead.';
+  deprecate($msg);
+  return $self->get_Analysis;
 }
 
 sub set_Analysis {
@@ -179,9 +195,9 @@ sub _get_all_epigenome_ids {
   return \@epigenome_id
 }
 
-=head2 fetch_sample_regulatory_feature
+=head2 get_sample_regulatory_feature
 
-  Example    : print "Stable id of sample regulatory feature: " . $regulatory_build->fetch_sample_RegulatoryFeature->stable_id . "\n";
+  Example    : print "Stable id of sample regulatory feature: " . $regulatory_build->get_sample_RegulatoryFeature->stable_id . "\n";
   Description: Gets all epigenomes used in this regulatory build.
   Returntype : ArrayRef[Bio::EnsEMBL::Funcgen::Epigenome]
   Exceptions : None
@@ -190,7 +206,7 @@ sub _get_all_epigenome_ids {
 
 =cut
 
-sub fetch_sample_RegulatoryFeature {
+sub get_sample_RegulatoryFeature {
   my $self = shift;
   
   my $sample_regulatory_feature_id = $self->sample_regulatory_feature_id;
@@ -199,6 +215,25 @@ sub fetch_sample_RegulatoryFeature {
   my $regulatory_feature_adaptor = $self->adaptor->db->get_RegulatoryFeatureAdaptor;
   my $sample_regulatory_feature = $regulatory_feature_adaptor->fetch_by_dbID($sample_regulatory_feature_id);
   return $sample_regulatory_feature
+}
+
+=head2 fetch_sample_regulatory_feature
+
+  Example    : print "Stable id of sample regulatory feature: " . $regulatory_build->fetch_sample_RegulatoryFeature->stable_id . "\n";
+  Description: Gets all epigenomes used in this regulatory build.
+  Returntype : ArrayRef[Bio::EnsEMBL::Funcgen::Epigenome]
+  Exceptions : None
+  Caller     : General
+  Status     : Deprecated
+
+=cut
+
+sub fetch_sample_RegulatoryFeature {
+  my $self = shift;
+  my $msg = 'It will be removed in release 104.' . "\n" . 'Please use '
+      . ref($self) . '::get_sample_RegulatoryFeature instead.';
+  deprecate($msg);
+  return $self->get_sample_RegulatoryFeature;
 }
 
 1;

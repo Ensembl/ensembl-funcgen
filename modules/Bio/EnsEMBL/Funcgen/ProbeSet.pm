@@ -97,7 +97,7 @@ package Bio::EnsEMBL::Funcgen::ProbeSet;
 use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Argument  qw( rearrange ) ;
-use Bio::EnsEMBL::Utils::Exception qw( throw warning );
+use Bio::EnsEMBL::Utils::Exception qw( throw warning deprecate );
 
 use base qw( Bio::EnsEMBL::Funcgen::Storable );
 
@@ -261,9 +261,17 @@ sub size {
   return $self->{'size'};
 }
 
-sub fetch_all_ProbeSetTranscriptMappings {
+sub get_all_ProbeSetTranscriptMappings {
   my $self = shift;
   return $self->adaptor->db->get_ProbeSetTranscriptMappingAdaptor->fetch_all_by_probe_set_id($self->dbID);
+}
+
+sub fetch_all_ProbeSetTranscriptMappings {
+  my $self = shift;
+  my $msg = 'It will be removed in release 104.' . "\n" . 'Please use '
+      . ref($self) . '::get_all_ProbeSetTranscriptMappings instead.';
+  deprecate($msg);
+  return $self->get_all_ProbeSetTranscriptMappings;
 }
 
 1;

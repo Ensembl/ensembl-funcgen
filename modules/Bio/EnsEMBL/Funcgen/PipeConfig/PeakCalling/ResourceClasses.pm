@@ -88,6 +88,14 @@ sub resource_classes {
             'LSF'         => [ qq($lsf_queue_option -M8000  -R"select[mem>8000]  rusage[mem=8000]") ],
             'DockerSwarm' => [ $self->_swarm_resource(1, 8 -1) ],
         },
+        '8Gb_job_2h'     => {
+            'LSF'         => qq($lsf_queue_option -M8000 -R"select[mem>8000] rusage[mem=8000]" -W 2:00),
+            'DockerSwarm' => [ $self->_swarm_resource(1, 8 -1) ],
+        },
+        '8Gb_job_8h'     => {
+            'LSF'         => qq($lsf_queue_option -M8000 -R"select[mem>8000] rusage[mem=8000]" -W 8:00),
+            'DockerSwarm' => [ $self->_swarm_resource(1, 8 -1) ],
+        },
         '16Gb_job'        => {
             'LSF'         => [ qq($lsf_queue_option -M16000 -R"select[mem>16000] rusage[mem=16000]") ],
             'DockerSwarm' => [ $self->_swarm_resource(1, 16 -1) ],

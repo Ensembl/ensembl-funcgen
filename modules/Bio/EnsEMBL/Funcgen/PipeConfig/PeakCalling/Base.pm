@@ -5,6 +5,7 @@ use warnings;
 use base 'Bio::EnsEMBL::Funcgen::PipeConfig::PeakCalling::ResourceClasses';
 use Bio::EnsEMBL::Hive::PipeConfig::HiveGeneric_conf;
 
+
 sub beekeeper_extra_cmdline_options {
   my $self = shift;
   return '-reg_conf ' . $self->o('reg_conf') . ' -keep_alive -can_respecialize 1 -sleep 0.5';
@@ -78,7 +79,7 @@ sub generate_parallel_alignment_analyses {
         {   -logic_name  => $surround->('split_fastq_files'),
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::SplitFastq',
             -rc_name    => '4Gb_job',
-            -analysis_capacity => 30,
+            -batch_size => 3,
             -parameters => {
               tempdir => '#tempdir_peak_calling#/#species#/alignments'
             },
@@ -90,7 +91,8 @@ sub generate_parallel_alignment_analyses {
         {   -logic_name  => $surround->('align_quick'),
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::AlignFastqFile',
             -priority   => 10,
-            -rc_name    => '32Gb_job_2h',
+            -batch_size => 10,
+            -rc_name    => '8Gb_job_2h',
             -flow_into  => {
               RUNLIMIT => $surround->('align_slow'),
             }
@@ -98,7 +100,7 @@ sub generate_parallel_alignment_analyses {
         {   -logic_name  => $surround->('align_slow'),
             -module     => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::AlignFastqFile',
             -priority   => 10,
-            -rc_name    => '32Gb_job_8h',
+            -rc_name    => '8Gb_job_8h',
         },
         {   -logic_name  => $surround->('merge_chunks'),
             -module      => 'Bio::EnsEMBL::Funcgen::RunnableDB::PeakCalling::MergeBamFiles',

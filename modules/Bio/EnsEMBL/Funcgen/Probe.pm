@@ -594,10 +594,10 @@ sub description {
 }
 
 
-=head2 fetch_all_ProbeTranscriptMappings
+=head2 get_all_ProbeTranscriptMappings
 
   Arg[0]     : none
-  Example    : $probe->fetch_all_mapped_Transcripts;
+  Example    : $probe->get_all_mapped_Transcripts;
   Description: Returns all mappings of this probe to transcripts.
   Returntype : Listref of Bio::EnsEMBL::Funcgen::ProbeTranscriptMapping objects
   Exceptions : none
@@ -606,9 +606,29 @@ sub description {
 
 =cut
 
-sub fetch_all_ProbeTranscriptMappings {
+sub get_all_ProbeTranscriptMappings {
   my $self = shift;
   return $self->adaptor->db->get_ProbeTranscriptMappingAdaptor->fetch_all_by_probe_id($self->dbID);
+}
+
+=head2 fetch_all_ProbeTranscriptMappings
+
+  Arg[0]     : none
+  Example    : $probe->fetch_all_mapped_Transcripts;
+  Description: Returns all mappings of this probe to transcripts.
+  Returntype : Listref of Bio::EnsEMBL::Funcgen::ProbeTranscriptMapping objects
+  Exceptions : none
+  Caller     : general
+  Status     : Deprecated
+
+=cut
+
+sub fetch_all_ProbeTranscriptMappings {
+    my $self = shift;
+    my $msg = 'It will be removed in release 104.' . "\n" . 'Please use '
+        . ref($self) . '::get_all_ProbeTranscriptMappings instead.';
+    deprecate($msg);
+    return $self->get_all_ProbeTranscriptMappings;
 }
 
 1;

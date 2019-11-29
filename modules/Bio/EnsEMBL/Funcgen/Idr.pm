@@ -51,7 +51,7 @@ use constant {
   NO_IDR                       => 'no_idr',
 
   };
-
+use Bio::EnsEMBL::Utils::Exception qw( deprecate );
 use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_get_or_set
   _generic_fetch
@@ -63,7 +63,7 @@ with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 sub _constructor_parameters {
   return {
     dbID           => 'dbID',
-    db             => 'db',
+    adaptor        => 'adaptor',
     experiment_id => 'experiment_id',
     max_peaks     => 'max_peaks',
     type          => 'type',
@@ -72,15 +72,32 @@ sub _constructor_parameters {
 }
 
 sub dbID          { return shift->_generic_get_or_set('dbID',          @_); }
-sub db            { return shift->_generic_get_or_set('db',            @_); }
-sub adaptor       { return shift->_generic_get_or_set('db',            @_); }
+sub adaptor {return shift->_generic_get_or_set('adaptor', @_);}
+sub db {
+  my $self = shift;
+  deprecate(
+      ref($self) . '::db has been deprecated and will be removed in '
+          . 'release 104.'
+          . "\n"
+          . 'Please use ' . ref($self) . '::adaptor instead.'
+  );
+  return $self->adaptor();
+}
 sub experiment_id { return shift->_generic_get_or_set('experiment_id', @_); }
 sub max_peaks     { return shift->_generic_get_or_set('max_peaks',     @_); }
 sub type          { return shift->_generic_get_or_set('type',          @_); }
 sub failed_idr_pairs { return shift->_generic_get_or_set('failed_idr_pairs', @_); }
 
-sub fetch_Experiment {
+sub get_Experiment {
   return shift->_generic_fetch('experiment', 'get_ExperimentAdaptor', 'experiment_id');
+}
+
+sub fetch_Experiment {
+  my $self = shift;
+  my $msg = 'It will be removed in release 104.' . "\n" . 'Please use '
+      . ref($self) . '::get_Experiment instead.';
+  deprecate($msg);
+  return $self->get_Experiment;
 }
 
 =head2 summary_as_hash

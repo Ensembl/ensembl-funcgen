@@ -49,17 +49,24 @@ sub _tables {
 sub fetch_by_statistic {
   my $self      = shift;
   my $statistic = shift;
-  
+
+  my $error_result = Bio::EnsEMBL::Funcgen::RegulatoryBuildStatistic->new(
+        statistic => $statistic,
+        value     => -1,
+  );
   my $result = $self->_generic_fetch_by_statistic($statistic);
   
   if (! defined $result->[0]) {
-    throw("Statistic $statistic does not exist!");
+    warning("Statistic $statistic does not exist!");
+    $result->[0] = $error_result;
   }
   if (! defined $result->[0]->value) {
-    throw("Statistic is not defined!");
+    warning("Statistic is not defined!");
+    $result->[0] = $error_result;
   }
   if (@$result > 1) {
-    throw("Statistic $statistic is not unique!");
+    warning("Statistic $statistic is not unique!");
+    $result->[0] = $error_result;
   }
   return $result->[0];
 }

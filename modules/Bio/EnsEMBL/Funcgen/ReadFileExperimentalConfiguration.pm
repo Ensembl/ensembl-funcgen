@@ -35,7 +35,7 @@ package Bio::EnsEMBL::Funcgen::ReadFileExperimentalConfiguration;
 
 use strict;
 use warnings;
-
+use Bio::EnsEMBL::Utils::Exception qw( deprecate );
 use Bio::EnsEMBL::Funcgen::GenericGetSetFunctionality qw(
   _generic_get_or_set
   _generic_get
@@ -49,7 +49,7 @@ with 'Bio::EnsEMBL::Funcgen::GenericConstructor';
 sub _constructor_parameters {
   return {
     dbID           => 'dbID',
-    db              => 'db',
+    adaptor        => 'adaptor',
 
     technical_replicate  => 'technical_replicate',
     biological_replicate => 'biological_replicate',
@@ -62,8 +62,17 @@ sub _constructor_parameters {
 }
 
 sub dbID                 { return shift->_generic_get_or_set('dbID',                 @_); }
-sub db                   { return shift->_generic_get_or_set('db',                   @_); }
-sub adaptor              { return shift->_generic_get_or_set('db',                   @_); }
+sub adaptor {return shift->_generic_get_or_set('adaptor', @_);}
+sub db {
+  my $self = shift;
+  deprecate(
+      ref($self) . '::db has been deprecated and will be removed in '
+          . 'release 104.'
+          . "\n"
+          . 'Please use ' . ref($self) . '::adaptor instead.'
+  );
+  return $self->adaptor();
+}
 
 =head2 biological_replicate
 

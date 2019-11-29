@@ -8,6 +8,68 @@ When a method is deprecated, a deprecation warning is thrown whenever the method
 The warning also contains instructions on replacing the deprecated method and when it will be removed.
 A year after deprecation (4 Ensembl releases), the method is removed from the API.
 
+### To be removed in EnsEMBL Release 104 ###
+ - Bio::EnsEMBL::Funcgen::**FeatureType**::*so_name()*
+ - Bio::EnsEMBL::Funcgen::**PeakCalling**::*fetch_Analysis()*
+ - Bio::EnsEMBL::Funcgen::**PeakCalling**::*fetch_Chance()*
+ - Bio::EnsEMBL::Funcgen::**PeakCalling**::*fetch_control_Alignment()*
+ - Bio::EnsEMBL::Funcgen::**PeakCalling**::*fetch_Epigenome()*
+ - Bio::EnsEMBL::Funcgen::**PeakCalling**::*fetch_Experiment()*
+ - Bio::EnsEMBL::Funcgen::**PeakCalling**::*fetch_FeatureType()*
+ - Bio::EnsEMBL::Funcgen::**PeakCalling**::*fetch_Frip()*
+ - Bio::EnsEMBL::Funcgen::**PeakCalling**::*fetch_Idr()*
+ - Bio::EnsEMBL::Funcgen::**PeakCalling**::*fetch_PeakCallingStatistic()*
+ - Bio::EnsEMBL::Funcgen::**PeakCalling**::*fetch_signal_Alignment()*
+ - Bio::EnsEMBL::Funcgen::**PeakCalling**::*fetch_source_label()*
+ - Bio::EnsEMBL::Funcgen::**Alignment**::*fetch_all_deduplicated_replicate_Alignments()*
+ - Bio::EnsEMBL::Funcgen::**Alignment**::*fetch_all_ReadFileExperimentalConfigurations()*
+ - Bio::EnsEMBL::Funcgen::**Alignment**::*fetch_all_ReadFiles()*
+ - Bio::EnsEMBL::Funcgen::**Alignment**::*fetch_Analysis()*
+ - Bio::EnsEMBL::Funcgen::**Alignment**::*fetch_bam_DataFile()*
+ - Bio::EnsEMBL::Funcgen::**Alignment**::*fetch_bigwig_DataFile()*
+ - Bio::EnsEMBL::Funcgen::**Alignment**::*fetch_Chance_by_control_Alignment()*
+ - Bio::EnsEMBL::Funcgen::**Alignment**::*fetch_Experiment()*
+ - Bio::EnsEMBL::Funcgen::**Alignment**::*fetch_PhantomPeak()*
+ - Bio::EnsEMBL::Funcgen::**Alignment**::*fetch_source_Alignment()*
+ - Bio::EnsEMBL::Funcgen::**RegulatoryBuild**:*fetch_Analysis()*
+ - Bio::EnsEMBL::Funcgen::**RegulatoryBuild**:*fetch_FeatureType()*
+ - Bio::EnsEMBL::Funcgen::**RegulatoryBuild**:*fetch_sample_RegulatoryFeature()*
+ - Bio::EnsEMBL::Funcgen::**SegmentationStateEmission**:*fetch_segmentation_state_assignment()*
+ - Bio::EnsEMBL::Funcgen::**Frip**:*fetch_PeakCalling()*
+ - Bio::EnsEMBL::Funcgen::**Idr**:*fetch_Experiment()*
+ - Bio::EnsEMBL::Funcgen::**ProbeTranscriptMapping**:*fetch_Probe()*
+ - Bio::EnsEMBL::Funcgen::**ProbeSetTranscriptMapping**:*fetch_ProbeSet()*
+ - Bio::EnsEMBL::Funcgen::**ProbeFeatureTranscriptMapping**:*fetch_ProbeFeature()*
+ - Bio::EnsEMBL::Funcgen::**PeakCallingStatistic**:*fetch_PeakCalling()*
+ - Bio::EnsEMBL::Funcgen::**PhantomPeak**:*fetch_Alignment()*
+ - Bio::EnsEMBL::Funcgen::**PhantomPeak**:*fetch_Idr()*
+ - Bio::EnsEMBL::Funcgen::**ReadFile**::*fetch_FastQC()*
+ - Bio::EnsEMBL::Funcgen::**ReadFile**::*fetch_mate_ReadFile()*
+ - Bio::EnsEMBL::Funcgen::**ReadFile**::*fetch_ReadFileExperimentalConfiguration()*
+ - Bio::EnsEMBL::Funcgen::**Probe**::*fetch_all_ProbeTranscriptMappings()*
+ - Bio::EnsEMBL::Funcgen::**ProbeSet**:*fetch_all_ProbeSetTranscriptMappings()*
+ - Bio::EnsEMBL::Funcgen::**Chance**::*db()*
+ - Bio::EnsEMBL::Funcgen::**DataFile**::*db()*
+ - Bio::EnsEMBL::Funcgen::**ExampleFeature**::*db()*
+ - Bio::EnsEMBL::Funcgen::**ExecutionPlan**::*db()*
+ - Bio::EnsEMBL::Funcgen::**FastQC**::*db()*
+ - Bio::EnsEMBL::Funcgen::**Frip**::*db()*
+ - Bio::EnsEMBL::Funcgen::**Idr**::*db()*
+ - Bio::EnsEMBL::Funcgen::**Peak**::*db()*
+ - Bio::EnsEMBL::Funcgen::**PeakCalling**::*db()*
+ - Bio::EnsEMBL::Funcgen::**PeakCallingStatistic**::*db()*
+ - Bio::EnsEMBL::Funcgen::**PhantomPeak**::*db()*
+ - Bio::EnsEMBL::Funcgen::**ProbeMapping**::*db()*
+ - Bio::EnsEMBL::Funcgen::**ProbeMappingStatistic**::*db()*
+ - Bio::EnsEMBL::Funcgen::**ReadFile**::*db()*
+ - Bio::EnsEMBL::Funcgen::**ReadFileExperimentalConfiguration**::*db()*
+ - Bio::EnsEMBL::Funcgen::**RegulatoryActivity**::*db()*
+ - Bio::EnsEMBL::Funcgen::**RegulatoryBuildStatistic**::*db()*
+ - Bio::EnsEMBL::Funcgen::**Segmentation**::*db()*
+ - Bio::EnsEMBL::Funcgen::**SegmentationStateAssignment**::*db()*
+ - Bio::EnsEMBL::Funcgen::**SegmentationStateEmission**::*db()*
+ - Bio::EnsEMBL::Funcgen::**SegmentationStateStatistic**::*db()*
+
 ### To be removed in EnsEMBL Release 101 ###
 
  - Bio::EnsEMBL::Funcgen::**BindingMatrixFrequencies**::*binding_matrix*
