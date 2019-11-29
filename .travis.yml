@@ -1,22 +1,24 @@
 language: perl
 
 perl:
-  - '5.14'
   - '5.26'
 
 env:
   matrix:
-  - COVERALLS=true  DB=mysql
-  - COVERALLS=false DB=mysql
+    - COVERALLS=true  DB=mysql
+    - COVERALLS=false DB=mysql
   global:
     secure: LliYZDvkIWwQndhXWK8LJ0xHOLVdEnRGo5fWe0ExGlqvBb41mUsmLv0BsZTZfIon+GLO5MGYJSFuJJd+XIkNuwil5zzdvmmeyiuW5lG9tlUXy2w2V+6yj83Tr7w/zRedOK/EnbY/DytrG0LttyKWqkWLwUpdm5PTRIKvTG/KJqw=
-    
+
 sudo: false
 
 addons:
   apt:
     packages:
-    - unzip
+      - unzip
+
+services:
+  - mysql
 
 before_install:
   - git clone --branch master --depth 1 https://github.com/Ensembl/ensembl-test.git
@@ -38,15 +40,13 @@ script: "./travisci/harness.sh"
 
 jobs:
   include:
-  - stage: trigger_dependent_builds
-    script: "./travisci/trigger-dependent-build.sh"
+    - stage: trigger_dependent_builds
+      script: "./travisci/trigger-dependent-build.sh"
 
 matrix:
   exclude:
-  - perl: '5.14'
-    env: COVERALLS=true  DB=mysql
-  - perl: '5.26'
-    env: COVERALLS=false DB=mysql
+    - perl: '5.26'
+      env: COVERALLS=false DB=mysql
 
 notifications:
   email:
