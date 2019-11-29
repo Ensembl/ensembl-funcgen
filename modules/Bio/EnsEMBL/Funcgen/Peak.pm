@@ -330,10 +330,28 @@ sub seq_region_name {
   return $slice->seq_region_name;
 }
 
+=head2 feature_so_acc
+
+  Example       : print $peak->feature_so_acc;
+  Description   : Returns the sequence ontology accession for this type of peak
+  Returntype    : String
+  Status        : At risk
+
+=cut
+
 sub feature_so_acc {
   my $self = shift;
   return $self->get_PeakCalling->fetch_FeatureType->so_accession;
 }
+
+=head2 feature_so_term
+
+  Example       : print $peak->feature_so_term;
+  Description   : Returns the sequence ontology term for this type of peak
+  Returntype    : String
+  Status        : At risk
+
+=cut
 
 sub feature_so_term {
   my $self = shift;
