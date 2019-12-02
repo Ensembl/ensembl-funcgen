@@ -64,7 +64,7 @@ use Bio::EnsEMBL::Utils::Exception         qw( throw );
 use Bio::EnsEMBL::Funcgen::Utils::EFGUtils qw( median );
 
 use base qw( Bio::EnsEMBL::Feature Bio::EnsEMBL::Funcgen::Storable );
-
+use constant SEQUENCE_ONTOLOGY => {'acc' => 'SO:0000001', 'term'=>'region'};
 
 =head2 new
 
