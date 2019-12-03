@@ -1662,7 +1662,8 @@ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'schema_versio
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_99_100_a.sql|schema_version');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_99_100_b.sql|rename so_name to so_term');
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_99_100_c.sql|remove default values from text data type');
-
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_99_100_d.sql|update type column on external_db table');
+INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_99_100_e.sql|Make some foreign keys not mandatory');
 /**
 @table meta_coord
 @desc Describes which co-ordinate systems the different feature tables use.
