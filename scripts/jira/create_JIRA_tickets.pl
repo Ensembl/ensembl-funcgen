@@ -272,9 +272,6 @@ sub validate_user_name {
     }
 }
 
-# sub check_dates {
-# }
-
 =head2 parse_tickets_file
 
   Arg[1]      : Hashref $parameters - parameters from command line and config
@@ -331,7 +328,7 @@ sub parse_tickets_file {
             'reporter'    => { 'name' => $reporter },
             'assignee'    => { 'name' => $assignee },
             'priority'    => { 'name' => $priority },
-            'labels'      => [ $label ],
+            'labels'      => [ 'auto', $label ],
             'duedate'     => $due_date,
             'components'  => \@components,
             'description' => $description,
