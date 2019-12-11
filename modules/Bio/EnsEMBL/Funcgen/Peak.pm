@@ -157,25 +157,6 @@ sub slice {
   return $self->_generic_get_or_set('slice', $slice);
 }
 
-=head2 fetch_PeakCalling
-
-  Example    : 
-  Description: Fetches the peak calling object representing the peak 
-               calling that generated this peak.
-  Returntype : Bio::EnsEMBL::Funcgen::PeakCalling
-  Exceptions : None
-  Caller     : general
-  Status     : Deprecated
-
-=cut
-
-sub fetch_PeakCalling {
-  my $deprecation_message = 'It will be removed in release 100. Please use '
-      . 'Bio::EnsEMBL::Funcgen::Peak::get_PeakCalling instead.';
-  deprecate($deprecation_message);
-  return shift->_generic_fetch('peak_calling', 'get_PeakCallingAdaptor', 'peak_calling_id');
-}
-
 =head2 get_PeakCalling
 
   Example    :
@@ -265,43 +246,6 @@ sub display_id {
         "_Enriched_Site";
     }
     return $self->{'display_id'};
-}
-
-=head2 get_underlying_structure
-
-  Example    : my @loci = @{ $af->get_underlying_structure() };
-  Description: Returns and array of loci consisting of:
-                  (start, (motif_feature_start, motif_feature_end)*, end)
-  Returntype : ARRAYREF
-  Exceptions : None
-  Caller     : General
-  Status     : Deprecated
-
-=cut
-
-sub get_underlying_structure{
-  my $deprecation_message = 'It will be removed in release 100';
-  deprecate($deprecation_message);
-  return [];
-}
-
-=head2 fetch_all_MotifFeatures
-
-  Example    : my $overlapping_motif_features = $peak->fetch_all_MotifFeatures
-  Description: Returns all MotifFeatures that overlap with a Peak
-  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::MotifFeature objects
-  Exceptions : none
-  Caller     : General
-  Status     : Deprecated
-
-=cut
-
-sub fetch_all_MotifFeatures {
-    my $self = shift;
-    my $deprecation_message = 'It will be removed in release 100. Please use '
-        . 'Bio::EnsEMBL::Funcgen::Peak::get_all_MotifFeatures instead.';
-    deprecate($deprecation_message);
-    return $self->get_all_MotifFeatures();
 }
 
 =head2 get_all_MotifFeatures

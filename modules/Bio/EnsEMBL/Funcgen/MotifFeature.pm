@@ -195,32 +195,6 @@ sub get_BindingMatrix { return shift->{binding_matrix}; }
 
 sub score { return shift->{score}; }
 
-=head2 fetch_all_overlapping_Peaks
-
-  Example    : my $peaks = $motif_feature->fetch_all_overlapping_Peaks;
-  Description: Fetches all overlapping Peaks
-  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::Peak objects
-  Exceptions : None
-  Caller     : Internal
-  Status     : Deprecated
-
-=cut
-
-sub fetch_all_overlapping_Peaks {
-    my $self = shift;
-
-    my $deprecation_message =
-        'Bio::EnsEMBL::Funcgen::MotifFeature::fetch_all_overlapping_Peaks'
-            . ' has been deprecated and will be removed in EnsEMBL release 100.'
-            . ' Please use '
-            . 'Bio::EnsEMBL::Funcgen::MotifFeature::get_all_overlapping_Peaks'
-            . ' instead.';
-
-    deprecate($deprecation_message);
-
-    return $self->get_all_overlapping_Peaks;
-}
-
 =head2 get_all_overlapping_Peaks
 
   Example    : my $peaks = $motif_feature->get_all_overlapping_Peaks;
@@ -241,31 +215,6 @@ sub get_all_overlapping_Peaks {
     }
 
     return $self->{overlapping_Peaks};
-}
-
-=head2 fetch_overlapping_Peak_by_Epigenome
-
-  Arg [1]    : Bio::EnsEMBL::Funcgen::Epigenome object
-  Example    : my $peak =
-             :    $motif_feature->fetch_overlapping_Peak_by_Epigenome($epigenome);
-  Description: Fetches the overlapping Peak for a particular Epigenome
-  Returntype : Bio::EnsEMBL::Funcgen::Peak
-  Exceptions : None
-  Caller     : Internal
-  Status     : Deprecated
-
-=cut
-
-sub fetch_overlapping_Peak_by_Epigenome {
-    my ($self, $epigenome) = @_;
-
-    deprecate("Bio::EnsEMBL::Funcgen::MotifFeature
-    ::fetch_overlapping_Peak_by_Epigenome has been deprecated and will be
-    removed in EnsEMBL release 100. Please use
-    Bio::EnsEMBL::Funcgen::MotifFeature
-    ::get_all_overlapping_Peaks_by_Epigenome instead.");
-
-    return $self->get_all_overlapping_Peaks_by_Epigenome($epigenome)->[0];
 }
 
 =head2 get_all_overlapping_Peaks_by_Epigenome

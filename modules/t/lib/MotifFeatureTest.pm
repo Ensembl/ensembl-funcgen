@@ -153,22 +153,6 @@ sub get_all_overlapping_Peaks :Test(no_plan) {
        'get_all_overlapping_Peaks works');
 }
 
-sub fetch_all_overlapping_Peaks :Test(no_plan) {
-    my $self = shift;
-
-    my @peaks = @{$self->{fetched}->[0]->fetch_all_overlapping_Peaks};
-
-    $self->num_tests(scalar(@peaks) + 1);
-
-    for my $peak (@peaks) {
-        isa_ok($peak, 'Bio::EnsEMBL::Funcgen::Peak');
-    }
-
-    is(scalar @peaks,
-       $self->{expected}->{number_of_peaks},
-       'fetch_all_overlapping_Peaks works');
-}
-
 sub get_all_overlapping_Peaks_by_Epigenome :Test(1) {
     my $self        = shift;
 
@@ -180,20 +164,6 @@ sub get_all_overlapping_Peaks_by_Epigenome :Test(1) {
     is_deeply($peak,
               $self->{expected}->{peaks},
               'get_all_overlapping_Peaks_by_Epigenome() works'
-    );
-}
-
-sub fetch_overlapping_Peak_by_Epigenome :Test(1) {
-    my $self        = shift;
-
-    my $epigenome = $self->{parameters}->{epigenome};
-
-    my $peak = $self->{fetched}->[0]->
-        fetch_overlapping_Peak_by_Epigenome($epigenome);
-
-    is_deeply($peak,
-              $self->{expected}->{peaks}->[0],
-              'fetch_overlapping_Peak_by_Epigenome() works'
     );
 }
 

@@ -77,7 +77,7 @@ A year after deprecation (4 Ensembl releases), the method is removed from the AP
  - Bio::EnsEMBL::Funcgen::DBSQL::**EpigenomeAdaptor**::*fetch_by_display_label()*
  - Bio::EnsEMBL::Funcgen::**Epigenome**::*display_label()*
 
-### To be removed in EnsEMBL Release 100 ###
+### Removed in EnsEMBL Release 100 ###
 
  - Bio::EnsEMBL::Funcgen::**MotifFeature**::*fetch_overlapping_Peak_by_Epigenome()*
  - Bio::EnsEMBL::Funcgen::**MotifFeature**::*fetch_all_overlapping_Peaks()*

@@ -326,26 +326,6 @@ sub regulatory_activity_for_epigenome {
   return $regulatory_activity[0];
 }
 
-=head2 fetch_all_MotifFeatures
-
-  Example    : my $overlapping_motif_features = $rf->fetch_all_MotifFeatures
-  Description: Returns all MotifFeatures that overlap with a RegulatoryFeature
-  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::MotifFeature objects
-  Exceptions : none
-  Caller     : General
-  Status     : Deprecated
-
-=cut
-
-sub fetch_all_MotifFeatures {
-    my $self = shift;
-    my $deprecation_message = 'It will be removed in release 100. Please use '
-        . 'Bio::EnsEMBL::Funcgen::RegulatoryFeature::get_all_MotifFeatures '
-        . 'instead.';
-    deprecate($deprecation_message);
-    return $self->get_all_MotifFeatures();
-}
-
 =head2 get_all_MotifFeatures
 
   Example    : my $overlapping_motif_features = $rf->get_all_MotifFeatures
@@ -364,30 +344,6 @@ sub get_all_MotifFeatures {
         = $self->adaptor()->_fetch_all_overlapping_MotifFeatures( $self );
 
     return $motif_features;
-}
-
-=head2 fetch_all_MotifFeatures_with_matching_Peak
-
-  Example    : my $overlapping_motif_features = 
-                $rf->fetch_all_MotifFeatures_with_matching_Peak;
-  Description: Returns all MotifFeatures that overlap with a RegulatoryFeature
-               and have a matching Peak
-  Returntype : Arrayref of Bio::EnsEMBL::Funcgen::MotifFeature objects
-  Exceptions : none
-  Caller     : General
-  Status     : Deprecated
-
-=cut
-
-sub fetch_all_MotifFeatures_with_matching_Peak {
-    my $self = shift;
-
-    my $deprecation_message = 'It will be removed in release 100. Please use '
-        . 'Bio::EnsEMBL::Funcgen::RegulatoryFeature::get_all_experimentally_verified_MotifFeatures '
-        . 'instead.';
-    deprecate($deprecation_message);
-
-    return $self->get_all_experimentally_verified_MotifFeatures;
 }
 
 =head2 get_all_experimentally_verified_MotifFeatures

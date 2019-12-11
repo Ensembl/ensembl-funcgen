@@ -104,52 +104,6 @@ my $true_final_clause = ' ORDER by mf.seq_region_id, mf.seq_region_start, mf.seq
 # was '' to avoid use of undef warning from BaseAdaptor
 my $final_clause = $true_final_clause;
 
-=head2 fetch_all_by_Slice_Epigenome
-
-  Arg [1]    : Bio::EnsEMBL::Slice
-  Arg [2]    : Bio::EnsEMBL::Funcgen::Epigenome
-  #Arg [3]    : (optional) string - type e.g. Jaspar/Inferred
-  Example    : my $slice = $sa->fetch_by_region('chromosome', '1');
-               my $features = $ofa->fetch_all_by_Slice_Epigenome($slice, $epigenome);
-  Description: Retrieves a list of features on a given slice, specific for a given Epigenome.
-  Returntype : Listref of Bio::EnsEMBL::MotifFeature objects
-  Exceptions : Throws if Epigenome is not valid
-  Caller     : General
-  Status     : Deprecated
-
-=cut
-
-sub fetch_all_by_Slice_Epigenome {
-
-  my ($self, $slice, $epigenome, $type) = @_;
-
-  my $deprecation_message = 'Will be removed in release 100.';
-  deprecate($deprecation_message);
-
-  #could add logic_name here for motif mapper analysis, motif source analysis
-  $self->db->is_stored_and_valid('Bio::EnsEMBL::Funcgen::Epigenome', $epigenome);
-
-  #Extend query tables
-  $self->_tables([['feature_set', 'fs'],
-                  ['associated_motif_feature', 'amf'],
-                  ['annotated_feature', 'af']]);
-
-  my $constraint = 'mf.motif_feature_id = amf.motif_feature_id AND '.
-  'amf.annotated_feature_id=af.annotated_feature_id and '.
-    'af.feature_set_id=fs.feature_set_id AND fs.epigenome_id = ?';
-
-  #Group here as the mf may be linked to multiple afs
-  $final_clause = ' GROUP BY mf.motif_feature_id';
-
-
-  $self->bind_param_generic_fetch( $epigenome->dbID(), SQL_INTEGER);
-  my $mfs = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint);
-  $self->reset_true_tables;
-  $final_clause = $true_final_clause;
-
-  return $mfs;
-}
-
 =head2 fetch_all_by_Slice_BindingMatrix
 
   Arg [1]    : Bio::EnsEMBL::Slice
