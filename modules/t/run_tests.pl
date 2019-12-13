@@ -31,35 +31,36 @@ use strict;
 use warnings;
 
 use File::Basename;
+use Test::More;
+use Test::Class::Load;
 
-# Load Tests
-BEGIN {
-    require Test::Class::Load;
-    # Do not drop test databases, use the same for all Tests
-    $ENV{'RUNTESTS_HARNESS'} = 1;
+use Bio::EnsEMBL::Test::MultiTestDB;
 
-    # Load and run tests
-    my ($filename, $dir, $suffix) = fileparse(__FILE__);
-    my $test_dir = $dir . '/lib';
-    Test::Class::Load->import($test_dir);
+# Load all Test Classes
+my ($filename, $dir, $suffix) = fileparse(__FILE__);
+my $test_dir                  = $dir . '/lib';
+Test::Class::Load->import($test_dir);
+
+# Create test database
+my $multi = Bio::EnsEMBL::Test::MultiTestDB->new('homo_sapiens');
+
+# Run all available Test Classes or just the ones provided by the user
+my @test_classes_to_run = @ARGV? @ARGV: Test::Class->_test_classes();
+
+# Plan number of Tests
+my $total_number_of_tests = 0;
+my @tests;
+for my $test_class (@test_classes_to_run){
+    if ($test_class =~ m/Test::Class/){
+        next;
+    }
+    my $test = $test_class->new($multi);
+    push @tests, $test;
+    $total_number_of_tests += $test->expected_tests();
 }
+plan tests => $total_number_of_tests;
 
 # Run Tests
-# Test::Class->runtests();
-
-# Clean up test databases and temp file(s)
-delete $ENV{'RUNTESTS_HARNESS'};
-my ($filename, $dir, $suffix) = fileparse(__FILE__);
-my $db_conf = Bio::EnsEMBL::Test::MultiTestDB->get_db_conf($dir);
-
-foreach my $species ( keys %{ $db_conf->{'databases'} } ) {
-    # as soon as the $multi object goes out of scope, its DESTROY function
-    # will take care of dropping the test databases
-    my $multi = Bio::EnsEMBL::Test::MultiTestDB->new($species);
+for my $t (@tests){
+    $t->runtests();
 }
-
-# CLEAN.t is created by MultiTestDB when environmental variable RUNTESTS_HARNESS
-# is set to 1 and should be removed at the end of the run.
-my $clean_file = $dir . 'CLEAN.t';
-print "# Deleting $clean_file\n";
-unlink $clean_file;

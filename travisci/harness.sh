@@ -6,9 +6,9 @@ echo "Running test suite"
 echo "Using $PERL5LIB"
 
 if [ "$COVERALLS" = 'true' ]; then
-  PERL5OPT='-MDevel::Cover=+ignore,bioperl,+ignore,ensembl-test,+ignore,ensembl,+ignore,\.t$$,+ignore,\.t/lib$$,+ignore,EFGUtils.pm$$' perl $PWD/modules/t/run_tests.t
+  PERL5OPT='-MDevel::Cover=+ignore,bioperl,+ignore,ensembl-test,+ignore,ensembl,+ignore,\.t$$,+ignore,\.t/lib$$,+ignore,EFGUtils.pm$$' perl $PWD/modules/t/run_tests.pl
 else
-  perl $PWD/modules/t/run_tests.t
+  perl $PWD/modules/t/run_tests.pl
 fi
 
 rt=$?

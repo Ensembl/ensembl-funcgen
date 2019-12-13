@@ -37,6 +37,18 @@ use Bio::EnsEMBL::Funcgen::BindingMatrix::Constants qw(:all);
 
 use parent qw(Bio::EnsEMBL::Funcgen::Test);
 
+sub new {
+    my $class = shift;
+    my $self = $class->SUPER::new(@_);
+
+    my $binding_matrix = $self->{fetched}->[0];
+    my $TFCs = $binding_matrix->get_all_associated_TranscriptionFactorComplexes;
+    my $n = scalar @{$TFCs} + 1;
+    $self->num_method_tests('get_all_associated_TranscriptionFactorComplexes', $n);
+
+    return $self;
+}
+
 sub parameters :Test(setup) {
     my $self = shift;
 
@@ -304,8 +316,6 @@ sub get_all_associated_TranscriptionFactorComplexes :Test(no_plan) {
     my $binding_matrix = $self->{fetched}->[0];
 
     my $TFCs = $binding_matrix->get_all_associated_TranscriptionFactorComplexes;
-
-    $self->num_tests(scalar @{$TFCs} + 1);
 
     for my $TFC (@{$TFCs}) {
         isa_ok($TFC, 'Bio::EnsEMBL::Funcgen::TranscriptionFactorComplex');
