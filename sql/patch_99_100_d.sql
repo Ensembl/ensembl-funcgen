@@ -25,7 +25,7 @@ alter table external_db modify type ENUM(
   'LIT',
   'PRIMARY_DB_SYNONYM',
   'ENSEMBL'
-);
+) DEFAULT NULL;
 
 -- patch identifier
 INSERT INTO meta (species_id, meta_key, meta_value) VALUES (NULL, 'patch', 'patch_99_100_d.sql|update type column on external_db table');

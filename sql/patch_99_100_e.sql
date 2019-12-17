@@ -17,10 +17,10 @@
 @desc   Make some foreign keys not mandatory
 */
 
-ALTER TABLE segmentation_cell_tables MODIFY control_alignment_id int(23) unsigned null;
+ALTER TABLE segmentation_cell_tables MODIFY control_alignment_id int(23) unsigned DEFAULT NULL;
 UPDATE segmentation_cell_tables SET control_alignment_id = NULL WHERE control_alignment_id = 0;
 
-ALTER TABLE object_xref MODIFY analysis_id smallint(5) unsigned NULL;
+ALTER TABLE object_xref MODIFY analysis_id smallint(5) unsigned DEFAULT NULL;
 UPDATE object_xref SET analysis_id = NULL WHERE analysis_id = 0;
 
 -- patch identifier

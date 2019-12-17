@@ -372,7 +372,7 @@ CREATE TABLE `segmentation_cell_tables` (
   `epigenome_id` int(16) unsigned NOT NULL,
   `feature_type_id` int(18) unsigned NOT NULL,
   `signal_alignment_id` int(23) unsigned NOT NULL,
-  `control_alignment_id` int(23) unsigned NULL
+  `control_alignment_id` int(23) unsigned DEFAULT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=latin1;
 
 DROP TABLE IF EXISTS `segmentation_statistic`;
@@ -1952,7 +1952,7 @@ CREATE TABLE `object_xref` (
   `ensembl_object_type` enum('Epigenome','Experiment','RegulatoryFeature','ExternalFeature','AnnotatedFeature','FeatureType','MirnaTargetFeature','ProbeSet','Probe','ProbeFeature','ReadFile') NOT NULL,
   `xref_id` int(10) unsigned NOT NULL,
   `linkage_annotation` varchar(255) DEFAULT NULL,
-  `analysis_id` smallint(5) unsigned NULL,
+  `analysis_id` smallint(5) unsigned DEFAULT NULL,
   PRIMARY KEY (`object_xref_id`),
   UNIQUE KEY `xref_idx` (`xref_id`,`ensembl_object_type`,`ensembl_id`,`analysis_id`),
   KEY `analysis_idx` (`analysis_id`),
