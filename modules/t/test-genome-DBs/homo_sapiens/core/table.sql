@@ -130,7 +130,7 @@ CREATE TABLE `coord_system` (
   UNIQUE KEY `rank_idx` (`rank`,`species_id`),
   UNIQUE KEY `name_idx` (`name`,`version`,`species_id`),
   KEY `species_idx` (`species_id`)
-) ENGINE=MyISAM AUTO_INCREMENT=1006 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=1007 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `data_file` (
   `data_file_id` int(10) unsigned NOT NULL AUTO_INCREMENT,
@@ -420,8 +420,8 @@ CREATE TABLE `mapping_session` (
   `new_db_name` varchar(80) NOT NULL DEFAULT '',
   `old_release` varchar(5) NOT NULL DEFAULT '',
   `new_release` varchar(5) NOT NULL DEFAULT '',
-  `old_assembly` varchar(20) NOT NULL DEFAULT '',
-  `new_assembly` varchar(20) NOT NULL DEFAULT '',
+  `old_assembly` varchar(80) DEFAULT NULL,
+  `new_assembly` varchar(80) DEFAULT NULL,
   `created` datetime NOT NULL,
   PRIMARY KEY (`mapping_session_id`)
 ) ENGINE=MyISAM AUTO_INCREMENT=394 DEFAULT CHARSET=latin1;
@@ -490,7 +490,7 @@ CREATE TABLE `meta` (
   PRIMARY KEY (`meta_id`),
   UNIQUE KEY `species_key_value_idx` (`species_id`,`meta_key`,`meta_value`),
   KEY `species_value_idx` (`species_id`,`meta_value`)
-) ENGINE=MyISAM AUTO_INCREMENT=1863 DEFAULT CHARSET=latin1;
+) ENGINE=MyISAM AUTO_INCREMENT=1864 DEFAULT CHARSET=latin1;
 
 CREATE TABLE `meta_coord` (
   `table_name` varchar(40) NOT NULL,
