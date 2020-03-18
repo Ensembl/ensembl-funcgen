@@ -136,7 +136,7 @@ sub define_expected :Test(setup) {
 sub dbIDs_to_fetch {return [4];}
 
 sub getters {
-    return [ 'binding_matrix', 'score', 'stable_id' ];
+    return [ 'score', 'stable_id' ];
 }
 
 sub get_BindingMatrix :Test(1) {

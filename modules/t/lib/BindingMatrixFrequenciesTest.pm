@@ -77,7 +77,7 @@ sub define_expected :Test(setup) {
 sub dbIDs_to_fetch {return [8813];}
 
 sub getters {
-    return [ 'binding_matrix', 'position', 'nucleotide', 'frequency' ];
+    return [ 'position', 'nucleotide', 'frequency' ];
 }
 
 sub get_BindingMatrix :Test(1) {
