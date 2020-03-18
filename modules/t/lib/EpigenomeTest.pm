@@ -86,7 +86,6 @@ sub define_expected :Test(setup) {
         'production_name'  => 'large_intestine',
         'gender'           => 'male',
         'description'      => $description,
-        'display_label'    => 'large intestine',
         'short_name'       => 'large intestine',
         'search_terms'     => $search_terms,
         'full_name'        => 'large intestine male embryo (composite)',
@@ -114,7 +113,7 @@ sub dbIDs_to_fetch {return [ 151 ];}
 
 sub getters {
     return [ 'name', 'production_name', 'gender', 'description',
-             'display_label', 'short_name', 'search_terms', 'full_name',
+             'short_name', 'search_terms', 'full_name',
              'efo_accession', 'encode_accession', 'epirr_accession'];
 }
 
